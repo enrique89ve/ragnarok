@@ -1,0 +1,358 @@
+/* ═══════════════════════════════════════════════════
+   POKER DRAMA — Combat tension, phase banners,
+   momentum glow, ambient warfare, card dealing
+   ═══════════════════════════════════════════════════ */
+
+/* ========================================
+   TENSION-REACTIVE VIGNETTE
+   Driven by data-tension-level on .game-viewport
+   ======================================== */
+.game-viewport::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	z-index: 1;
+	transition: box-shadow 0.6s ease, opacity 0.6s ease;
+	box-shadow: inset 0 0 60px rgba(0, 0, 0, 0);
+	opacity: 0;
+}
+
+.game-viewport[data-tension-level="medium"]::after {
+	box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.25);
+	opacity: 1;
+}
+
+.game-viewport[data-tension-level="high"]::after {
+	box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.4);
+	opacity: 1;
+}
+
+.game-viewport[data-tension-level="allin"]::after {
+	box-shadow:
+		inset 0 0 120px rgba(0, 0, 0, 0.5),
+		inset 0 0 40px rgba(239, 68, 68, 0.15);
+	opacity: 1;
+}
+
+
+/* ========================================
+   COMMUNITY CARD DEAL ANIMATION
+   Applied via .card-dealing class
+   ======================================== */
+.community-slot.card-dealing {
+	z-index: 10;
+}
+
+.community-slot.card-dealing .arena-poker-card {
+	animation: cardSlam 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes cardSlam {
+	0% {
+		transform: translateY(-30px) scale(1.15);
+		opacity: 0.7;
+	}
+	60% {
+		transform: translateY(2px) scale(0.98);
+		opacity: 1;
+	}
+	100% {
+		transform: translateY(0) scale(1);
+		opacity: 1;
+	}
+}
+
+/* Card flip for newly revealed cards */
+.community-slot .arena-poker-card.card-revealing {
+	animation: cardFlipReveal 0.4s ease-out forwards;
+	transform-style: preserve-3d;
+}
+
+@keyframes cardFlipReveal {
+	0% {
+		transform: perspective(800px) rotateY(90deg) scale(1.1);
+		opacity: 0.5;
+	}
+	50% {
+		transform: perspective(800px) rotateY(45deg) scale(1.05);
+		opacity: 0.8;
+	}
+	100% {
+		transform: perspective(800px) rotateY(0deg) scale(1);
+		opacity: 1;
+	}
+}
+
+
+/* ========================================
+   PHASE BANNER — DRAMATIC OVERHAUL
+   Full-width slash across screen
+   ======================================== */
+.phase-banner {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 50%;
+	transform: translateY(-50%);
+	z-index: var(--z-popup, 9000);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	pointer-events: none;
+}
+
+.phase-banner-content {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	padding: 12px 40px;
+	background: linear-gradient(90deg,
+		transparent 0%,
+		rgba(10, 10, 20, 0.85) 15%,
+		rgba(10, 10, 20, 0.92) 50%,
+		rgba(10, 10, 20, 0.85) 85%,
+		transparent 100%
+	);
+	width: 100%;
+	max-width: 900px;
+	justify-content: center;
+	position: relative;
+}
+
+/* Norse knotwork border lines */
+.phase-banner-line {
+	flex: 1;
+	height: 2px;
+	background: linear-gradient(90deg, transparent 0%, var(--phase-color, #fbbf24) 50%, transparent 100%);
+	max-width: 200px;
+}
+
+.phase-banner-text {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+}
+
+.phase-banner-title {
+	font-family: 'Cinzel', 'Georgia', serif;
+	font-size: 1.8rem;
+	font-weight: 900;
+	color: var(--phase-color, #fbbf24);
+	text-shadow:
+		0 0 15px var(--phase-glow, rgba(251, 191, 36, 0.6)),
+		0 0 30px var(--phase-glow, rgba(251, 191, 36, 0.3)),
+		0 2px 4px rgba(0, 0, 0, 0.8);
+	letter-spacing: 4px;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+
+.phase-banner-subtitle {
+	font-family: 'Cinzel', 'Georgia', serif;
+	font-size: 0.85rem;
+	font-weight: 500;
+	color: rgba(226, 232, 240, 0.8);
+	letter-spacing: 2px;
+	text-transform: uppercase;
+	font-style: italic;
+}
+
+/* Phase-specific colors */
+.phase-banner[data-phase="pre_flop"] {
+	--phase-color: #ef4444;
+	--phase-glow: rgba(239, 68, 68, 0.5);
+}
+
+.phase-banner[data-phase="faith"] {
+	--phase-color: #8b5cf6;
+	--phase-glow: rgba(139, 92, 246, 0.5);
+}
+
+.phase-banner[data-phase="foresight"] {
+	--phase-color: #22c55e;
+	--phase-glow: rgba(34, 197, 94, 0.5);
+}
+
+.phase-banner[data-phase="destiny"] {
+	--phase-color: #fbbf24;
+	--phase-glow: rgba(251, 191, 36, 0.6);
+}
+
+/* Entry/Exit animations */
+.phase-banner-enter {
+	animation: phaseBannerSlam 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.phase-banner-exit {
+	animation: phaseBannerSlashOut 0.3s ease-in forwards;
+}
+
+@keyframes phaseBannerSlam {
+	0% {
+		transform: translateY(-50%) translateX(100%) scale(1.1);
+		opacity: 0;
+	}
+	100% {
+		transform: translateY(-50%) translateX(0) scale(1);
+		opacity: 1;
+	}
+}
+
+@keyframes phaseBannerSlashOut {
+	0% {
+		transform: translateY(-50%) translateX(0);
+		opacity: 1;
+	}
+	100% {
+		transform: translateY(-50%) translateX(-100%);
+		opacity: 0;
+	}
+}
+
+
+/* ========================================
+   HAND STRENGTH INDICATOR
+   Persistent display near player hole cards
+   ======================================== */
+.hand-strength-indicator {
+	position: absolute;
+	bottom: 195px;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 100;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 14px;
+	background: rgba(10, 10, 20, 0.85);
+	border: 1px solid rgba(100, 100, 120, 0.3);
+	border-radius: 20px;
+	pointer-events: none;
+	transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hand-strength-indicator.tier-low {
+	border-color: rgba(226, 232, 240, 0.3);
+}
+
+.hand-strength-indicator.tier-mid {
+	border-color: rgba(96, 165, 250, 0.5);
+	box-shadow: 0 0 8px rgba(96, 165, 250, 0.2);
+}
+
+.hand-strength-indicator.tier-high {
+	border-color: rgba(168, 85, 247, 0.5);
+	box-shadow: 0 0 12px rgba(168, 85, 247, 0.3);
+}
+
+.hand-strength-indicator.tier-godly {
+	border-color: rgba(251, 191, 36, 0.6);
+	box-shadow: 0 0 16px rgba(251, 191, 36, 0.4);
+}
+
+.hand-strength-name {
+	font-family: 'Cinzel', 'Georgia', serif;
+	font-size: 0.8rem;
+	font-weight: 700;
+	letter-spacing: 1px;
+	text-transform: uppercase;
+	transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+
+.tier-low .hand-strength-name { color: #94a3b8; }
+.tier-mid .hand-strength-name { color: #60a5fa; text-shadow: 0 0 8px rgba(96, 165, 250, 0.4); }
+.tier-high .hand-strength-name { color: #a855f7; text-shadow: 0 0 8px rgba(168, 85, 247, 0.4); }
+.tier-godly .hand-strength-name { color: #fbbf24; text-shadow: 0 0 12px rgba(251, 191, 36, 0.6); }
+
+/* Pulse when hand improves */
+.hand-strength-indicator.improved {
+	animation: handImproved 0.5s ease-out;
+}
+
+@keyframes handImproved {
+	0% { transform: translateX(-50%) scale(1.3); }
+	50% { transform: translateX(-50%) scale(1.05); }
+	100% { transform: translateX(-50%) scale(1); }
+}
+
+
+/* ========================================
+   MOMENTUM / STREAK GLOW
+   Applied to hero wrappers
+   ======================================== */
+.game-viewport[data-player-streak="2"] [data-hero-role="player"],
+.game-viewport[data-opponent-streak="2"] [data-hero-role="opponent"] {
+	box-shadow: 0 0 20px rgba(251, 191, 36, 0.2);
+}
+
+.game-viewport[data-player-streak="3"] [data-hero-role="player"],
+.game-viewport[data-opponent-streak="3"] [data-hero-role="opponent"] {
+	box-shadow: 0 0 30px rgba(251, 191, 36, 0.35);
+}
+
+.game-viewport[data-player-streak="4"] [data-hero-role="player"],
+.game-viewport[data-opponent-streak="4"] [data-hero-role="opponent"] {
+	box-shadow: 0 0 40px rgba(239, 68, 68, 0.4);
+}
+
+
+/* ========================================
+   HP-REACTIVE BOARD DARKENING
+   ======================================== */
+.game-viewport[data-player-hp-zone="danger"] [data-hero-role="player"] {
+	filter: brightness(0.8) saturate(0.7);
+}
+
+.game-viewport[data-player-hp-zone="critical"] [data-hero-role="player"] {
+	filter: brightness(0.65) saturate(0.5);
+}
+
+.game-viewport[data-opponent-hp-zone="danger"] [data-hero-role="opponent"] {
+	filter: brightness(0.8) saturate(0.7);
+}
+
+.game-viewport[data-opponent-hp-zone="critical"] [data-hero-role="opponent"] {
+	filter: brightness(0.65) saturate(0.5);
+}
+
+
+/* ========================================
+   BUTTON PRESS FEEDBACK
+   Enhanced action button reactions
+   ======================================== */
+.poker-btn.raise-btn:active:not(:disabled),
+.action-btn.attack:active:not(:disabled) {
+	transform: translateY(2px) scale(0.96);
+	box-shadow: 0 0 25px rgba(239, 68, 68, 0.6);
+}
+
+.poker-btn.call-btn:active:not(:disabled),
+.action-btn.engage:active:not(:disabled) {
+	transform: translateY(2px) scale(0.96);
+	box-shadow: 0 0 25px rgba(251, 191, 36, 0.6);
+}
+
+.poker-btn.fold-btn:active:not(:disabled) {
+	transform: translateY(2px) scale(0.96);
+	filter: brightness(0.7);
+}
+
+
+/* ========================================
+   REDUCED MOTION
+   ======================================== */
+@media (prefers-reduced-motion: reduce) {
+	.phase-banner-enter,
+	.phase-banner-exit,
+	.community-slot.card-dealing .arena-poker-card,
+	.community-slot .arena-poker-card.card-revealing,
+	.hand-strength-indicator.improved {
+		animation: none;
+	}
+
+	.game-viewport::after {
+		transition: none;
+	}
+}

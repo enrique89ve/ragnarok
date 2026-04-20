@@ -1,0 +1,645 @@
+/* Import all combat styles - order matters: tokens → zones → pot-display */
+@import "./styles/index.css";
+
+/* ========================================
+   GAME VIEWPORT - 16:9 Fixed Aspect Container
+   Professional game UI architecture
+   ======================================== */
+
+/* ========================================
+   16:9 ASPECT RATIO LOCK SYSTEM
+   Prevents stretching on ultrawide monitors
+   Letterboxes content to maintain proportions
+   ======================================== */
+
+/*
+  Wrapper carries the full-window background. Putting it here (instead of
+  on the inner .game-viewport) means the background fills the actual
+  viewport even when the canvas is letterboxed by aspect ratio — no more
+  black bars at top/bottom on ultrawide windows. The inner canvas keeps
+  its own dim overlay + vignettes which scale with the gameplay.
+*/
+.game-viewport-wrapper {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  z-index: 1;
+  background:
+    /* Soft fade so the canvas edges blend into the background */
+    radial-gradient(ellipse 100% 100% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.7) 100%),
+    /* Primary combat background — for ranked / play (non-campaign) only.
+       Campaign missions set .game-viewport.realm-* which overrides this
+       via realm-boards.css. The ?v= query is a cache-bust. */
+    url('/ui/backgrounrag.png?v=2') center center / cover no-repeat #000;
+}
+
+/*
+  RESPONSIVE SCALING
+  ------------------
+  The canvas is 1920×1080. Scaling and centering are handled by JavaScript
+  in GameViewport.tsx, which sets `transform`, `top`, `left`, `width`, and
+  `height` as INLINE styles. Inline always wins over CSS in the cascade,
+  so this rule deliberately does NOT set any positioning or transform —
+  doing so would create dead rules that show up red in DevTools and
+  confuse anyone debugging.
+
+  Why JS and not CSS calc(100vw / 1920px)? That uses CSS Values 4 type-
+  altering calc which is only supported in Chrome 105+/Firefox 116+/
+  Safari 17+. Older browsers silently dropped the entire transform
+  declaration, leaving the canvas at 1920×1080 native and producing the
+  "static, no scaling, buttons cut off" bug.
+
+  This rule only carries the visual styling (background, overflow, etc).
+*/
+.game-viewport {
+  overflow: hidden;
+  touch-action: none; /* Prevent pinch-zoom/pan during gameplay on mobile */
+  /* Background image now lives on .game-viewport-wrapper so it fills the
+     full window even when the 16:9 canvas is letterboxed. The canvas
+     itself only carries the dim overlays and cluster vignettes, which
+     should scale with the gameplay area. */
+  background:
+    /* UI cluster vignettes — soft pockets behind the gameplay zones */
+    radial-gradient(ellipse 30% 34% at 12% 92%, rgba(6,8,14,0.50) 0%, transparent 70%),
+    radial-gradient(ellipse 26% 22% at 12% 12%, rgba(6,8,14,0.50) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 20% at 50% 96%, rgba(6,8,14,0.42) 0%, transparent 78%),
+    radial-gradient(ellipse 18% 22% at 14% 48%, rgba(6,8,14,0.36) 0%, transparent 78%),
+    /* Global dim so art never overpowers cards */
+    linear-gradient(180deg, rgba(10,14,26,0.32) 0%, rgba(10,14,26,0.18) 38%, rgba(10,14,26,0.18) 62%, rgba(10,14,26,0.32) 100%);
+  container-type: inline-size;
+  container-name: game-viewport;
+}
+
+/* =============================================
+   .ui-panel — base material for every premium panel
+   in the combat arena. Obsidian + tarnished gold +
+   restrained shadow. Apply this to ANY new panel and
+   override only what's specific (size, position).
+   Phase 1 — UI overhaul.
+   ============================================= */
+.ui-panel {
+  background: var(--ui-panel-bg);
+  border: var(--ui-panel-border);
+  border-radius: 6px;
+  box-shadow: var(--ui-panel-shadow);
+  font-family: var(--font-ui);
+  color: var(--text-primary);
+}
+
+.ui-panel.ui-panel-strong {
+  border: var(--ui-panel-border-strong);
+  box-shadow: var(--ui-panel-shadow-lift);
+}
+
+.ui-panel.ui-panel-rune {
+  border: var(--ui-panel-border-rune);
+}
+
+/* Reusable engraved hairline accent — apply via ::before on any panel */
+.ui-panel-accent::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg,
+    rgba(212, 175, 55, 0.10) 0%,
+    transparent 35%,
+    transparent 65%,
+    rgba(212, 175, 55, 0.06) 100%);
+}
+
+/* Screen-shake animations.
+
+   IMPORTANT: these animations target the .game-viewport-wrapper, NOT the
+   inner .game-viewport. The inner element has a JS-set inline transform
+   for scaling, and CSS animations on it would clobber the scale. The
+   wrapper has no transform of its own, so animating its `translate` only
+   shakes the screen without affecting scale. */
+.game-viewport-wrapper.screen-shake-mild {
+  animation: screenShakeMild 0.3s ease-out;
+}
+
+.game-viewport-wrapper.screen-shake-strong {
+  animation: screenShakeStrong 0.3s ease-out;
+}
+
+@keyframes screenShakeMild {
+  0%, 100% { transform: translate(0, 0); }
+  15% { transform: translate(-2px, 1px); }
+  30% { transform: translate(2px, -1px); }
+  50% { transform: translate(-1px, 2px); }
+  70% { transform: translate(1px, -1px); }
+}
+
+@keyframes screenShakeStrong {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-4px, 2px); }
+  25% { transform: translate(4px, -3px); }
+  40% { transform: translate(-3px, 4px); }
+  55% { transform: translate(3px, -2px); }
+  70% { transform: translate(-2px, 1px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-viewport-wrapper.screen-shake-mild,
+  .game-viewport-wrapper.screen-shake-strong {
+    animation: none !important;
+  }
+}
+
+/* ========================================
+   ZONE POSITIONING VARIABLES
+   
+   SINGLE SOURCE OF TRUTH: styles/zones.css
+   All zone positioning variables (--zone-*-left, --zone-*-top, etc.)
+   are defined in styles/zones.css including responsive overrides.
+   
+   This file CONSUMES those variables via selectors like:
+   .viewport-mode .unified-community { left: var(--zone-community-left); }
+   
+   DO NOT define zone variables in this file - edit zones.css instead.
+   ======================================== */
+
+/* ========================================
+   ABSOLUTE POSITIONED ZONES
+   Each zone is independently positioned
+   ======================================== */
+
+/* Dead zone-* selectors removed — only .zone-community is used (styled in .unified-community) */
+/* Dead .zone-player-hero, .zone-player-mana, .zone-player-hand, .zone-player-field,
+   .zone-opponent-hero, .zone-opponent-mana, .zone-opponent-hand, .zone-opponent-field,
+   .zone-pot, .zone-timer, .zone-activity-logs — none rendered in JSX */
+
+/* .zone-community — inner container for community card slots (used in RagnarokCombatArena.tsx) */
+.zone-community {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+/* ========================================
+   HERO CARD STYLING
+   ======================================== */
+.viewport-hero-card {
+  width: 180px;
+  aspect-ratio: 3/4;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.viewport-hero-card:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+}
+
+/* Dead .zone-poker-sidebar, .has-poker-sidebar removed — never rendered in JSX */
+
+/* ========================================
+   RESPONSIVE ADJUSTMENTS
+   Scale factor handles most responsiveness,
+   but we can adjust positioning for edge cases
+   
+   NOTE: Position overrides now use --zone-* variables.
+   See styles/zones.css for all zone positioning.
+   ======================================== */
+/* All responsive zone overrides moved to styles/zones.css for single source of truth */
+
+/* Container queries removed — virtual canvas is always 1920px, uniform scaling handles sizing */
+
+/* ========================================
+   VIEWPORT MODE OVERRIDES
+   When .viewport-mode is applied, switch 
+   from CSS Grid to absolute positioning
+   ======================================== */
+
+.ragnarok-combat-arena.viewport-mode {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+}
+
+.viewport-mode .arena-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.viewport-mode .unified-combat-arena {
+  /* Viewport mode uses absolute positioning for fine control */
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: transparent;
+}
+
+/* Activity logs - top right */
+.viewport-mode .activity-logs-dock {
+  position: absolute;
+  right: 16px;
+  top: 48px;
+  z-index: var(--z-overlays, 500);
+}
+
+/* Opponent Hero Zone - see OPPONENT ZONES section at end of file */
+
+.viewport-mode .unified-opponent-hero .opponent-hero-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Opponent Hand - near opponent hero */
+.viewport-mode .unified-opponent-hand {
+  position: absolute;
+  left: var(--zone-opponent-hand-left, 346px);
+  top: 8px;
+  transform: translateX(-50%);
+  z-index: var(--z-hand, 40);
+}
+
+/* ========================================
+   ZONE LAYOUT - CCG-inspired clear zones
+   
+   VERTICAL LAYOUT (top to bottom):
+   - Opponent Hero: top 8px
+   - Opponent Minions: top 22%
+   - Community Poker Cards: center (45%) - LEFT side
+   - Player Minions: bottom 28%
+   - Player Hero: bottom 8px
+   ======================================== */
+
+/* Community Poker Cards - positioned INSIDE their grid lane
+   Absolute positioning allowed here because:
+   1. Community cards live in their own dedicated grid column
+   2. They don't compete with battlefield for space
+   3. Absolute is used for fanning/stacking WITHIN the lane */
+.viewport-mode .unified-community {
+  position: absolute;
+  left: var(--zone-community-left, 60px);
+  top: var(--zone-community-top, 518px);
+  transform: translateY(-50%);
+  z-index: var(--zone-community-z, 25);
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  background: none;
+  border: none;
+}
+
+/* Risk Display - positioned via styles/pot-display.css */
+
+/* Opponent Minion Field - RIGHT SIDE to avoid poker card overlap
+   Shifted right from center (was 50%, now 60%) */
+.viewport-mode .unified-opponent-field {
+  position: absolute;
+  left: var(--zone-opponent-field-left, 1152px);
+  top: var(--zone-opponent-field-top, 260px);
+  transform: translateX(-50%);
+  z-index: var(--z-battlefield, 10);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  min-height: 120px;
+  overflow: visible;
+}
+
+.viewport-mode .unified-opponent-field:has(.bf-card-wrapper:hover) {
+  z-index: 600;
+}
+
+.viewport-mode .unified-opponent-field .simple-battlefield {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Player Field */
+/* NOTE: Player field moved to CCG-style layout section below */
+
+/* Info Row with End Turn button */
+.viewport-mode .unified-info-row {
+  position: absolute;
+  right: 0;
+  top: 45%;
+  transform: translateY(-50%);
+  z-index: var(--z-betting, 200);
+}
+
+/* Player Area, Hero, Hand, Mana — canonical definitions in HEARTHSTONE-STYLE section below */
+
+/* ========================================
+   HEARTHSTONE-STYLE PLAYER ZONE LAYOUT
+   Physical layering: cards behind heroes,
+   zones have clear "homes"
+   ======================================== */
+
+/* ========================================
+   LOCAL LAYOUT VARIABLES (Component-specific)
+   
+   These are GameViewport-specific styling variables.
+   Core tokens are in client/src/styles/design-tokens.css
+   Zone positions are in styles/zones.css.
+   ======================================== */
+:root {
+  --hero-z-index: var(--z-heroes, 30);
+  --hand-minion-card-spacing: -24px;
+}
+
+/* Player Zone Container — pinned to bottom of 1920×1080 canvas */
+.viewport-mode .unified-player-area {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  height: 250px; /* Compact player zone */
+  z-index: var(--z-heroes, 30);
+  pointer-events: none;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.viewport-mode .unified-player-area > * {
+  pointer-events: auto;
+}
+
+/* Hero Hand Row — flex, pinned to bottom of player area */
+.viewport-mode .unified-hero-hand-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end; /* Cards align to bottom — no dead space */
+  padding: 0 24px 4px;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+/* Hero Section - contains hero, mana, and hole cards layered */
+.viewport-mode .unified-hero-section {
+  position: relative;
+  flex-shrink: 0;
+  align-self: flex-end; /* Pin hero to bottom of row */
+  z-index: var(--z-heroes, 30);
+}
+
+.viewport-mode .poker-hero-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Hero card itself - lower z-index so poker cards can fan over it.
+   Both player (.poker-hero-container) and opponent (.opponent-hero-container)
+   share the same dimensions for visual symmetry. */
+.viewport-mode .poker-hero-container .battlefield-hero-square,
+.viewport-mode .opponent-hero-container .battlefield-hero-square {
+  position: relative;
+  z-index: var(--hero-z-index);
+  width: 220px;
+  aspect-ratio: 3 / 4;
+  transform: none;
+}
+
+.viewport-mode .poker-hero-container .battlefield-hero-square:hover {
+  transform: scale(1.02);
+}
+
+/* ========================================
+   POKER HOLE CARDS - VIEWPORT MODE
+   DEPRECATED: Replaced by HoleCardsOverlay component (2026-02-04)
+   See: client/src/game/combat/components/HoleCardsOverlay.tsx
+   ======================================== */
+
+/* Mana bar below hero — matches hero width */
+.viewport-mode .player-mana-display,
+.viewport-mode .opponent-hero-mana {
+  position: relative;
+  z-index: 25;
+  width: 220px;
+  margin-top: 4px;
+}
+
+/* ========================================
+   BATTLEFIELD MINION ZONE - CENTER OF SCREEN
+   (Active minions on the battlefield)
+   CCG-style: minions face each other in center
+   ======================================== */
+
+/* Player Minion Field - RIGHT SIDE to avoid poker card overlap
+   Shifted right from center (was 50%, now 60%) */
+.viewport-mode .unified-player-field {
+  position: absolute;
+  left: var(--zone-player-field-left, 1152px);
+  bottom: var(--zone-player-field-bottom, 360px);
+  transform: translateX(-50%);
+  z-index: var(--z-battlefield, 10);
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  min-height: 120px;
+  overflow: visible;
+}
+
+.viewport-mode .unified-player-field:has(.bf-card-wrapper:hover) {
+  z-index: 600;
+}
+
+.viewport-mode .unified-player-field .simple-battlefield {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Minion cards subtle hover tilt for physicality */
+.viewport-mode .unified-player-field .battlefield-card {
+  transition: transform 0.15s ease;
+}
+
+.viewport-mode .unified-player-field .battlefield-card:hover {
+  transform: translateY(-6px) rotate(-2deg);
+}
+
+/* ========================================
+   HAND CARDS ZONE - SNUG RIGHT OF HERO
+   Aligned to hero's TOP edge, flex child
+   ======================================== */
+
+.viewport-mode .unified-hand-section {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end; /* Cards sit on the bottom edge */
+  margin-left: 16px;
+  z-index: var(--z-hand, 40);
+  min-width: 240px;
+  max-width: 1200px;
+  overflow: visible;
+}
+
+.viewport-mode .poker-hand-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: flex-end; /* Cards bottom-aligned */
+  gap: var(--hand-minion-card-spacing);
+  padding: 0;
+}
+
+/* Hand cards have slight overlap and tilt for natural fan */
+.viewport-mode .poker-hand-container .hand-card-wrapper {
+  transition:
+    transform 0.18s ease,
+    z-index 0.1s;
+}
+
+.viewport-mode .poker-hand-container .hand-card-wrapper:hover {
+  transform: translateY(-12px) scale(1.05);
+  z-index: var(--z-hover, 500);
+}
+
+/* ========================================
+   BETTING BUTTONS - BELOW HAND CARDS
+   ======================================== */
+
+/* BETTING AREA - Next to hero, under hand cards. HP slider on top, buttons below */
+.viewport-mode .unified-betting-actions-container {
+  position: absolute;
+  left: var(--zone-betting-left, 220px);
+  bottom: var(--zone-betting-bottom, 8px);
+  z-index: var(--zone-betting-z, 200);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.viewport-mode .unified-betting-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  /* NO background box - removed to keep mana crystals visible */
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  border: none;
+}
+
+.viewport-mode .action-buttons-group {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+}
+
+/* Betting button glow effects */
+.viewport-mode .poker-btn {
+  transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.viewport-mode .poker-btn:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(255, 215, 0, 0.4);
+}
+
+/* ========================================
+   OPPONENT ZONES - Mirror layout at top
+   ======================================== */
+
+.viewport-mode .unified-opponent-hero {
+  position: absolute;
+  left: var(--zone-opponent-hero-left, 24px);
+  top: var(--zone-opponent-hero-top, 0);
+  z-index: var(--z-heroes, 30);
+  padding: 0;
+}
+
+/* REMOVED DUPLICATE: opponent-field is now defined in the zone layout section above */
+
+/* Community cards — positioned via zones.css variables, no responsive needed
+   (virtual canvas handles all scaling) */
+
+/* ========================================
+   FOCUS-VISIBLE - Keyboard navigation
+   ======================================== */
+
+.viewport-hero-card:focus-visible {
+  outline: 2px solid var(--color-gold, #ffd700);
+  outline-offset: 3px;
+}
+
+.viewport-mode .poker-btn:focus-visible {
+  outline: 2px solid var(--color-gold, #ffd700);
+  outline-offset: 2px;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+}
+
+.viewport-mode .poker-hand-container .hand-card-wrapper:focus-visible {
+  outline: 2px solid var(--color-gold, #ffd700);
+  outline-offset: 2px;
+  z-index: var(--z-hover, 500);
+}
+
+/* ========================================
+   TOUCH DEVICE SUPPORT
+   ======================================== */
+
+@media (hover: none) {
+  .viewport-hero-card:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .viewport-mode .poker-hand-container .hand-card-wrapper:hover {
+    transform: none;
+    z-index: auto;
+  }
+
+  .viewport-mode .poker-btn:not(:disabled):hover {
+    transform: none;
+  }
+
+  .viewport-mode .unified-player-field .battlefield-card:hover {
+    transform: none;
+  }
+}
+
+/* ========================================
+   REDUCED MOTION
+   ======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .viewport-hero-card {
+    transition: none;
+  }
+
+  .viewport-mode .poker-hand-container .hand-card-wrapper {
+    transition: none;
+  }
+
+  .viewport-mode .poker-btn {
+    transition: none;
+  }
+}

@@ -1,0 +1,346 @@
+/*
+  game-over-result.css — campaign mission result screen.
+
+  Replaces the old plain-text VICTORY/DEFEAT block with a layered
+  cinematic card: golden engraved title, subtitle headline, full
+  narrativeAfter epilogue scroll inside a parchment frame, gilded
+  reward pills, and Norse-styled buttons.
+
+  The screen is a fixed-inset overlay so it sits above the canvas
+  regardless of the parent's scaling. All animations are opacity/transform
+  only (GPU compositor friendly, zero repaints).
+*/
+
+.cgo-result {
+	position: fixed;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 22px;
+	padding: 40px 24px;
+	z-index: 5000;
+	background: radial-gradient(
+		ellipse 80% 70% at 50% 50%,
+		rgba(8, 6, 14, 0.88) 0%,
+		rgba(0, 0, 0, 0.96) 70%,
+		#000 100%
+	);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+}
+
+.cgo-title {
+	font-family: 'Cinzel', Georgia, serif;
+	font-size: clamp(48px, 7vw, 84px);
+	font-weight: 900;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	margin: 0;
+	line-height: 1;
+}
+
+.cgo-title.victory {
+	color: #ffd97a;
+	text-shadow:
+		0 0 24px rgba(255, 217, 122, 0.55),
+		0 0 56px rgba(255, 180, 60, 0.35),
+		0 4px 18px rgba(0, 0, 0, 0.95),
+		0 0 0 1px rgba(120, 80, 20, 0.6);
+	animation: victory-title-shimmer 4s ease-in-out infinite;
+}
+
+.cgo-title.defeat {
+	color: #f17070;
+	text-shadow:
+		0 0 24px rgba(241, 112, 112, 0.55),
+		0 0 56px rgba(150, 30, 30, 0.4),
+		0 4px 18px rgba(0, 0, 0, 0.95);
+}
+
+@keyframes victory-title-shimmer {
+	0%, 100% { opacity: 0.95; }
+	50% { opacity: 1; }
+}
+
+/* Boss victory gloat — in-character quote on defeat screen */
+.cgo-boss-quip {
+	font-family: Georgia, serif;
+	font-style: italic;
+	font-size: clamp(17px, 2.2vw, 24px);
+	color: rgba(241, 112, 112, 0.92);
+	max-width: 680px;
+	text-align: center;
+	line-height: 1.55;
+	margin: -6px 0 2px;
+	padding: 0 16px;
+	text-shadow: 0 0 18px rgba(150, 30, 30, 0.5), 0 2px 10px rgba(0, 0, 0, 0.95);
+}
+
+/* Star rating row on victory */
+.cgo-stars {
+	display: flex;
+	gap: 8px;
+	justify-content: center;
+	margin: -6px 0 4px;
+}
+
+.cgo-star {
+	font-size: 34px;
+	line-height: 1;
+	transition: opacity 0.3s ease;
+}
+
+.cgo-star.earned {
+	color: #ffd97a;
+	text-shadow: 0 0 12px rgba(255, 217, 122, 0.7);
+}
+
+.cgo-star.empty {
+	color: rgba(120, 100, 60, 0.35);
+}
+
+/* Chapter complete splash overlay */
+.cgo-chapter-splash {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 8px;
+}
+
+.cgo-chapter-label {
+	font-family: 'Cinzel', Georgia, serif;
+	font-size: clamp(13px, 1.6vw, 16px);
+	font-weight: 700;
+	letter-spacing: 0.25em;
+	text-transform: uppercase;
+	color: rgba(212, 175, 55, 0.85);
+	text-shadow: 0 0 14px rgba(212, 175, 55, 0.4);
+}
+
+.cgo-chapter-name {
+	font-family: 'Cinzel', Georgia, serif;
+	font-size: clamp(22px, 3vw, 32px);
+	font-weight: 900;
+	color: #ffd97a;
+	text-shadow: 0 0 20px rgba(255, 217, 122, 0.6), 0 4px 14px rgba(0, 0, 0, 0.9);
+	letter-spacing: 0.08em;
+}
+
+/* Difficulty-locked reward badges */
+.cgo-difficulty-bonus {
+	padding: 6px 14px;
+	border-radius: 999px;
+	font-family: 'Cinzel', Georgia, serif;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.cgo-difficulty-bonus.heroic {
+	background: linear-gradient(180deg, rgba(50, 40, 90, 0.85) 0%, rgba(35, 25, 70, 0.92) 100%);
+	border: 1px solid rgba(140, 100, 220, 0.65);
+	color: #c4b0f0;
+	box-shadow: 0 4px 14px rgba(60, 30, 100, 0.5), inset 0 1px 0 rgba(180, 140, 255, 0.2);
+}
+
+.cgo-difficulty-bonus.mythic {
+	background: linear-gradient(180deg, rgba(80, 30, 20, 0.85) 0%, rgba(60, 18, 12, 0.92) 100%);
+	border: 1px solid rgba(255, 140, 60, 0.65);
+	color: #ffc080;
+	box-shadow: 0 4px 14px rgba(120, 40, 10, 0.5), inset 0 1px 0 rgba(255, 180, 100, 0.2);
+}
+
+.cgo-subtitle {
+	font-family: Georgia, serif;
+	font-style: italic;
+	font-size: clamp(16px, 2vw, 22px);
+	color: rgba(245, 232, 198, 0.92);
+	max-width: 720px;
+	text-align: center;
+	line-height: 1.55;
+	margin: 0 0 4px;
+	text-shadow: 0 2px 10px rgba(0, 0, 0, 0.95);
+	padding: 0 16px;
+}
+
+/*
+  The full narrativeAfter epilogue scroll. Parchment-toned background,
+  gilded edge, monastic serif body. Maxed at 720px for legibility.
+*/
+.cgo-narrative-scroll {
+	max-width: 760px;
+	width: calc(100% - 48px);
+	padding: 28px 36px 32px;
+	background: linear-gradient(
+		180deg,
+		rgba(28, 20, 12, 0.92) 0%,
+		rgba(20, 14, 8, 0.94) 100%
+	);
+	border: 1px solid rgba(212, 175, 55, 0.55);
+	border-radius: 8px;
+	box-shadow:
+		0 12px 40px rgba(0, 0, 0, 0.85),
+		0 0 0 1px rgba(0, 0, 0, 0.4),
+		inset 0 1px 0 rgba(212, 175, 55, 0.18);
+	color: #f3e9c8;
+}
+
+.cgo-narrative-scroll p {
+	font-family: Georgia, 'Times New Roman', serif;
+	font-size: clamp(15px, 1.8vw, 18px);
+	line-height: 1.78;
+	color: #ede1bb;
+	margin: 0;
+	text-align: center;
+	font-style: italic;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.cgo-narrative-divider {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-bottom: 18px;
+	color: rgba(212, 175, 55, 0.7);
+	font-size: 22px;
+	text-shadow: 0 0 12px rgba(212, 175, 55, 0.4);
+}
+
+.cgo-narrative-divider::before,
+.cgo-narrative-divider::after {
+	content: '';
+	flex: 1;
+	max-width: 80px;
+	height: 1px;
+	background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.6), transparent);
+	margin: 0 14px;
+}
+
+/* Reward pills row */
+.cgo-rewards {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	justify-content: center;
+}
+
+.cgo-reward-pill {
+	padding: 8px 18px;
+	background: linear-gradient(180deg, rgba(80, 56, 16, 0.85) 0%, rgba(60, 40, 10, 0.92) 100%);
+	border: 1px solid rgba(212, 175, 55, 0.65);
+	border-radius: 999px;
+	color: #ffe6a0;
+	font-family: 'Cinzel', Georgia, serif;
+	font-size: 13px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+	box-shadow:
+		0 4px 14px rgba(0, 0, 0, 0.7),
+		inset 0 1px 0 rgba(255, 220, 140, 0.25);
+}
+
+/* Button row */
+.cgo-buttons {
+	display: flex;
+	gap: 16px;
+	margin-top: 12px;
+	flex-wrap: wrap;
+	justify-content: center;
+}
+
+.cgo-btn-primary {
+	padding: 14px 36px;
+	font-family: 'Cinzel', Georgia, serif;
+	font-size: 15px;
+	font-weight: 700;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	border-radius: 6px;
+	cursor: pointer;
+	transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+	color: #f7eccb;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+	background: linear-gradient(180deg, #b58838 0%, #8b6420 100%);
+	border: 1px solid rgba(255, 220, 140, 0.7);
+	box-shadow:
+		0 6px 22px rgba(120, 80, 20, 0.55),
+		inset 0 1px 0 rgba(255, 220, 140, 0.35);
+}
+
+.cgo-btn-primary:hover {
+	background: linear-gradient(180deg, #c89942 0%, #9d7426 100%);
+	transform: translateY(-1px);
+	box-shadow:
+		0 9px 28px rgba(180, 130, 40, 0.7),
+		inset 0 1px 0 rgba(255, 220, 140, 0.5);
+}
+
+.cgo-btn-primary:active {
+	transform: translateY(1px);
+}
+
+.cgo-btn-retry {
+	padding: 14px 36px;
+	font-family: 'Cinzel', Georgia, serif;
+	font-size: 15px;
+	font-weight: 700;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	border-radius: 6px;
+	cursor: pointer;
+	transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+	color: #f7eccb;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+	background: linear-gradient(180deg, #6e1f1f 0%, #4a1010 100%);
+	border: 1px solid rgba(255, 120, 120, 0.55);
+	box-shadow:
+		0 6px 22px rgba(80, 10, 10, 0.55),
+		inset 0 1px 0 rgba(255, 120, 120, 0.25);
+}
+
+.cgo-btn-retry:hover {
+	background: linear-gradient(180deg, #8a2727 0%, #5c1414 100%);
+	transform: translateY(-1px);
+}
+
+/* PvP rivalry record badge */
+.cgo-rivalry {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 8px 20px;
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 999px;
+	font-family: 'Cinzel', Georgia, serif;
+	font-size: 14px;
+	letter-spacing: 0.06em;
+}
+
+.cgo-rivalry-label {
+	color: rgba(245, 232, 198, 0.7);
+}
+
+.cgo-rivalry-record {
+	font-weight: 700;
+	color: #f3e9c8;
+}
+
+.cgo-rivalry-wins {
+	color: #22c55e;
+}
+
+.cgo-rivalry-losses {
+	color: #ef4444;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.cgo-title.victory { animation: none; }
+}

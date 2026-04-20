@@ -1,0 +1,230 @@
+/* Ranked Ladder Page */
+
+.ladder-container {
+	min-height: 100vh;
+	background: linear-gradient(180deg, #0a0a0f 0%, #121218 50%, #0a0a0f 100%);
+	color: #e5e7eb;
+	font-family: 'Inter', sans-serif;
+}
+
+.ladder-header {
+	background: linear-gradient(180deg, rgba(139, 92, 246, 0.15) 0%, transparent 100%);
+	border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.ladder-title {
+	background: linear-gradient(135deg, #c4b5fd, #a78bfa, #7c3aed);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
+}
+
+.ladder-player-card {
+	background: linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(79, 70, 229, 0.08) 100%);
+	border: 1px solid rgba(139, 92, 246, 0.3);
+	border-radius: 12px;
+	transition: border-color 0.2s;
+}
+
+.ladder-player-card:hover {
+	border-color: rgba(139, 92, 246, 0.5);
+}
+
+.ladder-row {
+	background: rgba(255, 255, 255, 0.02);
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	border-radius: 8px;
+	transition: background 0.2s, border-color 0.2s;
+}
+
+.ladder-row:hover {
+	background: rgba(255, 255, 255, 0.04);
+	border-color: rgba(255, 255, 255, 0.12);
+}
+
+.ladder-row-self {
+	background: rgba(139, 92, 246, 0.08);
+	border-color: rgba(139, 92, 246, 0.25);
+}
+
+.ladder-row-self:hover {
+	background: rgba(139, 92, 246, 0.12);
+	border-color: rgba(139, 92, 246, 0.4);
+}
+
+.ladder-rank-badge {
+	width: 36px;
+	height: 36px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	font-weight: 700;
+	font-size: 14px;
+}
+
+.ladder-rank-1 {
+	background: linear-gradient(135deg, #fbbf24, #f59e0b);
+	color: #451a03;
+	box-shadow: 0 0 12px rgba(251, 191, 36, 0.4);
+}
+
+.ladder-rank-2 {
+	background: linear-gradient(135deg, #9ca3af, #6b7280);
+	color: #1f2937;
+	box-shadow: 0 0 8px rgba(156, 163, 175, 0.3);
+}
+
+.ladder-rank-3 {
+	background: linear-gradient(135deg, #d97706, #b45309);
+	color: #451a03;
+	box-shadow: 0 0 8px rgba(217, 119, 6, 0.3);
+}
+
+.ladder-rank-default {
+	background: rgba(255, 255, 255, 0.06);
+	color: #9ca3af;
+}
+
+.ladder-elo {
+	font-variant-numeric: tabular-nums;
+	font-weight: 600;
+	color: #c4b5fd;
+}
+
+.ladder-winrate-bar {
+	height: 4px;
+	border-radius: 2px;
+	background: rgba(255, 255, 255, 0.06);
+	overflow: hidden;
+}
+
+.ladder-winrate-fill {
+	height: 100%;
+	border-radius: 2px;
+	transition: width 0.3s ease;
+}
+
+.ladder-stat-label {
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	color: #6b7280;
+}
+
+.ladder-stat-value {
+	font-variant-numeric: tabular-nums;
+	font-weight: 600;
+}
+
+.ladder-empty-state {
+	color: #6b7280;
+	text-align: center;
+	padding: 4rem 2rem;
+}
+
+.ladder-tab {
+	padding: 8px 20px;
+	border-radius: 6px;
+	font-size: 14px;
+	font-weight: 500;
+	cursor: pointer;
+	transition: background 0.2s, color 0.2s;
+	color: #9ca3af;
+	background: transparent;
+	border: 1px solid transparent;
+}
+
+.ladder-tab:hover {
+	color: #e5e7eb;
+	background: rgba(255, 255, 255, 0.04);
+}
+
+.ladder-tab-active {
+	color: #c4b5fd;
+	background: rgba(139, 92, 246, 0.12);
+	border-color: rgba(139, 92, 246, 0.3);
+}
+
+.ladder-match-row {
+	background: rgba(255, 255, 255, 0.02);
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	border-radius: 8px;
+	padding: 12px 16px;
+}
+
+.ladder-match-win {
+	border-left: 3px solid #22c55e;
+}
+
+.ladder-match-loss {
+	border-left: 3px solid #ef4444;
+}
+
+/* Season Banner */
+.ladder-season-banner {
+	margin: 0 24px 4px;
+	padding: 14px 20px;
+	background: linear-gradient(135deg, rgba(217, 119, 6, 0.12) 0%, rgba(180, 83, 9, 0.08) 100%);
+	border: 1px solid rgba(217, 119, 6, 0.25);
+	border-top: 2px solid rgba(251, 191, 36, 0.5);
+	border-radius: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	flex-wrap: wrap;
+}
+
+.ladder-season-name {
+	font-size: 15px;
+	font-weight: 700;
+	background: linear-gradient(135deg, #fbbf24, #d97706);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
+}
+
+.ladder-season-number {
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 1px;
+	color: #92702a;
+	font-weight: 600;
+}
+
+.ladder-season-stats {
+	display: flex;
+	align-items: center;
+	gap: 20px;
+}
+
+.ladder-season-stat {
+	text-align: center;
+}
+
+.ladder-season-stat-label {
+	font-size: 10px;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	color: rgba(217, 119, 6, 0.6);
+}
+
+.ladder-season-stat-value {
+	font-size: 15px;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+	color: #fbbf24;
+}
+
+.ladder-season-timer {
+	font-size: 12px;
+	color: #92702a;
+	font-variant-numeric: tabular-nums;
+}
+
+.ladder-season-preseason {
+	font-size: 12px;
+	color: #6b7280;
+	font-style: italic;
+}

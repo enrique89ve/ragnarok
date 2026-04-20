@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <!-- Background -->
+  <rect width="800" height="600" fill="#59421f" />
+  
+  <!-- Wood grain pattern -->
+  <filter id="wood-texture">
+    <feTurbulence type="fractalNoise" baseFrequency="0.01" numOctaves="3" result="noise" />
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="5" />
+  </filter>
+  
+  <rect width="800" height="600" filter="url(#wood-texture)" fill="#8B4513" opacity="0.3" />
+  
+  <!-- Battlefield divider line -->
+  <rect x="0" y="299" width="800" height="2" fill="#b45309" />
+  
+  <!-- Corner decorations -->
+  <g fill="#b45309" opacity="0.7">
+    <!-- Top left corner -->
+    <path d="M20 20 L100 20 L100 25 L25 25 L25 100 L20 100 Z" />
+    <!-- Top right corner -->
+    <path d="M780 20 L700 20 L700 25 L775 25 L775 100 L780 100 Z" />
+    <!-- Bottom left corner -->
+    <path d="M20 580 L100 580 L100 575 L25 575 L25 500 L20 500 Z" />
+    <!-- Bottom right corner -->
+    <path d="M780 580 L700 580 L700 575 L775 575 L775 500 L780 500 Z" />
+  </g>
+  
+  <!-- Battlefield markings -->
+  <circle cx="400" cy="300" r="30" fill="none" stroke="#b45309" stroke-width="2" opacity="0.5" />
+  <circle cx="400" cy="300" r="80" fill="none" stroke="#b45309" stroke-width="1" opacity="0.3" />
+</svg>

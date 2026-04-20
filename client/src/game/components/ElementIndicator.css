@@ -1,0 +1,244 @@
+.element-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  position: relative;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.element-indicator-small {
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+}
+
+.element-indicator-medium {
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+}
+
+.element-indicator-large {
+  width: 48px;
+  height: 48px;
+  font-size: 24px;
+}
+
+.element-icon {
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+
+.element-label {
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.element-effect {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.element-indicator.animated .element-effect-fire {
+  background: radial-gradient(circle at 50% 80%, #ff4500 0%, transparent 60%);
+  animation: fire-flicker 0.5s ease-in-out infinite alternate;
+}
+
+.element-indicator.animated .element-effect-water {
+  background: radial-gradient(circle at 50% 20%, rgba(0, 191, 255, 0.5) 0%, transparent 70%);
+  animation: water-ripple 2s ease-in-out infinite;
+}
+
+.element-indicator.animated .element-effect-wind {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(50, 205, 50, 0.4) 60deg,
+    transparent 120deg,
+    rgba(50, 205, 50, 0.3) 180deg,
+    transparent 240deg,
+    rgba(50, 205, 50, 0.35) 300deg,
+    transparent 360deg
+  );
+  animation: wind-swirl 3s linear infinite;
+}
+
+.element-indicator.animated .element-effect-earth {
+  background: radial-gradient(circle at 30% 70%, rgba(139, 69, 19, 0.4) 0%, transparent 50%),
+              radial-gradient(circle at 70% 30%, rgba(139, 69, 19, 0.3) 0%, transparent 50%);
+  animation: earth-pulse 2s ease-in-out infinite;
+}
+
+.element-indicator.animated .element-effect-holy {
+  background: radial-gradient(circle at 50% 50%, rgba(255, 215, 0, 0.6) 0%, transparent 70%);
+  animation: holy-glow 1.5s ease-in-out infinite alternate;
+}
+
+.element-indicator.animated .element-effect-shadow {
+  background: radial-gradient(circle at 50% 50%, rgba(75, 0, 130, 0.6) 0%, transparent 70%);
+  animation: shadow-pulse 2s ease-in-out infinite;
+}
+
+@keyframes fire-flicker {
+  0% { 
+    opacity: 0.8; 
+    transform: scale(1) translateY(0);
+  }
+  100% { 
+    opacity: 1; 
+    transform: scale(1.1) translateY(-2px);
+  }
+}
+
+@keyframes water-ripple {
+  0%, 100% { 
+    transform: scale(0.9); 
+    opacity: 0.5;
+  }
+  50% { 
+    transform: scale(1.1); 
+    opacity: 0.8;
+  }
+}
+
+@keyframes wind-swirl {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes earth-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes holy-glow {
+  0% { 
+    opacity: 0.5;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+  }
+  100% { 
+    opacity: 1;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+  }
+}
+
+@keyframes shadow-pulse {
+  0%, 100% { 
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+.element-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.element-badge-icon {
+  font-size: 12px;
+}
+
+.element-badge-label {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.element-aura {
+  position: relative;
+}
+
+.element-aura-effect {
+  position: absolute;
+  inset: calc(-4px * var(--intensity, 1));
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+  opacity: var(--intensity, 1);
+}
+
+.element-aura-fire-effect {
+  background: radial-gradient(ellipse at center bottom, rgba(255, 69, 0, 0.4) 0%, transparent 70%);
+  animation: aura-fire 0.8s ease-in-out infinite alternate;
+}
+
+.element-aura-water-effect {
+  background: radial-gradient(ellipse at center, rgba(30, 144, 255, 0.3) 0%, transparent 70%);
+  animation: aura-water 2s ease-in-out infinite;
+}
+
+.element-aura-wind-effect {
+  border: 2px dashed rgba(50, 205, 50, 0.5);
+  animation: aura-wind 4s linear infinite;
+}
+
+.element-aura-earth-effect {
+  border: 3px solid rgba(139, 69, 19, 0.4);
+  box-shadow: inset 0 0 10px rgba(139, 69, 19, 0.3);
+}
+
+.element-aura-holy-effect {
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.5), inset 0 0 10px rgba(255, 215, 0, 0.2);
+  animation: aura-holy 1.5s ease-in-out infinite alternate;
+}
+
+.element-aura-shadow-effect {
+  box-shadow: 0 0 20px rgba(75, 0, 130, 0.5), inset 0 0 10px rgba(75, 0, 130, 0.3);
+  animation: aura-shadow 2s ease-in-out infinite;
+}
+
+@keyframes aura-fire {
+  0% { opacity: 0.6; transform: scaleY(1); }
+  100% { opacity: 1; transform: scaleY(1.1); }
+}
+
+@keyframes aura-water {
+  0%, 100% { opacity: 0.4; transform: scale(0.95); }
+  50% { opacity: 0.7; transform: scale(1.05); }
+}
+
+@keyframes aura-wind {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes aura-holy {
+  0% { box-shadow: 0 0 15px rgba(255, 215, 0, 0.4); }
+  100% { box-shadow: 0 0 30px rgba(255, 215, 0, 0.7); }
+}
+
+@keyframes aura-shadow {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.8; }
+}
+
+.element-fire { box-shadow: 0 0 12px #ff4500, 0 0 24px rgba(255, 69, 0, 0.5); }
+.element-water { box-shadow: 0 0 12px #1e90ff, 0 0 24px rgba(30, 144, 255, 0.5); }
+.element-wind { box-shadow: 0 0 12px #32cd32, 0 0 24px rgba(50, 205, 50, 0.5); }
+.element-earth { box-shadow: 0 0 12px #8b4513, 0 0 24px rgba(139, 69, 19, 0.5); }
+.element-holy { box-shadow: 0 0 12px #ffd700, 0 0 24px rgba(255, 215, 0, 0.5); }
+.element-shadow { box-shadow: 0 0 12px #9932cc, 0 0 24px rgba(153, 50, 204, 0.5); }
+.element-neutral { box-shadow: 0 0 8px #808080; }

@@ -1,0 +1,90 @@
+.targeting-prompt {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: var(--z-targeting, 5000);
+  background: var(--targeting-bg, linear-gradient(135deg, rgba(0,0,0,0.9) 0%, rgba(40,0,60,0.9) 100%));
+  border: 3px solid var(--color-primary, #f59e0b);
+  border-radius: var(--radius-lg, 12px);
+  padding: 20px 40px;
+  max-width: calc(100% - 32px);
+  box-shadow: 0 0 60px rgba(245,158,11,0.8), inset 0 0 30px rgba(245,158,11,0.3);
+  text-align: center;
+  pointer-events: auto;
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+.targeting-prompt.hero-power-targeting {
+  background: var(--hero-power-bg, linear-gradient(135deg, rgba(0,0,0,0.9) 0%, rgba(60,20,80,0.9) 100%));
+  border-color: var(--color-hero-power, #a855f7);
+  box-shadow: 0 0 40px rgba(168,85,247,0.5), inset 0 0 20px rgba(168,85,247,0.2);
+  pointer-events: auto;
+}
+
+.targeting-prompt-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--color-primary, #f59e0b);
+  text-shadow: 0 0 10px rgba(245,158,11,0.8);
+  margin-bottom: 8px;
+}
+
+.hero-power-targeting .targeting-prompt-title {
+  color: var(--color-hero-power, #a855f7);
+  text-shadow: 0 0 10px rgba(168,85,247,0.8);
+}
+
+.targeting-prompt-message {
+  font-size: 16px;
+  color: var(--color-accent, #fbbf24);
+  opacity: 0.9;
+}
+
+.hero-power-targeting .targeting-prompt-message {
+  color: var(--color-hero-power-light, #c084fc);
+}
+
+.targeting-prompt-hint {
+  font-size: 14px;
+  color: var(--color-text-muted, #9ca3af);
+  margin-top: 12px;
+}
+
+.targeting-cancel-btn {
+  margin-top: 16px;
+  padding: 8px 24px;
+  background: rgba(239,68,68,0.8);
+  border: none;
+  border-radius: var(--radius-sm, 6px);
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.2s;
+}
+
+.targeting-cancel-btn:hover {
+  background: rgba(239,68,68,1);
+}
+
+@keyframes pulse-glow {
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 0.9; }
+  50% { transform: translate(-50%, -50%) scale(1.02); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 0.9; }
+}
+
+.targeting-cancel-btn:focus-visible {
+  outline: 2px solid var(--color-gold, #ffd700);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .targeting-prompt {
+    animation: none;
+  }
+
+  .targeting-cancel-btn {
+    transition: none;
+  }
+}

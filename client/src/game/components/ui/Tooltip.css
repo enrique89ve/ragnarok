@@ -1,0 +1,156 @@
+.portal-tooltip {
+  position: fixed;
+  z-index: var(--z-tooltip, 9000);
+  pointer-events: auto;
+  max-width: 320px;
+  animation: tooltip-fade-in 0.15s ease-out;
+}
+
+@keyframes tooltip-fade-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -100%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -100%) scale(1);
+  }
+}
+
+.portal-tooltip--bottom {
+  animation-name: tooltip-fade-in-bottom;
+}
+
+@keyframes tooltip-fade-in-bottom {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.portal-tooltip-content {
+  background: rgba(0, 0, 0, 0.95);
+  border: 2px solid #3b82f6;
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: white;
+  font-size: 13px;
+  line-height: 1.4;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+.portal-tooltip-header {
+  font-weight: bold;
+  color: #3b82f6;
+  font-size: 14px;
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.portal-tooltip-cost {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  color: white;
+}
+
+.portal-tooltip-description {
+  color: #e5e7eb;
+  margin-bottom: 6px;
+}
+
+.portal-tooltip-meta {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.portal-tooltip-divider {
+  border-top: 1px solid #374151;
+  margin: 10px 0;
+  padding-top: 10px;
+}
+
+.portal-tooltip-upgrade-header {
+  font-weight: bold;
+  font-size: 13px;
+  margin-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.portal-tooltip-upgrade-header--available {
+  color: #f59e0b;
+}
+
+.portal-tooltip-upgrade-header--complete {
+  color: #22c55e;
+}
+
+.portal-tooltip-upgrade-cost {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  color: white;
+}
+
+.portal-tooltip-upgrade-cost--disabled {
+  background: linear-gradient(135deg, #4b5563, #374151);
+}
+
+.portal-tooltip-upgrade-effect {
+  font-size: 12px;
+  color: #e5e7eb;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.portal-tooltip-upgrade-note {
+  font-size: 11px;
+  color: #22c55e;
+  margin-bottom: 8px;
+}
+
+.portal-tooltip-upgrade-button {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  font-weight: bold;
+  font-size: 12px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.portal-tooltip-upgrade-button:hover:not(:disabled) {
+  transform: scale(1.02);
+  box-shadow: 0 2px 10px rgba(239, 68, 68, 0.5);
+}
+
+.portal-tooltip-upgrade-button:disabled {
+  background: linear-gradient(135deg, #4b5563, #374151);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.portal-tooltip-upgraded-text {
+  font-size: 12px;
+  color: #22c55e;
+  font-style: italic;
+}
+
+.tooltip-trigger {
+  display: contents;
+}

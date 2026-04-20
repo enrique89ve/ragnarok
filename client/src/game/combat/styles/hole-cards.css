@@ -1,0 +1,303 @@
+/* Hole Cards - Player and opponent hand cards */
+
+/* ========================================
+   POKER-SITE STYLE: Half-visible cards with overlapping bars
+   ======================================== */
+
+:is(.opponent-hole-cards, .player-hole-cards) {
+  display: flex;
+  gap: 0; /* Overlap handled by negative margins below */
+  overflow: visible;
+  padding: 0;
+  position: relative;
+  z-index: 1;
+}
+
+/* Player cards: show top 75%, HP bars overlap bottom */
+.player-hole-cards {
+  margin-bottom: -35px; /* Cards extend into bar area */
+}
+
+/* Opponent cards: show top 75%, HP bars overlap bottom */
+.opponent-hole-cards {
+  margin-bottom: -30px;
+}
+
+/* ========================================
+   NORSE POKER CARDS - Enlarged for readability (30% larger)
+   ======================================== */
+
+.arena-poker-card.norse {
+  width: 100px;
+  height: 140px;
+  background: linear-gradient(145deg, #e8dcc4 0%, #d4c4a8 50%, #c4b494 100%);
+  border-radius: 8px;
+  position: relative;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.5),
+    inset 0 0 25px rgba(139, 90, 43, 0.15),
+    0 0 0 1px rgba(139, 90, 43, 0.3),
+    0 0 15px rgba(147, 112, 219, 0.4),
+    0 0 30px rgba(138, 43, 226, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+}
+
+.arena-poker-card.norse::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0L40 20L20 40L0 20z' fill='rgba(139,90,43,0.04)'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+.arena-poker-card.norse:hover {
+  transform: translateY(-5px) scale(1.05);
+  box-shadow: 
+    0 12px 25px rgba(0, 0, 0, 0.5),
+    0 0 25px rgba(147, 112, 219, 0.6),
+    0 0 40px rgba(138, 43, 226, 0.4),
+    inset 0 0 25px rgba(139, 90, 43, 0.2);
+}
+
+/* Large variant - hole cards */
+.arena-poker-card.norse.large {
+  width: 144px;
+  height: 202px;
+}
+
+.arena-poker-card.norse.face-down {
+  background: linear-gradient(145deg, #2a3a2a 0%, #1a2a1a 50%, #0f1a0f 100%);
+  border: 2px solid #4d6a4d;
+}
+
+/* ========================================
+   CARD BORDER AND DECORATIONS
+   ======================================== */
+
+.arena-poker-card .norse-border {
+  position: absolute;
+  inset: 4px;
+  border: 2px solid rgba(139, 90, 43, 0.5);
+  border-radius: 5px;
+  pointer-events: none;
+}
+
+.arena-poker-card .norse-border::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border: 1px solid rgba(139, 90, 43, 0.25);
+  border-radius: 4px;
+}
+
+.arena-poker-card .corner-rune {
+  position: absolute;
+  font-size: 9px;
+  color: rgba(75, 85, 70, 0.35);
+  font-family: serif;
+}
+
+.arena-poker-card .corner-rune.top-left { top: -2px; left: -2px; }
+.arena-poker-card .corner-rune.top-right { top: -2px; right: -2px; transform: rotate(90deg); }
+.arena-poker-card .corner-rune.bottom-left { bottom: -2px; left: -2px; transform: rotate(-90deg); }
+.arena-poker-card .corner-rune.bottom-right { bottom: -2px; right: -2px; transform: rotate(180deg); }
+
+/* ========================================
+   CARD INNER STRUCTURE
+   ======================================== */
+
+.arena-poker-card .card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.arena-poker-card .card-back {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 6px;
+}
+
+.arena-poker-card .norse-pattern {
+  width: 85%;
+  height: 85%;
+  background: 
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 4px,
+      rgba(61, 90, 61, 0.35) 4px,
+      rgba(61, 90, 61, 0.35) 5px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 4px,
+      rgba(61, 90, 61, 0.35) 4px,
+      rgba(61, 90, 61, 0.35) 5px
+    );
+  border-radius: 5px;
+  border: 2px solid #5d7a5d;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.arena-poker-card .valknut {
+  font-size: 28px;
+  color: #7b9b7b;
+  text-shadow: 0 0 12px rgba(107, 139, 107, 0.6);
+}
+
+/* ========================================
+   CARD CORNERS AND VALUES
+   ======================================== */
+
+.arena-poker-card .card-corner {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-weight: bold;
+  line-height: 1;
+  gap: 1px;
+}
+
+.arena-poker-card .card-corner.top-left {
+  top: 8px;
+  left: 8px;
+}
+
+.arena-poker-card .card-corner.bottom-right {
+  bottom: 8px;
+  right: 8px;
+  transform: rotate(180deg);
+}
+
+.arena-poker-card .card-value {
+  font-size: 1.6rem;
+  font-weight: 900;
+  font-family: 'Cinzel', 'Times New Roman', serif;
+  text-shadow: 1px 1px 0 rgba(255,255,255,0.6), 0 0 4px rgba(0,0,0,0.3);
+  background: rgba(255, 255, 255, 0.85);
+  padding: 1px 4px;
+  border-radius: 3px;
+  line-height: 1.1;
+}
+
+.arena-poker-card .card-rune {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  margin-top: 2px;
+}
+
+/* ========================================
+   CARD CENTER SYMBOL
+   ======================================== */
+
+.arena-poker-card .card-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.arena-poker-card .norse-symbol-large {
+  font-size: 2.8rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-shadow: 
+    0 2px 5px rgba(0,0,0,0.25),
+    0 0 12px currentColor;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.35));
+}
+
+.arena-poker-card .face-card-symbol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.arena-poker-card .face-rune {
+  font-size: 1rem;
+  opacity: 0.75;
+}
+
+/* ========================================
+   LARGE CARD VARIANT SIZES
+   ======================================== */
+
+.arena-poker-card.norse.large .card-value {
+  font-size: 2.2rem;
+}
+
+.arena-poker-card.norse.large .card-rune {
+  font-size: 1.2rem;
+}
+
+.arena-poker-card.norse.large .norse-symbol-large {
+  font-size: 4rem;
+}
+
+/* ========================================
+   CARD SUIT VARIANTS
+   ======================================== */
+
+.arena-poker-card.norse.spades { --suit-accent: #2d4a3d; }
+.arena-poker-card.norse.hearts { --suit-accent: #8b3a3a; }
+.arena-poker-card.norse.diamonds { --suit-accent: #5c4a2a; }
+.arena-poker-card.norse.clubs { --suit-accent: #3a4a5c; }
+
+.arena-poker-card.norse .card-inner {
+  color: var(--suit-accent, #2d4a3d);
+}
+
+/* ========================================
+   ACTIVE TURN GLOW & PULSE
+   Shows whose turn it is to act
+   ======================================== */
+
+@keyframes activeTurnPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Player's turn — gold glow on their hole cards */
+.hole-cards.active-turn .arena-poker-card,
+.hole-cards.active-turn .poker-card,
+.hole-cards-active-turn .arena-poker-card,
+.hole-cards-active-turn .poker-card {
+  animation: activeTurnPulse 2s ease-in-out infinite;
+  border-color: rgba(251, 191, 36, 0.6);
+  box-shadow:
+    0 0 20px rgba(251, 191, 36, 0.7),
+    0 0 40px rgba(251, 191, 36, 0.35),
+    0 0 0 2px rgba(251, 191, 36, 0.5);
+}
+
+/* Opponent's turn — red glow on their hole cards */
+@keyframes opponentTurnPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.opponent-section.active-turn .pet-card,
+.hole-cards-active-turn .arena-poker-card.norse.face-down,
+.hole-cards-active-turn .poker-card.norse.face-down {
+  animation: opponentTurnPulse 2s ease-in-out infinite;
+  border-color: rgba(239, 68, 68, 0.6);
+  box-shadow:
+    0 0 20px rgba(239, 68, 68, 0.7),
+    0 0 40px rgba(239, 68, 68, 0.35),
+    0 0 0 2px rgba(239, 68, 68, 0.5);
+}

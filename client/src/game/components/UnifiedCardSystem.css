@@ -1,0 +1,69 @@
+/* 
+ * UnifiedCardSystem.css
+ * 
+ * Legacy GameBoard-specific CSS overrides.
+ * SCOPED to .game-board only - does NOT apply to RagnarokCombatArena.
+ * 
+ * General battlefield and pointer-events styles are in UnifiedBattlefield.css.
+ */
+
+/* ========================================
+   Legacy GameBoard Hover Overrides
+   ======================================== */
+
+/* Force-disable CSS hover effects in legacy GameBoard - use JS control instead */
+.game-board .card:hover,
+.game-board .battlefield-card:hover,
+.game-board .card-with-drag:hover {
+  transform: none !important;
+  z-index: auto !important;
+}
+
+/* JS-controlled hover class in legacy GameBoard */
+.game-board .card.card-hover,
+.game-board .battlefield-card.card-hover,
+.game-board .card-with-drag.card-hover {
+  transform: scale(1.15) translateY(-10px) !important;
+  z-index: 1000 !important;
+  transition: transform 0.2s ease-out !important;
+}
+
+/* ========================================
+   Legacy GameBoard Pointer Events
+   ======================================== */
+
+.game-board .player-battlefield-zone,
+.game-board .opponent-battlefield-zone,
+.game-board .battlefield-row {
+  pointer-events: none !important;
+}
+
+.game-board .battlefield-card-wrapper {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  pointer-events: none !important;
+}
+
+.game-board .battlefield-card {
+  pointer-events: auto !important;
+  height: 140px !important;
+  width: auto !important;
+  margin: 0 auto !important;
+  box-sizing: border-box !important;
+}
+
+/* ========================================
+   Disable Competing Hover Systems
+   ======================================== */
+
+.card-hover-blocker,
+.hover-interceptor,
+.hover-fix,
+.pointer-events-fix,
+.card-hitbox-resolver,
+.card-slot-fix,
+.battlefield-hover-interceptor,
+.player-area-hover-blocker {
+  display: none !important;
+}

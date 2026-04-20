@@ -1,0 +1,72 @@
+{
+  "editor.rulers": [100],
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "files.associations": {
+    "DEVELOPMENT_RULES.md": "markdown"
+  },
+  "editor.snippets": [
+    {
+      "name": "Insert Bug Memory Entry",
+      "description": "Insert a properly formatted bug memory entry",
+      "prefix": "bugmemory",
+      "body": [
+        "### ${1:component}-${2:number} [${3:YYYY-MM-DD}] ${4:Title}",
+        "**Status**: ${5:Fixed|Open|In Progress}",
+        "**Component**: ${6:Component Name}",
+        "**Priority**: ${7:High|Medium|Low}",
+        "**Tags**: ${8:#tag1 #tag2}",
+        "**Files Affected**: ",
+        "- `${9:filepath}`",
+        "",
+        "**Description**: ${10:Detailed description of the issue}",
+        "",
+        "**Root Cause**: ${11:Explanation of what caused the issue}",
+        "",
+        "**Solution**: ",
+        "1. ${12:First step of the solution}",
+        "",
+        "**Verification**: ",
+        "- ${13:How the fix was verified}",
+        "",
+        "**Related Issues**: ${14:related-issue-references}"
+      ]
+    }
+  ],
+  "javascript.suggest.completeFunctionCalls": true,
+  "typescript.suggest.completeFunctionCalls": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "files.autoSave": "onFocusChange",
+  "workbench.colorCustomizations": {
+    "editorRuler.foreground": "#ff333333"
+  },
+  "eslint.validate": [
+    "javascript",
+    "typescript",
+    "javascriptreact",
+    "typescriptreact"
+  ],
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.git": true
+  },
+  "editor.quickSuggestions": {
+    "strings": true
+  },
+  "javascript.updateImportsOnFileMove.enabled": "always",
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "eslint.options": {
+    "rulePaths": ["./eslint-rules"]
+  },
+  "claudeCode.allowDangerouslySkipPermissions": true,
+  "claudeCode.disableLoginPrompt": true
+}

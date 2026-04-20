@@ -1,0 +1,161 @@
+/* Element Matchup Banner - Shown at poker combat start */
+
+.element-matchup-overlay {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: var(--z-cinematic);
+	pointer-events: none;
+	background: radial-gradient(ellipse at center, rgba(0,0,0,0.5) 0%, transparent 70%);
+}
+
+.element-matchup-banner {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	padding: 24px 48px;
+	background: linear-gradient(180deg, rgba(10,10,20,0.95) 0%, rgba(20,15,30,0.92) 100%);
+	border-top: 2px solid rgba(255,255,255,0.15);
+	border-bottom: 2px solid rgba(255,255,255,0.15);
+	min-width: 420px;
+	position: relative;
+	overflow: hidden;
+}
+
+.element-matchup-banner::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 120px;
+	pointer-events: none;
+	left: 0;
+	background: linear-gradient(90deg, rgba(255,255,255,0.04), transparent);
+}
+
+.element-matchup-banner::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 120px;
+	pointer-events: none;
+	right: 0;
+	background: linear-gradient(-90deg, rgba(255,255,255,0.04), transparent);
+}
+
+/* Decorative lines */
+.matchup-line {
+	position: absolute;
+	top: 50%;
+	height: 1px;
+	width: 80px;
+	transform: translateY(-50%);
+}
+
+.matchup-line.left {
+	left: 12px;
+	background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3));
+}
+
+.matchup-line.right {
+	right: 12px;
+	background: linear-gradient(-90deg, transparent, rgba(255,255,255,0.3));
+}
+
+/* Element icons row */
+.matchup-elements {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	font-size: 1.4rem;
+}
+
+.matchup-element-badge {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 14px;
+	border-radius: 8px;
+	background: rgba(0,0,0,0.4);
+	border: 1px solid var(--element-color, rgba(255,255,255,0.2));
+	box-shadow: 0 0 12px var(--element-glow, transparent);
+}
+
+.matchup-element-icon {
+	font-size: 1.6rem;
+	filter: drop-shadow(0 0 4px var(--element-glow, transparent));
+}
+
+.matchup-element-name {
+	font-size: 0.9rem;
+	font-weight: 700;
+	letter-spacing: 1px;
+	text-transform: uppercase;
+	color: var(--element-color, #fff);
+}
+
+.matchup-vs {
+	font-size: 1rem;
+	font-weight: 800;
+	color: rgba(255,255,255,0.5);
+	letter-spacing: 2px;
+	text-transform: uppercase;
+}
+
+/* Advantage text */
+.matchup-result {
+	font-size: 1.1rem;
+	font-weight: 800;
+	letter-spacing: 3px;
+	text-transform: uppercase;
+}
+
+.matchup-result.advantage {
+	color: #4ade80;
+	text-shadow: 0 0 12px rgba(74, 222, 128, 0.6);
+}
+
+.matchup-result.disadvantage {
+	color: #ef4444;
+	text-shadow: 0 0 12px rgba(239, 68, 68, 0.6);
+}
+
+.matchup-result.neutral {
+	color: rgba(255,255,255,0.4);
+	text-shadow: none;
+	letter-spacing: 2px;
+	font-size: 0.95rem;
+}
+
+/* Bonus details */
+.matchup-bonuses {
+	display: flex;
+	gap: 16px;
+	font-size: 0.85rem;
+	font-weight: 700;
+}
+
+.matchup-bonuses.advantage-bonuses span {
+	color: #fbbf24;
+	text-shadow: 0 0 6px rgba(251, 191, 36, 0.4);
+}
+
+.matchup-bonuses.disadvantage-bonuses span {
+	color: #f87171;
+	font-weight: 600;
+	font-size: 0.8rem;
+}
+
+.matchup-result.mutual {
+	color: #c084fc;
+	text-shadow: 0 0 12px rgba(192, 132, 252, 0.6);
+}
+
+.matchup-bonuses.mutual-bonuses span {
+	color: #c084fc;
+	text-shadow: 0 0 6px rgba(192, 132, 252, 0.4);
+}

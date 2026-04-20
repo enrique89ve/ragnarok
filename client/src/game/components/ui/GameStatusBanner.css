@@ -1,0 +1,65 @@
+.game-status-banner-container {
+	position: absolute;
+	top: 45%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	pointer-events: none;
+	z-index: 9200;
+}
+
+.game-status-banner {
+	padding: 8px 24px;
+	border-radius: 8px;
+	font-family: 'Cinzel', serif;
+	font-size: 18px;
+	font-weight: 800;
+	letter-spacing: 0.5px;
+	white-space: nowrap;
+	opacity: 0;
+	transform: translateY(8px) scale(0.95);
+	transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+	text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+}
+
+.game-status-banner.banner-enter {
+	opacity: 1;
+	transform: translateY(0) scale(1);
+}
+
+.game-status-banner.banner-exit {
+	opacity: 0;
+	transform: translateY(-6px) scale(0.97);
+	transition: opacity 0.5s ease-in, transform 0.5s ease-in;
+}
+
+.banner-info {
+	background: linear-gradient(135deg, rgba(40, 60, 100, 0.92), rgba(30, 45, 80, 0.92));
+	border: 1px solid rgba(100, 160, 255, 0.4);
+	color: #c8dfff;
+	box-shadow: 0 2px 12px rgba(50, 100, 200, 0.3);
+}
+
+.banner-error {
+	background: linear-gradient(135deg, rgba(100, 20, 20, 0.92), rgba(80, 15, 15, 0.92));
+	border: 1px solid rgba(255, 80, 80, 0.5);
+	color: #ffb0b0;
+	box-shadow: 0 2px 12px rgba(200, 40, 40, 0.3);
+}
+
+.banner-success {
+	background: linear-gradient(135deg, rgba(20, 80, 40, 0.92), rgba(15, 60, 30, 0.92));
+	border: 1px solid rgba(80, 220, 120, 0.4);
+	color: #b0ffc8;
+	box-shadow: 0 2px 12px rgba(40, 180, 80, 0.3);
+}
+
+.banner-warning {
+	background: linear-gradient(135deg, rgba(100, 70, 10, 0.92), rgba(80, 55, 8, 0.92));
+	border: 1px solid rgba(255, 200, 60, 0.5);
+	color: #ffe8a0;
+	box-shadow: 0 2px 12px rgba(200, 160, 30, 0.3);
+}

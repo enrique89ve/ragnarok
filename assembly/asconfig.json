@@ -1,0 +1,24 @@
+{
+  "targets": {
+    "release": {
+      "outFile": "client/public/engine.wasm",
+      "textFile": "client/public/engine.wat",
+      "optimize": true,
+      "noAssert": true,
+      "runtime": "stub",
+      "exportRuntime": true
+    },
+    "debug": {
+      "outFile": "client/public/engine.wasm",
+      "textFile": "client/public/engine.wat",
+      "debug": true,
+      "runtime": "stub",
+      "exportRuntime": true
+    }
+  },
+  "options": {
+    "bindings": "esm",
+    "exportStart": "_start"
+  },
+  "entries": ["assembly/index.ts"]
+}

@@ -1,0 +1,94 @@
+/**
+ * Spell Screen Effects — Full-screen tints applied during spell compositions.
+ * Applied to .game-viewport via GSAP addClass/removeClass.
+ * All use ::after pseudo for zero-layout-impact overlay.
+ */
+
+.game-viewport.screen-freeze::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(ellipse at center, transparent 30%, rgba(0, 120, 255, 0.15) 100%);
+	pointer-events: none;
+	z-index: 100;
+	opacity: 1;
+	transition: opacity 0.3s ease;
+}
+
+.game-viewport.screen-burn::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(ellipse at center, rgba(255, 80, 0, 0.12) 0%, rgba(255, 40, 0, 0.2) 100%);
+	pointer-events: none;
+	z-index: 100;
+	opacity: 1;
+	transition: opacity 0.3s ease;
+}
+
+.game-viewport.screen-holy::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(ellipse at center, rgba(255, 215, 0, 0.1) 0%, rgba(255, 255, 255, 0.08) 100%);
+	pointer-events: none;
+	z-index: 100;
+	opacity: 1;
+	transition: opacity 0.3s ease;
+}
+
+.game-viewport.screen-shadow::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(ellipse at center, transparent 20%, rgba(60, 0, 80, 0.25) 100%);
+	pointer-events: none;
+	z-index: 100;
+	opacity: 1;
+	transition: opacity 0.3s ease;
+}
+
+.game-viewport.screen-nature::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(ellipse at center, rgba(76, 175, 80, 0.06) 0%, rgba(30, 100, 30, 0.12) 100%);
+	pointer-events: none;
+	z-index: 100;
+	opacity: 1;
+	transition: opacity 0.3s ease;
+}
+
+.game-viewport.screen-lightning::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: rgba(255, 255, 255, 0.25);
+	pointer-events: none;
+	z-index: 100;
+	opacity: 1;
+	transition: opacity 0.15s ease;
+}
+
+.game-viewport.screen-blood::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(ellipse at center, rgba(180, 0, 0, 0.1) 0%, rgba(100, 0, 0, 0.2) 100%);
+	pointer-events: none;
+	z-index: 100;
+	opacity: 1;
+	transition: opacity 0.3s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.game-viewport.screen-freeze::after,
+	.game-viewport.screen-burn::after,
+	.game-viewport.screen-holy::after,
+	.game-viewport.screen-shadow::after,
+	.game-viewport.screen-nature::after,
+	.game-viewport.screen-lightning::after,
+	.game-viewport.screen-blood::after {
+		display: none;
+	}
+}

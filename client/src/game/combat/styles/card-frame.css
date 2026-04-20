@@ -1,0 +1,149 @@
+/* Card Frame - AAA Quality Ornate Design */
+
+/* ========================================
+   ORNATE CARD FRAME - AAA Quality Design
+   Metallic textures with aged patina
+   ======================================== */
+
+/* Wrapper for external glow effects */
+.hero-card-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.hero-card-frame {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  /* Obsidian + iron material from design tokens */
+  background: linear-gradient(160deg,
+    var(--ui-iron-mid) 0%,
+    var(--ui-iron-dark) 38%,
+    var(--ui-iron-darkest) 100%);
+  border: 3px solid transparent;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  transition: transform 0.3s ease, opacity 0.3s ease, box-shadow 0.3s ease;
+  isolation: isolate;
+}
+
+/* Engraved tarnished-gold metallic border (carved, not glossy) */
+.hero-card-frame::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 14px;
+  background: linear-gradient(145deg,
+    var(--ui-gold-warm) 0%,
+    var(--ui-gold-deep) 22%,
+    var(--ui-gold-bright) 50%,
+    var(--ui-gold-deep) 78%,
+    var(--ui-gold-warm) 100%);
+  z-index: -2;
+  box-shadow:
+    0 0 18px rgba(0, 0, 0, 0.85),
+    0 0 14px var(--ui-gold-glow-soft),
+    inset 0 1px 0 rgba(255, 215, 100, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.55);
+}
+
+/* Inner shadow for depth — darker so the portrait sits in a recessed frame */
+.hero-card-frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9px;
+  box-shadow:
+    inset 0 0 32px rgba(0, 0, 0, 0.78),
+    inset 0 2px 0 rgba(255, 215, 100, 0.10),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Corner decorations */
+.hero-card-frame .hero-portrait::before {
+  content: '⚜';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  font-size: 14px;
+  color: rgba(201, 162, 39, 0.6);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  z-index: 10;
+}
+
+/* Opponent variant — same gold frame for visual symmetry; identity is communicated
+   via a subtle crimson outer halo, not a different border material. Symmetry +
+   parity is more premium than asymmetric color coding. */
+.battlefield-hero-square.opponent .hero-card-frame::before {
+  box-shadow:
+    0 0 18px rgba(0, 0, 0, 0.85),
+    0 0 18px var(--ui-hp-crimson-glow),
+    inset 0 1px 0 rgba(255, 215, 100, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.55);
+}
+
+.hero-portrait {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.hero-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 15%;
+}
+
+.hero-portrait::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+/* Hero name plate — engraved gold ribbon centered under portrait */
+.hero-name-plate {
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.92) 15%,
+    rgba(0, 0, 0, 0.92) 85%,
+    transparent 100%);
+  padding: 6px 10px 5px;
+  text-align: center;
+  border-top: 1px solid var(--ui-gold-shadow);
+  border-bottom: 1px solid var(--ui-gold-glow-soft);
+}
+
+.hero-name {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--ui-gold-bright);
+  text-transform: uppercase;
+  letter-spacing: 2.5px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.1;
+  text-shadow:
+    0 0 10px rgba(212, 175, 55, 0.45),
+    0 1px 2px rgba(0, 0, 0, 0.95);
+}
+
+/* Dead .hero-initial, .damage-modifiers, .mod-box removed (not in JSX) */

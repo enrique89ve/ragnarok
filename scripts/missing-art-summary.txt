@@ -1,0 +1,54 @@
+=== Missing Art Summary ===
+{
+  "totalCollectible": 1605,
+  "totalWithArt": 914,
+  "totalMissingArt": 691,
+  "coveragePercent": "56.9%",
+  "missingByType": {
+    "minion": 422,
+    "spell": 223,
+    "hero": 16,
+    "weapon": 15,
+    "poker_spell": 15
+  },
+  "missingByClass": {
+    "Neutral": 122,
+    "neutral": 140,
+    "DeathKnight": 41,
+    "Warrior": 23,
+    "Priest": 20,
+    "Shaman": 69,
+    "Hunter": 23,
+    "Paladin": 45,
+    "Berserker": 37,
+    "rogue": 9,
+    "mage": 22,
+    "warlock": 5,
+    "Mage": 22,
+    "Druid": 16,
+    "Rogue": 23,
+    "Warlock": 16,
+    "priest": 11,
+    "paladin": 4,
+    "Necromancer": 22,
+    "shaman": 6,
+    "necromancer": 1,
+    "warrior": 2,
+    "hunter": 2,
+    "druid": 3,
+    "berserker": 7
+  },
+  "missingByRarity": {
+    "common": 198,
+    "basic": 3,
+    "rare": 190,
+    "epic": 245,
+    "mythic": 55
+  },
+  "artMapSizes": {
+    "CARD_ID_TO_ART": 769,
+    "VERCEL_CARD_ART": 330,
+    "MINION_CARD_TO_ART": 85
+  }
+}
+

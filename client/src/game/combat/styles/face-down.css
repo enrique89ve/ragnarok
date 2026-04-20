@@ -1,0 +1,248 @@
+/* Face Down Cards - Premium Norse card back design */
+
+/* ========================================
+   POKER CARD FACE-DOWN STATE
+   Premium dark Norse card back with gold accents
+   ======================================== */
+.arena-poker-card.norse.face-down {
+  background: linear-gradient(160deg, #1a1a2e 0%, #111122 40%, #0a0a1a 100%);
+  border: 2px solid #c9a84c;
+  box-shadow:
+    0 0 8px rgba(201, 168, 76, 0.3),
+    inset 0 0 20px rgba(0, 0, 0, 0.6);
+}
+
+.arena-poker-card .card-back {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 6px;
+  padding: 3px;
+}
+
+.arena-poker-card .card-back-border {
+  width: 100%;
+  height: 100%;
+  border: 1px solid rgba(201, 168, 76, 0.6);
+  border-radius: 4px;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 6px,
+      rgba(201, 168, 76, 0.08) 6px,
+      rgba(201, 168, 76, 0.08) 7px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 6px,
+      rgba(201, 168, 76, 0.08) 6px,
+      rgba(201, 168, 76, 0.08) 7px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 10px,
+      rgba(201, 168, 76, 0.04) 10px,
+      rgba(201, 168, 76, 0.04) 11px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 10px,
+      rgba(201, 168, 76, 0.04) 10px,
+      rgba(201, 168, 76, 0.04) 11px
+    );
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.5);
+}
+
+.arena-poker-card .corner-rune {
+  position: absolute;
+  font-size: 10px;
+  color: rgba(201, 168, 76, 0.55);
+  text-shadow: 0 0 6px rgba(201, 168, 76, 0.3);
+  line-height: 1;
+  z-index: 1;
+}
+
+.arena-poker-card .corner-rune.tl {
+  top: 4px;
+  left: 5px;
+}
+
+.arena-poker-card .corner-rune.tr {
+  top: 4px;
+  right: 5px;
+}
+
+.arena-poker-card .corner-rune.bl {
+  bottom: 4px;
+  left: 5px;
+}
+
+.arena-poker-card .corner-rune.br {
+  bottom: 4px;
+  right: 5px;
+}
+
+.arena-poker-card .card-back-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1;
+}
+
+.arena-poker-card .yggdrasil-symbol {
+  font-size: 36px;
+  color: #c9a84c;
+  text-shadow:
+    0 0 16px rgba(201, 168, 76, 0.7),
+    0 0 32px rgba(201, 168, 76, 0.35),
+    0 0 4px rgba(255, 223, 120, 0.5);
+  line-height: 1;
+}
+
+.arena-poker-card .card-back-shimmer {
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    transparent 40%,
+    rgba(255, 255, 255, 0.06) 45%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0.06) 55%,
+    transparent 60%,
+    transparent 100%
+  );
+  background-size: 250% 100%;
+  animation: card-shimmer 3s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+
+@keyframes card-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -50% 0;
+  }
+}
+
+/* ========================================
+   OPPONENT FACE-DOWN HAND DISPLAY
+   CCG-style card backs showing card count
+   ======================================== */
+/* Dead .opponent-hand-zone removed — class never in JSX */
+
+.opponent-hand-display {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  position: relative;
+  padding-top: 4px;
+}
+
+.opponent-card-back {
+  width: 78px;
+  height: 110px;
+  background: linear-gradient(160deg,
+    var(--ui-iron-mid) 0%,
+    var(--ui-iron-dark) 38%,
+    var(--ui-obsidian) 100%);
+  border: 2px solid var(--ui-gold-warm);
+  border-radius: 7px;
+  position: relative;
+  margin-left: -22px;
+  transition: transform 0.2s ease, margin 0.2s ease, box-shadow 0.2s ease;
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.7),
+    0 0 12px var(--ui-gold-glow-soft),
+    inset 0 0 20px rgba(0, 0, 0, 0.55);
+}
+
+.opponent-card-back:first-child {
+  margin-left: 0;
+}
+
+/* Gold knotwork pattern on card back */
+.opponent-card-back::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  background:
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 3px,
+      rgba(201, 168, 76, 0.12) 3px,
+      rgba(201, 168, 76, 0.12) 4px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 3px,
+      rgba(201, 168, 76, 0.12) 3px,
+      rgba(201, 168, 76, 0.12) 4px
+    );
+  border: 1px solid rgba(201, 168, 76, 0.25);
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+/* Eihwaz rune symbol on card back */
+.opponent-card-back::after {
+  content: 'ᛇ';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 28px;
+  color: var(--ui-gold-bright);
+  text-shadow:
+    0 0 10px rgba(212, 175, 55, 0.55),
+    0 0 20px rgba(212, 175, 55, 0.25),
+    0 1px 2px rgba(0, 0, 0, 0.95);
+  font-family: var(--font-display);
+}
+
+/* Fan effect on hover */
+.opponent-hand-display:hover .opponent-card-back {
+  margin-left: -16px;
+}
+
+.opponent-hand-display:hover .opponent-card-back:first-child {
+  margin-left: 0;
+}
+
+/* Card count badge */
+.opponent-hand-count {
+  position: absolute;
+  right: -8px;
+  top: -8px;
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, #dc2626, #991b1b);
+  border: 2px solid #fbbf24;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  z-index: 10;
+}

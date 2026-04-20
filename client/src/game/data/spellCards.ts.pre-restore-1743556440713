@@ -1,0 +1,25 @@
+import { CardData } from '../types';
+
+/**
+ * Collection of spell cards
+ * Organized by class with various spell effects
+ */
+export const spellCards: CardData[] = [
+  {
+    id: 6000,
+    name: "Soul Mirror",
+    manaCost: 7,
+    type: "spell",
+    rarity: "legendary",
+    description: "Summon copies of enemy minions. They have 1 Health remaining.",
+    keywords: [],
+    heroClass: "priest",
+    class: "Priest",
+    spellEffect: {
+      type: "summon_copies",
+      source: "enemy_board",
+      modifyHealth: 1
+    },
+    collectible: true
+  }
+];

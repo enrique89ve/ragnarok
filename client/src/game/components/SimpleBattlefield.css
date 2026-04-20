@@ -1,0 +1,1374 @@
+/* SimpleBattlefield.css - Clean, minimal battlefield styling */
+
+.simple-battlefield {
+  --bf-card-width: 120px;
+  --bf-card-height: 168px;
+  --bf-slot-gap: 8px;
+  --bf-row-height: 180px;
+  
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 8px;
+}
+
+/* Row container - horizontal layout */
+.bf-row {
+  display: flex;
+  justify-content: center;
+  gap: var(--bf-slot-gap);
+  min-height: var(--bf-row-height);
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: none;
+}
+
+/* Opponent minions anchor to bottom of their zone (toward center battlefield) */
+.opponent-row {
+  align-items: flex-end;
+  border-bottom: none;
+  padding-bottom: 4px;
+}
+
+/* Player minions anchor to top of their zone (toward center battlefield) */
+.player-row {
+  align-items: flex-start;
+  border-top: none;
+  padding-top: 4px;
+}
+
+/* Slot container — sized exactly to card, no extra hitbox */
+.bf-slot {
+  width: var(--bf-card-width);
+  height: var(--bf-card-height);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 6px;
+  transition: transform 0.2s ease;
+  position: relative;
+  padding: 0;
+  margin: 0;
+}
+
+.bf-slot.empty {
+  /* Hide empty slots completely - no placeholder boxes */
+  display: none;
+}
+
+.bf-slot.occupied {
+  border: none;
+  background: transparent;
+  animation: bf-idle-breathe 3.5s ease-in-out infinite;
+}
+
+/* Subtle idle breathing on battlefield minions — makes the board feel alive */
+@keyframes bf-idle-breathe {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1.5px); }
+}
+
+/* Stagger breathing so cards don't all pulse in sync */
+.bf-slot.occupied:nth-child(2) { animation-delay: -0.7s; }
+.bf-slot.occupied:nth-child(3) { animation-delay: -1.4s; }
+.bf-slot.occupied:nth-child(4) { animation-delay: -2.1s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bf-slot.occupied { animation: none; }
+}
+
+/* ── Insertion gap indicators — shown while dragging a card ── */
+.bf-insertion-gap {
+  width: 6px;
+  min-height: var(--bf-card-height);
+  border-radius: 3px;
+  background: rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.2);
+  transition: width 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.bf-insertion-gap.active {
+  width: 10px;
+  background: rgba(34, 197, 94, 0.5);
+  box-shadow: 0 0 16px rgba(34, 197, 94, 0.6), 0 0 32px rgba(34, 197, 94, 0.25);
+  opacity: 1;
+}
+
+.bf-row.dragging {
+  gap: 4px;
+}
+
+/* ── Position picker mode — clickable gaps for positional cards ── */
+.bf-row.position-picking {
+  gap: 4px;
+}
+
+.bf-insertion-gap.clickable {
+  width: 24px;
+  cursor: pointer;
+  background: rgba(59, 130, 246, 0.25);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+  opacity: 0.8;
+  border: 1px dashed rgba(59, 130, 246, 0.5);
+}
+
+.bf-insertion-gap.clickable:hover,
+.bf-insertion-gap.clickable.active {
+  width: 32px;
+  background: rgba(34, 197, 94, 0.5);
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.6), 0 0 40px rgba(34, 197, 94, 0.25);
+  border-color: rgba(34, 197, 94, 0.7);
+  opacity: 1;
+}
+
+/* Card wrapper - hover/click only triggers on the visible card, not gap dead space.
+   pointer-events:none on wrapper, re-enabled on card children.
+   CSS :hover still activates on parent when a child is hovered (spec behavior). */
+.bf-card-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), z-index 0s;
+  transform-origin: bottom center;
+  box-sizing: border-box;
+  overflow: visible;
+  pointer-events: none;
+  animation: summonFlash 0.6s ease-out;
+}
+
+.bf-card-wrapper > * {
+  pointer-events: auto;
+}
+
+.bf-card-wrapper:hover {
+  transform: translateY(-14px) scale(1.08);
+  z-index: var(--z-hover, 500);
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), z-index 0s;
+}
+
+/* Card inside wrapper */
+.bf-card-wrapper .card-renderer-wrapper {
+  width: 100%;
+  height: 100%;
+}
+
+.bf-card-wrapper .simple-card {
+  width: 100% !important;
+  height: 100% !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+/* Hide SimpleCard's built-in stat gems on battlefield — we use bf-card-stats instead */
+.bf-card-wrapper .card-attack,
+.bf-card-wrapper .card-health {
+  display: none;
+}
+
+/* Give description clearance above the hanging bf-card-stats gems.
+   bf-card-stats: bottom:-10px, size clamp(26-34px).
+   bottom:18% + align top ensures icons stay well above the gem zone.
+   overflow:visible lets icons slightly overhang the box without touching gems. */
+.bf-card-wrapper .card-description {
+  bottom: 18%;
+  background: transparent;
+  border: none;
+  align-items: flex-start;
+  padding: 1px 3px;
+  overflow: visible;
+  pointer-events: auto;
+  z-index: 30;
+}
+
+.bf-card-wrapper .keyword-icons-container {
+  gap: 3px;
+  padding: 0;
+  flex-wrap: nowrap;
+  pointer-events: auto;
+  position: relative;
+  z-index: 40;
+}
+
+.bf-card-wrapper .keyword-icon-badge {
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
+  cursor: help;
+  pointer-events: auto;
+  position: relative;
+  z-index: 50;
+}
+
+/* Attack/health gem overlay for battlefield minions — hang below card frame */
+.bf-card-stats {
+  position: absolute;
+  bottom: -10px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0;
+  pointer-events: none;
+  z-index: 25;
+}
+
+:is(.bf-attack, .bf-health) {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 800;
+  color: #ffffff;
+  border-radius: 6px;
+  text-shadow: 0 1px 0 rgba(0,0,0,1), 0 2px 4px rgba(0,0,0,0.9);
+}
+
+/* Attack gem — gold gradient with bevel */
+.bf-attack {
+  background: linear-gradient(135deg, #FBBF24 0%, #D97706 40%, #B45309 70%, #92400E 100%);
+  border: 2px solid #FDE68A;
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.6),
+    0 0 8px rgba(217,119,6,0.3),
+    inset 0 2px 3px rgba(255,255,255,0.4),
+    inset 0 -2px 3px rgba(0,0,0,0.4);
+}
+
+/* Health gem — red gradient with bevel */
+.bf-health {
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 40%, #B91C1C 70%, #7F1D1D 100%);
+  border: 2px solid #FCA5A5;
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.6),
+    0 0 8px rgba(220,38,38,0.3),
+    inset 0 2px 3px rgba(255,255,255,0.35),
+    inset 0 -2px 3px rgba(0,0,0,0.4);
+}
+
+/* Buffed stat — green glow (attack or health above base) */
+.bf-attack.buffed {
+  color: #4ade80;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 40%, #15803d 70%, #166534 100%);
+  border-color: #86efac;
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.6),
+    0 0 14px rgba(34,197,94,0.55),
+    inset 0 2px 3px rgba(255,255,255,0.4),
+    inset 0 -2px 3px rgba(0,0,0,0.4);
+  animation: statGemBuffPop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.bf-health.buffed {
+  color: #4ade80;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 40%, #15803d 70%, #166534 100%);
+  border-color: #86efac;
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.6),
+    0 0 14px rgba(34,197,94,0.55),
+    inset 0 2px 3px rgba(255,255,255,0.4),
+    inset 0 -2px 3px rgba(0,0,0,0.4);
+  animation: statGemBuffPop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Damaged health — deeper red with warning glow */
+.bf-health.damaged {
+  color: #fca5a5;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 40%, #991b1b 70%, #450a0a 100%);
+  border-color: #f87171;
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.6),
+    0 0 14px rgba(239,68,68,0.6),
+    inset 0 2px 3px rgba(255,255,255,0.3),
+    inset 0 -2px 3px rgba(0,0,0,0.5);
+}
+
+@keyframes statGemBuffPop {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.55); }
+  65%  { transform: scale(0.92); }
+  100% { transform: scale(1); }
+}
+
+/* Shake — invalid action or damage hit feedback */
+.bf-card-wrapper.shake {
+  animation:
+    invalidShake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both,
+    damageShake 0.4s ease-in-out,
+    damageFlash 0.4s ease-out;
+}
+
+@keyframes invalidShake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  15%       { transform: translateX(-7px) rotate(-2deg); }
+  30%       { transform: translateX(7px) rotate(2deg); }
+  45%       { transform: translateX(-5px) rotate(-1.5deg); }
+  60%       { transform: translateX(5px) rotate(1.5deg); }
+  75%       { transform: translateX(-3px) rotate(-1deg); }
+  90%       { transform: translateX(3px) rotate(1deg); }
+}
+
+/* Elemental buff — green card glow */
+.bf-card-wrapper.elemental-buffed {
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.25), inset 0 0 4px rgba(74, 222, 128, 0.1);
+}
+
+/* Can attack state — refined gold/amber glow (Norse theme) */
+.bf-card-wrapper.can-attack {
+  cursor: pointer;
+}
+
+.bf-card-wrapper.can-attack::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 1;
+  border: 1.5px solid rgba(251, 191, 36, 0.5);
+  box-shadow:
+    0 0 10px 2px rgba(251, 191, 36, 0.45),
+    0 0 22px 4px rgba(217, 160, 20, 0.18);
+  animation: canAttackGlow 2s ease-in-out infinite;
+}
+
+.bf-card-wrapper.can-attack:hover {
+  transform: translateY(-16px) scale(1.12);
+}
+
+.bf-card-wrapper.can-attack:hover::after {
+  animation: none;
+  opacity: 1;
+  box-shadow:
+    0 0 14px 4px rgba(251, 191, 36, 0.65),
+    0 0 30px 8px rgba(217, 160, 20, 0.25);
+}
+
+@keyframes canAttackGlow {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 1; }
+}
+
+/* Summoning sickness - newly played, cannot attack yet */
+.bf-card-wrapper.summoning-sick {
+  cursor: default;
+  opacity: 0.65;
+  filter: saturate(0.35) brightness(0.8);
+}
+
+.bf-card-wrapper.summoning-sick:hover {
+  transform: translateY(-4px) scale(1.02);
+}
+
+/* Keyword icons stay bright and interactive even on sleeping/exhausted minions */
+.bf-card-wrapper.summoning-sick .keyword-icon-badge,
+.bf-card-wrapper.exhausted .keyword-icon-badge {
+  filter: saturate(2.8) brightness(1.3);
+  pointer-events: auto;
+  z-index: 50;
+}
+
+.bf-card-wrapper.summoning-sick .keyword-icon-badge:hover,
+.bf-card-wrapper.exhausted .keyword-icon-badge:hover {
+  filter: saturate(3) brightness(1.5);
+}
+
+.bf-card-wrapper.summoning-sick::after {
+  content: 'Zzz';
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: rgba(186, 230, 253, 1);
+  background: rgba(15, 23, 42, 0.88);
+  padding: 3px 7px;
+  border-radius: 5px;
+  border: 1px solid rgba(186, 230, 253, 0.55);
+  pointer-events: none;
+  z-index: 15;
+  animation: sleepPulse 1.8s ease-in-out infinite;
+  text-shadow: 0 0 8px rgba(147, 210, 250, 0.8);
+}
+
+@keyframes sleepPulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+
+/* Exhausted - already attacked this turn */
+.bf-card-wrapper.exhausted {
+  cursor: default;
+  opacity: 0.55;
+  filter: saturate(0.3) brightness(0.7);
+}
+
+.bf-card-wrapper.exhausted:hover {
+  transform: translateY(-4px) scale(1.02);
+}
+
+/* Ready to evolve — pet with petEvolutionMet=true */
+.bf-card-wrapper.ready-to-evolve {
+  box-shadow: 0 0 14px 4px rgba(34, 211, 238, 0.6), 0 0 28px 8px rgba(168, 85, 247, 0.3);
+}
+
+.bf-card-wrapper.ready-to-evolve::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 10px;
+  background: conic-gradient(
+    from var(--evolve-angle, 0deg),
+    rgba(34, 211, 238, 0.8),
+    rgba(168, 85, 247, 0.8),
+    rgba(34, 211, 238, 0.8)
+  );
+  z-index: -1;
+  animation: evolveRotate 3s linear infinite;
+  opacity: 0.7;
+}
+
+.bf-card-wrapper.ready-to-evolve::after {
+  content: '⬆';
+  position: absolute;
+  top: -8px;
+  right: -4px;
+  font-size: 16px;
+  color: #22d3ee;
+  text-shadow: 0 0 8px rgba(34, 211, 238, 0.9);
+  pointer-events: none;
+  z-index: 20;
+  animation: evolveArrowBounce 1.2s ease-in-out infinite;
+}
+
+/* evolveReadyPulse removed — static box-shadow + conic ::before provides feedback */
+
+@keyframes evolveRotate {
+  to { --evolve-angle: 360deg; }
+}
+
+@keyframes evolveArrowBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@property --evolve-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+/* Evolve-ready hand card — synced pulse with battlefield pet */
+.hand-card-wrapper.evolve-ready {
+  box-shadow: 0 0 14px 4px rgba(34, 211, 238, 0.6), 0 0 28px 8px rgba(168, 85, 247, 0.3);
+  position: relative;
+  z-index: 50;
+}
+
+.hand-card-wrapper.evolve-ready::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 10px;
+  background: conic-gradient(
+    from var(--evolve-angle, 0deg),
+    rgba(34, 211, 238, 0.7),
+    rgba(168, 85, 247, 0.7),
+    rgba(34, 211, 238, 0.7)
+  );
+  z-index: -1;
+  animation: evolveRotate 3s linear infinite;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.hand-card-wrapper.evolve-ready::after {
+  content: 'EVOLVE';
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #22d3ee;
+  background: rgba(15, 23, 42, 0.9);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(34, 211, 238, 0.6);
+  text-shadow: 0 0 6px rgba(34, 211, 238, 0.8);
+  pointer-events: none;
+  z-index: 20;
+  animation: evolveArrowBounce 1.2s ease-in-out infinite;
+  white-space: nowrap;
+}
+
+/* Valid target state — AAA layered threat glow with animated rotating border
+   Multi-layer: inner highlight + animated conic border + outer atmospheric glow */
+.bf-card-wrapper.valid-target {
+  border: none;
+  border-radius: 8px;
+  cursor: crosshair;
+}
+
+/* Animated conic gradient border — rotating crimson energy ring */
+.bf-card-wrapper.valid-target::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 10px;
+  padding: 3px;
+  background: conic-gradient(
+    from var(--border-angle, 0deg),
+    #7f1d1d, #dc2626, #ef4444, #fca5a5,
+    #fff1f2,
+    #fca5a5, #ef4444, #dc2626, #7f1d1d
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: border-rotate 3s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Outer atmospheric glow — deep red falloff with soft pulse */
+.bf-card-wrapper.valid-target::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 10px;
+  pointer-events: none;
+  z-index: 0;
+  box-shadow:
+    /* Inner fire ring */
+    0 0 8px 2px rgba(239, 68, 68, 0.7),
+    /* Mid glow — warm crimson */
+    0 0 20px 6px rgba(220, 38, 38, 0.5),
+    /* Outer atmosphere — deep spread */
+    0 0 40px 12px rgba(185, 28, 28, 0.3),
+    /* Far ambient — barely visible */
+    0 0 60px 20px rgba(127, 29, 29, 0.15),
+    /* Inner highlight for depth */
+    inset 0 0 12px 2px rgba(239, 68, 68, 0.15);
+  animation: validTargetGlow 2s ease-in-out infinite;
+}
+
+@keyframes validTargetGlow {
+  0%, 100% { opacity: 0.6; }
+  50%       { opacity: 1; }
+}
+
+.bf-card-wrapper.valid-target:hover {
+  transform: translateY(-16px) scale(1.12);
+}
+
+.bf-card-wrapper.valid-target:hover::before {
+  animation: border-rotate 1.5s linear infinite;
+  background: conic-gradient(
+    from var(--border-angle, 0deg),
+    #991b1b, #ef4444, #f87171, #fecaca,
+    #ffffff,
+    #fecaca, #f87171, #ef4444, #991b1b
+  );
+  inset: -4px;
+  padding: 4px;
+}
+
+.bf-card-wrapper.valid-target:hover::after {
+  animation: none;
+  opacity: 1;
+  box-shadow:
+    0 0 12px 4px rgba(248, 113, 113, 0.9),
+    0 0 28px 10px rgba(239, 68, 68, 0.65),
+    0 0 50px 18px rgba(220, 38, 38, 0.4),
+    0 0 80px 28px rgba(185, 28, 28, 0.2),
+    inset 0 0 16px 4px rgba(239, 68, 68, 0.2);
+}
+
+/* Selected attacker — persistent pulsing glow + lift so player KNOWS it's selected */
+.bf-card-wrapper.attacking {
+  transform: translateY(-14px) scale(1.08);
+  z-index: var(--z-modal, 50);
+  box-shadow:
+    0 0 20px 6px rgba(251, 191, 36, 0.85),
+    0 0 40px 12px rgba(251, 191, 36, 0.4),
+    0 8px 24px rgba(0, 0, 0, 0.6);
+  animation: attacker-selected-pulse 1.2s ease-in-out infinite;
+  outline: 2px solid rgba(251, 191, 36, 0.9);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+@keyframes attacker-selected-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 20px 6px rgba(251, 191, 36, 0.85),
+      0 0 40px 12px rgba(251, 191, 36, 0.4),
+      0 8px 24px rgba(0, 0, 0, 0.6);
+  }
+  50% {
+    box-shadow:
+      0 0 28px 10px rgba(251, 191, 36, 1),
+      0 0 55px 18px rgba(251, 191, 36, 0.55),
+      0 8px 24px rgba(0, 0, 0, 0.6);
+  }
+}
+
+.player-row .bf-card-wrapper.attacking { --lunge-y: -40px; --lunge-x: 0; }
+.opponent-row .bf-card-wrapper.attacking { --lunge-y: 40px; --lunge-x: 0; }
+
+/* Super Minion Hero Bonus - Golden legendary glow */
+.bf-card-wrapper.super-minion-bonus {
+  border: 2px solid #fbbf24;
+  border-radius: 6px;
+}
+
+.bf-card-wrapper.super-minion-bonus::before {
+  content: '+2/+2';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+  color: #1e293b;
+  font-size: 10px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+  z-index: 20;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  text-shadow: 0 1px 0 rgba(255,255,255,0.3);
+}
+
+/* Super minion glow on ::after — opacity-only animation (GPU composited).
+   ::before is used for the +2/+2 label badge.
+   If can-attack is also active, ::after is shared — can-attack (green) wins via specificity. */
+.bf-card-wrapper.super-minion-bonus:not(.can-attack)::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 1;
+  box-shadow:
+    0 0 20px 6px rgba(251, 191, 36, 0.85),
+    inset 0 0 12px rgba(251, 191, 36, 0.35);
+  animation: superMinionGlowPulse 2s ease-in-out infinite;
+}
+
+@keyframes superMinionGlowPulse {
+  0%, 100% { opacity: 0.5; }
+  50%       { opacity: 1; }
+}
+
+/* Taunt visual indicator - stone shield border */
+.bf-card-wrapper.has-taunt {
+  border: 3px solid rgba(148, 163, 184, 0.7);
+  border-radius: 8px;
+  box-shadow:
+    inset 0 0 8px rgba(148, 163, 184, 0.3),
+    0 0 6px 2px rgba(148, 163, 184, 0.25);
+}
+
+.bf-card-wrapper.has-taunt::after {
+  content: '\1F6E1';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 14px;
+  z-index: 20;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
+  pointer-events: none;
+}
+
+.bf-card-wrapper.has-taunt.valid-target {
+  border-color: transparent;
+}
+
+@keyframes summonFlash {
+  0% {
+    box-shadow: 0 0 20px 8px rgba(255, 255, 255, 0.6), 0 0 40px 16px rgba(255, 255, 255, 0.2);
+  }
+  100% {
+    box-shadow: none;
+  }
+}
+
+@keyframes damageShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-6px); }
+  80% { transform: translateX(6px); }
+}
+
+@keyframes damageFlash {
+  0%   { box-shadow: inset 0 0 0 3px rgba(255, 50, 50, 0); }
+  20%  { box-shadow: inset 0 0 0 4px rgba(255, 50, 50, 0.9), 0 0 16px 4px rgba(255, 50, 50, 0.5); }
+  100% { box-shadow: inset 0 0 0 3px rgba(255, 50, 50, 0); }
+}
+
+/* HP gem flashes bright when minion takes damage */
+.bf-card-wrapper.shake .bf-health {
+  animation: hpFlash 0.5s ease-out;
+}
+
+@keyframes hpFlash {
+  0%   { color: #ffffff; box-shadow: 0 0 14px 4px rgba(255, 50, 50, 0.9), inset 0 0 8px rgba(255,255,255,0.5); }
+  50%  { color: #fca5a5; box-shadow: 0 0 8px 2px rgba(255, 50, 50, 0.5); }
+  100% { color: #ffffff; }
+}
+
+/* ==========================================================================
+   STATUS EFFECT OVERLAYS — Visual feedback for 8 combat debuffs
+   Each effect uses a colored border-glow + optional overlay via box-shadow.
+   Badge row shows emoji icons above the card.
+   ========================================================================== */
+
+/* ── Status badge bar ── */
+.bf-status-badges {
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2px;
+  z-index: 30;
+  pointer-events: none;
+}
+
+.status-badge {
+  font-size: 11px;
+  line-height: 1;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 4px;
+  padding: 2px 3px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: badgePulse 2.5s ease-in-out infinite;
+}
+
+.badge-poison { border-color: rgba(34, 197, 94, 0.6); }
+.badge-bleed { border-color: rgba(220, 38, 38, 0.6); }
+.badge-burn { border-color: rgba(249, 115, 22, 0.6); }
+.badge-frozen { border-color: rgba(56, 189, 248, 0.6); }
+.badge-paralysis { border-color: rgba(129, 140, 248, 0.6); }
+.badge-weakness { border-color: rgba(167, 139, 250, 0.6); }
+.badge-vulnerable { border-color: rgba(239, 68, 68, 0.6); }
+.badge-marked { border-color: rgba(251, 191, 36, 0.6); }
+
+@keyframes badgePulse {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+/* ── Einherjar return counter ── */
+.bf-einherjar-badge {
+  position: absolute;
+  top: -10px;
+  right: -6px;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.9), rgba(180, 140, 30, 0.9));
+  border: 1px solid rgba(255, 215, 100, 0.7);
+  border-radius: 8px;
+  padding: 1px 5px;
+  z-index: 31;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5), 0 0 14px rgba(212,175,55,0.6);
+  animation: einherjar-glow 3s ease-in-out infinite;
+}
+
+.einherjar-icon { font-size: 10px; line-height: 1; }
+.einherjar-count { font-size: 10px; font-weight: 800; color: #1a1610; text-shadow: 0 0 4px rgba(255,255,255,0.5); }
+
+@keyframes einherjar-glow {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+
+/* ── Ragnarok Chain partner badge ── */
+.bf-chain-badge {
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.9), rgba(124, 58, 237, 0.9));
+  border: 1px solid rgba(196, 143, 255, 0.7);
+  border-radius: 8px;
+  padding: 1px 5px;
+  z-index: 31;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5), 0 0 16px rgba(168,85,247,0.7);
+  animation: chain-active-glow 2s ease-in-out infinite;
+}
+
+.bf-chain-badge.chain-inactive {
+  background: rgba(60, 60, 80, 0.7);
+  border-color: rgba(120, 120, 140, 0.4);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  animation: none;
+  opacity: 0.5;
+}
+
+.chain-icon { font-size: 10px; line-height: 1; }
+
+@keyframes chain-active-glow {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+
+/* ── Dormant overlay ── */
+.bf-card-wrapper.is-dormant {
+	filter: saturate(0.3) brightness(0.7);
+	pointer-events: none;
+}
+
+.bf-dormant-overlay {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	background: rgba(20, 15, 40, 0.6);
+	border-radius: 8px;
+	z-index: 10;
+	animation: dormant-pulse 2.5s ease-in-out infinite;
+}
+
+.dormant-icon {
+	font-size: 24px;
+	filter: drop-shadow(0 0 6px rgba(120, 100, 255, 0.6));
+}
+
+.dormant-turns {
+	font-size: 14px;
+	font-weight: 900;
+	color: #c4b5fd;
+	text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+	margin-top: 2px;
+}
+
+@keyframes dormant-pulse {
+	0%, 100% { opacity: 0.85; }
+	50% { opacity: 1; background: rgba(30, 20, 60, 0.7); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.bf-dormant-overlay { animation: none; }
+	.bf-card-wrapper.is-dormant { filter: saturate(0.4) brightness(0.75); }
+}
+
+/* ── Poison — toxic green mist ── */
+.bf-card-wrapper.status-poisoned {
+  box-shadow:
+    0 0 10px 3px rgba(34, 197, 94, 0.6),
+    0 0 24px 5px rgba(22, 163, 74, 0.3),
+    inset 0 0 12px 2px rgba(34, 197, 94, 0.18);
+}
+
+.bf-card-wrapper.status-poisoned::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 2;
+  background: linear-gradient(to top, rgba(34, 197, 94, 0.25) 0%, rgba(34, 197, 94, 0.08) 40%, transparent 70%);
+  animation: statusOverlayPulse 3s ease-in-out infinite;
+}
+
+/* ── Bleed — crimson drip ── */
+.bf-card-wrapper.status-bleeding {
+  box-shadow:
+    0 0 11px 3px rgba(220, 38, 38, 0.6),
+    0 0 21px 5px rgba(185, 28, 28, 0.3),
+    inset 0 0 12px 2px rgba(220, 38, 38, 0.2);
+}
+
+.bf-card-wrapper.status-bleeding::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 2;
+  background: linear-gradient(to bottom, rgba(220, 38, 38, 0.3) 0%, rgba(185, 28, 28, 0.1) 30%, transparent 60%);
+  animation: statusOverlayPulse 2.5s ease-in-out infinite;
+}
+
+/* ── Burn — orange flame flicker ── */
+.bf-card-wrapper.status-burning {
+  box-shadow:
+    0 0 12px 4px rgba(249, 115, 22, 0.7),
+    0 0 26px 7px rgba(234, 88, 12, 0.35),
+    inset 0 0 10px 2px rgba(249, 115, 22, 0.18);
+}
+
+.bf-card-wrapper.status-burning::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 2;
+  background:
+    radial-gradient(ellipse at 50% 100%, rgba(249, 115, 22, 0.35) 0%, transparent 60%),
+    radial-gradient(ellipse at 30% 90%, rgba(234, 88, 12, 0.2) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 95%, rgba(251, 146, 60, 0.2) 0%, transparent 50%);
+  animation: statusOverlayFlicker 2s ease-in-out infinite;
+}
+
+@keyframes statusOverlayFlicker {
+  0%, 100% { opacity: 0.5; }
+  30% { opacity: 0.9; }
+  60% { opacity: 0.4; }
+  80% { opacity: 0.8; }
+}
+
+/* ── Freeze — ice blue frost ── */
+.bf-card-wrapper.status-frozen {
+  filter: saturate(0.4) brightness(0.85);
+  box-shadow:
+    0 0 12px 4px rgba(56, 189, 248, 0.7),
+    0 0 28px 7px rgba(14, 165, 233, 0.35),
+    inset 0 0 14px 3px rgba(56, 189, 248, 0.25);
+}
+
+.bf-card-wrapper.status-frozen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 2;
+  background: linear-gradient(135deg, rgba(224, 242, 254, 0.35) 0%, rgba(186, 230, 253, 0.2) 40%, rgba(56, 189, 248, 0.15) 70%, rgba(14, 165, 233, 0.25) 100%);
+  border: 2px solid rgba(56, 189, 248, 0.4);
+  animation: statusOverlayPulse 3s ease-in-out infinite;
+}
+
+/* ── Paralysis — electric indigo crackle ── */
+.bf-card-wrapper.status-paralyzed {
+  box-shadow:
+    0 0 12px 3px rgba(129, 140, 248, 0.6),
+    0 0 24px 6px rgba(99, 102, 241, 0.3),
+    inset 0 0 10px 2px rgba(129, 140, 248, 0.2);
+}
+
+.bf-card-wrapper.status-paralyzed::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 2;
+  border: 1.5px solid rgba(129, 140, 248, 0.5);
+  animation: statusOverlayFlicker 0.8s steps(2) infinite;
+}
+
+/* ── Weakness — muted purple dim ── */
+.bf-card-wrapper.status-weakened {
+  filter: saturate(0.45) brightness(0.7);
+  box-shadow:
+    0 0 8px 2px rgba(167, 139, 250, 0.4),
+    inset 0 0 10px 2px rgba(139, 92, 246, 0.15);
+}
+
+.bf-card-wrapper.status-weakened::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 2;
+  background: radial-gradient(circle at center, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+  animation: statusOverlayPulse 3s ease-in-out infinite;
+}
+
+/* ── Vulnerable — target red vignette ── */
+.bf-card-wrapper.status-vulnerable {
+  box-shadow:
+    0 0 10px 3px rgba(239, 68, 68, 0.6),
+    0 0 21px 5px rgba(220, 38, 38, 0.3),
+    inset 0 0 14px 3px rgba(239, 68, 68, 0.25);
+}
+
+.bf-card-wrapper.status-vulnerable::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 2;
+  background: radial-gradient(circle at center, transparent 40%, rgba(239, 68, 68, 0.15) 80%);
+  border: 1.5px solid rgba(239, 68, 68, 0.35);
+  animation: statusOverlayPulse 2s ease-in-out infinite;
+}
+
+/* ── Marked — gold highlight ── */
+.bf-card-wrapper.status-marked {
+  box-shadow:
+    0 0 12px 4px rgba(251, 191, 36, 0.6),
+    0 0 26px 7px rgba(245, 158, 11, 0.3),
+    inset 0 0 10px 2px rgba(251, 191, 36, 0.13);
+}
+
+.bf-card-wrapper.status-marked::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 2;
+  border: 2px solid rgba(251, 191, 36, 0.5);
+  background: radial-gradient(circle at center, rgba(251, 191, 36, 0.08) 0%, transparent 60%);
+  animation: statusOverlayPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes statusOverlayPulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* ═══════════════════════════════════════════════
+   SUBMERGE — face-down, untargetable deep blue
+   ═══════════════════════════════════════════════ */
+.bf-card-wrapper.is-submerged {
+  filter: saturate(0.25) brightness(0.55);
+  pointer-events: none;
+}
+
+.bf-card-wrapper.is-submerged .card-renderer-wrapper {
+  transform: rotateY(180deg);
+  transition: transform 0.4s ease;
+}
+
+.bf-submerge-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 40, 80, 0.65);
+  border-radius: 8px;
+  border: 2px solid rgba(56, 189, 248, 0.4);
+  z-index: 10;
+  animation: submerge-pulse 3s ease-in-out infinite;
+}
+
+.submerge-icon {
+  font-size: 26px;
+  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.7));
+}
+
+.submerge-turns {
+  font-size: 14px;
+  font-weight: 900;
+  color: #7dd3fc;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  margin-top: 2px;
+}
+
+@keyframes submerge-pulse {
+  0%, 100% { opacity: 0.85; border-color: rgba(56, 189, 248, 0.3); }
+  50% { opacity: 1; border-color: rgba(56, 189, 248, 0.6); }
+}
+
+/* ═══════════════════════════════════════════════
+   COIL — attack locked, serpent grip
+   ═══════════════════════════════════════════════ */
+.bf-card-wrapper.is-coiled {
+  box-shadow:
+    0 0 10px 3px rgba(139, 92, 246, 0.5),
+    inset 0 0 8px 2px rgba(139, 92, 246, 0.15);
+}
+
+.bf-coil-badge {
+  position: absolute;
+  top: -8px;
+  left: -4px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.9), rgba(109, 40, 217, 0.9));
+  border: 1px solid rgba(196, 143, 255, 0.6);
+  border-radius: 8px;
+  padding: 2px 5px;
+  z-index: 31;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5), 0 0 12px rgba(139, 92, 246, 0.6);
+  animation: coil-grip 2.5s ease-in-out infinite;
+}
+
+.coil-icon { font-size: 12px; line-height: 1; }
+
+@keyframes coil-grip {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+/* ═══════════════════════════════════════════════
+   WAGER — dice badge for poker combat active
+   ═══════════════════════════════════════════════ */
+.bf-wager-badge {
+  position: absolute;
+  bottom: 14px;
+  right: -6px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(217, 119, 6, 0.9));
+  border: 1px solid rgba(253, 230, 138, 0.6);
+  border-radius: 8px;
+  padding: 2px 5px;
+  z-index: 31;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4), 0 0 10px rgba(245, 158, 11, 0.5);
+}
+
+.wager-icon { font-size: 11px; line-height: 1; }
+
+/* ═══════════════════════════════════════════════
+   FLYING — feather badge, sky tint
+   ═══════════════════════════════════════════════ */
+.bf-card-wrapper.has-flying {
+  box-shadow: 0 0 8px 2px rgba(186, 230, 253, 0.3);
+}
+
+.bf-flying-badge {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, rgba(186, 230, 253, 0.9), rgba(125, 211, 252, 0.9));
+  border: 1px solid rgba(224, 242, 254, 0.6);
+  border-radius: 8px;
+  padding: 2px 5px;
+  z-index: 31;
+  pointer-events: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3), 0 0 8px rgba(125, 211, 252, 0.4);
+}
+
+.flying-icon { font-size: 11px; line-height: 1; }
+
+/* Flying badge moves aside when taunt shield is present */
+.bf-card-wrapper.has-flying.has-taunt .bf-flying-badge {
+  left: auto;
+  right: -4px;
+  transform: none;
+}
+
+/* Responsive: not needed — virtual canvas handles scaling uniformly */
+
+/* ==========================================================================
+   FOCUS-VISIBLE - Keyboard navigation support
+   ========================================================================== */
+
+.bf-card-wrapper:focus-visible {
+  outline: 2px solid var(--color-gold, #ffd700);
+  outline-offset: 2px;
+  z-index: var(--z-hover, 500);
+}
+
+/* ==========================================================================
+   TOUCH DEVICE SUPPORT
+   ========================================================================== */
+
+@media (hover: none) {
+  .bf-card-wrapper:hover {
+    transform: none;
+    z-index: auto;
+  }
+
+  .bf-card-wrapper.can-attack:hover {
+    transform: none;
+  }
+
+  .bf-card-wrapper.summoning-sick:hover {
+    transform: none;
+  }
+
+  .bf-card-wrapper.exhausted:hover {
+    transform: none;
+  }
+}
+
+/* ==========================================================================
+   REDUCED MOTION
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .bf-card-wrapper {
+    transition: none;
+  }
+
+  .bf-slot {
+    transition: none;
+  }
+
+  .bf-card-wrapper.can-attack {
+    animation: none;
+    box-shadow: 0 0 12px 3px rgba(251, 191, 36, 0.5);
+  }
+
+  .bf-card-wrapper.summoning-sick::after {
+    animation: none;
+    opacity: 1;
+  }
+
+  .bf-card-wrapper.super-minion-bonus {
+    animation: none;
+    box-shadow: 0 0 14px 4px rgba(251, 191, 36, 0.6);
+  }
+
+  .bf-card-wrapper.shake {
+    animation: none;
+  }
+
+  .bf-card-wrapper.shake .bf-health {
+    animation: none;
+    color: #fca5a5;
+  }
+
+  .bf-card-wrapper.attacking {
+    box-shadow: 0 0 14px 3px rgba(251, 191, 36, 0.6);
+  }
+
+  .bf-card-wrapper.valid-target::before {
+    animation: none;
+    background: rgba(239, 68, 68, 0.8);
+  }
+
+  .bf-card-wrapper.valid-target::after {
+    animation: none;
+    opacity: 1;
+  }
+
+  .bf-card-wrapper.status-poisoned,
+  .bf-card-wrapper.status-bleeding,
+  .bf-card-wrapper.status-burning,
+  .bf-card-wrapper.status-frozen,
+  .bf-card-wrapper.status-paralyzed,
+  .bf-card-wrapper.status-weakened,
+  .bf-card-wrapper.status-vulnerable,
+  .bf-card-wrapper.status-marked {
+    animation: none;
+  }
+
+  .bf-card-wrapper.status-poisoned::before,
+  .bf-card-wrapper.status-bleeding::before,
+  .bf-card-wrapper.status-burning::before,
+  .bf-card-wrapper.status-paralyzed::before {
+    animation: none;
+    opacity: 0.7;
+  }
+
+  .status-badge {
+    animation: none;
+  }
+
+  .bf-submerge-overlay {
+    animation: none;
+  }
+
+  .bf-coil-badge {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* ─── Prophecy Countdown Tracker ────────────────────────────── */
+.prophecy-tracker {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.prophecy-pip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.prophecy-pip.player {
+  background: rgba(40, 80, 120, 0.85);
+  border: 1px solid rgba(100, 180, 255, 0.4);
+  color: #c8dfff;
+}
+
+.prophecy-pip.opponent {
+  background: rgba(100, 30, 30, 0.85);
+  border: 1px solid rgba(255, 100, 100, 0.4);
+  color: #ffb0b0;
+}
+
+.prophecy-pip-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+}
+
+.prophecy-pip-turns {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 215, 0, 0.2);
+  border: 1px solid rgba(255, 215, 0, 0.5);
+  color: #ffd700;
+  font-size: 13px;
+  flex-shrink: 0;
+  animation: prophecy-tick 1.5s ease-in-out infinite;
+}
+
+@keyframes prophecy-tick {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* ═══ Battlecry/Spell Targeting Highlights ═══ */
+
+/* Friendly targeting: darken opponents, highlight player side */
+.simple-battlefield.targeting-friendly .opponent-row {
+  opacity: 0.3;
+  filter: brightness(0.4);
+  pointer-events: none;
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+.simple-battlefield.targeting-friendly .player-row .bf-slot.occupied {
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.6);
+}
+
+/* Enemy targeting: darken player side, highlight opponent side */
+.simple-battlefield.targeting-enemy .player-row {
+  opacity: 0.3;
+  filter: brightness(0.4);
+  pointer-events: none;
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+.simple-battlefield.targeting-enemy .opponent-row .bf-slot.occupied {
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.6);
+}
+
+/* Any targeting: highlight both sides */
+.simple-battlefield.targeting-any .bf-slot.occupied {
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.5);
+}

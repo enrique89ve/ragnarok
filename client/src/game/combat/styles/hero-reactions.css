@@ -1,0 +1,127 @@
+/* Idle breathing animation — subtle scale pulse */
+.hero-card-wrapper {
+	animation: hero-breathe 4s ease-in-out infinite;
+}
+
+@keyframes hero-breathe {
+	0%, 100% { transform: scale(1) translateY(0); }
+	50% { transform: scale(1.008) translateY(-1px); }
+}
+
+/* Low HP state — desaturated + red vignette pulse */
+.hero-card-wrapper.hero-low-hp {
+	animation: hero-low-hp-pulse 1.8s ease-in-out infinite;
+	filter: saturate(0.7) brightness(0.9);
+	box-shadow: inset 0 0 35px rgba(220, 38, 38, 0.45);
+}
+
+@keyframes hero-low-hp-pulse {
+	0%, 100% { opacity: 0.7; }
+	50% { opacity: 1; }
+}
+
+/* Critical HP — faster pulse, more desaturated */
+.hero-card-wrapper.hero-critical-hp {
+	animation: hero-critical-pulse 1s ease-in-out infinite;
+	filter: saturate(0.4) brightness(0.8);
+	box-shadow: inset 0 0 45px rgba(220, 38, 38, 0.65);
+}
+
+@keyframes hero-critical-pulse {
+	0%, 100% { opacity: 0.7; }
+	50% { opacity: 1; }
+}
+
+.hero-card-wrapper.hero-damaged {
+	animation: hero-damage-flash 0.5s ease-out;
+}
+
+@keyframes hero-damage-flash {
+	0% { transform: scale(1); }
+	10% { transform: scale(1.05); }
+	20% { transform: scale(0.97) translateX(-3px); }
+	35% { transform: scale(1.02) translateX(2px); }
+	50% { transform: scale(0.99) translateX(-1px); }
+	100% { transform: scale(1) translateX(0); }
+}
+
+.hero-card-wrapper.hero-damaged::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	background: radial-gradient(ellipse at center, transparent 30%, rgba(220, 38, 38, 0.4) 100%);
+	pointer-events: none;
+	animation: hero-damage-vignette 0.5s ease-out forwards;
+	z-index: 5;
+}
+
+@keyframes hero-damage-vignette {
+	0% { opacity: 0; }
+	15% { opacity: 1; }
+	100% { opacity: 0; }
+}
+
+.hero-card-wrapper.hero-healed {
+	animation: hero-heal-glow 0.6s ease-out;
+}
+
+@keyframes hero-heal-glow {
+	0% { opacity: 1; }
+	20% { opacity: 0.85; }
+	100% { opacity: 1; }
+}
+
+.hero-card-wrapper.hero-healed::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	background: radial-gradient(ellipse at center, rgba(34, 197, 94, 0.3) 0%, transparent 70%);
+	pointer-events: none;
+	animation: hero-heal-vignette 0.6s ease-out forwards;
+	z-index: 5;
+}
+
+@keyframes hero-heal-vignette {
+	0% { opacity: 0; }
+	20% { opacity: 1; }
+	100% { opacity: 0; }
+}
+
+.hero-portrait.power-activating {
+	box-shadow: inset 0 0 30px 10px rgba(250, 204, 21, 0.6), 0 0 20px rgba(250, 204, 21, 0.4);
+	animation: hero-power-burst 0.5s ease-out;
+}
+
+@keyframes hero-power-burst {
+	0% { opacity: 0; }
+	30% { opacity: 1; }
+	100% { opacity: 0; }
+}
+
+.hero-armor-badge.armor-gained {
+	animation: armor-gain-flash 0.4s ease-out;
+}
+
+@keyframes armor-gain-flash {
+	0% { transform: scale(1); opacity: 1; }
+	30% { transform: scale(1.4); opacity: 0.7; }
+	100% { transform: scale(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.hero-card-wrapper,
+	.hero-card-wrapper.hero-damaged,
+	.hero-card-wrapper.hero-healed,
+	.hero-card-wrapper.hero-low-hp,
+	.hero-card-wrapper.hero-critical-hp,
+	.hero-portrait.power-activating,
+	.hero-armor-badge.armor-gained {
+		animation: none;
+	}
+	.hero-card-wrapper.hero-damaged::after,
+	.hero-card-wrapper.hero-healed::after {
+		display: none;
+	}
+}

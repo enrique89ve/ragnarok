@@ -1,0 +1,13 @@
+/* Battlefield Layout - Combat zone structure
+   Most rules removed: .opponent-field-zone, .player-field-zone,
+   .opponent-hand-zone, field labels — replaced by .unified-* classes.
+   Only .opponent-hand-display kept (still used in JSX). */
+
+.opponent-hand-display {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+  position: relative;
+  padding-top: 4px;
+}

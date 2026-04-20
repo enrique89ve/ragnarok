@@ -1,0 +1,1855 @@
+/* RAGNAROK TCG DECK BUILDER - ARMY SELECTION THEME
+   =====================================================
+   Layout Architecture: CSS Grid-based
+   
+   Industry-standard deck builder layout using CSS Grid:
+   - Full viewport coverage (100vw x 100dvh)
+   - 3-column layout: left sidebar | center content | right sidebar
+   - Proper scrolling only in hero grid
+   - NO absolute positioning for layout (only for overlays)
+   ===================================================== */
+
+/* ============================================
+   RARITY ANIMATIONS — conic-gradient border rotation
+   ============================================ */
+@property --hero-border-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes hero-border-rotate {
+  to { --hero-border-angle: 360deg; }
+}
+
+@keyframes hero-rare-shimmer {
+  0%, 100% { background-position: 0% 0%; }
+  50%      { background-position: 100% 100%; }
+}
+
+@keyframes hero-mythic-pulse {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 0.55; }
+}
+
+@keyframes hero-epic-sweep {
+  0%   { background-position: 0% 0%; }
+  100% { background-position: 100% 100%; }
+}
+
+@keyframes hero-rare-glint {
+  0%, 85%  { background-position: -100% 0; }
+  100%     { background-position: 200% 0; }
+}
+
+@keyframes hero-common-breathe {
+  0%, 100% { opacity: 0.2; }
+  50%      { opacity: 0.45; }
+}
+
+/* ============================================
+   ROOT CONTAINER - CSS Grid Layout
+   ============================================ */
+.norse-army-selection {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  font-family: 'Cinzel', 'Times New Roman', serif;
+  
+  /* CSS Grid: Full page layout */
+  display: grid;
+  grid-template-rows: 104px 1fr 96px;
+  grid-template-columns: 212px 1fr 276px;
+  grid-template-areas:
+    "header  header  header"
+    "sidebar content army"
+    "footer  footer  footer";
+}
+
+/* ============================================
+   BACKGROUND LAYERS - Absolute positioned overlays
+   ============================================ */
+.norse-army-selection .norse-army-bg {
+  position: fixed;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse at 50% 0%, rgba(0, 255, 204, 0.05) 0%, transparent 50%),
+    radial-gradient(ellipse at 20% 80%, rgba(0, 255, 204, 0.03) 0%, transparent 40%),
+    radial-gradient(ellipse at 80% 80%, rgba(0, 255, 204, 0.03) 0%, transparent 40%),
+    linear-gradient(180deg, #0a0a1f 0%, #0f172a 100%);
+  z-index: -2;
+  pointer-events: none;
+}
+
+.norse-army-selection .norse-lightning-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: 
+    radial-gradient(ellipse at 30% 10%, rgba(0, 255, 204, 0.08) 0%, transparent 30%),
+    radial-gradient(ellipse at 70% 5%, rgba(0, 255, 204, 0.06) 0%, transparent 25%);
+  animation: lightningFlash 8s ease-in-out infinite;
+  z-index: -1;
+}
+
+@keyframes lightningFlash {
+  0%, 100% { opacity: 0.3; }
+  45% { opacity: 0.4; }
+  48% { opacity: 1; }
+  50% { opacity: 0.2; }
+  52% { opacity: 0.8; }
+  55% { opacity: 0.3; }
+}
+
+/* ============================================
+   TOP BAR - Header Row
+   ============================================ */
+.norse-army-selection .norse-top-bar {
+  grid-area: header;
+  height: 104px;
+  background: linear-gradient(180deg, 
+    rgba(10, 10, 31, 0.98) 0%, 
+    rgba(15, 23, 42, 0.95) 100%
+  );
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px 16px;
+  position: relative;
+  z-index: 100;
+  border-bottom: 1px solid rgba(139, 115, 85, 0.3);
+}
+
+.norse-army-selection .norse-top-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.norse-army-selection .norse-top-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #f1f5f9;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  background: linear-gradient(180deg, #ffd700 0%, #c8a96e 40%, #ffd700 60%, #8B7355 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
+  filter: drop-shadow(0 2px 4px rgba(139, 115, 85, 0.6));
+}
+
+.norse-army-selection .norse-top-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.norse-army-selection .norse-top-guidance {
+  margin: 0;
+  max-width: 46rem;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  font-size: 13px;
+  line-height: 1.55;
+  color: rgba(203, 213, 225, 0.72);
+}
+
+.norse-army-selection .norse-status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 11px;
+  border-radius: 999px;
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(100, 116, 139, 0.35);
+  color: #cbd5e1;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+}
+
+.norse-army-selection .norse-status-pill.complete {
+  background: rgba(21, 128, 61, 0.18);
+  border-color: rgba(74, 222, 128, 0.45);
+  color: #bbf7d0;
+}
+
+.norse-army-selection .norse-launch-rail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.norse-army-selection .norse-launch-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  padding: 0 12px 0 10px;
+  border-radius: 999px;
+  background: rgba(9, 14, 28, 0.78);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.norse-army-selection .norse-launch-step.complete {
+  border-color: rgba(74, 222, 128, 0.4);
+  background: rgba(21, 128, 61, 0.16);
+}
+
+.norse-army-selection .norse-launch-step.active {
+  border-color: rgba(245, 158, 11, 0.36);
+  background: rgba(120, 53, 15, 0.16);
+}
+
+.norse-army-selection .norse-launch-step-marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.16);
+  color: #e2e8f0;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.norse-army-selection .norse-launch-step.complete .norse-launch-step-marker {
+  background: rgba(74, 222, 128, 0.2);
+  color: #bbf7d0;
+}
+
+.norse-army-selection .norse-launch-step.active .norse-launch-step-marker {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fde68a;
+}
+
+.norse-army-selection .norse-launch-step-copy {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.norse-army-selection .norse-launch-step-copy strong {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #f8fafc;
+}
+
+.norse-army-selection .norse-launch-step-copy span {
+  font-size: 11px;
+  color: rgba(203, 213, 225, 0.7);
+}
+
+.norse-army-selection .norse-quick-decks {
+  display: flex;
+  gap: 12px;
+}
+
+.norse-army-selection .norse-quick-deck-btn {
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #22c55e;
+  border: none;
+  border-radius: 24px;
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.3);
+}
+
+.norse-army-selection .norse-quick-deck-btn:hover {
+  background: #16a34a;
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+  transform: translateY(-1px);
+}
+
+.norse-army-selection .norse-quick-deck-btn:disabled {
+  background: #334155;
+  color: #94a3b8;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.norse-army-selection .norse-quick-deck-btn:disabled:hover {
+  transform: none;
+}
+
+.norse-army-selection .norse-dev-tool-btn {
+  min-height: 40px;
+  padding: 0 18px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  background: linear-gradient(180deg, rgba(145, 90, 34, 0.95) 0%, rgba(110, 55, 18, 0.98) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: 999px;
+  color: #fef3c7;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 10px 26px rgba(120, 53, 15, 0.22);
+}
+
+.norse-army-selection .norse-dev-tool-btn:hover {
+  background: linear-gradient(180deg, rgba(180, 83, 9, 0.96) 0%, rgba(124, 58, 18, 0.99) 100%);
+  border-color: rgba(251, 191, 36, 0.55);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 32px rgba(120, 53, 15, 0.3);
+}
+
+.norse-army-selection .norse-dev-tool-btn:disabled {
+  background: rgba(51, 65, 85, 0.3);
+  border-color: rgba(51, 65, 85, 0.5);
+  color: #64748b;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ============================================
+   LEFT SIDEBAR - Piece Selector (212px = 16px margin + 180px + 16px padding)
+   ============================================ */
+.norse-army-selection .norse-piece-sidebar {
+  grid-area: sidebar;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  margin: 0;
+  background: linear-gradient(145deg, 
+    rgba(30, 41, 59, 0.95) 0%, 
+    rgba(15, 23, 42, 0.98) 100%
+  );
+  border-right: 2px solid transparent;
+  border-image: linear-gradient(180deg,
+    rgba(139, 115, 85, 0.2) 0%,
+    rgba(0, 255, 204, 0.4) 30%,
+    rgba(139, 115, 85, 0.6) 50%,
+    rgba(0, 255, 204, 0.4) 70%,
+    rgba(139, 115, 85, 0.2) 100%
+  ) 1;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.4);
+  overflow-y: auto;
+  z-index: var(--z-modal, 50);
+  animation: sidebarBorderGlow 4s ease-in-out infinite;
+}
+
+.norse-army-selection .norse-piece-sidebar::before {
+  display: none;
+}
+
+.norse-army-selection .norse-piece-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+  border: 2px solid #6B5B45;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, background 0.2s ease;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.norse-army-selection .norse-piece-btn:hover {
+  border-color: #00ffcc;
+  box-shadow: 0 0 10px rgba(0, 255, 204, 0.3);
+  transform: translateX(4px);
+}
+
+.norse-army-selection .norse-piece-btn.selected {
+  border-color: #22c55e;
+  background: linear-gradient(135deg, #1a3c34 0%, #0f2922 100%);
+  box-shadow:
+    0 0 15px rgba(34, 197, 94, 0.4),
+    inset 0 0 10px rgba(34, 197, 94, 0.1);
+}
+
+.norse-army-selection .norse-piece-btn.selected::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: #22c55e;
+  border-radius: 2px 0 0 2px;
+  box-shadow: 0 0 10px #22c55e;
+}
+
+.norse-army-selection .norse-piece-icon {
+  font-size: 24px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.norse-army-selection .norse-piece-info {
+  flex: 1;
+  text-align: left;
+}
+
+.norse-army-selection .norse-piece-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f1f5f9;
+  letter-spacing: 0.5px;
+}
+
+.norse-army-selection .norse-piece-hero {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.norse-army-selection .norse-piece-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #22c55e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: white;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.6);
+}
+
+/* ============================================
+   CENTER PANEL - Hero Grid (flexbox column)
+   ============================================ */
+.norse-army-selection .norse-hero-panel {
+  grid-area: content;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* Critical for flexbox scrolling */
+  background: linear-gradient(145deg, 
+    rgba(30, 41, 59, 0.95) 0%, 
+    rgba(15, 23, 42, 0.98) 100%
+  );
+  border-left: 1px solid rgba(139, 115, 85, 0.3);
+  border-right: 1px solid rgba(139, 115, 85, 0.3);
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  z-index: 40;
+}
+
+.norse-army-selection .norse-hero-panel::before {
+  display: none;
+}
+
+.norse-army-selection .norse-panel-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(107, 91, 69, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.norse-army-selection .norse-panel-title {
+  font-size: 19px;
+  font-weight: 700;
+  color: #f1f5f9;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.norse-army-selection .norse-panel-subtitle {
+  font-size: 13px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* Hero Grid - Scrollable area with CSS Grid auto-fit */
+.norse-army-selection .norse-hero-grid {
+  flex: 1;
+  min-height: 0; /* Critical for overflow to work */
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  grid-auto-rows: min-content;
+  align-content: start; /* Align cards to top */
+  gap: 14px;
+  padding: 14px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 115, 85, 0.5) transparent;
+}
+
+.norse-army-selection .norse-hero-grid::-webkit-scrollbar {
+  width: 8px;
+}
+
+.norse-army-selection .norse-hero-grid::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.norse-army-selection .norse-hero-grid::-webkit-scrollbar-thumb {
+  background: rgba(139, 115, 85, 0.6);
+  border-radius: 4px;
+}
+
+.norse-army-selection .norse-hero-grid::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 115, 85, 0.8);
+}
+
+/* ============================================
+   HERO CARD - Individual cards in grid
+   ============================================ */
+.norse-army-selection .norse-hero-card {
+  position: relative;
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  border: 2px solid #6B5B45;
+  border-radius: 10px;
+  overflow: visible;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  min-height: 220px;
+  max-height: 280px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.norse-army-selection .norse-hero-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  border-color: #00ffcc;
+  box-shadow: 
+    0 12px 30px rgba(0, 0, 0, 0.6),
+    0 0 20px rgba(0, 255, 204, 0.2),
+    0 0 40px rgba(0, 255, 204, 0.1);
+}
+
+.norse-army-selection .norse-hero-card.selected {
+  border-color: #22c55e;
+  box-shadow: 
+    0 0 20px rgba(34, 197, 94, 0.4),
+    0 8px 25px rgba(0, 0, 0, 0.5);
+}
+
+.norse-army-selection .norse-hero-card.selected::after {
+  content: '✓';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  background: #22c55e;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: white;
+  font-weight: bold;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.6);
+  z-index: 10;
+}
+
+/* ============================================
+   RARITY BLING — Per-tier visual hierarchy
+   ============================================ */
+
+/* Base ::before for animated border technique */
+.norse-army-selection .norse-hero-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  pointer-events: none;
+  z-index: 5;
+  transition: opacity 0.3s ease;
+}
+
+/* --- MYTHIC: rainbow aurora border + golden glow --- */
+.norse-army-selection .norse-hero-card.rarity-mythic {
+  border-color: transparent;
+  background: linear-gradient(180deg, #2a1f10 0%, #1a1008 100%);
+  box-shadow:
+    0 0 18px rgba(245, 158, 11, 0.4),
+    0 0 36px rgba(236, 72, 153, 0.2),
+    0 0 54px rgba(139, 92, 246, 0.15);
+}
+
+.norse-army-selection .norse-hero-card.rarity-mythic::before {
+  inset: -3px;
+  padding: 3px;
+  border-radius: 12px;
+  border: none;
+  background: conic-gradient(
+    from var(--hero-border-angle),
+    #ef4444, #f97316, #f59e0b,
+    #22c55e, #06b6d4,
+    #3b82f6, #8b5cf6,
+    #a855f7, #ec4899, #ef4444
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: hero-border-rotate 3s linear infinite;
+}
+
+.norse-army-selection .norse-hero-card.rarity-mythic:hover {
+  border-color: transparent;
+  box-shadow:
+    0 0 24px rgba(245, 158, 11, 0.6),
+    0 0 48px rgba(236, 72, 153, 0.35),
+    0 0 72px rgba(139, 92, 246, 0.25),
+    0 8px 25px rgba(0, 0, 0, 0.5);
+}
+
+.norse-army-selection .norse-hero-card.rarity-mythic .norse-hero-name {
+  color: #FCD34D;
+  text-shadow:
+    0 0 10px rgba(252, 211, 77, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* --- EPIC: purple crystalline border + purple glow --- */
+.norse-army-selection .norse-hero-card.rarity-epic {
+  border-color: transparent;
+  background: linear-gradient(180deg, #1e1530 0%, #110e20 100%);
+  box-shadow:
+    0 0 14px rgba(168, 85, 247, 0.35),
+    0 0 28px rgba(168, 85, 247, 0.15);
+}
+
+.norse-army-selection .norse-hero-card.rarity-epic::before {
+  inset: -2px;
+  padding: 2px;
+  border-radius: 11px;
+  border: none;
+  background: conic-gradient(
+    from var(--hero-border-angle),
+    #581C87, #7C3AED, #A855F7, #C084FC,
+    #E9D5FF,
+    #C084FC, #A855F7, #7C3AED, #581C87
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: hero-border-rotate 6s linear infinite;
+}
+
+.norse-army-selection .norse-hero-card.rarity-epic:hover {
+  border-color: transparent;
+  box-shadow:
+    0 0 22px rgba(168, 85, 247, 0.55),
+    0 0 44px rgba(168, 85, 247, 0.25),
+    0 8px 25px rgba(0, 0, 0, 0.5);
+}
+
+.norse-army-selection .norse-hero-card.rarity-epic .norse-hero-name {
+  color: #C084FC;
+  text-shadow:
+    0 0 8px rgba(192, 132, 252, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* --- RARE: blue shimmer sweep border + blue glow --- */
+.norse-army-selection .norse-hero-card.rarity-rare {
+  border-color: transparent;
+  box-shadow:
+    0 0 10px rgba(59, 130, 246, 0.3),
+    0 0 20px rgba(59, 130, 246, 0.12);
+}
+
+.norse-army-selection .norse-hero-card.rarity-rare::before {
+  inset: -2px;
+  padding: 2px;
+  border-radius: 11px;
+  border: none;
+  background:
+    linear-gradient(
+      135deg,
+      #1E3A8A 0%,
+      #3B82F6 20%,
+      #93C5FD 45%,
+      #BFDBFE 50%,
+      #93C5FD 55%,
+      #3B82F6 80%,
+      #1E3A8A 100%
+    );
+  background-size: 300% 300%;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: hero-rare-shimmer 4s ease-in-out infinite;
+}
+
+.norse-army-selection .norse-hero-card.rarity-rare:hover {
+  border-color: transparent;
+  box-shadow:
+    0 0 18px rgba(59, 130, 246, 0.5),
+    0 0 36px rgba(59, 130, 246, 0.2),
+    0 8px 25px rgba(0, 0, 0, 0.5);
+}
+
+.norse-army-selection .norse-hero-card.rarity-rare .norse-hero-name {
+  color: #93C5FD;
+  text-shadow:
+    0 0 8px rgba(147, 197, 253, 0.4),
+    0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* --- COMMON: keep existing static border (default) --- */
+.norse-army-selection .norse-hero-card.rarity-common {
+  /* No changes — inherits base .norse-hero-card styles */
+}
+
+/* --- Rarity badge — top-left pill over portrait --- */
+.norse-army-selection .norse-rarity-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 10;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.norse-army-selection .norse-rarity-badge.rarity-mythic {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(255, 140, 0, 0.9));
+  color: #fff;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+}
+
+.norse-army-selection .norse-rarity-badge.rarity-epic {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.85), rgba(168, 85, 247, 0.85));
+  color: #fff;
+  box-shadow: 0 0 6px rgba(168, 85, 247, 0.4);
+}
+
+.norse-army-selection .norse-rarity-badge.rarity-rare {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.8), rgba(59, 130, 246, 0.8));
+  color: #fff;
+  box-shadow: 0 0 6px rgba(59, 130, 246, 0.35);
+}
+
+/* Holo effects moved to styles/holoEffect.css */
+
+.norse-army-selection .norse-hero-card.selected.rarity-mythic {
+  border-color: #22c55e;
+  box-shadow:
+    0 0 18px rgba(245, 158, 11, 0.3),
+    0 0 20px rgba(34, 197, 94, 0.4),
+    0 8px 25px rgba(0, 0, 0, 0.5);
+}
+
+.norse-army-selection .norse-hero-card.selected.rarity-epic {
+  border-color: #22c55e;
+  box-shadow:
+    0 0 14px rgba(168, 85, 247, 0.25),
+    0 0 20px rgba(34, 197, 94, 0.4),
+    0 8px 25px rgba(0, 0, 0, 0.5);
+}
+
+.norse-army-selection .norse-hero-card.selected.rarity-rare {
+  border-color: #22c55e;
+  box-shadow:
+    0 0 10px rgba(59, 130, 246, 0.2),
+    0 0 20px rgba(34, 197, 94, 0.4),
+    0 8px 25px rgba(0, 0, 0, 0.5);
+}
+
+/* ============================================
+   RIGHT SIDEBAR - Army/Deck Panel (276px = 260px + 16px margin)
+   ============================================ */
+.norse-army-selection .norse-army-sidebar {
+  grid-area: army;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  background: linear-gradient(145deg, 
+    rgba(30, 41, 59, 0.95) 0%, 
+    rgba(15, 23, 42, 0.98) 100%
+  );
+  border-left: 2px solid transparent;
+  border-image: linear-gradient(180deg,
+    rgba(139, 115, 85, 0.2) 0%,
+    rgba(34, 197, 94, 0.4) 30%,
+    rgba(139, 115, 85, 0.6) 50%,
+    rgba(34, 197, 94, 0.4) 70%,
+    rgba(139, 115, 85, 0.2) 100%
+  ) 1;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.4);
+  overflow-y: auto;
+  z-index: 60;
+}
+
+.norse-army-selection .norse-army-sidebar::before {
+  display: none;
+}
+
+.norse-army-selection .norse-sidebar-header {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(139, 115, 85, 0.4);
+}
+
+.norse-army-selection .norse-sidebar-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #f1f5f9;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.norse-army-selection .norse-army-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.norse-army-selection .norse-army-slot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+  border: 2px solid #6B5B45;
+  border-radius: 8px;
+  transition: border-color 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+}
+
+.norse-army-selection .norse-army-slot.filled {
+  border-color: #22c55e;
+  background: linear-gradient(135deg, #1a3c34 0%, #0f2922 100%);
+}
+
+.norse-army-selection .norse-army-slot.empty {
+  border-style: dashed;
+  opacity: 0.6;
+}
+
+.norse-army-selection .norse-slot-icon {
+  font-size: 20px;
+}
+
+.norse-army-selection .norse-slot-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.norse-army-selection .norse-slot-piece {
+  font-size: 11px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.norse-army-selection .norse-slot-hero {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.norse-army-selection .norse-deck-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.norse-army-selection .norse-deck-count {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.norse-army-selection .norse-deck-count.complete {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.norse-army-selection .norse-deck-count.incomplete {
+  background: rgba(234, 179, 8, 0.2);
+  color: #eab308;
+  border: 1px solid rgba(234, 179, 8, 0.4);
+}
+
+.norse-army-selection .norse-edit-deck-btn {
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #00ffcc;
+  border: none;
+  border-radius: 4px;
+  color: #0f172a;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.norse-army-selection .norse-edit-deck-btn:hover {
+  background: #00e6b8;
+  transform: scale(1.05);
+}
+
+/* ============================================
+   BOTTOM BAR - Footer Row
+   ============================================ */
+.norse-army-selection .norse-bottom-bar {
+  grid-area: footer;
+  height: 96px;
+  background: linear-gradient(0deg, 
+    rgba(10, 10, 31, 0.98) 0%, 
+    rgba(15, 23, 42, 0.95) 100%
+  );
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 0 24px;
+  position: relative;
+  z-index: 100;
+  border-top: 1px solid rgba(139, 115, 85, 0.3);
+}
+
+.norse-army-selection .norse-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  background: transparent;
+  border: 2px solid #64748b;
+  border-radius: 8px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  font-family: inherit;
+}
+
+.norse-army-selection .norse-back-btn:hover {
+  border-color: #94a3b8;
+  color: #f1f5f9;
+  background: rgba(100, 116, 139, 0.1);
+}
+
+.norse-army-selection .norse-confirm-btn {
+  padding: 12px 32px;
+  font-size: 14px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border: 2px solid #22c55e;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+}
+
+.norse-army-selection .norse-confirm-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px rgba(34, 197, 94, 0.5);
+}
+
+.norse-army-selection .norse-confirm-btn:disabled {
+  background: #334155;
+  border-color: #475569;
+  color: #64748b;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.norse-army-selection .norse-btn-status {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* ============================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================ */
+@media (max-width: 1200px) {
+  .norse-army-selection {
+    grid-template-columns: 180px 1fr 240px;
+  }
+  
+  .norse-army-selection .norse-hero-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .norse-army-selection {
+    grid-template-columns: 160px 1fr 200px;
+  }
+
+  .norse-army-selection .norse-hero-grid {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 8px;
+    padding: 8px;
+  }
+  
+  .norse-army-selection .norse-hero-card {
+    min-height: 160px;
+    max-height: 200px;
+  }
+}
+
+@media (max-width: 768px) {
+  .norse-army-selection {
+    grid-template-columns: 1fr;
+    grid-template-rows: 72px 1fr auto auto 90px;
+    grid-template-areas:
+      "header"
+      "content"
+      "sidebar"
+      "army"
+      "footer";
+  }
+
+  .norse-army-selection .norse-top-bar {
+    height: 72px;
+    padding: 8px 14px 10px;
+    gap: 12px;
+  }
+
+  .norse-army-selection .norse-top-title {
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+
+  .norse-army-selection .norse-top-guidance {
+    display: none;
+  }
+
+  .norse-army-selection .norse-launch-rail {
+    display: none;
+  }
+
+  .norse-army-selection .norse-top-bar-actions {
+    width: auto;
+  }
+  
+  .norse-army-selection .norse-piece-sidebar {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 8px;
+    border-right: none;
+    border-image: none;
+    border-bottom: 2px solid #8B7355;
+  }
+  
+  .norse-army-selection .norse-piece-btn {
+    flex-direction: column;
+    padding: 8px;
+    min-width: 80px;
+  }
+  
+  .norse-army-selection .norse-army-sidebar {
+    border-left: none;
+    border-image: none;
+    border-top: 2px solid #8B7355;
+    max-height: 200px;
+  }
+
+  .norse-army-selection .norse-bottom-bar {
+    height: 90px;
+    padding: 10px 14px;
+  }
+
+  .norse-army-selection .norse-battle-status-text {
+    display: none;
+  }
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+.norse-army-selection .norse-stone-panel,
+.norse-army-selection .norse-rune-border {
+  /* These classes are kept for compatibility but styles are now on specific elements */
+}
+
+/* Class-specific badge colors */
+.norse-army-selection .class-mage { color: #69CCF0; }
+.norse-army-selection .class-warrior { color: #C79C6E; }
+.norse-army-selection .class-priest { color: #FFFFFF; }
+.norse-army-selection .class-rogue { color: #FFF569; }
+.norse-army-selection .class-hunter { color: #ABD473; }
+.norse-army-selection .class-warlock { color: #9482C9; }
+.norse-army-selection .class-shaman { color: #0070DE; }
+.norse-army-selection .class-druid { color: #FF7D0A; }
+.norse-army-selection .class-paladin { color: #F58CBA; }
+.norse-army-selection .class-deathknight { color: #C41F3B; }
+.norse-army-selection .class-berserker { color: #A330C9; }
+.norse-army-selection .class-necromancer { color: #40E0D0; }
+
+/* Hero portrait component overrides */
+.norse-army-selection .hero-portrait-container {
+  width: 100%;
+  height: 100%;
+}
+
+.norse-army-selection .hero-portrait {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+/* ============================================
+   HERO CARD - Extended styles from JSX
+   ============================================ */
+.norse-army-selection .norse-hero-media {
+  position: relative;
+  width: 100%;
+  height: 150px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.norse-army-selection .norse-hero-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.norse-army-selection .norse-hero-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+}
+
+.norse-army-selection .norse-hero-gradient-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.norse-army-selection .norse-hero-name-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.norse-army-selection .norse-hero-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f1f5f9;
+  text-align: center;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+.norse-army-selection .norse-hero-class-badge {
+  padding: 2px 8px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(139, 115, 85, 0.4);
+  border-radius: 4px;
+  font-size: 9px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.norse-army-selection .norse-hero-rune {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 20px;
+  color: rgba(0, 255, 204, 0.4);
+  text-shadow: 0 0 8px rgba(0, 255, 204, 0.4);
+  font-family: 'Norse', serif;
+}
+
+.norse-army-selection .norse-hero-info-panel {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.norse-army-selection .norse-hero-stats {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.norse-army-selection .norse-stat-hp {
+  color: #ef4444;
+}
+
+.norse-army-selection .norse-stat-sta {
+  color: #fbbf24;
+}
+
+.norse-army-selection .norse-element-badge {
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.norse-army-selection .element-fire { background: rgba(239, 68, 68, 0.3); color: #fca5a5; }
+.norse-army-selection .element-water { background: rgba(59, 130, 246, 0.3); color: #93c5fd; }
+.norse-army-selection .element-electric { background: rgba(234, 179, 8, 0.3); color: #fde047; }
+.norse-army-selection .element-grass { background: rgba(34, 197, 94, 0.3); color: #86efac; }
+.norse-army-selection .element-light { background: rgba(251, 191, 36, 0.3); color: #fef08a; }
+.norse-army-selection .element-dark { background: rgba(139, 92, 246, 0.3); color: #c4b5fd; }
+
+.norse-army-selection .norse-select-btn {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #475569 0%, #334155 100%);
+  border: 1px solid #64748b;
+  border-radius: 6px;
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  font-family: inherit;
+}
+
+.norse-army-selection .norse-select-btn:hover {
+  background: linear-gradient(135deg, #00ffcc 0%, #00e6b8 100%);
+  border-color: #00ffcc;
+  color: #0f172a;
+  box-shadow: 0 0 15px rgba(0, 255, 204, 0.4), 0 0 30px rgba(0, 255, 204, 0.2);
+}
+
+.norse-army-selection .norse-select-btn.selected {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border-color: #22c55e;
+  color: white;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+  animation: selectedBtnGlow 2s ease-in-out infinite;
+}
+
+/* ============================================
+   ARMY SIDEBAR - Extended styles from JSX
+   ============================================ */
+.norse-army-selection .norse-army-header {
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(139, 115, 85, 0.4);
+}
+
+.norse-army-selection .norse-army-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f1f5f9;
+  letter-spacing: 1px;
+}
+
+.norse-army-selection .norse-army-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+  border: 1px solid #6B5B45;
+  border-radius: 8px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.norse-army-selection .norse-army-item-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.norse-army-selection .norse-army-portrait {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #6B5B45;
+  flex-shrink: 0;
+}
+
+.norse-army-selection .norse-army-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.norse-army-selection .norse-army-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.norse-army-selection .norse-army-item-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.norse-army-selection .norse-army-item-deck {
+  font-size: 11px;
+  color: #64748b;
+  text-transform: capitalize;
+}
+
+.norse-army-selection .norse-army-footer {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid rgba(139, 115, 85, 0.4);
+}
+
+.norse-army-selection .norse-deck-status-label {
+  font-size: 11px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.norse-army-selection .norse-deck-status-value {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.norse-army-selection .norse-deck-status-value.complete {
+  color: #22c55e;
+}
+
+.norse-army-selection .norse-deck-status-value.incomplete {
+  color: #eab308;
+}
+
+/* ============================================
+   BOTTOM BAR - Extended styles from JSX
+   ============================================ */
+.norse-army-selection .norse-user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  border: 2px solid #6B5B45;
+}
+
+.norse-army-selection .norse-battle-btn {
+  min-height: 58px;
+  min-width: 236px;
+  padding: 0 28px;
+  font-size: 14px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border: 2px solid #22c55e;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+  position: relative;
+  overflow: visible;
+}
+
+.norse-army-selection .norse-battle-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px rgba(34, 197, 94, 0.5);
+}
+
+.norse-army-selection .norse-battle-btn:disabled {
+  background: #334155;
+  border-color: #475569;
+  color: #64748b;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* ============================================
+   BADASS VISUAL UPGRADES
+   ============================================ */
+
+/* Animated floating rune particles on background */
+.norse-army-selection .norse-army-bg::before {
+  content: 'ᚱ ᛟ ᚦ ᛗ ᚲ ᛚ ᛒ ᛈ';
+  position: fixed;
+  top: -20px;
+  left: 10%;
+  font-size: 24px;
+  color: rgba(0, 255, 204, 0.06);
+  letter-spacing: 60px;
+  white-space: nowrap;
+  animation: runeFloat 20s linear infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.norse-army-selection .norse-army-bg::after {
+  content: 'ᛞ ᛉ ᛊ ᚹ ᛏ ᚨ ᛝ ᛃ';
+  position: fixed;
+  top: 40%;
+  right: 5%;
+  font-size: 20px;
+  color: rgba(0, 255, 204, 0.04);
+  letter-spacing: 50px;
+  white-space: nowrap;
+  animation: runeFloat2 25s linear infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
+@keyframes runeFloat {
+  0% { transform: translateY(100vh) translateX(0); opacity: 0; }
+  10% { opacity: 0.06; }
+  90% { opacity: 0.06; }
+  100% { transform: translateY(-50px) translateX(30px); opacity: 0; }
+}
+
+@keyframes runeFloat2 {
+  0% { transform: translateY(100vh) translateX(0); opacity: 0; }
+  10% { opacity: 0.04; }
+  90% { opacity: 0.04; }
+  100% { transform: translateY(-50px) translateX(-20px); opacity: 0; }
+}
+
+@keyframes sidebarBorderGlow {
+  0%, 100% { border-image: linear-gradient(180deg, rgba(139, 115, 85, 0.2) 0%, rgba(0, 255, 204, 0.4) 30%, rgba(139, 115, 85, 0.6) 50%, rgba(0, 255, 204, 0.4) 70%, rgba(139, 115, 85, 0.2) 100%) 1; }
+  50% { border-image: linear-gradient(180deg, rgba(0, 255, 204, 0.4) 0%, rgba(139, 115, 85, 0.6) 30%, rgba(0, 255, 204, 0.5) 50%, rgba(139, 115, 85, 0.6) 70%, rgba(0, 255, 204, 0.4) 100%) 1; }
+}
+
+/* Common cards get an ambient hover aura without interfering with rarity borders */
+.norse-army-selection .norse-hero-card.rarity-common:hover::before {
+  inset: -3px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(0, 255, 204, 0.3), rgba(139, 115, 85, 0.3), rgba(0, 255, 204, 0.3));
+  opacity: 1;
+  z-index: -1;
+  filter: blur(4px);
+}
+
+.norse-army-selection .norse-hero-card.selected.rarity-common::before {
+  inset: -3px;
+  border-radius: 12px;
+  opacity: 1;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.5), rgba(255, 215, 0, 0.3), rgba(34, 197, 94, 0.5));
+  z-index: -1;
+  filter: blur(4px);
+  animation: selectedCardPulse 2s ease-in-out infinite;
+}
+
+@keyframes selectedCardPulse {
+  0%, 100% { opacity: 0.6; filter: blur(4px); }
+  50% { opacity: 1; filter: blur(6px); }
+}
+
+@keyframes selectedBtnGlow {
+  0%, 100% { box-shadow: 0 0 10px rgba(34, 197, 94, 0.4); }
+  50% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.6), 0 0 30px rgba(34, 197, 94, 0.3); }
+}
+
+.norse-army-selection .norse-battle-btn:not(:disabled)::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.6), rgba(255, 215, 0, 0.4), rgba(34, 197, 94, 0.6));
+  filter: blur(6px);
+  opacity: 0.5;
+  animation: battleBtnGlow 2s ease-in-out infinite;
+  z-index: -1;
+}
+
+@keyframes battleBtnGlow {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.02); }
+}
+
+/* Enhanced lightning overlay with more drama */
+.norse-army-selection .norse-lightning-overlay::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(0, 255, 204, 0.6) 30%, 
+    rgba(255, 215, 0, 0.4) 50%, 
+    rgba(0, 255, 204, 0.6) 70%, 
+    transparent 100%
+  );
+  animation: topGlowSweep 6s ease-in-out infinite;
+}
+
+@keyframes topGlowSweep {
+  0%, 100% { opacity: 0.3; transform: scaleX(0.6); }
+  50% { opacity: 0.8; transform: scaleX(1); }
+}
+
+.norse-army-selection .norse-army-item:hover {
+  border-color: rgba(0, 255, 204, 0.3);
+  box-shadow: 0 0 10px rgba(0, 255, 204, 0.1);
+}
+
+/* Bottom bar ambient glow line */
+.norse-army-selection .norse-bottom-bar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(139, 115, 85, 0.6) 20%,
+    rgba(0, 255, 204, 0.3) 50%,
+    rgba(139, 115, 85, 0.6) 80%,
+    transparent
+  );
+}
+
+/* Ember particle effect in top header */
+.norse-army-selection .norse-top-bar::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(255, 215, 0, 0.4) 25%,
+    rgba(0, 255, 204, 0.4) 50%,
+    rgba(255, 215, 0, 0.4) 75%,
+    transparent
+  );
+  animation: headerGlow 5s ease-in-out infinite;
+}
+
+@keyframes headerGlow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .norse-army-selection .norse-army-bg::before,
+  .norse-army-selection .norse-army-bg::after {
+    animation: none !important;
+    display: none;
+  }
+
+  .norse-army-selection .norse-hero-card::before {
+    animation: none !important;
+  }
+
+  .norse-army-selection .norse-battle-btn::before {
+    animation: none !important;
+  }
+
+  .norse-army-selection .norse-lightning-overlay {
+    animation: none !important;
+  }
+
+  .norse-army-selection .norse-lightning-overlay::before {
+    animation: none !important;
+  }
+
+  .norse-army-selection .norse-top-bar::after {
+    animation: none !important;
+  }
+
+  .norse-army-selection .norse-piece-sidebar {
+    animation: none !important;
+  }
+
+  .norse-army-selection .norse-select-btn.selected {
+    animation: none !important;
+  }
+
+  .norse-army-selection .norse-hero-card,
+  .norse-army-selection .norse-piece-btn,
+  .norse-army-selection .norse-select-btn,
+  .norse-army-selection .norse-quick-deck-btn,
+  .norse-army-selection .norse-back-btn,
+  .norse-army-selection .norse-confirm-btn,
+  .norse-army-selection .norse-battle-btn {
+    transition: none !important;
+  }
+}
+
+/* Focus-visible for army selection */
+.norse-army-selection .norse-hero-card:focus-visible {
+  outline: 2px solid var(--color-gold, #ffd700);
+  outline-offset: 3px;
+}
+
+.norse-army-selection .norse-piece-btn:focus-visible {
+  outline: 2px solid #00ffcc;
+  outline-offset: 2px;
+}
+
+.norse-army-selection .norse-select-btn:focus-visible,
+.norse-army-selection .norse-quick-deck-btn:focus-visible,
+.norse-army-selection .norse-back-btn:focus-visible,
+.norse-army-selection .norse-confirm-btn:focus-visible,
+.norse-army-selection .norse-battle-btn:focus-visible {
+  outline: 2px solid var(--color-gold, #ffd700);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   INLINE STYLE REPLACEMENTS
+   ============================================ */
+.norse-army-selection .norse-top-bar-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.norse-army-selection .norse-spell-badge {
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 4px;
+  border: 1px solid;
+}
+
+.norse-army-selection .norse-spell-badge.has-spells {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+.norse-army-selection .norse-spell-badge.no-spells {
+  background: rgba(107, 114, 128, 0.2);
+  color: #9ca3af;
+  border-color: rgba(107, 114, 128, 0.3);
+}
+
+.norse-army-selection .norse-hero-placeholder-icon {
+  font-size: 48px;
+}
+
+.norse-army-selection .norse-empty-text {
+  color: #6b7280;
+}
+
+.norse-army-selection .norse-deck-breakdown {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.norse-army-selection .norse-deck-breakdown-label {
+  color: #9ca3af;
+  text-transform: capitalize;
+}
+
+.norse-army-selection .norse-deck-breakdown-value.complete {
+  color: #4ade80;
+}
+
+.norse-army-selection .norse-deck-breakdown-value.has-hero {
+  color: #fbbf24;
+}
+
+.norse-army-selection .norse-deck-breakdown-value.no-hero {
+  color: #6b7280;
+}
+
+.norse-army-selection .norse-bottom-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.norse-army-selection .norse-deck-warning {
+  color: #fbbf24;
+  font-size: 13px;
+  text-align: center;
+}
+
+.norse-army-selection .norse-matchmaking-status {
+  color: #60a5fa;
+  font-size: 13px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.norse-army-selection .norse-matchmaking-status-line {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.norse-army-selection .norse-queue-position {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.norse-army-selection .norse-matchmaking-error {
+  color: #ef4444;
+  font-size: 12px;
+  text-align: center;
+}
+
+.norse-army-selection .norse-battle-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.norse-army-selection .norse-battle-status-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #f8d483;
+  background: linear-gradient(180deg, rgba(120, 53, 15, 0.32) 0%, rgba(51, 65, 85, 0.4) 100%);
+  border: 1px solid rgba(248, 212, 131, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 22px rgba(0, 0, 0, 0.18);
+  flex-shrink: 0;
+}
+
+.norse-army-selection .norse-battle-status-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.norse-army-selection .norse-battle-status-title {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #f8fafc;
+}
+
+.norse-army-selection .norse-battle-status-text {
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(203, 213, 225, 0.72);
+}
+
+.norse-army-selection .norse-hero-desc-preview {
+  font-size: 11px;
+  color: rgba(148, 163, 184, 0.7);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-style: italic;
+}
+
+/* Responsive updates */
+@media (max-width: 900px) {
+  .norse-army-selection .norse-hero-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .norse-army-selection .norse-hero-card {
+    min-height: 180px;
+    max-height: 240px;
+  }
+
+  .norse-army-selection .norse-hero-media {
+    height: 120px;
+  }
+}
+
+/* Touch device support */
+@media (hover: none) {
+  .norse-army-selection .norse-hero-card:hover {
+    transform: none;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  }
+
+  .norse-army-selection .norse-hero-card:hover::before {
+    opacity: 0;
+  }
+
+  .norse-army-selection .norse-piece-btn:hover {
+    transform: none;
+  }
+
+  .norse-army-selection .norse-select-btn:hover {
+    box-shadow: none;
+  }
+}
+
+/* ============================================
+   THEME PARTICLES — activate SimpleCard.css particles on hero grid hover
+   ============================================ */
+.norse-hero-card:hover .card-particles::before,
+.norse-hero-card:hover .card-particles::after {
+  animation-play-state: running;
+}

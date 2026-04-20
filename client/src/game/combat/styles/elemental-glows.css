@@ -1,0 +1,514 @@
+/* Elemental Glows - Element-specific effects */
+
+/* ========================================
+   ELEMENTAL GLOW EFFECTS (AAA QUALITY)
+   Dramatic auras matching reference images
+   ======================================== */
+
+/* Base elemental aura layer - sits behind the card frame */
+.hero-elemental-aura {
+  position: absolute;
+  inset: -8px;
+  border-radius: 16px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+/* Particle effects container - inside card frame, above portrait */
+.hero-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  overflow: hidden;
+}
+
+.hero-particles .particle {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0;
+}
+
+/* ========================================
+   FIRE ELEMENT - Orange/Red flames
+   ======================================== */
+.hero-card-frame.element-fire {
+  border-color: #ff6b35 !important;
+  box-shadow: 
+    0 0 20px rgba(255, 107, 53, 0.6),
+    0 0 40px rgba(255, 69, 0, 0.4),
+    0 0 60px rgba(255, 69, 0, 0.2),
+    inset 0 0 15px rgba(255, 107, 53, 0.2);
+}
+
+.hero-elemental-aura.element-fire {
+  background: radial-gradient(ellipse at center, 
+    rgba(255, 107, 53, 0.4) 0%, 
+    rgba(255, 69, 0, 0.2) 40%, 
+    transparent 70%);
+  animation: fireAuraPulse 2s ease-in-out infinite;
+}
+
+.hero-particles.element-fire .particle {
+  background: radial-gradient(circle, #ff6b35 0%, #ff4500 100%);
+  box-shadow: 0 0 10px #ff6b35, 0 0 20px #ff4500;
+  animation: fireParticleRise 2s ease-out infinite;
+}
+
+.hero-particles.element-fire .p1 { width: 8px; height: 8px; left: 10%; bottom: 0; animation-delay: 0s; }
+.hero-particles.element-fire .p2 { width: 6px; height: 6px; left: 30%; bottom: 0; animation-delay: 0.3s; }
+.hero-particles.element-fire .p3 { width: 10px; height: 10px; left: 50%; bottom: 0; animation-delay: 0.6s; }
+.hero-particles.element-fire .p4 { width: 5px; height: 5px; left: 70%; bottom: 0; animation-delay: 0.9s; }
+.hero-particles.element-fire .p5 { width: 7px; height: 7px; left: 90%; bottom: 0; animation-delay: 1.2s; }
+.hero-particles.element-fire .p6 { width: 4px; height: 4px; left: 20%; bottom: 0; animation-delay: 1.5s; }
+
+@keyframes fireAuraPulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+@keyframes fireParticleRise {
+  0% { opacity: 0; transform: translateY(0) scale(0.5); }
+  20% { opacity: 1; transform: translateY(-20px) scale(0.8); }
+  100% { opacity: 0; transform: translateY(-120px) translateX(10px) scale(0); }
+}
+
+/* ========================================
+   ELECTRIC ELEMENT - Blue/Cyan lightning
+   ======================================== */
+.hero-card-frame.element-electric {
+  border-color: #00d4ff !important;
+  box-shadow: 
+    0 0 20px rgba(0, 212, 255, 0.7),
+    0 0 40px rgba(0, 150, 255, 0.5),
+    0 0 60px rgba(0, 150, 255, 0.3),
+    inset 0 0 15px rgba(0, 212, 255, 0.3);
+}
+
+.hero-elemental-aura.element-electric {
+  background: radial-gradient(ellipse at center, 
+    rgba(0, 212, 255, 0.5) 0%, 
+    rgba(0, 150, 255, 0.3) 40%, 
+    transparent 70%);
+  animation: electricAuraPulse 1.5s ease-in-out infinite;
+}
+
+.hero-particles.element-electric .particle {
+  background: linear-gradient(180deg, #00d4ff 0%, #0099ff 100%);
+  box-shadow: 0 0 15px #00d4ff, 0 0 30px #0099ff;
+  animation: electricSpark 0.8s ease-out infinite;
+}
+
+.hero-particles.element-electric .p1 { width: 3px; height: 20px; left: 5%; bottom: 0; animation-delay: 0s; }
+.hero-particles.element-electric .p2 { width: 2px; height: 15px; left: 25%; bottom: 0; animation-delay: 0.2s; }
+.hero-particles.element-electric .p3 { width: 4px; height: 25px; left: 45%; bottom: 0; animation-delay: 0.4s; }
+.hero-particles.element-electric .p4 { width: 2px; height: 18px; left: 65%; bottom: 0; animation-delay: 0.6s; }
+.hero-particles.element-electric .p5 { width: 3px; height: 22px; left: 85%; bottom: 0; animation-delay: 0.15s; }
+.hero-particles.element-electric .p6 { width: 2px; height: 12px; left: 95%; bottom: 0; animation-delay: 0.35s; }
+
+@keyframes electricAuraPulse {
+  0%, 100% { opacity: 0.6; }
+  25% { opacity: 1; }
+  50% { opacity: 0.5; }
+  75% { opacity: 0.9; }
+}
+
+@keyframes electricSpark {
+  0% { opacity: 0; transform: translateY(0) scaleY(0.5); }
+  30% { opacity: 1; transform: translateY(-40px) scaleY(1); }
+  100% { opacity: 0; transform: translateY(-100px) scaleY(0.3); }
+}
+
+/* ========================================
+   WATER/ICE ELEMENT - Cyan/Blue frost
+   ======================================== */
+.hero-card-frame.element-water,
+.hero-card-frame.element-ice {
+  border-color: #5ce1e6 !important;
+  box-shadow: 
+    0 0 20px rgba(92, 225, 230, 0.6),
+    0 0 40px rgba(0, 191, 255, 0.4),
+    0 0 60px rgba(0, 191, 255, 0.2),
+    inset 0 0 15px rgba(92, 225, 230, 0.2);
+}
+
+.hero-elemental-aura.element-water,
+.hero-elemental-aura.element-ice {
+  background: radial-gradient(ellipse at center, 
+    rgba(92, 225, 230, 0.4) 0%, 
+    rgba(0, 191, 255, 0.2) 40%, 
+    transparent 70%);
+  animation: waterAuraPulse 3s ease-in-out infinite;
+}
+
+.hero-particles.element-water .particle,
+.hero-particles.element-ice .particle {
+  background: radial-gradient(circle, #5ce1e6 0%, #00bfff 100%);
+  box-shadow: 0 0 8px #5ce1e6;
+  border-radius: 2px;
+  animation: iceFloat 4s ease-in-out infinite;
+}
+
+.hero-particles.element-water .p1,
+.hero-particles.element-ice .p1 { width: 6px; height: 6px; left: 15%; top: 20%; animation-delay: 0s; }
+.hero-particles.element-water .p2,
+.hero-particles.element-ice .p2 { width: 4px; height: 4px; left: 85%; top: 30%; animation-delay: 0.5s; }
+.hero-particles.element-water .p3,
+.hero-particles.element-ice .p3 { width: 8px; height: 8px; left: 25%; top: 70%; animation-delay: 1s; }
+.hero-particles.element-water .p4,
+.hero-particles.element-ice .p4 { width: 5px; height: 5px; left: 75%; top: 60%; animation-delay: 1.5s; }
+.hero-particles.element-water .p5,
+.hero-particles.element-ice .p5 { width: 3px; height: 3px; left: 50%; top: 10%; animation-delay: 2s; }
+.hero-particles.element-water .p6,
+.hero-particles.element-ice .p6 { width: 7px; height: 7px; left: 40%; top: 85%; animation-delay: 2.5s; }
+
+@keyframes waterAuraPulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.02); }
+}
+
+@keyframes iceFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.3; }
+  50% { transform: translateY(-10px) rotate(45deg); opacity: 0.8; }
+}
+
+/* ========================================
+   LIGHT/HOLY ELEMENT - Golden/White radiance
+   ======================================== */
+.hero-card-frame.element-light,
+.hero-card-frame.element-holy {
+  border-color: #ffd700 !important;
+  box-shadow: 
+    0 0 25px rgba(255, 215, 0, 0.7),
+    0 0 50px rgba(255, 223, 128, 0.5),
+    0 0 75px rgba(255, 215, 0, 0.3),
+    inset 0 0 20px rgba(255, 223, 128, 0.3);
+}
+
+.hero-elemental-aura.element-light,
+.hero-elemental-aura.element-holy {
+  background: radial-gradient(ellipse at center, 
+    rgba(255, 223, 128, 0.5) 0%, 
+    rgba(255, 215, 0, 0.3) 40%, 
+    transparent 70%);
+  animation: lightAuraPulse 2.5s ease-in-out infinite;
+}
+
+.hero-particles.element-light .particle,
+.hero-particles.element-holy .particle {
+  background: radial-gradient(circle, #fff 0%, #ffd700 100%);
+  box-shadow: 0 0 15px #ffd700, 0 0 25px rgba(255, 215, 0, 0.5);
+  animation: lightSparkle 2s ease-in-out infinite;
+}
+
+.hero-particles.element-light .p1,
+.hero-particles.element-holy .p1 { width: 4px; height: 4px; left: 10%; top: 15%; animation-delay: 0s; }
+.hero-particles.element-light .p2,
+.hero-particles.element-holy .p2 { width: 3px; height: 3px; left: 90%; top: 25%; animation-delay: 0.4s; }
+.hero-particles.element-light .p3,
+.hero-particles.element-holy .p3 { width: 5px; height: 5px; left: 20%; top: 75%; animation-delay: 0.8s; }
+.hero-particles.element-light .p4,
+.hero-particles.element-holy .p4 { width: 4px; height: 4px; left: 80%; top: 65%; animation-delay: 1.2s; }
+.hero-particles.element-light .p5,
+.hero-particles.element-holy .p5 { width: 6px; height: 6px; left: 50%; top: 5%; animation-delay: 1.6s; }
+.hero-particles.element-light .p6,
+.hero-particles.element-holy .p6 { width: 3px; height: 3px; left: 35%; top: 90%; animation-delay: 0.2s; }
+
+@keyframes lightAuraPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes lightSparkle {
+  0%, 100% { opacity: 0; transform: scale(0.5); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* ========================================
+   DARK/SHADOW ELEMENT - Purple/Black mist
+   ======================================== */
+.hero-card-frame.element-dark,
+.hero-card-frame.element-shadow {
+  border-color: #9333ea !important;
+  box-shadow: 
+    0 0 20px rgba(147, 51, 234, 0.6),
+    0 0 40px rgba(88, 28, 135, 0.5),
+    0 0 60px rgba(88, 28, 135, 0.3),
+    inset 0 0 15px rgba(147, 51, 234, 0.2);
+}
+
+.hero-elemental-aura.element-dark,
+.hero-elemental-aura.element-shadow {
+  background: radial-gradient(ellipse at center, 
+    rgba(147, 51, 234, 0.4) 0%, 
+    rgba(88, 28, 135, 0.3) 40%, 
+    transparent 70%);
+  animation: darkAuraPulse 3s ease-in-out infinite;
+}
+
+.hero-particles.element-dark .particle,
+.hero-particles.element-shadow .particle {
+  background: radial-gradient(circle, #9333ea 0%, #581c87 100%);
+  box-shadow: 0 0 10px rgba(147, 51, 234, 0.8);
+  animation: darkMistFloat 4s ease-in-out infinite;
+}
+
+.hero-particles.element-dark .p1,
+.hero-particles.element-shadow .p1 { width: 12px; height: 12px; left: 5%; top: 30%; animation-delay: 0s; }
+.hero-particles.element-dark .p2,
+.hero-particles.element-shadow .p2 { width: 8px; height: 8px; left: 85%; top: 20%; animation-delay: 0.7s; }
+.hero-particles.element-dark .p3,
+.hero-particles.element-shadow .p3 { width: 15px; height: 15px; left: 15%; top: 70%; animation-delay: 1.4s; }
+.hero-particles.element-dark .p4,
+.hero-particles.element-shadow .p4 { width: 10px; height: 10px; left: 75%; top: 80%; animation-delay: 2.1s; }
+.hero-particles.element-dark .p5,
+.hero-particles.element-shadow .p5 { width: 6px; height: 6px; left: 50%; top: 5%; animation-delay: 2.8s; }
+.hero-particles.element-dark .p6,
+.hero-particles.element-shadow .p6 { width: 14px; height: 14px; left: 40%; top: 50%; animation-delay: 0.35s; }
+
+@keyframes darkAuraPulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.03); }
+}
+
+@keyframes darkMistFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.3; }
+  25% { transform: translate(5px, -5px) scale(1.1); opacity: 0.6; }
+  50% { transform: translate(-3px, 3px) scale(0.9); opacity: 0.4; }
+  75% { transform: translate(2px, 5px) scale(1.05); opacity: 0.5; }
+}
+
+/* ========================================
+   GRASS/NATURE ELEMENT - Green vines
+   ======================================== */
+.hero-card-frame.element-grass,
+.hero-card-frame.element-earth {
+  border-color: #22c55e !important;
+  box-shadow: 
+    0 0 20px rgba(34, 197, 94, 0.6),
+    0 0 40px rgba(22, 163, 74, 0.4),
+    0 0 60px rgba(22, 163, 74, 0.2),
+    inset 0 0 15px rgba(34, 197, 94, 0.2);
+}
+
+.hero-elemental-aura.element-grass,
+.hero-elemental-aura.element-earth {
+  background: radial-gradient(ellipse at center, 
+    rgba(34, 197, 94, 0.4) 0%, 
+    rgba(22, 163, 74, 0.2) 40%, 
+    transparent 70%);
+  animation: grassAuraPulse 3s ease-in-out infinite;
+}
+
+.hero-particles.element-grass .particle,
+.hero-particles.element-earth .particle {
+  background: linear-gradient(180deg, #4ade80 0%, #22c55e 100%);
+  box-shadow: 0 0 8px #22c55e;
+  border-radius: 1px;
+  animation: leafFloat 5s ease-in-out infinite;
+}
+
+.hero-particles.element-grass .p1,
+.hero-particles.element-earth .p1 { width: 6px; height: 10px; left: 10%; top: 20%; animation-delay: 0s; }
+.hero-particles.element-grass .p2,
+.hero-particles.element-earth .p2 { width: 5px; height: 8px; left: 80%; top: 30%; animation-delay: 1s; }
+.hero-particles.element-grass .p3,
+.hero-particles.element-earth .p3 { width: 7px; height: 12px; left: 30%; top: 70%; animation-delay: 2s; }
+.hero-particles.element-grass .p4,
+.hero-particles.element-earth .p4 { width: 4px; height: 7px; left: 70%; top: 60%; animation-delay: 3s; }
+.hero-particles.element-grass .p5,
+.hero-particles.element-earth .p5 { width: 8px; height: 14px; left: 50%; top: 10%; animation-delay: 4s; }
+.hero-particles.element-grass .p6,
+.hero-particles.element-earth .p6 { width: 5px; height: 9px; left: 90%; top: 80%; animation-delay: 0.5s; }
+
+@keyframes grassAuraPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes leafFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.2; }
+  25% { transform: translateY(-15px) rotate(-15deg); opacity: 0.7; }
+  50% { transform: translateY(-5px) rotate(10deg); opacity: 0.5; }
+  75% { transform: translateY(-20px) rotate(-5deg); opacity: 0.6; }
+}
+
+/* ========================================
+   WIND ELEMENT - White/Cyan gusts
+   ======================================== */
+.hero-card-frame.element-wind {
+  border-color: #a5f3fc !important;
+  box-shadow: 
+    0 0 20px rgba(165, 243, 252, 0.6),
+    0 0 40px rgba(34, 211, 238, 0.4),
+    0 0 60px rgba(34, 211, 238, 0.2),
+    inset 0 0 15px rgba(165, 243, 252, 0.2);
+}
+
+.hero-elemental-aura.element-wind {
+  background: radial-gradient(ellipse at center, 
+    rgba(165, 243, 252, 0.3) 0%, 
+    rgba(34, 211, 238, 0.15) 40%, 
+    transparent 70%);
+  animation: windAuraPulse 2s ease-in-out infinite;
+}
+
+.hero-particles.element-wind .particle {
+  background: linear-gradient(90deg, transparent 0%, rgba(165, 243, 252, 0.8) 50%, transparent 100%);
+  height: 2px !important;
+  border-radius: 0 !important;
+  animation: windGust 1.5s ease-out infinite;
+}
+
+.hero-particles.element-wind .p1 { width: 30px; left: 0; top: 20%; animation-delay: 0s; }
+.hero-particles.element-wind .p2 { width: 25px; left: 0; top: 40%; animation-delay: 0.3s; }
+.hero-particles.element-wind .p3 { width: 35px; left: 0; top: 60%; animation-delay: 0.6s; }
+.hero-particles.element-wind .p4 { width: 20px; left: 0; top: 80%; animation-delay: 0.9s; }
+.hero-particles.element-wind .p5 { width: 28px; left: 0; top: 30%; animation-delay: 1.2s; }
+.hero-particles.element-wind .p6 { width: 22px; left: 0; top: 70%; animation-delay: 0.15s; }
+
+@keyframes windAuraPulse {
+  0%, 100% { opacity: 0.3; transform: scaleX(1); }
+  50% { opacity: 0.6; transform: scaleX(1.05); }
+}
+
+@keyframes windGust {
+  0% { opacity: 0; transform: translateX(-100%); }
+  20% { opacity: 0.8; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(200%); }
+}
+
+/* ========================================
+   NEUTRAL ELEMENT - Subtle gray glow
+   ======================================== */
+.hero-card-frame.element-neutral {
+  border-color: rgba(218, 165, 32, 0.8) !important;
+}
+
+.hero-elemental-aura.element-neutral {
+  opacity: 0;
+}
+
+.hero-particles.element-neutral .particle {
+  display: none;
+}
+
+/* ========================================
+   MATCHUP BADGE - Compact icon-pill on hero card
+   Single row: ▼🔥💨 | ▲💧🌊
+   ======================================== */
+.hero-matchup-badge {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 7px;
+  background: rgba(6, 6, 14, 0.94);
+  border: 1px solid rgba(100, 100, 150, 0.4);
+  border-radius: 20px;
+  white-space: nowrap;
+  z-index: 6;
+  pointer-events: auto;
+  cursor: help;
+}
+
+/* ▼ / ▲ direction arrows */
+.matchup-arrow {
+  font-size: 7px;
+  font-weight: 900;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.matchup-arrow-weak  { color: rgba(239, 68, 68, 0.95); }
+.matchup-arrow-strong { color: rgba(74, 222, 128, 0.95); }
+
+/* Thin separator between the two groups */
+.matchup-sep {
+  display: inline-block;
+  width: 1px;
+  height: 10px;
+  background: rgba(120, 120, 180, 0.3);
+  margin: 0 3px;
+  flex-shrink: 0;
+}
+
+/* Element icons */
+.matchup-el-icon {
+  font-size: 12px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.matchup-el-weak {
+  filter: drop-shadow(0 0 3px rgba(239, 68, 68, 0.75));
+}
+
+.matchup-el-strong {
+  filter: drop-shadow(0 0 3px rgba(74, 222, 128, 0.75));
+}
+
+/* ========================================
+   MATCHUP HOVER TOOLTIP - Portal popup
+   ======================================== */
+.matchup-tooltip-portal {
+  pointer-events: none;
+}
+
+.matchup-tooltip-content {
+  background: rgba(8, 8, 18, 0.97);
+  border: 1px solid rgba(120, 120, 180, 0.4);
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.5);
+  min-width: 160px;
+}
+
+.matchup-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.matchup-tooltip-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  width: 72px;
+}
+
+.matchup-tooltip-weak .matchup-tooltip-label {
+  color: rgba(239, 68, 68, 0.95);
+}
+
+.matchup-tooltip-strong .matchup-tooltip-label {
+  color: rgba(74, 222, 128, 0.95);
+}
+
+.matchup-tooltip-elements {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.matchup-tooltip-el {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--el-color, #e2e8f0);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}

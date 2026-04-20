@@ -1,0 +1,102 @@
+Orphaned Art Inventory (98 files)
+These are art files from ragnarok-art-final-16-03 that have no matching card in the registry.
+They can be reassigned to missing cards if visually appropriate.
+
+95002: Skald of the Endless Saga -> cdc5-7b887f7c.webp
+95003: The Mead of Poetry -> be34-4b90fdba.webp
+95004: Phoenix of Alfheim -> e02e-d762e49f.webp
+95005: Muspelheim's Inferno -> 79d6-428fda33.webp
+95006: Keraunos, Living Lightning -> e3c9-c36eb4fc.webp
+95007: Aegis, the Divine Shield -> 4cfe-07f02d56.webp
+95008: Titan of the Blazing Sun -> 937d-ce551fe9.webp
+95010: Eternity's Hourglass -> d347-08c025f8.webp
+95011: Glitnir's Final Judgment -> 8e75-f04e6373.webp
+95013: Stormwyrm Tempest -> 3676-6ccb4f95.webp
+95014: Cerberus, Guardian of the Dead -> 0f42-9b504a4a.webp
+95015: Maenads' Frenzy -> d03e-250daf92.webp
+95016: Abyss of Eternal Night -> 49a8-a7ababce.webp
+95017: Queen of the Underworld -> 054b-c2e67d00.webp
+95018: Skoll, the Sun-Devourer -> e71e-f4d9ab88.webp
+95019: Lævateinn, Blade of Ruin -> 96cd-feecad85.webp
+95020: Garmr, Hound of Helheim -> 1b3b-90db0ecf.webp
+95021: Tanngrisnir & Tanngnjóstr -> 1ee0-c5e91144.webp
+95022: Hrungnir's Heart -> ddd2-719cfa1c.webp
+95023: Jörmungandr, World Serpent -> 60ee-93747180.webp
+95024: Whetstone of Ymir -> 5da2-f09b7b58.webp
+95025: Phobos & Deimos -> 5727-f7bb4061.webp
+95026: Automatons of Olympus -> afbc-61c5ff4c.webp
+95027: Hammer of the Forge-Father -> 11c2-b04b497e.webp
+95028: Völundr's Masterwork -> 1acf-a8e33b4e.webp
+95029: Gleipnir, the Binding Chain -> 3bfc-9257e0b5.webp
+95030: Iron Boot of Ragnarok -> 4b51-b68d1edf.webp
+95031: Gjallarhorn, Doom's Herald -> 628c-d6b2f421.webp
+95032: Mistletoe's Redemption -> cf54-ae1c0b9d.webp
+95033: Dawn's First Light -> 4732-c764a56d.webp
+95034: Brísingamen, Necklace of Flame -> 61b9-80348285.webp
+95035: Chalice of Eternal Life -> 9fe0-aba85bd6.webp
+95036: Gullinbursti, the Golden Boar -> 4050-74d2786d.webp
+95037: Breath of the Creator -> 2d95-fab9b203.webp
+95038: Eros's Bow of Enchantment -> 3e4f-6015feda.webp
+95039: Peacock Throne of Olympus -> 7a7c-c59d0982.webp
+95040: Arrow of True Love -> 5903-6e3d1de7.webp
+95041: Eternal Hearth Flame -> 8037-8c7b3dc1.webp
+95042: Golden Apple Tree -> 76b5-f568a855.webp
+95044: Heart of the World Tree -> ccf8-58c160b3.webp
+95045: Tears of the Faithful -> c157-96539206.webp
+95046: Cornucopia of Abundance -> 9908-6cd11797.webp
+95047: Colossus of the Dark Forge -> 9c65-063198fb.webp
+95048: Frost Giant's Heart -> 31f0-25d7e8df.webp
+95049: Four Oxen of Zealand -> 3dec-220eb280.webp
+95050: The Golden Net -> 2647-b65b4157.webp
+95051: Skidbladnir, Ship of the Gods -> 1c37-a61b71ea.webp
+95052: Trident of the Deep -> c518-198562ac.webp
+95053: Fenrir, the Unbound Wolf -> 0223-b64388c7.webp
+95054: Mistletoe Arrow -> d7c4-4b8e0e9b.webp
+95055: Níðhöggr, Corpse-Gnawer -> 70a8-76c8b669.webp
+95056: Serpent of the Nine Waves -> b0e4-762d4e7f.webp
+95057: Caduceus, Staff of Messengers -> b92d-720a6185.webp
+95058: Primordial Shadow of Night -> 5739-adc292a7.webp
+95059: Fenrisúlfr, Winter's Maw -> 3c9c-fd6a115a.webp
+95060: Wave Daughters of the Deep -> f3c9-7a98e8ee.webp
+95061: Hawk of Thrymheim -> 8596-7b77ab9c.webp
+95062: Bow of Ydalir -> dd34-d2139022.webp
+95063: Chariot of the Sun -> a546-37e570bb.webp
+95064: Huntress of the Moon -> b37b-bb3633d9.webp
+95065: Void-Bound Behemoth -> 01bc-311c044f.webp
+95066: Alpha of the Twilight Pack -> 9575-1fc23371.webp
+95067: Yomotsu-Shikome -> 2823-1d836fc1.webp
+95068: Moonlit Palace -> ab4a-b5690d02.webp
+95069: Divine Wind Storm -> d2a5-cffbfad7.webp
+95070: Crossroads Guardian -> 6b98-ca7b0860.webp
+95071: Spirit of Creation -> 2c3b-9d405593.webp
+95072: Scales of Ma'at -> cb3e-7007e002.webp
+95073: Feather of Truth -> 2b9f-32bbd9f6.webp
+95074: Scorpion's Tail -> f91d-c739deba.webp
+95075: Scarab of Eternal Dawn -> 0b8a-29e18c04.webp
+95078: Gulltoppr, the Golden-Maned -> f68a-e3ea5364.webp
+95079: The Ceryneian Hind -> 5a7a-a9c79a55.webp
+95080: Hildisvíni, the Battle Boar -> 017c-2b479749.webp
+95081: Hippocampus, Steed of the Depths -> 2eef-da401359.webp
+95082: Endymion, the Eternal Dreamer -> 2b9e-cab6a07a.webp
+95083: Empusa, Queen of the Crossroads -> e526-5b7e9b17.webp
+95084: Phaethon, Rider of the Dawn -> 3e0b-5f427308.webp
+95108: Hel's Warden -> b0fe-c8fb6bf8.webp
+95110: Magni (Dwarf god) -> c425-b3b1c198.webp
+95111: Surtr's Creation -> daab-eb5b0a07.webp
+95133: Sindri's Apprentice -> 0964-27aa27c1.webp
+95134: Hanuman the Wild -> 758b-200763be.webp
+95135: Bananas -> 55f9-a5829853.webp
+95137: Skadi the Mighty -> 1106-a63dda82.webp
+95221: Níðhöggr's Heir -> db4e-ff02d321.webp
+95236: Whelp with Rush -> 51ef-78ec62cf.webp
+95302: Fenrir, the Worldbreaker -> d11d-2894c2ee.webp
+95321: Mass Polymorph -> 9fd7-392c2b30.webp
+95322: The First Seal -> a305-636f07a1.webp
+95402: Frozen Champion -> b76b-ed17d061.webp
+95423: Surtr's Herald -> 87e9-07f113f9.webp
+95429: Fenrir's Fist -> e75a-9615f693.webp
+95430: Ares, Crime Lord -> c032-d37b8683.webp
+95508: Surtr's Heart -> b329-cb9490f2.webp
+95601: Fenrir's Gaze -> 3503-fc769663.webp
+95705: Hel's Servant -> da73-de318ae3.webp
+96008: Níðhöggr's Champion -> 1f0d-0f9971c1.webp

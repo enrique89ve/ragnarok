@@ -1,0 +1,37 @@
+/**
+ * Combat Responsive System
+ *
+ * The 1920×1080 virtual canvas (GameViewport.tsx) handles all screen
+ * adaptation via scaleX/scaleY transforms. Card sizes and zone positions
+ * are fixed px values within the canvas — NO vw/vh breakpoints needed.
+ *
+ * This file only contains:
+ * 1. Fixed combat-specific variables (hover, hand layout)
+ * 2. Mobile stacked layout (<768px actual viewport)
+ */
+
+:root {
+  /* Combat-specific layout variables (fixed px in virtual canvas) */
+  --hover-lift-distance: 50px;
+  --hover-scale-factor: 1.2;
+  --hover-safe-zone: calc(var(--hover-lift-distance) + 20px);
+  --active-minion-safe-margin: 80px;
+
+  /* Hand layout - CCG-style overlapping fan */
+  --hand-overlap: -100px;
+  --hand-max-fan-angle: 5deg;
+  --hand-hover-lift: -60px;
+  --hand-hover-scale: 1.35;
+
+  /* Hero card default width (used by zones.css for pot positioning) */
+  --hero-card-width: 130px;
+
+  /* Hero zone calculation */
+  --hero-zone-height: calc(var(--hero-card-width) * 1.4 + 60px);
+
+  /* Poker card scale */
+  --poker-card-scale: 1;
+}
+
+/* Dead mobile media query removed — canvas scaling handles all sizes,
+   and .poker-panel + .battle-arena are dead JSX */

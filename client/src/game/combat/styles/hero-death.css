@@ -1,0 +1,125 @@
+/* Hero Death - Death animation effects */
+
+/* ========================================
+   Hero Death Animation
+   ======================================== */
+.hero-death-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-overlays);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.9) 100%);
+  pointer-events: none;
+}
+
+.hero-death-overlay.player {
+  background: radial-gradient(ellipse at center bottom, rgba(139, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.9) 70%);
+}
+
+.hero-death-overlay.opponent {
+  background: radial-gradient(ellipse at center top, rgba(0, 100, 0, 0.2) 0%, rgba(0, 0, 0, 0.9) 70%);
+}
+
+.hero-death-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-death-card {
+  width: 200px;
+  height: 280px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%);
+  border: 4px solid #dc2626;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: 
+    0 0 30px rgba(220, 38, 38, 0.6),
+    0 0 60px rgba(220, 38, 38, 0.3),
+    inset 0 0 20px rgba(139, 0, 0, 0.3);
+}
+
+.hero-death-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4a1c1c 0%, #2d0f0f 100%);
+  border: 3px solid #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  font-weight: bold;
+  color: #fca5a5;
+  text-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+  margin-bottom: 16px;
+}
+
+.hero-death-name {
+  font-size: 20px;
+  font-weight: bold;
+  color: #fca5a5;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+}
+
+.hero-death-text {
+  font-size: 28px;
+  font-weight: bold;
+  color: #dc2626;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  text-shadow: 
+    0 0 10px rgba(220, 38, 38, 0.8),
+    0 0 20px rgba(220, 38, 38, 0.5),
+    0 0 30px rgba(220, 38, 38, 0.3);
+  animation: defeatPulse 0.8s ease-in-out infinite;
+}
+
+@keyframes defeatPulse {
+  0%, 100% { 
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+.hero-death-particles {
+  position: absolute;
+  inset: -50px;
+  pointer-events: none;
+  overflow: visible;
+}
+
+@keyframes hero-death-particle {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(
+      calc(-50% + var(--end-x)),
+      calc(-50% + var(--end-y))
+    ) scale(0);
+  }
+}
+
+.hero-death-flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(220, 38, 38, 0.8) 0%, transparent 70%);
+  pointer-events: none;
+}

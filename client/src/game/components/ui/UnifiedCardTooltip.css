@@ -1,0 +1,226 @@
+/**
+ * UnifiedCardTooltip.css
+ * 
+ * CCG-inspired tooltip styling.
+ * Single source of truth for card tooltip appearance.
+ * 
+ * NOTE: Global design tokens are in: client/src/styles/design-tokens.css
+ * This file defines tooltip-specific variables that extend the global tokens.
+ */
+
+/* Tooltip-specific variables (component-scoped) */
+:root {
+  --tooltip-bg: linear-gradient(180deg, rgba(30, 30, 46, 0.98) 0%, rgba(18, 18, 26, 1) 100%);
+  --tooltip-border-radius: var(--radius-md, 8px);
+  --tooltip-padding: var(--space-md, 12px);
+  --tooltip-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  --tooltip-font-family: 'Segoe UI', system-ui, sans-serif;
+  --tooltip-z-index: var(--z-topmost, 10000);
+  --tooltip-icon-size: 20px;
+  --tooltip-transition: var(--transition-fast, 150ms ease);
+}
+
+.unified-card-tooltip {
+  position: fixed;
+  z-index: var(--tooltip-z-index);
+  background: var(--tooltip-bg);
+  border-radius: var(--tooltip-border-radius);
+  padding: var(--tooltip-padding);
+  box-shadow: var(--tooltip-shadow);
+  font-family: var(--tooltip-font-family);
+  color: #F7FAFC;
+  pointer-events: none;
+  animation: tooltip-enter 0.15s ease-out;
+  transform-origin: center bottom;
+}
+
+@keyframes tooltip-enter {
+  0% { opacity: 0; transform: scale(0.92) translateY(6px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Rarity-specific border colors */
+.unified-card-tooltip.rarity-common {
+  border: 2px solid #4A5568;
+}
+
+.unified-card-tooltip.rarity-rare {
+  border: 2px solid #4299E1;
+  box-shadow: var(--tooltip-shadow), 0 0 16px rgba(66, 153, 225, 0.3);
+}
+
+.unified-card-tooltip.rarity-epic {
+  border: 2px solid #9F7AEA;
+  box-shadow: var(--tooltip-shadow), 0 0 16px rgba(159, 122, 234, 0.4);
+}
+
+.unified-card-tooltip.rarity-mythic {
+  border: 2px solid #F6AD55;
+  box-shadow: var(--tooltip-shadow), 0 0 20px rgba(246, 173, 85, 0.5);
+}
+
+/* Header row with mana and name */
+.tooltip-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tooltip-mana {
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, #4299E1 0%, #2B6CB0 100%);
+  border: 2px solid #90CDF4;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  color: #FFF;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  flex-shrink: 0;
+}
+
+.tooltip-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #F7FAFC;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  line-height: 1.2;
+}
+
+/* Type and tribe row */
+.tooltip-type-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 11px;
+  color: #A0AEC0;
+}
+
+.tooltip-type {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.tooltip-tribe {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+/* Stats row */
+.tooltip-stats {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tooltip-attack {
+  color: #F6AD55;
+}
+
+.tooltip-health {
+  color: #68D391;
+}
+
+/* Description text */
+.tooltip-description {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #E2E8F0;
+  margin-bottom: 10px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  border-left: 3px solid rgba(255, 255, 255, 0.2);
+}
+
+.keyword-highlight {
+  font-weight: 600;
+  text-shadow: 0 0 4px currentColor;
+  cursor: help;
+}
+
+/* Keywords section */
+.tooltip-keywords {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tooltip-keyword-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 4px;
+  border-left: 3px solid currentColor;
+}
+
+.keyword-icon {
+  font-size: var(--tooltip-icon-size);
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+
+.keyword-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.keyword-name {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.keyword-desc {
+  font-size: 10px;
+  color: #A0AEC0;
+  line-height: 1.4;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  :root {
+    --tooltip-icon-size: 18px;
+    --tooltip-padding: 10px;
+  }
+
+  .unified-card-tooltip {
+    max-width: calc(100vw - 32px);
+  }
+
+  .tooltip-name {
+    font-size: 14px;
+  }
+
+  .tooltip-description {
+    font-size: 11px;
+  }
+
+  .keyword-desc {
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tooltip-keywords {
+    max-height: 120px;
+    overflow-y: auto;
+  }
+}

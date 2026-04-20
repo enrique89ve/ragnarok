@@ -1,0 +1,130 @@
+/**
+ * CardHoverEffects.css
+ * 
+ * Flat card hover effects for CardWithDrag component.
+ * Simple lift-on-hover with z-index management.
+ * 
+ * Pointer-events for battlefield zones are in UnifiedBattlefield.css.
+ */
+
+/* ========================================
+   Hoverable Card Container
+   ======================================== */
+
+.hoverable-card-container {
+  position: relative;
+  transform-style: flat;
+  /* Spring physics easing for satisfying motion */
+  transition: 
+    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), 
+    z-index 0s, 
+    box-shadow 0.25s cubic-bezier(0.19, 1, 0.22, 1),
+    filter 0.2s ease;
+  pointer-events: auto;
+  overflow: visible;
+  z-index: 20;
+}
+
+/* Hover state - spring lift */
+.hoverable-card-container.is-hovering {
+  z-index: 1000;
+  transform: translateY(-15px) scale(1.02);
+}
+
+/* Playable cards have grab cursor on hover */
+.hoverable-card-container[data-is-playable="true"].is-hovering {
+  cursor: grab;
+  transform: translateY(-18px) scale(1.03);
+  z-index: 1000;
+}
+
+/* ========================================
+   Dragging State
+   ======================================== */
+
+.hoverable-card-container.is-dragging {
+  cursor: grabbing !important;
+  z-index: 2000;
+  pointer-events: none;
+  transition: none !important;
+}
+
+/* ========================================
+   Card Content
+   ======================================== */
+
+.hoverable-card-content {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  pointer-events: none;
+}
+
+.hoverable-card-content.is-hovering {
+  filter: brightness(1.1);
+}
+
+/* Re-enable pointer events for interactive elements inside cards */
+.hoverable-card-content button,
+.hoverable-card-content a,
+.hoverable-card-content input,
+.hoverable-card-content select {
+  pointer-events: auto;
+}
+
+/* ========================================
+   Hand Card Container
+   ======================================== */
+
+.hand-card-container {
+  pointer-events: none !important;
+}
+
+.hand-card-container .hoverable-card-container,
+.hand-card-container .card-with-drag {
+  pointer-events: auto;
+}
+
+/* ========================================
+   CardWithDrag — base (replaces inline style)
+   ======================================== */
+
+.card-with-drag {
+  width: var(--card-width, 140px);
+  height: var(--card-height, 200px);
+  transform-style: flat;
+  position: relative;
+  transition: transform 0.2s ease-out, filter 0.2s ease;
+  transform: translateY(0);
+}
+
+.card-with-drag.in-hand {
+  pointer-events: auto;
+}
+
+.card-with-drag.not-playable:not(.in-hand) {
+  pointer-events: none;
+}
+
+.card-with-drag.playable {
+  pointer-events: auto;
+  cursor: pointer;
+  filter: brightness(1.05);
+}
+
+.card-with-drag.not-playable {
+  cursor: default;
+  filter: brightness(0.6) grayscale(0.3);
+  transition: filter 0.3s ease;
+}
+
+.card-with-drag.is-hovering {
+  transform: translateY(-12px);
+  z-index: 100;
+}
+
+.card-with-drag.playable:active {
+  transform: translateY(-6px) scale(0.96);
+  transition: transform 0.08s ease-out;
+  filter: brightness(1.2);
+}

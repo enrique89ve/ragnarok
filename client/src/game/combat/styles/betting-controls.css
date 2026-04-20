@@ -1,0 +1,12 @@
+/* Betting Controls — minimal active rules.
+   Most of this file (~700 lines) was dead duplicates of RagnarokCombatArena.css.
+   .poker-btn and all its variants are defined in RagnarokCombatArena.css.
+   Only .poker-actions container kept (used in JSX). */
+
+.poker-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  flex-shrink: 0;
+}

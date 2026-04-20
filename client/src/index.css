@@ -1,0 +1,1146 @@
+/* Design tokens MUST be first - single source of truth for all CSS variables */
+@import './styles/design-tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Force emoji to render as monochrome text glyphs (not colorful platform-specific emoji).
+   This makes ⚔️🛡️⚡ etc. look like professional UI icons instead of chat emoji. */
+#root {
+  font-variant-emoji: text;
+  width: 100%;
+  height: 100%;
+  position: fixed;
+}
+
+:root {
+  /* =============================================
+     SHADCN/UI THEME VARIABLES (Required by Tailwind)
+     These MUST remain here - they're consumed by shadcn components.
+     All other design tokens are in: client/src/styles/design-tokens.css
+     ============================================= */
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 210 40% 98%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 212.7 26.8% 83.9%;
+  --radius: 0.5rem;
+
+  /* =============================================
+     LEGACY ALIASES (for backward compatibility)
+     These reference the centralized design-tokens.css values.
+     New code should use design-tokens.css variables directly.
+     ============================================= */
+  
+  /* Card dimensions - aliased to design-tokens */
+  --card-margin: 4px;
+  --grid-gap: var(--gap-sm, 6px);
+  
+  /* Legacy color aliases */
+  --primary-gold: var(--color-gold, #FFD700);
+  --secondary-grey: #4A4A4A;
+  --glow-yellow: #FFF3D4;
+  --shadow-black: rgba(0, 0, 0, 0.4);
+  --game-bg-color: var(--color-amber-primary, #92400e);
+  
+  /* Legacy Norse aliases */
+  --norse-primary: var(--color-amber-primary, #92400e);
+  --norse-secondary: var(--color-amber-secondary, #78350f);
+  --norse-accent: var(--color-gold, #FFD700);
+  --norse-text: var(--text-primary, #f3f4f6);
+  --norse-border: #9ca3af;
+  
+  /* UI scaling (game-specific) */
+  --reference-width: 1920px;
+  --reference-height: 1080px;
+  --opponent-area-height: 15%;
+  --battlefield-height: 75%;
+  --player-area-height: 10%;
+  
+  /* Legacy z-index aliases - prefer design-tokens vars */
+  --z-background: 0;
+  --z-board: var(--z-battlefield, 10);
+  --z-player-field: var(--z-community, 25);
+  --z-active-card: var(--z-active-minion, 30);
+  --z-ui: 40;
+  --z-notification: 70;
+  --z-hud-controls: 100;
+  --z-end-turn-button: var(--z-betting, 200);
+  --z-tooltips: var(--z-hover, 500);
+  --z-modals: 1000;
+  
+  /* Card glow effects (game-specific) */
+  --card-playable-glow: 0 0 15px rgba(120, 255, 120, 0.8), 0 0 30px rgba(0, 255, 0, 0.4);
+  --card-targetable-glow: 0 0 15px rgba(255, 120, 120, 0.8), 0 0 30px rgba(255, 0, 0, 0.4);
+  --card-highlighted-glow: 0 0 15px rgba(255, 255, 120, 0.8), 0 0 30px rgba(255, 255, 0, 0.4);
+  --card-legendary-glow: var(--shadow-glow-gold, 0 0 25px rgba(255, 215, 0, 0.7));
+  --card-epic-glow: 0 0 25px rgba(163, 53, 238, 0.7), 0 0 10px rgba(163, 53, 238, 0.4);
+  --card-standard-glow: var(--shadow-glow-blue, 0 0 25px rgba(0, 112, 221, 0.7));
+
+  /* Opponent zone styling */
+  --opponent-zone-bg: rgba(139, 0, 0, 0.05);
+  --opponent-zone-border: rgba(139, 0, 0, 0.1);
+  --opponent-zone-shadow: rgba(139, 0, 0, 0.1);
+
+  /* Player zone styling */
+  --player-zone-bg: rgba(0, 100, 0, 0.05);
+  --player-zone-border: rgba(0, 100, 0, 0.1);
+  --player-zone-shadow: rgba(0, 100, 0, 0.1);
+
+  /* Shared battlefield styling */
+  --battlefield-border-radius: var(--radius-md, 8px);
+  --battlefield-shadow-intensity: 10px;
+  --battlefield-border-width: 1px;
+  --battlefield-highlight-color: rgba(255, 215, 0, 0.3);
+  --battlefield-targeting-ring-width: 2px;
+
+  /* Card animation scales */
+  --hand-card-scale: 0.5;
+  --dragging-card-scale: 0.6;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    margin: 0;
+    padding: 0;
+    overflow: visible; /* Changed from hidden to visible to prevent card clipping */
+    width: 100vw;
+    height: 100dvh;
+  }
+}
+
+canvas {
+  width: 100% !important;
+  height: 100% !important;
+  touch-action: none;
+}
+
+/* ZZZ Sleeping Animation Keyframes */
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(-5deg); }
+  50% { transform: translateY(-8px) rotate(-5deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.9; }
+}
+
+@keyframes bubbleFloat {
+  0%, 100% { transform: translateY(0); opacity: 0.8; }
+  50% { transform: translateY(-5px); opacity: 1; }
+}
+
+@keyframes zzzFloat {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-3px) scale(1.1); }
+}
+
+/* Combat Animation Keyframes */
+@keyframes screenShake {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-5px, -5px); }
+  20% { transform: translate(5px, 5px); }
+  30% { transform: translate(-3px, 3px); }
+  40% { transform: translate(3px, -3px); }
+  50% { transform: translate(-2px, -2px); }
+  60% { transform: translate(2px, 2px); }
+  70% { transform: translate(-1px, 1px); }
+  80% { transform: translate(1px, -1px); }
+  90% { transform: translate(-1px, -1px); }
+}
+
+@keyframes spellFlash {
+  0% { filter: brightness(1); }
+  50% { filter: brightness(1.3); }
+  100% { filter: brightness(1); }
+}
+
+/* Screen shake and spell cast effect classes */
+.screen-shake-impact {
+  animation: screenShake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.spell-cast-flash {
+  animation: spellFlash 0.3s ease-in-out;
+}
+
+/* Card sizing and dimensions for consistent appearance */
+.card-with-drag {
+  min-width: var(--card-width);
+  min-height: var(--card-height);
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  /* Premium 3D effects */
+  transform-style: preserve-3d;
+  perspective: 1000px;
+  z-index: 30;
+  will-change: transform;
+  pointer-events: auto; /* Only enable pointer events for actual card elements */
+  cursor: grab !important;
+}
+
+/* Dead .battlefield-card .card-with-drag rule removed — class never rendered in JSX */
+
+/* Subtle card hover effects */
+@keyframes card-hover-glow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* REMOVED: Card hover effect styling is now fully managed by CardTransformationManager */
+/* This comment kept as documentation of where the styling was previously defined */
+
+/* State-based card classes for hover and drag states */
+.card-with-drag.is-hovering {
+  /* Glow effects temporarily disabled to isolate hover issues */
+  box-shadow: none !important;
+  filter: brightness(1.1) !important; /* Keep slight brightness for feedback */
+}
+
+.card-with-drag.is-dragging {
+  /* No transitions during dragging for responsiveness */
+  transition: none !important;
+  /* Removed box-shadow to eliminate unwanted outline when dragging */
+  box-shadow: none !important;
+  /* Still allow the CardDragAnimation component to handle transform */
+}
+
+/* CRITICAL FIX: Make sure parent container hover only affects the exact card element */
+.card-hover-parent:hover > * {
+  z-index: 1000 !important; /* Apply z-index only to direct children (the actual card) */
+}
+
+/* CRITICAL FIX: Prevent empty spaces between cards from triggering hover */
+.hand-container {
+  pointer-events: none; /* Disable pointer events on container (will be re-enabled for cards) */
+}
+
+/* CRITICAL FIX: Card containers and hoverable regions should be precisely sized */
+.hand-card-container {
+  pointer-events: none; /* Disable on outer container */
+  transform-origin: center bottom;
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  position: relative;
+  perspective: 1200px;
+  padding: 0; /* No padding for tightest possible arrangement */
+}
+.hand-card-container > * {
+  pointer-events: auto; /* Only re-enable on actual card elements */
+}
+
+/* Special class for cards being dragged */
+.hand-card-dragging {
+  z-index: 2000 !important; /* Even higher than hover state */
+  pointer-events: auto;
+  transition: none; /* No transition while dragging for responsiveness */
+}
+
+/* 
+ * Special class for cards being played/placed on the battlefield 
+ * NOTE: This style has been moved to CardTransformationManager.ts
+ * and is kept here only as a fallback. Optimized for GPU.
+ */
+.card-being-played {
+  z-index: 3000 !important; /* Higher than dragging for the placement animation */
+  transition: transform 0.4s cubic-bezier(0.11, 0.65, 0.33, 1.5) !important;
+  pointer-events: none; /* Prevent any interactions during placement animation */
+  animation: card-play-pulse 0.6s ease-in-out !important;
+  will-change: transform;
+  transform: scale(var(--dragging-card-scale)) !important; /* Use consistent scale while animating */
+  25% { filter: hue-rotate(90deg) saturate(1.8); }
+  50% { filter: hue-rotate(180deg) saturate(2); }
+  75% { filter: hue-rotate(270deg) saturate(1.8); }
+  100% { filter: hue-rotate(360deg) saturate(1.5); }
+}
+
+@keyframes shine-gold {
+  0% { background-position: 0% 0%; }
+  25% { background-position: 100% 0%; }
+  50% { background-position: 100% 100%; }
+  75% { background-position: 0% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+/* Holographic effect classes */
+.epic-holographic {
+  background-size: 200% 200%;
+  animation: prismatic-shift 5s infinite linear;
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  mix-blend-mode: color-dodge;
+}
+
+.legendary-holographic {
+  background-size: 150% 150%;
+  animation: shine-gold 3s ease infinite;
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  mix-blend-mode: color-dodge;
+}
+
+/* Special animation for the card damage shake */
+@keyframes damage-shake {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(-2px, 1px) rotate(-1deg); }
+  50% { transform: translate(0, -2px) rotate(0.5deg); }
+  75% { transform: translate(2px, 1px) rotate(1deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+/* Size overrides for hand and battlefield positions */
+.in-hand .card-with-drag {
+  width: var(--card-width);
+  height: var(--card-height);
+}
+
+/* Ensure premium card containers match the new dimensions */
+.premium-card-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* Taunt styling with border on the card frame */
+.taunt-frame::before {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  background: linear-gradient(135deg, #8B4513, #A0522D, #D2691E, #8B4513);
+  z-index: -1;
+  border-radius: 15px;
+  opacity: 0.75;
+  filter: blur(3px);
+}
+
+/* Tooltip styles for keyword icons */
+.tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip .tooltiptext {
+  visibility: hidden;
+  width: 120px;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px;
+  position: absolute;
+  z-index: 100;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -60px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.tooltip .tooltiptext::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Game UI Architecture - Layout System */
+
+/* Virtual Canvas Scaler: Maintains aspect ratio across devices */
+.virtual-canvas-scaler {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: visible; /* Changed from hidden to visible to prevent card clipping */
+  transform-origin: top left;
+}
+
+/* Game grid container: Divides the space into logical zones */
+.game-grid-container {
+  display: grid;
+  width: 100%;
+  height: 100dvh;
+  grid-template-rows: 15% 75% 10%; /* Updated layout to match new CSS variables */
+  overflow: visible; /* Changed from hidden to visible for proper card display */
+  /* Dynamic width - allow game to use full screen width */
+  max-width: 100vw;
+  padding: 0;
+  margin: 0 auto;
+}
+
+/* Game area sections with proper heights */
+.opponent-area, .opponent-section {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  grid-row: 1;
+  min-height: 160px; /* Fixed px for virtual canvas */
+  overflow: visible;
+  /* No horizontal padding to maximize width */
+  padding: 0.5rem 0;
+  box-sizing: border-box;
+  cursor: default !important;
+}
+
+.battlefield-area, .battlefield-container {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  position: relative;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 800px; /* Fixed px for virtual canvas */
+  overflow: visible;
+  box-sizing: border-box;
+  padding: 0; /* Remove padding completely to maximize width */
+  cursor: default !important;
+}
+
+.player-area, .player-section {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  grid-row: 3;
+  min-height: 120px; /* Fixed px for virtual canvas */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: visible;
+  /* No horizontal padding to maximize width */
+  padding: 0.5rem 0;
+  box-sizing: border-box;
+  cursor: default !important;
+}
+
+/* Game board container with flexbox layout */
+.game-board {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  position: relative;
+  overflow: visible; /* Changed from hidden to visible to prevent card clipping */
+  /* Optimize for widescreen displays */
+  max-width: 100vw;
+  margin: 0 auto;
+}
+
+/* Game Log with fixed height to prevent layout shifts */
+.game-log-container {
+  min-height: 150px;
+  max-height: 150px;
+  overflow-y: auto;
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: 8px;
+  border: 1px solid var(--norse-accent);
+  padding: 8px;
+}
+
+/* Empty log placeholder to maintain height */
+.game-log-empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.3);
+  font-style: italic;
+}
+
+/* Z-index hierarchy for proper stacking */
+.z-index-base { z-index: 1; }
+.z-index-cards { z-index: 10; }
+.z-index-active-card { z-index: 20; }
+.z-index-ui { z-index: 30; }
+.z-index-overlay { z-index: 40; }
+.z-index-modal { z-index: 50; }
+.z-index-tooltip { z-index: 60; }
+
+/* Advanced holographic card effects */
+.holographic-card {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.holographic-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 215, 0, 0.2),
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 215, 0, 0.2)
+  );
+  background-size: 400% 400%;
+  animation: holographic-shimmer 6s infinite linear;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 2;
+}
+
+@keyframes holographic-shimmer {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 400% 400%; }
+}
+
+/* Grid spacing and alignment utilities */
+.battlefield-spacing {
+  padding: 1rem;
+  gap: 1rem;
+}
+
+.game-area-padding {
+  padding: 0.75rem;
+}
+
+.card-area-gap {
+  gap: 0.5rem;
+}
+
+/* GameAreaContainer styles - enforces proper game area proportions */
+.game-area-container {
+  position: relative;
+  width: 100%;
+  overflow: visible;
+  box-sizing: border-box;
+}
+
+.game-area-container.opponent-area {
+  height: var(--opponent-area-height);
+  background-color: rgba(139, 0, 0, 0.05);
+  margin-top: 180px; /* Increased margin to move battlefield down further (was 96px) */
+}
+
+.game-area-container.battlefield-area {
+  height: var(--battlefield-height);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.game-area-container.player-area {
+  height: var(--player-area-height);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background-color: rgba(0, 100, 0, 0.05);
+  position: relative;
+  z-index: 200;
+}
+
+/* Critical fix for player area hover issues */
+.game-area-container.player-area::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 150;
+  pointer-events: auto !important;
+  background-color: transparent;
+}
+
+/* NOTE: .opponent-battlefield-zone, .player-battlefield-zone styles moved to UnifiedBattlefield.css */
+/* Per CSS Layer Ownership rules - battlefield zone styles belong in UnifiedBattlefield.css */
+
+/* Adaptive battlefield scaling based on number of minions */
+/* Base styling for all battlefield card configurations */
+:is(.opponent-cards, .player-cards) {
+  --base-gap: 10px;
+  --card-scale: 0.8;
+  display: flex;
+  flex-wrap: nowrap; /* Prevent cards from wrapping to new lines */
+  justify-content: center;
+  align-items: center;
+  border-radius: 8px;
+  padding: 0.25rem;
+  width: 100%;
+  max-width: 100%;
+  overflow: visible; /* No scrolling */
+  transform-style: preserve-3d;
+  perspective: 1200px;
+  position: relative;
+  gap: 0;
+
+  & > div {
+    margin: 0 -15px; /* Pronounced overlap across the battlefield row */
+    transform-origin: center bottom;
+    transition: transform 0.2s ease-out;
+    position: relative;
+
+    &:hover {
+      transform: translateY(-8px) scale(1.1);
+      z-index: 100 !important; /* Ensure hovered card is on top */
+    }
+  }
+}
+
+/* Progressive scaling for different numbers of cards */
+.card-container[data-card-count="4"] {
+  --card-scale: 0.75;
+  --base-gap: 8px;
+}
+
+.card-container[data-card-count="5"] {
+  --card-scale: 0.7;
+  --base-gap: 6px;
+}
+
+.card-container[data-card-count="6"] {
+  --card-scale: 0.65;
+  --base-gap: 4px;
+}
+
+.card-container[data-card-count="7"] {
+  --card-scale: 0.58;
+  --base-gap: 2px;
+}
+
+/* Apply consistent spacing regardless of card count */
+.card-container > div {
+  margin: 0 !important;
+  padding: 0 !important;
+  transform-origin: center center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 100px; /* Minimum width to ensure visibility */
+  height: 100%;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-sizing: border-box;
+  position: relative;
+  overflow: visible;
+  flex: 0 0 auto;
+  z-index: 30; /* Ensure individual card containers stack properly */
+}
+
+/* Targeting state styles moved from inline to CSS */
+/* Container-level targeting indicators */
+.battlefield-targeting-hero-power {
+  ring: var(--battlefield-targeting-ring-width) rgb(147, 51, 234);
+}
+
+.battlefield-targeting-battlecry {
+  ring: var(--battlefield-targeting-ring-width) rgb(234, 179, 8);
+}
+
+/* Card-level targeting indicators */
+.card-targeting-hero-power {
+  ring: 2px solid rgb(147, 51, 234);
+}
+
+.card-targeting-battlecry {
+  ring: 2px solid rgb(234, 179, 8);
+}
+
+.card-targeting-attack {
+  ring: 2px solid rgb(234, 179, 8);
+}
+
+.card-attacking {
+  ring: 4px solid rgb(249, 115, 22);
+}
+
+/* Battlefield drag target states */
+.drag-target-active {
+  background-color: rgba(0, 100, 0, 0.15);
+  border: 2px dashed rgba(0, 200, 0, 0.5);
+  box-shadow: inset 0 0 15px rgba(0, 200, 0, 0.2), 0 0 20px rgba(0, 200, 0, 0.1);
+}
+
+/* Visual indicator when dragging over battlefield */
+.player-battlefield-zone.drag-target-active {
+  background-color: rgba(0, 100, 0, 0.15);
+  border: 2px dashed rgba(0, 200, 0, 0.5);
+  box-shadow: inset 0 0 15px rgba(0, 200, 0, 0.2), 0 0 20px rgba(0, 200, 0, 0.1);
+}
+
+/* Battlefield card styles */
+.battlefield-card {
+  transform-origin: center center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+  max-width: calc(100% - var(--card-margin) * 2);
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 5px;
+  overflow: visible;
+  /* Center in the grid cell */
+  margin: 0 auto;
+  /* Ensure cards appear above background */
+  position: relative;
+  z-index: 40; 
+  transition: transform 0.3s ease, filter 0.2s ease;
+  /* Fix unwanted hover effects */
+  pointer-events: auto !important;
+  outline: none;
+  border: none;
+}
+
+/* Completely disable hover effects on empty battlefield sections and player area */
+.empty-battlefield *,
+.battlefield-area:not(.card-with-drag),
+.battlefield-container:not(.card-with-drag),
+.player-battlefield-zone:not(.card-with-drag),
+.opponent-battlefield-zone:not(.card-with-drag),
+.player-area:not(.card-with-drag),
+.player-area *:not(.card-with-drag):not(.battlefield-card):not(.player-hero-portrait),
+.game-area-container.player-area:not(.card-with-drag),
+.player-cards:not(.card-with-drag) {
+  pointer-events: none !important;
+  cursor: default !important;
+  user-select: none !important;
+  outline: none !important;
+  border: none !important;
+}
+
+/* Fix ghost card effects by removing unwanted borders and shadows */
+.battlefield-container *:not(.card-with-drag):not(.battlefield-card):not(.player-hero-portrait):not(.opponent-hero-portrait) {
+  box-shadow: none !important;
+  outline: none !important;
+  border-color: transparent !important;
+}
+
+.zone-header {
+  width: 100%;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.05em;
+}
+
+/* Card container with responsive dynamic layout */
+.card-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  min-height: 180px; /* Increased height for more visibility */
+  width: 100%;
+  max-width: 100%;
+  align-items: center;
+  padding: 4px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  overflow: visible;
+  position: relative;
+  z-index: 20; /* Higher than background, lower than cards */
+  cursor: default !important;
+  
+  /* Responsive scaling for different screen widths */
+  max-width: 95vw; /* Increased from 90% to 95% */
+  
+  /* Scale up for larger screens */
+  @media (min-width: 1200px) {
+    max-width: 85vw; /* Increased from 75% to 85% */
+  }
+  
+  /* Scale down for smaller screens */
+  @media (max-width: 768px) {
+    max-width: 95vw;
+  }
+}
+
+/* Apply curvature to battlefield rows */
+.opponent-cards {
+  min-height: 140px; /* Reduced height for opponent cards */
+  background-color: rgba(139, 0, 0, 0.1);
+  transform: perspective(1000px) rotateX(2deg); /* Subtle curve for opponent area */
+}
+
+.player-cards {
+  min-height: 180px; /* Maintain height for player cards */
+  background-color: rgba(0, 100, 0, 0.1);
+  position: relative;
+  margin-top: -88px; /* Move cards up by approximately 7/6 inch (increased by another 1/3 inch) */
+  /* Removed top: -50px to avoid conflict with hand-container bottom positioning */
+  transform: perspective(1000px) rotateX(-2deg); /* Subtle curve for player area */
+  z-index: 150;
+  pointer-events: none !important;
+}
+
+/* Create a special overlay for player cards area to block hovering */
+.player-cards::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  z-index: 149;
+  pointer-events: auto !important;
+}
+
+/* Specific fix for player area hover issues - complete direct fix */
+.player-area * {
+  pointer-events: none !important;
+}
+
+/* Only actual cards and interactive elements can receive hover in player area */
+.player-area .card-with-drag,
+.player-area .battlefield-card,
+.player-area .player-hero-portrait,
+.player-area .hero-power-wrapper,
+.player-area .hero-power-button,
+.player-area .hero-power-tooltip,
+.player-area .battlefield-hero-square {
+  pointer-events: auto !important;
+}
+
+/* Hero power needs very high z-index to be above overlays */
+.hero-power-wrapper,
+.hero-power-button {
+  z-index: 600 !important;
+  pointer-events: auto !important;
+}
+
+.hero-power-tooltip {
+  z-index: 5000 !important;
+  pointer-events: auto !important;
+}
+
+/* Direct hover blocking technique - DISABLED to allow hero power buttons to work */
+/* .player-area::after pseudo-element removed - was blocking all clicks with z-index: 2500 */
+
+.empty-battlefield-message {
+  background: rgba(30, 30, 30, 0.5);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.empty-battlefield {
+  min-height: 80px;
+  width: 100%;
+  pointer-events: none !important;
+  cursor: default !important;
+  touch-action: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  position: relative !important;
+}
+
+.opponent-hero-container, .player-hero-container {
+  position: relative;
+  margin-top: 0.5rem;
+}
+
+.opponent-hero-portrait, .player-hero-portrait {
+  position: relative;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.hero-label {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+/* REMOVED: CSS hover state handling
+   All hover effects are now managed through the CardTransformationManager
+   and React state in the SimpleHolographicCard component.
+   
+   This eliminates conflicts between CSS and JavaScript hover states
+   that were causing the visual artifacts.
+*/
+
+/* Class that will be applied by JS when a card is hovered */
+.card-js-hover {
+  position: relative;
+  z-index: 1000 !important;
+  /* We'll let the CardTransformationManager apply all transforms */
+}
+
+/* New contained glow effect that doesn't leak outside card boundaries */
+/* Add a class with a pseudo-element for contained card glow */
+.card-container-glow {
+  position: relative;
+  box-shadow: none !important; /* Remove any existing box-shadow */
+  overflow: hidden !important; /* Confine effects within card boundaries */
+  pointer-events: auto !important; /* Ensure hover events only work on the visible card */
+}
+
+/* Completely disabled pseudo-element to remove the unwanted border */
+.card-container-glow::before {
+  content: none; /* Remove the element completely */
+  display: none; /* Ensure it's not displayed */
+}
+
+/* Enhanced animation for contained glow with scale effect */
+@keyframes contained-glow-pulse {
+  0% { opacity: 0.5; transform: scale(0.98); }
+  50% { opacity: 0.8; transform: scale(1.02); }
+  100% { opacity: 0.5; transform: scale(0.98); }
+}
+
+/* Responsive hover settings are now handled by CardTransformationManager
+   The media query CSS hover effects have been completely removed
+   to prevent conflicts with the React state management system.
+*/
+
+/* Hand container styling now controlled by RagnarokCombatArena.css via .player-hand-zone */
+
+/* Enhanced Card Drag and Placement Animations */
+
+/* Elegant card falling animation when a card is placed on battlefield */
+@keyframes elegant-card-fall {
+  0% { 
+    transform: translateY(-20px) scale(var(--dragging-card-scale)) rotate(0deg);
+    box-shadow: 0 0 40px rgba(70, 130, 255, 0.9);
+  }
+  30% { 
+    transform: translateY(10px) scale(calc(var(--battlefield-card-scale) * 1.15)) rotate(2deg);
+  }
+  45% { 
+    transform: translateY(-5px) scale(calc(var(--battlefield-card-scale) * 1.1)) rotate(-1deg);
+  }
+  60% { 
+    transform: translateY(3px) scale(calc(var(--battlefield-card-scale) * 1.05)) rotate(1deg);
+  }
+  75% { 
+    transform: translateY(-2px) scale(calc(var(--battlefield-card-scale) * 1.02)) rotate(-0.5deg);
+  }
+  100% { 
+    transform: translateY(0) scale(var(--battlefield-card-scale)) rotate(0);
+    box-shadow: none;
+  }
+}
+
+/* Specific class for cards being dragged from hand to battlefield */
+.card-dragging {
+  cursor: grabbing !important;
+  will-change: transform; /* Performance optimization */
+  transition: none !important; /* Disable transitions for responsiveness */
+  transform-origin: center center;
+  z-index: 1000 !important; /* Use a high z-index during drag */
+  /* Use intermediate scale to smooth transition between hand and battlefield */
+  transform: scale(var(--dragging-card-scale)) !important;
+  pointer-events: all !important;
+}
+
+/* Explicit cursor style for battlefield area and non-card areas */
+.player-battlefield-zone,
+.opponent-battlefield-zone {
+  cursor: default !important;
+}
+
+/* Allow cards to show proper cursor */
+.hoverable-card-container {
+  pointer-events: auto !important;
+  cursor: grab !important;
+}
+
+.card-with-drag:active,
+.hoverable-card-container:active,
+.card-renderer:active {
+  cursor: grabbing !important;
+}
+
+/* But ensure that deck cards and UI elements remain clickable */
+.deck-card, 
+.class-selection *, 
+button, 
+.saved-deck-item, 
+.deck-list-item, 
+.select-deck-button,
+[role="button"],
+a, 
+input, 
+select {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  z-index: 5 !important;
+}
+
+/* Fix for ghost cards and faint borders - add strict z-indexing */
+.card-renderer {
+  pointer-events: auto !important;
+  cursor: grab !important;
+  z-index: 10;
+  position: relative !important;
+}
+
+/* Fix for ghost cards causing hover issues */
+.card-renderer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  z-index: -1;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Control card hover detection area precisely */
+.card-hover-control {
+  pointer-events: auto;
+  position: relative;
+}
+
+/* Fix for hover detection - constrains the hover area strictly to card dimensions */
+.card-hover-control::before {
+  content: '';
+  position: absolute;
+  /* Keep hitbox exactly within card boundaries */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: auto;
+}
+
+/* Visual indicator when cards are over valid drop zones */
+.valid-drop-zone {
+  outline: 2px dashed rgba(0, 255, 0, 0.5);
+  outline-offset: 5px;
+  transition: outline 0.2s ease-in-out;
+}
+
+/* CSS for card release animations */
+.card-release-to-hand {
+  animation: card-snap-back 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.card-place-on-battlefield {
+  animation: elegant-card-fall 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+/* Quick snap back animation when card returns to hand */
+@keyframes card-snap-back {
+  0% {
+    transform: translate(0, 0) scale(var(--dragging-card-scale)) rotate(0deg);
+  }
+  20% {
+    transform: translate(0, 0) scale(calc(var(--hand-card-scale) * 1.05)) rotate(-2deg);
+  }
+  60% {
+    transform: translate(0, 0) scale(calc(var(--hand-card-scale) * 1.02)) rotate(1deg);
+  }
+  100% {
+    transform: translate(0, 0) scale(var(--hand-card-scale)) rotate(0deg);
+  }
+}
+
+/* Right-click animation */
+.card-right-click-return {
+  animation: right-click-pop 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes right-click-pop {
+  0% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.95);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ==========================================================================
+   VIEW TRANSITIONS — GPU-accelerated page transitions (native API)
+   Progressive enhancement: browsers without support just get instant switches
+   ========================================================================== */
+
+::view-transition-old(root) {
+  animation: fade-out 0.2s ease-out forwards;
+}
+
+::view-transition-new(root) {
+  animation: fade-in 0.25s ease-in forwards;
+}
+
+@keyframes fade-out {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.98); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: scale(1.02); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ==========================================================================
+   SCROLL-DRIVEN ANIMATIONS — Cards animate into view on scroll (collection)
+   Progressive enhancement: browsers without support show cards immediately
+   ========================================================================== */
+
+@supports (animation-timeline: scroll()) {
+  .collection-grid-item,
+  .deck-card-item {
+    animation: scroll-reveal linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 30%;
+  }
+
+  @keyframes scroll-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+}
+
+/* ==========================================================================
+   REDUCED MOTION — Disable all cutting-edge animations for accessibility
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+
+  .collection-grid-item,
+  .deck-card-item {
+    animation: none !important;
+  }
+}

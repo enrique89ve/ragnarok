@@ -1,0 +1,49 @@
+/**
+ * Combat Styles Aggregator
+ * Only files actively used by combat are imported.
+ */
+
+@import './reset.css';
+@import './responsive.css';
+
+/* Layout */
+@import './arena-grid.css';
+@import './battlefield.css';
+@import './zones.css';
+
+/* Components */
+@import './hp-bar.css';
+@import './timer.css';
+@import './targeting-prompts.css';
+
+/* Card Elements */
+@import './card-frame.css';
+@import './card-highlight.css';
+@import './face-down.css';
+@import './hole-cards.css';
+@import './community-cards.css';
+@import './hand-strength.css';
+
+/* Combat Specific */
+@import './betting-controls.css';
+@import './pot-display.css';
+
+/* Effects */
+@import './glow-effects.css';
+@import './elemental-glows.css';
+@import './hero-death.css';
+@import './hero-reactions.css';
+@import './showdown.css';
+
+/* Atmosphere */
+@import './norse-atmosphere.css';
+@import './spell-screen-effects.css';
+
+/* Realm Board Skins */
+@import './realm-boards.css';
+
+/* Cursors */
+@import './cursors.css';
+
+/* Art-based UI Upgrade */
+@import './ragnarok-art-ui.css';

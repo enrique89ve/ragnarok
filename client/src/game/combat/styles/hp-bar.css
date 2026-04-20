@@ -1,0 +1,127 @@
+/* HP Bar - Bold, Readable Health Display */
+
+.fighting-hp-bar-container {
+	width: 100%;
+	max-width: 280px;
+	position: relative;
+	z-index: 2;
+	margin-top: 2px;
+}
+
+.fighting-hp-bar {
+	position: relative;
+	height: 32px;
+	background: linear-gradient(180deg,
+		var(--ui-iron-darkest) 0%,
+		var(--ui-obsidian) 50%,
+		var(--ui-iron-darkest) 100%);
+	border: 2px solid;
+	border-image: linear-gradient(135deg,
+		var(--ui-gold-bright) 0%,
+		var(--ui-gold-warm) 50%,
+		var(--ui-gold-bright) 100%) 1;
+	border-radius: 4px;
+	overflow: hidden;
+	box-shadow:
+		0 2px 10px rgba(0, 0, 0, 0.92),
+		inset 0 0 12px rgba(0, 0, 0, 0.98),
+		0 0 14px var(--ui-hp-crimson-glow),
+		0 0 3px var(--ui-gold-glow-soft);
+}
+
+.fighting-hp-fill {
+	position: absolute;
+	top: 1px;
+	left: 1px;
+	bottom: 1px;
+	right: 1px;
+	background: linear-gradient(180deg,
+		#e23b30 0%,
+		var(--ui-hp-crimson) 30%,
+		#a01a14 60%,
+		var(--ui-hp-crimson-deep) 100%);
+	border-radius: 3px;
+	transition: transform 0.6s ease-out;
+	transform-origin: left;
+	box-shadow:
+		0 0 10px var(--ui-hp-crimson-glow),
+		inset 0 2px 0 rgba(255, 130, 120, 0.45),
+		inset 0 -2px 0 rgba(0, 0, 0, 0.6);
+	z-index: 1;
+}
+
+.fighting-hp-fill::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 40%;
+	background: linear-gradient(180deg,
+		rgba(255, 255, 255, 0.2) 0%,
+		transparent 100%
+	);
+	border-radius: 2px 2px 0 0;
+}
+
+.fighting-hp-fill::before {
+	content: '';
+	position: absolute;
+	right: -1px;
+	top: 0;
+	bottom: 0;
+	width: 3px;
+	background: linear-gradient(180deg,
+		rgba(255, 200, 200, 0.8) 0%,
+		rgba(255, 100, 100, 0.4) 100%
+	);
+	border-radius: 0 2px 2px 0;
+}
+
+.fighting-hp-damage {
+	position: absolute;
+	top: 1px;
+	right: 1px;
+	bottom: 1px;
+	left: 1px;
+	background: linear-gradient(180deg,
+		rgba(100, 0, 0, 0.5) 0%,
+		rgba(40, 0, 0, 0.3) 100%
+	);
+	border-radius: 2px;
+	z-index: 0;
+}
+
+.fighting-hp-text {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	font-family: var(--font-display);
+	font-size: 1.4rem;
+	font-weight: 900;
+	color: #ffffff;
+	text-shadow:
+		0 0 4px #000,
+		0 0 10px rgba(0, 0, 0, 1),
+		1px 1px 0 #000,
+		-1px -1px 0 #000,
+		1px -1px 0 #000,
+		-1px 1px 0 #000,
+		0 0 16px rgba(200, 30, 25, 0.7);
+	z-index: 2;
+	letter-spacing: 2px;
+	white-space: nowrap;
+}
+
+.fighting-hp-bar-container.opponent .fighting-hp-fill {
+	right: 1px;
+	left: auto;
+}
+
+.fighting-hp-bar-container.opponent .fighting-hp-bar {
+	box-shadow:
+		0 2px 10px rgba(0, 0, 0, 0.7),
+		inset 0 0 10px rgba(0, 0, 0, 0.9),
+		0 0 16px rgba(239, 68, 68, 0.4);
+}

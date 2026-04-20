@@ -1,0 +1,451 @@
+/* Game Over Screen - Victory/Defeat overlay */
+
+.game-over-overlay {
+	position: absolute;
+	inset: 0;
+	z-index: 9600;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(0, 0, 0, 0.85);
+	animation: game-over-fade-in 0.8s ease-out;
+}
+
+@keyframes game-over-fade-in {
+	0% { opacity: 0; }
+	100% { opacity: 1; }
+}
+
+.game-over-overlay.victory {
+	background: radial-gradient(ellipse at center, rgba(251, 191, 36, 0.12) 0%, rgba(0, 0, 0, 0.88) 70%);
+}
+
+.game-over-overlay.defeat {
+	background: radial-gradient(ellipse at center, rgba(239, 68, 68, 0.1) 0%, rgba(0, 0, 0, 0.92) 70%);
+}
+
+.game-over-overlay.draw {
+	background: radial-gradient(ellipse at center, rgba(100, 116, 139, 0.1) 0%, rgba(0, 0, 0, 0.9) 70%);
+}
+
+.game-over-panel {
+	text-align: center;
+	max-width: 500px;
+	width: 92%;
+	padding: 36px 32px;
+	background: linear-gradient(160deg, rgba(15, 23, 42, 0.95) 0%, rgba(8, 12, 22, 0.98) 100%);
+	border-radius: 20px;
+	border: 1px solid rgba(100, 116, 139, 0.25);
+	box-shadow:
+		0 32px 80px rgba(0, 0, 0, 0.7),
+		0 0 0 1px rgba(255, 255, 255, 0.03);
+	animation: panel-slam-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes panel-slam-in {
+	0% { transform: scale(0.7) translateY(40px); opacity: 0; }
+	60% { transform: scale(1.03) translateY(-5px); opacity: 1; }
+	100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.victory .game-over-panel {
+	border-color: rgba(251, 191, 36, 0.3);
+	box-shadow:
+		0 32px 80px rgba(0, 0, 0, 0.7),
+		0 0 40px rgba(251, 191, 36, 0.12),
+		0 0 0 1px rgba(251, 191, 36, 0.08);
+}
+
+.defeat .game-over-panel {
+	border-color: rgba(239, 68, 68, 0.2);
+	box-shadow:
+		0 32px 80px rgba(0, 0, 0, 0.7),
+		0 0 40px rgba(239, 68, 68, 0.08),
+		0 0 0 1px rgba(239, 68, 68, 0.05);
+}
+
+/* Main title */
+.game-over-title {
+	font-family: 'Cinzel', 'Georgia', serif;
+	font-size: 60px;
+	font-weight: 900;
+	letter-spacing: 8px;
+	text-transform: uppercase;
+	line-height: 1;
+	margin-bottom: 10px;
+}
+
+.victory .game-over-title {
+	color: #fbbf24;
+	text-shadow:
+		0 0 30px rgba(251, 191, 36, 0.8),
+		0 0 60px rgba(251, 191, 36, 0.4),
+		0 4px 8px rgba(0, 0, 0, 0.8);
+	animation: victoryTitleSlam 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards, victoryTitlePulse 2.5s ease-in-out 0.7s infinite;
+}
+
+@keyframes victoryTitleSlam {
+	0% { transform: scale(3) translateY(-20px); opacity: 0; letter-spacing: 20px; }
+	50% { transform: scale(0.95) translateY(2px); opacity: 1; }
+	100% { transform: scale(1) translateY(0); opacity: 1; letter-spacing: 8px; }
+}
+
+.defeat .game-over-title {
+	color: #ef4444;
+	text-shadow:
+		0 0 30px rgba(239, 68, 68, 0.8),
+		0 0 60px rgba(239, 68, 68, 0.4),
+		0 4px 8px rgba(0, 0, 0, 0.8);
+	animation: defeatTitleFade 1s ease-out forwards;
+}
+
+@keyframes defeatTitleFade {
+	0% { transform: scale(0.5) translateY(30px); opacity: 0; filter: blur(8px); }
+	60% { filter: blur(0); }
+	100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.draw .game-over-title {
+	color: #94a3b8;
+	text-shadow: 0 4px 8px rgba(0, 0, 0, 0.8);
+}
+
+@keyframes victoryTitlePulse {
+	0%, 100% { opacity: 0.85; }
+	50% { opacity: 1; }
+}
+
+.game-over-subtitle {
+	font-size: 14px;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	line-height: 1.55;
+	margin-bottom: 28px;
+	opacity: 0.7;
+}
+
+.victory .game-over-subtitle { color: #fbbf24; }
+.defeat .game-over-subtitle { color: #ef4444; }
+.draw .game-over-subtitle { color: #94a3b8; }
+
+/* Hero portraits */
+.game-over-heroes {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 16px;
+	margin-bottom: 24px;
+}
+
+.game-over-hero {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+}
+
+.game-over-hero-portrait {
+	width: 110px;
+	height: 110px;
+	border-radius: 50%;
+	overflow: hidden;
+	transition: transform 0.3s ease, opacity 0.3s ease, box-shadow 0.3s ease;
+}
+
+.game-over-hero-portrait.winner {
+	box-shadow: 0 0 20px rgba(251, 191, 36, 0.6), 0 0 40px rgba(251, 191, 36, 0.25);
+	transform: scale(1.08);
+}
+
+.game-over-hero-portrait.loser {
+	filter: grayscale(0.6) brightness(0.65);
+	transform: scale(0.92);
+}
+
+/* Class-colored initial avatar */
+.game-over-hero-avatar {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-family: 'Cinzel', 'Georgia', serif;
+	font-size: 28px;
+	font-weight: 900;
+	color: rgba(255, 255, 255, 0.95);
+	text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+	border-radius: 50%;
+}
+
+.game-over-hero-image {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.game-over-hero-name {
+	font-size: 13px;
+	font-weight: 700;
+	color: rgba(203, 213, 225, 0.8);
+	letter-spacing: 0.5px;
+}
+
+.game-over-hero-name.winner-name {
+	color: #fbbf24;
+}
+
+.game-over-crown {
+	font-size: 11px;
+	font-weight: 800;
+	color: #fbbf24;
+	letter-spacing: 1px;
+	text-transform: uppercase;
+	text-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+}
+
+.game-over-vs-block {
+	display: flex;
+	align-items: center;
+	padding: 0 8px;
+}
+
+.game-over-vs {
+	font-size: 20px;
+	font-weight: 900;
+	color: rgba(100, 116, 139, 0.5);
+	letter-spacing: 3px;
+}
+
+/* Stats panel */
+.game-over-stats {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 12px;
+	margin-bottom: 28px;
+	padding: 18px;
+	background: rgba(10, 15, 30, 0.6);
+	border: 1px solid rgba(100, 116, 139, 0.2);
+	border-radius: 12px;
+}
+
+.game-over-stat {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+}
+
+.game-over-stat-value {
+	font-size: 26px;
+	font-weight: 800;
+	color: #f0f0f0;
+	line-height: 1;
+}
+
+.game-over-stat-value.game-over-stat-icon-badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 52px;
+	height: 52px;
+	border-radius: 16px;
+	background: rgba(15, 23, 42, 0.8);
+	border: 1px solid rgba(148, 163, 184, 0.18);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.game-over-stat-value.game-over-stat-icon-badge svg {
+	width: 24px;
+	height: 24px;
+}
+
+.game-over-stat-value.game-over-stat-icon-badge.victory {
+	color: #fbbf24;
+	border-color: rgba(251, 191, 36, 0.24);
+	background: rgba(120, 53, 15, 0.18);
+}
+
+.game-over-stat-value.game-over-stat-icon-badge.draw {
+	color: #94a3b8;
+	border-color: rgba(148, 163, 184, 0.22);
+	background: rgba(30, 41, 59, 0.28);
+}
+
+.game-over-stat-value.game-over-stat-icon-badge.defeat {
+	color: #f87171;
+	border-color: rgba(248, 113, 113, 0.2);
+	background: rgba(127, 29, 29, 0.2);
+}
+
+.game-over-stat-value.result-badge {
+	font-size: 18px;
+	font-weight: 900;
+	letter-spacing: 2px;
+	padding: 4px 10px;
+	border-radius: 6px;
+}
+
+.game-over-stat-value.result-badge.victory {
+	color: #22c55e;
+	background: rgba(34, 197, 94, 0.12);
+	border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.game-over-stat-value.result-badge.defeat {
+	color: #ef4444;
+	background: rgba(239, 68, 68, 0.12);
+	border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.game-over-stat-value.result-badge.draw {
+	color: #94a3b8;
+	background: rgba(100, 116, 139, 0.12);
+	border: 1px solid rgba(100, 116, 139, 0.3);
+}
+
+.game-over-stat-label {
+	font-size: 12px;
+	color: rgba(148, 163, 184, 0.75);
+	text-transform: uppercase;
+	letter-spacing: 1px;
+}
+
+/* ELO delta badge — ranked matches */
+.game-over-elo-delta {
+	text-align: center;
+	margin: 4px 0 8px;
+}
+
+.elo-delta-value {
+	font-family: 'Cinzel', Georgia, serif;
+	font-size: 22px;
+	font-weight: 900;
+	letter-spacing: 0.12em;
+}
+
+.elo-gain {
+	color: #22c55e;
+	text-shadow: 0 0 14px rgba(34, 197, 94, 0.5);
+}
+
+.elo-loss {
+	color: #ef4444;
+	text-shadow: 0 0 14px rgba(239, 68, 68, 0.5);
+}
+
+/* Action buttons */
+.game-over-actions {
+	display: flex;
+	gap: 12px;
+	justify-content: center;
+}
+
+.game-over-btn {
+	padding: 12px 32px;
+	border-radius: 10px;
+	font-size: 13px;
+	font-weight: 800;
+	text-transform: uppercase;
+	letter-spacing: 1.5px;
+	cursor: pointer;
+	transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+	border: none;
+}
+
+.game-over-btn.primary {
+	background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+	color: white;
+	box-shadow: 0 4px 16px rgba(34, 197, 94, 0.35);
+}
+
+.game-over-btn.primary:hover {
+	transform: translateY(-3px);
+	box-shadow: 0 8px 28px rgba(34, 197, 94, 0.55);
+}
+
+.game-over-btn.primary:active {
+	transform: translateY(0);
+	transition: transform 0.08s ease;
+}
+
+.game-over-btn.secondary {
+	background: rgba(51, 65, 85, 0.7);
+	color: rgba(203, 213, 225, 0.9);
+	border: 1px solid rgba(100, 116, 139, 0.35);
+}
+
+.game-over-btn.secondary:hover {
+	background: rgba(71, 85, 105, 0.8);
+	transform: translateY(-2px);
+}
+
+/* Particle burst for victory */
+.victory-particles {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	overflow: hidden;
+}
+
+.victory-particle {
+	position: absolute;
+	border-radius: 50%;
+	animation: victoryParticleFall 3.5s ease-in forwards;
+}
+
+@keyframes victoryParticleFall {
+	0% {
+		opacity: 1;
+		transform: translateY(-20px) rotate(0deg) scale(1);
+	}
+	80% { opacity: 0.6; }
+	100% {
+		opacity: 0;
+		transform: translateY(105vh) rotate(900deg) scale(0.3);
+	}
+}
+
+/* Victory screen golden flash overlay */
+.victory .game-over-overlay::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(ellipse at center, rgba(255, 215, 0, 0.4) 0%, transparent 60%);
+	animation: victory-screen-flash 1s ease-out forwards;
+	pointer-events: none;
+}
+
+@keyframes victory-screen-flash {
+	0% { opacity: 1; transform: scale(0.8); }
+	100% { opacity: 0; transform: scale(2); }
+}
+
+/* Defeat screen dark pulse */
+.defeat .game-over-overlay::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(ellipse at center, rgba(180, 0, 0, 0.25) 0%, transparent 50%);
+	animation: defeat-screen-pulse 2s ease-in-out infinite;
+	pointer-events: none;
+}
+
+@keyframes defeat-screen-pulse {
+	0%, 100% { opacity: 0.3; }
+	50% { opacity: 0.7; }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+	.game-over-title,
+	.game-over-panel,
+	.game-over-overlay,
+	.victory-particle {
+		animation: none !important;
+	}
+	.victory .game-over-overlay::before,
+	.defeat .game-over-overlay::before {
+		display: none;
+	}
+}

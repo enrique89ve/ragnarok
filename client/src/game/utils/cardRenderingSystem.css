@@ -1,0 +1,83 @@
+/* ---------- CARD CONTAINER FIXES ---------- */
+/* Target specifically the card containers that need fixes, not generic classes */
+.battlefield .premium-card-container,
+.hand-card-container .premium-card-container,
+.card-with-drag .premium-card-container,
+.enhanced-card-container,
+div[data-card-component] {
+  transform-style: preserve-3d !important;
+  position: relative !important;
+  overflow: visible !important;
+  clip-path: none !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  z-index: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* Target hover containers specifically */
+.card-with-drag:hover,
+.premium-card-container:hover {
+  z-index: 10 !important; /* Bring hovered cards to front */
+}
+
+/* ---------- CANVAS & WEBGL FIXES ---------- */
+/* Target only canvases inside our specific card components */
+.premium-card-container canvas,
+.canvas-container canvas,
+canvas[data-renderer="CardRenderer"] {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  z-index: 1 !important;
+  transform: translateZ(0) !important;
+  pointer-events: auto !important;
+}
+
+/* Prevent clipping from parent containers but only target card containers */
+.battlefield > div > div,
+.hand-container > div {
+  overflow: visible !important;
+}
+
+/* ---------- CARD STACKING CONTEXT ---------- */
+/* Create proper stacking context for cards */
+.hand-card-container {
+  transform-style: preserve-3d !important;
+  position: relative;
+  /* Individual z-index is applied inline */
+}
+
+/* Battlefield cards should maintain z-index based on board position */
+.battlefield .card-container {
+  transform-style: preserve-3d !important;
+  transition: transform 0.3s ease-out, z-index 0.01s;
+}
+
+/* ---------- INTERACTION FIXES ---------- */
+/* Make sure cards can be clicked and dragged */
+.card-with-drag canvas {
+  pointer-events: auto !important;
+}
+
+/* ---------- HOVER EFFECTS ENHANCEMENT ---------- */
+/* Smooth out hover effects */
+.premium-card-container {
+  transition: transform 0.2s cubic-bezier(0.165, 0.84, 0.44, 1) !important;
+}
+
+/* ---------- DISABLED RENDERER HANDLING ---------- */
+/* Hide disabled renderers completely - high specificity */
+canvas.disabled-renderer,
+.disabled-renderer canvas,
+div > canvas.disabled-renderer,
+div > .disabled-renderer canvas {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  position: absolute !important;
+  pointer-events: none !important;
+  z-index: -999 !important;
+  width: 0 !important;
+  height: 0 !important;
+}

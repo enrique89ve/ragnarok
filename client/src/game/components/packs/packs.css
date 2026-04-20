@@ -1,0 +1,382 @@
+/* Packs Page — Launch-Ready Supply System Styles */
+
+/* ========== Supply Banner ========== */
+.supply-banner {
+	background: linear-gradient(135deg, rgba(15, 15, 30, 0.8) 0%, rgba(20, 10, 40, 0.6) 50%, rgba(15, 15, 30, 0.8) 100%);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 16px;
+	padding: 24px 32px;
+	backdrop-filter: blur(8px);
+	position: relative;
+	overflow: hidden;
+}
+
+.supply-banner::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(ellipse at 50% 0%, rgba(251, 191, 36, 0.06) 0%, transparent 60%);
+	pointer-events: none;
+}
+
+.supply-number {
+	font-family: 'Courier New', 'Consolas', monospace;
+	font-weight: 800;
+	letter-spacing: 1px;
+	text-shadow: 0 0 20px rgba(251, 191, 36, 0.3);
+}
+
+.supply-number-large {
+	font-size: 36px;
+	line-height: 1;
+}
+
+.supply-number-medium {
+	font-size: 20px;
+	line-height: 1;
+}
+
+/* ========== Supply Progress Bar ========== */
+.supply-bar {
+	height: 8px;
+	border-radius: 4px;
+	background: rgba(255, 255, 255, 0.06);
+	overflow: hidden;
+	position: relative;
+}
+
+.supply-bar-fill {
+	height: 100%;
+	border-radius: 4px;
+	background: linear-gradient(90deg, #f59e0b, #fbbf24);
+	transition: width 1s ease;
+	position: relative;
+}
+
+.supply-bar-fill::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%);
+	animation: supply-shimmer 3s ease-in-out infinite;
+}
+
+@keyframes supply-shimmer {
+	0% { transform: translateX(-100%); }
+	100% { transform: translateX(200%); }
+}
+
+/* ========== Rarity Supply Meters ========== */
+.rarity-meter {
+	height: 4px;
+	border-radius: 2px;
+	background: rgba(255, 255, 255, 0.08);
+	overflow: hidden;
+}
+
+.rarity-meter-fill {
+	height: 100%;
+	border-radius: 2px;
+	transition: width 0.8s ease;
+}
+
+.rarity-meter-fill-mythic { background: linear-gradient(90deg, #d97706, #fbbf24); }
+.rarity-meter-fill-epic { background: linear-gradient(90deg, #7c3aed, #a855f7); }
+.rarity-meter-fill-rare { background: linear-gradient(90deg, #2563eb, #3b82f6); }
+.rarity-meter-fill-common { background: linear-gradient(90deg, #6b7280, #9ca3af); }
+
+/* ========== Pack Card Themes ========== */
+.pack-card {
+	position: relative;
+	border-radius: 16px;
+	overflow: hidden;
+	transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.pack-card:hover {
+	transform: translateY(-8px) scale(1.02);
+}
+
+.pack-card-starter {
+	background: linear-gradient(145deg, #1f2937 0%, #111827 50%, #1a1a2e 100%);
+	border: 2px solid rgba(107, 114, 128, 0.5);
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+.pack-card-starter:hover {
+	border-color: rgba(107, 114, 128, 0.8);
+	box-shadow: 0 8px 40px rgba(107, 114, 128, 0.2);
+}
+
+.pack-card-booster {
+	background: linear-gradient(145deg, #1e293b 0%, #0f172a 50%, #1e1b4b 100%);
+	border: 2px solid rgba(59, 130, 246, 0.5);
+	box-shadow: 0 4px 20px rgba(59, 130, 246, 0.1);
+}
+.pack-card-booster:hover {
+	border-color: rgba(59, 130, 246, 0.8);
+	box-shadow: 0 8px 40px rgba(59, 130, 246, 0.25);
+}
+
+.pack-card-premium {
+	background: linear-gradient(145deg, #292524 0%, #1c1917 50%, #27201a 100%);
+	border: 2px solid rgba(251, 191, 36, 0.5);
+	box-shadow: 0 4px 20px rgba(251, 191, 36, 0.1);
+}
+.pack-card-premium:hover {
+	border-color: rgba(251, 191, 36, 0.8);
+	box-shadow: 0 8px 40px rgba(251, 191, 36, 0.3);
+}
+
+.pack-card-mythic {
+	background: linear-gradient(145deg, #1a1025 0%, #0d0d1a 50%, #1a0a20 100%);
+	border: 2px solid rgba(236, 72, 153, 0.5);
+	box-shadow:
+		0 4px 20px rgba(236, 72, 153, 0.15),
+		0 4px 20px rgba(139, 92, 246, 0.1);
+}
+.pack-card-mythic:hover {
+	border-color: rgba(236, 72, 153, 0.8);
+	box-shadow:
+		0 8px 40px rgba(236, 72, 153, 0.3),
+		0 8px 40px rgba(139, 92, 246, 0.2);
+}
+
+/* ========== Pack Seal (CSS Emblem) ========== */
+.pack-seal {
+	width: 100%;
+	height: 160px;
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+}
+
+.pack-seal-icon {
+	width: 80px;
+	height: 80px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	position: relative;
+	z-index: 1;
+}
+
+.pack-seal-starter .pack-seal-icon {
+	background: radial-gradient(circle, #4b5563 0%, #1f2937 70%);
+	border: 3px solid #6b7280;
+	box-shadow: 0 0 20px rgba(107, 114, 128, 0.3), inset 0 2px 8px rgba(255, 255, 255, 0.1);
+}
+
+.pack-seal-booster .pack-seal-icon {
+	background: radial-gradient(circle, #3b82f6 0%, #1e40af 70%);
+	border: 3px solid #60a5fa;
+	box-shadow: 0 0 30px rgba(59, 130, 246, 0.4), inset 0 2px 8px rgba(255, 255, 255, 0.15);
+}
+
+.pack-seal-premium .pack-seal-icon {
+	background: radial-gradient(circle, #f59e0b 0%, #92400e 70%);
+	border: 3px solid #fbbf24;
+	box-shadow: 0 0 35px rgba(251, 191, 36, 0.5), inset 0 2px 8px rgba(255, 255, 255, 0.2);
+}
+
+.pack-seal-mythic .pack-seal-icon {
+	background: radial-gradient(circle, #ec4899 0%, #7c3aed 50%, #1a1a2e 100%);
+	border: 3px solid #f472b6;
+	box-shadow:
+		0 0 40px rgba(236, 72, 153, 0.5),
+		0 0 60px rgba(139, 92, 246, 0.3),
+		inset 0 2px 8px rgba(255, 255, 255, 0.2);
+}
+
+/* Runic ring around seal */
+.pack-seal::before {
+	content: '';
+	position: absolute;
+	width: 110px;
+	height: 110px;
+	border-radius: 50%;
+	border: 1px dashed rgba(255, 255, 255, 0.15);
+	animation: seal-rotate 20s linear infinite;
+}
+
+.pack-seal::after {
+	content: '';
+	position: absolute;
+	width: 130px;
+	height: 130px;
+	border-radius: 50%;
+	border: 1px dashed rgba(255, 255, 255, 0.08);
+	animation: seal-rotate 30s linear infinite reverse;
+}
+
+@keyframes seal-rotate {
+	0% { transform: rotate(0deg); }
+	100% { transform: rotate(360deg); }
+}
+
+/* Seal glow pulses */
+.pack-seal-glow {
+	position: absolute;
+	width: 120px;
+	height: 120px;
+	border-radius: 50%;
+	filter: blur(30px);
+	opacity: 0.3;
+	animation: seal-pulse 3s ease-in-out infinite;
+}
+
+@keyframes seal-pulse {
+	0%, 100% { transform: scale(0.8); opacity: 0.2; }
+	50% { transform: scale(1.1); opacity: 0.4; }
+}
+
+.pack-seal-starter .pack-seal-glow { background: #6b7280; }
+.pack-seal-booster .pack-seal-glow { background: #3b82f6; }
+.pack-seal-premium .pack-seal-glow { background: #f59e0b; }
+.pack-seal-mythic .pack-seal-glow { background: linear-gradient(135deg, #ec4899, #8b5cf6); }
+
+/* ========== Rarity Odds Bars ========== */
+.odds-bar {
+	height: 6px;
+	border-radius: 3px;
+	background: rgba(255, 255, 255, 0.06);
+	overflow: hidden;
+}
+
+.odds-bar-fill {
+	height: 100%;
+	border-radius: 3px;
+}
+
+.odds-bar-fill-common { background: #6b7280; }
+.odds-bar-fill-rare { background: #3b82f6; }
+.odds-bar-fill-epic { background: #a855f7; }
+.odds-bar-fill-mythic { background: linear-gradient(90deg, #ec4899, #8b5cf6); }
+
+/* ========== Open Pack Button Themes ========== */
+.open-btn {
+	width: 100%;
+	padding: 12px 0;
+	border: none;
+	border-radius: 12px;
+	font-weight: 700;
+	font-size: 15px;
+	color: white;
+	cursor: pointer;
+	transition: box-shadow 0.2s ease;
+	position: relative;
+	overflow: hidden;
+}
+
+.open-btn::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+	pointer-events: none;
+}
+
+.open-btn-starter {
+	background: linear-gradient(135deg, #4b5563, #6b7280);
+	box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+}
+.open-btn-starter:hover { box-shadow: 0 6px 20px rgba(107, 114, 128, 0.5); }
+
+.open-btn-booster {
+	background: linear-gradient(135deg, #2563eb, #3b82f6);
+	box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+.open-btn-booster:hover { box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5); }
+
+.open-btn-premium {
+	background: linear-gradient(135deg, #d97706, #f59e0b);
+	box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+}
+.open-btn-premium:hover { box-shadow: 0 6px 20px rgba(251, 191, 36, 0.5); }
+
+.open-btn-mythic {
+	background: linear-gradient(135deg, #db2777, #9333ea);
+	box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
+}
+.open-btn-mythic:hover { box-shadow: 0 6px 20px rgba(236, 72, 153, 0.5); }
+
+/* ========== Scarcity Badges ========== */
+.scarcity-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 2px 8px;
+	border-radius: 10px;
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.scarcity-badge-fresh {
+	background: rgba(16, 185, 129, 0.15);
+	color: #34d399;
+	border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.scarcity-badge-low {
+	background: rgba(245, 158, 11, 0.15);
+	color: #fbbf24;
+	border: 1px solid rgba(245, 158, 11, 0.3);
+	animation: scarcity-pulse 2s ease-in-out infinite;
+}
+
+.scarcity-badge-critical {
+	background: rgba(239, 68, 68, 0.15);
+	color: #f87171;
+	border: 1px solid rgba(239, 68, 68, 0.3);
+	animation: scarcity-pulse 1.2s ease-in-out infinite;
+}
+
+.scarcity-badge-soldout {
+	background: rgba(107, 114, 128, 0.15);
+	color: #9ca3af;
+	border: 1px solid rgba(107, 114, 128, 0.3);
+}
+
+@keyframes scarcity-pulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.6; }
+}
+
+/* ========== Reward Reserve Badge ========== */
+.reward-reserve-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 14px;
+	border-radius: 8px;
+	background: rgba(20, 184, 166, 0.08);
+	border: 1px solid rgba(20, 184, 166, 0.2);
+	color: rgba(94, 234, 212, 0.8);
+	font-size: 13px;
+}
+
+/* ========== Pack Price Badge ========== */
+.pack-price {
+	font-family: 'Courier New', 'Consolas', monospace;
+	font-weight: 800;
+	font-size: 18px;
+	letter-spacing: 0.5px;
+}
+
+/* ========== Guarantee Tag ========== */
+.guarantee-tag {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 3px 10px;
+	border-radius: 12px;
+	font-size: 11px;
+	font-weight: 600;
+	background: rgba(251, 191, 36, 0.1);
+	color: #fbbf24;
+	border: 1px solid rgba(251, 191, 36, 0.2);
+}

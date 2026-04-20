@@ -1,0 +1,88 @@
+/**
+ * AttackStyles.css
+ * 
+ * CSS styles for the attack system visual indicators and interactions
+ */
+
+/* Cards that can attack — subtle warm bronze outline */
+.card-attackable {
+  border: 1.5px solid rgba(205, 170, 100, 0.55);
+  box-shadow:
+    0 0 4px rgba(205, 170, 100, 0.25),
+    0 0 8px rgba(205, 170, 100, 0.12);
+  animation: ready-pulse 2.5s ease-in-out infinite;
+  cursor: pointer;
+  position: relative;
+  z-index: 2;
+}
+
+/* Cards that can't attack get a muted appearance */
+.card-non-attackable {
+  opacity: 0.8;
+  filter: saturate(0.8);
+}
+
+/* Currently selected attacker — bright gold lift */
+.active-attacker {
+  border: 2px solid rgba(218, 185, 107, 0.9) !important;
+  box-shadow:
+    0 0 6px rgba(218, 185, 107, 0.5),
+    0 0 14px rgba(218, 185, 107, 0.2) !important;
+  transform: translateY(-4px) scale(1.03);
+  z-index: 10;
+}
+
+/* Valid attack targets — subtle red indicator */
+.valid-target {
+  border: 1.5px solid rgba(220, 80, 60, 0.55);
+  box-shadow:
+    0 0 4px rgba(220, 80, 60, 0.25),
+    0 0 10px rgba(220, 80, 60, 0.12);
+  cursor: crosshair;
+  animation: target-pulse 2s ease-in-out infinite;
+}
+
+/* Taunt minions get a shield icon */
+.has-taunt::after {
+  content: '🛡️';
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  font-size: 14px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 50%;
+  padding: 2px;
+}
+
+/* Animation keyframes */
+@keyframes ready-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes target-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Attack line/arrow */
+.attack-line {
+  position: absolute;
+  height: 3px;
+  background-color: #f44336;
+  z-index: 1000;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+.attack-arrow {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 6px 12px 6px;
+  border-color: transparent transparent #f44336 transparent;
+  transform-origin: 50% 100%;
+  z-index: 1000;
+  pointer-events: none;
+}

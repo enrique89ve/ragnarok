@@ -1,0 +1,820 @@
+/* ============================================================
+   REALM BOARD SKINS
+   10 unique visual themes for each Norse realm.
+   Applied via `.game-viewport.realm-{id}` class.
+
+   Each realm overrides CSS custom properties that control:
+   - Board background gradient
+   - Vignette tint color
+   - Divider line color
+   - Fog/mist color
+   - Ambient glow tint
+   - Ember particle colors (via filter hue-rotate)
+   ============================================================ */
+
+/* ============================================================
+   BASE REALM VARIABLES (Midgard default)
+   ============================================================ */
+.game-viewport {
+	--realm-bg-top: #0a0e1a;
+	--realm-bg-mid: #141830;
+	--realm-bg-lower: #1a1610;
+	--realm-bg-bottom: #0a0e1a;
+	--realm-glow-color: rgba(212, 175, 55, 0.4);
+	--realm-divider-color: rgba(212, 175, 55, 0.6);
+	--realm-divider-glow: rgba(212, 175, 55, 0.3);
+	--realm-fog-color: rgba(8, 12, 24, 0.6);
+	--realm-vignette-color: rgba(0, 0, 0, 0.6);
+	--realm-torch-color: rgba(255, 140, 40, 0.12);
+	--realm-ember-filter: none;
+	--realm-dust-opacity: 0.5;
+	--realm-overlay-gradient: none;
+	transition: background 1.5s ease-in-out;
+}
+
+/* ============================================================
+   MIDGARD — Mortal Realm (Viking longhouse, torchlit stone)
+   Warm amber torchlight, carved stone, leather and iron
+   ============================================================ */
+:where(.game-viewport.realm-midgard) {
+	--realm-bg-top: #0c0806;
+	--realm-bg-mid: #1e1610;
+	--realm-bg-lower: #221a12;
+	--realm-bg-bottom: #0a0804;
+	--realm-glow-color: rgba(255, 180, 50, 0.7);
+	--realm-divider-color: rgba(255, 200, 80, 0.9);
+	--realm-divider-glow: rgba(255, 180, 60, 0.6);
+	--realm-fog-color: rgba(12, 8, 4, 0.7);
+	--realm-vignette-color: rgba(5, 3, 0, 0.82);
+	--realm-torch-color: rgba(255, 140, 40, 0.45);
+	--realm-dust-opacity: 1;
+}
+
+.game-viewport.realm-midgard {
+	background: url('/ui/background.jpg') center center / cover no-repeat !important;
+}
+
+/* Blazing torch light pools — massive warm light cones on walls */
+.game-viewport.realm-midgard .board-torch-glow::before {
+	background:
+		radial-gradient(ellipse 280px 380px at 3% 18%, rgba(255, 160, 50, 0.35) 0%, rgba(255, 100, 20, 0.08) 50%, transparent 80%),
+		radial-gradient(ellipse 200px 260px at 4% 80%, rgba(255, 130, 30, 0.28) 0%, rgba(255, 80, 10, 0.06) 50%, transparent 80%);
+	width: 55%;
+	height: 100%;
+	top: 0;
+	bottom: auto;
+}
+
+.game-viewport.realm-midgard .board-torch-glow::after {
+	background:
+		radial-gradient(ellipse 280px 380px at 97% 18%, rgba(255, 160, 50, 0.35) 0%, rgba(255, 100, 20, 0.08) 50%, transparent 80%),
+		radial-gradient(ellipse 200px 260px at 96% 80%, rgba(255, 130, 30, 0.28) 0%, rgba(255, 80, 10, 0.06) 50%, transparent 80%);
+	width: 55%;
+	height: 100%;
+	top: 0;
+	bottom: auto;
+	left: auto;
+	right: 0;
+}
+
+/* ============================================================
+   ASGARD — Realm of the Gods (radiant gold, celestial)
+   Brilliant golden marble, heavenly light pouring from above
+   ============================================================ */
+:where(.game-viewport.realm-asgard) {
+	--realm-bg-top: #1a1505;
+	--realm-bg-mid: #2a2008;
+	--realm-bg-lower: #1e180a;
+	--realm-bg-bottom: #0f0c04;
+	--realm-glow-color: rgba(251, 191, 36, 0.5);
+	--realm-divider-color: rgba(255, 220, 100, 0.8);
+	--realm-divider-glow: rgba(255, 215, 0, 0.5);
+	--realm-fog-color: rgba(40, 30, 5, 0.5);
+	--realm-torch-color: rgba(255, 215, 0, 0.2);
+	--realm-ember-filter: hue-rotate(-10deg) saturate(1.5);
+	--realm-dust-opacity: 0.8;
+}
+
+.game-viewport.realm-asgard {
+	background:
+		linear-gradient(180deg, rgba(26, 21, 5, 0.55) 0%, rgba(42, 32, 8, 0.45) 50%, rgba(15, 12, 4, 0.6) 100%),
+		url('/art/realms/asgard.webp') center center / cover no-repeat !important;
+}
+
+/* God-ray overlay */
+.game-viewport.realm-asgard .board-torch-glow::before {
+	background: radial-gradient(ellipse at 50% 0%, rgba(255, 215, 0, 0.06) 0%, transparent 50%);
+	width: 100%;
+	height: 60%;
+	top: 0;
+	left: 0;
+	bottom: auto;
+}
+
+/* ============================================================
+   NIFLHEIM — Frozen Wastes (deep blue ice, blizzard)
+   Blue-black with frost crystals, cold mist
+   ============================================================ */
+:where(.game-viewport.realm-niflheim) {
+	--realm-bg-top: #040810;
+	--realm-bg-mid: #081020;
+	--realm-bg-lower: #0a1428;
+	--realm-bg-bottom: #030608;
+	--realm-glow-color: rgba(103, 232, 249, 0.4);
+	--realm-divider-color: rgba(103, 232, 249, 0.6);
+	--realm-divider-glow: rgba(103, 232, 249, 0.4);
+	--realm-fog-color: rgba(4, 8, 16, 0.7);
+	--realm-vignette-color: rgba(0, 10, 30, 0.7);
+	--realm-torch-color: rgba(100, 180, 255, 0.1);
+	--realm-ember-filter: hue-rotate(180deg) saturate(0.8);
+	--realm-dust-opacity: 0.9;
+}
+
+.game-viewport.realm-niflheim {
+	background:
+		linear-gradient(180deg, rgba(4, 8, 16, 0.55) 0%, rgba(8, 16, 32, 0.45) 50%, rgba(3, 6, 8, 0.6) 100%),
+		url('/art/realms/niflheim.webp') center center / cover no-repeat !important;
+}
+
+/* Frost mist crawling from edges */
+.game-viewport.realm-niflheim .board-torch-glow::before {
+	background: radial-gradient(ellipse at 0% 50%, rgba(100, 200, 255, 0.08) 0%, transparent 60%);
+	width: 40%;
+	height: 100%;
+	top: 0;
+	bottom: auto;
+}
+
+.game-viewport.realm-niflheim .board-torch-glow::after {
+	background: radial-gradient(ellipse at 100% 50%, rgba(100, 200, 255, 0.08) 0%, transparent 60%);
+	width: 40%;
+	height: 100%;
+	top: 0;
+	bottom: auto;
+}
+
+/* ============================================================
+   MUSPELHEIM — Eternal Flame (volcanic, lava cracks)
+   Dark obsidian with glowing red/orange fissures
+   ============================================================ */
+:where(.game-viewport.realm-muspelheim) {
+	--realm-bg-top: #120404;
+	--realm-bg-mid: #1a0808;
+	--realm-bg-lower: #200a04;
+	--realm-bg-bottom: #0a0202;
+	--realm-glow-color: rgba(239, 68, 68, 0.5);
+	--realm-divider-color: rgba(255, 80, 20, 0.7);
+	--realm-divider-glow: rgba(255, 100, 0, 0.5);
+	--realm-fog-color: rgba(20, 4, 4, 0.6);
+	--realm-vignette-color: rgba(30, 0, 0, 0.6);
+	--realm-torch-color: rgba(255, 60, 0, 0.2);
+	--realm-ember-filter: hue-rotate(-20deg) saturate(2) brightness(1.3);
+	--realm-dust-opacity: 1;
+}
+
+.game-viewport.realm-muspelheim {
+	background:
+		linear-gradient(180deg, rgba(18, 4, 4, 0.55) 0%, rgba(26, 8, 8, 0.4) 50%, rgba(10, 2, 2, 0.6) 100%),
+		url('/art/realms/muspelheim.webp') center center / cover no-repeat !important;
+}
+
+/* Lava glow from below */
+.game-viewport.realm-muspelheim .board-torch-glow::before {
+	background: radial-gradient(ellipse at 30% 100%, rgba(255, 60, 0, 0.15) 0%, transparent 50%);
+	width: 60%;
+	height: 50%;
+}
+
+.game-viewport.realm-muspelheim .board-torch-glow::after {
+	background: radial-gradient(ellipse at 70% 100%, rgba(255, 80, 0, 0.12) 0%, transparent 50%);
+	width: 60%;
+	height: 50%;
+}
+
+/* ============================================================
+   HELHEIM — Death's Embrace (sickly green-purple, spectral)
+   Deep violet with eerie green mist and ghostly wisps
+   ============================================================ */
+:where(.game-viewport.realm-helheim) {
+	--realm-bg-top: #08040e;
+	--realm-bg-mid: #0e0618;
+	--realm-bg-lower: #0a0812;
+	--realm-bg-bottom: #050208;
+	--realm-glow-color: rgba(168, 85, 247, 0.4);
+	--realm-divider-color: rgba(168, 85, 247, 0.6);
+	--realm-divider-glow: rgba(100, 200, 100, 0.3);
+	--realm-fog-color: rgba(8, 4, 14, 0.7);
+	--realm-vignette-color: rgba(15, 0, 20, 0.7);
+	--realm-torch-color: rgba(100, 220, 100, 0.1);
+	--realm-ember-filter: hue-rotate(90deg) saturate(1.5);
+	--realm-dust-opacity: 0.8;
+}
+
+.game-viewport.realm-helheim {
+	background:
+		linear-gradient(180deg, rgba(8, 4, 14, 0.55) 0%, rgba(14, 6, 24, 0.4) 50%, rgba(5, 2, 8, 0.6) 100%),
+		url('/art/realms/helheim.webp') center center / cover no-repeat !important;
+}
+
+/* Spectral mist from below */
+.game-viewport.realm-helheim .board-torch-glow::before {
+	background: radial-gradient(ellipse at 20% 100%, rgba(100, 200, 100, 0.08) 0%, transparent 50%);
+	width: 50%;
+	height: 50%;
+}
+
+.game-viewport.realm-helheim .board-torch-glow::after {
+	background: radial-gradient(ellipse at 80% 100%, rgba(160, 80, 220, 0.08) 0%, transparent 50%);
+	width: 50%;
+	height: 50%;
+}
+
+/* ============================================================
+   JOTUNHEIM — Giant's Fury (pale glacier blue, cracked ice)
+   Massive icy expanse, pale blue-white, severe
+   ============================================================ */
+:where(.game-viewport.realm-jotunheim) {
+	--realm-bg-top: #060a12;
+	--realm-bg-mid: #0c1220;
+	--realm-bg-lower: #101828;
+	--realm-bg-bottom: #040810;
+	--realm-glow-color: rgba(56, 189, 248, 0.4);
+	--realm-divider-color: rgba(56, 189, 248, 0.6);
+	--realm-divider-glow: rgba(200, 220, 255, 0.3);
+	--realm-fog-color: rgba(6, 10, 18, 0.6);
+	--realm-vignette-color: rgba(0, 5, 20, 0.6);
+	--realm-torch-color: rgba(150, 200, 255, 0.08);
+	--realm-ember-filter: hue-rotate(160deg) saturate(0.5) brightness(1.5);
+	--realm-dust-opacity: 0.7;
+}
+
+.game-viewport.realm-jotunheim {
+	background:
+		linear-gradient(180deg, rgba(6, 10, 18, 0.55) 0%, rgba(12, 18, 32, 0.4) 50%, rgba(4, 8, 16, 0.6) 100%),
+		url('/art/realms/jotunheim.webp') center center / cover no-repeat !important;
+}
+
+/* ============================================================
+   ALFHEIM — Elven Arcana (ethereal lavender, soft bloom)
+   Magical purple-pink twilight, dreamy particles
+   ============================================================ */
+:where(.game-viewport.realm-alfheim) {
+	--realm-bg-top: #0a0610;
+	--realm-bg-mid: #14101e;
+	--realm-bg-lower: #100c18;
+	--realm-bg-bottom: #06040a;
+	--realm-glow-color: rgba(167, 139, 250, 0.4);
+	--realm-divider-color: rgba(167, 139, 250, 0.6);
+	--realm-divider-glow: rgba(200, 160, 255, 0.35);
+	--realm-fog-color: rgba(10, 6, 16, 0.5);
+	--realm-vignette-color: rgba(10, 0, 20, 0.5);
+	--realm-torch-color: rgba(180, 140, 255, 0.1);
+	--realm-ember-filter: hue-rotate(240deg) saturate(1.2);
+	--realm-dust-opacity: 0.9;
+}
+
+.game-viewport.realm-alfheim {
+	background:
+		linear-gradient(180deg, rgba(10, 6, 16, 0.55) 0%, rgba(20, 16, 30, 0.4) 50%, rgba(6, 4, 10, 0.6) 100%),
+		url('/art/realms/alfheim.webp') center center / cover no-repeat !important;
+}
+
+/* ============================================================
+   VANAHEIM — Nature's Grace (deep forest green, dappled light)
+   Rich emerald, life energy, organic warmth
+   ============================================================ */
+:where(.game-viewport.realm-vanaheim) {
+	--realm-bg-top: #040a04;
+	--realm-bg-mid: #081408;
+	--realm-bg-lower: #0a160a;
+	--realm-bg-bottom: #030803;
+	--realm-glow-color: rgba(34, 197, 94, 0.4);
+	--realm-divider-color: rgba(34, 197, 94, 0.6);
+	--realm-divider-glow: rgba(100, 220, 100, 0.3);
+	--realm-fog-color: rgba(4, 10, 4, 0.5);
+	--realm-vignette-color: rgba(0, 10, 0, 0.5);
+	--realm-torch-color: rgba(100, 200, 60, 0.1);
+	--realm-ember-filter: hue-rotate(80deg) saturate(1.3);
+	--realm-dust-opacity: 0.7;
+}
+
+.game-viewport.realm-vanaheim {
+	background:
+		linear-gradient(180deg, rgba(4, 10, 4, 0.55) 0%, rgba(8, 20, 8, 0.4) 50%, rgba(3, 8, 3, 0.6) 100%),
+		url('/art/realms/vanaheim.webp') center center / cover no-repeat !important;
+}
+
+/* Dappled sunlight from above */
+.game-viewport.realm-vanaheim .board-torch-glow::before {
+	background: radial-gradient(ellipse at 35% 0%, rgba(180, 230, 80, 0.06) 0%, transparent 40%);
+	width: 50%;
+	height: 50%;
+	top: 0;
+	bottom: auto;
+}
+
+.game-viewport.realm-vanaheim .board-torch-glow::after {
+	background: radial-gradient(ellipse at 65% 0%, rgba(100, 200, 60, 0.05) 0%, transparent 40%);
+	width: 50%;
+	height: 50%;
+	top: 0;
+	bottom: auto;
+}
+
+/* ============================================================
+   SVARTALFHEIM — Dwarven Craft (dark bronze, forge sparks)
+   Deep amber-orange, metallic sheen, industrial warmth
+   ============================================================ */
+:where(.game-viewport.realm-svartalfheim) {
+	--realm-bg-top: #0c0804;
+	--realm-bg-mid: #181006;
+	--realm-bg-lower: #1a1208;
+	--realm-bg-bottom: #080604;
+	--realm-glow-color: rgba(217, 119, 6, 0.5);
+	--realm-divider-color: rgba(217, 119, 6, 0.7);
+	--realm-divider-glow: rgba(255, 160, 40, 0.4);
+	--realm-fog-color: rgba(12, 8, 4, 0.6);
+	--realm-vignette-color: rgba(15, 5, 0, 0.6);
+	--realm-torch-color: rgba(255, 140, 20, 0.18);
+	--realm-ember-filter: hue-rotate(-30deg) saturate(1.8);
+	--realm-dust-opacity: 0.8;
+}
+
+.game-viewport.realm-svartalfheim {
+	background:
+		repeating-conic-gradient(rgba(255,140,20,0.025) 0% 25%, transparent 0% 50%) 0 0 / 3px 3px,
+		repeating-conic-gradient(rgba(200,100,10,0.02) 0% 25%, transparent 0% 50%) 1px 1px / 3px 3px,
+		radial-gradient(ellipse 80% 40% at 50% 100%, rgba(255, 100, 0, 0.06) 0%, transparent 50%),
+		radial-gradient(ellipse 600% 100% at 50% 0%, rgba(12, 8, 4, 0.98) 0%, transparent 70%),
+		radial-gradient(ellipse 600% 100% at 50% 100%, rgba(24, 16, 6, 0.95) 0%, transparent 70%),
+		linear-gradient(180deg, #0c0804 0%, #181006 30%, #1a1208 70%, #080604 100%) !important;
+}
+
+/* ============================================================
+   GINNUNGAGAP — Primordial Void (cosmic black, stars)
+   Pure darkness with distant starlight and cosmic dust
+   ============================================================ */
+:where(.game-viewport.realm-ginnungagap) {
+	--realm-bg-top: #020204;
+	--realm-bg-mid: #040408;
+	--realm-bg-lower: #030306;
+	--realm-bg-bottom: #010102;
+	--realm-glow-color: rgba(100, 100, 200, 0.3);
+	--realm-divider-color: rgba(136, 136, 255, 0.4);
+	--realm-divider-glow: rgba(100, 100, 200, 0.2);
+	--realm-fog-color: rgba(2, 2, 4, 0.8);
+	--realm-vignette-color: rgba(0, 0, 0, 0.8);
+	--realm-torch-color: rgba(100, 100, 200, 0.04);
+	--realm-ember-filter: hue-rotate(220deg) saturate(0.3) brightness(0.6);
+	--realm-dust-opacity: 1;
+}
+
+.game-viewport.realm-ginnungagap {
+	background:
+		radial-gradient(1px 1px at 15% 20%, rgba(255, 255, 255, 0.6), transparent),
+		radial-gradient(1px 1px at 35% 45%, rgba(200, 200, 255, 0.4), transparent),
+		radial-gradient(1.5px 1.5px at 55% 15%, rgba(255, 255, 255, 0.5), transparent),
+		radial-gradient(1px 1px at 72% 60%, rgba(180, 180, 255, 0.3), transparent),
+		radial-gradient(1px 1px at 88% 30%, rgba(255, 255, 255, 0.4), transparent),
+		radial-gradient(1px 1px at 10% 70%, rgba(200, 200, 255, 0.3), transparent),
+		radial-gradient(1.5px 1.5px at 60% 80%, rgba(255, 255, 255, 0.35), transparent),
+		radial-gradient(1px 1px at 45% 35%, rgba(180, 200, 255, 0.4), transparent),
+		radial-gradient(1px 1px at 80% 85%, rgba(255, 220, 200, 0.3), transparent),
+		radial-gradient(1px 1px at 25% 90%, rgba(200, 255, 200, 0.25), transparent),
+		linear-gradient(180deg, #020204 0%, #040408 30%, #030306 70%, #010102 100%) !important;
+}
+
+/* ============================================================
+   REALM-AWARE DIVIDER LINE
+   Uses CSS variables set by realm classes above
+   ============================================================ */
+.game-viewport[class*="realm-"] + .ragnarok-combat-arena.viewport-mode::after,
+.ragnarok-combat-arena.viewport-mode::after {
+	background: linear-gradient(90deg,
+		transparent 0%,
+		var(--realm-divider-color, rgba(212, 175, 55, 0.15)) 10%,
+		var(--realm-divider-color, rgba(212, 175, 55, 0.4)) 30%,
+		var(--realm-divider-color, rgba(212, 175, 55, 0.6)) 50%,
+		var(--realm-divider-color, rgba(212, 175, 55, 0.4)) 70%,
+		var(--realm-divider-color, rgba(212, 175, 55, 0.15)) 90%,
+		transparent 100%
+	);
+	box-shadow:
+		0 0 8px var(--realm-divider-glow, rgba(212, 175, 55, 0.3)),
+		0 0 20px var(--realm-divider-glow, rgba(212, 175, 55, 0.15));
+}
+
+/* ============================================================
+   REALM-AWARE VIGNETTE — Heavy cinematic edges
+   ============================================================ */
+.game-viewport[class*="realm-"] {
+	box-shadow:
+		inset 0 0 60px 30px var(--realm-vignette-color, rgba(0, 0, 0, 0.7)),
+		inset 0 0 150px 60px rgba(0, 0, 0, 0.5),
+		inset 0 0 300px 100px rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================================
+   REALM-AWARE EMBER PARTICLES
+   Tint existing CSS particles via filter
+   ============================================================ */
+.game-viewport[class*="realm-"]::before {
+	filter: var(--realm-ember-filter, none);
+}
+
+.game-viewport[class*="realm-"]::after {
+	filter: var(--realm-ember-filter, none);
+}
+
+/* ============================================================
+   REALM-AWARE DUST MOTES
+   Boost opacity based on realm
+   ============================================================ */
+.game-viewport[class*="realm-"] .board-ambient-dust::before,
+.game-viewport[class*="realm-"] .board-ambient-dust::after {
+	opacity: var(--realm-dust-opacity, 0.5);
+}
+
+/* ============================================================
+   REALM-AWARE TORCH GLOW
+   Tint corner torches based on realm
+   ============================================================ */
+.game-viewport[class*="realm-"] .board-torch-glow::before {
+	background: radial-gradient(ellipse at 0% 100%, var(--realm-torch-color) 0%, transparent 70%);
+}
+
+.game-viewport[class*="realm-"] .board-torch-glow::after {
+	background: radial-gradient(ellipse at 100% 100%, var(--realm-torch-color) 0%, transparent 70%);
+}
+
+/* ============================================================
+   REALM SHIFT TRANSITION
+   Smooth cross-fade when realm changes mid-game
+   ============================================================ */
+.game-viewport.realm-shifting {
+	animation: realm-shift-flash 0.8s ease-out;
+}
+
+@keyframes realm-shift-flash {
+	0% { filter: brightness(1); }
+	15% { filter: brightness(2.5) saturate(0.3); }
+	30% { filter: brightness(1.5) saturate(0.6); }
+	100% { filter: brightness(1) saturate(1); }
+}
+
+/* ============================================================
+   REALM ANNOUNCEMENT BANNER
+   Full-screen overlay when realm shifts
+   ============================================================ */
+.realm-announcement {
+	position: absolute;
+	inset: 0;
+	z-index: var(--z-cinematic);
+	pointer-events: none;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-direction: column;
+	gap: 8px;
+	animation: realm-announce-in 2s ease-out forwards;
+}
+
+.realm-announcement::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(ellipse at center, var(--realm-glow-color, rgba(212, 175, 55, 0.3)) 0%, transparent 60%);
+	animation: realm-announce-glow 2s ease-out forwards;
+}
+
+.realm-announcement-name {
+	font-family: 'Cinzel', 'Georgia', serif;
+	font-size: 3.5rem;
+	font-weight: 900;
+	text-transform: uppercase;
+	letter-spacing: 0.4em;
+	color: white;
+	text-shadow:
+		0 0 20px var(--realm-glow-color, rgba(212, 175, 55, 0.8)),
+		0 0 50px var(--realm-glow-color, rgba(212, 175, 55, 0.4)),
+		0 4px 8px rgba(0, 0, 0, 0.9);
+	animation: realm-title-slam 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+	z-index: 1;
+}
+
+.realm-announcement-desc {
+	font-family: 'Cinzel', 'Georgia', serif;
+	font-size: 1rem;
+	font-style: italic;
+	letter-spacing: 0.15em;
+	color: rgba(255, 255, 255, 0.7);
+	text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+	animation: realm-desc-fade 2s ease-out forwards;
+	z-index: 1;
+}
+
+.realm-announcement-rune {
+	font-size: 2rem;
+	animation: realm-rune-pulse 2s ease-out forwards;
+	z-index: 1;
+}
+
+@keyframes realm-announce-in {
+	0% { opacity: 0; }
+	10% { opacity: 1; }
+	70% { opacity: 1; }
+	100% { opacity: 0; }
+}
+
+@keyframes realm-announce-glow {
+	0% { opacity: 0; transform: scale(0.5); }
+	20% { opacity: 1; transform: scale(1); }
+	70% { opacity: 0.8; transform: scale(1.1); }
+	100% { opacity: 0; transform: scale(1.5); }
+}
+
+@keyframes realm-title-slam {
+	0% { transform: scale(3) translateY(-10px); opacity: 0; letter-spacing: 1em; }
+	50% { transform: scale(0.95); opacity: 1; }
+	100% { transform: scale(1); letter-spacing: 0.4em; }
+}
+
+@keyframes realm-desc-fade {
+	0%, 20% { opacity: 0; transform: translateY(10px); }
+	40% { opacity: 1; transform: translateY(0); }
+	70% { opacity: 1; }
+	100% { opacity: 0; }
+}
+
+@keyframes realm-rune-pulse {
+	0% { opacity: 0; transform: scale(0); }
+	15% { opacity: 1; transform: scale(1.5); }
+	30% { transform: scale(1); }
+	70% { opacity: 1; }
+	100% { opacity: 0; }
+}
+
+/* ============================================================
+   NORSE KNOTWORK BORDER
+   Decorative frame around the entire battlefield
+   ============================================================ */
+.board-border-ornament {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	z-index: 4;
+	border: 2px solid transparent;
+	border-image: linear-gradient(
+		180deg,
+		rgba(212, 175, 55, 0.05) 0%,
+		rgba(212, 175, 55, 0.35) 15%,
+		rgba(212, 175, 55, 0.2) 50%,
+		rgba(212, 175, 55, 0.35) 85%,
+		rgba(212, 175, 55, 0.05) 100%
+	) 1;
+	box-shadow:
+		inset 0 0 1px rgba(212, 175, 55, 0.15);
+}
+
+/* Corner rune flourishes */
+.board-border-ornament::before {
+	content: '';
+	position: absolute;
+	width: 80px;
+	height: 80px;
+	pointer-events: none;
+	opacity: 0.5;
+	top: 4px;
+	left: 4px;
+	border-top: 2px solid rgba(212, 175, 55, 0.4);
+	border-left: 2px solid rgba(212, 175, 55, 0.4);
+	border-radius: 3px 0 0 0;
+	box-shadow:
+		inset 8px 8px 0 -6px rgba(212, 175, 55, 0.15),
+		4px 4px 12px rgba(212, 175, 55, 0.08);
+}
+
+.board-border-ornament::after {
+	content: '';
+	position: absolute;
+	width: 80px;
+	height: 80px;
+	pointer-events: none;
+	opacity: 0.5;
+	bottom: 4px;
+	right: 4px;
+	border-bottom: 2px solid rgba(212, 175, 55, 0.4);
+	border-right: 2px solid rgba(212, 175, 55, 0.4);
+	border-radius: 0 0 3px 0;
+	box-shadow:
+		inset -8px -8px 0 -6px rgba(212, 175, 55, 0.15),
+		-4px -4px 12px rgba(212, 175, 55, 0.08);
+}
+
+/* Realm-tinted border */
+.game-viewport[class*="realm-"] .board-border-ornament {
+	border-image: linear-gradient(
+		180deg,
+		transparent 0%,
+		var(--realm-divider-color, rgba(212, 175, 55, 0.3)) 15%,
+		var(--realm-divider-color, rgba(212, 175, 55, 0.12)) 50%,
+		var(--realm-divider-color, rgba(212, 175, 55, 0.3)) 85%,
+		transparent 100%
+	) 1;
+}
+
+.game-viewport[class*="realm-"] .board-border-ornament::before,
+.game-viewport[class*="realm-"] .board-border-ornament::after {
+	border-color: var(--realm-divider-color, rgba(212, 175, 55, 0.4));
+	opacity: 0.6;
+}
+
+/* ============================================================
+   REALM INDICATOR — Small HUD showing current active realm
+   ============================================================ */
+.realm-indicator {
+	position: absolute;
+	top: 70px;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 500;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 14px;
+	background: rgba(0, 0, 0, 0.6);
+	border: 1px solid var(--realm-divider-color, rgba(212, 175, 55, 0.4));
+	border-radius: 16px;
+	/* backdrop-filter removed for perf */
+	pointer-events: none;
+	animation: realm-indicator-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.realm-indicator-rune {
+	font-size: 1rem;
+}
+
+.realm-indicator-name {
+	font-family: 'Cinzel', 'Georgia', serif;
+	font-size: 0.7rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 2px;
+	color: var(--realm-divider-color, rgba(212, 175, 55, 0.9));
+	text-shadow: 0 0 8px var(--realm-divider-glow, rgba(212, 175, 55, 0.4));
+}
+
+@keyframes realm-indicator-in {
+	0% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+	100% { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ============================================================
+   REALM EFFECTS BREAKDOWN PANEL
+   ============================================================ */
+.realm-effects-panel {
+	position: absolute;
+	top: 96px;
+	right: 12px;
+	z-index: 500;
+	background: rgba(0, 0, 0, 0.75);
+	border: 1px solid var(--realm-divider-color, rgba(212, 175, 55, 0.4));
+	border-radius: 8px;
+	padding: 8px 12px;
+	pointer-events: none;
+	/* backdrop-filter removed for perf */
+	max-width: 220px;
+	animation: realm-indicator-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.realm-effects-title {
+	font-family: 'Cinzel', 'Georgia', serif;
+	font-size: 0.7rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 1.5px;
+	color: var(--realm-divider-color, rgba(212, 175, 55, 0.9));
+	margin-bottom: 4px;
+	text-shadow: 0 0 6px var(--realm-glow-color, rgba(212, 175, 55, 0.3));
+}
+
+.realm-effects-desc {
+	font-size: 0.6rem;
+	color: rgba(255, 255, 255, 0.5);
+	font-style: italic;
+	margin-bottom: 6px;
+	line-height: 1.3;
+}
+
+.realm-effect-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 2px 0;
+	font-size: 0.65rem;
+	color: rgba(255, 255, 255, 0.8);
+}
+
+.realm-effect-row.friendly { color: rgba(34, 197, 94, 0.9); }
+.realm-effect-row.enemy { color: rgba(239, 68, 68, 0.9); }
+
+.realm-effect-icon { font-size: 0.7rem; }
+.realm-effect-text { text-transform: capitalize; }
+
+/* ============================================================
+   PROPHECY TRACKER
+   ============================================================ */
+.prophecy-tracker {
+	position: absolute;
+	top: 96px;
+	left: 12px;
+	z-index: 500;
+	background: rgba(0, 0, 0, 0.75);
+	border: 1px solid rgba(168, 85, 247, 0.4);
+	border-radius: 8px;
+	padding: 8px 12px;
+	pointer-events: none;
+	/* backdrop-filter removed for perf */
+	max-width: 200px;
+	animation: realm-indicator-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.prophecy-tracker-title {
+	font-family: 'Cinzel', 'Georgia', serif;
+	font-size: 0.65rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 1.5px;
+	color: rgba(168, 85, 247, 0.9);
+	margin-bottom: 6px;
+	text-shadow: 0 0 6px rgba(168, 85, 247, 0.4);
+}
+
+.prophecy-entry {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 3px 0;
+	border-bottom: 1px solid rgba(168, 85, 247, 0.15);
+}
+
+.prophecy-entry:last-child { border-bottom: none; }
+
+.prophecy-name {
+	font-size: 0.6rem;
+	color: rgba(255, 255, 255, 0.75);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	flex: 1;
+}
+
+.prophecy-countdown {
+	font-family: 'Cinzel', 'Georgia', serif;
+	font-size: 0.75rem;
+	font-weight: 800;
+	color: rgba(168, 85, 247, 0.9);
+	min-width: 18px;
+	height: 18px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(168, 85, 247, 0.15);
+	border: 1px solid rgba(168, 85, 247, 0.3);
+	border-radius: 50%;
+}
+
+.prophecy-entry.prophecy-imminent .prophecy-countdown {
+	color: #fbbf24;
+	background: rgba(251, 191, 36, 0.2);
+	border-color: rgba(251, 191, 36, 0.5);
+	animation: prophecy-imminent-pulse 1.2s ease-in-out infinite;
+}
+
+.prophecy-entry.prophecy-imminent .prophecy-name {
+	color: rgba(251, 191, 36, 0.9);
+}
+
+@keyframes prophecy-imminent-pulse {
+	0%, 100% { opacity: 0.8; transform: scale(1); }
+	50% { opacity: 1; transform: scale(1.15); box-shadow: 0 0 8px rgba(251, 191, 36, 0.5); }
+}
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+	.game-viewport.realm-shifting {
+		animation: none;
+	}
+	.realm-announcement,
+	.realm-announcement::before,
+	.realm-announcement-name,
+	.realm-announcement-rune {
+		animation-duration: 0.01ms !important;
+	}
+	.prophecy-entry.prophecy-imminent .prophecy-countdown {
+		animation: none;
+	}
+}

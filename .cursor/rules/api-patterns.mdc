@@ -1,0 +1,33 @@
+---
+description: API patterns for Pack and Inventory routes
+globs: server/**/*.ts
+alwaysApply: false
+---
+
+# API Patterns
+
+## Pack Routes (`/api/packs`)
+
+- **GET /types** — Returns active pack types ordered by price
+- **GET /supply-stats** — Overall stats, by rarity, by type
+- **POST /open** — Requires `packTypeId` and `userId` in body; uses transaction for atomic pack opening
+- **GET /history/:userId** — Pack opening history, max 50
+
+Pack routes require `DATABASE_URL`. They use `directDb` from `db.ts` for raw SQL.
+
+## Inventory Routes (`/api/inventory`)
+
+- **GET /:userId** — Paginated collection with optional filters (rarity, type, heroClass)
+- **GET /:userId/stats** — Completion %, by rarity/type/class, recent acquisitions
+- **GET /:userId/card/:cardId** — Single card details
+
+Inventory routes also require `DATABASE_URL`.
+
+## Conditional Loading
+
+Pack and inventory routes load only when `process.env.DATABASE_URL` is set. The game runs without a database for local dev — combat, deck building, and heroes work client-side. Add `.env` with `DATABASE_URL` for full collectible features.
+
+## Response Format
+
+- Success: `{ success: true, ...data }`
+- Error: `{ success: false, error: string }` with appropriate HTTP status (400, 404, 500)

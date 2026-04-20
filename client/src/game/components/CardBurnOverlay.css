@@ -1,0 +1,230 @@
+.card-burn-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: var(--z-cinematic);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-burn-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: burnSequence 2.5s ease-out forwards;
+}
+
+.card-burn-container.player {
+  animation-name: burnSequencePlayer;
+}
+
+.card-burn-container.opponent {
+  animation-name: burnSequenceOpponent;
+}
+
+@keyframes burnSequencePlayer {
+  0% {
+    opacity: 0;
+    transform: translateY(100px) scale(0.5);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-50px) scale(0.8);
+  }
+}
+
+@keyframes burnSequenceOpponent {
+  0% {
+    opacity: 0;
+    transform: translateY(-100px) scale(0.5);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(50px) scale(0.8);
+  }
+}
+
+.card-burn-card {
+  position: relative;
+  width: 120px;
+  height: 180px;
+  background: linear-gradient(145deg, #2a1810 0%, #1a0f0a 100%);
+  border: 3px solid #ff4500;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 
+    0 0 30px rgba(255, 69, 0, 0.8),
+    0 0 60px rgba(255, 140, 0, 0.5),
+    inset 0 0 20px rgba(255, 69, 0, 0.3);
+  animation: cardBurn 2.5s ease-in-out forwards;
+}
+
+@keyframes cardBurn {
+  0% {
+    filter: brightness(1);
+    box-shadow: 
+      0 0 30px rgba(255, 69, 0, 0.8),
+      0 0 60px rgba(255, 140, 0, 0.5),
+      inset 0 0 20px rgba(255, 69, 0, 0.3);
+  }
+  30% {
+    filter: brightness(1.5);
+    box-shadow: 
+      0 0 50px rgba(255, 69, 0, 1),
+      0 0 100px rgba(255, 140, 0, 0.8),
+      inset 0 0 40px rgba(255, 69, 0, 0.6);
+  }
+  70% {
+    filter: brightness(2);
+    box-shadow: 
+      0 0 80px rgba(255, 255, 0, 0.9),
+      0 0 150px rgba(255, 140, 0, 0.8),
+      inset 0 0 60px rgba(255, 200, 0, 0.8);
+  }
+  100% {
+    filter: brightness(0);
+    box-shadow: none;
+  }
+}
+
+.card-burn-flames {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.flame {
+  position: absolute;
+  bottom: -20px;
+  width: 40px;
+  height: 80px;
+  background: linear-gradient(
+    to top,
+    rgba(255, 69, 0, 0.9) 0%,
+    rgba(255, 140, 0, 0.7) 40%,
+    rgba(255, 200, 0, 0.5) 70%,
+    transparent 100%
+  );
+  border-radius: 50% 50% 20% 20%;
+  filter: blur(2px);
+  animation: flicker 0.3s ease-in-out infinite alternate;
+}
+
+.flame-1 {
+  left: 10px;
+  animation-delay: 0s;
+  height: 100px;
+}
+
+.flame-2 {
+  left: 40px;
+  animation-delay: 0.1s;
+  height: 120px;
+}
+
+.flame-3 {
+  left: 70px;
+  animation-delay: 0.2s;
+  height: 90px;
+}
+
+@keyframes flicker {
+  0% {
+    transform: scaleY(1) scaleX(1) translateY(0);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scaleY(1.2) scaleX(0.9) translateY(-10px);
+    opacity: 1;
+  }
+}
+
+.card-burn-name {
+  position: relative;
+  z-index: 10;
+  color: #ffd700;
+  font-size: 14px;
+  font-weight: bold;
+  text-align: center;
+  padding: 0 10px;
+  text-shadow: 
+    0 0 10px rgba(255, 69, 0, 1),
+    0 0 20px rgba(255, 140, 0, 0.8),
+    2px 2px 4px rgba(0, 0, 0, 0.8);
+  animation: fadeOut 2s ease-in forwards;
+  animation-delay: 0.5s;
+}
+
+@keyframes fadeOut {
+  0% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.card-burn-message {
+  margin-top: 20px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, rgba(139, 0, 0, 0.95), rgba(80, 0, 0, 0.95));
+  border: 2px solid #ff4500;
+  border-radius: 8px;
+  color: #ffd700;
+  font-size: 18px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 
+    0 0 10px rgba(255, 69, 0, 0.8),
+    2px 2px 4px rgba(0, 0, 0, 0.8);
+  box-shadow: 
+    0 0 20px rgba(255, 69, 0, 0.6),
+    0 4px 15px rgba(0, 0, 0, 0.5);
+  animation: messageSlide 2.5s ease-out forwards;
+}
+
+@keyframes messageSlide {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}

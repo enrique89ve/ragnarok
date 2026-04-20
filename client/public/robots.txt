@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /data/
+Disallow: /packs/
+
+Sitemap: https://dhenz14.github.io/norse-mythos-card-game/sitemap.xml

@@ -1,0 +1,11 @@
+/**
+ * Combat-specific tokens
+ * 
+ * NOTE: Core design tokens (colors, spacing, z-index, etc.) are now centralized in:
+ * client/src/styles/design-tokens.css
+ * 
+ * This file contains only combat-specific overrides if needed.
+ * All components inherit tokens from design-tokens.css via index.css import.
+ */
+
+/* Combat-specific tokens can be added here if needed */

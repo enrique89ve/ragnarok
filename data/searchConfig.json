@@ -1,0 +1,12 @@
+{
+  "isEnabled": true,
+  "preferredEngine": "brave",
+  "cacheEnabled": true,
+  "apiKeys": {
+    "google": "",
+    "googleCx": "",
+    "bing": "",
+    "serper": "",
+    "brave": "BSAp59hQqWr4_4fqMFwppPbNUNbpY4K"
+  }
+}

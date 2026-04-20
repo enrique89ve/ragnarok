@@ -1,0 +1,409 @@
+/* ═══════════════════════════════════════════════════════════
+   CINEMATIC CRAWL — AAA story mode experience
+   Star Wars-inspired chapter intros with Norse atmosphere
+   ═══════════════════════════════════════════════════════════ */
+
+.cinematic-crawl-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 10000;
+	background: #000;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	overflow: hidden;
+}
+
+/* ── Ambient particle layer ── */
+.cinematic-crawl-overlay::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background:
+		radial-gradient(1px 1px at 20% 30%, rgba(201, 164, 76, 0.3), transparent),
+		radial-gradient(1px 1px at 40% 70%, rgba(201, 164, 76, 0.2), transparent),
+		radial-gradient(1px 1px at 60% 10%, rgba(201, 164, 76, 0.25), transparent),
+		radial-gradient(1px 1px at 80% 50%, rgba(201, 164, 76, 0.15), transparent),
+		radial-gradient(1px 1px at 15% 85%, rgba(201, 164, 76, 0.2), transparent),
+		radial-gradient(1px 1px at 75% 90%, rgba(201, 164, 76, 0.3), transparent),
+		radial-gradient(2px 2px at 50% 50%, rgba(201, 164, 76, 0.1), transparent);
+	animation: cinematic-drift 20s linear infinite;
+	pointer-events: none;
+}
+
+@keyframes cinematic-drift {
+	0% { transform: translateY(0) scale(1); }
+	50% { transform: translateY(-20px) scale(1.02); }
+	100% { transform: translateY(0) scale(1); }
+}
+
+/* ── Letterbox bars ── */
+:is(.cinematic-letterbox-top, .cinematic-letterbox-bottom) {
+	position: fixed;
+	left: 0;
+	right: 0;
+	height: 10vh;
+	background: #000;
+	z-index: 10002;
+	pointer-events: none;
+}
+
+.cinematic-letterbox-top { top: 0; }
+.cinematic-letterbox-bottom { bottom: 0; }
+
+/* ── Vignette ── */
+.cinematic-crawl-overlay::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.7) 100%);
+	pointer-events: none;
+	z-index: 1;
+}
+
+/* ── "A long time ago" opener ── */
+.cinematic-prelude {
+	position: absolute;
+	top: 45%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	text-align: center;
+	z-index: 2;
+}
+
+.cinematic-prelude-text {
+	font-size: clamp(14px, 2vw, 20px);
+	color: #4a90d9;
+	letter-spacing: 0.2em;
+	text-transform: uppercase;
+	font-weight: 400;
+}
+
+/* ── Title card ── */
+.cinematic-title-card {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 20px;
+	z-index: 2;
+}
+
+.cinematic-title-rune {
+	font-size: 64px;
+	color: #c9a44c;
+	opacity: 0.7;
+	font-family: serif;
+	text-shadow: 0 0 30px rgba(201, 164, 76, 0.5);
+	animation: rune-breathe 3s ease-in-out infinite;
+}
+
+@keyframes rune-breathe {
+	0%, 100% { opacity: 0.5; transform: scale(1); }
+	50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+.cinematic-title-text {
+	font-size: clamp(32px, 6vw, 64px);
+	font-weight: 800;
+	color: #c9a44c;
+	text-align: center;
+	text-transform: uppercase;
+	letter-spacing: 0.2em;
+	text-shadow:
+		0 0 60px rgba(201, 164, 76, 0.4),
+		0 0 120px rgba(201, 164, 76, 0.2),
+		0 4px 8px rgba(0, 0, 0, 0.8);
+	padding: 0 24px;
+}
+
+.cinematic-title-subtitle {
+	font-size: clamp(12px, 1.5vw, 16px);
+	color: rgba(201, 164, 76, 0.5);
+	letter-spacing: 0.3em;
+	text-transform: uppercase;
+	font-weight: 400;
+}
+
+.cinematic-title-line {
+	width: 200px;
+	height: 1px;
+	background: linear-gradient(90deg, transparent, #c9a44c, transparent);
+	opacity: 0.6;
+}
+
+/* ── Scene narration ── */
+.cinematic-scene {
+	max-width: 760px;
+	padding: 0 40px;
+	text-align: center;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 28px;
+	z-index: 2;
+}
+
+.cinematic-narration {
+	font-size: clamp(17px, 2.5vw, 24px);
+	line-height: 1.8;
+	color: #e5e7eb;
+	font-style: italic;
+	text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9);
+	font-weight: 300;
+}
+
+/* ── Speaker portrait + name (per-scene character dialogue) ── */
+.cinematic-speaker {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 8px;
+}
+
+.cinematic-speaker-portrait {
+	width: clamp(96px, 12vw, 152px);
+	height: clamp(96px, 12vw, 152px);
+	border-radius: 50%;
+	object-fit: cover;
+	border: 2px solid rgba(201, 164, 76, 0.6);
+	box-shadow:
+		0 0 24px rgba(201, 164, 76, 0.35),
+		0 6px 24px rgba(0, 0, 0, 0.7),
+		inset 0 0 0 1px rgba(0, 0, 0, 0.5);
+	background: #0a0610;
+}
+
+.cinematic-speaker-name {
+	font-family: 'Cinzel', Georgia, serif;
+	font-size: clamp(11px, 1.2vw, 14px);
+	letter-spacing: 0.25em;
+	text-transform: uppercase;
+	color: #c9a44c;
+	text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+.cinematic-visual-cue {
+	font-size: clamp(11px, 1.4vw, 14px);
+	color: rgba(201, 164, 76, 0.4);
+	max-width: 560px;
+	line-height: 1.6;
+	letter-spacing: 0.02em;
+	border-top: 1px solid rgba(201, 164, 76, 0.1);
+	padding-top: 16px;
+}
+
+/* ── Scene counter ── */
+.cinematic-scene-counter {
+	position: fixed;
+	top: 12vh;
+	right: 40px;
+	font-size: 12px;
+	color: rgba(255, 255, 255, 0.2);
+	letter-spacing: 0.1em;
+	z-index: 10003;
+}
+
+/* ── Skip button ── */
+.cinematic-skip-btn {
+	position: fixed;
+	bottom: 12vh;
+	right: 32px;
+	padding: 8px 28px;
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 4px;
+	color: rgba(255, 255, 255, 0.35);
+	font-size: 13px;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	cursor: pointer;
+	transition: color 0.3s, border-color 0.3s, background 0.3s;
+	z-index: 10003;
+}
+
+.cinematic-skip-btn:hover {
+	color: rgba(255, 255, 255, 0.8);
+	border-color: rgba(255, 255, 255, 0.4);
+	background: rgba(255, 255, 255, 0.08);
+}
+
+/* ── Progress dots ── */
+.cinematic-progress {
+	position: fixed;
+	bottom: 12vh;
+	left: 50%;
+	transform: translateX(-50%);
+	display: flex;
+	gap: 10px;
+	z-index: 10003;
+}
+
+.cinematic-progress-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.1);
+	transition: all 0.4s ease-out;
+}
+
+.cinematic-progress-dot.active {
+	background: #c9a44c;
+	box-shadow: 0 0 12px rgba(201, 164, 76, 0.6);
+	transform: scale(1.4);
+}
+
+.cinematic-progress-dot.done {
+	background: rgba(201, 164, 76, 0.35);
+}
+
+/* ── Mission intro overlay ── */
+.mission-intro-overlay {
+	position: absolute;
+	inset: 0;
+	z-index: 50;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+}
+
+.mission-intro-bg {
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(ellipse at 50% 30%, var(--realm-color, rgba(201, 164, 76, 0.08)) 0%, rgba(0, 0, 0, 0.95) 60%, #000 100%);
+}
+
+.mission-intro-vignette {
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(ellipse at center, transparent 30%, rgba(0, 0, 0, 0.8) 100%);
+	pointer-events: none;
+}
+
+.mission-intro-content {
+	position: relative;
+	z-index: 2;
+	max-width: 600px;
+	text-align: center;
+	padding: 0 32px;
+}
+
+.mission-intro-realm-icon {
+	font-size: 48px;
+	margin-bottom: 24px;
+	filter: drop-shadow(0 0 20px var(--realm-color, rgba(201, 164, 76, 0.5)));
+}
+
+.mission-intro-chapter {
+	font-size: 11px;
+	color: rgba(255, 255, 255, 0.35);
+	text-transform: uppercase;
+	letter-spacing: 0.3em;
+	margin-bottom: 8px;
+}
+
+/*
+  Chapter finale badge — only shows when mission.isChapterFinale === true.
+  Pulsing crimson, slightly elevated above the title. Drumbeat-style
+  pulse animation so it feels heavy and important.
+*/
+.mission-intro-finale-badge {
+	display: inline-block;
+	margin: 0 auto 14px;
+	padding: 6px 18px;
+	font-family: 'Cinzel', Georgia, serif;
+	font-size: 14px;
+	font-weight: 900;
+	letter-spacing: 0.32em;
+	text-transform: uppercase;
+	color: #ffe6e6;
+	background: linear-gradient(180deg, rgba(120, 8, 8, 0.85) 0%, rgba(80, 4, 4, 0.92) 100%);
+	border: 1px solid rgba(255, 60, 60, 0.7);
+	border-radius: 4px;
+	box-shadow:
+		0 0 24px rgba(255, 30, 30, 0.45),
+		0 0 0 1px rgba(0, 0, 0, 0.5),
+		inset 0 1px 0 rgba(255, 120, 120, 0.25);
+	text-shadow: 0 0 12px rgba(255, 60, 60, 0.8), 0 1px 2px rgba(0, 0, 0, 0.9);
+	animation: missionFinaleBadgePulse 2.4s ease-in-out infinite;
+}
+
+@keyframes missionFinaleBadgePulse {
+	0%, 100% { box-shadow: 0 0 24px rgba(255, 30, 30, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 120, 120, 0.25); }
+	50% { box-shadow: 0 0 36px rgba(255, 50, 50, 0.65), 0 0 0 1px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 140, 140, 0.4); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.mission-intro-finale-badge {
+		animation: none;
+	}
+}
+
+.mission-intro-title {
+	font-size: clamp(24px, 4vw, 36px);
+	font-weight: 700;
+	color: var(--realm-text, #c9a44c);
+	letter-spacing: 0.1em;
+	text-shadow: 0 0 40px var(--realm-color, rgba(201, 164, 76, 0.3));
+	margin-bottom: 8px;
+}
+
+.mission-intro-number {
+	font-size: 12px;
+	color: rgba(255, 255, 255, 0.25);
+	text-transform: uppercase;
+	letter-spacing: 0.2em;
+	margin-bottom: 32px;
+}
+
+.mission-intro-narrative {
+	font-size: clamp(15px, 2vw, 18px);
+	line-height: 1.8;
+	color: rgba(255, 255, 255, 0.8);
+	font-style: italic;
+	text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+	font-weight: 300;
+}
+
+.mission-intro-boss-rules {
+	margin-top: 28px;
+	padding-top: 16px;
+	border-top: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+.mission-intro-boss-label {
+	font-size: 10px;
+	text-transform: uppercase;
+	letter-spacing: 0.2em;
+	color: rgba(220, 38, 38, 0.6);
+	margin-bottom: 8px;
+}
+
+.mission-intro-boss-rule {
+	font-size: 13px;
+	color: rgba(220, 38, 38, 0.7);
+	margin-bottom: 4px;
+}
+
+.mission-intro-prompt {
+	margin-top: 40px;
+	font-size: 12px;
+	color: rgba(255, 255, 255, 0.2);
+	letter-spacing: 0.15em;
+	animation: prompt-pulse 2s ease-in-out infinite;
+}
+
+@keyframes prompt-pulse {
+	0%, 100% { opacity: 0.2; }
+	50% { opacity: 0.5; }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+	.cinematic-crawl-overlay::before { animation: none; }
+	.cinematic-title-rune { animation: none; }
+	.mission-intro-prompt { animation: none; }
+}

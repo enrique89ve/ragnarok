@@ -1,0 +1,40 @@
+---
+description: Norse Mythos Card Game conventions for cards, combat, and components
+globs: client/src/game/**/*
+alwaysApply: false
+---
+
+# Game Conventions
+
+## Card System
+
+- **Single source of truth**: `allCards.ts` contains all 1,300 cards. Do not create duplicate card sources.
+- **Card ID ranges**: 1000-3999 neutrals, 4000-8999 classes, 9000-9999 tokens, 20000-29999 Norse set
+- When adding cards, use the registry in `cardRegistry/` and follow existing ID ranges
+
+## Effect Handlers
+
+- Battlecry handlers: `handlers/battlecry/` — export default function, indexed in `index.ts`
+- Deathrattle handlers: `handlers/deathrattle/` — same pattern
+- Spell effects: `handlers/spellEffect/` — same pattern
+- Always add new handlers to the respective index file
+
+## CSS Architecture
+
+- **zones.css**: Single source for zone positioning. Use `--zone-[name]-[position]` variables
+- **tokens.css**: Design tokens (spacing, colors). Z-index tiers: base(1) → battlefield(10) → minions(20) → hero(30) → hand(40) → betting(200) → tooltip(9000)
+- To move UI elements: edit zones.css only; do not scatter positioning across components
+
+## Components & State
+
+- Prefer Zustand over React Context
+- camelCase for functions/variables, PascalCase for components
+- Small functions (20-30 lines max)
+- Avoid magic strings; use constants
+- Edit existing files over creating new ones
+
+## Critical Files (Handle with Care)
+
+- `gameStore.ts`, `PokerCombatStore.ts`, `RagnarokCombatArena.tsx` — core game logic
+- `EffectRegistry.ts`, `allCards.ts` — do not change behavior without review
+- `types.ts`, `CardTypes.ts`, `PokerCombatTypes.ts` — extensions OK, breaking changes need review

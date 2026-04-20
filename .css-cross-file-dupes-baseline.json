@@ -1,0 +1,1033 @@
+{
+  ":root": [
+    "client/src/game/combat/GameViewport.css",
+    "client/src/game/combat/styles/responsive.css",
+    "client/src/game/combat/styles/zones.css",
+    "client/src/game/components/styles/holoEffect.css",
+    "client/src/game/components/ui/UnifiedCardTooltip.css",
+    "client/src/index.css",
+    "client/src/styles/design-tokens.css"
+  ],
+  ".all-in-showdown-message": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/showdown.css"
+  ],
+  ".announcement-icon": [
+    "client/src/game/components/ActionAnnouncement.css",
+    "client/src/game/components/PhaseTimer.css"
+  ],
+  ".arena-poker-card .card-back": [
+    "client/src/game/combat/styles/face-down.css",
+    "client/src/game/combat/styles/hole-cards.css"
+  ],
+  ".arena-poker-card .corner-rune": [
+    "client/src/game/combat/styles/face-down.css",
+    "client/src/game/combat/styles/hole-cards.css"
+  ],
+  ".arena-poker-card.norse.face-down": [
+    "client/src/game/combat/styles/face-down.css",
+    "client/src/game/combat/styles/hole-cards.css"
+  ],
+  ".attack-line": [
+    "client/src/game/combat/AttackStyles.css",
+    "client/src/game/components/AIAttackAnimation.css"
+  ],
+  ".battlefield-hero-square.opponent .hero-card-frame::before": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/card-frame.css"
+  ],
+  ".card-description": [
+    "client/src/game/components/SimpleCard.css",
+    "client/src/game/components/styles/CardTextStyles.css"
+  ],
+  ".card-name": [
+    "client/src/game/components/SimpleCard.css",
+    "client/src/game/components/styles/CardTextStyles.css"
+  ],
+  ".card-with-drag": [
+    "client/src/game/components/CardHoverEffects.css",
+    "client/src/index.css"
+  ],
+  ".card-with-drag.is-hovering": [
+    "client/src/game/components/CardHoverEffects.css",
+    "client/src/index.css"
+  ],
+  ".card-with-drag.not-playable": [
+    "client/src/game/components/CardEnhancements.css",
+    "client/src/game/components/CardHoverEffects.css"
+  ],
+  ".celebration-backdrop": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/showdown.css"
+  ],
+  ".community-cards-row": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/community-cards.css"
+  ],
+  ".community-cards-section": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/community-cards.css"
+  ],
+  ".community-group": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/community-cards.css"
+  ],
+  ".community-slot.winning-card": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/showdown.css"
+  ],
+  ".community-slot.winning-card::before": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/showdown.css"
+  ],
+  ".damage-text": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/showdown.css",
+    "client/src/game/components/AIAttackAnimation.css"
+  ],
+  ".damage-value": [
+    "client/src/game/components/TargetingOverlay.css",
+    "client/src/game/components/styles/CardTextStyles.css"
+  ],
+  ".element-badge": [
+    "client/src/game/components/ElementIndicator.css",
+    "client/src/game/components/SimpleCard.css"
+  ],
+  ".fighting-hp-bar": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/hp-bar.css"
+  ],
+  ".fighting-hp-bar-container": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/hp-bar.css"
+  ],
+  ".fighting-hp-bar-container.opponent .fighting-hp-bar": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/hp-bar.css"
+  ],
+  ".fighting-hp-bar-container.opponent .fighting-hp-fill": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/hp-bar.css"
+  ],
+  ".fighting-hp-damage": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/hp-bar.css"
+  ],
+  ".fighting-hp-fill": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/hp-bar.css",
+    "client/src/game/combat/styles/ragnarok-art-ui.css"
+  ],
+  ".fighting-hp-fill::after": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/hp-bar.css"
+  ],
+  ".fighting-hp-fill::before": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/hp-bar.css"
+  ],
+  ".fighting-hp-text": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/hp-bar.css"
+  ],
+  ".fold-message": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/showdown.css"
+  ],
+  ".game-log-container": [
+    "client/src/game/components/GameLog.css",
+    "client/src/index.css"
+  ],
+  ".game-log-empty": [
+    "client/src/game/components/GameLog.css",
+    "client/src/index.css"
+  ],
+  ".game-over-actions": [
+    "client/src/game/combat/styles/game-over.css",
+    "client/src/game/components/GameOverScreen.css"
+  ],
+  ".game-over-btn": [
+    "client/src/game/combat/styles/game-over.css",
+    "client/src/game/components/GameOverScreen.css"
+  ],
+  ".game-over-overlay": [
+    "client/src/game/combat/styles/game-over.css",
+    "client/src/game/components/GameOverScreen.css"
+  ],
+  ".game-over-stats": [
+    "client/src/game/combat/styles/game-over.css",
+    "client/src/game/components/GameOverScreen.css"
+  ],
+  ".game-over-subtitle": [
+    "client/src/game/combat/styles/game-over.css",
+    "client/src/game/components/GameOverScreen.css"
+  ],
+  ".game-over-title": [
+    "client/src/game/combat/styles/game-over.css",
+    "client/src/game/components/GameOverScreen.css"
+  ],
+  ".game-viewport": [
+    "client/src/game/combat/GameViewport.css",
+    "client/src/game/combat/styles/cursors.css",
+    "client/src/game/combat/styles/norse-atmosphere.css",
+    "client/src/game/combat/styles/realm-boards.css"
+  ],
+  ".game-viewport::after": [
+    "client/src/game/combat/styles/norse-atmosphere.css",
+    "client/src/game/combat/styles/poker-drama.css"
+  ],
+  ".hand-card-container": [
+    "client/src/game/components/CardHoverEffects.css",
+    "client/src/game/utils/cardRenderingSystem.css",
+    "client/src/index.css"
+  ],
+  ".hand-result.winner": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/card-highlight.css"
+  ],
+  ".hand-result.winner .hand-name": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/card-highlight.css"
+  ],
+  ".hand-strength-bar": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/hand-strength.css"
+  ],
+  ".hand-strength-fill": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/hand-strength.css"
+  ],
+  ".hand-strength-indicator": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/poker-drama.css"
+  ],
+  ".hand-strength-name": [
+    "client/src/game/combat/styles/hand-strength.css",
+    "client/src/game/combat/styles/poker-drama.css"
+  ],
+  ".hero-card-frame": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/card-frame.css"
+  ],
+  ".hero-card-frame .hero-portrait::before": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/card-frame.css"
+  ],
+  ".hero-card-frame::after": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/card-frame.css"
+  ],
+  ".hero-card-frame::before": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/card-frame.css"
+  ],
+  ".hero-card-frame.element-dark": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-card-frame.element-earth": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-card-frame.element-electric": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-card-frame.element-fire": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-card-frame.element-grass": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-card-frame.element-holy": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-card-frame.element-ice": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-card-frame.element-light": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-card-frame.element-neutral": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-card-frame.element-shadow": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-card-frame.element-water": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-card-frame.element-wind": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-card-frame.premium-glow": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/glow-effects.css"
+  ],
+  ".hero-card-frame.premium-glow::before": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/glow-effects.css"
+  ],
+  ".hero-card-wrapper": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/card-frame.css",
+    "client/src/game/combat/styles/hero-reactions.css"
+  ],
+  ".hero-death-avatar": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/hero-death.css"
+  ],
+  ".hero-death-card": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/hero-death.css"
+  ],
+  ".hero-death-container": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/hero-death.css"
+  ],
+  ".hero-death-flash": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/hero-death.css"
+  ],
+  ".hero-death-name": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/hero-death.css"
+  ],
+  ".hero-death-overlay": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/hero-death.css"
+  ],
+  ".hero-death-overlay.opponent": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/hero-death.css"
+  ],
+  ".hero-death-overlay.player": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/hero-death.css"
+  ],
+  ".hero-death-particles": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/hero-death.css"
+  ],
+  ".hero-death-text": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/hero-death.css"
+  ],
+  ".hero-elemental-aura": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-elemental-aura.element-dark": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-elemental-aura.element-earth": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-elemental-aura.element-electric": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-elemental-aura.element-fire": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-elemental-aura.element-grass": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-elemental-aura.element-holy": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-elemental-aura.element-ice": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-elemental-aura.element-light": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-elemental-aura.element-neutral": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-elemental-aura.element-shadow": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-elemental-aura.element-water": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-elemental-aura.element-wind": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-elemental-aura.premium-glow": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/glow-effects.css"
+  ],
+  ".hero-name": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/card-frame.css"
+  ],
+  ".hero-name-plate": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/card-frame.css"
+  ],
+  ".hero-particles": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles .particle": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-dark .p1": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-dark .p2": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-dark .p3": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-dark .p4": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-dark .p5": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-dark .p6": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-dark .particle": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-earth .p1": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-earth .p2": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-earth .p3": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-earth .p4": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-earth .p5": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-earth .p6": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-earth .particle": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-electric .p1": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-electric .p2": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-electric .p3": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-electric .p4": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-electric .p5": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-electric .p6": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-electric .particle": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-fire .p1": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-fire .p2": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-fire .p3": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-fire .p4": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-fire .p5": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-fire .p6": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-fire .particle": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-grass .p1": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-grass .p2": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-grass .p3": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-grass .p4": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-grass .p5": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-grass .p6": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-grass .particle": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-holy .p1": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-holy .p2": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-holy .p3": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-holy .p4": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-holy .p5": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-holy .p6": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-holy .particle": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-ice .p1": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-ice .p2": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-ice .p3": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-ice .p4": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-ice .p5": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-ice .p6": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-ice .particle": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-light .p1": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-light .p2": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-light .p3": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-light .p4": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-light .p5": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-light .p6": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-light .particle": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-neutral .particle": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-shadow .p1": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-shadow .p2": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-shadow .p3": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-shadow .p4": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-shadow .p5": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-shadow .p6": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-shadow .particle": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-water .p1": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-water .p2": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-water .p3": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-water .p4": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-water .p5": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-water .p6": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-water .particle": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-wind .p1": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-wind .p2": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-wind .p3": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-wind .p4": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-wind .p5": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-wind .p6": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.element-wind .particle": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/elemental-glows.css"
+  ],
+  ".hero-particles.premium-glow": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/glow-effects.css"
+  ],
+  ".hero-particles.premium-glow .particle": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/glow-effects.css"
+  ],
+  ".hero-particles.premium-glow .particle-1": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/glow-effects.css"
+  ],
+  ".hero-particles.premium-glow .particle-10": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/glow-effects.css"
+  ],
+  ".hero-particles.premium-glow .particle-2": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/glow-effects.css"
+  ],
+  ".hero-particles.premium-glow .particle-3": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/glow-effects.css"
+  ],
+  ".hero-particles.premium-glow .particle-4": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/glow-effects.css"
+  ],
+  ".hero-particles.premium-glow .particle-5": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/glow-effects.css"
+  ],
+  ".hero-particles.premium-glow .particle-6": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/glow-effects.css"
+  ],
+  ".hero-particles.premium-glow .particle-7": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/glow-effects.css"
+  ],
+  ".hero-particles.premium-glow .particle-8": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/glow-effects.css"
+  ],
+  ".hero-particles.premium-glow .particle-9": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/glow-effects.css"
+  ],
+  ".hero-portrait": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/card-frame.css"
+  ],
+  ".hero-portrait img": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/card-frame.css"
+  ],
+  ".hero-portrait::after": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/card-frame.css"
+  ],
+  ".hero-power-button": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/index.css"
+  ],
+  ".hero-power-tooltip": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/index.css"
+  ],
+  ".hero-power-wrapper": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/index.css"
+  ],
+  ".holo-foil": [
+    "client/src/game/components/SimpleCard.css",
+    "client/src/game/components/styles/holoEffect.css"
+  ],
+  ".holo-glare": [
+    "client/src/game/components/SimpleCard.css",
+    "client/src/game/components/styles/holoEffect.css"
+  ],
+  ".holo-glitter": [
+    "client/src/game/components/SimpleCard.css",
+    "client/src/game/components/styles/holoEffect.css"
+  ],
+  ".hoverable-card-container": [
+    "client/src/game/components/CardHoverEffects.css",
+    "client/src/index.css"
+  ],
+  ".keyword-highlight": [
+    "client/src/game/components/styles/CardTextStyles.css",
+    "client/src/game/components/ui/UnifiedCardTooltip.css"
+  ],
+  ".mana-value": [
+    "client/src/game/components/SimpleCard.css",
+    "client/src/game/components/styles/CardTextStyles.css"
+  ],
+  ".opponent-hand-count": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/face-down.css"
+  ],
+  ".opponent-hand-display": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/battlefield.css",
+    "client/src/game/combat/styles/face-down.css"
+  ],
+  ".opponent-hero-container": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/index.css"
+  ],
+  ".opponent-hole-cards.showdown-reveal .arena-poker-card.face-down": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/showdown.css"
+  ],
+  ".pet-god-card": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/ragnarok-art-ui.css"
+  ],
+  ".phase-banner": [
+    "client/src/game/combat/styles/norse-atmosphere.css",
+    "client/src/game/combat/styles/poker-drama.css"
+  ],
+  ".phase-banner-content": [
+    "client/src/game/combat/styles/norse-atmosphere.css",
+    "client/src/game/combat/styles/poker-drama.css"
+  ],
+  ".phase-banner-enter": [
+    "client/src/game/combat/styles/norse-atmosphere.css",
+    "client/src/game/combat/styles/poker-drama.css"
+  ],
+  ".phase-banner-exit": [
+    "client/src/game/combat/styles/norse-atmosphere.css",
+    "client/src/game/combat/styles/poker-drama.css"
+  ],
+  ".phase-banner-line": [
+    "client/src/game/combat/styles/norse-atmosphere.css",
+    "client/src/game/combat/styles/poker-drama.css"
+  ],
+  ".phase-banner-subtitle": [
+    "client/src/game/combat/styles/norse-atmosphere.css",
+    "client/src/game/combat/styles/poker-drama.css"
+  ],
+  ".phase-banner-text": [
+    "client/src/game/combat/styles/norse-atmosphere.css",
+    "client/src/game/combat/styles/poker-drama.css"
+  ],
+  ".phase-banner-title": [
+    "client/src/game/combat/styles/norse-atmosphere.css",
+    "client/src/game/combat/styles/poker-drama.css"
+  ],
+  ".poker-actions": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/betting-controls.css"
+  ],
+  ".poker-btn.call-btn:active:not(:disabled)": [
+    "client/src/game/combat/styles/norse-atmosphere.css",
+    "client/src/game/combat/styles/poker-drama.css"
+  ],
+  ".poker-btn.call-btn:hover:not(:disabled)": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/norse-atmosphere.css"
+  ],
+  ".poker-btn.fold-btn:active:not(:disabled)": [
+    "client/src/game/combat/styles/norse-atmosphere.css",
+    "client/src/game/combat/styles/poker-drama.css"
+  ],
+  ".poker-btn.fold-btn:hover:not(:disabled)": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/norse-atmosphere.css"
+  ],
+  ".poker-btn.raise-btn:active:not(:disabled)": [
+    "client/src/game/combat/styles/norse-atmosphere.css",
+    "client/src/game/combat/styles/poker-drama.css"
+  ],
+  ".poker-btn.raise-btn:hover:not(:disabled)": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/norse-atmosphere.css"
+  ],
+  ".premium-card-container": [
+    "client/src/game/components/FixInvisibleBox.css",
+    "client/src/game/utils/cardRenderingSystem.css",
+    "client/src/index.css"
+  ],
+  ".prophecy-tracker": [
+    "client/src/game/combat/styles/realm-boards.css",
+    "client/src/game/components/SimpleBattlefield.css"
+  ],
+  ".ragnarok-combat-arena": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/reset.css"
+  ],
+  ".ragnarok-combat-arena *": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/reset.css"
+  ],
+  ".ragnarok-combat-arena *::-webkit-scrollbar": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/reset.css"
+  ],
+  ".ragnarok-combat-arena::-webkit-scrollbar": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/reset.css"
+  ],
+  ".ragnarok-end-turn.active:hover": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/ragnarok-art-ui.css"
+  ],
+  ".risk-display": [
+    "client/src/game/combat/styles/norse-atmosphere.css",
+    "client/src/game/combat/styles/pot-display.css"
+  ],
+  ".showdown-celebration-container": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/showdown.css"
+  ],
+  ".showdown-subtitle": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/showdown.css"
+  ],
+  ".showdown-title": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/showdown.css"
+  ],
+  ".simple-card::before": [
+    "client/src/game/combat/styles/ragnarok-art-ui.css",
+    "client/src/game/components/SimpleCard.css"
+  ],
+  ".slot-label": [
+    "client/src/game/combat/components/HeroGearPanel.css",
+    "client/src/game/combat/styles/community-cards.css"
+  ],
+  ".spell-cast-flash": [
+    "client/src/game/combat/styles/combat-animations.css",
+    "client/src/index.css"
+  ],
+  ".stat-value": [
+    "client/src/game/components/GameOverScreen.css",
+    "client/src/game/components/SimpleCard.css"
+  ],
+  ".timer-section": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/timer.css"
+  ],
+  ".timer-section .timer-value": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/timer.css"
+  ],
+  ".tooltip-description": [
+    "client/src/game/components/ui/HeroPowerButton.css",
+    "client/src/game/components/ui/UnifiedCardTooltip.css"
+  ],
+  ".tooltip-header": [
+    "client/src/game/components/CardHoverPreview.css",
+    "client/src/game/components/ui/HeroPowerButton.css",
+    "client/src/game/components/ui/UnifiedCardTooltip.css"
+  ],
+  ".tooltip-mana": [
+    "client/src/game/components/CardHoverPreview.css",
+    "client/src/game/components/ui/UnifiedCardTooltip.css"
+  ],
+  ".tooltip-name": [
+    "client/src/game/components/CardHoverPreview.css",
+    "client/src/game/components/ui/HeroPowerButton.css",
+    "client/src/game/components/ui/UnifiedCardTooltip.css"
+  ],
+  ".tooltip-stats": [
+    "client/src/game/components/CardHoverPreview.css",
+    "client/src/game/components/ui/UnifiedCardTooltip.css"
+  ],
+  ".tooltip-tribe": [
+    "client/src/game/components/CardHoverPreview.css",
+    "client/src/game/components/ui/UnifiedCardTooltip.css"
+  ],
+  ".tooltip-type": [
+    "client/src/game/components/CardHoverPreview.css",
+    "client/src/game/components/ui/UnifiedCardTooltip.css"
+  ],
+  ".winner-badge": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/showdown.css"
+  ],
+  ".winner-badge-text": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/showdown.css"
+  ],
+  ".winner-badge.center": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/showdown.css"
+  ],
+  ".winner-badge.opponent-side": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/showdown.css"
+  ],
+  ".winner-badge.player-side": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/showdown.css"
+  ],
+  ".winner-hand-name": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/showdown.css"
+  ],
+  ".winning-card-glow": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/card-highlight.css"
+  ],
+  ".winning-card-glow::after": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/card-highlight.css"
+  ],
+  ".winning-card-glow.celebration": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/showdown.css"
+  ],
+  ".winning-card-glow.celebration::after": [
+    "client/src/game/combat/RagnarokCombatArena.css",
+    "client/src/game/combat/styles/showdown.css"
+  ],
+  ".zone-community": [
+    "client/src/game/combat/GameViewport.css",
+    "client/src/game/combat/RagnarokCombatArena.css"
+  ],
+  "*": [
+    "client/src/game/components/FixInvisibleBox.css",
+    "client/src/index.css"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "rules": {
+    "no-duplicate-selectors": [true, {
+      "disallowInList": true,
+      "severity": "warning"
+    }],
+    "no-duplicate-at-import-rules": [true, { "severity": "warning" }],
+    "no-empty-source": null
+  },
+  "ignoreFiles": [
+    "node_modules/**",
+    "dist/**",
+    "client/public/**",
+    "**/*.min.css"
+  ]
+}

@@ -1,0 +1,126 @@
+/**
+ * CardHoverPreview.css
+ * 
+ * DEPRECATED: This CSS is no longer used.
+ * CardHoverPreview now wraps UnifiedCardTooltip which has its own CSS.
+ * See: client/src/game/components/ui/UnifiedCardTooltip.css
+ * 
+ * This file is kept for backwards compatibility but can be safely removed
+ * once all references to the old .card-hover-tooltip classes are confirmed removed.
+ */
+
+.card-hover-tooltip {
+  position: fixed;
+  z-index: var(--z-topmost);
+  pointer-events: none;
+  min-width: 200px;
+  max-width: 300px;
+  padding: 10px 12px;
+  background: linear-gradient(180deg, rgba(25, 25, 40, 0.98) 0%, rgba(15, 15, 25, 0.98) 100%);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.8), 0 0 12px rgba(0, 0, 0, 0.5);
+  animation: tooltip-appear 0.1s ease-out;
+}
+
+.card-hover-tooltip.rarity-common { border-color: rgba(150, 150, 150, 0.6); }
+.card-hover-tooltip.rarity-rare { border-color: rgba(30, 144, 255, 0.7); }
+.card-hover-tooltip.rarity-epic { border-color: rgba(163, 53, 238, 0.7); }
+.card-hover-tooltip.rarity-mythic { border-color: rgba(255, 165, 0, 0.8); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.8), 0 0 15px rgba(255, 165, 0, 0.3); }
+
+@keyframes tooltip-appear {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.tooltip-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.tooltip-mana {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(135deg, #1e90ff 0%, #0066cc 100%);
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 800;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  flex-shrink: 0;
+}
+
+.tooltip-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 700;
+  color: #FFD700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  word-wrap: break-word;
+}
+
+.tooltip-stats {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+:is(.stat-atk, .stat-hp) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 800;
+  color: white;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+}
+
+.stat-atk {
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+}
+
+.stat-hp {
+  background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
+}
+
+.tooltip-effect {
+  padding: 8px 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #E2E8F0;
+  line-height: 1.4;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
+.tooltip-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.tooltip-type {
+  font-size: 9px;
+  font-weight: 600;
+  color: #94A3B8;
+  letter-spacing: 0.5px;
+}
+
+.tooltip-tribe {
+  font-size: 9px;
+  font-weight: 600;
+  color: #F59E0B;
+  text-transform: uppercase;
+}

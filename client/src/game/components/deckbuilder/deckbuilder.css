@@ -1,0 +1,1712 @@
+/**
+ * Deck Builder Styles
+ * Custom CSS for card tiles, hover previews, mana curve, and grid layout.
+ * Complements tokens.css and Tailwind utilities.
+ */
+
+/* ===== Rarity Animations ===== */
+@property --db-border-angle {
+	syntax: '<angle>';
+	initial-value: 0deg;
+	inherits: false;
+}
+
+@keyframes db-border-rotate {
+	to { --db-border-angle: 360deg; }
+}
+
+@keyframes db-rare-shimmer {
+	0%, 100% { background-position: 0% 0%; }
+	50% { background-position: 100% 100%; }
+}
+
+/* ===== Card Grid ===== */
+.db-card-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
+	gap: 12px;
+	padding: 12px;
+}
+
+@media (min-width: 1400px) {
+	.db-card-grid {
+		grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+	}
+}
+
+@media (max-width: 900px) {
+	.db-card-grid {
+		grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+		gap: 8px;
+	}
+}
+
+/* ===== Card Tile ===== */
+.db-card {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	border-radius: 8px;
+	overflow: hidden;
+	cursor: pointer;
+	transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+	border: 2px solid rgba(100, 100, 120, 0.5);
+	background: linear-gradient(180deg, #1a1f2e 0%, #0d1117 100%);
+	aspect-ratio: 3 / 4;
+}
+
+.db-card:hover {
+	transform: translateY(-4px) scale(1.02);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+	z-index: 5;
+}
+
+/* --- ::before base for animated borders --- */
+.db-card::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: 8px;
+	pointer-events: none;
+	z-index: 5;
+}
+
+/* --- COMMON: static border --- */
+.db-card.rarity-common { border-color: rgba(150, 155, 165, 0.5); }
+.db-card.rarity-common:hover { border-color: rgba(200, 205, 215, 0.8); }
+
+/* --- RARE: blue shimmer sweep --- */
+.db-card.rarity-rare {
+	border-color: transparent;
+	box-shadow: 0 0 10px rgba(59, 130, 246, 0.3), 0 0 20px rgba(59, 130, 246, 0.12);
+}
+.db-card.rarity-rare::before {
+	inset: -2px;
+	padding: 2px;
+	border-radius: 9px;
+	border: none;
+	background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 20%, #93C5FD 45%, #BFDBFE 50%, #93C5FD 55%, #3B82F6 80%, #1E3A8A 100%);
+	background-size: 300% 300%;
+	-webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+	-webkit-mask-composite: xor;
+	mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+	mask-composite: exclude;
+	animation: db-rare-shimmer 4s ease-in-out infinite;
+}
+.db-card.rarity-rare:hover {
+	border-color: transparent;
+	box-shadow: 0 0 18px rgba(59, 130, 246, 0.5), 0 0 36px rgba(59, 130, 246, 0.2), 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+.db-card.rarity-rare .db-card-name {
+	color: #93C5FD;
+	text-shadow: 0 0 6px rgba(147, 197, 253, 0.3);
+}
+
+/* --- EPIC: purple crystalline rotation --- */
+.db-card.rarity-epic {
+	border-color: transparent;
+	background: linear-gradient(180deg, #1e1530 0%, #110e20 100%);
+	box-shadow: 0 0 14px rgba(168, 85, 247, 0.35), 0 0 28px rgba(168, 85, 247, 0.15);
+}
+.db-card.rarity-epic::before {
+	inset: -2px;
+	padding: 2px;
+	border-radius: 9px;
+	border: none;
+	background: conic-gradient(from var(--db-border-angle), #581C87, #7C3AED, #A855F7, #C084FC, #E9D5FF, #C084FC, #A855F7, #7C3AED, #581C87);
+	-webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+	-webkit-mask-composite: xor;
+	mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+	mask-composite: exclude;
+	animation: db-border-rotate 6s linear infinite;
+}
+.db-card.rarity-epic:hover {
+	border-color: transparent;
+	box-shadow: 0 0 22px rgba(168, 85, 247, 0.55), 0 0 44px rgba(168, 85, 247, 0.25), 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+.db-card.rarity-epic .db-card-name {
+	color: #C084FC;
+	text-shadow: 0 0 6px rgba(192, 132, 252, 0.3);
+}
+
+/* --- MYTHIC: rainbow aurora rotation --- */
+.db-card.rarity-mythic {
+	border-color: transparent;
+	background: linear-gradient(180deg, #2a1f10 0%, #1a1008 100%);
+	box-shadow: 0 0 18px rgba(245, 158, 11, 0.4), 0 0 36px rgba(236, 72, 153, 0.2), 0 0 54px rgba(139, 92, 246, 0.15);
+}
+.db-card.rarity-mythic::before {
+	inset: -3px;
+	padding: 3px;
+	border-radius: 10px;
+	border: none;
+	background: conic-gradient(from var(--db-border-angle), #ef4444, #f97316, #f59e0b, #22c55e, #06b6d4, #3b82f6, #8b5cf6, #a855f7, #ec4899, #ef4444);
+	-webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+	-webkit-mask-composite: xor;
+	mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+	mask-composite: exclude;
+	animation: db-border-rotate 3s linear infinite;
+}
+.db-card.rarity-mythic:hover {
+	border-color: transparent;
+	box-shadow: 0 0 24px rgba(245, 158, 11, 0.6), 0 0 48px rgba(236, 72, 153, 0.35), 0 0 72px rgba(139, 92, 246, 0.25), 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+.db-card.rarity-mythic .db-card-name {
+	color: #FCD34D;
+	text-shadow: 0 0 8px rgba(252, 211, 77, 0.4);
+}
+
+/* --- Rarity badge (top-left pill) --- */
+.db-rarity-badge {
+	position: absolute;
+	top: 36px;
+	left: 4px;
+	z-index: 6;
+	padding: 1px 6px;
+	border-radius: 3px;
+	font-size: 7px;
+	font-weight: 800;
+	letter-spacing: 1.5px;
+	text-transform: uppercase;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+	/* backdrop-filter removed for perf */
+}
+.db-rarity-badge.rarity-mythic {
+	background: linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(255, 140, 0, 0.9));
+	color: #fff;
+	box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
+}
+.db-rarity-badge.rarity-epic {
+	background: linear-gradient(135deg, rgba(139, 92, 246, 0.85), rgba(168, 85, 247, 0.85));
+	color: #fff;
+	box-shadow: 0 0 5px rgba(168, 85, 247, 0.4);
+}
+.db-rarity-badge.rarity-rare {
+	background: linear-gradient(135deg, rgba(37, 99, 235, 0.8), rgba(59, 130, 246, 0.8));
+	color: #fff;
+	box-shadow: 0 0 5px rgba(59, 130, 246, 0.35);
+}
+
+/* Holo effects moved to styles/holoEffect.css */
+
+.db-card.not-playable {
+	opacity: 0.45;
+	filter: saturate(0.5);
+}
+
+.db-card.not-playable:hover {
+	transform: none;
+	box-shadow: none;
+}
+
+/* ===== Card Art Section ===== */
+.db-card-art {
+	position: relative;
+	flex: 1 1 0;
+	min-height: 0;
+	overflow: hidden;
+	background: linear-gradient(135deg, rgba(40, 50, 70, 0.8) 0%, rgba(20, 25, 35, 0.9) 100%);
+}
+
+.db-card-art img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	object-position: center 20%;
+	display: block;
+}
+
+.db-card-art-overlay {
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	height: 50%;
+	background: linear-gradient(to top, rgba(13, 17, 23, 0.95) 0%, transparent 100%);
+	pointer-events: none;
+}
+
+/* No-art fallback */
+.db-card-art-fallback {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 2.5rem;
+	opacity: 0.3;
+}
+
+/* ===== Mana Badge ===== */
+.db-mana-badge {
+	position: absolute;
+	top: 6px;
+	left: 6px;
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+	border: 2px solid #60a5fa;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: white;
+	font-weight: 800;
+	font-size: 13px;
+	z-index: 3;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* ===== Count Badge ===== */
+.db-count-badge {
+	position: absolute;
+	top: 6px;
+	right: 6px;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+	border: 2px solid #4ade80;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: white;
+	font-weight: 800;
+	font-size: 11px;
+	z-index: 3;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+/* ===== Card Info Section ===== */
+.db-card-info {
+	flex-shrink: 0;
+	padding: 6px 8px;
+	background: rgba(13, 17, 23, 0.95);
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-height: 52px;
+}
+
+.db-card-name {
+	font-size: 11px;
+	font-weight: 700;
+	color: #f0f0f0;
+	line-height: 1.2;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.db-card-meta {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 4px;
+}
+
+.db-card-type {
+	font-size: 9px;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	color: rgba(156, 163, 175, 0.8);
+	font-weight: 600;
+}
+
+.db-class-star {
+	color: #eab308;
+	font-size: 10px;
+}
+
+/* ===== Stat Gems ===== */
+.db-stat-row {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.db-stat {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	font-size: 11px;
+	font-weight: 800;
+}
+
+.db-stat-attack {
+	color: #fbbf24;
+}
+
+.db-stat-health {
+	color: #f87171;
+}
+
+.db-stat-icon {
+	font-size: 9px;
+	opacity: 0.7;
+}
+
+/* ===== MAX Overlay ===== */
+.db-max-overlay {
+	position: absolute;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 4;
+}
+
+.db-max-text {
+	font-size: 11px;
+	font-weight: 800;
+	color: rgba(200, 200, 200, 0.8);
+	text-transform: uppercase;
+	letter-spacing: 2px;
+}
+
+/* ===== Mana Curve in Sidebar ===== */
+.db-mana-curve {
+	display: flex;
+	align-items: flex-end;
+	gap: 3px;
+	height: 48px;
+	padding: 8px 12px 4px;
+}
+
+.db-mana-bar-wrap {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+	height: 100%;
+}
+
+.db-mana-bar-track {
+	flex: 1;
+	width: 100%;
+	display: flex;
+	align-items: flex-end;
+}
+
+.db-mana-bar {
+	width: 100%;
+	background: linear-gradient(to top, #2563eb, #3b82f6);
+	border-radius: 2px 2px 0 0;
+	min-height: 2px;
+	transition: height 0.3s ease;
+}
+
+.db-mana-bar-label {
+	font-size: 9px;
+	color: rgba(156, 163, 175, 0.6);
+	font-weight: 600;
+}
+
+/* ===== Deck Card Entry ===== */
+.db-deck-card {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 5px 8px;
+	border-radius: 6px;
+	cursor: pointer;
+	transition: background 0.15s ease;
+	background: rgba(30, 40, 60, 0.5);
+	border-left: 3px solid transparent;
+}
+
+.db-deck-card:hover {
+	background: rgba(50, 60, 90, 0.6);
+	transform: translateX(2px);
+}
+.db-deck-card:active {
+	transform: scale(0.97);
+	transition: transform 0.05s ease;
+}
+
+.db-deck-card.rarity-common { border-left-color: rgba(150, 155, 165, 0.4); }
+.db-deck-card.rarity-rare { border-left-color: rgba(59, 130, 246, 0.7); }
+.db-deck-card.rarity-epic { border-left-color: rgba(168, 85, 247, 0.7); }
+.db-deck-card.rarity-mythic { border-left-color: rgba(249, 115, 22, 0.7); }
+
+.db-deck-mana {
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	background: linear-gradient(135deg, #2563eb, #1d4ed8);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: white;
+	font-weight: 700;
+	font-size: 10px;
+	flex-shrink: 0;
+}
+
+.db-deck-name {
+	flex: 1;
+	font-size: 12px;
+	color: #e0e0e5;
+	font-weight: 500;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.db-deck-count {
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	background: rgba(202, 138, 4, 0.8);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: white;
+	font-weight: 700;
+	font-size: 10px;
+	flex-shrink: 0;
+}
+
+/* ===== Mana Filter Buttons ===== */
+.db-mana-filter {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.db-mana-btn {
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	border: 2px solid transparent;
+	background: rgba(30, 40, 60, 0.6);
+	color: rgba(156, 163, 175, 0.7);
+	font-weight: 700;
+	font-size: 12px;
+	cursor: pointer;
+	transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.db-mana-btn:hover {
+	background: rgba(37, 99, 235, 0.3);
+	color: white;
+	border-color: rgba(37, 99, 235, 0.5);
+}
+
+.db-mana-btn.active {
+	background: linear-gradient(135deg, #2563eb, #1d4ed8);
+	color: white;
+	border-color: #60a5fa;
+	box-shadow: 0 0 8px rgba(37, 99, 235, 0.4);
+}
+
+/* ===== Header Improvements ===== */
+.db-header {
+	display: flex;
+	align-items: stretch;
+	border-bottom: 1px solid rgba(55, 65, 81, 0.8);
+	background: linear-gradient(180deg, rgba(20, 25, 35, 0.95) 0%, rgba(15, 20, 30, 0.95) 100%);
+}
+
+.db-header-portrait {
+	width: 100px;
+	flex-shrink: 0;
+	position: relative;
+	overflow: hidden;
+}
+
+.db-header-portrait img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	object-position: center 20%;
+}
+
+.db-header-portrait-overlay {
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(to right, transparent 60%, rgba(15, 20, 30, 0.9) 100%);
+}
+
+.db-header-info {
+	flex: 1;
+	padding: 12px 16px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.db-header-title {
+	font-size: 22px;
+	font-weight: 800;
+	color: #fbbf24;
+	margin-bottom: 2px;
+}
+
+.db-header-subtitle {
+	font-size: 12px;
+	color: rgba(156, 163, 175, 0.7);
+	text-transform: capitalize;
+}
+
+.db-header-counter {
+	font-size: 20px;
+	font-weight: 800;
+}
+
+.db-header-counter.complete { color: #4ade80; }
+.db-header-counter.incomplete { color: #fbbf24; }
+
+/* ===== Sidebar ===== */
+.db-sidebar {
+	width: 280px;
+	display: flex;
+	flex-direction: column;
+	background: rgba(15, 20, 30, 0.6);
+	border-left: 1px solid rgba(55, 65, 81, 0.5);
+}
+
+.db-sidebar-header {
+	padding: 12px;
+	border-bottom: 1px solid rgba(55, 65, 81, 0.5);
+}
+
+.db-sidebar-title {
+	font-size: 14px;
+	font-weight: 700;
+	color: #e0e0e5;
+	margin-bottom: 8px;
+}
+
+.db-sidebar-actions {
+	display: flex;
+	gap: 6px;
+}
+
+.db-sidebar-btn {
+	flex: 1;
+	padding: 6px 10px;
+	border-radius: 6px;
+	font-size: 12px;
+	font-weight: 600;
+	border: none;
+	cursor: pointer;
+	transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.db-sidebar-btn.auto-fill {
+	background: linear-gradient(135deg, #2563eb, #1d4ed8);
+	color: white;
+}
+.db-sidebar-btn.auto-fill:hover { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.db-sidebar-btn.auto-fill:disabled { background: rgba(55, 65, 81, 0.5); color: rgba(156, 163, 175, 0.4); cursor: not-allowed; }
+
+.db-sidebar-btn.clear {
+	background: rgba(220, 38, 38, 0.2);
+	color: #f87171;
+	border: 1px solid rgba(220, 38, 38, 0.3);
+}
+.db-sidebar-btn.clear:hover { background: rgba(220, 38, 38, 0.3); }
+.db-sidebar-btn.clear:disabled { background: rgba(55, 65, 81, 0.3); color: rgba(156, 163, 175, 0.3); border-color: transparent; cursor: not-allowed; }
+
+.db-sidebar-list {
+	flex: 1;
+	overflow-y: auto;
+	padding: 6px;
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+
+.db-sidebar-empty {
+	padding: 24px 12px;
+	text-align: center;
+	color: rgba(156, 163, 175, 0.4);
+	font-size: 12px;
+}
+
+.db-sidebar-footer {
+	padding: 12px;
+	border-top: 1px solid rgba(55, 65, 81, 0.5);
+}
+
+.db-save-btn {
+	width: 100%;
+	padding: 10px;
+	border-radius: 8px;
+	font-size: 13px;
+	font-weight: 700;
+	border: none;
+	cursor: pointer;
+	transition: background 0.15s ease, box-shadow 0.15s ease;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.db-save-btn.complete {
+	background: linear-gradient(135deg, #16a34a, #15803d);
+	color: white;
+	box-shadow: 0 0 12px rgba(22, 163, 74, 0.3);
+}
+.db-save-btn.complete:hover {
+	background: linear-gradient(135deg, #22c55e, #16a34a);
+	box-shadow: 0 0 16px rgba(22, 163, 74, 0.5);
+}
+
+.db-save-btn.incomplete {
+	background: linear-gradient(135deg, #ca8a04, #a16207);
+	color: white;
+}
+.db-save-btn.incomplete:hover {
+	background: linear-gradient(135deg, #eab308, #ca8a04);
+}
+
+/* ===== Filter Bar ===== */
+.db-filter-bar {
+	padding: 10px 12px;
+	border-bottom: 1px solid rgba(55, 65, 81, 0.5);
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.db-filter-row {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.db-search-input {
+	flex: 1;
+	min-width: 180px;
+	padding: 7px 12px;
+	background: rgba(20, 25, 40, 0.8);
+	border: 1px solid rgba(75, 85, 99, 0.5);
+	border-radius: 8px;
+	color: #e0e0e5;
+	font-size: 13px;
+	outline: none;
+	transition: border-color 0.15s ease;
+}
+
+.db-search-input:focus {
+	border-color: rgba(202, 138, 4, 0.6);
+}
+
+.db-search-input::placeholder {
+	color: rgba(107, 114, 128, 0.6);
+}
+
+.db-filter-select {
+	padding: 7px 10px;
+	background: rgba(20, 25, 40, 0.8);
+	border: 1px solid rgba(75, 85, 99, 0.5);
+	border-radius: 8px;
+	color: #e0e0e5;
+	font-size: 12px;
+	outline: none;
+	cursor: pointer;
+}
+
+.db-filter-select:focus {
+	border-color: rgba(202, 138, 4, 0.6);
+}
+
+.db-showing-count {
+	font-size: 11px;
+	color: rgba(156, 163, 175, 0.5);
+	padding: 0 4px;
+}
+
+/* ===== Tab Toggle ===== */
+.db-tab-bar {
+	display: flex;
+	gap: 2px;
+	padding: 8px 12px 0;
+}
+
+.db-tab {
+	padding: 8px 16px;
+	border-radius: 8px 8px 0 0;
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background 0.15s ease, color 0.15s ease, border-bottom 0.15s ease;
+	border: none;
+	background: transparent;
+	color: rgba(156, 163, 175, 0.6);
+}
+
+.db-tab:hover {
+	color: rgba(220, 225, 235, 0.8);
+}
+
+.db-tab.active {
+	background: rgba(30, 40, 60, 0.5);
+	color: #fbbf24;
+	border-bottom: 2px solid #fbbf24;
+}
+
+/* ===== Scrollbar ===== */
+.db-sidebar-list::-webkit-scrollbar,
+.db-card-scroll::-webkit-scrollbar {
+	width: 5px;
+}
+
+.db-sidebar-list::-webkit-scrollbar-track,
+.db-card-scroll::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.db-sidebar-list::-webkit-scrollbar-thumb,
+.db-card-scroll::-webkit-scrollbar-thumb {
+	background: rgba(100, 110, 130, 0.3);
+	border-radius: 3px;
+}
+
+.db-sidebar-list::-webkit-scrollbar-thumb:hover,
+.db-card-scroll::-webkit-scrollbar-thumb:hover {
+	background: rgba(100, 110, 130, 0.5);
+}
+
+/* ===== Type Icons ===== */
+.db-type-minion::before { content: '⚔'; }
+.db-type-spell::before { content: '✨'; }
+.db-type-weapon::before { content: '🗡'; }
+
+/* ===== Save Error ===== */
+.db-save-error {
+	padding: 8px;
+	margin-bottom: 8px;
+	background: rgba(220, 38, 38, 0.15);
+	border: 1px solid rgba(220, 38, 38, 0.3);
+	border-radius: 6px;
+	color: #fca5a5;
+	font-size: 11px;
+	white-space: pre-wrap;
+}
+
+/* ===== Layout Helpers ===== */
+.db-main-container {
+	background: linear-gradient(180deg, #111827 0%, #0a0e17 100%);
+	border: 1px solid rgba(55, 65, 81, 0.6);
+}
+
+.db-main-split {
+	flex: 1;
+	display: flex;
+	min-height: 0;
+}
+
+.db-collection-pane {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.db-card-scroll {
+	flex: 1;
+	overflow-y: auto;
+}
+
+.db-header-actions {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+}
+
+.db-close-btn {
+	color: rgba(156, 163, 175, 0.6);
+	font-size: 28px;
+	line-height: 1;
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 4px;
+}
+
+.db-close-btn:hover {
+	color: rgba(220, 225, 235, 0.9);
+}
+
+.db-header-fallback {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.db-header-fallback-letter {
+	font-size: 40px;
+	font-weight: 800;
+	opacity: 0.7;
+}
+
+.db-filter-mana-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.db-clear-mana-btn {
+	font-size: 11px;
+	color: rgba(156, 163, 175, 0.5);
+	background: none;
+	border: none;
+	cursor: pointer;
+	margin-left: 4px;
+}
+
+.db-clear-mana-btn:hover {
+	color: rgba(220, 225, 235, 0.8);
+}
+
+.db-no-results {
+	text-align: center;
+	color: rgba(107, 114, 128, 0.5);
+	padding: 48px 0;
+	font-size: 13px;
+}
+
+.db-card-meta-left {
+	display: flex;
+	align-items: center;
+	gap: 3px;
+}
+
+.db-detail-backdrop {
+	background: rgba(0, 0, 0, 0.88);
+}
+
+/* ===== Card Detail Flip ===== */
+.cd-scene {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	perspective: 1200px;
+	z-index: 10;
+	gap: 0;
+}
+
+.cd-inner {
+	position: relative;
+	width: min(380px, 85vw);
+	aspect-ratio: 3/4;
+	max-height: 88vh;
+	transform-style: preserve-3d;
+	cursor: pointer;
+}
+
+:is(.cd-front, .cd-back) {
+	position: absolute;
+	inset: 0;
+	border-radius: 10px;
+	backface-visibility: hidden;
+	-webkit-backface-visibility: hidden;
+	overflow: hidden;
+}
+
+.cd-front {
+	display: flex;
+	flex-direction: column;
+	background: linear-gradient(180deg, #1a1f2e 0%, #0d1117 100%);
+}
+
+/* Rarity-animated borders on front face */
+.cd-front::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: 10px;
+	pointer-events: none;
+	z-index: 5;
+}
+.cd-front.rarity-mythic::before {
+	inset: -3px;
+	padding: 3px;
+	border-radius: 12px;
+	background: conic-gradient(from var(--db-border-angle), #ef4444, #f97316, #f59e0b, #22c55e, #06b6d4, #3b82f6, #8b5cf6, #a855f7, #ec4899, #ef4444);
+	-webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+	-webkit-mask-composite: xor;
+	mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+	mask-composite: exclude;
+	animation: db-border-rotate 3s linear infinite;
+}
+.cd-front.rarity-epic::before {
+	inset: -2px;
+	padding: 2px;
+	border-radius: 11px;
+	background: conic-gradient(from var(--db-border-angle), #581C87, #7C3AED, #A855F7, #C084FC, #E9D5FF, #C084FC, #A855F7, #7C3AED, #581C87);
+	-webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+	-webkit-mask-composite: xor;
+	mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+	mask-composite: exclude;
+	animation: db-border-rotate 6s linear infinite;
+}
+.cd-front.rarity-rare::before {
+	inset: -2px;
+	padding: 2px;
+	border-radius: 11px;
+	background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 20%, #93C5FD 45%, #BFDBFE 50%, #93C5FD 55%, #3B82F6 80%, #1E3A8A 100%);
+	background-size: 300% 300%;
+	-webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+	-webkit-mask-composite: xor;
+	mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+	mask-composite: exclude;
+	animation: db-rare-shimmer 4s ease-in-out infinite;
+}
+.cd-front.rarity-common::before {
+	border: 2px solid rgba(150, 155, 165, 0.5);
+}
+
+/* Front face art */
+.cd-front-art {
+	flex: 1;
+	min-height: 0;
+	position: relative;
+	overflow: hidden;
+	background: linear-gradient(135deg, rgba(40, 50, 70, 0.8), rgba(20, 25, 35, 0.9));
+}
+.cd-front-art img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	object-position: center 20%;
+	display: block;
+}
+.cd-front-art-fallback {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 5rem;
+	opacity: 0.2;
+}
+
+/* Deck builder: holo layers fill their art container (no art-window crop) */
+.db-card-art .holo-foil,
+.db-card-art .holo-glitter,
+.cd-front-art .holo-foil,
+.cd-front-art .holo-glitter {
+	-webkit-mask-size: 100% 100%;
+	-webkit-mask-position: center center;
+	mask-size: 100% 100%;
+	mask-position: center center;
+}
+
+/* Front face mana gem */
+.cd-front-mana {
+	position: absolute;
+	top: 12px;
+	left: 12px;
+	width: 44px;
+	height: 44px;
+	background: linear-gradient(135deg, #60A5FA 0%, #2563EB 40%, #1D4ED8 70%, #1E3A8A 100%);
+	border: 3px solid #93C5FD;
+	border-radius: 6px;
+	transform: rotate(45deg);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 6;
+	box-shadow: 0 3px 10px rgba(0, 0, 0, 0.7), 0 0 12px rgba(37, 99, 235, 0.4), inset 0 2px 3px rgba(255, 255, 255, 0.35);
+}
+.cd-front-mana span {
+	transform: rotate(-45deg);
+	color: white;
+	font-weight: 800;
+	font-size: 20px;
+	text-shadow: 0 1px 0 rgba(0, 0, 0, 1), 0 2px 4px rgba(0, 0, 0, 0.9);
+}
+
+/* Front face name plate */
+.cd-front-plate {
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	padding: 40px 14px 14px;
+	background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.7) 50%, transparent 100%);
+	z-index: 4;
+}
+.cd-front-name {
+	font-size: clamp(12px, 4vw, 18px);
+	font-weight: 800;
+	color: #f0f0f0;
+	text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+	text-transform: uppercase;
+	letter-spacing: 1px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.cd-front.rarity-mythic .cd-front-name { color: #FCD34D; }
+.cd-front.rarity-epic .cd-front-name { color: #C084FC; }
+.cd-front.rarity-rare .cd-front-name { color: #93C5FD; }
+.cd-front-type {
+	font-size: 10px;
+	min-width: 30px;
+	width: auto;
+	padding: 0 5px;
+	border-radius: 10px;
+	color: rgba(200, 200, 215, 0.7);
+	text-transform: uppercase;
+	letter-spacing: 1.5px;
+	margin-top: 2px;
+}
+
+/* Front face stat gems (bottom corners) */
+.cd-front-stat {
+	position: absolute;
+	bottom: 14px;
+	width: 34px;
+	height: 34px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-weight: 800;
+	font-size: 18px;
+	z-index: 6;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+	text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+.cd-front-stat.attack {
+	left: 10px;
+	background: linear-gradient(135deg, #f59e0b, #d97706);
+	border: 2px solid #fbbf24;
+	color: white;
+}
+.cd-front-stat.health {
+	right: 10px;
+	background: linear-gradient(135deg, #ef4444, #dc2626);
+	border: 2px solid #f87171;
+	color: white;
+}
+
+/* Front face flip hint */
+.cd-front-hint {
+	position: absolute;
+	bottom: 6px;
+	right: 10px;
+	font-size: 10px;
+	color: rgba(255, 255, 255, 0.55);
+	letter-spacing: 1px;
+	text-transform: uppercase;
+	z-index: 6;
+}
+
+/* Deck action buttons on detail card */
+.cd-deck-actions {
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 8px 12px;
+	background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+	z-index: 8;
+}
+.cd-add-btn {
+	padding: 6px 16px;
+	border-radius: 6px;
+	border: 1px solid rgba(34, 197, 94, 0.6);
+	background: rgba(34, 197, 94, 0.2);
+	color: #4ade80;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.5px;
+	cursor: pointer;
+	transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+.cd-add-btn:hover {
+	background: rgba(34, 197, 94, 0.4);
+	box-shadow: 0 0 12px rgba(34, 197, 94, 0.3);
+}
+.cd-remove-btn {
+	padding: 6px 12px;
+	border-radius: 6px;
+	border: 1px solid rgba(239, 68, 68, 0.5);
+	background: rgba(239, 68, 68, 0.15);
+	color: #f87171;
+	font-size: 12px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+.cd-remove-btn:hover {
+	background: rgba(239, 68, 68, 0.35);
+	box-shadow: 0 0 12px rgba(239, 68, 68, 0.3);
+}
+.cd-maxed-label {
+	font-size: 11px;
+	color: rgba(255, 255, 255, 0.5);
+	font-weight: 600;
+	letter-spacing: 0.5px;
+}
+
+/* Front rarity badge */
+.cd-front-badge {
+	position: absolute;
+	top: 12px;
+	right: 12px;
+	z-index: 6;
+	padding: 3px 10px;
+	border-radius: 3px;
+	font-size: 9px;
+	font-weight: 800;
+	letter-spacing: 1.5px;
+	text-transform: uppercase;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+	/* backdrop-filter removed for perf */
+}
+.cd-front-badge.rarity-mythic {
+	background: linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(255, 140, 0, 0.9));
+	color: #fff;
+	box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+}
+.cd-front-badge.rarity-epic {
+	background: linear-gradient(135deg, rgba(139, 92, 246, 0.85), rgba(168, 85, 247, 0.85));
+	color: #fff;
+	box-shadow: 0 0 6px rgba(168, 85, 247, 0.4);
+}
+.cd-front-badge.rarity-rare {
+	background: linear-gradient(135deg, rgba(37, 99, 235, 0.8), rgba(59, 130, 246, 0.8));
+	color: #fff;
+	box-shadow: 0 0 6px rgba(59, 130, 246, 0.35);
+}
+
+/* ===== Back Face ===== */
+.cd-back {
+	transform: rotateY(180deg);
+	background:
+		url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"),
+		linear-gradient(180deg, #1a1614 0%, #0c0a08 100%);
+	display: flex;
+	flex-direction: column;
+	padding: 16px 18px;
+	border: 2px solid rgba(100, 85, 70, 0.5);
+}
+.cd-back::before {
+	content: '';
+	position: absolute;
+	inset: 3px;
+	border: 1px solid rgba(100, 85, 70, 0.3);
+	border-radius: 6px;
+	pointer-events: none;
+}
+
+/* Back header */
+.cd-back-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	margin-bottom: 10px;
+	padding-bottom: 8px;
+	border-bottom: 1px solid rgba(100, 85, 70, 0.4);
+	flex-shrink: 0;
+}
+.cd-back-name {
+	font-size: 18px;
+	font-weight: 800;
+	color: #f0e8d8;
+	text-transform: uppercase;
+	letter-spacing: 1.5px;
+	text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+.cd-back-subtitle {
+	font-size: 10px;
+	color: rgba(200, 190, 170, 0.7);
+	text-transform: uppercase;
+	letter-spacing: 2px;
+	margin-top: 2px;
+}
+.cd-back-flip-btn {
+	width: 32px;
+	height: 32px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	background: rgba(60, 50, 40, 0.6);
+	border: 1px solid rgba(100, 85, 70, 0.4);
+	color: rgba(200, 190, 170, 0.6);
+	font-size: 14px;
+	cursor: pointer;
+	transition: background 0.2s ease, color 0.2s ease;
+	flex-shrink: 0;
+}
+.cd-back-flip-btn:hover {
+	background: rgba(80, 70, 60, 0.8);
+	color: rgba(240, 232, 216, 0.9);
+}
+
+/* Back scrollable content */
+.cd-back-scroll {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	scrollbar-width: thin;
+	scrollbar-color: rgba(100, 85, 70, 0.4) transparent;
+}
+.cd-back-scroll::-webkit-scrollbar { width: 4px; }
+.cd-back-scroll::-webkit-scrollbar-track { background: transparent; }
+.cd-back-scroll::-webkit-scrollbar-thumb { background: rgba(100, 85, 70, 0.4); border-radius: 2px; }
+
+/* Back stats row */
+.cd-back-stats {
+	display: flex;
+	gap: 12px;
+	margin-bottom: 10px;
+	padding: 8px 10px;
+	background: rgba(40, 36, 32, 0.5);
+	border-radius: 6px;
+	flex-shrink: 0;
+}
+.cd-back-stat {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+.cd-back-stat-val {
+	font-size: 20px;
+	font-weight: 800;
+}
+.cd-back-stat-label {
+	font-size: 10px;
+	color: rgba(180, 170, 160, 0.7);
+	text-transform: uppercase;
+	letter-spacing: 1px;
+}
+
+/* Back section dividers */
+.cd-back-divider {
+	font-size: 9px;
+	font-weight: 700;
+	color: rgba(200, 184, 160, 0.8);
+	text-transform: uppercase;
+	letter-spacing: 2px;
+	margin: 8px 0 4px;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	text-shadow: 0 0 8px rgba(200, 184, 160, 0.2);
+}
+.cd-back-divider::before,
+.cd-back-divider::after {
+	content: '';
+	flex: 1;
+	height: 1px;
+	background: linear-gradient(90deg, transparent, rgba(200, 184, 160, 0.4), transparent);
+}
+
+/* Back description */
+.cd-back-desc {
+	font-size: 14px;
+	color: #d8d0c8;
+	line-height: 1.5;
+	margin-bottom: 8px;
+}
+
+/* Back keywords */
+.cd-back-keywords {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-bottom: 8px;
+}
+.cd-back-keyword {
+	font-size: 10px;
+	padding: 3px 10px;
+	border-radius: 12px;
+	background: rgba(60, 80, 120, 0.4);
+	color: rgba(180, 200, 230, 0.9);
+	font-weight: 600;
+	text-transform: capitalize;
+	border: 1px solid rgba(60, 80, 120, 0.3);
+}
+
+/* Back flavor text */
+.cd-back-flavor {
+	font-size: 12px;
+	font-style: italic;
+	color: rgba(200, 190, 170, 0.6);
+	line-height: 1.4;
+	border-left: 2px solid rgba(100, 85, 70, 0.5);
+	padding-left: 10px;
+	margin-top: 8px;
+}
+
+/* Back rarity badge */
+.cd-back-rarity {
+	font-size: 9px;
+	font-weight: 800;
+	padding: 2px 8px;
+	border-radius: 3px;
+	text-transform: uppercase;
+	letter-spacing: 1px;
+}
+.cd-back-rarity.rarity-mythic { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+.cd-back-rarity.rarity-epic { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
+.cd-back-rarity.rarity-rare { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+.cd-back-rarity.rarity-common { background: rgba(156, 163, 175, 0.15); color: #9ca3af; }
+
+/* Close button */
+.cd-close {
+	position: absolute;
+	top: 16px;
+	right: 16px;
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	background: rgba(0, 0, 0, 0.6);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	z-index: 20;
+	transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+	color: white;
+	font-size: 18px;
+}
+.cd-close:hover {
+	background: rgba(0, 0, 0, 0.8);
+	border-color: rgba(255, 255, 255, 0.5);
+	transform: scale(1.1);
+}
+
+/* ===== Card Group Headers ===== */
+.db-card-group {
+	margin-bottom: 4px;
+}
+
+.db-group-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 14px 4px;
+	position: sticky;
+	top: 0;
+	z-index: 5;
+	background: linear-gradient(180deg, rgba(15, 15, 25, 0.98) 0%, rgba(15, 15, 25, 0.85) 100%);
+	/* backdrop-filter removed for perf */
+}
+
+.db-group-label {
+	font-size: 13px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 1px;
+	color: rgba(200, 210, 230, 0.85);
+}
+
+.db-group-count {
+	font-size: 11px;
+	font-weight: 600;
+	color: rgba(160, 170, 190, 0.6);
+	background: rgba(255, 255, 255, 0.06);
+	padding: 1px 7px;
+	border-radius: 8px;
+}
+
+/* ===== Super Minion Badge ===== */
+.db-super-badge {
+	position: absolute;
+	bottom: 6px;
+	left: 6px;
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+	border: 2px solid #fbbf24;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 11px;
+	line-height: 1;
+	box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+	z-index: 2;
+	cursor: help;
+}
+
+.db-super-tag {
+	font-size: 8px;
+	font-weight: 800;
+	color: #fbbf24;
+	letter-spacing: 0.5px;
+	margin-left: 4px;
+}
+
+.db-card.super-minion-linked {
+	box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.4), 0 0 12px rgba(251, 191, 36, 0.15);
+}
+
+.db-card.super-minion-linked::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	border: 1px solid rgba(251, 191, 36, 0.25);
+	pointer-events: none;
+}
+
+/* ===== Card Description Snippet ===== */
+.db-card-desc {
+	font-size: 9px;
+	color: rgba(180, 185, 200, 0.65);
+	line-height: 1.25;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* ===== Click-to-Add Feedback ===== */
+.db-card:not(.not-playable):active {
+	transform: scale(0.96);
+	transition: transform 0.05s ease;
+}
+
+/* ===== Hover Tooltip ===== */
+.db-tooltip {
+	position: fixed;
+	z-index: 205;
+	width: 260px;
+	max-width: 90vw;
+	padding: 10px 12px;
+	background: rgba(15, 18, 28, 0.97);
+	border: 1px solid rgba(100, 110, 140, 0.5);
+	border-radius: 8px;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+	pointer-events: none;
+	animation: db-tooltip-in 0.12s ease-out;
+}
+
+@keyframes db-tooltip-in {
+	from { opacity: 0; transform: translateY(4px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+
+.db-tooltip-name {
+	font-size: 13px;
+	font-weight: 700;
+	color: #f0f0f0;
+	margin-bottom: 4px;
+}
+
+.db-tooltip-desc {
+	font-size: 11px;
+	color: rgba(200, 205, 220, 0.85);
+	line-height: 1.4;
+	margin-bottom: 6px;
+}
+
+.db-tooltip-keywords {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 3px;
+	margin-bottom: 4px;
+}
+
+.db-tooltip-kw {
+	font-size: 9px;
+	padding: 1px 6px;
+	border-radius: 8px;
+	background: rgba(60, 80, 120, 0.5);
+	color: rgba(160, 180, 220, 0.9);
+	font-weight: 600;
+	text-transform: capitalize;
+}
+
+.db-tooltip-race {
+	font-size: 10px;
+	color: rgba(180, 170, 160, 0.7);
+	text-transform: capitalize;
+}
+
+/* ===== Deck Builder Tutorial ===== */
+.db-tutorial-overlay {
+	flex-shrink: 0;
+	overflow: hidden;
+	background: linear-gradient(
+		135deg,
+		rgba(30, 25, 15, 0.95) 0%,
+		rgba(45, 35, 18, 0.92) 50%,
+		rgba(30, 25, 15, 0.95) 100%
+	);
+	border-bottom: 1px solid rgba(180, 140, 60, 0.3);
+	box-shadow: inset 0 -8px 16px -8px rgba(0, 0, 0, 0.4);
+}
+
+.db-tutorial-inner {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	padding: 12px 20px;
+}
+
+/* ── Progress Pips ── */
+.db-tutorial-progress {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	flex-shrink: 0;
+}
+
+.db-tutorial-pip {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: rgba(180, 140, 60, 0.2);
+	border: 1px solid rgba(180, 140, 60, 0.25);
+	transition: all 0.3s ease;
+}
+
+.db-tutorial-pip.active {
+	background: rgba(220, 170, 50, 0.9);
+	border-color: rgba(255, 200, 80, 0.6);
+	box-shadow: 0 0 6px rgba(220, 170, 50, 0.4);
+}
+
+.db-tutorial-pip.done {
+	background: rgba(140, 110, 40, 0.6);
+	border-color: rgba(180, 140, 60, 0.4);
+}
+
+/* ── Step Card ── */
+.db-tutorial-card {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	flex: 1;
+	min-width: 0;
+}
+
+.db-tutorial-icon {
+	flex-shrink: 0;
+	width: 44px;
+	height: 44px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 10px;
+	background: linear-gradient(135deg, rgba(180, 140, 50, 0.15), rgba(120, 90, 30, 0.08));
+	border: 1px solid rgba(180, 140, 60, 0.2);
+	color: rgba(220, 180, 80, 0.85);
+}
+
+.db-tutorial-text {
+	flex: 1;
+	min-width: 0;
+}
+
+.db-tutorial-title {
+	font-family: 'Cinzel', Georgia, serif;
+	font-size: 13px;
+	font-weight: 700;
+	letter-spacing: 0.8px;
+	text-transform: uppercase;
+	color: rgba(220, 180, 80, 0.95);
+	margin-bottom: 2px;
+}
+
+.db-tutorial-desc {
+	font-size: 12.5px;
+	line-height: 1.4;
+	color: rgba(200, 190, 170, 0.8);
+}
+
+.db-tutorial-desc kbd {
+	display: inline-block;
+	padding: 1px 6px;
+	margin: 0 2px;
+	border-radius: 4px;
+	font-family: inherit;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.3px;
+	color: rgba(230, 200, 120, 0.95);
+	background: linear-gradient(180deg, rgba(180, 140, 50, 0.2), rgba(140, 100, 30, 0.15));
+	border: 1px solid rgba(180, 140, 60, 0.35);
+	box-shadow: 0 1px 0 rgba(180, 140, 60, 0.2);
+}
+
+.db-tutorial-desc strong {
+	color: rgba(220, 200, 150, 0.95);
+	font-weight: 600;
+}
+
+/* ── Action Buttons ── */
+.db-tutorial-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-shrink: 0;
+}
+
+.db-tutorial-skip {
+	padding: 5px 10px;
+	border: none;
+	background: transparent;
+	color: rgba(160, 150, 130, 0.5);
+	font-size: 11px;
+	cursor: pointer;
+	transition: color 0.2s;
+	white-space: nowrap;
+}
+
+.db-tutorial-skip:hover {
+	color: rgba(200, 190, 170, 0.8);
+}
+
+.db-tutorial-next {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	padding: 6px 14px;
+	border-radius: 6px;
+	font-family: 'Cinzel', Georgia, serif;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.6px;
+	text-transform: uppercase;
+	white-space: nowrap;
+	cursor: pointer;
+	color: rgba(30, 25, 15, 0.95);
+	background: linear-gradient(180deg, rgba(220, 180, 60, 0.9), rgba(180, 140, 40, 0.9));
+	border: 1px solid rgba(255, 210, 80, 0.5);
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 220, 100, 0.3);
+	transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.db-tutorial-next:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 2px 8px rgba(180, 140, 40, 0.3), inset 0 1px 0 rgba(255, 220, 100, 0.4);
+}
+
+.db-tutorial-next:active {
+	transform: translateY(0);
+}
+
+.db-tutorial-next svg {
+	opacity: 0.7;
+}

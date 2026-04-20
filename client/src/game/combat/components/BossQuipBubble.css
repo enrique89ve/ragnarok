@@ -1,0 +1,111 @@
+/*
+  BossQuipBubble — opponent dialogue overlay during campaign combat.
+  Positioned absolutely, anchored to the LEFT of the opponent hero
+  portrait so it doesn't cover the hero face. The opponent hero lives
+  inside .opponent-hero-container; we expect a parent with that class
+  to be position:relative.
+*/
+
+.boss-quip-bubble {
+	position: absolute;
+	top: 12px;
+	right: calc(100% + 16px);
+	min-width: 220px;
+	max-width: 320px;
+	padding: 14px 18px 16px;
+	z-index: 700;
+	pointer-events: none;
+	background: linear-gradient(180deg, rgba(20, 16, 8, 0.96) 0%, rgba(28, 22, 10, 0.97) 100%);
+	border: 1px solid rgba(212, 175, 55, 0.65);
+	border-radius: 8px;
+	box-shadow:
+		0 6px 24px rgba(0, 0, 0, 0.7),
+		0 0 0 1px rgba(0, 0, 0, 0.4),
+		inset 0 1px 0 rgba(212, 175, 55, 0.18);
+	font-family: var(--font-ui, 'Inter', system-ui, sans-serif);
+	color: #f3e9c8;
+}
+
+/* When a portrait is supplied, lay out as portrait | content row */
+.boss-quip-bubble.with-portrait {
+	display: flex;
+	gap: 12px;
+	align-items: flex-start;
+	min-width: 280px;
+	max-width: 380px;
+}
+
+.boss-quip-portrait {
+	width: 56px;
+	height: 56px;
+	border-radius: 50%;
+	object-fit: cover;
+	flex-shrink: 0;
+	border: 2px solid rgba(212, 175, 55, 0.7);
+	box-shadow:
+		0 0 12px rgba(212, 175, 55, 0.35),
+		0 2px 8px rgba(0, 0, 0, 0.7),
+		inset 0 0 0 1px rgba(0, 0, 0, 0.5);
+	background: #0a0610;
+}
+
+.boss-quip-content {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	flex: 1;
+}
+
+.boss-quip-speaker {
+	font-family: var(--font-display, 'Cinzel', Georgia, serif);
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: #d4af37;
+	margin-bottom: 6px;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.boss-quip-text {
+	font-size: 14px;
+	line-height: 1.45;
+	font-style: italic;
+	color: #f7eccb;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+/*
+  Tail — small triangle pointing right from the bubble toward the
+  opponent hero portrait. CSS borders give us a simple right-pointing
+  triangle without an extra SVG. The before/after pseudo-elements
+  create the gold edge over the dark fill.
+*/
+.boss-quip-tail {
+	position: absolute;
+	top: 22px;
+	left: 100%;
+	width: 0;
+	height: 0;
+	border-style: solid;
+	border-width: 9px 0 9px 12px;
+	border-color: transparent transparent transparent rgba(212, 175, 55, 0.65);
+}
+
+.boss-quip-tail::before {
+	content: '';
+	position: absolute;
+	top: -8px;
+	left: -13px;
+	width: 0;
+	height: 0;
+	border-style: solid;
+	border-width: 8px 0 8px 11px;
+	border-color: transparent transparent transparent rgba(28, 22, 10, 0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.boss-quip-bubble {
+		transition: none;
+	}
+}

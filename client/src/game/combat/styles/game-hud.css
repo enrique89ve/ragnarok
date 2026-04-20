@@ -1,0 +1,230 @@
+/* Game HUD - Deck count, hand count, turn counter */
+
+.game-hud {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	z-index: 80;
+}
+
+.hud-status-ribbon {
+	position: absolute;
+	top: 18px;
+	left: 50%;
+	transform: translateX(-50%);
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 8px;
+	max-width: min(920px, calc(100% - 320px));
+	padding: 10px 14px;
+	border-radius: 18px;
+	background: rgba(8, 12, 22, 0.8);
+	border: 1px solid rgba(148, 163, 184, 0.16);
+	box-shadow:
+		0 14px 36px rgba(0, 0, 0, 0.35),
+		inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.hud-status-ribbon.player-active {
+	border-color: rgba(245, 158, 11, 0.28);
+}
+
+.hud-status-ribbon.opponent-active {
+	border-color: rgba(239, 68, 68, 0.22);
+}
+
+:is(.hud-status-chip, .hud-status-breakdown) {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	min-height: 30px;
+	padding: 0 10px;
+	border-radius: 999px;
+	background: rgba(30, 41, 59, 0.72);
+	border: 1px solid rgba(148, 163, 184, 0.15);
+	font-size: 12px;
+	font-weight: 800;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: #e2e8f0;
+}
+
+.hud-status-phase {
+	color: #fbbf24;
+}
+
+.hud-status-pot {
+	color: #fde68a;
+}
+
+.hud-chip-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 14px;
+	height: 14px;
+	flex-shrink: 0;
+}
+
+.hud-chip-icon svg {
+	width: 100%;
+	height: 100%;
+}
+
+.hud-status-initiative {
+	color: #cbd5e1;
+}
+
+.hud-status-breakdown {
+	color: rgba(226, 232, 240, 0.78);
+}
+
+/* Deck count badges — premium obsidian + gold material */
+.hud-deck-badge {
+	position: absolute;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 14px;
+	background: var(--ui-panel-bg);
+	border: 1px solid var(--ui-gold-shadow);
+	border-radius: 10px;
+	font-family: var(--font-display);
+	font-size: 17px;
+	font-weight: 800;
+	color: var(--ui-gold-bright);
+	box-shadow:
+		0 4px 14px rgba(0, 0, 0, 0.7),
+		inset 0 1px 0 rgba(255, 215, 100, 0.10);
+	letter-spacing: 1px;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+.hud-badge-label {
+	font-size: 10px;
+	font-weight: 900;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: rgba(226, 232, 240, 0.76);
+}
+
+.hud-deck-badge .hud-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	opacity: 0.92;
+	color: var(--ui-gold-bright);
+}
+
+.hud-deck-badge .hud-icon svg {
+	width: 100%;
+	height: 100%;
+}
+
+.hud-deck-badge .hud-count {
+	min-width: 22px;
+	text-align: center;
+}
+
+/* Player deck — bottom right, anchored to player hero zone */
+.hud-player-deck {
+	right: 18px;
+	bottom: 26px;
+	border-color: rgba(91, 140, 184, 0.55);
+}
+
+/* Opponent deck — top right, anchored to opponent hero zone */
+.hud-opponent-deck {
+	right: 18px;
+	top: 18px;
+	border-color: rgba(200, 49, 42, 0.55);
+}
+
+/* Opponent hand count badge — hidden; shown via .opponent-hand-count on the hand display */
+.hud-opponent-hand {
+	right: 18px;
+	top: 70px;
+	border-color: rgba(148, 163, 184, 0.4);
+}
+
+/* Low deck warning */
+.hud-deck-badge.low-deck {
+	border-color: rgba(239, 68, 68, 0.4);
+	color: #fca5a5;
+}
+
+.hud-deck-badge.low-deck .hud-icon,
+.hud-deck-badge.low-deck .hud-badge-label {
+	opacity: 1;
+}
+
+/* Empty deck warning */
+.hud-deck-badge.empty {
+	border-color: rgba(239, 68, 68, 0.6);
+	color: #ef4444;
+	animation: emptyDeckWarn 1.5s ease-in-out infinite;
+}
+
+@keyframes emptyDeckWarn {
+	0%, 100% { box-shadow: 0 0 4px rgba(239, 68, 68, 0.3); }
+	50% { box-shadow: 0 0 8px rgba(239, 68, 68, 0.6); }
+}
+
+/* Element matchup badge - persistent indicator, below turn counter */
+.hud-matchup-badge {
+	position: absolute;
+	top: 78px;
+	left: 50%;
+	transform: translateX(-50%) translateY(22px);
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 3px 10px;
+	background: rgba(15, 23, 42, 0.85);
+	border: 1px solid rgba(100, 116, 139, 0.3);
+	border-radius: 14px;
+	/* backdrop-filter removed for perf */
+	pointer-events: auto;
+	cursor: help;
+}
+
+.hud-matchup-badge.advantage {
+	border-color: rgba(74, 222, 128, 0.4);
+	box-shadow: 0 0 6px rgba(74, 222, 128, 0.15);
+}
+
+.hud-matchup-badge.disadvantage {
+	border-color: rgba(239, 68, 68, 0.4);
+	box-shadow: 0 0 6px rgba(239, 68, 68, 0.15);
+}
+
+.hud-matchup-badge.neutral-matchup {
+	opacity: 0.6;
+}
+
+.hud-matchup-icon {
+	font-size: 14px;
+	line-height: 1;
+}
+
+.hud-matchup-arrow {
+	font-size: 14px;
+	font-weight: 800;
+	line-height: 1;
+}
+
+.hud-matchup-badge.advantage .hud-matchup-arrow {
+	color: #4ade80;
+}
+
+.hud-matchup-badge.disadvantage .hud-matchup-arrow {
+	color: #ef4444;
+}
+
+.hud-matchup-badge.neutral-matchup .hud-matchup-arrow {
+	color: rgba(203, 213, 225, 0.4);
+}

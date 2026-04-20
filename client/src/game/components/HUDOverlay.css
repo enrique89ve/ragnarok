@@ -1,0 +1,104 @@
+.hud-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: var(--z-hud-controls, 100);
+}
+
+.hud-overlay > * {
+  pointer-events: auto;
+}
+
+.hud-end-turn-button {
+  position: absolute;
+  right: 30px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: var(--z-end-turn-button, 200);
+  pointer-events: auto;
+  isolation: isolate;
+  
+  padding: 14px 24px;
+  min-width: 110px;
+  
+  background: linear-gradient(180deg, 
+    #e6b800 0%, 
+    #cc9900 30%,
+    #b38600 50%, 
+    #996600 70%,
+    #805500 100%
+  );
+  border: 3px solid #ffd700;
+  border-radius: 10px;
+  
+  font-family: 'Cinzel', 'Georgia', serif;
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #ffffff;
+  text-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.9),
+    0 0 8px rgba(0, 0, 0, 0.7),
+    1px 1px 0 #5a3d00,
+    -1px -1px 0 #5a3d00;
+  
+  box-shadow: 
+    0 6px 16px rgba(0, 0, 0, 0.7),
+    0 3px 6px rgba(0, 0, 0, 0.5),
+    inset 0 2px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.4);
+  
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.hud-end-turn-button.active {
+  animation: hud-end-turn-glow 2s ease-in-out infinite;
+}
+
+.hud-end-turn-button.active:hover {
+  transform: translateY(-50%) scale(1.08);
+  background: linear-gradient(180deg, 
+    #ffcc00 0%, 
+    #e6b300 30%,
+    #cc9900 50%, 
+    #b38600 70%,
+    #996600 100%
+  );
+  border-color: #ffdd44;
+  box-shadow: 
+    0 8px 24px rgba(255, 204, 0, 0.6),
+    0 4px 8px rgba(0, 0, 0, 0.5),
+    inset 0 2px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.3);
+}
+
+.hud-end-turn-button.active:active {
+  transform: translateY(-50%) scale(0.98);
+}
+
+.hud-end-turn-button.inactive {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: linear-gradient(180deg, 
+    #7a7a7a 0%, 
+    #5a5a5a 30%,
+    #4a4a4a 50%, 
+    #3a3a3a 70%,
+    #2a2a2a 100%
+  );
+  border-color: #666;
+  color: #aaa;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.hud-end-turn-button .end-turn-text {
+  display: block;
+  font-weight: 900;
+}
+
+@keyframes hud-end-turn-glow {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}

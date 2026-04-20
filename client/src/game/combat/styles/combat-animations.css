@@ -1,0 +1,506 @@
+/* ============================================================
+   Combat Animation System
+   Keyframes, utility classes, and archetype-specific effects
+   for the poker combat animation overlay.
+   ============================================================ */
+
+/* 1. Container */
+.poker-combat-animation {
+	position: absolute;
+	inset: 0;
+	z-index: 9100;
+	pointer-events: none;
+	overflow: hidden;
+}
+
+/* 2. Attack Name Text */
+.attack-name-text {
+	position: absolute;
+	left: 50%;
+	top: 20%;
+	transform: translateX(-50%);
+	font-family: 'Cinzel', serif;
+	font-size: 2rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 3px;
+	color: white;
+	text-shadow:
+		0 0 10px var(--element-color),
+		0 0 20px var(--element-color),
+		0 0 40px var(--element-color);
+	animation: attack-name-fade 1s ease-in-out forwards;
+}
+
+/* 3. Damage Number */
+.combat-damage-number {
+	position: absolute;
+	font-family: 'Cinzel', serif;
+	font-size: 3rem;
+	font-weight: 900;
+	color: #ff4444;
+	text-shadow:
+		0 0 8px rgba(0, 0, 0, 0.8),
+		0 0 16px rgba(0, 0, 0, 0.5);
+	animation: damage-number-fly 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Critical damage (10+) — oversized golden text */
+.combat-damage-number.crit {
+	font-size: 4.5rem;
+	color: #ffd700;
+	text-shadow:
+		0 0 12px rgba(255, 215, 0, 0.9),
+		0 0 30px rgba(255, 215, 0, 0.5),
+		0 0 6px rgba(0, 0, 0, 0.9);
+	animation: damage-crit-fly 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Heal number — green float up */
+.combat-heal-number {
+	position: absolute;
+	font-family: 'Cinzel', serif;
+	font-size: 2.5rem;
+	font-weight: 900;
+	color: #22c55e;
+	text-shadow:
+		0 0 8px rgba(34, 197, 94, 0.6),
+		0 0 16px rgba(0, 0, 0, 0.5);
+	animation: heal-number-fly 0.9s ease-out forwards;
+}
+
+/* 4. Brace Text */
+.brace-text {
+	position: absolute;
+	left: 50%;
+	bottom: 25%;
+	transform: translateX(-50%);
+	font-family: 'Cinzel', serif;
+	font-size: 2rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 3px;
+	color: #c9a84c;
+	text-shadow:
+		0 0 10px rgba(201, 168, 76, 0.6),
+		0 0 20px rgba(201, 168, 76, 0.4);
+	animation: attack-name-fade 1s ease-in-out forwards;
+}
+
+/* 5. Combat Particles */
+.combat-particle {
+	position: absolute;
+	pointer-events: none;
+	width: 20px;
+	height: 20px;
+	font-size: 20px;
+	animation: particle-burst 0.6s ease-out forwards;
+}
+
+/* 6. Screen Shake Classes */
+.screen-shake-mild {
+	animation: screen-shake-mild 0.3s ease-in-out;
+}
+
+.screen-shake-moderate {
+	animation: screen-shake-moderate 0.4s ease-in-out;
+}
+
+.screen-shake-heavy {
+	animation: screen-shake-heavy 0.5s ease-in-out;
+}
+
+/* 7. Archetype-Specific Effects */
+
+/* Melee lunge overlay */
+.melee-slash-trail {
+	position: absolute;
+	width: 200px;
+	height: 4px;
+	background: linear-gradient(
+		90deg,
+		transparent,
+		var(--element-color),
+		transparent
+	);
+	transform-origin: center;
+	animation: melee-slash 0.3s ease-out forwards;
+}
+
+/* Ranged projectile */
+.ranged-projectile {
+	position: absolute;
+	font-size: 2rem;
+	animation: ranged-flight 0.5s ease-in forwards;
+}
+
+/* Magic blast ring */
+.magic-blast-ring {
+	position: absolute;
+	width: 80px;
+	height: 80px;
+	border: 3px solid var(--element-color);
+	border-radius: 50%;
+	animation: magic-expand 0.6s ease-out forwards;
+}
+
+/* Divine rays */
+.divine-rays {
+	position: absolute;
+	width: 300px;
+	height: 300px;
+	background: conic-gradient(
+		transparent 0deg,
+		var(--element-color) 10deg,
+		transparent 20deg,
+		transparent 45deg,
+		var(--element-color) 55deg,
+		transparent 65deg,
+		transparent 90deg,
+		var(--element-color) 100deg,
+		transparent 110deg,
+		transparent 135deg,
+		var(--element-color) 145deg,
+		transparent 155deg,
+		transparent 180deg,
+		var(--element-color) 190deg,
+		transparent 200deg,
+		transparent 225deg,
+		var(--element-color) 235deg,
+		transparent 245deg,
+		transparent 270deg,
+		var(--element-color) 280deg,
+		transparent 290deg,
+		transparent 315deg,
+		var(--element-color) 325deg,
+		transparent 335deg,
+		transparent 360deg
+	);
+	animation: divine-rotate 1s linear forwards;
+}
+
+/* Nature wave */
+.nature-wave {
+	position: absolute;
+	width: 100%;
+	height: 60px;
+	background: linear-gradient(
+		to bottom,
+		transparent,
+		var(--element-color) 50%,
+		transparent
+	);
+	animation: nature-sweep 0.8s ease-in-out forwards;
+}
+
+/* Shadow tendrils */
+.shadow-tendril {
+	position: absolute;
+	width: 100%;
+	height: 40px;
+	background: linear-gradient(
+		90deg,
+		var(--element-color),
+		transparent
+	);
+	transform-origin: left center;
+	animation: shadow-creep 0.6s ease-in forwards;
+}
+
+/* 8. Impact Flash */
+.impact-flash {
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(
+		circle at center,
+		var(--element-color) 0%,
+		transparent 70%
+	);
+	animation: impact-pulse 0.3s ease-out forwards;
+}
+
+/* 9. Super Move Flash (30+ damage) */
+.super-move-flash {
+	position: absolute;
+	inset: 0;
+	background: white;
+	z-index: 9200;
+	animation: super-flash 0.4s ease-out forwards;
+}
+
+/* 10. Brace Shield Glow */
+.brace-shield-glow {
+	position: absolute;
+	inset: -10px;
+	border-radius: 50%;
+	border: 3px solid #c9a84c;
+	box-shadow: 0 0 20px rgba(201, 168, 76, 0.6);
+	animation: brace-pulse 0.5s ease-out forwards;
+}
+
+/* 11. Attacker Glow */
+.combat-attacker-glow {
+	position: absolute;
+	inset: -5px;
+	border-radius: 50%;
+	box-shadow: 0 0 40px var(--element-color), 0 0 60px var(--element-color);
+	animation: glow-pulse 0.8s ease-in-out;
+}
+
+/* ============================================================
+   KEYFRAMES
+   ============================================================ */
+
+@keyframes attack-name-fade {
+	0% { opacity: 0; transform: translateX(-50%) translateY(10px) scale(0.9); }
+	20% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+	80% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+	100% { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(1.05); }
+}
+
+@keyframes damage-number-fly {
+	0% { opacity: 1; transform: translateY(0) scale(1); }
+	50% { opacity: 1; transform: translateY(-40px) scale(1.3); }
+	100% { opacity: 0; transform: translateY(-80px) scale(0.8); }
+}
+
+@keyframes screen-shake-mild {
+	0%, 100% { transform: translate(0, 0); }
+	10% { transform: translate(-2px, 1px); }
+	20% { transform: translate(2px, -1px); }
+	30% { transform: translate(-1px, 2px); }
+	40% { transform: translate(1px, -2px); }
+	50% { transform: translate(-2px, 0); }
+	60% { transform: translate(2px, 1px); }
+	70% { transform: translate(-1px, -1px); }
+	80% { transform: translate(1px, 1px); }
+	90% { transform: translate(0, -1px); }
+}
+
+@keyframes screen-shake-moderate {
+	0%, 100% { transform: translate(0, 0); }
+	10% { transform: translate(-4px, 2px); }
+	20% { transform: translate(4px, -2px); }
+	30% { transform: translate(-3px, 4px); }
+	40% { transform: translate(3px, -3px); }
+	50% { transform: translate(-4px, 1px); }
+	60% { transform: translate(3px, 2px); }
+	70% { transform: translate(-2px, -3px); }
+	80% { transform: translate(2px, 3px); }
+	90% { transform: translate(-1px, -2px); }
+}
+
+@keyframes screen-shake-heavy {
+	0%, 100% { transform: translate(0, 0); }
+	10% { transform: translate(-8px, 4px); }
+	20% { transform: translate(8px, -4px); }
+	30% { transform: translate(-6px, 8px); }
+	40% { transform: translate(6px, -6px); }
+	50% { transform: translate(-8px, 2px); }
+	60% { transform: translate(7px, 5px); }
+	70% { transform: translate(-5px, -6px); }
+	80% { transform: translate(4px, 6px); }
+	90% { transform: translate(-3px, -4px); }
+}
+
+@keyframes melee-slash {
+	0% { transform: scaleX(0) rotate(-30deg); opacity: 0; }
+	30% { transform: scaleX(0.5) rotate(-15deg); opacity: 1; }
+	60% { transform: scaleX(1) rotate(0deg); opacity: 1; }
+	100% { transform: scaleX(1.2) rotate(5deg); opacity: 0; }
+}
+
+@keyframes ranged-flight {
+	0% { transform: translate(var(--start-x, 0), var(--start-y, 0)) scale(1); }
+	50% { transform: translate(calc(var(--end-x, 0) * 0.6), calc(var(--end-y, 0) - 40px)) scale(1.3); }
+	100% { transform: translate(var(--end-x, 0), var(--end-y, 0)) scale(1); }
+}
+
+@keyframes magic-expand {
+	0% { transform: scale(0); opacity: 1; }
+	50% { transform: scale(1.5); opacity: 0.8; }
+	100% { transform: scale(3); opacity: 0; }
+}
+
+@keyframes divine-rotate {
+	from { transform: rotate(0deg); opacity: 0.8; }
+	to { transform: rotate(360deg); opacity: 0; }
+}
+
+@keyframes nature-sweep {
+	0% { transform: translateX(-100%); opacity: 0; }
+	30% { opacity: 0.8; }
+	70% { opacity: 0.8; }
+	100% { transform: translateX(100%); opacity: 0; }
+}
+
+@keyframes shadow-creep {
+	0% { transform: scaleX(0); opacity: 0.8; }
+	70% { transform: scaleX(0.9); opacity: 0.6; }
+	100% { transform: scaleX(1); opacity: 0; }
+}
+
+@keyframes impact-pulse {
+	0% { opacity: 0; transform: scale(0.5); }
+	40% { opacity: 0.8; transform: scale(1); }
+	100% { opacity: 0; transform: scale(1.5); }
+}
+
+@keyframes super-flash {
+	0% { opacity: 0; }
+	20% { opacity: 0.9; }
+	100% { opacity: 0; }
+}
+
+@keyframes brace-pulse {
+	0% { opacity: 0; transform: scale(0.8); }
+	40% { opacity: 1; transform: scale(1); }
+	100% { opacity: 0; transform: scale(1.1); }
+}
+
+@keyframes glow-pulse {
+	0%, 100% { opacity: 0.6; }
+	50% { opacity: 1; }
+}
+
+@keyframes particle-burst {
+	0% { transform: translate(0, 0) scale(1); opacity: 1; }
+	100% { transform: translate(var(--tx, 0), var(--ty, 0)) scale(0); opacity: 0; }
+}
+
+/* 12. Minion Attack Lunge */
+.minion-attack-lunge {
+	animation: attack-lunge 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes attack-lunge {
+	0% { transform: translateY(0) scale(1); }
+	30% { transform: translateY(var(--lunge-y, -40px)) translateX(var(--lunge-x, 0)) scale(1.15); }
+	50% { transform: translateY(var(--lunge-y, -40px)) translateX(var(--lunge-x, 0)) scale(1.1); }
+	100% { transform: translateY(0) scale(1); }
+}
+
+/* 13. Card Summon Entrance */
+.card-summon-entrance {
+	animation: summon-entrance 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes summon-entrance {
+	0% { transform: translateY(30px) scale(0.3); opacity: 0; filter: brightness(3); }
+	40% { transform: translateY(-8px) scale(1.1); opacity: 1; filter: brightness(1.6); }
+	70% { transform: translateY(2px) scale(0.98); filter: brightness(1.1); }
+	100% { transform: translateY(0) scale(1); opacity: 1; filter: brightness(1); }
+}
+
+/* Rarity-specific summon glow ring */
+.summon-glow-ring {
+	position: absolute;
+	inset: -12px;
+	border-radius: 12px;
+	pointer-events: none;
+	animation: summon-ring-expand 0.6s ease-out forwards;
+}
+
+.summon-glow-ring.rarity-common { box-shadow: 0 0 20px rgba(200, 200, 200, 0.4); }
+.summon-glow-ring.rarity-rare { box-shadow: 0 0 25px rgba(59, 130, 246, 0.5); }
+.summon-glow-ring.rarity-epic { box-shadow: 0 0 30px rgba(163, 53, 238, 0.6); }
+.summon-glow-ring.rarity-mythic {
+	box-shadow: 0 0 40px rgba(255, 215, 0, 0.7), 0 0 80px rgba(255, 180, 0, 0.3);
+}
+
+@keyframes summon-ring-expand {
+	0% { opacity: 1; transform: scale(0.5); }
+	60% { opacity: 0.8; transform: scale(1); }
+	100% { opacity: 0; transform: scale(1.3); }
+}
+
+/* 14. Death Dissolve Animation */
+.minion-death-dissolve {
+	animation: death-dissolve 0.6s ease-in forwards;
+}
+
+@keyframes death-dissolve {
+	0% { transform: scale(1); opacity: 1; filter: brightness(1) saturate(1); }
+	20% { transform: scale(1.05); filter: brightness(1.8) saturate(0.5); }
+	50% { transform: scale(0.95) translateY(-5px); opacity: 0.6; filter: brightness(0.8) saturate(0.2); }
+	100% { transform: scale(0.3) translateY(-30px); opacity: 0; filter: brightness(0.3) saturate(0); }
+}
+
+/* Death shatter fragments (applied to pseudo-elements or child divs) */
+.death-fragment {
+	position: absolute;
+	width: 8px;
+	height: 8px;
+	border-radius: 2px;
+	animation: fragment-scatter 0.5s ease-out forwards;
+	pointer-events: none;
+}
+
+@keyframes fragment-scatter {
+	0% { opacity: 1; transform: translate(0, 0) rotate(0deg) scale(1); }
+	100% { opacity: 0; transform: translate(var(--frag-x, 30px), var(--frag-y, -40px)) rotate(var(--frag-rot, 180deg)) scale(0.2); }
+}
+
+/* 15. Spell Cast VFX */
+.spell-cast-flash {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	z-index: 9100;
+	animation: spell-flash 0.4s ease-out forwards;
+}
+
+.spell-cast-flash.element-fire { background: radial-gradient(circle at center, rgba(255, 100, 0, 0.3) 0%, transparent 60%); }
+.spell-cast-flash.element-ice { background: radial-gradient(circle at center, rgba(100, 180, 255, 0.3) 0%, transparent 60%); }
+.spell-cast-flash.element-lightning { background: radial-gradient(circle at center, rgba(255, 255, 100, 0.3) 0%, transparent 60%); }
+.spell-cast-flash.element-shadow { background: radial-gradient(circle at center, rgba(128, 0, 200, 0.3) 0%, transparent 60%); }
+.spell-cast-flash.element-nature { background: radial-gradient(circle at center, rgba(50, 200, 80, 0.3) 0%, transparent 60%); }
+.spell-cast-flash.element-holy { background: radial-gradient(circle at center, rgba(255, 230, 150, 0.3) 0%, transparent 60%); }
+
+@keyframes spell-flash {
+	0% { opacity: 0; transform: scale(0.5); }
+	30% { opacity: 1; transform: scale(1); }
+	100% { opacity: 0; transform: scale(1.5); }
+}
+
+/* 16. Card Draw Fly-in */
+.card-draw-fly-in {
+	animation: card-draw-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes card-draw-enter {
+	0% { transform: translateX(var(--draw-start-x, 200px)) translateY(var(--draw-start-y, -100px)) scale(0.5) rotateY(90deg); opacity: 0; }
+	50% { transform: translateX(calc(var(--draw-start-x, 200px) * 0.3)) translateY(calc(var(--draw-start-y, -100px) * 0.2)) scale(0.9) rotateY(30deg); opacity: 1; }
+	100% { transform: translateX(0) translateY(0) scale(1) rotateY(0deg); opacity: 1; }
+}
+
+/* 17. Crit Damage Keyframe */
+@keyframes damage-crit-fly {
+	0% { opacity: 1; transform: translateY(0) scale(0.5); }
+	20% { opacity: 1; transform: translateY(-10px) scale(1.8); }
+	50% { opacity: 1; transform: translateY(-40px) scale(1.3); }
+	100% { opacity: 0; transform: translateY(-90px) scale(0.8); }
+}
+
+/* 18. Heal Number Keyframe */
+@keyframes heal-number-fly {
+	0% { opacity: 1; transform: translateY(0) scale(0.8); }
+	30% { opacity: 1; transform: translateY(-20px) scale(1.2); }
+	100% { opacity: 0; transform: translateY(-60px) scale(0.9); }
+}
+
+/* 19. Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+	.poker-combat-animation *,
+	.screen-shake-mild,
+	.screen-shake-moderate,
+	.screen-shake-heavy,
+	.minion-attack-lunge,
+	.card-summon-entrance,
+	.minion-death-dissolve,
+	.card-draw-fly-in {
+		animation-duration: 0.01ms !important;
+	}
+	.super-move-flash,
+	.spell-cast-flash { display: none; }
+}

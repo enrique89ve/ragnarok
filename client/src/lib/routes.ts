@@ -1,0 +1,18 @@
+export const routes = {
+  home: '/',
+  game: '/game',
+  campaign: '/campaign',
+  multiplayer: '/multiplayer',
+  tournaments: '/tournaments',
+  packs: '/packs',
+  collection: '/collection',
+  trading: '/trading',
+  treasury: '/treasury',
+  ladder: '/ladder',
+  history: '/history',
+  settings: '/settings',
+  spectate: '/spectate/:peerId',
+  marketplace: '/marketplace',
+  explorer: '/explorer',
+  admin: '/admin',
+};

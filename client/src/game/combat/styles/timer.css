@@ -1,0 +1,153 @@
+/* ============================================================
+   HOURGLASS TIMER — Norse ornamental hourglass with sand physics
+   ============================================================ */
+
+.hourglass-timer {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-hud);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.8));
+}
+
+.hourglass-svg {
+  width: 48px;
+  height: 80px;
+}
+
+/* Ambient glow behind the glass */
+.hg-ambient-glow {
+  opacity: 0.4;
+  animation: hg-glow-breathe 3s ease-in-out infinite;
+}
+
+@keyframes hg-glow-breathe {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.5; }
+}
+
+/* Sand stream shimmer */
+.hg-stream {
+  opacity: 0.8;
+  animation: hg-stream-flow 0.4s linear infinite;
+  stroke-dasharray: 2 2;
+}
+
+@keyframes hg-stream-flow {
+  0% { opacity: 0.5; stroke-dashoffset: 0; }
+  50% { opacity: 1; }
+  100% { opacity: 0.5; stroke-dashoffset: 4; }
+}
+
+/* Falling sand particles */
+.hg-particle {
+  animation: hg-sand-fall 0.8s ease-in infinite;
+}
+
+.hg-p1 { animation-delay: 0s; }
+.hg-p2 { animation-delay: 0.25s; }
+.hg-p3 { animation-delay: 0.5s; }
+
+@keyframes hg-sand-fall {
+  0% { opacity: 1; transform: translateY(0); }
+  80% { opacity: 0.8; }
+  100% { opacity: 0; transform: translateY(6px); }
+}
+
+/* Glass shine shimmer — subtle moving highlight */
+.hg-shine-top {
+  animation: hg-shine-pulse 4s ease-in-out infinite;
+}
+
+.hg-shine-bottom {
+  animation: hg-shine-pulse 4s ease-in-out infinite 2s;
+}
+
+@keyframes hg-shine-pulse {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 0.5; }
+}
+
+/* Countdown number */
+.hg-countdown {
+  font-family: 'Cinzel', 'Georgia', serif;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #d4af37;
+  text-shadow:
+    0 0 6px rgba(212, 175, 55, 0.6),
+    0 1px 3px rgba(0, 0, 0, 0.8);
+  line-height: 1;
+  margin-top: -2px;
+}
+
+/* ============================================================
+   LOW TIME — Urgency state (<=10 seconds)
+   ============================================================ */
+.hourglass-timer.low-time .hg-countdown {
+  color: #ef4444;
+  animation: hg-timer-blink 0.6s ease-in-out infinite;
+  text-shadow:
+    0 0 8px rgba(239, 68, 68, 0.8),
+    0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.hourglass-timer.low-time .hg-sand-top,
+.hourglass-timer.low-time .hg-sand-bottom {
+  fill: #dc2626;
+}
+
+.hourglass-timer.low-time .hg-stream {
+  stroke: #ef4444;
+}
+
+.hourglass-timer.low-time .hg-particle {
+  fill: #ef4444;
+}
+
+.hourglass-timer.low-time .hg-ambient-glow {
+  opacity: 0.5;
+}
+
+/* ============================================================
+   CRITICAL TIME — Panic state (<=5 seconds)
+   ============================================================ */
+.hourglass-timer.critical {
+  animation: hg-shake 0.3s ease-in-out infinite;
+}
+
+.hourglass-timer.critical .hg-ambient-glow {
+  opacity: 0.7;
+  fill: rgba(239, 68, 68, 0.4);
+}
+
+@keyframes hg-timer-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes hg-shake {
+  0%, 100% { transform: translateX(-50%) rotate(0deg); }
+  25% { transform: translateX(-50%) rotate(1.5deg); }
+  75% { transform: translateX(-50%) rotate(-1.5deg); }
+}
+
+/* Legacy compat */
+.timer-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 0;
+}
+
+.timer-section .timer-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #fbbf24;
+}

@@ -1,0 +1,16 @@
+{
+	"name": "Ragnarok: Norse Mythos Card Game",
+	"short_name": "Ragnarok",
+	"description": "A multi-mythology digital collectible card game with poker combat mechanics",
+	"start_url": "./",
+	"display": "standalone",
+	"orientation": "landscape",
+	"background_color": "#0a0a1a",
+	"theme_color": "#d4af37",
+	"icons": [
+		{ "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+		{ "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+		{ "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+	],
+	"categories": ["games", "entertainment"]
+}

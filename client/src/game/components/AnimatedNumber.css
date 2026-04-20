@@ -1,0 +1,31 @@
+.animated-number {
+	display: inline-block;
+	transition: color 0.2s ease;
+}
+
+.animated-number.flash-down {
+	animation: number-flash-down 0.5s ease-out;
+}
+
+.animated-number.flash-up {
+	animation: number-flash-up 0.5s ease-out;
+}
+
+@keyframes number-flash-down {
+	0% { transform: scale(1); }
+	20% { transform: scale(1.4); color: #ef4444; text-shadow: 0 0 8px rgba(239, 68, 68, 0.6); }
+	100% { transform: scale(1); }
+}
+
+@keyframes number-flash-up {
+	0% { transform: scale(1); }
+	20% { transform: scale(1.4); color: #22c55e; text-shadow: 0 0 8px rgba(34, 197, 94, 0.6); }
+	100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.animated-number.flash-down,
+	.animated-number.flash-up {
+		animation: none;
+	}
+}

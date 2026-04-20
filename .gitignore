@@ -1,0 +1,140 @@
+# Dependencies
+node_modules/
+.npm/
+.upm/
+jspm_packages/
+
+# Build outputs
+dist/
+build/
+*.pyc
+__pycache__/
+
+# ========================================
+# REPLIT INTERNAL FILES - SECURITY CRITICAL
+# ========================================
+# These files contain Replit-specific configuration,
+# internal URLs, database connections, and system data.
+# They should NEVER be pushed to GitHub.
+
+# Replit configuration
+.replit
+replit.nix
+.replit-rules.json
+replit.md
+replit_push_status.json
+
+# Replit internal directories
+.config/
+.cache/
+.replit_db/
+.local/
+.upm/
+
+# Replit logs and temp files
+nohup.out
+log_mapping.json
+/tmp/
+
+# MCP server database files
+mcp-server/src/sqlite/*.db
+
+# ========================================
+# ENVIRONMENT & SECRETS - SECURITY CRITICAL
+# ========================================
+# Never commit secrets, keys, or environment files
+
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.secret
+*_key.json
+*_credentials.json
+
+# Database URLs and connection strings
+# (These may be embedded in config files - be careful)
+*.db
+*.sqlite
+*.sqlite3
+
+# ========================================
+# TEST & UTILITY SCRIPTS
+# ========================================
+# Root-level CJS/JS scripts are typically one-off utilities
+# that should not be in version control
+
+/*.cjs
+/*.js
+scripts/temp/
+!vite.config.js
+!postcss.config.js
+!tailwind.config.js
+!drizzle.config.js
+!eslint.config.js
+
+# Test files
+tests/
+__tests__/
+*.test.js
+*.test.ts
+!**/protocolConformance.test.ts
+*.spec.js
+*.spec.ts
+*.test.tsx
+*.spec.tsx
+
+# Analysis and debug output
+ast-analysis-results.json
+all_files.txt
+*.log
+
+# ========================================
+# ATTACHED ASSETS WITH REPLIT CONTENT
+# ========================================
+# Pasted content often contains internal Replit info
+attached_assets/Pasted--Coframe-*
+attached_assets/*replit*
+attached_assets/*Replit*
+
+# ========================================
+# IDE & OS FILES
+# ========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ========================================
+# STALE COMPILED FILES - BUILD ARTIFACTS
+# ========================================
+# Prevent stale .js files from accumulating in source directories
+# These can cause Vite module resolution issues
+
+client/src/**/*.js
+!client/src/vite-env.d.ts
+
+# ========================================
+# DOCUMENTATION GUIDELINES
+# ========================================
+# When pushing to GitHub:
+# 1. NEVER include database URLs or connection strings
+# 2. NEVER include API keys or secrets
+# 3. NEVER include Replit internal configuration
+# 4. NEVER include one-off test/fix scripts
+# 5. Always verify with: git status --ignored
+
+# Asset packs (build artifacts, ~255MB zips)
+client/public/packs/
+
+# Unused art stockpile (kept locally, not deployed)
+client/public/art/unused/
+
+# Server-side chain indexer state (runtime data)
+data/chain-state.json
+
+# Claude Code local settings
+.claude/

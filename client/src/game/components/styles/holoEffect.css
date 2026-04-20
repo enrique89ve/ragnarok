@@ -1,0 +1,413 @@
+/* ============================================================
+   Authentic 90s Holographic Foil — 4 Rarity Tiers
+   Replaces 10-variant Pokemon port with physics-accurate foil:
+   - color-dodge blend (foil only brightens highlights)
+   - Luminosity mask (tight cursor-following spotlight)
+   - Glitter PNG texture (tiled micro-sparkle)
+   - Art-window mask (foil restricted to art area)
+   - Idle shimmer via @property (no interaction needed)
+   - Parallax dual-angle gradients (epic+)
+   ============================================================ */
+
+/* --- Animatable custom properties for idle shimmer --- */
+@property --holo-idle-x {
+	syntax: "<percentage>";
+	inherits: false;
+	initial-value: 48%;
+}
+
+@property --holo-idle-y {
+	syntax: "<percentage>";
+	inherits: false;
+	initial-value: 48%;
+}
+
+/* --- Foil palette (overridden by element themes) --- */
+:root {
+	--foil-1: hsl(2, 100%, 73%);
+	--foil-2: hsl(53, 100%, 69%);
+	--foil-3: hsl(93, 100%, 69%);
+	--foil-4: hsl(176, 100%, 76%);
+	--foil-5: hsl(228, 100%, 74%);
+	--foil-6: hsl(283, 100%, 73%);
+}
+
+/* ============================================================
+   Base Layer Styles (hidden until holo-active or idle shimmer)
+   ============================================================ */
+
+:is(.holo-foil, .holo-glitter, .holo-glare) {
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 0.4s ease;
+	contain: strict;
+}
+
+.holo-foil {
+	z-index: 5;
+	will-change: opacity;
+	background-image: repeating-linear-gradient(
+		133deg,
+		var(--foil-1), var(--foil-2), var(--foil-3),
+		var(--foil-4), var(--foil-5), var(--foil-6), var(--foil-1)
+	);
+	background-size: 300% 300%;
+	background-position:
+		calc(((50% - var(--bg-x, 50%)) * 2.6) + 50%)
+		calc(((50% - var(--bg-y, 50%)) * 3.5) + 50%);
+	mix-blend-mode: color-dodge;
+	filter:
+		brightness(calc((var(--pointer-from-center, 0) * 0.3) + 0.4))
+		contrast(2.8)
+		saturate(0.55);
+}
+
+.holo-glitter {
+	z-index: 5;
+	will-change: opacity;
+	background-image: url('/art/textures/glitter-256.webp');
+	background-size: 256px 256px;
+	background-repeat: repeat;
+	background-position:
+		calc(var(--bg-x, 50%) * 2px)
+		calc(var(--bg-y, 50%) * 2px);
+	mix-blend-mode: soft-light;
+}
+
+.holo-glare {
+	z-index: 7;
+	will-change: opacity;
+	background: radial-gradient(
+		farthest-corner circle at var(--pointer-x, 50%) var(--pointer-y, 50%),
+		hsla(0, 0%, 100%, 0.35) 0%,
+		hsla(0, 0%, 100%, 0.1) 15%,
+		transparent 40%
+	);
+	mix-blend-mode: overlay;
+	filter: brightness(0.8);
+}
+
+/* ============================================================
+   3D Tilt — applied to the card container via .holo-active
+   ============================================================ */
+
+.holo-active {
+	transform: perspective(800px) rotateY(var(--rotate-x, 0deg)) rotateX(var(--rotate-y, 0deg));
+}
+
+[style*="--rotate-x"] {
+	transition: transform 0.35s ease-out;
+}
+
+/* ============================================================
+   Art-Window Mask — foil + glitter restricted to art area
+   ============================================================ */
+
+:is(.holo-foil, .holo-glitter) {
+	-webkit-mask-image: linear-gradient(black, black);
+	-webkit-mask-size: 88% 55%;
+	-webkit-mask-position: center 28%;
+	-webkit-mask-repeat: no-repeat;
+	mask-image: linear-gradient(black, black);
+	mask-size: 88% 55%;
+	mask-position: center 28%;
+	mask-repeat: no-repeat;
+}
+
+/* ============================================================
+   Layer 1: Rainbow Foil (.holo-foil)
+   color-dodge only brightens bright art areas
+   ============================================================ */
+
+/* Luminosity mask — restricts rainbow to tight cursor area */
+.holo-foil::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	background: radial-gradient(
+		farthest-corner circle at var(--pointer-x, 50%) var(--pointer-y, 50%),
+		hsla(0, 0%, 90%, 0.8) 10%,
+		hsla(0, 0%, 60%, 0.3) 40%,
+		hsl(0, 0%, 0%) 85%
+	);
+	mix-blend-mode: luminosity;
+	filter: brightness(0.55) contrast(3.5);
+}
+
+/* ============================================================
+   Layer 1a: Parallax Second Rainbow (.holo-foil::before, epic+)
+   Second gradient at offset angle, shifts at 1.5x for depth
+   ============================================================ */
+
+.holo-epic .holo-foil::before,
+.holo-mythic .holo-foil::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	background-image: repeating-linear-gradient(
+		-47deg,
+		var(--foil-6), var(--foil-4), var(--foil-2),
+		var(--foil-5), var(--foil-1), var(--foil-3), var(--foil-6)
+	);
+	background-size: 350% 350%;
+	background-position:
+		calc(var(--bg-x, 50%) * 1.5)
+		calc(var(--bg-y, 50%) * 1.5);
+	mix-blend-mode: hue;
+	filter: brightness(1.5) contrast(1.3) saturate(0.5);
+	opacity: 0.6;
+}
+
+/* ============================================================
+   Layer 2: Glitter Texture (.holo-glitter)
+   Tiled 256px PNG noise with cursor-tracking shift
+   ============================================================ */
+
+/* Epic: add scanline grooves */
+.holo-epic .holo-glitter {
+	background-image:
+		url('/art/textures/glitter-256.webp'),
+		repeating-linear-gradient(
+			110deg,
+			transparent 0px, transparent 3px,
+			rgba(255, 255, 255, 0.06) 3px, rgba(255, 255, 255, 0.06) 4px
+		);
+	background-size: 256px 256px, 100% 4px;
+}
+
+/* Mythic: crosshatch diamond grid (secret rare embossing) */
+.holo-mythic .holo-glitter {
+	background-image:
+		url('/art/textures/glitter-256.webp'),
+		repeating-linear-gradient(
+			45deg,
+			transparent 0px, transparent 4px,
+			rgba(255, 255, 255, 0.04) 4px, rgba(255, 255, 255, 0.04) 5px
+		),
+		repeating-linear-gradient(
+			-45deg,
+			transparent 0px, transparent 4px,
+			rgba(255, 255, 255, 0.04) 4px, rgba(255, 255, 255, 0.04) 5px
+		);
+	background-size: 256px 256px, 100% 5px, 100% 5px;
+}
+
+/* ============================================================
+   Layer 3: Specular Glare (.holo-glare)
+   Tight white spotlight following cursor
+   ============================================================ */
+
+/* Mythic: secondary screen-blend halo for metallic sheen */
+.holo-mythic .holo-glare::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	background: radial-gradient(
+		farthest-corner circle at var(--pointer-x, 50%) var(--pointer-y, 50%),
+		hsla(190, 60%, 90%, 0.3) 5%,
+		hsla(190, 40%, 70%, 0.1) 25%,
+		transparent 55%
+	);
+	mix-blend-mode: screen;
+	filter: brightness(0.6) contrast(3);
+}
+
+/* ============================================================
+   Tier 1: Rare — subtle foil + gentle glitter
+   ============================================================ */
+
+.holo-rare.holo-active .holo-foil {
+	opacity: 0.35;
+}
+
+.holo-rare.holo-active .holo-glitter {
+	opacity: 0.15;
+}
+
+.holo-rare.holo-active .holo-glare {
+	opacity: calc(0.2 + var(--pointer-from-center, 0) * 0.25);
+}
+
+/* ============================================================
+   Tier 2: Epic — strong prism + parallax + grooves
+   ============================================================ */
+
+.holo-epic.holo-active .holo-foil {
+	opacity: 0.5;
+}
+
+.holo-epic.holo-active .holo-glitter {
+	opacity: 0.25;
+}
+
+.holo-epic.holo-active .holo-glare {
+	opacity: calc(0.3 + var(--pointer-from-center, 0) * 0.35);
+}
+
+/* ============================================================
+   Tier 3: Mythic — full spectrum + crosshatch + art parallax
+   ============================================================ */
+
+.holo-mythic.holo-active .holo-foil {
+	opacity: 0.65;
+}
+
+.holo-mythic.holo-active .holo-glitter {
+	opacity: 0.35;
+}
+
+.holo-mythic.holo-active .holo-glare {
+	opacity: calc(0.4 + var(--pointer-from-center, 0) * 0.4);
+}
+
+/* Art parallax — mythic only */
+.holo-mythic.holo-active .card-art-image {
+	transform:
+		translateX(calc((var(--pointer-from-left, 0.5) - 0.5) * 6px))
+		translateY(calc((var(--pointer-from-top, 0.5) - 0.5) * 6px));
+	transition: transform 0.1s ease-out;
+}
+
+/* ============================================================
+   Idle Shimmer — cards glint without interaction
+   ============================================================ */
+
+@keyframes idle-shimmer {
+	0%, 100% {
+		--holo-idle-x: 46%;
+		--holo-idle-y: 48%;
+	}
+	33% {
+		--holo-idle-x: 54%;
+		--holo-idle-y: 52%;
+	}
+	66% {
+		--holo-idle-x: 50%;
+		--holo-idle-y: 46%;
+	}
+}
+
+/* Idle foil: visible at low opacity, overridden by holo-active */
+.holo-rare:not(.holo-active) .holo-foil {
+	background-position: var(--holo-idle-x) var(--holo-idle-y);
+	animation: idle-shimmer 6s ease-in-out infinite;
+	opacity: 0.1;
+}
+
+.holo-epic:not(.holo-active) .holo-foil {
+	background-position: var(--holo-idle-x) var(--holo-idle-y);
+	animation: idle-shimmer 6s ease-in-out infinite;
+	opacity: 0.15;
+}
+
+.holo-mythic:not(.holo-active) .holo-foil {
+	background-position: var(--holo-idle-x) var(--holo-idle-y);
+	animation: idle-shimmer 6s ease-in-out infinite;
+	opacity: 0.22;
+}
+
+/* ============================================================
+   Stage 3 Evolved Pets — max intensity override
+   ============================================================ */
+
+.stage3-evolved.holo-active .holo-foil {
+	opacity: 0.8 !important;
+}
+
+.stage3-evolved.holo-active .holo-glitter {
+	opacity: 0.45 !important;
+}
+
+.stage3-evolved.holo-active .holo-glare {
+	opacity: 0.55 !important;
+}
+
+.stage3-evolved:not(.holo-active) .holo-foil {
+	opacity: 0.3;
+}
+
+/* ============================================================
+   Element-Themed Variants — override foil palette colors
+   Applied via .element-holo-{theme} on the card container
+   ============================================================ */
+
+.element-holo-fire {
+	--foil-1: hsl(0, 100%, 65%);
+	--foil-2: hsl(20, 100%, 60%);
+	--foil-3: hsl(40, 100%, 65%);
+	--foil-4: hsl(30, 100%, 55%);
+	--foil-5: hsl(10, 90%, 50%);
+	--foil-6: hsl(350, 100%, 60%);
+}
+
+.element-holo-ice {
+	--foil-1: hsl(190, 100%, 75%);
+	--foil-2: hsl(200, 100%, 80%);
+	--foil-3: hsl(210, 90%, 85%);
+	--foil-4: hsl(220, 100%, 75%);
+	--foil-5: hsl(195, 100%, 70%);
+	--foil-6: hsl(185, 90%, 80%);
+}
+
+.element-holo-electric {
+	--foil-1: hsl(50, 100%, 65%);
+	--foil-2: hsl(45, 100%, 70%);
+	--foil-3: hsl(55, 100%, 75%);
+	--foil-4: hsl(40, 100%, 60%);
+	--foil-5: hsl(60, 90%, 65%);
+	--foil-6: hsl(35, 100%, 55%);
+}
+
+.element-holo-shadow {
+	--foil-1: hsl(270, 60%, 50%);
+	--foil-2: hsl(280, 50%, 40%);
+	--foil-3: hsl(260, 70%, 55%);
+	--foil-4: hsl(290, 60%, 45%);
+	--foil-5: hsl(250, 50%, 50%);
+	--foil-6: hsl(300, 60%, 40%);
+}
+
+.element-holo-light {
+	--foil-1: hsl(45, 100%, 80%);
+	--foil-2: hsl(50, 100%, 85%);
+	--foil-3: hsl(40, 100%, 90%);
+	--foil-4: hsl(55, 90%, 80%);
+	--foil-5: hsl(35, 100%, 75%);
+	--foil-6: hsl(60, 80%, 85%);
+}
+
+.element-holo-water {
+	--foil-1: hsl(200, 100%, 65%);
+	--foil-2: hsl(210, 100%, 70%);
+	--foil-3: hsl(195, 90%, 60%);
+	--foil-4: hsl(220, 100%, 65%);
+	--foil-5: hsl(190, 100%, 55%);
+	--foil-6: hsl(205, 90%, 70%);
+}
+
+.element-holo-grass {
+	--foil-1: hsl(120, 70%, 55%);
+	--foil-2: hsl(130, 60%, 60%);
+	--foil-3: hsl(100, 70%, 50%);
+	--foil-4: hsl(140, 60%, 55%);
+	--foil-5: hsl(110, 70%, 45%);
+	--foil-6: hsl(150, 50%, 55%);
+}
+
+/* ============================================================
+   Reduced Motion — hide all holo effects
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+	.holo-foil,
+	.holo-glitter,
+	.holo-glare {
+		display: none;
+	}
+}

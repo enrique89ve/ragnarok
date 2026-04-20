@@ -1,0 +1,104 @@
+.hbp-overlay {
+	pointer-events: none;
+	z-index: 700;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+	padding: 10px 16px;
+	border-radius: 10px;
+	background: radial-gradient(ellipse at center, rgba(20, 16, 28, 0.92) 0%, rgba(10, 8, 18, 0.88) 100%);
+	border: 2px solid var(--hbp-color, #9E9E9E);
+	box-shadow:
+		0 0 12px color-mix(in srgb, var(--hbp-color, #9E9E9E) 50%, transparent),
+		0 0 24px color-mix(in srgb, var(--hbp-color, #9E9E9E) 25%, transparent),
+		inset 0 0 8px rgba(0, 0, 0, 0.4);
+	min-width: 80px;
+	max-width: 180px;
+}
+
+.hbp-icon-wrap {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 52px;
+	height: 52px;
+	border-radius: 50%;
+	background: radial-gradient(circle, color-mix(in srgb, var(--hbp-color, #9E9E9E) 30%, transparent) 0%, transparent 70%);
+	color: var(--hbp-color, #9E9E9E);
+	filter: drop-shadow(0 0 6px var(--hbp-color, #9E9E9E));
+	animation: hbp-icon-pulse 1.2s ease-in-out 1;
+}
+
+.hbp-icon-wrap svg {
+	width: 36px;
+	height: 36px;
+}
+
+.hbp-text {
+	font-size: 14px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: #fff;
+	text-shadow:
+		0 0 6px var(--hbp-color, #9E9E9E),
+		0 1px 2px rgba(0, 0, 0, 0.6);
+	text-align: center;
+	line-height: 1.2;
+	white-space: nowrap;
+}
+
+.hbp-subtitle {
+	font-size: 11px;
+	font-weight: 600;
+	color: rgba(255, 255, 255, 0.65);
+	text-align: center;
+	white-space: nowrap;
+}
+
+/* Brace: silver shield glow */
+.hbp-brace {
+	--hbp-color: #9E9E9E;
+}
+
+/* Attack: orange sword glow */
+.hbp-attack {
+	--hbp-color: #FF9800;
+}
+
+/* Counter-attack: deep orange */
+.hbp-counter_attack {
+	--hbp-color: #FF5722;
+}
+
+/* Engage: blue crossed swords */
+.hbp-engage {
+	--hbp-color: #2196F3;
+}
+
+/* Defend: green helm */
+.hbp-defend {
+	--hbp-color: #4CAF50;
+}
+
+@keyframes hbp-icon-pulse {
+	0% {
+		transform: scale(1);
+		filter: drop-shadow(0 0 6px var(--hbp-color, #9E9E9E));
+	}
+	40% {
+		transform: scale(1.06);
+		filter: drop-shadow(0 0 10px var(--hbp-color, #9E9E9E));
+	}
+	100% {
+		transform: scale(1);
+		filter: drop-shadow(0 0 6px var(--hbp-color, #9E9E9E));
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.hbp-icon-wrap {
+		animation: none;
+	}
+}

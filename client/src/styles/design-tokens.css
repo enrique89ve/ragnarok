@@ -1,0 +1,345 @@
+/**
+ * DESIGN TOKENS - Single Source of Truth
+ * =======================================
+ * Centralized CSS variables for the entire application.
+ * Import this file FIRST in index.css to ensure all components inherit these tokens.
+ * 
+ * ORGANIZATION:
+ * 1. Colors - Brand, rarity, stats, semantic
+ * 2. Spacing - Consistent spacing scale
+ * 3. Typography - Font sizes, weights
+ * 4. Border Radius - Consistent rounding
+ * 5. Shadows - Elevation system
+ * 6. Z-Index - Layering hierarchy
+ * 7. Layout Grid - Container widths, gaps, responsive breakpoints
+ * 8. Component Sizes - Cards, heroes, panels
+ * 
+ * TO CUSTOMIZE: Change values here - all components will update automatically.
+ */
+
+:root {
+  /* =============================================
+     1. COLORS
+     ============================================= */
+  
+  /* Norse Brand Palette */
+  --color-gold: #ffd700;
+  --color-gold-muted: rgba(255, 215, 0, 0.6);
+  --color-norse-dark: #0a0a0a;
+  --color-norse-surface: #1a1a1a;
+  --color-rune-blue: #00d2ff;
+  --color-amber-primary: #92400e;
+  --color-amber-secondary: #78350f;
+  
+  /* Rarity Colors - Consistent across all components */
+  --rarity-basic: #d1d5db;
+  --rarity-common: #f3f4f6;
+  --rarity-rare: #60a5fa;
+  --rarity-epic: #c084fc;
+  --rarity-mythic: #f59e0b;
+
+  /* Rarity Colors - Text variants */
+  --rarity-basic-text: rgb(209 213 219);
+  --rarity-common-text: rgb(243 244 246);
+  --rarity-rare-text: rgb(96 165 250);
+  --rarity-epic-text: rgb(192 132 252);
+  --rarity-mythic-text: rgb(251 146 60);
+
+  /* Rarity Colors - Border variants */
+  --rarity-basic-border: rgb(156 163 175);
+  --rarity-common-border: rgb(209 213 219);
+  --rarity-rare-border: rgb(59 130 246);
+  --rarity-epic-border: rgb(168 85 247);
+  --rarity-mythic-border: rgb(249 115 22);
+
+  /* Rarity Colors - Background variants */
+  --rarity-basic-bg: rgb(55 65 81);
+  --rarity-common-bg: rgb(55 65 81);
+  --rarity-rare-bg: rgba(30, 58, 138, 0.5);
+  --rarity-epic-bg: rgba(88, 28, 135, 0.5);
+  --rarity-mythic-bg: rgba(124, 45, 18, 0.5);
+  
+  /* Stat Colors */
+  --stat-mana: rgb(37 99 235);
+  --stat-mana-border: rgb(96 165 250);
+  --stat-attack: rgb(202 138 4);
+  --stat-attack-border: rgb(250 204 21);
+  --stat-health: rgb(220 38 38);
+  --stat-health-border: rgb(248 113 113);
+  
+  /* UI Surface Colors */
+  --surface-primary: rgb(17 24 39);
+  --surface-secondary: rgb(31 41 55);
+  --surface-elevated: rgb(55 65 81);
+  --border-subtle: rgb(55 65 81);
+  --border-default: rgb(75 85 99);
+  
+  /* Action Colors */
+  --action-primary: rgb(202 138 4);
+  --action-success: rgb(22 163 74);
+  --action-danger: rgb(220 38 38);
+  --action-info: rgb(37 99 235);
+  
+  /* Text Colors */
+  --text-primary: #f3f4f6;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+  
+  /* =============================================
+     2. SPACING
+     ============================================= */
+  --space-xs: 0.25rem;   /* 4px */
+  --space-sm: 0.5rem;    /* 8px */
+  --space-md: 0.75rem;   /* 12px */
+  --space-lg: 1rem;      /* 16px */
+  --space-xl: 1.5rem;    /* 24px */
+  --space-2xl: 2rem;     /* 32px */
+  --space-3xl: 3rem;     /* 48px */
+  
+  /* =============================================
+     3. TYPOGRAPHY
+     ============================================= */
+  --text-xs: 0.75rem;    /* 12px */
+  --text-sm: 0.875rem;   /* 14px */
+  --text-base: 1rem;     /* 16px */
+  --text-lg: 1.125rem;   /* 18px */
+  --text-xl: 1.25rem;    /* 20px */
+  --text-2xl: 1.5rem;    /* 24px */
+  --text-3xl: 1.875rem;  /* 30px */
+  
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  
+  /* =============================================
+     4. BORDER RADIUS
+     ============================================= */
+  --radius-sm: 0.375rem;  /* 6px */
+  --radius-md: 0.5rem;    /* 8px */
+  --radius-lg: 0.75rem;   /* 12px */
+  --radius-xl: 1rem;      /* 16px */
+  --radius-full: 9999px;
+  
+  /* =============================================
+     5. SHADOWS
+     ============================================= */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.6);
+  --shadow-glow-gold: 0 0 20px rgba(255, 215, 0, 0.5);
+  --shadow-glow-blue: 0 0 20px rgba(59, 130, 246, 0.5);
+  
+  /* =============================================
+     6. Z-INDEX HIERARCHY
+     Single source of truth for all z-index values
+     ============================================= */
+  --z-base: 1;
+  --z-battlefield: 10;
+  --z-cards: 20;
+  --z-community: 25;
+  --z-heroes: 30;
+  --z-active-minion: 30;
+  --z-hand: 40;
+  --z-modal: 50;
+  --z-tooltip: 60;
+  --z-betting: 200;
+  --z-timer: 500;
+  --z-hover: 500;
+  --z-drag: 600;
+  --z-popup: 700;
+  --z-hud: 900;
+  --z-overlays: 2000;
+  --z-targeting: 5000;
+  --z-notifications: 9000;
+  --z-cinematic: 9500;
+  --z-topmost: 10000;
+
+  /* =============================================
+     7. LAYOUT GRID
+     Container widths, gaps, and responsive helpers
+     ============================================= */
+  
+  /* Container Max Widths */
+  --container-sm: 640px;
+  --container-md: 768px;
+  --container-lg: 1024px;
+  --container-xl: 1280px;
+  --container-2xl: 1536px;
+  
+  /* Layout Gaps */
+  --gap-xs: 0.25rem;     /* 4px */
+  --gap-sm: 0.5rem;      /* 8px */
+  --gap-md: 1rem;        /* 16px */
+  --gap-lg: 1.5rem;      /* 24px */
+  --gap-xl: 2rem;        /* 32px */
+  
+  /* Sidebar Widths */
+  --sidebar-sm: 14rem;   /* 224px */
+  --sidebar-md: 18rem;   /* 288px */
+  --sidebar-lg: 22rem;   /* 352px */
+  
+  /* Panel Widths */
+  --panel-sm: 280px;
+  --panel-md: 360px;
+  --panel-lg: 480px;
+  
+  /* Grid Columns (for common layouts) */
+  --cols-2: repeat(2, minmax(0, 1fr));
+  --cols-3: repeat(3, minmax(0, 1fr));
+  --cols-4: repeat(4, minmax(0, 1fr));
+  --cols-auto-fill-sm: repeat(auto-fill, minmax(200px, 1fr));
+  --cols-auto-fill-md: repeat(auto-fill, minmax(280px, 1fr));
+  --cols-auto-fill-lg: repeat(auto-fill, minmax(360px, 1fr));
+  
+  /* =============================================
+     8. COMPONENT SIZES
+     ============================================= */
+  
+  /* Card Dimensions — fixed px for virtual 1920×1080 canvas */
+  --card-width: 130px;
+  --card-height: 185px;
+  --card-tile-min-height: 140px;
+
+  /* Battlefield Cards */
+  --battlefield-card-width: 120px;
+  --battlefield-card-height: 168px;
+
+  /* Hand Cards */
+  --hand-card-width: 150px;
+  --hand-card-height: 210px;
+
+  /* Hero Cards */
+  --hero-card-width: 160px;
+  
+  /* Stat Badges */
+  --stat-badge-size: 1.5rem;
+  --stat-badge-size-lg: 1.75rem;
+  
+  /* Poker Panel */
+  --poker-panel-width: 400px;
+  --poker-panel-scale: 1;
+  --poker-panel-gap: 8px;
+
+  /* Zone Heights — fixed px for virtual canvas */
+  --opponent-zone-height: 180px;
+  --player-zone-height: 160px;
+  --hand-zone-height: 180px;
+  --field-zone-height: 180px;
+  
+  /* =============================================
+     9. TRANSITIONS
+     ============================================= */
+  --transition-fast: 150ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow: 300ms ease;
+  --transition-bounce: 300ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+  /* =============================================
+     10. NORSE COMBAT UI MATERIALS (Phase 1 — UI overhaul)
+     Materials, semantics and surfaces for the PvP / Play
+     combat arena. Single-source: NEVER inline these colors
+     anywhere — always reference these vars.
+     ============================================= */
+
+  /* Material palette — obsidian / iron / tarnished gold */
+  --ui-obsidian:        #0a0c12;
+  --ui-iron-darkest:    #12141b;
+  --ui-iron-dark:       #1a1d24;
+  --ui-iron-mid:        #262a33;
+  --ui-iron-light:      #3a4050;
+  --ui-iron-edge:       #4a5060;
+
+  /* Tarnished gold accent line */
+  --ui-gold-bright:     #d4af37;
+  --ui-gold-warm:       #b8860b;
+  --ui-gold-deep:       #6b4f0a;
+  --ui-gold-shadow:     rgba(212, 175, 55, 0.42);
+  --ui-gold-glow-soft:  rgba(212, 175, 55, 0.18);
+  --ui-gold-glow-hard:  rgba(255, 200, 60, 0.55);
+
+  /* Rune accents (cool cyan-blue, restrained) */
+  --ui-rune-cyan:       #4dd0e1;
+  --ui-rune-blue:       #5b8cb8;
+  --ui-rune-pale:       #d9e8f0;
+
+  /* Ember (restrained, never neon) */
+  --ui-ember-warm:      rgba(255, 140, 50, 0.32);
+  --ui-ember-deep:      rgba(180, 60, 20, 0.5);
+
+  /* Semantic combat colors */
+  --ui-hp-crimson:      #c8312a;          /* health primary */
+  --ui-hp-crimson-deep: #6b1a16;          /* health shadow */
+  --ui-hp-crimson-glow: rgba(200, 49, 42, 0.55);
+  --ui-mana-cyan:       #3a9ec4;          /* mana / energy primary */
+  --ui-mana-cyan-pale:  #7cc6dc;
+  --ui-mana-cyan-glow:  rgba(58, 158, 196, 0.55);
+  --ui-selection-gold:  #ffd700;          /* selected / active turn */
+  --ui-selection-pale:  #fff4c2;
+  --ui-disabled-bronze: #4a3a26;          /* exhausted / disabled */
+  --ui-danger-red:      #ef4444;          /* incoming damage flash only */
+
+  /* Panel surfaces — obsidian + gold trim */
+  --ui-panel-bg: linear-gradient(180deg,
+    rgba(20, 22, 28, 0.94) 0%,
+    rgba(12, 14, 20, 0.97) 50%,
+    rgba(6, 8, 12, 0.98) 100%);
+  --ui-panel-bg-dim: linear-gradient(180deg,
+    rgba(14, 16, 22, 0.88) 0%,
+    rgba(8, 10, 16, 0.94) 100%);
+  --ui-panel-border:        1px solid rgba(212, 175, 55, 0.45);
+  --ui-panel-border-strong: 2px solid rgba(212, 175, 55, 0.65);
+  --ui-panel-border-rune:   1px solid rgba(91, 140, 184, 0.42);
+  --ui-panel-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 215, 100, 0.10);
+  --ui-panel-shadow-lift:
+    0 12px 32px rgba(0, 0, 0, 0.78),
+    inset 0 1px 0 rgba(255, 215, 100, 0.14);
+
+  /* Typography — Cinzel for display, Inter for UI */
+  --font-display:  'Cinzel', 'Cinzel Decorative', Georgia, serif;
+  --font-decorative: 'Cinzel Decorative', 'Cinzel', Georgia, serif;
+  --font-ui:       'Inter', system-ui, -apple-system, Segoe UI, sans-serif;
+  --font-numeric:  'Cinzel', Georgia, serif;
+}
+
+/* =============================================
+   RESPONSIVE OVERRIDES
+   
+   NOTE: Combat-specific responsive overrides (card sizes, zone heights,
+   poker panel scaling) are in: client/src/game/combat/styles/responsive.css
+   
+   This file only contains general layout responsive overrides.
+   ============================================= */
+
+/* Small screens - general layout adjustments */
+@media (max-width: 768px) {
+  :root {
+    --sidebar-md: 100%;
+    --panel-md: 100%;
+  }
+}
+
+/* Medium screens */
+@media (min-width: 769px) and (max-width: 1024px) {
+  :root {
+    --sidebar-md: 16rem;
+    --panel-md: 320px;
+  }
+}
+
+/* =============================================
+   Z-INDEX UTILITY CLASSES
+   Use these instead of inline zIndex values.
+   Maps to the token tiers defined in :root above.
+   ============================================= */
+.z-notifications { z-index: var(--z-notifications) !important; }
+.z-cinematic { z-index: var(--z-cinematic) !important; }
+.z-topmost { z-index: var(--z-topmost) !important; }
+.z-overlays { z-index: var(--z-overlays) !important; }
+.z-targeting { z-index: var(--z-targeting) !important; }
+.z-popup { z-index: var(--z-popup) !important; }
+.z-hud { z-index: var(--z-hud) !important; }
+.z-drag { z-index: var(--z-drag) !important; }

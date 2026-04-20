@@ -1,0 +1,109 @@
+{
+  "_description": "Card ID Range Registry - Prevents ID collisions by reserving ranges per category",
+  "_version": "1.0.0",
+  "ranges": {
+    "dark_legendary": {
+      "start": 4300,
+      "end": 4309,
+      "nextAvailable": 4306,
+      "description": "Dark Legendary Creatures (Fenrir, Garm, Hati, etc.)"
+    },
+    "dark_legendary_tokens": {
+      "start": 4310,
+      "end": 4319,
+      "nextAvailable": 4314,
+      "description": "Dark Legendary Token Cards"
+    },
+    "mythological_legendary": {
+      "start": 4320,
+      "end": 4349,
+      "nextAvailable": 4341,
+      "description": "Mythological Legendary Creatures"
+    },
+    "fire_legendary": {
+      "start": 4350,
+      "end": 4369,
+      "nextAvailable": 4362,
+      "description": "Fire Legendaries (Surtr, Cinderstorm Wyrm, etc.)"
+    },
+    "earth_legendary": {
+      "start": 4370,
+      "end": 4379,
+      "nextAvailable": 4378,
+      "description": "Earth Legendaries (Audhumla, Eikthyrnir, etc.)"
+    },
+    "water_legendary": {
+      "start": 4380,
+      "end": 4389,
+      "nextAvailable": 4386,
+      "description": "Water Legendaries (Abyssal Kraken, Ran, etc.)"
+    },
+    "holy_legendary": {
+      "start": 4390,
+      "end": 4399,
+      "nextAvailable": 4396,
+      "description": "Holy Legendaries (Huginn, Muninn, Baldur, etc.)"
+    },
+    "fire_minions": {
+      "start": 5000,
+      "end": 5099,
+      "nextAvailable": 5021,
+      "description": "Fire Minions (pet-based creatures)"
+    },
+    "water_minions": {
+      "start": 5100,
+      "end": 5199,
+      "nextAvailable": 5120,
+      "description": "Water Minions (pet-based creatures)"
+    },
+    "shaman_reserved": {
+      "start": 5200,
+      "end": 5299,
+      "nextAvailable": 5226,
+      "description": "RESERVED for Shaman Cards - DO NOT USE for other elements",
+      "locked": true
+    },
+    "lightning_minions": {
+      "start": 5300,
+      "end": 5399,
+      "nextAvailable": 5320,
+      "description": "Lightning Minions (pet-based creatures)"
+    },
+    "dark_minions": {
+      "start": 5400,
+      "end": 5499,
+      "nextAvailable": 5420,
+      "description": "Dark Minions (pet-based creatures)"
+    },
+    "light_minions": {
+      "start": 5500,
+      "end": 5549,
+      "nextAvailable": 5510,
+      "description": "Light Minions (pet-based creatures)"
+    },
+    "neutral_minions": {
+      "start": 5550,
+      "end": 5599,
+      "nextAvailable": 5560,
+      "description": "Neutral Minions (pet-based creatures)"
+    },
+    "grass_earth_minions": {
+      "start": 6200,
+      "end": 6299,
+      "nextAvailable": 6224,
+      "description": "Grass/Earth Minions (pet-based creatures)"
+    },
+    "norse_general": {
+      "start": 20600,
+      "end": 20699,
+      "nextAvailable": 20630,
+      "description": "General Norse Mythology Cards"
+    }
+  },
+  "usedIds": {
+    "_note": "This section tracks individual IDs already in use to prevent duplicates",
+    "fire_minions": [
+      5020
+    ]
+  }
+}

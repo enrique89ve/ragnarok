@@ -1,0 +1,71 @@
+/*
+  BossPhaseFlash — fullscreen tinted gradient overlay that briefly washes
+  the combat arena when a boss phase fires. Pointer-events:none so it
+  never blocks input. z-index sits above the standard combat layer but
+  below tooltips/popups so the flash visually wraps the gameplay without
+  hiding system UI.
+*/
+
+.boss-phase-flash {
+	position: absolute;
+	inset: 0;
+	z-index: 800;
+	pointer-events: none;
+	mix-blend-mode: screen;
+}
+
+.boss-phase-flash-red {
+	background: radial-gradient(
+		ellipse 110% 90% at 50% 50%,
+		rgba(255, 40, 30, 0.55) 0%,
+		rgba(180, 20, 15, 0.45) 40%,
+		rgba(120, 10, 5, 0.30) 70%,
+		transparent 100%
+	);
+}
+
+.boss-phase-flash-gold {
+	background: radial-gradient(
+		ellipse 110% 90% at 50% 50%,
+		rgba(255, 215, 90, 0.50) 0%,
+		rgba(212, 175, 55, 0.40) 40%,
+		rgba(140, 100, 30, 0.25) 70%,
+		transparent 100%
+	);
+}
+
+.boss-phase-flash-blue {
+	background: radial-gradient(
+		ellipse 110% 90% at 50% 50%,
+		rgba(80, 180, 255, 0.50) 0%,
+		rgba(40, 120, 200, 0.40) 40%,
+		rgba(10, 60, 140, 0.25) 70%,
+		transparent 100%
+	);
+}
+
+.boss-phase-flash-green {
+	background: radial-gradient(
+		ellipse 110% 90% at 50% 50%,
+		rgba(80, 220, 100, 0.50) 0%,
+		rgba(40, 160, 60, 0.40) 40%,
+		rgba(10, 90, 25, 0.25) 70%,
+		transparent 100%
+	);
+}
+
+.boss-phase-flash-purple {
+	background: radial-gradient(
+		ellipse 110% 90% at 50% 50%,
+		rgba(170, 80, 230, 0.50) 0%,
+		rgba(110, 40, 180, 0.40) 40%,
+		rgba(50, 10, 100, 0.30) 70%,
+		transparent 100%
+	);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.boss-phase-flash {
+		display: none;
+	}
+}

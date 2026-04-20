@@ -1,0 +1,12 @@
+/* Arena Grid Layout — only .arena-content kept (used in JSX).
+   Dead .arena-header, .fire-border, @keyframes emberGlow/pulse-glow removed. */
+
+.arena-content {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  gap: 0;
+}

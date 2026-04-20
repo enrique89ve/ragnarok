@@ -1,0 +1,186 @@
+/* HandFan - CCG-style hand display with spring physics */
+/* Self-contained with CSS variable definitions */
+
+.hand-fan-container {
+  /* Fixed px — virtual canvas handles scaling */
+  --fan-card-width: var(--hand-card-width, 150px);
+  --fan-card-height: var(--hand-card-height, 210px);
+  /* Spring easing for satisfying snap-back motion */
+  --spring-easing: cubic-bezier(0.34, 1.18, 0.64, 1);
+  --smooth-easing: cubic-bezier(0.19, 1, 0.22, 1);
+  
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  position: relative;
+  height: calc(var(--fan-card-height) + 80px);
+  width: 100%;
+  padding-bottom: 10px;
+  overflow: visible;
+}
+
+.hand-fan-card {
+  width: var(--fan-card-width);
+  height: var(--fan-card-height);
+  position: relative;
+  flex-shrink: 0;
+  isolation: isolate;
+  /* Spring physics for smooth, satisfying motion */
+  transition:
+    transform 0.35s var(--spring-easing),
+    z-index 0s,
+    filter 0.2s ease;
+  transform-origin: bottom center;
+  cursor: pointer;
+}
+
+/* Overlap - each card overlaps the previous by ~30% */
+.hand-fan-card:not(:first-child) {
+  margin-left: calc(var(--fan-card-width) * -0.30);
+}
+
+/* Hovered state - handled via JS inline styles, but CSS fallback */
+.hand-fan-card.is-hovered {
+  filter: drop-shadow(0 20px 30px rgba(0, 0, 0, 0.5));
+}
+
+/* Playable cards — bright pulsing green glow to guide the player */
+.hand-fan-card.playable {
+  filter:
+    drop-shadow(0 0 6px rgba(34, 197, 94, 0.55))
+    drop-shadow(0 0 14px rgba(34, 197, 94, 0.3));
+  animation: playableCardPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes playableCardPulse {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 6px rgba(34, 197, 94, 0.55))
+      drop-shadow(0 0 14px rgba(34, 197, 94, 0.3));
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 10px rgba(34, 197, 94, 0.85))
+      drop-shadow(0 0 24px rgba(34, 197, 94, 0.5))
+      drop-shadow(0 0 40px rgba(34, 197, 94, 0.2));
+  }
+}
+
+/* Evolve-ready — synced pulse with battlefield pet (cyan/purple) */
+.hand-fan-card.evolve-ready {
+  animation: evolveHandPulse 1.6s ease-in-out infinite !important;
+  position: relative;
+}
+
+.hand-fan-card.evolve-ready::after {
+  content: 'EVOLVE';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #22d3ee;
+  background: rgba(15, 23, 42, 0.9);
+  padding: 2px 5px;
+  border-radius: 3px;
+  border: 1px solid rgba(34, 211, 238, 0.6);
+  text-shadow: 0 0 6px rgba(34, 211, 238, 0.8);
+  pointer-events: none;
+  z-index: 20;
+  white-space: nowrap;
+}
+
+@keyframes evolveHandPulse {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 6px rgba(34, 211, 238, 0.5))
+      drop-shadow(0 0 14px rgba(168, 85, 247, 0.25));
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 12px rgba(34, 211, 238, 0.85))
+      drop-shadow(0 0 26px rgba(168, 85, 247, 0.5))
+      drop-shadow(0 0 40px rgba(34, 211, 238, 0.2));
+  }
+}
+
+.hand-fan-card.playable.is-hovered {
+  animation: none;
+  filter:
+    drop-shadow(0 0 14px rgba(34, 197, 94, 0.9))
+    drop-shadow(0 0 30px rgba(34, 197, 94, 0.55))
+    drop-shadow(0 20px 30px rgba(0, 0, 0, 0.5));
+}
+
+/* Blood Price mode — red glow when paying with health */
+.hand-fan-card.blood-mode {
+  filter:
+    drop-shadow(0 0 8px rgba(220, 38, 38, 0.7))
+    drop-shadow(0 0 18px rgba(220, 38, 38, 0.4));
+  animation: bloodPricePulse 1.4s ease-in-out infinite;
+}
+
+.hand-fan-card.blood-mode.is-hovered {
+  animation: none;
+  filter:
+    drop-shadow(0 0 14px rgba(220, 38, 38, 0.9))
+    drop-shadow(0 0 30px rgba(220, 38, 38, 0.55))
+    drop-shadow(0 20px 30px rgba(0, 0, 0, 0.5));
+}
+
+@keyframes bloodPricePulse {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 8px rgba(220, 38, 38, 0.7))
+      drop-shadow(0 0 18px rgba(220, 38, 38, 0.4));
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 12px rgba(220, 38, 38, 0.95))
+      drop-shadow(0 0 28px rgba(220, 38, 38, 0.6))
+      drop-shadow(0 0 44px rgba(220, 38, 38, 0.25));
+  }
+}
+
+/* Locked evolution — Stage 2/3 pets that can't evolve yet */
+.hand-fan-card.evolution-locked {
+  filter: brightness(0.45) saturate(0.3);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.hand-fan-card.evolution-locked::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.5) 100%);
+  border-radius: inherit;
+  z-index: 15;
+  pointer-events: none;
+}
+
+/* Shake — unaffordable card click feedback */
+.hand-fan-card.shake {
+  animation: handCardShake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both !important;
+}
+
+@keyframes handCardShake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  15%       { transform: translateX(-8px) rotate(-3deg); }
+  30%       { transform: translateX(8px) rotate(3deg); }
+  45%       { transform: translateX(-6px) rotate(-2deg); }
+  60%       { transform: translateX(6px) rotate(2deg); }
+  75%       { transform: translateX(-3px) rotate(-1deg); }
+  90%       { transform: translateX(3px) rotate(1deg); }
+}
+
+/* Empty hand message */
+.hand-fan-empty {
+  color: #fcd34d;
+  font-size: 0.875rem;
+  font-style: italic;
+}
+
+/* Responsive: not needed — virtual canvas handles scaling uniformly */

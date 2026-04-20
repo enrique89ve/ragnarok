@@ -1,0 +1,88 @@
+/**
+ * Deck Builder Design Tokens
+ * Semantic tokens following M3 Expressive principles
+ * 
+ * NOTE: These tokens are scoped to .deck-builder class.
+ * Global design tokens are in: client/src/styles/design-tokens.css
+ * 
+ * This pattern allows component-specific overrides while
+ * inheriting global values from design-tokens.css.
+ */
+
+.deck-builder {
+  /* ===== Color Tokens ===== */
+  
+  /* Rarity Colors - Text */
+  --rarity-free-text: rgb(209 213 219);        /* gray-300 */
+  --rarity-common-text: rgb(243 244 246);      /* gray-100 */
+  --rarity-rare-text: rgb(96 165 250);         /* blue-400 */
+  --rarity-epic-text: rgb(192 132 252);        /* purple-400 */
+  --rarity-legendary-text: rgb(251 146 60);    /* orange-400 */
+  
+  /* Rarity Colors - Border */
+  --rarity-free-border: rgb(156 163 175);      /* gray-400 */
+  --rarity-common-border: rgb(209 213 219);    /* gray-300 */
+  --rarity-rare-border: rgb(59 130 246);       /* blue-500 */
+  --rarity-epic-border: rgb(168 85 247);       /* purple-500 */
+  --rarity-legendary-border: rgb(249 115 22);  /* orange-500 */
+  
+  /* Rarity Colors - Background */
+  --rarity-free-bg: rgb(55 65 81);             /* gray-700 */
+  --rarity-common-bg: rgb(55 65 81);           /* gray-700 */
+  --rarity-rare-bg: rgba(30 58 138, 0.5);      /* blue-900/50 */
+  --rarity-epic-bg: rgba(88 28 135, 0.5);      /* purple-900/50 */
+  --rarity-legendary-bg: rgba(124 45 18, 0.5); /* orange-900/50 */
+  
+  /* Stat Colors */
+  --stat-mana: rgb(37 99 235);                 /* blue-600 */
+  --stat-mana-border: rgb(96 165 250);         /* blue-400 */
+  --stat-attack: rgb(202 138 4);               /* yellow-600 */
+  --stat-attack-border: rgb(250 204 21);       /* yellow-400 */
+  --stat-health: rgb(220 38 38);               /* red-600 */
+  --stat-health-border: rgb(248 113 113);      /* red-400 */
+  
+  /* UI Colors */
+  --surface-primary: rgb(17 24 39);            /* gray-900 */
+  --surface-secondary: rgb(31 41 55);          /* gray-800 */
+  --surface-elevated: rgb(55 65 81);           /* gray-700 */
+  --border-subtle: rgb(55 65 81);              /* gray-700 */
+  --border-default: rgb(75 85 99);             /* gray-600 */
+  
+  /* Action Colors */
+  --action-primary: rgb(202 138 4);            /* yellow-600 */
+  --action-success: rgb(22 163 74);            /* green-600 */
+  --action-danger: rgb(220 38 38);             /* red-600 */
+  --action-info: rgb(37 99 235);               /* blue-600 */
+  
+  /* ===== Spacing Tokens ===== */
+  --space-xs: 0.25rem;   /* 4px */
+  --space-sm: 0.5rem;    /* 8px */
+  --space-md: 0.75rem;   /* 12px */
+  --space-lg: 1rem;      /* 16px */
+  --space-xl: 1.5rem;    /* 24px */
+  
+  /* ===== Size Tokens ===== */
+  --card-tile-min-height: 140px;
+  --stat-badge-size: 1.5rem;       /* 24px */
+  --stat-badge-size-lg: 1.75rem;   /* 28px */
+  --sidebar-width: 18rem;          /* 288px */
+  
+  /* ===== Typography ===== */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  
+  /* ===== Border Radius ===== */
+  --radius-sm: 0.375rem;  /* 6px */
+  --radius-md: 0.5rem;    /* 8px */
+  --radius-lg: 0.75rem;   /* 12px */
+  --radius-full: 9999px;
+  
+  /* ===== Z-Index ===== */
+  --z-card-badge: 10;
+  --z-modal: 60;
+  --z-overlay: 50;
+}

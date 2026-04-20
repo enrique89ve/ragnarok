@@ -1,0 +1,267 @@
+.vs-screen-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100dvh;
+  z-index: var(--z-topmost);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.vs-screen-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(ellipse at center, rgba(20, 20, 40, 0.95) 0%, rgba(0, 0, 0, 0.98) 100%);
+  backdrop-filter: blur(8px);
+}
+
+.vs-screen-content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  gap: 2rem;
+}
+
+.vs-fighter {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+  z-index: 2;
+}
+
+.vs-fighter-left {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.vs-fighter-right {
+  align-items: flex-start;
+  text-align: left;
+}
+
+.vs-fighter-glow {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.6;
+  z-index: -1;
+}
+
+.vs-fighter-glow-blue {
+  background: radial-gradient(circle, #4a9eff 0%, #1a5fc9 50%, transparent 70%);
+  left: -50px;
+}
+
+.vs-fighter-glow-red {
+  background: radial-gradient(circle, #ff4a4a 0%, #c91a1a 50%, transparent 70%);
+  right: -50px;
+}
+
+.vs-portrait-container {
+  width: 200px;
+  height: 200px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 4px solid;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 255, 255, 0.1) inset;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vs-fighter-left .vs-portrait-container {
+  border-color: #4a9eff;
+  box-shadow: 0 0 40px rgba(74, 158, 255, 0.5), 0 0 20px rgba(255, 255, 255, 0.1) inset;
+}
+
+.vs-fighter-right .vs-portrait-container {
+  border-color: #ff4a4a;
+  box-shadow: 0 0 40px rgba(255, 74, 74, 0.5), 0 0 20px rgba(255, 255, 255, 0.1) inset;
+}
+
+.vs-portrait {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(1.2) contrast(1.1);
+}
+
+.vs-portrait-emoji {
+  font-size: 6rem;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+}
+
+.vs-fighter-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 1rem;
+}
+
+.vs-fighter-owner {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  opacity: 0.7;
+  color: #aaa;
+}
+
+.vs-fighter-name {
+  font-size: 1.5rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+
+.vs-fighter-type {
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  opacity: 0.6;
+  color: #ccc;
+}
+
+.vs-fighter-stats {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  justify-content: inherit;
+}
+
+.vs-stat {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.vs-center {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vs-text {
+  display: flex;
+  gap: 0.25rem;
+  position: relative;
+}
+
+.vs-letter {
+  font-size: 8rem;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 
+    0 0 20px rgba(255, 200, 0, 0.8),
+    0 0 40px rgba(255, 150, 0, 0.6),
+    0 0 60px rgba(255, 100, 0, 0.4),
+    0 4px 0 #c97000,
+    0 8px 0 #8a4d00;
+  -webkit-text-stroke: 2px #ffaa00;
+  animation: vs-pulse 0.5s ease-in-out infinite alternate;
+}
+
+.vs-letter:first-child {
+  animation-delay: 0s;
+}
+
+.vs-letter:last-child {
+  animation-delay: 0.1s;
+}
+
+@keyframes vs-pulse {
+  from {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  to {
+    transform: scale(1.05);
+    filter: brightness(1.2);
+  }
+}
+
+.vs-sparks {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(255, 200, 0, 0.3) 0%, transparent 70%);
+  animation: sparks-rotate 2s linear infinite;
+}
+
+@keyframes sparks-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.vs-bottom-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+}
+
+.vs-battle-text {
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 8px;
+  color: #ffcc00;
+  text-shadow: 0 0 20px rgba(255, 200, 0, 0.5);
+  animation: battle-text-glow 1s ease-in-out infinite alternate;
+}
+
+@keyframes battle-text-glow {
+  from {
+    opacity: 0.7;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .vs-portrait-container {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .vs-letter {
+    font-size: 5rem;
+  }
+  
+  .vs-fighter-name {
+    font-size: 1rem;
+  }
+  
+  .vs-fighter {
+    padding: 1rem;
+  }
+}

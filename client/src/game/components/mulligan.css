@@ -1,0 +1,226 @@
+/* Mulligan Card */
+
+.mulligan-card-wrapper {
+  position: relative;
+  cursor: pointer;
+  width: 200px;
+}
+
+.mulligan-card-placeholder {
+  width: 100%;
+  aspect-ratio: 9 / 13;
+  background: rgba(30, 41, 59, 0.8);
+  border-radius: 12px;
+  border: 1px solid rgba(100, 116, 139, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mulligan-card-placeholder-text {
+  color: rgba(100, 116, 139, 0.6);
+  font-size: 12px;
+}
+
+.mulligan-card-selected-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 12px;
+  z-index: 40;
+}
+
+.mulligan-card-x-badge {
+  width: 52px;
+  height: 52px;
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: white;
+  font-weight: 900;
+  box-shadow: 0 0 20px rgba(220, 38, 38, 0.6);
+}
+
+.mulligan-card-replace-label {
+  margin-top: 8px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* Mulligan Screen */
+
+.mulligan-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-topmost);
+  background: radial-gradient(ellipse at center, rgba(10, 15, 30, 0.97) 0%, rgba(0, 0, 0, 0.99) 100%);
+}
+
+.mulligan-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  border: 1px solid rgba(251, 191, 36, 0.06);
+  pointer-events: none;
+}
+
+.mulligan-ring-large {
+  width: 600px;
+  height: 600px;
+  margin-left: -300px;
+  margin-top: -300px;
+}
+
+.mulligan-ring-small {
+  width: 400px;
+  height: 400px;
+  margin-left: -200px;
+  margin-top: -200px;
+  border-color: rgba(251, 191, 36, 0.04);
+}
+
+.mulligan-container {
+  position: relative;
+  max-width: 1020px;
+  width: 100%;
+  padding: 0 16px;
+}
+
+.mulligan-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.mulligan-title {
+  font-family: 'Cinzel', 'Georgia', serif;
+  font-size: 52px;
+  font-weight: 900;
+  color: white;
+  letter-spacing: 8px;
+  text-transform: uppercase;
+  line-height: 1;
+  margin-bottom: 12px;
+  text-shadow: 0 0 30px rgba(251, 191, 36, 0.5), 0 4px 8px rgba(0, 0, 0, 0.8);
+}
+
+.mulligan-subtitle {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: rgba(251, 191, 36, 0.55);
+}
+
+.mulligan-cards-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 32px;
+  margin-bottom: 40px;
+  padding: 16px 0;
+  overflow: visible;
+}
+
+.mulligan-actions {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.mulligan-btn {
+  padding: 14px 36px;
+  color: white;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mulligan-btn:hover {
+  transform: translateY(-3px);
+}
+
+.mulligan-btn:active {
+  transform: translateY(0);
+  transition: transform 0.08s ease;
+}
+
+.mulligan-btn-keep {
+  background: linear-gradient(135deg, #7f1d1d, #991b1b);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.mulligan-btn-keep:hover {
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.3);
+}
+
+.mulligan-btn-replace {
+  background: linear-gradient(135deg, #14532d, #166534);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.mulligan-btn-replace:hover {
+  box-shadow: 0 8px 24px rgba(34, 197, 94, 0.4);
+}
+
+.mulligan-btn-replace.has-selection {
+  box-shadow: 0 4px 20px rgba(34, 197, 94, 0.35);
+  border-color: rgba(34, 197, 94, 0.6);
+}
+
+.mulligan-waiting {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.mulligan-waiting-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.mulligan-waiting-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(251, 191, 36, 0.7);
+}
+
+.mulligan-waiting-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(251, 191, 36, 0.65);
+}
+
+/* Make SimpleCard fill the wrapper instead of using fixed size */
+.mulligan-card-wrapper .simple-card.large {
+  width: 100% !important;
+  height: auto !important;
+  aspect-ratio: 9 / 14;
+}

@@ -1,0 +1,226 @@
+/* ═══ Persistent Turn Badge — always visible top-center ═══ */
+
+.persistent-turn-badge {
+	position: absolute;
+	top: 14px;
+	left: 16px;
+	z-index: 9500;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 18px;
+	border-radius: 24px;
+	font-family: var(--font-display);
+	font-weight: 900;
+	font-size: 13px;
+	letter-spacing: 2px;
+	text-transform: uppercase;
+	pointer-events: none;
+	transition: all 0.4s ease;
+	background: var(--ui-panel-bg);
+	box-shadow: var(--ui-panel-shadow);
+}
+
+.persistent-turn-badge.your-turn {
+	border: 2px solid var(--ui-gold-bright);
+	color: var(--ui-selection-pale);
+	box-shadow:
+		0 0 22px var(--ui-gold-glow-soft),
+		0 4px 14px rgba(0, 0, 0, 0.65),
+		inset 0 1px 0 rgba(255, 215, 100, 0.16);
+	text-shadow:
+		0 0 10px var(--ui-gold-glow-hard),
+		0 1px 2px rgba(0, 0, 0, 0.95);
+}
+
+.persistent-turn-badge.enemy-turn {
+	border: 2px solid var(--ui-hp-crimson);
+	color: #ffd5d2;
+	box-shadow:
+		0 0 22px var(--ui-hp-crimson-glow),
+		0 4px 14px rgba(0, 0, 0, 0.65),
+		inset 0 1px 0 rgba(255, 130, 120, 0.14);
+	text-shadow:
+		0 0 10px var(--ui-hp-crimson-glow),
+		0 1px 2px rgba(0, 0, 0, 0.95);
+}
+
+.persistent-turn-dot {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	animation: turnDotPulse 1.5s ease-in-out infinite;
+}
+
+.your-turn .persistent-turn-dot {
+	background: var(--ui-gold-bright);
+	box-shadow: 0 0 10px var(--ui-gold-glow-hard);
+}
+
+.enemy-turn .persistent-turn-dot {
+	background: var(--ui-hp-crimson);
+	box-shadow: 0 0 10px var(--ui-hp-crimson-glow);
+}
+
+@keyframes turnDotPulse {
+	0%, 100% { opacity: 1; transform: scale(1); }
+	50% { opacity: 0.5; transform: scale(0.7); }
+}
+
+/* ═══ Turn Banner - CCG-style "YOUR TURN" / "ENEMY TURN" announcement ═══ */
+
+.turn-banner-overlay {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: var(--z-cinematic);
+	pointer-events: none;
+}
+
+.turn-banner {
+	position: relative;
+	width: 100%;
+	padding: 18px 0;
+	text-align: center;
+	overflow: hidden;
+}
+
+.turn-banner::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+}
+
+/* Player turn - gold/amber theme */
+.turn-banner.player-turn {
+	background: linear-gradient(
+		180deg,
+		transparent 0%,
+		rgba(251, 191, 36, 0.15) 20%,
+		rgba(251, 191, 36, 0.25) 50%,
+		rgba(251, 191, 36, 0.15) 80%,
+		transparent 100%
+	);
+	border-top: 2px solid rgba(251, 191, 36, 0.6);
+	border-bottom: 2px solid rgba(251, 191, 36, 0.6);
+}
+
+.turn-banner.player-turn::before {
+	background: linear-gradient(
+		90deg,
+		transparent 0%,
+		rgba(251, 191, 36, 0.1) 30%,
+		rgba(251, 191, 36, 0.2) 50%,
+		rgba(251, 191, 36, 0.1) 70%,
+		transparent 100%
+	);
+}
+
+/* Opponent turn - red/crimson theme */
+.turn-banner.opponent-turn {
+	background: linear-gradient(
+		180deg,
+		transparent 0%,
+		rgba(239, 68, 68, 0.15) 20%,
+		rgba(239, 68, 68, 0.25) 50%,
+		rgba(239, 68, 68, 0.15) 80%,
+		transparent 100%
+	);
+	border-top: 2px solid rgba(239, 68, 68, 0.6);
+	border-bottom: 2px solid rgba(239, 68, 68, 0.6);
+}
+
+.turn-banner.opponent-turn::before {
+	background: linear-gradient(
+		90deg,
+		transparent 0%,
+		rgba(239, 68, 68, 0.1) 30%,
+		rgba(239, 68, 68, 0.2) 50%,
+		rgba(239, 68, 68, 0.1) 70%,
+		transparent 100%
+	);
+}
+
+.turn-banner-text {
+	font-size: 42px;
+	font-weight: 900;
+	letter-spacing: 8px;
+	text-transform: uppercase;
+	line-height: 1;
+}
+
+.turn-banner.player-turn .turn-banner-text {
+	color: #fbbf24;
+	text-shadow:
+		0 0 20px rgba(251, 191, 36, 0.8),
+		0 0 40px rgba(251, 191, 36, 0.4),
+		0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.turn-banner.opponent-turn .turn-banner-text {
+	color: #ef4444;
+	text-shadow:
+		0 0 20px rgba(239, 68, 68, 0.8),
+		0 0 40px rgba(239, 68, 68, 0.4),
+		0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.turn-banner-sub {
+	font-size: 14px;
+	font-weight: 600;
+	letter-spacing: 3px;
+	text-transform: uppercase;
+	margin-top: 4px;
+	opacity: 0.6;
+}
+
+.turn-banner.player-turn .turn-banner-sub {
+	color: rgba(251, 191, 36, 0.7);
+}
+
+.turn-banner.opponent-turn .turn-banner-sub {
+	color: rgba(239, 68, 68, 0.7);
+}
+
+/* Decorative side lines */
+.turn-banner-line {
+	position: absolute;
+	top: 50%;
+	height: 2px;
+	width: 30%;
+	transform: translateY(-50%);
+}
+
+.turn-banner-line.left {
+	left: 0;
+}
+
+.turn-banner-line.right {
+	right: 0;
+}
+
+.turn-banner.player-turn .turn-banner-line {
+	background: linear-gradient(90deg, transparent, rgba(251, 191, 36, 0.6));
+}
+
+.turn-banner.player-turn .turn-banner-line.right {
+	background: linear-gradient(270deg, transparent, rgba(251, 191, 36, 0.6));
+}
+
+.turn-banner.opponent-turn .turn-banner-line {
+	background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.6));
+}
+
+.turn-banner.opponent-turn .turn-banner-line.right {
+	background: linear-gradient(270deg, transparent, rgba(239, 68, 68, 0.6));
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+	.turn-banner {
+		animation: none !important;
+	}
+}
