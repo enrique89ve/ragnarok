@@ -170,8 +170,8 @@ async function getGitHubClient() {
 }
 
 async function pushFiles() {
-  const owner = 'Dhenz14';
-  const repo = 'norse-mythos-card-game';
+  const owner = 'enrique89ve';
+  const repo = 'ragnarok';
   const branch = 'main';
   const commitMessage = process.argv[2] || 'Update from Replit';
 
