@@ -15,13 +15,13 @@
   padding: 16px 32px;
   background: linear-gradient(
     135deg,
-    rgba(15, 15, 25, 0.98) 0%,
-    rgba(30, 30, 45, 0.95) 100%
+    var(--surface-overlay-deep) 0%,
+    var(--surface-overlay-mid) 100%
   );
-  border: 2px solid var(--rarity-color, #FFD700);
+  border: 2px solid var(--rarity-color, var(--gold-300));
   border-radius: 12px;
   box-shadow: 
-    0 0 40px color-mix(in srgb, var(--rarity-color, #FFD700) 50%, transparent),
+    0 0 40px color-mix(in srgb, var(--rarity-color, var(--gold-300)) 50%, transparent),
     0 8px 32px rgba(0, 0, 0, 0.6);
   position: relative;
   overflow: hidden;
@@ -37,7 +37,7 @@
   background: linear-gradient(
     90deg,
     transparent,
-    var(--rarity-color, #FFD700),
+    var(--rarity-color, var(--gold-300)),
     transparent
   );
 }
@@ -52,7 +52,7 @@
   background: linear-gradient(
     90deg,
     transparent,
-    var(--rarity-color, #FFD700),
+    var(--rarity-color, var(--gold-300)),
     transparent
   );
 }
@@ -65,7 +65,7 @@
   justify-content: center;
   background: radial-gradient(
     circle,
-    var(--rarity-color, #FFD700) 0%,
+    color-mix(in srgb, var(--rarity-color, var(--gold-300)) 40%, transparent) 0%,
     transparent 70%
   );
   border-radius: 50%;
@@ -74,7 +74,7 @@
 
 .announcement-icon {
   font-size: 32px;
-  filter: drop-shadow(0 0 8px var(--rarity-color, #FFD700));
+  filter: drop-shadow(0 0 8px var(--rarity-color, var(--gold-300)));
 }
 
 .announcement-content {
@@ -86,9 +86,9 @@
 .announcement-title {
   font-size: 28px;
   font-weight: 800;
-  color: #FFFFFF;
+  color: var(--text-near-white);
   text-shadow: 
-    0 0 10px var(--rarity-color, #FFD700),
+    0 0 10px var(--rarity-color, var(--gold-300)),
     0 2px 4px rgba(0, 0, 0, 0.8);
   margin: 0;
   letter-spacing: 1px;
@@ -106,88 +106,88 @@
 
 
 .action-announcement-battlecry {
-  --rarity-color: #FFD700;
+  --rarity-color: var(--gold-300);
 }
 
 .action-announcement-deathrattle {
-  --rarity-color: #9B59B6;
+  --rarity-color: var(--rarity-epic-color);
 }
 
 .action-announcement-spell {
-  --rarity-color: #3498DB;
+  --rarity-color: var(--rarity-rare-color);
 }
 
 .action-announcement-attack {
-  --rarity-color: #E74C3C;
+  --rarity-color: var(--danger-400);
 }
 
 .action-announcement-damage {
-  --rarity-color: #E74C3C;
+  --rarity-color: var(--danger-400);
 }
 
 .action-announcement-heal {
-  --rarity-color: #2ECC71;
+  --rarity-color: var(--success-400);
 }
 
 .action-announcement-buff {
-  --rarity-color: #F39C12;
+  --rarity-color: var(--warning-400);
 }
 
 .action-announcement-summon {
-  --rarity-color: #1ABC9C;
+  --rarity-color: var(--success-400);
 }
 
 .action-announcement-draw {
-  --rarity-color: #3498DB;
+  --rarity-color: var(--rarity-rare-color);
 }
 
 .action-announcement-discover {
-  --rarity-color: #9B59B6;
+  --rarity-color: var(--rarity-epic-color);
 }
 
 .action-announcement-legendary {
-  --rarity-color: #FF8000;
+  --rarity-color: var(--rarity-mythic-color);
   animation: legendaryShimmer 2s ease-in-out infinite;
 }
 
 @keyframes legendaryShimmer {
   0%, 100% { 
     box-shadow: 
-      0 0 50px rgba(255, 128, 0, 0.9),
-      0 0 80px rgba(255, 200, 0, 0.5),
+      0 0 50px color-mix(in srgb, var(--rarity-mythic-color) 80%, transparent),
+      0 0 80px color-mix(in srgb, var(--gold-300) 50%, transparent),
       inset 0 0 20px rgba(255, 255, 255, 0.1);
   }
   50% { 
     box-shadow: 
-      0 0 70px rgba(255, 128, 0, 1),
-      0 0 100px rgba(255, 200, 0, 0.7),
+      0 0 70px var(--rarity-mythic-color),
+      0 0 100px color-mix(in srgb, var(--gold-200) 70%, transparent),
       inset 0 0 30px rgba(255, 255, 255, 0.2);
   }
 }
 
 .action-announcement-freeze {
-  --rarity-color: #00BCD4;
+  --rarity-color: var(--info-400);
 }
 
 .action-announcement-silence {
-  --rarity-color: #95A5A6;
+  --rarity-color: var(--ink-300);
 }
 
 .action-announcement-transform {
-  --rarity-color: #9B59B6;
+  --rarity-color: var(--rarity-epic-color);
 }
 
 .action-announcement-destroy {
-  --rarity-color: #2C3E50;
+  --rarity-color: var(--obsidian-700);
 }
 
 .action-announcement-phase_change {
-  --rarity-color: #E67E22;
+  --rarity-color: var(--warning-400);
 }
 
 .action-announcement-victory {
-  --rarity-color: #FFD700;
-  box-shadow: 0 0 80px rgba(255, 215, 0, 1);
+  --rarity-color: var(--gold-300);
+  box-shadow: 0 0 80px var(--gold-glow);
   animation: victoryGlow 0.5s ease-in-out infinite alternate;
 }
 
@@ -197,10 +197,10 @@
 }
 
 .action-announcement-defeat {
-  --rarity-color: #7F8C8D;
+  --rarity-color: var(--ink-300);
   filter: grayscale(0.3);
 }
 
 .action-announcement-status_effect {
-  --rarity-color: #A855F7;
+  --rarity-color: var(--rarity-epic-glow);
 }

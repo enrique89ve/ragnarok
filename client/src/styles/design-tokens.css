@@ -19,71 +19,230 @@
 
 :root {
   /* =============================================
-     1. COLORS
+     1. COLORS (RAGNAROK NEW PALETTE)
+     ============================================= */
+
+  /* 🌑 Obsidian — base oscura con tinte cálido */
+  --obsidian-950: #0a0907; /* Root / fondo más profundo */
+  --obsidian-900: #100d0a; /* Panel */
+  --obsidian-850: #151210; /* Elevado */
+  --obsidian-800: #1c1814; /* Card */
+  --obsidian-750: #241f19; /* Card hover */
+  --obsidian-700: #2d2720; /* Border fuerte */
+  --obsidian-600: #3a332a; /* Divider */
+  --obsidian-500: #4a4239; /* Muted edge */
+
+  /* 📜 Ink — jerarquía tipográfica (parchment cálido) */
+  --ink-0:   #f5ede0; /* Texto primario */
+  --ink-100: #e6dcc8; /* Levemente atenuado */
+  --ink-200: #b8ad97; /* Secundario */
+  --ink-300: #8a816f; /* Terciario */
+  --ink-400: #5d564a; /* Deshabilitado */
+  --ink-500: #3a342c; /* Muy tenue */
+
+  /* 🜚 Gold — Odin / acento primario (autoridad) */
+  --gold-50:  #fbf4dc;
+  --gold-100: #f5e3a8;
+  --gold-200: #e9c877;
+  --gold-300: #d9a844; /* hero gold */
+  --gold-400: #c08a24;
+  --gold-500: #9c6c16;
+  --gold-600: #73500f;
+  --gold-700: #4d340a;
+  --gold-glow: oklch(78% 0.14 82);
+
+  /* 🔥 Ember — Muspelheim / peligro y energía */
+  --ember-100: #ffd6b0;
+  --ember-200: #ff9a5a;
+  --ember-300: #ff6a28; /* hot ember */
+  --ember-400: #d94a12;
+  --ember-500: #a5310a;
+  --ember-600: #6e1f05;
+  --ember-glow: oklch(70% 0.20 40);
+
+  /* 🌈 Bifrost — raro / místico (solo en lo mítico) */
+  --bifrost-100: #c9e0ff;
+  --bifrost-300: #7aa9ff;
+  --bifrost-500: #4a6fe0;
+  --bifrost-glow: oklch(72% 0.16 260);
+
+  /* Apoyos (uso mínimo) */
+  --frost-200: #b8d8e0; /* Hielo / soporte */
+  --frost-400: #6ea5b3; /* Hielo / soporte */
+  --rune-300:  #8fb573; /* Yggdrasil */
+  --rune-500:  #4f7a36; /* Yggdrasil */
+  --blood-300: #c95a4a; /* Niflheim / danger */
+  --blood-500: #8a2a1c; /* Niflheim / danger */
+
+  /* ── SISTEMA DE RAREZA (fuente única de verdad) ──
+     Paleta canónica usada por SimpleCard, deckbuilder,
+     tooltips, animaciones y cualquier componente visual.
+     Toda referencia a rareza DEBE usar estas variables.
+  ── */
+
+  /* Common — steel gray */
+  --rarity-common-color:      #9CA3AF; /* gray-400 */
+  --rarity-common-bright:     #F1F5F9; /* slate-100 */
+  --rarity-common-deep:       #4A5568; /* slate-600 */
+  --rarity-common-glow:       rgba(156, 163, 175, 0.4);
+
+  /* Rare — blue */
+  --rarity-rare-color:        #3B82F6; /* blue-500  ← canónico */
+  --rarity-rare-bright:       #93C5FD; /* blue-300 */
+  --rarity-rare-deep:         #1E3A8A; /* blue-900 */
+  --rarity-rare-mid:          #2563EB; /* blue-600 */
+  --rarity-rare-glow:         rgba(59, 130, 246, 0.5);
+
+  /* Epic — purple */
+  --rarity-epic-color:        #A855F7; /* purple-500 ← canónico */
+  --rarity-epic-bright:       #C084FC; /* purple-400 */
+  --rarity-epic-deep:         #581C87; /* purple-900 */
+  --rarity-epic-mid:          #7C3AED; /* purple-600 */
+  --rarity-epic-glow:         rgba(168, 85, 247, 0.5);
+
+  /* Mythic — gold/amber */
+  --rarity-mythic-color:      #F59E0B; /* amber-500 ← canónico */
+  --rarity-mythic-bright:     #FCD34D; /* amber-300 */
+  --rarity-mythic-pale:       #FDE68A; /* amber-200 */
+  --rarity-mythic-deep:       #D97706; /* amber-600 */
+  --rarity-mythic-glow:       rgba(245, 158, 11, 0.5);
+
+  /* Bifrost/Legendary — iridescent tri-color */
+  --rarity-bifrost-from:      #7a5bd6;
+  --rarity-bifrost-mid:       #4a8fd8;
+  --rarity-bifrost-to:        #d97a9e;
+  --rarity-bifrost-glow:      rgba(122, 91, 214, 0.5);
+
+  /* ── Aliases cortos (backward-compat, apuntan al sistema canónico) ── */
+  --card-common-steel:        var(--rarity-common-deep);
+  --card-rare-blue-deep:      var(--rarity-rare-deep);
+  --card-rare-blue-mid:       var(--rarity-rare-mid);
+  --card-rare-blue-bright:    var(--rarity-rare-color);
+  --card-rare-blue-pale:      var(--rarity-rare-bright);
+  --card-rare-blue-glow:      var(--rarity-rare-glow);
+  --card-epic-purple-deep:    var(--rarity-epic-deep);
+  --card-epic-purple-mid:     var(--rarity-epic-mid);
+  --card-epic-purple-bright:  var(--rarity-epic-color);
+  --card-epic-purple-pale:    var(--rarity-epic-bright);
+  --card-epic-purple-glow:    var(--rarity-epic-glow);
+  --card-mythic-gold-deep:    var(--rarity-mythic-deep);
+  --card-mythic-gold-mid:     var(--rarity-mythic-color);
+  --card-mythic-gold-bright:  var(--rarity-mythic-bright);
+  --card-mythic-gold-pale:    var(--rarity-mythic-pale);
+  --card-mythic-gold-glow:    var(--rarity-mythic-glow);
+
+  /* ── Colores de estado semántico ── */
+  --success-500: #16A34A; /* green-600 */
+  --success-400: #22C55E; /* green-500 - stat buffed */
+  --success-300: #4ADE80; /* green-400 */
+  --success-200: #86EFAC; /* green-300 */
+  --success-glow: rgba(34, 197, 94, 0.4);
+
+  --warning-500: #D97706; /* amber-600 */
+  --warning-400: #F59E0B; /* amber-500 */
+  --warning-300: #FBBF24; /* amber-400 */
+  --warning-glow: rgba(245, 158, 11, 0.4);
+
+  --danger-500: #DC2626; /* red-600 */
+  --danger-400: #EF4444; /* red-500 */
+  --danger-300: #F87171; /* red-400 */
+  --danger-200: #FCA5A5; /* red-300 */
+  --danger-glow: rgba(239, 68, 68, 0.4);
+
+  --info-500: #2563EB; /* blue-600 */
+  --info-400: #3B82F6; /* blue-500 */
+  --info-300: #60A5FA; /* blue-400 */
+  --info-glow: rgba(59, 130, 246, 0.4);
+
+  /* ── Superficies semi-transparentes (para HUD, chips, menús) ── */
+  --surface-overlay-deep:   rgba(8, 12, 22, 0.80);
+  --surface-overlay-mid:    rgba(15, 23, 42, 0.85);
+  --surface-overlay-light:  rgba(30, 41, 59, 0.72);
+  --surface-chip:           rgba(30, 41, 59, 0.72);
+  --surface-card-dark:      rgba(10, 14, 28, 0.72);
+
+  --border-chip:            rgba(148, 163, 184, 0.15);
+  --border-bright:          rgba(148, 163, 184, 0.20);
+  --border-gold-soft:       rgba(240, 187, 87, 0.18);
+  --border-gold-mid:        rgba(240, 187, 87, 0.30);
+  --border-red-soft:        rgba(200, 50, 50, 0.25);
+  --border-green-soft:      rgba(74, 222, 128, 0.22);
+
+  /* ── Texto utilitario ── */
+  --text-gold-warm:  rgba(248, 200, 120, 0.88);
+  --text-slate:      rgba(148, 163, 184, 0.72);
+  --text-bright:     rgba(226, 232, 240, 0.78);
+  --text-dimmed:     rgba(226, 232, 240, 0.68);
+  --text-white-full: #FFFFFF;
+  --text-near-white: #F8FAFC;
+  --text-e2:         #E2E8F0;
+
+  /* =============================================
+     1b. ALIASES & HOMOLOGATION (Mapping legacy to Ragnarok)
      ============================================= */
   
-  /* Norse Brand Palette */
-  --color-gold: #ffd700;
-  --color-gold-muted: rgba(255, 215, 0, 0.6);
-  --color-norse-dark: #0a0a0a;
-  --color-norse-surface: #1a1a1a;
-  --color-rune-blue: #00d2ff;
-  --color-amber-primary: #92400e;
-  --color-amber-secondary: #78350f;
+  /* Norse Brand Palette aliases */
+  --color-gold: var(--gold-300);
+  --color-gold-muted: color-mix(in srgb, var(--gold-300) 60%, transparent);
+  --color-norse-dark: var(--obsidian-950);
+  --color-norse-surface: var(--obsidian-900);
+  --color-rune-blue: var(--bifrost-300);
+  --color-amber-primary: var(--ember-500);
+  --color-amber-secondary: var(--obsidian-700);
   
-  /* Rarity Colors - Consistent across all components */
-  --rarity-basic: #d1d5db;
-  --rarity-common: #f3f4f6;
-  --rarity-rare: #60a5fa;
-  --rarity-epic: #c084fc;
-  --rarity-mythic: #f59e0b;
+  /* Rarity semantic aliases — apuntan al sistema canónico */
+  --rarity-basic:        var(--rarity-common-deep);
+  --rarity-common:       var(--rarity-common-color);
+  --rarity-rare:         var(--rarity-rare-color);
+  --rarity-epic:         var(--rarity-epic-color);
+  --rarity-mythic:       var(--rarity-mythic-color);
 
-  /* Rarity Colors - Text variants */
-  --rarity-basic-text: rgb(209 213 219);
-  --rarity-common-text: rgb(243 244 246);
-  --rarity-rare-text: rgb(96 165 250);
-  --rarity-epic-text: rgb(192 132 252);
-  --rarity-mythic-text: rgb(251 146 60);
+  /* Rarity — variantes de texto */
+  --rarity-basic-text:   var(--rarity-common-bright);
+  --rarity-common-text:  var(--ink-0);
+  --rarity-rare-text:    var(--rarity-rare-bright);
+  --rarity-epic-text:    var(--rarity-epic-bright);
+  --rarity-mythic-text:  var(--rarity-mythic-bright);
 
-  /* Rarity Colors - Border variants */
-  --rarity-basic-border: rgb(156 163 175);
-  --rarity-common-border: rgb(209 213 219);
-  --rarity-rare-border: rgb(59 130 246);
-  --rarity-epic-border: rgb(168 85 247);
-  --rarity-mythic-border: rgb(249 115 22);
+  /* Rarity — variantes de borde */
+  --rarity-basic-border:  var(--rarity-common-color);
+  --rarity-common-border: var(--rarity-common-deep);
+  --rarity-rare-border:   var(--rarity-rare-color);
+  --rarity-epic-border:   var(--rarity-epic-color);
+  --rarity-mythic-border: var(--rarity-mythic-color);
 
-  /* Rarity Colors - Background variants */
-  --rarity-basic-bg: rgb(55 65 81);
-  --rarity-common-bg: rgb(55 65 81);
-  --rarity-rare-bg: rgba(30, 58, 138, 0.5);
-  --rarity-epic-bg: rgba(88, 28, 135, 0.5);
-  --rarity-mythic-bg: rgba(124, 45, 18, 0.5);
+  /* Rarity — variantes de fondo (obsidian base + tinte de rareza) */
+  --rarity-basic-bg:   var(--obsidian-900);
+  --rarity-common-bg:  var(--obsidian-850);
+  --rarity-rare-bg:    color-mix(in srgb, var(--rarity-rare-deep) 50%, var(--obsidian-800));
+  --rarity-epic-bg:    color-mix(in srgb, var(--rarity-epic-deep) 50%, var(--obsidian-750));
+  --rarity-mythic-bg:  color-mix(in srgb, var(--rarity-mythic-deep) 35%, var(--obsidian-700));
   
-  /* Stat Colors */
-  --stat-mana: rgb(37 99 235);
-  --stat-mana-border: rgb(96 165 250);
-  --stat-attack: rgb(202 138 4);
-  --stat-attack-border: rgb(250 204 21);
-  --stat-health: rgb(220 38 38);
-  --stat-health-border: rgb(248 113 113);
+  /* Stat Colors keeping functional distinction */
+  --stat-mana: var(--bifrost-500);
+  --stat-mana-border: var(--bifrost-300);
+  --stat-attack: var(--ember-300);
+  --stat-attack-border: var(--ember-200);
+  --stat-health: var(--blood-500);
+  --stat-health-border: var(--blood-300);
   
   /* UI Surface Colors */
-  --surface-primary: rgb(17 24 39);
-  --surface-secondary: rgb(31 41 55);
-  --surface-elevated: rgb(55 65 81);
-  --border-subtle: rgb(55 65 81);
-  --border-default: rgb(75 85 99);
+  --surface-primary: var(--obsidian-900);
+  --surface-secondary: var(--obsidian-850);
+  --surface-elevated: var(--obsidian-800);
+  --border-subtle: var(--obsidian-700);
+  --border-default: var(--obsidian-600);
   
   /* Action Colors */
-  --action-primary: rgb(202 138 4);
-  --action-success: rgb(22 163 74);
-  --action-danger: rgb(220 38 38);
-  --action-info: rgb(37 99 235);
+  --action-primary: var(--gold-300);
+  --action-success: var(--rune-500);
+  --action-danger: var(--ember-400);
+  --action-info: var(--bifrost-500);
   
   /* Text Colors */
-  --text-primary: #f3f4f6;
-  --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
+  --text-primary: var(--ink-0);
+  --text-secondary: var(--ink-200);
+  --text-muted: var(--ink-400);
   
   /* =============================================
      2. SPACING
@@ -237,48 +396,45 @@
   --transition-bounce: 300ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
   /* =============================================
-     10. NORSE COMBAT UI MATERIALS (Phase 1 — UI overhaul)
-     Materials, semantics and surfaces for the PvP / Play
-     combat arena. Single-source: NEVER inline these colors
-     anywhere — always reference these vars.
+     10. NORSE COMBAT UI MATERIALS
      ============================================= */
 
-  /* Material palette — obsidian / iron / tarnished gold */
-  --ui-obsidian:        #0a0c12;
-  --ui-iron-darkest:    #12141b;
-  --ui-iron-dark:       #1a1d24;
-  --ui-iron-mid:        #262a33;
-  --ui-iron-light:      #3a4050;
-  --ui-iron-edge:       #4a5060;
+  /* Material palette — Mapped to Obsidian */
+  --ui-obsidian:        var(--obsidian-950);
+  --ui-iron-darkest:    var(--obsidian-900);
+  --ui-iron-dark:       var(--obsidian-850);
+  --ui-iron-mid:        var(--obsidian-800);
+  --ui-iron-light:      var(--obsidian-750);
+  --ui-iron-edge:       var(--obsidian-700);
 
-  /* Tarnished gold accent line */
-  --ui-gold-bright:     #d4af37;
-  --ui-gold-warm:       #b8860b;
-  --ui-gold-deep:       #6b4f0a;
-  --ui-gold-shadow:     rgba(212, 175, 55, 0.42);
-  --ui-gold-glow-soft:  rgba(212, 175, 55, 0.18);
-  --ui-gold-glow-hard:  rgba(255, 200, 60, 0.55);
+  /* Tarnished gold accent line — Mapped to Gold */
+  --ui-gold-bright:     var(--gold-200);
+  --ui-gold-warm:       var(--gold-400);
+  --ui-gold-deep:       var(--gold-600);
+  --ui-gold-shadow:     oklch(78% 0.14 82 / 0.42);
+  --ui-gold-glow-soft:  oklch(78% 0.14 82 / 0.18);
+  --ui-gold-glow-hard:  oklch(78% 0.14 82 / 0.55);
 
-  /* Rune accents (cool cyan-blue, restrained) */
-  --ui-rune-cyan:       #4dd0e1;
-  --ui-rune-blue:       #5b8cb8;
-  --ui-rune-pale:       #d9e8f0;
+  /* Rune accents — Mapped to Frost / Rune / Bifrost */
+  --ui-rune-cyan:       var(--frost-400);
+  --ui-rune-blue:       var(--bifrost-300);
+  --ui-rune-pale:       var(--frost-200);
 
-  /* Ember (restrained, never neon) */
-  --ui-ember-warm:      rgba(255, 140, 50, 0.32);
-  --ui-ember-deep:      rgba(180, 60, 20, 0.5);
+  /* Ember — Mapped to Ember */
+  --ui-ember-warm:      color-mix(in srgb, var(--ember-300) 32%, transparent);
+  --ui-ember-deep:      color-mix(in srgb, var(--ember-500) 50%, transparent);
 
   /* Semantic combat colors */
-  --ui-hp-crimson:      #c8312a;          /* health primary */
-  --ui-hp-crimson-deep: #6b1a16;          /* health shadow */
-  --ui-hp-crimson-glow: rgba(200, 49, 42, 0.55);
-  --ui-mana-cyan:       #3a9ec4;          /* mana / energy primary */
-  --ui-mana-cyan-pale:  #7cc6dc;
-  --ui-mana-cyan-glow:  rgba(58, 158, 196, 0.55);
-  --ui-selection-gold:  #ffd700;          /* selected / active turn */
-  --ui-selection-pale:  #fff4c2;
-  --ui-disabled-bronze: #4a3a26;          /* exhausted / disabled */
-  --ui-danger-red:      #ef4444;          /* incoming damage flash only */
+  --ui-hp-crimson:      var(--blood-300);
+  --ui-hp-crimson-deep: var(--blood-500);
+  --ui-hp-crimson-glow: color-mix(in srgb, var(--blood-300) 55%, transparent);
+  --ui-mana-cyan:       var(--bifrost-500);
+  --ui-mana-cyan-pale:  var(--bifrost-100);
+  --ui-mana-cyan-glow:  color-mix(in srgb, var(--bifrost-300) 55%, transparent);
+  --ui-selection-gold:  var(--gold-300);
+  --ui-selection-pale:  var(--gold-50);
+  --ui-disabled-bronze: var(--obsidian-600);
+  --ui-danger-red:      var(--ember-300);
 
   /* Panel surfaces — obsidian + gold trim */
   --ui-panel-bg: linear-gradient(180deg,

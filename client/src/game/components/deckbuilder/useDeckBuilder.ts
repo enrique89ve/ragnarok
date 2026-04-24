@@ -84,7 +84,9 @@ export function useDeckBuilder({
   onSave,
 }: UseDeckBuilderProps): UseDeckBuilderReturn {
   const { playSoundEffect } = useAudio();
-  const { getDeck, setDeck, validateDeck } = useHeroDeckStore();
+  const getDeck = useHeroDeckStore(state => state.getDeck);
+  const setDeck = useHeroDeckStore(state => state.setDeck);
+  const validateDeck = useHeroDeckStore(state => state.validateDeck);
   
   const normalizedHeroClass = heroClass.toLowerCase();
   

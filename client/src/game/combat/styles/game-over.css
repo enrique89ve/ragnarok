@@ -17,15 +17,15 @@
 }
 
 .game-over-overlay.victory {
-	background: radial-gradient(ellipse at center, rgba(251, 191, 36, 0.12) 0%, rgba(0, 0, 0, 0.88) 70%);
+	background: radial-gradient(ellipse at center, color-mix(in srgb, var(--gold-300) 12%, transparent) 0%, rgba(0, 0, 0, 0.88) 70%);
 }
 
 .game-over-overlay.defeat {
-	background: radial-gradient(ellipse at center, rgba(239, 68, 68, 0.1) 0%, rgba(0, 0, 0, 0.92) 70%);
+	background: radial-gradient(ellipse at center, color-mix(in srgb, var(--danger-400) 10%, transparent) 0%, rgba(0, 0, 0, 0.92) 70%);
 }
 
 .game-over-overlay.draw {
-	background: radial-gradient(ellipse at center, rgba(100, 116, 139, 0.1) 0%, rgba(0, 0, 0, 0.9) 70%);
+	background: radial-gradient(ellipse at center, color-mix(in srgb, var(--info-400) 10%, transparent) 0%, rgba(0, 0, 0, 0.9) 70%);
 }
 
 .game-over-panel {
@@ -33,12 +33,12 @@
 	max-width: 500px;
 	width: 92%;
 	padding: 36px 32px;
-	background: linear-gradient(160deg, rgba(15, 23, 42, 0.95) 0%, rgba(8, 12, 22, 0.98) 100%);
+	background: var(--ui-panel-bg, linear-gradient(160deg, rgba(15, 23, 42, 0.95) 0%, rgba(8, 12, 22, 0.98) 100%));
 	border-radius: 20px;
-	border: 1px solid rgba(100, 116, 139, 0.25);
+	border: 1px solid var(--border-bright);
 	box-shadow:
 		0 32px 80px rgba(0, 0, 0, 0.7),
-		0 0 0 1px rgba(255, 255, 255, 0.03);
+		0 0 0 1px color-mix(in srgb, var(--ink-0) 3%, transparent);
 	animation: panel-slam-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
@@ -49,24 +49,24 @@
 }
 
 .victory .game-over-panel {
-	border-color: rgba(251, 191, 36, 0.3);
+	border-color: color-mix(in srgb, var(--gold-300) 30%, transparent);
 	box-shadow:
 		0 32px 80px rgba(0, 0, 0, 0.7),
-		0 0 40px rgba(251, 191, 36, 0.12),
-		0 0 0 1px rgba(251, 191, 36, 0.08);
+		0 0 40px color-mix(in srgb, var(--gold-300) 12%, transparent),
+		0 0 0 1px color-mix(in srgb, var(--gold-300) 8%, transparent);
 }
 
 .defeat .game-over-panel {
-	border-color: rgba(239, 68, 68, 0.2);
+	border-color: color-mix(in srgb, var(--danger-400) 20%, transparent);
 	box-shadow:
 		0 32px 80px rgba(0, 0, 0, 0.7),
-		0 0 40px rgba(239, 68, 68, 0.08),
-		0 0 0 1px rgba(239, 68, 68, 0.05);
+		0 0 40px color-mix(in srgb, var(--danger-400) 8%, transparent),
+		0 0 0 1px color-mix(in srgb, var(--danger-400) 5%, transparent);
 }
 
 /* Main title */
 .game-over-title {
-	font-family: 'Cinzel', 'Georgia', serif;
+	font-family: var(--font-display);
 	font-size: 60px;
 	font-weight: 900;
 	letter-spacing: 8px;
@@ -76,10 +76,10 @@
 }
 
 .victory .game-over-title {
-	color: #fbbf24;
+	color: var(--gold-300);
 	text-shadow:
-		0 0 30px rgba(251, 191, 36, 0.8),
-		0 0 60px rgba(251, 191, 36, 0.4),
+		0 0 30px color-mix(in srgb, var(--gold-300) 80%, transparent),
+		0 0 60px color-mix(in srgb, var(--gold-300) 40%, transparent),
 		0 4px 8px rgba(0, 0, 0, 0.8);
 	animation: victoryTitleSlam 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards, victoryTitlePulse 2.5s ease-in-out 0.7s infinite;
 }
@@ -91,10 +91,10 @@
 }
 
 .defeat .game-over-title {
-	color: #ef4444;
+	color: var(--danger-400);
 	text-shadow:
-		0 0 30px rgba(239, 68, 68, 0.8),
-		0 0 60px rgba(239, 68, 68, 0.4),
+		0 0 30px color-mix(in srgb, var(--danger-400) 80%, transparent),
+		0 0 60px color-mix(in srgb, var(--danger-400) 40%, transparent),
 		0 4px 8px rgba(0, 0, 0, 0.8);
 	animation: defeatTitleFade 1s ease-out forwards;
 }
@@ -106,7 +106,7 @@
 }
 
 .draw .game-over-title {
-	color: #94a3b8;
+	color: var(--info-300);
 	text-shadow: 0 4px 8px rgba(0, 0, 0, 0.8);
 }
 
@@ -124,9 +124,9 @@
 	opacity: 0.7;
 }
 
-.victory .game-over-subtitle { color: #fbbf24; }
-.defeat .game-over-subtitle { color: #ef4444; }
-.draw .game-over-subtitle { color: #94a3b8; }
+.victory .game-over-subtitle { color: var(--gold-300); }
+.defeat .game-over-subtitle { color: var(--danger-400); }
+.draw .game-over-subtitle { color: var(--info-300); }
 
 /* Hero portraits */
 .game-over-heroes {
@@ -153,7 +153,7 @@
 }
 
 .game-over-hero-portrait.winner {
-	box-shadow: 0 0 20px rgba(251, 191, 36, 0.6), 0 0 40px rgba(251, 191, 36, 0.25);
+	box-shadow: 0 0 20px color-mix(in srgb, var(--gold-300) 60%, transparent), 0 0 40px color-mix(in srgb, var(--gold-300) 25%, transparent);
 	transform: scale(1.08);
 }
 
@@ -169,10 +169,10 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	font-family: 'Cinzel', 'Georgia', serif;
+	font-family: var(--font-display);
 	font-size: 28px;
 	font-weight: 900;
-	color: rgba(255, 255, 255, 0.95);
+	color: var(--text-white-full);
 	text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
 	border-radius: 50%;
 }
@@ -187,21 +187,21 @@
 .game-over-hero-name {
 	font-size: 13px;
 	font-weight: 700;
-	color: rgba(203, 213, 225, 0.8);
+	color: var(--text-dimmed);
 	letter-spacing: 0.5px;
 }
 
 .game-over-hero-name.winner-name {
-	color: #fbbf24;
+	color: var(--gold-300);
 }
 
 .game-over-crown {
 	font-size: 11px;
 	font-weight: 800;
-	color: #fbbf24;
+	color: var(--gold-300);
 	letter-spacing: 1px;
 	text-transform: uppercase;
-	text-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+	text-shadow: 0 0 8px color-mix(in srgb, var(--gold-300) 60%, transparent);
 }
 
 .game-over-vs-block {
@@ -213,7 +213,7 @@
 .game-over-vs {
 	font-size: 20px;
 	font-weight: 900;
-	color: rgba(100, 116, 139, 0.5);
+	color: var(--ink-400);
 	letter-spacing: 3px;
 }
 
@@ -224,8 +224,8 @@
 	gap: 12px;
 	margin-bottom: 28px;
 	padding: 18px;
-	background: rgba(10, 15, 30, 0.6);
-	border: 1px solid rgba(100, 116, 139, 0.2);
+	background: color-mix(in srgb, var(--obsidian-950) 60%, transparent);
+	border: 1px solid color-mix(in srgb, var(--ink-400) 20%, transparent);
 	border-radius: 12px;
 }
 
@@ -239,7 +239,7 @@
 .game-over-stat-value {
 	font-size: 26px;
 	font-weight: 800;
-	color: #f0f0f0;
+	color: var(--text-near-white);
 	line-height: 1;
 }
 
@@ -250,9 +250,9 @@
 	width: 52px;
 	height: 52px;
 	border-radius: 16px;
-	background: rgba(15, 23, 42, 0.8);
-	border: 1px solid rgba(148, 163, 184, 0.18);
-	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+	background: var(--surface-overlay-deep);
+	border: 1px solid var(--border-bright);
+	box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink-0) 4%, transparent);
 }
 
 .game-over-stat-value.game-over-stat-icon-badge svg {
@@ -261,21 +261,21 @@
 }
 
 .game-over-stat-value.game-over-stat-icon-badge.victory {
-	color: #fbbf24;
-	border-color: rgba(251, 191, 36, 0.24);
-	background: rgba(120, 53, 15, 0.18);
+	color: var(--gold-300);
+	border-color: color-mix(in srgb, var(--gold-300) 24%, transparent);
+	background: color-mix(in srgb, var(--gold-500) 18%, transparent);
 }
 
 .game-over-stat-value.game-over-stat-icon-badge.draw {
-	color: #94a3b8;
-	border-color: rgba(148, 163, 184, 0.22);
-	background: rgba(30, 41, 59, 0.28);
+	color: var(--info-300);
+	border-color: color-mix(in srgb, var(--info-400) 22%, transparent);
+	background: color-mix(in srgb, var(--info-500) 28%, transparent);
 }
 
 .game-over-stat-value.game-over-stat-icon-badge.defeat {
-	color: #f87171;
-	border-color: rgba(248, 113, 113, 0.2);
-	background: rgba(127, 29, 29, 0.2);
+	color: var(--danger-400);
+	border-color: color-mix(in srgb, var(--danger-400) 20%, transparent);
+	background: color-mix(in srgb, var(--danger-500) 20%, transparent);
 }
 
 .game-over-stat-value.result-badge {
@@ -287,26 +287,26 @@
 }
 
 .game-over-stat-value.result-badge.victory {
-	color: #22c55e;
-	background: rgba(34, 197, 94, 0.12);
-	border: 1px solid rgba(34, 197, 94, 0.3);
+	color: var(--success-400);
+	background: color-mix(in srgb, var(--success-400) 12%, transparent);
+	border: 1px solid color-mix(in srgb, var(--success-400) 30%, transparent);
 }
 
 .game-over-stat-value.result-badge.defeat {
-	color: #ef4444;
-	background: rgba(239, 68, 68, 0.12);
-	border: 1px solid rgba(239, 68, 68, 0.3);
+	color: var(--danger-400);
+	background: color-mix(in srgb, var(--danger-400) 12%, transparent);
+	border: 1px solid color-mix(in srgb, var(--danger-400) 30%, transparent);
 }
 
 .game-over-stat-value.result-badge.draw {
-	color: #94a3b8;
-	background: rgba(100, 116, 139, 0.12);
-	border: 1px solid rgba(100, 116, 139, 0.3);
+	color: var(--info-300);
+	background: color-mix(in srgb, var(--info-300) 12%, transparent);
+	border: 1px solid color-mix(in srgb, var(--info-300) 30%, transparent);
 }
 
 .game-over-stat-label {
 	font-size: 12px;
-	color: rgba(148, 163, 184, 0.75);
+	color: var(--text-slate);
 	text-transform: uppercase;
 	letter-spacing: 1px;
 }
@@ -318,20 +318,20 @@
 }
 
 .elo-delta-value {
-	font-family: 'Cinzel', Georgia, serif;
+	font-family: var(--font-numeric);
 	font-size: 22px;
 	font-weight: 900;
 	letter-spacing: 0.12em;
 }
 
 .elo-gain {
-	color: #22c55e;
-	text-shadow: 0 0 14px rgba(34, 197, 94, 0.5);
+	color: var(--success-400);
+	text-shadow: 0 0 14px color-mix(in srgb, var(--success-glow) 50%, transparent);
 }
 
 .elo-loss {
-	color: #ef4444;
-	text-shadow: 0 0 14px rgba(239, 68, 68, 0.5);
+	color: var(--danger-400);
+	text-shadow: 0 0 14px color-mix(in srgb, var(--danger-glow) 50%, transparent);
 }
 
 /* Action buttons */
@@ -354,14 +354,14 @@
 }
 
 .game-over-btn.primary {
-	background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+	background: linear-gradient(135deg, var(--success-400) 0%, var(--success-600) 100%);
 	color: white;
-	box-shadow: 0 4px 16px rgba(34, 197, 94, 0.35);
+	box-shadow: 0 4px 16px color-mix(in srgb, var(--success-400) 35%, transparent);
 }
 
 .game-over-btn.primary:hover {
 	transform: translateY(-3px);
-	box-shadow: 0 8px 28px rgba(34, 197, 94, 0.55);
+	box-shadow: 0 8px 28px color-mix(in srgb, var(--success-400) 55%, transparent);
 }
 
 .game-over-btn.primary:active {
@@ -370,13 +370,13 @@
 }
 
 .game-over-btn.secondary {
-	background: rgba(51, 65, 85, 0.7);
-	color: rgba(203, 213, 225, 0.9);
-	border: 1px solid rgba(100, 116, 139, 0.35);
+	background: color-mix(in srgb, var(--obsidian-750) 70%, transparent);
+	color: var(--ink-100);
+	border: 1px solid color-mix(in srgb, var(--ink-300) 35%, transparent);
 }
 
 .game-over-btn.secondary:hover {
-	background: rgba(71, 85, 105, 0.8);
+	background: var(--obsidian-700);
 	transform: translateY(-2px);
 }
 
@@ -411,7 +411,7 @@
 	content: '';
 	position: absolute;
 	inset: 0;
-	background: radial-gradient(ellipse at center, rgba(255, 215, 0, 0.4) 0%, transparent 60%);
+	background: radial-gradient(ellipse at center, color-mix(in srgb, var(--gold-300) 40%, transparent) 0%, transparent 60%);
 	animation: victory-screen-flash 1s ease-out forwards;
 	pointer-events: none;
 }
@@ -426,7 +426,7 @@
 	content: '';
 	position: absolute;
 	inset: 0;
-	background: radial-gradient(ellipse at center, rgba(180, 0, 0, 0.25) 0%, transparent 50%);
+	background: radial-gradient(ellipse at center, color-mix(in srgb, var(--danger-500) 25%, transparent) 0%, transparent 50%);
 	animation: defeat-screen-pulse 2s ease-in-out infinite;
 	pointer-events: none;
 }

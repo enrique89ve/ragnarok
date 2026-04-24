@@ -32,8 +32,13 @@ const UnifiedBattlefieldAttackConnector: React.FC<UnifiedBattlefieldAttackConnec
   onOpponentCardClick,
   onOpponentHeroClick
 }) => {
-  const { attackingCard, isAttackMode, startAttackMode, endAttackMode, completeAttack } = useAttackStore();
-  const { gameState } = useGameStore();
+  const attackingCard = useAttackStore(state => state.attackingCard);
+  const isAttackMode = useAttackStore(state => state.isAttackMode);
+  const startAttackMode = useAttackStore(state => state.startAttackMode);
+  const endAttackMode = useAttackStore(state => state.endAttackMode);
+  const completeAttack = useAttackStore(state => state.completeAttack);
+
+  const opponentBattlefield = useGameStore(state => state.gameState?.players?.opponent?.battlefield || []);
 
   // Reset attack mode when turn changes
   useEffect(() => {
@@ -46,7 +51,7 @@ const UnifiedBattlefieldAttackConnector: React.FC<UnifiedBattlefieldAttackConnec
   useEffect(() => {
     // Register handlers for player cards
     const handlePlayerCardClick = (card: CardInstance) => {
-      
+
       // Check if this card can attack
       if (isPlayerTurn && canCardAttack(card, isPlayerTurn)) {
         // If we're already in attack mode with this card, toggle it off
@@ -64,21 +69,20 @@ const UnifiedBattlefieldAttackConnector: React.FC<UnifiedBattlefieldAttackConnec
 
     // Register handlers for opponent cards (potential targets)
     const handleOpponentCardClick = (card: CardInstance) => {
-      
+
       if (isAttackMode && attackingCard) {
         // Get taunt minions from opponent's battlefield for target validation
-        const opponentBattlefield = gameState?.players?.opponent?.battlefield || [];
         const opponentTauntCards = opponentBattlefield.filter((c: any) =>
           hasKeyword(c, 'taunt')
         );
-        
+
         // Check if this is a valid target
         const isValid = isValidAttackTarget(attackingCard, card, opponentTauntCards as any);
-        
+
         if (isValid) {
           // Complete the attack
           completeAttack(card);
-          
+
           // Call the attack handler from parent
           onOpponentCardClick(card);
         } else {
@@ -91,8 +95,8 @@ const UnifiedBattlefieldAttackConnector: React.FC<UnifiedBattlefieldAttackConnec
 
     // Hook up to the battlefield by setting up event handlers
     // This would be connected to the actual UI components in a full implementation
-  }, [isPlayerTurn, isAttackMode, attackingCard, gameState, onCardClick, onOpponentCardClick, startAttackMode, endAttackMode, completeAttack]);
-  
+  }, [isPlayerTurn, isAttackMode, attackingCard, opponentBattlefield, onCardClick, onOpponentCardClick, startAttackMode, endAttackMode, completeAttack]);
+
   // This component is just a connector and doesn't render any UI
   return null;
 };

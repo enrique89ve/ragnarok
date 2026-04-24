@@ -52,18 +52,18 @@
   --grid-gap: var(--gap-sm, 6px);
   
   /* Legacy color aliases */
-  --primary-gold: var(--color-gold, #FFD700);
-  --secondary-grey: #4A4A4A;
-  --glow-yellow: #FFF3D4;
+  --primary-gold: var(--gold-300);
+  --secondary-grey: var(--obsidian-600);
+  --glow-yellow: var(--gold-glow);
   --shadow-black: rgba(0, 0, 0, 0.4);
-  --game-bg-color: var(--color-amber-primary, #92400e);
+  --game-bg-color: var(--obsidian-950);
   
   /* Legacy Norse aliases */
-  --norse-primary: var(--color-amber-primary, #92400e);
-  --norse-secondary: var(--color-amber-secondary, #78350f);
-  --norse-accent: var(--color-gold, #FFD700);
-  --norse-text: var(--text-primary, #f3f4f6);
-  --norse-border: #9ca3af;
+  --norse-primary: var(--obsidian-800);
+  --norse-secondary: var(--obsidian-900);
+  --norse-accent: var(--gold-300);
+  --norse-text: var(--ink-100);
+  --norse-border: var(--ink-400);
   
   /* UI scaling (game-specific) */
   --reference-width: 1920px;
@@ -85,12 +85,12 @@
   --z-modals: 1000;
   
   /* Card glow effects (game-specific) - Fast GPU 1-layer versions */
-  --card-playable-glow: 0 0 15px rgba(0, 255, 0, 0.8);
-  --card-targetable-glow: 0 0 15px rgba(255, 0, 0, 0.8);
-  --card-highlighted-glow: 0 0 15px rgba(255, 255, 0, 0.8);
-  --card-legendary-glow: var(--shadow-glow-gold, 0 0 20px rgba(255, 215, 0, 0.7));
-  --card-epic-glow: 0 0 20px rgba(163, 53, 238, 0.7);
-  --card-standard-glow: var(--shadow-glow-blue, 0 0 20px rgba(0, 112, 221, 0.7));
+  --card-playable-glow: 0 0 15px var(--success-glow);
+  --card-targetable-glow: 0 0 15px var(--danger-glow);
+  --card-highlighted-glow: 0 0 15px var(--gold-glow);
+  --card-legendary-glow: var(--shadow-glow-gold);
+  --card-epic-glow: var(--rarity-epic-glow);
+  --card-standard-glow: var(--rarity-rare-glow);
 
   /* Opponent zone styling */
   --opponent-zone-bg: rgba(139, 0, 0, 0.05);
@@ -112,6 +112,49 @@
   /* Card animation scales */
   --hand-card-scale: 0.5;
   --dragging-card-scale: 0.6;
+}
+
+/* =============================================
+   CARD TEXT UTILITY CLASSES
+   Migrated from CardTextStyles.css (orphaned).
+   Used by: textFormatUtils.tsx, SimpleCard.tsx, TargetingOverlay.tsx
+   ============================================= */
+
+/* Highlighted numbers inside card text (inline HTML via dangerouslySetInnerHTML) */
+.number-value {
+  font-weight: 700;
+  color: var(--danger-500);
+  font-size: inherit;
+}
+
+.damage-value {
+  font-weight: 700;
+  color: var(--danger-400);
+  font-size: inherit;
+}
+
+/* Card body description container */
+.card-description {
+  color: var(--ink-0);
+  padding: 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  height: 100%;
+  background: transparent;
+  border: none;
+  overflow: visible;
+}
+
+/* Mana cost badge text */
+.mana-value {
+  color: var(--stat-mana, var(--bifrost-300));
+  font-weight: 700;
+  font-size: inherit;
 }
 
 @layer base {
@@ -325,11 +368,10 @@ canvas {
   content: '';
   position: absolute;
   inset: -3px;
-  background: linear-gradient(135deg, #8B4513, #A0522D, #D2691E, #8B4513);
+  background: linear-gradient(135deg, var(--obsidian-600), var(--gold-700), var(--gold-800), var(--obsidian-600));
   z-index: -1;
   border-radius: 12px;
   opacity: 0.8;
-  /* Removed filter: blur(3px) for GPU performance */
 }
 
 /* Tooltip styles for keyword icons */

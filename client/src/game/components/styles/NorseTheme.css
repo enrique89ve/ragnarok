@@ -15,14 +15,14 @@
   right: 0;
   bottom: 0;
   background: 
-    radial-gradient(ellipse at 50% 50%, rgba(30, 41, 59, 0.3) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, color-mix(in srgb, var(--obsidian-750) 30%, transparent) 0%, transparent 50%),
     linear-gradient(180deg, 
-      #1a1a2e 0%, 
-      #16213e 20%, 
-      #1a1a2e 40%,
-      #0f0f23 60%,
-      #1a1a2e 80%,
-      #16213e 100%
+      var(--obsidian-950) 0%, 
+      var(--obsidian-900) 20%, 
+      var(--obsidian-950) 40%,
+      var(--obsidian-950) 60%,
+      var(--obsidian-950) 80%,
+      var(--obsidian-900) 100%
     );
   z-index: -2;
 }
@@ -37,8 +37,8 @@
   width: 80%;
   height: 40%;
   background: radial-gradient(ellipse at center, 
-    rgba(59, 130, 246, 0.08) 0%, 
-    rgba(147, 51, 234, 0.04) 40%, 
+    var(--rarity-rare-glow) 0%, 
+    color-mix(in srgb, var(--rarity-epic-color) 4%, transparent) 40%, 
     transparent 70%
   );
   pointer-events: none;
@@ -55,24 +55,24 @@
 .norse-battlefield-zone {
   position: relative;
   background: linear-gradient(180deg, 
-    rgba(30, 41, 59, 0.4) 0%, 
-    rgba(51, 65, 85, 0.3) 50%, 
-    rgba(30, 41, 59, 0.4) 100%
+    color-mix(in srgb, var(--obsidian-750) 40%, transparent) 0%, 
+    color-mix(in srgb, var(--obsidian-700) 30%, transparent) 50%, 
+    color-mix(in srgb, var(--obsidian-750) 40%, transparent) 100%
   );
-  border: 2px solid rgba(148, 163, 184, 0.2);
+  border: 2px solid var(--border-bright);
   border-radius: 12px;
   /* backdrop-filter removed for GPU perf */
   box-shadow: 
     inset 0 2px 20px rgba(0, 0, 0, 0.3),
     0 4px 20px rgba(0, 0, 0, 0.2),
-    inset 0 -2px 10px rgba(59, 130, 246, 0.1);
+    inset 0 -2px 10px var(--rarity-rare-glow);
 }
 
 .norse-battlefield-zone::before {
   content: '';
   position: absolute;
   inset: 4px;
-  border: 1px solid rgba(148, 163, 184, 0.1);
+  border: 1px solid var(--border-chip);
   border-radius: 8px;
   pointer-events: none;
 }
@@ -88,9 +88,9 @@
   height: 4px;
   background: linear-gradient(90deg, 
     transparent 0%, 
-    rgba(59, 130, 246, 0.5) 20%,
-    rgba(147, 51, 234, 0.5) 50%,
-    rgba(59, 130, 246, 0.5) 80%,
+    color-mix(in srgb, var(--rarity-rare-color) 50%, transparent) 20%,
+    color-mix(in srgb, var(--rarity-epic-color) 50%, transparent) 50%,
+    color-mix(in srgb, var(--rarity-rare-color) 50%, transparent) 80%,
     transparent 100%
   );
   border-radius: 2px;
@@ -106,18 +106,18 @@
 /* Player Battlefield (bottom) */
 .norse-player-battlefield {
   background: linear-gradient(180deg, 
-    rgba(34, 197, 94, 0.05) 0%, 
-    rgba(30, 41, 59, 0.4) 50%, 
-    rgba(34, 197, 94, 0.08) 100%
+    color-mix(in srgb, var(--success-400) 5%, transparent) 0%, 
+    color-mix(in srgb, var(--obsidian-750) 40%, transparent) 50%, 
+    color-mix(in srgb, var(--success-400) 8%, transparent) 100%
   );
 }
 
 /* Opponent Battlefield (top) */
 .norse-opponent-battlefield {
   background: linear-gradient(180deg, 
-    rgba(239, 68, 68, 0.08) 0%, 
-    rgba(30, 41, 59, 0.4) 50%, 
-    rgba(239, 68, 68, 0.05) 100%
+    color-mix(in srgb, var(--danger-400) 8%, transparent) 0%, 
+    color-mix(in srgb, var(--obsidian-750) 40%, transparent) 50%, 
+    color-mix(in srgb, var(--danger-400) 5%, transparent) 100%
   );
 }
 
@@ -129,12 +129,12 @@
   height: 2px;
   background: linear-gradient(90deg, 
     transparent 0%, 
-    rgba(148, 163, 184, 0.4) 20%,
-    rgba(234, 179, 8, 0.6) 50%,
-    rgba(148, 163, 184, 0.4) 80%,
+    color-mix(in srgb, var(--border-bright) 40%, transparent) 20%,
+    color-mix(in srgb, var(--gold-300) 60%, transparent) 50%,
+    color-mix(in srgb, var(--border-bright) 40%, transparent) 80%,
     transparent 100%
   );
-  box-shadow: 0 0 10px rgba(234, 179, 8, 0.3);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--gold-300) 30%, transparent);
 }
 
 /* Hero Portrait Enhancements */
@@ -148,10 +148,10 @@
     rgba(30, 41, 59, 1) 100%
   );
   border: 4px solid;
-  border-image: linear-gradient(135deg, #fbbf24 0%, #d97706 50%, #92400e 100%) 1;
+  border-image: linear-gradient(135deg, var(--gold-200) 0%, var(--gold-300) 50%, var(--gold-500) 100%) 1;
   border-radius: 50%;
   box-shadow: 
-    0 0 20px rgba(251, 191, 36, 0.3),
+    0 0 20px color-mix(in srgb, var(--gold-300) 30%, transparent),
     inset 0 2px 10px rgba(255, 255, 255, 0.1),
     0 8px 20px rgba(0, 0, 0, 0.4);
   overflow: hidden;
@@ -167,7 +167,7 @@
   background: conic-gradient(
     from 0deg,
     transparent 0deg,
-    rgba(251, 191, 36, 0.2) 60deg,
+    color-mix(in srgb, var(--gold-200) 20%, transparent) 60deg,
     transparent 120deg
   );
   animation: heroShine 6s linear infinite;
@@ -179,17 +179,17 @@
 }
 
 .norse-hero-portrait-player {
-  border-color: #22c55e;
+  border-color: var(--success-500);
   box-shadow: 
-    0 0 15px rgba(34, 197, 94, 0.4),
+    0 0 15px var(--success-glow),
     inset 0 2px 10px rgba(255, 255, 255, 0.1),
     0 8px 20px rgba(0, 0, 0, 0.4);
 }
 
 .norse-hero-portrait-opponent {
-  border-color: #ef4444;
+  border-color: var(--danger-500);
   box-shadow: 
-    0 0 15px rgba(239, 68, 68, 0.4),
+    0 0 15px var(--danger-glow),
     inset 0 2px 10px rgba(255, 255, 255, 0.1),
     0 8px 20px rgba(0, 0, 0, 0.4);
 }
@@ -200,12 +200,12 @@
   bottom: -8px;
   left: 50%;
   transform: translateX(-50%);
-  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
-  border: 2px solid #fca5a5;
+  background: linear-gradient(135deg, var(--danger-500) 0%, var(--danger-600, #991b1b) 100%);
+  border: 2px solid var(--danger-200);
   border-radius: 12px;
   padding: 2px 12px;
   box-shadow: 
-    0 0 10px rgba(220, 38, 38, 0.5),
+    0 0 10px var(--danger-glow),
     0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
@@ -215,14 +215,14 @@
   width: 24px;
   height: 24px;
   background: linear-gradient(135deg, 
-    rgba(59, 130, 246, 0.9) 0%, 
-    rgba(37, 99, 235, 1) 50%,
-    rgba(29, 78, 216, 1) 100%
+    var(--rarity-rare-color) 0%, 
+    var(--rarity-rare-mid) 50%,
+    var(--rarity-rare-deep) 100%
   );
-  border: 2px solid rgba(147, 197, 253, 0.8);
+  border: 2px solid var(--rarity-rare-bright);
   border-radius: 6px;
   box-shadow: 
-    0 0 8px rgba(59, 130, 246, 0.6),
+    0 0 8px var(--rarity-rare-glow),
     inset 0 2px 4px rgba(255, 255, 255, 0.3),
     0 3px 6px rgba(0, 0, 0, 0.2);
   transform: rotate(45deg);
@@ -244,10 +244,10 @@
 
 .norse-mana-crystal-empty {
   background: linear-gradient(135deg, 
-    rgba(51, 65, 85, 0.9) 0%, 
-    rgba(30, 41, 59, 1) 100%
+    var(--obsidian-600) 0%, 
+    var(--obsidian-900) 100%
   );
-  border-color: rgba(100, 116, 139, 0.5);
+  border-color: var(--obsidian-500);
   box-shadow: 
     inset 0 2px 8px rgba(0, 0, 0, 0.3),
     0 3px 6px rgba(0, 0, 0, 0.2);
@@ -256,15 +256,15 @@
 /* Turn Indicator */
 .norse-turn-indicator {
   background: linear-gradient(135deg, 
-    rgba(34, 197, 94, 1) 0%, 
-    rgba(22, 163, 74, 1) 50%,
-    rgba(21, 128, 61, 1) 100%
+    var(--success-400) 0%, 
+    var(--success-500) 50%,
+    var(--success-600, #15803d) 100%
   );
-  border: 3px solid rgba(134, 239, 172, 0.8);
+  border: 3px solid var(--success-200);
   border-radius: 8px;
   padding: 8px 20px;
   box-shadow: 
-    0 0 20px rgba(34, 197, 94, 0.5),
+    0 0 20px var(--success-glow),
     0 6px 16px rgba(0, 0, 0, 0.3),
     inset 0 2px 4px rgba(255, 255, 255, 0.2);
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
@@ -275,29 +275,29 @@
 
 .norse-turn-indicator-enemy {
   background: linear-gradient(135deg, 
-    rgba(239, 68, 68, 1) 0%, 
-    rgba(220, 38, 38, 1) 50%,
-    rgba(185, 28, 28, 1) 100%
+    var(--danger-400) 0%, 
+    var(--danger-500) 50%,
+    var(--danger-600, #b91c1c) 100%
   );
-  border-color: rgba(252, 165, 165, 0.8);
+  border-color: var(--danger-200);
   box-shadow: 
-    0 0 20px rgba(239, 68, 68, 0.5),
+    0 0 20px var(--danger-glow),
     0 6px 16px rgba(0, 0, 0, 0.3),
     inset 0 2px 4px rgba(255, 255, 255, 0.2);
   animation: none;
 }
 
 @keyframes turnPulse {
-  0%, 100% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.5), 0 6px 16px rgba(0, 0, 0, 0.3); }
-  50% { box-shadow: 0 0 30px rgba(34, 197, 94, 0.8), 0 0 40px rgba(34, 197, 94, 0.3), 0 6px 16px rgba(0, 0, 0, 0.3); }
+  0%, 100% { box-shadow: 0 0 20px var(--success-glow), 0 6px 16px rgba(0, 0, 0, 0.3); }
+  50% { box-shadow: 0 0 30px color-mix(in srgb, var(--success-400) 80%, transparent), 0 0 40px var(--success-glow), 0 6px 16px rgba(0, 0, 0, 0.3); }
 }
 
 /* End Turn Button */
 .norse-end-turn-button {
   background: linear-gradient(135deg, 
-    #fbbf24 0%, 
-    #d97706 50%,
-    #b45309 100%
+    var(--gold-200) 0%, 
+    var(--gold-300) 50%,
+    var(--gold-500) 100%
   );
   border: 3px solid rgba(253, 224, 71, 0.8);
   border-radius: 8px;
@@ -319,7 +319,7 @@
   transform: translateY(-3px);
   box-shadow: 
     0 8px 25px rgba(0, 0, 0, 0.5),
-    0 0 25px rgba(251, 191, 36, 0.5),
+    0 0 25px color-mix(in srgb, var(--gold-300) 50%, transparent),
     inset 0 2px 4px rgba(255, 255, 255, 0.3);
 }
 
@@ -340,11 +340,11 @@
   width: 48px;
   height: 64px;
   background: linear-gradient(135deg, 
-    #92400e 0%, 
-    #78350f 50%,
-    #451a03 100%
+    var(--ember-500) 0%, 
+    var(--ember-600) 50%,
+    var(--obsidian-950) 100%
   );
-  border: 3px solid #fbbf24;
+  border: 3px solid var(--gold-300);
   border-radius: 8px;
   box-shadow: 
     0 4px 12px rgba(0, 0, 0, 0.4),
@@ -371,13 +371,13 @@
   bottom: 4px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.8);
-  border: 1px solid rgba(251, 191, 36, 0.5);
+  background: var(--surface-overlay-deep);
+  border: 1px solid var(--border-gold-mid);
   border-radius: 4px;
   padding: 1px 6px;
   font-size: 0.75rem;
   font-weight: 700;
-  color: white;
+  color: var(--text-white-full);
 }
 
 /* Floating Particles */
@@ -397,8 +397,8 @@
   width: 3px;
   height: 3px;
   background: radial-gradient(circle, 
-    rgba(251, 191, 36, 0.8) 0%, 
-    rgba(251, 191, 36, 0.2) 50%, 
+    color-mix(in srgb, var(--gold-300) 80%, transparent) 0%, 
+    color-mix(in srgb, var(--gold-300) 20%, transparent) 50%, 
     transparent 100%
   );
   border-radius: 50%;
@@ -407,8 +407,8 @@
 
 .norse-particle-blue {
   background: radial-gradient(circle, 
-    rgba(59, 130, 246, 0.8) 0%, 
-    rgba(59, 130, 246, 0.2) 50%, 
+    color-mix(in srgb, var(--rarity-rare-color) 80%, transparent) 0%, 
+    color-mix(in srgb, var(--rarity-rare-color) 20%, transparent) 50%, 
     transparent 100%
   );
 }
@@ -459,13 +459,13 @@
   height: 40px;
   border-radius: 50%;
   background: linear-gradient(135deg, 
-    rgba(147, 51, 234, 1) 0%, 
-    rgba(126, 34, 206, 1) 50%,
-    rgba(107, 33, 168, 1) 100%
+    var(--rarity-epic-color) 0%, 
+    var(--rarity-epic-mid) 50%,
+    var(--rarity-epic-deep) 100%
   );
-  border: 3px solid rgba(192, 132, 252, 0.8);
+  border: 3px solid var(--rarity-epic-bright);
   box-shadow: 
-    0 0 12px rgba(147, 51, 234, 0.5),
+    0 0 12px var(--rarity-epic-glow),
     0 4px 10px rgba(0, 0, 0, 0.3),
     inset 0 2px 4px rgba(255, 255, 255, 0.2);
   cursor: pointer;
@@ -485,10 +485,10 @@
 /* Game Log Enhancement */
 .norse-game-log {
   background: linear-gradient(135deg, 
-    rgba(15, 23, 42, 0.95) 0%, 
-    rgba(30, 41, 59, 0.9) 100%
+    var(--surface-overlay-deep) 0%, 
+    var(--surface-overlay-mid) 100%
   );
-  border: 2px solid rgba(148, 163, 184, 0.3);
+  border: 2px solid var(--border-bright);
   border-radius: 12px;
   box-shadow: 
     0 8px 24px rgba(0, 0, 0, 0.4),

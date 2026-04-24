@@ -13,13 +13,13 @@
 }
 
 .mastery-tier-2 {
-	color: #c4b5fd;
-	text-shadow: 0 0 6px rgba(168, 85, 247, 0.8);
+	color: var(--rarity-epic-pale);
+	text-shadow: 0 0 6px var(--rarity-epic-glow);
 }
 
 .mastery-tier-3 {
-	color: #fde68a;
-	text-shadow: 0 0 8px rgba(245, 158, 11, 0.9);
+	color: var(--gold-200);
+	text-shadow: 0 0 8px var(--gold-glow);
 }
 
 .mastery-badge-modal {
@@ -33,33 +33,33 @@
 
 /* ========== Mint Badge (Etched Serial Number) ========== */
 .mint-badge {
-	font-family: 'Courier New', 'Consolas', monospace;
+	font-family: var(--font-numeric);
 	font-size: 11px;
 	font-weight: 700;
 	letter-spacing: 0.5px;
-	color: rgba(255, 255, 255, 0.7);
+	color: var(--ink-200);
 	text-shadow:
 		0 1px 0 rgba(0, 0, 0, 0.8),
-		0 -1px 0 rgba(255, 255, 255, 0.1);
-	background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
-	border: 1px solid rgba(255, 255, 255, 0.1);
+		0 -1px 0 color-mix(in srgb, var(--ink-0) 10%, transparent);
+	background: color-mix(in srgb, var(--ink-0) 5%, transparent);
+	border: 1px solid color-mix(in srgb, var(--ink-0) 10%, transparent);
 	border-radius: 4px;
 	padding: 3px 8px;
 	backdrop-filter: blur(4px);
 }
 
 .mint-badge-modal {
-	font-family: 'Courier New', 'Consolas', monospace;
+	font-family: var(--font-numeric);
 	font-size: 18px;
 	font-weight: 700;
 	letter-spacing: 1.5px;
-	color: rgba(255, 255, 255, 0.85);
+	color: var(--ink-100);
 	text-shadow:
 		0 2px 0 rgba(0, 0, 0, 0.9),
-		0 -1px 0 rgba(255, 255, 255, 0.15),
-		0 0 20px rgba(255, 255, 255, 0.1);
-	background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%);
-	border: 1px solid rgba(255, 255, 255, 0.15);
+		0 -1px 0 color-mix(in srgb, var(--ink-0) 15%, transparent),
+		0 0 20px color-mix(in srgb, var(--ink-0) 10%, transparent);
+	background: color-mix(in srgb, var(--ink-0) 8%, transparent);
+	border: 1px solid color-mix(in srgb, var(--ink-0) 15%, transparent);
 	border-radius: 6px;
 	padding: 10px 20px;
 }
@@ -88,9 +88,9 @@
 	background: linear-gradient(
 		90deg,
 		transparent 0%,
-		rgba(255, 255, 255, 0.03) 30%,
-		rgba(255, 255, 255, 0.08) 50%,
-		rgba(255, 255, 255, 0.03) 70%,
+		color-mix(in srgb, var(--ink-0) 3%, transparent) 30%,
+		color-mix(in srgb, var(--ink-0) 8%, transparent) 50%,
+		color-mix(in srgb, var(--ink-0) 3%, transparent) 70%,
 		transparent 100%
 	);
 	animation: foil-shimmer 4s ease-in-out infinite;
@@ -100,9 +100,9 @@
 	background: linear-gradient(
 		90deg,
 		transparent 0%,
-		rgba(59, 130, 246, 0.05) 30%,
-		rgba(59, 130, 246, 0.12) 50%,
-		rgba(59, 130, 246, 0.05) 70%,
+		color-mix(in srgb, var(--rarity-rare-color) 5%, transparent) 30%,
+		color-mix(in srgb, var(--rarity-rare-color) 12%, transparent) 50%,
+		color-mix(in srgb, var(--rarity-rare-color) 5%, transparent) 70%,
 		transparent 100%
 	);
 }
@@ -111,9 +111,9 @@
 	background: linear-gradient(
 		90deg,
 		transparent 0%,
-		rgba(147, 51, 234, 0.06) 30%,
-		rgba(147, 51, 234, 0.15) 50%,
-		rgba(147, 51, 234, 0.06) 70%,
+		color-mix(in srgb, var(--rarity-epic-color) 6%, transparent) 30%,
+		color-mix(in srgb, var(--rarity-epic-color) 15%, transparent) 50%,
+		color-mix(in srgb, var(--rarity-epic-color) 6%, transparent) 70%,
 		transparent 100%
 	);
 	animation-duration: 3.5s;
@@ -123,9 +123,9 @@
 	background: linear-gradient(
 		90deg,
 		transparent 0%,
-		rgba(236, 72, 153, 0.1) 25%,
-		rgba(139, 92, 246, 0.15) 50%,
-		rgba(34, 211, 238, 0.1) 75%,
+		color-mix(in srgb, var(--danger-500) 10%, transparent) 25%,
+		color-mix(in srgb, var(--rarity-epic-bright) 15%, transparent) 50%,
+		color-mix(in srgb, var(--info-400) 10%, transparent) 75%,
 		transparent 100%
 	);
 	animation-duration: 2.5s;
@@ -145,7 +145,7 @@
 
 .mythic-card-frame {
 	position: relative;
-	background: linear-gradient(135deg, #1a1025 0%, #0d0d1a 100%);
+	background: linear-gradient(135deg, color-mix(in srgb, var(--rarity-epic-deep) 40%, black) 0%, var(--obsidian-950) 100%);
 	border-radius: 12px;
 }
 
@@ -156,10 +156,10 @@
 	border-radius: 14px;
 	background: conic-gradient(
 		from var(--angle, 0deg),
-		#ec4899,
-		#8b5cf6,
-		#22d3ee,
-		#ec4899
+		var(--danger-500),
+		var(--rarity-epic-color),
+		var(--info-400),
+		var(--danger-500)
 	);
 	z-index: -1;
 	animation: mythic-border-rotate 3s linear infinite;
@@ -169,7 +169,7 @@
 .supply-meter {
 	height: 6px;
 	border-radius: 3px;
-	background: rgba(255, 255, 255, 0.1);
+	background: var(--obsidian-750);
 	overflow: hidden;
 }
 
@@ -179,10 +179,10 @@
 	transition: width 0.6s ease;
 }
 
-.supply-meter-fill-common { background: linear-gradient(90deg, #6b7280, #9ca3af); }
-.supply-meter-fill-rare { background: linear-gradient(90deg, #2563eb, #3b82f6); }
-.supply-meter-fill-epic { background: linear-gradient(90deg, #7c3aed, #a855f7); }
-.supply-meter-fill-mythic { background: linear-gradient(90deg, #ec4899, #8b5cf6, #22d3ee); }
+.supply-meter-fill-common { background: linear-gradient(90deg, var(--obsidian-600), var(--obsidian-500)); }
+.supply-meter-fill-rare { background: linear-gradient(90deg, var(--rarity-rare-deep), var(--rarity-rare-color)); }
+.supply-meter-fill-epic { background: linear-gradient(90deg, var(--rarity-epic-deep), var(--rarity-epic-color)); }
+.supply-meter-fill-mythic { background: linear-gradient(90deg, var(--danger-500), var(--rarity-epic-color), var(--info-400)); }
 
 /* ========== Card Frame Glows ========== */
 .card-frame {
@@ -194,41 +194,41 @@
 }
 
 .card-frame-common {
-	border: 2px solid rgba(107, 114, 128, 0.6);
-	box-shadow: 0 0 8px rgba(107, 114, 128, 0.2);
+	border: 2px solid var(--obsidian-600);
+	box-shadow: 0 0 8px color-mix(in srgb, var(--obsidian-600) 20%, transparent);
 }
 .card-frame-common:hover {
-	box-shadow: 0 0 20px rgba(107, 114, 128, 0.4);
+	box-shadow: 0 0 20px color-mix(in srgb, var(--obsidian-600) 40%, transparent);
 }
 
 .card-frame-rare {
-	border: 2px solid rgba(59, 130, 246, 0.7);
-	box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+	border: 2px solid color-mix(in srgb, var(--rarity-rare-color) 70%, transparent);
+	box-shadow: 0 0 12px var(--rarity-rare-glow);
 }
 .card-frame-rare:hover {
-	box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
+	box-shadow: 0 0 30px color-mix(in srgb, var(--rarity-rare-color) 50%, transparent);
 }
 
 .card-frame-epic {
-	border: 2px solid rgba(147, 51, 234, 0.7);
-	box-shadow: 0 0 15px rgba(147, 51, 234, 0.35);
+	border: 2px solid color-mix(in srgb, var(--rarity-epic-color) 70%, transparent);
+	box-shadow: 0 0 15px var(--rarity-epic-glow);
 }
 .card-frame-epic:hover {
-	box-shadow: 0 0 35px rgba(147, 51, 234, 0.6);
+	box-shadow: 0 0 35px color-mix(in srgb, var(--rarity-epic-color) 60%, transparent);
 }
 
 .card-frame-mythic {
-	border: 2px solid rgba(251, 191, 36, 0.8);
+	border: 2px solid color-mix(in srgb, var(--gold-300) 80%, transparent);
 	box-shadow:
-		0 0 20px rgba(251, 191, 36, 0.4),
-		0 0 25px rgba(236, 72, 153, 0.4),
-		0 0 50px rgba(139, 92, 246, 0.2);
+		0 0 20px var(--gold-glow),
+		0 0 25px color-mix(in srgb, var(--danger-500) 40%, transparent),
+		0 0 50px color-mix(in srgb, var(--rarity-epic-color) 20%, transparent);
 }
 .card-frame-mythic:hover {
 	box-shadow:
-		0 0 40px rgba(251, 191, 36, 0.7),
-		0 0 25px rgba(236, 72, 153, 0.4),
-		0 0 50px rgba(139, 92, 246, 0.2);
+		0 0 40px color-mix(in srgb, var(--gold-300) 70%, transparent),
+		0 0 25px color-mix(in srgb, var(--danger-500) 40%, transparent),
+		0 0 50px color-mix(in srgb, var(--rarity-epic-color) 20%, transparent);
 }
 
 /* ========== Stat Gems ========== */
@@ -248,15 +248,15 @@
 }
 
 .stat-gem-attack {
-	background: linear-gradient(135deg, #f59e0b, #d97706);
+	background: linear-gradient(135deg, var(--gold-300), var(--gold-400));
 	color: #fff;
-	border: 2px solid #92400e;
+	border: 2px solid var(--gold-500);
 }
 
 .stat-gem-health {
-	background: linear-gradient(135deg, #ef4444, #b91c1c);
+	background: linear-gradient(135deg, var(--danger-400), var(--danger-600));
 	color: #fff;
-	border: 2px solid #7f1d1d;
+	border: 2px solid var(--danger-700, #7f1d1d);
 }
 
 /* ========== Filter Pills ========== */
@@ -276,13 +276,13 @@
 }
 
 .filter-pill-inactive {
-	background: rgba(255, 255, 255, 0.06);
-	color: rgba(255, 255, 255, 0.5);
-	border-color: rgba(255, 255, 255, 0.1);
+	background: color-mix(in srgb, var(--ink-0) 6%, transparent);
+	color: var(--ink-300);
+	border-color: color-mix(in srgb, var(--ink-0) 10%, transparent);
 }
 .filter-pill-inactive:hover {
-	background: rgba(255, 255, 255, 0.1);
-	color: rgba(255, 255, 255, 0.7);
+	background: color-mix(in srgb, var(--ink-0) 10%, transparent);
+	color: var(--ink-200);
 }
 
 .filter-pill-active {
@@ -293,16 +293,16 @@
 .completion-bar {
 	height: 10px;
 	border-radius: 5px;
-	background: rgba(255, 255, 255, 0.08);
+	background: var(--obsidian-750);
 	overflow: hidden;
 }
 
 .completion-bar-fill {
 	height: 100%;
 	border-radius: 5px;
-	background: linear-gradient(90deg, #6366f1, #8b5cf6, #a855f7);
+	background: linear-gradient(90deg, var(--rarity-rare-color), var(--rarity-epic-color), var(--rarity-epic-bright));
 	transition: width 0.8s ease;
-	box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);
+	box-shadow: 0 0 10px var(--rarity-epic-glow);
 }
 
 /* ========== Rarity Stat Cards ========== */
@@ -310,6 +310,6 @@
 	padding: 8px 12px;
 	border-radius: 8px;
 	text-align: center;
-	border: 1px solid rgba(255, 255, 255, 0.1);
+	border: 1px solid color-mix(in srgb, var(--ink-0) 10%, transparent);
 	backdrop-filter: blur(4px);
 }

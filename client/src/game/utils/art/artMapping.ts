@@ -239,7 +239,7 @@ const CHARACTER_ART_IDS: Record<string, string> = {
   'leikn': 'acf3-ujc0m5ze',
   'loki': '5e45-mxkiu04b',
   'lunargaittrotter': 'e832-nil2y5bq',
-  'lunarhowler': 'e6bc-wg7xls1q',
+  'lunarhowler': '9575-1fc23371',
   'managarm': '5415-ghtr7fjn',
   'managarm-celestial': '6e7a-zuq3r82h',
   'mani': 'd638-pfkjzzuo',

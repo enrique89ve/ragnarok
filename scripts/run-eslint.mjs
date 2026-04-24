@@ -5,7 +5,7 @@ import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { ESLint } from 'eslint';
 
-const DEFAULT_BATCH_SIZE = 40;
+const DEFAULT_BATCH_SIZE = 10;
 const RETRY_DELAY_MS = 200;
 const MAX_EIO_RETRIES = 3;
 const DEFAULT_MAX_WARNINGS = -1;

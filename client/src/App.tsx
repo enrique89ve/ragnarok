@@ -42,7 +42,7 @@ const AdminPanel = lazy(() => import('./game/components/admin/AdminPanel'));
 const StarterPackCeremony = lazy(() => import('./game/components/StarterPackCeremony'));
 const DuatClaimPopup = lazy(() => import('./game/components/DuatClaimPopup'));
 const FactionPledgePopup = lazy(() =>
-	import('./game/pvp').then(m => ({ default: m.FactionPledgePopup }))
+  import('./game/pvp').then(m => ({ default: m.FactionPledgePopup }))
 );
 
 type DeferredInstallPromptEvent = Event & {
@@ -144,15 +144,15 @@ function HomePage() {
         : `${completedMissionCount}/${totalMissionCount} missions cleared`;
   const journeySteps = !starterClaimed
     ? [
-        { icon: Shield, label: 'Claim', detail: 'Starter deck and default line', complete: false },
-        { icon: ScrollText, label: 'Stage', detail: 'Open the campaign map', complete: false },
-        { icon: Swords, label: 'Battle', detail: 'Enter the first authored run', complete: false },
-      ]
+      { icon: Shield, label: 'Claim', detail: 'Starter deck and default line', complete: false },
+      { icon: ScrollText, label: 'Stage', detail: 'Open the campaign map', complete: false },
+      { icon: Swords, label: 'Battle', detail: 'Enter the first authored run', complete: false },
+    ]
     : [
-        { icon: Castle, label: 'Campaign', detail: 'Choose the next mission', complete: true },
-        { icon: ScrollText, label: 'Briefing', detail: 'Lock difficulty and pacing', complete: Boolean(activeMission || nextMission) },
-        { icon: Swords, label: 'Battle', detail: 'Move from staging into live play', complete: Boolean(activeMission) || completedMissionCount > 0 },
-      ];
+      { icon: Castle, label: 'Campaign', detail: 'Choose the next mission', complete: true },
+      { icon: ScrollText, label: 'Briefing', detail: 'Lock difficulty and pacing', complete: Boolean(activeMission || nextMission) },
+      { icon: Swords, label: 'Battle', detail: 'Move from staging into live play', complete: Boolean(activeMission) || completedMissionCount > 0 },
+    ];
   const modeCards = [
     {
       title: 'Ranked PvP',
@@ -180,9 +180,7 @@ function HomePage() {
     { label: 'Packs', to: routes.packs },
     { label: 'Trading', to: routes.trading },
     { label: 'Tournaments', to: routes.tournaments },
-    { label: 'Ladder', to: routes.ladder },
     { label: 'History', to: routes.history },
-    { label: 'Settings', to: routes.settings },
     { label: 'Treasury', to: routes.treasury },
     { label: 'Explorer', to: routes.explorer },
   ];
@@ -197,178 +195,129 @@ function HomePage() {
   }, []);
 
   return (
-    <div className="h-screen w-screen relative overflow-hidden homepage-container">
+    <div className="h-screen w-screen relative overflow-y-auto overflow-x-hidden homepage-container">
       <div
         ref={bgOverlayRef}
         className="absolute inset-0 opacity-20 homepage-bg-overlay"
       />
 
+      {/* ── MENUBAR: Brand + Wallet only (no nav to avoid duplicates) ── */}
+      <header className="homepage-menubar">
+        <div className="homepage-menubar-inner">
+          <div className="homepage-menubar-brand">
+            <img src={ragnarokLogo} alt="" className="homepage-menubar-logo" />
+            <span className="homepage-menubar-title">RAGNAROK</span>
+            <span className="homepage-menubar-season">⬡ Forge &amp; Ember · v1.0</span>
+          </div>
+          <div className="homepage-menubar-right">
+            <Suspense fallback={<div className="animate-pulse h-8 w-8 rounded-full bg-gray-700" />}>
+              <FriendsPanel />
+            </Suspense>
+            <Suspense fallback={<div className="animate-pulse h-8 w-28 rounded bg-gray-700" />}>
+              <HiveKeychainLogin />
+            </Suspense>
+          </div>
+        </div>
+      </header>
+
       <div className="homepage-scaffold">
-        <div className="homepage-top-rail">
-          <div className="homepage-top-widget homepage-top-widget-wide">
-            <Suspense fallback={<div className="animate-pulse h-8 w-40 bg-gray-700 rounded" />}>
+
+        {/* ── HERO BANNER: copy left + Daily Quests right ── */}
+        <section className="homepage-hero-banner">
+          <div className="homepage-hero-copy">
+            <div className="homepage-kicker">⬡ Live · Season 01 · The Forge Kindles</div>
+            <h1 className="homepage-title">Claim the line. March into battle.</h1>
+            <p className="homepage-copy">
+              Campaign is the clean front door — claim the starter line, stage a mission briefing,
+              muster the warband, and break straight into live combat.
+            </p>
+            <div className="homepage-hero-actions">
+              {!starterClaimed ? (
+                <Button className="homepage-hero-cta" onClick={() => setShowCeremony(true)}>
+                  Claim Starter Deck
+                </Button>
+              ) : (
+                <Link to={routes.campaign} className="homepage-cta-link">
+                  <Button className="homepage-hero-cta">{primaryLabel}</Button>
+                </Link>
+              )}
+              <div className="homepage-support-actions">
+                <AssetDownloadButton />
+                {canInstall && (
+                  <button
+                    onClick={() => { if (deferredInstallPrompt) { deferredInstallPrompt.prompt(); setCanInstall(false); } }}
+                    className="homepage-install-btn"
+                  >
+                    Install App
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="homepage-hero-quests">
+            <Suspense fallback={<div className="animate-pulse h-48 rounded-2xl bg-gray-800" />}>
               <DailyQuestPanel />
             </Suspense>
           </div>
-          <div className="homepage-top-widget-group">
-            <div className="homepage-top-widget">
-              <Suspense fallback={<div className="animate-pulse h-8 w-32 bg-gray-700 rounded" />}>
-                <FriendsPanel />
-              </Suspense>
-            </div>
-            <div className="homepage-top-widget">
-              <Suspense fallback={<div className="animate-pulse h-8 w-32 bg-gray-700 rounded" />}>
-                <HiveKeychainLogin />
-              </Suspense>
-            </div>
+        </section>
+
+        {/* ── WAR PATH: full-width strip below hero ── */}
+        <div className="homepage-journey-card">
+          <div className="homepage-journey-header">
+            <span className="homepage-journey-kicker">War Path</span>
+            <span className="homepage-journey-progress">{completedMissionCount}/{totalMissionCount} cleared</span>
+          </div>
+          <div className="homepage-journey-title">{warPathTitle}</div>
+          <p className="homepage-journey-copy">{warPathSubtitle}</p>
+          <div className="homepage-journey-steps">
+            {journeySteps.map(({ icon: Icon, label, detail, complete }) => (
+              <div key={label} className={`homepage-journey-step ${complete ? 'is-complete' : ''}`}>
+                <span className="homepage-journey-step-icon"><Icon size={15} strokeWidth={2} /></span>
+                <span className="homepage-journey-step-copy">
+                  <strong>{label}</strong>
+                  <span>{detail}</span>
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="homepage-shell">
-          <section className="homepage-hero-panel">
-            <div className="relative group homepage-logo-block">
-              <div className="absolute inset-0 blur-2xl opacity-60 group-hover:opacity-80 transition-opacity duration-700 homepage-logo-glow" />
-              <img
-                src={ragnarokLogo}
-                alt="Ragnarok"
-                className="homepage-logo-image"
-              />
-            </div>
-
-            <div className="homepage-kicker">Norse Mythos Card Game</div>
-            <h1 className="homepage-title">Claim the line. March into battle.</h1>
-            <p className="homepage-copy">
-              Campaign is now the clean front door: claim the starter line, stage a mission briefing,
-              muster the warband, and break straight into live combat without bouncing through disconnected screens.
-            </p>
-
-            {!starterClaimed ? (
-              <Button
-                className="homepage-hero-cta"
-                onClick={() => setShowCeremony(true)}
+        {/* ── PRIMARY ROUTES: centered, reduced width ── */}
+        <section className="homepage-routes-section">
+          <div className="homepage-section-header">
+            <span className="homepage-section-kicker">Primary Routes</span>
+            <span className="homepage-section-note">Choose your front.</span>
+          </div>
+          <div className="homepage-mode-grid">
+            {modeCards.map((mode) => (
+              <Link
+                key={mode.title}
+                to={mode.to}
+                className={`homepage-mode-card homepage-mode-card-${mode.tone}`}
               >
-                Claim Starter Deck
-              </Button>
-            ) : (
-              <Link to={routes.campaign} className="homepage-cta-link">
-                <Button className="homepage-hero-cta">
-                  {primaryLabel}
-                </Button>
+                <span className="homepage-mode-eyebrow">{mode.eyebrow}</span>
+                <span className="homepage-mode-title">{mode.title}</span>
+                <span className="homepage-mode-copy">{mode.description}</span>
+                <span className="homepage-mode-arrow">Enter →</span>
               </Link>
-            )}
-            <p className="homepage-cta-note">{primarySummary}</p>
+            ))}
+          </div>
 
-            <div className="homepage-hero-meta">
-              <span>Campaign route</span>
-              <span>Army forge</span>
-              <span>Live combat</span>
-            </div>
-
-            <div className="homepage-journey-card">
-              <div className="homepage-journey-header">
-                <span className="homepage-journey-kicker">War Path</span>
-                <span className="homepage-journey-progress">{completedMissionCount}/{totalMissionCount} cleared</span>
-              </div>
-              <div className="homepage-journey-title">{warPathTitle}</div>
-              <p className="homepage-journey-copy">{warPathSubtitle}</p>
-              <div className="homepage-journey-steps">
-                {journeySteps.map(({ icon: Icon, label, detail, complete }) => (
-                  <div key={label} className={`homepage-journey-step ${complete ? 'is-complete' : ''}`}>
-                    <span className="homepage-journey-step-icon">
-                      <Icon size={15} strokeWidth={2} />
-                    </span>
-                    <span className="homepage-journey-step-copy">
-                      <strong>{label}</strong>
-                      <span>{detail}</span>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {starterClaimed && (
-              <div className="homepage-secondary-actions">
-                <Link to={routes.game} className="homepage-secondary-link">
-                  <Swords size={16} strokeWidth={2} />
-                  <span>Solo Battle</span>
-                  <ArrowRight size={15} strokeWidth={2} />
-                </Link>
-                <Link to={routes.multiplayer} className="homepage-secondary-link">
-                  <Trophy size={16} strokeWidth={2} />
-                  <span>Ranked Arena</span>
-                  <ArrowRight size={15} strokeWidth={2} />
-                </Link>
-                <Link to={routes.collection} className="homepage-secondary-link">
-                  <ScrollText size={16} strokeWidth={2} />
-                  <span>Tune Decks</span>
-                  <ArrowRight size={15} strokeWidth={2} />
-                </Link>
-              </div>
-            )}
-
-            <div className="homepage-support-actions">
-              <AssetDownloadButton />
-              {canInstall && (
-                <button
-                  onClick={() => {
-                    if (deferredInstallPrompt) {
-                      deferredInstallPrompt.prompt();
-                      setCanInstall(false);
-                    }
-                  }}
-                  className="homepage-install-btn"
-                >
-                  Install Desktop App
-                </button>
-              )}
-            </div>
-          </section>
-
-          <section className="homepage-destination-panel">
-            <div className="homepage-section-header">
-              <span className="homepage-section-kicker">Primary Routes</span>
-              <span className="homepage-section-note">Choose the front you want to enter from.</span>
-            </div>
-            <div className="homepage-mode-grid">
-              {modeCards.map((mode) => (
-                <Link
-                  key={mode.title}
-                  to={mode.to}
-                  className={`homepage-mode-card homepage-mode-card-${mode.tone}`}
-                >
-                  <span className="homepage-mode-eyebrow">{mode.eyebrow}</span>
-                  <span className="homepage-mode-title">{mode.title}</span>
-                  <span className="homepage-mode-copy">{mode.description}</span>
-                  <span className="homepage-mode-arrow">Enter</span>
-                </Link>
-              ))}
-            </div>
-
-            <div className="homepage-section-header homepage-section-header-utility">
-              <span className="homepage-section-kicker">War Table</span>
-              <span className="homepage-section-note">Collection, progression, and support systems.</span>
-            </div>
-            <div className="homepage-utility-grid">
-              {utilityLinks.map((link) => (
-                <Link
-                  key={link.label}
-                  to={link.to}
-                  className="homepage-utility-link"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-
-            {import.meta.env.DEV && (
-              <Link to={routes.game} className="homepage-dev-link">
-                Dev Test Route
+          <nav className="homepage-utility-strip">
+            {utilityLinks.map((link) => (
+              <Link key={link.label} to={link.to} className="homepage-utility-pill">
+                {link.label}
               </Link>
-            )}
-          </section>
-        </div>
+            ))}
+            <Link to={routes.settings} className="homepage-utility-pill homepage-utility-pill-dim">Settings</Link>
+          </nav>
+
+          {import.meta.env.DEV && (
+            <Link to={routes.game} className="homepage-dev-link">Dev Test Route</Link>
+          )}
+        </section>
       </div>
-      
+
       <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none homepage-bottom-gradient" />
 
       {showCeremony && (
@@ -394,7 +343,7 @@ function ViewTransitionBridge() {
     if (prevPath.current === location.pathname) return;
     prevPath.current = location.pathname;
     if (typeof document.startViewTransition === 'function') {
-      document.startViewTransition(() => {});
+      document.startViewTransition(() => { });
     }
   }, [location.pathname]);
 

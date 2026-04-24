@@ -27,11 +27,11 @@ const ELECTRIC_RE = /\b(thor|thunder|lightning|storm|spark|tempest|volt)\b/i;
 const SHADOW_RE = /\b(hel|helheim|shadow|dark|death|draugr|void|abyss|niflung|undead)\b/i;
 
 const getHeroTheme = (name: string, element?: string): string | null => {
-	if (element === 'ice' || ICE_RE.test(name)) return 'ice';
-	if (element === 'fire' || FIRE_RE.test(name)) return 'fire';
-	if (element === 'electric' || ELECTRIC_RE.test(name)) return 'electric';
-	if (element === 'dark' || SHADOW_RE.test(name)) return 'shadow';
-	return null;
+  if (element === 'ice' || ICE_RE.test(name)) return 'ice';
+  if (element === 'fire' || FIRE_RE.test(name)) return 'fire';
+  if (element === 'electric' || ELECTRIC_RE.test(name)) return 'electric';
+  if (element === 'dark' || SHADOW_RE.test(name)) return 'shadow';
+  return null;
 };
 import { debug } from '../config/debugConfig';
 import { useMatchmaking } from '../hooks/useMatchmaking';
@@ -61,21 +61,24 @@ const MAJOR_PIECES: PieceType[] = ['queen', 'rook', 'bishop', 'knight'];
 
 const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart, onBack, isMultiplayer = false, onMatchmakingStart }) => {
   const { playSoundEffect } = useAudio();
-  const { setSelectedHero, savedDecks } = useGame();
+  const setSelectedHero = useGame(state => state.setSelectedHero);
+  const savedDecks = useGame(state => state.savedDecks);
   const [army, setArmy] = useState<ArmySelectionType>(getDefaultArmySelection());
   const [selectedPieceType, setSelectedPieceType] = useState<ChessPieceType>('king');
   const [deckBuilderOpen, setDeckBuilderOpen] = useState<PieceType | null>(null);
   const [popupHero, setPopupHero] = useState<ChessPieceHero | null>(null);
-  
-  const { getDeck, loadFromStorage } = useHeroDeckStore();
-  
-  const { myPeerId, host } = usePeerStore();
+
+  const getDeck = useHeroDeckStore(state => state.getDeck);
+  const loadFromStorage = useHeroDeckStore(state => state.loadFromStorage);
+
+  const myPeerId = usePeerStore(state => state.myPeerId);
+  const host = usePeerStore(state => state.host);
   const { status: matchmakingStatus, queuePosition, joinQueue, leaveQueue, error: matchmakingError } = useMatchmaking();
-  
+
   useEffect(() => {
     loadFromStorage();
   }, [loadFromStorage]);
-  
+
   useEffect(() => {
     initializeCardDatabase();
     const allCards = getAllCards();
@@ -135,14 +138,14 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
 
   const handleConfirm = () => {
     playSoundEffect('button_click');
-    
+
     // Sync selected king hero to global store to ensure correct hero state
     const kingHero = army.king;
     if (kingHero) {
       debug.log(`[ArmySelection] Syncing King hero: ${kingHero.name} (${kingHero.id})`);
       setSelectedHero(kingHero.heroClass, kingHero.id);
     }
-    
+
     onComplete(army);
   };
 
@@ -153,7 +156,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
     }
 
     playSoundEffect('button_click');
-    
+
     // Sync selected king hero to global store
     const kingHero = army.king;
     if (kingHero) {
@@ -179,16 +182,16 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
     }
   };
 
-  const isArmyComplete = PIECE_ORDER.every(pieceType => 
+  const isArmyComplete = PIECE_ORDER.every(pieceType =>
     army[pieceType as keyof ArmySelectionType] !== undefined
   );
-  
+
   const getDeckStatus = (pieceType: PieceType): { cardCount: number; isComplete: boolean } => {
     const deck = getDeck(pieceType);
     if (!deck) return { cardCount: 0, isComplete: false };
     return { cardCount: deck.cardIds.length, isComplete: deck.cardIds.length === 30 };
   };
-  
+
   const allDecksComplete = MAJOR_PIECES.every(piece => {
     const hero = army[piece as keyof ArmySelectionType];
     if (!hero) return false;
@@ -197,22 +200,22 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
   });
   const selectedHeroCount = PIECE_ORDER.filter(pieceType => !!army[pieceType as keyof ArmySelectionType]).length;
   const completedDeckCount = MAJOR_PIECES.filter(piece => getDeckStatus(piece).isComplete).length;
-  
+
   const canProceedToBattle = isArmyComplete && allDecksComplete;
   const deploymentStatus = !isArmyComplete
     ? {
-        title: 'Lock the command line',
-        body: 'Assign a hero to every battlefield role before you move into loadout prep.',
-      }
+      title: 'Lock the command line',
+      body: 'Assign a hero to every battlefield role before you move into loadout prep.',
+    }
     : !allDecksComplete
       ? {
-          title: 'Complete the spell loadouts',
-          body: 'Every major piece needs a finished 30-card deck before the warband can launch.',
-        }
+        title: 'Complete the spell loadouts',
+        body: 'Every major piece needs a finished 30-card deck before the warband can launch.',
+      }
       : {
-          title: 'Warband ready for launch',
-          body: 'Commanders are locked, spell decks are tuned, and the line can move straight into battle.',
-        };
+        title: 'Warband ready for launch',
+        body: 'Commanders are locked, spell decks are tuned, and the line can move straight into battle.',
+      };
   const launchSteps = [
     {
       label: 'Command',
@@ -245,12 +248,12 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
       : isArmyComplete
         ? 'Complete Loadouts'
         : 'Lock the Line';
-  
+
   const handleOpenDeckBuilder = (pieceType: PieceType) => {
     setDeckBuilderOpen(pieceType);
     playSoundEffect('button_click');
   };
-  
+
   const handleCloseDeckBuilder = () => {
     setDeckBuilderOpen(null);
   };
@@ -265,7 +268,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
     <div className="norse-army-selection">
       <div className="norse-army-bg" />
       <div className="norse-lightning-overlay" />
-      
+
       {/* TOP BAR */}
       <div className="norse-top-bar">
         <div className="norse-top-title-group">
@@ -296,7 +299,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
           </div>
           <p className="norse-top-guidance">{deploymentStatus.body}</p>
         </div>
-        
+
         <div className="norse-top-bar-actions">
           {validDecks.length > 0 && onQuickStart && !isMultiplayer && (
             <div className="norse-quick-decks">
@@ -324,7 +327,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
           const info = PIECE_DISPLAY_INFO[pieceType];
           const isSelected = selectedPieceType === pieceType;
           const hero = army[pieceType as keyof ArmySelectionType];
-          
+
           return (
             <motion.button
               key={pieceType}
@@ -370,7 +373,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
             {pieceHasSpells(selectedPieceType) ? '10-card spell loadout' : 'Command slot · no spell deck'}
           </span>
         </div>
-        
+
         <div className="norse-hero-grid">
           {currentHeroOptions.map((hero) => {
             const isCurrentSelection = currentSelection?.id === hero.id;
@@ -430,11 +433,11 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
                     )}
                   </div>
                 </div>
-                
+
                 <div className="norse-hero-rune">
                   {PIECE_DISPLAY_INFO[selectedPieceType].rune}
                 </div>
-                
+
                 <div className="norse-hero-info-panel">
                   <div className="norse-hero-stats">
                     {selectedPieceType !== 'king' && (
@@ -473,14 +476,14 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
         <div className="norse-army-header">
           <div className="norse-army-title">Battle Line & Loadouts</div>
         </div>
-        
+
         <div className="norse-army-list">
           {PIECE_ORDER.map((pieceType) => {
             const info = PIECE_DISPLAY_INFO[pieceType];
             const hero = army[pieceType as keyof ArmySelectionType];
             const isMajorPiece = MAJOR_PIECES.includes(pieceType as PieceType);
             const deckStatus = isMajorPiece ? getDeckStatus(pieceType as PieceType) : null;
-            
+
             return (
               <div key={pieceType} className="norse-army-item">
                 <div className="norse-army-item-row">
@@ -510,7 +513,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
                     </span>
                   )}
                 </div>
-                
+
                 {isMajorPiece && hero && pieceType !== 'king' && (
                   <button
                     onClick={() => handleOpenDeckBuilder(pieceType as PieceType)}
@@ -523,7 +526,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
             );
           })}
         </div>
-        
+
         <div className="norse-army-footer">
           <div className="norse-deck-status">
             <span className="norse-deck-status-label">Deck Status</span>
@@ -531,7 +534,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
               {allDecksComplete ? 'Battle Ready' : 'Needs Loadouts'}
             </span>
           </div>
-          
+
           {MAJOR_PIECES.map(piece => {
             const hero = army[piece as keyof ArmySelectionType];
             const status = getDeckStatus(piece);
@@ -587,7 +590,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
             {matchmakingError}
           </div>
         )}
-        
+
         {/* Main action button - Matchmaking for multiplayer, Start Battle for solo */}
         {isMultiplayer ? (
           <motion.button
@@ -611,7 +614,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
           </motion.button>
         )}
       </div>
-      
+
       {/* DECK BUILDER MODAL */}
       <AnimatePresence>
         {deckBuilderOpen && army[deckBuilderOpen as keyof ArmySelectionType] && (
@@ -628,7 +631,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
           />
         )}
       </AnimatePresence>
-      
+
       {/* HERO DETAIL POPUP */}
       <HeroDetailPopup
         hero={popupHero}

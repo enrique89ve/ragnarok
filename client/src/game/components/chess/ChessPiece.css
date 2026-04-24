@@ -12,6 +12,8 @@
   pointer-events: none;
   z-index: 1;
   mix-blend-mode: screen;
+  will-change: opacity;
+  transform: translateZ(0);
 }
 
 .element-image-fire { animation: element-pulse-simple 1.5s ease-in-out infinite alternate; }
@@ -65,6 +67,8 @@
   z-index: 5;
   border-radius: inherit;
   overflow: hidden;
+  will-change: transform, opacity;
+  transform: translateZ(0);
 }
 
 .element-effect-fire {
@@ -126,6 +130,8 @@
   border: 3px solid rgba(255, 255, 255, 0.9);
   z-index: 40;
   animation: badge-pulse 1.5s ease-in-out infinite;
+  will-change: transform, opacity;
+  transform: translateZ(0);
 }
 
 .element-badge-fire { animation: badge-pulse-fire 1s ease-in-out infinite alternate; }
@@ -154,6 +160,8 @@
   border-radius: inherit;
   pointer-events: none;
   z-index: 0;
+  will-change: opacity;
+  transform: translateZ(0);
 }
 
 .element-border-fire {
@@ -275,6 +283,8 @@
   pointer-events: none;
   z-index: 0;
   animation: god-aura-breathe 3s ease-in-out infinite;
+  will-change: transform, opacity;
+  transform: translateZ(0);
 }
 
 @keyframes god-aura-breathe {

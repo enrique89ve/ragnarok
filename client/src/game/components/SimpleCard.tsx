@@ -223,7 +223,7 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
 
   const evolutionClass = card.evolutionLevel === 1 ? 'evolution-mortal'
     : card.evolutionLevel === 2 ? 'evolution-ascended'
-    : card.evolutionLevel === 3 ? 'evolution-divine' : '';
+      : card.evolutionLevel === 3 ? 'evolution-divine' : '';
 
   const evolutionStars = card.evolutionLevel ? '★'.repeat(card.evolutionLevel) : '';
 
@@ -233,6 +233,7 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
 
   const cardRef = useRef<HTMLDivElement>(null);
   const holo = useHoloTracking(cardRef);
+  const [loadError, setLoadError] = useState(false);
 
   const handleHoloLeave = useCallback((e: React.MouseEvent) => {
     holo.onMouseLeave(e);
@@ -386,6 +387,7 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
       data-card-type={card.type}
       data-evolution-level={card.evolutionLevel}
     >
+      <div className="card-hover-glow" />
       <div className={`card-mana stat-emblem ${card.bloodPrice ? 'blood-price-mana' : ''}`}>
         <svg className="stat-emblem-bg mana-emblem-bg" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
           <polygon points="20,2 38,20 20,38 2,20" fill={card.bloodPrice ? 'url(#mana-blood)' : 'url(#mana-emblem)'} stroke={card.bloodPrice ? '#fca5a5' : '#93C5FD'} strokeWidth="1.5" />
@@ -431,16 +433,29 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
       <div
         ref={artRef}
         className={`card-art-container${!owned ? ' art-locked' : ''}`}
-        style={artPath && owned ? undefined : { background: `linear-gradient(135deg, ${classColor}40 0%, ${classColor}20 100%)` }}
+        style={artPath && owned && !loadError ? undefined : { background: `linear-gradient(135deg, ${classColor}40 0%, ${classColor}20 100%)` }}
       >
-        {artPath && artInView && owned ? (
-          <img src={artPath} alt="" className="card-art-image" draggable={false} loading="lazy" decoding="async" width={256} height={256} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+        {artPath && artInView && owned && !loadError ? (
+          <img
+            src={artPath}
+            alt=""
+            className="card-art-image"
+            draggable={false}
+            loading="lazy"
+            decoding="async"
+            width={256}
+            height={256}
+            onError={() => {
+              console.error(`[SimpleCard] Failed to load art for ${card.name}: ${artPath}`);
+              setLoadError(true);
+            }}
+          />
         ) : !owned ? (
           <div className="card-art-locked">
             <span className="lock-icon">🔒</span>
             <span className="lock-text">Not Owned</span>
           </div>
-        ) : !artPath ? (
+        ) : (!artPath || loadError) ? (
           <div className="card-art-icon">
             <span>{getCardTypeIcon(card.type)}</span>
           </div>

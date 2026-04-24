@@ -22,26 +22,26 @@
 }
 
 .persistent-turn-badge.your-turn {
-	border: 2px solid var(--ui-gold-bright);
-	color: var(--ui-selection-pale);
+	border: 2px solid var(--gold-300);
+	color: var(--gold-100);
 	box-shadow:
-		0 0 22px var(--ui-gold-glow-soft),
+		0 0 22px var(--gold-glow),
 		0 4px 14px rgba(0, 0, 0, 0.65),
-		inset 0 1px 0 rgba(255, 215, 100, 0.16);
+		inset 0 1px 0 color-mix(in srgb, var(--gold-200) 16%, transparent);
 	text-shadow:
-		0 0 10px var(--ui-gold-glow-hard),
+		0 0 10px var(--gold-glow),
 		0 1px 2px rgba(0, 0, 0, 0.95);
 }
 
 .persistent-turn-badge.enemy-turn {
-	border: 2px solid var(--ui-hp-crimson);
-	color: #ffd5d2;
+	border: 2px solid var(--danger-400);
+	color: color-mix(in srgb, var(--danger-100) 80%, white);
 	box-shadow:
-		0 0 22px var(--ui-hp-crimson-glow),
+		0 0 22px var(--danger-glow),
 		0 4px 14px rgba(0, 0, 0, 0.65),
-		inset 0 1px 0 rgba(255, 130, 120, 0.14);
+		inset 0 1px 0 color-mix(in srgb, var(--danger-200) 14%, transparent);
 	text-shadow:
-		0 0 10px var(--ui-hp-crimson-glow),
+		0 0 10px var(--danger-glow),
 		0 1px 2px rgba(0, 0, 0, 0.95);
 }
 
@@ -53,13 +53,13 @@
 }
 
 .your-turn .persistent-turn-dot {
-	background: var(--ui-gold-bright);
-	box-shadow: 0 0 10px var(--ui-gold-glow-hard);
+	background: var(--gold-300);
+	box-shadow: 0 0 10px var(--gold-glow);
 }
 
 .enemy-turn .persistent-turn-dot {
-	background: var(--ui-hp-crimson);
-	box-shadow: 0 0 10px var(--ui-hp-crimson-glow);
+	background: var(--danger-400);
+	box-shadow: 0 0 10px var(--danger-glow);
 }
 
 @keyframes turnDotPulse {
@@ -99,22 +99,22 @@
 	background: linear-gradient(
 		180deg,
 		transparent 0%,
-		rgba(251, 191, 36, 0.15) 20%,
-		rgba(251, 191, 36, 0.25) 50%,
-		rgba(251, 191, 36, 0.15) 80%,
+		color-mix(in srgb, var(--gold-300) 15%, transparent) 20%,
+		color-mix(in srgb, var(--gold-300) 25%, transparent) 50%,
+		color-mix(in srgb, var(--gold-300) 15%, transparent) 80%,
 		transparent 100%
 	);
-	border-top: 2px solid rgba(251, 191, 36, 0.6);
-	border-bottom: 2px solid rgba(251, 191, 36, 0.6);
+	border-top: 2px solid color-mix(in srgb, var(--gold-300) 60%, transparent);
+	border-bottom: 2px solid color-mix(in srgb, var(--gold-300) 60%, transparent);
 }
 
 .turn-banner.player-turn::before {
 	background: linear-gradient(
 		90deg,
 		transparent 0%,
-		rgba(251, 191, 36, 0.1) 30%,
-		rgba(251, 191, 36, 0.2) 50%,
-		rgba(251, 191, 36, 0.1) 70%,
+		color-mix(in srgb, var(--gold-300) 10%, transparent) 30%,
+		color-mix(in srgb, var(--gold-300) 20%, transparent) 50%,
+		color-mix(in srgb, var(--gold-300) 10%, transparent) 70%,
 		transparent 100%
 	);
 }
@@ -124,27 +124,28 @@
 	background: linear-gradient(
 		180deg,
 		transparent 0%,
-		rgba(239, 68, 68, 0.15) 20%,
-		rgba(239, 68, 68, 0.25) 50%,
-		rgba(239, 68, 68, 0.15) 80%,
+		color-mix(in srgb, var(--danger-400) 15%, transparent) 20%,
+		color-mix(in srgb, var(--danger-400) 25%, transparent) 50%,
+		color-mix(in srgb, var(--danger-400) 15%, transparent) 80%,
 		transparent 100%
 	);
-	border-top: 2px solid rgba(239, 68, 68, 0.6);
-	border-bottom: 2px solid rgba(239, 68, 68, 0.6);
+	border-top: 2px solid color-mix(in srgb, var(--danger-400) 60%, transparent);
+	border-bottom: 2px solid color-mix(in srgb, var(--danger-400) 60%, transparent);
 }
 
 .turn-banner.opponent-turn::before {
 	background: linear-gradient(
 		90deg,
 		transparent 0%,
-		rgba(239, 68, 68, 0.1) 30%,
-		rgba(239, 68, 68, 0.2) 50%,
-		rgba(239, 68, 68, 0.1) 70%,
+		color-mix(in srgb, var(--danger-400) 10%, transparent) 30%,
+		color-mix(in srgb, var(--danger-400) 20%, transparent) 50%,
+		color-mix(in srgb, var(--danger-400) 10%, transparent) 70%,
 		transparent 100%
 	);
 }
 
 .turn-banner-text {
+	font-family: var(--font-display);
 	font-size: 42px;
 	font-weight: 900;
 	letter-spacing: 8px;
@@ -153,22 +154,23 @@
 }
 
 .turn-banner.player-turn .turn-banner-text {
-	color: #fbbf24;
+	color: var(--gold-300);
 	text-shadow:
-		0 0 20px rgba(251, 191, 36, 0.8),
-		0 0 40px rgba(251, 191, 36, 0.4),
+		0 0 20px color-mix(in srgb, var(--gold-300) 80%, transparent),
+		0 0 40px color-mix(in srgb, var(--gold-300) 40%, transparent),
 		0 2px 4px rgba(0, 0, 0, 0.8);
 }
 
 .turn-banner.opponent-turn .turn-banner-text {
-	color: #ef4444;
+	color: var(--danger-400);
 	text-shadow:
-		0 0 20px rgba(239, 68, 68, 0.8),
-		0 0 40px rgba(239, 68, 68, 0.4),
+		0 0 20px color-mix(in srgb, var(--danger-400) 80%, transparent),
+		0 0 40px color-mix(in srgb, var(--danger-400) 40%, transparent),
 		0 2px 4px rgba(0, 0, 0, 0.8);
 }
 
 .turn-banner-sub {
+	font-family: var(--font-display);
 	font-size: 14px;
 	font-weight: 600;
 	letter-spacing: 3px;
@@ -178,11 +180,11 @@
 }
 
 .turn-banner.player-turn .turn-banner-sub {
-	color: rgba(251, 191, 36, 0.7);
+	color: color-mix(in srgb, var(--gold-300) 70%, transparent);
 }
 
 .turn-banner.opponent-turn .turn-banner-sub {
-	color: rgba(239, 68, 68, 0.7);
+	color: color-mix(in srgb, var(--danger-400) 70%, transparent);
 }
 
 /* Decorative side lines */
@@ -203,19 +205,19 @@
 }
 
 .turn-banner.player-turn .turn-banner-line {
-	background: linear-gradient(90deg, transparent, rgba(251, 191, 36, 0.6));
+	background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--gold-300) 60%, transparent));
 }
 
 .turn-banner.player-turn .turn-banner-line.right {
-	background: linear-gradient(270deg, transparent, rgba(251, 191, 36, 0.6));
+	background: linear-gradient(270deg, transparent, color-mix(in srgb, var(--gold-300) 60%, transparent));
 }
 
 .turn-banner.opponent-turn .turn-banner-line {
-	background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.6));
+	background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--danger-400) 60%, transparent));
 }
 
 .turn-banner.opponent-turn .turn-banner-line.right {
-	background: linear-gradient(270deg, transparent, rgba(239, 68, 68, 0.6));
+	background: linear-gradient(270deg, transparent, color-mix(in srgb, var(--danger-400) 60%, transparent));
 }
 
 /* Reduced motion */

@@ -31,7 +31,7 @@
 .game-viewport[data-tension-level="allin"]::after {
 	box-shadow:
 		inset 0 0 120px rgba(0, 0, 0, 0.5),
-		inset 0 0 40px rgba(239, 68, 68, 0.15);
+		inset 0 0 40px color-mix(in srgb, var(--danger-400) 15%, transparent);
 	opacity: 1;
 }
 
@@ -109,9 +109,9 @@
 	padding: 12px 40px;
 	background: linear-gradient(90deg,
 		transparent 0%,
-		rgba(10, 10, 20, 0.85) 15%,
-		rgba(10, 10, 20, 0.92) 50%,
-		rgba(10, 10, 20, 0.85) 85%,
+		color-mix(in srgb, var(--obsidian-950) 85%, transparent) 15%,
+		color-mix(in srgb, var(--obsidian-950) 92%, transparent) 50%,
+		color-mix(in srgb, var(--obsidian-950) 85%, transparent) 85%,
 		transparent 100%
 	);
 	width: 100%;
@@ -124,7 +124,7 @@
 .phase-banner-line {
 	flex: 1;
 	height: 2px;
-	background: linear-gradient(90deg, transparent 0%, var(--phase-color, #fbbf24) 50%, transparent 100%);
+	background: linear-gradient(90deg, transparent 0%, var(--phase-color, var(--gold-300)) 50%, transparent 100%);
 	max-width: 200px;
 }
 
@@ -136,13 +136,13 @@
 }
 
 .phase-banner-title {
-	font-family: 'Cinzel', 'Georgia', serif;
+	font-family: var(--font-display);
 	font-size: 1.8rem;
 	font-weight: 900;
-	color: var(--phase-color, #fbbf24);
+	color: var(--phase-color, var(--gold-300));
 	text-shadow:
-		0 0 15px var(--phase-glow, rgba(251, 191, 36, 0.6)),
-		0 0 30px var(--phase-glow, rgba(251, 191, 36, 0.3)),
+		0 0 15px var(--phase-glow, var(--gold-glow)),
+		0 0 30px var(--phase-glow, color-mix(in srgb, var(--gold-300) 30%, transparent)),
 		0 2px 4px rgba(0, 0, 0, 0.8);
 	letter-spacing: 4px;
 	text-transform: uppercase;
@@ -150,10 +150,10 @@
 }
 
 .phase-banner-subtitle {
-	font-family: 'Cinzel', 'Georgia', serif;
+	font-family: var(--font-display);
 	font-size: 0.85rem;
 	font-weight: 500;
-	color: rgba(226, 232, 240, 0.8);
+	color: var(--text-dimmed);
 	letter-spacing: 2px;
 	text-transform: uppercase;
 	font-style: italic;
@@ -161,23 +161,23 @@
 
 /* Phase-specific colors */
 .phase-banner[data-phase="pre_flop"] {
-	--phase-color: #ef4444;
-	--phase-glow: rgba(239, 68, 68, 0.5);
+	--phase-color: var(--danger-400);
+	--phase-glow: var(--danger-glow);
 }
 
 .phase-banner[data-phase="faith"] {
-	--phase-color: #8b5cf6;
-	--phase-glow: rgba(139, 92, 246, 0.5);
+	--phase-color: var(--rarity-epic-color);
+	--phase-glow: var(--rarity-epic-glow);
 }
 
 .phase-banner[data-phase="foresight"] {
-	--phase-color: #22c55e;
-	--phase-glow: rgba(34, 197, 94, 0.5);
+	--phase-color: var(--success-400);
+	--phase-glow: var(--success-glow);
 }
 
 .phase-banner[data-phase="destiny"] {
-	--phase-color: #fbbf24;
-	--phase-glow: rgba(251, 191, 36, 0.6);
+	--phase-color: var(--gold-300);
+	--phase-glow: var(--gold-glow);
 }
 
 /* Entry/Exit animations */
@@ -226,8 +226,8 @@
 	align-items: center;
 	gap: 8px;
 	padding: 4px 14px;
-	background: rgba(10, 10, 20, 0.85);
-	border: 1px solid rgba(100, 100, 120, 0.3);
+	background: color-mix(in srgb, var(--obsidian-950) 85%, transparent);
+	border: 1px solid color-mix(in srgb, var(--ink-400) 30%, transparent);
 	border-radius: 20px;
 	pointer-events: none;
 	transition: border-color 0.3s ease, box-shadow 0.3s ease;
@@ -238,18 +238,18 @@
 }
 
 .hand-strength-indicator.tier-mid {
-	border-color: rgba(96, 165, 250, 0.5);
-	box-shadow: 0 0 8px rgba(96, 165, 250, 0.2);
+	border-color: color-mix(in srgb, var(--info-400) 50%, transparent);
+	box-shadow: 0 0 8px color-mix(in srgb, var(--info-400) 20%, transparent);
 }
 
 .hand-strength-indicator.tier-high {
-	border-color: rgba(168, 85, 247, 0.5);
-	box-shadow: 0 0 12px rgba(168, 85, 247, 0.3);
+	border-color: color-mix(in srgb, var(--rarity-epic-color) 50%, transparent);
+	box-shadow: 0 0 12px var(--rarity-epic-glow);
 }
 
 .hand-strength-indicator.tier-godly {
-	border-color: rgba(251, 191, 36, 0.6);
-	box-shadow: 0 0 16px rgba(251, 191, 36, 0.4);
+	border-color: color-mix(in srgb, var(--gold-300) 60%, transparent);
+	box-shadow: 0 0 16px var(--gold-glow);
 }
 
 .hand-strength-name {
@@ -261,10 +261,10 @@
 	transition: color 0.3s ease, text-shadow 0.3s ease;
 }
 
-.tier-low .hand-strength-name { color: #94a3b8; }
-.tier-mid .hand-strength-name { color: #60a5fa; text-shadow: 0 0 8px rgba(96, 165, 250, 0.4); }
-.tier-high .hand-strength-name { color: #a855f7; text-shadow: 0 0 8px rgba(168, 85, 247, 0.4); }
-.tier-godly .hand-strength-name { color: #fbbf24; text-shadow: 0 0 12px rgba(251, 191, 36, 0.6); }
+.tier-low .hand-strength-name { color: var(--ink-400); }
+.tier-mid .hand-strength-name { color: var(--info-400); text-shadow: 0 0 8px color-mix(in srgb, var(--info-400) 40%, transparent); }
+.tier-high .hand-strength-name { color: var(--rarity-epic-pale); text-shadow: 0 0 8px var(--rarity-epic-glow); }
+.tier-godly .hand-strength-name { color: var(--gold-300); text-shadow: 0 0 12px color-mix(in srgb, var(--gold-300) 60%, transparent); }
 
 /* Pulse when hand improves */
 .hand-strength-indicator.improved {
@@ -284,17 +284,17 @@
    ======================================== */
 .game-viewport[data-player-streak="2"] [data-hero-role="player"],
 .game-viewport[data-opponent-streak="2"] [data-hero-role="opponent"] {
-	box-shadow: 0 0 20px rgba(251, 191, 36, 0.2);
+	box-shadow: 0 0 20px color-mix(in srgb, var(--gold-300) 20%, transparent);
 }
 
 .game-viewport[data-player-streak="3"] [data-hero-role="player"],
 .game-viewport[data-opponent-streak="3"] [data-hero-role="opponent"] {
-	box-shadow: 0 0 30px rgba(251, 191, 36, 0.35);
+	box-shadow: 0 0 30px color-mix(in srgb, var(--gold-300) 35%, transparent);
 }
 
 .game-viewport[data-player-streak="4"] [data-hero-role="player"],
 .game-viewport[data-opponent-streak="4"] [data-hero-role="opponent"] {
-	box-shadow: 0 0 40px rgba(239, 68, 68, 0.4);
+	box-shadow: 0 0 40px color-mix(in srgb, var(--danger-400) 40%, transparent);
 }
 
 
@@ -325,13 +325,13 @@
 .poker-btn.raise-btn:active:not(:disabled),
 .action-btn.attack:active:not(:disabled) {
 	transform: translateY(2px) scale(0.96);
-	box-shadow: 0 0 25px rgba(239, 68, 68, 0.6);
+	box-shadow: 0 0 25px color-mix(in srgb, var(--danger-400) 60%, transparent);
 }
 
 .poker-btn.call-btn:active:not(:disabled),
 .action-btn.engage:active:not(:disabled) {
 	transform: translateY(2px) scale(0.96);
-	box-shadow: 0 0 25px rgba(251, 191, 36, 0.6);
+	box-shadow: 0 0 25px color-mix(in srgb, var(--gold-300) 60%, transparent);
 }
 
 .poker-btn.fold-btn:active:not(:disabled) {

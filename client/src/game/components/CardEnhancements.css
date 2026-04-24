@@ -1,8 +1,0 @@
-/* CardEnhancements.css */
-/* Stripped down - only keeping essential not-playable filter */
-/* All other styling centralized in SimpleCard.css */
-
-/* Unplayable cards - dimmed appearance */
-.card-with-drag.not-playable {
-  filter: brightness(0.65) saturate(0.7);
-}

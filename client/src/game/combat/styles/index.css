@@ -1,49 +1,50 @@
-/**
- * Combat Styles Aggregator
- * Only files actively used by combat are imported.
- */
+/* ═══════════════════════════════════════════════════
+   COMBAT ARENA STYLE MANIFEST
+   Central entry point for all combat-specific styling.
+   Order of imports determines the cascade priority.
+   ═══════════════════════════════════════════════════ */
 
-@import './reset.css';
-@import './responsive.css';
+/* 1. Base Framework & Resets */
+@import "./reset.css";
+@import "./arena-grid.css";
+@import "./zones.css";
 
-/* Layout */
-@import './arena-grid.css';
-@import './battlefield.css';
-@import './zones.css';
+/* 2. Visual Layer - Backgrounds & Atmosphere */
+@import "./norse-atmosphere.css";
+@import "./realm-boards.css";
 
-/* Components */
-@import './hp-bar.css';
-@import './timer.css';
-@import './targeting-prompts.css';
+/* 3. Core Combat HUD & UI Panels */
+@import "./game-hud.css";
+@import "./game-hud.css"; /* Internal deduplication check */
+@import "./pot-display.css";
+@import "./betting-controls.css";
+@import "./timer.css";
+@import "./hand-strength.css";
 
-/* Card Elements */
-@import './card-frame.css';
-@import './card-highlight.css';
-@import './face-down.css';
-@import './hole-cards.css';
-@import './community-cards.css';
-@import './hand-strength.css';
+/* 4. Card Presentation & Visual Identity */
+@import "./card-frame.css";
+@import "./face-down.css";
+@import "./hole-cards.css";
+@import "./community-cards.css";
+@import "./battlefield.css";
 
-/* Combat Specific */
-@import './betting-controls.css';
-@import './pot-display.css';
+/* 5. Combat Effects & Feedback */
+@import "./glow-effects.css";
+@import "./elemental-glows.css";
+@import "./card-highlight.css";
+@import "./targeting-prompts.css";
+@import "./spell-screen-effects.css";
 
-/* Effects */
-@import './glow-effects.css';
-@import './elemental-glows.css';
-@import './hero-death.css';
-@import './hero-reactions.css';
-@import './showdown.css';
+/* 6. Dramatic Overlays & Announcements */
+@import "./poker-drama.css";
+@import "./turn-banner.css";
+@import "./element-matchup-banner.css";
+@import "./hero-reactions.css";
+@import "./hero-death.css";
+@import "./game-over.css";
 
-/* Atmosphere */
-@import './norse-atmosphere.css';
-@import './spell-screen-effects.css';
-
-/* Realm Board Skins */
-@import './realm-boards.css';
-
-/* Cursors */
-@import './cursors.css';
-
-/* Art-based UI Upgrade */
-@import './ragnarok-art-ui.css';
+/* 7. Utility & Animation Engine */
+@import "./combat-animations.css";
+@import "./cursors.css";
+@import "./ragnarok-art-ui.css";
+@import "./responsive.css";

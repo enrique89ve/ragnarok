@@ -93,7 +93,7 @@ interface GameStore {
   attackWithCard: (attackerId: string, defenderId?: string) => void; // If defenderId is undefined, attack hero
   autoAttackAll: (mode?: 'minion' | 'hero') => void; // Auto-attack with all minions
   selectAttacker: (card: CardInstance | CardInstanceWithCardData | null) => void; // Select card to attack with
-  useHeroPower: (targetId?: string, targetType?: 'card' | 'hero') => void; // Use hero power
+  performHeroPower: (targetId?: string, targetType?: 'card' | 'hero') => void; // Renamed to avoid hook errors
   toggleHeroTargetMode: () => void; // Toggle hero power targeting mode
   endTurn: () => void;
   selectCard: (card: CardInstance | CardInstanceWithCardData | null) => void;
@@ -695,7 +695,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
   },
   
   // Use hero power on a target (or no target for some powers like Armor Up)
-  useHeroPower: (targetId?: string, targetType?: 'card' | 'hero') => {
+  performHeroPower: (targetId?: string, targetType?: 'card' | 'hero') => {
     const { gameState, heroTargetMode } = get();
     const audioStore = useAudio.getState();
     

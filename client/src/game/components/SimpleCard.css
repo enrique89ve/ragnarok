@@ -11,14 +11,12 @@
    Fallback: browsers without @property get static first-frame borders.
    ========================================================================== */
 
-@property --border-angle {
-  syntax: '<angle>';
-  initial-value: 0deg;
-  inherits: false;
-}
-
-@keyframes border-rotate {
-  to { --border-angle: 360deg; }
+/* border-rotate and @property --border-angle removed for performance optimization.
+   Using GPU-friendly background-position panning instead. */
+@keyframes diagonal-pan {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
 }
 
 @keyframes rare-shimmer {
@@ -120,36 +118,44 @@
   height: 400px;
 }
 
-/* Hover effects - 3D tilt + lift + dynamic shadow */
+/* Hover effects - 3D tilt + lift (No longer recalculating shadows = GPU accelerated) */
 .simple-card:hover {
   transform: perspective(800px) rotateY(var(--rotate-x)) rotateX(var(--rotate-y)) translateY(-6px) scale(1.03);
-  box-shadow:
-    var(--shadow-x, 0px) calc(var(--shadow-y, 0px) + 12px) 24px rgba(0,0,0,0.6),
-    var(--shadow-x, 0px) calc(var(--shadow-y, 0px) + 4px) 8px rgba(0,0,0,0.4),
-    0 0 0 1px rgba(255,255,255,0.06);
 }
 
-/* Rarity-specific hover glows + dynamic shadow */
-.simple-card.rarity-rare:hover {
-  box-shadow:
-    var(--shadow-x, 0px) calc(var(--shadow-y, 0px) + 12px) 24px rgba(0,0,0,0.6),
-    var(--shadow-x, 0px) calc(var(--shadow-y, 0px) + 4px) 8px rgba(0,0,0,0.4),
-    0 0 28px rgba(59,130,246,0.5);
+/* 
+   Pre-calculated Midudev Opacity Trick:
+   Instead of moving the shadow every frame with JavaScript (--shadow-x), we hold a static global
+   glow under the card and just fade it in via the GPU (opacity: 1) on hover.
+*/
+.card-hover-glow {
+  position: absolute;
+  inset: -6px;
+  border-radius: 12px;
+  background: transparent;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s cubic-bezier(0.03, 0.98, 0.52, 0.99);
+  will-change: opacity;
+  z-index: -2;
+  box-shadow: 0 16px 32px rgba(0,0,0,0.7), 0 4px 8px rgba(0,0,0,0.5);
 }
 
-.simple-card.rarity-epic:hover {
-  box-shadow:
-    var(--shadow-x, 0px) calc(var(--shadow-y, 0px) + 12px) 24px rgba(0,0,0,0.6),
-    var(--shadow-x, 0px) calc(var(--shadow-y, 0px) + 4px) 8px rgba(0,0,0,0.4),
-    0 0 32px rgba(168,85,247,0.55);
+.simple-card.rarity-rare .card-hover-glow {
+  box-shadow: 0 16px 32px rgba(0,0,0,0.7), 0 0 30px rgba(59,130,246,0.6);
 }
 
-.simple-card.rarity-mythic:hover {
-  box-shadow:
-    var(--shadow-x, 0px) calc(var(--shadow-y, 0px) + 12px) 24px rgba(0,0,0,0.6),
-    var(--shadow-x, 0px) calc(var(--shadow-y, 0px) + 4px) 8px rgba(0,0,0,0.4),
-    0 0 36px rgba(168,85,247,0.4),
-    0 0 36px rgba(245,158,11,0.35);
+.simple-card.rarity-epic .card-hover-glow {
+  box-shadow: 0 16px 32px rgba(0,0,0,0.7), 0 0 35px rgba(168,85,247,0.65);
+}
+
+.simple-card.rarity-mythic .card-hover-glow {
+  box-shadow: 0 16px 32px rgba(0,0,0,0.7), 0 0 40px rgba(168,85,247,0.5), 0 0 40px rgba(245,158,11,0.45);
+}
+
+/* Activate the glow smoothly without repaints */
+.simple-card:hover .card-hover-glow {
+  opacity: 1;
 }
 
 /* Active/click press-down feel */
@@ -178,7 +184,7 @@
 
 /* --- Common: clean gunmetal steel, no animation --- */
 .simple-card.rarity-common::before {
-  border: 2px solid #4A5568;
+  border: 2px solid var(--card-common-steel);
   box-shadow: inset 0 0 12px rgba(0,0,0,0.4);
 }
 
@@ -191,13 +197,13 @@
   background:
     linear-gradient(
       135deg,
-      #1E3A8A 0%,
-      #3B82F6 20%,
-      #93C5FD 45%,
+      var(--card-rare-blue-deep) 0%,
+      var(--card-rare-blue-bright) 20%,
+      var(--card-rare-blue-pale) 45%,
       #BFDBFE 50%,
-      #93C5FD 55%,
-      #3B82F6 80%,
-      #1E3A8A 100%
+      var(--card-rare-blue-pale) 55%,
+      var(--card-rare-blue-bright) 80%,
+      var(--card-rare-blue-deep) 100%
     );
   background-size: 300% 300%;
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -207,43 +213,44 @@
   animation: rare-shimmer 4s ease-in-out infinite;
 }
 
-/* --- Epic: slow rotating purple crystalline --- */
+/* --- Epic: slow rotating purple crystalline (Optimized CPU-friendly) --- */
 .simple-card.rarity-epic::before {
   inset: -2px;
   padding: 2px;
   border-radius: 12px;
   border: none;
-  background: conic-gradient(
-    from var(--border-angle),
-    #581C87, #7C3AED, #A855F7, #C084FC,
-    #E9D5FF,
-    #C084FC, #A855F7, #7C3AED, #581C87
+  background: linear-gradient(
+    135deg,
+    var(--card-epic-purple-deep) 0%,
+    var(--card-epic-purple-bright) 25%,
+    #E9D5FF 50%,
+    var(--card-epic-purple-pale) 75%,
+    var(--card-epic-purple-deep) 100%
   );
+  background-size: 300% 300%;
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
-  animation: border-rotate 6s linear infinite;
+  animation: diagonal-pan 5s linear infinite;
 }
 
-/* --- Mythic: iridescent rainbow aurora --- */
+/* --- Mythic: iridescent rainbow aurora (Optimized CPU-friendly) --- */
 .simple-card.rarity-mythic::before {
   inset: -3px;
   padding: 3px;
   border-radius: 13px;
   border: none;
-  background: conic-gradient(
-    from var(--border-angle),
-    #ef4444, #f97316, #f59e0b,
-    #22c55e, #06b6d4,
-    #3b82f6, #8b5cf6,
-    #a855f7, #ec4899, #ef4444
+  background: linear-gradient(
+    135deg,
+    #ef4444, #f59e0b, #22c55e, #06b6d4, #8b5cf6, #ec4899, #ef4444
   );
+  background-size: 300% 300%;
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
-  animation: border-rotate 3s linear infinite;
+  animation: diagonal-pan 3s linear infinite;
 }
 
 /* ==========================================================================
@@ -630,18 +637,18 @@
 
 /* Rarity-based name colors */
 .simple-card.rarity-mythic .card-name {
-  color: #FCD34D;
-  text-shadow: 0 1px 0 rgba(0,0,0,1), 0 2px 4px rgba(0,0,0,0.9), 0 0 8px rgba(252,211,77,0.3);
+  color: var(--card-mythic-gold-bright);
+  text-shadow: 0 1px 0 rgba(0,0,0,1), 0 2px 4px rgba(0,0,0,0.9), 0 0 8px color-mix(in srgb, var(--card-mythic-gold-bright) 30%, transparent);
 }
 
 .simple-card.rarity-epic .card-name {
-  color: #C084FC;
-  text-shadow: 0 1px 0 rgba(0,0,0,1), 0 2px 4px rgba(0,0,0,0.9), 0 0 8px rgba(192,132,252,0.3);
+  color: var(--card-epic-purple-pale);
+  text-shadow: 0 1px 0 rgba(0,0,0,1), 0 2px 4px rgba(0,0,0,0.9), 0 0 8px color-mix(in srgb, var(--card-epic-purple-pale) 30%, transparent);
 }
 
 .simple-card.rarity-rare .card-name {
-  color: #93C5FD;
-  text-shadow: 0 1px 0 rgba(0,0,0,1), 0 2px 4px rgba(0,0,0,0.9), 0 0 8px rgba(147,197,253,0.3);
+  color: var(--card-rare-blue-pale);
+  text-shadow: 0 1px 0 rgba(0,0,0,1), 0 2px 4px rgba(0,0,0,0.9), 0 0 8px color-mix(in srgb, var(--card-rare-blue-pale) 30%, transparent);
 }
 
 /* ==========================================================================
@@ -660,21 +667,21 @@
 }
 
 .rarity-gem-rare {
-  background: linear-gradient(135deg, #60A5FA 0%, #2563EB 50%, #1E3A8A 100%);
-  border: 1px solid #93C5FD;
-  box-shadow: 0 0 6px rgba(59,130,246,0.6), 0 2px 4px rgba(0,0,0,0.5);
+  background: linear-gradient(135deg, var(--info-300) 0%, var(--card-rare-blue-mid) 50%, var(--card-rare-blue-deep) 100%);
+  border: 1px solid var(--card-rare-blue-pale);
+  box-shadow: 0 0 6px var(--card-rare-blue-glow), 0 2px 4px rgba(0,0,0,0.5);
 }
 
 .rarity-gem-epic {
-  background: linear-gradient(135deg, #C084FC 0%, #7C3AED 50%, #581C87 100%);
+  background: linear-gradient(135deg, var(--card-epic-purple-pale) 0%, var(--card-epic-purple-mid) 50%, var(--card-epic-purple-deep) 100%);
   border: 1px solid #DDD6FE;
-  box-shadow: 0 0 8px rgba(168,85,247,0.6), 0 2px 4px rgba(0,0,0,0.5);
+  box-shadow: 0 0 8px var(--card-epic-purple-glow), 0 2px 4px rgba(0,0,0,0.5);
 }
 
 .rarity-gem-mythic {
-  background: linear-gradient(135deg, #FDE68A 0%, #F59E0B 40%, #D97706 100%);
-  border: 1px solid #FEF3C7;
-  box-shadow: 0 0 10px rgba(245,158,11,0.7), 0 0 20px rgba(245,158,11,0.3), 0 2px 4px rgba(0,0,0,0.5);
+  background: linear-gradient(135deg, var(--card-mythic-gold-pale) 0%, var(--card-mythic-gold-mid) 40%, var(--card-mythic-gold-deep) 100%);
+  border: 1px solid var(--card-mythic-gold-bright);
+  box-shadow: 0 0 10px var(--card-mythic-gold-glow), 0 0 20px color-mix(in srgb, var(--card-mythic-gold-mid) 30%, transparent), 0 2px 4px rgba(0,0,0,0.5);
   animation: mythic-gem-pulse 3s ease-in-out infinite;
 }
 
@@ -1080,19 +1087,19 @@
 
 /* Elemental buff indicator - green numbers like standard "above base" convention */
 .stat-value.stat-buffed {
-  color: #4ade80;
+  color: var(--success-300, #4ade80);
   text-shadow:
-    0 0 6px rgba(74, 222, 128, 0.6),
+    0 0 6px var(--success-glow),
     0 1px 0 rgba(0,0,0,1),
     0 2px 4px rgba(0,0,0,0.9);
 }
 
 .stat-value.stat-unknown {
-  color: #00e5ff;
+  color: var(--frost-400, #6ea5b3);
   font-style: italic;
   text-shadow:
-    0 0 8px rgba(0, 229, 255, 0.7),
-    0 0 16px rgba(0, 229, 255, 0.4),
+    0 0 8px color-mix(in srgb, var(--frost-400) 70%, transparent),
+    0 0 16px color-mix(in srgb, var(--frost-400) 40%, transparent),
     0 1px 0 rgba(0,0,0,1);
 }
 
@@ -1452,18 +1459,18 @@
 
 /* Static outer glows per rarity — on the card element (mask clips ::before box-shadow) */
 .simple-card.rarity-rare {
-  box-shadow: 0 0 12px rgba(59,130,246,0.4), 0 0 24px rgba(59,130,246,0.15);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--card-rare-blue-bright) 40%, transparent), 0 0 24px color-mix(in srgb, var(--card-rare-blue-bright) 15%, transparent);
 }
 
 .simple-card.rarity-epic {
-  box-shadow: 0 0 16px rgba(168,85,247,0.45), 0 0 32px rgba(168,85,247,0.2);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--card-epic-purple-bright) 45%, transparent), 0 0 32px color-mix(in srgb, var(--card-epic-purple-bright) 20%, transparent);
 }
 
 .simple-card.rarity-mythic {
   box-shadow:
-    0 0 20px rgba(168,85,247,0.35),
+    0 0 20px color-mix(in srgb, var(--card-epic-purple-bright) 35%, transparent),
     0 0 20px rgba(236,72,153,0.3),
-    0 0 40px rgba(59,130,246,0.2);
+    0 0 40px color-mix(in srgb, var(--card-rare-blue-bright) 20%, transparent);
 }
 
 /* Playable card glow indicator — static shadow + GPU-composited scale pulse */
@@ -1622,12 +1629,12 @@
 
 /* Divine (Level 3) — full saturation, golden glow (default look enhanced) */
 .evolution-divine .evolution-stars {
-  color: #FFD700;
-  text-shadow: 0 1px 2px rgba(0,0,0,1), 0 0 8px rgba(255,215,0,0.5);
+  color: var(--gold-300);
+  text-shadow: 0 1px 2px rgba(0,0,0,1), 0 0 8px color-mix(in srgb, var(--gold-300) 50%, transparent);
 }
 
 .simple-card.evolution-divine::after {
-  background: linear-gradient(90deg, transparent 0%, rgba(255,215,0,0.15) 30%, rgba(255,215,0,0.25) 50%, rgba(255,215,0,0.15) 70%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--gold-300) 15%, transparent) 30%, color-mix(in srgb, var(--gold-300) 25%, transparent) 50%, color-mix(in srgb, var(--gold-300) 15%, transparent) 70%, transparent 100%);
 }
 
 /* ==========================================================================

@@ -12,10 +12,6 @@
     "client/src/game/combat/RagnarokCombatArena.css",
     "client/src/game/combat/styles/showdown.css"
   ],
-  ".announcement-icon": [
-    "client/src/game/components/ActionAnnouncement.css",
-    "client/src/game/components/PhaseTimer.css"
-  ],
   ".arena-poker-card .card-back": [
     "client/src/game/combat/styles/face-down.css",
     "client/src/game/combat/styles/hole-cards.css"
@@ -38,11 +34,7 @@
   ],
   ".card-description": [
     "client/src/game/components/SimpleCard.css",
-    "client/src/game/components/styles/CardTextStyles.css"
-  ],
-  ".card-name": [
-    "client/src/game/components/SimpleCard.css",
-    "client/src/game/components/styles/CardTextStyles.css"
+    "client/src/index.css"
   ],
   ".card-with-drag": [
     "client/src/game/components/CardHoverEffects.css",
@@ -51,10 +43,6 @@
   ".card-with-drag.is-hovering": [
     "client/src/game/components/CardHoverEffects.css",
     "client/src/index.css"
-  ],
-  ".card-with-drag.not-playable": [
-    "client/src/game/components/CardEnhancements.css",
-    "client/src/game/components/CardHoverEffects.css"
   ],
   ".celebration-backdrop": [
     "client/src/game/combat/RagnarokCombatArena.css",
@@ -87,7 +75,7 @@
   ],
   ".damage-value": [
     "client/src/game/components/TargetingOverlay.css",
-    "client/src/game/components/styles/CardTextStyles.css"
+    "client/src/index.css"
   ],
   ".element-badge": [
     "client/src/game/components/ElementIndicator.css",
@@ -794,13 +782,9 @@
     "client/src/game/components/CardHoverEffects.css",
     "client/src/index.css"
   ],
-  ".keyword-highlight": [
-    "client/src/game/components/styles/CardTextStyles.css",
-    "client/src/game/components/ui/UnifiedCardTooltip.css"
-  ],
   ".mana-value": [
     "client/src/game/components/SimpleCard.css",
-    "client/src/game/components/styles/CardTextStyles.css"
+    "client/src/index.css"
   ],
   ".opponent-hand-count": [
     "client/src/game/combat/RagnarokCombatArena.css",
@@ -884,7 +868,6 @@
     "client/src/game/combat/styles/norse-atmosphere.css"
   ],
   ".premium-card-container": [
-    "client/src/game/components/FixInvisibleBox.css",
     "client/src/game/utils/cardRenderingSystem.css",
     "client/src/index.css"
   ],
@@ -893,10 +876,6 @@
     "client/src/game/components/SimpleBattlefield.css"
   ],
   ".ragnarok-combat-arena": [
-    "client/src/game/combat/RagnarokCombatArena.css",
-    "client/src/game/combat/styles/reset.css"
-  ],
-  ".ragnarok-combat-arena *": [
     "client/src/game/combat/RagnarokCombatArena.css",
     "client/src/game/combat/styles/reset.css"
   ],
@@ -957,29 +936,11 @@
     "client/src/game/components/ui/UnifiedCardTooltip.css"
   ],
   ".tooltip-header": [
-    "client/src/game/components/CardHoverPreview.css",
     "client/src/game/components/ui/HeroPowerButton.css",
-    "client/src/game/components/ui/UnifiedCardTooltip.css"
-  ],
-  ".tooltip-mana": [
-    "client/src/game/components/CardHoverPreview.css",
     "client/src/game/components/ui/UnifiedCardTooltip.css"
   ],
   ".tooltip-name": [
-    "client/src/game/components/CardHoverPreview.css",
     "client/src/game/components/ui/HeroPowerButton.css",
-    "client/src/game/components/ui/UnifiedCardTooltip.css"
-  ],
-  ".tooltip-stats": [
-    "client/src/game/components/CardHoverPreview.css",
-    "client/src/game/components/ui/UnifiedCardTooltip.css"
-  ],
-  ".tooltip-tribe": [
-    "client/src/game/components/CardHoverPreview.css",
-    "client/src/game/components/ui/UnifiedCardTooltip.css"
-  ],
-  ".tooltip-type": [
-    "client/src/game/components/CardHoverPreview.css",
     "client/src/game/components/ui/UnifiedCardTooltip.css"
   ],
   ".winner-badge": [
@@ -1025,9 +986,5 @@
   ".zone-community": [
     "client/src/game/combat/GameViewport.css",
     "client/src/game/combat/RagnarokCombatArena.css"
-  ],
-  "*": [
-    "client/src/game/components/FixInvisibleBox.css",
-    "client/src/index.css"
   ]
 }

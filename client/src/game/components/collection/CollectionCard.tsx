@@ -11,8 +11,8 @@ const GLOW_COLORS = {
   epic: 'rgba(163, 53, 238, 0.7)',
   mythic: 'rgba(255, 128, 0, 0.7)'
 };
-const NOOP_ADD = () => {};
-const NOOP_DETAILS = () => {};
+const NOOP_ADD = () => { };
+const NOOP_DETAILS = () => { };
 const HOVER_ANIMATION = { scale: 1.05, y: -8, transition: { duration: 0.2 } };
 const TRANSITION = { duration: 0.2 };
 
@@ -39,6 +39,7 @@ const CollectionCard: React.FC<CollectionCardProps> = React.memo(({
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const animTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -71,7 +72,7 @@ const CollectionCard: React.FC<CollectionCardProps> = React.memo(({
     e.preventDefault();
     handleShowCardDetails();
   }, [handleShowCardDetails]);
-  
+
   return (
     <motion.div
       className="collection-card collection-grid-item relative min-h-[240px] min-w-[180px] h-full block bg-gradient-to-b from-gray-800 to-gray-900 rounded-lg shadow-lg"
@@ -87,7 +88,7 @@ const CollectionCard: React.FC<CollectionCardProps> = React.memo(({
     >
       <div className="relative h-full w-full flex items-center justify-center p-3">
         <div className="w-full h-full" onClick={handleClick} onContextMenu={handleRightClick}>
-          {artPath ? (
+          {artPath && !loadError ? (
             <div className="relative w-full h-full rounded-lg overflow-hidden border border-gray-600">
               <img
                 src={artPath}
@@ -95,7 +96,10 @@ const CollectionCard: React.FC<CollectionCardProps> = React.memo(({
                 className="w-full h-full object-cover"
                 loading="lazy"
                 draggable={false}
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                onError={() => {
+                  console.error(`[CollectionCard] Failed to load art for ${cardData.name}: ${artPath}`);
+                  setLoadError(true);
+                }}
               />
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent px-2 py-1.5">
                 <p className="text-white text-xs font-semibold truncate">{cardData.name}</p>
@@ -127,7 +131,7 @@ const CollectionCard: React.FC<CollectionCardProps> = React.memo(({
             />
           )}
         </div>
-        
+
         {/* Card glow effect (CCG style) */}
         <AnimatePresence>
           {isHovered && (
@@ -143,7 +147,7 @@ const CollectionCard: React.FC<CollectionCardProps> = React.memo(({
             />
           )}
         </AnimatePresence>
-        
+
         {/* Card count indicators (for cards already in deck) */}
         {count > 0 && (
           <div className="absolute top-2 right-2 flex flex-col items-center z-10">
@@ -157,7 +161,7 @@ const CollectionCard: React.FC<CollectionCardProps> = React.memo(({
             ))}
           </div>
         )}
-        
+
         {/* "Can't add more" indicator */}
         {count >= maxCount && (
           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-lg z-10">
@@ -166,7 +170,7 @@ const CollectionCard: React.FC<CollectionCardProps> = React.memo(({
             </div>
           </div>
         )}
-        
+
         {/* "Can't add due to deck full" indicator */}
         {!canAdd && count < maxCount && (
           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-lg z-10">

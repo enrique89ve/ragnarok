@@ -4,7 +4,7 @@
  * Uses useHeroArt hook for consistent art resolution
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useHeroArt } from '../../hooks/useHeroArt';
 
 interface HeroArtImageProps {
@@ -23,8 +23,9 @@ export function HeroArtImage({
   fallbackIcon,
 }: HeroArtImageProps) {
   const { artPath, hasArt } = useHeroArt(heroId, portrait);
+  const [loadError, setLoadError] = useState(false);
 
-  if (!hasArt) {
+  if (!hasArt || loadError) {
     return fallbackIcon ? <>{fallbackIcon}</> : null;
   }
 
@@ -35,7 +36,8 @@ export function HeroArtImage({
       className={className}
       style={{ objectFit: 'contain' }}
       onError={(e) => {
-        (e.target as HTMLImageElement).style.display = 'none';
+        console.error(`[HeroArtImage] Failed to load art for ${heroId}: ${artPath}`);
+        setLoadError(true);
       }}
       loading="eager"
     />

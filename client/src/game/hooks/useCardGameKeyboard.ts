@@ -43,7 +43,7 @@ export function useCardGameKeyboard({ onToggleGameLog, enabled = true }: UseCard
 				e.preventDefault();
 				const gs = useGameStore.getState();
 				if (gs.gameState?.currentTurn === 'player' && gs.gameState?.gamePhase === 'playing') {
-					gs.useHeroPower();
+					gs.performHeroPower();
 				}
 			} else if (match(bindings.showGameLog)) {
 				e.preventDefault();

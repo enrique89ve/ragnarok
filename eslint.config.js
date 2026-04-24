@@ -2,6 +2,7 @@ import js from '@eslint/js';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
 import reactPlugin from 'eslint-plugin-react';
+import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 
 function trimGlobals(...sources) {
@@ -50,6 +51,7 @@ export default [
 		plugins: {
 			'@typescript-eslint': tsPlugin,
 			react: reactPlugin,
+			'react-hooks': reactHooks,
 		},
 		rules: {
 			'no-unused-vars': 'off',
@@ -67,6 +69,7 @@ export default [
 			'no-param-reassign': ['warn', { props: true, ignorePropertyModificationsFor: ['state', 'context', 'player', 'opponent'] }],
 			'no-empty': 'warn',
 			'no-case-declarations': 'warn',
+			...reactHooks.configs.recommended.rules,
 		},
 		settings: {
 			react: { version: 'detect' },

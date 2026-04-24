@@ -67,30 +67,37 @@ export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
       return;
     }
 
-    // Create unique ID for this animation to prevent stale closure issues
-    const currentAnimationId = `${animation.attacker.id}-${animation.defender.id}-${Date.now()}`;
-    animationIdRef.current = currentAnimationId;
+    // Create unique ID for this animation based purely on attackers/defenders
+    const animationSignature = `${animation.attacker.id}-${animation.defender.id}`;
 
+    // Prevent infinite loop: if we are already playing this exact animation, ignore new generic prop triggers
+    if (animationIdRef.current === animationSignature) {
+      return;
+    }
+
+    animationIdRef.current = animationSignature;
     setPhase('moving');
 
     const moveTimeout = setTimeout(() => {
-      // Validate we're still handling the same animation
-      if (animationIdRef.current !== currentAnimationId) return;
+      if (animationIdRef.current !== animationSignature) return;
       setPhase('impact');
     }, 400);
 
     const completeTimeout = setTimeout(() => {
-      // Validate we're still handling the same animation
-      if (animationIdRef.current !== currentAnimationId) return;
+      if (animationIdRef.current !== animationSignature) return;
       setPhase('done');
       onAnimationComplete();
+      // Clear the ref so this same animation could theoretically play again if null is passed in between
+      animationIdRef.current = null;
     }, 800);
 
     return () => {
       clearTimeout(moveTimeout);
       clearTimeout(completeTimeout);
     };
-  }, [animation, onAnimationComplete]);
+    // Removed onAnimationComplete from dependencies to avoid loop if parent passes inline functions
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [animation]);
 
   if (!animation || phase === 'idle' || phase === 'done') {
     return null;
@@ -103,7 +110,7 @@ export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
 
   return (
     <AnimatePresence>
-      <div 
+      <div
         className="chess-attack-animation-overlay"
         style={{
           position: 'fixed',
@@ -124,8 +131,8 @@ export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
             opacity: 1
           }}
           animate={{
-            x: phase === 'moving' || phase === 'impact' 
-              ? defenderPos.x - cellSize / 2 
+            x: phase === 'moving' || phase === 'impact'
+              ? defenderPos.x - cellSize / 2
               : attackerStart.x - cellSize / 2,
             y: phase === 'moving' || phase === 'impact'
               ? defenderPos.y - cellSize / 2
@@ -152,7 +159,7 @@ export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
             zIndex: 1001
           }}
         >
-          <span 
+          <span
             className={`text-3xl ${!isPlayer ? 'transform rotate-180' : ''}`}
             style={{ color: PIECE_COLORS[animation.attacker.type] }}
           >
@@ -230,12 +237,12 @@ export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
               zIndex: 1002
             }}
           >
-            <div 
+            <div
               className="px-4 py-2 rounded-lg font-bold text-lg"
               style={{
                 background: 'linear-gradient(135deg, rgba(0,0,0,0.9), rgba(30,0,50,0.9))',
-                border: animation.isInstantKill 
-                  ? '2px solid #facc15' 
+                border: animation.isInstantKill
+                  ? '2px solid #facc15'
                   : '2px solid #ef4444',
                 color: animation.isInstantKill ? '#facc15' : '#ef4444',
                 textShadow: `0 0 10px ${animation.isInstantKill ? '#facc15' : '#ef4444'}`,

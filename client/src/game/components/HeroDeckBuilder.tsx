@@ -106,6 +106,30 @@ export const HeroDeckBuilder: React.FC<HeroDeckBuilderProps> = ({
 		})).filter(g => g.cards.length > 0);
 	}, [db.groupedCards, rarityFilter]);
 
+	// Infinite scroll state to restrict DOM node explosion
+	const [visibleCount, setVisibleCount] = useState(20);
+
+	useEffect(() => {
+		setVisibleCount(20);
+	}, [db.groupedCards, rarityFilter, db.searchTerm, db.filterType, db.minCost, db.sortBy]);
+
+	const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+		const target = e.currentTarget;
+		if (target.scrollHeight - target.scrollTop - target.clientHeight < 600) {
+			setVisibleCount(prev => prev + 20);
+		}
+	}, []);
+
+	const paginatedGroupedCards = useMemo(() => {
+		let count = 0;
+		return filteredGroupedCards.map(g => {
+			if (count >= visibleCount) return { ...g, cards: [] };
+			const cards = g.cards.slice(0, visibleCount - count);
+			count += cards.length;
+			return { ...g, cards };
+		}).filter(g => g.cards.length > 0);
+	}, [filteredGroupedCards, visibleCount]);
+
 	const handleCardMouseEnter = useCallback((card: CardData, e: React.MouseEvent) => {
 		if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current);
 		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -176,84 +200,84 @@ export const HeroDeckBuilder: React.FC<HeroDeckBuilderProps> = ({
 				</div>
 
 				<AnimatePresence>
-				{showTutorial && (
-					<motion.div
-						className="db-tutorial-overlay"
-						initial={{ opacity: 0, height: 0 }}
-						animate={{ opacity: 1, height: 'auto' }}
-						exit={{ opacity: 0, height: 0 }}
-						transition={{ duration: 0.35, ease: 'easeOut' }}
-					>
-						<div className="db-tutorial-inner">
-							<div className="db-tutorial-progress">
-								{[0, 1, 2].map(i => (
-									<div key={i} className={`db-tutorial-pip ${i === tutorialStep ? 'active' : ''} ${i < tutorialStep ? 'done' : ''}`} />
-								))}
+					{showTutorial && (
+						<motion.div
+							className="db-tutorial-overlay"
+							initial={{ opacity: 0, height: 0 }}
+							animate={{ opacity: 1, height: 'auto' }}
+							exit={{ opacity: 0, height: 0 }}
+							transition={{ duration: 0.35, ease: 'easeOut' }}
+						>
+							<div className="db-tutorial-inner">
+								<div className="db-tutorial-progress">
+									{[0, 1, 2].map(i => (
+										<div key={i} className={`db-tutorial-pip ${i === tutorialStep ? 'active' : ''} ${i < tutorialStep ? 'done' : ''}`} />
+									))}
+								</div>
+								<AnimatePresence mode="wait">
+									<motion.div
+										key={tutorialStep}
+										className="db-tutorial-card"
+										initial={{ opacity: 0, x: 30 }}
+										animate={{ opacity: 1, x: 0 }}
+										exit={{ opacity: 0, x: -30 }}
+										transition={{ duration: 0.2 }}
+									>
+										{tutorialStep === 0 && (
+											<>
+												<div className="db-tutorial-icon">
+													<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+														<path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+													</svg>
+												</div>
+												<div className="db-tutorial-text">
+													<div className="db-tutorial-title">Add Cards</div>
+													<div className="db-tutorial-desc"><kbd>Left-click</kbd> any card in the grid to add it to your deck</div>
+												</div>
+											</>
+										)}
+										{tutorialStep === 1 && (
+											<>
+												<div className="db-tutorial-icon">
+													<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+														<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
+													</svg>
+												</div>
+												<div className="db-tutorial-text">
+													<div className="db-tutorial-title">Inspect Cards</div>
+													<div className="db-tutorial-desc"><kbd>Right-click</kbd> a card to flip it and read full details</div>
+												</div>
+											</>
+										)}
+										{tutorialStep === 2 && (
+											<>
+												<div className="db-tutorial-icon">
+													<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+														<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+													</svg>
+												</div>
+												<div className="db-tutorial-text">
+													<div className="db-tutorial-title">Find Cards</div>
+													<div className="db-tutorial-desc">Use the <strong>search</strong> and <strong>filters</strong> to narrow by type, rarity, or mana cost</div>
+												</div>
+											</>
+										)}
+									</motion.div>
+								</AnimatePresence>
+								<div className="db-tutorial-actions">
+									<button type="button" className="db-tutorial-skip" onClick={dismissTutorial}>Skip</button>
+									<button type="button" className="db-tutorial-next" onClick={advanceTutorial}>
+										{tutorialStep >= 2 ? 'Ready' : 'Next'}
+										{tutorialStep < 2 && (
+											<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+												<path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
+											</svg>
+										)}
+									</button>
+								</div>
 							</div>
-							<AnimatePresence mode="wait">
-								<motion.div
-									key={tutorialStep}
-									className="db-tutorial-card"
-									initial={{ opacity: 0, x: 30 }}
-									animate={{ opacity: 1, x: 0 }}
-									exit={{ opacity: 0, x: -30 }}
-									transition={{ duration: 0.2 }}
-								>
-									{tutorialStep === 0 && (
-										<>
-											<div className="db-tutorial-icon">
-												<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-													<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-												</svg>
-											</div>
-											<div className="db-tutorial-text">
-												<div className="db-tutorial-title">Add Cards</div>
-												<div className="db-tutorial-desc"><kbd>Left-click</kbd> any card in the grid to add it to your deck</div>
-											</div>
-										</>
-									)}
-									{tutorialStep === 1 && (
-										<>
-											<div className="db-tutorial-icon">
-												<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-													<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-												</svg>
-											</div>
-											<div className="db-tutorial-text">
-												<div className="db-tutorial-title">Inspect Cards</div>
-												<div className="db-tutorial-desc"><kbd>Right-click</kbd> a card to flip it and read full details</div>
-											</div>
-										</>
-									)}
-									{tutorialStep === 2 && (
-										<>
-											<div className="db-tutorial-icon">
-												<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-													<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
-												</svg>
-											</div>
-											<div className="db-tutorial-text">
-												<div className="db-tutorial-title">Find Cards</div>
-												<div className="db-tutorial-desc">Use the <strong>search</strong> and <strong>filters</strong> to narrow by type, rarity, or mana cost</div>
-											</div>
-										</>
-									)}
-								</motion.div>
-							</AnimatePresence>
-							<div className="db-tutorial-actions">
-								<button type="button" className="db-tutorial-skip" onClick={dismissTutorial}>Skip</button>
-								<button type="button" className="db-tutorial-next" onClick={advanceTutorial}>
-									{tutorialStep >= 2 ? 'Ready' : 'Next'}
-									{tutorialStep < 2 && (
-										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-											<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
-										</svg>
-									)}
-								</button>
-							</div>
-						</div>
-					</motion.div>
-				)}
+						</motion.div>
+					)}
 				</AnimatePresence>
 
 				{/* Main Content */}
@@ -261,215 +285,215 @@ export const HeroDeckBuilder: React.FC<HeroDeckBuilderProps> = ({
 					{/* Card Collection / Art Gallery */}
 					<div className="db-collection-pane">
 						<>
-						{/* Filters */}
-						<div className="db-filter-bar">
-							<div className="db-filter-row">
-								<input
-									type="text"
-									placeholder="Search cards..."
-									value={db.searchTerm}
-									onChange={e => db.setSearchTerm(e.target.value)}
-									className="db-search-input"
-								/>
-								<select
-									value={db.filterType}
-									onChange={e => db.setFilterType(e.target.value as any)}
-									className="db-filter-select"
-									title="Filter by card type"
-								>
-									<option value="all">All Types</option>
-									<option value="minion">Minions</option>
-									<option value="spell">Spells</option>
-									<option value="weapon">Weapons</option>
-									<option value="artifact">Artifacts</option>
-									<option value="armor">Armor</option>
-								</select>
-								<select
-									value={rarityFilter}
-									onChange={e => setRarityFilter(e.target.value as RarityFilter)}
-									className="db-filter-select"
-									title="Filter by rarity"
-								>
-									<option value="all">All Rarities</option>
-									<option value="common">Common</option>
-									<option value="rare">Rare</option>
-									<option value="epic">Epic</option>
-									<option value="mythic">Mythic</option>
-								</select>
-								<select
-									value={db.sortBy}
-									onChange={e => db.setSortBy(e.target.value as any)}
-									className="db-filter-select"
-									title="Sort cards"
-								>
-									<option value="cost">Sort by Cost</option>
-									<option value="name">Sort by Name</option>
-									<option value="type">Sort by Type</option>
-								</select>
-							</div>
-							<div className="db-filter-mana-row">
-								<div className="db-mana-filter">
-									{[0, 1, 2, 3, 4, 5, 6, 7].map(cost => (
-										<button
-											type="button"
-											key={cost}
-											onClick={() => db.handleManaFilter(cost)}
-											className={`db-mana-btn ${(db.minCost === cost || (cost === 7 && db.minCost === 7)) ? 'active' : ''}`}
-										>
-											{cost === 7 ? '7+' : cost}
+							{/* Filters */}
+							<div className="db-filter-bar">
+								<div className="db-filter-row">
+									<input
+										type="text"
+										placeholder="Search cards..."
+										value={db.searchTerm}
+										onChange={e => db.setSearchTerm(e.target.value)}
+										className="db-search-input"
+									/>
+									<select
+										value={db.filterType}
+										onChange={e => db.setFilterType(e.target.value as any)}
+										className="db-filter-select"
+										title="Filter by card type"
+									>
+										<option value="all">All Types</option>
+										<option value="minion">Minions</option>
+										<option value="spell">Spells</option>
+										<option value="weapon">Weapons</option>
+										<option value="artifact">Artifacts</option>
+										<option value="armor">Armor</option>
+									</select>
+									<select
+										value={rarityFilter}
+										onChange={e => setRarityFilter(e.target.value as RarityFilter)}
+										className="db-filter-select"
+										title="Filter by rarity"
+									>
+										<option value="all">All Rarities</option>
+										<option value="common">Common</option>
+										<option value="rare">Rare</option>
+										<option value="epic">Epic</option>
+										<option value="mythic">Mythic</option>
+									</select>
+									<select
+										value={db.sortBy}
+										onChange={e => db.setSortBy(e.target.value as any)}
+										className="db-filter-select"
+										title="Sort cards"
+									>
+										<option value="cost">Sort by Cost</option>
+										<option value="name">Sort by Name</option>
+										<option value="type">Sort by Type</option>
+									</select>
+								</div>
+								<div className="db-filter-mana-row">
+									<div className="db-mana-filter">
+										{[0, 1, 2, 3, 4, 5, 6, 7].map(cost => (
+											<button
+												type="button"
+												key={cost}
+												onClick={() => db.handleManaFilter(cost)}
+												className={`db-mana-btn ${(db.minCost === cost || (cost === 7 && db.minCost === 7)) ? 'active' : ''}`}
+											>
+												{cost === 7 ? '7+' : cost}
+											</button>
+										))}
+									</div>
+									{db.minCost !== null && (
+										<button type="button" onClick={db.handleClearManaFilter} className="db-clear-mana-btn">
+											Clear
 										</button>
-									))}
+									)}
+									<span className="db-showing-count" style={{ marginLeft: 'auto' }}>
+										{db.totalFilteredCards} of {db.totalValidCards} cards
+									</span>
 								</div>
-								{db.minCost !== null && (
-									<button type="button" onClick={db.handleClearManaFilter} className="db-clear-mana-btn">
-										Clear
-									</button>
-								)}
-								<span className="db-showing-count" style={{ marginLeft: 'auto' }}>
-									{db.totalFilteredCards} of {db.totalValidCards} cards
-								</span>
 							</div>
-						</div>
 
-						{/* Card Grid - Grouped by Class */}
-						<div className="db-card-scroll">
-							{filteredGroupedCards.length === 0 && (
-								<div className="db-no-results">No cards found matching your filters</div>
-							)}
-							{filteredGroupedCards.map(group => (
-								<div key={group.label} className="db-card-group">
-									<div className="db-group-header">
-										<span className="db-group-label">{group.label}</span>
-										<span className="db-group-count">{group.cards.length}</span>
-									</div>
-									<div className="db-card-grid">
-										{group.cards.map(card => {
-											const cardId = Number(card.id);
-											const inDeckCount = db.deckCardCounts[cardId] || 0;
-											const canAdd = db.canAddCard(cardId);
-											const rarityKey = (card.rarity || 'common').toLowerCase();
-											const isMinion = card.type === 'minion';
-											const maxCopies = getMaxCopies(card);
-											const cardArtPath = getCardArtPath(card.name, cardId);
-											const isMaxed = !canAdd && inDeckCount >= maxCopies;
-											const isSuper = isSuperMinion(cardId);
-											const isLinkedSuper = isSuper && getAllSuperMinionsForHero(db.heroId).includes(cardId);
+							{/* Card Grid - Grouped by Class */}
+							<div className="db-card-scroll" onScroll={handleScroll}>
+								{paginatedGroupedCards.length === 0 && (
+									<div className="db-no-results">No cards found matching your filters</div>
+								)}
+								{paginatedGroupedCards.map(group => (
+									<div key={group.label} className="db-card-group">
+										<div className="db-group-header">
+											<span className="db-group-label">{group.label}</span>
+											<span className="db-group-count">{group.cards.length}</span>
+										</div>
+										<div className="db-card-grid">
+											{group.cards.map(card => {
+												const cardId = Number(card.id);
+												const inDeckCount = db.deckCardCounts[cardId] || 0;
+												const canAdd = db.canAddCard(cardId);
+												const rarityKey = (card.rarity || 'common').toLowerCase();
+												const isMinion = card.type === 'minion';
+												const maxCopies = getMaxCopies(card);
+												const cardArtPath = getCardArtPath(card.name, cardId);
+												const isMaxed = !canAdd && inDeckCount >= maxCopies;
+												const isSuper = isSuperMinion(cardId);
+												const isLinkedSuper = isSuper && getAllSuperMinionsForHero(db.heroId).includes(cardId);
 
-											return (
-												<div
-													key={card.id}
-													onClick={() => {
-														if (canAdd) db.handleAddCard(card);
-													}}
-													onContextMenu={e => {
-														e.preventDefault();
-														db.setSelectedCard(card);
-													}}
-													onMouseEnter={e => handleCardMouseEnter(card, e)}
-													onMouseMove={holo.onMouseMove}
-													onMouseLeave={e => { holo.onMouseLeave(e); handleCardMouseLeave(); }}
-													className={`db-card rarity-${rarityKey} ${getHoloTier(rarityKey) || ''} ${isMaxed ? 'not-playable' : ''} ${isLinkedSuper ? 'super-minion-linked' : ''}`}
-													title={canAdd ? 'Click to add \u2022 Right-click for details' : 'Right-click for details'}
-												>
-													{/* Art Section */}
-													<div className="db-card-art">
-														{cardArtPath ? (
-															<>
-																<img src={cardArtPath} alt="" loading="lazy" />
-																<div className="db-card-art-overlay" />
-															</>
-														) : (
-															<div className="db-card-art-fallback" style={{ background: `linear-gradient(135deg, ${classColor}25 0%, ${classColor}08 100%)` }}>
-																{TYPE_ICONS[card.type] || '\u2726'}
-															</div>
-														)}
-
-														{rarityKey !== 'common' && rarityKey !== 'basic' && (
-														<>
-															<div className="holo-foil" />
-															<div className="holo-glitter" />
-															<div className="holo-glare" />
-														</>
-													)}
-
-														{/* Mana Badge */}
-														<div className="db-mana-badge">{card.manaCost ?? 0}</div>
-
-														{rarityKey !== 'common' && rarityKey !== 'basic' && (
-															<span className={`db-rarity-badge rarity-${rarityKey}`}>
-																{rarityKey === 'mythic' ? 'MYTHIC' : rarityKey === 'epic' ? 'EPIC' : 'RARE'}
-															</span>
-														)}
-
-														{/* Super Minion Badge */}
-														{isLinkedSuper && (
-															<div className="db-super-badge" title="Your Super Minion! Gets +2/+2 when played by this hero">
-																{'\u2B50'}
-															</div>
-														)}
-
-														{/* Count Badge */}
-														{inDeckCount > 0 && (
-															<div className="db-count-badge">{inDeckCount}/{maxCopies}</div>
-														)}
-													</div>
-
-													{/* Info Section */}
-													<div className="db-card-info">
-														<div className="db-card-name">{card.name}</div>
-														{card.description && (
-															<div className="db-card-desc">{card.description}</div>
-														)}
-														<div className="db-card-meta">
-															<div className="db-card-meta-left">
-																<span className="db-card-type">{card.type}</span>
-																{isClassCard(card) && <span className="db-class-star">{'\u2605'}</span>}
-																{isLinkedSuper && <span className="db-super-tag">SUPER</span>}
-															</div>
-															{isMinion && (
-																<div className="db-stat-row">
-																	<span className="db-stat db-stat-attack">
-																		<span className="db-stat-icon">{'\u2694'}</span>
-																		{(card as any).attack ?? 0}
-																	</span>
-																	<span className="db-stat db-stat-health">
-																		<span className="db-stat-icon">{'\u2665'}</span>
-																		{(card as any).health ?? 0}
-																	</span>
+												return (
+													<div
+														key={card.id}
+														onClick={() => {
+															if (canAdd) db.handleAddCard(card);
+														}}
+														onContextMenu={e => {
+															e.preventDefault();
+															db.setSelectedCard(card);
+														}}
+														onMouseEnter={e => handleCardMouseEnter(card, e)}
+														onMouseMove={holo.onMouseMove}
+														onMouseLeave={e => { holo.onMouseLeave(e); handleCardMouseLeave(); }}
+														className={`db-card rarity-${rarityKey} ${getHoloTier(rarityKey) || ''} ${isMaxed ? 'not-playable' : ''} ${isLinkedSuper ? 'super-minion-linked' : ''}`}
+														title={canAdd ? 'Click to add \u2022 Right-click for details' : 'Right-click for details'}
+													>
+														{/* Art Section */}
+														<div className="db-card-art">
+															{cardArtPath ? (
+																<>
+																	<img src={cardArtPath} alt="" loading="lazy" />
+																	<div className="db-card-art-overlay" />
+																</>
+															) : (
+																<div className="db-card-art-fallback" style={{ background: `linear-gradient(135deg, ${classColor}25 0%, ${classColor}08 100%)` }}>
+																	{TYPE_ICONS[card.type] || '\u2726'}
 																</div>
 															)}
-															{card.type === 'artifact' && (
-																<div className="db-stat-row">
-																	<span className="db-stat db-stat-attack">
-																		<span className="db-stat-icon">{'\u2694'}</span>
-																		{(card as any).attack ?? 0}
-																	</span>
+
+															{rarityKey !== 'common' && rarityKey !== 'basic' && (
+																<>
+																	<div className="holo-foil" />
+																	<div className="holo-glitter" />
+																	<div className="holo-glare" />
+																</>
+															)}
+
+															{/* Mana Badge */}
+															<div className="db-mana-badge">{card.manaCost ?? 0}</div>
+
+															{rarityKey !== 'common' && rarityKey !== 'basic' && (
+																<span className={`db-rarity-badge rarity-${rarityKey}`}>
+																	{rarityKey === 'mythic' ? 'MYTHIC' : rarityKey === 'epic' ? 'EPIC' : 'RARE'}
+																</span>
+															)}
+
+															{/* Super Minion Badge */}
+															{isLinkedSuper && (
+																<div className="db-super-badge" title="Your Super Minion! Gets +2/+2 when played by this hero">
+																	{'\u2B50'}
 																</div>
 															)}
-															{card.type === 'armor' && (
-																<div className="db-stat-row">
-																	<span className="db-stat db-stat-health">
-																		<span className="db-stat-icon">{'\uD83D\uDEE1'}</span>
-																		{(card as any).armorValue ?? 0}
-																	</span>
-																</div>
+
+															{/* Count Badge */}
+															{inDeckCount > 0 && (
+																<div className="db-count-badge">{inDeckCount}/{maxCopies}</div>
 															)}
 														</div>
-													</div>
 
-													{/* MAX Overlay */}
-													{isMaxed && (
-														<div className="db-max-overlay">
-															<span className="db-max-text">MAX</span>
+														{/* Info Section */}
+														<div className="db-card-info">
+															<div className="db-card-name">{card.name}</div>
+															{card.description && (
+																<div className="db-card-desc">{card.description}</div>
+															)}
+															<div className="db-card-meta">
+																<div className="db-card-meta-left">
+																	<span className="db-card-type">{card.type}</span>
+																	{isClassCard(card) && <span className="db-class-star">{'\u2605'}</span>}
+																	{isLinkedSuper && <span className="db-super-tag">SUPER</span>}
+																</div>
+																{isMinion && (
+																	<div className="db-stat-row">
+																		<span className="db-stat db-stat-attack">
+																			<span className="db-stat-icon">{'\u2694'}</span>
+																			{(card as any).attack ?? 0}
+																		</span>
+																		<span className="db-stat db-stat-health">
+																			<span className="db-stat-icon">{'\u2665'}</span>
+																			{(card as any).health ?? 0}
+																		</span>
+																	</div>
+																)}
+																{card.type === 'artifact' && (
+																	<div className="db-stat-row">
+																		<span className="db-stat db-stat-attack">
+																			<span className="db-stat-icon">{'\u2694'}</span>
+																			{(card as any).attack ?? 0}
+																		</span>
+																	</div>
+																)}
+																{card.type === 'armor' && (
+																	<div className="db-stat-row">
+																		<span className="db-stat db-stat-health">
+																			<span className="db-stat-icon">{'\uD83D\uDEE1'}</span>
+																			{(card as any).armorValue ?? 0}
+																		</span>
+																	</div>
+																)}
+															</div>
 														</div>
-													)}
-												</div>
-											);
-										})}
+
+														{/* MAX Overlay */}
+														{isMaxed && (
+															<div className="db-max-overlay">
+																<span className="db-max-text">MAX</span>
+															</div>
+														)}
+													</div>
+												);
+											})}
+										</div>
 									</div>
-								</div>
-							))}
-						</div>
+								))}
+							</div>
 						</>
 					</div>
 

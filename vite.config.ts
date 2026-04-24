@@ -32,10 +32,7 @@ export default defineConfig(({ command }) => ({
     dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {
-    // Pre-bundle heavy / hot-path deps so cold page loads don't stall
-    // re-reading them through the slow /mnt/c WSL filesystem mount.
-    // Each entry here gets bundled once at server startup instead of
-    // resolved on every request.
+    // Pre-bundle heavy / hot-path deps so cold page loads don't stall.
     // Only includes deps actually present in package.json — Vite errors
     // out if you list a missing one.
     include: [
@@ -44,7 +41,6 @@ export default defineConfig(({ command }) => ({
       'react/jsx-runtime',
       'react/jsx-dev-runtime',
       'framer-motion',
-      'react-spring',
       'zustand',
       'gsap',
       'peerjs',
@@ -85,12 +81,6 @@ export default defineConfig(({ command }) => ({
           if (id.includes('/game/data/norseHeroes/')) return 'card-data-heroes';
           if (id.includes('/game/data/allCards') || id.includes('/game/data/cardSets/')) return 'card-data';
           if (id.includes('/game/data/')) return 'card-data';
-          /*
-            Let Rollup decide how to split the local app graph.
-            Earlier source-level buckets for combat/game/blockchain code created
-            circular chunk assignments because those modules are tightly coupled
-            and imported across multiple routes.
-          */
           return undefined;
         },
       },
@@ -98,3 +88,4 @@ export default defineConfig(({ command }) => ({
   },
   assetsInclude: ["**/*.mp3", "**/*.ogg", "**/*.wav"],
 }));
+
