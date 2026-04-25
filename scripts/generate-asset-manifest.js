@@ -13,16 +13,36 @@ const CACHEABLE_EXTS = new Set([
 
 const EXCLUDE_FILES = new Set(['asset-manifest.json']);
 
-function walk(dir, base) {
+function getCanonicalNftFiles(publicDir) {
+	const nftDir = path.join(publicDir, 'art', 'nfts');
+	if (!fs.existsSync(nftDir)) {
+		return new Set();
+	}
+
+	const entries = fs.readdirSync(nftDir, { withFileTypes: true });
+	const nftFiles = entries
+		.filter((entry) => entry.isFile())
+		.filter((entry) => CACHEABLE_EXTS.has(path.extname(entry.name).toLowerCase()))
+		.map((entry) => entry.name);
+
+	return new Set(nftFiles);
+}
+
+function walk(dir, base, canonicalNftFiles) {
 	const entries = fs.readdirSync(dir, { withFileTypes: true });
 	const files = [];
 	for (const entry of entries) {
 		const rel = base ? `${base}/${entry.name}` : entry.name;
 		if (entry.isDirectory()) {
-			files.push(...walk(path.join(dir, entry.name), rel));
+			files.push(...walk(path.join(dir, entry.name), rel, canonicalNftFiles));
 		} else {
 			const ext = path.extname(entry.name).toLowerCase();
 			if (CACHEABLE_EXTS.has(ext) && !EXCLUDE_FILES.has(entry.name)) {
+				const isLegacyRootArtCopy = base === 'art' && canonicalNftFiles.has(entry.name);
+				if (isLegacyRootArtCopy) {
+					continue;
+				}
+
 				const stats = fs.statSync(path.join(dir, entry.name));
 				files.push({ path: `/${rel}`, size: stats.size });
 			}
@@ -39,7 +59,8 @@ try {
 }
 
 const publicDir = path.resolve(__dirname, '../client/public');
-const files = walk(publicDir, '');
+const canonicalNftFiles = getCanonicalNftFiles(publicDir);
+const files = walk(publicDir, '', canonicalNftFiles);
 
 files.sort((a, b) => a.path.localeCompare(b.path));
 

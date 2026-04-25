@@ -85,11 +85,11 @@ export const ElementBuffPopup: React.FC<ElementBuffPopupProps> = ({
             style={{
               display: 'flex',
               gap: '12px',
-              background: 'linear-gradient(135deg, rgba(0,0,0,0.8), rgba(20,20,30,0.9))',
+              background: 'linear-gradient(135deg, var(--obsidian-900), var(--obsidian-950))',
               border: `2px solid ${color}`,
               borderRadius: '8px',
               padding: '8px 16px',
-              boxShadow: `0 0 20px ${color}40, inset 0 0 10px ${color}20`
+              boxShadow: `0 0 20px color-mix(in srgb, ${color} 25%, transparent), inset 0 0 10px color-mix(in srgb, ${color} 15%, transparent)`
             }}
           >
             <motion.span
@@ -97,26 +97,26 @@ export const ElementBuffPopup: React.FC<ElementBuffPopupProps> = ({
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 }}
               style={{
-                color: '#ff6b6b',
+                color: 'var(--danger-400)',
                 fontWeight: 'bold',
                 fontSize: '1.25rem',
                 fontFamily: 'var(--font-norse, serif)',
-                textShadow: '0 0 8px rgba(255, 107, 107, 0.5)'
+                textShadow: '0 0 8px color-mix(in srgb, var(--danger-400) 50%, transparent)'
               }}
             >
               +{attackBonus} ATK
             </motion.span>
-            
+
             <motion.span
               initial={{ opacity: 0, x: 10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.4 }}
               style={{
-                color: '#4ade80',
+                color: 'var(--success-400)',
                 fontWeight: 'bold',
                 fontSize: '1.25rem',
                 fontFamily: 'var(--font-norse, serif)',
-                textShadow: '0 0 8px rgba(74, 222, 128, 0.5)'
+                textShadow: '0 0 8px color-mix(in srgb, var(--success-400) 50%, transparent)'
               }}
             >
               +{healthBonus} HP

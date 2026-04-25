@@ -431,6 +431,11 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
                         Starter
                       </span>
                     )}
+                    {hero.mythology && (
+                      <span className={`inline-block ml-1 px-1.5 py-0.5 bg-blue-600/80 text-[9px] text-white font-bold rounded uppercase tracking-wider faction-${hero.mythology}`}>
+                        {hero.mythology}
+                      </span>
+                    )}
                   </div>
                 </div>
 

@@ -2,7 +2,7 @@
  * useArtManager Hook
  * Manages art metadata loading, filtering, and grouping by character
  * 
- * Architecture: Hook layer - uses utils for pure logic
+ * Architecture: Hook layer - uses utils for pure logic and ArtRegistry as Source of Truth
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -15,12 +15,9 @@ import {
   findCardById,
   getCharacterCards,
   getArtImageUrl,
-  parseMetadata 
+  parseMetadata,
+  loadArtRegistry
 } from '../utils/art';
-
-interface UseArtManagerOptions {
-  useLocalImages?: boolean;
-}
 
 interface UseArtManagerReturn {
   cards: ArtCard[];
@@ -50,9 +47,7 @@ const defaultFilters: ArtFilters = {
   category: 'all',
 };
 
-export function useArtManager(options: UseArtManagerOptions = {}): UseArtManagerReturn {
-  const { useLocalImages = true } = options;
-  
+export function useArtManager(): UseArtManagerReturn {
   const [metadata, setMetadata] = useState<ArtMetadata | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,24 +61,14 @@ export function useArtManager(options: UseArtManagerOptions = {}): UseArtManager
         setIsLoading(true);
         setError(null);
 
-        const response = await fetch(assetPath('/ui/misc/metadata.json'));
+        // Uses the ArtRegistry logic which is the DNA Source of Truth
+        const registry = await loadArtRegistry();
+        
         if (!mounted) return;
-        if (!response.ok) {
-          throw new Error(`Failed to load art metadata: ${response.status}`);
-        }
-
-        const json = await response.json();
-        if (!mounted) return;
-        const parsed = parseMetadata(json);
-
-        if (!parsed) {
-          throw new Error('Invalid metadata format');
-        }
-
-        setMetadata(parsed);
+        setMetadata(registry);
       } catch (err) {
         if (!mounted) return;
-        setError(err instanceof Error ? err.message : 'Failed to load art');
+        setError(err instanceof Error ? err.message : 'Failed to load art registry');
       } finally {
         if (mounted) setIsLoading(false);
       }

@@ -62,20 +62,20 @@ export interface BattlefieldHeroProps {
 
 const getSecretColor = (heroClass: string) => {
   switch (heroClass) {
-    case 'mage': return '#3b82f6';
-    case 'hunter': return '#22c55e';
-    case 'paladin': return '#eab308';
-    case 'rogue': return '#94a3b8';
-    default: return '#a855f7';
+    case 'mage': return 'var(--rarity-rare-color)';
+    case 'hunter': return 'var(--success-500)';
+    case 'paladin': return 'var(--warning-300)';
+    case 'rogue': return 'var(--rarity-common-color)';
+    default: return 'var(--rarity-epic-color)';
   }
 };
 
-const QUESTION_MARK_STYLE: React.CSSProperties = { color: 'white', fontWeight: 'bold', fontSize: '16px' };
+const QUESTION_MARK_STYLE: React.CSSProperties = { color: 'var(--ink-0)', fontWeight: 'bold', fontSize: '16px' };
 const SECRET_COUNT_STYLE: React.CSSProperties = {
   position: 'absolute', bottom: '-4px', right: '-4px',
-  backgroundColor: '#dc2626', color: 'white', fontSize: '10px',
+  backgroundColor: 'var(--danger-600)', color: 'var(--ink-0)', fontSize: '10px',
   fontWeight: 'bold', width: '16px', height: '16px', borderRadius: '50%',
-  display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid white'
+  display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--ink-0)'
 };
 const SECRET_HEADER_STYLE_BASE: React.CSSProperties = { fontWeight: 'bold', marginBottom: '4px' };
 const SECRET_TEXT_STYLE: React.CSSProperties = { opacity: 0.8 };
@@ -85,7 +85,7 @@ const SECRET_TEXT_STYLE: React.CSSProperties = { opacity: 0.8 };
  * with interactive hero powers, elemental effects, and detailed stats
  */
 export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
-  pet, 
+  pet,
   hpCommitted,
   pokerPosition,
   level,
@@ -155,7 +155,7 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
     cursor: !isOpponent ? 'pointer' : 'default',
     pointerEvents: 'auto'
   }), [resolvedPortrait, isOpponent]);
-  
+
   const currentHP = pet.stats.currentHealth;
   const maxHP = pet.stats.maxHealth;
   const effectiveHP = Math.max(0, currentHP - hpCommitted);
@@ -202,7 +202,7 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
   }, [armor]);
 
   const elementClass = heroElement ? `element-${heroElement.toLowerCase()}` : '';
-  
+
   const norseHero = pet.norseHeroId ? ALL_NORSE_HEROES[pet.norseHeroId] : null;
   const heroPower = norseHero?.heroPower;
   const weaponUpgrade = norseHero?.weaponUpgrade;
@@ -227,7 +227,7 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
     top: isOpponent ? '100%' : 'auto',
     bottom: isOpponent ? 'auto' : '100%',
     left: '50%', transform: 'translateX(-50%)',
-    backgroundColor: 'rgba(0,0,0,0.9)', color: 'white',
+    backgroundColor: 'var(--obsidian-950)', color: 'var(--ink-0)',
     padding: '8px 12px', borderRadius: '6px', fontSize: '12px',
     whiteSpace: 'nowrap', zIndex: 100,
     marginTop: isOpponent ? '8px' : '0',
@@ -250,13 +250,13 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
     if (weakTo.length === 0 && strongVs.length === 0) return null;
     return { weakTo, strongVs };
   }, [norseHero?.element]);
-  
+
   const WEAPON_COST = 5;
   const canAffordPower = heroPower ? mana >= heroPower.cost : false;
   const canAffordUpgrade = mana >= WEAPON_COST;
   const canUpgrade = canAffordUpgrade && !isOpponent && !isWeaponUpgraded;
   const isPowerDisabled = !canAffordPower || isOpponent;
-  
+
   const handlePortraitClick = useCallback((e: React.MouseEvent) => {
     if (isOpponent) return;
     e.stopPropagation();
@@ -279,7 +279,7 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
       }
     }, 300);
   }, [isOpponent, onHeroPowerClick, onWeaponUpgradeClick, canUpgrade]);
-  
+
   useEffect(() => {
     return () => {
       if (clickTimeoutRef.current) {
@@ -287,15 +287,15 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
       }
     };
   }, []);
-  
+
   return (
-    <div 
+    <div
       className={`battlefield-hero-square ${isOpponent ? 'opponent' : 'player'} ${isTargetable ? 'targetable' : ''} ${onClick ? 'clickable' : ''}`}
       onClick={onClick}
     >
       <div className={`hero-card-wrapper ${elementClass} premium-glow ${damageReaction ? `hero-${damageReaction}` : ''} ${healthPercent <= 20 ? 'hero-critical-hp' : healthPercent <= 40 ? 'hero-low-hp' : ''}`}>
         <div className={`hero-elemental-aura ${elementClass} premium-glow`} />
-        
+
         <div className={`hero-card-frame ${elementClass} premium-glow`}>
           <div className={`hero-particles ${elementClass} premium-glow`}>
             <div className="particle particle-1" />
@@ -309,7 +309,7 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
             <div className="particle particle-9" />
             <div className="particle particle-10" />
           </div>
-          <div 
+          <div
             ref={portraitRef}
             className={`hero-portrait hero-portrait-interactive ${!isOpponent && heroPower ? 'has-power' : ''} ${!isPowerDisabled ? 'power-ready' : ''} ${canUpgrade ? 'upgrade-ready' : ''} ${isWeaponUpgraded ? 'upgraded' : ''} ${powerActivating ? 'power-activating' : ''}`}
             style={portraitBgStyle}
@@ -345,9 +345,9 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
               </div>
             )}
           </div>
-          
+
           {showHeroPowerTooltip && heroPower && tooltipPosition && createPortal(
-            <div 
+            <div
               className="hero-portrait-tooltip-portal"
               style={{
                 position: 'fixed',
@@ -365,14 +365,14 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
                   <span className="power-cost-display">{heroPower.cost} Mana</span>
                 </div>
                 <div className="tooltip-power-desc">{heroPower.description}</div>
-                
+
                 {weaponUpgrade && !isOpponent && (
                   <div className={`tooltip-upgrade-section ${canUpgrade ? 'can-upgrade' : ''} ${isWeaponUpgraded ? 'is-upgraded' : ''}`}>
                     <div className="upgrade-header">
                       {isWeaponUpgraded ? 'Weapon Upgraded' : `Weapon Upgrade: ${weaponUpgrade.name} (${WEAPON_COST} Mana)`}
                     </div>
                     <div className="upgrade-effect">
-                      {isWeaponUpgraded 
+                      {isWeaponUpgraded
                         ? `Upgraded effect active: ${weaponUpgrade.immediateEffect.description}`
                         : `Upgrade for: ${weaponUpgrade.immediateEffect.description}`}
                     </div>
@@ -388,8 +388,8 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
 
                 {!isOpponent && !isWeaponUpgraded && (
                   <div className="tooltip-power-hint">
-                    {isPowerDisabled 
-                      ? `Need ${heroPower.cost - mana} more mana` 
+                    {isPowerDisabled
+                      ? `Need ${heroPower.cost - mana} more mana`
                       : 'Single-click to activate'}
                   </div>
                 )}
@@ -474,7 +474,7 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
             </div>,
             document.body
           )}
-        
+
           <div className={`fighting-hp-bar-container${isOpponent ? ' opponent' : ''}`}>
             <div className="fighting-hp-bar">
               <div className="fighting-hp-damage" />
@@ -482,12 +482,12 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
               <span className="fighting-hp-text">{Math.round(effectiveHP)}/{Math.round(maxHP)}</span>
             </div>
           </div>
-        
+
           <div className="hero-stat-bar sta-bar">
             <div className="stat-bar-fill sta-fill" style={{ transform: `scaleX(${staminaPercent / 100})` }} />
             <span className="stat-bar-text">⚡{currentSta}/{maxSta}</span>
           </div>
-        
+
           {armor > 0 && (
             <div className={`hero-armor-badge${armorGained ? ' armor-gained' : ''}`} title={`Armor: ${armor} - Absorbs damage before HP`}>
               <svg className="armor-shield-icon" viewBox="0 0 36 40" xmlns="http://www.w3.org/2000/svg">
@@ -503,26 +503,26 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
                     <stop offset="100%" stopColor="rgba(255,255,255,0)" />
                   </linearGradient>
                 </defs>
-                <path 
-                  d="M18 2 L4 10 L4 22 Q4 34 18 38 Q32 34 32 22 L32 10 Z" 
+                <path
+                  d="M18 2 L4 10 L4 22 Q4 34 18 38 Q32 34 32 22 L32 10 Z"
                   fill={`url(#armorGrad-${isOpponent ? 'opp' : 'plr'})`}
                   stroke="#4a4a4a"
                   strokeWidth="2"
                 />
-                <path 
-                  d="M18 4 L6 11 L6 22 Q6 32 18 36 Q30 32 30 22 L30 11 Z" 
+                <path
+                  d="M18 4 L6 11 L6 22 Q6 32 18 36 Q30 32 30 22 L30 11 Z"
                   fill={`url(#armorHighlight-${isOpponent ? 'opp' : 'plr'})`}
                   opacity="0.3"
                 />
-                <path 
-                  d="M18 6 L8 12 L8 14 L18 8 L28 14 L28 12 Z" 
+                <path
+                  d="M18 6 L8 12 L8 14 L18 8 L28 14 L28 12 Z"
                   fill="rgba(255,255,255,0.15)"
                 />
               </svg>
               <span className="armor-value">{armor}</span>
             </div>
           )}
-        
+
           {secrets && secrets.length > 0 && (
             <div
               className="hero-secret-indicator"
@@ -538,7 +538,7 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
               )}
             </div>
           )}
-        
+
           {showSecretTooltip && secrets && secrets.length > 0 && (
             <div className="secret-tooltip" style={secretTooltipStyle}>
               <div style={secretHeaderStyle}>

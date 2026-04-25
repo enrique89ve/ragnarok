@@ -34,33 +34,33 @@ const PIECE_COLORS: Record<PieceType, string> = {
 };
 
 const ELEMENT_GLOW: Record<ElementType, { color: string; shadow: string; brightShadow: string }> = {
-  fire: { 
-    color: '#ff4500', 
+  fire: {
+    color: '#ff4500',
     shadow: '0 0 20px #ff4500, 0 0 40px rgba(255, 69, 0, 0.7), 0 0 60px rgba(255, 100, 0, 0.4)',
     brightShadow: '0 0 30px #ff6600, 0 0 60px rgba(255, 69, 0, 0.9), 0 0 80px rgba(255, 100, 0, 0.6)'
   },
-  water: { 
-    color: '#00bfff', 
+  water: {
+    color: '#00bfff',
     shadow: '0 0 20px #00bfff, 0 0 40px rgba(0, 191, 255, 0.7), 0 0 60px rgba(30, 144, 255, 0.4)',
     brightShadow: '0 0 30px #00dfff, 0 0 60px rgba(0, 191, 255, 0.9), 0 0 80px rgba(30, 144, 255, 0.6)'
   },
-  wind: { 
-    color: '#32cd32', 
+  wind: {
+    color: '#32cd32',
     shadow: '0 0 20px #32cd32, 0 0 40px rgba(50, 205, 50, 0.7), 0 0 60px rgba(0, 255, 0, 0.4)',
     brightShadow: '0 0 30px #50ff50, 0 0 60px rgba(50, 205, 50, 0.9), 0 0 80px rgba(0, 255, 0, 0.6)'
   },
-  earth: { 
-    color: '#cd853f', 
+  earth: {
+    color: '#cd853f',
     shadow: '0 0 20px #cd853f, 0 0 40px rgba(205, 133, 63, 0.7), 0 0 60px rgba(139, 69, 19, 0.4)',
     brightShadow: '0 0 30px #daa520, 0 0 60px rgba(205, 133, 63, 0.9), 0 0 80px rgba(218, 165, 32, 0.6)'
   },
-  holy: { 
-    color: '#ffd700', 
+  holy: {
+    color: '#ffd700',
     shadow: '0 0 25px #ffd700, 0 0 50px rgba(255, 215, 0, 0.8), 0 0 75px rgba(255, 255, 100, 0.5)',
     brightShadow: '0 0 35px #ffff00, 0 0 70px rgba(255, 215, 0, 1), 0 0 100px rgba(255, 255, 100, 0.7)'
   },
-  shadow: { 
-    color: '#9932cc', 
+  shadow: {
+    color: '#9932cc',
     shadow: '0 0 20px #9932cc, 0 0 40px rgba(153, 50, 204, 0.7), 0 0 60px rgba(75, 0, 130, 0.4)',
     brightShadow: '0 0 30px #bb44ee, 0 0 60px rgba(153, 50, 204, 0.9), 0 0 80px rgba(75, 0, 130, 0.6)'
   },
@@ -103,7 +103,7 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
 }) => {
   const [showTooltip, setShowTooltip] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   const isPlayer = piece.owner === 'player';
   const canSelect = isPlayerTurn && isPlayer;
   const isPawn = piece.type === 'pawn';
@@ -113,13 +113,13 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
   const elementGlow = piece.element ? ELEMENT_GLOW[piece.element] : ELEMENT_GLOW.neutral;
   const hasElement = piece.element && piece.element !== 'neutral';
   const elementImage = piece.element ? ELEMENT_IMAGES[piece.element] : null;
-  
+
   const handleMouseEnter = () => {
     hoverTimeoutRef.current = setTimeout(() => {
       setShowTooltip(true);
     }, 1000);
   };
-  
+
   const handleMouseLeave = () => {
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
@@ -127,7 +127,7 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
     }
     setShowTooltip(false);
   };
-  
+
   useEffect(() => {
     return () => {
       if (hoverTimeoutRef.current) {
@@ -135,7 +135,7 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
       }
     };
   }, []);
-  
+
   return (
     <motion.div
       data-piece-type={piece.type}
@@ -178,9 +178,9 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
               minWidth: '180px'
             }}
           >
-            <div 
+            <div
               className="rounded-lg p-3 text-white text-left shadow-xl"
-              style={{ 
+              style={{
                 background: 'linear-gradient(135deg, rgba(30, 30, 50, 0.98), rgba(20, 20, 35, 0.98))',
                 border: hasElement ? `2px solid ${ELEMENT_COLORS[piece.element!]}` : '2px solid rgba(100, 100, 150, 0.5)',
                 backdropFilter: 'blur(8px)'
@@ -193,11 +193,11 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
                 {PIECE_TYPE_NAMES[piece.type]} • {isPlayer ? 'Your Piece' : 'Enemy'}
               </div>
               {hasElement && (
-                <div 
+                <div
                   className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium"
-                  style={{ 
-                    background: `${ELEMENT_COLORS[piece.element!]}20`,
-                    border: `1px solid ${ELEMENT_COLORS[piece.element!]}50`
+                  style={{
+                    background: `color-mix(in srgb, ${ELEMENT_COLORS[piece.element!]} 12%, transparent)`,
+                    border: `1px solid color-mix(in srgb, ${ELEMENT_COLORS[piece.element!]} 30%, transparent)`
                   }}
                 >
                   <span>{ELEMENT_ICONS[piece.element!]}</span>
@@ -205,13 +205,13 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
                 </div>
               )}
               {(!isPawn && !isKing) && (
-                <div className="mt-2 text-xs text-gray-400 flex justify-between">
+                <div className="mt-2 text-xs text-gray-500 flex justify-between">
                   <span>HP: {piece.health}/{piece.maxHealth}</span>
                   {piece.stamina > 0 && <span>STA: {piece.stamina}</span>}
                 </div>
               )}
             </div>
-            <div 
+            <div
               className="absolute left-1/2 -bottom-2"
               style={{
                 transform: 'translateX(-50%)',
@@ -219,7 +219,7 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
                 height: 0,
                 borderLeft: '8px solid transparent',
                 borderRight: '8px solid transparent',
-                borderTop: hasElement ? `8px solid ${ELEMENT_COLORS[piece.element!]}` : '8px solid rgba(100, 100, 150, 0.5)'
+                borderTop: hasElement ? `8px solid ${ELEMENT_COLORS[piece.element!]}` : '8px solid var(--obsidian-500)'
               }}
             />
           </motion.div>
@@ -227,22 +227,22 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
       </AnimatePresence>
       {hasElement && elementImage && (
         <>
-          <div 
+          <div
             className={`element-image-bg element-image-${piece.element}`}
             style={{ backgroundImage: `url(${elementImage})` }}
           />
           <div className={`element-overlay element-overlay-${piece.element}`} />
         </>
       )}
-      
+
       {hasElement && (
         <div className={`element-effect-layer element-effect-${piece.element}`} />
       )}
-      
+
       {(!isPawn && !isKing) && (
-        <div className="absolute top-0 left-0 right-0 h-2 bg-gray-900/80 rounded-t-xl overflow-hidden z-30">
-          <div 
-            className={`h-full transition-all ${healthPercent > 50 ? 'bg-gradient-to-r from-green-400 to-green-500' : healthPercent > 25 ? 'bg-gradient-to-r from-yellow-400 to-yellow-500' : 'bg-gradient-to-r from-red-400 to-red-500'}`}
+        <div className="chess-piece-hp-container">
+          <div
+            className={`chess-piece-hp-fill ${healthPercent <= 25 ? 'hp-danger' : healthPercent <= 50 ? 'hp-warning' : ''}`}
             style={{ width: `${healthPercent}%` }}
           />
         </div>
@@ -272,18 +272,18 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
       </div>
 
       {(!isPawn && !isKing) && (
-        <div className="absolute bottom-0 left-0 right-0 flex justify-between px-1.5 pb-1 text-xs z-30">
-          <span className="text-red-300 font-bold drop-shadow-lg bg-black/40 px-1 rounded">{piece.health}</span>
+        <div className="chess-piece-stats-overlay">
+          <span className="text-red-400">{piece.health}</span>
           {piece.stamina > 0 && (
-            <span className="text-yellow-300 font-bold drop-shadow-lg bg-black/40 px-1 rounded">⚡{piece.stamina}</span>
+            <span className="text-amber-400">⚡{piece.stamina}</span>
           )}
         </div>
       )}
-      
+
       {hasElement && (
-        <div 
+        <div
           className={`element-badge-large element-badge-${piece.element}`}
-          style={{ 
+          style={{
             backgroundColor: ELEMENT_COLORS[piece.element],
             boxShadow: `0 0 10px ${ELEMENT_COLORS[piece.element]}, 0 0 20px ${ELEMENT_COLORS[piece.element]}`
           }}
@@ -292,11 +292,11 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
           <span className="element-icon-large">{ELEMENT_ICONS[piece.element]}</span>
         </div>
       )}
-      
+
       {hasElement && (
         <div className={`element-border-glow element-border-${piece.element}`} />
       )}
-      
+
     </motion.div>
   );
 };

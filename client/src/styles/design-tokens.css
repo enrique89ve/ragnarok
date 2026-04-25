@@ -459,6 +459,85 @@
   --font-decorative: 'Cinzel Decorative', 'Cinzel', Georgia, serif;
   --font-ui:       'Inter', system-ui, -apple-system, Segoe UI, sans-serif;
   --font-numeric:  'Cinzel', Georgia, serif;
+
+  /* =============================================
+     11. BRANDED MATERIALS & GRADIENTS
+     ============================================= */
+  
+  /* Canonical Gradients (The "Few" Sources of Truth) */
+  --gradient-obsidian: linear-gradient(180deg, #4a4a5a 0%, #2a2a3a 50%, #1a1a2a 100%);
+  --gradient-crimson:  linear-gradient(180deg, rgba(127, 29, 29, 0.95) 0%, rgba(74, 14, 22, 0.98) 100%);
+  --gradient-emerald:  linear-gradient(180deg, #1a4a2a 0%, #0d3318 50%, #071f0e 100%);
+  --gradient-gold:     linear-gradient(180deg, var(--gold-200) 0%, var(--gold-400) 50%, var(--gold-600) 100%);
+  --gradient-surface:  linear-gradient(180deg, var(--obsidian-850) 0%, var(--obsidian-900) 100%);
+  --gradient-void:     linear-gradient(180deg, #08080f 0%, #141428 100%);
+
+  /* Semantic Action Assignments */
+  --btn-primary-bg:   var(--gradient-obsidian);
+  --btn-cta-bg:       var(--gradient-crimson);
+  --btn-success-bg:   var(--gradient-emerald);
+  --btn-gold-bg:      var(--gradient-gold);
+
+  /* Border & Glow Defaults */
+  --btn-primary-border: #6a6a7a;
+  --btn-primary-glow:   rgba(200, 50, 50, 0.15);
+  --btn-cta-text:     #fff4dc;
+  --btn-cta-glow:     rgba(127, 29, 29, 0.34);
+  --btn-success-border: #2a7a3a;
+  --btn-success-text: #a0f0b0;
+
+  /* Zone Backgrounds */
+  --zone-opponent-bg: rgba(139, 0, 0, 0.05); /* Deep red tint */
+  --zone-player-bg:   rgba(0, 100, 0, 0.05); /* Deep green tint */
+
+  /* =============================================
+     12. GAME REALM THEMES (Chess vs Poker Battle)
+     ============================================= */
+  
+  /* --- A. Ragnarok Poker Battle (High Tension, Blood & Iron) --- */
+  --color-battle-primary:   var(--blood-500);
+  --color-battle-secondary: var(--obsidian-800);
+  --color-battle-accent:    var(--gold-300);
+  --gradient-battle-danger: linear-gradient(180deg, var(--danger-600) 0%, var(--danger-900) 100%);
+  --gradient-battle-hp:     linear-gradient(180deg, #ff3333 0%, #cc0000 25%, #990000 50%, #660000 75%, #4b0000 100%);
+  
+  /* --- B. Nine Realms Chess (Ancient Stone, Runes & Cosmos) --- */
+  --color-chess-stone:      #6b4c1a;
+  --color-chess-stone-dark: #2a1a06;
+  --color-chess-gold:       #8b6914;
+  --color-chess-tile-light: rgba(200, 169, 110, 0.45);
+  --color-chess-tile-dark:  rgba(40, 18, 10, 0.6);
+  --gradient-chess-player:   linear-gradient(90deg, transparent, #3b82f6, transparent);
+  --gradient-chess-opponent: linear-gradient(90deg, transparent, #ef4444, transparent);
+  --gradient-chess-hp:       linear-gradient(90deg, var(--success-400), var(--success-600));
+
+  /* Character Classes (Visual Identity) */
+  --class-warrior:     #C79C6E;
+  --class-mage:        #69CCF0;
+  --class-hunter:      #ABD473;
+  --class-paladin:     #F58CBA;
+  --class-priest:      #FFFFFF;
+  --class-rogue:       #FFF569;
+  --class-shaman:      #0070DE;
+  --class-warlock:     #9482C9;
+  --class-druid:       #FF7D0A;
+  --class-berserker:   #A330C9;
+  --class-deathknight: #C41F3B;
+
+  /* Nine Realms Affinities (Elements) */
+  --element-fire:   #ff6b35;
+  --element-water:  #4fc3f7;
+  --element-wind:   #81c784;
+  --element-earth:  #a1887f;
+  --element-holy:   #ffd54f;
+  --element-shadow: #9c27b0;
+  --element-neutral: #9e9e9e;
+
+  /* App Error Fallbacks */
+  --error-bg:      #1a1a2e;
+  --error-text:    #ff6b6b;
+  --error-stack:   #888;
+  --error-accent:  #c9a84c;
 }
 
 /* =============================================

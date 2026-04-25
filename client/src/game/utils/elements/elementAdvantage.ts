@@ -21,13 +21,13 @@ export const ELEMENT_WEAKNESSES: Record<ElementType, ElementType[]> = {
 };
 
 export const ELEMENT_COLORS: Record<ElementType, string> = {
-  fire: '#ff6b35',
-  water: '#4fc3f7',
-  wind: '#81c784',
-  earth: '#a1887f',
-  holy: '#ffd54f',
-  shadow: '#9c27b0',
-  neutral: '#9e9e9e'
+  fire: 'var(--element-fire)',
+  water: 'var(--element-water)',
+  wind: 'var(--element-wind)',
+  earth: 'var(--element-earth)',
+  holy: 'var(--element-holy)',
+  shadow: 'var(--element-shadow)',
+  neutral: 'var(--element-neutral)'
 };
 
 export const ELEMENT_ICONS: Record<ElementType, string> = {

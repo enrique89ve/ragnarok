@@ -47,16 +47,16 @@
   background-image: url('/textures/norse_rune_stone_game_board.webp');
   background-size: cover;
   background-position: center;
-  border: 6px solid #6b4c1a !important;
+  border: 6px solid var(--color-chess-stone) !important;
   border-radius: 10px;
   box-shadow:
     inset 0 0 20px rgba(0, 0, 0, 0.8),
     inset 0 0 4px rgba(251, 191, 36, 0.2),
-    0 0 0 3px #2a1a06,
+    0 0 0 3px var(--color-chess-stone-dark),
     0 0 0 6px #8b6914,
     0 0 0 8px #3d2a0a,
-    0 0 0 11px #6b4c1a,
-    0 0 0 13px #2a1a06,
+    0 0 0 11px var(--color-chess-stone),
+    0 0 0 13px var(--color-chess-stone-dark),
     0 8px 40px rgba(0, 0, 0, 0.9),
     0 0 60px rgba(139, 105, 20, 0.2),
     0 0 100px rgba(139, 105, 20, 0.08);
@@ -88,11 +88,11 @@
 .chess-cell-light {
   background: linear-gradient(
     135deg,
-    rgba(200, 169, 110, 0.45) 0%,
+    var(--color-chess-tile-light) 0%,
     rgba(212, 184, 122, 0.5) 25%,
-    rgba(200, 169, 110, 0.45) 50%,
+    var(--color-chess-tile-light) 50%,
     rgba(184, 151, 90, 0.4) 75%,
-    rgba(200, 169, 110, 0.45) 100%
+    var(--color-chess-tile-light) 100%
   ) !important;
   box-shadow:
     inset 1px 1px 2px rgba(255, 255, 255, 0.1),
@@ -103,11 +103,11 @@
 .chess-cell-dark {
   background: linear-gradient(
     135deg,
-    rgba(40, 18, 10, 0.6) 0%,
+    var(--color-chess-tile-dark) 0%,
     rgba(55, 28, 16, 0.65) 25%,
-    rgba(40, 18, 10, 0.6) 50%,
+    var(--color-chess-tile-dark) 50%,
     rgba(32, 14, 8, 0.55) 75%,
-    rgba(40, 18, 10, 0.6) 100%
+    var(--color-chess-tile-dark) 100%
   ) !important;
   box-shadow:
     inset 1px 1px 3px rgba(0, 0, 0, 0.3),

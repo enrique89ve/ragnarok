@@ -358,6 +358,47 @@
   50% { opacity: 1; }
 }
 
+/* Status Bars */
+.chess-piece-hp-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 30;
+  overflow: hidden;
+}
+
+.chess-piece-hp-fill {
+  height: 100%;
+  background: var(--gradient-chess-hp);
+  transition: width 0.3s ease-out;
+}
+
+.chess-piece-hp-fill.hp-warning {
+  background: linear-gradient(90deg, var(--warning-400), var(--warning-600));
+}
+
+.chess-piece-hp-fill.hp-danger {
+  background: linear-gradient(90deg, var(--danger-400), var(--danger-600));
+}
+
+.chess-piece-stats-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 4px 2px;
+  font-size: 10px;
+  font-weight: 800;
+  pointer-events: none;
+  z-index: 30;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .element-image-bg,
   .element-effect-layer,

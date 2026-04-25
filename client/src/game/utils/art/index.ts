@@ -6,3 +6,5 @@
 export * from './types';
 export * from './artUtils';
 export * from './artMapping';
+export * from './artRegistry';
+

@@ -12,7 +12,7 @@ export const FirstStrikeAnimation: React.FC<FirstStrikeAnimationProps> = ({ onCo
   const firstStrike = useUnifiedCombatStore(state => state.pokerCombatState?.firstStrike);
   const playerName = useUnifiedCombatStore(state => state.pokerCombatState?.player.playerName);
   const opponentName = useUnifiedCombatStore(state => state.pokerCombatState?.opponent.playerName);
-  
+
   const target = firstStrike?.target;
   const damage = firstStrike?.damage ?? 15;
   const attackerName = target === 'player' ? opponentName : playerName;
@@ -26,7 +26,7 @@ export const FirstStrikeAnimation: React.FC<FirstStrikeAnimationProps> = ({ onCo
 
     debug.animation('[FirstStrike] Animation starting, target:', target, 'damage:', damage);
     setPhase('charge');
-    
+
     const chargeTimer = setTimeout(() => {
       debug.animation('[FirstStrike] Phase: strike');
       setPhase('strike');
@@ -46,7 +46,7 @@ export const FirstStrikeAnimation: React.FC<FirstStrikeAnimationProps> = ({ onCo
       clearTimeout(strikeTimer);
       clearTimeout(doneTimer);
     };
-  // Include target and damage to restart animation on new combat, but not onComplete
+    // Include target and damage to restart animation on new combat, but not onComplete
   }, [firstStrike?.completed, firstStrike?.target, firstStrike?.damage]);
 
   if (!firstStrike || firstStrike.completed) {
@@ -62,7 +62,7 @@ export const FirstStrikeAnimation: React.FC<FirstStrikeAnimationProps> = ({ onCo
       alignItems: 'center',
       justifyContent: 'center',
       pointerEvents: 'none',
-      background: 'linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(20,10,10,0.5))'
+      background: 'linear-gradient(to bottom, color-mix(in srgb, var(--obsidian-950) 30%, transparent), color-mix(in srgb, var(--obsidian-900) 50%, transparent))'
     }}>
       <AnimatePresence>
         {phase === 'charge' && (
@@ -80,14 +80,14 @@ export const FirstStrikeAnimation: React.FC<FirstStrikeAnimationProps> = ({ onCo
             }}
           >
             <motion.div
-              animate={{ 
-                textShadow: ['0 0 10px #ff4444', '0 0 30px #ff6666', '0 0 10px #ff4444']
+              animate={{
+                textShadow: ['0 0 10px var(--danger-500)', '0 0 30px var(--danger-400)', '0 0 10px var(--danger-500)']
               }}
               transition={{ duration: 0.5, repeat: Infinity }}
               style={{
                 fontSize: '2.5rem',
                 fontWeight: 'bold',
-                color: '#ff4444',
+                color: 'var(--danger-500)',
                 fontFamily: 'var(--font-norse, serif)',
                 textTransform: 'uppercase',
                 letterSpacing: '4px'
@@ -97,7 +97,7 @@ export const FirstStrikeAnimation: React.FC<FirstStrikeAnimationProps> = ({ onCo
             </motion.div>
             <div style={{
               fontSize: '1.2rem',
-              color: '#ffd700',
+              color: 'var(--gold-300)',
               fontFamily: 'var(--font-norse, serif)'
             }}>
               {attackerName} attacks {defenderName}
@@ -144,8 +144,8 @@ export const FirstStrikeAnimation: React.FC<FirstStrikeAnimationProps> = ({ onCo
               style={{
                 fontSize: '4rem',
                 fontWeight: 'bold',
-                color: '#ff3333',
-                textShadow: '0 0 20px rgba(255, 50, 50, 0.8), 2px 2px 0 #000',
+                color: 'var(--danger-600)',
+                textShadow: '0 0 20px color-mix(in srgb, var(--danger-600) 80%, transparent), 2px 2px 0 #000',
                 fontFamily: 'var(--font-norse, serif)'
               }}
             >
@@ -153,7 +153,7 @@ export const FirstStrikeAnimation: React.FC<FirstStrikeAnimationProps> = ({ onCo
             </motion.div>
             <div style={{
               fontSize: '1rem',
-              color: '#ff6666',
+              color: 'var(--danger-300)',
               textTransform: 'uppercase',
               letterSpacing: '2px'
             }}>

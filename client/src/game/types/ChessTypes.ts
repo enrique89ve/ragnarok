@@ -274,6 +274,7 @@ export interface ChessPieceHero {
   element?: string; // Norse element type (fire, water, ice, grass, light, dark, electric)
   norseHeroId?: string; // Links to NorseHero definition for heroPower/weaponUpgrade/passive
   chessAbility?: string; // King Divine Command: reference to ability config in kingAbilityUtils
+  mythology?: 'norse' | 'greek' | 'egyptian' | 'japanese'; // Mythology faction hint
 }
 
 /**

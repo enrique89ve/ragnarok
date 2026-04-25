@@ -1,23 +1,16 @@
 .homepage-btn-primary {
-  background: linear-gradient(180deg, #4a4a5a 0%, #2a2a3a 50%, #1a1a2a 100%);
-  border-color: #6a6a7a;
+  background: var(--btn-primary-bg);
+  border-color: var(--btn-primary-border);
   color: #e8e8f0;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 40px rgba(200,50,50,0.15);
-  transition: background 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 40px var(--btn-primary-glow);
+  transition: all 0.3s ease;
 }
 
-.homepage-btn-primary:hover {
-  background: linear-gradient(180deg, #5a5a6a 0%, #3a3a4a 50%, #2a2a3a 100%);
-  box-shadow: 0 6px 30px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.15), 0 0 60px rgba(200,50,50,0.3);
-  transform: translateY(-2px);
-}
-
+.homepage-btn-primary:hover,
 .homepage-btn-primary:focus-visible {
-  background: linear-gradient(180deg, #5a5a6a 0%, #3a3a4a 50%, #2a2a3a 100%);
+  filter: brightness(1.2);
+  box-shadow: 0 6px 30px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.15), 0 0 60px var(--btn-primary-glow);
   transform: translateY(-2px);
-  outline: 2px solid rgba(200,100,100,0.6);
-  outline-offset: 2px;
-  box-shadow: 0 6px 30px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.15), 0 0 60px rgba(200,50,50,0.3), 0 0 0 4px rgba(200,100,100,0.2);
 }
 
 .homepage-btn-secondary {
@@ -43,27 +36,18 @@
 }
 
 .homepage-btn-download {
-  background: linear-gradient(180deg, #1a4a2a 0%, #0d3318 50%, #071f0e 100%);
-  border-color: #2a7a3a;
-  color: #a0f0b0;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 30px rgba(40,180,80,0.15);
-  transition: background 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease, color 0.3s ease;
+  background: var(--btn-success-bg);
+  border-color: var(--btn-success-border);
+  color: var(--btn-success-text);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 30px var(--btn-success-glow, rgba(40,180,80,0.15));
+  transition: all 0.3s ease;
 }
 
-.homepage-btn-download:hover {
-  background: linear-gradient(180deg, #2a5a3a 0%, #1a4328 50%, #0d2d14 100%);
-  box-shadow: 0 6px 30px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.15), 0 0 50px rgba(40,180,80,0.3);
-  transform: translateY(-2px);
-  color: #c0ffd0;
-}
-
+.homepage-btn-download:hover,
 .homepage-btn-download:focus-visible {
-  background: linear-gradient(180deg, #2a5a3a 0%, #1a4328 50%, #0d2d14 100%);
-  box-shadow: 0 6px 30px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.15), 0 0 50px rgba(40,180,80,0.3);
+  filter: brightness(1.2);
+  box-shadow: 0 6px 30px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.15), 0 0 50px var(--success-glow);
   transform: translateY(-2px);
-  color: #c0ffd0;
-  outline: 2px solid rgba(40,180,80,0.6);
-  outline-offset: 2px;
 }
 
 /* Homepage container background */
@@ -116,8 +100,7 @@
   align-items: start;
   padding: 36px 40px;
   border-radius: 24px;
-  background:
-    linear-gradient(135deg, var(--obsidian-900) 0%, var(--obsidian-850) 60%, var(--obsidian-800) 100%);
+  background: var(--gradient-surface);
   border: 1px solid var(--obsidian-700);
   box-shadow:
     0 24px 80px rgba(0, 0, 0, 0.6),
@@ -158,8 +141,7 @@
   position: relative;
   overflow: hidden;
   border-radius: 32px;
-  background:
-    linear-gradient(180deg, var(--obsidian-850) 0%, var(--obsidian-900) 100%);
+  background: var(--gradient-surface);
   border: 1px solid var(--obsidian-700);
   box-shadow:
     0 28px 90px rgba(0, 0, 0, 0.7),
@@ -212,15 +194,14 @@
   min-width: min(100%, 320px);
   min-height: 64px;
   padding: 0 28px;
-  border: 1px solid rgba(240, 187, 87, 0.3);
+  border: 1px solid var(--border-gold-mid);
   border-radius: 18px;
-  background:
-    linear-gradient(180deg, rgba(127, 29, 29, 0.95) 0%, rgba(74, 14, 22, 0.98) 100%);
-  color: #fff4dc;
+  background: var(--btn-cta-bg);
+  color: var(--btn-cta-text);
   box-shadow:
-    0 18px 46px rgba(127, 29, 29, 0.34),
+    0 18px 46px var(--btn-cta-glow),
     inset 0 1px 0 rgba(255, 241, 204, 0.12),
-    0 0 0 1px rgba(240, 187, 87, 0.05);
+    0 0 0 1px var(--border-gold-soft);
   font-size: 1rem;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -231,8 +212,7 @@
 .homepage-hero-cta:hover,
 .homepage-hero-cta:focus-visible {
   transform: translateY(-2px);
-  background:
-    linear-gradient(180deg, rgba(153, 34, 34, 0.96) 0%, rgba(92, 18, 27, 0.98) 100%);
+  filter: brightness(1.2);
 }
 
 .homepage-cta-link {
@@ -397,7 +377,7 @@
 .homepage-secondary-link:focus-visible {
   transform: translateY(-1px);
   background: rgba(17, 24, 39, 0.92);
-  border-color: rgba(240, 187, 87, 0.18);
+  border-color: var(--border-gold-soft);
   outline: none;
 }
 
@@ -412,7 +392,7 @@
   min-height: 48px;
   padding: 0 18px;
   border-radius: 14px;
-  border: 1px solid rgba(240, 187, 87, 0.18);
+  border: 1px solid var(--border-gold-soft);
   background: rgba(240, 187, 87, 0.1);
   color: #f6d38a;
   font-size: 0.85rem;
@@ -424,8 +404,8 @@
 
 .homepage-install-btn:hover,
 .homepage-install-btn:focus-visible {
-  background: rgba(240, 187, 87, 0.18);
-  border-color: rgba(240, 187, 87, 0.3);
+  background: var(--border-gold-soft);
+  border-color: var(--border-gold-mid);
   transform: translateY(-1px);
 }
 
@@ -624,7 +604,7 @@
 
 /* Bottom gradient overlay */
 .homepage-bottom-gradient {
-  background: linear-gradient(to top, rgba(200,50,50,0.1) 0%, transparent 100%);
+  background: linear-gradient(to top, color-mix(in srgb, var(--ember-600) 10%, transparent) 0%, transparent 100%);
 }
 
 /* Layer 1: golden embers drifting upward */
@@ -689,9 +669,7 @@
   z-index: 50;
   width: 100%;
   height: 52px;
-  background: linear-gradient(to bottom,
-    color-mix(in srgb, var(--obsidian-950) 96%, transparent) 0%,
-    color-mix(in srgb, var(--obsidian-950) 80%, transparent) 100%);
+  background: var(--surface-overlay-deep);
   border-bottom: 1px solid var(--obsidian-700);
   backdrop-filter: blur(12px);
 }

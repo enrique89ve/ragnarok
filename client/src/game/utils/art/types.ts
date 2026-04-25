@@ -1,7 +1,7 @@
 /**
  * Art Manager Types
  * Types for artwork metadata and management
- * ID is immutable - used for rendering as /art/{id}.webp
+ * NFT card art is rendered from /art/nfts/{id}.webp
  */
 
 export interface ArtCardStats {
@@ -24,7 +24,13 @@ export interface ArtCard {
   piece: string | null;
   faction: string | null;
   rarity: string | null;
+  collection?: string; // e.g. "Genesis Alpha", "Greek Expansion"
   mainArt: boolean;
+  styleDNA?: {
+    palette?: string[]; // primary hex colors
+    composition?: 'hero' | 'creature' | 'artifact' | 'landscape';
+    scale?: number; // default zoom/scale factor
+  };
   stats: ArtCardStats;
   wiki: string | null;
   _localPath: string;

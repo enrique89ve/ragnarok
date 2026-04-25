@@ -316,9 +316,11 @@ const CHARACTER_ART_IDS: Record<string, string> = {
   'ymirfrost': '3a09-gm3gx5tq',
   'ymirshell': 'b1d0-z8eue8gt',
   // Custom art entries
-  'yggdrasil-world-tree': 'yggdrasil-new',  // Custom tree being art for Yggdrasil king
-  'ginnungagap-void': 'ginnungagap-void',   // Custom primordial void art for Ginnungagap king
-  'audumbla-cow': 'audumbla-cow',           // Custom primordial cow art for Audumbla king
+  'yggdrasil-world-tree': 'king-yggdrasil',  // Custom tree being art for Yggdrasil king
+  'ginnungagap-void': 'king-ginnungagap',   // Custom primordial void art for Ginnungagap king
+  'audumbla-cow': 'king-audumbla',           // Custom primordial cow art for Audumbla king
+  'gaia': 'c838-ebed9878',                  // Gaia, Earth Sculptor NFT
+  'brimir': 'b1f2-3e7dd08d',                // Jotun of the depths NFT
 };
 
 /**
@@ -327,17 +329,14 @@ const CHARACTER_ART_IDS: Record<string, string> = {
  * Uses best judgment to match heroes without exact art to similar characters
  */
 const HERO_TO_CHARACTER: Record<string, string> = {
-  // Primary Norse gods
   'hero-odin': 'odin',
   'hero-thor': 'thor',
+  'hero-loki': 'loki',
   'hero-freya': 'freya',
   'hero-freyr': 'freyr',
-  'hero-frey': 'freyr',
-  'hero-loki': 'loki',
   'hero-heimdall': 'heimdallr',
   'hero-tyr': 'tyr',
   'hero-baldr': 'baldr',
-  'hero-baldur': 'baldr',
   'hero-hel': 'hel',
   'hero-skadi': 'skadi',
   'hero-ullr': 'ullr',
@@ -345,12 +344,10 @@ const HERO_TO_CHARACTER: Record<string, string> = {
   'hero-vali': 'vali',
   'hero-bragi': 'bragi',
   'hero-idun': 'idun',
-  'hero-idunn': 'idun',
   'hero-sif': 'sif',
   'hero-frigg': 'frigg',
   'hero-forseti': 'forseti',
   'hero-hodr': 'hodr',
-  'hero-hoder': 'hodr',
   'hero-eir': 'eir',
   'hero-gefjon': 'gefjon',
   'hero-nerthus': 'nerthus',
@@ -361,52 +358,56 @@ const HERO_TO_CHARACTER: Record<string, string> = {
   'hero-gerd': 'gerd',
   'hero-dellingr': 'dellingr',
   
-  // Giants and creatures
-  'hero-angrboda': 'angrboda',
-  'hero-fenrir': 'fenrir',
-  'hero-jormungandr': 'jormungandr',
-  'hero-mimir': 'mimir',
-  'hero-nidhogg': 'nidhogg',
-  'hero-gullveig': 'gullveig',
-  'hero-skoll': 'skoll',
-  'hero-hati': 'hatiskugge',
-  'hero-managarm': 'managarm',
-  'hero-hraesvelgr': 'hraesvelgr',
-  'hero-garmr': 'garmr',
-  'hero-gormr': 'garmr',
-  'hero-sinmara': 'sinmara',
-  'hero-aegir': 'aegir',
-  // hero-ran uses dedicated ran.png portrait (set in ChessPieceConfig)
-  'hero-grid': 'grid',
-  'hero-thrud': 'thrud',
-  'hero-svadilfari': 'svadilfari',
-  'hero-thjazi': 'thjazi',
-  'hero-jarnsaxa': 'jarnsaxa',
-  'hero-hyrrokkin': 'hyrrokkin',
-  
-  // Alternate heroes — no dedicated portrait, use closest match
-  'hero-njord': 'nerthus',
-  'hero-hoenir': 'mimir',
-  'hero-ve': 'vidarr',
-  'hero-vili': 'vali',
-  'hero-fjorgyn': 'frigg',
-  'hero-lirien': 'gerd',
-  'hero-solvi': 'sol',
-  'hero-ylva': 'ulfhednar',
-  'hero-fjora': 'skadi',
-  // hero-magni, hero-myrka, hero-logi removed — have dedicated portraits
+  'hero-njord': 'alsvin',
+  'hero-hoenir': 'alvaldi',
+  'hero-ve': 'audr',
+  'hero-vili': 'borr', 
+  'hero-fjorgyn': 'bestla',
+  'hero-volva': 'hyndla',
+  'hero-verdandi': 'nornweaver',
+  'hero-lirien': 'drofn',
+  'hero-solvi': 'sigurd-ring',
+  'hero-ylva': 'fenrishowl',
+  'hero-fjora': 'valhallaguard',
+  'hero-eldrin': 'glod',
+  'hero-magni': 'thrud',
+  'hero-myrka': 'sinmara',
+  'hero-logi': 'eimyrja',
 
-  // Greek heroes — no dedicated portrait, use closest match
-  'hero-ammit': 'nott',
+  'hero-zeus': 'asgar-rex',
+  'hero-athena': 'aurboda', 
+  'hero-hades': 'helheimwanderer', 
+  'hero-poseidon': 'aegir',
+  'hero-apollo': 'fdb4-pgffnylv',
+  'hero-ares': 'chainsbreaker',
+  'hero-hermes': 'hrodr',
+  'hero-aphrodite': 'bylgja',
+  'hero-hephaestus': 'dwarves',
+  'hero-dionysus': 'silfrintopp',
   'hero-artemis': 'hefring',
   'hero-demeter': 'hronn',
+  'hero-hyperion': 'bolthorn',
+  'hero-chronos': 'mimir',
+  'hero-persephone': 'lofni',
+  'hero-nyx': 'selene',
+  'hero-selene': 'bifrostgazer',
+  'hero-heracles': 'einherjar',
+  'hero-hecate': 'angrboda',
+  'hero-hera': 'gerdr',
+
+  'hero-izanami': 'helsilk',
+  'hero-tsukuyomi': 'mani-variant',
+  'hero-fujin': 'vedrskyruler',
+  'hero-sarutahiko': 'valhallaram',
+  'hero-kamimusubi': 'sagavix',
+
+  'hero-ammit': 'cerberos',
+  'hero-maat': 'gjallarthread',
+  'hero-serqet': 'runestonebeetle',
+  'hero-khepri': 'garmrage',
   'hero-blainn': 'udr',
-  'hero-dionysus': 'vidarr',
-  'hero-hermes': 'hrodr',
-  // aphrodite, athena, persephone, hera, hestia, nyx, ares, hephaestus,
-  // zeus, hades, apollo, poseidon removed — have dedicated portraits
-  
-  // Vikings (historical characters)
+  'hero-ran': 'blodughadda',
+
   'hero-ragnar': 'ragnar-lothbrok',
   'hero-bjorn': 'bjorn-ironside',
   'hero-lagertha': 'lagertha',
@@ -414,6 +415,9 @@ const HERO_TO_CHARACTER: Record<string, string> = {
   'hero-rollo': 'rollo',
   'hero-leif': 'leif-erikson',
   'hero-erik': 'erik-the-red',
+  'hero-leif-wayfinder': 'leif-erikson-v2',
+  'hero-askr': 'harald-hardrada',
+  'hero-embla': 'astrid-olofsdotter',
 };
 
 /**
@@ -421,9 +425,20 @@ const HERO_TO_CHARACTER: Record<string, string> = {
  * Kings use their own portrait PNGs from /portraits/kings/ — not the AI art override system
  */
 const KING_TO_CHARACTER: Record<string, string> = {
-	'king-leif': 'hero-leif-wayfinder',
-	'king-askr': 'hero-askr',
-	'king-embla': 'hero-embla',
+	'king-leif': 'leif-erikson',
+	'king-askr': 'harald-hardrada',
+	'king-embla': 'astrid-olofsdotter',
+	'king-ymir': 'ymir',
+	'king-buri': 'thrudgelmir',
+	'king-surtr': 'surtr',
+	'king-borr': 'borr',
+	'king-yggdrasil': 'yggdrasilram',
+	'king-audumbla': 'valhallagrazer',
+	'king-gaia': 'gaia',
+	'king-brimir': 'brimir',
+	'king-ginnungagap': 'ginnundragon',
+	'king-tartarus': 'helheimwanderer',
+	'king-uranus': 'asgardeagle',
 };
 
 /**
@@ -432,7 +447,7 @@ const KING_TO_CHARACTER: Record<string, string> = {
  * Sources: ragnarok-art-export.json (AI-generated hero portraits)
  */
 const HERO_ART_OVERRIDE: Record<string, string> = {
-	// ── Norse Gods (new AI art from export JSON) ──
+	// ── Primary Gods ──
 	'hero-odin': '17c1-d273b6d8',
 	'hero-thor': 'fb79-a09ea9b3',
 	'hero-loki': 'e8f6-c135e81a',
@@ -453,100 +468,26 @@ const HERO_ART_OVERRIDE: Record<string, string> = {
 	'hero-vidar': '9a25-fbad0a4b',
 	'hero-hoenir': 'b03b-7d0873e9',
 
-	// ── Greek Gods (new AI art from export JSON) ──
-	'hero-zeus': '761d-b53ad267',
-	'hero-athena': 'f552-7a8f56df',
-	'hero-hades': 'e444-2488ac9c',
-	'hero-poseidon': 'f386-d67122f8',
-	'hero-apollo': 'f2e8-0b20f068',
-	'hero-ares': 'b17a-ec608a43',
-	'hero-hermes': '9576-e4d01974',
-	'hero-aphrodite': 'b082-88cee63a',
-	'hero-hephaestus': '54df-42ef3878',
-	'hero-dionysus': 'e2c3-fc9ad5a2',
-	'hero-artemis': 'c380-df49fbd2',
+	// ── Greek Gods (Unique IDs) ──
 	'hero-demeter': '6ddf-0f8740b6',
 	'hero-hyperion': '378a-1bff480f',
 	'hero-chronos': '4128-54b33535',
-	'hero-persephone': '3c41-d5bf8c82',
 	'hero-nyx': '502a-6dafa318',
 
-	// ── Norse heroes (local art for heroes not in export) ──
-	'hero-frigg': '6333-p1fmzcky',
-	'hero-groa': 'c7cd-wbifyi1w',
-	'hero-frey': '7458-t0n1oqgs',
-	'hero-gullveig': 'df09-mj5d0z0j',
-	'hero-sinmara': '27de-qwzzvho5',
-	'hero-mani': '78e9-6mupjfob',
-	'hero-hoder': 'a08f-a2xbq9k1',
-	'hero-gefjon': '3e44-araj8dlb',
-	'hero-gerd': 'efdf-cwyuxjfl',
-	'hero-sigyn': '03d8-lf9wcao3',
-	'hero-ullr': 'cef7-2dqqiy45',
-	'hero-njord': '0429-y5arol11', // was female Nerthus art; now stoic male Norse god (Vidarr art)
-	'hero-fjorgyn': 'hero-fjorgyn',
-	'hero-gormr': 'e1e3-gg3jq3u0',
-	'hero-ve': 'd25c-fa7g75kn',
-
-	// ── Base/Common heroes ──
-	'hero-erik-flameheart': 'd986-20v9k725',
-	'hero-ragnar-ironside': '1ca8-tdtfqurr',
-	'hero-bjorn-ironside': '5388-g9bbr777',
-	'hero-hervor': '8e3b-ublpaurd',
-	'hero-bestla': '84b2-r6m51iu5',
-	'hero-brynhild': '6f02-yerac949',
-	'hero-nanna': '23d6-nesirs51',
-	'hero-volva': 'hero-volva',
-	'hero-sigurd': 'b972-ast4s29y',
-	'hero-gudrun': '1d97-35odajjd',
-	'hero-starkad': '145a-ra98jlmw',
-	'hero-verdandi': 'verdandi-norn',
-	'hero-hermod': '82c3-dmd7qmn8',
-	'hero-solvi': '6c5f-q5se4d7c', // was female Sol art; now male Viking king (Sigurd Ring art)
-	'hero-ylva': '660e-4jck4nlz',
-	'hero-fjora': 'fdfd-7p1e2ch9',
-	'hero-lirien': 'hero-lirien',
-
-	// ── Vikings / fictional heroes ──
-	'hero-thorgrim': '46c2-sy7byy2d',
-	'hero-valthrud': '9aae-tccijmav',
-	'hero-thryma': '984f-0o06zvr0',
-	'hero-eldrin': 'hero-eldrin',
-	'hero-magni': 'a55b-gwo99sp4', // was female Thrud art; now male Thor-like fiery warrior (Thor's son)
-	'hero-brakki': '92f4-85792li4',
-	'hero-myrka': 'hero-myrka',
-	'hero-logi': 'dbeb-b0mibte9',
-
-	// ── Eastern mythology ──
-	// NOTE: All Eastern heroes currently use Norse proxy art (wrong mythology).
-	// Keeping Izanami (female goddess art is acceptable) but removing the rest.
-	'hero-izanami': '6ea4-mrar7o70',
-	'hero-tsukuyomi': 'hero-tsukuyomi',
-	'hero-fujin': 'hero-fujin',
-	'hero-sarutahiko': 'hero-sarutahiko',
-	'hero-kamimusubi': 'hero-kamimusubi',
-
-	// ── Egyptian mythology ──
-	// NOTE: Egyptian heroes currently use Norse proxy art (wrong mythology).
-	// Keeping Khepri (scarab beetle is lore-accurate) but removing the rest.
-	'hero-ammit': 'hero-ammit',
-	'hero-maat': 'hero-maat',
-	'hero-serqet': 'hero-serqet',
-	'hero-khepri': '9370-t2s89bww',
-
-	// ── Greek heroes (matched from orphaned + unused art pools) ──
+	// ── Others (Ensuring Uniqueness) ──
 	'hero-helios': '0dc0-t8g7ugzd',
-	'hero-heracles': 'hercules',
 	'hero-selene': '86f7-8cb16c88',
 	'hero-perseus': '8159-7d41a656',
 	'hero-prometheus': '5dcd-o15t632m',
-	'hero-hecate': 'hecate-witch',
-	'hero-hera': 'hera-queen',
-	'hero-rhea': 'rhea-titan',
-	'hero-eros': 'hero-eros',
-	'hero-hestia': 'hero-hestia',
-	'hero-blainn': '23a5-lrnxovtk',
-	'hero-ran': '4434-4nu5rrrf',
+	'hero-blainn': '22a0-9ic0pwfw',
+	
+	// ── Protogenoi (Unique Variants) ──
+	'hero-askr': '1fa1-0bt3p0qe',
+	'hero-embla': '3193-0c4j0kwe',
+	'king-askr': '6c4b-otijmg2l', 
+	'king-embla': '3a95-a09cvqxa',
+	'king-audumbla': '4655-o4xbxsth',
+	'king-ginnungagap': '1d49-jajdixap',
 };
 
 /**
@@ -736,24 +677,36 @@ export function getKingArtId(kingId: string): string | null {
 }
 
 /**
- * Get art path for a hero. Checks both .webp and .png extensions.
+ * Helper to get the correct art path for a given artId.
+ * Some files are in /art/ (custom/hero art) and others are in /art/nfts/ (NFT art).
+ * If the artId matches the NFT hex pattern, it uses /art/nfts/.
  */
-const PNG_HERO_ART = new Set(['hera-queen', 'verdandi-norn', 'rhea-titan', 'hecate-witch']);
+function getNormalizedArtPath(artId: string, ext: string = 'webp'): string {
+  // If artId is already a path, return it (after stripping / if necessary for assetPath)
+  if (artId.startsWith('/')) return artId;
+  
+  // NFT IDs follow the xxxx-xxxxxxxx pattern
+  if (/^[0-9a-f]{4}-[0-9a-z]{8}$/i.test(artId)) {
+    return `/art/nfts/${artId}.${ext}`;
+  }
+  
+  // Default to /art/ for other IDs (hero overrides, custom art)
+  return `/art/${artId}.${ext}`;
+}
+
+const PNG_HERO_ART = new Set(['hero-hera', 'hero-verdandi', 'hero-rhea', 'hero-hecate']);
 
 export function getHeroArtPath(heroId: string): string | null {
   const artId = getHeroArtId(heroId);
   if (!artId) return null;
   const ext = PNG_HERO_ART.has(artId) ? 'png' : 'webp';
-  return assetPath(`/art/${artId}.${ext}`);
+  return assetPath(getNormalizedArtPath(artId, ext));
 }
 
-/**
- * Get art path for a king (returns /art/{id}.webp)
- */
 export function getKingArtPath(kingId: string): string | null {
   const artId = getKingArtId(kingId);
   if (!artId) return null;
-  return assetPath(`/art/${artId}.webp`);
+  return assetPath(getNormalizedArtPath(artId));
 }
 
 /**
@@ -806,108 +759,108 @@ export function getAllCharacterArtIds(): Record<string, string> {
  */
 const VERCEL_CARD_ART: Record<string, string> = {
   "rider of sleipnir": "/art/nfts/fef0-0f15bf87.webp",
-  "berserker combatant": "/ui/misc/048f-f32875d5.webp",
+  "berserker combatant": "/art/nfts/048f-f32875d5.webp",
   "crystalline oracle": "/art/nfts/6dd4-df5ea380.webp",
-  "resting archer of ullr": "/ui/misc/06ad-53c982e6.webp",
-  "xyrella, the devout": "/ui/misc/f6c1-8c7afbca.webp",
+  "resting archer of ullr": "/art/nfts/06ad-53c982e6.webp",
+  "xyrella, the devout": "/art/nfts/f6c1-8c7afbca.webp",
   "goody two-shields": "/art/nfts/516f-1bae72ea.webp",
-  "possessed lackey": "/ui/misc/ab76-3effa1a8.webp",
-  "warden of valhalla": "/ui/misc/4aec-0683ccbf.webp",
-  "headmaster of niflheim": "/ui/misc/a893-df4b505c.webp",
+  "possessed lackey": "/art/nfts/ab76-3effa1a8.webp",
+  "warden of valhalla": "/art/nfts/4aec-0683ccbf.webp",
+  "headmaster of niflheim": "/art/nfts/a893-df4b505c.webp",
   "restless mummy": "/art/nfts/e9bd-94bce6e3.webp",
   "kharj sandtongue": "/art/nfts/7504-f0bcb0c2.webp",
   "sea sprite oracle": "/art/nfts/5071-2f4d005e.webp",
-  "bound fire-phoenix": "/ui/misc/67df-5aac4c40.webp",
+  "bound fire-phoenix": "/art/nfts/67df-5aac4c40.webp",
   "týr, champion of justice": "/art/nfts/eb34-078cea46.webp",
-  "cerberus rex": "/ui/misc/cbe0-7eb935ad.webp",
+  "cerberus rex": "/art/nfts/cbe0-7eb935ad.webp",
   "jotun of the depths": "/art/nfts/b1f2-3e7dd08d.webp",
   "bound void sprite": "/art/nfts/b8f6-f8451592.webp",
-  "sunwalker": "/ui/misc/ca1e-d617aa0d.webp",
+  "sunwalker": "/art/nfts/ca1e-d617aa0d.webp",
   "erik the shadow lord": "/art/nfts/8de8-8b814790.webp",
-  "metamorphosis typhon": "/ui/misc/d81f-0d291dc9.webp",
+  "metamorphosis typhon": "/art/nfts/d81f-0d291dc9.webp",
   "cernunnos staghelm": "/art/nfts/0520-abfd3215.webp",
   "flame-touched pyromancer": "/art/nfts/f164-0824ce6c.webp",
-  "kraken of the deep": "/ui/misc/8adc-0eaefbf6.webp",
-  "einherjar vanguard": "/ui/misc/f2be-1df95b47.webp",
+  "kraken of the deep": "/art/nfts/8adc-0eaefbf6.webp",
+  "einherjar vanguard": "/art/nfts/f2be-1df95b47.webp",
   "earthen sentinel": "/art/nfts/b62c-ac1dc6a1.webp",
-  "acolyte of hestia": "/ui/misc/b1c8-451fba78.webp",
+  "acolyte of hestia": "/art/nfts/b1c8-451fba78.webp",
   "hera, queen of gods": "/art/nfts/4109-76fbf6df.webp",
   "valkyrie champion": "/art/nfts/18a0-28a73ca8.webp",
-  "bragi, bard of the gods": "/ui/misc/2998-1e075204.webp",
-  "yggdrasil": "/ui/misc/8215-7c352ae7.webp",
+  "bragi, bard of the gods": "/art/nfts/2998-1e075204.webp",
+  "yggdrasil": "/art/nfts/8215-7c352ae7.webp",
   "völva bloodweaver": "/art/nfts/005d-62d607f5.webp",
   "víðarr the bold": "/art/nfts/54e8-d12e1de2.webp",
   "perseus the relic hunter": "/art/nfts/e855-fe9c6e55.webp",
-  "níðhöggr": "/ui/misc/c672-c9142811.webp",
-  "nótt stargazer": "/ui/misc/b776-859ca4d2.webp",
-  "tech priest of hephaestus": "/ui/misc/adb0-3678e465.webp",
-  "hrungnir": "/ui/misc/c43d-6ce6df3c.webp",
+  "níðhöggr": "/art/nfts/c672-c9142811.webp",
+  "nótt stargazer": "/art/nfts/b776-859ca4d2.webp",
+  "tech priest of hephaestus": "/art/nfts/adb0-3678e465.webp",
+  "hrungnir": "/art/nfts/c43d-6ce6df3c.webp",
   "dvalinn, the root stag": "/art/nfts/1517-8aad873a.webp",
-  "sindri": "/ui/misc/97d0-a7e1c63e.webp",
-  "daedalus, the tinkerer": "/ui/misc/c692-fb4e009e.webp",
-  "beast-lord of artemis": "/ui/misc/fb1c-b8fafcf4.webp",
-  "brokkr the explorer": "/ui/misc/ab9c-df065bfa.webp",
-  "king fafnir": "/ui/misc/33fe-9f2e4a77.webp",
+  "sindri": "/art/nfts/97d0-a7e1c63e.webp",
+  "daedalus, the tinkerer": "/art/nfts/c692-fb4e009e.webp",
+  "beast-lord of artemis": "/art/nfts/fb1c-b8fafcf4.webp",
+  "brokkr the explorer": "/art/nfts/ab9c-df065bfa.webp",
+  "king fafnir": "/art/nfts/33fe-9f2e4a77.webp",
   "fenrisulfr, beast king": "/art/nfts/a8d9-eee8c126.webp",
-  "lady liadrin": "/ui/misc/2d33-1560e41f.webp",
-  "muspel imp": "/ui/misc/7c47-5aad6343.webp",
-  "chimera, beast of flame": "/ui/misc/5cf4-c2316405.webp",
-  "forager of the wild": "/ui/misc/9c86-b1367c6a.webp",
+  "lady liadrin": "/art/nfts/2d33-1560e41f.webp",
+  "muspel imp": "/art/nfts/7c47-5aad6343.webp",
+  "chimera, beast of flame": "/art/nfts/5cf4-c2316405.webp",
+  "forager of the wild": "/art/nfts/9c86-b1367c6a.webp",
   "curse lord of circe": "/art/nfts/647d-890bd83b.webp",
-  "charon the steward": "/art/c088-ad2fc9ed.webp",
+  "charon the steward": "/art/nfts/12d9-3c8e0733.webp",
   "hermès the trader": "/art/nfts/c34e-1db07574.webp",
-  "deckhand of njord": "/ui/misc/612d-23cc0c1f.webp",
-  "loki, trickster of chaos": "/ui/misc/5f6c-0d05e3a8.webp",
+  "deckhand of njord": "/art/nfts/612d-23cc0c1f.webp",
+  "loki, trickster of chaos": "/art/nfts/5f6c-0d05e3a8.webp",
   "medusa, gorgon queen": "/art/nfts/fb7d-82f7181c.webp",
-  "ancient of lore": "/ui/misc/cec8-dc67e3b1.webp",
+  "ancient of lore": "/art/nfts/cec8-dc67e3b1.webp",
   "mnemosyne the chronicler": "/art/nfts/dc94-80faa3e9.webp",
-  "níðhöggr the wyrm queen": "/art/556e-5fd736ca.webp",
-  "nidhogg, the corruptor": "/ui/misc/2000-b04c97b2.webp",
-  "mimir, wisdom keeper": "/ui/misc/6da7-ca0fc6e0.webp",
-  "moirai, master of fate": "/ui/misc/7d57-f8490489.webp",
-  "charybdis, the devourer": "/ui/misc/8abb-6bf6aeea.webp",
-  "primordial wyrm": "/ui/misc/bd55-987b9fd4.webp",
-  "echo of the norns": "/ui/misc/bead-9bf434ac.webp",
+  "níðhöggr the wyrm queen": "/art/nfts/97eb-855a83c1.webp",
+  "nidhogg, the corruptor": "/art/nfts/2000-b04c97b2.webp",
+  "mimir, wisdom keeper": "/art/nfts/6da7-ca0fc6e0.webp",
+  "moirai, master of fate": "/art/nfts/7d57-f8490489.webp",
+  "charybdis, the devourer": "/art/nfts/8abb-6bf6aeea.webp",
+  "primordial wyrm": "/art/nfts/bd55-987b9fd4.webp",
+  "echo of the norns": "/art/nfts/bead-9bf434ac.webp",
   "thanatos, titan form": "/art/nfts/450c-0fc107e1.webp",
-  "high priest of hades": "/ui/misc/fba2-dd9bb4b7.webp",
-  "corruptor of tartarus": "/ui/misc/681d-db2e93f0.webp",
-  "bloodthirsty raider": "/ui/misc/4c5f-62ce228c.webp",
-  "bragi, battle conductor": "/art/e17d-219031e7.webp",
-  "drake of midgard sky": "/ui/misc/a3fd-83f7ea12.webp",
-  "totem of muspelheim": "/ui/misc/d801-7b4d24a5.webp",
-  "glow-tron": "/ui/misc/154d-6053a70b.webp",
+  "high priest of hades": "/art/nfts/fba2-dd9bb4b7.webp",
+  "corruptor of tartarus": "/art/nfts/681d-db2e93f0.webp",
+  "bloodthirsty raider": "/art/nfts/4c5f-62ce228c.webp",
+  "bragi, battle conductor": "/art/nfts/8bb6-r8ug7jzo.webp",
+  "drake of midgard sky": "/art/nfts/a3fd-83f7ea12.webp",
+  "totem of muspelheim": "/art/nfts/d801-7b4d24a5.webp",
+  "glow-tron": "/art/nfts/154d-6053a70b.webp",
   "satyr reveler": "/art/nfts/12d9-3c8e0733.webp",
   "mechanical construct": "/art/nfts/b6be-4ae475dc.webp",
   "apophis, world ender": "/art/nfts/dfe6-c8f1baeb.webp",
   "craftsman of nidavellir": "/art/nfts/329d-cafbf408.webp",
   "harpy of the storm": "/art/nfts/ce51-63dd2bd9.webp",
-  "daedalus the inventor": "/ui/misc/5081-59720b15.webp",
-  "njörðr the fisher": "/ui/misc/5109-14028336.webp",
+  "daedalus the inventor": "/art/nfts/5081-59720b15.webp",
+  "njörðr the fisher": "/art/nfts/5109-14028336.webp",
   "jotun brute": "/art/nfts/ce88-79840db1.webp",
-  "terror of the grave": "/ui/misc/457b-62c061cb.webp",
-  "jötun giant": "/ui/misc/c552-72aaf7cb.webp",
-  "arachne the weaver": "/ui/misc/fff7-afaec725.webp",
-  "hypnos, dream weaver": "/ui/misc/6942-45622003.webp",
+  "terror of the grave": "/art/nfts/457b-62c061cb.webp",
+  "jötun giant": "/art/nfts/c552-72aaf7cb.webp",
+  "arachne the weaver": "/art/nfts/fff7-afaec725.webp",
+  "hypnos, dream weaver": "/art/nfts/6942-45622003.webp",
   "defender of bifrost": "/art/nfts/e08f-4965df25.webp",
-  "scylla, terror of depths": "/ui/misc/680e-871ef147.webp",
-  "garmr": "/ui/misc/c7e1-b2f9514e.webp",
+  "scylla, terror of depths": "/art/nfts/680e-871ef147.webp",
+  "garmr": "/art/nfts/c7e1-b2f9514e.webp",
   "valkyrie crusader": "/art/nfts/f31c-128c125b.webp",
-  "gaia, earth sculptor": "/ui/misc/c838-ebed9878.webp",
+  "gaia, earth sculptor": "/art/nfts/c838-ebed9878.webp",
   "replay specialist": "/art/nfts/d1be-5ae8e3a4.webp",
   "chronos the time dragon": "/art/nfts/0776-9e2bce21.webp",
-  "storm lizard of thor": "/ui/misc/94f4-9cf2f0ac.webp",
+  "storm lizard of thor": "/art/nfts/94f4-9cf2f0ac.webp",
   "automaton of ivaldi": "/art/nfts/d5ff-4fc50e75.webp",
-  "flame-born of muspel": "/ui/misc/bbe6-dc918a65.webp",
-  "hunter of skadi": "/ui/misc/f81d-60c11498.webp",
-  "moon-mad fenriskin": "/ui/misc/9c1b-844015cb.webp",
-  "pesterer of loki": "/ui/misc/6998-11a8dec8.webp",
+  "flame-born of muspel": "/art/nfts/bbe6-dc918a65.webp",
+  "hunter of skadi": "/art/nfts/f81d-60c11498.webp",
+  "moon-mad fenriskin": "/art/nfts/9c1b-844015cb.webp",
+  "pesterer of loki": "/art/nfts/6998-11a8dec8.webp",
   "arcane giant of olympus": "/art/nfts/d437-c256713a.webp",
   "hraesvelgr, the wind-bringer": "/art/nfts/5556-2013936e.webp",
   "oracle of delphi": "/art/nfts/6a25-ae20eaca.webp",
   "aegir, lord of the deep": "/art/nfts/7076-201ce228.webp",
-  "hungry wyrm of jormungandr": "/ui/misc/ae2b-a657c3e5.webp",
+  "hungry wyrm of jormungandr": "/art/nfts/ae2b-a657c3e5.webp",
   "sentinel of mimir": "/art/nfts/76e0-702e569b.webp",
-  "auðumbla the primordial": "/ui/misc/a62e-95ca6eb3.webp",
+  "auðumbla the primordial": "/art/nfts/a62e-95ca6eb3.webp",
   "mechanical whelp": "/art/nfts/7c91-a7f00b87.webp",
   "khartut defender": "/art/nfts/9936-c9deeae7.webp",
   "twilight summoner": "/art/nfts/5cdc-10bab677.webp",
@@ -921,28 +874,28 @@ const VERCEL_CARD_ART: Record<string, string> = {
   "lernaean flame": "/art/nfts/af3b-b6cab5a5.webp",
   "scylla, the world-render": "/art/nfts/6ec8-1643d76c.webp",
   "stheno, the stone-gazer": "/art/nfts/447a-296da71d.webp",
-  "echidna, mother of dragons": "/ui/misc/2b8f-03b3796e.webp",
-  "bygul, freyja": "/ui/misc/f45e-07ac6ecd.webp",
+  "echidna, mother of dragons": "/art/nfts/2b8f-03b3796e.webp",
+  "bygul, freyja": "/art/nfts/f45e-07ac6ecd.webp",
   "stormcaller wyvern": "/art/nfts/72c5-3bf0fa09.webp",
-  "bloodfury brewmaster": "/ui/misc/54f3-72f9c1d9.webp",
+  "bloodfury brewmaster": "/art/nfts/54f3-72f9c1d9.webp",
   "pain embracer": "/art/nfts/13d0-f697e174.webp",
   "blood reaver": "/art/nfts/76af-1b01258a.webp",
-  "dark whisperer": "/ui/misc/3d07-bd318af2.webp",
+  "dark whisperer": "/art/nfts/3d07-bd318af2.webp",
   "curious excavator": "/art/nfts/5e39-2bee39b1.webp",
-  "drakonid operative": "/ui/misc/195e-9c92d38e.webp",
+  "drakonid operative": "/art/nfts/195e-9c92d38e.webp",
   "muspeldreki": "/art/nfts/97eb-855a83c1.webp",
   "eldjotnar": "/art/nfts/f09c-c5673319.webp",
   "bone wraith": "/art/nfts/3291-9c9148e1.webp",
   "bronze gatekeeper": "/art/nfts/f9bc-04e778a9.webp",
   "smith of nidavellir": "/art/nfts/efdd-112f8e5e.webp",
-  "hecate, dark inquisitor": "/ui/misc/860f-b5f9e513.webp",
-  "ancient eye of the deep": "/ui/misc/0f7c-2ff14c3c.webp",
+  "hecate, dark inquisitor": "/art/nfts/860f-b5f9e513.webp",
+  "ancient eye of the deep": "/art/nfts/0f7c-2ff14c3c.webp",
   "voidfang": "/art/nfts/582b-32906c05.webp",
-  "dáinn": "/ui/misc/cdba-06955e36.webp",
+  "dáinn": "/art/nfts/cdba-06955e36.webp",
   "ljósálfr": "/art/nfts/ed22-fa7284c2.webp",
   "iron boar": "/art/nfts/e211-43420d15.webp",
   "druid of the plains": "/art/nfts/eea9-f6e3d8dd.webp",
-  "iron golem of sindri": "/ui/misc/1d23-acecf152.webp",
+  "iron golem of sindri": "/art/nfts/1d23-acecf152.webp",
   "stonetusk boar of gullinbursti": "/art/nfts/cf43-3ab9fce1.webp",
   "draugr bones": "/art/nfts/087b-02553bwr.webp",
   "draugr, the deathless hunger": "/art/nfts/0cf9-oarixvli.webp",
@@ -955,9 +908,9 @@ const VERCEL_CARD_ART: Record<string, string> = {
   "risen guardian": "/art/nfts/6dfd-wnbc3xxu.webp",
   "zombie": "/art/nfts/7062-xwoh2ewg.webp",
   "bone collector": "/art/nfts/7338-zus0zamb.webp",
-  "rider of death": "/ui/misc/8368-kj9k8gw3.webp",
+  "rider of death": "/art/nfts/8368-kj9k8gw3.webp",
   "doomed guardian": "/art/nfts/8711-tnk2u5sb.webp",
-  "scourge champion": "/ui/misc/8de6-xve9stte.webp",
+  "scourge champion": "/art/nfts/8de6-xve9stte.webp",
   "venomfang serpent": "/art/nfts/9b16-1fmfzodt.webp",
   "grave robber": "/art/nfts/adf6-9j5o3f2q.webp",
   "soul remnant": "/art/nfts/c7ec-e4ivcgjc.webp",
@@ -970,7 +923,7 @@ const VERCEL_CARD_ART: Record<string, string> = {
   "shadow hound": "/art/nfts/1f54-72m2h14b.webp",
   "shadow imp": "/art/nfts/22ae-5dn5jjkx.webp",
   "shadow keeper": "/art/nfts/3d86-2lvnvzvs.webp",
-  "shadow panther": "/ui/misc/4cec-8nftfnwf.webp",
+  "shadow panther": "/art/nfts/4cec-8nftfnwf.webp",
   "shadow thief": "/art/nfts/6dd3-6l9wd7rf.webp",
   "shadow whisperer": "/art/nfts/817f-wv8q3s76.webp",
   "shadow wolf": "/art/nfts/95d0-m51nszio.webp",
@@ -981,8 +934,8 @@ const VERCEL_CARD_ART: Record<string, string> = {
   "yggdrasil shadowblade": "/art/nfts/e9e2-rognnfhy.webp",
   "echidna, mother of monsters": "/art/nfts/095a-g7gjlt5b.webp",
   "arachne, spider lord": "/art/nfts/1aaa-333ts18j.webp",
-  "arachne": "/ui/misc/1ba3-bjnkto9l.webp",
-  "arachne, taunt weaver": "/ui/misc/3c0d-k7hegp81.webp",
+  "arachne": "/art/nfts/1ba3-bjnkto9l.webp",
+  "arachne, taunt weaver": "/art/nfts/3c0d-k7hegp81.webp",
   "typhon, chaos elemental": "/art/nfts/4c0f-wurcp818.webp",
   "briareos, the hundred-armed": "/art/nfts/5183-o1b3xh13.webp",
   "circe, echo witch": "/art/nfts/65de-h9kigxwq.webp",
@@ -992,7 +945,7 @@ const VERCEL_CARD_ART: Record<string, string> = {
   "eris, mind thief": "/art/nfts/fb18-qx4m1ksv.webp",
   "lich queen": "/art/nfts/1665-xqnaw540.webp",
   "rune weaver": "/art/nfts/3937-ax7x9u4g.webp",
-  "chronos, time weaver": "/ui/misc/41ce-m0jd0ymi.webp",
+  "chronos, time weaver": "/art/nfts/41ce-m0jd0ymi.webp",
   "rune scholar": "/art/nfts/4242-vz7cy9vj.webp",
   "rune spark": "/art/nfts/6a5e-ocn2s6ak.webp",
   "bifrost arcanist": "/art/nfts/6d85-xznex7yq.webp",
@@ -1005,8 +958,8 @@ const VERCEL_CARD_ART: Record<string, string> = {
   "failed student": "/art/nfts/c6c8-od6agjtc.webp",
   "apprentice mage": "/art/nfts/d359-69ckithi.webp",
   "poison master": "/art/nfts/f2eb-osv793c7.webp",
-  "hel": "/ui/misc/3308-4ceectwu.webp",
-  "shade of hades": "/ui/misc/504c-fy22uj0f.webp",
+  "hel": "/art/nfts/3308-4ceectwu.webp",
+  "shade of hades": "/art/nfts/504c-fy22uj0f.webp",
   "styx reliquary": "/art/nfts/8f32-5atoaan3.webp",
   "gemini illusion": "/art/nfts/9600-2uc6ue3n.webp",
   "banshee": "/art/nfts/08dc-1f4jdlb9.webp",
@@ -1014,34 +967,34 @@ const VERCEL_CARD_ART: Record<string, string> = {
   "frost wraith": "/art/nfts/bfc4-iejwrheq.webp",
   "nokken, the water spirit": "/art/nfts/cc1f-5ha7i6v8.webp",
   "baldur the radiant": "/art/nfts/e808-9qy2tzqo.webp",
-  "surtr": "/ui/misc/30a7-1lckcwg0.webp",
+  "surtr": "/art/nfts/30a7-1lckcwg0.webp",
   "surtr, flame lord": "/art/nfts/73f8-itgrlfi4.webp",
   "múspellsmegir, the fire titan": "/art/nfts/d829-1b2npvad.webp",
   "gladiator": "/art/nfts/a0f8-xxspmfv1.webp",
   "heroic challenger": "/art/nfts/e7a2-46blwsht.webp",
-  "ancient of wisdom": "/ui/misc/4e4a-jbe5z2ha.webp",
+  "ancient of wisdom": "/art/nfts/4e4a-jbe5z2ha.webp",
   "fandral the wise": "/art/nfts/b17e-v6jm83fs.webp",
   "stern mentor": "/art/nfts/f01d-9dcmv9ao.webp",
   "mountain sentinel": "/art/nfts/f65f-p0cr7tc7.webp",
   "heimdall, guardian of bifrost": "/art/nfts/3fb4-n9501hix.webp",
-  "beast king of freya": "/ui/misc/0433-1465k5g4.webp",
-  "hildisvini, freyja": "/ui/misc/1005-wc3i1dke.webp",
-  "trjegul, freyja": "/ui/misc/5c26-gfo3pan5.webp",
+  "beast king of freya": "/art/nfts/0433-1465k5g4.webp",
+  "hildisvini, freyja": "/art/nfts/1005-wc3i1dke.webp",
+  "trjegul, freyja": "/art/nfts/5c26-gfo3pan5.webp",
   "valkyrie commander": "/art/nfts/c7c8-3eygeu3y.webp",
   "valkyrie warlord": "/art/nfts/f437-jkhxemxt.webp",
   "grove keeper": "/art/nfts/2874-0kzcb8hn.webp",
   "grove warden": "/art/nfts/72aa-13a9lxuc.webp",
   "beast tracker": "/art/nfts/652d-3fruptt2.webp",
-  "hunter of artemis": "/ui/misc/67cc-a8ockltq.webp",
+  "hunter of artemis": "/art/nfts/67cc-a8ockltq.webp",
   "wilderness scout": "/art/nfts/6e64-l30c5tei.webp",
   "forest scout": "/art/nfts/79bd-szc13qxf.webp",
-  "pack alpha": "/ui/misc/9126-gqnsbj5d.webp",
+  "pack alpha": "/art/nfts/9126-gqnsbj5d.webp",
   "forest warden omu": "/art/nfts/f5bf-s7iotwa3.webp",
-  "jormungandr, echo serpent": "/art/0b0b-xzlu2e8y.webp",
+  "jormungandr, echo serpent": "/art/nfts/269c-47eab103.webp",
   "proteus, face collector": "/art/nfts/77fd-h2r8tkg6.webp",
-  "hafgufa, the sea-mist": "/ui/misc/801c-e9u5oyne.webp",
-  "sol, the sun goddess": "/ui/misc/42ec-h35gt366.webp",
-  "selene": "/ui/misc/9def-nnlmtyvd.webp",
+  "hafgufa, the sea-mist": "/art/nfts/801c-e9u5oyne.webp",
+  "sol, the sun goddess": "/art/nfts/42ec-h35gt366.webp",
+  "selene": "/art/nfts/9def-nnlmtyvd.webp",
   "spirit of healing": "/art/nfts/25ec-sh4r71a9.webp",
   "essence of vitality": "/art/nfts/ce30-dbajbor3.webp",
   "well of vitality": "/art/nfts/dfb5-guy6bfcm.webp",
@@ -1050,7 +1003,7 @@ const VERCEL_CARD_ART: Record<string, string> = {
   "brokkr forge-captain": "/art/nfts/ce57-n14wzrp3.webp",
   "spellbreaker": "/art/nfts/1ca8-wgo85bl3.webp",
   "asclepius, high priest": "/art/nfts/8628-8m5v40u3.webp",
-  "acolyte of valhalla": "/ui/misc/884e-569bv7e0.webp",
+  "acolyte of valhalla": "/art/nfts/884e-569bv7e0.webp",
   "restoration golem": "/art/nfts/af80-gn10s1bb.webp",
   "amara, shield of persephone": "/art/nfts/cb93-m8ivjgjw.webp",
   "thunder titan": "/art/nfts/9135-1vcfatl1.webp",
@@ -1058,7 +1011,7 @@ const VERCEL_CARD_ART: Record<string, string> = {
   "argus, storm watcher": "/art/nfts/9690-1zwekh9e.webp",
   "pain acceptor": "/art/nfts/68ac-d6r8xk8x.webp",
   "huldra, the forest spirit": "/art/nfts/f06f-uuaa5bw6.webp",
-  "storm elemental": "/ui/misc/a55b-gwo99sp4.webp",
+  "storm elemental": "/art/nfts/a55b-gwo99sp4.webp",
   "the storm guardian": "/art/nfts/ba8e-1tdq0rli.webp",
   "garm, the hellhound": "/art/nfts/97a8-frcm436d.webp",
   "battle-hardened veteran": "/art/nfts/0441-ujzwxfqa.webp",
@@ -1066,10 +1019,10 @@ const VERCEL_CARD_ART: Record<string, string> = {
   "fang commander": "/art/nfts/1af7-g502sskx.webp",
   "ancestral guardian": "/art/nfts/769b-8lxrumdk.webp",
   "ironwood sage": "/art/nfts/208d-4ilzugfo.webp",
-  "twilight elder": "/ui/misc/a6d6-6w7o2my0.webp",
+  "twilight elder": "/art/nfts/a6d6-6w7o2my0.webp",
   "sibyl of delphi": "/art/nfts/58c7-7miu0kuo.webp",
   "enraged berserker": "/art/nfts/2265-zp8fovec.webp",
-  "ember whelp": "/ui/misc/5940-n3snb3ua.webp",
+  "ember whelp": "/art/nfts/5940-n3snb3ua.webp",
   "firebrand": "/art/nfts/dc43-bu47ikb8.webp",
   "cyclops siege tower": "/art/nfts/2bbb-oxl7d7ni.webp",
   "talos, elemental titan": "/art/nfts/3db9-zkg5entq.webp",
@@ -1080,61 +1033,61 @@ const VERCEL_CARD_ART: Record<string, string> = {
   "earth elemental": "/art/nfts/d7fb-sss1cjes.webp",
   "kidnapper": "/art/nfts/beca-xje1t9e8.webp",
   "nerida, wave keeper": "/art/nfts/8b14-cmovodff.webp",
-  "beckoner of evil": "/ui/misc/a3ff-axgty9b5.webp",
-  "jötun shieldbearer": "/ui/misc/c266-vyrzmlaz.webp",
+  "beckoner of evil": "/art/nfts/a3ff-axgty9b5.webp",
+  "jötun shieldbearer": "/art/nfts/c266-vyrzmlaz.webp",
   "primordial fury": "/art/nfts/312d-g7hdk1bi.webp",
   "root guardian": "/art/nfts/c684-rogi9xw2.webp",
   "root defender": "/art/nfts/e0c8-pwdgii2c.webp",
-  "guardian of the woods": "/ui/misc/e949-r3yc9gw8.webp",
-  "verdian, nature": "/ui/misc/f674-xy50v0b4.webp",
-  "jörð": "/ui/misc/f733-z2fpg8q2.webp",
-  "pan, nature": "/ui/misc/fdb4-pgffnylv.webp",
+  "guardian of the woods": "/art/nfts/e949-r3yc9gw8.webp",
+  "verdian, nature": "/art/nfts/f674-xy50v0b4.webp",
+  "jörð": "/art/nfts/f733-z2fpg8q2.webp",
+  "pan, nature": "/art/nfts/fdb4-pgffnylv.webp",
   "lord of the pit": "/art/nfts/71db-t2s6902m.webp",
   "infernal": "/art/nfts/fd15-esta87rq.webp",
   "barnabus, world tree spirit": "/art/nfts/a521-vsi1eae3.webp",
   "yggdrasil golem": "/art/nfts/aeff-q23xlmep.webp",
   "sea sprite scout": "/art/nfts/9952-qpi0lscp.webp",
-  "ísormr, the frost serpent": "/ui/misc/d0b0-nv2dx1yn.webp",
-  "myrkrkló": "/ui/misc/386d-ig168es7.webp",
-  "toad of the wilds": "/ui/misc/067b-uw4uaq9s.webp",
+  "ísormr, the frost serpent": "/art/nfts/d0b0-nv2dx1yn.webp",
+  "myrkrkló": "/art/nfts/386d-ig168es7.webp",
+  "toad of the wilds": "/art/nfts/067b-uw4uaq9s.webp",
   "plant": "/art/nfts/8684-xe3hb2fr.webp",
   "verdant longneck": "/art/nfts/9605-zfp4egv7.webp",
-  "shady dealer": "/ui/misc/4bee-dwmp4o4v.webp",
-  "jötunn thornback": "/ui/misc/ebff-tmhw2wzs.webp",
-  "ginnungagap": "/ui/misc/60eb-a8jlgznz.webp",
-  "helheim valiant": "/ui/misc/30fa-4t35xv1n.webp",
+  "shady dealer": "/art/nfts/4bee-dwmp4o4v.webp",
+  "jötunn thornback": "/art/nfts/ebff-tmhw2wzs.webp",
+  "ginnungagap": "/art/nfts/60eb-a8jlgznz.webp",
+  "helheim valiant": "/art/nfts/30fa-4t35xv1n.webp",
   "einherjar recruit": "/art/nfts/d06b-vk7ei0k7.webp",
   "muspel infernal": "/art/nfts/7431-9wkai9y0.webp",
   "eldþurs, the lava giant": "/art/nfts/d37d-h5qceohb.webp",
   "spark": "/art/nfts/85c9-yz0ua28c.webp",
-  "aeolus, wind tyrant": "/ui/misc/a5f0-dxnsb0ev.webp",
+  "aeolus, wind tyrant": "/art/nfts/a5f0-dxnsb0ev.webp",
   "shield of the colossus": "/art/nfts/7130-0b8094b7.webp",
-  "temple guardian": "/ui/misc/bf42-9zhsqklq.webp",
+  "temple guardian": "/art/nfts/bf42-9zhsqklq.webp",
   "temple berserker": "/art/nfts/bd2a-m76xauwn.webp",
   "speaker gidra": "/art/nfts/c857-wm2cc1zh.webp",
-  "theseus, the equalizer": "/ui/misc/6c5f-q5se4d7c.webp",
+  "theseus, the equalizer": "/art/nfts/6c5f-q5se4d7c.webp",
   "orpheus, battle conductor": "/art/nfts/8bb6-r8ug7jzo.webp",
   "prometheus the outcast": "/art/nfts/e9c6-ogupxww1.webp",
   "prometheus the firebringer": "/art/nfts/e304-1sebgpwj.webp",
-  "abyssal enforcer": "/ui/misc/028d-vt8aecnj.webp",
-  "achilles, immortal warrior": "/ui/misc/0429-y5arol11.webp",
-  "acolyte of athena": "/ui/misc/047f-yymwaczr.webp",
-  "ægir greenwave": "/art/0705-wkjpdj4e.webp",
-  "ares, war commander": "/ui/misc/258c-cx4vkfm3.webp",
-  "argus white-eye": "/ui/misc/283e-wed4vq3l.webp",
-  "artemis the huntress": "/ui/misc/3193-0c4j0kwe.webp",
-  "askr & embla": "/ui/misc/37dc-8lo9azf3.webp",
-  "augmented porcupine": "/ui/misc/3a95-a09cvqxa.webp",
+  "abyssal enforcer": "/art/nfts/028d-vt8aecnj.webp",
+  "achilles, immortal warrior": "/art/nfts/0429-y5arol11.webp",
+  "acolyte of athena": "/art/nfts/047f-yymwaczr.webp",
+  "ægir greenwave": "/art/nfts/ce26-d7aff9aa.webp",
+  "ares, war commander": "/art/nfts/258c-cx4vkfm3.webp",
+  "argus white-eye": "/art/nfts/283e-wed4vq3l.webp",
+  "artemis the huntress": "/art/nfts/3193-0c4j0kwe.webp",
+  "askr & embla": "/art/nfts/37dc-8lo9azf3.webp",
+  "augmented porcupine": "/art/nfts/3a95-a09cvqxa.webp",
   "aviana, goddess of birds": "/art/nfts/3f60-7nyftfcn.webp",
-  "baldr, invulnerable": "/ui/misc/4143-wmwdmfsx.webp",
-  "bomb maker of sindri": "/ui/misc/6608-mn0zp585.webp",
+  "baldr, invulnerable": "/art/nfts/4143-wmwdmfsx.webp",
+  "bomb maker of sindri": "/art/nfts/6608-mn0zp585.webp",
   "bound forge-imp": "/art/nfts/6c4b-otijmg2l.webp",
-  "brawler of valhalla": "/ui/misc/73b0-pepudnqn.webp",
-  "centaur chieftain": "/ui/misc/8490-auxcxubs.webp",
-  "chronos, time dragon": "/ui/misc/983c-33dnmgxq.webp",
+  "brawler of valhalla": "/art/nfts/73b0-pepudnqn.webp",
+  "centaur chieftain": "/art/nfts/8490-auxcxubs.webp",
+  "chronos, time dragon": "/art/nfts/983c-33dnmgxq.webp",
   "cutpurse": "/art/nfts/bbb4-16zr8qmq.webp",
   "cyclops guardian": "/art/nfts/be99-pev40ohb.webp",
-  "cyclops siege engine": "/ui/misc/bf25-9aygfsaf.webp",
+  "cyclops siege engine": "/art/nfts/bf25-9aygfsaf.webp",
 };
 
 /**
@@ -3758,7 +3711,7 @@ const CARD_ID_TO_ART: Record<number, string> = {
 
 /** Set of all art file paths reserved for heroes — built once from HERO_ART_OVERRIDE */
 const HERO_ART_PATHS = new Set(
-	Object.values(HERO_ART_OVERRIDE).map(id => `/art/${id}.webp`)
+	Object.values(HERO_ART_OVERRIDE).map(id => getNormalizedArtPath(id))
 );
 
 /** Set of all hero art IDs (without path/extension) for VERCEL_CARD_ART guard */
@@ -3803,7 +3756,7 @@ export function getRawCardArtPath(cardName: string, cardId?: number | string): s
 	const character = MINION_CARD_TO_ART[lowerName];
 	if (!character || !CREATURE_ART_CHARACTERS.has(character)) return null;
 	const artId = CHARACTER_ART_IDS[character];
-	return artId ? `/art/${artId}.webp` : null;
+	return artId ? getNormalizedArtPath(artId) : null;
 }
 
 const _artPathCache = new Map<string, string | null>();
@@ -3876,7 +3829,7 @@ export function getCardArtPath(cardName: string, cardId?: number | string): stri
     return null;
   }
 
-  result = assetPath(`/art/${artId}.webp`);
+  result = assetPath(getNormalizedArtPath(artId));
   _artPathCache.set(lowerName, result);
   return result;
 }

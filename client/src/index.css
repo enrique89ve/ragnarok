@@ -93,12 +93,12 @@
   --card-standard-glow: var(--rarity-rare-glow);
 
   /* Opponent zone styling */
-  --opponent-zone-bg: rgba(139, 0, 0, 0.05);
+  --opponent-zone-bg: var(--zone-opponent-bg);
   --opponent-zone-border: rgba(139, 0, 0, 0.1);
   --opponent-zone-shadow: rgba(139, 0, 0, 0.1);
 
   /* Player zone styling */
-  --player-zone-bg: rgba(0, 100, 0, 0.05);
+  --player-zone-bg: var(--zone-player-bg);
   --player-zone-border: rgba(0, 100, 0, 0.1);
   --player-zone-shadow: rgba(0, 100, 0, 0.1);
 
@@ -582,7 +582,7 @@ canvas {
 
 .game-area-container.opponent-area {
   height: var(--opponent-area-height);
-  background-color: rgba(139, 0, 0, 0.05);
+  background-color: var(--opponent-zone-bg);
   margin-top: 180px; /* Increased margin to move battlefield down further (was 96px) */
 }
 
@@ -599,7 +599,7 @@ canvas {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  background-color: rgba(0, 100, 0, 0.05);
+  background-color: var(--player-zone-bg);
   position: relative;
   z-index: 200;
 }
