@@ -12,12 +12,12 @@ export const vanillaMinions: CardData[] = [
 		description: 'No abilities. Pure stat baseline.',
 		flavorText: 'Born from the mists of Niflheim, it knows only cold silence.',
 		type: 'minion',
-		rarity: 'basic',
+		rarity: 'common',
 		manaCost: 1,
 		attack: 1,
 		health: 2,
 		class: 'Neutral',
-		set: 'core',
+		set: 'genesis',
 		collectible: false
 	},
 	{
@@ -26,12 +26,12 @@ export const vanillaMinions: CardData[] = [
 		description: 'No abilities. Pure stat baseline.',
 		flavorText: 'Neither god nor giant — just a mortal with a sturdy shield.',
 		type: 'minion',
-		rarity: 'basic',
+		rarity: 'common',
 		manaCost: 2,
 		attack: 2,
 		health: 3,
 		class: 'Neutral',
-		set: 'core',
+		set: 'genesis',
 		collectible: false
 	},
 	{
@@ -40,12 +40,12 @@ export const vanillaMinions: CardData[] = [
 		description: 'No abilities. Pure stat baseline.',
 		flavorText: 'Too reckless for the Einherjar, too brave for Midgard.',
 		type: 'minion',
-		rarity: 'basic',
+		rarity: 'common',
 		manaCost: 2,
 		attack: 3,
 		health: 2,
 		class: 'Neutral',
-		set: 'core',
+		set: 'genesis',
 		collectible: false
 	},
 	{
@@ -59,7 +59,7 @@ export const vanillaMinions: CardData[] = [
 		attack: 3,
 		health: 4,
 		class: 'Neutral',
-		set: 'core',
+		set: 'genesis',
 		collectible: false
 	},
 	{
@@ -74,7 +74,7 @@ export const vanillaMinions: CardData[] = [
 		health: 5,
 		race: 'Giant',
 		class: 'Neutral',
-		set: 'core',
+		set: 'genesis',
 		collectible: false
 	},
 	{
@@ -88,7 +88,7 @@ export const vanillaMinions: CardData[] = [
 		attack: 5,
 		health: 6,
 		class: 'Neutral',
-		set: 'core',
+		set: 'genesis',
 		collectible: false
 	},
 	{
@@ -103,7 +103,7 @@ export const vanillaMinions: CardData[] = [
 		health: 8,
 		race: 'Automaton',
 		class: 'Neutral',
-		set: 'core',
+		set: 'genesis',
 		collectible: false
 	}
 ];

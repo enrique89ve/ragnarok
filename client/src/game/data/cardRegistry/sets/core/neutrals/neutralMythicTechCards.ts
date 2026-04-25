@@ -19,7 +19,7 @@ export const neutralMythicTechCards: CardData[] = [
 			targetType: 'none',
 			requiresTarget: false
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -39,7 +39,7 @@ export const neutralMythicTechCards: CardData[] = [
 			targetType: 'all_enemy_minions',
 			requiresTarget: false
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -60,7 +60,7 @@ export const neutralMythicTechCards: CardData[] = [
 			targetType: 'both_players',
 			requiresTarget: false
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -80,7 +80,7 @@ export const neutralMythicTechCards: CardData[] = [
 			discoveryType: 'any_spell',
 			requiresTarget: false
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -94,7 +94,7 @@ export const neutralMythicTechCards: CardData[] = [
 		type: 'minion',
 		rarity: 'rare',
 		class: 'Neutral',
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -115,7 +115,7 @@ export const neutralMythicTechCards: CardData[] = [
 			targetType: 'enemy_minions_by_attack',
 			requiresTarget: false
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -135,7 +135,7 @@ export const neutralMythicTechCards: CardData[] = [
 			targetType: 'random_class_spells',
 			requiresTarget: false
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -155,7 +155,7 @@ export const neutralMythicTechCards: CardData[] = [
 			targetType: 'self',
 			requiresTarget: false
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	}
 ];

@@ -12,7 +12,7 @@ export const petSynergyCards: CardData[] = [
 		type: 'minion',
 		rarity: 'common',
 		class: 'Neutral',
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -31,7 +31,7 @@ export const petSynergyCards: CardData[] = [
 			buffAttack: 1,
 			buffHealth: 1
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -47,7 +47,7 @@ export const petSynergyCards: CardData[] = [
 			type: 'discover_from_deck',
 			targetType: 'pet_cards'
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -67,7 +67,7 @@ export const petSynergyCards: CardData[] = [
 			targetType: 'random_stage1_pet',
 			requiresTarget: false
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -89,7 +89,7 @@ export const petSynergyCards: CardData[] = [
 			buffAttack: 3,
 			buffHealth: 3
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	}
 ];

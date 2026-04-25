@@ -14,7 +14,7 @@ export const deepKeywordCards: CardData[] = [
 		rarity: 'common',
 		class: 'Neutral',
 		keywords: ['overkill'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -30,7 +30,7 @@ export const deepKeywordCards: CardData[] = [
 		race: 'Undead',
 		class: 'Neutral',
 		keywords: ['rush', 'overkill'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -46,7 +46,7 @@ export const deepKeywordCards: CardData[] = [
 		race: 'Elemental',
 		class: 'Neutral',
 		keywords: ['overkill'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 
@@ -63,7 +63,7 @@ export const deepKeywordCards: CardData[] = [
 		rarity: 'common',
 		class: 'Neutral',
 		keywords: ['frenzy'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -78,7 +78,7 @@ export const deepKeywordCards: CardData[] = [
 		rarity: 'common',
 		class: 'Neutral',
 		keywords: ['frenzy'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -94,7 +94,7 @@ export const deepKeywordCards: CardData[] = [
 		race: 'Giant',
 		class: 'Neutral',
 		keywords: ['taunt', 'frenzy'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 
@@ -111,7 +111,7 @@ export const deepKeywordCards: CardData[] = [
 		rarity: 'common',
 		class: 'Neutral',
 		keywords: ['inspire'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -126,7 +126,7 @@ export const deepKeywordCards: CardData[] = [
 		rarity: 'common',
 		class: 'Neutral',
 		keywords: ['inspire'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -141,7 +141,7 @@ export const deepKeywordCards: CardData[] = [
 		rarity: 'common',
 		class: 'Neutral',
 		keywords: ['inspire'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -156,7 +156,7 @@ export const deepKeywordCards: CardData[] = [
 		rarity: 'rare',
 		class: 'Neutral',
 		keywords: ['inspire'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 
@@ -174,7 +174,7 @@ export const deepKeywordCards: CardData[] = [
 		race: 'Elemental',
 		class: 'Neutral',
 		keywords: ['echo', 'rush'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -193,7 +193,7 @@ export const deepKeywordCards: CardData[] = [
 			targetType: 'any',
 			requiresTarget: true
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -213,7 +213,7 @@ export const deepKeywordCards: CardData[] = [
 			value: 1,
 			targetType: 'self'
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 
@@ -233,7 +233,7 @@ export const deepKeywordCards: CardData[] = [
 		rarity: 'common',
 		class: 'Neutral',
 		keywords: ['lifesteal'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -249,7 +249,7 @@ export const deepKeywordCards: CardData[] = [
 		race: 'Undead',
 		class: 'Neutral',
 		keywords: ['lifesteal'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -265,7 +265,7 @@ export const deepKeywordCards: CardData[] = [
 		race: 'Undead',
 		class: 'Neutral',
 		keywords: ['lifesteal'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -280,7 +280,7 @@ export const deepKeywordCards: CardData[] = [
 		rarity: 'rare',
 		class: 'Neutral',
 		keywords: ['taunt', 'lifesteal'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -301,7 +301,7 @@ export const deepKeywordCards: CardData[] = [
 			value: 3,
 			targetType: 'friendly_hero'
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 
@@ -319,7 +319,7 @@ export const deepKeywordCards: CardData[] = [
 		rarity: 'common',
 		class: 'Neutral',
 		keywords: ['inspire'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -334,7 +334,7 @@ export const deepKeywordCards: CardData[] = [
 		rarity: 'common',
 		class: 'Neutral',
 		keywords: ['inspire'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -349,7 +349,7 @@ export const deepKeywordCards: CardData[] = [
 		rarity: 'common',
 		class: 'Neutral',
 		keywords: ['inspire'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -365,7 +365,7 @@ export const deepKeywordCards: CardData[] = [
 		class: 'Neutral',
 		race: 'Einherjar',
 		keywords: ['inspire'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -381,7 +381,7 @@ export const deepKeywordCards: CardData[] = [
 		class: 'Neutral',
 		race: 'Elemental',
 		keywords: ['inspire'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -396,7 +396,7 @@ export const deepKeywordCards: CardData[] = [
 		rarity: 'rare',
 		class: 'Neutral',
 		keywords: ['inspire'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	}
 ];

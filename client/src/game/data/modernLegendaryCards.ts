@@ -17,7 +17,8 @@ export const modernLegendaryCards: CardData[] = [
       health: 7,
       type: "minion",
       rarity: "epic",
-      description: "Battlecry: Reduce the Cost of Corrupt cards in your hand and deck by (2).",
+      set: 'genesis',
+    description: "Battlecry: Reduce the Cost of Corrupt cards in your hand and deck by (2).",
       keywords: ["battlecry"],
       heroClass: "priest",
                   battlecry: {
@@ -37,6 +38,7 @@ export const modernLegendaryCards: CardData[] = [
     health: 8,
     type: "minion",
     rarity: "mythic",
+      set: 'genesis',
     description: "At the end of your turn, summon a friendly minion that died this game.",
     keywords: [],
     heroClass: "necromancer",
@@ -57,7 +59,8 @@ export const modernLegendaryCards: CardData[] = [
       health: 7,
       type: "minion",
       rarity: "common",
-      description: "Whenever you summon a minion, set its Health equal to this minion's.",
+      set: 'genesis',
+    description: "Whenever you summon a minion, set its Health equal to this minion's.",
       keywords: [],
       heroClass: "priest",
       class: "Priest",
@@ -75,7 +78,8 @@ export const modernLegendaryCards: CardData[] = [
       health: 6,
       type: "minion",
       rarity: "common",
-      description: "After you play a minion, destroy it and summon a 4/4 Failed Student.",
+      set: 'genesis',
+    description: "After you play a minion, destroy it and summon a 4/4 Failed Student.",
       keywords: [],
       heroClass: "priest",
       class: "Priest",
@@ -89,7 +93,8 @@ export const modernLegendaryCards: CardData[] = [
       health: 3,
       type: "minion",
       rarity: "rare",
-      description: "Battlecry: Choose an enemy minion. Deathrattle: Summon a copy of it.",
+      set: 'genesis',
+    description: "Battlecry: Choose an enemy minion. Deathrattle: Summon a copy of it.",
       keywords: ["battlecry", "deathrattle"],
       heroClass: "priest",
       class: "Priest",
@@ -113,7 +118,8 @@ export const modernLegendaryCards: CardData[] = [
       health: 8,
       type: "minion",
       rarity: 'epic',
-      description: "Battlecry: Play all cards your opponent played last turn.",
+      set: 'genesis',
+    description: "Battlecry: Play all cards your opponent played last turn.",
       keywords: ["battlecry"],
       heroClass: "priest",
       class: "Priest",
@@ -130,7 +136,8 @@ export const modernLegendaryCards: CardData[] = [
       health: 3,
       type: "minion",
       rarity: "rare",
-      description: "Lifesteal. Deathrattle: Shuffle 'Reliquary Prime' into your deck.",
+      set: 'genesis',
+    description: "Lifesteal. Deathrattle: Shuffle 'Reliquary Prime' into your deck.",
       keywords: ["lifesteal", "deathrattle"],
       heroClass: "priest",
       class: "Priest",
@@ -148,7 +155,8 @@ export const modernLegendaryCards: CardData[] = [
       health: 5,
       type: "minion",
       rarity: "epic",
-      description: "Battlecry: Replay all friendly spells from this turn.",
+      set: 'genesis',
+    description: "Battlecry: Replay all friendly spells from this turn.",
       keywords: ["battlecry"],
       heroClass: "neutral",
       class: "Neutral",
@@ -172,8 +180,8 @@ export const modernLegendaryCards: CardData[] = [
 
       type: "minion",
       rarity: 'rare',
-
-      description: "Battlecry: Your opponent takes two turns. Then you take two turns.",
+      set: 'genesis',
+    description: "Battlecry: Your opponent takes two turns. Then you take two turns.",
     flavorText: "He understands that time is money, but hasn't figured out the exchange rate.",
       keywords: ["battlecry"],
 
@@ -196,6 +204,7 @@ export const modernLegendaryCards: CardData[] = [
     health: 8,
     type: "minion",
     rarity: "rare",
+      set: 'genesis',
     description: "Can't attack. Whenever this minion takes damage, deal 3 damage to a random enemy.",
     flavorText: "During construction, balloons kept getting caught on the tower, which the engineers insist was NOT part of the design.",
     keywords: [],
@@ -214,8 +223,8 @@ export const modernLegendaryCards: CardData[] = [
   
   type: "minion",
   rarity: "rare",
-  
-  description: "Whenever you draw a minion, summon a 1/1 copy of it.",
+      set: 'genesis',
+    description: "Whenever you draw a minion, summon a 1/1 copy of it.",
   flavorText: "It's like having imaginary friends, but way more fun!",
   keywords: [],
   
@@ -234,8 +243,8 @@ export const modernLegendaryCards: CardData[] = [
   
   type: "minion",
   rarity: "rare",
-  
-  description: "Minions in your hand have Echo.",
+      set: 'genesis',
+    description: "Minions in your hand have Echo.",
   flavorText: "They stabbed her with spears. They burned her in the hall. Three times born, three times scorned — and she outlived them all. (Völuspá 21)",
   
   keywords: [],
@@ -254,8 +263,8 @@ export const modernLegendaryCards: CardData[] = [
 
       type: "minion",
       rarity: "epic",
-
-      description: "Battlecry: Draw a Rush, Lifesteal, Deathrattle, and Taunt card from your deck.",
+      set: 'genesis',
+    description: "Battlecry: Draw a Rush, Lifesteal, Deathrattle, and Taunt card from your deck.",
       flavorText: "Only the most qualified bodyguards get to serve the Countess.",
 
       keywords: ["battlecry"],
@@ -281,8 +290,8 @@ export const modernLegendaryCards: CardData[] = [
   
   type: "minion",
   rarity: "rare",
-  
-  description: "Rush. After this attacks and kills a minion, gain +2/+2.",
+      set: 'genesis',
+    description: "Rush. After this attacks and kills a minion, gain +2/+2.",
   flavorText: "During the Battle for Midgard, he led a group of rebels called the 'Einherjar Boys.'",
   keywords: ["rush"],
   
@@ -303,8 +312,8 @@ export const modernLegendaryCards: CardData[] = [
 
       type: "minion",
       rarity: "rare",
-
-      description: "Echo.   Battlecry: Add a random Mythic minion to your hand.",
+      set: 'genesis',
+    description: "Echo.   Battlecry: Add a random Mythic minion to your hand.",
     flavorText: "The faceless... HATE... this guy.",
     keywords: ["echo", "battlecry"],
       heroClass: "rogue",
@@ -331,8 +340,8 @@ export const modernLegendaryCards: CardData[] = [
 
       type: "minion",
       rarity: "rare",
-
-      description: "Deathrattle: Add 3 copies of Arcane Missiles to your hand.",
+      set: 'genesis',
+    description: "Deathrattle: Add 3 copies of Arcane Missiles to your hand.",
       flavorText: "He was the Archmage of the Rune Council... but he's very humble. And he loves it when you call him 'Big Red'.",
 
       keywords: ["deathrattle"],
@@ -358,8 +367,8 @@ export const modernLegendaryCards: CardData[] = [
 
       type: "minion",
       rarity: "rare",
-
-      description: "Inspire: Summon a random Mythic minion.",
+      set: 'genesis',
+    description: "Inspire: Summon a random Mythic minion.",
       flavorText: "She sees into your past and makes you face your fears. Most common fear: Getting Surtr's Herald out of the Forgemaster's Shredder.",
 
       keywords: ["inspire"],
@@ -384,8 +393,8 @@ export const modernLegendaryCards: CardData[] = [
 
       type: "minion",
       rarity: "rare",
-
-      description: "Battlecry: Give all weapons in your hand and deck +1 Attack.",
+      set: 'genesis',
+    description: "Battlecry: Give all weapons in your hand and deck +1 Attack.",
       flavorText: "The divine smith forges weapons of unmatched power.",
 
       keywords: ["battlecry"],
@@ -415,8 +424,8 @@ export const modernLegendaryCards: CardData[] = [
   
   type: "minion",
   rarity: "common",
-  
-  description: "After you cast a spell, refresh your Hero Power.",
+      set: 'genesis',
+    description: "After you cast a spell, refresh your Hero Power.",
   flavorText: "The messenger god knows the value of a quick exchange.",
   
   keywords: [],
@@ -436,8 +445,8 @@ export const modernLegendaryCards: CardData[] = [
 
       type: "minion",
       rarity: "epic",
-
-      description: "Battlecry: Draw cards until you draw one that isn't a Dragon.",
+      set: 'genesis',
+    description: "Battlecry: Draw cards until you draw one that isn't a Dragon.",
     flavorText: "The heir of the world-serpent seeks kinship among dragonkind.",
       keywords: ["battlecry"],
 
@@ -463,8 +472,8 @@ export const modernLegendaryCards: CardData[] = [
 
       type: "minion",
       rarity: "rare",
-
-      description: "Battlecry: Foresee a new basic Hero Power.",
+      set: 'genesis',
+    description: "Battlecry: Foresee a new basic Hero Power.",
     flavorText: "He was a great explorer until his knee got injured, then he became a humble innkeeper.",
     keywords: ["battlecry", "discover"],
       heroClass: "neutral",
@@ -494,8 +503,8 @@ export const modernLegendaryCards: CardData[] = [
 
       type: "minion",
       rarity: "epic",
-
-      description: "Battlecry: Summon a 0/8 Treasure Chest for your opponent. (Break it for awesome treasures!)",
+      set: 'genesis',
+    description: "Battlecry: Summon a 0/8 Treasure Chest for your opponent. (Break it for awesome treasures!)",
       flavorText: "Marin became an explorer because it really pays to discover.",
 
       keywords: ["battlecry"],
@@ -523,8 +532,8 @@ export const modernLegendaryCards: CardData[] = [
 
       type: "minion",
       rarity: "common",
-
-      description: "Deathrattle: Give your opponent a fantastic treasure!",
+      set: 'genesis',
+    description: "Deathrattle: Give your opponent a fantastic treasure!",
     flavorText: "This chest isn't locked, it's just really hard to open.",
       keywords: ["deathrattle"],
 
@@ -553,8 +562,8 @@ export const modernLegendaryCards: CardData[] = [
 
       type: "minion",
       rarity: "rare",
-
-      description: "Battlecry: Choose a friendly minion. Add a Golden copy of it to your hand.",
+      set: 'genesis',
+    description: "Battlecry: Choose a friendly minion. Add a Golden copy of it to your hand.",
     flavorText: "Always dress to impress is Zola's motto. In fact, everything she possesses has been gilded, blinged, or bedazzled.",
       keywords: ["battlecry"],
 
@@ -580,8 +589,8 @@ export const modernLegendaryCards: CardData[] = [
 
       type: "minion",
       rarity: "epic",
-
-      description: "Rush.   Overkill: Summon a Beast from your hand.",
+      set: 'genesis',
+    description: "Rush.   Overkill: Summon a Beast from your hand.",
     flavorText: "The expedition to Muspelheim wasn't her first rodeo.",
     keywords: ["rush", "overkill"],
       heroClass: "neutral",
@@ -601,8 +610,8 @@ export const modernLegendaryCards: CardData[] = [
 
       type: "minion",
       rarity: 'epic',
-
-      description: "Battlecry: Foresee 5 cards. Replace your deck with 2 copies of each.",
+      set: 'genesis',
+    description: "Battlecry: Foresee 5 cards. Replace your deck with 2 copies of each.",
       flavorText: "She's the kind of person who shows up to a party with her own playlist and demands that everyone use it.",
 
       keywords: ["battlecry", "discover"],
@@ -632,8 +641,8 @@ export const modernLegendaryCards: CardData[] = [
 
       type: "minion",
       rarity: "mythic",
-
-      description: "Battlecry: If your deck has no duplicates, add 2 other random Dragons to your hand. They cost (0).",
+      set: 'genesis',
+    description: "Battlecry: If your deck has no duplicates, add 2 other random Dragons to your hand. They cost (0).",
     flavorText: "Dragons are like popcorn: once you've had one, you want to consume all of them as fast as you can.",
       keywords: ["battlecry"],
 
@@ -665,8 +674,8 @@ export const modernLegendaryCards: CardData[] = [
 
       type: "minion",
       rarity: "epic",
-
-      description: "Battlecry: Draw Níðhöggr. If you're already Níðhöggr, unleash a Devastation.",
+      set: 'genesis',
+    description: "Battlecry: Draw Níðhöggr. If you're already Níðhöggr, unleash a Devastation.",
     flavorText: "Whatever you do, do NOT correct his pronunciation of 'Níðhöggr'.",
       keywords: ["battlecry"],
 
@@ -696,8 +705,8 @@ export const modernLegendaryCards: CardData[] = [
 
       type: "minion",
       rarity: "rare",
-
-      description: "Battlecry: Reorder your deck from the highest Cost card to the lowest Cost card.",
+      set: 'genesis',
+    description: "Battlecry: Reorder your deck from the highest Cost card to the lowest Cost card.",
       flavorText: "Someone thought it would be hilarious to file his research tomes by card cost instead of alphabetically.",
 
       keywords: ["battlecry"],
@@ -725,8 +734,8 @@ export const modernLegendaryCards: CardData[] = [
 
       type: "minion",
       rarity: 'epic',
-
-      description: "Battlecry: If you've cast 10 spells this game, spin the Wheel of Utgarda-Loki.",
+      set: 'genesis',
+    description: "Battlecry: If you've cast 10 spells this game, spin the Wheel of Utgarda-Loki.",
     flavorText: "Utgarda-Loki doesn't so much master fate as give fate a friendly, but painful-looking noogie.",
       keywords: ["battlecry"],
 
@@ -755,8 +764,8 @@ export const modernLegendaryCards: CardData[] = [
 
       type: "minion",
       rarity: "epic",
-
-      description: "Battlecry: Eat a minion in your opponent's hand. Gain its stats.",
+      set: 'genesis',
+    description: "Battlecry: Eat a minion in your opponent's hand. Gain its stats.",
       flavorText: "Mutanus isn't a picky eater. Mutanus is just an eater.",
 
       keywords: ["battlecry"],
@@ -786,8 +795,8 @@ export const modernLegendaryCards: CardData[] = [
   
   type: "minion",
   rarity: "rare",
-  
-  description: "At the start and end of each player's turn, draw a card.",
+      set: 'genesis',
+    description: "At the start and end of each player's turn, draw a card.",
   flavorText: "Keep a light on when you read, and don't forget to clean your quill!",
   keywords: [],
   
@@ -806,8 +815,8 @@ export const modernLegendaryCards: CardData[] = [
 
       type: "minion",
       rarity: "epic",
-
-      description: "Battlecry: Transform all minions in your deck into random Dragons.",
+      set: 'genesis',
+    description: "Battlecry: Transform all minions in your deck into random Dragons.",
       flavorText: "Her favorite lullaby: 'Puff the Magic Dragon.'",
 
       keywords: ["battlecry"],
@@ -835,8 +844,8 @@ export const modernLegendaryCards: CardData[] = [
 
       type: "minion",
       rarity: 'epic',
-
-      description: "Rush. Battlecry: Summon six 1/1 Whelps with Rush. If any die, resummon them at the end of your turn.",
+      set: 'genesis',
+    description: "Rush. Battlecry: Summon six 1/1 Whelps with Rush. If any die, resummon them at the end of your turn.",
     flavorText: "Honestly, after the 42nd attempt, I think they should just put her purples in the mailbox.",
     keywords: ["rush", "battlecry"],
       heroClass: "neutral",
@@ -887,8 +896,8 @@ export const modernLegendaryCards: CardData[] = [
 
       type: "minion",
       rarity: "rare",
-
-      description: "Battlecry: Choose a minion. Become a copy of it. Silence it.",
+      set: 'genesis',
+    description: "Battlecry: Choose a minion. Become a copy of it. Silence it.",
       flavorText: "Never underestimate the power of becoming someone else for the afternoon.",
 
       keywords: ["battlecry"],
@@ -913,8 +922,8 @@ export const modernLegendaryCards: CardData[] = [
   
   type: "minion",
   rarity: "mythic",
-  
-  description: "Your deck size and starting Health are 40.",
+      set: 'genesis',
+    description: "Your deck size and starting Health are 40.",
   flavorText: "He'll help you live longer by suggesting a simple regime of more carbs, more cards, and a 3-minute neck extension.",
   keywords: [],
   
@@ -935,8 +944,8 @@ export const modernLegendaryCards: CardData[] = [
 
       type: "minion",
       rarity: 'epic',
-
-      description: "Lifesteal. Battlecry: Deal damage equal to the number of friendly minions that died this game to all enemies, distributed randomly. Gain that much Attack.",
+      set: 'genesis',
+    description: "Lifesteal. Battlecry: Deal damage equal to the number of friendly minions that died this game to all enemies, distributed randomly. Gain that much Attack.",
     flavorText: "With every soul he drained for power, he'd send a personalized thank-you note.",
     keywords: ["lifesteal", "battlecry"],
       heroClass: "neutral",

@@ -22,7 +22,7 @@ export const dragonSynergyCards: CardData[] = [
 			buffAttack: 1,
 			buffHealth: 1
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -45,7 +45,7 @@ export const dragonSynergyCards: CardData[] = [
 			buffAttack: 0,
 			buffHealth: 2
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -67,7 +67,7 @@ export const dragonSynergyCards: CardData[] = [
 			discoveryType: 'dragon',
 			requiresTarget: false
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -90,7 +90,7 @@ export const dragonSynergyCards: CardData[] = [
 			targetType: 'all_enemy_minions',
 			requiresTarget: false
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	}
 ];

@@ -17,6 +17,7 @@ export const additionalLegendaryCards: CardData[] = [
     health: 8,
     type: "minion",
     rarity: "mythic",
+    set: 'genesis',
     description: "Battlecry: Set a hero's remaining Health to 15.",
     keywords: [
       "battlecry"
@@ -40,6 +41,7 @@ export const additionalLegendaryCards: CardData[] = [
     health: 12,
     type: "minion",
     rarity: "rare",
+    set: 'genesis',
     description: "At the end of your turn, add a Dream Card to your hand.",
     keywords: [],
     heroClass: "neutral",
@@ -55,6 +57,7 @@ export const additionalLegendaryCards: CardData[] = [
     health: 12,
     type: "minion",
     rarity: 'epic',
+    set: 'genesis',
     description: "Battlecry: Destroy all other minions and discard your hand.",
     keywords: [
       "battlecry"
@@ -79,6 +82,7 @@ export const additionalLegendaryCards: CardData[] = [
     health: 1,
     type: "minion",
     rarity: "rare",
+    set: 'genesis',
     description: "Spell Damage +1. Deathrattle: Draw a card.",
     keywords: [
       "deathrattle"
@@ -101,6 +105,7 @@ export const additionalLegendaryCards: CardData[] = [
     health: 2,
     type: "minion",
     rarity: "rare",
+    set: 'genesis',
     description: "Charge. Battlecry: Summon two 1/1 Whelps for your opponent.",
     keywords: [
       "charge",
@@ -126,6 +131,7 @@ export const additionalLegendaryCards: CardData[] = [
     health: 12,
     type: "minion",
     rarity: "rare",
+    set: 'genesis',
     description: "Spell Damage +5",
     keywords: [],
     heroClass: "neutral",
@@ -142,6 +148,7 @@ export const additionalLegendaryCards: CardData[] = [
     health: 4,
     type: "minion",
     rarity: "epic",
+    set: 'genesis',
     description: "Battlecry: Destroy your opponent's weapon and draw cards equal to its Durability.",
     keywords: [
       "battlecry"
@@ -163,6 +170,7 @@ export const additionalLegendaryCards: CardData[] = [
     health: 5,
     type: "minion",
     rarity: "rare",
+    set: 'genesis',
     description: "Battlecry: Destroy an enemy minion with Taunt.",
     keywords: [
       "battlecry"
@@ -184,6 +192,7 @@ export const additionalLegendaryCards: CardData[] = [
     health: 5,
     type: "minion",
     rarity: "rare",
+    set: 'genesis',
     description: "Battlecry: Shuffle the 'Map to the Golden Monkey' into your deck.",
     keywords: [
       "battlecry"
@@ -205,6 +214,7 @@ export const additionalLegendaryCards: CardData[] = [
     health: 7,
     type: "minion",
     rarity: "epic",
+    set: 'genesis',
     description: "Battlecry: If you played an Elemental last turn, cast an Elemental Invocation.",
     keywords: [
       "battlecry",
@@ -231,6 +241,7 @@ export const additionalLegendaryCards: CardData[] = [
     health: 5,
     type: "minion",
     rarity: "rare",
+    set: 'genesis',
     description: "Whenever you cast a spell, add a random Priest spell to your hand.",
     keywords: [],
     heroClass: "priest",
@@ -244,6 +255,7 @@ export const additionalLegendaryCards: CardData[] = [
     manaCost: 9,
     type: "hero",
     rarity: 'epic',
+    set: 'genesis',
     description: "Battlecry: Gain Stealth until your next turn. Passive Hero Power: During your turn, add a Shadow Reflection to your hand.",
     keywords: [
       "battlecry"
@@ -268,6 +280,7 @@ export const additionalLegendaryCards: CardData[] = [
     health: 2,
     type: "minion",
     rarity: "common",
+    set: 'genesis',
     description: "Your cards that summon minions summon twice as many.",
     keywords: [],
     heroClass: "mage",
@@ -282,6 +295,7 @@ export const additionalLegendaryCards: CardData[] = [
     health: 4,
     type: "minion",
     rarity: "epic",
+    set: 'genesis',
     description: "Deathrattle: Return this to your hand and summon a 4/4 Undead Warrior.",
     keywords: [
       "deathrattle"
@@ -301,6 +315,7 @@ export const additionalLegendaryCards: CardData[] = [
     manaCost: 10,
     type: "hero",
     rarity: "mythic",
+    set: 'genesis',
     description: "Battlecry: Cast all spells you've played this game (targets chosen randomly).",
     keywords: [
       "battlecry"
@@ -321,6 +336,7 @@ export const additionalLegendaryCards: CardData[] = [
     manaCost: 6,
     type: "spell",
     rarity: "rare",
+    set: 'genesis',
     description: "Draw 3 cards. Outcast: Reduce their Cost by (3).",
     keywords: [
       "outcast"

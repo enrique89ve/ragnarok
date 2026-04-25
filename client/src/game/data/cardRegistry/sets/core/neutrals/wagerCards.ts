@@ -25,7 +25,7 @@ export const wagerCards: any[] = [
 		keywords: ['wager'],
 		wagerEffect: { type: 'double_blinds_bonus_multiplier', multiplierBonus: 0.1 },
 		collectible: true,
-		set: 'core'
+		set: 'genesis'
 	},
 	{
 		id: 31925,
@@ -42,7 +42,7 @@ export const wagerCards: any[] = [
 		keywords: ['wager'],
 		wagerEffect: { type: 'reduce_fold_penalty', value: 2 },
 		collectible: true,
-		set: 'core'
+		set: 'genesis'
 	},
 	{
 		id: 31926,
@@ -58,7 +58,7 @@ export const wagerCards: any[] = [
 		keywords: ['wager'],
 		wagerEffect: { type: 'showdown_coin_flip', damage: 5, chance: 0.5 },
 		collectible: true,
-		set: 'core'
+		set: 'genesis'
 	},
 	{
 		id: 31927,
@@ -75,7 +75,7 @@ export const wagerCards: any[] = [
 		keywords: ['wager', 'taunt'],
 		wagerEffect: { type: 'increase_min_bet', value: 3 },
 		collectible: true,
-		set: 'core'
+		set: 'genesis'
 	},
 	{
 		id: 31928,
@@ -91,7 +91,7 @@ export const wagerCards: any[] = [
 		keywords: ['stealth', 'wager'],
 		wagerEffect: { type: 'hide_bet_actions' },
 		collectible: true,
-		set: 'core'
+		set: 'genesis'
 	},
 	{
 		id: 31929,
@@ -108,7 +108,7 @@ export const wagerCards: any[] = [
 		keywords: ['wager'],
 		wagerEffect: { type: 'peek_next_community_card' },
 		collectible: true,
-		set: 'core'
+		set: 'genesis'
 	},
 	{
 		id: 31930,
@@ -124,7 +124,7 @@ export const wagerCards: any[] = [
 		keywords: ['wager'],
 		wagerEffect: { type: 'all_in_bonus_with_cost', bonusDamage: 10, selfDamage: 5 },
 		collectible: true,
-		set: 'core'
+		set: 'genesis'
 	},
 	{
 		id: 31931,
@@ -140,7 +140,7 @@ export const wagerCards: any[] = [
 		keywords: ['divine_shield', 'wager'],
 		wagerEffect: { type: 'showdown_win_armor', value: 5 },
 		collectible: true,
-		set: 'core'
+		set: 'genesis'
 	},
 	{
 		id: 31932,
@@ -157,7 +157,7 @@ export const wagerCards: any[] = [
 		keywords: ['wager'],
 		wagerEffect: { type: 'showdown_hand_rank_draw', minRank: 4, drawCount: 2 },
 		collectible: true,
-		set: 'core'
+		set: 'genesis'
 	},
 	{
 		id: 31933,
@@ -174,7 +174,7 @@ export const wagerCards: any[] = [
 		keywords: ['wager'],
 		wagerEffect: { type: 'showdown_aoe_damage', value: 2 },
 		collectible: true,
-		set: 'core'
+		set: 'genesis'
 	},
 	{
 		id: 31934,
@@ -191,7 +191,7 @@ export const wagerCards: any[] = [
 		keywords: ['wager'],
 		wagerEffect: { type: 'on_opponent_fold_heal', value: 5 },
 		collectible: true,
-		set: 'core'
+		set: 'genesis'
 	},
 	{
 		id: 31935,
@@ -208,7 +208,7 @@ export const wagerCards: any[] = [
 		keywords: ['rush', 'wager'],
 		wagerEffect: { type: 'all_in_buff_minions', buffAttack: 2 },
 		collectible: true,
-		set: 'core'
+		set: 'genesis'
 	},
 	{
 		id: 31936,
@@ -224,7 +224,7 @@ export const wagerCards: any[] = [
 		keywords: ['wager'],
 		wagerEffect: { type: 'hand_rank_upgrade', ranks: 1 },
 		collectible: true,
-		set: 'core'
+		set: 'genesis'
 	},
 	{
 		id: 31937,
@@ -240,7 +240,7 @@ export const wagerCards: any[] = [
 		keywords: ['wager'],
 		wagerEffect: { type: 'showdown_win_rank_damage' },
 		collectible: true,
-		set: 'core'
+		set: 'genesis'
 	},
 	{
 		id: 31938,
@@ -256,7 +256,7 @@ export const wagerCards: any[] = [
 		keywords: ['taunt', 'wager'],
 		wagerEffect: { type: 'reveal_opponent_hole_cards' },
 		collectible: true,
-		set: 'core'
+		set: 'genesis'
 	},
 	{
 		id: 31939,
@@ -272,6 +272,6 @@ export const wagerCards: any[] = [
 		keywords: ['wager'],
 		wagerEffect: { type: 'double_showdown_multiplier' },
 		collectible: true,
-		set: 'core'
+		set: 'genesis'
 	},
 ];

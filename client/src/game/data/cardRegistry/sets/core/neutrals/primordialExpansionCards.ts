@@ -24,7 +24,7 @@ export const primordialExpansionCards: CardData[] = [
 		attack: 1,
 		health: 1,
 		type: 'minion',
-		rarity: 'basic',
+		rarity: 'common',
 		class: 'Neutral',
 		race: 'Titan',
 		description: 'Spell Damage +1. If Vili-Spark and Ve-Spark survive until your next turn, merge into Aesir Ascendant.',
@@ -39,7 +39,7 @@ export const primordialExpansionCards: CardData[] = [
 		attack: 1,
 		health: 1,
 		type: 'minion',
-		rarity: 'basic',
+		rarity: 'common',
 		class: 'Neutral',
 		race: 'Titan',
 		description: 'Taunt. If Odin-Spark and Ve-Spark survive until your next turn, merge into Aesir Ascendant.',
@@ -54,7 +54,7 @@ export const primordialExpansionCards: CardData[] = [
 		attack: 1,
 		health: 1,
 		type: 'minion',
-		rarity: 'basic',
+		rarity: 'common',
 		class: 'Neutral',
 		race: 'Titan',
 		description: 'Adjacent minions have +1 Attack. If Odin-Spark and Vili-Spark survive until your next turn, merge into Aesir Ascendant.',
@@ -69,7 +69,7 @@ export const primordialExpansionCards: CardData[] = [
 		attack: 6,
 		health: 6,
 		type: 'minion',
-		rarity: 'basic',
+		rarity: 'common',
 		class: 'Neutral',
 		race: 'Titan',
 		description: 'Taunt. Spell Damage +1. Adjacent minions have +1 Attack.',
@@ -225,7 +225,7 @@ export const primordialExpansionCards: CardData[] = [
 				endOfTurnEffect: 'random_damage_enemies'
 			}
 		],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 
@@ -255,7 +255,7 @@ export const primordialExpansionCards: CardData[] = [
 				value: 2
 			}
 		],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 
@@ -278,7 +278,7 @@ export const primordialExpansionCards: CardData[] = [
 			value: 1,
 			targetType: 'all_enemy_minions'
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 

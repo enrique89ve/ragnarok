@@ -21,7 +21,7 @@ export const petTokens: CardData[] = [
 		health: 1,
 		race: 'Beast',
 		keywords: [],
-		set: 'core',
+		set: 'genesis',
 		collectible: false
 	},
 	{
@@ -36,7 +36,7 @@ export const petTokens: CardData[] = [
 		attack: 1,
 		health: 1,
 		keywords: [],
-		set: 'core',
+		set: 'genesis',
 		collectible: false
 	},
 	{
@@ -51,7 +51,7 @@ export const petTokens: CardData[] = [
 		attack: 0,
 		health: 2,
 		keywords: ['taunt'],
-		set: 'core',
+		set: 'genesis',
 		collectible: false
 	},
 	{
@@ -66,7 +66,7 @@ export const petTokens: CardData[] = [
 		attack: 2,
 		health: 2,
 		keywords: ['stealth'],
-		set: 'core',
+		set: 'genesis',
 		collectible: false
 	},
 	{
@@ -81,7 +81,7 @@ export const petTokens: CardData[] = [
 		attack: 2,
 		health: 2,
 		keywords: [],
-		set: 'core',
+		set: 'genesis',
 		collectible: false
 	},
 	{
@@ -96,7 +96,7 @@ export const petTokens: CardData[] = [
 		attack: 3,
 		health: 3,
 		keywords: [],
-		set: 'core',
+		set: 'genesis',
 		collectible: false
 	},
 	{
@@ -111,7 +111,7 @@ export const petTokens: CardData[] = [
 		attack: 4,
 		health: 4,
 		keywords: [],
-		set: 'core',
+		set: 'genesis',
 		collectible: false
 	},
 	{
@@ -126,7 +126,7 @@ export const petTokens: CardData[] = [
 		attack: 3,
 		health: 3,
 		keywords: [],
-		set: 'core',
+		set: 'genesis',
 		collectible: false
 	}
 ];

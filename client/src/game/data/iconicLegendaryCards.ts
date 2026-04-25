@@ -19,8 +19,8 @@ export const   iconicLegendaryCards: CardData[] = [{
 
       type: "minion",
       rarity: 'rare',
-
-      description: "Your Battlecries trigger twice.",
+    set: 'genesis',
+    description: "Your Battlecries trigger twice.",
       flavorText: "Brokkr and Sindri forged Mjölnir, Draupnir, and Gullinbursti in a single wager with Loki — and won. (Skáldskaparmál 35)",
 
       keywords: [],
@@ -40,8 +40,8 @@ export const   iconicLegendaryCards: CardData[] = [{
 
       type: "minion",
       rarity: "mythic",
-
-      description: "Battlecry: Repeat all other Battlecries from cards you played this game (targets chosen randomly).",
+      set: 'genesis',
+    description: "Battlecry: Repeat all other Battlecries from cards you played this game (targets chosen randomly).",
     flavorText: "Jörmungandr encircles all Midgard, tail in teeth. When he releases his grip, the world ends. (Gylfaginning 34)",
       keywords: ["battlecry"],
 
@@ -69,8 +69,8 @@ export const   iconicLegendaryCards: CardData[] = [{
   
   type: "minion",
   rarity: 'rare',
-  
-  description: "After you play a Pirate, summon this minion from your deck.",
+      set: 'genesis',
+    description: "After you play a Pirate, summon this minion from your deck.",
   flavorText: "Ægir's nine daughters are the waves themselves. His raiders ride them fearlessly into battle.",
   
   keywords: [],
@@ -92,8 +92,8 @@ export const   iconicLegendaryCards: CardData[] = [{
 
       type: "minion",
       rarity: 'epic',
-
-      description: "Battlecry: Summon a 1/1 copy of a random minion in your deck.",
+      set: 'genesis',
+    description: "Battlecry: Summon a 1/1 copy of a random minion in your deck.",
     flavorText: "At Ægir's feasts, the mead flowed from Eldhrímnir and the tales grew wilder with each horn. Some revelers never left.",
     keywords: ["battlecry"],
       heroClass: "neutral",
@@ -127,8 +127,8 @@ export const   iconicLegendaryCards: CardData[] = [{
   
   type: "minion",
   rarity: 'rare',
-  
-  description: "When the game starts, add 5 random Mythic minions to your deck.",
+      set: 'genesis',
+    description: "When the game starts, add 5 random Mythic minions to your deck.",
   flavorText: "Erebus, the primordial darkness born of Chaos, dwells where no light has ever reached — not even the light of memory.",
   
   keywords: [],
@@ -150,8 +150,8 @@ export const   iconicLegendaryCards: CardData[] = [{
   
   type: "minion",
   rarity: 'rare',
-  
-  description: "Stealth. After this attacks and kills a minion, summon 2 Nagas from your deck.",
+      set: 'genesis',
+    description: "Stealth. After this attacks and kills a minion, summon 2 Nagas from your deck.",
   flavorText: "Triton, son of Poseidon, carries the conch whose blast calms or rouses the sea. Even monsters pause when it sounds. (Apollodorus 1.4.6)",
   
   keywords: ["stealth"],
@@ -174,8 +174,8 @@ export const   iconicLegendaryCards: CardData[] = [{
   
   type: "minion",
   rarity: 'rare',
-  
-  description: "At the end of your turn, reduce the Cost of cards in your hand by (1).",
+      set: 'genesis',
+    description: "At the end of your turn, reduce the Cost of cards in your hand by (1).",
   flavorText: "King Midas begged Dionysus to take back the golden touch — but by then, even his daughter was cold metal. (Ovid, Metamorphoses XI)",
   
   keywords: [],
@@ -194,8 +194,8 @@ export const   iconicLegendaryCards: CardData[] = [{
   
   type: "minion",
   rarity: 'rare',
-  
-  description: "Your minions trigger their Deathrattles twice.",
+      set: 'genesis',
+    description: "Your minions trigger their Deathrattles twice.",
   flavorText: "In Hel's domain, the dead do not rest — they serve. Those who displease her die a second death, slower than the first.",
   
   keywords: [],
@@ -214,8 +214,8 @@ export const   iconicLegendaryCards: CardData[] = [{
 
       type: "minion",
       rarity: "mythic",
-
-      description: "Deathrattle: If Magni (Dwarf god) also died this game, summon Surtr's Creation.",
+      set: 'genesis',
+    description: "Deathrattle: If Magni (Dwarf god) also died this game, summon Surtr's Creation.",
       flavorText: "After Ragnarök, Móði and Magni inherit Mjölnir from their fallen father — the only sons strong enough to lift it. (Vafþrúðnismál 51)",
 
       keywords: ["deathrattle"],
@@ -242,8 +242,8 @@ export const   iconicLegendaryCards: CardData[] = [{
 
       type: "minion",
       rarity: 'epic',
-
-      description: "Deathrattle: If Móði (Thor's son) also died this game, summon Surtr's Creation.",
+      set: 'genesis',
+    description: "Deathrattle: If Móði (Thor's son) also died this game, summon Surtr's Creation.",
     flavorText: "At three nights old, Magni lifted Hrungnir's leg from Thor's throat — the only being in all the realms strong enough. (Skáldskaparmál 17)",
       keywords: ["deathrattle"],
 
@@ -291,8 +291,8 @@ export const   iconicLegendaryCards: CardData[] = [{
   
   type: "minion",
   rarity: 'rare',
-  
-  description: "At the end of each turn, summon all friendly minions that died this turn.",
+      set: 'genesis',
+    description: "At the end of each turn, summon all friendly minions that died this turn.",
   flavorText: "Niflheim's cold does not destroy — it preserves. The dead there do not decay. They accumulate.",
   keywords: [],
   
@@ -311,8 +311,8 @@ export const   iconicLegendaryCards: CardData[] = [{
 
   type: "minion",
   rarity: 'rare',
-
-  description: "Whenever you draw a card, add a copy of it to your hand. (Once per turn)",
+      set: 'genesis',
+    description: "Whenever you draw a card, add a copy of it to your hand. (Once per turn)",
   flavorText: "Ladon, the hundred-headed serpent-dragon, coils around the tree of the Hesperides. He never sleeps — each head watches a different star. (Apollodorus 2.5.11)",
   keywords: [],
   
@@ -335,8 +335,8 @@ export const   iconicLegendaryCards: CardData[] = [{
 
       type: "minion",
       rarity: 'epic',
-
-      description: "Battlecry: Add 2 random spells from your opponent's class to your hand.",
+      set: 'genesis',
+    description: "Battlecry: Add 2 random spells from your opponent's class to your hand.",
       flavorText: "Father of all monsters, Typhon claims dominion over all dragons. The gods themselves once fled from his wrath.",
 
       keywords: ["battlecry"],
@@ -369,8 +369,8 @@ export const   iconicLegendaryCards: CardData[] = [{
 
       type: "minion",
       rarity: 'epic',
-
-      description: "Taunt. Deathrattle: If you're holding a Dragon, deal 3 damage to all minions.",
+      set: 'genesis',
+    description: "Taunt. Deathrattle: If you're holding a Dragon, deal 3 damage to all minions.",
       flavorText: "The wolf who chases the sun will one day swallow it whole.",
 
       keywords: ["taunt", "deathrattle"],
@@ -400,8 +400,8 @@ export const   iconicLegendaryCards: CardData[] = [{
 
       type: "minion",
       rarity: 'rare',
-
-      description: "Deathrattle: Deal 8 damage to all minions.",
+      set: 'genesis',
+    description: "Deathrattle: Deal 8 damage to all minions.",
     flavorText: "Born from the primordial chaos, its death brings destruction to all around it.",
       keywords: ["deathrattle"],
 
@@ -427,8 +427,8 @@ export const   iconicLegendaryCards: CardData[] = [{
 
       type: "minion",
       rarity: 'rare',
-
-      description: "Battlecry: The next spell you cast this turn costs Health instead of Mana.",
+      set: 'genesis',
+    description: "Battlecry: The next spell you cast this turn costs Health instead of Mana.",
     flavorText: "Orthrus guarded the cattle of Geryon until Heracles struck him down with a single blow of his olive-wood club. (Apollodorus 2.5.10)",
       keywords: ["battlecry"],
 
@@ -461,8 +461,8 @@ export const   iconicLegendaryCards: CardData[] = [{
   
   type: "minion",
   rarity: 'rare',
-  
-  description: "Whenever your spells deal damage, restore that much Health to your hero.",
+      set: 'genesis',
+    description: "Whenever your spells deal damage, restore that much Health to your hero.",
   flavorText: "The Æsir discovered that fire could mend as well as destroy when Sigyn caught Loki's venom in a bowl and turned agony into mercy.",
   
   keywords: [],
@@ -484,8 +484,8 @@ export const   iconicLegendaryCards: CardData[] = [{
 
       type: "minion",
       rarity: "mythic",
-
-      description: "Battlecry: If your Gullveig has at least 10 Attack, summon a copy of this minion.",
+      set: 'genesis',
+    description: "Battlecry: If your Gullveig has at least 10 Attack, summon a copy of this minion.",
     flavorText: "Time splits when the titan king demands it. One becomes two, and two become eternity.",
     keywords: ["battlecry", "taunt"],
       heroClass: "neutral",
@@ -513,8 +513,8 @@ export const   iconicLegendaryCards: CardData[] = [{
 
       type: "minion",
       rarity: 'epic',
-
-      description: "Taunt. Battlecry: Draw a Beast, Dragon, and Naga from your deck.",
+      set: 'genesis',
+    description: "Taunt. Battlecry: Draw a Beast, Dragon, and Naga from your deck.",
     flavorText: "Odin sacrificed his eye at Mímir's Well to drink of its wisdom. Mímir's severed head still counsels the Allfather in times of need. (Völuspá 28)",
     keywords: ["taunt", "battlecry"],
       heroClass: "neutral",
@@ -543,8 +543,8 @@ export const   iconicLegendaryCards: CardData[] = [{
 
       type: "minion",
       rarity: 'epic',
-
-      description: "Battlecry: Equip Atiesh, Greatstaff of the Guardian.",
+      set: 'genesis',
+    description: "Battlecry: Equip Atiesh, Greatstaff of the Guardian.",
     flavorText: "Odin's chosen guardian carries Gungnir's twin — a staff that never misses and summons warriors from the spaces between worlds.",
       keywords: ["battlecry"],
 
@@ -572,8 +572,8 @@ export const   iconicLegendaryCards: CardData[] = [{
   
   type: "weapon",
   rarity: 'epic',
-  
-  description: "After you cast a spell, summon a random minion of the same Cost. Lose 1 Durability.",
+      set: 'genesis',
+    description: "After you cast a spell, summon a random minion of the same Cost. Lose 1 Durability.",
   flavorText: "Carved from the first branch to fall from Yggdrasil. Each spell it channels leaves behind the echo of a warrior yet unborn.",
   
   keywords: [],
@@ -593,8 +593,8 @@ export const   iconicLegendaryCards: CardData[] = [{
   
   type: "minion",
   rarity: "mythic",
-  
-  description: "Whenever this attacks, both players draw until they have 3 cards.",
+      set: 'genesis',
+    description: "Whenever this attacks, both players draw until they have 3 cards.",
   flavorText: "The sea god's favored predator circles the battlefield, drawing fortune for all who witness its hunt.",
   
   keywords: [],
@@ -613,8 +613,8 @@ export const   iconicLegendaryCards: CardData[] = [{
 
       type: "minion",
       rarity: "mythic",
-
-      description: "Battlecry and   Deathrattle: Summon a Yggdrasil Golem.",
+      set: 'genesis',
+    description: "Battlecry and   Deathrattle: Summon a Yggdrasil Golem.",
     flavorText: "Artemis walks between the moonlit groves, and where her shadow falls, new life takes root from old death. (Homeric Hymn 27)",
     keywords: ["battlecry", "deathrattle"],
       heroClass: "neutral",
@@ -648,8 +648,8 @@ export const   iconicLegendaryCards: CardData[] = [{
 
       type: "minion",
       rarity: 'epic',
-
-      description: "Taunt.   Deathrattle: Shuffle 'The Storm Guardian' into your deck.",
+      set: 'genesis',
+    description: "Taunt.   Deathrattle: Shuffle 'The Storm Guardian' into your deck.",
     flavorText: "Argus Panoptes had a hundred eyes, and even in sleep, fifty remained open. Hera trusted him above all others. (Apollodorus 2.1.3)",
     keywords: ["taunt", "deathrattle"],
       heroClass: "shaman",
@@ -694,8 +694,8 @@ export const   iconicLegendaryCards: CardData[] = [{
 
       type: "minion",
       rarity: 'epic',
-
-      description: "Battlecry: Fill your board with 1/1 Whelps.",
+      set: 'genesis',
+    description: "Battlecry: Fill your board with 1/1 Whelps.",
       flavorText: "When Heracles stole the golden apples, Ladon's hundred heads wept as one. The Hesperides placed his image among the stars. (Apollodorus 2.5.11)",
 
       keywords: ["battlecry"],
@@ -725,8 +725,8 @@ export const   iconicLegendaryCards: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "A young dragon learning to breathe fire.",
+      set: 'genesis',
+    description: "A young dragon learning to breathe fire.",
   flavorText: "A baby dragon. Aww, it's so cute! And deadly.",
   keywords: [],
   
@@ -746,8 +746,8 @@ export const   iconicLegendaryCards: CardData[] = [{
   
   type: "minion",
   rarity: 'rare',
-  
-  description: "At the end of each turn, gain +1/+1.",
+      set: 'genesis',
+    description: "At the end of each turn, gain +1/+1.",
   flavorText: "The titan who bears the weight of worlds grows ever stronger.",
   keywords: [],
   
@@ -766,8 +766,8 @@ export const   iconicLegendaryCards: CardData[] = [{
   
   type: "minion",
   rarity: "mythic",
-  
-  description: "At the end of your turn, summon a 2/2 Wolf with Taunt.",
+      set: 'genesis',
+    description: "At the end of your turn, summon a 2/2 Wolf with Taunt.",
   flavorText: "The great wolf who will devour Odin at Ragnarök.",
   keywords: [],
   
@@ -786,8 +786,8 @@ export const   iconicLegendaryCards: CardData[] = [{
   
   type: "minion",
   rarity: 'rare',
-  
-  description: "After you play a card, summon a 2/1 Storm Spawn.",
+      set: 'genesis',
+    description: "After you play a card, summon a 2/1 Storm Spawn.",
   flavorText: "Father of all monsters, his very presence spawns chaos.",
   keywords: [],
   
@@ -810,8 +810,8 @@ export const   iconicLegendaryCards: CardData[] = [{
 
       type: "minion",
       rarity: 'rare',
-
-      description: "Deathrattle: Summon a 3/3 Sindri's Apprentice for your opponent.",
+      set: 'genesis',
+    description: "Deathrattle: Summon a 3/3 Sindri's Apprentice for your opponent.",
       flavorText: "Descended from the legendary Nemean Lion, its hide is impervious but its appetite knows no bounds.",
 
       keywords: ["deathrattle"],
@@ -842,8 +842,8 @@ export const   iconicLegendaryCards: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "A famed apprentice of the dwarven smith.",
+      set: 'genesis',
+    description: "A famed apprentice of the dwarven smith.",
   flavorText: "Sindri's apprentices learn the sacred art of svartalfar smithing: fold the metal seven times, quench it in starlight, and never blink.",
   
   keywords: [],
@@ -862,8 +862,8 @@ export const   iconicLegendaryCards: CardData[] = [{
 
       type: "minion",
       rarity: 'rare',
-
-      description: "Battlecry: Give your opponent 2 Bananas.",
+      set: 'genesis',
+    description: "Battlecry: Give your opponent 2 Bananas.",
     flavorText: "The divine monkey god shares his bounty, for better or worse.",
       keywords: ["battlecry"],
 
@@ -893,8 +893,8 @@ export const   iconicLegendaryCards: CardData[] = [{
 
       type: "spell",
       rarity: "common",
-
-      description: "Give a minion +1/+1.",
+      set: 'genesis',
+    description: "Give a minion +1/+1.",
     flavorText: "Hanuman offered fruit to Rama as a gesture of devotion. Even the gods accept humble gifts graciously. (Ramayana)",
       keywords: [],
 
@@ -924,8 +924,8 @@ export const   iconicLegendaryCards: CardData[] = [{
 
       type: "minion",
       rarity: 'rare',
-
-      description: "Battlecry: Give your weapon +1/+1.",
+      set: 'genesis',
+    description: "Battlecry: Give your weapon +1/+1.",
     flavorText: "Ægir's hall beneath the waves gleams with gold brighter than firelight. Those he invites to feast rarely wish to leave. (Lokasenna, prose intro)",
       keywords: ["battlecry"],
 
@@ -956,8 +956,8 @@ export const   iconicLegendaryCards: CardData[] = [{
 
       type: "minion",
       rarity: "mythic",
-
-      description: "Battlecry: Give both players the power to ROCK! (with a Power Chord card)",
+      set: 'genesis',
+    description: "Battlecry: Give both players the power to ROCK! (with a Power Chord card)",
       flavorText: "The mountain-queen Skaði chose her husband by his feet alone — and mistook Njörðr's sea-washed soles for Baldr's. (Gylfaginning 23)",
 
       keywords: ["battlecry"],

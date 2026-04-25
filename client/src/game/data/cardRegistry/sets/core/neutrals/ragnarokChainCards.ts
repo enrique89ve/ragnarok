@@ -26,7 +26,7 @@ export const ragnarokChainCards: CardData[] = [
 		chainEffect: {
 			onPartnerDeath: { type: 'buff_self', value: 5, keywords: ['rush'] }
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -43,7 +43,7 @@ export const ragnarokChainCards: CardData[] = [
 		keywords: ['taunt'],
 		chainPartner: 30401,
 		chainEffect: {},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 
@@ -64,7 +64,7 @@ export const ragnarokChainCards: CardData[] = [
 		chainEffect: {
 			onPartnerDeath: { type: 'buff_self', value: 3, keywords: ['windfury'] }
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -83,7 +83,7 @@ export const ragnarokChainCards: CardData[] = [
 		chainEffect: {
 			onPartnerDeath: { type: 'buff_self', value: 3, keywords: ['windfury'] }
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 
@@ -106,7 +106,7 @@ export const ragnarokChainCards: CardData[] = [
 			onBothInPlay: { type: 'buff_self', value: 2 },
 			onPartnerDeath: { type: 'draw', value: 2 }
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -127,7 +127,7 @@ export const ragnarokChainCards: CardData[] = [
 			onBothInPlay: { type: 'buff_self', value: 2 },
 			onPartnerDeath: { type: 'draw', value: 2 }
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 
@@ -149,7 +149,7 @@ export const ragnarokChainCards: CardData[] = [
 		chainEffect: {
 			onPartnerPlay: { type: 'buff_self', value: 3 }
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -169,7 +169,7 @@ export const ragnarokChainCards: CardData[] = [
 		chainEffect: {
 			onPartnerDeath: { type: 'transform_self', value: 6 }
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 
@@ -191,7 +191,7 @@ export const ragnarokChainCards: CardData[] = [
 			onBothInPlay: { type: 'grant_divine_shield', value: 0 },
 			onPartnerDeath: { type: 'gain_taunt_and_health', value: 2 }
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -211,7 +211,7 @@ export const ragnarokChainCards: CardData[] = [
 			onBothInPlay: { type: 'grant_divine_shield', value: 0 },
 			onPartnerDeath: { type: 'gain_taunt_and_health', value: 2 }
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	}
 ];

@@ -14,7 +14,7 @@ export const mageCards: CardData[] = [
     class: "Mage",
     keywords: ["spell_trigger"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 14002,
@@ -32,7 +32,7 @@ export const mageCards: CardData[] = [
       value: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 14003,
@@ -47,7 +47,7 @@ export const mageCards: CardData[] = [
     class: "Mage",
     keywords: ["battlecry"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 14004,
@@ -61,7 +61,7 @@ export const mageCards: CardData[] = [
     rarity: "common",
     class: "Mage",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 14005,
@@ -76,7 +76,7 @@ export const mageCards: CardData[] = [
     class: "Mage",
     keywords: ["spell_trigger"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 14006,
@@ -92,7 +92,7 @@ export const mageCards: CardData[] = [
     race: "Elemental",
     keywords: ["freeze_on_damage"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 14009,
@@ -110,7 +110,7 @@ export const mageCards: CardData[] = [
       summonCardId: 14010
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 14010,
@@ -125,7 +125,7 @@ export const mageCards: CardData[] = [
     class: "Neutral",
     race: "Beast",
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 14012,
@@ -138,7 +138,7 @@ export const mageCards: CardData[] = [
     class: "Mage",
     keywords: ["secret"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 14013,
@@ -158,7 +158,7 @@ export const mageCards: CardData[] = [
       condition: "is_frozen"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 32001,
@@ -177,7 +177,7 @@ export const mageCards: CardData[] = [
       spellDamageMultiplier: 2
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 32002,
@@ -197,7 +197,7 @@ export const mageCards: CardData[] = [
       isRandom: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 32003,
@@ -215,7 +215,7 @@ export const mageCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 32004,
@@ -234,7 +234,7 @@ export const mageCards: CardData[] = [
     },
     keywords: ["freeze"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 32005,
@@ -254,7 +254,7 @@ export const mageCards: CardData[] = [
     },
     keywords: ["freeze"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 32006,
@@ -272,7 +272,7 @@ export const mageCards: CardData[] = [
       requiresTarget: false
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 32008,
@@ -291,7 +291,7 @@ export const mageCards: CardData[] = [
       requiresTarget: false
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 32009,
@@ -311,7 +311,7 @@ export const mageCards: CardData[] = [
     },
     keywords: ["freeze"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 32010,
@@ -329,7 +329,7 @@ export const mageCards: CardData[] = [
       requiresTarget: false
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 32011,
@@ -349,7 +349,7 @@ export const mageCards: CardData[] = [
     },
     keywords: ["freeze"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 32012,
@@ -367,7 +367,7 @@ export const mageCards: CardData[] = [
       requiresTarget: false
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 32013,
@@ -385,7 +385,7 @@ export const mageCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 32015,
@@ -404,7 +404,7 @@ export const mageCards: CardData[] = [
       costReductionPerDeadMinion: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 32019,
@@ -417,7 +417,7 @@ export const mageCards: CardData[] = [
     class: "Mage",
     keywords: ["secret"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 32018,
@@ -430,7 +430,7 @@ export const mageCards: CardData[] = [
     class: "Mage",
     keywords: ["secret"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 32031,
@@ -445,7 +445,7 @@ export const mageCards: CardData[] = [
     class: "Mage",
     keywords: ["taunt"],
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 20015,
@@ -460,7 +460,7 @@ export const mageCards: CardData[] = [
     keywords: [],
     class: "Mage",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 20117,
@@ -476,7 +476,7 @@ export const mageCards: CardData[] = [
     race: "Elemental",
     class: "Mage",
     collectible: true,
-    set: "core",
+    set: "genesis",
     deathrattle: {
       type: "damage",
       targetType: "all_minions",
@@ -496,7 +496,7 @@ export const mageCards: CardData[] = [
     keywords: [],
     class: "Mage",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 20808,
@@ -511,7 +511,7 @@ export const mageCards: CardData[] = [
     keywords: ["deathrattle"],
     class: "Mage",
     collectible: true,
-    set: "core",
+    set: "genesis",
     deathrattle: {
       type: "add_card",
       targetType: "none",
@@ -532,7 +532,7 @@ export const mageCards: CardData[] = [
     keywords: [],
     class: "Mage",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 20030,
@@ -546,7 +546,7 @@ export const mageCards: CardData[] = [
     class: "Mage",
     armorGain: 5,
     collectible: true,
-    set: "core",
+    set: "genesis",
     battlecry: {
       type: "summon",
       requiresTarget: false,
@@ -568,7 +568,7 @@ export const mageCards: CardData[] = [
     race: "Elemental",
     class: "Mage",
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   // === Dormant Card ===
   {
@@ -585,7 +585,7 @@ export const mageCards: CardData[] = [
     keywords: ["dormant"],
     class: "Mage",
     collectible: true,
-    set: "core",
+    set: "genesis",
     dormantTurns: 2,
     awakenEffect: {
       type: "damage",
@@ -612,7 +612,7 @@ export const mageCards: CardData[] = [
       targetType: "none"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 29003,
@@ -634,7 +634,7 @@ export const mageCards: CardData[] = [
       conditionalTarget: "secret"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Spellburst Card ===
   {
@@ -656,7 +656,7 @@ export const mageCards: CardData[] = [
       consumed: false
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Quest Cards ===
   {
@@ -678,7 +678,7 @@ export const mageCards: CardData[] = [
       cardId: 70011
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 70011,
@@ -694,7 +694,7 @@ export const mageCards: CardData[] = [
       type: "extra_turn"
     },
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   // === Highlander Card ===
   {
@@ -715,7 +715,7 @@ export const mageCards: CardData[] = [
       value: 0
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === New Elemental Spells ===
   {
@@ -736,7 +736,7 @@ export const mageCards: CardData[] = [
       adjacentDamage: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 80011,
@@ -756,7 +756,7 @@ export const mageCards: CardData[] = [
       applyStatus: "burn"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Seidr & Spell Damage Expansion ===
   {
@@ -777,7 +777,7 @@ export const mageCards: CardData[] = [
       isRandom: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38002,
@@ -795,7 +795,7 @@ export const mageCards: CardData[] = [
       requiresTarget: false
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38003,
@@ -813,7 +813,7 @@ export const mageCards: CardData[] = [
       requiresTarget: false
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38004,
@@ -831,7 +831,7 @@ export const mageCards: CardData[] = [
       requiresTarget: false
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38005,
@@ -847,7 +847,7 @@ export const mageCards: CardData[] = [
     race: "Elemental",
     keywords: ["spell_damage"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38006,
@@ -862,7 +862,7 @@ export const mageCards: CardData[] = [
     class: "Mage",
     keywords: ["spell_damage"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38007,
@@ -880,7 +880,7 @@ export const mageCards: CardData[] = [
       requiresTarget: false
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38008,
@@ -902,7 +902,7 @@ export const mageCards: CardData[] = [
       targetType: "none"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38009,
@@ -922,7 +922,7 @@ export const mageCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38010,
@@ -942,6 +942,6 @@ export const mageCards: CardData[] = [
       value: 2
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   }
 ];

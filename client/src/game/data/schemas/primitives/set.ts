@@ -4,15 +4,15 @@
  * Orthogonal to rarity. Set answers "where did this card come from?",
  * rarity answers "how scarce is it within its set?".
  *
- *  - 'free'    : starter pool, infinite supply, never on-chain.
- *                Identical combat rules to genesis cards; differs only in meta layers
- *                (XP curve, eitr economy, marketplace, pack pools, NFT ownership).
+ *  - 'starter' : starter pool, infinite supply, never on-chain. Every player has these
+ *                from day one. Identical combat rules to genesis cards; differs only in
+ *                meta layers (XP curve, eitr economy, marketplace, pack pools, NFT ownership).
  *  - 'genesis' : the single sealed NFT collection. Finite supply locked at
  *                Genesis ceremony (see docs/GENESIS_RUNBOOK.md). Mintable on Hive.
  */
 import { z } from 'zod';
 
-export const SETS = ['free', 'genesis'] as const;
+export const SETS = ['starter', 'genesis'] as const;
 export type Set = (typeof SETS)[number];
 export const SetSchema = z.enum(SETS);
 
@@ -30,7 +30,7 @@ export interface SetRules {
 }
 
 export const SET_RULES = {
-	free: {
+	starter: {
 		collectible: false,
 		onChain: false,
 		mintable: false,

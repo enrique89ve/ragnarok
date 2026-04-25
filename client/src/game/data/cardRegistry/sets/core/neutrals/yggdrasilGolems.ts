@@ -1,7 +1,6 @@
 /**
  * Yggdrasil Golem Cards
  * 
- * Migrated from client/src/game/data/jadeGolemCards.ts on 2026-02-02
  * Contains the Yggdrasil Golem mechanic cards that summon increasingly larger golems
  * for each one summoned during the game
  * 
@@ -21,7 +20,7 @@ export const yggdrasilGolemCards: CardData[] = [
     spellEffect: { type: "summon_yggdrasil_golem" },
     collectible: true,
     class: "Neutral",
-    set: "core"
+    set: "genesis"
   },
   {
     id: 85012,
@@ -33,7 +32,7 @@ export const yggdrasilGolemCards: CardData[] = [
     rarity: "common",
     spellEffect: { type: "shuffle_copies", count: 3, targetCardId: 85011 },
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     collectible: true
   },
   {
@@ -51,7 +50,7 @@ export const yggdrasilGolemCards: CardData[] = [
     deathrattle: {
       type: "summon_yggdrasil_golem"
     },
-    set: "core",
+    set: "genesis",
     collectible: true
   }
 ];
@@ -69,7 +68,7 @@ export const yggdrasilGolemTokens: CardData[] = [
     rarity: "common",
     class: "Neutral",
     keywords: [],
-    set: "core",
+    set: "genesis",
     collectible: false
   }
 ];

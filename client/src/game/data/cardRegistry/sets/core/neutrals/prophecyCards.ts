@@ -26,7 +26,7 @@ export const prophecyCards: CardData[] = [
 			turnsRemaining: 3,
 			resolveEffect: { type: 'destroy_low_attack', threshold: 3 }
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -46,7 +46,7 @@ export const prophecyCards: CardData[] = [
 			turnsRemaining: 2,
 			resolveEffect: { type: 'damage_both_heroes', value: 5 }
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -66,7 +66,7 @@ export const prophecyCards: CardData[] = [
 			turnsRemaining: 3,
 			resolveEffect: { type: 'freeze_all_minions', duration: 2 }
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -86,7 +86,7 @@ export const prophecyCards: CardData[] = [
 			turnsRemaining: 4,
 			resolveEffect: { type: 'destroy_all' }
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -106,7 +106,7 @@ export const prophecyCards: CardData[] = [
 			turnsRemaining: 2,
 			resolveEffect: { type: 'heal', value: 8, targetType: 'friendly_hero' }
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -126,7 +126,7 @@ export const prophecyCards: CardData[] = [
 			turnsRemaining: 3,
 			resolveEffect: { type: 'summon', summonName: 'Fenrir', summonAttack: 8, summonHealth: 8, keywords: ['rush'] }
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -146,7 +146,7 @@ export const prophecyCards: CardData[] = [
 			turnsRemaining: 2,
 			resolveEffect: { type: 'aoe_damage', value: 3, targetType: 'all_enemy_minions' }
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	}
 ];

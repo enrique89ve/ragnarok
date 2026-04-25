@@ -15,7 +15,7 @@ export const warlockCards: CardData[] = [
     race: "Titan",
     keywords: ["taunt"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 17002,
@@ -33,7 +33,7 @@ export const warlockCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 17003,
@@ -50,7 +50,7 @@ export const warlockCards: CardData[] = [
       targetType: "all_characters"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 17004,
@@ -70,7 +70,7 @@ export const warlockCards: CardData[] = [
       discardCount: 2
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 17005,
@@ -88,7 +88,7 @@ export const warlockCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 17006,
@@ -106,7 +106,7 @@ export const warlockCards: CardData[] = [
       healValue: 3
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 17007,
@@ -125,7 +125,7 @@ export const warlockCards: CardData[] = [
       type: "consume_adjacent"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 17008,
@@ -148,7 +148,7 @@ export const warlockCards: CardData[] = [
       count: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 17009,
@@ -163,7 +163,7 @@ export const warlockCards: CardData[] = [
       type: "destroy_all_minions"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 17010,
@@ -184,7 +184,7 @@ export const warlockCards: CardData[] = [
       targetType: "friendly_hero"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 17101,
@@ -203,7 +203,7 @@ export const warlockCards: CardData[] = [
       type: "replace_hero"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 17102,
@@ -220,7 +220,7 @@ export const warlockCards: CardData[] = [
       condition: "titan"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 17103,
@@ -237,7 +237,7 @@ export const warlockCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 17105,
@@ -254,7 +254,7 @@ export const warlockCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 17501,
@@ -269,7 +269,7 @@ export const warlockCards: CardData[] = [
     class: "Warlock",
     race: "Titan",
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 17506,
@@ -284,7 +284,7 @@ export const warlockCards: CardData[] = [
     class: "Warlock",
     race: "Titan",
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 20022,
@@ -297,7 +297,7 @@ export const warlockCards: CardData[] = [
     keywords: [],
     class: "Warlock",
     collectible: true,
-    set: "core",
+    set: "genesis",
     spellEffect: {
       type: "draw",
       value: 3,
@@ -320,7 +320,7 @@ export const warlockCards: CardData[] = [
     class: "Warlock",
     armor: 5,
     collectible: true,
-    set: "core",
+    set: "genesis",
     battlecry: {
       type: "summon",
       requiresTarget: false,
@@ -342,7 +342,7 @@ export const warlockCards: CardData[] = [
     keywords: [],
     class: "Warlock",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 20118,
@@ -357,7 +357,7 @@ export const warlockCards: CardData[] = [
     keywords: ["battlecry"],
     class: "Warlock",
     collectible: true,
-    set: "core",
+    set: "genesis",
     battlecry: {
       type: "buff",
       requiresTarget: false,
@@ -378,7 +378,7 @@ export const warlockCards: CardData[] = [
     keywords: [],
     class: "Warlock",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Dormant Card ===
   {
@@ -395,7 +395,7 @@ export const warlockCards: CardData[] = [
     keywords: ["dormant"],
     class: "Warlock",
     collectible: true,
-    set: "core",
+    set: "genesis",
     dormantTurns: 2,
     awakenEffect: {
       type: "buff_hand",
@@ -418,7 +418,7 @@ export const warlockCards: CardData[] = [
     keywords: ["frenzy", "taunt"],
     class: "Warlock",
     collectible: true,
-    set: "core",
+    set: "genesis",
     frenzyEffect: {
       type: "heal",
       targetType: "friendly_hero",
@@ -444,7 +444,7 @@ export const warlockCards: CardData[] = [
       targetType: "none"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Lifesteal Card ===
   {
@@ -464,9 +464,8 @@ export const warlockCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
-  // === Migrated from legacy warlockCards.ts ===
   {
     id: 17104,
     name: "Surtr's Fist",
@@ -482,7 +481,7 @@ export const warlockCards: CardData[] = [
       triggerOnDiscard: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 17106,
@@ -504,7 +503,7 @@ export const warlockCards: CardData[] = [
       }
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 17107,
@@ -523,7 +522,7 @@ export const warlockCards: CardData[] = [
       count: 3
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 17108,
@@ -542,7 +541,7 @@ export const warlockCards: CardData[] = [
       type: "destroy_random_minion_both_sides"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 17109,
@@ -571,7 +570,7 @@ export const warlockCards: CardData[] = [
       }
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 17110,
@@ -590,7 +589,7 @@ export const warlockCards: CardData[] = [
       count: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Warlock Spell Cards ===
   {
@@ -608,7 +607,7 @@ export const warlockCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 37002,
@@ -630,7 +629,7 @@ export const warlockCards: CardData[] = [
       }
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 37003,
@@ -653,7 +652,7 @@ export const warlockCards: CardData[] = [
       }
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 37004,
@@ -674,7 +673,7 @@ export const warlockCards: CardData[] = [
       }
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 37005,
@@ -694,7 +693,7 @@ export const warlockCards: CardData[] = [
       ]
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 37006,
@@ -718,7 +717,7 @@ export const warlockCards: CardData[] = [
       }
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 37007,
@@ -733,7 +732,7 @@ export const warlockCards: CardData[] = [
       type: "next_spell_costs_health"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 37008,
@@ -750,7 +749,7 @@ export const warlockCards: CardData[] = [
       affectBothPlayers: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 37009,
@@ -766,7 +765,7 @@ export const warlockCards: CardData[] = [
       affectBothPlayers: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 37010,
@@ -787,7 +786,7 @@ export const warlockCards: CardData[] = [
       }
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Warlock Tokens ===
   {
@@ -803,7 +802,7 @@ export const warlockCards: CardData[] = [
     flavorText: "What remains when the soul is drained.",
     class: "Warlock",
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 17503,
@@ -817,7 +816,7 @@ export const warlockCards: CardData[] = [
     flavorText: "It's lit.",
     class: "Warlock",
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 17504,
@@ -831,7 +830,7 @@ export const warlockCards: CardData[] = [
     flavorText: "It sweeps on its own. Best not to ask why.",
     class: "Warlock",
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 17505,
@@ -845,7 +844,7 @@ export const warlockCards: CardData[] = [
     flavorText: "Brews something foul. Drinks are not recommended.",
     class: "Warlock",
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   // === Self-Damage Cards (from selfDamageCards.ts) ===
   {
@@ -866,7 +865,7 @@ export const warlockCards: CardData[] = [
       buffAttack: 3
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 47002,
@@ -887,7 +886,7 @@ export const warlockCards: CardData[] = [
       targetType: "friendly_hero"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 47003,
@@ -908,7 +907,7 @@ export const warlockCards: CardData[] = [
       }
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 47004,
@@ -932,7 +931,7 @@ export const warlockCards: CardData[] = [
       targetType: "none"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 47005,
@@ -954,7 +953,7 @@ export const warlockCards: CardData[] = [
       }
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 47006,
@@ -973,7 +972,7 @@ export const warlockCards: CardData[] = [
       health: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 47007,
@@ -992,7 +991,7 @@ export const warlockCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 47008,
@@ -1013,7 +1012,7 @@ export const warlockCards: CardData[] = [
       targetType: "friendly_hero"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 47009,
@@ -1035,7 +1034,7 @@ export const warlockCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 47010,
@@ -1055,7 +1054,7 @@ export const warlockCards: CardData[] = [
       }
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Highlander Card ===
   {
@@ -1077,7 +1076,7 @@ export const warlockCards: CardData[] = [
       targetType: "titan"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Zoo & Discard Expansion ===
   {
@@ -1099,7 +1098,7 @@ export const warlockCards: CardData[] = [
       targetType: "friendly_hero"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38902,
@@ -1119,7 +1118,7 @@ export const warlockCards: CardData[] = [
       health: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38903,
@@ -1141,7 +1140,7 @@ export const warlockCards: CardData[] = [
       }
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38904,
@@ -1159,6 +1158,6 @@ export const warlockCards: CardData[] = [
       targetType: "none"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   }
 ];

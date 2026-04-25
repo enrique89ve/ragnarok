@@ -22,7 +22,7 @@ export const shamanCards: CardData[] = [
       targetType: "any"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 5202,
@@ -42,7 +42,7 @@ export const shamanCards: CardData[] = [
       targetType: "adjacent_minions"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 5115,
@@ -63,7 +63,7 @@ export const shamanCards: CardData[] = [
       targetType: "none"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 5116,
@@ -86,7 +86,7 @@ export const shamanCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 5221,
@@ -105,7 +105,7 @@ export const shamanCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 5222,
@@ -125,7 +125,7 @@ export const shamanCards: CardData[] = [
       targetType: "all_enemy_minions"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 5223,
@@ -143,7 +143,7 @@ export const shamanCards: CardData[] = [
       summonCardId: 5251
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 5118,
@@ -163,7 +163,7 @@ export const shamanCards: CardData[] = [
       duration: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 5119,
@@ -181,7 +181,7 @@ export const shamanCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 5120,
@@ -200,7 +200,7 @@ export const shamanCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 5121,
@@ -219,7 +219,7 @@ export const shamanCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 5122,
@@ -238,7 +238,7 @@ export const shamanCards: CardData[] = [
       targetType: "none"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 5123,
@@ -258,7 +258,7 @@ export const shamanCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 5124,
@@ -279,7 +279,7 @@ export const shamanCards: CardData[] = [
       duration: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 5125,
@@ -299,7 +299,7 @@ export const shamanCards: CardData[] = [
       costReduction: 3
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 5253,
@@ -315,7 +315,7 @@ export const shamanCards: CardData[] = [
     race: "Beast",
     keywords: ["taunt"],
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 5251,
@@ -331,7 +331,7 @@ export const shamanCards: CardData[] = [
     race: "Beast",
     keywords: ["taunt"],
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 5252,
@@ -347,7 +347,7 @@ export const shamanCards: CardData[] = [
     race: "Naga",
     keywords: ["spell_damage", "battlecry"],
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 20102,
@@ -362,7 +362,7 @@ export const shamanCards: CardData[] = [
     keywords: ["battlecry"],
     class: "Shaman",
     collectible: true,
-    set: "core",
+    set: "genesis",
     battlecry: {
       type: "replay_battlecries",
       requiresTarget: false,
@@ -384,7 +384,7 @@ export const shamanCards: CardData[] = [
     race: "Elemental",
     class: "Shaman",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 20126,
@@ -399,7 +399,7 @@ export const shamanCards: CardData[] = [
     keywords: ["taunt", "deathrattle"],
     class: "Shaman",
     collectible: true,
-    set: "core",
+    set: "genesis",
     deathrattle: {
       type: "shuffle",
       targetType: "none",
@@ -420,7 +420,7 @@ export const shamanCards: CardData[] = [
     battlecry: { type: "aoe_damage", targetType: "all_enemy_minions", value: 3 },
     class: "Shaman",
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 20702,
@@ -435,7 +435,7 @@ export const shamanCards: CardData[] = [
     keywords: [],
     class: "Shaman",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 20407,
@@ -450,7 +450,7 @@ export const shamanCards: CardData[] = [
     keywords: ["battlecry"],
     class: "Shaman",
     collectible: true,
-    set: "core",
+    set: "genesis",
     battlecry: {
       type: "add_card",
       requiresTarget: false,
@@ -473,7 +473,7 @@ export const shamanCards: CardData[] = [
     race: "Elemental",
     class: "Shaman",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 40131,
@@ -489,7 +489,7 @@ export const shamanCards: CardData[] = [
     race: "Elemental",
     class: "Shaman",
     collectible: true,
-    set: "core",
+    set: "genesis",
     battlecry: {
       type: "discover",
       requiresTarget: false,
@@ -519,7 +519,7 @@ export const shamanCards: CardData[] = [
     },
     overload: { amount: 2 },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 35006,
@@ -536,7 +536,7 @@ export const shamanCards: CardData[] = [
     race: "Elemental",
     overload: { amount: 3 },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 35007,
@@ -552,7 +552,7 @@ export const shamanCards: CardData[] = [
     class: "Shaman",
     overload: { amount: 2 },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 35008,
@@ -574,7 +574,7 @@ export const shamanCards: CardData[] = [
     },
     overload: { amount: 5 },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 35009,
@@ -594,7 +594,7 @@ export const shamanCards: CardData[] = [
       targetType: "any_minion"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 35010,
@@ -616,7 +616,7 @@ export const shamanCards: CardData[] = [
       targetType: "all_enemy_minions"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 35011,
@@ -636,7 +636,7 @@ export const shamanCards: CardData[] = [
       targetType: "all_friendly"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 35012,
@@ -656,7 +656,7 @@ export const shamanCards: CardData[] = [
       targetType: "any_minion"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 35013,
@@ -678,7 +678,7 @@ export const shamanCards: CardData[] = [
       targetType: "all_minions"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 35015,
@@ -693,7 +693,7 @@ export const shamanCards: CardData[] = [
     flavorText: "Where it walks, storms follow. Where it rests, nothing grows.",
     class: "Shaman",
     collectible: true,
-    set: "core",
+    set: "genesis",
     onPlayCardEffect: {
       type: "summon",
       value: 2,
@@ -714,7 +714,7 @@ export const shamanCards: CardData[] = [
     keywords: ["rush"],
     class: "Shaman",
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 35017,
@@ -734,7 +734,7 @@ export const shamanCards: CardData[] = [
       targetType: "both_players_hand"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 35018,
@@ -754,7 +754,7 @@ export const shamanCards: CardData[] = [
       transformType: "random_mythic_minion"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Echo Card ===
   {
@@ -777,7 +777,7 @@ export const shamanCards: CardData[] = [
       discoveryCount: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Spellburst Card ===
   {
@@ -798,9 +798,8 @@ export const shamanCards: CardData[] = [
       consumed: false
     },
     collectible: true,
-    set: "core"
-  },
-  // === Migrated from additionalClassMinions.ts ===
+    set: "genesis"
+  },
   {
     id: 40015,
     name: "Primordial Fury",
@@ -819,7 +818,7 @@ export const shamanCards: CardData[] = [
       buffHealth: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 40016,
@@ -839,7 +838,7 @@ export const shamanCards: CardData[] = [
       buffHealth: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 40017,
@@ -855,7 +854,7 @@ export const shamanCards: CardData[] = [
     keywords: ["overload"],
     overload: { amount: 1 },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Yggdrasil Golem Cards ===
   {
@@ -875,7 +874,7 @@ export const shamanCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 85203,
@@ -894,7 +893,7 @@ export const shamanCards: CardData[] = [
       type: "summon_yggdrasil_golem"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === New Elemental Spells ===
   {
@@ -915,7 +914,7 @@ export const shamanCards: CardData[] = [
       selfDamageOnSurvive: 2
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 85211,
@@ -939,12 +938,11 @@ export const shamanCards: CardData[] = [
       amount: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
 
   /**
    * Overload Cards
-   * Migrated from client/src/game/data/overloadCards.ts on 2026-02-02
    * Contains Shaman Overload mechanic cards
    */
   // === Evolve, Totem & Overload Expansion ===
@@ -966,7 +964,7 @@ export const shamanCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38202,
@@ -986,7 +984,7 @@ export const shamanCards: CardData[] = [
       value: 1
     }],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38203,
@@ -1007,7 +1005,7 @@ export const shamanCards: CardData[] = [
       targetType: "none"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38204,
@@ -1024,7 +1022,7 @@ export const shamanCards: CardData[] = [
       targetType: "all_friendly_minions"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38205,
@@ -1042,7 +1040,7 @@ export const shamanCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38206,
@@ -1061,7 +1059,7 @@ export const shamanCards: CardData[] = [
       targetType: "all_enemy_minions"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38207,
@@ -1080,7 +1078,7 @@ export const shamanCards: CardData[] = [
       value: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38208,
@@ -1101,6 +1099,6 @@ export const shamanCards: CardData[] = [
       targetType: "all_enemy_minions"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
 ];

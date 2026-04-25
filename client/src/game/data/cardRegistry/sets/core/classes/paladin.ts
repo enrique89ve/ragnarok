@@ -14,7 +14,7 @@ export const paladinCards: CardData[] = [
     class: "Paladin",
     keywords: ["divine_shield", "taunt", "deathrattle"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 8002,
@@ -31,7 +31,7 @@ export const paladinCards: CardData[] = [
       targetType: "all_enemy_minions"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 8003,
@@ -45,7 +45,7 @@ export const paladinCards: CardData[] = [
     rarity: "common",
     class: "Paladin",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 8004,
@@ -64,7 +64,7 @@ export const paladinCards: CardData[] = [
       targetType: "friendly_minion"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 8005,
@@ -82,7 +82,7 @@ export const paladinCards: CardData[] = [
       requiresTarget: false
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 8006,
@@ -99,7 +99,7 @@ export const paladinCards: CardData[] = [
       drawCards: 3
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 8007,
@@ -116,7 +116,7 @@ export const paladinCards: CardData[] = [
       targetType: "any"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 8008,
@@ -128,7 +128,7 @@ export const paladinCards: CardData[] = [
     rarity: "common",
     class: "Paladin",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 8009,
@@ -145,7 +145,7 @@ export const paladinCards: CardData[] = [
       drawCards: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 8010,
@@ -162,7 +162,7 @@ export const paladinCards: CardData[] = [
       damagePerMissile: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 8011,
@@ -179,7 +179,7 @@ export const paladinCards: CardData[] = [
       targetType: "friendly_minion"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 8012,
@@ -196,7 +196,7 @@ export const paladinCards: CardData[] = [
       targetType: "friendly_minion"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 8013,
@@ -213,7 +213,7 @@ export const paladinCards: CardData[] = [
       targetType: "any_minion"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 8014,
@@ -226,7 +226,7 @@ export const paladinCards: CardData[] = [
     class: "Paladin",
     keywords: ["secret"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 8015,
@@ -239,7 +239,7 @@ export const paladinCards: CardData[] = [
     class: "Paladin",
     keywords: ["secret"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 8016,
@@ -252,7 +252,7 @@ export const paladinCards: CardData[] = [
     class: "Paladin",
     keywords: ["secret"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 8540,
@@ -266,7 +266,7 @@ export const paladinCards: CardData[] = [
     rarity: 'epic',
     class: "Paladin",
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 8502,
@@ -280,7 +280,7 @@ export const paladinCards: CardData[] = [
     rarity: "common",
     class: "Paladin",
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 20018,
@@ -295,7 +295,7 @@ export const paladinCards: CardData[] = [
     keywords: ["taunt", "deathrattle"],
     class: "Paladin",
     collectible: true,
-    set: "core",
+    set: "genesis",
     deathrattle: {
       type: "summon",
       targetType: "none"
@@ -314,7 +314,7 @@ export const paladinCards: CardData[] = [
     keywords: ["battlecry"],
     class: "Paladin",
     collectible: true,
-    set: "core",
+    set: "genesis",
     battlecry: {
       type: "draw",
       requiresTarget: false,
@@ -337,7 +337,7 @@ export const paladinCards: CardData[] = [
     class: "Paladin",
     cantBeTargetedBySpells: true,
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 20406,
@@ -352,7 +352,7 @@ export const paladinCards: CardData[] = [
     keywords: ["battlecry"],
     class: "Paladin",
     collectible: true,
-    set: "core",
+    set: "genesis",
     battlecry: {
       type: "set_stats",
       requiresTarget: false,
@@ -380,7 +380,7 @@ export const paladinCards: CardData[] = [
       buffHealth: 2
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Dormant Card ===
   {
@@ -397,7 +397,7 @@ export const paladinCards: CardData[] = [
     keywords: ["dormant"],
     class: "Paladin",
     collectible: true,
-    set: "core",
+    set: "genesis",
     dormantTurns: 2,
     awakenEffect: {
       type: "summon",
@@ -419,7 +419,7 @@ export const paladinCards: CardData[] = [
     keywords: ["lifesteal", "reborn"],
     class: "Paladin",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Spellburst Card ===
   {
@@ -440,7 +440,7 @@ export const paladinCards: CardData[] = [
       consumed: false
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Magnetic Card ===
   {
@@ -457,7 +457,7 @@ export const paladinCards: CardData[] = [
     keywords: ["magnetic"],
     class: "Paladin",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === 2-Mana Class Minions (filling early-game gap) ===
   {
@@ -479,7 +479,7 @@ export const paladinCards: CardData[] = [
       targetType: "friendly_hero"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 8531,
@@ -494,9 +494,8 @@ export const paladinCards: CardData[] = [
     keywords: ["divine_shield"],
     class: "Paladin",
     collectible: true,
-    set: "core"
-  },
-  // === Migrated from additionalClassMinions.ts ===
+    set: "genesis"
+  },
   {
     id: 40005,
     name: "Heimdall's Warden",
@@ -516,7 +515,7 @@ export const paladinCards: CardData[] = [
       setAttack: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 40006,
@@ -531,7 +530,7 @@ export const paladinCards: CardData[] = [
     keywords: ["taunt", "divine_shield"],
     class: "Paladin",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === New Holy Spell ===
   {
@@ -552,7 +551,7 @@ export const paladinCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 40030,
@@ -573,7 +572,7 @@ export const paladinCards: CardData[] = [
       targetType: "friendly_minion"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 40031,
@@ -594,7 +593,7 @@ export const paladinCards: CardData[] = [
       targetType: "all_enemy_minions"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 40032,
@@ -609,7 +608,7 @@ export const paladinCards: CardData[] = [
     keywords: ["taunt", "divine_shield"],
     class: "Paladin",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 40033,
@@ -631,7 +630,7 @@ export const paladinCards: CardData[] = [
       drawCards: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
 
   // ═══════════════════════════════════════════════════════════════
@@ -653,7 +652,7 @@ export const paladinCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 36402,
@@ -672,7 +671,7 @@ export const paladinCards: CardData[] = [
       value: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 36403,
@@ -692,7 +691,7 @@ export const paladinCards: CardData[] = [
       targetType: "all_friendly_minions"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 36404,
@@ -709,7 +708,7 @@ export const paladinCards: CardData[] = [
       targetType: "all_friendly_minions"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 36405,
@@ -724,7 +723,7 @@ export const paladinCards: CardData[] = [
     class: "Paladin",
     keywords: ["divine_shield"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 36406,
@@ -742,7 +741,7 @@ export const paladinCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Token & Divine Shield Expansion ===
   {
@@ -763,7 +762,7 @@ export const paladinCards: CardData[] = [
       grantKeywords: ["divine_shield"]
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38302,
@@ -783,7 +782,7 @@ export const paladinCards: CardData[] = [
       targetType: "all_friendly_minions"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38303,
@@ -798,7 +797,7 @@ export const paladinCards: CardData[] = [
     class: "Paladin",
     keywords: ["divine_shield"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38304,
@@ -819,7 +818,7 @@ export const paladinCards: CardData[] = [
       summonHealth: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38305,
@@ -840,7 +839,7 @@ export const paladinCards: CardData[] = [
       buffHealth: 2
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38306,
@@ -861,7 +860,7 @@ export const paladinCards: CardData[] = [
       buffHealth: 2
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38307,
@@ -881,7 +880,7 @@ export const paladinCards: CardData[] = [
       grantKeywords: ["divine_shield"]
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38308,
@@ -901,7 +900,7 @@ export const paladinCards: CardData[] = [
       targetType: "all_enemy_minions"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Draw & Removal Expansion ===
   {
@@ -921,7 +920,7 @@ export const paladinCards: CardData[] = [
       targetType: "none"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 36408,
@@ -943,7 +942,7 @@ export const paladinCards: CardData[] = [
       }
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 36409,
@@ -957,6 +956,6 @@ export const paladinCards: CardData[] = [
     rarity: "common",
     class: "Paladin",
     collectible: true,
-    set: "core"
+    set: "genesis"
   }
 ];

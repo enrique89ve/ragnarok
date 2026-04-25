@@ -42,7 +42,7 @@ const commonNeutralMinions: CardData[] = [
     health: 1,
     race: 'Naga',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -57,7 +57,7 @@ const commonNeutralMinions: CardData[] = [
     health: 2,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -72,7 +72,7 @@ const commonNeutralMinions: CardData[] = [
     health: 3,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -86,7 +86,7 @@ const commonNeutralMinions: CardData[] = [
     attack: 4,
     health: 5,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -100,7 +100,7 @@ const commonNeutralMinions: CardData[] = [
     attack: 3,
     health: 5,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['taunt'],
     collectible: true
   },
@@ -116,7 +116,7 @@ const commonNeutralMinions: CardData[] = [
     health: 2,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['stealth'],
     collectible: true
   },
@@ -131,7 +131,7 @@ const commonNeutralMinions: CardData[] = [
     attack: 3,
     health: 1,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['divine_shield'],
     collectible: true
   },
@@ -146,7 +146,7 @@ const commonNeutralMinions: CardData[] = [
     attack: 2,
     health: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['windfury'],
     collectible: true
   },
@@ -161,7 +161,7 @@ const commonNeutralMinions: CardData[] = [
     attack: 3,
     health: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['divine_shield'],
     collectible: true
   },
@@ -176,7 +176,7 @@ const commonNeutralMinions: CardData[] = [
     attack: 2,
     health: 4,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -196,7 +196,7 @@ const commonNeutralMinions: CardData[] = [
     attack: 4,
     health: 5,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['windfury'],
     collectible: true
   },
@@ -211,7 +211,7 @@ const commonNeutralMinions: CardData[] = [
     attack: 4,
     health: 4,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -231,7 +231,7 @@ const commonNeutralMinions: CardData[] = [
     attack: 5,
     health: 4,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true,
     keywords: ['battlecry'],
     battlecry: {
@@ -251,7 +251,7 @@ const commonNeutralMinions: CardData[] = [
     attack: 1,
     health: 7,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['taunt'],
     collectible: true
   },
@@ -266,7 +266,7 @@ const commonNeutralMinions: CardData[] = [
     attack: 2,
     health: 2,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true,
     keywords: ['taunt']
   },
@@ -282,7 +282,7 @@ const commonNeutralMinions: CardData[] = [
     health: 4,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['taunt'],
     collectible: true
   },
@@ -298,7 +298,7 @@ const commonNeutralMinions: CardData[] = [
     health: 3,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['taunt'],
     collectible: true
   },
@@ -314,7 +314,7 @@ const commonNeutralMinions: CardData[] = [
     health: 7,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -328,7 +328,7 @@ const commonNeutralMinions: CardData[] = [
     attack: 5,
     health: 4,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['taunt'],
     collectible: true
   },
@@ -343,7 +343,7 @@ const commonNeutralMinions: CardData[] = [
     attack: 3,
     health: 6,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['taunt'],
     collectible: true
   },
@@ -358,7 +358,7 @@ const commonNeutralMinions: CardData[] = [
     attack: 4,
     health: 6,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['enrage'],
     collectible: true
   },
@@ -374,7 +374,7 @@ const commonNeutralMinions: CardData[] = [
     health: 1,
     race: 'Naga',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -389,7 +389,7 @@ const commonNeutralMinions: CardData[] = [
     health: 1,
     race: 'Naga',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -410,7 +410,7 @@ const commonNeutralMinions: CardData[] = [
     health: 5,
     race: 'Elemental',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -430,7 +430,7 @@ const commonNeutralMinions: CardData[] = [
     attack: 1,
     health: 1,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: false},
   {
     id: 5107,
@@ -446,9 +446,8 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['windfury'],
     collectible: true,
-    set: 'core'
-  },
-  // === Migrated from neutralMinions.ts ===
+    set: 'genesis'
+  },
   {
     id: 29970,
     name: 'Volva of the Realms',
@@ -462,7 +461,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'heal',
       value: 3,
@@ -483,7 +482,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['taunt'],
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30014,
@@ -497,7 +496,7 @@ const commonNeutralMinions: CardData[] = [
     health: 3,
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30055,
@@ -512,7 +511,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'heal',
       value: 2,
@@ -533,7 +532,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'summon',
       summonCardId: 30057,
@@ -553,7 +552,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'summon',
       summonCardId: 30059,
@@ -573,7 +572,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'buff',
       targetType: 'friendly_minion',
@@ -595,7 +594,7 @@ const commonNeutralMinions: CardData[] = [
     race: 'Undead',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30062,
@@ -611,7 +610,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['aura'],
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30064,
@@ -626,7 +625,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['divine_shield'],
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30065,
@@ -642,7 +641,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['stealth'],
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30066,
@@ -658,7 +657,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['taunt'],
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30067,
@@ -674,7 +673,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['taunt'],
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30068,
@@ -689,7 +688,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['aura'],
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30069,
@@ -704,7 +703,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['charge'],
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30070,
@@ -719,7 +718,7 @@ const commonNeutralMinions: CardData[] = [
     race: 'Beast',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30071,
@@ -734,7 +733,7 @@ const commonNeutralMinions: CardData[] = [
     race: 'Beast',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30072,
@@ -749,7 +748,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['taunt'],
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30073,
@@ -763,7 +762,7 @@ const commonNeutralMinions: CardData[] = [
     health: 4,
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30074,
@@ -778,7 +777,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'conditional_buff_and_add',
       condition: 'control_automaton',
@@ -800,7 +799,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'summon_multiple',
       summonCardId: 30076,
@@ -820,7 +819,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'buff',
       targetType: 'friendly_automaton',
@@ -842,7 +841,7 @@ const commonNeutralMinions: CardData[] = [
     race: 'Automaton',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30079,
@@ -858,7 +857,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['magnetic', 'rush'],
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30080,
@@ -874,7 +873,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['magnetic', 'taunt'],
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30081,
@@ -890,7 +889,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['taunt', 'battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'self_damage',
       value: 5,
@@ -911,7 +910,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'deal_damage',
       targetType: 'any',
@@ -933,7 +932,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['rush', 'battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'add_to_hand',
       cardId: 30084
@@ -953,7 +952,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'gain_stealth_until_next_turn',
       requiresTarget: false
@@ -972,7 +971,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'buff_hand',
       buffAttack: 1,
@@ -993,7 +992,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['lifesteal', 'battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'deal_damage',
       targetType: 'any',
@@ -1014,7 +1013,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'reduce_hero_power_cost',
       value: 0,
@@ -1033,7 +1032,7 @@ const commonNeutralMinions: CardData[] = [
     health: 4,
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30090,
@@ -1048,7 +1047,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['enrage'],
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30091,
@@ -1063,7 +1062,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['deathrattle'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     deathrattle: {
       type: 'summon_for_opponent',
       summonCardId: 30092
@@ -1081,7 +1080,7 @@ const commonNeutralMinions: CardData[] = [
     health: 3,
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30094,
@@ -1097,7 +1096,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['overkill'],
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30095,
@@ -1113,7 +1112,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'deal_damage_to_hero',
       value: 3,
@@ -1133,7 +1132,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['stealth', 'overkill'],
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30097,
@@ -1149,7 +1148,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: false,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'adapt',
       requiresTarget: false
@@ -1168,7 +1167,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'add_random_to_hand',
       filter: 'attack_5_or_more',
@@ -1189,7 +1188,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'conditional_gain_taunt',
       condition: 'control_2_minions',
@@ -1210,7 +1209,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['stealth'],
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 29975,
@@ -1226,7 +1225,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'conditional_adapt',
       condition: 'played_elemental_last_turn',
@@ -1247,7 +1246,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['taunt'],
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 29977,
@@ -1263,7 +1262,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['deathrattle'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     deathrattle: {
       type: 'deal_damage',
       targetType: 'random_enemy_minion',
@@ -1283,7 +1282,7 @@ const commonNeutralMinions: CardData[] = [
     race: 'Beast',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 29979,
@@ -1299,7 +1298,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['aura'],
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 29980,
@@ -1315,7 +1314,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['taunt', 'poisonous'],
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30108,
@@ -1331,7 +1330,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['deathrattle'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     deathrattle: {
       type: 'shuffle_card',
       cardId: 30109
@@ -1352,7 +1351,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry', 'discover'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'discover',
       value: 3,
@@ -1372,7 +1371,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'return',
       requiresTarget: true,
@@ -1392,7 +1391,7 @@ const commonNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'return',
       requiresTarget: true,
@@ -1412,7 +1411,7 @@ const commonNeutralMinions: CardData[] = [
     health: 2,
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   }
 ];
 
@@ -1429,7 +1428,7 @@ const commonNeutralSpells: CardData[] = [
     rarity: 'common',
     manaCost: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -1451,7 +1450,7 @@ const commonNeutralSpells: CardData[] = [
     rarity: 'common',
     manaCost: 1,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: false,
     spellEffect: {
       type: 'buff',
@@ -1479,7 +1478,7 @@ const rareNeutralMinions: CardData[] = [
     health: 4,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     heroClass: 'neutral',
     keywords: ['battlecry', 'spell_damage'],
     collectible: true,
@@ -1501,7 +1500,7 @@ const rareNeutralMinions: CardData[] = [
     attack: 2,
     health: 5,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -1522,7 +1521,7 @@ const rareNeutralMinions: CardData[] = [
     attack: 2,
     health: 2,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true},
   {
     id: 5042,
@@ -1535,7 +1534,7 @@ const rareNeutralMinions: CardData[] = [
     attack: 4,
     health: 2,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['charge', 'divine_shield'],
     collectible: true
   },
@@ -1551,7 +1550,7 @@ const rareNeutralMinions: CardData[] = [
     health: 5,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -1571,7 +1570,7 @@ const rareNeutralMinions: CardData[] = [
     attack: 3,
     health: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -1585,7 +1584,7 @@ const rareNeutralMinions: CardData[] = [
     attack: 1,
     health: 5,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -1599,7 +1598,7 @@ const rareNeutralMinions: CardData[] = [
     attack: 3,
     health: 5,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -1613,7 +1612,7 @@ const rareNeutralMinions: CardData[] = [
     attack: 7,
     health: 5,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['stealth'],
     collectible: true
   },
@@ -1628,7 +1627,7 @@ const rareNeutralMinions: CardData[] = [
     attack: 4,
     health: 7,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -1649,7 +1648,7 @@ const rareNeutralMinions: CardData[] = [
     health: 3,
     race: 'Automaton',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true},
   {
     id: 5104,
@@ -1663,7 +1662,7 @@ const rareNeutralMinions: CardData[] = [
     health: 4,
     race: 'Automaton',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -1679,15 +1678,14 @@ const rareNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['charge', 'battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'give_mana',
       value: 1,
       targetType: 'opponent',
       permanent: true
     }
-  },
-  // === Migrated from neutralMinions.ts ===
+  },
   {
     id: 30016,
     name: 'Flame Juggler of Muspelheim',
@@ -1700,7 +1698,7 @@ const rareNeutralMinions: CardData[] = [
     health: 2,
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30017,
@@ -1716,7 +1714,7 @@ const rareNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'draw',
       value: 2,
@@ -1736,7 +1734,7 @@ const rareNeutralMinions: CardData[] = [
     health: 2,
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30019,
@@ -1751,7 +1749,7 @@ const rareNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'buff_adjacent',
       buffType: 'taunt',
@@ -1771,7 +1769,7 @@ const rareNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'buff_adjacent',
       buffAttack: 1,
@@ -1793,7 +1791,7 @@ const rareNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'self_damage',
       value: 4,
@@ -1812,7 +1810,7 @@ const rareNeutralMinions: CardData[] = [
     health: 4,
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30024,
@@ -1827,7 +1825,7 @@ const rareNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'destroy',
       condition: 'attack_7_or_more',
@@ -1849,7 +1847,7 @@ const rareNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'destroy',
       condition: 'attack_2_or_less',
@@ -1870,7 +1868,7 @@ const rareNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'freeze',
       requiresTarget: true,
@@ -1890,7 +1888,7 @@ const rareNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'deal_damage',
       value: 2,
@@ -1911,7 +1909,7 @@ const rareNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'buff_and_damage',
       buffAttack: 2,
@@ -1933,7 +1931,7 @@ const rareNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'deal_damage',
       value: 1,
@@ -1954,7 +1952,7 @@ const rareNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['taunt'],
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30063,
@@ -1969,7 +1967,7 @@ const rareNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['cant_attack'],
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   // === From specialEffectNeutrals.ts ===
   {
@@ -1985,7 +1983,7 @@ const rareNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry', 'discover'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'discover',
       cardType: 'spell',
@@ -2005,7 +2003,7 @@ const rareNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   // === From neutralSpellsAndTech.ts ===
   {
@@ -2021,7 +2019,7 @@ const rareNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'silence_or_destroy_automaton',
       requiresTarget: true,
@@ -2041,7 +2039,7 @@ const rareNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'copy_from_opponent_hand',
       value: 1,
@@ -2060,7 +2058,7 @@ const rareNeutralMinions: CardData[] = [
     health: 5,
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 27008,
@@ -2074,7 +2072,7 @@ const rareNeutralMinions: CardData[] = [
     health: 5,
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   }
 ];
 
@@ -2091,7 +2089,7 @@ const rareNeutralSpells: CardData[] = [
     rarity: 'common',
     manaCost: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   }
 ];
@@ -2112,7 +2110,7 @@ const epicNeutralMinions: CardData[] = [
     health: 8,
     race: 'Elemental',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true},
   {
     id: 3008,
@@ -2125,7 +2123,7 @@ const epicNeutralMinions: CardData[] = [
     attack: 3,
     health: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true
   },
@@ -2142,9 +2140,8 @@ const epicNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core'
-  },
-  // === Migrated from neutralMinions.ts ===
+    set: 'genesis'
+  },
   {
     id: 29972,
     name: 'Shapeshifter of Loki',
@@ -2158,7 +2155,7 @@ const epicNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'copy',
       requiresTarget: true,
@@ -2177,7 +2174,7 @@ const epicNeutralMinions: CardData[] = [
     health: 7,
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     startOfTurn: { type: "destroy_all_minions" }
   },
   {
@@ -2192,7 +2189,7 @@ const epicNeutralMinions: CardData[] = [
     health: 8,
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30009,
@@ -2206,7 +2203,7 @@ const epicNeutralMinions: CardData[] = [
     health: 8,
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30010,
@@ -2222,7 +2219,7 @@ const epicNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'buff_health_by_hand_size',
       requiresTarget: false
@@ -2241,7 +2238,7 @@ const epicNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'mind_control',
       condition: 'attack_2_or_less',
@@ -2261,7 +2258,7 @@ const epicNeutralMinions: CardData[] = [
     health: 8,
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30028,
@@ -2277,7 +2274,7 @@ const epicNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'destroy_and_buff',
       condition: 'naga',
@@ -2300,7 +2297,7 @@ const epicNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'swap_stats',
       requiresTarget: true,
@@ -2320,7 +2317,7 @@ const epicNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'conditional_mind_control',
       condition: 'opponent_has_4_minions',
@@ -2341,7 +2338,7 @@ const epicNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'silence',
       requiresTarget: true,
@@ -2361,7 +2358,7 @@ const epicNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['charge', 'divine_shield'],
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30046,
@@ -2375,7 +2372,7 @@ const epicNeutralMinions: CardData[] = [
     durability: 3,
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 30047,
@@ -2387,7 +2384,7 @@ const epicNeutralMinions: CardData[] = [
     manaCost: 2,
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     spellEffect: {
       type: 'aoe_damage',
       value: 3,
@@ -2410,7 +2407,7 @@ const epicNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['deathrattle'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     deathrattle: {
       type: 'summon_random',
       targetType: 'none',
@@ -2431,7 +2428,7 @@ const epicNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['deathrattle'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     deathrattle: {
       type: 'add_to_hand',
       targetType: 'none',
@@ -2453,7 +2450,7 @@ const epicNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['deathrattle'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     deathrattle: {
       type: 'split_damage',
       targetType: 'all_enemies'
@@ -2472,7 +2469,7 @@ const epicNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'conditional_summon',
       condition: 'control_all_basic_totems',
@@ -2490,7 +2487,7 @@ const epicNeutralMinions: CardData[] = [
     manaCost: 3,
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     spellEffect: {
       type: 'armor_to_aoe_damage',
       requiresTarget: false,
@@ -2512,7 +2509,7 @@ const epicNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['frozen'],
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   // === From specialEffectNeutrals.ts ===
   {
@@ -2528,7 +2525,7 @@ const epicNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'copy_deathrattle',
       requiresTarget: true,
@@ -2548,7 +2545,7 @@ const epicNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'swap_hands',
       requiresTarget: false
@@ -2568,7 +2565,7 @@ const epicNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'summon_copy_from_deck',
       requiresTarget: false
@@ -2587,7 +2584,7 @@ const epicNeutralMinions: CardData[] = [
     race: 'Automaton',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 31011,
@@ -2602,7 +2599,7 @@ const epicNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'steal_from_deck',
       value: 1,
@@ -2622,7 +2619,7 @@ const epicNeutralMinions: CardData[] = [
     class: 'Neutral',
     keywords: ['battlecry'],
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'mass_silence',
       targetType: 'all_enemy_minions',
@@ -2664,7 +2661,7 @@ const legendaryNeutralMinions: CardData[] = [
     attack: 6,
     health: 6,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -2686,7 +2683,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Automaton',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 20001,
@@ -2701,7 +2698,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'buff',
       targetType: 'all_other_friendly_minions',
@@ -2723,7 +2720,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'damage',
       value: 10,
@@ -2744,7 +2741,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['windfury', 'battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'damage',
       value: 2,
@@ -2765,7 +2762,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'swap_stats',
       requiresTarget: true,
@@ -2785,7 +2782,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: [],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 28002,
@@ -2800,7 +2797,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['deathrattle'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     deathrattle: {
       type: 'resurrect',
       targetType: 'none',
@@ -2820,7 +2817,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'mind_control',
       requiresTarget: true,
@@ -2841,7 +2838,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'buff_aoe',
       requiresTarget: false,
@@ -2864,7 +2861,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: [],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 20021,
@@ -2879,7 +2876,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'discover',
       requiresTarget: false,
@@ -2901,7 +2898,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['divine_shield'],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 20025,
@@ -2916,7 +2913,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'destroy',
       requiresTarget: true,
@@ -2937,7 +2934,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['divine_shield', 'rush', 'deathrattle'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     deathrattle: {
       type: 'damage',
       value: 4,
@@ -2957,7 +2954,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['divine_shield', 'deathrattle'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     deathrattle: {
       type: 'heal',
       value: 99,
@@ -2977,7 +2974,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: [],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 20101,
@@ -2992,7 +2989,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: [],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 20103,
@@ -3007,7 +3004,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['rush'],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 20104,
@@ -3022,7 +3019,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'add_card',
       requiresTarget: false,
@@ -3044,7 +3041,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['taunt'],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 20106,
@@ -3059,7 +3056,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: [],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 20107,
@@ -3075,7 +3072,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Beast',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'summon',
       requiresTarget: false,
@@ -3096,7 +3093,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'damage',
       value: 2,
@@ -3117,7 +3114,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['stealth', 'battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'buff',
       requiresTarget: false,
@@ -3139,7 +3136,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'draw',
       requiresTarget: false,
@@ -3161,7 +3158,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['rush', 'battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'buff_hero',
       requiresTarget: false,
@@ -3183,7 +3180,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'heal',
       requiresTarget: false,
@@ -3205,7 +3202,7 @@ const legendaryNeutralMinions: CardData[] = [
     class: 'Neutral',
     cantBeTargetedBySpells: true,
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 20114,
@@ -3220,7 +3217,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'damage',
       value: 4,
@@ -3241,7 +3238,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'freeze',
       requiresTarget: false,
@@ -3261,7 +3258,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'heal',
       requiresTarget: false,
@@ -3282,7 +3279,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'discover',
       requiresTarget: false,
@@ -3304,7 +3301,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'cost_reduction',
       requiresTarget: false,
@@ -3327,7 +3324,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Beast',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 20201,
@@ -3342,7 +3339,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'buff',
       requiresTarget: false,
@@ -3364,7 +3361,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['poisonous', 'stealth', 'deathrattle'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     deathrattle: {
       type: 'destroy',
       targetType: 'random_enemy_minion',
@@ -3385,7 +3382,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Beast',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 20204,
@@ -3401,7 +3398,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Elemental',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     deathrattle: {
       type: 'return_to_hand',
       targetType: 'none',
@@ -3421,7 +3418,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'destroy',
       targetType: 'random_enemy_minion',
@@ -3443,7 +3440,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Beast',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 20207,
@@ -3458,7 +3455,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'summon',
       requiresTarget: false,
@@ -3480,7 +3477,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Beast',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 20209,
@@ -3496,7 +3493,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Beast',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'damage',
       value: 4,
@@ -3518,7 +3515,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['rush'],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 20211,
@@ -3533,7 +3530,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['windfury', 'battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'summon',
       requiresTarget: false,
@@ -3554,7 +3551,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'add_card',
       requiresTarget: false,
@@ -3575,7 +3572,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: [],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 20215,
@@ -3590,7 +3587,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: [],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 20216,
@@ -3605,7 +3602,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: [],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 20301,
@@ -3620,7 +3617,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'buff',
       requiresTarget: false,
@@ -3643,7 +3640,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['rush'],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 20303,
@@ -3658,7 +3655,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'joust',
       requiresTarget: false,
@@ -3679,7 +3676,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: [],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 20305,
@@ -3695,7 +3692,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Dragon',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'damage',
       value: 8,
@@ -3716,7 +3713,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: [],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   // ============================================
   // MECHANIC CARDS - DISCOVER
@@ -3738,7 +3735,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     collectible: true,
     class: 'Neutral',
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 5002,
@@ -3758,7 +3755,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     collectible: true,
     class: 'Neutral',
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 5003,
@@ -3777,7 +3774,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     collectible: true,
     class: 'Neutral',
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 5004,
@@ -3797,7 +3794,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     collectible: true,
     class: 'Neutral',
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 5005,
@@ -3817,7 +3814,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     collectible: true,
     class: 'Neutral',
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 5006,
@@ -3837,7 +3834,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     collectible: true,
     class: 'Neutral',
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 5007,
@@ -3856,7 +3853,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     collectible: true,
     class: 'Neutral',
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 5008,
@@ -3875,7 +3872,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     collectible: true,
     class: 'Neutral',
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 25009,
@@ -3895,7 +3892,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     collectible: true,
     class: 'Neutral',
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 5010,
@@ -3915,7 +3912,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     collectible: true,
     class: 'Neutral',
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 25013,
@@ -3935,7 +3932,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     collectible: true,
     class: 'Neutral',
-    set: 'core'
+    set: 'genesis'
   },
   // ============================================
   // MECHANIC CARDS - TRADEABLE
@@ -3952,7 +3949,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['tradeable', 'battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'transform',
       requiresTarget: false,
@@ -3972,7 +3969,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['tradeable'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     spellEffect: {
       type: 'buff',
       buffHealth: 3,
@@ -3995,7 +3992,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['tradeable', 'spell_damage'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     tradeableInfo: {
       tradeCost: 1
     }
@@ -4012,7 +4009,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['tradeable', 'battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'transform',
       requiresTarget: false,
@@ -4034,7 +4031,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['tradeable', 'taunt'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     tradeableInfo: {
       tradeCost: 1
     }
@@ -4054,7 +4051,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['inspire'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     inspireEffect: {
       type: 'heal',
       value: 2,
@@ -4074,7 +4071,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['inspire'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     inspireEffect: {
       type: 'buff',
       buffAttack: 1,
@@ -4095,7 +4092,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['inspire'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     inspireEffect: {
       type: 'summon',
       summonCardId: 13501,
@@ -4114,7 +4111,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['inspire'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     inspireEffect: {
       type: 'buff',
       buffAttack: 2,
@@ -4134,7 +4131,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['inspire'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     inspireEffect: {
       type: 'draw',
       value: 1,
@@ -4153,7 +4150,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: [],
     class: 'Neutral',
     collectible: false,
-    set: 'core'
+    set: 'genesis'
   },
   // ============================================
   // MECHANIC CARDS - CORRUPT
@@ -4174,7 +4171,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     collectible: true,
     class: 'Neutral',
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 21002,
@@ -4192,7 +4189,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     collectible: true,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     corruptState: {
       isCorruptible: true,
       isCorrupted: false
@@ -4217,7 +4214,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     collectible: true,
     class: 'Neutral',
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 21005,
@@ -4235,7 +4232,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     collectible: true,
     class: 'Neutral',
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 21006,
@@ -4253,7 +4250,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     collectible: true,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     corruptState: {
       isCorruptible: true,
       isCorrupted: false
@@ -4276,7 +4273,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     collectible: true,
     class: 'Neutral',
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 21010,
@@ -4300,7 +4297,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     collectible: true,
     class: 'Neutral',
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 21011,
@@ -4314,7 +4311,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: [],
     class: 'Neutral',
     collectible: false,
-    set: 'core'
+    set: 'genesis'
   },
   // ============================================
   // MECHANIC CARDS - DORMANT
@@ -4334,7 +4331,7 @@ const legendaryNeutralMinions: CardData[] = [
     flavorText: 'Shackled in the depths of Niflheim, awaiting release.',
     dormantTurns: 2,
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 10007,
@@ -4349,7 +4346,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['dormant'],
     description: 'Dormant. After you play 3 minions in a turn, destroy all other minions and awaken.',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     dormantTurns: -1,
     awakenCondition: {
       type: 'play_minions',
@@ -4378,7 +4375,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['frenzy'],
     description: 'Frenzy: Attack a random enemy.',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     frenzyEffect: {
       type: 'attack_random',
       targetType: 'random_enemy',
@@ -4397,7 +4394,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['frenzy'],
     description: 'Frenzy: Add a random spell to your hand.',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     frenzyEffect: {
       type: 'add_to_hand',
       cardType: 'spell',
@@ -4418,7 +4415,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['frenzy'],
     description: "Frenzy: Summon a 5/5 Watcher for each Watch Post you've summoned this game.",
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     frenzyEffect: {
       type: 'summon',
       summonCardId: 9008,
@@ -4438,7 +4435,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: [],
     description: 'Summoned by combat effects.',
     collectible: false,
-    set: 'core'
+    set: 'genesis'
   },
   // ============================================
   // MECHANIC CARDS - REBORN
@@ -4464,7 +4461,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     collectible: true,
     class: 'Neutral',
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 19021,
@@ -4480,7 +4477,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Naga',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 19001,
@@ -4495,7 +4492,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Naga',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 19005,
@@ -4509,7 +4506,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['reborn'],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 19006,
@@ -4522,7 +4519,7 @@ const legendaryNeutralMinions: CardData[] = [
     description: 'Reborn. Battlecry and Deathrattle: Give a random friendly minion +3 Attack.',
     keywords: ['reborn', 'battlecry', 'deathrattle'],
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true,
     battlecry: {
       type: 'buff',
@@ -4551,7 +4548,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['taunt', 'reborn'],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   // ============================================
   // MECHANIC CARDS - MAGNETIC
@@ -4566,7 +4563,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: [],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     spellEffect: {
       type: 'summon',
       summonCardId: 20502,
@@ -4587,7 +4584,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Automaton',
     class: 'Neutral',
     collectible: false,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 20504,
@@ -4602,7 +4599,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Automaton',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 20505,
@@ -4617,7 +4614,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Automaton',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 20506,
@@ -4630,7 +4627,7 @@ const legendaryNeutralMinions: CardData[] = [
     description: 'Runic Bond, Deathrattle: Summon three 1/1 Microbots.',
     keywords: ['magnetic', 'deathrattle'],
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true,
     race: 'Automaton',
     deathrattle: {
@@ -4653,7 +4650,7 @@ const legendaryNeutralMinions: CardData[] = [
     class: 'Neutral',
     race: 'Automaton',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   // ============================================
   // MECHANIC CARDS - RECRUIT
@@ -4675,7 +4672,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     collectible: true,
     class: 'Neutral',
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 18102,
@@ -4694,7 +4691,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 18104,
@@ -4714,7 +4711,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     collectible: true,
     class: 'Neutral',
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 18105,
@@ -4732,7 +4729,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 18106,
@@ -4751,7 +4748,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     collectible: true,
     class: 'Neutral',
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 18107,
@@ -4770,7 +4767,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 18108,
@@ -4789,7 +4786,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   // ============================================
   // MECHANIC CARDS - RUSH/LIFESTEAL
@@ -4813,7 +4810,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     collectible: true,
     class: 'Neutral',
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 26002,
@@ -4827,7 +4824,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['rush'],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 26003,
@@ -4842,7 +4839,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['rush'],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 26101,
@@ -4860,7 +4857,7 @@ const legendaryNeutralMinions: CardData[] = [
     },
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 26103,
@@ -4874,7 +4871,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['lifesteal', 'rush'],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 26104,
@@ -4888,7 +4885,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['lifesteal'],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   // ============================================
   // MECHANIC CARDS - SPELLBURST
@@ -4904,7 +4901,7 @@ const legendaryNeutralMinions: CardData[] = [
     description: 'Spellburst: Add 2 random spells from your class to your hand.',
     keywords: ['spellburst'],
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true,
     race: 'Dragon',
     spellburstEffect: {
@@ -4932,7 +4929,7 @@ const legendaryNeutralMinions: CardData[] = [
       consumed: false
     },
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   // ============================================
   // ELDER TITAN SUPPORT CARDS (Gullveig synergy)
@@ -4955,7 +4952,7 @@ const legendaryNeutralMinions: CardData[] = [
       targetType: 'none'
     },
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 91002,
@@ -4977,7 +4974,7 @@ const legendaryNeutralMinions: CardData[] = [
       buffHealth: 2
     },
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 91003,
@@ -5001,7 +4998,7 @@ const legendaryNeutralMinions: CardData[] = [
       buffHealth: 2
     },
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 91005,
@@ -5021,7 +5018,7 @@ const legendaryNeutralMinions: CardData[] = [
       endOfTurnEffect: 'buff_cthun'
     }],
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   // Duplicate Elder Titan cards (91101, 91102) deleted — canonical versions are
   // Hyrrokkin (60101) and Utgarda-Loki (60102) in oldGods.ts
@@ -5043,7 +5040,7 @@ const legendaryNeutralMinions: CardData[] = [
       endOfTurnEffect: 'summon_from_deck'
     }],
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   // ============================================
   // COLOSSAL CARDS
@@ -5066,7 +5063,7 @@ const legendaryNeutralMinions: CardData[] = [
       targetType: 'none'
     },
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 90202,
@@ -5081,7 +5078,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: [],
     class: 'Neutral',
     collectible: false,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 90203,
@@ -5103,7 +5100,7 @@ const legendaryNeutralMinions: CardData[] = [
       cardType: 'naga'
     },
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 90204,
@@ -5123,7 +5120,7 @@ const legendaryNeutralMinions: CardData[] = [
       targetType: 'all_enemies'
     },
     collectible: false,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 90205,
@@ -5145,7 +5142,7 @@ const legendaryNeutralMinions: CardData[] = [
       targetType: 'none'
     },
     collectible: false,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 90206,
@@ -5167,7 +5164,7 @@ const legendaryNeutralMinions: CardData[] = [
       targetType: 'none'
     },
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 90207,
@@ -5182,7 +5179,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['taunt', 'divine_shield'],
     class: 'Neutral',
     collectible: false,
-    set: 'core'
+    set: 'genesis'
   },
   // ============================================
   // PIRATE CARDS
@@ -5206,7 +5203,7 @@ const legendaryNeutralMinions: CardData[] = [
       targetType: 'none'
     },
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 86002,
@@ -5228,7 +5225,7 @@ const legendaryNeutralMinions: CardData[] = [
       targetType: 'none'
     },
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   // ============================================
   // DUAL-CLASS CARDS
@@ -5249,7 +5246,7 @@ const legendaryNeutralMinions: CardData[] = [
       classes: ['hunter', 'berserker']
     },
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 90402,
@@ -5267,7 +5264,7 @@ const legendaryNeutralMinions: CardData[] = [
       classes: ['druid', 'shaman']
     },
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 90403,
@@ -5288,7 +5285,7 @@ const legendaryNeutralMinions: CardData[] = [
       targetType: 'friendly_hero'
     },
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 90404,
@@ -5311,7 +5308,7 @@ const legendaryNeutralMinions: CardData[] = [
       targetType: 'none'
     },
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 90405,
@@ -5329,7 +5326,7 @@ const legendaryNeutralMinions: CardData[] = [
       classes: ['paladin', 'priest']
     },
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   // ============================================
   // MYTHOLOGY MYTHIC CARDS (92001-92025)
@@ -5348,7 +5345,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'summon_multiple',
       summonCardId: 92101,
@@ -5370,7 +5367,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['cant_attack'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     effects: [{
       type: 'end_of_turn',
       value: 8,
@@ -5390,7 +5387,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['deathrattle'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     deathrattle: {
       type: 'mind_control',
       targetType: 'random_enemy_minion',
@@ -5410,7 +5407,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['taunt'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     effects: [{
       type: 'end_of_turn',
       endOfTurnEffect: 'add_death_knight_card'
@@ -5429,7 +5426,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['charge', 'battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'summon_for_opponent',
       summonCardId: 92102,
@@ -5451,7 +5448,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['spell_damage', 'deathrattle'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     spellDamage: 1,
     deathrattle: {
       type: 'draw',
@@ -5473,7 +5470,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: [],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     effects: [{
       type: 'end_of_turn',
       value: 1,
@@ -5493,7 +5490,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'increase_spell_cost',
       value: 5,
@@ -5516,7 +5513,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Automaton',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 92010,
@@ -5532,7 +5529,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Dragon',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     spellDamage: 1,
     battlecry: {
       type: 'draw',
@@ -5555,7 +5552,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Automaton',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     deathrattle: {
       type: 'summon_random',
       costFilter: 2,
@@ -5576,7 +5573,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['taunt', 'deathrattle'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     deathrattle: {
       type: 'summon',
       summonCardId: 92103,
@@ -5597,7 +5594,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: [],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     costReduction: {
       type: 'minions_on_board',
       value: 1
@@ -5616,7 +5613,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: [],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     costReduction: {
       type: 'cards_in_hand',
       value: 1
@@ -5635,7 +5632,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: [],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     triggerEffect: {
       type: 'on_summon',
       effect: 'random_enemy_damage',
@@ -5655,7 +5652,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'buff_adjacent',
       buffAttack: 1,
@@ -5678,7 +5675,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'zephrys_wish',
       condition: 'no_duplicates',
@@ -5699,7 +5696,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'choose_keywords',
       options: ['rush', 'taunt', 'divine_shield', 'windfury'],
@@ -5722,7 +5719,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Naga',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'draw_for_both',
       value: 2,
@@ -5743,7 +5740,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'grant_keyword_adjacent',
       grantKeywords: ['taunt'],
@@ -5764,7 +5761,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'destroy',
       requiresTarget: true,
@@ -5786,7 +5783,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Beast',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'destroy',
       requiresTarget: false,
@@ -5807,7 +5804,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'copy_minion',
       requiresTarget: true,
@@ -5827,7 +5824,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['rush', 'battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'transform_friendly',
       transformStats: { attack: 3, health: 3 },
@@ -5850,7 +5847,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Dragon',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'buff_by_hand_size',
       buffHealth: 1,
@@ -5875,7 +5872,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Automaton',
     class: 'Neutral',
     collectible: false,
-    set: 'core',
+    set: 'genesis',
     deathrattle: {
       type: 'random_damage',
       minValue: 1,
@@ -5897,7 +5894,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Dragon',
     class: 'Neutral',
     collectible: false,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 92103,
@@ -5912,7 +5909,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['taunt'],
     class: 'Neutral',
     collectible: false,
-    set: 'core'
+    set: 'genesis'
   },
   // ============================================
   // MYTHOLOGY-THEMED NEUTRAL MINIONS (33026-33050)
@@ -5931,7 +5928,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'self_damage',
       value: 4,
@@ -5950,7 +5947,7 @@ const legendaryNeutralMinions: CardData[] = [
     flavorText: 'Like his master, he suffers for knowledge.',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 33028,
@@ -5964,7 +5961,7 @@ const legendaryNeutralMinions: CardData[] = [
     flavorText: 'Touched by the flames of Muspelheim, chaos follows every spell.',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 33029,
@@ -5978,7 +5975,7 @@ const legendaryNeutralMinions: CardData[] = [
     flavorText: 'The healing goddess Eir rewards those who mend wounds.',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 33030,
@@ -5992,7 +5989,7 @@ const legendaryNeutralMinions: CardData[] = [
     flavorText: 'When Ragnarok comes, none shall be spared.',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     startOfTurn: { type: "destroy_all_minions" }
   },
   {
@@ -6009,7 +6006,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Beast',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 33032,
@@ -6025,7 +6022,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Beast',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 33033,
@@ -6040,7 +6037,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['stealth', 'poisonous'],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 33034,
@@ -6054,7 +6051,7 @@ const legendaryNeutralMinions: CardData[] = [
     flavorText: 'The hearth goddess blesses her faithful with warmth and protection.',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 33035,
@@ -6070,7 +6067,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Beast',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 33036,
@@ -6086,7 +6083,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Spirit',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 33037,
@@ -6101,7 +6098,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'buff_temp',
       targetType: 'any_minion',
@@ -6122,7 +6119,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'buff_temp',
       targetType: 'any_minion',
@@ -6142,7 +6139,7 @@ const legendaryNeutralMinions: CardData[] = [
     flavorText: 'Every soul that passes fuels his dark knowledge.',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 33040,
@@ -6158,7 +6155,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Einherjar',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 33041,
@@ -6174,7 +6171,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Naga',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 33042,
@@ -6189,7 +6186,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['aura'],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 33043,
@@ -6204,7 +6201,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['aura'],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 33044,
@@ -6220,7 +6217,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Naga',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 33045,
@@ -6236,7 +6233,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Beast',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 33046,
@@ -6252,7 +6249,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Beast',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 33047,
@@ -6268,7 +6265,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Beast',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 33048,
@@ -6283,7 +6280,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['divine_shield'],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 33049,
@@ -6298,7 +6295,7 @@ const legendaryNeutralMinions: CardData[] = [
     keywords: ['divine_shield'],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 33050,
@@ -6314,7 +6311,7 @@ const legendaryNeutralMinions: CardData[] = [
     race: 'Automaton',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   }
 ];
 
@@ -6334,7 +6331,7 @@ const mythologySpells: CardData[] = [
     flavorText: 'The Allfather binds the tongues of the unworthy.',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     spellEffect: {
       type: 'silence',
       targetType: 'any_minion',
@@ -6358,7 +6355,7 @@ const mythologyCommonMinions: CardData[] = [
     race: 'Automaton',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 32065,
@@ -6373,7 +6370,7 @@ const mythologyCommonMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'destroy_weapon',
       targetType: 'enemy_hero',
@@ -6394,7 +6391,7 @@ const mythologyCommonMinions: CardData[] = [
     race: 'Beast',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'silence',
       targetType: 'any_minion',
@@ -6414,7 +6411,7 @@ const mythologyCommonMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'deal_damage',
       value: 6,
@@ -6439,7 +6436,7 @@ const mythologyRareMinions: CardData[] = [
     race: 'Automaton',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     deathrattle: {
       type: 'summon',
       summonCardId: 32076
@@ -6459,7 +6456,7 @@ const mythologyRareMinions: CardData[] = [
     race: 'Automaton',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     deathrattle: {
       type: 'give_spare_part',
       targetType: 'both_players'
@@ -6478,7 +6475,7 @@ const mythologyRareMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'silence',
       targetType: 'any_minion',
@@ -6499,7 +6496,7 @@ const mythologyRareMinions: CardData[] = [
     race: 'Dragon',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'add_random_to_hand',
       filter: 'mythic',
@@ -6519,7 +6516,7 @@ const mythologyRareMinions: CardData[] = [
     race: 'Dragon',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 32072,
@@ -6535,7 +6532,7 @@ const mythologyRareMinions: CardData[] = [
     race: 'Dragon',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'deal_damage',
       value: 1,
@@ -6557,7 +6554,7 @@ const mythologyRareMinions: CardData[] = [
     race: 'Dragon',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   }
 ];
 
@@ -6575,7 +6572,7 @@ const mythologyEpicMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'buff',
       buffAttack: 4,
@@ -6598,7 +6595,7 @@ const mythologyEpicMinions: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'destroy_weapon_draw',
       targetType: 'enemy_hero',
@@ -6619,7 +6616,7 @@ const mythologyEpicMinions: CardData[] = [
     race: 'Dragon',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'conditional_damage',
       condition: 'holding_dragon',
@@ -6642,7 +6639,7 @@ const mythologyEpicMinions: CardData[] = [
     race: 'Dragon',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'deal_damage',
       value: 2,
@@ -6666,7 +6663,7 @@ const mythologyLegendaryMinions: CardData[] = [
     keywords: ['deathrattle'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     deathrattle: {
       type: 'summon',
       summonCardId: 32077
@@ -6686,7 +6683,7 @@ const mythologyLegendaryMinions: CardData[] = [
     race: 'Beast',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     deathrattle: {
       type: 'summon_multiple',
       summonCardId: 32078,
@@ -6706,7 +6703,7 @@ const mythologyLegendaryMinions: CardData[] = [
     keywords: ['divine_shield', 'taunt', 'deathrattle'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     deathrattle: {
       type: 'equip_weapon',
       weaponId: 32080
@@ -6725,7 +6722,7 @@ const mythologyLegendaryMinions: CardData[] = [
     race: 'Dragon',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 32060,
@@ -6741,7 +6738,7 @@ const mythologyLegendaryMinions: CardData[] = [
     race: 'Dragon',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     spellDamage: 5
   },
   {
@@ -6758,7 +6755,7 @@ const mythologyLegendaryMinions: CardData[] = [
     race: 'Dragon',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'set_health',
       value: 15,
@@ -6780,7 +6777,7 @@ const mythologyLegendaryMinions: CardData[] = [
     race: 'Dragon',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'destroy_all_and_discard',
       targetType: 'all_other_minions',
@@ -6800,7 +6797,7 @@ const mythologyLegendaryMinions: CardData[] = [
     race: 'Dragon',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 32064,
@@ -6816,7 +6813,7 @@ const mythologyLegendaryMinions: CardData[] = [
     race: 'Dragon',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'summon_until_full',
       summonCardId: 32079
@@ -6842,7 +6839,7 @@ const mythologyNorseCards: CardData[] = [
     keywords: ['combo'],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 32082,
@@ -6856,7 +6853,7 @@ const mythologyNorseCards: CardData[] = [
     flavorText: 'Seeking glory across all the nine realms.',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 32083,
@@ -6870,7 +6867,7 @@ const mythologyNorseCards: CardData[] = [
     flavorText: 'Pain only fuels the fury of the berserker.',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 32084,
@@ -6884,7 +6881,7 @@ const mythologyNorseCards: CardData[] = [
     flavorText: 'The warriors of Valhalla rise again and again.',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 32085,
@@ -6899,7 +6896,7 @@ const mythologyNorseCards: CardData[] = [
     keywords: ['deathrattle'],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 32086,
@@ -6914,7 +6911,7 @@ const mythologyNorseCards: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 32090,
@@ -6928,7 +6925,7 @@ const mythologyNorseCards: CardData[] = [
     flavorText: "Born from the union of flame and storm, Surtr's Creation rises.",
     class: 'Neutral',
     collectible: false,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 32091,
@@ -6943,7 +6940,7 @@ const mythologyNorseCards: CardData[] = [
     keywords: ['deathrattle'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     deathrattle: {
       type: 'summon_if_other_died',
       checkCardId: 32092,
@@ -6963,7 +6960,7 @@ const mythologyNorseCards: CardData[] = [
     keywords: ['deathrattle'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     deathrattle: {
       type: 'summon_if_other_died',
       checkCardId: 32091,
@@ -6983,7 +6980,7 @@ const mythologyNorseCards: CardData[] = [
     keywords: ['battlecry'],
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'summon_copy_from_deck',
       stats: { attack: 1, health: 1 },
@@ -7004,7 +7001,7 @@ const mythologyNorseCards: CardData[] = [
     race: 'Automaton',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     deathrattle: {
       type: 'summon_random_mythic',
       requiresTarget: false
@@ -7022,7 +7019,7 @@ const mythologyNorseCards: CardData[] = [
     flavorText: 'Death is merely an inconvenience for this lich.',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 32097,
@@ -7037,7 +7034,7 @@ const mythologyNorseCards: CardData[] = [
     race: 'Titan',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 32098,
@@ -7053,7 +7050,7 @@ const mythologyNorseCards: CardData[] = [
     race: 'Einherjar',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 32099,
@@ -7068,7 +7065,7 @@ const mythologyNorseCards: CardData[] = [
     race: 'Einherjar',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 32100,
@@ -7084,7 +7081,7 @@ const mythologyNorseCards: CardData[] = [
     race: 'Einherjar',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 32101,
@@ -7099,7 +7096,7 @@ const mythologyNorseCards: CardData[] = [
     race: 'Einherjar',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 32102,
@@ -7115,7 +7112,7 @@ const mythologyNorseCards: CardData[] = [
     race: 'Einherjar',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'gain_weapon_attack',
       requiresTarget: false
@@ -7134,7 +7131,7 @@ const mythologyNorseCards: CardData[] = [
     race: 'Naga',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 32104,
@@ -7150,7 +7147,7 @@ const mythologyNorseCards: CardData[] = [
     race: 'Naga',
     class: 'Neutral',
     collectible: true,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 32105,
@@ -7166,7 +7163,7 @@ const mythologyNorseCards: CardData[] = [
     race: 'Beast',
     class: 'Neutral',
     collectible: true,
-    set: 'core',
+    set: 'genesis',
     battlecry: {
       type: 'adapt_nagas',
       requiresTarget: false
@@ -7192,7 +7189,7 @@ const commonDragonMinions: CardData[] = [
     health: 1,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -7207,7 +7204,7 @@ const commonDragonMinions: CardData[] = [
     health: 3,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -7222,7 +7219,7 @@ const commonDragonMinions: CardData[] = [
     health: 1,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -7243,7 +7240,7 @@ const commonDragonMinions: CardData[] = [
     health: 4,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -7258,7 +7255,7 @@ const commonDragonMinions: CardData[] = [
     health: 4,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -7273,7 +7270,7 @@ const commonDragonMinions: CardData[] = [
     health: 1,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -7300,7 +7297,7 @@ const rareDragonMinions: CardData[] = [
     health: 4,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -7323,7 +7320,7 @@ const rareDragonMinions: CardData[] = [
     health: 4,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -7346,7 +7343,7 @@ const rareDragonMinions: CardData[] = [
     health: 5,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -7361,7 +7358,7 @@ const rareDragonMinions: CardData[] = [
     health: 6,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -7383,7 +7380,7 @@ const rareDragonMinions: CardData[] = [
     health: 3,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry', 'discover'],
     collectible: true,
     battlecry: {
@@ -7405,7 +7402,7 @@ const rareDragonMinions: CardData[] = [
     health: 4,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -7429,7 +7426,7 @@ const rareDragonMinions: CardData[] = [
     health: 6,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry', 'discover'],
     collectible: true,
     battlecry: {
@@ -7451,7 +7448,7 @@ const rareDragonMinions: CardData[] = [
     health: 6,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -7479,7 +7476,7 @@ const epicDragonMinions: CardData[] = [
     health: 8,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -7494,7 +7491,7 @@ const epicDragonMinions: CardData[] = [
     health: 6,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -7517,7 +7514,7 @@ const epicDragonMinions: CardData[] = [
     health: 5,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['deathrattle'],
     collectible: true,
     deathrattle: {
@@ -7537,7 +7534,7 @@ const epicDragonMinions: CardData[] = [
     health: 4,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -7561,7 +7558,7 @@ const epicDragonMinions: CardData[] = [
     health: 3,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['divine_shield', 'rush', 'elusive'],
     collectible: true
   },
@@ -7577,7 +7574,7 @@ const epicDragonMinions: CardData[] = [
     health: 4,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['elusive'],
     collectible: true
   }
@@ -7597,7 +7594,7 @@ const legendaryDragonMinions: CardData[] = [
     health: 8,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -7619,7 +7616,7 @@ const legendaryDragonMinions: CardData[] = [
     health: 6,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['taunt', 'deathrattle'],
     collectible: true,
     deathrattle: {
@@ -7641,7 +7638,7 @@ const legendaryDragonMinions: CardData[] = [
     health: 5,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['taunt', 'battlecry'],
     collectible: true,
     battlecry: {
@@ -7661,7 +7658,7 @@ const legendaryDragonMinions: CardData[] = [
     health: 6,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -7683,7 +7680,7 @@ const legendaryDragonMinions: CardData[] = [
     health: 3,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -7708,7 +7705,7 @@ const dragonTokens: CardData[] = [
     attack: 0,
     health: 1,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['deathrattle'],
     collectible: false,
     deathrattle: {
@@ -7736,7 +7733,7 @@ const commonBeastMinions: CardData[] = [
     health: 2,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -7751,7 +7748,7 @@ const commonBeastMinions: CardData[] = [
     health: 1,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['charge'],
     collectible: true
   },
@@ -7767,7 +7764,7 @@ const commonBeastMinions: CardData[] = [
     health: 2,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -7782,7 +7779,7 @@ const commonBeastMinions: CardData[] = [
     health: 3,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -7797,7 +7794,7 @@ const commonBeastMinions: CardData[] = [
     health: 3,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['taunt'],
     collectible: true
   },
@@ -7813,7 +7810,7 @@ const commonBeastMinions: CardData[] = [
     health: 7,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -7828,7 +7825,7 @@ const commonBeastMinions: CardData[] = [
     health: 5,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['stealth'],
     collectible: true
   }
@@ -7848,7 +7845,7 @@ const rareBeastMinions: CardData[] = [
     health: 2,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -7863,7 +7860,7 @@ const rareBeastMinions: CardData[] = [
     health: 2,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: false,
     battlecry: {
@@ -7884,7 +7881,7 @@ const rareBeastMinions: CardData[] = [
     health: 3,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: false
   },
   {
@@ -7899,7 +7896,7 @@ const rareBeastMinions: CardData[] = [
     health: 3,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['deathrattle'],
     collectible: true,
     deathrattle: {
@@ -7920,7 +7917,7 @@ const rareBeastMinions: CardData[] = [
     health: 5,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['aura'],
     collectible: true
   },
@@ -7936,7 +7933,7 @@ const rareBeastMinions: CardData[] = [
     health: 4,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -7959,7 +7956,7 @@ const rareBeastMinions: CardData[] = [
     health: 4,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['cleave'],
     collectible: true
   },
@@ -7975,7 +7972,7 @@ const rareBeastMinions: CardData[] = [
     health: 12,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['taunt', 'battlecry'],
     collectible: true,
     battlecry: {
@@ -7999,7 +7996,7 @@ const epicBeastMinions: CardData[] = [
     health: 8,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -8014,7 +8011,7 @@ const epicBeastMinions: CardData[] = [
     health: 8,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -8029,7 +8026,7 @@ const epicBeastMinions: CardData[] = [
     health: 3,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['rush', 'deathrattle'],
     collectible: true,
     deathrattle: {
@@ -8051,7 +8048,7 @@ const epicBeastMinions: CardData[] = [
     health: 4,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -8072,7 +8069,7 @@ const epicBeastMinions: CardData[] = [
     health: 3,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['rush', 'battlecry'],
     collectible: true,
     battlecry: {
@@ -8098,7 +8095,7 @@ const legendaryBeastMinions: CardData[] = [
     health: 5,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -8119,7 +8116,7 @@ const legendaryBeastMinions: CardData[] = [
     health: 7,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['deathrattle'],
     collectible: true,
     deathrattle: {
@@ -8139,7 +8136,7 @@ const legendaryBeastMinions: CardData[] = [
     health: 4,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['deathrattle'],
     collectible: true,
     deathrattle: {
@@ -8160,7 +8157,7 @@ const legendaryBeastMinions: CardData[] = [
     health: 5,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -8175,7 +8172,7 @@ const legendaryBeastMinions: CardData[] = [
     health: 8,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['rush'],
     collectible: true
   }
@@ -8195,7 +8192,7 @@ const beastTokens: CardData[] = [
     health: 1,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: false
   },
   {
@@ -8207,7 +8204,7 @@ const beastTokens: CardData[] = [
     rarity: 'common',
     manaCost: 1,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: false,
     spellEffect: {
       type: 'buff',
@@ -8228,7 +8225,7 @@ const beastTokens: CardData[] = [
     attack: 3,
     health: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: false
   }
 ];
@@ -8248,7 +8245,7 @@ const mythologyTokens: CardData[] = [
     race: 'Automaton',
     class: 'Neutral',
     collectible: false,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 32077,
@@ -8262,7 +8259,7 @@ const mythologyTokens: CardData[] = [
     flavorText: 'The undying spirit fights on.',
     class: 'Neutral',
     collectible: false,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 32078,
@@ -8277,7 +8274,7 @@ const mythologyTokens: CardData[] = [
     race: 'Beast',
     class: 'Neutral',
     collectible: false,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 32079,
@@ -8292,7 +8289,7 @@ const mythologyTokens: CardData[] = [
     race: 'Dragon',
     class: 'Neutral',
     collectible: false,
-    set: 'core'
+    set: 'genesis'
   },
   {
     id: 32080,
@@ -8306,7 +8303,7 @@ const mythologyTokens: CardData[] = [
     flavorText: 'A blade blessed by the god of war and justice.',
     class: 'Neutral',
     collectible: false,
-    set: 'core'
+    set: 'genesis'
   }
 ];
 
@@ -8328,7 +8325,7 @@ const comboDrawCards: CardData[] = [
     attack: 3,
     health: 4,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -8348,7 +8345,7 @@ const comboDrawCards: CardData[] = [
     attack: 3,
     health: 5,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -8362,7 +8359,7 @@ const comboDrawCards: CardData[] = [
     attack: 2,
     health: 2,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -8384,7 +8381,7 @@ const comboDrawCards: CardData[] = [
     attack: 2,
     health: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -8404,7 +8401,7 @@ const comboDrawCards: CardData[] = [
     attack: 4,
     health: 4,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -8425,7 +8422,7 @@ const comboDrawCards: CardData[] = [
     health: 1,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['deathrattle'],
     collectible: true,
     deathrattle: {
@@ -8445,7 +8442,7 @@ const comboDrawCards: CardData[] = [
     health: 1,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -8464,7 +8461,7 @@ const comboDrawCards: CardData[] = [
     attack: 1,
     health: 2,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   }
 ];
@@ -8482,7 +8479,7 @@ const comboCostReductionCards: CardData[] = [
     attack: 3,
     health: 4,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -8496,7 +8493,7 @@ const comboCostReductionCards: CardData[] = [
     attack: 4,
     health: 5,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['aura'],
     collectible: true
   },
@@ -8511,7 +8508,7 @@ const comboCostReductionCards: CardData[] = [
     attack: 2,
     health: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -8531,7 +8528,7 @@ const comboCostReductionCards: CardData[] = [
     attack: 4,
     health: 6,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -8551,7 +8548,7 @@ const comboCostReductionCards: CardData[] = [
     attack: 3,
     health: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -8572,7 +8569,7 @@ const comboCostReductionCards: CardData[] = [
     attack: 2,
     health: 2,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['aura'],
     collectible: true
   },
@@ -8587,7 +8584,7 @@ const comboCostReductionCards: CardData[] = [
     attack: 8,
     health: 8,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -8602,7 +8599,7 @@ const comboCostReductionCards: CardData[] = [
     health: 8,
     race: 'Automaton',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   }
 ];
@@ -8620,7 +8617,7 @@ const comboBounceCards: CardData[] = [
     attack: 1,
     health: 1,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -8640,7 +8637,7 @@ const comboBounceCards: CardData[] = [
     attack: 3,
     health: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -8660,7 +8657,7 @@ const comboBounceCards: CardData[] = [
     attack: 2,
     health: 2,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['combo'],
     collectible: true,
     combo: {
@@ -8681,7 +8678,7 @@ const comboBounceCards: CardData[] = [
     attack: 2,
     health: 6,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -8695,7 +8692,7 @@ const comboBounceCards: CardData[] = [
     attack: 5,
     health: 5,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -8719,7 +8716,7 @@ const comboTutorCards: CardData[] = [
     attack: 4,
     health: 6,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['taunt', 'battlecry'],
     collectible: true,
     battlecry: {
@@ -8739,7 +8736,7 @@ const comboTutorCards: CardData[] = [
     attack: 3,
     health: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -8758,7 +8755,7 @@ const comboTutorCards: CardData[] = [
     attack: 2,
     health: 4,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -8778,7 +8775,7 @@ const comboTutorCards: CardData[] = [
     attack: 3,
     health: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['combo'],
     collectible: true,
     combo: {
@@ -8805,7 +8802,7 @@ const controlRemovalCards: CardData[] = [
     attack: 4,
     health: 4,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -8826,7 +8823,7 @@ const controlRemovalCards: CardData[] = [
     attack: 4,
     health: 4,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -8846,7 +8843,7 @@ const controlRemovalCards: CardData[] = [
     attack: 5,
     health: 5,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -8865,7 +8862,7 @@ const controlRemovalCards: CardData[] = [
     rarity: 'common',
     manaCost: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true,
     spellEffect: {
       type: 'transform',
@@ -8883,7 +8880,7 @@ const controlRemovalCards: CardData[] = [
     rarity: 'rare',
     manaCost: 8,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true,
     spellEffect: {
       type: 'destroy_all',
@@ -8902,7 +8899,7 @@ const controlRemovalCards: CardData[] = [
     attack: 3,
     durability: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -8916,7 +8913,7 @@ const controlRemovalCards: CardData[] = [
     attack: 3,
     health: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -8935,7 +8932,7 @@ const controlRemovalCards: CardData[] = [
     rarity: 'rare',
     manaCost: 5,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true,
     spellEffect: {
       type: 'transform_all',
@@ -8956,7 +8953,7 @@ const controlRemovalCards: CardData[] = [
     attack: 4,
     health: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -8976,7 +8973,7 @@ const controlRemovalCards: CardData[] = [
     attack: 2,
     health: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -8996,7 +8993,7 @@ const controlRemovalCards: CardData[] = [
     attack: 2,
     health: 5,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -9010,7 +9007,7 @@ const controlRemovalCards: CardData[] = [
     attack: 4,
     health: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -9032,7 +9029,7 @@ const controlRemovalCards: CardData[] = [
     attack: 1,
     health: 4,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -9046,7 +9043,7 @@ const controlRemovalCards: CardData[] = [
     attack: 2,
     health: 2,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -9060,7 +9057,7 @@ const controlRemovalCards: CardData[] = [
     attack: 2,
     health: 6,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['taunt', 'battlecry'],
     collectible: true,
     battlecry: {
@@ -9080,7 +9077,7 @@ const controlRemovalCards: CardData[] = [
     attack: 5,
     health: 6,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -9102,7 +9099,7 @@ const controlRemovalCards: CardData[] = [
     health: 6,
     race: 'Titan',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -9124,7 +9121,7 @@ const controlRemovalCards: CardData[] = [
     health: 6,
     race: 'Titan',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -9145,7 +9142,7 @@ const controlRemovalCards: CardData[] = [
     attack: 4,
     health: 5,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -9166,7 +9163,7 @@ const controlRemovalCards: CardData[] = [
     attack: 3,
     health: 2,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -9180,7 +9177,7 @@ const controlRemovalCards: CardData[] = [
     attack: 2,
     health: 7,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -9202,7 +9199,7 @@ const controlRemovalCards: CardData[] = [
     health: 5,
     race: 'Elemental',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -9216,7 +9213,7 @@ const controlRemovalCards: CardData[] = [
     attack: 0,
     health: 7,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true,
     startOfTurn: { type: "destroy_all_minions" }
   },
@@ -9232,7 +9229,7 @@ const controlRemovalCards: CardData[] = [
     health: 5,
     race: 'Elemental',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -9253,7 +9250,7 @@ const controlRemovalCards: CardData[] = [
     attack: 4,
     health: 4,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -9275,7 +9272,7 @@ const controlRemovalCards: CardData[] = [
     health: 1,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: false
   },
   {
@@ -9290,7 +9287,7 @@ const controlRemovalCards: CardData[] = [
     health: 1,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: false
   }
 ];
@@ -9310,7 +9307,7 @@ const cheatRecruitRampCards: CardData[] = [
     rarity: 'common',
     manaCost: 4,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true,
     spellEffect: {
       type: 'gain_armor_and_recruit',
@@ -9328,7 +9325,7 @@ const cheatRecruitRampCards: CardData[] = [
     rarity: 'rare',
     manaCost: 6,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true,
     spellEffect: {
       type: 'recruit',
@@ -9347,7 +9344,7 @@ const cheatRecruitRampCards: CardData[] = [
     health: 6,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry', 'deathrattle'],
     collectible: true,
     battlecry: {
@@ -9371,7 +9368,7 @@ const cheatRecruitRampCards: CardData[] = [
     attack: 3,
     durability: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -9385,7 +9382,7 @@ const cheatRecruitRampCards: CardData[] = [
     attack: 2,
     health: 4,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -9405,7 +9402,7 @@ const cheatRecruitRampCards: CardData[] = [
     attack: 2,
     health: 2,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['deathrattle'],
     collectible: true,
     deathrattle: {
@@ -9424,7 +9421,7 @@ const cheatRecruitRampCards: CardData[] = [
     attack: 3,
     health: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['deathrattle'],
     collectible: true,
     deathrattle: {
@@ -9444,7 +9441,7 @@ const cheatRecruitRampCards: CardData[] = [
     health: 4,
     race: 'Automaton',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['deathrattle'],
     collectible: true,
     deathrattle: {
@@ -9464,7 +9461,7 @@ const cheatRecruitRampCards: CardData[] = [
     health: 7,
     race: 'Beast',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['rush', 'overkill'],
     collectible: true
   },
@@ -9479,7 +9476,7 @@ const cheatRecruitRampCards: CardData[] = [
     attack: 0,
     durability: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   // MANA CHEAT (8 cards)
@@ -9492,7 +9489,7 @@ const cheatRecruitRampCards: CardData[] = [
     rarity: 'common',
     manaCost: 0,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true,
     spellEffect: {
       type: 'gain_temporary_mana',
@@ -9509,7 +9506,7 @@ const cheatRecruitRampCards: CardData[] = [
     rarity: 'common',
     manaCost: 0,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['overload'],
     collectible: true,
     overload: { amount: 2 },
@@ -9530,7 +9527,7 @@ const cheatRecruitRampCards: CardData[] = [
     attack: 3,
     health: 4,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -9549,7 +9546,7 @@ const cheatRecruitRampCards: CardData[] = [
     rarity: 'rare',
     manaCost: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true,
     spellEffect: {
       type: 'draw_and_reduce_cost',
@@ -9567,7 +9564,7 @@ const cheatRecruitRampCards: CardData[] = [
     rarity: 'rare',
     manaCost: 0,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true,
     spellEffect: {
       type: 'reduce_next_spell_cost',
@@ -9586,7 +9583,7 @@ const cheatRecruitRampCards: CardData[] = [
     attack: 5,
     health: 5,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['aura'],
     collectible: true
   },
@@ -9601,7 +9598,7 @@ const cheatRecruitRampCards: CardData[] = [
     attack: 5,
     health: 5,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['aura'],
     collectible: true
   },
@@ -9616,7 +9613,7 @@ const cheatRecruitRampCards: CardData[] = [
     attack: 7,
     health: 7,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['choose_one'],
     collectible: true
   },
@@ -9630,7 +9627,7 @@ const cheatRecruitRampCards: CardData[] = [
     rarity: 'rare',
     manaCost: 6,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true,
     spellEffect: {
       type: 'summon_copy_from_hand',
@@ -9650,7 +9647,7 @@ const cheatRecruitRampCards: CardData[] = [
     health: 4,
     race: 'Titan',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['deathrattle'],
     collectible: true,
     deathrattle: {
@@ -9667,7 +9664,7 @@ const cheatRecruitRampCards: CardData[] = [
     rarity: 'rare',
     manaCost: 4,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true,
     spellEffect: {
       type: 'summon_from_both_hands',
@@ -9683,7 +9680,7 @@ const cheatRecruitRampCards: CardData[] = [
     rarity: 'rare',
     manaCost: 8,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['discover'],
     collectible: true,
     spellEffect: {
@@ -9704,7 +9701,7 @@ const cheatRecruitRampCards: CardData[] = [
     health: 4,
     race: 'Treant',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['deathrattle'],
     collectible: true,
     deathrattle: {
@@ -9725,7 +9722,7 @@ const cheatRecruitRampCards: CardData[] = [
     health: 4,
     race: 'Elemental',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -9739,7 +9736,7 @@ const cheatRecruitRampCards: CardData[] = [
     attack: 2,
     health: 6,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   // Token for Splitting Festeroot
@@ -9755,7 +9752,7 @@ const cheatRecruitRampCards: CardData[] = [
     health: 2,
     race: 'Treant',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['deathrattle'],
     collectible: false,
     deathrattle: {
@@ -9783,7 +9780,7 @@ const synergyPackageCards: CardData[] = [
     attack: 3,
     health: 4,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -9797,7 +9794,7 @@ const synergyPackageCards: CardData[] = [
     attack: 3,
     health: 6,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -9818,7 +9815,7 @@ const synergyPackageCards: CardData[] = [
     health: 1,
     race: 'Einherjar',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -9838,7 +9835,7 @@ const synergyPackageCards: CardData[] = [
     attack: 4,
     health: 4,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -9856,7 +9853,7 @@ const synergyPackageCards: CardData[] = [
     rarity: 'common',
     manaCost: 2,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true,
     spellEffect: {
       type: 'draw_and_repeat',
@@ -9875,7 +9872,7 @@ const synergyPackageCards: CardData[] = [
     attack: 3,
     health: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -9896,7 +9893,7 @@ const synergyPackageCards: CardData[] = [
     attack: 2,
     health: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['reborn', 'deathrattle'],
     collectible: true,
     deathrattle: {
@@ -9916,7 +9913,7 @@ const synergyPackageCards: CardData[] = [
     attack: 7,
     health: 8,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['taunt'],
     collectible: true,
     costReduction: {
@@ -9937,7 +9934,7 @@ const synergyPackageCards: CardData[] = [
     attack: 5,
     health: 6,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -9959,7 +9956,7 @@ const synergyPackageCards: CardData[] = [
     attack: 2,
     health: 4,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -9981,7 +9978,7 @@ const synergyPackageCards: CardData[] = [
     attack: 2,
     health: 2,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -10003,7 +10000,7 @@ const synergyPackageCards: CardData[] = [
     attack: 0,
     health: 4,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['deathrattle'],
     collectible: true,
     deathrattle: {
@@ -10023,7 +10020,7 @@ const synergyPackageCards: CardData[] = [
     health: 8,
     race: 'Giant',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true,
     costReduction: {
       type: 'per_card_in_hand',
@@ -10042,7 +10039,7 @@ const synergyPackageCards: CardData[] = [
     health: 1,
     race: 'Dragon',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -10062,7 +10059,7 @@ const synergyPackageCards: CardData[] = [
     attack: 1,
     health: 7,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['divine_shield'],
     collectible: true
   },
@@ -10077,7 +10074,7 @@ const synergyPackageCards: CardData[] = [
     attack: 4,
     durability: 2,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['deathrattle'],
     collectible: true,
     deathrattle: {
@@ -10102,7 +10099,7 @@ const synergyPackageCards: CardData[] = [
     attack: 4,
     health: 7,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['spell_damage'],
     spellDamage: 2,
     collectible: true
@@ -10118,7 +10115,7 @@ const synergyPackageCards: CardData[] = [
     attack: 1,
     health: 1,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['spell_damage', 'deathrattle'],
     spellDamage: 1,
     collectible: true,
@@ -10138,7 +10135,7 @@ const synergyPackageCards: CardData[] = [
     attack: 1,
     health: 4,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['spell_damage'],
     spellDamage: 1,
     collectible: true
@@ -10154,7 +10151,7 @@ const synergyPackageCards: CardData[] = [
     attack: 2,
     health: 5,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['spell_damage'],
     spellDamage: 2,
     collectible: true
@@ -10171,7 +10168,7 @@ const synergyPackageCards: CardData[] = [
     health: 3,
     race: 'Elemental',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['spell_damage'],
     spellDamage: 2,
     collectible: true
@@ -10189,7 +10186,7 @@ const synergyPackageCards: CardData[] = [
     attack: 2,
     health: 2,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -10204,7 +10201,7 @@ const synergyPackageCards: CardData[] = [
     health: 8,
     race: 'Giant',
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true,
     costReduction: {
       type: 'per_minion_on_battlefield',
@@ -10222,7 +10219,7 @@ const synergyPackageCards: CardData[] = [
     attack: 3,
     health: 6,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: true
   },
   {
@@ -10236,7 +10233,7 @@ const synergyPackageCards: CardData[] = [
     attack: 6,
     health: 6,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     keywords: ['battlecry'],
     collectible: true,
     battlecry: {
@@ -10259,7 +10256,7 @@ const synergyPackageCards: CardData[] = [
     attack: 1,
     durability: 3,
     class: 'Neutral',
-    set: 'core',
+    set: 'genesis',
     collectible: false
   }
 ];

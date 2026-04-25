@@ -1,12 +1,5 @@
 /**
  * Mythic Cards - Core Set
- * Migrated from multiple source files on 2026-02-02:
- * - client/src/game/data/legendaryCards.ts
- * - client/src/game/data/additionalLegendaryCards.ts
- * - client/src/game/data/modernLegendaryCards.ts
- * - client/src/game/data/iconicLegendaryCards.ts
- * - client/src/game/data/finalLegendaryCards.ts
- * - client/src/game/data/expansionLegendaryCards.ts
  * 
  * Powerful unique cards with game-changing effects.
  * ID Range: 20003-20999
@@ -38,7 +31,7 @@ export const classLegendaryMinions: CardData[] = [
     keywords: ["divine_shield", "taunt", "deathrattle"],
     heroClass: "paladin",
     class: "Paladin",
-    set: "core",
+    set: "genesis",
     collectible: true,
     deathrattle: {
       type: "summon",
@@ -60,7 +53,7 @@ export const classLegendaryMinions: CardData[] = [
     heroClass: "shaman",
     race: "Elemental",
     class: "Shaman",
-    set: "core",
+    set: "genesis",
     collectible: true
   },
   {
@@ -76,7 +69,7 @@ export const classLegendaryMinions: CardData[] = [
     keywords: ["combo"],
     heroClass: "rogue",
     class: "Rogue",
-    set: "core",
+    set: "genesis",
     collectible: true,
     comboEffect: {
       type: "buff",

@@ -121,6 +121,7 @@ export interface Card {
   keywords?: string[];
   flavorText?: string;
   collectible?: boolean;
+  set?: 'starter' | 'genesis';
   
   // Effect properties
   battlecry?: BattlecryEffect;

@@ -29,7 +29,7 @@ export const realmShiftCards: CardData[] = [
 				{ type: 'debuff_all_attack', value: 2, target: 'all' }
 			]
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -51,7 +51,7 @@ export const realmShiftCards: CardData[] = [
 				{ type: 'damage_all_end_turn', value: 1, target: 'all' }
 			]
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -74,7 +74,7 @@ export const realmShiftCards: CardData[] = [
 				{ type: 'cost_increase', value: 1, target: 'enemy' }
 			]
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -96,7 +96,7 @@ export const realmShiftCards: CardData[] = [
 				{ type: 'banish_on_death', target: 'all' }
 			]
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -118,7 +118,7 @@ export const realmShiftCards: CardData[] = [
 				{ type: 'heal_all_start_turn', value: 2, target: 'all' }
 			]
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -141,7 +141,7 @@ export const realmShiftCards: CardData[] = [
 				{ type: 'debuff_all_health', value: 1, target: 'all' }
 			]
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -163,7 +163,7 @@ export const realmShiftCards: CardData[] = [
 				{ type: 'keyword_grant', value: 0, target: 'all' }
 			]
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -185,7 +185,7 @@ export const realmShiftCards: CardData[] = [
 				{ type: 'stealth_on_play', value: 0, target: 'all' }
 			]
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -205,7 +205,7 @@ export const realmShiftCards: CardData[] = [
 			realmDescription: 'No realm active. Minions restored to base stats.',
 			realmEffects: []
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	}
 ];

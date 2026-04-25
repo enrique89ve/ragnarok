@@ -18,8 +18,8 @@ export const colossalMinionCards: CardData[] = [
 
       description: "Colossal +2. Battlecry: Summon two Neptulon's Hands. Whenever a Neptulon's Hand attacks, add a random Elemental to your hand.",
       rarity: 'epic',
-
-      type: "minion",
+      set: 'genesis',
+    type: "minion",
       keywords: ['colossal', 'battlecry'],
       battlecry: {
         type: 'summon_parts',  // Special type for colossal parts summoning
@@ -41,7 +41,8 @@ export const colossalMinionCards: CardData[] = [
       
       description: "Colossal +2. Taunt.   Battlecry: Draw 3 Nagas from your deck.",
       rarity: 'epic',
-      type: "minion",
+      set: 'genesis',
+    type: "minion",
       
       keywords: ['colossal', 'taunt', 'battlecry'],
       battlecry: {
@@ -68,8 +69,8 @@ export const colossalMinionCards: CardData[] = [
       
       description: "Colossal +3. Divine Shield. Summons three Protective Shield parts that protect the main body.",
       rarity: 'epic',
-      
-      type: "minion",
+      set: 'genesis',
+    type: "minion",
       keywords: ['colossal', 'divine_shield', 'battlecry'],
       battlecry: {
         type: 'summon',
@@ -97,8 +98,8 @@ export const colossalPartCards: CardData[] = [
       health: 2,
       description: "Part of Neptulon the Tidehunter. After this attacks, add a random Elemental to your hand.",
       rarity: 'rare',
-      
-      type: "minion",
+      set: 'genesis',
+    type: "minion",
       keywords: [],
       class: "Neutral",
       collectible: true
@@ -115,7 +116,8 @@ export const colossalPartCards: CardData[] = [
       description: "Part of Giga-Fin. Taunt. Deathrattle: Deal 2 damage to all enemy minions.",
       
       rarity: 'rare',
-      type: "minion",
+      set: 'genesis',
+    type: "minion",
       
       keywords: ['taunt', 'deathrattle'],
       deathrattle: {
@@ -139,7 +141,8 @@ export const colossalPartCards: CardData[] = [
       description: "Part of Giga-Fin. Taunt. Battlecry: Give adjacent minions +1/+1.",
       
       rarity: 'rare',
-      type: "minion",
+      set: 'genesis',
+    type: "minion",
       
       keywords: ['taunt', 'battlecry'],
       battlecry: {
@@ -166,7 +169,8 @@ export const colossalPartCards: CardData[] = [
       description: "Part of Colossus of the Moon. Taunt. Divine Shield. Can't attack.",
       
       rarity: 'rare',
-      type: "minion",
+      set: 'genesis',
+    type: "minion",
       
       keywords: ['taunt', 'divine_shield'],
       class: "Neutral",

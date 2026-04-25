@@ -16,7 +16,8 @@ export const   mechanicCards: CardData[] = [{
       
       type: "spell", // Corrected type to be a valid CardType
       rarity: "common", // Added missing rarity
-      class: "Neutral", // Added class
+    set: 'genesis',
+    class: "Neutral", // Added class
       collectible: true, // Added collectible property
       
       spellEffect: { // Converted to a proper spellEffect
@@ -37,7 +38,8 @@ export const   mechanicCards: CardData[] = [{
       type: "minion",
 
       rarity: "common",
-      description: "Battlecry: Draw a card.",
+      set: 'genesis',
+    description: "Battlecry: Draw a card.",
 
       keywords: ["battlecry"],
       heroClass: "neutral",
@@ -64,8 +66,8 @@ export const   mechanicCards: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Battlecry: Silence a minion.",
+      set: 'genesis',
+    description: "Battlecry: Silence a minion.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -92,8 +94,8 @@ export const   mechanicCards: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Battlecry: Silence a minion.",
+      set: 'genesis',
+    description: "Battlecry: Silence a minion.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -119,8 +121,8 @@ export const   mechanicCards: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Battlecry: Give a minion +2 Attack this turn.",
+      set: 'genesis',
+    description: "Battlecry: Give a minion +2 Attack this turn.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -151,8 +153,8 @@ export const   mechanicCards: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Battlecry: Give a minion +2 Attack this turn.",
+      set: 'genesis',
+    description: "Battlecry: Give a minion +2 Attack this turn.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -183,8 +185,8 @@ export const   mechanicCards: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Battlecry: Give a friendly minion +1/+1.",
+      set: 'genesis',
+    description: "Battlecry: Give a friendly minion +1/+1.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -213,8 +215,8 @@ export const   mechanicCards: CardData[] = [{
 
       type: "minion",
       rarity: "rare",
-
-      description: "Battlecry: Give adjacent minions +1/+1 and Taunt.",
+      set: 'genesis',
+    description: "Battlecry: Give adjacent minions +1/+1 and Taunt.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -246,8 +248,8 @@ export const   mechanicCards: CardData[] = [{
 
       type: "minion",
       rarity: "rare",
-
-      description: "Battlecry: Deal 3 damage.",
+      set: 'genesis',
+    description: "Battlecry: Deal 3 damage.",
       flavorText: "Forged in the heart of Muspelheim, it carries the fire giant's wrath.",
       keywords: ["battlecry"],
 
@@ -276,8 +278,8 @@ export const   mechanicCards: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Deathrattle: Draw a card.",
+      set: 'genesis',
+    description: "Deathrattle: Draw a card.",
       keywords: ["deathrattle"],
 
       heroClass: "neutral",
@@ -301,8 +303,8 @@ export const   mechanicCards: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Deathrattle: Summon a 2/1 Damaged Golem.",
+      set: 'genesis',
+    description: "Deathrattle: Summon a 2/1 Damaged Golem.",
       keywords: ["deathrattle"],
 
       heroClass: "neutral",
@@ -329,8 +331,8 @@ export const   mechanicCards: CardData[] = [{
 
       type: "minion",
       rarity: "rare",
-
-      description: "Deathrattle: Summon a 4/5 Primordial Calf.",
+      set: 'genesis',
+    description: "Deathrattle: Summon a 4/5 Primordial Calf.",
       keywords: ["deathrattle"],
 
       heroClass: "neutral",
@@ -354,8 +356,8 @@ export const   mechanicCards: CardData[] = [{
 
       type: "minion",
       rarity: "rare",
-
-      description: "Taunt.   Deathrattle: Summon a 1/2 Slime with Taunt.",
+      set: 'genesis',
+    description: "Taunt.   Deathrattle: Summon a 1/2 Slime with Taunt.",
     keywords: ["deathrattle", "taunt"],
       heroClass: "neutral",
       class: "Neutral",
@@ -380,8 +382,8 @@ export const   mechanicCards: CardData[] = [{
 
       type: "minion",
       rarity: "rare",
-
-      description: "Deathrattle: Summon a 7/7 Automaton Dragon.",
+      set: 'genesis',
+    description: "Deathrattle: Summon a 7/7 Automaton Dragon.",
       keywords: ["deathrattle"],
 
       heroClass: "neutral",
@@ -408,8 +410,8 @@ export const   mechanicCards: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Deathrattle: Deal 2 damage to all minions.",
+      set: 'genesis',
+    description: "Deathrattle: Deal 2 damage to all minions.",
       keywords: ["deathrattle"],
 
       heroClass: "neutral",
@@ -436,8 +438,8 @@ export const   mechanicCards: CardData[] = [{
 
       type: "minion",
       rarity: "rare",
-
-      description: "Taunt, Reborn.   Deathrattle: Restore 3 Health to your hero.",
+      set: 'genesis',
+    description: "Taunt, Reborn.   Deathrattle: Restore 3 Health to your hero.",
     keywords: ["deathrattle", "taunt", "reborn"],
       heroClass: "neutral",
       class: "Neutral",
@@ -462,8 +464,8 @@ export const   mechanicCards: CardData[] = [{
 
       type: "minion",
       rarity: "rare",
-
-      description: "Deathrattle: Summon a 5/5 Faceless Destroyer.",
+      set: 'genesis',
+    description: "Deathrattle: Summon a 5/5 Faceless Destroyer.",
       keywords: ["deathrattle"],
 
       heroClass: "neutral",
@@ -487,8 +489,8 @@ export const   mechanicCards: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Deathrattle: Restore 8 Health to the enemy hero.",
+      set: 'genesis',
+    description: "Deathrattle: Restore 8 Health to the enemy hero.",
       keywords: ["deathrattle"],
 
       heroClass: "neutral",
@@ -515,8 +517,8 @@ export const   mechanicCards: CardData[] = [{
 
       type: "minion",
       rarity: "rare",
-
-      description: "Battlecry: Copy a friendly minion's Deathrattle.",
+      set: 'genesis',
+    description: "Battlecry: Copy a friendly minion's Deathrattle.",
       keywords: ["battlecry"],
 
       heroClass: "rogue",
@@ -542,8 +544,8 @@ export const   mechanicCards: CardData[] = [{
 
       type: "minion",
       rarity: "rare",
-
-      description: "Taunt.   Deathrattle: Deal 2 damage to ALL characters.",
+      set: 'genesis',
+    description: "Taunt.   Deathrattle: Deal 2 damage to ALL characters.",
     keywords: ["taunt", "deathrattle"],
       heroClass: "neutral",
       class: "Neutral",
@@ -568,8 +570,8 @@ export const   mechanicCards: CardData[] = [{
 
       type: "minion",
       rarity: "rare",
-
-      description: "Deathrattle: Summon a random 2-Cost minion.",
+      set: 'genesis',
+    description: "Deathrattle: Summon a random 2-Cost minion.",
       keywords: ["deathrattle"],
 
       heroClass: "neutral",
@@ -599,8 +601,8 @@ export const   mechanicCards: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Deathrattle: Restore 4 Health to both heroes.",
+      set: 'genesis',
+    description: "Deathrattle: Restore 4 Health to both heroes.",
       keywords: ["deathrattle"],
 
       heroClass: "neutral",
@@ -624,8 +626,8 @@ export const   mechanicCards: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Deathrattle: Put a Rune from your deck into the battlefield.",
+      set: 'genesis',
+    description: "Deathrattle: Put a Rune from your deck into the battlefield.",
       keywords: ["deathrattle"],
 
       heroClass: "neutral",
@@ -651,8 +653,8 @@ export const   mechanicCards: CardData[] = [{
   
   type: "minion",
   rarity: "rare",
-  
-  description: "Combo: Deal 2 damage.",
+      set: 'genesis',
+    description: "Combo: Deal 2 damage.",
   keywords: ["combo"],
   
   heroClass: "rogue",
@@ -674,7 +676,8 @@ export const   mechanicCards: CardData[] = [{
       health: 4,
       type: "minion",
       rarity: "common",
-      description: "Deathrattle: Put a random Titan from your hand into the battlefield.",
+    set: 'genesis',
+    description: "Deathrattle: Put a random Titan from your hand into the battlefield.",
       keywords: ["deathrattle"],
       heroClass: "warlock",
       class: "Warlock",

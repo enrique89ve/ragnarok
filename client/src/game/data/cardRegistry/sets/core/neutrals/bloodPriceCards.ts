@@ -30,7 +30,7 @@ export const bloodPriceCards: CardData[] = [
 				duration: 1
 			}
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -52,7 +52,7 @@ export const bloodPriceCards: CardData[] = [
 			buffAttack: 2,
 			buffHealth: 2
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -73,7 +73,7 @@ export const bloodPriceCards: CardData[] = [
 			requiresTarget: false,
 			targetType: 'none'
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -92,7 +92,7 @@ export const bloodPriceCards: CardData[] = [
 			value: 6,
 			targetType: 'friendly_minions'
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -114,7 +114,7 @@ export const bloodPriceCards: CardData[] = [
 				condition: 'blood_price_paid'
 			}
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -130,7 +130,7 @@ export const bloodPriceCards: CardData[] = [
 		class: 'Berserker',
 		keywords: ['blood_price', 'charge'],
 		bloodPrice: 4,
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -150,7 +150,7 @@ export const bloodPriceCards: CardData[] = [
 			type: 'summon_copy_if_blood',
 			condition: 'blood_price_paid'
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -173,7 +173,7 @@ export const bloodPriceCards: CardData[] = [
 				condition: 'blood_price_paid'
 			}
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	}
 ];

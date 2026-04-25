@@ -1,6 +1,5 @@
 /**
  * Mechanic Cards - Battlecry, Deathrattle, and Other Mechanics
- * Migrated from client/src/game/data/mechanicCards.ts on 2026-02-02
  * 
  * Contains cards focused on Battlecry, Deathrattle, Combo, and other core mechanics.
  * ID Range: 40003-40999
@@ -28,7 +27,7 @@ export const battlecryMinions: CardData[] = [
     heroClass: "neutral",
     class: "Neutral",
     race: "Beast",
-    set: "core",
+    set: "genesis",
     collectible: true,
     battlecry: {
       type: "silence",
@@ -49,7 +48,7 @@ export const battlecryMinions: CardData[] = [
     keywords: ["battlecry"],
     heroClass: "neutral",
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     collectible: true,
     battlecry: {
       type: "silence",
@@ -76,7 +75,7 @@ export const deathrattleMinions: CardData[] = [
     keywords: ["deathrattle"],
     heroClass: "neutral",
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     collectible: true,
     deathrattle: {
       type: "draw",
@@ -97,7 +96,7 @@ export const deathrattleMinions: CardData[] = [
     keywords: ["deathrattle"],
     heroClass: "neutral",
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     collectible: true,
     deathrattle: {
       type: "summon",
@@ -119,7 +118,7 @@ export const deathrattleMinions: CardData[] = [
     heroClass: "neutral",
     class: "Neutral",
     race: "Automaton",
-    set: "core",
+    set: "genesis",
     collectible: true,
     deathrattle: {
       type: "summon",
@@ -141,7 +140,7 @@ export const deathrattleMinions: CardData[] = [
     heroClass: "neutral",
     class: "Neutral",
     race: "Automaton",
-    set: "core",
+    set: "genesis",
     collectible: true,
     deathrattle: {
       type: "damage",
@@ -162,7 +161,7 @@ export const deathrattleMinions: CardData[] = [
     keywords: ["deathrattle", "taunt", "reborn"],
     heroClass: "neutral",
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     collectible: true,
     deathrattle: {
       type: "heal",

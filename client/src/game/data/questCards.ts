@@ -12,7 +12,8 @@ export const questRewards: CardData[] = [
       manaCost: 5,
       description: "Take an extra turn after this one.",
       rarity: "mythic",
-      type: "spell",
+      set: 'genesis',
+    type: "spell",
       keywords: [],
       spellEffect: {
         type: "extra_turn",
@@ -31,7 +32,8 @@ export const questRewards: CardData[] = [
       durability: 2,
       description: "Battlecry: Your Hero Power becomes 'Deal 8 damage'.",
       rarity: "mythic",
-      type: "weapon",
+      set: 'genesis',
+    type: "weapon",
       keywords: ["battlecry"],
                   battlecry: {
         type: "change_hero_power",
@@ -54,7 +56,8 @@ export const questRewards: CardData[] = [
       manaCost: 5,
       description: "For the rest of the game, your minions are 4/4.",
       rarity: "mythic",
-      type: "spell",
+      set: 'genesis',
+    type: "spell",
       keywords: [],
       spellEffect: {
         type: "crystal_core",
@@ -72,7 +75,8 @@ export const questRewards: CardData[] = [
       health: 8,
       description: "Taunt.   Battlecry: Set your hero's Health to 40.",
       rarity: "mythic",
-      type: "minion",
+      set: 'genesis',
+    type: "minion",
       keywords: ["taunt", "battlecry"],
                   battlecry: {
         type: "heal",
@@ -91,7 +95,8 @@ export const questRewards: CardData[] = [
       health: 8,
       description: "Battlecry: Shuffle 15 Raptors into your deck. They cost (1) and draw a card when played.",
       rarity: "mythic",
-      type: "minion",
+      set: 'genesis',
+    type: "minion",
       keywords: ["battlecry"],
                   battlecry: {
         type: "summon", // This is simplified, would shuffle raptors in real implementation
@@ -111,7 +116,8 @@ export const questRewards: CardData[] = [
       health: 8,
       description: "Battlecry: The minions in your deck cost (0).",
       rarity: "mythic",
-      type: "minion",
+      set: 'genesis',
+    type: "minion",
       keywords: ["battlecry"],
                   battlecry: {
         type: "buff", // Simplified effect
@@ -133,7 +139,8 @@ export const questCards: CardData[] = [
       manaCost: 1,
       description: "Quest: Cast 6 spells that didn't start in your deck.   Reward: Chronos Warp.",
       rarity: "mythic",
-      type: "spell",
+      set: 'genesis',
+    type: "spell",
       keywords: ["quest"],
       spellEffect: {
         type: "quest",
@@ -156,7 +163,8 @@ export const questCards: CardData[] = [
       manaCost: 1,
       description: "Quest: Play 7 Taunt minions.   Reward: Mjolnir's Fury.",
       rarity: "mythic",
-      type: "spell",
+      set: 'genesis',
+    type: "spell",
       keywords: ["quest"],
       spellEffect: {
         type: "quest",
@@ -179,7 +187,8 @@ export const questCards: CardData[] = [
       manaCost: 1,
       description: "Quest: Play 5 minions with the same name.   Reward: Yggdrasil Core.",
       rarity: "mythic",
-      type: "spell",
+      set: 'genesis',
+    type: "spell",
       keywords: ["quest"],
       spellEffect: {
         type: "quest",
@@ -202,7 +211,8 @@ export const questCards: CardData[] = [
       manaCost: 1,
       description: "Quest: Summon 7 Deathrattle minions. Reward: Elpis, Warden of Hope.",
       rarity: "mythic",
-      type: "spell",
+      set: 'genesis',
+    type: "spell",
       keywords: ["quest"],
       spellEffect: {
         type: "quest",
@@ -225,7 +235,8 @@ export const questCards: CardData[] = [
       manaCost: 1,
       description: "Quest: Play 7 minions that cost (1).   Reward: Queen Echidna.",
       rarity: "mythic",
-      type: "spell",
+      set: 'genesis',
+    type: "spell",
       keywords: ["quest"],
       spellEffect: {
         type: "quest",
@@ -248,7 +259,8 @@ export const questCards: CardData[] = [
       manaCost: 1,
       description: "Quest: Summon 5 minions with 5 or more Attack.   Reward: Barnabus, Titan Stomper.",
       rarity: "mythic",
-      type: "spell",
+      set: 'genesis',
+    type: "spell",
       keywords: ["quest"],
       spellEffect: {
         type: "quest",

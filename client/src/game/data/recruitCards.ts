@@ -9,7 +9,8 @@ export const recruitCards: CardData[] = [
 		health: 4,
 		description: "Deathrattle: Recruit an 8-Cost minion.",
 		rarity: "common",
-		type: "minion",
+        set: 'genesis',
+        type: "minion",
 		keywords: ["deathrattle", "recruit"],
 		deathrattle: {
 			type: "recruit",
@@ -24,7 +25,8 @@ export const recruitCards: CardData[] = [
 		manaCost: 6,
 		description: "Recruit a minion.",
 		rarity: "rare",
-		type: "spell",
+        set: 'genesis',
+        type: "spell",
 		keywords: ["recruit"],
 		spellEffect: {
 			type: "recruit",
@@ -41,7 +43,8 @@ export const recruitCards: CardData[] = [
 		health: 4,
 		description: "Battlecry: Recruit a minion that costs (4) or less.",
 		rarity: "common",
-		type: "minion",
+        set: 'genesis',
+        type: "minion",
 		keywords: ["battlecry", "recruit"],
 		battlecry: {
 			type: "recruit",
@@ -57,7 +60,8 @@ export const recruitCards: CardData[] = [
 		manaCost: 4,
 		description: "Gain 6 Armor. Recruit a minion that costs (4) or less.",
 		rarity: "common",
-		type: "spell",
+        set: 'genesis',
+        type: "spell",
 		keywords: ["recruit"],
 		spellEffect: {
 			type: "gain_armor_and_recruit",
@@ -76,7 +80,8 @@ export const recruitCards: CardData[] = [
 		health: 2,
 		description: "Deathrattle: Recruit a Titan.",
 		rarity: "rare",
-		type: "minion",
+        set: 'genesis',
+        type: "minion",
 		keywords: ["deathrattle", "recruit"],
 		deathrattle: {
 			type: "recruit",
@@ -91,7 +96,8 @@ export const recruitCards: CardData[] = [
 		manaCost: 5,
 		description: "Recruit 3 minions that cost (2) or less.",
 		rarity: "rare",
-		type: "spell",
+        set: 'genesis',
+        type: "spell",
 		keywords: ["recruit"],
 		spellEffect: {
 			type: "recruit",
@@ -108,7 +114,8 @@ export const recruitCards: CardData[] = [
 		manaCost: 6,
 		description: "Recruit a Beast.",
 		rarity: "rare",
-		type: "spell",
+        set: 'genesis',
+        type: "spell",
 		keywords: ["recruit"],
 		spellEffect: {
 			type: "recruit",

@@ -1,7 +1,6 @@
 /**
  * Death Knight Hero Cards
  * 
- * Migrated from client/src/game/data/heroCards.ts on 2026-02-02
  * Contains hero transformation cards (Death Knight variants)
  * These cards replace your current hero and hero power when played
  * 
@@ -51,7 +50,7 @@ export const deathKnightHeroCards: CardData[] = [
     rarity: 'rare',
     type: "hero",
     class: "Hunter",
-    set: "core",
+    set: "genesis",
     collectible: true,
     heroPower: deathstalkerHeroPower
   },
@@ -64,7 +63,7 @@ export const deathKnightHeroCards: CardData[] = [
     rarity: 'epic',
     type: "hero",
     class: "Mage",
-    set: "core",
+    set: "genesis",
     collectible: true,
     heroPower: frostLichHeroPower
   },
@@ -77,7 +76,7 @@ export const deathKnightHeroCards: CardData[] = [
     rarity: 'epic',
     type: "hero",
     class: "Warrior",
-    set: "core",
+    set: "genesis",
     collectible: true,
     heroPower: helheimWarlordHeroPower
   },
@@ -90,7 +89,7 @@ export const deathKnightHeroCards: CardData[] = [
     rarity: 'epic',
     type: "hero",
     class: "Paladin",
-    set: "core",
+    set: "genesis",
     collectible: true,
     heroPower: lightforgedHeroPower
   }
@@ -109,7 +108,7 @@ export const deathKnightHeroTokens: CardData[] = [
     type: "weapon",
     keywords: [],
     class: "Warrior",
-    set: "core",
+    set: "genesis",
     collectible: false
   },
   {
@@ -124,7 +123,7 @@ export const deathKnightHeroTokens: CardData[] = [
     type: "weapon",
     keywords: ["lifesteal"],
     class: "Paladin",
-    set: "core",
+    set: "genesis",
     collectible: false
   },
   {
@@ -139,7 +138,7 @@ export const deathKnightHeroTokens: CardData[] = [
     type: "minion",
     keywords: [],
     class: "Paladin",
-    set: "core",
+    set: "genesis",
     collectible: false
   }
 ];

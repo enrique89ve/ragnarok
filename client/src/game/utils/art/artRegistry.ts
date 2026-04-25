@@ -6,6 +6,7 @@
  */
 
 import { ArtCard, ArtMetadata } from './types';
+import { ArtMetadataSchema } from './schema';
 import { assetPath } from '../assetPath';
 
 // Path to the canonical metadata file
@@ -26,8 +27,14 @@ export async function loadArtRegistry(): Promise<ArtMetadata> {
   try {
     const response = await fetch(NFT_METADATA_PATH);
     if (!response.ok) throw new Error('Failed to load Art Registry');
-    
-    const metadata: ArtMetadata = await response.json();
+
+    const raw = await response.json();
+    const parsed = ArtMetadataSchema.safeParse(raw);
+    if (!parsed.success) {
+      const issues = parsed.error.issues.slice(0, 5).map(i => `${i.path.join('.')}: ${i.message}`);
+      throw new Error(`Art metadata schema validation failed:\n  ${issues.join('\n  ')}`);
+    }
+    const metadata = parsed.data as ArtMetadata;
     indexRegistry(metadata);
     registryCache = metadata;
     return metadata;

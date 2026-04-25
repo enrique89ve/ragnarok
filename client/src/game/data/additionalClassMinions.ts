@@ -17,6 +17,7 @@ export const additionalClassMinions: CardData[] = [
     health: 2,
     type: "minion",
     rarity: "common",
+      set: 'genesis',
     description: "Your spells cost (1) less.",
     keywords: [],
     heroClass: "mage", // Special handling in game logic for spell cost reduction
@@ -31,6 +32,7 @@ export const additionalClassMinions: CardData[] = [
     health: 4,
     type: "minion",
     rarity: "rare",
+      set: 'genesis',
     description: "Whenever a friendly minion takes damage, gain 1 Armor.",
     keywords: [],
     heroClass: "warrior", // Special handling in game logic for armor gain
@@ -47,8 +49,8 @@ export const additionalClassMinions: CardData[] = [
   
   type: "minion",
   rarity: "rare",
-  
-  description: "Whenever a minion takes damage, gain +1 Attack.",
+      set: 'genesis',
+    description: "Whenever a minion takes damage, gain +1 Attack.",
   keywords: [],
   
   heroClass: "warrior", // Special handling in game logic for attack gain
@@ -66,8 +68,8 @@ export const additionalClassMinions: CardData[] = [
   
   type: "minion",
   rarity: "common",
-  
-  description: "Whenever your hero gains Armor, gain +1/+1.",
+      set: 'genesis',
+    description: "Whenever your hero gains Armor, gain +1/+1.",
   keywords: [],
   
   heroClass: "warrior",
@@ -84,8 +86,8 @@ export const additionalClassMinions: CardData[] = [
 
       type: "minion",
       rarity: "common",
-
-      description: "Taunt. Battlecry: If you have a weapon equipped, gain +1 Health.",
+      set: 'genesis',
+    description: "Taunt. Battlecry: If you have a weapon equipped, gain +1 Health.",
       keywords: ["taunt", "battlecry"],
 
       heroClass: "warrior",
@@ -110,8 +112,8 @@ export const additionalClassMinions: CardData[] = [
   
   type: "minion",
   rarity: "common",
-  
-  description: "Whenever this minion takes damage, deal 2 damage to a random enemy.",
+      set: 'genesis',
+    description: "Whenever this minion takes damage, deal 2 damage to a random enemy.",
   keywords: ["enrage"],
   
   heroClass: "warrior",
@@ -128,8 +130,8 @@ export const additionalClassMinions: CardData[] = [
 
       type: "minion",
       rarity: "rare",
-
-      description: "Battlecry: Gain Armor equal to this minion's Attack.",
+      set: 'genesis',
+    description: "Battlecry: Gain Armor equal to this minion's Attack.",
       keywords: ["battlecry"],
 
       heroClass: "warrior",
@@ -151,8 +153,8 @@ export const additionalClassMinions: CardData[] = [
 
       type: "minion",
       rarity: "common",
-
-      description: "Battlecry: Deal 1 damage to a friendly minion.",
+      set: 'genesis',
+    description: "Battlecry: Deal 1 damage to a friendly minion.",
       keywords: ["battlecry"],
 
       heroClass: "warrior",
@@ -173,6 +175,7 @@ export const additionalClassMinions: CardData[] = [
     health: 5,
     type: "minion",
     rarity: "rare",
+      set: 'genesis',
     description: "Whenever you equip a weapon, gain +2 Attack.",
     keywords: [],
     heroClass: "warrior",
@@ -189,8 +192,8 @@ export const additionalClassMinions: CardData[] = [
 
       type: "minion",
       rarity: "rare",
-
-      description: "Battlecry: Gain 5 Armor. If you already have Armor, draw a card.",
+      set: 'genesis',
+    description: "Battlecry: Gain 5 Armor. If you already have Armor, draw a card.",
       keywords: ["battlecry"],
 
       heroClass: "warrior",
@@ -213,8 +216,8 @@ export const additionalClassMinions: CardData[] = [
   
   type: "minion",
   rarity: "common",
-  
-  description: "Has +3 Attack while damaged.",
+      set: 'genesis',
+    description: "Has +3 Attack while damaged.",
   keywords: ["enrage"],
   
   heroClass: "warrior",
@@ -231,8 +234,8 @@ export const additionalClassMinions: CardData[] = [
 
       type: "minion",
       rarity: "rare",
-
-      description: "Battlecry: Give your weapon +1/+1.",
+      set: 'genesis',
+    description: "Battlecry: Give your weapon +1/+1.",
       keywords: ["battlecry"],
 
       heroClass: "warrior",
@@ -256,8 +259,8 @@ export const additionalClassMinions: CardData[] = [
 
       type: "minion",
       rarity: 'epic',
-
-      description: "Battlecry: Equip a random weapon from your deck. Gain Armor equal to its Attack.",
+      set: 'genesis',
+    description: "Battlecry: Equip a random weapon from your deck. Gain Armor equal to its Attack.",
       keywords: ["battlecry"],
 
       heroClass: "warrior",
@@ -279,8 +282,8 @@ export const additionalClassMinions: CardData[] = [
 
       type: "minion",
       rarity: "rare",
-
-      description: "Battlecry: Change an enemy minion's Attack to 1.",
+      set: 'genesis',
+    description: "Battlecry: Change an enemy minion's Attack to 1.",
       keywords: ["battlecry"],
 
       heroClass: "paladin",
@@ -308,8 +311,8 @@ export const additionalClassMinions: CardData[] = [
   
   type: "minion",
   rarity: "common",
-  
-  description: "Taunt, Divine Shield",
+      set: 'genesis',
+    description: "Taunt, Divine Shield",
   keywords: ["taunt", "divine_shield"],
   heroClass: "paladin",
       class: "Paladin",
@@ -325,8 +328,8 @@ export const additionalClassMinions: CardData[] = [
 
       type: "minion",
       rarity: "rare",
-
-      description: "Deathrattle: Summon two 2/2 Hyenas.",
+      set: 'genesis',
+    description: "Deathrattle: Summon two 2/2 Hyenas.",
       keywords: ["deathrattle"],
 
       heroClass: "hunter",
@@ -351,8 +354,8 @@ export const additionalClassMinions: CardData[] = [
   
   type: "minion",
   rarity: "common",
-  
-  description: "Whenever a friendly Beast dies, gain +2/+1.",
+      set: 'genesis',
+    description: "Whenever a friendly Beast dies, gain +2/+1.",
   keywords: [],
   
   heroClass: "hunter", race: "Beast",
@@ -372,8 +375,8 @@ export const additionalClassMinions: CardData[] = [
 
       type: "minion",
       rarity: "rare",
-
-      description: "Choose One - Deal 2 damage; or Silence a minion.",
+      set: 'genesis',
+    description: "Choose One - Deal 2 damage; or Silence a minion.",
       keywords: ["choose_one"],
 
       heroClass: "druid",
@@ -427,8 +430,8 @@ export const additionalClassMinions: CardData[] = [
 
       type: "minion",
       rarity: "rare",
-
-      description: "Choose One - Draw 2 cards; or Restore 5 Health.",
+      set: 'genesis',
+    description: "Choose One - Draw 2 cards; or Restore 5 Health.",
       keywords: ["choose_one"],
 
       heroClass: "druid",
@@ -483,8 +486,8 @@ export const additionalClassMinions: CardData[] = [
 
       type: "minion",
       rarity: "epic",
-
-      description: "Battlecry: Take control of an enemy minion with 2 or less Attack.",
+      set: 'genesis',
+    description: "Battlecry: Take control of an enemy minion with 2 or less Attack.",
       keywords: ["battlecry"],
 
       heroClass: "priest",
@@ -509,8 +512,8 @@ export const additionalClassMinions: CardData[] = [
 
       type: "minion",
       rarity: "common",
-
-      description: "Battlecry: Deal 3 damage to your hero.",
+      set: 'genesis',
+    description: "Battlecry: Deal 3 damage to your hero.",
       keywords: ["battlecry"],
 
       heroClass: "warlock",
@@ -537,8 +540,8 @@ export const additionalClassMinions: CardData[] = [
 
       type: "minion",
       rarity: "rare",
-
-      description: "Charge.   Battlecry: Discard two random cards.",
+      set: 'genesis',
+    description: "Charge.   Battlecry: Discard two random cards.",
     keywords: ["charge", "battlecry"],
       heroClass: "warlock",
       class: "Warlock",
@@ -563,8 +566,8 @@ export const additionalClassMinions: CardData[] = [
   
   type: "minion",
   rarity: "common",
-  
-  description: "Whenever you play a card with Overload, gain +1/+1.",
+      set: 'genesis',
+    description: "Whenever you play a card with Overload, gain +1/+1.",
   keywords: [],
   
   heroClass: "shaman", race: "Elemental",
@@ -582,6 +585,7 @@ export const additionalClassMinions: CardData[] = [
     health: 2,
     type: "minion",
     rarity: "common",
+      set: 'genesis',
     description: "After your hero attacks, gain +1 Attack.",
     keywords: [],
     heroClass: "berserker", 

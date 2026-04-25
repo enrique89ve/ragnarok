@@ -16,7 +16,7 @@ export const druidCards: CardData[] = [
       isTemporaryMana: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 11015,
@@ -36,7 +36,7 @@ export const druidCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 11016,
@@ -52,7 +52,7 @@ export const druidCards: CardData[] = [
       targetType: "all_friendly_minions"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 11040,
@@ -69,7 +69,7 @@ export const druidCards: CardData[] = [
       value: 8
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 11041,
@@ -84,7 +84,7 @@ export const druidCards: CardData[] = [
     class: "Druid",
     keywords: ["taunt", "battlecry"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 11044,
@@ -99,7 +99,7 @@ export const druidCards: CardData[] = [
     class: "Druid",
     keywords: ["taunt"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 11050,
@@ -118,7 +118,7 @@ export const druidCards: CardData[] = [
       duration: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 11052,
@@ -134,7 +134,7 @@ export const druidCards: CardData[] = [
       value: 3
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 11058,
@@ -151,7 +151,7 @@ export const druidCards: CardData[] = [
       count: 3
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 33001,
@@ -164,7 +164,7 @@ export const druidCards: CardData[] = [
     class: "Druid",
     keywords: ["choose_one"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 33002,
@@ -179,7 +179,7 @@ export const druidCards: CardData[] = [
     class: "Druid",
     keywords: ["choose_one"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 33003,
@@ -194,7 +194,7 @@ export const druidCards: CardData[] = [
     class: "Druid",
     keywords: ["choose_one"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 11020,
@@ -208,7 +208,7 @@ export const druidCards: CardData[] = [
     rarity: "common",
     class: "Druid",
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 11059,
@@ -222,7 +222,7 @@ export const druidCards: CardData[] = [
     rarity: "common",
     class: "Druid",
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 20014,
@@ -237,7 +237,7 @@ export const druidCards: CardData[] = [
     keywords: [],
     class: "Druid",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 20703,
@@ -253,7 +253,7 @@ export const druidCards: CardData[] = [
     race: "Beast",
     class: "Druid",
     collectible: true,
-    set: "core",
+    set: "genesis",
     deathrattle: {
       type: "resurrect",
       targetType: "none",
@@ -273,7 +273,7 @@ export const druidCards: CardData[] = [
     keywords: [],
     class: "Druid",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Dormant Card ===
   {
@@ -290,7 +290,7 @@ export const druidCards: CardData[] = [
     keywords: ["dormant"],
     class: "Druid",
     collectible: true,
-    set: "core",
+    set: "genesis",
     dormantTurns: 2,
     awakenEffect: {
       type: "mana_discount",
@@ -313,7 +313,7 @@ export const druidCards: CardData[] = [
     keywords: ["frenzy"],
     class: "Druid",
     collectible: true,
-    set: "core",
+    set: "genesis",
     frenzyEffect: {
       type: "transform",
       transformId: 9004,
@@ -334,7 +334,7 @@ export const druidCards: CardData[] = [
     keywords: ["rush"],
     class: "Druid",
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 9010,
@@ -350,7 +350,7 @@ export const druidCards: CardData[] = [
     keywords: ["frenzy", "taunt"],
     class: "Druid",
     collectible: true,
-    set: "core",
+    set: "genesis",
     frenzyEffect: {
       type: "buff",
       buffAttack: 2,
@@ -377,7 +377,7 @@ export const druidCards: CardData[] = [
       consumed: false
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 18009,
@@ -397,9 +397,8 @@ export const druidCards: CardData[] = [
       consumed: false
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
-  // === Migrated from legacy druidCards.ts ===
   {
     id: 11042,
     name: "Yggdrasil's Surge",
@@ -416,7 +415,7 @@ export const druidCards: CardData[] = [
       buffHealth: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 11043,
@@ -433,7 +432,7 @@ export const druidCards: CardData[] = [
       duration: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 11045,
@@ -451,7 +450,7 @@ export const druidCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 11046,
@@ -471,7 +470,7 @@ export const druidCards: CardData[] = [
       targetType: "both_players"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 11047,
@@ -491,7 +490,7 @@ export const druidCards: CardData[] = [
       count: 3
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 11048,
@@ -505,7 +504,7 @@ export const druidCards: CardData[] = [
     rarity: "common",
     class: "Druid",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 11049,
@@ -526,7 +525,7 @@ export const druidCards: CardData[] = [
       count: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 11051,
@@ -547,7 +546,7 @@ export const druidCards: CardData[] = [
       consumed: false
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 11053,
@@ -563,7 +562,7 @@ export const druidCards: CardData[] = [
     keywords: ["spell_damage"],
     spellDamage: 2,
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 11054,
@@ -582,7 +581,7 @@ export const druidCards: CardData[] = [
       buffHealth: 2
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 11055,
@@ -598,7 +597,7 @@ export const druidCards: CardData[] = [
     class: "Druid",
     keywords: ["stealth"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 11056,
@@ -618,7 +617,7 @@ export const druidCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 11057,
@@ -638,7 +637,7 @@ export const druidCards: CardData[] = [
       discoveryType: "dragon"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 11060,
@@ -658,7 +657,7 @@ export const druidCards: CardData[] = [
       cardType: "spell"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Choose One Tokens and Cards ===
   {
@@ -674,7 +673,7 @@ export const druidCards: CardData[] = [
     class: "Druid",
     keywords: ["taunt"],
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 33005,
@@ -687,7 +686,7 @@ export const druidCards: CardData[] = [
     class: "Druid",
     keywords: ["choose_one"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 33006,
@@ -702,7 +701,7 @@ export const druidCards: CardData[] = [
     race: "Beast",
     class: "Druid",
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 33007,
@@ -717,7 +716,7 @@ export const druidCards: CardData[] = [
     class: "Druid",
     keywords: ["choose_one"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 33008,
@@ -733,7 +732,7 @@ export const druidCards: CardData[] = [
     class: "Druid",
     keywords: ["poisonous"],
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 33009,
@@ -749,7 +748,7 @@ export const druidCards: CardData[] = [
     class: "Druid",
     keywords: ["taunt"],
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 33010,
@@ -763,7 +762,7 @@ export const druidCards: CardData[] = [
     rarity: 'rare',
     class: "Druid",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 33011,
@@ -776,7 +775,7 @@ export const druidCards: CardData[] = [
     class: "Druid",
     keywords: ["choose_one"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Gullveig Themed ===
   {
@@ -799,7 +798,7 @@ export const druidCards: CardData[] = [
       buffHealth: 5
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Yggdrasil Golem ===
   {
@@ -816,7 +815,7 @@ export const druidCards: CardData[] = [
       type: "summon_yggdrasil_golem"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 40010,
@@ -865,9 +864,8 @@ export const druidCards: CardData[] = [
       }
     ],
     collectible: true,
-    set: "core"
-  },
-  // === Migrated from additionalSpellCards.ts ===
+    set: "genesis"
+  },
   {
     id: 31019,
     name: "Wild Roar",
@@ -886,7 +884,7 @@ export const druidCards: CardData[] = [
       includeHeroes: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Quest Cards ===
   {
@@ -908,7 +906,7 @@ export const druidCards: CardData[] = [
       cardId: 70016
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 70016,
@@ -928,7 +926,7 @@ export const druidCards: CardData[] = [
       value: 0
     },
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   // === New Nature Spells ===
   {
@@ -948,7 +946,7 @@ export const druidCards: CardData[] = [
       bonusCondition: "control_beast"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 70021,
@@ -966,7 +964,7 @@ export const druidCards: CardData[] = [
       isTemporaryMana: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Druid Expansion — board clear + Choose One ===
   {
@@ -985,7 +983,7 @@ export const druidCards: CardData[] = [
       targetType: "all_enemy_minions"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 31702,
@@ -1003,7 +1001,7 @@ export const druidCards: CardData[] = [
       targetType: "all_enemy_minions"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Ramp, Treant & Choose One Expansion ===
   {
@@ -1022,7 +1020,7 @@ export const druidCards: CardData[] = [
       targetType: "none"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38402,
@@ -1040,7 +1038,7 @@ export const druidCards: CardData[] = [
       targetType: "none"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38403,
@@ -1059,7 +1057,7 @@ export const druidCards: CardData[] = [
       value: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38404,
@@ -1079,7 +1077,7 @@ export const druidCards: CardData[] = [
       grantKeywords: ["rush"]
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38405,
@@ -1108,7 +1106,7 @@ export const druidCards: CardData[] = [
       }
     ],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38406,
@@ -1123,7 +1121,7 @@ export const druidCards: CardData[] = [
     class: "Druid",
     keywords: ["taunt", "elusive"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38407,
@@ -1143,7 +1141,7 @@ export const druidCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38408,
@@ -1166,6 +1164,6 @@ export const druidCards: CardData[] = [
       summonHealth: 2
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   }
 ];

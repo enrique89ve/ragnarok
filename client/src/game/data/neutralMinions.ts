@@ -19,8 +19,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Battlecry: Restore 3 Health.",
+    set: 'genesis',
+    description: "Battlecry: Restore 3 Health.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -46,8 +46,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Taunt",
+      set: 'genesis',
+    description: "Taunt",
   keywords: ["taunt"],
   
   heroClass: "neutral",
@@ -65,8 +65,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "rare",
-  
-  description: "After you cast a spell, deal 1 damage to ALL minions.",
+      set: 'genesis',
+    description: "After you cast a spell, deal 1 damage to ALL minions.",
   heroClass: "neutral",
       class: "Neutral",
       collectible: true
@@ -82,8 +82,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "rare",
-
-      description: "Battlecry: Each player draws 2 cards.",
+      set: 'genesis',
+    description: "Battlecry: Each player draws 2 cards.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -110,8 +110,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "rare",
-
-      description: "Battlecry: Choose a minion and become a copy of it.",
+      set: 'genesis',
+    description: "Battlecry: Choose a minion and become a copy of it.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -137,8 +137,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "rare",
-  
-  description: "At the start of your turn, destroy ALL minions.",
+      set: 'genesis',
+    description: "At the start of your turn, destroy ALL minions.",
   heroClass: "neutral",
       class: "Neutral",
       collectible: true,
@@ -155,8 +155,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "rare",
-  
-  description: "Costs (1) less for each minion on the battlefield.",
+      set: 'genesis',
+    description: "Costs (1) less for each minion on the battlefield.",
   heroClass: "neutral",
       class: "Neutral",
       collectible: true
@@ -172,8 +172,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "epic",
-  
-  description: "Costs (1) less for each damage your hero has taken.",
+      set: 'genesis',
+    description: "Costs (1) less for each damage your hero has taken.",
   heroClass: "neutral", race: "none",
       class: "Neutral",
       collectible: true
@@ -189,8 +189,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "rare",
-
-      description: "Battlecry: Gain +1 Health for each card in your hand.",
+      set: 'genesis',
+    description: "Battlecry: Gain +1 Health for each card in your hand.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -216,8 +216,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Whenever this minion takes damage, draw a card.",
+      set: 'genesis',
+    description: "Whenever this minion takes damage, draw a card.",
   heroClass: "neutral",
       class: "Neutral",
       collectible: true
@@ -233,8 +233,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "rare",
-  
-  description: "Whenever you cast a spell, draw a card.",
+      set: 'genesis',
+    description: "Whenever you cast a spell, draw a card.",
   heroClass: "neutral",
       class: "Neutral",
       collectible: true
@@ -278,8 +278,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "epic",
-
-      description: "Battlecry: Reveal a spell from your deck. Summon a random minion with the same Cost.",
+      set: 'genesis',
+    description: "Battlecry: Reveal a spell from your deck. Summon a random minion with the same Cost.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -306,8 +306,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Costs (1) less for each minion that died this turn.",
+      set: 'genesis',
+    description: "Costs (1) less for each minion that died this turn.",
   keywords: [],
   
   heroClass: "neutral", race: "none",
@@ -325,8 +325,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "epic",
-
-      description: "Battlecry: Destroy a friendly minion.   Deathrattle: Summon 2 copies of it.",
+      set: 'genesis',
+    description: "Battlecry: Destroy a friendly minion.   Deathrattle: Summon 2 copies of it.",
     keywords: ["battlecry", "deathrattle"],
       heroClass: "neutral",
       class: "Neutral",
@@ -357,8 +357,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "epic",
-
-      description: "Battlecry: Swap the Attack and Health of all other minions.",
+      set: 'genesis',
+    description: "Battlecry: Swap the Attack and Health of all other minions.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -385,8 +385,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "epic",
-
-      description: "Battlecry: Destroy all 1-Cost spells in both hands and decks.",
+      set: 'genesis',
+    description: "Battlecry: Destroy all 1-Cost spells in both hands and decks.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -410,8 +410,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Taunt.   Battlecry: Deal 2 damage to all other minions.",
+      set: 'genesis',
+    description: "Taunt.   Battlecry: Deal 2 damage to all other minions.",
     keywords: ["taunt", "battlecry"],
       heroClass: "neutral",
       class: "Neutral",
@@ -436,8 +436,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "rare",
-  
-  description: "Whenever this minion takes damage, deal 3 damage to your hero.",
+      set: 'genesis',
+    description: "Whenever this minion takes damage, deal 3 damage to your hero.",
   keywords: [],
   
   heroClass: "neutral", race: "none",
@@ -455,8 +455,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "epic",
-
-      description: "Charge.   Battlecry: Can't attack heroes this turn.",
+      set: 'genesis',
+    description: "Charge.   Battlecry: Can't attack heroes this turn.",
     keywords: ["charge", "battlecry"],
       heroClass: "neutral",
       class: "Neutral",
@@ -481,8 +481,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "epic",
-
-      description: "Battlecry: Destroy your opponent's weapon and gain Armor equal to its Attack.",
+      set: 'genesis',
+    description: "Battlecry: Destroy your opponent's weapon and gain Armor equal to its Attack.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -508,8 +508,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "epic",
-  
-  description: "Costs (0) if you've cast a spell that costs (5) or more this turn.",
+      set: 'genesis',
+    description: "Costs (0) if you've cast a spell that costs (5) or more this turn.",
   keywords: [],
   
   heroClass: "neutral", race: "none",
@@ -527,8 +527,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "epic",
-
-      description: "Battlecry: All minions lose Divine Shield. Gain +3/+3 for each Shield lost.",
+      set: 'genesis',
+    description: "Battlecry: All minions lose Divine Shield. Gain +3/+3 for each Shield lost.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -552,8 +552,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "rare",
-
-      description: "Battlecry: Shuffle an 'Ancient Curse' into your deck that deals 7 damage to you when drawn.",
+      set: 'genesis',
+    description: "Battlecry: Shuffle an 'Ancient Curse' into your deck that deals 7 damage to you when drawn.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -579,8 +579,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "rare",
-  
-  description: "At the start of your turn, deal 2 damage to this minion.",
+      set: 'genesis',
+    description: "At the start of your turn, deal 2 damage to this minion.",
   keywords: [],
   
   heroClass: "neutral",
@@ -598,8 +598,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "rare",
-
-      description: "Battlecry: If you played an Elemental last turn, deal 5 damage.",
+      set: 'genesis',
+    description: "Battlecry: If you played an Elemental last turn, deal 5 damage.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -629,8 +629,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "rare",
-
-      description: "Taunt.   Battlecry: Foresee a Taunt minion.",
+      set: 'genesis',
+    description: "Taunt.   Battlecry: Foresee a Taunt minion.",
     keywords: ["taunt", "battlecry", "discover"],
       heroClass: "neutral",
       class: "Neutral",
@@ -655,8 +655,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "rare",
-
-      description: "Battlecry: If you played an Elemental last turn, Foresee an Elemental.",
+      set: 'genesis',
+    description: "Battlecry: If you played an Elemental last turn, Foresee an Elemental.",
     keywords: ["battlecry", "discover"],
       heroClass: "neutral",
       class: "Neutral",
@@ -682,8 +682,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "rare",
-  
-  description: "After this minion attacks a hero, Adapt.",
+      set: 'genesis',
+    description: "After this minion attacks a hero, Adapt.",
   keywords: [],
   
   heroClass: "neutral", race: "none",
@@ -701,8 +701,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "epic",
-
-      description: "Battlecry: If you control a minion with 6 or more Health, draw 2 cards.",
+      set: 'genesis',
+    description: "Battlecry: If you control a minion with 6 or more Health, draw 2 cards.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -728,8 +728,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "epic",
-
-      description: "Battlecry: Swap stats with a friendly minion.",
+      set: 'genesis',
+    description: "Battlecry: Swap stats with a friendly minion.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -753,8 +753,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "rare",
-
-      description: "Taunt.   Deathrattle: Summon a 7/7 Felcracked Colossus with Taunt.",
+      set: 'genesis',
+    description: "Taunt.   Deathrattle: Summon a 7/7 Felcracked Colossus with Taunt.",
     keywords: ["taunt", "deathrattle"],
       heroClass: "neutral",
       class: "Neutral",
@@ -779,8 +779,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Taunt",
+      set: 'genesis',
+    description: "Taunt",
   keywords: ["taunt"],
   
   heroClass: "neutral", race: "Elemental",
@@ -798,8 +798,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "rare",
-  
-  description: "Rush. After this attacks and kills a minion, it may attack again.",
+      set: 'genesis',
+    description: "Rush. After this attacks and kills a minion, it may attack again.",
   keywords: ["rush"],
   
   heroClass: "neutral",
@@ -817,8 +817,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "epic",
-
-      description: "Battlecry: If you have 10 Mana Crystals, deal 10 damage to a minion.",
+      set: 'genesis',
+    description: "Battlecry: If you have 10 Mana Crystals, deal 10 damage to a minion.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -848,8 +848,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "epic",
-  
-  description: "After this minion survives damage, summon a copy of it.",
+      set: 'genesis',
+    description: "After this minion survives damage, summon a copy of it.",
   keywords: [],
   
   heroClass: "neutral",
@@ -867,8 +867,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "epic",
-  
-  description: "Costs (1) less for each friendly Titan that died this game.",
+      set: 'genesis',
+    description: "Costs (1) less for each friendly Titan that died this game.",
   keywords: [],
   
   heroClass: "neutral", race: "none",
@@ -886,8 +886,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "epic",
-
-      description: "Battlecry: Transform into a 4/4 copy of a different minion in your deck.",
+      set: 'genesis',
+    description: "Battlecry: Transform into a 4/4 copy of a different minion in your deck.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -913,8 +913,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "rare",
-
-      description: "Battlecry: Summon two 1/1 Amalgams with all minion types.",
+      set: 'genesis',
+    description: "Battlecry: Summon two 1/1 Amalgams with all minion types.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -940,8 +940,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "This is an Elemental, Automaton, Draugr, Naga, Dragon, Beast, Pirate and Totem.",
+      set: 'genesis',
+    description: "This is an Elemental, Automaton, Draugr, Naga, Dragon, Beast, Pirate and Totem.",
   keywords: [],
   
   heroClass: "neutral", race: "all",
@@ -959,8 +959,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "epic",
-  
-  description: "Your minions with Windfury have Mega-Windfury.",
+      set: 'genesis',
+    description: "Your minions with Windfury have Mega-Windfury.",
   keywords: [],
   
   heroClass: "neutral", race: "none",
@@ -978,8 +978,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "weapon",
   rarity: "rare",
-  
-  description: "After your hero attacks, give a random minion in your hand +1/+1.",
+      set: 'genesis',
+    description: "After your hero attacks, give a random minion in your hand +1/+1.",
   keywords: [],
   
   heroClass: "neutral",
@@ -996,8 +996,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "spell",
   rarity: "rare",
-  
-  description: "Deal 3 damage to all damaged minions.",
+      set: 'genesis',
+    description: "Deal 3 damage to all damaged minions.",
   keywords: [],
   
   heroClass: "neutral",
@@ -1022,8 +1022,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "rare",
-
-      description: "Deathrattle: Summon a random 2-Cost minion.",
+      set: 'genesis',
+    description: "Deathrattle: Summon a random 2-Cost minion.",
       keywords: ["deathrattle"],
 
       heroClass: "neutral",
@@ -1050,8 +1050,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "epic",
-
-      description: "Deathrattle: Add a random Mythic minion to your hand.",
+      set: 'genesis',
+    description: "Deathrattle: Add a random Mythic minion to your hand.",
       keywords: ["deathrattle"],
 
       heroClass: "neutral",
@@ -1079,8 +1079,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "rare",
-
-      description: "Deathrattle: Deal this minion's Attack damage randomly split among all enemies.",
+      set: 'genesis',
+    description: "Deathrattle: Deal this minion's Attack damage randomly split among all enemies.",
       keywords: ["deathrattle"],
 
       heroClass: "neutral",
@@ -1106,8 +1106,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "epic",
-
-      description: "Battlecry: If you control all 4 basic Totems, summon Al'Akir the Windlord.",
+      set: 'genesis',
+    description: "Battlecry: If you control all 4 basic Totems, summon Al'Akir the Windlord.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -1130,8 +1130,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "spell",
   rarity: "rare",
-  
-  description: "Spend all your Armor. Deal that much damage to all minions.",
+      set: 'genesis',
+    description: "Spend all your Armor. Deal that much damage to all minions.",
   keywords: [],
   
   heroClass: "neutral",
@@ -1155,8 +1155,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "rare",
-  
-  description: "Frozen. When this minion is Frozen, it has +2/+2.",
+      set: 'genesis',
+    description: "Frozen. When this minion is Frozen, it has +2/+2.",
   keywords: ["frozen"],
   
   heroClass: "neutral", race: "Beast",
@@ -1176,8 +1176,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Taunt. Costs (1) less for each spell you've cast this game.",
+      set: 'genesis',
+    description: "Taunt. Costs (1) less for each spell you've cast this game.",
   keywords: ["taunt"],
   
   heroClass: "neutral", // Cost reduction handled in game logic
@@ -1195,8 +1195,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Battlecry: Restore 2 health to all friendly characters.",
+      set: 'genesis',
+    description: "Battlecry: Restore 2 health to all friendly characters.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -1220,8 +1220,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Battlecry: Summon a 2/1 Automaton Dragonling.",
+      set: 'genesis',
+    description: "Battlecry: Summon a 2/1 Automaton Dragonling.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -1261,8 +1261,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Battlecry: Summon a 1/1 Boar.",
+      set: 'genesis',
+    description: "Battlecry: Summon a 1/1 Boar.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -1302,8 +1302,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Battlecry: Give a friendly minion +1/+1.",
+      set: 'genesis',
+    description: "Battlecry: Give a friendly minion +1/+1.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -1328,8 +1328,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Whenever a minion dies, gain +1 Attack.",
+      set: 'genesis',
+    description: "Whenever a minion dies, gain +1 Attack.",
   keywords: ["on_minion_death"],
   
   heroClass: "neutral", race: "Undead",
@@ -1347,8 +1347,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Adjacent minions have +1 Attack.",
+      set: 'genesis',
+    description: "Adjacent minions have +1 Attack.",
   keywords: ["aura"],
   
   heroClass: "neutral", race: "Beast",
@@ -1366,8 +1366,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Can't attack.",
+      set: 'genesis',
+    description: "Can't attack.",
   keywords: ["cant_attack"],
   
   heroClass: "neutral",
@@ -1385,8 +1385,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Divine Shield",
+      set: 'genesis',
+    description: "Divine Shield",
   keywords: ["divine_shield"],
   
   heroClass: "neutral",
@@ -1404,8 +1404,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Stealth",
+      set: 'genesis',
+    description: "Stealth",
   keywords: ["stealth"],
   
   heroClass: "neutral", race: "Beast",
@@ -1423,8 +1423,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Taunt",
+      set: 'genesis',
+    description: "Taunt",
   keywords: ["taunt"],
   
   heroClass: "neutral", race: "Beast",
@@ -1442,8 +1442,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Taunt",
+      set: 'genesis',
+    description: "Taunt",
   keywords: ["taunt"],
   
   heroClass: "neutral", race: "Beast",
@@ -1461,8 +1461,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Your other minions have +1 Attack.",
+      set: 'genesis',
+    description: "Your other minions have +1 Attack.",
   keywords: ["aura"],
   
   heroClass: "neutral",
@@ -1480,8 +1480,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Charge",
+      set: 'genesis',
+    description: "Charge",
   keywords: ["charge"],
   
   heroClass: "neutral",
@@ -1499,8 +1499,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "A deadly predator from the swamps.",
+      set: 'genesis',
+    description: "A deadly predator from the swamps.",
   heroClass: "neutral", race: "Beast",
       class: "Neutral",
       collectible: true
@@ -1516,8 +1516,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "A scaled guardian of the rivers.",
+      set: 'genesis',
+    description: "A scaled guardian of the rivers.",
   heroClass: "neutral", race: "Beast",
       class: "Neutral",
       collectible: true
@@ -1533,8 +1533,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Taunt",
+      set: 'genesis',
+    description: "Taunt",
   keywords: ["taunt"],
   
   heroClass: "neutral",
@@ -1552,8 +1552,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "At the start of your turn, restore this minion to full Health.",
+      set: 'genesis',
+    description: "At the start of your turn, restore this minion to full Health.",
   keywords: ["turn_start_effect"],
   
   heroClass: "neutral",
@@ -1571,8 +1571,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Battlecry: If you control an Automaton, gain +1/+1 and add a spare part to your hand.",
+      set: 'genesis',
+    description: "Battlecry: If you control an Automaton, gain +1/+1 and add a spare part to your hand.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -1596,8 +1596,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Battlecry: Summon two 0/2 Goblin Bombs.",
+      set: 'genesis',
+    description: "Battlecry: Summon two 0/2 Goblin Bombs.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -1646,8 +1646,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Battlecry: Give a friendly Automaton +1/+1.",
+      set: 'genesis',
+    description: "Battlecry: Give a friendly Automaton +1/+1.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -1672,8 +1672,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "A mechanical construct awaiting enhancement.",
+      set: 'genesis',
+    description: "A mechanical construct awaiting enhancement.",
   heroClass: "neutral", race: "Automaton",
       class: "Neutral",
       collectible: true
@@ -1689,8 +1689,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Runic Bond, Rush",
+      set: 'genesis',
+    description: "Runic Bond, Rush",
   keywords: ["magnetic", "rush"],
   
   heroClass: "neutral", race: "Automaton",
@@ -1708,8 +1708,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Runic Bond, Taunt",
+      set: 'genesis',
+    description: "Runic Bond, Taunt",
   keywords: ["magnetic", "taunt"],
   
   heroClass: "neutral", race: "Automaton",
@@ -1727,8 +1727,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Taunt. Battlecry: Deal 5 damage to this minion.",
+      set: 'genesis',
+    description: "Taunt. Battlecry: Deal 5 damage to this minion.",
       keywords: ["taunt", "battlecry"],
 
       heroClass: "neutral",
@@ -1752,8 +1752,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Battlecry: Deal 2 damage.",
+      set: 'genesis',
+    description: "Battlecry: Deal 2 damage.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -1778,8 +1778,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Rush. Battlecry: Add a 1/1 Spark with Rush to your hand.",
+      set: 'genesis',
+    description: "Rush. Battlecry: Add a 1/1 Spark with Rush to your hand.",
       keywords: ["rush", "battlecry"],
 
       heroClass: "neutral",
@@ -1821,8 +1821,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Battlecry: Gain Stealth until your next turn.",
+      set: 'genesis',
+    description: "Battlecry: Gain Stealth until your next turn.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -1845,8 +1845,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Battlecry: Give all minions in your hand +1/+1.",
+      set: 'genesis',
+    description: "Battlecry: Give all minions in your hand +1/+1.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -1870,8 +1870,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Lifesteal. Battlecry: Deal 1 damage.",
+      set: 'genesis',
+    description: "Lifesteal. Battlecry: Deal 1 damage.",
       keywords: ["lifesteal", "battlecry"],
 
       heroClass: "neutral",
@@ -1895,8 +1895,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Battlecry: The next Hero Power you use this turn costs (0).",
+      set: 'genesis',
+    description: "Battlecry: The next Hero Power you use this turn costs (0).",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -1919,8 +1919,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Whenever you restore a minion to full Health, draw a card.",
+      set: 'genesis',
+    description: "Whenever you restore a minion to full Health, draw a card.",
   keywords: ["on_heal_to_full"],
   
   heroClass: "neutral",
@@ -1938,8 +1938,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Has +4 Attack while damaged.",
+      set: 'genesis',
+    description: "Has +4 Attack while damaged.",
   keywords: ["enrage"],
   
   heroClass: "neutral",
@@ -1957,8 +1957,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Deathrattle: Summon a 0/3 Free Agent with Taunt for your opponent.",
+      set: 'genesis',
+    description: "Deathrattle: Summon a 0/3 Free Agent with Taunt for your opponent.",
       keywords: ["deathrattle"],
 
       heroClass: "neutral",
@@ -1999,8 +1999,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Has +2 Spell Damage while damaged.",
+      set: 'genesis',
+    description: "Has +2 Spell Damage while damaged.",
   keywords: ["conditional_spell_damage"],
   
   heroClass: "neutral",
@@ -2018,8 +2018,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Overkill: Gain +5 Attack.",
+      set: 'genesis',
+    description: "Overkill: Gain +5 Attack.",
   keywords: ["overkill"],
   
   heroClass: "neutral", race: "Beast",
@@ -2037,8 +2037,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Battlecry: Deal 5 damage to your hero.",
+      set: 'genesis',
+    description: "Battlecry: Deal 5 damage to your hero.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -2062,8 +2062,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Stealth. Overkill: Gain 3 Armor.",
+      set: 'genesis',
+    description: "Stealth. Overkill: Gain 3 Armor.",
   keywords: ["stealth", "overkill"],
   
   heroClass: "neutral",
@@ -2105,8 +2105,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Battlecry: Add a random minion with 5 or more Attack to your hand.",
+      set: 'genesis',
+    description: "Battlecry: Add a random minion with 5 or more Attack to your hand.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -2129,8 +2129,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Battlecry: If you control at least 2 other minions, gain Taunt.",
+      set: 'genesis',
+    description: "Battlecry: If you control at least 2 other minions, gain Taunt.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -2154,8 +2154,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Stealth",
+      set: 'genesis',
+    description: "Stealth",
   keywords: ["stealth"],
   
   heroClass: "neutral", race: "Beast",
@@ -2173,8 +2173,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Battlecry: If you played an Elemental last turn, Adapt.",
+      set: 'genesis',
+    description: "Battlecry: If you played an Elemental last turn, Adapt.",
       keywords: ["battlecry"],
 
       heroClass: "neutral",
@@ -2198,8 +2198,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Taunt",
+      set: 'genesis',
+    description: "Taunt",
   keywords: ["taunt"],
   
   heroClass: "neutral", race: "Beast",
@@ -2217,8 +2217,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Deathrattle: Deal 3 damage to a random enemy minion.",
+      set: 'genesis',
+    description: "Deathrattle: Deal 3 damage to a random enemy minion.",
       keywords: ["deathrattle"],
 
       heroClass: "neutral",
@@ -2242,8 +2242,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "A ferocious beast cloaked in shadow.",
+      set: 'genesis',
+    description: "A ferocious beast cloaked in shadow.",
   heroClass: "neutral", race: "Beast",
       class: "Neutral",
       collectible: true
@@ -2259,8 +2259,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Your spells cost (2) more.",
+      set: 'genesis',
+    description: "Your spells cost (2) more.",
   keywords: ["aura"],
   
   heroClass: "neutral", race: "Beast",
@@ -2278,8 +2278,8 @@ export const   neutralMinions: CardData[] = [{
   
   type: "minion",
   rarity: "common",
-  
-  description: "Taunt. Poisonous.",
+      set: 'genesis',
+    description: "Taunt. Poisonous.",
   keywords: ["taunt", "poisonous"],
   
   heroClass: "neutral", race: "Beast",
@@ -2297,8 +2297,8 @@ export const   neutralMinions: CardData[] = [{
 
       type: "minion",
       rarity: "common",
-
-      description: "Deathrattle: Shuffle a 4/3 Raptor into your deck.",
+      set: 'genesis',
+    description: "Deathrattle: Shuffle a 4/3 Raptor into your deck.",
       keywords: ["deathrattle"],
 
       heroClass: "neutral",

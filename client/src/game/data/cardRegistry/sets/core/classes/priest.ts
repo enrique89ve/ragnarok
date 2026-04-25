@@ -13,7 +13,7 @@ export const priestCards: CardData[] = [
     rarity: "common",
     class: "Priest",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 9014,
@@ -31,7 +31,7 @@ export const priestCards: CardData[] = [
       affects: "all_healing_effects"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 9016,
@@ -48,7 +48,7 @@ export const priestCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 9017,
@@ -60,7 +60,7 @@ export const priestCards: CardData[] = [
     rarity: "common",
     class: "Priest",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 9019,
@@ -78,7 +78,7 @@ export const priestCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 9021,
@@ -94,7 +94,7 @@ export const priestCards: CardData[] = [
     keywords: ["deathrattle"],
     deathrattle: { type: "heal_hero", value: 3 },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 9022,
@@ -113,7 +113,7 @@ export const priestCards: CardData[] = [
       healValue: 5
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 9023,
@@ -131,7 +131,7 @@ export const priestCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 9024,
@@ -150,7 +150,7 @@ export const priestCards: CardData[] = [
       healTarget: "all_friendly_characters"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 9025,
@@ -168,7 +168,7 @@ export const priestCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 9026,
@@ -186,7 +186,7 @@ export const priestCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 9027,
@@ -203,7 +203,7 @@ export const priestCards: CardData[] = [
       targetType: "none"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 9028,
@@ -220,7 +220,7 @@ export const priestCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 9029,
@@ -237,7 +237,7 @@ export const priestCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 9030,
@@ -254,7 +254,7 @@ export const priestCards: CardData[] = [
       targetType: "all_minions"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 9031,
@@ -271,7 +271,7 @@ export const priestCards: CardData[] = [
       drawCards: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 9032,
@@ -290,7 +290,7 @@ export const priestCards: CardData[] = [
       drawCards: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 5112,
@@ -304,7 +304,7 @@ export const priestCards: CardData[] = [
     rarity: "common",
     class: "Priest",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 5113,
@@ -319,7 +319,7 @@ export const priestCards: CardData[] = [
     class: "Priest",
     keywords: ["battlecry", "deathrattle"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 5114,
@@ -334,7 +334,7 @@ export const priestCards: CardData[] = [
     class: "Priest",
     keywords: ["battlecry"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 9501,
@@ -348,7 +348,7 @@ export const priestCards: CardData[] = [
     rarity: "common",
     class: "Priest",
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 20019,
@@ -363,7 +363,7 @@ export const priestCards: CardData[] = [
     keywords: ["battlecry"],
     class: "Priest",
     collectible: true,
-    set: "core",
+    set: "genesis",
     battlecry: {
       type: "summon",
       requiresTarget: false,
@@ -385,7 +385,7 @@ export const priestCards: CardData[] = [
     keywords: ["battlecry"],
     class: "Priest",
     collectible: true,
-    set: "core",
+    set: "genesis",
     battlecry: {
       type: "reduce_cost",
       value: 2,
@@ -406,7 +406,7 @@ export const priestCards: CardData[] = [
     keywords: [],
     class: "Priest",
     collectible: true,
-    set: "core",
+    set: "genesis",
     endOfTurn: {
       type: "summon",
       source: "graveyard",
@@ -427,7 +427,7 @@ export const priestCards: CardData[] = [
     keywords: [],
     class: "Priest",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 48116,
@@ -442,7 +442,7 @@ export const priestCards: CardData[] = [
     keywords: ["lifesteal", "deathrattle"],
     class: "Priest",
     collectible: true,
-    set: "core",
+    set: "genesis",
     deathrattle: {
       type: "shuffle_into_deck",
       cardId: "styx_prime"
@@ -462,7 +462,7 @@ export const priestCards: CardData[] = [
     race: "Dragon",
     class: "Priest",
     collectible: true,
-    set: "core",
+    set: "genesis",
     battlecry: {
       type: "extra_turns",
       requiresTarget: false,
@@ -482,7 +482,7 @@ export const priestCards: CardData[] = [
     keywords: ["inspire"],
     class: "Priest",
     collectible: true,
-    set: "core",
+    set: "genesis",
     inspireEffect: {
       type: "summon",
       condition: "random_mythic",
@@ -503,7 +503,7 @@ export const priestCards: CardData[] = [
     race: "Elemental",
     class: "Priest",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Dormant Card ===
   {
@@ -521,7 +521,7 @@ export const priestCards: CardData[] = [
     class: "Priest",
     dormantTurns: 2,
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Reborn Card ===
   {
@@ -543,7 +543,7 @@ export const priestCards: CardData[] = [
       targetType: "all_friendly"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Discover Cards ===
   {
@@ -563,7 +563,7 @@ export const priestCards: CardData[] = [
       targetType: "none"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 29002,
@@ -585,9 +585,8 @@ export const priestCards: CardData[] = [
       discoveryType: "any"
     },
     collectible: true,
-    set: "core"
-  },
-  // === Migrated from additionalClassMinions.ts ===
+    set: "genesis"
+  },
   {
     id: 40012,
     name: "Dark Priestess",
@@ -610,7 +609,7 @@ export const priestCards: CardData[] = [
       }
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Quest Cards ===
   {
@@ -632,7 +631,7 @@ export const priestCards: CardData[] = [
       cardId: 70014
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 70014,
@@ -651,7 +650,7 @@ export const priestCards: CardData[] = [
       value: 40
     },
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   // === Gullveig Card ===
   {
@@ -672,7 +671,7 @@ export const priestCards: CardData[] = [
       buffHealth: 2
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Highlander Card ===
   {
@@ -694,7 +693,7 @@ export const priestCards: CardData[] = [
       permanent: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === New Holy Spells ===
   {
@@ -715,7 +714,7 @@ export const priestCards: CardData[] = [
       triggerRuneActivation: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 80021,
@@ -733,7 +732,7 @@ export const priestCards: CardData[] = [
       triggerRuneActivation: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Shadow Priest Expansion ===
   {
@@ -752,7 +751,7 @@ export const priestCards: CardData[] = [
       condition: "attack_3_or_less"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38502,
@@ -770,7 +769,7 @@ export const priestCards: CardData[] = [
       condition: "attack_5_or_more"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38503,
@@ -789,7 +788,7 @@ export const priestCards: CardData[] = [
       overkillEffect: { type: "damage_hero", value: 2 }
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38504,
@@ -807,7 +806,7 @@ export const priestCards: CardData[] = [
       condition: "attack_3_or_less"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38505,
@@ -825,7 +824,7 @@ export const priestCards: CardData[] = [
       effect: "heal_also_damages"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38506,
@@ -848,7 +847,7 @@ export const priestCards: CardData[] = [
       type: "return_stolen_minion"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // ==================== COMMON GAP-FILL (Starter Deck Viability — draw + removal) ====================
   {
@@ -867,7 +866,7 @@ export const priestCards: CardData[] = [
       bonusValue: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 39215,
@@ -884,6 +883,6 @@ export const priestCards: CardData[] = [
       targetType: "all_enemy_minions"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   }
 ];

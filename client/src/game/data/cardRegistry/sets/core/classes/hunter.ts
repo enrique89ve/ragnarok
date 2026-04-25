@@ -16,7 +16,7 @@ export const hunterCards: CardData[] = [
       summonCardId: 7501
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 7002,
@@ -34,7 +34,7 @@ export const hunterCards: CardData[] = [
       summonCardId: 7503
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 7003,
@@ -48,7 +48,7 @@ export const hunterCards: CardData[] = [
     rarity: "common",
     class: "Hunter",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 7005,
@@ -64,7 +64,7 @@ export const hunterCards: CardData[] = [
       targetType: "enemy_minion"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 7010,
@@ -84,7 +84,7 @@ export const hunterCards: CardData[] = [
       discoveryType: "beast"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 7011,
@@ -100,7 +100,7 @@ export const hunterCards: CardData[] = [
     race: "Beast",
     keywords: ["stealth"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 7012,
@@ -121,7 +121,7 @@ export const hunterCards: CardData[] = [
       buffHealth: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 7013,
@@ -137,7 +137,7 @@ export const hunterCards: CardData[] = [
     race: "Beast",
     keywords: ["poisonous"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 7015,
@@ -157,7 +157,7 @@ export const hunterCards: CardData[] = [
       condition: "beast"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 7019,
@@ -173,7 +173,7 @@ export const hunterCards: CardData[] = [
     race: "Beast",
     keywords: ["taunt"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 7020,
@@ -193,7 +193,7 @@ export const hunterCards: CardData[] = [
       value: 2
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 7022,
@@ -209,7 +209,7 @@ export const hunterCards: CardData[] = [
     race: "Beast",
     keywords: ["taunt", "rush"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 7023,
@@ -225,7 +225,7 @@ export const hunterCards: CardData[] = [
     race: "Beast",
     keywords: ["rush"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 7101,
@@ -238,7 +238,7 @@ export const hunterCards: CardData[] = [
     class: "Hunter",
     keywords: ["secret"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 7102,
@@ -251,7 +251,7 @@ export const hunterCards: CardData[] = [
     class: "Hunter",
     keywords: ["secret"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 7103,
@@ -268,7 +268,7 @@ export const hunterCards: CardData[] = [
       value: 3
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 7105,
@@ -286,7 +286,7 @@ export const hunterCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 7108,
@@ -304,7 +304,7 @@ export const hunterCards: CardData[] = [
       summonCardIds: [7503, 7504, 7505]
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 7109,
@@ -317,7 +317,7 @@ export const hunterCards: CardData[] = [
     class: "Hunter",
     keywords: ["secret"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 7200,
@@ -331,7 +331,7 @@ export const hunterCards: CardData[] = [
     rarity: "common",
     class: "Hunter",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 7201,
@@ -345,7 +345,7 @@ export const hunterCards: CardData[] = [
     rarity: "rare",
     class: "Hunter",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 7501,
@@ -361,7 +361,7 @@ export const hunterCards: CardData[] = [
     race: "Beast",
     keywords: ["charge"],
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 7503,
@@ -377,7 +377,7 @@ export const hunterCards: CardData[] = [
     race: "Beast",
     keywords: ["taunt"],
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 7504,
@@ -393,7 +393,7 @@ export const hunterCards: CardData[] = [
     race: "Beast",
     keywords: ["charge"],
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 7505,
@@ -413,7 +413,7 @@ export const hunterCards: CardData[] = [
       target: "other_friendly_minions"
     },
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 20007,
@@ -429,7 +429,7 @@ export const hunterCards: CardData[] = [
     race: "Beast",
     class: "Hunter",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 20032,
@@ -443,7 +443,7 @@ export const hunterCards: CardData[] = [
     class: "Hunter",
     armor: 5,
     collectible: true,
-    set: "core",
+    set: "genesis",
     battlecry: {
       type: "damage",
       value: 2,
@@ -464,7 +464,7 @@ export const hunterCards: CardData[] = [
     keywords: ["battlecry"],
     class: "Hunter",
     collectible: true,
-    set: "core",
+    set: "genesis",
     battlecry: {
       type: "persistent_effect",
       requiresTarget: false,
@@ -488,7 +488,7 @@ export const hunterCards: CardData[] = [
     race: "Beast",
     class: "Hunter",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 20037,
@@ -502,7 +502,7 @@ export const hunterCards: CardData[] = [
     class: "Hunter",
     armor: 5,
     collectible: true,
-    set: "core",
+    set: "genesis",
     battlecry: {
       type: "cast_all_spells",
       requiresTarget: false,
@@ -523,7 +523,7 @@ export const hunterCards: CardData[] = [
     keywords: ["echo", "rush"],
     class: "Hunter",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Dormant Card ===
   {
@@ -540,7 +540,7 @@ export const hunterCards: CardData[] = [
     keywords: ["dormant", "rush"],
     class: "Hunter",
     collectible: true,
-    set: "core",
+    set: "genesis",
     dormantTurns: 2,
     awakenEffect: {
       type: "random_damage",
@@ -563,7 +563,7 @@ export const hunterCards: CardData[] = [
     keywords: ["frenzy"],
     class: "Hunter",
     collectible: true,
-    set: "core",
+    set: "genesis",
     frenzyEffect: {
       type: "damage",
       targetType: "all_enemy_minions",
@@ -591,9 +591,8 @@ export const hunterCards: CardData[] = [
       targetType: "random_enemy_minion"
     },
     collectible: true,
-    set: "core"
-  },
-  // === Migrated from additionalClassMinions.ts ===
+    set: "genesis"
+  },
   {
     id: 40007,
     name: "Beast King of Freya",
@@ -614,7 +613,7 @@ export const hunterCards: CardData[] = [
       summonCardId: 40008
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 40008,
@@ -635,7 +634,7 @@ export const hunterCards: CardData[] = [
       condition: "beast"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Quest Cards ===
   {
@@ -649,7 +648,7 @@ export const hunterCards: CardData[] = [
     keywords: ["quest"],
     class: "Hunter",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 70015,
@@ -670,7 +669,7 @@ export const hunterCards: CardData[] = [
       count: 15
     },
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 70017,
@@ -690,7 +689,7 @@ export const hunterCards: CardData[] = [
       value: 1
     },
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   // === Sidequest Cards ===
   {
@@ -704,7 +703,7 @@ export const hunterCards: CardData[] = [
     keywords: ["sidequest"],
     class: "Hunter",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 71002,
@@ -717,7 +716,7 @@ export const hunterCards: CardData[] = [
     keywords: ["sidequest"],
     class: "Hunter",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Hunter Expansion — board clear + removal ===
   {
@@ -736,7 +735,7 @@ export const hunterCards: CardData[] = [
       summonCardId: 9019
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 31602,
@@ -754,7 +753,7 @@ export const hunterCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // === Beast & Face Damage Expansion ===
   {
@@ -775,7 +774,7 @@ export const hunterCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38602,
@@ -792,7 +791,7 @@ export const hunterCards: CardData[] = [
       targetType: "none"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38603,
@@ -810,7 +809,7 @@ export const hunterCards: CardData[] = [
       hitCount: 2
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38604,
@@ -823,7 +822,7 @@ export const hunterCards: CardData[] = [
     class: "Hunter",
     keywords: ["secret"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38605,
@@ -846,7 +845,7 @@ export const hunterCards: CardData[] = [
       grantKeywords: ["taunt"]
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38606,
@@ -869,7 +868,7 @@ export const hunterCards: CardData[] = [
       summonHealth: 2
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38607,
@@ -887,7 +886,7 @@ export const hunterCards: CardData[] = [
       targetType: "enemy_hero"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38608,
@@ -903,7 +902,7 @@ export const hunterCards: CardData[] = [
     class: "Hunter",
     keywords: ["rush", "overkill"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // ==================== COMMON GAP-FILL (Starter Deck Viability — more spells) ====================
   {
@@ -922,7 +921,7 @@ export const hunterCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 39212,
@@ -939,7 +938,7 @@ export const hunterCards: CardData[] = [
       costModifier: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 39213,
@@ -957,6 +956,6 @@ export const hunterCards: CardData[] = [
       value: 3
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   }
 ];

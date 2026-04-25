@@ -12,7 +12,7 @@ export const norseMechanicSynergyCards: CardData[] = [
 		type: 'minion',
 		rarity: 'common',
 		class: 'Neutral',
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -26,7 +26,7 @@ export const norseMechanicSynergyCards: CardData[] = [
 		type: 'minion',
 		rarity: 'rare',
 		class: 'Neutral',
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -40,7 +40,7 @@ export const norseMechanicSynergyCards: CardData[] = [
 		type: 'minion',
 		rarity: 'rare',
 		class: 'Neutral',
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -55,7 +55,7 @@ export const norseMechanicSynergyCards: CardData[] = [
 		rarity: 'common',
 		class: 'Neutral',
 		keywords: ['einherjar'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -78,7 +78,7 @@ export const norseMechanicSynergyCards: CardData[] = [
 			buffAttack: 2,
 			buffHealth: 2
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	}
 ];

@@ -22,7 +22,7 @@ export const einherjarCards: CardData[] = [
 		rarity: 'common',
 		class: 'Neutral',
 		keywords: ['einherjar'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -37,7 +37,7 @@ export const einherjarCards: CardData[] = [
 		rarity: 'common',
 		class: 'Warrior',
 		keywords: ['einherjar', 'taunt'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -57,7 +57,7 @@ export const einherjarCards: CardData[] = [
 			value: 1,
 			targetType: 'none'
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -72,7 +72,7 @@ export const einherjarCards: CardData[] = [
 		rarity: 'rare',
 		class: 'Paladin',
 		keywords: ['einherjar', 'divine_shield'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -87,7 +87,7 @@ export const einherjarCards: CardData[] = [
 		rarity: 'rare',
 		class: 'Berserker',
 		keywords: ['einherjar', 'rush'],
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	},
 	{
@@ -105,7 +105,7 @@ export const einherjarCards: CardData[] = [
 		battlecry: {
 			type: 'summon_dead_einherjar'
 		},
-		set: 'core',
+		set: 'genesis',
 		collectible: true
 	}
 ];

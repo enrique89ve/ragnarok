@@ -420,8 +420,7 @@ export function registerWarriorCards(): void {
     .build();
 
   // ============================================
-  // MIGRATED WARRIOR SPELLS FROM additionalSpellCards.ts
-  // IDs: 31xxx series
+  // WARRIOR SPELLS (IDs: 31xxx series)
   // ============================================
 
   // Aegis Defense (31022, formerly Shield Block)

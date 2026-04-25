@@ -1,5 +1,6 @@
 import { CardData, CardType } from '../../types';
 import { debug } from '../../config/debugConfig';
+import { SetSchema, type Set } from '../schemas/primitives/set';
 
 const IS_DEV = import.meta.env?.DEV ?? process.env.NODE_ENV === 'development';
 
@@ -22,6 +23,29 @@ interface RawCardInput {
 function isValidCardType(type: unknown): type is CardType {
   return typeof type === 'string' &&
     ['minion', 'spell', 'weapon', 'hero', 'secret', 'location', 'poker_spell', 'artifact', 'armor'].includes(type);
+}
+
+/**
+ * Normalize the `set` axis at the registry boundary.
+ *
+ * `collectible: false` is overloaded in this codebase:
+ *   - Starter cards: distributed via StarterPackCeremony, kept off pack-opening UI.
+ *     Identified by explicit `set: 'starter'`.
+ *   - Tokens: combat-only summons (Spark, Boar, etc.). No set membership.
+ *
+ * Resolution order:
+ *   1. Card declares `set: 'starter'`              → 'starter' (regardless of collectible)
+ *   2. Card is collectible & declares 'genesis'    → 'genesis'
+ *   3. Card is collectible & no canonical set      → 'genesis' (default)
+ *   4. Card is non-collectible & not 'starter'     → undefined (token)
+ */
+function normalizeSet(input: Readonly<Record<string, unknown>>): Set | undefined {
+  const declared = typeof input.set === 'string' ? SetSchema.safeParse(input.set) : null;
+  const declaredSet = declared && declared.success ? declared.data : null;
+
+  if (declaredSet === 'starter') return 'starter';
+  if (input.collectible === false) return undefined;
+  return declaredSet ?? 'genesis';
 }
 
 export function validateCard(input: unknown): ValidationResult {
@@ -113,7 +137,14 @@ export function validateCardRegistry(cards: unknown[]): CardData[] {
     }
     
     seenIds.set(idKey, { name: String(rawCard.name), index: i });
-    validCards.push(card as CardData);
+    const normalizedSet = normalizeSet(rawCard);
+    if (normalizedSet === undefined) {
+      const { set: _set, ...rest } = card as CardData;
+      void _set;
+      validCards.push(rest as CardData);
+    } else {
+      validCards.push({ ...(card as CardData), set: normalizedSet });
+    }
   }
   
   if (duplicates.length > 0) {

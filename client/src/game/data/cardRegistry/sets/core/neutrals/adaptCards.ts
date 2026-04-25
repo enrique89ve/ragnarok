@@ -1,6 +1,5 @@
 /**
  * Adapt Mechanic Cards
- * Migrated from client/src/game/data/adaptCards.ts on 2026-02-02
  * 
  * Adapt allows players to choose one of three adaptations to enhance a minion.
  * ID Range: 16001-16299
@@ -22,7 +21,7 @@ export const adaptationOptions: CardData[] = [
     type: "spell",
     keywords: ["adapt_option"],
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     collectible: false,
     spellEffect: {
       type: "buff",
@@ -40,7 +39,7 @@ export const adaptationOptions: CardData[] = [
     type: "spell",
     keywords: ["adapt_option"],
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     collectible: false,
     spellEffect: {
       type: "buff",
@@ -59,7 +58,7 @@ export const adaptationOptions: CardData[] = [
     type: "spell",
     keywords: ["adapt_option"],
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     collectible: false,
     spellEffect: {
       type: "buff",
@@ -77,7 +76,7 @@ export const adaptationOptions: CardData[] = [
     type: "spell",
     keywords: ["adapt_option"],
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     collectible: false,
     spellEffect: {
       type: "buff",
@@ -95,7 +94,7 @@ export const adaptationOptions: CardData[] = [
     type: "spell",
     keywords: ["adapt_option"],
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     collectible: false,
     spellEffect: {
       type: "buff",
@@ -113,7 +112,7 @@ export const adaptationOptions: CardData[] = [
     type: "spell",
     keywords: ["adapt_option"],
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     collectible: false,
     spellEffect: {
       type: "buff",
@@ -131,7 +130,7 @@ export const adaptationOptions: CardData[] = [
     type: "spell",
     keywords: ["adapt_option"],
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     collectible: false,
     spellEffect: {
       type: "buff",
@@ -150,7 +149,7 @@ export const adaptationOptions: CardData[] = [
     type: "spell",
     keywords: ["adapt_option"],
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     collectible: false,
     spellEffect: {
       type: "buff",
@@ -168,7 +167,7 @@ export const adaptationOptions: CardData[] = [
     type: "spell",
     keywords: ["adapt_option"],
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     collectible: false,
     spellEffect: {
       type: "buff",
@@ -188,7 +187,7 @@ export const adaptationOptions: CardData[] = [
     type: "spell",
     keywords: ["adapt_option"],
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     collectible: false,
     spellEffect: {
       type: "buff",
@@ -214,7 +213,7 @@ export const adaptMinions: CardData[] = [
     type: "minion",
     keywords: ["battlecry", "adapt"],
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     collectible: false,
     battlecry: {
       type: "transform",
@@ -234,7 +233,7 @@ export const adaptMinions: CardData[] = [
     type: "minion",
     keywords: ["battlecry", "adapt"],
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     collectible: false,
     battlecry: {
       type: "transform",
@@ -254,7 +253,7 @@ export const adaptMinions: CardData[] = [
     type: "minion",
     keywords: ["battlecry", "adapt"],
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     collectible: false,
     battlecry: {
       type: "transform",
@@ -274,7 +273,7 @@ export const adaptMinions: CardData[] = [
     type: "minion",
     keywords: ["battlecry", "adapt"],
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     collectible: false,
     battlecry: {
       type: "transform",
@@ -292,7 +291,7 @@ export const adaptMinions: CardData[] = [
     type: "spell",
     keywords: ["adapt"],
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     collectible: false,
     spellEffect: {
       type: "transform",
@@ -318,7 +317,7 @@ export const adaptTokens: CardData[] = [
     type: "minion",
     keywords: [],
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     collectible: false
   }
 ];

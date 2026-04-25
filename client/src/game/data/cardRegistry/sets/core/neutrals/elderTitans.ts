@@ -29,7 +29,7 @@ export const elderTitanCards: CardData[] = [
     flavorText: "Völuspá st. 21: 'Thrice burned, thrice reborn, oft and again, yet ever she lives.' Her burning sparked the first war between gods.",
     keywords: ["battlecry"],
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     battlecry: {
       type: "cthun_damage",
       requiresTarget: false,
@@ -49,7 +49,7 @@ export const elderTitanCards: CardData[] = [
     flavorText: "A spark from her first burning. Even cold, it remembers the pyre and yearns to return.",
     keywords: ["battlecry"],
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     battlecry: {
       type: "buff_cthun",
       requiresTarget: false,
@@ -71,7 +71,7 @@ export const elderTitanCards: CardData[] = [
     flavorText: "Three pyres burned her. Three pyres she survived. This one tends the embers between burnings, ensuring the fourth never comes.",
     keywords: [],
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     effects: [
       {
         type: "end_of_turn",
@@ -93,7 +93,7 @@ export const elderTitanCards: CardData[] = [
     flavorText: "Born from the ashes of her third pyre, this guardian carries the weight of three deaths upon its shoulders.",
     keywords: ["battlecry"],
     class: "Warrior",
-    set: "core",
+    set: "genesis",
     battlecry: {
       type: "conditional_armor",
       requiresTarget: false,
@@ -115,7 +115,7 @@ export const elderTitanCards: CardData[] = [
     flavorText: "Not Gullveig herself, but something shaped in the flames of her rebirth — fire given form and purpose.",
     keywords: ["taunt"],
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     collectible: false
   },
   {
@@ -130,7 +130,7 @@ export const elderTitanCards: CardData[] = [
     flavorText: "When no god could push Baldur's funeral ship Hringhorni to sea, they summoned Hyrrokkin. Her single shove caused earthquakes across all Nine Realms.",
     keywords: ["battlecry"],
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     battlecry: {
       type: "resurrect_deathrattle",
       requiresTarget: false,
@@ -150,7 +150,7 @@ export const elderTitanCards: CardData[] = [
     flavorText: "In Gylfaginning, he made Thor drink the ocean, wrestle Old Age herself, and race against Thought. Every contest was an illusion — and Thor never won a single one.",
     keywords: ["battlecry"],
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     battlecry: {
       type: "yogg_saron",
       requiresTarget: false,
@@ -170,7 +170,7 @@ export const elderTitanCards: CardData[] = [
     flavorText: "The primordial jötunn, ancestor of the elemental forces. His sons: Ægir, lord of the sea; Logi, the living flame; Kári, the howling wind.",
     keywords: [],
     class: "Neutral",
-    set: "core",
+    set: "genesis",
     effects: [
       {
         type: "end_of_turn",

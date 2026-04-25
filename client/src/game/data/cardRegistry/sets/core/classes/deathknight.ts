@@ -17,7 +17,7 @@ export const deathknightCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 3005,
@@ -35,7 +35,7 @@ export const deathknightCards: CardData[] = [
       targetType: "none"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 3007,
@@ -52,7 +52,7 @@ export const deathknightCards: CardData[] = [
       targetType: "all_enemy_minions"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 3009,
@@ -66,7 +66,7 @@ export const deathknightCards: CardData[] = [
     rarity: 'rare',
     class: "DeathKnight",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 3011,
@@ -83,7 +83,7 @@ export const deathknightCards: CardData[] = [
       targetType: "all_minions"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 3012,
@@ -97,7 +97,7 @@ export const deathknightCards: CardData[] = [
     rarity: "rare",
     class: "DeathKnight",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 3013,
@@ -114,7 +114,7 @@ export const deathknightCards: CardData[] = [
       targetType: "friendly_hero"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 3014,
@@ -131,7 +131,7 @@ export const deathknightCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 3015,
@@ -144,7 +144,7 @@ export const deathknightCards: CardData[] = [
     class: "DeathKnight",
     keywords: ["battlecry"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 3017,
@@ -161,7 +161,7 @@ export const deathknightCards: CardData[] = [
       targetType: "none"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 3018,
@@ -179,7 +179,7 @@ export const deathknightCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 3021,
@@ -196,7 +196,7 @@ export const deathknightCards: CardData[] = [
       targetType: "friendly_hero"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 3022,
@@ -213,7 +213,7 @@ export const deathknightCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 3024,
@@ -227,7 +227,7 @@ export const deathknightCards: CardData[] = [
     rarity: "common",
     class: "DeathKnight",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 3025,
@@ -245,7 +245,7 @@ export const deathknightCards: CardData[] = [
       drawCards: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 3027,
@@ -264,7 +264,7 @@ export const deathknightCards: CardData[] = [
       buffAttack: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 3029,
@@ -286,7 +286,7 @@ export const deathknightCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 3019,
@@ -300,7 +300,7 @@ export const deathknightCards: CardData[] = [
     rarity: "common",
     class: "DeathKnight",
     collectible: false,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 3031,
@@ -320,7 +320,7 @@ export const deathknightCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 3032,
@@ -340,7 +340,7 @@ export const deathknightCards: CardData[] = [
       buffAttack: -1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 3033,
@@ -361,7 +361,7 @@ export const deathknightCards: CardData[] = [
       buffHealth: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 3034,
@@ -381,7 +381,7 @@ export const deathknightCards: CardData[] = [
       targetType: "frozen_enemies"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 3035,
@@ -403,7 +403,7 @@ export const deathknightCards: CardData[] = [
       gainStats: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 3036,
@@ -424,7 +424,7 @@ export const deathknightCards: CardData[] = [
       targetType: "friendly_hero"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 3037,
@@ -443,7 +443,7 @@ export const deathknightCards: CardData[] = [
       health: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 3038,
@@ -463,7 +463,7 @@ export const deathknightCards: CardData[] = [
       targetType: "all_enemy_minions"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
 
   // ═══════════════════════════════════════════════════════════════
@@ -485,7 +485,7 @@ export const deathknightCards: CardData[] = [
     keywords: ["lifesteal", "deathrattle"],
     deathrattle: { type: "deal_attack_damage_random_enemy" },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 36002,
@@ -500,7 +500,7 @@ export const deathknightCards: CardData[] = [
     class: "DeathKnight",
     race: "Undead",
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 36003,
@@ -520,7 +520,7 @@ export const deathknightCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 36004,
@@ -537,7 +537,7 @@ export const deathknightCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 36005,
@@ -554,7 +554,7 @@ export const deathknightCards: CardData[] = [
     keywords: ["deathrattle"],
     deathrattle: { type: "add_random_class_card" },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 36006,
@@ -571,7 +571,7 @@ export const deathknightCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 36007,
@@ -592,7 +592,7 @@ export const deathknightCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 36008,
@@ -609,7 +609,7 @@ export const deathknightCards: CardData[] = [
       targetType: "none"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 36009,
@@ -626,7 +626,7 @@ export const deathknightCards: CardData[] = [
       targetType: "all_enemies"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 36010,
@@ -642,7 +642,7 @@ export const deathknightCards: CardData[] = [
       targetType: "none"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 36011,
@@ -664,7 +664,7 @@ export const deathknightCards: CardData[] = [
     },
     deathrattle: { type: "resummon_self", health: 1 },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 36012,
@@ -681,7 +681,7 @@ export const deathknightCards: CardData[] = [
       targetType: "none"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 36013,
@@ -696,7 +696,7 @@ export const deathknightCards: CardData[] = [
     class: "DeathKnight",
     keywords: ["taunt"],
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 36014,
@@ -717,7 +717,7 @@ export const deathknightCards: CardData[] = [
       targetType: "all_low_attack"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
 
   // === Rune & Corpse Expansion ===
@@ -739,7 +739,7 @@ export const deathknightCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38102,
@@ -755,7 +755,7 @@ export const deathknightCards: CardData[] = [
       targetType: "all_enemy_minions"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38103,
@@ -772,7 +772,7 @@ export const deathknightCards: CardData[] = [
       targetType: "none"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38104,
@@ -792,7 +792,7 @@ export const deathknightCards: CardData[] = [
       cardId: 38101
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38105,
@@ -812,7 +812,7 @@ export const deathknightCards: CardData[] = [
       discoveryType: "dk_rune"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38106,
@@ -833,7 +833,7 @@ export const deathknightCards: CardData[] = [
       targetType: "all_minions"
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38107,
@@ -855,7 +855,7 @@ export const deathknightCards: CardData[] = [
       maxValue: 5
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38108,
@@ -874,7 +874,7 @@ export const deathknightCards: CardData[] = [
       summonHealth: 3
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38109,
@@ -896,7 +896,7 @@ export const deathknightCards: CardData[] = [
       grantKeywords: ["rush"]
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 38110,
@@ -917,7 +917,7 @@ export const deathknightCards: CardData[] = [
       buffPerCard: { attack: 2, health: 2 }
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   // ==================== COMMON GAP-FILL (Starter Deck Viability) ====================
   {
@@ -938,7 +938,7 @@ export const deathknightCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 39207,
@@ -955,7 +955,7 @@ export const deathknightCards: CardData[] = [
       selfDamage: 2
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 39208,
@@ -973,7 +973,7 @@ export const deathknightCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 39209,
@@ -990,7 +990,7 @@ export const deathknightCards: CardData[] = [
       value: 1
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 39210,
@@ -1008,7 +1008,7 @@ export const deathknightCards: CardData[] = [
       requiresTarget: true
     },
     collectible: true,
-    set: "core"
+    set: "genesis"
   },
   {
     id: 9051,
