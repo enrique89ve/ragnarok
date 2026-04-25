@@ -10,7 +10,7 @@
  * but MUST be consulted before any push operation.
  * 
  * SECURITY: This script validates files against forbidden patterns
- * before pushing. See docs/GITHUB_SECURITY_GUIDE.md for details.
+ * before pushing (secrets, credentials, env files).
  */
 
 import { Octokit } from '@octokit/rest';

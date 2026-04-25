@@ -565,9 +565,8 @@ server/
 
 | Document | Description |
 |----------|-------------|
-| [RAGNAROK_PROTOCOL_V1.md](docs/RAGNAROK_PROTOCOL_V1.md) | **Frozen protocol spec** — 14 base ops, authority matrix, finality rules, launch gates |
-| [ATOMIC_NFT_PACKS_DESIGN.md](docs/ATOMIC_NFT_PACKS_DESIGN.md) | **Protocol v1.1** — atomic transfers, pack NFTs, DNA lineage (6 new ops) |
-| [PROTOCOL_V1_2_DESIGN.md](docs/PROTOCOL_V1_2_DESIGN.md) | **Protocol v1.2** — marketplace, broadcast hardening, NFTLox integration, card visuals |
+| [RAGNAROK_PROTOCOL_V1.md](docs/RAGNAROK_PROTOCOL_V1.md) | **Frozen protocol spec** — base ops, authority matrix, finality rules, launch gates |
+| [ATOMIC_NFT_PACKS_DESIGN.md](docs/ATOMIC_NFT_PACKS_DESIGN.md) | Pack system — atomic transfers, pack NFTs, DNA lineage |
 | [DUAT_AIRDROP_DESIGN.md](docs/DUAT_AIRDROP_DESIGN.md) | **DUAT airdrop** — 30% supply to 3,511 holders, claim window, treasury absorption |
 | [DECENTRALIZED_INDEXER_DESIGN.md](docs/DECENTRALIZED_INDEXER_DESIGN.md) | **Light HAF** — 6-tier IPFS index, WoT operators, HafSQL fallback |
 | [RULEBOOK.md](docs/RULEBOOK.md) | Complete game rules with examples |
