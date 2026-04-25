@@ -944,7 +944,8 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       description: 'All friendly pieces gain +1 Health. At the start of your turn, restore 1 Health to your most damaged piece.',
       fixedCardIds: [],
       passiveEffect: 'leif_passives',
-      chessAbility: 'king-leif'
+      chessAbility: 'king-leif',
+      portrait: 'leif-erikson'
     },
     // ===== COMMON =====
     {
@@ -956,7 +957,8 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       description: 'First Man: All friendly pieces gain +1 Attack. Simple but relentless.',
       fixedCardIds: [],
       passiveEffect: 'askr_passives',
-      chessAbility: 'king-askr'
+      chessAbility: 'king-askr',
+      portrait: '6c4b-otijmg2l'
     },
     {
       id: 'king-embla',
@@ -967,7 +969,8 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       description: 'First Woman: All friendly pieces gain +1 Health. At end of turn, restore 1 Health to all allies.',
       fixedCardIds: [],
       passiveEffect: 'embla_passives',
-      chessAbility: 'king-embla'
+      chessAbility: 'king-embla',
+      portrait: '3a95-a09cvqxa'
     },
     // ===== PREMIUM =====
     {
@@ -980,7 +983,7 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       fixedCardIds: [],
       passiveEffect: 'ymir_passives',
       chessAbility: 'king-ymir',
-      portrait: '/art/king-ymir.webp'
+      portrait: '8f78-n51onie8'
     },
     {
       id: 'king-buri',
@@ -992,7 +995,7 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       fixedCardIds: [],
       passiveEffect: 'buri_passives',
       chessAbility: 'king-buri',
-      portrait: '/art/king-buri.webp'
+      portrait: '984f-0o06zvr0'
     },
     {
       id: 'king-surtr',
@@ -1004,7 +1007,7 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       fixedCardIds: [],
       passiveEffect: 'surtr_passives',
       chessAbility: 'king-surtr',
-      portrait: '/art/king-surtr.webp'
+      portrait: '30a7-1lckcwg0'
     },
     {
       id: 'king-borr',
@@ -1016,7 +1019,7 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       fixedCardIds: [],
       passiveEffect: 'borr_passives',
       chessAbility: 'king-borr',
-      portrait: '/art/king-borr.webp'
+      portrait: '78e9-6mupjfob'
     },
     {
       id: 'king-yggdrasil',
@@ -1028,7 +1031,7 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       fixedCardIds: [],
       passiveEffect: 'yggdrasil_passives',
       chessAbility: 'king-yggdrasil',
-      portrait: '/art/king-yggdrasil.webp'
+      portrait: 'a913-axqs13eu'
     },
     {
       id: 'king-audumbla',
@@ -1040,7 +1043,7 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       fixedCardIds: [],
       passiveEffect: 'audumbla_passives',
       chessAbility: 'king-audumbla',
-      portrait: '/art/king-audumbla.webp'
+      portrait: '4655-o4xbxsth'
     },
     {
       id: 'king-gaia',
@@ -1052,7 +1055,7 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       fixedCardIds: [],
       passiveEffect: 'gaia_passives',
       chessAbility: 'king-gaia',
-      portrait: '/art/king-gaia.webp'
+      portrait: 'c838-ebed9878'
     },
     {
       id: 'king-brimir',
@@ -1064,7 +1067,7 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       fixedCardIds: [],
       passiveEffect: 'brimir_passives',
       chessAbility: 'king-brimir',
-      portrait: '/art/king-brimir.webp'
+      portrait: 'b1f2-3e7dd08d'
     },
     {
       id: 'king-ginnungagap',
@@ -1076,7 +1079,7 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       fixedCardIds: [],
       passiveEffect: 'ginnungagap_passives',
       chessAbility: 'king-ginnungagap',
-      portrait: '/art/king-ginnungagap.webp'
+      portrait: '1d49-jajdixap'
     },
     {
       id: 'king-tartarus',
@@ -1088,7 +1091,7 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       fixedCardIds: [],
       passiveEffect: 'tartarus_passives',
       chessAbility: 'king-tartarus',
-      portrait: '/art/king-tartarus.webp'
+      portrait: '6c5f-enclx79l'
     },
     {
       id: 'king-uranus',
@@ -1100,7 +1103,7 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       fixedCardIds: [],
       passiveEffect: 'uranus_passives',
       chessAbility: 'king-uranus',
-      portrait: '/art/king-uranus.webp'
+      portrait: '523f-0ovd1djs'
     }
   ],
   pawn: [

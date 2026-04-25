@@ -10,7 +10,7 @@ import type { ArtCard, ArtMetadata, CharacterGroup, ArtFilters } from './types';
  * All art is bundled locally — no external CDN dependency
  */
 export function getArtImageUrl(card: ArtCard): string {
-  return card._localPath || card._cdnUrl;
+  return card._localPath;
 }
 
 /**

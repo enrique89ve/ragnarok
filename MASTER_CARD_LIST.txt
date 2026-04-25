@@ -1,0 +1,2459 @@
+10001: Bound Watcher
+10002: Bound Forest-Satyr
+10003: Bound Underfiend
+10004: Bound Fen-Hound
+10005: Bound Forge-Imp
+10006: Bound Sun-Serpent
+10007: Thrymr the Imprisoned
+10008: Flamereaper
+10009: Bound Titan-Spawn
+10010: Bound Void Sprite
+10011: Bound Homunculus
+1001: Sea Sprite Raider
+1002: Fenris Cub
+1003: Midgard Serpent Spawn
+1004: Jotun Brute
+1008: Einherjar Guardian
+100: Runic Apprentice
+101: Seidr Acolyte
+1029: Shadow Panther of Hades
+102: Flame Channeler
+1030: Crusader of Baldur
+1031: Seer of the Norns
+103: Galdor Student
+104: Bifrost Invoker
+10501: Skoll, Death-Hunter
+10502: Skadi, Frost Queen
+10503: Helheim's Warlord
+10504: Baldr, Fallen Radiance
+105: Muspel Pyromancer
+10601: Helgrind's Cleaver
+10602: Grave Vengeance
+10603: Herald of Ragnarök
+106: Rune Golem
+107: Frostbolt of Niflheim
+108: Arcane Burst
+109: Seidr Intellect
+11003: Gaia's Gift
+11015: Rune of the Wild
+11016: Yggdrasil's Essence
+11020: Treant
+11040: Healing Spring
+11041: Root Guardian
+11042: Yggdrasil's Surge
+11043: Fenrir's Hunger
+11044: Ironwood Sage
+11045: Primal Roar
+11046: Grove Keeper
+11047: Forest Scout
+11048: Spirit of Healing
+11049: Guardian of the Woods
+11050: Beast's Call
+11051: Root Defender
+11052: Nature's Bloom
+11053: Selene's Sage
+11054: Gift of the Wild
+11055: Beast Tracker
+11056: Primordial Druid
+11057: Yggdrasil Drake
+11058: Fury of Gaia
+11059: Treant
+11060: Ursol's Wisdom
+110: Shield Recruit
+111: Berserker Thrall
+112: Valhalla Shieldmaiden
+113: Einherjar Recruit
+114: Dwarven Armorer
+115: Jotunn Axeman
+116: Iron Bulwark
+117: Cleave of Tyr
+118: Shield Slam
+119: Battle Rage
+12001: Rustrot Viper
+12002: Heavy Plate
+12003: Entrapped Sorceress
+12004: Guild Trader
+12005: Stockades Guard
+1201: Jeweled Scarab of Ra
+1202: Young Brewmaster of Vanaheim
+1203: Elder Brewmaster of Vanaheim
+120: Temple Healer
+12101: Shadow of Loki
+12102: Óðinn's Foresight
+12103: Hel's Path
+12104: Jörmungandr Venom
+12105: Shadow Strike
+12106: Mist of Niflheim
+12107: Serpent's Fang
+12108: Daggers of Víðarr
+12109: Aegis Tempest
+12110: Hel's Execution
+121: Asgard Cleric
+12201: Loki's Shadow Ringleader
+12202: Odin's Raven Scout
+12203: Loki's Disciple
+12204: Kidnapper
+122: Radiant Priestess
+12301: Wicked Knife
+12302: Poisoned Blade
+12303: Assassin's Blade
+12304: Perdition's Blade
+123: Baldur's Faithful
+12401: Raven's Striking Curse
+12402: Shadow Dancer
+12403: Fade Shadow
+12404: Erik the Shadow Lord
+12405: Poison Master
+124: Norn's Attendant
+12501: Shadow Thief
+125: Guardian of the Well
+126: Valkyrie Initiate
+127: Holy Smite
+128: Healing Light
+129: Hymn of the Norns
+13001: Tournament Medic
+13002: Hanuman's Champion
+13003: Kodorider
+13004: Berserker Combatant
+13005: Nexus-Champion Saraad
+130: Svartalfheim Lookout
+131: Poison Brewer
+132: Loki's Disciple
+133: Niflheim Cutpurse
+134: Shadow Stalker
+13501: War Kodo
+135: Svartalf Blade Dancer
+136: Hel's Agent
+137: Backstab of Shadows
+138: Deadly Poison
+139: Fan of Daggers
+14001: Ymir's Mana Wyrm
+14002: Runescribe Initiate
+14003: Bifrost Arcanist
+14004: Æther Weaver
+14005: Flame-Bearer of Surtr
+14006: Frostweaver Spirit
+14009: Loki's Shapecraft
+14010: Sheep
+14012: Vaporize
+14013: Ice Lance
+140: Yggdrasil Sapling
+141: Midgard Defender
+142: Wanderer of the Realms
+143: Blessing of Yggdrasil
+144: Rune of Protection
+145: Raven Hatchling
+146: Draugr Footsoldier
+147: Naga Tidecaller
+148: Dwarven Miner
+149: Sparring Partner
+15014: Shade of Hades
+15017: Fury of Ares
+15018: Muspel Infernal
+150: Fire Imp
+151: Frost Sprite
+152: Wolf Pup
+153: Spirit Guide
+154: Eager Scout
+155: Serpent's Fang
+156: Rune Strike
+157: Odin's Blessing
+158: First Aid
+159: Sacrifice to the Norns
+16001: Crackling Shield
+16002: Flaming Claws
+16003: Living Spores
+16004: Lightning Speed
+16005: Massive
+16006: Poison Spit
+16007: Rocky Carapace
+16008: Shrouding Mist
+16009: Volcanic Might
+16010: Liquid Membrane
+160: Einherjar Raider
+16101: Verdant Longneck
+16102: Elder Longneck
+16103: Volcanosaur
+16104: Ravenous Pterrordax
+16105: Adapt
+161: Bifrost Sentinel
+16201: Plant
+162: Marsh Troll
+163: Naga Warrior
+164: Spirit Healer
+16501: Hunter's Ambush
+16502: Einherjar's Sacrifice
+16510: Twilight Acolyte
+16511: Crystalline Oracle
+16512: Shadowy Figure
+16513: Cleric of Scales
+16514: Light-Touched Zealot's Warden
+165: Stone Golem
+166: Dragon Whelp
+167: Asgard Squire
+168: Bear Cub
+169: Frost Wolf
+17001: Ginnungagap Wanderer
+17002: Rune of Shadows
+17003: Muspel's Inferno
+17004: Doomed Guardian
+17005: Hel's Flame
+17006: Soul's Siphon
+17007: Ginnungagap Shade
+17008: Shadow Keeper
+17009: Ginnungagap Abyss
+17010: Loki's Spark
+170: Lightning Elemental
+17101: Flame-Lord of Muspelheim
+17102: Titan Sense
+17103: Hel's Covenant
+17104: Surtr's Fist
+17105: Shadow Flame
+17106: Soul Renderer
+17107: Muspel's Ravager
+17108: Void Breaker
+17109: Titan's Heart
+17110: Shadow Imp
+171: Draugr Lurker
+17202: Soul Rend
+172: Runic Warden
+173: Greek Hoplite
+174: Thunder Strike
+17501: Infernal
+17502: Soul Remnant
+17503: Flame Wisp
+17504: Enchanted Besom
+17505: Cauldron Imp
+17506: Imp
+175: Freya's Gift
+176: Ancestral Knowledge
+177: Mend Wounds
+178: Norse War Cry
+179: Stormcall
+18001: Wand Thief
+18002: Rune Scholar
+18003: Shieldmaiden Sigrid
+18004: Firebrand
+18005: Voice of Yggdrasil
+18009: Warden of the World Tree
+180: Valkyrie Scout
+18101: Silver Vanguard
+18102: Gather Your Party
+18104: Guild Recruiter
+18105: Oaken Summons
+18106: Possessed Lackey
+18107: Call to Arms
+18108: To My Side!
+181: Jotun Youngblood
+18201: Onyx Magescribe
+18202: Necro-Archon of Hel
+182: Automaton Sentinel
+183: Fenrir Whelp
+184: Pegasus Rider
+185: Greek Phalanx
+186: Nidhogg Hatchling
+187: Spirit of the Fallen
+188: Elven Ranger
+189: Centaur Charger
+19001: Murmy
+19002: Risen Guardian
+19003: Temple Berserker
+19004: Ancestral Guardian
+19005: Wrapped Golem
+19006: Kharj Sandtongue
+19007: Restless Mummy
+19008: Bone Wraith
+1900: Niflheim Hatchling
+1901: Midgard Footman
+19020: Coldlight Seer
+19021: Aegir Tidecaller
+1902: Asgard Recruit
+1903: Vanaheim Guard
+1904: Jotunheim Brute
+1905: Muspel Marauder
+1906: Svartalfheim Construct
+190: Harvest Golem
+191: Olympian Athlete
+192: Draugr Champion
+193: Naga Tidebinder
+194: Runic Fireball
+195: Vanaheim Restoration
+196: Call of the Wild
+197: Shield of Asgard
+198: Whirlwind of Jotunheim
+199: Foresight
+20001: Echo of the Allfather
+20002: Echo of the Sky Sovereign
+20003: Echo of the Thunderlord
+20004: Echo of the Trickster
+20005: Echo of the War God
+20006: Echo of the Champion
+20007: Fenrisulfr, Beast King
+20008: Rune-Tron
+20009: Beryllium Nullifier
+20010: Arachne's Bomb
+20011: Kari, Lord of Storms
+20012: Erik the Shadow Lord
+20013: Surtr, Ragnarök Form
+20014: Pan, Nature's Avatar
+20015: Helios, Sun Strider
+20016: Enchantress of Sessrumnir
+20017: Reveler of the Mead Hall
+20018: Radiant Paragon of Baldur
+20019: Selene, the Devout
+20020: Echo of the Bifrost Watcher
+20021: Witch of the Crossroads
+20022: Lethe, Soul Vessel
+20023: Echo of the War Maiden
+20024: Champion of the Twelve Labors
+20025: Gorgon Slayer
+20026: Immortal Warrior
+20027: Hades, Titan Reaver
+2002: Nidhogg Whelp
+20030: Skadi, Frost Queen
+20031: Frost Wraith
+20032: Artemis, Wild Huntress
+20033: Nyx, Shadow Stalker
+20034: Echo of the Light Weaver
+20035: Silk-Lord of Arachne
+20036: Skull of Erebus
+20037: Orion, Hunter Supreme
+20050: Echo of the Radiant One
+200: Minotaur Guard
+20100: Bard of Asgard
+20101: Hypnos, Dream Weaver
+20102: Echo of the World Serpent
+20103: Nike, Winged Victory
+20104: Smith of Olympus
+20105: Avatar of War
+20106: Harvest Priestess
+20107: Twin Wolves of Twilight
+20108: Helios, Sun Chariot Driver
+20109: Shade of Primordial Night
+20110: Keeper of the Wisdom Well
+20111: Echo of the One-Handed God
+20112: Keeper of the Golden Apples
+20113: Light-Warded Champion
+20114: Flame Colossus of Muspel
+20115: Jotun Frost King
+20116: Healer of Valhalla
+20117: Chaos-Spawn of Typhon
+20118: Orthrus, Twin Mind
+20119: Echo of the Tidal Healer
+20126: Argus, Storm Watcher
+20127: The Storm Guardian
+20150: Saga, Keeper of Histories
+20151: Vár, Oath Warden
+2016: Daedalus the Inventor
+201: Alfheim Archer
+20200: Hell-Hound of the Gate
+20201: Minotaur, Labyrinth Guardian
+20202: Gorgon Sovereign
+20203: Hydra, Many Heads
+20204: Phoenix Immortal
+20205: Sphinx, Riddler
+20206: Chimera, Beast of Flame
+20207: Twin Terrors of the Strait
+20208: Griffon of Olympus
+20209: Kraken of the Deep
+20210: Sleipnir Warchief
+20211: Harpy Matriarch
+20212: Cyclops Forgemaster
+20213: Medusa's Bane
+20214: Satyr Reveler
+20215: Nymph of the Grove
+20216: Titan of Chaos
+20217: Nemean Lion
+202: Temple Guardian
+20300: Echo of the Forge Master
+20301: Argonaut Hero
+20302: Amazonian Queen
+20303: Seer of Pythia
+20304: Muse of Song
+20305: Aether Dragon
+20306: Charybdis Maw
+203: Frost Giant Youth
+20402: Orpheus, Battle Conductor
+20403: Hecate, the Accused
+20404: Undying Steed of Pegasus
+20405: Ember Herald of Sinmara
+20406: Theseus, the Equalizer
+20407: Proteus, Mist Shaper
+20408: Gaia, Stone Mother
+204: Hydra Spawn
+20501: Summon Microbots
+20502: Microbot
+20504: Wargear
+20505: Skaterbot
+20506: Replicating Menace
+20507: Missile Launcher
+205: Svartalfheim Engineer
+20612: Fenrir, the Worldbreaker
+20620: World Serpent Spawn
+20621: Jormungandr's Coil
+206: War Elephant
+20702: Boreas, Ice Collector
+20703: Web-Mother of Arachne
+20708: Eris, Mind Thief
+20709: Ymir, Earth Sculptor
+20710: Ragnarok's Edge
+207: Jotunn Seedling
+20801: Loom of Chronos
+20802: Cyclops Siege Tower
+20804: Gullveig, Thrice-Born Witch
+20806: War-Champion of Ares
+20807: Proteus, Face Collector
+20808: Swift Herald of Hermes
+20809: Heartwood of Idunn
+20810: Moirai Confessor
+208: Stone Drake
+209: Einherjar Veteran
+21001: Redscale Dragontamer
+21002: Altar of Fire
+21003: Bound Fire-Phoenix
+21005: Dreaming Drake
+21006: Nitroboost Poison
+21007: Helfire Deadeye
+21010: Sword Eater
+21011: Thornmantle Sword
+210: Cerberus Pup
+211: Realm Gate
+212: Consecration of Valhalla
+213: Norse Resilience
+214: Wrath of the Aesir
+215: Midgard Champion
+216: Olympian Warrior
+217: Helheim Revenant
+218: Gryphon Rider
+219: Stormborn Elemental
+2201: Oracle of Delphi
+2202: Chronos Timekeeper
+220: Jotunn Brawler
+221: Dragon Oracle
+222: Jotunn Forge-Guard
+223: Ragnarok Tremor
+224: Gift of the Aesir
+225: Summon the Einherjar
+226: Scroll of Wisdom
+227: Jotunn Warlord
+228: Phoenix of Muspelheim
+229: Ancient Treant
+230: Jormungandr Spawn
+231: Svartalfheim Colossus
+232: Twilight of the Gods
+233: Healing Rain of Vanaheim
+234: Fury of the Nine Realms
+25001: Magic Mapping
+25009: Academic Research
+25013: Stonehill Defender
+25019: Golden Apple
+26001: Militia Commander
+26002: Swift Messenger
+26003: Moon-Mad Fenriskin
+26101: Spirit Lash
+26103: Vicious Scalehide
+26104: Bloodworm
+27004: Tech Priest of Hephaestus
+27005: Card Stealer of Hermes
+27007: Rune Scribe
+27008: Echo of the Norns
+27009: Soul Binder
+27010: Divine Constructor
+28001: Echo of the Divine Queen
+28002: Echo of the Valkyrie Queen
+29001: Dark Glimpses
+29002: Dragon Kin Guardian
+29003: Arcanologist
+29004: Shadow Revelation
+29800: Gungnir
+29801: Master Bolt
+29802: Mjolnir
+29803: Lævateinn
+29804: The Aegis
+29805: Enyalios
+29806: Cap of Invisibility
+29807: Brisingamen
+29808: Trident of the Deep
+29809: Oathblade
+29810: Iron Helm
+29811: Chainmail Vest
+29812: Leather Greaves
+29813: Runic Circlet
+29814: Reinforced Plate
+29815: Traveler's Boots
+29816: Dwarf-Forged Helm
+29817: Uru Breastplate
+29818: Valkyrie Sabatons
+29819: Asgardian Warhelm
+29820: Stormcaller Crown
+29821: Stormcaller Robes
+29822: Stormcaller Treads
+29823: Valhalla Visor
+29824: Valhalla Mantle
+29825: Valhalla Sandals
+29826: Berserker Helm
+29827: Berserker Warplate
+29828: Berserker Greaves
+29829: Thunderguard Helm
+29830: Thunderguard Plate
+29831: Thunderguard Boots
+29832: Spectral Crown
+29833: Spectral Shroud
+29834: Spectral Greaves
+29835: Abyssal Crown
+29836: Abyssal Mail
+29837: Tidecaller Greaves
+29838: Aegis Helm
+29839: Aegis Breastplate
+29840: Aegis Greaves
+29841: Vanir Circlet
+29842: Enchanted Vestment
+29843: Vanir Sandals
+29844: Mask of Mirrors
+29845: Shadow Cloak
+29846: Shadow Greaves
+29847: Oathkeeper Helm
+29848: Oathkeeper Plate
+29849: Oathkeeper Greaves
+29900: Harp of Bragi
+29901: Odrerir
+29902: Gavel of Glitnir
+29903: Mani's Lunar Chariot
+29904: Sol's Sunfire Chariot
+29905: Laevateinn
+29906: Hungr & Sultr
+29907: Vili's Mantle of Awakening
+29908: The Mammen Axe
+29909: Seidstafr
+29910: Logi's Consuming Flame
+29911: Megingjord
+29912: Gleipnir
+29913: Thrymr's Stolen Crown
+29914: Vidarr's Iron Boot
+29915: Gjallarhorn
+29916: Baldur's Radiance
+29917: Solvi's Oath-Ring
+29918: Delling's Shard
+29919: Eir's Mercy
+29920: Sumarbrander
+29921: Hoenir's Spirit-Gift
+29922: Idunn's Golden Apples
+29923: Fjorgyn's Earthroot Staff
+29924: Sigyn's Venom Bowl
+29925: Ve's Gift of Speech
+29926: Blainn's Masterwork Anvil
+29927: Gerd's Radiant Arms
+29928: Gefjon's Plow
+29929: Ran's Drowning Net
+29930: Njord's Tide-Caller
+29931: Mistletoe Arrow
+29932: Gnipahellir's Tooth
+29933: Máni's Thread
+29934: Skadi's Frost Bow
+29935: Aegir's Brewing Cauldron
+29936: Ullr's Yew Longbow
+29937: Veðrfölnir's Talon
+29938: Naglfar's Keel
+29939: Gleipnir's Fang
+29940: Hyperion's Solar Crown
+29941: Vault of Ouranos
+29942: Kronos's Adamantine Sickle
+29943: The Thyrsus
+29944: Persephone's Pomegranate
+29945: Izanami's Mirror of Yomi
+29946: Hammer of the Divine Forge
+29947: Cestus of Aphrodite
+29948: Hera's Royal Diadem
+29949: Eros's Golden Arrows
+29950: Hestia's Eternal Flame
+29951: Demeter's Cornucopia
+29952: Hermes's Talaria
+29953: Nyx's Veil of Night
+29954: Apollo's Golden Lyre
+29955: Artemis's Silver Bow
+29956: Selene's Lunar Crown
+29957: Hecate's Twin Torches
+29958: Helios's Sun Chariot
+29959: Tsukuyomi's Moon Blade
+29960: Fujin's Wind Bag
+29961: Ama-no-Nuhoko
+29962: Kamimusubi's Seed of Creation
+29963: Ammit's Devouring Maw
+29964: Feather of Maat
+29965: Serqet's Venomous Tail
+29966: Khepri's Sacred Scarab
+29970: Volva of the Realms
+29971: Shield Bearer of Asgard
+29972: Shapeshifter of Loki
+29973: Herald of Ragnarok
+29974: Jotun of the Depths
+29975: Storm Lizard of Thor
+29976: Armored Beast
+29977: Volatile Fire Spirit
+29978: Dusk Boar
+29979: Queen Bee of Yggdrasil
+29980: Venomous Snail
+30001: Odin's Sacrifice
+30002: Tyr's Gambit
+30003: Blood Seer
+30004: Norn's Demand
+30005: Mimir's Eye
+30006: Berserker's Oath
+30007: Valkyrie's Tithe
+30008: Hel's Toll
+30009: Fire Giant of Muspelheim
+30010: Dreki of the Dusk
+30011: Mind Weaver of Hel
+30014: Initiate of Suffering
+30015: Mountain Giant of Jotunheim
+30016: Flame Juggler of Muspelheim
+30017: Seer of Aegir
+30018: Blade Dancer of Freya
+30019: Shieldmaiden of Odin
+3001: Death Coil
+30020: Defender of Bifrost
+30021: Wounded Champion of Tyr
+30022: Merchant of Midgard
+30024: Giant Slayer of the Gods
+30025: Trampling Beast of Thor
+30026: Ice Elemental of Niflheim
+30027: Thunder Striker of Asgard
+30028: Crab of Ginnungagap
+30029: Harsh Taskmaster
+3002: Titan of Olympus
+30030: Elven Archer of Alfheim
+30031: Mad Alchemist of Athens
+30035: Mind Thief of Hermes
+30037: Silencer of the Gods
+30038: Commander of Valhalla
+30046: Runeforged Blade
+30047: Wrath of the Deep
+30048: Piloted Construct
+30049: Treasure Vessel
+30050: Spine Beast of Hel
+30051: Totem Summoner of the Winds
+30052: Armor Burst
+30053: Frozen Beast of Niflheim
+30054: Terror of the Grave
+30055: Healer of Eir
+30056: Artificer of Brokkr
+30057: Mechanical Dragonling
+30058: Hunter of Skadi
+30059: Boar
+3005: Army of the Dead
+30060: Cleric of Sol
+30061: Draugr Flesh Eater
+30062: Alpha Wolf of Fenrir
+30063: Sentinel of Mimir
+30064: Crusader of Valhalla
+30065: Shadow Cat of Hel
+30066: Bear of the North
+30067: Elder Ape of the Grove
+30068: War Chief of Vanaheim
+30069: Rider of Sleipnir
+30070: Velociraptor of Midgard
+30071: River Serpent of Aegir
+30072: Warrior of Jotunheim
+30073: Stone Guardian of Asgard
+30074: Craftsman of Nidavellir
+30075: Bomb Maker of Sindri
+30076: Goblin Bomb
+30077: Sprite of Alfheim
+30078: Automaton of Ivaldi
+30079: Swift Construct
+3007: Remorseless Winter
+30080: Bronze Sentinel
+30081: Wounded Colossus
+30082: Thunder Launcher
+30083: Spark Engine of Muspel
+30084: Spark
+30085: Shadow Imposter
+30086: Arena Champion of Olympus
+30087: Biting Imp
+30088: Bearer of Mimir
+30089: Mead Vendor of Valhalla
+3008: Valkyrie Champion
+30090: Resting Archer of Ullr
+30091: Taskmaster of Hel
+30092: Free Agent
+30093: Spell Berserker
+30094: Rooster of Gullinkambi
+30095: Stubborn Turtle
+30096: Shadow Scavenger
+30097: Wyvern Hatchling
+30098: Forager of the Wild
+30099: Nesting Roc of Zeus
+3009: Hel's Edge
+30100: Sabretooth of the Frost
+30101: Norn's Decree
+30102: Heimdall's Warning
+30103: Fimbulwinter
+30104: Twilight of the Gods
+30105: Baldur's Doom
+30106: Fenrir Unbound
+30107: Surtr's March
+30108: Raptor Hatchling of Midgard
+30109: Raptor of Midgard
+3010: Runesmith of Odin
+3011: Blood Boil
+3012: Runeforged Blade
+3013: Icebound Fortitude
+3014: Dark Command
+3015: The Draugr King
+3017: Death Gate
+3018: Bone Shield
+3019: Skeleton
+30201: Hadding the Twice-Born
+30202: Hervor Shield-Maiden
+30203: Bödvar Bjarki
+30204: Einherjar Champion
+30205: Helgi Hundingsbane
+30206: Sigmund the Völsung
+3020: Draugr Bones
+3021: Blood Presence
+3022: Frost Presence
+3024: Runeblade
+3025: Chains of Ice
+3027: Death Knight Initiate
+3029: Draugr Champion
+30301: Gate to Niflheim
+30302: Gate to Muspelheim
+30303: Gate to Asgard
+30304: Gate to Helheim
+30305: Gate to Vanaheim
+30306: Gate to Jotunheim
+30307: Gate to Alfheim
+30308: Gate to Svartalfheim
+30309: Gate to Midgard
+3031: Frozen Acolyte
+3032: Plague Spreader
+3033: Runebound Ghoul
+3034: Frost Revenant
+3035: Abomination Smith
+3036: Deathcharger
+3037: Val'kyr Shadowguard
+3038: Frost Wyrm
+30401: Gleipnir-Bound Beast
+30402: Gleipnir, the Silk Chain
+30403: Sun-Chaser Wolf
+30404: Moon-Chaser Wolf
+30405: Thought-Raven
+30406: Memory-Raven
+30407: Root-Gnawer Drake
+30408: Ratatoskr, the Messenger
+30409: Ask
+30410: Embla
+31001: Remembrance of Mimir
+31002: Whisper of Hoenir
+31003: Scales of Forseti
+31004: Mead of Kvasir
+31005: Ember of Lodur
+31006: Will of Vili
+31007: Song of Bragi
+31008: Oath-Ring of Ull
+3100: Shield of the Colossus
+31011: Deck Thief of Hermes
+31014: Keeper of the Fallen
+31015: Mass Silencer
+31017: Skadi's Mark
+31019: Wild Roar
+3101: Hand of Poseidon
+31022: Aegis Defense
+31025: Frog
+31050: Defensive Stance
+31051: Reckless Strike
+31052: Warrior's Will
+31053: Blade Sharpening
+31054: Call of Valhalla
+31055: Battle Preparations
+31056: Iron Fortitude
+31057: Cleaving Slash
+31058: Last Stand
+31059: Champion's Legacy
+31101: Beast Tamer of Asgard
+31102: Elemental Harmony
+31103: Rune of the Wild Bond
+31104: Yggdrasil Beastkeeper
+31105: Fenrir's Chosen Alpha
+31201: Nidhogg's Disciple
+31202: Dragonscale Warden
+31203: Fafnir's Hoardkeeper
+31204: Jormungandr's Envoy
+31301: Weaver of Fates
+31302: Seidr Channeler
+31303: Bifrost Resonator
+31304: Einherjar Oath-Keeper
+31305: Ragnarok Harbinger
+31401: Fenrir's Butcher
+31402: Bloodgorged Draugr
+31403: Surtr's Executioner
+31404: Valkyrie Shieldmaiden
+31405: Berserk Raider
+31406: Jotunheim Sentinel
+31407: Runekeeper Acolyte
+31408: Vanaheim Healer
+31409: Thundercaller
+31410: Odin's Herald
+31411: Muspel Spark
+31412: Echoing Rune
+31413: Spectral Echo
+31414: Valkyrie Herald
+31415: Odin's Chronicler
+31416: Runic Amplifier
+31417: Einherjar Standard-Bearer
+31418: Seidr Resonator
+31419: Allfather's Chosen
+31501: Ulfhednar Hatchet
+31502: Berserker's Reckoning
+31503: Frenzied Cleave
+31504: Blood-Drunk Fury
+31505: Fenrir's Fang
+31506: Ulfhednar Veteran
+31507: Rage of the Fallen
+31508: Valhalla Berserker
+31509: Tyr's Warmonger
+31510: Shadow-Chaser of Hati
+31511: Ragnarok Unleashed
+31512: Silent Blade of Vidar
+31601: Rain of Arrows
+31602: Skadi's Mark
+31701: Wrath of Yggdrasil
+31702: Thorns of Jotunheim
+31801: Loki's Sleight
+31802: Shadow Viper
+31803: Niflheim Cutthroat
+31804: Shadowstep of Hel
+31805: Loki's Grand Scheme
+31806: Svartalf Combo Master
+31901: Eir's Disciple
+31902: Hel's Leech
+31903: Draugr Blood-Drinker
+31904: Nótt's Embrace
+31905: Valravn
+31906: Geirskögul, Spear-Shaker
+31907: Grimnir, the Hooded One
+31908: Blóðrún
+31909: Vithar, the Silent God
+31910: Skuld, Norn of the Future
+31911: Gróa's Vision
+31912: Verdandi's Anchor
+31913: Echoes of Urd
+31914: Veðrfölnir's Flight
+31915: Ratatoskr, Realm-Runner
+31916: Realm-Torn Veil
+31917: Gullintanni, Bifrost Sentinel
+31918: Valkyrja, Chooser of the Slain
+31919: Gjallarhorn
+31920: Herjan, Lord of Hosts
+31921: Feast of the Fallen
+31922: Eitri, Forge-Breaker
+31923: Behemoth
+31924: Reckless Bettor
+31925: Cautious Dealer
+31926: Coin-Flipper
+31927: Pot Raiser
+31928: Bluff Master
+31929: Fate Reader
+31930: Blood Gambler
+31931: Shield Bettor
+31932: Einherjar High-Roller
+31933: Storm Caller
+31934: Norn's Witness
+31935: Fenrir's Gambit
+31936: Loki's Loaded Dice
+31937: Ragnarok's Wager
+31938: Odin's All-Seeing Stake
+31939: Surtr's Final Bet
+31940: Bloodhowl Berserker
+31941: Crimson Valkyrie
+31942: Sanguine Pact
+31943: Twilight Sentinel
+31944: Ragnarok Herald
+31945: Surtr's Ember
+31946: Norn's Loom
+31947: Thread of Skuld
+31948: Wyrd Unraveling
+31949: Realm-Walker Scout
+31950: Bifrost Wanderer
+31951: Yggdrasil's Blessing
+31952: Oathsworn of Valhalla
+31953: Eternal Shieldbearer
+31954: Horn of Valhalla
+31955: Burning Stakes
+31956: Mimir's Gambit
+31957: Nidhogg's Ante
+32001: Rune Burst
+32002: Runic Barrage
+32003: Surtr's Wrath
+32004: Jötunheim Freeze
+32005: Skadi's Arrow
+32006: Athena's Wisdom
+32007: Loki's Shapecraft
+32008: Gemini Illusion
+32009: Niflheim's Embrace
+32010: Muspelheim's Fury
+32011: Thrymr's Breath
+32012: Runic Detonation
+32013: Helios Inferno
+32015: Dragon's Breath
+32017: Seidr Deflection
+32018: Mirror Entity
+32019: Ward of Gjallarhorn
+3201: Essence Weaver
+32020: Surtr's Vengeance
+3202: Chaos Invoker
+32031: Gemini Illusion
+32032: Seidr Deflection
+32033: Roaring Torch
+32051: Odin's Binding
+32052: Pesterer of Loki
+32053: Iron Golem of Sindri
+32054: Frost Automaton
+32055: Skeletal Steed of Hel
+32056: Echo of the Undying Son
+32057: Nemean Lion
+32058: Paladin of Tyr
+32059: Jörmungandr, Dragon of Dreams
+32060: Fafnir the Spell-Weaver
+32061: Níðhöggr the Life-Binder
+32062: World-Ender Wyrm
+32063: Time-Wyrm of the Void
+32064: Echidna, Mother of Dragons
+32065: Ooze of the Styx
+32066: Treasure Hunter of Hermes
+32067: Runebreaker of Asgard
+32068: Owl of Athena
+32069: Faerie of Alfheim
+32070: Fire-Breather of Olympus
+32071: Cobalt Drake of Thor
+32072: Flame Drake of Muspel
+32073: Primordial Wyrm
+32074: Slumbering Wyrm of Nidavellir
+32075: Dragon-Bane of Sigurd
+32076: Broken Dwarf-Construct
+32077: Undying Spirit
+32078: Nemean Cub
+32079: Whelp of Echidna
+32080: Ashbringer of Tyr
+32081: Fenrir's Shadowblade
+32082: Hero Seeker of Midgard
+32083: Rage-Born Berserker
+32084: Einherjar Revenant
+32085: Herald of Hel
+32086: Bard of the Twice-Spoken Word
+32090: Surtr's Creation Reborn
+32091: Flame-Born of Muspel
+32092: Storm-Born of Thor
+32093: Puppet Master of Loki
+32095: Sindri's Grand Machine
+32096: Kel'Thuzad the Undying
+32097: Titan Lord of Helheim
+32098: Dread Pirate of Ran
+32099: Cannon of Aegir
+32100: Skidbladnir's Stowaway
+32101: Deckhand of Njord
+32102: Raider of the Blood Sea
+32103: Tidecaller of Ran
+32104: Ancient Eye of the Deep
+32105: Megasaur of Poseidon
+32201: Cerberus, Hound of Hades
+32202: Father of Monsters
+32203: Porphyrion, Giant-King
+32204: Atlas, World-Bearer
+32205: Campe, Dragon of Tartarus
+32206: Gaze of the Gorgon
+32207: Hydra, the Many-Headed
+32208: Minotaur of the Labyrinth
+32209: Sphinx, Riddle-Keeper
+32210: Chimera, Three-Formed
+32211: Strait-Terror of the Deep
+32212: Divine Winged Steed
+32213: The Furies
+33001: Life's Sustenance
+33002: Grove Warden
+33003: Verdian, Nature's Herald
+33004: Treant with Taunt
+33005: Power of Gaia
+33006: Panther
+33007: Druid of the Bog
+33008: Spider Form
+33009: Turtle Form
+33010: Verdandi the Wise
+33011: Roots of Life
+33026: Wounded Champion of Athena
+33027: Disciple of Prometheus
+33028: Flame-Touched Pyromancer
+33029: Priestess of Eir
+33030: Prophet of Ragnarok
+33031: Nidhogg's Serpent
+33032: Silk-Weaver of the Dark
+33033: Shadow of Nyx
+33034: Acolyte of Hestia
+33035: Fenrir's Pack Leader
+33036: Totem of Muspelheim
+33037: Einherjar Commander
+33038: Smith of Nidavellir
+33039: High Priest of Hades
+33040: Pirate King of Aegir
+33041: Champion of Ran
+33042: Champion of Asgard
+33043: Warchief of Valhalla
+33044: Oracle of the Sea
+33045: Dawn-Wolf Alpha
+33046: Gryphon of Zeus
+33047: Beast-Lord of Artemis
+33048: Divine Knight of Freya
+33049: Squire of Baldur
+33050: Construct of Hephaestus
+33100: Whelp of Nidhogg
+33101: Ember Drake
+33102: Frost Whelp
+33103: Bronze Hatchling
+33104: Volcanic Drake
+33105: Twilight Whelp
+33106: Blackwing Sentinel
+33107: Corruptor of Tartarus
+33108: Dragonkin of Apollo
+33109: Hungry Wyrm of Jormungandr
+33110: Mnemosyne the Chronicler
+33111: Wyrmrest Agent
+33112: Drakonid Operative
+33113: Twilight Guardian
+33114: Scaled Nightmare
+33115: Book Wyrm of Athena
+33116: Bone Drake of Hel
+33117: Dragonmaw Poacher
+33118: Evasive Wyrm
+33119: Evasive Feywing
+33120: Niflheim Wyrm, Frost Queen
+33121: Chillmaw the Guardian
+33122: Níðhöggr's Heir, Prince of Dragons
+33123: Temporus, Time Dragon
+33124: Mímir, Dragon Lord
+33125: Cub of Fenrir
+33126: Stonetusk Boar of Gullinbursti
+33127: Bloodfen Raptor of Midgard
+33128: River Crocolisk of Aegir
+33129: Ironfur Grizzly of Jotunheim
+33130: Oasis Snapjaw of the Nile
+33131: Skogkatt Stalker
+33132: Scavenging Hyena of Anubis
+33133: Crackling Razormaw
+33134: Vicious Fledgling
+33135: Infested Wolf of Hati
+33136: Tundra Rhino of Freyr
+33137: Roc of the Thunderlands
+33138: Cave Hydra of Lerna
+33139: Witchwood Grizzly
+33140: Giant Sand Worm of Jormungandr
+33141: Bittertide Hydra of Lernaean
+33142: Dire Frenzy Wolf
+33143: Dispatch Kodo of Midgard
+33144: Stampeding Cerberus
+33145: Hanuman the Wild
+33146: The Beast of Tartarus
+33147: Goldrinn, Great Wolf
+33148: Mama Bear of Callisto
+33149: Garmr, Hound of Hel
+33150: Spider of Hati
+33151: Banana
+33152: Sindri's Apprentice
+33200: Lorekeeper of Odin
+33201: Chronicler of the Norns
+33202: Messenger of Hermes
+33203: Scroll Keeper of Alexandria
+33204: Deep Seer of Mimir
+33205: Raven of Huginn
+33206: Raven of Muninn
+33207: Wisdom Seeker
+33208: Midas' Apprentice
+33209: Runecarver of Nidavellir
+33210: Timeweaver of Chronos
+33211: Discount Djinn
+33212: Mana Thief of Loki
+33213: Essence Channeler
+33214: Arcane Giant of Olympus
+33215: Clockwork Giant
+33216: Echo of Narcissus
+33217: Mirror Spirit of Athena
+33218: Shadowstep Dancer
+33219: Spirit of Reflection
+33220: Doppelganger of Proteus
+33221: Curator of the Menagerie
+33222: Witchwood Piper
+33223: Sandbinder of the Dunes
+33224: Minstrel of Valhalla
+33225: Executioner of Hades
+33226: Assassin of the Moirai
+33227: Banisher of Tartarus
+33228: Petrifying Gaze of Medusa
+33229: Wrath of the Titans
+33230: Doomblade of Ares
+33231: Soul Collector of Hel
+33232: Plague of Locusts
+33233: Silencer of Ginnungagap
+33234: Rune Breaker
+33235: Mindbreaker of Prometheus
+33236: Saboteur of Loki
+33237: Nerub'ar Weblord
+33238: Mana Leech of Niflheim
+33239: Dirty Rat of Midgard
+33240: Unseen Saboteur
+33241: Dread Infernal of Surtr
+33242: Abyssal Enforcer
+33243: Brawler of Valhalla
+33244: Wild Pyromancer of Muspel
+33245: Mossy Horror of the Swamp
+33246: Unbound Fire Titan
+33247: Doomsayer's Prophet
+33248: Hellfire Elemental
+33249: Vanquisher of Giants
+33250: Oaken Summons of Yggdrasil
+33251: Rally of the Einherjar
+33252: Kathrena Winterwisp
+33253: Woecleaver of Hel
+33254: Guild Recruiter of Asgard
+33255: Shadow Thrall of Hel
+33256: Silvered Guardian of Asgard
+33257: Meat Wagon of Helheim
+33258: Oondasta the Great Beast
+33259: Skull of the Man'ari
+33260: Innervate Spirit
+33261: Lightning Bloom of Thor
+33262: Bright-Eyed Scout
+33263: Far Sight Shaman
+33264: Preparation of Loki
+33265: Naga Sea Witch
+33266: Feathered Sovereign of the Skies
+33267: Forgotten Time-Walker
+33268: Eureka of Archimedes
+33269: Voidcaller of Helheim
+33270: Ancestor's Call
+33271: Free from Amber
+33272: Splitting Festeroot
+33273: Ixlid, Fungal Lord
+33274: Dollmaster Dorian
+33275: Spiritsinger Umbra
+33276: Necromechanic of Sindri
+33277: Hyrrokkin's First Mate
+33278: Corpse Bride of Hel
+33279: Roll the Bones
+33280: Corpse Raiser
+33281: Reborn Spirit
+33282: Grave Horror
+33283: Dragonslayer Kingpin
+33284: Grimestreet Smuggler
+33285: Keleseth's Apprentice
+33286: Arena Treasure Chest
+33287: Stone Giant of Jotunheim
+33288: Twilight Drake of Dusk
+33289: Bolvar, Fireblood
+33290: Val'anyr of the Forge
+33291: Archmage of Asgard
+33292: Thalnos the Younger
+33293: Alfheim Mage
+33294: Spellweaver of Olympus
+33295: Cosmic Anomaly
+33296: Knife Juggler of Loki
+33297: Sea Giant of Poseidon
+33298: Warden of Valhalla
+33299: The Soulflayer
+33300: Stone Snake
+33301: Locust
+33400: Festeroot Spawn
+33401: Rusty Hook
+33999: Frost-Bound Champion
+35004: Zeus' Fork
+35006: Earth Elemental
+35007: Mjölnir's Echo
+35008: Ragnarok's Wrath
+35009: Thor's Surge
+35010: Storm Elemental
+35011: Tidal Surge
+35012: Chain of Mjolnir
+35013: Stone Guardian
+35015: Thunder Titan
+35016: Rune Spark
+35017: Spirit Summons
+35018: Storm Weaver
+36001: Soul Reaper
+36002: Plague Bearer
+36003: Niflheim Harbinger
+36004: Corpse Explosion
+36005: Hel-Walker
+36006: Obliterate
+36007: Frost Lich
+36008: Death Grip
+36009: Niflheim's Fury
+36010: Death Gate
+36011: Draugr Lord, Bone Storm
+36012: Blood Tap
+36013: Ebon Champion
+36014: Helheim's Chosen
+36101: Lich of the Barrow
+36102: Phylactery
+36103: Mass Raise Dead
+36104: Draugr Overlord
+36105: Soul Harvest
+36106: Bone Golem
+36107: Plague of Undeath
+36108: Revenant Stalker
+36109: Death's Emissary
+36110: Bone Spike
+36111: Ghoul Frenzy
+36112: Corpse-Glutton of Nidhogg
+36201: Ragnarok's Wrath
+36202: Muspelheim Overlord
+36203: Battle Fury
+36204: Blood-Drunk Berserker
+36205: Bifrost Cleaver
+36206: Fenrir's Howl
+36207: War-Scarred Veteran
+36208: Undying Rage
+36209: Jotunheim Destroyer
+36210: Bloodlust Incarnate
+36301: Nótt, Shadow Sovereign
+36302: Vanish into Shadow
+36303: Svartalf Assassin
+36401: Shield of Valhalla
+36402: Asgardian Defender
+36403: Bifrost Justicar
+36404: Baldr's Blessing
+36405: Shieldmaiden Recruit
+36406: Judgment of the Aesir
+36407: Rune of Forseti
+36408: Mjolnir's Echo
+36409: Saga-Keeper
+37001: Corruption Curse
+37002: Muspel Covenant
+37003: Vampire's Kiss of Hel
+37004: Doom's Curse
+37005: Hag's Summons
+37006: Seed of Ruin
+37007: Blood Rune
+37008: Shadow Project
+37009: Void Bargain
+37010: Ritual of Blood
+38001: Runestorm
+38002: Wisdom of Mímir
+38003: Seidr Eruption
+38004: Rune of Amplification
+38005: Rune Familiar
+38006: Seiðr Flamecaller
+38007: Astral Rift
+38008: Chrono-Weaver
+38009: Odin's Seidr Mastery
+38010: Sun-Archon of Hyperion
+38101: Blood Rune: Siphon
+38102: Frost Rune: Howling Gale
+38103: Unholy Rune: Raise Dead
+38104: Draugr Conscript
+38105: Runeforger
+38106: Helheim Abomination
+38107: Corpse Harvester
+38108: Niflheim's Grasp
+38109: Hel's Chosen
+38110: Root-Gnawer's Maw
+38201: Mjölnir's Bolt
+38202: Ancestral Totem
+38203: Totemic Surge
+38204: Primal Fury
+38205: Runic Evolution
+38206: Gaia's Earthquake
+38207: Spirit of the Tides
+38208: Echo of the Tidal Titan
+38301: Call to Valhalla
+38302: Valhalla's Decree
+38303: Baldur's Hammer
+38304: Shieldmaiden of Asgard
+38305: Valkyrie Quartermaster
+38306: Oathkeeper of Tyr
+38307: Libram of Radiance
+38308: Týr's Judgment
+38401: Yggdrasil's Roots
+38402: Sap of the World Tree
+38403: Norn's Shears
+38404: Force of Yggdrasil
+38405: Verdant Protector
+38406: Ironbark Guardian
+38407: Nidhogg's Infestation
+38408: Freya's Warden
+38501: Shadow Word: Bane
+38502: Shadow Word: Ruin
+38503: Hel's Shadow Bolt
+38504: Mind Seize
+38505: Shadow Priestess of Hel
+38506: Shadow-Warden of Helheim
+38601: Skadi's Command
+38602: Tracking Rune
+38603: Multi-Shot of Ullr
+38604: Explosive Rune
+38605: Freya's Houndmaster
+38606: Savanna Prowler
+38607: Artemis' Volley
+38608: Alpha of the Wolf-God
+38701: Shadow Bolt of Hel
+38702: Dark Pact
+38703: Mass Resurrection
+38704: Shadow Nova
+38705: Undead Horde Commander
+38706: Plague of Helheim
+38707: Hel's Vanguard
+38708: Grave Whisperer
+38709: Bone Reaper
+38710: Draugr Apprentice
+38801: Leech of Niflheim
+38802: Blood Drinker
+38803: Outcast's Reward
+38804: Soulrend Blade
+38805: Muspel Lifedrinker
+38806: Svartalf Exile
+38807: Ulfhednar Howl
+38808: Bolthorn, the Twice-Banished
+38901: Void Imp
+38902: Hel's Wretch
+38903: Soulfire of Muspel
+38904: Clutch of Hel
+39001: Pilfer of Loki
+39002: Hallowed Fencer
+39003: Rain of Daggers
+39004: Sprint of Shadows
+39005: Mist-Walker
+39006: Svartalfheim Shade
+39007: Daggers of Niflheim
+39008: Ambush Predator
+39009: Veil of Hel
+39010: Shadow Ambusher
+39011: Hel's Unseen
+39012: Nótt's Cloak
+39101: Whirlwind of Tyr
+39102: Raging Berserker
+39103: Death Bite
+39104: Patron of Valhalla
+39201: Ulfhednar's Howl
+39202: Reckless Charge
+39203: Blood Frenzy
+39204: Fury Slash
+39205: Fenrir's Bite
+39206: Frost Strike
+39207: Blood Tap
+39208: Unholy Grasp
+39209: Runic Shield
+39210: Helheim's Grasp
+39211: Skadi's Arrow
+39212: Tracker's Instinct
+39213: Venomous Trap
+39214: Norn's Counsel
+39215: Hel's Rebuke
+40001: Primordial Frost-Mother
+40003: Ironbeak Owl
+40004: Spellbreaker
+40005: Heimdall's Warden
+40006: Sol's Walker
+40007: Beast King of Freya
+40008: Feast Hound
+4000: Bone Collector
+40010: Ancient of Wisdom
+40011: Fáfnir's Thrall
+40012: Dark Priestess
+40014: Auðumbla the Primordial
+40015: Primordial Fury
+40016: Overload Unleasher
+40017: Stormforged Axe
+40018: Khartut Defender
+40019: Battlefiend
+4001: Grave Robber
+40020: Armored Warhorse
+40021: Mountain Sentinel
+40022: Muspel Berserker
+40023: Brokkr Forge-Captain
+40024: Blood Seeker
+40025: Gladiator's Champion
+40026: Battle-Hardened Veteran
+40027: Enraged Berserker
+40028: Weapons Master
+40029: Heroic Challenger
+4002: Skeletal Lord
+40030: Asgard Squire
+40031: Consecration Knight
+40032: Valkyrie Protector
+40033: Lightsworn Champion
+4003: Death's Harvester
+4004: Grave Pact
+40050: Mechanical Whelp
+40051: Explosive Sheep
+4006: Skeletal Warrior
+4007: Banshee
+4009: Lich Queen
+40100: Kraken of Ginnungagap
+40101: Kraken Spawn
+40102: Depths of the Void
+40103: Ginnungagap's Hunger
+40104: Diving Serpent
+40105: Deep Lurker
+40106: Abyssal Guardian
+40107: Ginnungagap Diver
+40108: Tidal Ambusher
+40109: Emerge from Depths
+4010: Death Knight
+40110: Lindworm, Wingless Terror
+40111: Young Lindworm
+40112: Binding Serpent
+40113: Jormungandr's Grip
+40114: Constrictor Wyrm
+40115: Gjoll Bridge-Keeper
+40116: Nidhogg's Chains
+40117: Serpent Pit
+40118: Freedom Strike
+4011: Ghoul
+40121: Faceless Destroyer
+40125: Cottus, the Striker
+40126: Gyges, Warden of Tartarus
+40127: Briareos, the Vigorous
+40131: Talos, Elemental Titan
+40200: Damaged Golem
+40201: Fallen Champion
+40202: Mechanical Dragon
+4100: Raise Dead
+4105: Soul Drain
+4106: Undead Horde
+4108: Death's Embrace
+4109: Dark Ritual
+4110: Eternal Servitude
+4111: Mass Resurrection
+4112: Corpse Explosion
+4113: Soul Siphon
+4114: Bone Armor
+4115: Wither
+4116: Plague of Undeath
+4117: Ghastly Visage
+4118: Necrotic Bolt
+4119: Army of Bones
+4200: Soulbound Dagger
+4300: Gleipnir's Captive
+4301: Garm, the Hellhound
+4302: Moon-Devourer Wolf
+4303: Root-Gnawer of Yggdrasil
+4304: Shadowmaw Alpha
+4305: Shadowmaw Direwolf
+4310: Shadow Hound
+4311: Shadow Wolf
+4312: Shadow Wolf
+4313: Shadow Pup
+4320: Hafgufa, the Sea-Mist
+4321: Briareos, the Hundred-Armed
+4322: Typhon's Brood
+4323: Mánagarm, the Blood Moon
+4324: Ladon, the Hundred-Eyed
+4325: Viðófnir, the Tree Guardian
+4326: Vánagand, the Eclipse Dragon
+4327: Lernaean Flame
+4328: Draugr, the Deathless Hunger
+4329: World-Rending Terror
+4330: Stheno, the Stone-Gazer
+4340: Ginnungagap's Fury
+4351: Muspel's Wyrm
+4352: Múspellsmegir, the Fire Titan
+4353: Golden War-Boar
+4354: Eldþurs, the Lava Giant
+4355: Sun-Chaser of the Eclipse
+4361: Glóð's Spark
+4371: Eikthyrnir, the Stag of Valhalla
+4372: Fafnir, the Gold-Hoarding Dragon
+4373: Dvalinn, the Root Stag
+4374: Jörð's Guardian
+4375: Élivágar's Beast
+4376: Audhumla, the Primordial Cow
+4377: Yggdrasil's Tendril
+4378: Duneyrr, the Roaring Stag
+4379: Durathror, the Enduring Stag
+4380: Abyssal Kraken
+4381: Ísormr, the Frost Serpent
+4382: Sovereign of the Drowned
+4383: Nokken, the Water Spirit
+4384: Tidelord of the Abyss
+4385: Rán's Thrall
+4386: Nyk, the Water Horse
+4390: Thought-Raven of the Allfather's Raven of Thought
+4391: Memory-Raven of the Allfather's Raven of Memory
+4392: Echo of the Light God
+4393: Echo of the Sun Goddess
+4394: Echo of the Bifrost Guardian
+4395: Valkyrie Commander
+4400: Skinfaxi, the Day Horse
+4401: Hildisvini, Freyja's Boar
+4402: Huldra, the Forest Spirit
+4403: Vedrfolnir, the Sky Hawk
+4404: Gullinkambi, the Ragnarok Rooster
+4405: Heidrun, the Mead Goat
+4406: Hrímfaxi, the Night Horse
+4410: Hábrók, the Storm Hawk
+4411: Bygul, Freyja's Swiftclaw
+4412: Hraesvelgr, the Wind-Bringer
+4413: Stormcaller Wyvern
+4414: Veðrfölnir's Kin
+4415: Trjegul, Freyja's Stormpouncer
+4416: Tanngrisnir, the Charging Goat
+4417: Tanngnjostr, the Summoning Goat
+4418: Charging Goat
+4501: Glowing Draugr
+4503: Norns' Hourglass
+4505: Rune of Asgard
+4506: Yggdrasil's Gift
+47001: Blood-Fury Brewer
+47002: Lord of the Pit
+47003: Ritual of Bleeding
+47004: Rune Weaver
+47005: Blood Covenant
+47006: Pain Acceptor
+47007: Soul Tear
+47008: Blood Drinker
+47009: Shadow Whisperer
+47010: Lesser Void Contract
+47249: Valkyrie's Apprentice
+47312: Fenrir's Hound
+47431: Ring the Gjallarhorn!
+47457: Valkyrie's March
+48001: Fenrir's Gaze
+48002: Odin's Vision
+48005: Einherjar Berserker
+48006: Priestess of Nemesis
+48032: Helios Sunshard
+48104: Nightmother's Inquisitor
+48116: Styx Reliquary
+4900: Skeleton
+4901: Zombie
+50000: Fenrir Pup
+50001: Shadow Hound
+50002: Tundra Whelp
+50003: Fenrir's Fury
+50004: Skoll's Shadow
+50005: Geri the Watchful
+50006: Fenrir Reborn
+5000: Ember Whelp
+50010: Ember Viper
+50011: Tidal Serpentling
+50012: Spark Adder
+50013: Magma Coil
+50014: Tide Coil
+50015: Storm Coil
+50016: Jormungandr's Heir
+5001: Muspelheim Flame
+50020: Dusk Raven
+50021: Storm Raven
+50022: Dawn Raven
+50023: Huginn's Eye
+50024: Muninn's Bolt
+50025: Sol's Wing
+50026: Odin's Emissary
+5002: Curious Excavator
+50030: Brook Fawn
+50031: Leaf Fawn
+50032: Sun Fawn
+50033: Riverside Stag
+50034: Canopy Stag
+50035: Radiant Stag
+50036: Eikthyrnir
+5003: Mage Runes
+50040: Ember Cub
+50041: Moss Cub
+50042: Cave Cub
+50043: Ashclaw Bear
+50044: Mossback Bear
+50045: Stoneridge Bear
+50046: Beorn the Unbroken
+5004: Weapon Smith
+50050: Cinder Hatchling
+50051: Bolt Hatchling
+50052: Scale Hatchling
+50053: Magma Drake
+50054: Tempest Drake
+50055: Iron Drake
+50056: Nidhogg's Scion
+5005: Beast Finder
+50060: Riverroot Seedling
+50061: Thornroot Seedling
+50062: Ironroot Seedling
+50063: Tidebark Ent
+50064: Thornweave Ent
+50065: Stonebark Ent
+50066: Yggdrasil's Warden
+5006: Shield Bearer
+50070: Storm Maiden
+50071: Shield Maiden
+50072: Oath Maiden
+50073: Thundersworn Valkyrie
+50074: Lightsworn Valkyrie
+50075: Oathsworn Valkyrie
+50076: Brynhildr Reborn
+5007: Mana Shifter
+50080: Barrow Wight
+50081: Grave Sprout
+50082: Risen Warrior
+50083: Hel's Champion
+50084: Deathbloom Guard
+50085: Radiant Revenant
+50086: Helbound Overlord
+5008: Master Searcher
+50090: Frost Jotun Cub
+50091: Shadow Jotun Cub
+50092: Stone Jotun Cub
+50093: Frost Jotun
+50094: Shadow Jotun
+50095: Stone Jotun
+50096: Ymir's Descendant
+5009: Hel's Taskmaster
+50100: Soot Imp
+50101: Flame Raven
+50102: Ember Whelp
+50103: Eldjotnar
+50104: Muspel's Harbinger
+50105: Surtr's Spawn
+50106: Surtr's Herald
+5010: Master Collector
+50110: Frost Nokk
+50111: Tide Colt
+50112: Njord's Tide
+50113: Nix of Niflheim
+50114: Aegir's Steed
+50115: Njord's Tempest
+50116: Aegir's Leviathan
+5011: Primordial Glyph
+50120: Ash Sprig
+50121: Fawn of Alfheim
+50122: Idunn's Seed
+50123: Yggdrasil's Bough
+50124: Elven Hart
+50125: Idunn's Apple
+50126: Idunn's Blessing
+5012: Valkyrie Warlord
+50130: Skoll's Pup
+50131: Spark Drake
+50132: Frey's Bolt
+50133: Skoll's Storm
+50134: Hraesvelgr's Bolt
+50135: Frey's Thunder
+50136: Hraesvelgr's Wrath
+5013: Warrior's Bloodlust
+50140: Nidhoggr's Spawn
+50141: Garmr's Pup
+50142: Draugr Shade
+50143: Nidhoggr's Fang
+50144: Garmr's Howl
+50145: Draugr Jarl
+50146: Garmr Unchained
+5014: War Horn of Asgard
+50150: Heimdall's Finch
+50151: Sun Foal
+50152: Sleipnir's Foal
+50153: Bifrost Sentinel
+50154: Arvakr's Glow
+50155: Sleipnir's Shadow
+50156: Heimdall's Champion
+5015: Einherjar Elite
+50160: Bygul Kitten
+50161: Trjegul Kitten
+50162: Hildisvini Piglet
+50163: Bygul, Freyja's Swiftclaw
+50164: Trjegul, Freyja's Stormpouncer
+50165: Hildisvini, Freyja's Boar
+50166: Freyja's Chosen
+5016: Dwarven Artificer
+50170: Skinfaxi Colt
+50171: Hrímfaxi Colt
+50172: Gullfaxi Colt
+50173: Skinfaxi, the Day Horse
+50174: Hrímfaxi, the Night Horse
+50175: Gullfaxi, Hrungnir's Horse
+50176: Celestial Stallion
+5017: Aegir's Hornbear
+50180: Vedrfolnir Chick
+50181: Duneyrr Fawn
+50182: Ratatoskr Kit
+50183: Vedrfolnir, Hawk of Yggdrasil
+50184: Duneyrr, the Roaring Stag
+50185: Ratatoskr, the Mischief
+50186: Yggdrasil's Voice
+5018: Odin's Hammer Blow
+50190: Nokk Sprite
+50191: Nyk Foal
+50192: Fossegrim Wisp
+50193: Nokken
+50194: Nyk, the Water Horse
+50195: Fossegrim
+50196: Spirit of the Deep
+5019: Fury of the North
+50200: Gullinbursti Piglet
+50201: Tanngrisnir Kid
+50202: Tanngnjostr Kid
+50203: Ascended War-Boar
+50204: Tanngrisnir, the Charging Goat
+50205: Tanngnjostr, the Summoning Goat
+50206: Aesir's Champion
+50210: Audhumla Calf
+50211: Fafnir Hatchling
+50212: Heidrun Kid
+50213: Audhumla, the Primordial Cow
+50214: Fafnir, the Cursed Dragon
+50215: Heidrun, the Mead Goat
+50216: Primordial Guardian
+50220: Hati Pup
+50221: Gullinkambi Chick
+50222: Cinder Whelp
+50223: Ascended Moon-Devourer
+50224: Gullinkambi, Ragnarok Rooster
+50225: Cinderstorm Wyrm
+50226: Herald of Ragnarok
+5022: Mjolnir's Impact
+50230: Svadilfari Colt
+50231: Blodughofi Colt
+50232: Gulltoppr Colt
+50233: Svadilfari, the Mighty Stallion
+50234: Blodughofi, Freyr's Horse
+50235: Gulltoppr, Heimdall's Horse
+50236: Steed of the Gods
+5023: Valhalla's Trial
+50240: Kid of Flame
+50241: Kid of Thunder
+50242: Kid of Dawn
+50243: Tanngrisnir Spark
+50244: Tanngnjóstr Guard
+50245: Radiant Kid
+50246: Tanngrisnir Reborn
+5024: Shield Crafter
+50250: Forge Apprentice
+50251: Anvil Striker
+50252: Spark Smith
+50253: Brokkr's Hammer
+50254: Sindri's Shield
+50255: Ivaldi's Bolt
+50256: Ivaldi's Masterwork
+5025: Tyr's Judgment
+50260: Urd's Initiate
+50261: Verdandi's Initiate
+50262: Skuld's Initiate
+50263: Urd the Past
+50264: Verdandi the Present
+50265: Skuld the Future
+50266: Norn Triumvirate
+5026: Shield of Asgard
+50270: Forest Trolling
+50271: River Trolling
+50272: Cave Trolling
+50273: Mossback Troll
+50274: Tidescale Troll
+50275: Stonewall Troll
+50276: Troll King
+50280: Light Sprite
+50281: Spark Sprite
+50282: Glimmer Sprite
+50283: Ljosalfar Sage
+50284: Ljosalfar Striker
+50285: Ljosalfar Warden
+50286: Alfheim's Radiance
+50290: Dark Artisan
+50291: Forge Imp
+50292: Venom Weaver
+50293: Svartalfar Assassin
+50294: Svartalfar Pyromancer
+50295: Svartalfar Herbalist
+50296: Svartalfheim's Shadow
+5029: Bifrost Cleave
+50300: Ancestor's Wisp
+50301: Shade of the Past
+50302: Echo of Ages
+50303: Disir Guardian
+50304: Disir Avenger
+50305: Disir Keeper
+50306: Disir Matriarch
+5030: Raging Berserker
+50310: Ember Spirit
+50311: Tide Spirit
+50312: Shadow Spirit
+50313: Fylgja Flamecaller
+50314: Fylgja Tidekeeper
+50315: Fylgja Shadowwalker
+50316: Fylgja Ascendant
+5031: Fenrir's Fang
+50320: Hidden Trickster
+50321: Moss Lurker
+50322: Cave Hider
+50323: Huldra Deceiver
+50324: Huldra Healer
+50325: Huldra Sentinel
+50326: Huldra Queen
+5032: Guardian of Alfheim
+50330: Fallen Recruit
+50331: Honored Dead
+50332: Valhalla Pledge
+50333: Einherjar Berserker
+50334: Einherjar Shieldbearer
+50335: Einherjar Champion
+50336: Einherjar Eternal
+5033: Tinkerer of Midgard
+50340: Branch Runner
+50341: Root Scurrier
+50342: Leaf Courier
+50343: Ratatoskr Herald
+50344: Ratatoskr Keeper
+50345: Ratatoskr Nurturer
+50346: Ratatoskr Prime
+5034: Mechanical Construct
+50350: Dead Sailor
+50351: Drowned Oarsman
+50352: Ghost Crewman
+50353: Naglfar Revenant
+50354: Naglfar Steersman
+50355: Naglfar Boatswain
+50356: Naglfar's Admiral
+5035: Harpy of the Storm
+50360: Cinder Chick
+50361: Spark Chick
+50362: Dawn Chick
+50363: Muspel Firehawk
+50364: Muspel Stormbolt
+50365: Muspel Sunwing
+50366: Muspel Eternal
+5036: Shade Assassin
+50370: Forge Hatchling
+50371: Rune Circuit
+50372: Scrap Sentinel
+50373: Nidavellir War-Engine
+50374: Ivaldi's Dynamo
+50375: Sindri's Protector
+50376: Ivaldi's Colossus
+5037: Priestess of Freyja
+5038: Ancient Rune Master
+5039: Mana Wraith of Niflheim
+5040: Cyclops Guardian
+5042: Champion of Olympus
+5043: Trampling Centaur
+5044: Sentinel of Helheim
+5045: Elder Gorilla of the Forest
+5046: Armored Bear of Thor
+5047: Swamp Turtle of Midgard
+5048: Mercenary of Sparta
+5049: Marsh Stalker
+5050: Spiteful Smith of Svartalfheim
+5051: Sea Sprite Oracle
+5052: Sea Sprite Hunter
+5053: Sea Sprite Scout
+5054: Grim Einherjar
+5055: Shade Summoner
+5057: Academy Sage
+5058: Apprentice Mage
+5059: Shadow Assassin of Hades
+5062: Glacial Jotunn of Jotunheim
+5070: Transmutation Engine
+5071: Restoration Golem
+5072: Transformed Fowl
+5102: Wounded Berserker
+5103: Automaton of Hephaestus
+5104: Siege Engine of Troy
+5105: Golem of Olympus
+5106: Will-o-wisp
+5107: Young Hippogriff
+5108: Shade-Queen's Revenant
+5111: Asclepius, High Priest
+5112: Stern Mentor
+5113: Soul Devourer
+5114: Eternal Echo of Nidhogg
+5115: Nerida, Wave Keeper
+5116: Leviathan's Child
+5118: Berserker's Rage
+5119: Gaia's Tremor
+5120: Surtr's Flame
+5121: Eir's Touch
+5122: Fenrir's Spirit
+5123: Aesir's Wrath
+5124: Stone Breaker
+5125: Odin's Eye
+5201: Muspel's Ember
+5202: Surtr's Totem
+5221: Thor's Strike
+5222: Thor's Fury
+5223: Loki's Trick
+5251: Frog
+5252: Nerida Prime
+5253: Spirit Wolf
+5400: Helhest, the Death Mare
+5401: Myrkrkló
+5402: Garmr's Pup
+5403: Náströnd's Serpent
+5404: Hel's Stallion
+5405: Voidfang
+5406: Garmr's Howl
+5500: Álfheimr's Light
+5501: Valkyrie Pegasus
+5502: Dáinn's Glow
+5503: Ljósálfr
+5550: Stone Pup
+5551: Mistfang Pup
+5552: Stonebleat Buckling
+5553: Trollhound
+5554: Runeclaw Wolf
+5555: Iron Boar
+5556: Hræsvelgr's Kin
+5557: Ironhide Sow
+5558: Granite Hound
+5919: Valkyr's Edge
+60001: Thrice-Burned Elder
+60002: Ember of Gullveig
+60004: Sibyl of Gullveig
+60005: Keeper of the Thrice-Flame
+60006: Einherjar Shieldbearer
+60007: Amber Weaver
+60008: Gullveig's Ash Guardian
+6000: Spirit Echo
+60010: Risen from the Pyre
+6001: Wave of Stasis
+6002: Call of Helheim
+6003: Soul Schism
+6004: Blessing of Strength
+6005: Eir's Renewal
+6006: Divine Ascension
+6007: Blessing of Baldur
+6008: Hand of the Divine
+6009: Tome of Wisdom
+60101: Hyrrokkin, Launcher of the Dead
+60102: Utgarda-Loki, Lord of Illusions
+60103: Fornjot, the Primordial
+70001: Chronos's Gateway
+70002: Heart of Hephaestus
+70003: Descent to Hades
+70004: Call of the Moirai
+70005: Hydra's Domain
+70006: Giants of Midgard
+70011: Time Warp of Chronos
+70012: Hephaestus's Hammer
+70013: Core of Tartarus
+70014: Amara, Shield of Persephone
+70015: Echidna, Mother of Monsters
+70016: Barnabus, World Tree Spirit
+70017: Raptor Spawn
+7001: Freya's Pack
+70020: Vine Snare
+70021: Rune of Greed
+7002: Beast of Freya
+7003: Diana's Bow
+7005: Artemis' Arrow
+70101: Mímir's Potion (1-Cost)
+70105: Mímir's Potion (5-Cost)
+7010: Wilderness Scout
+70110: Mímir's Potion (10-Cost)
+7011: Svartalfheim Stalker
+7012: Fenrir's Packleader
+7013: Venomfang Serpent
+7015: Garmr's Kin
+7019: Freya's Pride
+7020: Skadi's Huntmaster
+7022: Ferocious Grizzly
+7023: Swift Raptor
+71001: Serpent's Blessing
+71002: Path of the Wilds
+7101: Heimdall's Trap
+7102: Ymir's Freeze
+7103: Apollo's Volley
+7105: Skadi's Mark
+7108: Call of Fenrir
+7109: Apollo's Snipe
+7200: Diana's Crossbow
+7201: Apollo's Bow
+7501: Hound
+7503: Bjorn
+7504: Geri
+7505: Freki
+7510: Bear of Bjorn
+7511: Sleipnir's Kin
+7512: Serpent of Midgard
+80001: Sibyl of Delphi
+80002: The Abyss Bound
+80003: Krul the Unchained
+80010: Ember Shower
+80011: Ember Storm
+8001: Baldur's Champion
+80020: Rune of Renewal
+80021: Ancient Insight
+8002: Heimdall's Judgment
+8003: Sword of Tyr
+8004: Blessing of Odin
+8005: Balance of Themis
+8006: Touch of Eir
+8007: Baldur's Radiance
+8008: Blessing of Freya
+8009: Thor's Wrath
+8010: Odin's Vengeance
+8011: Strength of Thor
+8012: Baldur's Ward
+8013: Rune of Submission
+8014: Divine Retribution
+8015: Resurrection Rune
+8016: Einherjar's Valor
+85001: Svartalfheim Trader
+85002: Niflheim's Touch
+85003: Shadow Panther
+85004: Sabotage
+85005: Helheim Valiant
+85006: Shadow Strike
+85007: Loki's Pickpocket
+85008: Loki's Veil
+85009: Swift Poisoner
+85010: Nyxshade Assassin
+85011: Summon Yggdrasil Golem
+85012: Shuffle 3 Copies
+8501: Jötunn Thornback
+85020: Spectral Howl
+85021: Yggdrasil Shadowblade
+85022: Yggdrasil Swarmer
+8502: Einherjar Recruit
+8503: Temple Guardian
+8504: Acolyte of Valhalla
+8505: Herald of Fimbulvetr
+8506: Herald of Naglfar
+8507: Herald of Fenrir
+8508: Herald of Hel
+85101: Yggdrasil Golem
+85201: Emerald Strike
+85203: Emerald Talons
+8520: Gleaming Aura
+85210: Thunderstrike
+85211: Tide's Grace
+85301: Stone Flower
+8530: Baldur's Acolyte
+8531: Shieldbearer of Tyr
+8540: Luminous Blade
+86001: Draugr Raider
+86002: Corsair of Charybdis
+90001: Freya Frostweaver
+90002: Circe the Enchantress
+90003: Prometheus Spellweaver
+90004: Varden of the Dawn
+90005: Aegwynn the Eternal
+90006: Mordecai Flamecaller
+90010: Tyr the Battle-Lord
+90011: Brokkr Stoneheart
+90012: Nidhogg the Destroyer
+90013: Brynhildr Valkyrie
+90014: Rokara Frostwolf
+90020: Baldur the Radiant
+90021: Athena Lightbearer
+90022: Hephaestus the Forged
+90023: Perseus the Valiant
+90024: Sigrun Shieldmaiden
+90025: Iduna the Devoted
+9002: Death's Herald
+90030: Skadi the Huntress
+90031: Atalanta Swiftbow
+90032: Artemis Moonstalker
+90033: Tavish Stormpike
+90034: Orion the Beastmaster
+90035: Hemet the Great
+9003: Druid of the Plains
+90040: Freyr Earthshaper
+90041: Lunara Dryad
+90042: Hamuul Runetotem
+90043: Pan of the Wild
+90044: Hazelbark Ancient
+90045: Guff Wildkin
+9004: Dire Cat Form
+90050: Eir the Healer
+90051: Artemis Moonwarden
+90052: Delphi, Oracle of Light
+90053: Apollo Sunbringer
+90054: Natalie Seline
+90055: Xyrella Lightweaver
+9005: Razormane Raider
+90060: Hel the Underqueen
+90061: Nemsy Necrofizzle
+90062: Mecha-Jaraxxus
+90063: Hades Soulbinder
+90064: Tamsin Shadowmend
+90065: Cho'gall Twilight
+9006: Peon
+90070: Thor Stormcaller
+90071: Aegir the Tidecaller
+90072: Rastakhan the Loa King
+90073: Zeus Thunderlord
+90074: Instructor Fireheart
+90075: Poseidon Tidecaller
+9007: Kargal Battlescar
+90080: Loki the Trickster
+90081: Nyx Shadowblade
+90082: Hermes Swiftblade
+90083: Tess Greymane
+90084: Scabbs Cutterbutter
+90085: Captain Hooktusk
+9008: Battlescar Watcher
+90090: Surtr the Destroyer
+90091: Kayn Flamebrand
+90092: Kurtrus Ashfallen
+9009: Fenrir's Ravager
+90100: Hela Death-Queen
+90101: Charon Gravebringer
+90102: Draugr Lord Geirröðr
+90103: Angantýr Deathweaver
+90104: Sinfjötli Corpse-Caller
+90105: Hrímþursar the Pale Rider
+9010: Bear of the Wilds
+90110: Angrboda Bonecaller
+90111: Melinoe Soulweaver
+90112: Hecate Gravemother
+9013: Essence of Vitality
+9014: Hel's Priestess
+9016: Berserker's Fury
+9017: Odin's All-Sight
+9019: Loki's Deception
+90201: Tidehunter of the Deep
+90202: Tidal Hand
+90203: Depth-Terror of the Strait
+90204: Scylla's Maw
+90205: Scylla's Tail
+90206: Colossus of Rhodes
+90207: Solar Shield
+9021: Well of Vitality
+9022: Baldur's Flame
+9023: Radiant Smite
+9024: Baldur's Light
+9025: Hel's Whisper
+9026: Hel's Decree
+9027: Mind Theft
+9028: Odin's Domination
+9029: Spirit's Blessing
+9030: Healing Ring
+9031: Banishing Release
+9032: Odin's Ward
+90401: Huntress of the Wilds
+90402: Shapeshifter of Poseidon
+90403: Call from Helheim
+90404: Thief of Hermes
+90405: Acolyte of Athena
+9050: The Coin
+9051: Ghoul
+9060: Odin-Spark
+9061: Vili-Spark
+9062: Ve-Spark
+9063: Aesir Ascendant
+9070: Slime
+9091: Hound
+91001: Cthulhu, the Dreamer
+91002: Acolyte of Chaos
+91003: Disciple of Ginnungagap
+91005: Elder of Twilight
+9100: Bluff Rune
+9101: Chaos Strike
+9102: Soul Cleave
+9103: Blur
+9104: Rune Burn
+9105: Skull of Mímir
+91103: Unbound Rage of Muspel
+9110: Hole Swap
+9111: Ulfhednar Adept
+9112: Titan-Branded Outcast
+9113: Berserkergang
+9114: Berserker Blast
+9116: Coordinated Strike
+9117: Ulfhednar Initiate
+9118: Hunter of Artemis
+9120: Run It Twice
+9121: River Rewrite
+9122: Norns' Glimpse
+9130: Fold Curse
+9131: Blood Bet
+9132: Void Stare
+9140: All-In Aura
+9141: Ragnarok Gambit
+9142: Destiny Override
+9151: Fate Peek
+9152: Stamina Shield
+9161: Echo Bet
+9162: Shadow Fold
+92001: Surtr's Warmaster
+92002: Muspel's Fury
+92003: Hel's Reaper
+92004: Niflheim's Monarch
+92005: Berserker of Tyr
+92006: Seer of Mimir
+92007: Sindri's Goldsmith
+92008: Rune-Binder of Asgard
+92009: Hephaestus' Creation
+9200: Golden Piglet
+92010: Drake of Midgard Sky
+92011: Automaton of Brokkr
+92012: Guardian of Helgate
+92013: Titan of the Deep Sea
+92014: Giant of Jotunheim Peak
+92015: Loki's Blade Dancer
+92016: Shieldbearer of Argos
+92017: Oracle of Olympus
+92018: Champion of the Four Winds
+92019: Siren of the Deep
+9201: Coral Shard
+92020: Aegis Bearer of Apollo
+92021: Giant-Slayer of Midgard
+92022: War Beast of Ares
+92023: Shapeshifter of Proteus
+92024: Proteus' Champion
+92025: Dragon of Dusk
+9202: Vine
+9203: Forest Shade
+9204: Draugr
+9205: Disir Spirit
+9206: Einherjar Phantom
+9207: Ghost Sailor
+92101: Muspel Sprite
+92102: Wyrm Hatchling
+92103: Eitr Slime
+95001: All-Seeing Ravens
+95002: Skald of the Endless Saga
+95003: The Mead of Poetry
+95004: Phoenix of Alfheim
+95005: Muspelheim's Inferno
+95006: Keraunos, Living Lightning
+95007: Aegis, the Divine Shield
+95008: Titan of the Blazing Sun
+95010: Eternity's Hourglass
+95011: Glitnir's Final Judgment
+95012: Moonbane Wolf
+95013: Stormwyrm Tempest
+95014: Guardian of the Dead Gate
+95015: Maenads' Frenzy
+95016: Abyss of Eternal Night
+95017: Queen of the Underworld
+95018: Sun-Devourer Wolf
+95019: Lævateinn, Blade of Ruin
+9501: Failed Student
+95020: Garmr, Hound of Helheim
+95021: Tanngrisnir & Tanngnjóstr
+95022: Hrungnir's Heart
+95023: Jörmungandr, World Serpent
+95024: Whetstone of Ymir
+95025: Phobos & Deimos
+95026: Automatons of Olympus
+95027: Hammer of the Forge-Father
+95028: Völundr's Masterwork
+95029: Gleipnir, the Binding Chain
+95030: Iron Boot of Ragnarok
+95031: Gjallarhorn, Doom's Herald
+95032: Mistletoe's Redemption
+95033: Skinfaxi's Mane
+95034: Brísingamen, Necklace of Flame
+95035: Chalice of Eternal Life
+95036: Golden War-Boar of Freyr
+95037: Hoenir's Gift of Spirit
+95038: Aphrodite's Cestus
+95039: Hera's Jealous Claim
+95040: Eros's Golden Arrow
+95041: Eternal Hearth Flame
+95042: Golden Apple Tree
+95043: Askr & Embla
+95044: Heart of the World Tree
+95045: Sigyn's Vigil
+95046: Cornucopia of Abundance
+95047: Blainn's Masterwork
+95048: Frost Giant's Heart
+95049: Four Oxen of Zealand
+95050: The Golden Net
+95051: Skidbladnir, Ship of the Gods
+95052: Trident of the Deep
+95053: Unbound Wolf of Ragnarok
+95054: Mistletoe Arrow
+95055: Níðhöggr, Corpse-Gnawer
+95056: Serpent of the Nine Waves
+95057: Caduceus, Staff of Messengers
+95058: Primordial Shadow of Night
+95059: Fenrisúlfr, Winter's Maw
+95060: Wave Daughters of the Deep
+95061: Hawk of Thrymheim
+95062: Bow of Ydalir
+95063: Chariot of the Sun
+95064: Huntress of the Moon
+95065: Void-Bound Behemoth
+95066: Alpha of the Twilight Pack
+95067: Yomotsu-Shikome
+95068: Tsukuyomi's Exile
+95069: Divine Wind Storm
+95070: Sarutahiko's Guidance
+95071: Spirit of Creation
+95072: Scales of Ma'at
+95073: Feather of Truth
+95074: Scorpion's Tail
+95075: Scarab of Eternal Dawn
+95077: Jörmungandr, the World Serpent
+95078: Gulltoppr, the Golden-Maned
+95079: The Ceryneian Hind
+95080: Hildisvíni, the Battle Boar
+95081: Hippocampus, Steed of the Depths
+95082: Endymion, the Eternal Dreamer
+95083: Empusa, Queen of the Crossroads
+95084: Phaethon, Rider of the Dawn
+95101: Brokkr the Explorer
+95102: Echo of the World Serpent
+95103: Ægir's Raider
+95104: Reveler of the Wine-God
+95105: Erebus, Prince of Void
+95106: Triton, Flying Star
+95107: Midas the Golden
+95108: Hel's Warden
+95109: Móði (Thor's son)
+95110: Magni (Dwarf god)
+95111: Surtr's Creation
+95112: Archlich of Niflheim
+95113: Ladon, Chromatic Drake
+95114: Dragon-Lord of Chaos
+95115: Frost-Wyrm of the Eclipse
+95116: Chaos Elemental
+95117: Orthrus, Two-Headed
+95118: Æsir the Ascended
+95119: Twin Titan Kronos
+95120: Mímir the Keeper
+95121: Óðinn's Guardian
+95122: Atiesh, Greatstaff of the Guardian
+95123: Poseidon's Shark
+95124: Artemis Shadowpaw
+95125: Argus White-Eye
+95126: Stormwatch Sentinel
+95127: Ladon, Guardian Wyrm
+95128: Whelp
+95129: Atlas the Unbroken
+95130: Fenrisúlfr the Ravager
+95131: Storm-Titan of Tartarus
+95132: The Nemean Beast
+95133: Sindri's Apprentice
+95134: Hanuman the Wild
+95135: Bananas
+95136: Ægir Greenwave
+95137: Mountain-Queen's Champion
+95201: Hecate, Dark Inquisitor
+95202: Death-Queen's Revenant
+95203: Asclepius, High Healer
+95204: Charon, Stern Teacher
+95205: Echidna, Mind Stealer
+95206: Ouroboros, the Eternal
+95207: Leviathan's Reliquary
+95208: Replay Specialist
+95209: Time-Dragon of the Void
+95210: Cyclops Siege Engine
+95211: Pygmalion, Doll Master
+95212: Gullveig, Thrice-Born
+95213: Countess Nyx
+95214: War-Commander of Olympus
+95215: Proteus, Face Thief
+95216: Spell-Herald of Olympus
+95218: Moirai High Priestess
+95219: Hephaestus Forgemaster
+95220: Hermès the Trader
+95221: Níðhöggr's Heir
+95222: Triton, the Explorer
+95223: Treasure-Seeker of Olympus
+95224: Treasure Chest
+95225: Stheno, the Gorgon
+95226: Nemean Colossus
+95227: Mnemosyne, Archivist
+95228: Níðhöggr the Wyrm Queen
+95229: Chiron, Dragon Caller
+95230: Lore-Keeper of the Well
+95231: Moirai, Master of Fate
+95232: Charybdis, the Devourer
+95233: Argonaut Cornelius
+95234: Echidna, Dragon Mother
+95235: Raid Boss Ladon
+95236: Whelp with Rush
+95237: The Nameless One
+95238: Silent Avenger
+95239: World-Eater Wyrm
+95301: Unchained Maw
+95302: Worldbreaker Wolf
+95303: Talos, Doom Construct
+95304: Soul-Flayer of the Pack
+95305: King Fafnir
+95306: Icarus, Sky Pirate
+95307: Ran's Champion
+95308: Daedalus, Master Artificer
+95309: Njörðr the Fisher
+95310: Impaler of Olympus
+95311: The Primordial Dark
+95312: The Binding One
+95313: Blood-Sworn Warlord
+95314: Battle-Conductor of the Skalds
+95315: Accused Shade of Helheim
+95316: Immortal Eight-Legged Steed
+95317: Flint Firearm
+95318: Toy Captain Tarim
+95319: Zok Fogsnout
+95320: Gaia, Stone Mother
+95321: Mass Polymorph
+95322: The First Seal
+95401: Jötun Giant
+95402: Frozen Champion
+95403: Boreas, Ice Shaper
+95404: Web-Weaver of the Dark
+95405: Prince of Shadows
+95406: Prince Hel's Son
+95407: Prince of Blood
+95408: Garmr, Death Hound
+95409: Eris, Shadow Dancer
+95410: Gaia, Earth Sculptor
+95411: Ragnarok Cleaver
+95412: Daedalus, Spark Maker
+95413: Antaeus, Earth Crusher
+95414: Hephaestus' Gift
+95415: Daedalus, the Tinkerer
+95416: Talos, Mechanical Head
+95417: Orion, Beast Hunter
+95418: Talos, War Engineer
+95419: Talos, Reaper Construct
+95420: Hephaestus' Shredder
+95421: Judge of the Aesir Court
+95422: Echo of the Dragon Slayer
+95423: Surtr's Herald
+95424: Hanuman, Tyrant of the Vale
+95425: Venom-Mind Gorgon
+95426: Charon the Steward
+95427: Hecate the Merchant
+95428: Valkyrie Sally
+95429: Fenrir's Fist
+95430: Crime-Lord of the Arena
+95507: Open the Bifrost
+95508: Surtr's Heart
+95509: The Underworld Path
+95510: Awaken the Titans
+95511: The Hydra Queen
+95512: Titan Giants
+95601: Fenrir's Gaze
+95602: Odin's Vision
+95603: Shadow Studies
+95604: Chaos Guardians
+95605: Star Maiden Astraea
+95606: Devour Runes
+95607: Twin Fang Strike
+95701: Einherjar Vanguard
+95702: Summon the Warband
+95703: Valhalla Recruiter
+95704: Yggdrasil Summons
+95705: Hel's Servant
+95706: Call of Valhalla
+95707: Rally the Einherjar!
+95801: Rune Thief
+95802: Saga Keeper
+95803: Valkyrie Two-Shields
+95804: Muspel Brand
+95805: Speaker of Yggdrasil
+95806: Obsidian Runescribe
+95807: Grove Warden Idunn
+95808: Headmaster of Niflheim
+96001: Nidhöggr, Root-Gnawer
+96002: Jörmungandr, Dream Serpent
+96003: Apophis, World Ender
+96004: Völva Bloodweaver
+96005: Echo of the Bold
+96006: Fáfnir, Spell Wyrm
+96007: Echo of the Relic Hunter
+96008: Níðhöggr's Champion
+96009: Nótt Stargazer
+96010: Gaia, Primal Lord
+96011: Helios, Sun Fragment
+96012: Nyx, the Hollow
+96013: Allfather's Projection's Apprentice
+96014: Skorpius, the Devourer
+96015: Vidar, the Relentless
+96016: Skull of Hel

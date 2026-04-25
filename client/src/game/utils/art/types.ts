@@ -34,7 +34,6 @@ export interface ArtCard {
   stats: ArtCardStats;
   wiki: string | null;
   _localPath: string;
-  _cdnUrl: string;
 }
 
 export interface ArtMetadata {

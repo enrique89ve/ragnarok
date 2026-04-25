@@ -59,7 +59,6 @@ Reserved ID ranges for card organization:
 | 50350-50356 | Naglfar's Crew | Dark / Water / Neutral — Naglfar's Admiral |
 | 50360-50366 | Muspel Phoenixes | Fire / Electric / Light — Muspel Eternal |
 | 50370-50376 | Ivaldi's Constructs | Fire / Electric / Neutral — Ivaldi's Colossus |
-| 9200-9249 | Pet Tokens | Non-collectible tokens summoned by pet abilities |
 
 ## Expansion Card Ranges (Gap-Filling)
 
