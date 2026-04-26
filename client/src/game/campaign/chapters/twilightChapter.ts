@@ -260,7 +260,7 @@ export const twilightChapter: CampaignChapter = {
 			],
 			rewards: [{ type: 'rune', amount: 90 }, { type: 'card', cardId: 20210 }, { type: 'eitr', amount: 75 }],
 			realm: 'asgard',
-			campaignArmy: { king: 'king-yggdrasil', queen: 'hero-freya', rook: 'hero-tyr', bishop: 'hero-frey', knight: 'hero-ullr' },
+			campaignArmy: { king: 'king-yggdrasil', queen: 'hero-freya', rook: 'hero-tyr', bishop: 'hero-freyr', knight: 'hero-ullr' },
 			prerequisiteIds: ['twilight-3'],
 		},
 

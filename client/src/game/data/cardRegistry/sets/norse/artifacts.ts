@@ -642,7 +642,7 @@ const norseArtifacts: ArtifactCardData[] = [
 		type: 'artifact',
 		rarity: 'epic',
 		heroClass: 'priest',
-		heroId: 'hero-frey',
+		heroId: 'hero-freyr',
 		attack: 2,
 		description: 'Your minions have +1 Attack. When a friendly minion attacks alone (no others attacked this turn), it deals double damage.',
 		flavorText: 'The Summer Sword fights on its own. Freyr gave it away to win Gerd\'s love — and at Ragnarok, he will fall for it.',

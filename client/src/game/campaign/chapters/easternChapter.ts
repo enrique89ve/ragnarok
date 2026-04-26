@@ -295,7 +295,7 @@ export const easternChapter: CampaignChapter = {
 			narrativeAfter: 'Ganesha trumpets with joy. "Beautiful! You did not try to smash through it!" He hands you a golden tusk. "Carry this. It means you think before you strike."',
 			narrativeVictory: 'Wisdom overcomes obstacles. Ganesha removes every barrier before you.',
 			narrativeDefeat: 'Ganesha sighs. "You think like a warrior. Come back when you think like a sage."',
-			aiHeroId: 'hero-frey', aiHeroClass: 'priest',
+			aiHeroId: 'hero-freyr', aiHeroClass: 'priest',
 			aiDeckCardIds: deck(90), aiProfile: AI_PROFILES.ganesha,
 			bossRules: [
 				{ type: 'extra_health', value: 15, description: 'Ganesha has 115 health' },

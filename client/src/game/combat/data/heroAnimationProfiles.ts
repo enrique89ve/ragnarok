@@ -77,8 +77,8 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		particleEmoji: '⚖',
 		screenShakeIntensity: 0.7,
 	},
-	'hero-frey': {
-		heroId: 'hero-frey',
+	'hero-freyr': {
+		heroId: 'hero-freyr',
 		attackName: 'Harvest Blade',
 		archetype: 'nature_surge',
 		element: 'grass',

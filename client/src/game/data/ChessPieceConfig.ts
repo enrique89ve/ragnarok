@@ -513,13 +513,13 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       norseHeroId: 'hero-eir',
     },
     {
-      id: 'hero-frey',
+      id: 'hero-freyr',
       name: 'Frey',
       heroClass: 'priest',
       description: 'God of Fertility: Summon nature tokens and grow your army.',
       fixedCardIds: [],
       element: 'grass',
-      norseHeroId: 'hero-frey'
+      norseHeroId: 'hero-freyr'
     },
     {
       id: 'hero-idunn',

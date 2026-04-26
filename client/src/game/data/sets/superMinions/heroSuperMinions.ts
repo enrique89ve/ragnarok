@@ -62,7 +62,7 @@ export const HERO_SUPER_MINION_LINKS: Record<string, number> = {
   // BISHOP - Priest (8)
   'hero-freya': 95034,
   'hero-eir': 95035,
-  'hero-frey': 95036,
+  'hero-freyr': 95036,
   'hero-hoenir': 95037,
   'hero-aphrodite': 95038,
   'hero-hera': 95039,
@@ -1117,7 +1117,7 @@ export const heroSuperMinions: CardData[] = [
     heroClass: "priest",
     class: "Priest",
     race: "Beast",
-    linkedHeroId: "hero-frey",
+    linkedHeroId: "hero-freyr",
     isSuperMinion: true,
     battlecry: {
       type: "summon_copy",

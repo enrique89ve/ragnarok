@@ -419,8 +419,8 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   },
 
   // ==================== 8. FREY ====================
-  'hero-frey': {
-    id: 'hero-frey',
+  'hero-freyr': {
+    id: 'hero-freyr',
     name: 'Frey',
     title: 'God of Fertility',
     element: 'grass',
@@ -452,7 +452,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
     weaponUpgrade: {
       id: 90008,
       name: 'Gullinbursti',
-      heroId: 'hero-frey',
+      heroId: 'hero-freyr',
       manaCost: 5,
       description: 'Transform a friendly minion into a 5/5 Golden Boar with Charge. Permanently upgrade your hero power.',
       immediateEffect: {

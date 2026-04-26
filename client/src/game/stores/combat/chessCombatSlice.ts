@@ -6,7 +6,6 @@
 
 import { StateCreator } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
-import { resolveHeroPortrait } from '../../utils/art/artMapping';
 import { 
   ChessPiece, 
   ChessBoardPosition, 
@@ -118,7 +117,7 @@ export const createChessCombatSlice: StateCreator<
         stamina: Math.floor(stats.baseHealth / 10),
         heroClass: hero.heroClass,
         heroName: hero.name,
-        heroPortrait: resolveHeroPortrait(hero.id, hero.portrait),
+        heroId: hero.id,
         deckCardIds: [],
         fixedCards: hero.fixedCardIds,
         hasSpells: pieceHasSpells(type),
@@ -620,7 +619,7 @@ export const createChessCombatSlice: StateCreator<
               hasSpells: newStats.hasSpells,
               heroClass: queenHero.heroClass,
               heroName: queenHero.name,
-              heroPortrait: resolveHeroPortrait(queenHero.id, queenHero.portrait),
+              heroId: queenHero.id,
               fixedCards: queenHero.fixedCardIds,
               element: gameElement
             };

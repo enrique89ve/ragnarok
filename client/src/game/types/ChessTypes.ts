@@ -65,9 +65,9 @@ export interface ChessPiece {
   stamina: number;
   heroClass: HeroClass;
   heroName: string;
-  heroPortrait?: string;
+  heroId?: string;
   deckCardIds: number[];  // User-built 30-card deck (loaded from heroDeckStore)
-  fixedCards?: number[];  // DEPRECATED: Legacy fixed cards, use deckCardIds instead
+  fixedCards?: number[];
   hasSpells: boolean;
   hasMoved: boolean;
   element: ElementType;

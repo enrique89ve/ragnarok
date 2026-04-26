@@ -186,7 +186,7 @@ const FEUD_TABLE: Record<string, HeroFeud> = {
 		aQuip: 'I owe you one wrist. I do not owe you the rest of me.',
 		bQuip: 'Tyr. You always taste better when you\u2019re ready.',
 	},
-	'hero-surtr|hero-frey': {
+	'hero-surtr|hero-freyr': {
 		tagline: 'The fire-giant and the god who gave away his sword.',
 		aQuip: 'Vanir. I am the fire that takes the gods at the end. You traded the only blade that could stop me.',
 		bQuip: 'I traded it for love. I would do it again. But not today.',

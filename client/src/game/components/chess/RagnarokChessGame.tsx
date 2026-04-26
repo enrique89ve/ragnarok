@@ -678,7 +678,6 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
           stamina: Math.floor(pawnHealth / 10),
           heroClass: 'warrior',
           heroName: 'Boss Minion',
-          heroPortrait: DEFAULT_PORTRAIT,
           deckCardIds: [],
           fixedCards: [],
           hasSpells: false,

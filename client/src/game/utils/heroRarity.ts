@@ -67,7 +67,7 @@ const EPIC_PIECES = new Set([
 	'hero-bragi',
 	'hero-eir',
 	'hero-forseti',
-	'hero-frey',
+	'hero-freyr',
 	'hero-tyr',
 	'hero-vidar',
 	'hero-heimdall',

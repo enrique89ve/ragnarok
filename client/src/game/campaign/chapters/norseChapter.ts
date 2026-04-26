@@ -388,7 +388,7 @@ export const norseChapter: CampaignChapter = {
 			prerequisiteIds: ['norse-5'],
 			rewards: [{ type: 'rune', amount: 45 }, { type: 'eitr', amount: 50 }],
 			realm: 'alfheim',
-			campaignArmy: { king: 'king-yggdrasil', queen: 'hero-odin', rook: 'hero-heimdall', bishop: 'hero-frey', knight: 'hero-hoder' },
+			campaignArmy: { king: 'king-yggdrasil', queen: 'hero-odin', rook: 'hero-heimdall', bishop: 'hero-freyr', knight: 'hero-hoder' },
 		},
 
 		// ─── Chapter 6: War of Kin ───────────────────────────────────────

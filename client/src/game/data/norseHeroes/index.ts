@@ -116,7 +116,7 @@ export const HERO_ID_TO_CONFIG_KEY: Record<string, string> = {
   // Priest heroes
   'hero-freya': 'priest-anduin',
   'hero-eir': 'priest-tyrande',
-  'hero-frey': 'priest-voljin',
+  'hero-freyr': 'priest-voljin',
   'hero-verdandi': 'priest-anduin',  // Verdandi uses Priest spells (combo)
   // Berserker heroes
   'hero-vali': 'berserker-illidan',  // Vali uses Berserker spells (escalating)
@@ -224,7 +224,7 @@ export const HERO_ID_TO_CLASS: Record<string, string> = {
   // BISHOP - Priest (9 heroes)
   'hero-freya': 'priest',
   'hero-eir': 'priest',
-  'hero-frey': 'priest',
+  'hero-freyr': 'priest',
   'hero-hoenir': 'priest',
   'hero-aphrodite': 'priest',
   'hero-hera': 'priest',
