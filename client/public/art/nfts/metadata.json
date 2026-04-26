@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "source": "client/public/art/nfts",
-  "totalCards": 406,
+  "totalCards": 403,
   "totalCharacters": 197,
   "cards": [
     {
@@ -4681,34 +4681,6 @@
       }
     },
     {
-      "id": "0705-wkjpdj4e",
-      "character": "gefjon",
-      "name": "gefjon",
-      "category": "goddesses",
-      "description": "goddess, ploughing, foreknowledge",
-      "lore": "a goddess associated with ploughing, foreknowledge, and virginity.",
-      "element": "earth",
-      "piece": "rook",
-      "faction": "aesir",
-      "rarity": "common",
-      "mainArt": false,
-      "stats": {
-        "health": 90,
-        "stamina": null,
-        "attack": null,
-        "speed": null,
-        "mana": null,
-        "weight": 60
-      },
-      "wiki": "https://mythus.fandom.com/wiki/gefjon",
-      "_localPath": "/art/nfts/3e44-araj8dlb.webp",
-      "collection": "Genesis Alpha",
-      "styleDNA": {
-        "composition": "hero",
-        "scale": 1
-      }
-    },
-    {
       "id": "efdf-cwyuxjfl",
       "character": "gerd",
       "name": "gerd",
@@ -7229,34 +7201,6 @@
       }
     },
     {
-      "id": "0b0b-xzlu2e8y",
-      "character": "jormungandr",
-      "name": "jörmungandr",
-      "category": "gods",
-      "description": "midgard serpent, sea",
-      "lore": "jǫrmungandr, also known as the midgard serpent (old norse: miðgarðsormr), is a sea serpent and the middle son of the giantess angrboða and loki. according to the prose edda, odin took the three children of loki and angrboða—the wolf fenrir, hel, and jǫrmungandr",
-      "element": "earth",
-      "piece": "rook",
-      "faction": "jotnar",
-      "rarity": "legendary",
-      "mainArt": false,
-      "stats": {
-        "health": 200,
-        "stamina": null,
-        "attack": null,
-        "speed": null,
-        "mana": null,
-        "weight": 80
-      },
-      "wiki": "https://mythus.fandom.com/wiki/j%c3%b6rmungandr",
-      "_localPath": "/art/nfts/6017-p53522dp.webp",
-      "collection": "Genesis Alpha",
-      "styleDNA": {
-        "composition": "hero",
-        "scale": 1
-      }
-    },
-    {
       "id": "7a9b-c1mvx7tv",
       "character": "jormunreptile",
       "name": "jormunreptile",
@@ -7733,7 +7677,7 @@
       }
     },
     {
-      "id": "e6bc-wg7xls1q",
+      "id": "9575-1fc23371",
       "character": "lunarhowler",
       "name": "lunarhowler",
       "category": "pets",
@@ -8584,34 +8528,6 @@
       "faction": "jotnar",
       "rarity": "common",
       "mainArt": true,
-      "stats": {
-        "health": 90,
-        "stamina": null,
-        "attack": null,
-        "speed": null,
-        "mana": null,
-        "weight": 60
-      },
-      "wiki": "https://mythus.fandom.com/wiki/nott",
-      "_localPath": "/art/nfts/71c1-s6o2do75.webp",
-      "collection": "Genesis Alpha",
-      "styleDNA": {
-        "composition": "hero",
-        "scale": 1
-      }
-    },
-    {
-      "id": "7e12-5sufv4zl",
-      "character": "nott",
-      "name": "nótt",
-      "category": "goddesses",
-      "description": "night personification",
-      "lore": "the personification of night, mother of dagr (day).",
-      "element": "earth",
-      "piece": "bishop",
-      "faction": "jotnar",
-      "rarity": "common",
-      "mainArt": false,
       "stats": {
         "health": 90,
         "stamina": null,

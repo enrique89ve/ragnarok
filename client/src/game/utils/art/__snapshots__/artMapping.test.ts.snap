@@ -1467,7 +1467,7 @@ exports[`getCardArtPath > matches snapshot for the entire card registry 1`] = `
   "4373	Dvalinn, the Root Stag": "/art/nfts/1517-8aad873a.webp",
   "4374	Jörð's Guardian": "/art/nfts/e987-ec5be341.webp",
   "4375	Élivágar's Beast": "/art/nfts/38cb-770feee0.webp",
-  "4376	Audhumla, the Primordial Cow": "/art/nfts/4655-o4xbxsth.webp",
+  "4376	Audhumla, the Primordial Cow": null,
   "4377	Yggdrasil's Tendril": "/art/nfts/f051-c638e222.webp",
   "4378	Duneyrr, the Roaring Stag": "/art/nfts/8e02-a7e6fa9a.webp",
   "4379	Durathror, the Enduring Stag": "/art/nfts/ad90-6aba8d9a.webp",

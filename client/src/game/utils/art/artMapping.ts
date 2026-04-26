@@ -17,98 +17,6 @@ export interface ArtMapping {
   character: string;
 }
 
-/**
- * CREATURE-ONLY characters - artwork available for minion cards (BEASTS/ANIMALS only)
- * These are NOT playable heroes and can be used for minion artwork
- * IMPORTANT: Does NOT include hero-reserved characters OR human-looking creatures
- * Human-looking creatures (sea maidens, warriors, elves, siren) are now hero-reserved
- */
-const CREATURE_ART_CHARACTERS = new Set([
-  'alsvin',
-  'asgar-rex',
-  'asgard-s-whisper',
-  'asgardeagle',
-  'bergrisigorilla',
-  'bifrostgazer',
-  'blazebear',
-  'cerberos',
-  'deerhornrage',
-  'drakewing-guardian',
-  'draugr',
-  'eldericewyrm',
-  'fenrishowl',
-  'fjalarfeather',
-  'folnirflight',
-  'freki',
-  'frostcarapace',
-  'frostdrake',
-  'frostfur',
-  'frostorca',
-  'frostspinner',
-  'frostwhisker',
-  'galdramight',
-  'garmfang',
-  'garmrage',
-  'garmwatch',
-  'geri',
-  'ginnundragon',
-  'gjallarhornflyer',
-  'gjallarthread',
-  'glaer',
-  'glimmerhorse',
-  'helheim-s-blaze',
-  'helheimslither',
-  'helheimwanderer',
-  'helsilk',
-  'hofvarpnir',
-  'horncrestcockerel',
-  'hrimfaxi',
-  'hugin-munin',
-  'huginn-s-gaze',
-  'jormunflame',
-  'jormunreptile',
-  'kadi-s-hoof',
-  'kraken',
-  'lunargaittrotter',
-  'lunarhowler',
-  'managarm-celestial',
-  'mare',
-  'mimirpanther',
-  'mimirturtle',
-  'moonchaser',
-  'mysticfrostorca',
-  'nidhoggpython',
-  'nidhoggscale',
-  'nidhoggscion',
-  'nidhoggwyrm',
-  'nirbeak',
-  'nornweaver',
-  'ragnarpaws',
-  'ragnarskoll',
-  'runestonebeetle',
-  'saga-s-siamese',
-  'savagepacestalker',
-  'silfrintopp',
-  'skinfaxi',
-  'skoll-s-twilight',
-  'skuggapard',
-  'skuggefenrir',
-  'spiritwalkerbear',
-  'thor-s-claw',
-  'thunderclaws',
-  'thunderroar',
-  'turtlesurvivor',
-  'valhallagrazer',
-  'valhallaram',
-  'varg',
-  'vedrfolnir',
-  'vedrfolnirvane',
-  'vedrskyruler',
-  'vedrwing',
-  'yggdrasilram',
-  'ymirfrost',
-  'ymirshell',
-]);
 
 /**
  * Main art IDs for each character (mainArt: true from metadata) - 197 characters
@@ -505,166 +413,6 @@ const HERO_ART_OVERRIDE: Record<string, string> = {
  * All character artwork used by playable heroes/kings is reserved
  * These should NEVER be used for minion/spell cards
  */
-const HERO_RESERVED_CHARACTERS = new Set([
-  ...Object.values(HERO_TO_CHARACTER),
-  ...Object.values(KING_TO_CHARACTER)
-]);
-
-const HERO_RESERVED_ART_IDS = new Set([
-  ...[...HERO_RESERVED_CHARACTERS]
-    .map(char => CHARACTER_ART_IDS[char])
-    .filter((id): id is string => !!id),
-  ...Object.values(HERO_ART_OVERRIDE),
-]);
-
-const CREATURE_RESERVED_ART_IDS = new Set(
-  [...CREATURE_ART_CHARACTERS]
-    .map(char => CHARACTER_ART_IDS[char])
-    .filter((id): id is string => !!id)
-);
-
-// All art IDs that belong to ANY named character (hero, king, god, creature, human, etc.)
-// Used to distinguish "random AI art" (not in this set) from "character-specific art"
-const ALL_CHARACTER_ART_IDS_SET = new Set(Object.values(CHARACTER_ART_IDS));
-
-/**
- * MINION_CARD_TO_ART Mapping - STRICT 1:1 MAPPINGS
- * DEPRECATED: Kept for backwards compatibility. All entries have been merged into CARD_ID_TO_ART.
- * Each artwork character can ONLY be used by ONE minion card
- * Maps minion card names (lowercase) to creature artwork character names
- *
- * RULES:
- * 1. Each artwork = exactly ONE card (no duplicates)
- * 2. Best thematic match wins
- * 3. If no perfect fit, artwork stays unused
- * 4. No forced/mismatched art (e.g., NO treant→ram, NO boar→gorilla)
- */
-const MINION_CARD_TO_ART: Record<string, string> = {
-  // ========== WOLF ARTWORKS (11) - ONE card each ==========
-  "fenrir": "fenrishowl",                          // fenrishowl → fenrir (direct match)
-  "shadowmaw direwolf": "skuggefenrir",            // skuggefenrir → shadow wolf
-  "wolf": "varg",                                  // varg → generic wolf
-  "freki, odin's wolf": "freki",                   // freki → named wolf
-  "geri, odin's wolf": "geri",                     // geri → named wolf
-  "hati, the moon-devourer": "lunarhowler",        // lunarhowler → moon wolf
-  "moonchaser": "moonchaser",                      // moonchaser → direct match
-  "skoll, sun-chaser": "ragnarskoll",              // ragnarskoll → sun wolf
-  "skoll": "skoll-s-twilight",                     // skoll-s-twilight → twilight wolf
-  "mánagarm, the blood moon": "managarm-celestial",// managarm-celestial → blood moon wolf
-  "dire wolf alpha": "ragnarpaws",                 // ragnarpaws → dire wolf
-
-  // ========== BEAR ARTWORKS (3) - ONE card each ==========
-  "armored bear of thor": "blazebear",             // blazebear → battle bear
-  "bjorn, the sacred bear": "spiritwalkerbear",    // spiritwalkerbear → spirit bear
-  "thunderroar": "thunderroar",                    // thunderroar → direct match
-
-  // ========== DRAGON/WYRM ARTWORKS (8) - ONE card each ==========
-  "dreaming drake": "frostdrake",                  // frostdrake → ice dragon
-  "jade dragon": "ginnundragon",                   // ginnundragon → mythical dragon
-  "níðhöggr": "nidhoggwyrm",                       // nidhoggwyrm → Nidhogg wyrm
-  "nidhogg whelp": "nidhoggscion",                 // nidhoggscion → baby Nidhogg
-  "chillmaw": "eldericewyrm",                      // eldericewyrm → ice wyrm
-  "drakonid operative": "drakewing-guardian",      // drakewing-guardian → mechanical dragon
-  "nidhogg, the root-gnawer": "nidhoggpython",     // nidhoggpython → python wyrm
-  "cleric of scales": "nidhoggscale",              // nidhoggscale → scaled creature
-
-  // ========== HOUND/DOG ARTWORKS (4) - ONE card each ==========
-  "hound": "garmfang",                             // garmfang → hellhound variant
-  "trollhound": "garmrage",                        // garmrage → rage hound
-  "hunting mastiff": "garmwatch",                  // garmwatch → watch hound
-  "cerberus rex": "cerberos",                      // cerberos → direct match
-
-  // ========== HORSE ARTWORKS (10) - ONE card each ==========
-  "armored warhorse": "hofvarpnir",                // hofvarpnir → Valkyrie's horse
-  "sleipnir": "silfrintopp",                       // silfrintopp → Odin's 8-legged horse
-  "hrímfaxi, the night horse": "hrimfaxi",         // hrimfaxi → night horse
-  "skinfaxi, the day horse": "skinfaxi",           // skinfaxi → day horse
-  "nyk, the water horse": "glimmerhorse",          // glimmerhorse → water horse
-  "helhest, the death mare": "mare",               // mare → death horse
-  "kodorider": "lunargaittrotter",                 // lunargaittrotter → lunar horse
-  "storm-winged stallion": "glaer",                // glaer → storm horse
-  "valkyrie pegasus": "kadi-s-hoof",               // kadi-s-hoof → hooved creature
-  "alsvin": "alsvin",                              // alsvin → direct match (sun horse)
-
-  // ========== BIRD ARTWORKS (13) - ONE card each ==========
-  "asgardeagle": "asgardeagle",                    // asgardeagle → direct match
-  "veðrfölnir": "vedrfolnir",                      // vedrfolnir → sky hawk
-  "huginn, odin's raven": "hugin-munin",           // hugin-munin → Odin's ravens
-  "muninn, odin's raven": "huginn-s-gaze",         // huginn-s-gaze → raven gaze
-  "phoenix": "fjalarfeather",                      // fjalarfeather → fire bird
-  "gullinkambi, the ragnarok rooster": "horncrestcockerel", // horncrestcockerel → rooster
-  "young hippogriff": "vedrfolnirvane",            // vedrfolnirvane → hippogriff
-  "hræsvelgr": "vedrskyruler",                     // vedrskyruler → wind giant bird
-  "harpy of the storm": "vedrwing",                // vedrwing → storm wing
-  "nesting roc": "folnirflight",                   // folnirflight → flying creature
-  "ironbeak owl": "asgard-s-whisper",              // asgard-s-whisper → owl
-  "flame raven": "gjallarhornflyer",               // gjallarhornflyer → fire flyer
-  "raptor": "nirbeak",                             // nirbeak → raptor bird
-
-  // ========== CAT/PANTHER ARTWORKS (7) - ONE card each ==========
-  "panther": "mimirpanther",                       // mimirpanther → panther
-  "jungle panther": "skuggapard",                  // skuggapard → shadow panther
-  "sabretooth stalker": "thor-s-claw",             // thor-s-claw → thunder cat
-  "savagepacestalker": "savagepacestalker",        // savagepacestalker → direct match
-  "dire cat form": "saga-s-siamese",               // saga-s-siamese → cat
-  "frostfur": "frostfur",                          // frostfur → direct match
-  "frostwhisker": "frostwhisker",                  // frostwhisker → direct match
-
-  // ========== UNDEAD ARTWORKS (2) - ONE card each ==========
-  "draugr": "draugr",                              // draugr → direct match
-  "restless mummy": "helheimwanderer",             // helheimwanderer → helheim undead
-
-  // ========== SERPENT ARTWORKS (2) - ONE card each ==========
-  "jörmungandr": "jormunreptile",                  // jormunreptile → world serpent
-  "serpent": "helheimslither",                     // helheimslither → helheim snake
-
-  // ========== SEA CREATURE ARTWORKS (3) - ONE card each ==========
-  "kraken": "kraken",                              // kraken → direct match
-  "frostorca": "frostorca",                        // frostorca → direct match
-  "mysticfrostorca": "mysticfrostorca",            // mysticfrostorca → direct match
-
-  // ========== SPIDER/INSECT ARTWORKS (5) - ONE card each ==========
-  "spider bomb": "frostspinner",                   // frostspinner → frost spider
-  "helsilk": "helsilk",                            // helsilk → direct match
-  "nornweaver": "nornweaver",                      // nornweaver → fate weaver
-  "jeweled scarab": "runestonebeetle",             // runestonebeetle → beetle
-  "gjallarthread": "gjallarthread",                // gjallarthread → direct match
-
-  // ========== TURTLE/SHELL ARTWORKS (4) - ONE card each ==========
-  "ornery tortoise": "mimirturtle",                // mimirturtle → turtle
-  "swamp turtle of midgard": "turtlesurvivor",     // turtlesurvivor → survivor turtle
-  "stubborn gastropod": "ymirshell",               // ymirshell → shell creature
-  "frostcarapace": "frostcarapace",                // frostcarapace → direct match
-
-  // ========== GOAT/RAM ARTWORKS (2) - ONE card each ==========
-  "tanngrisnir, the charging goat": "valhallaram", // valhallaram → Thor's goat
-  "heidrun, the mead goat": "yggdrasilram",        // yggdrasilram → mythological goat
-
-  // ========== STAG/DEER ARTWORK (1) - ONE card ==========
-  "eikthyrnir, the stag of valhalla": "deerhornrage", // deerhornrage → stag
-
-  // ========== BOVINE ARTWORK (1) - ONE card ==========
-  "audhumla, the primordial cow": "valhallagrazer",// valhallagrazer → primordial cow
-
-  // ========== DEMON/ABYSS ARTWORKS ==========
-  "titan lord of helheim": "/art/nfts/154b-fc24cc77.webp",
-
-  // ========== GIANT/APE ARTWORKS (2) - ONE card each ==========
-  "elder gorilla of the forest": "bergrisigorilla",// bergrisigorilla → gorilla
-  "jötun giant": "ymirfrost",                      // ymirfrost → frost giant
-
-  // ========== FIRE ARTWORKS (2) - ONE card each ==========
-  "muspeldreki": "jormunflame",                    // jormunflame → fire serpent
-  "helheim's blaze": "helheim-s-blaze",            // helheim-s-blaze → direct match
-
-  // ========== MAGIC/MYSTICAL ARTWORKS (3) - ONE card each ==========
-  "bifrostgazer": "bifrostgazer",                  // bifrostgazer → direct match
-  "galdramight": "galdramight",                    // galdramight → direct match
-  "thunderclaws": "thunderclaws",                  // thunderclaws → direct match
-
-  // ========== MISC ARTWORKS (1) ==========
-  "asgar-rex": "asgar-rex",                        // asgar-rex → direct match (prehistoric beast)
-};
 
 /**
  * Get art ID for a hero
@@ -745,375 +493,8 @@ export function resolveHeroPortrait(heroId?: string, explicitPortrait?: string):
   return undefined;
 }
 
-/**
- * Find art for a card by name (fuzzy matching)
- * Useful for minions/spells that match character names
- * @deprecated Use getCardArtPath instead - this is kept for backwards compatibility
- */
-export function findArtByName(name: string): string | null {
-  return getCardArtPath(name);
-}
 
-/**
- * Get all character art IDs (for browsing)
- */
-export function getAllCharacterArtIds(): Record<string, string> {
-  return { ...CHARACTER_ART_IDS };
-}
-
-/**
- * Direct card art mappings from the Ragnarok New Art gallery
- * DEPRECATED: Kept for backwards compatibility. All entries have been merged into CARD_ID_TO_ART.
- * Maps card names (lowercase) to full image URLs
- * These take priority over MINION_CARD_TO_ART creature mappings
- */
-const VERCEL_CARD_ART: Record<string, string> = {
-  "rider of sleipnir": "/art/nfts/fef0-0f15bf87.webp",
-  "berserker combatant": "/art/nfts/048f-f32875d5.webp",
-  "crystalline oracle": "/art/nfts/6dd4-df5ea380.webp",
-  "resting archer of ullr": "/art/nfts/06ad-53c982e6.webp",
-  "xyrella, the devout": "/art/nfts/f6c1-8c7afbca.webp",
-  "goody two-shields": "/art/nfts/516f-1bae72ea.webp",
-  "possessed lackey": "/art/nfts/ab76-3effa1a8.webp",
-  "warden of valhalla": "/art/nfts/4aec-0683ccbf.webp",
-  "headmaster of niflheim": "/art/nfts/a893-df4b505c.webp",
-  "restless mummy": "/art/nfts/e9bd-94bce6e3.webp",
-  "kharj sandtongue": "/art/nfts/7504-f0bcb0c2.webp",
-  "sea sprite oracle": "/art/nfts/5071-2f4d005e.webp",
-  "bound fire-phoenix": "/art/nfts/67df-5aac4c40.webp",
-  "týr, champion of justice": "/art/nfts/eb34-078cea46.webp",
-  "cerberus rex": "/art/nfts/cbe0-7eb935ad.webp",
-  "jotun of the depths": "/art/nfts/b1f2-3e7dd08d.webp",
-  "bound void sprite": "/art/nfts/b8f6-f8451592.webp",
-  "sunwalker": "/art/nfts/ca1e-d617aa0d.webp",
-  "erik the shadow lord": "/art/nfts/8de8-8b814790.webp",
-  "metamorphosis typhon": "/art/nfts/d81f-0d291dc9.webp",
-  "cernunnos staghelm": "/art/nfts/0520-abfd3215.webp",
-  "flame-touched pyromancer": "/art/nfts/f164-0824ce6c.webp",
-  "kraken of the deep": "/art/nfts/8adc-0eaefbf6.webp",
-  "einherjar vanguard": "/art/nfts/f2be-1df95b47.webp",
-  "earthen sentinel": "/art/nfts/b62c-ac1dc6a1.webp",
-  "acolyte of hestia": "/art/nfts/b1c8-451fba78.webp",
-  "hera, queen of gods": "/art/nfts/4109-76fbf6df.webp",
-  "valkyrie champion": "/art/nfts/18a0-28a73ca8.webp",
-  "bragi, bard of the gods": "/art/nfts/2998-1e075204.webp",
-  "yggdrasil": "/art/nfts/8215-7c352ae7.webp",
-  "völva bloodweaver": "/art/nfts/005d-62d607f5.webp",
-  "víðarr the bold": "/art/nfts/54e8-d12e1de2.webp",
-  "perseus the relic hunter": "/art/nfts/e855-fe9c6e55.webp",
-  "níðhöggr": "/art/nfts/c672-c9142811.webp",
-  "nótt stargazer": "/art/nfts/b776-859ca4d2.webp",
-  "tech priest of hephaestus": "/art/nfts/adb0-3678e465.webp",
-  "hrungnir": "/art/nfts/c43d-6ce6df3c.webp",
-  "dvalinn, the root stag": "/art/nfts/1517-8aad873a.webp",
-  "sindri": "/art/nfts/97d0-a7e1c63e.webp",
-  "daedalus, the tinkerer": "/art/nfts/c692-fb4e009e.webp",
-  "beast-lord of artemis": "/art/nfts/fb1c-b8fafcf4.webp",
-  "brokkr the explorer": "/art/nfts/ab9c-df065bfa.webp",
-  "king fafnir": "/art/nfts/33fe-9f2e4a77.webp",
-  "fenrisulfr, beast king": "/art/nfts/a8d9-eee8c126.webp",
-  "lady liadrin": "/art/nfts/2d33-1560e41f.webp",
-  "muspel imp": "/art/nfts/7c47-5aad6343.webp",
-  "chimera, beast of flame": "/art/nfts/5cf4-c2316405.webp",
-  "forager of the wild": "/art/nfts/9c86-b1367c6a.webp",
-  "curse lord of circe": "/art/nfts/647d-890bd83b.webp",
-  "charon the steward": "/art/nfts/12d9-3c8e0733.webp",
-  "hermès the trader": "/art/nfts/c34e-1db07574.webp",
-  "deckhand of njord": "/art/nfts/612d-23cc0c1f.webp",
-  "loki, trickster of chaos": "/art/nfts/5f6c-0d05e3a8.webp",
-  "medusa, gorgon queen": "/art/nfts/fb7d-82f7181c.webp",
-  "ancient of lore": "/art/nfts/cec8-dc67e3b1.webp",
-  "mnemosyne the chronicler": "/art/nfts/dc94-80faa3e9.webp",
-  "níðhöggr the wyrm queen": "/art/nfts/97eb-855a83c1.webp",
-  "nidhogg, the corruptor": "/art/nfts/2000-b04c97b2.webp",
-  "mimir, wisdom keeper": "/art/nfts/6da7-ca0fc6e0.webp",
-  "moirai, master of fate": "/art/nfts/7d57-f8490489.webp",
-  "charybdis, the devourer": "/art/nfts/8abb-6bf6aeea.webp",
-  "primordial wyrm": "/art/nfts/bd55-987b9fd4.webp",
-  "echo of the norns": "/art/nfts/bead-9bf434ac.webp",
-  "thanatos, titan form": "/art/nfts/450c-0fc107e1.webp",
-  "high priest of hades": "/art/nfts/fba2-dd9bb4b7.webp",
-  "corruptor of tartarus": "/art/nfts/681d-db2e93f0.webp",
-  "bloodthirsty raider": "/art/nfts/4c5f-62ce228c.webp",
-  "bragi, battle conductor": "/art/nfts/8bb6-r8ug7jzo.webp",
-  "drake of midgard sky": "/art/nfts/a3fd-83f7ea12.webp",
-  "totem of muspelheim": "/art/nfts/d801-7b4d24a5.webp",
-  "glow-tron": "/art/nfts/154d-6053a70b.webp",
-  "satyr reveler": "/art/nfts/3c41-d5bf8c82.webp",
-  "mechanical construct": "/art/nfts/b6be-4ae475dc.webp",
-  "apophis, world ender": "/art/nfts/dfe6-c8f1baeb.webp",
-  "craftsman of nidavellir": "/art/nfts/329d-cafbf408.webp",
-  "harpy of the storm": "/art/nfts/ce51-63dd2bd9.webp",
-  "daedalus the inventor": "/art/nfts/5081-59720b15.webp",
-  "njörðr the fisher": "/art/nfts/5109-14028336.webp",
-  "jotun brute": "/art/nfts/ce88-79840db1.webp",
-  "terror of the grave": "/art/nfts/457b-62c061cb.webp",
-  "jötun giant": "/art/nfts/c552-72aaf7cb.webp",
-  "arachne the weaver": "/art/nfts/fff7-afaec725.webp",
-  "hypnos, dream weaver": "/art/nfts/6942-45622003.webp",
-  "defender of bifrost": "/art/nfts/e08f-4965df25.webp",
-  "scylla, terror of depths": "/art/nfts/680e-871ef147.webp",
-  "garmr": "/art/nfts/c7e1-b2f9514e.webp",
-  "valkyrie crusader": "/art/nfts/f31c-128c125b.webp",
-  "gaia, earth sculptor": "/art/nfts/c838-ebed9878.webp",
-  "replay specialist": "/art/nfts/d1be-5ae8e3a4.webp",
-  "chronos the time dragon": "/art/nfts/0776-9e2bce21.webp",
-  "storm lizard of thor": "/art/nfts/94f4-9cf2f0ac.webp",
-  "automaton of ivaldi": "/art/nfts/d5ff-4fc50e75.webp",
-  "flame-born of muspel": "/art/nfts/bbe6-dc918a65.webp",
-  "hunter of skadi": "/art/nfts/f81d-60c11498.webp",
-  "moon-mad fenriskin": "/art/nfts/9c1b-844015cb.webp",
-  "pesterer of loki": "/art/nfts/6998-11a8dec8.webp",
-  "arcane giant of olympus": "/art/nfts/d437-c256713a.webp",
-  "hraesvelgr, the wind-bringer": "/art/nfts/5556-2013936e.webp",
-  "oracle of delphi": "/art/nfts/6a25-ae20eaca.webp",
-  "aegir, lord of the deep": "/art/nfts/7076-201ce228.webp",
-  "hungry wyrm of jormungandr": "/art/nfts/ae2b-a657c3e5.webp",
-  "sentinel of mimir": "/art/nfts/76e0-702e569b.webp",
-  "auðumbla the primordial": "/art/nfts/a62e-95ca6eb3.webp",
-  "mechanical whelp": "/art/nfts/7c91-a7f00b87.webp",
-  "khartut defender": "/art/nfts/9936-c9deeae7.webp",
-  "twilight summoner": "/art/nfts/5cdc-10bab677.webp",
-  "corrupted healbot": "/art/nfts/7855-a8bdfa04.webp",
-  "abomination": "/art/nfts/3776-b3f02430.webp",
-  "typhon": "/art/nfts/b6ca-d5962a21.webp",
-  "mánagarm, the blood moon": "/art/nfts/a8e2-ea7daa72.webp",
-  "ladon, the hundred-eyed": "/art/nfts/b608-d0c0d2e0.webp",
-  "viðófnir, the tree guardian": "/art/nfts/d9b1-5876ff9a.webp",
-  "vánagand, the eclipse dragon": "/art/nfts/0182-c9b3b483.webp",
-  "lernaean flame": "/art/nfts/af3b-b6cab5a5.webp",
-  "scylla, the world-render": "/art/nfts/6ec8-1643d76c.webp",
-  "stheno, the stone-gazer": "/art/nfts/447a-296da71d.webp",
-  "echidna, mother of dragons": "/art/nfts/2b8f-03b3796e.webp",
-  "bygul, freyja": "/art/nfts/f45e-07ac6ecd.webp",
-  "stormcaller wyvern": "/art/nfts/72c5-3bf0fa09.webp",
-  "bloodfury brewmaster": "/art/nfts/54f3-72f9c1d9.webp",
-  "pain embracer": "/art/nfts/13d0-f697e174.webp",
-  "blood reaver": "/art/nfts/76af-1b01258a.webp",
-  "dark whisperer": "/art/nfts/3d07-bd318af2.webp",
-  "curious excavator": "/art/nfts/5e39-2bee39b1.webp",
-  "drakonid operative": "/art/nfts/195e-9c92d38e.webp",
-  "muspeldreki": "/art/nfts/54df-42ef3878.webp",
-  "eldjotnar": "/art/nfts/f09c-c5673319.webp",
-  "bone wraith": "/art/nfts/3291-9c9148e1.webp",
-  "bronze gatekeeper": "/art/nfts/f9bc-04e778a9.webp",
-  "smith of nidavellir": "/art/nfts/efdd-112f8e5e.webp",
-  "hecate, dark inquisitor": "/art/nfts/860f-b5f9e513.webp",
-  "ancient eye of the deep": "/art/nfts/0f7c-2ff14c3c.webp",
-  "voidfang": "/art/nfts/582b-32906c05.webp",
-  "dáinn": "/art/nfts/cdba-06955e36.webp",
-  "ljósálfr": "/art/nfts/ed22-fa7284c2.webp",
-  "iron boar": "/art/nfts/e211-43420d15.webp",
-  "druid of the plains": "/art/nfts/eea9-f6e3d8dd.webp",
-  "iron golem of sindri": "/art/nfts/1d23-acecf152.webp",
-  "stonetusk boar of gullinbursti": "/art/nfts/cf43-3ab9fce1.webp",
-  "draugr bones": "/art/nfts/087b-02553bwr.webp",
-  "draugr, the deathless hunger": "/art/nfts/0cf9-oarixvli.webp",
-  "skeletal warrior": "/art/nfts/130a-hq7tmpye.webp",
-  "skeleton": "/art/nfts/1d05-1hgo14ai.webp",
-  "skeletal lord": "/art/nfts/486e-5yogife3.webp",
-  "death knight": "/art/nfts/4a8d-9eh0ajkz.webp",
-  "death knight initiate": "/art/nfts/5dce-80i1xfeu.webp",
-  "ghoul": "/art/nfts/645f-iplk8zo8.webp",
-  "risen guardian": "/art/nfts/6dfd-wnbc3xxu.webp",
-  "zombie": "/art/nfts/7062-xwoh2ewg.webp",
-  "bone collector": "/art/nfts/7338-zus0zamb.webp",
-  "rider of death": "/art/nfts/8368-kj9k8gw3.webp",
-  "doomed guardian": "/art/nfts/8711-tnk2u5sb.webp",
-  "scourge champion": "/art/nfts/8de6-xve9stte.webp",
-  "venomfang serpent": "/art/nfts/9b16-1fmfzodt.webp",
-  "grave robber": "/art/nfts/adf6-9j5o3f2q.webp",
-  "soul remnant": "/art/nfts/c7ec-e4ivcgjc.webp",
-  "soul devourer": "/art/nfts/d028-mlwffxtg.webp",
-  "draugr flesh eater": "/art/nfts/d242-o97lo0ic.webp",
-  "the abyss bound": "/art/nfts/da50-xxfxd3on.webp",
-  "einherjar elite": "/art/nfts/2008-54tu9mt9.webp",
-  "dark priestess": "/art/nfts/030b-ipmne5nf.webp",
-  "shadow dancer": "/art/nfts/177f-g7hu5cng.webp",
-  "shadow hound": "/art/nfts/1f54-72m2h14b.webp",
-  "shadow imp": "/art/nfts/22ae-5dn5jjkx.webp",
-  "shadow keeper": "/art/nfts/3d86-2lvnvzvs.webp",
-  "shadow panther": "/art/nfts/4cec-8nftfnwf.webp",
-  "shadow thief": "/art/nfts/6dd3-6l9wd7rf.webp",
-  "shadow whisperer": "/art/nfts/817f-wv8q3s76.webp",
-  "shadow wolf": "/art/nfts/95d0-m51nszio.webp",
-  "shadowmaw alpha": "/art/nfts/afc6-ob20nnf5.webp",
-  "void shade": "/art/nfts/bb14-c6ht768i.webp",
-  "void wanderer": "/art/nfts/c408-9xxu9a72.webp",
-  "void breaker": "/art/nfts/d0bf-blddgqgk.webp",
-  "yggdrasil shadowblade": "/art/nfts/e9e2-rognnfhy.webp",
-  "echidna, mother of monsters": "/art/nfts/095a-g7gjlt5b.webp",
-  "arachne, spider lord": "/art/nfts/1aaa-333ts18j.webp",
-  "arachne": "/art/nfts/1ba3-bjnkto9l.webp",
-  "arachne, taunt weaver": "/art/nfts/3c0d-k7hegp81.webp",
-  "typhon, chaos elemental": "/art/nfts/4c0f-wurcp818.webp",
-  "briareos, the hundred-armed": "/art/nfts/5183-o1b3xh13.webp",
-  "circe, echo witch": "/art/nfts/65de-h9kigxwq.webp",
-  "moirai confessor": "/art/nfts/7bd1-b4ip7ji2.webp",
-  "priestess of nemesis": "/art/nfts/adbf-lp8ye61z.webp",
-  "nyx, dark inquisitor": "/art/nfts/addf-4wjxxka4.webp",
-  "eris, mind thief": "/art/nfts/fb18-qx4m1ksv.webp",
-  "lich queen": "/art/nfts/1665-xqnaw540.webp",
-  "rune weaver": "/art/nfts/3937-ax7x9u4g.webp",
-  "chronos, time weaver": "/art/nfts/41ce-m0jd0ymi.webp",
-  "rune scholar": "/art/nfts/4242-vz7cy9vj.webp",
-  "rune spark": "/art/nfts/6a5e-ocn2s6ak.webp",
-  "bifrost arcanist": "/art/nfts/6d85-xznex7yq.webp",
-  "frostweaver spirit": "/art/nfts/76b5-bwzyb3c4.webp",
-  "amber weaver": "/art/nfts/92c0-5zvr6h9k.webp",
-  "æther weaver": "/art/nfts/a053-bn3oyk4c.webp",
-  "arcanologist": "/art/nfts/a231-2mm7gjmc.webp",
-  "wand thief": "/art/nfts/b507-gvhjbjgz.webp",
-  "runescribe initiate": "/art/nfts/c5f8-ct2dhwm7.webp",
-  "failed student": "/art/nfts/c6c8-od6agjtc.webp",
-  "apprentice mage": "/art/nfts/d359-69ckithi.webp",
-  "poison master": "/art/nfts/f2eb-osv793c7.webp",
-  "hel": "/art/nfts/3308-4ceectwu.webp",
-  "shade of hades": "/art/nfts/504c-fy22uj0f.webp",
-  "styx reliquary": "/art/nfts/8f32-5atoaan3.webp",
-  "gemini illusion": "/art/nfts/9600-2uc6ue3n.webp",
-  "banshee": "/art/nfts/08dc-1f4jdlb9.webp",
-  "spirit wolf": "/art/nfts/1ca6-k1sl785t.webp",
-  "frost wraith": "/art/nfts/bfc4-iejwrheq.webp",
-  "nokken, the water spirit": "/art/nfts/cc1f-5ha7i6v8.webp",
-  "baldur the radiant": "/art/nfts/e808-9qy2tzqo.webp",
-  "surtr": "/art/nfts/30a7-1lckcwg0.webp",
-  "surtr, flame lord": "/art/nfts/73f8-itgrlfi4.webp",
-  "múspellsmegir, the fire titan": "/art/nfts/d829-1b2npvad.webp",
-  "gladiator": "/art/nfts/a0f8-xxspmfv1.webp",
-  "heroic challenger": "/art/nfts/e7a2-46blwsht.webp",
-  "ancient of wisdom": "/art/nfts/4e4a-jbe5z2ha.webp",
-  "fandral the wise": "/art/nfts/b17e-v6jm83fs.webp",
-  "stern mentor": "/art/nfts/f01d-9dcmv9ao.webp",
-  "mountain sentinel": "/art/nfts/f65f-p0cr7tc7.webp",
-  "heimdall, guardian of bifrost": "/art/nfts/3fb4-n9501hix.webp",
-  "beast king of freya": "/art/nfts/0433-1465k5g4.webp",
-  "hildisvini, freyja": "/art/nfts/1005-wc3i1dke.webp",
-  "trjegul, freyja": "/art/nfts/5c26-gfo3pan5.webp",
-  "valkyrie commander": "/art/nfts/c7c8-3eygeu3y.webp",
-  "valkyrie warlord": "/art/nfts/f437-jkhxemxt.webp",
-  "grove keeper": "/art/nfts/2874-0kzcb8hn.webp",
-  "grove warden": "/art/nfts/72aa-13a9lxuc.webp",
-  "beast tracker": "/art/nfts/652d-3fruptt2.webp",
-  "hunter of artemis": "/art/nfts/67cc-a8ockltq.webp",
-  "wilderness scout": "/art/nfts/6e64-l30c5tei.webp",
-  "forest scout": "/art/nfts/79bd-szc13qxf.webp",
-  "pack alpha": "/art/nfts/9126-gqnsbj5d.webp",
-  "forest warden omu": "/art/nfts/f5bf-s7iotwa3.webp",
-  "jormungandr, echo serpent": "/art/nfts/269c-47eab103.webp",
-  "proteus, face collector": "/art/nfts/77fd-h2r8tkg6.webp",
-  "hafgufa, the sea-mist": "/art/nfts/801c-e9u5oyne.webp",
-  "sol, the sun goddess": "/art/nfts/42ec-h35gt366.webp",
-  "selene": "/art/nfts/9def-nnlmtyvd.webp",
-  "spirit of healing": "/art/nfts/25ec-sh4r71a9.webp",
-  "essence of vitality": "/art/nfts/ce30-dbajbor3.webp",
-  "well of vitality": "/art/nfts/dfb5-guy6bfcm.webp",
-  "dwarven artificer": "/art/nfts/4246-w193m7p3.webp",
-  "shield crafter": "/art/nfts/7c7b-10nz846g.webp",
-  "brokkr forge-captain": "/art/nfts/ce57-n14wzrp3.webp",
-  "spellbreaker": "/art/nfts/1ca8-wgo85bl3.webp",
-  "asclepius, high priest": "/art/nfts/8628-8m5v40u3.webp",
-  "acolyte of valhalla": "/art/nfts/884e-569bv7e0.webp",
-  "restoration golem": "/art/nfts/af80-gn10s1bb.webp",
-  "amara, shield of persephone": "/art/nfts/cb93-m8ivjgjw.webp",
-  "thunder titan": "/art/nfts/9135-1vcfatl1.webp",
-  "weapons master": "/art/nfts/75e9-7vtupj6s.webp",
-  "argus, storm watcher": "/art/nfts/9690-1zwekh9e.webp",
-  "pain acceptor": "/art/nfts/68ac-d6r8xk8x.webp",
-  "huldra, the forest spirit": "/art/nfts/f06f-uuaa5bw6.webp",
-  "storm elemental": "/art/nfts/a55b-gwo99sp4.webp",
-  "the storm guardian": "/art/nfts/ba8e-1tdq0rli.webp",
-  "garm, the hellhound": "/art/nfts/97a8-frcm436d.webp",
-  "battle-hardened veteran": "/art/nfts/0441-ujzwxfqa.webp",
-  "raging berserker": "/art/nfts/953e-swf1tvb2.webp",
-  "fang commander": "/art/nfts/1af7-g502sskx.webp",
-  "ancestral guardian": "/art/nfts/769b-8lxrumdk.webp",
-  "ironwood sage": "/art/nfts/208d-4ilzugfo.webp",
-  "twilight elder": "/art/nfts/a6d6-6w7o2my0.webp",
-  "sibyl of delphi": "/art/nfts/58c7-7miu0kuo.webp",
-  "enraged berserker": "/art/nfts/2265-zp8fovec.webp",
-  "ember whelp": "/art/nfts/5940-n3snb3ua.webp",
-  "firebrand": "/art/nfts/dc43-bu47ikb8.webp",
-  "cyclops siege tower": "/art/nfts/2bbb-oxl7d7ni.webp",
-  "talos, elemental titan": "/art/nfts/3db9-zkg5entq.webp",
-  "muspel berserker": "/art/nfts/a642-s6opcphd.webp",
-  "elder longneck": "/art/nfts/552c-j4hbss6i.webp",
-  "stone guardian": "/art/nfts/7e79-wuvfl370.webp",
-  "primordial druid": "/art/nfts/621f-x6pjrh99.webp",
-  "earth elemental": "/art/nfts/d7fb-sss1cjes.webp",
-  "kidnapper": "/art/nfts/beca-xje1t9e8.webp",
-  "nerida, wave keeper": "/art/nfts/8b14-cmovodff.webp",
-  "beckoner of evil": "/art/nfts/a3ff-axgty9b5.webp",
-  "jötun shieldbearer": "/art/nfts/c266-vyrzmlaz.webp",
-  "primordial fury": "/art/nfts/312d-g7hdk1bi.webp",
-  "root guardian": "/art/nfts/c684-rogi9xw2.webp",
-  "root defender": "/art/nfts/e0c8-pwdgii2c.webp",
-  "guardian of the woods": "/art/nfts/e949-r3yc9gw8.webp",
-  "verdian, nature": "/art/nfts/f674-xy50v0b4.webp",
-  "jörð": "/art/nfts/f733-z2fpg8q2.webp",
-  "pan, nature": "/art/nfts/761d-b53ad267.webp",
-  "lord of the pit": "/art/nfts/71db-t2s6902m.webp",
-  "infernal": "/art/nfts/fd15-esta87rq.webp",
-  "barnabus, world tree spirit": "/art/nfts/a521-vsi1eae3.webp",
-  "yggdrasil golem": "/art/nfts/aeff-q23xlmep.webp",
-  "sea sprite scout": "/art/nfts/9952-qpi0lscp.webp",
-  "ísormr, the frost serpent": "/art/nfts/d0b0-nv2dx1yn.webp",
-  "myrkrkló": "/art/nfts/386d-ig168es7.webp",
-  "toad of the wilds": "/art/nfts/067b-uw4uaq9s.webp",
-  "plant": "/art/nfts/8684-xe3hb2fr.webp",
-  "verdant longneck": "/art/nfts/9605-zfp4egv7.webp",
-  "shady dealer": "/art/nfts/4bee-dwmp4o4v.webp",
-  "jötunn thornback": "/art/nfts/ebff-tmhw2wzs.webp",
-  "ginnungagap": "/art/nfts/60eb-a8jlgznz.webp",
-  "helheim valiant": "/art/nfts/30fa-4t35xv1n.webp",
-  "einherjar recruit": "/art/nfts/d06b-vk7ei0k7.webp",
-  "muspel infernal": "/art/nfts/7431-9wkai9y0.webp",
-  "eldþurs, the lava giant": "/art/nfts/d37d-h5qceohb.webp",
-  "spark": "/art/nfts/85c9-yz0ua28c.webp",
-  "aeolus, wind tyrant": "/art/nfts/a5f0-dxnsb0ev.webp",
-  "shield of the colossus": "/art/nfts/7130-0b8094b7.webp",
-  "temple guardian": "/art/nfts/bf42-9zhsqklq.webp",
-  "temple berserker": "/art/nfts/bd2a-m76xauwn.webp",
-  "speaker gidra": "/art/nfts/c857-wm2cc1zh.webp",
-  "orpheus, battle conductor": "/art/nfts/6f02-yerac949.webp",
-  "prometheus the outcast": "/art/nfts/e9c6-ogupxww1.webp",
-  "prometheus the firebringer": "/art/nfts/e304-1sebgpwj.webp",
-  "abyssal enforcer": "/art/nfts/028d-vt8aecnj.webp",
-  "achilles, immortal warrior": "/art/nfts/0429-y5arol11.webp",
-  "acolyte of athena": "/art/nfts/047f-yymwaczr.webp",
-  "ægir greenwave": "/art/nfts/ce26-d7aff9aa.webp",
-  "ares, war commander": "/art/nfts/258c-cx4vkfm3.webp",
-  "argus white-eye": "/art/nfts/283e-wed4vq3l.webp",
-  "artemis the huntress": "/art/nfts/9576-e4d01974.webp",
-  "athena the protector": "/art/nfts/f552-7a8f56df.webp",
-  "augmented porcupine": "/art/nfts/b082-88cee63a.webp",
-  "aviana, goddess of birds": "/art/nfts/3f60-7nyftfcn.webp",
-  "baldr, invulnerable": "/art/nfts/4143-wmwdmfsx.webp",
-  "berserk raider": "/art/nfts/37dc-8lo9azf3.webp",
-  "blade of asgard": "/art/nfts/6c5f-q5se4d7c.webp",
-  "blaze of muspelheim": "/art/nfts/c380-df49fbd2.webp",
-  "bomb maker of sindri": "/art/nfts/6608-mn0zp585.webp",
-  "bound forge-imp": "/art/nfts/b17a-ec608a43.webp",
-  "brawler of valhalla": "/art/nfts/73b0-pepudnqn.webp",
-  "centaur chieftain": "/art/nfts/8490-auxcxubs.webp",
-  "chronos, time dragon": "/art/nfts/983c-33dnmgxq.webp",
-  "cutpurse": "/art/nfts/bbb4-16zr8qmq.webp",
-  "cyclops guardian": "/art/nfts/be99-pev40ohb.webp",
-  "cyclops siege engine": "/art/nfts/bf25-9aygfsaf.webp",
-};
-
-/**
- * Get art path for a MINION card by name
- * Uses EXPLICIT MAPPING from MINION_CARD_TO_ART
- * Returns /art/{id}.webp path for matching creatures, or null if no match
- *
- * IMPORTANT: Validates that mapped artwork is in CREATURE_ART_CHARACTERS
- * to prevent minions from using hero-reserved artwork
- *
- * @param cardName - The minion card name
- * @returns The art path (/art/{id}.webp) or null if no explicit mapping exists
- */
-// Single source of truth for card art — all card art lookups go through this map
+// Single source of truth for card art. All lookups go through this map keyed by cardId.
 const CARD_ID_TO_ART: Record<number, string> = {
 	// ── Base Edition Cards (IDs 100-234) — mapped from orphan 95xxx art pool ──
 	// Mage class (100-109)
@@ -1300,7 +681,6 @@ const CARD_ID_TO_ART: Record<number, string> = {
 	4373: '/art/nfts/1517-8aad873a.webp',
 	4374: '/art/nfts/e987-ec5be341.webp',
 	4375: '/art/nfts/38cb-770feee0.webp',
-	4376: '/art/nfts/4655-o4xbxsth.webp',
 	4377: '/art/nfts/f051-c638e222.webp',
 	4378: '/art/nfts/8e02-a7e6fa9a.webp',
 	4379: '/art/nfts/ad90-6aba8d9a.webp',
@@ -1627,7 +1007,7 @@ const CARD_ID_TO_ART: Record<number, string> = {
 	10002: '/art/nfts/4a72-b276b3f9.webp',
 	10003: '/art/nfts/6b28-fda9ebd3.webp',
 	10004: '/art/nfts/e905-cb088536.webp',
-	10005: '/art/nfts/6c4b-otijmg2l.webp',
+	10005: '/art/nfts/b17a-ec608a43.webp',
 	10006: '/art/nfts/c3a8-aba25354.webp',
 	10007: '/art/nfts/bd6a-95ce78c6.webp',
 	10008: '/art/nfts/4dbf-5a2e85e2.webp',
@@ -3544,7 +2924,7 @@ const CARD_ID_TO_ART: Record<number, string> = {
 	95302: '/art/nfts/d11d-2894c2ee.webp',
 	95303: '/art/nfts/eb0a-914601b3.webp',
 	95304: '/art/nfts/a18a-f54d096b.webp',
-	95305: '/art/nfts/1d49-jajdixap.webp',
+	95305: '/art/nfts/33fe-9f2e4a77.webp',
 	95306: '/art/nfts/7f16-8990d70d.webp',
 	95307: '/art/nfts/f9bf-a102acc4.webp',
 	95308: '/art/nfts/0805-zofc19rh.webp',
@@ -3668,7 +3048,6 @@ const CARD_ID_TO_ART: Record<number, string> = {
 	31939: '/art/nfts/90b1-580bf385.webp', // Surtr's Final Bet — Surtr fire giant with flaming sword
 	// ── New Mechanics Expansion (Blood Echo, Ragnarok Threshold, Fateweave, Yggdrasil's Gift, Valhalla's Call, Active Wager) ──
 	31940: '/art/nfts/154b-fc24cc77.webp', // Bloodhowl Berserker — dark warrior from Helheim
-	31941: '/art/nfts/f5d6-01ff0c12.webp',   // Crimson Valkyrie — divine shielded warrior
 	31942: '/art/nfts/4569-fa2d8952.webp', // Sanguine Pact — primordial void ritual
 	31943: '/art/nfts/3652-pb7dlata.webp',    // Twilight Sentinel — dusk guardian
 	31944: '/art/nfts/3a09-gm3gx5tq.webp',   // Ragnarok Herald — apocalyptic herald
@@ -3696,12 +3075,18 @@ const CARD_ID_TO_ART: Record<number, string> = {
 	40113: '/art/nfts/269c-47eab103.webp', // Jormungandr's Grip — giant sea serpent
 	40117: '/art/nfts/bebd-2fba160f.webp',              // Serpent Pit — serpent vs warrior in storm
 	40118: '/art/nfts/eb59-e8c1abc1.webp',   // Freedom Strike — rock serpent breaking free
-	// ── Hero weapon (promoted from VERCEL_CARD_ART) ──
+	// ── Hero weapon ──
 	90020: '/art/nfts/e808-9qy2tzqo.webp',   // Baldur the Radiant
 	// ── Orphan Super Minions ──
 	95058: '/art/nfts/122d-ab271ba8.webp', // Primordial Shadow of Night — purple void shadow entity
 	95083: '/art/nfts/0a56-4ad6b40a.webp', // Empusa, Queen of Crossroads — vampire queen with undead army
 	95108: '/art/nfts/808c-ac01154a.webp',   // Hel's Warden — armored demon with rune magic
+	35010: '/art/nfts/a55b-gwo99sp4.webp',
+	4381: '/art/nfts/d0b0-nv2dx1yn.webp',
+	5002: '/art/nfts/5e39-2bee39b1.webp',
+	5401: '/art/nfts/386d-ig168es7.webp',
+	95309: '/art/nfts/5109-14028336.webp',
+	96004: '/art/nfts/005d-62d607f5.webp',
 };
 
 
@@ -3726,9 +3111,6 @@ const HERO_ART_PATHS = new Set(
 	Object.values(HERO_ART_OVERRIDE).map(id => getNormalizedArtPath(id))
 );
 
-/** Set of all hero art IDs (without path/extension) for VERCEL_CARD_ART guard */
-const HERO_ART_IDS_SET = new Set(Object.values(HERO_ART_OVERRIDE));
-
 export function getCardArtById(cardId: number | string): string | null {
 	const id = typeof cardId === 'string' ? parseInt(cardId, 10) : cardId;
 	if (isNaN(id)) return null;
@@ -3743,32 +3125,16 @@ export function getCardArtById(cardId: number | string): string | null {
 }
 
 /**
- * Returns the raw art path (e.g. `/art/filename.webp`) without deployment prefix.
- * Used by blockchain layer to build NFT image URLs that won't double the base path.
+ * Returns the raw art path (e.g. `/art/nfts/{id}.webp`) without deployment prefix.
+ * Used by the blockchain layer to build NFT image URLs that won't double the base path.
  */
-export function getRawCardArtPath(cardName: string, cardId?: number | string): string | null {
-	if (!cardName) return null;
-	if (cardId != null) {
-		const id = typeof cardId === 'string' ? parseInt(cardId, 10) : cardId;
-		if (!isNaN(id)) {
-			const path = CARD_ID_TO_ART[id];
-			if (path && !HERO_ART_PATHS.has(path)) return path;
-		}
-	}
-	const lowerName = cardName.toLowerCase().trim();
-	const vercelUrl = VERCEL_CARD_ART[lowerName];
-	if (vercelUrl) {
-		const artIdMatch = vercelUrl.match(/\/art\/(.+)\.webp$/);
-		if (artIdMatch) {
-			const artId = artIdMatch[1];
-			if ((ALL_CHARACTER_ART_IDS_SET.has(artId) && !CREATURE_RESERVED_ART_IDS.has(artId)) || HERO_ART_IDS_SET.has(artId)) return null;
-		}
-		return vercelUrl;
-	}
-	const character = MINION_CARD_TO_ART[lowerName];
-	if (!character || !CREATURE_ART_CHARACTERS.has(character)) return null;
-	const artId = CHARACTER_ART_IDS[character];
-	return artId ? getNormalizedArtPath(artId) : null;
+export function getRawCardArtPath(_cardName: string, cardId?: number | string): string | null {
+	if (cardId == null) return null;
+	const id = typeof cardId === 'string' ? parseInt(cardId, 10) : cardId;
+	if (isNaN(id)) return null;
+	const path = CARD_ID_TO_ART[id];
+	if (!path || HERO_ART_PATHS.has(path)) return null;
+	return path;
 }
 
 const _artPathCache = new Map<string, string | null>();
@@ -3781,81 +3147,15 @@ if (import.meta.hot) {
 
 export function getCardArtPath(cardName: string, cardId?: number | string): string | null {
   if (!cardName) return null;
+  if (cardId == null) return null;
 
-  const cacheKey = cardId != null ? `id:${cardId}` : cardName.toLowerCase().trim();
+  const cacheKey = `id:${cardId}`;
+  const cached = _artPathCache.get(cacheKey);
+  if (cached !== undefined) return cached;
 
-  if (_artPathCache.has(cacheKey)) {
-    return _artPathCache.get(cacheKey)!;
-  }
-
-  if (cardId != null) {
-    const idResult = getCardArtById(cardId);
-    if (idResult) {
-      _artPathCache.set(cacheKey, idResult);
-      return idResult;
-    }
-  }
-
-  const lowerName = cardName.toLowerCase().trim();
-
-  let result: string | null = null;
-
-  // Check VERCEL_CARD_ART first (new curated art takes priority)
-  const vercelUrl = VERCEL_CARD_ART[lowerName];
-  if (vercelUrl) {
-    const artIdMatch = vercelUrl.match(/\/art\/(.+)\.webp$/);
-    if (artIdMatch) {
-      const artId = artIdMatch[1];
-      // Block if art belongs to any named character that is NOT a creature
-      // (covers heroes, kings, gods, humans, and any other non-creature characters)
-      // Also block art reserved for heroes via HERO_ART_OVERRIDE (closes gap where
-      // 35+ hero art IDs exist outside CHARACTER_ART_IDS)
-      if ((ALL_CHARACTER_ART_IDS_SET.has(artId) && !CREATURE_RESERVED_ART_IDS.has(artId)) || HERO_ART_IDS_SET.has(artId)) {
-        _artPathCache.set(lowerName, null);
-        return null;
-      }
-    }
-    result = assetPath(vercelUrl);
-    _artPathCache.set(lowerName, result);
-    return result;
-  }
-
-  // Check MINION_CARD_TO_ART for exact match
-  const character = MINION_CARD_TO_ART[lowerName];
-  if (!character) {
-    _artPathCache.set(lowerName, null);
-    return null;
-  }
-
-  // Validate character is in creature-only set (not hero-reserved)
-  if (!CREATURE_ART_CHARACTERS.has(character)) {
-    debug.warn(`[artMapping] Warning: "${cardName}" maps to hero-reserved character "${character}"`);
-    _artPathCache.set(lowerName, null);
-    return null;
-  }
-
-  // Get the art ID for this creature
-  const artId = CHARACTER_ART_IDS[character];
-  if (!artId) {
-    _artPathCache.set(lowerName, null);
-    return null;
-  }
-
-  result = assetPath(getNormalizedArtPath(artId));
-  _artPathCache.set(lowerName, result);
+  const result = getCardArtById(cardId);
+  _artPathCache.set(cacheKey, result);
   return result;
 }
 
-/**
- * Check if a character name is creature-only (available for minion cards)
- */
-export function isCreatureCharacter(character: string): boolean {
-  return CREATURE_ART_CHARACTERS.has(character);
-}
 
-/**
- * Check if a character name is hero-reserved (not available for minions)
- */
-export function isHeroReservedCharacter(character: string): boolean {
-  return HERO_RESERVED_CHARACTERS.has(character);
-}
