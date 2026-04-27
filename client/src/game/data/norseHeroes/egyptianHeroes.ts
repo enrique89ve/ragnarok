@@ -14,7 +14,8 @@ export const EGYPTIAN_HEROES: Record<string, NorseHero> = {
 	// ==================== 1. AMMIT - Conditional Destruction ====================
 	'hero-ammit': {
 		id: 'hero-ammit',
-		name: 'Ammit',
+        portrait: '12e7-bcs00amy',
+        name: 'Ammit',
 		title: 'Devourer of the Dead',
 		element: 'dark',
 		weakness: 'light',
@@ -71,7 +72,8 @@ export const EGYPTIAN_HEROES: Record<string, NorseHero> = {
 	// ==================== 2. MA'AT - Stat Transformation ====================
 	'hero-maat': {
 		id: 'hero-maat',
-		name: "Ma'at",
+        portrait: '5d9b-kf3rnc4n',
+        name: "Ma'at",
 		title: 'Goddess of Truth and Balance',
 		element: 'light',
 		weakness: 'dark',
@@ -129,7 +131,8 @@ export const EGYPTIAN_HEROES: Record<string, NorseHero> = {
 	// ==================== 3. SERQET - Poison Application ====================
 	'hero-serqet': {
 		id: 'hero-serqet',
-		name: 'Serqet',
+        portrait: '9370-t2s89bww',
+        name: 'Serqet',
 		title: 'Scorpion Goddess',
 		element: 'dark',
 		weakness: 'light',
@@ -186,7 +189,8 @@ export const EGYPTIAN_HEROES: Record<string, NorseHero> = {
 	// ==================== 4. KHEPRI - Dawn Regeneration ====================
 	'hero-khepri': {
 		id: 'hero-khepri',
-		name: 'Khepri',
+        portrait: '64f4-24yr8hxe',
+        name: 'Khepri',
 		title: 'Scarab of Wrath',
 		element: 'light',
 		weakness: 'dark',

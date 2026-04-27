@@ -2,21 +2,34 @@
 
 How art assets are organized and mapped to gameplay entities. Authoritative as of the most recent commit; verify against `npm run audit:art` rather than this document if they diverge.
 
-## Source of truth
+## Source of truth — split by entity kind
 
-`client/src/game/utils/art/artMapping.ts` exports `ART_REGISTRY` — a single `Readonly<Record<string, string>>` that maps every gameplay entity to exactly one `.webp` file under `client/public/art/nfts/`. There is no separate metadata catalogue, no remote loader, no schema validation at runtime.
+The mapping from a game entity to its `.webp` lives **next to the entity definition**, never in a parallel registry:
+
+| Entity kind | Source of truth | Field |
+|---|---|---|
+| Cards (numeric ids) | `client/src/game/utils/art/artMapping.ts` `ART_REGISTRY` | record value |
+| Heroes (`hero-X`) | `client/src/game/data/norseHeroes/` | `NorseHero.portrait` |
+| Kings (`king-X`) | `client/src/game/data/norseKings/kingDefinitions.ts` | `NorseKing.portrait` |
+
+`ART_REGISTRY` only holds card mappings. Heroes and kings carry their asset id on the entity itself; this avoids the historical dualities where the same fact was duplicated in `ART_REGISTRY` plus `ChessPieceConfig.portrait` plus the entity definition.
+
+`resolveHeroPortrait(id)` reads the right source based on the id prefix:
+```ts
+if (id.startsWith('hero-')) return assetPath(`/art/nfts/${ALL_NORSE_HEROES[id]?.portrait}.webp`);
+if (id.startsWith('king-')) return assetPath(`/art/nfts/${NORSE_KINGS[id]?.portrait}.webp`);
+return ART_REGISTRY[id];
+```
 
 All art is **bundled locally and served from the static path**. There is no external CDN dependency — each player is their own CDN.
 
-## Mappable entities
+### Convention: `portrait` field is the asset id only
 
-| Key shape | Owner | Example |
-|---|---|---|
-| numeric string | `cardRegistry` (gameplay cards) | `'20110': '/art/nfts/9705-p5qah4s3.webp'` |
-| `hero-<slug>` | `ALL_NORSE_HEROES` (Norse / Greek / Japanese / Egyptian) | `'hero-odin': '/art/nfts/af1e-tgfxq4gr.webp'` |
-| `king-<slug>` | `NORSE_KINGS` | `'king-yggdrasil': '/art/nfts/a913-axqs13eu.webp'` |
+```ts
+{ id: 'king-ymir', name: 'Ymir', portrait: '8f78-n51onie8', ... }
+```
 
-The audit (`npm run audit:art`) cross-checks each `ART_REGISTRY` key against its owning collection and fails on any mismatch.
+Just the `[0-9a-f]{4}-[0-9a-z]{8}` asset id — no `/art/nfts/` prefix, no `.webp` suffix, no slug. The path is constructed at lookup time. This keeps the field uniform and the audit easy to validate.
 
 ## Filename convention (strict)
 
@@ -29,12 +42,13 @@ First 4 chars: hex (0-9 a-f). Next 8 chars: alnum lowercase (0-9 a-z). The audit
 ## Invariants enforced by the audit
 
 1. Every `ART_REGISTRY` value points at a `.webp` that exists on disk.
-2. Every `.webp` in `client/public/art/nfts/` is referenced by `ART_REGISTRY` (or one is a true orphan).
-3. Every numeric key exists in `cardRegistry` (or is whitelisted in `scripts/pending-art.json`).
-4. Every `hero-X` key exists in `ALL_NORSE_HEROES`.
-5. Every `king-X` key exists in `NORSE_KINGS`.
-6. No two cards share a name (collisions, case-sensitive).
-7. No two `ART_REGISTRY` keys map to the same `.webp` (1:1 invariant).
+2. Every `.webp` in `client/public/art/nfts/` is referenced by `ART_REGISTRY` or by an entity `portrait` field (anything else is reported as orphan).
+3. Every numeric key in `ART_REGISTRY` exists in `cardRegistry` (or is whitelisted in `scripts/pending-art.json`).
+4. **`ART_REGISTRY` MUST NOT contain `hero-X` or `king-X` keys** — that would be a dual source of truth alongside the entity `portrait` field. The audit fails strict mode on any such key.
+5. Every hero in `ALL_NORSE_HEROES` has a `portrait` field whose `.webp` exists on disk.
+6. Every king in `NORSE_KINGS` has a `portrait` field whose `.webp` exists on disk.
+7. No two cards share a name (collisions, case-sensitive).
+8. No two `ART_REGISTRY` values + entity portraits map to the same `.webp` (1:1 invariant across sources).
 
 Run `npm run audit:art -- --strict` in CI to enforce these.
 

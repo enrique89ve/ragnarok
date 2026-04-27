@@ -1,8 +1,14 @@
 /**
  * kingDefinitions.ts
- * 
- * Definitions for the 11 Primordial Kings (Summoners) in Ragnarok Poker.
- * Kings provide passive army-wide buffs and do not participate in combat directly.
+ *
+ * Definitions for the 14 Kings (Summoners) in Ragnarok Poker:
+ *   - 11 Primordial Kings (Genesis NFT, finite supply)
+ *   - 3 Starter Kings (free, every player owns them — Leif, Askr, Embla)
+ *
+ * Kings provide passive army-wide buffs and do not participate in combat
+ * directly. The `portrait` field is the single source of truth for which
+ * `.webp` file under `client/public/art/nfts/` represents this king;
+ * `resolveHeroPortrait()` reads it and `npm run audit:art` validates it.
  */
 
 import { NorseKing } from '../../types/NorseTypes';
@@ -12,6 +18,7 @@ export const NORSE_KINGS: Record<string, NorseKing> = {
   // ==================== 1. YMIR ====================
   'king-ymir': {
     id: 'king-ymir',
+      portrait: '8f78-n51onie8',
     name: 'Ymir',
     title: 'The Primordial Jotunn',
     description: 'The first being in Norse mythology, born from the collision of fire and ice alongside his brother Brimir. From his body the world was created.',
@@ -43,6 +50,7 @@ export const NORSE_KINGS: Record<string, NorseKing> = {
   // ==================== 2. BURI ====================
   'king-buri': {
     id: 'king-buri',
+      portrait: '984f-0o06zvr0',
     name: 'Buri',
     title: 'The First God',
     description: 'The first of the gods, licked free from the ice by the primordial cow Auðumbla.',
@@ -74,6 +82,7 @@ export const NORSE_KINGS: Record<string, NorseKing> = {
   // ==================== 3. SURTR ====================
   'king-surtr': {
     id: 'king-surtr',
+      portrait: 'dbeb-b0mibte9',
     name: 'Surtr',
     title: 'The Fire Giant',
     description: 'The lord of Muspelheim who will set the world ablaze at Ragnarok.',
@@ -105,6 +114,7 @@ export const NORSE_KINGS: Record<string, NorseKing> = {
   // ==================== 4. BORR ====================
   'king-borr': {
     id: 'king-borr',
+      portrait: '78e9-6mupjfob',
     name: 'Borr',
     title: 'The Primordial Father',
     description: 'Father of Odin, Vili, and Ve. The bridge between primordial beings and the Aesir.',
@@ -142,6 +152,7 @@ export const NORSE_KINGS: Record<string, NorseKing> = {
   // ==================== 5. YGGDRASIL ====================
   'king-yggdrasil': {
     id: 'king-yggdrasil',
+      portrait: 'a913-axqs13eu',
     name: 'Yggdrasil',
     title: 'The World Tree',
     description: 'The immense sacred tree that connects the nine worlds of Norse cosmology.',
@@ -173,6 +184,7 @@ export const NORSE_KINGS: Record<string, NorseKing> = {
   // ==================== 6. AUDUMBLA ====================
   'king-audumbla': {
     id: 'king-audumbla',
+      portrait: '4655-o4xbxsth',
     name: 'Auðumbla',
     title: 'The Primordial Cow',
     description: 'The primordial cow whose milk nourished Ymir and who licked Buri free from the ice.',
@@ -204,6 +216,7 @@ export const NORSE_KINGS: Record<string, NorseKing> = {
   // ==================== 7. GAIA ====================
   'king-gaia': {
     id: 'king-gaia',
+      portrait: 'c838-ebed9878',
     name: 'Gaia',
     title: 'Mother Earth',
     description: 'The primordial goddess of the Earth — patient, nurturing, and terrifyingly powerful when roused to anger.',
@@ -235,6 +248,7 @@ export const NORSE_KINGS: Record<string, NorseKing> = {
   // ==================== 8. BRIMIR ====================
   'king-brimir': {
     id: 'king-brimir',
+      portrait: 'b1f2-3e7dd08d',
     name: 'Brimir',
     title: 'The Bloody Moisture',
     description: 'Brother of Ymir, born alongside him from the primordial collision of fire and ice. Where Ymir became flesh and bone, Brimir became blood and marrow — the violent half of creation.',
@@ -266,6 +280,7 @@ export const NORSE_KINGS: Record<string, NorseKing> = {
   // ==================== 9. GINNUNGAGAP ====================
   'king-ginnungagap': {
     id: 'king-ginnungagap',
+      portrait: '1d49-jajdixap',
     name: 'Ginnungagap',
     title: 'Primordial Chaos',
     description: 'The primordial void that existed before creation, from which all things emerged.',
@@ -295,6 +310,7 @@ export const NORSE_KINGS: Record<string, NorseKing> = {
   // ==================== 10. TARTARUS ====================
   'king-tartarus': {
     id: 'king-tartarus',
+      portrait: '6c5f-enclx79l',
     name: 'Tartarus',
     title: 'The Abyss Below',
     description: 'The prison beneath the underworld where even gods fear to tread. Titans and the worst souls are chained in his depths, guarded by hundred-handed giants for eternity.',
@@ -329,6 +345,7 @@ export const NORSE_KINGS: Record<string, NorseKing> = {
   // ==================== 11. URANUS ====================
   'king-uranus': {
     id: 'king-uranus',
+      portrait: '523f-0ovd1djs',
     name: 'Uranus',
     title: 'The Sky Father',
     description: 'The primordial god of the sky whose body became the eternal dome of stars. His divine blood birthed the Furies and giants — even in defeat, his essence breeds power.',
@@ -351,6 +368,93 @@ export const NORSE_KINGS: Record<string, NorseKing> = {
         description: 'When a friendly minion attacks, deal 1 damage to a random adjacent enemy minion.',
         trigger: 'on_minion_attack',
         effectType: 'damage_adjacent_random',
+        value: 1,
+        isAura: false
+      }
+    ]
+  },
+
+  // ==================== 12. LEIF (STARTER — BASE / FREE) ====================
+  'king-leif': {
+    id: 'king-leif',
+    name: 'Leif the Wayfinder',
+    title: 'The Starter King',
+    description: 'A young Norse explorer-king. The first king every player commands.',
+    role: 'Sustain / Beginner-Friendly',
+    designIntent: 'Leif teaches the basics of the King role: a small persistent buff plus a gentle heal. Welcoming to new players, never punishing.',
+    portrait: '4a86-873y8lih',
+    hasSpells: false,
+    passives: [
+      {
+        id: 'leif-passive-1',
+        name: "Wayfinder's Resolve",
+        description: 'All friendly minions gain +1 Health.',
+        trigger: 'always',
+        effectType: 'buff_health',
+        value: 1,
+        isAura: true
+      },
+      {
+        id: 'leif-passive-2',
+        name: 'Mending Light',
+        description: 'At the start of your turn, restore 1 Health to your most damaged minion.',
+        trigger: 'start_of_turn',
+        effectType: 'heal_all_friendly',
+        value: 1,
+        isAura: false
+      }
+    ]
+  },
+
+  // ==================== 13. ASKR (STARTER — COMMON) ====================
+  'king-askr': {
+    id: 'king-askr',
+    name: 'Askr',
+    title: 'The First Man',
+    description: 'Carved from an ash tree by Odin, Vili and Vé. Simple but relentless, the first male of mortal kind.',
+    role: 'Attack Pressure',
+    designIntent: 'Askr is unsubtle: more attack, more pressure. Where Leif heals, Askr punches. He suits players who like a clear, aggressive plan.',
+    portrait: '1fa1-0bt3p0qe',
+    hasSpells: false,
+    passives: [
+      {
+        id: 'askr-passive-1',
+        name: "First Man's Vigor",
+        description: 'All friendly minions gain +1 Attack.',
+        trigger: 'always',
+        effectType: 'buff_attack',
+        value: 1,
+        isAura: true
+      }
+    ]
+  },
+
+  // ==================== 14. EMBLA (STARTER — COMMON) ====================
+  'king-embla': {
+    id: 'king-embla',
+    name: 'Embla',
+    title: 'The First Woman',
+    description: 'Carved from an elm tree by Odin, Vili and Vé. Mother of mortal kind, source of resilience.',
+    role: 'Sustain / Endurance',
+    designIntent: 'Embla rewards survival. Persistent passive healing keeps her board breathing while Askr swings. The pair completes the starter triad with Leif.',
+    portrait: 'e7cc-8r1oubzy',
+    hasSpells: false,
+    passives: [
+      {
+        id: 'embla-passive-1',
+        name: "First Woman's Endurance",
+        description: 'All friendly minions gain +1 Health.',
+        trigger: 'always',
+        effectType: 'buff_health',
+        value: 1,
+        isAura: true
+      },
+      {
+        id: 'embla-passive-2',
+        name: 'Tree of Life',
+        description: 'At the end of your turn, restore 1 Health to all friendly minions.',
+        trigger: 'end_of_turn',
+        effectType: 'heal_all_friendly',
         value: 1,
         isAura: false
       }

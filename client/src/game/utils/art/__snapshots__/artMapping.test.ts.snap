@@ -376,7 +376,7 @@ exports[`getCardArtPath > matches snapshot for the entire card registry 1`] = `
   "20403	Hecate, the Accused": "/art/nfts/306c-e2f06c7d.webp",
   "20404	Undying Steed of Pegasus": "/art/nfts/6be9-3140e0b7.webp",
   "20405	Ember Herald of Sinmara": "/art/nfts/ee59-5348f3b4.webp",
-  "20406	Theseus, the Equalizer": "/art/nfts/4a86-873y8lih.webp",
+  "20406	Theseus, the Equalizer": null,
   "20407	Proteus, Mist Shaper": "/art/nfts/8516-b0c46cb4.webp",
   "205	Svartalfheim Engineer": "/art/nfts/5b0f-07111762.webp",
   "20501	Summon Microbots": "/art/nfts/e220-f8d979c3.webp",

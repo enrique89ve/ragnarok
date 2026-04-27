@@ -1,4 +1,6 @@
 import { assetPath } from '../assetPath';
+import { ALL_NORSE_HEROES } from '../../data/norseHeroes';
+import { NORSE_KINGS } from '../../data/norseKings';
 
 /**
  * Unified art registry — single source of truth.
@@ -790,7 +792,6 @@ export const ART_REGISTRY: Readonly<Record<string, string>> = {
 	'20403': '/art/nfts/306c-e2f06c7d.webp',
 	'20404': '/art/nfts/6be9-3140e0b7.webp',
 	'20405': '/art/nfts/ee59-5348f3b4.webp',
-	'20406': '/art/nfts/4a86-873y8lih.webp',
 	'20407': '/art/nfts/8516-b0c46cb4.webp',
 	'20501': '/art/nfts/e220-f8d979c3.webp',
 	'20502': '/art/nfts/2d80-962df91c.webp',
@@ -2444,116 +2445,6 @@ export const ART_REGISTRY: Readonly<Record<string, string>> = {
 	'96014': '/art/nfts/48bc-a4ab5163.webp',
 	'96015': '/art/nfts/1913-79012baf.webp',
 	'96016': '/art/nfts/31df-83834d65.webp',
-	// ── Heroes ──
-	'hero-aegir': '/art/nfts/01f2-91d6d978.webp',
-	'hero-ammit': '/art/nfts/12e7-bcs00amy.webp',
-	'hero-aphrodite': '/art/nfts/8648-ghgxmwfh.webp',
-	'hero-apollo': '/art/nfts/e48e-x9s3l2ww.webp',
-	'hero-ares': '/art/nfts/12b8-gv4eco23.webp',
-	'hero-artemis': '/art/nfts/a3ef-uwsh945j.webp',
-	'hero-athena': '/art/nfts/02c5-rprsl3nq.webp',
-	'hero-baldur': '/art/nfts/be87-7f6e4b1b.webp',
-	'hero-bestla': '/art/nfts/84b2-r6m51iu5.webp',
-	'hero-bjorn-ironside': '/art/nfts/5388-g9bbr777.webp',
-	'hero-blainn': '/art/nfts/22a0-9ic0pwfw.webp',
-	'hero-bragi': '/art/nfts/c76a-a581a7c5.webp',
-	'hero-brakki': '/art/nfts/92f4-85792li4.webp',
-	'hero-brynhild': '/art/nfts/1d97-35odajjd.webp',
-	'hero-chronos': '/art/nfts/4128-54b33535.webp',
-	'hero-demeter': '/art/nfts/6ddf-0f8740b6.webp',
-	'hero-dionysus': '/art/nfts/ee28-lpu1nd1c.webp',
-	'hero-eir': '/art/nfts/e1c3-e2d51bc2.webp',
-	'hero-eldrin': '/art/nfts/6c37-llo1gkzy.webp',
-	'hero-erik-flameheart': '/art/nfts/d986-20v9k725.webp',
-	'hero-eros': '/art/nfts/8c39-kd4ymn12.webp',
-	'hero-fjora': '/art/nfts/888f-zv6117qs.webp',
-	'hero-fjorgyn': '/art/nfts/5579-rtdz78q8.webp',
-	'hero-forseti': '/art/nfts/4bb3-ce4b2ed9.webp',
-	'hero-freya': '/art/nfts/cda6-d28df479.webp',
-	'hero-freyr': '/art/nfts/7458-t0n1oqgs.webp',
-	'hero-frigg': '/art/nfts/6333-p1fmzcky.webp',
-	'hero-fujin': '/art/nfts/203d-wpnddi55.webp',
-	'hero-gefjon': '/art/nfts/3e44-araj8dlb.webp',
-	'hero-gerd': '/art/nfts/efdf-cwyuxjfl.webp',
-	'hero-gormr': '/art/nfts/e1e3-gg3jq3u0.webp',
-	'hero-groa': '/art/nfts/4e13-or4p37vj.webp',
-	'hero-gudrun': '/art/nfts/8e3b-ublpaurd.webp',
-	'hero-gullveig': '/art/nfts/df09-mj5d0z0j.webp',
-	'hero-hades': '/art/nfts/291e-ef8fwtd5.webp',
-	'hero-hecate': '/art/nfts/9787-7ahpdg4c.webp',
-	'hero-heimdall': '/art/nfts/b62d-d2625495.webp',
-	'hero-hel': '/art/nfts/62e5-8d33485a.webp',
-	'hero-helios': '/art/nfts/0dc0-t8g7ugzd.webp',
-	'hero-hephaestus': '/art/nfts/123f-fozmrwmc.webp',
-	'hero-hera': '/art/nfts/1e19-ytm9izjp.webp',
-	'hero-heracles': '/art/nfts/2336-808i04tf.webp',
-	'hero-hermes': '/art/nfts/7c36-amxvy4sn.webp',
-	'hero-hermod': '/art/nfts/a514-ab9j0g5r.webp',
-	'hero-hervor': '/art/nfts/f9a1-98tusiw3.webp',
-	'hero-hestia': '/art/nfts/c500-5pv67lfk.webp',
-	'hero-hoder': '/art/nfts/6017-p53522dp.webp',
-	'hero-hoenir': '/art/nfts/b03b-7d0873e9.webp',
-	'hero-hyperion': '/art/nfts/378a-1bff480f.webp',
-	'hero-idunn': '/art/nfts/d9ce-c81a7cad.webp',
-	'hero-izanami': '/art/nfts/a415-w915qhro.webp',
-	'hero-kamimusubi': '/art/nfts/1f64-yh413x60.webp',
-	'hero-khepri': '/art/nfts/64f4-24yr8hxe.webp',
-	'hero-kvasir': '/art/nfts/2a21-f54a507f.webp',
-	'hero-lirien': '/art/nfts/39d5-zmwzqszw.webp',
-	'hero-logi': '/art/nfts/97c0-gly90upv.webp',
-	'hero-loki': '/art/nfts/e8f6-c135e81a.webp',
-	'hero-maat': '/art/nfts/5d9b-kf3rnc4n.webp',
-	'hero-magni': '/art/nfts/89f2-bsi72zws.webp',
-	'hero-mani': '/art/nfts/d638-pfkjzzuo.webp',
-	'hero-myrka': '/art/nfts/bc09-7plgy7m3.webp',
-	'hero-nanna': '/art/nfts/74d0-wcwktcw1.webp',
-	'hero-njord': '/art/nfts/85e7-wljmvqe7.webp',
-	'hero-nyx': '/art/nfts/502a-6dafa318.webp',
-	'hero-odin': '/art/nfts/17c1-d273b6d8.webp',
-	'hero-persephone': '/art/nfts/e7be-0h8wgks0.webp',
-	'hero-perseus': '/art/nfts/8159-7d41a656.webp',
-	'hero-poseidon': '/art/nfts/150b-2gudiaxw.webp',
-	'hero-prometheus': '/art/nfts/5dcd-o15t632m.webp',
-	'hero-ragnar-ironside': '/art/nfts/1ca8-tdtfqurr.webp',
-	'hero-ran': '/art/nfts/4434-4nu5rrrf.webp',
-	'hero-rhea': '/art/nfts/9c91-gdtc98bt.webp',
-	'hero-sarutahiko': '/art/nfts/e4d7-fxhqn1cf.webp',
-	'hero-selene': '/art/nfts/86f7-8cb16c88.webp',
-	'hero-serqet': '/art/nfts/9370-t2s89bww.webp',
-	'hero-sigurd': '/art/nfts/b972-ast4s29y.webp',
-	'hero-sigyn': '/art/nfts/03d8-lf9wcao3.webp',
-	'hero-sinmara': '/art/nfts/27de-qwzzvho5.webp',
-	'hero-skadi': '/art/nfts/2a03-58ae797a.webp',
-	'hero-sol': '/art/nfts/f5d6-01ff0c12.webp',
-	'hero-solvi': '/art/nfts/5a44-64d4n3cy.webp',
-	'hero-starkad': '/art/nfts/2477-jzfm669g.webp',
-	'hero-thor': '/art/nfts/fb79-a09ea9b3.webp',
-	'hero-thorgrim': '/art/nfts/c12e-9p6c1ttu.webp',
-	'hero-thryma': '/art/nfts/d032-qyw3nqpe.webp',
-	'hero-tsukuyomi': '/art/nfts/6653-y9djk14f.webp',
-	'hero-tyr': '/art/nfts/5a19-57185498.webp',
-	'hero-ullr': '/art/nfts/cef7-2dqqiy45.webp',
-	'hero-vali': '/art/nfts/82c3-dmd7qmn8.webp',
-	'hero-valthrud': '/art/nfts/534a-jec4gcf3.webp',
-	'hero-ve': '/art/nfts/df32-b5qphdx1.webp',
-	'hero-verdandi': '/art/nfts/72ed-pyfzvxwm.webp',
-	'hero-vidar': '/art/nfts/9a25-fbad0a4b.webp',
-	'hero-vili': '/art/nfts/6975-92010e2a.webp',
-	'hero-volva': '/art/nfts/c7cd-wbifyi1w.webp',
-	'hero-ylva': '/art/nfts/d485-79u29gow.webp',
-	'hero-zeus': '/art/nfts/8732-n8izut0k.webp',
-	// ── Kings ──
-	'king-audumbla': '/art/nfts/4655-o4xbxsth.webp',
-	'king-borr': '/art/nfts/78e9-6mupjfob.webp',
-	'king-brimir': '/art/nfts/b1f2-3e7dd08d.webp',
-	'king-buri': '/art/nfts/984f-0o06zvr0.webp',
-	'king-gaia': '/art/nfts/c838-ebed9878.webp',
-	'king-ginnungagap': '/art/nfts/1d49-jajdixap.webp',
-	'king-surtr': '/art/nfts/dbeb-b0mibte9.webp',
-	'king-tartarus': '/art/nfts/6c5f-enclx79l.webp',
-	'king-uranus': '/art/nfts/523f-0ovd1djs.webp',
-	'king-yggdrasil': '/art/nfts/a913-axqs13eu.webp',
-	'king-ymir': '/art/nfts/8f78-n51onie8.webp',
 };
 
 const _cache = new Map<string, string | null>();
@@ -2561,20 +2452,40 @@ if (import.meta.hot) {
 	import.meta.hot.accept(() => _cache.clear());
 }
 
+/**
+ * Look up the asset id for any kind of game entity.
+ *
+ *   numeric / numeric-string ids   → cards, served from ART_REGISTRY
+ *   'hero-X'                       → heroes, served from ALL_NORSE_HEROES[id].portrait
+ *   'king-X'                       → kings,  served from NORSE_KINGS[id].portrait
+ *
+ * The hero/king path is the single source of truth; ART_REGISTRY no longer
+ * holds entity portraits — the `portrait` field on each entity is canon.
+ */
+function lookupAssetId(id: string | number | undefined): string | null {
+	if (id == null || id === '') return null;
+	const key = typeof id === 'number' ? String(id) : id;
+	if (key.startsWith('hero-')) return ALL_NORSE_HEROES[key]?.portrait ?? null;
+	if (key.startsWith('king-')) return NORSE_KINGS[key]?.portrait ?? null;
+	const raw = ART_REGISTRY[key];
+	if (!raw) return null;
+	const m = raw.match(/\/art\/nfts\/([^/]+)\.webp$/);
+	return m ? m[1] : null;
+}
+
 function resolve(id: string | number | undefined): string | null {
 	if (id == null || id === '') return null;
 	const key = typeof id === 'number' ? String(id) : id;
 	if (_cache.has(key)) return _cache.get(key)!;
-	const raw = ART_REGISTRY[key];
-	const result = raw ? assetPath(raw) : null;
+	const assetId = lookupAssetId(id);
+	const result = assetId ? assetPath(`/art/nfts/${assetId}.webp`) : null;
 	_cache.set(key, result);
 	return result;
 }
 
 function rawPath(id: string | number | undefined): string | null {
-	if (id == null || id === '') return null;
-	const key = typeof id === 'number' ? String(id) : id;
-	return ART_REGISTRY[key] ?? null;
+	const assetId = lookupAssetId(id);
+	return assetId ? `/art/nfts/${assetId}.webp` : null;
 }
 
 function bareId(path: string | null): string | null {

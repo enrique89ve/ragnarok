@@ -13,7 +13,8 @@ export const BASE_HEROES: Record<string, NorseHero> = {
 	// ==================== QUEEN SLOT — Erik Flameheart (Mage) ====================
 	'hero-erik-flameheart': {
 		id: 'hero-erik-flameheart',
-		name: 'Erik Flameheart',
+        portrait: 'd986-20v9k725',
+        name: 'Erik Flameheart',
 		title: 'The Scorched',
 		element: 'fire',
 		weakness: 'water',
@@ -72,7 +73,8 @@ export const BASE_HEROES: Record<string, NorseHero> = {
 	// ==================== ROOK SLOT — Ragnar Ironside (Warrior) ====================
 	'hero-ragnar-ironside': {
 		id: 'hero-ragnar-ironside',
-		name: 'Ragnar Ironside',
+        portrait: '1ca8-tdtfqurr',
+        name: 'Ragnar Ironside',
 		title: 'Jarl of the North Sea',
 		element: 'water',
 		weakness: 'electric',
@@ -131,7 +133,8 @@ export const BASE_HEROES: Record<string, NorseHero> = {
 	// ==================== BISHOP SLOT — Brynhild Shieldmaiden (Priest) ====================
 	'hero-brynhild': {
 		id: 'hero-brynhild',
-		name: 'Brynhild',
+        portrait: '1d97-35odajjd',
+        name: 'Brynhild',
 		title: 'The Defiant',
 		element: 'light',
 		weakness: 'dark',
@@ -189,7 +192,8 @@ export const BASE_HEROES: Record<string, NorseHero> = {
 	// ==================== KNIGHT SLOT — Sigurd Dragonbane (Rogue) ====================
 	'hero-sigurd': {
 		id: 'hero-sigurd',
-		name: 'Sigurd',
+        portrait: 'b972-ast4s29y',
+        name: 'Sigurd',
 		title: 'The Dragonbane',
 		element: 'fire',
 		weakness: 'ice',

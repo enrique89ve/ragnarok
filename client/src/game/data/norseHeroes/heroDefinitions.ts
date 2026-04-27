@@ -14,6 +14,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 1. ODIN ====================
   'hero-odin': {
     id: 'hero-odin',
+      portrait: '17c1-d273b6d8',
     name: 'Odin',
     title: 'The Allfather',
     element: 'light',
@@ -72,6 +73,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 2. THOR ====================
   'hero-thor': {
     id: 'hero-thor',
+      portrait: 'fb79-a09ea9b3',
     name: 'Thor',
     title: 'God of Thunder',
     element: 'electric',
@@ -129,6 +131,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 3. LOKI ====================
   'hero-loki': {
     id: 'hero-loki',
+      portrait: 'e8f6-c135e81a',
     name: 'Loki',
     title: 'The Trickster',
     element: 'dark',
@@ -186,6 +189,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 4. FREYA ====================
   'hero-freya': {
     id: 'hero-freya',
+      portrait: 'cda6-d28df479',
     name: 'Freya',
     title: 'Goddess of Love and War',
     element: 'grass',
@@ -245,6 +249,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 5. BRAGI ====================
   'hero-bragi': {
     id: 'hero-bragi',
+      portrait: 'c76a-a581a7c5',
     name: 'Bragi',
     title: 'God of Poetry',
     element: 'light',
@@ -305,6 +310,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 6. EIR ====================
   'hero-eir': {
     id: 'hero-eir',
+      portrait: 'e1c3-e2d51bc2',
     name: 'Eir',
     title: 'Goddess of Healing',
     element: 'grass',
@@ -362,6 +368,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 7. FORSETI ====================
   'hero-forseti': {
     id: 'hero-forseti',
+      portrait: '4bb3-ce4b2ed9',
     name: 'Forseti',
     title: 'God of Justice',
     element: 'light',
@@ -421,6 +428,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 8. FREY ====================
   'hero-freyr': {
     id: 'hero-freyr',
+      portrait: '7458-t0n1oqgs',
     name: 'Frey',
     title: 'God of Fertility',
     element: 'grass',
@@ -496,6 +504,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 9. IDUNN ====================
   'hero-idunn': {
     id: 'hero-idunn',
+      portrait: 'd9ce-c81a7cad',
     name: 'Idunn',
     title: 'Goddess of Youth',
     element: 'grass',
@@ -552,6 +561,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 10. RAN ====================
   'hero-ran': {
     id: 'hero-ran',
+      portrait: '4434-4nu5rrrf',
     name: 'Ran',
     title: 'Goddess of the Drowned',
     element: 'water',
@@ -611,6 +621,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 11. SOL ====================
   'hero-sol': {
     id: 'hero-sol',
+      portrait: 'f5d6-01ff0c12',
     name: 'Sol',
     title: 'Goddess of the Sun',
     element: 'fire',
@@ -669,6 +680,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 12. MANI ====================
   'hero-mani': {
     id: 'hero-mani',
+      portrait: 'd638-pfkjzzuo',
     name: 'Mani',
     title: 'God of the Moon',
     element: 'dark',
@@ -727,6 +739,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 13. HODER ====================
   'hero-hoder': {
     id: 'hero-hoder',
+      portrait: '6017-p53522dp',
     name: 'Hoder',
     title: 'Blind God of Winter',
     element: 'dark',
@@ -785,6 +798,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 14. KVASIR ====================
   'hero-kvasir': {
     id: 'hero-kvasir',
+      portrait: '2a21-f54a507f',
     name: 'Kvasir',
     title: 'God of Wisdom',
     element: 'light',
@@ -842,6 +856,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 15. MAGNI ====================
   'hero-magni': {
     id: 'hero-magni',
+      portrait: '89f2-bsi72zws',
     name: 'Magni',
     title: 'God of Strength',
     element: 'fire',
@@ -901,6 +916,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 16. SINMARA ====================
   'hero-sinmara': {
     id: 'hero-sinmara',
+      portrait: '27de-qwzzvho5',
     name: 'Sinmara',
     title: 'Giantess of Muspelheim',
     element: 'fire',
@@ -962,6 +978,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 17. SKADI ====================
   'hero-skadi': {
     id: 'hero-skadi',
+      portrait: '2a03-58ae797a',
     name: 'Skadi',
     title: 'Goddess of Winter',
     element: 'ice',
@@ -1018,6 +1035,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 18. HEIMDALL ====================
   'hero-heimdall': {
     id: 'hero-heimdall',
+      portrait: 'b62d-d2625495',
     name: 'Heimdall',
     title: 'The Watchful Guardian',
     element: 'light',
@@ -1077,6 +1095,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 19. VILI ====================
   'hero-vili': {
     id: 'hero-vili',
+      portrait: '6975-92010e2a',
     name: 'Vili',
     title: 'God of Will',
     element: 'light',
@@ -1133,6 +1152,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 20. VE ====================
   'hero-ve': {
     id: 'hero-ve',
+      portrait: 'df32-b5qphdx1',
     name: 'Ve',
     title: 'God of Sacred Fury',
     element: 'light',
@@ -1190,6 +1210,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 21. GERD ====================
   'hero-gerd': {
     id: 'hero-gerd',
+      portrait: 'efdf-cwyuxjfl',
     name: 'Gerd',
     title: 'Giantess of Fertile Earth',
     element: 'grass',
@@ -1257,6 +1278,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 22. AEGIR ====================
   'hero-aegir': {
     id: 'hero-aegir',
+      portrait: '01f2-91d6d978',
     name: 'Aegir',
     title: 'God of the Brewing Sea',
     element: 'water',
@@ -1317,6 +1339,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 23. HEL ====================
   'hero-hel': {
     id: 'hero-hel',
+      portrait: '62e5-8d33485a',
     name: 'Hel',
     title: 'Goddess of the Underworld',
     element: 'dark',
@@ -1376,6 +1399,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 24. NJORD ====================
   'hero-njord': {
     id: 'hero-njord',
+      portrait: '85e7-wljmvqe7',
     name: 'Njord',
     title: 'God of Sea and Wind',
     element: 'water',
@@ -1433,6 +1457,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 25. BALDUR ====================
   'hero-baldur': {
     id: 'hero-baldur',
+      portrait: 'be87-7f6e4b1b',
     name: 'Baldur',
     title: 'God of Light and Purity',
     element: 'light',
@@ -1490,6 +1515,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 26. TYR ====================
   'hero-tyr': {
     id: 'hero-tyr',
+      portrait: '5a19-57185498',
     name: 'Tyr',
     title: 'God of War and Justice',
     element: 'fire',
@@ -1548,6 +1574,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 27. VIDAR ====================
   'hero-vidar': {
     id: 'hero-vidar',
+      portrait: '9a25-fbad0a4b',
     name: 'Vidar',
     title: 'God of Vengeance',
     element: 'dark',
@@ -1606,6 +1633,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 28. HOENIR ====================
   'hero-hoenir': {
     id: 'hero-hoenir',
+      portrait: 'b03b-7d0873e9',
     name: 'Hoenir',
     title: 'God of Silence',
     element: 'light',
@@ -1661,6 +1689,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 29. ULLR ====================
   'hero-ullr': {
     id: 'hero-ullr',
+      portrait: 'cef7-2dqqiy45',
     name: 'Ullr',
     title: 'God of the Hunt',
     element: 'ice',
@@ -1718,6 +1747,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 30. SIGYN ====================
   'hero-sigyn': {
     id: 'hero-sigyn',
+      portrait: '03d8-lf9wcao3',
     name: 'Sigyn',
     title: 'Goddess of Loyalty',
     element: 'grass',
@@ -1779,6 +1809,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 31. ZEUS ====================
   'hero-zeus': {
     id: 'hero-zeus',
+      portrait: '8732-n8izut0k',
     name: 'Zeus',
     title: 'King of the Gods',
     element: 'electric',
@@ -1837,6 +1868,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 32. POSEIDON ====================
   'hero-poseidon': {
     id: 'hero-poseidon',
+      portrait: '150b-2gudiaxw',
     name: 'Poseidon',
     title: 'God of the Sea',
     element: 'water',
@@ -1893,6 +1925,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 33. HADES ====================
   'hero-hades': {
     id: 'hero-hades',
+      portrait: '291e-ef8fwtd5',
     name: 'Hades',
     title: 'God of the Underworld',
     element: 'dark',
@@ -1951,6 +1984,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 34. APOLLO ====================
   'hero-apollo': {
     id: 'hero-apollo',
+      portrait: 'e48e-x9s3l2ww',
     name: 'Apollo',
     title: 'God of the Sun',
     element: 'fire',
@@ -2009,6 +2043,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 35. ARES ====================
   'hero-ares': {
     id: 'hero-ares',
+      portrait: '12b8-gv4eco23',
     name: 'Ares',
     title: 'God of War',
     element: 'fire',
@@ -2068,6 +2103,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 36. HERMES ====================
   'hero-hermes': {
     id: 'hero-hermes',
+      portrait: '7c36-amxvy4sn',
     name: 'Hermes',
     title: 'Messenger of the Gods',
     element: 'light',
@@ -2125,6 +2161,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 37. ATHENA ====================
   'hero-athena': {
     id: 'hero-athena',
+      portrait: '02c5-rprsl3nq',
     name: 'Athena',
     title: 'Goddess of Wisdom',
     element: 'light',
@@ -2182,6 +2219,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 38. APHRODITE ====================
   'hero-aphrodite': {
     id: 'hero-aphrodite',
+      portrait: '8648-ghgxmwfh',
     name: 'Aphrodite',
     title: 'Goddess of Love',
     element: 'grass',
@@ -2238,6 +2276,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 39. HEPHAESTUS ====================
   'hero-hephaestus': {
     id: 'hero-hephaestus',
+      portrait: '123f-fozmrwmc',
     name: 'Hephaestus',
     title: 'God of the Forge',
     element: 'fire',
@@ -2294,6 +2333,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 40. DIONYSUS ====================
   'hero-dionysus': {
     id: 'hero-dionysus',
+      portrait: 'ee28-lpu1nd1c',
     name: 'Dionysus',
     title: 'God of Wine',
     element: 'grass',
@@ -2351,6 +2391,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 41. ARTEMIS ====================
   'hero-artemis': {
     id: 'hero-artemis',
+      portrait: 'a3ef-uwsh945j',
     name: 'Artemis',
     title: 'Goddess of the Hunt',
     element: 'grass',
@@ -2410,6 +2451,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 42. DEMETER ====================
   'hero-demeter': {
     id: 'hero-demeter',
+      portrait: '6ddf-0f8740b6',
     name: 'Demeter',
     title: 'Goddess of the Harvest',
     element: 'grass',
@@ -2478,6 +2520,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 43. HYPERION ====================
   'hero-hyperion': {
     id: 'hero-hyperion',
+      portrait: '378a-1bff480f',
     name: 'Hyperion',
     title: 'Titan of Light',
     element: 'light',
@@ -2535,6 +2578,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 44. HERA ====================
   'hero-hera': {
     id: 'hero-hera',
+      portrait: '1e19-ytm9izjp',
     name: 'Hera',
     title: 'Queen of the Gods',
     element: 'light',
@@ -2594,6 +2638,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 45. BLAINN ====================
   'hero-blainn': {
     id: 'hero-blainn',
+      portrait: '22a0-9ic0pwfw',
     name: 'Blainn',
     title: 'The Dark Craftsman',
     element: 'dark',
@@ -2662,6 +2707,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 48. EROS ====================
   'hero-eros': {
     id: 'hero-eros',
+      portrait: '8c39-kd4ymn12',
     name: 'Eros',
     title: 'The Procreator',
     element: 'grass',
@@ -2721,6 +2767,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 49. NYX ====================
   'hero-nyx': {
     id: 'hero-nyx',
+      portrait: '502a-6dafa318',
     name: 'Nyx',
     title: 'Goddess of the Night',
     element: 'dark',
@@ -2779,6 +2826,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 50. CHRONOS ====================
   'hero-chronos': {
     id: 'hero-chronos',
+      portrait: '4128-54b33535',
     name: 'Chronos',
     title: 'The Timekeeper',
     element: 'light',
@@ -2836,6 +2884,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 51. PERSEPHONE ====================
   'hero-persephone': {
     id: 'hero-persephone',
+      portrait: 'e7be-0h8wgks0',
     name: 'Persephone',
     title: 'Queen of the Underworld',
     element: 'dark',
@@ -2897,6 +2946,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 52. HESTIA ====================
   'hero-hestia': {
     id: 'hero-hestia',
+      portrait: 'c500-5pv67lfk',
     name: 'Hestia',
     title: 'Goddess of the Hearth',
     element: 'fire',
@@ -2956,6 +3006,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 53. PROMETHEUS ====================
   'hero-prometheus': {
     id: 'hero-prometheus',
+      portrait: '5dcd-o15t632m',
     name: 'Prometheus',
     title: 'The Fire-Bringer',
     element: 'fire',
@@ -3015,6 +3066,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 54. HERACLES ====================
   'hero-heracles': {
     id: 'hero-heracles',
+      portrait: '2336-808i04tf',
     name: 'Heracles',
     title: 'The Greatest Hero',
     element: 'fire',
@@ -3071,6 +3123,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 54b. PERSEUS ====================
   'hero-perseus': {
     id: 'hero-perseus',
+      portrait: '8159-7d41a656',
     name: 'Perseus',
     title: 'The Gorgon Slayer',
     element: 'light',
@@ -3127,6 +3180,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
   // ==================== 55. RHEA ====================
   'hero-rhea': {
     id: 'hero-rhea',
+      portrait: '9c91-gdtc98bt',
     name: 'Rhea',
     title: 'Mother of the Gods',
     element: 'grass',

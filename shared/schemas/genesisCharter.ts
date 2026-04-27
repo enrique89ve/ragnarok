@@ -32,7 +32,7 @@ export interface CharterBucket {
 }
 
 export const GENESIS_CHARTER: Readonly<Record<Rarity, CharterBucket>> = {
-	common: { cards: 914, heroes: 12, kings: 3, copiesEach: RARITY_TABLE.common.supplyCap },
+	common: { cards: 914, heroes: 12, kings: 6, copiesEach: RARITY_TABLE.common.supplyCap },
 	rare:   { cards: 684, heroes: 38, kings: 2, copiesEach: RARITY_TABLE.rare.supplyCap   },
 	epic:   { cards: 364, heroes: 34, kings: 3, copiesEach: RARITY_TABLE.epic.supplyCap   },
 	mythic: { cards: 158, heroes: 13, kings: 3, copiesEach: RARITY_TABLE.mythic.supplyCap },

@@ -13,7 +13,8 @@ export const COMMON_HEROES: Record<string, NorseHero> = {
 	// ==================== QUEEN SLOT #1 — Gullveig (Warlock) ====================
 	'hero-gullveig': {
 		id: 'hero-gullveig',
-		name: 'Gullveig',
+        portrait: 'df09-mj5d0z0j',
+        name: 'Gullveig',
 		title: 'The Thrice-Burned',
 		element: 'dark',
 		weakness: 'light',
@@ -73,7 +74,8 @@ export const COMMON_HEROES: Record<string, NorseHero> = {
 	// ==================== QUEEN SLOT #2 — Groa (Mage) ====================
 	'hero-groa': {
 		id: 'hero-groa',
-		name: 'Groa',
+        portrait: '4e13-or4p37vj',
+        name: 'Groa',
 		title: 'The Seeress',
 		element: 'ice',
 		weakness: 'fire',
@@ -130,7 +132,8 @@ export const COMMON_HEROES: Record<string, NorseHero> = {
 	// ==================== ROOK SLOT #1 — Hervor (Warrior) ====================
 	'hero-hervor': {
 		id: 'hero-hervor',
-		name: 'Hervor',
+        portrait: 'f9a1-98tusiw3',
+        name: 'Hervor',
 		title: 'Bearer of Tyrfing',
 		element: 'dark',
 		weakness: 'light',
@@ -187,7 +190,8 @@ export const COMMON_HEROES: Record<string, NorseHero> = {
 	// ==================== ROOK SLOT #2 — Bjorn Ironside (Paladin) ====================
 	'hero-bjorn-ironside': {
 		id: 'hero-bjorn-ironside',
-		name: 'Bjorn Ironside',
+        portrait: '5388-g9bbr777',
+        name: 'Bjorn Ironside',
 		title: 'Son of Ragnar',
 		element: 'water',
 		weakness: 'electric',
@@ -244,7 +248,8 @@ export const COMMON_HEROES: Record<string, NorseHero> = {
 	// ==================== BISHOP SLOT #1 — Nanna (Priest) ====================
 	'hero-nanna': {
 		id: 'hero-nanna',
-		name: 'Nanna',
+        portrait: '74d0-wcwktcw1',
+        name: 'Nanna',
 		title: 'Wife of Baldur',
 		element: 'light',
 		weakness: 'dark',
@@ -302,7 +307,8 @@ export const COMMON_HEROES: Record<string, NorseHero> = {
 	// ==================== BISHOP SLOT #2 — Volva (Shaman) ====================
 	'hero-volva': {
 		id: 'hero-volva',
-		name: 'Völva',
+        portrait: 'c7cd-wbifyi1w',
+        name: 'Völva',
 		title: 'The Prophetess',
 		element: 'grass',
 		weakness: 'fire',
@@ -360,7 +366,8 @@ export const COMMON_HEROES: Record<string, NorseHero> = {
 	// ==================== KNIGHT SLOT #1 — Gudrun (Hunter) ====================
 	'hero-gudrun': {
 		id: 'hero-gudrun',
-		name: 'Gudrun',
+        portrait: '8e3b-ublpaurd',
+        name: 'Gudrun',
 		title: 'The Avenger',
 		element: 'fire',
 		weakness: 'water',
@@ -417,7 +424,8 @@ export const COMMON_HEROES: Record<string, NorseHero> = {
 	// ==================== QUEEN SLOT #3 — Frigg (Priest) ====================
 	'hero-frigg': {
 		id: 'hero-frigg',
-		name: 'Frigg',
+        portrait: '6333-p1fmzcky',
+        name: 'Frigg',
 		title: 'All-Mother of Asgard',
 		element: 'light',
 		weakness: 'dark',
@@ -476,7 +484,8 @@ export const COMMON_HEROES: Record<string, NorseHero> = {
 	// ==================== BISHOP SLOT #3 — Bestla (Shaman) ====================
 	'hero-bestla': {
 		id: 'hero-bestla',
-		name: 'Bestla',
+        portrait: '84b2-r6m51iu5',
+        name: 'Bestla',
 		title: 'Primordial Frost-Mother',
 		element: 'ice',
 		weakness: 'fire',
@@ -536,7 +545,8 @@ export const COMMON_HEROES: Record<string, NorseHero> = {
 	// ==================== KNIGHT SLOT #3 — Hermod (Rogue) ====================
 	'hero-hermod': {
 		id: 'hero-hermod',
-		name: 'Hermod',
+        portrait: 'a514-ab9j0g5r',
+        name: 'Hermod',
 		title: 'The Brave',
 		element: 'dark',
 		weakness: 'light',
@@ -596,7 +606,8 @@ export const COMMON_HEROES: Record<string, NorseHero> = {
 	// ==================== KNIGHT SLOT #2 — Starkad (Berserker) ====================
 	'hero-starkad': {
 		id: 'hero-starkad',
-		name: 'Starkad',
+        portrait: '2477-jzfm669g',
+        name: 'Starkad',
 		title: 'The Eight-Armed',
 		element: 'fire',
 		weakness: 'ice',
@@ -655,7 +666,8 @@ export const COMMON_HEROES: Record<string, NorseHero> = {
 	// ==================== BISHOP SLOT — Verdandi (Priest, Combo) ====================
 	'hero-verdandi': {
 		id: 'hero-verdandi',
-		name: 'Verdandi',
+        portrait: '72ed-pyfzvxwm',
+        name: 'Verdandi',
 		title: 'Norn of the Present',
 		element: 'light',
 		weakness: 'dark',
@@ -712,7 +724,8 @@ export const COMMON_HEROES: Record<string, NorseHero> = {
 	// ==================== KNIGHT SLOT — Vali (Berserker, Escalating) ====================
 	'hero-vali': {
 		id: 'hero-vali',
-		name: 'Vali',
+        portrait: '82c3-dmd7qmn8',
+        name: 'Vali',
 		title: 'Son of Vengeance',
 		element: 'fire',
 		weakness: 'water',

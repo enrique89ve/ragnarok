@@ -271,7 +271,7 @@ const searchAcrossSources = (
 	const minScore = opts.minScore ?? 0.5;
 	const limit = opts.limit ?? 10;
 	const usedAssets = opts.excludeUsedAssets
-		? new Set([...sources.artRegistry.values()])
+		? new Set([...sources.artRegistry.values(), ...collectEntityPortraits()])
 		: new Set<string>();
 
 	const matches: SearchMatch[] = [];
@@ -359,10 +359,22 @@ const detectBrokenArtRefs = (sources: Sources): Issue[] => {
 	return issues;
 };
 
+const collectEntityPortraits = (): Set<string> => {
+	const out = new Set<string>();
+	for (const h of Object.values(ALL_NORSE_HEROES) as Array<{ portrait?: string }>) {
+		if (h.portrait) out.add(h.portrait);
+	}
+	for (const k of Object.values(NORSE_KINGS) as Array<{ portrait?: string }>) {
+		if (k.portrait) out.add(k.portrait);
+	}
+	return out;
+};
+
 const detectOrphanedFiles = (sources: Sources): Issue[] => {
 	const referenced = new Set<string>([
 		...sources.artRegistry.values(),
 		...sources.manifestAssetIds,
+		...collectEntityPortraits(),
 	]);
 	const issues: Issue[] = [];
 	for (const f of sources.physicalFiles) {
@@ -413,6 +425,16 @@ const classifyArtRegistryEntries = (sources: Sources): Issue[] => {
 	const planned = loadPlannedCardIds();
 
 	for (const key of sources.artRegistry.keys()) {
+		if (isHeroKey(key) || isKingKey(key)) {
+			issues.push({
+				kind: 'art_registry_orphan',
+				severity: 'error',
+				message: `ART_REGISTRY["${key}"] is a hero/king mapping — these must live on the entity's portrait field, not in ART_REGISTRY`,
+				cardId: key,
+				suggestion: 'Move the asset id into ALL_NORSE_HEROES/NORSE_KINGS[id].portrait and delete the ART_REGISTRY entry.',
+			});
+			continue;
+		}
 		if (isCardKey(key)) {
 			if (registryIds.has(key)) continue;
 			if (planned.has(key)) {
@@ -434,57 +456,56 @@ const classifyArtRegistryEntries = (sources: Sources): Issue[] => {
 			});
 			continue;
 		}
-
-		if (isHeroKey(key)) {
-			if (heroIds.has(key)) continue;
-			issues.push({
-				kind: 'unknown_hero_mapping',
-				severity: 'error',
-				message: `ART_REGISTRY["${key}"] maps a hero that does not exist in ALL_NORSE_HEROES`,
-				cardId: key,
-				suggestion: 'Either add the hero definition or delete the mapping.',
-			});
-			continue;
-		}
-
-		if (isKingKey(key)) {
-			if (kingIds.has(key)) continue;
-			issues.push({
-				kind: 'unknown_king_mapping',
-				severity: 'error',
-				message: `ART_REGISTRY["${key}"] maps a king that does not exist in NORSE_KINGS`,
-				cardId: key,
-				suggestion: 'Either add the king definition or delete the mapping.',
-			});
-			continue;
-		}
-
 		issues.push({
 			kind: 'art_registry_orphan',
 			severity: 'error',
-			message: `ART_REGISTRY["${key}"] uses a key that is neither a card id, hero id, nor king id`,
+			message: `ART_REGISTRY["${key}"] uses a key that is neither a numeric card id, hero id, nor king id`,
 			cardId: key,
 		});
 	}
 
 	for (const heroId of heroIds) {
-		if (!sources.artRegistry.has(heroId)) {
+		const portrait = ALL_NORSE_HEROES[heroId]?.portrait;
+		if (!portrait) {
 			issues.push({
 				kind: 'hero_missing_art',
 				severity: 'error',
-				message: `Hero "${heroId}" exists in ALL_NORSE_HEROES but has no entry in ART_REGISTRY`,
+				message: `Hero "${heroId}" has no portrait field in ALL_NORSE_HEROES`,
 				cardId: heroId,
+				suggestion: 'Set portrait: \'<assetId>\' on the entity definition.',
+			});
+			continue;
+		}
+		if (!sources.physicalFiles.has(portrait)) {
+			issues.push({
+				kind: 'broken_asset_ref',
+				severity: 'error',
+				message: `Hero "${heroId}".portrait = '${portrait}' but /art/nfts/${portrait}.webp does not exist`,
+				cardId: heroId,
+				assetId: portrait,
 			});
 		}
 	}
 
 	for (const kingId of kingIds) {
-		if (!sources.artRegistry.has(kingId)) {
+		const portrait = NORSE_KINGS[kingId]?.portrait;
+		if (!portrait) {
 			issues.push({
 				kind: 'king_missing_art',
 				severity: 'error',
-				message: `King "${kingId}" exists in NORSE_KINGS but has no entry in ART_REGISTRY`,
+				message: `King "${kingId}" has no portrait field in NORSE_KINGS`,
 				cardId: kingId,
+				suggestion: 'Set portrait: \'<assetId>\' on the entity definition.',
+			});
+			continue;
+		}
+		if (!sources.physicalFiles.has(portrait)) {
+			issues.push({
+				kind: 'broken_asset_ref',
+				severity: 'error',
+				message: `King "${kingId}".portrait = '${portrait}' but /art/nfts/${portrait}.webp does not exist`,
+				cardId: kingId,
+				assetId: portrait,
 			});
 		}
 	}

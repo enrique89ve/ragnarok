@@ -945,7 +945,6 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       fixedCardIds: [],
       passiveEffect: 'leif_passives',
       chessAbility: 'king-leif',
-      portrait: 'leif-erikson'
     },
     // ===== COMMON =====
     {
@@ -958,7 +957,6 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       fixedCardIds: [],
       passiveEffect: 'askr_passives',
       chessAbility: 'king-askr',
-      portrait: '6c4b-otijmg2l'
     },
     {
       id: 'king-embla',
@@ -970,7 +968,6 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       fixedCardIds: [],
       passiveEffect: 'embla_passives',
       chessAbility: 'king-embla',
-      portrait: '3a95-a09cvqxa'
     },
     // ===== PREMIUM =====
     {
@@ -983,7 +980,6 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       fixedCardIds: [],
       passiveEffect: 'ymir_passives',
       chessAbility: 'king-ymir',
-      portrait: '8f78-n51onie8'
     },
     {
       id: 'king-buri',
@@ -995,7 +991,6 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       fixedCardIds: [],
       passiveEffect: 'buri_passives',
       chessAbility: 'king-buri',
-      portrait: '984f-0o06zvr0'
     },
     {
       id: 'king-surtr',
@@ -1007,7 +1002,6 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       fixedCardIds: [],
       passiveEffect: 'surtr_passives',
       chessAbility: 'king-surtr',
-      portrait: '30a7-1lckcwg0'
     },
     {
       id: 'king-borr',
@@ -1019,7 +1013,6 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       fixedCardIds: [],
       passiveEffect: 'borr_passives',
       chessAbility: 'king-borr',
-      portrait: '78e9-6mupjfob'
     },
     {
       id: 'king-yggdrasil',
@@ -1031,7 +1024,6 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       fixedCardIds: [],
       passiveEffect: 'yggdrasil_passives',
       chessAbility: 'king-yggdrasil',
-      portrait: 'a913-axqs13eu'
     },
     {
       id: 'king-audumbla',
@@ -1043,7 +1035,6 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       fixedCardIds: [],
       passiveEffect: 'audumbla_passives',
       chessAbility: 'king-audumbla',
-      portrait: '4655-o4xbxsth'
     },
     {
       id: 'king-gaia',
@@ -1055,7 +1046,6 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       fixedCardIds: [],
       passiveEffect: 'gaia_passives',
       chessAbility: 'king-gaia',
-      portrait: 'c838-ebed9878'
     },
     {
       id: 'king-brimir',
@@ -1067,7 +1057,6 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       fixedCardIds: [],
       passiveEffect: 'brimir_passives',
       chessAbility: 'king-brimir',
-      portrait: 'b1f2-3e7dd08d'
     },
     {
       id: 'king-ginnungagap',
@@ -1079,7 +1068,6 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       fixedCardIds: [],
       passiveEffect: 'ginnungagap_passives',
       chessAbility: 'king-ginnungagap',
-      portrait: '1d49-jajdixap'
     },
     {
       id: 'king-tartarus',
@@ -1091,7 +1079,6 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       fixedCardIds: [],
       passiveEffect: 'tartarus_passives',
       chessAbility: 'king-tartarus',
-      portrait: '6c5f-enclx79l'
     },
     {
       id: 'king-uranus',
@@ -1103,7 +1090,6 @@ export const CHESS_PIECE_HEROES: Record<ChessPieceType, ChessPieceHero[]> = {
       fixedCardIds: [],
       passiveEffect: 'uranus_passives',
       chessAbility: 'king-uranus',
-      portrait: '523f-0ovd1djs'
     }
   ],
   pawn: [

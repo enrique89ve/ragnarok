@@ -17,7 +17,9 @@ Cards that exist in `cardRegistry` but have no entry in `client/src/game/utils/a
 
 ## Pending cards
 
-_Queue is currently empty._ Add new rows here when a card lands in `cardRegistry` without an `ART_REGISTRY` entry.
+| cardId | Name | Type / Rarity / Class | Mechanic |
+|--------|------|------------------------|----------|
+| 20406 | Theseus, the Equalizer | minion / epic / paladin | Greek hero — needs classical hoplite/paladin art with golden tones — see `client/src/game/data/cardRegistry/sets/core/classes/paladin.ts` |
 
 ## Pending filenames are owned by `pending-art.json`
 

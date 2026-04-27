@@ -14,7 +14,8 @@ export const JAPANESE_HEROES: Record<string, NorseHero> = {
 	// ==================== 1. IZANAMI - Sacrifice Mechanic ====================
 	'hero-izanami': {
 		id: 'hero-izanami',
-		name: 'Izanami',
+        portrait: 'a415-w915qhro',
+        name: 'Izanami',
 		title: 'She Who Invites',
 		element: 'dark',
 		weakness: 'light',
@@ -84,7 +85,8 @@ export const JAPANESE_HEROES: Record<string, NorseHero> = {
 	// ==================== 2. TSUKUYOMI - Stealth Granting ====================
 	'hero-tsukuyomi': {
 		id: 'hero-tsukuyomi',
-		name: 'Tsukuyomi',
+        portrait: '6653-y9djk14f',
+        name: 'Tsukuyomi',
 		title: 'God of the Moon',
 		element: 'dark',
 		weakness: 'light',
@@ -145,7 +147,8 @@ export const JAPANESE_HEROES: Record<string, NorseHero> = {
 	// ==================== 3. FUJIN - Bounce Mechanic ====================
 	'hero-fujin': {
 		id: 'hero-fujin',
-		name: 'Fujin',
+        portrait: '203d-wpnddi55',
+        name: 'Fujin',
 		title: 'God of Wind',
 		element: 'electric',
 		weakness: 'grass',
@@ -201,7 +204,8 @@ export const JAPANESE_HEROES: Record<string, NorseHero> = {
 	// ==================== 4. SARUTAHIKO - Taunt Granting ====================
 	'hero-sarutahiko': {
 		id: 'hero-sarutahiko',
-		name: 'Sarutahiko',
+        portrait: 'e4d7-fxhqn1cf',
+        name: 'Sarutahiko',
 		title: 'Great Kami of the Crossroads',
 		element: 'light',
 		weakness: 'dark',
@@ -261,7 +265,8 @@ export const JAPANESE_HEROES: Record<string, NorseHero> = {
 	// ==================== 5. KAMIMUSUBI - Heal + Buff Combo ====================
 	'hero-kamimusubi': {
 		id: 'hero-kamimusubi',
-		name: 'Kamimusubi',
+        portrait: '1f64-yh413x60',
+        name: 'Kamimusubi',
 		title: 'Divine Creator',
 		element: 'water',
 		weakness: 'electric',

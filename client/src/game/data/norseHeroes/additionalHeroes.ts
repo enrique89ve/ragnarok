@@ -14,6 +14,7 @@ export const ADDITIONAL_HEROES: Record<string, NorseHero> = {
   // ==================== 23. THORGRIM ====================
   'hero-thorgrim': {
     id: 'hero-thorgrim',
+      portrait: 'c12e-9p6c1ttu',
     name: 'Thorgrim',
     title: 'Thunder Warrior',
     element: 'electric',
@@ -69,6 +70,7 @@ export const ADDITIONAL_HEROES: Record<string, NorseHero> = {
   // ==================== 24. GEFJON — Fortune's Edge ====================
   'hero-gefjon': {
     id: 'hero-gefjon',
+      portrait: '3e44-araj8dlb',
     name: 'Gefjon',
     title: "Fortune's Edge",
     element: 'light',
@@ -121,6 +123,7 @@ export const ADDITIONAL_HEROES: Record<string, NorseHero> = {
   // ==================== 25. LOGI ====================
   'hero-logi': {
     id: 'hero-logi',
+      portrait: '97c0-gly90upv',
     name: 'Logi',
     title: 'Fire Giant',
     element: 'fire',
@@ -174,6 +177,7 @@ export const ADDITIONAL_HEROES: Record<string, NorseHero> = {
   // ==================== 26. FJORGYN ====================
   'hero-fjorgyn': {
     id: 'hero-fjorgyn',
+      portrait: '5579-rtdz78q8',
     name: 'Fjorgyn',
     title: 'Earth Mother',
     element: 'grass',
@@ -227,6 +231,7 @@ export const ADDITIONAL_HEROES: Record<string, NorseHero> = {
   // ==================== 27. VALTHRUD ====================
   'hero-valthrud': {
     id: 'hero-valthrud',
+      portrait: '534a-jec4gcf3',
     name: 'Valthrud',
     title: 'Storm Shaman',
     element: 'electric',
@@ -284,6 +289,7 @@ export const ADDITIONAL_HEROES: Record<string, NorseHero> = {
   // ==================== 28. YLVA ====================
   'hero-ylva': {
     id: 'hero-ylva',
+      portrait: 'd485-79u29gow',
     name: 'Ylva',
     title: 'Wolf Mother',
     element: 'grass',
@@ -337,6 +343,7 @@ export const ADDITIONAL_HEROES: Record<string, NorseHero> = {
   // ==================== 29. BRAKKI ====================
   'hero-brakki': {
     id: 'hero-brakki',
+      portrait: '92f4-85792li4',
     name: 'Brakki',
     title: 'Forge Master',
     element: 'fire',
@@ -390,6 +397,7 @@ export const ADDITIONAL_HEROES: Record<string, NorseHero> = {
   // ==================== 30. LIRIEN ====================
   'hero-lirien': {
     id: 'hero-lirien',
+      portrait: '39d5-zmwzqszw',
     name: 'Lirien',
     title: 'Wave Priestess',
     element: 'water',
@@ -443,6 +451,7 @@ export const ADDITIONAL_HEROES: Record<string, NorseHero> = {
   // ==================== 31. SOLVI ====================
   'hero-solvi': {
     id: 'hero-solvi',
+      portrait: '5a44-64d4n3cy',
     name: 'Solvi',
     title: 'Dawn Knight',
     element: 'light',
@@ -498,6 +507,7 @@ export const ADDITIONAL_HEROES: Record<string, NorseHero> = {
   // ==================== 32. GORMR ====================
   'hero-gormr': {
     id: 'hero-gormr',
+      portrait: 'e1e3-gg3jq3u0',
     name: 'Gormr',
     title: 'Venom Wyrm',
     element: 'dark',
@@ -554,6 +564,7 @@ export const ADDITIONAL_HEROES: Record<string, NorseHero> = {
   // ==================== 33. THRYMA ====================
   'hero-thryma': {
     id: 'hero-thryma',
+      portrait: 'd032-qyw3nqpe',
     name: 'Thryma',
     title: 'Storm Caller',
     element: 'electric',
@@ -607,6 +618,7 @@ export const ADDITIONAL_HEROES: Record<string, NorseHero> = {
   // ==================== 34. ELDRIN ====================
   'hero-eldrin': {
     id: 'hero-eldrin',
+      portrait: '6c37-llo1gkzy',
     name: 'Eldrin',
     title: 'Ember Mage',
     element: 'fire',
@@ -664,6 +676,7 @@ export const ADDITIONAL_HEROES: Record<string, NorseHero> = {
   // ==================== 35. MYRKA ====================
   'hero-myrka': {
     id: 'hero-myrka',
+      portrait: 'bc09-7plgy7m3',
     name: 'Myrka',
     title: 'Bog Witch',
     element: 'water',
@@ -718,6 +731,7 @@ export const ADDITIONAL_HEROES: Record<string, NorseHero> = {
   // ==================== 36. FJORA ====================
   'hero-fjora': {
     id: 'hero-fjora',
+      portrait: '888f-zv6117qs',
     name: 'Fjora',
     title: 'Nature Oracle',
     element: 'grass',
@@ -772,6 +786,7 @@ export const ADDITIONAL_HEROES: Record<string, NorseHero> = {
   // ==================== 15. SELENE ====================
   'hero-selene': {
     id: 'hero-selene',
+      portrait: '86f7-8cb16c88',
     name: 'Selene',
     title: 'Titaness of the Moon',
     element: 'dark',
@@ -833,6 +848,7 @@ export const ADDITIONAL_HEROES: Record<string, NorseHero> = {
   // ==================== 16. HECATE ====================
   'hero-hecate': {
     id: 'hero-hecate',
+      portrait: '9787-7ahpdg4c',
     name: 'Hecate',
     title: 'Goddess of Magic',
     element: 'dark',
@@ -890,6 +906,7 @@ export const ADDITIONAL_HEROES: Record<string, NorseHero> = {
   // ==================== 17. HELIOS ====================
   'hero-helios': {
     id: 'hero-helios',
+      portrait: '0dc0-t8g7ugzd',
     name: 'Helios',
     title: 'Titan of the Sun',
     element: 'light',
