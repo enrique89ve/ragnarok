@@ -314,7 +314,7 @@ const hunterTokens: CardData[] = [
 const paladinTokens: CardData[] = [
   {
     id: 8503,
-    name: 'Temple Guardian',
+    name: 'Temple Sentinel',
     description: 'A stone sentinel with a golden shield standing before temple gates.',
     flavorText: 'Sacred protectors of the divine temples.',
     type: 'minion',
@@ -379,7 +379,7 @@ const paladinTokens: CardData[] = [
   },
   {
     id: 8508,
-    name: 'Herald of Hel',
+    name: 'Herald of Hel Token',
     description: 'A half-living, half-dead figure on a three-legged horse, silence following in its wake.',
     flavorText: 'Half her face is living, half is dead. When Hel rides out at Ragnarök, even the gods feel Niflheim\'s cold. (Gylfaginning 34)',
     type: 'minion',
@@ -432,7 +432,7 @@ const warlockTokens: CardData[] = [];
 const mageTokens: CardData[] = [
   {
     id: 32032,
-    name: 'Seidr Deflection',
+    name: 'Seidr Deflection Token',
     description: 'A shimmering ward of woven rune-light hovering in mid-air.',
     flavorText: 'A fragment of diverted magic, given form and fury.',
     type: 'minion',
@@ -445,7 +445,7 @@ const mageTokens: CardData[] = [
   },
   {
     id: 31025,
-    name: 'Frog',
+    name: 'Polymorph Frog',
     description: 'A tiny enchanted frog with faintly glowing spots on its back.',
     flavorText: 'It was something else before. It does not remember what.',
     type: 'minion',
@@ -556,21 +556,6 @@ const warriorTokens: CardData[] = [
     race: 'Titan',
     class: 'Warrior',
     collectible: false
-  },
-  {
-    id: 9091,
-    name: 'Hound',
-    description: 'Charge',
-    flavorText: "Loyal, fast, and merciless. A hunter's best friend.",
-    type: 'minion',
-    rarity: 'common',
-    manaCost: 1,
-    attack: 1,
-    health: 1,
-    race: 'Beast',
-    class: 'Warrior',
-    keywords: ['charge'],
-    collectible: false
   }
 ];
 
@@ -599,23 +584,6 @@ const norseMythologyTokens: CardData[] = [
     collectible: false
   },
   {
-    id: 4310,
-    name: 'Shadow Hound',
-    manaCost: 2,
-    attack: 2,
-    health: 2,
-    description: 'Taunt',
-    flavorText: "Bound to serve the guardian of Hel's gates.",
-    rarity: 'common',
-    type: 'minion',
-    class: 'Neutral',
-    heroClass: 'neutral',
-    race: 'Beast',
-    keywords: ['taunt'],
-    categories: ['norse_mythology', 'token'],
-    collectible: false
-  },
-  {
     id: 4311,
     name: 'Shadow Wolf',
     manaCost: 2,
@@ -634,7 +602,7 @@ const norseMythologyTokens: CardData[] = [
   },
   {
     id: 4312,
-    name: 'Shadow Wolf',
+    name: 'Greater Shadow Wolf',
     manaCost: 3,
     attack: 3,
     health: 3,

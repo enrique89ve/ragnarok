@@ -120,20 +120,6 @@ export const warriorCards: CardData[] = [
     set: "genesis"
   },
   {
-    id: 5030,
-    name: "Raging Berserker",
-    manaCost: 3,
-    attack: 2,
-    health: 4,
-    description: "Whenever a minion takes damage, gain +1 Attack.",
-    flavorText: "He used to work as an accountant before finding his true calling as a frothing berserker.",
-    type: "minion",
-    rarity: "common",
-    class: "Warrior",
-    collectible: true,
-    set: "genesis"
-  },
-  {
     id: 5013,
     name: "Warrior's Bloodlust",
     manaCost: 0,
@@ -727,25 +713,6 @@ export const warriorCards: CardData[] = [
       type: "buff_weapon",
       buffAttack: 1,
       buffDurability: 1,
-      requiresTarget: false,
-      targetType: "none"
-    },
-    collectible: true,
-    set: "genesis"
-  },
-  {
-    id: 31054,
-    name: "Call of Valhalla",
-    manaCost: 2,
-    type: "spell",
-    rarity: "common",
-    description: "Give all damaged friendly minions +2 Attack.",
-    flavorText: "The rallying cry of Valhalla's chosen.",
-    class: "Warrior",
-    spellEffect: {
-      type: "buff_damaged_minions",
-      buffAttack: 2,
-      buffHealth: 0,
       requiresTarget: false,
       targetType: "none"
     },

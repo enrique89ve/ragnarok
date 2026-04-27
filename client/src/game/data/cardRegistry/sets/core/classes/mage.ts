@@ -434,7 +434,7 @@ export const mageCards: CardData[] = [
   },
   {
     id: 32031,
-    name: "Gemini Illusion",
+    name: "Gemini Illusion Token",
     manaCost: 0,
     attack: 0,
     health: 2,
@@ -533,26 +533,6 @@ export const mageCards: CardData[] = [
     class: "Mage",
     collectible: true,
     set: "genesis"
-  },
-  {
-    id: 20030,
-    name: "Skadi, Frost Queen",
-    manaCost: 9,
-    type: "hero",
-    rarity: "mythic",
-    description: "Battlecry: Summon a 3/6 Water Elemental. Your Elementals have Lifesteal this game.",
-    flavorText: "Skaði chose her husband by his feet alone — she picked the fairest pair, certain they belonged to Baldr, but found herself wed to Njörðr of the sea. She could not bear his gulls; he could not bear her wolves. They parted. (Gylfaginning 23)",
-    keywords: ["battlecry", "lifesteal"],
-    class: "Mage",
-    armorGain: 5,
-    collectible: true,
-    set: "genesis",
-    battlecry: {
-      type: "summon",
-      requiresTarget: false,
-      targetType: "none",
-      summonCardId: 20031
-    }
   },
   {
     id: 20031,

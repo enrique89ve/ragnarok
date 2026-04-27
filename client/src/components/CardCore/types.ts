@@ -10,7 +10,7 @@ export interface CardBaseProps {
   // Card identity and metadata
   id?: string | number;
   name: string;
-  rarity?: 'basic' | 'common' | 'rare' | 'epic' | 'mythic';
+  rarity?: 'common' | 'rare' | 'epic' | 'mythic';
   type?: 'minion' | 'spell' | 'weapon';
   
   // Card stats
@@ -80,6 +80,6 @@ export interface CardAnimationState {
 }
 
 // Re-export types to be used by consuming components
-export type CardRarity = 'basic' | 'common' | 'rare' | 'epic' | 'mythic';
+export type CardRarity = 'common' | 'rare' | 'epic' | 'mythic';
 export type CardType = 'minion' | 'spell' | 'weapon';
 export type CardSize = 'small' | 'medium' | 'large';

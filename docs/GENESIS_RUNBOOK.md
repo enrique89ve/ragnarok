@@ -378,7 +378,7 @@ Each signer independently runs the replay engine (pointed at a different API nod
 - `genesis_state.genesisBlock === <BLOCK_NUM>`
 - `genesis_state.readerHash === <ENGINE_HASH>` (matches hash bundle from Checkpoint H1)
 - `supply_counters` initialized to 0 for all rarities
-- Supply caps match: common 2000, rare 1000, epic 500, mythic 250
+- Supply caps match the canonical table in [`RULEBOOK.md`](RULEBOOK.md) Card Rarity section
 
 **Checkpoint B2**: All signers confirm identical genesis state from independent nodes. Reader hash in genesis state matches the engine hash from the pre-ceremony hash bundle.
 

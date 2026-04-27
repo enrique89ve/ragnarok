@@ -35,7 +35,7 @@ export default function executeDrawAndShuffle(
             description: effect.shuffleCardDescription || '',
             manaCost: effect.shuffleCardCost || 0,
             type: effect.shuffleCardType || 'spell',
-            rarity: 'token',
+            rarity: 'common',
             heroClass: 'neutral'
           },
           canAttack: false,

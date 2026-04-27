@@ -25,7 +25,7 @@ export interface SimpleCardData {
   health?: number;
   description?: string;
   type: 'minion' | 'spell' | 'weapon' | 'artifact' | 'armor';
-  rarity?: 'basic' | 'common' | 'rare' | 'epic' | 'mythic';
+  rarity?: 'common' | 'rare' | 'epic' | 'mythic';
   tribe?: string;
   cardClass?: string;
   keywords?: string[];
@@ -464,7 +464,7 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
 
       <div className="card-name-banner">
         <span className={`card-name ${nameClass}`}>{card.name}</span>
-        {card.rarity && card.rarity !== 'basic' && card.rarity !== 'common' && (
+        {card.rarity && card.rarity !== 'common' && (
           <span className={`rarity-gem rarity-gem-${card.rarity}`} />
         )}
       </div>

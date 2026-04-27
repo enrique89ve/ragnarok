@@ -73,24 +73,6 @@ export const rogueCards: CardData[] = [
     set: "genesis"
   },
   {
-    id: 12105,
-    name: "Shadow Strike",
-    manaCost: 1,
-    description: "Deal 3 damage to the enemy hero.",
-    flavorText: "You never see the blade. You only see the blood.",
-    type: "spell",
-    rarity: "common",
-    class: "Rogue",
-    spellEffect: {
-      type: "damage",
-      value: 3,
-      targetType: "enemy_hero",
-      requiresTarget: false
-    },
-    collectible: true,
-    set: "genesis"
-  },
-  {
     id: 12106,
     name: "Mist of Niflheim",
     manaCost: 2,
@@ -237,21 +219,6 @@ export const rogueCards: CardData[] = [
     flavorText: "Vanished without a trace. The ransom note arrived before anyone noticed.",
     type: "minion",
     rarity: "rare",
-    class: "Rogue",
-    keywords: ["combo"],
-    collectible: true,
-    set: "genesis"
-  },
-  {
-    id: 12404,
-    name: "Erik the Shadow Lord",
-    manaCost: 3,
-    attack: 2,
-    health: 2,
-    description: "Combo: Gain +2/+2 for each card played earlier this turn.",
-    flavorText: "Bound by chains of shadow, he grows stronger with each broken link.",
-    type: "minion",
-    rarity: 'rare',
     class: "Rogue",
     keywords: ["combo"],
     collectible: true,

@@ -7,6 +7,7 @@
 import express, { Request, Response } from 'express';
 import { directDb as _directDb } from '../db';
 import { verifyHiveAuth, isValidHiveUsername, isTimestampFresh } from '../services/hiveAuth';
+import { fallbackChain, sqlRarityOrderByCase, type Rarity } from '../../shared/schemas/rarity';
 
 // This file is only imported when DATABASE_URL is set (see server/routes.ts)
 const directDb = _directDb!;
@@ -20,6 +21,9 @@ interface PackTypeRow {
 	rare_slots: number;
 	epic_slots: number;
 	wildcard_slots: number;
+	// Both columns are wildcard-upgrade odds (percent). `legendary_chance` is
+	// historical naming that pre-dates the canon; today it adds to the
+	// `mythic_chance` roll window. See `determineWildcardRarity` below.
 	legendary_chance: number | null;
 	mythic_chance: number | null;
 }
@@ -108,13 +112,7 @@ router.get('/supply-stats', async (_req: Request, res: Response) => {
 					SUM(GREATEST(remaining_supply - reward_reserve, 0)) as pack_remaining
 				FROM card_supply
 				GROUP BY nft_rarity
-				ORDER BY
-					CASE nft_rarity
-						WHEN 'mythic' THEN 1
-						WHEN 'epic' THEN 2
-						WHEN 'rare' THEN 3
-						WHEN 'common' THEN 4
-					END
+				ORDER BY ${sqlRarityOrderByCase('nft_rarity')}
 			`);
 
 			const typeStats = await directDb.query(`
@@ -237,15 +235,8 @@ router.post('/open', async (req: Request, res: Response) => {
 		}
 		const openingSeed = `${userId}:${packTypeId}:${historyId}`;
 
-		const rarityFallback: Record<string, string[]> = {
-			common: ['common', 'rare', 'epic', 'mythic'],
-			rare: ['rare', 'epic', 'mythic'],
-			epic: ['epic', 'mythic'],
-			mythic: ['mythic', 'epic'],
-		};
-
 		async function claimDeterministicCard(
-			rarity: string,
+			rarity: Rarity,
 			slotSeed: string,
 			preferredType?: string,
 		): Promise<CardSupplyRow | null> {
@@ -277,8 +268,8 @@ router.post('/open', async (req: Request, res: Response) => {
 			return (updated.rows[0] as CardSupplyRow | undefined) ?? null;
 		}
 
-		async function pullCard(nftRarity: string, slotSeed: string, preferredType?: string): Promise<CardSupplyRow | null> {
-			const fallbackOrder = rarityFallback[nftRarity] || [nftRarity];
+		async function pullCard(nftRarity: Rarity, slotSeed: string, preferredType?: string): Promise<CardSupplyRow | null> {
+			const fallbackOrder = fallbackChain(nftRarity);
 
 			for (const rarity of fallbackOrder) {
 				if (preferredType) {
@@ -293,7 +284,9 @@ router.post('/open', async (req: Request, res: Response) => {
 			return null;
 		}
 
-		function determineWildcardRarity(slotSeed: string, mythicChance: number): string {
+		// `mythicChance` is the percent roll for the wildcard slot to upgrade
+		// to mythic; epic gets the next 20-pt window; otherwise rare.
+		function determineWildcardRarity(slotSeed: string, mythicChance: number): Rarity {
 			const roll = createDeterministicRng(`wildcard:${slotSeed}`)() * 100;
 			if (roll < mythicChance) return 'mythic';
 			if (roll < mythicChance + 20) return 'epic';

@@ -194,7 +194,7 @@ export function executeKingPassive(
               attack: passive.summonData.attack,
               health: passive.summonData.health,
               description: keywords.join(', '),
-              rarity: 'token' as any,
+              rarity: 'common',
               type: 'minion',
               keywords: keywords
             },

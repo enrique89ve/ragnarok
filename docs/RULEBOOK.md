@@ -116,13 +116,17 @@ Each hero has three unique abilities:
 
 ### Card Rarity
 
-| Rarity | Color | Eitr (Forge) | Eitr (Dissolve) |
-|--------|-------|--------------|-----------------|
-| Common | Gray | 40 | 5 |
-| Rare | Blue | 100 | 20 |
-| Epic | Purple | 400 | 100 |
-| Mythic | Orange | 1600 | 400 |
-| Token | Gray (darker) | N/A | N/A |
+Canonical 4-tier rarity. The runtime enum lives in [`shared/schemas/rarity.ts`](../shared/schemas/rarity.ts); every other place that talks about caps, eitr costs or deck limits points back to this table.
+
+| Rarity | Color | NFT Supply (per card) | Deck Limit | Eitr (Forge) | Eitr (Dissolve) |
+|--------|-------|----------------------|------------|--------------|-----------------|
+| Common | Gray | 2,000 | 2 copies | 40 | 5 |
+| Rare | Blue | 1,000 | 2 copies | 100 | 20 |
+| Epic | Purple | 500 | 2 copies | 400 | 100 |
+| Mythic | Orange | 250 | 1 copy | 1,600 | 400 |
+| Token | Gray (darker) | N/A (not collectible) | N/A | N/A | N/A |
+
+`Token` is not a rarity tier — it is a marker for non-collectible combat-only cards (`collectible: false` in the registry; ID range 9000-9099 and others). Tokens are excluded from packs, supply caps and deck limits.
 
 ### Card ID Ranges
 
@@ -850,8 +854,7 @@ Base cards are infinite supply — they are NOT NFTs and don't count toward the 
 
 - **6 cards** per hand (max)
 - Deck size: **up to 30 cards** (can be fewer — even 0)
-- Maximum **2 copies** of any card (except Mythics)
-- Maximum **1 copy** of Mythic cards
+- Per-rarity copy limits: see Card Rarity table above (2 copies for common/rare/epic, 1 copy for mythic)
 - Can include **class cards** and **neutral cards**
 - Cannot include cards from other classes
 
@@ -901,7 +904,7 @@ The game's economy is managed by two on-chain accounts:
 
 ### Genesis Ceremony (One-Time)
 
-1. **Genesis broadcast**: Initialize card supply caps (2,000/common, 1,000/rare, 500/epic, 250/mythic per card)
+1. **Genesis broadcast**: Initialize card supply caps per the Card Rarity table above
 2. **Mint batches**: Create all collectible NFT cards (~2,082 unique cards)
 3. **Seal broadcast**: Permanently lock minting — no new NFTs can ever be created
 4. **Authority brick**: Set all authority thresholds to 255 (unreachable) — the genesis account becomes cryptographically inert forever

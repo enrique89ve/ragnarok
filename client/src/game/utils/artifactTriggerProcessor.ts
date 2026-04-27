@@ -48,7 +48,7 @@ function summonToken(
 			attack: token.attack,
 			health: token.health,
 			description: `Summoned by artifact.`,
-			rarity: 'token' as const,
+			rarity: 'common' as const,
 			heroClass: 'neutral',
 			race: 'none',
 			keywords: kw

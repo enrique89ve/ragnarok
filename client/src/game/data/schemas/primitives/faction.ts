@@ -1,7 +1,7 @@
 /**
  * Faction canon — Norse mythology allegiances + cross-cutting categories.
  *
- * Source: docs/NFT_ART_PROTOCOL.md §2.1 + observed values in metadata.json.
+ * Source: faction values used by Norse / Greek / cross-mythology cards.
  */
 import { z } from 'zod';
 

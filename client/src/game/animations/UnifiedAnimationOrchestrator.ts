@@ -227,7 +227,7 @@ export const useAnimationOrchestrator = create<AnimationOrchestratorState>((set,
 export function scheduleSummonEffect(
   position: Position,
   cardName: string,
-  rarity: 'basic' | 'common' | 'rare' | 'epic' | 'mythic',
+  rarity: 'common' | 'rare' | 'epic' | 'mythic',
   phase?: string
 ): string {
   const duration = rarity === 'mythic' ? 2000 : 1200;

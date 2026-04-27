@@ -51,7 +51,7 @@ export default function executeSummonJadeGolem(
       description: `A ${golemSize}/${golemSize} Yggdrasil Golem.`,
       manaCost: Math.min(golemSize, 10),
       type: 'minion',
-      rarity: 'token',
+      rarity: 'common',
       heroClass: 'neutral',
       attack: golemSize,
       health: golemSize,

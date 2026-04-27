@@ -24,7 +24,6 @@ import { debug } from '../../config/debugConfig';
 import { useGameStore } from '../../stores/gameStore';
 import { useCraftingStore } from '../../crafting/craftingStore';
 import { resolveHeroPortrait, DEFAULT_PORTRAIT } from '../../utils/art/artMapping';
-import { assetPath } from '../../utils/assetPath';
 import CinematicCrawl from '../campaign/CinematicCrawl';
 import './HeroPortraitEnhanced.css';
 import './chess-realm-skins.css';
@@ -135,8 +134,8 @@ interface HeroPortraitPanelProps {
 
 const HeroPortraitPanel: React.FC<HeroPortraitPanelProps> = ({ army, side, pieceCount }) => {
   const king = army.king;
-  const kingPortrait = resolveHeroPortrait(king.id, king.portrait) || assetPath(`/portraits/kings/${king.id?.replace('king-', '')}.webp`);
-  const fallbackPortrait = assetPath(`/portraits/heroes/${king.heroClass}.png`);
+  const kingPortrait = resolveHeroPortrait(king.id, king.portrait) ?? DEFAULT_PORTRAIT;
+  const fallbackPortrait = DEFAULT_PORTRAIT;
   const safeFallback = DEFAULT_PORTRAIT;
   const isPlayer = side === 'player';
 
@@ -191,8 +190,8 @@ interface PlayerPortraitProps {
 
 const PlayerHeroPortrait: React.FC<PlayerPortraitProps> = ({ army, pieceCount }) => {
   const king = army.king;
-  const kingPortrait = resolveHeroPortrait(king.id, king.portrait) || assetPath(`/portraits/kings/${king.id?.replace('king-', '')}.webp`);
-  const fallbackPortrait = assetPath(`/portraits/heroes/${king.heroClass}.png`);
+  const kingPortrait = resolveHeroPortrait(king.id, king.portrait) ?? DEFAULT_PORTRAIT;
+  const fallbackPortrait = DEFAULT_PORTRAIT;
   const safeFallback = DEFAULT_PORTRAIT;
   const [isCasting, setIsCasting] = useState(false);
   const prevMinesRef = useRef<number | null>(null);
@@ -531,9 +530,7 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
       debug.chess(`createPetFromChessPiece: Skipping norseHeroId - piece.type=${piece.type}, isPawn=${piece.type === 'pawn'}, hasArmyEntry=${!!army[piece.type as keyof ArmySelectionType]}`);
     }
     
-    const heroPortrait = norseHeroId
-      ? resolveHeroPortrait(norseHeroId) || assetPath(`/portraits/heroes/${heroName.split(' ')[0].toLowerCase()}.png`)
-      : assetPath(`/portraits/heroes/${heroName.split(' ')[0].toLowerCase()}.png`);
+    const heroPortrait = (norseHeroId ? resolveHeroPortrait(norseHeroId) : undefined) ?? DEFAULT_PORTRAIT;
 
     return {
       id: piece.id,

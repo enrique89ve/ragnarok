@@ -38,7 +38,7 @@ Browser:
 - **Replay engine** is client-side: browser fetches ops, applies deterministic rules, builds IndexedDB
 - **No HAF / no backend indexer required** — the browser IS the indexer
 - **21 op types**: genesis, seal, mint, transfer, burn, pack_commit, pack_reveal, reward_claim, match_anchor, match_result, level_up, queue_join, queue_leave, slash_evidence, card_transfer, pack_mint, pack_distribute, pack_transfer, pack_burn, card_replicate, card_merge
-- **Supply caps**: 2,000/common, 1,000/rare, 500/epic, 250/mythic per card ID
+- **Supply caps**: canonical per-card-per-rarity caps live in [`docs/RULEBOOK.md`](RULEBOOK.md) (Card Rarity table); enforced at seed by `server/seedCardSupply.ts`
 
 ## Test Flow
 

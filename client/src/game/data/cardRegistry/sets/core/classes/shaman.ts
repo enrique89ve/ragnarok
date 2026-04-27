@@ -350,27 +350,6 @@ export const shamanCards: CardData[] = [
     set: "genesis"
   },
   {
-    id: 20102,
-    name: "Echo of the World Serpent",
-    manaCost: 9,
-    attack: 6,
-    health: 6,
-    type: "minion",
-    rarity: "mythic",
-    description: "Battlecry: Repeat all other Battlecries from cards you played this game (targets chosen randomly).",
-    flavorText: "The World Serpent echoes all that came before.",
-    keywords: ["battlecry"],
-    class: "Shaman",
-    collectible: true,
-    set: "genesis",
-    battlecry: {
-      type: "replay_battlecries",
-      requiresTarget: false,
-      targetType: "none",
-      isRandom: true
-    }
-  },
-  {
     id: 20119,
     name: "Echo of the Tidal Healer",
     manaCost: 5,
@@ -458,22 +437,6 @@ export const shamanCards: CardData[] = [
       cardName: "Mass Polymorph",
       costReduction: 1
     }
-  },
-  {
-    id: 20408,
-    name: "Gaia, Stone Mother",
-    manaCost: 8,
-    attack: 5,
-    health: 10,
-    type: "minion",
-    rarity: "epic",
-    description: "Taunt. At the end of your turn, summon a 2/3 Elemental with Taunt.",
-    flavorText: "Mother Earth herself defends her children.",
-    keywords: ["taunt"],
-    race: "Elemental",
-    class: "Shaman",
-    collectible: true,
-    set: "genesis"
   },
   {
     id: 40131,

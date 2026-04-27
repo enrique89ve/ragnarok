@@ -21,7 +21,7 @@ import { useCollectionMilestoneStore } from '../../stores/collectionMilestoneSto
 import './collection.css';
 import '../styles/holoEffect.css';
 
-type FilterRarity = 'all' | 'basic' | 'common' | 'rare' | 'epic' | 'mythic';
+type FilterRarity = 'all' | 'common' | 'rare' | 'epic' | 'mythic';
 type FilterType = 'all' | 'hero' | 'minion' | 'spell' | 'weapon';
 type SortBy = 'recent' | 'name' | 'rarity' | 'mint';
 
@@ -42,7 +42,6 @@ const RARITY_PILLS: { value: FilterRarity; label: string; color: string; activeC
 	{ value: 'epic', label: 'Epic', color: 'rgba(147,51,234,0.15)', activeColor: 'rgba(147,51,234,0.5)' },
 	{ value: 'rare', label: 'Rare', color: 'rgba(59,130,246,0.15)', activeColor: 'rgba(59,130,246,0.5)' },
 	{ value: 'common', label: 'Common', color: 'rgba(107,114,128,0.15)', activeColor: 'rgba(107,114,128,0.5)' },
-	{ value: 'basic', label: 'Basic', color: 'rgba(156,163,175,0.15)', activeColor: 'rgba(156,163,175,0.5)' },
 ];
 
 const TYPE_PILLS: { value: FilterType; label: string; icon: string }[] = [

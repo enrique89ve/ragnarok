@@ -31,7 +31,7 @@ export default function executeChangeHeroPower(
         description: effect.newHeroPower.description || effect.description || '',
         manaCost: effect.newHeroPower.cost !== undefined ? effect.newHeroPower.cost : (effect.cost !== undefined ? effect.cost : 2),
         type: 'hero_power',
-        rarity: 'basic',
+        rarity: 'common',
         heroClass: effect.newHeroPower.class || effect.class || 'neutral',
         spellEffect: effect.newHeroPower.effect || effect.newHeroPower
       },

@@ -103,7 +103,7 @@ export const paladinCards: CardData[] = [
   },
   {
     id: 8007,
-    name: "Baldur's Radiance",
+    name: "Baldur's Mending",
     manaCost: 2,
     description: "Restore 6 Health.",
     flavorText: "The light that cannot be dimmed, cast by the god who could not be harmed — until he was.",

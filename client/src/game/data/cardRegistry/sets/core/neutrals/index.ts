@@ -2163,21 +2163,6 @@ const epicNeutralMinions: CardData[] = [
     }
   },
   {
-    id: 29973,
-    name: 'Herald of Ragnarok',
-    description: 'At the start of your turn, destroy ALL minions.',
-    flavorText: 'When he speaks, the end of all things begins.',
-    type: 'minion',
-    rarity: 'rare',
-    manaCost: 2,
-    attack: 0,
-    health: 7,
-    class: 'Neutral',
-    collectible: true,
-    set: 'genesis',
-    startOfTurn: { type: "destroy_all_minions" }
-  },
-  {
     id: 29974,
     name: 'Jotun of the Depths',
     description: 'Costs (1) less for each other minion on the battlefield.',
@@ -2362,7 +2347,7 @@ const epicNeutralMinions: CardData[] = [
   },
   {
     id: 30046,
-    name: 'Runeforged Blade',
+    name: 'Runeforged Edge',
     description: 'After your hero attacks, give a random minion in your hand +1/+1.',
     flavorText: 'Inscribed with the power of the ancient runes.',
     type: 'weapon',
@@ -6671,7 +6656,7 @@ const mythologyLegendaryMinions: CardData[] = [
   },
   {
     id: 32057,
-    name: 'Nemean Lion',
+    name: 'Nemean Mother',
     manaCost: 6,
     attack: 6,
     health: 5,
@@ -8084,27 +8069,6 @@ const epicBeastMinions: CardData[] = [
 // Mythic Beast Minions (IDs 33145-33149)
 const legendaryBeastMinions: CardData[] = [
   {
-    id: 33145,
-    name: 'Hanuman the Wild',
-    description: 'Battlecry: Give your opponent 2 Bananas.',
-    flavorText: 'The great ape king shares his treasures, but always at a price.',
-    type: 'minion',
-    rarity: 'rare',
-    manaCost: 3,
-    attack: 5,
-    health: 5,
-    race: 'Beast',
-    class: 'Neutral',
-    set: 'genesis',
-    keywords: ['battlecry'],
-    collectible: true,
-    battlecry: {
-      type: 'give_opponent_cards',
-      cardId: 33151,
-      count: 2
-    }
-  },
-  {
     id: 33146,
     name: 'The Beast of Tartarus',
     description: "Deathrattle: Summon a 3/3 Sindri's Apprentice for your opponent.",
@@ -8213,20 +8177,6 @@ const beastTokens: CardData[] = [
       targetType: 'any_minion',
       requiresTarget: true
     }
-  },
-  {
-    id: 33152,
-    name: "Sindri's Apprentice",
-    description: 'A soot-covered young dwarf clutching a glowing hammer.',
-    flavorText: 'Freed from the belly of the beast!',
-    type: 'minion',
-    rarity: 'rare',
-    manaCost: 3,
-    attack: 3,
-    health: 3,
-    class: 'Neutral',
-    set: 'genesis',
-    collectible: false
   }
 ];
 

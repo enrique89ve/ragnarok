@@ -869,7 +869,7 @@ const SimpleHolographicCard: React.FC<SimpleHolographicCardProps> = ({
           </div>
         )}
         {/* Pokemon-151 style sunpillar holo — whole card overlay */}
-        {isHovering && card.rarity.toLowerCase() !== 'common' && card.rarity.toLowerCase() !== 'basic' && (
+        {isHovering && card.rarity.toLowerCase() !== 'common' && (
           <>
             <div
               style={{

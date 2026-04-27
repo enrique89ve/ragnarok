@@ -970,60 +970,6 @@ const earthElementLegendaries: CardData[] = [
     collectible: true
   },
   {
-    id: 4376,
-    name: "Audhumla, the Primordial Cow",
-    manaCost: 8,
-    attack: 6,
-    health: 8,
-    description: "Taunt. At the start of your turn, restore 2 Health to all friendly minions.",
-    flavorText: "The first being, whose milk nourished the gods and giants alike.",
-    rarity: 'rare',
-    type: "minion",
-    class: "Neutral",
-    heroClass: "neutral",
-    race: "Beast",
-    keywords: ["taunt"],
-    startOfTurn: {
-      type: "heal_all",
-      targetType: "friendly_minions",
-      value: 2
-    },
-    onAttack: {
-      type: 'apply_status',
-      statusEffect: 'freeze',
-      targetType: 'target'
-    },
-    categories: ["norse_mythology", "earth_legendary"],
-    collectible: true
-  },
-  {
-    id: 4378,
-    name: "Duneyrr, the Roaring Stag",
-    manaCost: 5,
-    attack: 4,
-    health: 5,
-    description: "Battlecry: Deal 2 damage to all enemy minions. When this deals damage, restore 1 Health to all friendly minions.",
-    flavorText: "Its roar shakes the World Tree.",
-    rarity: "epic",
-    type: "minion",
-    class: "Neutral",
-    heroClass: "neutral",
-    race: "Beast",
-    keywords: ["battlecry"],
-    battlecry: {
-      type: "damage_all",
-      targetType: "enemy_minions",
-      value: 2
-    },
-    onDamage: {
-      type: "heal_all",
-      targetType: "friendly_minions",
-      value: 1
-    },
-    categories: ["norse_mythology", "earth_legendary"],
-    collectible: true
-  },
-  {
     id: 4379,
     name: "Durathror, the Enduring Stag",
     manaCost: 6,
@@ -1225,30 +1171,7 @@ const waterElementLegendaries: CardData[] = [
     },
     categories: ["norse_mythology", "water_legendary"],
     collectible: true
-  },
-  {
-    id: 4386,
-    name: "Nyk, the Water Horse",
-    manaCost: 3,
-    attack: 2,
-    health: 3,
-    description: "Battlecry: Return a minion to its owner's hand. When this returns a minion, deal 1 damage to it.",
-    flavorText: "It lures the unwary into the deep.",
-    rarity: "rare",
-    type: "minion",
-    class: "Neutral",
-    heroClass: "neutral",
-    race: "Beast",
-    keywords: ["battlecry"],
-    battlecry: {
-      type: "bounce_and_damage",
-      targetType: "any_minion",
-      value: 1,
-      requiresTarget: true
-    },
-    categories: ["norse_mythology", "water_legendary"],
-    collectible: true
-  },
+  }
 ];
 
 // ============================================
@@ -1272,28 +1195,6 @@ const lightningElementLegendaries: CardData[] = [
     aura: {
       type: "self_buff_per_ally",
       condition: { element: "lightning" },
-      buffAttack: 1,
-      buffHealth: 0
-    },
-    categories: ["norse_mythology", "lightning_legendary"],
-    collectible: true
-  },
-  {
-    id: 4411,
-    name: "Bygul, Freyja's Swiftclaw",
-    manaCost: 5,
-    attack: 5,
-    health: 3,
-    description: "Charge. Each time this minion attacks, it gains +1 Attack permanently.",
-    flavorText: "Bygul's speed is unmatched, striking twice before the enemy can blink.",
-    rarity: "common",
-    type: "minion",
-    class: "Neutral",
-    heroClass: "neutral",
-    race: "Beast",
-    keywords: ["charge"],
-    onAttack: {
-      type: "buff_self",
       buffAttack: 1,
       buffHealth: 0
     },
@@ -1377,109 +1278,13 @@ const lightningElementLegendaries: CardData[] = [
     },
     categories: ["norse_mythology", "lightning_legendary"],
     collectible: true
-  },
-  {
-    id: 4415,
-    name: "Trjegul, Freyja's Stormpouncer",
-    manaCost: 4,
-    attack: 4,
-    health: 4,
-    description: "Charge. Whenever this minion attacks, deal 2 damage to all enemy minions.",
-    flavorText: "Trjegul's strength surges like a tempest, overwhelming its foes.",
-    rarity: "common",
-    type: "minion",
-    class: "Neutral",
-    heroClass: "neutral",
-    race: "Beast",
-    keywords: ["charge"],
-    onAttack: {
-      type: "damage_all",
-      targetType: "enemy_minions",
-      value: 2
-    },
-    categories: ["norse_mythology", "lightning_legendary"],
-    collectible: true
-  },
-  {
-    id: 4416,
-    name: "Tanngrisnir, the Charging Goat",
-    manaCost: 4,
-    attack: 3,
-    health: 3,
-    description: "Charge. When this minion attacks, deal 1 damage to all enemy minions.",
-    flavorText: "Tanngrisnir charges into battle, its hooves sparking with lightning.",
-    rarity: "common",
-    type: "minion",
-    class: "Neutral",
-    heroClass: "neutral",
-    race: "Beast",
-    keywords: ["charge"],
-    onAttack: {
-      type: "damage_all",
-      targetType: "enemy_minions",
-      value: 1
-    },
-    categories: ["norse_mythology", "lightning_legendary"],
-    collectible: true
-  },
-  {
-    id: 4417,
-    name: "Tanngnjostr, the Summoning Goat",
-    manaCost: 5,
-    attack: 2,
-    health: 4,
-    description: "Battlecry: Summon a 2/2 Goat with Charge. Whenever you summon a minion with Charge, give it +1 Health.",
-    flavorText: "Tanngnjostr calls upon its kin, bolstering the ranks with thunderous allies.",
-    rarity: "epic",
-    type: "minion",
-    class: "Neutral",
-    heroClass: "neutral",
-    race: "Beast",
-    keywords: ["battlecry"],
-    battlecry: {
-      type: "summon",
-      targetType: 'none',
-      summonCardId: 4418,
-      summonCount: 1
-    },
-    onSummon: {
-      type: "buff_summoned",
-      condition: { keyword: "charge" },
-      buffAttack: 0,
-      buffHealth: 1
-    },
-    categories: ["norse_mythology", "lightning_legendary"],
-    collectible: true
-  },
+  }
 ];
 
 // ============================================
 // FIRE ELEMENT MINIONS (Basic Pets)
 // ============================================
 const fireMinions: CardData[] = [
-  {
-    id: 5000,
-    name: "Ember Whelp",
-    manaCost: 2,
-    attack: 2,
-    health: 2,
-    description: "Battlecry: Deal 1 damage to an enemy minion.",
-    flavorText: "A young spawn of Muspelheim, spitting sparks with glee.",
-    rarity: "common",
-    type: "minion",
-    class: "Neutral",
-    heroClass: "neutral",
-    race: "Beast",
-    keywords: ["battlecry"],
-    battlecry: {
-      type: "damage",
-      targetType: "enemy_minion",
-      value: 1,
-      requiresTarget: true
-    },
-    categories: ["norse_mythology", "fire_minion"],
-    collectible: true
-  },
 ];
 
 // ============================================
@@ -1528,32 +1333,6 @@ const darkMinions: CardData[] = [
       targetType: "enemy_minion",
       debuffAttack: -2,
       duration: "this_turn",
-      requiresTarget: true
-    },
-    categories: ["norse_mythology", "dark_minion", "dark_common"],
-    collectible: true
-  },
-  {
-    id: 5402,
-    name: "Garmr's Pup",
-    manaCost: 2,
-    attack: 2,
-    health: 2,
-    description: "Battlecry: Deal 1 damage to an enemy minion and reduce its Attack by 1 this turn.",
-    flavorText: "A young pup of the Hellhound, learning the ways of darkness.",
-    rarity: "common",
-    type: "minion",
-    class: "Neutral",
-    heroClass: "neutral",
-    race: "Beast",
-    keywords: ["battlecry"],
-    battlecry: {
-      type: "compound",
-      targetType: "enemy_minion",
-      effects: [
-        { type: "damage", value: 1 },
-        { type: "debuff", debuffAttack: -1, duration: "this_turn" }
-      ],
       requiresTarget: true
     },
     categories: ["norse_mythology", "dark_minion", "dark_common"],
@@ -1641,42 +1420,7 @@ const darkMinions: CardData[] = [
     },
     categories: ["norse_mythology", "dark_minion", "dark_legendary"],
     collectible: true
-  },
-  {
-    id: 5406,
-    name: "Garmr's Howl",
-    manaCost: 5,
-    attack: 4,
-    health: 4,
-    description: "When this attacks, reduce target's Attack by 1. Passive: When this reduces Attack, deal 1 damage to all enemies. Battlecry: Deal 2 damage to all enemies.",
-    flavorText: "The howl of Hel's guardian echoes across the battlefield.",
-    rarity: 'epic',
-    type: "minion",
-    class: "Neutral",
-    heroClass: "neutral",
-    race: "Beast",
-    keywords: ["battlecry"],
-    onAttack: {
-      type: "debuff",
-      targetType: "attack_target",
-      debuffAttack: -1
-    },
-    passive: {
-      type: "on_attack_reduce",
-      effect: {
-        type: "damage",
-        targetType: "all_enemies",
-        value: 1
-      }
-    },
-    battlecry: {
-      type: "damage_all",
-      targetType: "all_enemies",
-      value: 2
-    },
-    categories: ["norse_mythology", "dark_minion", "dark_legendary"],
-    collectible: true
-  },
+  }
 ];
 
 // ============================================
@@ -2006,68 +1750,6 @@ const neutralMinions: CardData[] = [
 // ============================================
 const greekLegendaries: CardData[] = [
   {
-    id: 4400,
-    name: "Skinfaxi, the Day Horse",
-    manaCost: 3,
-    attack: 3,
-    health: 2,
-    description: "Battlecry: Give a minion +2 Attack until end of turn. At the start of your turn, give a random friendly minion +1 Attack.",
-    flavorText: "The horse whose mane brings the light of day, empowering allies at dawn.",
-    rarity: "rare",
-    type: "minion",
-    class: "Neutral",
-    heroClass: "neutral",
-    race: "Beast",
-    keywords: ["battlecry"],
-    battlecry: {
-      type: "buff_temporary",
-      targetType: "any_minion",
-      buffAttack: 2,
-      buffHealth: 0,
-      duration: "this_turn",
-      requiresTarget: true
-    },
-    startOfTurn: {
-      type: "buff",
-      targetType: "random_friendly_minion",
-      buffAttack: 1,
-      buffHealth: 0
-    },
-    categories: ["norse_mythology", "greek_legendary"],
-    collectible: true
-  },
-  {
-    id: 4401,
-    name: "Hildisvini, Freyja's Boar",
-    manaCost: 4,
-    attack: 3,
-    health: 4,
-    description: "Battlecry: Restore 5 Health to your hero. When this restores health to your hero, give a random friendly minion +1/+1.",
-    flavorText: "Freyja's loyal companion, bringing warmth and blessings to all allies.",
-    rarity: "rare",
-    type: "minion",
-    class: "Neutral",
-    heroClass: "neutral",
-    race: "Beast",
-    keywords: ["battlecry"],
-    battlecry: {
-      type: "heal_hero",
-      targetType: "friendly_hero",
-      value: 5
-    },
-    passive: {
-      type: "on_hero_heal",
-      effect: {
-        type: "buff",
-        targetType: "random_friendly_minion",
-        buffAttack: 1,
-        buffHealth: 1
-      }
-    },
-    categories: ["norse_mythology", "greek_legendary"],
-    collectible: true
-  },
-  {
     id: 4402,
     name: "Huldra, the Forest Spirit",
     manaCost: 6,
@@ -2158,67 +1840,7 @@ const greekLegendaries: CardData[] = [
     },
     categories: ["norse_mythology", "greek_legendary"],
     collectible: true
-  },
-  {
-    id: 4405,
-    name: "Heidrun, the Mead Goat",
-    manaCost: 4,
-    attack: 3,
-    health: 4,
-    description: "At the end of your turn, restore 2 Health to all friendly minions. When a friendly minion is healed, it gains +1 Health permanently.",
-    flavorText: "The goat whose mead sustains the gods, granting vigor to all.",
-    rarity: "common",
-    type: "minion",
-    class: "Neutral",
-    heroClass: "neutral",
-    race: "Beast",
-    keywords: [],
-    endOfTurn: {
-      type: "heal_all",
-      targetType: "friendly_minions",
-      value: 2
-    },
-    passive: {
-      type: "on_friendly_heal",
-      effect: {
-        type: "buff",
-        targetType: "healed_minion",
-        buffAttack: 0,
-        buffHealth: 1,
-        permanent: true
-      }
-    },
-    categories: ["norse_mythology", "greek_legendary"],
-    collectible: true
-  },
-  {
-    id: 4406,
-    name: "Hrímfaxi, the Night Horse",
-    manaCost: 3,
-    attack: 2,
-    health: 3,
-    description: "Battlecry: Give a minion Stealth until your next turn. At the end of your turn, if you have a minion with Stealth, draw a card.",
-    flavorText: "The horse whose mane drips with dew, shrouding allies in night's embrace.",
-    rarity: "rare",
-    type: "minion",
-    class: "Neutral",
-    heroClass: "neutral",
-    race: "Beast",
-    keywords: ["battlecry"],
-    battlecry: {
-      type: "grant_stealth_temporary",
-      targetType: "any_minion",
-      duration: "until_next_turn",
-      requiresTarget: true
-    },
-    endOfTurn: {
-      type: "draw_conditional",
-      condition: "has_stealthed_minion",
-      value: 1
-    },
-    categories: ["norse_mythology", "greek_legendary"],
-    collectible: true
-  },
+  }
 ];
 
 // ============================================

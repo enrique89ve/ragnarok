@@ -130,7 +130,7 @@ function createHeroCardInstance(player: LegacyPlayer): EffectCardInstance {
       manaCost: 0,
       type: 'hero' as const,
       class: player.heroClass,
-      rarity: 'basic' as const,
+      rarity: 'common' as const,
       description: '',
       health: player.health,
       maxHealth: player.maxHealth ?? 100,
@@ -151,7 +151,7 @@ function createHeroPowerCardInstance(player: LegacyPlayer): EffectCardInstance {
       manaCost: hp?.cost ?? 2,
       type: 'spell' as const,
       class: player.heroClass,
-      rarity: 'basic' as const,
+      rarity: 'common' as const,
       description: hp?.description || '',
     }
   } as unknown as EffectCardInstance;

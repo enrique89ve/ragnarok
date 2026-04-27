@@ -1,9 +1,18 @@
 # Atomic NFT Packs & Transfer Design
 
+> ⚠️ **Forward-looking design proposal — NOT active spec.** This document describes a possible future evolution of the NFT pack model (atomic transfers, packs-as-NFTs with DNA, seed/instance/replica lineage). None of it is currently implemented in the codebase. Active NFT semantics live in:
+>
+> - **Rarity & supply caps** → [`docs/RULEBOOK.md`](RULEBOOK.md) (Card Rarity table)
+> - **On-chain protocol** → [`docs/RAGNAROK_PROTOCOL_V1.md`](RAGNAROK_PROTOCOL_V1.md)
+> - **Genesis ceremony** → [`docs/GENESIS_RUNBOOK.md`](GENESIS_RUNBOOK.md)
+> - **External NFT layer (future)** → [`docs/NFTLOX_INTEGRATION_SPEC.md`](NFTLOX_INTEGRATION_SPEC.md)
+>
+> If this doc and the RULEBOOK disagree, the RULEBOOK wins.
+
 **Status**: Draft — Pre-Implementation Design
 **Date**: 2026-03-17
 **Authors**: Claude Opus 4.6, informed by NFTLox protocol audit
-**Affects**: `protocol-core/apply.ts`, `replayDB.ts`, `HiveSync.ts`, `opSchemas.ts`, `hiveConfig.ts`
+**Affects (if adopted)**: `protocol-core/apply.ts`, `replayDB.ts`, `HiveSync.ts`, `opSchemas.ts`, `hiveConfig.ts`
 
 ---
 

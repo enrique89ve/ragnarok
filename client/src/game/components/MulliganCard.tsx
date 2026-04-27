@@ -24,15 +24,8 @@ interface MulliganCardProps {
 export const MulliganCard: React.FC<MulliganCardProps> = React.memo(({ card, isSelected, onClick }) => {
   const cardData = card?.card;
 
-  if (!cardData) {
-    return (
-      <div className="mulligan-card-placeholder">
-        <span className="mulligan-card-placeholder-text">Loading…</span>
-      </div>
-    );
-  }
-
-  const simpleCardData: SimpleCardData = useMemo(() => {
+  const simpleCardData: SimpleCardData | null = useMemo(() => {
+    if (!cardData) return null;
     const cardDataTyped = cardData as any;
     const evolvesFrom = cardDataTyped.evolvesFrom as number | undefined;
     const evolvesFromCard = evolvesFrom ? getCardById(evolvesFrom) : undefined;
@@ -44,7 +37,7 @@ export const MulliganCard: React.FC<MulliganCardProps> = React.memo(({ card, isS
       health: cardDataTyped.health,
       description: cardData.description || '',
       type: (cardData.type as 'minion' | 'spell' | 'weapon') || 'minion',
-      rarity: (cardData.rarity as 'basic' | 'common' | 'rare' | 'epic' | 'mythic') || 'common',
+      rarity: (cardData.rarity as 'common' | 'rare' | 'epic' | 'mythic') || 'common',
       tribe: cardDataTyped.tribe || cardDataTyped.race,
       cardClass: (cardDataTyped.cardClass || cardDataTyped.class),
       keywords: cardData.keywords || [],
@@ -57,6 +50,14 @@ export const MulliganCard: React.FC<MulliganCardProps> = React.memo(({ card, isS
       hasStage3Variants: !!(cardDataTyped.stage3Variants && cardDataTyped.stage3Variants.length > 0),
     };
   }, [cardData]);
+
+  if (!simpleCardData) {
+    return (
+      <div className="mulligan-card-placeholder">
+        <span className="mulligan-card-placeholder-text">Loading…</span>
+      </div>
+    );
+  }
 
   return (
     <motion.div

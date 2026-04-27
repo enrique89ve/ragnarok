@@ -630,7 +630,7 @@ export const deathknightCards: CardData[] = [
   },
   {
     id: 36010,
-    name: "Death Gate",
+    name: "Greater Death Gate",
     manaCost: 6,
     description: "Summon a random minion from your opponent's graveyard. Give it Rush and Lifesteal.",
     flavorText: "The gate swings open. Something walks through. It is not what was expected.",
@@ -942,7 +942,7 @@ export const deathknightCards: CardData[] = [
   },
   {
     id: 39207,
-    name: "Blood Tap",
+    name: "Blood Pact",
     manaCost: 1,
     description: "Take 2 damage. Draw a card. Gain 1 Corpse.",
     flavorText: "A small sacrifice for forbidden knowledge.",
@@ -1012,13 +1012,13 @@ export const deathknightCards: CardData[] = [
   },
   {
     id: 9051,
-    name: "Ghoul",
+    name: "Ghoul Token",
     manaCost: 2,
     attack: 2,
     health: 2,
     description: "Taunt",
     type: "minion",
-    rarity: "basic",
+    rarity: "common",
     class: "DeathKnight",
     race: "Undead",
     keywords: ["taunt"],

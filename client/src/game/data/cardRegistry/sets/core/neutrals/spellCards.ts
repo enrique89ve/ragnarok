@@ -242,26 +242,6 @@ export const paladinSpells: CardData[] = [
 // MAGE SPELLS (32001-32030)
 // ============================================
 export const mageSpells: CardData[] = [
-  {
-    id: 32007,
-    name: "Loki's Shapecraft",
-    manaCost: 4,
-    type: "spell",
-    rarity: "common",
-    description: "Transform a minion into a 1/1 Sheep.",
-    flavorText: 'Loki once became a mare to distract Svaðilfari — and bore Sleipnir. A sheep is mercy by comparison. (Gylfaginning 42)',
-    keywords: ["transform"],
-    heroClass: "mage",
-    class: "Mage",
-    set: "genesis",
-    collectible: true,
-    spellEffect: {
-      type: "transform",
-      requiresTarget: true,
-      targetType: "any_minion",
-      transformInto: 31025
-    }
-  }
 ];
 
 // ============================================
@@ -351,26 +331,6 @@ export const warriorSpells: CardData[] = [
 // OTHER CLASS SPELLS
 // ============================================
 export const otherClassSpells: CardData[] = [
-  {
-    id: 31017,
-    name: "Skadi's Mark",
-    manaCost: 1,
-    type: "spell",
-    rarity: "common",
-    description: "Change a minion's Health to 1.",
-    flavorText: 'Skadi marks her prey. The hunt is already over.',
-    keywords: [],
-    heroClass: "hunter",
-    class: "Hunter",
-    set: "genesis",
-    collectible: true,
-    spellEffect: {
-      type: "set_health",
-      value: 1,
-      requiresTarget: true,
-      targetType: "any_minion"
-    }
-  }
 ];
 
 // ============================================

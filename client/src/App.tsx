@@ -10,7 +10,6 @@ import { CardTransformProvider } from "./game/context/CardTransformContext";
 import CardTransformBridgeInitializer from "./game/components/CardTransformBridgeInitializer";
 import ragnarokLogo from "./assets/images/ragnarok-logo.jpg";
 import LoadingScreen from "./game/components/ui/LoadingScreen";
-import AssetDownloadButton from "./game/components/ui/AssetDownloadButton";
 import GoldenCardFilter from "./game/animations/GoldenCardFilter";
 import { ALL_CHAPTERS, getMission, useCampaignStore } from "./game/campaign";
 import { useStarterStore } from "./game/stores/starterStore";
@@ -242,7 +241,6 @@ function HomePage() {
                 </Link>
               )}
               <div className="homepage-support-actions">
-                <AssetDownloadButton />
                 {canInstall && (
                   <button
                     onClick={() => { if (deferredInstallPrompt) { deferredInstallPrompt.prompt(); setCanInstall(false); } }}

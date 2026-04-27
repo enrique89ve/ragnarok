@@ -2,8 +2,14 @@
  * Seed Card Supply Script
  *
  * Populates the card_supply table with all collectible cards + heroes,
- * mapping game rarities to NFT scarcity tiers.
- * Dynamically calculates supply per card to hit 3.3M total.
+ * applying the per-rarity supply caps defined as canon in
+ * `docs/RULEBOOK.md:904`:
+ *
+ *   common 2,000 · rare 1,000 · epic 500 · mythic 250 (per card)
+ *
+ * No randomization, no global supply target — every card of a given rarity
+ * gets exactly the same hard cap. This mirrors what the genesis ceremony
+ * will broadcast on-chain (see `docs/GENESIS_RUNBOOK.md:381`).
  *
  * Run with: npx tsx server/seedCardSupply.ts
  *   or via: npm run db:seed
@@ -11,17 +17,9 @@
 
 import 'dotenv/config';
 import { directDb } from './db';
+import { tryAdaptRarity, supplyCap, RARITY, type Rarity } from '../shared/schemas/rarity';
 
-const TOTAL_SUPPLY_TARGET = 3_300_000;
-
-const TIER_DISTRIBUTION: Record<string, number> = {
-	mythic: 0.025,
-	epic: 0.075,
-	rare: 0.20,
-	common: 0.70,
-};
-
-type NftRarity = 'mythic' | 'epic' | 'rare' | 'common';
+type NftRarity = Rarity;
 
 interface CardData {
 	id: number;
@@ -35,33 +33,11 @@ interface CardData {
 function mapToNftRarity(card: CardData): NftRarity | null {
 	if (card.collectible === false) return null;
 
-	const rarity = (card.rarity || 'common').toLowerCase();
-	const type = (card.type || '').toLowerCase();
+	// Heroes always mint at the top tier regardless of declared rarity.
+	if ((card.type || '').toLowerCase() === 'hero') return 'mythic';
 
-	if (type === 'hero' || rarity === 'mythic') return 'mythic';
-	if (rarity === 'epic') return 'epic';
-	if (rarity === 'rare') return 'rare';
-	if (rarity === 'common' || rarity === 'basic') return 'common';
-	return 'common';
-}
-
-function calculateSupplyRanges(cardCounts: Record<string, number>): Record<string, { min: number; max: number; avg: number }> {
-	const ranges: Record<string, { min: number; max: number; avg: number }> = {};
-
-	for (const [tier, fraction] of Object.entries(TIER_DISTRIBUTION)) {
-		const tierTotal = Math.round(TOTAL_SUPPLY_TARGET * fraction);
-		const count = cardCounts[tier] || 1;
-		const avg = Math.round(tierTotal / count);
-		const min = Math.max(1, Math.round(avg * 0.8));
-		const max = Math.round(avg * 1.2);
-		ranges[tier] = { min, max, avg };
-	}
-
-	return ranges;
-}
-
-function generateSupply(min: number, max: number): number {
-	return Math.floor(Math.random() * (max - min + 1)) + min;
+	const adapted = tryAdaptRarity((card.rarity || 'common').toLowerCase());
+	return adapted ?? 'common';
 }
 
 async function loadCardRegistry(): Promise<CardData[]> {
@@ -227,7 +203,8 @@ async function seedCardSupply() {
 	}
 
 	console.log('Starting card supply seed...');
-	console.log(`Target total supply: ${TOTAL_SUPPLY_TARGET.toLocaleString()}\n`);
+	const capsByRarity = Object.fromEntries(RARITY.map(r => [r, supplyCap(r)]));
+	console.log('Per-card caps:', capsByRarity, '\n');
 
 	const cards = await loadCardRegistry();
 	const heroes = await loadHeroData();
@@ -244,8 +221,8 @@ async function seedCardSupply() {
 	const itemList = Array.from(allItems.values());
 	console.log(`\nTotal unique items: ${itemList.length}`);
 
-	// Count per tier
-	const cardCounts: Record<string, number> = { mythic: 0, epic: 0, rare: 0, common: 0 };
+	// Count per tier (derived from the canonical RARITY set).
+	const cardCounts = Object.fromEntries(RARITY.map(r => [r, 0])) as Record<Rarity, number>;
 	const tierAssignments: { card: CardData; nftRarity: NftRarity }[] = [];
 
 	for (const card of itemList) {
@@ -260,14 +237,8 @@ async function seedCardSupply() {
 		console.log(`  ${tier}: ${count}`);
 	}
 
-	// Calculate supply ranges to hit 3.3M
-	const supplyRanges = calculateSupplyRanges(cardCounts);
-	console.log('\nDynamic supply ranges:');
-	for (const [tier, range] of Object.entries(supplyRanges)) {
-		console.log(`  ${tier}: ${range.min}-${range.max} per card (avg ${range.avg})`);
-	}
-
-	// Build insert batch
+	// Build insert batch — each card gets the canonical fixed cap for its
+	// rarity (RULEBOOK.md:904). No randomization.
 	const stats = {
 		total: 0,
 		totalSupply: 0,
@@ -278,8 +249,7 @@ async function seedCardSupply() {
 	const insertBatch: any[] = [];
 
 	for (const { card, nftRarity } of tierAssignments) {
-		const range = supplyRanges[nftRarity];
-		const supply = generateSupply(range.min, range.max);
+		const supply = supplyCap(nftRarity);
 
 		insertBatch.push({
 			cardId: card.id,
@@ -351,13 +321,10 @@ async function seedCardSupply() {
 	console.log(`Total unique items: ${stats.total}`);
 	console.log(`Skipped (tokens): ${stats.skipped}`);
 	console.log(`Total supply: ${stats.totalSupply.toLocaleString()}`);
-	console.log(`Target was: ${TOTAL_SUPPLY_TARGET.toLocaleString()}`);
-	const pctDiff = ((stats.totalSupply - TOTAL_SUPPLY_TARGET) / TOTAL_SUPPLY_TARGET * 100).toFixed(1);
-	console.log(`Variance: ${pctDiff}%`);
 	console.log('\nBy NFT Rarity:');
 	for (const [rarity, data] of Object.entries(stats.byRarity)) {
 		const pct = (data.supply / stats.totalSupply * 100).toFixed(1);
-		console.log(`  ${rarity}: ${data.count} cards, ${data.supply.toLocaleString()} supply (${pct}%)`);
+		console.log(`  ${rarity}: ${data.count} cards × ${supplyCap(rarity as Rarity)} = ${data.supply.toLocaleString()} supply (${pct}%)`);
 	}
 
 	await directDb.end();

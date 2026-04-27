@@ -263,7 +263,7 @@ export const einherjarPayoffCards: CardData[] = [
 	},
 	{
 		id: 31919,
-		name: 'Gjallarhorn',
+		name: 'Gjallarhorn\'s Call',
 		manaCost: 2,
 		description: 'Give an Einherjar +2/+2 and "Deathrattle: Draw a card."',
 		flavorText: 'Its blast carries across all Nine Realms, heralding glory.',

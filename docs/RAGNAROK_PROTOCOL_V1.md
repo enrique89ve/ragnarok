@@ -166,7 +166,7 @@ Canonical identity is `uid`. Display metadata (name, race, image, art URL) are o
 
 ## 9. Supply Model
 
-Genesis MUST define distinct supply buckets:
+Genesis MUST define distinct supply buckets. Per-rarity values **MUST** match the canonical Card Rarity table in [`RULEBOOK.md`](RULEBOOK.md); the JSON example below is illustrative of structure, not a competing source of truth.
 
 ```json
 {

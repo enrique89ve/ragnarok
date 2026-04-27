@@ -164,7 +164,7 @@ export const muspelheimPets: CardData[] = [
 	// ── Stage 3 (Master) ─────────────────────────────────────────────
 	{
 		id: 50106,
-		name: "Surtr's Herald",
+		name: "Surtr's Avatar",
 		manaCost: 0,
 		attack: 8,
 		health: 5,

@@ -1180,7 +1180,7 @@ function resolveProphecy(state: GameState, prophecy: import('../types').Prophecy
             attack: effect.summonAttack || 1,
             health: effect.summonHealth || 1,
             description: `Summoned by ${prophecy.name}.`,
-            rarity: 'token' as any,
+            rarity: 'common',
             class: 'Neutral',
             keywords: kw,
             set: 'core',

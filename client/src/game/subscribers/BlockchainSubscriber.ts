@@ -8,7 +8,7 @@ import { generateMatchId, useHiveDataStore } from '@/data/HiveDataLayer';
 import { debug } from '../config/debugConfig';
 import type { CardUidMapping, PackagedMatchResult } from '@/data/blockchain/types';
 import { getCard, putCard } from '@/data/blockchain/replayDB';
-import { getLevelForXP } from '@/data/blockchain/cardXPSystem';
+import { getLevelForXP, xpKeyFor } from '@/data/blockchain/cardXPSystem';
 import { usePeerStore } from '../stores/peerStore';
 import { hiveSync } from '@/data/HiveSync';
 import { getActiveTranscript, clearTranscript } from '@/data/blockchain/transcriptBuilder';
@@ -107,16 +107,19 @@ function extractCardUidsFromGameState(side: 'player' | 'opponent'): CardUidMappi
 }
 
 /**
- * Builds a cardId → rarity map from card instances already in game state.
- * Avoids a separate allCards import — the data is already in memory.
+ * Builds a cardId → XP-progression key map from card instances already in
+ * game state. The key is `'starter' | Rarity` resolved via `xpKeyFor`:
+ * starter cards use a slower curve regardless of their declared rarity,
+ * genesis cards progress by their rarity tier. Combat tokens never reach
+ * here — they don't have stable cardIds in the XP system.
  */
 function buildCardRarities(
 	playerUids: CardUidMapping[],
 	opponentUids: CardUidMapping[]
 ): Map<number, string> {
 	const gs = useGameStore.getState().gameState;
-	const rarities = new Map<number, string>();
-	if (!gs) return rarities;
+	const xpKeys = new Map<number, string>();
+	if (!gs) return xpKeys;
 
 	const relevantIds = new Set([
 		...playerUids.map(u => u.cardId),
@@ -135,13 +138,12 @@ function buildCardRarities(
 
 		for (const instance of allInstances) {
 			const cardId = instance.card?.id;
-			if (typeof cardId !== 'number' || !relevantIds.has(cardId) || rarities.has(cardId)) continue;
-			const rarity: string = instance.card?.rarity ?? 'common';
-			rarities.set(cardId, rarity.toLowerCase());
+			if (typeof cardId !== 'number' || !relevantIds.has(cardId) || xpKeys.has(cardId)) continue;
+			xpKeys.set(cardId, xpKeyFor(instance.card ?? {}));
 		}
 	}
 
-	return rarities;
+	return xpKeys;
 }
 
 // ---------------------------------------------------------------------------

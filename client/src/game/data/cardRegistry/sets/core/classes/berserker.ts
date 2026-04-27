@@ -153,42 +153,6 @@ export const berserkerCards: CardData[] = [
     set: "genesis"
   },
   {
-    id: 48001,
-    name: "Fenrir's Gaze",
-    manaCost: 3,
-    description: "Lifesteal. Deal 3 damage to a minion. Outcast: This costs (1).",
-    flavorText: "The great wolf's eyes pierce through the darkness of Ragnarok.",
-    type: "spell",
-    rarity: "common",
-    class: "Berserker",
-    keywords: ["outcast", "lifesteal"],
-    spellEffect: {
-      type: "damage",
-      value: 3,
-      requiresTarget: true,
-      targetType: "any_minion"
-    },
-    collectible: true,
-    set: "genesis"
-  },
-  {
-    id: 48002,
-    name: "Odin's Vision",
-    manaCost: 2,
-    description: "Draw a card. Outcast: Draw another.",
-    flavorText: "He sacrificed his eye for wisdom - but gained sight beyond mortal ken.",
-    type: "spell",
-    rarity: "common",
-    class: "Berserker",
-    keywords: ["outcast"],
-    spellEffect: {
-      type: "draw",
-      value: 1
-    },
-    collectible: true,
-    set: "genesis"
-  },
-  {
     id: 10008,
     name: "Flamereaper",
     manaCost: 7,
@@ -316,21 +280,6 @@ export const berserkerCards: CardData[] = [
     set: "genesis"
   },
   {
-    id: 48005,
-    name: "Einherjar Berserker",
-    manaCost: 4,
-    attack: 5,
-    health: 3,
-    type: "minion",
-    rarity: "rare",
-    description: "Rush. Outcast: Gain +2/+2.",
-    flavorText: "Chosen warriors from Valhalla, eternally hungry for battle.",
-    class: "Berserker",
-    keywords: ["rush", "outcast"],
-    collectible: true,
-    set: "genesis"
-  },
-  {
     id: 48006,
     name: "Priestess of Nemesis",
     manaCost: 7,
@@ -428,7 +377,7 @@ export const berserkerCards: CardData[] = [
   },
   {
     id: 31505,
-    name: "Fenrir's Fang",
+    name: "Fenrir's Snap",
     manaCost: 2,
     attack: 3,
     durability: 2,
@@ -566,7 +515,7 @@ export const berserkerCards: CardData[] = [
 
   {
     id: 36201,
-    name: "Ragnarok's Wrath",
+    name: "Ragnarok's Final Strike",
     manaCost: 8,
     description: "Deal 5 damage to all minions. Give your hero +5 Attack this turn.",
     flavorText: "The world ends. Everything burns. From the ashes, something new may grow.",
@@ -747,7 +696,7 @@ export const berserkerCards: CardData[] = [
   },
   {
     id: 38802,
-    name: "Blood Drinker",
+    name: "Berserker Bloodfeast",
     manaCost: 5,
     attack: 4,
     health: 6,

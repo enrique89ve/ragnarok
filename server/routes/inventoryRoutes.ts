@@ -6,6 +6,7 @@
 
 import express, { Request, Response } from 'express';
 import { directDb as _directDb } from '../db';
+import { sqlRarityOrderByCase } from '../../shared/schemas/rarity';
 
 // This file is only imported when DATABASE_URL is set (see server/routes.ts)
 const directDb = _directDb!;
@@ -122,15 +123,7 @@ router.get('/:userId/stats', async (req: Request, res: Response) => {
       JOIN card_supply cs ON ui.card_id = cs.card_id
       WHERE ui.user_id = $1
       GROUP BY cs.nft_rarity
-      ORDER BY 
-        CASE cs.nft_rarity 
-          WHEN 'mythic' THEN 1 
-          WHEN 'legendary' THEN 2 -- legacy DB rows
-          WHEN 'mythic' THEN 1
-          WHEN 'epic' THEN 3 
-          WHEN 'rare' THEN 4 
-          WHEN 'common' THEN 5 
-        END
+      ORDER BY ${sqlRarityOrderByCase('cs.nft_rarity')}
     `, [userId]);
     
     // Stats by card type

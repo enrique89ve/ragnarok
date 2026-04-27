@@ -320,7 +320,7 @@ export const necromancerCards: CardData[] = [
   // ===== NEW NECROMANCER SPELLS =====
   {
     id: 4112,
-    name: "Corpse Explosion",
+    name: "Necromancer's Corpse Explosion",
     manaCost: 3,
     description: "Destroy a friendly minion. Deal damage equal to its Attack to all enemies.",
     flavorText: "In death, they serve one final, explosive purpose.",
@@ -479,7 +479,7 @@ export const necromancerCards: CardData[] = [
   },
   {
     id: 4900,
-    name: "Skeleton",
+    name: "Necromancer's Skeleton",
     manaCost: 1,
     attack: 2,
     health: 1,
@@ -625,7 +625,7 @@ export const necromancerCards: CardData[] = [
   },
   {
     id: 36107,
-    name: "Plague of Undeath",
+    name: "Plague of Zombies",
     manaCost: 5,
     description: "Transform all enemy minions into 2/2 Zombies.",
     flavorText: "The living become the dead. The dead become the army.",
@@ -767,23 +767,6 @@ export const necromancerCards: CardData[] = [
       targetType: "friendly_minion",
       requiresTarget: true,
       healValue: 4
-    },
-    collectible: true,
-    set: "genesis"
-  },
-  {
-    id: 38703,
-    name: "Mass Resurrection",
-    manaCost: 9,
-    description: "Summon 3 random friendly minions that died this game.",
-    flavorText: "They rise not as they were, but as they are needed.",
-    type: "spell",
-    rarity: "rare",
-    class: "Necromancer",
-    spellEffect: {
-      type: "mass_resurrect",
-      value: 3,
-      targetType: "none"
     },
     collectible: true,
     set: "genesis"

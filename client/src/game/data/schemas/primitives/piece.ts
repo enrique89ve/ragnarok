@@ -1,7 +1,7 @@
 /**
  * Chess piece role — board positioning identity.
  *
- * Source: docs/RULEBOOK.md §"Ragnarok Chess" + metadata.json.piece values.
+ * Source: docs/RULEBOOK.md §"Ragnarok Chess".
  * Used by ChessPieceConfig.ts and chess combat resolver.
  */
 import { z } from 'zod';

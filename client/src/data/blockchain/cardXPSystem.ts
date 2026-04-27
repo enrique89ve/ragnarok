@@ -6,15 +6,44 @@ import type {
 	XPConfigMap,
 	HiveCardAsset
 } from './types';
+import type { Rarity } from '@shared/schemas/rarity';
+import type { CardCategory } from '@shared/schemas/cardCategory';
 
 export const MAX_CARD_LEVEL = 3;
 
+/**
+ * XP progression key. Genesis cards progress by their canonical rarity tier;
+ * starter cards have their own slower curve regardless of declared rarity,
+ * reflecting their "free baseline" role (slightly below common). Tokens
+ * never earn XP and never resolve through this map.
+ */
+export type XPKey = 'starter' | Rarity;
+
+/**
+ * XP curves per progression key. The `starter` entry materializes the
+ * "free baseline progresses slower" intent: same shape as the canonical
+ * tiers, but lower numbers than `common`.
+ */
 export const XP_CONFIG: XPConfigMap = {
-	basic:     { rarity: 'basic',     xpPerWin: 5,  xpPerMvp: 0,  maxLevel: MAX_CARD_LEVEL, thresholds: [0, 20, 50] },
+	starter:   { rarity: 'starter',   xpPerWin: 5,  xpPerMvp: 0,  maxLevel: MAX_CARD_LEVEL, thresholds: [0, 20, 50] },
 	common:    { rarity: 'common',    xpPerWin: 10, xpPerMvp: 3,  maxLevel: MAX_CARD_LEVEL, thresholds: [0, 50, 150] },
 	rare:      { rarity: 'rare',      xpPerWin: 15, xpPerMvp: 5,  maxLevel: MAX_CARD_LEVEL, thresholds: [0, 100, 300] },
 	epic:      { rarity: 'epic',      xpPerWin: 20, xpPerMvp: 8,  maxLevel: MAX_CARD_LEVEL, thresholds: [0, 160, 480] },
 	mythic:    { rarity: 'mythic',    xpPerWin: 25, xpPerMvp: 10, maxLevel: MAX_CARD_LEVEL, thresholds: [0, 200, 500] },
+};
+
+/**
+ * Resolve the XP progression key for a card. Starter cards always use the
+ * starter curve (regardless of declared rarity, which is `'common'` in
+ * source data). Genesis cards fall back to their rarity tier. Tokens are
+ * filtered out upstream — they don't earn XP.
+ */
+export const xpKeyFor = (card: { rarity?: string; category?: CardCategory }): XPKey => {
+	if (card.category === 'starter') return 'starter';
+	const r = (card.rarity ?? 'common').toLowerCase();
+	return (r === 'rare' || r === 'epic' || r === 'mythic' || r === 'common')
+		? r as Rarity
+		: 'common';
 };
 
 const LEVEL_BONUSES: CardLevelBonus[] = [

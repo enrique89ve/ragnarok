@@ -181,7 +181,7 @@ export async function restoreSaveState(state: PortableSaveState): Promise<{ succ
 						uid: `base-${cardId}-${Date.now()}`,
 						cardId,
 						ownerId: 'local',
-						rarity: cardDef.rarity || 'basic',
+						rarity: cardDef.rarity || 'common',
 						edition: 'base' as 'alpha',
 						foil: 'standard',
 						level: 1,

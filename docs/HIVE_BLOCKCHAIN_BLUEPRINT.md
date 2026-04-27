@@ -129,7 +129,7 @@ The Ragnarok account broadcasts a single genesis transaction before any minting 
 
 **What this commits to:**
 
-- Supply is hard-capped per card: 2,000 common, 1,000 rare, 500 epic, 250 mythic (~2.7M total NFTs)
+- Supply is hard-capped per card per rarity — see [`RULEBOOK.md`](RULEBOOK.md) Card Rarity table for canonical values
 - The reader version that interprets ownership is pinned by hash
 - Supply counters enforce caps per rarity — even from the Ragnarok account
 

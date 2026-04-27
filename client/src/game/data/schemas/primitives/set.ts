@@ -1,49 +1,23 @@
 /**
- * Card distribution sets.
+ * Card distribution set — authoring intent.
  *
- * Orthogonal to rarity. Set answers "where did this card come from?",
- * rarity answers "how scarce is it within its set?".
+ * `set` is what a card AUTHOR declares in the source file (`'starter'` or
+ * `'genesis'`). It is OPTIONAL on input. The canonical post-validation
+ * discriminator is `category` (`'token' | 'starter' | 'genesis'`) which is
+ * computed and stamped at the registry boundary by `validateCardRegistry`.
  *
- *  - 'starter' : starter pool, infinite supply, never on-chain. Every player has these
- *                from day one. Identical combat rules to genesis cards; differs only in
- *                meta layers (XP curve, eitr economy, marketplace, pack pools, NFT ownership).
- *  - 'genesis' : the single sealed NFT collection. Finite supply locked at
- *                Genesis ceremony (see docs/GENESIS_RUNBOOK.md). Mintable on Hive.
+ * Capabilities matrix (onChain, mintable, inPacks, deckLimit, etc.) lives in
+ * `shared/schemas/cardCategory.ts` as `CARD_CATEGORY_TABLE`. That is the
+ * single source of truth for "what does this kind of card behave like".
+ *
+ * Definitions:
+ *  - 'starter' : free off-chain card distributed via StarterPackCeremony to
+ *                every new player. Infinite supply, never on-chain.
+ *  - 'genesis' : sealed NFT collection. Finite supply locked at the Genesis
+ *                ceremony (see `docs/GENESIS_RUNBOOK.md`).
  */
 import { z } from 'zod';
 
 export const SETS = ['starter', 'genesis'] as const;
 export type Set = (typeof SETS)[number];
 export const SetSchema = z.enum(SETS);
-
-// ── Meta-layer rules per set (data, not logic) ─────────────────────────────
-//
-// Combat-engine code MUST NOT branch on `set`; it lives in stats and effects.
-// Meta-layer code (XP, economy, marketplace, packs) reads these flags.
-
-export interface SetRules {
-	readonly collectible: boolean;
-	readonly onChain: boolean;
-	readonly mintable: boolean;
-	readonly participatesInPacks: boolean;
-	readonly participatesInEitr: boolean;
-}
-
-export const SET_RULES = {
-	starter: {
-		collectible: false,
-		onChain: false,
-		mintable: false,
-		participatesInPacks: false,
-		participatesInEitr: false,
-	},
-	genesis: {
-		collectible: true,
-		onChain: true,
-		mintable: true, // until Genesis seal; afterwards supply is fixed but each existing token remains mintable-from-pool
-		participatesInPacks: true,
-		participatesInEitr: true,
-	},
-} as const satisfies Record<Set, SetRules>;
-
-export const setRules = (s: Set): SetRules => SET_RULES[s];

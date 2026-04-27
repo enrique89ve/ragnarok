@@ -211,20 +211,6 @@ export const druidCards: CardData[] = [
     set: "genesis"
   },
   {
-    id: 11059,
-    name: "Treant",
-    manaCost: 2,
-    attack: 2,
-    health: 2,
-    description: "Summoned by Druid nature spells.",
-    flavorText: "It takes years to grow a tree this size. Or seconds with the right spell.",
-    type: "minion",
-    rarity: "common",
-    class: "Druid",
-    collectible: false,
-    set: "genesis"
-  },
-  {
     id: 20014,
     name: "Pan, Nature's Avatar",
     manaCost: 4,

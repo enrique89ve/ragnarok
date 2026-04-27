@@ -4,27 +4,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useKingPassiveEventStore, KingPassiveEvent } from '../../stores/kingPassiveEventStore';
 import { proceduralAudio } from '../../audio/proceduralAudio';
 import { assetPath } from '../../utils/assetPath';
+import { getKingArtPath, DEFAULT_PORTRAIT } from '../../utils/art/artMapping';
 import './KingPassivePopup.css';
 
 const POPUP_DURATION = 2200;
 const MAX_SIMULTANEOUS = 2;
 
-const KING_PORTRAIT_MAP: Record<string, string> = {
-	'king-ymir': '/portraits/kings/ymir.webp',
-	'king-buri': '/portraits/kings/buri.webp',
-	'king-surtr': '/portraits/kings/surtr.webp',
-	'king-borr': '/portraits/kings/borr.webp',
-	'king-yggdrasil': '/portraits/kings/yggdrasil.webp',
-	'king-audumbla': '/portraits/kings/audumbla.webp',
-	'king-gaia': '/portraits/kings/gaia.webp',
-	'king-brimir': '/portraits/kings/brimir.webp',
-	'king-ginnungagap': '/portraits/kings/ginnungagap.webp',
-	'king-tartarus': '/portraits/kings/tartarus.webp',
+const getKingPortraitPath = (kingId: string): string => {
+	const path = getKingArtPath(kingId);
+	return path ? assetPath(path) : DEFAULT_PORTRAIT;
 };
-
-function getKingPortraitPath(kingId: string): string {
-	return assetPath(KING_PORTRAIT_MAP[kingId] || `/portraits/kings/${kingId.replace('king-', '')}.webp`);
-}
 
 const KingPopupBubble: React.FC<{
 	event: KingPassiveEvent;

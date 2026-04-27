@@ -739,7 +739,7 @@ export const hunterCards: CardData[] = [
   },
   {
     id: 31602,
-    name: "Skadi's Mark",
+    name: "Skadi's Hunt",
     manaCost: 3,
     type: "spell",
     rarity: "common",
@@ -907,7 +907,7 @@ export const hunterCards: CardData[] = [
   // ==================== COMMON GAP-FILL (Starter Deck Viability — more spells) ====================
   {
     id: 39211,
-    name: "Skadi's Arrow",
+    name: "Skadi's Hunting Arrow",
     manaCost: 2,
     description: "Deal 3 damage to a minion.",
     flavorText: "She never misses. That's not a boast — it's a warning.",

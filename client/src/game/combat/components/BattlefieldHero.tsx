@@ -17,7 +17,6 @@ import { createPortal } from 'react-dom';
 import { ALL_NORSE_HEROES } from '../../data/norseHeroes';
 import { getElementColor, getElementIcon, ELEMENT_LABELS, ELEMENT_WEAKNESSES, ELEMENT_STRENGTHS, type ElementType } from '../../utils/elements';
 import { NORSE_TO_GAME_ELEMENT, type NorseElement } from '../../types/NorseTypes';
-import { assetPath } from '../../utils/assetPath';
 import { resolveHeroPortrait, DEFAULT_PORTRAIT } from '../../utils/art/artMapping';
 import '../styles/hero-reactions.css';
 import '../styles/hp-bar.css';
@@ -110,43 +109,25 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
     return 'neutral';
   }, [pet.norseHeroId, elementProp]);
 
-  const portraitPaths = useMemo(() => {
-    const localPath = assetPath(`/portraits/heroes/${pet.name.split(' ')[0].toLowerCase()}.png`);
-    const cdnPath = pet.norseHeroId ? resolveHeroPortrait(pet.norseHeroId) : null;
-    return { local: localPath, cdn: cdnPath };
-  }, [pet.name, pet.norseHeroId]);
+  const portraitSrc = useMemo(
+    () => (pet.norseHeroId ? resolveHeroPortrait(pet.norseHeroId) : null) ?? DEFAULT_PORTRAIT,
+    [pet.norseHeroId],
+  );
 
-  const [resolvedPortrait, setResolvedPortrait] = useState(portraitPaths.local);
+  const [resolvedPortrait, setResolvedPortrait] = useState(portraitSrc);
 
   useEffect(() => {
     let isActive = true;
-    const tryLoad = (src: string, fallback: () => void) => {
-      if (src.startsWith('data:')) {
-        if (isActive) setResolvedPortrait(src);
-        return;
-      }
-      const img = new Image();
-      img.onload = () => {
-        if (isActive) setResolvedPortrait(src);
-      };
-      img.onerror = () => {
-        if (isActive) fallback();
-      };
-      img.src = src;
-    };
-    tryLoad(portraitPaths.local, () => {
-      if (portraitPaths.cdn) {
-        tryLoad(portraitPaths.cdn, () => {
-          if (isActive) setResolvedPortrait(DEFAULT_PORTRAIT);
-        });
-      } else {
-        if (isActive) setResolvedPortrait(DEFAULT_PORTRAIT);
-      }
-    });
-    return () => {
-      isActive = false;
-    };
-  }, [portraitPaths]);
+    if (portraitSrc.startsWith('data:')) {
+      setResolvedPortrait(portraitSrc);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => { if (isActive) setResolvedPortrait(portraitSrc); };
+    img.onerror = () => { if (isActive) setResolvedPortrait(DEFAULT_PORTRAIT); };
+    img.src = portraitSrc;
+    return () => { isActive = false; };
+  }, [portraitSrc]);
 
   const portraitBgStyle = useMemo((): React.CSSProperties => ({
     backgroundImage: `url('${resolvedPortrait}')`,

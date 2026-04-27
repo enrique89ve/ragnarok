@@ -104,7 +104,7 @@ export const einherjarWarriorsPets: CardData[] = [
 	} as CardData,
 	{
 		id: 50334,
-		name: 'Einherjar Shieldbearer',
+		name: 'Einherjar Shieldwarden',
 		manaCost: 0,
 		attack: 2,
 		health: 4,

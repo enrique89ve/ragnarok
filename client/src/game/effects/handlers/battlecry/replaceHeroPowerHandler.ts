@@ -58,7 +58,7 @@ export default function executeReplaceHeroPower(
         description: upgradedPower.description,
         manaCost: 2,
         type: 'hero_power',
-        rarity: 'basic',
+        rarity: 'common',
         heroClass: currentHeroPower.card?.heroClass || 'neutral',
         spellEffect: {
           type: currentHeroPower.card?.spellEffect?.type || 'damage',

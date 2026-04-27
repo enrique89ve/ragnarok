@@ -408,7 +408,7 @@ export const HeroDeckBuilder: React.FC<HeroDeckBuilderProps> = ({
 																</div>
 															)}
 
-															{rarityKey !== 'common' && rarityKey !== 'basic' && (
+															{rarityKey !== 'common' && (
 																<>
 																	<div className="holo-foil" />
 																	<div className="holo-glitter" />
@@ -419,7 +419,7 @@ export const HeroDeckBuilder: React.FC<HeroDeckBuilderProps> = ({
 															{/* Mana Badge */}
 															<div className="db-mana-badge">{card.manaCost ?? 0}</div>
 
-															{rarityKey !== 'common' && rarityKey !== 'basic' && (
+															{rarityKey !== 'common' && (
 																<span className={`db-rarity-badge rarity-${rarityKey}`}>
 																	{rarityKey === 'mythic' ? 'MYTHIC' : rarityKey === 'epic' ? 'EPIC' : 'RARE'}
 																</span>

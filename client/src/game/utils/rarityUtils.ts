@@ -1,64 +1,72 @@
-export function getRarityColor(rarity: string): string {
-  switch (rarity) {
-    case 'common': return 'text-gray-300';
-    case 'rare': return 'text-blue-400';
-    case 'epic': return 'text-purple-400';
+/**
+ * UI presentation tokens per rarity tier.
+ *
+ * The keys mirror the canonical rarity set in `shared/schemas/rarity.ts`.
+ * Adding a new tier means: (1) declaring it in `RARITY_TABLE` over there,
+ * and (2) adding one entry here. TypeScript will mark missing entries as
+ * compile errors via the `Record<Rarity, ...>` type.
+ */
+import type { Rarity } from '@shared/schemas/rarity';
+import { tryAdaptRarity } from '@shared/schemas/rarity';
 
-    case 'mythic': return 'text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500';
-    default: return 'text-gray-300';
-  }
+interface RarityUi {
+	color: string;
+	border: string;
+	glow: string;
+	background: string;
+	bgColor: string;
 }
 
-export function getRarityBorder(rarity: string): string {
-  switch (rarity) {
-    case 'common': return 'border-gray-500';
-    case 'rare': return 'border-blue-500';
-    case 'epic': return 'border-purple-500';
+const RARITY_UI: Record<Rarity, RarityUi> = {
+	common: {
+		color:      'text-gray-300',
+		border:     'border-gray-500',
+		glow:       'shadow-[0_0_30px_rgba(255,255,255,0.5)]',
+		background: 'bg-gradient-to-br from-gray-700 to-gray-800',
+		bgColor:    'bg-gray-600/30',
+	},
+	rare: {
+		color:      'text-blue-400',
+		border:     'border-blue-500',
+		glow:       'shadow-[0_0_40px_rgba(59,130,246,0.8)]',
+		background: 'bg-gradient-to-br from-blue-800 to-blue-900',
+		bgColor:    'bg-blue-600/30',
+	},
+	epic: {
+		color:      'text-purple-400',
+		border:     'border-purple-500',
+		glow:       'shadow-[0_0_50px_rgba(147,51,234,0.9)]',
+		background: 'bg-gradient-to-br from-purple-800 to-purple-900',
+		bgColor:    'bg-purple-600/30',
+	},
+	mythic: {
+		color:      'text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500',
+		border:     'border-pink-500',
+		glow:       'shadow-[0_0_80px_rgba(236,72,153,1),0_0_120px_rgba(139,92,246,0.8)]',
+		background: 'bg-gradient-to-br from-pink-800 via-purple-800 to-cyan-800',
+		bgColor:    'bg-gradient-to-r from-pink-600/30 via-purple-600/30 to-cyan-600/30',
+	},
+};
 
-    case 'mythic': return 'border-pink-500';
-    default: return 'border-gray-500';
-  }
-}
+const FALLBACK: RarityUi = RARITY_UI.common;
 
-export function getRarityGlow(rarity: string): string {
-  switch (rarity) {
-    case 'common': return 'shadow-[0_0_30px_rgba(255,255,255,0.5)]';
-    case 'rare': return 'shadow-[0_0_40px_rgba(59,130,246,0.8)]';
-    case 'epic': return 'shadow-[0_0_50px_rgba(147,51,234,0.9)]';
+const resolve = (input: string): RarityUi => {
+	const canon = tryAdaptRarity(input);
+	return canon ? RARITY_UI[canon] : FALLBACK;
+};
 
-    case 'mythic': return 'shadow-[0_0_80px_rgba(236,72,153,1),0_0_120px_rgba(139,92,246,0.8)]';
-    default: return 'shadow-lg';
-  }
-}
-
-export function getRarityBackground(rarity: string): string {
-  switch (rarity) {
-    case 'common': return 'bg-gradient-to-br from-gray-700 to-gray-800';
-    case 'rare': return 'bg-gradient-to-br from-blue-800 to-blue-900';
-    case 'epic': return 'bg-gradient-to-br from-purple-800 to-purple-900';
-
-    case 'mythic': return 'bg-gradient-to-br from-pink-800 via-purple-800 to-cyan-800';
-    default: return 'bg-gray-800';
-  }
-}
-
-export function getRarityBgColor(rarity: string): string {
-  switch (rarity) {
-    case 'common': return 'bg-gray-600/30';
-    case 'rare': return 'bg-blue-600/30';
-    case 'epic': return 'bg-purple-600/30';
-
-    case 'mythic': return 'bg-gradient-to-r from-pink-600/30 via-purple-600/30 to-cyan-600/30';
-    default: return 'bg-gray-600/30';
-  }
-}
+export const getRarityColor      = (r: string): string => resolve(r).color;
+export const getRarityBorder     = (r: string): string => resolve(r).border;
+export const getRarityGlow       = (r: string): string => resolve(r).glow;
+export const getRarityBackground = (r: string): string => resolve(r).background;
+export const getRarityBgColor    = (r: string): string => resolve(r).bgColor;
 
 export function getTypeIcon(type: string): string {
-  switch (type) {
-    case 'minion': return '⚔️';
-    case 'spell': return '✨';
-    case 'weapon': return '🗡️';
-    case 'hero': return '👑';
-    default: return '📜';
-  }
+	switch (type) {
+		case 'minion': return '⚔️';
+		case 'spell':  return '✨';
+		case 'weapon': return '🗡️';
+		case 'hero':   return '👑';
+		default:       return '📜';
+	}
 }

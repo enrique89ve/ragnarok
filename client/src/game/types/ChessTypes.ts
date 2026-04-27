@@ -318,7 +318,7 @@ export type KingChessAbilityType =
 /**
  * King rarity tiers — unified with CardRarity
  */
-export type KingRarity = 'basic' | 'common' | 'rare' | 'epic' | 'mythic';
+export type KingRarity = 'common' | 'rare' | 'epic' | 'mythic';
 
 /**
  * Mine shape configuration - defines the pattern of tiles affected

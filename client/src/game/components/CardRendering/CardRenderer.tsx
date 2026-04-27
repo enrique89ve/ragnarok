@@ -58,14 +58,10 @@ const CardRenderer: React.FC<CardRendererProps> = React.memo(({
 }) => {
   const processedCard = useMemo(() => getCardDataSafely(card), [card]);
 
-  if (!processedCard) {
-    debug.warn('CardRenderer: No card data available');
-    return null;
-  }
-
   const evolutionLevel = ('evolutionLevel' in card) ? (card as any).evolutionLevel as (1 | 2 | 3 | undefined) : undefined;
 
-  const simpleCardData: SimpleCardData = useMemo(() => {
+  const simpleCardData: SimpleCardData | null = useMemo(() => {
+    if (!processedCard) return null;
     const cardAny = processedCard as any;
     const evolvesFrom = cardAny.evolvesFrom as number | undefined;
     const evolvesFromCard = evolvesFrom ? getCardById(evolvesFrom) : undefined;
@@ -77,7 +73,7 @@ const CardRenderer: React.FC<CardRendererProps> = React.memo(({
       health: processedCard.health,
       description: processedCard.description || '',
       type: (processedCard.type as 'minion' | 'spell' | 'weapon') || 'minion',
-      rarity: (processedCard.rarity as 'basic' | 'common' | 'rare' | 'epic' | 'mythic') || 'common',
+      rarity: (processedCard.rarity as 'common' | 'rare' | 'epic' | 'mythic') || 'common',
       tribe: processedCard.tribe,
       cardClass: processedCard.cardClass || processedCard.class,
       keywords: processedCard.keywords || [],
@@ -97,6 +93,11 @@ const CardRenderer: React.FC<CardRendererProps> = React.memo(({
     transformOrigin: 'center center',
     ...style
   } : style, [scale, style]);
+
+  if (!simpleCardData) {
+    debug.warn('CardRenderer: No card data available');
+    return null;
+  }
 
   return (
     <div className={`card-renderer-wrapper ${className}`} style={scaleStyle}>

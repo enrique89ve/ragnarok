@@ -61,21 +61,6 @@ export const einherjarCards: CardData[] = [
 		collectible: true
 	},
 	{
-		id: 30204,
-		name: 'Einherjar Champion',
-		manaCost: 5,
-		attack: 4,
-		health: 4,
-		description: 'Divine Shield. Einherjar',
-		flavorText: 'Odin himself blessed this warrior with light that persists beyond death.',
-		type: 'minion',
-		rarity: 'rare',
-		class: 'Paladin',
-		keywords: ['einherjar', 'divine_shield'],
-		set: 'genesis',
-		collectible: true
-	},
-	{
 		id: 30205,
 		name: 'Helgi Hundingsbane',
 		manaCost: 4,

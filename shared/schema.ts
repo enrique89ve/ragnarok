@@ -1,6 +1,7 @@
 import { pgTable, text, serial, integer, boolean, timestamp, foreignKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { RARITY, type Rarity } from "./schemas/rarity";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -87,16 +88,19 @@ export type InsertReasoningMetric = z.infer<typeof insertMetricsSchema>;
 // NFT Pack System Tables
 // ============================================
 
-// Rarity enum for NFT scarcity tiers
-export const nftRarityEnum = ['basic', 'common', 'rare', 'epic', 'mythic'] as const;
-export type NftRarity = typeof nftRarityEnum[number];
+// NFT scarcity tiers — re-export of the canonical rarity enum from
+// `shared/schemas/rarity.ts` (4 tiers per `docs/RULEBOOK.md` Card Rarity table).
+// Legacy 'basic' values must be normalized via `adaptRarity` at the trust
+// boundary before reaching DB writers.
+export const nftRarityEnum = RARITY;
+export type NftRarity = Rarity;
 
 // Card Supply - tracks max and remaining supply for each card
 export const cardSupply = pgTable("card_supply", {
   id: serial("id").primaryKey(),
   cardId: integer("card_id").notNull().unique(), // References the in-game card ID
   cardName: text("card_name").notNull(),
-  nftRarity: text("nft_rarity").notNull(), // common, rare, epic, mythic
+  nftRarity: text("nft_rarity").notNull(), // canonical: common | rare | epic | mythic
   maxSupply: integer("max_supply").notNull(), // Absolute max ever minted
   remainingSupply: integer("remaining_supply").notNull(), // How many left to pull
   rewardReserve: integer("reward_reserve").notNull().default(0), // 20% held back for in-game rewards
@@ -125,9 +129,9 @@ export const packTypes = pgTable("pack_types", {
   commonSlots: integer("common_slots").notNull().default(5),
   rareSlots: integer("rare_slots").notNull().default(2),
   epicSlots: integer("epic_slots").notNull().default(1),
-  wildcardSlots: integer("wildcard_slots").notNull().default(1), // Can upgrade to legendary/mythic
-  legendaryChance: integer("legendary_chance").notNull().default(10), // % chance wildcard upgrades
-  mythicChance: integer("mythic_chance").notNull().default(1), // % chance wildcard upgrades
+  wildcardSlots: integer("wildcard_slots").notNull().default(1), // Can upgrade to epic/mythic
+  legendaryChance: integer("legendary_chance").notNull().default(10), // % chance wildcard upgrades to epic
+  mythicChance: integer("mythic_chance").notNull().default(1), // % chance wildcard upgrades to mythic
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });

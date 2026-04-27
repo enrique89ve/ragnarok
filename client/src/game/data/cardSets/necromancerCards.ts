@@ -385,7 +385,7 @@ const necromancerCards = [
     .name("Soul Harvest")
     .manaCost(0)
     .class("Necromancer")
-    .rarity("basic") // Hero power
+    .rarity("common") // Hero power
     .type("spell")
     .spellEffect({
       type: "hero_power",

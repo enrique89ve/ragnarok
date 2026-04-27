@@ -383,7 +383,7 @@ function executeGenerateFateStrand(
     description: `Deal ${dmg} damage to a random enemy.`,
     flavorText: 'A thread of destiny, plucked from the loom.',
     type: 'spell',
-    rarity: 'basic',
+    rarity: 'common',
     class: 'Neutral',
     spellEffect: { type: 'damage_random', value: dmg, targetType: 'random_enemy' },
     collectible: false,
@@ -613,7 +613,7 @@ function executeSummon(
       attack: power.summonData.attack,
       health: power.summonData.health,
       description: power.summonData.keywords?.join(', ') || '',
-      rarity: 'token' as any,
+      rarity: 'common',
       type: 'minion',
       keywords: power.summonData.keywords || []
     },
@@ -894,7 +894,7 @@ function executeSummonRandom(
       attack: baseAttack + bonusAttack,
       health: baseHealth + bonusHealth,
       description: '',
-      rarity: 'token' as any,
+      rarity: 'common',
       type: 'minion',
       keywords: []
     },
@@ -1019,7 +1019,7 @@ function executeSelfDamageAndSummon(
         attack: power.summonData.attack,
         health: power.summonData.health,
         description: power.summonData.keywords?.join(', ') || '',
-        rarity: 'token' as any,
+        rarity: 'common',
         type: 'minion',
         keywords: power.summonData.keywords || []
       },
@@ -1072,7 +1072,7 @@ function executeSacrificeSummon(
         attack: power.summonData.attack,
         health: power.summonData.health,
         description: power.summonData.keywords?.join(', ') || '',
-        rarity: 'token' as any,
+        rarity: 'common',
         type: 'minion',
         keywords: power.summonData.keywords || []
       },
@@ -1176,7 +1176,7 @@ function executeGenerateEnemyClassCard(
       name: `${enemyClass} Card`,
       manaCost: Math.floor(Math.random() * 5) + 1,
       description: `Generated from ${enemyClass} class`,
-      rarity: 'common' as any,
+      rarity: 'common',
       type: 'spell',
       class: enemyClass
     },
@@ -1218,7 +1218,7 @@ function executeEquipWeapon(
       attack: weaponData.attack,
       durability: weaponData.durability,
       description: weaponData.keywords?.join(', ') || '',
-      rarity: 'common' as any,
+      rarity: 'common',
       type: 'weapon',
       keywords: weaponData.keywords || []
     } as any
@@ -1257,7 +1257,7 @@ function executeEquipRandomWeapon(
       attack: baseAttack,
       durability: baseDurability,
       description: '',
-      rarity: 'common' as any,
+      rarity: 'common',
       type: 'weapon',
       keywords: power.weaponData?.keywords || []
     } as any
@@ -1304,7 +1304,7 @@ function executeDiscover(
       name: selectedCard,
       manaCost: baseCost,
       description: `Foreseen card${costReduction > 0 ? ` (cost reduced by ${costReduction})` : ''}`,
-      rarity: 'rare' as any,
+      rarity: 'rare',
       type: 'spell',
       keywords: []
     },

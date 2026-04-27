@@ -90,9 +90,12 @@ export type CardType = 'minion' | 'spell' | 'weapon' | 'hero' | 'secret' | 'loca
 export type ZoneType = 'deck' | 'hand' | 'battlefield' | 'graveyard';
 
 /**
- * Valid card rarities
+ * Valid card rarities. Canonical 4 tiers per `docs/RULEBOOK.md` Card Rarity table,
+ * re-exported from the shared schemas package. Legacy values (`'basic'`,
+ * `'token'`) are translated by `tryAdaptRarity` at trust boundaries.
  */
-export type CardRarity = 'basic' | 'common' | 'rare' | 'epic' | 'mythic';
+import type { Rarity } from '@shared/schemas/rarity';
+export type CardRarity = Rarity;
 
 /**
  * Base interface with properties common to all cards
@@ -104,6 +107,13 @@ export interface BaseCardData {
   flavorText?: string;
   type: CardType;
   rarity?: CardRarity;
+  /**
+   * Stamped at the registry boundary by `validateCardRegistry`. Optional on
+   * the interface because runtime-spawned cards (battlecry summons, hero
+   * power replacements, etc.) bypass the boundary; consumers default such
+   * cards to `'token'` semantics when category is missing.
+   */
+  category?: import('@shared/schemas/cardCategory').CardCategory;
   manaCost?: number;
   class?: string;
   heroClass?: string;
