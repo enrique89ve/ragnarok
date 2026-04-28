@@ -726,7 +726,9 @@ export function playCard(state: GameState, cardInstanceId: string, targetId?: st
     (playedCard as any).hasStealth = true;
   }
 
-  // Alfheim realm: newly played minions get elusive
+  // Alfheim realm: newly played minions get elusive. Intentionally id-driven
+  // (not effect-driven like Svartalfheim's stealth_on_play). The Alfheim Gate
+  // ships with empty realmEffects — single source of truth lives here.
   if (newState.activeRealm?.id === 'alfheim') {
     (playedCard as any).hasElusive = true;
   }

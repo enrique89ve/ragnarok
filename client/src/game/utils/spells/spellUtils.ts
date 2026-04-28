@@ -1,4 +1,4 @@
-import { GameState, SpellEffect, CardData, CardInstance, MinionCardData, GameLogEventType } from '../../types';
+import { GameState, SpellEffect, CardData, CardInstance, MinionCardData, GameLogEventType, RealmShiftSpellEffect } from '../../types';
 import { v4 as uuidv4 } from 'uuid';
 import { executeBattlecry } from '../battlecryUtils';
 import { createCardInstance } from '../cards/cardUtils';
@@ -733,7 +733,7 @@ export function executeSpell(
       resultState = executeNextSpellCostsHealthSpell(state);
       break;
     case 'realm_shift': {
-      const eff = effect as any;
+      const eff = effect as unknown as RealmShiftSpellEffect;
       const caster = state.currentTurn === 'player' ? 'player' : 'opponent';
       let newState: GameState = {
         ...state,
@@ -2791,21 +2791,19 @@ function executeConditionalDamageSpell(
   
   // Check if target meets the condition
   if (effect.condition === 'is_frozen') {
-    // For now, we only handle the "is_frozen" condition
-    
     if (targetType === 'minion') {
       // Find the target minion
       const player = newState.players.player;
       const opponent = newState.players.opponent;
       let targetMinion: CardInstance | null = null;
-      
+
       // Check player's battlefield
       player.battlefield.forEach(minion => {
         if (minion.instanceId === targetId) {
           targetMinion = minion;
         }
       });
-      
+
       // If not found, check opponent's battlefield
       if (!targetMinion) {
         opponent.battlefield.forEach(minion => {
@@ -2814,14 +2812,18 @@ function executeConditionalDamageSpell(
           }
         });
       }
-      
+
       // If target found and is frozen, use enhanced damage
       if (targetMinion && (targetMinion as any).isFrozen) {
         damageAmount = enhancedValue;
       }
     }
+  } else if (effect.condition === 'realm_active') {
+    if (newState.activeRealm) {
+      damageAmount = enhancedValue;
+    }
   }
-  
+
   // Execute the damage spell with determined damage amount
   const modifiedEffect = { ...effect, value: damageAmount };
   return executeDamageSpell(newState, modifiedEffect, targetId, targetType);

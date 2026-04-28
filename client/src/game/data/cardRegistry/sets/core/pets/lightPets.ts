@@ -18,6 +18,7 @@ export const lightPets: CardData[] = [
 		collectible: true,
 		element: 'light',
 		weakness: { element: 'dark', bonusDamage: 2 },
+		realm: 'asgard',
 		petStage: 'basic',
 		evolvesInto: 50501,
 		evolutionCondition: { trigger: 'on_heal', description: 'After healing a friendly minion' }
@@ -39,6 +40,7 @@ export const lightPets: CardData[] = [
 		collectible: true,
 		element: 'light',
 		weakness: { element: 'dark', bonusDamage: 2 },
+		realm: 'asgard',
 		petStage: 'evolution',
 		evolvesFrom: 50500
 	},
@@ -58,6 +60,7 @@ export const lightPets: CardData[] = [
 		collectible: true,
 		element: 'light',
 		weakness: { element: 'dark', bonusDamage: 2 },
+		realm: 'asgard',
 		petStage: 'basic',
 		evolvesInto: 50503,
 		evolutionCondition: { trigger: 'on_buff', description: 'After a friendly minion is buffed' }
@@ -78,6 +81,7 @@ export const lightPets: CardData[] = [
 		collectible: true,
 		element: 'light',
 		weakness: { element: 'dark', bonusDamage: 2 },
+		realm: 'asgard',
 		petStage: 'evolution',
 		evolvesFrom: 50502
 	},
@@ -97,6 +101,7 @@ export const lightPets: CardData[] = [
 		collectible: true,
 		element: 'light',
 		weakness: { element: 'dark', bonusDamage: 2 },
+		realm: 'asgard',
 		petStage: 'basic',
 		evolvesInto: 50505,
 		evolutionCondition: { trigger: 'on_buff', description: 'After a friendly minion is buffed' }
@@ -118,6 +123,7 @@ export const lightPets: CardData[] = [
 		collectible: true,
 		element: 'light',
 		weakness: { element: 'dark', bonusDamage: 2 },
+		realm: 'asgard',
 		petStage: 'evolution',
 		evolvesFrom: 50504
 	},
@@ -137,6 +143,7 @@ export const lightPets: CardData[] = [
 		collectible: true,
 		element: 'light',
 		weakness: { element: 'dark', bonusDamage: 2 },
+		realm: 'asgard',
 		petStage: 'basic',
 		evolvesInto: 50507,
 		evolutionCondition: { trigger: 'on_buff', description: 'After a friendly minion is buffed' }
@@ -157,6 +164,7 @@ export const lightPets: CardData[] = [
 		collectible: true,
 		element: 'light',
 		weakness: { element: 'dark', bonusDamage: 2 },
+		realm: 'asgard',
 		petStage: 'evolution',
 		evolvesFrom: 50506
 	},
@@ -176,6 +184,7 @@ export const lightPets: CardData[] = [
 		collectible: true,
 		element: 'light',
 		weakness: { element: 'dark', bonusDamage: 2 },
+		realm: 'alfheim',
 		petStage: 'basic',
 		evolvesInto: 50509,
 		evolutionCondition: { trigger: 'on_heal', description: 'After healing a friendly minion' }
@@ -196,6 +205,7 @@ export const lightPets: CardData[] = [
 		collectible: true,
 		element: 'light',
 		weakness: { element: 'dark', bonusDamage: 2 },
+		realm: 'alfheim',
 		petStage: 'evolution',
 		evolvesFrom: 50508
 	},
@@ -215,6 +225,7 @@ export const lightPets: CardData[] = [
 		collectible: true,
 		element: 'light',
 		weakness: { element: 'dark', bonusDamage: 2 },
+		realm: 'asgard',
 		petStage: 'basic',
 		evolvesInto: 50511,
 		evolutionCondition: { trigger: 'on_buff', description: 'After a friendly minion is buffed' }
@@ -235,6 +246,7 @@ export const lightPets: CardData[] = [
 		collectible: true,
 		element: 'light',
 		weakness: { element: 'dark', bonusDamage: 2 },
+		realm: 'asgard',
 		petStage: 'evolution',
 		evolvesFrom: 50510
 	},
@@ -255,6 +267,7 @@ export const lightPets: CardData[] = [
 		collectible: true,
 		element: 'light',
 		weakness: { element: 'dark', bonusDamage: 2 },
+		realm: 'asgard',
 		petStage: 'basic',
 		evolvesInto: 50513,
 		evolutionCondition: { trigger: 'on_buff', description: 'After a friendly minion is buffed' }
@@ -276,6 +289,7 @@ export const lightPets: CardData[] = [
 		collectible: true,
 		element: 'light',
 		weakness: { element: 'dark', bonusDamage: 2 },
+		realm: 'asgard',
 		petStage: 'evolution',
 		evolvesFrom: 50512
 	}

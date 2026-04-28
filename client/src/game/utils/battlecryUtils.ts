@@ -17,14 +17,15 @@ import { MAX_BATTLEFIELD_SIZE, MAX_HAND_SIZE } from '../constants/gameConstants'
 import { useAnimationStore } from '../animations/AnimationManager';
 import allCards, { getCardById } from '../data/allCards';
 import { addKeyword, setKeywords, getKeywords, hasKeyword } from './cards/keywordUtils';
-import { 
-  findCardInstance, 
-  createCardInstance, 
-  getCardTribe, 
-  isCardOfTribe, 
+import {
+  findCardInstance,
+  createCardInstance,
+  getCardTribe,
+  isCardOfTribe,
   isNagaCard,
   instanceToCardData,
-  getCardKeywords
+  getCardKeywords,
+  getCardRealm
 } from './cards/cardUtils';
 import { transformMinion, silenceMinion } from './transformUtils';
 import { dealDamage } from './effects/damageUtils';
@@ -505,7 +506,12 @@ export function executeBattlecry(
         // Execute a battlecry to buff all minions of a specific tribe
         // Used by cards like Coldlight Seer (Give your other Murlocs +2 Health)
         return executeBuffTribeBattlecry(newState, cardInstanceId, battlecry);
-        
+
+      case 'realm_aligned_buff':
+        // Execute a Realm Aligned battlecry: buff self if active battlefield
+        // realm matches this minion's lore-origin realm. See docs/RULEBOOK.md.
+        return executeRealmAlignedBuffBattlecry(newState, cardInstanceId, battlecry);
+
       case 'conditional_grant_keyword':
         return executeConditionalGrantKeywordBattlecry(newState, battlecry, cardInstanceId);
         
@@ -3252,6 +3258,114 @@ function executeBuffTribeBattlecry(
 }
 
 /**
+ * Execute a Realm Aligned battlecry effect.
+ *
+ * Compares the source minion's lore-origin realm (`card.realm`, immutable, set
+ * at design time) against the active battlefield realm (`gameState.activeRealm.id`,
+ * mutable, written by Realm Shift spells). When they match, the minion gains
+ * `buffAttack`/`buffHealth` on itself. When no realm is active or the realms
+ * differ, the battlecry is a no-op (no penalty). See docs/RULEBOOK.md
+ * "Realm Aligned" section for the full design rationale.
+ *
+ * Mirrors the structural pattern of `executeBuffTribeBattlecry` (deep copy via
+ * JSON, try/catch, animation trigger, debug logging) and the self-target
+ * lookup pattern of `executeConditionalSelfBuffBattlecry` (search both
+ * battlefields, since either side may play this card).
+ */
+function executeRealmAlignedBuffBattlecry(
+  state: GameState,
+  cardInstanceId: string,
+  battlecry: BattlecryEffect
+): GameState {
+  // Create a deep copy of the state to avoid mutation
+  const newState = JSON.parse(JSON.stringify(state)) as GameState;
+
+  try {
+    // Locate the source minion on either battlefield (either side may play this)
+    const playerBattlefield = newState.players.player.battlefield || [];
+    const opponentBattlefield = newState.players.opponent.battlefield || [];
+    let cardInfo = findCardInstance(playerBattlefield, cardInstanceId);
+    let ownerKey: 'player' | 'opponent' = 'player';
+    if (!cardInfo) {
+      cardInfo = findCardInstance(opponentBattlefield, cardInstanceId);
+      ownerKey = 'opponent';
+    }
+    if (!cardInfo) {
+      debug.error('Card not found for realm aligned battlecry', cardInstanceId);
+      return state;
+    }
+
+    const sourceCard = cardInfo.card;
+    const cardRealm = getCardRealm(sourceCard);
+    const activeRealmId = newState.activeRealm?.id;
+
+    // No-op if either side of the equation is missing (no realm active OR
+    // card is untagged). Per spec, this resolves cleanly with no penalty.
+    if (!cardRealm || !activeRealmId) {
+      debug.log('Realm aligned battlecry no-op: missing realm tag or no active realm', {
+        cardRealm,
+        activeRealmId
+      });
+      return newState;
+    }
+
+    // Case-insensitive comparison (mirrors isCardOfTribe / isCardOfRealm)
+    if (cardRealm.toLowerCase() !== activeRealmId.toLowerCase()) {
+      debug.log('Realm aligned battlecry no-op: realm mismatch', {
+        cardRealm,
+        activeRealmId
+      });
+      return newState;
+    }
+
+    // Realms match — apply the self-buff
+    const attackBuff = battlecry.buffAttack || (battlecry as any).buffs?.attack || 0;
+    const healthBuff = battlecry.buffHealth || (battlecry as any).buffs?.health || 0;
+
+    if (attackBuff === 0 && healthBuff === 0) {
+      debug.error('No buff values provided for realm aligned battlecry');
+      return state;
+    }
+
+    const battlefield = newState.players[ownerKey].battlefield || [];
+    const targetIndex = battlefield.findIndex(c => c.instanceId === cardInstanceId);
+    if (targetIndex === -1) {
+      debug.error('Source minion lost from battlefield during realm aligned battlecry', cardInstanceId);
+      return state;
+    }
+
+    const target = battlefield[targetIndex];
+    const targetCard = target.card as MinionCardData;
+    const currentAttack = targetCard.attack || 0;
+    const currentHealth = targetCard.health || 0;
+    const currentHealthValue = target.currentHealth ?? currentHealth;
+
+    // Update base stats and current health (matches buff_tribe stat-update style)
+    newState.players[ownerKey].battlefield[targetIndex].card = {
+      ...target.card,
+      attack: currentAttack + attackBuff,
+      health: currentHealth + healthBuff
+    } as MinionCardData;
+    newState.players[ownerKey].battlefield[targetIndex].currentHealth = currentHealthValue + healthBuff;
+
+    // Trigger animation (mirrors buff_tribe)
+    const addAnimation = useAnimationStore.getState().addAnimation;
+    addAnimation({
+      id: `realm-aligned-${cardRealm}-${Date.now()}`,
+      type: 'buff',
+      sourceId: sourceCard.card.id as number,
+      position: { x: 400, y: 300 },
+      duration: 800
+    } as any);
+
+    return newState;
+  } catch (error) {
+    debug.error('Error executing realm aligned battlecry:', error);
+    return state;
+  }
+}
+
+/**
  * Execute a summon battlecry effect (summoning a specific minion)
  */
 function executeSummonBattlecry(
@@ -5065,7 +5179,12 @@ function checkBattlecryCondition(state: GameState, condition: string): boolean {
     }
     case 'hand_size_10_plus':
       return (player.hand || []).length >= 10;
+    case 'realm_active':
+      return !!state.activeRealm;
+    case 'realm_shifts_2':
+      return (state.realmsVisited?.length ?? 0) >= 2;
     default:
+      debug.warn('Unknown battlecry condition', condition);
       return true;
   }
 }

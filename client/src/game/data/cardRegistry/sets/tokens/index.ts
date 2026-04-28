@@ -194,6 +194,7 @@ const neutralTokens: CardData[] = [
     health: 1,
     race: 'Automaton',
     class: 'Neutral',
+    realm: 'jotunheim',
     collectible: false
   },
   {
@@ -207,6 +208,7 @@ const neutralTokens: CardData[] = [
     attack: 4,
     health: 5,
     class: 'Neutral',
+    realm: 'helheim',
     collectible: false
   },
   {
@@ -235,6 +237,7 @@ const neutralTokens: CardData[] = [
     health: 2,
     race: 'Automaton',
     class: 'Neutral',
+    realm: 'svartalfheim',
     collectible: false
   },
   {

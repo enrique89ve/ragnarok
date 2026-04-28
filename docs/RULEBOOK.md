@@ -19,6 +19,7 @@
    - [Einherjar](#einherjar)
    - [Prophecy](#prophecy)
    - [Realm Shift](#realm-shift)
+   - [Realm Aligned](#realm-aligned)
    - [Ragnarok Chain](#ragnarok-chain)
    - [Pet Evolution System](#pet-evolution-system)
    - [Submerge](#submerge)
@@ -620,15 +621,45 @@ Realm Shift spells change the active battlefield realm, applying board-wide rule
 
 | Realm | Class | Cost | Effect |
 |-------|-------|------|--------|
-| **Niflheim** | Shaman | 3 | All minions have -2 Attack |
+| **Niflheim** | Shaman | 3 | All minions have -2 Attack. Freeze effects last an extra turn |
 | **Muspelheim** | Mage | 3 | All minions take 1 damage at end of turn |
 | **Asgard** | Paladin | 4 | Your minions +1 Attack, enemy spells cost (1) more |
-| **Helheim** | Necromancer | 3 | Minions return to owner's hand costing (2) more when they die |
+| **Helheim** | Necromancer | 4 | Deathrattles don't trigger. Dead minions are banished |
 | **Vanaheim** | Druid | 3 | All minions restore 2 Health at start of turn |
 | **Jotunheim** | Warrior | 4 | All minions +2 Attack but -1 Health |
-| **Alfheim** | Neutral | 2 | All minions have Elusive (can't be targeted by spells) |
+| **Alfheim** | Neutral | 4 | All minions have Elusive (can't be targeted by spells) |
 | **Svartalfheim** | Rogue | 3 | Newly played minions have Stealth |
 | **Midgard** | Neutral | 2 | Remove active realm, restore minions to base stats |
+
+### Realm Aligned
+
+Realm Aligned cards are minions tagged with a lore-origin realm (`card.realm`). When their battlecry triggers, if the **active battlefield realm** matches their origin, they gain a power bonus. This rewards deckbuilding around a single realm and creates synergy with Realm Shift spells.
+
+| Rule | Detail |
+|------|--------|
+| **Realm Tag** | Each tagged minion declares its origin (e.g. `realm: 'helheim'`). Immutable. |
+| **Trigger** | Battlecry resolves on play. Reads `gameState.activeRealm.id`. |
+| **Match** | If active realm id equals card's realm tag, the buff applies. |
+| **No Realm Active** | If no realm is active, the battlecry is a no-op (no penalty). |
+| **Mismatch** | If active realm differs, the battlecry is a no-op (no penalty). |
+
+**Distinction from existing mechanics:**
+
+| Concept | Layer | Mutable | Type | Source |
+|---------|-------|---------|------|--------|
+| `activeRealm.id` (Realm Shift) | Game state | Yes — Gate spells overwrite it | `RealmId` | `realmShiftCards.ts` |
+| `card.realm` (Realm Aligned) | Card data | No — lore tag | `NineRealm` | Card definition |
+
+**Type contract:**
+
+The realm vocabulary lives in [`client/src/game/types/NorseTypes.ts`](../client/src/game/types/NorseTypes.ts):
+
+- **`NineRealm`** — the canonical nine: `asgard | midgard | jotunheim | niflheim | muspelheim | helheim | alfheim | svartalfheim | vanaheim`. Used by `card.realm` (origin) and by `realm_shift` Gate spells (destination).
+- **`RealmId = NineRealm | 'ginnungagap'`** — superset that includes the primordial void. Used by `RealmState.id` because the campaign's origin mission may render Ginnungagap as the active battlefield, even though no card is born there.
+
+This asymmetry is intentional: cards declare origin from a canonical realm; the battlefield can additionally show the void.
+
+**Example:** A minion `realm: 'asgard'` with a Realm Aligned battlecry, played while a Gate to Asgard is active, gets the bonus. Played without an active realm, or with a different active realm, the battlecry resolves as no-op.
 
 ### Ragnarok Chain
 

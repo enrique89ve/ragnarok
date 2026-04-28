@@ -13,6 +13,36 @@ import { ElementType } from './ChessTypes';
 export type NorseElement = 'fire' | 'water' | 'grass' | 'electric' | 'light' | 'dark' | 'ice' | 'neutral';
 
 /**
+ * The Nine Realms of Yggdrasil — canonical realms tagged on card origin.
+ * These are the only valid values for `BaseCardData.realm` (lore origin)
+ * and for `realm_shift` spell effects (Gate cards).
+ *
+ * See docs/RULEBOOK.md "The Nine Realms" table.
+ */
+export type NineRealm =
+	| 'asgard'       // realm of the Aesir gods
+	| 'midgard'      // realm of humans
+	| 'jotunheim'    // realm of giants
+	| 'niflheim'     // realm of ice and primordial mist
+	| 'muspelheim'   // realm of fire
+	| 'helheim'      // realm of the dishonored dead
+	| 'alfheim'      // realm of light elves
+	| 'svartalfheim' // realm of dark elves and dwarves
+	| 'vanaheim';    // realm of the Vanir gods
+
+/**
+ * Battlefield-state realm identifier — superset of `NineRealm`.
+ *
+ * Equals the canonical nine plus `'ginnungagap'`, the primordial void.
+ * Ginnungagap is a valid *active battlefield realm* (the campaign's origin
+ * mission renders the void as the arena background) but is NEVER a card
+ * origin — no minion's lore places its birth in the void.
+ *
+ * Used by `RealmState.id` in GameState. For card origin, use `NineRealm`.
+ */
+export type RealmId = NineRealm | 'ginnungagap';
+
+/**
  * Map Norse elements to game ElementType
  */
 export const NORSE_TO_GAME_ELEMENT: Record<NorseElement, ElementType> = {

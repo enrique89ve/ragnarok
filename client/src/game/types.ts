@@ -7,7 +7,7 @@
  * For adapter functions and unified types that bridge systems, see:
  * /utils/cardTypeAdapter.ts
  */
-import { NorseElement } from './types/NorseTypes';
+import { NorseElement, NineRealm, RealmId } from './types/NorseTypes';
 
 /**
  * Collection filtering types
@@ -121,6 +121,7 @@ export interface BaseCardData {
   race?: string;
   set?: string;
   keywords?: string[];
+  realm?: NineRealm;
   bloodPrice?: number;
   sacrificeCost?: number;
   trioPact?: number[];
@@ -975,7 +976,7 @@ export interface GameState {
   animations?: AnimationParams[];
   prophecies?: Prophecy[];
   activeRealm?: RealmState;
-  realmsVisited?: string[];
+  realmsVisited?: RealmId[];
 }
 
 export interface Prophecy {
@@ -988,8 +989,20 @@ export interface Prophecy {
   sourceCardId: number | string;
 }
 
+/**
+ * Battlefield realm state. The active realm renders the arena background
+ * and applies board-wide effects to all minions.
+ *
+ * `id` is `RealmId` — the canonical 9 Norse realms plus `'ginnungagap'`
+ * (the primordial void, used by the campaign's origin mission). Card
+ * origins (`BaseCardData.realm`) use the stricter `NineRealm` since no
+ * minion's lore is rooted in the void.
+ *
+ * See `client/src/game/types/NorseTypes.ts` for the type definitions
+ * and `docs/RULEBOOK.md` "Realm Shift" / "Realm Aligned" sections.
+ */
 export interface RealmState {
-  id: string;
+  id: RealmId;
   name: string;
   description: string;
   owner: 'player' | 'opponent';
@@ -997,9 +1010,22 @@ export interface RealmState {
 }
 
 export interface RealmEffect {
-  type: 'buff_all_attack' | 'debuff_all_attack' | 'damage_all_end_turn' | 'heal_all_start_turn' | 'cost_increase' | 'keyword_grant' | 'return_to_hand_on_death' | 'banish_on_death' | 'stealth_on_play';
+  type: 'buff_all_attack' | 'debuff_all_attack' | 'damage_all_end_turn' | 'heal_all_start_turn' | 'cost_increase' | 'keyword_grant' | 'return_to_hand_on_death' | 'banish_on_death' | 'stealth_on_play' | 'debuff_all_health';
   value: number;
   target: 'all' | 'friendly' | 'enemy';
+}
+
+/**
+ * Discriminated payload for `realm_shift` spell effects (Gate spells). The
+ * spell-effect dispatcher narrows `SpellEffect` to this when `type === 'realm_shift'`,
+ * so `realmId` typos are caught at compile time instead of crashing at runtime.
+ */
+export interface RealmShiftSpellEffect {
+  type: 'realm_shift';
+  realmId: RealmId;
+  realmName: string;
+  realmDescription: string;
+  realmEffects: RealmEffect[];
 }
 
 /**

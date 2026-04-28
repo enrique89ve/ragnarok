@@ -1,7 +1,8 @@
 import type { CampaignMission } from './campaignTypes';
+import type { RealmId } from '../types/NorseTypes';
 
 export interface Realm {
-	id: string;
+	id: RealmId;
 	name: string;
 	description: string;
 	runeSymbol: string;
@@ -136,7 +137,9 @@ export const NINE_REALMS: Realm[] = [
 	},
 ];
 
-export const REALM_MAP = new Map(NINE_REALMS.map(r => [r.id, r]));
+// Keyed by `string` (not `RealmId`) so callers can guard arbitrary route /
+// URL input without ceremony. Values stay strongly typed.
+export const REALM_MAP: Map<string, Realm> = new Map(NINE_REALMS.map(r => [r.id, r]));
 
 export const MISSION_REALM_MAP: Record<string, string> = {
 	'norse-1': 'ginnungagap',

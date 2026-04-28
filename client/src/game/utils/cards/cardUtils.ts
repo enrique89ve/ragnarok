@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { CardData, CardInstance } from '../../types';
+import type { NineRealm } from '../../types/NorseTypes';
 import allCards, { getCardById } from '../../data/allCards';
 import { initializeSpellPower } from '../spells/spellPowerUtils';
 import { initializePoisonousEffect } from '../mechanics/poisonousUtils';
@@ -372,6 +373,27 @@ export function getCardTribe(card: CardData | CardInstance): string | undefined 
 export function isCardOfTribe(card: CardData | CardInstance, tribeName: string): boolean {
   const tribe = getCardTribe(card);
   return tribe ? tribe.toLowerCase() === tribeName.toLowerCase() : false;
+}
+
+/**
+ * Get a card's lore-origin realm (Norse Nine Realms tag).
+ * Returns `undefined` if the card has no realm tag.
+ */
+export function getCardRealm(card: CardData | CardInstance): NineRealm | undefined {
+  if (!card) return undefined;
+
+  // If it's a CardInstance, get the inner card
+  const cardData = 'card' in card ? card.card : card;
+  return cardData ? cardData.realm : undefined;
+}
+
+/**
+ * Match a card's lore origin against a target realm.
+ * Returns false if the card has no realm tag.
+ */
+export function isCardOfRealm(card: CardData | CardInstance, realmId: NineRealm): boolean {
+  const realm = getCardRealm(card);
+  return realm === realmId;
 }
 
 /**

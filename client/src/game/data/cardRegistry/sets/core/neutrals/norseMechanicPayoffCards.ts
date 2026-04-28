@@ -210,7 +210,7 @@ export const realmShiftPayoffCards: CardData[] = [
 			type: 'conditional_damage',
 			value: 3,
 			condition: 'realm_active',
-			bonusValue: 5,
+			enhancedValue: 5,
 			targetType: 'any',
 			requiresTarget: true
 		},
@@ -235,6 +235,32 @@ export const realmShiftPayoffCards: CardData[] = [
 			buffAttack: 3,
 			buffHealth: 3,
 			grantKeywords: ['divine_shield']
+		},
+		set: 'genesis',
+		collectible: true
+	},
+	{
+		// Realm Aligned exemplar: rewards mono-realm decks that synergize with
+		// Realm Shift spells. See docs/RULEBOOK.md "Realm Aligned" section.
+		// ID 31958 is the first free slot after the contiguous 31908–31957 range
+		// (the spec's suggested 31918 was already taken by Valkyrja).
+		id: 31958,
+		name: 'Realmbound Acolyte',
+		manaCost: 2,
+		attack: 2,
+		health: 2,
+		realm: 'asgard',
+		description: 'Battlecry: If the active realm matches this minion\'s realm, gain +2/+2.',
+		flavorText: 'Where one realm rises, its faithful answer the call.',
+		type: 'minion',
+		rarity: 'common',
+		class: 'Neutral',
+		keywords: ['battlecry'],
+		battlecry: {
+			type: 'realm_aligned_buff',
+			buffAttack: 2,
+			buffHealth: 2,
+			targetType: 'self'
 		},
 		set: 'genesis',
 		collectible: true

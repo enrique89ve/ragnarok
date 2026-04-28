@@ -24,6 +24,7 @@ import { useGameStore } from '../../stores/gameStore';
 import { useWarbandStore, selectArmy, selectDeckCardIds } from '../../../lib/stores/useWarbandStore';
 import { useCraftingStore } from '../../crafting/craftingStore';
 import { resolveHeroPortrait, DEFAULT_PORTRAIT } from '../../utils/art/artMapping';
+import type { RealmId } from '../../types/NorseTypes';
 
 /*
   Phase components are lazy-loaded so casual / multiplayer routes —
@@ -53,38 +54,42 @@ import '../campaign/cinematic-crawl.css';
   Used by RagnarokChessGame.tsx (this file) and consumed by realm-boards.css
   + .ragnarok-chess-game.realm-{id} CSS rules below.
 */
-const REALM_VISUAL_MAP: Record<string, string> = {
-	// Norse (direct art)
-	ginnungagap: 'ginnungagap', midgard: 'midgard', asgard: 'asgard',
-	niflheim: 'niflheim', muspelheim: 'muspelheim', helheim: 'helheim',
-	jotunheim: 'jotunheim', alfheim: 'alfheim', vanaheim: 'vanaheim',
-	svartalfheim: 'svartalfheim',
-	// Greek → Norse visual proxies
-	chaos: 'ginnungagap', gaia_earth: 'vanaheim', mount_othrys: 'jotunheim',
-	tartarus: 'helheim', olympus: 'asgard', cilicia: 'muspelheim',
-	phlegra: 'muspelheim', athens: 'midgard',
-	// Egyptian → Norse visual proxies
-	heliopolis: 'asgard', thebes: 'midgard', duat: 'helheim',
-	memphis: 'svartalfheim', abydos: 'midgard',
-	// Celtic → Norse visual proxies
-	tara: 'vanaheim', emain_macha: 'midgard', cruachan: 'jotunheim',
-	tir_na_nog: 'alfheim', mag_mell: 'alfheim',
-	// Eastern → Norse visual proxies
-	celestial_court: 'asgard', takamagahara: 'asgard',
-	yomi: 'helheim', mount_meru: 'jotunheim', diyu: 'muspelheim',
+const REALM_VISUAL_MAP: Record<string, RealmId> = {
+  // Norse (direct art)
+  ginnungagap: 'ginnungagap', midgard: 'midgard', asgard: 'asgard',
+  niflheim: 'niflheim', muspelheim: 'muspelheim', helheim: 'helheim',
+  jotunheim: 'jotunheim', alfheim: 'alfheim', vanaheim: 'vanaheim',
+  svartalfheim: 'svartalfheim',
+  // Greek → Norse visual proxies
+  chaos: 'ginnungagap', gaia_earth: 'vanaheim', mount_othrys: 'jotunheim',
+  tartarus: 'helheim', olympus: 'asgard', cilicia: 'muspelheim',
+  phlegra: 'muspelheim', athens: 'midgard',
+  // Egyptian → Norse visual proxies
+  heliopolis: 'asgard', thebes: 'midgard', duat: 'helheim',
+  memphis: 'svartalfheim', abydos: 'midgard',
+  // Celtic → Norse visual proxies
+  tara: 'vanaheim', emain_macha: 'midgard', cruachan: 'jotunheim',
+  tir_na_nog: 'alfheim', mag_mell: 'alfheim',
+  // Eastern → Norse visual proxies
+  celestial_court: 'asgard', takamagahara: 'asgard',
+  yomi: 'helheim', mount_meru: 'jotunheim', diyu: 'muspelheim',
 };
 
-const REALM_DISPLAY_NAMES: Record<string, string> = {
-	ginnungagap: 'Ginnungagap', midgard: 'Midgard', asgard: 'Asgard',
-	niflheim: 'Niflheim', muspelheim: 'Muspelheim', helheim: 'Helheim',
-	jotunheim: 'Jotunheim', alfheim: 'Alfheim', vanaheim: 'Vanaheim',
-	svartalfheim: 'Svartalfheim',
+const REALM_DISPLAY_NAMES: Record<RealmId, string> = {
+  ginnungagap: 'Ginnungagap', midgard: 'Midgard', asgard: 'Asgard',
+  niflheim: 'Niflheim', muspelheim: 'Muspelheim', helheim: 'Helheim',
+  jotunheim: 'Jotunheim', alfheim: 'Alfheim', vanaheim: 'Vanaheim',
+  svartalfheim: 'Svartalfheim',
 };
 
-/** Resolve a campaign mission realm to its visual realm id. Falls back to midgard. */
-function resolveVisualRealm(missionRealm: string | undefined | null): string {
-	if (!missionRealm) return 'midgard';
-	return REALM_VISUAL_MAP[missionRealm] || 'midgard';
+/** Resolve a campaign mission realm to its visual realm id. Falls back to midgard.
+ *
+ * Input is open string because campaign missions may declare realms from any
+ * pantheon (Norse, Greek, Egyptian, Celtic, Eastern). Output is `RealmId`
+ * because all REALM_VISUAL_MAP values are canonical Norse + ginnungagap. */
+function resolveVisualRealm(missionRealm: string | undefined | null): RealmId {
+  if (!missionRealm) return 'midgard';
+  return REALM_VISUAL_MAP[missionRealm] || 'midgard';
 }
 
 

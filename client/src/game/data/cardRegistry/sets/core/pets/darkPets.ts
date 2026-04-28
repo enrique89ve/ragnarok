@@ -18,6 +18,7 @@ export const darkPets: CardData[] = [
 		collectible: true,
 		element: 'dark',
 		weakness: { element: 'light', bonusDamage: 2 },
+		realm: 'helheim',
 		petStage: 'basic',
 		evolvesInto: 50401,
 		evolutionCondition: { trigger: 'on_destroy', description: 'After destroying an enemy minion' }
@@ -39,6 +40,7 @@ export const darkPets: CardData[] = [
 		collectible: true,
 		element: 'dark',
 		weakness: { element: 'light', bonusDamage: 2 },
+		realm: 'helheim',
 		petStage: 'evolution',
 		evolvesFrom: 50400
 	},
@@ -58,6 +60,7 @@ export const darkPets: CardData[] = [
 		collectible: true,
 		element: 'dark',
 		weakness: { element: 'light', bonusDamage: 2 },
+		realm: 'niflheim',
 		petStage: 'basic',
 		evolvesInto: 50403,
 		evolutionCondition: { trigger: 'on_silence', description: 'After silencing an enemy minion' }
@@ -78,6 +81,7 @@ export const darkPets: CardData[] = [
 		collectible: true,
 		element: 'dark',
 		weakness: { element: 'light', bonusDamage: 2 },
+		realm: 'niflheim',
 		petStage: 'evolution',
 		evolvesFrom: 50402
 	},
@@ -98,6 +102,7 @@ export const darkPets: CardData[] = [
 		collectible: true,
 		element: 'dark',
 		weakness: { element: 'light', bonusDamage: 2 },
+		realm: 'niflheim',
 		petStage: 'basic',
 		evolvesInto: 50405,
 		evolutionCondition: { trigger: 'on_return_to_hand', description: 'After returning to your hand' }
@@ -119,6 +124,7 @@ export const darkPets: CardData[] = [
 		collectible: true,
 		element: 'dark',
 		weakness: { element: 'light', bonusDamage: 2 },
+		realm: 'niflheim',
 		petStage: 'evolution',
 		evolvesFrom: 50404
 	},
@@ -138,6 +144,7 @@ export const darkPets: CardData[] = [
 		collectible: true,
 		element: 'dark',
 		weakness: { element: 'light', bonusDamage: 2 },
+		realm: 'helheim',
 		petStage: 'basic',
 		evolvesInto: 50407,
 		evolutionCondition: { trigger: 'on_destroy', description: 'After destroying an enemy minion' }
@@ -158,6 +165,7 @@ export const darkPets: CardData[] = [
 		collectible: true,
 		element: 'dark',
 		weakness: { element: 'light', bonusDamage: 2 },
+		realm: 'helheim',
 		petStage: 'evolution',
 		evolvesFrom: 50406
 	},
@@ -177,6 +185,7 @@ export const darkPets: CardData[] = [
 		collectible: true,
 		element: 'dark',
 		weakness: { element: 'light', bonusDamage: 2 },
+		realm: 'helheim',
 		petStage: 'basic',
 		evolvesInto: 50409,
 		evolutionCondition: { trigger: 'on_attack_from_stealth', description: 'After attacking from Stealth' }
@@ -197,6 +206,7 @@ export const darkPets: CardData[] = [
 		collectible: true,
 		element: 'dark',
 		weakness: { element: 'light', bonusDamage: 2 },
+		realm: 'helheim',
 		petStage: 'evolution',
 		evolvesFrom: 50408
 	},
@@ -216,6 +226,7 @@ export const darkPets: CardData[] = [
 		collectible: true,
 		element: 'dark',
 		weakness: { element: 'light', bonusDamage: 2 },
+		realm: 'svartalfheim',
 		petStage: 'basic',
 		evolvesInto: 50411,
 		evolutionCondition: { trigger: 'on_silence', description: 'After silencing an enemy minion' }
@@ -236,6 +247,7 @@ export const darkPets: CardData[] = [
 		collectible: true,
 		element: 'dark',
 		weakness: { element: 'light', bonusDamage: 2 },
+		realm: 'svartalfheim',
 		petStage: 'evolution',
 		evolvesFrom: 50410
 	},
@@ -256,6 +268,7 @@ export const darkPets: CardData[] = [
 		collectible: true,
 		element: 'dark',
 		weakness: { element: 'light', bonusDamage: 2 },
+		realm: 'helheim',
 		petStage: 'basic',
 		evolvesInto: 50413,
 		evolutionCondition: { trigger: 'on_heal', description: 'After healing a friendly minion' }
@@ -277,6 +290,7 @@ export const darkPets: CardData[] = [
 		collectible: true,
 		element: 'dark',
 		weakness: { element: 'light', bonusDamage: 2 },
+		realm: 'helheim',
 		petStage: 'evolution',
 		evolvesFrom: 50412
 	},
@@ -297,6 +311,7 @@ export const darkPets: CardData[] = [
 		collectible: true,
 		element: 'dark',
 		weakness: { element: 'light', bonusDamage: 2 },
+		realm: 'midgard',
 		petStage: 'basic',
 		evolvesInto: 50415,
 		evolutionCondition: { trigger: 'on_draw_card', description: 'After drawing a card' }
@@ -318,6 +333,7 @@ export const darkPets: CardData[] = [
 		collectible: true,
 		element: 'dark',
 		weakness: { element: 'light', bonusDamage: 2 },
+		realm: 'midgard',
 		petStage: 'evolution',
 		evolvesFrom: 50414
 	},
@@ -338,6 +354,7 @@ export const darkPets: CardData[] = [
 		collectible: true,
 		element: 'dark',
 		weakness: { element: 'light', bonusDamage: 2 },
+		realm: 'helheim',
 		petStage: 'basic',
 		evolvesInto: 50417,
 		evolutionCondition: { trigger: 'on_deal_damage', description: 'After dealing damage to an enemy' }
@@ -359,6 +376,7 @@ export const darkPets: CardData[] = [
 		collectible: true,
 		element: 'dark',
 		weakness: { element: 'light', bonusDamage: 2 },
+		realm: 'helheim',
 		petStage: 'evolution',
 		evolvesFrom: 50416
 	}

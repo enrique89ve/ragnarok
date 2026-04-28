@@ -1,6 +1,6 @@
 /**
  * Effect Types
- * 
+ *
  * This file defines all the type interfaces for card effects in the game.
  * It provides consistent typing for battlecry, deathrattle, spell effects and more.
  */
@@ -239,6 +239,7 @@ export type BuffEffectType =
   | 'buff_self'
   | 'buff_hero'
   | 'buff_tribe'
+  | 'realm_aligned_buff'
   | 'buff_hand'
   | 'buff_deck'
   | 'buff_weapon'

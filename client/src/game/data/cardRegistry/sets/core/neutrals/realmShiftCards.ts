@@ -159,9 +159,7 @@ export const realmShiftCards: CardData[] = [
 			realmId: 'alfheim',
 			realmName: 'Alfheim',
 			realmDescription: 'All minions have Elusive.',
-			realmEffects: [
-				{ type: 'keyword_grant', value: 0, target: 'all' }
-			]
+			realmEffects: []
 		},
 		set: 'genesis',
 		collectible: true
