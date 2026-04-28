@@ -6,9 +6,8 @@ import { getDefaultArmySelection, buildCombatDeck } from '../../data/ChessPieceC
 import { useCampaignStore, getMission, getMissionStars } from '../../campaign';
 import { useRivalryStore } from '../../pvp/rivalryStore';
 import { buildCampaignArmy } from '../../campaign/campaignArmyBuilder';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { routes } from '../../../lib/routes';
-import ArmySelectionComponent from '../ArmySelection';
 import ChessBoard from './ChessBoard';
 import RagnarokCombatArena from '../../combat/RagnarokCombatArena';
 import VSScreen from './VSScreen';
@@ -22,6 +21,7 @@ import { getKingAbilityConfig, getAbilityDescription, requiresDirectionSelection
 import { Tooltip } from '../ui/Tooltip';
 import { debug } from '../../config/debugConfig';
 import { useGameStore } from '../../stores/gameStore';
+import { useWarbandStore, selectArmy, selectDeckCardIds } from '../../../lib/stores/useWarbandStore';
 import { useCraftingStore } from '../../crafting/craftingStore';
 import { resolveHeroPortrait, DEFAULT_PORTRAIT } from '../../utils/art/artMapping';
 import CinematicCrawl from '../campaign/CinematicCrawl';
@@ -439,11 +439,16 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
     campaignData ? s.seenCinematics.includes(campaignData.chapter.id) : true
   );
   const hasCinematic = isCampaign && !!campaignData?.chapter?.cinematicIntro && !cinematicAlreadySeen;
+  const warbandArmy = useWarbandStore(selectArmy);
+  const warbandDeck = useWarbandStore(selectDeckCardIds);
+  const effectiveInitialArmy: ArmySelectionType | null = initialArmy ?? warbandArmy;
   const [phase, setPhase] = useState<GamePhase>(
-    initialArmy ? 'chess' : isCampaign ? (hasCinematic ? 'cinematic' : 'chess') : 'army_selection'
+    effectiveInitialArmy ? 'chess' : isCampaign ? (hasCinematic ? 'cinematic' : 'chess') : 'army_selection'
   );
-  const [playerArmy, setPlayerArmy] = useState<ArmySelectionType | null>(initialArmy);
-  const [sharedDeckCardIds, setSharedDeckCardIds] = useState<number[]>([]);
+  const [playerArmy, setPlayerArmy] = useState<ArmySelectionType | null>(effectiveInitialArmy);
+  const [sharedDeckCardIds, setSharedDeckCardIds] = useState<number[]>(
+    !initialArmy && warbandArmy && warbandDeck.length > 0 ? [...warbandDeck] : []
+  );
   const [combatPieces, setCombatPieces] = useState<{ attackerId: string; defenderId: string } | null>(null);
   const [vsScreenPieces, setVsScreenPieces] = useState<{ attacker: ChessPiece; defender: ChessPiece } | null>(null);
   const [pokerSlotsSwapped, setPokerSlotsSwapped] = useState(false);
@@ -555,13 +560,6 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
     };
   }, []);
 
-  const handleArmyComplete = useCallback((army: ArmySelectionType) => {
-    setPlayerArmy(army);
-    initializeBoard(army, opponentArmy);
-    setPhase('chess');
-    playSoundEffect('game_start');
-  }, [opponentArmy, initializeBoard, playSoundEffect]);
-
   // Initialize board if initialArmy is provided
   useEffect(() => {
     if (initialArmy && !playerArmy) {
@@ -569,6 +567,23 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
       initializeBoard(initialArmy, opponentArmy);
     }
   }, [initialArmy, opponentArmy, initializeBoard]);
+
+  // Bootstrap from warband store when arriving via /warband flow.
+  // Idempotent via ref so the board is initialized exactly once per mount.
+  const bootstrappedFromWarbandRef = useRef(false);
+  useEffect(() => {
+    if (bootstrappedFromWarbandRef.current) return;
+    if (initialArmy || isCampaign) return;
+    if (!warbandArmy) return;
+    bootstrappedFromWarbandRef.current = true;
+    initializeBoard(warbandArmy, opponentArmy);
+    if (warbandDeck.length > 0) {
+      const deckCopy = [...warbandDeck];
+      setSharedDeckCardIds(deckCopy);
+      setSharedDeck(deckCopy);
+    }
+    playSoundEffect('game_start');
+  }, [warbandArmy, warbandDeck, isCampaign, initialArmy, opponentArmy, initializeBoard, setSharedDeck, playSoundEffect]);
 
   // Campaign auto-init: skip army selection, use default player army
   useEffect(() => {
@@ -761,15 +776,6 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
       }
     }
   }, [phase, boardState.currentTurn, turnCount, isCampaign]);
-
-  const handleQuickStart = useCallback((army: ArmySelectionType, deckCardIds: number[]) => {
-    setPlayerArmy(army);
-    setSharedDeckCardIds(deckCardIds);
-    setSharedDeck(deckCardIds);
-    initializeBoard(army, opponentArmy);
-    setPhase('chess');
-    playSoundEffect('game_start');
-  }, [opponentArmy, initializeBoard, setSharedDeck, playSoundEffect]);
 
   const { lastMineTriggered } = useKingChessAbility('player');
 
@@ -1063,17 +1069,21 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
   }, [phase, boardState.currentTurn, boardState.gameStatus, boardState.pieces.length]);
 
   const handleRestart = useCallback(() => {
-    if (isCampaign) {
-      clearCurrent();
-    }
     resetBoard();
     setPlayerArmy(null);
     setSharedDeckCardIds([]);
     setCombatPieces(null);
     setTurnCount(0);
     gameEndProcessedRef.current = false;
-    setPhase('army_selection');
-  }, [resetBoard, isCampaign, clearCurrent]);
+    bootstrappedFromWarbandRef.current = false;
+    if (isCampaign) {
+      clearCurrent();
+      // Campaign auto-init effect re-bootstraps from default army on next render
+      setPhase('army_selection');
+    } else {
+      navigate(routes.warband);
+    }
+  }, [resetBoard, isCampaign, clearCurrent, navigate]);
 
   /*
     "Back to Campaign" — if the player won AND the mission has an authored
@@ -1138,13 +1148,13 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
   const isFinale = isCampaign && campaignData?.mission?.isChapterFinale;
   const finaleClass = isFinale ? 'mission-finale' : '';
 
+  // Guard: arriving at /game with no warband and not in campaign → redirect to picker
+  if (!effectiveInitialArmy && !isCampaign && !playerArmy) {
+    return <Navigate to={routes.warband} replace />;
+  }
+
   return (
     <div className={`ragnarok-chess-game w-full h-full overflow-hidden ${chessRealmClass} ${finaleClass}`.trim()}>
-      {/* Army Selection renders OUTSIDE AnimatePresence to avoid transform breaking fixed positioning */}
-      {phase === 'army_selection' && (
-        <ArmySelectionComponent onComplete={handleArmyComplete} onQuickStart={handleQuickStart} />
-      )}
-      
       {phase === 'cinematic' && campaignData?.chapter?.cinematicIntro && (
         <CinematicCrawl
           intro={campaignData.chapter.cinematicIntro}

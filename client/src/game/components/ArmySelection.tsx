@@ -273,15 +273,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
       <div className="norse-top-bar">
         <div className="norse-top-title-group">
           <h1 className="norse-top-title">Muster the Warband</h1>
-          <div className="norse-top-status">
-            <span className={`norse-status-pill ${selectedHeroCount === PIECE_ORDER.length ? 'complete' : ''}`}>
-              {selectedHeroCount}/{PIECE_ORDER.length} heroes locked
-            </span>
-            <span className={`norse-status-pill ${completedDeckCount === MAJOR_PIECES.length ? 'complete' : ''}`}>
-              {completedDeckCount}/{MAJOR_PIECES.length} decks battle ready
-            </span>
-          </div>
-          <div className="norse-launch-rail">
+          <div className="norse-launch-rail" role="status" aria-label={deploymentStatus.body}>
             {launchSteps.map((step) => (
               <div
                 key={step.label}
@@ -297,7 +289,6 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
               </div>
             ))}
           </div>
-          <p className="norse-top-guidance">{deploymentStatus.body}</p>
         </div>
 
         <div className="norse-top-bar-actions">

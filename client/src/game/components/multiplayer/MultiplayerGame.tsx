@@ -8,6 +8,7 @@ import { ArmySelection as ArmySelectionType } from '../../types/ChessTypes';
 import { useNavigate } from 'react-router-dom';
 import { routes } from '../../../lib/routes';
 import { useMatchmaking } from '../../hooks/useMatchmaking';
+import { useWarbandStore, selectArmy } from '../../../lib/stores/useWarbandStore';
 import { Toaster } from '../../../components/ui/sonner';
 import { P2PStatusBadge } from './P2PStatusBadge';
 import { resolveHeroPortrait } from '../../utils/art/artMapping';
@@ -82,8 +83,10 @@ export const MultiplayerGame: React.FC = () => {
 	const { connectionState } = usePeerStore();
 	const [gameStarted, setGameStarted] = useState(false);
 	const [showVS, setShowVS] = useState(false);
+	const persistedArmy = useWarbandStore(selectArmy);
+	const setWarband = useWarbandStore(s => s.setWarband);
 	const [armySelected, setArmySelected] = useState(false);
-	const [playerArmy, setPlayerArmy] = useState<ArmySelectionType | null>(null);
+	const [playerArmy, setPlayerArmy] = useState<ArmySelectionType | null>(persistedArmy);
 	const navigate = useNavigate();
 	const { status: matchmakingStatus, opponentPeerId, isHost: matchmakingIsHost, joinQueue } = useMatchmaking();
 	const { host, join } = usePeerStore();
@@ -117,11 +120,13 @@ export const MultiplayerGame: React.FC = () => {
 	}, [matchmakingStatus, opponentPeerId, matchmakingIsHost, armySelected, gameStarted, join]);
 
 	const handleArmyComplete = (army: ArmySelectionType) => {
+		setWarband(army, []);
 		setPlayerArmy(army);
 		setArmySelected(true);
 	};
 
 	const handleMatchmakingStart = async (army: ArmySelectionType) => {
+		setWarband(army, []);
 		setPlayerArmy(army);
 		setArmySelected(true);
 		// Create peer only if ArmySelection hasn't already done so

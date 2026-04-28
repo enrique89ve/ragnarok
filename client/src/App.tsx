@@ -24,6 +24,7 @@ const DailyQuestPanel = lazy(() => import("./game/components/quests/DailyQuestPa
 const FriendsPanel = lazy(() => import("./game/components/social/FriendsPanel"));
 
 const RagnarokChessGame = lazy(() => import('./game/components/chess/RagnarokChessGame'));
+const WarbandPage = lazy(() => import('./game/components/warband/WarbandPage'));
 const MultiplayerGame = lazy(() => import('./game/components/multiplayer/MultiplayerGame').then(m => ({ default: m.MultiplayerGame })));
 const PacksPage = lazy(() => import('./game/components/packs/PacksPage'));
 const CollectionPage = lazy(() => import('./game/components/collection/CollectionPage'));
@@ -311,7 +312,7 @@ function HomePage() {
           </nav>
 
           {import.meta.env.DEV && (
-            <Link to={routes.game} className="homepage-dev-link">Dev Test Route</Link>
+            <Link to={routes.warband} className="homepage-dev-link">Casual Battle (dev)</Link>
           )}
         </section>
       </div>
@@ -391,6 +392,7 @@ function App() {
               <Route element={<BridgeRuntimeBoundary />}>
                 <Route element={<GlobalOverlaysLayout />}>
                   <Route path={routes.home} element={<HomePage />} />
+                  <Route path={routes.warband} element={<WarbandPage />} />
                   <Route path={routes.campaign} element={<CampaignPage />} />
                   <Route path={routes.collection} element={<CollectionPage />} />
                   <Route path={routes.ladder} element={<RankedLadderPage />} />
