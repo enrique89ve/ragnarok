@@ -96,7 +96,7 @@ export default function DeckImportExport({ deck, onImport }: DeckImportExportPro
 									readOnly
 									value={deckCode}
 									rows={3}
-									className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-sm text-gray-200 font-mono focus:outline-none resize-none"
+									className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-sm text-gray-200 font-mono focus:outline-hidden resize-none"
 								/>
 								<div className="flex gap-2 mt-3">
 									<button
@@ -123,7 +123,7 @@ export default function DeckImportExport({ deck, onImport }: DeckImportExportPro
 									onChange={(e) => { setImportCode(e.target.value); setImportError(''); }}
 									rows={3}
 									placeholder="Paste deck code here..."
-									className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-sm text-gray-200 font-mono placeholder-gray-600 focus:outline-none focus:border-amber-500 resize-none"
+									className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-sm text-gray-200 font-mono placeholder-gray-600 focus:outline-hidden focus:border-amber-500 resize-none"
 								/>
 								{importError && (
 									<p className="text-red-400 text-xs mt-2">{importError}</p>

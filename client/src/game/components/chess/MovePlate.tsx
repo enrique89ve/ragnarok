@@ -12,9 +12,9 @@ const MovePlate: React.FC<MovePlateProps> = ({ isAttack, onClick }) => {
       className={`
         move-plate w-full h-full flex items-center justify-center
         rounded-lg cursor-pointer
-        ${isAttack 
-          ? 'bg-red-500 bg-opacity-40 hover:bg-opacity-60 border-2 border-red-400' 
-          : 'bg-green-500 bg-opacity-40 hover:bg-opacity-60 border-2 border-green-400'
+        ${isAttack
+          ? 'bg-red-500/40 hover:bg-red-500/60 border-2 border-red-400'
+          : 'bg-green-500/40 hover:bg-green-500/60 border-2 border-green-400'
         }
       `}
       onClick={onClick}

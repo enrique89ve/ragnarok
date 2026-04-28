@@ -148,7 +148,7 @@ const TurnTransition: React.FC<TurnTransitionProps> = ({
         className="relative w-64 h-64 flex items-center justify-center"
       >
         {/* Rune circle */}
-        <div className="absolute inset-0 rounded-full border-4 border-opacity-70"
+        <div className="absolute inset-0 rounded-full border-4"
           style={{ 
             borderColor: isPlayerTurn ? '#3b82f6' : '#f59e0b',
             boxShadow: `0 0 40px ${isPlayerTurn ? 'rgba(59, 130, 246, 0.6)' : 'rgba(245, 158, 11, 0.6)'}` 

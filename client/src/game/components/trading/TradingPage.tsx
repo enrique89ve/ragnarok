@@ -112,7 +112,7 @@ function CreateTradePanel({ onSend }: { onSend: (toUser: string) => void }) {
 					placeholder="Hive username"
 					value={toUser}
 					onChange={e => setToUser(e.target.value)}
-					className="w-full px-3 py-2 bg-gray-800/60 border border-gray-600/50 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-amber-500/50"
+					className="w-full px-3 py-2 bg-gray-800/60 border border-gray-600/50 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-hidden focus:border-amber-500/50"
 				/>
 			</div>
 

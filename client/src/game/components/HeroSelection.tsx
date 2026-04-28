@@ -164,7 +164,7 @@ const HeroSelection: React.FC<HeroSelectionProps> = ({ onHeroSelect, lastPlayedD
                     <p>{selectedHeroData?.description}</p>
                   </div>
                   
-                  <div className="hero-power mt-4 p-3 bg-black bg-opacity-30 rounded-lg w-full">
+                  <div className="hero-power mt-4 p-3 bg-black/30 rounded-lg w-full">
                     <div className="font-semibold text-lg">{selectedHeroData?.heroPowers[0].name}</div>
                     <div className="opacity-90">{selectedHeroData?.heroPowers[0].description}</div>
                     <div className="mt-2 text-sm">Cost: {selectedHeroData?.heroPowers[0].cost} Mana</div>

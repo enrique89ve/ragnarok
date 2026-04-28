@@ -172,7 +172,7 @@ export const HeroDeckBuilder: React.FC<HeroDeckBuilderProps> = ({
 				onClick={e => e.stopPropagation()}
 			>
 				{/* Header */}
-				<div className="db-header flex-shrink-0">
+				<div className="db-header shrink-0">
 					<div className="db-header-portrait">
 						{heroPortrait ? (
 							<>

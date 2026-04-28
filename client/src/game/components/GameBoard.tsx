@@ -16,7 +16,7 @@ import { useCardPositions } from '../hooks/useCardPositions';
 import { AnimationLayer } from './AnimationLayer';
 import { useAnimations } from './AnimationContainer';
 import { useAIActionManager } from '../animations/AIActionManager';
-import { Toaster } from '../../components/ui/sonner';
+import { ToastProvider } from "../../components/ui-norse";
 import DebugRenderCheck from './DebugRenderCheck';
 import { preloadImages } from '../utils/assetPreloader';
 import { getCardArtPath } from '../utils/art/artMapping';
@@ -2000,8 +2000,8 @@ export const GameBoard: React.FC<{}> = () => {
 
         {/* AI thinking overlay - show when AI is processing actions */}
         {isProcessingAIActions && !isPlayerTurn && (
-          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 pointer-events-none">
-            <div className="bg-gray-900 bg-opacity-80 p-4 rounded-xl shadow-xl border border-yellow-600 max-w-md">
+          <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 pointer-events-none">
+            <div className="bg-gray-900/80 p-4 rounded-xl shadow-xl border border-yellow-600 max-w-md">
               <div className="text-center">
                 <h3 className="text-xl font-bold text-yellow-400 mb-2">💭 Opponent's Turn</h3>
                 <p className="text-white text-sm">The opponent is thinking about their next move...</p>
@@ -2047,7 +2047,7 @@ export const GameBoard: React.FC<{}> = () => {
         />
 
         {/* Toast notifications */}
-        <Toaster position="top-right" richColors />
+        <ToastProvider position="top-right" richColors />
 
         {/* AI Action notifications */}
         <ActionNotification action={currentAction} />
@@ -2352,7 +2352,7 @@ export const GameBoard: React.FC<{}> = () => {
         {/* Card preview */}
         {hoveredCard && (
           <div className="fixed top-1/2 right-8 transform -translate-y-1/2 pointer-events-none z-50">
-            <div className="bg-gray-900 bg-opacity-90 p-4 rounded-lg shadow-xl border border-gray-700">
+            <div className="bg-gray-900/90 p-4 rounded-lg shadow-xl border border-gray-700">
               <h3 className="text-xl font-bold text-white mb-2">{hoveredCard.card.name}</h3>
               <p className="text-sm text-gray-300 mb-3">{hoveredCard.card.description || 'No description'}</p>
               <div className="grid grid-cols-2 gap-2 text-sm">

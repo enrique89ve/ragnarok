@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { HashRouter, Routes, Route, Link, Outlet, useLocation } from 'react-router-dom';
 import { routes } from './lib/routes';
-import { Button } from './components/ui/button';
+import { Button } from './components/ui-norse';
 import { ArrowRight, Castle, ScrollText, Shield, Swords, Trophy } from 'lucide-react';
 import UnifiedCardSystem from "./game/components/UnifiedCardSystem";
 import "./index.css";

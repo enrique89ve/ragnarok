@@ -113,7 +113,7 @@ export const AttackAnimation: React.FC<AttackAnimationProps> = ({
                   boxShadow: "0 0 10px rgba(255, 215, 0, 0.7), inset 0 0 6px rgba(255, 215, 0, 0.5)",
                 }}
               ></div>
-              <div className="bg-yellow-400 bg-opacity-30 rounded-full w-12 h-12 flex items-center justify-center">
+              <div className="bg-yellow-400/30 rounded-full w-12 h-12 flex items-center justify-center">
                 <div className="text-4xl transform rotate-12 drop-shadow-lg">⚔️</div>
               </div>
             </div>
@@ -323,7 +323,7 @@ export const DamageEffect: React.FC<DamageEffectProps> = ({
         <>
           {/* Initial flash effect for damage - standard CCG style */}
           <motion.div
-            className="absolute rounded-full bg-white bg-opacity-30 pointer-events-none"
+            className="absolute rounded-full bg-white/30 pointer-events-none"
             style={{
               left: position.x - 30,
               top: position.y - 30,
@@ -545,7 +545,7 @@ export const HealEffect: React.FC<DamageEffectProps> = ({
         <>
           {/* Initial healing glow flash - Starts with a bright flash */}
           <motion.div
-            className="absolute rounded-full bg-green-400 bg-opacity-40 pointer-events-none"
+            className="absolute rounded-full bg-green-400/40 pointer-events-none"
             style={{
               left: position.x - 35,
               top: position.y - 35,
@@ -867,7 +867,7 @@ export const BuffEffect: React.FC<{
         <>
           {/* Initial flash effect - Uses a pulse on buff */}
           <motion.div
-            className="absolute rounded-full bg-yellow-100 bg-opacity-40 pointer-events-none"
+            className="absolute rounded-full bg-yellow-100/40 pointer-events-none"
             style={{
               left: position.x - 40,
               top: position.y - 40,
@@ -1240,7 +1240,7 @@ export const HeroPowerEffect: React.FC<{
             
             {/* Circular glow ring - Uses this */}
             <motion.div
-              className="absolute rounded-full border-2 border-opacity-70 pointer-events-none"
+              className="absolute rounded-full border-2 pointer-events-none"
               style={{
                 left: "8%",
                 top: "8%",
@@ -1263,7 +1263,7 @@ export const HeroPowerEffect: React.FC<{
               {[...Array(3)].map((_, i) => (
                 <motion.div
                   key={`ripple-${i}`}
-                  className="absolute rounded-full border-2 border-opacity-60 pointer-events-none"
+                  className="absolute rounded-full border-2 pointer-events-none"
                   style={{
                     left: position.x - 25,
                     top: position.y - 25,

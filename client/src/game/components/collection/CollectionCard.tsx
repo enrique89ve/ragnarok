@@ -164,7 +164,7 @@ const CollectionCard: React.FC<CollectionCardProps> = React.memo(({
 
         {/* "Can't add more" indicator */}
         {count >= maxCount && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-lg z-10">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg z-10">
             <div className="bg-red-600 text-white px-3 py-1 rounded-full font-bold transform -rotate-12 shadow-lg">
               Max Copies
             </div>
@@ -173,7 +173,7 @@ const CollectionCard: React.FC<CollectionCardProps> = React.memo(({
 
         {/* "Can't add due to deck full" indicator */}
         {!canAdd && count < maxCount && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-lg z-10">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg z-10">
             <div className="bg-red-600 text-white px-3 py-1 rounded-full font-bold transform -rotate-12 shadow-lg">
               Deck Full
             </div>

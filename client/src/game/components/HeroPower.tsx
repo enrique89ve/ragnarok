@@ -81,14 +81,14 @@ export const HeroPower: React.FC<HeroPowerProps> = ({
         
         {/* Used indicator */}
         {heroPower.used && (
-          <div className="absolute inset-0 rounded-full bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
             <span className="text-white text-xs">Used</span>
           </div>
         )}
       </div>
       
       {/* Tooltip */}
-      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-36 bg-gray-900 bg-opacity-95 text-white p-2 rounded text-xs shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-36 bg-gray-900/95 text-white p-2 rounded text-xs shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
         <div className="font-bold text-center mb-1">{heroPower.name}</div>
         <div className="text-gray-300">{heroPower.description}</div>
         <div className="mt-1 text-blue-400 text-center">Cost: {heroPower.cost} mana</div>

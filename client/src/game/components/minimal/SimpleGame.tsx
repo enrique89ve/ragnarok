@@ -59,7 +59,7 @@ const Card = ({
         </div>
         
         {/* Card Description */}
-        <div className="px-3 py-2 flex-grow bg-gray-800">
+        <div className="px-3 py-2 grow bg-gray-800">
           <p className="text-xs text-gray-300 italic">{card.card.description}</p>
         </div>
         
@@ -245,7 +245,7 @@ export const SimpleGame = () => {
               <h3 className="font-bold text-xl mb-4 text-red-400">OPPONENT'S CARDS</h3>
               <div className="flex flex-wrap gap-4 justify-center">
                 {players.opponent.battlefield.length === 0 ? (
-                  <div className="bg-gray-800 bg-opacity-50 rounded-lg p-4 text-gray-400 w-full text-center">
+                  <div className="bg-gray-800/50 rounded-lg p-4 text-gray-400 w-full text-center">
                     No cards on the battlefield
                   </div>
                 ) : (
@@ -262,7 +262,7 @@ export const SimpleGame = () => {
               <h3 className="font-bold text-xl mb-4 text-green-400">YOUR CARDS</h3>
               <div className="flex flex-wrap gap-4 justify-center">
                 {players.player.battlefield.length === 0 ? (
-                  <div className="bg-gray-800 bg-opacity-50 rounded-lg p-4 text-gray-400 w-full text-center">
+                  <div className="bg-gray-800/50 rounded-lg p-4 text-gray-400 w-full text-center">
                     Play cards from your hand to the battlefield
                   </div>
                 ) : (
@@ -281,7 +281,7 @@ export const SimpleGame = () => {
           <div className="bg-gradient-to-b from-gray-900 to-gray-800 rounded-lg p-6 shadow-xl border border-gray-700">
             <div className="flex flex-wrap gap-4 justify-center">
               {players.player.hand.length === 0 ? (
-                <div className="bg-gray-800 bg-opacity-50 rounded-lg p-4 text-gray-400 w-full text-center">
+                <div className="bg-gray-800/50 rounded-lg p-4 text-gray-400 w-full text-center">
                   Your hand is empty. End turn to draw a new card.
                 </div>
               ) : (

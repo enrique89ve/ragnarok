@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { routes } from '../../../lib/routes';
 import { useMatchmaking } from '../../hooks/useMatchmaking';
 import { useWarbandStore, selectArmy } from '../../../lib/stores/useWarbandStore';
-import { Toaster } from '../../../components/ui/sonner';
+import { ToastProvider } from '../../../components/ui-norse';
 import { P2PStatusBadge } from './P2PStatusBadge';
 import { resolveHeroPortrait } from '../../utils/art/artMapping';
 
@@ -172,7 +172,7 @@ export const MultiplayerGame: React.FC = () => {
 
 	return (
 		<>
-			<Toaster position="top-right" richColors />
+			<ToastProvider position="top-right" richColors />
 			<P2PStatusBadge />
 			<RagnarokChessGame initialArmy={playerArmy} />
 		</>

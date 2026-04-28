@@ -391,14 +391,14 @@ export default function CollectionPage() {
 								placeholder="Search cards..."
 								value={searchQuery}
 								onChange={(e) => setSearchQuery(e.target.value)}
-								className="w-full pl-9 pr-4 py-2 bg-gray-900/60 border border-gray-600/50 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500/50"
+								className="w-full pl-9 pr-4 py-2 bg-gray-900/60 border border-gray-600/50 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-hidden focus:border-purple-500/50"
 							/>
 						</div>
 						<select
 							value={sortBy}
 							onChange={(e) => setSortBy(e.target.value as SortBy)}
 							title="Sort cards by"
-							className="px-3 py-2 bg-gray-900/60 border border-gray-600/50 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/50"
+							className="px-3 py-2 bg-gray-900/60 border border-gray-600/50 rounded-lg text-white text-sm focus:outline-hidden focus:border-purple-500/50"
 						>
 							<option value="rarity">Sort: Rarity</option>
 							<option value="name">Sort: Name A-Z</option>

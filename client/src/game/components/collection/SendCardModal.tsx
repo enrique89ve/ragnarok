@@ -97,7 +97,7 @@ const SendCardModal: React.FC<SendCardModalProps> = ({ nft, onClose, onSuccess }
 								value={recipient}
 								onChange={e => { setRecipient(e.target.value.toLowerCase()); setConfirmed(false); }}
 								placeholder="username"
-								className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
+								className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-hidden"
 								disabled={sending}
 							/>
 							{recipient && !validRecipient && (
@@ -114,7 +114,7 @@ const SendCardModal: React.FC<SendCardModalProps> = ({ nft, onClose, onSuccess }
 								value={memo}
 								onChange={e => setMemo(e.target.value)}
 								placeholder="Gift for you!"
-								className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-none"
+								className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 focus:outline-hidden"
 								disabled={sending}
 								maxLength={100}
 							/>

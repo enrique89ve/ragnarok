@@ -167,7 +167,7 @@ export function HiveKeychainLogin() {
 										autoFocus
 										spellCheck={false}
 										autoCapitalize="none"
-										className="flex-1 min-w-0 px-3 py-1.5 bg-gray-800/80 border border-gray-600/60 rounded-lg text-white text-sm placeholder-gray-600 focus:outline-none focus:border-amber-500/60"
+										className="flex-1 min-w-0 px-3 py-1.5 bg-gray-800/80 border border-gray-600/60 rounded-lg text-white text-sm placeholder-gray-600 focus:outline-hidden focus:border-amber-500/60"
 									/>
 									<motion.button
 										whileHover={{ scale: 1.05 }}

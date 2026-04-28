@@ -19,7 +19,7 @@ function AddFriendDialog({ onAdd, onClose }: { onAdd: (name: string) => void; on
 					onKeyDown={e => { if (e.key === 'Enter' && name.trim()) onAdd(name.trim()); }}
 					placeholder="@username"
 					autoFocus
-					className="flex-1 min-w-0 px-2 py-1 bg-gray-900 border border-gray-600 rounded text-sm text-white placeholder-gray-600 focus:outline-none focus:border-amber-500"
+					className="flex-1 min-w-0 px-2 py-1 bg-gray-900 border border-gray-600 rounded text-sm text-white placeholder-gray-600 focus:outline-hidden focus:border-amber-500"
 				/>
 				<button
 					onClick={() => { if (name.trim()) onAdd(name.trim()); }}

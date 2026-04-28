@@ -34,10 +34,10 @@ const CollectionFilters: React.FC<CollectionFiltersProps> = ({
     <div className="collection-filters p-4 border-b border-gray-700 bg-gray-800 text-white">
       <div className="flex flex-col md:flex-row md:items-center gap-4">
         {/* Search input */}
-        <div className="search-bar relative flex-grow max-w-md">
+        <div className="search-bar relative grow max-w-md">
           <input
             type="text"
-            className="w-full bg-gray-700 border border-gray-600 rounded-full px-4 py-2 pr-10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full bg-gray-700 border border-gray-600 rounded-full px-4 py-2 pr-10 text-white placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
             placeholder="Search cards..."
             value={filters.searchText}
             onChange={handleSearchChange}
@@ -83,7 +83,7 @@ const CollectionFilters: React.FC<CollectionFiltersProps> = ({
           {/* Card type filter */}
           <div className="card-type-filter">
             <select
-              className="bg-gray-700 border border-gray-600 rounded-full px-3 py-2 text-white appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="bg-gray-700 border border-gray-600 rounded-full px-3 py-2 text-white appearance-none cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               value={filters.cardType}
               onChange={(e) => onUpdateFilters({ cardType: e.target.value as CardType | 'all' })}
             >
@@ -97,7 +97,7 @@ const CollectionFilters: React.FC<CollectionFiltersProps> = ({
           {/* Rarity filter */}
           <div className="rarity-filter">
             <select
-              className="bg-gray-700 border border-gray-600 rounded-full px-3 py-2 text-white appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="bg-gray-700 border border-gray-600 rounded-full px-3 py-2 text-white appearance-none cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               value={filters.rarity}
               onChange={(e) => onUpdateFilters({ rarity: e.target.value as CardRarity | 'all' })}
             >

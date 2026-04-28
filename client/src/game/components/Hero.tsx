@@ -211,7 +211,7 @@ export const Hero: React.FC<HeroProps> = ({
             loading="lazy"
           />
         ) : (
-          <div className="flex flex-col items-center justify-center w-full h-full bg-gradient-to-b from-gray-800 to-gray-900 bg-opacity-90">
+          <div className="flex flex-col items-center justify-center w-full h-full bg-gradient-to-b from-gray-800/90 to-gray-900/90">
             <span className="text-3xl mb-1">{heroEmoji}</span>
             <div className="text-xs font-bold text-center px-1 leading-tight">
               {heroName.split(' ').map((word, i) => (
@@ -229,7 +229,7 @@ export const Hero: React.FC<HeroProps> = ({
         )}
         
         {/* Hero frame overlay */}
-        <div className="absolute inset-0 rounded-full pointer-events-none border-2 border-opacity-60 shadow-inner" 
+        <div className="absolute inset-0 rounded-full pointer-events-none border-2 border-white/60 shadow-inner"
              style={{ 
                boxShadow: 'inset 0 0 15px rgba(0, 0, 0, 0.6)',
                background: 'radial-gradient(circle, transparent 60%, rgba(0, 0, 0, 0.4) 100%)'

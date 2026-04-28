@@ -1,9 +1,15 @@
 import { useState, useEffect } from 'react';
 import { usePeerStore } from '../../stores/peerStore';
 import { useMatchmaking } from '../../hooks/useMatchmaking';
-import { Button } from '../../../components/ui/button';
-import { Input } from '../../../components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
+import {
+	Button,
+	Input,
+	Panel,
+	PanelContent,
+	PanelDescription,
+	PanelHeader,
+	PanelTitle,
+} from '../../../components/ui-norse';
 import { Copy, Check, X, Users, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -118,17 +124,17 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart 
 
 	return (
 		<div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
-			<Card className="w-full max-w-md">
-				<CardHeader>
-					<CardTitle className="flex items-center gap-2">
+			<Panel className="w-full max-w-md">
+				<PanelHeader>
+					<PanelTitle className="flex items-center gap-2">
 						<Users className="w-5 h-5" />
 						P2P Multiplayer
-					</CardTitle>
-					<CardDescription>
+					</PanelTitle>
+					<PanelDescription>
 						Host a game or join with a friend's ID. All gameplay is peer-to-peer.
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="space-y-4">
+					</PanelDescription>
+				</PanelHeader>
+				<PanelContent className="space-y-4">
 					{connectionState === 'disconnected' && matchmakingStatus === 'idle' && (
 						<div className="space-y-4">
 							<Button onClick={handleQuickMatch} className="w-full" size="lg">
@@ -140,7 +146,7 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart 
 									<span className="w-full border-t" />
 								</div>
 								<div className="relative flex justify-center text-xs uppercase">
-									<span className="bg-background px-2 text-muted-foreground">Or</span>
+									<span className="bg-[var(--obsidian-900)] px-2 text-[var(--ink-300)]">Or</span>
 								</div>
 							</div>
 							<Button onClick={handleHost} className="w-full" variant="outline">
@@ -162,10 +168,10 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart 
 
 					{matchmakingStatus === 'queued' && (
 						<div className="text-center space-y-4">
-							<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
-							<p className="text-sm text-muted-foreground">Searching for opponent...</p>
+							<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--gold-400)] mx-auto" />
+							<p className="text-sm text-[var(--ink-300)]">Searching for opponent...</p>
 							{queuePosition !== null && (
-								<p className="text-xs text-muted-foreground">
+								<p className="text-xs text-[var(--ink-300)]">
 									Position in queue: {queuePosition}
 								</p>
 							)}
@@ -177,14 +183,14 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart 
 
 					{matchmakingStatus === 'matched' && connectionState !== 'connected' && (
 						<div className="text-center space-y-2">
-							<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
-							<p className="text-sm text-muted-foreground">Connecting to opponent...</p>
+							<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--gold-400)] mx-auto" />
+							<p className="text-sm text-[var(--ink-300)]">Connecting to opponent...</p>
 						</div>
 					)}
 
 					{matchmakingError && (
-						<div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-							<p className="text-sm text-destructive">{matchmakingError}</p>
+						<div className="p-4 bg-[var(--blood-500)]/10 border border-[var(--blood-500)]/20 rounded-lg">
+							<p className="text-sm text-[var(--blood-300)]">{matchmakingError}</p>
 							<div className="flex gap-2 mt-2">
 								<Button onClick={leaveQueue} variant="outline" className="flex-1">
 									Try Again
@@ -205,8 +211,8 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart 
 
 					{connectionState === 'connecting' && (
 						<div className="text-center space-y-2">
-							<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
-							<p className="text-sm text-muted-foreground">
+							<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--gold-400)] mx-auto" />
+							<p className="text-sm text-[var(--ink-300)]">
 								{isHost ? 'Creating game...' : 'Connecting...'}
 							</p>
 						</div>
@@ -215,7 +221,7 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart 
 
 					{connectionState === 'waiting' && myPeerId && (
 						<div className="space-y-4">
-							<div className="p-4 bg-muted rounded-lg">
+							<div className="p-4 bg-[var(--obsidian-800)] rounded-lg">
 								<div className="flex items-center justify-between mb-2">
 									<span className="text-sm font-medium">Your Game ID:</span>
 									<Button
@@ -232,17 +238,17 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart 
 									</Button>
 								</div>
 								<code className="text-xs font-mono break-all">{myPeerId}</code>
-								<p className="text-xs text-muted-foreground mt-2">
+								<p className="text-xs text-[var(--ink-300)] mt-2">
 									Share this ID with your opponent
 								</p>
 							</div>
 							<div className="text-center space-y-2">
 								<div className="flex justify-center gap-1">
-									<div className="animate-bounce h-2 w-2 rounded-full bg-primary" style={{ animationDelay: '0ms' }} />
-									<div className="animate-bounce h-2 w-2 rounded-full bg-primary" style={{ animationDelay: '150ms' }} />
-									<div className="animate-bounce h-2 w-2 rounded-full bg-primary" style={{ animationDelay: '300ms' }} />
+									<div className="animate-bounce h-2 w-2 rounded-full bg-[var(--gold-400)]" style={{ animationDelay: '0ms' }} />
+									<div className="animate-bounce h-2 w-2 rounded-full bg-[var(--gold-400)]" style={{ animationDelay: '150ms' }} />
+									<div className="animate-bounce h-2 w-2 rounded-full bg-[var(--gold-400)]" style={{ animationDelay: '300ms' }} />
 								</div>
-								<p className="text-sm text-muted-foreground">Waiting for opponent to join...</p>
+								<p className="text-sm text-[var(--ink-300)]">Waiting for opponent to join...</p>
 							</div>
 							<Button onClick={handleDisconnect} variant="destructive" className="w-full">
 								<X className="w-4 h-4 mr-2" />
@@ -253,7 +259,7 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart 
 
 					{connectionState === 'connected' && myPeerId && (
 						<div className="space-y-4">
-							<div className="p-4 bg-muted rounded-lg">
+							<div className="p-4 bg-[var(--obsidian-800)] rounded-lg">
 								<div className="flex items-center justify-between mb-2">
 									<span className="text-sm font-medium">Your Game ID:</span>
 									<Button
@@ -271,13 +277,13 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart 
 								</div>
 								<code className="text-xs font-mono break-all">{myPeerId}</code>
 								{isHost && (
-									<p className="text-xs text-muted-foreground mt-2">
+									<p className="text-xs text-[var(--ink-300)] mt-2">
 										Share this ID with your opponent to let them join
 									</p>
 								)}
 							</div>
 							{isHost && connectionState === 'connected' && !remotePeerId && (
-								<p className="text-sm text-muted-foreground text-center">
+								<p className="text-sm text-[var(--ink-300)] text-center">
 									Waiting for opponent to join...
 								</p>
 							)}
@@ -296,15 +302,15 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart 
 					)}
 
 					{connectionState === 'error' && error && (
-						<div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-							<p className="text-sm text-destructive">{error}</p>
+						<div className="p-4 bg-[var(--blood-500)]/10 border border-[var(--blood-500)]/20 rounded-lg">
+							<p className="text-sm text-[var(--blood-300)]">{error}</p>
 							<Button onClick={handleDisconnect} variant="outline" className="w-full mt-2">
 								Try Again
 							</Button>
 						</div>
 					)}
-				</CardContent>
-			</Card>
+				</PanelContent>
+			</Panel>
 		</div>
 	);
 };

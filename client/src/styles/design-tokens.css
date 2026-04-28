@@ -578,3 +578,84 @@
 .z-popup { z-index: var(--z-popup) !important; }
 .z-hud { z-index: var(--z-hud) !important; }
 .z-drag { z-index: var(--z-drag) !important; }
+
+/* =============================================
+   TAILWIND v4 BRIDGE — @theme inline
+   Maps the canonical CSS variables above into Tailwind's utility namespace
+   so classes like `bg-obsidian-900`, `text-gold-300`, `font-display`,
+   `tracking-epic` work automatically. NO duplication: `inline` makes
+   Tailwind read the existing :root vars instead of redefining them.
+   Adding a new token? Define it once in :root above; if you want a
+   utility for it, add ONE line here.
+   ============================================= */
+@theme inline {
+	/* ---- Obsidian (surface scale) ---- */
+	--color-obsidian-500: var(--obsidian-500);
+	--color-obsidian-600: var(--obsidian-600);
+	--color-obsidian-700: var(--obsidian-700);
+	--color-obsidian-750: var(--obsidian-750);
+	--color-obsidian-800: var(--obsidian-800);
+	--color-obsidian-850: var(--obsidian-850);
+	--color-obsidian-900: var(--obsidian-900);
+	--color-obsidian-950: var(--obsidian-950);
+
+	/* ---- Ink (text scale) ---- */
+	--color-ink-0:   var(--ink-0);
+	--color-ink-100: var(--ink-100);
+	--color-ink-200: var(--ink-200);
+	--color-ink-300: var(--ink-300);
+	--color-ink-400: var(--ink-400);
+	--color-ink-500: var(--ink-500);
+
+	/* ---- Gold (Odin / primary accent) ---- */
+	--color-gold-50:  var(--gold-50);
+	--color-gold-100: var(--gold-100);
+	--color-gold-200: var(--gold-200);
+	--color-gold-300: var(--gold-300);
+	--color-gold-400: var(--gold-400);
+	--color-gold-500: var(--gold-500);
+	--color-gold-600: var(--gold-600);
+	--color-gold-700: var(--gold-700);
+
+	/* ---- Ember (Muspelheim) ---- */
+	--color-ember-100: var(--ember-100);
+	--color-ember-200: var(--ember-200);
+	--color-ember-300: var(--ember-300);
+	--color-ember-400: var(--ember-400);
+	--color-ember-500: var(--ember-500);
+	--color-ember-600: var(--ember-600);
+
+	/* ---- Bifrost (rare / mystic) ---- */
+	--color-bifrost-100: var(--bifrost-100);
+	--color-bifrost-300: var(--bifrost-300);
+	--color-bifrost-500: var(--bifrost-500);
+
+	/* ---- Frost (ice / support) ---- */
+	--color-frost-200: var(--frost-200);
+	--color-frost-400: var(--frost-400);
+
+	/* ---- Rune (Yggdrasil) ---- */
+	--color-rune-300: var(--rune-300);
+	--color-rune-500: var(--rune-500);
+
+	/* ---- Blood (Niflheim / danger) ---- */
+	--color-blood-300: var(--blood-300);
+	--color-blood-500: var(--blood-500);
+
+	/* ---- Rarity (canonical) ---- */
+	--color-rarity-common:  var(--rarity-common-color);
+	--color-rarity-rare:    var(--rarity-rare-color);
+	--color-rarity-epic:    var(--rarity-epic-color);
+	--color-rarity-mythic:  var(--rarity-mythic-color);
+
+	/* ---- Type families ---- */
+	--font-display:    var(--font-display);
+	--font-decorative: var(--font-decorative);
+	--font-sans:       var(--font-ui);
+	--font-mono:       'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+
+	/* ---- Tracking (letter-spacing) for editorial labels ---- */
+	--tracking-wide:  0.08em;
+	--tracking-xwide: 0.18em;
+	--tracking-epic:  0.32em;
+}

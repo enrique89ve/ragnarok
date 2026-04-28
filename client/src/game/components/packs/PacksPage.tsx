@@ -222,7 +222,7 @@ function SealedPacksSection() {
 							placeholder="Recipient username"
 							value={recipient}
 							onChange={e => setRecipient(e.target.value.toLowerCase())}
-							className="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white mb-4 focus:border-amber-500 focus:outline-none"
+							className="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white mb-4 focus:border-amber-500 focus:outline-hidden"
 						/>
 						<div className="flex gap-3">
 							<button

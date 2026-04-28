@@ -68,7 +68,7 @@ export const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose })
           {keywords.map((keyword, index) => {
             const info = keywordInfo[keyword.toLowerCase()] || { icon: '•', desc: keyword };
             return (
-              <div key={index} className="flex items-center bg-black bg-opacity-30 rounded p-2">
+              <div key={index} className="flex items-center bg-black/30 rounded p-2">
                 <span className="mr-2 text-xl">{info.icon}</span>
                 <div>
                   <div className="text-yellow-300 font-bold">{keyword}</div>
@@ -83,7 +83,7 @@ export const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose })
   };
   
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-75">
+    <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/75">
       <div className="max-w-2xl w-full bg-gray-900 rounded-lg shadow-2xl overflow-hidden">
         <div className="p-4 flex justify-between border-b border-gray-700">
           <h2 className="text-xl font-bold text-white">{cardData.name}</h2>
@@ -96,10 +96,10 @@ export const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose })
         </div>
         
         <div className="p-6 flex flex-col md:flex-row">
-          <div className="flex-shrink-0 w-full md:w-64 mb-6 md:mb-0">
+          <div className="shrink-0 w-full md:w-64 mb-6 md:mb-0">
             <div className={`${getCardBorderColor()} border-4 rounded-lg overflow-hidden bg-gradient-to-b ${getCardBackgroundColor()} p-4 flex flex-col h-80`}>
               <div className="text-center text-white font-bold text-xl mb-2">{cardData.name}</div>
-              <div className="bg-black bg-opacity-30 text-white p-3 rounded mb-auto">
+              <div className="bg-black/30 text-white p-3 rounded mb-auto">
                 <p>{cardData.description || "No description available."}</p>
               </div>
               <div className="flex justify-between items-center mt-2">
@@ -121,7 +121,7 @@ export const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose })
           </div>
           
           {/* Card details */}
-          <div className="md:ml-6 flex-grow">
+          <div className="md:ml-6 grow">
             <div className="bg-gray-800 p-4 rounded-lg">
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>

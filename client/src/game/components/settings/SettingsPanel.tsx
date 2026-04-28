@@ -116,7 +116,7 @@ export default function SettingsPanel() {
 				<select
 					value={settings.cardQuality}
 					onChange={(e) => settings.setSetting('cardQuality', e.target.value as 'low' | 'medium' | 'high')}
-					className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-amber-500"
+					className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-gray-300 focus:outline-hidden focus:border-amber-500"
 				>
 					<option value="low">Low</option>
 					<option value="medium">Medium</option>
