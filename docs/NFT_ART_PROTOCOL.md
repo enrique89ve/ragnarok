@@ -103,14 +103,42 @@ Art that is no longer referenced should be moved to `client/public/art/orphaned/
 
 Useful when you want to know whether a piece of art for a given character already exists outside the project before commissioning a new one.
 
+## Pending-art triage
+
+`npm run triage:art` cross-references every cardId in `scripts/pending-art.json` against the external batch exports and the orphaned pool, then prints a per-card recommendation:
+
+- ✅ **Direct cardId match**: the external dataset declares an asset for this exact cardId and the file is present in `art/orphaned/`. Highest confidence — apply.
+- ⚡ **High-confidence fuzzy (≥50%)**: name token overlap exceeds half. Worth applying after a quick visual sanity-check.
+- ⚠️ **Low-confidence fuzzy (<50%)**: only one or two tokens match, often a stopword. Review manually.
+- ❌ **No candidate**: needs new art commission.
+
+Add `--json` for machine-readable output. The triage report is regenerated on demand and intentionally not committed as a static doc — file-based copies go stale within hours of any reassignment commit.
+
+## Mismatch detection — avoiding false positives
+
+Many cards have a `type: 'spell'` but use art whose external metadata describes a character (e.g. `5018 Odin → "Odin"`). These look like mismatches but aren't — the spell is *named after* a deity and intentionally depicts that deity. The naïve check "spell card has art with character-token in name" produces ~80% false positives.
+
+**Rule of thumb**: a real mismatch exists when the card name and the external art name share **zero tokens of length ≥4 chars** after case-folding. Stopwords (`of`, `the`, `to`) are filtered by the length threshold. Examples:
+
+| Card | Art (external) | Real mismatch? |
+|---|---|---|
+| `5018 Odin` (spell) | `Odin` | ❌ no — same token |
+| `5025 Tyr` (spell) | `Bloodied Axe of Tyr` | ❌ no — share `Tyr` |
+| `107 Frostbolt of Niflheim` | `Titan of the Blazing Sun` | ✅ yes — disjoint |
+| `40116 Nidhogg's Chains` | `Mechanical Dragon` | ✅ yes — disjoint |
+
+When applying a fix, **prefer pending over wrong art**. Showing `DEFAULT_PORTRAIT` is honest; showing the wrong character actively misleads the player.
+
 ## Related
 
 | File / doc | Role |
 |---|---|
 | `client/src/game/utils/art/artMapping.ts` | The registry itself |
 | `client/src/game/utils/art/index.ts` | Public re-export barrel |
-| `scripts/auditArt.ts` | Cross-layer audit |
+| `scripts/auditArt.ts` | Cross-layer audit (run on every PR) |
+| `scripts/triagePendingArt.ts` | On-demand `npm run triage:art` |
 | `scripts/genCollections.ts` | Manifest generator (consumes ART_REGISTRY) |
 | `scripts/pending-art.json` | Whitelist for cards awaiting art |
 | `docs/ART_GEN_PENDING.md` | Authoring workflow |
 | `client/public/art/orphaned/` | Retired art (not served) |
+| `client/public/art/orphaned/ORPHAN_INVENTORY.txt` | Regenerable summary; rebuild with `node scripts/regenOrphanInventory.mjs` |
