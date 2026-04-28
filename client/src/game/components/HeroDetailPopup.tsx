@@ -1344,18 +1344,20 @@ export function HeroDetailPopup({ hero, isOpen, onClose, onSelect }: HeroDetailP
                     {edition.editionLabel} EDITION
                   </motion.div>
 
-                  <motion.div
-                    className="scarcity-badge"
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4, duration: 0.4 }}
-                  >
-                    <span className="scarcity-number" style={{ color: edition.colors.primary }}>
-                      #{String(edition.mintNumber).padStart(edition.maxSupply >= 10000 ? 5 : edition.maxSupply >= 1000 ? 4 : 3, '0')}
-                    </span>
-                    <span className="scarcity-separator">/</span>
-                    <span className="scarcity-max">{edition.maxSupply.toLocaleString()}</span>
-                  </motion.div>
+                  {edition.rarity !== 'base' && (
+                    <motion.div
+                      className="scarcity-badge"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.4, duration: 0.4 }}
+                    >
+                      <span className="scarcity-number" style={{ color: edition.colors.primary }}>
+                        #{String(edition.mintNumber).padStart(edition.maxSupply >= 10000 ? 5 : edition.maxSupply >= 1000 ? 4 : 3, '0')}
+                      </span>
+                      <span className="scarcity-separator">/</span>
+                      <span className="scarcity-max">{edition.maxSupply.toLocaleString()}</span>
+                    </motion.div>
+                  )}
 
                   <div className="card-name-plate">
                     <div className="card-name-plate-name">{hero.name}</div>

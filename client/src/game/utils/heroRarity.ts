@@ -185,10 +185,15 @@ export function getEditionInfo(heroId: string, _isKing: boolean): EditionInfo {
 	const rarity = getHeroRarity(heroId);
 	const maxSupply = PIECE_SUPPLY[rarity];
 
+	// Base pieces are non-NFT (free starter set) — there is no meaningful mint
+	// number. Guard against `hash % 0 = NaN` and surface 0 so consumers can
+	// branch on rarity rather than checking NaN.
+	const mintNumber = maxSupply > 0 ? (hash % maxSupply) + 1 : 0;
+
 	return {
 		rarity,
 		maxSupply,
-		mintNumber: (hash % maxSupply) + 1,
+		mintNumber,
 		editionLabel: RARITY_COLORS[rarity].label,
 		rarityLabel: RARITY_COLORS[rarity].label,
 		colors: RARITY_COLORS[rarity],
