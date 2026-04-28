@@ -1,13 +1,12 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { ArmySelection as ArmySelectionType, ChessPiece } from '../../types/ChessTypes';
 import { useChessCombatAdapter } from '../../hooks/useChessCombatAdapter';
-import { getDefaultArmySelection, buildCombatDeck } from '../../data/ChessPieceConfig';
+import { getDefaultArmySelection } from '../../data/ChessPieceConfig';
 import { useCampaignStore, getMission } from '../../campaign';
 import { buildCampaignArmy } from '../../campaign/campaignArmyBuilder';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { routes } from '../../../lib/routes';
-import ChessBoard from './ChessBoard';
 import { usePokerCombatAdapter } from '../../hooks/usePokerCombatAdapter';
 import { PetData, DEFAULT_PET_STATS, calculateStaminaFromHP } from '../../types/PokerCombatTypes';
 import { useAudio } from '../../../lib/stores/useAudio';
@@ -20,8 +19,6 @@ import type {
   GameResult,
   CombatHandoff,
 } from '../../flow/round/types';
-import { getKingAbilityConfig, getAbilityDescription, requiresDirectionSelection, getAvailableDirections, MineDirection } from '../../utils/chess/kingAbilityUtils';
-import { Tooltip } from '../ui/Tooltip';
 import { debug } from '../../config/debugConfig';
 import { useGameStore } from '../../stores/gameStore';
 import { useWarbandStore, selectArmy, selectDeckCardIds } from '../../../lib/stores/useWarbandStore';
@@ -39,12 +36,11 @@ const MissionIntroPhase = lazy(() => import('./phases/MissionIntroPhase'));
 const GameOverPhase = lazy(() => import('./phases/GameOverPhase'));
 const VsScreenPhase = lazy(() => import('./phases/VsScreenPhase'));
 const PokerCombatPhase = lazy(() => import('./phases/PokerCombatPhase'));
+const ChessPhase = lazy(() => import('./phases/ChessPhase'));
 import './HeroPortraitEnhanced.css';
 import './chess-realm-skins.css';
 import './game-over-result.css';
 import '../campaign/cinematic-crawl.css';
-
-type GamePhase = 'army_selection' | 'cinematic' | 'mission_intro' | 'chess' | 'vs_screen' | 'poker_combat' | 'game_over';
 
 // Realm icon / color / text-color tables moved into MissionIntroPhase.tsx
 // (their only consumer). The coordinator no longer carries them.
@@ -91,297 +87,6 @@ function resolveVisualRealm(missionRealm: string | undefined | null): string {
 	return REALM_VISUAL_MAP[missionRealm] || 'midgard';
 }
 
-interface HeroPortraitPanelProps {
-  army: ArmySelectionType;
-  side: 'player' | 'opponent';
-  pieceCount?: number;
-}
-
-const HeroPortraitPanel: React.FC<HeroPortraitPanelProps> = ({ army, side, pieceCount }) => {
-  const king = army.king;
-  const kingPortrait = resolveHeroPortrait(king.id, king.portrait) ?? DEFAULT_PORTRAIT;
-  const fallbackPortrait = DEFAULT_PORTRAIT;
-  const safeFallback = DEFAULT_PORTRAIT;
-  const isPlayer = side === 'player';
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: isPlayer ? -50 : 50 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.5, delay: 0.2 }}
-      className={`flex flex-col items-center ${isPlayer ? 'mr-6' : 'ml-6'}`}
-    >
-      <div
-        className={`hero-portrait-frame ${isPlayer ? 'hero-portrait-player' : 'hero-portrait-opponent'}`}
-        data-element={king.element || (isPlayer ? 'holy' : 'shadow')}
-      >
-        <img
-          src={kingPortrait}
-          alt={king.name}
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            if (!target.src.includes(fallbackPortrait) && !target.src.startsWith('data:')) {
-              target.src = fallbackPortrait;
-            } else if (!target.src.startsWith('data:')) {
-              target.src = safeFallback;
-            }
-          }}
-          loading="lazy"
-        />
-      </div>
-
-      <div className="hero-nameplate">
-        <div className="hero-nameplate-text">{king.name}</div>
-        <div className="hero-nameplate-subtitle">
-          {isPlayer ? 'Aesir Commander' : 'Jotun Warlord'}
-        </div>
-      </div>
-
-      {pieceCount !== undefined && (
-        <div className={`chess-piece-count-shield mt-2 ${isPlayer ? 'chess-piece-count-player' : 'chess-piece-count-opponent'}`}>
-          <span className="font-bold text-sm">{pieceCount}</span>
-          <span className="text-[10px] opacity-60 ml-1">pieces</span>
-        </div>
-      )}
-    </motion.div>
-  );
-};
-
-interface PlayerPortraitProps {
-  army: ArmySelectionType;
-  pieceCount?: number;
-}
-
-const PlayerHeroPortrait: React.FC<PlayerPortraitProps> = ({ army, pieceCount }) => {
-  const king = army.king;
-  const kingPortrait = resolveHeroPortrait(king.id, king.portrait) ?? DEFAULT_PORTRAIT;
-  const fallbackPortrait = DEFAULT_PORTRAIT;
-  const safeFallback = DEFAULT_PORTRAIT;
-  const [isCasting, setIsCasting] = useState(false);
-  const prevMinesRef = useRef<number | null>(null);
-
-  const {
-    canPlaceMine,
-    minesRemaining,
-    isPlacementMode,
-    selectedDirection,
-    enterPlacementMode,
-    exitPlacementMode,
-    selectDirection
-  } = useKingChessAbility('player');
-
-  const kingId = king.id || '';
-  const config = getKingAbilityConfig(kingId);
-  const description = getAbilityDescription(kingId);
-  const needsDirection = requiresDirectionSelection(kingId);
-  const availableDirections = getAvailableDirections(kingId);
-
-  useEffect(() => {
-    if (prevMinesRef.current !== null && minesRemaining < prevMinesRef.current) {
-      setIsCasting(true);
-      const timer = setTimeout(() => setIsCasting(false), 900);
-      prevMinesRef.current = minesRemaining;
-      return () => clearTimeout(timer);
-    }
-    prevMinesRef.current = minesRemaining;
-    return undefined;
-  }, [minesRemaining]);
-
-  const handlePortraitClick = () => {
-    if (isPlacementMode) {
-      exitPlacementMode();
-    } else if (canPlaceMine) {
-      enterPlacementMode();
-    }
-  };
-
-  const isClickable = canPlaceMine || isPlacementMode;
-
-  const tooltipContent = (
-    <div className="portal-tooltip-content" style={{ borderColor: '#fbbf24', boxShadow: '0 4px 20px rgba(0,0,0,0.5), 0 0 20px rgba(251,191,36,0.25)' }}>
-      <div className="portal-tooltip-header" style={{ color: '#fbbf24' }}>
-        <span>Divine Command</span>
-      </div>
-      <div className="portal-tooltip-description">{description}</div>
-      <div className="portal-tooltip-meta">
-        <div style={{ color: '#fbbf24' }}>⚡ {minesRemaining}/5 uses</div>
-        <div style={{ color: '#ef4444', marginTop: '4px' }}>💀 STA: -{config?.staPenalty || 2}</div>
-        <div style={{ color: '#22d3ee', marginTop: '4px' }}>✨ Mana: +{config?.manaBoost || 1} next PvP</div>
-        <div style={{ color: '#9ca3af', marginTop: '4px', fontStyle: 'italic' }}>Click portrait to {isPlacementMode ? 'cancel' : 'activate'}</div>
-      </div>
-    </div>
-  );
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: -50 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.5, delay: 0.2 }}
-      className="flex flex-col items-center mr-6"
-    >
-      <Tooltip content={tooltipContent} position="right" delay={400}>
-        <div
-          className={`hero-portrait-frame hero-portrait-player ${isClickable ? 'king-clickable' : ''} ${isPlacementMode ? 'king-placement-active' : ''} ${isCasting ? 'king-casting' : ''}`}
-          data-element={king.element || 'holy'}
-          onClick={handlePortraitClick}
-          style={{ cursor: isClickable ? 'pointer' : 'default' }}
-        >
-          <img
-            src={kingPortrait}
-            alt={king.name}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              if (!target.src.includes(fallbackPortrait) && !target.src.startsWith('data:')) {
-                target.src = fallbackPortrait;
-              } else if (!target.src.startsWith('data:')) {
-                target.src = safeFallback;
-              }
-            }}
-            loading="lazy"
-          />
-
-          <div className={`king-uses-badge ${minesRemaining === 0 ? 'king-uses-empty' : ''} ${isPlacementMode ? 'king-uses-active' : ''}`}>
-            {minesRemaining}/5
-          </div>
-
-          <AnimatePresence>
-            {isCasting && (
-              <motion.div
-                className="king-cast-burst"
-                initial={{ opacity: 1, scale: 0.3 }}
-                animate={{ opacity: 0, scale: 2.5 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.8, ease: 'easeOut' }}
-              />
-            )}
-          </AnimatePresence>
-        </div>
-      </Tooltip>
-
-      <div className="hero-nameplate">
-        <div className="hero-nameplate-text">{king.name}</div>
-        <div className="hero-nameplate-subtitle">Aesir Commander</div>
-      </div>
-
-      {pieceCount !== undefined && (
-        <div className="chess-piece-count-shield mt-2 chess-piece-count-player">
-          <span className="font-bold text-sm">{pieceCount}</span>
-          <span className="text-[10px] opacity-60 ml-1">pieces</span>
-        </div>
-      )}
-
-      {needsDirection && isPlacementMode && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="mt-2 flex gap-1"
-        >
-          {availableDirections.map((dir) => (
-            <button
-              key={dir}
-              onClick={() => selectDirection(dir)}
-              className={`px-2 py-1 rounded text-xs font-semibold transition-all ${selectedDirection === dir ? 'bg-yellow-600 text-white border border-yellow-400' : 'bg-gray-700 text-gray-300 border border-gray-600 hover:bg-gray-600'}`}
-            >
-              {dir === 'horizontal' ? '↔' : dir === 'vertical' ? '↕' : dir === 'diagonal_up' ? '↗' : '↘'}
-            </button>
-          ))}
-        </motion.div>
-      )}
-
-      {isPlacementMode && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-1 text-center">
-          <div className="text-xs text-yellow-400">Click a tile to place trap</div>
-        </motion.div>
-      )}
-    </motion.div>
-  );
-};
-
-
-interface ChessPhaseContentProps {
-  boardState: any;
-  playerArmy: ArmySelectionType | null;
-  opponentArmy: ArmySelectionType;
-  handleCombatTriggered: (attackerId: string, defenderId: string) => void;
-  handleBattleMode: () => void;
-}
-
-const ChessPhaseContent: React.FC<ChessPhaseContentProps> = ({
-  boardState,
-  playerArmy,
-  opponentArmy,
-  handleCombatTriggered,
-  handleBattleMode
-}) => {
-  const { isPlacementMode } = useKingChessAbility('player');
-  const playerPieceCount = boardState.pieces.filter((p: any) => p.owner === 'player').length;
-  const opponentPieceCount = boardState.pieces.filter((p: any) => p.owner === 'opponent').length;
-  
-  return (
-    <motion.div
-      key="chess"
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      className="w-full h-full flex flex-col items-center justify-center p-4"
-    >
-      <div className="mb-4 text-center">
-        <h1 className="text-4xl font-bold" style={{ background: 'linear-gradient(180deg, #ffd700, #ff8c00)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', textShadow: 'none', filter: 'drop-shadow(0 2px 4px rgba(255, 165, 0, 0.5))' }}>Ragnarok Chess</h1>
-
-      </div>
-      
-      <AnimatePresence>
-        {boardState.inCheck && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: -20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: -20 }}
-            className="check-warning-banner mb-3"
-          >
-            CHECK! {boardState.inCheck === 'player' ? 'Your King is in danger!' : "Enemy King is threatened!"}
-          </motion.div>
-        )}
-      </AnimatePresence>
-      
-      <div className="flex items-center justify-center">
-        {playerArmy && (
-          <PlayerHeroPortrait army={playerArmy} pieceCount={playerPieceCount} />
-        )}
-
-        <div className="relative flex flex-col items-center">
-          <ChessBoard
-            onCombatTriggered={handleCombatTriggered}
-            disabled={isPlacementMode}
-          />
-
-          {boardState.inCheck === boardState.currentTurn && (
-            <div className="mt-2 text-center text-sm">
-              <p className="text-yellow-400 font-semibold">You must escape check! Move King, block, or capture the threat.</p>
-            </div>
-          )}
-        </div>
-
-        <HeroPortraitPanel army={opponentArmy} side="opponent" pieceCount={opponentPieceCount} />
-
-        {import.meta.env.DEV && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleBattleMode();
-            }}
-            className="fixed bottom-2 left-2 z-hud opacity-20 hover:opacity-80 transition-opacity text-[10px] px-2 py-1 bg-gray-800/80 border border-gray-600/50 rounded text-gray-500 cursor-pointer"
-            title="Developer battle sandbox"
-          >
-            Battle Sandbox
-          </button>
-        )}
-      </div>
-    </motion.div>
-  );
-};
 
 interface RagnarokChessGameProps {
   onGameEnd?: (winner: 'player' | 'opponent') => void;
@@ -408,21 +113,22 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
   const warbandDeck = useWarbandStore(selectDeckCardIds);
   const effectiveInitialArmy: ArmySelectionType | null = initialArmy ?? warbandArmy;
   /*
-    Round-level FSM (G4) — single source of truth for phase. The legacy
-    GamePhase literal union is preserved as a derived view so existing
-    `phase === 'X'` checks keep working until G5–G9 extract phase
-    components and switch the renderer to read flowState directly.
+    Round-level FSM (G4). The single source of truth for which phase
+    the renderer is in. Phase components subscribe to flowState directly;
+    coordinator effects read flowState.tag where they need to gate work.
   */
   const flowState = useGameFlowStore(s => s.current);
   const startFlow = useGameFlowStore(s => s.start);
   const dispatchFlow = useGameFlowStore(s => s.dispatch);
   const clearFlow = useGameFlowStore(s => s.clear);
-  const phase: GamePhase = flowState === null ? 'army_selection' : flowState.tag;
 
   const [playerArmy, setPlayerArmy] = useState<ArmySelectionType | null>(effectiveInitialArmy);
-  const [sharedDeckCardIds, setSharedDeckCardIds] = useState<number[]>(
-    !initialArmy && warbandArmy && warbandDeck.length > 0 ? [...warbandDeck] : []
-  );
+  /*
+    Shared deck IDs flow directly into useUnifiedCombatStore.setSharedDeck
+    when warband bootstrap fires. There is no need for a local mirror —
+    every consumer (poker phase, combat resolution) reads from the unified
+    store. The setter survives only as a write-through.
+  */
   /*
     `combatPieces` (lifecycle tracker for in-flight chess→poker handoff)
     was removed in G8 — the FSM tag (`vs_screen` / `poker_combat`) is now
@@ -467,7 +173,7 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
     nextTurn
   } = useChessCombatAdapter();
 
-  const { initializeCombat, endCombat, combatState } = usePokerCombatAdapter();
+  const { initializeCombat, endCombat } = usePokerCombatAdapter();
 
   const opponentArmy = useMemo(() => isCampaign
     ? buildCampaignArmy(campaignData!.mission)
@@ -561,9 +267,7 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
     bootstrappedFromWarbandRef.current = true;
     initializeBoard(warbandArmy, opponentArmy);
     if (warbandDeck.length > 0) {
-      const deckCopy = [...warbandDeck];
-      setSharedDeckCardIds(deckCopy);
-      setSharedDeck(deckCopy);
+      setSharedDeck([...warbandDeck]);
     }
     playSoundEffect('game_start');
   }, [warbandArmy, warbandDeck, isCampaign, initialArmy, opponentArmy, initializeBoard, setSharedDeck, playSoundEffect]);
@@ -745,7 +449,7 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
   // Combined into a single effect with a turn-tracking ref to prevent re-entry loops
   const lastBossRuleTurnRef = useRef<string>('');
   useEffect(() => {
-    if (!isCampaign || !campaignData || phase !== 'chess') return;
+    if (!isCampaign || !campaignData || flowState?.tag !== 'chess') return;
 
     // Create a unique key for this turn to prevent re-firing
     const turnKey = `${boardState.currentTurn}-${turnCount}`;
@@ -809,7 +513,7 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
         });
       }
     }
-  }, [phase, boardState.currentTurn, turnCount, isCampaign]);
+  }, [flowState, boardState.currentTurn, turnCount, isCampaign]);
 
   const { lastMineTriggered } = useKingChessAbility('player');
 
@@ -1068,33 +772,33 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
   }, [boardState.gameStatus, onGameEnd, playSoundEffect]);
 
   useEffect(() => {
-    if (phase === 'chess' && boardState.currentTurn === 'player' && boardState.gameStatus === 'playing') {
+    if (flowState?.tag === 'chess' && boardState.currentTurn === 'player' && boardState.gameStatus === 'playing') {
       incrementPlayerTurn();
     }
-  }, [phase, boardState.currentTurn, boardState.gameStatus, incrementPlayerTurn]);
+  }, [flowState, boardState.currentTurn, boardState.gameStatus, incrementPlayerTurn]);
 
   useEffect(() => {
-    if (phase === 'chess' && boardState.currentTurn === 'opponent' && boardState.gameStatus === 'playing') {
+    if (flowState?.tag === 'chess' && boardState.currentTurn === 'opponent' && boardState.gameStatus === 'playing') {
       const aiDelay = setTimeout(() => {
         executeAITurn();
       }, 1000);
       return () => clearTimeout(aiDelay);
     }
     return undefined;
-  }, [phase, boardState.currentTurn, boardState.gameStatus, executeAITurn]);
+  }, [flowState, boardState.currentTurn, boardState.gameStatus, executeAITurn]);
 
   useEffect(() => {
-    if (pendingCombat && boardState.gameStatus === 'combat' && phase === 'chess') {
+    if (pendingCombat && boardState.gameStatus === 'combat' && flowState?.tag === 'chess') {
       debug.chess('pendingCombat detected (AI attack), triggering combat flow');
       const { attacker, defender } = pendingCombat;
 
       dispatchFlow({ type: 'COMBAT_TRIGGERED', pieces: { attacker, defender } });
       playSoundEffect('card_draw');
     }
-  }, [pendingCombat, boardState.gameStatus, phase, playSoundEffect, dispatchFlow]);
+  }, [pendingCombat, boardState.gameStatus, flowState, playSoundEffect, dispatchFlow]);
 
   useEffect(() => {
-    if (phase === 'chess' && boardState.gameStatus === 'playing') {
+    if (flowState?.tag === 'chess' && boardState.gameStatus === 'playing') {
       const currentSide = boardState.currentTurn;
       const pieces = boardState.pieces.filter(p => p.owner === currentSide);
       let hasValidMove = false;
@@ -1113,12 +817,12 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
         setGameStatus(winnerStatus);
       }
     }
-  }, [phase, boardState.currentTurn, boardState.gameStatus, boardState.pieces.length]);
+  }, [flowState, boardState.currentTurn, boardState.gameStatus, boardState.pieces.length]);
 
   const handleRestart = useCallback(() => {
     resetBoard();
     setPlayerArmy(null);
-    setSharedDeckCardIds([]);
+    setSharedDeck([]);
     resetPlayerTurnCount();
     gameEndProcessedRef.current = false;
     bootstrappedFromWarbandRef.current = false;
@@ -1220,13 +924,13 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
 
       <Suspense fallback={null}>
         <AnimatePresence mode="wait">
-          {phase === 'chess' && (
-            <ChessPhaseContent
+          {flowState !== null && flowState.tag === 'chess' && (
+            <ChessPhase
               boardState={boardState}
               playerArmy={playerArmy}
               opponentArmy={opponentArmy}
-              handleCombatTriggered={handleCombatTriggered}
-              handleBattleMode={handleBattleMode}
+              onCombatTriggered={handleCombatTriggered}
+              onBattleMode={handleBattleMode}
             />
           )}
 
