@@ -12,8 +12,6 @@ interface MissionCompletion {
 	bestDifficulty: Difficulty;
 }
 
-export type GameOverSubPhase = 'cinematic' | 'result' | 'bridge';
-
 interface CampaignState {
 	completedMissions: Record<string, MissionCompletion>;
 	currentMission: string | null;
@@ -23,7 +21,6 @@ interface CampaignState {
 	// Transient per-mission runtime state — never persisted. Resets on
 	// startMission/clearCurrent so a fresh mission boots clean.
 	bossRulesApplied: boolean;
-	gameOverSubPhase: GameOverSubPhase;
 }
 
 interface CampaignActions {
@@ -40,7 +37,6 @@ interface CampaignActions {
 	reset: () => void;
 	markBossRulesApplied: () => void;
 	resetBossRulesApplied: () => void;
-	setGameOverSubPhase: (sub: GameOverSubPhase) => void;
 }
 
 export const useCampaignStore = create<CampaignState & CampaignActions>()(
@@ -52,14 +48,12 @@ export const useCampaignStore = create<CampaignState & CampaignActions>()(
 			rewardsClaimed: [],
 			seenCinematics: [],
 			bossRulesApplied: false,
-			gameOverSubPhase: 'result',
 
 			startMission: (missionId, difficulty) => {
 				set({
 					currentMission: missionId,
 					currentDifficulty: difficulty,
 					bossRulesApplied: false,
-					gameOverSubPhase: 'result',
 				});
 			},
 
@@ -130,7 +124,6 @@ export const useCampaignStore = create<CampaignState & CampaignActions>()(
 			clearCurrent: () => set({
 				currentMission: null,
 				bossRulesApplied: false,
-				gameOverSubPhase: 'result',
 			}),
 
 			reset: () => set({
@@ -140,12 +133,10 @@ export const useCampaignStore = create<CampaignState & CampaignActions>()(
 				rewardsClaimed: [],
 				seenCinematics: [],
 				bossRulesApplied: false,
-				gameOverSubPhase: 'result',
 			}),
 
 			markBossRulesApplied: () => set({ bossRulesApplied: true }),
 			resetBossRulesApplied: () => set({ bossRulesApplied: false }),
-			setGameOverSubPhase: (sub) => set({ gameOverSubPhase: sub }),
 		}),
 		{
 			name: 'ragnarok-campaign',

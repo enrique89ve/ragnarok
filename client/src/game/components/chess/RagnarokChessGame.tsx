@@ -3,8 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArmySelection as ArmySelectionType, ChessPiece } from '../../types/ChessTypes';
 import { useChessCombatAdapter } from '../../hooks/useChessCombatAdapter';
 import { getDefaultArmySelection, buildCombatDeck } from '../../data/ChessPieceConfig';
-import { useCampaignStore, getMission, getMissionStars } from '../../campaign';
-import { useRivalryStore } from '../../pvp/rivalryStore';
+import { useCampaignStore, getMission } from '../../campaign';
 import { buildCampaignArmy } from '../../campaign/campaignArmyBuilder';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { routes } from '../../../lib/routes';
@@ -30,7 +29,6 @@ import { useGameStore } from '../../stores/gameStore';
 import { useWarbandStore, selectArmy, selectDeckCardIds } from '../../../lib/stores/useWarbandStore';
 import { useCraftingStore } from '../../crafting/craftingStore';
 import { resolveHeroPortrait, DEFAULT_PORTRAIT } from '../../utils/art/artMapping';
-import CinematicCrawl from '../campaign/CinematicCrawl';
 
 /*
   Phase components are lazy-loaded so casual / multiplayer routes —
@@ -40,38 +38,13 @@ import CinematicCrawl from '../campaign/CinematicCrawl';
 */
 const CinematicPhase = lazy(() => import('./phases/CinematicPhase'));
 const MissionIntroPhase = lazy(() => import('./phases/MissionIntroPhase'));
+const GameOverPhase = lazy(() => import('./phases/GameOverPhase'));
 import './HeroPortraitEnhanced.css';
 import './chess-realm-skins.css';
 import './game-over-result.css';
 import '../campaign/cinematic-crawl.css';
 
 type GamePhase = 'army_selection' | 'cinematic' | 'mission_intro' | 'chess' | 'vs_screen' | 'poker_combat' | 'game_over';
-
-/*
-  RivalryBadge — shows head-to-head PvP record on the game-over screen.
-  Reads from useRivalryStore to find the most recent opponent and display
-  the W/L tally. Only renders if a rivalry record exists.
-*/
-function RivalryBadge() {
-	const rivals = useRivalryStore(s => s.rivals);
-	const latest = rivals.length > 0 ? rivals[0] : null;
-	if (!latest) return null;
-	return (
-		<motion.div
-			className="cgo-rivalry"
-			initial={{ opacity: 0, y: 10 }}
-			animate={{ opacity: 1, y: 0 }}
-			transition={{ delay: 0.8, duration: 0.6 }}
-		>
-			<span className="cgo-rivalry-label">vs {latest.displayName}</span>
-			<span className="cgo-rivalry-record">
-				<span className="cgo-rivalry-wins">{latest.wins}W</span>
-				{' — '}
-				<span className="cgo-rivalry-losses">{latest.losses}L</span>
-			</span>
-		</motion.div>
-	);
-}
 
 // Realm icon / color / text-color tables moved into MissionIntroPhase.tsx
 // (their only consumer). The coordinator no longer carries them.
@@ -1284,221 +1257,18 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
           </motion.div>
         )}
 
-        {phase === 'game_over' && (() => {
-          const isVictory = boardState.gameStatus === 'player_wins';
-          // Sub-phase 1: cinematic — fires only if the mission authored one.
-          // Skip handler advances to result card.
-          if (gameOverSubPhase === 'cinematic' && isCampaign && campaignData) {
-            const cinematicScenes = isVictory
-              ? campaignData.mission.victoryCinematic
-              : campaignData.mission.defeatCinematic;
-            if (cinematicScenes && cinematicScenes.length > 0) {
-              const syntheticIntro = {
-                title: isVictory ? 'Victory' : 'Twilight',
-                style: campaignData.chapter.cinematicIntro?.style ?? 'A Norse Saga',
-                scenes: cinematicScenes,
-              };
-              return (
-                <CinematicCrawl
-                  key="gameover-cinematic"
-                  intro={syntheticIntro}
-                  onComplete={() => dispatchFlow({ type: 'GAME_OVER_ADVANCE', nextSub: 'result' })}
-                  openingMusic={isVictory ? 'aesir_triumph' : 'twilight_horn'}
-                />
-              );
-            }
-            // Defensive: no scenes after all → drop into result.
-            dispatchFlow({ type: 'GAME_OVER_ADVANCE', nextSub: 'result' });
-            return null;
-          }
-
-          // Sub-phase 3: story bridge — between mission N and N+1.
-          if (gameOverSubPhase === 'bridge' && isCampaign && campaignData?.mission?.storyBridge?.length) {
-            const syntheticBridge = {
-              title: campaignData.chapter.name,
-              style: campaignData.chapter.cinematicIntro?.style ?? 'A Norse Saga',
-              scenes: campaignData.mission.storyBridge,
-            };
-            return (
-              <CinematicCrawl
-                key="gameover-bridge"
-                intro={syntheticBridge}
-                onComplete={() => {
-                  clearCurrent();
-                  navigate(routes.campaign);
-                }}
-                openingMusic="forge_anvil"
-              />
-            );
-          }
-
-          // Sub-phase 2 (default): the result card.
-          return (
-            <motion.div
-              key="gameover-result"
-              initial={{ opacity: 0, scale: 0.92 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              className="cgo-result"
-            >
-              <motion.div
-                className={`cgo-title ${isVictory ? 'victory' : 'defeat'}`}
-                initial={{ opacity: 0, y: -30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-              >
-                {isVictory ? 'VICTORY' : 'DEFEAT'}
-              </motion.div>
-
-              {isCampaign && campaignData ? (
-                <>
-                  {/* Boss victory quip — the boss gloats when the player loses */}
-                  {!isVictory && campaignData.mission.bossQuips?.onVictory && (
-                    <motion.p
-                      className="cgo-boss-quip"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.6, duration: 1.0 }}
-                    >
-                      &ldquo;{campaignData.mission.bossQuips.onVictory}&rdquo;
-                    </motion.p>
-                  )}
-                  <motion.p
-                    className="cgo-subtitle"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 1.0, duration: 0.8 }}
-                  >
-                    {isVictory
-                      ? (campaignData.mission.narrativeVictory ?? '')
-                      : (campaignData.mission.narrativeDefeat ?? 'The enemy stands triumphant. But your story is not yet over...')}
-                  </motion.p>
-
-                  {/*
-                    The full epilogue paragraph — narrativeAfter. Authored on
-                    every campaign mission. This is the connective tissue
-                    between "you won the fight" and "what it meant for the
-                    world." Renders below the subtitle in a scrollable box.
-                  */}
-                  {isVictory && campaignData.mission.narrativeAfter && (
-                    <motion.div
-                      className="cgo-narrative-scroll"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 1.6, duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-                    >
-                      <div className="cgo-narrative-divider">
-                        <span>&#x16A0;</span>
-                      </div>
-                      <p>{campaignData.mission.narrativeAfter}</p>
-                    </motion.div>
-                  )}
-
-                  {/* Star rating — 1-3 stars based on turn count */}
-                  {isVictory && (
-                    <motion.div
-                      className="cgo-stars"
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 1.4, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                    >
-                      {[1, 2, 3].map(star => {
-                        const earned = getMissionStars(turnCount, campaignData.mission) >= star;
-                        return (
-                          <span key={star} className={`cgo-star ${earned ? 'earned' : 'empty'}`}>
-                            &#9733;
-                          </span>
-                        );
-                      })}
-                    </motion.div>
-                  )}
-
-                  {/* Chapter completion splash — fires if this was the last mission */}
-                  {isVictory && campaignData.mission.isChapterFinale && (
-                    <motion.div
-                      className="cgo-chapter-splash"
-                      initial={{ opacity: 0, y: -20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 1.8, duration: 1.0, ease: [0.16, 1, 0.3, 1] }}
-                    >
-                      <div className="cgo-chapter-label">Chapter Complete</div>
-                      <div className="cgo-chapter-name">{campaignData.chapter.name}</div>
-                    </motion.div>
-                  )}
-
-                  {isVictory && campaignData.mission.rewards.length > 0 && (
-                    <motion.div
-                      className="cgo-rewards"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 2.2, duration: 0.8 }}
-                    >
-                      {campaignData.mission.rewards.map((r, i) => (
-                        <div key={i} className="cgo-reward-pill">
-                          +{r.amount || 1} {r.type}
-                        </div>
-                      ))}
-                      {/* Difficulty-locked bonus rewards */}
-                      {campaignDifficulty === 'heroic' && (
-                        <div className="cgo-difficulty-bonus heroic">
-                          +50 eitr (heroic)
-                        </div>
-                      )}
-                      {campaignDifficulty === 'mythic' && (
-                        <div className="cgo-difficulty-bonus mythic">
-                          +150 eitr + bonus pack (mythic)
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-
-                  <motion.div
-                    className="cgo-buttons"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 2.6, duration: 0.6 }}
-                  >
-                    <button
-                      type="button"
-                      onClick={handleBackToCampaign}
-                      className="cgo-btn-primary"
-                    >
-                      {isVictory && (campaignData.mission.storyBridge?.length ?? 0) > 0
-                        ? 'Continue the Saga'
-                        : 'Back to Campaign'}
-                    </button>
-                    {!isVictory && (
-                      <button
-                        type="button"
-                        onClick={handleRetryMission}
-                        className="cgo-btn-retry"
-                      >
-                        Retry Mission
-                      </button>
-                    )}
-                  </motion.div>
-                </>
-              ) : (
-                <>
-                  <p className="cgo-subtitle">
-                    {isVictory
-                      ? 'Checkmate! The enemy King has no escape.'
-                      : 'Checkmate... Your King has been cornered.'}
-                  </p>
-                  {/* PvP rivalry record — show head-to-head if we have history */}
-                  <RivalryBadge />
-                  <button
-                    type="button"
-                    onClick={handleRestart}
-                    className="cgo-btn-primary"
-                  >
-                    Play Again
-                  </button>
-                </>
-              )}
-            </motion.div>
-          );
-        })()}
+        {flowState !== null && flowState.tag === 'game_over' && (
+          <GameOverPhase
+            isVictory={boardState.gameStatus === 'player_wins'}
+            sub={flowState.sub}
+            playerTurnCount={turnCount}
+            campaign={isCampaign && campaignData ? { mission: campaignData.mission, chapter: campaignData.chapter, difficulty: campaignDifficulty } : null}
+            onCinematicEnd={() => dispatchFlow({ type: 'GAME_OVER_ADVANCE', nextSub: 'result' })}
+            onBridgeEnd={() => { clearCurrent(); navigate(routes.campaign); }}
+            onPrimaryAction={isCampaign ? handleBackToCampaign : handleRestart}
+            onRetry={handleRetryMission}
+          />
+        )}
       </AnimatePresence>
     </div>
   );

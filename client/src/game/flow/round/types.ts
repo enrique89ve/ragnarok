@@ -19,7 +19,14 @@
 
 import type { ArmySelection, ChessPiece } from '../../types/ChessTypes';
 import type { CinematicIntro, CinematicScene } from '../../campaign/campaignTypes';
-import type { GameOverSubPhase } from '../../campaign/campaignStore';
+
+/*
+  Sub-routing inside the game_over state. Campaign missions can chain
+  optional victory/defeat cinematics ('cinematic') and a story bridge
+  between mission N and N+1 ('bridge') around the standard result card
+  ('result'). Casual + multiplayer always sit in 'result'.
+*/
+export type GameOverSubPhase = 'cinematic' | 'result' | 'bridge';
 
 /*
   Payloads carried by individual flow states.
