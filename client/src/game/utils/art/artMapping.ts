@@ -2040,6 +2040,7 @@ export const ART_REGISTRY: Readonly<Record<string, string>> = {
 	'85007': '/art/nfts/bbb4-16zr8qmq.webp',
 	'85008': '/art/nfts/1314-652ef1ac.webp',
 	'85009': '/art/nfts/01b9-8522fb51.webp',
+	'85010': '/art/nfts/7504-f0bcb0c2.webp',
 	'85011': '/art/nfts/1f12-c371d891.webp',
 	'85012': '/art/nfts/d74e-bdd750c1.webp',
 	'85020': '/art/nfts/ef80-c0086c13.webp',
