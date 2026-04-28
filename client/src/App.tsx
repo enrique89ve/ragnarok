@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'rea
 import { HashRouter, Routes, Route, Link, Outlet, useLocation } from 'react-router-dom';
 import { routes } from './lib/routes';
 import { Button, Panel } from './components/ui-norse';
-import { Compass, LayoutGrid, Play, Settings as SettingsIcon, Swords } from 'lucide-react';
+import { ChevronRight, Compass, LayoutGrid, Play, Settings as SettingsIcon, Swords } from 'lucide-react';
 import UnifiedCardSystem from "./game/components/UnifiedCardSystem";
 import "./index.css";
 import { CardTransformProvider } from "./game/context/CardTransformContext";
@@ -382,10 +382,10 @@ function HomePage() {
 									<Link
 										key={mode.title}
 										to={mode.to}
-										className={`relative group flex flex-col min-h-[144px] p-4 rounded-xl border bg-linear-to-b overflow-hidden transition-all duration-300 ${a.border} ${
+										className={`relative group flex flex-col min-h-[160px] p-4 rounded-xl border bg-linear-to-b overflow-hidden transition-all duration-300 ${a.border} ${
 											isCombat
 												? 'border-obsidian-700 from-obsidian-850 to-obsidian-950'
-												: 'border-obsidian-700/70 from-obsidian-900 to-obsidian-950'
+												: 'border-obsidian-700/60 from-obsidian-900 to-obsidian-950'
 										}`}
 									>
 										{/* Atmospheric color layer (mode-specific). Sits below content. */}
@@ -420,22 +420,24 @@ function HomePage() {
 											<h3 className="font-display text-lg font-black tracking-[0.08em] uppercase text-ink-0 mb-1 leading-none">
 												{mode.title}
 											</h3>
-											<p className="text-ink-200 text-[12px] leading-[1.5] mb-2.5 max-w-[95%]">
+											<p className="text-ink-200 text-[12px] leading-[1.5] mb-3 max-w-[95%]">
 												{mode.description}
 											</p>
-											<div className="flex items-center justify-between pt-2 border-t border-obsidian-700/80">
-												<span className={`inline-flex items-center gap-1.5 font-display text-[11px] tracking-[0.22em] uppercase font-bold transition-colors ${
-													isCombat
-														? `${a.text} group-hover:text-ink-0`
-														: 'text-ink-200 group-hover:text-bifrost-300'
-												}`}>
-													{isCombat && (
-														<Play size={10} strokeWidth={2.4} fill="currentColor" className="shrink-0" />
-													)}
+
+											{/* CTA differentiated by intent — combat reads as a real ceremonial
+											    Play button (gold gradient, glow, dark text); meta reads as a
+											    sober curatorial link (mono, ghost). */}
+											{isCombat ? (
+												<div className="inline-flex items-center gap-2 rounded-md bg-linear-to-b from-gold-300 to-gold-500 border border-gold-200 px-3.5 py-1.5 font-display text-[11px] font-bold tracking-[0.22em] uppercase text-obsidian-950 shadow-[0_0_18px_-6px_rgba(217,168,68,0.55)] transition-all duration-300 group-hover:from-gold-200 group-hover:to-gold-400 group-hover:shadow-[0_0_24px_-4px_rgba(217,168,68,0.85)]">
+													<Play size={11} strokeWidth={2.4} fill="currentColor" className="shrink-0" />
 													{mode.cta}
-												</span>
-												<span className={`${a.arrow} transition-transform duration-300 group-hover:translate-x-1`}>→</span>
-											</div>
+												</div>
+											) : (
+												<div className="inline-flex items-center gap-1.5 font-mono text-[11px] tracking-[0.22em] uppercase text-ink-300 transition-colors group-hover:text-bifrost-300">
+													{mode.cta}
+													<ChevronRight size={13} strokeWidth={2} className="shrink-0 transition-transform duration-300 group-hover:translate-x-1" />
+												</div>
+											)}
 										</div>
 
 										{/* Bottom accent strip (semantic identity) */}
