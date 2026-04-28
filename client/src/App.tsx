@@ -476,7 +476,7 @@ function HomePage() {
 			    sticky header above to bracket the page. Horizontal scroll on
 			    overflow keeps it single-line on narrow viewports. */}
 			<nav className="sticky bottom-0 z-40 backdrop-blur-md bg-obsidian-950/85 border-t border-obsidian-700">
-				<div className="mx-auto max-w-[1600px] px-6 h-12 flex items-center gap-2 overflow-x-auto [scrollbar-width:none]">
+				<div className="mx-auto max-w-[1600px] px-6 h-12 flex items-center justify-center gap-2 overflow-x-auto [scrollbar-width:none]">
 					{UTILITY_LINKS.map(link => (
 						<Link
 							key={link.label}
