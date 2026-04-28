@@ -1,11 +1,10 @@
 import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { HashRouter, Routes, Route, Link, Outlet, useLocation } from 'react-router-dom';
 import { routes } from './lib/routes';
-import { Button } from './components/ui-norse';
-import { ArrowRight, Castle, ScrollText, Shield, Swords, Trophy } from 'lucide-react';
+import { Button, Panel } from './components/ui-norse';
+import { BookOpen, Layers, Swords } from 'lucide-react';
 import UnifiedCardSystem from "./game/components/UnifiedCardSystem";
 import "./index.css";
-import "./styles/homepage.css";
 import { CardTransformProvider } from "./game/context/CardTransformContext";
 import CardTransformBridgeInitializer from "./game/components/CardTransformBridgeInitializer";
 import ragnarokLogo from "./assets/images/ragnarok-logo.jpg";
@@ -13,6 +12,7 @@ import LoadingScreen from "./game/components/ui/LoadingScreen";
 import GoldenCardFilter from "./game/animations/GoldenCardFilter";
 import { ALL_CHAPTERS, getMission, useCampaignStore } from "./game/campaign";
 import { useStarterStore } from "./game/stores/starterStore";
+import { useNFTUsername } from "./game/nft/hooks";
 import {
   BridgeRuntimeBoundary,
   CardDataRuntimeBoundary,
@@ -82,250 +82,400 @@ function OnlineOnly({ children, label }: { children: React.ReactNode; label: str
   return <>{children}</>;
 }
 
+/* ────────────────────────────────────────────────────────────────────────────
+ * HOME — Forge & Ember layout (iter 1: distribution only).
+ * Structure:
+ *   header (sticky)
+ *   ├── banner             grid 1fr / 360px : copy + cta | stats panel
+ *   ├── page grid          1fr / 380px (lg+) : main column | side rail
+ *   │     ├── routes (3 horizontal mode cards)
+ *   │     └── campaign feature card
+ *   │     side rail:
+ *   │     ├── Daily Quests panel
+ *   │     └── Warband (FriendsPanel) panel
+ *   └── footer (utility pills)
+ * Visual polish (atmosphere, custom fonts, hover effects) lands in iter 2.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/*
+ * Mode card visual identity — gives each route its own atmosphere instead of
+ * three identical tiles. We don't have hero artwork yet, so each card uses:
+ *   - a mode-specific radial gradient (background "atmosphere")
+ *   - an oversized decorative icon at the bottom-right (acts as art)
+ *   - a vignette to anchor the text block at the bottom
+ *   - an accent color (text + bottom strip + arrow + hover border)
+ * When real art lands, the radial layer becomes the image and the rest stays.
+ */
+type AccentKey = 'ember' | 'gold' | 'bifrost';
+
+interface ModeCard {
+	title: string;
+	kicker: string;
+	description: string;
+	to: string;
+	icon: typeof Swords;
+	accent: AccentKey;
+	atmosphere: string; // CSS gradient string for the card's background mood
+}
+
+const ACCENT: Record<AccentKey, { text: string; strip: string; border: string; arrow: string }> = {
+	ember: {
+		text: 'text-ember-300',
+		strip: 'bg-ember-300',
+		border: 'hover:border-ember-300/50',
+		arrow: 'text-ember-300',
+	},
+	gold: {
+		text: 'text-gold-300',
+		strip: 'bg-gold-300',
+		border: 'hover:border-gold-300/50',
+		arrow: 'text-gold-300',
+	},
+	bifrost: {
+		text: 'text-bifrost-300',
+		strip: 'bg-bifrost-300',
+		border: 'hover:border-bifrost-300/50',
+		arrow: 'text-bifrost-300',
+	},
+};
+
+const MODE_CARDS: ReadonlyArray<ModeCard> = [
+	{
+		title: 'Ranked PvP',
+		kicker: 'Competitive',
+		description: 'Queue into live opponents, hold your nerve, and climb with the full combat ruleset.',
+		to: routes.multiplayer,
+		icon: Swords,
+		accent: 'ember',
+		atmosphere:
+			'radial-gradient(ellipse 75% 60% at 85% 15%, rgba(217, 74, 18, 0.45), transparent 65%), ' +
+			'radial-gradient(ellipse 50% 40% at 20% 90%, rgba(110, 31, 5, 0.35), transparent 70%)',
+	},
+	{
+		title: 'Campaign',
+		kicker: 'Adventure',
+		description: 'Push through faction storylines, boss phases, and realm-driven encounters.',
+		to: routes.campaign,
+		icon: BookOpen,
+		accent: 'gold',
+		atmosphere:
+			'radial-gradient(ellipse 75% 60% at 85% 15%, rgba(192, 138, 36, 0.42), transparent 65%), ' +
+			'radial-gradient(ellipse 50% 40% at 20% 90%, rgba(77, 52, 10, 0.45), transparent 70%)',
+	},
+	{
+		title: 'Collection',
+		kicker: 'Deckbuilding',
+		description: 'Review your cards, inspect rarity treatments, and tune the pieces behind your army.',
+		to: routes.collection,
+		icon: Layers,
+		accent: 'bifrost',
+		atmosphere:
+			'radial-gradient(ellipse 75% 60% at 85% 15%, rgba(74, 111, 224, 0.40), transparent 65%), ' +
+			'radial-gradient(ellipse 50% 40% at 20% 90%, rgba(122, 91, 214, 0.30), transparent 70%)',
+	},
+] as const;
+
+const UTILITY_LINKS: ReadonlyArray<{ label: string; to: string }> = [
+	{ label: 'Packs', to: routes.packs },
+	{ label: 'Trading', to: routes.trading },
+	{ label: 'Tournaments', to: routes.tournaments },
+	{ label: 'History', to: routes.history },
+	{ label: 'Treasury', to: routes.treasury },
+	{ label: 'Explorer', to: routes.explorer },
+	{ label: 'Settings', to: routes.settings },
+] as const;
+
+function StatRow({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
+	return (
+		<div className="flex items-center justify-between gap-4">
+			<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300">{label}</span>
+			<span className={`font-display text-base tracking-[0.08em] ${highlight ? 'text-gold-300' : 'text-ink-0'}`}>
+				{value}
+			</span>
+		</div>
+	);
+}
+
+function SideRailPanel({ title, children }: { title: string; children: React.ReactNode }) {
+	return (
+		<Panel className="p-5">
+			<div className="flex items-center justify-between pb-3 mb-4 border-b border-obsidian-700">
+				<div className="font-display text-xs tracking-[0.22em] uppercase text-ink-0 inline-flex items-center gap-2">
+					<span className="w-1 h-3 rounded-sm bg-gold-300" />
+					{title}
+				</div>
+			</div>
+			{children}
+		</Panel>
+	);
+}
+
 function HomePage() {
-  const bgOverlayRef = useRef<HTMLDivElement>(null);
-  const starterClaimed = useStarterStore(s => s.claimed);
-  const completedMissions = useCampaignStore(s => s.completedMissions);
-  const currentMissionId = useCampaignStore(s => s.currentMission);
-  const [showCeremony, setShowCeremony] = useState(false);
-  const [canInstall, setCanInstall] = useState(!!deferredInstallPrompt);
-  const completedMissionCount = Object.keys(completedMissions).length;
-  const totalMissionCount = useMemo(
-    () => ALL_CHAPTERS.reduce((sum, chapter) => sum + chapter.missions.length, 0),
-    [],
-  );
-  const activeMission = useMemo(
-    () => (currentMissionId ? getMission(currentMissionId) : null),
-    [currentMissionId],
-  );
-  const nextMission = useMemo(() => {
-    if (activeMission) {
-      return activeMission;
-    }
+	const starterClaimed = useStarterStore(s => s.claimed);
+	const completedMissions = useCampaignStore(s => s.completedMissions);
+	const currentMissionId = useCampaignStore(s => s.currentMission);
+	const hiveUsername = useNFTUsername();
+	const [showCeremony, setShowCeremony] = useState(false);
+	const [canInstall, setCanInstall] = useState(!!deferredInstallPrompt);
 
-    for (const chapter of ALL_CHAPTERS) {
-      const mission = chapter.missions.find(candidate =>
-        !completedMissions[candidate.id] &&
-        (candidate.prerequisiteIds.length === 0 ||
-          candidate.prerequisiteIds.every(id => Boolean(completedMissions[id]))),
-      );
-      if (mission) {
-        return { chapter, mission };
-      }
-    }
+	const completedMissionCount = Object.keys(completedMissions).length;
+	const totalMissionCount = useMemo(
+		() => ALL_CHAPTERS.reduce((sum, chapter) => sum + chapter.missions.length, 0),
+		[],
+	);
+	const activeMission = useMemo(
+		() => (currentMissionId ? getMission(currentMissionId) : null),
+		[currentMissionId],
+	);
+	const nextMission = useMemo(() => {
+		if (activeMission) return activeMission;
+		for (const chapter of ALL_CHAPTERS) {
+			const mission = chapter.missions.find(candidate =>
+				!completedMissions[candidate.id] &&
+				(candidate.prerequisiteIds.length === 0 ||
+					candidate.prerequisiteIds.every(id => Boolean(completedMissions[id]))),
+			);
+			if (mission) return { chapter, mission };
+		}
+		return null;
+	}, [activeMission, completedMissions]);
 
-    return null;
-  }, [activeMission, completedMissions]);
-  const primaryLabel = !starterClaimed
-    ? 'Claim Starter Deck'
-    : activeMission
-      ? 'Return to Active Mission'
-      : completedMissionCount > 0
-        ? 'Continue Campaign'
-        : 'Start Campaign';
-  const primarySummary = !starterClaimed
-    ? 'Claim the starter line, then move straight into the campaign map for the first authored battle.'
-    : activeMission
-      ? `${activeMission.chapter.name} is already staged. Re-enter ${activeMission.mission.name} from the campaign map.`
-      : nextMission
-        ? `Open ${nextMission.chapter.name} and stage ${nextMission.mission.name} for the cleanest path into live play.`
-        : 'Open the campaign map and step into the next battle.';
-  const warPathTitle = !starterClaimed
-    ? 'Starter Ceremony'
-    : activeMission
-      ? activeMission.mission.name
-      : nextMission?.mission.name ?? 'Campaign Ready';
-  const warPathSubtitle = !starterClaimed
-    ? 'Starter line pending'
-    : activeMission
-      ? `${activeMission.chapter.name} · Mission ${activeMission.mission.missionNumber}`
-      : nextMission
-        ? `${nextMission.chapter.name} · Mission ${nextMission.mission.missionNumber}`
-        : `${completedMissionCount}/${totalMissionCount} missions cleared`;
-  const journeySteps = !starterClaimed
-    ? [
-      { icon: Shield, label: 'Claim', detail: 'Starter deck and default line', complete: false },
-      { icon: ScrollText, label: 'Stage', detail: 'Open the campaign map', complete: false },
-      { icon: Swords, label: 'Battle', detail: 'Enter the first authored run', complete: false },
-    ]
-    : [
-      { icon: Castle, label: 'Campaign', detail: 'Choose the next mission', complete: true },
-      { icon: ScrollText, label: 'Briefing', detail: 'Lock difficulty and pacing', complete: Boolean(activeMission || nextMission) },
-      { icon: Swords, label: 'Battle', detail: 'Move from staging into live play', complete: Boolean(activeMission) || completedMissionCount > 0 },
-    ];
-  const modeCards = [
-    {
-      title: 'Ranked PvP',
-      eyebrow: 'Competitive',
-      description: 'Queue into live opponents, hold your nerve, and climb with the full combat ruleset.',
-      to: routes.multiplayer,
-      tone: 'crimson',
-    },
-    {
-      title: 'Campaign',
-      eyebrow: 'Adventure',
-      description: 'Push through faction storylines, boss phases, and realm-driven encounters.',
-      to: routes.campaign,
-      tone: 'emerald',
-    },
-    {
-      title: 'Collection',
-      eyebrow: 'Deckbuilding',
-      description: 'Review your cards, inspect rarity treatments, and tune the pieces behind your army.',
-      to: routes.collection,
-      tone: 'azure',
-    },
-  ];
-  const utilityLinks = [
-    { label: 'Packs', to: routes.packs },
-    { label: 'Trading', to: routes.trading },
-    { label: 'Tournaments', to: routes.tournaments },
-    { label: 'History', to: routes.history },
-    { label: 'Treasury', to: routes.treasury },
-    { label: 'Explorer', to: routes.explorer },
-  ];
+	const primaryLabel = !starterClaimed
+		? 'Claim Starter Deck'
+		: activeMission
+			? 'Resume Campaign'
+			: completedMissionCount > 0
+				? 'Continue Campaign'
+				: 'Start Campaign';
+	const activeFocusTitle = !starterClaimed
+		? 'Starter Ceremony'
+		: activeMission
+			? activeMission.mission.name
+			: nextMission?.mission.name ?? 'Saga Complete';
+	const activeFocusChapter = !starterClaimed
+		? 'Prologue · pending'
+		: activeMission
+			? `${activeMission.chapter.name} · Mission ${activeMission.mission.missionNumber}`
+			: nextMission
+				? `${nextMission.chapter.name} · Mission ${nextMission.mission.missionNumber}`
+				: '—';
+	const sagaPercent = totalMissionCount > 0
+		? Math.round((completedMissionCount / totalMissionCount) * 100)
+		: 0;
 
-  useEffect(() => {
-    if (bgOverlayRef.current) {
-      bgOverlayRef.current.style.backgroundImage = `url(${ragnarokLogo})`;
-    }
-    const handler = () => setCanInstall(true);
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, []);
+	useEffect(() => {
+		const handler = () => setCanInstall(true);
+		window.addEventListener('beforeinstallprompt', handler);
+		return () => window.removeEventListener('beforeinstallprompt', handler);
+	}, []);
 
-  return (
-    <div className="h-screen w-screen relative overflow-y-auto overflow-x-hidden homepage-container">
-      <div
-        ref={bgOverlayRef}
-        className="absolute inset-0 opacity-20 homepage-bg-overlay"
-      />
+	const triggerInstall = () => {
+		if (deferredInstallPrompt) {
+			deferredInstallPrompt.prompt();
+			setCanInstall(false);
+		}
+	};
 
-      {/* ── MENUBAR: Brand + Wallet only (no nav to avoid duplicates) ── */}
-      <header className="homepage-menubar">
-        <div className="homepage-menubar-inner">
-          <div className="homepage-menubar-brand">
-            <img src={ragnarokLogo} alt="" className="homepage-menubar-logo" />
-            <span className="homepage-menubar-title">RAGNAROK</span>
-            <span className="homepage-menubar-season">⬡ Forge &amp; Ember · v1.0</span>
-          </div>
-          <div className="homepage-menubar-right">
-            <Suspense fallback={<div className="animate-pulse h-8 w-8 rounded-full bg-gray-700" />}>
-              <FriendsPanel />
-            </Suspense>
-            <Suspense fallback={<div className="animate-pulse h-8 w-28 rounded bg-gray-700" />}>
-              <HiveKeychainLogin />
-            </Suspense>
-          </div>
-        </div>
-      </header>
+	return (
+		<div className="h-screen w-screen overflow-y-auto overflow-x-hidden bg-obsidian-950 text-ink-0">
+			{/* ── HEADER ─────────────────────────────────────────────────────── */}
+			<header className="sticky top-0 z-50 backdrop-blur-md bg-obsidian-950/80 border-b border-obsidian-700">
+				<div className="mx-auto max-w-[1600px] h-14 px-6 flex items-center justify-between gap-4">
+					<div className="flex items-center gap-3">
+						<img src={ragnarokLogo} alt="" className="w-8 h-8 rounded-md border border-obsidian-600 object-cover" />
+						<div className="leading-none">
+							<div className="font-display text-sm font-bold tracking-[0.18em] text-gold-300">RAGNAROK</div>
+							<div className="font-mono text-[10px] tracking-[0.16em] text-ink-300 mt-1">FORGE &amp; EMBER · S01</div>
+						</div>
+					</div>
+					<div className="flex items-center gap-3">
+						<Suspense fallback={<div className="animate-pulse h-8 w-28 rounded bg-obsidian-800" />}>
+							<HiveKeychainLogin />
+						</Suspense>
+					</div>
+				</div>
+			</header>
 
-      <div className="homepage-scaffold">
+			{/* ── BANNER ─────────────────────────────────────────────────────── */}
+			<section className="mx-auto max-w-[1440px] px-6 mt-7">
+				<div className="relative grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-9 items-center px-10 py-10 rounded-2xl border border-obsidian-700 bg-linear-to-b from-obsidian-850 to-obsidian-900 overflow-hidden">
+					<div>
+						<div className="inline-flex items-center gap-2.5 mb-4">
+							<span className="w-2 h-2 rounded-full bg-ember-300" />
+							<span className="font-mono text-[11px] tracking-[0.32em] uppercase text-gold-300 font-semibold">
+								Live · Season 01 · The Forge Kindles
+							</span>
+						</div>
+						<h1 className="font-display font-black uppercase leading-[0.95] tracking-[0.10em] text-[clamp(2.4rem,5vw,4rem)] m-0">
+							<span className="bg-linear-to-b from-gold-100 via-gold-300 to-gold-500 bg-clip-text text-transparent">
+								Claim the line.<br />March into battle.
+							</span>
+						</h1>
+						<p className="mt-5 mb-7 max-w-[540px] text-ink-200 text-[15px] leading-[1.65]">
+							Campaign is the clean front door — claim the starter line, stage a mission briefing, and break straight into live combat.
+						</p>
+						<div className="flex flex-wrap items-center gap-3">
+							{!starterClaimed ? (
+								<Button variant="primary" size="lg" onClick={() => setShowCeremony(true)}>
+									Claim Starter Deck
+								</Button>
+							) : (
+								<Link to={routes.campaign}>
+									<Button variant="primary" size="lg">{primaryLabel}</Button>
+								</Link>
+							)}
+							{canInstall && (
+								<Button variant="outline" size="lg" ornate onClick={triggerInstall}>
+									Install App
+								</Button>
+							)}
+						</div>
+					</div>
 
-        {/* ── HERO BANNER: copy left + Daily Quests right ── */}
-        <section className="homepage-hero-banner">
-          <div className="homepage-hero-copy">
-            <div className="homepage-kicker">⬡ Live · Season 01 · The Forge Kindles</div>
-            <h1 className="homepage-title">Claim the line. March into battle.</h1>
-            <p className="homepage-copy">
-              Campaign is the clean front door — claim the starter line, stage a mission briefing,
-              muster the warband, and break straight into live combat.
-            </p>
-            <div className="homepage-hero-actions">
-              {!starterClaimed ? (
-                <Button className="homepage-hero-cta" onClick={() => setShowCeremony(true)}>
-                  Claim Starter Deck
-                </Button>
-              ) : (
-                <Link to={routes.campaign} className="homepage-cta-link">
-                  <Button className="homepage-hero-cta">{primaryLabel}</Button>
-                </Link>
-              )}
-              <div className="homepage-support-actions">
-                {canInstall && (
-                  <button
-                    onClick={() => { if (deferredInstallPrompt) { deferredInstallPrompt.prompt(); setCanInstall(false); } }}
-                    className="homepage-install-btn"
-                  >
-                    Install App
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="homepage-hero-quests">
-            <Suspense fallback={<div className="animate-pulse h-48 rounded-2xl bg-gray-800" />}>
-              <DailyQuestPanel />
-            </Suspense>
-          </div>
-        </section>
+					{/* Stats panel */}
+					<aside className="rounded-xl border border-gold-300/40 bg-obsidian-900/80 backdrop-blur-md p-6 grid gap-3.5 self-stretch">
+						<StatRow label="Saga" value={`${completedMissionCount} / ${totalMissionCount}`} highlight />
+						<StatRow label="Active" value={activeFocusTitle} />
+						<StatRow label="Chapter" value={activeFocusChapter} />
+						<StatRow label="Season" value="01 · Forge" />
+						<div className="mt-1 pt-3 border-t border-obsidian-700">
+							<div className="flex items-center justify-between mb-1.5">
+								<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300">Saga progress</span>
+								<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-gold-300">{sagaPercent}%</span>
+							</div>
+							<div className="h-1 rounded-full bg-obsidian-700 overflow-hidden">
+								<div
+									className="h-full bg-linear-to-r from-gold-500 to-gold-200"
+									style={{ width: `${sagaPercent}%` }}
+								/>
+							</div>
+						</div>
+					</aside>
+				</div>
+			</section>
 
-        {/* ── WAR PATH: full-width strip below hero ── */}
-        <div className="homepage-journey-card">
-          <div className="homepage-journey-header">
-            <span className="homepage-journey-kicker">War Path</span>
-            <span className="homepage-journey-progress">{completedMissionCount}/{totalMissionCount} cleared</span>
-          </div>
-          <div className="homepage-journey-title">{warPathTitle}</div>
-          <p className="homepage-journey-copy">{warPathSubtitle}</p>
-          <div className="homepage-journey-steps">
-            {journeySteps.map(({ icon: Icon, label, detail, complete }) => (
-              <div key={label} className={`homepage-journey-step ${complete ? 'is-complete' : ''}`}>
-                <span className="homepage-journey-step-icon"><Icon size={15} strokeWidth={2} /></span>
-                <span className="homepage-journey-step-copy">
-                  <strong>{label}</strong>
-                  <span>{detail}</span>
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+			{/* ── PAGE GRID: main + side rail ────────────────────────────────── */}
+			<div className="mx-auto max-w-[1440px] px-6 mt-6 grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+				<div className="grid gap-6 content-start">
+					{/* Routes */}
+					<section>
+						<header className="mb-4">
+							<div className="font-mono text-[11px] tracking-[0.32em] uppercase text-ink-300">Primary Routes</div>
+							<h2 className="font-display text-xl tracking-[0.08em] uppercase text-ink-0 mt-1">Choose your front</h2>
+						</header>
+						<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+							{MODE_CARDS.map(mode => {
+								const Icon = mode.icon;
+								const a = ACCENT[mode.accent];
+								return (
+									<Link
+										key={mode.title}
+										to={mode.to}
+										className={`relative group flex flex-col min-h-[260px] p-6 rounded-xl border border-obsidian-700 bg-linear-to-b from-obsidian-850 to-obsidian-950 overflow-hidden transition-all duration-300 ${a.border}`}
+									>
+										{/* Atmospheric color layer (mode-specific). Sits below content. */}
+										<div
+											className="absolute inset-0 opacity-70 group-hover:opacity-90 transition-opacity duration-500 pointer-events-none"
+											style={{ background: mode.atmosphere }}
+										/>
 
-        {/* ── PRIMARY ROUTES: centered, reduced width ── */}
-        <section className="homepage-routes-section">
-          <div className="homepage-section-header">
-            <span className="homepage-section-kicker">Primary Routes</span>
-            <span className="homepage-section-note">Choose your front.</span>
-          </div>
-          <div className="homepage-mode-grid">
-            {modeCards.map((mode) => (
-              <Link
-                key={mode.title}
-                to={mode.to}
-                className={`homepage-mode-card homepage-mode-card-${mode.tone}`}
-              >
-                <span className="homepage-mode-eyebrow">{mode.eyebrow}</span>
-                <span className="homepage-mode-title">{mode.title}</span>
-                <span className="homepage-mode-copy">{mode.description}</span>
-                <span className="homepage-mode-arrow">Enter →</span>
-              </Link>
-            ))}
-          </div>
+										{/* Oversized decorative icon — anchors the bottom-right as "art" */}
+										<Icon
+											className={`absolute -right-3 -bottom-3 w-32 h-32 ${a.text} opacity-[0.08] pointer-events-none`}
+											strokeWidth={1}
+										/>
 
-          <nav className="homepage-utility-strip">
-            {utilityLinks.map((link) => (
-              <Link key={link.label} to={link.to} className="homepage-utility-pill">
-                {link.label}
-              </Link>
-            ))}
-            <Link to={routes.settings} className="homepage-utility-pill homepage-utility-pill-dim">Settings</Link>
-          </nav>
+										{/* Bottom vignette for text legibility on top of the gradient */}
+										<div
+											className="absolute inset-0 bg-linear-to-t from-obsidian-950/85 via-obsidian-950/30 to-transparent pointer-events-none"
+										/>
 
-          {import.meta.env.DEV && (
-            <Link to={routes.warband} className="homepage-dev-link">Casual Battle (dev)</Link>
-          )}
-        </section>
-      </div>
+										{/* Header row */}
+										<div className="relative z-10 flex items-start justify-between mb-auto">
+											<span className={`font-mono text-[10px] tracking-[0.32em] uppercase font-semibold ${a.text}`}>
+												{mode.kicker}
+											</span>
+											<span className={`inline-flex items-center justify-center w-9 h-9 rounded-md bg-obsidian-900/70 backdrop-blur-sm border border-obsidian-700 ${a.text}`}>
+												<Icon size={16} strokeWidth={1.8} />
+											</span>
+										</div>
 
-      <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none homepage-bottom-gradient" />
+										{/* Body */}
+										<div className="relative z-10 mt-auto">
+											<h3 className="font-display text-3xl font-black tracking-[0.08em] uppercase text-ink-0 mb-2 leading-none">
+												{mode.title}
+											</h3>
+											<p className="text-ink-200 text-sm leading-[1.6] mb-4 max-w-[95%]">
+												{mode.description}
+											</p>
+											<div className="flex items-center justify-between pt-3 border-t border-obsidian-700/80">
+												<span className="font-display text-xs tracking-[0.22em] uppercase text-ink-0 transition-colors group-hover:text-gold-300">
+													Enter
+												</span>
+												<span className={`${a.arrow} transition-transform duration-300 group-hover:translate-x-1`}>→</span>
+											</div>
+										</div>
 
-      {showCeremony && (
-        <Suspense fallback={null}>
-          <StarterPackCeremony onComplete={() => setShowCeremony(false)} />
-        </Suspense>
-      )}
-    </div>
-  );
+										{/* Bottom accent strip (semantic identity) */}
+										<span className={`absolute bottom-0 left-0 right-0 h-[3px] ${a.strip}`} />
+									</Link>
+								);
+							})}
+						</div>
+					</section>
+
+				</div>
+
+				{/* Side rail.
+				    Warband only shows after Hive login (LoL-style: friends list is gated by auth).
+				    Pre-login, the slot collapses so Daily Quests gets full visual weight
+				    and the connect-wallet CTA in the header carries the action. */}
+				<aside className="grid gap-5 content-start">
+					<SideRailPanel title="Daily Quests">
+						<Suspense fallback={<div className="animate-pulse h-32 rounded-xl bg-obsidian-800" />}>
+							<DailyQuestPanel />
+						</Suspense>
+					</SideRailPanel>
+					{hiveUsername && (
+						<SideRailPanel title="Warband">
+							<Suspense fallback={<div className="animate-pulse h-32 rounded-xl bg-obsidian-800" />}>
+								<FriendsPanel />
+							</Suspense>
+						</SideRailPanel>
+					)}
+				</aside>
+			</div>
+
+			{/* ── FOOTER (utility nav) ───────────────────────────────────────── */}
+			<footer className="mx-auto max-w-[1440px] px-6 mt-8 pb-10">
+				<nav className="flex flex-wrap gap-2 pt-4 border-t border-obsidian-700">
+					{UTILITY_LINKS.map(link => (
+						<Link
+							key={link.label}
+							to={link.to}
+							className="inline-flex items-center h-8 px-3.5 rounded-full border border-obsidian-700 bg-obsidian-850 text-ink-200 hover:text-gold-300 hover:border-gold-600 font-display text-xs tracking-[0.18em] uppercase font-bold transition-colors"
+						>
+							{link.label}
+						</Link>
+					))}
+					{import.meta.env.DEV && (
+						<Link
+							to={routes.warband}
+							className="inline-flex items-center h-8 px-3.5 rounded-full border border-dashed border-obsidian-600 text-ink-300 hover:text-ink-0 font-display text-xs tracking-[0.18em] uppercase opacity-70 hover:opacity-100 transition-opacity"
+						>
+							Casual Battle (dev)
+						</Link>
+					)}
+				</nav>
+			</footer>
+
+			{showCeremony && (
+				<Suspense fallback={null}>
+					<StarterPackCeremony onComplete={() => setShowCeremony(false)} />
+				</Suspense>
+			)}
+		</div>
+	);
 }
 
 /*

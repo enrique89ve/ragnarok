@@ -17,7 +17,7 @@
   --tooltip-border-radius: var(--radius-md);
   --tooltip-padding: var(--space-md);
   --tooltip-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.08);
-  --tooltip-font-family: var(--font-ui);
+  --tooltip-font-family: var(--type-ui);
   --tooltip-z-index: var(--z-topmost);
   --tooltip-icon-size: 20px;
   --tooltip-transition: var(--transition-fast);

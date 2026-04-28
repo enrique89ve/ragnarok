@@ -67,6 +67,5 @@
   "eslint.options": {
     "rulePaths": ["./eslint-rules"]
   },
-  "claudeCode.allowDangerouslySkipPermissions": true,
   "claudeCode.disableLoginPrompt": true
 }

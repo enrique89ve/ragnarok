@@ -142,7 +142,7 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
       className={`
         chess-piece w-full h-full flex flex-col items-center justify-center
         rounded-xl cursor-pointer transition-all relative
-        ${isPlayer ? 'bg-gradient-to-b from-blue-900 to-blue-950' : 'bg-gradient-to-b from-red-900 to-red-950'}
+        ${isPlayer ? 'bg-linear-to-b from-blue-900 to-blue-950' : 'bg-linear-to-b from-red-900 to-red-950'}
         ${isSelected ? 'ring-4 ring-yellow-400 z-20' : ''}
         ${canSelect ? 'hover:brightness-110' : ''}
         ${hasElement ? `element-piece element-piece-${piece.element}` : ''}

@@ -18,6 +18,7 @@ import { useHiveDataStore } from '../../data/HiveDataLayer';
 import { hiveSync } from '../../data/HiveSync';
 import { getNFTBridge } from '../nft';
 import { ensureBridgeRuntime } from '../runtime/bridgeRuntime';
+import { Button } from '../../components/ui-norse';
 
 type ConnectStatus = 'idle' | 'connecting' | 'error';
 
@@ -115,15 +116,13 @@ export function HiveKeychainLogin() {
 	// --- Disconnected state ---
 	return (
 		<div className="flex flex-col items-end gap-2">
-			<motion.button
-				whileHover={{ scale: 1.03 }}
-				whileTap={{ scale: 0.97 }}
+			<Button
+				variant="outline"
+				size="default"
 				onClick={() => { setIsExpanded(!isExpanded); setStatus('idle'); setErrorMsg(''); }}
-				className="px-3 py-1.5 bg-amber-800/70 hover:bg-amber-700/70 text-amber-200 rounded-lg border border-amber-600/50 text-sm font-medium transition-colors flex items-center gap-1.5 backdrop-blur-sm"
 			>
-				<span className="text-base">⛓</span>
-				Connect Hive Wallet
-			</motion.button>
+				⛓ Connect Hive
+			</Button>
 
 			<AnimatePresence>
 				{isExpanded && (
@@ -167,14 +166,13 @@ export function HiveKeychainLogin() {
 										autoFocus
 										spellCheck={false}
 										autoCapitalize="none"
-										className="flex-1 min-w-0 px-3 py-1.5 bg-gray-800/80 border border-gray-600/60 rounded-lg text-white text-sm placeholder-gray-600 focus:outline-hidden focus:border-amber-500/60"
+										className="flex-1 min-w-0 px-3 py-1.5 bg-obsidian-900/80 border border-obsidian-600/60 rounded-lg text-ink-0 text-sm placeholder-ink-400 focus:outline-hidden focus:border-gold-500/60"
 									/>
-									<motion.button
-										whileHover={{ scale: 1.05 }}
-										whileTap={{ scale: 0.95 }}
+									<Button
+										variant="primary"
+										size="default"
 										onClick={handleConnect}
 										disabled={status === 'connecting' || !username.trim()}
-										className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-lg text-sm font-semibold transition-colors whitespace-nowrap"
 									>
 										{status === 'connecting' ? (
 											<motion.span
@@ -184,7 +182,7 @@ export function HiveKeychainLogin() {
 												···
 											</motion.span>
 										) : 'Connect'}
-									</motion.button>
+									</Button>
 								</div>
 								{errorMsg && (
 									<motion.p

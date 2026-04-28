@@ -75,7 +75,7 @@
 
 /* Countdown number */
 .hg-countdown {
-  font-family: var(--font-numeric);
+  font-family: var(--type-numeric);
   font-size: 1rem;
   font-weight: 800;
   color: var(--gold-400);

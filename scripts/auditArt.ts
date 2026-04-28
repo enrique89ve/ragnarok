@@ -21,6 +21,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 import { cardRegistry } from '../client/src/game/data/cardRegistry';
@@ -74,7 +75,9 @@ type IssueKind =
 	| 'hero_missing_art'
 	| 'king_missing_art'
 	| 'card_id_collision'
-	| 'parallel_art_directory';
+	| 'parallel_art_directory'
+	| 'parallel_art_shadow'
+	| 'duplicate_asset_content';
 
 interface Issue {
 	readonly kind: IssueKind;
@@ -567,14 +570,85 @@ const walkHasArtFiles = (dir: string): boolean => {
 	return false;
 };
 
+/**
+ * Recurse INTO allowed dirs looking for files that match the canonical
+ * Genesis filename pattern `[0-9a-f]{4}-[0-9a-z]{8}.webp`. The only
+ * legitimate homes for such files are `art/nfts/` and `art/orphaned/`;
+ * anything else is a parallel collection-art dump (e.g. legacy CDN export
+ * mirrors, abandoned portrait drafts) silently shadowing the canon.
+ */
+const GENESIS_FILENAME_RE = /^[0-9a-f]{4}-[0-9a-z]{8}\.webp$/;
+
+const detectParallelArtShadows = (): Issue[] => {
+	if (!fs.existsSync(PUBLIC_DIR)) return [];
+	const issues: Issue[] = [];
+	const canonRoots = new Set([
+		path.join(PUBLIC_DIR, 'art', 'nfts'),
+		path.join(PUBLIC_DIR, 'art', 'orphaned'),
+	]);
+	const walk = (dir: string): void => {
+		for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+			const full = path.join(dir, entry.name);
+			if (entry.isDirectory()) {
+				if (canonRoots.has(full)) continue;
+				walk(full);
+				continue;
+			}
+			if (!GENESIS_FILENAME_RE.test(entry.name)) continue;
+			const rel = path.relative(REPO_ROOT, full).replace(/\\/g, '/');
+			issues.push({
+				kind: 'parallel_art_shadow',
+				severity: 'error',
+				message: `Genesis-pattern art file outside canon: ${rel}`,
+				assetId: entry.name.replace(/\.webp$/, ''),
+				suggestion: 'Move the file into client/public/art/nfts/ (and register it) or client/public/art/orphaned/ — never into a UI/utility folder.',
+			});
+		}
+	};
+	walk(PUBLIC_DIR);
+	return issues;
+};
+
+/**
+ * Two cards / heroes / kings can share a *filename* — already detected by
+ * `duplicate_asset_mapping`. They must not share a *bitmap*: byte-identical
+ * art under different names violates collection uniqueness. md5-hash every
+ * .webp under `art/nfts/` and report each collision group.
+ */
+const detectDuplicateAssetContent = (sources: Sources): Issue[] => {
+	const byHash = new Map<string, string[]>();
+	for (const assetId of sources.physicalFiles) {
+		const full = path.join(ART_DIR, `${assetId}.webp`);
+		if (!fs.existsSync(full)) continue;
+		const hash = createHash('md5').update(fs.readFileSync(full)).digest('hex');
+		const bucket = byHash.get(hash) ?? [];
+		bucket.push(assetId);
+		byHash.set(hash, bucket);
+	}
+	const issues: Issue[] = [];
+	for (const [hash, group] of byHash) {
+		if (group.length < 2) continue;
+		const sorted = [...group].sort();
+		issues.push({
+			kind: 'duplicate_asset_content',
+			severity: 'error',
+			message: `Byte-identical art (md5 ${hash.slice(0, 8)}…): ${sorted.join(', ')}`,
+			suggestion: 'Pick one canonical filename, mark the other card(s) pending in scripts/pending-art.json, and delete the duplicate file.',
+		});
+	}
+	return issues;
+};
+
 const detectAllIssues = (sources: Sources): Issue[] => [
 	...detectDuplicateCardNames(sources),
 	...detectMissingArtMappings(sources),
 	...detectBrokenArtRefs(sources),
 	...detectDuplicateAssetMappings(sources),
+	...detectDuplicateAssetContent(sources),
 	...classifyArtRegistryEntries(sources),
 	...detectOrphanedFiles(sources),
 	...detectParallelArtDirs(),
+	...detectParallelArtShadows(),
 ];
 
 // ── Reporter ───────────────────────────────────────────────────────────────

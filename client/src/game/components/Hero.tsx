@@ -193,7 +193,7 @@ export const Hero: React.FC<HeroProps> = ({
       {/* Hero portrait with frame */}
       <div 
         ref={heroRef}
-        className={`w-20 h-20 bg-gradient-to-b ${heroClassColor} rounded-full flex items-center justify-center text-white font-bold shadow-lg border-2 transition-all hover:scale-105 relative overflow-hidden ${onHeroClick && !isInteractionDisabled ? 'cursor-pointer' : 'cursor-default'}`}
+        className={`w-20 h-20 bg-linear-to-b ${heroClassColor} rounded-full flex items-center justify-center text-white font-bold shadow-lg border-2 transition-all hover:scale-105 relative overflow-hidden ${onHeroClick && !isInteractionDisabled ? 'cursor-pointer' : 'cursor-default'}`}
         onClick={isInteractionDisabled ? undefined : onHeroClick}
       >
         {/* Hero glow effect when it's player's turn */}
@@ -211,7 +211,7 @@ export const Hero: React.FC<HeroProps> = ({
             loading="lazy"
           />
         ) : (
-          <div className="flex flex-col items-center justify-center w-full h-full bg-gradient-to-b from-gray-800/90 to-gray-900/90">
+          <div className="flex flex-col items-center justify-center w-full h-full bg-linear-to-b from-gray-800/90 to-gray-900/90">
             <span className="text-3xl mb-1">{heroEmoji}</span>
             <div className="text-xs font-bold text-center px-1 leading-tight">
               {heroName.split(' ').map((word, i) => (
@@ -248,7 +248,7 @@ export const Hero: React.FC<HeroProps> = ({
       
       {/* Hero name & health/armor */}
       <div className="mt-2 text-center">
-        <div className="font-bold text-sm bg-gradient-to-r from-gray-700 to-gray-800 rounded px-2 py-0.5">{heroName}</div>
+        <div className="font-bold text-sm bg-linear-to-r from-gray-700 to-gray-800 rounded px-2 py-0.5">{heroName}</div>
         <div className="flex items-center justify-center mt-1 space-x-2">
           <Suspense fallback={<span className="text-green-500 font-bold">{player.heroHealth}</span>}>
             <HealthDisplay

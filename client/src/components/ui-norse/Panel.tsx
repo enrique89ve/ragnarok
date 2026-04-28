@@ -5,7 +5,7 @@ type DivProps = React.HTMLAttributes<HTMLDivElement>;
 
 const PANEL_BASE =
 	'rounded-xl border border-[var(--obsidian-700)] ' +
-	'bg-gradient-to-b from-[var(--obsidian-850)] to-[var(--obsidian-900)] ' +
+	'bg-linear-to-b from-[var(--obsidian-850)] to-[var(--obsidian-900)] ' +
 	'text-[var(--ink-0)] shadow-[0_8px_24px_-8px_rgba(0,0,0,0.7)]';
 
 export const Panel = React.forwardRef<HTMLDivElement, DivProps>(({ className, ...props }, ref) => (

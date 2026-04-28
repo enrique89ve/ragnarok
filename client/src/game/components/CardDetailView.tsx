@@ -97,7 +97,7 @@ export const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose })
         
         <div className="p-6 flex flex-col md:flex-row">
           <div className="shrink-0 w-full md:w-64 mb-6 md:mb-0">
-            <div className={`${getCardBorderColor()} border-4 rounded-lg overflow-hidden bg-gradient-to-b ${getCardBackgroundColor()} p-4 flex flex-col h-80`}>
+            <div className={`${getCardBorderColor()} border-4 rounded-lg overflow-hidden bg-linear-to-b ${getCardBackgroundColor()} p-4 flex flex-col h-80`}>
               <div className="text-center text-white font-bold text-xl mb-2">{cardData.name}</div>
               <div className="bg-black/30 text-white p-3 rounded mb-auto">
                 <p>{cardData.description || "No description available."}</p>

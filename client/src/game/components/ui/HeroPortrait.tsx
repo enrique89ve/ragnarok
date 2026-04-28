@@ -39,7 +39,7 @@ export function HeroPortrait({
         font-bold
         border-2 ${borderColor}
         overflow-hidden
-        bg-gradient-to-br from-gray-700 to-gray-900
+        bg-linear-to-br from-gray-700 to-gray-900
         ${className}
       `}
     >

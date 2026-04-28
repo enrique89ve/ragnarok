@@ -42,7 +42,7 @@ const Card = ({
       style={{ width: '180px', height: isBattlefield ? '210px' : '280px' }}
     >
       {/* Card Frame */}
-      <div className="h-full flex flex-col bg-gradient-to-b from-gray-800 to-gray-900 border-4 border-gray-700 rounded-lg">
+      <div className="h-full flex flex-col bg-linear-to-b from-gray-800 to-gray-900 border-4 border-gray-700 rounded-lg">
         {/* Card Cost */}
         <div className="absolute top-2 left-2 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold shadow-md z-10">
           {card.card.manaCost}
@@ -54,7 +54,7 @@ const Card = ({
         </div>
         
         {/* Card Name */}
-        <div className="px-3 py-2 bg-gradient-to-r from-gray-700 to-gray-800">
+        <div className="px-3 py-2 bg-linear-to-r from-gray-700 to-gray-800">
           <h3 className="font-bold text-white truncate">{card.card.name}</h3>
         </div>
         
@@ -167,7 +167,7 @@ export const SimpleGame = () => {
   const currentPlayerLabel = currentTurn === 'player' ? 'YOUR TURN' : 'OPPONENT\'S TURN';
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-900 to-blue-950 text-white p-4">
+    <div className="min-h-screen bg-linear-to-b from-blue-900 to-blue-950 text-white p-4">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold text-yellow-400 tracking-wide">Card Battler</h1>
@@ -180,7 +180,7 @@ export const SimpleGame = () => {
         </div>
         
         {/* Game info panel */}
-        <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg p-4 mb-8 shadow-xl border border-gray-700">
+        <div className="bg-linear-to-r from-gray-900 to-gray-800 rounded-lg p-4 mb-8 shadow-xl border border-gray-700">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
               <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xl mr-3">
@@ -208,7 +208,7 @@ export const SimpleGame = () => {
                 disabled={currentTurn !== 'player'}
                 className={`px-6 py-3 rounded-lg font-bold text-lg shadow-lg transition transform hover:scale-105
                   ${currentTurn === 'player' 
-                    ? 'bg-gradient-to-r from-yellow-600 to-yellow-500 text-white' 
+                    ? 'bg-linear-to-r from-yellow-600 to-yellow-500 text-white' 
                     : 'bg-gray-700 text-gray-500 cursor-not-allowed'}`}
               >
                 END TURN
@@ -240,7 +240,7 @@ export const SimpleGame = () => {
         {/* Battlefield */}
         <div className="mb-8">
           <h2 className="font-bold text-2xl mb-4 text-yellow-400">BATTLEFIELD</h2>
-          <div className="bg-gradient-to-b from-gray-900 to-gray-800 rounded-lg p-6 shadow-xl border border-gray-700">
+          <div className="bg-linear-to-b from-gray-900 to-gray-800 rounded-lg p-6 shadow-xl border border-gray-700">
             <div className="mb-8">
               <h3 className="font-bold text-xl mb-4 text-red-400">OPPONENT'S CARDS</h3>
               <div className="flex flex-wrap gap-4 justify-center">
@@ -278,7 +278,7 @@ export const SimpleGame = () => {
         {/* Hand */}
         <div>
           <h2 className="font-bold text-2xl mb-4 text-yellow-400">YOUR HAND</h2>
-          <div className="bg-gradient-to-b from-gray-900 to-gray-800 rounded-lg p-6 shadow-xl border border-gray-700">
+          <div className="bg-linear-to-b from-gray-900 to-gray-800 rounded-lg p-6 shadow-xl border border-gray-700">
             <div className="flex flex-wrap gap-4 justify-center">
               {players.player.hand.length === 0 ? (
                 <div className="bg-gray-800/50 rounded-lg p-4 text-gray-400 w-full text-center">

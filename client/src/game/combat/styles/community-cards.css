@@ -28,7 +28,7 @@
 
 .card-placeholder::after {
   content: 'ᛟ';
-  font-family: var(--font-display);
+  font-family: var(--type-display);
   font-size: 48px;
   color: rgba(212, 175, 55, 0.18);
   text-shadow: 0 0 12px rgba(212, 175, 55, 0.10);
@@ -60,7 +60,7 @@
 }
 
 .slot-label {
-  font-family: var(--font-display);
+  font-family: var(--type-display);
   font-size: 0.78rem;
   font-weight: 800;
   color: var(--ui-gold-bright);

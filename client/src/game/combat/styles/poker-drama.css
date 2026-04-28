@@ -136,7 +136,7 @@
 }
 
 .phase-banner-title {
-	font-family: var(--font-display);
+	font-family: var(--type-display);
 	font-size: 1.8rem;
 	font-weight: 900;
 	color: var(--phase-color, var(--gold-300));
@@ -150,7 +150,7 @@
 }
 
 .phase-banner-subtitle {
-	font-family: var(--font-display);
+	font-family: var(--type-display);
 	font-size: 0.85rem;
 	font-weight: 500;
 	color: var(--text-dimmed);

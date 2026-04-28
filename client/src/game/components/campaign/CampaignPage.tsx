@@ -928,7 +928,7 @@ export default function CampaignPage() {
 						return (
 							<article
 								key={chapter.id}
-								className={`beyond-card bg-gradient-to-br ${FACTION_COLORS[chapter.faction]}`}
+								className={`beyond-card bg-linear-to-br ${FACTION_COLORS[chapter.faction]}`}
 							>
 								<p className="campaign-kicker">Chapter Theater</p>
 								<h3 className={`mt-2 text-2xl font-semibold ${FACTION_ACCENT[chapter.faction]}`}>
@@ -977,7 +977,7 @@ export default function CampaignPage() {
 					})}
 
 					{isAllComplete && (
-						<article className="beyond-card bg-gradient-to-br from-red-950/[0.88] via-red-900/70 to-amber-950/[0.72] border-red-500/30">
+						<article className="beyond-card bg-linear-to-br from-red-950/[0.88] via-red-900/70 to-amber-950/[0.72] border-red-500/30">
 							<p className="campaign-kicker">Secret Gate</p>
 							<h3 className="mt-2 text-2xl font-semibold text-red-200">
 								The Celestial Gate

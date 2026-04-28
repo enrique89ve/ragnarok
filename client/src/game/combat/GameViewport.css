@@ -82,7 +82,7 @@
   border: var(--ui-panel-border);
   border-radius: 6px;
   box-shadow: var(--ui-panel-shadow);
-  font-family: var(--font-ui);
+  font-family: var(--type-ui);
   color: var(--text-primary);
 }
 

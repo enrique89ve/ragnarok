@@ -120,7 +120,7 @@
 	padding: 10px 14px;
 	background: color-mix(in srgb, var(--gold-300) 10%, transparent);
 	border-bottom: 1px solid color-mix(in srgb, var(--gold-300) 20%, transparent);
-	font-family: var(--font-display);
+	font-family: var(--type-display);
 	font-size: 0.85rem;
 	font-weight: 600;
 	color: var(--gold-300);

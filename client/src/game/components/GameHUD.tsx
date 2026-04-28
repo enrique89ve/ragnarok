@@ -57,7 +57,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   const turnLabel = isPlayerTurn ? 'YOUR TURN' : 'OPPONENT\'S TURN';
   
   return (
-    <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg p-4 shadow-xl border border-gray-700">
+    <div className="bg-linear-to-r from-gray-900 to-gray-800 rounded-lg p-4 shadow-xl border border-gray-700">
       <div className="flex justify-between items-center">
         {/* Player hero */}
         <div className="flex items-center">

@@ -33,7 +33,7 @@ const NorseBackground: React.FC<NorseBackgroundProps> = ({ children }) => {
         }}
       />
       
-      <div className="absolute inset-0 z-0 bg-gradient-to-b from-slate-900/70 via-transparent to-slate-900/70" />
+      <div className="absolute inset-0 z-0 bg-linear-to-b from-slate-900/70 via-transparent to-slate-900/70" />
       
       <div 
         className="absolute inset-x-0 top-1/2 transform -translate-y-1/2 h-2/3 z-0"

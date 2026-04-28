@@ -97,7 +97,7 @@
 	top: 50%;
 	left: 50%;
 	transform: translate(-50%, -50%);
-	font-family: var(--font-display);
+	font-family: var(--type-display);
 	font-size: 1.4rem;
 	font-weight: 900;
 	color: var(--text-near-white);

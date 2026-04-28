@@ -66,7 +66,7 @@
 
 /* Main title */
 .game-over-title {
-	font-family: var(--font-display);
+	font-family: var(--type-display);
 	font-size: 60px;
 	font-weight: 900;
 	letter-spacing: 8px;
@@ -169,7 +169,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	font-family: var(--font-display);
+	font-family: var(--type-display);
 	font-size: 28px;
 	font-weight: 900;
 	color: var(--text-white-full);
@@ -318,7 +318,7 @@
 }
 
 .elo-delta-value {
-	font-family: var(--font-numeric);
+	font-family: var(--type-numeric);
 	font-size: 22px;
 	font-weight: 900;
 	letter-spacing: 0.12em;

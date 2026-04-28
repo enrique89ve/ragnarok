@@ -88,7 +88,7 @@ const EnhancedDeathAnimation: React.FC<EnhancedDeathAnimationProps> = ({
             
             {/* Overlay for the dissolve effect */}
             <motion.div
-              className="absolute inset-0 bg-gradient-to-t from-amber-500 to-amber-200"
+              className="absolute inset-0 bg-linear-to-t from-amber-500 to-amber-200"
               style={{ mixBlendMode: 'overlay', opacity: 0.7 }}
               animate={{
                 opacity: [0.7, 0.9, 0]

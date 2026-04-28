@@ -224,7 +224,7 @@ export default function PackOpeningAnimation({
                     <motion.div
                       animate={{ opacity: [0.3, 0.6, 0.3] }}
                       transition={{ duration: 2, repeat: Infinity }}
-                      className="absolute inset-0 bg-gradient-to-t from-transparent via-white/10 to-transparent pointer-events-none"
+                      className="absolute inset-0 bg-linear-to-t from-transparent via-white/10 to-transparent pointer-events-none"
                     />
                   )}
 
@@ -257,7 +257,7 @@ export default function PackOpeningAnimation({
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={onOpenAnother}
-                  className="px-8 py-4 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold rounded-xl transition-all shadow-lg shadow-amber-900/30"
+                  className="px-8 py-4 bg-linear-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold rounded-xl transition-all shadow-lg shadow-amber-900/30"
                 >
                   Open Another Pack
                 </motion.button>
@@ -266,7 +266,7 @@ export default function PackOpeningAnimation({
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-900/30"
+                    className="px-8 py-4 bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-900/30"
                   >
                     View Collection
                   </motion.button>

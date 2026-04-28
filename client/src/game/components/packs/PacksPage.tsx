@@ -180,7 +180,7 @@ function SealedPacksSection() {
 				{[...grouped.entries()].map(([packType, typePacks]) => (
 					<div
 						key={packType}
-						className="bg-gradient-to-b from-amber-900/20 to-gray-900/40 rounded-xl p-4 border border-amber-600/30"
+						className="bg-linear-to-b from-amber-900/20 to-gray-900/40 rounded-xl p-4 border border-amber-600/30"
 					>
 						<div className="text-center mb-3">
 							<div className="text-2xl mb-1">
@@ -595,7 +595,7 @@ export default function PacksPage() {
 
 	if (loading) {
 		return (
-			<div className="min-h-screen bg-gradient-to-b from-gray-900 via-purple-950 to-gray-900 flex items-center justify-center">
+			<div className="min-h-screen bg-linear-to-b from-gray-900 via-purple-950 to-gray-900 flex items-center justify-center">
 				<motion.div
 					animate={{ rotate: 360 }}
 					transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
@@ -607,7 +607,7 @@ export default function PacksPage() {
 
 	if (error) {
 		return (
-			<div className="min-h-screen bg-gradient-to-b from-gray-900 via-purple-950 to-gray-900 flex items-center justify-center">
+			<div className="min-h-screen bg-linear-to-b from-gray-900 via-purple-950 to-gray-900 flex items-center justify-center">
 				<div className="text-center">
 					<p className="text-red-400 text-xl mb-4">{error}</p>
 					<motion.button
@@ -629,7 +629,7 @@ export default function PacksPage() {
 	const scarcity = getScarcityInfo(packPercentRemaining);
 
 	return (
-		<div className="h-full overflow-y-auto bg-gradient-to-b from-gray-900 via-purple-950 to-gray-900 p-8 pb-16">
+		<div className="h-full overflow-y-auto bg-linear-to-b from-gray-900 via-purple-950 to-gray-900 p-8 pb-16">
 			{isOpening && openingPack && revealedCards.length > 0 && (
 				<PackOpeningAnimation
 					packName={openingPack.name}
@@ -704,7 +704,7 @@ export default function PacksPage() {
 				<motion.h1
 					initial={{ opacity: 0, y: -20 }}
 					animate={{ opacity: 1, y: 0 }}
-					className="text-5xl font-bold text-center mb-2 text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400"
+					className="text-5xl font-bold text-center mb-2 text-transparent bg-clip-text bg-linear-to-r from-amber-400 via-yellow-300 to-amber-400"
 					style={{ textShadow: '0 0 40px rgba(251, 191, 36, 0.4)' }}
 				>
 					Norse Mythos Card Packs
@@ -970,7 +970,7 @@ export default function PacksPage() {
 								<div className="text-gray-400 text-sm">Cards Collected</div>
 							</div>
 							<div className="bg-gray-800/40 rounded-xl p-4 border border-gray-700/50 text-center">
-								<div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500">
+								<div className="text-2xl font-bold text-transparent bg-clip-text bg-linear-to-r from-pink-500 to-purple-500">
 									{supplyStats.mythicDropRate}%
 								</div>
 								<div className="text-gray-400 text-sm">Mythic Rate</div>

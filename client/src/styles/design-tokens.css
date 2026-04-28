@@ -454,11 +454,13 @@
     0 12px 32px rgba(0, 0, 0, 0.78),
     inset 0 1px 0 rgba(255, 215, 100, 0.14);
 
-  /* Typography — Cinzel for display, Inter for UI */
-  --font-display:  'Cinzel', 'Cinzel Decorative', Georgia, serif;
-  --font-decorative: 'Cinzel Decorative', 'Cinzel', Georgia, serif;
-  --font-ui:       'Inter', system-ui, -apple-system, Segoe UI, sans-serif;
-  --font-numeric:  'Cinzel', Georgia, serif;
+  /* Typography — source of truth for font stacks.
+     IMPORTANT: do NOT name these `--font-*` because that namespace is owned by
+     Tailwind v4 in @theme inline below; same-name causes circular var() loops. */
+  --type-display:    'Cinzel', 'Cinzel Decorative', Georgia, serif;
+  --type-decorative: 'Cinzel Decorative', 'Cinzel', Georgia, serif;
+  --type-ui:         'Inter', system-ui, -apple-system, Segoe UI, sans-serif;
+  --type-numeric:    'Cinzel', Georgia, serif;
 
   /* =============================================
      11. BRANDED MATERIALS & GRADIENTS
@@ -648,10 +650,11 @@
 	--color-rarity-epic:    var(--rarity-epic-color);
 	--color-rarity-mythic:  var(--rarity-mythic-color);
 
-	/* ---- Type families ---- */
-	--font-display:    var(--font-display);
-	--font-decorative: var(--font-decorative);
-	--font-sans:       var(--font-ui);
+	/* ---- Type families ----
+	   Tailwind v4 owns the `--font-*` namespace; we read from our `--type-*` source vars. */
+	--font-display:    var(--type-display);
+	--font-decorative: var(--type-decorative);
+	--font-sans:       var(--type-ui);
 	--font-mono:       'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
 
 	/* ---- Tracking (letter-spacing) for editorial labels ---- */

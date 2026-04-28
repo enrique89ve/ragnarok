@@ -440,7 +440,7 @@ export const SummonAnimation: React.FC<SummonAnimationProps> = ({
         >
           {/* Main summon light ray */}
           <motion.div 
-            className="absolute inset-0 bg-gradient-to-b from-yellow-200 to-transparent"
+            className="absolute inset-0 bg-linear-to-b from-yellow-200 to-transparent"
             style={{ transformOrigin: 'center top' }}
             initial={{ scaleY: 0, opacity: 0 }}
             animate={{ scaleY: 1, opacity: [0, 0.7, 0] }}
@@ -513,7 +513,7 @@ export const DrawCardAnimation: React.FC<DrawCardAnimationProps> = ({
     <AnimatePresence>
       {isVisible && (
         <motion.div
-          className="absolute pointer-events-none z-30 bg-gradient-to-b from-blue-400 to-transparent rounded-lg"
+          className="absolute pointer-events-none z-30 bg-linear-to-b from-blue-400 to-transparent rounded-lg"
           style={{
             width: '60px',
             height: '90px',

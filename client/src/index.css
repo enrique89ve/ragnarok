@@ -143,7 +143,7 @@
 
 @layer base {
   body {
-    font-family: var(--font-ui);
+    font-family: var(--type-ui);
     background: var(--obsidian-950);
     color: var(--ink-0);
     -webkit-font-smoothing: antialiased;

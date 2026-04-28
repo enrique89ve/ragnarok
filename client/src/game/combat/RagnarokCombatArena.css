@@ -2473,7 +2473,7 @@
   border: 1px solid rgba(212, 175, 55, 0.28);
   background: rgba(8, 12, 22, 0.84);
   color: #f8d483;
-  font-family: var(--font-display);
+  font-family: var(--type-display);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -2526,7 +2526,7 @@
 }
 
 .battle-intel-section-title {
-  font-family: var(--font-display);
+  font-family: var(--type-display);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.16em;
@@ -2535,7 +2535,7 @@
 }
 
 .battle-intel-emphasis {
-  font-family: var(--font-display);
+  font-family: var(--type-display);
   font-size: 16px;
   font-weight: 700;
   color: #f8fafc;
@@ -3927,7 +3927,7 @@
 }
 
 :is(.combat-phase-director-kicker, .combat-phase-director-cue, .combat-phase-director-phase) {
-  font-family: var(--font-display);
+  font-family: var(--type-display);
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.18em;
@@ -4010,7 +4010,7 @@
 }
 
 .combat-phase-director-title {
-  font-family: var(--font-display);
+  font-family: var(--type-display);
   font-size: 20px;
   font-weight: 700;
   line-height: 1.15;
@@ -4085,7 +4085,7 @@
 
 .betting-phase-kicker,
 .phase-command-kicker {
-  font-family: var(--font-display);
+  font-family: var(--type-display);
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.18em;
@@ -4101,7 +4101,7 @@
 }
 
 .phase-command-title {
-  font-family: var(--font-display);
+  font-family: var(--type-display);
   font-size: 18px;
   font-weight: 700;
   color: #f8fafc;
@@ -4606,7 +4606,7 @@
   height: 38px;
   padding: 0 16px;
   border-radius: 7px;
-  font-family: var(--font-display);
+  font-family: var(--type-display);
   font-size: 0.92rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -4620,7 +4620,7 @@
   position: relative;
   z-index: 2;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
-  font-family: var(--font-display);
+  font-family: var(--type-display);
   font-weight: 800;
 }
 
@@ -4958,7 +4958,7 @@
 .quick-bet-btn {
   padding: 2px 12px;
   border-radius: 4px;
-  font-family: var(--font-display);
+  font-family: var(--type-display);
   font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -5022,7 +5022,7 @@
   align-items: center;
   font-size: 12px;
   margin-top: 4px;
-  font-family: var(--font-display);
+  font-family: var(--type-display);
   letter-spacing: 0.04em;
 }
 

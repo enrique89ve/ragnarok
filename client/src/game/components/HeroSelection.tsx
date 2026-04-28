@@ -71,7 +71,7 @@ const HeroSelection: React.FC<HeroSelectionProps> = ({ onHeroSelect, lastPlayedD
       <h1 className="text-3xl font-bold mb-8 text-center text-yellow-400">Choose Your Hero</h1>
       
       {lastPlayedDeck && onQuickStart && (
-        <div className="mb-6 p-4 bg-gradient-to-r from-green-800 to-green-700 rounded-lg shadow-lg">
+        <div className="mb-6 p-4 bg-linear-to-r from-green-800 to-green-700 rounded-lg shadow-lg">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm text-green-200">Quick Start</div>

@@ -132,7 +132,7 @@
 }
 
 .hero-name {
-  font-family: var(--font-display);
+  font-family: var(--type-display);
   font-size: 1.05rem;
   font-weight: 800;
   color: var(--ui-gold-bright);

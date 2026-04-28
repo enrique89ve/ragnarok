@@ -259,7 +259,7 @@ export default function CollectionPage() {
 
 	if (loading) {
 		return (
-			<div className="min-h-screen bg-gradient-to-b from-gray-900 via-purple-950 to-gray-900 flex items-center justify-center">
+			<div className="min-h-screen bg-linear-to-b from-gray-900 via-purple-950 to-gray-900 flex items-center justify-center">
 				<motion.div
 					animate={{ rotate: 360 }}
 					transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
@@ -270,7 +270,7 @@ export default function CollectionPage() {
 	}
 
 	return (
-		<div className="min-h-screen bg-gradient-to-b from-gray-900 via-purple-950 to-gray-900 p-6 md:p-8">
+		<div className="min-h-screen bg-linear-to-b from-gray-900 via-purple-950 to-gray-900 p-6 md:p-8">
 			<div className="max-w-7xl mx-auto">
 				{/* Header Nav */}
 				<div className="flex justify-between items-center mb-6">
@@ -291,7 +291,7 @@ export default function CollectionPage() {
 						<motion.button
 							whileHover={{ scale: 1.05 }}
 							whileTap={{ scale: 0.95 }}
-							className="px-5 py-2.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white rounded-lg text-sm font-semibold transition-colors"
+							className="px-5 py-2.5 bg-linear-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white rounded-lg text-sm font-semibold transition-colors"
 						>
 							Open Packs →
 						</motion.button>
@@ -302,7 +302,7 @@ export default function CollectionPage() {
 				<motion.h1
 					initial={{ opacity: 0, y: -20 }}
 					animate={{ opacity: 1, y: 0 }}
-					className="text-4xl md:text-5xl font-bold text-center mb-2 text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-400"
+					className="text-4xl md:text-5xl font-bold text-center mb-2 text-transparent bg-clip-text bg-linear-to-r from-indigo-400 via-purple-400 to-indigo-400"
 					style={{ textShadow: '0 0 40px rgba(99, 102, 241, 0.4)' }}
 				>
 					My Collection
@@ -461,7 +461,7 @@ export default function CollectionPage() {
 							<motion.button
 								whileHover={{ scale: 1.05 }}
 								whileTap={{ scale: 0.95 }}
-								className="px-8 py-4 bg-gradient-to-r from-amber-600 to-amber-500 text-white font-bold rounded-xl"
+								className="px-8 py-4 bg-linear-to-r from-amber-600 to-amber-500 text-white font-bold rounded-xl"
 							>
 								Open Packs to Get Cards
 							</motion.button>
@@ -548,7 +548,7 @@ export default function CollectionPage() {
 																		)}
 
 																		{/* Dark gradient overlay for text readability */}
-																		<div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+																		<div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/30 to-transparent" />
 
 																		{/* Holo layers */}
 																		{holoTier && (

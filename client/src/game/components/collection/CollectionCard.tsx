@@ -75,7 +75,7 @@ const CollectionCard: React.FC<CollectionCardProps> = React.memo(({
 
   return (
     <motion.div
-      className="collection-card collection-grid-item relative min-h-[240px] min-w-[180px] h-full block bg-gradient-to-b from-gray-800 to-gray-900 rounded-lg shadow-lg"
+      className="collection-card collection-grid-item relative min-h-[240px] min-w-[180px] h-full block bg-linear-to-b from-gray-800 to-gray-900 rounded-lg shadow-lg"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleClick}
@@ -101,7 +101,7 @@ const CollectionCard: React.FC<CollectionCardProps> = React.memo(({
                   setLoadError(true);
                 }}
               />
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent px-2 py-1.5">
+              <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/90 via-black/60 to-transparent px-2 py-1.5">
                 <p className="text-white text-xs font-semibold truncate">{cardData.name}</p>
                 <div className="flex items-center justify-between text-[10px]">
                   <span className="text-blue-300 font-bold">{cardData.manaCost ?? '?'} mana</span>

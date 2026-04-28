@@ -351,7 +351,7 @@ export default function AdminPanel() {
 	];
 
 	return (
-		<div className="h-full overflow-y-auto bg-gradient-to-b from-gray-950 via-red-950/20 to-gray-950 p-6">
+		<div className="h-full overflow-y-auto bg-linear-to-b from-gray-950 via-red-950/20 to-gray-950 p-6">
 			<div className="max-w-5xl mx-auto">
 				{/* Header */}
 				<div className="flex justify-between items-center mb-6">
@@ -367,7 +367,7 @@ export default function AdminPanel() {
 					</div>
 				</div>
 
-				<h1 className="text-3xl font-bold text-center mb-1 text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-amber-400 to-red-400">
+				<h1 className="text-3xl font-bold text-center mb-1 text-transparent bg-clip-text bg-linear-to-r from-red-400 via-amber-400 to-red-400">
 					Genesis Command Center
 				</h1>
 				<p className="text-gray-500 text-center text-sm mb-4">Ragnarok NFT Protocol Administration</p>

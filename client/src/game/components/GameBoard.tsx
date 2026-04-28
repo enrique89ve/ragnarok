@@ -2101,14 +2101,14 @@ export const GameBoard: React.FC<{}> = () => {
                   }
                 }}
               >
-                <div className="w-16 h-16 rounded-full bg-gradient-to-b from-red-700 to-red-900 flex items-center justify-center text-white font-bold shadow-lg border-2 border-red-600 hover:scale-110 transition-transform">
+                <div className="w-16 h-16 rounded-full bg-linear-to-b from-red-700 to-red-900 flex items-center justify-center text-white font-bold shadow-lg border-2 border-red-600 hover:scale-110 transition-transform">
                   <div className="text-center">
                     <div className="text-lg leading-none">{opponent.heroHealth ?? opponent.health ?? 100}</div>
                     <div className="text-[8px] opacity-70">HP</div>
                   </div>
                 </div>
                 {(opponent.heroArmor ?? opponent.armor ?? 0) > 0 && (
-                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-gradient-to-b from-gray-400 to-gray-600 rounded-full flex items-center justify-center text-white text-xs font-bold border border-gray-300 shadow-md">
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-linear-to-b from-gray-400 to-gray-600 rounded-full flex items-center justify-center text-white text-xs font-bold border border-gray-300 shadow-md">
                     {opponent.heroArmor ?? opponent.armor ?? 0}
                   </div>
                 )}
@@ -2120,7 +2120,7 @@ export const GameBoard: React.FC<{}> = () => {
                   {opponent.hand.map((_, index) => (
                     <div
                       key={index}
-                      className="w-6 h-8 bg-gradient-to-br from-amber-700 to-amber-900 rounded border border-amber-600 -ml-2 first:ml-0"
+                      className="w-6 h-8 bg-linear-to-br from-amber-700 to-amber-900 rounded border border-amber-600 -ml-2 first:ml-0"
                     />
                   ))}
                   {opponent.hand.length > 0 && (
@@ -2278,14 +2278,14 @@ export const GameBoard: React.FC<{}> = () => {
                   }
                 }}
               >
-                <div className="w-14 h-14 rounded-full bg-gradient-to-b from-blue-700 to-blue-900 flex items-center justify-center text-white font-bold shadow-lg border-2 border-blue-500">
+                <div className="w-14 h-14 rounded-full bg-linear-to-b from-blue-700 to-blue-900 flex items-center justify-center text-white font-bold shadow-lg border-2 border-blue-500">
                   <div className="text-center">
                     <div className="text-lg leading-none">{player.heroHealth ?? player.health ?? 100}</div>
                     <div className="text-[8px] opacity-70">HP</div>
                   </div>
                 </div>
                 {(player.heroArmor ?? 0) > 0 && (
-                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-gradient-to-b from-gray-400 to-gray-600 rounded-full flex items-center justify-center text-white text-xs font-bold border border-gray-300 shadow-md">
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-linear-to-b from-gray-400 to-gray-600 rounded-full flex items-center justify-center text-white text-xs font-bold border border-gray-300 shadow-md">
                     {player.heroArmor}
                   </div>
                 )}

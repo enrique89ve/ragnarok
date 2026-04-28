@@ -22,7 +22,7 @@
 }
 
 .risk-label {
-  font-family: var(--font-display);
+  font-family: var(--type-display);
   font-size: 0.78rem;
   font-weight: 900;
   letter-spacing: 2px;
@@ -32,7 +32,7 @@
 }
 
 .risk-value {
-  font-family: var(--font-display);
+  font-family: var(--type-display);
   font-size: 1.55rem;
   font-weight: 900;
   color: var(--ui-selection-pale);

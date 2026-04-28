@@ -10,7 +10,7 @@
 	gap: 10px;
 	padding: 10px 18px;
 	border-radius: 24px;
-	font-family: var(--font-display);
+	font-family: var(--type-display);
 	font-weight: 900;
 	font-size: 13px;
 	letter-spacing: 2px;
@@ -145,7 +145,7 @@
 }
 
 .turn-banner-text {
-	font-family: var(--font-display);
+	font-family: var(--type-display);
 	font-size: 42px;
 	font-weight: 900;
 	letter-spacing: 8px;
@@ -170,7 +170,7 @@
 }
 
 .turn-banner-sub {
-	font-family: var(--font-display);
+	font-family: var(--type-display);
 	font-size: 14px;
 	font-weight: 600;
 	letter-spacing: 3px;
