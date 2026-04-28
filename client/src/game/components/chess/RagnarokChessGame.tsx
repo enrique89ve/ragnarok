@@ -8,8 +8,6 @@ import { buildCampaignArmy } from '../../campaign/campaignArmyBuilder';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { routes } from '../../../lib/routes';
 import ChessBoard from './ChessBoard';
-import RagnarokCombatArena from '../../combat/RagnarokCombatArena';
-import VSScreen from './VSScreen';
 import { usePokerCombatAdapter } from '../../hooks/usePokerCombatAdapter';
 import { PetData, DEFAULT_PET_STATS, calculateStaminaFromHP } from '../../types/PokerCombatTypes';
 import { useAudio } from '../../../lib/stores/useAudio';
@@ -39,6 +37,8 @@ import { resolveHeroPortrait, DEFAULT_PORTRAIT } from '../../utils/art/artMappin
 const CinematicPhase = lazy(() => import('./phases/CinematicPhase'));
 const MissionIntroPhase = lazy(() => import('./phases/MissionIntroPhase'));
 const GameOverPhase = lazy(() => import('./phases/GameOverPhase'));
+const VsScreenPhase = lazy(() => import('./phases/VsScreenPhase'));
+const PokerCombatPhase = lazy(() => import('./phases/PokerCombatPhase'));
 import './HeroPortraitEnhanced.css';
 import './chess-realm-skins.css';
 import './game-over-result.css';
@@ -423,7 +423,12 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
   const [sharedDeckCardIds, setSharedDeckCardIds] = useState<number[]>(
     !initialArmy && warbandArmy && warbandDeck.length > 0 ? [...warbandDeck] : []
   );
-  const [combatPieces, setCombatPieces] = useState<{ attackerId: string; defenderId: string } | null>(null);
+  /*
+    `combatPieces` (lifecycle tracker for in-flight chess→poker handoff)
+    was removed in G8 — the FSM tag (`vs_screen` / `poker_combat`) is now
+    the single source of truth for "are we mid-combat?". Guards that used
+    to read combatPieces now derive the same answer from flowState.tag.
+  */
   // Migrated to stores (G3):
   //   pokerSlotsSwapped → useUnifiedCombatStore (poker slice, crosses chess↔poker)
   //   playerTurnCount   → useUnifiedCombatStore (chess slice, board metadata)
@@ -809,7 +814,6 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
   const { lastMineTriggered } = useKingChessAbility('player');
 
   const handleCombatTriggered = useCallback((attackerId: string, defenderId: string) => {
-    setCombatPieces({ attackerId, defenderId });
 
     if (lastMineTriggered) {
       setTimeout(() => {
@@ -834,7 +838,6 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
     // unless the FSM is actually in vs_screen — late callbacks from the
     // VS timer can fire after a phase change.
     if (flowState === null || flowState.tag !== 'vs_screen') return;
-    if (!combatPieces) return;
     const vsPieces = flowState.pieces;
 
     const freshAttacker = boardState.pieces.find(p => p.id === vsPieces.attacker.id) || vsPieces.attacker;
@@ -920,7 +923,7 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
     };
     dispatchFlow({ type: 'VS_COMPLETE', handoff });
     playSoundEffect('game_start');
-  }, [flowState, combatPieces, playerArmy, opponentArmy, boardState.pieces, createPetFromChessPiece, initializeCombat, playSoundEffect, setPokerSlotsSwapped, dispatchFlow]);
+  }, [flowState, playerArmy, opponentArmy, boardState.pieces, createPetFromChessPiece, initializeCombat, playSoundEffect, setPokerSlotsSwapped, dispatchFlow]);
 
   const handleCombatEnd = useCallback((winner: 'player' | 'opponent' | 'draw') => {
     try {
@@ -928,10 +931,9 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
       const freshCombat = storeState.pendingCombat;
       const freshPokerState = storeState.pokerCombatState;
       
-      if (!freshCombat || !combatPieces) {
-        debug.combat(`[handleCombatEnd] Guard fail: pendingCombat=${!!freshCombat}, combatPieces=${!!combatPieces}`);
+      if (!freshCombat) {
+        debug.combat(`[handleCombatEnd] Guard fail: pendingCombat=${!!freshCombat}, flowTag=${flowState?.tag ?? null}`);
         clearPendingCombat();
-        setCombatPieces(null);
         setPokerSlotsSwapped(false);
         endCombat();
         dispatchFlow({ type: 'COMBAT_RESOLVED' });
@@ -994,7 +996,6 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
       }
       
       clearPendingCombat();
-      setCombatPieces(null);
       setPokerSlotsSwapped(false);
       endCombat();
 
@@ -1002,12 +1003,11 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
       playSoundEffect('turn_start');
     } catch (error) {
       debug.error('[handleCombatEnd] Error during combat resolution:', error);
-      setCombatPieces(null);
       setPokerSlotsSwapped(false);
       endCombat();
       dispatchFlow({ type: 'COMBAT_RESOLVED' });
     }
-  }, [combatPieces, pokerSlotsSwapped, resolveCombat, clearPendingCombat, endCombat, playSoundEffect, updatePieceStamina, updatePieceHealth, incrementAllStamina, nextTurn, setPokerSlotsSwapped, dispatchFlow]);
+  }, [pokerSlotsSwapped, resolveCombat, clearPendingCombat, endCombat, playSoundEffect, updatePieceStamina, updatePieceHealth, incrementAllStamina, nextTurn, setPokerSlotsSwapped, dispatchFlow]);
 
   useEffect(() => {
     if (boardState.gameStatus !== 'player_wins' && boardState.gameStatus !== 'opponent_wins') return;
@@ -1084,15 +1084,14 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
   }, [phase, boardState.currentTurn, boardState.gameStatus, executeAITurn]);
 
   useEffect(() => {
-    if (pendingCombat && boardState.gameStatus === 'combat' && phase === 'chess' && !combatPieces) {
+    if (pendingCombat && boardState.gameStatus === 'combat' && phase === 'chess') {
       debug.chess('pendingCombat detected (AI attack), triggering combat flow');
       const { attacker, defender } = pendingCombat;
 
-      setCombatPieces({ attackerId: attacker.id, defenderId: defender.id });
       dispatchFlow({ type: 'COMBAT_TRIGGERED', pieces: { attacker, defender } });
       playSoundEffect('card_draw');
     }
-  }, [pendingCombat, boardState.gameStatus, phase, combatPieces, playSoundEffect, dispatchFlow]);
+  }, [pendingCombat, boardState.gameStatus, phase, playSoundEffect, dispatchFlow]);
 
   useEffect(() => {
     if (phase === 'chess' && boardState.gameStatus === 'playing') {
@@ -1120,7 +1119,6 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
     resetBoard();
     setPlayerArmy(null);
     setSharedDeckCardIds([]);
-    setCombatPieces(null);
     resetPlayerTurnCount();
     gameEndProcessedRef.current = false;
     bootstrappedFromWarbandRef.current = false;
@@ -1160,7 +1158,6 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
   const handleRetryMission = useCallback(() => {
     resetBoard();
     setPlayerArmy(null);
-    setCombatPieces(null);
     resetPlayerTurnCount();
     resetBossRulesApplied();
     gameEndProcessedRef.current = false;
@@ -1184,7 +1181,6 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
     const attacker = playerPieces[Math.floor(Math.random() * playerPieces.length)];
     const defender = opponentPieces[Math.floor(Math.random() * opponentPieces.length)];
     
-    setCombatPieces({ attackerId: attacker.id, defenderId: defender.id });
     dispatchFlow({ type: 'COMBAT_TRIGGERED', pieces: { attacker, defender } });
     playSoundEffect('card_draw');
   }, [boardState.pieces, playSoundEffect, dispatchFlow]);
@@ -1222,54 +1218,47 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
         )}
       </Suspense>
 
-      <AnimatePresence mode="wait">
-        {phase !== 'army_selection' && phase !== 'cinematic' && phase !== 'mission_intro' && null}
+      <Suspense fallback={null}>
+        <AnimatePresence mode="wait">
+          {phase === 'chess' && (
+            <ChessPhaseContent
+              boardState={boardState}
+              playerArmy={playerArmy}
+              opponentArmy={opponentArmy}
+              handleCombatTriggered={handleCombatTriggered}
+              handleBattleMode={handleBattleMode}
+            />
+          )}
 
-        {phase === 'chess' && (
-          <ChessPhaseContent
-            boardState={boardState}
-            playerArmy={playerArmy}
-            opponentArmy={opponentArmy}
-            handleCombatTriggered={handleCombatTriggered}
-            handleBattleMode={handleBattleMode}
-          />
-        )}
+          {flowState !== null && flowState.tag === 'vs_screen' && (
+            <VsScreenPhase
+              attacker={flowState.pieces.attacker}
+              defender={flowState.pieces.defender}
+              onTimeout={handleVsScreenComplete}
+            />
+          )}
 
-        {flowState !== null && flowState.tag === 'vs_screen' && (
-          <VSScreen
-            key="vs"
-            attacker={flowState.pieces.attacker}
-            defender={flowState.pieces.defender}
-            onComplete={handleVsScreenComplete}
-            duration={2500}
-          />
-        )}
+          {flowState !== null && flowState.tag === 'poker_combat' && (
+            <PokerCombatPhase
+              handoff={flowState.handoff}
+              onCombatEnd={handleCombatEnd}
+            />
+          )}
 
-        {phase === 'poker_combat' && (
-          <motion.div
-            key="poker"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="w-full h-full"
-          >
-            <RagnarokCombatArena onCombatEnd={handleCombatEnd} />
-          </motion.div>
-        )}
-
-        {flowState !== null && flowState.tag === 'game_over' && (
-          <GameOverPhase
-            isVictory={boardState.gameStatus === 'player_wins'}
-            sub={flowState.sub}
-            playerTurnCount={turnCount}
-            campaign={isCampaign && campaignData ? { mission: campaignData.mission, chapter: campaignData.chapter, difficulty: campaignDifficulty } : null}
-            onCinematicEnd={() => dispatchFlow({ type: 'GAME_OVER_ADVANCE', nextSub: 'result' })}
-            onBridgeEnd={() => { clearCurrent(); navigate(routes.campaign); }}
-            onPrimaryAction={isCampaign ? handleBackToCampaign : handleRestart}
-            onRetry={handleRetryMission}
-          />
-        )}
-      </AnimatePresence>
+          {flowState !== null && flowState.tag === 'game_over' && (
+            <GameOverPhase
+              isVictory={boardState.gameStatus === 'player_wins'}
+              sub={flowState.sub}
+              playerTurnCount={turnCount}
+              campaign={isCampaign && campaignData ? { mission: campaignData.mission, chapter: campaignData.chapter, difficulty: campaignDifficulty } : null}
+              onCinematicEnd={() => dispatchFlow({ type: 'GAME_OVER_ADVANCE', nextSub: 'result' })}
+              onBridgeEnd={() => { clearCurrent(); navigate(routes.campaign); }}
+              onPrimaryAction={isCampaign ? handleBackToCampaign : handleRestart}
+              onRetry={handleRetryMission}
+            />
+          )}
+        </AnimatePresence>
+      </Suspense>
     </div>
   );
 };
