@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { routes } from '../../../lib/routes';
-import { getRarityColor, getRarityBackground, getTypeIcon } from '../../utils/rarityUtils';
+import { getRarityColor, getTypeIcon } from '../../utils/rarityUtils';
 import { getCardArtPath } from '../../utils/art/artMapping';
 import { getHoloTier, applyHoloVars, resetHoloVars } from '../../hooks/useHoloTracking';
 import type { OwnedCard, InventoryResponse, InventoryCard } from '../packs/types';
@@ -37,7 +37,7 @@ interface CollectionStats {
 const RARITY_ORDER: Record<string, number> = { mythic: 0, epic: 1, rare: 2, common: 3, basic: 4 };
 
 const RARITY_PILLS: { value: FilterRarity; label: string; color: string; activeColor: string }[] = [
-	{ value: 'all', label: 'All', color: 'rgba(255,255,255,0.06)', activeColor: 'rgba(139,92,246,0.5)' },
+	{ value: 'all', label: 'All', color: 'rgba(255,255,255,0.06)', activeColor: 'rgba(217,168,68,0.55)' },
 	{ value: 'mythic', label: 'Mythic', color: 'rgba(236,72,153,0.15)', activeColor: 'rgba(236,72,153,0.6)' },
 	{ value: 'epic', label: 'Epic', color: 'rgba(147,51,234,0.15)', activeColor: 'rgba(147,51,234,0.5)' },
 	{ value: 'rare', label: 'Rare', color: 'rgba(59,130,246,0.15)', activeColor: 'rgba(59,130,246,0.5)' },
@@ -51,6 +51,11 @@ const TYPE_PILLS: { value: FilterType; label: string; icon: string }[] = [
 	{ value: 'spell', label: 'Spells', icon: '✨' },
 	{ value: 'weapon', label: 'Weapons', icon: '🗡️' },
 ];
+
+// Vault surface treatments — used multiple times across the page.
+// Padding/margin se concatena en cada call site según contexto.
+const VAULT_PANEL_CLASS = 'bg-obsidian-800/70 border border-obsidian-700/80 rounded-xl backdrop-blur-sm';
+const VAULT_INPUT_CLASS = 'bg-obsidian-900/70 border border-obsidian-700 text-ink-0 rounded-lg transition-colors placeholder:text-ink-300 focus:outline-hidden focus:border-gold-500 focus:ring-1 focus:ring-gold-500/40';
 
 function getClassGradient(heroClass: string): string {
 	switch (heroClass) {
@@ -103,7 +108,6 @@ export default function CollectionPage() {
 	const [selectedCard, setSelectedCard] = useState<OwnedCard | null>(null);
 	const [page, setPage] = useState(1);
 	const [totalPages, setTotalPages] = useState(1);
-	const [totalCards, setTotalCards] = useState(0);
 	const [isLoadingMore, setIsLoadingMore] = useState(false);
 
 	useEffect(() => {
@@ -144,7 +148,6 @@ export default function CollectionPage() {
 			manaCost: (c as any).manaCost,
 		}));
 		setCards(localCards);
-		setTotalCards(localCards.length);
 		setTotalPages(1);
 		setPage(1);
 		setError(null);
@@ -177,7 +180,6 @@ export default function CollectionPage() {
 				if (data.pagination) {
 					setPage(data.pagination.page);
 					setTotalPages(data.pagination.totalPages);
-					setTotalCards(data.pagination.total);
 				}
 			} else {
 				loadLocalCollection();
@@ -259,7 +261,7 @@ export default function CollectionPage() {
 
 	if (loading) {
 		return (
-			<div className="collection-vault min-h-screen flex items-center justify-center">
+			<div className="min-h-screen flex items-center justify-center text-ink-0 bg-(image:--bg-vault-nav)">
 				<motion.div
 					animate={{ rotate: 360 }}
 					transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
@@ -270,7 +272,7 @@ export default function CollectionPage() {
 	}
 
 	return (
-		<div className="collection-vault min-h-screen p-6 md:p-8">
+		<div className="min-h-screen p-6 md:p-8 text-ink-0 bg-(image:--bg-vault-nav)">
 			<div className="max-w-7xl mx-auto">
 				{/* Header Nav */}
 				<div className="flex justify-between items-center mb-6">
@@ -278,14 +280,14 @@ export default function CollectionPage() {
 						<motion.button
 							whileHover={{ scale: 1.05 }}
 							whileTap={{ scale: 0.95 }}
-							className="px-5 py-2.5 bg-gray-800/80 hover:bg-gray-700/80 text-white rounded-lg border border-gray-600 flex items-center gap-2 text-sm transition-colors"
+							className="px-5 py-2.5 bg-obsidian-800/80 hover:bg-obsidian-750/80 text-ink-0 rounded-lg border border-obsidian-700 flex items-center gap-2 text-sm transition-colors"
 						>
 							<span>←</span> Back to Home
 						</motion.button>
 					</Link>
-					<div className="flex items-center gap-2 px-4 py-2 bg-blue-900/30 border border-blue-700/40 rounded-lg">
-						<span className="text-blue-400 font-bold text-sm">{eitr}</span>
-						<span className="text-gray-400 text-xs">Eitr</span>
+					<div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-bifrost-500/30 bg-[color-mix(in_oklch,var(--bifrost-500)_12%,transparent)]">
+						<span className="text-bifrost-300 font-bold text-sm">{eitr}</span>
+						<span className="text-ink-300 text-xs">Eitr</span>
 					</div>
 					<Link to={routes.packs}>
 						<motion.button
@@ -302,8 +304,8 @@ export default function CollectionPage() {
 				<motion.h1
 					initial={{ opacity: 0, y: -20 }}
 					animate={{ opacity: 1, y: 0 }}
-					className="text-4xl md:text-5xl font-bold text-center mb-2 text-transparent bg-clip-text bg-linear-to-r from-indigo-400 via-purple-400 to-indigo-400"
-					style={{ textShadow: '0 0 40px rgba(99, 102, 241, 0.4)' }}
+					className="text-4xl md:text-5xl font-bold text-center mb-2 text-transparent bg-clip-text bg-linear-to-r from-(--gold-100) via-(--gold-300) to-(--gold-500)"
+					style={{ textShadow: '0 0 32px rgba(217, 168, 68, 0.35)' }}
 				>
 					My Collection
 				</motion.h1>
@@ -323,10 +325,10 @@ export default function CollectionPage() {
 								<span className="text-white font-bold text-lg">
 									{stats.uniqueCards}
 									<span className="text-gray-500 font-normal text-sm"> / {stats.totalInGame || '???'}</span>
-									<span className="text-purple-400 ml-2 text-sm font-semibold">({stats.completionPercentage}%)</span>
+									<span className="ml-2 text-sm font-semibold text-(--gold-300)">({stats.completionPercentage}%)</span>
 								</span>
 							</div>
-							<div className="completion-bar">
+							<div className="h-2.5 rounded-md bg-obsidian-750 overflow-hidden">
 								<div
 									className="completion-bar-fill"
 									style={{ width: `${Math.min(stats.completionPercentage, 100)}%` }}
@@ -337,13 +339,13 @@ export default function CollectionPage() {
 						{/* Rarity + Type Breakdown */}
 						<div className="grid grid-cols-2 gap-4">
 							{/* Rarity Breakdown */}
-							<div className="bg-gray-800/40 rounded-xl p-4 border border-gray-700/50">
+							<div className={`${VAULT_PANEL_CLASS} p-4`}>
 								<div className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-3">By Rarity</div>
 								<div className="flex flex-wrap gap-2">
 									{(['mythic', 'epic', 'rare', 'common', 'basic'] as const).map(rarity => {
 										const rs = stats.byRarity.find(r => r.rarity === rarity);
 										return (
-											<div key={rarity} className="rarity-stat-card" style={{ background: `rgba(255,255,255,0.03)` }}>
+											<div key={rarity} className="px-3 py-2 rounded-lg text-center border border-ink-0/10 backdrop-blur-sm bg-white/3">
 												<div className={`text-lg font-bold ${getRarityColor(rarity)}`}>
 													{rs?.uniqueCards ?? 0}
 												</div>
@@ -355,13 +357,13 @@ export default function CollectionPage() {
 							</div>
 
 							{/* Type Breakdown */}
-							<div className="bg-gray-800/40 rounded-xl p-4 border border-gray-700/50">
+							<div className={`${VAULT_PANEL_CLASS} p-4`}>
 								<div className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-3">By Type</div>
 								<div className="flex flex-wrap gap-2">
 									{(['hero', 'minion', 'spell', 'weapon'] as const).map(type => {
 										const ts = stats.byType.find(t => t.type === type);
 										return (
-											<div key={type} className="rarity-stat-card" style={{ background: `rgba(255,255,255,0.03)` }}>
+											<div key={type} className="px-3 py-2 rounded-lg text-center border border-ink-0/10 backdrop-blur-sm bg-white/3">
 												<div className="text-lg font-bold text-white">
 													{getTypeIcon(type)} {ts?.uniqueCards ?? 0}
 												</div>
@@ -380,7 +382,7 @@ export default function CollectionPage() {
 					initial={{ opacity: 0, y: 20 }}
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ delay: 0.2 }}
-					className="bg-gray-800/40 rounded-xl p-4 mb-6 border border-gray-700/50"
+					className={`${VAULT_PANEL_CLASS} p-4 mb-6`}
 				>
 					{/* Search + Sort Row */}
 					<div className="flex gap-3 mb-3">
@@ -391,14 +393,14 @@ export default function CollectionPage() {
 								placeholder="Search cards..."
 								value={searchQuery}
 								onChange={(e) => setSearchQuery(e.target.value)}
-								className="w-full pl-9 pr-4 py-2 bg-gray-900/60 border border-gray-600/50 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-hidden focus:border-purple-500/50"
+								className={`${VAULT_INPUT_CLASS} w-full pl-9 pr-4 py-2 text-sm`}
 							/>
 						</div>
 						<select
 							value={sortBy}
 							onChange={(e) => setSortBy(e.target.value as SortBy)}
 							title="Sort cards by"
-							className="px-3 py-2 bg-gray-900/60 border border-gray-600/50 rounded-lg text-white text-sm focus:outline-hidden focus:border-purple-500/50"
+							className={`${VAULT_INPUT_CLASS} px-3 py-2 text-sm`}
 						>
 							<option value="rarity">Sort: Rarity</option>
 							<option value="name">Sort: Name A-Z</option>
@@ -428,7 +430,7 @@ export default function CollectionPage() {
 								key={pill.value}
 								onClick={() => setFilterType(pill.value)}
 								className={`filter-pill ${filterType === pill.value ? 'filter-pill-active' : 'filter-pill-inactive'}`}
-								style={filterType === pill.value ? { background: 'rgba(139,92,246,0.5)', borderColor: 'rgba(139,92,246,0.5)' } : {}}
+								style={filterType === pill.value ? { background: 'rgba(217,168,68,0.55)', borderColor: 'rgba(217,168,68,0.55)' } : {}}
 							>
 								{pill.icon && <span className="mr-1">{pill.icon}</span>}
 								{pill.label}
@@ -771,7 +773,7 @@ export default function CollectionPage() {
 												{' / '}{selectedCard.maxSupply.toLocaleString()}
 											</span>
 										</div>
-										<div className="supply-meter">
+										<div className="h-1.5 rounded-sm bg-obsidian-750 overflow-hidden">
 											<div
 												className={`supply-meter-fill supply-meter-fill-${selectedCard.rarity}`}
 												style={{
@@ -823,7 +825,6 @@ export default function CollectionPage() {
 								{(() => {
 									const eitrVal = getEitrValue(selectedCard.rarity);
 									const craftCostVal = getCraftCost(selectedCard.rarity);
-									const canAfford = eitr >= craftCostVal && craftCostVal > 0;
 
 									if (craftConfirm) {
 										return (

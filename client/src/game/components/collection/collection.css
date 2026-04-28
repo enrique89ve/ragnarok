@@ -1,39 +1,12 @@
 /* Collection Page — Premium Collector Styles */
+/* Background canónico vive en design-tokens.css → `--bg-vault-nav`,
+   aplicado vía Tailwind `bg-(image:--bg-vault-nav)` en CollectionPage.tsx.
+   Los siguientes paneles, inputs y micro-componentes que tenían equivalente
+   directo en Tailwind (vault-panel, vault-input, supply-meter, completion-bar,
+   rarity-stat-card) ahora viven inline en el JSX. Solo permanece aquí lo que
+   requiere pseudo-elementos, animaciones, multi-shadow, o naming dinámico. */
 
-/* ========== Vault Background — "bóveda mística" ========== */
-/* Capa 0: base canónica (warm obsidian, idéntica a Home/Warband/Campaign).
-   Capa 1: lumbrera cenital bifrost + halo gold al ras del piso. Estático. */
-.collection-vault {
-	position: relative;
-	min-height: 100vh;
-	background:
-		radial-gradient(ellipse at 50% 0%, var(--obsidian-850) 0%, transparent 60%),
-		linear-gradient(180deg, var(--obsidian-950) 0%, var(--obsidian-900) 100%);
-	color: var(--ink-0);
-}
-
-.collection-vault::before {
-	content: '';
-	position: absolute;
-	inset: 0;
-	background:
-		radial-gradient(ellipse 60% 45% at 50% 0%,
-			color-mix(in oklch, var(--bifrost-300) 8%, transparent) 0%,
-			transparent 70%),
-		radial-gradient(ellipse 80% 20% at 50% 100%,
-			color-mix(in oklch, var(--gold-500) 4%, transparent) 0%,
-			transparent 80%);
-	pointer-events: none;
-	z-index: 0;
-}
-
-.collection-vault > * {
-	position: relative;
-	z-index: 1;
-}
-
-
-/* ========== Mastery Badges ========== */
+/* ========== Mastery Badges (tier-driven, naming dinámico) ========== */
 .mastery-badge {
 	position: absolute;
 	top: 4px;
@@ -198,14 +171,7 @@
 	animation: mythic-border-rotate 3s linear infinite;
 }
 
-/* ========== Supply Meter ========== */
-.supply-meter {
-	height: 6px;
-	border-radius: 3px;
-	background: var(--obsidian-750);
-	overflow: hidden;
-}
-
+/* ========== Supply Meter Fills (rarity-keyed, naming dinámico) ========== */
 .supply-meter-fill {
 	height: 100%;
 	border-radius: 3px;
@@ -217,37 +183,13 @@
 .supply-meter-fill-epic { background: linear-gradient(90deg, var(--rarity-epic-deep), var(--rarity-epic-color)); }
 .supply-meter-fill-mythic { background: linear-gradient(90deg, var(--danger-500), var(--rarity-epic-color), var(--info-400)); }
 
-/* ========== Card Frame Glows ========== */
+/* ========== Card Frame Glows (solo mythic — multi-shadow apilados) ========== */
 .card-frame {
 	transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .card-frame:hover {
 	transform: translateY(-6px) scale(1.02);
-}
-
-.card-frame-common {
-	border: 2px solid var(--obsidian-600);
-	box-shadow: 0 0 8px color-mix(in srgb, var(--obsidian-600) 20%, transparent);
-}
-.card-frame-common:hover {
-	box-shadow: 0 0 20px color-mix(in srgb, var(--obsidian-600) 40%, transparent);
-}
-
-.card-frame-rare {
-	border: 2px solid color-mix(in srgb, var(--rarity-rare-color) 70%, transparent);
-	box-shadow: 0 0 12px var(--rarity-rare-glow);
-}
-.card-frame-rare:hover {
-	box-shadow: 0 0 30px color-mix(in srgb, var(--rarity-rare-color) 50%, transparent);
-}
-
-.card-frame-epic {
-	border: 2px solid color-mix(in srgb, var(--rarity-epic-color) 70%, transparent);
-	box-shadow: 0 0 15px var(--rarity-epic-glow);
-}
-.card-frame-epic:hover {
-	box-shadow: 0 0 35px color-mix(in srgb, var(--rarity-epic-color) 60%, transparent);
 }
 
 .card-frame-mythic {
@@ -264,7 +206,7 @@
 		0 0 50px color-mix(in srgb, var(--rarity-epic-color) 20%, transparent);
 }
 
-/* ========== Stat Gems ========== */
+/* ========== Stat Gems (multi-layer inset+drop shadows) ========== */
 .stat-gem {
 	width: 28px;
 	height: 28px;
@@ -292,7 +234,7 @@
 	border: 2px solid var(--danger-700, #7f1d1d);
 }
 
-/* ========== Filter Pills ========== */
+/* ========== Filter Pills (color activo viene inline desde JSX) ========== */
 .filter-pill {
 	padding: 6px 14px;
 	border-radius: 20px;
@@ -322,27 +264,11 @@
 	color: white;
 }
 
-/* ========== Completion Bar ========== */
-.completion-bar {
-	height: 10px;
-	border-radius: 5px;
-	background: var(--obsidian-750);
-	overflow: hidden;
-}
-
+/* ========== Completion Bar Fill (gradient + glow) ========== */
 .completion-bar-fill {
 	height: 100%;
 	border-radius: 5px;
-	background: linear-gradient(90deg, var(--rarity-rare-color), var(--rarity-epic-color), var(--rarity-epic-bright));
+	background: linear-gradient(90deg, var(--gold-500), var(--gold-300), var(--gold-100));
 	transition: width 0.8s ease;
-	box-shadow: 0 0 10px var(--rarity-epic-glow);
-}
-
-/* ========== Rarity Stat Cards ========== */
-.rarity-stat-card {
-	padding: 8px 12px;
-	border-radius: 8px;
-	text-align: center;
-	border: 1px solid color-mix(in srgb, var(--ink-0) 10%, transparent);
-	backdrop-filter: blur(4px);
+	box-shadow: 0 0 10px color-mix(in oklch, var(--gold-300) 50%, transparent);
 }

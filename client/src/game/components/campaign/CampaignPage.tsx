@@ -583,7 +583,7 @@ export default function CampaignPage() {
 	if (selectedMission) {
 		const chapter = selectedChapter ?? norseChapter;
 		return (
-			<div className="constellation-container">
+			<div className="relative min-h-screen overflow-hidden text-ink-0 bg-(image:--bg-cosmos-nav)">
 				<div className="rune-border-decoration rune-border-top-left">{RUNE_CORNERS[0]}</div>
 				<div className="rune-border-decoration rune-border-top-right">{RUNE_CORNERS[1]}</div>
 				<div className="rune-border-decoration rune-border-bottom-left">{RUNE_CORNERS[2]}</div>
@@ -615,7 +615,7 @@ export default function CampaignPage() {
 	}
 
 	return (
-		<div className="constellation-container">
+		<div className="relative min-h-screen overflow-hidden text-ink-0 bg-(image:--bg-cosmos-nav)">
 			<div className="rune-border-decoration rune-border-top-left">{RUNE_CORNERS[0]}</div>
 			<div className="rune-border-decoration rune-border-top-right">{RUNE_CORNERS[1]}</div>
 			<div className="rune-border-decoration rune-border-bottom-left">{RUNE_CORNERS[2]}</div>

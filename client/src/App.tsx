@@ -294,7 +294,7 @@ function HomePage() {
 	};
 
 	return (
-		<div className="h-screen w-screen overflow-y-auto overflow-x-hidden bg-obsidian-950 text-ink-0">
+		<div className="h-screen w-screen overflow-y-auto overflow-x-hidden text-ink-0 bg-(image:--bg-home-nav)">
 			{/* ── HEADER ─────────────────────────────────────────────────────── */}
 			<header className="sticky top-0 z-50 backdrop-blur-md bg-obsidian-950/80 border-b border-obsidian-700">
 				<div className="mx-auto max-w-[1600px] h-14 px-6 flex items-center justify-between gap-4">

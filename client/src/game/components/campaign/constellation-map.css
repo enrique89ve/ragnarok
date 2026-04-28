@@ -1,30 +1,6 @@
 /* Campaign map and briefing surfaces */
-
-/* Capa 0 — base canónica (warm obsidian, idéntica a Home/Warband/Collection) */
-.constellation-container {
-	position: relative;
-	min-height: 100vh;
-	background:
-		radial-gradient(ellipse at 50% 0%, var(--obsidian-850) 0%, transparent 60%),
-		linear-gradient(180deg, var(--obsidian-950) 0%, var(--obsidian-900) 100%);
-	overflow: hidden;
-	color: var(--ink-0);
-}
-
-/* Capa 1 — intent "campaign": cosmos mítico. Halo bifrost centro-alto + acento gold tenue. */
-.constellation-container::before {
-	content: '';
-	position: absolute;
-	inset: 0;
-	background:
-		radial-gradient(ellipse 70% 50% at 50% 26%,
-			color-mix(in oklch, var(--bifrost-300) 7%, transparent) 0%,
-			transparent 70%),
-		radial-gradient(ellipse 50% 30% at 50% 90%,
-			color-mix(in oklch, var(--gold-500) 4%, transparent) 0%,
-			transparent 80%);
-	pointer-events: none;
-}
+/* Background canónico vive en design-tokens.css → `--bg-cosmos-nav`,
+   aplicado vía Tailwind `bg-(image:--bg-cosmos-nav)` en CampaignPage.tsx. */
 
 .constellation-star {
 	position: absolute;
