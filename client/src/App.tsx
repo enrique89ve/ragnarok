@@ -288,75 +288,69 @@ function HomePage() {
 							<div className="font-mono text-[10px] tracking-[0.16em] text-ink-300 mt-1">FORGE &amp; EMBER · S01</div>
 						</div>
 					</div>
-					<div className="flex items-center gap-3">
-						<Suspense fallback={<div className="animate-pulse h-8 w-28 rounded bg-obsidian-800" />}>
-							<HiveKeychainLogin />
-						</Suspense>
-					</div>
 				</div>
 			</header>
 
-			{/* ── BANNER ─────────────────────────────────────────────────────── */}
-			<section className="mx-auto max-w-[1440px] px-6 mt-7">
-				<div className="relative grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-9 items-center px-10 py-10 rounded-2xl border border-obsidian-700 bg-linear-to-b from-obsidian-850 to-obsidian-900 overflow-hidden">
-					<div>
-						<div className="inline-flex items-center gap-2.5 mb-4">
-							<span className="w-2 h-2 rounded-full bg-ember-300" />
-							<span className="font-mono text-[11px] tracking-[0.32em] uppercase text-gold-300 font-semibold">
-								Live · Season 01 · The Forge Kindles
-							</span>
-						</div>
-						<h1 className="font-display font-black uppercase leading-[0.95] tracking-[0.10em] text-[clamp(2.4rem,5vw,4rem)] m-0">
-							<span className="bg-linear-to-b from-gold-100 via-gold-300 to-gold-500 bg-clip-text text-transparent">
-								Claim the line.<br />March into battle.
-							</span>
-						</h1>
-						<p className="mt-5 mb-7 max-w-[540px] text-ink-200 text-[15px] leading-[1.65]">
-							Campaign is the clean front door — claim the starter line, stage a mission briefing, and break straight into live combat.
-						</p>
-						<div className="flex flex-wrap items-center gap-3">
-							{!starterClaimed ? (
-								<Button variant="primary" size="lg" onClick={() => setShowCeremony(true)}>
-									Claim Starter Deck
-								</Button>
-							) : (
-								<Link to={routes.campaign}>
-									<Button variant="primary" size="lg">{primaryLabel}</Button>
-								</Link>
-							)}
-							{canInstall && (
-								<Button variant="outline" size="lg" ornate onClick={triggerInstall}>
-									Install App
-								</Button>
-							)}
-						</div>
-					</div>
-
-					{/* Stats panel */}
-					<aside className="rounded-xl border border-gold-300/40 bg-obsidian-900/80 backdrop-blur-md p-6 grid gap-3.5 self-stretch">
-						<StatRow label="Saga" value={`${completedMissionCount} / ${totalMissionCount}`} highlight />
-						<StatRow label="Active" value={activeFocusTitle} />
-						<StatRow label="Chapter" value={activeFocusChapter} />
-						<StatRow label="Season" value="01 · Forge" />
-						<div className="mt-1 pt-3 border-t border-obsidian-700">
-							<div className="flex items-center justify-between mb-1.5">
-								<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300">Saga progress</span>
-								<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-gold-300">{sagaPercent}%</span>
+			{/* ── PAGE GRID: full-height main column + persistent right rail ──── */}
+			<div className="mx-auto max-w-[1600px] px-6 mt-7 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-7 items-start">
+				{/* MAIN COLUMN: banner + routes + daily quests + footer */}
+				<main className="grid gap-7 content-start min-w-0">
+					{/* Banner */}
+					<section className="relative grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-9 items-center px-10 py-10 rounded-2xl border border-obsidian-700 bg-linear-to-b from-obsidian-850 to-obsidian-900 overflow-hidden">
+						<div>
+							<div className="inline-flex items-center gap-2.5 mb-4">
+								<span className="w-2 h-2 rounded-full bg-ember-300" />
+								<span className="font-mono text-[11px] tracking-[0.32em] uppercase text-gold-300 font-semibold">
+									Live · Season 01 · The Forge Kindles
+								</span>
 							</div>
-							<div className="h-1 rounded-full bg-obsidian-700 overflow-hidden">
-								<div
-									className="h-full bg-linear-to-r from-gold-500 to-gold-200"
-									style={{ width: `${sagaPercent}%` }}
-								/>
+							<h1 className="font-display font-black uppercase leading-[0.95] tracking-[0.10em] text-[clamp(2.4rem,5vw,4rem)] m-0">
+								<span className="bg-linear-to-b from-gold-100 via-gold-300 to-gold-500 bg-clip-text text-transparent">
+									Claim the line.<br />March into battle.
+								</span>
+							</h1>
+							<p className="mt-5 mb-7 max-w-[540px] text-ink-200 text-[15px] leading-[1.65]">
+								Campaign is the clean front door — claim the starter line, stage a mission briefing, and break straight into live combat.
+							</p>
+							<div className="flex flex-wrap items-center gap-3">
+								{!starterClaimed ? (
+									<Button variant="primary" size="lg" onClick={() => setShowCeremony(true)}>
+										Claim Starter Deck
+									</Button>
+								) : (
+									<Link to={routes.campaign}>
+										<Button variant="primary" size="lg">{primaryLabel}</Button>
+									</Link>
+								)}
+								{canInstall && (
+									<Button variant="outline" size="lg" ornate onClick={triggerInstall}>
+										Install App
+									</Button>
+								)}
 							</div>
 						</div>
-					</aside>
-				</div>
-			</section>
 
-			{/* ── PAGE GRID: main + side rail ────────────────────────────────── */}
-			<div className="mx-auto max-w-[1440px] px-6 mt-6 grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
-				<div className="grid gap-6 content-start">
+						{/* Stats panel */}
+						<aside className="rounded-xl border border-gold-300/40 bg-obsidian-900/80 backdrop-blur-md p-6 grid gap-3.5 self-stretch">
+							<StatRow label="Saga" value={`${completedMissionCount} / ${totalMissionCount}`} highlight />
+							<StatRow label="Active" value={activeFocusTitle} />
+							<StatRow label="Chapter" value={activeFocusChapter} />
+							<StatRow label="Season" value="01 · Forge" />
+							<div className="mt-1 pt-3 border-t border-obsidian-700">
+								<div className="flex items-center justify-between mb-1.5">
+									<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300">Saga progress</span>
+									<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-gold-300">{sagaPercent}%</span>
+								</div>
+								<div className="h-1 rounded-full bg-obsidian-700 overflow-hidden">
+									<div
+										className="h-full bg-linear-to-r from-gold-500 to-gold-200"
+										style={{ width: `${sagaPercent}%` }}
+									/>
+								</div>
+							</div>
+						</aside>
+					</section>
+
 					{/* Routes */}
 					<section>
 						<header className="mb-4">
@@ -371,7 +365,7 @@ function HomePage() {
 									<Link
 										key={mode.title}
 										to={mode.to}
-										className={`relative group flex flex-col min-h-[260px] p-6 rounded-xl border border-obsidian-700 bg-linear-to-b from-obsidian-850 to-obsidian-950 overflow-hidden transition-all duration-300 ${a.border}`}
+										className={`relative group flex flex-col min-h-[180px] p-5 rounded-xl border border-obsidian-700 bg-linear-to-b from-obsidian-850 to-obsidian-950 overflow-hidden transition-all duration-300 ${a.border}`}
 									>
 										{/* Atmospheric color layer (mode-specific). Sits below content. */}
 										<div
@@ -381,7 +375,7 @@ function HomePage() {
 
 										{/* Oversized decorative icon — anchors the bottom-right as "art" */}
 										<Icon
-											className={`absolute -right-3 -bottom-3 w-32 h-32 ${a.text} opacity-[0.08] pointer-events-none`}
+											className={`absolute -right-2 -bottom-2 w-24 h-24 ${a.text} opacity-[0.08] pointer-events-none`}
 											strokeWidth={1}
 										/>
 
@@ -395,21 +389,21 @@ function HomePage() {
 											<span className={`font-mono text-[10px] tracking-[0.32em] uppercase font-semibold ${a.text}`}>
 												{mode.kicker}
 											</span>
-											<span className={`inline-flex items-center justify-center w-9 h-9 rounded-md bg-obsidian-900/70 backdrop-blur-sm border border-obsidian-700 ${a.text}`}>
-												<Icon size={16} strokeWidth={1.8} />
+											<span className={`inline-flex items-center justify-center w-8 h-8 rounded-md bg-obsidian-900/70 backdrop-blur-sm border border-obsidian-700 ${a.text}`}>
+												<Icon size={14} strokeWidth={1.8} />
 											</span>
 										</div>
 
 										{/* Body */}
 										<div className="relative z-10 mt-auto">
-											<h3 className="font-display text-3xl font-black tracking-[0.08em] uppercase text-ink-0 mb-2 leading-none">
+											<h3 className="font-display text-xl font-black tracking-[0.08em] uppercase text-ink-0 mb-1.5 leading-none">
 												{mode.title}
 											</h3>
-											<p className="text-ink-200 text-sm leading-[1.6] mb-4 max-w-[95%]">
+											<p className="text-ink-200 text-[13px] leading-[1.55] mb-3 max-w-[95%]">
 												{mode.description}
 											</p>
-											<div className="flex items-center justify-between pt-3 border-t border-obsidian-700/80">
-												<span className="font-display text-xs tracking-[0.22em] uppercase text-ink-0 transition-colors group-hover:text-gold-300">
+											<div className="flex items-center justify-between pt-2.5 border-t border-obsidian-700/80">
+												<span className="font-display text-[11px] tracking-[0.22em] uppercase text-ink-0 transition-colors group-hover:text-gold-300">
 													Enter
 												</span>
 												<span className={`${a.arrow} transition-transform duration-300 group-hover:translate-x-1`}>→</span>
@@ -424,50 +418,61 @@ function HomePage() {
 						</div>
 					</section>
 
-				</div>
-
-				{/* Side rail.
-				    Warband only shows after Hive login (LoL-style: friends list is gated by auth).
-				    Pre-login, the slot collapses so Daily Quests gets full visual weight
-				    and the connect-wallet CTA in the header carries the action. */}
-				<aside className="grid gap-5 content-start">
-					<SideRailPanel title="Daily Quests">
-						<Suspense fallback={<div className="animate-pulse h-32 rounded-xl bg-obsidian-800" />}>
+					{/* Daily Quests — actionable tasks live in main column, not sidebar.
+					    DailyQuestPanel renders its own card grid (parallel to route cards). */}
+					<section>
+						<header className="mb-4">
+							<div className="font-mono text-[11px] tracking-[0.32em] uppercase text-ink-300">Today's Saga</div>
+							<h2 className="font-display text-xl tracking-[0.08em] uppercase text-ink-0 mt-1">Daily quests</h2>
+						</header>
+						<Suspense fallback={<div className="animate-pulse h-48 rounded-xl bg-obsidian-800" />}>
 							<DailyQuestPanel />
+						</Suspense>
+					</section>
+
+					{/* Footer (utility nav) */}
+					<footer className="pb-10">
+						<nav className="flex flex-wrap gap-2 pt-4 border-t border-obsidian-700">
+							{UTILITY_LINKS.map(link => (
+								<Link
+									key={link.label}
+									to={link.to}
+									className="inline-flex items-center h-8 px-3.5 rounded-full border border-obsidian-700 bg-obsidian-850 text-ink-200 hover:text-gold-300 hover:border-gold-600 font-display text-xs tracking-[0.18em] uppercase font-bold transition-colors"
+								>
+									{link.label}
+								</Link>
+							))}
+							{import.meta.env.DEV && (
+								<Link
+									to={routes.warband}
+									className="inline-flex items-center h-8 px-3.5 rounded-full border border-dashed border-obsidian-600 text-ink-300 hover:text-ink-0 font-display text-xs tracking-[0.18em] uppercase opacity-70 hover:opacity-100 transition-opacity"
+								>
+									Casual Battle (dev)
+								</Link>
+							)}
+						</nav>
+					</footer>
+				</main>
+
+				{/* RIGHT RAIL — pure identity stack: Account → Warband (post-login).
+				    Warband has internal scroll so contacts can grow without breaking layout. */}
+				<aside className="grid gap-5 content-start pb-10">
+					<SideRailPanel title="Account">
+						<Suspense fallback={<div className="animate-pulse h-20 rounded-xl bg-obsidian-800" />}>
+							<HiveKeychainLogin />
 						</Suspense>
 					</SideRailPanel>
 					{hiveUsername && (
 						<SideRailPanel title="Warband">
-							<Suspense fallback={<div className="animate-pulse h-32 rounded-xl bg-obsidian-800" />}>
-								<FriendsPanel />
-							</Suspense>
+							<div className="max-h-[420px] overflow-y-auto pr-1 -mr-1 [scrollbar-width:thin]">
+								<Suspense fallback={<div className="animate-pulse h-32 rounded-xl bg-obsidian-800" />}>
+									<FriendsPanel />
+								</Suspense>
+							</div>
 						</SideRailPanel>
 					)}
 				</aside>
 			</div>
-
-			{/* ── FOOTER (utility nav) ───────────────────────────────────────── */}
-			<footer className="mx-auto max-w-[1440px] px-6 mt-8 pb-10">
-				<nav className="flex flex-wrap gap-2 pt-4 border-t border-obsidian-700">
-					{UTILITY_LINKS.map(link => (
-						<Link
-							key={link.label}
-							to={link.to}
-							className="inline-flex items-center h-8 px-3.5 rounded-full border border-obsidian-700 bg-obsidian-850 text-ink-200 hover:text-gold-300 hover:border-gold-600 font-display text-xs tracking-[0.18em] uppercase font-bold transition-colors"
-						>
-							{link.label}
-						</Link>
-					))}
-					{import.meta.env.DEV && (
-						<Link
-							to={routes.warband}
-							className="inline-flex items-center h-8 px-3.5 rounded-full border border-dashed border-obsidian-600 text-ink-300 hover:text-ink-0 font-display text-xs tracking-[0.18em] uppercase opacity-70 hover:opacity-100 transition-opacity"
-						>
-							Casual Battle (dev)
-						</Link>
-					)}
-				</nav>
-			</footer>
 
 			{showCeremony && (
 				<Suspense fallback={null}>
