@@ -17,6 +17,12 @@ import { useAudio } from '../../../lib/stores/useAudio';
 import { v4 as uuidv4 } from 'uuid';
 import { useKingChessAbility } from '../../hooks/useKingChessAbility';
 import { useUnifiedCombatStore } from '../../stores/unifiedCombatStore';
+import { useGameFlowStore } from '../../stores/gameFlowStore';
+import type {
+  PostCinematicPlan,
+  GameResult,
+  CombatHandoff,
+} from '../../flow/round/types';
 import { getKingAbilityConfig, getAbilityDescription, requiresDirectionSelection, getAvailableDirections, MineDirection } from '../../utils/chess/kingAbilityUtils';
 import { Tooltip } from '../ui/Tooltip';
 import { debug } from '../../config/debugConfig';
@@ -442,20 +448,31 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
   const warbandArmy = useWarbandStore(selectArmy);
   const warbandDeck = useWarbandStore(selectDeckCardIds);
   const effectiveInitialArmy: ArmySelectionType | null = initialArmy ?? warbandArmy;
-  const [phase, setPhase] = useState<GamePhase>(
-    effectiveInitialArmy ? 'chess' : isCampaign ? (hasCinematic ? 'cinematic' : 'chess') : 'army_selection'
-  );
+  /*
+    Round-level FSM (G4) — single source of truth for phase. The legacy
+    GamePhase literal union is preserved as a derived view so existing
+    `phase === 'X'` checks keep working until G5–G9 extract phase
+    components and switch the renderer to read flowState directly.
+  */
+  const flowState = useGameFlowStore(s => s.current);
+  const startFlow = useGameFlowStore(s => s.start);
+  const dispatchFlow = useGameFlowStore(s => s.dispatch);
+  const clearFlow = useGameFlowStore(s => s.clear);
+  const phase: GamePhase = flowState === null ? 'army_selection' : flowState.tag;
+
   const [playerArmy, setPlayerArmy] = useState<ArmySelectionType | null>(effectiveInitialArmy);
   const [sharedDeckCardIds, setSharedDeckCardIds] = useState<number[]>(
     !initialArmy && warbandArmy && warbandDeck.length > 0 ? [...warbandDeck] : []
   );
   const [combatPieces, setCombatPieces] = useState<{ attackerId: string; defenderId: string } | null>(null);
-  const [vsScreenPieces, setVsScreenPieces] = useState<{ attacker: ChessPiece; defender: ChessPiece } | null>(null);
   // Migrated to stores (G3):
   //   pokerSlotsSwapped → useUnifiedCombatStore (poker slice, crosses chess↔poker)
   //   playerTurnCount   → useUnifiedCombatStore (chess slice, board metadata)
   //   bossRulesApplied  → useCampaignStore (campaign-only)
-  //   gameOverSubPhase  → useCampaignStore (campaign-only)
+  // Note: gameOverSubPhase WAS migrated to useCampaignStore in G3 but
+  // G4 makes the FSM the single source of truth — sub now lives in
+  // flowState.sub when tag === 'game_over'. Campaign-store fields kept
+  // for one commit so reads don't break; G7 will delete the campaign field.
   const pokerSlotsSwapped = useUnifiedCombatStore(s => s.pokerSlotsSwapped);
   const setPokerSlotsSwapped = useUnifiedCombatStore(s => s.setPokerSlotsSwapped);
   const turnCount = useUnifiedCombatStore(s => s.playerTurnCount);
@@ -464,8 +481,8 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
   const bossRulesApplied = useCampaignStore(s => s.bossRulesApplied);
   const markBossRulesApplied = useCampaignStore(s => s.markBossRulesApplied);
   const resetBossRulesApplied = useCampaignStore(s => s.resetBossRulesApplied);
-  const gameOverSubPhase = useCampaignStore(s => s.gameOverSubPhase);
-  const setGameOverSubPhase = useCampaignStore(s => s.setGameOverSubPhase);
+  const gameOverSubPhase: 'cinematic' | 'result' | 'bridge' =
+    flowState !== null && flowState.tag === 'game_over' ? flowState.sub : 'result';
   const gameEndProcessedRef = useRef(false);
   const gameOverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -587,19 +604,70 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
     playSoundEffect('game_start');
   }, [warbandArmy, warbandDeck, isCampaign, initialArmy, opponentArmy, initializeBoard, setSharedDeck, playSoundEffect]);
 
-  // Campaign auto-init: skip army selection, use default player army
+  /*
+    Round FSM bootstrap (G4). Runs once per mount when flowState is null
+    AND we have enough context to pick a starting phase. Re-runs after a
+    restart that calls clearFlow(). The campaign auto-init effect below
+    still mounts the default army + board state; the FSM only governs
+    which phase the renderer is in.
+  */
+  useEffect(() => {
+    if (flowState !== null) return;
+
+    // Casual / multiplayer / explicit initialArmy → straight to chess.
+    if (effectiveInitialArmy && !isCampaign) {
+      startFlow({ kind: 'chess' });
+      return;
+    }
+
+    if (!isCampaign || !campaignData) return;
+
+    const intro = campaignData.chapter.cinematicIntro;
+    const narrative = campaignData.mission.narrativeBefore;
+    const planAfterCinematic: PostCinematicPlan = narrative
+      ? {
+          kind: 'intro',
+          mission: {
+            missionId: campaignData.mission.id,
+            narrativeBefore: narrative,
+            isChapterFinale: !!campaignData.mission.isChapterFinale,
+          },
+        }
+      : { kind: 'chess' };
+
+    if (hasCinematic && intro) {
+      startFlow({
+        kind: 'cinematic',
+        cinematic: { chapterId: campaignData.chapter.id, intro },
+        then: planAfterCinematic,
+      });
+    } else if (narrative) {
+      startFlow({
+        kind: 'mission_intro',
+        mission: {
+          missionId: campaignData.mission.id,
+          narrativeBefore: narrative,
+          isChapterFinale: !!campaignData.mission.isChapterFinale,
+        },
+      });
+    } else {
+      startFlow({ kind: 'chess' });
+    }
+  }, [flowState, effectiveInitialArmy, isCampaign, hasCinematic, campaignData, startFlow]);
+
+  // Campaign auto-init: skip army selection, use default player army.
+  // Phase selection lives in the FSM bootstrap effect above; this one just
+  // ensures the board state has a default army when the player enters via
+  // /campaign without picking one. Sound cue stays here because it's tied
+  // to "match starts now" — fired only when no narrative gate precedes it.
   useEffect(() => {
     if (isCampaign && !playerArmy && !initialArmy) {
       const defaultArmy = getDefaultArmySelection();
       setPlayerArmy(defaultArmy);
       initializeBoard(defaultArmy, opponentArmy);
       resetBossRulesApplied();
-      if (!hasCinematic) {
-        // Show mission intro narrative before chess phase
-        setPhase(campaignData?.mission?.narrativeBefore ? 'mission_intro' : 'chess');
-        if (!campaignData?.mission?.narrativeBefore) {
-          playSoundEffect('game_start');
-        }
+      if (!hasCinematic && !campaignData?.mission?.narrativeBefore) {
+        playSoundEffect('game_start');
       }
     }
   }, [
@@ -617,19 +685,19 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
     if (campaignData) {
       markCinematicSeen(campaignData.chapter.id);
     }
-    // After chapter cinematic, show mission intro
-    if (campaignData?.mission?.narrativeBefore) {
-      setPhase('mission_intro');
-    } else {
-      setPhase('chess');
+    // FSM reads `state.then` — set at cinematic entry — to decide whether
+    // mission_intro or chess comes next. The sound cue still fires here
+    // because the bare event has no payload context.
+    dispatchFlow({ type: 'CINEMATIC_DONE' });
+    if (!campaignData?.mission?.narrativeBefore) {
       playSoundEffect('game_start');
     }
-  }, [playSoundEffect, campaignData, markCinematicSeen]);
+  }, [playSoundEffect, campaignData, markCinematicSeen, dispatchFlow]);
 
   const handleMissionIntroComplete = useCallback(() => {
-    setPhase('chess');
+    dispatchFlow({ type: 'INTRO_DONE' });
     playSoundEffect('game_start');
-  }, [playSoundEffect]);
+  }, [playSoundEffect, dispatchFlow]);
 
   // Apply boss rules + difficulty scaling after board initialization (one-time)
   const bossRulesInitRef = useRef(false);
@@ -783,32 +851,35 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
 
   const handleCombatTriggered = useCallback((attackerId: string, defenderId: string) => {
     setCombatPieces({ attackerId, defenderId });
-    
+
     if (lastMineTriggered) {
       setTimeout(() => {
         const freshPieces = useUnifiedCombatStore.getState().boardState.pieces;
         const freshAttacker = freshPieces.find(p => p.id === attackerId);
         const freshDefender = freshPieces.find(p => p.id === defenderId);
         if (!freshAttacker || !freshDefender) return;
-        setVsScreenPieces({ attacker: freshAttacker, defender: freshDefender });
-        setPhase('vs_screen');
+        dispatchFlow({ type: 'COMBAT_TRIGGERED', pieces: { attacker: freshAttacker, defender: freshDefender } });
         playSoundEffect('card_draw');
       }, 1800);
     } else {
       const attacker = boardState.pieces.find(p => p.id === attackerId);
       const defender = boardState.pieces.find(p => p.id === defenderId);
       if (!attacker || !defender) return;
-      setVsScreenPieces({ attacker, defender });
-      setPhase('vs_screen');
+      dispatchFlow({ type: 'COMBAT_TRIGGERED', pieces: { attacker, defender } });
       playSoundEffect('card_draw');
     }
-  }, [boardState.pieces, playSoundEffect, lastMineTriggered]);
+  }, [boardState.pieces, playSoundEffect, lastMineTriggered, dispatchFlow]);
 
   const handleVsScreenComplete = useCallback(() => {
-    if (!vsScreenPieces || !combatPieces) return;
+    // VS pieces now live in flowState.pieces (FSM owns vs_screen). Bail
+    // unless the FSM is actually in vs_screen — late callbacks from the
+    // VS timer can fire after a phase change.
+    if (flowState === null || flowState.tag !== 'vs_screen') return;
+    if (!combatPieces) return;
+    const vsPieces = flowState.pieces;
 
-    const freshAttacker = boardState.pieces.find(p => p.id === vsScreenPieces.attacker.id) || vsScreenPieces.attacker;
-    const freshDefender = boardState.pieces.find(p => p.id === vsScreenPieces.defender.id) || vsScreenPieces.defender;
+    const freshAttacker = boardState.pieces.find(p => p.id === vsPieces.attacker.id) || vsPieces.attacker;
+    const freshDefender = boardState.pieces.find(p => p.id === vsPieces.defender.id) || vsPieces.defender;
     const attacker = freshAttacker;
     const defender = freshDefender;
     
@@ -842,6 +913,9 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
     // When AI attacks human, swap parameters so human remains as "player"
     const humanIsAttacker = attacker.owner === 'player';
     
+    const slotsSwapped = !humanIsAttacker;
+    const firstStrikeTarget: 'player' | 'opponent' = humanIsAttacker ? 'opponent' : 'player';
+
     if (humanIsAttacker) {
       // Human attacks AI: Human (attacker) = player, AI (defender) = opponent
       // First strike target is 'opponent' (the defender in the player slot)
@@ -856,7 +930,7 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
         true,
         attackerKingId,
         defenderKingId,
-        'opponent' // First strike hits the opponent (defender)
+        firstStrikeTarget
       );
     } else {
       // AI attacks Human: Human (defender) = player, AI (attacker) = opponent
@@ -873,14 +947,21 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
         true,
         defenderKingId,
         attackerKingId,
-        'player' // First strike hits the player (defender/human)
+        firstStrikeTarget
       );
     }
-    
-    setVsScreenPieces(null);
-    setPhase('poker_combat');
+
+    const handoff: CombatHandoff = {
+      attacker,
+      defender,
+      playerArmy: attackerArmy,
+      opponentArmy: defenderArmy,
+      slotsSwapped,
+      firstStrikeTarget,
+    };
+    dispatchFlow({ type: 'VS_COMPLETE', handoff });
     playSoundEffect('game_start');
-  }, [vsScreenPieces, combatPieces, playerArmy, opponentArmy, boardState.pieces, createPetFromChessPiece, initializeCombat, playSoundEffect]);
+  }, [flowState, combatPieces, playerArmy, opponentArmy, boardState.pieces, createPetFromChessPiece, initializeCombat, playSoundEffect, setPokerSlotsSwapped, dispatchFlow]);
 
   const handleCombatEnd = useCallback((winner: 'player' | 'opponent' | 'draw') => {
     try {
@@ -894,7 +975,7 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
         setCombatPieces(null);
         setPokerSlotsSwapped(false);
         endCombat();
-        setPhase('chess');
+        dispatchFlow({ type: 'COMBAT_RESOLVED' });
         playSoundEffect('turn_start');
         return;
       }
@@ -957,17 +1038,17 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
       setCombatPieces(null);
       setPokerSlotsSwapped(false);
       endCombat();
-      
-      setPhase('chess');
+
+      dispatchFlow({ type: 'COMBAT_RESOLVED' });
       playSoundEffect('turn_start');
     } catch (error) {
       debug.error('[handleCombatEnd] Error during combat resolution:', error);
       setCombatPieces(null);
       setPokerSlotsSwapped(false);
       endCombat();
-      setPhase('chess');
+      dispatchFlow({ type: 'COMBAT_RESOLVED' });
     }
-  }, [combatPieces, pokerSlotsSwapped, resolveCombat, clearPendingCombat, endCombat, playSoundEffect, updatePieceStamina, updatePieceHealth, incrementAllStamina, nextTurn]);
+  }, [combatPieces, pokerSlotsSwapped, resolveCombat, clearPendingCombat, endCombat, playSoundEffect, updatePieceStamina, updatePieceHealth, incrementAllStamina, nextTurn, setPokerSlotsSwapped, dispatchFlow]);
 
   useEffect(() => {
     if (boardState.gameStatus !== 'player_wins' && boardState.gameStatus !== 'opponent_wins') return;
@@ -1005,8 +1086,15 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
       const lostCampaign = winner !== 'player' && isCampaign && campaignData;
       const hasVictoryCinematic = wonCampaign && (campaignData?.mission?.victoryCinematic?.length ?? 0) > 0;
       const hasDefeatCinematic = lostCampaign && (campaignData?.mission?.defeatCinematic?.length ?? 0) > 0;
-      setGameOverSubPhase(hasVictoryCinematic || hasDefeatCinematic ? 'cinematic' : 'result');
-      setPhase('game_over');
+      const initialSub: 'cinematic' | 'result' = hasVictoryCinematic || hasDefeatCinematic ? 'cinematic' : 'result';
+      const result: GameResult = {
+        winner,
+        playerTurnCount: turnCount,
+        victoryCinematic: campaignData?.mission?.victoryCinematic ?? null,
+        defeatCinematic: campaignData?.mission?.defeatCinematic ?? null,
+        storyBridge: campaignData?.mission?.storyBridge ?? null,
+      };
+      dispatchFlow({ type: 'GAME_ENDED', result, initialSub });
       if (onGameEnd) {
         onGameEnd(winner);
       }
@@ -1040,13 +1128,12 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
     if (pendingCombat && boardState.gameStatus === 'combat' && phase === 'chess' && !combatPieces) {
       debug.chess('pendingCombat detected (AI attack), triggering combat flow');
       const { attacker, defender } = pendingCombat;
-      
+
       setCombatPieces({ attackerId: attacker.id, defenderId: defender.id });
-      setVsScreenPieces({ attacker, defender });
-      setPhase('vs_screen');
+      dispatchFlow({ type: 'COMBAT_TRIGGERED', pieces: { attacker, defender } });
       playSoundEffect('card_draw');
     }
-  }, [pendingCombat, boardState.gameStatus, phase, combatPieces, playSoundEffect]);
+  }, [pendingCombat, boardState.gameStatus, phase, combatPieces, playSoundEffect, dispatchFlow]);
 
   useEffect(() => {
     if (phase === 'chess' && boardState.gameStatus === 'playing') {
@@ -1078,14 +1165,16 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
     resetPlayerTurnCount();
     gameEndProcessedRef.current = false;
     bootstrappedFromWarbandRef.current = false;
+    clearFlow();
     if (isCampaign) {
       clearCurrent();
-      // Campaign auto-init effect re-bootstraps from default army on next render
-      setPhase('army_selection');
+      // After clearCurrent, isCampaign becomes false on next render and the
+      // /warband redirect guard catches us. The FSM bootstrap effect will
+      // re-fire if a new mission is started later.
     } else {
       navigate(routes.warband);
     }
-  }, [resetBoard, isCampaign, clearCurrent, navigate, resetPlayerTurnCount]);
+  }, [resetBoard, isCampaign, clearCurrent, navigate, resetPlayerTurnCount, clearFlow]);
 
   /*
     "Back to Campaign" — if the player won AND the mission has an authored
@@ -1102,12 +1191,12 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
       gameOverSubPhase === 'result' &&
       (campaignData.mission.storyBridge?.length ?? 0) > 0
     ) {
-      setGameOverSubPhase('bridge');
+      dispatchFlow({ type: 'GAME_OVER_ADVANCE', nextSub: 'bridge' });
       return;
     }
     clearCurrent();
     navigate(routes.campaign);
-  }, [clearCurrent, navigate, isCampaign, campaignData, boardState.gameStatus, gameOverSubPhase]);
+  }, [clearCurrent, navigate, isCampaign, campaignData, boardState.gameStatus, gameOverSubPhase, dispatchFlow]);
 
   const handleRetryMission = useCallback(() => {
     resetBoard();
@@ -1119,9 +1208,10 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
     const defaultArmy = getDefaultArmySelection();
     setPlayerArmy(defaultArmy);
     initializeBoard(defaultArmy, opponentArmy);
-    setPhase('chess');
+    clearFlow();
+    startFlow({ kind: 'chess' });
     playSoundEffect('game_start');
-  }, [resetBoard, opponentArmy, initializeBoard, playSoundEffect, resetPlayerTurnCount, resetBossRulesApplied]);
+  }, [resetBoard, opponentArmy, initializeBoard, playSoundEffect, resetPlayerTurnCount, resetBossRulesApplied, clearFlow, startFlow]);
 
   const handleBattleMode = useCallback(() => {
     const playerPieces = boardState.pieces.filter(p => p.owner === 'player' && p.type !== 'pawn' && p.type !== 'king');
@@ -1136,10 +1226,9 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
     const defender = opponentPieces[Math.floor(Math.random() * opponentPieces.length)];
     
     setCombatPieces({ attackerId: attacker.id, defenderId: defender.id });
-    setVsScreenPieces({ attacker, defender });
-    setPhase('vs_screen');
+    dispatchFlow({ type: 'COMBAT_TRIGGERED', pieces: { attacker, defender } });
     playSoundEffect('card_draw');
-  }, [boardState.pieces, playSoundEffect]);
+  }, [boardState.pieces, playSoundEffect, dispatchFlow]);
 
   // Chess root carries the realm-{id} class so the chess phase board can
   // get its own thematic background per mission. CSS rules live in
@@ -1270,11 +1359,11 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
           />
         )}
 
-        {phase === 'vs_screen' && vsScreenPieces && (
+        {flowState !== null && flowState.tag === 'vs_screen' && (
           <VSScreen
             key="vs"
-            attacker={vsScreenPieces.attacker}
-            defender={vsScreenPieces.defender}
+            attacker={flowState.pieces.attacker}
+            defender={flowState.pieces.defender}
             onComplete={handleVsScreenComplete}
             duration={2500}
           />
@@ -1310,13 +1399,13 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
                 <CinematicCrawl
                   key="gameover-cinematic"
                   intro={syntheticIntro}
-                  onComplete={() => setGameOverSubPhase('result')}
+                  onComplete={() => dispatchFlow({ type: 'GAME_OVER_ADVANCE', nextSub: 'result' })}
                   openingMusic={isVictory ? 'aesir_triumph' : 'twilight_horn'}
                 />
               );
             }
             // Defensive: no scenes after all → drop into result.
-            setGameOverSubPhase('result');
+            dispatchFlow({ type: 'GAME_OVER_ADVANCE', nextSub: 'result' });
             return null;
           }
 
