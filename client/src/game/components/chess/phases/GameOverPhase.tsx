@@ -18,7 +18,7 @@
   the campaign-only narrative branches.
 */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import type { CampaignMission, CampaignChapter, Difficulty } from '../../../campaign/campaignTypes';
 import { getMissionStars } from '../../../campaign';
@@ -79,30 +79,38 @@ const GameOverPhase: React.FC<GameOverPhaseProps> = ({
 	onRetry,
 }) => {
 	// Sub-phase 1: victory / defeat cinematic. Campaign-authored only.
-	if (sub === 'cinematic' && campaign) {
-		const cinematicScenes = isVictory
-			? campaign.mission.victoryCinematic
-			: campaign.mission.defeatCinematic;
-		if (cinematicScenes && cinematicScenes.length > 0) {
-			const syntheticIntro = {
-				title: isVictory ? 'Victory' : 'Twilight',
-				style: campaign.chapter.cinematicIntro?.style ?? 'A Norse Saga',
-				scenes: cinematicScenes,
-			};
-			return (
-				<CinematicCrawl
-					key="gameover-cinematic"
-					intro={syntheticIntro}
-					onComplete={onCinematicEnd}
-					openingMusic={isVictory ? 'aesir_triumph' : 'twilight_horn'}
-				/>
-			);
-		}
-		// Defensive: mission flagged cinematic sub but no scenes — drop
-		// straight into result. Fire the advance-to-result callback during
-		// commit so the FSM transitions on the next render rather than
-		// looping inside this branch.
-		onCinematicEnd();
+	const cinematicScenes = sub === 'cinematic' && campaign
+		? (isVictory ? campaign.mission.victoryCinematic : campaign.mission.defeatCinematic)
+		: undefined;
+	const cinematicHasScenes = !!(cinematicScenes && cinematicScenes.length > 0);
+	const cinematicNeedsFallback = sub === 'cinematic' && !!campaign && !cinematicHasScenes;
+
+	// Defensive: mission flagged cinematic sub but no scenes — drop straight
+	// into result. The advance-to-result dispatch must happen during commit
+	// (not render) to keep the parent FSM transition out of React's render
+	// phase. Without the effect, calling onCinematicEnd() inline would mutate
+	// parent state during this component's render — illegal in React and
+	// double-invoked under StrictMode.
+	useEffect(() => {
+		if (cinematicNeedsFallback) onCinematicEnd();
+	}, [cinematicNeedsFallback, onCinematicEnd]);
+
+	if (sub === 'cinematic' && campaign && cinematicHasScenes) {
+		const syntheticIntro = {
+			title: isVictory ? 'Victory' : 'Twilight',
+			style: campaign.chapter.cinematicIntro?.style ?? 'A Norse Saga',
+			scenes: cinematicScenes!,
+		};
+		return (
+			<CinematicCrawl
+				key="gameover-cinematic"
+				intro={syntheticIntro}
+				onComplete={onCinematicEnd}
+				openingMusic={isVictory ? 'aesir_triumph' : 'twilight_horn'}
+			/>
+		);
+	}
+	if (cinematicNeedsFallback) {
 		return null;
 	}
 
@@ -225,7 +233,7 @@ const GameOverPhase: React.FC<GameOverPhaseProps> = ({
 							transition={{ delay: 2.2, duration: 0.8 }}
 						>
 							{campaign.mission.rewards.map((r, i) => (
-								<div key={i} className="cgo-reward-pill">
+								<div key={`${r.type}-${r.amount ?? 1}-${i}`} className="cgo-reward-pill">
 									+{r.amount || 1} {r.type}
 								</div>
 							))}

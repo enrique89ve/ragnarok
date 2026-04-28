@@ -71,7 +71,15 @@ const MissionIntroPhase: React.FC<MissionIntroPhaseProps> = ({
 				'--realm-color': realmColor,
 				'--realm-text': realmText,
 			} as React.CSSProperties}
+			role="button"
+			tabIndex={0}
 			onClick={onComplete}
+			onKeyDown={(e) => {
+				if (e.key === 'Enter' || e.key === ' ') {
+					e.preventDefault();
+					onComplete();
+				}
+			}}
 		>
 			<div className="mission-intro-bg" />
 			<div className="mission-intro-vignette" />
@@ -146,7 +154,7 @@ const MissionIntroPhase: React.FC<MissionIntroPhaseProps> = ({
 					>
 						<p className="mission-intro-boss-label">Boss Modifiers</p>
 						{mission.bossRules.map((rule, i) => (
-							<p key={i} className="mission-intro-boss-rule">{rule.description}</p>
+							<p key={`${rule.description}-${i}`} className="mission-intro-boss-rule">{rule.description}</p>
 						))}
 					</motion.div>
 				)}
