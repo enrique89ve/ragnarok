@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'rea
 import { HashRouter, Routes, Route, Link, Outlet, useLocation } from 'react-router-dom';
 import { routes } from './lib/routes';
 import { Button, Panel } from './components/ui-norse';
-import { Compass, LayoutGrid, Settings as SettingsIcon, Swords } from 'lucide-react';
+import { Compass, LayoutGrid, Play, Settings as SettingsIcon, Swords } from 'lucide-react';
 import UnifiedCardSystem from "./game/components/UnifiedCardSystem";
 import "./index.css";
 import { CardTransformProvider } from "./game/context/CardTransformContext";
@@ -116,6 +116,8 @@ interface ModeCard {
 	icon: typeof Swords;
 	accent: AccentKey;
 	atmosphere: string; // CSS gradient string for the card's background mood
+	cta: string;        // verb-led label, varies by intent (combat vs meta)
+	intent: 'combat' | 'meta'; // drives Play-icon affordance + visual grouping
 }
 
 const ACCENT: Record<AccentKey, { text: string; strip: string; border: string; arrow: string }> = {
@@ -150,6 +152,8 @@ const MODE_CARDS: ReadonlyArray<ModeCard> = [
 		atmosphere:
 			'radial-gradient(ellipse 75% 60% at 85% 15%, rgba(217, 74, 18, 0.45), transparent 65%), ' +
 			'radial-gradient(ellipse 50% 40% at 20% 90%, rgba(110, 31, 5, 0.35), transparent 70%)',
+		cta: 'Fight',
+		intent: 'combat',
 	},
 	{
 		title: 'Campaign',
@@ -161,6 +165,8 @@ const MODE_CARDS: ReadonlyArray<ModeCard> = [
 		atmosphere:
 			'radial-gradient(ellipse 75% 60% at 85% 15%, rgba(192, 138, 36, 0.42), transparent 65%), ' +
 			'radial-gradient(ellipse 50% 40% at 20% 90%, rgba(77, 52, 10, 0.45), transparent 70%)',
+		cta: 'March',
+		intent: 'combat',
 	},
 	{
 		title: 'Collection',
@@ -170,8 +176,10 @@ const MODE_CARDS: ReadonlyArray<ModeCard> = [
 		icon: LayoutGrid,
 		accent: 'bifrost',
 		atmosphere:
-			'radial-gradient(ellipse 75% 60% at 85% 15%, rgba(74, 111, 224, 0.40), transparent 65%), ' +
-			'radial-gradient(ellipse 50% 40% at 20% 90%, rgba(122, 91, 214, 0.30), transparent 70%)',
+			'radial-gradient(ellipse 75% 60% at 85% 15%, rgba(74, 111, 224, 0.30), transparent 65%), ' +
+			'radial-gradient(ellipse 50% 40% at 20% 90%, rgba(122, 91, 214, 0.22), transparent 70%)',
+		cta: 'Browse',
+		intent: 'meta',
 	},
 ] as const;
 
@@ -365,15 +373,20 @@ function HomePage() {
 							<div className="font-mono text-[11px] tracking-[0.32em] uppercase text-ink-300">Primary Routes</div>
 							<h2 className="font-display text-xl tracking-[0.08em] uppercase text-ink-0 mt-1">Choose your front</h2>
 						</header>
-						<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+						<div className="grid grid-cols-1 sm:grid-cols-3 gap-4 [&>:nth-child(3)]:sm:ml-3">
 							{MODE_CARDS.map(mode => {
 								const Icon = mode.icon;
 								const a = ACCENT[mode.accent];
+								const isCombat = mode.intent === 'combat';
 								return (
 									<Link
 										key={mode.title}
 										to={mode.to}
-										className={`relative group flex flex-col min-h-[144px] p-4 rounded-xl border border-obsidian-700 bg-linear-to-b from-obsidian-850 to-obsidian-950 overflow-hidden transition-all duration-300 ${a.border}`}
+										className={`relative group flex flex-col min-h-[144px] p-4 rounded-xl border bg-linear-to-b overflow-hidden transition-all duration-300 ${a.border} ${
+											isCombat
+												? 'border-obsidian-700 from-obsidian-850 to-obsidian-950'
+												: 'border-obsidian-700/70 from-obsidian-900 to-obsidian-950'
+										}`}
 									>
 										{/* Atmospheric color layer (mode-specific). Sits below content. */}
 										<div
@@ -411,8 +424,15 @@ function HomePage() {
 												{mode.description}
 											</p>
 											<div className="flex items-center justify-between pt-2 border-t border-obsidian-700/80">
-												<span className="font-display text-[11px] tracking-[0.22em] uppercase text-ink-0 transition-colors group-hover:text-gold-300">
-													Enter
+												<span className={`inline-flex items-center gap-1.5 font-display text-[11px] tracking-[0.22em] uppercase font-bold transition-colors ${
+													isCombat
+														? `${a.text} group-hover:text-ink-0`
+														: 'text-ink-200 group-hover:text-bifrost-300'
+												}`}>
+													{isCombat && (
+														<Play size={10} strokeWidth={2.4} fill="currentColor" className="shrink-0" />
+													)}
+													{mode.cta}
 												</span>
 												<span className={`${a.arrow} transition-transform duration-300 group-hover:translate-x-1`}>→</span>
 											</div>
