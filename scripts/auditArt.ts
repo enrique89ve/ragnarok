@@ -522,14 +522,24 @@ const PUBLIC_DIR = path.join(REPO_ROOT, 'client', 'public');
  * Allowed top-level directories under client/public/. Anything else that
  * holds image/audio assets is a dual source of truth and gets flagged.
  *
- *   art/        — canonical NFT art (cards, heroes, kings) + retired (orphaned/)
+ *   art/        — collection canon (NFTs + realms + retired)
+ *                 ├─ nfts/      canonical NFT collection
+ *                 ├─ realms/    full-bleed realm board backgrounds
+ *                 └─ orphaned/  retired NFT art (preserved for revival)
+ *   textures/   — VFX and decorative textures (NOT collection canon)
+ *                 ├─ foil/      holographic foil overlays for cards
+ *                 ├─ board/     chess/poker board surface textures
+ *                 └─ elements/  fire/water/wind/earth/holy/shadow icons
  *   icons/      — UI icons (PWA + favicon)
- *   ui/         — UI sprites (buttons, frames)
+ *   ui/         — UI chrome (buttons, frames, decorative backgrounds)
  *   sounds/     — sound effects + music
- *   textures/   — chess board textures, particle textures
  *   fonts/      — custom fonts
  *   assets/     — bootstrap images (logo, card-back) imported by Vite from src
  *   data/       — generated manifests (genesis, starter, duat-snapshot)
+ *
+ * The line between art/ and textures/ is intentional: art/ is the
+ * canon-coleccionable layer (gated by Genesis Charter); textures/ is
+ * decoration & VFX that can be swapped without touching the collection.
  */
 const ALLOWED_PUBLIC_ASSET_DIRS = new Set([
 	'art', 'icons', 'ui', 'sounds', 'textures', 'fonts', 'assets', 'data',

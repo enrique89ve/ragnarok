@@ -44,7 +44,7 @@
 /* 1. BOARD FRAME - Stone slab with rune texture */
 .chess-board {
   position: relative;
-  background-image: url('/textures/norse_rune_stone_game_board.webp');
+  background-image: url('/textures/board/norse-rune-stone.webp');
   background-size: cover;
   background-position: center;
   border: 6px solid var(--color-chess-stone) !important;
