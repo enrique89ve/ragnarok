@@ -4,9 +4,9 @@ import { cn } from '@/lib/utils';
 type DivProps = React.HTMLAttributes<HTMLDivElement>;
 
 const PANEL_BASE =
-	'rounded-xl border border-[var(--obsidian-700)] ' +
-	'bg-linear-to-b from-[var(--obsidian-850)] to-[var(--obsidian-900)] ' +
-	'text-[var(--ink-0)] shadow-[0_8px_24px_-8px_rgba(0,0,0,0.7)]';
+	'rounded-xl border border-(--obsidian-700) ' +
+	'bg-linear-to-b from-(--obsidian-850) to-(--obsidian-900) ' +
+	'text-(--ink-0) shadow-[0_8px_24px_-8px_rgba(0,0,0,0.7)]';
 
 export const Panel = React.forwardRef<HTMLDivElement, DivProps>(({ className, ...props }, ref) => (
 	<div ref={ref} className={cn(PANEL_BASE, className)} {...props} />
@@ -18,7 +18,7 @@ export const PanelHeader = React.forwardRef<HTMLDivElement, DivProps>(
 		<div
 			ref={ref}
 			className={cn(
-				'flex flex-col gap-1.5 border-b border-[var(--obsidian-700)] p-6',
+				'flex flex-col gap-1.5 border-b border-(--obsidian-700) p-6',
 				className,
 			)}
 			{...props}
@@ -32,7 +32,7 @@ export const PanelTitle = React.forwardRef<HTMLDivElement, DivProps>(
 		<div
 			ref={ref}
 			className={cn(
-				"font-['Cinzel',serif] text-lg font-semibold tracking-wide text-[var(--ink-0)]",
+				"font-['Cinzel',serif] text-lg font-semibold tracking-wide text-(--ink-0)",
 				className,
 			)}
 			{...props}
@@ -45,7 +45,7 @@ export const PanelDescription = React.forwardRef<HTMLDivElement, DivProps>(
 	({ className, ...props }, ref) => (
 		<div
 			ref={ref}
-			className={cn('text-sm leading-relaxed text-[var(--ink-200)]', className)}
+			className={cn('text-sm leading-relaxed text-(--ink-200)', className)}
 			{...props}
 		/>
 	),
@@ -64,7 +64,7 @@ export const PanelFooter = React.forwardRef<HTMLDivElement, DivProps>(
 		<div
 			ref={ref}
 			className={cn(
-				'flex items-center border-t border-[var(--obsidian-700)] p-6',
+				'flex items-center border-t border-(--obsidian-700) p-6',
 				className,
 			)}
 			{...props}

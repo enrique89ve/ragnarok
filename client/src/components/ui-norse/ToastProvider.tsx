@@ -11,11 +11,11 @@ export function ToastProvider(props: SonnerProps) {
 			toastOptions={{
 				classNames: {
 					toast:
-						'group toast border bg-[var(--obsidian-850)] text-[var(--ink-0)] ' +
-						'border-[var(--obsidian-700)] shadow-lg',
-					description: 'text-[var(--ink-200)]',
-					actionButton: 'bg-[var(--gold-400)] text-[var(--obsidian-950)]',
-					cancelButton: 'bg-[var(--obsidian-700)] text-[var(--ink-200)]',
+						'group toast border bg-(--obsidian-850) text-(--ink-0) ' +
+						'border-(--obsidian-700) shadow-lg',
+					description: 'text-(--ink-200)',
+					actionButton: 'bg-(--gold-400) text-(--obsidian-950)',
+					cancelButton: 'bg-(--obsidian-700) text-(--ink-200)',
 				},
 			}}
 			{...props}
