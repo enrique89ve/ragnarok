@@ -175,9 +175,9 @@ const MODE_CARDS: ReadonlyArray<ModeCard> = [
 		to: routes.collection,
 		icon: LayoutGrid,
 		accent: 'bifrost',
+		// Sober treatment: barely-there bifrost wash. Reads as "tool" not "battle".
 		atmosphere:
-			'radial-gradient(ellipse 75% 60% at 85% 15%, rgba(74, 111, 224, 0.30), transparent 65%), ' +
-			'radial-gradient(ellipse 50% 40% at 20% 90%, rgba(122, 91, 214, 0.22), transparent 70%)',
+			'radial-gradient(ellipse 60% 50% at 90% 10%, rgba(74, 111, 224, 0.10), transparent 70%)',
 		cta: 'Browse',
 		intent: 'meta',
 	},
@@ -424,20 +424,25 @@ function HomePage() {
 												{mode.description}
 											</p>
 
-											{/* CTA differentiated by intent — combat reads as a real ceremonial
-											    Play button (gold gradient, glow, dark text); meta reads as a
-											    sober curatorial link (mono, ghost). */}
-											{isCombat ? (
-												<div className="inline-flex items-center gap-2 rounded-md bg-linear-to-b from-gold-300 to-gold-500 border border-gold-200 px-3.5 py-1.5 font-display text-[11px] font-bold tracking-[0.22em] uppercase text-obsidian-950 shadow-[0_0_18px_-6px_rgba(217,168,68,0.55)] transition-all duration-300 group-hover:from-gold-200 group-hover:to-gold-400 group-hover:shadow-[0_0_24px_-4px_rgba(217,168,68,0.85)]">
-													<Play size={11} strokeWidth={2.4} fill="currentColor" className="shrink-0" />
-													{mode.cta}
-												</div>
-											) : (
-												<div className="inline-flex items-center gap-1.5 font-mono text-[11px] tracking-[0.22em] uppercase text-ink-300 transition-colors group-hover:text-bifrost-300">
-													{mode.cta}
-													<ChevronRight size={13} strokeWidth={2} className="shrink-0 transition-transform duration-300 group-hover:translate-x-1" />
-												</div>
-											)}
+											{/* CTA differentiated by intent — combat is a dramatic ceremonial
+											    Play button (gold gradient, diamond ornaments, glow); meta is a
+											    sober curatorial link. Both right-aligned to feel like an "action
+											    corner" of the card. */}
+											<div className="flex justify-end">
+												{isCombat ? (
+													<div className="inline-flex items-center gap-2.5 rounded-md bg-linear-to-b from-gold-300 to-gold-500 border border-gold-200 px-4 py-2 font-display text-[12px] font-bold tracking-[0.24em] uppercase text-obsidian-950 shadow-[0_0_22px_-6px_rgba(217,168,68,0.65)] transition-all duration-300 group-hover:from-gold-200 group-hover:to-gold-400 group-hover:shadow-[0_0_32px_-4px_rgba(217,168,68,0.95)] group-hover:scale-[1.03]">
+														<span aria-hidden className="w-[5px] h-[5px] rotate-45 bg-current opacity-80 shrink-0" />
+														<Play size={13} strokeWidth={2.4} fill="currentColor" className="shrink-0" />
+														{mode.cta}
+														<span aria-hidden className="w-[5px] h-[5px] rotate-45 bg-current opacity-80 shrink-0" />
+													</div>
+												) : (
+													<div className="inline-flex items-center gap-1.5 font-mono text-[11px] tracking-[0.22em] uppercase text-ink-300 transition-colors group-hover:text-bifrost-300">
+														{mode.cta}
+														<ChevronRight size={13} strokeWidth={2} className="shrink-0 transition-transform duration-300 group-hover:translate-x-1" />
+													</div>
+												)}
+											</div>
 										</div>
 
 										{/* Bottom accent strip (semantic identity) */}
