@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'rea
 import { HashRouter, Routes, Route, Link, Outlet, useLocation } from 'react-router-dom';
 import { routes } from './lib/routes';
 import { Button, Panel } from './components/ui-norse';
-import { BookOpen, Layers, Settings as SettingsIcon, Swords } from 'lucide-react';
+import { Compass, LayoutGrid, Settings as SettingsIcon, Swords } from 'lucide-react';
 import UnifiedCardSystem from "./game/components/UnifiedCardSystem";
 import "./index.css";
 import { CardTransformProvider } from "./game/context/CardTransformContext";
@@ -156,7 +156,7 @@ const MODE_CARDS: ReadonlyArray<ModeCard> = [
 		kicker: 'Adventure',
 		description: 'Push through faction storylines, boss phases, and realm-driven encounters.',
 		to: routes.campaign,
-		icon: BookOpen,
+		icon: Compass,
 		accent: 'gold',
 		atmosphere:
 			'radial-gradient(ellipse 75% 60% at 85% 15%, rgba(192, 138, 36, 0.42), transparent 65%), ' +
@@ -167,7 +167,7 @@ const MODE_CARDS: ReadonlyArray<ModeCard> = [
 		kicker: 'Deckbuilding',
 		description: 'Review your cards, inspect rarity treatments, and tune the pieces behind your army.',
 		to: routes.collection,
-		icon: Layers,
+		icon: LayoutGrid,
 		accent: 'bifrost',
 		atmosphere:
 			'radial-gradient(ellipse 75% 60% at 85% 15%, rgba(74, 111, 224, 0.40), transparent 65%), ' +
