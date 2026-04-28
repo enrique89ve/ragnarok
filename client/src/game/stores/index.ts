@@ -7,10 +7,9 @@
 
 export {
   useGameFlowStore,
-  type GamePhase,
-  type GamePhaseTransition,
-  type MatchState,
-  type ArmyConfig,
+  selectFlowState,
+  selectFlowTag,
+  type GameFlowStore,
 } from './gameFlowStore';
 
 export {

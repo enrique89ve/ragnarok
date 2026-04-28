@@ -1,169 +1,76 @@
-/**
- * GameFlowStore - Consolidated Game State Store
- * 
- * Manages game phase, screen transitions, and match state.
- * Integrates with GameFlowManager for state machine logic.
- */
+/*
+  GameFlowStore — round-level FSM Zustand wrapper.
+
+  Holds a single `current: RoundFlowState | null` and exposes start/
+  dispatch/clear actions that delegate to the pure FSM in
+  `client/src/game/flow/round/`. The store does NOT own any
+  transition logic — it is just the React-facing carrier so phase
+  components can subscribe via selectors.
+
+  Design notes:
+    - No persist. Round-flow is intra-match ephemeral; reentering
+      /game from /warband or /campaign should produce a clean slate,
+      not rehydrate a half-finished match.
+    - Module-load cleanup wipes the v1 'ragnarok-game-flow' localStorage
+      payload (legacy GameFlowManager-backed shape) so users with stale
+      v1 data don't carry orphaned keys forever.
+    - dispatch() ignores events when current is null. Callers must
+      start() before dispatching — there is no implicit boot.
+*/
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import {
-  GameFlowManager,
-  GamePhase,
-  GamePhaseTransition,
-  MatchState,
-  ArmyConfig,
-} from '../flow/GameFlowManager';
+import type {
+	RoundFlowState,
+	FlowEvent,
+	InitialFlowInput,
+} from '../flow/round/types';
+import { initialState } from '../flow/round/types';
+import { nextState } from '../flow/round/transitions';
 
-interface GameFlowStore {
-  phase: GamePhase;
-  previousPhase: GamePhase | null;
-  match: MatchState | null;
-  isLoading: boolean;
-  error: string | null;
-  
-  selectedKingId: string | null;
-  selectedHeroIds: string[];
-  selectedDeckIds: number[];
-  
-  transition: (transition: GamePhaseTransition) => boolean;
+const LEGACY_STORAGE_KEY = 'ragnarok-game-flow';
 
-  setSelectedKing: (kingId: string) => void;
-  addHeroToArmy: (heroId: string) => void;
-  removeHeroFromArmy: (heroId: string) => void;
-  setDeckIds: (deckIds: number[]) => void;
-  clearArmySelection: () => void;
-  
-  startMatch: (opponentArmy: ArmyConfig) => void;
-  updateScore: (player: 'player' | 'opponent', points: number) => void;
-  incrementRound: () => void;
-  endMatch: (winner: 'player' | 'opponent') => void;
-  
-  setLoading: (loading: boolean) => void;
-  setError: (error: string | null) => void;
-  reset: () => void;
+if (typeof localStorage !== 'undefined') {
+	try {
+		localStorage.removeItem(LEGACY_STORAGE_KEY);
+	} catch {
+		// localStorage can throw in private mode / disabled storage —
+		// failure to clean up legacy data is not fatal.
+	}
 }
 
-const flowManager = new GameFlowManager();
+export type GameFlowStore = {
+	readonly current: RoundFlowState | null;
+	readonly start: (input: InitialFlowInput) => void;
+	readonly dispatch: (event: FlowEvent) => void;
+	readonly clear: () => void;
+};
 
-let flowManagerUnsub: (() => void) | null = null;
+export const useGameFlowStore = create<GameFlowStore>()((set) => ({
+	current: null,
 
-export function initGameFlowSubscription() {
-  if (flowManagerUnsub) return;
-  flowManagerUnsub = flowManager.subscribe((state) => {
-    useGameFlowStore.setState({
-      phase: state.phase,
-      previousPhase: state.previousPhase,
-      match: state.match,
-      isLoading: state.isLoading,
-      error: state.error,
-    });
-  });
+	start: (input) => {
+		set({ current: initialState(input) });
+	},
+
+	dispatch: (event) => {
+		set((s) =>
+			s.current === null ? s : { current: nextState(s.current, event) }
+		);
+	},
+
+	clear: () => {
+		set({ current: null });
+	},
+}));
+
+/* ============================================================
+   Selectors — colocated for ergonomic, type-safe consumption.
+   ============================================================ */
+
+export function selectFlowState(s: GameFlowStore): RoundFlowState | null {
+	return s.current;
 }
 
-export function disposeGameFlowSubscription() {
-  flowManagerUnsub?.();
-  flowManagerUnsub = null;
+export function selectFlowTag(s: GameFlowStore): RoundFlowState['tag'] | null {
+	return s.current === null ? null : s.current.tag;
 }
-
-export const useGameFlowStore = create<GameFlowStore>()(
-  persist(
-    (set, get) => {
-      return {
-        phase: 'MAIN_MENU',
-        previousPhase: null,
-        match: null,
-        isLoading: false,
-        error: null,
-        selectedKingId: null,
-        selectedHeroIds: [],
-        selectedDeckIds: [],
-
-        transition: (transition) => {
-          return flowManager.transition(transition);
-        },
-
-        setSelectedKing: (kingId) => {
-          set({ selectedKingId: kingId });
-        },
-
-        addHeroToArmy: (heroId) => {
-          const current = get().selectedHeroIds;
-          if (!current.includes(heroId) && current.length < 5) {
-            set({ selectedHeroIds: [...current, heroId] });
-          }
-        },
-
-        removeHeroFromArmy: (heroId) => {
-          set({
-            selectedHeroIds: get().selectedHeroIds.filter((id) => id !== heroId),
-          });
-        },
-
-        setDeckIds: (deckIds) => {
-          set({ selectedDeckIds: deckIds });
-        },
-
-        clearArmySelection: () => {
-          set({
-            selectedKingId: null,
-            selectedHeroIds: [],
-            selectedDeckIds: [],
-          });
-        },
-
-        startMatch: (opponentArmy) => {
-          const state = get();
-          if (!state.selectedKingId) return;
-
-          const playerArmy: ArmyConfig = {
-            kingId: state.selectedKingId,
-            heroIds: state.selectedHeroIds,
-            deckIds: state.selectedDeckIds,
-          };
-
-          flowManager.startMatch(playerArmy, opponentArmy);
-        },
-
-        updateScore: (player, points) => {
-          flowManager.updateScore(player, points);
-        },
-
-        incrementRound: () => {
-          flowManager.incrementRound();
-        },
-
-        endMatch: (winner) => {
-          flowManager.endMatch(winner);
-        },
-
-        setLoading: (loading) => {
-          set({ isLoading: loading });
-        },
-
-        setError: (error) => {
-          set({ error });
-        },
-
-        reset: () => {
-          flowManager.reset();
-          set({
-            selectedKingId: null,
-            selectedHeroIds: [],
-            selectedDeckIds: [],
-          });
-        },
-      };
-    },
-    {
-      name: 'ragnarok-game-flow',
-      partialize: (state) => ({
-        selectedKingId: state.selectedKingId,
-        selectedHeroIds: state.selectedHeroIds,
-        selectedDeckIds: state.selectedDeckIds,
-      }),
-    }
-  )
-);
-
-export { type GamePhase, type GamePhaseTransition, type MatchState, type ArmyConfig };

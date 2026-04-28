@@ -7,8 +7,6 @@ type GameplayModules = {
   loadWasmEngine: () => Promise<unknown>;
   initGameStoreSubscriptions: () => void;
   disposeGameStoreSubscriptions: () => void;
-  initGameFlowSubscription: () => void;
-  disposeGameFlowSubscription: () => void;
   stopOrphanSweep: () => void;
 };
 
@@ -27,14 +25,12 @@ async function loadGameplayModules(): Promise<GameplayModules> {
       import('@/game/stores/gameStoreIntegration'),
       import('@/game/engine/wasmLoader'),
       import('@/game/stores/gameStore'),
-      import('@/game/stores/gameFlowStore'),
       import('@/game/animations/BattlecryVFX'),
     ]).then(([
       effectSystemModule,
       gameStoreIntegrationModule,
       wasmLoaderModule,
       gameStoreModule,
-      gameFlowStoreModule,
       battlecryVfxModule,
     ]) => ({
       default: effectSystemModule.default,
@@ -42,8 +38,6 @@ async function loadGameplayModules(): Promise<GameplayModules> {
       loadWasmEngine: wasmLoaderModule.loadWasmEngine,
       initGameStoreSubscriptions: gameStoreModule.initGameStoreSubscriptions,
       disposeGameStoreSubscriptions: gameStoreModule.disposeGameStoreSubscriptions,
-      initGameFlowSubscription: gameFlowStoreModule.initGameFlowSubscription,
-      disposeGameFlowSubscription: gameFlowStoreModule.disposeGameFlowSubscription,
       stopOrphanSweep: battlecryVfxModule.stopOrphanSweep,
     }));
   }
@@ -68,7 +62,6 @@ async function ensureGameplayRuntime(): Promise<void> {
       }
 
       modules.initGameStoreSubscriptions();
-      modules.initGameFlowSubscription();
       gameplayCleanup = modules.initializeGameStoreIntegration();
 
       if (!wasmLoadStarted) {
@@ -95,7 +88,6 @@ async function releaseGameplayRuntime(): Promise<void> {
   gameplayCleanup?.();
   gameplayCleanup = null;
   modules.disposeGameStoreSubscriptions();
-  modules.disposeGameFlowSubscription();
   modules.stopOrphanSweep();
   gameplayActive = false;
 }
