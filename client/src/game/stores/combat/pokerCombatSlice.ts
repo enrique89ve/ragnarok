@@ -124,6 +124,9 @@ export const createPokerCombatSlice: StateCreator<
   isTransitioningHand: false,
   pokerHandsWonPlayer: 0,
   pokerHandsWonOpponent: 0,
+  pokerSlotsSwapped: false,
+
+  setPokerSlotsSwapped: (swapped) => set({ pokerSlotsSwapped: swapped }),
 
   initializePoker: () => {
     set({

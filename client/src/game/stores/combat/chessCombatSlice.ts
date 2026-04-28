@@ -51,6 +51,10 @@ export const createChessCombatSlice: StateCreator<
   playerArmy: null,
   opponentArmy: null,
   sharedDeckCardIds: [],
+  playerTurnCount: 0,
+
+  incrementPlayerTurn: () => set((s) => ({ playerTurnCount: s.playerTurnCount + 1 })),
+  resetPlayerTurnCount: () => set({ playerTurnCount: 0 }),
 
   initializeCombat: (playerPieces, opponentPieces) => {
     set({

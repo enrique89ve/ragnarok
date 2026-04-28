@@ -126,6 +126,11 @@ export interface PokerCombatSliceState {
   isTransitioningHand: boolean;
   pokerHandsWonPlayer: number;
   pokerHandsWonOpponent: number;
+  // True when the human player is the chess defender — poker UI mirrors
+  // attacker/defender so the human stays in the "player" slot. Lives across
+  // chess→poker→chess so the resolution step knows which chess piece to
+  // credit each poker outcome to.
+  pokerSlotsSwapped: boolean;
 }
 
 export interface PokerCombatSliceActions {
@@ -166,6 +171,7 @@ export interface PokerCombatSliceActions {
   startNextHandDelayed: (resolution: CombatResolution) => void;
   maybeCloseBettingRound: () => void;
   applyDirectDamage: (targetPlayerId: 'player' | 'opponent', damage: number, sourceDescription?: string) => void;
+  setPokerSlotsSwapped: (swapped: boolean) => void;
 }
 
 export type PokerCombatSlice = PokerCombatSliceState & PokerCombatSliceActions;
@@ -179,6 +185,10 @@ export interface ChessCombatSliceState {
   playerArmy: ArmySelection | null;
   opponentArmy: ArmySelection | null;
   sharedDeckCardIds: number[];
+  // Counts player turns (increments when currentTurn becomes 'player').
+  // Distinct from boardState.moveCount which counts every ply (each side's
+  // moves). Used for mission completion telemetry and per-turn boss rules.
+  playerTurnCount: number;
 }
 
 export interface ChessCombatSliceActions {
@@ -211,6 +221,8 @@ export interface ChessCombatSliceActions {
   checkPawnPromotion: (piece: ChessPiece) => boolean;
   promotePawn: (pieceId: string, newType: ChessPieceType) => void;
   resolveCombat: (result: ChessCombatResult) => void;
+  incrementPlayerTurn: () => void;
+  resetPlayerTurnCount: () => void;
 }
 
 export type ChessCombatSlice = ChessCombatSliceState & ChessCombatSliceActions;

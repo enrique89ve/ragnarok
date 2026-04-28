@@ -12,12 +12,18 @@ interface MissionCompletion {
 	bestDifficulty: Difficulty;
 }
 
+export type GameOverSubPhase = 'cinematic' | 'result' | 'bridge';
+
 interface CampaignState {
 	completedMissions: Record<string, MissionCompletion>;
 	currentMission: string | null;
 	currentDifficulty: Difficulty;
 	rewardsClaimed: string[];
 	seenCinematics: string[];
+	// Transient per-mission runtime state — never persisted. Resets on
+	// startMission/clearCurrent so a fresh mission boots clean.
+	bossRulesApplied: boolean;
+	gameOverSubPhase: GameOverSubPhase;
 }
 
 interface CampaignActions {
@@ -32,6 +38,9 @@ interface CampaignActions {
 	hasCinematicBeenSeen: (chapterId: string) => boolean;
 	clearCurrent: () => void;
 	reset: () => void;
+	markBossRulesApplied: () => void;
+	resetBossRulesApplied: () => void;
+	setGameOverSubPhase: (sub: GameOverSubPhase) => void;
 }
 
 export const useCampaignStore = create<CampaignState & CampaignActions>()(
@@ -42,9 +51,16 @@ export const useCampaignStore = create<CampaignState & CampaignActions>()(
 			currentDifficulty: 'normal',
 			rewardsClaimed: [],
 			seenCinematics: [],
+			bossRulesApplied: false,
+			gameOverSubPhase: 'result',
 
 			startMission: (missionId, difficulty) => {
-				set({ currentMission: missionId, currentDifficulty: difficulty });
+				set({
+					currentMission: missionId,
+					currentDifficulty: difficulty,
+					bossRulesApplied: false,
+					gameOverSubPhase: 'result',
+				});
 			},
 
 			completeMission: (missionId, difficulty, turns) => {
@@ -111,7 +127,11 @@ export const useCampaignStore = create<CampaignState & CampaignActions>()(
 				return get().seenCinematics.includes(chapterId);
 			},
 
-			clearCurrent: () => set({ currentMission: null }),
+			clearCurrent: () => set({
+				currentMission: null,
+				bossRulesApplied: false,
+				gameOverSubPhase: 'result',
+			}),
 
 			reset: () => set({
 				completedMissions: {},
@@ -119,7 +139,13 @@ export const useCampaignStore = create<CampaignState & CampaignActions>()(
 				currentDifficulty: 'normal',
 				rewardsClaimed: [],
 				seenCinematics: [],
+				bossRulesApplied: false,
+				gameOverSubPhase: 'result',
 			}),
+
+			markBossRulesApplied: () => set({ bossRulesApplied: true }),
+			resetBossRulesApplied: () => set({ bossRulesApplied: false }),
+			setGameOverSubPhase: (sub) => set({ gameOverSubPhase: sub }),
 		}),
 		{
 			name: 'ragnarok-campaign',

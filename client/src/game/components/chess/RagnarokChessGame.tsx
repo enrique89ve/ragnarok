@@ -451,21 +451,23 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
   );
   const [combatPieces, setCombatPieces] = useState<{ attackerId: string; defenderId: string } | null>(null);
   const [vsScreenPieces, setVsScreenPieces] = useState<{ attacker: ChessPiece; defender: ChessPiece } | null>(null);
-  const [pokerSlotsSwapped, setPokerSlotsSwapped] = useState(false);
-  const [turnCount, setTurnCount] = useState(0);
-  const [bossRulesApplied, setBossRulesApplied] = useState(false);
+  // Migrated to stores (G3):
+  //   pokerSlotsSwapped → useUnifiedCombatStore (poker slice, crosses chess↔poker)
+  //   playerTurnCount   → useUnifiedCombatStore (chess slice, board metadata)
+  //   bossRulesApplied  → useCampaignStore (campaign-only)
+  //   gameOverSubPhase  → useCampaignStore (campaign-only)
+  const pokerSlotsSwapped = useUnifiedCombatStore(s => s.pokerSlotsSwapped);
+  const setPokerSlotsSwapped = useUnifiedCombatStore(s => s.setPokerSlotsSwapped);
+  const turnCount = useUnifiedCombatStore(s => s.playerTurnCount);
+  const incrementPlayerTurn = useUnifiedCombatStore(s => s.incrementPlayerTurn);
+  const resetPlayerTurnCount = useUnifiedCombatStore(s => s.resetPlayerTurnCount);
+  const bossRulesApplied = useCampaignStore(s => s.bossRulesApplied);
+  const markBossRulesApplied = useCampaignStore(s => s.markBossRulesApplied);
+  const resetBossRulesApplied = useCampaignStore(s => s.resetBossRulesApplied);
+  const gameOverSubPhase = useCampaignStore(s => s.gameOverSubPhase);
+  const setGameOverSubPhase = useCampaignStore(s => s.setGameOverSubPhase);
   const gameEndProcessedRef = useRef(false);
   const gameOverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  /*
-    game_over has three internal sub-phases for campaign missions:
-      'cinematic' — playing victoryCinematic / defeatCinematic if authored
-      'result'    — the standard result card (VICTORY / DEFEAT + narrative + rewards)
-      'bridge'    — playing storyBridge scenes before returning to the map
-    Non-campaign matches always sit in 'result' immediately.
-  */
-  type GameOverSubPhase = 'cinematic' | 'result' | 'bridge';
-  const [gameOverSubPhase, setGameOverSubPhase] = useState<GameOverSubPhase>('result');
 
   const {
     boardState,
@@ -591,7 +593,7 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
       const defaultArmy = getDefaultArmySelection();
       setPlayerArmy(defaultArmy);
       initializeBoard(defaultArmy, opponentArmy);
-      setBossRulesApplied(false);
+      resetBossRulesApplied();
       if (!hasCinematic) {
         // Show mission intro narrative before chess phase
         setPhase(campaignData?.mission?.narrativeBefore ? 'mission_intro' : 'chess');
@@ -704,8 +706,8 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
       boardState: { ...store.boardState, pieces: boostedPieces },
     });
 
-    setBossRulesApplied(true);
-  }, [isCampaign, campaignData, bossRulesApplied, campaignDifficulty]);
+    markBossRulesApplied();
+  }, [isCampaign, campaignData, bossRulesApplied, campaignDifficulty, markBossRulesApplied]);
 
   // Per-turn boss rules: passive_damage, bonus_draw, extra_mana
   // Combined into a single effect with a turn-tracking ref to prevent re-entry loops
@@ -1020,9 +1022,9 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
 
   useEffect(() => {
     if (phase === 'chess' && boardState.currentTurn === 'player' && boardState.gameStatus === 'playing') {
-      setTurnCount(t => t + 1);
+      incrementPlayerTurn();
     }
-  }, [phase, boardState.currentTurn, boardState.gameStatus]);
+  }, [phase, boardState.currentTurn, boardState.gameStatus, incrementPlayerTurn]);
 
   useEffect(() => {
     if (phase === 'chess' && boardState.currentTurn === 'opponent' && boardState.gameStatus === 'playing') {
@@ -1073,7 +1075,7 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
     setPlayerArmy(null);
     setSharedDeckCardIds([]);
     setCombatPieces(null);
-    setTurnCount(0);
+    resetPlayerTurnCount();
     gameEndProcessedRef.current = false;
     bootstrappedFromWarbandRef.current = false;
     if (isCampaign) {
@@ -1083,7 +1085,7 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
     } else {
       navigate(routes.warband);
     }
-  }, [resetBoard, isCampaign, clearCurrent, navigate]);
+  }, [resetBoard, isCampaign, clearCurrent, navigate, resetPlayerTurnCount]);
 
   /*
     "Back to Campaign" — if the player won AND the mission has an authored
@@ -1111,15 +1113,15 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
     resetBoard();
     setPlayerArmy(null);
     setCombatPieces(null);
-    setTurnCount(0);
-    setBossRulesApplied(false);
+    resetPlayerTurnCount();
+    resetBossRulesApplied();
     gameEndProcessedRef.current = false;
     const defaultArmy = getDefaultArmySelection();
     setPlayerArmy(defaultArmy);
     initializeBoard(defaultArmy, opponentArmy);
     setPhase('chess');
     playSoundEffect('game_start');
-  }, [resetBoard, opponentArmy, initializeBoard, playSoundEffect]);
+  }, [resetBoard, opponentArmy, initializeBoard, playSoundEffect, resetPlayerTurnCount, resetBossRulesApplied]);
 
   const handleBattleMode = useCallback(() => {
     const playerPieces = boardState.pieces.filter(p => p.owner === 'player' && p.type !== 'pawn' && p.type !== 'king');
