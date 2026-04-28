@@ -173,34 +173,34 @@ function SealedPacksSection() {
 			animate={{ opacity: 1, y: 0 }}
 			className="mb-12"
 		>
-			<h2 className="text-lg font-bold text-amber-300 mb-4 uppercase tracking-wider text-center">
+			<h2 className="text-lg font-bold text-gold-300 mb-4 uppercase tracking-wider text-center">
 				Your Sealed Packs
 			</h2>
 			<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 				{[...grouped.entries()].map(([packType, typePacks]) => (
 					<div
 						key={packType}
-						className="bg-linear-to-b from-amber-900/20 to-gray-900/40 rounded-xl p-4 border border-amber-600/30"
+						className="bg-linear-to-b from-gold-700/20 to-obsidian-900/40 rounded-xl p-4 border border-gold-500/30"
 					>
 						<div className="text-center mb-3">
 							<div className="text-2xl mb-1">
 								{packType === 'mythic' ? '龍' : packType === 'premium' ? '冠' : packType === 'standard' ? '盾' : '石'}
 							</div>
-							<div className="text-amber-300 font-bold capitalize">{packType}</div>
-							<div className="text-gray-400 text-sm">x{typePacks.length}</div>
+							<div className="text-gold-300 font-bold capitalize">{packType}</div>
+							<div className="text-ink-300 text-sm">x{typePacks.length}</div>
 						</div>
 						<div className="flex gap-2">
 							<button
 								type="button"
 								onClick={() => handleBurnPack(typePacks[0].uid)}
-								className="flex-1 px-3 py-2 bg-amber-600 hover:bg-amber-500 text-white text-sm rounded-lg transition-colors"
+								className="flex-1 px-3 py-2 bg-gold-400 hover:bg-gold-300 text-white text-sm rounded-lg transition-colors"
 							>
 								Open
 							</button>
 							<button
 								type="button"
 								onClick={() => setSendingPack(typePacks[0].uid)}
-								className="flex-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors"
+								className="flex-1 px-3 py-2 bg-obsidian-700 hover:bg-obsidian-600 text-white text-sm rounded-lg transition-colors"
 							>
 								Send
 							</button>
@@ -212,9 +212,9 @@ function SealedPacksSection() {
 			{/* Send Pack Modal */}
 			{sendingPack && (
 				<div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-					<div className="bg-gray-900 border border-amber-600/40 rounded-xl p-6 w-96 max-w-[90vw]">
-						<h3 className="text-amber-300 font-bold text-lg mb-4">Send Sealed Pack</h3>
-						<p className="text-gray-400 text-sm mb-4">
+					<div className="bg-obsidian-900 border border-gold-500/40 rounded-xl p-6 w-96 max-w-[90vw]">
+						<h3 className="text-gold-300 font-bold text-lg mb-4">Send Sealed Pack</h3>
+						<p className="text-ink-300 text-sm mb-4">
 							This will transfer the sealed pack to another player via Hive Keychain (0.001 HIVE atomic transfer).
 						</p>
 						<input
@@ -222,13 +222,13 @@ function SealedPacksSection() {
 							placeholder="Recipient username"
 							value={recipient}
 							onChange={e => setRecipient(e.target.value.toLowerCase())}
-							className="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white mb-4 focus:border-amber-500 focus:outline-hidden"
+							className="w-full px-4 py-2 bg-obsidian-800 border border-obsidian-600 rounded-lg text-white mb-4 focus:border-gold-400 focus:outline-hidden"
 						/>
 						<div className="flex gap-3">
 							<button
 								type="button"
 								onClick={() => { setSendingPack(null); setRecipient(''); }}
-								className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+								className="flex-1 px-4 py-2 bg-obsidian-700 hover:bg-obsidian-600 text-white rounded-lg transition-colors"
 							>
 								Cancel
 							</button>
@@ -236,7 +236,7 @@ function SealedPacksSection() {
 								type="button"
 								onClick={handleSendPack}
 								disabled={sending || !recipient.trim()}
-								className="flex-1 px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded-lg transition-colors"
+								className="flex-1 px-4 py-2 bg-gold-400 hover:bg-gold-300 disabled:opacity-50 text-white rounded-lg transition-colors"
 							>
 								{sending ? 'Sending...' : 'Confirm Send'}
 							</button>
@@ -595,11 +595,11 @@ export default function PacksPage() {
 
 	if (loading) {
 		return (
-			<div className="min-h-screen bg-linear-to-b from-gray-900 via-purple-950 to-gray-900 flex items-center justify-center">
+			<div className="min-h-screen bg-(image:--bg-home-nav) text-ink-0 flex items-center justify-center">
 				<motion.div
 					animate={{ rotate: 360 }}
 					transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-					className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full"
+					className="w-16 h-16 border-4 border-gold-400 border-t-transparent rounded-full"
 				/>
 			</div>
 		);
@@ -607,14 +607,14 @@ export default function PacksPage() {
 
 	if (error) {
 		return (
-			<div className="min-h-screen bg-linear-to-b from-gray-900 via-purple-950 to-gray-900 flex items-center justify-center">
+			<div className="min-h-screen bg-(image:--bg-home-nav) text-ink-0 flex items-center justify-center">
 				<div className="text-center">
-					<p className="text-red-400 text-xl mb-4">{error}</p>
+					<p className="text-ember-300 text-xl mb-4">{error}</p>
 					<motion.button
 						whileHover={{ scale: 1.05 }}
 						whileTap={{ scale: 0.95 }}
 						onClick={fetchData}
-						className="px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-lg transition-colors"
+						className="px-6 py-3 bg-gold-400 hover:bg-gold-300 text-white rounded-lg transition-colors"
 					>
 						Retry
 					</motion.button>
@@ -629,7 +629,7 @@ export default function PacksPage() {
 	const scarcity = getScarcityInfo(packPercentRemaining);
 
 	return (
-		<div className="h-full overflow-y-auto bg-linear-to-b from-gray-900 via-purple-950 to-gray-900 p-8 pb-16">
+		<div className="h-full overflow-y-auto bg-(image:--bg-home-nav) text-ink-0 p-8 pb-16">
 			{isOpening && openingPack && revealedCards.length > 0 && (
 				<PackOpeningAnimation
 					packName={openingPack.name}
@@ -643,7 +643,7 @@ export default function PacksPage() {
 				<motion.div
 					initial={{ opacity: 0, y: -20 }}
 					animate={{ opacity: 1, y: 0 }}
-					className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg"
+					className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-ember-400 text-white px-6 py-3 rounded-lg shadow-lg"
 				>
 					{packError}
 					<button
@@ -663,7 +663,7 @@ export default function PacksPage() {
 						<motion.button
 							whileHover={{ scale: 1.05 }}
 							whileTap={{ scale: 0.95 }}
-							className="px-6 py-3 bg-gray-800/80 hover:bg-gray-700/80 text-white rounded-lg border border-gray-600 flex items-center gap-2 transition-colors"
+							className="px-6 py-3 bg-obsidian-800/80 hover:bg-obsidian-700/80 text-white rounded-lg border border-obsidian-600 flex items-center gap-2 transition-colors"
 						>
 							<span>←</span>
 							<span>Back to Home</span>
@@ -671,10 +671,10 @@ export default function PacksPage() {
 					</Link>
 					<div className="flex items-center gap-3">
 						{hiveUsername && (
-							<div className="flex items-center gap-2 px-4 py-2 bg-amber-900/40 border border-amber-600/40 rounded-lg text-sm">
-								<span className="text-amber-400">⚡</span>
-								<span className="text-amber-200 font-bold">{runeBalance.toLocaleString()}</span>
-								<span className="text-amber-500 text-xs">RUNE</span>
+							<div className="flex items-center gap-2 px-4 py-2 bg-gold-700/40 border border-gold-500/40 rounded-lg text-sm">
+								<span className="text-gold-300">⚡</span>
+								<span className="text-gold-200 font-bold">{runeBalance.toLocaleString()}</span>
+								<span className="text-gold-400 text-xs">RUNE</span>
 							</div>
 						)}
 						{getNFTBridge().isHiveMode() && hiveUsername && hiveUsername! === RAGNAROK_ACCOUNT && (
@@ -683,7 +683,7 @@ export default function PacksPage() {
 								whileTap={{ scale: 0.95 }}
 								onClick={handleTestMint}
 								disabled={testMinting}
-								className="px-6 py-3 bg-green-700 hover:bg-green-600 text-white rounded-lg border border-green-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+								className="px-6 py-3 bg-rune-500 hover:bg-rune-300 text-white rounded-lg border border-rune-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 							>
 								{testMinting ? 'Minting...' : 'Test Mint 5 NFTs'}
 							</motion.button>
@@ -692,7 +692,7 @@ export default function PacksPage() {
 							<motion.button
 								whileHover={{ scale: 1.05 }}
 								whileTap={{ scale: 0.95 }}
-								className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg border border-indigo-400 transition-colors"
+								className="px-6 py-3 bg-bifrost-500 hover:bg-bifrost-300 text-white rounded-lg border border-bifrost-300 transition-colors"
 							>
 								View Collection →
 							</motion.button>
@@ -704,7 +704,7 @@ export default function PacksPage() {
 				<motion.h1
 					initial={{ opacity: 0, y: -20 }}
 					animate={{ opacity: 1, y: 0 }}
-					className="text-5xl font-bold text-center mb-2 text-transparent bg-clip-text bg-linear-to-r from-amber-400 via-yellow-300 to-amber-400"
+					className="text-5xl font-bold text-center mb-2 text-transparent bg-clip-text bg-linear-to-r from-gold-200 via-gold-100 to-gold-200"
 					style={{ textShadow: '0 0 40px rgba(251, 191, 36, 0.4)' }}
 				>
 					Norse Mythos Card Packs
@@ -713,7 +713,7 @@ export default function PacksPage() {
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
 					transition={{ delay: 0.2 }}
-					className="text-gray-400 text-center mb-8 text-lg"
+					className="text-ink-300 text-center mb-8 text-lg"
 				>
 					Limited supply — once they're gone, they're gone forever
 				</motion.p>
@@ -730,23 +730,23 @@ export default function PacksPage() {
 							{/* Main supply numbers */}
 							<div className="flex items-center justify-between mb-4">
 								<div>
-									<div className="text-xs uppercase tracking-widest text-gray-500 mb-1">Pack Supply</div>
+									<div className="text-xs uppercase tracking-widest text-ink-400 mb-1">Pack Supply</div>
 									<div className="flex items-baseline gap-3">
-										<span className="supply-number supply-number-large text-amber-400">
+										<span className="supply-number supply-number-large text-gold-300">
 											{supplyStats.totalPackRemaining.toLocaleString()}
 										</span>
-										<span className="text-gray-500 text-lg">/</span>
-										<span className="supply-number supply-number-medium text-gray-400">
+										<span className="text-ink-400 text-lg">/</span>
+										<span className="supply-number supply-number-medium text-ink-300">
 											{supplyStats.totalPackSupply.toLocaleString()}
 										</span>
-										<span className="text-gray-500 text-sm ml-1">available in packs</span>
+										<span className="text-ink-400 text-sm ml-1">available in packs</span>
 									</div>
 								</div>
 								<div className="text-right">
 									<div className={`scarcity-badge ${scarcity.class} mb-1`}>
 										{scarcity.label}
 									</div>
-									<div className="text-gray-400 text-sm">
+									<div className="text-ink-300 text-sm">
 										{packPercentRemaining.toFixed(1)}% remaining
 									</div>
 								</div>
@@ -778,13 +778,13 @@ export default function PacksPage() {
 												>
 													{rs.rarity}
 												</span>
-												<span className="text-gray-500 text-[10px]">
+												<span className="text-ink-400 text-[10px]">
 													{rs.uniqueCards} cards
 												</span>
 											</div>
 											<div className="supply-number text-sm mb-1" style={{ color }}>
 												{formatNumber(rs.packRemaining)}
-												<span className="text-gray-500 text-xs ml-1">
+												<span className="text-ink-400 text-xs ml-1">
 													/ {formatNumber(rs.packSupply)}
 												</span>
 											</div>
@@ -820,12 +820,12 @@ export default function PacksPage() {
 						animate={{ opacity: 1 }}
 						className="text-center py-20"
 					>
-						<p className="text-gray-400 text-xl mb-4">No packs available at the moment.</p>
+						<p className="text-ink-300 text-xl mb-4">No packs available at the moment.</p>
 						<motion.button
 							whileHover={{ scale: 1.05 }}
 							whileTap={{ scale: 0.95 }}
 							onClick={fetchData}
-							className="px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-lg transition-colors"
+							className="px-6 py-3 bg-gold-400 hover:bg-gold-300 text-white rounded-lg transition-colors"
 						>
 							Refresh
 						</motion.button>
@@ -857,7 +857,7 @@ export default function PacksPage() {
 
 										{/* Pack Info */}
 										<h3 className="text-xl font-bold text-white mb-1">{pack.name}</h3>
-										<p className="text-gray-400 text-sm mb-3 h-10 leading-tight">{pack.description}</p>
+										<p className="text-ink-300 text-sm mb-3 h-10 leading-tight">{pack.description}</p>
 
 										{/* Guarantees */}
 										{guarantees.length > 0 && (
@@ -870,17 +870,17 @@ export default function PacksPage() {
 
 										{/* Price + Card Count */}
 										<div className="flex justify-between items-center mb-4">
-											<span className="pack-price text-amber-400">
+											<span className="pack-price text-gold-300">
 												{pack.price.toLocaleString()}
 											</span>
-											<span className="text-gray-400 text-sm font-medium">
+											<span className="text-ink-300 text-sm font-medium">
 												{pack.cardCount} cards
 											</span>
 										</div>
 
 										{/* Rarity Odds Bars */}
 										<div className="space-y-1.5 mb-5">
-											<div className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">
+											<div className="text-[10px] uppercase tracking-wider text-ink-400 mb-1">
 												Rarity Odds
 											</div>
 											{Object.entries(pack.rarityOdds)
@@ -896,7 +896,7 @@ export default function PacksPage() {
 																style={{ width: `${Math.min(odds, 100)}%` }}
 															/>
 														</div>
-														<span className="text-gray-400 text-[10px] w-8 text-right">
+														<span className="text-ink-300 text-[10px] w-8 text-right">
 															{odds}%
 														</span>
 													</div>
@@ -928,8 +928,8 @@ export default function PacksPage() {
 													disabled={!canAfford || isLoading}
 													className={`w-full mt-2 py-2 rounded-lg text-sm font-semibold transition-all border ${
 														canAfford
-															? 'bg-amber-900/50 hover:bg-amber-800/60 text-amber-300 border-amber-600/50'
-															: 'bg-gray-800/30 text-gray-500 border-gray-700/30 cursor-not-allowed'
+															? 'bg-gold-700/50 hover:bg-gold-600/60 text-gold-300 border-gold-500/50'
+															: 'bg-obsidian-800/30 text-ink-400 border-obsidian-700/30 cursor-not-allowed'
 													}`}
 												>
 													{isLoading ? '···' : `⚡ ${cost} RUNE`}
@@ -953,27 +953,27 @@ export default function PacksPage() {
 						animate={{ opacity: 1 }}
 						transition={{ delay: 0.5 }}
 					>
-						<h2 className="text-lg font-bold text-gray-300 mb-4 text-center uppercase tracking-wider">
+						<h2 className="text-lg font-bold text-ink-100 mb-4 text-center uppercase tracking-wider">
 							Community Stats
 						</h2>
 						<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-							<div className="bg-gray-800/40 rounded-xl p-4 border border-gray-700/50 text-center">
-								<div className="text-2xl font-bold text-amber-400">
+							<div className="bg-obsidian-800/40 rounded-xl p-4 border border-obsidian-700/50 text-center">
+								<div className="text-2xl font-bold text-gold-300">
 									{supplyStats.totalPacksOpened.toLocaleString()}
 								</div>
-								<div className="text-gray-400 text-sm">Packs Opened</div>
+								<div className="text-ink-300 text-sm">Packs Opened</div>
 							</div>
-							<div className="bg-gray-800/40 rounded-xl p-4 border border-gray-700/50 text-center">
+							<div className="bg-obsidian-800/40 rounded-xl p-4 border border-obsidian-700/50 text-center">
 								<div className="text-2xl font-bold text-blue-400">
 									{supplyStats.totalCardsOpened.toLocaleString()}
 								</div>
-								<div className="text-gray-400 text-sm">Cards Collected</div>
+								<div className="text-ink-300 text-sm">Cards Collected</div>
 							</div>
-							<div className="bg-gray-800/40 rounded-xl p-4 border border-gray-700/50 text-center">
-								<div className="text-2xl font-bold text-transparent bg-clip-text bg-linear-to-r from-pink-500 to-purple-500">
+							<div className="bg-obsidian-800/40 rounded-xl p-4 border border-obsidian-700/50 text-center">
+								<div className="text-2xl font-bold text-transparent bg-clip-text bg-linear-to-r from-gold-300 to-ember-400">
 									{supplyStats.mythicDropRate}%
 								</div>
-								<div className="text-gray-400 text-sm">Mythic Rate</div>
+								<div className="text-ink-300 text-sm">Mythic Rate</div>
 							</div>
 						</div>
 					</motion.div>
