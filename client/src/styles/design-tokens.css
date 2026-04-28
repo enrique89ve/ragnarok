@@ -22,18 +22,38 @@
      1. COLORS (RAGNAROK NEW PALETTE)
      ============================================= */
 
-  /* 🌑 Obsidian — base oscura con tinte cálido */
-  --obsidian-950: #0a0907; /* Root / fondo más profundo */
-  --obsidian-900: #100d0a; /* Panel */
-  --obsidian-850: #151210; /* Elevado */
-  --obsidian-800: #1c1814; /* Card */
-  --obsidian-750: #241f19; /* Card hover */
-  --obsidian-700: #2d2720; /* Border fuerte */
-  --obsidian-600: #3a332a; /* Divider */
-  --obsidian-500: #4a4239; /* Muted edge */
+  /* ── Norse navigation backgrounds (canonical, used via Tailwind `bg-(image:--bg-*-nav)`) ── */
+  --bg-home-nav:
+    radial-gradient(ellipse 55% 40% at 50% 0%, var(--obsidian-800) 0%, transparent 65%),
+    radial-gradient(ellipse 35% 28% at 50% 38%, color-mix(in oklch, var(--gold-300) 4%, transparent) 0%, transparent 75%),
+    linear-gradient(180deg, var(--obsidian-950) 0%, var(--obsidian-900) 100%);
+
+  --bg-vault-nav:
+    radial-gradient(ellipse 60% 45% at 50% 0%, color-mix(in oklch, var(--bifrost-300) 13%, transparent) 0%, transparent 70%),
+    radial-gradient(ellipse 35% 28% at 50% 38%, color-mix(in oklch, var(--gold-300) 4%, transparent) 0%, transparent 75%),
+    radial-gradient(ellipse 80% 22% at 50% 100%, color-mix(in oklch, var(--gold-500) 6%, transparent) 0%, transparent 80%),
+    radial-gradient(ellipse 55% 40% at 50% 0%, var(--obsidian-800) 0%, transparent 65%),
+    linear-gradient(180deg, var(--obsidian-950) 0%, var(--obsidian-900) 100%);
+
+  --bg-cosmos-nav:
+    radial-gradient(ellipse 70% 50% at 50% 26%, color-mix(in oklch, var(--bifrost-300) 12%, transparent) 0%, transparent 70%),
+    radial-gradient(ellipse 30% 24% at 50% 42%, color-mix(in oklch, var(--gold-300) 4%, transparent) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 30% at 50% 90%, color-mix(in oklch, var(--gold-500) 6%, transparent) 0%, transparent 80%),
+    radial-gradient(ellipse 55% 40% at 50% 0%, var(--obsidian-800) 0%, transparent 65%),
+    linear-gradient(180deg, var(--obsidian-950) 0%, var(--obsidian-900) 100%);
+
+  /* 🌑 Obsidian — Norse midnight (black dominant, cool undertone) */
+  --obsidian-950: #060810; /* Root / fondo más profundo */
+  --obsidian-900: #0a0e1c; /* Panel */
+  --obsidian-850: #0f141f; /* Elevado */
+  --obsidian-800: #151c29; /* Card */
+  --obsidian-750: #1b2230; /* Card hover */
+  --obsidian-700: #222833; /* Border fuerte */
+  --obsidian-600: #2c3240; /* Divider */
+  --obsidian-500: #38404e; /* Muted edge */
 
   /* 📜 Ink — jerarquía tipográfica (parchment cálido) */
-  --ink-0:   #f5ede0; /* Texto primario */
+  --ink-0: #f5ede0; /* Texto primario */
   --ink-100: #e6dcc8; /* Levemente atenuado */
   --ink-200: #b8ad97; /* Secundario */
   --ink-300: #8a816f; /* Terciario */
@@ -41,15 +61,15 @@
   --ink-500: #3a342c; /* Muy tenue */
 
   /* 🜚 Gold — Odin / acento primario (autoridad) */
-  --gold-50:  #fbf4dc;
+  --gold-50: #fbf4dc;
   --gold-100: #f5e3a8;
   --gold-200: #e9c877;
-  --gold-300: #d9a844; /* hero gold */
+  --gold-300: #ddb84a; /* hero gold */
   --gold-400: #c08a24;
   --gold-500: #9c6c16;
   --gold-600: #73500f;
   --gold-700: #4d340a;
-  --gold-glow: oklch(78% 0.14 82);
+  --gold-glow: oklch(80% 0.16 82);
 
   /* 🔥 Ember — Muspelheim / peligro y energía */
   --ember-100: #ffd6b0;
@@ -58,7 +78,7 @@
   --ember-400: #d94a12;
   --ember-500: #a5310a;
   --ember-600: #6e1f05;
-  --ember-glow: oklch(70% 0.20 40);
+  --ember-glow: oklch(70% 0.2 40);
 
   /* 🌈 Bifrost — raro / místico (solo en lo mítico) */
   --bifrost-100: #c9e0ff;
@@ -69,8 +89,8 @@
   /* Apoyos (uso mínimo) */
   --frost-200: #b8d8e0; /* Hielo / soporte */
   --frost-400: #6ea5b3; /* Hielo / soporte */
-  --rune-300:  #8fb573; /* Yggdrasil */
-  --rune-500:  #4f7a36; /* Yggdrasil */
+  --rune-300: #8fb573; /* Yggdrasil */
+  --rune-500: #4f7a36; /* Yggdrasil */
   --blood-300: #c95a4a; /* Niflheim / danger */
   --blood-500: #8a2a1c; /* Niflheim / danger */
 
@@ -81,106 +101,106 @@
   ── */
 
   /* Common — steel gray */
-  --rarity-common-color:      #9CA3AF; /* gray-400 */
-  --rarity-common-bright:     #F1F5F9; /* slate-100 */
-  --rarity-common-deep:       #4A5568; /* slate-600 */
-  --rarity-common-glow:       rgba(156, 163, 175, 0.4);
+  --rarity-common-color: #9ca3af; /* gray-400 */
+  --rarity-common-bright: #f1f5f9; /* slate-100 */
+  --rarity-common-deep: #4a5568; /* slate-600 */
+  --rarity-common-glow: rgba(156, 163, 175, 0.4);
 
   /* Rare — blue */
-  --rarity-rare-color:        #3B82F6; /* blue-500  ← canónico */
-  --rarity-rare-bright:       #93C5FD; /* blue-300 */
-  --rarity-rare-deep:         #1E3A8A; /* blue-900 */
-  --rarity-rare-mid:          #2563EB; /* blue-600 */
-  --rarity-rare-glow:         rgba(59, 130, 246, 0.5);
+  --rarity-rare-color: #3b82f6; /* blue-500  ← canónico */
+  --rarity-rare-bright: #93c5fd; /* blue-300 */
+  --rarity-rare-deep: #1e3a8a; /* blue-900 */
+  --rarity-rare-mid: #2563eb; /* blue-600 */
+  --rarity-rare-glow: rgba(59, 130, 246, 0.5);
 
   /* Epic — purple */
-  --rarity-epic-color:        #A855F7; /* purple-500 ← canónico */
-  --rarity-epic-bright:       #C084FC; /* purple-400 */
-  --rarity-epic-deep:         #581C87; /* purple-900 */
-  --rarity-epic-mid:          #7C3AED; /* purple-600 */
-  --rarity-epic-glow:         rgba(168, 85, 247, 0.5);
+  --rarity-epic-color: #a855f7; /* purple-500 ← canónico */
+  --rarity-epic-bright: #c084fc; /* purple-400 */
+  --rarity-epic-deep: #581c87; /* purple-900 */
+  --rarity-epic-mid: #7c3aed; /* purple-600 */
+  --rarity-epic-glow: rgba(168, 85, 247, 0.5);
 
   /* Mythic — gold/amber */
-  --rarity-mythic-color:      #F59E0B; /* amber-500 ← canónico */
-  --rarity-mythic-bright:     #FCD34D; /* amber-300 */
-  --rarity-mythic-pale:       #FDE68A; /* amber-200 */
-  --rarity-mythic-deep:       #D97706; /* amber-600 */
-  --rarity-mythic-glow:       rgba(245, 158, 11, 0.5);
+  --rarity-mythic-color: #f59e0b; /* amber-500 ← canónico */
+  --rarity-mythic-bright: #fcd34d; /* amber-300 */
+  --rarity-mythic-pale: #fde68a; /* amber-200 */
+  --rarity-mythic-deep: #d97706; /* amber-600 */
+  --rarity-mythic-glow: rgba(245, 158, 11, 0.5);
 
   /* Bifrost/Legendary — iridescent tri-color */
-  --rarity-bifrost-from:      #7a5bd6;
-  --rarity-bifrost-mid:       #4a8fd8;
-  --rarity-bifrost-to:        #d97a9e;
-  --rarity-bifrost-glow:      rgba(122, 91, 214, 0.5);
+  --rarity-bifrost-from: #7a5bd6;
+  --rarity-bifrost-mid: #4a8fd8;
+  --rarity-bifrost-to: #d97a9e;
+  --rarity-bifrost-glow: rgba(122, 91, 214, 0.5);
 
   /* ── Aliases cortos (backward-compat, apuntan al sistema canónico) ── */
-  --card-common-steel:        var(--rarity-common-deep);
-  --card-rare-blue-deep:      var(--rarity-rare-deep);
-  --card-rare-blue-mid:       var(--rarity-rare-mid);
-  --card-rare-blue-bright:    var(--rarity-rare-color);
-  --card-rare-blue-pale:      var(--rarity-rare-bright);
-  --card-rare-blue-glow:      var(--rarity-rare-glow);
-  --card-epic-purple-deep:    var(--rarity-epic-deep);
-  --card-epic-purple-mid:     var(--rarity-epic-mid);
-  --card-epic-purple-bright:  var(--rarity-epic-color);
-  --card-epic-purple-pale:    var(--rarity-epic-bright);
-  --card-epic-purple-glow:    var(--rarity-epic-glow);
-  --card-mythic-gold-deep:    var(--rarity-mythic-deep);
-  --card-mythic-gold-mid:     var(--rarity-mythic-color);
-  --card-mythic-gold-bright:  var(--rarity-mythic-bright);
-  --card-mythic-gold-pale:    var(--rarity-mythic-pale);
-  --card-mythic-gold-glow:    var(--rarity-mythic-glow);
+  --card-common-steel: var(--rarity-common-deep);
+  --card-rare-blue-deep: var(--rarity-rare-deep);
+  --card-rare-blue-mid: var(--rarity-rare-mid);
+  --card-rare-blue-bright: var(--rarity-rare-color);
+  --card-rare-blue-pale: var(--rarity-rare-bright);
+  --card-rare-blue-glow: var(--rarity-rare-glow);
+  --card-epic-purple-deep: var(--rarity-epic-deep);
+  --card-epic-purple-mid: var(--rarity-epic-mid);
+  --card-epic-purple-bright: var(--rarity-epic-color);
+  --card-epic-purple-pale: var(--rarity-epic-bright);
+  --card-epic-purple-glow: var(--rarity-epic-glow);
+  --card-mythic-gold-deep: var(--rarity-mythic-deep);
+  --card-mythic-gold-mid: var(--rarity-mythic-color);
+  --card-mythic-gold-bright: var(--rarity-mythic-bright);
+  --card-mythic-gold-pale: var(--rarity-mythic-pale);
+  --card-mythic-gold-glow: var(--rarity-mythic-glow);
 
   /* ── Colores de estado semántico ── */
-  --success-500: #16A34A; /* green-600 */
-  --success-400: #22C55E; /* green-500 - stat buffed */
-  --success-300: #4ADE80; /* green-400 */
-  --success-200: #86EFAC; /* green-300 */
+  --success-500: #16a34a; /* green-600 */
+  --success-400: #22c55e; /* green-500 - stat buffed */
+  --success-300: #4ade80; /* green-400 */
+  --success-200: #86efac; /* green-300 */
   --success-glow: rgba(34, 197, 94, 0.4);
 
-  --warning-500: #D97706; /* amber-600 */
-  --warning-400: #F59E0B; /* amber-500 */
-  --warning-300: #FBBF24; /* amber-400 */
+  --warning-500: #d97706; /* amber-600 */
+  --warning-400: #f59e0b; /* amber-500 */
+  --warning-300: #fbbf24; /* amber-400 */
   --warning-glow: rgba(245, 158, 11, 0.4);
 
-  --danger-500: #DC2626; /* red-600 */
-  --danger-400: #EF4444; /* red-500 */
-  --danger-300: #F87171; /* red-400 */
-  --danger-200: #FCA5A5; /* red-300 */
+  --danger-500: #dc2626; /* red-600 */
+  --danger-400: #ef4444; /* red-500 */
+  --danger-300: #f87171; /* red-400 */
+  --danger-200: #fca5a5; /* red-300 */
   --danger-glow: rgba(239, 68, 68, 0.4);
 
-  --info-500: #2563EB; /* blue-600 */
-  --info-400: #3B82F6; /* blue-500 */
-  --info-300: #60A5FA; /* blue-400 */
+  --info-500: #2563eb; /* blue-600 */
+  --info-400: #3b82f6; /* blue-500 */
+  --info-300: #60a5fa; /* blue-400 */
   --info-glow: rgba(59, 130, 246, 0.4);
 
   /* ── Superficies semi-transparentes (para HUD, chips, menús) ── */
-  --surface-overlay-deep:   rgba(8, 12, 22, 0.80);
-  --surface-overlay-mid:    rgba(15, 23, 42, 0.85);
-  --surface-overlay-light:  rgba(30, 41, 59, 0.72);
-  --surface-chip:           rgba(30, 41, 59, 0.72);
-  --surface-card-dark:      rgba(10, 14, 28, 0.72);
+  --surface-overlay-deep: rgba(8, 12, 22, 0.8);
+  --surface-overlay-mid: rgba(15, 23, 42, 0.85);
+  --surface-overlay-light: rgba(30, 41, 59, 0.72);
+  --surface-chip: rgba(30, 41, 59, 0.72);
+  --surface-card-dark: rgba(10, 14, 28, 0.72);
 
-  --border-chip:            rgba(148, 163, 184, 0.15);
-  --border-bright:          rgba(148, 163, 184, 0.20);
-  --border-gold-soft:       rgba(240, 187, 87, 0.18);
-  --border-gold-mid:        rgba(240, 187, 87, 0.30);
-  --border-red-soft:        rgba(200, 50, 50, 0.25);
-  --border-green-soft:      rgba(74, 222, 128, 0.22);
+  --border-chip: rgba(148, 163, 184, 0.15);
+  --border-bright: rgba(148, 163, 184, 0.2);
+  --border-gold-soft: rgba(240, 187, 87, 0.18);
+  --border-gold-mid: rgba(240, 187, 87, 0.3);
+  --border-red-soft: rgba(200, 50, 50, 0.25);
+  --border-green-soft: rgba(74, 222, 128, 0.22);
 
   /* ── Texto utilitario ── */
-  --text-gold-warm:  rgba(248, 200, 120, 0.88);
-  --text-slate:      rgba(148, 163, 184, 0.72);
-  --text-bright:     rgba(226, 232, 240, 0.78);
-  --text-dimmed:     rgba(226, 232, 240, 0.68);
-  --text-white-full: #FFFFFF;
-  --text-near-white: #F8FAFC;
-  --text-e2:         #E2E8F0;
+  --text-gold-warm: rgba(248, 200, 120, 0.88);
+  --text-slate: rgba(148, 163, 184, 0.72);
+  --text-bright: rgba(226, 232, 240, 0.78);
+  --text-dimmed: rgba(226, 232, 240, 0.68);
+  --text-white-full: #ffffff;
+  --text-near-white: #f8fafc;
+  --text-e2: #e2e8f0;
 
   /* =============================================
      1b. ALIASES & HOMOLOGATION (Mapping legacy to Ragnarok)
      ============================================= */
-  
+
   /* Norse Brand Palette aliases */
   --color-gold: var(--gold-300);
   --color-gold-muted: color-mix(in srgb, var(--gold-300) 60%, transparent);
@@ -189,35 +209,47 @@
   --color-rune-blue: var(--bifrost-300);
   --color-amber-primary: var(--ember-500);
   --color-amber-secondary: var(--obsidian-700);
-  
+
   /* Rarity semantic aliases — apuntan al sistema canónico */
-  --rarity-basic:        var(--rarity-common-deep);
-  --rarity-common:       var(--rarity-common-color);
-  --rarity-rare:         var(--rarity-rare-color);
-  --rarity-epic:         var(--rarity-epic-color);
-  --rarity-mythic:       var(--rarity-mythic-color);
+  --rarity-basic: var(--rarity-common-deep);
+  --rarity-common: var(--rarity-common-color);
+  --rarity-rare: var(--rarity-rare-color);
+  --rarity-epic: var(--rarity-epic-color);
+  --rarity-mythic: var(--rarity-mythic-color);
 
   /* Rarity — variantes de texto */
-  --rarity-basic-text:   var(--rarity-common-bright);
-  --rarity-common-text:  var(--ink-0);
-  --rarity-rare-text:    var(--rarity-rare-bright);
-  --rarity-epic-text:    var(--rarity-epic-bright);
-  --rarity-mythic-text:  var(--rarity-mythic-bright);
+  --rarity-basic-text: var(--rarity-common-bright);
+  --rarity-common-text: var(--ink-0);
+  --rarity-rare-text: var(--rarity-rare-bright);
+  --rarity-epic-text: var(--rarity-epic-bright);
+  --rarity-mythic-text: var(--rarity-mythic-bright);
 
   /* Rarity — variantes de borde */
-  --rarity-basic-border:  var(--rarity-common-color);
+  --rarity-basic-border: var(--rarity-common-color);
   --rarity-common-border: var(--rarity-common-deep);
-  --rarity-rare-border:   var(--rarity-rare-color);
-  --rarity-epic-border:   var(--rarity-epic-color);
+  --rarity-rare-border: var(--rarity-rare-color);
+  --rarity-epic-border: var(--rarity-epic-color);
   --rarity-mythic-border: var(--rarity-mythic-color);
 
   /* Rarity — variantes de fondo (obsidian base + tinte de rareza) */
-  --rarity-basic-bg:   var(--obsidian-900);
-  --rarity-common-bg:  var(--obsidian-850);
-  --rarity-rare-bg:    color-mix(in srgb, var(--rarity-rare-deep) 50%, var(--obsidian-800));
-  --rarity-epic-bg:    color-mix(in srgb, var(--rarity-epic-deep) 50%, var(--obsidian-750));
-  --rarity-mythic-bg:  color-mix(in srgb, var(--rarity-mythic-deep) 35%, var(--obsidian-700));
-  
+  --rarity-basic-bg: var(--obsidian-900);
+  --rarity-common-bg: var(--obsidian-850);
+  --rarity-rare-bg: color-mix(
+    in srgb,
+    var(--rarity-rare-deep) 50%,
+    var(--obsidian-800)
+  );
+  --rarity-epic-bg: color-mix(
+    in srgb,
+    var(--rarity-epic-deep) 50%,
+    var(--obsidian-750)
+  );
+  --rarity-mythic-bg: color-mix(
+    in srgb,
+    var(--rarity-mythic-deep) 35%,
+    var(--obsidian-700)
+  );
+
   /* Stat Colors keeping functional distinction */
   --stat-mana: var(--bifrost-500);
   --stat-mana-border: var(--bifrost-300);
@@ -225,61 +257,61 @@
   --stat-attack-border: var(--ember-200);
   --stat-health: var(--blood-500);
   --stat-health-border: var(--blood-300);
-  
+
   /* UI Surface Colors */
   --surface-primary: var(--obsidian-900);
   --surface-secondary: var(--obsidian-850);
   --surface-elevated: var(--obsidian-800);
   --border-subtle: var(--obsidian-700);
   --border-default: var(--obsidian-600);
-  
+
   /* Action Colors */
   --action-primary: var(--gold-300);
   --action-success: var(--rune-500);
   --action-danger: var(--ember-400);
   --action-info: var(--bifrost-500);
-  
+
   /* Text Colors */
   --text-primary: var(--ink-0);
   --text-secondary: var(--ink-200);
   --text-muted: var(--ink-400);
-  
+
   /* =============================================
      2. SPACING
      ============================================= */
-  --space-xs: 0.25rem;   /* 4px */
-  --space-sm: 0.5rem;    /* 8px */
-  --space-md: 0.75rem;   /* 12px */
-  --space-lg: 1rem;      /* 16px */
-  --space-xl: 1.5rem;    /* 24px */
-  --space-2xl: 2rem;     /* 32px */
-  --space-3xl: 3rem;     /* 48px */
-  
+  --space-xs: 0.25rem; /* 4px */
+  --space-sm: 0.5rem; /* 8px */
+  --space-md: 0.75rem; /* 12px */
+  --space-lg: 1rem; /* 16px */
+  --space-xl: 1.5rem; /* 24px */
+  --space-2xl: 2rem; /* 32px */
+  --space-3xl: 3rem; /* 48px */
+
   /* =============================================
      3. TYPOGRAPHY
      ============================================= */
-  --text-xs: 0.75rem;    /* 12px */
-  --text-sm: 0.875rem;   /* 14px */
-  --text-base: 1rem;     /* 16px */
-  --text-lg: 1.125rem;   /* 18px */
-  --text-xl: 1.25rem;    /* 20px */
-  --text-2xl: 1.5rem;    /* 24px */
-  --text-3xl: 1.875rem;  /* 30px */
-  
+  --text-xs: 0.75rem; /* 12px */
+  --text-sm: 0.875rem; /* 14px */
+  --text-base: 1rem; /* 16px */
+  --text-lg: 1.125rem; /* 18px */
+  --text-xl: 1.25rem; /* 20px */
+  --text-2xl: 1.5rem; /* 24px */
+  --text-3xl: 1.875rem; /* 30px */
+
   --font-normal: 400;
   --font-medium: 500;
   --font-semibold: 600;
   --font-bold: 700;
-  
+
   /* =============================================
      4. BORDER RADIUS
      ============================================= */
-  --radius-sm: 0.375rem;  /* 6px */
-  --radius-md: 0.5rem;    /* 8px */
-  --radius-lg: 0.75rem;   /* 12px */
-  --radius-xl: 1rem;      /* 16px */
+  --radius-sm: 0.375rem; /* 6px */
+  --radius-md: 0.5rem; /* 8px */
+  --radius-lg: 0.75rem; /* 12px */
+  --radius-xl: 1rem; /* 16px */
   --radius-full: 9999px;
-  
+
   /* =============================================
      5. SHADOWS
      ============================================= */
@@ -289,7 +321,7 @@
   --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.6);
   --shadow-glow-gold: 0 0 20px rgba(255, 215, 0, 0.5);
   --shadow-glow-blue: 0 0 20px rgba(59, 130, 246, 0.5);
-  
+
   /* =============================================
      6. Z-INDEX HIERARCHY
      Single source of truth for all z-index values
@@ -319,31 +351,31 @@
      7. LAYOUT GRID
      Container widths, gaps, and responsive helpers
      ============================================= */
-  
+
   /* Container Max Widths */
   --container-sm: 640px;
   --container-md: 768px;
   --container-lg: 1024px;
   --container-xl: 1280px;
   --container-2xl: 1536px;
-  
+
   /* Layout Gaps */
-  --gap-xs: 0.25rem;     /* 4px */
-  --gap-sm: 0.5rem;      /* 8px */
-  --gap-md: 1rem;        /* 16px */
-  --gap-lg: 1.5rem;      /* 24px */
-  --gap-xl: 2rem;        /* 32px */
-  
+  --gap-xs: 0.25rem; /* 4px */
+  --gap-sm: 0.5rem; /* 8px */
+  --gap-md: 1rem; /* 16px */
+  --gap-lg: 1.5rem; /* 24px */
+  --gap-xl: 2rem; /* 32px */
+
   /* Sidebar Widths */
-  --sidebar-sm: 14rem;   /* 224px */
-  --sidebar-md: 18rem;   /* 288px */
-  --sidebar-lg: 22rem;   /* 352px */
-  
+  --sidebar-sm: 14rem; /* 224px */
+  --sidebar-md: 18rem; /* 288px */
+  --sidebar-lg: 22rem; /* 352px */
+
   /* Panel Widths */
   --panel-sm: 280px;
   --panel-md: 360px;
   --panel-lg: 480px;
-  
+
   /* Grid Columns (for common layouts) */
   --cols-2: repeat(2, minmax(0, 1fr));
   --cols-3: repeat(3, minmax(0, 1fr));
@@ -351,11 +383,11 @@
   --cols-auto-fill-sm: repeat(auto-fill, minmax(200px, 1fr));
   --cols-auto-fill-md: repeat(auto-fill, minmax(280px, 1fr));
   --cols-auto-fill-lg: repeat(auto-fill, minmax(360px, 1fr));
-  
+
   /* =============================================
      8. COMPONENT SIZES
      ============================================= */
-  
+
   /* Card Dimensions — fixed px for virtual 1920×1080 canvas */
   --card-width: 130px;
   --card-height: 185px;
@@ -371,11 +403,11 @@
 
   /* Hero Cards */
   --hero-card-width: 160px;
-  
+
   /* Stat Badges */
   --stat-badge-size: 1.5rem;
   --stat-badge-size-lg: 1.75rem;
-  
+
   /* Poker Panel */
   --poker-panel-width: 400px;
   --poker-panel-scale: 1;
@@ -386,7 +418,7 @@
   --player-zone-height: 160px;
   --hand-zone-height: 180px;
   --field-zone-height: 180px;
-  
+
   /* =============================================
      9. TRANSITIONS
      ============================================= */
@@ -400,146 +432,196 @@
      ============================================= */
 
   /* Material palette — Mapped to Obsidian */
-  --ui-obsidian:        var(--obsidian-950);
-  --ui-iron-darkest:    var(--obsidian-900);
-  --ui-iron-dark:       var(--obsidian-850);
-  --ui-iron-mid:        var(--obsidian-800);
-  --ui-iron-light:      var(--obsidian-750);
-  --ui-iron-edge:       var(--obsidian-700);
+  --ui-obsidian: var(--obsidian-950);
+  --ui-iron-darkest: var(--obsidian-900);
+  --ui-iron-dark: var(--obsidian-850);
+  --ui-iron-mid: var(--obsidian-800);
+  --ui-iron-light: var(--obsidian-750);
+  --ui-iron-edge: var(--obsidian-700);
 
   /* Tarnished gold accent line — Mapped to Gold */
-  --ui-gold-bright:     var(--gold-200);
-  --ui-gold-warm:       var(--gold-400);
-  --ui-gold-deep:       var(--gold-600);
-  --ui-gold-shadow:     oklch(78% 0.14 82 / 0.42);
-  --ui-gold-glow-soft:  oklch(78% 0.14 82 / 0.18);
-  --ui-gold-glow-hard:  oklch(78% 0.14 82 / 0.55);
+  --ui-gold-bright: var(--gold-200);
+  --ui-gold-warm: var(--gold-400);
+  --ui-gold-deep: var(--gold-600);
+  --ui-gold-shadow: oklch(78% 0.14 82 / 0.42);
+  --ui-gold-glow-soft: oklch(78% 0.14 82 / 0.18);
+  --ui-gold-glow-hard: oklch(78% 0.14 82 / 0.55);
 
   /* Rune accents — Mapped to Frost / Rune / Bifrost */
-  --ui-rune-cyan:       var(--frost-400);
-  --ui-rune-blue:       var(--bifrost-300);
-  --ui-rune-pale:       var(--frost-200);
+  --ui-rune-cyan: var(--frost-400);
+  --ui-rune-blue: var(--bifrost-300);
+  --ui-rune-pale: var(--frost-200);
 
   /* Ember — Mapped to Ember */
-  --ui-ember-warm:      color-mix(in srgb, var(--ember-300) 32%, transparent);
-  --ui-ember-deep:      color-mix(in srgb, var(--ember-500) 50%, transparent);
+  --ui-ember-warm: color-mix(in srgb, var(--ember-300) 32%, transparent);
+  --ui-ember-deep: color-mix(in srgb, var(--ember-500) 50%, transparent);
 
   /* Semantic combat colors */
-  --ui-hp-crimson:      var(--blood-300);
+  --ui-hp-crimson: var(--blood-300);
   --ui-hp-crimson-deep: var(--blood-500);
   --ui-hp-crimson-glow: color-mix(in srgb, var(--blood-300) 55%, transparent);
-  --ui-mana-cyan:       var(--bifrost-500);
-  --ui-mana-cyan-pale:  var(--bifrost-100);
-  --ui-mana-cyan-glow:  color-mix(in srgb, var(--bifrost-300) 55%, transparent);
-  --ui-selection-gold:  var(--gold-300);
-  --ui-selection-pale:  var(--gold-50);
+  --ui-mana-cyan: var(--bifrost-500);
+  --ui-mana-cyan-pale: var(--bifrost-100);
+  --ui-mana-cyan-glow: color-mix(in srgb, var(--bifrost-300) 55%, transparent);
+  --ui-selection-gold: var(--gold-300);
+  --ui-selection-pale: var(--gold-50);
   --ui-disabled-bronze: var(--obsidian-600);
-  --ui-danger-red:      var(--ember-300);
+  --ui-danger-red: var(--ember-300);
 
   /* Panel surfaces — obsidian + gold trim */
-  --ui-panel-bg: linear-gradient(180deg,
+  --ui-panel-bg: linear-gradient(
+    180deg,
     rgba(20, 22, 28, 0.94) 0%,
     rgba(12, 14, 20, 0.97) 50%,
-    rgba(6, 8, 12, 0.98) 100%);
-  --ui-panel-bg-dim: linear-gradient(180deg,
+    rgba(6, 8, 12, 0.98) 100%
+  );
+  --ui-panel-bg-dim: linear-gradient(
+    180deg,
     rgba(14, 16, 22, 0.88) 0%,
-    rgba(8, 10, 16, 0.94) 100%);
-  --ui-panel-border:        1px solid rgba(212, 175, 55, 0.45);
+    rgba(8, 10, 16, 0.94) 100%
+  );
+  --ui-panel-border: 1px solid rgba(212, 175, 55, 0.45);
   --ui-panel-border-strong: 2px solid rgba(212, 175, 55, 0.65);
-  --ui-panel-border-rune:   1px solid rgba(91, 140, 184, 0.42);
+  --ui-panel-border-rune: 1px solid rgba(91, 140, 184, 0.42);
   --ui-panel-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.7),
-    inset 0 1px 0 rgba(255, 215, 100, 0.10);
+    0 8px 24px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 215, 100, 0.1);
   --ui-panel-shadow-lift:
-    0 12px 32px rgba(0, 0, 0, 0.78),
-    inset 0 1px 0 rgba(255, 215, 100, 0.14);
+    0 12px 32px rgba(0, 0, 0, 0.78), inset 0 1px 0 rgba(255, 215, 100, 0.14);
 
   /* Typography — source of truth for font stacks.
      IMPORTANT: do NOT name these `--font-*` because that namespace is owned by
      Tailwind v4 in @theme inline below; same-name causes circular var() loops. */
-  --type-display:    'Cinzel', 'Cinzel Decorative', Georgia, serif;
-  --type-decorative: 'Cinzel Decorative', 'Cinzel', Georgia, serif;
-  --type-ui:         'Inter', system-ui, -apple-system, Segoe UI, sans-serif;
-  --type-numeric:    'Cinzel', Georgia, serif;
+  --type-display: "Cinzel", "Cinzel Decorative", Georgia, serif;
+  --type-decorative: "Cinzel Decorative", "Cinzel", Georgia, serif;
+  --type-ui: "Inter", system-ui, -apple-system, Segoe UI, sans-serif;
+  --type-numeric: "Cinzel", Georgia, serif;
 
   /* =============================================
      11. BRANDED MATERIALS & GRADIENTS
      ============================================= */
-  
+
   /* Canonical Gradients (The "Few" Sources of Truth) */
-  --gradient-obsidian: linear-gradient(180deg, #4a4a5a 0%, #2a2a3a 50%, #1a1a2a 100%);
-  --gradient-crimson:  linear-gradient(180deg, rgba(127, 29, 29, 0.95) 0%, rgba(74, 14, 22, 0.98) 100%);
-  --gradient-emerald:  linear-gradient(180deg, #1a4a2a 0%, #0d3318 50%, #071f0e 100%);
-  --gradient-gold:     linear-gradient(180deg, var(--gold-200) 0%, var(--gold-400) 50%, var(--gold-600) 100%);
-  --gradient-surface:  linear-gradient(180deg, var(--obsidian-850) 0%, var(--obsidian-900) 100%);
-  --gradient-void:     linear-gradient(180deg, #08080f 0%, #141428 100%);
+  --gradient-obsidian: linear-gradient(
+    180deg,
+    #4a4a5a 0%,
+    #2a2a3a 50%,
+    #1a1a2a 100%
+  );
+  --gradient-crimson: linear-gradient(
+    180deg,
+    rgba(127, 29, 29, 0.95) 0%,
+    rgba(74, 14, 22, 0.98) 100%
+  );
+  --gradient-emerald: linear-gradient(
+    180deg,
+    #1a4a2a 0%,
+    #0d3318 50%,
+    #071f0e 100%
+  );
+  --gradient-gold: linear-gradient(
+    180deg,
+    var(--gold-200) 0%,
+    var(--gold-400) 50%,
+    var(--gold-600) 100%
+  );
+  --gradient-surface: linear-gradient(
+    180deg,
+    var(--obsidian-850) 0%,
+    var(--obsidian-900) 100%
+  );
+  --gradient-void: linear-gradient(180deg, #08080f 0%, #141428 100%);
 
   /* Semantic Action Assignments */
-  --btn-primary-bg:   var(--gradient-obsidian);
-  --btn-cta-bg:       var(--gradient-crimson);
-  --btn-success-bg:   var(--gradient-emerald);
-  --btn-gold-bg:      var(--gradient-gold);
+  --btn-primary-bg: var(--gradient-obsidian);
+  --btn-cta-bg: var(--gradient-crimson);
+  --btn-success-bg: var(--gradient-emerald);
+  --btn-gold-bg: var(--gradient-gold);
 
   /* Border & Glow Defaults */
   --btn-primary-border: #6a6a7a;
-  --btn-primary-glow:   rgba(200, 50, 50, 0.15);
-  --btn-cta-text:     #fff4dc;
-  --btn-cta-glow:     rgba(127, 29, 29, 0.34);
+  --btn-primary-glow: rgba(200, 50, 50, 0.15);
+  --btn-cta-text: #fff4dc;
+  --btn-cta-glow: rgba(127, 29, 29, 0.34);
   --btn-success-border: #2a7a3a;
   --btn-success-text: #a0f0b0;
 
   /* Zone Backgrounds */
   --zone-opponent-bg: rgba(139, 0, 0, 0.05); /* Deep red tint */
-  --zone-player-bg:   rgba(0, 100, 0, 0.05); /* Deep green tint */
+  --zone-player-bg: rgba(0, 100, 0, 0.05); /* Deep green tint */
 
   /* =============================================
      12. GAME REALM THEMES (Chess vs Poker Battle)
      ============================================= */
-  
+
   /* --- A. Ragnarok Poker Battle (High Tension, Blood & Iron) --- */
-  --color-battle-primary:   var(--blood-500);
+  --color-battle-primary: var(--blood-500);
   --color-battle-secondary: var(--obsidian-800);
-  --color-battle-accent:    var(--gold-300);
-  --gradient-battle-danger: linear-gradient(180deg, var(--danger-600) 0%, var(--danger-900) 100%);
-  --gradient-battle-hp:     linear-gradient(180deg, #ff3333 0%, #cc0000 25%, #990000 50%, #660000 75%, #4b0000 100%);
-  
+  --color-battle-accent: var(--gold-300);
+  --gradient-battle-danger: linear-gradient(
+    180deg,
+    var(--danger-600) 0%,
+    var(--danger-900) 100%
+  );
+  --gradient-battle-hp: linear-gradient(
+    180deg,
+    #ff3333 0%,
+    #cc0000 25%,
+    #990000 50%,
+    #660000 75%,
+    #4b0000 100%
+  );
+
   /* --- B. Nine Realms Chess (Ancient Stone, Runes & Cosmos) --- */
-  --color-chess-stone:      #6b4c1a;
+  --color-chess-stone: #6b4c1a;
   --color-chess-stone-dark: #2a1a06;
-  --color-chess-gold:       #8b6914;
+  --color-chess-gold: #8b6914;
   --color-chess-tile-light: rgba(200, 169, 110, 0.45);
-  --color-chess-tile-dark:  rgba(40, 18, 10, 0.6);
-  --gradient-chess-player:   linear-gradient(90deg, transparent, #3b82f6, transparent);
-  --gradient-chess-opponent: linear-gradient(90deg, transparent, #ef4444, transparent);
-  --gradient-chess-hp:       linear-gradient(90deg, var(--success-400), var(--success-600));
+  --color-chess-tile-dark: rgba(40, 18, 10, 0.6);
+  --gradient-chess-player: linear-gradient(
+    90deg,
+    transparent,
+    #3b82f6,
+    transparent
+  );
+  --gradient-chess-opponent: linear-gradient(
+    90deg,
+    transparent,
+    #ef4444,
+    transparent
+  );
+  --gradient-chess-hp: linear-gradient(
+    90deg,
+    var(--success-400),
+    var(--success-600)
+  );
 
   /* Character Classes (Visual Identity) */
-  --class-warrior:     #C79C6E;
-  --class-mage:        #69CCF0;
-  --class-hunter:      #ABD473;
-  --class-paladin:     #F58CBA;
-  --class-priest:      #FFFFFF;
-  --class-rogue:       #FFF569;
-  --class-shaman:      #0070DE;
-  --class-warlock:     #9482C9;
-  --class-druid:       #FF7D0A;
-  --class-berserker:   #A330C9;
-  --class-deathknight: #C41F3B;
+  --class-warrior: #c79c6e;
+  --class-mage: #69ccf0;
+  --class-hunter: #abd473;
+  --class-paladin: #f58cba;
+  --class-priest: #ffffff;
+  --class-rogue: #fff569;
+  --class-shaman: #0070de;
+  --class-warlock: #9482c9;
+  --class-druid: #ff7d0a;
+  --class-berserker: #a330c9;
+  --class-deathknight: #c41f3b;
 
   /* Nine Realms Affinities (Elements) */
-  --element-fire:   #ff6b35;
-  --element-water:  #4fc3f7;
-  --element-wind:   #81c784;
-  --element-earth:  #a1887f;
-  --element-holy:   #ffd54f;
+  --element-fire: #ff6b35;
+  --element-water: #4fc3f7;
+  --element-wind: #81c784;
+  --element-earth: #a1887f;
+  --element-holy: #ffd54f;
   --element-shadow: #9c27b0;
   --element-neutral: #9e9e9e;
 
   /* App Error Fallbacks */
-  --error-bg:      #1a1a2e;
-  --error-text:    #ff6b6b;
-  --error-stack:   #888;
-  --error-accent:  #c9a84c;
+  --error-bg: #1a1a2e;
+  --error-text: #ff6b6b;
+  --error-stack: #888;
+  --error-accent: #c9a84c;
 }
 
 /* =============================================
@@ -572,14 +654,30 @@
    Use these instead of inline zIndex values.
    Maps to the token tiers defined in :root above.
    ============================================= */
-.z-notifications { z-index: var(--z-notifications) !important; }
-.z-cinematic { z-index: var(--z-cinematic) !important; }
-.z-topmost { z-index: var(--z-topmost) !important; }
-.z-overlays { z-index: var(--z-overlays) !important; }
-.z-targeting { z-index: var(--z-targeting) !important; }
-.z-popup { z-index: var(--z-popup) !important; }
-.z-hud { z-index: var(--z-hud) !important; }
-.z-drag { z-index: var(--z-drag) !important; }
+.z-notifications {
+  z-index: var(--z-notifications) !important;
+}
+.z-cinematic {
+  z-index: var(--z-cinematic) !important;
+}
+.z-topmost {
+  z-index: var(--z-topmost) !important;
+}
+.z-overlays {
+  z-index: var(--z-overlays) !important;
+}
+.z-targeting {
+  z-index: var(--z-targeting) !important;
+}
+.z-popup {
+  z-index: var(--z-popup) !important;
+}
+.z-hud {
+  z-index: var(--z-hud) !important;
+}
+.z-drag {
+  z-index: var(--z-drag) !important;
+}
 
 /* =============================================
    TAILWIND v4 BRIDGE — @theme inline
@@ -591,74 +689,74 @@
    utility for it, add ONE line here.
    ============================================= */
 @theme inline {
-	/* ---- Obsidian (surface scale) ---- */
-	--color-obsidian-500: var(--obsidian-500);
-	--color-obsidian-600: var(--obsidian-600);
-	--color-obsidian-700: var(--obsidian-700);
-	--color-obsidian-750: var(--obsidian-750);
-	--color-obsidian-800: var(--obsidian-800);
-	--color-obsidian-850: var(--obsidian-850);
-	--color-obsidian-900: var(--obsidian-900);
-	--color-obsidian-950: var(--obsidian-950);
+  /* ---- Obsidian (surface scale) ---- */
+  --color-obsidian-500: var(--obsidian-500);
+  --color-obsidian-600: var(--obsidian-600);
+  --color-obsidian-700: var(--obsidian-700);
+  --color-obsidian-750: var(--obsidian-750);
+  --color-obsidian-800: var(--obsidian-800);
+  --color-obsidian-850: var(--obsidian-850);
+  --color-obsidian-900: var(--obsidian-900);
+  --color-obsidian-950: var(--obsidian-950);
 
-	/* ---- Ink (text scale) ---- */
-	--color-ink-0:   var(--ink-0);
-	--color-ink-100: var(--ink-100);
-	--color-ink-200: var(--ink-200);
-	--color-ink-300: var(--ink-300);
-	--color-ink-400: var(--ink-400);
-	--color-ink-500: var(--ink-500);
+  /* ---- Ink (text scale) ---- */
+  --color-ink-0: var(--ink-0);
+  --color-ink-100: var(--ink-100);
+  --color-ink-200: var(--ink-200);
+  --color-ink-300: var(--ink-300);
+  --color-ink-400: var(--ink-400);
+  --color-ink-500: var(--ink-500);
 
-	/* ---- Gold (Odin / primary accent) ---- */
-	--color-gold-50:  var(--gold-50);
-	--color-gold-100: var(--gold-100);
-	--color-gold-200: var(--gold-200);
-	--color-gold-300: var(--gold-300);
-	--color-gold-400: var(--gold-400);
-	--color-gold-500: var(--gold-500);
-	--color-gold-600: var(--gold-600);
-	--color-gold-700: var(--gold-700);
+  /* ---- Gold (Odin / primary accent) ---- */
+  --color-gold-50: var(--gold-50);
+  --color-gold-100: var(--gold-100);
+  --color-gold-200: var(--gold-200);
+  --color-gold-300: var(--gold-300);
+  --color-gold-400: var(--gold-400);
+  --color-gold-500: var(--gold-500);
+  --color-gold-600: var(--gold-600);
+  --color-gold-700: var(--gold-700);
 
-	/* ---- Ember (Muspelheim) ---- */
-	--color-ember-100: var(--ember-100);
-	--color-ember-200: var(--ember-200);
-	--color-ember-300: var(--ember-300);
-	--color-ember-400: var(--ember-400);
-	--color-ember-500: var(--ember-500);
-	--color-ember-600: var(--ember-600);
+  /* ---- Ember (Muspelheim) ---- */
+  --color-ember-100: var(--ember-100);
+  --color-ember-200: var(--ember-200);
+  --color-ember-300: var(--ember-300);
+  --color-ember-400: var(--ember-400);
+  --color-ember-500: var(--ember-500);
+  --color-ember-600: var(--ember-600);
 
-	/* ---- Bifrost (rare / mystic) ---- */
-	--color-bifrost-100: var(--bifrost-100);
-	--color-bifrost-300: var(--bifrost-300);
-	--color-bifrost-500: var(--bifrost-500);
+  /* ---- Bifrost (rare / mystic) ---- */
+  --color-bifrost-100: var(--bifrost-100);
+  --color-bifrost-300: var(--bifrost-300);
+  --color-bifrost-500: var(--bifrost-500);
 
-	/* ---- Frost (ice / support) ---- */
-	--color-frost-200: var(--frost-200);
-	--color-frost-400: var(--frost-400);
+  /* ---- Frost (ice / support) ---- */
+  --color-frost-200: var(--frost-200);
+  --color-frost-400: var(--frost-400);
 
-	/* ---- Rune (Yggdrasil) ---- */
-	--color-rune-300: var(--rune-300);
-	--color-rune-500: var(--rune-500);
+  /* ---- Rune (Yggdrasil) ---- */
+  --color-rune-300: var(--rune-300);
+  --color-rune-500: var(--rune-500);
 
-	/* ---- Blood (Niflheim / danger) ---- */
-	--color-blood-300: var(--blood-300);
-	--color-blood-500: var(--blood-500);
+  /* ---- Blood (Niflheim / danger) ---- */
+  --color-blood-300: var(--blood-300);
+  --color-blood-500: var(--blood-500);
 
-	/* ---- Rarity (canonical) ---- */
-	--color-rarity-common:  var(--rarity-common-color);
-	--color-rarity-rare:    var(--rarity-rare-color);
-	--color-rarity-epic:    var(--rarity-epic-color);
-	--color-rarity-mythic:  var(--rarity-mythic-color);
+  /* ---- Rarity (canonical) ---- */
+  --color-rarity-common: var(--rarity-common-color);
+  --color-rarity-rare: var(--rarity-rare-color);
+  --color-rarity-epic: var(--rarity-epic-color);
+  --color-rarity-mythic: var(--rarity-mythic-color);
 
-	/* ---- Type families ----
+  /* ---- Type families ----
 	   Tailwind v4 owns the `--font-*` namespace; we read from our `--type-*` source vars. */
-	--font-display:    var(--type-display);
-	--font-decorative: var(--type-decorative);
-	--font-sans:       var(--type-ui);
-	--font-mono:       'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+  --font-display: var(--type-display);
+  --font-decorative: var(--type-decorative);
+  --font-sans: var(--type-ui);
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
 
-	/* ---- Tracking (letter-spacing) for editorial labels ---- */
-	--tracking-wide:  0.08em;
-	--tracking-xwide: 0.18em;
-	--tracking-epic:  0.32em;
+  /* ---- Tracking (letter-spacing) for editorial labels ---- */
+  --tracking-wide: 0.08em;
+  --tracking-xwide: 0.18em;
+  --tracking-epic: 0.32em;
 }
