@@ -299,8 +299,10 @@ function HomePage() {
 
 			{/* ── PAGE GRID: full-height main column + persistent right rail ──── */}
 			<div className="mx-auto max-w-[1600px] px-6 mt-7 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-7 items-start">
-				{/* MAIN COLUMN: banner + routes + daily quests + footer */}
-				<main className="grid gap-7 content-start min-w-0">
+				{/* MAIN COLUMN: banner + routes + daily quests.
+				    pb-24 mirrors the right aside so neither column slides under
+				    the anchored utility bar at the bottom. */}
+				<main className="grid gap-7 content-start min-w-0 pb-24">
 					{/* Banner */}
 					<section className="relative grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-9 items-center px-10 py-10 rounded-2xl border border-obsidian-700 bg-linear-to-b from-obsidian-850 to-obsidian-900 overflow-hidden">
 						<div>
@@ -371,7 +373,7 @@ function HomePage() {
 									<Link
 										key={mode.title}
 										to={mode.to}
-										className={`relative group flex flex-col min-h-[180px] p-5 rounded-xl border border-obsidian-700 bg-linear-to-b from-obsidian-850 to-obsidian-950 overflow-hidden transition-all duration-300 ${a.border}`}
+										className={`relative group flex flex-col min-h-[144px] p-4 rounded-xl border border-obsidian-700 bg-linear-to-b from-obsidian-850 to-obsidian-950 overflow-hidden transition-all duration-300 ${a.border}`}
 									>
 										{/* Atmospheric color layer (mode-specific). Sits below content. */}
 										<div
@@ -381,7 +383,7 @@ function HomePage() {
 
 										{/* Oversized decorative icon — anchors the bottom-right as "art" */}
 										<Icon
-											className={`absolute -right-2 -bottom-2 w-24 h-24 ${a.text} opacity-[0.08] pointer-events-none`}
+											className={`absolute -right-2 -bottom-2 w-20 h-20 ${a.text} opacity-[0.08] pointer-events-none`}
 											strokeWidth={1}
 										/>
 
@@ -395,20 +397,20 @@ function HomePage() {
 											<span className={`font-mono text-[10px] tracking-[0.32em] uppercase font-semibold ${a.text}`}>
 												{mode.kicker}
 											</span>
-											<span className={`inline-flex items-center justify-center w-8 h-8 rounded-md bg-obsidian-900/70 backdrop-blur-sm border border-obsidian-700 ${a.text}`}>
-												<Icon size={14} strokeWidth={1.8} />
+											<span className={`inline-flex items-center justify-center w-7 h-7 rounded-md bg-obsidian-900/70 backdrop-blur-sm border border-obsidian-700 ${a.text}`}>
+												<Icon size={13} strokeWidth={1.8} />
 											</span>
 										</div>
 
 										{/* Body */}
 										<div className="relative z-10 mt-auto">
-											<h3 className="font-display text-xl font-black tracking-[0.08em] uppercase text-ink-0 mb-1.5 leading-none">
+											<h3 className="font-display text-lg font-black tracking-[0.08em] uppercase text-ink-0 mb-1 leading-none">
 												{mode.title}
 											</h3>
-											<p className="text-ink-200 text-[13px] leading-[1.55] mb-3 max-w-[95%]">
+											<p className="text-ink-200 text-[12px] leading-[1.5] mb-2.5 max-w-[95%]">
 												{mode.description}
 											</p>
-											<div className="flex items-center justify-between pt-2.5 border-t border-obsidian-700/80">
+											<div className="flex items-center justify-between pt-2 border-t border-obsidian-700/80">
 												<span className="font-display text-[11px] tracking-[0.22em] uppercase text-ink-0 transition-colors group-hover:text-gold-300">
 													Enter
 												</span>
