@@ -109,6 +109,39 @@ attached_assets/*Replit*
 Thumbs.db
 
 # ========================================
+# AI AGENT / IDE TOOL DIRECTORIES
+# ========================================
+# Each AI-coding tool drops its own state/config directory.
+# These should never be committed — they're per-developer environment.
+.agents/
+.codebuddy/
+.commandcode/
+.continue/
+.crush/
+.factory/
+.goose/
+.junie/
+.kilocode/
+.kiro/
+.kode/
+.mcpjam/
+.mux/
+.neovate/
+.openhands/
+.pi/
+.pochi/
+.qoder/
+.qwen/
+.roo/
+.trae/
+.windsurf/
+.zencoder/
+
+# Project-local skill installations (skills should be global, not per-project)
+skills/
+skills-lock.json
+
+# ========================================
 # STALE COMPILED FILES - BUILD ARTIFACTS
 # ========================================
 # Prevent stale .js files from accumulating in source directories
