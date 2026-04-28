@@ -120,22 +120,25 @@ interface ModeCard {
 	intent: 'combat' | 'meta'; // drives Play-icon affordance + visual grouping
 }
 
+// `strip` is now a gradient class (transparent → accent → transparent) so the
+// bottom accent fades into the obsidian background instead of butting hard
+// against the gold Play button. Reads as a runic underline, not a hard rule.
 const ACCENT: Record<AccentKey, { text: string; strip: string; border: string; arrow: string }> = {
 	ember: {
 		text: 'text-ember-300',
-		strip: 'bg-ember-300',
+		strip: 'bg-linear-to-r from-transparent via-ember-300/80 to-transparent',
 		border: 'hover:border-ember-300/50',
 		arrow: 'text-ember-300',
 	},
 	gold: {
 		text: 'text-gold-300',
-		strip: 'bg-gold-300',
+		strip: 'bg-linear-to-r from-transparent via-gold-300/80 to-transparent',
 		border: 'hover:border-gold-300/50',
 		arrow: 'text-gold-300',
 	},
 	bifrost: {
 		text: 'text-bifrost-300',
-		strip: 'bg-bifrost-300',
+		strip: 'bg-linear-to-r from-transparent via-bifrost-300/70 to-transparent',
 		border: 'hover:border-bifrost-300/50',
 		arrow: 'text-bifrost-300',
 	},
@@ -430,7 +433,13 @@ function HomePage() {
 											    corner" of the card. */}
 											<div className="flex justify-end">
 												{isCombat ? (
-													<div className="inline-flex items-center gap-2.5 rounded-md bg-linear-to-b from-gold-300 to-gold-500 border border-gold-200 px-4 py-2 font-display text-[12px] font-bold tracking-[0.24em] uppercase text-obsidian-950 shadow-[0_0_22px_-6px_rgba(217,168,68,0.65)] transition-all duration-300 group-hover:from-gold-200 group-hover:to-gold-400 group-hover:shadow-[0_0_32px_-4px_rgba(217,168,68,0.95)] group-hover:scale-[1.03]">
+													<div
+														className="inline-flex items-center gap-2.5 bg-linear-to-b from-gold-300 to-gold-500 border border-gold-200 px-4 py-2 font-display text-[12px] font-bold tracking-[0.24em] uppercase text-obsidian-950 shadow-[0_0_22px_-6px_rgba(217,168,68,0.65)] transition-all duration-300 group-hover:from-gold-200 group-hover:to-gold-400 group-hover:shadow-[0_0_32px_-4px_rgba(217,168,68,0.95)] group-hover:scale-[1.03]"
+														style={{
+															clipPath:
+																'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)',
+														}}
+													>
 														<span aria-hidden className="w-[5px] h-[5px] rotate-45 bg-current opacity-80 shrink-0" />
 														<Play size={13} strokeWidth={2.4} fill="currentColor" className="shrink-0" />
 														{mode.cta}
@@ -445,8 +454,9 @@ function HomePage() {
 											</div>
 										</div>
 
-										{/* Bottom accent strip (semantic identity) */}
-										<span className={`absolute bottom-0 left-0 right-0 h-[3px] ${a.strip}`} />
+										{/* Bottom accent strip — runic underline that fades to the
+									    obsidian backdrop on both ends, no longer butts the gold button. */}
+										<span className={`absolute bottom-0 left-0 right-0 h-[2px] ${a.strip}`} />
 									</Link>
 								);
 							})}
