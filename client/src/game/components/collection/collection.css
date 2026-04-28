@@ -1,5 +1,38 @@
 /* Collection Page — Premium Collector Styles */
 
+/* ========== Vault Background — "bóveda mística" ========== */
+/* Capa 0: base canónica (warm obsidian, idéntica a Home/Warband/Campaign).
+   Capa 1: lumbrera cenital bifrost + halo gold al ras del piso. Estático. */
+.collection-vault {
+	position: relative;
+	min-height: 100vh;
+	background:
+		radial-gradient(ellipse at 50% 0%, var(--obsidian-850) 0%, transparent 60%),
+		linear-gradient(180deg, var(--obsidian-950) 0%, var(--obsidian-900) 100%);
+	color: var(--ink-0);
+}
+
+.collection-vault::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background:
+		radial-gradient(ellipse 60% 45% at 50% 0%,
+			color-mix(in oklch, var(--bifrost-300) 8%, transparent) 0%,
+			transparent 70%),
+		radial-gradient(ellipse 80% 20% at 50% 100%,
+			color-mix(in oklch, var(--gold-500) 4%, transparent) 0%,
+			transparent 80%);
+	pointer-events: none;
+	z-index: 0;
+}
+
+.collection-vault > * {
+	position: relative;
+	z-index: 1;
+}
+
+
 /* ========== Mastery Badges ========== */
 .mastery-badge {
 	position: absolute;

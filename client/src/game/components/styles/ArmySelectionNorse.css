@@ -69,36 +69,35 @@
 /* ============================================
    BACKGROUND LAYERS - Absolute positioned overlays
    ============================================ */
+/* Capa 0 — base canónica (warm obsidian, idéntica a Home/Campaign/Collection) */
 .norse-army-selection .norse-army-bg {
   position: fixed;
   inset: 0;
-  background: 
-    radial-gradient(ellipse at 50% 0%, rgba(0, 255, 204, 0.05) 0%, transparent 50%),
-    radial-gradient(ellipse at 20% 80%, rgba(0, 255, 204, 0.03) 0%, transparent 40%),
-    radial-gradient(ellipse at 80% 80%, rgba(0, 255, 204, 0.03) 0%, transparent 40%),
-    linear-gradient(180deg, #0a0a1f 0%, #0f172a 100%);
+  background:
+    radial-gradient(ellipse at 50% 0%, var(--obsidian-850) 0%, transparent 60%),
+    linear-gradient(180deg, var(--obsidian-950) 0%, var(--obsidian-900) 100%);
   z-index: -2;
   pointer-events: none;
 }
 
+/* Capa 1 — intent "warband": forja del consejo. Halo gold cenital con pulso lento. */
 .norse-army-selection .norse-lightning-overlay {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background: 
-    radial-gradient(ellipse at 30% 10%, rgba(0, 255, 204, 0.08) 0%, transparent 30%),
-    radial-gradient(ellipse at 70% 5%, rgba(0, 255, 204, 0.06) 0%, transparent 25%);
-  animation: lightningFlash 8s ease-in-out infinite;
+  background:
+    radial-gradient(ellipse 70% 40% at 50% 0%,
+      color-mix(in oklch, var(--gold-300) 6%, transparent) 0%,
+      transparent 70%);
+  animation: warbandEmberPulse 14s ease-in-out infinite;
   z-index: -1;
+  opacity: 0.85;
 }
 
-@keyframes lightningFlash {
-  0%, 100% { opacity: 0.3; }
-  45% { opacity: 0.4; }
-  48% { opacity: 1; }
-  50% { opacity: 0.2; }
-  52% { opacity: 0.8; }
-  55% { opacity: 0.3; }
+/* Pulso lento (no flash) — el halo respira como brasa, no como rayo. */
+@keyframes warbandEmberPulse {
+  0%, 100% { opacity: 0.7; }
+  50%      { opacity: 1; }
 }
 
 /* ============================================
