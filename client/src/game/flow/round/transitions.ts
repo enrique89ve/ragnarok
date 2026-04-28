@@ -23,8 +23,8 @@ export function nextState(
 	switch (state.tag) {
 		case 'cinematic': {
 			if (event.type !== 'CINEMATIC_DONE') return state;
-			return event.next.kind === 'intro'
-				? { tag: 'mission_intro', mission: event.next.mission }
+			return state.then.kind === 'intro'
+				? { tag: 'mission_intro', mission: state.then.mission }
 				: { tag: 'chess' };
 		}
 

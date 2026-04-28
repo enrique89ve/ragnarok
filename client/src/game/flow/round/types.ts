@@ -76,6 +76,24 @@ export type GameResult = {
 };
 
 /*
+  Plan for what happens AFTER the cinematic completes. Captured at
+  cinematic *entry* time (when the coordinator has full campaign
+  context) and stored in the cinematic state itself. CINEMATIC_DONE
+  is therefore a bare event — the FSM reads `state.then` to know
+  where to go.
+
+  Why in state, not in the event:
+    - The decision is time-invariant during a cinematic — it does not
+      change between entering cinematic and dispatching DONE.
+    - Mirrors `game_over.sub` which also lives in state.
+    - Coordinator computes it exactly once (initialState) instead of
+      memoising it for the lifetime of the cinematic.
+*/
+export type PostCinematicPlan =
+	| { readonly kind: 'intro'; readonly mission: MissionIntroData }
+	| { readonly kind: 'chess' };
+
+/*
   The FSM. Each state carries ONLY the payload that belongs to that
   phase. Cross-phase data (army, board, mission) lives in its rightful
   store (useWarbandStore / useUnifiedCombatStore / useCampaignStore).
@@ -85,7 +103,11 @@ export type GameResult = {
   before /game so it has no place in the FSM.
 */
 export type RoundFlowState =
-	| { readonly tag: 'cinematic'; readonly cinematic: CinematicData }
+	| {
+			readonly tag: 'cinematic';
+			readonly cinematic: CinematicData;
+			readonly then: PostCinematicPlan;
+	  }
 	| { readonly tag: 'mission_intro'; readonly mission: MissionIntroData }
 	| { readonly tag: 'chess' }
 	| { readonly tag: 'vs_screen'; readonly pieces: CombatPieces }
@@ -99,18 +121,12 @@ export type RoundFlowState =
 /*
   Events. Each carries exactly the data needed for its target state.
 
-  CINEMATIC_DONE is special: post-cinematic the next phase is either
-  mission_intro (campaign with narrativeBefore) or chess. The decision
-  belongs to the coordinator that knows about campaign data — the FSM
-  just executes the chosen branch.
+  CINEMATIC_DONE is intentionally bare: the post-cinematic plan lives
+  in `state.then` (set at entry), so the event has no payload to
+  duplicate.
 */
 export type FlowEvent =
-	| {
-			readonly type: 'CINEMATIC_DONE';
-			readonly next:
-				| { readonly kind: 'intro'; readonly mission: MissionIntroData }
-				| { readonly kind: 'chess' };
-	  }
+	| { readonly type: 'CINEMATIC_DONE' }
 	| { readonly type: 'INTRO_DONE' }
 	| {
 			readonly type: 'COMBAT_TRIGGERED';
@@ -137,14 +153,22 @@ export type FlowEvent =
   here keeps the "where do we start?" decision testable.
 */
 export type InitialFlowInput =
-	| { readonly kind: 'cinematic'; readonly cinematic: CinematicData }
+	| {
+			readonly kind: 'cinematic';
+			readonly cinematic: CinematicData;
+			readonly then: PostCinematicPlan;
+	  }
 	| { readonly kind: 'mission_intro'; readonly mission: MissionIntroData }
 	| { readonly kind: 'chess' };
 
 export function initialState(input: InitialFlowInput): RoundFlowState {
 	switch (input.kind) {
 		case 'cinematic':
-			return { tag: 'cinematic', cinematic: input.cinematic };
+			return {
+				tag: 'cinematic',
+				cinematic: input.cinematic,
+				then: input.then,
+			};
 		case 'mission_intro':
 			return { tag: 'mission_intro', mission: input.mission };
 		case 'chess':
