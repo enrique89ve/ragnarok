@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'rea
 import { HashRouter, Routes, Route, Link, Outlet, useLocation } from 'react-router-dom';
 import { routes } from './lib/routes';
 import { Button, Panel } from './components/ui-norse';
-import { BookOpen, Layers, Swords } from 'lucide-react';
+import { BookOpen, Layers, Settings as SettingsIcon, Swords } from 'lucide-react';
 import UnifiedCardSystem from "./game/components/UnifiedCardSystem";
 import "./index.css";
 import { CardTransformProvider } from "./game/context/CardTransformContext";
@@ -175,6 +175,8 @@ const MODE_CARDS: ReadonlyArray<ModeCard> = [
 	},
 ] as const;
 
+// Settings lives next to the Account panel (gear icon) — universal access
+// without competing with the route-shortcut chips below.
 const UTILITY_LINKS: ReadonlyArray<{ label: string; to: string }> = [
 	{ label: 'Packs', to: routes.packs },
 	{ label: 'Trading', to: routes.trading },
@@ -182,7 +184,6 @@ const UTILITY_LINKS: ReadonlyArray<{ label: string; to: string }> = [
 	{ label: 'History', to: routes.history },
 	{ label: 'Treasury', to: routes.treasury },
 	{ label: 'Explorer', to: routes.explorer },
-	{ label: 'Settings', to: routes.settings },
 ] as const;
 
 function StatRow({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
@@ -196,7 +197,11 @@ function StatRow({ label, value, highlight = false }: { label: string; value: st
 	);
 }
 
-function SideRailPanel({ title, children }: { title: string; children: React.ReactNode }) {
+function SideRailPanel({ title, action, children }: {
+	title: string;
+	action?: React.ReactNode;
+	children: React.ReactNode;
+}) {
 	return (
 		<Panel className="p-5">
 			<div className="flex items-center justify-between pb-3 mb-4 border-b border-obsidian-700">
@@ -204,6 +209,7 @@ function SideRailPanel({ title, children }: { title: string; children: React.Rea
 					<span className="w-1 h-3 rounded-sm bg-gold-300" />
 					{title}
 				</div>
+				{action}
 			</div>
 			{children}
 		</Panel>
@@ -430,34 +436,25 @@ function HomePage() {
 						</Suspense>
 					</section>
 
-					{/* Footer (utility nav) */}
-					<footer className="pb-10">
-						<nav className="flex flex-wrap gap-2 pt-4 border-t border-obsidian-700">
-							{UTILITY_LINKS.map(link => (
-								<Link
-									key={link.label}
-									to={link.to}
-									className="inline-flex items-center h-8 px-3.5 rounded-full border border-obsidian-700 bg-obsidian-850 text-ink-200 hover:text-gold-300 hover:border-gold-600 font-display text-xs tracking-[0.18em] uppercase font-bold transition-colors"
-								>
-									{link.label}
-								</Link>
-							))}
-							{import.meta.env.DEV && (
-								<Link
-									to={routes.warband}
-									className="inline-flex items-center h-8 px-3.5 rounded-full border border-dashed border-obsidian-600 text-ink-300 hover:text-ink-0 font-display text-xs tracking-[0.18em] uppercase opacity-70 hover:opacity-100 transition-opacity"
-								>
-									Casual Battle (dev)
-								</Link>
-							)}
-						</nav>
-					</footer>
 				</main>
 
 				{/* RIGHT RAIL — pure identity stack: Account → Warband (post-login).
-				    Warband has internal scroll so contacts can grow without breaking layout. */}
-				<aside className="grid gap-5 content-start pb-10">
-					<SideRailPanel title="Account">
+				    Warband has internal scroll so contacts can grow without breaking layout.
+				    Settings lives in the Account panel header (gear icon) — universal
+				    access without competing with the route-shortcut chips in the bottom bar. */}
+				<aside className="grid gap-5 content-start pb-24">
+					<SideRailPanel
+						title="Account"
+						action={
+							<Link
+								to={routes.settings}
+								title="Settings"
+								className="inline-flex items-center justify-center w-7 h-7 rounded-md border border-obsidian-700 bg-obsidian-900/60 text-ink-300 hover:text-gold-300 hover:border-gold-600/60 transition-colors"
+							>
+								<SettingsIcon size={14} strokeWidth={1.8} />
+							</Link>
+						}
+					>
 						<Suspense fallback={<div className="animate-pulse h-20 rounded-xl bg-obsidian-800" />}>
 							<HiveKeychainLogin />
 						</Suspense>
@@ -473,6 +470,32 @@ function HomePage() {
 					)}
 				</aside>
 			</div>
+
+			{/* ── ANCHORED UTILITY BAR ───────────────────────────────────────────
+			    Sticky bottom — always visible across home scroll. Mirrors the
+			    sticky header above to bracket the page. Horizontal scroll on
+			    overflow keeps it single-line on narrow viewports. */}
+			<nav className="sticky bottom-0 z-40 backdrop-blur-md bg-obsidian-950/85 border-t border-obsidian-700">
+				<div className="mx-auto max-w-[1600px] px-6 h-12 flex items-center gap-2 overflow-x-auto [scrollbar-width:none]">
+					{UTILITY_LINKS.map(link => (
+						<Link
+							key={link.label}
+							to={link.to}
+							className="shrink-0 inline-flex items-center h-8 px-3.5 rounded-full border border-obsidian-700 bg-obsidian-850 text-ink-200 hover:text-gold-300 hover:border-gold-600 font-display text-xs tracking-[0.18em] uppercase font-bold transition-colors"
+						>
+							{link.label}
+						</Link>
+					))}
+					{import.meta.env.DEV && (
+						<Link
+							to={routes.warband}
+							className="shrink-0 inline-flex items-center h-8 px-3.5 rounded-full border border-dashed border-obsidian-600 text-ink-300 hover:text-ink-0 font-display text-xs tracking-[0.18em] uppercase opacity-70 hover:opacity-100 transition-opacity"
+						>
+							Casual Battle (dev)
+						</Link>
+					)}
+				</div>
+			</nav>
 
 			{showCeremony && (
 				<Suspense fallback={null}>
