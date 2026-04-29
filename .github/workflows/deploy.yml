@@ -27,7 +27,6 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: node scripts/buildAssetPacks.mjs
       - run: npx vite build --config vite.config.ts
       - run: cp dist/public/index.html dist/public/404.html
       - run: touch dist/public/.nojekyll
