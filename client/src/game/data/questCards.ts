@@ -1,10 +1,20 @@
 /**
- * Quest cards for Norse mythos card game
- * Quests are spell cards that when played, give the player a task to complete for a powerful reward
+ * Quest cards for Norse mythos card game.
+ *
+ * Quests (95507–95512) are spell cards that when played, set up a goal the
+ * player must complete in exchange for a powerful reward.
+ *
+ * STATUS — auto-grant not implemented:
+ *   The `questData.rewardCardId` field on each quest points at a reward card
+ *   (e.g. quest 95507 → reward 95501 Chronos Warp). Both the quest and the
+ *   reward exist in the registry and the QuestTracker UI shows the reward
+ *   name to the player, but the engine does NOT instantiate the reward card
+ *   into the owner's hand on completion. See questStore.ts `completeQuest`
+ *   for the TODO marker. Until that ships, quests resolve cosmetically only.
  */
 import { CardData } from '../types';
 
-// Quest reward cards
+// Quest reward cards (instantiated when their parent quest completes — see STATUS above).
 export const questRewards: CardData[] = [
   {
       id: 95501,

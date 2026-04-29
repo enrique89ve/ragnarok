@@ -116,33 +116,41 @@ export const useQuestStore = create<QuestStore>((set, get) => ({
     debug.log(`[QuestStore] Quest progress: ${quest.name} ${newProgress}/${quest.goal}${isComplete ? ' (COMPLETE!)' : ''}`);
   },
 
+  // TODO(quest-reward-auto-grant): when a quest completes, the reward card
+  // promised by `quest.rewardCardId` is NOT instantiated into the owner's
+  // hand. The UI (QuestTracker.tsx) shows `rewardCardName` so the player
+  // expects it, but no code reads `rewardCardId` to summon/give the card.
+  // To implement: after the quest is marked completed, look up the card
+  // definition by id (cardRegistry.find), instantiate it, and push to the
+  // owner's hand via the same mechanism used by `summon`/`draw` effects.
+  // Affected quest cards: 95507–95512 (questCards.ts) and 70013 (rogue.ts).
   completeQuest: (owner, questId) => {
     const quests = owner === 'player' ? get().playerQuests : get().opponentQuests;
     const questIndex = quests.findIndex(q => q.id === questId);
-    
+
     if (questIndex === -1) return;
-    
+
     const updatedQuest: ActiveQuest = {
       ...quests[questIndex],
       completed: true,
       current: quests[questIndex].goal,
       completedAt: Date.now()
     };
-    
+
     if (owner === 'player') {
       set(state => ({
-        playerQuests: state.playerQuests.map((q, i) => 
+        playerQuests: state.playerQuests.map((q, i) =>
           i === questIndex ? updatedQuest : q
         )
       }));
     } else {
       set(state => ({
-        opponentQuests: state.opponentQuests.map((q, i) => 
+        opponentQuests: state.opponentQuests.map((q, i) =>
           i === questIndex ? updatedQuest : q
         )
       }));
     }
-    
+
     debug.log(`[QuestStore] Quest completed: ${updatedQuest.name}`);
   },
 
