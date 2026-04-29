@@ -2,10 +2,8 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { routes } from '../../lib/routes';
-import { getStarterCards, STARTER_PACK_NAME, buildStarterDecks } from '../data/starterSet';
+import { getStarterCards, STARTER_PACK_NAME, buildStarterDecks, materializeStarterEntitlement } from '../data/starterSet';
 import { useStarterStore } from '../stores/starterStore';
-import { getNFTBridge } from '../nft';
-import type { HiveCardAsset } from '../../data/schemas/HiveTypes';
 import PackOpeningAnimation from './packs/PackOpeningAnimation';
 import TreasureChestSVG from './packs/TreasureChestSVG';
 
@@ -16,7 +14,6 @@ interface StarterPackCeremonyProps {
 export default function StarterPackCeremony({ onComplete }: StarterPackCeremonyProps) {
 	const [phase, setPhase] = useState<'welcome' | 'opening' | 'done'>('welcome');
 	const markClaimed = useStarterStore(s => s.markClaimed);
-	const addCard = (card: HiveCardAsset) => getNFTBridge().addCard(card);
 	const navigate = useNavigate();
 
 	const starterCards = getStarterCards();
@@ -30,26 +27,12 @@ export default function StarterPackCeremony({ onComplete }: StarterPackCeremonyP
 	}));
 
 	const handleClaimBirthright = useCallback(() => {
-		for (const card of starterCards) {
-			const asset: HiveCardAsset = {
-				uid: `starter-${card.id}-${Date.now()}`,
-				cardId: card.id as number,
-				ownerId: 'local',
-				edition: 'alpha',
-				foil: 'standard',
-				rarity: card.rarity || 'common',
-				level: 1,
-				xp: 0,
-				name: card.name,
-				type: card.type,
-			};
-			addCard(asset);
-		}
+		materializeStarterEntitlement();
 		// Auto-build 4 starter decks (one per hero) so player can immediately play
 		buildStarterDecks();
 		markClaimed();
 		setPhase('opening');
-	}, [starterCards, addCard, markClaimed]);
+	}, [markClaimed]);
 
 	const handlePackClose = useCallback(() => {
 		onComplete();

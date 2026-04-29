@@ -76,7 +76,7 @@ Hero Death            ▼             │
 | **tradeStore** | `tradeStore.ts` | Trade offers + chain transfers on accept |
 | **craftingStore** | `craftingStore.ts` | Eitr balance (forge/dissolve) |
 | **settingsStore** | `settingsStore.ts` | Audio, visual, gameplay preferences |
-| **starterStore** | `starterStore.ts` | New player starter pack claim tracking |
+| **starterStore** | `starterStore.ts` | Local tracking for starter entitlement materialization / ceremony completion |
 
 ### Current Implementation Notes
 	

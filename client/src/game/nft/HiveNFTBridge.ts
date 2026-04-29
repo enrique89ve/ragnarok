@@ -9,7 +9,8 @@
 import type { HiveCardAsset, HivePlayerStats, HiveTokenBalance } from '@/data/schemas/HiveTypes';
 import { DEFAULT_PLAYER_STATS } from '@/data/schemas/HiveTypes';
 import type { PackAsset } from '../../../../shared/protocol-core/types';
-import { hiveSync, buildHiveAuthBody } from '@/data/HiveSync';
+import { buildHiveAuthBody, loginWithHiveWallet } from '@/data/HiveAuth';
+import { hiveSync } from '@/data/HiveSync';
 import { hiveEvents } from '@/data/HiveEvents';
 import { useHiveDataStore } from '@/data/HiveDataLayer';
 import { isBlockchainPackagingEnabled as checkPackaging } from '@/game/config/featureFlags';
@@ -184,7 +185,7 @@ export class HiveNFTBridge implements INFTBridge {
 	// ── Lifecycle ──
 
 	async login(username: string): Promise<BroadcastResult> {
-		return hiveSync.login(username);
+		return loginWithHiveWallet(username);
 	}
 
 	logout(): void {

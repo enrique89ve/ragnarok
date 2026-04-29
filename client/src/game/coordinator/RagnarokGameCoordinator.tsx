@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { ArmySelection as ArmySelectionType } from '../types/ChessTypes';
@@ -254,14 +255,14 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ onGam
     const freshDefender = boardState.pieces.find(p => p.id === vsPieces.defender.id) || vsPieces.defender;
     const attacker = freshAttacker;
     const defender = freshDefender;
-    
+
     debug.combat(`Attacker ${attacker.type} (${attacker.owner}): HP=${attacker.health}, Stamina=${attacker.stamina}`);
     debug.combat(`Defender ${defender.type} (${defender.owner}): HP=${defender.health}, Stamina=${defender.stamina}`);
     debug.combat(`First strike will be applied via animation in poker combat`);
-    
+
     const attackerArmy = getArmyForOwner(attacker.owner, playerArmy, opponentArmy);
     const defenderArmy = getArmyForOwner(defender.owner, playerArmy, opponentArmy);
-    
+
     if (!attackerArmy || !defenderArmy) return;
 
     const attackerPet = buildPetDataFromChessPiece({
@@ -274,7 +275,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ onGam
       army: defenderArmy,
       resolvePortrait: resolveHeroPortrait,
     });
-    
+
     debug.combat(`AttackerPet stamina: ${attackerPet.stats.currentStamina}/${attackerPet.stats.maxStamina}`);
     debug.combat(`DefenderPet stamina: ${defenderPet.stats.currentStamina}/${defenderPet.stats.maxStamina}`);
 
@@ -284,7 +285,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ onGam
     // Pass king IDs to apply king passive aura buffs
     const attackerKingId = attackerArmy.king?.id;
     const defenderKingId = defenderArmy.king?.id;
-    
+
     // (Realm background is now set earlier — see useEffect that watches
     //  campaignData.mission.realm. The chess phase needs the realm class
     //  applied before combat starts, not just at piece collision.)
@@ -343,7 +344,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ onGam
       const storeState = useUnifiedCombatStore.getState();
       const freshCombat = storeState.pendingCombat;
       const freshPokerState = storeState.pokerCombatState;
-      
+
       if (!freshCombat) {
         debug.combat(`[handleCombatEnd] Guard fail: pendingCombat=${!!freshCombat}, flowTag=${flowState?.tag ?? null}`);
         clearPendingCombat();
@@ -353,37 +354,37 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ onGam
         playSoundEffect('turn_start');
         return;
       }
-      
+
       const playerPreBlindHP = freshPokerState?.player.preBlindHealth ?? freshPokerState?.player.pet.stats.currentHealth ?? 0;
       const opponentPreBlindHP = freshPokerState?.opponent.preBlindHealth ?? freshPokerState?.opponent.pet.stats.currentHealth ?? 0;
       const playerStamina = freshPokerState?.player.pet.stats.currentStamina ?? 0;
       const opponentStamina = freshPokerState?.opponent.pet.stats.currentStamina ?? 0;
-      
+
       const pokerPlayerPiece = pokerSlotsSwapped ? freshCombat.defender : freshCombat.attacker;
       const pokerOpponentPiece = pokerSlotsSwapped ? freshCombat.attacker : freshCombat.defender;
-      
+
       debug.combat(`Winner: ${winner}, pokerSlotsSwapped: ${pokerSlotsSwapped}`);
       debug.combat(`Poker player = chess ${pokerSlotsSwapped ? 'defender' : 'attacker'} (${pokerPlayerPiece.owner})`);
       debug.combat(`Poker opponent = chess ${pokerSlotsSwapped ? 'attacker' : 'defender'} (${pokerOpponentPiece.owner})`);
       debug.combat(`PreBlindHP - player: ${playerPreBlindHP}, opponent: ${opponentPreBlindHP}`);
       debug.combat(`Stamina - player: ${playerStamina}, opponent: ${opponentStamina}`);
-      
+
       if (winner === 'draw') {
         updatePieceHealth(pokerPlayerPiece.id, Math.max(1, playerPreBlindHP));
         updatePieceHealth(pokerOpponentPiece.id, Math.max(1, opponentPreBlindHP));
         updatePieceStamina(pokerPlayerPiece.id, playerStamina);
         updatePieceStamina(pokerOpponentPiece.id, opponentStamina);
-        
+
         incrementAllStamina();
         nextTurn();
-        
+
         debug.chess(`Draw resolved - both pieces survive. Player HP: ${playerPreBlindHP}, Opponent HP: ${opponentPreBlindHP}`);
       } else {
         let winnerPiece: typeof freshCombat.attacker;
         let loserPiece: typeof freshCombat.attacker;
         let winnerNewHealth: number;
         let winnerNewStamina: number;
-        
+
         if (winner === 'player') {
           winnerPiece = pokerPlayerPiece;
           loserPiece = pokerOpponentPiece;
@@ -397,17 +398,17 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ onGam
           winnerNewStamina = opponentStamina;
           debug.chess(`Poker opponent (${winnerPiece.owner} ${winnerPiece.type}) wins - HP stays at ${opponentPreBlindHP}`);
         }
-        
+
         resolveCombat({
           winner: winnerPiece,
           loser: loserPiece,
           winnerNewHealth: Math.max(1, winnerNewHealth)
         });
-        
+
         debug.combat(`Updating winner ${winnerPiece.type} (${winnerPiece.owner}) stamina to ${winnerNewStamina}`);
         updatePieceStamina(winnerPiece.id, winnerNewStamina);
       }
-      
+
       clearPendingCombat();
       setPokerSlotsSwapped(false);
       endCombat();
@@ -505,7 +506,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ onGam
       const currentSide = boardState.currentTurn;
       const pieces = boardState.pieces.filter(p => p.owner === currentSide);
       let hasValidMove = false;
-      
+
       for (const piece of pieces) {
         const { moves, attacks } = getValidMoves(piece);
         if (moves.length > 0 || attacks.length > 0) {
@@ -513,7 +514,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ onGam
           break;
         }
       }
-      
+
       if (!hasValidMove && pieces.length > 0) {
         const winnerStatus = currentSide === 'player' ? 'opponent_wins' : 'player_wins';
         debug.chess(`${currentSide} has no valid moves - stalemate, ${winnerStatus}`);
@@ -579,15 +580,15 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ onGam
   const handleBattleMode = useCallback(() => {
     const playerPieces = boardState.pieces.filter(p => p.owner === 'player' && p.type !== 'pawn' && p.type !== 'king');
     const opponentPieces = boardState.pieces.filter(p => p.owner === 'opponent' && p.type !== 'pawn' && p.type !== 'king');
-    
+
     if (playerPieces.length === 0 || opponentPieces.length === 0) {
       debug.chess('BattleMode: Not enough pieces for test battle');
       return;
     }
-    
+
     const attacker = playerPieces[Math.floor(Math.random() * playerPieces.length)];
     const defender = opponentPieces[Math.floor(Math.random() * opponentPieces.length)];
-    
+
     dispatchFlow({ type: 'COMBAT_TRIGGERED', pieces: { attacker, defender } });
     playSoundEffect('card_draw');
   }, [boardState.pieces, playSoundEffect, dispatchFlow]);

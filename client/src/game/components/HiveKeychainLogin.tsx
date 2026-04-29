@@ -8,14 +8,20 @@
  *   disconnected → expands to username input → Keychain signs a buffer to verify ownership
  *   connected     → shows @username pill + Logout button
  *
- * On connect: calls hiveSync.login(), sets HiveDataLayer user, starts chain replay sync.
+ * On connect: calls HiveAuth login, sets HiveDataLayer user, starts chain replay sync.
  * On logout: stops sync, clears HiveDataLayer state.
  */
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useHiveDataStore } from '../../data/HiveDataLayer';
-import { hiveSync } from '../../data/HiveSync';
+import {
+	clearActiveHiveSession,
+	getDefaultHiveWalletProviderId,
+	isHiveWalletAvailable,
+	loginWithHiveWallet,
+	setActiveHiveSession,
+} from '../../data/HiveAuth';
 import { getNFTBridge } from '../nft';
 import { ensureBridgeRuntime } from '../runtime/bridgeRuntime';
 import { Button } from '../../components/ui-norse';
@@ -32,14 +38,14 @@ export function HiveKeychainLogin() {
 	const [status, setStatus] = useState<ConnectStatus>('idle');
 	const [errorMsg, setErrorMsg] = useState('');
 
-	const keychainAvailable = hiveSync.isKeychainAvailable();
+	const keychainAvailable = isHiveWalletAvailable();
 
 	// Re-connect on mount if user was previously logged in
 	useEffect(() => {
 		let cancelled = false;
 
 		if (user) {
-			hiveSync.setUsername(user.hiveUsername);
+			setActiveHiveSession(user.hiveUsername, getDefaultHiveWalletProviderId());
 			void ensureBridgeRuntime().then(() => {
 				if (!cancelled) {
 					getNFTBridge().startSync(user.hiveUsername);
@@ -66,7 +72,7 @@ export function HiveKeychainLogin() {
 			return;
 		}
 
-		const result = await hiveSync.login(trimmed);
+		const result = await loginWithHiveWallet(trimmed);
 
 		if (!result.success) {
 			setStatus('error');
@@ -88,6 +94,7 @@ export function HiveKeychainLogin() {
 
 	const handleLogout = () => {
 		getNFTBridge().stopSync();
+		clearActiveHiveSession();
 		logout();
 	};
 

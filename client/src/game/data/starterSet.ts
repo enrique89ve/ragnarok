@@ -1,7 +1,8 @@
 /**
- * starterSet.ts — New Player Starter Card Distribution
+ * starterSet.ts — Fixed Starter Entitlement
  *
- * Each player receives 45 base cards matched to their default heroes:
+ * Every account receives the same 45-card starter entitlement matched to the
+ * default heroes:
  * - 10 Mage cards (for Erik Flameheart)
  * - 10 Warrior cards (for Ragnar Ironside)
  * - 10 Priest cards (for Brynhild)
@@ -10,11 +11,16 @@
  *
  * Base cards are infinite supply — they don't count toward the 3.3M NFT cap.
  * Power level: slightly below common, with "value gems" to keep decks competitive.
+ *
+ * Important: the starter is intentionally fixed, not random. Randomness belongs
+ * in pack/reward systems, not in account bootstrap.
  */
 
 import { getCardById } from './cardManagement/cardRegistry';
 import type { CardData } from '../types';
 import { BASE_CARD_IDS_BY_CLASS } from './cardRegistry/sets/core/neutrals/baseCards';
+import { useHiveDataStore } from '@/data/HiveDataLayer';
+import type { HiveCardAsset } from '@/data/schemas/HiveTypes';
 
 // Hero class → card IDs mapping (matches getDefaultArmySelection heroes)
 const CLASS_CARD_SETS: Record<string, number[]> = {
@@ -51,6 +57,47 @@ export function getStarterCards(): CardData[] {
 	return cards;
 }
 
+function toStarterAsset(card: CardData): HiveCardAsset {
+	return {
+		uid: `starter-${card.id as number}`,
+		cardId: card.id as number,
+		ownerId: 'local',
+		edition: 'alpha',
+		foil: 'standard',
+		rarity: card.rarity || 'common',
+		level: 1,
+		xp: 0,
+		name: card.name,
+		type: card.type,
+	};
+}
+
+/**
+ * Materialize the fixed starter entitlement into the local collection cache.
+ * The source of truth is the fixed starter set in code, not persisted card IDs.
+ *
+ * Returns the number of cards newly inserted into the local collection.
+ */
+export function materializeStarterEntitlement(): number {
+	const hiveStore = useHiveDataStore.getState();
+	const starterCards = getStarterCards();
+	const ownedStarterIds = new Set(
+		hiveStore.cardCollection
+			.filter(card => card.ownerId === 'local')
+			.map(card => card.cardId),
+	);
+
+	let added = 0;
+	for (const card of starterCards) {
+		const cardId = card.id as number;
+		if (ownedStarterIds.has(cardId)) continue;
+		hiveStore.addCard(toStarterAsset(card));
+		added++;
+	}
+
+	return added;
+}
+
 /**
  * Get class-specific base cards for a given hero class.
  * Used when giving bonus cards for a specific hero.
@@ -58,46 +105,6 @@ export function getStarterCards(): CardData[] {
 export function getBaseCardsByClass(heroClass: string): CardData[] {
 	const ids = CLASS_CARD_SETS[heroClass] ?? [];
 	return ids.map(id => getCardById(id)).filter(Boolean) as CardData[];
-}
-
-/**
- * Get random neutral base cards from the shared pool.
- * Guarantees at least 20% minions.
- */
-export function getRandomNeutralBaseCards(count: number): CardData[] {
-	const allNeutralIds = BASE_CARD_IDS_BY_CLASS.Neutral.slice(5); // Skip king cards (140-144)
-	const shuffled = [...allNeutralIds].sort(() => Math.random() - 0.5);
-	const cards: CardData[] = [];
-
-	for (const id of shuffled) {
-		if (cards.length >= count) break;
-		const card = getCardById(id);
-		if (card) cards.push(card);
-	}
-
-	// Ensure 20% minion floor
-	const minions = cards.filter(c => c.type === 'minion');
-	const minMinionCount = Math.ceil(count * 0.2);
-	if (minions.length < minMinionCount) {
-		const minionIds = allNeutralIds.filter(id => {
-			const c = getCardById(id);
-			return c?.type === 'minion' && !cards.some(existing => existing.id === id);
-		});
-		const shuffledMinions = minionIds.sort(() => Math.random() - 0.5);
-		let needed = minMinionCount - minions.length;
-		for (const id of shuffledMinions) {
-			if (needed <= 0) break;
-			const card = getCardById(id);
-			if (card) {
-				// Replace a spell with this minion
-				const spellIdx = cards.findIndex(c => c.type === 'spell');
-				if (spellIdx >= 0) cards[spellIdx] = card;
-				needed--;
-			}
-		}
-	}
-
-	return cards;
 }
 
 export const STARTER_PACK_NAME = 'Birthright of the Norns';
@@ -126,4 +133,14 @@ export function buildStarterDecks(): Array<{ name: string; heroId: string; cardI
 
 	localStorage.setItem('ragnarok-decks', JSON.stringify(decks));
 	return decks;
+}
+
+/**
+ * Rebuild starter decks if they are missing from localStorage. This is safe to
+ * run on every startup because it only writes when no deck payload exists.
+ */
+export function ensureStarterDecks(): void {
+	const existing = localStorage.getItem('ragnarok-decks');
+	if (existing) return;
+	buildStarterDecks();
 }

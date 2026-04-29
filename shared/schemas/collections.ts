@@ -12,7 +12,8 @@
  *     finite supply per rarity. The genesis ceremony commits to the hash
  *     of this file on Hive L1.
  *   - `starterCollection.json`  — `set: 'starter'`, infinite supply, never
- *     on-chain. Distributed via `StarterPackCeremony` to every new player.
+ *     on-chain. Fixed universal entitlement materialized locally for every
+ *     player via `StarterPackCeremony`.
  *
  * Tokens (`collectible: false`) are excluded from both: per `RULEBOOK.md`
  * they are not NFTs and have no supply.

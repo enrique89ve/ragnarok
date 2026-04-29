@@ -1,10 +1,10 @@
 /**
- * HiveSync - Hive Keychain integration
+ * HiveSync - Hive transaction broadcaster
  *
  * Handles broadcasting via Hive Keychain for core transaction types:
  * rp_team_submit, rp_match_result, rp_card_transfer, rp_pack_open, rp_level_up
  *
- * Also provides login (requestSignBuffer) and signResultHash (dual-sig).
+ * Authentication/session ownership now lives in HiveAuth.
  */
 
 import {
@@ -12,6 +12,15 @@ import {
   RagnarokTransactionType,
   RAGNAROK_APP_ID,
 } from "./schemas/HiveTypes";
+import {
+  getActiveHiveUsername,
+  setActiveHiveSession,
+  signHiveMessage,
+} from "./HiveAuth";
+import {
+  getHiveKeychain,
+  isHiveKeychainAvailable,
+} from "./HiveKeychain";
 import { RAGNAROK_LEGACY_PREFIX } from "@shared/indexer-types";
 import {
   sanitizePayload,
@@ -37,55 +46,19 @@ export interface HiveSignatureResult {
   error?: string;
 }
 
-export interface HiveKeychainResponse {
-  success: boolean;
-  result?: {
-    id: string;
-    block_num: number;
-    trx_num: number;
-  };
-  error?: string;
-  message?: string;
-}
-
-declare global {
-  interface Window {
-    hive_keychain?: {
-      requestCustomJson: (
-        username: string,
-        id: string,
-        keyType: "Active" | "Posting",
-        json: string,
-        displayName: string,
-        callback: (response: HiveKeychainResponse) => void,
-      ) => void;
-      requestSignBuffer: (
-        username: string,
-        message: string,
-        keyType: "Active" | "Posting" | "Memo",
-        callback: (response: HiveKeychainResponse) => void,
-        rpc?: string,
-        title?: string,
-      ) => void;
-    };
-  }
-}
-
 const KEYCHAIN_TIMEOUT_MS = 60_000;
 
 export class HiveSync {
-  private username: string | null = null;
-
   isKeychainAvailable(): boolean {
-    return typeof window !== "undefined" && !!window.hive_keychain;
+    return isHiveKeychainAvailable();
   }
 
   setUsername(username: string) {
-    this.username = username;
+    setActiveHiveSession(username);
   }
 
   getUsername(): string | null {
-    return this.username;
+    return getActiveHiveUsername();
   }
 
   async broadcastCustomJson(
@@ -93,7 +66,8 @@ export class HiveSync {
     payload: Record<string, unknown>,
     useActiveKey: boolean = false,
   ): Promise<HiveBroadcastResult> {
-    if (!this.username) {
+    const username = this.getUsername();
+    if (!username) {
       return { success: false, error: "No username set" };
     }
 
@@ -122,10 +96,14 @@ export class HiveSync {
     }
 
     const jsonStr = JSON.stringify(fullPayload);
+    const keychain = getHiveKeychain();
+    if (!keychain) {
+      return { success: false, error: "Hive Keychain not available" };
+    }
 
     const keychainPromise = new Promise<HiveBroadcastResult>((resolve) => {
-      window.hive_keychain!.requestCustomJson(
-        this.username!,
+      keychain.requestCustomJson(
+        username,
         RAGNAROK_APP_ID,
         useActiveKey ? "Active" : "Posting",
         jsonStr,
@@ -419,7 +397,8 @@ export class HiveSync {
     data: Record<string, unknown>,
     useActiveKey: boolean = false,
   ): Promise<HiveBroadcastResult> {
-    if (!this.username) return { success: false, error: "No username set" };
+    const username = this.getUsername();
+    if (!username) return { success: false, error: "No username set" };
     if (!this.isKeychainAvailable())
       return { success: false, error: "Hive Keychain not available" };
 
@@ -439,9 +418,13 @@ export class HiveSync {
     }
 
     const jsonStr = JSON.stringify(payload);
+    const keychain = getHiveKeychain();
+    if (!keychain) {
+      return { success: false, error: "Hive Keychain not available" };
+    }
     const keychainPromise = new Promise<HiveBroadcastResult>((resolve) => {
-      window.hive_keychain!.requestCustomJson(
-        this.username!,
+      keychain.requestCustomJson(
+        username,
         NFTLOX_PROTOCOL_ID,
         useActiveKey ? "Active" : "Posting",
         jsonStr,
@@ -474,7 +457,7 @@ export class HiveSync {
     return this.broadcastNFTLoxJson("create_collection", {
       name: collectionName,
       symbol: NFTLOX_COLLECTION_SYMBOL,
-      creator: this.username,
+      creator: this.getUsername(),
       totalPotential,
       metadata: {
         description:
@@ -488,7 +471,7 @@ export class HiveSync {
         burnable: true,
         replicable: false,
         royaltyPct: 0,
-        royaltyRecipient: this.username,
+        royaltyRecipient: this.getUsername(),
       },
       schema,
     });
@@ -508,7 +491,7 @@ export class HiveSync {
     return this.broadcastNFTLoxJson("mint", {
       collectionId,
       edition: 1,
-      owner: this.username,
+      owner: this.getUsername(),
       metadata: {
         name: seed.name,
         description: seed.description,
@@ -554,7 +537,7 @@ export class HiveSync {
     imageOverrides?: Record<string, string>,
   ): Promise<HiveBroadcastResult> {
     return this.broadcastNFTLoxJson("bulk_distribute", {
-      to: to || this.username,
+      to: to || this.getUsername(),
       items,
       ...(imageOverrides ? { imageOverrides } : {}),
     });
@@ -632,7 +615,7 @@ export class HiveSync {
   ): Promise<HiveBroadcastResult> {
     return this.broadcastNFTLoxJson("replicate", {
       seedId,
-      to: to || this.username,
+      to: to || this.getUsername(),
     });
   }
 
@@ -661,48 +644,6 @@ export class HiveSync {
     ); // buy requires active key
   }
 
-  /**
-   * Verify account ownership via Keychain requestSignBuffer.
-   * Signs a timestamped message with the user's Posting key — no transaction posted.
-   */
-  async login(username: string): Promise<HiveBroadcastResult> {
-    if (!this.isKeychainAvailable()) {
-      return { success: false, error: "Hive Keychain extension not installed" };
-    }
-
-    const message = `ragnarok-login:${username}:${Date.now()}`;
-
-    const keychainPromise = new Promise<HiveBroadcastResult>((resolve) => {
-      window.hive_keychain!.requestSignBuffer(
-        username,
-        message,
-        "Posting",
-        (response) => {
-          if (response.success) {
-            this.username = username;
-            resolve({ success: true });
-          } else {
-            resolve({
-              success: false,
-              error: response.error || response.message,
-            });
-          }
-        },
-        undefined,
-        "Log in to Ragnarok Cards",
-      );
-    });
-
-    const timeout = new Promise<HiveBroadcastResult>((resolve) =>
-      setTimeout(
-        () => resolve({ success: false, error: "Keychain timeout (60s)" }),
-        KEYCHAIN_TIMEOUT_MS,
-      ),
-    );
-
-    return Promise.race([keychainPromise, timeout]);
-  }
-
   async stampLevelUp(
     cardUid: string,
     cardId: number,
@@ -729,101 +670,27 @@ export class HiveSync {
       title?: string;
     },
   ): Promise<HiveSignatureResult> {
-    const user = options?.username ?? this.username;
-    if (!user) {
-      return { success: false, error: "No username set" };
-    }
-    if (!this.isKeychainAvailable()) {
-      return { success: false, error: "Hive Keychain not available" };
-    }
-
-    const keyType = options?.keyType ?? "Posting";
-    const title = options?.title ?? "Sign message";
-
-    const keychainPromise = new Promise<HiveSignatureResult>((resolve) => {
-      window.hive_keychain!.requestSignBuffer(
-        user,
-        message,
-        keyType,
-        (response) => {
-          if (response.success && response.result) {
-            resolve({ success: true, signature: response.result.id });
-          } else {
-            resolve({
-              success: false,
-              error: response.error || response.message,
-            });
-          }
-        },
-        undefined,
-        title,
-      );
-    });
-
-    const timeout = new Promise<HiveSignatureResult>((resolve) =>
-      setTimeout(
-        () => resolve({ success: false, error: "Keychain timeout (60s)" }),
-        KEYCHAIN_TIMEOUT_MS,
-      ),
-    );
-
-    return Promise.race([keychainPromise, timeout]);
+    return signHiveMessage(message, options);
   }
 
   async signResultHash(hash: string): Promise<string> {
-    if (!this.username) {
+    if (!this.getUsername()) {
       throw new Error("No username set");
     }
     if (!this.isKeychainAvailable()) {
       throw new Error("Hive Keychain not available");
     }
 
-    const keychainPromise = new Promise<string>((resolve, reject) => {
-      window.hive_keychain!.requestSignBuffer(
-        this.username!,
-        hash,
-        "Posting",
-        (response) => {
-          if (response.success && response.result) {
-            resolve(String(response.result));
-          } else {
-            reject(
-              new Error(response.error || response.message || "Signing failed"),
-            );
-          }
-        },
-        undefined,
-        "Sign match result",
-      );
+    const result = await signHiveMessage(hash, {
+      keyType: "Posting",
+      title: "Sign match result",
     });
+    if (!result.success || !result.signature) {
+      throw new Error(result.error || "Signing failed");
+    }
 
-    const timeout = new Promise<string>((_, reject) =>
-      setTimeout(
-        () => reject(new Error("Keychain signing timeout (60s)")),
-        KEYCHAIN_TIMEOUT_MS,
-      ),
-    );
-
-    return Promise.race([keychainPromise, timeout]);
+    return result.signature;
   }
 }
 
 export const hiveSync = new HiveSync();
-
-export async function buildHiveAuthBody(
-  username: string,
-  action: string,
-  bodyFields: Record<string, unknown> = {},
-): Promise<Record<string, unknown>> {
-  const timestamp = Date.now();
-  const message = `ragnarok-${action}:${username}:${timestamp}`;
-  const result = await hiveSync.signMessage(message, {
-    title: `Ragnarok: ${action.replace(/-/g, " ")}`,
-  });
-  return {
-    ...bodyFields,
-    username,
-    timestamp,
-    signature: result.success ? result.signature : undefined,
-  };
-}

@@ -6,7 +6,7 @@
  *
  * Two implementations:
  *   LocalNFTBridge  — localStorage only, no chain ops (local/test mode)
- *   HiveNFTBridge   — delegates to HiveSync, HiveEvents, replayEngine (hive mode)
+ *   HiveNFTBridge   — delegates to HiveSync, HiveAuth, HiveEvents, replayEngine (hive mode)
  */
 
 import type {

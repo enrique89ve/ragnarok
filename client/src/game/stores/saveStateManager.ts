@@ -5,12 +5,13 @@
  * Tier 2: File export/import — universal fallback for all players
  * Tier 3: QR/WebRTC transfer — convenience (handled by existing PeerJS infra)
  *
- * State payload: ~2KB compressed (base card IDs, campaign progress, decks,
- * quest state, Eitr balance, settings, tutorial flags). Does NOT include
- * NFT cards (those are chain-derived via replay engine).
+ * State payload: ~2KB compressed (campaign progress, decks, quest state,
+ * Eitr balance, settings, tutorial flags). Does NOT include NFT cards or
+ * starter card IDs — starter is a fixed entitlement reconstructed from code.
  */
 
 import { debug } from '../config/debugConfig';
+import { materializeStarterEntitlement, ensureStarterDecks } from '../data/starterSet';
 
 // ── Auto-Save on Milestones ──
 
@@ -37,10 +38,8 @@ export function triggerAutoSave(): void {
 // ── State Shape (what gets saved/restored) ──
 
 export interface PortableSaveState {
-	version: 2;
+	version: 3;
 	timestamp: number;
-	// Base card IDs owned (not NFTs — those are chain-derived)
-	baseCardIds: number[];
 	// Campaign progress
 	campaign: {
 		completedMissions: string[];
@@ -68,6 +67,14 @@ export interface PortableSaveState {
 	checksum?: string;
 }
 
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null;
+}
+
+function hasValidStarterClaimFlag(value: unknown): value is Pick<PortableSaveState, 'starterClaimed'> {
+	return isObjectRecord(value) && typeof value.starterClaimed === 'boolean';
+}
+
 // ── Collect State from All Stores ──
 
 export async function collectSaveState(): Promise<PortableSaveState> {
@@ -77,19 +84,12 @@ export async function collectSaveState(): Promise<PortableSaveState> {
 	const { useTutorialStore } = await import('../tutorial/tutorialStore');
 	const { useStarterStore } = await import('./starterStore');
 	const { useSettingsStore } = await import('./settingsStore');
-	const { useHiveDataStore } = await import('../../data/HiveDataLayer');
 
 	const campaign = useCampaignStore.getState() as unknown as Record<string, unknown>;
 	const crafting = useCraftingStore.getState() as unknown as Record<string, unknown>;
 	const tutorial = useTutorialStore.getState() as unknown as Record<string, unknown>;
 	const starter = useStarterStore.getState();
 	const settings = useSettingsStore.getState() as unknown as Record<string, unknown>;
-	const hiveData = useHiveDataStore.getState();
-
-	// Collect base card IDs (non-NFT local cards)
-	const baseCardIds = hiveData.cardCollection
-		.filter(c => c.ownerId === 'local')
-		.map(c => c.cardId);
 
 	// Collect completed mission IDs from campaign store
 	const rawMissions = campaign.completedMissions;
@@ -118,9 +118,8 @@ export async function collectSaveState(): Promise<PortableSaveState> {
 	}
 
 	const state: PortableSaveState = {
-		version: 2,
+		version: 3,
 		timestamp: Date.now(),
-		baseCardIds,
 		campaign: {
 			completedMissions: missionIds,
 			rewardsClaimed: rewardIds,
@@ -159,7 +158,7 @@ export async function restoreSaveState(state: PortableSaveState): Promise<{ succ
 			const actual = await computeChecksum(copy);
 			if (actual !== expected) {
 				debug.warn('[SaveState] Checksum mismatch — state may have been tampered with');
-				// Continue anyway — base cards have no economic value
+				// Continue anyway — starter entitlement has no economic value
 			}
 		}
 
@@ -167,35 +166,6 @@ export async function restoreSaveState(state: PortableSaveState): Promise<{ succ
 		const { useCraftingStore } = await import('../crafting/craftingStore');
 		const { useTutorialStore } = await import('../tutorial/tutorialStore');
 		const { useStarterStore } = await import('./starterStore');
-		const { useHiveDataStore } = await import('../../data/HiveDataLayer');
-		const { getCardById } = await import('../data/cardManagement/cardRegistry');
-
-		// Restore base cards
-		const hiveStore = useHiveDataStore.getState();
-		for (const cardId of state.baseCardIds) {
-			const existing = hiveStore.cardCollection.find(c => c.cardId === cardId && c.ownerId === 'local');
-			if (!existing) {
-				const cardDef = getCardById(cardId);
-				if (cardDef) {
-					hiveStore.addCard({
-						uid: `base-${cardId}-${Date.now()}`,
-						cardId,
-						ownerId: 'local',
-						rarity: cardDef.rarity || 'common',
-						edition: 'base' as 'alpha',
-						foil: 'standard',
-						level: 1,
-						xp: 0,
-						lastTransferBlock: 0,
-						lastTransferTrxId: '',
-						mintBlockNum: 0,
-						mintTrxId: '',
-						name: cardDef.name,
-						type: cardDef.type,
-					});
-				}
-			}
-		}
 
 		// Restore campaign (set state directly via Zustand)
 		if (state.campaign) {
@@ -220,10 +190,9 @@ export async function restoreSaveState(state: PortableSaveState): Promise<{ succ
 
 		// Restore starter claimed
 		if (state.starterClaimed) {
-			const starterStore = useStarterStore.getState() as unknown as Record<string, unknown>;
-			const claimFn = (starterStore.setClaimed ?? starterStore.claim ?? starterStore.markClaimed) as (() => void) | undefined;
-			if (claimFn) claimFn();
-			else starterStore.claimed = true;
+			useStarterStore.getState().markClaimed();
+			materializeStarterEntitlement();
+			ensureStarterDecks();
 		}
 
 		// Restore decks
@@ -231,7 +200,7 @@ export async function restoreSaveState(state: PortableSaveState): Promise<{ succ
 			localStorage.setItem('ragnarok-decks', JSON.stringify(state.decks));
 		}
 
-		debug.log(`[SaveState] Restored: ${state.baseCardIds.length} base cards, ${state.decks.length} decks, Eitr: ${state.eitr}`);
+		debug.log(`[SaveState] Restored: starter=${state.starterClaimed}, ${state.decks.length} decks, Eitr: ${state.eitr}`);
 		return { success: true };
 	} catch (err) {
 		debug.warn('[SaveState] Restore failed:', err);
@@ -329,12 +298,16 @@ export async function exportToFile(): Promise<void> {
 export async function importFromFile(file: File): Promise<{ success: boolean; error?: string }> {
 	try {
 		const text = await file.text();
-		const state = JSON.parse(text) as PortableSaveState;
-
-		if (!state.version || !state.timestamp || !Array.isArray(state.baseCardIds)) {
+		const parsed: unknown = JSON.parse(text);
+		if (!isObjectRecord(parsed)) {
 			return { success: false, error: 'Invalid save file format' };
 		}
 
+		if (parsed.version !== 3 || typeof parsed.timestamp !== 'number' || !hasValidStarterClaimFlag(parsed)) {
+			return { success: false, error: 'Invalid save file format' };
+		}
+
+		const state = parsed as PortableSaveState;
 		return restoreSaveState(state);
 	} catch (err) {
 		return { success: false, error: `Failed to parse save file: ${err}` };
@@ -347,7 +320,6 @@ async function computeChecksum(state: Omit<PortableSaveState, 'checksum'>): Prom
 	const str = JSON.stringify({
 		v: state.version,
 		t: state.timestamp,
-		b: state.baseCardIds.sort(),
 		c: state.campaign.completedMissions.sort(),
 		e: state.eitr,
 		s: state.starterClaimed,

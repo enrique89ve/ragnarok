@@ -5,7 +5,8 @@
  * Power level: slightly below common. A few "value gems" per class keep base decks competitive.
  *
  * Distribution: 4 class sets (10 each) + 1 king set (5) + 90 shared neutrals
- * Each player receives 45 cards: 10 per hero class + 5 neutrals (random from pool)
+ * Each player receives the same 45-card fixed starter:
+ * 10 per hero class + the 5 king neutrals (IDs 140-144).
  *
  * IDs: 100-234 (reserved base range, below all collectible card ranges)
  */

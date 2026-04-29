@@ -29,7 +29,7 @@ const GENESIS_SIGNERS = [RAGNAROK_ACCOUNT, RAGNAROK_GENESIS_ACCOUNT];
 function requireGenesisSigner(): HiveBroadcastResult | null {
 	const username = hiveSync.getUsername();
 	if (!username) {
-		return { success: false, error: 'Not logged in. Call hiveSync.login() first.' };
+		return { success: false, error: 'Not logged in. Connect a Hive wallet first.' };
 	}
 	if (!GENESIS_SIGNERS.includes(username)) {
 		return { success: false, error: `Must be logged in as a genesis signer, currently @${username}` };
@@ -40,7 +40,7 @@ function requireGenesisSigner(): HiveBroadcastResult | null {
 function requireAdmin(): HiveBroadcastResult | null {
 	const username = hiveSync.getUsername();
 	if (!username) {
-		return { success: false, error: 'Not logged in. Call hiveSync.login() first.' };
+		return { success: false, error: 'Not logged in. Connect a Hive wallet first.' };
 	}
 	if (username !== RAGNAROK_ACCOUNT) {
 		return { success: false, error: `Must be logged in as @${RAGNAROK_ACCOUNT}, currently @${username}` };

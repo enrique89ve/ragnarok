@@ -27,6 +27,8 @@ export * from './schemas/LocalTypes';
 
 export { useHiveDataStore, generateMatchId, generateCardUid } from './HiveDataLayer';
 
+export * from './WalletAuth';
+export * from './HiveAuth';
 export { HiveSync, hiveSync, type HiveBroadcastResult } from './HiveSync';
 
 export { hiveEvents, type HiveEvent, type HiveEventType } from './HiveEvents';
