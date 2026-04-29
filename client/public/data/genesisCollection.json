@@ -3449,7 +3449,7 @@
       "health": 6,
       "race": null,
       "supplyCap": 2000,
-      "assetId": "b7c0-961a91b2"
+      "assetId": "8621-6dcc124b"
     },
     {
       "id": 8520,
@@ -4476,7 +4476,7 @@
       "health": 5,
       "race": "Beast",
       "supplyCap": 2000,
-      "assetId": "a0c8-56f62e78"
+      "assetId": "9552-2465c9a5"
     },
     {
       "id": 11050,
@@ -4710,7 +4710,7 @@
       "health": 0,
       "race": null,
       "supplyCap": 2000,
-      "assetId": "43bc-f8a67756"
+      "assetId": "e00b-1d7c0e5c"
     },
     {
       "id": 12104,
@@ -4788,7 +4788,7 @@
       "health": 0,
       "race": null,
       "supplyCap": 2000,
-      "assetId": "d9a3-b4212b9e"
+      "assetId": "e325-dd2b8b6e"
     },
     {
       "id": 12201,
@@ -4944,7 +4944,7 @@
       "health": 8,
       "race": null,
       "supplyCap": 2000,
-      "assetId": "ce83-041621d0"
+      "assetId": "0433-1465k5g4"
     },
     {
       "id": 13002,
@@ -4957,7 +4957,7 @@
       "health": 3,
       "race": null,
       "supplyCap": 2000,
-      "assetId": "4a30-6698d4cc"
+      "assetId": "3291-9c9148e1"
     },
     {
       "id": 13003,
@@ -4970,7 +4970,7 @@
       "health": 5,
       "race": null,
       "supplyCap": 1000,
-      "assetId": "ebf1-c707a6ff"
+      "assetId": "fdfd-7p1e2ch9"
     },
     {
       "id": 13004,
@@ -4983,7 +4983,7 @@
       "health": 4,
       "race": null,
       "supplyCap": 2000,
-      "assetId": "176e-656d77fb"
+      "assetId": "54e8-d12e1de2"
     },
     {
       "id": 13005,
@@ -5269,7 +5269,7 @@
       "health": 0,
       "race": null,
       "supplyCap": 2000,
-      "assetId": "8744-92fe48ce"
+      "assetId": "ecda-1409c542"
     },
     {
       "id": 17006,
@@ -5919,7 +5919,7 @@
       "health": 8,
       "race": "Automaton",
       "supplyCap": 500,
-      "assetId": "4974-c1fcd35a"
+      "assetId": "1601-jfuw1ee2"
     },
     {
       "id": 20010,
@@ -9273,7 +9273,7 @@
       "health": 0,
       "race": null,
       "supplyCap": 1000,
-      "assetId": "f10f-eae16349"
+      "assetId": "ef9d-42bf3b92"
     },
     {
       "id": 30009,
@@ -9923,7 +9923,7 @@
       "health": 3,
       "race": null,
       "supplyCap": 2000,
-      "assetId": "f6a2-b0ca36b6"
+      "assetId": "44a5-yfcvx4ut"
     },
     {
       "id": 30075,
@@ -10105,7 +10105,7 @@
       "health": 4,
       "race": null,
       "supplyCap": 2000,
-      "assetId": "35e3-f4c7cd19"
+      "assetId": "6dd4-df5ea380"
     },
     {
       "id": 30091,
@@ -11067,7 +11067,7 @@
       "health": 6,
       "race": null,
       "supplyCap": 1000,
-      "assetId": "a1eb-fa3fb055"
+      "assetId": "eb34-078cea46"
     },
     {
       "id": 31304,
@@ -11301,7 +11301,7 @@
       "health": 2,
       "race": null,
       "supplyCap": 2000,
-      "assetId": "82ae-8fd7158e"
+      "assetId": "e0bc-01c153b6"
     },
     {
       "id": 31417,
@@ -11327,7 +11327,7 @@
       "health": 4,
       "race": "Elemental",
       "supplyCap": 1000,
-      "assetId": "8198-24f0cced"
+      "assetId": "0f7c-2ff14c3c"
     },
     {
       "id": 31419,
@@ -11353,7 +11353,7 @@
       "health": 0,
       "race": null,
       "supplyCap": 2000,
-      "assetId": "93d4-514494fa"
+      "assetId": "64db-482d89bb"
     },
     {
       "id": 31502,
@@ -12250,7 +12250,7 @@
       "health": 0,
       "race": null,
       "supplyCap": 500,
-      "assetId": "7855-a8bdfa04"
+      "assetId": "2923-5e0262ea"
     },
     {
       "id": 31949,
@@ -12289,7 +12289,7 @@
       "health": 0,
       "race": null,
       "supplyCap": 500,
-      "assetId": "407f-7deafd3e"
+      "assetId": "ea43-6c8f81ec"
     },
     {
       "id": 31952,
@@ -12328,7 +12328,7 @@
       "health": 0,
       "race": null,
       "supplyCap": 1000,
-      "assetId": "652d-3fruptt2"
+      "assetId": "0fbb-6e0e9d17"
     },
     {
       "id": 31955,
@@ -12368,6 +12368,19 @@
       "race": null,
       "supplyCap": 500,
       "assetId": "c34e-1db07574"
+    },
+    {
+      "id": 31958,
+      "name": "Realmbound Acolyte",
+      "type": "minion",
+      "rarity": "common",
+      "heroClass": "neutral",
+      "manaCost": 2,
+      "attack": 2,
+      "health": 2,
+      "race": null,
+      "supplyCap": 2000,
+      "assetId": "6c4b-otijmg2l"
     },
     {
       "id": 32001,
@@ -12458,7 +12471,7 @@
       "health": 0,
       "race": null,
       "supplyCap": 2000,
-      "assetId": "9600-2uc6ue3n"
+      "assetId": "2bdc-f25e0ba3"
     },
     {
       "id": 32009,
@@ -12770,7 +12783,7 @@
       "health": 8,
       "race": "Dragon",
       "supplyCap": 500,
-      "assetId": "7d52-7a8fa469"
+      "assetId": "834d-f9f96842"
     },
     {
       "id": 32065,
@@ -13121,7 +13134,7 @@
       "health": 1,
       "race": "Einherjar",
       "supplyCap": 2000,
-      "assetId": "65fa-dea4d1e5"
+      "assetId": "30d4-4e8879f1"
     },
     {
       "id": 32102,
@@ -13342,7 +13355,7 @@
       "health": 3,
       "race": "Spirit",
       "supplyCap": 500,
-      "assetId": "be4e-330a97ef"
+      "assetId": "b89a-b4bdd601"
     },
     {
       "id": 33001,
@@ -13550,7 +13563,7 @@
       "health": 1,
       "race": null,
       "supplyCap": 2000,
-      "assetId": "5e2a-ab09482d"
+      "assetId": "fdae-e73c7a5d"
     },
     {
       "id": 33035,
@@ -13589,7 +13602,7 @@
       "health": 1,
       "race": null,
       "supplyCap": 2000,
-      "assetId": "21fd-3d27b323"
+      "assetId": "279c-701cfbce"
     },
     {
       "id": 33038,
@@ -13602,7 +13615,7 @@
       "health": 4,
       "race": null,
       "supplyCap": 1000,
-      "assetId": "4096-02da5c5c"
+      "assetId": "5646-frtep472"
     },
     {
       "id": 33039,
@@ -13615,7 +13628,7 @@
       "health": 2,
       "race": null,
       "supplyCap": 2000,
-      "assetId": "a002-6e297461"
+      "assetId": "c3cf-ku0j70m6"
     },
     {
       "id": 33040,
@@ -13849,7 +13862,7 @@
       "health": 4,
       "race": "Dragon",
       "supplyCap": 1000,
-      "assetId": "5eeb-8662a741"
+      "assetId": "e01b-26d3b6b2"
     },
     {
       "id": 33107,
@@ -13862,7 +13875,7 @@
       "health": 4,
       "race": "Dragon",
       "supplyCap": 1000,
-      "assetId": "767a-9151971e"
+      "assetId": "d242-o97lo0ic"
     },
     {
       "id": 33108,
@@ -13888,7 +13901,7 @@
       "health": 6,
       "race": "Dragon",
       "supplyCap": 1000,
-      "assetId": "b9b6-efc5b4f0"
+      "assetId": "6654-mfeyt8se"
     },
     {
       "id": 33110,
@@ -13901,7 +13914,7 @@
       "health": 3,
       "race": "Dragon",
       "supplyCap": 1000,
-      "assetId": "fd49-d0f6c3cc"
+      "assetId": "d437-c256713a"
     },
     {
       "id": 33111,
@@ -13927,7 +13940,7 @@
       "health": 6,
       "race": "Dragon",
       "supplyCap": 1000,
-      "assetId": "5333-5686c9f0"
+      "assetId": "5e45-mxkiu04b"
     },
     {
       "id": 33113,
@@ -13940,7 +13953,7 @@
       "health": 6,
       "race": "Dragon",
       "supplyCap": 1000,
-      "assetId": "3dff-2996ad77"
+      "assetId": "36c9-825a0125"
     },
     {
       "id": 33114,
@@ -14811,7 +14824,7 @@
       "health": 3,
       "race": null,
       "supplyCap": 1000,
-      "assetId": "0a8d-336ea882"
+      "assetId": "8d30-0998e2d7"
     },
     {
       "id": 33234,
@@ -14928,7 +14941,7 @@
       "health": 6,
       "race": "Titan",
       "supplyCap": 2000,
-      "assetId": "ecda-d33ad1b0"
+      "assetId": "eaf6-d5c81dfa"
     },
     {
       "id": 33243,
@@ -14941,7 +14954,7 @@
       "health": 5,
       "race": null,
       "supplyCap": 500,
-      "assetId": "ec7d-2ab0ba30"
+      "assetId": "46c2-sy7byy2d"
     },
     {
       "id": 33244,
@@ -15318,7 +15331,7 @@
       "health": 4,
       "race": "Treant",
       "supplyCap": 500,
-      "assetId": "b569-c77f450b"
+      "assetId": "9e27-d128608d"
     },
     {
       "id": 33273,
@@ -17749,7 +17762,7 @@
       "health": 5,
       "race": "Undead",
       "supplyCap": 500,
-      "assetId": "556e-5fd736ca"
+      "assetId": "8de8-8b814790"
     },
     {
       "id": 39012,
@@ -18009,7 +18022,7 @@
       "health": 0,
       "race": null,
       "supplyCap": 2000,
-      "assetId": "bbc9-820efde7"
+      "assetId": "9c51-16b74aad"
     },
     {
       "id": 40001,
@@ -18113,7 +18126,7 @@
       "health": 5,
       "race": null,
       "supplyCap": 1000,
-      "assetId": "d1d5-ed57b8d5"
+      "assetId": "a54c-1ad47c41"
     },
     {
       "id": 40011,
@@ -18191,7 +18204,7 @@
       "health": 0,
       "race": null,
       "supplyCap": 2000,
-      "assetId": "328d-826bf00f"
+      "assetId": "4244-4be44d1c"
     },
     {
       "id": 40018,
@@ -18555,7 +18568,7 @@
       "health": 0,
       "race": null,
       "supplyCap": 1000,
-      "assetId": "649b-b7101782"
+      "assetId": "5ae9-f6288075"
     },
     {
       "id": 40110,
@@ -18607,7 +18620,7 @@
       "health": 0,
       "race": null,
       "supplyCap": 2000,
-      "assetId": "269c-47eab103"
+      "assetId": "649b-b7101782"
     },
     {
       "id": 40114,
@@ -18646,7 +18659,7 @@
       "health": 0,
       "race": null,
       "supplyCap": 1000,
-      "assetId": "e383-90b307bc"
+      "assetId": "48c0-768a7845"
     },
     {
       "id": 40117,
@@ -18698,7 +18711,7 @@
       "health": 12,
       "race": "Titan",
       "supplyCap": 500,
-      "assetId": "6a1b-b5ee31c7"
+      "assetId": "8e68-623bee80"
     },
     {
       "id": 40127,
@@ -22780,7 +22793,7 @@
       "health": 3,
       "race": null,
       "supplyCap": 2000,
-      "assetId": "cf0a-a1a8af03"
+      "assetId": "71c1-s6o2do75"
     },
     {
       "id": 85002,
@@ -22806,7 +22819,7 @@
       "health": 3,
       "race": "Beast",
       "supplyCap": 2000,
-      "assetId": "220e-62f8b863"
+      "assetId": "2407-5a48091b"
     },
     {
       "id": 85004,
@@ -22897,7 +22910,7 @@
       "health": 0,
       "race": null,
       "supplyCap": 500,
-      "assetId": "9c72-799a4917"
+      "assetId": "7504-f0bcb0c2"
     },
     {
       "id": 85011,
@@ -24197,7 +24210,7 @@
       "health": 4,
       "race": "Dragon",
       "supplyCap": 1000,
-      "assetId": "b0fc-f35fc98c"
+      "assetId": "e16f-90296cb7"
     },
     {
       "id": 92011,
@@ -24847,7 +24860,7 @@
       "health": 8,
       "race": "Beast",
       "supplyCap": 250,
-      "assetId": "94f4-9cf2f0ac"
+      "assetId": "277f-ea4880c7"
     },
     {
       "id": 95037,
@@ -25250,7 +25263,7 @@
       "health": 8,
       "race": null,
       "supplyCap": 250,
-      "assetId": "c088-ad2fc9ed"
+      "assetId": "4fb5-e048ac39"
     },
     {
       "id": 95068,
@@ -25484,7 +25497,7 @@
       "health": 6,
       "race": null,
       "supplyCap": 250,
-      "assetId": "e17d-219031e7"
+      "assetId": "c152-aa750d5a"
     },
     {
       "id": 95103,
@@ -25731,7 +25744,7 @@
       "health": 0,
       "race": null,
       "supplyCap": 500,
-      "assetId": "fdb4-pgffnylv"
+      "assetId": "f51b-b4e4b953"
     },
     {
       "id": 95123,
@@ -26927,7 +26940,7 @@
       "health": 7,
       "race": null,
       "supplyCap": 500,
-      "assetId": "87e9-07f113f9"
+      "assetId": "d25c-fa7g75kn"
     },
     {
       "id": 95424,
@@ -27595,12 +27608,12 @@
   ],
   "totals": {
     "byRarity": {
-      "common": 914,
+      "common": 915,
       "rare": 684,
       "epic": 364,
       "mythic": 158
     },
-    "totalCards": 2120,
-    "totalNFTs": 2733500
+    "totalCards": 2121,
+    "totalNFTs": 2735500
   }
 }
