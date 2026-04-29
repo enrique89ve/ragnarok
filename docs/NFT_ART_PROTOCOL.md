@@ -141,4 +141,4 @@ When applying a fix, **prefer pending over wrong art**. Showing `DEFAULT_PORTRAI
 | `scripts/pending-art.json` | Whitelist for cards awaiting art |
 | `docs/ART_GEN_PENDING.md` | Authoring workflow |
 | `client/public/art/orphaned/` | Retired art (not served) |
-| `client/public/art/orphaned/ORPHAN_INVENTORY.txt` | Regenerable summary; rebuild with `node scripts/regenOrphanInventory.mjs` |
+| `client/public/art/orphaned/ORPHAN_VISUAL_CATALOG.md` | Hand-maintained visual catalog of orphan art (single source of truth for the orphan pool) |

@@ -1,6 +1,8 @@
 # Catálogo Visual — Orphaned Art
-> Generado por inspección visual de 246 imágenes en `client/public/art/orphaned/`
-> Fecha: 2026-04-28
+> Fuente única de verdad del pool de arte huérfano en `client/public/art/orphaned/`.
+> Mantener a mano: cuando se mueva un archivo de aquí a `/art/nfts/`, eliminar su línea del catálogo;
+> cuando llegue arte nuevo a `orphaned/`, describirlo en la sección apropiada o dejarlo en "Pending visual review".
+> Última auditoría: 2026-04-28 — 261 archivos en folder, 195 descritos, 66 pendientes de revisión visual.
 
 ---
 
@@ -17,7 +19,6 @@
 | `a534-4fcc0ac2` | Guerrero masculino, cabello castaño-rubio, armadura dorada, magia de llama azul (portrait de medio cuerpo) |
 | `af1e-tgfxq4gr` | Dios nórdico anciano, casco dorado bicorne, barba blanca larga, armadura dorada+oscura, portrait realista con chispas de fuego |
 | `c141-vn5xetct` | Vikingo veterano corpulento, barba blanca prominente, casco dorado, armadura de cuero+metal, portrait realista, castillo de fondo |
-| `c3cf-ku0j70m6` | Anciano vidente encapuchado (tipo Odín), barba blanca larga, manto oscuro, bastón encendido en una mano, libro en la otra |
 | `cf01-a188b24b` | Guerrero calvo con cicatriz facial, espada recta + escudo redondo de madera, túnica roja sobre cota de malla, puente colgante en montañas |
 | `d25c-fa7g75kn` | Gigante de fuego masculino, barba negra espesa, casco dorado bicorne, ojos rojos ardientes, torso desnudo musculoso, aura de fuego |
 | `e0bc-01c153b6` | Mago-guerrero cabello oscuro largo, casco nórdico con cuernos, armadura de placas con runas, lanzando energía de rayos azules con ambas manos |
@@ -35,14 +36,11 @@
 | `0f7c-2ff14c3c` | Diosa, cabello azul, corona dorada con cuernos y gema central, armadura corset azul+dorado nórdico, lanzando magia de runas brillantes |
 | `0da8-5c705956` | Guerrera cabello oscuro, armadura de cuero/piel nórdica, empuñando maza con cabeza de criatura/tentáculo, bosque místico con tótem |
 | `a523-50tt2zcw` | Valquiria-guerrera con corona de hojas doradas de otoño, cabello largo castaño, armadura plateada-dorada, bosque otoñal |
-| `b89a-b4bdd601` | Mujer de estética grecorromana-nórdica, cabello negro corto, corona de laurel dorada con gema, armadura blanco+dorado, anillos de magia verde, columnas encadenadas de fondo |
-| `d437-c256713a` | Elfa/hechicera nórdica, orejas puntiagudas, cabello rubio, armadura oscura con fur, tatuajes de runas en brazos, nueve orbes de runas flotando en círculo, hacha azul en mano |
 | `d718-mekc8ckp` | Mujer, cabello rubio-café, armadura plateada-azul, corona/casco dorado, magia de hielo flotante, ruinas glaciales de fondo (portrait pequeño) |
 | `eea6-1802903d` | Mujer, cabello oscuro, túnica nórdica azul+dorado, magia de hielo azul, pose sobre agua helada, montañas de fondo (portrait pequeño) |
 | `efdd-112f8e5e` | Figura divina en armadura totalmente dorada-blanca, corona, dos espadas, aureola dorada, rayos de fondo (portrait pequeño, posiblemente masculino) |
 | `f60f-8f36954e` | Valquiria en vuelo dinámico, casco alado plateado, armadura plateada con piel, lanza en mano derecha, escudo circular con alas en mano izquierda |
 | `fef0-0f15bf87` | Diosa del fuego, cabello cobrizo-dorado ondulado largo, corona de dragón dorada con escamas, armadura dorada con hombros afilados, chispas de fondo |
-| `fdae-e73c7a5d` | Shieldmaiden vikinga, cabello negro con trenzas finas, diadema de runas, túnica blanca+azul nórdica, hacha pequeña + escudo redondo, árbol de runas y ruina de fondo |
 
 ---
 
@@ -78,7 +76,6 @@
 | `a84b-921a4d94` | Lobo-oso bípedo, piel gris oscura, armadura de runas oscura, emblema de rayo dorado en pecho, ojos azul brillante, templo antiguo con cristales morados |
 | `af80-ff2b55c1` | Lobo-berserker bípedo, casco de piedra con cuernos y runas brillantes de teal, armadura oscura, snarling ante fogata en longhouse |
 | `ba44-ef642119` | Lobo-toro bípedo, casco vikingo de piedra con cuernos grandes, armadura nórdica de cuero con fur, hacha con grabados celtas, escudo redondo, de pie sobre roca en fiordo con aurora |
-| `eaf6-d5c81dfa` | Lobo-berserker masivo, armadura de escamas roja-dorada con runas en rojo, cráneo de lobo en hombro izquierdo, de pie en arena circular con cadenas de fondo |
 | `ff2e-1026d548` | Hombre-lobo bípedo, piel gris, armadura oscura con picos dorados y gemas azules, ojos naranja, de pie sobre roca en fiordo helado |
 
 ---
@@ -115,11 +112,8 @@
 | Archivo | Descripción visual |
 |---|---|
 | `04b7-88285000` | Bestia lobo-gato con alas de cuervo, piel con textura de piedra, armadura de tiras de cuero, escudo de piedra con emblema de ave, ojos teal, cueva |
-| `137f-71dbf902` | Trol de escarcha / Jotun, piel azul-morada, picos de cristal de hielo brotando del cuerpo, armadura de hielo nórdica, martillo de piedra gigante con cristal |
 | `a395-in0vknq1` | Unicornio oscuro, cuerpo negro mate, cuerno dorado espiral, melena roja llameante, ojos rojos, escamas doradas en cuello, halo solar dorado de fondo |
 | `c7e2-3e4fcfa2` | Dragón pequeño negro, ojos verdes brillantes, pose acurrucada, luz dorada de fuego (portrait pequeño, estilo Hearthstone) |
-| `d242-o97lo0ic` | Demonio humanoide de fuego: cuernos múltiples, piel oscura, cráneo-rostro con colmillos, ojos rojos brillantes, melena de llamas, bosque oscuro de fondo |
-| `dc05-8c0icj7w` | Oso negro grande close-up, halo de melena de fuego dorado, ojos rojos brillantes, colmillos expuestos, snarling |
 | `e293-5eb31a82` | Quimera ciervo-león cuadrúpeda: cuerpo de león con armadura de piedra, cabeza y astas de ciervo, ojos naranja, interior de salón de piedra con fogata |
 | `e67e-327da2df` | Ciervo mítico cuadrúpedo, cuerpo de piedra-musgo, astas grandes con constelaciones/líneas estelares grabadas, ojo naranja, arco de piedra con árbol retorcido |
 | `ea47-4bx4dl0s` | Caballo infernal oscuro, cara con armadura ornamentada rojo-naranja, astas de dragón, melena roja ondulante, ojo amarillo brillante, cielo morado-rojo |
@@ -154,7 +148,6 @@
 | `e73b-23fba25a` | Espada plantada en el suelo con explosión de lava horizontal, círculo de piedras rúnicas |
 | `ea43-6c8f81ec` | Yggdrasil dorado luminoso, tronco con knotwork rúnico, raíces que brillan, piedra rúnica alta a un lado |
 | `ec64-c2d78230` | Bloque/monolito de piedra oscura con runas en rojo y teal, resplandor de teal desde arriba |
-| `f10f-eae16349` | Explosión de fragmentos de roca volcánica con núcleo de fuego naranja, rayos azules, lluvia |
 | `f3a8-766798e0` | Flecha de muérdago con hojas verdes y bayas blancas, plumas de ala blanca en el extremo, altar de piedra encantado en bosque |
 | `f51b-b4e4b953` | Bastón rúnico de madera con fragmentos de hielo, huesos y energía fantasmal teal-verde |
 
@@ -180,19 +173,14 @@
 | `1f54-72m2h14b` | Anciano humanoid, grandes cuernos dorados, piel blanca/gris, ojos cian brillantes, larga barba blanca, túnica bordada en oro |
 | `28ca-zxymlb38` | Anciano masculino, pelo y barba blancos/plateados, corona de hueso/asta blanca, armadura pesada oscura |
 | `2f35-7597bd04` | Hombre-lobo bípedo, piel marrón con placas de piedra, ojos teal brillante, cicatrices rúnicas rojas, agazapado, pilares celtas, aurora |
-| `30d4-4e8879f1` | **CANDIDATO DECKHAND NJORD** — Humano masculino, rastas oscuras con ojo blanco brillante, armadura oscura con broche rúnico dorado, acantilado costero nórdico al atardecer con aves marinas, gesto de mando |
 | `36b6-c6f68329` | Anciano hechicero, dreadlocks/trenzas blanco-gris, cara cicatrizada, ojos naranja brillante, arrodillado en círculo rúnico, fuego en ambas manos, piedra erguida de fondo |
 | `38fc-22c1eed2` | Guerrero-lobo bípedo, escudo vikingo y hacha de batalla (con sangre), armadura nórdica con knotwork celta, halo dorado, ojos amarillo brillante, ruinas de pilares celtas |
 | `3c34-zji96mi7` | Guerrero nórdico masculino clásico, casco dorado ornamentado con cuernos, armadura dorada grabada, escudo redondo dorado, espada |
 | `3fb4-n9501hix` | Guerrero masculino sin rostro, casco ornamentado dorado con cuernos, ojos ranura verde brillante, armadura dorada grabada, espada, resplandor amarillo/fuego |
-| `44a5-yfcvx4ut` | **CANDIDATO CRAFTSMAN NIDAVELLIR** — Hombre robusto/bajo, cabeza rapada con pelo blanco/rubio recogido, barba gruesa completa, armadura pesada ornamentada en bronce-naranja, medallón rúnico brillante, fondo oscuro |
 | `46c2-sy7byy2d` | Guerrero nórdico masculino, larga melena rubia al viento, casco dorado con alas, marcas de batalla rojas, torso desnudo, pauldrons dorados y faja roja, fondo de fuego |
 | `4c90-629a9395` | Guerrero-lobo bípedo, pelaje azul-gris oscuro, armadura bronce nórdica con medallón rúnico, pequeños cuernos, fauces abiertas aullando, aurora, montañas nevadas |
 | `54e8-d12e1de2` | Humano masculino grande, calveza, relámpagos emanando de cabeza/ojos (azul), cara demacrada, brazaletes dorados teal brillantes, armadura de cuero/piel con medallones rúnicos dorados, espada, campo de lava/rayos |
-| `5646-frtep472` | **CANDIDATO SMITH NIDAVELLIR** — Hombre robusto y bajo, barba gris/oscura mediana, pelo gris, cicatriz roja en frente, ojos naranja-rojo brillante, capa con ribete de piel roja, pesada armadura bronce-naranja con pieza pectoral rúnica naranja brillante, cueva/roca oscura con brasas |
-| `5e45-mxkiu04b` | **CANDIDATO DRAKONID OPERATIVE** — Humano masculino élfico, pelo marrón ondulado, corona de cuernos de dragón dorados (dos cuernos curvados), ojos heterocromáticos (verde+azul-teal), orejas de elfo puntiagudas, armadura dorada y naranja-fuego con motivos de llamas, fondo de fuego |
 | `6c4b-otijmg2l` | Humano masculino, largo pelo marrón-dorado rizado, barba completa, armadura de cuero/piel nórdica con ribete de piel, expresión calmada, fondo de sala con tablones de madera — marino/deckhand |
-| `6dd4-df5ea380` | **CANDIDATO RESTING ARCHER ULLR** — Elfo masculino, pelo oscuro, corona de astas de ciervo con colgantes, ojos azul brillante (uno en sombra), capa de piel blanca, armadura nórdica rojo-marrón oscuro, sosteniendo espada en descanso, cueva helada/árbol oscuro de fondo |
 | `87a5-kprlfacx` | Anciano humano masculino, barba blanca completa, casco nórdico con cuernos, ojos ámbar, armadura de cuero con ribete de piel y broche nórdico — jarl vikingo clásico |
 | `8d30-0998e2d7` | Anciano masculino, largo pelo y barba blancos flotantes, túnica nórdica oscura con runas rojas, hombros acorazados, sosteniendo bastón con calavera coronada de llamas teal, energía teal en otra mano, calaveras flotando, puente helado, montañas — nigromante poderoso |
 
@@ -245,7 +233,6 @@
 | `8df8-c4061554` | Hombre-lobo bípedo, piel con textura de corteza/piedra, marcas rúnicas, arnés de cuero ligero con broche plateado, patrones de runas teal en brazo, agazapado junto a arroyo en bosque de abedules/otoño con arco de piedra |
 | `8e68-623bee80` | Golem guerrero bípedo de piedra/roca, armadura de placas de piedra con musgo, ojos teal brillante, sosteniendo gran martillo de piedra y escudo teal con símbolo solar, sala subterránea con cristales morados |
 | `8fcc-8babbb6f` | Hombre-lobo alado bípedo, grandes alas de plumas/cuervo extendidas, pelaje azul-gris oscuro, ojos naranja-rojo brillante, armadura nórdica de piedra, sosteniendo martillo rúnico (tipo Mjolnir), campo de batalla con relámpagos y armas rotas |
-| `834d-f9f96842` | **CANDIDATO ECHIDNA** — Humanoid acuático/dracónico oscuro, escamas azul-verde, crecimientos de coral rojo en cabeza, apéndices de tentáculos, ojos teal brillante, energía espiral azul en manos, fondo de templo griego/Partenón |
 
 ---
 
@@ -265,7 +252,6 @@
 | `4b23-ec55818a` | Oso cuadrúpedo acorazado, armadura nórdica dorada con knotwork, corriendo por tundra/estepa, árbol muerto, runestone |
 | `5804-9c8c8d56` | Lobo cuadrúpedo acorazado, pelaje marrón-gris oscuro, armadura de placa metálica con picos, ojo naranja-rojo, acechando en pantano/ciénaga neblinosa |
 | `64db-82daaaf0` | Lobo cuadrúpedo acorazado, plateado/gris, armadura de piedra con correas de cuero y picos, ojos naranja-rojo, río oscuro/pantano, heridas de sangre |
-| `6654-mfeyt8se` | **CANDIDATO HUNGRY WYRM JORMUNGANDR** — Dragón serpentino oscuro sin alas, cuello enrollado levantado, boca abierta, ojos rojo brillante, cuernos dorados, anillo de fuego/halo detrás |
 | `672c-e22afb77` | Lobo cuadrúpedo acorazado, gris-marrón oscuro, armadura de placas de piedra, correas de cuero, picos de hueso, ojos teal, bosque de árboles oscuros retorcidos |
 | `712d-335a64a2` | Jabalí salvaje cuadrúpedo, acorazado con correas de cuero/madera, ojo ámbar/naranja, bosque encantado oscuro, arco de gran árbol retorcido |
 | `77f-ea4880c7` | Gran jabalí acorazado, medallón espiral dorado en hombro, escenario costero con faro y aurora, sobre rocas |
@@ -329,20 +315,12 @@
 | ID | Nombre de carta | Archivo candidato | Justificación |
 |---|---|---|---|
 | 115 | Jotunn Axeman | `137f-...` | Jotun de escarcha, picos de hielo, gran martillo |
-| 119 | Battle Rage | `f10f-eae16349` | Arte de hechizo: explosión de roca volcánica con fuego y rayos |
 | 7510 | Bear of Bjorn | `dc05-...` | Gran oso negro con melena de fuego, ojos rojos — perfecta |
-| 30074 | Craftsman of Nidavellir | `44a5-yfcvx4ut` | Hombre robusto y bajo con armadura pesada de bronce rúnico — enano prototípico |
-| 30090 | Resting Archer of Ullr | `6dd4-df5ea380` | Elfo con corona de astas en bosque invernal en pose de descanso — motivo de deidad de caza |
-| 32064 | Echidna Mother of Dragons | `834d-f9f96842` | Ser dracónico tentaculado con coral ante templo griego — madre de monstruos griega |
-| 32101 | Deckhand of Njord | `30d4-4e8879f1` | Comandante marino nórdico con ojo brillante en acantilado costero tormentoso |
 | 32213 | The Furies | `b89a-...` | Femenina griega-nórdica con cadenas y magia verde |
 | 33034 | Acolyte of Hestia | `fdae-...` | Doncellaescudada en pose ceremonial ante árbol sagrado |
-| 33038 | Smith of Nidavellir | `5646-frtep472` | Hombre robusto con cicatriz, ojos naranja, capa roja en cueva de fragua oscura |
 | 33039 | High Priest of Hades | `c3cf-...` | Vidente encapuchado con bastón y libro |
 | 33107 | Corruptor of Tartarus | `d242-...` | Demonio de fuego con cara de calavera, ojos rojos |
-| 33109 | Hungry Wyrm of Jormungandr | `6654-mfeyt8se` | Dragón serpentino oscuro sin alas, ojos rojo brillante, anillo de fuego |
 | 33110 | Mnemosyne the Chronicler | `d437-...` | Sorceress elfa con 9 orbes de runas |
-| 33112 | Drakonid Operative | `5e45-mxkiu04b` | Elfo con corona de cuernos de dragón dorados, ojos heterocromáticos, armadura de fuego |
 | 33242 | Abyssal Enforcer | `eaf6-...` | Gran lobo-berserker encadenado masivo |
 | 92010 | Drake of Midgard Sky | `b75d-...` | Grifo oscuro con alas de relámpago |
 | 95067 | (nombre desconocido) | — | ID no encontrado en registros del juego |
@@ -451,3 +429,79 @@ Las siguientes **52 cartas coleccionables** del registro activo no tienen arte a
 | 95504 | Elpis, Warden of Hope | minion |
 | 95505 | Queen Echidna | minion |
 | 95506 | Barnabus, Titan Stomper | minion |
+
+---
+
+## PENDIENTES DE REVISIÓN VISUAL — 66 archivos
+
+> Archivos en `orphaned/` que aún no han sido descritos visualmente. Al asignar arte
+> a una carta, mover la línea a la sección apropiada arriba con su descripción, o
+> eliminarla si el archivo se mueve a `/art/nfts/`.
+
+- `0a8d-336ea882`
+- `176e-656d77fb`
+- `1e8a-ec131156`
+- `21fd-3d27b323`
+- `220e-62f8b863`
+- `269c-47eab103`
+- `2df6-cb27a76a`
+- `30e0-fe89f95b`
+- `328d-826bf00f`
+- `3a95-a09cvqxa`
+- `3dff-2996ad77`
+- `407f-7deafd3e`
+- `4974-c1fcd35a`
+- `4a30-6698d4cc`
+- `556e-5fd736ca`
+- `5eeb-8662a741`
+- `628c-d6b2f421`
+- `62b4-1f92034e`
+- `652d-3fruptt2`
+- `6a1b-b5ee31c7`
+- `7855-a8bdfa04`
+- `8198-24f0cced`
+- `82ae-8fd7158e`
+- `86ac-a6173348`
+- `87e9-07f113f9`
+- `9187-36fae0c7`
+- `9264-c325e147`
+- `93d4-514494fa`
+- `94ce-nffxsw3q`
+- `94f4-9cf2f0ac`
+- `9527-eb1eddd5`
+- `953e-swf1tvb2`
+- `95f4-75e2420a`
+- `9600-2uc6ue3n`
+- `9654-2cd78712`
+- `96df-081cebfd`
+- `96e5-308117de`
+- `980f-fef8a042`
+- `982f-ea8f4fef`
+- `986f-f1293dea`
+- `995d-1b9f7107`
+- `998a-1dhipeiq`
+- `9a82-xjclj2bn`
+- `9aae-tccijmav`
+- `9b3c-69abdfc5`
+- `a08f-a2xbq9k1`
+- `a1eb-fa3fb055`
+- `ae7a-9c0b3dba`
+- `b36a-ceb2dce3`
+- `b569-c77f450b`
+- `b62c-ac1dc6a1`
+- `b7c0-961a91b2`
+- `bb9e-4fce48b0`
+- `c97c-d31278f8`
+- `ce83-041621d0`
+- `cf0a-a1a8af03`
+- `d1d5-ed57b8d5`
+- `d898-1b6aaab7`
+- `d9a2-0e0294cd`
+- `d9a3-b4212b9e`
+- `dc89-540b22ae`
+- `e832-nil2y5bq`
+- `ebf1-c707a6ff`
+- `f8e4-386be9d3`
+- `fa84-98f4c257`
+- `fdb4-pgffnylv`
+
