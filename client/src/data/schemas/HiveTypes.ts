@@ -15,23 +15,20 @@
 
 export const RAGNAROK_APP_ID = 'ragnarok-cards';
 
-export type RagnarokAction =
-  | 'genesis'
-  | 'mint'
-  | 'transfer'
-  | 'burn'
-  | 'seal'
-  | 'match_start'
-  | 'match_result'
-  | 'queue_join'
-  | 'queue_leave'
-  | 'slash_evidence'
-  | 'team_submit'
-  | 'pack_open'
-  | 'card_transfer'
-  | 'level_up'
-  | 'reward_claim';
-
+/**
+ * Chain-level `custom_json` op id used at broadcast time.
+ *
+ * The canonical post-genesis form is the single id `'ragnarok-cards'` with
+ * the action name carried inside the payload (`{ app, action, ... }`). The
+ * `rp_*` variants are the pre-genesis legacy form, kept here because
+ * `HiveSync.broadcastCustomJson` still routes by them today; the long-term
+ * goal (separate phase) is to migrate every broadcast site to the canonical
+ * `'ragnarok-cards'` id and let the action live entirely in the payload.
+ *
+ * Canonical action names (`'mint_batch'`, `'pack_commit'`, …) are the source
+ * of truth for the protocol layer — see `CanonicalAction` /  `LegacyAction`
+ * in `shared/protocol-core/types.ts`.
+ */
 export type RagnarokTransactionType =
   | 'ragnarok-cards'
   | 'rp_genesis'
@@ -214,4 +211,3 @@ export const DEFAULT_TOKEN_BALANCE: HiveTokenBalance = {
   lastClaimTimestamp: 0,
 };
 
-export const RAGNAROK_CUSTOM_JSON_PREFIX = 'rp_';

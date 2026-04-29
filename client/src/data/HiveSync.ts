@@ -10,9 +10,9 @@
 import {
   HiveMatchResult,
   RagnarokTransactionType,
-  RAGNAROK_CUSTOM_JSON_PREFIX,
   RAGNAROK_APP_ID,
 } from './schemas/HiveTypes';
+import { RAGNAROK_LEGACY_PREFIX } from '@shared/indexer-types';
 import {
   sanitizePayload, validatePayloadSize, buildTransferMemo,
 } from '../../../shared/protocol-core/broadcast-utils';
@@ -95,7 +95,7 @@ export class HiveSync {
       return { success: false, error: 'Hive Keychain not available' };
     }
 
-    const action = type.replace(RAGNAROK_CUSTOM_JSON_PREFIX, '');
+    const action = type.replace(RAGNAROK_LEGACY_PREFIX, '');
 
     // Sanitize string fields before broadcast (defense-in-depth)
     const cleanPayload = sanitizePayload(payload);
