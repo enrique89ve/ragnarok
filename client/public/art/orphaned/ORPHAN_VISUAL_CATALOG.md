@@ -2,7 +2,7 @@
 > Fuente única de verdad del pool de arte huérfano en `client/public/art/orphaned/`.
 > Mantener a mano: cuando se mueva un archivo de aquí a `/art/nfts/`, eliminar su línea del catálogo;
 > cuando llegue arte nuevo a `orphaned/`, describirlo en la sección apropiada o dejarlo en "Pending visual review".
-> Última auditoría: 2026-04-28 — 231 archivos en folder, 165 descritos, 66 pendientes de revisión visual.
+> Última auditoría: 2026-04-28 — 225 archivos en folder, 159 descritos, 66 pendientes de revisión visual.
 
 ---
 
@@ -21,7 +21,6 @@
 | `c141-vn5xetct` | Vikingo veterano corpulento, barba blanca prominente, casco dorado, armadura de cuero+metal, portrait realista, castillo de fondo |
 | `cf01-a188b24b` | Guerrero calvo con cicatriz facial, espada recta + escudo redondo de madera, túnica roja sobre cota de malla, puente colgante en montañas |
 | `f0fa-95215f4d` | Berserker divino, armadura nórdica plateada+dorada, aurora boreal, órbita de armas rúnicas flotando alrededor (portrait pequeño) |
-| `f09c-c5673319` | Elemental/gigante de fuego, cabeza completamente en llamas, armadura de placas oscura con símbolo circular, garras de lava, rayos de tormenta |
 
 ---
 
@@ -34,7 +33,6 @@
 | `a523-50tt2zcw` | Valquiria-guerrera con corona de hojas doradas de otoño, cabello largo castaño, armadura plateada-dorada, bosque otoñal |
 | `d718-mekc8ckp` | Mujer, cabello rubio-café, armadura plateada-azul, corona/casco dorado, magia de hielo flotante, ruinas glaciales de fondo (portrait pequeño) |
 | `eea6-1802903d` | Mujer, cabello oscuro, túnica nórdica azul+dorado, magia de hielo azul, pose sobre agua helada, montañas de fondo (portrait pequeño) |
-| `efdd-112f8e5e` | Figura divina en armadura totalmente dorada-blanca, corona, dos espadas, aureola dorada, rayos de fondo (portrait pequeño, posiblemente masculino) |
 | `f60f-8f36954e` | Valquiria en vuelo dinámico, casco alado plateado, armadura plateada con piel, lanza en mano derecha, escudo circular con alas en mano izquierda |
 | `fef0-0f15bf87` | Diosa del fuego, cabello cobrizo-dorado ondulado largo, corona de dragón dorada con escamas, armadura dorada con hombros afilados, chispas de fondo |
 
@@ -125,17 +123,14 @@
 | `9c72-799a4917` | Estrella de cristal azul explotando con rayo al ser golpeada por bastón, arco de runas de piedra |
 | `9d11-42bac177` | Piedra rúnica vertical destruyéndose en una X de luz azul con rayos |
 | `a5ea-cfa3c283` | Anillo de rocas y enredaderas explotando, portal de luz verde, helechos de fondo |
-| `a73a-758c9630` | Vórtex/tornado de runas verdes con anillos de energía, pilares celtas, embers de fondo |
 | `b34b-cfbe1ca1` | Losas de piedra rúnicas con knotwork celta volando en una corriente de energía, rayos |
 | `b6a2-6bcfa6b3` | Torre de vid ardiente con fragmentos de piedra rúnica creciendo desde grieta de lava |
 | `bbf7-0166328e` | Prisma de diamante blanco irradiando rayos de luz dorada, círculo de runas tenue de fondo |
 | `be4e-330a97ef` | Silueta humana de espaldas frente a roca de obsidiana, espirales de energía teal+rojo serpenteando |
 | `c783-31a0ce87` | Rayo de fuego rojo diagonal / lanza de energía entre dos pilares de runas nórdicas, oscuridad |
-| `cd77-b63c2d2d` | Portal vórtex verde con raíces girando alrededor, arco de templo de runas de fondo |
 | `cef3-38ed8c23` | Estrella de 8 puntas de luz blanca/hielo, restos de roca alrededor, dos piedras de fondo |
 | `d567-4efa301c` | Torre de cristal azul-morado explotando hacia arriba, suelo de azulejo, dos pilares rúnicos |
 | `dbad-f6270ffa` | Tres dagas oscuras de runas con brillo verde-neón emergiendo de un vórtex de oscuridad |
-| `e60c-294660a5` | Martillo tipo Mjolnir con runas verdes brillantes, cristales de hielo, portal de agua |
 | `e73b-23fba25a` | Espada plantada en el suelo con explosión de lava horizontal, círculo de piedras rúnicas |
 | `ec64-c2d78230` | Bloque/monolito de piedra oscura con runas en rojo y teal, resplandor de teal desde arriba |
 | `f3a8-766798e0` | Flecha de muérdago con hojas verdes y bayas blancas, plumas de ala blanca en el extremo, altar de piedra encantado en bosque |
@@ -174,7 +169,6 @@
 
 | Archivo | Descripción visual |
 |---|---|
-| `1a40-cmxhweqk` | Femenina, largo pelo rubio, ojos azul brillante, armadura dorada/bronce con motivo de serpiente, halo de fuego — posible Echidna |
 | `1b21-8hx6f644` | Femenina, pelo castaño ondulado oscuro, corona dorada tipo rayos de sol, armadura de cuero verde, brazaletes dorados, bosque — retrato realista |
 | `21e2-rigfxmta` | Femenina, pelo rubio/castaño rojizo, capucha roja, armadura oscura de cuero, expresión calmada — arquera/exploradora |
 | `23d6-nesirs51` | Guerrera femenina, corona de astas de alce/ciervo doradas, armadura de placa dorada-naranja, pelo al viento, pose de carga |

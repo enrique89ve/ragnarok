@@ -31,7 +31,7 @@ import { finalLegendaryCards } from '../finalLegendaryCards';
 import { expansionLegendaryCards } from '../expansionLegendaryCards';
 
 // Mechanic-specific cards
-import { questCards } from '../questCards';
+import { questCards, questRewards } from '../questCards';
 import { outcastCards } from '../outcastCards';
 import { recruitCards } from '../recruitCards';
 import { spellburstCards } from '../spellburstCards';
@@ -55,6 +55,7 @@ const rawRegistry: CardData[] = [
   ...finalLegendaryCards,
   ...expansionLegendaryCards,
   ...questCards,
+  ...questRewards,
   ...outcastCards,
   ...recruitCards,
   ...spellburstCards,

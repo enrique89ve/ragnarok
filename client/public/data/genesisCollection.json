@@ -27034,6 +27034,84 @@
       "assetId": "c032-d37b8683"
     },
     {
+      "id": 95501,
+      "name": "Chronos Warp",
+      "type": "spell",
+      "rarity": "mythic",
+      "heroClass": "neutral",
+      "manaCost": 5,
+      "attack": 0,
+      "health": 0,
+      "race": null,
+      "supplyCap": 250,
+      "assetId": "a73a-758c9630"
+    },
+    {
+      "id": 95502,
+      "name": "Mjolnir's Fury",
+      "type": "weapon",
+      "rarity": "mythic",
+      "heroClass": "neutral",
+      "manaCost": 3,
+      "attack": 4,
+      "health": 0,
+      "race": null,
+      "supplyCap": 250,
+      "assetId": "e60c-294660a5"
+    },
+    {
+      "id": 95503,
+      "name": "Yggdrasil Core",
+      "type": "spell",
+      "rarity": "mythic",
+      "heroClass": "neutral",
+      "manaCost": 5,
+      "attack": 0,
+      "health": 0,
+      "race": null,
+      "supplyCap": 250,
+      "assetId": "cd77-b63c2d2d"
+    },
+    {
+      "id": 95504,
+      "name": "Elpis, Warden of Hope",
+      "type": "minion",
+      "rarity": "mythic",
+      "heroClass": "neutral",
+      "manaCost": 5,
+      "attack": 8,
+      "health": 8,
+      "race": null,
+      "supplyCap": 250,
+      "assetId": "efdd-112f8e5e"
+    },
+    {
+      "id": 95505,
+      "name": "Queen Echidna",
+      "type": "minion",
+      "rarity": "mythic",
+      "heroClass": "neutral",
+      "manaCost": 5,
+      "attack": 8,
+      "health": 8,
+      "race": null,
+      "supplyCap": 250,
+      "assetId": "1a40-cmxhweqk"
+    },
+    {
+      "id": 95506,
+      "name": "Barnabus, Titan Stomper",
+      "type": "minion",
+      "rarity": "mythic",
+      "heroClass": "neutral",
+      "manaCost": 5,
+      "attack": 8,
+      "health": 8,
+      "race": null,
+      "supplyCap": 250,
+      "assetId": "f09c-c5673319"
+    },
+    {
       "id": 95507,
       "name": "Open the Bifrost",
       "type": "spell",
@@ -27611,9 +27689,9 @@
       "common": 915,
       "rare": 684,
       "epic": 364,
-      "mythic": 158
+      "mythic": 164
     },
-    "totalCards": 2121,
-    "totalNFTs": 2735500
+    "totalCards": 2127,
+    "totalNFTs": 2737000
   }
 }

@@ -17,21 +17,10 @@ Cards that exist in `cardRegistry` but have no entry in `client/src/game/utils/a
 
 ## Pending cards
 
-### Quest / Legendary Cards — 6 cards (IDs 95501–95506)
-
-**Deferral reason:** High-profile quest and legendary cards with strong narrative identity. Intentionally deferred — these cards deserve custom-generated art that reflects their unique role in the game, not generic portraits from the orphaned pool.
-
-| cardId | Name | Type | Notes |
-|--------|------|------|-------|
-| 95501 | Chronos Warp | spell | Time-manipulation quest reward |
-| 95502 | Mjolnir | weapon | Thor's hammer — iconic, needs signature art |
-| 95503 | Yggdrasil Core | spell | World Tree essence — central to Norse theme |
-| 95504 | Elpis, Warden of Hope | minion | Greek mythology — Hope personified |
-| 95505 | Queen Echidna | minion | Mother of Monsters — needs tentacular beast art |
-| 95506 | Barnabus, Titan Stomper | minion | Titan stomper — needs massive giant art |
+_None._ All cards in `cardRegistry` have art assigned (verified via `npm run audit:art`).
 
 ## Pending filenames are owned by `pending-art.json`
 
 The whitelist of cards excused from `missing_asset_mapping` errors lives in `scripts/pending-art.json` so that CI can pass while these slots are open. The audit uses it to downgrade these specific IDs from error to info. **Keep both files in sync** — adding a card here without adding the ID to `scripts/pending-art.json` will fail CI.
 
-_Last updated: 2026-04-28. Total active pending: **6 cards** (quest/legendary)._
+_Last updated: 2026-04-28. Total active pending: **0 cards**._

@@ -1,6 +1,4 @@
 {
 	"comment": "Card IDs with no assetId yet — see docs/ART_GEN_PENDING.md. Audit downgrades these from error to info until art is generated.",
-	"cardIds": [
-		95501, 95502, 95503, 95504, 95505, 95506
-	]
+	"cardIds": []
 }
