@@ -130,6 +130,40 @@ NFTLox normalizes image URLs through `toWireUrl()` before hashing — the wire f
 
 ---
 
+## Deferred cleanup plan (gated on SDK install)
+
+**Decision (2026-04-29)**: keep current v1.1 DNA + replicate/merge code as-is until the `nftlox-sdk` is actually installed and we can do the cleanup with full context. Doing it ahead of time risks deleting working features that we'd then have to rebuild.
+
+**Target end state**: internal `CardAsset` carries only `cardId` for template identity. No `originDna`, `instanceDna`, `parentInstanceDna`, `generation`, `replicaCount`, `mergedFrom`. All instance-level identity comes from NFTLox's `nftDna` and is **validated at the boundary** (when ingesting from indexer or replay) but not propagated into our domain.
+
+**When it triggers**: after `nftlox-sdk` is installed, after we've decided how replicate/merge survive the migration (3 options in the section above), and *before* the first NFTLox-mediated mint.
+
+**Cleanup checklist** (mapped to current files):
+
+| File | Action |
+|---|---|
+| `shared/protocol-core/types.ts` | Drop `originDna`, `instanceDna`, `parentInstanceDna`, `generation`, `replicaCount`, `mergedFrom` from `CardAsset`. Drop `'replica'` and `'merge'` from `CardAsset.mintSource` union. Drop `MAX_REPLICAS_PER_CARD`, `MAX_GENERATION`, `REPLICA_COOLDOWN_BLOCKS` constants. Drop `'card_replicate'` and `'card_merge'` from `CanonicalAction`. Drop them from `ACTIVE_AUTH_OPS`. |
+| `shared/protocol-core/apply.ts` | Drop `applyCardReplicate`, `applyCardMerge`, `loadMergeCards`, `resolveMergeLineage`, `getCardOriginDna`, `getCardInstanceDna`. Drop dispatcher entries. In `applyPackBurn`: stop computing `originDna`/`instanceDna`. |
+| `shared/protocol-core/normalize.ts` | Drop `'rp_card_replicate'` / `'rp_card_merge'` from `LEGACY_MAP` and from the canonical `known` set. |
+| `shared/protocol-core/broadcast-utils.ts` | Drop `generateOriginDna`, `generateInstanceDna`. Drop `instanceDna` param from `buildTransferMemo` and `dnaPrefix` from `parseTransferMemo`. |
+| `shared/protocol-core/index.ts` | Drop re-exports of `generateOriginDna`, `generateInstanceDna`. |
+| `client/src/data/blockchain/opSchemas.ts` | Drop `CardReplicatePayload`, `CardMergePayload`, and entries in op schema map. |
+| `client/src/data/schemas/HiveTypes.ts` | Drop `'rp_card_replicate'`, `'rp_card_merge'` from custom_json id union. |
+| `client/src/data/HiveSync.ts` | Drop `replicateCard`, `mergeCards`. |
+| `client/src/game/nft/INFTBridge.ts` | Drop `replicateCard`, `mergeCards` from interface. |
+| `client/src/game/nft/HiveNFTBridge.ts` + `LocalNFTBridge.ts` | Drop both methods. |
+| `client/src/game/components/collection/CollectionPage.tsx` | Drop "Genetic Heritage" panel and Replicate/Merge buttons (lines ~960–1033). |
+| `shared/protocol-core/replayTraces.test.ts` | Drop `describe('v1.1: card_replicate', ...)` and `describe('v1.1: card_merge', ...)` blocks (lines ~1069–1231). Adjust `pack_burn` test to no longer assert `originDna`/`instanceDna`. |
+
+**Estimated diff**: net negative — ~13 files, mostly deletions. Low risk because none of the touched code reaches the combat engine.
+
+**Do not** start this cleanup before:
+1. `nftlox-sdk` installed and a smoke `create_collection` works on testnet.
+2. Replicate/merge fate decided (off-chain only / `mutableData` shadow / drop entirely).
+3. Pack opening flow rewritten on top of `bulk_distribute` (the current `applyPackBurn` is the live pack opener — removing DNA from it is fine, removing it entirely is not until the NFTLox-mediated replacement works).
+
+---
+
 ## What we still need from NFTLox
 
 | Need | Status |
