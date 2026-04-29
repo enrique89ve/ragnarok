@@ -76,17 +76,17 @@ Current charter (sealed, derived from `shared/schemas/genesisCharter.ts`):
 
 | Rarity | Cards | Heroes | Kings | Copies each | NFT subtotal |
 |--------|------:|-------:|------:|------------:|-------------:|
-| common |   914 |     12 |     6 |       2,000 |    1,864,000 |
+| common |   915 |     12 |     6 |       2,000 |    1,866,000 |
 | rare   |   684 |     38 |     2 |       1,000 |      724,000 |
 | epic   |   364 |     34 |     3 |         500 |      200,500 |
-| mythic |   158 |     13 |     3 |         250 |       43,500 |
-| **Total** | **2,120** | **97** | **14** | — | **2,832,000** |
+| mythic |   164 |     13 |     3 |         250 |       45,000 |
+| **Total** | **2,127** | **97** | **14** | — | **2,835,500** |
 
 The audit (`npm run audit:art`) reports a "Genesis Charter Compliance" block on every run. When `status: CLEAN` the registry matches the charter exactly; any drift surfaces as a delta the user can resolve before sealing.
 
 > Source-of-truth rule: this table mirrors `GENESIS_CHARTER` in `shared/schemas/genesisCharter.ts`. If the two diverge, the code wins — open the charter file and update this doc, never the other way around.
 
-> Historical note: an earlier draft published an aspirational 2,152-card / 91-hero / 13-king target (927 / 695 / 370 / 160 cards by rarity). That figure was computed when the registry held 32 duplicate card names. After de-duplication and king re-balancing, the canonicalised counts are 2,120 cards / 97 heroes / 14 kings; the per-rarity proportions of cards remain identical to two decimal places (5.78 : 4.33 : 2.30 : 1.00).
+> Historical note: an earlier draft published an aspirational 2,152-card / 91-hero / 13-king target (927 / 695 / 370 / 160 cards by rarity). That figure was computed when the registry held 32 duplicate card names. After de-duplication and king re-balancing the charter sealed at 2,120 cards (914 / 684 / 364 / 158); a later pre-launch correction added Realmbound Acolyte (common) and imported the six `questRewards` ghost cards (mythic) into the registry, bumping the charter to its current 2,127 cards (915 / 684 / 364 / 164). The exact numbers live in `shared/schemas/genesisCharter.ts` — read the file, do not paraphrase from this note.
 
 ## Adding new art
 
