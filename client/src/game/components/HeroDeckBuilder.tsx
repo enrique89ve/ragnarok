@@ -374,7 +374,7 @@ export const HeroDeckBuilder: React.FC<HeroDeckBuilderProps> = ({
 												const rarityKey = (card.rarity || 'common').toLowerCase();
 												const isMinion = card.type === 'minion';
 												const maxCopies = getMaxCopies(card);
-												const cardArtPath = getCardArtPath(card.name, cardId);
+												const cardArtPath = getCardArtPath(cardId);
 												const isMaxed = !canAdd && inDeckCount >= maxCopies;
 												const isSuper = isSuperMinion(cardId);
 												const isLinkedSuper = isSuper && getAllSuperMinionsForHero(db.heroId).includes(cardId);
@@ -646,7 +646,7 @@ const CardDetailFlip: React.FC<{
 
 	const rarityKey = (card.rarity || 'common').toLowerCase();
 	const holoTier = getHoloTier(rarityKey);
-	const cardArtPath = getCardArtPath(card.name, card.id);
+	const cardArtPath = getCardArtPath(card.id);
 	const isMinion = card.type === 'minion';
 	const keywords = (card as any).keywords as string[] | undefined;
 	const flavorText = (card as any).flavorText as string | undefined;

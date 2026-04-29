@@ -47,7 +47,7 @@ const CollectionCard: React.FC<CollectionCardProps> = React.memo(({
   }, []);
 
   const cardData = useMemo(() => extractCardData(card), [card]);
-  const artPath = useMemo(() => getCardArtPath(cardData.name, cardData.id), [cardData.name, cardData.id]);
+  const artPath = useMemo(() => getCardArtPath(cardData.id), [cardData.id]);
 
   const handleShowCardDetails = useCallback(() => {
     showCardDetails(cardData);

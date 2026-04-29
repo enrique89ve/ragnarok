@@ -82,7 +82,7 @@ export default function MarketplacePage() {
 						return {
 							...l,
 							cardName: cardDef?.name || l.nftUid,
-							cardArt: (cardDef ? getCardArtPath(cardDef.name, cardId) : undefined) || undefined,
+							cardArt: (cardDef ? getCardArtPath(cardId) : undefined) || undefined,
 							cardRarity: cardDef?.rarity as string | undefined,
 						};
 					}));

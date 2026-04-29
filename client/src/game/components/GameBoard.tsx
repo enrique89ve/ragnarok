@@ -213,7 +213,7 @@ export const GameBoard: React.FC<{}> = () => {
       if (!p) continue;
       for (const ci of [...(p.hand || []), ...(p.deck || [])]) {
         const c = 'card' in ci ? ci.card : ci;
-        const art = getCardArtPath(c.name, c.id);
+        const art = getCardArtPath(c.id);
         if (art) paths.push(art);
       }
     }

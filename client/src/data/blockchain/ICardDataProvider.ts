@@ -19,7 +19,7 @@ export interface CardDataMinimal {
 export interface ICardDataProvider {
 	getCardById(id: number): CardDataMinimal | undefined;
 	getAllCards(): CardDataMinimal[];
-	getCardArtPath(name: string, cardId?: number): string | null;
+	getCardArtPath(cardId?: number): string | null;
 }
 
 let provider: ICardDataProvider | null = null;

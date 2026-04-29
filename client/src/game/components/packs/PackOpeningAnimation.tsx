@@ -202,7 +202,7 @@ export default function PackOpeningAnimation({
                     <div className="flex-1 flex items-center justify-center">
                       <div className="w-28 h-28 rounded-lg bg-black/30 border border-white/20 overflow-hidden">
                         {(() => {
-                          const artPath = getCardArtPath(card.name, card.id);
+                          const artPath = getCardArtPath(card.id);
                           return artPath ? (
                             <img src={artPath} alt={card.name} className="w-full h-full object-cover" />
                           ) : (

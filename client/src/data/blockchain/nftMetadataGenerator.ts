@@ -90,7 +90,7 @@ export async function generateNFTMetadata(
 	provenance?: MintProvenance,
 ): Promise<NFTMetadata> {
 	const heroClass = cardDef.heroClass || cardDef.class || 'neutral';
-	const localPath = getCardDataProvider().getCardArtPath(cardDef.name, cardDef.id);
+	const localPath = getCardDataProvider().getCardArtPath(cardDef.id);
 	const image = localPath ? `${NFT_ART_BASE_URL}${localPath}` : '';
 
 	const metadataWithoutHash: Omit<NFTMetadata, 'hash'> = {

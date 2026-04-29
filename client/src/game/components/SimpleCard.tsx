@@ -214,7 +214,7 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
   const isArmor = card.type === 'armor';
 
   const classColor = getClassColor(card.cardClass);
-  const artPath = getCardArtPath(card.name, card.id);
+  const artPath = getCardArtPath(card.id);
   const cardTheme = useMemo(() => getCardTheme(card.name, card.element), [card.name, card.element]);
 
   const nameClass = card.name.length > 24 ? 'name-extreme' : card.name.length > 18 ? 'name-very-long' : card.name.length > 13 ? 'name-long' : '';

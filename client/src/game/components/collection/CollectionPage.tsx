@@ -522,7 +522,7 @@ export default function CollectionPage() {
 
 														{/* Card art area with holo */}
 														{(() => {
-															const artPath = getCardArtPath(card.name, card.id);
+															const artPath = getCardArtPath(card.id);
 															const holoTier = getHoloTier(card.rarity);
 															return (
 																<div
@@ -704,7 +704,7 @@ export default function CollectionPage() {
 
 								{/* Art Area */}
 								{(() => {
-									const modalArt = getCardArtPath(selectedCard.name, selectedCard.id);
+									const modalArt = getCardArtPath(selectedCard.id);
 									return (
 										<div className="w-full aspect-[4/3] rounded-xl mb-4 overflow-hidden border border-white/15 relative group">
 											{modalArt ? (

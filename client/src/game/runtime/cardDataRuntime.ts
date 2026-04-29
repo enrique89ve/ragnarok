@@ -57,7 +57,7 @@ export async function ensureCardDataRuntime(): Promise<void> {
               allCardsModule.default
                 .map(toCardDataMinimal)
                 .filter((card): card is CardDataMinimal => card !== null),
-            getCardArtPath: (name, cardId) => artMappingModule.getRawCardArtPath(name, cardId),
+            getCardArtPath: (cardId) => artMappingModule.getRawCardArtPath(cardId),
           });
         }
 
