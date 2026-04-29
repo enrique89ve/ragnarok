@@ -97,7 +97,7 @@ export interface INFTBridge {
 	mergeCards(sourceUids: [string, string]): Promise<BroadcastResult>;
 
 	// ── Events ──
-	onEvent(type: NFTEventType | '*', callback: NFTEventCallback): () => void;
+	onEvent(type: NFTEventType, callback: NFTEventCallback): () => void;
 	emitCardTransferred(cardUid: string, from: string, to: string): void;
 	emitTokenUpdate(token: string, amount: number, change: number): void;
 	emitTransactionConfirmed(trxId: string): void;

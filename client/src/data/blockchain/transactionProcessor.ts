@@ -146,7 +146,7 @@ async function submitToMockServer(tx: TransactionEntry): Promise<void> {
 		trxId: data.trxId ?? `mock_${tx.id}`,
 		blockNum: data.blockNum ?? 0,
 	});
-	hiveEvents.emitTransactionConfirmed({ trxId: data.trxId ?? `mock_${tx.id}`, type: tx.actionType as any, status: 'confirmed' });
+	hiveEvents.emitTransactionConfirmed({ trxId: data.trxId ?? `mock_${tx.id}` });
 }
 
 // ---------------------------------------------------------------------------
@@ -189,7 +189,7 @@ async function submitToHive(tx: TransactionEntry): Promise<void> {
 	);
 
 	if (!result.success) {
-		hiveEvents.emitTransactionFailed({ trxId: tx.id, type: tx.actionType as any, status: 'failed', errorMessage: result.error ?? 'Keychain broadcast rejected' });
+		hiveEvents.emitTransactionFailed({ trxId: tx.id, errorMessage: result.error ?? 'Keychain broadcast rejected' });
 		throw new Error(result.error ?? 'Keychain broadcast rejected');
 	}
 
@@ -197,7 +197,7 @@ async function submitToHive(tx: TransactionEntry): Promise<void> {
 		trxId: result.trxId ?? null,
 		blockNum: result.blockNum ?? null,
 	});
-	hiveEvents.emitTransactionConfirmed({ trxId: result.trxId ?? '', type: tx.actionType as any, status: 'confirmed' });
+	hiveEvents.emitTransactionConfirmed({ trxId: result.trxId ?? '' });
 }
 
 // ---------------------------------------------------------------------------

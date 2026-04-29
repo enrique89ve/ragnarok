@@ -155,11 +155,10 @@ export class HiveNFTBridge implements INFTBridge {
 
 	// ── Events ──
 
-	onEvent(type: NFTEventType | '*', callback: NFTEventCallback): () => void {
-		const hiveType = type as string;
-		return hiveEvents.on(hiveType as any, (event) => {
+	onEvent(type: NFTEventType, callback: NFTEventCallback): () => void {
+		return hiveEvents.on(type, (event) => {
 			callback({
-				type: event.type as NFTEventType,
+				type,
 				payload: event.payload,
 				timestamp: event.timestamp,
 			});
@@ -175,11 +174,11 @@ export class HiveNFTBridge implements INFTBridge {
 	}
 
 	emitTransactionConfirmed(trxId: string): void {
-		hiveEvents.emitTransactionConfirmed({ trxId, status: 'confirmed' });
+		hiveEvents.emitTransactionConfirmed({ trxId });
 	}
 
 	emitTransactionFailed(errorMessage: string): void {
-		hiveEvents.emitTransactionFailed({ status: 'failed', errorMessage });
+		hiveEvents.emitTransactionFailed({ errorMessage });
 	}
 
 	// ── Lifecycle ──

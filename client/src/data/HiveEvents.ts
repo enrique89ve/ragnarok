@@ -6,7 +6,7 @@
  * 
  */
 
-import { HiveMatchResult, HiveTransaction } from './schemas/HiveTypes';
+import { HiveMatchResult } from './schemas/HiveTypes';
 
 export type HiveEventType =
   | 'match:ended'
@@ -14,6 +14,15 @@ export type HiveEventType =
   | 'token:updated'
   | 'transaction:confirmed'
   | 'transaction:failed';
+
+export interface TransactionConfirmedPayload {
+  trxId: string;
+}
+
+export interface TransactionFailedPayload {
+  trxId?: string;
+  errorMessage: string;
+}
 
 export interface HiveEvent<T = unknown> {
   type: HiveEventType;
@@ -60,12 +69,12 @@ class HiveEventEmitter {
     this.emit('token:updated', { token, amount, change });
   }
 
-  emitTransactionConfirmed(tx: Partial<HiveTransaction>): void {
-    this.emit('transaction:confirmed', tx);
+  emitTransactionConfirmed(payload: TransactionConfirmedPayload): void {
+    this.emit('transaction:confirmed', payload);
   }
 
-  emitTransactionFailed(tx: Partial<HiveTransaction>): void {
-    this.emit('transaction:failed', tx);
+  emitTransactionFailed(payload: TransactionFailedPayload): void {
+    this.emit('transaction:failed', payload);
   }
 
   removeAllListeners(): void {

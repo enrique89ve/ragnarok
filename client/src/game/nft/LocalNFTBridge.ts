@@ -153,7 +153,7 @@ export class LocalNFTBridge implements INFTBridge {
 
 	// ── Events (no-ops) ──
 
-	onEvent(_type: NFTEventType | '*', _callback: NFTEventCallback): () => void {
+	onEvent(_type: NFTEventType, _callback: NFTEventCallback): () => void {
 		return () => {};
 	}
 
