@@ -1,16 +1,18 @@
 # Atomic NFT Packs & Transfer Design
 
-> ⚠️ **Forward-looking design proposal — NOT active spec.** This document describes a possible future evolution of the NFT pack model (atomic transfers, packs-as-NFTs with DNA, seed/instance/replica lineage). None of it is currently implemented in the codebase. Active NFT semantics live in:
+> ⚠️ **Historical design doc.** Upgrades 2 (Packs as NFTs) and 3 (Seed/Instance/Replica DNA Lineage) **are implemented** in protocol v1.1 — see `shared/protocol-core/apply.ts` (`applyPackBurn`, `applyCardReplicate`, `applyCardMerge`) and `shared/protocol-core/types.ts` (`PackAsset.dna`, `CardAsset.originDna/instanceDna/parentInstanceDna/generation/replicaCount`). UI lives in `client/src/game/components/collection/CollectionPage.tsx`.
+>
+> Read this for design rationale, threat model, and migration notes. For the **current contract**, go to:
 >
 > - **Rarity & supply caps** → [`docs/RULEBOOK.md`](RULEBOOK.md) (Card Rarity table)
 > - **On-chain protocol** → [`docs/RAGNAROK_PROTOCOL_V1.md`](RAGNAROK_PROTOCOL_V1.md)
 > - **Genesis ceremony** → [`docs/GENESIS_RUNBOOK.md`](GENESIS_RUNBOOK.md)
-> - **External NFT layer (future)** → [`docs/NFTLOX_INTEGRATION_SPEC.md`](NFTLOX_INTEGRATION_SPEC.md)
+> - **External NFT layer (target)** → [`docs/NFTLOX_INTEGRATION_SPEC.md`](NFTLOX_INTEGRATION_SPEC.md) — note that NFTLox v0.4.0 has **no `replicate` / `merge` ops**; those primitives stay in our protocol.
 >
 > If this doc and the RULEBOOK disagree, the RULEBOOK wins.
 
-**Status**: Draft — Pre-Implementation Design
-**Date**: 2026-03-17
+**Status**: Implemented (v1.1) — design rationale only
+**Date**: 2026-03-17 (last revised 2026-04-29)
 **Authors**: Claude Opus 4.6, informed by NFTLox protocol audit
 **Affects (if adopted)**: `protocol-core/apply.ts`, `replayDB.ts`, `HiveSync.ts`, `opSchemas.ts`, `hiveConfig.ts`
 

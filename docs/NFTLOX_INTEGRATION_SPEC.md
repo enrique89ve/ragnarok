@@ -6,7 +6,7 @@
 > - **Card definitions** → `client/src/game/data/cardRegistry/`.
 > - **Game state on Hive** (matches, ELO, decks, rewards) → `docs/RAGNAROK_PROTOCOL_V1.md`.
 >
-> This file describes only the **external NFT birth & ownership layer** (minting, supply, pack opening, transfer, burn) that runs on the third-party NFTLox protocol on Hive L1. It is forward-looking integration spec, not active game logic. If this doc and the schemas package disagree, **the schemas win**.
+> This file describes only the **external NFT birth & ownership layer** (minting, supply, distribution, transfer, burn) that will run on the third-party NFTLox protocol on Hive L1. **Not yet integrated** — it is target spec, not active game logic. Active mint/pack/replicate/merge logic currently lives in `shared/protocol-core/apply.ts` (v1.1). If this doc and the schemas package disagree, **the schemas win**.
 
 ---
 
@@ -14,8 +14,8 @@
 
 | Layer | Owner | What it governs |
 |---|---|---|
-| **NFTLox** (external protocol) | Birth & custody | Collection creation, seed minting, instance distribution, pack opening RNG, transfers, burns |
-| **Ragnarok** (`ragnarok-cards` protocol) | Game state | Matches, ELO, decks, rewards, marketplace, anti-cheat, level/XP progression |
+| **NFTLox** (external protocol) | Birth & custody | Collection creation, seed minting, instance distribution (`bulk_distribute`), transfers, burns, deterministic IDs/DNAs |
+| **Ragnarok** (`ragnarok-cards` protocol) | Game state | Matches, ELO, decks, rewards, marketplace, anti-cheat, level/XP progression, **pack RNG resolution**, replicate/merge primitives |
 
 The Ragnarok client-side replay engine watches **both** custom_json protocols on Hive L1 and merges them into local IndexedDB. No NFTLox API dependency at runtime.
 
@@ -23,44 +23,110 @@ The Ragnarok client-side replay engine watches **both** custom_json protocols on
 
 ## Current decisions (target v0.4.0)
 
+> Verified against NFTLox testnet docs at `nftloxtest.hivecreators.co/docs` on 2026-04-29.
+
 ### Collection — single, generic schema
 
 One NFTLox collection: `Ragnarok Cards` / symbol `RGNRK`, ~2,134 seeds (one per unique card template). Generic schema with all gameplay-relevant fields; spell/weapon cards leave irrelevant numeric fields at 0. Per-type collections rejected for launch simplicity.
 
-| Property | Value |
-|---|---|
-| `replicable` | `false` (Ragnarok manages its own DNA) |
-| `royaltyPct` | `0` (Ragnarok runs its own marketplace) |
+`CollectionData.rules` exposes only four flags — there is no `replicable`, no built-in lineage, no breeding. The values we set:
 
-### Schema (immutable + mutable + owner)
-
-NFTLox v0.4.0 supports a 3-tier data model. Ragnarok uses all three:
-
-| Tier | Writer | Fields |
+| Rule | Value | Reason |
 |---|---|---|
-| `immutableData` | Creator at mint, never changes | `card_id, name, type, rarity, class, mana_cost, attack, health, race, set` (attack/health are `uint16`) |
-| `mutableData` | Creator / data operators only | `level, xp, foil` (admin-controlled progression after match results) |
-| `ownerData` | NFT owner | Free-form personal data (custom names, notes) |
+| `transferable` | `true` | Players can trade and gift cards |
+| `burnable` | `true` | Required for the merge primitive (Ragnarok-side) |
+| `royaltyPct` | `0` | Ragnarok runs its own marketplace; NFTLox royalties bypassed |
+| `royaltyRecipient` | (omitted) | n/a when `royaltyPct = 0` |
+
+### Schema — 2 tiers (immutable + mutable)
+
+NFTLox v0.4.0 has a **2-tier** data model — there is no `ownerData` tier.
+
+| Tier | Writer | Op | Fields we use |
+|---|---|---|---|
+| `immutableData` | Creator at mint | `mint` (seed) | `card_id, name, type, rarity, class, mana_cost, attack, health, race, set` (numeric stats are `uint16`) |
+| `mutableData` | NFT **owner** (default) or approved **data operator** | `set_data` / `set_data_from` | `level, xp, foil` |
+
+Two consequences worth flagging:
+- The owner of the NFT can rewrite `mutableData` directly. To prevent players from setting their own `level`/`xp`, Ragnarok must register a **data operator** (`data_operator_approve`) and have the operator be the only signer of `set_data_from` for those fields. The schema can't enforce "creator-only writes" by itself.
+- Schemas are append-only and validated by `schema_version`. Existing fields can never change type; new fields can be added with `extend_schema`.
 
 The `set` and `rarity` fields here mirror the canon defined in `client/src/game/data/schemas/primitives/`. Any divergence between the on-chain `immutableData` and the schemas package is a bug.
 
-### Pack opening — Option C+ (server-resolved + `bulk_distribute`)
+### Pack opening — server-resolved RNG + `bulk_distribute`
 
-NFTLox drop tables cap at 50 entries; Ragnarok has 2,134 seeds. The `pack_create` / `pack_open` flow can't represent the full catalog. Instead:
+**NFTLox v0.4.0 has no pack primitive.** There is no `pack_create`, `pack_open`, `pack_buy`, or drop table on the protocol. The canonical pattern (and the one shown in NFTLox's own [Game Development guide](https://nftloxtest.hivecreators.co/docs/use-cases/games.md)) is the same flow Ragnarok needs:
 
-1. Player pays via HIVE transfer (any method).
-2. Ragnarok admin reads payment `txId + blockNum` from chain.
-3. `resolveDropTable()` runs locally with the full catalog (no 50-seed cap).
-4. `bulk_distribute` ships the resolved seed IDs to the recipient (max 50 distinct seeds per op).
+1. Player pays via HIVE transfer (or some other off-protocol trigger — e.g. a Ragnarok pack burn).
+2. Ragnarok admin (or game server) reads the trigger `txId + blockNum` from chain.
+3. RNG roll happens **server-side** with the full catalog (no protocol-imposed cap on entries).
+4. `buildBulkDistribute({ signer: CREATOR, to: player, items })` ships the resolved seed IDs to the recipient.
 
-This supersedes any prior plan based on `pack_create` with rarity-pool drop tables.
+Caps from `nftlox-sdk`:
+- `MAX_BULK_DISTRIBUTE_ITEMS = 50` distinct seeds per call.
+- `MAX_BULK_DISTRIBUTE_TOTAL_QUANTITY = 250` instances per call.
+- `MAX_BULK_TRANSFER / BURN = 50` ids per call.
+
+A 5-card pack fits trivially in one op; a 15-card mega pack also fits as long as it touches ≤ 50 distinct seeds. No batching needed for normal pack sizes.
 
 ### Authority model (v0.4.0)
 
-Asset-moving ops require **active key**; everything else is posting:
+The mapping is enforced by `ACTION_AUTH_LEVEL` in NFTLox's protocol package — there is no override.
 
-- **Active**: `transfer, burn, list, buy, pack_buy, pack_transfer, nft_approve, nft_approve_all, pack_approve, data_operator_approve`
-- **Posting**: `create_collection, mint, replicate, bulk_distribute, set_data, set_owner_data, extend_schema, unlist, pack_create, pack_open, nft_transfer_from, pack_transfer_from, set_data_from, nft_lend, nft_return`
+- **Active key (3 ops only)**: `create_collection`, `buy_commitment`, `buy`.
+- **Posting key (everything else)**: `mint`, `bulk_distribute`, `transfer`, `burn`, `list`, `unlist`, `set_data`, `set_data_from`, `extend_schema`, `archive_collection`, `nft_approve`, `nft_approve_all`, `data_operator_approve`, `nft_transfer_from`, `nft_lend`, `nft_return`.
+
+A subset of active actions also requires the signer to be a **registered active settlement node** (`NODE_SIGNED_ACTIONS` — currently `buy_commitment` and `buy`). `create_collection` is active-signed by the creator, not by a node.
+
+---
+
+## On-chain identity — IDs and DNAs (deterministic)
+
+NFTLox derives every ID and DNA deterministically from `sha256` with a fixed domain separator. Anyone can recompute them client-side without trusting the indexer.
+
+| ID | Format | Derivation |
+|---|---|---|
+| Collection ID | `col_<20 hex>` | `sha256("nftlox:col:" + creator + ":" + name + ":" + symbol)` |
+| Collection origin DNA | `o<15 upper-hex>` | `sha256("nftlox:origin:" + collectionId)` |
+| Seed ID | `seed_<20 hex>` | `sha256("nftlox:seed:" + collectionId + ":" + artId.lower())` |
+| Instance ID | `nft_<seedSuffix>_<n>` | concatenation, where `n` = `instanceNumber` |
+| Seed `nftDna` | `i<19 upper-hex>` | `sha256("nftlox:seed-dna:" + nftId + ":" + originDna + ":" + edition + ":" + imageHash)` |
+| Instance `nftDna` | `i<19 upper-hex>` | `sha256("nftlox:dna:" + seedId + ":" + n + ":" + txId + ":" + blockNum)` |
+| Image hash | `img_<16 hex>` | `sha256("nftlox:img:" + imageUrl)` after `toWireUrl()` normalization |
+| Listing ID | `list_<32 hex>` | `sha256("nftlox:listing:v1:" + nftId + ":" + owner + ":" + marketplace + ":" + price + ":" + currency + ":" + expiresAt + ":" + nonce)` |
+
+**`nftDna` is functional, not cosmetic.** Mutating ops (`set_data`, `set_data_from`) **require** passing the current `nftDna` as a guard; it prevents cross-NFT replays and binds the mutation to current state. `client.getNft(nftId).nft_dna` is how the SDK exposes it.
+
+### How this maps to our v1.1 DNA fields
+
+Our protocol-core (`shared/protocol-core/`) already implements its own DNA system in `CardAsset` (`originDna`, `instanceDna`, `parentInstanceDna`, `generation`, `replicaCount`). It was designed for the standalone Ragnarok protocol and **does not align 1:1 with NFTLox**:
+
+| Concept | Ragnarok v1.1 | NFTLox v0.4.0 |
+|---|---|---|
+| "Genotype" granularity | Per-card (`cardId + edition + rarity`) | Per-**collection** (`originDna` is one value for the whole catalog) |
+| Template identity | Implicit via `originDna` | Explicit: the **seed** itself, identified by `seed_<…>` and its own `nftDna` |
+| Per-instance identity | `instanceDna` (sha256, no prefix) | `nftDna` of the instance (`i<19 upper-hex>`) |
+| Lineage (`parent`, `generation`) | Yes | Not modeled |
+| Domain separators | Ad-hoc (`\|`, `:`) | Stable namespaced (`nftlox:origin:`, `nftlox:dna:`, …) |
+| Image binding | Not in DNA | `imageHash` is part of seed `nftDna` |
+
+When integration lands, the **seed `nftDna`** replaces our per-card `originDna` (it carries strictly more information — image hash + edition), and the **instance `nftDna`** replaces our `instanceDna`. We stop computing them ourselves and read them off the indexer (`client.getNft(...)`) or recompute via `verifyDeterministicDerivation()`.
+
+### Replicate / Merge are Ragnarok-only
+
+NFTLox v0.4.0 has **no** `replicate` op and **no** `merge` op. The lineage fields (`parentInstanceDna`, `generation`, `replicaCount`, `mergedFrom`) live on `CardAsset` only and are written by our `card_replicate` / `card_merge` handlers in `shared/protocol-core/apply.ts`.
+
+If we want those primitives to survive the NFTLox migration, the options are:
+
+1. **Off-chain only**: keep replicate/merge entirely in Ragnarok protocol state (no NFTLox NFT is created/destroyed). Player owns one NFTLox NFT per "real" card; replicas/merges are virtual.
+2. **NFTLox `mutableData` shadow**: store `parent_nft_id` and `generation` as schema fields. Replicate = `bulk_distribute` 1 instance, write `parent` via `set_data_from`. Merge = burn the two source NFTs and `bulk_distribute` 1 new one.
+3. **Drop the primitives**. Simplest, but breaks the existing `Replicate` / `Merge (2 → 1)` UI in [`CollectionPage.tsx`](../client/src/game/components/collection/CollectionPage.tsx).
+
+Decision deferred until integration starts; the UI flagging in `CollectionPage.tsx` is fine to leave as-is meanwhile.
+
+### Image URL canonicalization
+
+NFTLox normalizes image URLs through `toWireUrl()` before hashing — the wire form has no protocol prefix (`https://example.com/img.png` → `example.com/img.png`). The reader applies `fromWireUrl()` on the way out. Our `assetPathFor(assetId)` currently produces relative paths (`/art/nfts/...`), which are **not stable hostnames**. Before mint, we need a canonical absolute URL per asset (CDN, IPFS, or pinned host) — otherwise the `imageHash` is fragile.
 
 ---
 
@@ -69,11 +135,10 @@ Asset-moving ops require **active key**; everything else is posting:
 | Need | Status |
 |---|---|
 | Production protocol ID (currently `nftlox_testnet`) | Pending |
-| Confirmed `royaltyPct: 0` for our collection | Pending |
-| 8KB custom_json payload limit (`NFTLOX_SAFE_PAYLOAD_MAX = 7372`) | Documented |
+| Stable absolute image URL host for each asset (drives `imageHash`) | Pending |
 | Test mint pass on testnet | Pending |
 
-What we explicitly **don't** use: NFTLox marketplace, lending, multisig buy, data operators (cross-game composability — future).
+What we **don't** use: NFTLox marketplace, lending, multisig buy. We **do** use `data_operator_approve` + `set_data_from` (required to keep `level`/`xp`/`foil` writable only by Ragnarok admin).
 
 ---
 
@@ -81,10 +146,10 @@ What we explicitly **don't** use: NFTLox marketplace, lending, multisig buy, dat
 
 | File | Role |
 |---|---|
-| `replayEngine.ts` | Add `nftlox_*` as second protocol filter alongside `ragnarok-cards` |
-| `replayRules.ts` | Handlers for NFTLox `mint / transfer / burn / pack_open / bulk_distribute` |
-| `HiveSync.ts` | Adapter methods for each NFTLox action with correct key type |
-| `genesisAdmin.ts` | Replace custom genesis with NFTLox `create_collection` + seed batch |
+| `replayEngine.ts` | Add `nftlox_testnet` (later `nftlox`) as second protocol filter alongside `ragnarok-cards` |
+| `replayRules.ts` | Handlers for NFTLox `mint`, `bulk_distribute`, `transfer`, `burn`, `set_data`, `set_data_from` |
+| `HiveSync.ts` | Adapter methods using `nftlox-sdk` builders; wire `seedTxId` provenance refs where applicable |
+| `genesisAdmin.ts` | Replace custom genesis with NFTLox `create_collection` + `bulk` seed mints |
 | `client/src/game/data/schemas/` | **Source of truth** — `immutableData` schema mirrors these primitives |
 
 Total NFT supply at full mint: ~2.76M instances across ~2,134 seeds.
@@ -93,9 +158,9 @@ Total NFT supply at full mint: ~2.76M instances across ~2,134 seeds.
 
 ## Constraints to remember
 
-- 5 ops per Hive `custom_json` transaction → 2,134 seeds = 427 signatures (~28 min full mint).
-- Drop tables max 50 entries (worked around by Option C+).
-- Bulk distribute: max 50 distinct seeds per op.
-- Marketplace listings expire by block, not wall-time.
-- Min price: 0.001 HIVE/HBD (3 decimal places exactly).
-- 1.0% protocol fee on marketplace sales (taken from buyer payment before seller/royalty split).
+- Hive `custom_json` hard cap: 8192 B; SDK enforces a safe budget of `SAFE_PAYLOAD_MAX_BYTES = 7372` (90%).
+- Max 5 ops per Hive transaction → 2,134 seeds = ~427 signatures (~28 min full mint).
+- `bulk_distribute`: max **50 distinct seeds** AND max **250 instances** per op.
+- `bulk_transfer` / `bulk_burn`: max **50 ids** per op.
+- 8 actions support optional `seedId` / `seedTxId` provenance attestation (`transfer`, `list`, `unlist`, `set_data`, `set_data_from`, `nft_transfer_from`, `nft_lend`, `nft_return`) — mismatch is rejected.
+- Image URLs are stored in **wire form** (no `https://` prefix); `imageHash` is `sha256("nftlox:img:" + toWireUrl(url))`.
