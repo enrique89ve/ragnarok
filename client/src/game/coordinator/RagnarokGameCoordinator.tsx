@@ -1,30 +1,37 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { ArmySelection as ArmySelectionType, ChessPiece } from '../../types/ChessTypes';
-import { useChessCombatAdapter } from '../../hooks/useChessCombatAdapter';
-import { getDefaultArmySelection } from '../../data/ChessPieceConfig';
-import { useCampaignStore, getMission } from '../../campaign';
-import { buildCampaignArmy } from '../../campaign/campaignArmyBuilder';
+import { ArmySelection as ArmySelectionType } from '../types/ChessTypes';
+import { useChessCombatAdapter } from '../hooks/useChessCombatAdapter';
+import { getDefaultArmySelection } from '../data/ChessPieceConfig';
+import { useCampaignStore, getMission } from '../campaign';
+import { buildCampaignArmy } from '../campaign/campaignArmyBuilder';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { routes } from '../../../lib/routes';
-import { usePokerCombatAdapter } from '../../hooks/usePokerCombatAdapter';
-import { PetData, DEFAULT_PET_STATS, calculateStaminaFromHP } from '../../types/PokerCombatTypes';
-import { useAudio } from '../../../lib/stores/useAudio';
+import { routes } from '../../lib/routes';
+import { usePokerCombatAdapter } from '../hooks/usePokerCombatAdapter';
+import { useAudio } from '../../lib/stores/useAudio';
 import { v4 as uuidv4 } from 'uuid';
-import { useKingChessAbility } from '../../hooks/useKingChessAbility';
-import { useUnifiedCombatStore } from '../../stores/unifiedCombatStore';
-import { useGameFlowStore } from '../../stores/gameFlowStore';
-import type {
-  PostCinematicPlan,
-  GameResult,
-  CombatHandoff,
-} from '../../flow/round/types';
-import { debug } from '../../config/debugConfig';
-import { useGameStore } from '../../stores/gameStore';
-import { useWarbandStore, selectArmy, selectDeckCardIds } from '../../../lib/stores/useWarbandStore';
-import { useCraftingStore } from '../../crafting/craftingStore';
-import { resolveHeroPortrait, DEFAULT_PORTRAIT } from '../../utils/art/artMapping';
-import type { RealmId } from '../../types/NorseTypes';
+import { useKingChessAbility } from '../hooks/useKingChessAbility';
+import { useUnifiedCombatStore } from '../stores/unifiedCombatStore';
+import { useGameFlowStore } from '../stores/gameFlowStore';
+import type { CombatHandoff } from '../flow/round/types';
+import { debug } from '../config/debugConfig';
+import { useWarbandStore, selectArmy, selectDeckCardIds } from '../../lib/stores/useWarbandStore';
+import { useCraftingStore } from '../crafting/craftingStore';
+import { resolveHeroPortrait } from '../utils/art/artMapping';
+import { useCampaignGameBootstrap } from './hooks/useCampaignGameBootstrap';
+import { useBossRuleEffects } from './hooks/useBossRuleEffects';
+import {
+  buildGameResult,
+  buildPetDataFromChessPiece,
+  getArmyForOwner,
+  getChessRealmClass,
+  getCombatSlotMapping,
+  getFinaleClass,
+  getInitialGameOverSubPhase,
+  getRealmDisplayName,
+  getWinnerFromGameStatus,
+  resolveVisualRealm,
+} from './gameCoordinatorRules';
 
 /*
   Phase components are lazy-loaded so casual / multiplayer routes —
@@ -32,73 +39,26 @@ import type { RealmId } from '../../types/NorseTypes';
   pull the briefing UI, framer-motion choreography, or campaign-only
   crawl player into their initial chunk.
 */
-const CinematicPhase = lazy(() => import('./phases/CinematicPhase'));
-const MissionIntroPhase = lazy(() => import('./phases/MissionIntroPhase'));
-const GameOverPhase = lazy(() => import('./phases/GameOverPhase'));
-const VsScreenPhase = lazy(() => import('./phases/VsScreenPhase'));
-const PokerCombatPhase = lazy(() => import('./phases/PokerCombatPhase'));
-const ChessPhase = lazy(() => import('./phases/ChessPhase'));
-import './HeroPortraitEnhanced.css';
-import './chess-realm-skins.css';
-import './game-over-result.css';
-import '../campaign/cinematic-crawl.css';
+const CinematicPhase = lazy(() => import('../components/chess/phases/CinematicPhase'));
+const MissionIntroPhase = lazy(() => import('../components/chess/phases/MissionIntroPhase'));
+const GameOverPhase = lazy(() => import('../components/chess/phases/GameOverPhase'));
+const VsScreenPhase = lazy(() => import('../components/chess/phases/VsScreenPhase'));
+const PokerCombatPhase = lazy(() => import('../components/chess/phases/PokerCombatPhase'));
+const ChessPhase = lazy(() => import('../components/chess/phases/ChessPhase'));
+import '../components/chess/HeroPortraitEnhanced.css';
+import '../components/chess/chess-realm-skins.css';
+import '../components/chess/game-over-result.css';
+import '../components/campaign/cinematic-crawl.css';
 
 // Realm icon / color / text-color tables moved into MissionIntroPhase.tsx
 // (their only consumer). The coordinator no longer carries them.
 
-/*
-  Maps every campaign mission realm to its closest visual realm. Norse
-  realms map to themselves; non-Norse mythologies use the closest Norse
-  proxy until we author dedicated art for each. The visual realm is what
-  drives both the chess board background and the combat arena board skin.
-  Used by RagnarokChessGame.tsx (this file) and consumed by realm-boards.css
-  + .ragnarok-chess-game.realm-{id} CSS rules below.
-*/
-const REALM_VISUAL_MAP: Record<string, RealmId> = {
-  // Norse (direct art)
-  ginnungagap: 'ginnungagap', midgard: 'midgard', asgard: 'asgard',
-  niflheim: 'niflheim', muspelheim: 'muspelheim', helheim: 'helheim',
-  jotunheim: 'jotunheim', alfheim: 'alfheim', vanaheim: 'vanaheim',
-  svartalfheim: 'svartalfheim',
-  // Greek → Norse visual proxies
-  chaos: 'ginnungagap', gaia_earth: 'vanaheim', mount_othrys: 'jotunheim',
-  tartarus: 'helheim', olympus: 'asgard', cilicia: 'muspelheim',
-  phlegra: 'muspelheim', athens: 'midgard',
-  // Egyptian → Norse visual proxies
-  heliopolis: 'asgard', thebes: 'midgard', duat: 'helheim',
-  memphis: 'svartalfheim', abydos: 'midgard',
-  // Celtic → Norse visual proxies
-  tara: 'vanaheim', emain_macha: 'midgard', cruachan: 'jotunheim',
-  tir_na_nog: 'alfheim', mag_mell: 'alfheim',
-  // Eastern → Norse visual proxies
-  celestial_court: 'asgard', takamagahara: 'asgard',
-  yomi: 'helheim', mount_meru: 'jotunheim', diyu: 'muspelheim',
-};
-
-const REALM_DISPLAY_NAMES: Record<RealmId, string> = {
-  ginnungagap: 'Ginnungagap', midgard: 'Midgard', asgard: 'Asgard',
-  niflheim: 'Niflheim', muspelheim: 'Muspelheim', helheim: 'Helheim',
-  jotunheim: 'Jotunheim', alfheim: 'Alfheim', vanaheim: 'Vanaheim',
-  svartalfheim: 'Svartalfheim',
-};
-
-/** Resolve a campaign mission realm to its visual realm id. Falls back to midgard.
- *
- * Input is open string because campaign missions may declare realms from any
- * pantheon (Norse, Greek, Egyptian, Celtic, Eastern). Output is `RealmId`
- * because all REALM_VISUAL_MAP values are canonical Norse + ginnungagap. */
-function resolveVisualRealm(missionRealm: string | undefined | null): RealmId {
-  if (!missionRealm) return 'midgard';
-  return REALM_VISUAL_MAP[missionRealm] || 'midgard';
-}
-
-
-interface RagnarokChessGameProps {
+type RagnarokGameCoordinatorProps = {
   onGameEnd?: (winner: 'player' | 'opponent') => void;
   initialArmy?: ArmySelectionType | null;
-}
+};
 
-const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initialArmy = null }) => {
+const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ onGameEnd, initialArmy = null }) => {
   const { playSoundEffect } = useAudio();
   const navigate = useNavigate();
 
@@ -185,74 +145,9 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
     : getDefaultArmySelection(),
     [isCampaign, campaignData]);
 
-  /*
-    Set the active realm in the global game store as soon as we know the
-    campaign mission. This drives both the chess board background skin
-    (.ragnarok-chess-game.realm-{id} CSS rules) and the combat arena skin
-    (.game-viewport.realm-{id} from realm-boards.css). Previously this
-    only fired inside handleCombatTriggered, which meant the chess board
-    rendered with no realm theming until pieces collided.
-  */
   const missionRealm = isCampaign ? campaignData?.mission?.realm : undefined;
   const visualRealm = useMemo(() => resolveVisualRealm(missionRealm), [missionRealm]);
-  useEffect(() => {
-    if (!isCampaign || !missionRealm) return;
-    useGameStore.getState().setGameState({
-      activeRealm: {
-        id: visualRealm,
-        name: REALM_DISPLAY_NAMES[visualRealm] || visualRealm,
-        description: '',
-        owner: 'player',
-        effects: [],
-      }
-    });
-  }, [isCampaign, missionRealm, visualRealm]);
-
-  const createPetFromChessPiece = useCallback((
-    piece: typeof boardState.pieces[0],
-    army: ArmySelectionType
-  ): PetData => {
-    const petClass: PetData['petClass'] = piece.type === 'queen' ? 'queen' : 
-                piece.type === 'king' ? 'king' :
-                piece.type === 'pawn' ? 'pawn' : 'standard';
-    
-    const baseStats = DEFAULT_PET_STATS[petClass];
-    
-    let heroName = piece.heroName || 'Unknown Warrior';
-    let norseHeroId: string | undefined;
-    if (piece.type !== 'pawn' && army[piece.type as keyof ArmySelectionType]) {
-      const heroData = army[piece.type as keyof ArmySelectionType];
-      heroName = heroData.name;
-      norseHeroId = heroData.norseHeroId;
-      debug.chess(`createPetFromChessPiece: piece.type=${piece.type}, heroData.name=${heroData.name}, heroData.norseHeroId=${heroData.norseHeroId}`);
-    } else {
-      debug.chess(`createPetFromChessPiece: Skipping norseHeroId - piece.type=${piece.type}, isPawn=${piece.type === 'pawn'}, hasArmyEntry=${!!army[piece.type as keyof ArmySelectionType]}`);
-    }
-    
-    const heroPortrait = (norseHeroId ? resolveHeroPortrait(norseHeroId) : undefined) ?? DEFAULT_PORTRAIT;
-
-    return {
-      id: piece.id,
-      name: heroName,
-      imageUrl: heroPortrait || DEFAULT_PORTRAIT,
-      rarity: piece.type === 'king' ? 'mythic' :
-              piece.type === 'queen' ? 'epic' :
-              piece.type === 'pawn' ? 'common' : 'rare',
-      petClass,
-      stats: {
-        ...baseStats,
-        element: 'neutral',
-        currentHealth: piece.health,
-        maxHealth: piece.maxHealth,
-        maxStamina: calculateStaminaFromHP(piece.maxHealth),
-        currentStamina: Math.min(piece.stamina, calculateStaminaFromHP(piece.maxHealth))
-      },
-      abilities: [],
-      spellSlots: piece.hasSpells ? 10 : 0,
-      equippedSpells: [],
-      norseHeroId
-    };
-  }, []);
+  const realmDisplayName = getRealmDisplayName(visualRealm);
 
   // Initialize board if initialArmy is provided
   useEffect(() => {
@@ -260,7 +155,7 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
       setPlayerArmy(initialArmy);
       initializeBoard(initialArmy, opponentArmy);
     }
-  }, [initialArmy, opponentArmy, initializeBoard]);
+  }, [initialArmy, opponentArmy, initializeBoard, playerArmy]);
 
   // Bootstrap from warband store when arriving via /warband flow.
   // Idempotent via ref so the board is initialized exactly once per mount.
@@ -277,82 +172,24 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
     playSoundEffect('game_start');
   }, [warbandArmy, warbandDeck, isCampaign, initialArmy, opponentArmy, initializeBoard, setSharedDeck, playSoundEffect]);
 
-  /*
-    Round FSM bootstrap (G4). Runs once per mount when flowState is null
-    AND we have enough context to pick a starting phase. Re-runs after a
-    restart that calls clearFlow(). The campaign auto-init effect below
-    still mounts the default army + board state; the FSM only governs
-    which phase the renderer is in.
-  */
-  useEffect(() => {
-    if (flowState !== null) return;
-
-    // Casual / multiplayer / explicit initialArmy → straight to chess.
-    if (effectiveInitialArmy && !isCampaign) {
-      startFlow({ kind: 'chess' });
-      return;
-    }
-
-    if (!isCampaign || !campaignData) return;
-
-    const intro = campaignData.chapter.cinematicIntro;
-    const narrative = campaignData.mission.narrativeBefore;
-    const planAfterCinematic: PostCinematicPlan = narrative
-      ? {
-          kind: 'intro',
-          mission: {
-            missionId: campaignData.mission.id,
-            narrativeBefore: narrative,
-            isChapterFinale: !!campaignData.mission.isChapterFinale,
-          },
-        }
-      : { kind: 'chess' };
-
-    if (hasCinematic && intro) {
-      startFlow({
-        kind: 'cinematic',
-        cinematic: { chapterId: campaignData.chapter.id, intro },
-        then: planAfterCinematic,
-      });
-    } else if (narrative) {
-      startFlow({
-        kind: 'mission_intro',
-        mission: {
-          missionId: campaignData.mission.id,
-          narrativeBefore: narrative,
-          isChapterFinale: !!campaignData.mission.isChapterFinale,
-        },
-      });
-    } else {
-      startFlow({ kind: 'chess' });
-    }
-  }, [flowState, effectiveInitialArmy, isCampaign, hasCinematic, campaignData, startFlow]);
-
-  // Campaign auto-init: skip army selection, use default player army.
-  // Phase selection lives in the FSM bootstrap effect above; this one just
-  // ensures the board state has a default army when the player enters via
-  // /campaign without picking one. Sound cue stays here because it's tied
-  // to "match starts now" — fired only when no narrative gate precedes it.
-  useEffect(() => {
-    if (isCampaign && !playerArmy && !initialArmy) {
-      const defaultArmy = getDefaultArmySelection();
-      setPlayerArmy(defaultArmy);
-      initializeBoard(defaultArmy, opponentArmy);
-      resetBossRulesApplied();
-      if (!hasCinematic && !campaignData?.mission?.narrativeBefore) {
-        playSoundEffect('game_start');
-      }
-    }
-  }, [
-    campaignData,
-    hasCinematic,
-    initialArmy,
-    initializeBoard,
+  useCampaignGameBootstrap({
     isCampaign,
-    opponentArmy,
-    playSoundEffect,
+    missionRealm,
+    visualRealm,
+    realmDisplayName,
+    flowState,
+    effectiveInitialArmy,
+    hasCinematic,
+    campaignData,
+    initialArmy,
     playerArmy,
-  ]);
+    opponentArmy,
+    setPlayerArmy,
+    initializeBoard,
+    resetBossRulesApplied,
+    playSoundEffect,
+    startFlow,
+  });
 
   const handleCinematicComplete = useCallback(() => {
     if (campaignData) {
@@ -372,153 +209,17 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
     playSoundEffect('game_start');
   }, [playSoundEffect, dispatchFlow]);
 
-  // Apply boss rules + difficulty scaling after board initialization (one-time)
-  const bossRulesInitRef = useRef(false);
-  useEffect(() => {
-    if (!isCampaign || !campaignData) return;
-    if (bossRulesApplied || bossRulesInitRef.current) return;
-
-    const store = useUnifiedCombatStore.getState();
-    if (store.boardState.pieces.length === 0) return;
-
-    bossRulesInitRef.current = true;
-
-    const rules = campaignData.mission.bossRules;
-    // Mythic doubles its HP bonus and Heroic gets a 50% bump on top of the
-    // baseline. Combined with profileToSmartAIConfig() which dials up the
-    // AI's aggression on higher difficulties, mythic should now feel like
-    // a real boss fight, not just "more HP." See campaignTypes.ts.
-    const difficultyBonus = campaignDifficulty === 'mythic' ? 60 : campaignDifficulty === 'heroic' ? 30 : 0;
-    const bossExtraHealth = rules.find(r => r.type === 'extra_health')?.value ?? 0;
-    const totalExtraHealth = bossExtraHealth + difficultyBonus;
-
-    let boostedPieces = [...store.boardState.pieces];
-
-    if (totalExtraHealth > 0) {
-      boostedPieces = boostedPieces.map(p => {
-        if (p.owner !== 'opponent') return p;
-        return { ...p, health: p.health + totalExtraHealth, maxHealth: p.maxHealth + totalExtraHealth };
-      });
-      debug.chess(`[Boss Rules] Applied +${totalExtraHealth} health to opponent (boss: ${bossExtraHealth}, difficulty: ${difficultyBonus})`);
-    }
-
-    const extraMana = rules.find(r => r.type === 'extra_mana')?.value ?? 0;
-    if (extraMana > 0) {
-      boostedPieces = boostedPieces.map(p => {
-        if (p.owner !== 'opponent') return p;
-        const maxStamina = Math.floor(p.maxHealth / 10) + extraMana;
-        return { ...p, stamina: maxStamina };
-      });
-      debug.chess(`[Boss Rules] Applied +${extraMana} stamina to opponent pieces`);
-    }
-
-    const startMinion = rules.find(r => r.type === 'start_with_minion');
-    if (startMinion) {
-      const emptySpots = [];
-      for (let col = 0; col < 5; col++) {
-        if (!boostedPieces.some(p => p.position.row === 4 && p.position.col === col)) {
-          emptySpots.push(col);
-        }
-      }
-      if (emptySpots.length > 0) {
-        const col = emptySpots[Math.floor(emptySpots.length / 2)];
-        const pawnHealth = 100 + totalExtraHealth;
-        boostedPieces.push({
-          id: uuidv4(),
-          type: 'pawn',
-          owner: 'opponent',
-          position: { row: 4, col },
-          health: pawnHealth,
-          maxHealth: pawnHealth,
-          stamina: Math.floor(pawnHealth / 10),
-          heroClass: 'warrior',
-          heroName: 'Boss Minion',
-          deckCardIds: [],
-          fixedCards: [],
-          hasSpells: false,
-          hasMoved: false,
-          element: 'neutral' as const,
-        } as ChessPiece);
-        debug.chess(`[Boss Rules] Spawned extra pawn at row 4, col ${col}`);
-      }
-    }
-
-    useUnifiedCombatStore.setState({
-      boardState: { ...store.boardState, pieces: boostedPieces },
-    });
-
-    markBossRulesApplied();
-  }, [isCampaign, campaignData, bossRulesApplied, campaignDifficulty, markBossRulesApplied]);
-
-  // Per-turn boss rules: passive_damage, bonus_draw, extra_mana
-  // Combined into a single effect with a turn-tracking ref to prevent re-entry loops
-  const lastBossRuleTurnRef = useRef<string>('');
-  useEffect(() => {
-    if (!isCampaign || !campaignData || flowState?.tag !== 'chess') return;
-
-    // Create a unique key for this turn to prevent re-firing
-    const turnKey = `${boardState.currentTurn}-${turnCount}`;
-    if (lastBossRuleTurnRef.current === turnKey) return;
-    lastBossRuleTurnRef.current = turnKey;
-
-    const rules = campaignData.mission.bossRules;
-
-    // Passive damage: player king takes damage at start of player turn
-    if (boardState.currentTurn === 'player') {
-      const bossPassive = rules.find(r => r.type === 'passive_damage')?.value ?? 0;
-      const difficultyPassive = campaignDifficulty === 'mythic' ? 1 : 0;
-      const passiveDmg = bossPassive + difficultyPassive;
-      if (passiveDmg > 0) {
-        const store = useUnifiedCombatStore.getState();
-        const playerKing = store.boardState.pieces.find(p => p.owner === 'player' && p.type === 'king');
-        if (playerKing) {
-          const newHp = Math.max(1, playerKing.health - passiveDmg);
-          updatePieceHealth(playerKing.id, newHp);
-          debug.chess(`[Boss Rules] Passive damage: player king takes ${passiveDmg} (HP: ${playerKing.health} → ${newHp})`);
-        }
-      }
-    }
-
-    // Bonus heal + extra mana: opponent pieces at start of opponent turn
-    if (boardState.currentTurn === 'opponent') {
-      const store = useUnifiedCombatStore.getState();
-      let pieces = [...store.boardState.pieces];
-      let storeChanged = false;
-
-      // Bonus draw (heal most damaged opponent piece)
-      const bonusDraw = rules.find(r => r.type === 'bonus_draw')?.value ?? 0;
-      if (bonusDraw > 0) {
-        const healAmount = bonusDraw * 15;
-        const opponentPieces = pieces.filter(p => p.owner === 'opponent' && p.health < p.maxHealth);
-        if (opponentPieces.length > 0) {
-          const mostDamaged = opponentPieces.reduce((a, b) => (a.maxHealth - a.health) > (b.maxHealth - b.health) ? a : b);
-          const healed = Math.min(mostDamaged.maxHealth, mostDamaged.health + healAmount);
-          pieces = pieces.map(p => p.id === mostDamaged.id ? { ...p, health: healed } : p);
-          storeChanged = true;
-          debug.chess(`[Boss Rules] Bonus heal: ${mostDamaged.heroName} heals ${healAmount}`);
-        }
-      }
-
-      // Extra mana (bonus stamina for opponent)
-      const extraMana = rules.find(r => r.type === 'extra_mana')?.value ?? 0;
-      if (extraMana > 0) {
-        pieces = pieces.map(p => {
-          if (p.owner !== 'opponent') return p;
-          const maxStamina = Math.floor(p.maxHealth / 10) + extraMana;
-          return { ...p, stamina: Math.min(p.stamina + extraMana, maxStamina) };
-        });
-        storeChanged = true;
-        debug.chess(`[Boss Rules] Extra stamina: opponent +${extraMana}`);
-      }
-
-      // Single store update for all opponent-turn boss rules
-      if (storeChanged) {
-        useUnifiedCombatStore.setState({
-          boardState: { ...store.boardState, pieces },
-        });
-      }
-    }
-  }, [flowState, boardState.currentTurn, turnCount, isCampaign]);
+  useBossRuleEffects({
+    isCampaign,
+    campaignData,
+    campaignDifficulty,
+    flowState,
+    boardState,
+    turnCount,
+    bossRulesApplied,
+    markBossRulesApplied,
+    updatePieceHealth,
+  });
 
   const { lastMineTriggered } = useKingChessAbility('player');
 
@@ -558,13 +259,21 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
     debug.combat(`Defender ${defender.type} (${defender.owner}): HP=${defender.health}, Stamina=${defender.stamina}`);
     debug.combat(`First strike will be applied via animation in poker combat`);
     
-    const attackerArmy = attacker.owner === 'player' ? playerArmy : opponentArmy;
-    const defenderArmy = defender.owner === 'player' ? playerArmy : opponentArmy;
+    const attackerArmy = getArmyForOwner(attacker.owner, playerArmy, opponentArmy);
+    const defenderArmy = getArmyForOwner(defender.owner, playerArmy, opponentArmy);
     
     if (!attackerArmy || !defenderArmy) return;
 
-    const attackerPet = createPetFromChessPiece(attacker, attackerArmy);
-    const defenderPet = createPetFromChessPiece(defender, defenderArmy);
+    const attackerPet = buildPetDataFromChessPiece({
+      piece: attacker,
+      army: attackerArmy,
+      resolvePortrait: resolveHeroPortrait,
+    });
+    const defenderPet = buildPetDataFromChessPiece({
+      piece: defender,
+      army: defenderArmy,
+      resolvePortrait: resolveHeroPortrait,
+    });
     
     debug.combat(`AttackerPet stamina: ${attackerPet.stats.currentStamina}/${attackerPet.stats.maxStamina}`);
     debug.combat(`DefenderPet stamina: ${defenderPet.stats.currentStamina}/${defenderPet.stats.maxStamina}`);
@@ -580,14 +289,9 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
     //  campaignData.mission.realm. The chess phase needs the realm class
     //  applied before combat starts, not just at piece collision.)
 
-    // FIX: Human player should ALWAYS be in the "player" slot for combat UI
-    // When AI attacks human, swap parameters so human remains as "player"
-    const humanIsAttacker = attacker.owner === 'player';
-    
-    const slotsSwapped = !humanIsAttacker;
-    const firstStrikeTarget: 'player' | 'opponent' = humanIsAttacker ? 'opponent' : 'player';
+    const { slotsSwapped, firstStrikeTarget } = getCombatSlotMapping(attacker.owner);
 
-    if (humanIsAttacker) {
+    if (!slotsSwapped) {
       // Human attacks AI: Human (attacker) = player, AI (defender) = opponent
       // First strike target is 'opponent' (the defender in the player slot)
       setPokerSlotsSwapped(false);
@@ -632,7 +336,7 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
     };
     dispatchFlow({ type: 'VS_COMPLETE', handoff });
     playSoundEffect('game_start');
-  }, [flowState, playerArmy, opponentArmy, boardState.pieces, createPetFromChessPiece, initializeCombat, playSoundEffect, setPokerSlotsSwapped, dispatchFlow]);
+  }, [flowState, playerArmy, opponentArmy, boardState.pieces, initializeCombat, playSoundEffect, setPokerSlotsSwapped, dispatchFlow]);
 
   const handleCombatEnd = useCallback((winner: 'player' | 'opponent' | 'draw') => {
     try {
@@ -716,14 +420,14 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
       endCombat();
       dispatchFlow({ type: 'COMBAT_RESOLVED' });
     }
-  }, [pokerSlotsSwapped, resolveCombat, clearPendingCombat, endCombat, playSoundEffect, updatePieceStamina, updatePieceHealth, incrementAllStamina, nextTurn, setPokerSlotsSwapped, dispatchFlow]);
+  }, [pokerSlotsSwapped, resolveCombat, clearPendingCombat, endCombat, playSoundEffect, updatePieceStamina, updatePieceHealth, incrementAllStamina, nextTurn, setPokerSlotsSwapped, dispatchFlow, flowState?.tag]);
 
   useEffect(() => {
-    if (boardState.gameStatus !== 'player_wins' && boardState.gameStatus !== 'opponent_wins') return;
+    const winner = getWinnerFromGameStatus(boardState.gameStatus);
+    if (!winner) return;
     if (gameEndProcessedRef.current) return;
     gameEndProcessedRef.current = true;
 
-    const winner = boardState.gameStatus === 'player_wins' ? 'player' : 'opponent';
     playSoundEffect(winner === 'player' ? 'victory' : 'defeat');
     gameOverTimerRef.current = setTimeout(() => {
       gameOverTimerRef.current = null;
@@ -746,22 +450,16 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
           debug.chess(`[Campaign] Rewards distributed for ${campaignMissionId} (${campaignDifficulty})`);
         }
       }
-      // Decide which sub-phase of game_over to enter:
-      //   - victory + has victoryCinematic → 'cinematic' (play it first)
-      //   - defeat + has defeatCinematic   → 'cinematic'
-      //   - else → 'result' immediately
-      const wonCampaign = winner === 'player' && isCampaign && campaignData;
-      const lostCampaign = winner !== 'player' && isCampaign && campaignData;
-      const hasVictoryCinematic = wonCampaign && (campaignData?.mission?.victoryCinematic?.length ?? 0) > 0;
-      const hasDefeatCinematic = lostCampaign && (campaignData?.mission?.defeatCinematic?.length ?? 0) > 0;
-      const initialSub: 'cinematic' | 'result' = hasVictoryCinematic || hasDefeatCinematic ? 'cinematic' : 'result';
-      const result: GameResult = {
+      const initialSub = getInitialGameOverSubPhase({
         winner,
-        playerTurnCount: turnCount,
-        victoryCinematic: campaignData?.mission?.victoryCinematic ?? null,
-        defeatCinematic: campaignData?.mission?.defeatCinematic ?? null,
-        storyBridge: campaignData?.mission?.storyBridge ?? null,
-      };
+        isCampaign,
+        campaignData,
+      });
+      const result = buildGameResult({
+        winner,
+        turnCount,
+        campaignData,
+      });
       dispatchFlow({ type: 'GAME_ENDED', result, initialSub });
       if (onGameEnd) {
         onGameEnd(winner);
@@ -822,7 +520,7 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
         setGameStatus(winnerStatus);
       }
     }
-  }, [flowState, boardState.currentTurn, boardState.gameStatus, boardState.pieces.length]);
+  }, [flowState, boardState.currentTurn, boardState.gameStatus, boardState.pieces, getValidMoves, setGameStatus]);
 
   const handleRestart = useCallback(() => {
     resetBoard();
@@ -840,7 +538,7 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
     } else {
       navigate(routes.warband);
     }
-  }, [resetBoard, isCampaign, clearCurrent, navigate, resetPlayerTurnCount, clearFlow]);
+  }, [resetBoard, isCampaign, clearCurrent, navigate, resetPlayerTurnCount, clearFlow, setSharedDeck]);
 
   /*
     "Back to Campaign" — if the player won AND the mission has an authored
@@ -899,9 +597,8 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
   // chess-realm-skins.css. Chapter finale missions also get the
   // .mission-finale class which adds a pulsing crimson border + slower
   // music. CSS for finale lives in chess-realm-skins.css.
-  const chessRealmClass = isCampaign && missionRealm ? `realm-${visualRealm}` : '';
-  const isFinale = isCampaign && campaignData?.mission?.isChapterFinale;
-  const finaleClass = isFinale ? 'mission-finale' : '';
+  const chessRealmClass = getChessRealmClass({ isCampaign, missionRealm, visualRealm });
+  const finaleClass = getFinaleClass({ isCampaign, campaignData });
 
   // Guard: arriving at /game with no warband and not in campaign → redirect to picker
   if (!effectiveInitialArmy && !isCampaign && !playerArmy) {
@@ -972,4 +669,4 @@ const RagnarokChessGame: React.FC<RagnarokChessGameProps> = ({ onGameEnd, initia
   );
 };
 
-export default RagnarokChessGame;
+export default RagnarokGameCoordinator;

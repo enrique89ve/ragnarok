@@ -23,7 +23,7 @@ const HiveKeychainLogin = lazy(() => import("./game/components/HiveKeychainLogin
 const DailyQuestPanel = lazy(() => import("./game/components/quests/DailyQuestPanel"));
 const FriendsPanel = lazy(() => import("./game/components/social/FriendsPanel"));
 
-const RagnarokChessGame = lazy(() => import('./game/components/chess/RagnarokChessGame'));
+const RagnarokGameCoordinator = lazy(() => import('./game/coordinator/RagnarokGameCoordinator'));
 const WarbandPage = lazy(() => import('./game/components/warband/WarbandPage'));
 const MultiplayerGame = lazy(() => import('./game/components/multiplayer/MultiplayerGame').then(m => ({ default: m.MultiplayerGame })));
 const PacksPage = lazy(() => import('./game/components/packs/PacksPage'));
@@ -627,7 +627,7 @@ function App() {
                   </Route>
 
                   <Route element={<GameplayRuntimeBoundary />}>
-                    <Route path={routes.game} element={<RagnarokChessGame />} />
+                    <Route path={routes.game} element={<RagnarokGameCoordinator />} />
                     <Route path={routes.multiplayer} element={<MultiplayerGame />} />
                     <Route path={routes.spectate} element={<SpectatorView />} />
                   </Route>

@@ -3,7 +3,7 @@
    ============================================================
    Each campaign mission has a `realm` field. The mission realm
    maps to a "visual realm" (Norse art proxy for non-Norse
-   mythologies — see REALM_VISUAL_MAP in RagnarokChessGame.tsx)
+   mythologies — see REALM_VISUAL_MAP in RagnarokGameCoordinator.tsx)
    and the chess root container gets `.realm-{visualRealm}`.
 
    These rules give every chess board a thematic background drawn

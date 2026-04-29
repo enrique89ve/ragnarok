@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { debug } from '../../config/debugConfig';
 import { usePeerStore } from '../../stores/peerStore';
 import { MultiplayerLobby } from './MultiplayerLobby';
-import RagnarokChessGame from '../chess/RagnarokChessGame';
+import RagnarokGameCoordinator from '../../coordinator/RagnarokGameCoordinator';
 import ArmySelectionComponent from '../ArmySelection';
 import { ArmySelection as ArmySelectionType } from '../../types/ChessTypes';
 import { useNavigate } from 'react-router-dom';
@@ -174,7 +174,7 @@ export const MultiplayerGame: React.FC = () => {
 		<>
 			<ToastProvider position="top-right" richColors />
 			<P2PStatusBadge />
-			<RagnarokChessGame initialArmy={playerArmy} />
+			<RagnarokGameCoordinator initialArmy={playerArmy} />
 		</>
 	);
 };
