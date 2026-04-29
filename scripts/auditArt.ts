@@ -1,21 +1,16 @@
 #!/usr/bin/env npx tsx
 /**
- * Art audit & sophisticated search.
+ * Art audit.
  *
  * Cross-references the four layers of art truth and reports drift:
- *   1. cardRegistry           — gameplay definitions (TS)
- *   2. ART_REGISTRY            — operational map cardId → file path
+ *   1. cardRegistry              — gameplay definitions (TS)
+ *   2. ART_REGISTRY              — operational map cardId → file path
  *   3. genesis/starter manifests — derived JSON (gen:collections)
- *   4. /art/nfts/*.webp         — physical files
- *
- * Plus an external sweep over batch exports under
- * `/mnt/c/Users/Admin/Documents/ragartdev/all_arts/` for fuzzy matching
- * orphaned cards to art that already exists outside the project.
+ *   4. /art/nfts/*.webp          — physical files
  *
  * Run:
  *   npm run audit:art                        # full audit, human report
  *   npm run audit:art -- --json              # machine-readable issues
- *   npm run audit:art -- --search "Theseus"  # search mode (no audit)
  *   npm run audit:art -- --strict            # exit 1 on any error
  */
 
@@ -45,19 +40,10 @@ const __filename = fileURLToPath(import.meta.url);
 const REPO_ROOT = path.resolve(path.dirname(__filename), '..');
 const ART_DIR = path.join(REPO_ROOT, 'client', 'public', 'art', 'nfts');
 const DATA_DIR = path.join(REPO_ROOT, 'client', 'public', 'data');
-const EXTERNAL_ROOT = '/mnt/c/Users/Admin/Documents/ragartdev/all_arts';
 const PENDING_ART_PATH = path.join(path.dirname(__filename), 'pending-art.json');
 
 const ASSET_PATH_RE = /\/art\/nfts\/([0-9a-f]{4}-[0-9a-z]{8})\.webp$/;
 const ASSET_FILENAME_RE = /^([0-9a-f]{4}-[0-9a-z]{8})\.(webp|png)$/;
-
-const KNOWN_EXPORTS: ReadonlyArray<string> = [
-	'Proyecto-0c1a8619/ragnarok-art-export.json',
-	'ragnarok-art/ragnarok-art-export.json',
-	'ragnarok-art-35/ragnarok-art-export.json',
-	'ragnarok-art-691/ragnarok-art-cards.json',
-	'arte 14-3/ragnarok-art/ragnarok-art-export.json',
-];
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -89,20 +75,12 @@ interface Issue {
 	readonly suggestion?: string;
 }
 
-interface ExternalEntry {
-	readonly source: string;
-	readonly cardId: string;
-	readonly cardName: string;
-	readonly assetId: string;
-}
-
 interface Sources {
 	readonly registryCards: ReadonlyArray<RegistryCard>;
 	readonly artRegistry: ReadonlyMap<string, string>; // cardId → assetId
 	readonly artRegistryReverse: ReadonlyMap<string, ReadonlyArray<string>>; // assetId → cardIds
 	readonly manifestAssetIds: ReadonlySet<string>;
 	readonly physicalFiles: ReadonlySet<string>;
-	readonly externalEntries: ReadonlyArray<ExternalEntry>;
 }
 
 interface RegistryCard {
@@ -112,14 +90,6 @@ interface RegistryCard {
 	readonly rarity?: string;
 	readonly heroClass?: string;
 	readonly category: string;
-}
-
-interface SearchMatch {
-	readonly source: string;
-	readonly score: number;
-	readonly assetId: string;
-	readonly displayName: string;
-	readonly meta: string;
 }
 
 // ── Loaders (pure) ─────────────────────────────────────────────────────────
@@ -170,33 +140,6 @@ const loadPhysicalFiles = (): Set<string> => {
 	return out;
 };
 
-const loadExternalExports = (): ReadonlyArray<ExternalEntry> => {
-	if (!fs.existsSync(EXTERNAL_ROOT)) return [];
-	const out: ExternalEntry[] = [];
-	for (const rel of KNOWN_EXPORTS) {
-		const full = path.join(EXTERNAL_ROOT, rel);
-		if (!fs.existsSync(full)) continue;
-		try {
-			const data = JSON.parse(fs.readFileSync(full, 'utf8')) as unknown;
-			const arr = Array.isArray(data) ? data : ((data as { cards?: unknown[] }).cards ?? []);
-			for (const e of arr as Array<Record<string, unknown>>) {
-				const filename = String(e.filename ?? '');
-				const m = ASSET_FILENAME_RE.exec(filename);
-				if (!m) continue;
-				out.push({
-					source: rel,
-					cardId: String(e.id ?? ''),
-					cardName: String(e.name ?? e.character ?? ''),
-					assetId: m[1],
-				});
-			}
-		} catch {
-			// skip malformed exports
-		}
-	}
-	return out;
-};
-
 const loadSources = (): Sources => {
 	const { forward, reverse } = loadArtRegistry();
 	return {
@@ -205,96 +148,7 @@ const loadSources = (): Sources => {
 		artRegistryReverse: reverse,
 		manifestAssetIds: loadManifestAssetIds(),
 		physicalFiles: loadPhysicalFiles(),
-		externalEntries: loadExternalExports(),
 	};
-};
-
-// ── Search algorithms (pure) ───────────────────────────────────────────────
-
-const slugify = (s: string): string =>
-	s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
-		.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-
-const tokens = (s: string): string[] =>
-	slugify(s).split('-').filter(t => t.length >= 3);
-
-const levenshtein = (a: string, b: string): number => {
-	if (a === b) return 0;
-	if (!a.length) return b.length;
-	if (!b.length) return a.length;
-	const prev = new Array<number>(b.length + 1);
-	for (let j = 0; j <= b.length; j++) prev[j] = j;
-	for (let i = 1; i <= a.length; i++) {
-		let last = i - 1;
-		prev[0] = i;
-		for (let j = 1; j <= b.length; j++) {
-			const tmp = prev[j];
-			const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-			prev[j] = Math.min(prev[j] + 1, prev[j - 1] + 1, last + cost);
-			last = tmp;
-		}
-	}
-	return prev[b.length];
-};
-
-const stringSimilarity = (a: string, b: string): number => {
-	const longest = Math.max(a.length, b.length);
-	return longest === 0 ? 1 : 1 - levenshtein(a, b) / longest;
-};
-
-/** Score a candidate name/character against a query. Returns 0..1. */
-const scoreMatch = (query: string, candidateName: string, candidateMeta = ''): number => {
-	const qSlug = slugify(query);
-	const cSlug = slugify(candidateName);
-	if (cSlug === qSlug) return 1.0;
-	if (cSlug.includes(qSlug) || qSlug.includes(cSlug)) return 0.85;
-
-	const qTokens = new Set(tokens(query));
-	const cTokens = new Set([...tokens(candidateName), ...tokens(candidateMeta)]);
-	if (qTokens.size === 0) return 0;
-	let hits = 0;
-	for (const t of qTokens) if (cTokens.has(t)) hits++;
-	const tokenScore = hits / qTokens.size;
-
-	const editScore = stringSimilarity(qSlug, cSlug);
-	return Math.max(tokenScore * 0.7 + editScore * 0.3, tokenScore * 0.95);
-};
-
-interface SearchOptions {
-	readonly minScore?: number;
-	readonly limit?: number;
-	readonly excludeUsedAssets?: boolean;
-}
-
-const searchAcrossSources = (
-	query: string,
-	sources: Sources,
-	opts: SearchOptions = {},
-): SearchMatch[] => {
-	const minScore = opts.minScore ?? 0.5;
-	const limit = opts.limit ?? 10;
-	const usedAssets = opts.excludeUsedAssets
-		? new Set([...sources.artRegistry.values(), ...collectEntityPortraits()])
-		: new Set<string>();
-
-	const matches: SearchMatch[] = [];
-
-	for (const e of sources.externalEntries) {
-		if (usedAssets.has(e.assetId)) continue;
-		const score = scoreMatch(query, e.cardName);
-		if (score >= minScore) {
-			matches.push({
-				source: e.source,
-				score,
-				assetId: e.assetId,
-				displayName: e.cardName,
-				meta: `external cardId=${e.cardId}`,
-			});
-		}
-	}
-
-	matches.sort((a, b) => b.score - a.score);
-	return matches.slice(0, limit);
 };
 
 // ── Issue detectors (pure) ─────────────────────────────────────────────────
@@ -698,7 +552,6 @@ const summary = (sources: Sources): string => {
 		`  ART_REGISTRY entries:  ${sources.artRegistry.size}`,
 		`  manifest assetIds:     ${sources.manifestAssetIds.size}`,
 		`  physical .webp files:  ${sources.physicalFiles.size}`,
-		`  external batch entries: ${sources.externalEntries.length}`,
 	];
 	return lines.join('\n');
 };
@@ -765,47 +618,16 @@ const formatReport = (sources: Sources, issues: Issue[]): string => {
 	return lines.join('\n');
 };
 
-const formatSearchMatches = (query: string, matches: SearchMatch[]): string => {
-	if (matches.length === 0) return `No matches for "${query}".`;
-	const lines = [`Top ${matches.length} matches for "${query}":`, ''];
-	for (const m of matches) {
-		const score = (m.score * 100).toFixed(0);
-		lines.push(`  [${score}%] ${m.assetId}  "${m.displayName}"`);
-		lines.push(`         meta: ${m.meta}`);
-		lines.push(`         from: ${m.source}`);
-	}
-	return lines.join('\n');
-};
-
 // ── CLI ────────────────────────────────────────────────────────────────────
 
-const parseArgs = (argv: string[]): { json: boolean; strict: boolean; search?: string } => {
-	const out: { json: boolean; strict: boolean; search?: string } = {
-		json: argv.includes('--json'),
-		strict: argv.includes('--strict'),
-	};
-	const i = argv.indexOf('--search');
-	if (i >= 0 && argv[i + 1]) out.search = argv[i + 1];
-	return out;
-};
+const parseArgs = (argv: string[]): { json: boolean; strict: boolean } => ({
+	json: argv.includes('--json'),
+	strict: argv.includes('--strict'),
+});
 
 const main = (): void => {
 	const args = parseArgs(process.argv.slice(2));
 	const sources = loadSources();
-
-	if (args.search) {
-		const matches = searchAcrossSources(args.search, sources, {
-			minScore: 0.4,
-			limit: 15,
-			excludeUsedAssets: true,
-		});
-		if (args.json) {
-			console.log(JSON.stringify({ query: args.search, matches }, null, 2));
-		} else {
-			console.log(formatSearchMatches(args.search, matches));
-		}
-		return;
-	}
 
 	const issues = detectAllIssues(sources);
 	if (args.json) {
@@ -814,7 +636,6 @@ const main = (): void => {
 			artRegistry: sources.artRegistry.size,
 			manifest: sources.manifestAssetIds.size,
 			files: sources.physicalFiles.size,
-			external: sources.externalEntries.length,
 		} }, issues }, null, 2));
 	} else {
 		console.log(formatReport(sources, issues));
