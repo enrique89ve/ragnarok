@@ -439,16 +439,6 @@ Las siguientes **52 cartas coleccionables** del registro activo no tienen arte a
 | 50614 | Echo Wisp (basic) | Neutral |
 | 50615 | Resonance Spirit (evolution) | Neutral |
 
-### Additional Class Minions (3 cartas)
-
-**Motivo:** Cartas en proceso de migración al nuevo sistema de registry. Funcionales en `additionalClassMinions.ts` pero sin revisión de arte pendiente.
-
-| ID | Nombre | Tipo |
-|---|---|---|
-| 40002 | Sorcerer | minion |
-| 40009 | Keeper of the Grove: Silence | spell |
-| 40013 | Muspel Imp | minion |
-
 ### Quest Cards (6 cartas) — IDs 95501–95506
 
 **Motivo:** Cartas de quest/legendarias de alto perfil que requieren arte custom de primera calidad. Se difiere intencionalmente hasta tener arte generado específicamente para ellas — no se les asigna arte de orphaned por su relevancia narrativa en el juego.

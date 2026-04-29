@@ -261,7 +261,6 @@ const EXTRA_CARD_FILES = [
 	'legendaryCards.ts',
 	'spellCards.ts',
 	'additionalSpellCards.ts',
-	'additionalClassMinions.ts',
 	'colossalCards.ts',
 	'druidCards.ts',
 	'rogueCards.ts',
