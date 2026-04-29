@@ -350,3 +350,114 @@
 
 ---
 *Catálogo generado por inspección visual directa con Claude multimodal. Segunda pasada completada 2026-04-28. ~246 archivos analizados.*
+
+---
+
+## SESIÓN 2 — ASIGNACIONES (2026-04-28)
+
+| Archivo | Carta | ID |
+|---|---|---|
+| `8de8-8b814790` | Hel's Unseen | 39011 |
+| `46c2-sy7byy2d` | Brawler of Valhalla | 33243 |
+| `d25c-fa7g75kn` | Surtr's Herald | 95423 |
+| `e16f-90296cb7` | Drake of Midgard Sky | 92010 |
+| `8d30-0998e2d7` | Silencer of Ginnungagap | 33233 |
+| `eb34-078cea46` | Bifrost Resonator | 31303 |
+| `0f7c-2ff14c3c` | Seidr Resonator | 31418 |
+| `277f-ea4880c7` | Golden War-Boar of Freyr | 95036 |
+| `1601-jfuw1ee2` | Beryllium Nullifier | 20009 |
+| `9e27-d128608d` | Splitting Festeroot | 33272 |
+| `2407-5a48091b` | Shadow Panther | 85003 |
+| `8621-6dcc124b` | Jötunn Thornback | 8501 |
+| `0433-1465k5g4` | Tournament Medic | 13001 |
+| `3291-9c9148e1` | Hanuman's Champion | 13002 |
+| `54e8-d12e1de2` | Berserker Combatant | 13004 |
+| `e0bc-01c153b6` | Runic Amplifier | 31416 |
+| `fdfd-7p1e2ch9` | Kodorider | 13003 |
+| `a54c-1ad47c41` | Ancient of Wisdom | 40010 |
+| `71c1-s6o2do75` | Svartalfheim Trader | 85001 |
+| `6c4b-otijmg2l` | Realmbound Acolyte | 31958 |
+| `4244-4be44d1c` | Stormforged Axe | 40017 |
+| `8e68-623bee80` | Gyges, Warden of Tartarus | 40126 |
+| `bbc9-820efde7` | (asignado a 85001 pero resultó ser arte de cristal, no dark elf — liberado) | — |
+
+> **Nota:** `bbc9-820efde7` fue asignado a Svartalfheim Trader pero el archivo contenía arte de cristal/diamante (descripción del catálogo incorrecta). Fue reemplazado por `71c1-s6o2do75`.
+
+---
+
+## DEUDA DE ARTE PENDIENTE — CARTAS SIN ASIGNAR (2026-04-28)
+
+Las siguientes **52 cartas coleccionables** del registro activo no tienen arte asignado en `artMapping.ts`. Se documentan aquí con el motivo del diferimiento para no perder contexto.
+
+### Pet System (40 cartas) — IDs 50400–50615
+
+**Motivo:** El sistema de pets es una mecánica nueva con evolución en dos etapas (basic → evolution). Requiere arte que muestre coherencia visual entre la forma básica y la evolucionada de cada criatura. El catálogo de orphaned disponible en esta fecha no contaba con suficientes retratos temáticamente apropiados para cubrir las 40 entradas. Se difiere hasta que se genere o adquiera arte específico para este sistema.
+
+| ID | Nombre | Familia |
+|---|---|---|
+| 50400 | Hel's Hound (basic) | Dark |
+| 50401 | Garmr's Pup (evolution) | Dark |
+| 50402 | Draugr Scout (basic) | Dark |
+| 50403 | Draugr Wraith (evolution) | Dark |
+| 50404 | Shadow Mare (basic) | Dark |
+| 50405 | Night Terror (evolution) | Dark |
+| 50406 | Draugr Thrall (basic) | Dark |
+| 50407 | Draugr Lord (evolution) | Dark |
+| 50408 | Shadow Wisp (basic) | Dark |
+| 50410 | Dark Elf Scout (basic) | Dark |
+| 50412 | Grave Beetle (basic) | Dark |
+| 50413 | Deathcarver Scarab (evolution) | Dark |
+| 50414 | Dusk Raven (basic) | Dark |
+| 50415 | Nightshade Corvid (evolution) | Dark |
+| 50416 | Gloom Owl (basic) | Dark |
+| 50417 | Shadowtalon Owl (evolution) | Dark |
+| 50500 | Freyja's Dove (basic) | Light |
+| 50501 | Valkyrie's Wing (evolution) | Light |
+| 50502 | Light Einherjar (basic) | Light |
+| 50503 | Valhalla Champion (evolution) | Light |
+| 50504 | Sun Wisp (basic) | Light |
+| 50505 | Solar Sprite (evolution) | Light |
+| 50508 | Light Elf Apprentice (basic) | Light |
+| 50509 | Light Elf Mage (evolution) | Light |
+| 50510 | Dawn Wisp (basic) | Light |
+| 50511 | Sun Elemental (evolution) | Light |
+| 50512 | Dawn Fawn (basic) | Light |
+| 50513 | Radiant Stag (evolution) | Light |
+| 50600 | Bifrost Watcher (basic) | Neutral |
+| 50602 | Norn's Weaver (basic) | Neutral |
+| 50603 | Fate's Arachnid (evolution) | Neutral |
+| 50604 | Midgard Cub (basic) | Neutral |
+| 50605 | Midgard Bruin (evolution) | Neutral |
+| 50606 | Troll Whelp (basic) | Neutral |
+| 50607 | Troll (evolution) | Neutral |
+| 50608 | Giant Cub (basic) | Neutral |
+| 50609 | Giant (evolution) | Neutral |
+| 50610 | Stone Golem (basic) | Neutral |
+| 50611 | Granite Titan (evolution) | Neutral |
+| 50612 | Wind Sprite (basic) | Neutral |
+| 50613 | Gale Spirit (evolution) | Neutral |
+| 50614 | Echo Wisp (basic) | Neutral |
+| 50615 | Resonance Spirit (evolution) | Neutral |
+
+### Additional Class Minions (3 cartas)
+
+**Motivo:** Cartas en proceso de migración al nuevo sistema de registry. Funcionales en `additionalClassMinions.ts` pero sin revisión de arte pendiente.
+
+| ID | Nombre | Tipo |
+|---|---|---|
+| 40002 | Sorcerer | minion |
+| 40009 | Keeper of the Grove: Silence | spell |
+| 40013 | Muspel Imp | minion |
+
+### Quest Cards (6 cartas) — IDs 95501–95506
+
+**Motivo:** Cartas de quest/legendarias de alto perfil que requieren arte custom de primera calidad. Se difiere intencionalmente hasta tener arte generado específicamente para ellas — no se les asigna arte de orphaned por su relevancia narrativa en el juego.
+
+| ID | Nombre | Tipo |
+|---|---|---|
+| 95501 | Chronos Warp | spell |
+| 95502 | Mjolnir | weapon |
+| 95503 | Yggdrasil Core | spell |
+| 95504 | Elpis, Warden of Hope | minion |
+| 95505 | Queen Echidna | minion |
+| 95506 | Barnabus, Titan Stomper | minion |
