@@ -1,14 +1,7 @@
 import type { CardData } from '../../types';
 import type { HiveCardAsset } from '../../../data/schemas/HiveTypes';
 
-export const EVOLUTION_LEVELS = { MORTAL: 1, ASCENDED: 2, DIVINE: 3 } as const;
 export type EvolutionLevel = 1 | 2 | 3;
-
-export const LEVEL_NAMES: Record<EvolutionLevel, string> = {
-	1: 'Mortal',
-	2: 'Ascended',
-	3: 'Divine',
-};
 
 const BASIC_KEYWORDS = new Set([
 	'taunt', 'charge', 'rush', 'divine_shield', 'battlecry', 'echo',
@@ -24,14 +17,6 @@ const EFFECT_MULTIPLIERS: Record<EvolutionLevel, number> = {
 	1: 0.6,
 	2: 0.8,
 	3: 1.0,
-};
-
-const EVOLUTION_TIER_MAP: Record<string, [number, number][]> = {
-	basic:     [[1, 2], [3, 4], [5, 5]],
-	common:    [[1, 3], [4, 7], [8, 10]],
-	rare:      [[1, 3], [4, 6], [7, 8]],
-	epic:      [[1, 2], [3, 4], [5, 6]],
-	mythic:    [[1, 1], [2, 3], [4, 4]],
 };
 
 const SCALABLE_EFFECT_NUMBER_KEYS = new Set(['value', 'amount', 'damage', 'healing', 'armor']);
@@ -65,7 +50,6 @@ function scaleEffect<T>(effect: T | undefined, multiplier: number): T | undefine
 
 function scaleDescription(
 	description: string | undefined,
-	level: EvolutionLevel,
 	effectMultiplier: number
 ): string | undefined {
 	if (!description || effectMultiplier === 1) return description;
@@ -127,31 +111,14 @@ export function getCardAtLevel(card: CardData, level: EvolutionLevel): CardData 
 		if (scaledEffect !== undefined) scaledRecord[key] = scaledEffect;
 	}
 
-	scaled.description = scaleDescription(scaled.description, level, effectMult);
+	scaled.description = scaleDescription(scaled.description, effectMult);
 
 	return scaled;
 }
 
-export function getLevelName(level: EvolutionLevel): string {
-	return LEVEL_NAMES[level] || 'Unknown';
-}
-
-export function getEvolutionLevel(xpLevel: number, rarity: string): EvolutionLevel {
-	const key = rarity.toLowerCase();
-	const tiers = EVOLUTION_TIER_MAP[key] || EVOLUTION_TIER_MAP.common;
-
-	for (let i = 0; i < tiers.length; i++) {
-		const [min, max] = tiers[i];
-		if (xpLevel >= min && xpLevel <= max) {
-			return (i + 1) as EvolutionLevel;
-		}
-	}
-
-	return 3;
-}
-
-export function getEvolutionStars(level: EvolutionLevel): string {
-	return '★'.repeat(level);
+export function getEvolutionLevel(xpLevel: number): EvolutionLevel {
+	const clamped = Math.max(1, Math.min(3, xpLevel));
+	return clamped as EvolutionLevel;
 }
 
 export function enrichDeckWithNFTLevels(
@@ -175,8 +142,7 @@ export function enrichDeckWithNFTLevels(
 		const nftLevel = bestLevelByCardId.get(cardId);
 		if (nftLevel === undefined) return card;
 
-		const rarity = (card.rarity ?? 'common').toLowerCase();
-		const evoLevel = getEvolutionLevel(nftLevel, rarity);
+		const evoLevel = getEvolutionLevel(nftLevel);
 		if (evoLevel >= 3) return card;
 
 		const enriched = { ...card, _evolutionLevel: evoLevel };

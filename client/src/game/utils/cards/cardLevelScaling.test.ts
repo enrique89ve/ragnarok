@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { HiveCardAsset } from '../../../data/schemas/HiveTypes';
 import type { CardCategory } from '@shared/schemas/cardCategory';
 import type { CardData } from '../../types';
-import { enrichDeckWithNFTLevels } from './cardLevelScaling';
+import { enrichDeckWithNFTLevels, getEvolutionLevel } from './cardLevelScaling';
 
 function makeMinion(id: number, category: CardCategory): CardData {
 	return {
@@ -31,6 +31,20 @@ function makeAsset(cardId: number, ownershipSource: 'starter' | 'nft'): HiveCard
 		type: 'minion',
 	};
 }
+
+describe('getEvolutionLevel', () => {
+	it('maps card level 1:1 to evolution tier within the [1, 3] cap', () => {
+		expect(getEvolutionLevel(1)).toBe(1);
+		expect(getEvolutionLevel(2)).toBe(2);
+		expect(getEvolutionLevel(3)).toBe(3);
+	});
+
+	it('clamps out-of-range levels to the [1, 3] interval', () => {
+		expect(getEvolutionLevel(0)).toBe(1);
+		expect(getEvolutionLevel(-5)).toBe(1);
+		expect(getEvolutionLevel(99)).toBe(3);
+	});
+});
 
 describe('enrichDeckWithNFTLevels', () => {
 	it('does not apply NFT level scaling to starter entitlements', () => {
