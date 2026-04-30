@@ -108,7 +108,6 @@ describe('packageMatchResult', () => {
 			{
 				cardUid: 'opponent-nft-1',
 				cardId: 20001,
-				source: 'nft',
 				xpBefore: 0,
 				xpGained: 10,
 				xpAfter: 10,

@@ -53,7 +53,6 @@ export function calculateXPRewards(
 		rewards.push({
 			cardUid: mapping.uid,
 			cardId: mapping.cardId,
-			source: 'nft',
 			xpBefore,
 			xpGained,
 			xpAfter,

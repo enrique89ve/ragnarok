@@ -87,8 +87,6 @@ export interface PackagedMatchResultOnChain {
 export interface CardXPReward {
 	cardUid: string;
 	cardId: number;
-	/** Missing only on legacy queued rewards created before source tracking. */
-	source?: 'nft';
 	xpBefore: number;
 	xpGained: number;
 	xpAfter: number;

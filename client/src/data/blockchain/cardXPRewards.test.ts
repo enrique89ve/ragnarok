@@ -55,7 +55,6 @@ describe('calculateXPRewards', () => {
 			{
 				cardUid: nftAsset.uid,
 				cardId: nftAsset.cardId,
-				source: 'nft',
 				xpBefore: 0,
 				xpGained: 10,
 				xpAfter: 10,
