@@ -417,17 +417,13 @@ async function applyLevelUp(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpR
 	if (newLevel <= card.level) return { status: 'ignored' }; // idempotent
 
 	// Validate against chain-derived XP
-	const derivedLevel = getLevelForXP(card.rarity, card.xp);
+	const derivedLevel = getEconomicLevelForXP(card.rarity, card.xp);
 	if (newLevel > derivedLevel) {
 		return reject(`level overclaim: ${newLevel} > derived ${derivedLevel} (xp=${card.xp})`);
 	}
 
 	await deps.state.putCard({ ...card, level: newLevel });
 	return { status: 'applied' };
-}
-
-function getLevelForXP(rarity: string, xp: number): number {
-	return getEconomicLevelForXP(rarity, xp);
 }
 
 // ============================================================

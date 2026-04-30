@@ -97,16 +97,6 @@ export interface CardXPReward {
 	didLevelUp: boolean;
 }
 
-export interface CardXPConfig {
-	rarity: string;
-	xpPerWin: number;
-	xpPerMvp: number;
-	maxLevel: number;
-	thresholds: readonly number[];
-}
-
-export type XPConfigMap = Record<string, CardXPConfig>;
-
 export interface CardLevelBonus {
 	level: number;
 	attackBonus: number;

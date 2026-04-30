@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { calculateXPRewards, getLevelForXP, getXPToNextLevel, MAX_CARD_LEVEL } from './cardXPSystem';
+import { calculateXPRewards, getLevelForXP, getXPToNextLevel } from './cardXPSystem';
+import { MAX_CARD_LEVEL } from '../../../../shared/protocol-core/types';
 import { STARTER_ENTITLEMENT_OWNER_ID } from '../schemas/HiveTypes';
 import type { HiveCardAsset } from '../schemas/HiveTypes';
 

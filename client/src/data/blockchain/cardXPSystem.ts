@@ -12,8 +12,6 @@ import {
 	type EconomicXPKey,
 } from '../../../../shared/protocol-core/cardProgression';
 
-export const MAX_CARD_LEVEL = 3;
-
 /**
  * XP progression key. Only economic NFT cards earn transferable card XP.
  * Starter cards are account-bound off-chain entitlements and are tracked by
