@@ -500,7 +500,9 @@ export default function CollectionPage() {
 										<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
 											{rows[virtualRow.index].map((card, colIndex) => {
 												const hiveAsset = hiveCardMap.get(card.id);
-												const masteryTier = hiveAsset ? getMasteryTier(hiveAsset.xp, card.rarity) : 0;
+												const masteryTier = hiveAsset?.ownershipSource === 'nft'
+													? getMasteryTier(hiveAsset.xp, card.rarity)
+													: 0;
 												return (
 													<motion.div
 														key={`${card.id}-${colIndex}`}
@@ -803,7 +805,7 @@ export default function CollectionPage() {
 								{/* Mastery Tier */}
 								{(() => {
 									const a = hiveCardMap.get(selectedCard.id);
-									const mt = a ? getMasteryTier(a.xp, selectedCard.rarity) : 0;
+									const mt = a?.ownershipSource === 'nft' ? getMasteryTier(a.xp, selectedCard.rarity) : 0;
 									if (mt < 2) return null;
 									return (
 										<div className="text-center mb-3">

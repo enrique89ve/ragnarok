@@ -144,7 +144,7 @@ Rule: any op that changes NFT custody or irreversibly destroys an NFT MUST requi
 
 ## 8. Asset Model
 
-Each canonical NFT is:
+Each canonical NFT asset is:
 
 ```json
 {
@@ -163,6 +163,8 @@ Each canonical NFT is:
 ```
 
 Canonical identity is `uid`. Display metadata (name, race, image, art URL) are off-chain render metadata resolved from the card registry by `card_id` and MUST NOT affect ownership or replay validity.
+
+Starter cards are not canonical NFT assets. They are off-chain, account-bound gameplay entitlements and therefore have no canonical `uid`, custody transfer, `CardXP`, or `level_up` state in this protocol.
 
 ## 9. Supply Model
 
@@ -368,7 +370,7 @@ Destroys an NFT.
 
 ## 10.9 `level_up`
 
-Acknowledges a level derived from chain XP.
+Acknowledges an NFT card level derived from chain XP.
 
 ```json
 {
@@ -381,11 +383,13 @@ Acknowledges a level derived from chain XP.
 ```
 
 - Posting auth by `owner`
+- `uid` MUST resolve to a canonical NFT asset
 - `owner` MUST own `uid`
 - `new_level` MUST be `> current_level`
 - `new_level` MUST be `<= derivedLevel(xp, rarity)` where XP is accumulated from valid `match_result` ops
 - Max level: 3
-- No XP is created by this op; it only records acknowledgement of a chain-valid level transition
+- Starter cards and local/dev catalog cards MUST NOT emit `level_up`
+- No XP is created by this op; it only records acknowledgement of a chain-valid NFT level transition
 
 ## 10.10 `queue_join`
 
@@ -472,7 +476,8 @@ Settles a match with transcript commitment.
 - `result_nonce` MUST advance per broadcaster monotonic nonce rules
 - Proof of work MUST be valid: 64 challenges, 6-bit difficulty over canonical payload hash
 - Ranked rewards, XP, and ELO changes are derived only from valid `match_result`
-- XP is accumulated on the winner's NFTs that match the card IDs encoded in the result
+- XP is accumulated only on winner-owned NFTs that match the card IDs encoded in the result
+- Starter entitlements, local/dev catalog cards, and combat tokens are excluded from protocol XP
 - RUNE rewards: +10 winner, +3 loser for ranked matches (deterministic, non-transferable)
 - ELO: K=32, derived from match history
 

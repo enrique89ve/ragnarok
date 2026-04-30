@@ -24,6 +24,7 @@ import {
 import { verifyPoW, POW_CONFIG } from './pow';
 import { canonicalStringify, sha256Hash } from './hash';
 import { fnv1a } from './broadcast-utils';
+import { getEconomicLevelForXP, getEconomicXPPerWin } from './cardProgression';
 
 // ============================================================
 // Dependencies injected at init, not imported
@@ -425,29 +426,9 @@ async function applyLevelUp(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpR
 	return { status: 'applied' };
 }
 
-// XP thresholds by rarity (from cardXPSystem.ts)
-const XP_THRESHOLDS: Record<string, number[]> = {
-	free: [0, 20, 50],
-	basic: [0, 20, 50],
-	common: [0, 50, 150],
-	rare: [0, 100, 300],
-	epic: [0, 160, 480],
-	mythic: [0, 200, 500],
-};
-
 function getLevelForXP(rarity: string, xp: number): number {
-	const thresholds = XP_THRESHOLDS[rarity] ?? XP_THRESHOLDS.common;
-	let level = 1;
-	for (let i = 1; i < thresholds.length; i++) {
-		if (xp >= thresholds[i]) level = i + 1;
-	}
-	return Math.min(level, MAX_CARD_LEVEL);
+	return getEconomicLevelForXP(rarity, xp);
 }
-
-// XP gain per win by rarity
-const XP_PER_WIN: Record<string, number> = {
-	free: 5, basic: 5, common: 10, rare: 15, epic: 20, mythic: 25,
-};
 
 // ============================================================
 // match_anchor
@@ -737,7 +718,7 @@ async function applyWinnerCardXp(
 	const winnerNFTs = await deps.state.getCardsByOwner(details.winner);
 	for (const nft of winnerNFTs) {
 		if (!winnerCardIds.has(nft.cardId)) continue;
-		const xpGain = XP_PER_WIN[nft.rarity] ?? XP_PER_WIN.common;
+		const xpGain = getEconomicXPPerWin(nft.rarity);
 		if (xpGain <= 0) continue;
 		await deps.state.putCard({ ...nft, xp: nft.xp + xpGain });
 	}

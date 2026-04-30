@@ -113,8 +113,8 @@ export async function packageMatchResult(
 	// XP rewards for winner's cards only (loser gets 0 — intentional "brutal" design)
 	// calculateXPRewards handles null/undefined collection by defaulting card XP to 0
 	let xpRewards: CardXPReward[] = [];
-	if (input.matchType === 'ranked' && cardRarities && input.playerCardUids.length > 0) {
-		const winnerCardUids = isPlayerWinner ? input.playerCardUids : input.opponentCardUids;
+	const winnerCardUids = isPlayerWinner ? input.playerCardUids : input.opponentCardUids;
+	if (input.matchType === 'ranked' && cardRarities && winnerCardUids.length > 0) {
 		xpRewards = calculateXPRewards(winnerCardUids, cardCollection, cardRarities, null);
 	}
 

@@ -66,7 +66,7 @@ Hero Death            ▼             │
 | **gameStore** | `gameStore.ts` | Card game state, turns, attacks |
 | **PokerCombatStore** | `PokerCombatStore.ts` | Poker phases, betting, resolution |
 | **ChessBoardStore** | `ChessBoardStore.ts` | Chess positions, moves, collisions |
-| **heroDeckStore** | `heroDeckStore.ts` | User-built decks per hero (NFT ownership enforcement in Hive mode) |
+| **heroDeckStore** | `heroDeckStore.ts` | User-built decks per hero (NFT ownership enforcement in Hive/mainnet mode) |
 | **animationStore** | `animationStore.ts` | Animation state orchestration |
 | **sharedDeckStore** | `sharedDeckStore.ts` | Shared deck for Ragnarok Chess |
 | **activityLogStore** | `activityLogStore.ts` | Event logging/history |
@@ -76,7 +76,7 @@ Hero Death            ▼             │
 | **tradeStore** | `tradeStore.ts` | Trade offers + chain transfers on accept |
 | **craftingStore** | `craftingStore.ts` | Eitr balance (forge/dissolve) |
 | **settingsStore** | `settingsStore.ts` | Audio, visual, gameplay preferences |
-| **starterStore** | `starterStore.ts` | Local tracking for starter entitlement materialization / ceremony completion |
+| **starterStore** | `starterStore.ts` | Starter entitlement ceremony state + local/account-bound starter reputation |
 
 ### Current Implementation Notes
 	
@@ -517,6 +517,8 @@ StarterPackCeremony.tsx
 - Base cards are infinite supply (NOT NFTs, don't count toward 2.7M cap)
 - Slightly below common power level with "value gem" cards for competitiveness
 - Stored in `starterSet.ts` + `baseCards.ts`, tracked via `starterStore.ts`
+- Starter cards are persistent gameplay assets, but non-economic: no `CardXP`, no `level_up`, no NFT mastery badge, no marketplace value, and no NFT evolution scaling.
+- Starter usage can build local/account-bound reputation for onboarding, achievements, or UX, but that reputation is not transferable card progression.
 - To play: only 1 King + 4 Heroes required. Cards are optional bonus firepower.
 
 ---

@@ -401,7 +401,7 @@ If any card returns owns: false → deck is invalid → match refused
 
 This happens at match handshake, enforced by both clients. A player cannot use cards they don't own.
 
-In local mode (`VITE_DATA_LAYER_MODE=local`), deck building is unrestricted. In Hive mode, `heroDeckStore.ts` checks `useHiveDataStore.cardCollection` and rejects cards exceeding the player's owned NFT copies.
+In local/dev mode (`VITE_DATA_LAYER_MODE=local`), deck building is unrestricted for runtime testing. These catalog cards are not economic assets and are excluded from ownership packaging, `CardXP`, and `level_up`. In Hive/mainnet mode, `heroDeckStore.ts` checks `useHiveDataStore.cardCollection` and rejects genesis cards exceeding the player's owned NFT copies while allowing only the fixed starter entitlement off-chain.
 
 ### 5.4 NFT Provenance & Explorer Links
 
@@ -955,7 +955,10 @@ async function verifyDeckOwnership(
 ): Promise<boolean> {
   const db = await openReplayDB(); // IndexedDB
   for (const card of deck) {
-    if (!card.nft_id) continue; // Skip non-NFT cards (dev mode)
+    if (!card.nft_id) {
+      if (card.category === 'starter' && isStarterEntitlementCardId(card.cardId)) continue;
+      return false;
+    }
     const ownership = await db.get('nft_ownership', card.nft_id);
     if (!ownership || ownership.ownerAccount !== hiveAccount) return false;
   }
@@ -963,7 +966,7 @@ async function verifyDeckOwnership(
 }
 ```
 
-Both players verify each other's deck at P2P handshake. If either player's deck contains cards they don't own (according to the local chain replay), the match is refused.
+Both players verify each other's deck at P2P handshake. If either player's deck contains economic cards they don't own (according to the local chain replay), the match is refused. Starter cards are the only accepted cards without `nft_id`, and only when the `card_id` belongs to the fixed starter entitlement.
 
 ### 9.3 P2P Message Protocol Extension
 
@@ -982,21 +985,21 @@ type P2PMessage =
   // ... existing message types
 ```
 
-### 9.4 Non-Breaking: NFT Cards Alongside Normal Cards
+### 9.4 Runtime Modes: Mainnet vs Local/Dev
 
-During the transition period, not all cards need to be NFTs. Add `nft_id?: string` to the card instance type:
+Card instances carry an optional `nft_id` because local/dev gameplay can run from catalog data and starter cards are off-chain entitlements:
 
 ```typescript
 interface CardInstance {
   // ... existing fields
-  nft_id?: string;  // Present if this is a Hive NFT card; absent for demo/dev cards
+  nft_id?: string;  // Present only for Hive NFT cards
 }
 ```
 
-The deck verifier skips cards without `nft_id`. This lets the game run in both modes:
+The deck verifier does not blindly skip missing `nft_id` values in Hive/mainnet mode:
 
-- **Dev/demo mode**: All cards, no blockchain
-- **NFT mode**: Deck must be verified on-chain before ranked matches
+- **Mainnet mode**: Genesis cards must have `nft_id`; fixed starter entitlement cards may omit it; every other missing `nft_id` is rejected.
+- **Local/dev mode**: Runtime can grant catalog access for testing, but those cards are gameplay-only and are excluded from ownership packaging and CardXP.
 
 ---
 
@@ -1074,7 +1077,7 @@ Players trade cards freely using Hive Keychain-signed `transfer` ops. The game c
 - [x] Implement `match_start` anchor broadcast (dual-sig, with PoW)
 - [x] Implement commit-reveal seed exchange (`useP2PSync.ts`: SHA256 commitments, joint seed derivation, seeded PRNG deck shuffle via `seededRng.ts`)
 - [x] Implement dual-signature `match_result` (`BlockchainSubscriber.ts`: host signs → proposes via P2P → opponent verifies + counter-signs → ranked matches require dual-sig or are NOT broadcast; `apply.ts` rejects ranked results without both sigs)
-- [x] Implement XP derivation from `match_result` (replay engine processes embedded `xpRewards[]` array, updates card XP/level in IndexedDB — no separate `xp_update` ops needed)
+- [x] Implement NFT XP derivation from valid `match_result` ops (replay derives winner-owned NFT XP from match data + ownership state; browser `xpRewards[]` is local UX packaging, not the canonical trust boundary)
 - [x] Implement `level_up` on-chain convenience record (auto-broadcast when card crosses level threshold; `replayRules.ts` validates ownership + XP warrants claimed level)
 - [x] Implement card evolution scaling (`cardLevelScaling.ts`: NFT XP level → evolution tier (Mortal/Ascended/Divine) → stat/effect/keyword scaling at deck creation; `enrichDeckWithNFTLevels` wires collection into gameplay)
 - [x] Implement move recording with hash-chained transcript (`signedMove.ts`: `GameMove` + `MoveRecord` types; `transcriptBuilder.ts`: accumulates moves during gameplay, builds SHA-256 Merkle tree at game end)
@@ -1139,7 +1142,7 @@ Players trade cards freely using Hive Keychain-signed `transfer` ops. The game c
 | Matchmaking Auth | **IMPLEMENTED** | Server-side Hive signature verification via `hive-tx`. Validates `ragnarok-queue:{username}:{timestamp}` signed with Posting key. 5-min timestamp drift window. |
 | Username Validation | **IMPLEMENTED** | All chain/matchmaking endpoints validate Hive username format (`/^[a-z][a-z0-9.-]{2,15}$/`). |
 | Account Registry Cap | **ENFORCED** | Max 10,000 known accounts in server chain indexer. |
-| Demo Card Guard | **ENFORCED** | In hive mode, cards without `nft_uid` are excluded from chain packaging. Deck verification rejects non-NFT cards. |
+| Mainnet Card Guard | **ENFORCED** | In Hive/mainnet mode, genesis cards without `nft_id` are rejected or excluded from chain packaging. Fixed starter entitlement cards are the only accepted off-chain deck cards; local/dev catalog cards remain gameplay-only. |
 | PoW Web Worker | **IMPLEMENTED** | `computePoW` dispatches to up to 4 Web Workers in parallel. Falls back to serial if Workers unavailable. |
 | Poker Hands Won | **WIRED** | `pokerHandsWon` counter tracked per player/opponent in `PokerCombatSlice` and read by `matchResultPackager`. |
 | stampLevelUp | **CANONICAL FORMAT** | Uses `broadcastCustomJson` with `ragnarok-cards` app ID instead of legacy `ragnarok_level_up` custom_json id. |
@@ -1215,7 +1218,7 @@ client/src/
 │   │   └── SendCardModal.tsx        # Direct card gifting (Keychain transfer)
 │   │
 │   ├── stores/
-│   │   ├── heroDeckStore.ts         # Deck building (NFT ownership enforcement in Hive mode)
+│   │   ├── heroDeckStore.ts         # Deck building (NFT ownership enforcement in Hive/mainnet mode)
 │   │   └── gameStoreIntegration.ts  # Subscriber init + HiveEvents → toast notifications
 │   │
 │   ├── subscribers/
@@ -1330,37 +1333,42 @@ Each reward can only be claimed once per account. The replay engine stores `{acc
 
 ---
 
-## 16. Card XP, Leveling & Evolution System
+## 16. NFT Card XP, Leveling & Evolution System
 
-Cards gain XP from ranked matches. XP accumulates on-chain and determines the card's evolution tier, which directly affects gameplay stats.
+Only economic NFT cards gain `CardXP`. XP is a replay-derived counter on NFT card state; it is not a standalone token and it is not awarded to starter cards, local/dev catalog cards, or combat tokens. Starter cards use local/account-bound starter reputation instead.
 
 ### 16.1 XP Flow
 
 ```
 match_result (on-chain)
-  └── xpRewards[] array (embedded in payload)
-        └── replay engine reads each reward
-              └── updates card.xp + card.level in IndexedDB
+  └── compact winner card-id set
+        └── replay engine intersects winner-owned NFTs
+              └── updates NFT card.xp in canonical replay state
+                    └── optional level_up records acknowledge threshold crossings
 ```
 
-XP is **derived from match_result during replay** — no separate `xp_update` ops needed. The `xpRewards[]` array is computed by `cardXPSystem.ts` at match packaging time and embedded in the `match_result` payload. Every reader processes it identically.
+XP is **derived from valid `match_result` ops during replay**. There is no `xp_update` op. The browser may compute `xpRewards[]` at match packaging time for local UX, local IndexedDB refresh, and queued `level_up` convenience records, but canonical readers do not trust arbitrary XP reward payloads. Canonical replay derives winner XP from the valid match result plus the winner's NFT ownership state.
 
-### 16.2 Level Thresholds (per rarity)
+Only economic NFT cards can appear in this XP path. Starter cards are off-chain account entitlements: they do not earn `CardXP`, do not broadcast `level_up`, do not receive NFT evolution scaling, and track usage separately as local/account-bound starter reputation.
 
-| Rarity    | Max Level | XP per level (approx) |
-|-----------|-----------|----------------------|
-| Free      | 5         | Low thresholds       |
-| Basic     | 5         | Low thresholds       |
-| Common    | 10        | Moderate thresholds  |
-| Rare      | 8         | Higher thresholds    |
-| Epic      | 6         | High thresholds      |
-| Mythic    | 4         | Very high thresholds |
+### 16.2 XP Gains and Level Thresholds
+
+Current economic NFT XP curves are intentionally small and capped at level 3:
+
+| Rarity | XP per ranked win | MVP bonus | Level thresholds | Max level |
+|---|---:|---:|---|---:|
+| Common | 10 | 3 | 0, 50, 150 | 3 |
+| Rare | 15 | 5 | 0, 100, 300 | 3 |
+| Epic | 20 | 8 | 0, 160, 480 | 3 |
+| Mythic | 25 | 10 | 0, 200, 500 | 3 |
 
 Thresholds defined in `cardXPSystem.ts:XP_CONFIG`.
 
+XP itself may continue accumulating beyond the final threshold, but derived card level is capped by `MAX_CARD_LEVEL = 3`. At max level, `getXPToNextLevel()` returns `null`; `level_up` above level 3 is invalid.
+
 ### 16.3 Evolution Tiers (gameplay impact)
 
-XP levels map to 3 evolution tiers that scale card stats:
+NFT card level maps to 3 evolution tiers that scale card stats:
 
 | Tier      | Attack | Health | Effects | Keywords |
 |-----------|--------|--------|---------|----------|
@@ -1368,10 +1376,11 @@ XP levels map to 3 evolution tiers that scale card stats:
 | Ascended  | 80%    | 90%    | 80%     | All keywords |
 | Divine    | 100%   | 100%   | 100%    | All keywords |
 
-Tier thresholds by rarity (`EVOLUTION_TIER_MAP` in `cardLevelScaling.ts`):
+Tier thresholds by rarity (`EVOLUTION_TIER_MAP` in `cardLevelScaling.ts`) are retained for compatibility with the level-scaling helper. `basic` is a legacy helper fallback, not an economic XP rarity. With `MAX_CARD_LEVEL = 3`, reachable tiers are intentionally conservative unless the progression cap is raised:
 
 | Rarity    | Mortal (levels) | Ascended (levels) | Divine (levels) |
 |-----------|-----------------|--------------------|-----------------|
+| basic fallback | 1-2       | 3-4                | 5               |
 | Common    | 1-3             | 4-7                | 8-10            |
 | Rare      | 1-3             | 4-6                | 7-8             |
 | Epic      | 1-2             | 3-4                | 5-6             |
@@ -1379,17 +1388,17 @@ Tier thresholds by rarity (`EVOLUTION_TIER_MAP` in `cardLevelScaling.ts`):
 
 ### 16.4 How Scaling is Applied
 
-1. At deck creation, `enrichDeckWithNFTLevels(deck, collection)` looks up the player's best NFT for each cardId
+1. At deck creation, `enrichDeckWithNFTLevels(deck, collection)` looks up the player's best **NFT** for each cardId
 2. Each card's XP level is mapped to an evolution tier via `getEvolutionLevel(xpLevel, rarity)`
 3. The tier is attached to the `CardData` as `_evolutionLevel`
 4. When cards are drawn/instantiated, `createCardInstance` reads the tier and applies `getCardAtLevel`
 5. `getCardAtLevel` scales attack, health, effect values, descriptions, and keywords
 
-Summoned/generated cards (battlecries, deathrattles) always spawn at Divine (level 3). Only cards from the player's NFT collection are affected.
+Summoned/generated cards (battlecries, deathrattles) always spawn at Divine (level 3). Only cards from the player's NFT collection are affected. Starter entitlements are ignored by `enrichDeckWithNFTLevels`; they remain baseline cards and progress only through starter reputation.
 
 ### 16.5 `level_up` On-Chain Record
 
-When a card crosses a level threshold, the client auto-broadcasts a `level_up` op:
+When an NFT card crosses a level threshold, the client may auto-broadcast a `level_up` op:
 
 ```json
 {
@@ -1397,14 +1406,21 @@ When a card crosses a level threshold, the client auto-broadcasts a `level_up` o
   "action": "level_up",
   "nft_id": "gen1-rare-042",
   "card_id": 2001,
-  "old_level": 3,
-  "new_level": 4,
-  "xp_total": 1250,
+  "new_level": 2,
   "match_id": "abc123..."
 }
 ```
 
-The replay engine validates: card exists, broadcaster owns it, card XP warrants the claimed level. This op is a convenience index for quick lookups — the canonical XP state is always derivable from replaying `match_result` ops.
+The replay engine validates: card exists, broadcaster owns it, `new_level > current_level`, `new_level <= MAX_CARD_LEVEL`, and chain-derived XP warrants the claimed level. This op is a convenience index for quick lookups; the canonical XP state is always derivable from replaying valid `match_result` ops.
+
+### 16.6 Starter Reputation (Non-Economic)
+
+Starter reputation is intentionally outside the NFT XP system:
+
+- It is account-bound/local and non-transferable.
+- It is recorded from starter cards used on battlefield/graveyard at game end.
+- It does not affect NFT ownership, `CardXP`, `level_up`, mastery badges, marketplace value, or NFT evolution scaling.
+- It may be used later for UX, achievements, onboarding, or account-bound progression, but it must never become a transferable card property without a separate protocol decision.
 
 ---
 

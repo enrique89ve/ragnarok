@@ -7,9 +7,9 @@ How every card is bucketed for ownership, supply and on-chain semantics. Orthogo
 Cards split into two macro buckets:
 
 ```
-  ASSET (owned by a player, has identity)         EPHEMERAL (no ownership)
-  ├── genesis  — NFT, on-chain, finite supply     └── token  — combat-only,
-  └── starter  — free, off-chain, infinite                       summoned by effects
+  ASSET (bound to a player/account)                 EPHEMERAL (no ownership)
+  ├── genesis  — economic NFT, on-chain, finite     └── token  — combat-only,
+  └── starter  — account-bound, off-chain, infinite                summoned by effects
 ```
 
 Tactically:
@@ -40,6 +40,8 @@ CARD_CATEGORIES = ['token', 'starter', 'genesis'] as const;
 | `starter` | 1 | no  | no  | no  | yes | yes | no  |
 | `genesis` | 2 | yes | yes | yes | yes | yes | yes |
 
+`starter` ownership is account-bound and non-economic. Starter cards do not earn `CardXP`, do not emit `level_up`, do not receive NFT evolution scaling, and do not gain transferable value. Starter usage is tracked separately as local/account-bound reputation.
+
 `CARD_CATEGORY_TABLE` in `cardCategory.ts` encodes the matrix as data; combat-engine code MUST NOT branch on `category` for resolution rules. `categoryOrder()` and `isAtLeast()` enable hierarchy filters like *"every card a player can own"* (= `isAtLeast(c.category, 'starter')`).
 
 ## Macro splits (derived views)
@@ -55,6 +57,8 @@ isNFT('token')    === false
 ```
 
 Use `isNFT(c.category)` whenever you mean "is this card on-chain / mintable / supply-capped". Backed by `CARD_CATEGORY_TABLE.<x>.onChain`.
+
+`isNFT(c.category)` is also the correct conceptual boundary for economic progression. `CardXP`, `level_up`, NFT mastery badges, and NFT evolution scaling are NFT-only concepts. Starter cards may have local/account reputation, but that reputation must not be confused with transferable card progression.
 
 ### Persistent vs ephemeral
 

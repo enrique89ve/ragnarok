@@ -552,7 +552,7 @@ Run these checks after the ceremony is complete. Any failure is a critical incid
 On a fresh browser (no IndexedDB):
 
 1. Load the game at the deployed URL
-2. Enable Hive mode, log in with any account
+2. Enable Hive/mainnet mode, log in with any account
 3. Wait for replay engine to sync from block 0
 4. Verify:
    - [ ] Genesis detected at correct block

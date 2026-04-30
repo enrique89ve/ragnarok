@@ -6,8 +6,8 @@
  * according to the local chain replay state.
  *
  * Starter cards are persistent, universally owned, and off-chain, so they are
- * valid in Hive mode without an `nft_id`. Other non-NFT cards are skipped only
- * outside Hive mode (dev/demo).
+ * valid in Hive/mainnet mode without an `nft_id`. Other non-NFT cards are
+ * skipped only outside Hive/mainnet mode (local/dev runtime).
  *
  * Usage:
  *   const result = await verifyDeckOwnership('alice', deck);
@@ -37,7 +37,7 @@ export interface DeckVerificationResult {
 /**
  * Verify that every NFT card in the deck is owned by hiveAccount.
  * Starter cards are accepted without an NFT id because their entitlement is
- * universal and off-chain. Other non-NFT cards are invalid in Hive mode.
+ * universal and off-chain. Other non-NFT cards are invalid in Hive/mainnet mode.
  */
 export async function verifyDeckOwnership(
 	hiveAccount: string,

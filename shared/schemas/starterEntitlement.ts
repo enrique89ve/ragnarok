@@ -3,7 +3,7 @@
  *
  * These are the fixed card IDs every account owns without Hive L1 NFT identity.
  * The set is intentionally explicit: cards outside this list must not be
- * accepted as owned starter assets in Hive mode just because they carry
+ * accepted as owned starter assets in Hive/mainnet mode just because they carry
  * `category: 'starter'`.
  */
 

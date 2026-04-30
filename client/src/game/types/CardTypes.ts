@@ -252,7 +252,7 @@ export interface CardInstance {
     y: number;
   };
 
-  // NFT — present if this is a Hive L1 NFT card; absent for demo/dev cards
+  // NFT — present if this is a Hive L1 NFT card; absent for starter and local/dev cards
   nft_id?: string;
 }
 

@@ -10,7 +10,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { applyOp, type ProtocolCoreDeps } from './apply';
-import { normalizeRawOp, type NormalizeResult } from './normalize';
+import { normalizeRawOp } from './normalize';
 import type {
 	StateAdapter, CardAsset, GenesisRecord, EloRecord,
 	TokenBalance, MatchAnchorRecord, PackCommitRecord, SupplyRecord,
@@ -356,6 +356,21 @@ describe('Protocol Core: Replay Traces', () => {
 
 		expect(result.status).toBe('rejected');
 		expect(state.cards.get('nft-001')!.level).toBe(1);
+	});
+
+	it('level_up rejected above max card level even with excess XP', async () => {
+		state.cards.set('nft-001', {
+			uid: 'nft-001', cardId: 20001, owner: 'alice', rarity: 'common',
+			level: 3, xp: 999_999, edition: 'alpha', mintSource: 'genesis',
+			mintTrxId: 'x', mintBlockNum: 100, lastTransferBlock: 0,
+		});
+
+		const result = await applyOp(makeOp('level_up', {
+			nft_id: 'nft-001', new_level: 4,
+		}), defaultCtx, deps);
+
+		expect(result.status).toBe('rejected');
+		expect(state.cards.get('nft-001')!.level).toBe(3);
 	});
 
 	// --- Legacy Pack Open ---

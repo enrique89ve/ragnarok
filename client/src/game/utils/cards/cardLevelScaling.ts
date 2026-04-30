@@ -1,4 +1,4 @@
-import type { CardData, BattlecryEffect, SpellEffect, DeathrattleEffect } from '../../types';
+import type { CardData } from '../../types';
 import type { HiveCardAsset } from '../../../data/schemas/HiveTypes';
 
 export const EVOLUTION_LEVELS = { MORTAL: 1, ASCENDED: 2, DIVINE: 3 } as const;
@@ -34,6 +34,8 @@ const EVOLUTION_TIER_MAP: Record<string, [number, number][]> = {
 	mythic:    [[1, 1], [2, 3], [4, 4]],
 };
 
+const SCALABLE_EFFECT_NUMBER_KEYS = new Set(['value', 'amount', 'damage', 'healing', 'armor']);
+
 function scaleValue(value: number, multiplier: number): number {
 	if (value === 0) return 0;
 	if (value > 0) return Math.max(1, Math.ceil(value * multiplier));
@@ -48,17 +50,12 @@ function scaleEffect<T>(effect: T | undefined, multiplier: number): T | undefine
 
 	for (const key of Object.keys(scaled)) {
 		const val = scaled[key];
-		if (key === 'value' && typeof val === 'number') {
+		if (typeof val === 'number' && SCALABLE_EFFECT_NUMBER_KEYS.has(key)) {
 			scaled[key] = scaleValue(val, multiplier);
-		} else if (key === 'amount' && typeof val === 'number') {
-			scaled[key] = scaleValue(val, multiplier);
-		} else if (key === 'damage' && typeof val === 'number') {
-			scaled[key] = scaleValue(val, multiplier);
-		} else if (key === 'healing' && typeof val === 'number') {
-			scaled[key] = scaleValue(val, multiplier);
-		} else if (key === 'armor' && typeof val === 'number') {
-			scaled[key] = scaleValue(val, multiplier);
-		} else if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+			continue;
+		}
+
+		if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
 			scaled[key] = scaleEffect(val, multiplier);
 		}
 	}
@@ -85,67 +82,49 @@ function scaleKeywords(keywords: string[] | undefined, level: EvolutionLevel): s
 	return keywords.filter(kw => BASIC_KEYWORDS.has(kw));
 }
 
+function getScaledNumericProperty(target: Record<string, unknown>, key: string, multiplier: number): number | null {
+	const value = target[key];
+	if (typeof value === 'number') {
+		return scaleValue(value, multiplier);
+	}
+	return null;
+}
+
+function getScaledEffectProperty(target: Record<string, unknown>, key: string, multiplier: number): unknown {
+	const effect = target[key];
+	if (effect) {
+		return scaleEffect(effect, multiplier);
+	}
+	return undefined;
+}
+
 export function getCardAtLevel(card: CardData, level: EvolutionLevel): CardData {
 	if (!level || level === 3 || level < 1 || level > 3) return card;
 
 	const mult = STAT_MULTIPLIERS[level];
 	const effectMult = EFFECT_MULTIPLIERS[level];
 
-	const scaled: CardData = { ...card };
+	const scaledRecord: Record<string, unknown> = { ...card };
+	const scaled = scaledRecord as unknown as CardData;
 
-	if ('attack' in scaled && typeof (scaled as any).attack === 'number') {
-		(scaled as any).attack = scaleValue((scaled as any).attack, mult.attack);
-	}
+	const scaledAttack = getScaledNumericProperty(scaledRecord, 'attack', mult.attack);
+	if (scaledAttack !== null) scaledRecord.attack = scaledAttack;
 
-	if ('health' in scaled && typeof (scaled as any).health === 'number') {
-		(scaled as any).health = scaleValue((scaled as any).health, mult.health);
-	}
+	const scaledHealth = getScaledNumericProperty(scaledRecord, 'health', mult.health);
+	if (scaledHealth !== null) scaledRecord.health = scaledHealth;
 
 	if (scaled.type === 'weapon' && 'durability' in scaled) {
-		const dur = (scaled as any).durability as number;
-		if (typeof dur === 'number' && level === 1) {
-			(scaled as any).durability = Math.max(1, dur - 1);
+		const durability = scaledRecord.durability;
+		if (typeof durability === 'number' && level === 1) {
+			scaledRecord.durability = Math.max(1, durability - 1);
 		}
 	}
 
 	scaled.keywords = scaleKeywords(scaled.keywords, level);
 
-	if ('battlecry' in scaled && (scaled as any).battlecry) {
-		(scaled as any).battlecry = scaleEffect<BattlecryEffect>(
-			(scaled as any).battlecry, effectMult
-		);
-	}
-
-	if ('spellEffect' in scaled && (scaled as any).spellEffect) {
-		(scaled as any).spellEffect = scaleEffect<SpellEffect>(
-			(scaled as any).spellEffect, effectMult
-		);
-	}
-
-	if ('deathrattle' in scaled && (scaled as any).deathrattle) {
-		(scaled as any).deathrattle = scaleEffect<DeathrattleEffect>(
-			(scaled as any).deathrattle, effectMult
-		);
-	}
-
-	if ('endOfTurn' in scaled && (scaled as any).endOfTurn) {
-		(scaled as any).endOfTurn = scaleEffect((scaled as any).endOfTurn, effectMult);
-	}
-
-	if ('aura' in scaled && (scaled as any).aura) {
-		(scaled as any).aura = scaleEffect((scaled as any).aura, effectMult);
-	}
-
-	if ('auraEffect' in scaled && (scaled as any).auraEffect) {
-		(scaled as any).auraEffect = scaleEffect((scaled as any).auraEffect, effectMult);
-	}
-
-	if ('passive' in scaled && (scaled as any).passive) {
-		(scaled as any).passive = scaleEffect((scaled as any).passive, effectMult);
-	}
-
-	if ('frenzyEffect' in scaled && (scaled as any).frenzyEffect) {
-		(scaled as any).frenzyEffect = scaleEffect((scaled as any).frenzyEffect, effectMult);
+	for (const key of ['battlecry', 'spellEffect', 'deathrattle', 'endOfTurn', 'aura', 'auraEffect', 'passive', 'frenzyEffect']) {
+		const scaledEffect = getScaledEffectProperty(scaledRecord, key, effectMult);
+		if (scaledEffect !== undefined) scaledRecord[key] = scaledEffect;
 	}
 
 	scaled.description = scaleDescription(scaled.description, level, effectMult);
@@ -183,6 +162,8 @@ export function enrichDeckWithNFTLevels(
 
 	const bestLevelByCardId = new Map<number, number>();
 	for (const asset of collection) {
+		if (asset.ownershipSource !== 'nft') continue;
+
 		const existing = bestLevelByCardId.get(asset.cardId);
 		if (existing === undefined || asset.level > existing) {
 			bestLevelByCardId.set(asset.cardId, asset.level);

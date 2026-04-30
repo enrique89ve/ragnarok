@@ -1,48 +1,39 @@
 import type {
-	CardXPConfig,
 	CardXPReward,
 	CardLevelBonus,
 	CardUidMapping,
-	XPConfigMap,
 	HiveCardAsset
 } from './types';
-import type { Rarity } from '@shared/schemas/rarity';
 import type { CardCategory } from '@shared/schemas/cardCategory';
+import {
+	ECONOMIC_XP_CONFIG,
+	getEconomicLevelForXP,
+	getEconomicXPConfig,
+	type EconomicXPKey,
+} from '../../../../shared/protocol-core/cardProgression';
 
 export const MAX_CARD_LEVEL = 3;
 
 /**
- * XP progression key. Genesis cards progress by their canonical rarity tier;
- * starter cards have their own slower curve regardless of declared rarity,
- * reflecting their "free baseline" role (slightly below common). Tokens
- * never earn XP and never resolve through this map.
+ * XP progression key. Only economic NFT cards earn transferable card XP.
+ * Starter cards are account-bound off-chain entitlements and are tracked by
+ * starter reputation, not by CardXP.
  */
-export type XPKey = 'starter' | Rarity;
+export type XPKey = EconomicXPKey;
 
 /**
- * XP curves per progression key. The `starter` entry materializes the
- * "free baseline progresses slower" intent: same shape as the canonical
- * tiers, but lower numbers than `common`.
+ * XP curves per economic progression key.
  */
-export const XP_CONFIG: XPConfigMap = {
-	starter:   { rarity: 'starter',   xpPerWin: 5,  xpPerMvp: 0,  maxLevel: MAX_CARD_LEVEL, thresholds: [0, 20, 50] },
-	common:    { rarity: 'common',    xpPerWin: 10, xpPerMvp: 3,  maxLevel: MAX_CARD_LEVEL, thresholds: [0, 50, 150] },
-	rare:      { rarity: 'rare',      xpPerWin: 15, xpPerMvp: 5,  maxLevel: MAX_CARD_LEVEL, thresholds: [0, 100, 300] },
-	epic:      { rarity: 'epic',      xpPerWin: 20, xpPerMvp: 8,  maxLevel: MAX_CARD_LEVEL, thresholds: [0, 160, 480] },
-	mythic:    { rarity: 'mythic',    xpPerWin: 25, xpPerMvp: 10, maxLevel: MAX_CARD_LEVEL, thresholds: [0, 200, 500] },
-};
+export const XP_CONFIG = ECONOMIC_XP_CONFIG;
 
 /**
- * Resolve the XP progression key for a card. Starter cards always use the
- * starter curve (regardless of declared rarity, which is `'common'` in
- * source data). Genesis cards fall back to their rarity tier. Tokens are
- * filtered out upstream — they don't earn XP.
+ * Resolve the economic XP progression key for a card. Starter cards and tokens
+ * are filtered upstream and never earn CardXP.
  */
 export const xpKeyFor = (card: { rarity?: string; category?: CardCategory }): XPKey => {
-	if (card.category === 'starter') return 'starter';
 	const r = (card.rarity ?? 'common').toLowerCase();
 	return (r === 'rare' || r === 'epic' || r === 'mythic' || r === 'common')
-		? r as Rarity
+		? r as EconomicXPKey
 		: 'common';
 };
 
@@ -52,30 +43,18 @@ const LEVEL_BONUSES: CardLevelBonus[] = [
 	{ level: 3, attackBonus: 0, healthBonus: 0 },
 ];
 
-function getConfig(rarity: string): CardXPConfig {
-	return XP_CONFIG[rarity.toLowerCase()] || XP_CONFIG.common;
-}
-
 export function getLevelForXP(rarity: string, xp: number): number {
-	const config = getConfig(rarity);
-	let level = 1;
-	for (let i = config.thresholds.length - 1; i >= 0; i--) {
-		if (xp >= config.thresholds[i]) {
-			level = i + 1;
-			break;
-		}
-	}
-	return Math.min(level, config.maxLevel);
+	return getEconomicLevelForXP(rarity, xp);
 }
 
 export function getXPForLevel(rarity: string, level: number): number {
-	const config = getConfig(rarity);
+	const config = getEconomicXPConfig(rarity);
 	const idx = Math.max(0, Math.min(level - 1, config.thresholds.length - 1));
 	return config.thresholds[idx];
 }
 
 export function getXPToNextLevel(rarity: string, currentXP: number): number | null {
-	const config = getConfig(rarity);
+	const config = getEconomicXPConfig(rarity);
 	const currentLevel = getLevelForXP(rarity, currentXP);
 	if (currentLevel >= config.maxLevel) return null;
 	const nextThreshold = config.thresholds[currentLevel];
@@ -83,13 +62,13 @@ export function getXPToNextLevel(rarity: string, currentXP: number): number | nu
 }
 
 export function isMaxLevel(rarity: string, level: number): boolean {
-	const config = getConfig(rarity);
+	const config = getEconomicXPConfig(rarity);
 	return level >= config.maxLevel;
 }
 
 export function calculateXPGain(rarity: string, isWin: boolean, isMvp: boolean): number {
 	if (!isWin) return 0;
-	const config = getConfig(rarity);
+	const config = getEconomicXPConfig(rarity);
 	let xp = config.xpPerWin;
 	if (isMvp) xp += config.xpPerMvp;
 	return xp;
@@ -109,6 +88,8 @@ export function calculateXPRewards(
 	const rewards: CardXPReward[] = [];
 
 	for (const mapping of cardUids) {
+		if (mapping.source !== 'nft') continue;
+
 		const rarity = cardRarities.get(mapping.cardId) || 'common';
 		const isMvp = mapping.uid === mvpCardUid;
 		const xpGained = calculateXPGain(rarity, true, isMvp);
@@ -125,7 +106,7 @@ export function calculateXPRewards(
 		rewards.push({
 			cardUid: mapping.uid,
 			cardId: mapping.cardId,
-			source: mapping.source,
+			source: 'nft',
 			xpBefore,
 			xpGained,
 			xpAfter,
@@ -140,7 +121,7 @@ export function calculateXPRewards(
 
 export function getMasteryTier(xp: number, rarity: string): 0 | 2 | 3 {
 	const level = getLevelForXP(rarity, xp);
-	const config = getConfig(rarity);
+	const config = getEconomicXPConfig(rarity);
 	if (level <= 1) return 0;
 	if (level >= config.maxLevel) return 3;
 	return 2;

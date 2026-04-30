@@ -88,7 +88,7 @@ export interface CardXPReward {
 	cardUid: string;
 	cardId: number;
 	/** Missing only on legacy queued rewards created before source tracking. */
-	source?: CardOwnershipSource;
+	source?: 'nft';
 	xpBefore: number;
 	xpGained: number;
 	xpAfter: number;
@@ -102,7 +102,7 @@ export interface CardXPConfig {
 	xpPerWin: number;
 	xpPerMvp: number;
 	maxLevel: number;
-	thresholds: number[];
+	thresholds: readonly number[];
 }
 
 export type XPConfigMap = Record<string, CardXPConfig>;

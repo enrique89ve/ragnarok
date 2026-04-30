@@ -805,7 +805,7 @@ export interface CardInstance {
   // Instance-level keyword overrides (takes precedence over card.keywords when present)
   instanceKeywords?: string[];
 
-  // NFT — present if this is a Hive L1 NFT card; absent for demo/dev cards
+  // NFT — present if this is a Hive L1 NFT card; absent for starter and local/dev cards
   nft_id?: string;
 }
 

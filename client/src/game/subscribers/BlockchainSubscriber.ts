@@ -7,7 +7,7 @@ import { isBlockchainPackagingEnabled } from '../config/featureFlags';
 import { generateMatchId, useHiveDataStore } from '@/data/HiveDataLayer';
 import { getStarterUid, isStarterEntitlementAsset, type HiveCardAsset } from '@/data/schemas/HiveTypes';
 import { debug } from '../config/debugConfig';
-import type { CardOwnershipSource, CardUidMapping, CardXPReward, PackagedMatchResult } from '@/data/blockchain/types';
+import type { CardOwnershipSource, CardUidMapping, PackagedMatchResult } from '@/data/blockchain/types';
 import { getCard, putCard } from '@/data/blockchain/replayDB';
 import { getLevelForXP, xpKeyFor } from '@/data/blockchain/cardXPSystem';
 import { usePeerStore } from '../stores/peerStore';
@@ -132,11 +132,8 @@ function extractCardUidsFromGameState(side: 'player' | 'opponent'): CardUidMappi
 }
 
 /**
- * Builds a cardId → XP-progression key map from card instances already in
- * game state. The key is `'starter' | Rarity` resolved via `xpKeyFor`:
- * starter cards use a slower curve regardless of their declared rarity,
- * genesis cards progress by their rarity tier. Combat tokens never reach
- * here — they don't have stable cardIds in the XP system.
+ * Builds a cardId → XP-progression key map for economic NFT cards only.
+ * Starter cards use account-bound reputation, not CardXP.
  */
 function buildCardRarities(
 	playerUids: CardUidMapping[],
@@ -147,8 +144,8 @@ function buildCardRarities(
 	if (!gs) return xpKeys;
 
 	const relevantIds = new Set([
-		...playerUids.map(u => u.cardId),
-		...opponentUids.map(u => u.cardId),
+		...playerUids.filter(u => u.source === 'nft').map(u => u.cardId),
+		...opponentUids.filter(u => u.source === 'nft').map(u => u.cardId),
 	]);
 
 	for (const side of ['player', 'opponent'] as const) {
@@ -169,22 +166,6 @@ function buildCardRarities(
 	}
 
 	return xpKeys;
-}
-
-function applyStarterXPReward(xpReward: CardXPReward): boolean {
-	const store = useHiveDataStore.getState();
-	const current = store.cardCollection.find(card => card.uid === xpReward.cardUid);
-	if (!current) return false;
-
-	const oldLevel = getLevelForXP('starter', current.xp);
-	const updatedCollection = store.cardCollection.map(card =>
-		card.uid === xpReward.cardUid
-			? { ...card, xp: xpReward.xpAfter, level: xpReward.levelAfter }
-			: card,
-	);
-	store.loadFromHive({ cardCollection: updatedCollection });
-
-	return xpReward.levelAfter > oldLevel;
 }
 
 // ---------------------------------------------------------------------------
@@ -387,15 +368,6 @@ async function applyLocalXPAndStampLevelUps(result: PackagedMatchResult): Promis
 
 	for (const xpReward of result.xpRewards) {
 		try {
-			const source = xpReward.source ?? 'nft';
-
-			if (source === 'starter') {
-				if (applyStarterXPReward(xpReward)) {
-					levelUpCount++;
-				}
-				continue;
-			}
-
 			const card = await getCard(xpReward.cardUid);
 			if (!card) continue;
 

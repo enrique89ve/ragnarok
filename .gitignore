@@ -82,6 +82,9 @@ __tests__/
 !**/protocolConformance.test.ts
 !client/src/data/blockchain/cardXPSystem.test.ts
 !client/src/data/blockchain/deckVerification.test.ts
+!client/src/data/blockchain/matchResultPackager.test.ts
+!client/src/game/stores/starterStore.test.ts
+!client/src/game/utils/cards/cardLevelScaling.test.ts
 *.spec.js
 *.spec.ts
 *.test.tsx
