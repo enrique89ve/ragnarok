@@ -5,8 +5,9 @@
  * Verifies that every NFT card in a deck is owned by the specified account
  * according to the local chain replay state.
  *
- * Cards without an `nft_id` are skipped (dev/demo mode — always allowed).
- * A deck with zero NFT cards passes verification (full dev-mode game).
+ * Starter cards are persistent, universally owned, and off-chain, so they are
+ * valid in Hive mode without an `nft_id`. Other non-NFT cards are skipped only
+ * outside Hive mode (dev/demo).
  *
  * Usage:
  *   const result = await verifyDeckOwnership('alice', deck);
@@ -15,23 +16,28 @@
 
 import { getCard } from './replayDB';
 import { sha256Hash } from './hashUtils';
-import { isHiveMode } from '@/config/featureFlags';
+import { isMainnetMode } from '@/config/featureFlags';
+import type { CardCategory } from '@shared/schemas/cardCategory';
+import { isStarterEntitlementCardId } from '@shared/schemas/starterEntitlement';
 
 export interface CardRef {
 	nft_id?: string;
 	instanceId?: string;
 	cardId?: number;
+	category?: CardCategory;
 }
 
 export interface DeckVerificationResult {
 	valid: boolean;
 	checkedCount: number;
+	starterCount: number;
 	invalidCards: string[]; // nft_ids that failed ownership check
 }
 
 /**
  * Verify that every NFT card in the deck is owned by hiveAccount.
- * Non-NFT cards (no nft_id) are silently skipped.
+ * Starter cards are accepted without an NFT id because their entitlement is
+ * universal and off-chain. Other non-NFT cards are invalid in Hive mode.
  */
 export async function verifyDeckOwnership(
 	hiveAccount: string,
@@ -39,12 +45,18 @@ export async function verifyDeckOwnership(
 ): Promise<DeckVerificationResult> {
 	const invalidCards: string[] = [];
 	let checkedCount = 0;
+	let starterCount = 0;
 
-	const requireNft = isHiveMode();
+	const requireNft = isMainnetMode();
 	for (const card of deck) {
 		if (!card.nft_id) {
+			if (card.category === 'starter' && isStarterEntitlementCardId(card.cardId)) {
+				starterCount++;
+				continue;
+			}
 			if (requireNft) {
-				invalidCards.push(`no-nft:${card.cardId ?? 'unknown'}`);
+				const reason = card.category === 'starter' ? 'invalid-starter' : 'no-nft';
+				invalidCards.push(`${reason}:${card.cardId ?? 'unknown'}`);
 			}
 			continue;
 		}
@@ -59,6 +71,7 @@ export async function verifyDeckOwnership(
 	return {
 		valid: invalidCards.length === 0,
 		checkedCount,
+		starterCount,
 		invalidCards,
 	};
 }

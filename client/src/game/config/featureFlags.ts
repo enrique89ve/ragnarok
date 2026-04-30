@@ -7,6 +7,7 @@
  */
 
 export type DataLayerMode = 'local' | 'test' | 'hive';
+export type RuntimeExecutionMode = 'mainnet' | 'local-dev';
 
 function resolveDataLayerMode(): DataLayerMode {
 	const raw = import.meta.env.VITE_DATA_LAYER_MODE as string | undefined;
@@ -37,6 +38,14 @@ export function isHiveMode(): boolean {
 }
 
 /**
+ * Economic mainnet mode: ownership is enforced and only persistent assets
+ * (`nft` + `starter`) participate in blockchain packaging.
+ */
+export function isMainnetMode(): boolean {
+	return isHiveMode();
+}
+
+/**
  * Checks if test mode is active (mock blockchain endpoints).
  */
 export function isTestMode(): boolean {
@@ -51,6 +60,14 @@ export function isLocalMode(): boolean {
 }
 
 /**
+ * Local/dev mode: the full card catalog can be used for gameplay simulation,
+ * but catalog access is not economic ownership.
+ */
+export function isLocalDevMode(): boolean {
+	return !isMainnetMode();
+}
+
+/**
  * Checks if battle history is enabled.
  */
 export function isBattleHistoryEnabled(): boolean {
@@ -62,6 +79,10 @@ export function isBattleHistoryEnabled(): boolean {
  */
 export function getDataLayerMode(): DataLayerMode {
 	return FeatureFlags.DATA_LAYER_MODE;
+}
+
+export function getRuntimeExecutionMode(): RuntimeExecutionMode {
+	return isMainnetMode() ? 'mainnet' : 'local-dev';
 }
 
 /**

@@ -13,7 +13,20 @@
  *   custom_json id = "rp_<action>"
  */
 
+import { isStarterEntitlementCardId } from '@shared/schemas/starterEntitlement';
+
 export const RAGNAROK_APP_ID = 'ragnarok-cards';
+
+export type CardOwnershipSource =
+  | 'nft' // Genesis card with Hive L1 identity.
+  | 'starter'; // Universal off-chain starter entitlement.
+
+export const STARTER_UID_PREFIX = 'starter-';
+export const STARTER_ENTITLEMENT_OWNER_ID = 'starter-entitlement';
+
+export function getStarterUid(cardId: number): string {
+  return `${STARTER_UID_PREFIX}${cardId}`;
+}
 
 /**
  * Chain-level `custom_json` op id used at broadcast time.
@@ -138,6 +151,8 @@ export interface HiveCardAsset {
   uid: string;
   cardId: number;
   ownerId: string;
+  /** Present only for economic assets. Local/dev catalog records leave this unset. */
+  ownershipSource?: CardOwnershipSource;
   edition: 'alpha' | 'beta' | 'promo';
   foil: 'standard' | 'gold';
   rarity: string;
@@ -155,6 +170,15 @@ export interface HiveCardAsset {
   provenanceChain?: ProvenanceStamp[];
   compactedProvenance?: CompactedProvenance;
   officialMint?: OfficialMint;
+}
+
+export function isStarterEntitlementAsset(
+  card: Pick<HiveCardAsset, 'uid' | 'ownerId' | 'cardId'> & { ownershipSource?: CardOwnershipSource },
+): boolean {
+  if (!isStarterEntitlementCardId(card.cardId)) return false;
+  return card.ownershipSource === 'starter'
+    || card.uid.startsWith(STARTER_UID_PREFIX)
+    || card.ownerId === STARTER_ENTITLEMENT_OWNER_ID;
 }
 
 export interface HiveTokenBalance {

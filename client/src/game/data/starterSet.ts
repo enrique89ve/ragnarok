@@ -18,20 +18,17 @@
 
 import { getCardById } from './cardManagement/cardRegistry';
 import type { CardData } from '../types';
-import { BASE_CARD_IDS_BY_CLASS } from './cardRegistry/sets/core/neutrals/baseCards';
 import { useHiveDataStore } from '@/data/HiveDataLayer';
-import type { HiveCardAsset } from '@/data/schemas/HiveTypes';
+import {
+	STARTER_ENTITLEMENT_OWNER_ID,
+	getStarterUid,
+	isStarterEntitlementAsset,
+	type HiveCardAsset,
+} from '@/data/schemas/HiveTypes';
+import { STARTER_ENTITLEMENT_CARD_IDS_BY_CLASS } from '@shared/schemas/starterEntitlement';
 
 // Hero class → card IDs mapping (matches getDefaultArmySelection heroes)
-const CLASS_CARD_SETS: Record<string, number[]> = {
-	Mage: BASE_CARD_IDS_BY_CLASS.Mage,       // Erik Flameheart (Queen)
-	Warrior: BASE_CARD_IDS_BY_CLASS.Warrior,  // Ragnar Ironside (Rook)
-	Priest: BASE_CARD_IDS_BY_CLASS.Priest,    // Brynhild (Bishop)
-	Rogue: BASE_CARD_IDS_BY_CLASS.Rogue,      // Sigurd (Knight)
-};
-
-// King neutral cards (Leif the Wayfinder)
-const KING_CARD_IDS = BASE_CARD_IDS_BY_CLASS.Neutral.slice(0, 5); // IDs 140-144
+const CLASS_CARD_SETS: Record<string, readonly number[]> = STARTER_ENTITLEMENT_CARD_IDS_BY_CLASS;
 
 /**
  * Get the 45 starter cards for a new player.
@@ -40,7 +37,7 @@ const KING_CARD_IDS = BASE_CARD_IDS_BY_CLASS.Neutral.slice(0, 5); // IDs 140-144
 export function getStarterCards(): CardData[] {
 	const cards: CardData[] = [];
 
-	// Add all 4 class sets (10 each)
+	// Add all 4 class sets (10 each) and the 5 neutral king cards.
 	for (const classIds of Object.values(CLASS_CARD_SETS)) {
 		for (const id of classIds) {
 			const card = getCardById(id);
@@ -48,20 +45,15 @@ export function getStarterCards(): CardData[] {
 		}
 	}
 
-	// Add king neutral cards (5)
-	for (const id of KING_CARD_IDS) {
-		const card = getCardById(id);
-		if (card) cards.push(card);
-	}
-
 	return cards;
 }
 
 function toStarterAsset(card: CardData): HiveCardAsset {
 	return {
-		uid: `starter-${card.id as number}`,
+		uid: getStarterUid(card.id as number),
 		cardId: card.id as number,
-		ownerId: 'local',
+		ownerId: STARTER_ENTITLEMENT_OWNER_ID,
+		ownershipSource: 'starter',
 		edition: 'alpha',
 		foil: 'standard',
 		rarity: card.rarity || 'common',
@@ -83,7 +75,7 @@ export function materializeStarterEntitlement(): number {
 	const starterCards = getStarterCards();
 	const ownedStarterIds = new Set(
 		hiveStore.cardCollection
-			.filter(card => card.ownerId === 'local')
+			.filter(isStarterEntitlementAsset)
 			.map(card => card.cardId),
 	);
 

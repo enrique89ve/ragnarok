@@ -80,6 +80,8 @@ __tests__/
 *.test.js
 *.test.ts
 !**/protocolConformance.test.ts
+!client/src/data/blockchain/cardXPSystem.test.ts
+!client/src/data/blockchain/deckVerification.test.ts
 *.spec.js
 *.spec.ts
 *.test.tsx
@@ -171,3 +173,7 @@ data/chain-state.json
 
 # Claude Code local settings
 .claude/
+
+# Superpowers brainstorm specs + implementation plans
+# (per-developer design artefacts, not pushed)
+docs/superpowers/

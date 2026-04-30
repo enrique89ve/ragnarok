@@ -9,11 +9,14 @@
 export {
 	FeatureFlags,
 	isHiveMode,
+	isMainnetMode,
 	isTestMode,
 	isLocalMode,
+	isLocalDevMode,
 	isBattleHistoryEnabled,
 	getDataLayerMode,
+	getRuntimeExecutionMode,
 	isBlockchainPackagingEnabled,
 } from '../game/config/featureFlags';
 
-export type { DataLayerMode, FeatureFlagsType } from '../game/config/featureFlags';
+export type { DataLayerMode, FeatureFlagsType, RuntimeExecutionMode } from '../game/config/featureFlags';

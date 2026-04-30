@@ -1,4 +1,4 @@
-import type { HiveCardAsset } from '../schemas/HiveTypes';
+import type { CardOwnershipSource, HiveCardAsset } from '../schemas/HiveTypes';
 
 export type BlockchainActionType =
 	| 'match_result'
@@ -87,6 +87,8 @@ export interface PackagedMatchResultOnChain {
 export interface CardXPReward {
 	cardUid: string;
 	cardId: number;
+	/** Missing only on legacy queued rewards created before source tracking. */
+	source?: CardOwnershipSource;
 	xpBefore: number;
 	xpGained: number;
 	xpAfter: number;
@@ -172,6 +174,7 @@ export interface MutableCardState {
 export interface CardUidMapping {
 	uid: string;
 	cardId: number;
+	source: CardOwnershipSource;
 }
 
 export interface MintInfo {
@@ -203,4 +206,4 @@ export const MAX_QUEUE_SIZE = 200;
 export const DEFAULT_MAX_RETRIES = 3;
 export const MATCH_RESULT_VERSION = 1;
 
-export type { HiveCardAsset };
+export type { CardOwnershipSource, HiveCardAsset };

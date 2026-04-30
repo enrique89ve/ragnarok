@@ -7,6 +7,7 @@ export type {
 	EloChange,
 	CardXPReward,
 	CardXPConfig,
+	CardOwnershipSource,
 	XPConfigMap,
 	CardLevelBonus,
 	NFTMetadata,

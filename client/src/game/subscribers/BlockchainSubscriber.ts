@@ -3,10 +3,11 @@ import type { GameEndedEvent } from '@/core/events/GameEvents';
 import { useGameStore } from '../stores/gameStore';
 import { useTransactionQueueStore } from '@/data/blockchain/transactionQueueStore';
 import { packageMatchResult, packMatchResultForChain } from '@/data/blockchain/matchResultPackager';
-import { isBlockchainPackagingEnabled, isHiveMode } from '../config/featureFlags';
+import { isBlockchainPackagingEnabled } from '../config/featureFlags';
 import { generateMatchId, useHiveDataStore } from '@/data/HiveDataLayer';
+import { getStarterUid, isStarterEntitlementAsset, type HiveCardAsset } from '@/data/schemas/HiveTypes';
 import { debug } from '../config/debugConfig';
-import type { CardUidMapping, PackagedMatchResult } from '@/data/blockchain/types';
+import type { CardOwnershipSource, CardUidMapping, CardXPReward, PackagedMatchResult } from '@/data/blockchain/types';
 import { getCard, putCard } from '@/data/blockchain/replayDB';
 import { getLevelForXP, xpKeyFor } from '@/data/blockchain/cardXPSystem';
 import { usePeerStore } from '../stores/peerStore';
@@ -14,14 +15,18 @@ import { hiveSync } from '@/data/HiveSync';
 import { getActiveTranscript, clearTranscript } from '@/data/blockchain/transcriptBuilder';
 import { pinTranscript } from '@/data/blockchain/transcriptIPFS';
 import { registerAccount, fetchPlayerElo } from '@/data/chainAPI';
-import { computePoW, POW_CONFIG } from '@/data/blockchain/proofOfWork';
+import { computePoW } from '@/data/blockchain/proofOfWork';
 import { sha256Hash, canonicalStringify } from '@/data/blockchain/hashUtils';
 import { useSeasonStore } from '../stores/seasonStore';
 import { getCardsByOwner, getTokenBalance, getEloRating } from '@/data/blockchain/replayDB';
 import { hiveEvents } from '@/data/HiveEvents';
 import { HIVE_USERNAME_RE } from '../../../../shared/protocol-core/types';
+import { isStarterEntitlementCardId } from '@shared/schemas/starterEntitlement';
 
 type UnsubscribeFn = () => void;
+type RuntimeCardSource =
+	| { kind: 'owned'; source: CardOwnershipSource; uid: string }
+	| { kind: 'localDevCatalog' };
 
 let unsubscribes: UnsubscribeFn[] = [];
 let gamePhaseUnsub: (() => void) | null = null;
@@ -32,6 +37,12 @@ let gameStartTime = 0;
 // Dedup guard: "{winner}_{turnNumber}" — unique per game session
 // Prevents double-packaging when both the store watcher and event bus fire for the same game end
 let lastProcessedMatchKey = '';
+
+function preserveStarterEntitlements(chainCards: HiveCardAsset[], currentCards: HiveCardAsset[]): HiveCardAsset[] {
+	const chainUids = new Set(chainCards.map(card => card.uid));
+	const starters = currentCards.filter(card => isStarterEntitlementAsset(card) && !chainUids.has(card.uid));
+	return [...chainCards, ...starters];
+}
 
 // ---------------------------------------------------------------------------
 // Post-match Zustand store refresh from IndexedDB
@@ -49,7 +60,10 @@ async function refreshHiveDataStoreFromIDB(): Promise<void> {
 		]);
 
 		const store = useHiveDataStore.getState();
-		store.loadFromHive({ cardCollection: cards, tokenBalance });
+		store.loadFromHive({
+			cardCollection: preserveStarterEntitlements(cards, store.cardCollection),
+			tokenBalance,
+		});
 		store.updateStats({
 			odinsEloRating: eloRating.elo,
 			wins: eloRating.wins,
@@ -67,10 +81,23 @@ async function refreshHiveDataStoreFromIDB(): Promise<void> {
 // Card UID extraction
 // ---------------------------------------------------------------------------
 
+function resolveRuntimeCardSource(
+	nftUid: string | undefined,
+	cardId: number,
+	category: string | undefined,
+): RuntimeCardSource {
+	if (nftUid) return { kind: 'owned', source: 'nft', uid: nftUid };
+	if (category === 'starter' && isStarterEntitlementCardId(cardId)) {
+		return { kind: 'owned', source: 'starter', uid: getStarterUid(cardId) };
+	}
+	return { kind: 'localDevCatalog' };
+}
+
 /**
  * Builds a CardUidMapping array from all card instances a player used.
- * Uses nft_id if the card is a real NFT, otherwise synthesizes a
- * deterministic test UID so XP calculations produce real data in test mode.
+ * NFTs use their chain UID. Starter cards use their fixed off-chain
+ * entitlement UID. Local/dev catalog cards are gameplay-only and are not
+ * packaged as owned economic assets.
  */
 function extractCardUidsFromGameState(side: 'player' | 'opponent'): CardUidMapping[] {
 	const gs = useGameStore.getState().gameState;
@@ -88,19 +115,17 @@ function extractCardUidsFromGameState(side: 'player' | 'opponent'): CardUidMappi
 		...(player.hand ?? []),
 	];
 
-	const hiveMode = isHiveMode();
 	for (const instance of allInstances) {
 		const cardId = instance.card?.id;
 		if (typeof cardId !== 'number') continue;
 
 		const nftUid: string | undefined = instance.nft_id;
-		if (hiveMode && !nftUid) continue;
+		const runtimeSource = resolveRuntimeCardSource(nftUid, cardId, instance.card?.category);
+		if (runtimeSource.kind === 'localDevCatalog') continue;
 
-		const uid: string = nftUid ?? `test_${side}_${cardId}_${instance.instanceId ?? '0'}`;
-
-		if (seenUids.has(uid)) continue;
-		seenUids.add(uid);
-		uids.push({ uid, cardId });
+		if (seenUids.has(runtimeSource.uid)) continue;
+		seenUids.add(runtimeSource.uid);
+		uids.push({ uid: runtimeSource.uid, cardId, source: runtimeSource.source });
 	}
 
 	return uids;
@@ -144,6 +169,22 @@ function buildCardRarities(
 	}
 
 	return xpKeys;
+}
+
+function applyStarterXPReward(xpReward: CardXPReward): boolean {
+	const store = useHiveDataStore.getState();
+	const current = store.cardCollection.find(card => card.uid === xpReward.cardUid);
+	if (!current) return false;
+
+	const oldLevel = getLevelForXP('starter', current.xp);
+	const updatedCollection = store.cardCollection.map(card =>
+		card.uid === xpReward.cardUid
+			? { ...card, xp: xpReward.xpAfter, level: xpReward.levelAfter }
+			: card,
+	);
+	store.loadFromHive({ cardCollection: updatedCollection });
+
+	return xpReward.levelAfter > oldLevel;
 }
 
 // ---------------------------------------------------------------------------
@@ -346,6 +387,15 @@ async function applyLocalXPAndStampLevelUps(result: PackagedMatchResult): Promis
 
 	for (const xpReward of result.xpRewards) {
 		try {
+			const source = xpReward.source ?? 'nft';
+
+			if (source === 'starter') {
+				if (applyStarterXPReward(xpReward)) {
+					levelUpCount++;
+				}
+				continue;
+			}
+
 			const card = await getCard(xpReward.cardUid);
 			if (!card) continue;
 

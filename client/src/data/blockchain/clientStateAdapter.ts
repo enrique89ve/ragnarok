@@ -50,6 +50,7 @@ function hiveCardToAsset(c: HiveCardAsset): CardAsset {
 function assetToHiveCard(a: CardAsset): HiveCardAsset {
 	return {
 		uid: a.uid, cardId: a.cardId, ownerId: a.owner, rarity: a.rarity,
+		ownershipSource: 'nft',
 		level: a.level, xp: a.xp, edition: a.edition as HiveCardAsset['edition'],
 		foil: 'standard', lastTransferBlock: a.lastTransferBlock,
 		lastTransferTrxId: '', mintBlockNum: a.mintBlockNum, mintTrxId: a.mintTrxId,

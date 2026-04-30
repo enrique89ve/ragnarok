@@ -125,6 +125,7 @@ export function calculateXPRewards(
 		rewards.push({
 			cardUid: mapping.uid,
 			cardId: mapping.cardId,
+			source: mapping.source,
 			xpBefore,
 			xpGained,
 			xpAfter,

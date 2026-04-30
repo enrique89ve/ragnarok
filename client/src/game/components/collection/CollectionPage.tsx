@@ -890,7 +890,7 @@ export default function CollectionPage() {
 																getNFTBridge().addCard({
 																	uid: `forge-${Date.now()}-${pickId}`,
 																	cardId: pickId,
-																	ownerId: hiveCards.length > 0 ? hiveCards[0].ownerId : 'local',
+																	ownerId: hiveCards.length > 0 ? hiveCards[0].ownerId : 'local-dev',
 																	edition: 'alpha',
 																	foil: 'standard',
 																	rarity: pick.rarity || 'common',

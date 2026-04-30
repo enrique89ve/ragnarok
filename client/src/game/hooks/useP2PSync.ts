@@ -15,7 +15,7 @@ import { startNewTranscript, getActiveTranscript, clearTranscript } from '../../
 import type { GameMove } from '../../data/blockchain/signedMove';
 import { getWasmHash, loadWasmEngine } from '../engine/wasmLoader';
 import { computeStateHash } from '../engine/engineBridge';
-import { isHiveMode } from '../config/featureFlags';
+import { isMainnetMode } from '../config/featureFlags';
 import { submitSlashEvidence, findExistingMatchResult } from '../../data/blockchain/slashEvidence';
 import { filterGameStateForSpectator } from '../spectator/spectatorFilter';
 
@@ -174,13 +174,16 @@ export function useP2PSync() {
 		send({ type: 'version_check', buildHash: hash });
 
 		// Cross-verify deck NFT ownership: send our deck's NFT IDs so opponent can verify on-chain
-		if (isHiveMode()) {
+		if (isMainnetMode()) {
 			try {
 				const bridge = getNFTBridge();
 				const username = bridge.getUsername();
 				if (username) {
 					const collection = bridge.getCardCollection();
-					const nftIds = collection.map(c => c.uid ?? '').filter(Boolean);
+					const nftIds = collection
+						.filter(card => card.ownershipSource === 'nft')
+						.map(c => c.uid ?? '')
+						.filter(Boolean);
 					if (nftIds.length > 0) {
 						send({ type: 'deck_verify', hiveAccount: username, nftIds });
 						debug.combat(`[useP2PSync] Sent deck_verify: ${nftIds.length} NFTs for @${username}`);
@@ -245,7 +248,7 @@ export function useP2PSync() {
 				description: 'The connection was lost. You may need to start a new game.',
 			});
 
-			if (isHiveMode()) {
+			if (isMainnetMode()) {
 				const gs = useGameStore.getState().gameState;
 				const matchSeed = useGameStore.getState().matchSeed;
 				const opponentName = usePeerStore.getState().remotePeerId ?? 'unknown';
@@ -315,7 +318,7 @@ export function useP2PSync() {
 							duration: 8000,
 						});
 
-						if (isHiveMode() && data.turnNumber !== lastSlashTurnRef.current) {
+						if (isMainnetMode() && data.turnNumber !== lastSlashTurnRef.current) {
 							lastSlashTurnRef.current = data.turnNumber;
 							const matchSeed = useGameStore.getState().matchSeed;
 							const opponentName = usePeerStore.getState().remotePeerId ?? 'unknown';
@@ -341,7 +344,7 @@ export function useP2PSync() {
 						duration: 8000,
 					});
 
-					if (isHiveMode()) {
+					if (isMainnetMode()) {
 						const matchSeed = useGameStore.getState().matchSeed;
 						const opponentName = usePeerStore.getState().remotePeerId ?? 'unknown';
 						if (matchSeed) {
@@ -608,7 +611,7 @@ export function useP2PSync() {
 						break;
 					}
 
-					if (isHiveMode() && data.result.matchId) {
+					if (isMainnetMode() && data.result.matchId) {
 						const proposerUsername = data.result.winner?.username || data.result.loser?.username;
 						findExistingMatchResult(data.result.matchId, proposerUsername)
 							.then(existingTrxId => {
