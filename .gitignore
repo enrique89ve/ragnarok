@@ -181,3 +181,4 @@ data/chain-state.json
 # Superpowers brainstorm specs + implementation plans
 # (per-developer design artefacts, not pushed)
 docs/superpowers/
+docs/BETA_TESTNET_ROADMAP.md
