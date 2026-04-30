@@ -14,6 +14,10 @@ import { hiveSync } from '@/data/HiveSync';
 import { hiveEvents } from '@/data/HiveEvents';
 import { useHiveDataStore } from '@/data/HiveDataLayer';
 import { isBlockchainPackagingEnabled as checkPackaging } from '@/game/config/featureFlags';
+import {
+	STARTER_ENTITLEMENT_COPIES_PER_DECK,
+	isStarterEntitlementCardId,
+} from '@shared/schemas/starterEntitlement';
 import type {
 	INFTBridge,
 	DataLayerMode,
@@ -52,7 +56,9 @@ export class HiveNFTBridge implements INFTBridge {
 
 	getOwnedCopies(cardId: number): number {
 		const collection = useHiveDataStore.getState().cardCollection;
-		return collection.filter(c => c.cardId === cardId).length;
+		const chainCopies = collection.filter(c => c.cardId === cardId).length;
+		if (!isStarterEntitlementCardId(cardId)) return chainCopies;
+		return Math.max(chainCopies, STARTER_ENTITLEMENT_COPIES_PER_DECK);
 	}
 
 	addCard(card: HiveCardAsset): void {

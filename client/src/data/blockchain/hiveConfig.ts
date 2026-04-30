@@ -1,16 +1,20 @@
+import { getRagnarokNetworkConfig } from '../../game/config/networkConfig';
+
+const networkConfig = getRagnarokNetworkConfig();
+
 export const HIVE_NODES = [
 	'https://api.hive.blog',
 	'https://api.deathwing.me',
 	'https://api.openhive.network',
 ] as const;
 
-export const RAGNAROK_ACCOUNT = 'ragnarok';
-export const RAGNAROK_GENESIS_ACCOUNT = 'ragnarok-genesis';
-export const RAGNAROK_TREASURY_ACCOUNT = 'ragnarok-treasury';
-export const RAGNAROK_INDEX_ACCOUNT = 'ragnarok-index';
+export const RAGNAROK_ACCOUNT = networkConfig.adminAccount;
+export const RAGNAROK_GENESIS_ACCOUNT = networkConfig.genesisAccount;
+export const RAGNAROK_TREASURY_ACCOUNT = networkConfig.treasuryAccount;
+export const RAGNAROK_INDEX_ACCOUNT = networkConfig.indexAccount;
 
 // NFTLox integration — NFT birth layer for card minting/packs
-export const NFTLOX_PROTOCOL_ID = 'nftlox_testnet'; // switch to 'nftlox' for production
+export const NFTLOX_PROTOCOL_ID = networkConfig.nftLoxProtocolId;
 export const NFTLOX_PROTOCOL_VERSION = '0.4.0';
 export const NFTLOX_COLLECTION_SYMBOL = 'RGNRK';
 export const NFTLOX_MAX_OPS_PER_TX = 5;
@@ -23,9 +27,9 @@ export const NFTLOX_MAX_DROP_TABLE = 50; // max entries in pack drop table
 // NOT used for in-game art rendering — all runtime art loads via assetPath() from local files.
 // Players download all art; each player is their own CDN. No centralized servers.
 // Points to GitHub Pages deployment — permanent, decentralized hosting.
-export const NFT_ART_BASE_URL = 'https://dhenz14.github.io/norse-mythos-card-game';
+export const NFT_ART_BASE_URL = networkConfig.nftArtBaseUrl;
 
-export const EXTERNAL_URL_BASE = 'https://dhenz14.github.io/norse-mythos-card-game';
+export const EXTERNAL_URL_BASE = networkConfig.externalUrlBase;
 
 export const HIVE_EXPLORER_URL = 'https://hivehub.dev/tx/';
 export const HIVE_BLOCK_EXPLORER_URL = 'https://hivehub.dev/b/';

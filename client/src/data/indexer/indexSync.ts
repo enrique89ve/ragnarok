@@ -13,14 +13,15 @@
 
 import { debug } from '../../game/config/debugConfig';
 import { gunzipSync } from 'fflate';
-import { HIVE_NODES } from '../blockchain/hiveConfig';
+import { HIVE_NODES, RAGNAROK_INDEX_ACCOUNT } from '../blockchain/hiveConfig';
+import { RAGNAROK_APP_ID } from '../schemas/HiveTypes';
 import type {
 	IndexManifest, IndexEntry, LeaderboardSnapshot,
 	SupplySnapshot, IndexHealthStatus,
 } from '../../../../shared/indexer-types';
 import {
 	IPFS_GATEWAYS, MIN_OPERATORS_FOR_CONSENSUS,
-	STATE_CONFIRMATION_QUORUM, RAGNAROK_INDEX_ACCOUNT,
+	STATE_CONFIRMATION_QUORUM,
 } from '../../../../shared/indexer-types';
 import {
 	putIndexEntries, putLeaderboard, putSupplyCounters,
@@ -90,7 +91,7 @@ async function resolveLatestCID(): Promise<string | null> {
 			const [, entry] = history[i];
 			if (entry.op[0] !== 'custom_json') continue;
 			const opData = entry.op[1];
-			if (opData.id !== 'ragnarok-cards') continue;
+			if (opData.id !== RAGNAROK_APP_ID) continue;
 			try {
 				const payload = JSON.parse(opData.json as string) as Record<string, unknown>;
 				if (payload.action === 'index_update' && typeof payload.cid === 'string') {
@@ -193,7 +194,7 @@ async function fetchFromHafSQL(fromBlock: number, limit: number = 1000): Promise
 		const controller = new AbortController();
 		const timeout = setTimeout(() => controller.abort(), 15000);
 		try {
-			const url = `${endpoint}/operations/custom_json/ragnarok-cards?from_block=${fromBlock}&limit=${limit}`;
+			const url = `${endpoint}/operations/custom_json/${RAGNAROK_APP_ID}?from_block=${fromBlock}&limit=${limit}`;
 			const resp = await fetch(url, { signal: controller.signal });
 			clearTimeout(timeout);
 			if (!resp.ok) continue;

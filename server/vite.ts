@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import fs from "fs";
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
-import { createServer as createViteServer, createLogger } from "vite";
+import { createServer as createViteServer, createLogger, loadEnv } from "vite";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 import { type Server } from "http";
@@ -10,6 +10,12 @@ import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
 
 const viteLogger = createLogger();
+
+function resolveViteMode(): string {
+  const modeIndex = process.argv.indexOf('--mode');
+  const mode = modeIndex >= 0 ? process.argv[modeIndex + 1] : undefined;
+  return mode && !mode.startsWith('-') ? mode : 'development';
+}
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -23,6 +29,12 @@ export function log(message: string, source = "express") {
 }
 
 export async function setupVite(app: Express, server: Server) {
+  const mode = resolveViteMode();
+  const env = loadEnv(mode, process.cwd(), '');
+  for (const [key, value] of Object.entries(env)) {
+    process.env[key] ??= value;
+  }
+
   // WSL/Windows file-watcher fix:
   // When the dev server runs inside WSL with the project on /mnt/c, native
   // inotify does NOT receive events for files written from the Windows side.
@@ -40,11 +52,12 @@ export async function setupVite(app: Express, server: Server) {
   } as const;
 
   const resolvedConfig = typeof viteConfig === 'function'
-    ? viteConfig({ command: 'serve', mode: 'development' } as any)
+    ? viteConfig({ command: 'serve', mode } as any)
     : viteConfig;
 
   const vite = await createViteServer({
     ...resolvedConfig,
+    mode,
     configFile: false,
     customLogger: {
       ...viteLogger,

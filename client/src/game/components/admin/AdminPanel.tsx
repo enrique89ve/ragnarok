@@ -18,6 +18,7 @@ import { useNFTUsername } from '../../nft/hooks';
 import { RAGNAROK_ACCOUNT } from '../../../data/blockchain/hiveConfig';
 import { cardRegistry } from '../../data/cardRegistry';
 import { debug } from '../../config/debugConfig';
+import { getRagnarokCollectionId } from '../../config/networkConfig';
 
 // Lazy-import admin functions to avoid loading blockchain code on non-admin pages
 async function getAdminFns() {
@@ -176,7 +177,7 @@ export default function AdminPanel() {
 			status: 'minting' as const,
 			createdAt: Date.now(),
 			updatedAt: Date.now(),
-			collectionId: 'ragnarok-alpha',
+			collectionId: getRagnarokCollectionId(),
 			totalCards: collectible.length,
 			batches: batches.map((b, idx) => ({
 				batchNumber: idx,

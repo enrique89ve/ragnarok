@@ -19,6 +19,8 @@ export const STARTER_ENTITLEMENT_CARD_IDS = Object.freeze(
 	Object.values(STARTER_ENTITLEMENT_CARD_IDS_BY_CLASS).flat(),
 );
 
+export const STARTER_ENTITLEMENT_COPIES_PER_DECK = 2;
+
 const STARTER_ENTITLEMENT_CARD_ID_SET = new Set<number>(STARTER_ENTITLEMENT_CARD_IDS);
 
 export function isStarterEntitlementCardId(cardId: number | undefined): boolean {

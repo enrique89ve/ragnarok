@@ -43,7 +43,7 @@ interface ArmySelectionProps {
   onQuickStart?: (army: ArmySelectionType, deckCardIds: number[]) => void;
   onBack?: () => void;
   isMultiplayer?: boolean;
-  onMatchmakingStart?: (army: ArmySelectionType) => void;
+  onMatchmakingStart?: (army: ArmySelectionType) => void | Promise<void>;
 }
 
 const PIECE_ORDER: ChessPieceType[] = ['king', 'queen', 'rook', 'bishop', 'knight'];
@@ -176,7 +176,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
 
     // Start matchmaking
     if (onMatchmakingStart) {
-      onMatchmakingStart(army);
+      await onMatchmakingStart(army);
     } else {
       await joinQueue();
     }

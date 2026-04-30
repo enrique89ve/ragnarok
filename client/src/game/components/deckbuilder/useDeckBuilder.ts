@@ -9,6 +9,7 @@ import { CardData } from '../../types';
 import { cardRegistry } from '../../data/cardRegistry';
 import { useHeroDeckStore, HeroDeck, PieceType } from '../../stores/heroDeckStore';
 import { useAudio } from '../../../lib/stores/useAudio';
+import { getNFTBridge } from '../../nft';
 import {
   DECK_SIZE,
   SortOption,
@@ -89,6 +90,7 @@ export function useDeckBuilder({
   const validateDeck = useHeroDeckStore(state => state.validateDeck);
   
   const normalizedHeroClass = heroClass.toLowerCase();
+  const nftBridge = getNFTBridge();
   
   // Core state
   const existingDeck = getDeck(pieceType);
@@ -111,6 +113,11 @@ export function useDeckBuilder({
   const validCards = useMemo(() => {
     return filterCardsByClass(cardRegistry, normalizedHeroClass, heroId);
   }, [normalizedHeroClass, heroId]);
+
+  const visibleCards = useMemo(() => {
+    if (!nftBridge.isHiveMode()) return validCards;
+    return validCards.filter(card => nftBridge.getOwnedCopies(Number(card.id)) > 0);
+  }, [validCards, nftBridge]);
   
   // Derived: Filtered and sorted cards
   const filteredAndSortedCards = useMemo(() => {
@@ -121,8 +128,8 @@ export function useDeckBuilder({
       minCost,
       maxCost,
     };
-    return filterAndSortCards(validCards, filters);
-  }, [validCards, searchTerm, filterType, sortBy, minCost, maxCost]);
+    return filterAndSortCards(visibleCards, filters);
+  }, [visibleCards, searchTerm, filterType, sortBy, minCost, maxCost]);
   
   // Derived: Cards grouped by class (hero class first, then neutral)
   const groupedCards = useMemo(() => {
@@ -159,8 +166,10 @@ export function useDeckBuilder({
   const canAddCard = useCallback((cardId: number): boolean => {
     const card = cardRegistry.find(c => Number(c.id) === cardId);
     if (!card) return false;
-    return canAddCardToDeck(cardId, deckCardIds, card);
-  }, [deckCardIds]);
+    if (!canAddCardToDeck(cardId, deckCardIds, card)) return false;
+    const currentCount = deckCardCounts[cardId] ?? 0;
+    return currentCount < nftBridge.getOwnedCopies(cardId);
+  }, [deckCardIds, deckCardCounts, nftBridge]);
   
   // Add card to deck
   const handleAddCard = useCallback((card: CardData) => {
@@ -187,12 +196,17 @@ export function useDeckBuilder({
   
   // Auto-fill deck
   const handleAutoFill = useCallback(() => {
-    const newCards = generateAutoFillCards(deckCardIds, validCards);
+    const newCards = generateAutoFillCards(
+      deckCardIds,
+      visibleCards,
+      DECK_SIZE,
+      (cardId) => nftBridge.getOwnedCopies(cardId),
+    );
     if (newCards.length > 0) {
       setDeckCardIds(prev => [...prev, ...newCards]);
       playSoundEffect('card_draw');
     }
-  }, [deckCardIds, validCards, playSoundEffect]);
+  }, [deckCardIds, visibleCards, nftBridge, playSoundEffect]);
   
   // Clear deck
   const handleClearDeck = useCallback(() => {
@@ -261,7 +275,7 @@ export function useDeckBuilder({
     deckCardCounts,
     deckCardsWithCounts,
     isDeckComplete,
-    totalValidCards: validCards.length,
+    totalValidCards: visibleCards.length,
     totalFilteredCards: filteredAndSortedCards.length,
     
     // Setters

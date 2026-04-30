@@ -4,7 +4,8 @@
  * No React, no side effects - just data transformations.
  */
 
-import { CardData } from '../../types';
+import type { CardData } from '../../types';
+import { isStarterEntitlementCardId } from '@shared/schemas/starterEntitlement';
 
 export const DECK_SIZE = 30;
 export const MAX_COPIES = 2;
@@ -20,6 +21,8 @@ export interface CardFilters {
   minCost: number | null;
   maxCost: number | null;
 }
+
+export type CardCopyLimitProvider = (cardId: number) => number;
 
 /**
  * Count occurrences of each card ID in a deck
@@ -82,7 +85,9 @@ export function isClassCard(card: CardData): boolean {
 export function filterCardsByClass(cards: CardData[], heroClass: string, heroId?: string): CardData[] {
   const normalizedHeroClass = heroClass.toLowerCase();
   return cards.filter(card => {
-    if (card.collectible === false || card.type === 'hero') return false;
+    const cardId = Number(card.id);
+    const isStarterEntitlement = isStarterEntitlementCardId(cardId);
+    if ((card.collectible === false && !isStarterEntitlement) || card.type === 'hero') return false;
     const cardClass = getCardClass(card);
     const classMatch = cardClass === 'neutral' || cardClass === normalizedHeroClass;
     if (!classMatch) return false;
@@ -177,7 +182,8 @@ export function getDeckCardsWithCounts(
 export function generateAutoFillCards(
   currentDeckIds: number[],
   validCards: CardData[],
-  targetSize: number = DECK_SIZE
+  targetSize: number = DECK_SIZE,
+  getOwnedCopies?: CardCopyLimitProvider
 ): number[] {
   const remaining = targetSize - currentDeckIds.length;
   if (remaining <= 0) return [];
@@ -193,7 +199,8 @@ export function generateAutoFillCards(
     
     const cardId = Number(card.id);
     const currentCount = currentCounts[cardId] || 0;
-    const maxAllowed = getMaxCopies(card);
+    const ownedCopies = getOwnedCopies?.(cardId) ?? getMaxCopies(card);
+    const maxAllowed = Math.min(getMaxCopies(card), Math.max(0, Math.floor(ownedCopies)));
     
     if (currentCount < maxAllowed) {
       const toAdd = Math.min(maxAllowed - currentCount, remaining - newCards.length);

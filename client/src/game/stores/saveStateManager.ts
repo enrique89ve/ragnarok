@@ -11,6 +11,7 @@
  */
 
 import { debug } from '../config/debugConfig';
+import { RAGNAROK_APP_ID } from '../../data/schemas/HiveTypes';
 import { materializeStarterEntitlement, ensureStarterDecks } from '../data/starterSet';
 
 // ── Auto-Save on Milestones ──
@@ -260,7 +261,7 @@ export async function restoreFromHive(): Promise<{ success: boolean; error?: str
 			const [, entry] = history[i];
 			if (entry.op[0] !== 'custom_json') continue;
 			const opData = entry.op[1];
-			if (opData.id !== 'ragnarok-cards') continue;
+			if (opData.id !== RAGNAROK_APP_ID) continue;
 			try {
 				const payload = JSON.parse(opData.json);
 				if (payload.action === 'save_state' && payload.state) {

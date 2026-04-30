@@ -13,7 +13,6 @@ import {
 const API_BASE = import.meta.env.VITE_API_URL || (window.location.origin);
 
 export function useMatchmaking() {
-	const { myPeerId } = usePeerStore();
 	const hiveUsername = useNFTUsername();
 	const {
 		status,
@@ -33,8 +32,10 @@ export function useMatchmaking() {
 	const chainLeaveFnRef = useRef<(() => Promise<void>) | null>(null);
 
 	const joinQueue = useCallback(async () => {
-		if (!myPeerId) {
+		const peerId = usePeerStore.getState().myPeerId;
+		if (!peerId) {
 			setError('No peer ID available');
+			setStatus('error');
 			return;
 		}
 
@@ -49,7 +50,7 @@ export function useMatchmaking() {
 					account: hiveUsername,
 					mode: 'ranked',
 					elo,
-					peerId: myPeerId,
+					peerId,
 					deckHash: '',
 				});
 				chainLeaveFnRef.current = leaveFn;
@@ -70,8 +71,8 @@ export function useMatchmaking() {
 			}
 
 			const queueBody = hiveUsername
-				? await getNFTBridge().buildAuthBody(hiveUsername, 'queue', { peerId: myPeerId, username: hiveUsername })
-				: { peerId: myPeerId, username: hiveUsername };
+				? await getNFTBridge().buildAuthBody(hiveUsername, 'queue', { peerId, username: hiveUsername })
+				: { peerId, username: hiveUsername };
 			const response = await fetch(`${API_BASE}/api/matchmaking/queue`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -101,7 +102,18 @@ export function useMatchmaking() {
 
 			const interval = window.setInterval(async () => {
 				try {
-					const statusResponse = await fetch(`${API_BASE}/api/matchmaking/status/${myPeerId}`);
+					const currentPeerId = usePeerStore.getState().myPeerId;
+					if (!currentPeerId) {
+						if (pollIntervalRef.current) {
+							clearInterval(pollIntervalRef.current);
+							pollIntervalRef.current = null;
+						}
+						setError('Peer connection closed while searching');
+						setStatus('error');
+						return;
+					}
+
+					const statusResponse = await fetch(`${API_BASE}/api/matchmaking/status/${currentPeerId}`);
 					if (!statusResponse.ok) return;
 					const statusData = await statusResponse.json();
 
@@ -128,13 +140,15 @@ export function useMatchmaking() {
 			}, 2000);
 
 			pollIntervalRef.current = interval;
-		} catch (err: any) {
-			setError(err.message || 'Failed to join matchmaking queue');
+		} catch (err: unknown) {
+			setError(err instanceof Error ? err.message : 'Failed to join matchmaking queue');
 			setStatus('error');
 		}
-	}, [myPeerId, hiveUsername, setStatus, setError, setQueuePosition, setOpponent]);
+	}, [hiveUsername, setStatus, setError, setQueuePosition, setOpponent]);
 
 	const leaveQueue = useCallback(async () => {
+		const peerId = usePeerStore.getState().myPeerId;
+
 		if (chainPollerCancelRef.current) {
 			chainPollerCancelRef.current();
 			chainPollerCancelRef.current = null;
@@ -149,7 +163,7 @@ export function useMatchmaking() {
 			chainLeaveFnRef.current = null;
 		}
 
-		if (!myPeerId) {
+		if (!peerId) {
 			reset();
 			return;
 		}
@@ -164,7 +178,7 @@ export function useMatchmaking() {
 				await fetch(`${API_BASE}/api/matchmaking/leave`, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ peerId: myPeerId }),
+					body: JSON.stringify({ peerId }),
 				});
 			} catch (err) {
 				debug.error('[useMatchmaking] Failed to leave queue:', err);
@@ -172,7 +186,7 @@ export function useMatchmaking() {
 		}
 
 		reset();
-	}, [myPeerId, reset]);
+	}, [reset]);
 
 	useEffect(() => {
 		return () => {

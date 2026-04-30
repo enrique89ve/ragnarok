@@ -16,7 +16,7 @@
 
 import { getCard } from './replayDB';
 import { sha256Hash } from './hashUtils';
-import { isMainnetMode } from '@/config/featureFlags';
+import { isSharedNetworkEnvironment } from '@/config/featureFlags';
 import type { CardCategory } from '@shared/schemas/cardCategory';
 import { isStarterEntitlementCardId } from '@shared/schemas/starterEntitlement';
 
@@ -47,7 +47,7 @@ export async function verifyDeckOwnership(
 	let checkedCount = 0;
 	let starterCount = 0;
 
-	const requireNft = isMainnetMode();
+	const requireNft = isSharedNetworkEnvironment();
 	for (const card of deck) {
 		if (!card.nft_id) {
 			if (card.category === 'starter' && isStarterEntitlementCardId(card.cardId)) {

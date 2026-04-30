@@ -24,6 +24,7 @@
 
 import { hiveSync } from '../HiveSync';
 import type { HiveBroadcastResult } from '../HiveSync';
+import { RAGNAROK_APP_ID } from '../schemas/HiveTypes';
 import { HIVE_NODES } from './hiveConfig';
 
 // ---------------------------------------------------------------------------
@@ -79,7 +80,7 @@ export async function submitSlashEvidence(
 	}
 
 	const payload: SlashEvidencePayload = {
-		app: 'ragnarok-cards',
+		app: RAGNAROK_APP_ID,
 		type: 'rp_slash_evidence',
 		match_id: matchId,
 		offender,

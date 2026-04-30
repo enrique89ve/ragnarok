@@ -15,8 +15,23 @@ export {
 	isLocalDevMode,
 	isBattleHistoryEnabled,
 	getDataLayerMode,
+	getNetworkStage,
 	getRuntimeExecutionMode,
+	isEconomicEnvironment,
 	isBlockchainPackagingEnabled,
+	isLocalStage,
+	isMainnetStage,
+	isResettableEnvironment,
+	isSharedNetworkEnvironment,
+	isTestnetStage,
 } from '../game/config/featureFlags';
 
-export type { DataLayerMode, FeatureFlagsType, RuntimeExecutionMode } from '../game/config/featureFlags';
+export type { DataLayerMode, FeatureFlagsType, NetworkStage, RuntimeExecutionMode } from '../game/config/featureFlags';
+export {
+	RAGNAROK_NETWORK_CONFIG,
+	RAGNAROK_NETWORK_CONFIGS,
+	getRagnarokCollectionId,
+	getRagnarokNetworkConfig,
+	getRagnarokProtocolId,
+} from '../game/config/networkConfig';
+export type { RagnarokNetworkConfig } from '../game/config/networkConfig';

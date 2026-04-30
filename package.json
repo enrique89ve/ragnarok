@@ -6,6 +6,7 @@
 	"license": "MIT",
 	"scripts": {
 		"dev": "CHOKIDAR_USEPOLLING=1 tsx server/index.ts",
+		"dev:testnet": "CHOKIDAR_USEPOLLING=1 tsx server/index.ts --mode testnet",
 		"dev:game": "npm run dev",
 		"build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
 		"build:static": "vite build",

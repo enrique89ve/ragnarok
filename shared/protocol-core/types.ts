@@ -14,6 +14,7 @@
 // ============================================================
 
 export const RAGNAROK_ADMIN_ACCOUNT = 'ragnarok';
+export const RAGNAROK_PROTOCOL_IDS = ['ragnarok-cards', 'rk_game_testnet', 'ragnarok-cards-local'] as const;
 export const TRANSFER_COOLDOWN_BLOCKS = 10;
 export const PACK_REVEAL_DEADLINE_BLOCKS = 200;
 export const PACK_ENTROPY_DELAY_BLOCKS = 20;

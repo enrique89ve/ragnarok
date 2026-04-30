@@ -2,16 +2,23 @@
  * featureFlags.ts
  *
  * Feature flags to control game features.
- * Driven by Vite env vars at build time (VITE_DATA_LAYER_MODE, VITE_BLOCKCHAIN_PACKAGING).
+ * Driven by Vite env vars at build time (VITE_NETWORK_STAGE, VITE_DATA_LAYER_MODE, VITE_BLOCKCHAIN_PACKAGING).
  * Defaults to safe local/off values when env vars are not set.
  */
 
 export type DataLayerMode = 'local' | 'test' | 'hive';
+export type NetworkStage = 'local' | 'testnet' | 'mainnet';
 export type RuntimeExecutionMode = 'mainnet' | 'local-dev';
 
 function resolveDataLayerMode(): DataLayerMode {
 	const raw = import.meta.env.VITE_DATA_LAYER_MODE as string | undefined;
 	if (raw === 'hive' || raw === 'test' || raw === 'local') return raw;
+	return 'local';
+}
+
+function resolveNetworkStage(): NetworkStage {
+	const raw = import.meta.env.VITE_NETWORK_STAGE as string | undefined;
+	if (raw === 'testnet' || raw === 'mainnet' || raw === 'local') return raw;
 	return 'local';
 }
 
@@ -22,6 +29,7 @@ function resolveBlockchainPackaging(): boolean {
 
 export const FeatureFlags = {
 	DATA_LAYER_MODE: resolveDataLayerMode(),
+	NETWORK_STAGE: resolveNetworkStage(),
 	BATTLE_HISTORY_ENABLED: true,
 	BATTLE_HISTORY_MAX_SIZE: 5,
 	DATA_LAYER_DEBUG: false,
@@ -42,7 +50,7 @@ export function isHiveMode(): boolean {
  * (`nft` + `starter`) participate in blockchain packaging.
  */
 export function isMainnetMode(): boolean {
-	return isHiveMode();
+	return FeatureFlags.NETWORK_STAGE === 'mainnet';
 }
 
 /**
@@ -59,12 +67,40 @@ export function isLocalMode(): boolean {
 	return FeatureFlags.DATA_LAYER_MODE === 'local';
 }
 
+export function getNetworkStage(): NetworkStage {
+	return FeatureFlags.NETWORK_STAGE;
+}
+
+export function isLocalStage(): boolean {
+	return FeatureFlags.NETWORK_STAGE === 'local';
+}
+
+export function isTestnetStage(): boolean {
+	return FeatureFlags.NETWORK_STAGE === 'testnet';
+}
+
+export function isMainnetStage(): boolean {
+	return FeatureFlags.NETWORK_STAGE === 'mainnet';
+}
+
+export function isResettableEnvironment(): boolean {
+	return !isMainnetStage();
+}
+
+export function isSharedNetworkEnvironment(): boolean {
+	return isTestnetStage() || isMainnetStage();
+}
+
+export function isEconomicEnvironment(): boolean {
+	return isMainnetStage();
+}
+
 /**
  * Local/dev mode: the full card catalog can be used for gameplay simulation,
  * but catalog access is not economic ownership.
  */
 export function isLocalDevMode(): boolean {
-	return !isMainnetMode();
+	return !isEconomicEnvironment();
 }
 
 /**
@@ -82,7 +118,7 @@ export function getDataLayerMode(): DataLayerMode {
 }
 
 export function getRuntimeExecutionMode(): RuntimeExecutionMode {
-	return isMainnetMode() ? 'mainnet' : 'local-dev';
+	return isEconomicEnvironment() ? 'mainnet' : 'local-dev';
 }
 
 /**

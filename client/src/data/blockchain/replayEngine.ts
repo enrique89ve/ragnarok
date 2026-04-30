@@ -23,7 +23,8 @@ import {
 	getEloRating,
 } from './replayDB';
 import { useHiveDataStore } from '../HiveDataLayer';
-import { HIVE_NODES } from './hiveConfig';
+import { HIVE_NODES, NFTLOX_PROTOCOL_ID } from './hiveConfig';
+import { RAGNAROK_APP_ID } from '../schemas/HiveTypes';
 import { clientStateAdapter } from './clientStateAdapter';
 
 const HISTORY_PAGE_SIZE = 1000;
@@ -161,7 +162,7 @@ async function _doSync(username: string): Promise<void> {
 			// We only care about our app's custom_json ops
 			if (entry.op[0] !== 'custom_json') continue;
 			const opData = entry.op[1] as CustomJsonOpData;
-			if (!opData.id?.startsWith('rp_') && opData.id !== 'ragnarok-cards' && opData.id !== 'ragnarok_level_up' && opData.id !== 'nftlox_testnet') continue;
+			if (!opData.id?.startsWith('rp_') && opData.id !== RAGNAROK_APP_ID && opData.id !== 'ragnarok_level_up' && opData.id !== NFTLOX_PROTOCOL_ID) continue;
 
 			const broadcaster =
 				opData.required_posting_auths?.[0] ??
@@ -217,14 +218,14 @@ async function _doSync(username: string): Promise<void> {
 			clientStateAdapter.setTrxSiblings(entry.trx_id, siblings);
 		}
 
-		// Normalize op id: canonical "ragnarok-cards" format extracts action from JSON,
+		// Normalize canonical protocol format by extracting the action from JSON.
 		// legacy "rp_*" format uses the id directly.
 		let opId = opData.id;
-		if (opId === 'ragnarok-cards') {
+		if (opId === RAGNAROK_APP_ID) {
 			try {
 				const parsed = JSON.parse(opData.json) as { action?: string };
 				if (parsed.action) opId = `rp_${parsed.action}`;
-			} catch { console.warn('[replayEngine] malformed ragnarok-cards JSON:', opData.json.slice(0, 100)); }
+			} catch { console.warn(`[replayEngine] malformed ${RAGNAROK_APP_ID} JSON:`, opData.json.slice(0, 100)); }
 		} else if (opId === 'ragnarok_level_up') {
 			opId = 'rp_level_up';
 		}

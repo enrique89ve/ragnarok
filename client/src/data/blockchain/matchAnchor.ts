@@ -12,6 +12,7 @@
  */
 
 import { hiveSync } from '../HiveSync';
+import { RAGNAROK_APP_ID } from '../schemas/HiveTypes';
 import { sha256Hash, canonicalStringify } from './hashUtils';
 import { computePoW, POW_CONFIG } from './proofOfWork';
 import { fetchAccountKeys } from './hiveSignatureVerifier';
@@ -136,7 +137,7 @@ export async function broadcastMatchAnchor(params: {
 
 	// Emit canonical ragnarok-cards format (not legacy rp_match_start)
 	return hiveSync.broadcastCustomJson(
-		'ragnarok-cards',
+		RAGNAROK_APP_ID,
 		payload as unknown as Record<string, unknown>,
 		false, // Posting key
 	);
@@ -179,8 +180,8 @@ export async function waitForOpponentAnchor(
 					for (const [, entry] of history) {
 						if (entry.op[0] !== 'custom_json') continue;
 						const opData = entry.op[1] as { id?: string; json?: string };
-						// Accept both canonical and legacy
-						if (opData.id !== 'ragnarok-cards' && opData.id !== 'rp_match_start') continue;
+						// Accept both active canonical protocol and legacy match_start.
+						if (opData.id !== RAGNAROK_APP_ID && opData.id !== 'rp_match_start') continue;
 						try {
 							const parsed = JSON.parse(opData.json ?? '{}');
 							const mId = parsed.match_id ?? parsed.matchId;

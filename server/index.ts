@@ -1,9 +1,21 @@
-import 'dotenv/config';
+import { config as loadDotenv } from 'dotenv';
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+
+function resolveCliMode(): string {
+  const modeIndex = process.argv.indexOf('--mode');
+  const mode = modeIndex >= 0 ? process.argv[modeIndex + 1] : undefined;
+  return mode && !mode.startsWith('-') ? mode : (process.env.NODE_ENV ?? 'development');
+}
+
+loadDotenv();
+const envMode = resolveCliMode();
+if (envMode !== 'development' && envMode !== 'production') {
+  loadDotenv({ path: `.env.${envMode}` });
+}
 
 const app = express();
 const isDev = process.env.NODE_ENV !== 'production';

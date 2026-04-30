@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'rea
 import { HashRouter, Routes, Route, Link, Outlet, useLocation } from 'react-router-dom';
 import { routes } from './lib/routes';
 import { Button, Panel } from './components/ui-norse';
-import { ChevronRight, Compass, LayoutGrid, Play, Settings as SettingsIcon, Swords } from 'lucide-react';
+import { ChevronRight, Compass, LayoutGrid, Play, Settings as SettingsIcon, Swords, X } from 'lucide-react';
 import UnifiedCardSystem from "./game/components/UnifiedCardSystem";
 import "./index.css";
 import { CardTransformProvider } from "./game/context/CardTransformContext";
@@ -13,6 +13,8 @@ import GoldenCardFilter from "./game/animations/GoldenCardFilter";
 import { ALL_CHAPTERS, getMission, useCampaignStore } from "./game/campaign";
 import { useStarterStore } from "./game/stores/starterStore";
 import { useNFTUsername } from "./game/nft/hooks";
+import { getRagnarokNetworkConfig } from "./game/config/networkConfig";
+import { isTestnetStage } from "./game/config/featureFlags";
 import {
   BridgeRuntimeBoundary,
   CardDataRuntimeBoundary,
@@ -301,7 +303,14 @@ function HomePage() {
 					<div className="flex items-center gap-3">
 						<img src={ragnarokLogo} alt="" className="w-8 h-8 rounded-md border border-obsidian-600 object-cover" />
 						<div className="leading-none">
-							<div className="font-display text-sm font-bold tracking-[0.18em] text-gold-300">RAGNAROK</div>
+							<div className="flex items-center gap-2">
+								<div className="font-display text-sm font-bold tracking-[0.18em] text-gold-300">RAGNAROK</div>
+								{isTestnetStage() && (
+									<span className="rounded border border-amber-300/40 bg-amber-300/10 px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-amber-200">
+										Testnet
+									</span>
+								)}
+							</div>
 							<div className="font-mono text-[10px] tracking-[0.16em] text-ink-300 mt-1">FORGE &amp; EMBER · S01</div>
 						</div>
 					</div>
@@ -587,10 +596,51 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { err
 function GlobalOverlaysLayout() {
   return (
     <>
+      <EnvironmentBanner />
       <Outlet />
       <Suspense fallback={null}><DuatClaimPopup /></Suspense>
       <Suspense fallback={null}><FactionPledgePopup /></Suspense>
     </>
+  );
+}
+
+function EnvironmentBanner() {
+  const dismissKey = 'ragnarok:testnet-banner-dismissed';
+  const [dismissed, setDismissed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem(dismissKey) === 'true';
+  });
+
+  if (!isTestnetStage()) return null;
+  if (dismissed) return null;
+
+  const config = getRagnarokNetworkConfig();
+  const dismiss = () => {
+    window.localStorage.setItem(dismissKey, 'true');
+    setDismissed(true);
+  };
+
+  return (
+    <aside
+      aria-label="Testnet environment"
+      className="fixed bottom-4 left-4 z-50 max-w-[calc(100vw-2rem)] rounded-md border border-amber-300/40 bg-gray-950/95 px-3 py-2 pr-9 text-xs text-amber-100 shadow-lg shadow-black/40 backdrop-blur"
+    >
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="font-semibold uppercase tracking-[0.14em] text-amber-300">Testnet</span>
+        <span className="text-gray-500">/</span>
+        <span>Resettable</span>
+        <span className="hidden text-gray-500 sm:inline">/</span>
+        <span className="hidden font-mono text-gray-300 sm:inline">{config.protocolId}</span>
+      </div>
+      <button
+        type="button"
+        aria-label="Dismiss testnet banner"
+        onClick={dismiss}
+        className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded border border-transparent text-gray-400 transition-colors hover:border-amber-300/30 hover:text-amber-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300"
+      >
+        <X className="h-3.5 w-3.5" aria-hidden="true" />
+      </button>
+    </aside>
   );
 }
 

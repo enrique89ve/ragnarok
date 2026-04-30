@@ -29,6 +29,7 @@ import {
 	stopPersistence,
 	saveState,
 } from './chainState';
+import { RAGNAROK_APP_IDS, RAGNAROK_LEGACY_PREFIX } from '../../shared/indexer-types';
 
 // ---------------------------------------------------------------------------
 // Config
@@ -221,7 +222,7 @@ async function scanBlocks(): Promise<number> {
 
 			// Quick pre-filter
 			const opId = opData.id ?? '';
-			if (!opId.startsWith('rp_') && opId !== 'ragnarok-cards' && opId !== 'ragnarok_level_up') continue;
+			if (!opId.startsWith(RAGNAROK_LEGACY_PREFIX) && !(RAGNAROK_APP_IDS as readonly string[]).includes(opId)) continue;
 
 			const broadcaster = opData.required_posting_auths?.[0] ?? opData.required_auths?.[0] ?? '';
 			if (!broadcaster) continue;

@@ -15,7 +15,7 @@ import { startNewTranscript, getActiveTranscript, clearTranscript } from '../../
 import type { GameMove } from '../../data/blockchain/signedMove';
 import { getWasmHash, loadWasmEngine } from '../engine/wasmLoader';
 import { computeStateHash } from '../engine/engineBridge';
-import { isMainnetMode } from '../config/featureFlags';
+import { isSharedNetworkEnvironment } from '../config/featureFlags';
 import { submitSlashEvidence, findExistingMatchResult } from '../../data/blockchain/slashEvidence';
 import { filterGameStateForSpectator } from '../spectator/spectatorFilter';
 
@@ -174,7 +174,7 @@ export function useP2PSync() {
 		send({ type: 'version_check', buildHash: hash });
 
 		// Cross-verify deck NFT ownership: send our deck's NFT IDs so opponent can verify on-chain
-		if (isMainnetMode()) {
+		if (isSharedNetworkEnvironment()) {
 			try {
 				const bridge = getNFTBridge();
 				const username = bridge.getUsername();
@@ -248,7 +248,7 @@ export function useP2PSync() {
 				description: 'The connection was lost. You may need to start a new game.',
 			});
 
-			if (isMainnetMode()) {
+			if (isSharedNetworkEnvironment()) {
 				const gs = useGameStore.getState().gameState;
 				const matchSeed = useGameStore.getState().matchSeed;
 				const opponentName = usePeerStore.getState().remotePeerId ?? 'unknown';
@@ -318,7 +318,7 @@ export function useP2PSync() {
 							duration: 8000,
 						});
 
-						if (isMainnetMode() && data.turnNumber !== lastSlashTurnRef.current) {
+						if (isSharedNetworkEnvironment() && data.turnNumber !== lastSlashTurnRef.current) {
 							lastSlashTurnRef.current = data.turnNumber;
 							const matchSeed = useGameStore.getState().matchSeed;
 							const opponentName = usePeerStore.getState().remotePeerId ?? 'unknown';
@@ -344,7 +344,7 @@ export function useP2PSync() {
 						duration: 8000,
 					});
 
-					if (isMainnetMode()) {
+					if (isSharedNetworkEnvironment()) {
 						const matchSeed = useGameStore.getState().matchSeed;
 						const opponentName = usePeerStore.getState().remotePeerId ?? 'unknown';
 						if (matchSeed) {
@@ -611,7 +611,7 @@ export function useP2PSync() {
 						break;
 					}
 
-					if (isMainnetMode() && data.result.matchId) {
+					if (isSharedNetworkEnvironment() && data.result.matchId) {
 						const proposerUsername = data.result.winner?.username || data.result.loser?.username;
 						findExistingMatchResult(data.result.matchId, proposerUsername)
 							.then(existingTrxId => {
@@ -896,7 +896,8 @@ export function useP2PSync() {
 	/**
 	 * Propose a match result to the opponent for dual-signature verification.
 	 * Returns the signatures object if the opponent counter-signs within 30s,
-	 * or null if they reject/timeout (single-sig fallback).
+	 * or null if they reject/timeout. Ranked broadcasters must treat null as
+	 * a blocked result, not as permission to publish a single-sig result.
 	 */
 	const proposeResult = useCallback(async (
 		result: PackagedMatchResult,

@@ -62,7 +62,7 @@ export class HiveSync {
   }
 
   async broadcastCustomJson(
-    type: RagnarokTransactionType,
+    type: RagnarokTransactionType | string,
     payload: Record<string, unknown>,
     useActiveKey: boolean = false,
   ): Promise<HiveBroadcastResult> {
@@ -75,14 +75,19 @@ export class HiveSync {
       return { success: false, error: "Hive Keychain not available" };
     }
 
-    const action = type.replace(RAGNAROK_LEGACY_PREFIX, "");
+    const cleanPayload = sanitizePayload(payload);
+    const payloadAction = cleanPayload.action;
+    const action = type.startsWith(RAGNAROK_LEGACY_PREFIX)
+      ? type.replace(RAGNAROK_LEGACY_PREFIX, "")
+      : typeof payloadAction === "string" && payloadAction.length > 0
+        ? payloadAction
+        : type;
 
     // Sanitize string fields before broadcast (defense-in-depth)
-    const cleanPayload = sanitizePayload(payload);
-
     const fullPayload = {
       ...cleanPayload,
       app: RAGNAROK_APP_ID,
+      p: RAGNAROK_APP_ID,
       action,
     };
 
@@ -300,8 +305,7 @@ export class HiveSync {
     duatBalance: number,
     packsEarned: number,
   ): Promise<HiveBroadcastResult> {
-    return this.broadcastCustomJson("ragnarok-cards", {
-      p: "ragnarok-cards",
+    return this.broadcastCustomJson(RAGNAROK_APP_ID, {
       action: "duat_airdrop_claim",
       duat_balance: duatBalance,
       packs_earned: packsEarned,
@@ -316,8 +320,7 @@ export class HiveSync {
     price: number,
     currency: "HIVE" | "HBD" = "HIVE",
   ): Promise<HiveBroadcastResult> {
-    return this.broadcastCustomJson("ragnarok-cards", {
-      p: "ragnarok-cards",
+    return this.broadcastCustomJson(RAGNAROK_APP_ID, {
       action: "market_list",
       nft_uid: nftUid,
       nft_type: nftType,
@@ -327,8 +330,7 @@ export class HiveSync {
   }
 
   async marketUnlist(listingId: string): Promise<HiveBroadcastResult> {
-    return this.broadcastCustomJson("ragnarok-cards", {
-      p: "ragnarok-cards",
+    return this.broadcastCustomJson(RAGNAROK_APP_ID, {
       action: "market_unlist",
       listing_id: listingId,
     });
@@ -339,9 +341,8 @@ export class HiveSync {
     paymentTrxId: string,
   ): Promise<HiveBroadcastResult> {
     return this.broadcastCustomJson(
-      "ragnarok-cards",
+      RAGNAROK_APP_ID,
       {
-        p: "ragnarok-cards",
         action: "market_buy",
         listing_id: listingId,
         payment_trx_id: paymentTrxId,
@@ -355,8 +356,7 @@ export class HiveSync {
     price: number,
     currency: "HIVE" | "HBD" = "HIVE",
   ): Promise<HiveBroadcastResult> {
-    return this.broadcastCustomJson("ragnarok-cards", {
-      p: "ragnarok-cards",
+    return this.broadcastCustomJson(RAGNAROK_APP_ID, {
       action: "market_offer",
       nft_uid: nftUid,
       price,
@@ -369,9 +369,8 @@ export class HiveSync {
     paymentTrxId: string,
   ): Promise<HiveBroadcastResult> {
     return this.broadcastCustomJson(
-      "ragnarok-cards",
+      RAGNAROK_APP_ID,
       {
-        p: "ragnarok-cards",
         action: "market_accept",
         offer_id: offerId,
         payment_trx_id: paymentTrxId,
@@ -381,8 +380,7 @@ export class HiveSync {
   }
 
   async marketRejectOffer(offerId: string): Promise<HiveBroadcastResult> {
-    return this.broadcastCustomJson("ragnarok-cards", {
-      p: "ragnarok-cards",
+    return this.broadcastCustomJson(RAGNAROK_APP_ID, {
       action: "market_reject",
       offer_id: offerId,
     });

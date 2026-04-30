@@ -12,7 +12,7 @@
 import type {
 	RawHiveOp, ProtocolOp, ProtocolAction, CanonicalAction,
 } from './types';
-import { ACTIVE_AUTH_OPS } from './types';
+import { ACTIVE_AUTH_OPS, RAGNAROK_PROTOCOL_IDS } from './types';
 
 // ============================================================
 // Legacy → Canonical Mapping
@@ -73,11 +73,11 @@ export function normalizeRawOp(raw: RawHiveOp): NormalizeResult {
 		return { status: 'ignore', reason: 'malformed JSON' };
 	}
 
-	if (raw.customJsonId === 'ragnarok-cards') {
+	if ((RAGNAROK_PROTOCOL_IDS as readonly string[]).includes(raw.customJsonId)) {
 		// Canonical format: action is inside the JSON body
 		const bodyAction = payload.action as string | undefined;
 		if (!bodyAction) {
-			return { status: 'ignore', reason: 'ragnarok-cards op missing action field' };
+			return { status: 'ignore', reason: `${raw.customJsonId} op missing action field` };
 		}
 		// Check if it's a known canonical action
 		const known: ReadonlySet<string> = new Set([

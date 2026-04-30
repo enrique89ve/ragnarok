@@ -14,8 +14,9 @@
  */
 
 import { isStarterEntitlementCardId } from '@shared/schemas/starterEntitlement';
+import { getRagnarokProtocolId } from '../../game/config/networkConfig';
 
-export const RAGNAROK_APP_ID = 'ragnarok-cards';
+export const RAGNAROK_APP_ID = getRagnarokProtocolId();
 
 export type CardOwnershipSource =
   | 'nft' // Genesis card with Hive L1 identity.
@@ -44,6 +45,8 @@ export function getStarterUid(cardId: number): string {
  */
 export type RagnarokTransactionType =
   | 'ragnarok-cards'
+  | 'ragnarok-cards-local'
+  | 'rk_game_testnet'
   | 'rp_genesis'
   | 'rp_mint'
   | 'rp_seal'

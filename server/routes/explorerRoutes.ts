@@ -88,7 +88,7 @@ router.get('/status', (_req: Request, res: Response) => {
 	const genesis = getGenesisState();
 	res.json({
 		protocolVersion: '1.2.0',
-		protocolId: 'ragnarok-cards',
+		protocolId: process.env.RAGNAROK_PROTOCOL_ID ?? process.env.VITE_RAGNAROK_PROTOCOL_ID ?? 'ragnarok-cards',
 		genesisBlock: genesis?.sealBlock ?? null,
 		sealed: genesis?.sealed ?? false,
 		lastBlock: getBlockCursor(),

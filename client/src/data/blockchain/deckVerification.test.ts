@@ -6,7 +6,8 @@ describe('verifyDeckOwnership', () => {
 		vi.resetModules();
 	});
 
-	it('accepts starter cards without nft_id in Hive mode', async () => {
+	it('accepts starter cards without nft_id in testnet', async () => {
+		vi.stubEnv('VITE_NETWORK_STAGE', 'testnet');
 		vi.stubEnv('VITE_DATA_LAYER_MODE', 'hive');
 		vi.resetModules();
 
@@ -23,7 +24,8 @@ describe('verifyDeckOwnership', () => {
 		});
 	});
 
-	it('rejects non-starter cards without nft_id in Hive mode', async () => {
+	it('rejects non-starter cards without nft_id in testnet', async () => {
+		vi.stubEnv('VITE_NETWORK_STAGE', 'testnet');
 		vi.stubEnv('VITE_DATA_LAYER_MODE', 'hive');
 		vi.resetModules();
 
@@ -40,7 +42,8 @@ describe('verifyDeckOwnership', () => {
 		});
 	});
 
-	it('rejects starter labels outside the fixed entitlement in Hive mode', async () => {
+	it('rejects starter labels outside the fixed entitlement in testnet', async () => {
+		vi.stubEnv('VITE_NETWORK_STAGE', 'testnet');
 		vi.stubEnv('VITE_DATA_LAYER_MODE', 'hive');
 		vi.resetModules();
 

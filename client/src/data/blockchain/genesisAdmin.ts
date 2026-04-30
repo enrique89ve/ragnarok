@@ -15,6 +15,8 @@
 import { hiveSync } from '../HiveSync';
 import type { HiveBroadcastResult } from '../HiveSync';
 import { RAGNAROK_ACCOUNT, RAGNAROK_GENESIS_ACCOUNT } from './hiveConfig';
+import { RAGNAROK_APP_ID } from '../schemas/HiveTypes';
+import { getRagnarokCollectionId } from '../../game/config/networkConfig';
 
 /** Per-card supply caps — each unique card_id can have at most this many NFTs */
 const SUPPLY_CAPS: Record<string, number> = {
@@ -61,11 +63,10 @@ export async function broadcastGenesis(): Promise<HiveBroadcastResult> {
 		console.warn('[genesisAdmin] Could not hash WASM binary:', err);
 	}
 
-	return hiveSync.broadcastCustomJson('ragnarok-cards', {
-		p: 'ragnarok-cards',
+	return hiveSync.broadcastCustomJson(RAGNAROK_APP_ID, {
 		action: 'genesis',
 		version: 1,
-		collection: 'ragnarok-alpha',
+		collection: getRagnarokCollectionId(),
 		engine_hash: readerHash,
 		supply: {
 			pack_supply: SUPPLY_CAPS,
@@ -78,8 +79,7 @@ export async function broadcastSeal(): Promise<HiveBroadcastResult> {
 	const err = requireAdmin();
 	if (err) return err;
 
-	return hiveSync.broadcastCustomJson('ragnarok-cards', {
-		p: 'ragnarok-cards',
+	return hiveSync.broadcastCustomJson(RAGNAROK_APP_ID, {
 		action: 'seal',
 		version: 1,
 	});
@@ -105,8 +105,7 @@ export async function broadcastMint(params: {
 		return { success: false, error: 'to and cards[] are required' };
 	}
 
-	return hiveSync.broadcastCustomJson('ragnarok-cards', {
-		p: 'ragnarok-cards',
+	return hiveSync.broadcastCustomJson(RAGNAROK_APP_ID, {
 		action: 'mint_batch',
 		to: params.to,
 		cards: params.cards,
@@ -133,10 +132,10 @@ export async function buildUnsignedGenesisTx(): Promise<UnsignedGenesisTx> {
 	}
 
 	const payload: Record<string, unknown> = {
-		p: 'ragnarok-cards',
+		p: RAGNAROK_APP_ID,
 		action: 'genesis',
 		version: 1,
-		collection: 'ragnarok-alpha',
+		collection: getRagnarokCollectionId(),
 		engine_hash: readerHash,
 		supply: {
 			pack_supply: SUPPLY_CAPS,
@@ -148,7 +147,7 @@ export async function buildUnsignedGenesisTx(): Promise<UnsignedGenesisTx> {
 	const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(payloadStr));
 	const txDigest = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 
-	return { customJsonId: 'ragnarok-cards', payload, txDigest };
+	return { customJsonId: RAGNAROK_APP_ID, payload, txDigest };
 }
 
 export async function buildUnsignedSealTx(): Promise<UnsignedGenesisTx> {
@@ -156,7 +155,7 @@ export async function buildUnsignedSealTx(): Promise<UnsignedGenesisTx> {
 	if (err) throw new Error(err.error);
 
 	const payload: Record<string, unknown> = {
-		p: 'ragnarok-cards',
+		p: RAGNAROK_APP_ID,
 		action: 'seal',
 		version: 1,
 	};
@@ -164,7 +163,7 @@ export async function buildUnsignedSealTx(): Promise<UnsignedGenesisTx> {
 	const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(payloadStr));
 	const txDigest = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 
-	return { customJsonId: 'ragnarok-cards', payload, txDigest };
+	return { customJsonId: RAGNAROK_APP_ID, payload, txDigest };
 }
 
 export async function buildAuthorityBrickTx(account: string): Promise<{ operations: unknown[] }> {
