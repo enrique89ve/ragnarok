@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateXPRewards, getLevelForXP, getXPToNextLevel } from './cardXPSystem';
-import { MAX_CARD_LEVEL } from '../../../../shared/protocol-core/types';
+import { calculateXPRewards } from './cardXPRewards';
 import { STARTER_ENTITLEMENT_OWNER_ID } from '../schemas/HiveTypes';
 import type { HiveCardAsset } from '../schemas/HiveTypes';
 
@@ -65,10 +64,5 @@ describe('calculateXPRewards', () => {
 				didLevelUp: false,
 			},
 		]);
-	});
-
-	it('caps derived card level while allowing XP to remain an accumulated counter', () => {
-		expect(getLevelForXP('common', 999_999)).toBe(MAX_CARD_LEVEL);
-		expect(getXPToNextLevel('common', 999_999)).toBeNull();
 	});
 });

@@ -80,11 +80,12 @@ __tests__/
 *.test.js
 *.test.ts
 !**/protocolConformance.test.ts
-!client/src/data/blockchain/cardXPSystem.test.ts
+!client/src/data/blockchain/cardXPRewards.test.ts
 !client/src/data/blockchain/deckVerification.test.ts
 !client/src/data/blockchain/matchResultPackager.test.ts
 !client/src/game/stores/starterStore.test.ts
 !client/src/game/utils/cards/cardLevelScaling.test.ts
+!shared/protocol-core/cardProgression.test.ts
 *.spec.js
 *.spec.ts
 *.test.tsx

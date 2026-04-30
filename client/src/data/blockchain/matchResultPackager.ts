@@ -9,7 +9,7 @@ import type {
 } from './types';
 import { MATCH_RESULT_VERSION } from './types';
 import { hashMatchResult, sha256Hash, canonicalStringify } from './hashUtils';
-import { calculateXPRewards } from './cardXPSystem';
+import { calculateXPRewards } from './cardXPRewards';
 import type { HiveCardAsset } from '../schemas/HiveTypes';
 import { getPlayerNonce, advancePlayerNonce } from './replayDB';
 // Access combat store lazily to break blockchain ↔ combat-stores circular dependency

@@ -9,7 +9,7 @@ import { getRarityColor, getTypeIcon } from '../../utils/rarityUtils';
 import { getCardArtPath } from '../../utils/art/artMapping';
 import { getHoloTier, applyHoloVars, resetHoloVars } from '../../hooks/useHoloTracking';
 import type { OwnedCard, InventoryResponse, InventoryCard } from '../packs/types';
-import { getMasteryTier } from '../../../data/blockchain/cardXPSystem';
+import { getMasteryTier } from '../../../data/blockchain/cardXPRewards';
 import { useCraftingStore } from '../../crafting/craftingStore';
 import { getEitrValue, getCraftCost } from '../../crafting/craftingConstants';
 import { cardRegistry } from '../../data/cardRegistry';

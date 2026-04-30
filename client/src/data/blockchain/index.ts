@@ -27,17 +27,6 @@ export { useTransactionQueueStore } from './transactionQueueStore';
 
 export { packageMatchResult } from './matchResultPackager';
 
-export {
-	XP_CONFIG,
-	getLevelForXP,
-	getXPForLevel,
-	getXPToNextLevel,
-	isMaxLevel,
-	calculateXPGain,
-	getLevelBonuses,
-	calculateXPRewards,
-} from './cardXPSystem';
-
 export { generateNFTMetadata } from './nftMetadataGenerator';
 
 export {

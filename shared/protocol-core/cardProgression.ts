@@ -43,3 +43,11 @@ export function getEconomicLevelForXP(rarity: string, xp: number): number {
 export function getEconomicXPPerWin(rarity: string): number {
 	return getEconomicXPConfig(rarity).xpPerWin;
 }
+
+export function getXPToNextLevel(rarity: string, currentXP: number): number | null {
+	const config = getEconomicXPConfig(rarity);
+	const currentLevel = getEconomicLevelForXP(rarity, currentXP);
+	if (currentLevel >= config.maxLevel) return null;
+	const nextThreshold = config.thresholds[currentLevel];
+	return nextThreshold - currentXP;
+}
