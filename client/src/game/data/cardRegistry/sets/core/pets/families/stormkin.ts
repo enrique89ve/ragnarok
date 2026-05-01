@@ -26,7 +26,7 @@ export const stormkinPets: CardData[] = [
 			trigger: 'on_summon',
 			description: 'After a minion is summoned',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50131,
 		name: 'Spark Drake',
@@ -51,7 +51,7 @@ export const stormkinPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50132,
 		name: "Frey's Bolt",
@@ -76,7 +76,7 @@ export const stormkinPets: CardData[] = [
 			trigger: 'on_destroy',
 			description: 'After destroying an enemy minion',
 		},
-	} as CardData,
+	} satisfies CardData,
 
 	// ── Stage 2 (Adept) ──────────────────────────────────────────────
 	{
@@ -104,7 +104,7 @@ export const stormkinPets: CardData[] = [
 			trigger: 'on_summon',
 			description: 'After a minion is summoned',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50134,
 		name: "Hraesvelgr's Bolt",
@@ -131,7 +131,7 @@ export const stormkinPets: CardData[] = [
 			description: 'After dealing damage to an enemy',
 		},
 		battlecry: { type: 'damage', targetType: 'random_enemy', value: 2 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50135,
 		name: "Frey's Thunder",
@@ -158,7 +158,7 @@ export const stormkinPets: CardData[] = [
 			description: 'After destroying an enemy minion',
 		},
 		battlecry: { type: 'damage', targetType: 'enemy_hero', value: 2 },
-	} as CardData,
+	} satisfies CardData,
 
 	// ── Stage 3 (Master) ─────────────────────────────────────────────
 	{
@@ -208,5 +208,5 @@ export const stormkinPets: CardData[] = [
 				deathrattle: { type: 'damage', targetType: 'enemy_hero', value: 4 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

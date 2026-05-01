@@ -8,6 +8,7 @@ import { ArmySelection as ArmySelectionType } from '../../types/ChessTypes';
 import { useNavigate } from 'react-router-dom';
 import { routes } from '../../../lib/routes';
 import { useMatchmaking } from '../../hooks/useMatchmaking';
+import { useMatchmakingStore } from '../../stores/matchmakingStore';
 import { useWarbandStore, selectArmy } from '../../../lib/stores/useWarbandStore';
 import { ToastProvider } from '../../../components/ui-norse';
 import { P2PStatusBadge } from './P2PStatusBadge';
@@ -88,7 +89,7 @@ export const MultiplayerGame: React.FC = () => {
 	const [armySelected, setArmySelected] = useState(false);
 	const [playerArmy, setPlayerArmy] = useState<ArmySelectionType | null>(persistedArmy);
 	const navigate = useNavigate();
-	const { status: matchmakingStatus, opponentPeerId, isHost: matchmakingIsHost, joinQueue } = useMatchmaking();
+	const { status: matchmakingStatus, opponentPeerId, isHost: matchmakingIsHost, joinQueue, leaveQueue } = useMatchmaking();
 	const { host, join } = usePeerStore();
 	const vsShownRef = useRef(false);
 
@@ -128,18 +129,19 @@ export const MultiplayerGame: React.FC = () => {
 	const handleMatchmakingStart = async (army: ArmySelectionType) => {
 		setWarband(army, []);
 		setPlayerArmy(army);
-		setArmySelected(true);
-		// Create peer only if ArmySelection hasn't already done so
+
 		const { myPeerId: existingPeerId } = usePeerStore.getState();
 		if (!existingPeerId) {
-			try {
-				await host();
-			} catch (err) {
-				debug.error('[MultiplayerGame] Failed to initialize peer for matchmaking:', err);
-				return;
-			}
+			debug.log('[MultiplayerGame] Initializing peer for matchmaking');
+			await host();
 		}
-		await joinQueue();
+
+		debug.log('[MultiplayerGame] Joining matchmaking queue');
+		const queued = await joinQueue();
+		if (!queued) {
+			throw new Error(useMatchmakingStore.getState().error || 'Failed to join matchmaking queue');
+		}
+		setArmySelected(true);
 	};
 
 	const handleBack = () => {
@@ -167,7 +169,13 @@ export const MultiplayerGame: React.FC = () => {
 	}
 
 	if (!gameStarted) {
-		return <MultiplayerLobby onGameStart={() => setGameStarted(true)} />;
+		return (
+			<MultiplayerLobby
+				onGameStart={() => setGameStarted(true)}
+				joinQueue={joinQueue}
+				leaveQueue={leaveQueue}
+			/>
+		);
 	}
 
 	return (

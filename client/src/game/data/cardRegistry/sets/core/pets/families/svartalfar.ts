@@ -25,7 +25,7 @@ export const svartalfarPets: CardData[] = [
 			trigger: 'on_attack_from_stealth',
 			description: 'After attacking from Stealth',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50291,
 		name: 'Forge Imp',
@@ -50,7 +50,7 @@ export const svartalfarPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50292,
 		name: 'Venom Weaver',
@@ -75,7 +75,7 @@ export const svartalfarPets: CardData[] = [
 			trigger: 'on_heal',
 			description: 'After a friendly character is healed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50293,
 		name: 'Svartalfar Assassin',
@@ -102,7 +102,7 @@ export const svartalfarPets: CardData[] = [
 			description: 'After destroying an enemy minion',
 		},
 		battlecry: { type: 'silence', targetType: 'random_enemy_minion', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50294,
 		name: 'Svartalfar Pyromancer',
@@ -129,7 +129,7 @@ export const svartalfarPets: CardData[] = [
 			description: 'After dealing damage to an enemy',
 		},
 		battlecry: { type: 'damage', targetType: 'random_enemy', value: 2 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50295,
 		name: 'Svartalfar Herbalist',
@@ -155,7 +155,7 @@ export const svartalfarPets: CardData[] = [
 			trigger: 'on_heal',
 			description: 'After a friendly character is healed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50296,
 		name: "Svartalfheim's Shadow",
@@ -204,5 +204,5 @@ export const svartalfarPets: CardData[] = [
 				deathrattle: { type: 'buff', targetType: 'all_friendly_minions', buffAttack: 2, buffHealth: 2 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

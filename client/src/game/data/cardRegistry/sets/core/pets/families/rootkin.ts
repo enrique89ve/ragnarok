@@ -26,7 +26,7 @@ export const rootkinPets: CardData[] = [
 			trigger: 'on_gain_health',
 			description: 'After a friendly minion gains health',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50121,
 		name: 'Fawn of Alfheim',
@@ -51,7 +51,7 @@ export const rootkinPets: CardData[] = [
 			trigger: 'on_buff',
 			description: 'After a friendly minion is buffed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50122,
 		name: "Idunn's Seed",
@@ -76,7 +76,7 @@ export const rootkinPets: CardData[] = [
 			trigger: 'on_heal',
 			description: 'After a friendly character is healed',
 		},
-	} as CardData,
+	} satisfies CardData,
 
 	// ── Stage 2 (Adept) ──────────────────────────────────────────────
 	{
@@ -104,7 +104,7 @@ export const rootkinPets: CardData[] = [
 			trigger: 'on_heal',
 			description: 'After a friendly character is healed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50124,
 		name: 'Elven Hart',
@@ -131,7 +131,7 @@ export const rootkinPets: CardData[] = [
 			description: 'After a friendly minion is buffed',
 		},
 		battlecry: { type: 'damage', targetType: 'random_enemy_minion', value: 2 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50125,
 		name: "Idunn's Apple",
@@ -158,7 +158,7 @@ export const rootkinPets: CardData[] = [
 			description: 'After a friendly character is healed',
 		},
 		battlecry: { type: 'steal_health', targetType: 'enemy_minion', value: 2 },
-	} as CardData,
+	} satisfies CardData,
 
 	// ── Stage 3 (Master) ─────────────────────────────────────────────
 	{
@@ -209,5 +209,5 @@ export const rootkinPets: CardData[] = [
 				battlecry: { type: 'steal_attack', targetType: 'enemy_minion', value: 3 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

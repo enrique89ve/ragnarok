@@ -25,7 +25,7 @@ export const ratatoskrMessengersPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50341,
 		name: 'Root Scurrier',
@@ -49,7 +49,7 @@ export const ratatoskrMessengersPets: CardData[] = [
 			trigger: 'on_draw_card',
 			description: 'After drawing a card',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50342,
 		name: 'Leaf Courier',
@@ -74,7 +74,7 @@ export const ratatoskrMessengersPets: CardData[] = [
 			trigger: 'on_buff',
 			description: 'After a friendly minion is buffed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50343,
 		name: 'Ratatoskr Herald',
@@ -100,7 +100,7 @@ export const ratatoskrMessengersPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50344,
 		name: 'Ratatoskr Keeper',
@@ -126,7 +126,7 @@ export const ratatoskrMessengersPets: CardData[] = [
 			description: 'After drawing a card',
 		},
 		battlecry: { type: 'draw', value: 2 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50345,
 		name: 'Ratatoskr Nurturer',
@@ -153,7 +153,7 @@ export const ratatoskrMessengersPets: CardData[] = [
 			description: 'After a friendly minion is buffed',
 		},
 		battlecry: { type: 'buff', targetType: 'friendly_minion', buffAttack: 1, buffHealth: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50346,
 		name: 'Ratatoskr Prime',
@@ -202,5 +202,5 @@ export const ratatoskrMessengersPets: CardData[] = [
 				deathrattle: { type: 'buff', targetType: 'all_friendly_minions', buffAttack: 2, buffHealth: 2 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

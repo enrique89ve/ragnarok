@@ -26,7 +26,7 @@ export const doomHeraldsPets: CardData[] = [
 			trigger: 'on_destroy',
 			description: 'After destroying an enemy minion',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50221,
 		name: 'Gullinkambi Chick',
@@ -51,7 +51,7 @@ export const doomHeraldsPets: CardData[] = [
 			trigger: 'on_summon',
 			description: 'After a minion is summoned',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50222,
 		name: 'Cinder Whelp',
@@ -76,7 +76,7 @@ export const doomHeraldsPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 
 	// ── Stage 2 (Adept) ──────────────────────────────────────────────
 	{
@@ -105,7 +105,7 @@ export const doomHeraldsPets: CardData[] = [
 			description: 'After destroying an enemy minion',
 		},
 		battlecry: { type: 'damage', targetType: 'enemy_hero', value: 2 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50224,
 		name: 'Gullinkambi, Ragnarok Rooster',
@@ -132,7 +132,7 @@ export const doomHeraldsPets: CardData[] = [
 			description: 'After dealing damage to an enemy',
 		},
 		battlecry: { type: 'aoe_damage', targetType: 'all_enemies', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50225,
 		name: 'Cinderstorm Wyrm',
@@ -159,7 +159,7 @@ export const doomHeraldsPets: CardData[] = [
 			description: 'After dealing damage to an enemy',
 		},
 		battlecry: { type: 'damage', targetType: 'random_enemy', value: 2 },
-	} as CardData,
+	} satisfies CardData,
 
 	// ── Stage 3 (Master) ─────────────────────────────────────────────
 	{
@@ -210,5 +210,5 @@ export const doomHeraldsPets: CardData[] = [
 				battlecry: { type: 'aoe_damage', targetType: 'all_enemies', value: 4 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

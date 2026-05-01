@@ -96,6 +96,15 @@ export interface TokenBalanceRecord {
 	RUNE: number;
 }
 
+export interface QueueStateRecord {
+	mode: string;
+	elo: number;
+	peerId: string;
+	deckHash: string;
+	timestamp: number;
+	blockNum: number;
+}
+
 interface SerializedState {
 	players: [string, PlayerRecord][];
 	cards: [string, CardRecord][];
@@ -136,7 +145,7 @@ const matchAnchors = new Map<string, MatchAnchorStateRecord>();
 const packCommits = new Map<string, PackCommitStateRecord>();
 const rewardClaims = new Set<string>();
 const slashedAccounts = new Set<string>();
-const queueEntries = new Map<string, { timestamp: number }>();
+const queueEntries = new Map<string, QueueStateRecord>();
 
 // Marketplace state (v1.2)
 export interface ListingRecord {
@@ -513,8 +522,8 @@ export function addRewardClaim(key: string): void { rewardClaims.add(key); markD
 export function isSlashed(account: string): boolean { return slashedAccounts.has(account); }
 export function addSlashed(account: string): void { slashedAccounts.add(account); markDirty(); }
 
-export function getQueueEntry(account: string): { timestamp: number } | undefined { return queueEntries.get(account); }
-export function setQueueEntry(account: string, data: { timestamp: number }): void { queueEntries.set(account, data); markDirty(); }
+export function getQueueEntry(account: string): QueueStateRecord | undefined { return queueEntries.get(account); }
+export function setQueueEntry(account: string, data: QueueStateRecord): void { queueEntries.set(account, data); markDirty(); }
 export function deleteQueueEntryFn(account: string): void { queueEntries.delete(account); markDirty(); }
 
 // ---------------------------------------------------------------------------

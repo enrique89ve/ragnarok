@@ -25,7 +25,7 @@ export const valkyriesPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50071,
 		name: 'Shield Maiden',
@@ -50,7 +50,7 @@ export const valkyriesPets: CardData[] = [
 			trigger: 'on_buff',
 			description: 'After a friendly minion is buffed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50072,
 		name: 'Oath Maiden',
@@ -74,7 +74,7 @@ export const valkyriesPets: CardData[] = [
 			trigger: 'on_destroy',
 			description: 'After a friendly minion dies',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50073,
 		name: 'Thundersworn Valkyrie',
@@ -100,7 +100,7 @@ export const valkyriesPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50074,
 		name: 'Lightsworn Valkyrie',
@@ -127,7 +127,7 @@ export const valkyriesPets: CardData[] = [
 			description: 'After a friendly minion is buffed',
 		},
 		battlecry: { type: 'buff', targetType: 'friendly_minion', value: 0, grantKeywords: ['divine_shield'] },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50075,
 		name: 'Oathsworn Valkyrie',
@@ -153,7 +153,7 @@ export const valkyriesPets: CardData[] = [
 			description: 'After a friendly minion dies',
 		},
 		battlecry: { type: 'discover', targetType: 'friendly_deck_minion', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50076,
 		name: 'Brynhildr Reborn',
@@ -202,5 +202,5 @@ export const valkyriesPets: CardData[] = [
 				battlecry: { type: 'discover', value: 1, manaReduction: 3 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

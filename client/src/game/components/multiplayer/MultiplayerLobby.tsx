@@ -15,9 +15,11 @@ import { toast } from 'sonner';
 
 interface MultiplayerLobbyProps {
 	onGameStart: () => void;
+	joinQueue: () => Promise<boolean>;
+	leaveQueue: () => Promise<void>;
 }
 
-export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart }) => {
+export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart, joinQueue, leaveQueue }) => {
 	const {
 		myPeerId,
 		remotePeerId,
@@ -33,11 +35,7 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart 
 	const {
 		status: matchmakingStatus,
 		queuePosition,
-		opponentPeerId,
-		isHost: matchmakingIsHost,
 		error: matchmakingError,
-		joinQueue,
-		leaveQueue,
 	} = useMatchmaking();
 
 	const [joinId, setJoinId] = useState('');
@@ -49,25 +47,6 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart 
 			onGameStart();
 		}
 	}, [connectionState, myPeerId, onGameStart]);
-
-	useEffect(() => {
-		if (matchmakingStatus === 'matched' && opponentPeerId && myPeerId) {
-			const connectToOpponent = async () => {
-				try {
-					if (!matchmakingIsHost) {
-						// Client connects to the host's already-running peer
-						await join(opponentPeerId);
-					}
-					// Host already has a running peer - the opponent will connect to us
-					leaveQueue();
-				} catch (err) {
-					toast.error('Failed to connect to opponent');
-					leaveQueue();
-				}
-			};
-			connectToOpponent();
-		}
-	}, [matchmakingStatus, opponentPeerId, matchmakingIsHost, myPeerId, join, leaveQueue]);
 
 	const handleHost = async () => {
 		try {
@@ -119,7 +98,10 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart 
 				return;
 			}
 		}
-		await joinQueue();
+		const queued = await joinQueue();
+		if (!queued) {
+			toast.error('Failed to join matchmaking queue');
+		}
 	};
 
 	return (

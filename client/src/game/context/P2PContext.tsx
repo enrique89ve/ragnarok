@@ -1,13 +1,16 @@
 import React, { createContext, useContext, useRef, ReactNode } from 'react';
+import { dispatchGameCommand } from '../actions/gameCommandDispatcher';
+import type { GameCommand, HeroPowerTargetType } from '../core/commands';
 import { useP2PSync } from '../hooks/useP2PSync';
 import { useGameStore } from '../stores/gameStore';
 import { GameState } from '../types';
 
 interface P2PActions {
 	playCard: (cardId: string, targetId?: string, targetType?: 'minion' | 'hero', insertionIndex?: number) => void;
-	attackWithCard: (attackerId: string, defenderId: string) => void;
+	attackWithCard: (attackerId: string, defenderId?: string) => void;
 	endTurn: () => void;
 	performHeroPower: (targetId?: string) => void;
+	dispatchGameCommand: (command: GameCommand) => void;
 	gameState: GameState | null;
 	isConnected: boolean;
 	isHost: boolean;
@@ -29,16 +32,38 @@ export const P2PProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 		attackWithCard: gsAttackWithCard,
 		endTurn: gsEndTurn,
 		performHeroPower: gsPerformHeroPower,
+		dispatchGameCommand: () => undefined,
 		gameState: null,
 		isConnected: false,
 		isHost: false,
 	});
 
+	const activePlayCard = p2pSync.isConnected ? p2pSync.playCard : gsPlayCard;
+	const activeAttackWithCard = p2pSync.isConnected
+		? (attackerId: string, defenderId?: string) => p2pSync.attackWithCard(attackerId, defenderId ?? 'opponent-hero')
+		: gsAttackWithCard;
+	const activeEndTurn = p2pSync.isConnected ? p2pSync.endTurn : gsEndTurn;
+	const activePerformHeroPower = p2pSync.isConnected
+		? (targetId?: string, _targetType?: HeroPowerTargetType) => p2pSync.performHeroPower(targetId)
+		: gsPerformHeroPower;
+
 	// Mutate ref fields — zero allocations, zero new object identity
-	ref.current.playCard = p2pSync.isConnected ? p2pSync.playCard : gsPlayCard;
-	ref.current.attackWithCard = p2pSync.isConnected ? p2pSync.attackWithCard : gsAttackWithCard;
-	ref.current.endTurn = p2pSync.isConnected ? p2pSync.endTurn : gsEndTurn;
-	ref.current.performHeroPower = p2pSync.isConnected ? p2pSync.performHeroPower : gsPerformHeroPower;
+	ref.current.playCard = activePlayCard;
+	ref.current.attackWithCard = activeAttackWithCard;
+	ref.current.endTurn = activeEndTurn;
+	ref.current.performHeroPower = (targetId?: string) => activePerformHeroPower(targetId);
+	ref.current.dispatchGameCommand = (command: GameCommand) => {
+		dispatchGameCommand(command, {
+			playCard: activePlayCard,
+			attackWithCard: activeAttackWithCard,
+			endTurn: activeEndTurn,
+			performHeroPower: activePerformHeroPower,
+			toggleMulliganCard: useGameStore.getState().toggleMulliganCard,
+			confirmMulligan: useGameStore.getState().confirmMulligan,
+			skipMulligan: useGameStore.getState().skipMulligan,
+			selectDiscoveryOption: useGameStore.getState().selectDiscoveryOption,
+		});
+	};
 	ref.current.gameState = gameState;
 	ref.current.isConnected = p2pSync.isConnected;
 	ref.current.isHost = p2pSync.isHost;
@@ -59,6 +84,18 @@ export const useP2PActions = () => {
 			attackWithCard: gsAttackWithCard,
 			endTurn: gsEndTurn,
 			performHeroPower: gsPerformHeroPower,
+			dispatchGameCommand: (command: GameCommand) => {
+				dispatchGameCommand(command, {
+					playCard: gsPlayCard,
+					attackWithCard: gsAttackWithCard,
+					endTurn: gsEndTurn,
+					performHeroPower: gsPerformHeroPower,
+					toggleMulliganCard: useGameStore.getState().toggleMulliganCard,
+					confirmMulligan: useGameStore.getState().confirmMulligan,
+					skipMulligan: useGameStore.getState().skipMulligan,
+					selectDiscoveryOption: useGameStore.getState().selectDiscoveryOption,
+				});
+			},
 			gameState: gsGameState,
 			isConnected: false,
 			isHost: false,

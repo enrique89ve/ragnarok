@@ -26,7 +26,7 @@ export const freyjasCompanionsPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50161,
 		name: 'Trjegul Kitten',
@@ -51,7 +51,7 @@ export const freyjasCompanionsPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50162,
 		name: 'Hildisvini Piglet',
@@ -76,7 +76,7 @@ export const freyjasCompanionsPets: CardData[] = [
 			trigger: 'on_heal',
 			description: 'After a friendly character is healed',
 		},
-	} as CardData,
+	} satisfies CardData,
 
 	// ── Stage 2 (Adept) ──────────────────────────────────────────────
 	{
@@ -104,7 +104,7 @@ export const freyjasCompanionsPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50164,
 		name: "Trjegul, Freyja's Stormpouncer",
@@ -131,7 +131,7 @@ export const freyjasCompanionsPets: CardData[] = [
 			description: 'After dealing damage to an enemy',
 		},
 		battlecry: { type: 'damage', targetType: 'random_enemy', value: 2 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50165,
 		name: "Hildisvini, Freyja's Boar",
@@ -158,7 +158,7 @@ export const freyjasCompanionsPets: CardData[] = [
 			description: 'After a friendly character is healed',
 		},
 		battlecry: { type: 'heal', targetType: 'friendly_hero', value: 3 },
-	} as CardData,
+	} satisfies CardData,
 
 	// ── Stage 3 (Master) ─────────────────────────────────────────────
 	{
@@ -208,5 +208,5 @@ export const freyjasCompanionsPets: CardData[] = [
 				battlecry: { type: 'buff', targetType: 'all_friendly_minions', value: 1, buffAttack: 1, buffHealth: 1, grantKeywords: ['divine_shield'] },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

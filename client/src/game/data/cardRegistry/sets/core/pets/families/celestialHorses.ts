@@ -26,7 +26,7 @@ export const celestialHorsesPets: CardData[] = [
 			trigger: 'on_buff',
 			description: 'After a friendly minion is buffed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50171,
 		name: 'Hrímfaxi Colt',
@@ -51,7 +51,7 @@ export const celestialHorsesPets: CardData[] = [
 			trigger: 'on_draw_card',
 			description: 'After drawing a card',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50172,
 		name: 'Gullfaxi Colt',
@@ -75,7 +75,7 @@ export const celestialHorsesPets: CardData[] = [
 			trigger: 'on_survive_turn',
 			description: 'After surviving a turn',
 		},
-	} as CardData,
+	} satisfies CardData,
 
 	// ── Stage 2 (Adept) ──────────────────────────────────────────────
 	{
@@ -104,7 +104,7 @@ export const celestialHorsesPets: CardData[] = [
 			description: 'After a friendly minion is buffed',
 		},
 		battlecry: { type: 'buff', targetType: 'friendly_minion', value: 2, buffHealth: 0 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50174,
 		name: 'Hrímfaxi, the Night Horse',
@@ -131,7 +131,7 @@ export const celestialHorsesPets: CardData[] = [
 			description: 'After drawing a card',
 		},
 		battlecry: { type: 'draw', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50175,
 		name: "Gullfaxi, Hrungnir's Horse",
@@ -157,7 +157,7 @@ export const celestialHorsesPets: CardData[] = [
 			description: 'After surviving a turn',
 		},
 		battlecry: { type: 'draw', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 
 	// ── Stage 3 (Master) ─────────────────────────────────────────────
 	{
@@ -208,5 +208,5 @@ export const celestialHorsesPets: CardData[] = [
 				battlecry: { type: 'draw', value: 2, armor: 4 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

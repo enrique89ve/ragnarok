@@ -12,6 +12,7 @@
 import { create } from 'zustand';
 import Peer, { DataConnection } from 'peerjs';
 import { debug } from '../config/debugConfig';
+import { assertWebRTCSupport, getPeerErrorMessage } from '../utils/webrtcSupport';
 
 // ── Timing Constants ──
 
@@ -265,6 +266,14 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 	},
 
 	host: async () => {
+		try {
+			assertWebRTCSupport();
+		} catch (err: unknown) {
+			const message = getPeerErrorMessage(err);
+			set({ error: message, connectionState: 'error' });
+			throw new Error(message);
+		}
+
 		const { peer, disconnect } = get();
 		if (peer) disconnect();
 
@@ -289,8 +298,9 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 
 			newPeer.on('error', (err) => {
 				clearTimeout(timeoutId);
-				set({ error: err.message || 'Failed to create peer', connectionState: 'error' });
-				reject(err);
+				const message = getPeerErrorMessage(err);
+				set({ error: message, connectionState: 'error' });
+				reject(new Error(message));
 			});
 
 			newPeer.on('connection', (conn) => {
@@ -305,7 +315,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 
 				conn.on('error', (err) => {
 					if (!get().peer) return;
-					set({ error: err.message || 'Connection error', connectionState: 'error' });
+					set({ error: getPeerErrorMessage(err), connectionState: 'error' });
 				});
 
 				conn.on('close', () => {
@@ -319,6 +329,14 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 	},
 
 	join: async (remoteId: string, isReconnect = false, _retryCount = 0) => {
+		try {
+			assertWebRTCSupport();
+		} catch (err: unknown) {
+			const message = getPeerErrorMessage(err);
+			set({ error: message, connectionState: 'error' });
+			throw new Error(message);
+		}
+
 		const { peer, disconnect } = get();
 		if (peer) disconnect();
 
@@ -360,8 +378,9 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 				conn.on('error', (err) => {
 					clearTimeout(timeoutId);
 					if (!get().peer) return;
-					set({ error: err.message || 'Connection error', connectionState: 'error' });
-					reject(err);
+					const message = getPeerErrorMessage(err);
+					set({ error: message, connectionState: 'error' });
+					reject(new Error(message));
 				});
 
 				conn.on('close', () => {
@@ -378,8 +397,9 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 
 			newPeer.on('error', (err) => {
 				clearTimeout(timeoutId);
-				set({ error: err.message || 'Peer error', connectionState: 'error' });
-				reject(err);
+				const message = getPeerErrorMessage(err);
+				set({ error: message, connectionState: 'error' });
+				reject(new Error(message));
 			});
 		});
 	},

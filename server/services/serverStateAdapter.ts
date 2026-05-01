@@ -172,7 +172,7 @@ export const serverStateAdapter: StateAdapter = {
 	async slash(account) { csAddSlashed(account); },
 
 	async getQueueEntry(account) { return csGetQueueEntry(account) ?? null; },
-	async putQueueEntry(account, data) { csSetQueueEntry(account, { timestamp: data.timestamp }); },
+	async putQueueEntry(account, data) { csSetQueueEntry(account, data); },
 	async deleteQueueEntry(account) { csDeleteQueueEntry(account); },
 
 	// v1.1: Pack NFTs + companion transfers

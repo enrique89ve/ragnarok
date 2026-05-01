@@ -25,7 +25,7 @@ export const disirPets: CardData[] = [
 			trigger: 'on_buff',
 			description: 'After a friendly minion is buffed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50301,
 		name: 'Shade of the Past',
@@ -50,7 +50,7 @@ export const disirPets: CardData[] = [
 			trigger: 'on_destroy',
 			description: 'After an enemy minion is destroyed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50302,
 		name: 'Echo of Ages',
@@ -74,7 +74,7 @@ export const disirPets: CardData[] = [
 			trigger: 'on_survive_turn',
 			description: 'After surviving a turn',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50303,
 		name: 'Disir Guardian',
@@ -100,7 +100,7 @@ export const disirPets: CardData[] = [
 			trigger: 'on_buff',
 			description: 'After a friendly minion is buffed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50304,
 		name: 'Disir Avenger',
@@ -127,7 +127,7 @@ export const disirPets: CardData[] = [
 			description: 'After an enemy minion is destroyed',
 		},
 		deathrattle: { type: 'damage', targetType: 'enemy_hero', value: 3 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50305,
 		name: 'Disir Keeper',
@@ -153,7 +153,7 @@ export const disirPets: CardData[] = [
 			description: 'After surviving a turn',
 		},
 		battlecry: { type: 'draw', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50306,
 		name: 'Disir Matriarch',
@@ -203,5 +203,5 @@ export const disirPets: CardData[] = [
 				deathrattle: { type: 'summon', summonId: 9205, value: 1 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

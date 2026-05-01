@@ -25,7 +25,7 @@ export const entsPets: CardData[] = [
 			trigger: 'on_gain_health',
 			description: 'After gaining max Health',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50061,
 		name: 'Thornroot Seedling',
@@ -50,7 +50,7 @@ export const entsPets: CardData[] = [
 			trigger: 'on_summon',
 			description: 'After a minion is summoned',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50062,
 		name: 'Ironroot Seedling',
@@ -74,7 +74,7 @@ export const entsPets: CardData[] = [
 			trigger: 'on_survive_turn',
 			description: 'After surviving a turn',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50063,
 		name: 'Tidebark Ent',
@@ -101,7 +101,7 @@ export const entsPets: CardData[] = [
 			description: 'After healing a friendly character',
 		},
 		battlecry: { type: 'heal', targetType: 'all_friendly_minions', value: 3 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50064,
 		name: 'Thornweave Ent',
@@ -128,7 +128,7 @@ export const entsPets: CardData[] = [
 			description: 'After a minion is summoned',
 		},
 		deathrattle: { type: 'summon', summonCardId: 'treant_taunt', value: 1, summonAttack: 2, summonHealth: 2, summonKeywords: ['taunt'] },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50065,
 		name: 'Stonebark Ent',
@@ -154,7 +154,7 @@ export const entsPets: CardData[] = [
 			description: 'After surviving a turn',
 		},
 		battlecry: { type: 'buff_adjacent', value: 1, buffAttack: 1, buffHealth: 2 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50066,
 		name: "Yggdrasil's Warden",
@@ -203,5 +203,5 @@ export const entsPets: CardData[] = [
 				battlecry: { type: 'buff', targetType: 'all_friendly_minions', value: 2, buffAttack: 2, buffHealth: 2 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

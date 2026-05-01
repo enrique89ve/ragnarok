@@ -26,7 +26,7 @@ export const norseSeaSpiritsPets: CardData[] = [
 			trigger: 'on_freeze',
 			description: 'After an enemy is frozen',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50191,
 		name: 'Nyk Foal',
@@ -51,7 +51,7 @@ export const norseSeaSpiritsPets: CardData[] = [
 			trigger: 'on_return_to_hand',
 			description: 'After a card is returned to hand',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50192,
 		name: 'Fossegrim Wisp',
@@ -76,7 +76,7 @@ export const norseSeaSpiritsPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 
 	// ── Stage 2 (Adept) ──────────────────────────────────────────────
 	{
@@ -105,7 +105,7 @@ export const norseSeaSpiritsPets: CardData[] = [
 			description: 'After an enemy is frozen',
 		},
 		battlecry: { type: 'freeze', targetType: 'random_enemy_minion', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50194,
 		name: 'Nyk, the Water Horse',
@@ -132,7 +132,7 @@ export const norseSeaSpiritsPets: CardData[] = [
 			description: 'After a card is returned to hand',
 		},
 		battlecry: { type: 'bounce', targetType: 'enemy_minion', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50195,
 		name: 'Fossegrim',
@@ -159,7 +159,7 @@ export const norseSeaSpiritsPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 
 	// ── Stage 3 (Master) ─────────────────────────────────────────────
 	{
@@ -210,5 +210,5 @@ export const norseSeaSpiritsPets: CardData[] = [
 				spellDamage: 2,
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

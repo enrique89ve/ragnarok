@@ -26,7 +26,7 @@ export const primordialBeastsPets: CardData[] = [
 			trigger: 'on_heal',
 			description: 'After a friendly character is healed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50211,
 		name: 'Fafnir Hatchling',
@@ -51,7 +51,7 @@ export const primordialBeastsPets: CardData[] = [
 			trigger: 'on_destroy',
 			description: 'After destroying an enemy minion',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50212,
 		name: 'Heidrun Kid',
@@ -75,7 +75,7 @@ export const primordialBeastsPets: CardData[] = [
 			trigger: 'on_survive_turn',
 			description: 'After surviving a turn',
 		},
-	} as CardData,
+	} satisfies CardData,
 
 	// ── Stage 2 (Adept) ──────────────────────────────────────────────
 	{
@@ -104,7 +104,7 @@ export const primordialBeastsPets: CardData[] = [
 			description: 'After a friendly character is healed',
 		},
 		battlecry: { type: 'buff', targetType: 'all_other_friendly_minions', buffAttack: 1, buffHealth: 2 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50214,
 		name: 'Fafnir, the Cursed Dragon',
@@ -131,7 +131,7 @@ export const primordialBeastsPets: CardData[] = [
 			description: 'After destroying an enemy minion',
 		},
 		deathrattle: { type: 'draw', value: 2 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50215,
 		name: 'Heidrun, the Mead Goat',
@@ -157,7 +157,7 @@ export const primordialBeastsPets: CardData[] = [
 			description: 'After surviving a turn',
 		},
 		battlecry: { type: 'gain_mana_crystal', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 
 	// ── Stage 3 (Master) ─────────────────────────────────────────────
 	{
@@ -208,5 +208,5 @@ export const primordialBeastsPets: CardData[] = [
 				battlecry: { type: 'gain_mana_crystal_and_draw', value: 2, drawValue: 1 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

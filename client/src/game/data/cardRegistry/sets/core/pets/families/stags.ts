@@ -25,7 +25,7 @@ export const stagsPets: CardData[] = [
 			trigger: 'on_heal',
 			description: 'After healing a friendly character',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50031,
 		name: 'Leaf Fawn',
@@ -50,7 +50,7 @@ export const stagsPets: CardData[] = [
 			trigger: 'on_buff',
 			description: 'After a friendly minion is buffed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50032,
 		name: 'Sun Fawn',
@@ -75,7 +75,7 @@ export const stagsPets: CardData[] = [
 			trigger: 'on_buff',
 			description: 'After a friendly minion is buffed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50033,
 		name: 'Riverside Stag',
@@ -102,7 +102,7 @@ export const stagsPets: CardData[] = [
 			description: 'After healing a friendly character',
 		},
 		battlecry: { type: 'heal', targetType: 'friendly_hero', value: 3 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50034,
 		name: 'Canopy Stag',
@@ -128,7 +128,7 @@ export const stagsPets: CardData[] = [
 			trigger: 'on_heal',
 			description: 'After healing a friendly character',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50035,
 		name: 'Radiant Stag',
@@ -155,7 +155,7 @@ export const stagsPets: CardData[] = [
 			description: 'After a friendly minion is buffed',
 		},
 		battlecry: { type: 'buff', targetType: 'friendly_minion', value: 1, buffAttack: 1, buffHealth: 2 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50036,
 		name: 'Eikthyrnir',
@@ -204,5 +204,5 @@ export const stagsPets: CardData[] = [
 				battlecry: { type: 'buff', targetType: 'all_friendly_minions', value: 0, grantKeywords: ['divine_shield'] },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

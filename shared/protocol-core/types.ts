@@ -308,7 +308,7 @@ export interface StateAdapter {
 
 	// Queue
 	getQueueEntry(account: string): Promise<{ timestamp: number } | null>;
-	putQueueEntry(account: string, data: { mode: string; elo: number; timestamp: number; blockNum: number }): Promise<void>;
+	putQueueEntry(account: string, data: { mode: string; elo: number; peerId: string; deckHash: string; timestamp: number; blockNum: number }): Promise<void>;
 	deleteQueueEntry(account: string): Promise<void>;
 
 	// v1.1: Pack NFTs

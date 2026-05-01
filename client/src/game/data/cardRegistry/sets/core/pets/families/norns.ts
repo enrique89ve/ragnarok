@@ -25,7 +25,7 @@ export const nornsPets: CardData[] = [
 			trigger: 'on_heal',
 			description: 'After a friendly character is healed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50261,
 		name: "Verdandi's Initiate",
@@ -50,7 +50,7 @@ export const nornsPets: CardData[] = [
 			trigger: 'on_buff',
 			description: 'After a friendly minion is buffed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50262,
 		name: "Skuld's Initiate",
@@ -75,7 +75,7 @@ export const nornsPets: CardData[] = [
 			trigger: 'on_draw_card',
 			description: 'After drawing a card',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50263,
 		name: 'Urd the Past',
@@ -102,7 +102,7 @@ export const nornsPets: CardData[] = [
 			description: 'After a friendly character is healed',
 		},
 		battlecry: { type: 'heal', targetType: 'friendly_hero', value: 3 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50264,
 		name: 'Verdandi the Present',
@@ -129,7 +129,7 @@ export const nornsPets: CardData[] = [
 			description: 'After a friendly minion is buffed',
 		},
 		battlecry: { type: 'buff', targetType: 'friendly_minion', buffAttack: 1, buffHealth: 2 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50265,
 		name: 'Skuld the Future',
@@ -156,7 +156,7 @@ export const nornsPets: CardData[] = [
 			description: 'After drawing a card',
 		},
 		battlecry: { type: 'draw', value: 2 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50266,
 		name: 'Norn Triumvirate',
@@ -205,5 +205,5 @@ export const nornsPets: CardData[] = [
 				battlecry: { type: 'draw', value: 3, manaReduction: 2 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

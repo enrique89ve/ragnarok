@@ -750,6 +750,8 @@ async function applyQueueJoin(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<O
 	await deps.state.putQueueEntry(op.broadcaster, {
 		mode: (op.payload.mode as string) ?? 'ranked',
 		elo: chainElo.elo,
+		peerId: (op.payload.peer_id as string) ?? '',
+		deckHash: (op.payload.deck_hash as string) ?? '',
 		timestamp: op.timestamp,
 		blockNum: op.blockNum,
 	});

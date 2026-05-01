@@ -25,7 +25,7 @@ export const ljosalfarPets: CardData[] = [
 			trigger: 'on_buff',
 			description: 'After a friendly minion is buffed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50281,
 		name: 'Spark Sprite',
@@ -50,7 +50,7 @@ export const ljosalfarPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50282,
 		name: 'Glimmer Sprite',
@@ -74,7 +74,7 @@ export const ljosalfarPets: CardData[] = [
 			trigger: 'on_summon',
 			description: 'After a minion is summoned',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50283,
 		name: 'Ljosalfar Sage',
@@ -101,7 +101,7 @@ export const ljosalfarPets: CardData[] = [
 			description: 'After a friendly minion is buffed',
 		},
 		battlecry: { type: 'buff', targetType: 'friendly_minion', buffAttack: 1, buffHealth: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50284,
 		name: 'Ljosalfar Striker',
@@ -127,7 +127,7 @@ export const ljosalfarPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50285,
 		name: 'Ljosalfar Warden',
@@ -153,7 +153,7 @@ export const ljosalfarPets: CardData[] = [
 			description: 'After surviving a turn',
 		},
 		battlecry: { type: 'draw', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50286,
 		name: "Alfheim's Radiance",
@@ -202,5 +202,5 @@ export const ljosalfarPets: CardData[] = [
 				battlecry: { type: 'discover', value: 1, manaReduction: 2 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

@@ -25,7 +25,7 @@ export const huldrefolkPets: CardData[] = [
 			trigger: 'on_attack_from_stealth',
 			description: 'After attacking from Stealth',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50321,
 		name: 'Moss Lurker',
@@ -50,7 +50,7 @@ export const huldrefolkPets: CardData[] = [
 			trigger: 'on_heal',
 			description: 'After a friendly character is healed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50322,
 		name: 'Cave Hider',
@@ -74,7 +74,7 @@ export const huldrefolkPets: CardData[] = [
 			trigger: 'on_survive_turn',
 			description: 'After surviving a turn',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50323,
 		name: 'Huldra Deceiver',
@@ -101,7 +101,7 @@ export const huldrefolkPets: CardData[] = [
 			description: 'After an enemy minion is destroyed',
 		},
 		battlecry: { type: 'bounce', targetType: 'random_enemy_minion', attackThreshold: 3 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50324,
 		name: 'Huldra Healer',
@@ -127,7 +127,7 @@ export const huldrefolkPets: CardData[] = [
 			trigger: 'on_heal',
 			description: 'After a friendly character is healed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50325,
 		name: 'Huldra Sentinel',
@@ -153,7 +153,7 @@ export const huldrefolkPets: CardData[] = [
 			description: 'After surviving a turn',
 		},
 		battlecry: { type: 'gain_armor', value: 3 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50326,
 		name: 'Huldra Queen',
@@ -202,5 +202,5 @@ export const huldrefolkPets: CardData[] = [
 				battlecry: { type: 'buff_adjacent', buffAttack: 2, buffHealth: 2, armor: 5 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

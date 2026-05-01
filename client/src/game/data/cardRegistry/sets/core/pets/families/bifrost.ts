@@ -26,7 +26,7 @@ export const bifrostPets: CardData[] = [
 			trigger: 'on_buff',
 			description: 'After a friendly minion is buffed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50151,
 		name: 'Sun Foal',
@@ -51,7 +51,7 @@ export const bifrostPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50152,
 		name: "Sleipnir's Foal",
@@ -75,7 +75,7 @@ export const bifrostPets: CardData[] = [
 			trigger: 'on_survive_turn',
 			description: 'After surviving a turn',
 		},
-	} as CardData,
+	} satisfies CardData,
 
 	// ── Stage 2 (Adept) ──────────────────────────────────────────────
 	{
@@ -104,7 +104,7 @@ export const bifrostPets: CardData[] = [
 			description: 'After a friendly minion is buffed',
 		},
 		battlecry: { type: 'grant_rush', targetType: 'friendly_minion', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50154,
 		name: "Arvakr's Glow",
@@ -130,7 +130,7 @@ export const bifrostPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50155,
 		name: "Sleipnir's Shadow",
@@ -156,7 +156,7 @@ export const bifrostPets: CardData[] = [
 			description: 'After surviving a turn',
 		},
 		battlecry: { type: 'buff', targetType: 'friendly_minion', buffAttack: 2, buffHealth: 0 },
-	} as CardData,
+	} satisfies CardData,
 
 	// ── Stage 3 (Master) ─────────────────────────────────────────────
 	{
@@ -206,5 +206,5 @@ export const bifrostPets: CardData[] = [
 				battlecry: { type: 'buff', targetType: 'all_friendly_minions', buffAttack: 2, buffHealth: 0 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

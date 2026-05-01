@@ -349,6 +349,7 @@ export interface MinionCardData extends BaseCardData {
     manaCost: number;
     keywords: string[];
     description: string;
+    spellDamage?: number;
     battlecry?: BattlecryEffect;
     deathrattle?: DeathrattleEffect;
     passiveAbility?: { name: string; description: string; trigger: string; effect: BattlecryEffect | TriggeredEffect };

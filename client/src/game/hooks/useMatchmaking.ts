@@ -32,19 +32,29 @@ export function useMatchmaking() {
 	const chainLeaveFnRef = useRef<(() => Promise<void>) | null>(null);
 
 	const joinQueue = useCallback(async () => {
+		const failJoin = (message: string) => {
+			setError(message);
+			setStatus('error');
+			setQueuePosition(null);
+			return false;
+		};
+
 		const peerId = usePeerStore.getState().myPeerId;
 		if (!peerId) {
-			setError('No peer ID available');
-			setStatus('error');
-			return;
+			return failJoin('No peer ID available');
 		}
 
 		try {
 			setStatus('queued');
 			setError(null);
 
-			if (getNFTBridge().isHiveMode() && hiveUsername) {
-				const elo = getNFTBridge().getElo();
+			const nftBridge = getNFTBridge();
+			if (nftBridge.isHiveMode() && !hiveUsername) {
+				return failJoin('Connect Hive Keychain before entering testnet matchmaking.');
+			}
+
+			if (nftBridge.isHiveMode() && hiveUsername) {
+				const elo = nftBridge.getElo();
 
 				const leaveFn = await broadcastQueueJoin({
 					account: hiveUsername,
@@ -67,11 +77,11 @@ export function useMatchmaking() {
 					},
 				);
 				chainPollerCancelRef.current = cancelPoller;
-				return;
+				return true;
 			}
 
 			const queueBody = hiveUsername
-				? await getNFTBridge().buildAuthBody(hiveUsername, 'queue', { peerId, username: hiveUsername })
+				? await nftBridge.buildAuthBody(hiveUsername, 'queue', { peerId, username: hiveUsername })
 				: { peerId, username: hiveUsername };
 			const response = await fetch(`${API_BASE}/api/matchmaking/queue`, {
 				method: 'POST',
@@ -95,7 +105,7 @@ export function useMatchmaking() {
 				setStatus('matched');
 				setOpponent(data.opponentPeerId, data.isHost);
 				setQueuePosition(null);
-				return;
+				return true;
 			}
 
 			setQueuePosition(data.position || null);
@@ -140,9 +150,9 @@ export function useMatchmaking() {
 			}, 2000);
 
 			pollIntervalRef.current = interval;
+			return true;
 		} catch (err: unknown) {
-			setError(err instanceof Error ? err.message : 'Failed to join matchmaking queue');
-			setStatus('error');
+			return failJoin(err instanceof Error ? err.message : 'Failed to join matchmaking queue');
 		}
 	}, [hiveUsername, setStatus, setError, setQueuePosition, setOpponent]);
 

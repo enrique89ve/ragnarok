@@ -37,6 +37,7 @@ import { debug } from '../config/debugConfig';
 import { useMatchmaking } from '../hooks/useMatchmaking';
 import { usePeerStore } from '../stores/peerStore';
 import { toast } from 'sonner';
+import { getWebRTCSupport } from '../utils/webrtcSupport';
 
 interface ArmySelectionProps {
   onComplete: (army: ArmySelectionType) => void;
@@ -67,6 +68,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
   const [selectedPieceType, setSelectedPieceType] = useState<ChessPieceType>('king');
   const [deckBuilderOpen, setDeckBuilderOpen] = useState<PieceType | null>(null);
   const [popupHero, setPopupHero] = useState<ChessPieceHero | null>(null);
+  const [matchmakingStarting, setMatchmakingStarting] = useState(false);
 
   const getDeck = useHeroDeckStore(state => state.getDeck);
   const loadFromStorage = useHeroDeckStore(state => state.loadFromStorage);
@@ -74,6 +76,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
   const myPeerId = usePeerStore(state => state.myPeerId);
   const host = usePeerStore(state => state.host);
   const { status: matchmakingStatus, queuePosition, joinQueue, leaveQueue, error: matchmakingError } = useMatchmaking();
+  const webRTCSupport = useMemo(getWebRTCSupport, []);
 
   useEffect(() => {
     loadFromStorage();
@@ -150,35 +153,49 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
   };
 
   const handleMatchmaking = async () => {
+    if (matchmakingStarting) return;
+
     if (!canProceedToBattle) {
       toast.error('Please complete all decks before starting matchmaking');
       return;
     }
 
-    playSoundEffect('button_click');
-
-    // Sync selected king hero to global store
-    const kingHero = army.king;
-    if (kingHero) {
-      debug.log(`[ArmySelection] Syncing King hero: ${kingHero.name} (${kingHero.id})`);
-      setSelectedHero(kingHero.heroClass, kingHero.id);
+    if (!webRTCSupport.supported) {
+      toast.error(webRTCSupport.message ?? 'This browser does not support P2P multiplayer');
+      return;
     }
 
-    // Initialize peer connection if needed
-    if (!myPeerId) {
-      try {
-        await host();
-      } catch {
-        toast.error('Failed to initialize connection. Please try again.');
+    setMatchmakingStarting(true);
+
+    try {
+      playSoundEffect('button_click');
+
+      // Sync selected king hero to global store
+      const kingHero = army.king;
+      if (kingHero) {
+        debug.log(`[ArmySelection] Syncing King hero: ${kingHero.name} (${kingHero.id})`);
+        setSelectedHero(kingHero.heroClass, kingHero.id);
+      }
+
+      if (onMatchmakingStart) {
+        await onMatchmakingStart(army);
         return;
       }
-    }
 
-    // Start matchmaking
-    if (onMatchmakingStart) {
-      await onMatchmakingStart(army);
-    } else {
-      await joinQueue();
+      const currentPeerId = usePeerStore.getState().myPeerId;
+      if (!currentPeerId) {
+        await host();
+      }
+
+      const queued = await joinQueue();
+      if (!queued) {
+        throw new Error('Failed to join matchmaking queue');
+      }
+    } catch (err: unknown) {
+      debug.error('[ArmySelection] Failed to start matchmaking:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to start matchmaking. Please try again.');
+    } finally {
+      setMatchmakingStarting(false);
     }
   };
 
@@ -241,13 +258,19 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
     : isArmyComplete
       ? 'Complete Loadouts'
       : 'Lock the Line';
-  const multiplayerActionLabel = matchmakingStatus === 'queued'
+  const multiplayerActionLabel = matchmakingStarting
+    ? 'Starting Search...'
+    : !webRTCSupport.supported
+      ? 'WebRTC Unavailable'
+    : matchmakingStatus === 'queued'
     ? 'Cancel Search'
     : canProceedToBattle
       ? 'Find Opponent'
       : isArmyComplete
         ? 'Complete Loadouts'
         : 'Lock the Line';
+  const matchmakingButtonReady = canProceedToBattle && matchmakingStatus !== 'queued' && !matchmakingStarting && webRTCSupport.supported;
+  const displayedMatchmakingError = matchmakingError ?? (!webRTCSupport.supported ? webRTCSupport.message : null);
 
   const handleOpenDeckBuilder = (pieceType: PieceType) => {
     setDeckBuilderOpen(pieceType);
@@ -567,13 +590,13 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
         </div>
 
         {/* Matchmaking status for multiplayer */}
-        {isMultiplayer && matchmakingStatus === 'queued' && (
+        {isMultiplayer && (matchmakingStarting || matchmakingStatus === 'queued') && (
           <div className="norse-matchmaking-status">
             <div className="norse-matchmaking-status-line">
               <Search size={15} strokeWidth={2.1} />
-              <span>Searching for an opponent</span>
+              <span>{matchmakingStarting ? 'Starting matchmaking' : 'Searching for an opponent'}</span>
             </div>
-            {queuePosition !== null && (
+            {!matchmakingStarting && queuePosition !== null && (
               <div className="norse-queue-position">
                 Position in queue: {queuePosition}
               </div>
@@ -581,19 +604,19 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
           </div>
         )}
 
-        {isMultiplayer && matchmakingError && (
+        {isMultiplayer && displayedMatchmakingError && (
           <div className="norse-matchmaking-error">
-            {matchmakingError}
+            {displayedMatchmakingError}
           </div>
         )}
 
         {/* Main action button - Matchmaking for multiplayer, Start Battle for solo */}
         {isMultiplayer ? (
           <motion.button
-            whileHover={canProceedToBattle && matchmakingStatus !== 'queued' ? { scale: 1.02 } : undefined}
-            whileTap={canProceedToBattle && matchmakingStatus !== 'queued' ? { scale: 0.98 } : undefined}
+            whileHover={matchmakingButtonReady ? { scale: 1.02 } : undefined}
+            whileTap={matchmakingButtonReady ? { scale: 0.98 } : undefined}
             onClick={matchmakingStatus === 'queued' ? leaveQueue : handleMatchmaking}
-            disabled={!canProceedToBattle && matchmakingStatus !== 'queued'}
+            disabled={!webRTCSupport.supported || matchmakingStarting || (!canProceedToBattle && matchmakingStatus !== 'queued')}
             className="norse-battle-btn"
           >
             {multiplayerActionLabel}

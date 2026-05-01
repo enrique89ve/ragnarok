@@ -26,7 +26,7 @@ export const ivaldiConstructsPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After a friendly Automaton attacks',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50371,
 		name: 'Rune Circuit',
@@ -52,7 +52,7 @@ export const ivaldiConstructsPets: CardData[] = [
 			trigger: 'on_survive_turn',
 			description: 'After surviving a turn',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50372,
 		name: 'Scrap Sentinel',
@@ -77,7 +77,7 @@ export const ivaldiConstructsPets: CardData[] = [
 			trigger: 'on_summon',
 			description: 'After a minion is summoned',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50373,
 		name: "Nidavellir War-Engine",
@@ -105,7 +105,7 @@ export const ivaldiConstructsPets: CardData[] = [
 			description: 'After dealing damage to an enemy',
 		},
 		deathrattle: { type: 'summon', summonCardId: 20504, targetType: 'none' },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50374,
 		name: "Ivaldi's Dynamo",
@@ -132,7 +132,7 @@ export const ivaldiConstructsPets: CardData[] = [
 			trigger: 'on_survive_turn',
 			description: 'After surviving a turn',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50375,
 		name: "Sindri's Protector",
@@ -158,7 +158,7 @@ export const ivaldiConstructsPets: CardData[] = [
 			trigger: 'on_survive_turn',
 			description: 'After surviving a turn',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50376,
 		name: "Ivaldi's Colossus",
@@ -206,5 +206,5 @@ export const ivaldiConstructsPets: CardData[] = [
 				description: 'Taunt. Divine Shield. Reborn.',
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

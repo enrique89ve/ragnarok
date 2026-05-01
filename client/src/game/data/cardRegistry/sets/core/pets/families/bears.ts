@@ -25,7 +25,7 @@ export const bearsPets: CardData[] = [
 			trigger: 'on_gain_health',
 			description: 'After gaining max Health',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50041,
 		name: 'Moss Cub',
@@ -50,7 +50,7 @@ export const bearsPets: CardData[] = [
 			trigger: 'on_heal',
 			description: 'After healing a friendly character',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50042,
 		name: 'Cave Cub',
@@ -74,7 +74,7 @@ export const bearsPets: CardData[] = [
 			trigger: 'on_survive_turn',
 			description: 'After surviving a turn',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50043,
 		name: 'Ashclaw Bear',
@@ -101,7 +101,7 @@ export const bearsPets: CardData[] = [
 			description: 'After gaining max Health',
 		},
 		battlecry: { type: 'damage', targetType: 'random_enemy', value: 2 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50044,
 		name: 'Mossback Bear',
@@ -127,7 +127,7 @@ export const bearsPets: CardData[] = [
 			trigger: 'on_heal',
 			description: 'After healing a friendly character',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50045,
 		name: 'Stoneridge Bear',
@@ -153,7 +153,7 @@ export const bearsPets: CardData[] = [
 			description: 'After surviving a turn',
 		},
 		battlecry: { type: 'gain_armor', value: 3 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50046,
 		name: 'Beorn the Unbroken',
@@ -202,5 +202,5 @@ export const bearsPets: CardData[] = [
 				battlecry: { type: 'buff_adjacent', value: 2, buffAttack: 2, buffHealth: 2, armor: 5 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

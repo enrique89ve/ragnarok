@@ -25,7 +25,7 @@ export const trollsPets: CardData[] = [
 			trigger: 'on_heal',
 			description: 'After a friendly character is healed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50271,
 		name: 'River Trolling',
@@ -50,7 +50,7 @@ export const trollsPets: CardData[] = [
 			trigger: 'on_gain_health',
 			description: 'After a minion gains max health',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50272,
 		name: 'Cave Trolling',
@@ -74,7 +74,7 @@ export const trollsPets: CardData[] = [
 			trigger: 'on_survive_turn',
 			description: 'After surviving a turn',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50273,
 		name: 'Mossback Troll',
@@ -100,7 +100,7 @@ export const trollsPets: CardData[] = [
 			trigger: 'on_heal',
 			description: 'After a friendly character is healed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50274,
 		name: 'Tidescale Troll',
@@ -127,7 +127,7 @@ export const trollsPets: CardData[] = [
 			description: 'After a friendly character is healed',
 		},
 		battlecry: { type: 'gain_armor', value: 3 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50275,
 		name: 'Stonewall Troll',
@@ -153,7 +153,7 @@ export const trollsPets: CardData[] = [
 			description: 'After surviving a turn',
 		},
 		battlecry: { type: 'gain_armor', value: 3 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50276,
 		name: 'Troll King',
@@ -201,5 +201,5 @@ export const trollsPets: CardData[] = [
 				battlecry: { type: 'buff_adjacent', buffAttack: 2, buffHealth: 2, armor: 5 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

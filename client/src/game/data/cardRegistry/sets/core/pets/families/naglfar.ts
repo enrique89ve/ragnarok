@@ -25,7 +25,7 @@ export const naglfarPets: CardData[] = [
 			trigger: 'on_destroy',
 			description: 'After an enemy minion is destroyed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50351,
 		name: 'Drowned Oarsman',
@@ -50,7 +50,7 @@ export const naglfarPets: CardData[] = [
 			trigger: 'on_freeze',
 			description: 'After an enemy is frozen',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50352,
 		name: 'Ghost Crewman',
@@ -74,7 +74,7 @@ export const naglfarPets: CardData[] = [
 			trigger: 'on_summon',
 			description: 'After a minion is summoned',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50353,
 		name: 'Naglfar Revenant',
@@ -101,7 +101,7 @@ export const naglfarPets: CardData[] = [
 			description: 'After an enemy minion is destroyed',
 		},
 		deathrattle: { type: 'damage', targetType: 'enemy_hero', value: 3 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50354,
 		name: 'Naglfar Steersman',
@@ -128,7 +128,7 @@ export const naglfarPets: CardData[] = [
 			description: 'After an enemy is frozen',
 		},
 		battlecry: { type: 'freeze', targetType: 'random_enemy', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50355,
 		name: 'Naglfar Boatswain',
@@ -154,7 +154,7 @@ export const naglfarPets: CardData[] = [
 			description: 'After surviving a turn',
 		},
 		battlecry: { type: 'draw', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50356,
 		name: "Naglfar's Admiral",
@@ -203,5 +203,5 @@ export const naglfarPets: CardData[] = [
 				deathrattle: { type: 'summon', summonId: 9207, value: 2 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

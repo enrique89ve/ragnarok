@@ -25,7 +25,7 @@ export const ravensPets: CardData[] = [
 			trigger: 'on_draw_card',
 			description: 'After drawing a card',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50021,
 		name: 'Storm Raven',
@@ -50,7 +50,7 @@ export const ravensPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50022,
 		name: 'Dawn Raven',
@@ -75,7 +75,7 @@ export const ravensPets: CardData[] = [
 			trigger: 'on_buff',
 			description: 'After a friendly minion is buffed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50023,
 		name: "Huginn's Eye",
@@ -102,7 +102,7 @@ export const ravensPets: CardData[] = [
 			description: 'After drawing a card',
 		},
 		battlecry: { type: 'draw', value: 2 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50024,
 		name: "Muninn's Bolt",
@@ -129,7 +129,7 @@ export const ravensPets: CardData[] = [
 			description: 'After dealing damage',
 		},
 		spellDamage: 1,
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50025,
 		name: "Sol's Wing",
@@ -156,7 +156,7 @@ export const ravensPets: CardData[] = [
 			description: 'After a friendly minion is buffed',
 		},
 		battlecry: { type: 'buff', targetType: 'friendly_minion', value: 1, buffAttack: 1, buffHealth: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50026,
 		name: "Odin's Emissary",
@@ -205,5 +205,5 @@ export const ravensPets: CardData[] = [
 				battlecry: { type: 'buff', targetType: 'all_friendly_minions', value: 1, buffAttack: 1, buffHealth: 1, grantKeywords: ['divine_shield'] },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

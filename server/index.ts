@@ -41,7 +41,8 @@ const sensitiveLimiter = rateLimit({
   legacyHeaders: false,
   message: { success: false, error: 'Rate limit exceeded for this endpoint' },
 });
-app.use('/api/matchmaking', sensitiveLimiter);
+app.use('/api/matchmaking/queue', sensitiveLimiter);
+app.use('/api/matchmaking/leave', sensitiveLimiter);
 app.use('/api/tournaments/:id/register', sensitiveLimiter);
 app.use('/api/tournaments/:id/result', sensitiveLimiter);
 

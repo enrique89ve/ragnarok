@@ -25,7 +25,7 @@ export const thorsGoatsPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50241,
 		name: 'Kid of Thunder',
@@ -49,7 +49,7 @@ export const thorsGoatsPets: CardData[] = [
 			trigger: 'on_survive_turn',
 			description: 'After surviving a turn',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50242,
 		name: 'Kid of Dawn',
@@ -74,7 +74,7 @@ export const thorsGoatsPets: CardData[] = [
 			trigger: 'on_buff',
 			description: 'After a friendly minion is buffed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50243,
 		name: 'Tanngrisnir Spark',
@@ -101,7 +101,7 @@ export const thorsGoatsPets: CardData[] = [
 			description: 'After dealing damage to an enemy',
 		},
 		battlecry: { type: 'damage', targetType: 'random_enemy', value: 2 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50244,
 		name: 'Tanngnjóstr Guard',
@@ -127,7 +127,7 @@ export const thorsGoatsPets: CardData[] = [
 			description: 'After surviving a turn',
 		},
 		battlecry: { type: 'draw', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50245,
 		name: 'Radiant Kid',
@@ -154,7 +154,7 @@ export const thorsGoatsPets: CardData[] = [
 			description: 'After a friendly minion is buffed',
 		},
 		battlecry: { type: 'buff', targetType: 'friendly_minion', buffAttack: 1, buffHealth: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50246,
 		name: 'Tanngrisnir Reborn',
@@ -203,5 +203,5 @@ export const thorsGoatsPets: CardData[] = [
 				battlecry: { type: 'buff', targetType: 'all_friendly_minions', buffAttack: 1, buffHealth: 1 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

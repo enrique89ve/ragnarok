@@ -26,7 +26,7 @@ export const hellhoundsPets: CardData[] = [
 			trigger: 'on_destroy',
 			description: 'After destroying an enemy minion',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50141,
 		name: "Garmr's Pup",
@@ -51,7 +51,7 @@ export const hellhoundsPets: CardData[] = [
 			trigger: 'on_apply_burn',
 			description: 'After applying Burn to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50142,
 		name: 'Draugr Shade',
@@ -76,7 +76,7 @@ export const hellhoundsPets: CardData[] = [
 			trigger: 'on_heal',
 			description: 'After a friendly character is healed',
 		},
-	} as CardData,
+	} satisfies CardData,
 
 	// ── Stage 2 (Adept) ──────────────────────────────────────────────
 	{
@@ -105,7 +105,7 @@ export const hellhoundsPets: CardData[] = [
 			description: 'After destroying an enemy minion',
 		},
 		deathrattle: { type: 'damage', targetType: 'enemy_hero', value: 3 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50144,
 		name: "Garmr's Howl",
@@ -132,7 +132,7 @@ export const hellhoundsPets: CardData[] = [
 			description: 'After applying Burn to an enemy',
 		},
 		battlecry: { type: 'damage', targetType: 'enemy_hero', value: 3 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50145,
 		name: 'Draugr Jarl',
@@ -159,7 +159,7 @@ export const hellhoundsPets: CardData[] = [
 			description: 'After a friendly character is healed',
 		},
 		deathrattle: { type: 'damage', targetType: 'enemy_hero', value: 3 },
-	} as CardData,
+	} satisfies CardData,
 
 	// ── Stage 3 (Master) ─────────────────────────────────────────────
 	{
@@ -210,5 +210,5 @@ export const hellhoundsPets: CardData[] = [
 				deathrattle: { type: 'damage', targetType: 'enemy_hero', value: 5 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

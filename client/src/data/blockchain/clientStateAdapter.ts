@@ -180,7 +180,7 @@ export const clientStateAdapter: StateAdapter = {
 	async putQueueEntry(account, data) {
 		await putQueueEntry({
 			account, mode: data.mode, elo: data.elo,
-			peerId: '', deckHash: '', timestamp: data.timestamp, blockNum: data.blockNum,
+			peerId: data.peerId, deckHash: data.deckHash, timestamp: data.timestamp, blockNum: data.blockNum,
 		});
 	},
 	async deleteQueueEntry(account) { await deleteQueueEntry(account); },

@@ -1,19 +1,15 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { showStatus } from '../components/ui/GameStatusBanner';
-import { createCardInstance, findCardInstance } from '../utils/cards/cardUtils';
 import { hasKeyword } from '../utils/cards/keywordUtils';
 import {
   initializeGame,
-  playCard,
   endTurn,
   processAttack,
   processAITurn,
   autoAttackWithAllCards
 } from '../utils/gameUtils';
 import { executeHeroPower } from '../utils/heroPowerUtils';
-import { processDiscovery } from '../utils/discoveryUtils';
-import { toggleCardSelection, confirmMulligan, skipMulligan } from '../utils/mulliganUtils';
 import { useMulliganStore } from './mulliganStore';
 import { useDiscoveryStore } from './discoveryStore';
 import { usePokerRewardStore } from './pokerRewardStore';
@@ -27,13 +23,14 @@ import { isAISimulationMode, debug, getDebugConfig } from '../config/debugConfig
 import { getPokerCombatAdapterState } from '../hooks/usePokerCombatAdapter';
 import { CombatAction, CombatPhase } from '../types/PokerCombatTypes';
 import { useUnifiedCombatStore } from './unifiedCombatStore';
-import { MAX_BATTLEFIELD_SIZE, MAX_HAND_SIZE } from '../constants/gameConstants';
 import { useTargetingStore } from './targetingStore';
 import { logActivity } from './activityLogStore';
 import { CombatEventBus } from '../services/CombatEventBus';
 import { getAttack } from '../utils/cards/typeGuards';
 import { usePeerStore } from './peerStore';
 import { computeStateHash } from '../engine/engineBridge';
+import { GAME_COMMAND_TYPES, applyGameCommand } from '../core/commands';
+import { applyGameCommandToStore } from './gameCommandStoreAdapter';
 
 // ============== BATTLEFIELD DEBUG MONITOR ==============
 // Track battlefield changes with stack traces to identify root cause of minion disappearance
@@ -161,148 +158,24 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
 
   playCard: (cardId: string, targetId?: string, targetType?: 'minion' | 'hero', insertionIndex?: number, payWithBlood?: boolean) => {
     const { gameState } = get();
-    const audioStore = useAudio.getState();
+    const command = {
+      type: GAME_COMMAND_TYPES.playCard,
+      cardId,
+      targetId,
+      targetType,
+      insertionIndex,
+      payWithBlood,
+    } as const;
+    const result = applyGameCommand(gameState, command, {
+      isAiSimulationMode: isAISimulationMode,
+    });
 
-    try {
-      // Check if it's player's turn - add exception for AI simulation
-      if (gameState.currentTurn !== 'player' && !isAISimulationMode()) {
-        throw new Error('Not your turn');
-      }
-
-      // Find the card in player's hand
-      const player = gameState.players.player;
-      const cardResult = findCardInstance(player.hand, cardId);
-
-      if (!cardResult) {
-        debug.warn('Card not found in hand (may have been played already):', cardId);
-        return;
-      }
-
-      // Extract the card instance from the result
-      const cardInstance = cardResult.card as CardInstance;
-
-      // Check if player has enough mana
-      if (!player.mana || typeof player.mana.current !== 'number') {
-        player.mana = { current: 1, max: 1, overloaded: 0, pendingOverload: 0 };
-      }
-
-      const cardCost = cardInstance.card.manaCost ?? 0;
-      const bloodCost = cardInstance.card.bloodPrice;
-      if (payWithBlood && bloodCost && bloodCost > 0) {
-        const heroHp = player.heroHealth ?? player.health ?? 100;
-        if (heroHp <= bloodCost) {
-          throw new Error(`Not enough health. Need more than ${bloodCost} HP to pay Blood Price`);
-        }
-      } else if (cardCost > player.mana.current) {
-        throw new Error(`Not enough mana. Need ${cardCost} but only have ${player.mana.current}`);
-      }
-
-      if (cardInstance.card.type === 'minion' && player.battlefield.length >= MAX_BATTLEFIELD_SIZE) {
-        throw new Error(`Battlefield is full! Maximum ${MAX_BATTLEFIELD_SIZE} minions allowed.`);
-      }
-
-      // For cards with battlecry that require target, check if we have a target
-      if (cardInstance.card.type === 'minion' &&
-          hasKeyword(cardInstance, 'battlecry') &&
-          cardInstance.card.battlecry?.requiresTarget && 
-          !targetId) {
-        debug.log(`${cardInstance.card.name} requires a battlecry target`);
-        return; // Don't proceed without a target
-      }
-      
-      // Save the card data for reference after it's played
-      const cardData = JSON.parse(JSON.stringify(cardInstance.card));
-      
-      try {
-        // Play the card with the target if provided
-        const newState = playCard(gameState, cardId, targetId, targetType, insertionIndex, payWithBlood);
-        
-        // If the card requires a battlecry target but we still don't have a valid game state,
-        // it means the battlecry couldn't be executed properly
-        if (cardData.type === 'minion' &&
-            cardData.keywords?.includes('battlecry') &&
-            cardData.battlecry?.requiresTarget &&
-            newState === gameState) {
-          debug.log('Battlecry target validation failed');
-          return;
-        }
-        
-        // Log to saga feed based on card type
-        if (cardInstance.card.type === 'spell') {
-          logActivity('spell_cast', 'player', `Cast ${cardInstance.card.name}`, {
-            cardName: cardInstance.card.name,
-            cardId: typeof cardInstance.card.id === 'number' ? cardInstance.card.id : undefined,
-            value: cardInstance.card.spellEffect?.value as number
-          });
-        } else if (cardInstance.card.type === 'minion') {
-          logActivity('minion_summoned', 'player', `Summoned ${cardInstance.card.name} (${cardInstance.card.attack}/${cardInstance.card.health})`, {
-            cardName: cardInstance.card.name,
-            cardId: typeof cardInstance.card.id === 'number' ? cardInstance.card.id : undefined
-          });
-        }
-        
-        // Check if the card has a spell effect that triggers discovery
-        const hasDiscover = (cardInstance.card.type === 'spell' && cardInstance.card.spellEffect?.type === 'discover') ||
-                          hasKeyword(cardInstance, 'discover');
-
-        if (hasDiscover && newState.discovery?.active) {
-          // Play sound effect
-          if (audioStore && typeof audioStore.playSoundEffect === 'function') {
-            audioStore.playSoundEffect('discover');
-          }
-          
-          set({ 
-            gameState: newState,
-            selectedCard: null
-          });
-        } else {
-          // Normal card play, no discovery
-          
-          // Play sound effect based on card type
-          if (cardInstance.card.rarity === 'mythic') {
-            if (audioStore && typeof audioStore.playSoundEffect === 'function') {
-              audioStore.playSoundEffect('legendary');
-            }
-          } else if (cardInstance.card.type === 'minion' &&
-                    hasKeyword(cardInstance, 'battlecry') &&
-                    cardInstance.card.battlecry?.type === 'damage') {
-            if (audioStore && typeof audioStore.playSoundEffect === 'function') {
-              audioStore.playSoundEffect('damage');
-            }
-          } else {
-            if (audioStore && typeof audioStore.playSoundEffect === 'function') {
-              audioStore.playSoundEffect('card_play');
-            }
-          }
-          
-          let finalState = newState;
-          const hasCharge = hasKeyword(cardInstance, 'charge');
-          const hasRush = hasKeyword(cardInstance, 'rush');
-          
-          if (cardInstance.card.type === 'minion' && (cardInstance.card.attack ?? 0) > 0 && (hasCharge || hasRush)) {
-            // Find the minion in state and ensure it's ready to attack
-            const minionIndex = finalState.players.player.battlefield.findIndex(
-              (c: CardInstance) => c.instanceId === cardInstance.instanceId
-            );
-            if (minionIndex !== -1) {
-              finalState.players.player.battlefield[minionIndex].isSummoningSick = false;
-              finalState.players.player.battlefield[minionIndex].canAttack = true;
-            }
-          }
-          
-          // Update state
-          set({ 
-            gameState: finalState,
-            selectedCard: null
-          });
-        }
-      } catch (playCardError) {
-        debug.error(`[PLAY-CARD-ERROR] Error in playCard utility for ${cardInstance.card.name}:`, playCardError);
-        throw playCardError;
-      }
-    } catch (error) {
-      debug.error('Error playing card:', error);
-    }
+    applyGameCommandToStore({
+      command,
+      beforeState: gameState,
+      result,
+      setState: set,
+    });
   },
 
   endTurn: () => {

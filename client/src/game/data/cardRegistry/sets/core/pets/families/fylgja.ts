@@ -25,7 +25,7 @@ export const fylgjaPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50311,
 		name: 'Tide Spirit',
@@ -50,7 +50,7 @@ export const fylgjaPets: CardData[] = [
 			trigger: 'on_heal',
 			description: 'After a friendly character is healed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50312,
 		name: 'Shadow Spirit',
@@ -75,7 +75,7 @@ export const fylgjaPets: CardData[] = [
 			trigger: 'on_draw_card',
 			description: 'After drawing a card',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50313,
 		name: 'Fylgja Flamecaller',
@@ -102,7 +102,7 @@ export const fylgjaPets: CardData[] = [
 			description: 'After dealing damage to an enemy',
 		},
 		battlecry: { type: 'aoe_damage', targetType: 'all_enemy_minions', value: 2 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50314,
 		name: 'Fylgja Tidekeeper',
@@ -129,7 +129,7 @@ export const fylgjaPets: CardData[] = [
 			description: 'After an enemy is frozen',
 		},
 		battlecry: { type: 'freeze', targetType: 'random_enemy', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50315,
 		name: 'Fylgja Shadowwalker',
@@ -156,7 +156,7 @@ export const fylgjaPets: CardData[] = [
 			description: 'After drawing a card',
 		},
 		battlecry: { type: 'draw', value: 2 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50316,
 		name: 'Fylgja Ascendant',
@@ -205,5 +205,5 @@ export const fylgjaPets: CardData[] = [
 				battlecry: { type: 'draw', value: 3, manaReduction: 1 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

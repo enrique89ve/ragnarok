@@ -26,7 +26,7 @@ export const tidebornPets: CardData[] = [
 			trigger: 'on_freeze',
 			description: 'After an enemy is frozen',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50111,
 		name: 'Tide Colt',
@@ -51,7 +51,7 @@ export const tidebornPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50112,
 		name: "Njord's Tide",
@@ -75,7 +75,7 @@ export const tidebornPets: CardData[] = [
 			trigger: 'on_heal',
 			description: 'After a friendly character is healed',
 		},
-	} as CardData,
+	} satisfies CardData,
 
 	// ── Stage 2 (Adept) ──────────────────────────────────────────────
 	{
@@ -104,7 +104,7 @@ export const tidebornPets: CardData[] = [
 			description: 'After an enemy is frozen',
 		},
 		battlecry: { type: 'freeze', targetType: 'random_enemy_minion', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50114,
 		name: "Aegir's Steed",
@@ -130,7 +130,7 @@ export const tidebornPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50115,
 		name: "Njord's Tempest",
@@ -156,7 +156,7 @@ export const tidebornPets: CardData[] = [
 			description: 'After a friendly character is healed',
 		},
 		battlecry: { type: 'heal', targetType: 'friendly_hero', value: 3 },
-	} as CardData,
+	} satisfies CardData,
 
 	// ── Stage 3 (Master) ─────────────────────────────────────────────
 	{
@@ -206,5 +206,5 @@ export const tidebornPets: CardData[] = [
 				battlecry: { type: 'heal', targetType: 'all_friendly_characters', value: 5 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

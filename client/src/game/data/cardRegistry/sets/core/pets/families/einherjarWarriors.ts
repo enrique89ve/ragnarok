@@ -25,7 +25,7 @@ export const einherjarWarriorsPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50331,
 		name: 'Honored Dead',
@@ -50,7 +50,7 @@ export const einherjarWarriorsPets: CardData[] = [
 			trigger: 'on_survive_turn',
 			description: 'After surviving a turn',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50332,
 		name: 'Valhalla Pledge',
@@ -74,7 +74,7 @@ export const einherjarWarriorsPets: CardData[] = [
 			trigger: 'on_destroy',
 			description: 'After an enemy minion is destroyed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50333,
 		name: 'Einherjar Berserker',
@@ -101,7 +101,7 @@ export const einherjarWarriorsPets: CardData[] = [
 			description: 'After dealing damage to an enemy',
 		},
 		battlecry: { type: 'damage', targetType: 'random_enemy', value: 2 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50334,
 		name: 'Einherjar Shieldwarden',
@@ -127,7 +127,7 @@ export const einherjarWarriorsPets: CardData[] = [
 			trigger: 'on_survive_turn',
 			description: 'After surviving a turn',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50335,
 		name: 'Einherjar Champion',
@@ -153,7 +153,7 @@ export const einherjarWarriorsPets: CardData[] = [
 			description: 'After an enemy minion is destroyed',
 		},
 		battlecry: { type: 'draw', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50336,
 		name: 'Einherjar Eternal',
@@ -203,5 +203,5 @@ export const einherjarWarriorsPets: CardData[] = [
 				deathrattle: { type: 'summon', summonId: 9206, value: 1 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

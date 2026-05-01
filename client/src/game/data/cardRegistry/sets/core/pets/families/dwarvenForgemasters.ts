@@ -25,7 +25,7 @@ export const dwarvenForgemastersPets: CardData[] = [
 			trigger: 'on_return_to_hand',
 			description: 'After a card is returned to hand',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50251,
 		name: 'Anvil Striker',
@@ -49,7 +49,7 @@ export const dwarvenForgemastersPets: CardData[] = [
 			trigger: 'on_survive_turn',
 			description: 'After surviving a turn',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50252,
 		name: 'Spark Smith',
@@ -74,7 +74,7 @@ export const dwarvenForgemastersPets: CardData[] = [
 			trigger: 'on_summon',
 			description: 'After a minion is summoned',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50253,
 		name: "Brokkr's Hammer",
@@ -101,7 +101,7 @@ export const dwarvenForgemastersPets: CardData[] = [
 			description: 'After a card is returned to hand',
 		},
 		battlecry: { type: 'damage', targetType: 'random_enemy', value: 2 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50254,
 		name: "Sindri's Shield",
@@ -127,7 +127,7 @@ export const dwarvenForgemastersPets: CardData[] = [
 			description: 'After surviving a turn',
 		},
 		battlecry: { type: 'gain_armor', value: 3 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50255,
 		name: "Ivaldi's Bolt",
@@ -153,7 +153,7 @@ export const dwarvenForgemastersPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50256,
 		name: "Ivaldi's Masterwork",
@@ -201,5 +201,5 @@ export const dwarvenForgemastersPets: CardData[] = [
 				description: 'Windfury. Rush.',
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

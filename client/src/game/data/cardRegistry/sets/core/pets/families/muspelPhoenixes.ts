@@ -25,7 +25,7 @@ export const muspelPhoenixesPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50361,
 		name: 'Spark Chick',
@@ -50,7 +50,7 @@ export const muspelPhoenixesPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50362,
 		name: 'Dawn Chick',
@@ -75,7 +75,7 @@ export const muspelPhoenixesPets: CardData[] = [
 			trigger: 'on_buff',
 			description: 'After a friendly minion is buffed',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50363,
 		name: 'Muspel Firehawk',
@@ -101,7 +101,7 @@ export const muspelPhoenixesPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50364,
 		name: 'Muspel Stormbolt',
@@ -127,7 +127,7 @@ export const muspelPhoenixesPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50365,
 		name: 'Muspel Sunwing',
@@ -154,7 +154,7 @@ export const muspelPhoenixesPets: CardData[] = [
 			description: 'After a friendly minion is buffed',
 		},
 		battlecry: { type: 'buff', targetType: 'friendly_minion', buffAttack: 1, buffHealth: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50366,
 		name: 'Muspel Eternal',
@@ -202,5 +202,5 @@ export const muspelPhoenixesPets: CardData[] = [
 				battlecry: { type: 'buff', targetType: 'all_friendly_minions', buffAttack: 1, buffHealth: 1, grantKeywords: ['reborn'] },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

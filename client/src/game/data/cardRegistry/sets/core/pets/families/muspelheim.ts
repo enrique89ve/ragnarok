@@ -26,7 +26,7 @@ export const muspelheimPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50101,
 		name: 'Flame Raven',
@@ -51,7 +51,7 @@ export const muspelheimPets: CardData[] = [
 			trigger: 'on_draw_card',
 			description: 'After drawing a card',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50102,
 		name: 'Ember Whelp',
@@ -76,7 +76,7 @@ export const muspelheimPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 
 	// ── Stage 2 (Adept) ──────────────────────────────────────────────
 	{
@@ -105,7 +105,7 @@ export const muspelheimPets: CardData[] = [
 			description: 'After dealing damage to an enemy',
 		},
 		battlecry: { type: 'aoe_damage', targetType: 'all_enemy_minions', value: 2 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50104,
 		name: "Muspel's Harbinger",
@@ -132,7 +132,7 @@ export const muspelheimPets: CardData[] = [
 			description: 'After destroying an enemy minion',
 		},
 		battlecry: { type: 'draw', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50105,
 		name: "Surtr's Spawn",
@@ -159,7 +159,7 @@ export const muspelheimPets: CardData[] = [
 			description: 'After dealing damage to an enemy',
 		},
 		battlecry: { type: 'damage', targetType: 'random_enemy', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 
 	// ── Stage 3 (Master) ─────────────────────────────────────────────
 	{
@@ -209,5 +209,5 @@ export const muspelheimPets: CardData[] = [
 				description: 'Windfury. Rush. A storm of fire and lightning.',
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

@@ -25,7 +25,7 @@ export const giantsPets: CardData[] = [
 			trigger: 'on_freeze',
 			description: 'After freezing an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50091,
 		name: 'Shadow Jotun Cub',
@@ -50,7 +50,7 @@ export const giantsPets: CardData[] = [
 			trigger: 'on_silence',
 			description: 'After silencing an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50092,
 		name: 'Stone Jotun Cub',
@@ -74,7 +74,7 @@ export const giantsPets: CardData[] = [
 			trigger: 'on_reduce_attack',
 			description: 'After reducing an enemy minion\'s Attack',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50093,
 		name: 'Frost Jotun',
@@ -101,7 +101,7 @@ export const giantsPets: CardData[] = [
 			description: 'After freezing an enemy',
 		},
 		battlecry: { type: 'freeze', targetType: 'all_enemy_minions', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50094,
 		name: 'Shadow Jotun',
@@ -128,7 +128,7 @@ export const giantsPets: CardData[] = [
 			description: 'After silencing an enemy',
 		},
 		battlecry: { type: 'silence', targetType: 'random_enemy_minion', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50095,
 		name: 'Stone Jotun',
@@ -154,7 +154,7 @@ export const giantsPets: CardData[] = [
 			description: 'After reducing an enemy minion\'s Attack',
 		},
 		deathrattle: { type: 'gain_armor', value: 5 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50096,
 		name: "Ymir's Descendant",
@@ -203,5 +203,5 @@ export const giantsPets: CardData[] = [
 				deathrattle: { type: 'summon', value: 2, summonId: 9211 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

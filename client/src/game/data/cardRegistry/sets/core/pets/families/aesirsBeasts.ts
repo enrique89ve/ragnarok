@@ -26,7 +26,7 @@ export const aesirsBeastsPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50201,
 		name: 'Tanngrisnir Kid',
@@ -51,7 +51,7 @@ export const aesirsBeastsPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50202,
 		name: 'Tanngnjostr Kid',
@@ -76,7 +76,7 @@ export const aesirsBeastsPets: CardData[] = [
 			trigger: 'on_survive_turn',
 			description: 'After surviving a turn',
 		},
-	} as CardData,
+	} satisfies CardData,
 
 	// ── Stage 2 (Adept) ──────────────────────────────────────────────
 	{
@@ -105,7 +105,7 @@ export const aesirsBeastsPets: CardData[] = [
 			description: 'After dealing damage to an enemy',
 		},
 		battlecry: { type: 'buff', targetType: 'all_friendly_taunt_minions', value: 1, buffHealth: 0 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50204,
 		name: 'Tanngrisnir, the Charging Goat',
@@ -132,7 +132,7 @@ export const aesirsBeastsPets: CardData[] = [
 			description: 'After dealing damage to an enemy',
 		},
 		battlecry: { type: 'aoe_damage', targetType: 'all_enemy_minions', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50205,
 		name: 'Tanngnjostr, the Summoning Goat',
@@ -159,7 +159,7 @@ export const aesirsBeastsPets: CardData[] = [
 			description: 'After surviving a turn',
 		},
 		battlecry: { type: 'summon', tokenId: 9210, count: 1 },
-	} as CardData,
+	} satisfies CardData,
 
 	// ── Stage 3 (Master) ─────────────────────────────────────────────
 	{
@@ -210,5 +210,5 @@ export const aesirsBeastsPets: CardData[] = [
 				battlecry: { type: 'summon', tokenId: 9210, count: 2 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

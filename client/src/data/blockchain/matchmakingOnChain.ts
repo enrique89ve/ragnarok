@@ -96,12 +96,15 @@ export async function broadcastQueueJoin(params: QueueJoinParams): Promise<() =>
 		blockNum: 0, // not yet on chain
 	});
 
-	// Fire-and-forget broadcast (Hive Keychain prompts user)
-	hiveSync.broadcastCustomJson(
+	const broadcastResult = await hiveSync.broadcastCustomJson(
 		'rp_queue_join',
 		payload as unknown as Record<string, unknown>,
 		false,
-	).catch(() => { /* user may reject */ });
+	);
+	if (!broadcastResult.success) {
+		await deleteQueueEntry(account);
+		throw new Error(broadcastResult.error || 'Failed to broadcast queue join');
+	}
 
 	return () => broadcastQueueLeave(account);
 }

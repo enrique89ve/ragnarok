@@ -25,7 +25,7 @@ export const drakesPets: CardData[] = [
 			trigger: 'on_apply_burn',
 			description: 'After applying Burn to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50051,
 		name: 'Bolt Hatchling',
@@ -50,7 +50,7 @@ export const drakesPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50052,
 		name: 'Scale Hatchling',
@@ -74,7 +74,7 @@ export const drakesPets: CardData[] = [
 			trigger: 'on_summon',
 			description: 'After a minion is summoned',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50053,
 		name: 'Magma Drake',
@@ -101,7 +101,7 @@ export const drakesPets: CardData[] = [
 			description: 'After applying Burn to an enemy',
 		},
 		battlecry: { type: 'damage', targetType: 'random_enemy', value: 3 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50054,
 		name: 'Tempest Drake',
@@ -127,7 +127,7 @@ export const drakesPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50055,
 		name: 'Iron Drake',
@@ -153,7 +153,7 @@ export const drakesPets: CardData[] = [
 			description: 'After surviving a turn',
 		},
 		battlecry: { type: 'draw', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50056,
 		name: "Nidhogg's Scion",
@@ -202,5 +202,5 @@ export const drakesPets: CardData[] = [
 				deathrattle: { type: 'summon', value: 1, summonId: 9210 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

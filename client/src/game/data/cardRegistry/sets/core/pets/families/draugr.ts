@@ -25,7 +25,7 @@ export const draugrPets: CardData[] = [
 			trigger: 'on_silence',
 			description: 'After silencing an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50081,
 		name: 'Grave Sprout',
@@ -50,7 +50,7 @@ export const draugrPets: CardData[] = [
 			trigger: 'on_heal',
 			description: 'After healing a friendly character',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50082,
 		name: 'Risen Warrior',
@@ -75,7 +75,7 @@ export const draugrPets: CardData[] = [
 			trigger: 'on_survive_turn',
 			description: 'After surviving a turn',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50083,
 		name: "Hel's Champion",
@@ -102,7 +102,7 @@ export const draugrPets: CardData[] = [
 			description: 'After silencing an enemy',
 		},
 		deathrattle: { type: 'damage', targetType: 'enemy_hero', value: 3 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50084,
 		name: 'Deathbloom Guard',
@@ -129,7 +129,7 @@ export const draugrPets: CardData[] = [
 			description: 'After healing a friendly character',
 		},
 		deathrattle: { type: 'return_to_hand', targetType: 'self_copy', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50085,
 		name: 'Radiant Revenant',
@@ -155,7 +155,7 @@ export const draugrPets: CardData[] = [
 			trigger: 'on_survive_turn',
 			description: 'After surviving a turn',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50086,
 		name: 'Helbound Overlord',
@@ -204,5 +204,5 @@ export const draugrPets: CardData[] = [
 				deathrattle: { type: 'resummon', value: 1 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

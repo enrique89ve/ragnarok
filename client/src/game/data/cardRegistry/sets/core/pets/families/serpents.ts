@@ -25,7 +25,7 @@ export const serpentsPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50011,
 		name: 'Tidal Serpentling',
@@ -50,7 +50,7 @@ export const serpentsPets: CardData[] = [
 			trigger: 'on_freeze',
 			description: 'After freezing an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50012,
 		name: 'Spark Adder',
@@ -75,7 +75,7 @@ export const serpentsPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage to an enemy',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50013,
 		name: 'Magma Coil',
@@ -102,7 +102,7 @@ export const serpentsPets: CardData[] = [
 			description: 'After dealing damage',
 		},
 		battlecry: { type: 'aoe_damage', targetType: 'all_enemy_minions', value: 2 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50014,
 		name: 'Tide Coil',
@@ -129,7 +129,7 @@ export const serpentsPets: CardData[] = [
 			description: 'After freezing an enemy',
 		},
 		battlecry: { type: 'freeze', targetType: 'random_enemy', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50015,
 		name: 'Storm Coil',
@@ -155,7 +155,7 @@ export const serpentsPets: CardData[] = [
 			trigger: 'on_deal_damage',
 			description: 'After dealing damage',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50016,
 		name: "Jormungandr's Heir",
@@ -203,5 +203,5 @@ export const serpentsPets: CardData[] = [
 				description: 'Windfury. Rush.',
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];

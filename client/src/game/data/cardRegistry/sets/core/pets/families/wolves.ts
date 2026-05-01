@@ -25,7 +25,7 @@ export const wolvesPets: CardData[] = [
 			trigger: 'on_destroy',
 			description: 'After destroying an enemy minion',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50001,
 		name: 'Shadow Hound',
@@ -50,7 +50,7 @@ export const wolvesPets: CardData[] = [
 			trigger: 'on_attack_from_stealth',
 			description: 'After attacking from Stealth',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50002,
 		name: 'Tundra Whelp',
@@ -74,7 +74,7 @@ export const wolvesPets: CardData[] = [
 			trigger: 'on_survive_turn',
 			description: 'After surviving a turn',
 		},
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50003,
 		name: "Fenrir's Fury",
@@ -101,7 +101,7 @@ export const wolvesPets: CardData[] = [
 			description: 'After destroying an enemy minion',
 		},
 		battlecry: { type: 'damage', targetType: 'random_enemy', value: 2 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50004,
 		name: "Skoll's Shadow",
@@ -128,7 +128,7 @@ export const wolvesPets: CardData[] = [
 			description: 'After destroying an enemy minion',
 		},
 		battlecry: { type: 'silence', targetType: 'enemy_minion', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50005,
 		name: 'Geri the Watchful',
@@ -154,7 +154,7 @@ export const wolvesPets: CardData[] = [
 			description: 'After surviving a turn',
 		},
 		battlecry: { type: 'draw', value: 1 },
-	} as CardData,
+	} satisfies CardData,
 	{
 		id: 50006,
 		name: 'Fenrir Reborn',
@@ -203,5 +203,5 @@ export const wolvesPets: CardData[] = [
 				battlecry: { type: 'draw', value: 2, manaReduction: 1 },
 			},
 		],
-	} as CardData,
+	} satisfies CardData,
 ];
