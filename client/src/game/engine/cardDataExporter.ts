@@ -7,6 +7,10 @@
  */
 
 import type { CardData, BattlecryEffect, DeathrattleEffect, SpellEffect } from '../types';
+import { parseEffect } from '../data/effects/effectSchema';
+import { debug } from '../config/debugConfig';
+
+type EffectSlot = 'battlecry' | 'deathrattle' | 'spellEffect';
 
 const CARD_TYPE_MAP: Record<string, number> = {
 	minion: 0, spell: 1, weapon: 2, hero: 3,
@@ -22,19 +26,36 @@ const HERO_CLASS_MAP: Record<string, number> = {
 	Necromancer: 10, Berserker: 11, DeathKnight: 12,
 };
 
-function mapEffectToPattern(effect: BattlecryEffect | DeathrattleEffect | SpellEffect | undefined): {
+function mapEffectToPattern(
+	effect: BattlecryEffect | DeathrattleEffect | SpellEffect | undefined,
+	cardId: number,
+	slot: EffectSlot,
+): {
 	pattern: string; value: number; value2: number;
 	targetType: string; condition: string; cardId: number; count: number;
 } | null {
 	if (!effect || !effect.type) return null;
+
+	// Validate against the EffectSchema canon. A typo in the dispatcher key
+	// (e.g. `type: 'damge'`) would today silently fall into the AS dispatcher's
+	// "unknown pattern → no-op" branch, breaking peer state-hash convergence
+	// in P2P matches. Surfacing it at boot with card context prevents the bug
+	// from ever reaching a ranked match. Behavior on failure is unchanged
+	// (skip the effect) — the warn raises visibility without a hard break.
+	const parsed = parseEffect(effect);
+	if (!parsed.ok) {
+		debug.warn(`[cardDataExporter] Skipping malformed effect (card=${cardId} slot=${slot}): ${parsed.reason}`);
+		return null;
+	}
+
 	return {
-		pattern: effect.type ?? '',
-		value: typeof effect.value === 'number' ? effect.value : 0,
-		value2: ('value2' in effect && typeof effect.value2 === 'number') ? effect.value2 : 0,
-		targetType: effect.targetType ?? 'none',
-		condition: ('condition' in effect && typeof effect.condition === 'string') ? effect.condition : '',
-		cardId: ('cardId' in effect && typeof effect.cardId === 'number') ? effect.cardId : 0,
-		count: ('count' in effect && typeof effect.count === 'number') ? effect.count : 1,
+		pattern: parsed.effect.type,
+		value: parsed.effect.value ?? 0,
+		value2: parsed.effect.value2 ?? 0,
+		targetType: parsed.effect.targetType ?? 'none',
+		condition: parsed.effect.condition ?? '',
+		cardId: parsed.effect.cardId ?? 0,
+		count: parsed.effect.count ?? 1,
 	};
 }
 
@@ -87,17 +108,17 @@ export function exportCardDataToWasm(cards: CardData[], loader: WasmCardLoader):
 		}
 
 		if ('battlecry' in card) {
-			const bc = mapEffectToPattern(card.battlecry as BattlecryEffect);
+			const bc = mapEffectToPattern(card.battlecry as BattlecryEffect, id, 'battlecry');
 			if (bc) loader.setCardBattlecry(bc.pattern, bc.value, bc.value2, bc.targetType, bc.condition, bc.cardId, bc.count);
 		}
 
 		if ('deathrattle' in card) {
-			const dr = mapEffectToPattern(card.deathrattle as DeathrattleEffect);
+			const dr = mapEffectToPattern(card.deathrattle as DeathrattleEffect, id, 'deathrattle');
 			if (dr) loader.setCardDeathrattle(dr.pattern, dr.value, dr.value2, dr.targetType, dr.condition, dr.cardId, dr.count);
 		}
 
 		if ('spellEffect' in card) {
-			const se = mapEffectToPattern(card.spellEffect as SpellEffect);
+			const se = mapEffectToPattern(card.spellEffect as SpellEffect, id, 'spellEffect');
 			if (se) loader.setCardSpellEffect(se.pattern, se.value, se.value2, se.targetType, se.condition, se.cardId, se.count);
 		}
 
