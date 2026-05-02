@@ -18,6 +18,7 @@ import type { CombatHandoff } from '../flow/round/types';
 import { debug } from '../config/debugConfig';
 import { useWarbandStore, selectArmy, selectDeckCardIds } from '../../lib/stores/useWarbandStore';
 import { usePeerStore } from '../stores/peerStore';
+import { useGameStore } from '../stores/gameStore';
 import { useCraftingStore } from '../crafting/craftingStore';
 import { resolveHeroPortrait } from '../utils/art/artMapping';
 import { useCampaignGameBootstrap } from './hooks/useCampaignGameBootstrap';
@@ -163,6 +164,23 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ onGam
   const missionRealm = isCampaign ? campaignData?.mission?.realm : undefined;
   const visualRealm = useMemo(() => resolveVisualRealm(missionRealm), [missionRealm]);
   const realmDisplayName = getRealmDisplayName(visualRealm);
+
+  // Local-play gameState bootstrap (C5). gameStore module-load now returns
+  // the empty deterministic shape; whoever drives a local match must call
+  // `initGame()` to populate decks, hands, and hero powers. The
+  // coordinator owns that responsibility for non-P2P modes (campaign,
+  // warband, picker fallback). P2P matches are populated by the host via
+  // `initGameWithSeed(matchSeed)` from `useP2PSync` and adopted by the
+  // client through the `init` envelope, so this effect bails on P2P.
+  // Idempotent via ref — re-mounts on the same coordinator instance do
+  // not re-initialize.
+  const localPlayInitRef = useRef(false);
+  useEffect(() => {
+    if (localPlayInitRef.current) return;
+    if (isP2PConnected) return;
+    localPlayInitRef.current = true;
+    useGameStore.getState().initGame();
+  }, [isP2PConnected]);
 
   // Initialize board if initialArmy is provided.
   // P2P mode: skip — the host's authoritative `init` message owns the state.

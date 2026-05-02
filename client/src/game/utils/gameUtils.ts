@@ -1,4 +1,5 @@
 import { GameState, CardInstance, Player, HeroClass, CardData } from '../types';
+import type { HiveCardAsset } from '../../data/schemas/HiveTypes';
 import { debug, isAISimulationMode } from '../config/debugConfig';
 import { createStartingDeck, createClassDeck, drawCards, findCardInstance, createCardInstance } from './cards/cardUtils';
 import { isMinion, getAttack, getHealth } from './cards/typeGuards';
@@ -161,101 +162,153 @@ function attemptPetEvolution(
   return { evolved: true, newState: state };
 }
 
+function emptyPlayer(id: 'player' | 'opponent', name: string, heroClass: HeroClass): Player {
+  return {
+    id,
+    name,
+    hand: [],
+    battlefield: [],
+    deck: [],
+    graveyard: [],
+    secrets: [],
+    weapon: undefined,
+    mana: { current: 1, max: 1, overloaded: 0, pendingOverload: 0 },
+    health: 100,
+    maxHealth: 100,
+    heroHealth: 100,
+    heroArmor: 0,
+    armor: 0,
+    heroClass,
+    heroPower: getDefaultHeroPower(heroClass),
+    cardsPlayedThisTurn: 0,
+    attacksPerformedThisTurn: 0,
+  };
+}
+
 /**
- * Initialize a new game state
- * @param selectedDeckId - The ID of the player's selected deck
- * @param selectedHeroClass - The hero class selected by the player
- * @param selectedHeroId - The specific Norse hero ID selected by the player
+ * Empty deterministic GameState used at module-load and by `resetGameState`.
+ * Both players have empty decks and hands; all randomness lives in
+ * `initializeGameSeeded`, called explicitly by the coordinator (local-play)
+ * or by `useP2PSync` after seed exchange (P2P). Module-load no longer
+ * shuffles or draws — the previous `Math.random` side-effects are gone.
  */
-export function initializeGame(selectedDeckId?: string, selectedHeroClass?: HeroClass, selectedHeroId?: string): GameState {
-  // Get the selected deck if available or create a random deck
+export function initializeGame(): GameState {
+  return {
+    players: {
+      player: emptyPlayer('player', 'Player', 'mage'),
+      opponent: emptyPlayer('opponent', 'Opponent', 'hunter'),
+    },
+    currentTurn: 'player',
+    turnNumber: 1,
+    gamePhase: 'mulligan',
+    winner: undefined,
+    mulligan: {
+      active: false,
+      playerSelections: {},
+      playerReady: false,
+      opponentReady: false,
+    },
+    mulliganCompleted: false,
+    gameLog: [],
+  };
+}
+
+export interface InitializeGameSeededOpts {
+  readonly rng: () => number;
+  readonly playerIdGen: () => string;
+  readonly opponentIdGen: () => string;
+  readonly selectedDeckId?: string;
+  readonly selectedHeroClass?: HeroClass;
+  readonly selectedHeroId?: string;
+  /**
+   * NFT collection used for level-scaling enrichment of the player deck.
+   * When omitted, no enrichment runs. In Plan B replay-symmetric this
+   * value must come from the deck-handshake input (announced by both
+   * peers), NOT from a global store — otherwise the two peers would
+   * diverge on the per-card stats. For host-authoritative today the host
+   * passes its own `cardCollection` and the client adopts the host's
+   * resulting state via `init`.
+   */
+  readonly hiveCollection?: HiveCardAsset[];
+}
+
+/**
+ * Construct a fully populated `GameState` from an explicit RNG and id
+ * generators. Pure with respect to its arguments — no `Math.random`, no
+ * `globalThis` reads, no `localStorage` reads beyond the deck lookup
+ * (which is keyed by `selectedDeckId` and is itself deterministic given
+ * the same browser state).
+ *
+ * Two peers calling this with the same seed-derived `rng`, `playerIdGen`,
+ * `opponentIdGen` and the same opts produce byte-equivalent output —
+ * the convergence guarantee for the P2P symmetric-replay path.
+ */
+export function initializeGameSeeded(opts: InitializeGameSeededOpts): GameState {
   let playerDeck: CardData[];
   let playerClass: HeroClass;
-  
-  if (selectedDeckId && selectedHeroClass) {
+
+  if (opts.selectedDeckId && opts.selectedHeroClass) {
     const savedDecks = JSON.parse(localStorage.getItem('ragnarok_decks') || '[]');
-    const selectedDeck = savedDecks.find((deck: any) => deck.id === selectedDeckId);
-    
+    const selectedDeck = savedDecks.find((deck: any) => deck.id === opts.selectedDeckId);
+
     if (selectedDeck) {
-      // Convert deck format to array of CardData
       playerDeck = [];
       Object.entries(selectedDeck.cards).forEach(([cardId, count]) => {
-        // Find the card in the full database
         const cardData = getCardById(parseInt(cardId));
         if (cardData) {
-          // Convert count to a number if it isn't already
           const countNumber = typeof count === 'number' ? count : parseInt(count as string) || 0;
-          
-          // Add the card multiple times based on count
           for (let i = 0; i < countNumber; i++) {
             playerDeck.push(cardData);
           }
         }
       });
-      
-      playerClass = selectedHeroClass;
+      playerClass = opts.selectedHeroClass;
     } else {
-      // Fallback to random deck if saved deck not found
-      playerDeck = createStartingDeck(30, cryptoRng);
-      playerClass = selectedHeroClass;
+      playerDeck = createStartingDeck(30, opts.rng);
+      playerClass = opts.selectedHeroClass;
       debug.warn(`Selected deck not found. Using random deck.`);
     }
   } else {
-    // Fallback to random class deck with no test cards
     playerClass = 'mage';
-    playerDeck = createClassDeck(playerClass, 30, cryptoRng);
+    playerDeck = createClassDeck(playerClass, 30, opts.rng);
   }
-  
-  // Apply NFT card levels from collection (lower-level NFTs get weaker stats)
-  // Access HiveDataLayer lazily to avoid circular chunk dependency (game-engine ↔ blockchain)
-  try {
-    const hiveStore = (globalThis as any).__ragnarokHiveDataStore;
-    const hiveCollection = hiveStore?.getState?.()?.cardCollection;
-    if (hiveCollection?.length) {
-      playerDeck = enrichDeckWithNFTLevels(playerDeck, hiveCollection);
-    }
-  } catch { /* HiveDataLayer not loaded yet */ }
+
+  // Apply NFT card levels from collection when provided. Caller is
+  // responsible for sourcing the collection — see opts.hiveCollection.
+  if (opts.hiveCollection?.length) {
+    playerDeck = enrichDeckWithNFTLevels(playerDeck, opts.hiveCollection);
+  }
 
   // Create opponent deck (AI always gets max-level cards)
   const opponentClass: HeroClass = 'hunter';
-  const opponentDeck = createClassDeck(opponentClass, 30, cryptoRng);
-  
-  // Create players with initial cards. cryptoIdGen here is the
-  // local-play default; C5 will replace these calls with an idGen
-  // injected as parameter so P2P / replay paths can substitute a
-  // SeededIdGen and converge byte-for-byte across peers.
+  const opponentDeck = createClassDeck(opponentClass, 30, opts.rng);
+
   const { drawnCards: playerInitialCards, remainingDeck: playerRemainingDeck } =
-    drawCards(playerDeck, 3, cryptoIdGen);
+    drawCards(playerDeck, 3, opts.playerIdGen);
 
   const { drawnCards: opponentInitialCards, remainingDeck: opponentRemainingDeck } =
-    drawCards(opponentDeck, 3, cryptoIdGen);
-  
-  // Create player objects
+    drawCards(opponentDeck, 3, opts.opponentIdGen);
+
   const player: Player = {
     id: 'player',
     name: 'Player',
     hand: playerInitialCards,
     battlefield: [],
     deck: playerRemainingDeck,
-    graveyard: [], // Initialize empty graveyard
-    secrets: [], // Initialize empty secrets
-    weapon: undefined, // No weapon equipped initially
-    mana: { 
-      current: 1, 
-      max: 1,
-      overloaded: 0,
-      pendingOverload: 0
-    },
+    graveyard: [],
+    secrets: [],
+    weapon: undefined,
+    mana: { current: 1, max: 1, overloaded: 0, pendingOverload: 0 },
     health: 100,
     maxHealth: 100,
     heroHealth: 100,
-    heroArmor: playerClass === 'warrior' ? 5 : 0, // Warriors start with armor
-    armor: playerClass === 'warrior' ? 5 : 0, // Alternative property for armor
+    heroArmor: playerClass === 'warrior' ? 5 : 0,
+    armor: playerClass === 'warrior' ? 5 : 0,
     heroClass: playerClass,
-    hero: selectedHeroId ? { id: selectedHeroId } as any : undefined,
+    hero: opts.selectedHeroId ? { id: opts.selectedHeroId } as any : undefined,
     heroPower: getDefaultHeroPower(playerClass),
-    cardsPlayedThisTurn: 0, // Initialize cards played counter
-    attacksPerformedThisTurn: 0 // Initialize attacks performed with weapon
+    cardsPlayedThisTurn: 0,
+    attacksPerformedThisTurn: 0,
   };
 
   const opponent: Player = {
@@ -264,41 +317,35 @@ export function initializeGame(selectedDeckId?: string, selectedHeroClass?: Hero
     hand: opponentInitialCards,
     battlefield: [],
     deck: opponentRemainingDeck,
-    graveyard: [], // Initialize empty graveyard
-    secrets: [], // Initialize empty secrets
-    weapon: undefined, // No weapon equipped initially
-    mana: {
-      current: 1,
-      max: 1,
-      overloaded: 0,
-      pendingOverload: 0
-    },
+    graveyard: [],
+    secrets: [],
+    weapon: undefined,
+    mana: { current: 1, max: 1, overloaded: 0, pendingOverload: 0 },
     health: 100,
     maxHealth: 100,
     heroHealth: 100,
-    heroArmor: (opponentClass as string) === 'warrior' ? 5 : 0, // Warriors start with armor
-    armor: (opponentClass as string) === 'warrior' ? 5 : 0, // Alternative property for armor
+    heroArmor: 0,
+    armor: 0,
     heroClass: opponentClass,
     heroPower: getDefaultHeroPower(opponentClass),
-    cardsPlayedThisTurn: 0, // Initialize cards played counter
-    attacksPerformedThisTurn: 0 // Initialize attacks performed with weapon
+    cardsPlayedThisTurn: 0,
+    attacksPerformedThisTurn: 0,
   };
-  
-  // Create initial game state with mulligan phase
+
   return {
     players: { player, opponent },
     currentTurn: 'player',
     turnNumber: 1,
-    gamePhase: 'mulligan', // Start with mulligan phase instead of playing
+    gamePhase: 'mulligan',
     winner: undefined,
     mulligan: {
       active: true,
       playerSelections: {},
       playerReady: false,
-      opponentReady: false
+      opponentReady: false,
     },
-    mulliganCompleted: false, // Mulligan happens once per game
-    gameLog: []
+    mulliganCompleted: false,
+    gameLog: [],
   };
 }
 

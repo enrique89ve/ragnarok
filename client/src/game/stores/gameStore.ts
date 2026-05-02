@@ -4,9 +4,12 @@ import { showStatus } from '../components/ui/GameStatusBanner';
 import { hasKeyword } from '../utils/cards/keywordUtils';
 import {
   initializeGame,
+  initializeGameSeeded,
   processAITurn,
   autoAttackWithAllCards
 } from '../utils/gameUtils';
+import { cryptoRng, cryptoIdGen, createSeededRng, createSeededIdGen } from '../utils/seededRng';
+import type { HiveCardAsset } from '../../data/schemas/HiveTypes';
 import { useMulliganStore } from './mulliganStore';
 import { useDiscoveryStore } from './discoveryStore';
 import { usePokerRewardStore } from './pokerRewardStore';
@@ -82,6 +85,13 @@ interface GameStore {
   
   // Game actions
   initGame: () => void;
+  /**
+   * Initialize gameState deterministically from a P2P matchSeed (commit-reveal
+   * output). Host-only entry point: the host calls this after seed exchange
+   * resolves, then sends the resulting gameState to the client via the `init`
+   * envelope. The client adopts via `setState` directly and never calls this.
+   */
+  initGameWithSeed: (matchSeed: string) => void;
   playCard: (cardId: string, targetId?: string, targetType?: 'minion' | 'hero', insertionIndex?: number, payWithBlood?: boolean) => void;
   /**
    * Apply a command issued by the opponent (P2P host receiving remote peer's envelope).
@@ -128,6 +138,24 @@ let isAITurnProcessing = false;
 
 // Guard: poker reward retries moved to pokerRewardStore.ts
 
+/**
+ * Lazy read of the player's NFT collection from the Hive data store.
+ * Lives behind globalThis to keep the game-engine chunk independent of
+ * the blockchain chunk (HiveDataLayer registers itself at creation time
+ * via `unifiedCombatStore.ts`-style ambient publishing). Returns
+ * `undefined` when the store hasn't been mounted yet — that path is
+ * exercised at module-load and during tests.
+ */
+function readHiveCollection(): HiveCardAsset[] | undefined {
+  try {
+    const hiveStore = (globalThis as Record<string, unknown>).__ragnarokHiveDataStore as
+      { getState: () => { cardCollection?: HiveCardAsset[] } } | undefined;
+    return hiveStore?.getState?.()?.cardCollection;
+  } catch {
+    return undefined;
+  }
+}
+
 // Create store with subscribeWithSelector middleware for precise battlefield monitoring
 export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get) => ({
   gameState: initializeGame(),
@@ -141,20 +169,57 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
   initGame: () => {
     if (autoEndTurnTimer) { clearTimeout(autoEndTurnTimer); autoEndTurnTimer = null; }
     isAttackProcessing = false;
+    isAITurnProcessing = false;
     if (attackWatchdogTimer) { clearTimeout(attackWatchdogTimer); attackWatchdogTimer = null; }
-    // Get selectedDeck and selectedHero from useGame store
+
     const { selectedDeck, selectedHero, selectedHeroId } = useGame.getState();
-    // Convert null to undefined for function compatibility
-    const deckId = selectedDeck === null ? undefined : selectedDeck;
-    const hero = selectedHero === null ? undefined : selectedHero;
-    const heroId = selectedHeroId === null ? undefined : selectedHeroId;
+    const hiveCollection = readHiveCollection();
 
     set({
-      gameState: initializeGame(deckId, hero, heroId),
+      gameState: initializeGameSeeded({
+        rng: cryptoRng,
+        playerIdGen: cryptoIdGen,
+        opponentIdGen: cryptoIdGen,
+        selectedDeckId: selectedDeck ?? undefined,
+        selectedHeroClass: selectedHero ?? undefined,
+        selectedHeroId: selectedHeroId ?? undefined,
+        hiveCollection,
+      }),
       selectedCard: null,
       hoveredCard: null,
       attackingCard: null,
-      heroTargetMode: false
+      heroTargetMode: false,
+    });
+  },
+
+  initGameWithSeed: (matchSeed: string) => {
+    if (autoEndTurnTimer) { clearTimeout(autoEndTurnTimer); autoEndTurnTimer = null; }
+    isAttackProcessing = false;
+    isAITurnProcessing = false;
+    if (attackWatchdogTimer) { clearTimeout(attackWatchdogTimer); attackWatchdogTimer = null; }
+
+    const { selectedDeck, selectedHero, selectedHeroId } = useGame.getState();
+    const hiveCollection = readHiveCollection();
+
+    const rng = createSeededRng(matchSeed);
+    const playerIdGen = createSeededIdGen(matchSeed, 'p1');
+    const opponentIdGen = createSeededIdGen(matchSeed, 'p2');
+
+    set({
+      matchSeed,
+      gameState: initializeGameSeeded({
+        rng,
+        playerIdGen,
+        opponentIdGen,
+        selectedDeckId: selectedDeck ?? undefined,
+        selectedHeroClass: selectedHero ?? undefined,
+        selectedHeroId: selectedHeroId ?? undefined,
+        hiveCollection,
+      }),
+      selectedCard: null,
+      hoveredCard: null,
+      attackingCard: null,
+      heroTargetMode: false,
     });
   },
 
