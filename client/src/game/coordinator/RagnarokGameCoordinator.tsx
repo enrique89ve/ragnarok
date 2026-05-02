@@ -17,6 +17,7 @@ import { useGameFlowStore } from '../stores/gameFlowStore';
 import type { CombatHandoff } from '../flow/round/types';
 import { debug } from '../config/debugConfig';
 import { useWarbandStore, selectArmy, selectDeckCardIds } from '../../lib/stores/useWarbandStore';
+import { usePeerStore } from '../stores/peerStore';
 import { useCraftingStore } from '../crafting/craftingStore';
 import { resolveHeroPortrait } from '../utils/art/artMapping';
 import { useCampaignGameBootstrap } from './hooks/useCampaignGameBootstrap';
@@ -84,6 +85,11 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ onGam
   const hasCinematic = isCampaign && !!campaignData?.chapter?.cinematicIntro && !cinematicAlreadySeen;
   const warbandArmy = useWarbandStore(selectArmy);
   const warbandDeck = useWarbandStore(selectDeckCardIds);
+  // TD-19: in P2P mode, the host's `init` message (post seed-exchange) is the
+  // authoritative source of board state. Local `initializeBoard` calls would
+  // race against — and on the client overwrite — that authoritative state.
+  // Gate every mount-time `initializeBoard` on this flag.
+  const isP2PConnected = usePeerStore(s => s.connectionState === 'connected');
   const effectiveInitialArmy: ArmySelectionType | null = initialArmy ?? warbandArmy;
   /*
     Round-level FSM (G4). The single source of truth for which phase
@@ -158,13 +164,18 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ onGam
   const visualRealm = useMemo(() => resolveVisualRealm(missionRealm), [missionRealm]);
   const realmDisplayName = getRealmDisplayName(visualRealm);
 
-  // Initialize board if initialArmy is provided
+  // Initialize board if initialArmy is provided.
+  // P2P mode: skip — the host's authoritative `init` message owns the state.
   useEffect(() => {
+    if (isP2PConnected) {
+      if (initialArmy && !playerArmy) setPlayerArmy(initialArmy);
+      return;
+    }
     if (initialArmy && !playerArmy) {
       setPlayerArmy(initialArmy);
       initializeBoard(initialArmy, opponentArmy);
     }
-  }, [initialArmy, opponentArmy, initializeBoard, playerArmy]);
+  }, [initialArmy, opponentArmy, initializeBoard, playerArmy, isP2PConnected]);
 
   // Bootstrap from warband store when arriving via /warband flow.
   // Idempotent via ref so the board is initialized exactly once per mount.
@@ -173,13 +184,14 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ onGam
     if (bootstrappedFromWarbandRef.current) return;
     if (initialArmy || isCampaign) return;
     if (!warbandArmy) return;
+    if (isP2PConnected) return;
     bootstrappedFromWarbandRef.current = true;
     initializeBoard(warbandArmy, opponentArmy);
     if (warbandDeck.length > 0) {
       setSharedDeck([...warbandDeck]);
     }
     playSoundEffect('game_start');
-  }, [warbandArmy, warbandDeck, isCampaign, initialArmy, opponentArmy, initializeBoard, setSharedDeck, playSoundEffect]);
+  }, [warbandArmy, warbandDeck, isCampaign, initialArmy, opponentArmy, initializeBoard, setSharedDeck, playSoundEffect, isP2PConnected]);
 
   useCampaignGameBootstrap({
     isCampaign,
