@@ -13,6 +13,7 @@ import { ToastProvider } from '../../../components/ui-norse';
 import { P2PStatusBadge } from './P2PStatusBadge';
 import { resolveHeroPortrait } from '../../utils/art/artMapping';
 import { P2PProvider } from '../../context/P2PContext';
+import { computeP2PRenderGuard } from './multiplayerRenderGuard';
 
 /*
   PvPVSScreen — 3-second dramatic splash showing "Player vs Opponent"
@@ -97,6 +98,7 @@ export const MultiplayerGame: React.FC = () => {
 	const navigate = useNavigate();
 	const { status: matchmakingStatus, roomId, joinQueue, leaveQueue } = useMatchmaking();
 	const opponentArmyFromPeer = usePeerStore(s => s.opponentArmy);
+	const p2pInitApplied = usePeerStore(s => s.p2pInitApplied);
 
 	// VS screen is now triggered ONLY when the lobby calls `onGameStart` (after its
 	// own connection-confirmation delay). The previous flow auto-fired VS the instant
@@ -190,16 +192,22 @@ export const MultiplayerGame: React.FC = () => {
 
 		// Multiplayer game UI: pass the opponent army announced via P2P so the
 		// coordinator renders real hero portraits instead of the default fallback.
-		// If the announcement hasn't arrived yet (e.g., the opponent's `useP2PSync`
-		// effect hasn't fired), show a brief "Syncing armies…" indicator rather
-		// than booting the board with placeholder data that would later need to
-		// be re-initialized.
-		if (!opponentArmyFromPeer) {
+		// Two gates here:
+		//   1. opponentArmyFromPeer: the opponent's army announcement arrived.
+		//   2. p2pInitApplied: the host's `init` envelope has been applied
+		//      locally (host: after initGameWithSeed; client: after the case
+		//      'init' handler ran setState). Until both are true the
+		//      coordinator stays unmounted so user input cannot reach an empty
+		//      / stale gameState. The P2PProvider wrapping all of renderInner
+		//      keeps useP2PSync mounted behind the spinner so the init
+		//      envelope is still received.
+		const guard = computeP2PRenderGuard({ opponentArmyFromPeer, p2pInitApplied });
+		if (guard.kind === 'wait') {
 			return (
 				<div className="flex items-center justify-center min-h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
 					<div className="text-center space-y-3">
 						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-(--gold-400) mx-auto" />
-						<p className="text-sm text-(--ink-300)">Syncing opponent army…</p>
+						<p className="text-sm text-(--ink-300)">{guard.reason}</p>
 					</div>
 				</div>
 			);

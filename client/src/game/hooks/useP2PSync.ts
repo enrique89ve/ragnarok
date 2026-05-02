@@ -10,7 +10,6 @@ import { sha256Hash } from '../../data/blockchain/hashUtils';
 import { verifyDeck as verifyDeckOnServer } from '../../data/chainAPI';
 import { getNFTBridge } from '../nft';
 import type { PackagedMatchResult } from '../../data/blockchain/types';
-import { createSeededRng, seededShuffle } from '../utils/seededRng';
 import { startNewTranscript, getActiveTranscript, clearTranscript, recordSessionEvent, exportSessionLog } from '../../data/blockchain/transcriptBuilder';
 import type { GameMove } from '../../data/blockchain/signedMove';
 import { getWasmHash, loadWasmEngine } from '../engine/wasmLoader';
@@ -467,18 +466,12 @@ export function useP2PSync() {
 					}
 
 					if (isHost) {
-						const rng = createSeededRng(matchSeed);
-						const gs = useGameStore.getState().gameState;
-						if (gs) {
-							const reshuffled = {
-								...gs,
-								players: {
-									player: { ...gs.players.player, deck: seededShuffle(gs.players.player.deck, rng) },
-									opponent: { ...gs.players.opponent, deck: seededShuffle(gs.players.opponent.deck, rng) },
-								},
-							};
-							useGameStore.setState({ gameState: reshuffled });
-						}
+						// Build the host's authoritative gameState deterministically
+						// from matchSeed. Replaces the prior "reshuffle decks of the
+						// module-load random state" path, which left hands and
+						// instanceIds non-deterministic.
+						useGameStore.getState().initGameWithSeed(matchSeed);
+						usePeerStore.getState().setP2pInitApplied(true);
 
 						initSentRef.current = true;
 						const updatedState = useGameStore.getState().gameState;
@@ -492,6 +485,7 @@ export function useP2PSync() {
 				case 'init':
 					if (!isHost) {
 						useGameStore.setState({ gameState: flipGameState(data.gameState) });
+						usePeerStore.getState().setP2pInitApplied(true);
 					}
 					break;
 

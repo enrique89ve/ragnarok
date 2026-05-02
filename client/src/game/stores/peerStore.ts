@@ -91,6 +91,23 @@ export interface PeerStore {
 	reconnectCountdown: number;
 	bufferedMessageCount: number;
 	opponentArmy: ArmySelection | null;
+	/**
+	 * True once the P2P `init` envelope has been applied locally —
+	 * - host: set after `initGameWithSeed` populates gameState and the
+	 *   init message is sent.
+	 * - client: set inside `case 'init'` after `setState` adopts the
+	 *   host's gameState (flipped).
+	 *
+	 * Reset to false only on hard `disconnect()`; reconnect inside the
+	 * grace period is implicitly handled by the host re-emitting `init`,
+	 * which re-runs the case 'init' handler and re-sets the flag.
+	 *
+	 * Used by `MultiplayerGame.tsx` to gate render of the in-game
+	 * coordinator. Without this gate the coordinator could mount with an
+	 * empty (post-C5) or stale gameState before the host's authoritative
+	 * state arrives, causing TD-15 payload-existence rejections.
+	 */
+	p2pInitApplied: boolean;
 
 	setMyPeerId: (id: string | null) => void;
 	setRemotePeerId: (id: string | null) => void;
@@ -100,6 +117,7 @@ export interface PeerStore {
 	setIsHost: (isHost: boolean) => void;
 	setError: (error: string | null) => void;
 	setOpponentArmy: (army: ArmySelection | null) => void;
+	setP2pInitApplied: (applied: boolean) => void;
 
 	/** Generate a peerId for matchmaking without opening a transport yet.
 	 *  Used by Quick Match — the room id is unknown until matchmaking pairs us. */
@@ -339,6 +357,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 	reconnectCountdown: 0,
 	bufferedMessageCount: 0,
 	opponentArmy: null,
+	p2pInitApplied: false,
 
 	setMyPeerId: (id) => set({ myPeerId: id }),
 	setRemotePeerId: (id) => set({ remotePeerId: id }),
@@ -348,6 +367,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 	setIsHost: (isHost) => set({ isHost }),
 	setError: (error) => set({ error }),
 	setOpponentArmy: (army) => set({ opponentArmy: army }),
+	setP2pInitApplied: (applied) => set({ p2pInitApplied: applied }),
 
 	handleHeartbeat: () => {
 		lastHeartbeatReceived = Date.now();
@@ -445,6 +465,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			connectionState: 'disconnected', isHost: false, error: null,
 			reconnectCountdown: 0, bufferedMessageCount: 0,
 			opponentArmy: null,
+			p2pInitApplied: false,
 		});
 	},
 
