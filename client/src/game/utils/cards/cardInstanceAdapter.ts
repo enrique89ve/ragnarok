@@ -59,6 +59,7 @@ export function adaptCardInstance(
         id: 0,
         name: "Invalid Card",
         type: "minion",
+        rarity: 'common',
         manaCost: 0,
         collectible: false
       };

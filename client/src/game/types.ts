@@ -106,7 +106,7 @@ export interface BaseCardData {
   description?: string;
   flavorText?: string;
   type: CardType;
-  rarity?: CardRarity;
+  rarity: CardRarity;
   /**
    * Stamped at the registry boundary by `validateCardRegistry`. Optional on
    * the interface because runtime-spawned cards (battlecry summons, hero
@@ -228,7 +228,7 @@ export interface ChooseOneOption {
   spellEffect?: SpellEffect;
   manaCost?: number;
   type?: string;
-  rarity?: string;
+  rarity?: CardRarity;
   class?: string;
   heroClass?: string;
   collectible?: boolean;
@@ -524,6 +524,13 @@ export type CardData =
   | PokerSpellCardData
   | ArtifactCardData
   | ArmorCardData;
+
+/**
+ * Raw card input shape accepted at the trust boundary.
+ * `rarity` is `string` so non-canonical values are valid at ingestion;
+ * `cardDatabase.initialize` normalises every entry via `adaptRarity`.
+ */
+export type RawCardData = Omit<CardData, 'rarity'> & { rarity: string };
 
 /**
  * Type for card transform objects that should not be treated as cards

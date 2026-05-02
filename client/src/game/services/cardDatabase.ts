@@ -5,8 +5,9 @@
  * This implementation supports optimized card lookup, filtering, and dynamic card generation.
  */
 
-import { CardData } from '../types';
+import { CardData, RawCardData } from '../types';
 import { debug } from '../config/debugConfig';
+import { adaptRarity } from '@shared/schemas/rarity';
 
 // Advanced card data store with optimized lookup via multiple indices
 class CardDatabaseService {
@@ -27,27 +28,37 @@ class CardDatabaseService {
   }
 
   /**
-   * Initialize the card database with a set of cards
-   * Validates cards during initialization to prevent invalid objects
-   * @param cards Array of card data to populate the database
+   * Initialize the card database with a set of raw cards.
+   * Normalises every `rarity` value via `adaptRarity` so that all stored
+   * cards carry a canonical `Rarity`; throws if any card has an unknown value.
+   * @param rawCards Array of raw card data to populate the database
    */
-  public initialize(cards: CardData[]): void {
+  public initialize(rawCards: RawCardData[]): void {
     if (this.isInitialized()) {
-      debug.warn('Card database already initialized.');
-      return;
+      debug.warn('Card database already initialized.')
+      return
     }
 
-    // Initialize without external validation to avoid circular dependencies
-    debug.log(`Initializing ${cards.length} cards into database...`);
-    
-    // Store the cards directly
-    this.cards = [...cards];
-    
-    // Build optimized lookup tables
-    this.buildLookupIndices();
-    
-    debug.log(`Card database initialized with ${this.cards.length} cards.`);
-    this.initialized = true;
+    debug.log(`Initializing ${rawCards.length} cards into database...`)
+
+    const errors: string[] = []
+    const validated: CardData[] = []
+    for (let i = 0; i < rawCards.length; i++) {
+      const raw = rawCards[i]
+      try {
+        validated.push({ ...raw, rarity: adaptRarity(raw.rarity) } as CardData)
+      } catch (e) {
+        errors.push(`card[${i}] id=${raw.id} name="${raw.name}" rarity=${JSON.stringify(raw.rarity)}: ${(e as Error).message}`)
+      }
+    }
+    if (errors.length > 0) {
+      throw new RangeError(`cardDatabase.initialize: ${errors.length} card(s) with non-canonical rarity:\n${errors.join('\n')}`)
+    }
+
+    this.cards = validated
+    this.buildLookupIndices()
+    debug.log(`Card database initialized with ${this.cards.length} cards.`)
+    this.initialized = true
   }
 
   /**
@@ -475,8 +486,8 @@ class CardDatabaseService {
       }
     ];
     
-    // Register our demo data
-    this.initialize(demoCards);
+    // Register our demo data — CardData.rarity is already canonical so the cast is sound
+    this.initialize(demoCards as unknown as RawCardData[]);
   }
 }
 
