@@ -134,20 +134,64 @@ export const EffectSchema = z.object({
 
 export type Effect = z.infer<typeof EffectSchema>;
 
+// ── Legacy type aliases ────────────────────────────────────────────────────
+//
+// Historical synonyms used by older card definitions that map 1-to-1 to a
+// canonical pattern WITHOUT field translation. Only safe-by-construction
+// renames go here — anything that requires shifting fields (e.g.
+// `heal_hero` → `heal` + `targetType: 'hero'`) is NOT a simple alias and
+// belongs to a future per-pattern migration.
+//
+// Why aliases live in the canon (and not in the exporter): the alias must
+// be applied identically on every node that hashes / verifies effects —
+// otherwise two clients with different mappings would diverge under the
+// P2P symmetric-replay model. Centralising here gives a single source of
+// truth that the exporter, the registry hash, and any future indexer all
+// consume.
+//
+// Audit baseline (2026-05-02): registry has 2429 cards, 1289 effects, 809
+// pre-alias failures. These three aliases recover 26 effects — small but
+// proven correct. The remaining ~780 are distinct mechanics, not synonyms.
+
+export const LEGACY_TYPE_ALIASES: Readonly<Record<string, EffectPattern>> = {
+	deal_damage: 'damage',
+	damage_all_enemies: 'damage_all',
+	damage_random: 'random_damage',
+};
+
+/** Returns the canonical EffectPattern for a legacy type string, or the
+ * input unchanged when no alias applies. Pure; safe to call repeatedly. */
+export function canonicalizeEffectType(rawType: string): string {
+	const alias = LEGACY_TYPE_ALIASES[rawType];
+	return alias ?? rawType;
+}
+
 // ── Result-style parser ────────────────────────────────────────────────────
 //
 // Returns a discriminated result rather than throwing, so call sites in the
 // boot path can aggregate errors across the registry instead of crashing on
-// the first malformed card.
+// the first malformed card. Applies legacy aliases before validation so a
+// rename never looks like a failure.
 
 export type EffectParseResult =
 	| { ok: true; effect: Effect }
 	| { ok: false; reason: string };
 
 export function parseEffect(input: unknown): EffectParseResult {
-	const parsed = EffectSchema.safeParse(input);
+	const candidate = applyLegacyAlias(input);
+	const parsed = EffectSchema.safeParse(candidate);
 	if (parsed.success) return { ok: true, effect: parsed.data };
 	const firstIssue = parsed.error.issues[0];
 	const path = firstIssue.path.length === 0 ? '<root>' : firstIssue.path.join('.');
 	return { ok: false, reason: `${path}: ${firstIssue.message}` };
+}
+
+function applyLegacyAlias(input: unknown): unknown {
+	if (!input || typeof input !== 'object') return input;
+	const obj = input as Record<string, unknown>;
+	const rawType = obj.type;
+	if (typeof rawType !== 'string') return input;
+	const canonical = canonicalizeEffectType(rawType);
+	if (canonical === rawType) return input;
+	return { ...obj, type: canonical };
 }
