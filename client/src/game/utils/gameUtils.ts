@@ -63,7 +63,7 @@ import { applyLifestealHealing } from './mechanics/lifestealUtils';
 import { recalculateAuras } from './mechanics/auraUtils';
 import { processSpellburst } from './mechanics/spellburstUtils';
 import { GameEventBus } from '@/core/events/GameEventBus';
-import { cryptoIdGen } from './seededRng';
+import { cryptoIdGen, cryptoRng } from './seededRng';
 
 function attemptPetEvolution(
   state: GameState,
@@ -196,14 +196,14 @@ export function initializeGame(selectedDeckId?: string, selectedHeroClass?: Hero
       playerClass = selectedHeroClass;
     } else {
       // Fallback to random deck if saved deck not found
-      playerDeck = createStartingDeck(30);
+      playerDeck = createStartingDeck(30, cryptoRng);
       playerClass = selectedHeroClass;
       debug.warn(`Selected deck not found. Using random deck.`);
     }
   } else {
     // Fallback to random class deck with no test cards
     playerClass = 'mage';
-    playerDeck = createClassDeck(playerClass, 30);
+    playerDeck = createClassDeck(playerClass, 30, cryptoRng);
   }
   
   // Apply NFT card levels from collection (lower-level NFTs get weaker stats)
@@ -218,7 +218,7 @@ export function initializeGame(selectedDeckId?: string, selectedHeroClass?: Hero
 
   // Create opponent deck (AI always gets max-level cards)
   const opponentClass: HeroClass = 'hunter';
-  const opponentDeck = createClassDeck(opponentClass, 30);
+  const opponentDeck = createClassDeck(opponentClass, 30, cryptoRng);
   
   // Create players with initial cards. cryptoIdGen here is the
   // local-play default; C5 will replace these calls with an idGen

@@ -1,6 +1,7 @@
 import { CardData, CardInstance } from '../../types';
 import type { NineRealm } from '../../types/NorseTypes';
 import allCards, { getCardById } from '../../data/allCards';
+import { seededShuffle } from '../seededRng';
 import { initializeSpellPower } from '../spells/spellPowerUtils';
 import { initializePoisonousEffect } from '../mechanics/poisonousUtils';
 import { initializeLifestealEffect } from '../mechanics/lifestealUtils';
@@ -120,79 +121,74 @@ export function getRandomCards(count: number): CardData[] {
 }
 
 /**
- * Create a starting deck of cards for testing
- * Ensures a mix of cards including special cards for testing various mechanics
+ * Create a starting deck for testing — a curated mix of mechanic
+ * archetypes (deathrattle, AoE battlecry, taunt, overload, mana, frenzy,
+ * colossal, naga) padded out with a random selection of the remaining
+ * pool. `rng` decides every shuffle. Pass `cryptoRng` for local-play /
+ * AI / dev paths and a `SeededRng` for P2P / replay paths.
  */
-export function createStartingDeck(size: number = 20): CardData[] {
+export function createStartingDeck(size: number, rng: () => number): CardData[] {
   // First, get all deathrattle cards
-  const deathrattleCards = allCards.filter((card: CardData) => 
+  const deathrattleCards = allCards.filter((card: CardData) =>
     card.keywords?.includes('deathrattle') || false
   );
-  
+
   // Make sure we include at least some deathrattle cards
   const numDeathrattleCards = Math.min(3, deathrattleCards.length);
-  const selectedDeathrattleCards = deathrattleCards
-    .sort(() => 0.5 - Math.random())
-    .slice(0, numDeathrattleCards);
-  
+  const selectedDeathrattleCards = seededShuffle(deathrattleCards, rng).slice(0, numDeathrattleCards);
+
   // Get cards with complex battlecries for testing (AoE damage)
-  const aoeBattlecryCards = allCards.filter((card: CardData) => 
+  const aoeBattlecryCards = allCards.filter((card: CardData) =>
     (card as any).battlecry?.type === 'aoe_damage'
   );
-  
+
   // Make sure we include the AoE battlecry cards
   const numAoECards = Math.min(2, aoeBattlecryCards.length);
   const selectedAoECards = aoeBattlecryCards.slice(0, numAoECards);
-  
+
   // Get some taunt cards for testing
-  const tauntCards = allCards.filter((card: CardData) => 
+  const tauntCards = allCards.filter((card: CardData) =>
     card.keywords?.includes('taunt') || false
   );
-  
+
   const numTauntCards = Math.min(3, tauntCards.length);
-  const selectedTauntCards = tauntCards
-    .sort(() => 0.5 - Math.random())
-    .slice(0, numTauntCards);
-    
+  const selectedTauntCards = seededShuffle(tauntCards, rng).slice(0, numTauntCards);
+
   // Get overload cards for testing
-  const overloadCards = allCards.filter((card: CardData) => 
+  const overloadCards = allCards.filter((card: CardData) =>
     card.keywords?.includes('overload') || false
   );
-  
+
   // Make sure we include several overload cards for testing
   const numOverloadCards = Math.min(4, overloadCards.length);
   const selectedOverloadCards = overloadCards.slice(0, numOverloadCards);
-  
+
   // Get mana manipulation cards for testing (The Coin and Innervate)
   // Use allCards (1300+ cards) instead of tiny spellCards database
-  const manaCards = allCards.filter(card => 
+  const manaCards = allCards.filter(card =>
     card.type === 'spell' && card.spellEffect?.type === 'mana_crystal'
   );
-  
+
   // Make sure we include these mana cards for testing
   const numManaCards = Math.min(2, manaCards.length);
   const selectedManaCards = manaCards.slice(0, numManaCards);
-  
+
   // Get frenzy cards for testing
-  const frenzyCards = allCards.filter((card: CardData) => 
+  const frenzyCards = allCards.filter((card: CardData) =>
     card.keywords?.includes('frenzy') || false
   );
-  
+
   // Make sure we include some frenzy cards
   const numFrenzyCards = Math.min(2, frenzyCards.length);
-  const selectedFrenzyCards = frenzyCards
-    .sort(() => 0.5 - Math.random())
-    .slice(0, numFrenzyCards);
-  
+  const selectedFrenzyCards = seededShuffle(frenzyCards, rng).slice(0, numFrenzyCards);
+
   // Get colossal minions for testing
   const colossalCards = allCards.filter((card: CardData) =>
     card.keywords?.includes('colossal') || false
   );
   const numColossalCards = Math.min(2, colossalCards.length);
-  const selectedColossalCards = colossalCards
-    .sort(() => 0.5 - Math.random())
-    .slice(0, numColossalCards);
-  
+  const selectedColossalCards = seededShuffle(colossalCards, rng).slice(0, numColossalCards);
+
   // Get Naga cards for testing Giga-Fin's battlecry
   const nagaCards = allCards.filter((card: CardData) => {
     const cardAny = card as any;
@@ -202,69 +198,72 @@ export function createStartingDeck(size: number = 20): CardData[] {
 
   // Make sure we include enough Naga cards
   const numNagaCards = Math.min(4, nagaCards.length);
-  const selectedNagaCards = nagaCards
-    .sort(() => 0.5 - Math.random())
-    .slice(0, numNagaCards);
-  
+  const selectedNagaCards = seededShuffle(nagaCards, rng).slice(0, numNagaCards);
+
   // Get random cards for the rest of the deck
   const specialCardIds = [
-    ...selectedDeathrattleCards, 
-    ...selectedAoECards, 
+    ...selectedDeathrattleCards,
+    ...selectedAoECards,
     ...selectedTauntCards,
     ...selectedOverloadCards,
     ...selectedManaCards,
     ...selectedFrenzyCards,
     ...selectedColossalCards,
-    ...selectedNagaCards
-  ].map(card => card.id);
-  
-  const remainingCards = allCards
-    .filter((card: CardData) => !specialCardIds.includes(card.id))
-    .sort(() => 0.5 - Math.random())
-    .slice(0, size - numDeathrattleCards - numAoECards - numTauntCards - numOverloadCards - numManaCards - numFrenzyCards - numColossalCards - numNagaCards);
-  
-  // Combine and shuffle the deck
-  return [
-    ...selectedDeathrattleCards, 
-    ...selectedAoECards, 
-    ...selectedTauntCards, 
-    ...selectedOverloadCards,
-    ...selectedManaCards,
-    ...selectedFrenzyCards,
-    ...selectedColossalCards,
     ...selectedNagaCards,
-    ...remainingCards
-  ].sort(() => 0.5 - Math.random());
+  ].map(card => card.id);
+
+  const remainingCards = seededShuffle(
+    allCards.filter((card: CardData) => !specialCardIds.includes(card.id)),
+    rng,
+  ).slice(0, size - numDeathrattleCards - numAoECards - numTauntCards - numOverloadCards - numManaCards - numFrenzyCards - numColossalCards - numNagaCards);
+
+  // Combine and shuffle the deck
+  return seededShuffle(
+    [
+      ...selectedDeathrattleCards,
+      ...selectedAoECards,
+      ...selectedTauntCards,
+      ...selectedOverloadCards,
+      ...selectedManaCards,
+      ...selectedFrenzyCards,
+      ...selectedColossalCards,
+      ...selectedNagaCards,
+      ...remainingCards,
+    ],
+    rng,
+  );
 }
 
 /**
- * Create a random deck for a specific class without test cards
- * @param heroClass - The hero class for the deck
- * @param size - The number of cards in the deck
+ * Build a random deck for a specific class, with neutral cards mixed in.
+ * Falls back to a wider collectible pool when the class subset is too
+ * small. `rng` controls the selection: pass `cryptoRng` for local-play /
+ * AI / dev paths and a `SeededRng` for P2P / replay paths so both peers
+ * land on the same selection.
  */
-export function createClassDeck(heroClass: string, size: number = 30): CardData[] {
+export function createClassDeck(heroClass: string, size: number, rng: () => number): CardData[] {
   // Filter out undefined cards first
   const validCards = allCards.filter(card => card !== undefined && card !== null);
-  
+
   // Filter cards for the specific class and neutral cards
   const classCards = validCards.filter((card: CardData) => {
     try {
       // Extract the card class safely
       let cardClass = '';
-      
+
       // Check the class property
       if (typeof card.class === 'string') {
         cardClass = card.class;
-      } 
+      }
       // Check heroClass property if class isn't available
       else if (typeof card.heroClass === 'string') {
         cardClass = card.heroClass;
       }
-      
+
       // Check if the card belongs to the specified class or is neutral
-      const matchesClass = cardClass.toLowerCase() === heroClass.toLowerCase() || 
+      const matchesClass = cardClass.toLowerCase() === heroClass.toLowerCase() ||
                            cardClass.toLowerCase() === 'neutral';
-      
+
       // Only include collectible cards
       return matchesClass && card.collectible !== false;
     } catch (error) {
@@ -273,20 +272,15 @@ export function createClassDeck(heroClass: string, size: number = 30): CardData[
       return false;
     }
   });
-  
+
   // If we don't have enough class cards, mix in some generic cards
   if (classCards.length < size) {
-    // Just get random cards from all collectible cards
     const allCollectibleCards = allCards.filter(card => card && card.collectible !== false);
-    return allCollectibleCards
-      .sort(() => 0.5 - Math.random())
-      .slice(0, size);
+    return seededShuffle(allCollectibleCards, rng).slice(0, size);
   }
-  
+
   // Randomly select cards for the deck
-  return classCards
-    .sort(() => 0.5 - Math.random())
-    .slice(0, size);
+  return seededShuffle(classCards, rng).slice(0, size);
 }
 
 /**
