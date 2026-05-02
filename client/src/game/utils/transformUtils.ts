@@ -4,6 +4,7 @@ import { findCardInstance, createCardInstance } from './cards/cardUtils';
 import { isMinion, getHealth } from './cards/typeGuards';
 import allCards, { getCardById } from '../data/allCards';
 import { debug } from '../config/debugConfig';
+import { cryptoIdGen } from './seededRng';
 
 /**
  * Transform a minion into another minion
@@ -42,7 +43,7 @@ export function transformMinion(
   }
   
   // Create a new instance of the target card using our card creation utility
-  const newCardInstance = createCardInstance(transformToCard);
+  const newCardInstance = createCardInstance(transformToCard, cryptoIdGen);
   
   // Mark it as already played and on the battlefield
   newCardInstance.isPlayed = true;

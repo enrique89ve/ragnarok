@@ -2,6 +2,7 @@ import { GameState, CardData, CardInstance } from '../types';
 import { debug } from '../config/debugConfig';
 import { createCardInstance } from './cards/cardUtils';
 import { MAX_HAND_SIZE } from '../constants/gameConstants';
+import { cryptoIdGen } from './seededRng';
 
 /**
  * Draw a card from a player's deck to their hand
@@ -25,7 +26,7 @@ export function drawCardFromDeck(
   const cardData = player.deck[0];
   player.deck.splice(0, 1);
 
-  const cardInstance = createCardInstance(cardData);
+  const cardInstance = createCardInstance(cardData, cryptoIdGen);
 
   player.hand.push(cardInstance);
   

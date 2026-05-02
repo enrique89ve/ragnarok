@@ -1,7 +1,7 @@
-import { v4 as uuidv4 } from 'uuid';
 import { CardData, CardInstance } from '../../types';
 import type { NineRealm } from '../../types/NorseTypes';
 import allCards, { getCardById } from '../../data/allCards';
+import { cryptoIdGen } from '../seededRng';
 import { initializeSpellPower } from '../spells/spellPowerUtils';
 import { initializePoisonousEffect } from '../mechanics/poisonousUtils';
 import { initializeLifestealEffect } from '../mechanics/lifestealUtils';
@@ -14,9 +14,15 @@ import { debug } from '../../config/debugConfig';
 import { getCardAtLevel, type EvolutionLevel } from './cardLevelScaling';
 
 /**
- * Creates a new card instance from card data
+ * Creates a new card instance from card data.
+ *
+ * `idGen` is mandatory — there is no implicit `uuidv4`. P2P paths pass a
+ * `SeededIdGen` derived from `matchSeed`; local-play / AI / mid-match
+ * paths pass `cryptoIdGen` (or any other `() => string`). This keeps the
+ * function pure with respect to its parameters and makes the dependency
+ * on randomness explicit at the type level.
  */
-export function createCardInstance(card: CardData, evolutionLevel?: EvolutionLevel): CardInstance {
+export function createCardInstance(card: CardData, idGen: () => string, evolutionLevel?: EvolutionLevel): CardInstance {
   const level = evolutionLevel ?? (card as any)._evolutionLevel ?? 3;
   const scaledCard = level !== 3 ? getCardAtLevel(card, level) : card;
 
@@ -24,10 +30,10 @@ export function createCardInstance(card: CardData, evolutionLevel?: EvolutionLev
   const hasCharge = scaledCard.keywords?.includes('charge') || false;
 
   const cardHealth = 'health' in scaledCard ? (scaledCard as any).health : 0;
-  
+
   // Create the basic card instance
   const cardInstance: CardInstance = {
-    instanceId: uuidv4(),
+    instanceId: idGen(),
     card: scaledCard,
     currentHealth: cardHealth,
     canAttack: false,
@@ -293,7 +299,7 @@ export function drawCards(deck: CardData[], count: number): {
   const remainingDeck = deck.slice(actualDrawCount);
   
   // Convert card data to card instances
-  const drawnCards = drawnCardData.map(c => createCardInstance(c));
+  const drawnCards = drawnCardData.map(c => createCardInstance(c, cryptoIdGen));
   
   return {
     drawnCards,

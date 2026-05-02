@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { CardData, DiscoveryState, CardType, CardRarity, HeroClass } from '../types';
 import SimpleCard, { SimpleCardData } from './SimpleCard';
 import { createCardInstance } from '../utils/cards/cardUtils';
@@ -6,6 +6,7 @@ import { filterCards } from '../utils/discoveryUtils';
 import { useAudio } from '../../lib/stores/useAudio';
 import { debug } from '../config/debugConfig';
 import { isMinion, isWeapon, getAttack, getHealth } from '../utils/cards/typeGuards';
+import { cryptoIdGen } from '../utils/seededRng';
 
 interface DiscoveryModalProps {
   discoveryState: DiscoveryState;
@@ -18,41 +19,49 @@ export const DiscoveryModal: React.FC<DiscoveryModalProps> = ({
 }) => {
   const { playSoundEffect } = useAudio();
   const [selectedCard, setSelectedCard] = useState<CardData | null>(null);
-  
-  debug.log('[DiscoveryModal] Rendering with discoveryState:', discoveryState);
-  debug.log('[DiscoveryModal] active:', discoveryState?.active, 'options:', discoveryState?.options?.length);
-  
-  // Guard against invalid discovery state - handle case where game is over
-  // but discovery UI is attempting to render
-  if (!discoveryState || !discoveryState.options || !discoveryState.active) {
-    debug.error("DiscoveryModal: Invalid discovery state provided", discoveryState);
-    // Auto-close the modal to avoid freezing the UI
-    setTimeout(() => onCardSelect(null), 100);
-    return null;
-  }
-  
-  debug.log('[DiscoveryModal] Valid discovery state, rendering', discoveryState.options.length, 'options');
-  
-  // Initialize filters from discovery state
+
+  // All hooks declared before any early-return so the call order stays
+  // stable across renders (react-hooks/rules-of-hooks).
   const [cardType, setCardType] = useState<CardType | 'any'>(
-    discoveryState.filters?.type || 'any'
+    discoveryState?.filters?.type || 'any'
   );
   const [cardRarity, setCardRarity] = useState<CardRarity | 'any'>(
-    discoveryState.filters?.rarity || 'any'
+    discoveryState?.filters?.rarity || 'any'
   );
   const [manaCost, setManaCost] = useState<number | 'any'>(
-    discoveryState.filters?.manaCost || 'any'
+    discoveryState?.filters?.manaCost || 'any'
   );
-  
+
+  const isValidDiscoveryState = !!discoveryState && !!discoveryState.options && !!discoveryState.active;
+
   const filteredOptions = useMemo(() => {
+    if (!isValidDiscoveryState || !discoveryState) return [];
     if (!discoveryState.allOptions) return discoveryState.options;
     const filtered = filterCards(discoveryState.allOptions, {
       type: cardType,
       rarity: cardRarity,
-      manaCost: manaCost
+      manaCost: manaCost,
     });
     return filtered.length > 0 ? filtered : discoveryState.options;
-  }, [cardType, cardRarity, manaCost, discoveryState.allOptions, discoveryState.options]);
+  }, [cardType, cardRarity, manaCost, discoveryState, isValidDiscoveryState]);
+
+  // Auto-close path moved into an effect so the side-effect is not fired
+  // during render (which the previous early-return + setTimeout did).
+  useEffect(() => {
+    if (isValidDiscoveryState) return undefined;
+    debug.error('DiscoveryModal: Invalid discovery state provided', discoveryState);
+    const t = setTimeout(() => onCardSelect(null), 100);
+    return () => clearTimeout(t);
+  }, [isValidDiscoveryState, discoveryState, onCardSelect]);
+
+  debug.log('[DiscoveryModal] Rendering with discoveryState:', discoveryState);
+  debug.log('[DiscoveryModal] active:', discoveryState?.active, 'options:', discoveryState?.options?.length);
+
+  if (!isValidDiscoveryState || !discoveryState) {
+    return null;
+  }
+
+  debug.log('[DiscoveryModal] Valid discovery state, rendering', discoveryState.options.length, 'options');
   
   const handleCardClick = (card: CardData) => {
     if (selectedCard) return;
@@ -213,7 +222,7 @@ export const DiscoveryModal: React.FC<DiscoveryModalProps> = ({
             const cardInstance = createCardInstance({
               ...card,
               id: card.id
-            });
+            }, cryptoIdGen);
             
             const cardAttack = isMinion(card) || isWeapon(card) ? (card as any).attack : null;
             const cardHealth = isMinion(card) ? (card as any).health : isWeapon(card) ? (card as any).durability : null;

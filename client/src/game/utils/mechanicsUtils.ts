@@ -36,6 +36,7 @@ import { destroyCard } from './zoneUtils';
 import { dealDamage, dealDamageToAllEnemyMinions } from './effects/damageUtils';
 import { addKeyword, hasKeyword } from './cards/keywordUtils';
 import allCards from '../data/allCards';
+import { cryptoIdGen } from './seededRng';
 
 function pickRandom<T>(arr: T[], count: number): T[] {
 	const pool = [...arr];
@@ -145,7 +146,7 @@ export const handleDiscoverSelection = (
   if (newGameState.players[player].hand.length >= MAX_HAND_SIZE) {
     return newGameState;
   }
-  const cardInstance = createCardInstance(selectedCard);
+  const cardInstance = createCardInstance(selectedCard, cryptoIdGen);
   newGameState.players[player].hand.push(cardInstance);
   
   // Reset discovery state
@@ -229,7 +230,7 @@ export const handleTradeable = (
   if (newGameState.players[player].deck.length > 0 && newGameState.players[player].hand.length < MAX_HAND_SIZE) {
     const drawnCard = newGameState.players[player].deck.pop();
     if (drawnCard) {
-      const newCardInstance = createCardInstance(drawnCard);
+      const newCardInstance = createCardInstance(drawnCard, cryptoIdGen);
       newGameState.players[player].hand.push(newCardInstance);
     }
   }
@@ -317,7 +318,7 @@ export const handleInspireEffects = (
           const cardToSummon = { id: inspireEffect.summonCardId } as CardData;
           
           // Create a new minion instance
-          const summonedMinion = createCardInstance(cardToSummon);
+          const summonedMinion = createCardInstance(cardToSummon, cryptoIdGen);
           
           // Add to battlefield
           if (newGameState.players[player].battlefield.length < MAX_BATTLEFIELD_SIZE) {
@@ -335,7 +336,7 @@ export const handleInspireEffects = (
             if (newGameState.players[player].deck.length > 0 && newGameState.players[player].hand.length < MAX_HAND_SIZE) {
               const drawnCard = newGameState.players[player].deck.pop();
               if (drawnCard) {
-                const newCardInstance = createCardInstance(drawnCard);
+                const newCardInstance = createCardInstance(drawnCard, cryptoIdGen);
                 newGameState.players[player].hand.push(newCardInstance);
               }
             }
@@ -510,7 +511,7 @@ export const handleSecretTrigger = (
           const cardToSummon = { id: secretEffect.summonCardId } as CardData;
           
           // Create a new minion instance
-          const summonedMinion = createCardInstance(cardToSummon);
+          const summonedMinion = createCardInstance(cardToSummon, cryptoIdGen);
           
           // Add to battlefield
           if (newGameState.players[secretOwner].battlefield.length < MAX_BATTLEFIELD_SIZE) {
@@ -849,7 +850,7 @@ export const handleRecruit = (
     }
     
     // Create a new minion instance
-    const summonedMinion = createCardInstance(recruitedMinion);
+    const summonedMinion = createCardInstance(recruitedMinion, cryptoIdGen);
     
     // Add to battlefield if there's space
     if (newGameState.players[player].battlefield.length < MAX_BATTLEFIELD_SIZE) {

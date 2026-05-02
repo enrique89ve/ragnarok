@@ -3,6 +3,7 @@ import { getHealth } from './cards/typeGuards';
 import { debug } from '../config/debugConfig';
 import { createCardInstance } from './cards/cardUtils';
 import { MAX_HAND_SIZE } from '../constants/gameConstants';
+import { cryptoIdGen } from './seededRng';
 
 /**
  * Draw a card from player's deck and add it to their hand
@@ -23,7 +24,7 @@ export function drawCard(state: GameState, playerType: 'player' | 'opponent'): G
   const drawnCard = player.deck.shift() as CardData;
 
   // Add the card to the player's hand
-  const cardInstance = createCardInstance(drawnCard);
+  const cardInstance = createCardInstance(drawnCard, cryptoIdGen);
 
   player.hand.push(cardInstance);
   
@@ -42,7 +43,7 @@ export function addCardToHand(state: GameState, playerType: 'player' | 'opponent
   }
   
   // Add the card to the player's hand (generated cards → level 3 default)
-  const cardInstance = createCardInstance(cardData);
+  const cardInstance = createCardInstance(cardData, cryptoIdGen);
 
   player.hand.push(cardInstance);
   

@@ -9,6 +9,7 @@ import { dealDamage } from './effects/damageUtils';
 import { MAX_BATTLEFIELD_SIZE, MAX_HAND_SIZE } from '../constants/gameConstants';
 import { addKeyword } from './cards/keywordUtils';
 import { isMinion } from './cards/typeGuards';
+import { cryptoIdGen } from './seededRng';
 
 const MAX_DEATHRATTLE_DEPTH = 10;
 let deathrattleDepth = 0;
@@ -219,7 +220,7 @@ function executeDeathrattleInner(
     case 'resummon': {
       const player = newState.players[playerId];
       if (player.battlefield.length < MAX_BATTLEFIELD_SIZE) {
-        const rebornCopy = createCardInstance(card.card);
+        const rebornCopy = createCardInstance(card.card, cryptoIdGen);
         rebornCopy.currentHealth = (card.card as MinionCardData).health || 1;
         rebornCopy.isSummoningSick = true;
         rebornCopy.canAttack = false;
@@ -278,7 +279,7 @@ function executeDeathrattleInner(
     case 'resummon_self': {
       const player = newState.players[playerId];
       if (player.battlefield.length < MAX_BATTLEFIELD_SIZE) {
-        const selfCopy = createCardInstance(card.card);
+        const selfCopy = createCardInstance(card.card, cryptoIdGen);
         selfCopy.currentHealth = 1;
         selfCopy.isSummoningSick = true;
         selfCopy.canAttack = false;
@@ -290,7 +291,7 @@ function executeDeathrattleInner(
     case 'add_copy_to_hand': {
       const player = newState.players[playerId];
       if (player.hand.length < MAX_HAND_SIZE) {
-        const handCopy = createCardInstance(card.card);
+        const handCopy = createCardInstance(card.card, cryptoIdGen);
         player.hand.push(handCopy);
       }
       return newState;
@@ -300,7 +301,7 @@ function executeDeathrattleInner(
       if (player.hand.length < MAX_HAND_SIZE && player.deck.length > 0) {
         const randomIdx = Math.floor(Math.random() * player.deck.length);
         const randomCard = player.deck[randomIdx];
-        const inst = createCardInstance(randomCard);
+        const inst = createCardInstance(randomCard, cryptoIdGen);
         player.hand.push(inst);
       }
       return newState;
@@ -327,7 +328,7 @@ function executeDeathrattleInner(
       const deadMinions = graveyard.filter(c => isMinion(c.card));
       if (deadMinions.length > 0 && player.hand.length < MAX_HAND_SIZE) {
         const pick = deadMinions[Math.floor(Math.random() * deadMinions.length)];
-        const inst = createCardInstance(pick.card);
+        const inst = createCardInstance(pick.card, cryptoIdGen);
         player.hand.push(inst);
       }
       return newState;
@@ -335,7 +336,7 @@ function executeDeathrattleInner(
     case 'return_to_hand_cost_increase': {
       const player = newState.players[playerId];
       if (player.hand.length < MAX_HAND_SIZE) {
-        const handCopy = createCardInstance(card.card);
+        const handCopy = createCardInstance(card.card, cryptoIdGen);
         const mana = (handCopy.card as any).manaCost ?? (handCopy.card as any).cost ?? 0;
         (handCopy.card as any).manaCost = mana + ((deathrattle as any).costIncrease || 2);
         (handCopy.card as any).cost = mana + ((deathrattle as any).costIncrease || 2);
@@ -349,7 +350,7 @@ function executeDeathrattleInner(
       const devoured = (card as any).devouredCards || [];
       for (const devouredCard of devoured) {
         if (player.battlefield.length >= MAX_BATTLEFIELD_SIZE) break;
-        const inst = createCardInstance(devouredCard);
+        const inst = createCardInstance(devouredCard, cryptoIdGen);
         inst.isSummoningSick = true;
         inst.canAttack = false;
         player.battlefield.push(inst);
@@ -385,28 +386,28 @@ function executeDeathrattleInner(
         const mythics = allCards.filter(c => c.rarity === 'mythic');
         if (mythics.length > 0) {
           const pick = mythics[Math.floor(Math.random() * mythics.length)];
-          player.hand.push(createCardInstance(pick));
+          player.hand.push(createCardInstance(pick, cryptoIdGen));
         }
       } else if (addCardCondition && addCardCondition.startsWith('random_')) {
         const className = addCardCondition.replace('random_', '');
         const classCards = allCards.filter(c => (c as any).heroClass?.toLowerCase() === className.toLowerCase() || (c as any).class?.toLowerCase() === className.toLowerCase());
         if (classCards.length > 0) {
           const pick = classCards[Math.floor(Math.random() * classCards.length)];
-          player.hand.push(createCardInstance(pick));
+          player.hand.push(createCardInstance(pick, cryptoIdGen));
         }
       } else {
         const addId = (deathrattle as any).cardId || (deathrattle as any).summonCardId;
         if (addId) {
           const cardData = getCardById(typeof addId === 'string' ? parseInt(addId, 10) : addId);
           if (cardData) {
-            player.hand.push(createCardInstance(cardData));
+            player.hand.push(createCardInstance(cardData, cryptoIdGen));
           }
         } else {
           const cardName = (deathrattle as any).cardName as string | undefined;
           if (cardName) {
             const found = allCards.find(c => c.name === cardName);
             if (found) {
-              player.hand.push(createCardInstance(found));
+              player.hand.push(createCardInstance(found, cryptoIdGen));
             }
           }
         }
@@ -422,7 +423,7 @@ function executeDeathrattleInner(
         if (tokenData) {
           for (let i = 0; i < tokenCount; i++) {
             if (player.battlefield.length >= MAX_BATTLEFIELD_SIZE) break;
-            const inst = createCardInstance(tokenData);
+            const inst = createCardInstance(tokenData, cryptoIdGen);
             inst.isSummoningSick = true;
             inst.canAttack = false;
             player.battlefield.push(inst);
@@ -438,13 +439,13 @@ function executeDeathrattleInner(
       const targetFromBattlecry = (deathrattle as any).targetFromBattlecry;
       if (targetFromBattlecry && (card as any).battlecryTargetCard) {
         const storedCard = (card as any).battlecryTargetCard;
-        const inst = createCardInstance(storedCard);
+        const inst = createCardInstance(storedCard, cryptoIdGen);
         inst.isSummoningSick = true;
         inst.canAttack = false;
         player.battlefield.push(inst);
         trackQuestProgress(playerId, 'summon_minion', inst.card);
       } else {
-        const selfCopy = createCardInstance(card.card);
+        const selfCopy = createCardInstance(card.card, cryptoIdGen);
         selfCopy.isSummoningSick = true;
         selfCopy.canAttack = false;
         player.battlefield.push(selfCopy);
@@ -471,7 +472,7 @@ function executeDeathrattleInner(
         race: 'Elemental',
         collectible: false
       } as CardData;
-      const golemInst = createCardInstance(golemCard);
+      const golemInst = createCardInstance(golemCard, cryptoIdGen);
       golemInst.isSummoningSick = true;
       golemInst.canAttack = false;
       player.battlefield.push(golemInst);
@@ -535,7 +536,7 @@ function executeDeathrattleInner(
         if (opponent.deck.length === 0) break;
         const randomIdx = Math.floor(Math.random() * opponent.deck.length);
         const copiedCardData = JSON.parse(JSON.stringify(opponent.deck[randomIdx])) as CardData;
-        const inst = createCardInstance(copiedCardData);
+        const inst = createCardInstance(copiedCardData, cryptoIdGen);
         player.hand.push(inst);
       }
       return newState;
@@ -551,7 +552,7 @@ function executeDeathrattleInner(
       }
       const condCardData = getCardById(typeof condSummonId === 'number' ? condSummonId : parseInt(condSummonId, 10));
       if (!condCardData) return newState;
-      const condInst = createCardInstance(condCardData);
+      const condInst = createCardInstance(condCardData, cryptoIdGen);
       condInst.isSummoningSick = true;
       condInst.canAttack = false;
       player.battlefield.push(condInst);
@@ -570,7 +571,7 @@ function executeDeathrattleInner(
           highest = m;
         }
       }
-      const resurrected = createCardInstance(highest.card);
+      const resurrected = createCardInstance(highest.card, cryptoIdGen);
       resurrected.isSummoningSick = true;
       resurrected.canAttack = false;
       player.battlefield.push(resurrected);
@@ -601,7 +602,7 @@ function executeDeathrattleInner(
       );
       if (classSpells.length === 0) return newState;
       const picked = classSpells[Math.floor(Math.random() * classSpells.length)];
-      player.hand.push(createCardInstance(picked));
+      player.hand.push(createCardInstance(picked, cryptoIdGen));
       return newState;
     }
     case 'summon_with_triggered': {
@@ -622,7 +623,7 @@ function executeDeathrattleInner(
         class: 'Neutral',
         collectible: false
       } as CardData;
-      const tokenInst = createCardInstance(tokenCard);
+      const tokenInst = createCardInstance(tokenCard, cryptoIdGen);
       tokenInst.isSummoningSick = true;
       tokenInst.canAttack = false;
       player.battlefield.push(tokenInst);
@@ -635,7 +636,7 @@ function executeDeathrattleInner(
       const storedCount = deathrattle.value || devoured.length || 1;
       for (let i = 0; i < Math.min(storedCount, devoured.length); i++) {
         if (player.battlefield.length >= MAX_BATTLEFIELD_SIZE) break;
-        const inst = createCardInstance(devoured[i]);
+        const inst = createCardInstance(devoured[i], cryptoIdGen);
         inst.isSummoningSick = true;
         inst.canAttack = false;
         player.battlefield.push(inst);
@@ -647,7 +648,7 @@ function executeDeathrattleInner(
       const player = newState.players[playerId];
       if (player.hand.length >= MAX_HAND_SIZE) return newState;
       const buffVal = deathrattle.value || 1;
-      const buffedCopy = createCardInstance(card.card);
+      const buffedCopy = createCardInstance(card.card, cryptoIdGen);
       if (buffedCopy.card.type === 'minion') {
         const mc = buffedCopy.card as MinionCardData;
         mc.attack = (mc.attack ?? 0) + buffVal;
@@ -677,7 +678,7 @@ function executeDeathrattleInner(
     case 'resurrect_self': {
       const player = newState.players[playerId];
       if (player.battlefield.length >= MAX_BATTLEFIELD_SIZE) return newState;
-      const selfCopy = createCardInstance(card.card);
+      const selfCopy = createCardInstance(card.card, cryptoIdGen);
       selfCopy.currentHealth = deathrattle.value || 1;
       selfCopy.isSummoningSick = true;
       selfCopy.canAttack = false;
@@ -693,7 +694,7 @@ function executeDeathrattleInner(
       const deadMinions = graveyard.filter(c => c.card.type === 'minion');
       if (deadMinions.length === 0) return newState;
       const pick = deadMinions[Math.floor(Math.random() * deadMinions.length)];
-      const resInst = createCardInstance(pick.card);
+      const resInst = createCardInstance(pick.card, cryptoIdGen);
       if (resInst.card.type === 'minion') {
         const mc = resInst.card as MinionCardData;
         mc.attack = (mc.attack ?? 0) + (deathrattle.buffAttack || 0);
@@ -856,7 +857,7 @@ function executeDeathrattleEffect(
       const count = deathrattle.value || 1;
       for (let i = 0; i < count; i++) {
         if (p.battlefield.length >= MAX_BATTLEFIELD_SIZE) break;
-        const inst = createCardInstance(cardData);
+        const inst = createCardInstance(cardData, cryptoIdGen);
         inst.isSummoningSick = true;
         inst.canAttack = false;
         p.battlefield.push(inst);
@@ -939,7 +940,7 @@ function executeSummonDeathrattle(
     }
     
     // Create a new instance of the card to summon
-    const summonedCard = createCardInstance(cardToSummon);
+    const summonedCard = createCardInstance(cardToSummon, cryptoIdGen);
     
     // Add the summoned card to the battlefield
     player.battlefield.push(summonedCard);
@@ -1126,7 +1127,7 @@ function executeReturnToHandDeathrattle(
   if ((player.hand || []).length >= MAX_HAND_SIZE) {
     return newState;
   }
-  const returnedCard = createCardInstance(card.card);
+  const returnedCard = createCardInstance(card.card, cryptoIdGen);
   returnedCard.isPlayed = false;
   player.hand.push(returnedCard);
   return newState;
@@ -1453,7 +1454,7 @@ function executeRecruitDeathrattle(
   const randomIdx = minionIndices[Math.floor(Math.random() * minionIndices.length)];
   const recruitedCardData = player.deck.splice(randomIdx, 1)[0] as any;
   const cardData = recruitedCardData.card || recruitedCardData;
-  const instance = createCardInstance(cardData);
+  const instance = createCardInstance(cardData, cryptoIdGen);
   instance.isSummoningSick = true;
   instance.canAttack = false;
   instance.attacksPerformed = 0;
@@ -1478,7 +1479,7 @@ function executeSummonSplittingDeathrattle(
 
   for (let i = 0; i < 2; i++) {
     if (player.battlefield.length >= MAX_BATTLEFIELD_SIZE) break;
-    const instance = createCardInstance(cardData);
+    const instance = createCardInstance(cardData, cryptoIdGen);
     player.battlefield.push(instance);
     trackQuestProgress(playerId, 'summon_minion', instance.card);
   }
@@ -1501,7 +1502,7 @@ function executeSummonMultipleDeathrattle(
       if (player.battlefield.length >= MAX_BATTLEFIELD_SIZE) break;
       const cardData = getCardById(typeof cardId === 'string' ? parseInt(cardId, 10) : cardId);
       if (!cardData) continue;
-      const instance = createCardInstance(cardData);
+      const instance = createCardInstance(cardData, cryptoIdGen);
       player.battlefield.push(instance);
       trackQuestProgress(playerId, 'summon_minion', instance.card);
     }
@@ -1511,7 +1512,7 @@ function executeSummonMultipleDeathrattle(
     const count = deathrattle.value || 1;
     for (let i = 0; i < count; i++) {
       if (player.battlefield.length >= MAX_BATTLEFIELD_SIZE) break;
-      const instance = createCardInstance(cardData);
+      const instance = createCardInstance(cardData, cryptoIdGen);
       player.battlefield.push(instance);
       trackQuestProgress(playerId, 'summon_minion', instance.card);
     }
@@ -1538,7 +1539,7 @@ function executeSummonIfOtherDiedDeathrattle(
   const cardData = getCardById(deathrattle.summonCardId as number);
   if (!cardData) return newState;
 
-  const instance = createCardInstance(cardData);
+  const instance = createCardInstance(cardData, cryptoIdGen);
   player.battlefield.push(instance);
   trackQuestProgress(playerId, 'summon_minion', instance.card);
 
@@ -1563,7 +1564,7 @@ function executeSummonForOpponentDeathrattle(
   const count = deathrattle.value || 1;
   for (let i = 0; i < count; i++) {
     if (opponent.battlefield.length >= MAX_BATTLEFIELD_SIZE) break;
-    const instance = createCardInstance(cardData);
+    const instance = createCardInstance(cardData, cryptoIdGen);
     opponent.battlefield.push(instance);
   }
 
@@ -1583,7 +1584,7 @@ function executeAddRandomToHandDeathrattle(
     if (player.hand.length >= MAX_HAND_SIZE) break;
     if (allCards.length === 0) break;
     const randomCard = allCards[Math.floor(Math.random() * allCards.length)];
-    const instance = createCardInstance(randomCard);
+    const instance = createCardInstance(randomCard, cryptoIdGen);
     player.hand.push(instance);
   }
 
@@ -1604,7 +1605,7 @@ function executeSummonRandomMythicDeathrattle(
   if (mythics.length === 0) return newState;
 
   const randomCard = mythics[Math.floor(Math.random() * mythics.length)];
-  const instance = createCardInstance(randomCard);
+  const instance = createCardInstance(randomCard, cryptoIdGen);
   player.battlefield.push(instance);
   trackQuestProgress(playerId, 'summon_minion', instance.card);
 
@@ -1738,7 +1739,7 @@ function executeGiveSparePartDeathrattle(
     if (player.hand.length >= MAX_HAND_SIZE) break;
     if (allCards.length === 0) break;
     const randomCard = allCards[Math.floor(Math.random() * allCards.length)];
-    const instance = createCardInstance(randomCard);
+    const instance = createCardInstance(randomCard, cryptoIdGen);
     player.hand.push(instance);
   }
 
@@ -1907,7 +1908,7 @@ function executeAddToHandDeathrattle(
     cardData = card.card;
   }
 
-  const copy = createCardInstance(cardData);
+  const copy = createCardInstance(cardData, cryptoIdGen);
   player.hand.push(copy);
   debug.log(`[Deathrattle] add_to_hand: Added ${cardData.name} to ${playerId}'s hand`);
   return state;
@@ -1954,7 +1955,7 @@ function executeSummonRandomDeathrattle(
   if (candidates.length === 0) return state;
 
   const picked = candidates[Math.floor(Math.random() * candidates.length)];
-  const inst = createCardInstance(picked);
+  const inst = createCardInstance(picked, cryptoIdGen);
   inst.isSummoningSick = true;
   inst.canAttack = false;
   player.battlefield.push(inst);

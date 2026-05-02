@@ -24,6 +24,7 @@ import { MAX_BATTLEFIELD_SIZE, MAX_HAND_SIZE } from '../../constants/gameConstan
 import { checkPetEvolutionTrigger } from '../petEvolutionTriggers';
 import { addKeyword, removeKeyword, hasKeyword } from '../cards/keywordUtils';
 import { shuffleInPlace, shuffleArray } from '../seededRng';
+import { cryptoIdGen } from '../seededRng';
 
 function getSpellEffectType(effectType: string): SpellEffectType {
   const typeMap: Record<string, SpellEffectType> = {
@@ -963,7 +964,7 @@ export function executeSpell(
             const pick = oppHand[Math.floor(Math.random() * oppHand.length)];
             const playerHand = revealState.players[casterSide].hand;
             if (playerHand.length < MAX_HAND_SIZE) {
-              const copy = createCardInstance(pick.card);
+              const copy = createCardInstance(pick.card, cryptoIdGen);
               playerHand.push(copy);
             }
           }
