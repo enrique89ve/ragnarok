@@ -358,6 +358,22 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
         const counterDamage = targetMinion ? getAttack(targetMinion.card) : 0;
         const isHeroTarget = !defenderId || defenderId === 'opponent-hero';
 
+        // Capture target health before/after the attack so animations and debug
+        // subscribers see real values (TD-7 closure). For hero targets, read
+        // from heroHealth; for minions, find by instanceId in pre/post state.
+        const beforeOpponent = gameState.players.opponent;
+        const afterOpponent = result.state.players.opponent;
+        const targetHealthBefore = isHeroTarget
+          ? (beforeOpponent.heroHealth ?? beforeOpponent.health ?? 0)
+          : (targetMinion?.currentHealth ?? 0);
+        const afterTargetMinion = !isHeroTarget && defenderId
+          ? afterOpponent.battlefield.find(c => c.instanceId === defenderId)
+          : undefined;
+        const targetHealthAfter = isHeroTarget
+          ? (afterOpponent.heroHealth ?? afterOpponent.health ?? 0)
+          : (afterTargetMinion?.currentHealth ?? 0);
+        const targetDied = !isHeroTarget && defenderId !== undefined && afterTargetMinion === undefined;
+
         CombatEventBus.emitImpactPhase({
           attackerId,
           targetId: defenderId || 'opponent-hero',
@@ -374,9 +390,9 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
           damageSource: 'minion_attack',
           attackerOwner: 'player',
           defenderOwner: 'opponent',
-          targetHealthBefore: 0,
-          targetHealthAfter: 0,
-          targetDied: false,
+          targetHealthBefore,
+          targetHealthAfter,
+          targetDied,
           counterDamage: isHeroTarget ? undefined : counterDamage,
         });
       }

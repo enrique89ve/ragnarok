@@ -26,7 +26,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePokerCombatAdapter, getActionPermissions, getPokerCombatAdapterState } from '../../hooks/usePokerCombatAdapter';
 import { useGameStore } from '../../stores/gameStore';
 import { GAME_COMMAND_TYPES } from '../../core/commands';
-import { useP2PActions } from '../../context/P2PContext';
+import { useP2PActions } from '../../context/useP2PActions';
 import { CombatPhase, CombatAction } from '../../types/PokerCombatTypes';
 import { fireAnnouncement } from '../../stores/unifiedUIStore';
 import { ALL_NORSE_HEROES } from '../../data/norseHeroes';

@@ -65,7 +65,7 @@ export default function MatchHistoryPage() {
 	}
 
 	return (
-		<div className="min-h-screen bg-gray-950 text-white">
+		<div className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-cosmos-nav) text-ink-0">
 			<div className="max-w-4xl mx-auto px-4 py-8">
 				<div className="flex items-center justify-between mb-8">
 					<h1 className="text-3xl font-bold text-amber-400 tracking-wide">Match History</h1>

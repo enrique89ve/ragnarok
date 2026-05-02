@@ -7,11 +7,11 @@
 
 import { useSyncExternalStore } from 'react';
 import type { HiveCardAsset, HivePlayerStats, HiveTokenBalance } from '@/data/schemas/HiveTypes';
+import { useHiveDataStore } from '@/data/HiveDataLayer';
 import { getNFTBridge } from './index';
 
 function subscribe(callback: () => void): () => void {
-	const interval = setInterval(callback, 1000);
-	return () => clearInterval(interval);
+	return useHiveDataStore.subscribe(callback);
 }
 
 export function useNFTUsername(): string | null {

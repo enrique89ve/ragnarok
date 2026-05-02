@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
+import { ChevronLeft, Compass, Play } from 'lucide-react';
 import { routes } from '../../../lib/routes';
+import { Button } from '../../../components/ui-norse';
 import {
 	ALL_CHAPTERS, EASTERN_CHAPTER, BASE_CHAPTER_MISSION_IDS, useCampaignStore,
 	NINE_REALMS, REALM_MAP, MISSION_REALM_MAP, getMissionsForRealm, getRealmProgress,
@@ -15,29 +17,46 @@ import CosmicCanvas from './CosmicCanvas';
 import { MapIntroCard, MissionBriefing } from './CampaignStagePanels';
 import './constellation-map.css';
 
-const FACTION_COLORS: Record<string, string> = {
-	egyptian: 'from-orange-950/[0.85] via-orange-900/[0.65] to-red-950/70 border-orange-500/25',
-	celtic: 'from-emerald-950/[0.85] via-green-900/[0.65] to-slate-950/70 border-emerald-500/25',
-	eastern: 'from-red-950/[0.85] via-red-900/[0.65] to-amber-950/70 border-red-500/25',
+/* ────────────────────────────────────────────────────────────────────────────
+ * Faction visual identity — atmospheric radial gradients (mirroring HomePage
+ * mode cards) instead of opaque overlay washes. Each faction owns a hue but
+ * the surface stays obsidian, so beyond cards feel coherent with the rest of
+ * the app instead of like alien posters.
+ * ──────────────────────────────────────────────────────────────────────────── */
+const FACTION_ATMOSPHERE: Record<string, string> = {
+	egyptian:
+		'radial-gradient(ellipse 75% 60% at 85% 15%, rgba(217, 74, 18, 0.38), transparent 65%), ' +
+		'radial-gradient(ellipse 50% 40% at 20% 90%, rgba(110, 31, 5, 0.30), transparent 70%)',
+	celtic:
+		'radial-gradient(ellipse 75% 60% at 85% 15%, rgba(79, 122, 54, 0.38), transparent 65%), ' +
+		'radial-gradient(ellipse 50% 40% at 20% 90%, rgba(38, 60, 24, 0.30), transparent 70%)',
+	eastern:
+		'radial-gradient(ellipse 75% 60% at 85% 15%, rgba(165, 49, 10, 0.40), transparent 65%), ' +
+		'radial-gradient(ellipse 50% 40% at 20% 90%, rgba(115, 80, 15, 0.32), transparent 70%)',
+	twilight:
+		'radial-gradient(ellipse 75% 60% at 85% 15%, rgba(122, 91, 214, 0.36), transparent 65%), ' +
+		'radial-gradient(ellipse 50% 40% at 20% 90%, rgba(51, 26, 105, 0.32), transparent 70%)',
 };
 
 const FACTION_ACCENT: Record<string, string> = {
-	norse: 'text-cyan-300',
-	greek: 'text-amber-300',
-	egyptian: 'text-orange-300',
-	celtic: 'text-emerald-300',
-	eastern: 'text-red-300',
+	norse: 'text-bifrost-300',
+	greek: 'text-gold-300',
+	egyptian: 'text-ember-300',
+	celtic: 'text-rune-300',
+	eastern: 'text-blood-300',
+	twilight: 'text-bifrost-300',
 };
 
-const FACTION_PANEL: Record<string, string> = {
-	norse: 'border-cyan-400/20 bg-cyan-400/[0.06]',
-	greek: 'border-amber-400/20 bg-amber-400/[0.06]',
-	egyptian: 'border-orange-400/20 bg-orange-400/[0.06]',
-	celtic: 'border-emerald-400/20 bg-emerald-400/[0.06]',
-	eastern: 'border-red-400/20 bg-red-400/[0.06]',
+const FACTION_BORDER: Record<string, string> = {
+	norse: 'hover:border-bifrost-300/40',
+	greek: 'hover:border-gold-300/50',
+	egyptian: 'hover:border-ember-300/50',
+	celtic: 'hover:border-rune-300/50',
+	eastern: 'hover:border-blood-300/50',
+	twilight: 'hover:border-bifrost-300/45',
 };
 
-const RUNE_CORNERS = ['\u16A0\u16B7\u16C1', '\u16DE\u16D7\u16D2', '\u16C7\u16BA\u16A0', '\u16D2\u16C1\u16DE'];
+const RUNE_CORNERS = ['ᚠᚷᛁ', 'ᛞᛗᛒ', 'ᛇᚺᚠ', 'ᛒᛁᛞ'];
 
 type View = 'norse' | 'greek' | 'beyond';
 
@@ -99,6 +118,29 @@ function buildConnectionData<T extends MapRealmShape>(
 
 	return result;
 }
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Token-based typographic primitives reused across the campaign tree.
+ * Inlined as constants so the design token vocabulary stays first-class
+ * without growing a parallel CSS utility set.
+ * ──────────────────────────────────────────────────────────────────────────── */
+export const KICKER_CLASS =
+	'font-mono text-[10px] sm:text-[11px] tracking-[0.32em] uppercase font-semibold text-gold-300';
+
+export const DISPLAY_TITLE_CLASS =
+	'font-display font-black tracking-[0.06em] uppercase text-[clamp(1.5rem,2.6vw,2.4rem)] leading-[1.05] text-ink-0';
+
+export const SURFACE_CLASS =
+	'rounded-xl border border-obsidian-700 bg-obsidian-900/60 backdrop-blur-sm p-4';
+
+export const SURFACE_STRONG_CLASS =
+	'rounded-2xl border border-obsidian-700 bg-linear-to-b from-obsidian-850 to-obsidian-900 ' +
+	'shadow-[0_28px_90px_-30px_rgba(0,0,0,0.85)] backdrop-blur-md';
+
+export const PILL_CLASS =
+	'inline-flex items-center justify-center h-7 px-3 rounded-full ' +
+	'border border-obsidian-700 bg-obsidian-850 ' +
+	'font-mono text-[10px] tracking-[0.18em] uppercase font-bold text-ink-200';
 
 function StarField() {
 	const stars = useMemo(() =>
@@ -203,37 +245,43 @@ function MissionNode({
 			type="button"
 			onClick={() => unlocked && onSelect(mission)}
 			disabled={!unlocked}
-			className={`w-full rounded-2xl border p-4 text-left transition-all ${
+			className={`group w-full rounded-xl border p-4 text-left transition-all duration-200 ${
 				completed
-					? 'border-emerald-500/25 bg-emerald-500/[0.08] hover:bg-emerald-500/[0.12]'
+					? 'border-rune-500/40 bg-rune-500/[0.08] hover:bg-rune-500/[0.14] hover:border-rune-300/60'
 					: unlocked
-						? 'border-white/10 bg-white/[0.06] hover:border-white/[0.18] hover:bg-white/[0.09]'
-						: 'cursor-not-allowed border-white/[0.06] bg-black/25 opacity-45'
+						? 'border-obsidian-700 bg-obsidian-900/60 hover:border-gold-300/50 hover:bg-obsidian-800/70'
+						: 'cursor-not-allowed border-obsidian-700/60 bg-obsidian-950/40 opacity-50'
 			}`}
 		>
 			<div className="flex items-start gap-3">
-				<div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
-					completed ? 'bg-emerald-500 text-emerald-950' : unlocked ? 'bg-white/10 text-gray-100' : 'bg-white/5 text-gray-500'
+				<div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md font-display text-sm font-bold tracking-wider ${
+					completed
+						? 'bg-rune-500 text-obsidian-950 shadow-[0_0_12px_-2px_rgba(143,181,115,0.55)]'
+						: unlocked
+							? 'bg-obsidian-800 border border-obsidian-600 text-ink-100 group-hover:border-gold-300/60 group-hover:text-gold-200'
+							: 'bg-obsidian-900 border border-obsidian-700 text-ink-400'
 				}`}>
-					{completed ? '\u2713' : mission.missionNumber}
+					{completed ? '✓' : mission.missionNumber}
 				</div>
 				<div className="min-w-0 flex-1">
 					<div className="flex flex-wrap items-center gap-2">
-						<p className={`text-sm font-semibold ${completed ? 'text-emerald-200' : unlocked ? 'text-gray-100' : 'text-gray-500'}`}>
+						<p className={`font-display text-sm font-bold tracking-wide ${
+							completed ? 'text-rune-300' : unlocked ? 'text-ink-0' : 'text-ink-400'
+						}`}>
 							{mission.name}
 						</p>
 						{mission.isChapterFinale && (
-							<span className="rounded-full border border-red-500/[0.35] bg-red-500/[0.12] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-red-200">
+							<span className="inline-flex items-center h-5 rounded-full border border-blood-300/40 bg-blood-500/15 px-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-blood-300">
 								Finale
 							</span>
 						)}
 						{!mission.isChapterFinale && mission.bossRules.length > 0 && (
-							<span className="rounded-full border border-amber-400/25 bg-amber-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200">
+							<span className="inline-flex items-center h-5 rounded-full border border-ember-300/30 bg-ember-300/10 px-2 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-ember-200">
 								Boss
 							</span>
 						)}
 					</div>
-					<p className="mt-1 text-sm leading-relaxed text-gray-400">
+					<p className="mt-1.5 text-[13px] leading-relaxed text-ink-300">
 						{mission.description}
 					</p>
 				</div>
@@ -358,43 +406,61 @@ function RealmMissionPanel({
 
 	return (
 		<div className="realm-mission-panel" style={{ '--realm-color': realm.color } as React.CSSProperties}>
-			<button type="button" className="realm-panel-back" onClick={onClose}>&larr; Back to Map</button>
+			<button
+				type="button"
+				className="inline-flex items-center gap-1.5 mb-4 font-mono text-[11px] tracking-[0.18em] uppercase font-bold text-ink-300 hover:text-gold-300 transition-colors"
+				onClick={onClose}
+			>
+				<ChevronLeft size={13} strokeWidth={2.2} />
+				Back to Map
+			</button>
 
-			<div className="realm-panel-header">
-				<div className="realm-panel-name" style={{ color: realm.color }}>{realm.name}</div>
-				<p className="realm-panel-description">{description}</p>
-				<div className="realm-panel-meta">
-					<span>{cleared}/{missions.length} cleared</span>
-					{effect && <span>{symbol} {effect}</span>}
+			<div className="mb-5 pb-4 border-b border-obsidian-700">
+				<h3
+					className="font-display text-2xl font-bold tracking-[0.04em]"
+					style={{ color: realm.color }}
+				>
+					{realm.name}
+				</h3>
+				<p className="mt-2 text-[13px] leading-relaxed text-ink-300">{description}</p>
+
+				<div className="mt-4 flex flex-wrap gap-2">
+					<span className={PILL_CLASS}>
+						{cleared}/{missions.length} cleared
+					</span>
+					{effect && (
+						<span className={PILL_CLASS}>
+							{symbol} {effect}
+						</span>
+					)}
 				</div>
-				{effect && (
-					<div className="realm-panel-effect">
-						<span>{effectDescription}</span>
-					</div>
+
+				{effect && effectDescription && (
+					<p className="mt-3 text-[12px] leading-relaxed text-ink-200">{effectDescription}</p>
 				)}
 			</div>
 
 			{nextMission ? (
-				<div className="realm-panel-guidance">
-					<p className="campaign-kicker text-left">Next Route</p>
-					<p className="mt-2 text-base font-semibold text-gray-100">{nextMission.name}</p>
-					<p className="mt-2 text-sm leading-relaxed text-gray-400">{nextMission.description}</p>
-					<button type="button" className="campaign-primary-btn mt-4" onClick={() => onSelectMission(nextMission)}>
+				<div className={`${SURFACE_CLASS} mb-4`}>
+					<p className={KICKER_CLASS}>Next Route</p>
+					<p className="mt-2 font-display text-base font-bold tracking-wide text-ink-0">{nextMission.name}</p>
+					<p className="mt-2 text-[13px] leading-relaxed text-ink-300">{nextMission.description}</p>
+					<Button variant="primary" size="sm" className="mt-4 w-full" onClick={() => onSelectMission(nextMission)}>
 						Open Briefing
-					</button>
+					</Button>
 				</div>
 			) : missions.length > 0 && cleared === missions.length ? (
-				<div className="realm-panel-guidance">
-					<p className="campaign-kicker text-left">Realm Status</p>
-					<p className="mt-2 text-base font-semibold text-gray-100">Realm secured</p>
-					<p className="mt-2 text-sm leading-relaxed text-gray-400">
-						All authored missions in this realm are cleared. Revisit any mission below whenever you want another pass.
+				<div className={`${SURFACE_CLASS} mb-4 border-rune-500/30 bg-rune-500/[0.06]`}>
+					<p className={`${KICKER_CLASS} text-rune-300`}>Realm Status</p>
+					<p className="mt-2 font-display text-base font-bold tracking-wide text-ink-0">Realm secured</p>
+					<p className="mt-2 text-[13px] leading-relaxed text-ink-300">
+						All authored missions cleared. Revisit any mission below for another pass.
 					</p>
 				</div>
 			) : null}
 
 			{allLocked && (
-				<div className="realm-panel-locked-hint">
+				<div className="mb-4 rounded-xl border border-gold-600/30 bg-gold-300/[0.06] p-3 text-[12.5px] leading-relaxed text-gold-100">
 					All missions here require an earlier victory first. Follow the glowing realm marker to stay on the authored route.
 				</div>
 			)}
@@ -430,6 +496,9 @@ export default function CampaignPage() {
 		[],
 	);
 	const totalClearedMissions = Object.keys(completedMissions).length;
+	const sagaPercent = totalCampaignMissions > 0
+		? Math.round((totalClearedMissions / totalCampaignMissions) * 100)
+		: 0;
 	const currentMissionData = useMemo(
 		() => (currentMissionId ? getMission(currentMissionId) : null),
 		[currentMissionId],
@@ -583,13 +652,15 @@ export default function CampaignPage() {
 	if (selectedMission) {
 		const chapter = selectedChapter ?? norseChapter;
 		return (
-			<div className="relative min-h-screen overflow-hidden text-ink-0 bg-(image:--bg-cosmos-nav)">
+			<div className="relative h-screen w-full overflow-y-auto overflow-x-hidden text-ink-0 bg-(image:--bg-cosmos-nav)">
 				<div className="rune-border-decoration rune-border-top-left">{RUNE_CORNERS[0]}</div>
 				<div className="rune-border-decoration rune-border-top-right">{RUNE_CORNERS[1]}</div>
 				<div className="rune-border-decoration rune-border-bottom-left">{RUNE_CORNERS[2]}</div>
 				<div className="rune-border-decoration rune-border-bottom-right">{RUNE_CORNERS[3]}</div>
 
-				<div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
+				<CampaignHeader title="Mission Briefing" subtitle={`${chapter.name} · #${selectedMission.missionNumber}`} />
+
+				<div className="mx-auto max-w-5xl px-4 pb-12 sm:px-6">
 					<MissionBriefing
 						mission={selectedMission}
 						chapter={chapter}
@@ -597,7 +668,6 @@ export default function CampaignPage() {
 						onBack={() => setSelectedMission(null)}
 						onWatchPrologue={() => openChapterCinematic(chapter)}
 						accentClass={FACTION_ACCENT[chapter.faction]}
-						panelClass={FACTION_PANEL[chapter.faction]}
 					/>
 				</div>
 
@@ -615,409 +685,302 @@ export default function CampaignPage() {
 	}
 
 	return (
-		<div className="relative min-h-screen overflow-hidden text-ink-0 bg-(image:--bg-cosmos-nav)">
+		<div className="relative h-screen w-full overflow-y-auto overflow-x-hidden text-ink-0 bg-(image:--bg-cosmos-nav)">
 			<div className="rune-border-decoration rune-border-top-left">{RUNE_CORNERS[0]}</div>
 			<div className="rune-border-decoration rune-border-top-right">{RUNE_CORNERS[1]}</div>
 			<div className="rune-border-decoration rune-border-bottom-left">{RUNE_CORNERS[2]}</div>
 			<div className="rune-border-decoration rune-border-bottom-right">{RUNE_CORNERS[3]}</div>
 
-			<div className="constellation-nav">
-				<div className="flex items-center gap-4">
-					<Link to={routes.home}>
-						<button type="button" className="text-sm text-gray-400 transition-colors hover:text-white">
-							&larr; Back
-						</button>
-					</Link>
-					<h1 className="constellation-title">Campaign</h1>
-				</div>
-			</div>
+			<CampaignHeader title="Campaign" subtitle="Saga Theater · S01" />
 
-			<div className="constellation-tabs">
-				<button
-					type="button"
-					className={`constellation-tab ${view === 'norse' ? 'constellation-tab-active' : ''}`}
-					onClick={() => {
-						setView('norse');
-						setSelectedRealm(null);
-						setSelectedChapter(null);
-					}}
-				>
-					Nine Realms
-				</button>
-				<button
-					type="button"
-					className={`constellation-tab ${view === 'greek' ? 'constellation-tab-active' : ''}`}
-					onClick={() => {
-						setView('greek');
-						setSelectedRealm(null);
-						setSelectedChapter(null);
-					}}
-				>
-					Olympus
-				</button>
-				<button
-					type="button"
-					className={`constellation-tab ${view === 'beyond' ? 'constellation-tab-active' : ''}`}
-					onClick={() => {
-						setView('beyond');
-						setSelectedRealm(null);
-					}}
-				>
-					Beyond
-				</button>
-			</div>
+			{/* ── Lead band: framed by max-w container, two-col layout (text | stats) ───── */}
+			<section className="relative mx-auto max-w-[1600px] px-4 sm:px-6 mt-6">
+				<div className={`${SURFACE_STRONG_CLASS} relative overflow-hidden`}>
+					{/* Atmospheric layer */}
+					<div
+						aria-hidden
+						className="absolute inset-0 pointer-events-none opacity-70"
+						style={{
+							background:
+								'radial-gradient(ellipse 60% 45% at 88% 8%, rgba(221,184,74,0.18), transparent 65%),' +
+								'radial-gradient(ellipse 45% 35% at 12% 92%, rgba(122,169,255,0.12), transparent 70%)',
+						}}
+					/>
 
-			<div className="mx-4 mb-6 rounded-[28px] border border-white/10 bg-black/[0.28] px-4 py-4 shadow-[0_28px_90px_rgba(0,0,0,0.34)] backdrop-blur-xl sm:px-5 sm:py-5">
-				<div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-					<div className="min-w-0">
-						<p className="campaign-kicker">
-							{campaignLead?.title ?? 'Campaign Theater'}
-						</p>
-						<h2 className="mt-2 campaign-display-title text-gray-100">
-							{campaignLead
-								? campaignLead.mission.name
-								: currentDisplayChapter
-									? currentDisplayChapter.name
-									: 'Choose a mythology and stage the next authored battle'}
-						</h2>
-						<p className="mt-3 max-w-3xl text-sm leading-relaxed text-gray-400 sm:text-[15px]">
-							{campaignLead
-								? `${campaignLead.chapter.name} · Mission ${campaignLead.mission.missionNumber}. ${campaignLead.copy}`
-								: currentDisplayChapter
-									? currentDisplayChapter.description
-									: 'Beyond opens into later mythologies and the secret gate. Clear the base arcs, then push into the deeper campaign line.'}
-						</p>
-					</div>
-
-					<div className="flex flex-col gap-3 lg:items-end">
-						<div className="flex flex-wrap items-center gap-2 lg:justify-end">
-							<span className="campaign-pill">
-								{totalClearedMissions}/{totalCampaignMissions} cleared
-							</span>
-							{chapterProgressLabel && (
-								<span className="campaign-pill">
-									{chapterProgressLabel}
+					<div className="relative grid gap-6 px-5 py-6 sm:px-7 sm:py-8 lg:grid-cols-[1fr_320px] lg:items-center">
+						<div className="min-w-0">
+							<div className="inline-flex items-center gap-2.5">
+								<Compass size={14} className="text-gold-300" strokeWidth={1.8} />
+								<span className={KICKER_CLASS}>
+									{campaignLead?.title ?? 'Campaign Theater'}
 								</span>
-							)}
-						</div>
-
-						<div className="flex flex-wrap items-center gap-2 lg:justify-end">
-							{hasCurrentPrologue && (
-								<button
-									type="button"
-									onClick={() => openChapterCinematic(currentDisplayChapter)}
-									className="campaign-secondary-btn"
-								>
-									{hasSeenCurrentPrologue ? 'Replay Prologue' : 'Play Prologue'}
-								</button>
-							)}
-
-							{campaignLead && (
-								<button
-									type="button"
-									onClick={() => stageMission(campaignLead.mission, campaignLead.chapter, campaignLead.view)}
-									className="campaign-primary-btn"
-								>
-									{campaignLead.cta}
-								</button>
-							)}
-						</div>
-
-						{currentDisplayNextMission && !campaignLead && (
-							<p className="text-sm text-gray-500">
-								Next route: {currentDisplayNextMission.name}
+							</div>
+							<h2 className={`${DISPLAY_TITLE_CLASS} mt-3`}>
+								<span className="bg-linear-to-b from-gold-100 via-gold-300 to-gold-500 bg-clip-text text-transparent">
+									{campaignLead
+										? campaignLead.mission.name
+										: currentDisplayChapter
+											? currentDisplayChapter.name
+											: 'Choose your saga line'}
+								</span>
+							</h2>
+							<p className="mt-3 max-w-2xl text-[14px] leading-[1.65] text-ink-200 sm:text-[15px]">
+								{campaignLead
+									? `${campaignLead.chapter.name} · Mission ${campaignLead.mission.missionNumber}. ${campaignLead.copy}`
+									: currentDisplayChapter
+										? currentDisplayChapter.description
+										: 'Beyond opens into later mythologies and the secret gate. Clear the base arcs, then push into the deeper campaign line.'}
 							</p>
-						)}
+
+							<div className="mt-5 flex flex-wrap items-center gap-2.5">
+								{hasCurrentPrologue && (
+									<Button variant="default" size="default" onClick={() => openChapterCinematic(currentDisplayChapter)}>
+										{hasSeenCurrentPrologue ? 'Replay Prologue' : 'Play Prologue'}
+									</Button>
+								)}
+								{campaignLead && (
+									<Button
+										variant="primary"
+										size="default"
+										onClick={() => stageMission(campaignLead.mission, campaignLead.chapter, campaignLead.view)}
+									>
+										<Play size={13} strokeWidth={2.4} fill="currentColor" />
+										{campaignLead.cta}
+									</Button>
+								)}
+							</div>
+
+							{currentDisplayNextMission && !campaignLead && (
+								<p className="mt-3 font-mono text-[11px] tracking-[0.18em] uppercase text-ink-300">
+									Next route: <span className="text-ink-100">{currentDisplayNextMission.name}</span>
+								</p>
+							)}
+						</div>
+
+						{/* Stats column — mirrors the home banner stat panel */}
+						<aside className="rounded-xl border border-gold-300/30 bg-obsidian-900/80 backdrop-blur-md p-5 grid gap-3.5 self-stretch">
+							<StatRow label="Saga" value={`${totalClearedMissions} / ${totalCampaignMissions}`} highlight />
+							{chapterProgressLabel && (
+								<StatRow label="Chapter" value={chapterProgressLabel} />
+							)}
+							<StatRow
+								label="Active"
+								value={
+									campaignLead
+										? `M${campaignLead.mission.missionNumber} · ${campaignLead.mission.name}`
+										: 'No mission staged'
+								}
+							/>
+							<div className="mt-1 pt-3 border-t border-obsidian-700">
+								<div className="flex items-center justify-between mb-1.5">
+									<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300">Saga progress</span>
+									<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-gold-300">{sagaPercent}%</span>
+								</div>
+								<div className="h-1 rounded-full bg-obsidian-800 overflow-hidden">
+									<div
+										className="h-full bg-linear-to-r from-gold-500 to-gold-200"
+										style={{ width: `${sagaPercent}%` }}
+									/>
+								</div>
+							</div>
+						</aside>
 					</div>
 				</div>
-			</div>
+			</section>
 
-			{view === 'norse' ? (
-				<div className="constellation-map-area">
-					<CosmicCanvas realms={NINE_REALMS} connections={norseConnections} className="constellation-cosmic-canvas" />
-					<div className="constellation-map-shroud" />
-					<StarField />
-					<NorseConstellationLines completedMissions={completedMissions} />
+			{/* ── Tabs: pill chip family aligned with home utility bar ───────────────────── */}
+			<nav
+				aria-label="Campaign sections"
+				className="mx-auto max-w-[1600px] px-4 sm:px-6 mt-6 flex gap-2 overflow-x-auto [scrollbar-width:none]"
+			>
+				{(['norse', 'greek', 'beyond'] as const).map(tab => {
+					const labels: Record<View, string> = { norse: 'Nine Realms', greek: 'Olympus', beyond: 'Beyond' };
+					const active = view === tab;
+					return (
+						<button
+							key={tab}
+							type="button"
+							onClick={() => {
+								setView(tab);
+								setSelectedRealm(null);
+								if (tab !== 'beyond') setSelectedChapter(null);
+							}}
+							className={`shrink-0 inline-flex items-center h-9 px-4 rounded-full font-display text-[12px] tracking-[0.18em] uppercase font-bold transition-colors ${
+								active
+									? 'bg-gold-300/12 border border-gold-300/40 text-gold-300 shadow-[inset_0_0_18px_-6px_rgba(221,184,74,0.4)]'
+									: 'bg-obsidian-850 border border-obsidian-700 text-ink-200 hover:text-gold-300 hover:border-gold-600'
+							}`}
+						>
+							{labels[tab]}
+						</button>
+					);
+				})}
+			</nav>
 
-					{!selectedNorseRealm && (
-						<div className="constellation-intro absolute inset-0 flex items-center justify-center px-6">
-							<MapIntroCard
-								chapter={norseChapter}
-								nextMission={nextMissionByChapter.get(norseChapter.id) ?? null}
-								onPlayPrologue={() => openChapterCinematic(norseChapter)}
-								onStageNextBattle={() => {
-									const nextMission = nextMissionByChapter.get(norseChapter.id);
-									if (nextMission) stageMission(nextMission, norseChapter, 'norse');
-								}}
-								prologueSeen={seenCinematics.includes(norseChapter.id)}
-								accentClass={FACTION_ACCENT[norseChapter.faction]}
-							/>
-						</div>
-					)}
+			{/* ── Map / Beyond bodies ─────────────────────────────────────────────────────── */}
+			<div className="mt-5">
+				{view === 'norse' ? (
+					<div className="constellation-map-area">
+						<CosmicCanvas realms={NINE_REALMS} connections={norseConnections} className="constellation-cosmic-canvas" />
+						<div className="constellation-map-shroud" />
+						<StarField />
+						<NorseConstellationLines completedMissions={completedMissions} />
 
-					{NINE_REALMS.map(realm => (
-						<NorseRealmNode
-							key={realm.id}
-							realm={realm}
-							selected={selectedRealm === realm.id}
-							onClick={() => setSelectedRealm(selectedRealm === realm.id ? null : realm.id)}
-							hasUnlockedMission={norseRealmsWithUnlocked.has(realm.id)}
-						/>
-					))}
-
-					<AnimatePresence>
-						{selectedNorseRealm && (
-							<motion.div
-								initial={{ opacity: 0, x: 30 }}
-								animate={{ opacity: 1, x: 0 }}
-								exit={{ opacity: 0, x: 30 }}
-								transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-							>
-								<RealmMissionPanel
-									realm={selectedNorseRealm}
-									missions={getMissionsForRealm(selectedNorseRealm.id, norseChapter.missions)}
-									onSelectMission={mission => {
-										setSelectedMission(mission);
-										setSelectedChapter(norseChapter);
+						{!selectedNorseRealm && (
+							<div className="constellation-intro absolute inset-0 flex items-center justify-center px-6">
+								<MapIntroCard
+									chapter={norseChapter}
+									nextMission={nextMissionByChapter.get(norseChapter.id) ?? null}
+									onPlayPrologue={() => openChapterCinematic(norseChapter)}
+									onStageNextBattle={() => {
+										const nextMission = nextMissionByChapter.get(norseChapter.id);
+										if (nextMission) stageMission(nextMission, norseChapter, 'norse');
 									}}
-									onClose={() => setSelectedRealm(null)}
+									prologueSeen={seenCinematics.includes(norseChapter.id)}
+									accentClass={FACTION_ACCENT[norseChapter.faction]}
 								/>
-							</motion.div>
-						)}
-					</AnimatePresence>
-				</div>
-			) : view === 'greek' ? (
-				<div
-					className="constellation-map-area"
-					style={{ background: 'radial-gradient(ellipse at 50% 28%, #101735 0%, #0a1023 42%, #040711 100%)' }}
-				>
-					<CosmicCanvas realms={GREEK_REALMS} connections={greekConnections} className="constellation-cosmic-canvas" />
-					<div className="constellation-map-shroud constellation-map-shroud-greek" />
-					<StarField />
-					<GreekConstellationLines completedMissions={completedMissions} />
-
-					{!selectedGreekRealm && (
-						<div className="constellation-intro absolute inset-0 flex items-center justify-center px-6">
-							<MapIntroCard
-								chapter={greekChapter}
-								nextMission={nextMissionByChapter.get(greekChapter.id) ?? null}
-								onPlayPrologue={() => openChapterCinematic(greekChapter)}
-								onStageNextBattle={() => {
-									const nextMission = nextMissionByChapter.get(greekChapter.id);
-									if (nextMission) stageMission(nextMission, greekChapter, 'greek');
-								}}
-								prologueSeen={seenCinematics.includes(greekChapter.id)}
-								accentClass={FACTION_ACCENT[greekChapter.faction]}
-							/>
-						</div>
-					)}
-
-					{GREEK_REALMS.map(realm => (
-						<GreekRealmNode
-							key={realm.id}
-							realm={realm}
-							selected={selectedRealm === realm.id}
-							onClick={() => setSelectedRealm(selectedRealm === realm.id ? null : realm.id)}
-							hasUnlockedMission={greekRealmsWithUnlocked.has(realm.id)}
-						/>
-					))}
-
-					<AnimatePresence>
-						{selectedGreekRealm && (
-							<motion.div
-								initial={{ opacity: 0, x: 30 }}
-								animate={{ opacity: 1, x: 0 }}
-								exit={{ opacity: 0, x: 30 }}
-								transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-							>
-								<RealmMissionPanel
-									realm={selectedGreekRealm}
-									missions={getGreekMissionsForRealm(selectedGreekRealm.id, greekChapter.missions)}
-									onSelectMission={mission => {
-										setSelectedMission(mission);
-										setSelectedChapter(greekChapter);
-									}}
-									onClose={() => setSelectedRealm(null)}
-								/>
-							</motion.div>
-						)}
-					</AnimatePresence>
-				</div>
-			) : selectedChapter ? (
-				<div className="mx-auto max-w-5xl px-4 pb-10 sm:px-6">
-					<motion.div
-						initial={{ opacity: 0, y: 18 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
-						className="campaign-surface-strong"
-					>
-						<div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-							<div className="min-w-0">
-								<button
-									type="button"
-									onClick={() => setSelectedChapter(null)}
-									className="text-sm text-gray-500 transition-colors hover:text-gray-200"
-								>
-									&larr; Back to chapters
-								</button>
-								<p className="campaign-kicker mt-4">Chapter Brief</p>
-								<h2 className={`mt-2 campaign-display-title ${FACTION_ACCENT[selectedChapter.faction]}`}>
-									{selectedChapter.name}
-								</h2>
-								<p className="mt-3 max-w-3xl text-sm leading-relaxed text-gray-400 sm:text-[15px]">
-									{selectedChapter.description}
-								</p>
 							</div>
+						)}
 
-							<div className="grid gap-3 sm:grid-cols-2 lg:w-[22rem] lg:grid-cols-1">
-								<div className="campaign-surface">
-									<p className="campaign-kicker text-left">Chapter Progress</p>
-									<p className="mt-2 text-base font-semibold text-gray-100">
-										{chapterProgressById.get(selectedChapter.id) ?? 0}/{selectedChapter.missions.length}
-									</p>
-									<p className="mt-1 text-sm text-gray-400">Cleared missions inside this arc.</p>
-								</div>
-								<div className="campaign-surface">
-									<p className="campaign-kicker text-left">Next Route</p>
-									<p className="mt-2 text-base font-semibold text-gray-100">
-										{(nextMissionByChapter.get(selectedChapter.id) ?? null)?.name ?? 'Chapter cleared'}
-									</p>
-									<p className="mt-1 text-sm text-gray-400">
-										{(nextMissionByChapter.get(selectedChapter.id) ?? null)?.description ?? 'Replay the chapter or revisit missions as needed.'}
-									</p>
-								</div>
-							</div>
-						</div>
-
-						<div className="mt-5 flex flex-wrap gap-2">
-							{selectedChapter.cinematicIntro && (
-								<button type="button" className="campaign-secondary-btn" onClick={() => openChapterCinematic(selectedChapter)}>
-									{seenCinematics.includes(selectedChapter.id) ? 'Replay Prologue' : 'Play Prologue'}
-								</button>
-							)}
-							{(nextMissionByChapter.get(selectedChapter.id) ?? null) && (
-								<button
-									type="button"
-									className="campaign-primary-btn"
-									onClick={() => {
-										const nextMission = nextMissionByChapter.get(selectedChapter.id);
-										if (nextMission) stageMission(nextMission, selectedChapter, 'beyond');
-									}}
-								>
-									Stage Next Battle
-								</button>
-							)}
-						</div>
-					</motion.div>
-
-					<div className="mt-5 space-y-2">
-						{selectedChapter.missions.map(mission => (
-							<MissionNode
-								key={mission.id}
-								mission={mission}
-								onSelect={selected => setSelectedMission(selected)}
+						{NINE_REALMS.map(realm => (
+							<NorseRealmNode
+								key={realm.id}
+								realm={realm}
+								selected={selectedRealm === realm.id}
+								onClick={() => setSelectedRealm(selectedRealm === realm.id ? null : realm.id)}
+								hasUnlockedMission={norseRealmsWithUnlocked.has(realm.id)}
 							/>
 						))}
+
+						<AnimatePresence>
+							{selectedNorseRealm && (
+								<motion.div
+									initial={{ opacity: 0, x: 30 }}
+									animate={{ opacity: 1, x: 0 }}
+									exit={{ opacity: 0, x: 30 }}
+									transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+								>
+									<RealmMissionPanel
+										realm={selectedNorseRealm}
+										missions={getMissionsForRealm(selectedNorseRealm.id, norseChapter.missions)}
+										onSelectMission={mission => {
+											setSelectedMission(mission);
+											setSelectedChapter(norseChapter);
+										}}
+										onClose={() => setSelectedRealm(null)}
+									/>
+								</motion.div>
+							)}
+						</AnimatePresence>
 					</div>
-				</div>
-			) : (
-				<div className="beyond-grid">
-					{beyondChapters.map(chapter => {
-						const progress = chapterProgressById.get(chapter.id) ?? 0;
-						const nextMission = nextMissionByChapter.get(chapter.id) ?? null;
-						return (
-							<article
+				) : view === 'greek' ? (
+					<div className="constellation-map-area">
+						<CosmicCanvas realms={GREEK_REALMS} connections={greekConnections} className="constellation-cosmic-canvas" />
+						<div className="constellation-map-shroud constellation-map-shroud-greek" />
+						<StarField />
+						<GreekConstellationLines completedMissions={completedMissions} />
+
+						{!selectedGreekRealm && (
+							<div className="constellation-intro absolute inset-0 flex items-center justify-center px-6">
+								<MapIntroCard
+									chapter={greekChapter}
+									nextMission={nextMissionByChapter.get(greekChapter.id) ?? null}
+									onPlayPrologue={() => openChapterCinematic(greekChapter)}
+									onStageNextBattle={() => {
+										const nextMission = nextMissionByChapter.get(greekChapter.id);
+										if (nextMission) stageMission(nextMission, greekChapter, 'greek');
+									}}
+									prologueSeen={seenCinematics.includes(greekChapter.id)}
+									accentClass={FACTION_ACCENT[greekChapter.faction]}
+								/>
+							</div>
+						)}
+
+						{GREEK_REALMS.map(realm => (
+							<GreekRealmNode
+								key={realm.id}
+								realm={realm}
+								selected={selectedRealm === realm.id}
+								onClick={() => setSelectedRealm(selectedRealm === realm.id ? null : realm.id)}
+								hasUnlockedMission={greekRealmsWithUnlocked.has(realm.id)}
+							/>
+						))}
+
+						<AnimatePresence>
+							{selectedGreekRealm && (
+								<motion.div
+									initial={{ opacity: 0, x: 30 }}
+									animate={{ opacity: 1, x: 0 }}
+									exit={{ opacity: 0, x: 30 }}
+									transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+								>
+									<RealmMissionPanel
+										realm={selectedGreekRealm}
+										missions={getGreekMissionsForRealm(selectedGreekRealm.id, greekChapter.missions)}
+										onSelectMission={mission => {
+											setSelectedMission(mission);
+											setSelectedChapter(greekChapter);
+										}}
+										onClose={() => setSelectedRealm(null)}
+									/>
+								</motion.div>
+							)}
+						</AnimatePresence>
+					</div>
+				) : selectedChapter ? (
+					<ChapterDetail
+						chapter={selectedChapter}
+						chapterProgressById={chapterProgressById}
+						nextMissionByChapter={nextMissionByChapter}
+						seenCinematics={seenCinematics}
+						onBack={() => setSelectedChapter(null)}
+						onPlayPrologue={openChapterCinematic}
+						onSelectMission={mission => setSelectedMission(mission)}
+						onStageNextBattle={() => {
+							const nextMission = nextMissionByChapter.get(selectedChapter.id);
+							if (nextMission) stageMission(nextMission, selectedChapter, 'beyond');
+						}}
+					/>
+				) : (
+					<div className="beyond-grid">
+						{beyondChapters.map(chapter => (
+							<BeyondCard
 								key={chapter.id}
-								className={`beyond-card bg-linear-to-br ${FACTION_COLORS[chapter.faction]}`}
-							>
-								<p className="campaign-kicker">Chapter Theater</p>
-								<h3 className={`mt-2 text-2xl font-semibold ${FACTION_ACCENT[chapter.faction]}`}>
-									{chapter.name}
+								chapter={chapter}
+								progress={chapterProgressById.get(chapter.id) ?? 0}
+								nextMission={nextMissionByChapter.get(chapter.id) ?? null}
+								prologueSeen={seenCinematics.includes(chapter.id)}
+								onPlayPrologue={() => openChapterCinematic(chapter)}
+								onOpen={() => setSelectedChapter(chapter)}
+							/>
+						))}
+
+						{isAllComplete && (
+							<BeyondCard
+								secret
+								chapter={EASTERN_CHAPTER}
+								progress={chapterProgressById.get(EASTERN_CHAPTER.id) ?? 0}
+								nextMission={nextMissionByChapter.get(EASTERN_CHAPTER.id) ?? null}
+								prologueSeen={seenCinematics.includes(EASTERN_CHAPTER.id)}
+								onPlayPrologue={() => openChapterCinematic(EASTERN_CHAPTER)}
+								onOpen={() => setSelectedChapter(EASTERN_CHAPTER)}
+							/>
+						)}
+
+						{!isAllComplete && (
+							<article className={`${SURFACE_STRONG_CLASS} border-dashed p-6 sm:p-7 opacity-70`}>
+								<p className={KICKER_CLASS}>Locked Arc</p>
+								<h3 className="mt-2 font-display text-2xl font-bold tracking-[0.04em] text-ink-200">
+									The Celestial Gate
 								</h3>
-								<p className="mt-3 text-sm leading-relaxed text-gray-300">
-									{chapter.description}
+								<p className="mt-3 text-[13px] leading-relaxed text-ink-300">
+									Clear every visible chapter to open the hidden mythology line.
 								</p>
-
-								<div className="campaign-surface mt-5">
-									<p className="campaign-kicker text-left">Next Route</p>
-									<p className="mt-2 text-base font-semibold text-gray-100">
-										{nextMission?.name ?? 'Chapter cleared'}
-									</p>
-									<p className="mt-2 text-sm leading-relaxed text-gray-400">
-										{nextMission?.description ?? 'All missions in this chapter are complete. Replay the prologue or reopen the chapter to review the arc.'}
-									</p>
-								</div>
-
-								<div className="mt-5 flex items-center gap-2">
-									<div className="h-2 flex-1 overflow-hidden rounded-full bg-white/[0.08]">
-										<div
-											className="h-full rounded-full bg-amber-400 transition-all"
-											style={{ width: `${(progress / chapter.missions.length) * 100}%` }}
-										/>
-									</div>
-									<span className="text-xs font-medium text-gray-400">
-										{progress}/{chapter.missions.length}
-									</span>
-								</div>
-
-								<div className="beyond-card-buttons">
-									<button type="button" className="campaign-secondary-btn" onClick={() => openChapterCinematic(chapter)}>
-										{seenCinematics.includes(chapter.id) ? 'Replay Prologue' : 'Play Prologue'}
-									</button>
-									<button
-										type="button"
-										className="campaign-primary-btn"
-										onClick={() => setSelectedChapter(chapter)}
-									>
-										Open Chapter
-									</button>
-								</div>
 							</article>
-						);
-					})}
-
-					{isAllComplete && (
-						<article className="beyond-card bg-linear-to-br from-red-950/[0.88] via-red-900/70 to-amber-950/[0.72] border-red-500/30">
-							<p className="campaign-kicker">Secret Gate</p>
-							<h3 className="mt-2 text-2xl font-semibold text-red-200">
-								The Celestial Gate
-							</h3>
-							<p className="mt-3 text-sm leading-relaxed text-gray-300">
-								Chinese, Japanese, and Hindu myth lines converge beyond the base arcs. The gate is open now.
-							</p>
-
-							<div className="campaign-surface mt-5">
-								<p className="campaign-kicker text-left">Gate Status</p>
-								<p className="mt-2 text-base font-semibold text-gray-100">
-									{chapterProgressById.get(EASTERN_CHAPTER.id) ?? 0}/{EASTERN_CHAPTER.missions.length} cleared
-								</p>
-								<p className="mt-2 text-sm leading-relaxed text-gray-400">
-									A later mythology tranche with its own prologue, route, and finale cadence.
-								</p>
-							</div>
-
-							<div className="beyond-card-buttons">
-								<button type="button" className="campaign-secondary-btn" onClick={() => openChapterCinematic(EASTERN_CHAPTER)}>
-									{seenCinematics.includes(EASTERN_CHAPTER.id) ? 'Replay Prologue' : 'Play Prologue'}
-								</button>
-								<button type="button" className="campaign-primary-btn" onClick={() => setSelectedChapter(EASTERN_CHAPTER)}>
-									Open Chapter
-								</button>
-							</div>
-						</article>
-					)}
-
-					{!isAllComplete && (
-						<div className="beyond-card border-dashed border-white/10 bg-white/4">
-							<p className="campaign-kicker">Locked Arc</p>
-							<h3 className="mt-2 text-2xl font-semibold text-gray-200">The Celestial Gate</h3>
-							<p className="mt-3 text-sm leading-relaxed text-gray-400">
-								Clear every visible chapter to open the hidden mythology line.
-							</p>
-						</div>
-					)}
-				</div>
-			)}
+						)}
+					</div>
+				)}
+			</div>
 
 			{cinematicChapter?.cinematicIntro && (
 				<CinematicCrawl
@@ -1028,6 +991,245 @@ export default function CampaignPage() {
 					}}
 				/>
 			)}
+		</div>
+	);
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Sticky page header — mirrors HomePage so the campaign feels like a sister
+ * surface, not a separate app. Shows back link + title + subtitle, all in
+ * the canonical Norse type system.
+ * ──────────────────────────────────────────────────────────────────────────── */
+function CampaignHeader({ title, subtitle }: { title: string; subtitle: string }) {
+	return (
+		<header className="sticky top-0 z-40 backdrop-blur-md bg-obsidian-950/80 border-b border-obsidian-700">
+			<div className="mx-auto max-w-[1600px] h-14 px-4 sm:px-6 flex items-center justify-between gap-3">
+				<div className="flex items-center gap-3 min-w-0">
+					<Link
+						to={routes.home}
+						className="inline-flex items-center justify-center w-8 h-8 shrink-0 rounded-md border border-obsidian-700 bg-obsidian-900/60 text-ink-300 hover:text-gold-300 hover:border-gold-600/60 transition-colors"
+						aria-label="Back to home"
+					>
+						<ChevronLeft size={16} strokeWidth={2} />
+					</Link>
+					<div className="leading-none min-w-0">
+						<div className="font-display text-sm font-bold tracking-[0.18em] uppercase text-gold-300 truncate">
+							{title}
+						</div>
+						<div className="font-mono text-[10px] tracking-[0.16em] text-ink-300 mt-1 truncate">
+							{subtitle}
+						</div>
+					</div>
+				</div>
+			</div>
+		</header>
+	);
+}
+
+function StatRow({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
+	return (
+		<div className="flex items-center justify-between gap-4">
+			<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300 shrink-0">{label}</span>
+			<span
+				className={`font-display text-[13px] tracking-[0.06em] truncate ${
+					highlight ? 'text-gold-300' : 'text-ink-0'
+				}`}
+				title={value}
+			>
+				{value}
+			</span>
+		</div>
+	);
+}
+
+function BeyondCard({
+	chapter,
+	progress,
+	nextMission,
+	prologueSeen,
+	onPlayPrologue,
+	onOpen,
+	secret = false,
+}: {
+	chapter: CampaignChapter;
+	progress: number;
+	nextMission: CampaignMission | null;
+	prologueSeen: boolean;
+	onPlayPrologue: () => void;
+	onOpen: () => void;
+	secret?: boolean;
+}) {
+	const accent = FACTION_ACCENT[chapter.faction] ?? 'text-ink-100';
+	const borderHover = FACTION_BORDER[chapter.faction] ?? 'hover:border-gold-300/45';
+	const atmosphere = FACTION_ATMOSPHERE[chapter.faction] ?? FACTION_ATMOSPHERE.twilight;
+	const progressPct = chapter.missions.length > 0
+		? Math.round((progress / chapter.missions.length) * 100)
+		: 0;
+
+	return (
+		<article
+			className={`relative overflow-hidden rounded-2xl border transition-colors duration-300 ${borderHover} ${
+				secret
+					? 'border-blood-300/40 bg-linear-to-b from-obsidian-850 to-obsidian-950'
+					: 'border-obsidian-700 bg-linear-to-b from-obsidian-850 to-obsidian-950'
+			} shadow-[0_22px_60px_-30px_rgba(0,0,0,0.85)]`}
+		>
+			{/* Atmospheric color layer — sits below content */}
+			<div
+				aria-hidden
+				className="absolute inset-0 pointer-events-none opacity-80"
+				style={{ background: atmosphere }}
+			/>
+			{/* Bottom vignette for legibility */}
+			<div
+				aria-hidden
+				className="absolute inset-0 pointer-events-none bg-linear-to-t from-obsidian-950/85 via-obsidian-950/30 to-transparent"
+			/>
+
+			<div className="relative z-10 p-5 sm:p-6 flex flex-col gap-5">
+				<div>
+					<p className={KICKER_CLASS}>
+						{secret ? 'Secret Gate' : 'Chapter Theater'}
+					</p>
+					<h3 className={`mt-2 font-display text-2xl font-bold tracking-[0.04em] uppercase ${accent}`}>
+						{secret ? 'The Celestial Gate' : chapter.name}
+					</h3>
+					<p className="mt-3 text-[13px] leading-relaxed text-ink-200">
+						{secret
+							? 'Chinese, Japanese, and Hindu myth lines converge beyond the base arcs. The gate is open now.'
+							: chapter.description}
+					</p>
+				</div>
+
+				<div className={SURFACE_CLASS}>
+					<p className={`${KICKER_CLASS} text-left`}>{secret ? 'Gate Status' : 'Next Route'}</p>
+					<p className="mt-2 font-display text-[15px] font-bold tracking-wide text-ink-0">
+						{secret
+							? `${progress}/${chapter.missions.length} cleared`
+							: nextMission?.name ?? 'Chapter cleared'}
+					</p>
+					<p className="mt-2 text-[12.5px] leading-relaxed text-ink-300">
+						{secret
+							? 'A later mythology tranche with its own prologue, route, and finale cadence.'
+							: (nextMission?.description ?? 'Replay the prologue or revisit completed fights to review the arc.')}
+					</p>
+				</div>
+
+				<div className="flex items-center gap-3">
+					<div className="h-1.5 flex-1 overflow-hidden rounded-full bg-obsidian-800">
+						<div
+							className="h-full rounded-full bg-linear-to-r from-gold-500 to-gold-200 transition-all duration-500"
+							style={{ width: `${progressPct}%` }}
+						/>
+					</div>
+					<span className="font-mono text-[10px] tracking-[0.16em] uppercase text-ink-300 shrink-0">
+						{progress}/{chapter.missions.length}
+					</span>
+				</div>
+
+				<div className="flex flex-wrap gap-2">
+					<Button variant="default" size="sm" onClick={onPlayPrologue}>
+						{prologueSeen ? 'Replay Prologue' : 'Play Prologue'}
+					</Button>
+					<Button variant="primary" size="sm" onClick={onOpen}>
+						Open Chapter
+					</Button>
+				</div>
+			</div>
+		</article>
+	);
+}
+
+function ChapterDetail({
+	chapter,
+	chapterProgressById,
+	nextMissionByChapter,
+	seenCinematics,
+	onBack,
+	onPlayPrologue,
+	onSelectMission,
+	onStageNextBattle,
+}: {
+	chapter: CampaignChapter;
+	chapterProgressById: Map<string, number>;
+	nextMissionByChapter: Map<string, CampaignMission | null>;
+	seenCinematics: string[];
+	onBack: () => void;
+	onPlayPrologue: (chapter: CampaignChapter) => void;
+	onSelectMission: (mission: CampaignMission) => void;
+	onStageNextBattle: () => void;
+}) {
+	const accent = FACTION_ACCENT[chapter.faction] ?? 'text-ink-0';
+	const nextMission = nextMissionByChapter.get(chapter.id) ?? null;
+	const progress = chapterProgressById.get(chapter.id) ?? 0;
+
+	return (
+		<div className="mx-auto max-w-5xl px-4 sm:px-6 pb-12">
+			<motion.div
+				initial={{ opacity: 0, y: 18 }}
+				animate={{ opacity: 1, y: 0 }}
+				transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+				className={`${SURFACE_STRONG_CLASS} p-5 sm:p-7`}
+			>
+				<button
+					type="button"
+					onClick={onBack}
+					className="inline-flex items-center gap-1.5 font-mono text-[11px] tracking-[0.18em] uppercase font-bold text-ink-300 hover:text-gold-300 transition-colors"
+				>
+					<ChevronLeft size={13} strokeWidth={2.2} />
+					Back to chapters
+				</button>
+
+				<div className="mt-4 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+					<div className="min-w-0">
+						<p className={KICKER_CLASS}>Chapter Brief</p>
+						<h2 className={`mt-2 font-display text-3xl font-bold tracking-[0.04em] uppercase ${accent}`}>
+							{chapter.name}
+						</h2>
+						<p className="mt-3 max-w-2xl text-[14px] leading-relaxed text-ink-200">
+							{chapter.description}
+						</p>
+					</div>
+
+					<div className="grid gap-3 sm:grid-cols-2 lg:w-[22rem] lg:grid-cols-1">
+						<div className={SURFACE_CLASS}>
+							<p className={`${KICKER_CLASS} text-left`}>Chapter Progress</p>
+							<p className="mt-2 font-display text-base font-bold tracking-wide text-ink-0">
+								{progress}/{chapter.missions.length}
+							</p>
+							<p className="mt-1 text-[12.5px] text-ink-300">Cleared missions inside this arc.</p>
+						</div>
+						<div className={SURFACE_CLASS}>
+							<p className={`${KICKER_CLASS} text-left`}>Next Route</p>
+							<p className="mt-2 font-display text-base font-bold tracking-wide text-ink-0">
+								{nextMission?.name ?? 'Chapter cleared'}
+							</p>
+							<p className="mt-1 text-[12.5px] text-ink-300">
+								{nextMission?.description ?? 'Replay the chapter or revisit missions as needed.'}
+							</p>
+						</div>
+					</div>
+				</div>
+
+				<div className="mt-5 flex flex-wrap gap-2">
+					{chapter.cinematicIntro && (
+						<Button variant="default" size="default" onClick={() => onPlayPrologue(chapter)}>
+							{seenCinematics.includes(chapter.id) ? 'Replay Prologue' : 'Play Prologue'}
+						</Button>
+					)}
+					{nextMission && (
+						<Button variant="primary" size="default" onClick={onStageNextBattle}>
+							Stage Next Battle
+						</Button>
+					)}
+				</div>
+			</motion.div>
+
+			<div className="mt-5 space-y-2">
+				{chapter.missions.map(mission => (
+					<MissionNode key={mission.id} mission={mission} onSelect={onSelectMission} />
+				))}
+			</div>
 		</div>
 	);
 }

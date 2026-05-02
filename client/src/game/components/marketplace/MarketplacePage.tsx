@@ -224,7 +224,7 @@ export default function MarketplacePage() {
 	];
 
 	return (
-		<div className="min-h-screen bg-linear-to-b from-gray-950 via-gray-900 to-gray-950 text-white">
+		<div className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-vault-nav) text-ink-0">
 			{/* Header */}
 			<div className="border-b border-gray-800/60 bg-gray-950/80 backdrop-blur-sm sticky top-0 z-40">
 				<div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">

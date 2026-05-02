@@ -261,7 +261,7 @@ export default function CollectionPage() {
 
 	if (loading) {
 		return (
-			<div className="min-h-screen flex items-center justify-center text-ink-0 bg-(image:--bg-vault-nav)">
+			<div className="h-screen w-full overflow-y-auto overflow-x-hidden flex items-center justify-center text-ink-0 bg-(image:--bg-vault-nav)">
 				<motion.div
 					animate={{ rotate: 360 }}
 					transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
@@ -272,7 +272,7 @@ export default function CollectionPage() {
 	}
 
 	return (
-		<div className="min-h-screen p-6 md:p-8 text-ink-0 bg-(image:--bg-vault-nav)">
+		<div className="h-screen w-full overflow-y-auto overflow-x-hidden p-6 md:p-8 text-ink-0 bg-(image:--bg-vault-nav)">
 			<div className="max-w-7xl mx-auto">
 				{/* Header Nav */}
 				<div className="flex justify-between items-center mb-6">

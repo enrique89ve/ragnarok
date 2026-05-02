@@ -73,6 +73,12 @@ export async function setupVite(app: Express, server: Server) {
   app.use(vite.middlewares);
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
+    const pathname = url.split('?')[0] ?? url;
+
+    if (pathname.startsWith('/.well-known/') || pathname.endsWith('.json')) {
+      res.status(404).end();
+      return;
+    }
 
     try {
       const clientTemplate = path.resolve(

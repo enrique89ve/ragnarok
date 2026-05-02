@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, CheckCircle2, Search, Shield } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Search, Shield, User } from 'lucide-react';
 import { ChessPieceType, ArmySelection as ArmySelectionType, ChessPieceHero } from '../types/ChessTypes';
 import { CHESS_PIECE_HEROES, getDefaultArmySelection, pieceHasSpells } from '../data/ChessPieceConfig';
 import { useAudio } from '../../lib/stores/useAudio';
@@ -18,6 +18,7 @@ import { resolveHeroPortrait } from '../utils/art/artMapping';
 import { HeroArtImage } from './ui/HeroArtImage';
 import { getHeroRarity, RARITY_COLORS } from '../utils/heroRarity';
 import { useHoloTracking, getHoloTier } from '../hooks/useHoloTracking';
+import { useNFTUsername } from '../nft/hooks';
 import './styles/ArmySelectionNorse.css';
 import './styles/holoEffect.css';
 
@@ -70,8 +71,9 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
   const [popupHero, setPopupHero] = useState<ChessPieceHero | null>(null);
   const [matchmakingStarting, setMatchmakingStarting] = useState(false);
 
-  const getDeck = useHeroDeckStore(state => state.getDeck);
+  const heroDecks = useHeroDeckStore(state => state.decks);
   const loadFromStorage = useHeroDeckStore(state => state.loadFromStorage);
+  const hiveUsername = useNFTUsername();
 
   const myPeerId = usePeerStore(state => state.myPeerId);
   const host = usePeerStore(state => state.host);
@@ -204,7 +206,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
   );
 
   const getDeckStatus = (pieceType: PieceType): { cardCount: number; isComplete: boolean } => {
-    const deck = getDeck(pieceType);
+    const deck = heroDecks[pieceType];
     if (!deck) return { cardCount: 0, isComplete: false };
     return { cardCount: deck.cardIds.length, isComplete: deck.cardIds.length === 30 };
   };
@@ -315,6 +317,23 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
         </div>
 
         <div className="norse-top-bar-actions">
+          <div
+            className={`norse-user-pill ${hiveUsername ? 'is-authed' : 'is-guest'}`}
+            title={hiveUsername ? `Logged in as @${hiveUsername}` : 'No Hive account connected'}
+          >
+            <span className="norse-user-pill-avatar" aria-hidden>
+              <User size={13} strokeWidth={2.2} />
+            </span>
+            <span className="norse-user-pill-text">
+              <span className="norse-user-pill-label">
+                {hiveUsername ? 'Hive' : 'Guest'}
+              </span>
+              <span className="norse-user-pill-handle">
+                {hiveUsername ? `@${hiveUsername}` : 'No login'}
+              </span>
+            </span>
+          </div>
+
           {validDecks.length > 0 && onQuickStart && !isMultiplayer && (
             <div className="norse-quick-decks">
               {validDecks.slice(0, 3).map((deck) => {

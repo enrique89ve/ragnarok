@@ -776,12 +776,10 @@ export default function ExplorerPage() {
 	const [tab, setTab] = useState<Tab>('overview');
 
 	return (
-		<div style={{
-			minHeight: '100vh',
-			background: 'linear-gradient(180deg, #0a0a14 0%, #12121e 50%, #0a0a14 100%)',
-			color: '#e0e0e0',
-			fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
-		}}>
+		<div
+			className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-vault-nav) text-ink-0"
+			style={{ fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif" }}
+		>
 			{/* Header */}
 			<div style={{
 				background: 'linear-gradient(180deg, rgba(212,175,55,0.08), transparent)',

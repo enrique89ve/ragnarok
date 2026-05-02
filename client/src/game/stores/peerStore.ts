@@ -1,24 +1,40 @@
 /**
- * peerStore.ts — P2P connection with production-grade resilience
+ * peerStore.ts — match transport (server-mediated WebSocket relay).
  *
- * Features:
- * - STUN/TURN for cross-continent NAT traversal
- * - Exponential backoff reconnection (3 attempts: 2s, 5s, 10s)
- * - Message buffer: queues outgoing messages during disconnect, replays on reconnect
- * - Grace period: 15s window before declaring opponent disconnected
- * - Heartbeat keepalive: detects dead connections before PeerJS close event
+ * Replaces the previous PeerJS + WebRTC + STUN/TURN stack with a single
+ * WebSocket connection to the game's own server (`/ws/p2p`). Same external
+ * API (`host`, `join`, `send`, `disconnect`, `handleHeartbeat`) so
+ * `useP2PSync` keeps working unchanged. The `connection` exposed in the
+ * store is structurally compatible with the subset of `DataConnection` that
+ * `useP2PSync` consumes (events `data|open|close|error`, methods `send`/
+ * `close`, props `peer`/`open`).
+ *
+ * Why WS instead of WebRTC: under WSL2 + Chrome the internal DNS resolver
+ * fails on every STUN/TURN hostname (errorCode=701) and the public OpenRelay
+ * TURN credentials were revoked (errorCode=400). With both srflx and relay
+ * unavailable two same-machine peers behind WSL2 NAT couldn't negotiate.
+ * Going through the server eliminates ICE/STUN/TURN/broker entirely; works
+ * everywhere the HTTP server is reachable. Tradeoff: server sees all match
+ * traffic (~1 KB/s per match — negligible). WebRTC can be re-introduced as
+ * a transparent upgrade later (open the WebRTC peer connection over the
+ * same WS for signaling; swap transports if the data channel opens).
+ *
+ * Features preserved from the WebRTC implementation:
+ * - Heartbeat keepalive (app-level, in addition to WS-level ping/pong).
+ * - Grace period after opponent dropout before declaring DC.
+ * - Outgoing message buffer that flushes on reconnect.
+ * - Exponential reconnect backoff (2s → 5s → 10s).
  */
 
 import { create } from 'zustand';
-import Peer, { DataConnection } from 'peerjs';
+import type { DataConnection, Peer } from 'peerjs';
 import { debug } from '../config/debugConfig';
-import { assertWebRTCSupport, getPeerErrorMessage } from '../utils/webrtcSupport';
+import { LocalWebSocketTransport, deriveRelayUrl } from './wsTransport';
+import type { ArmySelection } from '../types/ChessTypes';
 
 // ── Timing Constants ──
 
 const PEER_CONNECT_TIMEOUT_MS = 25_000;
-const PEER_RETRY_DELAY_MS = 3_000;
-const MAX_JOIN_RETRIES = 2;
 
 // Reconnect backoff: 2s → 5s → 10s
 const RECONNECT_DELAYS = [2_000, 5_000, 10_000];
@@ -27,39 +43,12 @@ const MAX_RECONNECT_ATTEMPTS = RECONNECT_DELAYS.length;
 // Grace period: how long to wait before declaring opponent gone
 const DISCONNECT_GRACE_MS = 15_000;
 
-// Heartbeat: detect dead connections (PeerJS close event can be delayed)
+// Heartbeat: app-level keepalive on top of WS-level ping/pong
 const HEARTBEAT_INTERVAL_MS = 5_000;
 const HEARTBEAT_TIMEOUT_MS = 12_000;
 
 // Message buffer: max messages queued during disconnect
 const MAX_BUFFERED_MESSAGES = 200;
-
-// ── ICE Servers ──
-
-// eslint-disable-next-line no-undef
-const ICE_SERVERS: RTCIceServer[] = [
-	{ urls: 'stun:stun.l.google.com:19302' },
-	{ urls: 'stun:stun1.l.google.com:19302' },
-	{ urls: 'stun:stun2.l.google.com:19302' },
-	{ urls: 'stun:stun3.l.google.com:19302' },
-	{ urls: 'stun:stun4.l.google.com:19302' },
-	{ urls: 'stun:stun.stunprotocol.org:3478' },
-	{ urls: 'stun:stun.nextcloud.com:443' },
-	{
-		urls: ['turn:a.relay.metered.ca:80', 'turn:a.relay.metered.ca:80?transport=tcp', 'turn:a.relay.metered.ca:443', 'turns:a.relay.metered.ca:443'],
-		username: 'open',
-		credential: 'open',
-	},
-];
-
-const PEER_CONFIG = {
-	host: '0.peerjs.com',
-	port: 443,
-	path: '/',
-	secure: true,
-	config: { iceServers: ICE_SERVERS },
-	debug: 0,
-};
 
 // ── Module-level state (survives store resets) ──
 
@@ -70,6 +59,12 @@ let heartbeatIntervalId: ReturnType<typeof setInterval> | null = null;
 let lastHeartbeatReceived = 0;
 const messageBuffer: unknown[] = [];
 
+// Active transport (kept outside the store to avoid serializing zustand on
+// each WS event — the store only holds the structural cast for consumers).
+let activeTransport: LocalWebSocketTransport | null = null;
+// Last roomId used — needed by `attemptReconnect` to rejoin the same room.
+let lastRoomId: string | null = null;
+
 // ── Types ──
 
 export type P2PConnectionState =
@@ -77,20 +72,25 @@ export type P2PConnectionState =
 	| 'connecting'
 	| 'waiting'
 	| 'connected'
-	| 'reconnecting'  // actively trying to restore connection
-	| 'grace_period'  // opponent dropped, waiting before declaring DC
+	| 'reconnecting'
+	| 'grace_period'
 	| 'error';
 
 export interface PeerStore {
 	myPeerId: string | null;
 	remotePeerId: string | null;
 	connection: DataConnection | null;
+	// Always null in the WS transport. Type retained as `Peer | null` so
+	// `useP2PSync`'s spectator effect (which dereferences `peer.on(...)`) keeps
+	// type-checking; the effect early-returns on `!peer` so the deref is never
+	// reached at runtime.
 	peer: Peer | null;
 	connectionState: P2PConnectionState;
 	isHost: boolean;
 	error: string | null;
-	reconnectCountdown: number; // seconds remaining in grace period (for UI)
+	reconnectCountdown: number;
 	bufferedMessageCount: number;
+	opponentArmy: ArmySelection | null;
 
 	setMyPeerId: (id: string | null) => void;
 	setRemotePeerId: (id: string | null) => void;
@@ -99,9 +99,17 @@ export interface PeerStore {
 	setConnectionState: (state: P2PConnectionState) => void;
 	setIsHost: (isHost: boolean) => void;
 	setError: (error: string | null) => void;
+	setOpponentArmy: (army: ArmySelection | null) => void;
 
+	/** Generate a peerId for matchmaking without opening a transport yet.
+	 *  Used by Quick Match — the room id is unknown until matchmaking pairs us. */
+	prepareForMatchmaking: () => void;
+	/** Manual host: opens a room named after our peerId; user shares the id. */
 	host: () => Promise<void>;
-	join: (remoteId: string, isReconnect?: boolean, _retryCount?: number) => Promise<void>;
+	/** Manual join: opens the room named after the host's peerId. */
+	join: (remoteId: string, isReconnect?: boolean) => Promise<void>;
+	/** Quick Match join: opens the room emitted by matchmaking (matchId). */
+	connectToRoom: (roomId: string) => Promise<void>;
 	disconnect: () => void;
 	send: (data: unknown) => void;
 	handleHeartbeat: () => void;
@@ -109,30 +117,35 @@ export interface PeerStore {
 
 // ── Helpers ──
 
-function clearAllTimers() {
+function generatePeerId(): string {
+	if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+		return crypto.randomUUID();
+	}
+	return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function clearAllTimers(): void {
 	if (reconnectTimerId) { clearTimeout(reconnectTimerId); reconnectTimerId = null; }
 	if (graceTimerId) { clearTimeout(graceTimerId); graceTimerId = null; }
 	if (heartbeatIntervalId) { clearInterval(heartbeatIntervalId); heartbeatIntervalId = null; }
 	reconnectAttempt = 0;
 }
 
-function flushBuffer(conn: DataConnection) {
+function flushBuffer(transport: LocalWebSocketTransport): void {
 	let flushed = 0;
 	while (messageBuffer.length > 0) {
 		const msg = messageBuffer.shift();
 		try {
-			conn.send(msg);
+			transport.send(msg);
 			flushed++;
 		} catch {
 			break;
 		}
 	}
-	if (flushed > 0) {
-		debug.log(`[PeerStore] Flushed ${flushed} buffered messages`);
-	}
+	if (flushed > 0) debug.log(`[PeerStore] Flushed ${flushed} buffered messages`);
 }
 
-function startHeartbeat(get: () => PeerStore, set: (state: Partial<PeerStore>) => void) {
+function startHeartbeat(get: () => PeerStore, set: (state: Partial<PeerStore>) => void): void {
 	if (heartbeatIntervalId) clearInterval(heartbeatIntervalId);
 	lastHeartbeatReceived = Date.now();
 
@@ -140,18 +153,13 @@ function startHeartbeat(get: () => PeerStore, set: (state: Partial<PeerStore>) =
 		const { connection, connectionState, isHost } = get();
 		if (connectionState !== 'connected' || !connection) return;
 
-		// Send keepalive ping
-		try {
-			connection.send({ type: 'heartbeat', t: Date.now() });
-		} catch { /* ignore send errors here */ }
+		try { connection.send({ type: 'heartbeat', t: Date.now() }); }
+		catch { /* socket closed mid-send — let reconnect handle it */ }
 
-		// Check if we've heard from opponent recently
 		const silenceMs = Date.now() - lastHeartbeatReceived;
 		if (silenceMs > HEARTBEAT_TIMEOUT_MS) {
 			debug.warn(`[PeerStore] No heartbeat for ${(silenceMs / 1000).toFixed(1)}s — connection may be dead`);
-			// Don't immediately disconnect — enter grace period
 			if (isHost) {
-				// Host: enter grace period, wait for opponent to reconnect
 				set({ connectionState: 'grace_period', reconnectCountdown: Math.ceil(DISCONNECT_GRACE_MS / 1000) });
 				startGracePeriod(get, set);
 			}
@@ -159,10 +167,9 @@ function startHeartbeat(get: () => PeerStore, set: (state: Partial<PeerStore>) =
 	}, HEARTBEAT_INTERVAL_MS);
 }
 
-function startGracePeriod(get: () => PeerStore, set: (state: Partial<PeerStore>) => void) {
+function startGracePeriod(get: () => PeerStore, set: (state: Partial<PeerStore>) => void): void {
 	if (graceTimerId) clearTimeout(graceTimerId);
 
-	// Countdown timer for UI
 	const countdownInterval = setInterval(() => {
 		const { connectionState, reconnectCountdown } = get();
 		if (connectionState !== 'grace_period' && connectionState !== 'reconnecting') {
@@ -192,7 +199,7 @@ function startGracePeriod(get: () => PeerStore, set: (state: Partial<PeerStore>)
 	}, DISCONNECT_GRACE_MS);
 }
 
-function attemptReconnect(remoteId: string, get: () => PeerStore, set: (state: Partial<PeerStore>) => void) {
+function attemptReconnect(roomId: string, get: () => PeerStore, set: (state: Partial<PeerStore>) => void): void {
 	if (reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) {
 		debug.error(`[PeerStore] All ${MAX_RECONNECT_ATTEMPTS} reconnect attempts failed`);
 		set({
@@ -203,17 +210,16 @@ function attemptReconnect(remoteId: string, get: () => PeerStore, set: (state: P
 		return;
 	}
 
-	const delay = RECONNECT_DELAYS[reconnectAttempt] || 10_000;
+	const delay = RECONNECT_DELAYS[reconnectAttempt] ?? 10_000;
 	reconnectAttempt++;
 
-	debug.warn(`[PeerStore] Reconnect attempt ${reconnectAttempt}/${MAX_RECONNECT_ATTEMPTS} in ${delay / 1000}s...`);
+	debug.warn(`[PeerStore] Reconnect attempt ${reconnectAttempt}/${MAX_RECONNECT_ATTEMPTS} in ${delay / 1000}s…`);
 	set({
 		connectionState: 'reconnecting',
 		reconnectCountdown: Math.ceil(DISCONNECT_GRACE_MS / 1000),
 		error: null,
 	});
 
-	// Start grace period countdown in parallel
 	startGracePeriod(get, set);
 
 	reconnectTimerId = setTimeout(() => {
@@ -221,16 +227,103 @@ function attemptReconnect(remoteId: string, get: () => PeerStore, set: (state: P
 		const currentState = get();
 		if (currentState.connectionState !== 'reconnecting' || currentState.connection) return;
 
-		get().join(remoteId, true).then(() => {
-			// Reconnected — clear grace period
+		get().connectToRoom(roomId).then(() => {
 			if (graceTimerId) { clearTimeout(graceTimerId); graceTimerId = null; }
 			reconnectAttempt = 0;
 			set({ reconnectCountdown: 0 });
 		}).catch(() => {
-			// Try again with next backoff level
-			attemptReconnect(remoteId, get, set);
+			attemptReconnect(roomId, get, set);
 		});
 	}, delay);
+}
+
+/**
+ * Open the WS transport against a roomId and wire up its lifecycle to the
+ * store. Shared by `host()`, `join()`, `connectToRoom()`. Resolves once the
+ * server confirms `__sys event=open` (i.e. the room is full / both peers
+ * present); rejects on timeout or transport error before then.
+ */
+function openTransport(
+	roomId: string,
+	peerId: string,
+	get: () => PeerStore,
+	set: (state: Partial<PeerStore>) => void,
+): Promise<void> {
+	// Close any previous transport before opening a new one — protects against
+	// stale connections after a reconnect or a quick-match retry.
+	if (activeTransport) {
+		try { activeTransport.close(); } catch { /* already closed */ }
+		activeTransport = null;
+	}
+
+	lastRoomId = roomId;
+	const transport = new LocalWebSocketTransport({
+		url: deriveRelayUrl(),
+		roomId,
+		peerId,
+	});
+	activeTransport = transport;
+
+	return new Promise<void>((resolve, reject) => {
+		const timeoutId = setTimeout(() => {
+			debug.error(`[PeerStore] TIMEOUT (${PEER_CONNECT_TIMEOUT_MS}ms) waiting for peer in room=${roomId.slice(0, 16)}…`);
+			try { transport.close(); } catch { /* ignored */ }
+			set({ error: 'Connection timeout — opponent did not arrive', connectionState: 'error' });
+			reject(new Error('Connect timeout'));
+		}, PEER_CONNECT_TIMEOUT_MS);
+
+		transport.on('open', (...args: unknown[]) => {
+			clearTimeout(timeoutId);
+			const payload = (args[0] ?? {}) as { isHost?: boolean; remotePeerId?: string };
+			reconnectAttempt = 0;
+			if (graceTimerId) { clearTimeout(graceTimerId); graceTimerId = null; }
+			set({
+				connection: transport as unknown as DataConnection,
+				connectionState: 'connected',
+				isHost: !!payload.isHost,
+				remotePeerId: payload.remotePeerId ?? null,
+				reconnectCountdown: 0,
+				error: null,
+			});
+			flushBuffer(transport);
+			startHeartbeat(get, set);
+			debug.log(`[PeerStore] connected via WS relay — isHost=${!!payload.isHost} remotePeerId=${(payload.remotePeerId ?? '').slice(0, 8)}…`);
+			resolve();
+		});
+
+		transport.on('close', () => {
+			const { connectionState } = get();
+			if (connectionState === 'connected') {
+				debug.warn('[PeerStore] transport closed — entering grace period');
+				set({
+					connection: null,
+					connectionState: 'grace_period',
+					reconnectCountdown: Math.ceil(DISCONNECT_GRACE_MS / 1000),
+				});
+				if (lastRoomId) attemptReconnect(lastRoomId, get, set);
+				else startGracePeriod(get, set);
+			} else if (connectionState === 'connecting' || connectionState === 'waiting') {
+				clearTimeout(timeoutId);
+				set({ connection: null, connectionState: 'disconnected' });
+				reject(new Error('Connection closed before opening'));
+			}
+		});
+
+		transport.on('error', (...args: unknown[]) => {
+			const err = (args[0] instanceof Error) ? args[0] : new Error('Transport error');
+			debug.error('[PeerStore] transport error:', err.message);
+			const { connectionState } = get();
+			if (connectionState === 'connecting' || connectionState === 'waiting') {
+				clearTimeout(timeoutId);
+				set({ error: err.message, connectionState: 'error' });
+				reject(err);
+			} else {
+				set({ error: err.message });
+			}
+		});
+
+		transport.connect();
+	});
 }
 
 // ── Store ──
@@ -245,6 +338,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 	error: null,
 	reconnectCountdown: 0,
 	bufferedMessageCount: 0,
+	opponentArmy: null,
 
 	setMyPeerId: (id) => set({ myPeerId: id }),
 	setRemotePeerId: (id) => set({ remotePeerId: id }),
@@ -253,10 +347,10 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 	setConnectionState: (state) => set({ connectionState: state }),
 	setIsHost: (isHost) => set({ isHost }),
 	setError: (error) => set({ error }),
+	setOpponentArmy: (army) => set({ opponentArmy: army }),
 
 	handleHeartbeat: () => {
 		lastHeartbeatReceived = Date.now();
-		// If we were in grace period and got a heartbeat, connection is alive
 		const { connectionState } = get();
 		if (connectionState === 'grace_period') {
 			if (graceTimerId) { clearTimeout(graceTimerId); graceTimerId = null; }
@@ -265,162 +359,98 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 		}
 	},
 
+	prepareForMatchmaking: () => {
+		const { myPeerId } = get();
+		if (myPeerId) return;
+		const newId = generatePeerId();
+		set({ myPeerId: newId, connectionState: 'disconnected', error: null });
+		debug.log(`[PeerStore] prepared peerId=${newId.slice(0, 8)}… (no transport yet)`);
+	},
+
 	host: async () => {
-		try {
-			assertWebRTCSupport();
-		} catch (err: unknown) {
-			const message = getPeerErrorMessage(err);
-			set({ error: message, connectionState: 'error' });
-			throw new Error(message);
-		}
+		const { connection } = get();
+		if (connection) get().disconnect();
 
-		const { peer, disconnect } = get();
-		if (peer) disconnect();
-
-		set({ connectionState: 'connecting', isHost: true, error: null });
 		clearAllTimers();
 		messageBuffer.length = 0;
 
-		return new Promise((resolve, reject) => {
-			const timeoutId = setTimeout(() => {
-				newPeer.destroy();
-				set({ error: 'Connection timeout — check your internet connection', connectionState: 'error' });
-				reject(new Error('Peer connection timeout'));
-			}, PEER_CONNECT_TIMEOUT_MS);
-
-			const newPeer = new Peer(PEER_CONFIG);
-
-			newPeer.on('open', (id) => {
-				clearTimeout(timeoutId);
-				set({ myPeerId: id, peer: newPeer, connectionState: 'waiting' });
-				resolve();
-			});
-
-			newPeer.on('error', (err) => {
-				clearTimeout(timeoutId);
-				const message = getPeerErrorMessage(err);
-				set({ error: message, connectionState: 'error' });
-				reject(new Error(message));
-			});
-
-			newPeer.on('connection', (conn) => {
-				conn.on('open', () => {
-					reconnectAttempt = 0;
-					if (graceTimerId) { clearTimeout(graceTimerId); graceTimerId = null; }
-					set({ connection: conn, connectionState: 'connected', remotePeerId: conn.peer, reconnectCountdown: 0, error: null });
-					flushBuffer(conn);
-					startHeartbeat(get, set);
-					debug.log(`[PeerStore] Host: opponent connected (${conn.peer})`);
-				});
-
-				conn.on('error', (err) => {
-					if (!get().peer) return;
-					set({ error: getPeerErrorMessage(err), connectionState: 'error' });
-				});
-
-				conn.on('close', () => {
-					if (!get().peer) return;
-					debug.warn('[PeerStore] Host: opponent connection closed — entering grace period');
-					set({ connection: null, connectionState: 'grace_period', reconnectCountdown: Math.ceil(DISCONNECT_GRACE_MS / 1000) });
-					startGracePeriod(get, set);
-				});
-			});
+		const peerId = generatePeerId();
+		set({
+			myPeerId: peerId,
+			remotePeerId: null,
+			connectionState: 'waiting',
+			isHost: true,
+			error: null,
+			opponentArmy: null,
 		});
+
+		debug.log(`[PeerStore][host] opening room=${peerId.slice(0, 8)}…`);
+		try {
+			await openTransport(peerId, peerId, get, set);
+		} catch (err) {
+			throw err instanceof Error ? err : new Error(String(err));
+		}
 	},
 
-	join: async (remoteId: string, isReconnect = false, _retryCount = 0) => {
-		try {
-			assertWebRTCSupport();
-		} catch (err: unknown) {
-			const message = getPeerErrorMessage(err);
-			set({ error: message, connectionState: 'error' });
-			throw new Error(message);
+	join: async (remoteId: string, isReconnect = false) => {
+		const { connection } = get();
+		if (connection) get().disconnect();
+
+		messageBuffer.length = 0;
+
+		const peerId = get().myPeerId ?? generatePeerId();
+		set({
+			myPeerId: peerId,
+			remotePeerId: remoteId,
+			connectionState: isReconnect ? 'reconnecting' : 'connecting',
+			isHost: false,
+			error: null,
+			opponentArmy: null,
+		});
+
+		debug.log(`[PeerStore][join] joining room=${remoteId.slice(0, 8)}… as peer=${peerId.slice(0, 8)}…`);
+		await openTransport(remoteId, peerId, get, set);
+	},
+
+	connectToRoom: async (roomId: string) => {
+		const { connection } = get();
+		if (connection) {
+			try { (connection as unknown as { close: () => void }).close(); } catch { /* ignored */ }
 		}
 
-		const { peer, disconnect } = get();
-		if (peer) disconnect();
+		messageBuffer.length = 0;
 
-		set({ connectionState: isReconnect ? 'reconnecting' : 'connecting', isHost: false, remotePeerId: remoteId, error: null });
-
-		return new Promise<void>((resolve, reject) => {
-			const timeoutId = setTimeout(() => {
-				newPeer.destroy();
-				if (_retryCount < MAX_JOIN_RETRIES) {
-					debug.warn(`[PeerStore] Attempt ${_retryCount + 1} timed out — retrying...`);
-					set({ error: null, connectionState: 'connecting' });
-					setTimeout(() => {
-						get().join(remoteId, isReconnect, _retryCount + 1).then(resolve).catch(reject);
-					}, PEER_RETRY_DELAY_MS);
-					return;
-				}
-				set({ error: 'Connection failed. Try sharing game code directly.', connectionState: 'error' });
-				reject(new Error('Connection failed'));
-			}, PEER_CONNECT_TIMEOUT_MS);
-
-			const newPeer = new Peer(PEER_CONFIG);
-
-			newPeer.on('open', (id) => {
-				set({ myPeerId: id, peer: newPeer });
-
-				const conn = newPeer.connect(remoteId, { reliable: true });
-
-				conn.on('open', () => {
-					clearTimeout(timeoutId);
-					reconnectAttempt = 0;
-					if (graceTimerId) { clearTimeout(graceTimerId); graceTimerId = null; }
-					set({ connection: conn, connectionState: 'connected', reconnectCountdown: 0, error: null });
-					flushBuffer(conn);
-					startHeartbeat(get, set);
-					debug.log(`[PeerStore] Connected to ${remoteId}`);
-					resolve();
-				});
-
-				conn.on('error', (err) => {
-					clearTimeout(timeoutId);
-					if (!get().peer) return;
-					const message = getPeerErrorMessage(err);
-					set({ error: message, connectionState: 'error' });
-					reject(new Error(message));
-				});
-
-				conn.on('close', () => {
-					if (!get().peer) return;
-					const { remotePeerId } = get();
-					if (remotePeerId) {
-						debug.warn('[PeerStore] Client: connection lost — attempting reconnect');
-						attemptReconnect(remotePeerId, get, set);
-					} else {
-						set({ connection: null, connectionState: 'disconnected' });
-					}
-				});
-			});
-
-			newPeer.on('error', (err) => {
-				clearTimeout(timeoutId);
-				const message = getPeerErrorMessage(err);
-				set({ error: message, connectionState: 'error' });
-				reject(new Error(message));
-			});
+		const peerId = get().myPeerId ?? generatePeerId();
+		set({
+			myPeerId: peerId,
+			connectionState: 'connecting',
+			error: null,
+			opponentArmy: null,
 		});
+
+		debug.log(`[PeerStore][connectToRoom] room=${roomId.slice(0, 16)}… peer=${peerId.slice(0, 8)}…`);
+		await openTransport(roomId, peerId, get, set);
 	},
 
 	disconnect: () => {
 		clearAllTimers();
 		messageBuffer.length = 0;
-		const { connection, peer } = get();
-		if (connection) connection.close();
-		if (peer) peer.destroy();
+		if (activeTransport) {
+			try { activeTransport.close(); } catch { /* already closed */ }
+			activeTransport = null;
+		}
+		lastRoomId = null;
 		set({
 			myPeerId: null, remotePeerId: null, connection: null, peer: null,
 			connectionState: 'disconnected', isHost: false, error: null,
 			reconnectCountdown: 0, bufferedMessageCount: 0,
+			opponentArmy: null,
 		});
 	},
 
 	send: (data: unknown) => {
 		const { connection, connectionState } = get();
 
-		// Connected: send immediately
 		if (connection && connectionState === 'connected') {
 			try {
 				connection.send(data);
@@ -434,7 +464,6 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			return;
 		}
 
-		// Reconnecting or grace period: buffer the message for replay
 		if (connectionState === 'reconnecting' || connectionState === 'grace_period') {
 			if (messageBuffer.length < MAX_BUFFERED_MESSAGES) {
 				messageBuffer.push(data);

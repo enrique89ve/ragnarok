@@ -1029,9 +1029,11 @@
   }
 
   .norse-army-selection .norse-top-bar {
-    height: 72px;
+    height: auto;
+    min-height: 72px;
     padding: 8px 14px 10px;
-    gap: 12px;
+    gap: 8px;
+    flex-wrap: wrap;
   }
 
   .norse-army-selection .norse-top-title {
@@ -1050,7 +1052,26 @@
   .norse-army-selection .norse-top-bar-actions {
     width: auto;
   }
-  
+
+  /* Mobile pill: anchored fixed top-right since the army-selection grid
+     overflows the viewport horizontally on narrow widths. Without this
+     the pill renders inside the bar at x=417 (off-screen at vw=390). */
+  .norse-army-selection .norse-user-pill {
+    position: fixed !important;
+    top: 12px !important;
+    right: 12px !important;
+    z-index: 110;
+    height: 32px;
+    padding: 0 10px 0 6px;
+    gap: 6px;
+    backdrop-filter: blur(8px);
+  }
+
+  .norse-army-selection .norse-user-pill-handle {
+    max-width: 100px;
+    font-size: 12px;
+  }
+
   .norse-army-selection .norse-piece-sidebar {
     flex-direction: row;
     overflow-x: auto;
@@ -1653,6 +1674,86 @@
   gap: 12px;
 }
 
+/* User identity pill — Hive login surfaced in the top bar so the player
+   always knows which account is staging the warband. */
+.norse-army-selection .norse-user-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px 0 8px;
+  border-radius: 999px;
+  border: 1px solid var(--obsidian-700);
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--obsidian-850) 92%, transparent),
+    color-mix(in srgb, var(--obsidian-900) 96%, transparent));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink-0) 4%, transparent);
+}
+
+.norse-army-selection .norse-user-pill.is-authed {
+  border-color: color-mix(in srgb, var(--gold-300) 35%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--gold-200) 14%, transparent),
+    0 0 18px -8px color-mix(in srgb, var(--gold-300) 55%, transparent);
+}
+
+.norse-army-selection .norse-user-pill-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--obsidian-700) 80%, transparent);
+  color: var(--ink-200);
+  flex-shrink: 0;
+}
+
+.norse-army-selection .norse-user-pill.is-authed .norse-user-pill-avatar {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--gold-300) 28%, var(--obsidian-800)),
+    color-mix(in srgb, var(--gold-500) 22%, var(--obsidian-900)));
+  color: var(--gold-100);
+}
+
+.norse-army-selection .norse-user-pill-text {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.05;
+  min-width: 0;
+}
+
+.norse-army-selection .norse-user-pill-label {
+  font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-300);
+}
+
+.norse-army-selection .norse-user-pill.is-authed .norse-user-pill-label {
+  color: var(--gold-300);
+}
+
+.norse-army-selection .norse-user-pill-handle {
+  font-family: var(--type-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--ink-100);
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.norse-army-selection .norse-user-pill.is-guest .norse-user-pill-handle {
+  color: var(--ink-300);
+  font-style: italic;
+  font-weight: 600;
+}
+
 .norse-army-selection .norse-spell-badge {
   font-size: 12px;
   padding: 4px 12px;
@@ -1846,4 +1947,16 @@
 .norse-hero-card:hover .card-particles::before,
 .norse-hero-card:hover .card-particles::after {
   animation-play-state: running;
+}
+
+/* User pill — very narrow viewports drop the secondary label so the
+   handle stays legible without truncating the @username badly. */
+@media (max-width: 480px) {
+  .norse-army-selection .norse-user-pill-label {
+    display: none;
+  }
+  .norse-army-selection .norse-user-pill-handle {
+    max-width: 90px;
+    font-size: 11px;
+  }
 }

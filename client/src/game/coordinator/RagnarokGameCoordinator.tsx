@@ -57,9 +57,16 @@ import '../components/campaign/cinematic-crawl.css';
 type RagnarokGameCoordinatorProps = {
   onGameEnd?: (winner: 'player' | 'opponent') => void;
   initialArmy?: ArmySelectionType | null;
+  /**
+   * Opposing army announced by the remote peer in P2P mode. When provided,
+   * overrides the default-army fallback so the opponent's hero portraits and
+   * decks reflect what they actually selected. Solo/campaign callers omit
+   * this and the coordinator falls back to the campaign or default army.
+   */
+  opponentArmy?: ArmySelectionType | null;
 };
 
-const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ onGameEnd, initialArmy = null }) => {
+const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ onGameEnd, initialArmy = null, opponentArmy: opponentArmyProp = null }) => {
   const { playSoundEffect } = useAudio();
   const navigate = useNavigate();
 
@@ -141,10 +148,11 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ onGam
 
   const { initializeCombat, endCombat } = usePokerCombatAdapter();
 
-  const opponentArmy = useMemo(() => isCampaign
-    ? buildCampaignArmy(campaignData!.mission)
-    : getDefaultArmySelection(),
-    [isCampaign, campaignData]);
+  const opponentArmy = useMemo(() => {
+    if (isCampaign) return buildCampaignArmy(campaignData!.mission);
+    if (opponentArmyProp) return opponentArmyProp;
+    return getDefaultArmySelection();
+  }, [isCampaign, campaignData, opponentArmyProp]);
 
   const missionRealm = isCampaign ? campaignData?.mission?.realm : undefined;
   const visualRealm = useMemo(() => resolveVisualRealm(missionRealm), [missionRealm]);

@@ -20,6 +20,7 @@ import { submitSlashEvidence, findExistingMatchResult } from '../../data/blockch
 import { filterGameStateForSpectator } from '../spectator/spectatorFilter';
 import { GAME_COMMAND_TYPES } from '../core/commands';
 import { canonicalQuickHash, type GameCommandEnvelope, type WireGameCommand } from './p2pEnvelope';
+import { useWarbandStore, selectArmy } from '../../lib/stores/useWarbandStore';
 
 export type { GameCommandEnvelope, WireGameCommand } from './p2pEnvelope';
 export { canonicalQuickHash } from './p2pEnvelope';
@@ -80,6 +81,7 @@ export type P2PMessage =
 	| { type: 'deck_verify'; hiveAccount: string; nftIds: string[] }
 	| { type: 'seed_commit'; commitment: string }
 	| { type: 'seed_reveal'; salt: string; hiveUsername?: string }
+	| { type: 'army_announcement'; army: import('../types/ChessTypes').ArmySelection }
 	| { type: 'result_propose'; result: PackagedMatchResult; hash: string; broadcasterSig: string; proposalId: string }
 	| { type: 'result_countersign'; counterpartySig: string; proposalId: string }
 	| { type: 'result_reject'; reason: string }
@@ -128,6 +130,23 @@ export function useP2PSync() {
 	// Slash dedup: only submit one slash per turn
 	const lastSlashTurnRef = useRef<number>(-1);
 
+	// Command dedup: track commandIds (UUIDs from envelope) we've already applied so a
+	// duplicate envelope (network retry, buffered replay after reconnect, malicious
+	// resend) is rejected before re-applying its mutation. Defense-in-depth alongside
+	// the seq-contiguity check — seq alone catches simple duplicates but doesn't
+	// survive a peer-side seq counter reset; commandId is globally unique per envelope.
+	// Bounded ring (Set + insertion-order array) prevents unbounded memory growth on
+	// long matches while keeping recent IDs for replay rejection.
+	const SEEN_COMMAND_IDS_MAX = 256;
+	const seenCommandIdsRef = useRef<Set<string>>(new Set());
+	const seenCommandIdsOrderRef = useRef<string[]>([]);
+
+	// Last envelope send timestamp — used by `sendCommandEnvelope` to enforce a
+	// short cooldown that avoids the prevStateHash race when the user clicks
+	// faster than the host's gameState sync round-trip. Reset on disconnect via
+	// the seed-exchange useEffect cleanup branch.
+	const lastEnvelopeSentAtRef = useRef<number>(0);
+
 	// Dual-sig result state
 	const pendingResultRef = useRef<{
 		result: PackagedMatchResult;
@@ -148,6 +167,9 @@ export function useP2PSync() {
 			moveCounter = 0;
 			outgoingSeqCounter = 0;
 			lastIncomingSeqRef.current = -1;
+			seenCommandIdsRef.current.clear();
+			seenCommandIdsOrderRef.current.length = 0;
+			lastEnvelopeSentAtRef.current = 0;
 			return;
 		}
 
@@ -171,6 +193,22 @@ export function useP2PSync() {
 		const hash = typeof __BUILD_HASH__ !== 'undefined' ? __BUILD_HASH__ : 'dev';
 		send({ type: 'version_check', buildHash: hash });
 
+		// Announce our selected army so the opponent can render our actual hero
+		// portraits (and the host can build a gameState with both armies before
+		// sending the `init`). Without this both sides initialize with the
+		// hardcoded `getDefaultArmySelection()` fallback.
+		try {
+			const ourArmy = selectArmy(useWarbandStore.getState());
+			if (ourArmy) {
+				send({ type: 'army_announcement', army: ourArmy });
+				debug.log('[useP2PSync] Sent army_announcement:', { king: ourArmy.king?.name });
+			} else {
+				debug.warn('[useP2PSync] No local army to announce — opponent will see default fallback');
+			}
+		} catch (err) {
+			debug.warn('[useP2PSync] Failed to send army_announcement:', err);
+		}
+
 		// Cross-verify deck NFT ownership: send our deck's NFT IDs so opponent can verify on-chain
 		if (isSharedNetworkEnvironment()) {
 			try {
@@ -193,6 +231,15 @@ export function useP2PSync() {
 		}
 
 		startNewTranscript();
+
+		// Owner of `activeTranscript`: this effect started it, so it cleans it up on
+		// unmount or dep change. The early-return branch above also calls clearTranscript
+		// when the connection drops mid-mount; this return covers the unmount path
+		// (e.g., user navigates away while connected) where the early-return never fires.
+		// `clearTranscript` is idempotent — safe if both paths run on a state transition.
+		return () => {
+			clearTranscript();
+		};
 	}, [connection, connectionState, send]);
 
 	// Host sends init AFTER seed exchange completes (replaces old 200ms timer)
@@ -272,10 +319,22 @@ export function useP2PSync() {
 	useEffect(() => {
 		if (!connection || (connectionState !== 'connected' && connectionState !== 'grace_period')) return;
 
+		// Track heartbeat reception for diagnostics; log once on first arrival to confirm
+		// the listener is wired, then again every 30s so the user can see the connection
+		// is alive without spamming the console.
+		let heartbeatLogState = { firstSeen: false, lastLoggedAt: 0 };
 		const processMessage = async (data: P2PMessage) => {
 			// Heartbeat keepalive — handle before switch (not a game message)
 			if ((data as { type: string }).type === 'heartbeat') {
 				usePeerStore.getState().handleHeartbeat();
+				const now = Date.now();
+				if (!heartbeatLogState.firstSeen) {
+					debug.log('[useP2PSync] First heartbeat received from opponent — connection alive');
+					heartbeatLogState = { firstSeen: true, lastLoggedAt: now };
+				} else if (now - heartbeatLogState.lastLoggedAt > 30_000) {
+					debug.log('[useP2PSync] Heartbeats flowing (alive, last 30s)');
+					heartbeatLogState.lastLoggedAt = now;
+				}
 				return;
 			}
 
@@ -307,7 +366,13 @@ export function useP2PSync() {
 				case 'hash_check': {
 					const gs = useGameStore.getState().gameState;
 					if (!gs) break;
-					const myHash = await computeStateHash(gs);
+					// Canonicalize to host perspective before hashing so both peers operate
+					// on the same byte layout. The host stores `players.player = host`;
+					// the client stores `players.player = client` (post-flip in the init/
+					// gameState handlers). Without this flip the WASM hash always mismatches
+					// because the byte order of `players.player` vs `players.opponent` differs.
+					const canonicalState = isHost ? gs : flipGameState(gs);
+					const myHash = await computeStateHash(canonicalState);
 					if (myHash !== data.stateHash) {
 						debug.error(`[useP2PSync] State hash mismatch at turn ${data.turnNumber}: local=${myHash.slice(0, 16)}, remote=${data.stateHash.slice(0, 16)}`);
 						send({ type: 'hash_mismatch', turnNumber: data.turnNumber, myHash });
@@ -460,8 +525,29 @@ export function useP2PSync() {
 							break;
 						}
 
+						// commandId dedup — defense-in-depth alongside seq. Catches replays that
+						// somehow bypass seq (e.g., a buggy peer that resets its counter mid-game).
+						if (typeof data.commandId !== 'string' || data.commandId.length === 0) {
+							reject('missing_command_id');
+							break;
+						}
+						if (seenCommandIdsRef.current.has(data.commandId)) {
+							reject(`duplicate_command_id_${data.commandId.slice(0, 8)}`);
+							break;
+						}
+
+						// prevStateHash is required and must match. Earlier code short-circuited
+						// when `data.prevStateHash` was falsy — that allowed a sender to bypass
+						// the integrity check by omitting the field. With sender-side
+						// canonicalQuickHash always producing a string (empty only when state
+						// is null, which shouldn't happen during play), we can validate
+						// strictly: non-empty string + exact match.
+						if (typeof data.prevStateHash !== 'string' || data.prevStateHash.length === 0) {
+							reject('missing_prev_state_hash');
+							break;
+						}
 						const localPrevHash = canonicalQuickHash(useGameStore.getState().gameState, true);
-						if (data.prevStateHash && data.prevStateHash !== localPrevHash) {
+						if (data.prevStateHash !== localPrevHash) {
 							reject(`prev_state_hash_mismatch_local_${localPrevHash}_got_${data.prevStateHash}`);
 							break;
 						}
@@ -486,11 +572,44 @@ export function useP2PSync() {
 							break;
 						}
 
+						// Mark a successfully-applied envelope: advance seq, register commandId
+						// in the dedup ring (FIFO eviction at SEEN_COMMAND_IDS_MAX), and trigger
+						// the post-apply sync to the peer. Fails-fast with `false` if the dedup
+						// ring is corrupt — but `add` cannot fail, so this always returns `true`.
+						const markCommandApplied = (): void => {
+							lastIncomingSeqRef.current = data.seq;
+							seenCommandIdsRef.current.add(data.commandId);
+							seenCommandIdsOrderRef.current.push(data.commandId);
+							while (seenCommandIdsOrderRef.current.length > SEEN_COMMAND_IDS_MAX) {
+								const evicted = seenCommandIdsOrderRef.current.shift();
+								if (evicted !== undefined) seenCommandIdsRef.current.delete(evicted);
+							}
+						};
+
+						// Payload existence pre-check helpers. Rejecting BEFORE applyOpponentCommand
+						// saves CPU on a flood of bogus IDs. From host POV the opponent's data
+						// is gs.players.opponent.* and our own is gs.players.player.*.
+						const HERO_TARGET_IDS = new Set(['player-hero', 'opponent-hero']);
+						const isMinionInBattlefield = (id: string): boolean => (
+							gs.players.opponent.battlefield.some(c => c.instanceId === id)
+							|| gs.players.player.battlefield.some(c => c.instanceId === id)
+						);
+
 						// Lightweight payload validation; wireCommand is already a discriminated union.
 						switch (wireCommand.type) {
 							case GAME_COMMAND_TYPES.playCard:
 								if (typeof wireCommand.cardId !== 'string' || wireCommand.cardId.length > 64) {
 									reject('invalid_play_card_payload');
+									break;
+								}
+								if (!gs.players.opponent.hand.some(c => c.instanceId === wireCommand.cardId)) {
+									reject('play_card_id_not_in_opponent_hand');
+									break;
+								}
+								if (wireCommand.targetId !== undefined
+									&& !HERO_TARGET_IDS.has(wireCommand.targetId)
+									&& !isMinionInBattlefield(wireCommand.targetId)) {
+									reject('play_card_target_not_found');
 									break;
 								}
 								recordMove('playCard', {
@@ -502,7 +621,7 @@ export function useP2PSync() {
 									seq: data.seq,
 								}, 'opponent');
 								applyOpponentCommandToStore(wireCommand);
-								lastIncomingSeqRef.current = data.seq;
+								markCommandApplied();
 								debouncedSync();
 								break;
 							case GAME_COMMAND_TYPES.attack:
@@ -514,6 +633,16 @@ export function useP2PSync() {
 									reject('invalid_attack_payload');
 									break;
 								}
+								if (!gs.players.opponent.battlefield.some(c => c.instanceId === wireCommand.attackerId)) {
+									reject('attack_attacker_not_on_opponent_battlefield');
+									break;
+								}
+								if (wireCommand.defenderId !== undefined
+									&& !HERO_TARGET_IDS.has(wireCommand.defenderId)
+									&& !gs.players.player.battlefield.some(c => c.instanceId === wireCommand.defenderId)) {
+									reject('attack_defender_not_on_player_battlefield');
+									break;
+								}
 								recordMove('attack', {
 									attackerId: wireCommand.attackerId,
 									defenderId: wireCommand.defenderId,
@@ -521,7 +650,7 @@ export function useP2PSync() {
 									seq: data.seq,
 								}, 'opponent');
 								applyOpponentCommandToStore(wireCommand);
-								lastIncomingSeqRef.current = data.seq;
+								markCommandApplied();
 								debouncedSync();
 								break;
 							case GAME_COMMAND_TYPES.endTurn:
@@ -530,17 +659,23 @@ export function useP2PSync() {
 									seq: data.seq,
 								}, 'opponent');
 								applyOpponentCommandToStore(wireCommand);
-								lastIncomingSeqRef.current = data.seq;
+								markCommandApplied();
 								debouncedSync();
 								break;
 							case GAME_COMMAND_TYPES.useHeroPower:
+								if (wireCommand.targetId !== undefined
+									&& !HERO_TARGET_IDS.has(wireCommand.targetId)
+									&& !isMinionInBattlefield(wireCommand.targetId)) {
+									reject('hero_power_target_not_found');
+									break;
+								}
 								recordMove('useHeroPower', {
 									targetId: wireCommand.targetId,
 									commandId: data.commandId,
 									seq: data.seq,
 								}, 'opponent');
 								applyOpponentCommandToStore(wireCommand);
-								lastIncomingSeqRef.current = data.seq;
+								markCommandApplied();
 								debouncedSync();
 								break;
 							default:
@@ -621,6 +756,26 @@ export function useP2PSync() {
 					send({ type: 'pong' });
 					break;
 
+				case 'pong':
+					// Residual ack of our ping (legacy keepalive scheme — modern keepalive
+					// is the dedicated `heartbeat` message handled at the top). No action
+					// needed; just silently consume so the default branch doesn't log a
+					// spurious "Unknown message type: pong" warning.
+					break;
+
+				case 'army_announcement':
+					// Opponent announced their selected army. Store so the match coordinator
+					// can render the real hero portraits instead of the default fallback.
+					if (data.army && typeof data.army === 'object') {
+						usePeerStore.getState().setOpponentArmy(data.army);
+						debug.log('[useP2PSync] Opponent army received:', {
+							king: data.army.king?.name,
+							queen: data.army.queen?.name,
+							rook: data.army.rook?.name,
+						});
+					}
+					break;
+
 				case 'deck_verify': {
 					let disconnecting = false;
 					const disconnectOnce = () => {
@@ -689,12 +844,6 @@ export function useP2PSync() {
 					const gs = useGameStore.getState().gameState;
 					const myWinner = gs?.winner;
 
-					const expectedHostWinner = myWinner === 'player' ? 'opponent' : 'player';
-					const proposedWinner = data.result.winner.username;
-					const hostUsername = data.result.matchType === 'ranked'
-						? (expectedHostWinner === 'player' ? data.result.winner.username : data.result.loser.username)
-						: proposedWinner;
-
 					const clientUsername = getNFTBridge().getUsername();
 					const iAmWinner = myWinner === 'player';
 					const resultSaysIWon = data.result.winner.username === clientUsername;
@@ -741,11 +890,24 @@ export function useP2PSync() {
 			}
 		};
 
+		// Connection-scoped cancellation flag. Closed over by `processQueue` so a
+		// long-running message processing loop bails out as soon as React unmounts
+		// the hook (or `connection`/`connectionState` deps change). Without this,
+		// `await processMessage(msg)` could continue post-cleanup, firing toasts /
+		// audio / transcript writes against a session that no longer exists. Local
+		// (not useRef) so each connection epoch starts fresh — no carry-over from
+		// the previous cleanup.
+		let cancelled = false;
+
 		const processQueue = async () => {
 			if (isProcessingRef.current) return;
 			isProcessingRef.current = true;
 			try {
 				while (messageQueueRef.current.length > 0) {
+					if (cancelled) {
+						messageQueueRef.current.length = 0;
+						break;
+					}
 					const msg = messageQueueRef.current.shift()!;
 					try {
 						await processMessage(msg);
@@ -773,15 +935,18 @@ export function useP2PSync() {
 
 		const handleMessageWrapper = (data: unknown) => handleMessage(data);
 		connection.on('data', handleMessageWrapper);
+		debug.log('[useP2PSync] Data listener attached to connection (heartbeats will now be processed)');
 
 		return () => {
+			cancelled = true;
 			connection.off('data', handleMessageWrapper);
+			debug.log('[useP2PSync] Data listener detached');
 			if (pendingSyncRef.current) {
 				clearTimeout(pendingSyncRef.current);
 				pendingSyncRef.current = null;
 			}
 		};
-	}, [connection, connectionState, isHost, send, playCard, attackWithCard, endTurn, performHeroPower]);
+	}, [connection, connectionState, isHost, send, playCard, attackWithCard, endTurn, performHeroPower, applyOpponentCommandToStore]);
 
 	const syncGameState = useCallback(() => {
 		if (connectionState !== 'connected' || !isHost) return;
@@ -810,6 +975,23 @@ export function useP2PSync() {
 			debug.warn('[useP2PSync] sendCommandEnvelope skipped: no matchId yet');
 			return;
 		}
+		// Cooldown to avoid the fast-double-click race: client (!isHost) doesn't
+		// apply commands locally — its state stays at the pre-command hash until
+		// host's gameState sync arrives. A second envelope sent within the round-
+		// trip window carries the SAME prevStateHash as the first, but the host
+		// has already advanced. The host then rejects with `prev_state_hash_mismatch`
+		// and the user's second action is silently lost. Cooldown (250ms) is well
+		// under typical human click cadence (~300-500ms) and well over LAN RTT
+		// (~50-100ms), so legitimate consecutive actions still flow through.
+		const ENVELOPE_COOLDOWN_MS = 250;
+		const nowSend = Date.now();
+		if (nowSend - lastEnvelopeSentAtRef.current < ENVELOPE_COOLDOWN_MS) {
+			debug.warn(`[useP2PSync] envelope cooldown active (${nowSend - lastEnvelopeSentAtRef.current}ms since last) — dropping ${command.type}`);
+			toast.error('Action too fast — wait for opponent to sync', { duration: 1500 });
+			return;
+		}
+		lastEnvelopeSentAtRef.current = nowSend;
+
 		const localState = useGameStore.getState().gameState;
 		const prevStateHash = canonicalQuickHash(localState, isHost);
 		const envelope: GameCommandEnvelope = {
@@ -936,6 +1118,13 @@ export function useP2PSync() {
 		peer.on('connection', handleConnection);
 		return () => {
 			peer.off('connection', handleConnection);
+			// Close any live spectator data channels before clearing the ref. Without
+			// this the browser-side spectators stay connected to a peer that the host
+			// just abandoned — they sit on a zombie channel until their own timeout
+			// fires. Best-effort: PeerJS `close()` swallows on already-closed.
+			for (const spectatorConn of spectatorConnectionsRef.current) {
+				try { spectatorConn.close(); } catch { /* already closed */ }
+			}
 			spectatorConnectionsRef.current = [];
 		};
 	}, [isHost, connectionState]);
@@ -1018,22 +1207,36 @@ export function useP2PSync() {
 		if (connectionState !== 'connected') return null;
 
 		return new Promise((resolve) => {
+			// Capture the timeout id so the success/reject paths can clear it
+			// instead of letting it run to completion (it's a no-op once
+			// `pendingResultRef.current` is null, but clearing is cheaper than
+			// letting a 30s timer wait around for nothing).
+			let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+			const settle = (sigs: { broadcaster: string; counterparty: string } | null) => {
+				if (timeoutId !== null) {
+					clearTimeout(timeoutId);
+					timeoutId = null;
+				}
+				resolve(sigs);
+			};
+
 			pendingResultRef.current = {
 				result,
 				hash,
 				broadcasterSig,
-				resolve: (sigs) => resolve(sigs),
-				reject: () => resolve(null),
+				resolve: (sigs) => settle(sigs),
+				reject: () => settle(null),
 			};
 
 			const proposalId = crypto.randomUUID();
 			send({ type: 'result_propose', result, hash, broadcasterSig, proposalId });
 
 			// 30s timeout — fall back to single-sig
-			setTimeout(() => {
+			timeoutId = setTimeout(() => {
 				if (pendingResultRef.current) {
 					pendingResultRef.current = null;
-					resolve(null);
+					settle(null);
 				}
 			}, RESULT_SIGN_TIMEOUT_MS);
 		});

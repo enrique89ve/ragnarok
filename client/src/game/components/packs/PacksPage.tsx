@@ -598,7 +598,7 @@ export default function PacksPage() {
 
 	if (loading) {
 		return (
-			<div className="min-h-screen bg-(image:--bg-home-nav) text-ink-0 flex items-center justify-center">
+			<div className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-home-nav) text-ink-0 flex items-center justify-center">
 				<motion.div
 					animate={{ rotate: 360 }}
 					transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
@@ -610,7 +610,7 @@ export default function PacksPage() {
 
 	if (error) {
 		return (
-			<div className="min-h-screen bg-(image:--bg-home-nav) text-ink-0 flex items-center justify-center">
+			<div className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-home-nav) text-ink-0 flex items-center justify-center">
 				<div className="text-center">
 					<p className="text-ember-300 text-xl mb-4">{error}</p>
 					<motion.button
@@ -632,7 +632,7 @@ export default function PacksPage() {
 	const scarcity = getScarcityInfo(packPercentRemaining);
 
 	return (
-		<div className="h-full overflow-y-auto bg-(image:--bg-home-nav) text-ink-0 p-8 pb-16">
+		<div className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-home-nav) text-ink-0 p-8 pb-16">
 			{isOpening && openingPack && revealedCards.length > 0 && (
 				<PackOpeningAnimation
 					packName={openingPack.name}

@@ -183,3 +183,4 @@ data/chain-state.json
 docs/superpowers/
 docs/BETA_TESTNET_ROADMAP.md
 a.out
+.playwright-mcp/

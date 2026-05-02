@@ -19,10 +19,12 @@ export function useMatchmaking() {
 		queuePosition,
 		opponentPeerId,
 		isHost,
+		roomId,
 		error,
 		setStatus,
 		setQueuePosition,
 		setOpponent,
+		setRoomId,
 		setError,
 		reset,
 	} = useMatchmakingStore();
@@ -72,6 +74,12 @@ export function useMatchmaking() {
 					(match) => {
 						setStatus('matched');
 						setOpponent(match.peerId, true);
+						// Hive on-chain matchmaking has no server-side matchId; derive a
+						// deterministic roomId from the lex-ordered peer pair so both
+						// clients converge on the same value without extra round-trips.
+						const myPeerId = usePeerStore.getState().myPeerId ?? '';
+						const [first, second] = myPeerId < match.peerId ? [myPeerId, match.peerId] : [match.peerId, myPeerId];
+						setRoomId(`${first}-${second}`);
 						setQueuePosition(null);
 						chainPollerCancelRef.current = null;
 					},
@@ -80,19 +88,51 @@ export function useMatchmaking() {
 				return true;
 			}
 
-			const queueBody = hiveUsername
-				? await nftBridge.buildAuthBody(hiveUsername, 'queue', { peerId, username: hiveUsername })
-				: { peerId, username: hiveUsername };
+			// Build the request body. Only include `username` (and request a signed
+			// auth body) when we're actually in Hive mode AND have a username.
+			//
+			// In LOCAL mode, `LocalNFTBridge.buildAuthBody` returns `{...fields,
+			// username, timestamp}` WITHOUT a signature — sending that unsigned
+			// `username` triggers the server's
+			// `requireHiveBodyAuthIfUsernamePresent` middleware to reject with
+			// HTTP 401 "Hive signature required". So in local mode we just send
+			// `{ peerId }` (anonymous queue).
+			//
+			// If hiveUsername is stale-rehydrated from localStorage but Keychain
+			// isn't actually installed/active, the Hive-mode try/catch still
+			// falls back gracefully.
+			let queueBody: Record<string, unknown> = { peerId };
+			if (hiveUsername && nftBridge.isHiveMode()) {
+				try {
+					queueBody = await nftBridge.buildAuthBody(hiveUsername, 'queue', { peerId, username: hiveUsername });
+				} catch (err) {
+					debug.warn('[useMatchmaking] Hive auth body build failed — falling back to anonymous queue:', err);
+					queueBody = { peerId };
+				}
+			}
 			const response = await fetch(`${API_BASE}/api/matchmaking/queue`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(queueBody),
-			}).catch(() => {
-				throw new Error('Matchmaking service unavailable. Please use manual match.');
+			}).catch((err) => {
+				// Network-level failure (server not running, CORS, browser offline).
+				// Surface the actual error so we don't lose diagnosability behind a
+				// generic "service unavailable" message.
+				debug.error('[useMatchmaking] queue fetch failed:', err);
+				throw new Error(`Matchmaking service unreachable: ${err instanceof Error ? err.message : String(err)}`);
 			});
 
 			if (!response.ok) {
-				throw new Error('Matchmaking service unavailable. Please use manual match.');
+				// Try to read the server's error JSON for the real cause (rate limit,
+				// auth failure, etc.). Falls back to a status-code summary if the
+				// body isn't JSON.
+				let serverError = `HTTP ${response.status}`;
+				try {
+					const errBody = await response.json();
+					if (errBody?.error) serverError = `${errBody.error} (HTTP ${response.status})`;
+				} catch { /* not JSON, use status code */ }
+				debug.error('[useMatchmaking] queue rejected by server:', serverError);
+				throw new Error(`Matchmaking error: ${serverError}`);
 			}
 
 			const data = await response.json();
@@ -104,6 +144,7 @@ export function useMatchmaking() {
 			if (data.status === 'matched') {
 				setStatus('matched');
 				setOpponent(data.opponentPeerId, data.isHost);
+				if (typeof data.matchId === 'string') setRoomId(data.matchId);
 				setQueuePosition(null);
 				return true;
 			}
@@ -130,6 +171,7 @@ export function useMatchmaking() {
 					if (statusData.success && statusData.status === 'matched') {
 						setStatus('matched');
 						setOpponent(statusData.opponentPeerId, statusData.isHost);
+						if (typeof statusData.matchId === 'string') setRoomId(statusData.matchId);
 						setQueuePosition(null);
 						if (pollIntervalRef.current) {
 							clearInterval(pollIntervalRef.current);
@@ -154,7 +196,7 @@ export function useMatchmaking() {
 		} catch (err: unknown) {
 			return failJoin(err instanceof Error ? err.message : 'Failed to join matchmaking queue');
 		}
-	}, [hiveUsername, setStatus, setError, setQueuePosition, setOpponent]);
+	}, [hiveUsername, setStatus, setError, setQueuePosition, setOpponent, setRoomId]);
 
 	const leaveQueue = useCallback(async () => {
 		const peerId = usePeerStore.getState().myPeerId;
@@ -214,6 +256,7 @@ export function useMatchmaking() {
 		queuePosition,
 		opponentPeerId,
 		isHost,
+		roomId,
 		error,
 		joinQueue,
 		leaveQueue,

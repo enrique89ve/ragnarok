@@ -94,6 +94,76 @@ function getMaxCopiesForCard(cardId: number): number {
   return isCardMythic(cardId) ? 1 : MAX_COPIES;
 }
 
+export function validateHeroDeck(deck: HeroDeck | null, pieceType: string): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  if (!isPieceType(pieceType)) {
+    return { valid: false, errors: [`Invalid piece type: ${pieceType}`] };
+  }
+
+  if (!deck) {
+    return { valid: false, errors: ['No deck exists for this piece'] };
+  }
+
+  if (!deck.heroId) {
+    errors.push('No hero selected');
+  }
+
+  if (!deck.heroClass) {
+    errors.push('No hero class specified');
+  }
+
+  if (deck.cardIds.length !== DECK_SIZE) {
+    errors.push(`Deck must contain exactly ${DECK_SIZE} cards (has ${deck.cardIds.length})`);
+  }
+
+  const cardCounts: Record<number, number> = {};
+  for (const cardId of deck.cardIds) {
+    cardCounts[cardId] = (cardCounts[cardId] || 0) + 1;
+  }
+
+  for (const [cardIdStr, count] of Object.entries(cardCounts)) {
+    const cardId = Number(cardIdStr);
+    const maxAllowed = getMaxCopiesForCard(cardId);
+    if (count > maxAllowed) {
+      const card = getCardById(cardId);
+      const rarityNote = isCardMythic(cardId) ? ' (Mythic - max 1)' : '';
+      errors.push(`Card "${card?.name || cardId}"${rarityNote} has ${count} copies (max ${maxAllowed})`);
+    }
+  }
+
+  for (const cardId of deck.cardIds) {
+    if (!isCardValidForClass(cardId, deck.heroClass)) {
+      const card = getCardById(cardId);
+      const cardClass = normalizeClass(card?.class || card?.heroClass);
+      errors.push(`Card "${card?.name || cardId}" (${cardClass}) is not valid for ${deck.heroClass}`);
+    }
+  }
+
+  for (const cardId of deck.cardIds) {
+    const card = getCardById(cardId);
+    if (!card) {
+      errors.push(`Card with ID ${cardId} not found in registry`);
+    }
+  }
+
+  if (getNFTBridge().isHiveMode()) {
+    for (const [cardIdStr, count] of Object.entries(cardCounts)) {
+      const cardId = Number(cardIdStr);
+      const owned = getOwnedCopies(cardId);
+      if (count > owned) {
+        const card = getCardById(cardId);
+        errors.push(`You own ${owned} copy(ies) of "${card?.name || cardId}" but deck has ${count}`);
+      }
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
+}
+
 export const useHeroDeckStore = create<HeroDeckState & HeroDeckActions>((set, get) => ({
   ...createInitialState(),
 
@@ -220,75 +290,10 @@ export const useHeroDeckStore = create<HeroDeckState & HeroDeckActions>((set, ge
   },
 
   validateDeck: (pieceType: string): { valid: boolean; errors: string[] } => {
-    const errors: string[] = [];
-    
     if (!isPieceType(pieceType)) {
       return { valid: false, errors: [`Invalid piece type: ${pieceType}`] };
     }
-    
-    const deck = get().decks[pieceType];
-    
-    if (!deck) {
-      return { valid: false, errors: ['No deck exists for this piece'] };
-    }
-    
-    if (!deck.heroId) {
-      errors.push('No hero selected');
-    }
-    
-    if (!deck.heroClass) {
-      errors.push('No hero class specified');
-    }
-    
-    if (deck.cardIds.length !== DECK_SIZE) {
-      errors.push(`Deck must contain exactly ${DECK_SIZE} cards (has ${deck.cardIds.length})`);
-    }
-    
-    const cardCounts: Record<number, number> = {};
-    for (const cardId of deck.cardIds) {
-      cardCounts[cardId] = (cardCounts[cardId] || 0) + 1;
-    }
-    
-    for (const [cardIdStr, count] of Object.entries(cardCounts)) {
-      const cardId = Number(cardIdStr);
-      const maxAllowed = getMaxCopiesForCard(cardId);
-      if (count > maxAllowed) {
-        const card = getCardById(cardId);
-        const rarityNote = isCardMythic(cardId) ? ' (Mythic - max 1)' : '';
-        errors.push(`Card "${card?.name || cardId}"${rarityNote} has ${count} copies (max ${maxAllowed})`);
-      }
-    }
-    
-    for (const cardId of deck.cardIds) {
-      if (!isCardValidForClass(cardId, deck.heroClass)) {
-        const card = getCardById(cardId);
-        const cardClass = normalizeClass(card?.class || card?.heroClass);
-        errors.push(`Card "${card?.name || cardId}" (${cardClass}) is not valid for ${deck.heroClass}`);
-      }
-    }
-    
-    for (const cardId of deck.cardIds) {
-      const card = getCardById(cardId);
-      if (!card) {
-        errors.push(`Card with ID ${cardId} not found in registry`);
-      }
-    }
-
-    if (getNFTBridge().isHiveMode()) {
-      for (const [cardIdStr, count] of Object.entries(cardCounts)) {
-        const cardId = Number(cardIdStr);
-        const owned = getOwnedCopies(cardId);
-        if (count > owned) {
-          const card = getCardById(cardId);
-          errors.push(`You own ${owned} copy(ies) of "${card?.name || cardId}" but deck has ${count}`);
-        }
-      }
-    }
-
-    return {
-      valid: errors.length === 0,
-      errors,
-    };
+    return validateHeroDeck(get().decks[pieceType], pieceType);
   },
 
   isArmyComplete: (): boolean => {

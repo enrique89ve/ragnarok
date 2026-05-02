@@ -68,5 +68,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const httpServer = createServer(app);
 
+  // P2P relay WebSocket — replaces the old PeerJS broker + WebRTC DataChannel.
+  // Mounts at /ws/p2p on the same HTTP server (single port deployment).
+  const { attachP2PRelay } = await import("./routes/p2pRelay");
+  attachP2PRelay(httpServer);
+
   return httpServer;
 }

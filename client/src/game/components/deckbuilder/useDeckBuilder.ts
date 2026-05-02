@@ -7,9 +7,10 @@
 import { useState, useMemo, useCallback } from 'react';
 import { CardData } from '../../types';
 import { cardRegistry } from '../../data/cardRegistry';
-import { useHeroDeckStore, HeroDeck, PieceType } from '../../stores/heroDeckStore';
+import { useHeroDeckStore, validateHeroDeck, HeroDeck, PieceType } from '../../stores/heroDeckStore';
 import { useAudio } from '../../../lib/stores/useAudio';
 import { getNFTBridge } from '../../nft';
+import { useNFTCollection } from '../../nft/hooks';
 import {
   DECK_SIZE,
   SortOption,
@@ -35,6 +36,15 @@ export interface UseDeckBuilderProps {
 export interface CardGroup {
   label: string;
   cards: CardData[];
+}
+
+function areDecksEqual(left: HeroDeck | null, right: HeroDeck): boolean {
+  if (!left) return false;
+  if (left.pieceType !== right.pieceType) return false;
+  if (left.heroId !== right.heroId) return false;
+  if (left.heroClass !== right.heroClass) return false;
+  if (left.cardIds.length !== right.cardIds.length) return false;
+  return left.cardIds.every((cardId, index) => cardId === right.cardIds[index]);
 }
 
 export interface UseDeckBuilderReturn {
@@ -87,8 +97,8 @@ export function useDeckBuilder({
   const { playSoundEffect } = useAudio();
   const getDeck = useHeroDeckStore(state => state.getDeck);
   const setDeck = useHeroDeckStore(state => state.setDeck);
-  const validateDeck = useHeroDeckStore(state => state.validateDeck);
-  
+  const nftCollection = useNFTCollection();
+
   const normalizedHeroClass = heroClass.toLowerCase();
   const nftBridge = getNFTBridge();
   
@@ -117,7 +127,7 @@ export function useDeckBuilder({
   const visibleCards = useMemo(() => {
     if (!nftBridge.isHiveMode()) return validCards;
     return validCards.filter(card => nftBridge.getOwnedCopies(Number(card.id)) > 0);
-  }, [validCards, nftBridge]);
+  }, [validCards, nftBridge, nftCollection]);
   
   // Derived: Filtered and sorted cards
   const filteredAndSortedCards = useMemo(() => {
@@ -169,7 +179,7 @@ export function useDeckBuilder({
     if (!canAddCardToDeck(cardId, deckCardIds, card)) return false;
     const currentCount = deckCardCounts[cardId] ?? 0;
     return currentCount < nftBridge.getOwnedCopies(cardId);
-  }, [deckCardIds, deckCardCounts, nftBridge]);
+  }, [deckCardIds, deckCardCounts, nftBridge, nftCollection]);
   
   // Add card to deck
   const handleAddCard = useCallback((card: CardData) => {
@@ -206,7 +216,7 @@ export function useDeckBuilder({
       setDeckCardIds(prev => [...prev, ...newCards]);
       playSoundEffect('card_draw');
     }
-  }, [deckCardIds, visibleCards, nftBridge, playSoundEffect]);
+  }, [deckCardIds, visibleCards, nftBridge, nftCollection, playSoundEffect]);
   
   // Clear deck
   const handleClearDeck = useCallback(() => {
@@ -224,20 +234,29 @@ export function useDeckBuilder({
       heroClass: normalizedHeroClass,
       cardIds: deckCardIds,
     };
-    
-    setDeck(pieceType, deck);
-    
-    const validation = validateDeck(pieceType);
+
+    const validation = validateHeroDeck(deck, pieceType);
     if (!validation.valid) {
       setSaveError(validation.errors.join('\n'));
       playSoundEffect('error' as any);
       return;
     }
-    
+
+    const latestSavedDeck = getDeck(pieceType);
+    const isReplacingDeck = latestSavedDeck !== null && !areDecksEqual(latestSavedDeck, deck);
+    if (isReplacingDeck) {
+      const shouldReplace = globalThis.confirm(
+        `Replace the saved ${pieceType} deck for ${latestSavedDeck.heroId}?`
+      );
+      if (!shouldReplace) return;
+    }
+
+    setDeck(pieceType, deck);
+
     playSoundEffect('button_click');
     onSave?.();
     onClose();
-  }, [pieceType, heroId, normalizedHeroClass, deckCardIds, setDeck, validateDeck, playSoundEffect, onSave, onClose]);
+  }, [pieceType, heroId, normalizedHeroClass, deckCardIds, getDeck, setDeck, playSoundEffect, onSave, onClose]);
   
   // Mana cost filter toggle
   const handleManaFilter = useCallback((cost: number) => {

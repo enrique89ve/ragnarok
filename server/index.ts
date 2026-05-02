@@ -34,9 +34,23 @@ const apiLimiter = rateLimit({
 });
 app.use('/api', apiLimiter);
 
+// Sensitive endpoint limiter: queue/leave matchmaking + tournament register/result.
+//
+// Calibration rationale:
+// - Normal user with 2-3 retries hits ~6 req/min easily. Old 6/min cap caused
+//   false-positive 429s that surface as "Matchmaking service unavailable".
+// - Per-IP rate limiting CANNOT stop a distributed bot (multi-IP) anyway —
+//   that requires proof-of-work / captcha / Hive-auth tokens (see
+//   requireHiveBodyAuthIfUsernamePresent middleware on /queue).
+// - The endpoints are in-memory operations (no DB, no remote calls), cost
+//   per request is nanoseconds. Stale entries auto-purge every 60s.
+// - Prod 30/min: 5× normal usage headroom, still catches single-IP floods
+//   (>500 req/min would trip easily).
+// - Dev 120/min: smoke testing involves browser refresh + reconnect loops
+//   that legitimately exceed 30/min. `isDev` already declared at module scope.
 const sensitiveLimiter = rateLimit({
   windowMs: 60_000,
-  limit: 6,
+  limit: isDev ? 120 : 30,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { success: false, error: 'Rate limit exceeded for this endpoint' },

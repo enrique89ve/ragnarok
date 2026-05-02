@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { ChevronLeft, Play, Swords } from 'lucide-react';
+import { Button } from '../../../components/ui-norse';
 import { useCampaignStore } from '../../campaign';
 import type { CampaignChapter, CampaignMission, CampaignReward, Difficulty } from '../../campaign/campaignTypes';
+import {
+	KICKER_CLASS,
+	DISPLAY_TITLE_CLASS,
+	SURFACE_CLASS,
+	SURFACE_STRONG_CLASS,
+	PILL_CLASS,
+} from './CampaignPage';
 
 const DIFFICULTY_META: Record<Difficulty, { label: string; blurb: string }> = {
 	normal: {
@@ -61,40 +70,41 @@ export function MapIntroCard({
 			initial={{ opacity: 0, y: 18 }}
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-			className="constellation-intro-copy"
+			className={`${SURFACE_STRONG_CLASS} pointer-events-auto w-full max-w-[640px] p-6 sm:p-7 text-center`}
 		>
-			<p className="campaign-kicker">Chapter Theater</p>
-			<h2 className={`campaign-display-title ${accentClass}`}>
+			<p className={KICKER_CLASS}>Chapter Theater</p>
+			<h2 className={`mt-2 font-display text-2xl sm:text-3xl font-bold tracking-[0.04em] uppercase ${accentClass}`}>
 				{chapter.name}
 			</h2>
-			<p className="mt-3 text-sm leading-relaxed text-gray-300 sm:text-[15px]">
+			<p className="mt-3 text-[14px] leading-relaxed text-ink-200">
 				{chapter.description}
 			</p>
 
-			<div className="campaign-surface-strong mt-5 text-left">
-				<p className="campaign-kicker text-left">Next Scene</p>
-				<p className="mt-2 text-lg font-semibold text-gray-100">
+			<div className={`${SURFACE_CLASS} mt-5 text-left`}>
+				<p className={`${KICKER_CLASS} text-left`}>Next Scene</p>
+				<p className="mt-2 font-display text-base font-bold tracking-wide text-ink-0">
 					{nextMission ? nextMission.name : 'This chapter is currently cleared.'}
 				</p>
-				<p className="mt-2 text-sm leading-relaxed text-gray-400">
+				<p className="mt-2 text-[13px] leading-relaxed text-ink-300">
 					{nextMission
 						? `${nextMission.description} Select a realm to inspect the route, or move straight into the authored briefing from here.`
 						: 'Replay the prologue, revisit completed fights, or move through the realm map to review pacing and rewards.'}
 				</p>
 			</div>
 
-			<div className="constellation-intro-actions">
-				<button type="button" className="campaign-secondary-btn" onClick={onPlayPrologue}>
+			<div className="mt-6 flex flex-wrap justify-center gap-2.5">
+				<Button variant="default" size="default" onClick={onPlayPrologue}>
 					{prologueSeen ? 'Replay Prologue' : 'Play Prologue'}
-				</button>
+				</Button>
 				{nextMission && (
-					<button type="button" className="campaign-primary-btn" onClick={onStageNextBattle}>
+					<Button variant="primary" size="default" onClick={onStageNextBattle}>
+						<Play size={13} strokeWidth={2.4} fill="currentColor" />
 						Stage Next Battle
-					</button>
+					</Button>
 				)}
 			</div>
 
-			<p className="mt-4 text-xs uppercase tracking-[0.18em] text-gray-500">
+			<p className="mt-4 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-300">
 				Select a realm to inspect missions, route order, and rewards.
 			</p>
 		</motion.div>
@@ -108,7 +118,6 @@ interface MissionBriefingProps {
 	onBack: () => void;
 	onWatchPrologue: () => void;
 	accentClass: string;
-	panelClass: string;
 }
 
 export function MissionBriefing({
@@ -118,7 +127,6 @@ export function MissionBriefing({
 	onBack,
 	onWatchPrologue,
 	accentClass,
-	panelClass,
 }: MissionBriefingProps) {
 	const [difficulty, setDifficulty] = useState<Difficulty>('normal');
 	const completed = useCampaignStore(state => state.completedMissions[mission.id]);
@@ -131,59 +139,79 @@ export function MissionBriefing({
 			initial={{ opacity: 0, y: 22 }}
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-			className="campaign-briefing-shell"
+			className="mx-auto max-w-[1120px]"
 		>
+			{/* Top action row */}
 			<div className="flex flex-wrap items-center justify-between gap-3">
-				<button type="button" onClick={onBack} className="campaign-secondary-btn">
+				<button
+					type="button"
+					onClick={onBack}
+					className="inline-flex items-center gap-1.5 font-mono text-[11px] tracking-[0.18em] uppercase font-bold text-ink-300 hover:text-gold-300 transition-colors"
+				>
+					<ChevronLeft size={13} strokeWidth={2.2} />
 					Back to Map
 				</button>
 				{chapter.cinematicIntro && (
-					<button type="button" onClick={onWatchPrologue} className="campaign-secondary-btn">
+					<Button variant="default" size="sm" onClick={onWatchPrologue}>
 						Replay Chapter Prologue
-					</button>
+					</Button>
 				)}
 			</div>
 
-			<div className={`campaign-surface-strong mt-5 border ${panelClass}`}>
-				<div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+			{/* Hero brief surface */}
+			<div className={`${SURFACE_STRONG_CLASS} relative mt-5 overflow-hidden p-5 sm:p-7`}>
+				<div
+					aria-hidden
+					className="absolute inset-0 pointer-events-none opacity-60"
+					style={{
+						background:
+							'radial-gradient(ellipse 60% 40% at 90% 0%, rgba(221,184,74,0.16), transparent 65%),' +
+							'radial-gradient(ellipse 35% 25% at 10% 100%, rgba(122,169,255,0.10), transparent 70%)',
+					}}
+				/>
+
+				<div className="relative flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
 					<div className="min-w-0">
-						<p className="campaign-kicker">Mission Briefing</p>
-						<h2 className={`mt-2 campaign-display-title ${accentClass}`}>
+						<div className="inline-flex items-center gap-2.5">
+							<Swords size={14} className="text-gold-300" strokeWidth={1.8} />
+							<span className={KICKER_CLASS}>Mission Briefing</span>
+						</div>
+						<h2 className={`${DISPLAY_TITLE_CLASS} mt-2 ${accentClass}`}>
 							{mission.name}
 						</h2>
-						<p className="mt-2 text-sm text-gray-400 sm:text-[15px]">
+						<p className="mt-2 font-mono text-[11px] tracking-[0.16em] uppercase text-ink-300">
 							{chapter.name} · Mission {mission.missionNumber}
 						</p>
-						<p className="mt-3 max-w-3xl text-sm leading-relaxed text-gray-300 sm:text-[15px]">
+						<p className="mt-3 max-w-2xl text-[14px] leading-relaxed text-ink-200">
 							{mission.description}
 						</p>
 					</div>
 
 					<div className="grid gap-3 sm:grid-cols-2 lg:w-[20rem] lg:grid-cols-1">
-						<div className="campaign-surface">
-							<p className="campaign-kicker text-left">Encounter Tone</p>
-							<p className="mt-2 text-base font-semibold text-gray-100">{encounterTone}</p>
-							<p className="mt-1 text-sm text-gray-400">
+						<div className={SURFACE_CLASS}>
+							<p className={`${KICKER_CLASS} text-left`}>Encounter Tone</p>
+							<p className="mt-2 font-display text-base font-bold tracking-wide text-ink-0">{encounterTone}</p>
+							<p className="mt-1 text-[12.5px] leading-relaxed text-ink-300">
 								{mission.bossRules.length > 0
 									? `${mission.bossRules.length} authored boss rule${mission.bossRules.length === 1 ? '' : 's'} shape this fight.`
-									: 'No special boss rules. The emphasis is route clarity and combat rhythm.'}
+									: 'No special boss rules. Emphasis is route clarity and combat rhythm.'}
 							</p>
 						</div>
-						<div className="campaign-surface">
-							<p className="campaign-kicker text-left">Campaign Record</p>
+						<div className={SURFACE_CLASS}>
+							<p className={`${KICKER_CLASS} text-left`}>Campaign Record</p>
 							{completed ? (
 								<>
-									<p className="mt-2 text-base font-semibold text-gray-100">
+									<p className="mt-2 font-display text-base font-bold tracking-wide text-ink-0">
 										{completed.bestTurns} turns
 									</p>
-									<p className="mt-1 text-sm text-gray-400">
+									<p className="mt-1 text-[12.5px] text-ink-300">
 										Best clear on {completed.bestDifficulty}
 									</p>
 								</>
 							) : (
 								<>
-									<p className="mt-2 text-base font-semibold text-gray-100">First clear pending</p>
-									<p className="mt-1 text-sm text-gray-400">
+									<p className="mt-2 font-display text-base font-bold tracking-wide text-ink-0">First clear pending</p>
+									<p className="mt-1 text-[12.5px] text-ink-300">
 										Normal is the cleanest first route through this fight.
 									</p>
 								</>
@@ -193,54 +221,57 @@ export function MissionBriefing({
 				</div>
 			</div>
 
-			<div className="campaign-surface mt-5">
-				<p className="campaign-kicker text-left">Opening Beat</p>
-				<p className="mt-3 text-base italic leading-8 text-gray-200 sm:text-[17px]">
+			{/* Opening beat — quote */}
+			<div className={`${SURFACE_CLASS} mt-5 border-l-2 border-l-gold-300/50`}>
+				<p className={`${KICKER_CLASS} text-left`}>Opening Beat</p>
+				<p className="mt-3 font-display text-base sm:text-[17px] italic leading-[1.7] text-ink-100">
 					"{mission.narrativeBefore}"
 				</p>
 			</div>
 
-			<div className="campaign-briefing-grid mt-5">
-				<div className="campaign-surface">
-					<p className="campaign-kicker text-left">Combat Rhythm</p>
-					<p className="mt-2 text-base font-semibold text-gray-100">
+			{/* Briefing 3-up */}
+			<div className="mt-5 grid gap-3 lg:grid-cols-3">
+				<div className={SURFACE_CLASS}>
+					<p className={`${KICKER_CLASS} text-left`}>Combat Rhythm</p>
+					<p className="mt-2 font-display text-base font-bold tracking-wide text-ink-0">
 						{phaseCount > 0 ? `${phaseCount} escalation beat${phaseCount === 1 ? '' : 's'}` : 'Single-beat combat pass'}
 					</p>
-					<p className="mt-2 text-sm leading-relaxed text-gray-400">
+					<p className="mt-2 text-[12.5px] leading-relaxed text-ink-300">
 						{phaseCount > 0
 							? 'Expect the opponent to shift tempo mid-fight. Learn the thresholds once, then push harder on later clears.'
 							: 'This mission leans on clean board pressure rather than multi-stage boss theatrics.'}
 					</p>
 				</div>
 
-				<div className="campaign-surface">
-					<p className="campaign-kicker text-left">Aftermath</p>
-					<p className="mt-2 text-base font-semibold text-gray-100">
+				<div className={SURFACE_CLASS}>
+					<p className={`${KICKER_CLASS} text-left`}>Aftermath</p>
+					<p className="mt-2 font-display text-base font-bold tracking-wide text-ink-0">
 						{bridgeCount > 0 ? `${bridgeCount} bridge scene${bridgeCount === 1 ? '' : 's'}` : 'Direct return to campaign'}
 					</p>
-					<p className="mt-2 text-sm leading-relaxed text-gray-400">
+					<p className="mt-2 text-[12.5px] leading-relaxed text-ink-300">
 						{bridgeCount > 0
 							? 'A short connective cinematic carries the win forward into the next chapter beat before you return to the map.'
 							: 'Results flow straight back to the campaign shell with no additional bridge scene.'}
 					</p>
 				</div>
 
-				<div className="campaign-surface">
-					<p className="campaign-kicker text-left">Launch Sequence</p>
-					<div className="mt-3 space-y-2 text-sm text-gray-300">
-						<p><span className="text-gray-500">01</span> Chapter prologue establishes the arc.</p>
-						<p><span className="text-gray-500">02</span> This briefing locks the mission tone and difficulty.</p>
-						<p><span className="text-gray-500">03</span> Battle launches directly into the chess and poker flow.</p>
-					</div>
+				<div className={SURFACE_CLASS}>
+					<p className={`${KICKER_CLASS} text-left`}>Launch Sequence</p>
+					<ol className="mt-3 space-y-2 text-[13px] text-ink-200">
+						<li className="flex gap-2"><span className="font-mono text-ink-400">01</span> Chapter prologue establishes the arc.</li>
+						<li className="flex gap-2"><span className="font-mono text-ink-400">02</span> This briefing locks tone & difficulty.</li>
+						<li className="flex gap-2"><span className="font-mono text-ink-400">03</span> Battle launches into chess + poker flow.</li>
+					</ol>
 				</div>
 			</div>
 
+			{/* Boss rules — danger surface */}
 			{mission.bossRules.length > 0 && (
-				<div className="campaign-surface mt-5 border border-red-500/[0.18] bg-red-500/[0.06]">
-					<p className="campaign-kicker text-left text-red-200">Boss Rules</p>
+				<div className={`${SURFACE_CLASS} mt-5 border-ember-300/30 bg-ember-300/[0.05]`}>
+					<p className={`${KICKER_CLASS} text-left text-ember-200`}>Boss Rules</p>
 					<div className="mt-3 space-y-2">
 						{mission.bossRules.map((rule, index) => (
-							<p key={index} className="text-sm leading-relaxed text-red-100/90">
+							<p key={index} className="text-[13px] leading-relaxed text-ember-100/95">
 								{rule.description}
 							</p>
 						))}
@@ -248,51 +279,70 @@ export function MissionBriefing({
 				</div>
 			)}
 
+			{/* Difficulty picker */}
 			<div className="mt-5">
-				<p className="campaign-kicker text-left">Difficulty</p>
-				<div className="campaign-difficulty-grid mt-3">
-					{(['normal', 'heroic', 'mythic'] as Difficulty[]).map(option => (
-						<button
-							key={option}
-							type="button"
-							onClick={() => setDifficulty(option)}
-							className={`campaign-difficulty-card ${difficulty === option ? 'campaign-difficulty-card-active' : ''}`}
-						>
-							<div className="flex items-center justify-between gap-3">
-								<div className="text-left">
-									<p className="text-sm font-semibold text-gray-100">
-										{option.charAt(0).toUpperCase() + option.slice(1)}
-									</p>
-									<p className="mt-1 text-xs uppercase tracking-[0.18em] text-gray-500">
-										{DIFFICULTY_META[option].label}
-									</p>
+				<p className={`${KICKER_CLASS} text-left`}>Difficulty</p>
+				<div className="mt-3 grid gap-3 lg:grid-cols-3">
+					{(['normal', 'heroic', 'mythic'] as Difficulty[]).map(option => {
+						const active = difficulty === option;
+						return (
+							<button
+								key={option}
+								type="button"
+								onClick={() => setDifficulty(option)}
+								className={`text-left rounded-xl border p-4 transition-all duration-200 ${
+									active
+										? 'border-gold-300/50 bg-linear-to-b from-gold-300/[0.10] to-gold-300/[0.04] shadow-[inset_0_1px_0_rgba(245,237,224,0.06)]'
+										: 'border-obsidian-700 bg-obsidian-900/60 hover:border-gold-600/50 hover:bg-obsidian-800/70'
+								}`}
+							>
+								<div className="flex items-center justify-between gap-3">
+									<div className="text-left min-w-0">
+										<p className={`font-display text-sm font-bold tracking-wide uppercase ${active ? 'text-gold-200' : 'text-ink-0'}`}>
+											{option}
+										</p>
+										<p className="mt-1 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-300">
+											{DIFFICULTY_META[option].label}
+										</p>
+									</div>
+									<div
+										className={`h-3 w-3 rounded-full shrink-0 ${
+											active ? 'bg-gold-300 shadow-[0_0_10px_-1px_rgba(221,184,74,0.7)]' : 'bg-obsidian-700'
+										}`}
+									/>
 								</div>
-								<div className={`h-3 w-3 rounded-full ${difficulty === option ? 'bg-amber-300' : 'bg-white/[0.12]'}`} />
-							</div>
-							<p className="mt-3 text-sm leading-relaxed text-gray-400">
-								{DIFFICULTY_META[option].blurb}
-							</p>
-						</button>
-					))}
+								<p className="mt-3 text-[12.5px] leading-relaxed text-ink-300">
+									{DIFFICULTY_META[option].blurb}
+								</p>
+							</button>
+						);
+					})}
 				</div>
 			</div>
 
-			<div className="campaign-surface mt-5">
+			{/* Rewards + Enter Battle */}
+			<div className={`${SURFACE_CLASS} mt-5`}>
 				<div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
 					<div className="min-w-0">
-						<p className="campaign-kicker text-left">Rewards on Clear</p>
+						<p className={`${KICKER_CLASS} text-left`}>Rewards on Clear</p>
 						<div className="mt-3 flex flex-wrap gap-2">
 							{mission.rewards.map((reward, index) => (
-								<span key={index} className="campaign-pill">
+								<span key={index} className={PILL_CLASS}>
 									{describeReward(reward)}
 								</span>
 							))}
 						</div>
 					</div>
 
-					<button type="button" onClick={() => onStart(difficulty)} className="campaign-primary-btn whitespace-nowrap">
+					<Button
+						variant="primary"
+						size="lg"
+						className="whitespace-nowrap"
+						onClick={() => onStart(difficulty)}
+					>
+						<Play size={14} strokeWidth={2.4} fill="currentColor" />
 						Enter Battle
-					</button>
+					</Button>
 				</div>
 			</div>
 		</motion.div>

@@ -40,13 +40,22 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 
 	const [joinId, setJoinId] = useState('');
 	const [copied, setCopied] = useState(false);
-	const [mode, setMode] = useState<'manual' | 'quick'>('manual');
+	const [, setMode] = useState<'manual' | 'quick'>('manual');
+	const [matchStarting, setMatchStarting] = useState(false);
 
+	// Hold the lobby visible briefly after the link establishes so the user can
+	// see who connected (peer ID of the remote opponent) before the match UI mounts.
+	// Without this delay the connected panel never renders — the effect fires the
+	// instant `connectionState` flips to 'connected' and the parent unmounts the lobby.
+	const MATCH_START_DELAY_MS = 2500;
 	useEffect(() => {
-		if (connectionState === 'connected' && myPeerId) {
+		if (connectionState !== 'connected' || !myPeerId || !remotePeerId) return;
+		setMatchStarting(true);
+		const timer = setTimeout(() => {
 			onGameStart();
-		}
-	}, [connectionState, myPeerId, onGameStart]);
+		}, MATCH_START_DELAY_MS);
+		return () => clearTimeout(timer);
+	}, [connectionState, myPeerId, remotePeerId, onGameStart]);
 
 	const handleHost = async () => {
 		try {
@@ -90,14 +99,10 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 
 	const handleQuickMatch = async () => {
 		setMode('quick');
-		if (!myPeerId) {
-			try {
-				await host();
-			} catch (err) {
-				toast.error('Failed to initialize. Please try again.');
-				return;
-			}
-		}
+		// Quick Match only needs a peerId for the matchmaking handshake; the
+		// transport opens later against the matchId emitted by the server.
+		// Calling host() here would open a transport against the wrong room.
+		if (!myPeerId) usePeerStore.getState().prepareForMatchmaking();
 		const queued = await joinQueue();
 		if (!queued) {
 			toast.error('Failed to join matchmaking queue');
@@ -258,28 +263,43 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 									</Button>
 								</div>
 								<code className="text-xs font-mono break-all">{myPeerId}</code>
-								{isHost && (
+								{isHost && !remotePeerId && (
 									<p className="text-xs text-(--ink-300) mt-2">
 										Share this ID with your opponent to let them join
 									</p>
 								)}
 							</div>
-							{isHost && connectionState === 'connected' && !remotePeerId && (
+							{isHost && !remotePeerId && (
 								<p className="text-sm text-(--ink-300) text-center">
 									Waiting for opponent to join...
 								</p>
 							)}
 							{remotePeerId && (
-								<div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-									<p className="text-sm text-green-600 dark:text-green-400">
-										✓ Connected to opponent
+								<div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg space-y-2">
+									<p className="text-sm font-medium text-green-600 dark:text-green-400">
+										✓ Connected to {isHost ? 'opponent' : 'host'}
 									</p>
+									<div>
+										<span className="text-xs text-(--ink-300) uppercase tracking-wide">
+											{isHost ? 'Opponent ID' : 'Host ID'}
+										</span>
+										<code className="block text-xs font-mono break-all text-(--ink-100) mt-1">
+											{remotePeerId}
+										</code>
+									</div>
+									{matchStarting && (
+										<p className="text-xs text-(--gold-300) pt-2 border-t border-green-500/20">
+											Starting match...
+										</p>
+									)}
 								</div>
 							)}
-							<Button onClick={handleDisconnect} variant="destructive" className="w-full">
-								<X className="w-4 h-4 mr-2" />
-								Disconnect
-							</Button>
+							{!matchStarting && (
+								<Button onClick={handleDisconnect} variant="destructive" className="w-full">
+									<X className="w-4 h-4 mr-2" />
+									Disconnect
+								</Button>
+							)}
 						</div>
 					)}
 
