@@ -27,7 +27,7 @@
  */
 
 import { create } from 'zustand';
-import type { DataConnection, Peer } from 'peerjs';
+import type { DataConnection } from 'peerjs';
 import { debug } from '../config/debugConfig';
 import { LocalWebSocketTransport, deriveRelayUrl } from './wsTransport';
 import type { ArmySelection } from '../types/ChessTypes';
@@ -80,11 +80,6 @@ export interface PeerStore {
 	myPeerId: string | null;
 	remotePeerId: string | null;
 	connection: DataConnection | null;
-	// Always null in the WS transport. Type retained as `Peer | null` so
-	// `useP2PSync`'s spectator effect (which dereferences `peer.on(...)`) keeps
-	// type-checking; the effect early-returns on `!peer` so the deref is never
-	// reached at runtime.
-	peer: Peer | null;
 	connectionState: P2PConnectionState;
 	isHost: boolean;
 	error: string | null;
@@ -112,7 +107,6 @@ export interface PeerStore {
 	setMyPeerId: (id: string | null) => void;
 	setRemotePeerId: (id: string | null) => void;
 	setConnection: (conn: DataConnection | null) => void;
-	setPeer: (peer: Peer | null) => void;
 	setConnectionState: (state: P2PConnectionState) => void;
 	setIsHost: (isHost: boolean) => void;
 	setError: (error: string | null) => void;
@@ -350,7 +344,6 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 	myPeerId: null,
 	remotePeerId: null,
 	connection: null,
-	peer: null,
 	connectionState: 'disconnected',
 	isHost: false,
 	error: null,
@@ -362,7 +355,6 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 	setMyPeerId: (id) => set({ myPeerId: id }),
 	setRemotePeerId: (id) => set({ remotePeerId: id }),
 	setConnection: (conn) => set({ connection: conn }),
-	setPeer: (peer) => set({ peer }),
 	setConnectionState: (state) => set({ connectionState: state }),
 	setIsHost: (isHost) => set({ isHost }),
 	setError: (error) => set({ error }),
@@ -461,7 +453,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 		}
 		lastRoomId = null;
 		set({
-			myPeerId: null, remotePeerId: null, connection: null, peer: null,
+			myPeerId: null, remotePeerId: null, connection: null,
 			connectionState: 'disconnected', isHost: false, error: null,
 			reconnectCountdown: 0, bufferedMessageCount: 0,
 			opponentArmy: null,

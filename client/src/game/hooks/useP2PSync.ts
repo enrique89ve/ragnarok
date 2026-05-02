@@ -1,6 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
-import type { DataConnection } from 'peerjs';
 import { usePeerStore } from '../stores/peerStore';
 import { useGameStore } from '../stores/gameStore';
 import { debug } from '../config/debugConfig';
@@ -16,7 +15,6 @@ import { getWasmHash, loadWasmEngine } from '../engine/wasmLoader';
 import { computeStateHash } from '../engine/engineBridge';
 import { isSharedNetworkEnvironment } from '../config/featureFlags';
 import { submitSlashEvidence, findExistingMatchResult } from '../../data/blockchain/slashEvidence';
-import { filterGameStateForSpectator } from '../spectator/spectatorFilter';
 import { GAME_COMMAND_TYPES } from '../core/commands';
 import { canonicalQuickHash, type GameCommandEnvelope, type WireGameCommand } from './p2pEnvelope';
 import { useWarbandStore, selectArmy } from '../../lib/stores/useWarbandStore';
@@ -119,7 +117,6 @@ export function useP2PSync() {
 	// Identity binding: opponent's Hive username from seed_reveal
 	const opponentUsernameRef = useRef<string | null>(null);
 	const pendingSyncRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const spectatorConnectionsRef = useRef<DataConnection[]>([]);
 
 	// Commit-reveal seed exchange state
 	const mySaltRef = useRef<string | null>(null);
@@ -1078,69 +1075,13 @@ export function useP2PSync() {
 		}
 	}, [connectionState, isHost]);
 
-	// Host: accept incoming spectator connections via PeerJS
-	useEffect(() => {
-		const peer = usePeerStore.getState().peer;
-		if (!peer || !isHost) return;
-
-		const handleConnection = (conn: DataConnection) => {
-			const meta = conn.metadata as { type?: string; hiveAccount?: string; spectateToken?: string } | undefined;
-			if (meta?.type !== 'spectator') return;
-
-			// Spectator authentication: require a Hive account name
-			// In tournament mode, could further verify against participant list
-			if (!meta.hiveAccount || typeof meta.hiveAccount !== 'string' || meta.hiveAccount.length < 3) {
-				debug.warn('[useP2PSync] Spectator rejected — no Hive account provided');
-				conn.close();
-				return;
-			}
-
-			conn.on('open', () => {
-				spectatorConnectionsRef.current.push(conn);
-				debug.log(`[useP2PSync] Spectator connected: ${meta.hiveAccount}`);
-			});
-
-			conn.on('close', () => {
-				spectatorConnectionsRef.current = spectatorConnectionsRef.current.filter(c => c !== conn);
-			});
-
-			conn.on('error', () => {
-				spectatorConnectionsRef.current = spectatorConnectionsRef.current.filter(c => c !== conn);
-			});
-		};
-
-		peer.on('connection', handleConnection);
-		return () => {
-			peer.off('connection', handleConnection);
-			// Close any live spectator data channels before clearing the ref. Without
-			// this the browser-side spectators stay connected to a peer that the host
-			// just abandoned — they sit on a zombie channel until their own timeout
-			// fires. Best-effort: PeerJS `close()` swallows on already-closed.
-			for (const spectatorConn of spectatorConnectionsRef.current) {
-				try { spectatorConn.close(); } catch { /* already closed */ }
-			}
-			spectatorConnectionsRef.current = [];
-		};
-	}, [isHost, connectionState]);
-
-	// Host broadcasts state every 500ms as heartbeat sync (to opponent + spectators)
+	// Host broadcasts state every 500ms as heartbeat sync to the opponent.
+	// (Spectator broadcast was removed — see Patch-WebRTC.2; replaced
+	// post-beta by a transcript-based replay viewer, TD-25.)
 	useEffect(() => {
 		if (connectionState !== 'connected' || !isHost) return;
 		const interval = setInterval(() => {
 			syncGameState();
-
-			const currentState = useGameStore.getState().gameState;
-			if (currentState) {
-				const filteredState = filterGameStateForSpectator(currentState);
-				spectatorConnectionsRef.current = spectatorConnectionsRef.current.filter(c => c.open);
-				spectatorConnectionsRef.current.forEach(conn => {
-					try {
-						conn.send({ type: 'spectator_state', gameState: filteredState });
-					} catch {
-						// Connection may have closed between filter and send
-					}
-				});
-			}
 		}, 500);
 		return () => clearInterval(interval);
 	}, [connectionState, isHost, syncGameState]);

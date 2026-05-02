@@ -12,7 +12,6 @@ export const routes = {
   ladder: '/ladder',
   history: '/history',
   settings: '/settings',
-  spectate: '/spectate/:peerId',
   marketplace: '/marketplace',
   explorer: '/explorer',
   admin: '/admin',

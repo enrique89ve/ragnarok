@@ -34,7 +34,6 @@ const RankedLadderPage = lazy(() => import('./game/components/ladder/RankedLadde
 const CampaignPage = lazy(() => import('./game/components/campaign/CampaignPage'));
 const TradingPage = lazy(() => import('./game/components/trading/TradingPage'));
 const TournamentListPage = lazy(() => import('./game/components/tournament/TournamentListPage'));
-const SpectatorView = lazy(() => import('./game/components/spectator/SpectatorView'));
 const MatchHistoryPage = lazy(() => import('./game/components/replay/MatchHistoryPage'));
 const SettingsPage = lazy(() => import('./game/components/settings/SettingsPage'));
 const TreasuryPage = lazy(() => import('./game/components/treasury/TreasuryPage'));
@@ -679,7 +678,6 @@ function App() {
                   <Route element={<GameplayRuntimeBoundary />}>
                     <Route path={routes.game} element={<RagnarokGameCoordinator />} />
                     <Route path={routes.multiplayer} element={<MultiplayerGame />} />
-                    <Route path={routes.spectate} element={<SpectatorView />} />
                   </Route>
                 </Route>
               </Route>
