@@ -220,12 +220,15 @@ export function initializeGame(selectedDeckId?: string, selectedHeroClass?: Hero
   const opponentClass: HeroClass = 'hunter';
   const opponentDeck = createClassDeck(opponentClass, 30);
   
-  // Create players with initial cards
-  const { drawnCards: playerInitialCards, remainingDeck: playerRemainingDeck } = 
-    drawCards(playerDeck, 3);
-  
-  const { drawnCards: opponentInitialCards, remainingDeck: opponentRemainingDeck } = 
-    drawCards(opponentDeck, 3);
+  // Create players with initial cards. cryptoIdGen here is the
+  // local-play default; C5 will replace these calls with an idGen
+  // injected as parameter so P2P / replay paths can substitute a
+  // SeededIdGen and converge byte-for-byte across peers.
+  const { drawnCards: playerInitialCards, remainingDeck: playerRemainingDeck } =
+    drawCards(playerDeck, 3, cryptoIdGen);
+
+  const { drawnCards: opponentInitialCards, remainingDeck: opponentRemainingDeck } =
+    drawCards(opponentDeck, 3, cryptoIdGen);
   
   // Create player objects
   const player: Player = {

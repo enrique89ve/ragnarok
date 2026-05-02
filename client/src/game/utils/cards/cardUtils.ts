@@ -1,7 +1,6 @@
 import { CardData, CardInstance } from '../../types';
 import type { NineRealm } from '../../types/NorseTypes';
 import allCards, { getCardById } from '../../data/allCards';
-import { cryptoIdGen } from '../seededRng';
 import { initializeSpellPower } from '../spells/spellPowerUtils';
 import { initializePoisonousEffect } from '../mechanics/poisonousUtils';
 import { initializeLifestealEffect } from '../mechanics/lifestealUtils';
@@ -291,22 +290,27 @@ export function createClassDeck(heroClass: string, size: number = 30): CardData[
 }
 
 /**
- * Draw cards and convert them to instances
+ * Draw cards from the top of the deck and materialize them as
+ * `CardInstance`s. The caller passes `idGen` — a `() => string` invoked
+ * once per drawn card to mint each instance's id. P2P / replay paths
+ * pass a `SeededIdGen`; local-play / AI / mid-match paths pass
+ * `cryptoIdGen`. The function itself is pure with respect to its
+ * arguments.
  */
-export function drawCards(deck: CardData[], count: number): {
+export function drawCards(deck: CardData[], count: number, idGen: () => string): {
   drawnCards: CardInstance[];
   remainingDeck: CardData[];
 } {
   // Ensure we don't draw more cards than available
   const actualDrawCount = Math.min(count, deck.length);
-  
+
   // Get the cards to draw from the top of the deck
   const drawnCardData = deck.slice(0, actualDrawCount);
   const remainingDeck = deck.slice(actualDrawCount);
-  
+
   // Convert card data to card instances
-  const drawnCards = drawnCardData.map(c => createCardInstance(c, cryptoIdGen()));
-  
+  const drawnCards = drawnCardData.map(c => createCardInstance(c, idGen()));
+
   return {
     drawnCards,
     remainingDeck

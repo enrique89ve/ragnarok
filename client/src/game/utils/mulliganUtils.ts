@@ -1,7 +1,7 @@
 import { GameState, CardInstance } from '../types';
 import { drawCards } from './cards/cardUtils';
 import { getManaCost } from './cards/typeGuards';
-import { shuffleInPlace } from './seededRng';
+import { shuffleInPlace, cryptoIdGen } from './seededRng';
 
 export interface MulliganState {
   active: boolean;
@@ -103,12 +103,16 @@ export function completeMulligan(state: GameState): GameState {
     
     shuffleInPlace(newState.players.player.deck);
     
-    // Draw new cards equal to the number of replaced cards
+    // Draw new cards equal to the number of replaced cards. Mulligan is
+    // mid-match (post-init) — the host is authoritative, so cryptoIdGen
+    // is fine here. Plan B replay-symmetric will plumb an EffectContext
+    // SeededIdGen through this path.
     const { drawnCards, remainingDeck } = drawCards(
       newState.players.player.deck,
-      playerSelectedCards.length
+      playerSelectedCards.length,
+      cryptoIdGen,
     );
-    
+
     // Update hand and deck — cap at 7
     const combined = [...newState.players.player.hand, ...drawnCards];
     newState.players.player.hand = combined.slice(0, 7);
@@ -133,7 +137,8 @@ export function completeMulligan(state: GameState): GameState {
     // Draw new cards equal to the number of replaced cards
     const { drawnCards, remainingDeck } = drawCards(
       newState.players.opponent.deck,
-      opponentSelectedCards.length
+      opponentSelectedCards.length,
+      cryptoIdGen,
     );
     
     // Update hand and deck — cap at 7
