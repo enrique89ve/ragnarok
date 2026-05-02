@@ -14,11 +14,110 @@ import {
 	rejectedGameCommand,
 	type CardPlayedEffect,
 	type ApplyGameCommandResult,
+	type GameCommandEffect,
 } from './gameCommandResult';
 
 export type ApplyGameCommandDeps = {
 	readonly isAiSimulationMode?: () => boolean;
 };
+
+/**
+ * Swap players.player ↔ players.opponent and flip currentTurn.
+ * Pure: no winner/mulligan/secret reshuffling — only the symmetric pivot needed
+ * so the opponent's command runs through the canonical (player-perspective) handlers.
+ *
+ * Idempotent: swap(swap(state)) === state structurally.
+ */
+function swapPlayerOpponent(state: GameState): GameState {
+	return {
+		...state,
+		players: {
+			player: state.players.opponent,
+			opponent: state.players.player,
+		},
+		currentTurn:
+			state.currentTurn === 'player' ? 'opponent'
+			: state.currentTurn === 'opponent' ? 'player'
+			: state.currentTurn,
+	};
+}
+
+/**
+ * Translate effects produced under the swapped (opponent-as-player) perspective
+ * back into the host's perspective.
+ *
+ * - `play_sound` → kept as-is (audio cues are perspective-neutral).
+ * - `log_activity` → actor is flipped (`player` ↔ `opponent`) so the host's saga
+ *   feed correctly attributes the action to the opponent.
+ * - `card_played` → dropped: its consumer (`applyCardPlayedEffect`) hard-codes
+ *   `'player'` as the activity-log actor. Re-emitting it on the host would
+ *   produce a misleading "you summoned X" entry. Audio for the card play
+ *   already flows through the implicit `play_sound` paths in the player handler.
+ * - `clear_selection`, `schedule_ai_turn`, `show_status` → dropped: these target
+ *   the player's UI state (selection, AI scheduler, error banners). The host
+ *   wasn't selecting, isn't running AI for a human peer, and shouldn't see
+ *   "Not your turn" toasts for opponent's actions.
+ */
+function flipEffectsToOpponentPerspective(
+	effects: readonly GameCommandEffect[],
+): readonly GameCommandEffect[] {
+	const out: GameCommandEffect[] = [];
+	for (const effect of effects) {
+		switch (effect.type) {
+			case 'play_sound':
+				out.push(effect);
+				break;
+			case 'log_activity':
+				out.push({
+					...effect,
+					actor:
+						effect.actor === 'player' ? 'opponent'
+						: effect.actor === 'opponent' ? 'player'
+						: effect.actor,
+				});
+				break;
+			case 'card_played':
+			case 'clear_selection':
+			case 'schedule_ai_turn':
+			case 'show_status':
+				break;
+		}
+	}
+	return out;
+}
+
+/**
+ * Apply a command issued by the opponent — typically used by the P2P host when
+ * it receives a `game_command` envelope from the remote peer.
+ *
+ * Strategy: swap player/opponent in the state so the opponent's command runs
+ * through the canonical (player-perspective) handlers, then swap back. This
+ * keeps the core `applyGameCommand` ego-centric while making the boundary
+ * explicit: the function name announces the role, no hidden translations
+ * leak into call-sites.
+ *
+ * Effects are translated to the host's perspective: actor labels in
+ * `log_activity` are flipped; UI-only effects (selection clears, AI scheduler,
+ * status banners) are dropped because the host is not the actor.
+ */
+export function applyOpponentCommand(
+	state: GameState,
+	command: GameCommand,
+	deps: ApplyGameCommandDeps = {},
+): ApplyGameCommandResult {
+	const swapped = swapPlayerOpponent(state);
+	const result = applyGameCommand(swapped, command, deps);
+	const restoredState = swapPlayerOpponent(result.state);
+	const flippedEffects = flipEffectsToOpponentPerspective(result.effects);
+
+	if (result.status === 'applied') {
+		return { status: 'applied', state: restoredState, effects: flippedEffects };
+	}
+	if (result.status === 'rejected') {
+		return { status: 'rejected', state: restoredState, reason: result.reason, effects: flippedEffects };
+	}
+	return { status: 'ignored', state: restoredState, reason: result.reason, effects: flippedEffects };
+}
 
 const isPlayerCommandAllowed = (state: GameState, deps: ApplyGameCommandDeps): boolean => (
 	state.currentTurn === 'player' || deps.isAiSimulationMode?.() === true
@@ -112,6 +211,13 @@ function applyAttackCommand(
 		return ignoredGameCommand(state, 'attacker not found');
 	}
 
+	const maxAttacks = hasKeyword(attacker, 'mega_windfury') ? 4 : hasKeyword(attacker, 'windfury') ? 2 : 1;
+	if ((attacker.attacksPerformed ?? 0) >= maxAttacks) {
+		return rejectedGameCommand(state, 'no attacks left', [
+			{ type: 'clear_selection', selection: 'attacking_card' },
+		]);
+	}
+
 	const newState = processAttack(state, command.attackerId, command.defenderId);
 	if (newState === state) {
 		return ignoredGameCommand(state, 'attack produced no state change', [
@@ -152,6 +258,12 @@ function applyEndTurnCommand(state: GameState): ApplyGameCommandResult {
 			activityType: 'turn_end',
 			actor: 'player',
 			message: `Turn ${state.turnNumber} ended`,
+		},
+		{
+			type: 'log_activity',
+			activityType: 'turn_start',
+			actor: 'opponent',
+			message: `Turn ${newState.turnNumber} - Opponent's turn`,
 		},
 		{ type: 'play_sound', sound: 'turn_end' },
 		{ type: 'clear_selection', selection: 'selected_card' },

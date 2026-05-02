@@ -14,7 +14,7 @@ export {
 	type ToggleMulliganCardCommand,
 	type UseHeroPowerCommand,
 } from './gameCommandTypes';
-export { applyGameCommand, type ApplyGameCommandDeps } from './applyGameCommand';
+export { applyGameCommand, applyOpponentCommand, type ApplyGameCommandDeps } from './applyGameCommand';
 export {
 	appliedGameCommand,
 	ignoredGameCommand,

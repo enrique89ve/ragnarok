@@ -11,13 +11,18 @@ import { verifyDeck as verifyDeckOnServer } from '../../data/chainAPI';
 import { getNFTBridge } from '../nft';
 import type { PackagedMatchResult } from '../../data/blockchain/types';
 import { createSeededRng, seededShuffle } from '../utils/seededRng';
-import { startNewTranscript, getActiveTranscript, clearTranscript } from '../../data/blockchain/transcriptBuilder';
+import { startNewTranscript, getActiveTranscript, clearTranscript, recordSessionEvent, exportSessionLog } from '../../data/blockchain/transcriptBuilder';
 import type { GameMove } from '../../data/blockchain/signedMove';
 import { getWasmHash, loadWasmEngine } from '../engine/wasmLoader';
 import { computeStateHash } from '../engine/engineBridge';
 import { isSharedNetworkEnvironment } from '../config/featureFlags';
 import { submitSlashEvidence, findExistingMatchResult } from '../../data/blockchain/slashEvidence';
 import { filterGameStateForSpectator } from '../spectator/spectatorFilter';
+import { GAME_COMMAND_TYPES } from '../core/commands';
+import { canonicalQuickHash, type GameCommandEnvelope, type WireGameCommand } from './p2pEnvelope';
+
+export type { GameCommandEnvelope, WireGameCommand } from './p2pEnvelope';
+export { canonicalQuickHash } from './p2pEnvelope';
 
 declare const __BUILD_HASH__: string;
 
@@ -43,16 +48,6 @@ function flipGameState(state: GameState): GameState {
 	};
 }
 
-/**
- * Translate a target ID from the client's flipped perspective back to the host's perspective.
- * e.g. the client sees the host's hero as 'opponent-hero', but the host calls it 'player-hero'.
- */
-function translateTargetForHost(targetId: string | undefined): string | undefined {
-	if (targetId === 'opponent-hero') return 'player-hero';
-	if (targetId === 'player-hero') return 'opponent-hero';
-	return targetId;
-}
-
 function generateSalt(): string {
 	const bytes = new Uint8Array(32);
 	crypto.getRandomValues(bytes);
@@ -60,6 +55,7 @@ function generateSalt(): string {
 }
 
 let moveCounter = 0;
+let outgoingSeqCounter = 0;
 
 function recordMove(action: string, payload: Record<string, unknown>, playerId: string): void {
 	const transcript = getActiveTranscript();
@@ -76,10 +72,7 @@ function recordMove(action: string, payload: Record<string, unknown>, playerId: 
 
 export type P2PMessage =
 	| { type: 'init'; gameState: GameState; isHost: boolean; matchId?: string }
-	| { type: 'playCard'; cardId: string; targetId?: string; targetType?: 'minion' | 'hero'; insertionIndex?: number }
-	| { type: 'attack'; attackerId: string; defenderId: string }
-	| { type: 'endTurn' }
-	| { type: 'useHeroPower'; targetId?: string }
+	| GameCommandEnvelope
 	| { type: 'gameState'; gameState: GameState; stateHash?: string }
 	| { type: 'opponentDisconnected' }
 	| { type: 'ping' }
@@ -108,6 +101,7 @@ export function useP2PSync() {
 	const attackWithCard = useGameStore(state => state.attackWithCard);
 	const endTurn = useGameStore(state => state.endTurn);
 	const performHeroPower = useGameStore(state => state.performHeroPower);
+	const applyOpponentCommandToStore = useGameStore(state => state.applyOpponentCommand);
 	const lastSyncRef = useRef<number>(0);
 	const messageQueueRef = useRef<P2PMessage[]>([]);
 	const isProcessingRef = useRef(false);
@@ -119,6 +113,8 @@ export function useP2PSync() {
 
 	// Session binding: matchId derived from seed exchange
 	const matchIdRef = useRef<string | null>(null);
+	// Per-session seq tracking: monotonic, contiguous, reset on new session
+	const lastIncomingSeqRef = useRef<number>(-1);
 	// Identity binding: opponent's Hive username from seed_reveal
 	const opponentUsernameRef = useRef<string | null>(null);
 	const pendingSyncRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -150,6 +146,8 @@ export function useP2PSync() {
 			seedResolvedRef.current = false;
 			clearTranscript();
 			moveCounter = 0;
+			outgoingSeqCounter = 0;
+			lastIncomingSeqRef.current = -1;
 			return;
 		}
 
@@ -432,63 +430,122 @@ export function useP2PSync() {
 					}
 					break;
 
-				case 'playCard':
+				case 'game_command':
 					if (isHost) {
-						// Rate limit: max 5 actions/sec from opponent
-						const now1 = Date.now();
-						actionTimestampsRef.current = actionTimestampsRef.current.filter(t => now1 - t < 1000);
-						if (actionTimestampsRef.current.length >= MAX_ACTIONS_PER_SEC) break;
-						actionTimestampsRef.current.push(now1);
+						const reject = (cause: string): void => {
+							debug.warn(`[useP2PSync] game_command rejected: ${cause}`, {
+								seq: data.seq,
+								commandType: data.command?.type,
+							});
+							recordSessionEvent('command_rejected', {
+								cause,
+								seq: data.seq,
+								commandType: data.command?.type,
+							});
+						};
+
+						const expectedMatchId = matchIdRef.current;
+						if (!expectedMatchId) {
+							reject('no_match_id_yet');
+							break;
+						}
+						if (data.matchId !== expectedMatchId) {
+							reject('match_id_mismatch');
+							break;
+						}
+
+						const expectedSeq = lastIncomingSeqRef.current + 1;
+						if (data.seq !== expectedSeq) {
+							reject(`seq_non_contiguous_expected_${expectedSeq}_got_${data.seq}`);
+							break;
+						}
+
+						const localPrevHash = canonicalQuickHash(useGameStore.getState().gameState, true);
+						if (data.prevStateHash && data.prevStateHash !== localPrevHash) {
+							reject(`prev_state_hash_mismatch_local_${localPrevHash}_got_${data.prevStateHash}`);
+							break;
+						}
+
+						const nowEnvelope = Date.now();
+						actionTimestampsRef.current = actionTimestampsRef.current.filter(t => nowEnvelope - t < 1000);
+						if (actionTimestampsRef.current.length >= MAX_ACTIONS_PER_SEC) {
+							reject('rate_limit_exceeded');
+							break;
+						}
+						actionTimestampsRef.current.push(nowEnvelope);
 
 						const gs = useGameStore.getState().gameState;
-						if (gs.currentTurn !== 'opponent' || gs.gamePhase === 'game_over') break;
-						// Validate ID format (alphanumeric, hyphens, underscores, max 64 chars)
-						if (typeof data.cardId !== 'string' || data.cardId.length > 64) break;
-						recordMove('playCard', { cardId: data.cardId, targetId: data.targetId, targetType: data.targetType, insertionIndex: data.insertionIndex }, 'opponent');
-						playCard(data.cardId, translateTargetForHost(data.targetId), data.targetType, data.insertionIndex);
-						debouncedSync();
-					}
-					break;
+						if (gs.currentTurn !== 'opponent' || gs.gamePhase === 'game_over') {
+							reject('not_opponent_turn_or_game_over');
+							break;
+						}
 
-				case 'attack':
-					if (isHost) {
-						const now2 = Date.now();
-						actionTimestampsRef.current = actionTimestampsRef.current.filter(t => now2 - t < 1000);
-						if (actionTimestampsRef.current.length >= MAX_ACTIONS_PER_SEC) break;
-						actionTimestampsRef.current.push(now2);
+						const wireCommand = data.command;
+						if (!wireCommand || typeof wireCommand !== 'object') {
+							reject('malformed_command');
+							break;
+						}
 
-						const gs = useGameStore.getState().gameState;
-						if (gs.currentTurn !== 'opponent' || gs.gamePhase === 'game_over') break;
-						if (typeof data.attackerId !== 'string' || data.attackerId.length > 64) break;
-						if (typeof data.defenderId !== 'string' || data.defenderId.length > 64) break;
-						recordMove('attack', { attackerId: data.attackerId, defenderId: data.defenderId }, 'opponent');
-						attackWithCard(data.attackerId, translateTargetForHost(data.defenderId) ?? data.defenderId);
-						debouncedSync();
-					}
-					break;
-
-				case 'endTurn':
-					if (isHost) {
-						const now3 = Date.now();
-						actionTimestampsRef.current = actionTimestampsRef.current.filter(t => now3 - t < 1000);
-						if (actionTimestampsRef.current.length >= MAX_ACTIONS_PER_SEC) break;
-						actionTimestampsRef.current.push(now3);
-
-						const gs = useGameStore.getState().gameState;
-						if (gs.currentTurn !== 'opponent' || gs.gamePhase === 'game_over') break;
-						recordMove('endTurn', {}, 'opponent');
-						endTurn();
-						debouncedSync();
-					}
-					break;
-
-				case 'useHeroPower':
-					if (isHost) {
-						const gs = useGameStore.getState().gameState;
-						if (gs.currentTurn !== 'opponent' || gs.gamePhase === 'game_over') break;
-						recordMove('useHeroPower', { targetId: data.targetId }, 'opponent');
-						performHeroPower(translateTargetForHost(data.targetId), 'card');
-						debouncedSync();
+						// Lightweight payload validation; wireCommand is already a discriminated union.
+						switch (wireCommand.type) {
+							case GAME_COMMAND_TYPES.playCard:
+								if (typeof wireCommand.cardId !== 'string' || wireCommand.cardId.length > 64) {
+									reject('invalid_play_card_payload');
+									break;
+								}
+								recordMove('playCard', {
+									cardId: wireCommand.cardId,
+									targetId: wireCommand.targetId,
+									targetType: wireCommand.targetType,
+									insertionIndex: wireCommand.insertionIndex,
+									commandId: data.commandId,
+									seq: data.seq,
+								}, 'opponent');
+								applyOpponentCommandToStore(wireCommand);
+								lastIncomingSeqRef.current = data.seq;
+								debouncedSync();
+								break;
+							case GAME_COMMAND_TYPES.attack:
+								if (typeof wireCommand.attackerId !== 'string' || wireCommand.attackerId.length > 64) {
+									reject('invalid_attack_payload');
+									break;
+								}
+								if (wireCommand.defenderId !== undefined && (typeof wireCommand.defenderId !== 'string' || wireCommand.defenderId.length > 64)) {
+									reject('invalid_attack_payload');
+									break;
+								}
+								recordMove('attack', {
+									attackerId: wireCommand.attackerId,
+									defenderId: wireCommand.defenderId,
+									commandId: data.commandId,
+									seq: data.seq,
+								}, 'opponent');
+								applyOpponentCommandToStore(wireCommand);
+								lastIncomingSeqRef.current = data.seq;
+								debouncedSync();
+								break;
+							case GAME_COMMAND_TYPES.endTurn:
+								recordMove('endTurn', {
+									commandId: data.commandId,
+									seq: data.seq,
+								}, 'opponent');
+								applyOpponentCommandToStore(wireCommand);
+								lastIncomingSeqRef.current = data.seq;
+								debouncedSync();
+								break;
+							case GAME_COMMAND_TYPES.useHeroPower:
+								recordMove('useHeroPower', {
+									targetId: wireCommand.targetId,
+									commandId: data.commandId,
+									seq: data.seq,
+								}, 'opponent');
+								applyOpponentCommandToStore(wireCommand);
+								lastIncomingSeqRef.current = data.seq;
+								debouncedSync();
+								break;
+							default:
+								reject(`unknown_command_type_${(wireCommand as { type: string }).type}`);
+						}
 					}
 					break;
 
@@ -747,49 +804,103 @@ export function useP2PSync() {
 		}, 25);
 	}, [syncGameState]);
 
+	const sendCommandEnvelope = useCallback((command: WireGameCommand): void => {
+		const matchId = matchIdRef.current ?? '';
+		if (!matchId) {
+			debug.warn('[useP2PSync] sendCommandEnvelope skipped: no matchId yet');
+			return;
+		}
+		const localState = useGameStore.getState().gameState;
+		const prevStateHash = canonicalQuickHash(localState, isHost);
+		const envelope: GameCommandEnvelope = {
+			type: 'game_command',
+			matchId,
+			seq: outgoingSeqCounter++,
+			commandId: crypto.randomUUID(),
+			prevStateHash,
+			command,
+		};
+		send(envelope);
+	}, [send, isHost]);
+
+	// Sender wrappers: when the local player is the P2P client, the command travels
+	// in the SENDER's perspective (e.g. `targetId: 'opponent-hero'` means "the host's hero
+	// from the client's POV"). The host's applyOpponentCommand swaps player/opponent
+	// before applying — no perspective translation is performed at the wire level.
 	const wrappedPlayCard = useCallback((cardId: string, targetId?: string, targetType?: 'minion' | 'hero', insertionIndex?: number) => {
+		recordMove('playCard', { cardId, targetId, targetType, insertionIndex }, 'player');
 		if (connectionState === 'connected' && !isHost) {
-			recordMove('playCard', { cardId, targetId, targetType, insertionIndex }, 'player');
-			send({ type: 'playCard', cardId, targetId: translateTargetForHost(targetId), targetType, insertionIndex });
+			sendCommandEnvelope({
+				type: GAME_COMMAND_TYPES.playCard,
+				cardId,
+				targetId,
+				targetType,
+				insertionIndex,
+			});
 		} else {
-			recordMove('playCard', { cardId, targetId, targetType, insertionIndex }, 'player');
 			playCard(cardId, targetId, targetType, insertionIndex);
 			if (isHost) debouncedSync();
 		}
-	}, [connectionState, isHost, send, playCard, debouncedSync]);
+	}, [connectionState, isHost, playCard, debouncedSync, sendCommandEnvelope]);
 
 	const wrappedAttack = useCallback((attackerId: string, defenderId: string) => {
+		recordMove('attack', { attackerId, defenderId }, 'player');
 		if (connectionState === 'connected' && !isHost) {
-			recordMove('attack', { attackerId, defenderId }, 'player');
-			send({ type: 'attack', attackerId, defenderId: translateTargetForHost(defenderId) ?? defenderId });
+			sendCommandEnvelope({
+				type: GAME_COMMAND_TYPES.attack,
+				attackerId,
+				defenderId,
+			});
 		} else {
-			recordMove('attack', { attackerId, defenderId }, 'player');
 			attackWithCard(attackerId, defenderId);
 			if (isHost) debouncedSync();
 		}
-	}, [connectionState, isHost, send, attackWithCard, debouncedSync]);
+	}, [connectionState, isHost, attackWithCard, debouncedSync, sendCommandEnvelope]);
 
 	const wrappedEndTurn = useCallback(() => {
+		recordMove('endTurn', {}, 'player');
 		if (connectionState === 'connected' && !isHost) {
-			recordMove('endTurn', {}, 'player');
-			send({ type: 'endTurn' });
+			sendCommandEnvelope({ type: GAME_COMMAND_TYPES.endTurn });
 		} else {
-			recordMove('endTurn', {}, 'player');
 			endTurn();
 			if (isHost) debouncedSync();
 		}
-	}, [connectionState, isHost, send, endTurn, debouncedSync]);
+	}, [connectionState, isHost, endTurn, debouncedSync, sendCommandEnvelope]);
 
 	const wrappedUseHeroPower = useCallback((targetId?: string) => {
+		recordMove('useHeroPower', { targetId }, 'player');
 		if (connectionState === 'connected' && !isHost) {
-			recordMove('useHeroPower', { targetId }, 'player');
-			send({ type: 'useHeroPower', targetId: translateTargetForHost(targetId) });
+			sendCommandEnvelope({
+				type: GAME_COMMAND_TYPES.useHeroPower,
+				targetId,
+				targetType: 'card',
+			});
 		} else {
-			recordMove('useHeroPower', { targetId }, 'player');
 			performHeroPower(targetId, 'card');
 			if (isHost) debouncedSync();
 		}
-	}, [connectionState, isHost, send, performHeroPower, debouncedSync]);
+	}, [connectionState, isHost, performHeroPower, debouncedSync, sendCommandEnvelope]);
+
+	const downloadSessionLog = useCallback((): void => {
+		try {
+			const blob = exportSessionLog({
+				matchId: matchIdRef.current,
+				buildHash: typeof __BUILD_HASH__ !== 'undefined' ? __BUILD_HASH__ : 'dev',
+				connectionState,
+				isHost,
+			});
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `ragnarok-session-${matchIdRef.current ?? 'unmatched'}-${Date.now()}.json`;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			URL.revokeObjectURL(url);
+		} catch (err) {
+			debug.error('[useP2PSync] downloadSessionLog failed:', err);
+		}
+	}, [connectionState, isHost]);
 
 	// Host: accept incoming spectator connections via PeerJS
 	useEffect(() => {
@@ -936,6 +1047,7 @@ export function useP2PSync() {
 		performHeroPower: wrappedUseHeroPower,
 		sendDeckVerification,
 		proposeResult,
+		downloadSessionLog,
 		isConnected: connectionState === 'connected',
 		isHost,
 	};

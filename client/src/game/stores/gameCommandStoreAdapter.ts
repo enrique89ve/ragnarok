@@ -25,6 +25,8 @@ const VISIBLE_REJECTION_MESSAGES: Readonly<Record<string, string>> = {
 	'not enough mana': 'Not enough mana',
 	'not enough health for blood price': 'Not enough health to pay Blood Price',
 	'battlefield full': 'Battlefield is full',
+	'no attacks left': 'This minion already attacked this turn!',
+	'hero power already used': 'Hero power already used this turn',
 };
 
 const CLEAR_SELECTION_REJECTION_REASONS = new Set([
@@ -48,6 +50,7 @@ export function applyGameCommandToStore({
 
 	if (result.status === 'rejected') {
 		applyRejectedCommand(result.reason, setState);
+		applyGameCommandEffects(result.effects, setState);
 		debug.warn(`[GameCommand] Rejected ${command.type}: ${result.reason}`);
 		return;
 	}

@@ -25,6 +25,25 @@ export interface TranscriptBundle {
 	moves: string; // NDJSON
 }
 
+export interface SessionEvent {
+	timestamp: number;
+	kind: string;
+	payload: Record<string, unknown>;
+}
+
+export interface SessionLogPayload {
+	matchId: string | null;
+	buildHash: string;
+	connectionState: string;
+	isHost: boolean;
+	exportedAt: number;
+	moves: GameMove[];
+	events: SessionEvent[];
+}
+
+const SESSION_EVENT_BUFFER_SIZE = 200;
+const sessionEventBuffer: SessionEvent[] = [];
+
 let activeTranscript: TranscriptBuilder | null = null;
 
 export function getActiveTranscript(): TranscriptBuilder | null {
@@ -33,11 +52,53 @@ export function getActiveTranscript(): TranscriptBuilder | null {
 
 export function startNewTranscript(): TranscriptBuilder {
 	activeTranscript = new TranscriptBuilder();
+	sessionEventBuffer.length = 0;
 	return activeTranscript;
 }
 
 export function clearTranscript(): void {
 	activeTranscript = null;
+	sessionEventBuffer.length = 0;
+}
+
+/**
+ * Record a non-move P2P/session event into a bounded ring buffer.
+ * Used for the exportable session log (Bloque C.0 — bitácora P2P local).
+ */
+export function recordSessionEvent(kind: string, payload: Record<string, unknown> = {}): void {
+	sessionEventBuffer.push({ timestamp: Date.now(), kind, payload });
+	if (sessionEventBuffer.length > SESSION_EVENT_BUFFER_SIZE) {
+		sessionEventBuffer.splice(0, sessionEventBuffer.length - SESSION_EVENT_BUFFER_SIZE);
+	}
+}
+
+export function getSessionEvents(): SessionEvent[] {
+	return [...sessionEventBuffer];
+}
+
+/**
+ * Build a downloadable JSON Blob with the active transcript moves and the
+ * recent session event ring buffer, plus identifying metadata. Designed for
+ * QA bug reports during closed beta — not consumed by the protocol.
+ */
+export function exportSessionLog(meta: {
+	matchId: string | null;
+	buildHash: string;
+	connectionState: string;
+	isHost: boolean;
+}): Blob {
+	const transcript = getActiveTranscript();
+	const moves = transcript ? transcript.getRawMoves() : [];
+	const payload: SessionLogPayload = {
+		matchId: meta.matchId,
+		buildHash: meta.buildHash,
+		connectionState: meta.connectionState,
+		isHost: meta.isHost,
+		exportedAt: Date.now(),
+		moves,
+		events: getSessionEvents(),
+	};
+	return new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
 }
 
 export class TranscriptBuilder {

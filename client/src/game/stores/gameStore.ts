@@ -4,18 +4,14 @@ import { showStatus } from '../components/ui/GameStatusBanner';
 import { hasKeyword } from '../utils/cards/keywordUtils';
 import {
   initializeGame,
-  endTurn,
-  processAttack,
   processAITurn,
   autoAttackWithAllCards
 } from '../utils/gameUtils';
-import { executeHeroPower } from '../utils/heroPowerUtils';
 import { useMulliganStore } from './mulliganStore';
 import { useDiscoveryStore } from './discoveryStore';
 import { usePokerRewardStore } from './pokerRewardStore';
 import { CardInstance, GameState, CardData } from '../types';
 import { CardInstanceWithCardData } from '../types/interfaceExtensions';
-import { useAudio } from '../../lib/stores/useAudio';
 import useGame from '../../lib/stores/useGame';
 import { useUnifiedUIStore as useAnnouncementStore } from './unifiedUIStore';
 import { GameEventBus } from '../../core/events/GameEventBus';
@@ -29,7 +25,7 @@ import { CombatEventBus } from '../services/CombatEventBus';
 import { getAttack } from '../utils/cards/typeGuards';
 import { usePeerStore } from './peerStore';
 import { computeStateHash } from '../engine/engineBridge';
-import { GAME_COMMAND_TYPES, applyGameCommand } from '../core/commands';
+import { GAME_COMMAND_TYPES, applyGameCommand, applyOpponentCommand, type GameCommand } from '../core/commands';
 import { applyGameCommandToStore } from './gameCommandStoreAdapter';
 
 // ============== BATTLEFIELD DEBUG MONITOR ==============
@@ -87,6 +83,12 @@ interface GameStore {
   // Game actions
   initGame: () => void;
   playCard: (cardId: string, targetId?: string, targetType?: 'minion' | 'hero', insertionIndex?: number, payWithBlood?: boolean) => void;
+  /**
+   * Apply a command issued by the opponent (P2P host receiving remote peer's envelope).
+   * Goes through the canonical pipeline via state swap so the host's state correctly
+   * reflects the opponent's action. Effects are translated to host perspective.
+   */
+  applyOpponentCommand: (command: GameCommand) => void;
   attackWithCard: (attackerId: string, defenderId?: string) => void; // If defenderId is undefined, attack hero
   autoAttackAll: (mode?: 'minion' | 'hero') => void; // Auto-attack with all minions
   selectAttacker: (card: CardInstance | CardInstanceWithCardData | null) => void; // Select card to attack with
@@ -178,6 +180,20 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
     });
   },
 
+  applyOpponentCommand: (command: GameCommand) => {
+    const { gameState } = get();
+    const result = applyOpponentCommand(gameState, command, {
+      isAiSimulationMode: isAISimulationMode,
+    });
+
+    applyGameCommandToStore({
+      command,
+      beforeState: gameState,
+      result,
+      setState: set,
+    });
+  },
+
   endTurn: () => {
     // Guard: prevent double-firing while AI is thinking
     if (isAITurnProcessing) {
@@ -186,74 +202,56 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
     }
 
     const { gameState } = get();
-    const audioStore = useAudio.getState();
 
-    try {
-      // Log end turn to saga feed
-      logActivity('turn_end', 'player', `Turn ${gameState.turnNumber} ended`);
-
-      // Phase 1: End player turn, switch to opponent (skip AI simulation for delay)
-      const intermediateState = endTurn(gameState, true);
-
-      // Log opponent turn start
-      logActivity('turn_start', 'opponent',
-        `Turn ${intermediateState.turnNumber} - Opponent's turn`);
-
-      // Play sound effect
-      if (audioStore && typeof audioStore.playSoundEffect === 'function') {
-        audioStore.playSoundEffect('turn_end');
+    // End Turn = Fold in poker (depends on PRE state; runs before pipeline)
+    const pokerAdapter = getPokerCombatAdapterState();
+    if (pokerAdapter.isActive && pokerAdapter.combatState) {
+      const phase = pokerAdapter.combatState.phase;
+      const playerId = pokerAdapter.combatState.player.playerId;
+      const isTransitioning = useUnifiedCombatStore.getState().isTransitioningHand;
+      const hasFoldWinner = !!pokerAdapter.combatState.foldWinner;
+      if (phase !== CombatPhase.MULLIGAN && phase !== CombatPhase.RESOLUTION && !isTransitioning && !hasFoldWinner) {
+        debug.log('[UnifiedEndTurn] End Turn = Fold');
+        pokerAdapter.performAction(playerId, CombatAction.BRACE);
+      } else {
+        debug.log(`[UnifiedEndTurn] Skipping fold: phase=${phase}, transitioning=${isTransitioning}`);
       }
-
-      // End Turn = Fold in poker
-      const pokerAdapter = getPokerCombatAdapterState();
-      if (pokerAdapter.isActive && pokerAdapter.combatState) {
-        const phase = pokerAdapter.combatState.phase;
-        const playerId = pokerAdapter.combatState.player.playerId;
-
-        const isTransitioning = useUnifiedCombatStore.getState().isTransitioningHand;
-        const hasFoldWinner = !!pokerAdapter.combatState.foldWinner;
-        if (phase !== CombatPhase.MULLIGAN && phase !== CombatPhase.RESOLUTION && !isTransitioning && !hasFoldWinner) {
-          debug.log('[UnifiedEndTurn] End Turn = Fold');
-          pokerAdapter.performAction(playerId, CombatAction.BRACE);
-        } else {
-          debug.log(`[UnifiedEndTurn] Skipping fold: phase=${phase}, transitioning=${isTransitioning}`);
-        }
-      }
-
-      // Set intermediate state (shows opponent's turn, triggers turn banner)
-      set({
-        gameState: intermediateState,
-        selectedCard: null
-      });
-
-      // Phase 2: After AI thinking delay, process AI turn and switch back to player
-      // Skip AI processing if opponent is a real human (P2P connected)
-      const aiDelay = 1800 + Math.random() * 1000; // 1800-2800ms — slow enough to read
-      const scheduledTurnNumber = intermediateState.turnNumber;
-      isAITurnProcessing = true;
-      setTimeout(() => {
-        try {
-          const { gameState: currentState } = get();
-          if (currentState.currentTurn !== 'opponent') return;
-          if (currentState.gamePhase === 'game_over') return;
-          if (currentState.turnNumber !== scheduledTurnNumber) return;
-
-          // If P2P connected, the opponent is a real human — do NOT run AI
-          if (usePeerStore.getState().connectionState === 'connected') return;
-
-          const finalState = processAITurn(currentState);
-
-          logActivity('turn_start', 'player',
-            `Turn ${finalState.turnNumber} - Your turn`);
-
-          set({ gameState: finalState });
-        } finally {
-          isAITurnProcessing = false;
-        }
-      }, aiDelay);
-    } catch (error) {
-      debug.error('Error ending turn:', error);
     }
+
+    const command = { type: GAME_COMMAND_TYPES.endTurn } as const;
+    const result = applyGameCommand(gameState, command, {
+      isAiSimulationMode: isAISimulationMode,
+    });
+
+    applyGameCommandToStore({
+      command,
+      beforeState: gameState,
+      result,
+      setState: set,
+    });
+
+    if (result.status !== 'applied') return;
+
+    // AI delay + AI turn — kept in wrapper so the isAITurnProcessing guard above remains coherent.
+    // Skip if opponent is a real human (P2P connected).
+    const aiDelay = 1800 + Math.random() * 1000;
+    const scheduledTurnNumber = result.state.turnNumber;
+    isAITurnProcessing = true;
+    setTimeout(() => {
+      try {
+        const { gameState: currentState } = get();
+        if (currentState.currentTurn !== 'opponent') return;
+        if (currentState.gamePhase === 'game_over') return;
+        if (currentState.turnNumber !== scheduledTurnNumber) return;
+        if (usePeerStore.getState().connectionState === 'connected') return;
+
+        const finalState = processAITurn(currentState);
+        logActivity('turn_start', 'player', `Turn ${finalState.turnNumber} - Your turn`);
+        set({ gameState: finalState });
+      } finally {
+        isAITurnProcessing = false;
+      }
+    }, aiDelay);
   },
 
   // Select a card as a possible attacker
@@ -319,67 +317,52 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
       attackWatchdogTimer = null;
     }, 5000);
 
-    const { gameState } = get();
-    const audioStore = useAudio.getState();
-    const targetingStore = useTargetingStore.getState();
+    try {
+      const { gameState } = get();
+      const attackerCard = gameState.players.player.battlefield.find(
+        c => c.instanceId === attackerId
+      );
 
-    // Find the attacker card — use fresh state for accurate attacksPerformed
-    const attackerCard = get().gameState.players.player.battlefield.find(
-      c => c.instanceId === attackerId
-    );
-
-    if (attackerCard) {
-      const hasMegaWindfury = hasKeyword(attackerCard, 'mega_windfury');
-      const hasWindfury = hasKeyword(attackerCard, 'windfury');
-      const maxAttacks = hasMegaWindfury ? 4 : hasWindfury ? 2 : 1;
-      if ((attackerCard.attacksPerformed || 0) >= maxAttacks) {
-        showStatus("This minion already attacked this turn!", 'error');
-        targetingStore.cancelTargeting();
-        set({ attackingCard: null });
-        isAttackProcessing = false;
-        if (attackWatchdogTimer) { clearTimeout(attackWatchdogTimer); attackWatchdogTimer = null; }
+      // Asymmetric early-return: when the attacker isn't on our player.battlefield,
+      // this is either a P2P host receiving an opponent's attack or a stale ID.
+      // Bypass the canonical pipeline so processAttack's player-side checks don't surface as toasts.
+      if (!attackerCard) {
+        useTargetingStore.getState().cancelTargeting();
+        set({ attackingCard: null, selectedCard: null });
         return;
       }
-    }
 
-    try {
-      // Emit animation request — rendering layer handles the visual lunge
-      GameEventBus.emitAnimationRequest({
-        animationType: 'attack_lunge',
-        sourceId: attackerId,
-        targetId: defenderId || 'opponent-hero',
-        params: { attackerSide: 'player' }
+      const command = {
+        type: GAME_COMMAND_TYPES.attack,
+        attackerId,
+        defenderId,
+      } as const;
+      const result = applyGameCommand(gameState, command, {
+        isAiSimulationMode: isAISimulationMode,
       });
 
-      // Process attack logic immediately (animation is purely visual, non-blocking)
-      if (!attackerCard) {
-        targetingStore.cancelTargeting();
-        set({ attackingCard: null, selectedCard: null });
-        isAttackProcessing = false;
-        if (attackWatchdogTimer) { clearTimeout(attackWatchdogTimer); attackWatchdogTimer = null; }
-        return;
+      // Animation: matches original — fires for valid attempts, suppressed only on windfury rejection
+      const isWindfuryRejection = result.status === 'rejected' && result.reason === 'no attacks left';
+      if (!isWindfuryRejection) {
+        GameEventBus.emitAnimationRequest({
+          animationType: 'attack_lunge',
+          sourceId: attackerId,
+          targetId: defenderId || 'opponent-hero',
+          params: { attackerSide: 'player' }
+        });
       }
 
-      const newState = processAttack(gameState, attackerId, defenderId);
-
-      // If the state changed, it means the attack was successful
-      if (newState !== gameState) {
-        // Play sound effect
-        if (audioStore && typeof audioStore.playSoundEffect === 'function') {
-          audioStore.playSoundEffect('attack');
-        }
-
-        // Emit combat events for subscribers (PokerCombatStore, animations, sound, etc.)
+      if (result.status === 'applied') {
         const damage = getAttack(attackerCard.card);
         const targetMinion = gameState.players.opponent.battlefield.find(c => c.instanceId === defenderId);
         const counterDamage = targetMinion ? getAttack(targetMinion.card) : 0;
         const isHeroTarget = !defenderId || defenderId === 'opponent-hero';
 
         CombatEventBus.emitImpactPhase({
-          attackerId: attackerId,
+          attackerId,
           targetId: defenderId || 'opponent-hero',
           damageToTarget: damage,
-          damageToAttacker: isHeroTarget ? 0 : counterDamage
+          damageToAttacker: isHeroTarget ? 0 : counterDamage,
         });
 
         CombatEventBus.emitDamageResolved({
@@ -394,37 +377,19 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
           targetHealthBefore: 0,
           targetHealthAfter: 0,
           targetDied: false,
-          counterDamage: isHeroTarget ? undefined : counterDamage
+          counterDamage: isHeroTarget ? undefined : counterDamage,
         });
-
-        // Log attack to saga feed
-        const targetName = defenderId === 'opponent-hero' || !defenderId
-          ? 'enemy hero'
-          : gameState.players.opponent.battlefield.find(c => c.instanceId === defenderId)?.card.name || 'enemy minion';
-
-        logActivity('attack', 'player', `${attackerCard.card.name} attacked ${targetName}`, {
-          cardName: attackerCard.card.name,
-          targetName: targetName,
-          value: getAttack(attackerCard.card)
-        });
-
-        // Clear targeting state - attack completed
-        targetingStore.cancelTargeting();
-
-        // Update game state
-        set({
-          gameState: newState,
-          attackingCard: null,
-          selectedCard: null
-        });
-      } else {
-        // Attack failed - clear targeting
-        targetingStore.cancelTargeting();
-        set({ attackingCard: null });
       }
+
+      applyGameCommandToStore({
+        command,
+        beforeState: gameState,
+        result,
+        setState: set,
+      });
     } catch (error) {
       debug.error('Error processing attack:', error);
-      targetingStore.cancelTargeting();
+      useTargetingStore.getState().cancelTargeting();
       set({ attackingCard: null, selectedCard: null });
     } finally {
       isAttackProcessing = false;
@@ -567,94 +532,71 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
     if (newState) set({ gameState: newState });
   },
   
-  // Use hero power on a target (or no target for some powers like Armor Up)
+  // Use hero power on a target (or no target for some powers like Armor Up).
+  // Note: this covers the GENERIC hero power path (mage fireblast, warrior armor, etc.,
+  // including Norse heroes whose powers route through `executeNorseHeroPower` inside
+  // the canonical `executeHeroPower`). The poker-combat-coupled hero power flow in
+  // `useRagnarokCombatController.executeHeroPowerEffect` remains a separate path —
+  // it carries poker-combat context (applyDirectDamage, healPlayerHero, setPlayerHeroBuffs)
+  // that does not yet fit the `UseHeroPowerCommand` contract.
   performHeroPower: (targetId?: string, targetType?: 'card' | 'hero') => {
     const { gameState, heroTargetMode } = get();
-    const audioStore = useAudio.getState();
-    
-    try {
-      // Can only use hero power during player's turn and if not already used
-      if (gameState.currentTurn !== 'player' && !isAISimulationMode()) {
-        throw new Error('Not your turn');
-      }
-      
-      const player = gameState.players.player;
-      
-      if (player.heroPower.used) {
-        throw new Error('Hero power already used this turn');
-      }
-      
-      if (player.mana.current < player.heroPower.cost) {
-        throw new Error(`Not enough mana. Need ${player.heroPower.cost} but only have ${player.mana.current}`);
-      }
-      
-      // Some hero powers don't need a target (warrior, hunter, and special ones like Odin)
-      const heroClass = player.heroClass.toLowerCase();
-      const heroId = player.hero?.id;
-      let needsTarget = false;
-      
-      // Odin's Wisdom of the Ravens does NOT need a target
-      if (heroClass === 'mage' && heroId !== 'hero-odin') {
-        needsTarget = true;
-      }
-      
-      // Make sure we have a target if needed
-      if (needsTarget && (!targetId || !targetType)) {
-        if (!heroTargetMode) {
-          set({ heroTargetMode: true });
-          showStatus('Select a target for your hero power', 'info');
-          return;
-        }
-        throw new Error('This hero power requires a target');
-      }
-      
-      // Execute the hero power
-      const newState = executeHeroPower(gameState, 'player', targetId, targetType);
-      
-      if (newState === gameState) {
+    const player = gameState.players.player;
+
+    // UX pre-step: some hero powers require a target (e.g. mage Fireblast).
+    // If the user clicked the hero-power button without picking a target yet,
+    // enter target-selection mode and bail out — the next click will retry.
+    const heroClass = player.heroClass.toLowerCase();
+    const heroId = player.hero?.id;
+    const needsTarget = heroClass === 'mage' && heroId !== 'hero-odin';
+    if (needsTarget && (!targetId || !targetType)) {
+      if (!heroTargetMode) {
+        set({ heroTargetMode: true });
+        showStatus('Select a target for your hero power', 'info');
         return;
       }
-
-      // Show action announcement for the hero power
-      const announcementStoreState = useAnnouncementStore.getState();
-      if (announcementStoreState && announcementStoreState.addAnnouncement) {
-        announcementStoreState.addAnnouncement({
-          type: 'action' as any,
-          title: player.heroPower.name,
-          subtitle: player.heroPower.description,
-          icon: '✨',
-          duration: 2000
-        });
-      }
-
-      // Play hero power sound effect
-      if (audioStore && typeof audioStore.playSoundEffect === 'function') {
-        audioStore.playSoundEffect('hero_power');
-      }
-      
-      // Log to saga feed
-      logActivity('buff', 'player', `Used ${player.heroPower.name}`);
-
-      // Update game state
-      set({
-        gameState: newState,
-        heroTargetMode: false  // Exit hero power mode
-      });
-      
-      // Success notification
-      showStatus(`Used Hero Power: ${player.heroPower.name}`, 'success');
-
-      // Emit hero power effect event — rendering layer handles the visual
-      GameEventBus.emitAnimationRequest({
-        animationType: 'hero_power_effect',
-        sourceId: 'player',
-        params: { heroClass, effectType: player.heroPower.name }
-      });
-
-      debug.log(`Hero power ${player.heroPower.name} used successfully`);
-    } catch (error) {
-      debug.error('Error using hero power:', error);
+      debug.error('[HeroPower] Target required but none provided');
+      return;
     }
+
+    const command = {
+      type: GAME_COMMAND_TYPES.useHeroPower,
+      targetId,
+      targetType,
+    } as const;
+    const result = applyGameCommand(gameState, command, {
+      isAiSimulationMode: isAISimulationMode,
+    });
+
+    applyGameCommandToStore({
+      command,
+      beforeState: gameState,
+      result,
+      setState: set,
+    });
+
+    if (result.status !== 'applied') return;
+
+    // Wrapper-only side effects: bespoke UI cues that don't fit the canonical
+    // effect vocabulary. Ordered AFTER state apply so they reflect committed action.
+    const announcementStoreState = useAnnouncementStore.getState();
+    if (announcementStoreState && announcementStoreState.addAnnouncement) {
+      announcementStoreState.addAnnouncement({
+        type: 'action' as any,
+        title: player.heroPower.name,
+        subtitle: player.heroPower.description,
+        icon: '✨',
+        duration: 2000,
+      });
+    }
+
+    showStatus(`Used Hero Power: ${player.heroPower.name}`, 'success');
+
+    GameEventBus.emitAnimationRequest({
+      animationType: 'hero_power_effect',
+      sourceId: 'player',
+      params: { heroClass, effectType: player.heroPower.name },
+    });
   },
   
   grantPokerHandRewards: () => {
