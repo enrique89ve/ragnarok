@@ -102,7 +102,7 @@ export const HeroDeckBuilder: React.FC<HeroDeckBuilderProps> = ({
 		if (rarityFilter === 'all') return db.groupedCards;
 		return db.groupedCards.map(g => ({
 			...g,
-			cards: g.cards.filter(c => (c.rarity || 'common').toLowerCase() === rarityFilter),
+			cards: g.cards.filter(c => c.rarity === rarityFilter),
 		})).filter(g => g.cards.length > 0);
 	}, [db.groupedCards, rarityFilter]);
 
@@ -371,7 +371,7 @@ export const HeroDeckBuilder: React.FC<HeroDeckBuilderProps> = ({
 												const cardId = Number(card.id);
 												const inDeckCount = db.deckCardCounts[cardId] || 0;
 												const canAdd = db.canAddCard(cardId);
-												const rarityKey = (card.rarity || 'common').toLowerCase();
+												const rarityKey = card.rarity;
 												const isMinion = card.type === 'minion';
 												const maxCopies = getMaxCopies(card);
 												const cardArtPath = getCardArtPath(cardId);
@@ -543,7 +543,7 @@ export const HeroDeckBuilder: React.FC<HeroDeckBuilderProps> = ({
 								<div className="db-sidebar-empty">Click cards to add them to your deck</div>
 							) : (
 								db.deckCardsWithCounts.map(({ card, count }) => {
-									const rarityKey = (card.rarity || 'common').toLowerCase();
+									const rarityKey = card.rarity;
 									return (
 										<div
 											key={card.id}
@@ -644,7 +644,7 @@ const CardDetailFlip: React.FC<{
 	const [isFlipping, setIsFlipping] = useState(false);
 	const holo = useHoloTracking();
 
-	const rarityKey = (card.rarity || 'common').toLowerCase();
+	const rarityKey = card.rarity;
 	const holoTier = getHoloTier(rarityKey);
 	const cardArtPath = getCardArtPath(card.id);
 	const isMinion = card.type === 'minion';
@@ -710,7 +710,7 @@ const CardDetailFlip: React.FC<{
 						<div className="cd-front-mana"><span>{card.manaCost ?? 0}</span></div>
 
 						{/* Rarity badge */}
-						{rarityKey !== 'common' && rarityKey !== 'basic' && (
+						{rarityKey !== 'common' && (
 							<span className={`cd-front-badge rarity-${rarityKey}`}>
 								{RARITY_LABELS[rarityKey] || rarityKey.toUpperCase()}
 							</span>
