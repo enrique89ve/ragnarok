@@ -16,13 +16,19 @@ import { getCardAtLevel, type EvolutionLevel } from './cardLevelScaling';
 /**
  * Creates a new card instance from card data.
  *
- * `idGen` is mandatory — there is no implicit `uuidv4`. P2P paths pass a
- * `SeededIdGen` derived from `matchSeed`; local-play / AI / mid-match
- * paths pass `cryptoIdGen` (or any other `() => string`). This keeps the
- * function pure with respect to its parameters and makes the dependency
- * on randomness explicit at the type level.
+ * `instanceId` is the per-copy identity. The caller decides its origin:
+ * - Virtual local-play: `cryptoIdGen()` (CSPRNG UUID).
+ * - Virtual seeded P2P: a `SeededIdGen()` call (deterministic UUID
+ *   derived from `matchSeed + namespace + ordinal`).
+ * - NFTLox-backed cards (future): the on-chain `nftDna`
+ *   (`i<19 upper-hex>`) directly. The same field carries both virtual
+ *   and on-chain identity so deck-loading code can swap origins without
+ *   changing the runtime shape.
+ *
+ * The template / character identity lives separately on `card.id`
+ * (`CardData.id`); a single character has many instances.
  */
-export function createCardInstance(card: CardData, idGen: () => string, evolutionLevel?: EvolutionLevel): CardInstance {
+export function createCardInstance(card: CardData, instanceId: string, evolutionLevel?: EvolutionLevel): CardInstance {
   const level = evolutionLevel ?? (card as any)._evolutionLevel ?? 3;
   const scaledCard = level !== 3 ? getCardAtLevel(card, level) : card;
 
@@ -33,7 +39,7 @@ export function createCardInstance(card: CardData, idGen: () => string, evolutio
 
   // Create the basic card instance
   const cardInstance: CardInstance = {
-    instanceId: idGen(),
+    instanceId,
     card: scaledCard,
     currentHealth: cardHealth,
     canAttack: false,
@@ -299,7 +305,7 @@ export function drawCards(deck: CardData[], count: number): {
   const remainingDeck = deck.slice(actualDrawCount);
   
   // Convert card data to card instances
-  const drawnCards = drawnCardData.map(c => createCardInstance(c, cryptoIdGen));
+  const drawnCards = drawnCardData.map(c => createCardInstance(c, cryptoIdGen()));
   
   return {
     drawnCards,

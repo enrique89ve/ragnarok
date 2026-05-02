@@ -26,7 +26,7 @@ export function drawCardFromDeck(
   const cardData = player.deck[0];
   player.deck.splice(0, 1);
 
-  const cardInstance = createCardInstance(cardData, cryptoIdGen);
+  const cardInstance = createCardInstance(cardData, cryptoIdGen());
 
   player.hand.push(cardInstance);
   

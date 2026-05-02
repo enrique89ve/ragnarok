@@ -24,7 +24,7 @@ export function drawCard(state: GameState, playerType: 'player' | 'opponent'): G
   const drawnCard = player.deck.shift() as CardData;
 
   // Add the card to the player's hand
-  const cardInstance = createCardInstance(drawnCard, cryptoIdGen);
+  const cardInstance = createCardInstance(drawnCard, cryptoIdGen());
 
   player.hand.push(cardInstance);
   
@@ -43,7 +43,7 @@ export function addCardToHand(state: GameState, playerType: 'player' | 'opponent
   }
   
   // Add the card to the player's hand (generated cards → level 3 default)
-  const cardInstance = createCardInstance(cardData, cryptoIdGen);
+  const cardInstance = createCardInstance(cardData, cryptoIdGen());
 
   player.hand.push(cardInstance);
   

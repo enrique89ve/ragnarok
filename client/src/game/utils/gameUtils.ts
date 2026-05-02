@@ -2298,7 +2298,7 @@ function processAttackForOpponent(
         } else if (desc.includes('summon a 5/5')) {
           if (newState.players.opponent.battlefield.length < MAX_BATTLEFIELD_SIZE) {
             const tokenCard = { id: 9071, name: 'Fire Elemental', type: 'minion', manaCost: 5, attack: 5, health: 5, rarity: 'common', race: 'Elemental', keywords: [], collectible: false };
-            const token = createCardInstance(tokenCard as any, cryptoIdGen);
+            const token = createCardInstance(tokenCard as any, cryptoIdGen());
             token.isSummoningSick = true;
             token.canAttack = false;
             newState.players.opponent.battlefield.push(token);
@@ -2309,7 +2309,7 @@ function processAttackForOpponent(
           newState.players.opponent.heroArmor = (newState.players.opponent.heroArmor || 0) + 3;
         } else if (desc.includes('summon a copy')) {
           if (newState.players.opponent.battlefield.length < MAX_BATTLEFIELD_SIZE) {
-            const copyInstance = createCardInstance(attacker.card, cryptoIdGen);
+            const copyInstance = createCardInstance(attacker.card, cryptoIdGen());
             copyInstance.isSummoningSick = true;
             copyInstance.canAttack = false;
             newState.players.opponent.battlefield.push(copyInstance);
@@ -3047,7 +3047,7 @@ export function processAttack(
       } else if (desc.includes('summon a 5/5')) {
         if (newState.players.player.battlefield.length < MAX_BATTLEFIELD_SIZE) {
           const tokenCard = { id: 9071, name: 'Fire Elemental', type: 'minion', manaCost: 5, attack: 5, health: 5, rarity: 'common', race: 'Elemental', keywords: [], collectible: false };
-          const token = createCardInstance(tokenCard as any, cryptoIdGen);
+          const token = createCardInstance(tokenCard as any, cryptoIdGen());
           token.isSummoningSick = true;
           token.canAttack = false;
           newState.players.player.battlefield.push(token);
@@ -3058,7 +3058,7 @@ export function processAttack(
         newState.players.player.heroArmor = (newState.players.player.heroArmor || 0) + 3;
       } else if (desc.includes('summon a copy')) {
         if (newState.players.player.battlefield.length < MAX_BATTLEFIELD_SIZE) {
-          const copyInstance = createCardInstance(attacker.card, cryptoIdGen);
+          const copyInstance = createCardInstance(attacker.card, cryptoIdGen());
           copyInstance.isSummoningSick = true;
           copyInstance.canAttack = false;
           newState.players.player.battlefield.push(copyInstance);

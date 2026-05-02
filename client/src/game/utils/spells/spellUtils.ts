@@ -964,7 +964,7 @@ export function executeSpell(
             const pick = oppHand[Math.floor(Math.random() * oppHand.length)];
             const playerHand = revealState.players[casterSide].hand;
             if (playerHand.length < MAX_HAND_SIZE) {
-              const copy = createCardInstance(pick.card, cryptoIdGen);
+              const copy = createCardInstance(pick.card, cryptoIdGen());
               playerHand.push(copy);
             }
           }

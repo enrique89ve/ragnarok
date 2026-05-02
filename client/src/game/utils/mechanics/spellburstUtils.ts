@@ -98,7 +98,7 @@ function executeSpellburstEffect(
 			for (let i = 0; i < count; i++) {
 				if (player.hand.length >= MAX_HAND_SIZE) break;
 				const pick = classSpells[Math.floor(Math.random() * classSpells.length)];
-				const inst = createCardInstance(pick, cryptoIdGen);
+				const inst = createCardInstance(pick, cryptoIdGen());
 				player.hand.push(inst);
 			}
 			break;
@@ -106,7 +106,7 @@ function executeSpellburstEffect(
 		case 'draw': {
 			if (effect.targetType === 'spell' && spellCard) {
 				if (player.hand.length < MAX_HAND_SIZE) {
-					const copy = createCardInstance(spellCard, cryptoIdGen);
+					const copy = createCardInstance(spellCard, cryptoIdGen());
 					player.hand.push(copy);
 				}
 			}
@@ -118,7 +118,7 @@ function executeSpellburstEffect(
 				if (summonId) {
 					const cardDef = allCards.find(c => c.id === Number(summonId));
 					if (cardDef) {
-						const summoned = createCardInstance(cardDef as CardData, cryptoIdGen);
+						const summoned = createCardInstance(cardDef as CardData, cryptoIdGen());
 						summoned.isSummoningSick = true;
 						summoned.canAttack = false;
 						player.battlefield.push(summoned);

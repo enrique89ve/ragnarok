@@ -87,7 +87,7 @@ export const usePokerRewardStore = create<PokerRewardStore>()((set, get) => ({
 			for (let i = 0; i < playerDrawCount; i++) {
 				if (newPlayerDeck.length > 0 && newPlayerHand.length < MAX_HAND_SIZE) {
 					const drawnCardData = newPlayerDeck.pop()!;
-					const cardInstance = createCardInstance(drawnCardData, cryptoIdGen);
+					const cardInstance = createCardInstance(drawnCardData, cryptoIdGen());
 					newPlayerHand.push(cardInstance);
 					debug.log(`[PokerRewards] Player drew card: ${cardInstance.card.name}`);
 				}
@@ -99,7 +99,7 @@ export const usePokerRewardStore = create<PokerRewardStore>()((set, get) => ({
 			for (let i = 0; i < opponentDrawCount; i++) {
 				if (newOpponentDeck.length > 0 && newOpponentHand.length < MAX_HAND_SIZE) {
 					const drawnCardData = newOpponentDeck.pop()!;
-					const cardInstance = createCardInstance(drawnCardData, cryptoIdGen);
+					const cardInstance = createCardInstance(drawnCardData, cryptoIdGen());
 					newOpponentHand.push(cardInstance);
 					debug.log(`[PokerRewards] Opponent drew card: ${cardInstance.card.name}`);
 				}

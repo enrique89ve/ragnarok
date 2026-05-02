@@ -43,7 +43,7 @@ export function transformMinion(
   }
   
   // Create a new instance of the target card using our card creation utility
-  const newCardInstance = createCardInstance(transformToCard, cryptoIdGen);
+  const newCardInstance = createCardInstance(transformToCard, cryptoIdGen());
   
   // Mark it as already played and on the battlefield
   newCardInstance.isPlayed = true;

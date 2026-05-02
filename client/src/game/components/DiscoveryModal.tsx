@@ -222,7 +222,7 @@ export const DiscoveryModal: React.FC<DiscoveryModalProps> = ({
             const cardInstance = createCardInstance({
               ...card,
               id: card.id
-            }, cryptoIdGen);
+            }, cryptoIdGen());
             
             const cardAttack = isMinion(card) || isWeapon(card) ? (card as any).attack : null;
             const cardHealth = isMinion(card) ? (card as any).health : isWeapon(card) ? (card as any).durability : null;
