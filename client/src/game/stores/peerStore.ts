@@ -5,7 +5,7 @@
  * WebSocket connection to the game's own server (`/ws/p2p`). Same external
  * API (`host`, `join`, `send`, `disconnect`, `handleHeartbeat`) so
  * `useP2PSync` keeps working unchanged. The `connection` exposed in the
- * store is structurally compatible with the subset of `DataConnection` that
+ * store is structurally compatible with the subset of `P2PConnection` that
  * `useP2PSync` consumes (events `data|open|close|error`, methods `send`/
  * `close`, props `peer`/`open`).
  *
@@ -27,7 +27,6 @@
  */
 
 import { create } from 'zustand';
-import type { DataConnection } from 'peerjs';
 import { debug } from '../config/debugConfig';
 import { LocalWebSocketTransport, deriveRelayUrl } from './wsTransport';
 import type { ArmySelection } from '../types/ChessTypes';
@@ -67,6 +66,22 @@ let lastRoomId: string | null = null;
 
 // ── Types ──
 
+/**
+ * Structural subset of the active wire connection that `useP2PSync` and
+ * `peerStore` consume. The legacy PeerJS `P2PConnection` import was
+ * removed (Patch-WebRTC.3) — the WS transport (`LocalWebSocketTransport`
+ * in `wsTransport.ts`) implements this surface natively, so the field
+ * type is owned by us instead of by an external package whose runtime we
+ * no longer depend on.
+ */
+export interface P2PConnection {
+	send(data: unknown): void;
+	on(event: 'data', listener: (data: unknown) => void): void;
+	on(event: 'close', listener: () => void): void;
+	off(event: 'data', listener: (data: unknown) => void): void;
+	off(event: 'close', listener: () => void): void;
+}
+
 export type P2PConnectionState =
 	| 'disconnected'
 	| 'connecting'
@@ -79,7 +94,7 @@ export type P2PConnectionState =
 export interface PeerStore {
 	myPeerId: string | null;
 	remotePeerId: string | null;
-	connection: DataConnection | null;
+	connection: P2PConnection | null;
 	connectionState: P2PConnectionState;
 	isHost: boolean;
 	error: string | null;
@@ -106,7 +121,7 @@ export interface PeerStore {
 
 	setMyPeerId: (id: string | null) => void;
 	setRemotePeerId: (id: string | null) => void;
-	setConnection: (conn: DataConnection | null) => void;
+	setConnection: (conn: P2PConnection | null) => void;
 	setConnectionState: (state: P2PConnectionState) => void;
 	setIsHost: (isHost: boolean) => void;
 	setError: (error: string | null) => void;
@@ -290,7 +305,7 @@ function openTransport(
 			reconnectAttempt = 0;
 			if (graceTimerId) { clearTimeout(graceTimerId); graceTimerId = null; }
 			set({
-				connection: transport as unknown as DataConnection,
+				connection: transport as unknown as P2PConnection,
 				connectionState: 'connected',
 				isHost: !!payload.isHost,
 				remotePeerId: payload.remotePeerId ?? null,
