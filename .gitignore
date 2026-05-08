@@ -88,6 +88,7 @@ __tests__/
 !client/src/game/utils/cards/cardLevelScaling.test.ts
 !shared/protocol-core/cardProgression.test.ts
 !shared/protocol-core/campaignResult.test.ts
+!shared/protocol-core/packCatalog.test.ts
 !client/src/game/match/economy.test.ts
 !client/src/game/match/derived.test.ts
 !client/src/game/match/legacyBridge.test.ts
@@ -96,6 +97,7 @@ __tests__/
 !client/src/game/match/modes/campaign/resolver.test.ts
 !client/src/game/match/modes/p2p/resolver.test.ts
 !client/src/game/coordinator/hooks/chessAITurnDriver.test.ts
+!client/src/lib/stores/useWarbandStore.test.ts
 *.spec.js
 *.spec.ts
 *.test.tsx
