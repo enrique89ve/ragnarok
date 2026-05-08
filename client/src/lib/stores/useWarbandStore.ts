@@ -123,6 +123,13 @@ export const useWarbandStore = create<WarbandStore>()(
 	}))
 );
 
+// Expose the warband store on globalThis so smoke harnesses (chrome-devtools
+// MCP, Playwright) and debug consoles can seed a ready warband without
+// driving the deck-builder UI. Same pattern as `unifiedCombatStore` line 102.
+// Reads stay routed through the React hooks; this is a side-channel for
+// test affordance only.
+(globalThis as Record<string, unknown>).__ragnarokWarbandStore = useWarbandStore;
+
 export function selectIsReady(state: WarbandStore): boolean {
 	return state.warband.status === 'ready';
 }
