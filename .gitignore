@@ -95,6 +95,7 @@ __tests__/
 !client/src/game/match/modes/single/resolver.test.ts
 !client/src/game/match/modes/campaign/resolver.test.ts
 !client/src/game/match/modes/p2p/resolver.test.ts
+!client/src/game/coordinator/hooks/chessAITurnDriver.test.ts
 *.spec.js
 *.spec.ts
 *.test.tsx
