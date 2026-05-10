@@ -30,7 +30,6 @@
 import { Router, Request, Response } from 'express';
 import {
 	getPlayer,
-	getOrCreatePlayer,
 	getLeaderboard,
 	getCardsByOwner,
 	getMatchHistory,
@@ -51,8 +50,11 @@ import {
 	getBlockCursor,
 	isAccountKnown,
 	registerAccount,
+	getKnownAccounts,
 } from '../services/chainState';
 import { isValidHiveUsername } from '../services/hiveAuth';
+
+const MAX_KNOWN_ACCOUNTS = 10_000;
 
 const router = Router();
 
@@ -60,6 +62,10 @@ function clampInt(val: string | undefined, def: number, min: number, max: number
 	const n = parseInt(val as string, 10);
 	if (!Number.isFinite(n)) return def;
 	return Math.min(Math.max(n, min), max);
+}
+
+function hasAccountRegistryCapacity(username: string): boolean {
+	return isAccountKnown(username) || getKnownAccounts().length < MAX_KNOWN_ACCOUNTS;
 }
 
 // ---------------------------------------------------------------------------
@@ -136,6 +142,11 @@ router.get('/users/:username', (req: Request, res: Response) => {
 	const { username } = req.params;
 	if (!username || !isValidHiveUsername(username)) {
 		res.status(400).json({ error: 'Invalid username' });
+		return;
+	}
+
+	if (!hasAccountRegistryCapacity(username)) {
+		res.status(503).json({ error: 'Account registry full' });
 		return;
 	}
 

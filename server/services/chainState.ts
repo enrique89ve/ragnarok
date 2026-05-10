@@ -15,6 +15,7 @@ import path from 'path';
 import type {
 	CampaignProgressRecord,
 	CampaignSubmissionRecord,
+	DuatClaimRecord,
 	PackAsset,
 	PackSupplyRecord,
 	RuneLedgerEntry,
@@ -130,6 +131,7 @@ interface SerializedState {
 	matchAnchors?: [string, MatchAnchorStateRecord][];
 	packCommits?: [string, PackCommitStateRecord][];
 	rewardClaims?: string[];
+	duatClaims?: [string, DuatClaimRecord][];
 	campaignNonces?: [string, number][];
 	campaignSubmissions?: [string, CampaignSubmissionRecord][];
 	campaignProgress?: [string, CampaignProgressRecord][];
@@ -159,6 +161,7 @@ const tokenBalances = new Map<string, TokenBalanceRecord>();
 const matchAnchors = new Map<string, MatchAnchorStateRecord>();
 const packCommits = new Map<string, PackCommitStateRecord>();
 const rewardClaims = new Set<string>();
+const duatClaims = new Map<string, DuatClaimRecord>();
 const campaignNonces = new Map<string, number>();
 const campaignSubmissions = new Map<string, CampaignSubmissionRecord>();
 const campaignProgress = new Map<string, CampaignProgressRecord>();
@@ -194,8 +197,12 @@ const marketListings = new Map<string, ListingRecord>();
 const marketOffers = new Map<string, OfferRecord>();
 
 const MAX_MATCHES = 10000;
-const STATE_FILE = path.join(process.cwd(), 'data', 'chain-state.json');
+const STATE_FILE_ENV = 'RAGNAROK_CHAIN_STATE_FILE';
+const STATE_FILE_MODE = 0o600;
+const STATE_DIR_MODE = 0o700;
+const STATE_FILE = process.env[STATE_FILE_ENV] ?? path.join(process.cwd(), 'data', 'chain-state.json');
 const SAVE_INTERVAL_MS = 30_000;
+const QUEUE_STATE_EXPIRY_MS = 10 * 60 * 1000;
 
 let _saveTimer: ReturnType<typeof setInterval> | null = null;
 let _dirty = false;
@@ -207,8 +214,27 @@ let _dirty = false;
 function ensureDataDir(): void {
 	const dir = path.dirname(STATE_FILE);
 	if (!fs.existsSync(dir)) {
-		fs.mkdirSync(dir, { recursive: true });
+		fs.mkdirSync(dir, { recursive: true, mode: STATE_DIR_MODE });
 	}
+}
+
+function assertStateFileWritable(): void {
+	ensureDataDir();
+	const dir = path.dirname(STATE_FILE);
+	fs.accessSync(dir, fs.constants.R_OK | fs.constants.W_OK | fs.constants.X_OK);
+
+	if (fs.existsSync(STATE_FILE)) {
+		fs.accessSync(STATE_FILE, fs.constants.R_OK | fs.constants.W_OK);
+	}
+
+	const probeFile = path.join(dir, `.chain-state-write-check-${process.pid}-${Date.now()}.tmp`);
+	const fd = fs.openSync(probeFile, 'w', STATE_FILE_MODE);
+	fs.closeSync(fd);
+	fs.unlinkSync(probeFile);
+}
+
+export function getStateFilePath(): string {
+	return STATE_FILE;
 }
 
 export function loadState(): void {
@@ -255,6 +281,9 @@ export function loadState(): void {
 
 		rewardClaims.clear();
 		for (const c of data.rewardClaims ?? []) rewardClaims.add(c);
+
+		duatClaims.clear();
+		for (const [k, v] of data.duatClaims ?? []) duatClaims.set(k, v);
 
 		campaignNonces.clear();
 		for (const [k, v] of data.campaignNonces ?? []) campaignNonces.set(k, v);
@@ -303,6 +332,7 @@ export function saveState(): void {
 			matchAnchors: [...matchAnchors.entries()],
 			packCommits: [...packCommits.entries()],
 			rewardClaims: [...rewardClaims],
+			duatClaims: [...duatClaims.entries()],
 			campaignNonces: [...campaignNonces.entries()],
 			campaignSubmissions: [...campaignSubmissions.entries()],
 			campaignProgress: [...campaignProgress.entries()],
@@ -312,7 +342,7 @@ export function saveState(): void {
 			slashedAccounts: [...slashedAccounts],
 		};
 		const tmpFile = STATE_FILE + '.tmp';
-		fs.writeFileSync(tmpFile, JSON.stringify(data), 'utf8');
+		fs.writeFileSync(tmpFile, JSON.stringify(data), { encoding: 'utf8', mode: STATE_FILE_MODE });
 		fs.renameSync(tmpFile, STATE_FILE);
 		_dirty = false;
 	} catch (err) {
@@ -326,6 +356,7 @@ function markDirty(): void {
 
 export function startPersistence(): void {
 	if (_saveTimer) return;
+	assertStateFileWritable();
 	_saveTimer = setInterval(saveState, SAVE_INTERVAL_MS);
 }
 
@@ -564,11 +595,7 @@ export function setRuneLedgerEntry(entry: RuneLedgerEntry): void {
 export function getRuneLedgerEntries(query: RuneLedgerEntryQuery): RuneLedgerEntry[] {
 	const entries: RuneLedgerEntry[] = [];
 	for (const entry of runeLedger.values()) {
-		if (entry.seasonId !== query.seasonId) continue;
-		if (query.direction !== undefined && entry.direction !== query.direction) continue;
-		if (query.sourceType !== undefined && entry.sourceType !== query.sourceType) continue;
-		if (query.account !== undefined && entry.account !== query.account) continue;
-		if (query.sourceKeyPrefix !== undefined && !entry.sourceKey.startsWith(query.sourceKeyPrefix)) continue;
+		if (!matchesRuneLedgerQuery(entry, query)) continue;
 		entries.push(entry);
 	}
 	return entries;
@@ -576,10 +603,20 @@ export function getRuneLedgerEntries(query: RuneLedgerEntryQuery): RuneLedgerEnt
 
 export function getRuneLedgerTotal(query: RuneLedgerTotalQuery): number {
 	let total = 0;
-	for (const entry of getRuneLedgerEntries(query)) {
+	for (const entry of runeLedger.values()) {
+		if (!matchesRuneLedgerQuery(entry, query)) continue;
 		total += entry.amount;
 	}
 	return total;
+}
+
+function matchesRuneLedgerQuery(entry: RuneLedgerEntry, query: RuneLedgerEntryQuery | RuneLedgerTotalQuery): boolean {
+	if (entry.seasonId !== query.seasonId) return false;
+	if (query.direction !== undefined && entry.direction !== query.direction) return false;
+	if (query.sourceType !== undefined && entry.sourceType !== query.sourceType) return false;
+	if (query.account !== undefined && entry.account !== query.account) return false;
+	if (query.sourceKeyPrefix !== undefined && !entry.sourceKey.startsWith(query.sourceKeyPrefix)) return false;
+	return true;
 }
 
 export function getPackAsset(uid: string): PackAsset | undefined {
@@ -624,6 +661,8 @@ export function getUnrevealedCommitsBefore(deadlineBlock: number): PackCommitSta
 
 export function hasRewardClaim(key: string): boolean { return rewardClaims.has(key); }
 export function addRewardClaim(key: string): void { rewardClaims.add(key); markDirty(); }
+export function getDuatClaim(account: string): DuatClaimRecord | undefined { return duatClaims.get(account); }
+export function setDuatClaim(claim: DuatClaimRecord): void { duatClaims.set(claim.account, claim); markDirty(); }
 
 export function advanceCampaignNonce(account: string, nonce: number): boolean {
 	const current = campaignNonces.get(account) ?? 0;
@@ -658,8 +697,40 @@ export function setCampaignProgress(progress: CampaignProgressRecord): void {
 export function isSlashed(account: string): boolean { return slashedAccounts.has(account); }
 export function addSlashed(account: string): void { slashedAccounts.add(account); markDirty(); }
 
-export function getQueueEntry(account: string): QueueStateRecord | undefined { return queueEntries.get(account); }
-export function setQueueEntry(account: string, data: QueueStateRecord): void { queueEntries.set(account, data); markDirty(); }
+function isFreshQueueEntry(entry: QueueStateRecord, now = Date.now()): boolean {
+	return now - entry.timestamp <= QUEUE_STATE_EXPIRY_MS;
+}
+
+function pruneExpiredQueueEntries(now = Date.now()): void {
+	let pruned = false;
+	for (const [account, entry] of queueEntries) {
+		if (isFreshQueueEntry(entry, now)) continue;
+		queueEntries.delete(account);
+		pruned = true;
+	}
+	if (pruned) markDirty();
+}
+
+export function getQueueEntry(account: string): QueueStateRecord | undefined {
+	const entry = queueEntries.get(account);
+	if (!entry) return undefined;
+	if (isFreshQueueEntry(entry)) return entry;
+
+	queueEntries.delete(account);
+	markDirty();
+	return undefined;
+}
+
+export function setQueueEntry(account: string, data: QueueStateRecord): void {
+	pruneExpiredQueueEntries();
+	if (!isFreshQueueEntry(data)) {
+		queueEntries.delete(account);
+		markDirty();
+		return;
+	}
+	queueEntries.set(account, data);
+	markDirty();
+}
 export function deleteQueueEntryFn(account: string): void { queueEntries.delete(account); markDirty(); }
 
 // ---------------------------------------------------------------------------

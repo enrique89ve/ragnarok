@@ -135,4 +135,43 @@ app.use((req, res, next) => {
   server.listen(port, "0.0.0.0", () => {
     log(`serving on port ${port}`);
   });
+
+  let isShuttingDown = false;
+  function formatShutdownError(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
+  }
+
+  async function shutdown(signal: string) {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+    log(`received ${signal}, flushing chain state`);
+
+    try {
+      const { stopIndexer } = await import("./services/chainIndexer");
+      stopIndexer();
+    } catch (err) {
+      log(`[shutdown] failed to stop chain indexer: ${formatShutdownError(err)}`);
+    }
+
+    const forcedExit = setTimeout(() => {
+      log('[shutdown] timed out waiting for HTTP server close');
+      process.exit(1);
+    }, 10_000);
+    forcedExit.unref();
+
+    server.close(error => {
+      if (error) {
+        log(`[shutdown] HTTP server close failed: ${formatShutdownError(error)}`);
+        process.exit(1);
+      }
+      process.exit(0);
+    });
+  }
+
+  process.once('SIGINT', () => {
+    void shutdown('SIGINT');
+  });
+  process.once('SIGTERM', () => {
+    void shutdown('SIGTERM');
+  });
 })();

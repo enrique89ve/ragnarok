@@ -24,6 +24,7 @@ import {
 	getMatchAnchor as csGetMatchAnchor, setMatchAnchor as csSetMatchAnchor,
 	getPackCommit as csGetPackCommit, setPackCommit as csSetPackCommit,
 	hasRewardClaim as csHasRewardClaim, addRewardClaim as csAddRewardClaim,
+	getDuatClaim as csGetDuatClaim, setDuatClaim as csSetDuatClaim,
 	advanceCampaignNonce as csAdvanceCampaignNonce,
 	getCampaignSubmission as csGetCampaignSubmission, setCampaignSubmission as csSetCampaignSubmission,
 	getCampaignProgress as csGetCampaignProgress, setCampaignProgress as csSetCampaignProgress,
@@ -103,7 +104,6 @@ function recordToCommit(r: PackCommitStateRecord): PackCommitRecord {
 // ============================================================
 
 const _trxSiblings = new Map<string, unknown[]>();
-const _duatClaimStore = new Map<string, import('../../shared/protocol-core/types').DuatClaimRecord>();
 const _listingStore = new Map<string, import('../../shared/protocol-core/types').MarketListing>();
 const _offerStore = new Map<string, import('../../shared/protocol-core/types').MarketOffer>();
 
@@ -222,8 +222,8 @@ export const serverStateAdapter: StateAdapter = {
 	setTrxSiblings(trxId, ops) { _trxSiblings.set(trxId, ops); },
 
 	// v1.2: DUAT Airdrop
-	async getDuatClaim(account) { return _duatClaimStore.get(account) ?? null; },
-	async putDuatClaim(claim) { _duatClaimStore.set(claim.account, claim); },
+	async getDuatClaim(account) { return csGetDuatClaim(account) ?? null; },
+	async putDuatClaim(claim) { csSetDuatClaim(claim); },
 
 	// v1.2: Marketplace (in-memory, same pattern as packs)
 	async getListing(listingId) { return _listingStore.get(listingId) ?? null; },

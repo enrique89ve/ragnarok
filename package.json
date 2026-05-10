@@ -21,6 +21,7 @@
 		"lint:css:dupes:baseline": "node scripts/check-css-cross-file-dupes.mjs --baseline",
 		"lint:css:dupes:infile": "node scripts/check-css-infile-dupes.mjs",
 		"lint:css:dupes:infile:baseline": "node scripts/check-css-infile-dupes.mjs --baseline",
+		"bench:claim-store": "tsx scripts/benchClaimStore.ts",
 		"db:push": "drizzle-kit push",
 		"db:setup": "tsx server/setupDatabase.ts",
 		"db:seed": "tsx server/seedCardSupply.ts",

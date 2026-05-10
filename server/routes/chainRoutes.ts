@@ -27,6 +27,37 @@ const MAX_CARD_IDS = 100;
 
 const router = Router();
 
+type DeckVerificationRequest =
+	| { status: 'valid'; username: string; cardIds: number[] }
+	| { status: 'invalid'; code: number; error: string };
+
+function hasAccountRegistryCapacity(username: string): boolean {
+	return isAccountKnown(username) || getKnownAccounts().length < MAX_KNOWN_ACCOUNTS;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null;
+}
+
+function validateDeckVerificationRequest(body: unknown): DeckVerificationRequest {
+	const username = isRecord(body) ? body.username : undefined;
+	const cardIds = isRecord(body) ? body.cardIds : undefined;
+
+	if (typeof username !== 'string' || !isValidHiveUsername(username)) {
+		return { status: 'invalid', code: 400, error: 'Valid username required' };
+	}
+
+	if (!Array.isArray(cardIds) || cardIds.length === 0 || cardIds.length > MAX_CARD_IDS) {
+		return { status: 'invalid', code: 400, error: `cardIds[] required (max ${MAX_CARD_IDS})` };
+	}
+
+	if (!cardIds.every(id => typeof id === 'number' && Number.isFinite(id))) {
+		return { status: 'invalid', code: 400, error: 'All cardIds must be finite numbers' };
+	}
+
+	return { status: 'valid', username, cardIds };
+}
+
 // ---------------------------------------------------------------------------
 // GET /leaderboard — global ELO rankings
 // ---------------------------------------------------------------------------
@@ -54,6 +85,11 @@ router.get('/player/:username', async (req: Request, res: Response) => {
 		const { username } = req.params;
 		if (!username || !isValidHiveUsername(username)) {
 			res.status(400).json({ success: false, error: 'Invalid username' });
+			return;
+		}
+
+		if (!hasAccountRegistryCapacity(username)) {
+			res.status(503).json({ success: false, error: 'Account registry full' });
 			return;
 		}
 
@@ -90,8 +126,8 @@ router.get('/player/:username/elo', (req: Request, res: Response) => {
 	const player = getPlayer(username);
 	const indexed = isAccountKnown(username);
 
-	// Register for future indexing even on read
-	if (!indexed) registerAccount(username);
+	// Register for future indexing even on read, bounded to protect RAM.
+	if (!indexed && hasAccountRegistryCapacity(username)) registerAccount(username);
 
 	res.json({
 		success: true,
@@ -112,6 +148,11 @@ router.get('/player/:username/cards', async (req: Request, res: Response) => {
 		const { username } = req.params;
 		if (!username || !isValidHiveUsername(username)) {
 			res.status(400).json({ success: false, error: 'Invalid username' });
+			return;
+		}
+
+		if (!hasAccountRegistryCapacity(username)) {
+			res.status(503).json({ success: false, error: 'Account registry full' });
 			return;
 		}
 
@@ -138,6 +179,11 @@ router.get('/player/:username/cards', async (req: Request, res: Response) => {
 
 router.get('/player/:username/matches', (req: Request, res: Response) => {
 	const { username } = req.params;
+	if (!username || !isValidHiveUsername(username)) {
+		res.status(400).json({ success: false, error: 'Invalid username' });
+		return;
+	}
+
 	const limit = Math.min(Math.max(parseInt(req.query.limit as string ?? '20', 10) || 20, 1), 100);
 
 	const matches = getMatchHistory(username, limit);
@@ -155,18 +201,15 @@ router.get('/player/:username/matches', (req: Request, res: Response) => {
 
 router.post('/verify-deck', async (req: Request, res: Response) => {
 	try {
-		const { username, cardIds } = req.body as { username?: string; cardIds?: number[] };
+		const validation = validateDeckVerificationRequest(req.body);
+		if (validation.status === 'invalid') {
+			res.status(validation.code).json({ success: false, error: validation.error });
+			return;
+		}
 
-		if (!username || !isValidHiveUsername(username)) {
-			res.status(400).json({ success: false, error: 'Valid username required' });
-			return;
-		}
-		if (!Array.isArray(cardIds) || cardIds.length === 0 || cardIds.length > MAX_CARD_IDS) {
-			res.status(400).json({ success: false, error: `cardIds[] required (max ${MAX_CARD_IDS})` });
-			return;
-		}
-		if (!cardIds.every(id => typeof id === 'number' && Number.isFinite(id))) {
-			res.status(400).json({ success: false, error: 'All cardIds must be finite numbers' });
+		const { username, cardIds } = validation;
+		if (!hasAccountRegistryCapacity(username)) {
+			res.status(503).json({ success: false, error: 'Account registry full' });
 			return;
 		}
 
