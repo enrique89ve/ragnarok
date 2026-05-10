@@ -20,6 +20,7 @@ import {
 } from '../../shared/protocol-core';
 import { serverStateAdapter } from './serverStateAdapter';
 import { serverSignatureVerifier } from './hiveSignatureVerifier';
+import { serverRuneExchangeAdapter } from './runeExchangeAdapter';
 import { campaignRegistryProvider } from '../../shared/campaign/registry';
 import {
 	registerAccount,
@@ -164,6 +165,7 @@ function buildDeps(): ProtocolCoreDeps {
 		rewards: serverRewards,
 		campaigns: campaignRegistryProvider,
 		sigs: serverSignatureVerifier,
+		runeExchange: serverRuneExchangeAdapter,
 	};
 }
 

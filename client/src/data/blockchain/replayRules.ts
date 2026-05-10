@@ -24,6 +24,7 @@ import {
 import { campaignRegistryProvider } from '../../../../shared/campaign/registry';
 import { clientStateAdapter } from './clientStateAdapter';
 import { clientSignatureVerifier } from './clientSignatureVerifier';
+import { clientRuneExchangeAdapter } from './runeExchangeAdapter';
 import { hiveEvents } from '../HiveEvents';
 import { getCardDataProvider } from './ICardDataProvider';
 import { getRewardById } from './tournamentRewards';
@@ -145,6 +146,7 @@ function buildDeps(): ProtocolCoreDeps {
 		rewards: rewardProviderAdapter,
 		campaigns: campaignRegistryProvider,
 		sigs: clientSignatureVerifier,
+		runeExchange: clientRuneExchangeAdapter,
 	};
 }
 

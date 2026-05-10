@@ -56,6 +56,38 @@ export type SeasonScoreInput = {
 	p2pRuneEarned: number;
 };
 
+export type RuneExchangeQuoteInput = {
+	packType: string;
+	quantity: number;
+};
+
+export type RuneExchangeQuote = {
+	packType: string;
+	quantity: number;
+	runeCost: number;
+	totalCost: number;
+	accountLimit: number;
+	globalPackCap: number;
+};
+
+export type RuneExchangeFulfillment = {
+	seasonId: string;
+	account: string;
+	sourceKey: string;
+	packType: string;
+	quantity: number;
+	totalCost: number;
+	trxId: string;
+	blockNum: number;
+	timestamp: number;
+};
+
+export interface RuneExchangeAdapter {
+	getQuote(input: RuneExchangeQuoteInput): RuneExchangeQuote | null;
+	getGlobalMinted(input: { packType: string }): Promise<number>;
+	fulfill(input: RuneExchangeFulfillment): Promise<void>;
+}
+
 export const TESTNET_RUNE_ECONOMY = {
 	phase: 'testnet',
 	seasonId: 'S01',

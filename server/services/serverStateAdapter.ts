@@ -28,6 +28,9 @@ import {
 	getCampaignSubmission as csGetCampaignSubmission, setCampaignSubmission as csSetCampaignSubmission,
 	getCampaignProgress as csGetCampaignProgress, setCampaignProgress as csSetCampaignProgress,
 	isSlashed as csIsSlashed, addSlashed as csAddSlashed,
+	getPackAsset as csGetPackAsset, setPackAsset as csSetPackAsset, deletePackAsset as csDeletePackAsset,
+	getPackAssetsByOwner as csGetPackAssetsByOwner,
+	getPackSupplyRecord as csGetPackSupplyRecord, setPackSupplyRecord as csSetPackSupplyRecord,
 	getQueueEntry as csGetQueueEntry, setQueueEntry as csSetQueueEntry,
 	deleteQueueEntryFn as csDeleteQueueEntry,
 	type CardRecord,
@@ -96,11 +99,9 @@ function recordToCommit(r: PackCommitStateRecord): PackCommitRecord {
 }
 
 // ============================================================
-// v1.1: In-memory stores for pack NFTs + companion transfers
+// v1.1: In-memory stores for ephemeral companion transfers
 // ============================================================
 
-const _packStore = new Map<string, import('../../shared/protocol-core/types').PackAsset>();
-const _packSupplyStore = new Map<string, import('../../shared/protocol-core/types').PackSupplyRecord>();
 const _trxSiblings = new Map<string, unknown[]>();
 const _duatClaimStore = new Map<string, import('../../shared/protocol-core/types').DuatClaimRecord>();
 const _listingStore = new Map<string, import('../../shared/protocol-core/types').MarketListing>();
@@ -195,18 +196,17 @@ export const serverStateAdapter: StateAdapter = {
 	async deleteQueueEntry(account) { csDeleteQueueEntry(account); },
 
 	// v1.1: Pack NFTs + companion transfers
-	async getPack(uid) { return _packStore.get(uid) ?? null; },
-	async putPack(pack) { _packStore.set(pack.uid, pack); },
-	async deletePack(uid) { _packStore.delete(uid); },
-	async getPacksByOwner(owner) {
-		const result: import('../../shared/protocol-core/types').PackAsset[] = [];
-		for (const p of _packStore.values()) {
-			if (p.owner === owner) result.push(p);
-		}
-		return result;
+	async getPack(uid) { return csGetPackAsset(uid) ?? null; },
+	async putPack(pack) {
+		csSetPackAsset(pack);
+		registerAccount(pack.owner);
 	},
-	async getPackSupply(packType) { return _packSupplyStore.get(packType) ?? null; },
-	async putPackSupply(record) { _packSupplyStore.set(record.packType, record); },
+	async deletePack(uid) { csDeletePackAsset(uid); },
+	async getPacksByOwner(owner) {
+		return csGetPackAssetsByOwner(owner);
+	},
+	async getPackSupply(packType) { return csGetPackSupplyRecord(packType) ?? null; },
+	async putPackSupply(record) { csSetPackSupplyRecord(record); },
 
 	async getCompanionTransfer(trxId) {
 		const siblings = _trxSiblings.get(trxId);

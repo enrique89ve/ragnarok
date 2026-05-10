@@ -11,6 +11,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { applyOp, type ProtocolCoreDeps } from './apply';
 import { normalizeRawOp } from './normalize';
+import {
+	PACK_SIZES,
+	getRuneExchangePackQuote,
+	type RuneExchangeAdapter,
+} from './types';
 import type {
 	StateAdapter, CardAsset, GenesisRecord, EloRecord,
 	TokenBalance, MatchAnchorRecord, PackCommitRecord, SupplyRecord,
@@ -181,6 +186,53 @@ const mockSigs: SignatureVerifier = {
 	async verifyCurrentKey() { return true; },
 };
 
+const getTestRuneExchangeQuote: RuneExchangeAdapter['getQuote'] = getRuneExchangePackQuote;
+
+function makeRuneExchangeAdapter(state: MemoryState): RuneExchangeAdapter {
+	return {
+		getQuote: getTestRuneExchangeQuote,
+		async getGlobalMinted(input) {
+			return state.packSupply.get(input.packType)?.minted ?? 0;
+		},
+		async fulfill(input) {
+			let createdCount = 0;
+			let fulfilledCount = 0;
+
+			for (let i = 0; i < input.quantity; i++) {
+				const uid = `pack_${input.trxId}:rune:${i}`;
+				if (state.packs.has(uid)) {
+					fulfilledCount++;
+					continue;
+				}
+
+				state.packs.set(uid, {
+					uid,
+					packType: input.packType,
+					dna: await sha256Hash(`${input.trxId}:rune:${i}:${input.packType}`),
+					owner: input.account,
+					sealed: true,
+					mintTrxId: input.trxId,
+					mintBlockNum: input.blockNum,
+					lastTransferBlock: input.blockNum,
+					cardCount: PACK_SIZES[input.packType] ?? 0,
+					edition: 'alpha',
+				});
+				createdCount++;
+				fulfilledCount++;
+			}
+
+			const supply = state.packSupply.get(input.packType);
+			const quote = getTestRuneExchangeQuote({ packType: input.packType, quantity: input.quantity });
+			state.packSupply.set(input.packType, {
+				packType: input.packType,
+				minted: Math.max((supply?.minted ?? 0) + createdCount, fulfilledCount),
+				burned: supply?.burned ?? 0,
+				cap: quote?.globalPackCap ?? supply?.cap ?? 0,
+			});
+		},
+	};
+}
+
 const defaultCtx: ReplayContext = {
 	lastIrreversibleBlock: 999999999,
 	getBlockId: async () => 'deadbeef'.repeat(5),
@@ -261,6 +313,7 @@ function makeDeps(state: MemoryState): ProtocolCoreDeps {
 			getMission: () => null,
 		},
 		sigs: mockSigs,
+		runeExchange: makeRuneExchangeAdapter(state),
 	};
 }
 
@@ -1139,7 +1192,7 @@ describe('Protocol Core: Replay Traces', () => {
 	}
 
 	describe('rune_exchange', () => {
-		it('spends RUNE and mints sealed packs to the buyer', async () => {
+		it('spends RUNE and delegates sealed pack fulfillment to the adapter', async () => {
 			await seedSealedGenesis(state, deps);
 			await deps.state.putTokenBalance({ account: 'alice', RUNE: 10 });
 
@@ -1178,12 +1231,19 @@ describe('Protocol Core: Replay Traces', () => {
 				quantity: 1,
 			}, { broadcaster: 'alice', trxId: 'rune-x-duplicate', blockNum: 2000 });
 			const firstResult = await applyOp(op, defaultCtx, deps);
+
+			state.packs.clear();
+			state.packSupply.clear();
+
 			const duplicateResult = await applyOp(op, defaultCtx, deps);
+			const repeatedDuplicateResult = await applyOp(op, defaultCtx, deps);
 
 			expect(firstResult.status).toBe('applied');
 			expect(duplicateResult.status).toBe('ignored');
+			expect(repeatedDuplicateResult.status).toBe('ignored');
 			expect((await deps.state.getTokenBalance('alice')).RUNE).toBe(8);
 			expect(state.packs.size).toBe(1);
+			expect(state.packSupply.get('standard')?.minted).toBe(1);
 			expect(state.runeLedger.size).toBe(1);
 		});
 

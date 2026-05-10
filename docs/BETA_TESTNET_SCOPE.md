@@ -120,7 +120,8 @@ Canonical RUNE state is derived from Hive events:
 - `campaign_result` proves a campaign win and unlocks first-clear campaign RUNE.
 - `match_result` proves ranked P2P outcome and emits ranked RUNE.
 - `reward_claim` claims a replay-derived reward by source key.
-- `rune_exchange` spends existing RUNE into testnet packs.
+- `rune_exchange` spends existing RUNE and asks a RUNE exchange bridge to
+  fulfill testnet packs.
 - Optional verifier/admin summaries may compact claims for faster UI reads, but
   the replay engine must be able to reject or rebuild them from source events.
 
@@ -147,6 +148,9 @@ Idempotency keys are mandatory:
 
 Pack exchange limits:
 
+- The RUNE ledger only validates the quote, records the debit, and enforces
+  spend/account/global caps. Pack construction belongs to the exchange adapter
+  for the current runtime.
 - Standard pack: `2` RUNE.
 - Premium pack: `7` RUNE.
 - Mythic pack: `20` RUNE.
@@ -161,11 +165,11 @@ Pack exchange limits:
 - Pack quantities must be derived from `packType * quantity`; direct negative
   spends or direct card mints are invalid.
 
-Replay rejection rules:
+Replay rejection/cap rules:
 
 - Duplicate source key: ignored/idempotent.
-- Claim over account cap: rejected.
-- Claim over season pool cap: rejected.
+- RUNE credit over account cap: credited only up to the remaining account cap.
+- RUNE credit over season pool cap: credited only up to the remaining pool cap.
 - Spend greater than balance: rejected.
 - Spend greater than max per op: rejected.
 - Unknown season, pack type, campaign id, mission id, or ruleset hash: rejected.

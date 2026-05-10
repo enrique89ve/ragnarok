@@ -188,6 +188,11 @@ function createDeps(state: StateAdapter, campaignId = 'war-of-pantheons'): Proto
 			verifyAnchored: async () => false,
 			verifyCurrentKey: async () => false,
 		},
+		runeExchange: {
+			getQuote: () => null,
+			getGlobalMinted: async () => 0,
+			fulfill: async () => { /* noop */ },
+		},
 	};
 }
 

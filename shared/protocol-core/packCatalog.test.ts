@@ -8,6 +8,7 @@ import {
 	PUBLIC_PACK_KEYS,
 	RUNE_REDEEMABLE_PACK_KEYS,
 	TESTNET_RUNE_PACK_POOL,
+	getRuneExchangePackQuote,
 	getRunePackPoolAllocations,
 	getRunePackPoolTotals,
 	normalizePackKey,
@@ -33,6 +34,19 @@ describe('pack catalog', () => {
 
 			expect(PACK_RUNE_COSTS[pack.key]).toBe(pack.runeCost);
 		}
+	});
+
+	it('quotes RUNE exchange packs from the canonical catalog', () => {
+		expect(getRuneExchangePackQuote({ packType: 'Standard Pack', quantity: 2 })).toEqual({
+			packType: 'standard',
+			quantity: 2,
+			runeCost: 2,
+			totalCost: 4,
+			accountLimit: 1,
+			globalPackCap: 20_000,
+		});
+		expect(getRuneExchangePackQuote({ packType: 'starter', quantity: 1 })).toBeNull();
+		expect(getRuneExchangePackQuote({ packType: 'standard', quantity: 0 })).toBeNull();
 	});
 
 	it('uses standard as the active 5-card reward pack', () => {

@@ -568,7 +568,7 @@ so campaign participation matters without letting raw farming overpower ELO.
 
 ### RUNE
 
-Derived non-transferable reward points. Testnet S01 emission is capped at 2,200,000 RUNE: 2,000,000 for P2P and 200,000 for campaign. Ranked P2P currently pays +2 per win and +0 per loss, capped at 100 RUNE per target account; campaign first-clear claims are capped at 10 RUNE per target account. `rune_exchange` debits existing RUNE into sealed testnet packs, rejects overspend, and enforces per-op, per-account pack-type, and global pack caps. RUNE is used for progression thresholds and season rewards. Not a transferable token in v1.
+Derived non-transferable reward points. Testnet S01 emission is capped at 2,200,000 RUNE: 2,000,000 for P2P and 200,000 for campaign. Ranked P2P currently pays +2 per win and +0 per loss, capped at 100 RUNE per target account; campaign first-clear claims are capped at 10 RUNE per target account. `rune_exchange` debits existing RUNE, rejects overspend, and enforces per-op, per-account pack-type, and global pack caps. Pack fulfillment is delegated to a RUNE exchange adapter/bridge; the RUNE ledger does not construct packs or cards. RUNE is used for progression thresholds and season rewards. Not a transferable token in v1.
 
 ### Eitr
 

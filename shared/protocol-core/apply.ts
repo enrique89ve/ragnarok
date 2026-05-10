@@ -13,7 +13,7 @@ import type {
 	CardAsset, GenesisRecord, EloRecord, PackAsset,
 	MarketListing, MarketOffer, ProtocolAction, RewardDefinition,
 	CampaignDifficulty, CampaignProgressRecord, CampaignRegistryProvider, CampaignSubmissionRecord,
-	RuneRedeemablePackKey,
+	RuneExchangeAdapter,
 } from './types';
 import {
 	RAGNAROK_ADMIN_ACCOUNT, TRANSFER_COOLDOWN_BLOCKS, MAX_CARD_LEVEL,
@@ -23,8 +23,6 @@ import {
 	PACK_ENTROPY_DELAY_BLOCKS, PACK_REVEAL_DEADLINE_BLOCKS,
 	DUAT_CLAIM_WINDOW_BLOCKS, calculateDuatPacks,
 	getPackDefinition,
-	isRuneRedeemablePackKey,
-	TESTNET_RUNE_PACK_POOL,
 	TESTNET_RUNE_ECONOMY,
 	TESTNET_RUNE_SEASON_ID,
 	calculateCappedRuneCredit,
@@ -49,6 +47,7 @@ export interface ProtocolCoreDeps {
 	rewards: RewardProvider;
 	campaigns: CampaignRegistryProvider;
 	sigs: SignatureVerifier;
+	runeExchange: RuneExchangeAdapter;
 }
 
 type OpHandler = (op: ProtocolOp, ctx: ReplayContext, deps: ProtocolCoreDeps) => Promise<OpResult>;
@@ -89,10 +88,12 @@ type MarketNftAsset =
 	| { nftType: 'pack'; asset: PackAsset };
 
 type RuneExchangeDetails = {
-	packType: RuneRedeemablePackKey;
+	packType: string;
 	quantity: number;
 	runeCost: number;
 	totalCost: number;
+	accountLimit: number;
+	globalPackCap: number;
 	sourceKey: string;
 	entryId: string;
 };
@@ -1119,17 +1120,19 @@ async function applyCampaignRewardClaim(
 		return reject('campaign reward id must be campaign:{campaignId}:{missionId}');
 	}
 
-	if (await deps.state.hasRewardClaim(op.broadcaster, rewardId)) {
-		return { status: 'ignored' };
-	}
-
+	const alreadyClaimed = await deps.state.hasRewardClaim(op.broadcaster, rewardId);
 	const progress = await deps.state.getCampaignProgress(op.broadcaster, campaignId, missionId);
 	if (!progress) {
-		return reject(`campaign reward condition not met for ${campaignId}:${missionId}`);
+		return alreadyClaimed
+			? { status: 'ignored' }
+			: reject(`campaign reward condition not met for ${campaignId}:${missionId}`);
 	}
 
 	const runeResult = await applyCampaignFirstClearRuneCredit(op, progress, deps);
 	if (runeResult) return runeResult;
+	if (alreadyClaimed) {
+		return { status: 'ignored' };
+	}
 
 	await deps.state.putRewardClaim(op.broadcaster, rewardId, op.blockNum);
 	return { status: 'applied' };
@@ -1276,14 +1279,27 @@ async function applyRuneExchange(op: ProtocolOp, deps: ProtocolCoreDeps): Promis
 	const genesis = await deps.state.getGenesis();
 	if (!genesis?.sealed) return reject('rune_exchange requires sealed genesis');
 
-	const details = parseRuneExchangeDetails(op);
+	const details = parseRuneExchangeDetails(op, deps.runeExchange);
 	if (isOpResult(details)) return details;
 
 	const existingEntry = await deps.state.getRuneLedgerEntry(details.entryId);
 	if (existingEntry) {
-		return existingEntry.account === op.broadcaster
-			? { status: 'ignored' }
-			: reject('rune_exchange source already spent by a different account');
+		if (existingEntry.account !== op.broadcaster) {
+			return reject('rune_exchange source already spent by a different account');
+		}
+
+		await deps.runeExchange.fulfill({
+			seasonId: TESTNET_RUNE_SEASON_ID,
+			account: op.broadcaster,
+			sourceKey: details.sourceKey,
+			packType: details.packType,
+			quantity: details.quantity,
+			totalCost: existingEntry.amount,
+			trxId: op.trxId,
+			blockNum: op.blockNum,
+			timestamp: op.timestamp,
+		});
+		return { status: 'ignored' };
 	}
 
 	const balance = await deps.state.getTokenBalance(op.broadcaster);
@@ -1307,23 +1323,28 @@ async function applyRuneExchange(op: ProtocolOp, deps: ProtocolCoreDeps): Promis
 		timestamp: op.timestamp,
 	});
 	await deps.state.putTokenBalance({ ...balance, RUNE: balance.RUNE - details.totalCost });
-	await mintRuneExchangePacks(op, details, deps);
+	await deps.runeExchange.fulfill({
+		seasonId: TESTNET_RUNE_SEASON_ID,
+		account: op.broadcaster,
+		sourceKey: details.sourceKey,
+		packType: details.packType,
+		quantity: details.quantity,
+		totalCost: details.totalCost,
+		trxId: op.trxId,
+		blockNum: op.blockNum,
+		timestamp: op.timestamp,
+	});
 
 	return { status: 'applied' };
 }
 
-function parseRuneExchangeDetails(op: ProtocolOp): RuneExchangeDetails | OpResult {
+function parseRuneExchangeDetails(
+	op: ProtocolOp,
+	runeExchange: RuneExchangeAdapter,
+): RuneExchangeDetails | OpResult {
 	const packTypeValue = op.payload.pack_type ?? op.payload.packType;
 	if (typeof packTypeValue !== 'string') {
 		return reject('missing pack_type');
-	}
-
-	const packDefinition = getPackDefinition(packTypeValue);
-	if (!packDefinition || !isRuneRedeemablePackKey(packDefinition.key)) {
-		return reject(`invalid rune_exchange pack_type: ${packTypeValue}`);
-	}
-	if (!packDefinition.runeCost) {
-		return reject(`pack_type is not rune-redeemable: ${packDefinition.key}`);
 	}
 
 	const quantity = Number(op.payload.quantity ?? 1);
@@ -1331,16 +1352,19 @@ function parseRuneExchangeDetails(op: ProtocolOp): RuneExchangeDetails | OpResul
 		return reject('quantity must be a positive integer');
 	}
 
-	const totalCost = packDefinition.runeCost * quantity;
-	if (totalCost > TESTNET_RUNE_ECONOMY.maxRuneExchangeSpendPerOp) {
+	const quote = runeExchange.getQuote({ packType: packTypeValue, quantity });
+	if (!quote) {
+		return reject(`invalid rune_exchange pack_type: ${packTypeValue}`);
+	}
+	if (quote.totalCost > TESTNET_RUNE_ECONOMY.maxRuneExchangeSpendPerOp) {
 		return reject('rune_exchange spend exceeds per-op cap');
 	}
 
 	const sourceKey = createRuneExchangeSourceKey(
 		op.broadcaster,
 		op.trxId,
-		packDefinition.key,
-		quantity,
+		quote.packType,
+		quote.quantity,
 	);
 	const entryId = createRuneLedgerEntryId({
 		seasonId: TESTNET_RUNE_SEASON_ID,
@@ -1350,10 +1374,12 @@ function parseRuneExchangeDetails(op: ProtocolOp): RuneExchangeDetails | OpResul
 	});
 
 	return {
-		packType: packDefinition.key,
-		quantity,
-		runeCost: packDefinition.runeCost,
-		totalCost,
+		packType: quote.packType,
+		quantity: quote.quantity,
+		runeCost: quote.runeCost,
+		totalCost: quote.totalCost,
+		accountLimit: quote.accountLimit,
+		globalPackCap: quote.globalPackCap,
 		sourceKey,
 		entryId,
 	};
@@ -1364,20 +1390,13 @@ async function validateRuneExchangeLimits(
 	details: RuneExchangeDetails,
 	deps: ProtocolCoreDeps,
 ): Promise<OpResult | null> {
-	const packDefinition = getPackDefinition(details.packType);
-	const accountLimit = packDefinition?.runeExchangeLimitPerAccount ?? 0;
 	const redeemedQuantity = await getRedeemedRuneExchangeQuantity(account, details.packType, deps);
-	if (redeemedQuantity + details.quantity > accountLimit) {
+	if (redeemedQuantity + details.quantity > details.accountLimit) {
 		return reject(`rune_exchange account limit reached for ${details.packType}`);
 	}
 
-	const supply = await deps.state.getPackSupply(details.packType);
-	const configuredCap = TESTNET_RUNE_PACK_POOL.packCaps[details.packType];
-	const supplyCap = supply?.cap && supply.cap > 0
-		? Math.min(supply.cap, configuredCap)
-		: configuredCap;
-	const minted = supply?.minted ?? 0;
-	if (minted + details.quantity > supplyCap) {
+	const minted = await deps.runeExchange.getGlobalMinted({ packType: details.packType });
+	if (minted + details.quantity > details.globalPackCap) {
 		return reject(`rune_exchange pack cap reached for ${details.packType}`);
 	}
 
@@ -1386,7 +1405,7 @@ async function validateRuneExchangeLimits(
 
 async function getRedeemedRuneExchangeQuantity(
 	account: string,
-	packType: RuneRedeemablePackKey,
+	packType: string,
 	deps: ProtocolCoreDeps,
 ): Promise<number> {
 	const entries = await deps.state.getRuneLedgerEntries({
@@ -1412,41 +1431,6 @@ function parseRuneExchangeSourceKey(sourceKey: string): { packType: string; quan
 	const quantity = Number(parts[5]);
 	if (!Number.isInteger(quantity) || quantity < 1) return null;
 	return { packType: parts[4], quantity };
-}
-
-async function mintRuneExchangePacks(
-	op: ProtocolOp,
-	details: RuneExchangeDetails,
-	deps: ProtocolCoreDeps,
-): Promise<void> {
-	for (let i = 0; i < details.quantity; i++) {
-		const uid = `pack_${op.trxId}:rune:${i}`;
-		if (await deps.state.getPack(uid)) continue;
-
-		await deps.state.putPack({
-			uid,
-			packType: details.packType,
-			dna: await sha256Hash(`${op.trxId}:rune:${i}:${details.packType}`),
-			owner: op.broadcaster,
-			sealed: true,
-			mintTrxId: op.trxId,
-			mintBlockNum: op.blockNum,
-			lastTransferBlock: op.blockNum,
-			cardCount: PACK_SIZES[details.packType],
-			edition: 'alpha',
-		});
-	}
-
-	const supply = await deps.state.getPackSupply(details.packType);
-	const configuredCap = TESTNET_RUNE_PACK_POOL.packCaps[details.packType];
-	await deps.state.putPackSupply({
-		packType: details.packType,
-		minted: (supply?.minted ?? 0) + details.quantity,
-		burned: supply?.burned ?? 0,
-		cap: supply?.cap && supply.cap > 0
-			? Math.min(supply.cap, configuredCap)
-			: configuredCap,
-	});
 }
 
 // ============================================================

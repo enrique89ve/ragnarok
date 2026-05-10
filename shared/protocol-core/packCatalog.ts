@@ -5,6 +5,8 @@
  * flows should prefer `standard` as the canonical 5-card pack.
  */
 
+import type { RuneExchangeQuote, RuneExchangeQuoteInput } from './runeEconomy';
+
 export const PACK_KEYS = ['starter', 'booster', 'standard', 'premium', 'mythic', 'mega'] as const;
 export const PUBLIC_PACK_KEYS = ['starter', 'standard', 'premium', 'mythic'] as const;
 export const ADMIN_MINTABLE_PACK_KEYS = ['standard', 'premium', 'mythic', 'mega'] as const;
@@ -229,6 +231,22 @@ export function getPackRuneCost(value: string): number | null {
 
 export function isRuneRedeemablePackKey(value: string): value is RuneRedeemablePackKey {
 	return RUNE_REDEEMABLE_PACK_KEYS.some((key) => key === value);
+}
+
+export function getRuneExchangePackQuote(input: RuneExchangeQuoteInput): RuneExchangeQuote | null {
+	if (!Number.isInteger(input.quantity) || input.quantity < 1) return null;
+
+	const pack = getPackDefinition(input.packType);
+	if (!pack || !isRuneRedeemablePackKey(pack.key) || !pack.runeCost) return null;
+
+	return {
+		packType: pack.key,
+		quantity: input.quantity,
+		runeCost: pack.runeCost,
+		totalCost: pack.runeCost * input.quantity,
+		accountLimit: pack.runeExchangeLimitPerAccount,
+		globalPackCap: TESTNET_RUNE_PACK_POOL.packCaps[pack.key],
+	};
 }
 
 export function getRunePackPoolAllocations(pool: RunePackPoolConfig = TESTNET_RUNE_PACK_POOL): RunePackPoolAllocation[] {

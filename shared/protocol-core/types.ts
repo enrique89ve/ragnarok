@@ -35,6 +35,10 @@ export {
 	type RuneLedgerDirection,
 	type RuneLedgerEntry,
 	type RuneLedgerTotalQuery,
+	type RuneExchangeAdapter,
+	type RuneExchangeFulfillment,
+	type RuneExchangeQuote,
+	type RuneExchangeQuoteInput,
 	type RuneSourceType,
 	type SeasonScoreInput,
 } from './runeEconomy';
@@ -71,6 +75,7 @@ export {
 	TESTNET_RUNE_PACK_POOL,
 	getPackDefinition,
 	getPackRuneCost,
+	getRuneExchangePackQuote,
 	getRunePackPoolAllocations,
 	getRunePackPoolTotals,
 	isPackKey,

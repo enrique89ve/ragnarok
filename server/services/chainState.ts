@@ -15,6 +15,8 @@ import path from 'path';
 import type {
 	CampaignProgressRecord,
 	CampaignSubmissionRecord,
+	PackAsset,
+	PackSupplyRecord,
 	RuneLedgerEntry,
 	RuneLedgerEntryQuery,
 	RuneLedgerTotalQuery,
@@ -132,6 +134,8 @@ interface SerializedState {
 	campaignSubmissions?: [string, CampaignSubmissionRecord][];
 	campaignProgress?: [string, CampaignProgressRecord][];
 	runeLedger?: [string, RuneLedgerEntry][];
+	packs?: [string, PackAsset][];
+	packSupply?: [string, PackSupplyRecord][];
 	slashedAccounts?: string[];
 }
 
@@ -159,6 +163,8 @@ const campaignNonces = new Map<string, number>();
 const campaignSubmissions = new Map<string, CampaignSubmissionRecord>();
 const campaignProgress = new Map<string, CampaignProgressRecord>();
 const runeLedger = new Map<string, RuneLedgerEntry>();
+const packs = new Map<string, PackAsset>();
+const packSupply = new Map<string, PackSupplyRecord>();
 const slashedAccounts = new Set<string>();
 const queueEntries = new Map<string, QueueStateRecord>();
 
@@ -262,6 +268,12 @@ export function loadState(): void {
 		runeLedger.clear();
 		for (const [k, v] of data.runeLedger ?? []) runeLedger.set(k, v);
 
+		packs.clear();
+		for (const [k, v] of data.packs ?? []) packs.set(k, v);
+
+		packSupply.clear();
+		for (const [k, v] of data.packSupply ?? []) packSupply.set(k, v);
+
 		slashedAccounts.clear();
 		for (const a of data.slashedAccounts ?? []) slashedAccounts.add(a);
 
@@ -295,6 +307,8 @@ export function saveState(): void {
 			campaignSubmissions: [...campaignSubmissions.entries()],
 			campaignProgress: [...campaignProgress.entries()],
 			runeLedger: [...runeLedger.entries()],
+			packs: [...packs.entries()],
+			packSupply: [...packSupply.entries()],
 			slashedAccounts: [...slashedAccounts],
 		};
 		const tmpFile = STATE_FILE + '.tmp';
@@ -566,6 +580,37 @@ export function getRuneLedgerTotal(query: RuneLedgerTotalQuery): number {
 		total += entry.amount;
 	}
 	return total;
+}
+
+export function getPackAsset(uid: string): PackAsset | undefined {
+	return packs.get(uid);
+}
+
+export function setPackAsset(pack: PackAsset): void {
+	packs.set(pack.uid, pack);
+	markDirty();
+}
+
+export function deletePackAsset(uid: string): void {
+	packs.delete(uid);
+	markDirty();
+}
+
+export function getPackAssetsByOwner(owner: string): PackAsset[] {
+	const result: PackAsset[] = [];
+	for (const pack of packs.values()) {
+		if (pack.owner === owner) result.push(pack);
+	}
+	return result;
+}
+
+export function getPackSupplyRecord(packType: string): PackSupplyRecord | undefined {
+	return packSupply.get(packType);
+}
+
+export function setPackSupplyRecord(record: PackSupplyRecord): void {
+	packSupply.set(record.packType, record);
+	markDirty();
 }
 
 export function getMatchAnchor(matchId: string): MatchAnchorStateRecord | undefined { return matchAnchors.get(matchId); }
