@@ -15,6 +15,9 @@ import path from 'path';
 import type {
 	CampaignProgressRecord,
 	CampaignSubmissionRecord,
+	RuneLedgerEntry,
+	RuneLedgerEntryQuery,
+	RuneLedgerTotalQuery,
 } from '../../shared/protocol-core/types';
 
 const DEFAULT_ELO_RATING = 1000;
@@ -128,6 +131,7 @@ interface SerializedState {
 	campaignNonces?: [string, number][];
 	campaignSubmissions?: [string, CampaignSubmissionRecord][];
 	campaignProgress?: [string, CampaignProgressRecord][];
+	runeLedger?: [string, RuneLedgerEntry][];
 	slashedAccounts?: string[];
 }
 
@@ -154,6 +158,7 @@ const rewardClaims = new Set<string>();
 const campaignNonces = new Map<string, number>();
 const campaignSubmissions = new Map<string, CampaignSubmissionRecord>();
 const campaignProgress = new Map<string, CampaignProgressRecord>();
+const runeLedger = new Map<string, RuneLedgerEntry>();
 const slashedAccounts = new Set<string>();
 const queueEntries = new Map<string, QueueStateRecord>();
 
@@ -254,6 +259,9 @@ export function loadState(): void {
 		campaignProgress.clear();
 		for (const [k, v] of data.campaignProgress ?? []) campaignProgress.set(k, v);
 
+		runeLedger.clear();
+		for (const [k, v] of data.runeLedger ?? []) runeLedger.set(k, v);
+
 		slashedAccounts.clear();
 		for (const a of data.slashedAccounts ?? []) slashedAccounts.add(a);
 
@@ -286,6 +294,7 @@ export function saveState(): void {
 			campaignNonces: [...campaignNonces.entries()],
 			campaignSubmissions: [...campaignSubmissions.entries()],
 			campaignProgress: [...campaignProgress.entries()],
+			runeLedger: [...runeLedger.entries()],
 			slashedAccounts: [...slashedAccounts],
 		};
 		const tmpFile = STATE_FILE + '.tmp';
@@ -528,6 +537,36 @@ export function setSupplyCounter(key: string, r: SupplyCounterRecord): void { su
 
 export function getTokenBalance(account: string): TokenBalanceRecord | undefined { return tokenBalances.get(account); }
 export function setTokenBalance(account: string, b: TokenBalanceRecord): void { tokenBalances.set(account, b); markDirty(); }
+
+export function getRuneLedgerEntry(entryId: string): RuneLedgerEntry | undefined {
+	return runeLedger.get(entryId);
+}
+
+export function setRuneLedgerEntry(entry: RuneLedgerEntry): void {
+	runeLedger.set(entry.entryId, entry);
+	markDirty();
+}
+
+export function getRuneLedgerEntries(query: RuneLedgerEntryQuery): RuneLedgerEntry[] {
+	const entries: RuneLedgerEntry[] = [];
+	for (const entry of runeLedger.values()) {
+		if (entry.seasonId !== query.seasonId) continue;
+		if (query.direction !== undefined && entry.direction !== query.direction) continue;
+		if (query.sourceType !== undefined && entry.sourceType !== query.sourceType) continue;
+		if (query.account !== undefined && entry.account !== query.account) continue;
+		if (query.sourceKeyPrefix !== undefined && !entry.sourceKey.startsWith(query.sourceKeyPrefix)) continue;
+		entries.push(entry);
+	}
+	return entries;
+}
+
+export function getRuneLedgerTotal(query: RuneLedgerTotalQuery): number {
+	let total = 0;
+	for (const entry of getRuneLedgerEntries(query)) {
+		total += entry.amount;
+	}
+	return total;
+}
 
 export function getMatchAnchor(matchId: string): MatchAnchorStateRecord | undefined { return matchAnchors.get(matchId); }
 export function setMatchAnchor(matchId: string, a: MatchAnchorStateRecord): void { matchAnchors.set(matchId, a); markDirty(); }

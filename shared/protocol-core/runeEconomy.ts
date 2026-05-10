@@ -4,6 +4,37 @@ export type RuneEmissionCaps = {
 	campaignCap: number;
 };
 
+export type RuneLedgerDirection = 'credit' | 'debit';
+
+export type RuneSourceType =
+	| 'p2p_ranked'
+	| 'campaign_first_clear'
+	| 'rune_exchange'
+	| 'reward_claim';
+
+export type RuneLedgerEntry = {
+	entryId: string;
+	seasonId: string;
+	account: string;
+	direction: RuneLedgerDirection;
+	sourceType: RuneSourceType;
+	sourceKey: string;
+	amount: number;
+	trxId: string;
+	blockNum: number;
+	timestamp: number;
+};
+
+export type RuneLedgerEntryQuery = {
+	seasonId: string;
+	direction?: RuneLedgerDirection;
+	sourceType?: RuneSourceType;
+	account?: string;
+	sourceKeyPrefix?: string;
+};
+
+export type RuneLedgerTotalQuery = RuneLedgerEntryQuery;
+
 export type P2PMatchCapacity = {
 	runePerMatch: number;
 	maxMatchesAtCap: number;
@@ -11,8 +42,23 @@ export type P2PMatchCapacity = {
 	avgParticipationsPerTargetAccount: number;
 };
 
+export type RuneCreditCapInput = {
+	requestedAmount: number;
+	accountEarned: number;
+	globalEarned: number;
+	accountCap: number;
+	globalCap: number;
+};
+
+export type SeasonScoreInput = {
+	finalElo: number;
+	campaignRuneEarned: number;
+	p2pRuneEarned: number;
+};
+
 export const TESTNET_RUNE_ECONOMY = {
 	phase: 'testnet',
+	seasonId: 'S01',
 	totalCap: 2_200_000,
 	targetAccounts: 20_000,
 	p2pCap: 2_000_000,
@@ -21,11 +67,15 @@ export const TESTNET_RUNE_ECONOMY = {
 	p2pLossRune: 0,
 	maxP2PRunePerAccount: 100,
 	maxCampaignRunePerAccount: 10,
+	maxRuneScoreBonusInput: 110,
+	runeScoreBonusMultiplier: 0.5,
+	maxRuneExchangeSpendPerOp: 50,
 	campaignStageRuneRewards: [2, 2, 2, 2, 1, 1],
 } as const;
 
 export const RUNE_WIN_RANKED = TESTNET_RUNE_ECONOMY.p2pWinRune;
 export const RUNE_LOSS_RANKED = TESTNET_RUNE_ECONOMY.p2pLossRune;
+export const TESTNET_RUNE_SEASON_ID = TESTNET_RUNE_ECONOMY.seasonId;
 
 export function getRuneEmissionCaps(economy = TESTNET_RUNE_ECONOMY): RuneEmissionCaps {
 	return {
@@ -50,4 +100,88 @@ export function getP2PMatchCapacity(economy = TESTNET_RUNE_ECONOMY): P2PMatchCap
 
 export function getCampaignStageRuneTotal(economy = TESTNET_RUNE_ECONOMY): number {
 	return economy.campaignStageRuneRewards.reduce((total, reward) => total + reward, 0);
+}
+
+export function calculateSeasonRuneEarned(
+	input: Pick<SeasonScoreInput, 'campaignRuneEarned' | 'p2pRuneEarned'>,
+	economy = TESTNET_RUNE_ECONOMY,
+): number {
+	return Math.min(input.campaignRuneEarned, economy.maxCampaignRunePerAccount)
+		+ Math.min(input.p2pRuneEarned, economy.maxP2PRunePerAccount);
+}
+
+export function calculateRuneScoreBonus(
+	seasonRuneEarned: number,
+	economy = TESTNET_RUNE_ECONOMY,
+): number {
+	return Math.floor(
+		Math.min(seasonRuneEarned, economy.maxRuneScoreBonusInput)
+			* economy.runeScoreBonusMultiplier,
+	);
+}
+
+export function calculateSeasonScore(
+	input: SeasonScoreInput,
+	economy = TESTNET_RUNE_ECONOMY,
+): number {
+	const seasonRuneEarned = calculateSeasonRuneEarned(input, economy);
+	return input.finalElo + calculateRuneScoreBonus(seasonRuneEarned, economy);
+}
+
+export function createRuneLedgerEntryId(input: {
+	seasonId: string;
+	direction: RuneLedgerDirection;
+	sourceType: RuneSourceType;
+	sourceKey: string;
+}): string {
+	return `${input.seasonId}:${input.direction}:${input.sourceType}:${input.sourceKey}`;
+}
+
+export function createP2PRankedRuneSourceKey(
+	matchId: string,
+	seasonId = TESTNET_RUNE_SEASON_ID,
+): string {
+	return `match:${seasonId}:${matchId}`;
+}
+
+export function createCampaignFirstClearRuneSourceKey(
+	account: string,
+	campaignId: string,
+	missionId: string,
+	seasonId = TESTNET_RUNE_SEASON_ID,
+): string {
+	return `campaign:${seasonId}:${account}:${campaignId}:${missionId}`;
+}
+
+export function createRuneExchangeSourceKey(
+	account: string,
+	trxId: string,
+	packType: string,
+	quantity: number,
+	seasonId = TESTNET_RUNE_SEASON_ID,
+): string {
+	return `pack:${seasonId}:${account}:${trxId}:${packType}:${quantity}`;
+}
+
+export function getCampaignFirstClearRuneReward(
+	missionId: string,
+	economy = TESTNET_RUNE_ECONOMY,
+): number {
+	const missionOrdinal = getMissionOrdinal(missionId);
+	if (missionOrdinal === null) return 0;
+	return economy.campaignStageRuneRewards[missionOrdinal - 1] ?? 0;
+}
+
+export function calculateCappedRuneCredit(input: RuneCreditCapInput): number {
+	const requested = Math.max(0, input.requestedAmount);
+	const accountRemaining = Math.max(0, input.accountCap - input.accountEarned);
+	const globalRemaining = Math.max(0, input.globalCap - input.globalEarned);
+	return Math.min(requested, accountRemaining, globalRemaining);
+}
+
+function getMissionOrdinal(missionId: string): number | null {
+	const match = /-(\d+)$/.exec(missionId);
+	if (!match) return null;
+	const ordinal = Number(match[1]);
+	return Number.isInteger(ordinal) && ordinal > 0 ? ordinal : null;
 }

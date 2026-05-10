@@ -3,7 +3,12 @@ import {
 	RUNE_LOSS_RANKED,
 	RUNE_WIN_RANKED,
 	TESTNET_RUNE_ECONOMY,
+	calculateRuneScoreBonus,
+	calculateSeasonRuneEarned,
+	calculateSeasonScore,
+	createCampaignFirstClearRuneSourceKey,
 	getCampaignStageRuneTotal,
+	getCampaignFirstClearRuneReward,
 	getP2PMatchCapacity,
 	getRuneEmissionCaps,
 } from './runeEconomy';
@@ -38,5 +43,31 @@ describe('rune economy', () => {
 		expect(TESTNET_RUNE_ECONOMY.campaignStageRuneRewards).toEqual([2, 2, 2, 2, 1, 1]);
 		expect(getCampaignStageRuneTotal(TESTNET_RUNE_ECONOMY)).toBe(10);
 		expect(TESTNET_RUNE_ECONOMY.maxCampaignRunePerAccount * TESTNET_RUNE_ECONOMY.targetAccounts).toBe(caps.campaignCap);
+	});
+
+	it('derives campaign first-clear rewards and source keys from mission ids', () => {
+		expect(createCampaignFirstClearRuneSourceKey(
+			'alice',
+			'war-of-pantheons',
+			'norse-1',
+		)).toBe('campaign:S01:alice:war-of-pantheons:norse-1');
+		expect(getCampaignFirstClearRuneReward('norse-1')).toBe(2);
+		expect(getCampaignFirstClearRuneReward('norse-4')).toBe(2);
+		expect(getCampaignFirstClearRuneReward('norse-5')).toBe(1);
+		expect(getCampaignFirstClearRuneReward('norse-6')).toBe(1);
+		expect(getCampaignFirstClearRuneReward('norse-7')).toBe(0);
+	});
+
+	it('calculates Season Score from capped RUNE totals and final ELO', () => {
+		expect(calculateSeasonRuneEarned({
+			campaignRuneEarned: 999,
+			p2pRuneEarned: 999,
+		})).toBe(110);
+		expect(calculateRuneScoreBonus(110)).toBe(55);
+		expect(calculateSeasonScore({
+			finalElo: 1420,
+			campaignRuneEarned: 10,
+			p2pRuneEarned: 100,
+		})).toBe(1475);
 	});
 });

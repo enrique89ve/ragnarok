@@ -24,9 +24,10 @@
  *   campaign_nonces  keyed by account           — monotonic anti-replay nonces for campaign_result
  *   campaign_submissions keyed by submissionKey — verifier inbox; not final campaign state
  *   campaign_progress keyed by progressKey      — verified final campaign mission progress
+ *   rune_ledger      keyed by entryId           — season/source-key RUNE credits and spends
  *
  * All writes are idempotent — safe to re-apply the same op.
- * DB version 11 — upgrade handler creates any missing stores.
+ * DB version 13 — upgrade handler creates any missing stores.
  */
 
 import type { HiveCardAsset, HiveMatchResult, HiveTokenBalance } from '../schemas/HiveTypes';
@@ -36,10 +37,13 @@ import type {
 	CampaignProgressRecord,
 	CampaignSubmissionRecord,
 	CampaignDifficulty,
+	RuneLedgerEntry,
+	RuneLedgerEntryQuery,
+	RuneLedgerTotalQuery,
 } from '../../../../shared/protocol-core/types';
 
 const DB_NAME = 'ragnarok-chain-v1';
-const DB_VERSION = 12;
+const DB_VERSION = 13;
 
 let _db: IDBDatabase | null = null;
 
@@ -144,6 +148,11 @@ function openDB(): Promise<IDBDatabase> {
 				progress.createIndex('by_account', 'account', { unique: false });
 				progress.createIndex('by_mission', 'missionId', { unique: false });
 			}
+			if (!db.objectStoreNames.contains('rune_ledger')) {
+				const ledger = db.createObjectStore('rune_ledger', { keyPath: 'entryId' });
+				ledger.createIndex('by_account', 'account', { unique: false });
+				ledger.createIndex('by_source_type', 'sourceType', { unique: false });
+			}
 
 			// v1.1: Pack NFTs
 			if (!db.objectStoreNames.contains('packs')) {
@@ -245,6 +254,17 @@ function idbGetByIndex<T>(store: string, indexName: string, key: string): Promis
 	);
 }
 
+function idbGetAll<T>(store: string): Promise<T[]> {
+	return openDB().then(
+		(db) =>
+			new Promise((resolve, reject) => {
+				const req = db.transaction(store, 'readonly').objectStore(store).getAll();
+				req.onsuccess = () => resolve(req.result as T[]);
+				req.onerror = () => reject(req.error);
+			}),
+	);
+}
+
 // ---------------------------------------------------------------------------
 // Cards API
 // ---------------------------------------------------------------------------
@@ -301,6 +321,37 @@ export async function getTokenBalance(username: string): Promise<HiveTokenBalanc
 
 export const putTokenBalance = (balance: HiveTokenBalance): Promise<void> =>
 	idbPut('token_balances', balance);
+
+// ---------------------------------------------------------------------------
+// RUNE Ledger API
+// ---------------------------------------------------------------------------
+
+export const getRuneLedgerEntry = (entryId: string): Promise<RuneLedgerEntry | undefined> =>
+	idbGet<RuneLedgerEntry>('rune_ledger', entryId);
+
+export const putRuneLedgerEntry = (entry: RuneLedgerEntry): Promise<void> =>
+	idbPut('rune_ledger', entry);
+
+export async function getRuneLedgerEntries(query: RuneLedgerEntryQuery): Promise<RuneLedgerEntry[]> {
+	const candidates = query.account
+		? await idbGetByIndex<RuneLedgerEntry>('rune_ledger', 'by_account', query.account)
+		: query.sourceType
+			? await idbGetByIndex<RuneLedgerEntry>('rune_ledger', 'by_source_type', query.sourceType)
+			: await idbGetAll<RuneLedgerEntry>('rune_ledger');
+
+	return candidates
+		.filter(entry => entry.seasonId === query.seasonId)
+		.filter(entry => query.direction === undefined || entry.direction === query.direction)
+		.filter(entry => query.sourceType === undefined || entry.sourceType === query.sourceType)
+		.filter(entry => query.account === undefined || entry.account === query.account)
+		.filter(entry => query.sourceKeyPrefix === undefined || entry.sourceKey.startsWith(query.sourceKeyPrefix));
+}
+
+export async function getRuneLedgerTotal(query: RuneLedgerTotalQuery): Promise<number> {
+	const entries = await getRuneLedgerEntries(query);
+	return entries
+		.reduce((total, entry) => total + entry.amount, 0);
+}
 
 // ---------------------------------------------------------------------------
 // Genesis State API

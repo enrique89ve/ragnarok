@@ -17,24 +17,45 @@ import type {
 	PackAsset,
 	PackCommitRecord,
 	PackSupplyRecord,
+	ProtocolOp,
+	RuneLedgerEntry,
+	RuneLedgerEntryQuery,
+	RuneLedgerTotalQuery,
 	StateAdapter,
 	SupplyRecord,
 	TokenBalance,
 } from './types';
 
 function createStateAdapter(): StateAdapter & {
+	readonly campaignProgress: Map<string, CampaignProgressRecord>;
 	readonly campaignSubmissions: Map<string, CampaignSubmissionRecord>;
+	readonly rewardClaims: Set<string>;
+	readonly runeLedger: Map<string, RuneLedgerEntry>;
+	readonly tokens: Map<string, TokenBalance>;
 } {
 	const campaignNonces = new Map<string, number>();
 	const campaignSubmissions = new Map<string, CampaignSubmissionRecord>();
 	const campaignProgress = new Map<string, CampaignProgressRecord>();
 	const rewardClaims = new Set<string>();
+	const runeLedger = new Map<string, RuneLedgerEntry>();
+	const tokens = new Map<string, TokenBalance>();
+	let genesis: GenesisRecord | null = {
+		version: '1',
+		sealed: false,
+		sealBlock: 0,
+		packSupply: {},
+		rewardSupply: {},
+	};
 
 	return {
+		campaignProgress,
 		campaignSubmissions,
+		rewardClaims,
+		runeLedger,
+		tokens,
 
-		async getGenesis(): Promise<GenesisRecord | null> { return null; },
-		async putGenesis(): Promise<void> { /* noop */ },
+		async getGenesis(): Promise<GenesisRecord | null> { return genesis; },
+		async putGenesis(nextGenesis: GenesisRecord): Promise<void> { genesis = nextGenesis; },
 		async getCard(): Promise<CardAsset | null> { return null; },
 		async putCard(): Promise<void> { /* noop */ },
 		async deleteCard(): Promise<void> { /* noop */ },
@@ -47,9 +68,41 @@ function createStateAdapter(): StateAdapter & {
 		},
 		async putElo(): Promise<void> { /* noop */ },
 		async getTokenBalance(account: string): Promise<TokenBalance> {
-			return { account, RUNE: 0 };
+			return tokens.get(account) ?? { account, RUNE: 0 };
 		},
-		async putTokenBalance(): Promise<void> { /* noop */ },
+		async putTokenBalance(balance: TokenBalance): Promise<void> {
+			tokens.set(balance.account, balance);
+		},
+		async getRuneLedgerEntry(entryId: string): Promise<RuneLedgerEntry | null> {
+			return runeLedger.get(entryId) ?? null;
+		},
+		async putRuneLedgerEntry(entry: RuneLedgerEntry): Promise<void> {
+			runeLedger.set(entry.entryId, entry);
+		},
+		async getRuneLedgerEntries(query: RuneLedgerEntryQuery): Promise<RuneLedgerEntry[]> {
+			const entries: RuneLedgerEntry[] = [];
+			for (const entry of runeLedger.values()) {
+				if (entry.seasonId !== query.seasonId) continue;
+				if (query.direction !== undefined && entry.direction !== query.direction) continue;
+				if (query.sourceType !== undefined && entry.sourceType !== query.sourceType) continue;
+				if (query.account !== undefined && entry.account !== query.account) continue;
+				if (query.sourceKeyPrefix !== undefined && !entry.sourceKey.startsWith(query.sourceKeyPrefix)) continue;
+				entries.push(entry);
+			}
+			return entries;
+		},
+		async getRuneLedgerTotal(query: RuneLedgerTotalQuery): Promise<number> {
+			let total = 0;
+			for (const entry of runeLedger.values()) {
+				if (entry.seasonId !== query.seasonId) continue;
+				if (query.direction !== undefined && entry.direction !== query.direction) continue;
+				if (query.sourceType !== undefined && entry.sourceType !== query.sourceType) continue;
+				if (query.account !== undefined && entry.account !== query.account) continue;
+				if (query.sourceKeyPrefix !== undefined && !entry.sourceKey.startsWith(query.sourceKeyPrefix)) continue;
+				total += entry.amount;
+			}
+			return total;
+		},
 		async getMatchAnchor(): Promise<MatchAnchorRecord | null> { return null; },
 		async putMatchAnchor(): Promise<void> { /* noop */ },
 		async getPackCommit(): Promise<PackCommitRecord | null> { return null; },
@@ -108,6 +161,56 @@ function createStateAdapter(): StateAdapter & {
 	};
 }
 
+function createDeps(state: StateAdapter, campaignId = 'war-of-pantheons'): ProtocolCoreDeps {
+	const rulesetHash = 'ruleset-hash-v1';
+	return {
+		state,
+		cards: {
+			getCardById: () => null,
+			getCollectibleIdsInRanges: () => [],
+		},
+		rewards: {
+			getRewardById: () => null,
+		},
+		campaigns: {
+			getRegistryHash: () => rulesetHash,
+			getCampaignId: () => campaignId,
+			getMission: missionId => ({
+				id: missionId,
+				campaignId,
+				chapterId: 'norse',
+				prerequisiteIds: [],
+				allowedDifficulties: ['normal', 'heroic', 'mythic'],
+				starThresholds: { threeStar: 12, twoStar: 20 },
+			}),
+		},
+		sigs: {
+			verifyAnchored: async () => false,
+			verifyCurrentKey: async () => false,
+		},
+	};
+}
+
+function makeRewardClaimOp(rewardId: string, overrides: Partial<ProtocolOp> = {}): ProtocolOp {
+	return {
+		action: 'reward_claim',
+		payload: { reward_id: rewardId },
+		broadcaster: 'alice',
+		trxId: 'claim-trx-1',
+		blockNum: 30,
+		timestamp: 130_000,
+		usedActiveAuth: false,
+		...overrides,
+	};
+}
+
+function putVerifiedProgress(
+	state: StateAdapter,
+	progress: CampaignProgressRecord,
+): Promise<void> {
+	return state.putCampaignProgress(progress);
+}
+
 describe('campaign_result protocol op', () => {
 	it('stores a queued campaign submission derived from the broadcaster identity', async () => {
 		const state = createStateAdapter();
@@ -115,32 +218,7 @@ describe('campaign_result protocol op', () => {
 		const localRunId = 'run-local-1';
 		const localStartedAt = 1736200000000;
 		const rulesetHash = 'ruleset-hash-v1';
-		const deps: ProtocolCoreDeps = {
-			state,
-			cards: {
-				getCardById: () => null,
-				getCollectibleIdsInRanges: () => [],
-			},
-			rewards: {
-				getRewardById: () => null,
-			},
-			campaigns: {
-				getRegistryHash: () => rulesetHash,
-				getCampaignId: () => campaignId,
-				getMission: missionId => ({
-					id: missionId,
-					campaignId,
-					chapterId: 'norse',
-					prerequisiteIds: [],
-					allowedDifficulties: ['normal', 'heroic', 'mythic'],
-					starThresholds: { threeStar: 12, twoStar: 20 },
-				}),
-			},
-			sigs: {
-				verifyAnchored: async () => false,
-				verifyCurrentKey: async () => false,
-			},
-		};
+		const deps = createDeps(state, campaignId);
 
 		const normalized = normalizeRawOp({
 			customJsonId: 'rp_campaign_result',
@@ -195,5 +273,157 @@ describe('campaign_result protocol op', () => {
 			rulesetHash,
 		}));
 		expect(stored?.seed).toBe(expectedSeed);
+	});
+
+	it('credits first-clear campaign RUNE through verified campaign reward claims', async () => {
+		const state = createStateAdapter();
+		const deps = createDeps(state);
+		await putVerifiedProgress(state, {
+			account: 'alice',
+			campaignId: 'war-of-pantheons',
+			missionId: 'norse-1',
+			bestDifficulty: 'normal',
+			bestTurns: 9,
+			bestStars: 3,
+			completedAtBlock: 20,
+			completedTrxId: 'campaign-result-trx',
+			status: 'verified',
+		});
+
+		const result = await applyOp(makeRewardClaimOp('campaign:war-of-pantheons:norse-1'), {
+			lastIrreversibleBlock: 30,
+			getBlockId: async () => null,
+		}, deps);
+
+		expect(result.status).toBe('applied');
+		expect((await state.getTokenBalance('alice')).RUNE).toBe(2);
+		expect(await state.getRuneLedgerTotal({
+			seasonId: 'S01',
+			direction: 'credit',
+			sourceType: 'campaign_first_clear',
+			account: 'alice',
+		})).toBe(2);
+		expect(state.runeLedger.get('S01:credit:campaign_first_clear:campaign:S01:alice:war-of-pantheons:norse-1')).toMatchObject({
+			account: 'alice',
+			amount: 2,
+			sourceKey: 'campaign:S01:alice:war-of-pantheons:norse-1',
+		});
+	});
+
+	it('ignores duplicate campaign reward claims without double-crediting RUNE', async () => {
+		const state = createStateAdapter();
+		const deps = createDeps(state);
+		await putVerifiedProgress(state, {
+			account: 'alice',
+			campaignId: 'war-of-pantheons',
+			missionId: 'norse-2',
+			bestDifficulty: 'normal',
+			bestTurns: 10,
+			bestStars: 3,
+			completedAtBlock: 20,
+			completedTrxId: 'campaign-result-trx',
+			status: 'verified',
+		});
+
+		const firstResult = await applyOp(makeRewardClaimOp('campaign:war-of-pantheons:norse-2'), {
+			lastIrreversibleBlock: 30,
+			getBlockId: async () => null,
+		}, deps);
+		const duplicateResult = await applyOp(makeRewardClaimOp('campaign:war-of-pantheons:norse-2', {
+			trxId: 'claim-trx-duplicate',
+			blockNum: 31,
+		}), {
+			lastIrreversibleBlock: 31,
+			getBlockId: async () => null,
+		}, deps);
+
+		expect(firstResult.status).toBe('applied');
+		expect(duplicateResult.status).toBe('ignored');
+		expect((await state.getTokenBalance('alice')).RUNE).toBe(2);
+		expect(state.runeLedger.size).toBe(1);
+	});
+
+	it('clamps campaign RUNE to the account cap', async () => {
+		const state = createStateAdapter();
+		const deps = createDeps(state);
+		await state.putRuneLedgerEntry({
+			entryId: 'S01:credit:campaign_first_clear:prefill-account-cap',
+			seasonId: 'S01',
+			account: 'alice',
+			direction: 'credit',
+			sourceType: 'campaign_first_clear',
+			sourceKey: 'prefill-account-cap',
+			amount: 9,
+			trxId: 'prefill',
+			blockNum: 1,
+			timestamp: 1,
+		});
+		await state.putTokenBalance({ account: 'alice', RUNE: 9 });
+		await putVerifiedProgress(state, {
+			account: 'alice',
+			campaignId: 'war-of-pantheons',
+			missionId: 'norse-3',
+			bestDifficulty: 'normal',
+			bestTurns: 10,
+			bestStars: 3,
+			completedAtBlock: 20,
+			completedTrxId: 'campaign-result-trx',
+			status: 'verified',
+		});
+
+		const result = await applyOp(makeRewardClaimOp('campaign:war-of-pantheons:norse-3'), {
+			lastIrreversibleBlock: 30,
+			getBlockId: async () => null,
+		}, deps);
+
+		expect(result.status).toBe('applied');
+		expect((await state.getTokenBalance('alice')).RUNE).toBe(10);
+		expect(await state.getRuneLedgerTotal({
+			seasonId: 'S01',
+			direction: 'credit',
+			sourceType: 'campaign_first_clear',
+			account: 'alice',
+		})).toBe(10);
+	});
+
+	it('clamps campaign RUNE to the global campaign cap', async () => {
+		const state = createStateAdapter();
+		const deps = createDeps(state);
+		await state.putRuneLedgerEntry({
+			entryId: 'S01:credit:campaign_first_clear:prefill-global-cap',
+			seasonId: 'S01',
+			account: 'mallory',
+			direction: 'credit',
+			sourceType: 'campaign_first_clear',
+			sourceKey: 'prefill-global-cap',
+			amount: 199_999,
+			trxId: 'prefill',
+			blockNum: 1,
+			timestamp: 1,
+		});
+		await putVerifiedProgress(state, {
+			account: 'alice',
+			campaignId: 'war-of-pantheons',
+			missionId: 'norse-4',
+			bestDifficulty: 'normal',
+			bestTurns: 10,
+			bestStars: 3,
+			completedAtBlock: 20,
+			completedTrxId: 'campaign-result-trx',
+			status: 'verified',
+		});
+
+		const result = await applyOp(makeRewardClaimOp('campaign:war-of-pantheons:norse-4'), {
+			lastIrreversibleBlock: 30,
+			getBlockId: async () => null,
+		}, deps);
+
+		expect(result.status).toBe('applied');
+		expect((await state.getTokenBalance('alice')).RUNE).toBe(1);
+		expect(await state.getRuneLedgerTotal({
+			seasonId: 'S01',
+			direction: 'credit',
+			sourceType: 'campaign_first_clear',
+		})).toBe(200_000);
 	});
 });

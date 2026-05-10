@@ -12,7 +12,8 @@ import type {
 	CardDataProvider, RewardProvider, SignatureVerifier,
 	CardAsset, GenesisRecord, EloRecord, PackAsset,
 	MarketListing, MarketOffer, ProtocolAction, RewardDefinition,
-	CampaignDifficulty, CampaignRegistryProvider, CampaignSubmissionRecord,
+	CampaignDifficulty, CampaignProgressRecord, CampaignRegistryProvider, CampaignSubmissionRecord,
+	RuneRedeemablePackKey,
 } from './types';
 import {
 	RAGNAROK_ADMIN_ACCOUNT, TRANSFER_COOLDOWN_BLOCKS, MAX_CARD_LEVEL,
@@ -22,6 +23,16 @@ import {
 	PACK_ENTROPY_DELAY_BLOCKS, PACK_REVEAL_DEADLINE_BLOCKS,
 	DUAT_CLAIM_WINDOW_BLOCKS, calculateDuatPacks,
 	getPackDefinition,
+	isRuneRedeemablePackKey,
+	TESTNET_RUNE_PACK_POOL,
+	TESTNET_RUNE_ECONOMY,
+	TESTNET_RUNE_SEASON_ID,
+	calculateCappedRuneCredit,
+	createCampaignFirstClearRuneSourceKey,
+	createP2PRankedRuneSourceKey,
+	createRuneExchangeSourceKey,
+	createRuneLedgerEntryId,
+	getCampaignFirstClearRuneReward,
 } from './types';
 import { verifyPoW, POW_CONFIG } from './pow';
 import { canonicalStringify, sha256Hash } from './hash';
@@ -77,6 +88,15 @@ type MarketNftAsset =
 	| { nftType: 'card'; asset: CardAsset }
 	| { nftType: 'pack'; asset: PackAsset };
 
+type RuneExchangeDetails = {
+	packType: RuneRedeemablePackKey;
+	quantity: number;
+	runeCost: number;
+	totalCost: number;
+	sourceKey: string;
+	entryId: string;
+};
+
 const IGNORE_RESULT: OpResult = { status: 'ignored' };
 const GAME_ACTIONS_REQUIRING_SLASH_CHECK = new Set<ProtocolAction>([
 	'match_anchor', 'match_result', 'campaign_result', 'queue_join',
@@ -98,6 +118,7 @@ const OP_HANDLERS: Record<ProtocolAction, OpHandler> = {
 	match_anchor: (op, _ctx, deps) => applyMatchAnchor(op, deps),
 	match_result: (op, ctx, deps) => applyMatchResult(op, ctx, deps),
 	campaign_result: (op, _ctx, deps) => applyCampaignResult(op, deps),
+	rune_exchange: (op, _ctx, deps) => applyRuneExchange(op, deps),
 	queue_join: (op, _ctx, deps) => applyQueueJoin(op, deps),
 	queue_leave: (op, _ctx, deps) => applyQueueLeave(op, deps),
 	reward_claim: (op, _ctx, deps) => applyRewardClaim(op, deps),
@@ -504,7 +525,9 @@ async function applyMatchResult(
 	const signatureResult = await validateRankedMatchSignatures(op, details, genesis, deps);
 	if (signatureResult) return signatureResult;
 
-	await applyRankedMatchSettlement(details, deps);
+	const settlementResult = await applyRankedMatchSettlement(op, details, deps);
+	if (settlementResult) return settlementResult;
+
 	await applyWinnerCardXp(details, deps);
 
 	return { status: 'applied' };
@@ -681,14 +704,32 @@ function extractMatchResultSignatures(
 }
 
 async function applyRankedMatchSettlement(
+	op: ProtocolOp,
 	details: MatchResultDetails,
 	deps: ProtocolCoreDeps,
-): Promise<void> {
+): Promise<OpResult | null> {
 	if (details.matchType !== 'ranked' || !details.p2) {
-		return;
+		return null;
+	}
+	if (!details.matchId) {
+		return reject('missing match id');
 	}
 
 	const loserAccount = details.winner === details.p1 ? details.p2 : details.p1;
+	const sourceKey = createP2PRankedRuneSourceKey(details.matchId);
+	const entryId = createRuneLedgerEntryId({
+		seasonId: TESTNET_RUNE_SEASON_ID,
+		direction: 'credit',
+		sourceType: 'p2p_ranked',
+		sourceKey,
+	});
+	const existingRuneEntry = await deps.state.getRuneLedgerEntry(entryId);
+	if (existingRuneEntry) {
+		return existingRuneEntry.account === details.winner
+			? { status: 'ignored' }
+			: reject('p2p ranked rune source already credited to a different account');
+	}
+
 	const winnerElo = await deps.state.getElo(details.winner);
 	const loserElo = await deps.state.getElo(loserAccount);
 	const expected = 1 / (1 + Math.pow(10, (loserElo.elo - winnerElo.elo) / 400));
@@ -702,10 +743,42 @@ async function applyRankedMatchSettlement(
 	await deps.state.putElo({ ...loserElo, elo: newLoserElo, losses: loserElo.losses + 1 });
 
 	const winnerBal = await deps.state.getTokenBalance(details.winner);
-	await deps.state.putTokenBalance({ ...winnerBal, RUNE: winnerBal.RUNE + RUNE_WIN_RANKED });
+	const accountEarned = await deps.state.getRuneLedgerTotal({
+		seasonId: TESTNET_RUNE_SEASON_ID,
+		direction: 'credit',
+		sourceType: 'p2p_ranked',
+		account: details.winner,
+	});
+	const globalEarned = await deps.state.getRuneLedgerTotal({
+		seasonId: TESTNET_RUNE_SEASON_ID,
+		direction: 'credit',
+		sourceType: 'p2p_ranked',
+	});
+	const winnerRune = calculateCappedRuneCredit({
+		requestedAmount: RUNE_WIN_RANKED,
+		accountEarned,
+		globalEarned,
+		accountCap: TESTNET_RUNE_ECONOMY.maxP2PRunePerAccount,
+		globalCap: TESTNET_RUNE_ECONOMY.p2pCap,
+	});
+	await deps.state.putRuneLedgerEntry({
+		entryId,
+		seasonId: TESTNET_RUNE_SEASON_ID,
+		account: details.winner,
+		direction: 'credit',
+		sourceType: 'p2p_ranked',
+		sourceKey,
+		amount: winnerRune,
+		trxId: op.trxId,
+		blockNum: op.blockNum,
+		timestamp: op.timestamp,
+	});
+	await deps.state.putTokenBalance({ ...winnerBal, RUNE: winnerBal.RUNE + winnerRune });
 
 	const loserBal = await deps.state.getTokenBalance(loserAccount);
 	await deps.state.putTokenBalance({ ...loserBal, RUNE: loserBal.RUNE + RUNE_LOSS_RANKED });
+
+	return null;
 }
 
 async function applyWinnerCardXp(
@@ -1055,8 +1128,77 @@ async function applyCampaignRewardClaim(
 		return reject(`campaign reward condition not met for ${campaignId}:${missionId}`);
 	}
 
+	const runeResult = await applyCampaignFirstClearRuneCredit(op, progress, deps);
+	if (runeResult) return runeResult;
+
 	await deps.state.putRewardClaim(op.broadcaster, rewardId, op.blockNum);
 	return { status: 'applied' };
+}
+
+async function applyCampaignFirstClearRuneCredit(
+	op: ProtocolOp,
+	progress: CampaignProgressRecord,
+	deps: ProtocolCoreDeps,
+): Promise<OpResult | null> {
+	const requestedAmount = getCampaignFirstClearRuneReward(progress.missionId);
+	if (requestedAmount <= 0) {
+		return null;
+	}
+
+	const sourceKey = createCampaignFirstClearRuneSourceKey(
+		progress.account,
+		progress.campaignId,
+		progress.missionId,
+	);
+	const entryId = createRuneLedgerEntryId({
+		seasonId: TESTNET_RUNE_SEASON_ID,
+		direction: 'credit',
+		sourceType: 'campaign_first_clear',
+		sourceKey,
+	});
+	const existingRuneEntry = await deps.state.getRuneLedgerEntry(entryId);
+	if (existingRuneEntry) {
+		return existingRuneEntry.account === progress.account
+			? null
+			: reject('campaign first-clear rune source already credited to a different account');
+	}
+
+	const accountEarned = await deps.state.getRuneLedgerTotal({
+		seasonId: TESTNET_RUNE_SEASON_ID,
+		direction: 'credit',
+		sourceType: 'campaign_first_clear',
+		account: progress.account,
+	});
+	const globalEarned = await deps.state.getRuneLedgerTotal({
+		seasonId: TESTNET_RUNE_SEASON_ID,
+		direction: 'credit',
+		sourceType: 'campaign_first_clear',
+	});
+	const runeAmount = calculateCappedRuneCredit({
+		requestedAmount,
+		accountEarned,
+		globalEarned,
+		accountCap: TESTNET_RUNE_ECONOMY.maxCampaignRunePerAccount,
+		globalCap: TESTNET_RUNE_ECONOMY.campaignCap,
+	});
+
+	await deps.state.putRuneLedgerEntry({
+		entryId,
+		seasonId: TESTNET_RUNE_SEASON_ID,
+		account: progress.account,
+		direction: 'credit',
+		sourceType: 'campaign_first_clear',
+		sourceKey,
+		amount: runeAmount,
+		trxId: op.trxId,
+		blockNum: op.blockNum,
+		timestamp: op.timestamp,
+	});
+
+	const balance = await deps.state.getTokenBalance(progress.account);
+	await deps.state.putTokenBalance({ ...balance, RUNE: balance.RUNE + runeAmount });
+
+	return null;
 }
 
 async function mintRewardCards(
@@ -1124,6 +1266,187 @@ function checkRewardCondition(
 		case 'matches_played': return (elo.wins + elo.losses) >= condition.value;
 		default: return false;
 	}
+}
+
+// ============================================================
+// rune_exchange
+// ============================================================
+
+async function applyRuneExchange(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpResult> {
+	const genesis = await deps.state.getGenesis();
+	if (!genesis?.sealed) return reject('rune_exchange requires sealed genesis');
+
+	const details = parseRuneExchangeDetails(op);
+	if (isOpResult(details)) return details;
+
+	const existingEntry = await deps.state.getRuneLedgerEntry(details.entryId);
+	if (existingEntry) {
+		return existingEntry.account === op.broadcaster
+			? { status: 'ignored' }
+			: reject('rune_exchange source already spent by a different account');
+	}
+
+	const balance = await deps.state.getTokenBalance(op.broadcaster);
+	if (balance.RUNE < details.totalCost) {
+		return reject('insufficient RUNE balance');
+	}
+
+	const limitResult = await validateRuneExchangeLimits(op.broadcaster, details, deps);
+	if (limitResult) return limitResult;
+
+	await deps.state.putRuneLedgerEntry({
+		entryId: details.entryId,
+		seasonId: TESTNET_RUNE_SEASON_ID,
+		account: op.broadcaster,
+		direction: 'debit',
+		sourceType: 'rune_exchange',
+		sourceKey: details.sourceKey,
+		amount: details.totalCost,
+		trxId: op.trxId,
+		blockNum: op.blockNum,
+		timestamp: op.timestamp,
+	});
+	await deps.state.putTokenBalance({ ...balance, RUNE: balance.RUNE - details.totalCost });
+	await mintRuneExchangePacks(op, details, deps);
+
+	return { status: 'applied' };
+}
+
+function parseRuneExchangeDetails(op: ProtocolOp): RuneExchangeDetails | OpResult {
+	const packTypeValue = op.payload.pack_type ?? op.payload.packType;
+	if (typeof packTypeValue !== 'string') {
+		return reject('missing pack_type');
+	}
+
+	const packDefinition = getPackDefinition(packTypeValue);
+	if (!packDefinition || !isRuneRedeemablePackKey(packDefinition.key)) {
+		return reject(`invalid rune_exchange pack_type: ${packTypeValue}`);
+	}
+	if (!packDefinition.runeCost) {
+		return reject(`pack_type is not rune-redeemable: ${packDefinition.key}`);
+	}
+
+	const quantity = Number(op.payload.quantity ?? 1);
+	if (!Number.isInteger(quantity) || quantity < 1) {
+		return reject('quantity must be a positive integer');
+	}
+
+	const totalCost = packDefinition.runeCost * quantity;
+	if (totalCost > TESTNET_RUNE_ECONOMY.maxRuneExchangeSpendPerOp) {
+		return reject('rune_exchange spend exceeds per-op cap');
+	}
+
+	const sourceKey = createRuneExchangeSourceKey(
+		op.broadcaster,
+		op.trxId,
+		packDefinition.key,
+		quantity,
+	);
+	const entryId = createRuneLedgerEntryId({
+		seasonId: TESTNET_RUNE_SEASON_ID,
+		direction: 'debit',
+		sourceType: 'rune_exchange',
+		sourceKey,
+	});
+
+	return {
+		packType: packDefinition.key,
+		quantity,
+		runeCost: packDefinition.runeCost,
+		totalCost,
+		sourceKey,
+		entryId,
+	};
+}
+
+async function validateRuneExchangeLimits(
+	account: string,
+	details: RuneExchangeDetails,
+	deps: ProtocolCoreDeps,
+): Promise<OpResult | null> {
+	const packDefinition = getPackDefinition(details.packType);
+	const accountLimit = packDefinition?.runeExchangeLimitPerAccount ?? 0;
+	const redeemedQuantity = await getRedeemedRuneExchangeQuantity(account, details.packType, deps);
+	if (redeemedQuantity + details.quantity > accountLimit) {
+		return reject(`rune_exchange account limit reached for ${details.packType}`);
+	}
+
+	const supply = await deps.state.getPackSupply(details.packType);
+	const configuredCap = TESTNET_RUNE_PACK_POOL.packCaps[details.packType];
+	const supplyCap = supply?.cap && supply.cap > 0
+		? Math.min(supply.cap, configuredCap)
+		: configuredCap;
+	const minted = supply?.minted ?? 0;
+	if (minted + details.quantity > supplyCap) {
+		return reject(`rune_exchange pack cap reached for ${details.packType}`);
+	}
+
+	return null;
+}
+
+async function getRedeemedRuneExchangeQuantity(
+	account: string,
+	packType: RuneRedeemablePackKey,
+	deps: ProtocolCoreDeps,
+): Promise<number> {
+	const entries = await deps.state.getRuneLedgerEntries({
+		seasonId: TESTNET_RUNE_SEASON_ID,
+		direction: 'debit',
+		sourceType: 'rune_exchange',
+		account,
+		sourceKeyPrefix: `pack:${TESTNET_RUNE_SEASON_ID}:${account}:`,
+	});
+
+	let quantity = 0;
+	for (const entry of entries) {
+		const parsed = parseRuneExchangeSourceKey(entry.sourceKey);
+		if (parsed?.packType !== packType) continue;
+		quantity += parsed.quantity;
+	}
+	return quantity;
+}
+
+function parseRuneExchangeSourceKey(sourceKey: string): { packType: string; quantity: number } | null {
+	const parts = sourceKey.split(':');
+	if (parts.length !== 6 || parts[0] !== 'pack') return null;
+	const quantity = Number(parts[5]);
+	if (!Number.isInteger(quantity) || quantity < 1) return null;
+	return { packType: parts[4], quantity };
+}
+
+async function mintRuneExchangePacks(
+	op: ProtocolOp,
+	details: RuneExchangeDetails,
+	deps: ProtocolCoreDeps,
+): Promise<void> {
+	for (let i = 0; i < details.quantity; i++) {
+		const uid = `pack_${op.trxId}:rune:${i}`;
+		if (await deps.state.getPack(uid)) continue;
+
+		await deps.state.putPack({
+			uid,
+			packType: details.packType,
+			dna: await sha256Hash(`${op.trxId}:rune:${i}:${details.packType}`),
+			owner: op.broadcaster,
+			sealed: true,
+			mintTrxId: op.trxId,
+			mintBlockNum: op.blockNum,
+			lastTransferBlock: op.blockNum,
+			cardCount: PACK_SIZES[details.packType],
+			edition: 'alpha',
+		});
+	}
+
+	const supply = await deps.state.getPackSupply(details.packType);
+	const configuredCap = TESTNET_RUNE_PACK_POOL.packCaps[details.packType];
+	await deps.state.putPackSupply({
+		packType: details.packType,
+		minted: (supply?.minted ?? 0) + details.quantity,
+		burned: supply?.burned ?? 0,
+		cap: supply?.cap && supply.cap > 0
+			? Math.min(supply.cap, configuredCap)
+			: configuredCap,
+	});
 }
 
 // ============================================================

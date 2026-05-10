@@ -9,15 +9,34 @@
  * Tests: client/src/data/blockchain/protocolConformance.test.ts
  */
 
+import type { RuneLedgerEntry, RuneLedgerEntryQuery, RuneLedgerTotalQuery } from './runeEconomy';
+
 export {
 	RUNE_LOSS_RANKED,
 	RUNE_WIN_RANKED,
+	TESTNET_RUNE_SEASON_ID,
 	TESTNET_RUNE_ECONOMY,
+	calculateCappedRuneCredit,
+	calculateRuneScoreBonus,
+	calculateSeasonRuneEarned,
+	calculateSeasonScore,
+	createCampaignFirstClearRuneSourceKey,
+	createP2PRankedRuneSourceKey,
+	createRuneExchangeSourceKey,
+	createRuneLedgerEntryId,
+	getCampaignFirstClearRuneReward,
 	getCampaignStageRuneTotal,
 	getP2PMatchCapacity,
 	getRuneEmissionCaps,
 	type P2PMatchCapacity,
 	type RuneEmissionCaps,
+	type RuneCreditCapInput,
+	type RuneLedgerEntryQuery,
+	type RuneLedgerDirection,
+	type RuneLedgerEntry,
+	type RuneLedgerTotalQuery,
+	type RuneSourceType,
+	type SeasonScoreInput,
 } from './runeEconomy';
 
 // ============================================================
@@ -87,6 +106,7 @@ export type CanonicalAction =
 	| 'match_anchor'
 	| 'match_result'
 	| 'campaign_result'
+	| 'rune_exchange'
 	| 'slash_evidence'
 	// v1.1: Pack NFTs
 	| 'pack_mint'
@@ -128,6 +148,7 @@ export const ACTIVE_AUTH_OPS: ReadonlySet<CanonicalAction> = new Set([
 
 export const POSTING_AUTH_OPS: ReadonlySet<CanonicalAction> = new Set([
 	'queue_join', 'queue_leave', 'match_anchor', 'match_result', 'campaign_result',
+	'rune_exchange',
 	'pack_commit', 'pack_reveal', 'reward_claim', 'level_up',
 	// Marketplace: listing/offers use posting key
 	'market_list', 'market_unlist', 'market_offer', 'market_reject',
@@ -384,6 +405,10 @@ export interface StateAdapter {
 	// Tokens
 	getTokenBalance(account: string): Promise<TokenBalance>;
 	putTokenBalance(balance: TokenBalance): Promise<void>;
+	getRuneLedgerEntry(entryId: string): Promise<RuneLedgerEntry | null>;
+	putRuneLedgerEntry(entry: RuneLedgerEntry): Promise<void>;
+	getRuneLedgerEntries(query: RuneLedgerEntryQuery): Promise<RuneLedgerEntry[]>;
+	getRuneLedgerTotal(query: RuneLedgerTotalQuery): Promise<number>;
 
 	// Match anchors
 	getMatchAnchor(matchId: string): Promise<MatchAnchorRecord | null>;

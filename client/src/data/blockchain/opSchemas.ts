@@ -1,5 +1,5 @@
 /**
- * opSchemas.ts — Zod schemas for all 15 Hive chain op types.
+ * opSchemas.ts — Zod schemas for Hive chain op types.
  *
  * Used at the applyOp() dispatch boundary to validate raw JSON payloads
  * before they enter deterministic handlers. Internal game code does NOT
@@ -199,6 +199,13 @@ export const CampaignResultPayload = z.object({
 	t: PositiveInt,
 });
 
+// ── rp_rune_exchange ──
+
+export const RuneExchangePayload = z.object({
+	pack_type: z.enum(['standard', 'premium', 'mythic']),
+	quantity: PositiveInt.default(1),
+});
+
 // ── rp_team_submit (informational only, no state change) ──
 
 export const TeamSubmitPayload = z.object({}).passthrough();
@@ -267,6 +274,7 @@ export const OP_SCHEMAS: Record<string, z.ZodType> = {
 	rp_pack_open: PackOpenPayload,
 	rp_reward_claim: RewardClaimPayload,
 	rp_campaign_result: CampaignResultPayload,
+	rp_rune_exchange: RuneExchangePayload,
 	rp_team_submit: TeamSubmitPayload,
 	// v1.1
 	rp_pack_mint: PackMintPayload,

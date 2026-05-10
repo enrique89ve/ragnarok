@@ -53,6 +53,7 @@ export type RagnarokTransactionType =
   | 'rp_team_submit'
   | 'rp_match_result'
   | 'rp_campaign_result'
+  | 'rp_rune_exchange'
   | 'rp_card_transfer'
   | 'rp_pack_open'
   | 'rp_level_up'

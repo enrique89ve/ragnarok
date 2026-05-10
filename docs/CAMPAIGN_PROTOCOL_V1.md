@@ -110,6 +110,12 @@ building `rp_campaign_result`, but it is not authoritative campaign progress.
 `reward_claim campaign:{campaignId}:{missionId}` is gated by verified campaign
 progress. Queued submissions do not unlock economic rewards.
 
+For S01, a verified campaign reward claim also writes a `campaign_first_clear`
+RUNE ledger credit using source key
+`campaign:S01:{account}:{campaignId}:{missionId}`. The claim is idempotent:
+the same mission cannot credit RUNE twice for the same account, and campaign
+RUNE remains capped by the season account and pool limits.
+
 ## Registry
 
 The verification registry lives at:

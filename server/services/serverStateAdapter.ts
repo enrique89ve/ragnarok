@@ -18,6 +18,9 @@ import {
 	getGenesisState, setGenesisState,
 	getSupplyCounter, setSupplyCounter,
 	getTokenBalance as csGetTokenBalance, setTokenBalance as csSetTokenBalance,
+	getRuneLedgerEntry as csGetRuneLedgerEntry, setRuneLedgerEntry as csSetRuneLedgerEntry,
+	getRuneLedgerEntries as csGetRuneLedgerEntries,
+	getRuneLedgerTotal as csGetRuneLedgerTotal,
 	getMatchAnchor as csGetMatchAnchor, setMatchAnchor as csSetMatchAnchor,
 	getPackCommit as csGetPackCommit, setPackCommit as csSetPackCommit,
 	hasRewardClaim as csHasRewardClaim, addRewardClaim as csAddRewardClaim,
@@ -150,6 +153,10 @@ export const serverStateAdapter: StateAdapter = {
 		return r ? { account: r.account, RUNE: r.RUNE } : { account, RUNE: 0 };
 	},
 	async putTokenBalance(b) { csSetTokenBalance(b.account, { account: b.account, RUNE: b.RUNE }); },
+	async getRuneLedgerEntry(entryId) { return csGetRuneLedgerEntry(entryId) ?? null; },
+	async putRuneLedgerEntry(entry) { csSetRuneLedgerEntry(entry); },
+	async getRuneLedgerEntries(query) { return csGetRuneLedgerEntries(query); },
+	async getRuneLedgerTotal(query) { return csGetRuneLedgerTotal(query); },
 
 	async getMatchAnchor(matchId) {
 		const r = csGetMatchAnchor(matchId);

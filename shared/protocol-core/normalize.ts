@@ -28,6 +28,7 @@ const LEGACY_MAP: Record<string, ProtocolAction> = {
 	'rp_match_start': 'match_anchor',
 	'rp_match_result': 'match_result',
 	'rp_campaign_result': 'campaign_result',
+	'rp_rune_exchange': 'rune_exchange',
 	'rp_level_up': 'level_up',
 	'rp_queue_join': 'queue_join',
 	'rp_queue_leave': 'queue_leave',
@@ -85,7 +86,7 @@ export function normalizeRawOp(raw: RawHiveOp): NormalizeResult {
 			'genesis', 'seal', 'mint_batch', 'pack_commit', 'pack_reveal',
 			'reward_claim', 'card_transfer', 'burn', 'level_up',
 			'queue_join', 'queue_leave', 'match_anchor', 'match_result',
-			'campaign_result', 'slash_evidence',
+			'campaign_result', 'rune_exchange', 'slash_evidence',
 			// v1.1
 			'pack_mint', 'pack_distribute', 'pack_transfer', 'pack_burn',
 			'card_replicate', 'card_merge',

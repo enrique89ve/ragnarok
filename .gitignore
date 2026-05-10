@@ -134,6 +134,7 @@ Thumbs.db
 # Each AI-coding tool drops its own state/config directory.
 # These should never be committed — they're per-developer environment.
 .agents/
+.scratch/
 .codebuddy/
 .commandcode/
 .continue/

@@ -15,8 +15,11 @@ import type {
 	StateAdapter, CardAsset, GenesisRecord, EloRecord,
 	TokenBalance, MatchAnchorRecord, PackCommitRecord, SupplyRecord,
 	ReplayContext, ProtocolOp, CardDataProvider, RewardProvider, SignatureVerifier, RawHiveOp,
-	PackAsset, PackSupplyRecord, CompanionTransfer,
+	PackAsset, PackSupplyRecord, CompanionTransfer, CampaignProgressRecord, CampaignSubmissionRecord,
+	RuneLedgerEntry, RuneLedgerEntryQuery, RuneLedgerTotalQuery,
 } from './types';
+import { canonicalStringify, sha256Hash } from './hash';
+import { deriveChallenge, POW_CONFIG } from './pow';
 
 // ============================================================
 // In-Memory StateAdapter (test harness)
@@ -29,9 +32,13 @@ class MemoryState implements StateAdapter {
 	nonces = new Map<string, number>();
 	elo = new Map<string, EloRecord>();
 	tokens = new Map<string, TokenBalance>();
+	runeLedger = new Map<string, RuneLedgerEntry>();
 	anchors = new Map<string, MatchAnchorRecord>();
 	commits = new Map<string, PackCommitRecord>();
 	rewards = new Set<string>();
+	campaignNonces = new Map<string, number>();
+	campaignSubmissions = new Map<string, CampaignSubmissionRecord>();
+	campaignProgress = new Map<string, CampaignProgressRecord>();
 	slashed = new Set<string>();
 	queue = new Map<string, { timestamp: number }>();
 
@@ -59,6 +66,27 @@ class MemoryState implements StateAdapter {
 		return this.tokens.get(account) ?? { account, RUNE: 0 };
 	}
 	async putTokenBalance(b: TokenBalance) { this.tokens.set(b.account, b); }
+	async getRuneLedgerEntry(entryId: string) { return this.runeLedger.get(entryId) ?? null; }
+	async putRuneLedgerEntry(entry: RuneLedgerEntry) { this.runeLedger.set(entry.entryId, entry); }
+	async getRuneLedgerEntries(query: RuneLedgerEntryQuery) {
+		const entries: RuneLedgerEntry[] = [];
+		for (const entry of this.runeLedger.values()) {
+			if (entry.seasonId !== query.seasonId) continue;
+			if (query.direction !== undefined && entry.direction !== query.direction) continue;
+			if (query.sourceType !== undefined && entry.sourceType !== query.sourceType) continue;
+			if (query.account !== undefined && entry.account !== query.account) continue;
+			if (query.sourceKeyPrefix !== undefined && !entry.sourceKey.startsWith(query.sourceKeyPrefix)) continue;
+			entries.push(entry);
+		}
+		return entries;
+	}
+	async getRuneLedgerTotal(query: RuneLedgerTotalQuery) {
+		let total = 0;
+		for (const entry of await this.getRuneLedgerEntries(query)) {
+			total += entry.amount;
+		}
+		return total;
+	}
 	async getMatchAnchor(matchId: string) { return this.anchors.get(matchId) ?? null; }
 	async putMatchAnchor(a: MatchAnchorRecord) { this.anchors.set(a.matchId, a); }
 	async getPackCommit(trxId: string) { return this.commits.get(trxId) ?? null; }
@@ -68,6 +96,24 @@ class MemoryState implements StateAdapter {
 	}
 	async hasRewardClaim(account: string, rewardId: string) { return this.rewards.has(`${account}:${rewardId}`); }
 	async putRewardClaim(account: string, rewardId: string) { this.rewards.add(`${account}:${rewardId}`); }
+	async advanceCampaignNonce(account: string, nonce: number) {
+		const current = this.campaignNonces.get(account) ?? 0;
+		if (nonce <= current) return false;
+		this.campaignNonces.set(account, nonce);
+		return true;
+	}
+	async getCampaignSubmission(submissionKey: string) {
+		return this.campaignSubmissions.get(submissionKey) ?? null;
+	}
+	async putCampaignSubmission(submission: CampaignSubmissionRecord) {
+		this.campaignSubmissions.set(submission.submissionKey, submission);
+	}
+	async getCampaignProgress(account: string, campaignId: string, missionId: string) {
+		return this.campaignProgress.get(`${account}:${campaignId}:${missionId}`) ?? null;
+	}
+	async putCampaignProgress(progress: CampaignProgressRecord) {
+		this.campaignProgress.set(`${progress.account}:${progress.campaignId}:${progress.missionId}`, progress);
+	}
 	async isSlashed(account: string) { return this.slashed.has(account); }
 	async slash(account: string) { this.slashed.add(account); }
 	async getQueueEntry(account: string) { return this.queue.get(account) ?? null; }
@@ -157,8 +203,65 @@ function makeOp(action: string, payload: Record<string, unknown>, overrides: Par
 	};
 }
 
+function hasLeadingZeroBits(hexHash: string, bits: number): boolean {
+	const fullNibbles = Math.floor(bits / 4);
+	for (let i = 0; i < fullNibbles; i++) {
+		if (hexHash[i] !== '0') return false;
+	}
+	const remainder = bits % 4;
+	if (remainder === 0) return true;
+	const nibble = parseInt(hexHash[fullNibbles], 16);
+	return (nibble >> (4 - remainder)) === 0;
+}
+
+async function solvePow(payload: Record<string, unknown>): Promise<{ nonces: number[] }> {
+	const payloadHash = await sha256Hash(canonicalStringify(payload));
+	const nonces: number[] = [];
+	for (let i = 0; i < POW_CONFIG.MATCH_RESULT.count; i++) {
+		const challenge = await deriveChallenge(payloadHash, i);
+		let nonce = 0;
+		while (true) {
+			const hash = await sha256Hash(`${challenge}:${nonce}`);
+			if (hasLeadingZeroBits(hash, POW_CONFIG.MATCH_RESULT.difficulty)) {
+				nonces.push(nonce);
+				break;
+			}
+			nonce++;
+		}
+	}
+	return { nonces };
+}
+
+async function makeRankedMatchPayload(input: {
+	matchId: string;
+	winner?: string;
+	loser?: string;
+	nonce?: number;
+}): Promise<Record<string, unknown>> {
+	const payload: Record<string, unknown> = {
+		m: input.matchId,
+		w: input.winner ?? 'alice',
+		l: input.loser ?? 'bob',
+		n: input.nonce ?? 1,
+		s: 'seed123',
+		v: 1,
+		sig: { b: 'sig-a', c: 'sig-b' },
+	};
+	return { ...payload, pow: await solvePow(payload) };
+}
+
 function makeDeps(state: MemoryState): ProtocolCoreDeps {
-	return { state, cards: mockCards, rewards: mockRewards, sigs: mockSigs };
+	return {
+		state,
+		cards: mockCards,
+		rewards: mockRewards,
+		campaigns: {
+			getRegistryHash: () => 'test-registry-hash',
+			getCampaignId: () => 'test-campaign',
+			getMission: () => null,
+		},
+		sigs: mockSigs,
+	};
 }
 
 async function seedGenesis(state: MemoryState, deps: ProtocolCoreDeps) {
@@ -584,6 +687,132 @@ describe('Protocol Core: Replay Traces', () => {
 		expect((result as { reason: string }).reason).toContain('slashed');
 	});
 
+	// --- RUNE Ledger ---
+
+	it('ranked match_result credits P2P RUNE through one consumed source', async () => {
+		await seedGenesis(state, deps);
+
+		const payload = await makeRankedMatchPayload({ matchId: 'ledger-match-1' });
+		const firstResult = await applyOp(makeOp('match_result', payload, {
+			broadcaster: 'alice',
+			trxId: 'match-trx-1a',
+			blockNum: 1000,
+		}), defaultCtx, deps);
+
+		expect(firstResult.status).toBe('applied');
+		expect((await deps.state.getTokenBalance('alice')).RUNE).toBe(2);
+		expect(await deps.state.getRuneLedgerTotal({
+			seasonId: 'S01',
+			direction: 'credit',
+			sourceType: 'p2p_ranked',
+			account: 'alice',
+		})).toBe(2);
+
+		const duplicatePayload = await makeRankedMatchPayload({ matchId: 'ledger-match-1', nonce: 2 });
+		const duplicateResult = await applyOp(makeOp('match_result', duplicatePayload, {
+			broadcaster: 'bob',
+			trxId: 'match-trx-1b',
+			blockNum: 1001,
+		}), defaultCtx, deps);
+
+		expect(duplicateResult.status).toBe('ignored');
+		expect((await deps.state.getTokenBalance('alice')).RUNE).toBe(2);
+		expect((await deps.state.getElo('alice')).wins).toBe(1);
+	});
+
+	it('ranked match_result rejects conflicting winner for an already consumed RUNE source', async () => {
+		await seedGenesis(state, deps);
+
+		const firstPayload = await makeRankedMatchPayload({ matchId: 'ledger-match-2' });
+		const firstResult = await applyOp(makeOp('match_result', firstPayload, {
+			broadcaster: 'alice',
+			trxId: 'match-trx-2a',
+			blockNum: 1000,
+		}), defaultCtx, deps);
+		expect(firstResult.status).toBe('applied');
+
+		const conflictingPayload = await makeRankedMatchPayload({
+			matchId: 'ledger-match-2',
+			winner: 'bob',
+			loser: 'alice',
+			nonce: 2,
+		});
+		const conflictingResult = await applyOp(makeOp('match_result', conflictingPayload, {
+			broadcaster: 'bob',
+			trxId: 'match-trx-2b',
+			blockNum: 1001,
+		}), defaultCtx, deps);
+
+		expect(conflictingResult.status).toBe('rejected');
+		expect((conflictingResult as { reason: string }).reason).toContain('different account');
+		expect((await deps.state.getTokenBalance('bob')).RUNE).toBe(0);
+		expect((await deps.state.getElo('bob')).wins).toBe(0);
+	});
+
+	it('ranked match_result clamps P2P RUNE to the account cap', async () => {
+		await seedGenesis(state, deps);
+		await deps.state.putRuneLedgerEntry({
+			entryId: 'S01:credit:p2p_ranked:prefill-account-cap',
+			seasonId: 'S01',
+			account: 'alice',
+			direction: 'credit',
+			sourceType: 'p2p_ranked',
+			sourceKey: 'prefill-account-cap',
+			amount: 99,
+			trxId: 'prefill',
+			blockNum: 1,
+			timestamp: 1,
+		});
+		await deps.state.putTokenBalance({ account: 'alice', RUNE: 99 });
+
+		const payload = await makeRankedMatchPayload({ matchId: 'ledger-match-3' });
+		const result = await applyOp(makeOp('match_result', payload, {
+			broadcaster: 'alice',
+			trxId: 'match-trx-3',
+			blockNum: 1000,
+		}), defaultCtx, deps);
+
+		expect(result.status).toBe('applied');
+		expect((await deps.state.getTokenBalance('alice')).RUNE).toBe(100);
+		expect(await deps.state.getRuneLedgerTotal({
+			seasonId: 'S01',
+			direction: 'credit',
+			sourceType: 'p2p_ranked',
+			account: 'alice',
+		})).toBe(100);
+	});
+
+	it('ranked match_result clamps P2P RUNE to the global cap', async () => {
+		await seedGenesis(state, deps);
+		await deps.state.putRuneLedgerEntry({
+			entryId: 'S01:credit:p2p_ranked:prefill-global-cap',
+			seasonId: 'S01',
+			account: 'mallory',
+			direction: 'credit',
+			sourceType: 'p2p_ranked',
+			sourceKey: 'prefill-global-cap',
+			amount: 1_999_999,
+			trxId: 'prefill',
+			blockNum: 1,
+			timestamp: 1,
+		});
+
+		const payload = await makeRankedMatchPayload({ matchId: 'ledger-match-4' });
+		const result = await applyOp(makeOp('match_result', payload, {
+			broadcaster: 'alice',
+			trxId: 'match-trx-4',
+			blockNum: 1000,
+		}), defaultCtx, deps);
+
+		expect(result.status).toBe('applied');
+		expect((await deps.state.getTokenBalance('alice')).RUNE).toBe(1);
+		expect(await deps.state.getRuneLedgerTotal({
+			seasonId: 'S01',
+			direction: 'credit',
+			sourceType: 'p2p_ranked',
+		})).toBe(2_000_000);
+	});
+
 	// --- Post-seal signature enforcement ---
 
 	it('post-seal ranked match_result rejected without match_anchor pubkeys', async () => {
@@ -908,6 +1137,125 @@ describe('Protocol Core: Replay Traces', () => {
 			['transfer', { from: 'ragnarok', to, amount: '0.001 HIVE', memo: `ragnarok:test` }],
 		]);
 	}
+
+	describe('rune_exchange', () => {
+		it('spends RUNE and mints sealed packs to the buyer', async () => {
+			await seedSealedGenesis(state, deps);
+			await deps.state.putTokenBalance({ account: 'alice', RUNE: 10 });
+
+			const result = await applyOp(makeOp('rune_exchange', {
+				pack_type: 'standard',
+				quantity: 1,
+			}, { broadcaster: 'alice', trxId: 'rune-x-1', blockNum: 2000 }), defaultCtx, deps);
+
+			expect(result.status).toBe('applied');
+			expect((await deps.state.getTokenBalance('alice')).RUNE).toBe(8);
+			expect(await deps.state.getRuneLedgerTotal({
+				seasonId: 'S01',
+				direction: 'debit',
+				sourceType: 'rune_exchange',
+				account: 'alice',
+			})).toBe(2);
+			expect(state.packs.get('pack_rune-x-1:rune:0')).toMatchObject({
+				owner: 'alice',
+				packType: 'standard',
+				sealed: true,
+				cardCount: 5,
+			});
+			expect(state.packSupply.get('standard')).toMatchObject({
+				minted: 1,
+				burned: 0,
+				cap: 20_000,
+			});
+		});
+
+		it('ignores duplicate rune_exchange sources without double spend', async () => {
+			await seedSealedGenesis(state, deps);
+			await deps.state.putTokenBalance({ account: 'alice', RUNE: 10 });
+
+			const op = makeOp('rune_exchange', {
+				pack_type: 'standard',
+				quantity: 1,
+			}, { broadcaster: 'alice', trxId: 'rune-x-duplicate', blockNum: 2000 });
+			const firstResult = await applyOp(op, defaultCtx, deps);
+			const duplicateResult = await applyOp(op, defaultCtx, deps);
+
+			expect(firstResult.status).toBe('applied');
+			expect(duplicateResult.status).toBe('ignored');
+			expect((await deps.state.getTokenBalance('alice')).RUNE).toBe(8);
+			expect(state.packs.size).toBe(1);
+			expect(state.runeLedger.size).toBe(1);
+		});
+
+		it('rejects rune_exchange when the account balance is too low', async () => {
+			await seedSealedGenesis(state, deps);
+			await deps.state.putTokenBalance({ account: 'alice', RUNE: 1 });
+
+			const result = await applyOp(makeOp('rune_exchange', {
+				pack_type: 'standard',
+				quantity: 1,
+			}, { broadcaster: 'alice', trxId: 'rune-x-low-balance', blockNum: 2000 }), defaultCtx, deps);
+
+			expect(result.status).toBe('rejected');
+			expect((result as { reason: string }).reason).toContain('insufficient');
+			expect(state.packs.size).toBe(0);
+			expect(state.runeLedger.size).toBe(0);
+		});
+
+		it('rejects rune_exchange above the per-account pack limit', async () => {
+			await seedSealedGenesis(state, deps);
+			await deps.state.putTokenBalance({ account: 'alice', RUNE: 10 });
+
+			const firstResult = await applyOp(makeOp('rune_exchange', {
+				pack_type: 'standard',
+				quantity: 1,
+			}, { broadcaster: 'alice', trxId: 'rune-x-limit-1', blockNum: 2000 }), defaultCtx, deps);
+			const secondResult = await applyOp(makeOp('rune_exchange', {
+				pack_type: 'standard',
+				quantity: 1,
+			}, { broadcaster: 'alice', trxId: 'rune-x-limit-2', blockNum: 2001 }), defaultCtx, deps);
+
+			expect(firstResult.status).toBe('applied');
+			expect(secondResult.status).toBe('rejected');
+			expect((secondResult as { reason: string }).reason).toContain('account limit');
+			expect((await deps.state.getTokenBalance('alice')).RUNE).toBe(8);
+			expect(state.packs.size).toBe(1);
+		});
+
+		it('rejects rune_exchange above the per-op spend cap', async () => {
+			await seedSealedGenesis(state, deps);
+			await deps.state.putTokenBalance({ account: 'alice', RUNE: 100 });
+
+			const result = await applyOp(makeOp('rune_exchange', {
+				pack_type: 'mythic',
+				quantity: 3,
+			}, { broadcaster: 'alice', trxId: 'rune-x-spend-cap', blockNum: 2000 }), defaultCtx, deps);
+
+			expect(result.status).toBe('rejected');
+			expect((result as { reason: string }).reason).toContain('per-op cap');
+			expect((await deps.state.getTokenBalance('alice')).RUNE).toBe(100);
+		});
+
+		it('rejects rune_exchange above the global pack cap', async () => {
+			await seedSealedGenesis(state, deps);
+			await deps.state.putTokenBalance({ account: 'alice', RUNE: 10 });
+			await deps.state.putPackSupply({
+				packType: 'standard',
+				minted: 20_000,
+				burned: 0,
+				cap: 20_000,
+			});
+
+			const result = await applyOp(makeOp('rune_exchange', {
+				pack_type: 'standard',
+				quantity: 1,
+			}, { broadcaster: 'alice', trxId: 'rune-x-global-cap', blockNum: 2000 }), defaultCtx, deps);
+
+			expect(result.status).toBe('rejected');
+			expect((result as { reason: string }).reason).toContain('pack cap');
+			expect(state.packs.size).toBe(0);
+		});
+	});
 
 	describe('v1.1: pack_mint', () => {
 		it('admin can mint packs into admin inventory', async () => {
@@ -1270,6 +1618,17 @@ describe('Protocol Core: Replay Traces', () => {
 			});
 			expect(result.status).toBe('ok');
 			if (result.status === 'ok') expect(result.op.action).toBe('pack_distribute');
+		});
+
+		it('normalizes rp_rune_exchange to rune_exchange', () => {
+			const result = normalizeRawOp({
+				customJsonId: 'rp_rune_exchange',
+				json: '{"pack_type":"standard","quantity":1}',
+				broadcaster: 'alice', trxId: 'n-rune', blockNum: 100, timestamp: 0,
+				requiredPostingAuths: ['alice'], requiredAuths: [],
+			});
+			expect(result.status).toBe('ok');
+			if (result.status === 'ok') expect(result.op.action).toBe('rune_exchange');
 		});
 
 		it('normalizes rp_card_replicate and rp_card_merge', () => {

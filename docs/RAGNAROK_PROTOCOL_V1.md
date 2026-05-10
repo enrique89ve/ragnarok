@@ -50,7 +50,7 @@ The codebase currently uses `rp_match_start` for match anchoring. The v1 spec re
 - Writers MUST emit the canonical form (`ragnarok-cards` with `"action": "match_anchor"`) for all new ops.
 - No cutover block is defined; both forms are valid indefinitely. The legacy form is a compatibility alias, not a separate op.
 
-This same rule applies to all legacy `rp_*` ids: `rp_mint` = `mint_batch`, `rp_transfer` = `card_transfer`, `rp_burn` = `burn`, `rp_match_result` = `match_result`, `rp_level_up` = `level_up`, `rp_queue_join` = `queue_join`, `rp_queue_leave` = `queue_leave`, `rp_reward_claim` = `reward_claim`, `rp_slash_evidence` = `slash_evidence`.
+This same rule applies to all legacy `rp_*` ids: `rp_mint` = `mint_batch`, `rp_transfer` = `card_transfer`, `rp_burn` = `burn`, `rp_match_result` = `match_result`, `rp_campaign_result` = `campaign_result`, `rp_rune_exchange` = `rune_exchange`, `rp_level_up` = `level_up`, `rp_queue_join` = `queue_join`, `rp_queue_leave` = `queue_leave`, `rp_reward_claim` = `reward_claim`, `rp_slash_evidence` = `slash_evidence`.
 
 ### 3.1.1 Legacy `rp_pack_open` Replay Rule
 
@@ -127,6 +127,8 @@ Hive `custom_json` supports both `required_posting_auths` and `required_auths`.
 - `queue_leave`
 - `match_anchor`
 - `match_result`
+- `campaign_result`
+- `rune_exchange`
 - `pack_commit`
 - `pack_reveal`
 - `reward_claim`
@@ -566,7 +568,7 @@ so campaign participation matters without letting raw farming overpower ELO.
 
 ### RUNE
 
-Derived non-transferable reward points. Testnet S01 emission is capped at 2,200,000 RUNE: 2,000,000 for P2P and 200,000 for campaign. Ranked P2P currently pays +2 per win and +0 per loss, capped at 100 RUNE per target account; campaign completion is capped at 10 RUNE per target account. Milestone bonuses from `reward_claim` are replay-derived. RUNE is used for progression thresholds and season rewards. Not a transferable token in v1.
+Derived non-transferable reward points. Testnet S01 emission is capped at 2,200,000 RUNE: 2,000,000 for P2P and 200,000 for campaign. Ranked P2P currently pays +2 per win and +0 per loss, capped at 100 RUNE per target account; campaign first-clear claims are capped at 10 RUNE per target account. `rune_exchange` debits existing RUNE into sealed testnet packs, rejects overspend, and enforces per-op, per-account pack-type, and global pack caps. RUNE is used for progression thresholds and season rewards. Not a transferable token in v1.
 
 ### Eitr
 

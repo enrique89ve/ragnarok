@@ -21,6 +21,20 @@ npm run lint:css  # Stylelint (runs in pre-commit)
 - **Genesis ceremony** → `docs/GENESIS_RUNBOOK.md`
 - **Element interactions** → `docs/ElementWeaknessSystem.md`
 
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs are tracked as local markdown files under `.scratch/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Triage uses the canonical local status values `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This is a single-context repo: read root `CONTEXT.md` and relevant ADRs when present. See `docs/agents/domain.md`.
+
 ## Conventions
 
 - **Gameplay is truth.** When docs and code diverge, code wins. `schemas/` is the contract; anything else (incl. `metadata.json`) derives from it.

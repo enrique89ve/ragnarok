@@ -16,6 +16,9 @@ import {
 	getGenesisState, putGenesisState,
 	getSupplyCounter, putSupplyCounter,
 	getTokenBalance, putTokenBalance,
+	getRuneLedgerEntry as idbGetRuneLedgerEntry, putRuneLedgerEntry as idbPutRuneLedgerEntry,
+	getRuneLedgerEntries as idbGetRuneLedgerEntries,
+	getRuneLedgerTotal as idbGetRuneLedgerTotal,
 	getMatchAnchor, putMatchAnchor,
 	getQueueEntry, putQueueEntry, deleteQueueEntry,
 	isAccountSlashed, putSlashedAccount,
@@ -131,6 +134,18 @@ export const clientStateAdapter: StateAdapter = {
 	async putTokenBalance(b) {
 		const existing = await getTokenBalance(b.account);
 		await putTokenBalance({ ...existing, RUNE: b.RUNE });
+	},
+	async getRuneLedgerEntry(entryId) {
+		return await idbGetRuneLedgerEntry(entryId) ?? null;
+	},
+	async putRuneLedgerEntry(entry) {
+		await idbPutRuneLedgerEntry(entry);
+	},
+	async getRuneLedgerEntries(query) {
+		return idbGetRuneLedgerEntries(query);
+	},
+	async getRuneLedgerTotal(query) {
+		return idbGetRuneLedgerTotal(query);
 	},
 
 	async getMatchAnchor(matchId) {
