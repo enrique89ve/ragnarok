@@ -20,14 +20,15 @@ import {
 	type RawHiveOp,
 	type ReplayContext,
 	type ProtocolCoreDeps,
+	type RewardProvider,
 } from '../../../../shared/protocol-core';
 import { campaignRegistryProvider } from '../../../../shared/campaign/registry';
+import { getProtocolRewardById } from '../../../../shared/protocol-core/rewardCatalog';
 import { clientStateAdapter } from './clientStateAdapter';
 import { clientSignatureVerifier } from './clientSignatureVerifier';
 import { clientRuneExchangeAdapter } from './runeExchangeAdapter';
 import { hiveEvents } from '../HiveEvents';
 import { getCardDataProvider } from './ICardDataProvider';
-import { getRewardById } from './tournamentRewards';
 import { HIVE_NODES } from './hiveConfig';
 
 // ============================================================
@@ -74,17 +75,8 @@ function getCardDataProviderAdapter() {
 // Reward provider adapter
 // ============================================================
 
-const rewardProviderAdapter = {
-	getRewardById(id: string) {
-		const r = getRewardById(id);
-		if (!r) return null;
-		return {
-			id: r.rewardId,
-			condition: r.condition,
-			cards: r.cards,
-			runeBonus: r.runeBonus,
-		};
-	},
+const rewardProviderAdapter: RewardProvider = {
+	getRewardById: getProtocolRewardById,
 };
 
 // ============================================================

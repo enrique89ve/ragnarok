@@ -102,6 +102,7 @@ export interface INFTBridge {
 	transferCard(cardUid: string, toUser: string, memo?: string): Promise<BroadcastResult>;
 	transferCards(cardUids: string[], toUser: string, memo?: string): Promise<BroadcastResult>;
 	openPack(packType: string, quantity?: number): Promise<BroadcastResult>;
+	runeExchange(packType: string, quantity?: number): Promise<BroadcastResult>;
 	signResultHash(hash: string): Promise<string>;
 
 	// ── Pack Transactions (v1.1) ──

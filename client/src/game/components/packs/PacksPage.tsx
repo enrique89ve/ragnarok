@@ -632,53 +632,17 @@ export default function PacksPage() {
 		if (!hiveUsername) return;
 
 		setRuneOpening(pack.id.toString());
-		setOpeningPack(pack);
-		setIsOpening(true);
 		setPackError(null);
 
-		const result = await getNFTBridge().openPack(packKey, 1);
+		const result = await getNFTBridge().runeExchange(packKey, 1);
 		setRuneOpening(null);
 
 		if (result.success && result.trxId) {
-			getNFTBridge().updateTokenBalance({ RUNE: runeBalance - cost });
-
-			const derived = derivePackCards(result.trxId, packKey, 1);
-			const mappedCards: RevealedCard[] = derived.map(c => ({
-				id: c.cardId,
-				name: c.name,
-				rarity: c.rarity,
-				type: c.type,
-				heroClass: 'neutral',
-			}));
-			setRevealedCards(mappedCards);
-
-			derived.forEach(c => {
-				getNFTBridge().addCard({
-					uid: c.uid,
-					cardId: c.cardId,
-					ownerId: hiveUsername!,
-					ownershipSource: 'nft',
-					edition: 'alpha',
-					foil: c.foil,
-					rarity: c.rarity,
-					level: 1,
-					xp: 0,
-					lastTransferBlock: result.blockNum,
-					lastTransferTrxId: result.trxId,
-					mintBlockNum: result.blockNum,
-					mintTrxId: result.trxId,
-					name: c.name,
-					type: c.type,
-					race: c.race,
-				});
-			});
-
 			forceSync(hiveUsername!).catch(err => debug.warn('[Packs] Sync error:', err));
-			toast.success(`Opened ${derived.length} cards with RUNE!`);
+			fetchData();
+			toast.success('RUNE exchange submitted. Your sealed pack will appear after replay sync.');
 		} else {
-			setPackError(result.error ?? 'RUNE pack open failed. Please try again.');
-			setIsOpening(false);
-			setOpeningPack(null);
+			setPackError(result.error ?? 'RUNE exchange failed. Please try again.');
 		}
 	};
 
@@ -1003,7 +967,7 @@ export default function PacksPage() {
 											{pack.isFreeClaim ? 'Claim Starter' : 'Buy Pack'}
 										</motion.button>
 
-										{/* Open with RUNE */}
+										{/* RUNE exchange */}
 										{hiveUsername && pack.isRuneRedeemable && (() => {
 											const cost = pack.runeCost;
 											if (cost === null) return null;
@@ -1021,7 +985,7 @@ export default function PacksPage() {
 															: 'bg-obsidian-800/30 text-ink-400 border-obsidian-700/30 cursor-not-allowed'
 													}`}
 												>
-													{isLoading ? '···' : `⚡ ${cost} RUNE`}
+													{isLoading ? '···' : `Exchange for ${cost} RUNE`}
 												</motion.button>
 											);
 										})()}

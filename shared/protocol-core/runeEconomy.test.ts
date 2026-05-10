@@ -7,11 +7,17 @@ import {
 	calculateSeasonRuneEarned,
 	calculateSeasonScore,
 	createCampaignFirstClearRuneSourceKey,
+	createRewardClaimRuneSourceKey,
 	getCampaignStageRuneTotal,
 	getCampaignFirstClearRuneReward,
 	getP2PMatchCapacity,
 	getRuneEmissionCaps,
 } from './runeEconomy';
+import {
+	TOURNAMENT_REWARDS,
+	getProtocolRewardById,
+	getRewardById,
+} from './rewardCatalog';
 
 describe('rune economy', () => {
 	it('allocates S01 testnet RUNE emission to P2P and campaign pools', () => {
@@ -51,11 +57,25 @@ describe('rune economy', () => {
 			'war-of-pantheons',
 			'norse-1',
 		)).toBe('campaign:S01:alice:war-of-pantheons:norse-1');
+		expect(createRewardClaimRuneSourceKey('alice', 'first_victory'))
+			.toBe('reward:S01:alice:first_victory');
 		expect(getCampaignFirstClearRuneReward('norse-1')).toBe(2);
 		expect(getCampaignFirstClearRuneReward('norse-4')).toBe(2);
 		expect(getCampaignFirstClearRuneReward('norse-5')).toBe(1);
 		expect(getCampaignFirstClearRuneReward('norse-6')).toBe(1);
 		expect(getCampaignFirstClearRuneReward('norse-7')).toBe(0);
+	});
+
+	it('exposes reward_claim RUNE through one shared protocol catalog', () => {
+		expect(TOURNAMENT_REWARDS.length).toBeGreaterThan(0);
+		expect(getRewardById('first_victory')?.runeBonus).toBe(50);
+		expect(getProtocolRewardById('first_victory')).toEqual({
+			id: 'first_victory',
+			condition: { type: 'wins_milestone', value: 1 },
+			cards: [{ cardId: 20001, rarity: 'rare' }],
+			runeBonus: 50,
+		});
+		expect(getProtocolRewardById('missing')).toBeNull();
 	});
 
 	it('calculates Season Score from capped RUNE totals and final ELO', () => {

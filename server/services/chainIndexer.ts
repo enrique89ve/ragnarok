@@ -18,6 +18,7 @@ import {
 	type CardDataProvider,
 	type RewardProvider,
 } from '../../shared/protocol-core';
+import { getProtocolRewardById } from '../../shared/protocol-core/rewardCatalog';
 import { serverStateAdapter } from './serverStateAdapter';
 import { serverSignatureVerifier } from './hiveSignatureVerifier';
 import { serverRuneExchangeAdapter } from './runeExchangeAdapter';
@@ -155,7 +156,7 @@ const serverCardData: CardDataProvider = {
 };
 
 const serverRewards: RewardProvider = {
-	getRewardById() { return null; },
+	getRewardById: getProtocolRewardById,
 };
 
 function buildDeps(): ProtocolCoreDeps {

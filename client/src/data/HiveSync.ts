@@ -224,6 +224,16 @@ export class HiveSync {
     });
   }
 
+  async runeExchange(
+    packType: string,
+    quantity: number = 1,
+  ): Promise<HiveBroadcastResult> {
+    return this.broadcastCustomJson("rp_rune_exchange", {
+      pack_type: packType,
+      quantity,
+    });
+  }
+
   // ── v1.1: Pack NFT operations ──
 
   async mintPack(

@@ -13,6 +13,7 @@ export { canonicalStringify, sha256Hash } from './hash';
 export { verifyPoW, deriveChallenge, POW_CONFIG } from './pow';
 export type { PoWConfig, PoWResult } from './pow';
 export * from './types';
+export * from './rewardCatalog';
 
 // v1.2: Broadcast utilities (NFTLox-inspired patterns)
 export {

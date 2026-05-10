@@ -28,6 +28,7 @@ import {
 	calculateCappedRuneCredit,
 	createCampaignFirstClearRuneSourceKey,
 	createP2PRankedRuneSourceKey,
+	createRewardClaimRuneSourceKey,
 	createRuneExchangeSourceKey,
 	createRuneLedgerEntryId,
 	getCampaignFirstClearRuneReward,
@@ -1103,8 +1104,9 @@ async function applyRewardClaim(op: ProtocolOp, deps: ProtocolCoreDeps): Promise
 		return reject(`condition not met for ${rewardId}`);
 	}
 
+	const runeResult = await applyRewardRuneBonus(op, reward, deps);
+	if (runeResult) return runeResult;
 	await mintRewardCards(op, rewardId, reward, deps);
-	await applyRewardRuneBonus(op.broadcaster, reward.runeBonus, deps);
 
 	await deps.state.putRewardClaim(op.broadcaster, rewardId, op.blockNum);
 	return { status: 'applied' };
@@ -1247,16 +1249,44 @@ async function mintRewardCards(
 }
 
 async function applyRewardRuneBonus(
-	account: string,
-	runeBonus: number,
+	op: ProtocolOp,
+	reward: RewardDefinition,
 	deps: ProtocolCoreDeps,
-): Promise<void> {
-	if (runeBonus <= 0) {
-		return;
+): Promise<OpResult | null> {
+	if (reward.runeBonus <= 0) {
+		return null;
 	}
 
-	const bal = await deps.state.getTokenBalance(account);
-	await deps.state.putTokenBalance({ ...bal, RUNE: bal.RUNE + runeBonus });
+	const sourceKey = createRewardClaimRuneSourceKey(op.broadcaster, reward.id);
+	const entryId = createRuneLedgerEntryId({
+		seasonId: TESTNET_RUNE_SEASON_ID,
+		direction: 'credit',
+		sourceType: 'reward_claim',
+		sourceKey,
+	});
+	const existingEntry = await deps.state.getRuneLedgerEntry(entryId);
+	if (existingEntry) {
+		return existingEntry.account === op.broadcaster
+			? null
+			: reject('reward claim rune source already credited to a different account');
+	}
+
+	await deps.state.putRuneLedgerEntry({
+		entryId,
+		seasonId: TESTNET_RUNE_SEASON_ID,
+		account: op.broadcaster,
+		direction: 'credit',
+		sourceType: 'reward_claim',
+		sourceKey,
+		amount: reward.runeBonus,
+		trxId: op.trxId,
+		blockNum: op.blockNum,
+		timestamp: op.timestamp,
+	});
+
+	const balance = await deps.state.getTokenBalance(op.broadcaster);
+	await deps.state.putTokenBalance({ ...balance, RUNE: balance.RUNE + reward.runeBonus });
+	return null;
 }
 
 function checkRewardCondition(

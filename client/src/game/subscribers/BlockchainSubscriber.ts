@@ -20,8 +20,7 @@ import { computePoW } from '@/data/blockchain/proofOfWork';
 import { sha256Hash, canonicalStringify } from '@/data/blockchain/hashUtils';
 import { useSeasonStore } from '../stores/seasonStore';
 import { getCardsByOwner, getTokenBalance, getEloRating } from '@/data/blockchain/replayDB';
-import { hiveEvents } from '@/data/HiveEvents';
-import { HIVE_USERNAME_RE, RUNE_LOSS_RANKED, RUNE_WIN_RANKED } from '../../../../shared/protocol-core/types';
+import { HIVE_USERNAME_RE } from '../../../../shared/protocol-core/types';
 import { isStarterEntitlementCardId } from '@shared/schemas/starterEntitlement';
 
 type UnsubscribeFn = () => void;
@@ -468,19 +467,6 @@ async function enqueueResult(result: PackagedMatchResult, playerCardCount: numbe
 		.catch((err) => {
 			debug.error('[BlockchainSubscriber] Failed to apply local XP:', err);
 		});
-
-	// Update RUNE token balance in Zustand for ranked P2P.
-	if (result.matchType === 'ranked') {
-		const playerUsername = useHiveDataStore.getState().user?.hiveUsername;
-		if (playerUsername) {
-			const isWin = result.winner.username === playerUsername;
-			const runeReward = isWin ? RUNE_WIN_RANKED : RUNE_LOSS_RANKED;
-			const currentBalance = useHiveDataStore.getState().tokenBalance;
-			const newRune = (currentBalance?.RUNE ?? 0) + runeReward;
-			useHiveDataStore.getState().updateTokenBalance({ RUNE: newRune });
-			hiveEvents.emitTokenUpdate('RUNE', newRune, runeReward);
-		}
-	}
 
 	debug.combat('[BlockchainSubscriber] Packaged and queued:', {
 		matchId: result.matchId,

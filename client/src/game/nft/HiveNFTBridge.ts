@@ -141,6 +141,10 @@ export class HiveNFTBridge implements INFTBridge {
 		return hiveSync.openPack(packType, quantity);
 	}
 
+	async runeExchange(packType: string, quantity: number = 1): Promise<BroadcastResult> {
+		return hiveSync.runeExchange(packType, quantity);
+	}
+
 	async signResultHash(hash: string): Promise<string> {
 		return hiveSync.signResultHash(hash);
 	}

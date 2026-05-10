@@ -22,6 +22,7 @@ export {
 	calculateSeasonScore,
 	createCampaignFirstClearRuneSourceKey,
 	createP2PRankedRuneSourceKey,
+	createRewardClaimRuneSourceKey,
 	createRuneExchangeSourceKey,
 	createRuneLedgerEntryId,
 	getCampaignFirstClearRuneReward,

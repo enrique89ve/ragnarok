@@ -185,6 +185,14 @@ export function createCampaignFirstClearRuneSourceKey(
 	return `campaign:${seasonId}:${account}:${campaignId}:${missionId}`;
 }
 
+export function createRewardClaimRuneSourceKey(
+	account: string,
+	rewardId: string,
+	seasonId = TESTNET_RUNE_SEASON_ID,
+): string {
+	return `reward:${seasonId}:${account}:${rewardId}`;
+}
+
 export function createRuneExchangeSourceKey(
 	account: string,
 	trxId: string,

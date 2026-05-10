@@ -132,6 +132,10 @@ export class LocalNFTBridge implements INFTBridge {
 		return SUCCESS;
 	}
 
+	async runeExchange(_packType: string, _quantity?: number): Promise<BroadcastResult> {
+		return SUCCESS;
+	}
+
 	async signResultHash(_hash: string): Promise<string> {
 		return 'local-mode-no-signature';
 	}

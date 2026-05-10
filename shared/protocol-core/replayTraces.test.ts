@@ -585,8 +585,15 @@ describe('Protocol Core: Replay Traces', () => {
 		const rewardCard = state.cards.get('reward-first_victory-alice-0');
 		expect(rewardCard).toBeDefined();
 		expect(rewardCard!.mintSource).toBe('reward');
-		// RUNE bonus applied
+		// RUNE bonus is ledger-backed, not a direct balance-only mutation.
 		expect(state.tokens.get('alice')!.RUNE).toBe(50);
+		expect(await deps.state.getRuneLedgerTotal({
+			seasonId: 'S01',
+			direction: 'credit',
+			sourceType: 'reward_claim',
+			account: 'alice',
+		})).toBe(50);
+		expect([...state.runeLedger.values()][0]?.sourceKey).toBe('reward:S01:alice:first_victory');
 	});
 
 	it('reward claim is idempotent', async () => {
@@ -598,6 +605,7 @@ describe('Protocol Core: Replay Traces', () => {
 
 		expect(result.status).toBe('ignored');
 		expect(state.tokens.get('alice')!.RUNE).toBe(50); // not doubled
+		expect(state.runeLedger.size).toBe(1);
 	});
 
 	// --- Normalizer ---

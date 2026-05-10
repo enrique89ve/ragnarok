@@ -327,7 +327,9 @@ Claims a deterministic reward or milestone.
 - Eligibility MUST be derivable from prior canonical state (wins, ELO, matches played)
 - Each `(account, reward_id)` may be claimed at most once
 - Reward card mints draw only from `reward_supply`
-- RUNE points are replay-derived, not a token transfer
+- Any RUNE bonus writes a `reward_claim` ledger credit with source key
+  `reward:S01:{account}:{rewardId}`. RUNE points are replay-derived, not a
+  token transfer.
 
 ## 10.7 `card_transfer`
 
