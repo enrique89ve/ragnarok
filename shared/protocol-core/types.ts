@@ -9,6 +9,17 @@
  * Tests: client/src/data/blockchain/protocolConformance.test.ts
  */
 
+export {
+	RUNE_LOSS_RANKED,
+	RUNE_WIN_RANKED,
+	TESTNET_RUNE_ECONOMY,
+	getCampaignStageRuneTotal,
+	getP2PMatchCapacity,
+	getRuneEmissionCaps,
+	type P2PMatchCapacity,
+	type RuneEmissionCaps,
+} from './runeEconomy';
+
 // ============================================================
 // Protocol Constants
 // ============================================================
@@ -21,8 +32,6 @@ export const PACK_ENTROPY_DELAY_BLOCKS = 20;
 export const MAX_CARD_LEVEL = 3;
 export const ELO_K_FACTOR = 32;
 export const ELO_FLOOR = 100;
-export const RUNE_WIN_RANKED = 10;
-export const RUNE_LOSS_RANKED = 3;
 export const HIVE_USERNAME_RE = /^[a-z][a-z0-9.-]{2,15}$/;
 
 // v1.1: Pack NFT + DNA Lineage constants
@@ -30,9 +39,34 @@ export const ATOMIC_TRANSFER_AMOUNT = '0.001 HIVE';
 export const MAX_REPLICAS_PER_CARD = 3;
 export const MAX_GENERATION = 3;
 export const REPLICA_COOLDOWN_BLOCKS = 100;
-export const PACK_SIZES: Record<string, number> = {
-	starter: 5, booster: 5, standard: 5, premium: 7, mythic: 7, mega: 15,
-};
+
+export {
+	PACK_DEFINITIONS,
+	PACK_DEFINITION_LIST,
+	PACK_KEYS,
+	PACK_RUNE_COSTS,
+	PACK_SIZES,
+	ADMIN_MINTABLE_PACK_KEYS,
+	PUBLIC_PACK_KEYS,
+	RUNE_REDEEMABLE_PACK_KEYS,
+	TESTNET_RUNE_PACK_POOL,
+	getPackDefinition,
+	getPackRuneCost,
+	getRunePackPoolAllocations,
+	getRunePackPoolTotals,
+	isPackKey,
+	isRuneRedeemablePackKey,
+	normalizePackKey,
+	type CanonicalPackDefinition,
+	type PackAcquisition,
+	type PackCategory,
+	type PackKey,
+	type AdminMintablePackKey,
+	type PublicPackKey,
+	type RunePackPoolAllocation,
+	type RunePackPoolConfig,
+	type RuneRedeemablePackKey,
+} from './packCatalog';
 
 // ============================================================
 // Canonical Op Actions (v1.0 base + v1.1/v1.2 extensions)

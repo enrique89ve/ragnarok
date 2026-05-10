@@ -124,13 +124,13 @@ export const packTypes = pgTable("pack_types", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(), // "Starter Pack", "Booster Pack", "Premium Pack"
   description: text("description"),
-  cardCount: integer("card_count").notNull().default(9), // Cards per pack
+  cardCount: integer("card_count").notNull().default(5), // Cards per pack
   price: integer("price").notNull(), // In-game currency or cents
-  commonSlots: integer("common_slots").notNull().default(5),
-  rareSlots: integer("rare_slots").notNull().default(2),
-  epicSlots: integer("epic_slots").notNull().default(1),
+  commonSlots: integer("common_slots").notNull().default(3),
+  rareSlots: integer("rare_slots").notNull().default(1),
+  epicSlots: integer("epic_slots").notNull().default(0),
   wildcardSlots: integer("wildcard_slots").notNull().default(1), // Can upgrade to epic/mythic
-  legendaryChance: integer("legendary_chance").notNull().default(10), // % chance wildcard upgrades to epic
+  legendaryChance: integer("legendary_chance").notNull().default(8), // % chance wildcard upgrades to epic
   mythicChance: integer("mythic_chance").notNull().default(1), // % chance wildcard upgrades to mythic
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),

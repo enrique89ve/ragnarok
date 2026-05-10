@@ -1,3 +1,5 @@
+import type { PackKey } from '@shared/protocol-core/packCatalog';
+
 export interface RarityOdds {
   common: number;
   rare: number;
@@ -6,17 +8,35 @@ export interface RarityOdds {
 }
 
 export interface PackType {
+  key: PackKey;
   id: number;
   name: string;
   description: string;
   price: number;
+  runeCost: number | null;
+  isFreeClaim: boolean;
+  isRuneRedeemable: boolean;
   cardCount: number;
   rarityOdds: RarityOdds;
   imageUrl?: string;
 }
 
+export interface PackTypeApiRow {
+  id: number;
+  name: string;
+  description?: string | null;
+  price: number;
+  card_count: number;
+  common_slots: number;
+  rare_slots: number;
+  epic_slots: number;
+  wildcard_slots: number;
+  legendary_chance?: number | null;
+  mythic_chance?: number | null;
+}
+
 export interface PackTypeResponse {
-  packs: PackType[];
+  packs: PackTypeApiRow[];
 }
 
 export interface RarityStats {

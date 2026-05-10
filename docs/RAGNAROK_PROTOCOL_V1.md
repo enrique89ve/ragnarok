@@ -478,7 +478,7 @@ Settles a match with transcript commitment.
 - Ranked rewards, XP, and ELO changes are derived only from valid `match_result`
 - XP is accumulated only on winner-owned NFTs that match the card IDs encoded in the result
 - Starter entitlements, local/dev catalog cards, and combat tokens are excluded from protocol XP
-- RUNE rewards: +10 winner, +3 loser for ranked matches (deterministic, non-transferable)
+- RUNE rewards: +2 winner, +0 loser for ranked matches (deterministic, non-transferable)
 - ELO: K=32, derived from match history
 
 ## 10.14 `slash_evidence`
@@ -558,11 +558,15 @@ The indexer MUST NOT:
 
 ### ELO / MMR
 
-Fully derived from `match_result` history. Non-transferable. K=32.
+Fully derived from verified ranked `match_result` history. Non-transferable.
+K=32. The official S01 leaderboard ranks eligible accounts by Season Score at
+the season-end snapshot: `finalElo + floor(min(seasonRuneEarned, 110) * 0.5)`.
+RUNE is capped in the formula (`10` campaign + `100` P2P, max `55` score bonus)
+so campaign participation matters without letting raw farming overpower ELO.
 
 ### RUNE
 
-Derived non-transferable reward points. +10 per ranked win, +3 per ranked loss. Milestone bonuses from `reward_claim`. Used for progression thresholds and season rewards. Not a transferable token in v1.
+Derived non-transferable reward points. Testnet S01 emission is capped at 2,200,000 RUNE: 2,000,000 for P2P and 200,000 for campaign. Ranked P2P currently pays +2 per win and +0 per loss, capped at 100 RUNE per target account; campaign completion is capped at 10 RUNE per target account. Milestone bonuses from `reward_claim` are replay-derived. RUNE is used for progression thresholds and season rewards. Not a transferable token in v1.
 
 ### Eitr
 

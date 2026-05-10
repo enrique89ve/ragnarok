@@ -81,6 +81,15 @@ Validates that a single-player practice match runs end-to-end on the local stack
 11. Confirm the game-over screen renders with the correct winner attribution. `getWinnerFromGameStatus` resolves to `'player'` or `'opponent'` matching the visible UI.
 12. Confirm console is clean of errors throughout the entire session. Warnings from `cardDataExporter` (effect registry deuda, see `effect-registry-deuda.md`) are expected and not failures.
 
+**Last verified**
+
+- 2026-05-10 via `agent-browser 0.27.0` against `npm run dev` at `http://localhost:5000/#/game/single`.
+- Warband used the programmatic seed below. The chess board mounted 10v10 with `currentTurn === 'player'` and `gameStatus === 'playing'`.
+- AI turn check: 12 consecutive AI responses advanced `boardState.moveCount` from 0 to 24, exactly +2 per player/AI round. No freeze, no timeout, no double movement.
+- Combat check: bishop-vs-queen attack transitioned into cards combat with `gameStatus === 'combat'` and `pokerIsActive === true`; poker hands resolved and returned to chess with `pendingCombat === false`.
+- Game-over check: legal chess endgame reached `boardState.gameStatus === 'opponent_wins'`; visible UI showed `DEFEAT` and `PLAY AGAIN`.
+- Console check: 0 errors. `cardDataExporter` malformed-effect warnings were present and are expected by this runbook.
+
 **Expected sample seed for step 2**
 
 ```js

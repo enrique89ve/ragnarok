@@ -21,6 +21,7 @@ import {
 	MAX_REPLICAS_PER_CARD, MAX_GENERATION, REPLICA_COOLDOWN_BLOCKS,
 	PACK_ENTROPY_DELAY_BLOCKS, PACK_REVEAL_DEADLINE_BLOCKS,
 	DUAT_CLAIM_WINDOW_BLOCKS, calculateDuatPacks,
+	getPackDefinition,
 } from './types';
 import { verifyPoW, POW_CONFIG } from './pow';
 import { canonicalStringify, sha256Hash } from './hash';
@@ -1136,8 +1137,11 @@ async function applyPackCommit(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<
 	const saltCommit = op.payload.salt_commit as string;
 	const packType = (op.payload.pack_type as string) ?? 'standard';
 	const quantity = Math.min(Number(op.payload.quantity ?? 1), 10);
+	const packDefinition = getPackDefinition(packType);
 
 	if (!saltCommit) return reject('missing salt_commit');
+	if (!packDefinition?.isActive) return reject(`invalid pack_type: ${packType}`);
+	if (packDefinition.key === 'starter') return reject('starter is a signed one-time claim, not a repeatable pack open');
 
 	const existing = await deps.state.getPackCommit(op.trxId);
 	if (existing) return { status: 'ignored' }; // idempotent
@@ -1170,6 +1174,7 @@ async function applyPackReveal(
 	if (!commit) return reject('no matching pack_commit');
 	if (commit.revealed) return { status: 'ignored' }; // already revealed
 	if (commit.account !== op.broadcaster) return reject('not the committer');
+	if (commit.packType === 'starter') return reject('starter is a signed one-time claim, not a repeatable pack open');
 
 	// Verify salt
 	const expectedSaltCommit = await sha256Hash(userSalt);
@@ -1365,6 +1370,8 @@ async function applyLegacyPackOpen(op: ProtocolOp, deps: ProtocolCoreDeps): Prom
 	if (genesis.sealed) return reject('legacy pack_open rejected after seal');
 
 	const packType = (op.payload.pack_type as string) ?? 'standard';
+	const packDefinition = getPackDefinition(packType);
+	if (packDefinition?.key === 'starter') return reject('starter is a signed one-time claim, not a legacy pack open');
 	const quantity = Math.min(Number(op.payload.quantity ?? 1), 10);
 	const seed = deriveLegacyPackSeed(op.trxId);
 	const cardIds = getLegacyPackCardIds(packType, quantity, seed, deps.cards);
@@ -1464,8 +1471,9 @@ async function applyPackMint(op: ProtocolOp, _ctx: ReplayContext, deps: Protocol
 
 	const packType = op.payload.pack_type as string;
 	const quantity = Number(op.payload.quantity ?? 1);
+	const packDefinition = getPackDefinition(packType);
 
-	if (!PACK_SIZES[packType]) return reject(`invalid pack_type: ${packType}`);
+	if (!packDefinition?.adminMintable || !PACK_SIZES[packType]) return reject(`invalid pack_type: ${packType}`);
 	if (quantity < 1 || quantity > 10) return reject('quantity must be 1-10');
 
 	for (let i = 0; i < quantity; i++) {

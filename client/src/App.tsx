@@ -12,7 +12,8 @@ import LoadingScreen from "./game/components/ui/LoadingScreen";
 import GoldenCardFilter from "./game/animations/GoldenCardFilter";
 import { ALL_CHAPTERS, getMission, useCampaignStore } from "./game/campaign";
 import { useStarterStore } from "./game/stores/starterStore";
-import { useNFTUsername } from "./game/nft/hooks";
+import { ensureStarterDecks, materializeStarterEntitlement } from "./game/data/starterSet";
+import { useIsHiveMode, useNFTUsername } from "./game/nft/hooks";
 import { getRagnarokNetworkConfig } from "./game/config/networkConfig";
 import { isTestnetStage } from "./game/config/featureFlags";
 import {
@@ -230,10 +231,13 @@ function SideRailPanel({ title, action, children }: {
 }
 
 function HomePage() {
-	const starterClaimed = useStarterStore(s => s.claimed);
 	const completedMissions = useCampaignStore(s => s.completedMissions);
 	const currentMissionId = useCampaignStore(s => s.currentMission);
 	const hiveUsername = useNFTUsername();
+	const isHiveMode = useIsHiveMode();
+	const starterClaimed = useStarterStore(s => isHiveMode && !hiveUsername ? false : s.hasClaimed(hiveUsername));
+	const starterClaimBlocked = isHiveMode && !hiveUsername;
+	const syncLegacyStarterClaim = useStarterStore(s => s.syncLegacyClaimToAccount);
 	const [showCeremony, setShowCeremony] = useState(false);
 	const [canInstall, setCanInstall] = useState(!!deferredInstallPrompt);
 
@@ -260,7 +264,7 @@ function HomePage() {
 	}, [activeMission, completedMissions]);
 
 	const primaryLabel = !starterClaimed
-		? 'Claim Starter Deck'
+		? starterClaimBlocked ? 'Connect Hive to Claim' : 'Claim Starter Deck'
 		: activeMission
 			? 'Resume Campaign'
 			: completedMissionCount > 0
@@ -287,6 +291,16 @@ function HomePage() {
 		window.addEventListener('beforeinstallprompt', handler);
 		return () => window.removeEventListener('beforeinstallprompt', handler);
 	}, []);
+
+	useEffect(() => {
+		if (isHiveMode && !hiveUsername) return;
+
+		syncLegacyStarterClaim(hiveUsername);
+		if (!useStarterStore.getState().hasClaimed(hiveUsername)) return;
+
+		materializeStarterEntitlement();
+		ensureStarterDecks();
+	}, [hiveUsername, isHiveMode, syncLegacyStarterClaim]);
 
 	const triggerInstall = () => {
 		if (deferredInstallPrompt) {
@@ -342,8 +356,15 @@ function HomePage() {
 							</p>
 							<div className="flex flex-wrap items-center gap-3">
 								{!starterClaimed ? (
-									<Button variant="primary" size="lg" onClick={() => setShowCeremony(true)}>
-										Claim Starter Deck
+									<Button
+										variant="primary"
+										size="lg"
+										onClick={() => {
+											if (!starterClaimBlocked) setShowCeremony(true);
+										}}
+										disabled={starterClaimBlocked}
+									>
+										{primaryLabel}
 									</Button>
 								) : (
 									<Link to={routes.campaign}>
@@ -547,7 +568,11 @@ function HomePage() {
 
 			{showCeremony && (
 				<Suspense fallback={null}>
-					<StarterPackCeremony onComplete={() => setShowCeremony(false)} />
+					<StarterPackCeremony
+						accountId={hiveUsername}
+						requireSignedClaim={isHiveMode}
+						onComplete={() => setShowCeremony(false)}
+					/>
 				</Suspense>
 			)}
 		</div>

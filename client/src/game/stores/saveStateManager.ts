@@ -167,6 +167,7 @@ export async function restoreSaveState(state: PortableSaveState): Promise<{ succ
 		const { useCraftingStore } = await import('../crafting/craftingStore');
 		const { useTutorialStore } = await import('../tutorial/tutorialStore');
 		const { useStarterStore } = await import('./starterStore');
+		const { getNFTBridge } = await import('../nft');
 
 		// Restore campaign (set state directly via Zustand)
 		if (state.campaign) {
@@ -191,7 +192,7 @@ export async function restoreSaveState(state: PortableSaveState): Promise<{ succ
 
 		// Restore starter claimed
 		if (state.starterClaimed) {
-			useStarterStore.getState().markClaimed();
+			useStarterStore.getState().markClaimed(getNFTBridge().getUsername());
 			materializeStarterEntitlement();
 			ensureStarterDecks();
 		}

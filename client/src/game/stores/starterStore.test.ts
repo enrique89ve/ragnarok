@@ -5,8 +5,41 @@ describe('useStarterStore starter reputation', () => {
 	beforeEach(() => {
 		useStarterStore.setState({
 			claimed: false,
+			claimedByAccount: {},
+			legacyClaimAccountId: null,
 			starterReputationByAccount: {},
 		});
+	});
+
+	it('tracks starter claims per Hive account', () => {
+		useStarterStore.getState().markClaimed('alice');
+
+		expect(useStarterStore.getState().hasClaimed('alice')).toBe(true);
+		expect(useStarterStore.getState().hasClaimed('bob')).toBe(false);
+	});
+
+	it('migrates a legacy local claim to the first Hive account only', () => {
+		useStarterStore.setState({
+			claimed: true,
+			claimedByAccount: {},
+			legacyClaimAccountId: null,
+		});
+
+		expect(useStarterStore.getState().hasClaimed('alice')).toBe(true);
+
+		useStarterStore.getState().syncLegacyClaimToAccount('alice');
+
+		expect(useStarterStore.getState().hasClaimed('alice')).toBe(true);
+		expect(useStarterStore.getState().hasClaimed('bob')).toBe(false);
+	});
+
+	it('does not copy an explicit account claim to another account', () => {
+		useStarterStore.getState().markClaimed('alice');
+
+		useStarterStore.getState().syncLegacyClaimToAccount('bob');
+
+		expect(useStarterStore.getState().hasClaimed('alice')).toBe(true);
+		expect(useStarterStore.getState().hasClaimed('bob')).toBe(false);
 	});
 
 	it('records account-bound starter reputation without XP or levels', () => {

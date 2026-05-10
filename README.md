@@ -74,7 +74,7 @@ Five mythological pantheons clash for supremacy. Norse frost giants wage war aga
 - **Card evolution** — 3 tiers: Mortal (60-70%) → Ascended (80-90%) → Divine (100%)
 - **Daily quest system** — 19 quest templates, 3 active per day
 - **Pack opening** — commit-reveal with delayed irreversible Hive block entropy (anti-grind, anti-selective-reveal)
-- **RUNE rewards** — +10 per ranked win, +3 per loss, milestone bonuses (non-transferable in v1)
+- **RUNE rewards** — testnet emission capped at 1M RUNE: 80% P2P, 20% campaign; ranked P2P currently pays +2 per win, +0 per loss (non-transferable in v1)
 - **Eitr crafting** — dissolve cards to see Eitr value (display only in v1 — forging and Eitr trading disabled until replay-derived)
 
 ### Blockchain (Hive Layer 1 — Protocol v1.2)

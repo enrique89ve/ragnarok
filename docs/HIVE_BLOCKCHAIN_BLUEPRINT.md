@@ -444,7 +444,7 @@ After each match, `BlockchainSubscriber.ts`:
 1. Packages match result → transaction queue → Hive broadcast
 2. Applies XP to cards in IndexedDB, stamps level-ups on chain
 3. Calls `refreshHiveDataStoreFromIDB()` — re-reads IndexedDB → Zustand (cards, ELO, tokens)
-4. Awards RUNE tokens: +10 win, +3 loss for ranked matches
+4. Awards RUNE tokens: +2 win, +0 loss for ranked matches
 5. Emits `token:updated` event → toast notification
 
 ### 5.8 Reward Claiming on Chain
@@ -1103,7 +1103,7 @@ Players trade cards freely using Hive Keychain-signed `transfer` ops. The game c
 - [x] Ban system (on-chain evidence, client-enforced) — `slashEvidence.ts` + `replayRules.ts` blocks slashed accounts at dispatch
 - [x] `result_nonce` anti-replay — monotonic per-account nonce in `matchResultPackager` + validated by `applyMatchResult`
 - [x] Deck ownership verification at P2P handshake — `deckVerification.ts` + `deck_verify` message in `useWireSync.ts`
-- [x] Ranked ladder UI (`RankedLadderPage.tsx`: leaderboard tab computes ELO rankings from IndexedDB match history; match history tab with win/loss/duration/damage stats; `/ladder` route with homepage nav)
+- [x] Ranked ladder UI (`RankedLadderPage.tsx`: leaderboard tab computes Season Score from IndexedDB match/RUNE history and surfaces final ELO; match history tab with win/loss/duration/damage stats; `/ladder` route with homepage nav)
 - [x] Dispute resolution (`disputeResolution.ts`: `buildDisputeEvidence()` extracts move + Merkle proof from transcript; `submitMoveDispute()` broadcasts `slash_evidence` with `forged_move` reason; `verifyMoveInTranscript()` for client-side proof validation)
 
 ### Phase 2E — Server-Side Chain Indexer (COMPLETE)
@@ -1130,7 +1130,7 @@ Players trade cards freely using Hive Keychain-signed `transfer` ops. The game c
 | Signature Verification | **IMPLEMENTED** | `hiveSignatureVerifier.ts` uses `hive-tx` to fetch posting keys via `condenser_api.get_accounts` (3-node fallback, 8s timeout, 5-min cache) and verify signatures cryptographically. |
 | Slash Evidence Verification | **IMPLEMENTED** | `applySlashEvidence` now fetches referenced transactions from public Hive RPC and verifies both are ragnarok ops from the offender. Unreachable RPC queues to `pending_slashes` IDB store (max 3 retries). |
 | ELO Derivation | **CHAIN-DERIVED** | ELO is computed deterministically from `match_result` history (K=32). Stored in `elo_ratings` IDB store. `queue_join` ignores client-reported ELO — uses chain-derived values. |
-| RUNE Rewards | **CHAIN-DERIVED + CLAIMABLE** | Match RUNE: derived inside `applyMatchResult` (10 win / 3 loss for ranked). Milestone RUNE: awarded via `rp_reward_claim` alongside reward cards (self-serve). |
+| RUNE Rewards | **CHAIN-DERIVED + CLAIMABLE** | Match RUNE: derived inside `applyMatchResult` (+2 win / +0 loss for ranked in S01). Milestone RUNE: awarded via `rp_reward_claim` alongside reward cards (self-serve). |
 | Supply Cap (Pack Open) | **ENFORCED** | `applyPackOpen` checks `getSupplyCounter()` before minting each card. Cards exceeding the cap are skipped. |
 | Deck Hash | **SHA-256** | `computeDeckHash` now uses SHA-256 (truncated to 32 hex chars) instead of reversible base64. |
 | P2P Turn Validation | **IMPLEMENTED** | Host validates `currentTurn === 'opponent'` before executing remote actions. Messages are queued (not dropped) when busy. AI guard prevents `processAITurn` from running when P2P connected. |
@@ -1602,7 +1602,7 @@ Adapted from HivePoA's self-healing treasury. Starts simple (Keychain multisig),
 
 | Fund | Source | Disbursement |
 |------|--------|-------------|
-| **RUNE token pool** | Match rewards (+10 win, +3 loss) | Self-serve claim via `reward_claim` op |
+| **RUNE token pool** | S01 match rewards (+2 win, +0 loss) | Self-serve claim via `reward_claim` op |
 | **Tournament prizes** | Entry fees | Post-tournament payout to top N |
 | **Marketplace fees** | Trade commissions (future) | Periodic distribution to stakeholders |
 | **Development fund** | Initial allocation | Bounties, art commissions, hosting |

@@ -73,13 +73,107 @@ Perform the first Hive smoke test:
 ## Beta Modes
 
 - Single (PvE practice) — no reward.
-- Campaign (PvE) — ~10% xpRunes per mission (multiplier overridable per mission).
-- Multiplayer P2P manual host/join — 100% xpRunes + ELO ranking.
+- Campaign (PvE) — up to `10` first-clear RUNE per account/S01.
+- Multiplayer P2P manual host/join — ranked RUNE + Season Score ranking.
 - Quick Match P2P as experimental matchmaking, not official ranked.
+
+## Season Ranking
+
+The official S01 leaderboard is Season Score based. ELO is the dominant skill
+component; capped RUNE contributes a smaller participation bonus so prize
+contenders must play both ranked P2P and campaign.
+
+Ranking source:
+
+- Only verified ranked P2P `match_result` operations count for ELO.
+- ELO is derived from match history with K=32.
+- Casual, single, campaign, local, disputed, or unverified matches do not count.
+- Queue-advertised ELO is never trusted; it is read from replay-derived state.
+
+Score formula:
+
+```txt
+seasonRuneEarned = min(campaignRune, 10) + min(p2pRune, 100)
+runeScoreBonus = floor(min(seasonRuneEarned, 110) * 0.5)
+seasonScore = finalElo + runeScoreBonus
+```
+
+S01 prize snapshot:
+
+- Primary sort: `seasonScore` descending at the season-end block.
+- Eligibility: at least `20` verified ranked matches and no unresolved dispute
+  at snapshot time.
+- Prize eligibility requires the account to earn the full `10` campaign RUNE.
+- Max RUNE score bonus is `55`, so ELO remains the primary ranking force.
+- Tiebreakers: final ELO, ranked wins, win rate, head-to-head where available,
+  then fewer abandons/disconnects.
+- Verifier/admin leaderboard snapshots are compact reads only; the final ranking
+  must be reproducible from Hive `match_result` replay.
+
+## Playtest RUNE Ledger
+
+RUNE is active during beta as resettable playtest progression. It is not a
+transferable token and it is not user-authored balance state.
+
+Canonical RUNE state is derived from Hive events:
+
+- `campaign_result` proves a campaign win and unlocks first-clear campaign RUNE.
+- `match_result` proves ranked P2P outcome and emits ranked RUNE.
+- `reward_claim` claims a replay-derived reward by source key.
+- `rune_exchange` spends existing RUNE into testnet packs.
+- Optional verifier/admin summaries may compact claims for faster UI reads, but
+  the replay engine must be able to reject or rebuild them from source events.
+
+RUNE payloads must never trust a client-supplied amount. The protocol computes
+the amount from season config, source type, account, and source key. If an op
+injects an amount or exceeds a cap, replay rejects it.
+
+Season S01 hard caps:
+
+- Total emission: `2_200_000` RUNE.
+- P2P pool: `2_000_000` RUNE.
+- Campaign pool: `200_000` RUNE.
+- Campaign account cap: `10` RUNE per account per season.
+- P2P account cap: `100` RUNE per account per season for the closed beta target
+  of 20,000 accounts.
+- Starter pack claim: `1` per account.
+
+Idempotency keys are mandatory:
+
+- Campaign first-clear: `campaign:S01:{account}:{campaignId}:{missionId}`.
+- P2P reward: `p2p:S01:{matchId}:{winner|loser}:{account}`.
+- Reward claim: `reward:S01:{account}:{rewardId}`.
+- RUNE pack spend: `pack:S01:{account}:{trxId}:{packType}:{quantity}`.
+
+Pack exchange limits:
+
+- Standard pack: `2` RUNE.
+- Premium pack: `7` RUNE.
+- Mythic pack: `20` RUNE.
+- Max RUNE spend per pack op: `50` RUNE.
+- RUNE exchange limit per account/season: `1` standard, `1` premium,
+  `5` mythic.
+- Campaign-only target: full campaign cap (`10` RUNE) buys exactly `1`
+  standard + `1` premium pack, leaving `1` RUNE.
+- P2P target: full P2P cap (`100` RUNE) buys exactly `5` mythic packs.
+- Global RUNE pack instance caps: `20_000` standard, `20_000` premium,
+  `100_000` mythic.
+- Pack quantities must be derived from `packType * quantity`; direct negative
+  spends or direct card mints are invalid.
+
+Replay rejection rules:
+
+- Duplicate source key: ignored/idempotent.
+- Claim over account cap: rejected.
+- Claim over season pool cap: rejected.
+- Spend greater than balance: rejected.
+- Spend greater than max per op: rejected.
+- Unknown season, pack type, campaign id, mission id, or ruleset hash: rejected.
+- Verifier/admin compact logs that disagree with replay: rejected.
 
 ## Not Permanent In Beta
 
-- Official ranked rewards.
+- Permanent ranked rewards or mainnet prize state.
 - Final genesis assets or supply.
 - Mainnet reward claims.
 - Production marketplace value.

@@ -7,14 +7,25 @@ import PackOpeningAnimation from './PackOpeningAnimation';
 import { getRarityColor } from '../../utils/rarityUtils';
 import { cardRegistry } from '../../data/cardRegistry';
 import { getNFTBridge } from '../../nft';
-import { useNFTUsername, useNFTTokenBalance } from '../../nft/hooks';
+import { useIsHiveMode, useNFTUsername, useNFTTokenBalance } from '../../nft/hooks';
 import { RAGNAROK_ACCOUNT } from '../../../data/blockchain/hiveConfig';
 import { derivePackCards } from '../../../data/blockchain/packDerivation';
 import { forceSync } from '../../../data/blockchain/replayEngine';
 import { toast } from 'sonner';
+import { useStarterStore } from '../../stores/starterStore';
+import { claimStarterEntitlement } from '../../data/starterClaim';
+import {
+	PACK_DEFINITIONS,
+	PUBLIC_PACK_KEYS,
+	getPackDefinition,
+	normalizePackKey,
+	type CanonicalPackDefinition,
+} from '@shared/protocol-core/packCatalog';
+import type { CardData } from '../../types';
 import type {
 	PackType,
 	PackTypeResponse,
+	PackTypeApiRow,
 	SupplyStatsResponse,
 	SupplyStats,
 	ProcessedRarityStats,
@@ -28,13 +39,6 @@ import { cryptoRng, cryptoIdGen } from '../../utils/seededRng';
 
 const RARITY_ORDER = ['mythic', 'epic', 'rare', 'common'] as const;
 
-const RUNE_COST: Record<string, number> = {
-	starter:   50,
-	booster:  100,
-	premium:  250,
-	mythic:   500,
-};
-
 const RARITY_COLORS: Record<string, string> = {
 	mythic: '#ec4899',
 	epic: '#a855f7',
@@ -45,22 +49,83 @@ const RARITY_COLORS: Record<string, string> = {
 const PACK_THEMES: Record<string, { seal: string; btn: string; card: string; icon: string }> = {
 	'Starter Pack': { seal: 'pack-seal-starter', btn: 'open-btn-starter', card: 'pack-card-starter', icon: '石' },
 	'Booster Pack': { seal: 'pack-seal-booster', btn: 'open-btn-booster', card: 'pack-card-booster', icon: '盾' },
+	'Standard Pack': { seal: 'pack-seal-booster', btn: 'open-btn-booster', card: 'pack-card-booster', icon: '盾' },
 	'Premium Pack': { seal: 'pack-seal-premium', btn: 'open-btn-premium', card: 'pack-card-premium', icon: '冠' },
 	'Mythic Pack': { seal: 'pack-seal-mythic', btn: 'open-btn-mythic', card: 'pack-card-mythic', icon: '龍' },
+	'Mega Pack': { seal: 'pack-seal-mythic', btn: 'open-btn-mythic', card: 'pack-card-mythic', icon: '星' },
 };
 
 function getPackTheme(name: string) {
 	return PACK_THEMES[name] || PACK_THEMES['Starter Pack'];
 }
 
-const FALLBACK_PACKS: PackType[] = [
-	{ id: 1, name: 'Starter Pack', description: '5 cards with guaranteed rare or better', price: 100, cardCount: 5, rarityOdds: { common: 60, rare: 25, epic: 10, mythic: 5 } },
-	{ id: 2, name: 'Booster Pack', description: '5 cards with improved rare odds', price: 200, cardCount: 5, rarityOdds: { common: 45, rare: 30, epic: 15, mythic: 10 } },
-	{ id: 3, name: 'Premium Pack', description: '7 cards with guaranteed epic or better', price: 500, cardCount: 7, rarityOdds: { common: 30, rare: 30, epic: 25, mythic: 15 } },
-	{ id: 4, name: 'Mythic Pack', description: '7 cards with guaranteed mythic', price: 1000, cardCount: 7, rarityOdds: { common: 15, rare: 25, epic: 30, mythic: 30 } },
-];
+function packRarityOdds(pack: Pick<CanonicalPackDefinition, 'cardCount' | 'commonSlots' | 'rareSlots' | 'epicSlots' | 'wildcardSlots' | 'legendaryChance' | 'mythicChance'>): PackType['rarityOdds'] {
+	const guaranteedSlots = Math.max(pack.cardCount - pack.wildcardSlots, 1);
+	const wildcardRareWeight = Math.max(100 - pack.legendaryChance - pack.mythicChance, 0);
+
+	return {
+		common: Math.round((pack.commonSlots / guaranteedSlots) * 100),
+		rare: Math.min(100, Math.round((pack.rareSlots / guaranteedSlots) * 100) + Math.round((pack.wildcardSlots * wildcardRareWeight) / pack.cardCount)),
+		epic: Math.min(100, Math.round((pack.epicSlots / guaranteedSlots) * 100) + Math.round((pack.wildcardSlots * pack.legendaryChance) / pack.cardCount)),
+		mythic: Math.min(100, Math.round((pack.wildcardSlots * pack.mythicChance) / pack.cardCount)),
+	};
+}
+
+function packDefinitionToUiPack(pack: CanonicalPackDefinition, id: number): PackType {
+	return {
+		key: pack.key,
+		id,
+		name: pack.name,
+		description: pack.description,
+		price: pack.price,
+		runeCost: pack.runeCost,
+		isFreeClaim: pack.freeClaimLimitPerAccount > 0,
+		isRuneRedeemable: pack.runeCost !== null,
+		cardCount: pack.cardCount,
+		rarityOdds: packRarityOdds(pack),
+	};
+}
+
+function apiPackToUiPack(pack: PackTypeApiRow): PackType {
+	const definition = getPackDefinition(pack.name);
+	if (definition) return packDefinitionToUiPack(definition, pack.id);
+
+	return {
+		key: normalizePackKey(pack.name) ?? 'standard',
+		id: pack.id,
+		name: pack.name,
+		description: pack.description ?? '',
+		price: pack.price,
+		runeCost: null,
+		isFreeClaim: false,
+		isRuneRedeemable: false,
+		cardCount: pack.card_count,
+		rarityOdds: packRarityOdds({
+			cardCount: pack.card_count,
+			commonSlots: pack.common_slots,
+			rareSlots: pack.rare_slots,
+			epicSlots: pack.epic_slots,
+			wildcardSlots: pack.wildcard_slots,
+			legendaryChance: pack.legendary_chance ?? 0,
+			mythicChance: pack.mythic_chance ?? 0,
+		}),
+	};
+}
+
+const FALLBACK_PACKS: PackType[] = PUBLIC_PACK_KEYS
+	.map((key, index) => packDefinitionToUiPack(PACK_DEFINITIONS[key], index + 1));
 
 const CARD_POOL = cardRegistry.filter(c => c.rarity && c.name && Number(c.id) >= 1000);
+
+function starterCardToRevealedCard(card: CardData): RevealedCard {
+	return {
+		id: card.id as number,
+		name: card.name,
+		rarity: (card.rarity ?? 'common').toLowerCase(),
+		type: card.type ?? 'minion',
+		heroClass: 'class' in card ? (card as { class: string }).class : 'Neutral',
+	};
+}
 
 function openPackLocally(pack: PackType): RevealedCard[] {
 	const byRarity: Record<string, typeof CARD_POOL> = {};
@@ -110,7 +175,7 @@ function formatNumber(n: number): string {
 	return n.toLocaleString();
 }
 
-function getPackGuarantees(pack: any): string[] {
+function getPackGuarantees(pack: Pick<PackType, 'cardCount' | 'rarityOdds'>): string[] {
 	const guarantees: string[] = [];
 	if (pack.rarityOdds.epic > 0) guarantees.push('Epic');
 	if (pack.cardCount >= 7) guarantees.push(`${pack.cardCount} Cards`);
@@ -252,7 +317,10 @@ function SealedPacksSection() {
 export default function PacksPage() {
 	const tokenBalance = useNFTTokenBalance();
 	const hiveUsername = useNFTUsername();
+	const isHiveMode = useIsHiveMode();
 	const runeBalance = tokenBalance?.RUNE ?? 0;
+	const starterClaimed = useStarterStore(state => isHiveMode && !hiveUsername ? false : state.hasClaimed(hiveUsername));
+	const syncLegacyStarterClaim = useStarterStore(state => state.syncLegacyClaimToAccount);
 
 	const [packTypes, setPackTypes] = useState<PackType[]>(FALLBACK_PACKS);
 	const [supplyStats, setSupplyStats] = useState<SupplyStats | null>(null);
@@ -264,6 +332,9 @@ export default function PacksPage() {
 	const [packError, setPackError] = useState<string | null>(null);
 	const [runeOpening, setRuneOpening] = useState<string | null>(null);
 	const [testMinting, setTestMinting] = useState(false);
+	const visiblePackTypes = starterClaimed
+		? packTypes.filter(pack => pack.key !== 'starter')
+		: packTypes;
 
 	const handleTestMint = async () => {
 		if (!hiveUsername || testMinting) return;
@@ -348,6 +419,12 @@ export default function PacksPage() {
 		fetchData();
 	}, []);
 
+	useEffect(() => {
+		if (isHiveMode && !hiveUsername) return;
+
+		syncLegacyStarterClaim(hiveUsername);
+	}, [hiveUsername, isHiveMode, syncLegacyStarterClaim]);
+
 	const fetchData = async () => {
 		try {
 			setLoading(true);
@@ -359,19 +436,7 @@ export default function PacksPage() {
 
 			if (typesRes.ok) {
 				const typesData: PackTypeResponse = await typesRes.json();
-				const mappedPacks = (typesData.packs || []).map((pack: any) => ({
-					id: pack.id,
-					name: pack.name,
-					description: pack.description || '',
-					price: pack.price,
-					cardCount: pack.card_count,
-					rarityOdds: {
-						common: pack.common_slots * 10,
-						rare: pack.rare_slots * 10,
-						epic: pack.epic_slots * 10,
-						mythic: (pack.legendary_chance ?? 0) + (pack.mythic_chance ?? 0),
-					}
-				}));
+				const mappedPacks = (typesData.packs || []).map(apiPackToUiPack);
 				setPackTypes(mappedPacks);
 			} else {
 				setPackTypes(FALLBACK_PACKS);
@@ -439,11 +504,30 @@ export default function PacksPage() {
 	};
 
 	const handleOpenPack = async (pack: PackType) => {
+		if (pack.key === 'starter' && starterClaimed) return;
+
 		setOpeningPack(pack);
 		setIsOpening(true);
 		setPackError(null);
 
-		const packKey = pack.name.split(' ')[0].toLowerCase();
+		const packKey = pack.key;
+		if (packKey === 'starter') {
+			const result = await claimStarterEntitlement({
+				accountId: hiveUsername,
+				requireSignature: isHiveMode,
+			});
+
+			if (!result.success) {
+				setPackError(result.error);
+				setIsOpening(false);
+				setOpeningPack(null);
+				return;
+			}
+
+			setRevealedCards(result.cards.map(starterCardToRevealedCard));
+			toast.success('Starter claimed!');
+			return;
+		}
 
 		if (getNFTBridge().isHiveMode() && hiveUsername) {
 			const result = await getNFTBridge().openPack(packKey, 1);
@@ -541,8 +625,9 @@ export default function PacksPage() {
 	};
 
 	const handleOpenWithRune = async (pack: PackType) => {
-		const packKey = pack.name.split(' ')[0].toLowerCase();
-		const cost = RUNE_COST[packKey] ?? 100;
+		const packKey = pack.key;
+		const cost = pack.runeCost;
+		if (cost === null) return;
 		if (runeBalance < cost) return;
 		if (!hiveUsername) return;
 
@@ -818,7 +903,7 @@ export default function PacksPage() {
 				)}
 
 				{/* ========== PACK GRID ========== */}
-				{packTypes.length === 0 ? (
+				{visiblePackTypes.length === 0 ? (
 					<motion.div
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
@@ -836,7 +921,7 @@ export default function PacksPage() {
 					</motion.div>
 				) : (
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-						{packTypes.map((pack, index) => {
+						{visiblePackTypes.map((pack, index) => {
 							const theme = getPackTheme(pack.name);
 							const guarantees = getPackGuarantees(pack);
 
@@ -875,7 +960,7 @@ export default function PacksPage() {
 										{/* Price + Card Count */}
 										<div className="flex justify-between items-center mb-4">
 											<span className="pack-price text-gold-300">
-												{pack.price.toLocaleString()}
+												{pack.isFreeClaim ? 'Free' : pack.price.toLocaleString()}
 											</span>
 											<span className="text-ink-300 text-sm font-medium">
 												{pack.cardCount} cards
@@ -915,13 +1000,13 @@ export default function PacksPage() {
 											onClick={() => handleOpenPack(pack)}
 											className={`open-btn ${theme.btn}`}
 										>
-											Open Pack
+											{pack.isFreeClaim ? 'Claim Starter' : 'Buy Pack'}
 										</motion.button>
 
 										{/* Open with RUNE */}
-										{hiveUsername && (() => {
-											const packKey = pack.name.split(' ')[0].toLowerCase();
-											const cost = RUNE_COST[packKey] ?? 100;
+										{hiveUsername && pack.isRuneRedeemable && (() => {
+											const cost = pack.runeCost;
+											if (cost === null) return null;
 											const canAfford = runeBalance >= cost;
 											const isLoading = runeOpening === pack.id.toString();
 											return (

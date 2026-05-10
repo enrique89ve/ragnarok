@@ -132,7 +132,7 @@ Tier 6: Personal account scan via Hive RPC                   (~5-30s)
 
 Client stores everything in IndexedDB (`ragnarok-index-v1`, 4 stores):
 - `global_ops` — full op log with 5 indexes
-- `global_leaderboard` — ELO rankings
+- `global_leaderboard` — Season Score rankings with replay-derived ELO fields
 - `global_supply` — per-card mint counts
 - `index_sync` — cursor metadata
 

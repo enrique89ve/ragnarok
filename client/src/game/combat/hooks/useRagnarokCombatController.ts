@@ -24,10 +24,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePokerCombatAdapter, getActionPermissions, getPokerCombatAdapterState } from '../../hooks/usePokerCombatAdapter';
-import { useGameStore } from '../../stores/gameStore';
+import { useGameStore, selectPlayerHand } from '../../stores/gameStore';
 import { GAME_COMMAND_TYPES } from '../../core/commands';
 import { useP2PActions } from '../../context/useP2PActions';
 import { CombatPhase, CombatAction } from '../../types/PokerCombatTypes';
+import type { CardInstance } from '../../types';
 import { fireAnnouncement } from '../../stores/unifiedUIStore';
 import { ALL_NORSE_HEROES } from '../../data/norseHeroes';
 import { executeNorseHeroPower } from '../../utils/norseHeroPowerUtils';
@@ -97,7 +98,7 @@ export interface UseRagnarokCombatControllerReturn {
   cardPositionsRef: React.MutableRefObject<Map<string, { x: number; y: number }>>;
   
   currentTurn: 'player' | 'opponent' | undefined;
-  playerHand: any[];
+  playerHand: CardInstance[];
   attackingCard: any;
   selectedCard: any;
   playerMana: number;
@@ -234,7 +235,7 @@ export function useRagnarokCombatController(
   const currentTurn = useGameStore(state => state.gameState?.currentTurn);
   const mulliganActive = useGameStore(state => state.gameState?.mulligan?.active);
   const gameStateMulligan = useGameStore(state => state.gameState?.mulligan);
-  const playerHand = useGameStore(state => state.gameState?.players?.player?.hand ?? []);
+  const playerHand = useGameStore(selectPlayerHand);
   const attackingCard = useGameStore(state => state.attackingCard);
   const selectedCard = useGameStore(state => state.selectedCard);
   const selectAttacker = useGameStore(state => state.selectAttacker);

@@ -2,18 +2,25 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { routes } from '../../lib/routes';
-import { getStarterCards, STARTER_PACK_NAME, buildStarterDecks, materializeStarterEntitlement } from '../data/starterSet';
-import { useStarterStore } from '../stores/starterStore';
+import { getStarterCards, STARTER_PACK_NAME } from '../data/starterSet';
+import { claimStarterEntitlement } from '../data/starterClaim';
 import PackOpeningAnimation from './packs/PackOpeningAnimation';
 import TreasureChestSVG from './packs/TreasureChestSVG';
 
 interface StarterPackCeremonyProps {
+	accountId?: string | null;
+	requireSignedClaim?: boolean;
 	onComplete: () => void;
 }
 
-export default function StarterPackCeremony({ onComplete }: StarterPackCeremonyProps) {
+export default function StarterPackCeremony({
+	accountId,
+	requireSignedClaim = false,
+	onComplete,
+}: StarterPackCeremonyProps) {
 	const [phase, setPhase] = useState<'welcome' | 'opening' | 'done'>('welcome');
-	const markClaimed = useStarterStore(s => s.markClaimed);
+	const [isClaiming, setIsClaiming] = useState(false);
+	const [claimError, setClaimError] = useState<string | null>(null);
 	const navigate = useNavigate();
 
 	const starterCards = getStarterCards();
@@ -26,13 +33,24 @@ export default function StarterPackCeremony({ onComplete }: StarterPackCeremonyP
 		heroClass: 'class' in card ? (card as { class: string }).class : 'Neutral',
 	}));
 
-	const handleClaimBirthright = useCallback(() => {
-		materializeStarterEntitlement();
-		// Auto-build 4 starter decks (one per hero) so player can immediately play
-		buildStarterDecks();
-		markClaimed();
+	const handleClaimBirthright = useCallback(async () => {
+		if (isClaiming) return;
+
+		setIsClaiming(true);
+		setClaimError(null);
+		const result = await claimStarterEntitlement({
+			accountId,
+			requireSignature: requireSignedClaim,
+		});
+		setIsClaiming(false);
+
+		if (!result.success) {
+			setClaimError(result.error);
+			return;
+		}
+
 		setPhase('opening');
-	}, [markClaimed]);
+	}, [accountId, isClaiming, requireSignedClaim]);
 
 	const handlePackClose = useCallback(() => {
 		onComplete();
@@ -104,6 +122,7 @@ export default function StarterPackCeremony({ onComplete }: StarterPackCeremonyP
 							whileHover={{ scale: 1.05, boxShadow: '0 0 30px rgba(218, 165, 32, 0.5)' }}
 							whileTap={{ scale: 0.95 }}
 							onClick={handleClaimBirthright}
+							disabled={isClaiming}
 							className="px-10 py-5 text-xl font-bold tracking-wider uppercase rounded-xl border-2 transition-all"
 							style={{
 								fontFamily: "'Cinzel', Georgia, serif",
@@ -111,10 +130,17 @@ export default function StarterPackCeremony({ onComplete }: StarterPackCeremonyP
 								borderColor: '#DAA520',
 								color: '#fff',
 								textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+								opacity: isClaiming ? 0.7 : 1,
 							}}
 						>
-							Claim Your Birthright
+							{isClaiming ? 'Signing Claim...' : 'Claim Your Birthright'}
 						</motion.button>
+
+						{claimError && (
+							<p className="text-red-300 text-sm mt-4">
+								{claimError}
+							</p>
+						)}
 
 						<motion.p
 							initial={{ opacity: 0 }}

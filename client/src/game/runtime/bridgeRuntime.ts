@@ -16,9 +16,14 @@ export async function ensureBridgeRuntime(): Promise<void> {
 
   if (!bridgeInitPromise) {
     bridgeInitPromise = initializeNFTBridge()
-      .then(() => {
-        const { claimed } = useStarterStore.getState();
-        if (claimed) {
+      .then((bridge) => {
+        const accountId = bridge.getUsername();
+        const starterStore = useStarterStore.getState();
+        const shouldMaterializeStarter = bridge.isHiveMode()
+          ? accountId !== null && starterStore.hasClaimed(accountId)
+          : starterStore.hasClaimed();
+
+        if (shouldMaterializeStarter) {
           materializeStarterEntitlement();
           ensureStarterDecks();
         }

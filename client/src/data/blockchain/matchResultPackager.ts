@@ -12,6 +12,7 @@ import { hashMatchResult, sha256Hash, canonicalStringify } from './hashUtils';
 import { calculateXPRewards } from './cardXPRewards';
 import type { HiveCardAsset } from '../schemas/HiveTypes';
 import { getPlayerNonce, advancePlayerNonce } from './replayDB';
+import { RUNE_LOSS_RANKED, RUNE_WIN_RANKED } from '@shared/protocol-core/runeEconomy';
 // Access combat store lazily to break blockchain ↔ combat-stores circular dependency
 // The store registers itself on globalThis at creation time (see unifiedCombatStore.ts)
 function getPokerHandsWon(side: 'player' | 'opponent'): number {
@@ -23,8 +24,6 @@ function getPokerHandsWon(side: 'player' | 'opponent'): number {
 }
 
 const ELO_K_FACTOR = 32;
-const RUNE_WIN_RANKED  = 10;
-const RUNE_LOSS_RANKED = 3;
 
 // Typed game log entry for damage calculation
 interface DamageLogEntry {

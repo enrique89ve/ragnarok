@@ -116,5 +116,6 @@ describe('packageMatchResult', () => {
 				didLevelUp: false,
 			},
 		]);
+		expect(result.runeRewards).toEqual({ winner: 2, loser: 0 });
 	});
 });

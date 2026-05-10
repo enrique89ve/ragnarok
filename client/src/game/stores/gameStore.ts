@@ -821,6 +821,19 @@ export function disposeGameStoreSubscriptions() {
 	if (attackWatchdogTimer) { clearTimeout(attackWatchdogTimer); attackWatchdogTimer = null; }
 }
 
+// Stable empty fallback for the player-hand selector. A zustand selector
+// MUST return the same reference across calls when state hasn't changed —
+// otherwise `useSyncExternalStore` sees snapshot drift and loops on
+// re-render. Module-scope const gives that stability. Typed as mutable
+// (not frozen) because downstream consumers expect `CardInstance[]`; if
+// you reach for `.push`/`.splice` here you will be reaching for an empty
+// shared singleton — don't.
+export const EMPTY_HAND: CardInstance[] = [];
+
+export function selectPlayerHand(state: GameStore): CardInstance[] {
+	return state.gameState?.players?.player?.hand ?? EMPTY_HAND;
+}
+
 // Zustand slice selectors — subscribe to specific state slices to avoid excess re-renders
 export const usePlayerHand = () => useGameStore(s => s.gameState?.players?.player?.hand);
 export const usePlayerBattlefield = () => useGameStore(s => s.gameState?.players?.player?.battlefield);

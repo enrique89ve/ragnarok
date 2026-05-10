@@ -119,7 +119,7 @@ The index is a **table of contents**, not a database. The blockchain is the data
 4. Client merges new entries into local IndexedDB
 5. Client queries locally:
    - "My match history" → filter by player === myUsername
-   - "Top 100 ELO" → read pre-computed leaderboard snapshot
+   - "Top 100 Season Score" → read pre-computed leaderboard snapshot
    - "Card ownership" → filter by action === 'card_transfer' | 'mint', latest per cardUid
    - "Supply counters" → read pre-computed supply snapshot
 6. If client needs raw op payload → ONE Hive API call: get_transaction(trxId)
@@ -156,7 +156,7 @@ The index is split into time-based chunks for incremental sync:
   compacted/
     compacted-000000-090000.ndjson.gz  ← merged old chunks (periodic)
   snapshots/
-    leaderboard.json      ← pre-computed top 1000 ELO (updated each chunk)
+    leaderboard.json      ← pre-computed top 1000 Season Score (updated each chunk)
     supply.json            ← current supply counters per card/rarity
     genesis.json           ← genesis state (sealed block, initial supply)
 ```
@@ -489,7 +489,7 @@ const GLOBAL_STORES = {
   // Pre-computed leaderboard (updated from snapshots)
   'global_leaderboard': {
     keyPath: 'username',
-    // Sorted by ELO descending in snapshot
+    // Sorted by Season Score descending in snapshot; final ELO remains stored for tiebreaks
   },
 
   // Supply counters (updated from snapshots)
@@ -586,7 +586,7 @@ The operator reuses existing protocol-core code with zero modifications:
 | `applyOp()` | `shared/protocol-core/apply.ts` | Validate every op |
 | `normalizeAction()` | `shared/protocol-core/normalize.ts` | Canonical action names |
 | `StateAdapter` interface | `shared/protocol-core/types.ts` | State tracking |
-| ELO calculation | `shared/protocol-core/elo.ts` | Derived ELO in entries |
+| ELO calculation | `shared/protocol-core/elo.ts` | Derived ELO component for Season Score entries |
 | Supply tracking | `shared/protocol-core/supply.ts` | Derived supply counters |
 | Op schemas (Zod) | `shared/protocol-core/opSchemas.ts` | Runtime validation |
 

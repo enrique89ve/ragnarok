@@ -15,6 +15,8 @@
 import {
 	normalizeRawOp,
 	applyOp as coreApplyOp,
+	RUNE_LOSS_RANKED,
+	RUNE_WIN_RANKED,
 	type RawHiveOp,
 	type ReplayContext,
 	type ProtocolCoreDeps,
@@ -199,7 +201,7 @@ function emitUIEvents(action: string, op: RawOp): void {
 			case 'match_result': {
 				const winner = payload.w ?? payload.winnerId;
 				if (winner) {
-					hiveEvents.emitTokenUpdate('RUNE', 0, winner === op.broadcaster ? 10 : 3);
+					hiveEvents.emitTokenUpdate('RUNE', 0, winner === op.broadcaster ? RUNE_WIN_RANKED : RUNE_LOSS_RANKED);
 				}
 				break;
 			}

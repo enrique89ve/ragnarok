@@ -19,6 +19,7 @@ import { RAGNAROK_ACCOUNT } from '../../../data/blockchain/hiveConfig';
 import { cardRegistry } from '../../data/cardRegistry';
 import { debug } from '../../config/debugConfig';
 import { getRagnarokCollectionId } from '../../config/networkConfig';
+import { ADMIN_MINTABLE_PACK_KEYS, PACK_DEFINITIONS } from '@shared/protocol-core/packCatalog';
 
 // Lazy-import admin functions to avoid loading blockchain code on non-admin pages
 async function getAdminFns() {
@@ -39,6 +40,8 @@ async function getHiveSync() {
 async function getReplayEngine() {
 	return import('../../../data/blockchain/replayEngine');
 }
+
+const ADMIN_MINTABLE_PACKS = ADMIN_MINTABLE_PACK_KEYS.map((key) => PACK_DEFINITIONS[key]);
 
 // ── Types ──
 
@@ -97,12 +100,7 @@ export default function AdminPanel() {
 	}, []);
 
 	useEffect(() => {
-		let mounted = true;
-		async function load() {
-			await refreshState();
-		}
-		load();
-		return () => { mounted = false; };
+		void refreshState();
 	}, [refreshState]);
 
 	// ── Handlers ──
@@ -552,11 +550,9 @@ export default function AdminPanel() {
 							<p className="text-gray-400 text-sm mb-4">Create sealed packs into admin inventory. Packs must be distributed separately.</p>
 							<div className="flex gap-3 mb-4">
 								<select id="pack-type-select" className="bg-gray-800 text-white px-3 py-2 rounded-lg border border-gray-600">
-									<option value="starter">Starter (5 cards)</option>
-									<option value="standard">Standard (5 cards)</option>
-									<option value="premium">Premium (7 cards)</option>
-									<option value="mythic">Mythic (7 cards)</option>
-									<option value="mega">Mega (15 cards)</option>
+									{ADMIN_MINTABLE_PACKS.map((pack) => (
+										<option key={pack.key} value={pack.key}>{pack.name.replace(' Pack', '')} ({pack.cardCount} cards)</option>
+									))}
 								</select>
 								<input id="pack-qty-input" type="number" min="1" max="10" defaultValue="1"
 									className="bg-gray-800 text-white px-3 py-2 rounded-lg border border-gray-600 w-20" />

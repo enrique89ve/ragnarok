@@ -8,15 +8,7 @@
  */
 
 import { getCardDataProvider } from './ICardDataProvider';
-
-const PACK_SIZES: Record<string, number> = {
-	starter: 5,
-	booster: 5,
-	standard: 5,
-	premium: 7,
-	mythic: 7,
-	mega: 15,
-};
+import { PACK_SIZES } from '@shared/protocol-core/packCatalog';
 
 function lcgNext(seed: number): number {
 	return (seed * 16807) % 2147483647;

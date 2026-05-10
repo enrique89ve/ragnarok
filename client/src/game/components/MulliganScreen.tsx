@@ -7,7 +7,7 @@ import './mulligan.css';
 
 interface MulliganScreenProps {
   mulligan: MulliganState;
-  playerHand: CardInstance[];
+  playerHand: ReadonlyArray<CardInstance>;
   onMulliganAction: (newState: any) => void;
 }
 

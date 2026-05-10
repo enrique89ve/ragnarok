@@ -206,7 +206,7 @@ export const TeamSubmitPayload = z.object({}).passthrough();
 // ── v1.1: pack_mint ──
 
 export const PackMintPayload = z.object({
-	pack_type: z.enum(['starter', 'standard', 'premium', 'mythic', 'mega']),
+	pack_type: z.enum(['standard', 'premium', 'mythic', 'mega']),
 	quantity: z.number().int().min(1).max(10).default(1),
 	to: HiveUsername,
 });

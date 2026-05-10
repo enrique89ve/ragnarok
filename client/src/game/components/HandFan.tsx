@@ -19,7 +19,7 @@ import { MAX_BATTLEFIELD_SIZE } from '../constants/gameConstants';
 import './HandFan.css';
 
 interface HandFanProps {
-  cards: CardInstance[];
+  cards: ReadonlyArray<CardInstance>;
   currentMana: number;
   heroHealth: number;
   isPlayerTurn: boolean;

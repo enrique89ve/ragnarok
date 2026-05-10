@@ -84,11 +84,13 @@ __tests__/
 !client/src/data/blockchain/deckVerification.test.ts
 !client/src/data/blockchain/matchResultPackager.test.ts
 !client/src/game/stores/starterStore.test.ts
+!client/src/game/stores/gameStore.test.ts
 !client/src/game/deck/heroDeckRules.test.ts
 !client/src/game/utils/cards/cardLevelScaling.test.ts
 !shared/protocol-core/cardProgression.test.ts
 !shared/protocol-core/campaignResult.test.ts
 !shared/protocol-core/packCatalog.test.ts
+!shared/protocol-core/runeEconomy.test.ts
 !client/src/game/match/economy.test.ts
 !client/src/game/match/derived.test.ts
 !client/src/game/match/legacyBridge.test.ts
