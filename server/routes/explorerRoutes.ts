@@ -50,7 +50,7 @@ import {
 	getBlockCursor,
 	isAccountKnown,
 	registerAccount,
-	getKnownAccounts,
+	getKnownAccountCount,
 } from '../services/chainState';
 import { isValidHiveUsername } from '../services/hiveAuth';
 
@@ -65,7 +65,7 @@ function clampInt(val: string | undefined, def: number, min: number, max: number
 }
 
 function hasAccountRegistryCapacity(username: string): boolean {
-	return isAccountKnown(username) || getKnownAccounts().length < MAX_KNOWN_ACCOUNTS;
+	return isAccountKnown(username) || getKnownAccountCount() < MAX_KNOWN_ACCOUNTS;
 }
 
 // ---------------------------------------------------------------------------

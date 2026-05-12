@@ -10,8 +10,8 @@
  *   - Player ELO stats
  *   - Ownership transfers
  *
- * DATA_LAYER_MODE = 'test' → client hits these endpoints instead of real Hive.
- * Switch to DATA_LAYER_MODE = 'hive' when ready for the real chain.
+ * VITE_DATA_LAYER_MODE=test → client hits these endpoints instead of real Hive.
+ * Normal local/testnet/mainnet runs derive their data layer from VITE_NETWORK_STAGE.
  *
  * All data is in-memory (resets on server restart).
  * Use POST /api/mock-blockchain/dump to export state as JSON for review.

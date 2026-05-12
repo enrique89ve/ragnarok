@@ -23,6 +23,7 @@ import { serverStateAdapter } from './serverStateAdapter';
 import { serverSignatureVerifier } from './hiveSignatureVerifier';
 import { serverRuneExchangeAdapter } from './runeExchangeAdapter';
 import { campaignRegistryProvider } from '../../shared/campaign/registry';
+import { getDuatEntitlement } from '../../shared/protocol-core/duatSnapshot';
 import {
 	registerAccount,
 	getBlockCursor, setBlockCursor,
@@ -167,6 +168,7 @@ function buildDeps(): ProtocolCoreDeps {
 		campaigns: campaignRegistryProvider,
 		sigs: serverSignatureVerifier,
 		runeExchange: serverRuneExchangeAdapter,
+		duat: { getDuatEntitlement },
 	};
 }
 
@@ -176,6 +178,7 @@ function buildDeps(): ProtocolCoreDeps {
 
 let _pollTimer: ReturnType<typeof setInterval> | null = null;
 let _isSyncing = false;
+let _scanPromise: Promise<number> | null = null;
 
 // ---------------------------------------------------------------------------
 // Block scanner
@@ -279,7 +282,7 @@ async function pollNext(): Promise<void> {
 	_isSyncing = true;
 
 	try {
-		const applied = await scanBlocks();
+		const applied = await scanOnce();
 		if (applied > 0) {
 			console.log(`[chainIndexer] Processed ${applied} ops, cursor now at block ${getBlockCursor()}`);
 		}
@@ -294,7 +297,21 @@ async function pollNext(): Promise<void> {
 // Public API
 // ---------------------------------------------------------------------------
 
+function isIndexerEnabled(): boolean {
+	return process.env.ENABLE_CHAIN_INDEXER !== 'false';
+}
+
+function scanOnce(): Promise<number> {
+	if (_scanPromise) return _scanPromise;
+
+	_scanPromise = scanBlocks().finally(() => {
+		_scanPromise = null;
+	});
+	return _scanPromise;
+}
+
 export function startIndexer(): void {
+	if (!isIndexerEnabled()) return;
 	if (_pollTimer) return;
 
 	loadState();
@@ -317,7 +334,8 @@ export function stopIndexer(): void {
 }
 
 export async function syncAccountNow(username: string): Promise<number> {
+	if (!isIndexerEnabled()) return 0;
 	registerAccount(username);
 	// In block-scanning mode, account-specific sync triggers a full batch scan
-	return scanBlocks();
+	return scanOnce();
 }

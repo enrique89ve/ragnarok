@@ -13,7 +13,7 @@ import type {
 	CardAsset, GenesisRecord, EloRecord, PackAsset,
 	MarketListing, MarketOffer, ProtocolAction, RewardDefinition,
 	CampaignDifficulty, CampaignProgressRecord, CampaignRegistryProvider, CampaignSubmissionRecord,
-	RuneExchangeAdapter,
+	RuneExchangeAdapter, RuneLedgerEntry, DuatEntitlementProvider,
 } from './types';
 import {
 	RAGNAROK_ADMIN_ACCOUNT, TRANSFER_COOLDOWN_BLOCKS, MAX_CARD_LEVEL,
@@ -21,7 +21,7 @@ import {
 	HIVE_USERNAME_RE, ATOMIC_TRANSFER_AMOUNT, PACK_SIZES,
 	MAX_REPLICAS_PER_CARD, MAX_GENERATION, REPLICA_COOLDOWN_BLOCKS,
 	PACK_ENTROPY_DELAY_BLOCKS, PACK_REVEAL_DEADLINE_BLOCKS,
-	DUAT_CLAIM_WINDOW_BLOCKS, calculateDuatPacks,
+	DUAT_CLAIM_WINDOW_BLOCKS,
 	getPackDefinition,
 	TESTNET_RUNE_ECONOMY,
 	TESTNET_RUNE_SEASON_ID,
@@ -31,12 +31,16 @@ import {
 	createRewardClaimRuneSourceKey,
 	createRuneExchangeSourceKey,
 	createRuneLedgerEntryId,
+	calculateRuneBalanceTrace,
 	getCampaignFirstClearRuneReward,
 } from './types';
 import { verifyPoW, POW_CONFIG } from './pow';
 import { canonicalStringify, sha256Hash } from './hash';
 import { fnv1a } from './broadcast-utils';
 import { getEconomicLevelForXP, getEconomicXPPerWin } from './cardProgression';
+import {
+	PACK_ID_RANGES, lcgNext, deriveLegacyPackSeed, pickLegacyPackCardIds,
+} from './packDraw';
 
 // ============================================================
 // Dependencies injected at init, not imported
@@ -49,6 +53,7 @@ export interface ProtocolCoreDeps {
 	campaigns: CampaignRegistryProvider;
 	sigs: SignatureVerifier;
 	runeExchange: RuneExchangeAdapter;
+	duat: DuatEntitlementProvider;
 }
 
 type OpHandler = (op: ProtocolOp, ctx: ReplayContext, deps: ProtocolCoreDeps) => Promise<OpResult>;
@@ -170,6 +175,13 @@ function reject(reason: string): OpResult {
 	return { status: 'rejected', reason };
 }
 
+function readOptionalPayloadNumber(payload: Record<string, unknown>, key: string): number | null {
+	if (!(key in payload)) return null;
+
+	const value = Number(payload[key]);
+	return Number.isFinite(value) ? value : Number.NaN;
+}
+
 async function validateSlashedAction(
 	op: ProtocolOp,
 	deps: ProtocolCoreDeps,
@@ -187,6 +199,46 @@ function isOpResult(value: OpResult | unknown): value is OpResult {
 	return typeof value === 'object'
 		&& value !== null
 		&& 'status' in value;
+}
+
+type NewRuneLedgerEntry = Omit<RuneLedgerEntry, 'balanceBefore' | 'balanceAfter'>;
+
+async function putRuneLedgerEntryAndBalance(
+	deps: ProtocolCoreDeps,
+	entry: NewRuneLedgerEntry,
+): Promise<OpResult | null> {
+	const balance = await deps.state.getTokenBalance(entry.account);
+	const trace = calculateRuneBalanceTrace({
+		balanceBefore: balance.RUNE,
+		direction: entry.direction,
+		amount: entry.amount,
+	});
+	if (trace.balanceAfter < 0) {
+		return reject('insufficient RUNE balance');
+	}
+
+	const currentRuneBalanceTotal = await deps.state.getRuneBalanceTotal();
+	const projectedRuneBalanceTotal = currentRuneBalanceTotal - balance.RUNE + trace.balanceAfter;
+	if (
+		currentRuneBalanceTotal > TESTNET_RUNE_ECONOMY.totalCap
+		|| projectedRuneBalanceTotal > TESTNET_RUNE_ECONOMY.totalCap
+	) {
+		return reject('RUNE active balance cap exceeded');
+	}
+
+	if (entry.direction === 'credit' && entry.amount > 0) {
+		const totalCredited = await deps.state.getRuneLedgerTotal({
+			seasonId: entry.seasonId,
+			direction: 'credit',
+		});
+		if (totalCredited + entry.amount > TESTNET_RUNE_ECONOMY.totalCap) {
+			return reject('RUNE total emission cap exceeded');
+		}
+	}
+
+	await deps.state.putRuneLedgerEntry({ ...entry, ...trace });
+	await deps.state.putTokenBalance({ ...balance, RUNE: trace.balanceAfter });
+	return null;
 }
 
 // ============================================================
@@ -744,7 +796,6 @@ async function applyRankedMatchSettlement(
 	await deps.state.putElo({ ...winnerElo, elo: newWinnerElo, wins: winnerElo.wins + 1 });
 	await deps.state.putElo({ ...loserElo, elo: newLoserElo, losses: loserElo.losses + 1 });
 
-	const winnerBal = await deps.state.getTokenBalance(details.winner);
 	const accountEarned = await deps.state.getRuneLedgerTotal({
 		seasonId: TESTNET_RUNE_SEASON_ID,
 		direction: 'credit',
@@ -763,7 +814,7 @@ async function applyRankedMatchSettlement(
 		accountCap: TESTNET_RUNE_ECONOMY.maxP2PRunePerAccount,
 		globalCap: TESTNET_RUNE_ECONOMY.p2pCap,
 	});
-	await deps.state.putRuneLedgerEntry({
+	const ledgerResult = await putRuneLedgerEntryAndBalance(deps, {
 		entryId,
 		seasonId: TESTNET_RUNE_SEASON_ID,
 		account: details.winner,
@@ -775,7 +826,7 @@ async function applyRankedMatchSettlement(
 		blockNum: op.blockNum,
 		timestamp: op.timestamp,
 	});
-	await deps.state.putTokenBalance({ ...winnerBal, RUNE: winnerBal.RUNE + winnerRune });
+	if (ledgerResult) return ledgerResult;
 
 	const loserBal = await deps.state.getTokenBalance(loserAccount);
 	await deps.state.putTokenBalance({ ...loserBal, RUNE: loserBal.RUNE + RUNE_LOSS_RANKED });
@@ -1187,7 +1238,7 @@ async function applyCampaignFirstClearRuneCredit(
 		globalCap: TESTNET_RUNE_ECONOMY.campaignCap,
 	});
 
-	await deps.state.putRuneLedgerEntry({
+	const ledgerResult = await putRuneLedgerEntryAndBalance(deps, {
 		entryId,
 		seasonId: TESTNET_RUNE_SEASON_ID,
 		account: progress.account,
@@ -1199,9 +1250,7 @@ async function applyCampaignFirstClearRuneCredit(
 		blockNum: op.blockNum,
 		timestamp: op.timestamp,
 	});
-
-	const balance = await deps.state.getTokenBalance(progress.account);
-	await deps.state.putTokenBalance({ ...balance, RUNE: balance.RUNE + runeAmount });
+	if (ledgerResult) return ledgerResult;
 
 	return null;
 }
@@ -1271,7 +1320,7 @@ async function applyRewardRuneBonus(
 			: reject('reward claim rune source already credited to a different account');
 	}
 
-	await deps.state.putRuneLedgerEntry({
+	const ledgerResult = await putRuneLedgerEntryAndBalance(deps, {
 		entryId,
 		seasonId: TESTNET_RUNE_SEASON_ID,
 		account: op.broadcaster,
@@ -1283,9 +1332,7 @@ async function applyRewardRuneBonus(
 		blockNum: op.blockNum,
 		timestamp: op.timestamp,
 	});
-
-	const balance = await deps.state.getTokenBalance(op.broadcaster);
-	await deps.state.putTokenBalance({ ...balance, RUNE: balance.RUNE + reward.runeBonus });
+	if (ledgerResult) return ledgerResult;
 	return null;
 }
 
@@ -1340,7 +1387,7 @@ async function applyRuneExchange(op: ProtocolOp, deps: ProtocolCoreDeps): Promis
 	const limitResult = await validateRuneExchangeLimits(op.broadcaster, details, deps);
 	if (limitResult) return limitResult;
 
-	await deps.state.putRuneLedgerEntry({
+	const ledgerResult = await putRuneLedgerEntryAndBalance(deps, {
 		entryId: details.entryId,
 		seasonId: TESTNET_RUNE_SEASON_ID,
 		account: op.broadcaster,
@@ -1352,7 +1399,7 @@ async function applyRuneExchange(op: ProtocolOp, deps: ProtocolCoreDeps): Promis
 		blockNum: op.blockNum,
 		timestamp: op.timestamp,
 	});
-	await deps.state.putTokenBalance({ ...balance, RUNE: balance.RUNE - details.totalCost });
+	if (ledgerResult) return ledgerResult;
 	await deps.runeExchange.fulfill({
 		seasonId: TESTNET_RUNE_SEASON_ID,
 		account: op.broadcaster,
@@ -1549,18 +1596,7 @@ async function applyPackReveal(
 // Shared pack card draw (used by reveal + auto-finalize)
 // ============================================================
 
-// PACK_SIZES imported from ./types
-
-const PACK_ID_RANGES: Record<string, [number, number][]> = {
-	starter:  [[1000, 3999], [20000, 29999]],
-	booster:  [[1000, 3999], [20000, 31999]],
-	standard: [[1000, 8999], [20000, 31999]],
-	premium:  [[1000, 8999], [20000, 40999], [50000, 50999]],
-	mythic:   [[20000, 29999], [30001, 31999], [95001, 96999]],
-	class:    [[4000, 8999], [35001, 40999]],
-	mega:     [[1000, 8999], [20000, 40999], [50000, 50999], [85001, 86999]],
-	norse:    [[20000, 29999], [30001, 31999]],
-};
+// PACK_SIZES imported from ./types; PACK_ID_RANGES + lcgNext imported from ./packDraw
 
 async function drawPackCards(
 	seedHex: string,
@@ -1711,44 +1747,13 @@ async function applyLegacyPackOpen(op: ProtocolOp, deps: ProtocolCoreDeps): Prom
 	if (packDefinition?.key === 'starter') return reject('starter is a signed one-time claim, not a legacy pack open');
 	const quantity = Math.min(Number(op.payload.quantity ?? 1), 10);
 	const seed = deriveLegacyPackSeed(op.trxId);
-	const cardIds = getLegacyPackCardIds(packType, quantity, seed, deps.cards);
-	if (isOpResult(cardIds)) return cardIds;
-
-	const applied = await mintLegacyPackCards(op, cardIds, deps);
-	return applied ? { status: 'applied' } : { status: 'ignored' };
-}
-
-function deriveLegacyPackSeed(trxId: string): number {
-	let seedHex = trxId.replace(/[^0-9a-f]/gi, '').slice(0, 8);
-	if (seedHex.length >= 4) {
-		return parseInt(seedHex, 16);
-	}
-
-	let hash = 0;
-	for (let i = 0; i < trxId.length; i++) {
-		hash = ((hash << 5) - hash + trxId.charCodeAt(i)) | 0;
-	}
-
-	seedHex = (Math.abs(hash) >>> 0).toString(16).slice(0, 8);
-	return parseInt(seedHex || 'a7f3', 16);
-}
-
-function getLegacyPackCardIds(
-	packType: string,
-	quantity: number,
-	seed: number,
-	cardProvider: CardDataProvider,
-): number[] | OpResult {
 	const ranges = PACK_ID_RANGES[packType] ?? PACK_ID_RANGES.standard;
-	const mintableIds = cardProvider.getCollectibleIdsInRanges(ranges);
+	const mintableIds = deps.cards.getCollectibleIdsInRanges(ranges);
 	if (mintableIds.length === 0) return reject('no mintable cards for pack type');
 
-	const cardCount = (PACK_SIZES[packType] ?? 5) * quantity;
-	let s = Math.max(seed, 1);
-	return Array.from({ length: cardCount }, () => {
-		s = lcgNext(s);
-		return mintableIds[s % mintableIds.length];
-	});
+	const cardIds = pickLegacyPackCardIds(seed, packType, quantity, mintableIds);
+	const applied = await mintLegacyPackCards(op, cardIds, deps);
+	return applied ? { status: 'applied' } : { status: 'ignored' };
 }
 
 async function mintLegacyPackCards(
@@ -1790,10 +1795,6 @@ async function mintLegacyPackCards(
 	}
 
 	return applied;
-}
-
-function lcgNext(seed: number): number {
-	return (seed * 16807) % 2147483647;
 }
 
 // ============================================================
@@ -1868,10 +1869,16 @@ async function applyPackDistribute(op: ProtocolOp, deps: ProtocolCoreDeps): Prom
 }
 
 // ============================================================
-// v1.1: pack_transfer — Transfer sealed pack between players (atomic)
+// v1.1: pack_transfer — Admin-only sealed pack transfer (atomic)
+//
+// Restricted to RAGNAROK_ADMIN_ACCOUNT. Player-to-player pack transfers
+// are NOT supported — packs are non-tradeable between players. Admin
+// distribution at scale uses pack_distribute; this op handles one-off
+// admin moves (treasury rebalancing, manual airdrops outside an event).
 // ============================================================
 
 async function applyPackTransfer(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpResult> {
+	if (op.broadcaster !== RAGNAROK_ADMIN_ACCOUNT) return reject('pack_transfer restricted to admin');
 	const packUid = op.payload.pack_uid as string;
 	const to = op.payload.to as string;
 	if (!packUid || !to) return reject('missing pack_uid or to');
@@ -2117,10 +2124,6 @@ function getCardInstanceDna(card: CardAsset, originDna: string): Promise<string>
 
 async function applyDuatAirdropClaim(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpResult> {
 	const account = op.broadcaster;
-	const duatRaw = Number(op.payload.duat_balance ?? 0);
-	const packsEarned = Number(op.payload.packs_earned ?? 0);
-
-	if (duatRaw <= 0 || packsEarned <= 0) return reject('invalid duat_balance or packs_earned');
 
 	// Genesis must exist
 	const genesis = await deps.state.getGenesis();
@@ -2135,14 +2138,32 @@ async function applyDuatAirdropClaim(op: ProtocolOp, deps: ProtocolCoreDeps): Pr
 	const existing = await deps.state.getDuatClaim(account);
 	if (existing) return reject('duat already claimed');
 
-	// Verify pack count matches formula
-	const expected = calculateDuatPacks(duatRaw);
-	if (packsEarned !== expected) return reject(`pack count mismatch: expected ${expected}, got ${packsEarned}`);
+	// Snapshot membership is resolved through an injected provider. The server
+	// provider reads the frozen snapshot; the browser provider lazy-loads the
+	// public snapshot only when a DUAT lookup/replay path needs it.
+	const entitlement = await deps.duat.getDuatEntitlement(account);
+	if (!entitlement) return reject('account not in duat snapshot');
+	const { packsEarned } = entitlement;
+	if (packsEarned <= 0) return reject('invalid duat entitlement');
+
+	// Legacy clients may still include derived fields in the custom_json. They
+	// are accepted only when they match the canonical entitlement.
+	const payloadDuatRaw = readOptionalPayloadNumber(op.payload, 'duat_balance');
+	if (Number.isNaN(payloadDuatRaw)) return reject('invalid duat_balance');
+	if (payloadDuatRaw !== null && entitlement.duatRaw !== null && payloadDuatRaw !== entitlement.duatRaw) {
+		return reject(`duat balance mismatch: snapshot ${entitlement.duatRaw}, claimed ${payloadDuatRaw}`);
+	}
+
+	const payloadPacksEarned = readOptionalPayloadNumber(op.payload, 'packs_earned');
+	if (Number.isNaN(payloadPacksEarned)) return reject('invalid packs_earned');
+	if (payloadPacksEarned !== null && payloadPacksEarned !== packsEarned) {
+		return reject(`pack count mismatch: expected ${packsEarned}, got ${payloadPacksEarned}`);
+	}
 
 	// Mint sealed packs
 	for (let i = 0; i < packsEarned; i++) {
 		const packUid = `duat_${op.trxId}:${i}`;
-		const dna = await sha256Hash(`${packUid}:${account}:${duatRaw}`);
+		const dna = await sha256Hash(`${packUid}:${account}:${packsEarned}`);
 		await deps.state.putPack({
 			uid: packUid,
 			packType: 'standard',
@@ -2160,7 +2181,7 @@ async function applyDuatAirdropClaim(op: ProtocolOp, deps: ProtocolCoreDeps): Pr
 	// Record claim
 	await deps.state.putDuatClaim({
 		account,
-		duatRaw,
+		duatRaw: entitlement.duatRaw ?? 0,
 		packsEarned,
 		blockNum: op.blockNum,
 		trxId: op.trxId,

@@ -41,9 +41,14 @@ export async function setupVite(app: Express, server: Server) {
   // This caused every CSS/TSX edit to silently fail to hot-reload — Vite
   // would keep serving the in-memory bundle from boot until restart.
   // Polling works correctly across the WSL/Windows boundary.
+  // HMR client port must be explicit: `httpServer.address()` returns null
+  // here because `setupVite` runs before `server.listen()`, so Vite cannot
+  // derive the port to embed in the injected client config (results in
+  // `ws://localhost:undefined/...` in the browser).
+  const hmrPort = parseInt(process.env.PORT || '5000', 10);
   const serverOptions = {
     middlewareMode: true,
-    hmr: { server },
+    hmr: { server, port: hmrPort, clientPort: hmrPort },
     allowedHosts: true,
     watch: {
       usePolling: true,

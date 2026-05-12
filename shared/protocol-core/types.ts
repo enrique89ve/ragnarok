@@ -10,6 +10,7 @@
  */
 
 import type { RuneLedgerEntry, RuneLedgerEntryQuery, RuneLedgerTotalQuery } from './runeEconomy';
+import type { EitrLedgerEntry, EitrLedgerEntryQuery, EitrLedgerTotalQuery } from './eitrEconomy';
 
 export {
 	RUNE_LOSS_RANKED,
@@ -17,6 +18,7 @@ export {
 	TESTNET_RUNE_SEASON_ID,
 	TESTNET_RUNE_ECONOMY,
 	calculateCappedRuneCredit,
+	calculateRuneBalanceTrace,
 	calculateRuneScoreBonus,
 	calculateSeasonRuneEarned,
 	calculateSeasonScore,
@@ -40,9 +42,28 @@ export {
 	type RuneExchangeFulfillment,
 	type RuneExchangeQuote,
 	type RuneExchangeQuoteInput,
+	type RuneBalanceTrace,
+	type RuneBalanceTraceInput,
 	type RuneSourceType,
 	type SeasonScoreInput,
 } from './runeEconomy';
+
+export {
+	EITR_DISSOLVE_VALUES,
+	EITR_FORGE_COSTS,
+	createBurnEitrSourceKey,
+	createEitrLedgerEntryId,
+	createForgeCommitEitrSourceKey,
+	createForgeRefundEitrSourceKey,
+	getEitrDissolveValue,
+	getEitrForgeCost,
+	type EitrLedgerDirection,
+	type EitrLedgerEntry,
+	type EitrLedgerEntryQuery,
+	type EitrLedgerTotalQuery,
+	type EitrRarity,
+	type EitrSourceType,
+} from './eitrEconomy';
 
 // ============================================================
 // Protocol Constants
@@ -411,10 +432,17 @@ export interface StateAdapter {
 	// Tokens
 	getTokenBalance(account: string): Promise<TokenBalance>;
 	putTokenBalance(balance: TokenBalance): Promise<void>;
+	getRuneBalanceTotal(): Promise<number>;
 	getRuneLedgerEntry(entryId: string): Promise<RuneLedgerEntry | null>;
 	putRuneLedgerEntry(entry: RuneLedgerEntry): Promise<void>;
 	getRuneLedgerEntries(query: RuneLedgerEntryQuery): Promise<RuneLedgerEntry[]>;
 	getRuneLedgerTotal(query: RuneLedgerTotalQuery): Promise<number>;
+
+	// Eitr ledger (canonical per docs/adr/0001-eitr-v1-canonical.md)
+	getEitrLedgerEntry(entryId: string): Promise<EitrLedgerEntry | null>;
+	putEitrLedgerEntry(entry: EitrLedgerEntry): Promise<void>;
+	getEitrLedgerEntries(query: EitrLedgerEntryQuery): Promise<EitrLedgerEntry[]>;
+	getEitrLedgerTotal(query: EitrLedgerTotalQuery): Promise<number>;
 
 	// Match anchors
 	getMatchAnchor(matchId: string): Promise<MatchAnchorRecord | null>;
@@ -494,7 +522,7 @@ export interface SignatureVerifier {
 
 export interface CardDataProvider {
 	getCardById(id: number): { name: string; type: string; rarity: string; race?: string; collectible?: boolean } | null;
-	getCollectibleIdsInRanges(ranges: [number, number][]): number[];
+	getCollectibleIdsInRanges(ranges: readonly [number, number][]): number[];
 }
 
 // ============================================================
@@ -549,6 +577,16 @@ export interface DuatClaimRecord {
 	packsEarned: number;
 	blockNum: number;
 	trxId: string;
+}
+
+export interface DuatEntitlement {
+	account: string;
+	duatRaw: number | null;
+	packsEarned: number;
+}
+
+export interface DuatEntitlementProvider {
+	getDuatEntitlement(account: string): Promise<DuatEntitlement | null>;
 }
 
 // DUAT airdrop formula constants (calibrated)

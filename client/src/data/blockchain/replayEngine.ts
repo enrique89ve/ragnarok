@@ -21,6 +21,7 @@ import {
 	getMatchesByAccount,
 	getTokenBalance,
 	getEloRating,
+	getPacksByOwner,
 } from './replayDB';
 import { useHiveDataStore } from '../HiveDataLayer';
 import { HIVE_NODES, NFTLOX_PROTOCOL_ID } from './hiveConfig';
@@ -262,11 +263,12 @@ async function _doSync(username: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 async function hydrateStore(username: string): Promise<void> {
-	const [cards, matches, tokenBalance, eloRating] = await Promise.all([
+	const [cards, matches, tokenBalance, eloRating, packs] = await Promise.all([
 		getCardsByOwner(username),
 		getMatchesByAccount(username),
 		getTokenBalance(username),
 		getEloRating(username),
+		getPacksByOwner(username),
 	]);
 
 	const store = useHiveDataStore.getState();
@@ -274,6 +276,7 @@ async function hydrateStore(username: string): Promise<void> {
 		cardCollection: cards,
 		recentMatches: matches,
 		tokenBalance,
+		packCollection: packs,
 	});
 	store.updateStats({
 		odinsEloRating: eloRating.elo,
@@ -312,4 +315,12 @@ export function stopSync(): void {
 
 export async function forceSync(username: string): Promise<void> {
 	await syncAccount(username);
+}
+
+// Expose on globalThis for testnet diagnostics: `__ragnarokForceSync('username')`
+// can be called from the browser console to trigger a re-sync without waiting
+// for the 60 s poller. Production strips this via dead-code elimination because
+// the debug-only check is folded away.
+if (typeof globalThis !== 'undefined') {
+	(globalThis as unknown as { __ragnarokForceSync?: typeof forceSync }).__ragnarokForceSync = forceSync;
 }

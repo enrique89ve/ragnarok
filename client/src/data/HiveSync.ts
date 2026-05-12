@@ -326,14 +326,9 @@ export class HiveSync {
 
   // ── v1.2: DUAT Airdrop ──
 
-  async claimDuatAirdrop(
-    duatBalance: number,
-    packsEarned: number,
-  ): Promise<HiveBroadcastResult> {
+  async claimDuatAirdrop(): Promise<HiveBroadcastResult> {
     return this.broadcastCustomJson(RAGNAROK_APP_ID, {
       action: "duat_airdrop_claim",
-      duat_balance: duatBalance,
-      packs_earned: packsEarned,
     });
   }
 

@@ -14,16 +14,20 @@ import {
 	getLeaderboard,
 	getCardsByOwner,
 	getMatchHistory,
+	getRuneAccountSummary,
 	registerAccount,
 	isAccountKnown,
 	getStats,
-	getKnownAccounts,
+	getKnownAccountCount,
 } from '../services/chainState';
 import { syncAccountNow } from '../services/chainIndexer';
 import { isValidHiveUsername } from '../services/hiveAuth';
+import { TESTNET_RUNE_SEASON_ID } from '../../shared/protocol-core/types';
+import runeRoutes from './runeRoutes';
 
 const MAX_KNOWN_ACCOUNTS = 10_000;
 const MAX_CARD_IDS = 100;
+const SEASON_ID_RE = /^[A-Za-z0-9_-]{1,32}$/;
 
 const router = Router();
 
@@ -31,12 +35,31 @@ type DeckVerificationRequest =
 	| { status: 'valid'; username: string; cardIds: number[] }
 	| { status: 'invalid'; code: number; error: string };
 
+type SeasonIdValidation =
+	| { status: 'valid'; value: string }
+	| { status: 'invalid'; code: number; error: string };
+
 function hasAccountRegistryCapacity(username: string): boolean {
-	return isAccountKnown(username) || getKnownAccounts().length < MAX_KNOWN_ACCOUNTS;
+	return isAccountKnown(username) || getKnownAccountCount() < MAX_KNOWN_ACCOUNTS;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null;
+}
+
+function getSingleQueryValue(value: unknown): string | undefined {
+	if (value === undefined) return undefined;
+	if (typeof value === 'string') return value;
+	if (Array.isArray(value) && typeof value[0] === 'string') return value[0];
+	return undefined;
+}
+
+function validateSeasonId(value: unknown): SeasonIdValidation {
+	const raw = getSingleQueryValue(value) ?? TESTNET_RUNE_SEASON_ID;
+	if (!SEASON_ID_RE.test(raw)) {
+		return { status: 'invalid', code: 400, error: 'Invalid seasonId' };
+	}
+	return { status: 'valid', value: raw };
 }
 
 function validateDeckVerificationRequest(body: unknown): DeckVerificationRequest {
@@ -137,6 +160,51 @@ router.get('/player/:username/elo', (req: Request, res: Response) => {
 		losses: player?.losses ?? 0,
 		confidence: indexed && player ? 'indexed' : 'default',
 	});
+});
+
+// ---------------------------------------------------------------------------
+// GET /player/:username/rune — RUNE balance and ledger summary
+// ---------------------------------------------------------------------------
+
+router.get('/player/:username/rune', async (req: Request, res: Response) => {
+	try {
+		const { username } = req.params;
+		if (!username || !isValidHiveUsername(username)) {
+			res.status(400).json({ success: false, error: 'Invalid username' });
+			return;
+		}
+
+		const seasonId = validateSeasonId(req.query.seasonId);
+		if (seasonId.status === 'invalid') {
+			res.status(seasonId.code).json({ success: false, error: seasonId.error });
+			return;
+		}
+
+		if (!hasAccountRegistryCapacity(username)) {
+			res.status(503).json({ success: false, error: 'Account registry full' });
+			return;
+		}
+
+		if (!isAccountKnown(username)) {
+			await syncAccountNow(username);
+		}
+
+		const summary = getRuneAccountSummary(username, seasonId.value);
+		res.json({
+			success: true,
+			username,
+			seasonId: seasonId.value,
+			runeBalance: summary.runeBalance,
+			credits: summary.credits,
+			debits: summary.debits,
+			drift: summary.drift,
+			lastBlock: summary.lastBlock,
+			indexed: summary.indexed,
+		});
+	} catch (err) {
+		console.error('[chainRoutes] /player/:username/rune error:', err);
+		res.status(500).json({ success: false, error: 'Internal server error' });
+	}
 });
 
 // ---------------------------------------------------------------------------
@@ -266,7 +334,7 @@ router.post('/register', (req: Request, res: Response) => {
 		return;
 	}
 
-	if (getKnownAccounts().length >= MAX_KNOWN_ACCOUNTS) {
+	if (getKnownAccountCount() >= MAX_KNOWN_ACCOUNTS) {
 		res.status(503).json({ success: false, error: 'Account registry full' });
 		return;
 	}
@@ -285,5 +353,9 @@ router.get('/status', (_req: Request, res: Response) => {
 	const stats = getStats();
 	res.json({ success: true, ...stats });
 });
+
+// RUNE read model — balances, ledger trace, caps, and drift.
+// Mounted under /api/chain so chain-derived reads have one public namespace.
+router.use('/rune', runeRoutes);
 
 export default router;

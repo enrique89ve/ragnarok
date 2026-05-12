@@ -73,6 +73,13 @@ function createStateAdapter(): StateAdapter & {
 		async putTokenBalance(balance: TokenBalance): Promise<void> {
 			tokens.set(balance.account, balance);
 		},
+		async getRuneBalanceTotal(): Promise<number> {
+			let total = 0;
+			for (const balance of tokens.values()) {
+				total += balance.RUNE;
+			}
+			return total;
+		},
 		async getRuneLedgerEntry(entryId: string): Promise<RuneLedgerEntry | null> {
 			return runeLedger.get(entryId) ?? null;
 		},
@@ -193,6 +200,9 @@ function createDeps(state: StateAdapter, campaignId = 'war-of-pantheons'): Proto
 			getGlobalMinted: async () => 0,
 			fulfill: async () => { /* noop */ },
 		},
+		duat: {
+			getDuatEntitlement: async () => null,
+		},
 	};
 }
 
@@ -311,6 +321,8 @@ describe('campaign_result protocol op', () => {
 		expect(state.runeLedger.get('S01:credit:campaign_first_clear:campaign:S01:alice:war-of-pantheons:norse-1')).toMatchObject({
 			account: 'alice',
 			amount: 2,
+			balanceBefore: 0,
+			balanceAfter: 2,
 			sourceKey: 'campaign:S01:alice:war-of-pantheons:norse-1',
 		});
 	});
@@ -359,6 +371,8 @@ describe('campaign_result protocol op', () => {
 			sourceType: 'campaign_first_clear',
 			sourceKey: 'prefill-account-cap',
 			amount: 9,
+			balanceBefore: 0,
+			balanceAfter: 9,
 			trxId: 'prefill',
 			blockNum: 1,
 			timestamp: 1,
@@ -383,6 +397,11 @@ describe('campaign_result protocol op', () => {
 
 		expect(result.status).toBe('applied');
 		expect((await state.getTokenBalance('alice')).RUNE).toBe(10);
+		expect(state.runeLedger.get('S01:credit:campaign_first_clear:campaign:S01:alice:war-of-pantheons:norse-3')).toMatchObject({
+			amount: 1,
+			balanceBefore: 9,
+			balanceAfter: 10,
+		});
 		expect(await state.getRuneLedgerTotal({
 			seasonId: 'S01',
 			direction: 'credit',
@@ -402,6 +421,8 @@ describe('campaign_result protocol op', () => {
 			sourceType: 'campaign_first_clear',
 			sourceKey: 'prefill-global-cap',
 			amount: 199_999,
+			balanceBefore: 0,
+			balanceAfter: 199_999,
 			trxId: 'prefill',
 			blockNum: 1,
 			timestamp: 1,

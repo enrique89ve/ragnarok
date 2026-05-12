@@ -20,6 +20,8 @@ export type RuneLedgerEntry = {
 	sourceType: RuneSourceType;
 	sourceKey: string;
 	amount: number;
+	balanceBefore: number;
+	balanceAfter: number;
 	trxId: string;
 	blockNum: number;
 	timestamp: number;
@@ -48,6 +50,17 @@ export type RuneCreditCapInput = {
 	globalEarned: number;
 	accountCap: number;
 	globalCap: number;
+};
+
+export type RuneBalanceTraceInput = {
+	balanceBefore: number;
+	direction: RuneLedgerDirection;
+	amount: number;
+};
+
+export type RuneBalanceTrace = {
+	balanceBefore: number;
+	balanceAfter: number;
 };
 
 export type SeasonScoreInput = {
@@ -167,6 +180,14 @@ export function createRuneLedgerEntryId(input: {
 	sourceKey: string;
 }): string {
 	return `${input.seasonId}:${input.direction}:${input.sourceType}:${input.sourceKey}`;
+}
+
+export function calculateRuneBalanceTrace(input: RuneBalanceTraceInput): RuneBalanceTrace {
+	const delta = input.direction === 'credit' ? input.amount : -input.amount;
+	return {
+		balanceBefore: input.balanceBefore,
+		balanceAfter: input.balanceBefore + delta,
+	};
 }
 
 export function createP2PRankedRuneSourceKey(

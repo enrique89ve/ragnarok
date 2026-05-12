@@ -63,6 +63,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { startIndexer } = await import("./services/chainIndexer");
     startIndexer();
   } else {
+    const { loadState, startPersistence } = await import("./services/chainState");
+    loadState();
+    startPersistence();
     console.log('[Server] Chain indexer disabled (ENABLE_CHAIN_INDEXER=false)');
   }
 

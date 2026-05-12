@@ -15,6 +15,7 @@
 import {
 	normalizeRawOp,
 	applyOp as coreApplyOp,
+	filterCollectibleIdsInRanges,
 	RUNE_LOSS_RANKED,
 	RUNE_WIN_RANKED,
 	type RawHiveOp,
@@ -27,6 +28,7 @@ import { getProtocolRewardById } from '../../../../shared/protocol-core/rewardCa
 import { clientStateAdapter } from './clientStateAdapter';
 import { clientSignatureVerifier } from './clientSignatureVerifier';
 import { clientRuneExchangeAdapter } from './runeExchangeAdapter';
+import { clientDuatEntitlementProvider } from './clientDuatEntitlementProvider';
 import { hiveEvents } from '../HiveEvents';
 import { getCardDataProvider } from './ICardDataProvider';
 import { HIVE_NODES } from './hiveConfig';
@@ -62,11 +64,8 @@ function getCardDataProviderAdapter() {
 				collectible: card.collectible,
 			};
 		},
-		getCollectibleIdsInRanges(ranges: [number, number][]) {
-			const all = provider.getAllCards().filter((c: { collectible?: boolean }) => c.collectible !== false);
-			return all
-				.filter((c: { id: number }) => ranges.some(([lo, hi]) => c.id >= lo && c.id <= hi))
-				.map((c: { id: number }) => c.id);
+		getCollectibleIdsInRanges(ranges: readonly [number, number][]) {
+			return filterCollectibleIdsInRanges(provider.getAllCards(), ranges);
 		},
 	};
 }
@@ -139,6 +138,7 @@ function buildDeps(): ProtocolCoreDeps {
 		campaigns: campaignRegistryProvider,
 		sigs: clientSignatureVerifier,
 		runeExchange: clientRuneExchangeAdapter,
+		duat: clientDuatEntitlementProvider,
 	};
 }
 

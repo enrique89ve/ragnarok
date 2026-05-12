@@ -3,6 +3,7 @@ import {
 	RUNE_LOSS_RANKED,
 	RUNE_WIN_RANKED,
 	TESTNET_RUNE_ECONOMY,
+	calculateRuneBalanceTrace,
 	calculateRuneScoreBonus,
 	calculateSeasonRuneEarned,
 	calculateSeasonScore,
@@ -76,6 +77,26 @@ describe('rune economy', () => {
 			runeBonus: 50,
 		});
 		expect(getProtocolRewardById('missing')).toBeNull();
+	});
+
+	it('traces RUNE balance before and after ledger movements', () => {
+		expect(calculateRuneBalanceTrace({
+			balanceBefore: 10,
+			direction: 'credit',
+			amount: 2,
+		})).toEqual({
+			balanceBefore: 10,
+			balanceAfter: 12,
+		});
+
+		expect(calculateRuneBalanceTrace({
+			balanceBefore: 10,
+			direction: 'debit',
+			amount: 2,
+		})).toEqual({
+			balanceBefore: 10,
+			balanceAfter: 8,
+		});
 	});
 
 	it('calculates Season Score from capped RUNE totals and final ELO', () => {

@@ -13,6 +13,7 @@ import { applyOp, type ProtocolCoreDeps } from './apply';
 import { normalizeRawOp } from './normalize';
 import {
 	PACK_SIZES,
+	TESTNET_RUNE_ECONOMY,
 	getRuneExchangePackQuote,
 	type RuneExchangeAdapter,
 } from './types';
@@ -21,6 +22,7 @@ import type {
 	TokenBalance, MatchAnchorRecord, PackCommitRecord, SupplyRecord,
 	ReplayContext, ProtocolOp, CardDataProvider, RewardProvider, SignatureVerifier, RawHiveOp,
 	PackAsset, PackSupplyRecord, CompanionTransfer, CampaignProgressRecord, CampaignSubmissionRecord,
+	DuatClaimRecord,
 	RuneLedgerEntry, RuneLedgerEntryQuery, RuneLedgerTotalQuery,
 } from './types';
 import { canonicalStringify, sha256Hash } from './hash';
@@ -71,6 +73,13 @@ class MemoryState implements StateAdapter {
 		return this.tokens.get(account) ?? { account, RUNE: 0 };
 	}
 	async putTokenBalance(b: TokenBalance) { this.tokens.set(b.account, b); }
+	async getRuneBalanceTotal() {
+		let total = 0;
+		for (const balance of this.tokens.values()) {
+			total += balance.RUNE;
+		}
+		return total;
+	}
 	async getRuneLedgerEntry(entryId: string) { return this.runeLedger.get(entryId) ?? null; }
 	async putRuneLedgerEntry(entry: RuneLedgerEntry) { this.runeLedger.set(entry.entryId, entry); }
 	async getRuneLedgerEntries(query: RuneLedgerEntryQuery) {
@@ -130,6 +139,7 @@ class MemoryState implements StateAdapter {
 	// v1.1: Pack NFTs + companion transfers
 	packs = new Map<string, PackAsset>();
 	packSupply = new Map<string, PackSupplyRecord>();
+	duatClaims = new Map<string, DuatClaimRecord>();
 	trxSiblings = new Map<string, unknown[]>();
 
 	async getPack(uid: string) { return this.packs.get(uid) ?? null; }
@@ -138,6 +148,8 @@ class MemoryState implements StateAdapter {
 	async getPacksByOwner(owner: string) { return [...this.packs.values()].filter(p => p.owner === owner); }
 	async getPackSupply(packType: string) { return this.packSupply.get(packType) ?? null; }
 	async putPackSupply(r: PackSupplyRecord) { this.packSupply.set(r.packType, r); }
+	async getDuatClaim(account: string) { return this.duatClaims.get(account) ?? null; }
+	async putDuatClaim(claim: DuatClaimRecord) { this.duatClaims.set(claim.account, claim); }
 	async getCompanionTransfer(trxId: string): Promise<CompanionTransfer | null> {
 		const siblings = this.trxSiblings.get(trxId);
 		if (!siblings) return null;
@@ -314,6 +326,12 @@ function makeDeps(state: MemoryState): ProtocolCoreDeps {
 		},
 		sigs: mockSigs,
 		runeExchange: makeRuneExchangeAdapter(state),
+		duat: {
+			async getDuatEntitlement(account) {
+				if (account !== 'alice') return null;
+				return { account, duatRaw: 1000, packsEarned: 1 };
+			},
+		},
 	};
 }
 
@@ -381,6 +399,31 @@ describe('Protocol Core: Replay Traces', () => {
 			to: 'alice', cards: [{ nft_id: 'nft-001', card_id: 20001, rarity: 'common' }],
 		}, { broadcaster: 'ragnarok', usedActiveAuth: true }), defaultCtx, deps);
 		expect(mintResult.status).toBe('rejected');
+	});
+
+	// --- DUAT ---
+
+	it('duat_airdrop_claim derives entitlement without client-sent balance fields', async () => {
+		await seedGenesis(state, deps);
+
+		const result = await applyOp(makeOp('duat_airdrop_claim', {}, {
+			broadcaster: 'alice',
+			trxId: 'duat-claim-trx',
+		}), defaultCtx, deps);
+
+		expect(result.status).toBe('applied');
+		expect(state.duatClaims.get('alice')).toMatchObject({
+			account: 'alice',
+			duatRaw: 1000,
+			packsEarned: 1,
+			trxId: 'duat-claim-trx',
+		});
+		expect(await state.getPacksByOwner('alice')).toHaveLength(1);
+		expect(state.packs.get('duat_duat-claim-trx:0')).toMatchObject({
+			owner: 'alice',
+			packType: 'standard',
+			sealed: true,
+		});
 	});
 
 	// --- Mint ---
@@ -608,6 +651,52 @@ describe('Protocol Core: Replay Traces', () => {
 		expect(state.runeLedger.size).toBe(1);
 	});
 
+	it('reward claim cannot exceed the total RUNE emission cap', async () => {
+		await seedGenesis(state, deps);
+		state.elo.set('alice', { account: 'alice', elo: 1200, wins: 5, losses: 2 });
+		await deps.state.putRuneLedgerEntry({
+			entryId: 'S01:credit:p2p_ranked:prefill-total-cap',
+			seasonId: 'S01',
+			account: 'mallory',
+			direction: 'credit',
+			sourceType: 'p2p_ranked',
+			sourceKey: 'prefill-total-cap',
+			amount: 2_199_975,
+			balanceBefore: 0,
+			balanceAfter: 2_199_975,
+			trxId: 'prefill',
+			blockNum: 1,
+			timestamp: 1,
+		});
+
+		const result = await applyOp(makeOp('reward_claim', {
+			reward_id: 'first_victory',
+		}), defaultCtx, deps);
+
+		expect(result.status).toBe('rejected');
+		expect((result as { reason: string }).reason).toContain('total emission cap');
+		expect(state.tokens.get('alice')?.RUNE ?? 0).toBe(0);
+		expect(state.runeLedger.size).toBe(1);
+	});
+
+	it('reward claim cannot exceed the active RUNE balance cap', async () => {
+		await seedGenesis(state, deps);
+		state.elo.set('alice', { account: 'alice', elo: 1200, wins: 5, losses: 2 });
+		await deps.state.putTokenBalance({
+			account: 'mallory',
+			RUNE: TESTNET_RUNE_ECONOMY.totalCap,
+		});
+
+		const result = await applyOp(makeOp('reward_claim', {
+			reward_id: 'first_victory',
+		}), defaultCtx, deps);
+
+		expect(result.status).toBe('rejected');
+		expect((result as { reason: string }).reason).toContain('active balance cap');
+		expect(state.tokens.get('alice')?.RUNE ?? 0).toBe(0);
+		expect(state.runeLedger.size).toBe(0);
+	});
+
 	// --- Normalizer ---
 
 	it('normalizes ragnarok-cards canonical format', () => {
@@ -820,6 +909,8 @@ describe('Protocol Core: Replay Traces', () => {
 			sourceType: 'p2p_ranked',
 			sourceKey: 'prefill-account-cap',
 			amount: 99,
+			balanceBefore: 0,
+			balanceAfter: 99,
 			trxId: 'prefill',
 			blockNum: 1,
 			timestamp: 1,
@@ -853,6 +944,8 @@ describe('Protocol Core: Replay Traces', () => {
 			sourceType: 'p2p_ranked',
 			sourceKey: 'prefill-global-cap',
 			amount: 1_999_999,
+			balanceBefore: 0,
+			balanceAfter: 1_999_999,
 			trxId: 'prefill',
 			blockNum: 1,
 			timestamp: 1,
@@ -1217,6 +1310,11 @@ describe('Protocol Core: Replay Traces', () => {
 				sourceType: 'rune_exchange',
 				account: 'alice',
 			})).toBe(2);
+			expect(state.runeLedger.get('S01:debit:rune_exchange:pack:S01:alice:rune-x-1:standard:1')).toMatchObject({
+				amount: 2,
+				balanceBefore: 10,
+				balanceAfter: 8,
+			});
 			expect(state.packs.get('pack_rune-x-1:rune:0')).toMatchObject({
 				owner: 'alice',
 				packType: 'standard',
@@ -1406,50 +1504,62 @@ describe('Protocol Core: Replay Traces', () => {
 		});
 	});
 
-	describe('v1.1: pack_transfer', () => {
-		it('player transfers sealed pack with atomic transfer', async () => {
+	describe('v1.1: pack_transfer (admin-only)', () => {
+		it('admin transfers sealed pack to a player with atomic transfer', async () => {
 			await seedSealedGenesis(state, deps);
-			// Mint and distribute to alice
 			await applyOp(makeOp('pack_mint', { pack_type: 'premium', quantity: 1 },
 				{ broadcaster: 'ragnarok', trxId: 'mint-t1', usedActiveAuth: true }), defaultCtx, deps);
 			const uid = [...state.packs.keys()][0];
-			withCompanion(state, 'dist-t1', 'alice');
-			await applyOp(makeOp('pack_distribute', { pack_uids: [uid], to: 'alice' },
-				{ broadcaster: 'ragnarok', trxId: 'dist-t1', usedActiveAuth: true }), defaultCtx, deps);
 
-			// Alice transfers to bob
 			withCompanion(state, 'xfer-1', 'bob');
 			const result = await applyOp(makeOp('pack_transfer', { pack_uid: uid, to: 'bob' },
-				{ broadcaster: 'alice', trxId: 'xfer-1', blockNum: 2000, usedActiveAuth: true }), defaultCtx, deps);
+				{ broadcaster: 'ragnarok', trxId: 'xfer-1', blockNum: 2000, usedActiveAuth: true }), defaultCtx, deps);
 
 			expect(result.status).toBe('applied');
 			expect(state.packs.get(uid)!.owner).toBe('bob');
 		});
 
-		it('rejects transfer of non-owned pack', async () => {
+		it('rejects pack_transfer from a non-admin broadcaster', async () => {
+			await seedSealedGenesis(state, deps);
+			await applyOp(makeOp('pack_mint', { pack_type: 'standard', quantity: 1 },
+				{ broadcaster: 'ragnarok', trxId: 'mint-t-non-admin', usedActiveAuth: true }), defaultCtx, deps);
+			const uid = [...state.packs.keys()][0];
+			withCompanion(state, 'dist-t-non-admin', 'alice');
+			await applyOp(makeOp('pack_distribute', { pack_uids: [uid], to: 'alice' },
+				{ broadcaster: 'ragnarok', trxId: 'dist-t-non-admin', usedActiveAuth: true }), defaultCtx, deps);
+
+			// Alice — the legitimate pack owner — cannot transfer it: admin-only.
+			withCompanion(state, 'xfer-non-admin', 'bob');
+			const result = await applyOp(makeOp('pack_transfer', { pack_uid: uid, to: 'bob' },
+				{ broadcaster: 'alice', trxId: 'xfer-non-admin', blockNum: 2000, usedActiveAuth: true }), defaultCtx, deps);
+
+			expect(result.status).toBe('rejected');
+			expect(state.packs.get(uid)!.owner).toBe('alice');
+		});
+
+		it('rejects admin transfer of a pack already distributed to a player', async () => {
 			await seedSealedGenesis(state, deps);
 			await applyOp(makeOp('pack_mint', { pack_type: 'standard', quantity: 1 },
 				{ broadcaster: 'ragnarok', trxId: 'mint-t2', usedActiveAuth: true }), defaultCtx, deps);
 			const uid = [...state.packs.keys()][0];
+			withCompanion(state, 'dist-t2', 'alice');
+			await applyOp(makeOp('pack_distribute', { pack_uids: [uid], to: 'alice' },
+				{ broadcaster: 'ragnarok', trxId: 'dist-t2', usedActiveAuth: true }), defaultCtx, deps);
 
 			withCompanion(state, 'xfer-2', 'bob');
 			const result = await applyOp(makeOp('pack_transfer', { pack_uid: uid, to: 'bob' },
-				{ broadcaster: 'alice', trxId: 'xfer-2', usedActiveAuth: true }), defaultCtx, deps);
+				{ broadcaster: 'ragnarok', trxId: 'xfer-2', blockNum: 2000, usedActiveAuth: true }), defaultCtx, deps);
 			expect(result.status).toBe('rejected');
 		});
 
-		it('rejects transfer without companion', async () => {
+		it('rejects admin pack_transfer without companion atomic transfer', async () => {
 			await seedSealedGenesis(state, deps);
 			await applyOp(makeOp('pack_mint', { pack_type: 'standard', quantity: 1 },
 				{ broadcaster: 'ragnarok', trxId: 'mint-t3', usedActiveAuth: true }), defaultCtx, deps);
 			const uid = [...state.packs.keys()][0];
-			withCompanion(state, 'dist-t3', 'alice');
-			await applyOp(makeOp('pack_distribute', { pack_uids: [uid], to: 'alice' },
-				{ broadcaster: 'ragnarok', trxId: 'dist-t3', usedActiveAuth: true }), defaultCtx, deps);
 
-			// No companion set for xfer-3
 			const result = await applyOp(makeOp('pack_transfer', { pack_uid: uid, to: 'bob' },
-				{ broadcaster: 'alice', trxId: 'xfer-3', blockNum: 2000, usedActiveAuth: true }), defaultCtx, deps);
+				{ broadcaster: 'ragnarok', trxId: 'xfer-3', blockNum: 2000, usedActiveAuth: true }), defaultCtx, deps);
 			expect(result.status).toBe('rejected');
 		});
 	});

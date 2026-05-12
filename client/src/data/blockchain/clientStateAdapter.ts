@@ -16,9 +16,13 @@ import {
 	getGenesisState, putGenesisState,
 	getSupplyCounter, putSupplyCounter,
 	getTokenBalance, putTokenBalance,
+	getRuneBalanceTotal as idbGetRuneBalanceTotal,
 	getRuneLedgerEntry as idbGetRuneLedgerEntry, putRuneLedgerEntry as idbPutRuneLedgerEntry,
 	getRuneLedgerEntries as idbGetRuneLedgerEntries,
 	getRuneLedgerTotal as idbGetRuneLedgerTotal,
+	getEitrLedgerEntry as idbGetEitrLedgerEntry, putEitrLedgerEntry as idbPutEitrLedgerEntry,
+	getEitrLedgerEntries as idbGetEitrLedgerEntries,
+	getEitrLedgerTotal as idbGetEitrLedgerTotal,
 	getMatchAnchor, putMatchAnchor,
 	getQueueEntry, putQueueEntry, deleteQueueEntry,
 	isAccountSlashed, putSlashedAccount,
@@ -135,6 +139,9 @@ export const clientStateAdapter: StateAdapter = {
 		const existing = await getTokenBalance(b.account);
 		await putTokenBalance({ ...existing, RUNE: b.RUNE });
 	},
+	async getRuneBalanceTotal() {
+		return idbGetRuneBalanceTotal();
+	},
 	async getRuneLedgerEntry(entryId) {
 		return await idbGetRuneLedgerEntry(entryId) ?? null;
 	},
@@ -146,6 +153,18 @@ export const clientStateAdapter: StateAdapter = {
 	},
 	async getRuneLedgerTotal(query) {
 		return idbGetRuneLedgerTotal(query);
+	},
+	async getEitrLedgerEntry(entryId) {
+		return await idbGetEitrLedgerEntry(entryId) ?? null;
+	},
+	async putEitrLedgerEntry(entry) {
+		await idbPutEitrLedgerEntry(entry);
+	},
+	async getEitrLedgerEntries(query) {
+		return idbGetEitrLedgerEntries(query);
+	},
+	async getEitrLedgerTotal(query) {
+		return idbGetEitrLedgerTotal(query);
 	},
 
 	async getMatchAnchor(matchId) {

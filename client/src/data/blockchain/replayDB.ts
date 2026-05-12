@@ -25,9 +25,10 @@
  *   campaign_submissions keyed by submissionKey — verifier inbox; not final campaign state
  *   campaign_progress keyed by progressKey      — verified final campaign mission progress
  *   rune_ledger      keyed by entryId           — season/source-key RUNE credits and spends
+ *   eitr_ledger      keyed by entryId           — season/source-key Eitr credits, debits, refunds (ADR 0001)
  *
  * All writes are idempotent — safe to re-apply the same op.
- * DB version 13 — upgrade handler creates any missing stores.
+ * DB version 14 — upgrade handler creates any missing stores.
  */
 
 import type { HiveCardAsset, HiveMatchResult, HiveTokenBalance } from '../schemas/HiveTypes';
@@ -40,10 +41,13 @@ import type {
 	RuneLedgerEntry,
 	RuneLedgerEntryQuery,
 	RuneLedgerTotalQuery,
+	EitrLedgerEntry,
+	EitrLedgerEntryQuery,
+	EitrLedgerTotalQuery,
 } from '../../../../shared/protocol-core/types';
 
 const DB_NAME = 'ragnarok-chain-v1';
-const DB_VERSION = 13;
+const DB_VERSION = 14;
 
 let _db: IDBDatabase | null = null;
 
@@ -152,6 +156,13 @@ function openDB(): Promise<IDBDatabase> {
 				const ledger = db.createObjectStore('rune_ledger', { keyPath: 'entryId' });
 				ledger.createIndex('by_account', 'account', { unique: false });
 				ledger.createIndex('by_source_type', 'sourceType', { unique: false });
+			}
+
+			// v14: Eitr ledger (canonical per docs/adr/0001-eitr-v1-canonical.md)
+			if (!db.objectStoreNames.contains('eitr_ledger')) {
+				const eitr = db.createObjectStore('eitr_ledger', { keyPath: 'entryId' });
+				eitr.createIndex('by_account', 'account', { unique: false });
+				eitr.createIndex('by_source_type', 'sourceType', { unique: false });
 			}
 
 			// v1.1: Pack NFTs
@@ -322,6 +333,11 @@ export async function getTokenBalance(username: string): Promise<HiveTokenBalanc
 export const putTokenBalance = (balance: HiveTokenBalance): Promise<void> =>
 	idbPut('token_balances', balance);
 
+export async function getRuneBalanceTotal(): Promise<number> {
+	const balances = await idbGetAll<HiveTokenBalance>('token_balances');
+	return balances.reduce((total, balance) => total + balance.RUNE, 0);
+}
+
 // ---------------------------------------------------------------------------
 // RUNE Ledger API
 // ---------------------------------------------------------------------------
@@ -349,6 +365,37 @@ export async function getRuneLedgerEntries(query: RuneLedgerEntryQuery): Promise
 
 export async function getRuneLedgerTotal(query: RuneLedgerTotalQuery): Promise<number> {
 	const entries = await getRuneLedgerEntries(query);
+	return entries
+		.reduce((total, entry) => total + entry.amount, 0);
+}
+
+// ---------------------------------------------------------------------------
+// Eitr Ledger API (canonical per docs/adr/0001-eitr-v1-canonical.md)
+// ---------------------------------------------------------------------------
+
+export const getEitrLedgerEntry = (entryId: string): Promise<EitrLedgerEntry | undefined> =>
+	idbGet<EitrLedgerEntry>('eitr_ledger', entryId);
+
+export const putEitrLedgerEntry = (entry: EitrLedgerEntry): Promise<void> =>
+	idbPut('eitr_ledger', entry);
+
+export async function getEitrLedgerEntries(query: EitrLedgerEntryQuery): Promise<EitrLedgerEntry[]> {
+	const candidates = query.account
+		? await idbGetByIndex<EitrLedgerEntry>('eitr_ledger', 'by_account', query.account)
+		: query.sourceType
+			? await idbGetByIndex<EitrLedgerEntry>('eitr_ledger', 'by_source_type', query.sourceType)
+			: await idbGetAll<EitrLedgerEntry>('eitr_ledger');
+
+	return candidates
+		.filter(entry => entry.seasonId === query.seasonId)
+		.filter(entry => query.direction === undefined || entry.direction === query.direction)
+		.filter(entry => query.sourceType === undefined || entry.sourceType === query.sourceType)
+		.filter(entry => query.account === undefined || entry.account === query.account)
+		.filter(entry => query.sourceKeyPrefix === undefined || entry.sourceKey.startsWith(query.sourceKeyPrefix));
+}
+
+export async function getEitrLedgerTotal(query: EitrLedgerTotalQuery): Promise<number> {
+	const entries = await getEitrLedgerEntries(query);
 	return entries
 		.reduce((total, entry) => total + entry.amount, 0);
 }

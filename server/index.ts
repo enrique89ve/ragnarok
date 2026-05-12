@@ -19,6 +19,23 @@ if (envMode !== 'development' && envMode !== 'production') {
 
 const app = express();
 const isDev = process.env.NODE_ENV !== 'production';
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function getHttpErrorStatus(error: unknown): number {
+  if (!isRecord(error)) return 500;
+  const status = error.status ?? error.statusCode;
+  return typeof status === 'number' && Number.isInteger(status) ? status : 500;
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (isRecord(error) && typeof error.message === 'string') return error.message;
+  return 'Internal Server Error';
+}
+
 app.use(helmet({
   contentSecurityPolicy: isDev ? false : undefined,
 }));
@@ -33,6 +50,45 @@ const apiLimiter = rateLimit({
   message: { success: false, error: 'Too many requests, try again later' },
 });
 app.use('/api', apiLimiter);
+
+// Chain reads are public, but some routes can trigger a bounded Hive scan when
+// the account is unknown. Keep those below normal UI retry/refresh rates.
+const chainOnDemandSyncLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: isDev ? 90 : 24,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { success: false, error: 'Chain sync lookup rate limit exceeded' },
+});
+app.get('/api/chain/player/:username', chainOnDemandSyncLimiter);
+app.get('/api/chain/player/:username/rune', chainOnDemandSyncLimiter);
+app.get('/api/chain/player/:username/cards', chainOnDemandSyncLimiter);
+app.post('/api/chain/verify-deck', chainOnDemandSyncLimiter);
+app.post('/api/chain/register', chainOnDemandSyncLimiter);
+
+// ELO lookup is used during P2P flow and only registers unknown accounts.
+const chainLookupLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: isDev ? 180 : 60,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { success: false, error: 'Chain lookup rate limit exceeded' },
+});
+app.get('/api/chain/player/:username/elo', chainLookupLimiter);
+app.get('/api/explorer/users/:username', chainLookupLimiter);
+
+// RUNE reads are in-memory, but state/ledger views scan or sort replay-derived
+// data. Wallet/dashboard refresh should stay comfortably below this.
+const runeReadLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: isDev ? 180 : 60,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { success: false, error: 'RUNE read rate limit exceeded' },
+});
+app.get('/api/chain/rune/state', runeReadLimiter);
+app.get('/api/chain/rune/ledger', runeReadLimiter);
+app.get('/api/chain/rune/balances', runeReadLimiter);
 
 // Sensitive endpoint limiter: queue/leave matchmaking + tournament register/result.
 //
@@ -81,7 +137,7 @@ app.use('/api/friends/challenge', challengeLimiter);
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+  let capturedJsonResponse: unknown;
 
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
@@ -111,12 +167,12 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
+  app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+    const status = getHttpErrorStatus(err);
     console.error(`[error] ${status}:`, err);
     const message = app.get("env") === "production"
       ? "Internal Server Error"
-      : (err.message || "Internal Server Error");
+      : getErrorMessage(err);
     res.status(status).json({ message });
   });
 

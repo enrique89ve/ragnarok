@@ -10,6 +10,12 @@ export type { NormalizeResult } from './normalize';
 export { applyOp, autoFinalizeExpiredCommits } from './apply';
 export type { ProtocolCoreDeps } from './apply';
 export { canonicalStringify, sha256Hash } from './hash';
+export {
+	PACK_ID_RANGES, getPackIdRanges,
+	lcgNext, deriveLegacyPackSeed,
+	getLegacyPackCardCount, pickLegacyPackCardIds,
+	filterCollectibleIdsInRanges, filterCollectibleIdsForPack,
+} from './packDraw';
 export { verifyPoW, deriveChallenge, POW_CONFIG } from './pow';
 export type { PoWConfig, PoWResult } from './pow';
 export * from './types';

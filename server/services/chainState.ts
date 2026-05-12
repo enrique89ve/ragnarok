@@ -21,6 +21,9 @@ import type {
 	RuneLedgerEntry,
 	RuneLedgerEntryQuery,
 	RuneLedgerTotalQuery,
+	EitrLedgerEntry,
+	EitrLedgerEntryQuery,
+	EitrLedgerTotalQuery,
 } from '../../shared/protocol-core/types';
 
 const DEFAULT_ELO_RATING = 1000;
@@ -115,6 +118,25 @@ export interface QueueStateRecord {
 	blockNum: number;
 }
 
+export interface RuneAccountSummary {
+	account: string;
+	runeBalance: number;
+	credits: number;
+	debits: number;
+	drift: number;
+	lastBlock: number;
+	indexed: boolean;
+}
+
+export interface RuneSeasonStats {
+	ledgerCreditTotal: number;
+	ledgerDebitTotal: number;
+	p2pCreditTotal: number;
+	campaignCreditTotal: number;
+	rewardClaimCreditTotal: number;
+	runeExchangeDebitTotal: number;
+}
+
 interface SerializedState {
 	players: [string, PlayerRecord][];
 	cards: [string, CardRecord][];
@@ -136,6 +158,7 @@ interface SerializedState {
 	campaignSubmissions?: [string, CampaignSubmissionRecord][];
 	campaignProgress?: [string, CampaignProgressRecord][];
 	runeLedger?: [string, RuneLedgerEntry][];
+	eitrLedger?: [string, EitrLedgerEntry][];
 	packs?: [string, PackAsset][];
 	packSupply?: [string, PackSupplyRecord][];
 	slashedAccounts?: string[];
@@ -166,6 +189,7 @@ const campaignNonces = new Map<string, number>();
 const campaignSubmissions = new Map<string, CampaignSubmissionRecord>();
 const campaignProgress = new Map<string, CampaignProgressRecord>();
 const runeLedger = new Map<string, RuneLedgerEntry>();
+const eitrLedger = new Map<string, EitrLedgerEntry>();
 const packs = new Map<string, PackAsset>();
 const packSupply = new Map<string, PackSupplyRecord>();
 const slashedAccounts = new Set<string>();
@@ -296,6 +320,8 @@ export function loadState(): void {
 
 		runeLedger.clear();
 		for (const [k, v] of data.runeLedger ?? []) runeLedger.set(k, v);
+		eitrLedger.clear();
+		for (const [k, v] of data.eitrLedger ?? []) eitrLedger.set(k, v);
 
 		packs.clear();
 		for (const [k, v] of data.packs ?? []) packs.set(k, v);
@@ -337,6 +363,7 @@ export function saveState(): void {
 			campaignSubmissions: [...campaignSubmissions.entries()],
 			campaignProgress: [...campaignProgress.entries()],
 			runeLedger: [...runeLedger.entries()],
+			eitrLedger: [...eitrLedger.entries()],
 			packs: [...packs.entries()],
 			packSupply: [...packSupply.entries()],
 			slashedAccounts: [...slashedAccounts],
@@ -517,6 +544,10 @@ export function getKnownAccounts(): string[] {
 	return [...knownAccounts];
 }
 
+export function getKnownAccountCount(): number {
+	return knownAccounts.size;
+}
+
 export function isAccountKnown(username: string): boolean {
 	return knownAccounts.has(username);
 }
@@ -582,6 +613,13 @@ export function setSupplyCounter(key: string, r: SupplyCounterRecord): void { su
 
 export function getTokenBalance(account: string): TokenBalanceRecord | undefined { return tokenBalances.get(account); }
 export function setTokenBalance(account: string, b: TokenBalanceRecord): void { tokenBalances.set(account, b); markDirty(); }
+export function getRuneBalanceTotal(): number {
+	let total = 0;
+	for (const balance of tokenBalances.values()) {
+		total += balance.RUNE;
+	}
+	return total;
+}
 
 export function getRuneLedgerEntry(entryId: string): RuneLedgerEntry | undefined {
 	return runeLedger.get(entryId);
@@ -617,6 +655,121 @@ function matchesRuneLedgerQuery(entry: RuneLedgerEntry, query: RuneLedgerEntryQu
 	if (query.account !== undefined && entry.account !== query.account) return false;
 	if (query.sourceKeyPrefix !== undefined && !entry.sourceKey.startsWith(query.sourceKeyPrefix)) return false;
 	return true;
+}
+
+// ---------------------------------------------------------------------------
+// Eitr ledger (canonical per docs/adr/0001-eitr-v1-canonical.md)
+// ---------------------------------------------------------------------------
+
+export function getEitrLedgerEntry(entryId: string): EitrLedgerEntry | undefined {
+	return eitrLedger.get(entryId);
+}
+
+export function setEitrLedgerEntry(entry: EitrLedgerEntry): void {
+	eitrLedger.set(entry.entryId, entry);
+	markDirty();
+}
+
+export function getEitrLedgerEntries(query: EitrLedgerEntryQuery): EitrLedgerEntry[] {
+	const entries: EitrLedgerEntry[] = [];
+	for (const entry of eitrLedger.values()) {
+		if (!matchesEitrLedgerQuery(entry, query)) continue;
+		entries.push(entry);
+	}
+	return entries;
+}
+
+export function getEitrLedgerTotal(query: EitrLedgerTotalQuery): number {
+	let total = 0;
+	for (const entry of eitrLedger.values()) {
+		if (!matchesEitrLedgerQuery(entry, query)) continue;
+		total += entry.amount;
+	}
+	return total;
+}
+
+function matchesEitrLedgerQuery(entry: EitrLedgerEntry, query: EitrLedgerEntryQuery | EitrLedgerTotalQuery): boolean {
+	if (entry.seasonId !== query.seasonId) return false;
+	if (query.direction !== undefined && entry.direction !== query.direction) return false;
+	if (query.sourceType !== undefined && entry.sourceType !== query.sourceType) return false;
+	if (query.account !== undefined && entry.account !== query.account) return false;
+	if (query.sourceKeyPrefix !== undefined && !entry.sourceKey.startsWith(query.sourceKeyPrefix)) return false;
+	return true;
+}
+
+export function getRuneSeasonStats(seasonId: string): RuneSeasonStats {
+	const stats: RuneSeasonStats = {
+		ledgerCreditTotal: 0,
+		ledgerDebitTotal: 0,
+		p2pCreditTotal: 0,
+		campaignCreditTotal: 0,
+		rewardClaimCreditTotal: 0,
+		runeExchangeDebitTotal: 0,
+	};
+
+	for (const entry of runeLedger.values()) {
+		if (entry.seasonId !== seasonId) continue;
+
+		if (entry.direction === 'credit') {
+			stats.ledgerCreditTotal += entry.amount;
+			if (entry.sourceType === 'p2p_ranked') stats.p2pCreditTotal += entry.amount;
+			if (entry.sourceType === 'campaign_first_clear') stats.campaignCreditTotal += entry.amount;
+			if (entry.sourceType === 'reward_claim') stats.rewardClaimCreditTotal += entry.amount;
+			continue;
+		}
+
+		stats.ledgerDebitTotal += entry.amount;
+		if (entry.sourceType === 'rune_exchange') stats.runeExchangeDebitTotal += entry.amount;
+	}
+
+	return stats;
+}
+
+export function getLastRuneBlock(account: string, seasonId: string): number {
+	const entries = getRuneLedgerEntries({ seasonId, account });
+	return entries.reduce((lastBlock, entry) => Math.max(lastBlock, entry.blockNum), 0);
+}
+
+export function getRuneAccountSummary(account: string, seasonId: string): RuneAccountSummary {
+	return getRuneAccountSummaries([account], seasonId)[0];
+}
+
+export function getRuneAccountSummaries(accounts: readonly string[], seasonId: string): RuneAccountSummary[] {
+	const tallies = new Map<string, { credits: number; debits: number; lastBlock: number }>();
+	for (const account of accounts) {
+		tallies.set(account, { credits: 0, debits: 0, lastBlock: 0 });
+	}
+
+	if (tallies.size > 0) {
+		for (const entry of runeLedger.values()) {
+			if (entry.seasonId !== seasonId) continue;
+			const tally = tallies.get(entry.account);
+			if (!tally) continue;
+
+			if (entry.direction === 'credit') {
+				tally.credits += entry.amount;
+			} else {
+				tally.debits += entry.amount;
+			}
+			tally.lastBlock = Math.max(tally.lastBlock, entry.blockNum);
+		}
+	}
+
+	return accounts.map(account => {
+		const tally = tallies.get(account) ?? { credits: 0, debits: 0, lastBlock: 0 };
+		const runeBalance = getTokenBalance(account)?.RUNE ?? 0;
+		const projectedBalance = tally.credits - tally.debits;
+
+		return {
+			account,
+			runeBalance,
+			credits: tally.credits,
+			debits: tally.debits,
+			drift: runeBalance - projectedBalance,
+			lastBlock: tally.lastBlock,
+			indexed: isAccountKnown(account),
+		};
+	});
 }
 
 export function getPackAsset(uid: string): PackAsset | undefined {
