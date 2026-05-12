@@ -1,0 +1,11 @@
+export { REALM_EFFECTS } from './data/effects';
+export { REALM_PATHS } from './data/paths';
+export { REALM_POLYGONS } from './data/polygons';
+export type { RealmPolygon, PolygonContour, PolygonVertex } from './data/polygons';
+export { FACTION_HOME_REALMS, getFactionHomeRealm } from './data/factions';
+export { MAP_REALM_IDS, isMapRealmId } from './data/realmIds';
+export { CAMPAIGN_ARCS } from './data/campaignArcs';
+export { REALM_CARD_MATCHERS } from './data/cardMatchers';
+export type { RealmCardMatcher } from './data/cardMatchers';
+export { MAP_REALMS, getMapRealmById, getMapRealmCardSections } from './queries/realmLegend';
+export { whichRealm, samplePointInRealm, realmBounds, pointInPolygon, sampleInPolygon } from './queries/polygonOps';

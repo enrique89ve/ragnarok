@@ -90,7 +90,9 @@ __tests__/
 !shared/protocol-core/cardProgression.test.ts
 !shared/protocol-core/campaignResult.test.ts
 !shared/protocol-core/packCatalog.test.ts
+!shared/protocol-core/packDraw.test.ts
 !shared/protocol-core/runeEconomy.test.ts
+!shared/protocol-core/eitrEconomy.test.ts
 !client/src/game/match/economy.test.ts
 !client/src/game/match/derived.test.ts
 !client/src/game/match/legacyBridge.test.ts
@@ -186,6 +188,15 @@ client/public/packs/
 
 # Unused art stockpile (kept locally, not deployed)
 client/public/art/unused/
+
+# Internal map editor (local-only authoring tool). The viewer ships publicly;
+# only the editor-specific files stay local. The map image is publicly served.
+client/src/game/components/map/MapAtlasEditor.tsx
+client/src/game/components/map/MapAtlasEditorOverlay.tsx
+client/src/game/components/map/MapAtlasTerritoryEditor.tsx
+client/src/game/components/map/MapAtlasFxEditor.tsx
+client/src/game/components/map/MapAtlasPathEditor.tsx
+client/src/game/components/map/editor/
 
 # Server-side chain indexer state (runtime data)
 data/chain-state.json
