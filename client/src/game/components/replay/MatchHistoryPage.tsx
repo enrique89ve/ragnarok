@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { routes } from '../../../lib/routes';
 import { useReplayStore, type MatchRecord } from '../../stores/replayStore';
+import { useNFTUsername } from '../../nft/hooks';
+import { AccountSlot } from '../../../components/account/AccountSlot';
 import ReplayViewer from './ReplayViewer';
 
 function MatchCard({ match, onView }: { match: MatchRecord; onView: () => void }) {
@@ -58,7 +60,15 @@ export default function MatchHistoryPage() {
 	const loadReplay = useReplayStore(s => s.loadReplay);
 	const closeReplay = useReplayStore(s => s.closeReplay);
 	const clearHistory = useReplayStore(s => s.clearHistory);
+	const username = useNFTUsername();
 	const [confirmClear, setConfirmClear] = useState(false);
+
+	const matchCount = matchHistory.length;
+	const historySecondary = matchCount === 0
+		? 'No matches'
+		: matchCount === 1
+			? '1 match'
+			: `${matchCount} matches`;
 
 	if (currentReplay) {
 		return <ReplayViewer match={currentReplay} onClose={closeReplay} />;
@@ -66,23 +76,34 @@ export default function MatchHistoryPage() {
 
 	return (
 		<div className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-cosmos-nav) text-ink-0">
-			<div className="max-w-4xl mx-auto px-4 py-8">
-				<div className="flex items-center justify-between mb-8">
-					<h1 className="text-3xl font-bold text-amber-400 tracking-wide">Match History</h1>
-					<div className="flex items-center gap-3">
+			<div className="border-b border-obsidian-700 bg-obsidian-950/85 backdrop-blur-md sticky top-0 z-40">
+				<div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+					<div className="flex items-center gap-4 min-w-0">
+						<Link
+							to={routes.home}
+							className="inline-flex items-center h-8 px-3 rounded-full border border-obsidian-700 bg-obsidian-850 text-ink-200 hover:text-gold-300 hover:border-gold-600 font-display text-[11px] tracking-[0.18em] uppercase font-bold transition-colors"
+						>
+							Home
+						</Link>
+						<div>
+							<div className="font-mono text-[10px] tracking-[0.32em] uppercase text-ink-300">Records</div>
+							<h1 className="font-display text-xl font-black tracking-[0.10em] uppercase text-gold-300">Match History</h1>
+						</div>
+					</div>
+					<div className="flex items-center gap-3 flex-wrap">
 						{matchHistory.length > 0 && (
 							confirmClear ? (
 								<div className="flex items-center gap-2">
-									<span className="text-sm text-red-300">Are you sure?</span>
+									<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ember-300">Are you sure?</span>
 									<button
 										onClick={() => { clearHistory(); setConfirmClear(false); }}
-										className="px-3 py-1.5 bg-red-700 hover:bg-red-600 text-white rounded-lg text-sm font-semibold transition-colors"
+										className="inline-flex items-center h-8 px-3 rounded-full border border-ember-400/60 bg-ember-600/30 text-ember-100 hover:bg-ember-600/45 hover:border-ember-400 font-display text-[11px] tracking-[0.18em] uppercase font-bold transition-colors"
 									>
 										Confirm
 									</button>
 									<button
 										onClick={() => setConfirmClear(false)}
-										className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg text-sm transition-colors"
+										className="inline-flex items-center h-8 px-3 rounded-full border border-obsidian-700 bg-obsidian-850 text-ink-200 hover:text-gold-300 hover:border-gold-600 font-display text-[11px] tracking-[0.18em] uppercase font-bold transition-colors"
 									>
 										Cancel
 									</button>
@@ -90,20 +111,24 @@ export default function MatchHistoryPage() {
 							) : (
 								<button
 									onClick={() => setConfirmClear(true)}
-									className="px-4 py-2 bg-red-900/40 hover:bg-red-800/50 text-red-300 rounded-lg text-sm border border-red-700/40 transition-colors"
+									className="inline-flex items-center h-8 px-3 rounded-full border border-ember-500/30 bg-obsidian-850 text-ember-300 hover:text-ember-200 hover:border-ember-400/55 font-display text-[11px] tracking-[0.18em] uppercase font-bold transition-colors"
 								>
 									Clear All
 								</button>
 							)
 						)}
-						<Link
-							to={routes.home}
-							className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm border border-gray-700 transition-colors"
-						>
-							Back to Menu
-						</Link>
+						<AccountSlot
+							username={username}
+							tier="premium"
+							to={routes.settings}
+							secondary={historySecondary}
+							showSettings
+						/>
 					</div>
 				</div>
+			</div>
+
+			<div className="max-w-4xl mx-auto px-4 py-8">
 
 				{matchHistory.length === 0 ? (
 					<div className="text-center py-20">

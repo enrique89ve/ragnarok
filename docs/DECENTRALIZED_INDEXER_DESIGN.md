@@ -612,7 +612,7 @@ Once the decentralized indexer is live, these server components become unnecessa
 ### What Stays (Dev/Testing Only)
 
 - `server/` directory remains for local development and testing
-- `ENABLE_CHAIN_INDEXER` env var already gates the indexer — keep it off in production
+- `ENABLE_CHAIN_INDEXER` env var gates the built-in server scanner. Express starts it by default today; set `ENABLE_CHAIN_INDEXER=false` in decentralized/operator-first production profiles.
 - Mock blockchain routes useful for offline development
 
 ## Security Model

@@ -8,10 +8,6 @@
     "client/src/index.css",
     "client/src/styles/design-tokens.css"
   ],
-  ".all-in-showdown-message": [
-    "client/src/game/combat/RagnarokCombatArena.css",
-    "client/src/game/combat/styles/showdown.css"
-  ],
   ".arena-poker-card .card-back": [
     "client/src/game/combat/styles/face-down.css",
     "client/src/game/combat/styles/hole-cards.css"
@@ -27,6 +23,14 @@
   ".attack-line": [
     "client/src/game/combat/AttackStyles.css",
     "client/src/game/components/AIAttackAnimation.css"
+  ],
+  ".battlefield-area": [
+    "client/src/index.css",
+    "client/src/styles/landscape-responsive.css"
+  ],
+  ".battlefield-container": [
+    "client/src/index.css",
+    "client/src/styles/landscape-responsive.css"
   ],
   ".battlefield-hero-square.opponent .hero-card-frame::before": [
     "client/src/game/combat/RagnarokCombatArena.css",
@@ -44,10 +48,6 @@
     "client/src/game/components/CardHoverEffects.css",
     "client/src/index.css"
   ],
-  ".celebration-backdrop": [
-    "client/src/game/combat/RagnarokCombatArena.css",
-    "client/src/game/combat/styles/showdown.css"
-  ],
   ".community-cards-row": [
     "client/src/game/combat/RagnarokCombatArena.css",
     "client/src/game/combat/styles/community-cards.css"
@@ -60,17 +60,8 @@
     "client/src/game/combat/RagnarokCombatArena.css",
     "client/src/game/combat/styles/community-cards.css"
   ],
-  ".community-slot.winning-card": [
-    "client/src/game/combat/RagnarokCombatArena.css",
-    "client/src/game/combat/styles/showdown.css"
-  ],
-  ".community-slot.winning-card::before": [
-    "client/src/game/combat/RagnarokCombatArena.css",
-    "client/src/game/combat/styles/showdown.css"
-  ],
   ".damage-text": [
     "client/src/game/combat/RagnarokCombatArena.css",
-    "client/src/game/combat/styles/showdown.css",
     "client/src/game/components/AIAttackAnimation.css"
   ],
   ".damage-value": [
@@ -118,9 +109,9 @@
     "client/src/game/combat/RagnarokCombatArena.css",
     "client/src/game/combat/styles/hp-bar.css"
   ],
-  ".fold-message": [
-    "client/src/game/combat/RagnarokCombatArena.css",
-    "client/src/game/combat/styles/showdown.css"
+  ".game-grid-container": [
+    "client/src/index.css",
+    "client/src/styles/landscape-responsive.css"
   ],
   ".game-log-container": [
     "client/src/game/components/GameLog.css",
@@ -799,10 +790,6 @@
     "client/src/game/combat/RagnarokCombatArena.css",
     "client/src/index.css"
   ],
-  ".opponent-hole-cards.showdown-reveal .arena-poker-card.face-down": [
-    "client/src/game/combat/RagnarokCombatArena.css",
-    "client/src/game/combat/styles/showdown.css"
-  ],
   ".pet-god-card": [
     "client/src/game/combat/RagnarokCombatArena.css",
     "client/src/game/combat/styles/ragnarok-art-ui.css"
@@ -895,18 +882,6 @@
     "client/src/game/combat/styles/norse-atmosphere.css",
     "client/src/game/combat/styles/pot-display.css"
   ],
-  ".showdown-celebration-container": [
-    "client/src/game/combat/RagnarokCombatArena.css",
-    "client/src/game/combat/styles/showdown.css"
-  ],
-  ".showdown-subtitle": [
-    "client/src/game/combat/RagnarokCombatArena.css",
-    "client/src/game/combat/styles/showdown.css"
-  ],
-  ".showdown-title": [
-    "client/src/game/combat/RagnarokCombatArena.css",
-    "client/src/game/combat/styles/showdown.css"
-  ],
   ".simple-card::before": [
     "client/src/game/combat/styles/ragnarok-art-ui.css",
     "client/src/game/components/SimpleCard.css"
@@ -943,29 +918,9 @@
     "client/src/game/components/ui/HeroPowerButton.css",
     "client/src/game/components/ui/UnifiedCardTooltip.css"
   ],
-  ".winner-badge": [
-    "client/src/game/combat/RagnarokCombatArena.css",
-    "client/src/game/combat/styles/showdown.css"
-  ],
-  ".winner-badge-text": [
-    "client/src/game/combat/RagnarokCombatArena.css",
-    "client/src/game/combat/styles/showdown.css"
-  ],
-  ".winner-badge.center": [
-    "client/src/game/combat/RagnarokCombatArena.css",
-    "client/src/game/combat/styles/showdown.css"
-  ],
-  ".winner-badge.opponent-side": [
-    "client/src/game/combat/RagnarokCombatArena.css",
-    "client/src/game/combat/styles/showdown.css"
-  ],
-  ".winner-badge.player-side": [
-    "client/src/game/combat/RagnarokCombatArena.css",
-    "client/src/game/combat/styles/showdown.css"
-  ],
-  ".winner-hand-name": [
-    "client/src/game/combat/RagnarokCombatArena.css",
-    "client/src/game/combat/styles/showdown.css"
+  ".virtual-canvas-scaler": [
+    "client/src/index.css",
+    "client/src/styles/landscape-responsive.css"
   ],
   ".winning-card-glow": [
     "client/src/game/combat/RagnarokCombatArena.css",
@@ -974,14 +929,6 @@
   ".winning-card-glow::after": [
     "client/src/game/combat/RagnarokCombatArena.css",
     "client/src/game/combat/styles/card-highlight.css"
-  ],
-  ".winning-card-glow.celebration": [
-    "client/src/game/combat/RagnarokCombatArena.css",
-    "client/src/game/combat/styles/showdown.css"
-  ],
-  ".winning-card-glow.celebration::after": [
-    "client/src/game/combat/RagnarokCombatArena.css",
-    "client/src/game/combat/styles/showdown.css"
   ],
   ".zone-community": [
     "client/src/game/combat/GameViewport.css",

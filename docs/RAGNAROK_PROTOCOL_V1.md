@@ -62,6 +62,10 @@ After the v1 activation block, `rp_pack_open` is no longer a valid op. Readers M
 
 The **v1 activation block** is defined as: the `block_num` of the `seal` operation. Before seal, the system is in genesis/distribution mode and legacy ops are expected. After seal, all new ops must follow v1 semantics.
 
+**Canonical algorithm location**: the pre-seal LCG card-id draw, the Park-Miller step, the trxId-derived seed and `PACK_ID_RANGES` table are defined in [`shared/protocol-core/packDraw.ts`](../shared/protocol-core/packDraw.ts). Both `applyLegacyPackOpen` (server + client replay) and the client's optimistic pack-open preview (`client/src/data/blockchain/packDerivation.ts`) consume this module — no duplicated implementations. Card rarity for legacy opens comes from the resolved `CardDataProvider.getCardById(id).rarity`, never from a client-side rarity roll. Any change to `packDraw.ts` is a determinism-breaking change for all pre-seal pack opens already on chain.
+
+**Starter packs are NOT part of this flow.** The starter pack (`pack_type: 'starter'`) is a deterministic, content-fixed off-chain entitlement (see §10.4 and `shared/schemas/starterEntitlement.ts`); `applyLegacyPackOpen` and `applyPackCommit` both reject it.
+
 ## 3.2 Schema-Code Alignment Requirements
 
 Where the spec says a field is REQUIRED (e.g., `pow` on `match_result`), the Zod schema in `opSchemas.ts` MUST enforce it as non-optional at the validation boundary. The current codebase has `pow: PoWBlock.optional()` in the match result schema while the handler rejects missing PoW at runtime. This is a spec violation — the schema MUST be tightened to match before launch.
@@ -88,7 +92,7 @@ A conforming reader:
 | Hive L1 | Canonical data source (immutable, ordered) |
 | Server indexer | Availability and performance cache |
 | Browser replay | Verifier (can independently derive state from chain) |
-| REST API | Convenience layer, not authoritative |
+| REST API | Public read-only convenience layer under `/api/chain`, not authoritative |
 
 A fast client may consume server snapshots for UX. A verifying client may replay from Hive blocks and compare results. The chain is always canonical.
 
@@ -140,7 +144,8 @@ Hive `custom_json` supports both `required_posting_auths` and `required_auths`.
 - `burn`
 - `seal`
 - `mint_batch`
-- Any future transferable balance operation (`eitr_transfer`, `rune_transfer`)
+- `forge_commit`
+- `forge_reveal`
 
 Rule: any op that changes NFT custody or irreversibly destroys an NFT MUST require active auth. Routine signaling and self-serve gameplay ops MAY use posting auth.
 
@@ -189,7 +194,7 @@ Per-card caps are per-rarity within each bucket. Pack opening draws from `pack_s
 
 # 10. Canonical Operation Set
 
-v1 has **14 canonical operations**. Unknown ops are ignored.
+v1 has **16 canonical operations**. Unknown ops are ignored. The Eitr-specific ops (`forge_commit`, `forge_reveal`) and the extended `burn` semantics are specified in [ADR 0001](adr/0001-eitr-v1-canonical.md); their wire shape will land in a follow-up revision of §10.
 
 ## 10.1 `genesis`
 
@@ -258,7 +263,7 @@ Commits pack open intent and salt hash. Replaces txid-seeded RNG.
   "p": "ragnarok-cards",
   "action": "pack_commit",
   "account": "player",
-  "pack_type": "starter|standard|class|mega|norse",
+  "pack_type": "standard|premium|mythic|class|mega|norse",
   "quantity": 1,
   "salt_commit": "sha256hex",
   "client_nonce": 42
@@ -269,6 +274,7 @@ Commits pack open intent and salt hash. Replaces txid-seeded RNG.
 - `quantity` bounded by protocol max (10)
 - One commit may be revealed only once
 - Commit is canonical immediately, but no cards are minted yet
+- `pack_type` MUST match an `isActive: true` entry in [`shared/protocol-core/packCatalog.ts`](../shared/protocol-core/packCatalog.ts) (canonical pack definitions, slots, prices). The **starter** pack key is rejected here — it is a one-time off-chain entitlement, not a repeatable pack open. See §15.2.
 - **Anti-abort rule**: an unrevealed commit expires after `PACK_REVEAL_DEADLINE` blocks (default: 200 blocks ≈ 10 minutes). If no valid `pack_reveal` references this commit by the deadline block `D = commit_block + 200`, and `D <= LIB`, the reader MUST auto-finalize using the formula below. This prevents selective non-reveal (free-option abuse).
 
 **Auto-finalize formula** (deterministic, every reader MUST produce identical output):
@@ -309,6 +315,67 @@ Finalizes a prior pack commit using delayed irreversible entropy.
 - `seed = sha256(user_salt || commit_trx_id || entropy_block_id || version)`
 - Cards drawn deterministically from remaining `pack_supply` using that seed
 - Resulting minted `uid`s are `{reveal_trx_id}:{index}`
+
+## 10.5.5 Sealed Pack Lifecycle (v1.1)
+
+v1.1 introduces a sealed-pack asset model on top of the commit-reveal draw. Sealed packs are NFT-like records (uid, packType, owner, sealed flag, mint trxId) that exist between mint and burn. The four ops below are admin-gated except `pack_burn`, which any pack owner may broadcast on their own pack.
+
+### `pack_mint`
+
+Pre-burn sealed-pack mint. Admin-only.
+
+```json
+{ "p": "ragnarok-cards", "action": "pack_mint", "pack_type": "standard", "quantity": 1 }
+```
+
+- Broadcaster MUST be `RAGNAROK_ADMIN_ACCOUNT` (the genesis multisig).
+- Genesis MUST be `sealed` (post-v1).
+- `pack_type` MUST be `adminMintable: true` in `packCatalog`.
+- `quantity` ∈ [1, 10].
+- Mints `quantity` sealed packs with `uid = pack_${trxId}:${i}` to the admin account.
+
+### `pack_distribute`
+
+Atomic admin → player batch distribution of previously-minted sealed packs.
+
+```json
+{ "p": "ragnarok-cards", "action": "pack_distribute", "pack_uids": ["..."], "to": "player" }
+```
+
+- Broadcaster MUST be `RAGNAROK_ADMIN_ACCOUNT`.
+- Every `pack_uid` MUST exist, be sealed, and currently owned by admin.
+- Atomic: either every uid transfers to `to`, or none of them do.
+
+### `pack_transfer`
+
+**Admin-only** one-off sealed-pack transfer.
+
+```json
+{ "p": "ragnarok-cards", "action": "pack_transfer", "pack_uid": "...", "to": "player" }
+```
+
+- Broadcaster MUST be `RAGNAROK_ADMIN_ACCOUNT`. **Player-to-player pack transfers are not supported in v1.1.** Player wallets MUST NOT broadcast `pack_transfer`; readers reject all non-admin broadcasters.
+- Companion atomic HIVE transfer (escrow proof) MUST exist for the trxId.
+- Pack MUST be sealed and currently owned by admin (admin can only move their own holdings).
+- Cooldown: pack MUST NOT have been transferred in the last `TRANSFER_COOLDOWN_BLOCKS`.
+
+The handler lives at `applyPackTransfer` in `shared/protocol-core/apply.ts`. Bulk admin moves SHOULD prefer `pack_distribute`; `pack_transfer` is the surgical single-pack tool (treasury rebalancing, manual remediation).
+
+### `pack_burn`
+
+Opens a sealed pack — burns the NFT, draws cards from DNA + chain entropy.
+
+```json
+{ "p": "ragnarok-cards", "action": "pack_burn", "pack_uid": "...", "salt": "randomstring" }
+```
+
+- Posting auth by pack owner.
+- Pack MUST exist, be sealed, and owned by broadcaster.
+- Entropy block = `op.blockNum + PACK_ENTROPY_DELAY_BLOCKS`; reveal is valid only when entropy block ≤ LIB.
+- `seed = sha256(pack.dna || trxId || entropy_block_id)`.
+- Cards drawn from `PACK_ID_RANGES[pack.packType]` filtered to collectible IDs via `CardDataProvider.getCollectibleIdsInRanges` (canon LCG step lives in [`packDraw.ts`](../shared/protocol-core/packDraw.ts) — same algorithm as legacy).
+- Resulting minted card `uid`s are `{trxId}:{index}`.
+- Pack record is deleted; supply counter incremented on `burned`.
 
 ## 10.6 `reward_claim`
 
@@ -370,7 +437,7 @@ Destroys an NFT.
 - **Active auth** by `owner`
 - `owner` MUST currently own `uid`
 - Asset is removed from canonical ownership state
-- v1 note: `burn` has **no canonical Eitr side effect**. Eitr is removed from trade and scarce crafting until a later replay-derived balance model exists.
+- `burn` deterministically credits Eitr in replay state per `EITR_VALUES[rarity]` and refills `pack_supply[rarity] += 1`. The uid is permanently destroyed; per-card_id circulation decreases by 1. See [ADR 0001](adr/0001-eitr-v1-canonical.md) for the full Eitr ledger model.
 
 ## 10.9 `level_up`
 
@@ -516,7 +583,7 @@ The client replay engine (`replayRules.ts`) and the server indexer (`chainIndexe
 
 The correct implementation is:
 
-- **Extract one shared replay/validation core** that implements all 14 op handlers with full validation (PoW, signatures, nonces, cooldowns, supply caps, ownership checks).
+- **Extract one shared replay/validation core** that implements every canonical op handler with full validation (PoW, signatures, nonces, cooldowns, supply caps, ownership checks).
 - The **server** imports this core and feeds it ops from irreversible block scanning.
 - The **client** imports this core and feeds it ops from server snapshots (fast mode) or block replay (verify mode).
 - Op normalization (legacy `rp_*` → canonical `ragnarok-cards` action names) MUST happen **before** validation, PoW hashing, signature verification, and state transition — not after.
@@ -572,9 +639,33 @@ so campaign participation matters without letting raw farming overpower ELO.
 
 Derived non-transferable reward points. Testnet S01 emission is capped at 2,200,000 RUNE: 2,000,000 for P2P and 200,000 for campaign. Ranked P2P currently pays +2 per win and +0 per loss, capped at 100 RUNE per target account; campaign first-clear claims are capped at 10 RUNE per target account. `rune_exchange` debits existing RUNE, rejects overspend, and enforces per-op, per-account pack-type, and global pack caps. Pack fulfillment is delegated to a RUNE exchange adapter/bridge; the RUNE ledger does not construct packs or cards. RUNE is used for progression thresholds and season rewards. Not a transferable token in v1.
 
+RUNE read endpoints are a chain-indexer convenience surface, not protocol
+authority. They live under `/api/chain`: account balance at
+`/api/chain/player/:username/rune`, global summaries at `/api/chain/rune/state`,
+ledger rows at `/api/chain/rune/ledger`, and balance pages at
+`/api/chain/rune/balances`. There is no separate `/api/testnet/rune/*`
+namespace; testnet is selected by runtime configuration and Hive protocol id.
+
 ### Eitr
 
-**Non-canonical in v1.** Removed from P2P trade and scarce card forging until replay-derived. May exist as local UI preview only with zero effect on scarce assets. Path to canonical: `burn` deterministically credits Eitr in replay state; `forge` deterministically debits Eitr in replay state.
+Replay-derived, non-transferable, season-scoped crafting balance. Full design canon lives in [ADR 0001](adr/0001-eitr-v1-canonical.md); this section summarizes the protocol-visible surface.
+
+- **Sole source**: `burn` credits `EITR_VALUES[rarity(uid)]` and refills `pack_supply[rarity] += 1`.
+- **Sole sink**: `forge_commit` (debit at commit time) → `forge_reveal` (mint a random card_id within the chosen rarity from `pack_supply`, or `forge_refund` credit when the rarity is exhausted).
+- **Identity discipline**: Eitr crosses only the `rarity` dimension. It MUST NOT inject `xp` or `level_up`. Forge mints at level 0 (Mortal); XP is earned in play.
+- **Ledger**: `eitr_ledger` store mirrors `rune_ledger`. Balance is computed by query, not persisted as a scalar. Each entry is tagged with `seasonId` and resets at season rollover.
+- **Lockup at burn time**: protocol checks only ownership. UI is responsible for hiding "Dissolve" when a uid is listed on marketplace, anchored in an active match, or pending in a trade.
+
+Dissolve / Forge cost table (canonical, matches [RULEBOOK.md Card Rarity](RULEBOOK.md#card-rarity)):
+
+| Rarity | Dissolve credit | Forge cost | Ratio |
+|---|---|---|---|
+| Common | 5 | 40 | 8:1 |
+| Rare | 20 | 100 | 5:1 |
+| Epic | 100 | 400 | 4:1 |
+| Mythic | 400 | 1600 | 4:1 |
+
+Conservation invariant: `uids_in_circulation + pack_supply = total_supply_at_genesis` for any rarity. Burns reduce circulation by 1 and increase `pack_supply` by 1; forge reveals do the inverse.
 
 # 14. Explicit Non-Goals for v1
 
@@ -583,18 +674,19 @@ Derived non-transferable reward points. Testnet S01 emission is capped at 2,200,
 - On-chain per-move transcripts
 - Checkpoint ops
 - Transferable RUNE
-- Canonical Eitr balances
-- Eitr in P2P trade or scarce forging
+- `eitr_transfer` op (Eitr is non-transferable peer-to-peer; see [ADR 0001](adr/0001-eitr-v1-canonical.md))
+- Eitr from gameplay rewards (`match_result`, `campaign_result`, quests)
+- Eitr injecting `xp` / `level_up`
+- Quality variants in Eitr ops
 
 # 15. Launch Gate
 
-Do not call mainnet launch-ready until ALL FIVE are true:
+Do not call mainnet launch-ready until ALL FOUR are true:
 
 1. **Shared replay core** extracted and used by both client and server — full validation parity (PoW, signatures, nonces, cooldowns, supply caps)
 2. **Server indexer** is irreversible block-based (`get_ops_in_block` + LIB cursor), not account-history polling
 3. **Pack opening** uses commit-reveal with irreversible entropy block and anti-abort auto-finalization on deadline expiry
 4. **`match_anchor`** pins pubkeys and result verification uses anchored keys (not current chain keys)
-5. **Eitr** is removed from canonical trade/crafting flows until replay-derived
 
 ## 15.1 Implementation Order
 
@@ -604,8 +696,34 @@ Do not call mainnet launch-ready until ALL FIVE are true:
 4. Implement `pack_commit` / `pack_reveal` with delayed entropy + anti-abort deadline
 5. Implement `match_anchor` with pinned pubkeys; update signature verifier
 6. Tighten Zod schemas (PoW required, undefined card guard)
-7. Remove Eitr from trade store and scarce crafting until replay-derived
+
+Eitr canonicalization (`forge_commit` / `forge_reveal` ops, `eitr_ledger` store, extended `burn` semantics) is sequenced separately per [ADR 0001](adr/0001-eitr-v1-canonical.md).
+
+## 15.2 Starter Pack — Deterministic, Off-Chain Entitlement
+
+The `starter` pack key in `packCatalog.ts` is intentionally **not** a chain-broadcast pack open. It is a fixed-content off-chain entitlement claimed once per account.
+
+| Property | Value |
+|---|---|
+| `cardCount` | 45 |
+| Slots | `commonSlots: 45` (all collapsed — pack is deterministic, no roll) |
+| `legendaryChance` / `mythicChance` | 0 |
+| `acquisition` | `['free_starter_claim']` (no `direct_purchase`, no `rune_exchange`) |
+| Source of card IDs | [`shared/schemas/starterEntitlement.ts`](../shared/schemas/starterEntitlement.ts) — `STARTER_ENTITLEMENT_CARD_IDS_BY_CLASS` (10 Mage + 10 Warrior + 10 Priest + 10 Rogue + 5 Neutral) |
+| Materialization | `materializeStarterEntitlement()` in `client/src/game/data/starterSet.ts` — writes 45 starter-category cards directly into the local collection. No Hive broadcast for the cards themselves. |
+| `claimStarterEntitlement` | OPTIONAL signed claim record (testnet flag `requireSignature`) for accounting; cards are entitled regardless. |
+
+Protocol-level rejection rules:
+
+- `applyLegacyPackOpen` rejects `pack_type === 'starter'`.
+- `applyPackCommit` rejects `pack_type === 'starter'`.
+- `applyPackReveal` rejects `commit.packType === 'starter'`.
+
+Starter cards are tagged `category: 'starter'` (see [`docs/SET_AXIS.md`](SET_AXIS.md)) — they are non-NFT, infinite-supply, account-bound. They do **not** consume `pack_supply` buckets, accrue protocol XP, or emit `level_up`.
+
+The starter pack's `cardCount: 45` exists so the rest of the pack catalog stays uniform (`slotTotal === cardCount` invariant), not because 45 cards are drawn at open time. Client UX presents the entitlement as opening "one big pack" — see `StarterPackCeremony` and the `mode-select` follow-up screen.
 
 ---
 
 *Frozen: v1.0 — derived from four rounds of adversarial protocol review*
+*v1.1 additions (sealed pack lifecycle, admin-only pack_transfer, starter pack §15.2, packDraw.ts canon location): documented inline. No new launch-gate requirements introduced.*

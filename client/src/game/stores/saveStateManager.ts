@@ -12,7 +12,6 @@
 
 import { debug } from '../config/debugConfig';
 import { RAGNAROK_APP_ID } from '../../data/schemas/HiveTypes';
-import { materializeStarterEntitlement, ensureStarterDecks } from '../data/starterSet';
 
 // ── Auto-Save on Milestones ──
 
@@ -190,11 +189,10 @@ export async function restoreSaveState(state: PortableSaveState): Promise<{ succ
 			if (completeFn) completeFn();
 		}
 
-		// Restore starter claimed
+		// Restore starter claimed. Ownership is universal (no materialization);
+		// the seed of hero decks happens via ensureBridgeRuntime on next boot.
 		if (state.starterClaimed) {
 			useStarterStore.getState().markClaimed(getNFTBridge().getUsername());
-			materializeStarterEntitlement();
-			ensureStarterDecks();
 		}
 
 		// Restore decks

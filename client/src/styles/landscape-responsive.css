@@ -1,0 +1,182 @@
+/**
+ * LANDSCAPE RESPONSIVENESS OVERRIDES
+ * ===================================
+ * Targets phones held horizontally and tiny tablet landscape:
+ *   - 740×360 to 932×430 (iPhone landscape)
+ *   - 1024×600 (small tablet landscape)
+ *
+ * Strategy: opt-in utility classes + scoped overrides for known shells.
+ * Combat boards (chess + poker) are intentionally NOT touched — their canvas
+ * is virtual-scaled and lives inside `.virtual-canvas-scaler` /
+ * `.game-grid-container`, both excluded below.
+ */
+
+/* =============================================
+   1. OPT-IN UTILITIES (use these on components)
+   ============================================= */
+
+/**
+ * Apply to any modal card to cap its height to the dynamic viewport
+ * and add internal scroll. Safer than putting raw arbitrary classes
+ * on every modal.
+ */
+.modal-landscape-safe {
+	max-height: 88dvh;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+}
+
+/**
+ * Apply to a modal overlay's inner card to also cap horizontal width
+ * on landscape phones (so a 512px modal doesn't dominate a 740px viewport).
+ */
+@media (orientation: landscape) and (max-height: 500px) {
+	.modal-landscape-safe {
+		max-height: 90dvh;
+		max-width: min(86vw, 640px);
+	}
+}
+
+/* =============================================
+   2. HOMEPAGE SHELL — sticky header + footer sandwich
+   Selectors are scoped to the EXACT class signatures used in App.tsx
+   to avoid collateral damage. If those change, update here.
+   ============================================= */
+
+@media (orientation: landscape) and (max-height: 500px) {
+	/* HomePage sticky header (App.tsx L315) */
+	header.sticky.top-0.z-50 {
+		min-height: 0;
+	}
+	header.sticky.top-0.z-50 > div {
+		height: 2.25rem;
+	}
+	header.sticky.top-0.z-50 img {
+		width: 1.5rem;
+		height: 1.5rem;
+	}
+
+	/* HomePage sticky utility bar (App.tsx L547) */
+	nav.sticky.bottom-0.z-40 > div {
+		height: 2.25rem;
+	}
+	nav.sticky.bottom-0.z-40 a {
+		height: 1.75rem;
+		padding-left: 0.625rem;
+		padding-right: 0.625rem;
+		font-size: 0.625rem;
+	}
+}
+
+/* =============================================
+   3. KNOWN MODAL/PANEL HEIGHT OFFENDERS
+   Caught by the audit. Each rule targets a unique signature.
+   ============================================= */
+
+@media (orientation: landscape) and (max-height: 500px) {
+	/* DailyQuestPanel inner list (max-h-[480px] > 360-430px landscape) */
+	.max-h-\[480px\] {
+		max-height: min(480px, 60dvh) !important;
+	}
+
+	/* FriendsPanel hardcoded w-64 (256px = 35% of 740px viewport) */
+	.w-64.space-y-3 {
+		width: 100%;
+		max-width: 18rem;
+	}
+
+	/* HomePage right rail Warband scroll cap */
+	.max-h-\[420px\] {
+		max-height: min(420px, 70dvh) !important;
+	}
+
+	/* HeroDeckBuilder full-screen modal (h-[92vh] crushes content) */
+	.db-main-container.h-\[92vh\] {
+		height: min(92dvh, 520px);
+	}
+}
+
+/* =============================================
+   4. PAGE SHELLS — h-screen → dynamic viewport
+   `h-screen` resolves to 100vh which on iOS landscape includes the
+   address bar overlap. Switch to `dvh` so the page actually fits.
+   We scope this to top-level page containers (direct children of
+   GlobalOverlaysLayout outlet) by matching the canonical bg-image
+   utilities our pages share.
+   ============================================= */
+
+@media (orientation: landscape) and (max-height: 500px) {
+	div.h-screen.bg-\(image\:--bg-home-nav\),
+	div.h-screen.bg-\(image\:--bg-vault-nav\),
+	div.h-screen.bg-\(image\:--bg-cosmos-nav\) {
+		height: 100dvh;
+	}
+}
+
+/* =============================================
+   5. HOMEPAGE RIGHT RAIL — collapse to single column
+   In landscape phones the 360px rail eats half the viewport width.
+   We let the right rail flow under the main column instead.
+   ============================================= */
+
+@media (orientation: landscape) and (max-height: 500px) and (max-width: 1024px) {
+	/* HomePage main grid: was lg:grid-cols-[1fr_360px], force 1 col */
+	.grid.lg\:grid-cols-\[1fr_360px\] {
+		grid-template-columns: 1fr !important;
+	}
+
+	/* Pull the side rail bottom padding tighter so utility bar reads */
+	aside.grid.gap-5.content-start.pb-24 {
+		padding-bottom: 4rem;
+	}
+}
+
+/* =============================================
+   6. CAMPAIGN CONSTELLATION MAP — readability cap
+   Constellation map is unreadable below 360px height. Scale it down
+   so dots/labels remain tappable rather than micro-stretched.
+   ============================================= */
+
+@media (orientation: landscape) and (max-height: 500px) {
+	.constellation-map,
+	.constellation-svg {
+		max-height: 60dvh;
+	}
+}
+
+/* =============================================
+   7. SAFETY: never compress the combat boards
+   Belt-and-suspenders — explicitly preserve the virtual canvas and
+   game grid even if any rule above accidentally bleeds in.
+   ============================================= */
+
+@media (orientation: landscape) {
+	.virtual-canvas-scaler,
+	.virtual-canvas-scaler *,
+	.game-grid-container,
+	.game-grid-container *,
+	.battlefield-area,
+	.battlefield-area *,
+	.battlefield-container,
+	.battlefield-container * {
+		/* No height caps imposed by landscape rules */
+	}
+
+	/* If a parent applied modal-landscape-safe, the board itself opts out */
+	.virtual-canvas-scaler.modal-landscape-safe,
+	.game-grid-container.modal-landscape-safe {
+		max-height: none;
+		overflow: visible;
+	}
+}
+
+/* =============================================
+   8. REDUCED MOTION — keep it accessible
+   ============================================= */
+
+@media (prefers-reduced-motion: reduce) and (orientation: landscape) {
+	header.sticky,
+	nav.sticky {
+		transition: none !important;
+	}
+}

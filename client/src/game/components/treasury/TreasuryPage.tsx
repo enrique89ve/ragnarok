@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { routes } from '../../../lib/routes';
+import { AccountSlot } from '../../../components/account/AccountSlot';
 
 interface Signer {
 	username: string;
@@ -935,27 +936,31 @@ export default function TreasuryPage() {
 
 	return (
 		<div className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-vault-nav) text-ink-0">
-			<div className="max-w-6xl mx-auto px-4 py-8">
-				<div className="flex items-center justify-between mb-8">
-					<h1
-						style={{ fontFamily: 'Cinzel, serif', color: '#DAA520' }}
-						className="text-3xl font-bold tracking-wide"
-					>
-						Treasury
-					</h1>
-					<Link
-						to={routes.home}
-						className="px-4 py-2 text-sm font-semibold rounded transition-colors"
-						style={{
-							background: 'rgba(255,255,255,0.05)',
-							color: '#DAA520',
-							border: '1px solid rgba(218, 165, 32, 0.3)',
-						}}
-					>
-						Back to Home
-					</Link>
+			<div className="border-b border-obsidian-700 bg-obsidian-950/85 backdrop-blur-md sticky top-0 z-40">
+				<div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+					<div className="flex items-center gap-4 min-w-0">
+						<Link
+							to={routes.home}
+							className="inline-flex items-center h-8 px-3 rounded-full border border-obsidian-700 bg-obsidian-850 text-ink-200 hover:text-gold-300 hover:border-gold-600 font-display text-[11px] tracking-[0.18em] uppercase font-bold transition-colors"
+						>
+							Home
+						</Link>
+						<div>
+							<div className="font-mono text-[10px] tracking-[0.32em] uppercase text-ink-300">Eitr · Reserve</div>
+							<h1 className="font-display text-xl font-black tracking-[0.10em] uppercase text-gold-300">Treasury</h1>
+						</div>
+					</div>
+					<AccountSlot
+						username={username}
+						tier="premium"
+						to={routes.settings}
+						secondary="Treasury"
+						showSettings
+					/>
 				</div>
+			</div>
 
+			<div className="max-w-6xl mx-auto px-4 py-8">
 				<AnimatePresence>
 					{actionMsg && (
 						<motion.div

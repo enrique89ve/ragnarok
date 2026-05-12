@@ -146,8 +146,16 @@ export class LocalNFTBridge implements INFTBridge {
 		return SUCCESS;
 	}
 
-	async burnPack(_packUid: string, _salt: string): Promise<BroadcastResult> {
-		return SUCCESS;
+	async burnPack(packUid: string, _salt: string): Promise<BroadcastResult> {
+		// In local mode there is no chain to mint canonical cards. The ceremony
+		// flow still wants a trxId to seed `derivePackCards` so the open animation
+		// can reveal something — provide a deterministic synthetic one derived
+		// from the pack uid so re-opens are stable.
+		return {
+			success: true,
+			trxId: `local-burn-${packUid}`,
+			blockNum: 0,
+		};
 	}
 
 	// ── DNA Lineage (v1.1 no-ops) ──

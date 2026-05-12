@@ -1,6 +1,6 @@
 import type { CardData } from '../types';
 import { getNFTBridge } from '../nft';
-import { buildStarterDecks, getStarterCards, materializeStarterEntitlement } from './starterSet';
+import { getStarterCards, seedStarterHeroDecks } from './starterSet';
 import { useStarterStore } from '../stores/starterStore';
 
 export type StarterClaimResult =
@@ -43,9 +43,11 @@ export async function claimStarterEntitlement({
 		}
 	}
 
+	// Ownership is universal — no materialization needed. The claim ceremony's
+	// only data effect is (a) seeding the 4 pre-built hero decks for convenience
+	// and (b) recording claimedAt so the ritual is not shown again.
 	const cards = getStarterCards();
-	materializeStarterEntitlement();
-	buildStarterDecks();
+	seedStarterHeroDecks();
 	useStarterStore.getState().markClaimed(normalizedAccountId);
 
 	return { success: true, cards };

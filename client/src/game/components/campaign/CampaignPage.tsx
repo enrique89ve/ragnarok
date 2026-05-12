@@ -4,6 +4,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Compass, Play } from 'lucide-react';
 import { routes } from '../../../lib/routes';
 import { Button } from '../../../components/ui-norse';
+import { AccountSlot } from '../../../components/account/AccountSlot';
+import { useNFTUsername } from '../../nft/hooks';
 import {
 	ALL_CHAPTERS, EASTERN_CHAPTER, BASE_CHAPTER_MISSION_IDS, useCampaignStore,
 	NINE_REALMS, REALM_MAP, MISSION_REALM_MAP, getMissionsForRealm, getRealmProgress,
@@ -1001,6 +1003,7 @@ export default function CampaignPage() {
  * the canonical Norse type system.
  * ──────────────────────────────────────────────────────────────────────────── */
 function CampaignHeader({ title, subtitle }: { title: string; subtitle: string }) {
+	const username = useNFTUsername();
 	return (
 		<header className="sticky top-0 z-40 backdrop-blur-md bg-obsidian-950/80 border-b border-obsidian-700">
 			<div className="mx-auto max-w-[1600px] h-14 px-4 sm:px-6 flex items-center justify-between gap-3">
@@ -1021,6 +1024,13 @@ function CampaignHeader({ title, subtitle }: { title: string; subtitle: string }
 						</div>
 					</div>
 				</div>
+				<AccountSlot
+					username={username}
+					tier="premium"
+					to={routes.settings}
+					secondary="Saga"
+					showSettings
+				/>
 			</div>
 		</header>
 	);

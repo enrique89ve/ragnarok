@@ -1,1037 +1,600 @@
-import { debug } from '../../config/debugConfig';
-import React, { useState, useEffect } from 'react';
+/**
+ * PacksPage — personal vault for sealed packs.
+ *
+ * After the marketplace split (2026-05-10):
+ *   - Buying packs lives in /marketplace?tab=packs
+ *   - Starter pack is a free per-account claim (NOT a marketplace product) —
+ *     it appears here for the player to claim once.
+ *   - This page only shows what you can claim or already OWN.
+ */
+
+import React, { lazy, Suspense, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { routes } from '../../../lib/routes';
-import PackOpeningAnimation from './PackOpeningAnimation';
-import { getRarityColor } from '../../utils/rarityUtils';
-import { cardRegistry } from '../../data/cardRegistry';
-import { getNFTBridge } from '../../nft';
-import { useIsHiveMode, useNFTUsername, useNFTTokenBalance } from '../../nft/hooks';
-import { RAGNAROK_ACCOUNT } from '../../../data/blockchain/hiveConfig';
-import { derivePackCards } from '../../../data/blockchain/packDerivation';
-import { forceSync } from '../../../data/blockchain/replayEngine';
+import { motion, useReducedMotion } from 'framer-motion';
 import { toast } from 'sonner';
+import { ArrowRight } from 'lucide-react';
+import { routes } from '../../../lib/routes';
+import { getNFTBridge } from '../../nft';
 import { useStarterStore } from '../../stores/starterStore';
-import { claimStarterEntitlement } from '../../data/starterClaim';
-import {
-	PACK_DEFINITIONS,
-	PUBLIC_PACK_KEYS,
-	getPackDefinition,
-	normalizePackKey,
-	type CanonicalPackDefinition,
-} from '@shared/protocol-core/packCatalog';
-import type { CardData } from '../../types';
-import type {
-	PackType,
-	PackTypeResponse,
-	PackTypeApiRow,
-	SupplyStatsResponse,
-	SupplyStats,
-	ProcessedRarityStats,
-	RevealedCard,
-	PackOpenResponse,
-	OpenedCard,
-	RarityStats
-} from './types';
-import './packs.css';
-import { cryptoRng, cryptoIdGen } from '../../utils/seededRng';
+import { useDuatClaimStore } from '../../stores/duatClaimStore';
+import { useIsHiveMode, useNFTUsername } from '../../nft/hooks';
+import { NumericRitual, OrnateCorners, SigilBackplate, type Tier } from '../../../components/ornaments/RunicSigils';
+import { SplashBackdrop } from '../../../components/ornaments/SplashBackdrop';
+import { AccountSlot } from '../../../components/account/AccountSlot';
 
-const RARITY_ORDER = ['mythic', 'epic', 'rare', 'common'] as const;
+// Lazy — the ceremony modal is a one-time-per-account event.
+const StarterPackCeremony = lazy(() => import('../StarterPackCeremony'));
+// Lazy — pack reveal ceremony only mounts on demand.
+const DuatPackCeremony = lazy(() => import('../DuatPackCeremony'));
 
-const RARITY_COLORS: Record<string, string> = {
-	mythic: '#ec4899',
-	epic: '#a855f7',
-	rare: '#3b82f6',
-	common: '#9ca3af',
+const PACK_ICON: Record<string, string> = {
+	mythic: '龍',
+	premium: '冠',
+	standard: '盾',
+	starter: '石',
 };
 
-const PACK_THEMES: Record<string, { seal: string; btn: string; card: string; icon: string }> = {
-	'Starter Pack': { seal: 'pack-seal-starter', btn: 'open-btn-starter', card: 'pack-card-starter', icon: '石' },
-	'Booster Pack': { seal: 'pack-seal-booster', btn: 'open-btn-booster', card: 'pack-card-booster', icon: '盾' },
-	'Standard Pack': { seal: 'pack-seal-booster', btn: 'open-btn-booster', card: 'pack-card-booster', icon: '盾' },
-	'Premium Pack': { seal: 'pack-seal-premium', btn: 'open-btn-premium', card: 'pack-card-premium', icon: '冠' },
-	'Mythic Pack': { seal: 'pack-seal-mythic', btn: 'open-btn-mythic', card: 'pack-card-mythic', icon: '龍' },
-	'Mega Pack': { seal: 'pack-seal-mythic', btn: 'open-btn-mythic', card: 'pack-card-mythic', icon: '星' },
+const PACK_HEX_VARIANT: Record<string, string> = {
+	mythic: 'hex-frame--ember',
+	premium: 'hex-frame--gold',
+	standard: 'hex-frame--bifrost',
+	starter: 'hex-frame--obsidian',
 };
 
-function getPackTheme(name: string) {
-	return PACK_THEMES[name] || PACK_THEMES['Starter Pack'];
+const PACK_TIER: Record<string, Tier> = {
+	mythic: 'mythic',
+	premium: 'premium',
+	standard: 'standard',
+	starter: 'obsidian',
+};
+
+const PACK_INSCRIPTION: Record<string, string> = {
+	mythic: 'Owned · Mythic',
+	premium: 'Owned · Premium',
+	standard: 'Owned · Standard',
+	starter: 'Owned · Starter',
+};
+
+const PACK_NUMERIC_TIER: Record<string, 'gold' | 'bifrost' | 'ember'> = {
+	mythic: 'ember',
+	premium: 'gold',
+	standard: 'bifrost',
+	starter: 'gold',
+};
+
+const PACK_SURFACE_VAR: Record<string, string> = {
+	mythic: 'var(--surface-mystic-mythic)',
+	premium: 'var(--surface-mystic-premium)',
+	standard: 'var(--surface-mystic-standard)',
+	starter: 'var(--surface-mystic-obsidian)',
+};
+
+const PACK_GLOW_CLASS: Record<string, string> = {
+	mythic: 'mystic-tile--ember',
+	premium: 'mystic-tile--gold',
+	standard: 'mystic-tile--bifrost',
+	starter: 'mystic-tile--gold',
+};
+
+function packIconFor(packType: string): string {
+	return PACK_ICON[packType] ?? '石';
 }
 
-function packRarityOdds(pack: Pick<CanonicalPackDefinition, 'cardCount' | 'commonSlots' | 'rareSlots' | 'epicSlots' | 'wildcardSlots' | 'legendaryChance' | 'mythicChance'>): PackType['rarityOdds'] {
-	const guaranteedSlots = Math.max(pack.cardCount - pack.wildcardSlots, 1);
-	const wildcardRareWeight = Math.max(100 - pack.legendaryChance - pack.mythicChance, 0);
-
-	return {
-		common: Math.round((pack.commonSlots / guaranteedSlots) * 100),
-		rare: Math.min(100, Math.round((pack.rareSlots / guaranteedSlots) * 100) + Math.round((pack.wildcardSlots * wildcardRareWeight) / pack.cardCount)),
-		epic: Math.min(100, Math.round((pack.epicSlots / guaranteedSlots) * 100) + Math.round((pack.wildcardSlots * pack.legendaryChance) / pack.cardCount)),
-		mythic: Math.min(100, Math.round((pack.wildcardSlots * pack.mythicChance) / pack.cardCount)),
-	};
+function packHexVariantFor(packType: string): string {
+	return PACK_HEX_VARIANT[packType] ?? 'hex-frame--obsidian';
 }
 
-function packDefinitionToUiPack(pack: CanonicalPackDefinition, id: number): PackType {
-	return {
-		key: pack.key,
-		id,
-		name: pack.name,
-		description: pack.description,
-		price: pack.price,
-		runeCost: pack.runeCost,
-		isFreeClaim: pack.freeClaimLimitPerAccount > 0,
-		isRuneRedeemable: pack.runeCost !== null,
-		cardCount: pack.cardCount,
-		rarityOdds: packRarityOdds(pack),
-	};
-}
-
-function apiPackToUiPack(pack: PackTypeApiRow): PackType {
-	const definition = getPackDefinition(pack.name);
-	if (definition) return packDefinitionToUiPack(definition, pack.id);
-
-	return {
-		key: normalizePackKey(pack.name) ?? 'standard',
-		id: pack.id,
-		name: pack.name,
-		description: pack.description ?? '',
-		price: pack.price,
-		runeCost: null,
-		isFreeClaim: false,
-		isRuneRedeemable: false,
-		cardCount: pack.card_count,
-		rarityOdds: packRarityOdds({
-			cardCount: pack.card_count,
-			commonSlots: pack.common_slots,
-			rareSlots: pack.rare_slots,
-			epicSlots: pack.epic_slots,
-			wildcardSlots: pack.wildcard_slots,
-			legendaryChance: pack.legendary_chance ?? 0,
-			mythicChance: pack.mythic_chance ?? 0,
-		}),
-	};
-}
-
-const FALLBACK_PACKS: PackType[] = PUBLIC_PACK_KEYS
-	.map((key, index) => packDefinitionToUiPack(PACK_DEFINITIONS[key], index + 1));
-
-const CARD_POOL = cardRegistry.filter(c => c.rarity && c.name && Number(c.id) >= 1000);
-
-function starterCardToRevealedCard(card: CardData): RevealedCard {
-	return {
-		id: card.id as number,
-		name: card.name,
-		rarity: (card.rarity ?? 'common').toLowerCase(),
-		type: card.type ?? 'minion',
-		heroClass: 'class' in card ? (card as { class: string }).class : 'Neutral',
-	};
-}
-
-function openPackLocally(pack: PackType): RevealedCard[] {
-	const byRarity: Record<string, typeof CARD_POOL> = {};
-	for (const c of CARD_POOL) {
-		const r = (c.rarity ?? 'common').toLowerCase();
-		(byRarity[r] ??= []).push(c);
-	}
-	const pick = (rarity: string) => {
-		const pool = byRarity[rarity] ?? byRarity['common'] ?? [];
-		if (pool.length === 0) return null;
-		return pool[Math.floor(cryptoRng() * pool.length)];
-	};
-	const odds = pack.rarityOdds;
-	const totalWeight = odds.common + odds.rare + odds.epic + odds.mythic;
-	const rollRarity = () => {
-		let roll = cryptoRng() * totalWeight;
-		if ((roll -= odds.mythic) < 0) return 'mythic';
-		if ((roll -= odds.epic) < 0) return 'epic';
-		if ((roll -= odds.rare) < 0) return 'rare';
-		return 'common';
-	};
-	const cards: RevealedCard[] = [];
-	for (let i = 0; i < pack.cardCount; i++) {
-		const rarity = rollRarity();
-		const card = pick(rarity);
-		if (card) {
-			cards.push({
-				id: Number(card.id), name: card.name,
-				rarity: (card.rarity ?? 'common').toLowerCase(),
-				type: card.type ?? 'minion', heroClass: card.heroClass ?? 'neutral',
-			});
-		}
-	}
-	return cards;
-}
-
-function getScarcityInfo(percentRemaining: number): { label: string; class: string } {
-	if (percentRemaining <= 0) return { label: 'SOLD OUT', class: 'scarcity-badge-soldout' };
-	if (percentRemaining <= 10) return { label: 'ALMOST GONE', class: 'scarcity-badge-critical' };
-	if (percentRemaining <= 25) return { label: 'LOW SUPPLY', class: 'scarcity-badge-low' };
-	return { label: 'AVAILABLE', class: 'scarcity-badge-fresh' };
-}
-
-function formatNumber(n: number): string {
-	if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-	if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-	return n.toLocaleString();
-}
-
-function getPackGuarantees(pack: Pick<PackType, 'cardCount' | 'rarityOdds'>): string[] {
-	const guarantees: string[] = [];
-	if (pack.rarityOdds.epic > 0) guarantees.push('Epic');
-	if (pack.cardCount >= 7) guarantees.push(`${pack.cardCount} Cards`);
-	return guarantees;
-}
-
-function parseNum(v: string | number): number {
-	return typeof v === 'string' ? parseInt(v, 10) || 0 : v || 0;
-}
-
-// ============================================================
-// v1.1: Sealed Packs Inventory
-// ============================================================
-
-function SealedPacksSection() {
-	const packs = getNFTBridge().getPackCollection().filter(p => p.sealed);
-	const [sendingPack, setSendingPack] = useState<string | null>(null);
-	const [recipient, setRecipient] = useState('');
-	const [sending, setSending] = useState(false);
-
-	if (packs.length === 0) return null;
-
-	const handleBurnPack = async (packUid: string) => {
-		const salt = Array.from(crypto.getRandomValues(new Uint8Array(32)))
-			.map(b => b.toString(16).padStart(2, '0')).join('');
-		const result = await getNFTBridge().burnPack(packUid, salt);
-		if (result.success) {
-			getNFTBridge().removePack(packUid);
-			toast.success('Pack opened! Check your collection.');
-		} else {
-			toast.error(result.error || 'Failed to open pack');
-		}
-	};
-
-	const handleSendPack = async () => {
-		if (!sendingPack || !recipient.trim()) return;
-		setSending(true);
-		const result = await getNFTBridge().transferPack(sendingPack, recipient.trim());
-		if (result.success) {
-			getNFTBridge().removePack(sendingPack);
-			toast.success(`Pack sent to @${recipient.trim()}`);
-			setSendingPack(null);
-			setRecipient('');
-		} else {
-			toast.error(result.error || 'Failed to send pack');
-		}
-		setSending(false);
-	};
-
-	// Group by pack type
-	const grouped = new Map<string, typeof packs>();
-	for (const p of packs) {
-		const list = grouped.get(p.packType) ?? [];
-		list.push(p);
-		grouped.set(p.packType, list);
-	}
-
-	return (
-		<motion.div
-			initial={{ opacity: 0, y: 20 }}
-			animate={{ opacity: 1, y: 0 }}
-			className="mb-12"
-		>
-			<h2 className="text-lg font-bold text-gold-300 mb-4 uppercase tracking-wider text-center">
-				Your Sealed Packs
-			</h2>
-			<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-				{[...grouped.entries()].map(([packType, typePacks]) => (
-					<div
-						key={packType}
-						className="bg-linear-to-b from-gold-700/20 to-obsidian-900/40 rounded-xl p-4 border border-gold-500/30"
-					>
-						<div className="text-center mb-3">
-							<div className="text-2xl mb-1">
-								{packType === 'mythic' ? '龍' : packType === 'premium' ? '冠' : packType === 'standard' ? '盾' : '石'}
-							</div>
-							<div className="text-gold-300 font-bold capitalize">{packType}</div>
-							<div className="text-ink-300 text-sm">x{typePacks.length}</div>
-						</div>
-						<div className="flex gap-2">
-							<button
-								type="button"
-								onClick={() => handleBurnPack(typePacks[0].uid)}
-								className="flex-1 px-3 py-2 bg-gold-400 hover:bg-gold-300 text-white text-sm rounded-lg transition-colors"
-							>
-								Open
-							</button>
-							<button
-								type="button"
-								onClick={() => setSendingPack(typePacks[0].uid)}
-								className="flex-1 px-3 py-2 bg-obsidian-700 hover:bg-obsidian-600 text-white text-sm rounded-lg transition-colors"
-							>
-								Send
-							</button>
-						</div>
-					</div>
-				))}
-			</div>
-
-			{/* Send Pack Modal */}
-			{sendingPack && (
-				<div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-					<div className="bg-obsidian-900 border border-gold-500/40 rounded-xl p-6 w-96 max-w-[90vw]">
-						<h3 className="text-gold-300 font-bold text-lg mb-4">Send Sealed Pack</h3>
-						<p className="text-ink-300 text-sm mb-4">
-							This will transfer the sealed pack to another player via Hive Keychain (0.001 HIVE atomic transfer).
-						</p>
-						<input
-							type="text"
-							placeholder="Recipient username"
-							value={recipient}
-							onChange={e => setRecipient(e.target.value.toLowerCase())}
-							className="w-full px-4 py-2 bg-obsidian-800 border border-obsidian-600 rounded-lg text-white mb-4 focus:border-gold-400 focus:outline-hidden"
-						/>
-						<div className="flex gap-3">
-							<button
-								type="button"
-								onClick={() => { setSendingPack(null); setRecipient(''); }}
-								className="flex-1 px-4 py-2 bg-obsidian-700 hover:bg-obsidian-600 text-white rounded-lg transition-colors"
-							>
-								Cancel
-							</button>
-							<button
-								type="button"
-								onClick={handleSendPack}
-								disabled={sending || !recipient.trim()}
-								className="flex-1 px-4 py-2 bg-gold-400 hover:bg-gold-300 disabled:opacity-50 text-white rounded-lg transition-colors"
-							>
-								{sending ? 'Sending...' : 'Confirm Send'}
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
-		</motion.div>
-	);
+function packTierFor(packType: string): Tier {
+	return PACK_TIER[packType] ?? 'obsidian';
 }
 
 export default function PacksPage() {
-	const tokenBalance = useNFTTokenBalance();
+	// Re-read on every render — sealed pack inventory mutates after burn/send.
+	const sealedPacks = getNFTBridge().getPackCollection().filter(p => p.sealed);
+
 	const hiveUsername = useNFTUsername();
 	const isHiveMode = useIsHiveMode();
-	const runeBalance = tokenBalance?.RUNE ?? 0;
-	const starterClaimed = useStarterStore(state => isHiveMode && !hiveUsername ? false : state.hasClaimed(hiveUsername));
-	const syncLegacyStarterClaim = useStarterStore(state => state.syncLegacyClaimToAccount);
+	const starterClaimed = useStarterStore(s =>
+		isHiveMode && !hiveUsername ? false : s.hasClaimed(hiveUsername),
+	);
+	const starterClaimBlocked = isHiveMode && !hiveUsername;
 
-	const [packTypes, setPackTypes] = useState<PackType[]>(FALLBACK_PACKS);
-	const [supplyStats, setSupplyStats] = useState<SupplyStats | null>(null);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
-	const [openingPack, setOpeningPack] = useState<PackType | null>(null);
-	const [revealedCards, setRevealedCards] = useState<RevealedCard[]>([]);
-	const [isOpening, setIsOpening] = useState(false);
-	const [packError, setPackError] = useState<string | null>(null);
-	const [runeOpening, setRuneOpening] = useState<string | null>(null);
-	const [testMinting, setTestMinting] = useState(false);
-	const visiblePackTypes = starterClaimed
-		? packTypes.filter(pack => pack.key !== 'starter')
-		: packTypes;
+	// DUAT airdrop awareness — vault is the primary surface for the claim CTA.
+	// The claim has one authority: Hive broadcast + replay. While a broadcast
+	// is pending, the card stays visible as a confirmation state instead of
+	// minting provisional packs.
+	const duatEntry = useDuatClaimStore(s => s.currentUserEntry);
+	const duatClaiming = useDuatClaimStore(s => s.claiming);
+	const duatPendingClaimTrxId = useDuatClaimStore(s => s.pendingClaimTrxId);
+	const claimDuatPacks = useDuatClaimStore(s => s.claimPacks);
+	const duatPacksEarned = duatEntry?.packsEarned ?? 0;
+	const duatClaimed = duatEntry?.claimed ?? false;
+	const duatConfirming = Boolean(duatPendingClaimTrxId && !duatClaimed);
+	const showDuatRow = Boolean(duatEntry) && !duatClaimed;
 
-	const handleTestMint = async () => {
-		if (!hiveUsername || testMinting) return;
-		setTestMinting(true);
-		try {
-			const { getGenesisState } = await import('../../../data/blockchain/replayDB');
-			const { broadcastGenesis, broadcastMint } = await import('../../../data/blockchain/genesisAdmin');
+	const [showCeremony, setShowCeremony] = useState(false);
+	const [showPackCeremony, setShowPackCeremony] = useState(false);
+	const [, forceRerender] = useState(0);
 
-			const genesis = await getGenesisState();
-			if (!genesis.version) {
-				toast.info('Broadcasting genesis (one-time setup)...');
-				const genesisResult = await broadcastGenesis();
-				if (!genesisResult.success) {
-					toast.error(`Genesis failed: ${genesisResult.error}`);
-					return;
-				}
-				toast.success('Genesis broadcast complete!');
-			}
+	const refresh = () => forceRerender(n => n + 1);
 
-			const testCards = [];
-			const pool = cardRegistry.filter(c => c.rarity && Number(c.id) >= 1000);
-			for (let i = 0; i < 5; i++) {
-				const card = pool[Math.floor(cryptoRng() * pool.length)];
-				testCards.push({
-					nft_id: `test-${cryptoIdGen()}-${i}`,
-					card_id: Number(card.id),
-					rarity: (card.rarity ?? 'common').toLowerCase(),
-					name: card.name,
-					type: card.type ?? 'minion',
-					race: card.race,
-				});
-			}
+	const handleDuatClaim = async () => {
+		if (!duatEntry || !hiveUsername) return;
 
-			const mintResult = await broadcastMint({ to: hiveUsername!, cards: testCards });
-			if (mintResult.success) {
-				const mapped: RevealedCard[] = testCards.map(c => ({
-					id: c.card_id,
-					name: c.name ?? `Card #${c.card_id}`,
-					rarity: c.rarity,
-					type: c.type,
-					heroClass: 'neutral',
-				}));
+		const result = await claimDuatPacks();
 
-				testCards.forEach(c => {
-					getNFTBridge().addCard({
-						uid: c.nft_id,
-						cardId: c.card_id,
-						ownerId: hiveUsername!,
-						ownershipSource: 'nft',
-						edition: 'alpha',
-						foil: 'standard',
-						rarity: c.rarity,
-						level: 1,
-						xp: 0,
-						lastTransferBlock: mintResult.blockNum,
-						lastTransferTrxId: mintResult.trxId,
-						mintBlockNum: mintResult.blockNum,
-						mintTrxId: mintResult.trxId,
-						name: c.name ?? '',
-						type: c.type,
-						race: c.race,
-					});
-				});
-
-				setOpeningPack(FALLBACK_PACKS[0]);
-				setRevealedCards(mapped);
-				setIsOpening(true);
-
-				forceSync(hiveUsername!).catch(err => debug.warn('[Packs] Sync error:', err));
-				toast.success(`Minted ${testCards.length} test NFTs on-chain!`);
-			} else {
-				toast.error(`Mint failed: ${mintResult.error}`);
-			}
-		} catch (err) {
-			toast.error(`Test mint error: ${err instanceof Error ? err.message : 'unknown'}`);
-		} finally {
-			setTestMinting(false);
-		}
-	};
-
-	useEffect(() => {
-		fetchData();
-	}, []);
-
-	useEffect(() => {
-		if (isHiveMode && !hiveUsername) return;
-
-		syncLegacyStarterClaim(hiveUsername);
-	}, [hiveUsername, isHiveMode, syncLegacyStarterClaim]);
-
-	const fetchData = async () => {
-		try {
-			setLoading(true);
-			setError(null);
-			const [typesRes, statsRes] = await Promise.all([
-				fetch('/api/packs/types'),
-				fetch('/api/packs/supply-stats')
-			]);
-
-			if (typesRes.ok) {
-				const typesData: PackTypeResponse = await typesRes.json();
-				const mappedPacks = (typesData.packs || []).map(apiPackToUiPack);
-				setPackTypes(mappedPacks);
-			} else {
-				setPackTypes(FALLBACK_PACKS);
-			}
-
-			if (statsRes.ok) {
-				const statsData: SupplyStatsResponse = await statsRes.json();
-				const overall = statsData.overall || {
-					total_max_supply: 0, total_remaining_supply: 0,
-					total_reward_reserve: 0, total_pack_supply: 0, total_pack_remaining: 0
-				};
-				const rarityList = statsData.byRarity || [];
-
-				const totalMaxSupply = parseNum(overall.total_max_supply);
-				const totalPackSupply = parseNum(overall.total_pack_supply);
-				const totalPackRemaining = parseNum(overall.total_pack_remaining);
-				const totalRewardReserve = parseNum(overall.total_reward_reserve);
-				const totalPulled = totalPackSupply - totalPackRemaining;
-
-				const mythicStats = rarityList.find((r: RarityStats) => r.nft_rarity === 'mythic');
-
-				const mythicPulled = mythicStats
-					? parseNum(mythicStats.pack_supply) - parseNum(mythicStats.pack_remaining)
-					: 0;
-
-				const mythicRate = totalPulled > 0 ? ((mythicPulled / totalPulled) * 100) : 0;
-
-				const byRarity: ProcessedRarityStats[] = [];
-				for (const rarity of RARITY_ORDER) {
-					const stat = rarityList.find((r: RarityStats) => r.nft_rarity === rarity);
-					if (!stat) continue;
-					const ps = parseNum(stat.pack_supply);
-					const pr = parseNum(stat.pack_remaining);
-					const claimed = ps - pr;
-					byRarity.push({
-						rarity,
-						packSupply: ps,
-						packRemaining: pr,
-						percentClaimed: ps > 0 ? (claimed / ps) * 100 : 0,
-						uniqueCards: parseNum(stat.card_count),
-					});
-				}
-
-				setSupplyStats({
-					totalMaxSupply: totalMaxSupply,
-					totalPackSupply: totalPackSupply,
-					totalPackRemaining: totalPackRemaining,
-					totalRewardReserve: totalRewardReserve,
-					totalCardsOpened: totalPulled,
-					totalPacksOpened: Math.floor(totalPulled / 5),
-					mythicDropRate: parseFloat(mythicRate.toFixed(1)),
-					byRarity,
-				});
-			} else {
-				setSupplyStats(null);
-			}
-		} catch (err) {
-			debug.warn('Pack API unavailable, using client-side packs:', err);
-			setPackTypes(FALLBACK_PACKS);
-			setSupplyStats(null);
-			setError(null);
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	const handleOpenPack = async (pack: PackType) => {
-		if (pack.key === 'starter' && starterClaimed) return;
-
-		setOpeningPack(pack);
-		setIsOpening(true);
-		setPackError(null);
-
-		const packKey = pack.key;
-		if (packKey === 'starter') {
-			const result = await claimStarterEntitlement({
-				accountId: hiveUsername,
-				requireSignature: isHiveMode,
-			});
-
-			if (!result.success) {
-				setPackError(result.error);
-				setIsOpening(false);
-				setOpeningPack(null);
-				return;
-			}
-
-			setRevealedCards(result.cards.map(starterCardToRevealedCard));
-			toast.success('Starter claimed!');
-			return;
-		}
-
-		if (getNFTBridge().isHiveMode() && hiveUsername) {
-			const result = await getNFTBridge().openPack(packKey, 1);
-
-			if (result.success && result.trxId) {
-				const derived = derivePackCards(result.trxId, packKey, 1);
-				const mappedCards: RevealedCard[] = derived.map(c => ({
-					id: c.cardId,
-					name: c.name,
-					rarity: c.rarity,
-					type: c.type,
-					heroClass: 'neutral',
-				}));
-				setRevealedCards(mappedCards);
-
-				derived.forEach(c => {
-					getNFTBridge().addCard({
-						uid: c.uid,
-						cardId: c.cardId,
-						ownerId: hiveUsername!,
-						ownershipSource: 'nft',
-						edition: 'alpha',
-						foil: c.foil,
-						rarity: c.rarity,
-						level: 1,
-						xp: 0,
-						lastTransferBlock: result.blockNum,
-						lastTransferTrxId: result.trxId,
-						mintBlockNum: result.blockNum,
-						mintTrxId: result.trxId,
-						name: c.name,
-						type: c.type,
-						race: c.race,
-					});
-				});
-
-				forceSync(hiveUsername!).catch(err => debug.warn('[Packs] Sync error:', err));
-				toast.success(`Opened ${derived.length} cards on-chain!`);
-				return;
-			}
-
-			setPackError(result.error ?? 'Pack open failed — check Keychain');
-			setIsOpening(false);
-			setOpeningPack(null);
-			return;
-		}
-
-		try {
-			const res = await fetch('/api/packs/open', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ packTypeId: pack.id, userId: 1 })
-			});
-
-			if (res.ok) {
-				const data: PackOpenResponse = await res.json();
-				const mappedCards: RevealedCard[] = (data.cards || []).map((card: OpenedCard) => ({
-					id: card.cardId,
-					name: card.cardName,
-					rarity: card.nftRarity,
-					type: card.cardType,
-					heroClass: card.heroClass,
-					imageUrl: card.imageUrl,
-				}));
-				if (mappedCards.length > 0) {
-					setRevealedCards(mappedCards);
-					return;
-				}
-			}
-			const localCards = openPackLocally(pack);
-			if (localCards.length > 0) {
-				setRevealedCards(localCards);
-			} else {
-				setPackError('Could not generate pack. Please try again.');
-				setIsOpening(false);
-				setOpeningPack(null);
-			}
-		} catch {
-			const localCards = openPackLocally(pack);
-			if (localCards.length > 0) {
-				setRevealedCards(localCards);
-			} else {
-				setPackError('Could not generate pack. Please try again.');
-				setIsOpening(false);
-				setOpeningPack(null);
-			}
-		}
-	};
-
-	const handleCloseAnimation = () => {
-		setOpeningPack(null);
-		setRevealedCards([]);
-		setIsOpening(false);
-		fetchData();
-	};
-
-	const handleOpenWithRune = async (pack: PackType) => {
-		const packKey = pack.key;
-		const cost = pack.runeCost;
-		if (cost === null) return;
-		if (runeBalance < cost) return;
-		if (!hiveUsername) return;
-
-		setRuneOpening(pack.id.toString());
-		setPackError(null);
-
-		const result = await getNFTBridge().runeExchange(packKey, 1);
-		setRuneOpening(null);
-
-		if (result.success && result.trxId) {
-			forceSync(hiveUsername!).catch(err => debug.warn('[Packs] Sync error:', err));
-			fetchData();
-			toast.success('RUNE exchange submitted. Your sealed pack will appear after replay sync.');
+		refresh();
+		if (result.error) {
+			toast.error(result.error);
+		} else if (result.trxId) {
+			toast.success('Claim submitted. Packs appear after chain confirmation.');
+		} else if (duatClaimed) {
+			toast(`${duatPacksEarned} sealed packs already claimed`);
 		} else {
-			setPackError(result.error ?? 'RUNE exchange failed. Please try again.');
+			toast('Claim is already confirming on-chain.');
 		}
 	};
 
-	if (loading) {
-		return (
-			<div className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-home-nav) text-ink-0 flex items-center justify-center">
-				<motion.div
-					animate={{ rotate: 360 }}
-					transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-					className="w-16 h-16 border-4 border-gold-400 border-t-transparent rounded-full"
-				/>
-			</div>
-		);
+	// Opening a tile launches the sequential pack ceremony — same flow as
+	// "Open Now" from the DUAT popup. The ceremony handles burn + reveal +
+	// card derivation per pack and exposes Next/Skip controls. Direct burn
+	// (without the modal) is intentionally not the /packs path; the user
+	// expects to see the cards their packs contained.
+	const launchPackCeremony = () => {
+		setShowPackCeremony(true);
+	};
+
+	// Group sealed packs by type. DUAT packs only enter this collection after
+	// canonical replay writes them, so every listed pack is openable.
+	const openableByType = new Map<string, typeof sealedPacks>();
+	for (const p of sealedPacks) {
+		const list = openableByType.get(p.packType) ?? [];
+		list.push(p);
+		openableByType.set(p.packType, list);
 	}
 
-	if (error) {
-		return (
-			<div className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-home-nav) text-ink-0 flex items-center justify-center">
-				<div className="text-center">
-					<p className="text-ember-300 text-xl mb-4">{error}</p>
-					<motion.button
-						whileHover={{ scale: 1.05 }}
-						whileTap={{ scale: 0.95 }}
-						onClick={fetchData}
-						className="px-6 py-3 bg-gold-400 hover:bg-gold-300 text-white rounded-lg transition-colors"
-					>
-						Retry
-					</motion.button>
-				</div>
-			</div>
-		);
-	}
-
-	const packPercentRemaining = supplyStats && supplyStats.totalPackSupply > 0
-		? (supplyStats.totalPackRemaining / supplyStats.totalPackSupply) * 100
-		: 100;
-	const scarcity = getScarcityInfo(packPercentRemaining);
+	const showStarterRow = !starterClaimed;
+	const hasOpenable = openableByType.size > 0;
+	const showSealedGrid = hasOpenable;
+	const showSubtleEmpty = starterClaimed && !showDuatRow && !showSealedGrid;
 
 	return (
-		<div className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-home-nav) text-ink-0 p-8 pb-16">
-			{isOpening && openingPack && revealedCards.length > 0 && (
-				<PackOpeningAnimation
-					packName={openingPack.name}
-					cards={revealedCards}
-					onClose={handleCloseAnimation}
-					onOpenAnother={() => handleOpenPack(openingPack)}
-				/>
-			)}
-
-			{packError && (
-				<motion.div
-					initial={{ opacity: 0, y: -20 }}
-					animate={{ opacity: 1, y: 0 }}
-					className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-ember-400 text-white px-6 py-3 rounded-lg shadow-lg"
-				>
-					{packError}
-					<button
-						type="button"
-						onClick={() => setPackError(null)}
-						className="ml-4 text-white/80 hover:text-white"
-					>
-						✕
-					</button>
-				</motion.div>
-			)}
-
-			<div className="max-w-7xl mx-auto">
-				{/* Navigation */}
-				<div className="flex justify-between items-center mb-8">
-					<Link to={routes.home}>
-						<motion.button
-							whileHover={{ scale: 1.05 }}
-							whileTap={{ scale: 0.95 }}
-							className="px-6 py-3 bg-obsidian-800/80 hover:bg-obsidian-700/80 text-white rounded-lg border border-obsidian-600 flex items-center gap-2 transition-colors"
+		<main className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-home-nav) text-ink-0">
+			{/* Sticky nav bar — matches Marketplace pattern */}
+			<div className="border-b border-obsidian-700 bg-obsidian-950/85 backdrop-blur-md sticky top-0 z-40">
+				<div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+					<div className="flex items-center gap-4 min-w-0">
+						<Link
+							to={routes.home}
+							className="inline-flex items-center h-8 px-3 rounded-full border border-obsidian-700 bg-obsidian-850 text-ink-200 hover:text-gold-300 hover:border-gold-600 font-display text-[11px] tracking-[0.18em] uppercase font-bold transition-colors"
 						>
-							<span>←</span>
-							<span>Back to Home</span>
-						</motion.button>
-					</Link>
-					<div className="flex items-center gap-3">
-						{hiveUsername && (
-							<div className="flex items-center gap-2 px-4 py-2 bg-gold-700/40 border border-gold-500/40 rounded-lg text-sm">
-								<span className="text-gold-300">⚡</span>
-								<span className="text-gold-200 font-bold">{runeBalance.toLocaleString()}</span>
-								<span className="text-gold-400 text-xs">RUNE</span>
-							</div>
-						)}
-						{getNFTBridge().isHiveMode() && hiveUsername && hiveUsername! === RAGNAROK_ACCOUNT && (
-							<motion.button
-								whileHover={{ scale: 1.05 }}
-								whileTap={{ scale: 0.95 }}
-								onClick={handleTestMint}
-								disabled={testMinting}
-								className="px-6 py-3 bg-rune-500 hover:bg-rune-300 text-white rounded-lg border border-rune-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-							>
-								{testMinting ? 'Minting...' : 'Test Mint 5 NFTs'}
-							</motion.button>
-						)}
-						<Link to={routes.collection}>
-							<motion.button
-								whileHover={{ scale: 1.05 }}
-								whileTap={{ scale: 0.95 }}
-								className="px-6 py-3 bg-bifrost-500 hover:bg-bifrost-300 text-white rounded-lg border border-bifrost-300 transition-colors"
-							>
-								View Collection →
-							</motion.button>
+							Home
 						</Link>
+						<div>
+							<div className="font-mono text-[10px] tracking-[0.32em] uppercase text-ink-300">Vault</div>
+							<h1 className="font-display text-xl font-black tracking-[0.10em] uppercase text-gold-300">
+								Your Packs
+							</h1>
+						</div>
+					</div>
+					<div className="flex items-center gap-3 flex-wrap">
+						<Link
+							to={`${routes.marketplace}?tab=packs`}
+							className="inline-flex items-center gap-2 h-8 px-3 rounded-full border border-obsidian-700 bg-obsidian-850 text-ink-300 hover:text-gold-300 hover:border-gold-600 font-display text-[11px] tracking-[0.18em] uppercase font-bold transition-colors"
+						>
+							<span>Marketplace</span>
+							<ArrowRight size={12} strokeWidth={2} aria-hidden="true" />
+						</Link>
+						<AccountSlot
+							username={hiveUsername}
+							tier="premium"
+							to={routes.settings}
+							secondary={`${sealedPacks.length} sealed`}
+							showSettings
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div className="max-w-5xl mx-auto px-4 py-8">
+				{/* Starter claim card — only when not yet claimed */}
+				{showStarterRow && (
+					<StarterClaimCard
+						blocked={starterClaimBlocked}
+						onClaim={() => { if (!starterClaimBlocked) setShowCeremony(true); }}
+					/>
+				)}
+
+				{/* DUAT airdrop claim card — only when eligible & unclaimed */}
+				{showDuatRow && duatEntry && (
+					<DuatClaimCard
+						packsEarned={duatPacksEarned}
+						onClaim={handleDuatClaim}
+						loading={duatClaiming}
+						confirming={duatConfirming}
+					/>
+				)}
+
+				{/* Optional divider when both sections render together */}
+				{(showStarterRow || showDuatRow) && showSealedGrid && (
+					<div className="my-8" role="separator" aria-hidden="true">
+						<div className="ornament-divider">
+							<span className="ornament-divider-mark-trio">
+								<span className="ornament-divider-mark ornament-divider-mark--small" />
+								<span className="ornament-divider-mark" />
+								<span className="ornament-divider-mark ornament-divider-mark--small" />
+							</span>
+						</div>
+					</div>
+				)}
+
+				{/* Sealed packs grid */}
+				{showSealedGrid && (
+					<motion.section
+						initial={{ opacity: 0, y: 12 }}
+						animate={{ opacity: 1, y: 0 }}
+						aria-labelledby="sealed-inventory-heading"
+					>
+						{(showStarterRow || showDuatRow) && (
+							<header className="section-heading mb-6">
+								<div id="sealed-inventory-heading" className="section-heading-kicker">
+									Sealed inventory
+								</div>
+							</header>
+						)}
+						<div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+							{[...openableByType.entries()].map(([packType, typePacks]) => (
+								<SealedPackTile
+									key={`open-${packType}`}
+									packType={packType}
+									count={typePacks.length}
+									onOpen={launchPackCeremony}
+								/>
+							))}
+						</div>
+					</motion.section>
+				)}
+
+				{/* Empty Cave — when nothing to claim and nothing to open */}
+				{showSubtleEmpty && <EmptyCave />}
+
+				{/* Footer CTA — quiet forge entry, hidden only in the empty state */}
+				{!showSubtleEmpty && <BuyMorePacksFooter />}
+			</div>
+
+			{/* Starter ceremony modal */}
+			{showCeremony && (
+				<Suspense fallback={null}>
+					<StarterPackCeremony
+						accountId={hiveUsername}
+						requireSignedClaim={isHiveMode}
+						onComplete={() => { setShowCeremony(false); refresh(); }}
+					/>
+				</Suspense>
+			)}
+
+			{/* Pack reveal ceremony — sequential burn + reveal with Next/Skip */}
+			{showPackCeremony && hiveUsername && (
+				<Suspense fallback={null}>
+					<DuatPackCeremony
+						accountId={hiveUsername}
+						onComplete={() => { setShowPackCeremony(false); refresh(); }}
+					/>
+				</Suspense>
+			)}
+
+		</main>
+	);
+}
+
+/**
+ * Sealed pack tile (vault) — Runic Forge.
+ * Smaller and denser than catalog tile: ritual count instead of price,
+ * sigil backplate at restrained opacity, no description, no odds.
+ */
+function SealedPackTile({
+	packType,
+	count,
+	onOpen,
+	pending = false,
+}: {
+	packType: string;
+	count: number;
+	onOpen: () => void;
+	pending?: boolean;
+}) {
+	const hexVariant = packHexVariantFor(packType);
+	const icon = packIconFor(packType);
+	const tier = packTierFor(packType);
+	const inscription = pending
+		? 'Confirming · On-chain'
+		: (PACK_INSCRIPTION[packType] ?? 'Owned · Sealed');
+	const numericTier = PACK_NUMERIC_TIER[packType] ?? 'gold';
+	const surface = PACK_SURFACE_VAR[packType] ?? 'var(--surface-mystic-obsidian)';
+	const glowClass = PACK_GLOW_CLASS[packType] ?? 'mystic-tile--gold';
+	const isMythic = packType === 'mythic';
+	const reducedMotion = useReducedMotion();
+
+	return (
+		<motion.article
+			initial={reducedMotion ? false : { opacity: 0, y: 12 }}
+			animate={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+			aria-label={pending
+				? `${packType} pack — ${count} confirming on chain`
+				: `${packType} sealed pack — ${count} owned`}
+			className={`runic-panel ornate-corners-host ornate-corners-host--${tier} mystic-tile ${glowClass} relative rounded-xl p-4 overflow-hidden ${pending ? 'opacity-70' : ''}`}
+			style={{ background: surface }}
+		>
+			{!pending && <SplashBackdrop packKey={packType} count={2} intervalMs={9000} />}
+			<OrnateCorners />
+			{isMythic && !pending && <span className="aura-mystic" aria-hidden="true" />}
+
+			<div className="relative z-10 flex flex-col items-center mb-4">
+				<div className="sigil-host mb-3">
+					<SigilBackplate tier={tier} />
+					<div className={`hex-frame ${hexVariant} hex-frame--md`} aria-hidden="true">
+						<div className="hex-frame-inner">
+							<span className="text-3xl text-ink-0/95 select-none">{icon}</span>
+						</div>
 					</div>
 				</div>
 
-				{/* Title */}
-				<motion.h1
-					initial={{ opacity: 0, y: -20 }}
-					animate={{ opacity: 1, y: 0 }}
-					className="text-5xl font-bold text-center mb-2 text-transparent bg-clip-text bg-linear-to-r from-gold-200 via-gold-100 to-gold-200"
-					style={{ textShadow: '0 0 40px rgba(251, 191, 36, 0.4)' }}
-				>
-					Norse Mythos Card Packs
-				</motion.h1>
-				<motion.p
-					initial={{ opacity: 0 }}
-					animate={{ opacity: 1 }}
-					transition={{ delay: 0.2 }}
-					className="text-ink-300 text-center mb-8 text-lg"
-				>
-					Limited supply — once they're gone, they're gone forever
-				</motion.p>
+				<div className={`tier-inscription tier-inscription--${tier} mb-2`}>
+					{inscription}
+				</div>
 
-				{/* ========== GLOBAL SUPPLY BANNER ========== */}
-				{supplyStats && (
-					<motion.div
-						initial={{ opacity: 0, y: 20 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ delay: 0.3 }}
-						className="supply-banner mb-8"
-					>
-						<div className="relative z-10">
-							{/* Main supply numbers */}
-							<div className="flex items-center justify-between mb-4">
-								<div>
-									<div className="text-xs uppercase tracking-widest text-ink-400 mb-1">Pack Supply</div>
-									<div className="flex items-baseline gap-3">
-										<span className="supply-number supply-number-large text-gold-300">
-											{supplyStats.totalPackRemaining.toLocaleString()}
-										</span>
-										<span className="text-ink-400 text-lg">/</span>
-										<span className="supply-number supply-number-medium text-ink-300">
-											{supplyStats.totalPackSupply.toLocaleString()}
-										</span>
-										<span className="text-ink-400 text-sm ml-1">available in packs</span>
-									</div>
-								</div>
-								<div className="text-right">
-									<div className={`scarcity-badge ${scarcity.class} mb-1`}>
-										{scarcity.label}
-									</div>
-									<div className="text-ink-300 text-sm">
-										{packPercentRemaining.toFixed(1)}% remaining
-									</div>
-								</div>
-							</div>
-
-							{/* Supply progress bar */}
-							<div className="supply-bar mb-5">
-								<div
-									className="supply-bar-fill"
-									style={{ width: `${packPercentRemaining}%` }}
-								/>
-							</div>
-
-							{/* Rarity breakdown */}
-							<div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-								{supplyStats.byRarity.map(rs => {
-									const color = RARITY_COLORS[rs.rarity] || '#9ca3af';
-									const percentRemaining = rs.packSupply > 0
-										? (rs.packRemaining / rs.packSupply) * 100
-										: 0;
-									return (
-										<div
-											key={rs.rarity}
-											className="bg-white/[0.03] rounded-lg p-3 border border-white/[0.06]"
-										>
-											<div className="flex items-center justify-between mb-1">
-												<span
-													className={`text-xs font-bold uppercase ${getRarityColor(rs.rarity)}`}
-												>
-													{rs.rarity}
-												</span>
-												<span className="text-ink-400 text-[10px]">
-													{rs.uniqueCards} cards
-												</span>
-											</div>
-											<div className="supply-number text-sm mb-1" style={{ color }}>
-												{formatNumber(rs.packRemaining)}
-												<span className="text-ink-400 text-xs ml-1">
-													/ {formatNumber(rs.packSupply)}
-												</span>
-											</div>
-											<div className="rarity-meter">
-												<div
-													className={`rarity-meter-fill rarity-meter-fill-${rs.rarity}`}
-													style={{ width: `${percentRemaining}%` }}
-												/>
-											</div>
-										</div>
-									);
-								})}
-							</div>
-
-							{/* Reward reserve info */}
-							<div className="reward-reserve-badge">
-								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-									<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-								</svg>
-								<span>
-									{supplyStats.totalRewardReserve.toLocaleString()} cards reserved for in-game rewards
-								</span>
-								<span className="text-teal-400/50 text-xs ml-1">(not available in packs)</span>
-							</div>
-						</div>
-					</motion.div>
-				)}
-
-				{/* ========== PACK GRID ========== */}
-				{visiblePackTypes.length === 0 ? (
-					<motion.div
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						className="text-center py-20"
-					>
-						<p className="text-ink-300 text-xl mb-4">No packs available at the moment.</p>
-						<motion.button
-							whileHover={{ scale: 1.05 }}
-							whileTap={{ scale: 0.95 }}
-							onClick={fetchData}
-							className="px-6 py-3 bg-gold-400 hover:bg-gold-300 text-white rounded-lg transition-colors"
-						>
-							Refresh
-						</motion.button>
-					</motion.div>
-				) : (
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-						{visiblePackTypes.map((pack, index) => {
-							const theme = getPackTheme(pack.name);
-							const guarantees = getPackGuarantees(pack);
-
-							return (
-								<motion.div
-									key={pack.id}
-									initial={{ opacity: 0, y: 30 }}
-									animate={{ opacity: 1, y: 0 }}
-									transition={{ delay: 0.1 * index }}
-									className={`pack-card ${theme.card}`}
-								>
-									<div className="p-6">
-										{/* Pack Seal */}
-										<div className={`pack-seal ${theme.seal} mb-4 rounded-xl`}>
-											<div className="pack-seal-glow" />
-											<div className="pack-seal-icon">
-												<span className="text-3xl font-black text-white/90 select-none">
-													{theme.icon}
-												</span>
-											</div>
-										</div>
-
-										{/* Pack Info */}
-										<h3 className="text-xl font-bold text-white mb-1">{pack.name}</h3>
-										<p className="text-ink-300 text-sm mb-3 h-10 leading-tight">{pack.description}</p>
-
-										{/* Guarantees */}
-										{guarantees.length > 0 && (
-											<div className="flex flex-wrap gap-1.5 mb-3">
-												{guarantees.map(g => (
-													<span key={g} className="guarantee-tag">{g}</span>
-												))}
-											</div>
-										)}
-
-										{/* Price + Card Count */}
-										<div className="flex justify-between items-center mb-4">
-											<span className="pack-price text-gold-300">
-												{pack.isFreeClaim ? 'Free' : pack.price.toLocaleString()}
-											</span>
-											<span className="text-ink-300 text-sm font-medium">
-												{pack.cardCount} cards
-											</span>
-										</div>
-
-										{/* Rarity Odds Bars */}
-										<div className="space-y-1.5 mb-5">
-											<div className="text-[10px] uppercase tracking-wider text-ink-400 mb-1">
-												Rarity Odds
-											</div>
-											{Object.entries(pack.rarityOdds)
-												.filter(([, odds]) => odds > 0)
-												.map(([rarity, odds]) => (
-													<div key={rarity} className="flex items-center gap-2">
-														<span className={`text-[10px] w-14 text-right capitalize ${getRarityColor(rarity)}`}>
-															{rarity}
-														</span>
-														<div className="odds-bar flex-1">
-															<div
-																className={`odds-bar-fill odds-bar-fill-${rarity}`}
-																style={{ width: `${Math.min(odds, 100)}%` }}
-															/>
-														</div>
-														<span className="text-ink-300 text-[10px] w-8 text-right">
-															{odds}%
-														</span>
-													</div>
-												))
-											}
-										</div>
-
-										{/* Open Button */}
-										<motion.button
-											whileHover={{ scale: 1.02 }}
-											whileTap={{ scale: 0.98 }}
-											onClick={() => handleOpenPack(pack)}
-											className={`open-btn ${theme.btn}`}
-										>
-											{pack.isFreeClaim ? 'Claim Starter' : 'Buy Pack'}
-										</motion.button>
-
-										{/* RUNE exchange */}
-										{hiveUsername && pack.isRuneRedeemable && (() => {
-											const cost = pack.runeCost;
-											if (cost === null) return null;
-											const canAfford = runeBalance >= cost;
-											const isLoading = runeOpening === pack.id.toString();
-											return (
-												<motion.button
-													whileHover={{ scale: canAfford ? 1.02 : 1 }}
-													whileTap={{ scale: canAfford ? 0.98 : 1 }}
-													onClick={() => canAfford && !isLoading && handleOpenWithRune(pack)}
-													disabled={!canAfford || isLoading}
-													className={`w-full mt-2 py-2 rounded-lg text-sm font-semibold transition-all border ${
-														canAfford
-															? 'bg-gold-700/50 hover:bg-gold-600/60 text-gold-300 border-gold-500/50'
-															: 'bg-obsidian-800/30 text-ink-400 border-obsidian-700/30 cursor-not-allowed'
-													}`}
-												>
-													{isLoading ? '···' : `Exchange for ${cost} RUNE`}
-												</motion.button>
-											);
-										})()}
-									</div>
-								</motion.div>
-							);
-						})}
-					</div>
-				)}
-
-				{/* ========== SEALED PACKS INVENTORY (v1.1) ========== */}
-				<SealedPacksSection />
-
-				{/* ========== COMMUNITY STATS (only when packs opened) ========== */}
-				{supplyStats && supplyStats.totalCardsOpened > 0 && (
-					<motion.div
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						transition={{ delay: 0.5 }}
-					>
-						<h2 className="text-lg font-bold text-ink-100 mb-4 text-center uppercase tracking-wider">
-							Community Stats
-						</h2>
-						<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-							<div className="bg-obsidian-800/40 rounded-xl p-4 border border-obsidian-700/50 text-center">
-								<div className="text-2xl font-bold text-gold-300">
-									{supplyStats.totalPacksOpened.toLocaleString()}
-								</div>
-								<div className="text-ink-300 text-sm">Packs Opened</div>
-							</div>
-							<div className="bg-obsidian-800/40 rounded-xl p-4 border border-obsidian-700/50 text-center">
-								<div className="text-2xl font-bold text-blue-400">
-									{supplyStats.totalCardsOpened.toLocaleString()}
-								</div>
-								<div className="text-ink-300 text-sm">Cards Collected</div>
-							</div>
-							<div className="bg-obsidian-800/40 rounded-xl p-4 border border-obsidian-700/50 text-center">
-								<div className="text-2xl font-bold text-transparent bg-clip-text bg-linear-to-r from-gold-300 to-ember-400">
-									{supplyStats.mythicDropRate}%
-								</div>
-								<div className="text-ink-300 text-sm">Mythic Rate</div>
-							</div>
-						</div>
-					</motion.div>
-				)}
+				<NumericRitual tier={numericTier}>
+					<span className="numeric-display numeric-display--lg">×{count}</span>
+				</NumericRitual>
 			</div>
-		</div>
+
+			<div className="relative z-10">
+				<button
+					type="button"
+					onClick={onOpen}
+					disabled={pending}
+					aria-label={pending
+						? `${count} ${packType} pack${count === 1 ? '' : 's'} confirming on chain`
+						: `Open one ${packType} pack`}
+					className="btn-runic btn-runic--gold btn-runic--sm w-full disabled:cursor-not-allowed disabled:opacity-60"
+				>
+					<span className="btn-runic-stud" aria-hidden />
+					{pending ? 'Confirming…' : 'Open'}
+					<span className="btn-runic-stud" aria-hidden />
+				</button>
+			</div>
+		</motion.article>
+	);
+}
+
+/**
+ * Starter claim card — Runic Forge warm parchment treatment.
+ * The birthright artifact: ornate corners, etched texture, gold sigil
+ * backplate behind the seal icon, ritual heading.
+ */
+function StarterClaimCard({ blocked, onClaim }: { blocked: boolean; onClaim: () => void }) {
+	return (
+		<motion.section
+			initial={{ opacity: 0, y: 8 }}
+			animate={{ opacity: 1, y: 0 }}
+			aria-labelledby="starter-claim-heading"
+			className="runic-panel ornate-corners-host ornate-corners-host--premium mystic-tile mystic-tile--gold texture-etched relative mb-8 flex items-center gap-6 p-6 rounded-xl flex-wrap sm:flex-nowrap overflow-hidden"
+			style={{ background: 'var(--surface-mystic-obsidian)' }}
+		>
+			<SplashBackdrop packKey="starter" count={2} intervalMs={10000} />
+			<OrnateCorners />
+
+			<div className="sigil-host shrink-0 relative z-10">
+				<SigilBackplate tier="obsidian" />
+				<div className="hex-frame hex-frame--gold hex-frame--md" aria-hidden="true">
+					<div className="hex-frame-inner">
+						<span className="text-2xl text-gold-300/95">石</span>
+					</div>
+				</div>
+			</div>
+
+			<div className="relative z-10 min-w-0 flex-1">
+				<div className="tier-inscription tier-inscription--neutral mb-2">
+					Birthright · Unclaimed
+				</div>
+				<h2 id="starter-claim-heading" className="font-display text-xl font-bold text-ink-0 tracking-[0.10em] uppercase mb-2">
+					Your starter line awaits
+				</h2>
+				<p className="text-ink-200 text-sm leading-snug max-w-[44ch]">
+					{blocked
+						? 'Connect Hive Keychain to claim your starter line.'
+						: 'A 5-card starter line, one-time per account. No cost.'}
+				</p>
+			</div>
+
+			<button
+				type="button"
+				onClick={onClaim}
+				disabled={blocked}
+				className="btn-runic btn-runic--gold shrink-0 relative z-10"
+			>
+				<span className="btn-runic-stud" aria-hidden />
+				Claim
+				<span className="btn-runic-stud" aria-hidden />
+			</button>
+		</motion.section>
+	);
+}
+
+/**
+ * DUAT airdrop claim card — Runic Forge bifrost variant.
+ * Mirrors StarterClaimCard structure but signals "snapshot legacy" with
+ * the bifrost palette (vs. the warm gold of the birthright).
+ *
+ * Temporary surface — visible only during the 90-day claim window.
+ */
+function DuatClaimCard({
+	packsEarned,
+	onClaim,
+	loading,
+	confirming,
+}: {
+	packsEarned: number;
+	onClaim: () => void;
+	loading: boolean;
+	confirming: boolean;
+}) {
+	const disabled = loading || confirming;
+
+	return (
+		<motion.section
+			initial={{ opacity: 0, y: 8 }}
+			animate={{ opacity: 1, y: 0 }}
+			aria-labelledby="duat-claim-heading"
+			className="runic-panel ornate-corners-host ornate-corners-host--premium mystic-tile mystic-tile--bifrost texture-etched relative mb-8 flex items-center gap-6 p-6 rounded-xl flex-wrap sm:flex-nowrap overflow-hidden"
+			style={{ background: 'var(--surface-mystic-obsidian)' }}
+		>
+			<SplashBackdrop packKey="standard" count={2} intervalMs={10000} />
+			<OrnateCorners />
+
+			<div className="sigil-host shrink-0 relative z-10">
+				<SigilBackplate tier="standard" />
+				<div className="hex-frame hex-frame--bifrost hex-frame--md" aria-hidden="true">
+					<div className="hex-frame-inner">
+						<span className="text-2xl text-bifrost-100/95">𓂀</span>
+					</div>
+				</div>
+			</div>
+
+			<div className="relative z-10 min-w-0 flex-1">
+				<div className="tier-inscription tier-inscription--standard mb-2">
+					DUAT Airdrop · {confirming ? 'Confirming' : 'Eligible'}
+				</div>
+				<h2 id="duat-claim-heading" className="font-display text-xl font-bold text-ink-0 tracking-[0.10em] uppercase mb-2">
+					{packsEarned} sealed pack{packsEarned === 1 ? '' : 's'} {confirming ? 'confirming' : 'await'}
+				</h2>
+				<p className="text-ink-200 text-sm leading-snug max-w-[44ch]">
+					{confirming
+						? 'Your claim is on-chain. Packs appear here after replay confirms it.'
+						: 'Claim once during the 90-day window. Unclaimed packs return to the treasury.'}
+				</p>
+			</div>
+
+			<button
+				type="button"
+				onClick={onClaim}
+				disabled={disabled}
+				aria-busy={loading || confirming}
+				className="btn-runic btn-runic--bifrost shrink-0 relative z-10 disabled:opacity-60"
+			>
+				<span className="btn-runic-stud" aria-hidden />
+				{loading ? 'Claiming...' : confirming ? 'Confirming...' : 'Claim Packs'}
+				<span className="btn-runic-stud" aria-hidden />
+			</button>
+		</motion.section>
+	);
+}
+
+/**
+ * Buy-more-packs footer — quiet centered CTA at the bottom of the vault.
+ * Restrained on purpose: an ornament divider, a single question line, one
+ * gold button. Always reachable without competing with the claim/inventory
+ * surfaces above.
+ */
+function BuyMorePacksFooter() {
+	return (
+		<footer
+			aria-labelledby="buy-more-packs-heading"
+			className="mt-16 pt-8 flex flex-col items-center text-center gap-4"
+		>
+			<div className="ornament-divider max-w-[200px]" role="separator" aria-hidden="true">
+				<span className="ornament-divider-mark-trio">
+					<span className="ornament-divider-mark ornament-divider-mark--small" />
+					<span className="ornament-divider-mark" />
+					<span className="ornament-divider-mark ornament-divider-mark--small" />
+				</span>
+			</div>
+			<p id="buy-more-packs-heading" className="font-mono text-[11px] tracking-[0.22em] uppercase text-ink-300">
+				Want more sealed packs?
+			</p>
+			<Link
+				to={`${routes.marketplace}?tab=packs`}
+				aria-label="Open marketplace to buy more sealed packs"
+				className="btn-runic btn-runic--gold btn-runic--sm"
+			>
+				<span className="btn-runic-stud" aria-hidden />
+				Buy Packs
+				<ArrowRight size={12} strokeWidth={2.4} aria-hidden="true" />
+				<span className="btn-runic-stud" aria-hidden />
+			</Link>
+		</footer>
+	);
+}
+
+/**
+ * Empty Cave — atmospheric empty state. The vault as a sleeping forge.
+ *
+ * Radial vignette inline darkens the center to suggest depth, ornament-divider
+ * trios bracket the composition, the central sigil sits at ~30% opacity so the
+ * cave reads as dormant rather than absent. CSS/SVG only — no asset.
+ */
+function EmptyCave() {
+	return (
+		<motion.section
+			initial={{ opacity: 0 }}
+			animate={{ opacity: 1 }}
+			transition={{ duration: 1.2 }}
+			aria-labelledby="empty-cave-heading"
+			className="runic-panel ornate-corners-host ornate-corners-host--standard relative mt-12 rounded-xl overflow-hidden"
+			style={{
+				background:
+					'radial-gradient(ellipse at center, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 70%), var(--surface-mystic-obsidian)',
+			}}
+		>
+			<OrnateCorners />
+
+			<div className="relative z-10 flex flex-col items-center justify-center text-center py-20 px-6">
+				<div className="ornament-divider mb-10 max-w-[200px]" role="separator" aria-hidden="true">
+					<span className="ornament-divider-mark-trio">
+						<span className="ornament-divider-mark ornament-divider-mark--small" />
+						<span className="ornament-divider-mark" />
+						<span className="ornament-divider-mark ornament-divider-mark--small" />
+					</span>
+				</div>
+
+				<div className="sigil-host mb-8 opacity-30" aria-hidden="true">
+					<SigilBackplate tier="obsidian" />
+					<div className="hex-frame hex-frame--obsidian hex-frame--md">
+						<div className="hex-frame-inner">
+							<span className="text-2xl text-ink-300 select-none">穴</span>
+						</div>
+					</div>
+				</div>
+
+				<div className="font-mono text-[10px] tracking-[0.32em] uppercase text-ink-400 mb-3">
+					Vault · Sealed
+				</div>
+				<h2 id="empty-cave-heading" className="font-display text-xl font-bold text-ink-200/80 tracking-[0.18em] uppercase mb-3">
+					The forge sleeps
+				</h2>
+				<p className="text-ink-300 text-sm leading-relaxed max-w-sm mb-7">
+					No packs to claim or open. New packs land here after you buy or claim them.
+				</p>
+
+				<Link
+					to={`${routes.marketplace}?tab=packs`}
+					aria-label="Open marketplace to buy sealed packs"
+					className="btn-runic btn-runic--gold btn-runic--sm"
+				>
+					<span className="btn-runic-stud" aria-hidden />
+					Visit marketplace
+					<ArrowRight size={12} strokeWidth={2.4} aria-hidden="true" />
+					<span className="btn-runic-stud" aria-hidden />
+				</Link>
+
+				<div className="ornament-divider mt-10 max-w-[200px]" role="separator" aria-hidden="true">
+					<span className="ornament-divider-mark-trio">
+						<span className="ornament-divider-mark ornament-divider-mark--small" />
+						<span className="ornament-divider-mark" />
+						<span className="ornament-divider-mark ornament-divider-mark--small" />
+					</span>
+				</div>
+			</div>
+		</motion.section>
 	);
 }

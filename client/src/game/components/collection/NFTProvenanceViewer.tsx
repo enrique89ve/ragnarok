@@ -31,7 +31,7 @@ const NFTProvenanceViewer: React.FC<NFTProvenanceViewerProps> = ({ nft, onClose,
 				exit={{ opacity: 0 }}
 			>
 				<motion.div
-					className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-[28rem] max-w-[90vw] overflow-hidden"
+					className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-[28rem] max-w-[90vw] modal-landscape-safe"
 					onClick={e => e.stopPropagation()}
 					initial={{ opacity: 0, scale: 0.9, y: 30 }}
 					animate={{ opacity: 1, scale: 1, y: 0 }}

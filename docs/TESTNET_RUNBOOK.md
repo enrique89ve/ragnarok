@@ -16,12 +16,20 @@ Required values for the current profile:
 
 ```env
 VITE_NETWORK_STAGE=testnet
-VITE_DATA_LAYER_MODE=hive
-VITE_BLOCKCHAIN_PACKAGING=true
 VITE_RAGNAROK_PROTOCOL_ID=rk_game_testnet
 VITE_RAGNAROK_COLLECTION_ID=ragnarok-testnet
 VITE_NFTLOX_PROTOCOL_ID=nftlox_testnet
 ```
+
+`VITE_NETWORK_STAGE=testnet` derives Hive data mode and blockchain packaging.
+Do not set `VITE_DATA_LAYER_MODE` or `VITE_BLOCKCHAIN_PACKAGING` for normal
+testnet runs.
+
+Hive private keys are server/operator-only. Never put posting, active, owner,
+memo, or WIF keys in a `VITE_*` variable; `VITE_*` is bundled into browser code.
+Public `VITE_*` values may include network stage, protocol ids, collection ids,
+Hive account names, and public endpoints. Do not put credentials in public URLs.
+See [`ENV_SECURITY.md`](ENV_SECURITY.md) for the canonical key-placement rules.
 
 Indexer and art endpoints can stay empty until those services are deployed:
 
@@ -42,6 +50,28 @@ Expected UI signals:
 - Dismissible lower-left banner shows `Testnet / Resettable / rk_game_testnet`.
 
 The header badge remains visible after dismissing the lower-left banner.
+
+## Chain Read API
+
+Testnet uses the same public chain-derived API namespace as every other
+runtime profile. Do not use or reintroduce `/api/testnet/rune/*`.
+
+- `GET /api/chain/player/:username/rune?seasonId=S01` returns one account's
+  RUNE balance, credits, debits, drift, last RUNE block, and indexed flag.
+- `GET /api/chain/rune/state?seasonId=S01` returns global RUNE caps, emission
+  totals, and drift.
+- `GET /api/chain/rune/ledger?seasonId=S01&account=:username` returns
+  paginated RUNE ledger entries.
+- `GET /api/chain/rune/balances?seasonId=S01` returns paginated account balance
+  summaries.
+
+Expected cadence: wallet/testnet panels may request `state`, account summary,
+and ledger together on open or manual refresh. Background refresh must not run
+faster than once every 30 seconds per browser view.
+
+Production rate limits are 24 requests/minute per IP for chain reads that may
+sync unknown accounts, 60 requests/minute per IP for RUNE state/ledger/balances,
+and 120 requests/minute per IP for the global `/api` limiter.
 
 ## Smoke Test — Testnet Configuration (Gate 5)
 

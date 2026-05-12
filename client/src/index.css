@@ -3,6 +3,13 @@
 
 @import "tailwindcss";
 
+/* Norse ornament library (LOL-tier primitives) — diamond dividers, runic corners,
+   hex frames, beveled CTAs, section heading triple, texture overlays. */
+@import './styles/ornaments.css';
+
+/* Landscape responsiveness overrides — must come AFTER tailwind to win specificity wars */
+@import './styles/landscape-responsive.css';
+
 /* Preserve v3 default behavior: borders without explicit color use obsidian-700.
    Without this, Tailwind v4 defaults to currentColor which would break dark UI. */
 @layer base {

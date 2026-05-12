@@ -81,6 +81,8 @@ These values are written into the genesis payload (Section 4.1) and become the p
 - [ ] At least 2 Hive API nodes reachable from deployment environment
 - [ ] Hive Keychain extension installed on all signer machines
 - [ ] All signers have tested Keychain signing on testnet
+- [ ] No signer posting/active keys are stored in repo files, `.env`, browser env,
+      logs, or issue trackers. See [`ENV_SECURITY.md`](ENV_SECURITY.md).
 
 ### Accounts (created in Phase 1)
 
@@ -118,6 +120,10 @@ These values are written into the genesis payload (Section 4.1) and become the p
 5. Signatures collected by broadcaster
 6. Once threshold met (2-of-3), broadcaster calls `broadcastSignedTransaction()`
 7. All participants verify the transaction hit an irreversible block
+
+Signer active keys stay inside Hive Keychain on signer-controlled machines. The
+ceremony never requires exporting WIF/PVT keys to the web server, operator
+process, browser bundle, or shared documents.
 
 ### Quorum Requirements — Exact Hive Authority Math
 
@@ -226,6 +232,10 @@ Type: 2-of-3 multisig (no standalone posting/active keys)
 Purpose: Genesis broadcast, mint batches, seal, then bricked forever
 Lifetime: Active only during genesis ceremony
 ```
+
+Do not create or retain standalone `@ragnarok` posting/active private keys for
+the app. The account authority should be multisig-only; signer keys remain in
+each signer's Keychain.
 
 **Steps**:
 
@@ -568,8 +578,12 @@ If server indexer is enabled (`ENABLE_CHAIN_INDEXER=true`):
 
 1. Start server, wait for indexer to catch up to LIB
 2. Query `/api/chain/leaderboard` — should return empty (no matches yet)
-3. Query `/api/chain/cards/:account` — should return minted cards for `@ragnarok`
-4. Verify indexer cursor is at or past seal block
+3. Query `/api/chain/player/:account/cards` — should return minted cards for `@ragnarok`
+4. Query `/api/chain/player/:account/rune?seasonId=S01` — should return the
+   replay-derived RUNE balance summary for the account
+5. Query `/api/chain/rune/state?seasonId=S01` — should return global RUNE caps
+   and drift summary
+6. Verify indexer cursor is at or past seal block
 
 ### 8.3 Pack Opening Validation
 
@@ -884,6 +898,8 @@ Run this rehearsal before scheduling the mainnet ceremony. Its purpose is to ver
 - Conductor prepares a dummy `custom_json` payload (not `ragnarok-cards` — use a throwaway app ID like `ragnarok-rehearsal`)
 - Create a throwaway 2-of-3 multisig account on testnet (or use an existing test account)
 - Each signer has Hive Keychain configured for the test account
+- Rehearsal keys remain in Keychain. Do not paste test WIF/PVT keys into `.env`,
+  chat, docs, logs, or browser-visible `VITE_*` variables.
 
 ### 12.2 Exercise 1 — Happy Path Signing
 

@@ -6,8 +6,11 @@ Step-by-step guide for testing the Ragnarok NFT pipeline on Hive. Assumes you ha
 
 - Node.js 18+
 - [Hive Keychain](https://hive-keychain.com/) browser extension
-- `ragnarok` account **active key** imported into Keychain
+- `ragnarok` test/admin signer **active key** imported into Keychain when running admin-only ceremony actions
 - Git access to `https://github.com/Dhenz14/norse-mythos-card-game`
+
+Never put posting, active, owner, memo, WIF, or `PVT_*` keys in `.env` variables
+with a `VITE_` prefix. See [`ENV_SECURITY.md`](ENV_SECURITY.md).
 
 ## Setup
 
@@ -189,21 +192,23 @@ Or visit: `https://hivehub.dev/@ragnarok` and look for `custom_json` operations 
 | "Pack open failed" | Commit-reveal needs ~60 blocks | Wait ~3 minutes for irreversible finality |
 | Provenance shows no explorer links | Card was minted before stamp system | Only affects pre-stamp legacy cards |
 
-## Data Layer Modes
+## Runtime Profiles
 
-The game separates production ownership from local/dev runtime access:
+The normal configuration is `VITE_NETWORK_STAGE`. It separates production
+ownership from local/dev runtime access:
 
-| Mode | Chain Ops | Collection | Ownership / Progression |
+| Stage | Chain Ops | Collection | Ownership / Progression |
 |------|-----------|------------|-------------------------|
-| `local` / local-dev (default) | No-ops | localStorage/catalog runtime | Unrestricted catalog access for development; no economic ownership, no `CardXP`, no `level_up` |
-| `hive` / mainnet | Real Hive L1 | IndexedDB from chain | Genesis NFT ownership enforced per card; fixed starter entitlement allowed off-chain |
-| `test` | Mock server | Server-side | Server-managed harness data; not economic ownership |
+| `local` (default) | No-ops | localStorage/catalog runtime | Unrestricted catalog access for development; no economic ownership, no `CardXP`, no `level_up` |
+| `testnet` | Real Hive L1 in the testnet namespace | IndexedDB from chain | Genesis NFT ownership enforced per card; fixed starter entitlement allowed off-chain; resettable and non-economic |
+| `mainnet` | Real Hive L1 in the mainnet namespace | IndexedDB from chain | Genesis NFT ownership enforced per card; fixed starter entitlement allowed off-chain; permanent and economic |
 
-To switch to Hive/mainnet mode, the user logs in via Keychain — mode auto-detects.
+`VITE_DATA_LAYER_MODE=test` remains available only for mock-server harnesses.
 
 ## Security Notes
 
 - **Private keys never leave Keychain** — the game only asks Keychain to sign payloads
+- **Operator keys are server/operator-only** — if automation needs a posting key, use `HIVE_POSTING_KEY` or a similar non-`VITE_` env var outside the browser bundle
 - **Replay rules are deterministic** — every reader computes the same state from the same ops
 - **Supply caps are hard-enforced** — every reader independently rejects mints that exceed caps
 - **Genesis is one-time** — after seal, admin authority is bricked forever

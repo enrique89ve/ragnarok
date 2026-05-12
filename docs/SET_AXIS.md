@@ -42,6 +42,10 @@ CARD_CATEGORIES = ['token', 'starter', 'genesis'] as const;
 
 `starter` ownership is account-bound and non-economic. Starter cards do not earn `CardXP`, do not emit `level_up`, do not receive NFT evolution scaling, and do not gain transferable value. Starter usage is tracked separately as local/account-bound reputation.
 
+### Starter delivery
+
+Starter cards reach a new account as **a single deterministic Starter Pack of 45 cards** — never as random pack draws. The card-id list is canonical in [`shared/schemas/starterEntitlement.ts`](../shared/schemas/starterEntitlement.ts) (10 Mage + 10 Warrior + 10 Priest + 10 Rogue + 5 Neutral). The pack metadata (`cardCount: 45`, `commonSlots: 45`, all chance fields `0`) lives in [`shared/protocol-core/packCatalog.ts`](../shared/protocol-core/packCatalog.ts) so the pack catalog stays uniform with `slotTotal === cardCount`, but the open is content-fixed — `applyLegacyPackOpen`, `applyPackCommit` and `applyPackReveal` all reject `pack_type === 'starter'`. See [`docs/RAGNAROK_PROTOCOL_V1.md`](RAGNAROK_PROTOCOL_V1.md) §15.2 for the protocol-side rejection rules.
+
 `CARD_CATEGORY_TABLE` in `cardCategory.ts` encodes the matrix as data; combat-engine code MUST NOT branch on `category` for resolution rules. `categoryOrder()` and `isAtLeast()` enable hierarchy filters like *"every card a player can own"* (= `isAtLeast(c.category, 'starter')`).
 
 ## Macro splits (derived views)
@@ -104,7 +108,10 @@ Therefore:
 SETS = ['starter', 'genesis'] as const;
 ```
 
-`SET_RULES` in `set.ts` encodes the same on-chain / mintable / packs / eitr flags as the category table — they are kept in sync by construction (`SET_RULES.starter` ≡ `CARD_CATEGORY_TABLE.starter`, same for `genesis`). Combat tokens have no `set` value because they are not part of any distribution pool.
+Capabilities (on-chain, mintable, in-packs, deck limits) live in `CARD_CATEGORY_TABLE` keyed by `category`, not on the authoring `set`. There is no per-set `eitr` flag: Eitr eligibility is a derived consequence of `category === 'genesis'` (only genesis uids can be burned for Eitr — see [ADR 0001](./adr/0001-eitr-v1-canonical.md) and [TOKEN_AXIS.md](./TOKEN_AXIS.md)). Combat tokens have no `set` value because they are not part of any distribution pool.
+
+<!-- Decision (2026-05-12, issue 01 doc-cleanup): `SET_RULES` does not exist in `client/src/game/data/schemas/primitives/set.ts` and was never landed in `shared/`. Earlier prose described an `eitr` flag that never materialized. The non-branching rule is enforced by absence (combat-engine code can't read a flag that isn't there). Future authors: do not add a per-set `eitr` flag — Eitr eligibility is category-derived. -->
+
 
 ## Boundary normalization
 

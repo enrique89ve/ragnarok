@@ -127,6 +127,8 @@ Canonical 4-tier rarity. The runtime enum lives in [`shared/schemas/rarity.ts`](
 | Mythic | Orange | 250 | 1 copy | 1,600 | 400 |
 | Token | Gray (darker) | N/A (not collectible) | N/A | N/A | N/A |
 
+Eitr (Forge) and Eitr (Dissolve) costs are canonical per [ADR 0001](adr/0001-eitr-v1-canonical.md). Eitr is replay-derived, non-transferable, and scoped to the active season. Forged cards always mint at Mortal level 0; XP must be earned in play.
+
 `Token` is not a rarity tier — it is a marker for non-collectible combat-only cards (`collectible: false` in the registry; ID range 9000-9099 and others). Tokens are excluded from packs, supply caps and deck limits.
 
 ### Card ID Ranges
@@ -880,6 +882,8 @@ All new players receive **45 free base cards** when they first start:
 - 5 neutral cards (universal)
 
 Base cards are infinite supply — they are NOT NFTs and don't count toward the 2.7M collectible cap. They're slightly weaker than common-rarity cards but include a few "value gems" that keep starter decks competitive.
+
+The 45 cards are delivered as a **single deterministic Starter Pack** claimed once per account. The pack content is fixed (no random draw) and sourced from the canonical entitlement table in `shared/schemas/starterEntitlement.ts`. After the pack opens, the new player picks an entry mode (Campaign / Quick Match / Multiplayer) and starts playing. See [`docs/SET_AXIS.md`](SET_AXIS.md) for the category model and [`docs/RAGNAROK_PROTOCOL_V1.md`](RAGNAROK_PROTOCOL_V1.md) §15.2 for the protocol-level rejection rules that keep starter outside the on-chain pack flow.
 
 ### Deck Rules
 

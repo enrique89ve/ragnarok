@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { routes } from '../../../lib/routes';
 import SettingsPanel from './SettingsPanel';
 import { useNFTUsername } from '../../nft/hooks';
+import { UserChip } from '../../../components/account/UserChip';
 
 export default function SettingsPage() {
 	const hiveUsername = useNFTUsername();
@@ -49,14 +50,23 @@ export default function SettingsPage() {
 	return (
 		<div className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-home-nav) text-ink-0">
 			<div className="max-w-2xl mx-auto px-4 py-8">
-				<div className="flex items-center justify-between mb-8">
-					<h1 className="text-3xl font-bold text-amber-400 tracking-wide">Settings</h1>
-					<Link
-						to={routes.home}
-						className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm border border-gray-700 transition-colors"
-					>
-						Back to Menu
-					</Link>
+				<div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
+					<h1 className="font-display text-3xl font-black tracking-[0.10em] uppercase text-gold-300">Settings</h1>
+					<div className="flex items-center gap-3 flex-wrap">
+						{hiveUsername && (
+							<UserChip
+								username={hiveUsername}
+								tier="premium"
+								secondary="Profile"
+							/>
+						)}
+						<Link
+							to={routes.home}
+							className="inline-flex items-center h-9 px-4 rounded-full border border-obsidian-700 bg-obsidian-850 text-ink-200 hover:text-gold-300 hover:border-gold-600 font-display text-xs tracking-[0.18em] uppercase font-bold transition-colors"
+						>
+							Home
+						</Link>
+					</div>
 				</div>
 
 				{/* ── Portable Save Section ── */}

@@ -5,6 +5,7 @@ export const routes = {
   singleGame: '/game/single',
   campaignGame: '/game/campaign',
   campaign: '/campaign',
+  map: '/map',
   multiplayer: '/multiplayer',
   tournaments: '/tournaments',
   packs: '/packs',
@@ -14,7 +15,9 @@ export const routes = {
   ladder: '/ladder',
   history: '/history',
   settings: '/settings',
+  wallet: '/wallet',
   marketplace: '/marketplace',
   explorer: '/explorer',
   admin: '/admin',
+  runeTestnetPrototype: '/testnet/rune',
 };

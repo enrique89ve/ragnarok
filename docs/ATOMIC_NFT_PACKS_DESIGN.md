@@ -128,7 +128,7 @@ Both operations succeed or fail atomically — Hive's transaction processing gua
 |----|--------------------------|-----------|-----------|
 | `card_transfer` | **YES** | Card recipient | Custody change = value transfer |
 | `pack_mint` (new) | **YES** | Pack buyer | Pack purchase = value transfer |
-| `pack_transfer` (new) | **YES** | Pack recipient | Sealed pack custody change |
+| `pack_transfer` (new, **admin-only**) | **YES** | Pack recipient | Sealed pack custody change. v1.1 restricts broadcaster to `RAGNAROK_ADMIN_ACCOUNT` — players cannot trade or gift sealed packs via this op. Bulk admin moves SHOULD use `pack_distribute`; this op is the surgical single-pack tool. |
 | `pack_burn` (new) | **NO** | N/A | Burn is self-action, no recipient |
 | `burn` | **NO** | N/A | Destruction, no recipient |
 | `match_result` | **NO** | N/A | Game outcome, no HIVE transfer |
@@ -737,11 +737,17 @@ for (let i = 0; i < quantity; i++) {
 }
 ```
 
-### 5.2 `pack_transfer` — Transfer Sealed Pack
+### 5.2 `pack_transfer` — Admin-Only Sealed-Pack Transfer
 
-**Broadcaster**: Pack owner
+**Broadcaster**: `RAGNAROK_ADMIN_ACCOUNT` ONLY (v1.1 hardening — see [`docs/RAGNAROK_PROTOCOL_V1.md`](RAGNAROK_PROTOCOL_V1.md) §10.5.5)
 **Auth**: Active
 **Atomic**: YES — includes 0.001 HIVE transfer to recipient
+
+**Player-to-player pack transfers are NOT supported.** `applyPackTransfer` in `shared/protocol-core/apply.ts` rejects any broadcaster other than `RAGNAROK_ADMIN_ACCOUNT`. The original v1.1 design enabled player-to-player sealed-pack trading; that was removed to keep sealed packs as a non-tradeable asset class (players claim, open, keep — they do not gift). Use cases that previously belonged to player-to-player `pack_transfer`:
+
+- **Airdrops and event distribution**: use `pack_distribute` (bulk atomic admin → players).
+- **Treasury rebalancing / manual remediation**: use `pack_transfer` from admin (this op).
+- **Player gifting**: not supported. A future iteration could re-enable it behind a freshly-modeled "gift" op with explicit policy; do not silently relax the broadcaster check.
 
 ```typescript
 interface PackTransferPayload {
@@ -753,8 +759,9 @@ interface PackTransferPayload {
 }
 
 // Validation
+- Broadcaster MUST be RAGNAROK_ADMIN_ACCOUNT (NEW in v1.1 hardening)
 - Pack must exist and be sealed
-- Broadcaster must be current owner
+- Broadcaster (admin) must be current owner
 - Recipient != sender
 - Transfer cooldown (10 blocks)
 - Nonce must advance (if provided)
@@ -842,7 +849,7 @@ await deletePack(pack.uid);
 | `pack_reveal` | **Deprecated** | Posting | No | *(legacy, pre-NFT packs)* |
 | `legacy_pack_open` | No | Posting | No | Pre-seal compat |
 | `pack_mint` | **NEW** | Active | **YES** | Create sealed pack NFT |
-| `pack_transfer` | **NEW** | Active | **YES** | Transfer sealed pack |
+| `pack_transfer` | **NEW** (admin-only post-v1.1) | Active | **YES** | Transfer sealed pack (admin only — see §5.2) |
 | `pack_burn` | **NEW** | Active | No | Open pack (burn + derive) |
 
 ---

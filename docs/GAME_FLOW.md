@@ -81,7 +81,7 @@ Hero Death            ▼             │
 ### Current Implementation Notes
 	
 - **Home shell**: `App.tsx` is the current funnel entry. Daily quests, friends, wallet, primary mode cards, and utility links all mount there, so browser QA should validate that the primary "continue playing" action stays dominant on both desktop and mobile.
-- **Starter handoff**: `StarterPackCeremony.tsx` now returns first-time players to `routes.campaign` after the reveal instead of dropping them back on the home shell. The intended first-run path is home → starter ceremony → campaign theater → mission briefing → army staging → battle.
+- **Starter handoff**: `StarterPackCeremony.tsx` ends in a **mode-select** screen — three tiles (Campaign / Quick Match / Multiplayer) — after the reveal animation. There is **no skip** and no auto-redirect to `/campaign`. The intended first-run path is now home → starter ceremony → reveal → mode-select → chosen mode. Mode-select is implemented inline in `StarterPackCeremony.tsx` (function `ModeSelect`); the three routes resolve to `routes.campaign`, `routes.singleGame`, and `routes.multiplayer`.
 - **Campaign navigation**: `CampaignPage.tsx` now stages the campaign as a chapter-theater funnel instead of a flat mission picker. Chapter prologues can autoplay from the campaign shell, Norse/Greek maps now sit over a live cosmic canvas, realm panels surface the next authored route, and the mission briefing is structured as a launch sequence rather than a loose settings card.
 - **Army staging**: `ArmySelection.tsx` now reads as a launch surface instead of a raw picker: command, loadout, and launch states are surfaced explicitly, and the footer CTA language follows the same route that starts on the campaign shell.
 - **Combat feel**: `RagnarokCombatArena.tsx` now uses a shared phase director for setup and wagering instead of separate loose cards. Disabled wagering controls are hidden when the opponent owns the decision window, so each phase exposes fewer active controls at once and the cadence reads more deliberately during live play.
@@ -501,13 +501,24 @@ StarterPackCeremony.tsx
   ▼ Click
   ├── Phase 2: Pack Opening Animation
   │   45 class-matched base cards revealed (PackOpeningAnimation reuse)
+  │   ── For cards.length > 10 the animation uses batch reveal (instant grid
+  │      stagger) instead of 800ms-per-card sequential. 45 × 800ms = 36s
+  │      was too slow for the starter; batch keeps the ceremony under 5s.
+  │   ── cards.length === 0 also lands directly on the complete state so
+  │      a cardRegistry-not-ready race never leaves the screen stuck on
+  │      "Revealing...".
   │   Cards added to HiveDataStore
   │   4 starter card pools saved to localStorage
   │   starterStore.markClaimed()
   │
-  ▼ Animation complete
-  ceremony closes → /campaign
-  player lands on the campaign lead card / mission briefing path
+  ▼ Animation complete (close button or auto)
+  ├── Phase 3: Mode Select
+  │   Three tiles: Campaign / Quick Match / Multiplayer
+  │   No skip — the player MUST pick a mode (the previous design
+  │   auto-redirected to /campaign, which felt forced).
+  │
+  ▼ Pick mode → onComplete() + navigate(route)
+  Player lands on the chosen entry point.
 ```
 
 ### Starter Set

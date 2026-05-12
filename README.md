@@ -74,7 +74,7 @@ Five mythological pantheons clash for supremacy. Norse frost giants wage war aga
 - **Card evolution** — 3 tiers: Mortal (60-70%) → Ascended (80-90%) → Divine (100%)
 - **Daily quest system** — 19 quest templates, 3 active per day
 - **Pack opening** — commit-reveal with delayed irreversible Hive block entropy (anti-grind, anti-selective-reveal)
-- **RUNE rewards** — testnet emission capped at 1M RUNE: 80% P2P, 20% campaign; ranked P2P currently pays +2 per win, +0 per loss (non-transferable in v1)
+- **RUNE rewards** — testnet S01 emission capped at 2.2M RUNE: 2M P2P, 200K campaign; ranked P2P currently pays +2 per win, +0 per loss (non-transferable in v1)
 - **Eitr crafting** — dissolve cards to see Eitr value (display only in v1 — forging and Eitr trading disabled until replay-derived)
 
 ### Blockchain (Hive Layer 1 — Protocol v1.2)
@@ -404,8 +404,17 @@ Genesis → Mint Batches → Seal → Admin minting permanently closed
 
 - **Protocol spec**: [`docs/RAGNAROK_PROTOCOL_V1.md`](docs/RAGNAROK_PROTOCOL_V1.md) — frozen normative specification
 - **Conformance suite**: 170 tests (37 golden vectors + 38 replay traces + 95 existing)
-- **Server indexer**: Sequential irreversible block scan via `get_ops_in_block` + LIB cursor
+- **Server indexer**: Sequential irreversible block scan via `get_ops_in_block` + LIB cursor; starts by default unless `ENABLE_CHAIN_INDEXER=false`
 - **Client replay**: Shared `protocol-core` module with LIB-gated application
+- **Chain read API**: Public read-only chain-derived reads live under `/api/chain`; RUNE uses `/api/chain/player/:username/rune` plus `/api/chain/rune/{state,ledger,balances}`
+
+### Hive Keys And Environment Security
+
+- Browser code may receive only public `VITE_*` values: network stage, protocol ids, collection ids, account names, and public endpoints.
+- Player keys stay in Hive Keychain. The app asks Keychain to sign and never stores private keys.
+- Operator posting keys belong only in server/operator runtime env vars such as `HIVE_POSTING_KEY` or `RAGNAROK_OPERATOR_POSTING_KEY`.
+- Active keys should stay in Keychain/manual multisig unless a dedicated operator process explicitly needs one.
+- See [`docs/ENV_SECURITY.md`](docs/ENV_SECURITY.md) before adding any env var or signing automation.
 
 ---
 
@@ -543,9 +552,13 @@ server/
 - [x] P2P resilience — STUN/TURN, 15s grace period, heartbeat, message buffer, exponential reconnect
 - [x] 6-tier decentralized indexer — IPFS + HafSQL fallback, zero server required
 - [x] Marketplace UI — `/marketplace` with browse, list, buy, offer
+- [x] RUNE chain read API — `/api/chain/player/:username/rune` plus `/api/chain/rune/{state,ledger,balances}`, with no parallel `/api/testnet/rune/*`
+- [x] Chain API rate limits — tighter caps for sync-on-demand reads and RUNE ledger/state views
 
 ### Next: Genesis Launch
 
+- [ ] RUNE live smoke with Hive/Keychain: claim/open pack, visible balance, local replay parity
+- [ ] Season Score snapshot: final ELO + capped RUNE bonus at season-end block
 - [ ] Create @ragnarok Hive account (2-of-3 multisig, no standalone keys)
 - [ ] Create @ragnarok-genesis Hive account (2-of-3 multisig, same signers)
 - [ ] Create @ragnarok-treasury Hive account (2-of-3 initial, expandable via WoT)
@@ -568,6 +581,7 @@ server/
 | [RULEBOOK.md](docs/RULEBOOK.md) | Complete game rules with examples |
 | [GAME_FLOW.md](docs/GAME_FLOW.md) | Game flow diagrams and state management |
 | [GENESIS_RUNBOOK.md](docs/GENESIS_RUNBOOK.md) | **Operational ceremony guide** — multisig signing, checkpoints, emergency procedures |
+| [ENV_SECURITY.md](docs/ENV_SECURITY.md) | Environment and Hive key placement rules |
 | [HIVE_BLOCKCHAIN_BLUEPRINT.md](docs/HIVE_BLOCKCHAIN_BLUEPRINT.md) | Hive NFT architecture (legacy — protocol spec is now canonical) |
 | [CLAUDE.md](CLAUDE.md) | Technical architecture reference |
 

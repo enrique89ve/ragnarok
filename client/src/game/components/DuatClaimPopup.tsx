@@ -1,51 +1,72 @@
 /**
  * DuatClaimPopup.tsx — DUAT holder airdrop claim overlay
  *
- * Shows when a logged-in user is in the DUAT snapshot and hasn't claimed yet.
- * Gold-themed popup with balance display, pack count, and one-click claim.
+ * Shows when a logged-in user is eligible for the DUAT airdrop and hasn't
+ * claimed yet. The UI shows entitlement and chain status, not raw holder data.
  */
 
-import React, { useEffect } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDuatClaimStore } from '../stores/duatClaimStore';
+import { useStarterStore } from '../stores/starterStore';
 import { useNFTUsername } from '../nft/hooks';
 
-const DUAT_PRECISION = 1000;
+// Lazy — ceremony is only mounted after a successful claim.
+const DuatPackCeremony = lazy(() => import('./DuatPackCeremony'));
 
 export default function DuatClaimPopup() {
 	const username = useNFTUsername();
-	const snapshotLoaded = useDuatClaimStore(s => s.snapshotLoaded);
+	const eligibilityLoaded = useDuatClaimStore(s => s.eligibilityLoaded);
 	const currentUserEntry = useDuatClaimStore(s => s.currentUserEntry);
-	const claimed = useDuatClaimStore(s => s.claimed);
 	const dismissed = useDuatClaimStore(s => s.dismissed);
-	const loading = useDuatClaimStore(s => s.loading);
-	const claimTrxId = useDuatClaimStore(s => s.claimTrxId);
-	const loadSnapshot = useDuatClaimStore(s => s.loadSnapshot);
+	const claiming = useDuatClaimStore(s => s.claiming);
+	const pendingClaimTrxId = useDuatClaimStore(s => s.pendingClaimTrxId);
 	const checkAccount = useDuatClaimStore(s => s.checkAccount);
 	const claimPacks = useDuatClaimStore(s => s.claimPacks);
 	const dismiss = useDuatClaimStore(s => s.dismiss);
 
-	// Load snapshot on mount
-	useEffect(() => {
-		loadSnapshot();
-	}, [loadSnapshot]);
+	// Onboarding order: the starter ceremony must complete before the DUAT
+	// popup interrupts. Otherwise the gold-themed overlay races the "Claim
+	// Your Birthright" CTA on /home and the new player sees DUAT first.
+	const starterClaimed = useStarterStore(s => s.hasClaimed(username));
+
+	const [showCeremony, setShowCeremony] = useState(false);
+
+	const earnedPacks = currentUserEntry?.packsEarned ?? 0;
+	const claimConfirmed = Boolean(currentUserEntry?.claimed && pendingClaimTrxId);
+	const claimPending = Boolean(pendingClaimTrxId && !currentUserEntry?.claimed);
+	const activeClaimTrxId = currentUserEntry?.claimTrxId ?? pendingClaimTrxId;
 
 	// Check account when username changes
 	useEffect(() => {
-		if (username && snapshotLoaded) {
-			checkAccount(username);
-		}
-	}, [username, snapshotLoaded, checkAccount]);
+		if (!username) return;
+		void checkAccount(username);
+	}, [username, checkAccount]);
 
-	// Don't show if: no user, not loaded, not eligible, already claimed, dismissed
-	const visible = username && snapshotLoaded && currentUserEntry && !claimed && !dismissed;
+	// Don't show if: no user, not loaded, not eligible, already claimed,
+	// dismissed, OR starter not yet claimed (defer to starter ceremony first).
+	const visible = username && eligibilityLoaded && currentUserEntry && !currentUserEntry.claimed && !claimPending && !dismissed && starterClaimed;
 
-	// Success state (just claimed)
-	const justClaimed = claimed && claimTrxId && !dismissed;
+	const statusVisible = username && currentUserEntry && (claimPending || claimConfirmed) && !dismissed && starterClaimed;
+
+	if (showCeremony && username) {
+		return (
+			<Suspense fallback={null}>
+				<DuatPackCeremony
+					accountId={username}
+					expectedPacks={earnedPacks}
+					onComplete={() => {
+						setShowCeremony(false);
+						dismiss();
+					}}
+				/>
+			</Suspense>
+		);
+	}
 
 	return (
 		<AnimatePresence>
-			{(visible || justClaimed) && (
+			{(visible || statusVisible) && (
 				<motion.div
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
@@ -58,7 +79,7 @@ export default function DuatClaimPopup() {
 						animate={{ scale: 1, opacity: 1, y: 0 }}
 						exit={{ scale: 0.9, opacity: 0 }}
 						transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-						className="relative max-w-md w-full mx-4 rounded-xl overflow-hidden"
+						className="relative max-w-md w-full mx-4 rounded-xl modal-landscape-safe"
 						style={{
 							background: 'linear-gradient(180deg, #1a1510 0%, #0d0a06 100%)',
 							border: '1px solid rgba(201, 164, 76, 0.3)',
@@ -72,33 +93,51 @@ export default function DuatClaimPopup() {
 						/>
 
 						<div className="p-8 text-center">
-							{justClaimed ? (
+							{statusVisible ? (
 								<>
-									{/* Success state */}
 									<motion.div
 										initial={{ scale: 0 }}
 										animate={{ scale: 1 }}
 										transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
 										className="text-5xl mb-4"
 									>
-										&#x2728;
+										{claimConfirmed ? '\u2728' : '\u23F3'}
 									</motion.div>
 									<h2 className="text-2xl font-bold mb-2" style={{ color: '#c9a44c' }}>
-										Packs Claimed!
+										{claimConfirmed ? 'Packs Confirmed' : 'Claim Submitted'}
 									</h2>
 									<p className="text-gray-400 text-sm mb-4">
-										{currentUserEntry?.packs} sealed packs have been added to your collection.
+										{claimConfirmed
+											? `${earnedPacks} sealed pack${earnedPacks === 1 ? '' : 's'} confirmed in your vault.`
+											: `${earnedPacks} sealed pack${earnedPacks === 1 ? '' : 's'} will appear after chain confirmation.`}
 									</p>
-									<p className="text-xs text-gray-600 mb-6 font-mono">
-										tx: {claimTrxId?.slice(0, 16)}...
-									</p>
-									<button
-										onClick={dismiss}
-										className="px-8 py-2.5 rounded-lg text-sm font-semibold transition-colors"
-										style={{ background: 'rgba(201, 164, 76, 0.15)', color: '#c9a44c', border: '1px solid rgba(201, 164, 76, 0.3)' }}
-									>
-										Continue to Game
-									</button>
+									{activeClaimTrxId && (
+										<p className="text-xs text-gray-600 mb-6 font-mono">
+											tx: {activeClaimTrxId.slice(0, 16)}...
+										</p>
+									)}
+									<div className="flex gap-3">
+										<button
+											onClick={dismiss}
+											className="flex-1 px-4 py-2.5 rounded-lg text-sm transition-colors"
+											style={{ background: 'rgba(255, 255, 255, 0.05)', color: 'rgba(255, 255, 255, 0.6)', border: '1px solid rgba(255, 255, 255, 0.1)' }}
+										>
+											{claimConfirmed ? 'Open Later' : 'Close'}
+										</button>
+										{claimConfirmed && (
+											<button
+												onClick={() => setShowCeremony(true)}
+												className="flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-all"
+												style={{
+													background: 'linear-gradient(135deg, #c9a44c, #a07830)',
+													color: '#fff',
+													boxShadow: '0 0 20px rgba(201, 164, 76, 0.3)',
+												}}
+											>
+												Open Packs
+											</button>
+										)}
+									</div>
 								</>
 							) : (
 								<>
@@ -112,7 +151,7 @@ export default function DuatClaimPopup() {
 									</motion.div>
 
 									<h2 className="text-2xl font-bold mb-1" style={{ color: '#c9a44c', letterSpacing: '0.05em' }}>
-										DUAT Holder Detected
+										DUAT Packs Ready
 									</h2>
 
 									<p className="text-gray-500 text-xs uppercase tracking-widest mb-6">
@@ -124,9 +163,9 @@ export default function DuatClaimPopup() {
 										style={{ background: 'rgba(201, 164, 76, 0.06)', border: '1px solid rgba(201, 164, 76, 0.15)' }}
 									>
 										<div className="flex justify-between items-center mb-3">
-											<span className="text-gray-500 text-sm">Your DUAT Balance</span>
+											<span className="text-gray-500 text-sm">Eligibility</span>
 											<span className="text-lg font-bold" style={{ color: '#c9a44c' }}>
-												{((currentUserEntry?.duatRaw ?? 0) / DUAT_PRECISION).toLocaleString()} DUAT
+												Verified
 											</span>
 										</div>
 										<div
@@ -136,14 +175,13 @@ export default function DuatClaimPopup() {
 										<div className="flex justify-between items-center">
 											<span className="text-gray-500 text-sm">Packs Earned</span>
 											<span className="text-xl font-bold text-white">
-												{currentUserEntry?.packs} <span className="text-sm text-gray-400">Standard Packs</span>
+												{earnedPacks} <span className="text-sm text-gray-400">Standard Packs</span>
 											</span>
 										</div>
 									</div>
 
 									<p className="text-gray-500 text-xs mb-6 leading-relaxed">
-										Each pack contains 5 random cards from the Ragnarok Alpha collection.
-										Claim within 90 days of genesis or packs return to the treasury.
+										Claim once with Hive Keychain. Packs appear after chain confirmation.
 									</p>
 
 									<div className="flex gap-3">
@@ -156,15 +194,15 @@ export default function DuatClaimPopup() {
 										</button>
 										<button
 											onClick={claimPacks}
-											disabled={loading}
+											disabled={claiming}
 											className="flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-all disabled:opacity-50"
 											style={{
-												background: loading ? 'rgba(201, 164, 76, 0.2)' : 'linear-gradient(135deg, #c9a44c, #a07830)',
+												background: claiming ? 'rgba(201, 164, 76, 0.2)' : 'linear-gradient(135deg, #c9a44c, #a07830)',
 												color: '#fff',
-												boxShadow: loading ? 'none' : '0 0 20px rgba(201, 164, 76, 0.3)',
+												boxShadow: claiming ? 'none' : '0 0 20px rgba(201, 164, 76, 0.3)',
 											}}
 										>
-											{loading ? 'Claiming...' : 'Claim Your Packs'}
+											{claiming ? 'Claiming...' : 'Claim Packs'}
 										</button>
 									</div>
 								</>

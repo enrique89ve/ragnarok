@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { routes } from '../../../lib/routes';
 import { useNFTUsername } from '../../nft/hooks';
+import { AccountSlot } from '../../../components/account/AccountSlot';
 import { getMatchesByAccount } from '../../../data/blockchain/replayDB';
 import type { HiveMatchResult } from '../../../data/schemas/HiveTypes';
 import { getSeasonInfo, formatTimeRemaining } from '../../utils/seasonUtils';
@@ -185,15 +186,23 @@ export default function RankedLadderPage() {
 				</div>
 			)}
 			{/* Header */}
-			<div className="ladder-header px-6 py-4 flex items-center justify-between">
+			<div className="ladder-header px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
 				<div className="flex items-center gap-4">
-					<Link to={routes.home}>
-						<button className="text-gray-400 hover:text-white transition-colors text-sm">
-							&larr; Back
-						</button>
+					<Link
+						to={routes.home}
+						className="inline-flex items-center h-9 px-4 rounded-full border border-obsidian-700 bg-obsidian-850 text-ink-200 hover:text-gold-300 hover:border-gold-600 font-display text-xs tracking-[0.18em] uppercase font-bold transition-colors"
+					>
+						Home
 					</Link>
 					<h1 className="ladder-title text-3xl font-bold">Ranked Ladder</h1>
 				</div>
+
+				<AccountSlot
+					username={myUsername}
+					tier={myRank && myRank <= 10 ? 'mythic' : myRank && myRank <= 50 ? 'premium' : 'standard'}
+					to={routes.settings}
+					secondary={myRank ? `Rank #${myRank}` : 'Unranked'}
+				/>
 
 				{myEntry && myRank && (
 					<div className="flex items-center gap-6 text-sm">

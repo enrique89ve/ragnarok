@@ -14,17 +14,20 @@ Beta-testnet state is temporary. Progress, rankings, rewards, packs, and NFTs cr
 | `testnet` | Shared beta network for real users and full architecture validation. | Resettable at beta wipe. | No permanent value. |
 | `mainnet` | Production economy, final supply, permanent ownership. | Permanent. | Real. |
 
-`VITE_NETWORK_STAGE` is the source of truth for permanence:
+`VITE_NETWORK_STAGE` is the source of truth for the runtime profile:
 
 - `local`: private development.
-- `testnet`: shared resettable beta.
-- `mainnet`: permanent economic environment.
+- `testnet`: shared resettable beta using Hive data and blockchain packaging.
+- `mainnet`: permanent economic environment using Hive data and blockchain packaging.
 
-`VITE_DATA_LAYER_MODE` only defines where data comes from:
+`VITE_DATA_LAYER_MODE` is an advanced override for focused tests/debugging:
 
 - `local`: browser/dev data.
 - `test`: mock/test server data.
 - `hive`: Hive L1 replay or indexed data.
+
+Normal local/testnet/mainnet runs should not set `VITE_DATA_LAYER_MODE` or
+`VITE_BLOCKCHAIN_PACKAGING`; both are derived from `VITE_NETWORK_STAGE`.
 
 Network constants live in `client/src/game/config/networkConfig.ts`. They define protocol namespace, collection id, admin/index accounts, indexer endpoints, art endpoints, NFTLox protocol id, and reset/economic policy per stage.
 
@@ -128,6 +131,42 @@ Canonical RUNE state is derived from Hive events:
 RUNE payloads must never trust a client-supplied amount. The protocol computes
 the amount from season config, source type, account, and source key. If an op
 injects an amount or exceeds a cap, replay rejects it.
+
+RUNE read APIs are part of the chain read surface, not a separate testnet API.
+The canonical public endpoints are:
+
+- `GET /api/chain/player/:username/rune?seasonId=S01` — one account balance,
+  credits, debits, drift, last RUNE block, and indexed flag.
+- `GET /api/chain/rune/state?seasonId=S01` — global cap, emission, and drift
+  summary.
+- `GET /api/chain/rune/ledger?seasonId=S01&account=:username` — paginated
+  replay-derived ledger entries.
+- `GET /api/chain/rune/balances?seasonId=S01` — paginated account balance
+  summaries.
+
+Do not add or document parallel `/api/testnet/rune/*` endpoints. Testnet is a
+runtime profile; `/api/chain` is the single namespace for chain-derived reads.
+
+Expected read cadence:
+
+- Wallet/testnet panels may fetch `state`, the selected account summary, and the
+  selected account ledger on open, reconnect, or manual refresh.
+- Background refresh must not be faster than once every 30 seconds per browser
+  view. Normal wallet usage should stay around 3-6 RUNE reads per minute.
+- `/api/chain/player/:username/*` reads are not pure cache reads when the
+  account is unknown; they may request a bounded server-side Hive scan. Do not
+  call them from render loops or high-frequency UI effects.
+
+Server-side limits:
+
+- Global `/api` limit: 120 requests/minute per IP.
+- On-demand chain sync reads (`/player/:username`, `/player/:username/rune`,
+  `/player/:username/cards`, `/verify-deck`, `/register`): 24 requests/minute
+  per IP in production, 90 in development.
+- ELO lookup (`/player/:username/elo`): 60 requests/minute per IP in production,
+  180 in development.
+- RUNE state/ledger/balances reads: 60 requests/minute per IP in production,
+  180 in development.
 
 Season S01 hard caps:
 

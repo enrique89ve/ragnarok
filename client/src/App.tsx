@@ -12,7 +12,6 @@ import LoadingScreen from "./game/components/ui/LoadingScreen";
 import GoldenCardFilter from "./game/animations/GoldenCardFilter";
 import { ALL_CHAPTERS, getMission, useCampaignStore } from "./game/campaign";
 import { useStarterStore } from "./game/stores/starterStore";
-import { ensureStarterDecks, materializeStarterEntitlement } from "./game/data/starterSet";
 import { useIsHiveMode, useNFTUsername } from "./game/nft/hooks";
 import { getRagnarokNetworkConfig } from "./game/config/networkConfig";
 import { isTestnetStage } from "./game/config/featureFlags";
@@ -34,7 +33,7 @@ const PacksPage = lazy(() => import('./game/components/packs/PacksPage'));
 const CollectionPage = lazy(() => import('./game/components/collection/CollectionPage'));
 const RankedLadderPage = lazy(() => import('./game/components/ladder/RankedLadderPage'));
 const CampaignPage = lazy(() => import('./game/components/campaign/CampaignPage'));
-const TradingPage = lazy(() => import('./game/components/trading/TradingPage'));
+const MapPage = lazy(() => import('./game/components/map/MapPage'));
 const TournamentListPage = lazy(() => import('./game/components/tournament/TournamentListPage'));
 const MatchHistoryPage = lazy(() => import('./game/components/replay/MatchHistoryPage'));
 const SettingsPage = lazy(() => import('./game/components/settings/SettingsPage'));
@@ -42,6 +41,7 @@ const TreasuryPage = lazy(() => import('./game/components/treasury/TreasuryPage'
 const MarketplacePage = lazy(() => import('./game/components/marketplace/MarketplacePage'));
 const ExplorerPage = lazy(() => import('./game/components/explorer/ExplorerPage'));
 const AdminPanel = lazy(() => import('./game/components/admin/AdminPanel'));
+const WalletPage = lazy(() => import('./game/components/wallet/WalletPage'));
 const StarterPackCeremony = lazy(() => import('./game/components/StarterPackCeremony'));
 const DuatClaimPopup = lazy(() => import('./game/components/DuatClaimPopup'));
 const FactionPledgePopup = lazy(() =>
@@ -73,11 +73,11 @@ function OnlineOnly({ children, label }: { children: React.ReactNode; label: str
   }, []);
   if (!online) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gray-950 text-center px-8">
+      <div className="h-screen flex items-center justify-center bg-obsidian-950 text-center px-8">
         <div>
-          <p className="text-amber-400 text-xl font-bold mb-2">Offline Mode</p>
-          <p className="text-gray-400 text-sm">{label} requires an internet connection.</p>
-          <p className="text-gray-600 text-xs mt-4">Campaign, Collection, Deck Builder, and Settings work offline.</p>
+          <p className="font-display text-gold-300 text-xl font-bold tracking-[0.18em] uppercase mb-2">Offline Mode</p>
+          <p className="text-ink-200 text-sm">{label} requires an internet connection.</p>
+          <p className="text-ink-400 text-xs mt-4">Campaign, Collection, Deck Builder, and Settings work offline.</p>
         </div>
       </div>
     );
@@ -109,7 +109,7 @@ function OnlineOnly({ children, label }: { children: React.ReactNode; label: str
  *   - an accent color (text + bottom strip + arrow + hover border)
  * When real art lands, the radial layer becomes the image and the rest stays.
  */
-type AccentKey = 'ember' | 'gold' | 'bifrost';
+type AccentKey = 'ember' | 'gold' | 'bifrost' | 'rune';
 
 interface ModeCard {
 	title: string;
@@ -145,6 +145,12 @@ const ACCENT: Record<AccentKey, { text: string; strip: string; border: string; a
 		border: 'hover:border-bifrost-300/50',
 		arrow: 'text-bifrost-300',
 	},
+	rune: {
+		text: 'text-rune-300',
+		strip: 'bg-linear-to-r from-transparent via-rune-300/70 to-transparent',
+		border: 'hover:border-rune-300/50',
+		arrow: 'text-rune-300',
+	},
 };
 
 const MODE_CARDS: ReadonlyArray<ModeCard> = [
@@ -175,6 +181,19 @@ const MODE_CARDS: ReadonlyArray<ModeCard> = [
 		intent: 'combat',
 	},
 	{
+		title: 'Yggdrasil Atlas',
+		kicker: 'Lore',
+		description: 'Review realm origins, Gate effects, and pledged houses before campaign or PvP.',
+		to: routes.map,
+		icon: Compass,
+		accent: 'rune',
+		atmosphere:
+			'radial-gradient(ellipse 70% 55% at 85% 18%, rgba(143, 181, 115, 0.28), transparent 68%), ' +
+			'radial-gradient(ellipse 45% 42% at 20% 90%, rgba(74, 111, 224, 0.14), transparent 70%)',
+		cta: 'Study',
+		intent: 'meta',
+	},
+	{
 		title: 'Collection',
 		kicker: 'Deckbuilding',
 		description: 'Review your cards, inspect rarity treatments, and tune the pieces behind your army.',
@@ -192,8 +211,10 @@ const MODE_CARDS: ReadonlyArray<ModeCard> = [
 // Settings lives next to the Account panel (gear icon) — universal access
 // without competing with the route-shortcut chips below.
 const UTILITY_LINKS: ReadonlyArray<{ label: string; to: string }> = [
+	{ label: 'Wallet', to: routes.wallet },
+	{ label: 'Atlas', to: routes.map },
+	{ label: 'Marketplace', to: routes.marketplace },
 	{ label: 'Packs', to: routes.packs },
-	{ label: 'Trading', to: routes.trading },
 	{ label: 'Tournaments', to: routes.tournaments },
 	{ label: 'History', to: routes.history },
 	{ label: 'Treasury', to: routes.treasury },
@@ -285,6 +306,7 @@ function HomePage() {
 	const sagaPercent = totalMissionCount > 0
 		? Math.round((completedMissionCount / totalMissionCount) * 100)
 		: 0;
+	const accountInitials = hiveUsername?.slice(0, 2).toUpperCase();
 
 	useEffect(() => {
 		const handler = () => setCanInstall(true);
@@ -294,12 +316,10 @@ function HomePage() {
 
 	useEffect(() => {
 		if (isHiveMode && !hiveUsername) return;
-
+		// Re-seed of hero decks on account load is handled by ensureBridgeRuntime
+		// (bridgeRuntime.ts). Here we only need the legacy claim sync so the
+		// starter store reflects the active account.
 		syncLegacyStarterClaim(hiveUsername);
-		if (!useStarterStore.getState().hasClaimed(hiveUsername)) return;
-
-		materializeStarterEntitlement();
-		ensureStarterDecks();
 	}, [hiveUsername, isHiveMode, syncLegacyStarterClaim]);
 
 	const triggerInstall = () => {
@@ -320,7 +340,7 @@ function HomePage() {
 							<div className="flex items-center gap-2">
 								<div className="font-display text-sm font-bold tracking-[0.18em] text-gold-300">RAGNAROK</div>
 								{isTestnetStage() && (
-									<span className="rounded border border-amber-300/40 bg-amber-300/10 px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-amber-200">
+									<span className="rounded border border-gold-300/40 bg-gold-300/10 px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-gold-100">
 										Testnet
 									</span>
 								)}
@@ -328,6 +348,18 @@ function HomePage() {
 							<div className="font-mono text-[10px] tracking-[0.16em] text-ink-300 mt-1">FORGE &amp; EMBER · S01</div>
 						</div>
 					</div>
+					{hiveUsername && (
+						<Link
+							to={routes.wallet}
+							title={`@${hiveUsername}`}
+							aria-label={`Open wallet for @${hiveUsername}`}
+							className="grid h-10 w-10 place-items-center rounded-full border border-gold-300/35 bg-obsidian-900/70 text-ink-200 transition-colors hover:border-gold-300/65 hover:text-gold-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
+						>
+							<span className="grid h-8 w-8 place-items-center rounded-full border border-gold-300/45 bg-linear-to-br from-gold-300 to-gold-700 font-display text-xs font-black uppercase text-obsidian-950">
+								{accountInitials}
+							</span>
+						</Link>
+					)}
 				</div>
 			</header>
 
@@ -406,7 +438,7 @@ function HomePage() {
 							<div className="font-mono text-[11px] tracking-[0.32em] uppercase text-ink-300">Primary Routes</div>
 							<h2 className="font-display text-xl tracking-[0.08em] uppercase text-ink-0 mt-1">Choose your front</h2>
 						</header>
-						<div className="grid grid-cols-1 sm:grid-cols-3 gap-4 [&>:nth-child(3)]:sm:ml-3">
+						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
 							{MODE_CARDS.map(mode => {
 								const Icon = mode.icon;
 								const a = ACCENT[mode.accent];
@@ -648,20 +680,20 @@ function EnvironmentBanner() {
   return (
     <aside
       aria-label="Testnet environment"
-      className="fixed bottom-4 left-4 z-50 max-w-[calc(100vw-2rem)] rounded-md border border-amber-300/40 bg-gray-950/95 px-3 py-2 pr-9 text-xs text-amber-100 shadow-lg shadow-black/40 backdrop-blur"
+      className="fixed bottom-4 left-4 z-50 max-w-[calc(100vw-2rem)] rounded-md border border-gold-300/40 bg-obsidian-950/95 px-3 py-2 pr-9 text-xs text-gold-100 shadow-lg shadow-black/40 backdrop-blur"
     >
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="font-semibold uppercase tracking-[0.14em] text-amber-300">Testnet</span>
-        <span className="text-gray-500">/</span>
-        <span>Resettable</span>
-        <span className="hidden text-gray-500 sm:inline">/</span>
-        <span className="hidden font-mono text-gray-300 sm:inline">{config.protocolId}</span>
+        <span className="font-display font-semibold uppercase tracking-[0.18em] text-gold-300">Testnet</span>
+        <span className="text-ink-400">/</span>
+        <span className="text-ink-200">Resettable</span>
+        <span className="hidden text-ink-400 sm:inline">/</span>
+        <span className="hidden font-mono text-ink-300 sm:inline">{config.protocolId}</span>
       </div>
       <button
         type="button"
         aria-label="Dismiss testnet banner"
         onClick={dismiss}
-        className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded border border-transparent text-gray-400 transition-colors hover:border-amber-300/30 hover:text-amber-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300"
+        className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded border border-transparent text-ink-300 transition-colors hover:border-gold-300/30 hover:text-gold-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
       >
         <X className="h-3.5 w-3.5" aria-hidden="true" />
       </button>
@@ -681,6 +713,8 @@ function App() {
           <ViewTransitionBridge />
           <Suspense fallback={<LoadingScreen />}>
             <Routes>
+              <Route path={routes.map} element={<MapPage />} />
+
               <Route element={<BridgeRuntimeBoundary />}>
                 <Route element={<GlobalOverlaysLayout />}>
                   <Route path={routes.home} element={<HomePage />} />
@@ -688,11 +722,13 @@ function App() {
                   <Route path={routes.campaign} element={<CampaignPage />} />
                   <Route path={routes.collection} element={<CollectionPage />} />
                   <Route path={routes.ladder} element={<RankedLadderPage />} />
-                  <Route path={routes.trading} element={<OnlineOnly label="Trading"><TradingPage /></OnlineOnly>} />
+                  <Route path={routes.trading} element={<Navigate to={`${routes.marketplace}?tab=swaps`} replace />} />
                   <Route path={routes.marketplace} element={<OnlineOnly label="Marketplace"><MarketplacePage /></OnlineOnly>} />
                   <Route path={routes.treasury} element={<OnlineOnly label="Treasury"><TreasuryPage /></OnlineOnly>} />
                   <Route path={routes.explorer} element={<ExplorerPage />} />
                   <Route path={routes.admin} element={<AdminPanel />} />
+                  <Route path={routes.wallet} element={<WalletPage />} />
+                  <Route path={routes.runeTestnetPrototype} element={<Navigate to={routes.wallet} replace />} />
                   <Route path={routes.tournaments} element={<OnlineOnly label="Tournaments"><TournamentListPage /></OnlineOnly>} />
                   <Route path={routes.history} element={<MatchHistoryPage />} />
                   <Route path={routes.settings} element={<SettingsPage />} />
@@ -719,10 +755,10 @@ function App() {
               </Route>
 
               <Route path="*" element={
-                <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-white">
-                  <h1 className="text-5xl font-bold text-amber-400 mb-4">404</h1>
-                  <p className="text-gray-400 text-lg mb-8">Page not found</p>
-                  <Link to={routes.home} className="px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white font-semibold rounded-lg transition-colors">
+                <div className="min-h-screen bg-obsidian-950 flex flex-col items-center justify-center text-ink-0 px-6">
+                  <h1 className="font-display text-6xl font-black tracking-[0.18em] text-gold-300 mb-4">404</h1>
+                  <p className="font-mono text-[11px] tracking-[0.32em] uppercase text-ink-300 mb-8">Page not found</p>
+                  <Link to={routes.home} className="px-6 py-3 bg-linear-to-b from-gold-300 to-gold-500 border border-gold-200 text-obsidian-950 font-display font-bold tracking-[0.18em] uppercase rounded-md transition-all hover:from-gold-200 hover:to-gold-400 hover:scale-[1.02]">
                     Back to Home
                   </Link>
                 </div>

@@ -95,7 +95,7 @@ This namespaces all operations. Any Hive node can filter for this app ID and rec
 // v1.1 Extensions (7 new ops — see ATOMIC_NFT_PACKS_DESIGN.md)
 { "app": "ragnarok-cards", "action": "pack_mint",       ... }  // Admin: create sealed pack NFTs
 { "app": "ragnarok-cards", "action": "pack_distribute",  ... }  // Admin: distribute packs to player (atomic 0.001 HIVE)
-{ "app": "ragnarok-cards", "action": "pack_transfer",    ... }  // Player: trade/gift sealed pack (atomic 0.001 HIVE)
+{ "app": "ragnarok-cards", "action": "pack_transfer",    ... }  // Admin-only: surgical sealed-pack move (atomic 0.001 HIVE). Player-to-player pack transfers are NOT supported in v1.1.
 { "app": "ragnarok-cards", "action": "pack_burn",        ... }  // Player: open pack (burn NFT → derive cards from DNA)
 { "app": "ragnarok-cards", "action": "card_replicate",   ... }  // Player: clone card (same genotype, new phenotype)
 { "app": "ragnarok-cards", "action": "card_merge",       ... }  // Player: merge 2 same-origin cards → ascended card
@@ -386,7 +386,7 @@ The operation must be broadcast from `player_alice`'s account (Hive verifies the
 }
 ```
 
-Burned cards are removed from circulation permanently. Total circulating supply decreases. This could be used for crafting mechanics.
+The uid is permanently destroyed and per-card_id circulation decreases by 1, but the rarity slot recycles: `pack_supply[rarity] += 1` and the broadcaster is credited `EITR_VALUES[rarity]` in the replay-derived Eitr ledger. The destroyed uid cannot be revived; the slot it freed is drawn by a future `pack_reveal` or `forge_reveal` as a fresh uid for some `card_id` in the same rarity. See [ADR 0001](adr/0001-eitr-v1-canonical.md) for the full Eitr canonical model.
 
 ### 5.3 Deck Verification Before Match
 
@@ -401,7 +401,7 @@ If any card returns owns: false → deck is invalid → match refused
 
 This happens at match handshake, enforced by both clients. A player cannot use cards they don't own.
 
-In local/dev mode (`VITE_DATA_LAYER_MODE=local`), deck building is unrestricted for runtime testing. These catalog cards are not economic assets and are excluded from ownership packaging, `CardXP`, and `level_up`. In Hive/mainnet mode, `heroDeckStore.ts` checks `useHiveDataStore.cardCollection` and rejects genesis cards exceeding the player's owned NFT copies while allowing only the fixed starter entitlement off-chain.
+In local/dev mode (`VITE_NETWORK_STAGE=local`), deck building is unrestricted for runtime testing. These catalog cards are not economic assets and are excluded from ownership packaging, `CardXP`, and `level_up`. In shared-network stages (`testnet` and `mainnet`), `heroDeckStore.ts` checks `useHiveDataStore.cardCollection` and rejects genesis cards exceeding the player's owned NFT copies while allowing only the fixed starter entitlement off-chain.
 
 ### 5.4 NFT Provenance & Explorer Links
 
@@ -1130,13 +1130,13 @@ Players trade cards freely using Hive Keychain-signed `transfer` ops. The game c
 | Signature Verification | **IMPLEMENTED** | `hiveSignatureVerifier.ts` uses `hive-tx` to fetch posting keys via `condenser_api.get_accounts` (3-node fallback, 8s timeout, 5-min cache) and verify signatures cryptographically. |
 | Slash Evidence Verification | **IMPLEMENTED** | `applySlashEvidence` now fetches referenced transactions from public Hive RPC and verifies both are ragnarok ops from the offender. Unreachable RPC queues to `pending_slashes` IDB store (max 3 retries). |
 | ELO Derivation | **CHAIN-DERIVED** | ELO is computed deterministically from `match_result` history (K=32). Stored in `elo_ratings` IDB store. `queue_join` ignores client-reported ELO — uses chain-derived values. |
-| RUNE Rewards | **CHAIN-DERIVED + CLAIMABLE** | Match RUNE: derived inside `applyMatchResult` (+2 win / +0 loss for ranked in S01). Milestone RUNE: awarded via `rp_reward_claim` alongside reward cards (self-serve). |
+| RUNE Rewards | **CHAIN-DERIVED + CLAIMABLE** | Match RUNE: derived inside `applyMatchResult` (+2 win / +0 loss for ranked in S01). Milestone RUNE: awarded via `rp_reward_claim` alongside reward cards (self-serve). Public RUNE reads are under `/api/chain` only: `/api/chain/player/:username/rune` and `/api/chain/rune/{state,ledger,balances}`. |
 | Supply Cap (Pack Open) | **ENFORCED** | `applyPackOpen` checks `getSupplyCounter()` before minting each card. Cards exceeding the cap are skipped. |
 | Deck Hash | **SHA-256** | `computeDeckHash` now uses SHA-256 (truncated to 32 hex chars) instead of reversible base64. |
 | P2P Turn Validation | **IMPLEMENTED** | Host validates `currentTurn === 'opponent'` before executing remote actions. Messages are queued (not dropped) when busy. AI guard prevents `processAITurn` from running when P2P connected. |
 | Invariant #7 (Block-anchored moves) | **NOT IMPLEMENTED** | Per-move `hive_block_ref` is a design goal. Current implementation uses unsigned Merkle transcripts. |
 | Invariant #10 (WASM hash) | **NOT IMPLEMENTED** | Uses `__BUILD_HASH__` (git rev-parse) instead. WASM compilation deferred to Phase 2C. |
-| Feature Flags | **ENV-VAR DRIVEN** | `VITE_DATA_LAYER_MODE` and `VITE_BLOCKCHAIN_PACKAGING` read from env vars. `.env.production` sets `hive` / `true`. |
+| Feature Flags | **ENV-VAR DRIVEN** | `VITE_NETWORK_STAGE` drives the runtime profile. `testnet` and `mainnet` derive Hive data + blockchain packaging; explicit data-layer/packaging env vars are test/debug overrides. |
 | Mock Blockchain Routes | **PRODUCTION-GUARDED** | `mockBlockchainRoutes` only mounted when `NODE_ENV !== 'production'`. |
 | Server Rate Limiting | **IMPLEMENTED** | `express-rate-limit` on all `/api` routes: 120 req/min per IP. |
 | Matchmaking Auth | **IMPLEMENTED** | Server-side Hive signature verification via `hive-tx`. Validates `ragnarok-queue:{username}:{timestamp}` signed with Posting key. 5-min timestamp drift window. |
@@ -1185,6 +1185,7 @@ client/src/
 │   │   └── index.ts                  # Barrel exports
 │   │
 │   ├── chainAPI.ts                    # Client fetch wrapper for /api/chain/* server endpoints
+│   ├── runeAPI.ts                     # Client wrapper for /api/chain RUNE read endpoints
 │   ├── HiveSync.ts                    # Keychain integration: login, broadcast, transfer, claimReward
 │   ├── HiveDataLayer.ts              # Zustand store: user, stats, collection, tokens
 │   ├── HiveEvents.ts                 # Event bus for chain state changes
@@ -1225,7 +1226,7 @@ client/src/
 │   │   └── BlockchainSubscriber.ts    # Game end → match packaging → IDB refresh → RUNE rewards
 │   │
 │   └── config/
-│       └── featureFlags.ts            # DATA_LAYER_MODE, BLOCKCHAIN_PACKAGING_ENABLED
+│       └── featureFlags.ts            # NETWORK_STAGE-derived runtime profile
 
 server/
 ├── services/
@@ -1238,7 +1239,19 @@ server/
 └── routes.ts                          # Mount points + indexer startup
 ```
 
-**Architecture note:** The server-side chain indexer is a **convenience layer**, not a trust dependency. It polls the same public Hive RPC data that every browser replays independently. If the server is down, clients still function via their local IndexedDB replay — they just lose global queries (leaderboard, opponent ELO lookup, cross-account deck verification).
+**Architecture note:** The server-side chain indexer is a **convenience layer**, not a trust dependency. It polls the same public Hive RPC data that every browser replays independently. Express mounts its public read-only surface at `/api/chain`, and the scanner starts by default unless `ENABLE_CHAIN_INDEXER=false`. If the server is down, clients still function via their local IndexedDB replay — they just lose global queries (leaderboard, opponent ELO lookup, cross-account deck verification, and global RUNE summaries).
+
+**API namespace invariant:** chain-derived public reads live under `/api/chain`.
+RUNE does not get a parallel testnet namespace. Account balance reads use
+`/api/chain/player/:username/rune`; global RUNE state uses
+`/api/chain/rune/state`, `/api/chain/rune/ledger`, and
+`/api/chain/rune/balances`.
+
+**API recurrence invariant:** chain reads are intended for page load, wallet
+connect/reconnect, match handoff, and manual or slow background refresh. RUNE
+wallet/dashboard refresh must not poll faster than once every 30 seconds per
+browser view. Reads that can register/sync unknown accounts are capped more
+tightly than normal `/api` traffic because they may trigger a bounded Hive scan.
 
 ---
 

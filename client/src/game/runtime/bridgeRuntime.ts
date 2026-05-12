@@ -1,5 +1,5 @@
 import { initializeNFTBridge } from '@/game/nft';
-import { materializeStarterEntitlement, ensureStarterDecks } from '@/game/data/starterSet';
+import { purgeLegacyStarterRows, seedStarterHeroDecks } from '@/game/data/starterSet';
 import { useStarterStore } from '@/game/stores/starterStore';
 
 let bridgeReady = false;
@@ -17,15 +17,20 @@ export async function ensureBridgeRuntime(): Promise<void> {
   if (!bridgeInitPromise) {
     bridgeInitPromise = initializeNFTBridge()
       .then((bridge) => {
+        // One-shot migration: drop legacy starter rows persisted by the old
+        // materialization path. Idempotent — no path writes those uids anymore.
+        purgeLegacyStarterRows();
+
         const accountId = bridge.getUsername();
         const starterStore = useStarterStore.getState();
-        const shouldMaterializeStarter = bridge.isHiveMode()
+        const hasClaimedStarter = bridge.isHiveMode()
           ? accountId !== null && starterStore.hasClaimed(accountId)
           : starterStore.hasClaimed();
 
-        if (shouldMaterializeStarter) {
-          materializeStarterEntitlement();
-          ensureStarterDecks();
+        // Re-seed the 4 hero decks for accounts that have already claimed.
+        // Respects existing custom decks (idempotent — does not overwrite).
+        if (hasClaimedStarter) {
+          seedStarterHeroDecks();
         }
         bridgeReady = true;
       })

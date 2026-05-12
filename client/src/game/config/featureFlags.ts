@@ -2,19 +2,19 @@
  * featureFlags.ts
  *
  * Feature flags to control game features.
- * Driven by Vite env vars at build time (VITE_NETWORK_STAGE, VITE_DATA_LAYER_MODE, VITE_BLOCKCHAIN_PACKAGING).
+ * Driven by VITE_NETWORK_STAGE. The normal runtime path is:
+ *   local   -> local data, no blockchain packaging
+ *   testnet -> Hive data, blockchain packaging
+ *   mainnet -> Hive data, blockchain packaging
+ *
+ * VITE_DATA_LAYER_MODE and VITE_BLOCKCHAIN_PACKAGING remain as explicit
+ * test/debug overrides, not as the everyday configuration surface.
  * Defaults to safe local/off values when env vars are not set.
  */
 
 export type DataLayerMode = 'local' | 'test' | 'hive';
 export type NetworkStage = 'local' | 'testnet' | 'mainnet';
-export type RuntimeExecutionMode = 'mainnet' | 'local-dev';
-
-function resolveDataLayerMode(): DataLayerMode {
-	const raw = import.meta.env.VITE_DATA_LAYER_MODE as string | undefined;
-	if (raw === 'hive' || raw === 'test' || raw === 'local') return raw;
-	return 'local';
-}
+export type RuntimeExecutionMode = 'local-dev' | 'testnet' | 'mainnet';
 
 function resolveNetworkStage(): NetworkStage {
 	const raw = import.meta.env.VITE_NETWORK_STAGE as string | undefined;
@@ -22,18 +22,32 @@ function resolveNetworkStage(): NetworkStage {
 	return 'local';
 }
 
-function resolveBlockchainPackaging(): boolean {
-	const raw = import.meta.env.VITE_BLOCKCHAIN_PACKAGING as string | undefined;
-	return raw === 'true' || raw === '1';
+function getDefaultDataLayerMode(stage: NetworkStage): DataLayerMode {
+	return stage === 'local' ? 'local' : 'hive';
 }
 
+function resolveDataLayerMode(stage: NetworkStage): DataLayerMode {
+	const raw = import.meta.env.VITE_DATA_LAYER_MODE as string | undefined;
+	if (raw === 'hive' || raw === 'test' || raw === 'local') return raw;
+	return getDefaultDataLayerMode(stage);
+}
+
+function resolveBlockchainPackaging(stage: NetworkStage): boolean {
+	const raw = import.meta.env.VITE_BLOCKCHAIN_PACKAGING as string | undefined;
+	if (raw === 'true' || raw === '1') return true;
+	if (raw === 'false' || raw === '0') return false;
+	return stage !== 'local';
+}
+
+const NETWORK_STAGE = resolveNetworkStage();
+
 export const FeatureFlags = {
-	DATA_LAYER_MODE: resolveDataLayerMode(),
-	NETWORK_STAGE: resolveNetworkStage(),
+	DATA_LAYER_MODE: resolveDataLayerMode(NETWORK_STAGE),
+	NETWORK_STAGE,
 	BATTLE_HISTORY_ENABLED: true,
 	BATTLE_HISTORY_MAX_SIZE: 5,
 	DATA_LAYER_DEBUG: false,
-	BLOCKCHAIN_PACKAGING_ENABLED: resolveBlockchainPackaging(),
+	BLOCKCHAIN_PACKAGING_ENABLED: resolveBlockchainPackaging(NETWORK_STAGE),
 };
 
 export type FeatureFlagsType = typeof FeatureFlags;
@@ -100,7 +114,7 @@ export function isEconomicEnvironment(): boolean {
  * but catalog access is not economic ownership.
  */
 export function isLocalDevMode(): boolean {
-	return !isEconomicEnvironment();
+	return isLocalStage();
 }
 
 /**
@@ -118,7 +132,9 @@ export function getDataLayerMode(): DataLayerMode {
 }
 
 export function getRuntimeExecutionMode(): RuntimeExecutionMode {
-	return isEconomicEnvironment() ? 'mainnet' : 'local-dev';
+	if (isMainnetStage()) return 'mainnet';
+	if (isTestnetStage()) return 'testnet';
+	return 'local-dev';
 }
 
 /**

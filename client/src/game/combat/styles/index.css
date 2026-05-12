@@ -15,7 +15,6 @@
 
 /* 3. Core Combat HUD & UI Panels */
 @import "./game-hud.css";
-@import "./game-hud.css"; /* Internal deduplication check */
 @import "./pot-display.css";
 @import "./betting-controls.css";
 @import "./timer.css";

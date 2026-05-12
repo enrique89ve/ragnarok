@@ -14,10 +14,7 @@ import { hiveSync } from '@/data/HiveSync';
 import { hiveEvents } from '@/data/HiveEvents';
 import { useHiveDataStore } from '@/data/HiveDataLayer';
 import { isBlockchainPackagingEnabled as checkPackaging } from '@/game/config/featureFlags';
-import {
-	STARTER_ENTITLEMENT_COPIES_PER_DECK,
-	isStarterEntitlementCardId,
-} from '@shared/schemas/starterEntitlement';
+import { STARTER_ENTITLEMENT } from '@shared/schemas/starterEntitlement';
 import type {
 	INFTBridge,
 	DataLayerMode,
@@ -56,10 +53,12 @@ export class HiveNFTBridge implements INFTBridge {
 	}
 
 	getOwnedCopies(cardId: number): number {
+		// Honest sum: real NFT instances + universal starter entitlement.
+		// No Math.max hack — the entitlement rule is a dataset lookup, not a synthesized minimum.
 		const collection = useHiveDataStore.getState().cardCollection;
 		const chainCopies = collection.filter(c => c.cardId === cardId).length;
-		if (!isStarterEntitlementCardId(cardId)) return chainCopies;
-		return Math.max(chainCopies, STARTER_ENTITLEMENT_COPIES_PER_DECK);
+		const entitledCopies = STARTER_ENTITLEMENT.copiesPerCardId[cardId] ?? 0;
+		return chainCopies + entitledCopies;
 	}
 
 	addCard(card: HiveCardAsset): void {

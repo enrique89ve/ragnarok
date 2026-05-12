@@ -1,20 +1,27 @@
 /**
- * MarketplacePage.tsx — On-chain NFT marketplace
+ * MarketplacePage.tsx — On-chain NFT marketplace + sealed pack store
  *
- * Trustless listing/buying/offers for cards and packs via Hive L1 custom_json.
- * All state derived from chain replay — no server required.
+ * Trustless listing/buying/offers for cards via Hive L1 custom_json.
+ * Pack catalog (buy sealed packs) is a tab here too — see PackCatalog.
  *
- * Tabs: Browse Listings | My Listings | My Offers
+ * Tabs: Packs | Browse | My Listings | My Offers
+ *
+ * Deep link: `#/marketplace?tab=packs` (any Tab key) opens that tab directly.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Link, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { X as CloseIcon } from 'lucide-react';
+import { OrnateCorners } from '../../../components/ornaments/RunicSigils';
+import { AccountSlot } from '../../../components/account/AccountSlot';
 import { routes } from '../../../lib/routes';
 import { useNFTUsername, useNFTCollection } from '../../nft/hooks';
 import { getCardById } from '../../data/allCards';
 import { getCardArtPath } from '../../utils/art/artMapping';
 import type { MarketListing, MarketOffer } from '../../../../../shared/protocol-core/types';
+import PackCatalog from './PackCatalog';
+import SwapsTab from './SwapsTab';
 
 // Lazy-load HiveSync to avoid bundling blockchain in initial load
 async function getHiveSync() {
@@ -28,7 +35,7 @@ async function getReplayDB() {
 
 // ── Types ──
 
-type Tab = 'browse' | 'my-listings' | 'my-offers';
+type Tab = 'packs' | 'browse' | 'my-listings' | 'my-offers' | 'swaps';
 
 interface ListingWithCard extends MarketListing {
 	cardName?: string;
@@ -36,12 +43,21 @@ interface ListingWithCard extends MarketListing {
 	cardRarity?: string;
 }
 
+const TAB_KEYS: ReadonlySet<string> = new Set(['packs', 'browse', 'my-listings', 'my-offers', 'swaps']);
+
+function readTabFromQuery(search: string): Tab | null {
+	const params = new URLSearchParams(search);
+	const raw = params.get('tab');
+	return raw && TAB_KEYS.has(raw) ? (raw as Tab) : null;
+}
+
 // ── Component ──
 
 export default function MarketplacePage() {
 	const username = useNFTUsername();
 	const collection = useNFTCollection();
-	const [tab, setTab] = useState<Tab>('browse');
+	const location = useLocation();
+	const [tab, setTab] = useState<Tab>(() => readTabFromQuery(location.search) ?? 'packs');
 	const [listings, setListings] = useState<ListingWithCard[]>([]);
 	const [myListings, setMyListings] = useState<ListingWithCard[]>([]);
 	const [myOffers, setMyOffers] = useState<MarketOffer[]>([]);
@@ -60,11 +76,15 @@ export default function MarketplacePage() {
 	const [offerPrice, setOfferPrice] = useState('');
 	const [offerCurrency, setOfferCurrency] = useState<'HIVE' | 'HBD'>('HIVE');
 
+	// React to ?tab= changes (e.g., user navigates from /packs CTA)
+	useEffect(() => {
+		const next = readTabFromQuery(location.search);
+		if (next && next !== tab) setTab(next);
+	}, [location.search, tab]);
+
 	const loadListings = useCallback(async () => {
 		try {
 			const db = await getReplayDB();
-			// Load all active listings from IndexedDB
-			const allListingsRaw: MarketListing[] = [];
 			const idb = await (db as unknown as { openDB: () => Promise<IDBDatabase> }).openDB?.() ?? null;
 			if (!idb) return;
 
@@ -75,7 +95,6 @@ export default function MarketplacePage() {
 				req.onsuccess = () => {
 					const raw = (req.result || []) as MarketListing[];
 					resolve(raw.filter(l => l.active).map(l => {
-						// Enrich with card data
 						const uidParts = l.nftUid.split('-');
 						const cardId = parseInt(uidParts[1] || '0', 10);
 						const cardDef = cardId ? getCardById(cardId) : null;
@@ -129,6 +148,20 @@ export default function MarketplacePage() {
 
 		return () => { mounted = false; };
 	}, [loadListings, loadOffers]);
+
+	// Esc closes the topmost open modal — gives keyboard users an escape hatch
+	// without relying on the (now-removed) backdrop click.
+	useEffect(() => {
+		if (!showListModal && !showOfferModal) return;
+		const onKey = (event: KeyboardEvent) => {
+			if (event.key !== 'Escape') return;
+			event.preventDefault();
+			if (showOfferModal) setShowOfferModal(false);
+			else if (showListModal) setShowListModal(false);
+		};
+		window.addEventListener('keydown', onKey);
+		return () => window.removeEventListener('keydown', onKey);
+	}, [showListModal, showOfferModal]);
 
 	const handleListCard = async () => {
 		if (!listCardUid || !listPrice) return;
@@ -218,54 +251,58 @@ export default function MarketplacePage() {
 	};
 
 	const tabs: { key: Tab; label: string; count?: number }[] = [
-		{ key: 'browse', label: 'Browse Listings', count: listings.length },
+		{ key: 'packs', label: 'Packs' },
+		{ key: 'browse', label: 'Cards', count: listings.length },
 		{ key: 'my-listings', label: 'My Listings', count: myListings.length },
 		{ key: 'my-offers', label: 'My Offers', count: myOffers.length },
+		{ key: 'swaps', label: 'Swaps' },
 	];
 
 	return (
 		<div className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-vault-nav) text-ink-0">
 			{/* Header */}
-			<div className="border-b border-gray-800/60 bg-gray-950/80 backdrop-blur-sm sticky top-0 z-40">
-				<div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-					<div className="flex items-center gap-4">
-						<Link to={routes.home} className="text-gray-500 hover:text-gray-300 text-sm transition-colors">
+			<div className="border-b border-obsidian-700 bg-obsidian-950/85 backdrop-blur-md sticky top-0 z-40">
+				<div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+					<div className="flex items-center gap-4 min-w-0">
+						<Link
+							to={routes.home}
+							className="inline-flex items-center h-8 px-3 rounded-full border border-obsidian-700 bg-obsidian-850 text-ink-200 hover:text-gold-300 hover:border-gold-600 font-display text-[11px] tracking-[0.18em] uppercase font-bold transition-colors"
+						>
 							Home
 						</Link>
-						<h1 className="text-xl font-bold tracking-wide">
-							<span className="text-amber-400">Marketplace</span>
-						</h1>
-					</div>
-					{username && (
-						<div className="flex items-center gap-3">
-							<span className="text-sm text-gray-400">@{username}</span>
-							<button
-								onClick={() => setShowListModal(true)}
-								className="px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold rounded transition-colors"
-							>
-								List a Card
-							</button>
+						<div>
+							<div className="font-mono text-[10px] tracking-[0.32em] uppercase text-ink-300">Forge · Bazaar</div>
+							<h1 className="font-display text-xl font-black tracking-[0.10em] uppercase text-gold-300">
+								Marketplace
+							</h1>
 						</div>
-					)}
+					</div>
+					<AccountSlot
+						username={username}
+						tier="premium"
+						to={routes.settings}
+						secondary="Trader"
+						showSettings
+					/>
 				</div>
 			</div>
 
 			{/* Tabs */}
 			<div className="max-w-6xl mx-auto px-4 pt-4">
-				<div className="flex gap-1 border-b border-gray-800/60 mb-6">
+				<div className="flex gap-1 border-b border-obsidian-700 mb-6 overflow-x-auto [scrollbar-width:none]">
 					{tabs.map(t => (
 						<button
 							key={t.key}
 							onClick={() => setTab(t.key)}
-							className={`px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 ${
+							className={`shrink-0 px-4 py-2.5 font-display text-xs tracking-[0.18em] uppercase font-bold transition-colors border-b-2 ${
 								tab === t.key
-									? 'text-amber-400 border-amber-400'
-									: 'text-gray-500 border-transparent hover:text-gray-300'
+									? 'text-gold-300 border-gold-300'
+									: 'text-ink-300 border-transparent hover:text-ink-0'
 							}`}
 						>
 							{t.label}
 							{t.count !== undefined && t.count > 0 && (
-								<span className="ml-2 px-1.5 py-0.5 text-xs bg-gray-800 rounded-full">{t.count}</span>
+								<span className="ml-2 px-1.5 py-0.5 font-mono text-[10px] tracking-[0.14em] bg-obsidian-800 text-ink-200 rounded-full">{t.count}</span>
 							)}
 						</button>
 					))}
@@ -280,8 +317,8 @@ export default function MarketplacePage() {
 							exit={{ opacity: 0, y: -10 }}
 							className={`mb-4 p-3 rounded-lg text-sm border ${
 								actionResult.success
-									? 'bg-green-900/30 border-green-700/40 text-green-300'
-									: 'bg-red-900/30 border-red-700/40 text-red-300'
+									? 'bg-rune-500/20 border-rune-500/40 text-rune-300'
+									: 'bg-ember-600/25 border-ember-400/40 text-ember-300'
 							}`}
 						>
 							{actionResult.message}
@@ -289,13 +326,16 @@ export default function MarketplacePage() {
 					)}
 				</AnimatePresence>
 
-				{/* Browse Listings */}
+				{/* Packs (catalog + buy) */}
+				{tab === 'packs' && <PackCatalog />}
+
+				{/* Browse Card Listings */}
 				{tab === 'browse' && (
 					<div>
 						{listings.length === 0 ? (
-							<div className="text-center py-20 text-gray-600">
-								<p className="text-lg mb-2">No listings yet</p>
-								<p className="text-sm">Be the first to list a card for sale</p>
+							<div className="text-center py-20 text-ink-300">
+								<p className="text-lg mb-2">No card listings yet</p>
+								<p className="text-sm text-ink-400">Be the first to list a card for sale</p>
 							</div>
 						) : (
 							<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -317,26 +357,46 @@ export default function MarketplacePage() {
 				{tab === 'my-listings' && (
 					<div>
 						{!username ? (
-							<div className="text-center py-20 text-gray-600">
+							<div className="text-center py-20 text-ink-300">
 								<p>Connect Hive Keychain to manage listings</p>
 							</div>
-						) : myListings.length === 0 ? (
-							<div className="text-center py-20 text-gray-600">
-								<p className="text-lg mb-2">No active listings</p>
-								<p className="text-sm">Click "List a Card" to start selling</p>
-							</div>
 						) : (
-							<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-								{myListings.map(listing => (
-									<ListingCard
-										key={listing.listingId}
-										listing={listing}
-										isMine
-										onUnlist={() => handleUnlist(listing.listingId)}
-										loading={loading}
-									/>
-								))}
-							</div>
+							<>
+								<div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
+									<header className="section-heading">
+										<div className="section-heading-kicker">Selling</div>
+									</header>
+									<button
+										type="button"
+										onClick={() => setShowListModal(true)}
+										aria-label="List a card for sale"
+										className="btn-runic btn-runic--gold btn-runic--sm"
+									>
+										<span className="btn-runic-stud" aria-hidden />
+										List a Card
+										<span className="btn-runic-stud" aria-hidden />
+									</button>
+								</div>
+
+								{myListings.length === 0 ? (
+									<div className="text-center py-20 text-ink-300">
+										<p className="text-lg mb-2">No active listings</p>
+										<p className="text-sm text-ink-400">Click &ldquo;List a Card&rdquo; to start selling</p>
+									</div>
+								) : (
+									<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+										{myListings.map(listing => (
+											<ListingCard
+												key={listing.listingId}
+												listing={listing}
+												isMine
+												onUnlist={() => handleUnlist(listing.listingId)}
+												loading={loading}
+											/>
+										))}
+									</div>
+								)}
+							</>
 						)}
 					</div>
 				)}
@@ -345,19 +405,21 @@ export default function MarketplacePage() {
 				{tab === 'my-offers' && (
 					<div>
 						{myOffers.length === 0 ? (
-							<div className="text-center py-20 text-gray-600">
+							<div className="text-center py-20 text-ink-300">
 								<p className="text-lg mb-2">No pending offers</p>
-								<p className="text-sm">Browse listings and make offers on cards you want</p>
+								<p className="text-sm text-ink-400">Browse listings and make offers on cards you want</p>
 							</div>
 						) : (
 							<div className="space-y-3">
 								{myOffers.map(offer => (
-									<div key={offer.offerId} className="bg-gray-900/60 border border-gray-700/50 rounded-lg p-4 flex items-center justify-between">
-										<div>
-											<p className="text-sm font-semibold text-gray-200">{offer.nftUid}</p>
-											<p className="text-xs text-gray-500">Offered: {offer.price} {offer.currency}</p>
+									<div key={offer.offerId} className="bg-obsidian-900/60 border border-obsidian-700/50 rounded-lg p-4 flex items-center justify-between gap-3 flex-wrap">
+										<div className="min-w-0">
+											<p className="text-sm font-semibold text-ink-0 truncate">{offer.nftUid}</p>
+											<p className="font-mono text-[10px] tracking-[0.14em] uppercase text-ink-400">
+												Offered: {offer.price} {offer.currency}
+											</p>
 										</div>
-										<span className="text-xs px-2 py-0.5 rounded border text-amber-400 bg-amber-900/30 border-amber-700/40">
+										<span className="font-mono text-[10px] tracking-[0.18em] uppercase px-2 py-0.5 rounded border text-gold-300 bg-gold-600/20 border-gold-500/40">
 											{offer.status}
 										</span>
 									</div>
@@ -366,6 +428,9 @@ export default function MarketplacePage() {
 						)}
 					</div>
 				)}
+
+				{/* Swaps — peer-to-peer card-for-card exchange (formerly /trading) */}
+				{tab === 'swaps' && <SwapsTab />}
 			</div>
 
 			{/* List Card Modal */}
@@ -375,25 +440,34 @@ export default function MarketplacePage() {
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
-						className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
-						onClick={() => setShowListModal(false)}
+						role="dialog"
+						aria-modal="true"
+						aria-labelledby="list-modal-title"
+						className="fixed inset-0 bg-obsidian-950/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
 					>
 						<motion.div
 							initial={{ scale: 0.9, opacity: 0 }}
 							animate={{ scale: 1, opacity: 1 }}
 							exit={{ scale: 0.9, opacity: 0 }}
-							className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full max-w-md"
-							onClick={e => e.stopPropagation()}
+							className="relative bg-obsidian-900 border border-obsidian-700 rounded-xl p-6 w-full max-w-md modal-landscape-safe"
 						>
-							<h2 className="text-lg font-bold text-amber-400 mb-4">List a Card for Sale</h2>
+							<button
+								type="button"
+								onClick={() => setShowListModal(false)}
+								aria-label="Close List a Card dialog"
+								className="absolute top-3 right-3 grid h-8 w-8 place-items-center rounded-full border border-obsidian-700 bg-obsidian-900/80 text-ink-300 hover:text-gold-300 hover:border-gold-600 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
+							>
+								<CloseIcon size={14} aria-hidden="true" />
+							</button>
+							<h2 id="list-modal-title" className="font-display text-lg font-bold text-gold-300 tracking-[0.18em] uppercase mb-4 pr-8">List a Card for Sale</h2>
 
 							<div className="space-y-4">
 								<div>
-									<label className="block text-xs text-gray-500 mb-1">Card to sell</label>
+									<label className="block font-mono text-[10px] tracking-[0.18em] uppercase text-ink-400 mb-1">Card to sell</label>
 									<select
 										value={listCardUid}
 										onChange={e => setListCardUid(e.target.value)}
-										className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
+										className="w-full bg-obsidian-800 border border-obsidian-600 rounded px-3 py-2 text-sm text-ink-0 focus:border-gold-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-300"
 									>
 										<option value="">Select a card...</option>
 										{collection.map(card => (
@@ -406,7 +480,7 @@ export default function MarketplacePage() {
 
 								<div className="flex gap-3">
 									<div className="flex-1">
-										<label className="block text-xs text-gray-500 mb-1">Price</label>
+										<label className="block font-mono text-[10px] tracking-[0.18em] uppercase text-ink-400 mb-1">Price</label>
 										<input
 											type="number"
 											min="0.001"
@@ -414,15 +488,15 @@ export default function MarketplacePage() {
 											value={listPrice}
 											onChange={e => setListPrice(e.target.value)}
 											placeholder="0.000"
-											className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
+											className="w-full bg-obsidian-800 border border-obsidian-600 rounded px-3 py-2 text-sm text-ink-0 placeholder-ink-400 focus:border-gold-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-300"
 										/>
 									</div>
 									<div className="w-24">
-										<label className="block text-xs text-gray-500 mb-1">Currency</label>
+										<label className="block font-mono text-[10px] tracking-[0.18em] uppercase text-ink-400 mb-1">Currency</label>
 										<select
 											value={listCurrency}
 											onChange={e => setListCurrency(e.target.value as 'HIVE' | 'HBD')}
-											className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
+											className="w-full bg-obsidian-800 border border-obsidian-600 rounded px-3 py-2 text-sm text-ink-0 focus:border-gold-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-300"
 										>
 											<option value="HIVE">HIVE</option>
 											<option value="HBD">HBD</option>
@@ -433,14 +507,14 @@ export default function MarketplacePage() {
 								<div className="flex gap-3 pt-2">
 									<button
 										onClick={() => setShowListModal(false)}
-										className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded text-sm transition-colors"
+										className="flex-1 px-4 py-2 bg-obsidian-700 hover:bg-obsidian-600 text-ink-0 font-display text-xs tracking-[0.14em] uppercase rounded transition-colors"
 									>
 										Cancel
 									</button>
 									<button
 										onClick={handleListCard}
 										disabled={loading || !listCardUid || !listPrice}
-										className="flex-1 px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-semibold rounded text-sm transition-colors"
+										className="flex-1 px-4 py-2 bg-linear-to-b from-gold-300 to-gold-500 hover:from-gold-200 hover:to-gold-400 disabled:from-obsidian-700 disabled:to-obsidian-700 disabled:text-ink-400 disabled:opacity-60 text-obsidian-950 font-display text-xs font-bold tracking-[0.14em] uppercase rounded transition-all"
 									>
 										{loading ? 'Listing...' : 'List for Sale'}
 									</button>
@@ -458,24 +532,33 @@ export default function MarketplacePage() {
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
-						className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
-						onClick={() => setShowOfferModal(false)}
+						role="dialog"
+						aria-modal="true"
+						aria-labelledby="offer-modal-title"
+						className="fixed inset-0 bg-obsidian-950/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
 					>
 						<motion.div
 							initial={{ scale: 0.9, opacity: 0 }}
 							animate={{ scale: 1, opacity: 1 }}
 							exit={{ scale: 0.9, opacity: 0 }}
-							className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full max-w-md"
-							onClick={e => e.stopPropagation()}
+							className="relative bg-obsidian-900 border border-obsidian-700 rounded-xl p-6 w-full max-w-md modal-landscape-safe"
 						>
-							<h2 className="text-lg font-bold text-blue-400 mb-4">Make an Offer</h2>
+							<button
+								type="button"
+								onClick={() => setShowOfferModal(false)}
+								aria-label="Close Make an Offer dialog"
+								className="absolute top-3 right-3 grid h-8 w-8 place-items-center rounded-full border border-obsidian-700 bg-obsidian-900/80 text-ink-300 hover:text-bifrost-300 hover:border-bifrost-300 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-bifrost-300"
+							>
+								<CloseIcon size={14} aria-hidden="true" />
+							</button>
+							<h2 id="offer-modal-title" className="font-display text-lg font-bold text-bifrost-300 tracking-[0.18em] uppercase mb-4 pr-8">Make an Offer</h2>
 
 							<div className="space-y-4">
-								<p className="text-sm text-gray-400">Card: <span className="text-white">{offerNftUid}</span></p>
+								<p className="text-sm text-ink-300">Card: <span className="text-ink-0">{offerNftUid}</span></p>
 
 								<div className="flex gap-3">
 									<div className="flex-1">
-										<label className="block text-xs text-gray-500 mb-1">Your Offer</label>
+										<label className="block font-mono text-[10px] tracking-[0.18em] uppercase text-ink-400 mb-1">Your Offer</label>
 										<input
 											type="number"
 											min="0.001"
@@ -483,15 +566,15 @@ export default function MarketplacePage() {
 											value={offerPrice}
 											onChange={e => setOfferPrice(e.target.value)}
 											placeholder="0.000"
-											className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
+											className="w-full bg-obsidian-800 border border-obsidian-600 rounded px-3 py-2 text-sm text-ink-0 placeholder-ink-400 focus:border-bifrost-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bifrost-300"
 										/>
 									</div>
 									<div className="w-24">
-										<label className="block text-xs text-gray-500 mb-1">Currency</label>
+										<label className="block font-mono text-[10px] tracking-[0.18em] uppercase text-ink-400 mb-1">Currency</label>
 										<select
 											value={offerCurrency}
 											onChange={e => setOfferCurrency(e.target.value as 'HIVE' | 'HBD')}
-											className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-white"
+											className="w-full bg-obsidian-800 border border-obsidian-600 rounded px-3 py-2 text-sm text-ink-0 focus:border-bifrost-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bifrost-300"
 										>
 											<option value="HIVE">HIVE</option>
 											<option value="HBD">HBD</option>
@@ -502,14 +585,14 @@ export default function MarketplacePage() {
 								<div className="flex gap-3 pt-2">
 									<button
 										onClick={() => setShowOfferModal(false)}
-										className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded text-sm transition-colors"
+										className="flex-1 px-4 py-2 bg-obsidian-700 hover:bg-obsidian-600 text-ink-0 font-display text-xs tracking-[0.14em] uppercase rounded transition-colors"
 									>
 										Cancel
 									</button>
 									<button
 										onClick={handleMakeOffer}
 										disabled={loading || !offerPrice}
-										className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold rounded text-sm transition-colors"
+										className="flex-1 px-4 py-2 bg-linear-to-b from-bifrost-500 to-bifrost-500/70 hover:from-bifrost-300 hover:to-bifrost-500 disabled:from-obsidian-700 disabled:to-obsidian-700 disabled:opacity-60 text-ink-0 font-display text-xs font-bold tracking-[0.14em] uppercase rounded border border-bifrost-300/50 transition-all"
 									>
 										{loading ? 'Submitting...' : 'Submit Offer'}
 									</button>
@@ -525,6 +608,39 @@ export default function MarketplacePage() {
 
 // ── Listing Card Component ──
 
+/**
+ * Tier-aware ornament density:
+ *   - epic / mythic: full Runic Forge (surface tint + ornate corners + sigil hint)
+ *   - rare / common: compact (rarity border + bevel only) — keeps the 5-col
+ *     grid scannable instead of bloating it with ornaments.
+ */
+
+const LISTING_TIER_SURFACE: Record<string, string> = {
+	mythic: 'var(--surface-mystic-mythic)',
+	epic: 'var(--surface-mystic-premium)',     // epic borrows premium gradient (gold-tinted)
+	rare: 'var(--surface-mystic-standard)',
+	common: 'var(--surface-mystic-obsidian)',
+};
+
+const LISTING_TIER_GLOW: Record<string, string> = {
+	mythic: 'mystic-tile--ember',
+	epic: 'mystic-tile--gold',
+	rare: 'mystic-tile--bifrost',
+	common: 'mystic-tile--gold',
+};
+
+const LISTING_TIER_ORNATE: Record<string, string> = {
+	mythic: 'ornate-corners-host--mythic',
+	epic: 'ornate-corners-host--premium',
+	rare: 'ornate-corners-host--standard',
+	common: '',
+};
+
+function listingTypeLabel(nftType: string): string {
+	if (nftType === 'pack') return 'Sealed pack';
+	return 'Card';
+}
+
 function ListingCard({ listing, isMine, onBuy, onUnlist, onOffer, loading }: {
 	listing: ListingWithCard;
 	isMine?: boolean;
@@ -533,80 +649,104 @@ function ListingCard({ listing, isMine, onBuy, onUnlist, onOffer, loading }: {
 	onOffer?: () => void;
 	loading: boolean;
 }) {
-	const rarityColors: Record<string, string> = {
-		mythic: 'border-amber-500/60 shadow-amber-500/10',
-		epic: 'border-purple-500/60 shadow-purple-500/10',
-		rare: 'border-blue-500/60 shadow-blue-500/10',
-		common: 'border-gray-600/60',
-	};
-
+	const reducedMotion = useReducedMotion();
 	const rarity = listing.cardRarity || 'common';
-	const borderClass = rarityColors[rarity] || rarityColors.common;
+	const isHigh = rarity === 'epic' || rarity === 'mythic';
+
+	const surface = LISTING_TIER_SURFACE[rarity] ?? LISTING_TIER_SURFACE.common;
+	const glowClass = LISTING_TIER_GLOW[rarity] ?? LISTING_TIER_GLOW.common;
+	const ornateClass = LISTING_TIER_ORNATE[rarity] ?? '';
+
+	const rarityChips: Record<string, string> = {
+		mythic: 'bg-rarity-mythic text-obsidian-950',
+		epic: 'bg-rarity-epic text-ink-0',
+		rare: 'bg-rarity-rare text-ink-0',
+		common: 'bg-obsidian-700 text-ink-200',
+	};
+	const chipClass = rarityChips[rarity] || rarityChips.common;
+	const displayName = listing.cardName || listing.nftUid;
+	const typeLabel = listingTypeLabel(listing.nftType);
 
 	return (
-		<motion.div
-			whileHover={{ y: -4 }}
-			className={`bg-gray-900/80 border rounded-lg overflow-hidden shadow-lg ${borderClass}`}
+		<motion.article
+			whileHover={reducedMotion ? undefined : { y: -3 }}
+			aria-label={`${displayName} — ${rarity} ${typeLabel}, ${listing.price} ${listing.currency}, sold by ${listing.seller}`}
+			className={`runic-panel ${isHigh ? `ornate-corners-host ${ornateClass}` : ''} mystic-tile ${glowClass} relative rounded-lg overflow-hidden flex flex-col`}
+			style={{ background: surface }}
 		>
-			{/* Card art */}
-			<div className="aspect-square bg-gray-800/60 relative overflow-hidden">
+			{isHigh && <OrnateCorners />}
+
+			<div className="relative aspect-square overflow-hidden">
 				{listing.cardArt ? (
-					<img src={listing.cardArt} alt="" className="w-full h-full object-cover" loading="lazy" />
+					<img
+						src={listing.cardArt}
+						alt={`${displayName} artwork`}
+						className="w-full h-full object-cover"
+						loading="lazy"
+					/>
 				) : (
-					<div className="w-full h-full flex items-center justify-center text-gray-600 text-3xl">
-						{listing.nftType === 'pack' ? '📦' : '🃏'}
+					<div
+						role="img"
+						aria-label={`${typeLabel} placeholder artwork`}
+						className="w-full h-full flex items-center justify-center text-ink-400 text-3xl bg-obsidian-950/40"
+					>
+						{listing.nftType === 'pack' ? '盾' : '◈'}
 					</div>
 				)}
-				{/* Rarity badge */}
-				<span className={`absolute top-2 right-2 text-xs px-1.5 py-0.5 rounded font-bold uppercase ${
-					rarity === 'mythic' ? 'bg-amber-600 text-white' :
-					rarity === 'epic' ? 'bg-purple-600 text-white' :
-					rarity === 'rare' ? 'bg-blue-600 text-white' :
-					'bg-gray-700 text-gray-300'
-				}`}>
+				{/* Bottom scrim — gives the rarity chip and price legible contrast */}
+				<div className="absolute inset-x-0 bottom-0 h-1/2 bg-linear-to-t from-obsidian-950/85 to-transparent pointer-events-none" />
+				<span className={`absolute top-2 right-2 font-mono text-[11px] tracking-[0.18em] px-2 py-0.5 rounded font-bold uppercase ${chipClass}`}>
 					{rarity}
 				</span>
 			</div>
 
-			{/* Info */}
-			<div className="p-3">
-				<p className="text-sm font-semibold text-gray-200 truncate" title={listing.cardName}>
-					{listing.cardName || listing.nftUid}
-				</p>
-				<p className="text-xs text-gray-500 mt-0.5">
-					Seller: @{listing.seller}
-				</p>
+			<div className="relative z-10 p-3 flex flex-col gap-2">
+				<div>
+					<p className="text-sm font-semibold text-ink-0 truncate" title={displayName}>
+						{displayName}
+					</p>
+					<p className="font-mono text-xs tracking-[0.14em] text-ink-400 mt-0.5">
+						@{listing.seller}
+					</p>
+				</div>
 
-				{/* Price */}
-				<div className="mt-2 flex items-center justify-between">
-					<span className="text-lg font-bold text-amber-400">
-						{listing.price} <span className="text-xs text-amber-600">{listing.currency}</span>
+				<div className="flex items-baseline gap-1.5">
+					<span className="numeric-display numeric-display--md text-gold-300">
+						{listing.price}
+					</span>
+					<span className="font-mono text-[11px] tracking-[0.18em] uppercase text-gold-500">
+						{listing.currency}
 					</span>
 				</div>
 
-				{/* Actions */}
-				<div className="mt-3 flex gap-2">
+				<div className="flex gap-2 mt-1">
 					{isMine ? (
 						<button
+							type="button"
 							onClick={onUnlist}
 							disabled={loading}
-							className="flex-1 px-3 py-1.5 bg-red-900/50 hover:bg-red-800/60 text-red-300 rounded text-xs transition-colors border border-red-700/40 disabled:opacity-50"
+							aria-label={`Remove ${displayName} from your listings`}
+							className="flex-1 px-3 py-1.5 bg-ember-600/30 hover:bg-ember-500/50 text-ember-300 rounded font-mono text-xs uppercase tracking-[0.14em] transition-colors border border-ember-400/40 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ember-300"
 						>
 							Remove
 						</button>
 					) : (
 						<>
 							<button
+								type="button"
 								onClick={onBuy}
 								disabled={loading}
-								className="flex-1 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded text-xs font-semibold transition-colors disabled:opacity-50"
+								aria-label={`Buy ${displayName} for ${listing.price} ${listing.currency}`}
+								className="flex-1 px-3 py-1.5 bg-linear-to-b from-gold-300 to-gold-500 hover:from-gold-200 hover:to-gold-400 text-obsidian-950 rounded font-display text-xs font-bold tracking-[0.14em] uppercase transition-all disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-300"
 							>
-								Buy Now
+								Buy
 							</button>
 							<button
+								type="button"
 								onClick={onOffer}
 								disabled={loading}
-								className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded text-xs transition-colors disabled:opacity-50"
+								aria-label={`Make an offer on ${displayName}`}
+								className="px-3 py-1.5 bg-obsidian-700 hover:bg-obsidian-600 text-ink-200 rounded font-mono text-xs uppercase tracking-[0.14em] transition-colors disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bifrost-300"
 							>
 								Offer
 							</button>
@@ -614,6 +754,6 @@ function ListingCard({ listing, isMine, onBuy, onUnlist, onOffer, loading }: {
 					)}
 				</div>
 			</div>
-		</motion.div>
+		</motion.article>
 	);
 }

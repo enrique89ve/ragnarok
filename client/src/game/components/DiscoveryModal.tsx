@@ -127,7 +127,7 @@ export const DiscoveryModal: React.FC<DiscoveryModalProps> = ({
         </div>
       )}
       <div 
-        className="bg-gray-800 p-6 rounded-xl max-w-4xl w-full"
+        className="bg-gray-800 p-6 rounded-xl max-w-4xl w-full modal-landscape-safe"
         style={{ 
           boxShadow: '0 0 40px rgba(251, 191, 36, 0.3), 0 0 80px rgba(251, 191, 36, 0.1)',
           border: '1px solid rgba(251, 191, 36, 0.3)',

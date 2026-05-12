@@ -1,14 +1,28 @@
 #!/usr/bin/env node
 /**
- * testDuatClaim.mjs — End-to-end test of the DUAT claim system
+ * testDuatClaim.mjs — End-to-end checks for the DUAT claim system
  *
- * Tests: snapshot loading, formula, applyOp simulation, edge cases
+ * Verifies the canonical snapshot (shared/protocol-core/duatSnapshot.json):
+ *   - Shape: each holder has { account, duatRaw } only — pack counts are
+ *     derived live via `calculateDuatPacks`, never persisted.
+ *   - Integrity: stats.totalPacks equals the sum of the formula over all
+ *     holders. This is the same assertion that runs at module load in
+ *     `shared/protocol-core/duatSnapshot.ts`.
+ *   - Hash: snapshotHash matches a fresh SHA-256 over the canonical JSON
+ *     minus the hash itself.
+ *
+ * Usage: node scripts/testDuatClaim.mjs
  */
 
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const snapshot = JSON.parse(readFileSync('client/public/data/duat-snapshot.json', 'utf8'));
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const SNAPSHOT_PATH = join(__dirname, '..', 'shared', 'protocol-core', 'duatSnapshot.json');
+
+const snapshot = JSON.parse(readFileSync(SNAPSHOT_PATH, 'utf8'));
 const SCALE = snapshot.formula.scale;
 const BASE = snapshot.formula.basePacks;
 const MAX = snapshot.formula.maxPacks;
@@ -49,8 +63,17 @@ delete verify.snapshotHash;
 const computedHash = createHash('sha256').update(JSON.stringify(verify, null, 2), 'utf8').digest('hex');
 assert(computedHash === snapshot.snapshotHash, 'SHA-256 hash matches');
 
-// ═══ TEST 3: Formula correctness ═══
-console.log('\n=== TEST 3: Formula Tests ===');
+// ═══ TEST 3: Holder shape ═══
+console.log('\n=== TEST 3: Holder Shape ===');
+const sample = snapshot.holders[0];
+const keys = Object.keys(sample).sort();
+assert(keys.length === 2 && keys[0] === 'account' && keys[1] === 'duatRaw',
+	`holder keys are exactly {account, duatRaw}, got [${keys.join(',')}]`);
+const persistedPacks = snapshot.holders.filter(h => 'packs' in h).length;
+assert(persistedPacks === 0, 'no holder persists a `packs` field (derived only)');
+
+// ═══ TEST 4: Formula correctness ═══
+console.log('\n=== TEST 4: Formula Tests ===');
 assert(calculateDuatPacks(1909813950) === 112, 'theycallmedan: 1.9M DUAT → 112 packs');
 assert(calculateDuatPacks(9896316000) === 125, 'blocktrades: 9.9M DUAT → 125 packs');
 assert(calculateDuatPacks(1000) === 1, 'minimum: 1 DUAT → 1 pack');
@@ -58,23 +81,19 @@ assert(calculateDuatPacks(0) === 0, 'zero: 0 DUAT → 0 packs');
 assert(calculateDuatPacks(500) === 0, 'below threshold: 0.5 DUAT → 0 packs');
 assert(calculateDuatPacks(-1000) === 0, 'negative: -1 DUAT → 0 packs');
 
-// ═══ TEST 4: All holders formula match ═══
-console.log('\n=== TEST 4: All Holders Formula Match ===');
-let mismatches = 0;
+// ═══ TEST 5: Aggregate matches stats ═══
+console.log('\n=== TEST 5: Aggregate Matches Stats ===');
 let totalPacks = 0;
+let zeroPack = 0;
+let maxPack = 0;
 for (const h of snapshot.holders) {
-	const expected = calculateDuatPacks(h.duatRaw);
-	if (expected !== h.packs) mismatches++;
-	totalPacks += h.packs;
+	const p = calculateDuatPacks(h.duatRaw);
+	totalPacks += p;
+	if (p === 0) zeroPack++;
+	if (p > maxPack) maxPack = p;
 }
-assert(mismatches === 0, `0 formula mismatches across ${snapshot.holders.length} holders`);
-assert(totalPacks === snapshot.stats.totalPacks, `sum(packs) = ${totalPacks} matches stats`);
-
-// ═══ TEST 5: No zero-pack holders ═══
-console.log('\n=== TEST 5: Edge Cases ===');
-const zeroPack = snapshot.holders.filter(h => h.packs === 0);
-assert(zeroPack.length === 0, 'no holders with 0 packs');
-const maxPack = Math.max(...snapshot.holders.map(h => h.packs));
+assert(totalPacks === snapshot.stats.totalPacks, `Σ formula(duatRaw) = ${totalPacks} matches stats.totalPacks`);
+assert(zeroPack === 0, 'no holders derive to 0 packs');
 assert(maxPack <= MAX, `max packs (${maxPack}) ≤ cap (${MAX})`);
 assert(maxPack === 125, `max packs is 125 (blocktrades)`);
 
@@ -94,28 +113,8 @@ console.log('\n=== TEST 7: Uniqueness ===');
 const accountSet = new Set(snapshot.holders.map(h => h.account));
 assert(accountSet.size === snapshot.holders.length, `no duplicate accounts (${accountSet.size} unique)`);
 
-// ═══ TEST 8: Simulate claim validation ═══
-console.log('\n=== TEST 8: Claim Validation Simulation ===');
-
-// Valid claim
-const dan = snapshot.holders.find(h => h.account === 'theycallmedan');
-assert(dan !== undefined, 'theycallmedan found in snapshot');
-assert(dan.packs === calculateDuatPacks(dan.duatRaw), 'theycallmedan pack count matches formula');
-
-// Invalid: wrong pack count
-const wrongPacks = calculateDuatPacks(dan.duatRaw) + 1;
-assert(wrongPacks !== dan.packs, `wrong pack count (${wrongPacks}) rejected by formula check`);
-
-// Invalid: account not in snapshot
-const fakeAccount = snapshot.holders.find(h => h.account === 'nonexistent_fake_user');
-assert(fakeAccount === undefined, 'fake account not in snapshot');
-
-// Invalid: already claimed (would be checked by IndexedDB)
-// This just verifies the logic path exists
-assert(typeof snapshot.snapshotHash === 'string', 'snapshot hash available for on-chain genesis');
-
-// ═══ TEST 9: Supply math ═══
-console.log('\n=== TEST 9: Supply Math ===');
+// ═══ TEST 8: Supply math ═══
+console.log('\n=== TEST 8: Supply Math ===');
 const totalCards = totalPacks * 5;
 const supplyPct = (totalCards / 2741000) * 100;
 assert(Math.abs(supplyPct - 30) < 0.01, `${supplyPct.toFixed(2)}% of supply (target: 30%)`);

@@ -622,6 +622,48 @@
   --error-text: #ff6b6b;
   --error-stack: #888;
   --error-accent: #c9a84c;
+
+  /* =============================================
+     13. RUNIC FORGE — mystical surface system
+     Used by PackTile/SealedPackTile/StarterClaimCard to make rarity
+     readable from the panel surface itself, not just the border.
+     ============================================= */
+
+  /* Mystic surface gradients — obsidian backbone with rarity ambience */
+  --surface-mystic-standard:
+    radial-gradient(ellipse 60% 40% at 50% 0%, color-mix(in oklch, var(--bifrost-500) 14%, transparent) 0%, transparent 65%),
+    linear-gradient(180deg, var(--obsidian-800) 0%, var(--obsidian-950) 100%);
+
+  --surface-mystic-premium:
+    radial-gradient(ellipse 60% 40% at 50% 0%, color-mix(in oklch, var(--gold-300) 12%, transparent) 0%, transparent 65%),
+    linear-gradient(180deg, var(--obsidian-800) 0%, var(--obsidian-950) 100%);
+
+  --surface-mystic-mythic:
+    radial-gradient(ellipse 50% 35% at 50% 0%, color-mix(in oklch, var(--ember-300) 16%, transparent) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 50% at 50% 100%, color-mix(in oklch, var(--gold-500) 10%, transparent) 0%, transparent 70%),
+    linear-gradient(180deg, var(--obsidian-800) 0%, var(--obsidian-950) 100%);
+
+  --surface-mystic-obsidian:
+    radial-gradient(ellipse 60% 40% at 50% 0%, color-mix(in oklch, var(--gold-300) 6%, transparent) 0%, transparent 65%),
+    linear-gradient(180deg, var(--obsidian-850) 0%, var(--obsidian-950) 100%);
+
+  /* Mystic glows — paired with bevel below for the carved-stone effect */
+  --glow-mystic-bifrost:
+    0 0 32px -8px color-mix(in oklch, var(--bifrost-300) 55%, transparent),
+    0 0 1px color-mix(in oklch, var(--bifrost-300) 40%, transparent);
+  --glow-mystic-gold:
+    0 0 32px -8px color-mix(in oklch, var(--gold-300) 55%, transparent),
+    0 0 1px color-mix(in oklch, var(--gold-300) 40%, transparent);
+  --glow-mystic-ember:
+    0 0 36px -8px color-mix(in oklch, var(--ember-300) 60%, transparent),
+    0 0 1px color-mix(in oklch, var(--ember-300) 40%, transparent);
+  --glow-mystic-rest:
+    0 0 0 1px color-mix(in oklch, var(--gold-300) 12%, transparent);
+
+  /* Edge bevel — top highlight + bottom shadow, gives recessed/carved feel */
+  --bevel-inset:
+    inset 0 1px 0 color-mix(in oklch, var(--gold-300) 18%, transparent),
+    inset 0 -1px 0 color-mix(in oklch, var(--obsidian-950) 70%, transparent);
 }
 
 /* =============================================
