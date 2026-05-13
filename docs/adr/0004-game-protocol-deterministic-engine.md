@@ -134,6 +134,8 @@ Alternatives explicitly rejected (see §Rejected alternatives below):
 
 **Duration estimate**: 8–11 weeks total with explicit test gates between phases. Phase 0 alone (3–4 weeks) is sufficient for closed beta if false-positive slash is acceptable in low-stakes ranked.
 
+**Phase 0 → Phase 1 promotion gate**: `npm run smoke:phase0` must exit 0. The harness (`client/src/game/protocol/phase0.smoke.test.ts`) drives a 60-turn mock match through session_authorize + signed transcript + encrypted action log + session_renewal + server pending queue, with a stub engine. It asserts envelope integrity, prevHash chaining, Merkle root convergence, renewal idempotency, queue TTL, and the Keychain prompt budget (2 at start per peer, 0 mid-match). Green light = the protocol design holds end-to-end without an engine; Phase 1 (chess → WASM) is unlocked.
+
 ### 6. Reconnect & recovery
 
 The ephemeral session key pattern (Decision §3) creates a recovery surface: if the peer's tab dies, the privkey dies with it. Five distinct scenarios, all of which must be handled before mainnet:

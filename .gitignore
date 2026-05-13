@@ -114,6 +114,7 @@ __tests__/
 !server/services/matchPendingQueue.test.ts
 !server/routes/chainRoutes.matchPending.test.ts
 !client/src/game/protocol/sessionRenewal.test.ts
+!client/src/game/protocol/phase0.smoke.test.ts
 *.spec.js
 *.spec.ts
 *.test.tsx
