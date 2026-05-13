@@ -9,13 +9,20 @@
  *
  * Legacy `rp_match_start` is still accepted by readers (normalization alias)
  * but new writers MUST emit the canonical form.
+ *
+ * ADR 0004 §Decision.3 (issue 02): `pubkey_a` / `pubkey_b` are now ephemeral
+ * Ed25519 session-key pubkeys generated per match (see
+ * `client/src/game/protocol/sessionKey.ts`), NOT Hive Posting keys. The
+ * binding to a Hive identity happens via `session_authorize` (Hive sig over
+ * `matchId | ephemeralPubkey`) exchanged on the wire before this anchor is
+ * broadcast; callers are responsible for collecting both ephemeral pubkeys
+ * and passing them in.
  */
 
 import { hiveSync } from '../HiveSync';
 import { RAGNAROK_APP_ID } from '../schemas/HiveTypes';
 import { sha256Hash, canonicalStringify } from './hashUtils';
 import { computePoW, POW_CONFIG } from './proofOfWork';
-import { fetchAccountKeys } from './hiveSignatureVerifier';
 import { HIVE_NODES } from './hiveConfig';
 import { getCardRegistryHash } from '../../game/data/effects/registryHash';
 
@@ -52,6 +59,16 @@ export interface MatchAnchorResult {
 // Helpers
 // ---------------------------------------------------------------------------
 
+// Loose base64url shape guard. Ephemeral Ed25519 pubkeys are 43-char
+// base64url, but we accept a wider range to leave headroom for the wire
+// schema's broader 32–256 char band (see `messageSchemas.ts`).
+function isLikelyBase64UrlPubkey(value: string): boolean {
+	return typeof value === 'string'
+		&& value.length >= 32
+		&& value.length <= 256
+		&& /^[A-Za-z0-9_-]+$/.test(value);
+}
+
 async function getHeadBlockRef(): Promise<string> {
 	for (const node of HIVE_NODES) {
 		try {
@@ -78,12 +95,6 @@ async function getHeadBlockRef(): Promise<string> {
 	return sha256Hash(`fallback:${Date.now()}`);
 }
 
-async function getPostingPubKey(username: string): Promise<string> {
-	const keys = await fetchAccountKeys(username);
-	if (keys.posting.length === 0) throw new Error(`No posting key found for ${username}`);
-	return keys.posting[0];
-}
-
 // ---------------------------------------------------------------------------
 // Broadcast
 // ---------------------------------------------------------------------------
@@ -92,22 +103,31 @@ export async function broadcastMatchAnchor(params: {
 	matchId: string;
 	playerA: string;
 	playerB: string;
+	/** Player A's ephemeral Ed25519 session pubkey (base64url). */
+	ephemeralPubkey: string;
+	/**
+	 * Player B's ephemeral Ed25519 session pubkey (base64url). Collected
+	 * from the opponent's `session_authorize` wire message before this
+	 * anchor is broadcast.
+	 */
+	opponentEphemeralPubkey: string;
 	deckHash: string;
 	engineHash: string;
 }): Promise<MatchAnchorResult> {
-	const { matchId, playerA, playerB, deckHash, engineHash } = params;
+	const { matchId, playerA, playerB, ephemeralPubkey, opponentEphemeralPubkey, deckHash, engineHash } = params;
 
-	// Fetch both players' posting public keys for anchoring
-	let pubkeyA: string;
-	let pubkeyB: string;
-	try {
-		[pubkeyA, pubkeyB] = await Promise.all([
-			getPostingPubKey(playerA),
-			getPostingPubKey(playerB),
-		]);
-	} catch (err) {
-		return { success: false, error: `Failed to fetch pubkeys: ${err instanceof Error ? err.message : err}` };
+	// Shape-validate the ephemeral keys before anchoring them on chain.
+	// Bad input here would be permanently pinned in the Hive op, so we'd
+	// rather fail loudly at the boundary than ship malformed bytes.
+	if (!isLikelyBase64UrlPubkey(ephemeralPubkey)) {
+		return { success: false, error: 'broadcastMatchAnchor: ephemeralPubkey must be base64url (32–256 chars)' };
 	}
+	if (!isLikelyBase64UrlPubkey(opponentEphemeralPubkey)) {
+		return { success: false, error: 'broadcastMatchAnchor: opponentEphemeralPubkey must be base64url (32–256 chars)' };
+	}
+
+	const pubkeyA = ephemeralPubkey;
+	const pubkeyB = opponentEphemeralPubkey;
 
 	const blockRef = await getHeadBlockRef();
 	// ADR 0004 §Decision.2: pin the card registry hash alongside the engine

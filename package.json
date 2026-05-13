@@ -36,6 +36,8 @@
 	"dependencies": {
 		"@jridgewell/trace-mapping": "^0.3.25",
 		"@neondatabase/serverless": "^0.10.4",
+		"@noble/curves": "^2.0.1",
+		"@noble/hashes": "^2.0.1",
 		"@octokit/rest": "^22.0.0",
 		"@tanstack/react-virtual": "^3.13.19",
 		"@types/howler": "^2.2.12",

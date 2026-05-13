@@ -27,6 +27,8 @@ import { deriveCanonicalSide, isChessAttackInstantKill, tryParseChessCommandEnve
 import { resetChessWireSender, setChessSendObserver } from '../../../../p2p/chessWireSender';
 import type { P2PMessage } from '../../../../p2p/messages';
 import { parseWireMessage } from '../../../../p2p/messageSchemas';
+import { generateSessionKey, type SessionKey } from '../../../../protocol/sessionKey';
+import { signSessionAuthorize } from '../../../../../data/HiveDataLayer';
 
 export type { GameCommandEnvelope, WireGameCommand } from '../../../../hooks/p2pEnvelope';
 export type { P2PMessage } from '../../../../p2p/messages';
@@ -97,6 +99,16 @@ export function useWireSync() {
 
 	// Session binding: matchId derived from seed exchange
 	const matchIdRef = useRef<string | null>(null);
+	// ADR 0004 §Decision.3 — ephemeral session keys. The local SessionKey
+	// is the in-process keypair signing every action envelope (issue 03).
+	// `sessionAuthorizeSentRef` guards against re-firing the Hive Keychain
+	// prompt if seed_reveal arrives twice (network retry, reconnect).
+	// Opponent state is captured when their `session_authorize` arrives;
+	// both halves must be present before any action_envelope is sent.
+	const sessionKeyRef = useRef<SessionKey | null>(null);
+	const sessionAuthorizeSentRef = useRef(false);
+	const opponentSessionPubkeyRef = useRef<string | null>(null);
+	const opponentSessionHiveSigRef = useRef<string | null>(null);
 	// Per-session seq tracking: monotonic, contiguous, reset on new session
 	const lastIncomingSeqRef = useRef<number>(-1);
 	// Identity binding: opponent's Hive username from seed_reveal
@@ -188,6 +200,10 @@ export function useWireSync() {
 			seenChessCommandIdsOrderRef.current.length = 0;
 			resetChessWireSender();
 			lastEnvelopeSentAtRef.current = 0;
+			sessionKeyRef.current = null;
+			sessionAuthorizeSentRef.current = false;
+			opponentSessionPubkeyRef.current = null;
+			opponentSessionHiveSigRef.current = null;
 			return;
 		}
 
@@ -580,6 +596,42 @@ export function useWireSync() {
 					// Identity binding: capture opponent's Hive username
 					if (data.hiveUsername) {
 						opponentUsernameRef.current = data.hiveUsername;
+					}
+
+					// ADR 0004 §Decision.3 — generate per-match ephemeral Ed25519
+					// session key and request Hive Keychain to authorize the
+					// pubkey. Fire-and-forget: the prompt is async and must not
+					// block seed_reveal completion. Issue 03 will block envelope
+					// sends on both `sessionKeyRef.current` and
+					// `opponentSessionPubkeyRef.current` being populated.
+					if (!sessionAuthorizeSentRef.current) {
+						sessionAuthorizeSentRef.current = true;
+						const localMatchId = truncatedMatchId;
+						(async () => {
+							try {
+								const sessionKey = await generateSessionKey(localMatchId);
+								sessionKeyRef.current = sessionKey;
+								const localUsername = getNFTBridge().getUsername();
+								if (!localUsername) {
+									debug.warn('[wireSync] session_authorize skipped — no local Hive username');
+									return;
+								}
+								const hiveSig = await signSessionAuthorize(localMatchId, sessionKey.pubkey);
+								send({
+									type: 'session_authorize',
+									matchId: localMatchId,
+									ephemeralPubkey: sessionKey.pubkey,
+									hiveSig,
+								});
+								debug.log('[wireSync] Sent session_authorize', {
+									matchId: localMatchId,
+									mode: sessionKey.mode,
+									pubkeyPrefix: sessionKey.pubkey.slice(0, 8),
+								});
+							} catch (err) {
+								debug.error('[wireSync] session_authorize failed:', err);
+							}
+						})();
 					}
 
 					if (isCardsAuthority) {
@@ -1324,6 +1376,36 @@ export function useWireSync() {
 						pending.reject(new Error(`Result rejected: ${data.reason}`));
 						pendingResultRef.current = null;
 					}
+					break;
+				}
+
+				case 'session_authorize': {
+					// ADR 0004 §Decision.3 — cache opponent's ephemeral pubkey +
+					// the Hive sig that binds it to their on-chain identity.
+					// Hive-sig verification + `match_anchor` cross-check belong
+					// to issue 03 (action_envelope wiring) and the broadcaster
+					// flow respectively; this layer only caches.
+					if (data.matchId !== matchIdRef.current) {
+						debug.warn('[wireSync] session_authorize matchId mismatch — ignoring', {
+							received: data.matchId,
+							expected: matchIdRef.current,
+						});
+						break;
+					}
+					if (opponentSessionPubkeyRef.current
+						&& opponentSessionPubkeyRef.current !== data.ephemeralPubkey
+					) {
+						debug.warn('[wireSync] session_authorize replaced opponent pubkey mid-match — possible re-key', {
+							before: opponentSessionPubkeyRef.current.slice(0, 8),
+							after: data.ephemeralPubkey.slice(0, 8),
+						});
+					}
+					opponentSessionPubkeyRef.current = data.ephemeralPubkey;
+					opponentSessionHiveSigRef.current = data.hiveSig;
+					debug.log('[wireSync] Cached opponent session_authorize', {
+						matchId: data.matchId,
+						pubkeyPrefix: data.ephemeralPubkey.slice(0, 8),
+					});
 					break;
 				}
 

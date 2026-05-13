@@ -107,6 +107,7 @@ __tests__/
 !client/src/game/match/modes/p2p/resolver.test.ts
 !client/src/game/coordinator/hooks/chessAITurnDriver.test.ts
 !client/src/lib/stores/useWarbandStore.test.ts
+!client/src/game/protocol/sessionKey.test.ts
 *.spec.js
 *.spec.ts
 *.test.tsx

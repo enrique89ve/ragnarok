@@ -28,6 +28,7 @@ import {
   DEFAULT_PLAYER_STATS,
   DEFAULT_TOKEN_BALANCE,
 } from './schemas/HiveTypes';
+import { signHiveMessage } from './HiveAuth';
 
 interface HiveDataStore extends HiveGameState {
   setUser: (user: HiveUserRecord) => void;
@@ -192,6 +193,52 @@ export const generateMatchId = (): string => {
 export const generateCardUid = (): string => {
   return `C-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 };
+
+// ─── Session authorization (ADR 0004 §Decision.3) ─────────────────────────
+//
+// Sibling helper to the generators above (top-level functions, not store
+// methods — the call is effectful and triggers a Hive Keychain prompt).
+// One prompt per match is the budget; mid-match signing uses the in-process
+// SessionKey with zero further prompts. The signed buffer is exchanged via
+// the `session_authorize` wire message (see `useWireSync.ts`).
+
+const SESSION_AUTHORIZE_PREFIX = 'ragnarok session_authorize';
+
+export function buildSessionAuthorizeMessage(
+  matchId: string,
+  ephemeralPubkey: string,
+): string {
+  return `${SESSION_AUTHORIZE_PREFIX} | ${matchId} | ${ephemeralPubkey}`;
+}
+
+/**
+ * Prompt the user (via Hive Keychain) to sign the ephemeral session pubkey
+ * with their Hive Active key, binding the match-scoped key to their on-chain
+ * identity. Returns the base58 Hive signature.
+ *
+ * Confidence:
+ *   - Message format is canonical and verbatim — Hive Keychain `signBuffer`
+ *     signs the bytes as provided (MEDIUM per issue 02 confidence note).
+ *   - Active key is required: this signature gates entry to a match and
+ *     should not be reusable from a leaked Posting key.
+ */
+export async function signSessionAuthorize(
+  matchId: string,
+  ephemeralPubkey: string,
+): Promise<string> {
+  if (!matchId || !ephemeralPubkey) {
+    throw new Error('signSessionAuthorize: matchId and ephemeralPubkey required');
+  }
+  const message = buildSessionAuthorizeMessage(matchId, ephemeralPubkey);
+  const result = await signHiveMessage(message, {
+    keyType: 'Active',
+    title: 'Authorize session key',
+  });
+  if (!result.success || !result.signature) {
+    throw new Error(`Hive Keychain sign rejected: ${result.error ?? 'unknown error'}`);
+  }
+  return result.signature;
+}
 
 // Expose on globalThis so game-engine can access without circular chunk dependency
 (globalThis as any).__ragnarokHiveDataStore = useHiveDataStore;
