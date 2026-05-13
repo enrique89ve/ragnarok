@@ -24,6 +24,7 @@ import type {
 	EitrLedgerEntry,
 	EitrLedgerEntryQuery,
 	EitrLedgerTotalQuery,
+	ForgeCommitRecord,
 } from '../../shared/protocol-core/types';
 
 const DEFAULT_ELO_RATING = 1000;
@@ -159,6 +160,7 @@ interface SerializedState {
 	campaignProgress?: [string, CampaignProgressRecord][];
 	runeLedger?: [string, RuneLedgerEntry][];
 	eitrLedger?: [string, EitrLedgerEntry][];
+	forgeCommits?: [string, ForgeCommitRecord][];
 	packs?: [string, PackAsset][];
 	packSupply?: [string, PackSupplyRecord][];
 	slashedAccounts?: string[];
@@ -190,6 +192,7 @@ const campaignSubmissions = new Map<string, CampaignSubmissionRecord>();
 const campaignProgress = new Map<string, CampaignProgressRecord>();
 const runeLedger = new Map<string, RuneLedgerEntry>();
 const eitrLedger = new Map<string, EitrLedgerEntry>();
+const forgeCommits = new Map<string, ForgeCommitRecord>();
 const packs = new Map<string, PackAsset>();
 const packSupply = new Map<string, PackSupplyRecord>();
 const slashedAccounts = new Set<string>();
@@ -322,6 +325,8 @@ export function loadState(): void {
 		for (const [k, v] of data.runeLedger ?? []) runeLedger.set(k, v);
 		eitrLedger.clear();
 		for (const [k, v] of data.eitrLedger ?? []) eitrLedger.set(k, v);
+		forgeCommits.clear();
+		for (const [k, v] of data.forgeCommits ?? []) forgeCommits.set(k, v);
 
 		packs.clear();
 		for (const [k, v] of data.packs ?? []) packs.set(k, v);
@@ -364,6 +369,7 @@ export function saveState(): void {
 			campaignProgress: [...campaignProgress.entries()],
 			runeLedger: [...runeLedger.entries()],
 			eitrLedger: [...eitrLedger.entries()],
+			forgeCommits: [...forgeCommits.entries()],
 			packs: [...packs.entries()],
 			packSupply: [...packSupply.entries()],
 			slashedAccounts: [...slashedAccounts],
@@ -695,6 +701,27 @@ function matchesEitrLedgerQuery(entry: EitrLedgerEntry, query: EitrLedgerEntryQu
 	if (query.account !== undefined && entry.account !== query.account) return false;
 	if (query.sourceKeyPrefix !== undefined && !entry.sourceKey.startsWith(query.sourceKeyPrefix)) return false;
 	return true;
+}
+
+// ---------------------------------------------------------------------------
+// Forge commits (ADR 0001 §3 commit-reveal forge)
+// ---------------------------------------------------------------------------
+
+export function getForgeCommit(trxId: string): ForgeCommitRecord | undefined {
+	return forgeCommits.get(trxId);
+}
+
+export function setForgeCommit(commit: ForgeCommitRecord): void {
+	forgeCommits.set(commit.trxId, commit);
+	markDirty();
+}
+
+export function getUnrevealedForgeCommitsBefore(deadlineBlock: number): ForgeCommitRecord[] {
+	const out: ForgeCommitRecord[] = [];
+	for (const commit of forgeCommits.values()) {
+		if (!commit.revealed && commit.commitBlock <= deadlineBlock) out.push(commit);
+	}
+	return out;
 }
 
 export function getRuneSeasonStats(seasonId: string): RuneSeasonStats {

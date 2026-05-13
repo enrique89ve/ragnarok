@@ -25,6 +25,8 @@ import {
 	getEitrLedgerEntry as csGetEitrLedgerEntry, setEitrLedgerEntry as csSetEitrLedgerEntry,
 	getEitrLedgerEntries as csGetEitrLedgerEntries,
 	getEitrLedgerTotal as csGetEitrLedgerTotal,
+	getForgeCommit as csGetForgeCommit, setForgeCommit as csSetForgeCommit,
+	getUnrevealedForgeCommitsBefore as csGetUnrevealedForgeCommitsBefore,
 	getMatchAnchor as csGetMatchAnchor, setMatchAnchor as csSetMatchAnchor,
 	getPackCommit as csGetPackCommit, setPackCommit as csSetPackCommit,
 	hasRewardClaim as csHasRewardClaim, addRewardClaim as csAddRewardClaim,
@@ -167,6 +169,9 @@ export const serverStateAdapter: StateAdapter = {
 	async putEitrLedgerEntry(entry) { csSetEitrLedgerEntry(entry); },
 	async getEitrLedgerEntries(query) { return csGetEitrLedgerEntries(query); },
 	async getEitrLedgerTotal(query) { return csGetEitrLedgerTotal(query); },
+	async getForgeCommit(trxId) { return csGetForgeCommit(trxId) ?? null; },
+	async putForgeCommit(commit) { csSetForgeCommit(commit); },
+	async getUnrevealedForgeCommitsBefore(deadlineBlock) { return csGetUnrevealedForgeCommitsBefore(deadlineBlock); },
 
 	async getMatchAnchor(matchId) {
 		const r = csGetMatchAnchor(matchId);

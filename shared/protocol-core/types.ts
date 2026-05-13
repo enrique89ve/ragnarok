@@ -125,6 +125,9 @@ export type CanonicalAction =
 	| 'mint_batch'
 	| 'pack_commit'
 	| 'pack_reveal'
+	// Eitr canonical forge per ADR 0001 §3
+	| 'forge_commit'
+	| 'forge_reveal'
 	| 'reward_claim'
 	| 'card_transfer'
 	| 'burn'
@@ -247,7 +250,7 @@ export interface CardAsset {
 	xp: number;
 	edition: string;
 	foil?: string;
-	mintSource: 'genesis' | 'pack' | 'reward' | 'replica' | 'merge';
+	mintSource: 'genesis' | 'pack' | 'reward' | 'replica' | 'merge' | 'forge';
 	mintTrxId: string;
 	mintBlockNum: number;
 	lastTransferBlock: number;
@@ -325,6 +328,18 @@ export interface PackCommitRecord {
 	quantity: number;
 	saltCommit: string;
 	commitBlock: number;
+	revealed: boolean;
+}
+
+// Forge commit per ADR 0001 §3 — mirror of PackCommitRecord with the Eitr cost
+// captured so refund-on-exhaustion at reveal can credit the original amount.
+export interface ForgeCommitRecord {
+	trxId: string;
+	account: string;
+	rarity: string;
+	saltCommit: string;
+	commitBlock: number;
+	debitAmount: number;
 	revealed: boolean;
 }
 
@@ -453,6 +468,11 @@ export interface StateAdapter {
 	getPackCommit(trxId: string): Promise<PackCommitRecord | null>;
 	putPackCommit(commit: PackCommitRecord): Promise<void>;
 	getUnrevealedCommitsBefore(deadlineBlock: number): Promise<PackCommitRecord[]>;
+
+	// Forge commits (per ADR 0001 §3 — commit-reveal forge)
+	getForgeCommit(trxId: string): Promise<ForgeCommitRecord | null>;
+	putForgeCommit(commit: ForgeCommitRecord): Promise<void>;
+	getUnrevealedForgeCommitsBefore(deadlineBlock: number): Promise<ForgeCommitRecord[]>;
 
 	// Reward claims
 	hasRewardClaim(account: string, rewardId: string): Promise<boolean>;

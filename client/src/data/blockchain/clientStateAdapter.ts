@@ -23,6 +23,8 @@ import {
 	getEitrLedgerEntry as idbGetEitrLedgerEntry, putEitrLedgerEntry as idbPutEitrLedgerEntry,
 	getEitrLedgerEntries as idbGetEitrLedgerEntries,
 	getEitrLedgerTotal as idbGetEitrLedgerTotal,
+	getForgeCommit as idbGetForgeCommit, putForgeCommit as idbPutForgeCommit,
+	getUnrevealedForgeCommitsBefore as idbGetUnrevealedForgeCommitsBefore,
 	getMatchAnchor, putMatchAnchor,
 	getQueueEntry, putQueueEntry, deleteQueueEntry,
 	isAccountSlashed, putSlashedAccount,
@@ -165,6 +167,15 @@ export const clientStateAdapter: StateAdapter = {
 	},
 	async getEitrLedgerTotal(query) {
 		return idbGetEitrLedgerTotal(query);
+	},
+	async getForgeCommit(trxId) {
+		return await idbGetForgeCommit(trxId) ?? null;
+	},
+	async putForgeCommit(commit) {
+		await idbPutForgeCommit(commit);
+	},
+	async getUnrevealedForgeCommitsBefore(deadlineBlock) {
+		return idbGetUnrevealedForgeCommitsBefore(deadlineBlock);
 	},
 
 	async getMatchAnchor(matchId) {

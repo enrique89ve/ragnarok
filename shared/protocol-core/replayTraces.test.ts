@@ -25,6 +25,7 @@ import type {
 	DuatClaimRecord,
 	RuneLedgerEntry, RuneLedgerEntryQuery, RuneLedgerTotalQuery,
 	EitrLedgerEntry, EitrLedgerEntryQuery, EitrLedgerTotalQuery,
+	ForgeCommitRecord,
 } from './types';
 import { canonicalStringify, sha256Hash } from './hash';
 import { deriveChallenge, POW_CONFIG } from './pow';
@@ -124,6 +125,12 @@ class MemoryState implements StateAdapter {
 		}
 		return total;
 	}
+	forgeCommits = new Map<string, ForgeCommitRecord>();
+	async getForgeCommit(trxId: string) { return this.forgeCommits.get(trxId) ?? null; }
+	async putForgeCommit(commit: ForgeCommitRecord) { this.forgeCommits.set(commit.trxId, commit); }
+	async getUnrevealedForgeCommitsBefore(deadlineBlock: number) {
+		return [...this.forgeCommits.values()].filter(c => !c.revealed && c.commitBlock <= deadlineBlock);
+	}
 	async getMatchAnchor(matchId: string) { return this.anchors.get(matchId) ?? null; }
 	async putMatchAnchor(a: MatchAnchorRecord) { this.anchors.set(a.matchId, a); }
 	async getPackCommit(trxId: string) { return this.commits.get(trxId) ?? null; }
@@ -191,6 +198,14 @@ class MemoryState implements StateAdapter {
 // Mock providers
 // ============================================================
 
+function mockRarityForId(id: number): 'common' | 'rare' | 'epic' | 'mythic' {
+	// Deterministic id → rarity buckets so forge can find candidates per rarity.
+	if (id >= 7000 && id <= 9999) return 'mythic';
+	if (id >= 5000 && id <= 6999) return 'epic';
+	if (id >= 4000 && id <= 4999) return 'rare';
+	return 'common';
+}
+
 const mockCards: CardDataProvider = {
 	getCardById(id: number) {
 		if (id >= 1000 && id <= 99999) {
@@ -200,7 +215,7 @@ const mockCards: CardDataProvider = {
 			return {
 				name: `Card${id}`,
 				type: 'minion',
-				rarity: 'common',
+				rarity: isStarter ? 'common' : mockRarityForId(id),
 				collectible: !isStarter,
 				set: isStarter ? 'starter' : 'genesis',
 			};
@@ -1278,6 +1293,214 @@ describe('Protocol Core: Replay Traces', () => {
 		// Cards were minted with forfeit seed
 		const cards = await deps.state.getCardsByOwner('alice');
 		expect(cards.length).toBeGreaterThan(0);
+	});
+
+	// --- Forge commit-reveal flow (ADR 0001 §3) ---
+
+	async function seedEitrCredit(account: string, amount: number, trxId = 'eitr-seed') {
+		// Helper: simulate a prior burn credit by writing directly to the ledger.
+		await state.putEitrLedgerEntry({
+			entryId: `S01:credit:burn:burn:S01:${account}:${trxId}:seed-uid`,
+			seasonId: 'S01',
+			account,
+			direction: 'credit',
+			sourceType: 'burn',
+			sourceKey: `burn:S01:${account}:${trxId}:seed-uid`,
+			amount,
+			balanceBefore: 0,
+			balanceAfter: amount,
+			trxId,
+			blockNum: 100,
+			timestamp: Date.now(),
+		});
+	}
+
+	it('forge_commit debits Eitr and stores a pending commit', async () => {
+		await seedGenesis(state, deps);
+		await seedEitrCredit('alice', 200);
+
+		const { sha256Hash: hash } = await import('./hash');
+		const saltCommit = await hash('forge-salt-1');
+
+		const result = await applyOp(makeOp('forge_commit', {
+			rarity: 'rare', salt_commit: saltCommit,
+		}, { trxId: 'forge-commit-1', blockNum: 5000 }), defaultCtx, deps);
+
+		expect(result.status).toBe('applied');
+
+		const commit = await state.getForgeCommit('forge-commit-1');
+		expect(commit).not.toBeNull();
+		expect(commit!.rarity).toBe('rare');
+		expect(commit!.debitAmount).toBe(100); // rare forge cost
+		expect(commit!.revealed).toBe(false);
+
+		// Debit appears in ledger; balance now = 200 - 100 = 100
+		const debits = await state.getEitrLedgerTotal({
+			seasonId: 'S01', account: 'alice', direction: 'debit', sourceType: 'forge_commit',
+		});
+		expect(debits).toBe(100);
+	});
+
+	it('forge_commit rejects when Eitr balance is insufficient', async () => {
+		await seedGenesis(state, deps);
+		await seedEitrCredit('alice', 50); // less than rare cost 100
+
+		const { sha256Hash: hash } = await import('./hash');
+		const saltCommit = await hash('forge-salt-2');
+
+		const result = await applyOp(makeOp('forge_commit', {
+			rarity: 'rare', salt_commit: saltCommit,
+		}, { trxId: 'forge-commit-2', blockNum: 5000 }), defaultCtx, deps);
+
+		expect(result.status).toBe('rejected');
+		// No debit recorded
+		const debits = await state.getEitrLedgerTotal({
+			seasonId: 'S01', account: 'alice', direction: 'debit',
+		});
+		expect(debits).toBe(0);
+	});
+
+	it('forge_commit rejects unknown rarity', async () => {
+		await seedGenesis(state, deps);
+		await seedEitrCredit('alice', 5000);
+
+		const { sha256Hash: hash } = await import('./hash');
+		const result = await applyOp(makeOp('forge_commit', {
+			rarity: 'legendary', salt_commit: await hash('x'),
+		}, { trxId: 'forge-commit-bad', blockNum: 5000 }), defaultCtx, deps);
+
+		expect(result.status).toBe('rejected');
+	});
+
+	it('forge_commit is idempotent on replay', async () => {
+		await seedGenesis(state, deps);
+		await seedEitrCredit('alice', 500);
+
+		const { sha256Hash: hash } = await import('./hash');
+		const op = makeOp('forge_commit', {
+			rarity: 'rare', salt_commit: await hash('idem-salt'),
+		}, { trxId: 'forge-commit-idem', blockNum: 5000 });
+
+		const first = await applyOp(op, defaultCtx, deps);
+		expect(first.status).toBe('applied');
+		const second = await applyOp(op, defaultCtx, deps);
+		expect(second.status).toBe('ignored');
+
+		// Only one debit
+		const debits = await state.getEitrLedgerEntries({
+			seasonId: 'S01', account: 'alice', direction: 'debit', sourceType: 'forge_commit',
+		});
+		expect(debits.length).toBe(1);
+	});
+
+	it('forge_commit → forge_reveal mints a new card with mintSource forge at level 0', async () => {
+		await seedGenesis(state, deps);
+		await seedEitrCredit('alice', 200);
+
+		const { sha256Hash: hash } = await import('./hash');
+		const userSalt = 'forge-secret';
+		const saltCommit = await hash(userSalt);
+
+		await applyOp(makeOp('forge_commit', {
+			rarity: 'rare', salt_commit: saltCommit,
+		}, { trxId: 'forge-commit-3', blockNum: 5000 }), defaultCtx, deps);
+
+		const cardsBefore = (await state.getCardsByOwner('alice')).length;
+
+		const reveal = await applyOp(makeOp('forge_reveal', {
+			commit_trx_id: 'forge-commit-3', user_salt: userSalt,
+		}, { trxId: 'forge-reveal-3', blockNum: 5050 }), defaultCtx, deps);
+		expect(reveal.status).toBe('applied');
+
+		const cards = await state.getCardsByOwner('alice');
+		expect(cards.length).toBe(cardsBefore + 1);
+		const forged = cards[cards.length - 1];
+		expect(forged.mintSource).toBe('forge');
+		expect(forged.rarity).toBe('rare');
+		expect(forged.xp).toBe(0);
+		expect(forged.level).toBe(1); // protocol convention: 'Mortal' = level 1
+
+		// Commit is marked revealed
+		const commitAfter = await state.getForgeCommit('forge-commit-3');
+		expect(commitAfter!.revealed).toBe(true);
+
+		// No refund credit appears
+		const refunds = await state.getEitrLedgerEntries({
+			seasonId: 'S01', account: 'alice', direction: 'credit', sourceType: 'forge_refund',
+		});
+		expect(refunds.length).toBe(0);
+	});
+
+	it('forge_reveal rejects with wrong salt and keeps commit unrevealed', async () => {
+		await seedGenesis(state, deps);
+		await seedEitrCredit('alice', 200);
+
+		const { sha256Hash: hash } = await import('./hash');
+		await applyOp(makeOp('forge_commit', {
+			rarity: 'rare', salt_commit: await hash('real-salt'),
+		}, { trxId: 'forge-commit-4', blockNum: 5000 }), defaultCtx, deps);
+
+		const result = await applyOp(makeOp('forge_reveal', {
+			commit_trx_id: 'forge-commit-4', user_salt: 'wrong-salt',
+		}, { trxId: 'forge-reveal-4', blockNum: 5050 }), defaultCtx, deps);
+
+		expect(result.status).toBe('rejected');
+		const commit = await state.getForgeCommit('forge-commit-4');
+		expect(commit!.revealed).toBe(false); // retriable
+	});
+
+	it('forge_reveal refunds Eitr when rarity supply is exhausted', async () => {
+		await seedGenesis(state, deps);
+		await seedEitrCredit('alice', 500);
+
+		// Drain pack_supply.rare so no minting is possible
+		const supplyBefore = (await state.getSupply('rare', 'pack'))!;
+		await state.putSupply({ ...supplyBefore, minted: supplyBefore.cap });
+
+		const { sha256Hash: hash } = await import('./hash');
+		const userSalt = 'exhaust-salt';
+		await applyOp(makeOp('forge_commit', {
+			rarity: 'rare', salt_commit: await hash(userSalt),
+		}, { trxId: 'forge-commit-5', blockNum: 5000 }), defaultCtx, deps);
+
+		const cardsBefore = (await state.getCardsByOwner('alice')).length;
+
+		const reveal = await applyOp(makeOp('forge_reveal', {
+			commit_trx_id: 'forge-commit-5', user_salt: userSalt,
+		}, { trxId: 'forge-reveal-5', blockNum: 5050 }), defaultCtx, deps);
+
+		expect(reveal.status).toBe('applied');
+		// No card minted
+		expect((await state.getCardsByOwner('alice')).length).toBe(cardsBefore);
+		// Refund credit matches original debit (100)
+		const refund = await state.getEitrLedgerTotal({
+			seasonId: 'S01', account: 'alice', direction: 'credit', sourceType: 'forge_refund',
+		});
+		expect(refund).toBe(100);
+	});
+
+	it('autoFinalizeExpiredForgeCommits finalizes a stale commit (mint or refund)', async () => {
+		await seedGenesis(state, deps);
+		await seedEitrCredit('alice', 200);
+
+		const { sha256Hash: hash } = await import('./hash');
+		const { autoFinalizeExpiredForgeCommits } = await import('./apply');
+
+		await applyOp(makeOp('forge_commit', {
+			rarity: 'rare', salt_commit: await hash('forfeit-salt'),
+		}, { trxId: 'forge-commit-6', blockNum: 1000 }), defaultCtx, deps);
+
+		const commit = await state.getForgeCommit('forge-commit-6');
+		expect(commit!.revealed).toBe(false);
+
+		// Trigger auto-finalize past the deadline (commitBlock + 200 = 1200)
+		const finalized = await autoFinalizeExpiredForgeCommits(1201, defaultCtx, deps);
+		expect(finalized).toBe(1);
+
+		const after = await state.getForgeCommit('forge-commit-6');
+		expect(after!.revealed).toBe(true);
+		// Either the card was minted or the refund was credited (deterministic on forfeit seed,
+		// but either outcome is "finalized" — we just verify the commit no longer pending)
 	});
 
 	it('legacy pack_open still works pre-seal but not post-seal', async () => {

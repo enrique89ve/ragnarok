@@ -26,9 +26,10 @@
  *   campaign_progress keyed by progressKey      — verified final campaign mission progress
  *   rune_ledger      keyed by entryId           — season/source-key RUNE credits and spends
  *   eitr_ledger      keyed by entryId           — season/source-key Eitr credits, debits, refunds (ADR 0001)
+ *   forge_commits    keyed by trxId             — forge commit-reveal records (ADR 0001 §3)
  *
  * All writes are idempotent — safe to re-apply the same op.
- * DB version 14 — upgrade handler creates any missing stores.
+ * DB version 15 — upgrade handler creates any missing stores.
  */
 
 import type { HiveCardAsset, HiveMatchResult, HiveTokenBalance } from '../schemas/HiveTypes';
@@ -44,10 +45,11 @@ import type {
 	EitrLedgerEntry,
 	EitrLedgerEntryQuery,
 	EitrLedgerTotalQuery,
+	ForgeCommitRecord,
 } from '../../../../shared/protocol-core/types';
 
 const DB_NAME = 'ragnarok-chain-v1';
-const DB_VERSION = 14;
+const DB_VERSION = 15;
 
 let _db: IDBDatabase | null = null;
 
@@ -163,6 +165,13 @@ function openDB(): Promise<IDBDatabase> {
 				const eitr = db.createObjectStore('eitr_ledger', { keyPath: 'entryId' });
 				eitr.createIndex('by_account', 'account', { unique: false });
 				eitr.createIndex('by_source_type', 'sourceType', { unique: false });
+			}
+
+			// v15: Forge commits (ADR 0001 §3 commit-reveal forge)
+			if (!db.objectStoreNames.contains('forge_commits')) {
+				const forge = db.createObjectStore('forge_commits', { keyPath: 'trxId' });
+				forge.createIndex('by_account', 'account', { unique: false });
+				forge.createIndex('by_revealed', 'revealed', { unique: false });
 			}
 
 			// v1.1: Pack NFTs
@@ -398,6 +407,21 @@ export async function getEitrLedgerTotal(query: EitrLedgerTotalQuery): Promise<n
 	const entries = await getEitrLedgerEntries(query);
 	return entries
 		.reduce((total, entry) => total + entry.amount, 0);
+}
+
+// ---------------------------------------------------------------------------
+// Forge Commits API (ADR 0001 §3 commit-reveal forge)
+// ---------------------------------------------------------------------------
+
+export const getForgeCommit = (trxId: string): Promise<ForgeCommitRecord | undefined> =>
+	idbGet<ForgeCommitRecord>('forge_commits', trxId);
+
+export const putForgeCommit = (commit: ForgeCommitRecord): Promise<void> =>
+	idbPut('forge_commits', commit);
+
+export async function getUnrevealedForgeCommitsBefore(deadlineBlock: number): Promise<ForgeCommitRecord[]> {
+	const all = await idbGetAll<ForgeCommitRecord>('forge_commits');
+	return all.filter(c => !c.revealed && c.commitBlock <= deadlineBlock);
 }
 
 // ---------------------------------------------------------------------------

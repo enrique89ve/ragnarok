@@ -30,6 +30,8 @@ import {
 	createBurnEitrSourceKey,
 	createCampaignFirstClearRuneSourceKey,
 	createEitrLedgerEntryId,
+	createForgeCommitEitrSourceKey,
+	createForgeRefundEitrSourceKey,
 	createP2PRankedRuneSourceKey,
 	createRewardClaimRuneSourceKey,
 	createRuneExchangeSourceKey,
@@ -37,7 +39,9 @@ import {
 	calculateRuneBalanceTrace,
 	getCampaignFirstClearRuneReward,
 	getEitrDissolveValue,
+	getEitrForgeCost,
 } from './types';
+import type { ForgeCommitRecord } from './types';
 import { classifyCard } from '../schemas/cardCategory';
 import { verifyPoW, POW_CONFIG } from './pow';
 import { canonicalStringify, sha256Hash } from './hash';
@@ -137,6 +141,8 @@ const OP_HANDLERS: Record<ProtocolAction, OpHandler> = {
 	slash_evidence: async () => IGNORE_RESULT,
 	pack_commit: (op, _ctx, deps) => applyPackCommit(op, deps),
 	pack_reveal: (op, ctx, deps) => applyPackReveal(op, ctx, deps),
+	forge_commit: (op, _ctx, deps) => applyForgeCommit(op, deps),
+	forge_reveal: (op, ctx, deps) => applyForgeReveal(op, ctx, deps),
 	legacy_pack_open: (op, _ctx, deps) => applyLegacyPackOpen(op, deps),
 	pack_mint: (op, ctx, deps) => applyPackMint(op, ctx, deps),
 	pack_distribute: (op, _ctx, deps) => applyPackDistribute(op, deps),
@@ -1802,6 +1808,249 @@ export async function autoFinalizeExpiredCommits(
 			commit.account, `${commit.trxId}:forfeit`, commit.commitBlock,
 			deps,
 		);
+
+		finalized++;
+	}
+
+	return finalized;
+}
+
+// ============================================================
+// forge_commit / forge_reveal (ADR 0001 §3)
+// ============================================================
+
+async function applyForgeCommit(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpResult> {
+	const genesis = await deps.state.getGenesis();
+	if (!genesis) return reject('no genesis');
+
+	const rawRarity = op.payload.rarity;
+	const rawSaltCommit = op.payload.salt_commit;
+	if (typeof rawRarity !== 'string') return reject('missing rarity');
+	if (typeof rawSaltCommit !== 'string' || rawSaltCommit.length === 0) {
+		return reject('missing salt_commit');
+	}
+	const rarity = rawRarity.toLowerCase();
+	const cost = getEitrForgeCost(rarity);
+	if (cost <= 0) return reject(`invalid rarity: ${rarity}`);
+
+	const existing = await deps.state.getForgeCommit(op.trxId);
+	if (existing) return { status: 'ignored' };
+
+	const balance = await getEitrBalanceFor(deps, op.broadcaster);
+	if (balance < cost) return reject('insufficient Eitr');
+
+	const supply = await deps.state.getSupply(rarity, 'pack');
+	if (!supply) return reject('genesis supply missing for rarity');
+
+	const sourceKey = createForgeCommitEitrSourceKey({
+		seasonId: TESTNET_EITR_SEASON_ID,
+		account: op.broadcaster,
+		trxId: op.trxId,
+	});
+	const entryId = createEitrLedgerEntryId({
+		seasonId: TESTNET_EITR_SEASON_ID,
+		direction: 'debit',
+		sourceType: 'forge_commit',
+		sourceKey,
+	});
+
+	// Ledger debit → commit record (in this order, idempotent recovery on crash).
+	await deps.state.putEitrLedgerEntry({
+		entryId,
+		seasonId: TESTNET_EITR_SEASON_ID,
+		account: op.broadcaster,
+		direction: 'debit',
+		sourceType: 'forge_commit',
+		sourceKey,
+		amount: cost,
+		balanceBefore: balance,
+		balanceAfter: balance - cost,
+		trxId: op.trxId,
+		blockNum: op.blockNum,
+		timestamp: op.timestamp,
+	});
+	await deps.state.putForgeCommit({
+		trxId: op.trxId,
+		account: op.broadcaster,
+		rarity,
+		saltCommit: rawSaltCommit,
+		commitBlock: op.blockNum,
+		debitAmount: cost,
+		revealed: false,
+	});
+
+	return { status: 'applied' };
+}
+
+async function applyForgeReveal(op: ProtocolOp, ctx: ReplayContext, deps: ProtocolCoreDeps): Promise<OpResult> {
+	const rawCommitTrxId = op.payload.commit_trx_id;
+	const rawUserSalt = op.payload.user_salt;
+	if (typeof rawCommitTrxId !== 'string' || typeof rawUserSalt !== 'string') {
+		return reject('missing commit_trx_id or user_salt');
+	}
+
+	const commit = await deps.state.getForgeCommit(rawCommitTrxId);
+	if (!commit) return reject('no matching forge_commit');
+	if (commit.revealed) return { status: 'ignored' };
+	if (commit.account !== op.broadcaster) return reject('not the committer');
+
+	const expectedSaltCommit = await sha256Hash(rawUserSalt);
+	if (expectedSaltCommit !== commit.saltCommit) return reject('salt does not match commitment');
+
+	const entropyBlock = commit.commitBlock + PACK_ENTROPY_DELAY_BLOCKS;
+	if (entropyBlock > ctx.lastIrreversibleBlock) return reject('entropy block not yet irreversible');
+
+	const deadline = commit.commitBlock + PACK_REVEAL_DEADLINE_BLOCKS;
+	if (op.blockNum > deadline) return reject('reveal past deadline — auto-finalize should have occurred');
+
+	const entropyBlockId = await ctx.getBlockId(entropyBlock);
+	if (!entropyBlockId) return reject('entropy block id unavailable');
+
+	const seed = await sha256Hash(`${rawUserSalt}${rawCommitTrxId}${entropyBlockId}forge`);
+	await deps.state.putForgeCommit({ ...commit, revealed: true });
+
+	const minted = await drawForgeCard(seed, commit, op.broadcaster, op.trxId, op.blockNum, deps);
+	if (minted) return { status: 'applied' };
+
+	// Exhaustion → refund Eitr (credit reversal).
+	await creditForgeRefund(commit, op, deps);
+	return { status: 'applied' };
+}
+
+// Draw a single card_id for forge: iterate available cards in the rarity,
+// skipping per-card caps. Returns true on successful mint.
+async function drawForgeCard(
+	seedHex: string,
+	commit: ForgeCommitRecord,
+	owner: string,
+	trxId: string,
+	blockNum: number,
+	deps: ProtocolCoreDeps,
+): Promise<boolean> {
+	// Forge draws from the full collectible pool; per-card and rarity filters happen inline.
+	const allRanges: readonly [number, number][] = [
+		[1000, 2999], [3000, 3999], [4000, 4999], [5000, 5999], [6000, 6999],
+		[7000, 7999], [8000, 8999], [20000, 29799], [30001, 30410], [31001, 31999], [50000, 50376],
+	];
+	const mintableIds = deps.cards.getCollectibleIdsInRanges(allRanges);
+	if (mintableIds.length === 0) return false;
+
+	let s = parseInt(seedHex.slice(0, 8), 16) || 1;
+	s = Math.max(s, 1);
+
+	for (let attempts = 0; attempts < mintableIds.length; attempts++) {
+		s = lcgNext(s);
+		const cardId = mintableIds[s % mintableIds.length];
+		const cardDef = deps.cards.getCardById(cardId);
+		if (!cardDef) continue;
+		if ((cardDef.rarity || 'common').toLowerCase() !== commit.rarity) continue;
+
+		const rarity = commit.rarity;
+		const rarSupply = await deps.state.getSupply(rarity, 'pack');
+		if (!rarSupply || rarSupply.minted >= rarSupply.cap) continue;
+
+		const cardKey = `card:${cardId}`;
+		const cardSupply = await deps.state.getSupply(cardKey, 'pack');
+		const cardMinted = cardSupply?.minted ?? 0;
+		const perCardCap = cardSupply?.cap ?? 2000;
+		if (cardMinted >= perCardCap) continue;
+
+		const uid = `forge:${trxId}`;
+		await deps.state.putCard({
+			uid,
+			cardId,
+			owner,
+			rarity,
+			level: 1,
+			xp: 0,
+			edition: 'alpha',
+			mintSource: 'forge',
+			mintTrxId: trxId,
+			mintBlockNum: blockNum,
+			lastTransferBlock: blockNum,
+		});
+		await deps.state.putSupply({ ...rarSupply, minted: rarSupply.minted + 1 });
+		await deps.state.putSupply({
+			key: cardKey, pool: 'pack', cap: perCardCap, minted: cardMinted + 1,
+		});
+		return true;
+	}
+	return false;
+}
+
+async function creditForgeRefund(commit: ForgeCommitRecord, op: ProtocolOp, deps: ProtocolCoreDeps): Promise<void> {
+	const sourceKey = createForgeRefundEitrSourceKey({
+		seasonId: TESTNET_EITR_SEASON_ID,
+		account: commit.account,
+		revealTrxId: op.trxId,
+	});
+	const entryId = createEitrLedgerEntryId({
+		seasonId: TESTNET_EITR_SEASON_ID,
+		direction: 'credit',
+		sourceType: 'forge_refund',
+		sourceKey,
+	});
+	const balanceBefore = await getEitrBalanceFor(deps, commit.account);
+	await deps.state.putEitrLedgerEntry({
+		entryId,
+		seasonId: TESTNET_EITR_SEASON_ID,
+		account: commit.account,
+		direction: 'credit',
+		sourceType: 'forge_refund',
+		sourceKey,
+		amount: commit.debitAmount,
+		balanceBefore,
+		balanceAfter: balanceBefore + commit.debitAmount,
+		trxId: op.trxId,
+		blockNum: op.blockNum,
+		timestamp: op.timestamp,
+	});
+}
+
+// Auto-finalize unrevealed forge commits past deadline.
+// Mirrors autoFinalizeExpiredCommits for pack — forfeit seed makes the outcome
+// deterministic regardless of whether the player ever broadcasts the reveal.
+export async function autoFinalizeExpiredForgeCommits(
+	currentBlock: number,
+	ctx: ReplayContext,
+	deps: ProtocolCoreDeps,
+): Promise<number> {
+	if (currentBlock > ctx.lastIrreversibleBlock) return 0;
+
+	const expired = await deps.state.getUnrevealedForgeCommitsBefore(currentBlock);
+	let finalized = 0;
+
+	for (const commit of expired) {
+		const deadline = commit.commitBlock + PACK_REVEAL_DEADLINE_BLOCKS;
+		if (currentBlock < deadline) continue;
+
+		const entropyBlock = commit.commitBlock + PACK_ENTROPY_DELAY_BLOCKS;
+		if (entropyBlock > ctx.lastIrreversibleBlock) continue;
+
+		const entropyBlockId = await ctx.getBlockId(entropyBlock);
+		if (!entropyBlockId) continue;
+
+		const forfeitSeed = await sha256Hash(`${commit.trxId}${entropyBlockId}forfeit`);
+		await deps.state.putForgeCommit({ ...commit, revealed: true });
+
+		const forfeitTrxId = `${commit.trxId}:forfeit`;
+		const minted = await drawForgeCard(
+			forfeitSeed, commit, commit.account, forfeitTrxId, commit.commitBlock, deps,
+		);
+		if (!minted) {
+			// Refund using a synthetic op for ledger trace
+			const syntheticOp: ProtocolOp = {
+				...({} as ProtocolOp),
+				broadcaster: commit.account,
+				trxId: forfeitTrxId,
+				blockNum: commit.commitBlock + PACK_REVEAL_DEADLINE_BLOCKS,
+				timestamp: 0,
+				action: 'forge_reveal',
+				payload: {},
+				usedActiveAuth: false,
+			};
+			await creditForgeRefund(commit, syntheticOp, deps);
+		}
 
 		finalized++;
 	}
