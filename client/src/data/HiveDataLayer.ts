@@ -240,5 +240,38 @@ export async function signSessionAuthorize(
   return result.signature;
 }
 
+// ─── Action log access (ADR 0004 §Decision.6, issue 04) ───────────────────
+//
+// Per ADR's Keychain prompt budget: this fires exactly ONCE per match (at
+// session_authorize time) AND once per reload (session_renewal — issue 06).
+// The returned Hive sig is HKDF-input for the per-match AES-GCM key used
+// by `client/src/game/protocol/actionLog.ts` to encrypt the IndexedDB log,
+// so XSS reading IndexedDB cannot decrypt without the Hive key.
+
+const ACTION_LOG_ACCESS_PREFIX = 'ragnarok action-log-access';
+
+export function buildActionLogAccessMessage(matchId: string): string {
+  return `${ACTION_LOG_ACCESS_PREFIX} | ${matchId}`;
+}
+
+/**
+ * Hive Active signature over `'ragnarok action-log-access | <matchId>'`.
+ * The signature bytes are the IKM for HKDF — they never leave the client,
+ * never appear in any wire message, and never decrypt anything off-device.
+ * The Hive Active key never leaves Hive Keychain.
+ */
+export async function signActionLogAccess(matchId: string): Promise<string> {
+  if (!matchId) throw new Error('signActionLogAccess: matchId required');
+  const message = buildActionLogAccessMessage(matchId);
+  const result = await signHiveMessage(message, {
+    keyType: 'Active',
+    title: 'Authorize action log access',
+  });
+  if (!result.success || !result.signature) {
+    throw new Error(`Hive Keychain sign rejected: ${result.error ?? 'unknown error'}`);
+  }
+  return result.signature;
+}
+
 // Expose on globalThis so game-engine can access without circular chunk dependency
 (globalThis as any).__ragnarokHiveDataStore = useHiveDataStore;

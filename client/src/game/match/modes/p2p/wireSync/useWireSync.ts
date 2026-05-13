@@ -35,7 +35,14 @@ import {
 	type Transcript,
 	type Broadcaster,
 } from '../../../../protocol/transcript';
-import { signSessionAuthorize } from '../../../../../data/HiveDataLayer';
+import { signSessionAuthorize, signActionLogAccess } from '../../../../../data/HiveDataLayer';
+import {
+	open as openActionLog,
+	deriveEncKey as deriveActionLogEncKey,
+	appendLeaf as appendActionLogLeaf,
+	pruneFinalized as pruneActionLog,
+	type StoredLeaf,
+} from '../../../../protocol/actionLog';
 
 export type { GameCommandEnvelope, WireGameCommand } from '../../../../hooks/p2pEnvelope';
 export type { P2PMessage } from '../../../../p2p/messages';
@@ -123,6 +130,13 @@ export function useWireSync() {
 	// derived from the WS host hint at seed_reveal — see seed_reveal handler.
 	const signedTranscriptRef = useRef<Transcript | null>(null);
 	const myBroadcasterRef = useRef<Broadcaster | null>(null);
+	// ADR 0004 §Decision.6 (issue 04) — encrypted IndexedDB action log. The
+	// DB handle is opened lazily after session_authorize so the encKey
+	// derivation can use the Hive sig from `signActionLogAccess`. Both refs
+	// MAY be null during the early-handshake window; appendLeaf is then a
+	// no-op (Phase 0 accepts this loss; harden in issue 06).
+	const actionLogDbRef = useRef<Awaited<ReturnType<typeof openActionLog>> | null>(null);
+	const actionLogEncKeyRef = useRef<CryptoKey | null>(null);
 	// Per-session seq tracking: monotonic, contiguous, reset on new session
 	const lastIncomingSeqRef = useRef<number>(-1);
 	// Identity binding: opponent's Hive username from seed_reveal
@@ -215,6 +229,8 @@ export function useWireSync() {
 			resetChessWireSender();
 			lastEnvelopeSentAtRef.current = 0;
 			sessionKeyRef.current = null;
+			actionLogDbRef.current = null;
+			actionLogEncKeyRef.current = null;
 			sessionAuthorizeSentRef.current = false;
 			opponentSessionPubkeyRef.current = null;
 			opponentSessionHiveSigRef.current = null;
@@ -653,6 +669,23 @@ export function useWireSync() {
 									mode: sessionKey.mode,
 									pubkeyPrefix: sessionKey.pubkey.slice(0, 8),
 								});
+								// ADR 0004 §Decision.6 (issue 04) — open the encrypted
+								// action log alongside session_authorize. A second Hive
+								// sig (Active key) derives the per-match AES-GCM key.
+								// This is the second of the two prompts already budgeted
+								// at match start; mid-match remains zero prompts.
+								try {
+									const logSig = await signActionLogAccess(localMatchId);
+									const [db, encKey] = await Promise.all([
+										openActionLog(),
+										deriveActionLogEncKey(logSig, localMatchId),
+									]);
+									actionLogDbRef.current = db;
+									actionLogEncKeyRef.current = encKey;
+									debug.log('[wireSync] Action log opened', { matchId: localMatchId });
+								} catch (logErr) {
+									debug.warn('[wireSync] Action log unavailable — running without reload safety', logErr);
+								}
 							} catch (err) {
 								debug.error('[wireSync] session_authorize failed:', err);
 							}
@@ -1344,6 +1377,15 @@ export function useWireSync() {
 						try {
 							const sig = await getNFTBridge().signResultHash(data.hash);
 							send({ type: 'result_countersign', counterpartySig: sig, proposalId: data.proposalId });
+							// ADR 0004 §Decision.6 (issue 04) — match finalized,
+							// prune the action log. Idempotent; second prune is
+							// a no-op if the connection cleanup ran first.
+							const logDb = actionLogDbRef.current;
+							if (logDb) {
+								void pruneActionLog(logDb, data.result.matchId).catch((e) => {
+									debug.warn('[wireSync] action log prune failed:', e);
+								});
+							}
 						} catch {
 							recordSessionEvent('result_rejected', {
 								reason: 'signing_failed',
@@ -1481,6 +1523,17 @@ export function useWireSync() {
 							remoteBroadcaster,
 						);
 						signedTranscriptRef.current = next;
+						// Persist the remote leaf to the encrypted log (issue 04).
+						// No-op if the log isn't open yet (early handshake gap).
+						const logDb = actionLogDbRef.current;
+						const logKey = actionLogEncKeyRef.current;
+						if (logDb && logKey) {
+							const appended = next.leaves[next.leaves.length - 1];
+							const stored: StoredLeaf = { ...appended, matchId: data.matchId };
+							void appendActionLogLeaf(logDb, stored, logKey).catch((e) => {
+								debug.warn('[wireSync] action log write (remote) failed:', e);
+							});
+						}
 					} catch (err) {
 						debug.warn('[wireSync] action_envelope rejected:', err instanceof Error ? err.message : String(err));
 					}
@@ -1653,6 +1706,23 @@ export function useWireSync() {
 			const { next, envelope } = await appendSelfAction(tr, action, key, broadcaster);
 			signedTranscriptRef.current = next;
 			send(envelope);
+			// Persist the self leaf to the encrypted log (issue 04). No-op if
+			// the log handle isn't ready yet (early-handshake gap).
+			const logDb = actionLogDbRef.current;
+			const logKey = actionLogEncKeyRef.current;
+			if (logDb && logKey) {
+				const stored: StoredLeaf = {
+					seq: envelope.seq,
+					prevHash: envelope.prevHash,
+					action: envelope.action,
+					sig: envelope.sig,
+					broadcaster,
+					matchId: tr.matchId,
+				};
+				void appendActionLogLeaf(logDb, stored, logKey).catch((e) => {
+					debug.warn('[wireSync] action log write (self) failed:', e);
+				});
+			}
 		} catch (err) {
 			debug.error('[wireSync] action_envelope build/send failed:', err);
 		}
