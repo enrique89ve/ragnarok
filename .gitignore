@@ -97,6 +97,7 @@ __tests__/
 !shared/protocol-core/packDraw.test.ts
 !shared/protocol-core/runeEconomy.test.ts
 !shared/protocol-core/eitrEconomy.test.ts
+!client/src/data/eitrAPI.test.ts
 !client/src/game/match/economy.test.ts
 !client/src/game/match/derived.test.ts
 !client/src/game/match/legacyBridge.test.ts
