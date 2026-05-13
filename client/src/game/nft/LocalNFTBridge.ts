@@ -18,6 +18,7 @@ import type {
 	AuthBody,
 	NFTEventType,
 	NFTEventCallback,
+	TokenKind,
 	CampaignResultBroadcastPayload,
 } from './INFTBridge';
 
@@ -175,7 +176,7 @@ export class LocalNFTBridge implements INFTBridge {
 	}
 
 	emitCardTransferred(_cardUid: string, _from: string, _to: string): void {}
-	emitTokenUpdate(_token: string, _amount: number, _change: number): void {}
+	emitTokenUpdate(_token: TokenKind, _amount: number, _change: number): void {}
 	emitTransactionConfirmed(_trxId: string): void {}
 	emitTransactionFailed(_errorMessage: string): void {}
 

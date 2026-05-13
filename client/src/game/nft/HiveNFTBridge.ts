@@ -22,6 +22,7 @@ import type {
 	AuthBody,
 	NFTEventType,
 	NFTEventCallback,
+	TokenKind,
 	CampaignResultBroadcastPayload,
 } from './INFTBridge';
 
@@ -184,7 +185,7 @@ export class HiveNFTBridge implements INFTBridge {
 		hiveEvents.emitCardTransferred(cardUid, from, to);
 	}
 
-	emitTokenUpdate(token: string, amount: number, change: number): void {
+	emitTokenUpdate(token: TokenKind, amount: number, change: number): void {
 		hiveEvents.emitTokenUpdate(token, amount, change);
 	}
 

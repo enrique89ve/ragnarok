@@ -65,7 +65,7 @@ class HiveEventEmitter {
     this.emit('card:transferred', { cardUid, from, to });
   }
 
-  emitTokenUpdate(token: string, amount: number, change: number): void {
+  emitTokenUpdate(token: 'NFT' | 'RUNE' | 'Eitr', amount: number, change: number): void {
     this.emit('token:updated', { token, amount, change });
   }
 

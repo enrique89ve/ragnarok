@@ -1,3 +1,9 @@
+// Legacy local-Eitr constants — kept only for the dissolve/forge confirm copy
+// in CollectionPage. Canonical values live in
+// `shared/protocol-core/eitrEconomy.ts` (EITR_DISSOLVE_VALUES /
+// EITR_FORGE_COSTS); drop this file when the UI imports the shared helpers
+// directly.
+
 export const EITR_VALUES: Record<string, number> = {
 	basic: 0,
 	common: 5,
@@ -13,13 +19,10 @@ export const CRAFT_COSTS: Record<string, number> = {
 	mythic: 1600,
 };
 
-export const GOLDEN_MULTIPLIER = 4;
-
 export function getEitrValue(rarity: string): number {
 	return EITR_VALUES[rarity.toLowerCase()] ?? 0;
 }
 
-export function getCraftCost(rarity: string, golden = false): number {
-	const base = CRAFT_COSTS[rarity.toLowerCase()] ?? 0;
-	return golden ? base * GOLDEN_MULTIPLIER : base;
+export function getCraftCost(rarity: string): number {
+	return CRAFT_COSTS[rarity.toLowerCase()] ?? 0;
 }

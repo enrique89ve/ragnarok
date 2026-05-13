@@ -18,6 +18,10 @@ import type { PackAsset } from '../../../../shared/protocol-core/types';
 
 export type DataLayerMode = 'local' | 'test' | 'hive';
 
+// Closed enum of tokenized balances per docs/TOKEN_AXIS.md. Do not extend
+// without an ADR — the wire side validates against this set.
+export type TokenKind = 'NFT' | 'RUNE' | 'Eitr';
+
 export interface BroadcastResult {
 	success: boolean;
 	trxId?: string;
@@ -116,7 +120,7 @@ export interface INFTBridge {
 	// ── Events ──
 	onEvent(type: NFTEventType, callback: NFTEventCallback): () => void;
 	emitCardTransferred(cardUid: string, from: string, to: string): void;
-	emitTokenUpdate(token: string, amount: number, change: number): void;
+	emitTokenUpdate(token: TokenKind, amount: number, change: number): void;
 	emitTransactionConfirmed(trxId: string): void;
 	emitTransactionFailed(errorMessage: string): void;
 
