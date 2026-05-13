@@ -111,6 +111,8 @@ __tests__/
 !client/src/game/protocol/canonicalJson.test.ts
 !client/src/game/protocol/transcript.test.ts
 !client/src/game/protocol/actionLog.test.ts
+!server/services/matchPendingQueue.test.ts
+!server/routes/chainRoutes.matchPending.test.ts
 *.spec.js
 *.spec.ts
 *.test.tsx

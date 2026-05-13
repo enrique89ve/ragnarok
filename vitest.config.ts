@@ -18,5 +18,13 @@ export default defineConfig({
 		root: path.resolve(__dirname),
 		include: ["client/src/**/*.test.ts", "server/**/*.test.ts", "shared/**/*.test.ts"],
 		exclude: ["node_modules"],
+		server: {
+			deps: {
+				// hive-tx ships ESM with extensionless internal imports;
+				// inline it so vitest's loader resolves Transaction.js
+				// correctly under Node ESM strictness.
+				inline: ["hive-tx"],
+			},
+		},
 	},
 });

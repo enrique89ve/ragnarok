@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, foreignKey } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, foreignKey, jsonb, bigint, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { RARITY, type Rarity } from "./schemas/rarity";
@@ -268,3 +268,19 @@ export type TreasuryVouch = typeof treasuryVouches.$inferSelect;
 export type TreasuryTransaction = typeof treasuryTransactions.$inferSelect;
 export type TreasuryAuditLogEntry = typeof treasuryAuditLog.$inferSelect;
 export type TreasuryFreezeStateRow = typeof treasuryFreezeState.$inferSelect;
+
+// ADR 0004 §Decision.3 (issue 05) — server pending queue for winner
+// envelopes when the opponent is offline. The server witness-signs the
+// arrival timestamp with WITNESS_HIVE_POSTING_KEY and holds the envelope
+// for 100 blocks (~5 min). Last-writer-wins on matchId.
+export const matchPendingEnvelope = pgTable("match_pending_envelope", {
+	matchId: text("match_id").primaryKey(),
+	envelope: jsonb("envelope").notNull(),
+	queuedAt: bigint("queued_at", { mode: "number" }).notNull(),
+	witnessSig: text("witness_sig").notNull(),
+	expiresAt: bigint("expires_at", { mode: "number" }).notNull(),
+}, (table) => ({
+	expiresIdx: index("idx_match_pending_expires").on(table.expiresAt),
+}));
+
+export type MatchPendingEnvelopeRow = typeof matchPendingEnvelope.$inferSelect;

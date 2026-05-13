@@ -42,7 +42,7 @@ interface HiveAccountKeys {
 
 const keyCache = new Map<string, { keys: HiveAccountKeys; fetchedAt: number }>();
 
-async function fetchAccountKeys(username: string): Promise<HiveAccountKeys> {
+export async function fetchAccountKeys(username: string): Promise<HiveAccountKeys> {
 	const cached = keyCache.get(username);
 	if (cached && Date.now() - cached.fetchedAt < KEY_CACHE_TTL_MS) {
 		return cached.keys;

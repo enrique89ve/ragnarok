@@ -165,6 +165,24 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // ADR 0004 §Decision.3 (issue 05) — validate witness signing config at
+  // boot when env vars are set. Non-fatal if absent (match/pending routes
+  // will return 503 until configured); fatal if WIF parses but the derived
+  // pubkey is not a Posting authority for the named account (silent
+  // misconfiguration is worse than a hard fail).
+  if (process.env.WITNESS_HIVE_ACCOUNT && process.env.WITNESS_HIVE_POSTING_KEY) {
+    const { validateWitnessConfig } = await import('./services/matchPendingQueue');
+    try {
+      const witness = await validateWitnessConfig();
+      log(`witness signer ready: ${witness.account} (${witness.pubkey.slice(0, 12)}…)`);
+    } catch (err) {
+      console.error('[boot] witness config invalid:', err instanceof Error ? err.message : err);
+      throw err;
+    }
+  } else {
+    log('witness signer not configured — /api/chain/match/pending routes will return 503');
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

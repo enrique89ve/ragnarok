@@ -23,6 +23,14 @@ import {
 } from '../services/chainState';
 import { syncAccountNow } from '../services/chainIndexer';
 import { isValidHiveUsername } from '../services/hiveAuth';
+import {
+	deleteByMatchId,
+	enqueue,
+	fetchByMatchId,
+	getWitnessPubkey,
+	sweepExpired,
+} from '../services/matchPendingQueue';
+import { getBlockCursor } from '../services/chainState';
 import { TESTNET_RUNE_SEASON_ID } from '../../shared/protocol-core/types';
 import {
 	buildPlayerCollection,
@@ -473,6 +481,100 @@ router.post('/register', (req: Request, res: Response) => {
 router.get('/status', (_req: Request, res: Response) => {
 	const stats = getStats();
 	res.json({ success: true, ...stats });
+});
+
+// ---------------------------------------------------------------------------
+// /match/pending — server pending queue for offline-opponent envelopes
+// (ADR 0004 §Decision.3, issue 05). Witness-signs the deposit timestamp,
+// holds for 100 blocks (~5 min). Server never opens the inner envelope —
+// it's opaque JSONB. Per DECISIONS.md §D4, signing uses the Hive Posting
+// key configured in env vars.
+// ---------------------------------------------------------------------------
+
+const MATCH_ID_RE = /^[A-Za-z0-9_-]{1,128}$/;
+
+interface MatchPendingBody {
+	matchId?: unknown;
+	envelope?: unknown;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+router.post('/match/pending', async (req: Request, res: Response) => {
+	const body = req.body as MatchPendingBody;
+	if (typeof body?.matchId !== 'string' || !MATCH_ID_RE.test(body.matchId)) {
+		res.status(400).json({ success: false, error: 'Invalid matchId' });
+		return;
+	}
+	if (!isPlainObject(body.envelope)) {
+		res.status(400).json({ success: false, error: 'envelope must be a JSON object' });
+		return;
+	}
+	// Pre-emptive sweep: free TTL'd rows before insertion. Cheap; the queue
+	// is tiny in steady state.
+	const head = Math.max(getBlockCursor(), 1);
+	await sweepExpired(head);
+	try {
+		const record = await enqueue(body.matchId, body.envelope, head);
+		res.json({
+			success: true,
+			queuedAt: record.queuedAt,
+			ttlBlocks: record.expiresAt - record.queuedAt,
+			witnessSig: record.witnessSig,
+		});
+	} catch (err) {
+		res.status(503).json({
+			success: false,
+			error: `Witness signing unavailable: ${err instanceof Error ? err.message : 'unknown'}`,
+		});
+	}
+});
+
+router.get('/match/pending/:matchId', async (req: Request, res: Response) => {
+	const { matchId } = req.params;
+	if (!MATCH_ID_RE.test(matchId)) {
+		res.status(400).json({ success: false, error: 'Invalid matchId' });
+		return;
+	}
+	await sweepExpired(Math.max(getBlockCursor(), 1));
+	const record = await fetchByMatchId(matchId);
+	if (!record) {
+		res.status(404).json({ success: false, error: 'No pending envelope for this matchId' });
+		return;
+	}
+	res.json({
+		success: true,
+		matchId: record.matchId,
+		envelope: record.envelope,
+		queuedAt: record.queuedAt,
+		expiresAt: record.expiresAt,
+		witnessSig: record.witnessSig,
+	});
+});
+
+router.delete('/match/pending/:matchId', async (req: Request, res: Response) => {
+	const { matchId } = req.params;
+	if (!MATCH_ID_RE.test(matchId)) {
+		res.status(400).json({ success: false, error: 'Invalid matchId' });
+		return;
+	}
+	const result = await deleteByMatchId(matchId);
+	res.json({ success: true, cleared: result.cleared });
+});
+
+router.get('/match/witness-pubkey', async (_req: Request, res: Response) => {
+	try {
+		const witness = await getWitnessPubkey();
+		res.set('Cache-Control', 'public, max-age=3600');
+		res.json({ success: true, account: witness.account, pubkey: witness.pubkey });
+	} catch (err) {
+		res.status(503).json({
+			success: false,
+			error: `Witness signing unavailable: ${err instanceof Error ? err.message : 'unknown'}`,
+		});
+	}
 });
 
 // RUNE read model — balances, ledger trace, caps, and drift.
