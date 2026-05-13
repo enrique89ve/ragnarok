@@ -201,6 +201,63 @@ const HeartbeatSchema = z.object({
 	t: NonNegativeInt,
 }).strict();
 
+// ── Phase 0 protocol-v2 envelopes (ADR 0004 §Decision.6) ───────────────────
+//
+// Schema-only entries; handlers ship in issues 02 / 03 / 06. The outer
+// scalars are validated strictly. The `action` payload on `action_envelope`
+// stays `unknown` here: per-action validation is owned by the signed-
+// transcript builder (issue 03) so this layer cannot pre-narrow it without
+// pinning the wire to a single action shape.
+
+// Hex-encoded Ed25519 pubkey (32 bytes → 64 hex chars). Accept a slightly
+// wider range to leave room for base64url variants if a future issue
+// changes encoding; the exact format is locked when issue 02 lands.
+const PubkeyString = z.string().min(32).max(256);
+
+// Hive signature payloads are base58 (Hive convention) and bounded in
+// length — we don't decode here, only require non-empty + reasonable cap.
+const HiveSigString = NonEmptyString(512);
+
+const SessionAuthorizeSchema = z.object({
+	type: z.literal('session_authorize'),
+	matchId: NonEmptyString(64),
+	ephemeralPubkey: PubkeyString,
+	hiveSig: HiveSigString,
+}).strict();
+
+const SessionRenewalSchema = z.object({
+	type: z.literal('session_renewal'),
+	matchId: NonEmptyString(64),
+	newPubkey: PubkeyString,
+	hiveSig: HiveSigString,
+}).strict();
+
+const SessionResumedSchema = z.object({
+	type: z.literal('session_resumed'),
+	matchId: NonEmptyString(64),
+	lastSeenStateHash: HashString,
+}).strict();
+
+const StateSyncRequestSchema = z.object({
+	type: z.literal('state_sync_request'),
+	matchId: NonEmptyString(64),
+	fromTurn: NonNegativeInt,
+}).strict();
+
+// `action` is intentionally `unknown` — issue 03 owns the per-action schema
+// and we must not narrow it on the wire boundary. The required-ness check
+// rejects `undefined` so the field cannot be silently dropped over the wire.
+const ActionEnvelopeSchema = z.object({
+	type: z.literal('action_envelope'),
+	matchId: NonEmptyString(64),
+	seq: NonNegativeInt,
+	prevHash: HashString,
+	action: z.unknown().refine((v) => v !== undefined, {
+		message: 'action_envelope.action required (validated by issue 03)',
+	}),
+	sig: NonEmptyString(512),
+}).strict();
+
 // ── Dispatch table ─────────────────────────────────────────────────────────
 
 const SCHEMA_BY_TYPE = {
@@ -224,6 +281,11 @@ const SCHEMA_BY_TYPE = {
 	hash_mismatch: HashMismatchSchema,
 	poker_action: PokerActionSchema,
 	heartbeat: HeartbeatSchema,
+	session_authorize: SessionAuthorizeSchema,
+	session_renewal: SessionRenewalSchema,
+	session_resumed: SessionResumedSchema,
+	state_sync_request: StateSyncRequestSchema,
+	action_envelope: ActionEnvelopeSchema,
 } as const satisfies Record<P2PMessage['type'], z.ZodTypeAny>;
 
 export type WireMessageType = keyof typeof SCHEMA_BY_TYPE;

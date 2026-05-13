@@ -30,7 +30,17 @@ export type WireMessage =
 	| { type: 'hash_check'; stateHash: string; chessStateHash: string; chessMoveCount: number; turnNumber: number }
 	| { type: 'hash_mismatch'; turnNumber: number; myHash: string }
 	| { type: 'poker_action'; playerId: string; action: string; hpCommitment?: number }
-	| ChessCommandEnvelope;
+	| ChessCommandEnvelope
+	// ── Phase 0 protocol-v2 envelopes (ADR 0004 §Decision.6) ─────────────
+	// Schema/wire only at this stage — handlers land in issues 02 / 06 / 03.
+	// Inner `action: unknown` on `action_envelope` is intentional: the per-
+	// action schema is owned by issue 03 (signed-transcript builder) and
+	// must not be narrowed here.
+	| { type: 'session_authorize'; matchId: string; ephemeralPubkey: string; hiveSig: string }
+	| { type: 'session_renewal'; matchId: string; newPubkey: string; hiveSig: string }
+	| { type: 'session_resumed'; matchId: string; lastSeenStateHash: string }
+	| { type: 'state_sync_request'; matchId: string; fromTurn: number }
+	| { type: 'action_envelope'; matchId: string; seq: number; prevHash: string; action: unknown; sig: string };
 
 export interface HeartbeatMessage {
 	readonly type: 'heartbeat';

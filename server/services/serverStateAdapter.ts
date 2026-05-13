@@ -84,7 +84,8 @@ function anchorToRecord(a: MatchAnchorRecord): MatchAnchorStateRecord {
 		matchId: a.matchId, playerA: a.playerA, playerB: a.playerB,
 		pubkeyA: a.pubkeyA, pubkeyB: a.pubkeyB,
 		deckHashA: a.deckHashA, deckHashB: a.deckHashB,
-		engineHash: a.engineHash, dualAnchored: a.dualAnchored, timestamp: a.timestamp,
+		engineHash: a.engineHash, cardRegistryHash: a.cardRegistryHash,
+		dualAnchored: a.dualAnchored, timestamp: a.timestamp,
 	};
 }
 
@@ -93,7 +94,8 @@ function recordToAnchor(r: MatchAnchorStateRecord): MatchAnchorRecord {
 		matchId: r.matchId, playerA: r.playerA, playerB: r.playerB,
 		pubkeyA: r.pubkeyA, pubkeyB: r.pubkeyB,
 		deckHashA: r.deckHashA, deckHashB: r.deckHashB,
-		engineHash: r.engineHash, dualAnchored: r.dualAnchored, timestamp: r.timestamp,
+		engineHash: r.engineHash, cardRegistryHash: r.cardRegistryHash,
+		dualAnchored: r.dualAnchored, timestamp: r.timestamp,
 	};
 }
 

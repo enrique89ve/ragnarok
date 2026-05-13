@@ -17,6 +17,7 @@ import { sha256Hash, canonicalStringify } from './hashUtils';
 import { computePoW, POW_CONFIG } from './proofOfWork';
 import { fetchAccountKeys } from './hiveSignatureVerifier';
 import { HIVE_NODES } from './hiveConfig';
+import { getCardRegistryHash } from '../../game/data/effects/registryHash';
 
 const MATCH_START_TIMEOUT_MS = 30_000;
 
@@ -33,6 +34,9 @@ export interface MatchAnchorPayload {
 	pubkey_b: string;
 	deck_hash_a: string;
 	engine_hash: string;
+	// ADR 0004 §Decision.2: hash of the canonical card registry. Anchored at
+	// match start so a peer running an older registry invalidates the match.
+	card_registry_hash: string;
 	block_ref: string;
 	pow: { nonces: number[] };
 }
@@ -106,6 +110,10 @@ export async function broadcastMatchAnchor(params: {
 	}
 
 	const blockRef = await getHeadBlockRef();
+	// ADR 0004 §Decision.2: pin the card registry hash alongside the engine
+	// hash. Memoised inside `getCardRegistryHash` so this is a single hash
+	// per client session, not per match.
+	const cardRegistryHash = await getCardRegistryHash();
 
 	// PoW over canonical payload (excludes pow field itself)
 	const payloadForPow = canonicalStringify({
@@ -117,6 +125,7 @@ export async function broadcastMatchAnchor(params: {
 		pubkey_b: pubkeyB,
 		deck_hash_a: deckHash,
 		engine_hash: engineHash,
+		card_registry_hash: cardRegistryHash,
 		block_ref: blockRef,
 	});
 	const payloadHash = await sha256Hash(payloadForPow);
@@ -131,6 +140,7 @@ export async function broadcastMatchAnchor(params: {
 		pubkey_b: pubkeyB,
 		deck_hash_a: deckHash,
 		engine_hash: engineHash,
+		card_registry_hash: cardRegistryHash,
 		block_ref: blockRef,
 		pow: { nonces: pow.nonces },
 	};

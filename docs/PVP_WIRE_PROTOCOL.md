@@ -258,6 +258,11 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `ping` / `pong` | both | both | Lower-level RTT probe |
 | `opponentDisconnected` | (relay only) | relay | Surfaced to UI |
 | `spectator_state` | host | host | Future / unused in beta |
+| `session_authorize` | peer→peer | both | Phase 0 (ADR 0004): broadcast `{ matchId, ephemeralPubkey, hiveSig }` at match start so the opponent binds the ephemeral signing key to the Hive identity |
+| `session_renewal` | peer→peer | both | Phase 0 (ADR 0004): after reload/crash, broadcast `{ matchId, newPubkey, hiveSig }` so the opponent accepts a fresh ephemeral key for the same match |
+| `session_resumed` | peer→peer | both | Phase 0 (ADR 0004): acknowledge a renewal with `{ matchId, lastSeenStateHash }` so the resuming peer can decide between replay-from-log and `state_sync_request` |
+| `state_sync_request` | peer→peer | both | Phase 0 (ADR 0004): request the signed action log from a turn onwards (`{ matchId, fromTurn }`) when local IndexedDB replay is unavailable or corrupted |
+| `action_envelope` | peer→peer | broadcaster | Phase 0 (ADR 0004): per-action signed envelope `{ matchId, seq, prevHash, action, sig }`. `action` stays `unknown` on this layer — issue 03 owns the inner schema and per-action validation |
 
 Envelope schemas live next to their handlers:
 - Cards: `client/src/game/hooks/p2pEnvelope.ts` (`GameCommandEnvelope`)

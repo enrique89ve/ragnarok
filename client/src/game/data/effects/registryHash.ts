@@ -127,3 +127,46 @@ export async function computeRegistryHash(cards: readonly CardData[]): Promise<s
 	const fingerprints = cards.map(fingerprintCard).sort((a, b) => a.id - b.id);
 	return sha256Hash(canonicalStringify(fingerprints));
 }
+
+// ---------------------------------------------------------------------------
+// Canonical registry accessor (ADR 0004 §Decision.2)
+// ---------------------------------------------------------------------------
+// `match_anchor` (issue 01) pins this hash alongside `engineHash` so a peer
+// running an older registry invalidates the match. The canonical registry
+// import is dynamic to keep this module free of a static dependency on the
+// registry tree — handy for tests that want to exercise the hashing logic
+// without booting the full 1300+ card import graph.
+
+let cachedRegistryHash: string | null = null;
+let inFlight: Promise<string> | null = null;
+
+/**
+ * Memoised SHA-256 of the canonical card registry. First call hashes the
+ * full registry; subsequent calls return the cached value. The registry is
+ * deterministic for a given client build, so re-hashing per match would
+ * just burn CPU.
+ *
+ * Used by `broadcastMatchAnchor` to populate
+ * `MatchAnchorRecord.cardRegistryHash` at match start.
+ */
+export async function getCardRegistryHash(): Promise<string> {
+	if (cachedRegistryHash !== null) return cachedRegistryHash;
+	if (inFlight) return inFlight;
+	inFlight = (async () => {
+		const { cardRegistry } = await import('../cardRegistry');
+		const hash = await computeRegistryHash(cardRegistry);
+		cachedRegistryHash = hash;
+		inFlight = null;
+		return hash;
+	})();
+	return inFlight;
+}
+
+/**
+ * Test-only reset. Clears the memoised hash so a test fixture that mutates
+ * the registry (e.g. injects a stub) can re-hash without a stale cache.
+ */
+export function _resetCardRegistryHashForTest(): void {
+	cachedRegistryHash = null;
+	inFlight = null;
+}

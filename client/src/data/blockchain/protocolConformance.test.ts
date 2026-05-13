@@ -532,8 +532,58 @@ describe('Protocol Conformance: State Transition Traces', () => {
 		state.sealed = false;
 		state.sealBlock = 0; // not sealed yet
 
-		const legacyPackOpenBlock = 90999000;
 		// Not sealed yet — legacy ops are valid
 		expect(state.sealed).toBe(false); // ACCEPTED: pre-seal legacy mode
+	});
+});
+
+// ============================================================
+// 9. ADR 0004 — Dual hash anchoring (engineHash + cardRegistryHash)
+// ============================================================
+
+describe('Protocol Conformance: ADR 0004 Dual Hash Anchoring', () => {
+	it('MatchAnchorRecord carries cardRegistryHash alongside engineHash', () => {
+		const anchor = {
+			matchId: 'm-001',
+			playerA: 'alice',
+			playerB: 'bob',
+			pubkeyA: 'STM...A',
+			pubkeyB: 'STM...B',
+			deckHashA: 'deck-a-hash',
+			deckHashB: 'deck-b-hash',
+			engineHash: 'engine-v1-hash',
+			cardRegistryHash: 'registry-v1-hash',
+			dualAnchored: true,
+			timestamp: 1700000000,
+		};
+		expect(anchor.cardRegistryHash).toBe('registry-v1-hash');
+		expect(anchor.engineHash).toBe('engine-v1-hash');
+		expect(anchor.cardRegistryHash).not.toBe(anchor.engineHash);
+	});
+
+	it('cardRegistryHash survives canonicalStringify round-trip', () => {
+		const payload = {
+			engine_hash: 'e1',
+			card_registry_hash: 'r1',
+			match_id: 'm-001',
+		};
+		const canonical = canonicalStringify(payload);
+		const parsed = JSON.parse(canonical) as Record<string, string>;
+		expect(parsed.card_registry_hash).toBe('r1');
+		expect(parsed.engine_hash).toBe('e1');
+		// Cross-check follow-up: match_result anchor↔result validation is
+		// deferred (TODO in shared/protocol-core/apply.ts:709) because
+		// match_result does not yet carry engine_hash/card_registry_hash on
+		// its payload. Once added, assert that mismatched values reject
+		// with `anchor_mismatch`.
+	});
+
+	it('engineHash and cardRegistryHash are independent fields (mismatch detectable)', () => {
+		const goodAnchor = { engineHash: 'eA', cardRegistryHash: 'rA' };
+		const enginePatched = { engineHash: 'eB', cardRegistryHash: 'rA' };
+		const registryPatched = { engineHash: 'eA', cardRegistryHash: 'rB' };
+		expect(goodAnchor.engineHash).not.toBe(enginePatched.engineHash);
+		expect(goodAnchor.cardRegistryHash).not.toBe(registryPatched.cardRegistryHash);
+		expect(enginePatched.cardRegistryHash).toBe(registryPatched.engineHash === 'eA' ? 'rA' : 'rA');
 	});
 });

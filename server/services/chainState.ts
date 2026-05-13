@@ -91,6 +91,11 @@ export interface MatchAnchorStateRecord {
 	deckHashA?: string;
 	deckHashB?: string;
 	engineHash?: string;
+	// Mirrors MatchAnchorRecord.cardRegistryHash (ADR 0004 §Decision.2).
+	// Persisted alongside engineHash so the anchor↔result cross-check has
+	// both pinned values. Optional for backward-read compat with anchors
+	// written before this field existed.
+	cardRegistryHash?: string;
 	dualAnchored: boolean;
 	timestamp: number;
 }

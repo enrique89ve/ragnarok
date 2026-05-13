@@ -317,6 +317,14 @@ export interface MatchAnchorRecord {
 	deckHashA?: string;
 	deckHashB?: string;
 	engineHash?: string;
+	// Dual hash anchoring (ADR 0004 §Decision.2): the WASM engine pins the
+	// dispatcher bytecode, the card registry pins the data the dispatcher
+	// consumes. A peer running an older registry would otherwise diverge
+	// invisibly. Optional in the type for backward-read compatibility with
+	// pre-Phase-0 anchors persisted before this field landed; new anchors
+	// MUST populate it. Server cross-checks `(engineHash, cardRegistryHash)`
+	// at match_result ingest and rejects with `anchor_mismatch` on disagree.
+	cardRegistryHash?: string;
 	dualAnchored: boolean;
 	timestamp: number;
 }

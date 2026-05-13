@@ -619,6 +619,7 @@ async function applyMatchAnchor(op: ProtocolOp, deps: ProtocolCoreDeps): Promise
 			deckHashA: op.payload.deck_hash_a as string | undefined,
 			deckHashB: op.payload.deck_hash_b as string | undefined,
 			engineHash: op.payload.engine_hash as string | undefined,
+			cardRegistryHash: op.payload.card_registry_hash as string | undefined,
 			dualAnchored: !!(op.payload.sig_a && op.payload.sig_b),
 			timestamp: op.timestamp,
 		});
@@ -792,6 +793,13 @@ async function validateRankedMatchSignatures(
 	const anchor = details.matchId
 		? await deps.state.getMatchAnchor(details.matchId)
 		: null;
+	// TODO(adr-0004-issue-01): cross-check (engineHash, cardRegistryHash) on
+	// the match_result payload against the values pinned in `anchor`. Reject
+	// with `anchor_mismatch` when either disagrees. Deferred to keep this
+	// issue schema/wire only — match_result does not yet carry the engine
+	// or registry hash on its payload, so the cross-check has no source
+	// fields to compare today. Implement once match_result is extended in a
+	// follow-up issue.
 	const sigMessage = details.isCompact
 		? `${details.matchId}:${details.winner}:${details.loser ?? ''}:${details.nonce}`
 		: `${details.matchId}:${details.winner}`;
