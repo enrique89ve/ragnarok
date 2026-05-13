@@ -14,6 +14,7 @@ export interface CardDataMinimal {
 	type: string;
 	race?: string;
 	collectible?: boolean;
+	set?: string;
 }
 
 export interface ICardDataProvider {

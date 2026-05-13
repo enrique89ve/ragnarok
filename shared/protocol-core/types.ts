@@ -51,6 +51,7 @@ export {
 export {
 	EITR_DISSOLVE_VALUES,
 	EITR_FORGE_COSTS,
+	TESTNET_EITR_SEASON_ID,
 	createBurnEitrSourceKey,
 	createEitrLedgerEntryId,
 	createForgeCommitEitrSourceKey,
@@ -521,7 +522,14 @@ export interface SignatureVerifier {
 // ============================================================
 
 export interface CardDataProvider {
-	getCardById(id: number): { name: string; type: string; rarity: string; race?: string; collectible?: boolean } | null;
+	getCardById(id: number): {
+		name: string;
+		type: string;
+		rarity: string;
+		race?: string;
+		collectible?: boolean;
+		set?: string;
+	} | null;
 	getCollectibleIdsInRanges(ranges: readonly [number, number][]): number[];
 }
 

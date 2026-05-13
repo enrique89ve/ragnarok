@@ -62,6 +62,7 @@ function getCardDataProviderAdapter() {
 				rarity: card.rarity || 'common',
 				race: card.race,
 				collectible: card.collectible,
+				set: card.set,
 			};
 		},
 		getCollectibleIdsInRanges(ranges: readonly [number, number][]) {

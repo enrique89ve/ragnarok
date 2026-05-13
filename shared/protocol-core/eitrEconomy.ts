@@ -2,6 +2,8 @@
 // Values must match the Card Rarity table in docs/RULEBOOK.md.
 // Eitr is non-transferable, season-scoped, mirror of RUNE ledger shape.
 
+export const TESTNET_EITR_SEASON_ID = 'S01';
+
 export type EitrLedgerDirection = 'credit' | 'debit';
 
 export type EitrSourceType =

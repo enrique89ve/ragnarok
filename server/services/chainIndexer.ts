@@ -143,7 +143,7 @@ async function getBlockId(blockNum: number): Promise<string | null> {
 const serverCardData: CardDataProvider = {
 	getCardById(id: number) {
 		if (id >= 1000 && id <= 99999) {
-			return { name: `Card${id}`, type: 'minion', rarity: 'common', collectible: true };
+			return { name: `Card${id}`, type: 'minion', rarity: 'common', collectible: true, set: 'genesis' };
 		}
 		return null;
 	},

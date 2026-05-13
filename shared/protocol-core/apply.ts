@@ -25,15 +25,20 @@ import {
 	getPackDefinition,
 	TESTNET_RUNE_ECONOMY,
 	TESTNET_RUNE_SEASON_ID,
+	TESTNET_EITR_SEASON_ID,
 	calculateCappedRuneCredit,
+	createBurnEitrSourceKey,
 	createCampaignFirstClearRuneSourceKey,
+	createEitrLedgerEntryId,
 	createP2PRankedRuneSourceKey,
 	createRewardClaimRuneSourceKey,
 	createRuneExchangeSourceKey,
 	createRuneLedgerEntryId,
 	calculateRuneBalanceTrace,
 	getCampaignFirstClearRuneReward,
+	getEitrDissolveValue,
 } from './types';
+import { classifyCard } from '../schemas/cardCategory';
 import { verifyPoW, POW_CONFIG } from './pow';
 import { canonicalStringify, sha256Hash } from './hash';
 import { fnv1a } from './broadcast-utils';
@@ -460,15 +465,88 @@ async function transferSingle(
 // ============================================================
 
 async function applyBurn(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpResult> {
-	const nftId = (op.payload.nft_id ?? op.payload.card_uid) as string;
-	if (typeof nftId !== 'string') return reject('missing nft_id');
+	// Type-guarded extraction of nft_id (per hive-payload-canon: payload enters as unknown).
+	const rawNftId = op.payload.nft_id ?? op.payload.card_uid;
+	if (typeof rawNftId !== 'string' || rawNftId.length === 0) {
+		return reject('missing nft_id');
+	}
+	const nftId = rawNftId;
 
 	const card = await deps.state.getCard(nftId);
 	if (!card) return { status: 'ignored' };
 	if (card.owner !== op.broadcaster) return reject('not owner');
 
+	// Category gate: only genesis NFTs are dissolve-eligible per ADR 0001 §5.
+	// Starter cards are off-chain and never reach here; tokens are not collectible.
+	const cardDef = deps.cards.getCardById(card.cardId);
+	if (!cardDef) return reject('card definition missing');
+	const category = classifyCard({ set: cardDef.set, collectible: cardDef.collectible });
+	if (category !== 'genesis') return reject('not a genesis card');
+
+	const rarity = card.rarity.toLowerCase();
+	const eitrAmount = getEitrDissolveValue(rarity);
+	if (eitrAmount <= 0) return reject(`no eitr value for rarity: ${rarity}`);
+
+	// Pre-check supply: a genesis card must have a corresponding pack_supply record.
+	// If absent, the chain state is corrupt — refuse rather than destroy the uid.
+	const supply = await deps.state.getSupply(rarity, 'pack');
+	if (!supply) return reject('genesis supply missing for rarity');
+
+	const sourceKey = createBurnEitrSourceKey({
+		seasonId: TESTNET_EITR_SEASON_ID,
+		account: op.broadcaster,
+		trxId: op.trxId,
+		uid: nftId,
+	});
+	const entryId = createEitrLedgerEntryId({
+		seasonId: TESTNET_EITR_SEASON_ID,
+		direction: 'credit',
+		sourceType: 'burn',
+		sourceKey,
+	});
+
+	// Idempotency: re-applying the same burn op is a no-op.
+	const existing = await deps.state.getEitrLedgerEntry(entryId);
+	if (existing) return { status: 'ignored' };
+
+	// Atomic intent: ledger → supply → deleteCard (in this order).
+	// If a crash interrupts after ledger write but before deleteCard, replay
+	// will see the entry exist and ignore — the card stays alive, no double-credit.
+	const balanceBefore = await getEitrBalanceFor(deps, op.broadcaster);
+	await deps.state.putEitrLedgerEntry({
+		entryId,
+		seasonId: TESTNET_EITR_SEASON_ID,
+		account: op.broadcaster,
+		direction: 'credit',
+		sourceType: 'burn',
+		sourceKey,
+		amount: eitrAmount,
+		balanceBefore,
+		balanceAfter: balanceBefore + eitrAmount,
+		trxId: op.trxId,
+		blockNum: op.blockNum,
+		timestamp: op.timestamp,
+	});
+	await deps.state.putSupply({ ...supply, minted: Math.max(0, supply.minted - 1) });
 	await deps.state.deleteCard(nftId);
+
 	return { status: 'applied' };
+}
+
+// Compute current Eitr balance for an account in the active season:
+// credits minus debits, mirroring how server-side stats derive it.
+async function getEitrBalanceFor(deps: ProtocolCoreDeps, account: string): Promise<number> {
+	const credits = await deps.state.getEitrLedgerTotal({
+		seasonId: TESTNET_EITR_SEASON_ID,
+		account,
+		direction: 'credit',
+	});
+	const debits = await deps.state.getEitrLedgerTotal({
+		seasonId: TESTNET_EITR_SEASON_ID,
+		account,
+		direction: 'debit',
+	});
+	return credits - debits;
 }
 
 // ============================================================

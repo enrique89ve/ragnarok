@@ -97,18 +97,29 @@ Mirror of `RuneLedgerEntry`:
 
 ```ts
 interface EitrLedgerEntry {
-	entryId: string;        // 'burn:S01:alice:trx-abc:uid-xyz' | 'forge:S01:alice:trx-def'
+	entryId: string;        // canonical: seasonId:direction:sourceType:sourceKey
 	seasonId: string;       // 'S01'
 	account: string;        // 'alice'
 	direction: 'credit' | 'debit';
 	sourceType: 'burn' | 'forge_commit' | 'forge_refund';
-	amount: number;         // positive integer
-	sourceKey: string;      // idempotency
+	amount: number;         // positive integer; sign comes from `direction`
+	sourceKey: string;      // idempotency, e.g. 'burn:S01:alice:trxId:uid'
+	balanceBefore: number;  // ledger-derived: credits(prior) - debits(prior)
+	balanceAfter: number;   // balanceBefore +/- amount per direction
+	trxId: string;
 	blockNum: number;
+	timestamp: number;
 }
 ```
 
-Balance is computed by query, not persisted as a scalar. Same shape as `getRuneLedgerEntries` in `replayDB.ts`.
+Unlike RUNE, Eitr **has no `TokenBalance` scalar** — there is no `Eitr` field on `TokenBalance`, and no `getEitrBalanceTotal` accessor. Balance is computed by ledger query alone:
+
+```
+balance(account, seasonId) = sum(amount where direction='credit')
+                           - sum(amount where direction='debit')
+```
+
+The per-entry `balanceBefore` / `balanceAfter` fields capture the trace at write time (audit-friendly), and the writer (e.g. `applyBurn`) computes them via two `getEitrLedgerTotal` queries before persisting. This keeps RUNE-style audit parity without requiring a denormalized scalar that could diverge.
 
 ### 8. Lockup at burn time
 
@@ -170,6 +181,8 @@ See [.scratch/eitr-v1/issues/01-eitr-doc-cleanup.md](../../.scratch/eitr-v1/issu
 ### Migration
 
 `localStorage['ragnarok-crafting']` is cleared on v1 boot. A one-time UI banner explains: *"Eitr is now chain-derived. Your previous balance was a local preview."* No admin grant op is broadcast — testers start S01 with 0 Eitr.
+
+**Non-retroactive credit for historical burns.** `rp_burn` ops broadcast **before** the v1 deployment block do not retroactively credit Eitr. The extended `applyBurn` handler ignores ops on uids that were already deleted by the legacy handler (the `if (!card) return ignored` branch fires before the ledger write). Eitr accrual begins at the upgrade block and is fully derived from burns going forward. This is consistent with the resettable testnet posture; if a tester quemó NFTs pre-upgrade, those uids are gone but generated no Eitr.
 
 ## Rejected alternatives
 

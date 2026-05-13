@@ -24,6 +24,7 @@ import type {
 	PackAsset, PackSupplyRecord, CompanionTransfer, CampaignProgressRecord, CampaignSubmissionRecord,
 	DuatClaimRecord,
 	RuneLedgerEntry, RuneLedgerEntryQuery, RuneLedgerTotalQuery,
+	EitrLedgerEntry, EitrLedgerEntryQuery, EitrLedgerTotalQuery,
 } from './types';
 import { canonicalStringify, sha256Hash } from './hash';
 import { deriveChallenge, POW_CONFIG } from './pow';
@@ -101,6 +102,28 @@ class MemoryState implements StateAdapter {
 		}
 		return total;
 	}
+	eitrLedger = new Map<string, EitrLedgerEntry>();
+	async getEitrLedgerEntry(entryId: string) { return this.eitrLedger.get(entryId) ?? null; }
+	async putEitrLedgerEntry(entry: EitrLedgerEntry) { this.eitrLedger.set(entry.entryId, entry); }
+	async getEitrLedgerEntries(query: EitrLedgerEntryQuery) {
+		const entries: EitrLedgerEntry[] = [];
+		for (const entry of this.eitrLedger.values()) {
+			if (entry.seasonId !== query.seasonId) continue;
+			if (query.direction !== undefined && entry.direction !== query.direction) continue;
+			if (query.sourceType !== undefined && entry.sourceType !== query.sourceType) continue;
+			if (query.account !== undefined && entry.account !== query.account) continue;
+			if (query.sourceKeyPrefix !== undefined && !entry.sourceKey.startsWith(query.sourceKeyPrefix)) continue;
+			entries.push(entry);
+		}
+		return entries;
+	}
+	async getEitrLedgerTotal(query: EitrLedgerTotalQuery) {
+		let total = 0;
+		for (const entry of await this.getEitrLedgerEntries(query)) {
+			total += entry.amount;
+		}
+		return total;
+	}
 	async getMatchAnchor(matchId: string) { return this.anchors.get(matchId) ?? null; }
 	async putMatchAnchor(a: MatchAnchorRecord) { this.anchors.set(a.matchId, a); }
 	async getPackCommit(trxId: string) { return this.commits.get(trxId) ?? null; }
@@ -171,7 +194,16 @@ class MemoryState implements StateAdapter {
 const mockCards: CardDataProvider = {
 	getCardById(id: number) {
 		if (id >= 1000 && id <= 99999) {
-			return { name: `Card${id}`, type: 'minion', rarity: 'common', collectible: true };
+			// Tokens are non-collectible by convention (id range 9000-9099 in real registry);
+			// in tests we mark id < 2000 as starter to exercise category branching in burn.
+			const isStarter = id < 2000;
+			return {
+				name: `Card${id}`,
+				type: 'minion',
+				rarity: 'common',
+				collectible: !isStarter,
+				set: isStarter ? 'starter' : 'genesis',
+			};
 		}
 		return null;
 	},
@@ -510,19 +542,127 @@ describe('Protocol Core: Replay Traces', () => {
 
 	// --- Burn ---
 
-	it('burn removes card from state', async () => {
-		state.cards.set('nft-001', {
-			uid: 'nft-001', cardId: 20001, owner: 'alice', rarity: 'common',
+	it('burn removes card from state, credits Eitr, and refills pack_supply', async () => {
+		await seedGenesis(state, deps);
+		// Simulate that 1 mythic was already minted (so minted=1, cap=250).
+		const supplyBefore = (await state.getSupply('mythic', 'pack'))!;
+		await state.putSupply({ ...supplyBefore, minted: 1 });
+
+		state.cards.set('nft-mythic-001', {
+			uid: 'nft-mythic-001', cardId: 20001, owner: 'alice', rarity: 'mythic',
+			level: 1, xp: 0, edition: 'alpha', mintSource: 'pack',
+			mintTrxId: 'x', mintBlockNum: 100, lastTransferBlock: 0,
+		});
+
+		const result = await applyOp(makeOp('burn', {
+			nft_id: 'nft-mythic-001',
+		}, { trxId: 'burn-trx-1', usedActiveAuth: true }), defaultCtx, deps);
+
+		expect(result.status).toBe('applied');
+		expect(state.cards.has('nft-mythic-001')).toBe(false);
+
+		// Eitr credited at the rarity's dissolve value (mythic = 400)
+		const eitrTotal = await state.getEitrLedgerTotal({
+			seasonId: 'S01', account: 'alice', direction: 'credit', sourceType: 'burn',
+		});
+		expect(eitrTotal).toBe(400);
+
+		// pack_supply.mythic refilled: minted went from 1 back to 0
+		const supplyAfter = (await state.getSupply('mythic', 'pack'))!;
+		expect(supplyAfter.minted).toBe(0);
+	});
+
+	it('burn credit amount matches rarity (common = 5, rare = 20, epic = 100)', async () => {
+		await seedGenesis(state, deps);
+		const rarities: Array<['common' | 'rare' | 'epic', number]> = [
+			['common', 5],
+			['rare', 20],
+			['epic', 100],
+		];
+		for (const [rarity, expected] of rarities) {
+			const supplyBefore = (await state.getSupply(rarity, 'pack'))!;
+			await state.putSupply({ ...supplyBefore, minted: 1 });
+			const uid = `nft-${rarity}-1`;
+			state.cards.set(uid, {
+				uid, cardId: 20001, owner: 'alice', rarity,
+				level: 1, xp: 0, edition: 'alpha', mintSource: 'pack',
+				mintTrxId: `mint-${rarity}`, mintBlockNum: 100, lastTransferBlock: 0,
+			});
+			const result = await applyOp(makeOp('burn', {
+				nft_id: uid,
+			}, { trxId: `burn-${rarity}`, usedActiveAuth: true }), defaultCtx, deps);
+			expect(result.status, `burn ${rarity}`).toBe('applied');
+			const credit = await state.getEitrLedgerTotal({
+				seasonId: 'S01', account: 'alice', direction: 'credit',
+				sourceKeyPrefix: `burn:S01:alice:burn-${rarity}:`,
+			});
+			expect(credit, `${rarity} credit`).toBe(expected);
+		}
+	});
+
+	it('burn is idempotent on replay (same trxId produces one ledger entry)', async () => {
+		await seedGenesis(state, deps);
+		const supplyBefore = (await state.getSupply('rare', 'pack'))!;
+		await state.putSupply({ ...supplyBefore, minted: 2 });
+
+		state.cards.set('nft-rare-007', {
+			uid: 'nft-rare-007', cardId: 20002, owner: 'alice', rarity: 'rare',
+			level: 1, xp: 0, edition: 'alpha', mintSource: 'pack',
+			mintTrxId: 'x', mintBlockNum: 100, lastTransferBlock: 0,
+		});
+
+		const op = makeOp('burn', {
+			nft_id: 'nft-rare-007',
+		}, { trxId: 'burn-replay', usedActiveAuth: true });
+
+		const first = await applyOp(op, defaultCtx, deps);
+		expect(first.status).toBe('applied');
+
+		// Card was deleted by first burn — second burn must be a clean no-op.
+		const second = await applyOp(op, defaultCtx, deps);
+		expect(second.status).toBe('ignored');
+
+		// Only one credit entry exists (no double-credit on replay)
+		const credits = await state.getEitrLedgerEntries({
+			seasonId: 'S01', account: 'alice', direction: 'credit', sourceType: 'burn',
+		});
+		expect(credits.length).toBe(1);
+		expect(credits[0].amount).toBe(20);
+	});
+
+	it('burn rejects starter cards (not a genesis category)', async () => {
+		await seedGenesis(state, deps);
+		// cardId 1500 is starter per the mockCards convention (id < 2000)
+		state.cards.set('starter-uid-1', {
+			uid: 'starter-uid-1', cardId: 1500, owner: 'alice', rarity: 'common',
 			level: 1, xp: 0, edition: 'alpha', mintSource: 'genesis',
 			mintTrxId: 'x', mintBlockNum: 100, lastTransferBlock: 0,
 		});
 
 		const result = await applyOp(makeOp('burn', {
-			nft_id: 'nft-001',
+			nft_id: 'starter-uid-1',
 		}, { usedActiveAuth: true }), defaultCtx, deps);
 
-		expect(result.status).toBe('applied');
-		expect(state.cards.has('nft-001')).toBe(false);
+		expect(result.status).toBe('rejected');
+		// Card still alive, no eitr credit
+		expect(state.cards.has('starter-uid-1')).toBe(true);
+		const total = await state.getEitrLedgerTotal({ seasonId: 'S01', account: 'alice' });
+		expect(total).toBe(0);
+	});
+
+	it('burn rejects when genesis supply for rarity is missing (integrity guard)', async () => {
+		// No seedGenesis — supply is empty
+		state.cards.set('nft-orphan-1', {
+			uid: 'nft-orphan-1', cardId: 20001, owner: 'alice', rarity: 'rare',
+			level: 1, xp: 0, edition: 'alpha', mintSource: 'pack',
+			mintTrxId: 'x', mintBlockNum: 100, lastTransferBlock: 0,
+		});
+
+		const result = await applyOp(makeOp('burn', {
+			nft_id: 'nft-orphan-1',
+		}, { usedActiveAuth: true }), defaultCtx, deps);
+
+		expect(result.status).toBe('rejected');
 	});
 
 	// --- Level Up ---

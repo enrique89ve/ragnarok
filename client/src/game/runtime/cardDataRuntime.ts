@@ -14,6 +14,7 @@ function toCardDataMinimal(card: {
   type: string;
   race?: string;
   collectible?: boolean;
+  set?: string;
 }): CardDataMinimal | null {
   const normalizedId = typeof card.id === 'number' ? card.id : Number(card.id);
 
@@ -28,6 +29,7 @@ function toCardDataMinimal(card: {
     type: card.type,
     race: card.race,
     collectible: card.collectible,
+    set: card.set,
   };
 }
 
