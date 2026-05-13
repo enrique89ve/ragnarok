@@ -149,7 +149,13 @@ Thumbs.db
 # Each AI-coding tool drops its own state/config directory.
 # These should never be committed — they're per-developer environment.
 .agents/
-.scratch/
+.scratch/*
+# Exception: protocol workstream scratch dirs are tracked because their PRD +
+# DECISIONS + issue files are referenced from committed ADRs and act as the
+# canonical Phase planning artefact (see docs/adr/0004-...md §Decision.5).
+# Using `.scratch/*` (not `.scratch/`) so explicit re-includes below work —
+# git cannot re-include a child of a fully-excluded parent directory.
+!.scratch/game-protocol-v2-phase1/
 .codebuddy/
 .commandcode/
 .continue/

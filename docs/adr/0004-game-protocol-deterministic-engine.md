@@ -252,7 +252,7 @@ These are explicitly out of scope and **must not be implemented** without supers
 ### Code-level
 
 New code (estimate):
-- `assembly/chess/` — 5 files, ~800 lines AS (board, moves, winCondition, mines, stamina)
+- `assembly/chess/` — ~6 files, ~400 lines AS (types, state, boardSetup, rules, reducer, canonicalize). Geometry-only mirror of [`shared/protocol-core/chess/`](../../shared/protocol-core/chess/). Stamina + mines + element + health stay TS hooks around the WASM reducer until Phase 2 (see [.scratch/game-protocol-v2-phase1/DECISIONS.md#d1](../../.scratch/game-protocol-v2-phase1/DECISIONS.md) D1).
 - `assembly/engine/` — complete ~13 reachable stubs (drawCard, spell handlers, weapon, mana, effects)
 - `shared/protocol-core/match/` — mirror of `shared/protocol-core/` separation for game protocol types
 - Server: `server/services/matchState.ts` (separated from `chainState.ts`)
