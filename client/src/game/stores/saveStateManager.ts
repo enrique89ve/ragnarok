@@ -54,7 +54,9 @@ export interface PortableSaveState {
 		completedToday: string[];
 		lastRefresh: number;
 	};
-	// Economy
+	// Economy — Eitr is chain-derived per ADR 0001; this field is vestigial
+	// and kept only for backward compat with v3 saves. Always written as 0;
+	// never restored.
 	eitr: number;
 	// Tutorial
 	tutorialCompleted: boolean;
@@ -80,13 +82,11 @@ function hasValidStarterClaimFlag(value: unknown): value is Pick<PortableSaveSta
 export async function collectSaveState(): Promise<PortableSaveState> {
 	// Lazy-import stores to avoid circular deps
 	const { useCampaignStore } = await import('../campaign/campaignStore');
-	const { useCraftingStore } = await import('../crafting/craftingStore');
 	const { useTutorialStore } = await import('../tutorial/tutorialStore');
 	const { useStarterStore } = await import('./starterStore');
 	const { useSettingsStore } = await import('./settingsStore');
 
 	const campaign = useCampaignStore.getState() as unknown as Record<string, unknown>;
-	const crafting = useCraftingStore.getState() as unknown as Record<string, unknown>;
 	const tutorial = useTutorialStore.getState() as unknown as Record<string, unknown>;
 	const starter = useStarterStore.getState();
 	const settings = useSettingsStore.getState() as unknown as Record<string, unknown>;
@@ -131,7 +131,7 @@ export async function collectSaveState(): Promise<PortableSaveState> {
 			completedToday: [],
 			lastRefresh: 0,
 		},
-		eitr: Number(crafting.eitr ?? 0),
+		eitr: 0,
 		tutorialCompleted: !!(tutorial.completed ?? tutorial.isComplete ?? false),
 		tutorialStep: Number(tutorial.currentStep ?? tutorial.step ?? 0),
 		starterClaimed: starter.claimed ?? false,
@@ -163,7 +163,6 @@ export async function restoreSaveState(state: PortableSaveState): Promise<{ succ
 		}
 
 		const { useCampaignStore } = await import('../campaign/campaignStore');
-		const { useCraftingStore } = await import('../crafting/craftingStore');
 		const { useTutorialStore } = await import('../tutorial/tutorialStore');
 		const { useStarterStore } = await import('./starterStore');
 		const { getNFTBridge } = await import('../nft');
@@ -175,12 +174,8 @@ export async function restoreSaveState(state: PortableSaveState): Promise<{ succ
 			campStore.rewardsClaimed = state.campaign.rewardsClaimed;
 		}
 
-		// Restore Eitr
-		if (state.eitr > 0) {
-			const craftStore = useCraftingStore.getState() as unknown as Record<string, unknown>;
-			const addEitr = craftStore.addEitr as ((v: number) => void) | undefined;
-			if (addEitr) addEitr(state.eitr - Number(craftStore.eitr ?? 0));
-		}
+		// Eitr is chain-derived per ADR 0001 — no local restore. The vestigial
+		// `state.eitr` field is ignored; balance always comes from the chain.
 
 		// Restore tutorial state
 		if (state.tutorialCompleted) {

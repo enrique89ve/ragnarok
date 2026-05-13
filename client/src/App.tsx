@@ -10,6 +10,7 @@ import CardTransformBridgeInitializer from "./game/components/CardTransformBridg
 import ragnarokLogo from "./assets/images/ragnarok-logo.jpg";
 import LoadingScreen from "./game/components/ui/LoadingScreen";
 import GoldenCardFilter from "./game/animations/GoldenCardFilter";
+import { EitrMigrationBanner } from "./game/components/migrations/EitrMigrationBanner";
 import { ALL_CHAPTERS, getMission, useCampaignStore } from "./game/campaign";
 import { useStarterStore } from "./game/stores/starterStore";
 import { useIsHiveMode, useNFTUsername } from "./game/nft/hooks";
@@ -708,6 +709,7 @@ function App() {
         <CardTransformBridgeInitializer />
         <UnifiedCardSystem />
         <GoldenCardFilter />
+        <EitrMigrationBanner />
 
         <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <ViewTransitionBridge />

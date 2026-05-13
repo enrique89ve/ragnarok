@@ -10,7 +10,6 @@ import { getCardArtPath } from '../../utils/art/artMapping';
 import { getHoloTier, applyHoloVars, resetHoloVars } from '../../hooks/useHoloTracking';
 import type { OwnedCard, InventoryResponse, InventoryCard } from '../packs/types';
 import { getMasteryTier } from '../../../data/blockchain/cardXPRewards';
-import { useCraftingStore } from '../../crafting/craftingStore';
 import { getEitrValue, getCraftCost } from '../../crafting/craftingConstants';
 import { cardRegistry } from '../../data/cardRegistry';
 import { getNFTBridge } from '../../nft';
@@ -20,7 +19,11 @@ import SendCardModal from './SendCardModal';
 import { useCollectionMilestoneStore } from '../../stores/collectionMilestoneStore';
 import './collection.css';
 import '../styles/holoEffect.css';
-import { cryptoRng, cryptoIdGen } from '../../utils/seededRng';
+import { useEitrBalance } from '../../hooks/useEitrBalance';
+import { hiveSync } from '../../../data/HiveSync';
+import { sha256Hash } from '../../../../../shared/protocol-core/hash';
+import { PACK_ENTROPY_DELAY_BLOCKS } from '../../../../../shared/protocol-core/types';
+import { emitNotification } from '../../actions/gameActions';
 
 type FilterRarity = 'all' | 'common' | 'rare' | 'epic' | 'mythic';
 type FilterType = 'all' | 'hero' | 'minion' | 'spell' | 'weapon';
@@ -91,10 +94,43 @@ function getShimmerClass(rarity: string): string {
 
 export default function CollectionPage() {
 	const hiveCards = useNFTCollection();
-	const eitr = useCraftingStore(s => s.eitr);
-	const addEitr = useCraftingStore(s => s.addEitr);
-	const spendEitr = useCraftingStore(s => s.spendEitr);
+	const currentAccount = hiveSync.getUsername();
+	const { balance: eitr } = useEitrBalance(currentAccount, 'S01');
 	const [craftConfirm, setCraftConfirm] = useState<'craft' | 'disenchant' | null>(null);
+
+	// Two-phase forge per ADR 0001 §3. Commit broadcasts immediately; reveal
+	// fires after PACK_ENTROPY_DELAY_BLOCKS (~20 blocks ≈ 60s on Hive). Server
+	// auto-finalizes if reveal misses the deadline, so worst case the user
+	// closes the tab and the chain still resolves.
+	async function runForge(rarity: string, _craftCostVal: number): Promise<void> {
+		const userSalt = `forge-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+		const saltCommit = await sha256Hash(userSalt);
+
+		const commitRes = await hiveSync.broadcastCustomJson('forge_commit', { rarity, salt_commit: saltCommit });
+		if (!commitRes.success || !commitRes.trxId) {
+			showStatus(commitRes.error ?? 'Forge commit failed', 'error');
+			return;
+		}
+
+		emitNotification({
+			message: `Forging a random ${rarity}… revealing in ~${PACK_ENTROPY_DELAY_BLOCKS * 3}s`,
+			level: 'info',
+		});
+
+		// Wait for entropy block irreversibility (block_time ≈ 3s * delay + buffer).
+		const waitMs = (PACK_ENTROPY_DELAY_BLOCKS + 5) * 3 * 1000;
+		const commitTrxId = commitRes.trxId;
+		setTimeout(() => {
+			void hiveSync.broadcastCustomJson('forge_reveal', {
+				commit_trx_id: commitTrxId,
+				user_salt: userSalt,
+			}).then(revealRes => {
+				if (!revealRes.success) {
+					showStatus(revealRes.error ?? 'Forge reveal failed — auto-finalize will retry', 'warning');
+				}
+			}).catch(() => showStatus('Forge reveal broadcast failed', 'warning'));
+		}, waitMs);
+	}
 	const [provenanceNft, setProvenanceNft] = useState<typeof hiveCards[0] | null>(null);
 	const [sendNft, setSendNft] = useState<typeof hiveCards[0] | null>(null);
 
@@ -842,67 +878,28 @@ export default function CollectionPage() {
 														onClick={() => {
 															if (craftConfirm === 'disenchant') {
 																const nft = hiveCards.find(c => c.cardId === selectedCard.id);
-																const bridge = getNFTBridge();
-																if (bridge.isHiveMode() && nft) {
-																	import('../../../data/HiveSync').then(({ hiveSync }) => {
-																		hiveSync.broadcastCustomJson('rp_burn' as any, { nft_id: nft.uid }).catch(() => { showStatus('On-chain burn failed — Eitr added locally only', 'warning'); });
-																	});
+																if (!nft) {
+																	showStatus('Card uid not found in collection', 'error');
+																	setCraftConfirm(null);
+																	return;
 																}
-																addEitr(eitrVal);
-																bridge.emitTokenUpdate('Eitr', eitr + eitrVal, eitrVal);
-																setCards(prev => {
-																	const idx = prev.findIndex(c => c.id === selectedCard.id);
-																	if (idx === -1) return prev;
-																	const card = prev[idx];
-																	if (card.quantity <= 1) {
-																		return prev.filter((_, i) => i !== idx);
-																	}
-																	return prev.map((c, i) => i === idx ? { ...c, quantity: c.quantity - 1 } : c);
-																});
-																if (nft?.uid) {
-																getNFTBridge().removeCard(nft.uid);
-															}
-																if (selectedCard.quantity <= 1) setSelectedCard(null);
-																else setSelectedCard({ ...selectedCard, quantity: selectedCard.quantity - 1 });
+																// Broadcast-only per ADR 0001. Balance arrives via
+																// chain-derived eitr_ledger entry — no local credit.
+																hiveSync.broadcastCustomJson('rp_burn', { nft_id: nft.uid })
+																	.then(res => {
+																		if (!res.success) {
+																			showStatus(res.error ?? 'Burn broadcast failed', 'error');
+																			return;
+																		}
+																		emitNotification({
+																			message: `Burning ${selectedCard.name} for ${eitrVal} Eitr — confirming on chain…`,
+																			level: 'info',
+																		});
+																	})
+																	.catch(() => showStatus('Burn broadcast failed', 'error'));
 															} else {
-																const pool = cardRegistry.filter(c => c.rarity?.toLowerCase() === selectedCard.rarity?.toLowerCase() && c.type !== 'hero' && c.collectible !== false);
-																if (pool.length === 0) return;
-																if (!spendEitr(craftCostVal)) return;
-																getNFTBridge().emitTokenUpdate('Eitr', eitr - craftCostVal, -craftCostVal);
-																const pick = pool[Math.floor(cryptoRng() * pool.length)];
-																const pickId = typeof pick.id === 'number' ? pick.id : parseInt(pick.id as string, 10);
-																const forgedCard: OwnedCard = {
-																	id: pickId,
-																	name: pick.name,
-																	rarity: pick.rarity || 'common',
-																	type: pick.type || 'minion',
-																	heroClass: pick.heroClass || 'neutral',
-																	quantity: 1,
-																	manaCost: pick.manaCost,
-																	attack: 'attack' in pick ? pick.attack : undefined,
-																	health: 'health' in pick ? pick.health : undefined,
-																	description: pick.description,
-																};
-																setCards(prev => {
-																	const existing = prev.findIndex(c => c.id === pickId);
-																	if (existing >= 0) {
-																		return prev.map((c, i) => i === existing ? { ...c, quantity: c.quantity + 1 } : c);
-																	}
-																	return [forgedCard, ...prev];
-																});
-																getNFTBridge().addCard({
-																	uid: `forge-${cryptoIdGen()}-${pickId}`,
-																	cardId: pickId,
-																	ownerId: hiveCards.length > 0 ? hiveCards[0].ownerId : 'local-dev',
-																	edition: 'alpha',
-																	foil: 'standard',
-																	rarity: pick.rarity || 'common',
-																	level: 1,
-																	xp: 0,
-																	name: pick.name,
-																	type: pick.type || 'minion',
-																});
-																setSelectedCard(forgedCard);
+																// Two-phase forge per ADR 0001 §3.
+																void runForge(selectedCard.rarity, craftCostVal);
 															}
 															setCraftConfirm(null);
 														}}

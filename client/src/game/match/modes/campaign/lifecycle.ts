@@ -26,15 +26,14 @@
  */
 
 import { debug } from '../../../config/debugConfig';
-import { useCraftingStore } from '../../../crafting/craftingStore';
 import { publishCampaignVictoryResult, useCampaignStore } from '../../../campaign';
 import { getNFTBridge } from '../../../nft';
 import type { MatchEndContext } from '../../onWinDispatch';
 import type { MatchContext } from '../../types';
 
-const HEROIC_BONUS_EITR = 50;
-const MYTHIC_BONUS_EITR = 150;
-
+// Per ADR 0001 §Non-goals, Eitr is NOT awarded by campaign/match rewards —
+// it accrues solely from `burn`. Campaign completion just records the mission
+// claim; RUNE credits flow through the canonical `campaign_result` chain op.
 function awardLocalCampaignRewards(ctx: MatchContext, end: MatchEndContext): void {
 	if (ctx.opponent.kind !== 'scripted') return;
 	if (ctx.opponent.script.kind !== 'campaign-mission') return;
@@ -43,21 +42,8 @@ function awardLocalCampaignRewards(ctx: MatchContext, end: MatchEndContext): voi
 	const campaign = useCampaignStore.getState();
 	if (campaign.rewardsClaimed.includes(mission.id)) return;
 
-	const crafting = useCraftingStore.getState();
-	for (const reward of mission.rewards) {
-		if (reward.type === 'eitr' && reward.amount) {
-			crafting.addEitr(reward.amount);
-		}
-	}
-
-	if (difficulty === 'heroic') {
-		crafting.addEitr(HEROIC_BONUS_EITR);
-	} else if (difficulty === 'mythic') {
-		crafting.addEitr(MYTHIC_BONUS_EITR);
-	}
-
 	campaign.claimReward(mission.id);
-	debug.chess(`[Campaign] Local rewards distributed for ${mission.id} (${difficulty}, turns=${end.turnCount})`);
+	debug.chess(`[Campaign] Mission ${mission.id} claimed (${difficulty}, turns=${end.turnCount})`);
 }
 
 export function onCampaignMatchEnd(ctx: MatchContext, end: MatchEndContext): void {
