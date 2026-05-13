@@ -273,5 +273,39 @@ export async function signActionLogAccess(matchId: string): Promise<string> {
   return result.signature;
 }
 
+// ─── Session renewal (ADR 0004 §Decision.6 B–E, issue 06) ─────────────────
+//
+// After a tab reload / crash / OOM / sleep the in-memory ephemeral session
+// key dies but the match is still live on the opponent's side. The
+// resuming peer generates a fresh Ed25519 keypair and authorizes the new
+// pubkey under the SAME matchId via a single Hive Active signature. The
+// opponent verifies the Hive sig against the broadcaster's known Hive
+// account (from match_anchor) and accepts the new pubkey for the
+// remainder of the match. Per-reload prompt budget = 1.
+
+const SESSION_RENEWAL_PREFIX = 'ragnarok session_renewal';
+
+export function buildSessionRenewalMessage(matchId: string, newPubkey: string): string {
+  return `${SESSION_RENEWAL_PREFIX} | ${matchId} | ${newPubkey}`;
+}
+
+export async function signSessionRenewal(
+  matchId: string,
+  newPubkey: string,
+): Promise<string> {
+  if (!matchId || !newPubkey) {
+    throw new Error('signSessionRenewal: matchId and newPubkey required');
+  }
+  const message = buildSessionRenewalMessage(matchId, newPubkey);
+  const result = await signHiveMessage(message, {
+    keyType: 'Active',
+    title: 'Renew session key',
+  });
+  if (!result.success || !result.signature) {
+    throw new Error(`Hive Keychain sign rejected: ${result.error ?? 'unknown error'}`);
+  }
+  return result.signature;
+}
+
 // Expose on globalThis so game-engine can access without circular chunk dependency
 (globalThis as any).__ragnarokHiveDataStore = useHiveDataStore;

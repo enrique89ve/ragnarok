@@ -113,6 +113,7 @@ __tests__/
 !client/src/game/protocol/actionLog.test.ts
 !server/services/matchPendingQueue.test.ts
 !server/routes/chainRoutes.matchPending.test.ts
+!client/src/game/protocol/sessionRenewal.test.ts
 *.spec.js
 *.spec.ts
 *.test.tsx

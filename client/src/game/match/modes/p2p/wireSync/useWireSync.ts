@@ -36,6 +36,8 @@ import {
 	type Broadcaster,
 } from '../../../../protocol/transcript';
 import { signSessionAuthorize, signActionLogAccess } from '../../../../../data/HiveDataLayer';
+import { verifyInboundRenewal } from '../../../../protocol/sessionRenewal';
+import { verifyHiveSignature } from '../../../../../data/blockchain/hiveSignatureVerifier';
 import {
 	open as openActionLog,
 	deriveEncKey as deriveActionLogEncKey,
@@ -1473,6 +1475,102 @@ export function useWireSync() {
 						matchId: data.matchId,
 						pubkeyPrefix: data.ephemeralPubkey.slice(0, 8),
 					});
+					break;
+				}
+
+				case 'session_renewal': {
+					// ADR 0004 §Decision.6 B–E (issue 06). Opponent reloaded;
+					// they generated a fresh ephemeral keypair and re-bound it
+					// to their Hive identity. Validate the Hive sig and accept
+					// the new pubkey for the remainder of the match.
+					const activeMatchId = matchIdRef.current;
+					const opponentUsername = opponentUsernameRef.current;
+					if (!activeMatchId || !opponentUsername) {
+						debug.warn('[wireSync] session_renewal dropped — no active match or opponent username', {
+							hasMatchId: !!activeMatchId,
+							hasOpponent: !!opponentUsername,
+						});
+						break;
+					}
+					try {
+						const result = await verifyInboundRenewal({
+							matchId: data.matchId,
+							newPubkey: data.newPubkey,
+							hiveSig: data.hiveSig,
+							activeMatchId,
+							verifyHiveSig: async (message, sig) => {
+								// Recover the signing pubkey from the Hive sig
+								// and confirm it's a known Hive Posting/Active
+								// authority for the opponent. The existing
+								// p2pRelay path already attests the opponent's
+								// account via seed_reveal, so trusting the
+								// account-name binding here matches that level.
+								return verifyHiveSignature(opponentUsername, message, sig);
+							},
+						});
+						if (result.accepted) {
+							opponentSessionPubkeyRef.current = data.newPubkey;
+							opponentSessionHiveSigRef.current = data.hiveSig;
+							const lastSeen = signedTranscriptRef.current?.merkleRoot ?? '0'.repeat(64);
+							send({ type: 'session_resumed', matchId: activeMatchId, lastSeenStateHash: lastSeen });
+							debug.log('[wireSync] Accepted opponent session_renewal', {
+								matchId: data.matchId,
+								newPubkeyPrefix: data.newPubkey.slice(0, 8),
+							});
+						} else {
+							debug.warn('[wireSync] session_renewal rejected', { reason: result.reason });
+						}
+					} catch (err) {
+						debug.error('[wireSync] session_renewal verification error:', err);
+					}
+					break;
+				}
+
+				case 'session_resumed': {
+					// ADR 0004 §Decision.6 — opponent acknowledged OUR renewal
+					// and reported the last state hash they saw. The actual
+					// state reconciliation belongs to issue 07's smoke harness
+					// (state_sync_request fallback path); Phase 0 only logs
+					// here so the protocol bookkeeping completes.
+					debug.log('[wireSync] Opponent session_resumed', {
+						matchId: data.matchId,
+						lastSeenStateHashPrefix: data.lastSeenStateHash.slice(0, 8),
+						localRootPrefix: signedTranscriptRef.current?.merkleRoot.slice(0, 8) ?? '0'.repeat(8),
+					});
+					break;
+				}
+
+				case 'state_sync_request': {
+					// ADR 0004 §Decision.6 — the resuming peer's local action
+					// log was unavailable (private browsing, corruption). Send
+					// our copy of the signed transcript for replay; the
+					// resuming peer verifies every signature against the
+					// active pubkeys before applying. Phase 0 sends the full
+					// in-memory transcript leaves; if signedTranscriptRef is
+					// empty, reply with zero leaves so they fall back to
+					// other recovery paths.
+					const activeId = matchIdRef.current;
+					if (!activeId || data.matchId !== activeId) break;
+					const tr = signedTranscriptRef.current;
+					const leaves = tr ? tr.leaves.slice(data.fromTurn) : [];
+					debug.log('[wireSync] state_sync_request — replying with', {
+						matchId: data.matchId,
+						leafCount: leaves.length,
+						fromTurn: data.fromTurn,
+					});
+					// Phase 0: re-emit each leaf as its own action_envelope,
+					// preserving the chain ordering. Sufficient for the smoke
+					// harness; a richer bundled wire message is a follow-up.
+					for (const leaf of leaves) {
+						send({
+							type: 'action_envelope',
+							matchId: data.matchId,
+							seq: leaf.seq,
+							prevHash: leaf.prevHash,
+							action: leaf.action,
+							sig: leaf.sig,
+						});
+					}
 					break;
 				}
 
