@@ -9,8 +9,6 @@ export interface TradeOffer {
 	toUser: string;
 	offeredCardIds: number[];
 	requestedCardIds: number[];
-	offeredEitr: number;
-	requestedEitr: number;
 	status: 'pending' | 'accepted' | 'declined' | 'cancelled';
 	createdAt: number;
 	expiresAt: number;
@@ -20,8 +18,6 @@ interface TradeState {
 	offers: TradeOffer[];
 	selectedOfferedCards: number[];
 	selectedRequestedCards: number[];
-	offeredEitr: number;
-	requestedEitr: number;
 	loading: boolean;
 	error: string | null;
 }
@@ -34,8 +30,6 @@ interface TradeActions {
 	cancelOffer: (offerId: string, username: string) => Promise<boolean>;
 	toggleOfferedCard: (cardId: number) => void;
 	toggleRequestedCard: (cardId: number) => void;
-	setOfferedEitr: (amount: number) => void;
-	setRequestedEitr: (amount: number) => void;
 	clearSelections: () => void;
 }
 
@@ -43,8 +37,6 @@ export const useTradeStore = create<TradeState & TradeActions>()((set, get) => (
 	offers: [],
 	selectedOfferedCards: [],
 	selectedRequestedCards: [],
-	offeredEitr: 0,
-	requestedEitr: 0,
 	loading: false,
 	error: null,
 
@@ -66,8 +58,8 @@ export const useTradeStore = create<TradeState & TradeActions>()((set, get) => (
 	},
 
 	createOffer: async (fromUser, toUser) => {
-		const { selectedOfferedCards, selectedRequestedCards, offeredEitr, requestedEitr } = get();
-		if (selectedOfferedCards.length === 0 && offeredEitr === 0) return false;
+		const { selectedOfferedCards, selectedRequestedCards } = get();
+		if (selectedOfferedCards.length === 0) return false;
 		set({ loading: true, error: null });
 		try {
 			const authBody = getNFTBridge().isHiveMode()
@@ -75,13 +67,11 @@ export const useTradeStore = create<TradeState & TradeActions>()((set, get) => (
 					fromUser, toUser,
 					offeredCardIds: selectedOfferedCards,
 					requestedCardIds: selectedRequestedCards,
-					offeredEitr, requestedEitr,
 				})
 				: {
 					fromUser, toUser,
 					offeredCardIds: selectedOfferedCards,
 					requestedCardIds: selectedRequestedCards,
-					offeredEitr, requestedEitr,
 				};
 			const res = await fetch('/api/trades', {
 				method: 'POST',
@@ -220,13 +210,8 @@ export const useTradeStore = create<TradeState & TradeActions>()((set, get) => (
 		}));
 	},
 
-	setOfferedEitr: (amount) => set({ offeredEitr: Math.max(0, amount) }),
-	setRequestedEitr: (amount) => set({ requestedEitr: Math.max(0, amount) }),
-
 	clearSelections: () => set({
 		selectedOfferedCards: [],
 		selectedRequestedCards: [],
-		offeredEitr: 0,
-		requestedEitr: 0,
 	}),
 }));
