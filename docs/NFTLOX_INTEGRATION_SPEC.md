@@ -201,7 +201,9 @@ Decision deferred until integration starts; the UI flagging in `CollectionPage.t
 
 ### Image URL canonicalization
 
-NFTLox normalizes image URLs through `toWireUrl()` before hashing — the wire form has no protocol prefix (`https://example.com/img.png` → `example.com/img.png`). The reader applies `fromWireUrl()` on the way out. Our `assetPathFor(assetId)` currently produces relative paths (`/art/nfts/...`), which are **not stable hostnames**. Before mint, we need a canonical absolute URL per asset (CDN, IPFS, or pinned host) — otherwise the `imageHash` is fragile.
+NFTLox does **not** host images. Art is served by the Ragnarok deploy itself from `client/public/art/nfts/<hash>.webp`. NFTLox only stores the URL and derives `imageHash = sha256("nftlox:img:" + toWireUrl(url))`, where `toWireUrl()` strips the protocol prefix (`https://example.com/img.png` → `example.com/img.png`).
+
+`assetPathFor(assetId)` currently produces relative paths (`/art/nfts/...`). Before mint we must lock a **canonical absolute origin** (the production deploy host) and prepend it at mint time — once the seed `nftDna` is signed, changing the origin would orphan every `imageHash`. The asset bytes never need to move; only the URL has to be stable.
 
 ---
 
@@ -244,7 +246,7 @@ NFTLox normalizes image URLs through `toWireUrl()` before hashing — the wire f
 | Need | Status |
 |---|---|
 | Production protocol ID (currently `nftlox_testnet`) | Pending |
-| Stable absolute image URL host for each asset (drives `imageHash`) | Pending |
+| Lock canonical production origin to prepend to `/art/nfts/...` before mint (drives `imageHash`; assets stay in our `public/`) | Pending |
 | Test mint pass on testnet | Pending |
 | `GET /api/users/:u/state-hash?collection=RGNRK` (XOR per-NFT `claim_hash`) | Pending — required by Read-side architecture |
 

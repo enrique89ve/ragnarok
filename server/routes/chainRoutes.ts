@@ -15,6 +15,7 @@ import {
 	getCardsByOwner,
 	getMatchHistory,
 	getRuneAccountSummary,
+	getEitrAccountSummary,
 	registerAccount,
 	isAccountKnown,
 	getStats,
@@ -23,7 +24,19 @@ import {
 import { syncAccountNow } from '../services/chainIndexer';
 import { isValidHiveUsername } from '../services/hiveAuth';
 import { TESTNET_RUNE_SEASON_ID } from '../../shared/protocol-core/types';
+import {
+	buildPlayerCollection,
+} from '../../shared/protocol-core/playerCollection';
+import {
+	parseDeckCardClaims,
+	toDeckClaimsFromLegacyCardIds,
+	verifyDeckClaims,
+	type DeckCardClaim,
+	type DeckRejection,
+	type VerifiedDeckCard,
+} from '../../shared/protocol-core/deckVerification';
 import runeRoutes from './runeRoutes';
+import eitrRoutes from './eitrRoutes';
 
 const MAX_KNOWN_ACCOUNTS = 10_000;
 const MAX_CARD_IDS = 100;
@@ -32,7 +45,8 @@ const SEASON_ID_RE = /^[A-Za-z0-9_-]{1,32}$/;
 const router = Router();
 
 type DeckVerificationRequest =
-	| { status: 'valid'; username: string; cardIds: number[] }
+	| { status: 'valid'; version: 'legacy'; username: string; cardIds: number[] }
+	| { status: 'valid'; version: 2; username: string; claims: readonly DeckCardClaim[]; parseRejections: readonly DeckRejection[] }
 	| { status: 'invalid'; code: number; error: string };
 
 type SeasonIdValidation =
@@ -65,9 +79,21 @@ function validateSeasonId(value: unknown): SeasonIdValidation {
 function validateDeckVerificationRequest(body: unknown): DeckVerificationRequest {
 	const username = isRecord(body) ? body.username : undefined;
 	const cardIds = isRecord(body) ? body.cardIds : undefined;
+	const claims = isRecord(body) ? body.claims : undefined;
+	const protocolVersion = isRecord(body) ? body.protocolVersion : undefined;
 
 	if (typeof username !== 'string' || !isValidHiveUsername(username)) {
 		return { status: 'invalid', code: 400, error: 'Valid username required' };
+	}
+
+	if (claims !== undefined || protocolVersion === 2) {
+		if (protocolVersion !== 2) {
+			return { status: 'invalid', code: 400, error: 'protocolVersion 2 required for claims[]' };
+		}
+		const parsed = parseDeckCardClaims(claims);
+		return parsed.status === 'parsed'
+			? { status: 'valid', version: 2, username, claims: parsed.claims, parseRejections: [] }
+			: { status: 'valid', version: 2, username, claims: parsed.claims, parseRejections: parsed.rejections };
 	}
 
 	if (!Array.isArray(cardIds) || cardIds.length === 0 || cardIds.length > MAX_CARD_IDS) {
@@ -78,7 +104,42 @@ function validateDeckVerificationRequest(body: unknown): DeckVerificationRequest
 		return { status: 'invalid', code: 400, error: 'All cardIds must be finite numbers' };
 	}
 
-	return { status: 'valid', username, cardIds };
+	return { status: 'valid', version: 'legacy', username, cardIds };
+}
+
+function buildCollectionForOwner(username: string) {
+	const ownedCards = getCardsByOwner(username);
+	return {
+		ownedCards,
+		collection: buildPlayerCollection({
+			nftCards: ownedCards.map(card => ({
+				nftUid: card.uid,
+				cardId: card.cardId,
+				owner: card.owner,
+				xp: card.xp,
+				level: card.level,
+			})),
+		}),
+	};
+}
+
+function cardIdsFromVerifiedCards(cards: readonly VerifiedDeckCard[]): number[] {
+	return [...new Set(cards.map(card => card.cardId))];
+}
+
+function legacyMissingCardIds(
+	cardIds: readonly number[],
+	rejections: readonly DeckRejection[],
+): number[] {
+	const missing = new Set<number>();
+	for (const rejection of rejections) {
+		if (rejection.cardId !== undefined) {
+			missing.add(rejection.cardId);
+			continue;
+		}
+		missing.add(cardIds[rejection.slotIndex] ?? -1);
+	}
+	return [...missing].filter(cardId => cardId > 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -208,6 +269,50 @@ router.get('/player/:username/rune', async (req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /player/:username/eitr — Eitr balance and ledger summary (ADR 0001)
+// ---------------------------------------------------------------------------
+
+router.get('/player/:username/eitr', async (req: Request, res: Response) => {
+	try {
+		const { username } = req.params;
+		if (!username || !isValidHiveUsername(username)) {
+			res.status(400).json({ success: false, error: 'Invalid username' });
+			return;
+		}
+
+		const seasonId = validateSeasonId(req.query.seasonId);
+		if (seasonId.status === 'invalid') {
+			res.status(seasonId.code).json({ success: false, error: seasonId.error });
+			return;
+		}
+
+		if (!hasAccountRegistryCapacity(username)) {
+			res.status(503).json({ success: false, error: 'Account registry full' });
+			return;
+		}
+
+		if (!isAccountKnown(username)) {
+			await syncAccountNow(username);
+		}
+
+		const summary = getEitrAccountSummary(username, seasonId.value);
+		res.json({
+			success: true,
+			username,
+			seasonId: seasonId.value,
+			eitrBalance: summary.eitrBalance,
+			credits: summary.credits,
+			debits: summary.debits,
+			lastBlock: summary.lastBlock,
+			indexed: summary.indexed,
+		});
+	} catch (err) {
+		console.error('[chainRoutes] /player/:username/eitr error:', err);
+		res.status(500).json({ success: false, error: 'Internal server error' });
+	}
+});
+
+// ---------------------------------------------------------------------------
 // GET /player/:username/cards — NFTs owned by player
 // ---------------------------------------------------------------------------
 
@@ -275,7 +380,7 @@ router.post('/verify-deck', async (req: Request, res: Response) => {
 			return;
 		}
 
-		const { username, cardIds } = validation;
+		const { username } = validation;
 		if (!hasAccountRegistryCapacity(username)) {
 			res.status(503).json({ success: false, error: 'Account registry full' });
 			return;
@@ -285,37 +390,53 @@ router.post('/verify-deck', async (req: Request, res: Response) => {
 			await syncAccountNow(username);
 		}
 
-		const ownedCards = getCardsByOwner(username);
+		const { ownedCards, collection } = buildCollectionForOwner(username);
 
-		// Build a count map: cardId → number of owned copies
-		const ownedCounts = new Map<number, number>();
-		for (const c of ownedCards) {
-			ownedCounts.set(c.cardId, (ownedCounts.get(c.cardId) ?? 0) + 1);
-		}
-
-		// Track requested counts to detect multi-copy violations
-		const requestedCounts = new Map<number, number>();
-		for (const id of cardIds) {
-			requestedCounts.set(id, (requestedCounts.get(id) ?? 0) + 1);
-		}
-
-		const owned: number[] = [];
-		const missing: number[] = [];
-		for (const [id, requested] of requestedCounts) {
-			const available = ownedCounts.get(id) ?? 0;
-			if (available >= requested) {
-				owned.push(id);
-			} else {
-				missing.push(id);
+		if (validation.version === 2) {
+			if (validation.parseRejections.length > 0) {
+				res.json({
+					success: true,
+					protocolVersion: 2,
+					verified: false,
+					verifiedCards: [],
+					rejections: validation.parseRejections,
+					totalOwned: collection.length,
+				});
+				return;
 			}
+
+			const decision = verifyDeckClaims({
+				claims: validation.claims,
+				collection,
+			});
+
+			res.json({
+				success: true,
+				protocolVersion: 2,
+				verified: decision.status === 'verified',
+				verifiedCards: decision.cards,
+				rejections: decision.status === 'rejected' ? decision.rejections : [],
+				totalOwned: collection.length,
+			});
+			return;
 		}
+
+		const parsed = toDeckClaimsFromLegacyCardIds(validation.cardIds);
+		const decision = parsed.status === 'parsed'
+			? verifyDeckClaims({ claims: parsed.claims, collection })
+			: { status: 'rejected' as const, cards: [], rejections: parsed.rejections };
+		const rejections = decision.status === 'rejected' ? decision.rejections : [];
+		const owned = cardIdsFromVerifiedCards(decision.cards);
+		const missing = legacyMissingCardIds(validation.cardIds, rejections);
 
 		res.json({
 			success: true,
-			verified: missing.length === 0,
+			verified: decision.status === 'verified',
 			owned,
 			missing,
 			totalOwned: ownedCards.length,
+			protocolVersion: 1,
+			rejections,
 		});
 	} catch (err) {
 		console.error('[chainRoutes] /verify-deck error:', err);
@@ -357,5 +478,6 @@ router.get('/status', (_req: Request, res: Response) => {
 // RUNE read model — balances, ledger trace, caps, and drift.
 // Mounted under /api/chain so chain-derived reads have one public namespace.
 router.use('/rune', runeRoutes);
+router.use('/eitr', eitrRoutes);
 
 export default router;

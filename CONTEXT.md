@@ -59,12 +59,39 @@ _Avoid_: NFTLox as XP authority, owner-authored XP, resolving progress conflicts
 A server or database cache that improves reads or workflows but can be rebuilt from **NFT Custody** and **Ragnarok Replay State**.
 _Avoid_: Source of truth, canonical database, permanent inventory state
 
+**Player Collection Protocol**:
+The shared read protocol that answers "what can this account play with?" by combining **Starter Ownership**, **NFT Custody**, and **Ragnarok Replay State** into one typed collection view. It is client-verifiable and server-cacheable: the browser may build it from local replay/NFTLox cache, and the server may expose it as a convenience projection, but both must obey the same protocol rules.
+_Avoid_: UI-only collection shape, server-only inventory endpoint, `user_inventory` as ownership truth, losing the `starter` vs `nft` discriminator
+
+**Deck Card Claim**:
+An untrusted deck-submission assertion that a player intends to use a card under one explicit authority: `starter-entitlement` for universal starter cards by card-id, or `nft-custody` for genesis NFT instances by NFT uid. A claim is not gameplay truth until the **Deck Verification Protocol** resolves it into a verified card. For NFT claims, the card-id is derived from the NFT instance; any submitted card-id is only display/hint data and must not be trusted as authority.
+_Avoid_: treating `cardId` as proof of genesis ownership, optional `nft_id` refs with implicit meaning, mixing starter entitlement and NFT custody in the same branch
+
+**Verified Deck Card**:
+A slot-preserving card fact produced by the **Deck Verification Protocol** from a **Deck Card Claim**. It is safe for match packaging, replay, XP, and anti-cheat to consume because the authority branch has already been resolved. A verified starter card carries only starter card-id and non-transferable/no-CardXP facts. A verified NFT card carries concrete NFT uid plus replay-derived instance data.
+_Avoid_: deduplicating a deck into collection entries, awarding NFT XP from `cardId` alone, using verified deck cards before runtime boundary validation
+
+**Protocol Authority**:
+The explicit authority named by a protocol claim, currently `starter-entitlement` or `nft-custody`. It is not the same as the legacy local `CardOwnershipSource` string (`starter` or `nft`); adapters may map between them, but protocol validation should keep the authority vocabulary intact.
+_Avoid_: silently aliasing protocol authority to UI/source labels, replacing legacy local source strings in one broad migration, using optional fields to infer authority
+
+**Anti-Cheat Protocol**:
+The shared verification rules and evidence format for ranked play: identity binding, deck eligibility, seed commit-reveal, command schemas, state hashes, dual signatures, transcript roots, replay validation, and slash evidence. It is not a live server referee; the server may relay, index, snapshot, and arbitrate under dispute, but the rules must be reproducible by clients and third parties.
+_Avoid_: always-on server simulation, opaque moderator decisions, unverifiable ranked results, accepting single-signed ranked outcomes
+
+**Server-Light Verification**:
+The operating philosophy that expensive or authority-sensitive checks should be client-verifiable and replayable first, with the server acting as an availability and projection layer unless an operator write is unavoidable.
+_Avoid_: server as hidden truth, per-request heavyweight recomputation, gameplay correctness depending on private server state
+
 ## Authority Relationships
 
 - **Starter Ownership** is a rule from **Starter Entitlement Source of Truth**, not **NFT Custody** or **Operational Projection**.
 - **NFT Custody** decides who owns a genesis NFT instance; **Ragnarok Replay State** decides what that instance has earned in gameplay.
 - **NFTLox Progress Mirror** may be repaired from **Ragnarok Replay State** whenever they drift.
 - **Operational Projection** must never be the only place a sensitive balance, ranking, ownership, or pack distribution decision exists.
+- **Player Collection Protocol** is the seam every UI, deck verification, and match packaging flow uses when it needs playable ownership.
+- **Deck Card Claim** is untrusted until resolved into a **Verified Deck Card** by the **Deck Verification Protocol**.
+- **Anti-Cheat Protocol** decides whether ranked evidence is acceptable; **Operational Projection** may only cache or summarize its result.
 
 ## Campaign Protocol
 

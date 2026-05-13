@@ -1,3 +1,9 @@
+import type {
+	DeckCardClaim,
+	DeckRejection,
+	VerifiedDeckCard,
+} from '@shared/protocol-core/deckVerification';
+
 /**
  * chainAPI.ts — Client-side fetch wrapper for /api/chain/* endpoints.
  *
@@ -40,6 +46,17 @@ export interface DeckVerification {
 	verified: boolean;
 	owned: number[];
 	missing: number[];
+	totalOwned: number;
+	protocolVersion?: number;
+	rejections?: DeckRejection[];
+}
+
+export interface DeckVerificationV2 {
+	success: boolean;
+	protocolVersion: 2;
+	verified: boolean;
+	verifiedCards: VerifiedDeckCard[];
+	rejections: DeckRejection[];
 	totalOwned: number;
 }
 
@@ -92,6 +109,16 @@ export async function verifyDeck(username: string, cardIds: number[]): Promise<D
 		body: JSON.stringify({ username, cardIds }),
 	});
 	return data;
+}
+
+export async function verifyDeckClaims(
+	username: string,
+	claims: readonly DeckCardClaim[],
+): Promise<DeckVerificationV2> {
+	return fetchJSON<DeckVerificationV2>('/api/chain/verify-deck', {
+		method: 'POST',
+		body: JSON.stringify({ username, protocolVersion: 2, claims }),
+	});
 }
 
 export async function registerAccount(username: string): Promise<void> {

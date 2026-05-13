@@ -7,9 +7,11 @@ import { useGameStore } from '../../../../stores/gameStore';
 import { debug } from '../../../../config/debugConfig';
 import { verifyDeckOwnership } from '../../../../../data/blockchain/deckVerification';
 import { sha256Hash } from '../../../../../data/blockchain/hashUtils';
-import { verifyDeck as verifyDeckOnServer } from '../../../../../data/chainAPI';
+import { verifyDeckClaims as verifyDeckClaimsOnServer } from '../../../../../data/chainAPI';
 import { getNFTBridge } from '../../../../nft';
 import type { PackagedMatchResult } from '../../../../../data/blockchain/types';
+import { NftUidSchema } from '../../../../../../../shared/protocol-core/playerCollection';
+import type { DeckCardClaim } from '../../../../../../../shared/protocol-core/deckVerification';
 import { startNewTranscript, clearTranscript, recordSessionEvent, exportSessionLog, recordMove } from '../../../../../data/blockchain/transcriptBuilder';
 import { localPlayerId, remotePlayerId } from '../../../../../data/blockchain/playerIdentity';
 import { getWasmHash, loadWasmEngine } from '../../../../engine/wasmLoader';
@@ -1196,14 +1198,20 @@ export function useWireSync() {
 					}).catch(() => { /* IndexedDB unavailable in dev mode — skip */ });
 
 					if (data.hiveAccount && data.nftIds.length > 0) {
-						const cardIds = data.nftIds.map(id => parseInt(id, 10)).filter(n => !isNaN(n));
-						if (cardIds.length > 0) {
-							verifyDeckOnServer(data.hiveAccount, cardIds)
+						const claims: DeckCardClaim[] = [];
+						for (const id of data.nftIds) {
+							const parsedUid = NftUidSchema.safeParse(id);
+							if (!parsedUid.success) continue;
+							claims.push({ authority: 'nft-custody', nftUid: parsedUid.data });
+						}
+
+						if (claims.length > 0) {
+							verifyDeckClaimsOnServer(data.hiveAccount, claims)
 								.then(sv => {
 									if (!sv.verified) {
 										GameEventBus.emitNotification({
 											level: 'error',
-											message: `Server deck verification failed — ${sv.missing.length} card(s) not found on-chain for ${data.hiveAccount}. Disconnecting.`,
+											message: `Server deck verification failed — ${sv.rejections.length} card claim(s) rejected for ${data.hiveAccount}. Disconnecting.`,
 											duration: 5000,
 										});
 										disconnectOnce();

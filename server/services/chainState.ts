@@ -138,6 +138,23 @@ export interface RuneSeasonStats {
 	runeExchangeDebitTotal: number;
 }
 
+export interface EitrAccountSummary {
+	account: string;
+	eitrBalance: number;   // derived: credits - debits (no scalar TokenBalance.Eitr)
+	credits: number;
+	debits: number;
+	lastBlock: number;
+	indexed: boolean;
+}
+
+export interface EitrSeasonStats {
+	ledgerCreditTotal: number;
+	ledgerDebitTotal: number;
+	burnCreditTotal: number;
+	forgeCommitDebitTotal: number;
+	forgeRefundCreditTotal: number;
+}
+
 interface SerializedState {
 	players: [string, PlayerRecord][];
 	cards: [string, CardRecord][];
@@ -701,6 +718,70 @@ function matchesEitrLedgerQuery(entry: EitrLedgerEntry, query: EitrLedgerEntryQu
 	if (query.account !== undefined && entry.account !== query.account) return false;
 	if (query.sourceKeyPrefix !== undefined && !entry.sourceKey.startsWith(query.sourceKeyPrefix)) return false;
 	return true;
+}
+
+export function getEitrSeasonStats(seasonId: string): EitrSeasonStats {
+	const stats: EitrSeasonStats = {
+		ledgerCreditTotal: 0,
+		ledgerDebitTotal: 0,
+		burnCreditTotal: 0,
+		forgeCommitDebitTotal: 0,
+		forgeRefundCreditTotal: 0,
+	};
+
+	for (const entry of eitrLedger.values()) {
+		if (entry.seasonId !== seasonId) continue;
+
+		if (entry.direction === 'credit') {
+			stats.ledgerCreditTotal += entry.amount;
+			if (entry.sourceType === 'burn') stats.burnCreditTotal += entry.amount;
+			if (entry.sourceType === 'forge_refund') stats.forgeRefundCreditTotal += entry.amount;
+			continue;
+		}
+
+		stats.ledgerDebitTotal += entry.amount;
+		if (entry.sourceType === 'forge_commit') stats.forgeCommitDebitTotal += entry.amount;
+	}
+
+	return stats;
+}
+
+export function getEitrAccountSummary(account: string, seasonId: string): EitrAccountSummary {
+	return getEitrAccountSummaries([account], seasonId)[0];
+}
+
+export function getEitrAccountSummaries(accounts: readonly string[], seasonId: string): EitrAccountSummary[] {
+	const tallies = new Map<string, { credits: number; debits: number; lastBlock: number }>();
+	for (const account of accounts) {
+		tallies.set(account, { credits: 0, debits: 0, lastBlock: 0 });
+	}
+
+	if (tallies.size > 0) {
+		for (const entry of eitrLedger.values()) {
+			if (entry.seasonId !== seasonId) continue;
+			const tally = tallies.get(entry.account);
+			if (!tally) continue;
+
+			if (entry.direction === 'credit') {
+				tally.credits += entry.amount;
+			} else {
+				tally.debits += entry.amount;
+			}
+			tally.lastBlock = Math.max(tally.lastBlock, entry.blockNum);
+		}
+	}
+
+	return accounts.map(account => {
+		const tally = tallies.get(account) ?? { credits: 0, debits: 0, lastBlock: 0 };
+		return {
+			account,
+			eitrBalance: tally.credits - tally.debits,
+			credits: tally.credits,
+			debits: tally.debits,
+			lastBlock: tally.lastBlock,
+			indexed: isAccountKnown(account),
+		};
+	});
 }
 
 // ---------------------------------------------------------------------------

@@ -35,6 +35,10 @@ Triage uses the canonical local status values `needs-triage`, `needs-info`, `rea
 
 This is a single-context repo: read root `CONTEXT.md` and relevant ADRs when present. See `docs/agents/domain.md`.
 
+### TypeScript protocol design
+
+For protocol-boundary TypeScript contracts, authority models, discriminated unions, branded primitives, or runtime validation shape, use the `typescript-pro` skill and consult a separate agent when the design affects shared client/server/replay behavior.
+
 ## Conventions
 
 - **Gameplay is truth.** When docs and code diverge, code wins. `schemas/` is the contract; anything else (incl. `metadata.json`) derives from it.

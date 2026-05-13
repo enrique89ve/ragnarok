@@ -10,6 +10,10 @@ build/
 *.pyc
 __pycache__/
 
+
+PLAN.md
+CONTEXT.md
+
 # ========================================
 # REPLIT INTERNAL FILES - SECURITY CRITICAL
 # ========================================
@@ -210,3 +214,7 @@ docs/superpowers/
 docs/BETA_TESTNET_ROADMAP.md
 a.out
 .playwright-mcp/
+
+
+PLAN.md
+CONTEXT.md
