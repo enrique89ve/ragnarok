@@ -1,9 +1,23 @@
 # ADR 0001 — Eitr v1: replay-derived crafting balance
 
-**Status**: Accepted
+**Status**: Accepted; implemented through issue 05 of [.scratch/eitr-v1](../../.scratch/eitr-v1)
 **Date**: 2026-05-12
 **Deciders**: enrique
 **Supersedes**: RAGNAROK_PROTOCOL_V1.md §13 "Eitr — Non-canonical in v1"
+
+**Implementation status** (chain layer COMPLETE; client UI rewire pending):
+
+| Issue | Scope | Status |
+|---|---|---|
+| 01 | Doc cleanup (RAGNAROK_PROTOCOL_V1, RULEBOOK, BLUEPRINT, SET_AXIS) | Merged |
+| 02 | `eitr_ledger` store + accessors (mirror of `rune_ledger`) | Merged |
+| 03 | `applyBurn` extended (credit, refill, category gate, atomicity) | Merged |
+| 04 | `applyForgeCommit` / `applyForgeReveal` / `autoFinalizeExpiredForgeCommits` | Merged |
+| 05 | `/api/chain/eitr/{state,ledger,balances}` + `/api/chain/player/:u/eitr` | Merged |
+| 06 | `eitrAPI.ts` + `useEitrBalance` hook (client wrapper) | Pending |
+| 07 | `CollectionPage` rewire + localStorage migration banner | Pending |
+| 08 | Drop `offeredEitr`/`requestedEitr` from trade wire | Pending |
+| 09 | Delete `GOLDEN_MULTIPLIER` + `CardQuality`; type `emitTokenUpdate` | Pending |
 
 ---
 
@@ -29,7 +43,7 @@ Each genesis card has three orthogonal dimensions, with non-overlapping mutators
 | `xp` / `level` | gameplay (`match_result`) | replay-derived |
 | `owner` | `transfer`, `mint`, `burn` | replay-derived |
 
-Eitr crosses only the rarity dimension. **Eitr does not, and will not, inject `xp` or `level_up`.** Forge always mints at level 0 (Mortal tier).
+Eitr crosses only the rarity dimension. **Eitr does not, and will not, inject `xp` or `level_up`.** Forge always mints at the starting level (`level: 1`, Mortal tier) with `xp: 0`; subsequent tiers (Ascended, Divine) are earned via `match_result`.
 
 ### 2. Forge output
 
@@ -144,7 +158,7 @@ These are explicitly out of scope for v1 and **must not appear** in the protocol
 - `eitr_transfer` op — Eitr is non-transferable peer-to-peer.
 - Eitr awarded by `match_result`, `campaign_result`, daily quests, or any other gameplay event.
 - Eitr injecting `xp` or `level_up`. There is no `xp_update` op and Eitr will not become one.
-- Forge minting a uid at any level above 0 (Mortal). XP must be earned in play.
+- Forge minting a uid at any level above the starting Mortal tier (`level: 1`, `xp: 0`). XP must be earned in play.
 - Quality variants (golden / foil / diamond) at the protocol layer.
 
 ## Consequences
@@ -154,7 +168,7 @@ These are explicitly out of scope for v1 and **must not appear** in the protocol
 - 2 new canonical ops (`forge_commit`, `forge_reveal`) and 1 extended op (`burn` now credits Eitr ledger and refills `pack_supply`).
 - 1 new replay store: `eitr_ledger` (mirror of `rune_ledger`).
 - 1 new auto-finalize loop: `autoFinalizeExpiredForgeCommits` (mirror of pack auto-finalize).
-- 3 new server endpoints: `/api/testnet/eitr/state`, `/ledger`, `/balances` (mirror of RUNE).
+- 3 new server endpoints: `/api/chain/eitr/state`, `/ledger`, `/balances` (mirror of RUNE; mounted under `chainRoutes` like `/api/chain/rune/*`).
 - 1 new client API module: `client/src/data/eitrAPI.ts` (mirror of `runeAPI.ts`).
 
 ### Doc surface changes

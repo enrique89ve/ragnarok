@@ -194,7 +194,7 @@ Per-card caps are per-rarity within each bucket. Pack opening draws from `pack_s
 
 # 10. Canonical Operation Set
 
-v1 has **16 canonical operations**. Unknown ops are ignored. The Eitr-specific ops (`forge_commit`, `forge_reveal`) and the extended `burn` semantics are specified in [ADR 0001](adr/0001-eitr-v1-canonical.md); their wire shape will land in a follow-up revision of §10.
+v1 has **18 canonical operations**. Unknown ops are ignored. The Eitr-specific ops (`forge_commit`, `forge_reveal`) and the extended `burn` semantics are specified in [ADR 0001](adr/0001-eitr-v1-canonical.md); the wire shape is documented in §10.15 / §10.16 below.
 
 ## 10.1 `genesis`
 
@@ -556,6 +556,54 @@ Settles a match with transcript commitment.
 
 Submits objective evidence against a fraudulent ranked action.
 
+## 10.15 `forge_commit`
+
+First half of the two-phase forge ([ADR 0001 §3](adr/0001-eitr-v1-canonical.md#decision)). Debits Eitr and pins the entropy block; reveal must follow within `PACK_REVEAL_DEADLINE_BLOCKS`.
+
+```json
+{
+  "p": "ragnarok-cards",
+  "action": "forge_commit",
+  "rarity": "rare",
+  "salt_commit": "sha256hex"
+}
+```
+
+- **Posting auth** by broadcaster
+- `rarity` MUST be one of `common | rare | epic | mythic` (lowercase)
+- `salt_commit` MUST be a non-empty hex string; the reveal proves preimage knowledge
+- Eitr balance MUST be `>= EITR_FORGE_COSTS[rarity]`
+- `pack_supply[rarity]` SupplyRecord MUST exist (genesis integrity)
+- Idempotent on `op.trxId` (replay safe)
+- Effects: writes `eitr_ledger` debit (`sourceType: 'forge_commit'`, `amount: EITR_FORGE_COSTS[rarity]`) and a `ForgeCommitRecord` keyed by `trxId`
+- Wire-level entropy block: `commitBlock + PACK_ENTROPY_DELAY_BLOCKS` (same delay constant as packs)
+
+## 10.16 `forge_reveal`
+
+Second half of the two-phase forge. Verifies the salt preimage against the commit, draws a card_id deterministically from the entropy block hash, and either mints a fresh uid or refunds the original Eitr debit.
+
+```json
+{
+  "p": "ragnarok-cards",
+  "action": "forge_reveal",
+  "commit_trx_id": "abc...",
+  "user_salt": "hexstring"
+}
+```
+
+- **Posting auth** by broadcaster (MUST be the same account as the commit)
+- `sha256(user_salt) === commit.saltCommit` (else `rejected: salt does not match commitment`)
+- Entropy block MUST be irreversible (`commitBlock + PACK_ENTROPY_DELAY_BLOCKS <= LIB`)
+- Reveal MUST occur within `commitBlock + PACK_REVEAL_DEADLINE_BLOCKS` (else `auto-finalize` runs with a forfeit seed)
+- Seed: `sha256(user_salt + commit_trx_id + entropy_block_id + "forge")`
+- Draw rule: iterate collectible card_ids, accept the first one matching `rarity === commit.rarity` whose per-card cap and `pack_supply[rarity]` permit a new mint
+- On success: mint uid `forge:<reveal_trx_id>` with `level: 1` (Mortal), `xp: 0`, `mintSource: 'forge'`; debit `pack_supply[rarity]` and the per-card supply
+- On exhaustion (no eligible card_id): credit `eitr_ledger` (`sourceType: 'forge_refund'`, `amount: commit.debitAmount`); no card is minted
+- The commit is marked `revealed: true` either way; cannot be retried
+- `autoFinalizeExpiredForgeCommits` (block-scanner hook) executes the same logic with a forfeit seed `sha256(commit_trx_id + entropy_block_id + "forfeit")` for commits whose deadline lapsed without an explicit reveal
+
+
+
 ```json
 {
   "p": "ragnarok-cards",
@@ -652,7 +700,7 @@ Replay-derived, non-transferable, season-scoped crafting balance. Full design ca
 
 - **Sole source**: `burn` credits `EITR_VALUES[rarity(uid)]` and refills `pack_supply[rarity] += 1`.
 - **Sole sink**: `forge_commit` (debit at commit time) → `forge_reveal` (mint a random card_id within the chosen rarity from `pack_supply`, or `forge_refund` credit when the rarity is exhausted).
-- **Identity discipline**: Eitr crosses only the `rarity` dimension. It MUST NOT inject `xp` or `level_up`. Forge mints at level 0 (Mortal); XP is earned in play.
+- **Identity discipline**: Eitr crosses only the `rarity` dimension. It MUST NOT inject `xp` or `level_up`. Forge mints at level 1 (Mortal tier) with `xp: 0`; subsequent levels are earned via `match_result`.
 - **Ledger**: `eitr_ledger` store mirrors `rune_ledger`. Balance is computed by query, not persisted as a scalar. Each entry is tagged with `seasonId` and resets at season rollover.
 - **Lockup at burn time**: protocol checks only ownership. UI is responsible for hiding "Dissolve" when a uid is listed on marketplace, anchored in an active match, or pending in a trade.
 

@@ -53,11 +53,16 @@ Non-transferable season points used for ranking score bonus and for the `rune_ex
 
 Non-transferable season-scoped crafting dust. Sole source is dissolving NFTs; sole sink is forging new NFTs.
 
-- **Source ops**: `burn` only (credit equals `EITR_VALUES[rarity(uid)]`).
-- **Sink ops**: `forge_commit` (debit) → `forge_reveal` (mint card or refund on exhaustion).
-- **Visible at**: `client/src/data/eitrAPI.ts` (post-implementation), `eitr_ledger` store in `replayDB.ts`.
-- **Caps**: implicit — bounded by total NFT supply × dissolve value. No configured pool cap.
-- **Canonical doc**: [ADR 0001](./adr/0001-eitr-v1-canonical.md), [RULEBOOK.md Card Rarity table](./RULEBOOK.md#card-rarity).
+- **Source ops**: `burn` only (credit equals `EITR_DISSOLVE_VALUES[rarity(uid)]`).
+- **Sink ops**: `forge_commit` (debit at commit) → `forge_reveal` (mint a random card_id within the rarity, or `forge_refund` credit on exhaustion).
+- **Storage**: [`eitr_ledger`](../client/src/data/blockchain/replayDB.ts) IDB store (client) / `eitrLedger` Map (server `chainState.ts`). Balance derived from `getEitrLedgerTotal({direction})` queries; no scalar `TokenBalance.Eitr` field.
+- **Server endpoints** (mirror of `/api/chain/rune/*`):
+	- `GET /api/chain/eitr/state?seasonId=S01` — season-wide totals + emission breakdown
+	- `GET /api/chain/eitr/ledger?seasonId=...&account=...&direction=...&sourceType=...` — paginated entries
+	- `GET /api/chain/eitr/balances?seasonId=...` — paginated per-account `eitrBalance = credits − debits`
+	- `GET /api/chain/player/:username/eitr?seasonId=S01` — single account summary
+- **Caps**: implicit — bounded by `Σ NFT_supply[rarity] × EITR_DISSOLVE_VALUES[rarity]`. No configured pool cap.
+- **Canonical doc**: [ADR 0001](./adr/0001-eitr-v1-canonical.md), [RULEBOOK.md Card Rarity table](./RULEBOOK.md#card-rarity), [RAGNAROK_PROTOCOL_V1.md §10.15–10.16, §13](./RAGNAROK_PROTOCOL_V1.md#1015-forge_commit).
 
 ### DUAT (external, read-only)
 
