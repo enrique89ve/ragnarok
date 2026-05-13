@@ -28,6 +28,13 @@ import { resetChessWireSender, setChessSendObserver } from '../../../../p2p/ches
 import type { P2PMessage } from '../../../../p2p/messages';
 import { parseWireMessage } from '../../../../p2p/messageSchemas';
 import { generateSessionKey, type SessionKey } from '../../../../protocol/sessionKey';
+import {
+	emptyTranscript,
+	appendSelfAction,
+	verifyAndAppendRemote,
+	type Transcript,
+	type Broadcaster,
+} from '../../../../protocol/transcript';
 import { signSessionAuthorize } from '../../../../../data/HiveDataLayer';
 
 export type { GameCommandEnvelope, WireGameCommand } from '../../../../hooks/p2pEnvelope';
@@ -109,6 +116,13 @@ export function useWireSync() {
 	const sessionAuthorizeSentRef = useRef(false);
 	const opponentSessionPubkeyRef = useRef<string | null>(null);
 	const opponentSessionHiveSigRef = useRef<string | null>(null);
+	// ADR 0004 §Decision.4 — per-action signed transcript (issue 03). Both
+	// peers maintain a local copy of the same leaf sequence; the Merkle
+	// root is committed in `match_result.transcriptRoot` at end-of-match.
+	// Broadcaster role is canonical (A = first-mover, B = second-mover),
+	// derived from the WS host hint at seed_reveal — see seed_reveal handler.
+	const signedTranscriptRef = useRef<Transcript | null>(null);
+	const myBroadcasterRef = useRef<Broadcaster | null>(null);
 	// Per-session seq tracking: monotonic, contiguous, reset on new session
 	const lastIncomingSeqRef = useRef<number>(-1);
 	// Identity binding: opponent's Hive username from seed_reveal
@@ -204,6 +218,8 @@ export function useWireSync() {
 			sessionAuthorizeSentRef.current = false;
 			opponentSessionPubkeyRef.current = null;
 			opponentSessionHiveSigRef.current = null;
+			signedTranscriptRef.current = null;
+			myBroadcasterRef.current = null;
 			return;
 		}
 
@@ -592,6 +608,15 @@ export function useWireSync() {
 						myCanonicalSide,
 						isWsHost,
 					});
+
+					// ADR 0004 §Decision.4 (issue 03) — initialise the signed
+					// transcript before any action can be appended. Broadcaster
+					// label is canonical (A/B), derived from the WS host hint
+					// at seed_reveal: WS host is 'A', client is 'B'. This is
+					// the only place we mint the label; downstream code reads
+					// `myBroadcasterRef.current`.
+					signedTranscriptRef.current = emptyTranscript(truncatedMatchId);
+					myBroadcasterRef.current = isWsHost ? 'A' : 'B';
 
 					// Identity binding: capture opponent's Hive username
 					if (data.hiveUsername) {
@@ -1409,6 +1434,59 @@ export function useWireSync() {
 					break;
 				}
 
+				case 'action_envelope': {
+					// ADR 0004 §Decision.4 (issue 03). Per-action signed
+					// envelopes feed a parallel transcript (additive to the
+					// host-auth `game_command` flow); the engine still applies
+					// state from gameStore as before. Drop silently when the
+					// transcript or opponent pubkey isn't yet populated —
+					// `session_authorize` is async over the wire, so the first
+					// few envelopes can race the handshake. The legacy
+					// `game_command` path still mutates state in the meantime.
+					const tr = signedTranscriptRef.current;
+					const oppPubkey = opponentSessionPubkeyRef.current;
+					const myRole = myBroadcasterRef.current;
+					if (!tr || !oppPubkey || !myRole) {
+						debug.warn('[wireSync] action_envelope dropped — handshake not ready', {
+							hasTranscript: !!tr,
+							hasOpponentKey: !!oppPubkey,
+							hasBroadcasterRole: !!myRole,
+						});
+						break;
+					}
+					if (data.matchId !== tr.matchId) {
+						debug.warn('[wireSync] action_envelope matchId mismatch', {
+							got: data.matchId,
+							expected: tr.matchId,
+						});
+						break;
+					}
+					// The remote's broadcaster label is the opposite of ours
+					// (A/B is a per-match canonical labelling, not viewer-
+					// relative). We never trust a self-reported broadcaster
+					// from the envelope — derived locally from myBroadcasterRef.
+					const remoteBroadcaster: Broadcaster = myRole === 'A' ? 'B' : 'A';
+					try {
+						const next = await verifyAndAppendRemote(
+							tr,
+							{
+								type: 'action_envelope',
+								matchId: data.matchId,
+								seq: data.seq,
+								prevHash: data.prevHash,
+								action: data.action,
+								sig: data.sig,
+							},
+							oppPubkey,
+							remoteBroadcaster,
+						);
+						signedTranscriptRef.current = next;
+					} catch (err) {
+						debug.warn('[wireSync] action_envelope rejected:', err instanceof Error ? err.message : String(err));
+					}
+					break;
+				}
+
 				default:
 					debug.warn('[wireSync] Unknown message type:', (data as any).type);
 			}
@@ -1545,6 +1623,41 @@ export function useWireSync() {
 		send(envelope);
 	}, [send, isCardsAuthority]);
 
+	/**
+	 * ADR 0004 §Decision.4 (issue 03) — sign + append the local action to
+	 * the transcript and broadcast an `action_envelope`. Additive to the
+	 * host-auth `game_command` flow: the cards engine still mutates state
+	 * via `playCard`/`applyOpponentCommand`; the envelope is the audit
+	 * record committed in `match_result.transcriptRoot`.
+	 *
+	 * Drops silently (with a debug warn) until the session handshake is
+	 * complete on both sides — `session_authorize` is async, so the first
+	 * few actions can race the prompt. The legacy game_command path keeps
+	 * gameplay moving while we wait; missing leaves in the early window
+	 * are an accepted limitation of Phase 0 (issue 06 will harden it).
+	 */
+	const appendAndSendActionEnvelope = useCallback(async (action: Record<string, unknown>): Promise<void> => {
+		if (connectionState !== 'connected') return;
+		const key = sessionKeyRef.current;
+		const tr = signedTranscriptRef.current;
+		const broadcaster = myBroadcasterRef.current;
+		if (!key || !tr || !broadcaster) {
+			debug.warn('[wireSync] action_envelope skipped — session not ready', {
+				hasKey: !!key,
+				hasTranscript: !!tr,
+				hasBroadcaster: !!broadcaster,
+			});
+			return;
+		}
+		try {
+			const { next, envelope } = await appendSelfAction(tr, action, key, broadcaster);
+			signedTranscriptRef.current = next;
+			send(envelope);
+		} catch (err) {
+			debug.error('[wireSync] action_envelope build/send failed:', err);
+		}
+	}, [connectionState, send]);
+
 	// Local transcript identity: read fresh from the NFT bridge + peer store on
 	// each move. Memoizing would be wrong — `getNFTBridge().getUsername()` can
 	// flip mid-session if the user re-authenticates, and `myPeerId` flips on
@@ -1558,8 +1671,26 @@ export function useWireSync() {
 	// in the SENDER's perspective (e.g. `targetId: 'opponent-hero'` means "the host's hero
 	// from the client's POV"). The host's applyOpponentCommand swaps player/opponent
 	// before applying — no perspective translation is performed at the wire level.
+	// Build a transcript-friendly action payload. Strips `undefined` keys so
+	// the canonical-JSON serializer (which rejects `undefined`) sees only
+	// the fields the wire actually carries. Mirrors the optionality of the
+	// `WireGameCommand` discriminated union.
+	const buildTranscriptAction = (
+		type: typeof GAME_COMMAND_TYPES[keyof typeof GAME_COMMAND_TYPES],
+		fields: Record<string, string | number | boolean | undefined>,
+	): Record<string, unknown> => {
+		const out: Record<string, unknown> = { type };
+		for (const [k, v] of Object.entries(fields)) {
+			if (v !== undefined) out[k] = v;
+		}
+		return out;
+	};
+
 	const wrappedPlayCard = useCallback((cardId: string, targetId?: string, targetType?: 'minion' | 'hero', insertionIndex?: number) => {
 		recordMove('playCard', { cardId, targetId, targetType, insertionIndex }, buildLocalTranscriptId());
+		void appendAndSendActionEnvelope(buildTranscriptAction(GAME_COMMAND_TYPES.playCard, {
+			cardId, targetId, targetType, insertionIndex,
+		}));
 		if (connectionState === 'connected' && !isCardsAuthority) {
 			sendCommandEnvelope({
 				type: GAME_COMMAND_TYPES.playCard,
@@ -1572,10 +1703,13 @@ export function useWireSync() {
 			playCard(cardId, targetId, targetType, insertionIndex);
 			if (isCardsAuthority) debouncedSync();
 		}
-	}, [connectionState, isCardsAuthority, playCard, debouncedSync, sendCommandEnvelope]);
+	}, [connectionState, isCardsAuthority, playCard, debouncedSync, sendCommandEnvelope, appendAndSendActionEnvelope]);
 
 	const wrappedAttack = useCallback((attackerId: string, defenderId: string) => {
 		recordMove('attack', { attackerId, defenderId }, buildLocalTranscriptId());
+		void appendAndSendActionEnvelope(buildTranscriptAction(GAME_COMMAND_TYPES.attack, {
+			attackerId, defenderId,
+		}));
 		if (connectionState === 'connected' && !isCardsAuthority) {
 			sendCommandEnvelope({
 				type: GAME_COMMAND_TYPES.attack,
@@ -1586,20 +1720,24 @@ export function useWireSync() {
 			attackWithCard(attackerId, defenderId);
 			if (isCardsAuthority) debouncedSync();
 		}
-	}, [connectionState, isCardsAuthority, attackWithCard, debouncedSync, sendCommandEnvelope]);
+	}, [connectionState, isCardsAuthority, attackWithCard, debouncedSync, sendCommandEnvelope, appendAndSendActionEnvelope]);
 
 	const wrappedEndTurn = useCallback(() => {
 		recordMove('endTurn', {}, buildLocalTranscriptId());
+		void appendAndSendActionEnvelope({ type: GAME_COMMAND_TYPES.endTurn });
 		if (connectionState === 'connected' && !isCardsAuthority) {
 			sendCommandEnvelope({ type: GAME_COMMAND_TYPES.endTurn });
 		} else {
 			endTurn();
 			if (isCardsAuthority) debouncedSync();
 		}
-	}, [connectionState, isCardsAuthority, endTurn, debouncedSync, sendCommandEnvelope]);
+	}, [connectionState, isCardsAuthority, endTurn, debouncedSync, sendCommandEnvelope, appendAndSendActionEnvelope]);
 
 	const wrappedUseHeroPower = useCallback((targetId?: string) => {
 		recordMove('useHeroPower', { targetId }, buildLocalTranscriptId());
+		void appendAndSendActionEnvelope(buildTranscriptAction(GAME_COMMAND_TYPES.useHeroPower, {
+			targetId, targetType: 'card',
+		}));
 		if (connectionState === 'connected' && !isCardsAuthority) {
 			sendCommandEnvelope({
 				type: GAME_COMMAND_TYPES.useHeroPower,
@@ -1610,7 +1748,7 @@ export function useWireSync() {
 			performHeroPower(targetId, 'card');
 			if (isCardsAuthority) debouncedSync();
 		}
-	}, [connectionState, isCardsAuthority, performHeroPower, debouncedSync, sendCommandEnvelope]);
+	}, [connectionState, isCardsAuthority, performHeroPower, debouncedSync, sendCommandEnvelope, appendAndSendActionEnvelope]);
 
 	const downloadSessionLog = useCallback((): void => {
 		try {
@@ -1750,6 +1888,19 @@ export function useWireSync() {
 		});
 	}, [connectionState, send]);
 
+	/**
+	 * ADR 0004 §Decision.4 (issue 03) — read the signed-transcript Merkle
+	 * root. The broadcaster overlays this onto `PackagedMatchResult.
+	 * transcriptRoot` *before* computing the match hash + dual sig so the
+	 * committed root pins the full per-action history (not the legacy
+	 * session-log digest). Returns `null` when the transcript is unset
+	 * (handshake not yet complete) — callers fall back to the legacy
+	 * transcriptRoot in that case.
+	 */
+	const getSignedTranscriptRoot = useCallback((): string | null => {
+		return signedTranscriptRef.current?.merkleRoot ?? null;
+	}, []);
+
 	return {
 		syncGameState,
 		playCard: wrappedPlayCard,
@@ -1759,6 +1910,7 @@ export function useWireSync() {
 		sendDeckVerification,
 		proposeResult,
 		downloadSessionLog,
+		getSignedTranscriptRoot,
 		isConnected: connectionState === 'connected',
 		isHost: isCardsAuthority,
 	};

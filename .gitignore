@@ -108,6 +108,8 @@ __tests__/
 !client/src/game/coordinator/hooks/chessAITurnDriver.test.ts
 !client/src/lib/stores/useWarbandStore.test.ts
 !client/src/game/protocol/sessionKey.test.ts
+!client/src/game/protocol/canonicalJson.test.ts
+!client/src/game/protocol/transcript.test.ts
 *.spec.js
 *.spec.ts
 *.test.tsx
