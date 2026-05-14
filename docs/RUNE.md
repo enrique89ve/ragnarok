@@ -5,20 +5,25 @@ One stop for everything RUNE. Other docs link here; this file is authoritative f
 ## TL;DR
 
 - Non-transferable, season-scoped, replay-derived from chain ops.
-- Earned via P2P ranked wins and campaign first-clears. Spent via `rune_exchange` for packs.
-- Each source has an independent per-account cap. **Campaign (10) and P2P (100) do NOT share quota** — same account can hold up to 10 + 100 = 110 RUNE/season.
+- Earned via P2P ranked wins, campaign first-clears, and daily quests. Spent via `rune_exchange` for packs.
+- Each source has an independent per-account cap. **P2P (100), campaign (10), and daily quest (20) do NOT share quota** — same account can hold up to 100 + 10 + 20 = 130 RUNE/season.
+- P2P remains the primary source (~77% of bonus input); daily quest gives casual players enough RUNE to actually purchase packs without canibalizing competitive scarcity.
 
 ## Caps (S01)
 
 | Cap | Value | Scope |
 |---|---|---|
-| `totalCap` | 2,200,000 | Global emission |
+| `totalCap` | 2,600,000 | Global emission |
 | `p2pCap` | 2,000,000 | Global P2P pool |
 | `campaignCap` | 200,000 | Global campaign pool |
+| `dailyQuestCap` | 400,000 | Global daily quest pool |
 | `maxP2PRunePerAccount` | 100 | P2P per-account, per season |
 | `maxCampaignRunePerAccount` | 10 | Campaign per-account, per season |
+| `maxDailyQuestRunePerAccount` | 20 | Daily quest per-account, per season |
+| `dailyQuestRunePerSlot` | 2 | Flat reward per completed slot |
+| `dailyQuestSlotsPerDay` | 3 | Slots assigned per UTC day |
 | `maxRuneExchangeSpendPerOp` | 50 | Per `rune_exchange` op |
-| `maxRuneScoreBonusInput` | 110 | Season Score formula clamp |
+| `maxRuneScoreBonusInput` | 130 | Season Score formula clamp |
 
 Constants live in [shared/protocol-core/runeEconomy.ts](../shared/protocol-core/runeEconomy.ts) `TESTNET_RUNE_ECONOMY`. The runtime values are the only truth — this table is a snapshot.
 
@@ -28,7 +33,8 @@ Constants live in [shared/protocol-core/runeEconomy.ts](../shared/protocol-core/
 |---|---|---|---|---|
 | `p2p_ranked` | `match_result` (ranked) | win = 2, loss = 0 | `p2p:S01:{matchId}` | Loser RUNE credited via `TokenBalance` only, no ledger entry |
 | `campaign_first_clear` | `campaign_result` | per ordinal table `[2,2,2,2,1,1]` | `campaign:S01:{account}:{cid}:{m}` | Only first clear ever pays; replays update best stats, not RUNE |
-| `reward_claim` | `reward_claim` (generic) | per reward def | `reward:S01:{account}:{rewardId}` | Non-campaign rewards only — `reward_claim` campaign:* path was removed in [commit 00d48fb](../shared/protocol-core/apply.ts) |
+| `daily_quest_claim` | `daily_quest_claim` | flat 2 RUNE/slot | `daily_quest:S01:{account}:{ymd_utc}:{slot}` | Auto-claimed on completion; chain trusts client (no match transcript); per-day cap = 3 slots × 2 RUNE = 6 RUNE; ymd_utc validated within ±48h of `op.timestamp` |
+| `reward_claim` | `reward_claim` (generic) | per reward def | `reward:S01:{account}:{rewardId}` | Tournament rewards only (`first_victory`, `elo_*`, etc) — `reward_claim` campaign:* path was removed in [commit 00d48fb](../shared/protocol-core/apply.ts), `reward_claim` daily_quest:* path replaced by `daily_quest_claim` op |
 
 ## Sink (debit op)
 
@@ -62,6 +68,34 @@ client.publishCampaignVictoryResult(ctx, end)
 ```
 
 Validation order matters: a duplicate nonce returns `'ignored'` before any state mutates.
+
+## How a daily quest claim becomes RUNE
+
+Single broadcast per slot, single apply step. Auto-fired by the client when
+the slot's progress hits its goal — no manual "Claim" button.
+
+```
+dailyQuestStore.updateProgress(type, delta)
+  └→ if (newProgress >= goal && !completed)
+       └→ getNFTBridge().claimDailyQuest(ymdUtc, slot, questType)
+            └→ hiveSync.broadcastCustomJson('rp_daily_quest_claim', payload)
+                 └→ chain replay: applyDailyQuestClaim(op, deps)
+                      ├ parse payload (ymd_utc, slot, quest_type)
+                      ├ validate ymd_utc within ±48h of op.timestamp
+                      ├ idempotency by (account, ymd_utc, slot)
+                      └ calculateCappedRuneCredit + putRuneLedgerEntryAndBalance
+                           ├ source: daily_quest_claim
+                           └ key:    daily_quest:S01:{account}:{ymd}:{slot}
+```
+
+`quest_type` is informational only — chain does NOT vary reward by it. Daily
+quest progress lives entirely client-side (event-bus subscribed), so a
+verifiable per-quest-type reward would require match transcripts (deferred
+to Phase 2 of ADR 0004). Flat reward removes spoof incentive.
+
+Refresh boundary is UTC (`new Date().toISOString().slice(0,10)`); a local
+clock shift cannot harvest extra quests because the chain idempotency key
+uses the broadcast `ymd_utc` and rejects out-of-skew dates.
 
 ## How a P2P ranked win becomes RUNE
 
@@ -108,10 +142,12 @@ These are explicit non-goals of v1 and must not be implemented:
 
 - RUNE transferable peer-to-peer.
 - Eitr ↔ RUNE conversion.
-- RUNE awarded by any op other than `match_result`, `campaign_result`, or `reward_claim`.
+- RUNE awarded by any op other than `match_result`, `campaign_result`, `daily_quest_claim`, or `reward_claim`.
 - Per-chapter caps separate from the account-wide campaign cap.
-- Client-supplied RUNE amounts (chain computes from canonical state).
+- Client-supplied RUNE amounts (chain computes from canonical state — daily quest reward is the constant `dailyQuestRunePerSlot`, not a client-supplied number).
 - A second `reward_claim campaign:*` path. Campaign credit happens inline in `applyCampaignResult` only.
+- A second `reward_claim daily_quest:*` path. Daily quest credit happens in `applyDailyQuestClaim` only.
+- Per-quest-type reward variance for `daily_quest_claim`. Chain cannot verify quest progress without match transcripts; varying reward by `quest_type` would let a client spoof the most-rewarding type on claim.
 
 ## See also
 

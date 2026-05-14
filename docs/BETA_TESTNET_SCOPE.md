@@ -77,6 +77,7 @@ Perform the first Hive smoke test:
 
 - Single (PvE practice) — no reward.
 - Campaign (PvE) — up to `10` first-clear RUNE per account/S01.
+- Daily quests — up to `20` RUNE per account/S01 (`3` slots × `2` RUNE/slot per UTC day; auto-claimed on completion).
 - Multiplayer P2P manual host/join — ranked RUNE + Season Score ranking.
 - Quick Match P2P as experimental matchmaking, not official ranked.
 
@@ -96,8 +97,8 @@ Ranking source:
 Score formula:
 
 ```txt
-seasonRuneEarned = min(campaignRune, 10) + min(p2pRune, 100)
-runeScoreBonus = floor(min(seasonRuneEarned, 110) * 0.5)
+seasonRuneEarned = min(campaignRune, 10) + min(p2pRune, 100) + min(dailyQuestRune, 20)
+runeScoreBonus = floor(min(seasonRuneEarned, 130) * 0.5)
 seasonScore = finalElo + runeScoreBonus
 ```
 
@@ -107,7 +108,7 @@ S01 prize snapshot:
 - Eligibility: at least `20` verified ranked matches and no unresolved dispute
   at snapshot time.
 - Prize eligibility requires the account to earn the full `10` campaign RUNE.
-- Max RUNE score bonus is `55`, so ELO remains the primary ranking force.
+- Max RUNE score bonus is `65`, so ELO remains the primary ranking force.
 - Tiebreakers: final ELO, ranked wins, win rate, head-to-head where available,
   then fewer abandons/disconnects.
 - Verifier/admin leaderboard snapshots are compact reads only; the final ranking
@@ -154,12 +155,14 @@ Server-side limits:
 
 Season S01 hard caps:
 
-- Total emission: `2_200_000` RUNE.
+- Total emission: `2_600_000` RUNE.
 - P2P pool: `2_000_000` RUNE.
 - Campaign pool: `200_000` RUNE.
+- Daily quest pool: `400_000` RUNE.
 - Campaign account cap: `10` RUNE per account per season.
 - P2P account cap: `100` RUNE per account per season for the closed beta target
   of 20,000 accounts.
+- Daily quest account cap: `20` RUNE per account per season.
 - Starter pack claim: `1` per account.
 
 Idempotency keys are mandatory:
@@ -167,6 +170,7 @@ Idempotency keys are mandatory:
 - Campaign first-clear: `campaign:S01:{account}:{campaignId}:{missionId}`.
 - P2P reward: `p2p:S01:{matchId}:{winner|loser}:{account}`.
 - Reward claim: `reward:S01:{account}:{rewardId}`.
+- Daily quest claim: `daily_quest:S01:{account}:{ymd_utc}:{slot}`.
 - RUNE pack spend: `pack:S01:{account}:{trxId}:{packType}:{quantity}`.
 
 Pack exchange limits:
@@ -178,12 +182,18 @@ Pack exchange limits:
 - Premium pack: `7` RUNE.
 - Mythic pack: `20` RUNE.
 - Max RUNE spend per pack op: `50` RUNE.
-- RUNE exchange limit per account/season: `1` standard, `1` premium,
+- RUNE exchange limit per account/season: `5` standard, `3` premium,
   `5` mythic.
-- Campaign-only target: full campaign cap (`10` RUNE) buys exactly `1`
-  standard + `1` premium pack, leaving `1` RUNE.
-- P2P target: full P2P cap (`100` RUNE) buys exactly `5` mythic packs.
-- Global RUNE pack instance caps: `20_000` standard, `20_000` premium,
+- Campaign-only target: full campaign cap (`10` RUNE) still buys exactly `1`
+  standard + `1` premium pack, leaving `1` RUNE — preserves the original
+  onboarding-pack guarantee.
+- Casual target (no P2P): campaign + daily (`30` RUNE) buys `4` standard +
+  `3` premium = `29` RUNE spent, `1` RUNE locked.
+- P2P target: full P2P cap (`100` RUNE) still buys exactly `5` mythic packs.
+- Active full target: full caps combined (`130` RUNE) buy `5` standard +
+  `3` premium + `5` mythic = `131` RUNE; the per-account RUNE total is
+  the binding constraint, not the pack limit.
+- Global RUNE pack instance caps: `100_000` standard, `60_000` premium,
   `100_000` mythic.
 - Pack quantities must be derived from `packType * quantity`; direct negative
   spends or direct card mints are invalid.
