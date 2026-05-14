@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { HashRouter, Routes, Route, Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { routes } from './lib/routes';
-import { Button, Panel } from './components/ui-norse';
+import { Button, Panel, ToastProvider } from './components/ui-norse';
 import { ChevronRight, Compass, LayoutGrid, Play, Settings as SettingsIcon, Swords, X } from 'lucide-react';
 import UnifiedCardSystem from "./game/components/UnifiedCardSystem";
 import "./index.css";
@@ -48,6 +48,16 @@ const DuatClaimPopup = lazy(() => import('./game/components/DuatClaimPopup'));
 const FactionPledgePopup = lazy(() =>
   import('./game/pvp').then(m => ({ default: m.FactionPledgePopup }))
 );
+
+const prototypeModules = import.meta.glob('./game/combat/prototypes/PokerViewportSafeAreaPrototype.tsx');
+const PokerViewportSafeAreaPrototype = lazy(async () => {
+  const loadPrototype = prototypeModules['./game/combat/prototypes/PokerViewportSafeAreaPrototype.tsx'];
+  if (!import.meta.env.DEV || loadPrototype === undefined) {
+    return { default: () => <Navigate to={routes.home} replace /> };
+  }
+
+  return loadPrototype() as Promise<{ default: React.ComponentType }>;
+});
 
 type DeferredInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -711,11 +721,16 @@ function App() {
         <GoldenCardFilter />
         <EitrMigrationBanner />
 
+        <ToastProvider position="top-right" richColors />
         <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <ViewTransitionBridge />
           <Suspense fallback={<LoadingScreen />}>
             <Routes>
               <Route path={routes.map} element={<MapPage />} />
+              <Route
+                path={routes.pokerViewportPrototype}
+                element={import.meta.env.DEV ? <PokerViewportSafeAreaPrototype /> : <Navigate to={routes.home} replace />}
+              />
 
               <Route element={<BridgeRuntimeBoundary />}>
                 <Route element={<GlobalOverlaysLayout />}>

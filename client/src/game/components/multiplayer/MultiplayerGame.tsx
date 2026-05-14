@@ -10,7 +10,6 @@ import { useNavigate } from 'react-router-dom';
 import { routes } from '../../../lib/routes';
 import { useMatchmaking } from '../../hooks/useMatchmaking';
 import { useWarbandStore, selectArmy } from '../../../lib/stores/useWarbandStore';
-import { ToastProvider } from '../../../components/ui-norse';
 import { P2PStatusBadge } from './P2PStatusBadge';
 import { resolveHeroPortrait } from '../../utils/art/artMapping';
 import { P2PProvider } from '../../context/P2PContext';
@@ -219,7 +218,6 @@ export const MultiplayerGame: React.FC = () => {
 		if (guard.kind === 'wait') return spinner;
 		return (
 			<>
-				<ToastProvider position="top-right" richColors />
 				<P2PStatusBadge />
 				<MatchSetupP2P fallback={spinner}>
 					<RagnarokGameCoordinator initialArmy={playerArmy} opponentArmy={opponentArmyFromPeer} />
