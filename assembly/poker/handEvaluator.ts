@@ -25,7 +25,7 @@ import {
  */
 function sortForTiebreak(cards: PokerCard[]): PokerCard[] {
 	// Count occurrences of each value
-	const valueCounts = new Map<i32, i32>();
+	const valueCounts = new Map<i32, i32>(); // audit: keys derived from sorted card values; insertion order is deterministic
 	for (let i = 0; i < cards.length; i++) {
 		const v = cards[i].numericValue;
 		valueCounts.set(v, (valueCounts.has(v) ? valueCounts.get(v) : 0) + 1);
@@ -107,7 +107,7 @@ export function evaluateFiveCardHand(cards: PokerCard[]): EvaluatedHand {
 	const isStraight = isRegularStraight || isWheelStraight;
 
 	// Count value occurrences
-	const valueCounts = new Map<i32, i32>();
+	const valueCounts = new Map<i32, i32>(); // audit: keys derived from sorted card values; insertion order is deterministic
 	for (let i = 0; i < cards.length; i++) {
 		const v = cards[i].numericValue;
 		valueCounts.set(v, (valueCounts.has(v) ? valueCounts.get(v) : 0) + 1);

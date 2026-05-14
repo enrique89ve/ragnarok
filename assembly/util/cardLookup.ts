@@ -6,7 +6,7 @@
 
 import { CardDef, EffectDef } from '../types/GameState';
 
-const cardRegistry = new Map<i32, CardDef>();
+const cardRegistry = new Map<i32, CardDef>(); // audit: lookup-only registry, never iterated for replay
 
 /** Clear all loaded card data */
 export function clearCardData(): void {
