@@ -7,7 +7,19 @@ One stop for everything RUNE. Other docs link here; this file is authoritative f
 - Non-transferable, season-scoped, replay-derived from chain ops.
 - Earned via P2P ranked wins, campaign first-clears, and daily quests. Spent via `rune_exchange` for packs.
 - Each source has an independent per-account cap. **P2P (100), campaign (10), and daily quest (20) do NOT share quota** — same account can hold up to 100 + 10 + 20 = 130 RUNE/season.
-- P2P remains the primary source (~77% of bonus input); daily quest gives casual players enough RUNE to actually purchase packs without canibalizing competitive scarcity.
+- P2P is canon-only in closed beta: the on-chain handler is wired but the client does **not** broadcast `match_result` until the winner-arbiter / ranking server lands (see [Beta status](#beta-status)). Closed-beta earn surface is **campaign (10) + daily quest (20) = 30 RUNE/season per account**.
+
+## Beta status
+
+| Source | Chain handler | Client broadcast | Closed beta |
+|---|---|---|---|
+| `p2p_ranked` | live (`applyRankedMatchSettlement`) | **stub** (no arbiter yet) | **deferred** |
+| `campaign_first_clear` | live | live (`publishCampaignVictoryResult`) | active |
+| `daily_quest_claim` | live | live (auto-claim on goal) | active |
+| `reward_claim` (tournament) | live | tournament server pending | deferred |
+| `rune_exchange` (sink) | live | live (pack purchase) | active |
+
+The P2P broadcast stub lives in [client/src/game/match/modes/p2p/lifecycle.ts](../client/src/game/match/modes/p2p/lifecycle.ts) and will be wired once the arbiter can verify the winner from a signed transcript. Until then, P2P matches produce no RUNE on either side; canon emission caps stay declared so the cap structure is forward-compatible.
 
 ## Caps (S01)
 
@@ -98,6 +110,10 @@ clock shift cannot harvest extra quests because the chain idempotency key
 uses the broadcast `ymd_utc` and rejects out-of-skew dates.
 
 ## How a P2P ranked win becomes RUNE
+
+> **Closed-beta status:** the client does not yet broadcast `match_result`. The
+> chain handler below is fully wired and tested; flipping the bit will require
+> the winner-arbiter (post-beta scope).
 
 ```
 match_result (ranked) → applyRankedMatchSettlement → P2P RUNE credit

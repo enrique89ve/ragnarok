@@ -8,12 +8,15 @@ import {
 import type { RuneStateSnapshot } from '../../../data/runeAPI';
 import { formatNumber } from './walletFormatting';
 
+type CapStatus = 'active' | 'deferred';
+
 type CapRow = {
 	key: 'p2p_ranked' | 'campaign_first_clear' | 'daily_quest_claim';
 	label: string;
 	icon: LucideIcon;
 	cap: number;
 	issued: number;
+	status: CapStatus;
 };
 
 function buildRows(state: RuneStateSnapshot): CapRow[] {
@@ -24,6 +27,7 @@ function buildRows(state: RuneStateSnapshot): CapRow[] {
 			icon: Trophy,
 			cap: state.p2pCap,
 			issued: state.p2pCreditTotal,
+			status: 'deferred',
 		},
 		{
 			key: 'campaign_first_clear',
@@ -31,6 +35,7 @@ function buildRows(state: RuneStateSnapshot): CapRow[] {
 			icon: Sparkles,
 			cap: state.campaignCap,
 			issued: state.campaignCreditTotal,
+			status: 'active',
 		},
 		{
 			key: 'daily_quest_claim',
@@ -38,6 +43,7 @@ function buildRows(state: RuneStateSnapshot): CapRow[] {
 			icon: CalendarCheck,
 			cap: state.dailyQuestCap,
 			issued: state.dailyQuestCreditTotal,
+			status: 'active',
 		},
 	];
 }
@@ -93,41 +99,64 @@ export function SeasonStateOverview({ state }: { state: RuneStateSnapshot }) {
 function CapRowItem({ row }: { row: CapRow }) {
 	const Icon = row.icon;
 	const pct = ratio(row.issued, row.cap);
+	const isDeferred = row.status === 'deferred';
+
+	const iconWrap = isDeferred
+		? 'border-obsidian-600 bg-obsidian-900/60 text-ink-500'
+		: 'border-bifrost-300/35 bg-bifrost-500/10 text-bifrost-200';
+	const titleClass = isDeferred ? 'text-ink-300' : 'text-ink-0';
+	const subtitle = isDeferred
+		? `Cap ${formatNumber(row.cap)} RUNE — emission paused`
+		: `${formatNumber(row.issued)} / ${formatNumber(row.cap)} RUNE`;
 
 	return (
-		<article className="border-l border-obsidian-600 bg-obsidian-950/55 px-4 py-3">
+		<article className={`border-l px-4 py-3 ${isDeferred ? 'border-obsidian-700 bg-obsidian-950/35' : 'border-obsidian-600 bg-obsidian-950/55'}`}>
 			<div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
 				<div className="flex min-w-0 items-center gap-3">
-					<span className="grid h-9 w-9 shrink-0 place-items-center border border-bifrost-300/35 bg-bifrost-500/10 text-bifrost-200">
+					<span className={`grid h-9 w-9 shrink-0 place-items-center border ${iconWrap}`}>
 						<Icon className="h-4 w-4" aria-hidden="true" />
 					</span>
 					<div className="min-w-0">
-						<h3 className="font-display text-sm font-bold uppercase tracking-[0.14em] text-ink-0">
-							{row.label}
-						</h3>
-						<p className="mt-1 font-mono text-xs text-ink-400">
-							{formatNumber(row.issued)} / {formatNumber(row.cap)} RUNE
+						<div className="flex flex-wrap items-center gap-2">
+							<h3 className={`font-display text-sm font-bold uppercase tracking-[0.14em] ${titleClass}`}>
+								{row.label}
+							</h3>
+							{isDeferred && (
+								<span
+									className="rounded border border-obsidian-600 bg-obsidian-900/70 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em] text-ink-400"
+									title="Awaiting winner-arbiter — see RUNE.md"
+								>
+									Post-beta
+								</span>
+							)}
+						</div>
+						<p className="mt-1 font-mono text-xs text-ink-400">{subtitle}</p>
+					</div>
+				</div>
+				{isDeferred ? (
+					<p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-500 md:min-w-50 md:text-right">
+						Not earning in closed beta
+					</p>
+				) : (
+					<div className="flex items-center gap-3 md:min-w-50">
+						<div
+							className="h-2 flex-1 overflow-hidden rounded-full bg-obsidian-800"
+							role="progressbar"
+							aria-valuenow={Math.round(pct)}
+							aria-valuemin={0}
+							aria-valuemax={100}
+							aria-label={`${row.label} issued`}
+						>
+							<div
+								className="h-full bg-linear-to-r from-bifrost-500 to-gold-300"
+								style={{ width: `${pct}%` }}
+							/>
+						</div>
+						<p className="w-12 text-right font-mono text-xs font-bold text-gold-200">
+							{formatPercent(row.issued, row.cap)}
 						</p>
 					</div>
-				</div>
-				<div className="flex items-center gap-3 md:min-w-50">
-					<div
-						className="h-2 flex-1 overflow-hidden rounded-full bg-obsidian-800"
-						role="progressbar"
-						aria-valuenow={Math.round(pct)}
-						aria-valuemin={0}
-						aria-valuemax={100}
-						aria-label={`${row.label} issued`}
-					>
-						<div
-							className="h-full bg-linear-to-r from-bifrost-500 to-gold-300"
-							style={{ width: `${pct}%` }}
-						/>
-					</div>
-					<p className="w-12 text-right font-mono text-xs font-bold text-gold-200">
-						{formatPercent(row.issued, row.cap)}
-					</p>
-				</div>
+				)}
 			</div>
 		</article>
 	);

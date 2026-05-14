@@ -78,10 +78,18 @@ Perform the first Hive smoke test:
 - Single (PvE practice) — no reward.
 - Campaign (PvE) — up to `10` first-clear RUNE per account/S01.
 - Daily quests — up to `20` RUNE per account/S01 (`3` slots × `2` RUNE/slot per UTC day; auto-claimed on completion).
-- Multiplayer P2P manual host/join — ranked RUNE + Season Score ranking.
+- Multiplayer P2P manual host/join — playable but **does not credit RUNE in closed beta**. The chain handler is live; client broadcast waits on the winner-arbiter (see [RUNE.md § Beta status](./RUNE.md#beta-status)).
 - Quick Match P2P as experimental matchmaking, not official ranked.
 
+Active closed-beta earn surface: **campaign (max 10) + daily quest (max 20) = 30 RUNE per account, per season**. P2P ranked stays in canon and caps but emits 0 RUNE until the arbiter ships.
+
 ## Season Ranking
+
+**Closed-beta gate:** ELO and the Season Score leaderboard go live once the
+winner-arbiter is shipped and P2P `match_result` broadcasts begin. Until then,
+campaign + daily quest RUNE accrue normally but the public leaderboard stays
+dark (no ranked match history to rank against). See
+[RUNE.md § Beta status](./RUNE.md#beta-status).
 
 The official S01 leaderboard is Season Score based. ELO is the dominant skill
 component; capped RUNE contributes a smaller participation bonus so prize
