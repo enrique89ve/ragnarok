@@ -125,6 +125,10 @@ export class HiveNFTBridge implements INFTBridge {
 		return hiveSync.claimReward(rewardId);
 	}
 
+	async claimDailyQuest(ymdUtc: string, slot: number, questType: string): Promise<BroadcastResult> {
+		return hiveSync.claimDailyQuest(ymdUtc, slot, questType);
+	}
+
 	async submitCampaignResult(payload: CampaignResultBroadcastPayload): Promise<BroadcastResult> {
 		return hiveSync.submitCampaignResult(payload);
 	}

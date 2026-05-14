@@ -680,6 +680,18 @@ export class HiveSync {
     });
   }
 
+  async claimDailyQuest(
+    ymdUtc: string,
+    slot: number,
+    questType: string,
+  ): Promise<HiveBroadcastResult> {
+    return this.broadcastCustomJson("rp_daily_quest_claim", {
+      ymd_utc: ymdUtc,
+      slot,
+      quest_type: questType,
+    });
+  }
+
   async submitCampaignResult(payload: HiveCampaignResultPayload): Promise<HiveBroadcastResult> {
     return this.broadcastCustomJson("rp_campaign_result", { ...payload });
   }

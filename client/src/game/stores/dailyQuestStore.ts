@@ -1,11 +1,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { TESTNET_RUNE_ECONOMY } from '@shared/protocol-core/runeEconomy';
 import { pickRandomQuests, type DailyQuestType, type QuestTemplate } from '../data/dailyQuestPool';
 import { getNFTBridge } from '../nft';
 import { debug } from '../config/debugConfig';
 
 export interface DailyQuest {
 	id: string;
+	slot: number;
+	ymdUtc: string;
 	type: DailyQuestType;
 	title: string;
 	description: string;
@@ -26,21 +29,20 @@ interface DailyQuestState {
 interface DailyQuestActions {
 	refreshIfNeeded: () => void;
 	updateProgress: (type: DailyQuestType, increment: number) => void;
-	claimReward: (questId: string) => { rune: number; xp: number } | null;
 	rerollQuest: (questId: string) => void;
 }
 
-function todayString(): string {
-	const d = new Date();
-	const year = d.getFullYear();
-	const month = String(d.getMonth() + 1).padStart(2, '0');
-	const day = String(d.getDate()).padStart(2, '0');
-	return `${year}-${month}-${day}`;
+const DAILY_QUEST_RUNE_REWARD = TESTNET_RUNE_ECONOMY.dailyQuestRunePerSlot;
+
+function todayUtcString(): string {
+	return new Date().toISOString().slice(0, 10);
 }
 
-function templateToQuest(template: QuestTemplate, index: number): DailyQuest {
+function templateToQuest(template: QuestTemplate, slot: number, ymdUtc: string): DailyQuest {
 	return {
-		id: `dq-${todayString()}-${index}`,
+		id: `dq-${ymdUtc}-${slot}`,
+		slot,
+		ymdUtc,
 		type: template.type,
 		title: template.title,
 		description: template.description.replace('{goal}', String(template.goal)),
@@ -48,8 +50,16 @@ function templateToQuest(template: QuestTemplate, index: number): DailyQuest {
 		goal: template.goal,
 		completed: false,
 		claimed: false,
-		reward: template.reward,
+		reward: { rune: DAILY_QUEST_RUNE_REWARD, xp: template.xp },
 	};
+}
+
+function broadcastDailyQuestClaim(quest: DailyQuest): void {
+	const bridge = getNFTBridge();
+	if (!bridge.isHiveMode()) return;
+	bridge.claimDailyQuest(quest.ymdUtc, quest.slot, quest.type)
+		.then(r => { if (r.success && r.trxId) bridge.emitTransactionConfirmed(r.trxId); })
+		.catch(err => debug.warn('[DailyQuest] Claim broadcast error:', err));
 }
 
 export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
@@ -61,51 +71,41 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 			rerollsUsedToday: 0,
 
 			refreshIfNeeded: () => {
-				const today = todayString();
+				const today = todayUtcString();
 				if (get().lastRefreshDate === today && get().quests.length > 0) return;
 
-				const templates = pickRandomQuests(3);
-				const quests = templates.map((t, i) => templateToQuest(t, i));
+				const templates = pickRandomQuests(TESTNET_RUNE_ECONOMY.dailyQuestSlotsPerDay);
+				const quests = templates.map((t, i) => templateToQuest(t, i, today));
 				set({ quests, lastRefreshDate: today, rerollsUsedToday: 0 });
 			},
 
 			updateProgress: (type, increment) => {
+				const claims: DailyQuest[] = [];
 				set(state => {
 					let changed = false;
 					const quests = state.quests.map(q => {
-						if (q.type === type && !q.completed) {
-							changed = true;
-							const newProgress = Math.min(q.progress + increment, q.goal);
-							return {
-								...q,
-								progress: newProgress,
-								completed: newProgress >= q.goal,
-							};
-						}
-						return q;
+						if (q.type !== type || q.completed) return q;
+						changed = true;
+						const newProgress = Math.min(q.progress + increment, q.goal);
+						const isNowComplete = newProgress >= q.goal;
+						const next: DailyQuest = {
+							...q,
+							progress: newProgress,
+							completed: isNowComplete,
+							claimed: isNowComplete ? true : q.claimed,
+						};
+						if (isNowComplete) claims.push(next);
+						return next;
 					});
-					return changed ? { quests } : {};
+					if (!changed) return {};
+					return {
+						quests,
+						totalCompleted: state.totalCompleted + claims.length,
+					};
 				});
-			},
-
-			claimReward: (questId) => {
-				const quest = get().quests.find(q => q.id === questId);
-				if (!quest || !quest.completed || quest.claimed) return null;
-
-				set(state => ({
-					quests: state.quests.map(q =>
-						q.id === questId ? { ...q, claimed: true } : q
-					),
-					totalCompleted: state.totalCompleted + 1,
-				}));
-
-				if (getNFTBridge().isHiveMode()) {
-					getNFTBridge().claimReward(`daily_quest:${questId}`)
-					.then(r => { if (r.success && r.trxId) getNFTBridge().emitTransactionConfirmed(r.trxId); })
-					.catch(err => debug.warn('[DailyQuest] Reward claim error:', err));
+				for (const claim of claims) {
+					broadcastDailyQuestClaim(claim);
 				}
-
-				return quest.reward;
 			},
 
 			rerollQuest: (questId) => {
@@ -119,7 +119,9 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 				set(state => {
 					const questIndex = state.quests.findIndex(q => q.id === questId);
 					if (questIndex === -1) return {};
-					const newQuest = templateToQuest(newTemplates[0], questIndex);
+					const slot = state.quests[questIndex].slot;
+					const ymdUtc = state.quests[questIndex].ymdUtc;
+					const newQuest = templateToQuest(newTemplates[0], slot, ymdUtc);
 					return {
 						quests: state.quests.map((q, i) => i === questIndex ? newQuest : q),
 						rerollsUsedToday: state.rerollsUsedToday + 1,
@@ -130,9 +132,9 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 		{
 			name: 'ragnarok-daily-quests',
 			partialize: (state) => {
-				const { refreshIfNeeded: _a, updateProgress: _b, claimReward: _c, rerollQuest: _d, ...data } = state;
+				const { refreshIfNeeded: _a, updateProgress: _b, rerollQuest: _c, ...data } = state;
 				return data;
 			},
-		}
-	)
+		},
+	),
 );
