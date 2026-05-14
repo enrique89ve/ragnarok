@@ -9,7 +9,6 @@ export const celticChapter: CampaignChapter = {
 	name: 'Tir na nOg: The Otherworld',
 	faction: 'celtic',
 	description: 'Enter the mystical Otherworld of Celtic legend where fae and gods blur the line between dream and reality.',
-	chapterReward: [{ type: 'pack', amount: 3 }, { type: 'rune', amount: 200 }],
 	cinematicIntro: {
 		title: 'Tir na nOg: The Otherworld',
 		style: 'Silver mist rolls across emerald hills, Celtic knotwork borders illuminate line by line, moonlit palette',
@@ -77,7 +76,6 @@ export const celticChapter: CampaignChapter = {
 			storyBridge: [
 				{ narration: 'Crows begin to gather on every branch behind you. Thousands of them, in a pattern that spells a name in the old script.', visualCue: 'A black sky full of crows turning together to spell a single word.', musicId: 'shadow_root', durationHint: 8 },
 			],
-			rewards: [{ type: 'rune', amount: 20 }],
 			campaignArmy: { king: 'king-yggdrasil', queen: 'hero-kvasir', rook: 'hero-baldur', bishop: 'hero-idunn', knight: 'hero-fjora' },
 		},
 		{
@@ -116,7 +114,6 @@ export const celticChapter: CampaignChapter = {
 			storyBridge: [
 				{ narration: 'You walk on. A single warrior is waiting on a ford ahead, alone, body twisted in something that might be rage and might be magic. The Hound of Ulster has been holding the line for a hundred names.', visualCue: 'A man-shape on a river crossing, twisted in unnatural ways, spear in hand.', musicId: 'jotun_rage', durationHint: 8 },
 			],
-			rewards: [{ type: 'rune', amount: 25 }],
 			campaignArmy: { king: 'king-ginnungagap', queen: 'hero-hel', rook: 'hero-vidar', bishop: 'hero-sigyn', knight: 'hero-nyx' },
 		},
 		{
@@ -156,7 +153,6 @@ export const celticChapter: CampaignChapter = {
 				{ narration: 'Beyond the ford, a quiet pool waits beneath nine hazel trees. A salmon as wide as a man circles slowly in it, scales bright as foreknowledge.', visualCue: 'A still pool. A great pale fish circling under hazel branches.', musicId: 'celtic_mist', durationHint: 8 },
 			],
 			prerequisiteIds: ['celtic-2'],
-			rewards: [{ type: 'rune', amount: 30 }],
 			campaignArmy: { king: 'king-surtr', queen: 'hero-sinmara', rook: 'hero-thor', bishop: 'hero-gerd', knight: 'hero-skadi' },
 		},
 		{
@@ -196,7 +192,6 @@ export const celticChapter: CampaignChapter = {
 				{ narration: 'You walk on. The ground begins to shake. Fomorians are gathering on the next ridge \u2014 and at their head, a king with a single eye that takes four men to lift.', visualCue: 'A vast one-eyed shape on a horizon, with handles set into his eyelid.', musicId: 'jotun_rage', durationHint: 8 },
 			],
 			prerequisiteIds: ['celtic-3'],
-			rewards: [{ type: 'rune', amount: 35 }, { type: 'eitr', amount: 50 }],
 			campaignArmy: { king: 'king-yggdrasil', queen: 'hero-odin', rook: 'hero-heimdall', bishop: 'hero-idunn', knight: 'hero-loki' },
 		},
 		{
@@ -239,7 +234,6 @@ export const celticChapter: CampaignChapter = {
 				{ narration: 'The Tuatha De Danann gather in their high hall. The Dagda himself, club in one hand, cauldron in the other, is laughing about something. He hears your footsteps and looks up.', visualCue: 'A massive booming god in a fur cloak with an enormous club and an enormous bowl of stew.', musicId: 'celtic_mist', durationHint: 8 },
 			],
 			prerequisiteIds: ['celtic-4'],
-			rewards: [{ type: 'rune', amount: 40 }],
 			campaignArmy: { king: 'king-ginnungagap', queen: 'hero-hades', rook: 'hero-logi', bishop: 'hero-ran', knight: 'hero-myrka' },
 		},
 		{
@@ -282,7 +276,6 @@ export const celticChapter: CampaignChapter = {
 				{ narration: 'You walk on. Golden light spills across fields of impossible flowers. The air smells like honey and forgetting. Tir na nOg has opened.', visualCue: 'A field of golden grass under a too-bright sun. A figure with golden hair smiling at you from a horse.', musicId: 'celestial_court', durationHint: 9 },
 			],
 			prerequisiteIds: ['celtic-5'],
-			rewards: [{ type: 'rune', amount: 50 }, { type: 'card', cardId: 20106 }],
 			campaignArmy: { king: 'king-buri', queen: 'hero-odin', rook: 'hero-thor', bishop: 'hero-freya', knight: 'hero-ullr' },
 		},
 		{
@@ -325,7 +318,6 @@ export const celticChapter: CampaignChapter = {
 				{ narration: 'Horns sound in the high sky. The Wild Hunt is riding tonight, and tonight\u2019s quarry is YOU.', visualCue: 'Spectral riders pouring across a midnight sky, hounds the size of horses baying in front of them.', musicId: 'jotun_rage', durationHint: 9 },
 			],
 			prerequisiteIds: ['celtic-6'],
-			rewards: [{ type: 'rune', amount: 55 }],
 			campaignArmy: { king: 'king-audumbla', queen: 'hero-sol', rook: 'hero-baldur', bishop: 'hero-freya', knight: 'hero-fjora' },
 		},
 		{
@@ -368,7 +360,6 @@ export const celticChapter: CampaignChapter = {
 				{ narration: 'You walk into a forge that burns with three different fires. Brigid is waiting, in three faces at once \u2014 the Smith, the Healer, the Poet.', visualCue: 'A goddess in three superimposed forms holding a hammer, a salve, and a harp.', musicId: 'forge_anvil', durationHint: 9 },
 			],
 			prerequisiteIds: ['celtic-7'],
-			rewards: [{ type: 'rune', amount: 60 }, { type: 'eitr', amount: 100 }],
 			campaignArmy: { king: 'king-ymir', queen: 'hero-sinmara', rook: 'hero-magni', bishop: 'hero-gerd', knight: 'hero-skadi' },
 		},
 		{
@@ -418,7 +409,6 @@ export const celticChapter: CampaignChapter = {
 				{ narration: 'And in the highest hall of the Tuatha De Danann, a young god with a long-armed spear is waiting for you. Lugh of the Long Arm. The master of every art. The slayer of Balor. Your final test.', visualCue: 'A bright young god in golden armor, spear in hand, smiling.', musicId: 'celestial_court', durationHint: 9 },
 			],
 			prerequisiteIds: ['celtic-8'],
-			rewards: [{ type: 'rune', amount: 75 }, { type: 'card', cardId: 20204 }],
 			campaignArmy: { king: 'king-surtr', queen: 'hero-sol', rook: 'hero-tyr', bishop: 'hero-eir', knight: 'hero-apollo' },
 		},
 		{
@@ -474,7 +464,6 @@ export const celticChapter: CampaignChapter = {
 				{ narration: 'Lugh is the master of everything \u2014 including the art of victory.', musicId: 'twilight_horn', durationHint: 7 },
 			],
 			prerequisiteIds: ['celtic-9'],
-			rewards: [{ type: 'rune', amount: 100 }, { type: 'card', cardId: 20111 }, { type: 'pack', amount: 2 }],
 			campaignArmy: { king: 'king-borr', queen: 'hero-odin', rook: 'hero-thor', bishop: 'hero-freya', knight: 'hero-loki' },
 			starThresholds: { threeStar: 16, twoStar: 24 },
 			isChapterFinale: true,

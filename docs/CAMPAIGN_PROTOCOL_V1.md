@@ -78,14 +78,18 @@ through the existing `StateAdapter` path:
 - `campaignSubmissions`
 - `campaignProgress`
 
-`campaignSubmissions` is a verifier inbox. It records accepted
-`rp_campaign_result` envelopes as `queued`, `consumed`, or `rejected`, but it is
-not the player's campaign state and can be rebuilt from chain history.
+`campaignSubmissions` records accepted `rp_campaign_result` envelopes. The apply
+step marks the entry `consumed` immediately after writing the corresponding
+progress record. The `queued` / `rejected` states are reserved for future
+transcript-replay verification (Phase 2 / mainnet hardening); they are not
+emitted by the current inline-validation path.
 
-`campaignProgress` is the only final campaign state. A verifier writes it only
-after replaying the transcript/final state and confirming the result against the
-campaign registry. Rewards and unlock checks must read `campaignProgress`, not
-submission status.
+`campaignProgress` is the only final campaign state. `applyCampaignResult`
+writes it inline after registry hash, mission, prerequisite, and nonce checks
+pass, and credits first-clear RUNE in the same apply step via the
+`campaign_first_clear` ledger source. Transcript-replay verification is
+reserved for Phase 2 / mainnet hardening (see ADR 0004). Rewards and unlock
+checks must read `campaignProgress`, not submission status.
 
 ## Local Run Ledger
 
@@ -107,14 +111,21 @@ building `rp_campaign_result`, but it is not authoritative campaign progress.
 
 ## Rewards
 
-`reward_claim campaign:{campaignId}:{missionId}` is gated by verified campaign
-progress. Queued submissions do not unlock economic rewards.
+`rp_campaign_result` itself credits first-clear RUNE in the same apply step
+that writes `campaignProgress`. There is no separate `reward_claim campaign:*`
+broadcast — a single chain op carries both the progression update and the
+economic settlement.
 
-For S01, a verified campaign reward claim also writes a `campaign_first_clear`
-RUNE ledger credit using source key
-`campaign:S01:{account}:{campaignId}:{missionId}`. The claim is idempotent:
+For S01, the `campaign_first_clear` RUNE ledger credit uses source key
+`campaign:S01:{account}:{campaignId}:{missionId}`. The credit is idempotent:
 the same mission cannot credit RUNE twice for the same account, and campaign
-RUNE remains capped by the season account and pool limits.
+RUNE remains capped by the season account and pool limits (10 RUNE/account
+across all chapters). The per-mission reward table is
+`runeEconomy.campaignStageRuneRewards` and is keyed by trailing mission
+ordinal: missions `*-1`..`*-4` pay 2 RUNE, `*-5`..`*-6` pay 1 RUNE, and any
+later mission ordinal is narrative-only (0 RUNE). Chapter mission counts are
+narrative; only the first six ordinals across all chapters participate in the
+campaign economy.
 
 ## Registry
 

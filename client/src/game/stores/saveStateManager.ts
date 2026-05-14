@@ -40,7 +40,11 @@ export function triggerAutoSave(): void {
 export interface PortableSaveState {
 	version: 3;
 	timestamp: number;
-	// Campaign progress
+	// Campaign progress.
+	// `rewardsClaimed` is vestigial since the per-mission reward claim was
+	// collapsed into `rp_campaign_result` (single chain op writes progress
+	// AND credits first-clear RUNE). The field is kept for v3 save compat
+	// and always serialized as []; the import path ignores it.
 	campaign: {
 		completedMissions: string[];
 		rewardsClaimed: string[];
@@ -97,10 +101,6 @@ export async function collectSaveState(): Promise<PortableSaveState> {
 		? Object.keys(rawMissions as Record<string, unknown>)
 		: Array.isArray(rawMissions) ? rawMissions as string[] : [];
 
-	const rawRewards = campaign.rewardsClaimed;
-	const rewardIds: string[] = Array.isArray(rawRewards) ? rawRewards as string[]
-		: rawRewards && typeof rawRewards === 'object' ? Object.keys(rawRewards as Record<string, unknown>) : [];
-
 	// Collect deck configs from localStorage
 	const decksRaw = localStorage.getItem('ragnarok-decks');
 	let decks: PortableSaveState['decks'] = [];
@@ -122,7 +122,7 @@ export async function collectSaveState(): Promise<PortableSaveState> {
 		timestamp: Date.now(),
 		campaign: {
 			completedMissions: missionIds,
-			rewardsClaimed: rewardIds,
+			rewardsClaimed: [],
 			difficulty: String(campaign.difficulty ?? 'normal'),
 		},
 		decks,
@@ -167,11 +167,13 @@ export async function restoreSaveState(state: PortableSaveState): Promise<{ succ
 		const { useStarterStore } = await import('./starterStore');
 		const { getNFTBridge } = await import('../nft');
 
-		// Restore campaign (set state directly via Zustand)
+		// Restore campaign (set state directly via Zustand).
+		// `rewardsClaimed` from v3 saves is intentionally ignored — the per-mission
+		// reward claim was collapsed into `rp_campaign_result` and the field is
+		// no longer part of the campaign store.
 		if (state.campaign) {
 			const campStore = useCampaignStore.getState() as unknown as Record<string, unknown>;
 			campStore.completedMissions = state.campaign.completedMissions;
-			campStore.rewardsClaimed = state.campaign.rewardsClaimed;
 		}
 
 		// Eitr is chain-derived per ADR 0001 — no local restore. The vestigial

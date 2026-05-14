@@ -1162,14 +1162,58 @@ async function applyCampaignResult(
 		transcriptRoot: parsed.transcriptRoot,
 		transcriptCid: parsed.transcriptCid,
 		finalStateHash: parsed.finalStateHash,
-		status: 'queued',
+		status: 'consumed',
 		trxId: op.trxId,
 		blockNum: op.blockNum,
 		timestamp: op.timestamp,
 	};
 
 	await deps.state.putCampaignSubmission(submission);
+
+	const existingProgress = await deps.state.getCampaignProgress(
+		op.broadcaster,
+		parsed.campaignId,
+		parsed.missionId,
+	);
+	const progress: CampaignProgressRecord = {
+		account: op.broadcaster,
+		campaignId: parsed.campaignId,
+		missionId: parsed.missionId,
+		bestDifficulty: pickBetterDifficulty(existingProgress?.bestDifficulty, parsed.difficulty),
+		bestTurns: existingProgress
+			? Math.min(existingProgress.bestTurns, parsed.turnCount)
+			: parsed.turnCount,
+		bestStars: existingProgress
+			? Math.max(existingProgress.bestStars, stars)
+			: stars,
+		completedAtBlock: op.blockNum,
+		completedTrxId: op.trxId,
+		status: 'verified',
+	};
+	await deps.state.putCampaignProgress(progress);
+
+	if (!existingProgress) {
+		const runeResult = await applyCampaignFirstClearRuneCredit(op, progress, deps);
+		if (runeResult) return runeResult;
+	}
+
 	return { status: 'applied' };
+}
+
+const CAMPAIGN_DIFFICULTY_ORDER: Record<CampaignDifficulty, number> = {
+	normal: 0,
+	heroic: 1,
+	mythic: 2,
+};
+
+function pickBetterDifficulty(
+	existing: CampaignDifficulty | undefined,
+	candidate: CampaignDifficulty,
+): CampaignDifficulty {
+	if (!existing) return candidate;
+	return CAMPAIGN_DIFFICULTY_ORDER[candidate] > CAMPAIGN_DIFFICULTY_ORDER[existing]
+		? candidate
+		: existing;
 }
 
 function decodeCardIds(hex: string): number[] {
@@ -1231,10 +1275,6 @@ async function applyRewardClaim(op: ProtocolOp, deps: ProtocolCoreDeps): Promise
 	const genesis = await deps.state.getGenesis();
 	if (!genesis) return reject('no genesis');
 
-	if (rewardId.startsWith('campaign:')) {
-		return applyCampaignRewardClaim(op, rewardId, deps);
-	}
-
 	const reward = deps.rewards.getRewardById(rewardId);
 	if (!reward) return reject(`unknown reward: ${rewardId}`);
 
@@ -1250,34 +1290,6 @@ async function applyRewardClaim(op: ProtocolOp, deps: ProtocolCoreDeps): Promise
 	const runeResult = await applyRewardRuneBonus(op, reward, deps);
 	if (runeResult) return runeResult;
 	await mintRewardCards(op, rewardId, reward, deps);
-
-	await deps.state.putRewardClaim(op.broadcaster, rewardId, op.blockNum);
-	return { status: 'applied' };
-}
-
-async function applyCampaignRewardClaim(
-	op: ProtocolOp,
-	rewardId: string,
-	deps: ProtocolCoreDeps,
-): Promise<OpResult> {
-	const [, campaignId, missionId] = rewardId.split(':');
-	if (!campaignId || !missionId) {
-		return reject('campaign reward id must be campaign:{campaignId}:{missionId}');
-	}
-
-	const alreadyClaimed = await deps.state.hasRewardClaim(op.broadcaster, rewardId);
-	const progress = await deps.state.getCampaignProgress(op.broadcaster, campaignId, missionId);
-	if (!progress) {
-		return alreadyClaimed
-			? { status: 'ignored' }
-			: reject(`campaign reward condition not met for ${campaignId}:${missionId}`);
-	}
-
-	const runeResult = await applyCampaignFirstClearRuneCredit(op, progress, deps);
-	if (runeResult) return runeResult;
-	if (alreadyClaimed) {
-		return { status: 'ignored' };
-	}
 
 	await deps.state.putRewardClaim(op.broadcaster, rewardId, op.blockNum);
 	return { status: 'applied' };

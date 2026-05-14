@@ -10,6 +10,7 @@ import type {
 	CompanionTransfer,
 	DuatClaimRecord,
 	EloRecord,
+	ForgeCommitRecord,
 	GenesisRecord,
 	MarketListing,
 	MarketOffer,
@@ -17,7 +18,6 @@ import type {
 	PackAsset,
 	PackCommitRecord,
 	PackSupplyRecord,
-	ProtocolOp,
 	RuneLedgerEntry,
 	RuneLedgerEntryQuery,
 	RuneLedgerTotalQuery,
@@ -25,6 +25,10 @@ import type {
 	SupplyRecord,
 	TokenBalance,
 } from './types';
+import type { EitrLedgerEntry } from './eitrEconomy';
+
+const CAMPAIGN_ID = 'war-of-pantheons';
+const RULESET_HASH = 'ruleset-hash-v1';
 
 function createStateAdapter(): StateAdapter & {
 	readonly campaignProgress: Map<string, CampaignProgressRecord>;
@@ -156,6 +160,13 @@ function createStateAdapter(): StateAdapter & {
 		async putPackSupply(): Promise<void> { /* noop */ },
 		async getCompanionTransfer(): Promise<CompanionTransfer | null> { return null; },
 		setTrxSiblings(): void { /* noop */ },
+		async getEitrLedgerEntry(): Promise<EitrLedgerEntry | null> { return null; },
+		async putEitrLedgerEntry(): Promise<void> { /* noop */ },
+		async getEitrLedgerEntries(): Promise<EitrLedgerEntry[]> { return []; },
+		async getEitrLedgerTotal(): Promise<number> { return 0; },
+		async getForgeCommit(): Promise<ForgeCommitRecord | null> { return null; },
+		async putForgeCommit(): Promise<void> { /* noop */ },
+		async getUnrevealedForgeCommitsBefore(): Promise<ForgeCommitRecord[]> { return []; },
 		async getDuatClaim(): Promise<DuatClaimRecord | null> { return null; },
 		async putDuatClaim(): Promise<void> { /* noop */ },
 		async getListing(): Promise<MarketListing | null> { return null; },
@@ -168,8 +179,7 @@ function createStateAdapter(): StateAdapter & {
 	};
 }
 
-function createDeps(state: StateAdapter, campaignId = 'war-of-pantheons'): ProtocolCoreDeps {
-	const rulesetHash = 'ruleset-hash-v1';
+function createDeps(state: StateAdapter, campaignId = CAMPAIGN_ID): ProtocolCoreDeps {
 	return {
 		state,
 		cards: {
@@ -180,7 +190,7 @@ function createDeps(state: StateAdapter, campaignId = 'war-of-pantheons'): Proto
 			getRewardById: () => null,
 		},
 		campaigns: {
-			getRegistryHash: () => rulesetHash,
+			getRegistryHash: () => RULESET_HASH,
 			getCampaignId: () => campaignId,
 			getMission: missionId => ({
 				id: missionId,
@@ -206,118 +216,100 @@ function createDeps(state: StateAdapter, campaignId = 'war-of-pantheons'): Proto
 	};
 }
 
-function makeRewardClaimOp(rewardId: string, overrides: Partial<ProtocolOp> = {}): ProtocolOp {
+interface CampaignResultOpInput {
+	readonly account?: string;
+	readonly missionId: string;
+	readonly nonce: number;
+	readonly turnCount?: number;
+	readonly difficulty?: 'normal' | 'heroic' | 'mythic';
+	readonly localRunId?: string;
+	readonly trxId?: string;
+	readonly blockNum?: number;
+	readonly timestamp?: number;
+}
+
+function makeCampaignResultRawOp(input: CampaignResultOpInput) {
+	const account = input.account ?? 'alice';
+	const blockNum = input.blockNum ?? 20;
+	const timestamp = input.timestamp ?? 123_000;
 	return {
-		action: 'reward_claim',
-		payload: { reward_id: rewardId },
-		broadcaster: 'alice',
-		trxId: 'claim-trx-1',
-		blockNum: 30,
-		timestamp: 130_000,
-		usedActiveAuth: false,
-		...overrides,
+		customJsonId: 'rp_campaign_result',
+		json: JSON.stringify({
+			v: 1,
+			cid: CAMPAIGN_ID,
+			m: input.missionId,
+			d: input.difficulty ?? 'normal',
+			n: input.nonce,
+			rid: input.localRunId ?? `run-${input.missionId}-${input.nonce}`,
+			lst: 1736200000000,
+			rh: RULESET_HASH,
+			tr: 'transcript-root',
+			tc: 'ipfs://campaign-transcript',
+			fh: 'final-state-hash',
+			t: input.turnCount ?? 9,
+		}),
+		broadcaster: account,
+		trxId: input.trxId ?? `trx-${input.missionId}-${input.nonce}`,
+		blockNum,
+		timestamp,
+		requiredPostingAuths: [account],
+		requiredAuths: [],
 	};
 }
 
-function putVerifiedProgress(
-	state: StateAdapter,
-	progress: CampaignProgressRecord,
-): Promise<void> {
-	return state.putCampaignProgress(progress);
+async function applyCampaignResult(
+	deps: ProtocolCoreDeps,
+	input: CampaignResultOpInput,
+) {
+	const normalized = normalizeRawOp(makeCampaignResultRawOp(input));
+	if (normalized.status !== 'ok') {
+		throw new Error(`normalizeRawOp failed: ${JSON.stringify(normalized)}`);
+	}
+	return applyOp(normalized.op, {
+		lastIrreversibleBlock: input.blockNum ?? 20,
+		getBlockId: async () => null,
+	}, deps);
 }
 
 describe('campaign_result protocol op', () => {
-	it('stores a queued campaign submission derived from the broadcaster identity', async () => {
+	it('marks the submission consumed, writes verified progress, and credits first-clear RUNE inline', async () => {
 		const state = createStateAdapter();
-		const campaignId = 'war-of-pantheons';
-		const localRunId = 'run-local-1';
-		const localStartedAt = 1736200000000;
-		const rulesetHash = 'ruleset-hash-v1';
-		const deps = createDeps(state, campaignId);
+		const deps = createDeps(state);
 
-		const normalized = normalizeRawOp({
-			customJsonId: 'rp_campaign_result',
-			json: JSON.stringify({
-				v: 1,
-				cid: campaignId,
-				m: 'norse-1',
-				d: 'normal',
-				n: 1,
-				rid: localRunId,
-				lst: localStartedAt,
-				rh: rulesetHash,
-				tr: 'transcript-root',
-				tc: 'ipfs://campaign-transcript',
-				fh: 'final-state-hash',
-				t: 9,
-			}),
-			broadcaster: 'alice',
-			trxId: 'trx-campaign-1',
-			blockNum: 20,
-			timestamp: 123_000,
-			requiredPostingAuths: ['alice'],
-			requiredAuths: [],
-		});
-
-		expect(normalized.status).toBe('ok');
-		if (normalized.status !== 'ok') return;
-
-		const result = await applyOp(normalized.op, {
-			lastIrreversibleBlock: 20,
-			getBlockId: async () => null,
-		}, deps);
+		const result = await applyCampaignResult(deps, { missionId: 'norse-1', nonce: 1 });
 
 		expect(result.status).toBe('applied');
-		const stored = state.campaignSubmissions.get('alice:war-of-pantheons:norse-1:normal:1');
-		expect(stored?.status).toBe('queued');
-		expect(stored?.stars).toBe(3);
-		expect(stored?.account).toBe('alice');
-		expect(stored?.campaignId).toBe(campaignId);
-		expect(stored?.localRunId).toBe(localRunId);
-		expect(stored?.localStartedAt).toBe(localStartedAt);
+
+		const submission = state.campaignSubmissions.get('alice:war-of-pantheons:norse-1:normal:1');
+		expect(submission?.status).toBe('consumed');
+		expect(submission?.stars).toBe(3);
+		expect(submission?.account).toBe('alice');
 
 		const expectedSeed = await sha256Hash(canonicalStringify({
 			account: 'alice',
-			campaignId,
+			campaignId: CAMPAIGN_ID,
 			difficulty: 'normal',
 			domain: 'ragnarok:campaign:v1',
-			localRunId,
-			localStartedAt,
+			localRunId: 'run-norse-1-1',
+			localStartedAt: 1736200000000,
 			missionId: 'norse-1',
 			nonce: 1,
-			rulesetHash,
+			rulesetHash: RULESET_HASH,
 		}));
-		expect(stored?.seed).toBe(expectedSeed);
-	});
+		expect(submission?.seed).toBe(expectedSeed);
 
-	it('credits first-clear campaign RUNE through verified campaign reward claims', async () => {
-		const state = createStateAdapter();
-		const deps = createDeps(state);
-		await putVerifiedProgress(state, {
+		const progress = state.campaignProgress.get('alice:war-of-pantheons:norse-1');
+		expect(progress).toMatchObject({
 			account: 'alice',
-			campaignId: 'war-of-pantheons',
+			campaignId: CAMPAIGN_ID,
 			missionId: 'norse-1',
 			bestDifficulty: 'normal',
 			bestTurns: 9,
 			bestStars: 3,
-			completedAtBlock: 20,
-			completedTrxId: 'campaign-result-trx',
 			status: 'verified',
 		});
 
-		const result = await applyOp(makeRewardClaimOp('campaign:war-of-pantheons:norse-1'), {
-			lastIrreversibleBlock: 30,
-			getBlockId: async () => null,
-		}, deps);
-
-		expect(result.status).toBe('applied');
 		expect((await state.getTokenBalance('alice')).RUNE).toBe(2);
-		expect(await state.getRuneLedgerTotal({
-			seasonId: 'S01',
-			direction: 'credit',
-			sourceType: 'campaign_first_clear',
-			account: 'alice',
-		})).toBe(2);
 		expect(state.runeLedger.get('S01:credit:campaign_first_clear:campaign:S01:alice:war-of-pantheons:norse-1')).toMatchObject({
 			account: 'alice',
 			amount: 2,
@@ -327,42 +319,51 @@ describe('campaign_result protocol op', () => {
 		});
 	});
 
-	it('ignores duplicate campaign reward claims without double-crediting RUNE', async () => {
+	it('does not double-credit RUNE on a replay (same mission, higher nonce)', async () => {
 		const state = createStateAdapter();
 		const deps = createDeps(state);
-		await putVerifiedProgress(state, {
-			account: 'alice',
-			campaignId: 'war-of-pantheons',
+
+		const first = await applyCampaignResult(deps, { missionId: 'norse-2', nonce: 1, turnCount: 14 });
+		expect(first.status).toBe('applied');
+		expect((await state.getTokenBalance('alice')).RUNE).toBe(2);
+
+		const replay = await applyCampaignResult(deps, {
 			missionId: 'norse-2',
-			bestDifficulty: 'normal',
-			bestTurns: 10,
-			bestStars: 3,
-			completedAtBlock: 20,
-			completedTrxId: 'campaign-result-trx',
-			status: 'verified',
+			nonce: 2,
+			turnCount: 8,
+			trxId: 'trx-norse-2-replay',
 		});
+		expect(replay.status).toBe('applied');
 
-		const firstResult = await applyOp(makeRewardClaimOp('campaign:war-of-pantheons:norse-2'), {
-			lastIrreversibleBlock: 30,
-			getBlockId: async () => null,
-		}, deps);
-		const duplicateResult = await applyOp(makeRewardClaimOp('campaign:war-of-pantheons:norse-2', {
-			trxId: 'claim-trx-duplicate',
-			blockNum: 31,
-		}), {
-			lastIrreversibleBlock: 31,
-			getBlockId: async () => null,
-		}, deps);
+		// Personal-best stats improved, but RUNE balance is unchanged.
+		expect((await state.getTokenBalance('alice')).RUNE).toBe(2);
+		const progress = state.campaignProgress.get('alice:war-of-pantheons:norse-2');
+		expect(progress?.bestTurns).toBe(8);
+		expect(progress?.bestStars).toBe(3);
+		expect(state.runeLedger.size).toBe(1);
+	});
 
-		expect(firstResult.status).toBe('applied');
-		expect(duplicateResult.status).toBe('ignored');
+	it('ignores a duplicate submission with the same nonce', async () => {
+		const state = createStateAdapter();
+		const deps = createDeps(state);
+
+		const first = await applyCampaignResult(deps, { missionId: 'norse-3', nonce: 1 });
+		expect(first.status).toBe('applied');
+
+		const duplicate = await applyCampaignResult(deps, {
+			missionId: 'norse-3',
+			nonce: 1,
+			trxId: 'trx-duplicate',
+		});
+		expect(duplicate.status).toBe('ignored');
 		expect((await state.getTokenBalance('alice')).RUNE).toBe(2);
 		expect(state.runeLedger.size).toBe(1);
 	});
 
-	it('clamps campaign RUNE to the account cap', async () => {
+	it('clamps inline RUNE credit to the per-account season cap', async () => {
 		const state = createStateAdapter();
 		const deps = createDeps(state);
+
 		await state.putRuneLedgerEntry({
 			entryId: 'S01:credit:campaign_first_clear:prefill-account-cap',
 			seasonId: 'S01',
@@ -378,22 +379,8 @@ describe('campaign_result protocol op', () => {
 			timestamp: 1,
 		});
 		await state.putTokenBalance({ account: 'alice', RUNE: 9 });
-		await putVerifiedProgress(state, {
-			account: 'alice',
-			campaignId: 'war-of-pantheons',
-			missionId: 'norse-3',
-			bestDifficulty: 'normal',
-			bestTurns: 10,
-			bestStars: 3,
-			completedAtBlock: 20,
-			completedTrxId: 'campaign-result-trx',
-			status: 'verified',
-		});
 
-		const result = await applyOp(makeRewardClaimOp('campaign:war-of-pantheons:norse-3'), {
-			lastIrreversibleBlock: 30,
-			getBlockId: async () => null,
-		}, deps);
+		const result = await applyCampaignResult(deps, { missionId: 'norse-3', nonce: 1 });
 
 		expect(result.status).toBe('applied');
 		expect((await state.getTokenBalance('alice')).RUNE).toBe(10);
@@ -402,17 +389,12 @@ describe('campaign_result protocol op', () => {
 			balanceBefore: 9,
 			balanceAfter: 10,
 		});
-		expect(await state.getRuneLedgerTotal({
-			seasonId: 'S01',
-			direction: 'credit',
-			sourceType: 'campaign_first_clear',
-			account: 'alice',
-		})).toBe(10);
 	});
 
-	it('clamps campaign RUNE to the global campaign cap', async () => {
+	it('clamps inline RUNE credit to the global campaign cap', async () => {
 		const state = createStateAdapter();
 		const deps = createDeps(state);
+
 		await state.putRuneLedgerEntry({
 			entryId: 'S01:credit:campaign_first_clear:prefill-global-cap',
 			seasonId: 'S01',
@@ -427,22 +409,8 @@ describe('campaign_result protocol op', () => {
 			blockNum: 1,
 			timestamp: 1,
 		});
-		await putVerifiedProgress(state, {
-			account: 'alice',
-			campaignId: 'war-of-pantheons',
-			missionId: 'norse-4',
-			bestDifficulty: 'normal',
-			bestTurns: 10,
-			bestStars: 3,
-			completedAtBlock: 20,
-			completedTrxId: 'campaign-result-trx',
-			status: 'verified',
-		});
 
-		const result = await applyOp(makeRewardClaimOp('campaign:war-of-pantheons:norse-4'), {
-			lastIrreversibleBlock: 30,
-			getBlockId: async () => null,
-		}, deps);
+		const result = await applyCampaignResult(deps, { missionId: 'norse-4', nonce: 1 });
 
 		expect(result.status).toBe('applied');
 		expect((await state.getTokenBalance('alice')).RUNE).toBe(1);
@@ -451,5 +419,116 @@ describe('campaign_result protocol op', () => {
 			direction: 'credit',
 			sourceType: 'campaign_first_clear',
 		})).toBe(200_000);
+	});
+
+	it('credits 0 RUNE for narrative-only missions past ordinal 6', async () => {
+		const state = createStateAdapter();
+		const deps = createDeps(state);
+
+		const result = await applyCampaignResult(deps, { missionId: 'norse-7', nonce: 1 });
+
+		expect(result.status).toBe('applied');
+		expect((await state.getTokenBalance('alice')).RUNE).toBe(0);
+		expect(state.runeLedger.size).toBe(0);
+
+		// Progress IS written even when reward is zero — narrative completion still
+		// unlocks prerequisite gating downstream.
+		expect(state.campaignProgress.get('alice:war-of-pantheons:norse-7')?.status).toBe('verified');
+	});
+
+	it('never credits more than 10 RUNE per account across all paying missions and chapters', async () => {
+		const state = createStateAdapter();
+		const deps = createDeps(state);
+
+		// Six paying ordinals split across norse + celtic chapters, then a tail of
+		// narrative-only ordinals. The per-account cap (10 RUNE) is account-wide,
+		// independent of chapter — table [2,2,2,2,1,1] applies per ordinal regardless
+		// of which chapter the player chose first.
+		const plan = [
+			{ missionId: 'norse-1', nonce: 1 },
+			{ missionId: 'norse-2', nonce: 2 },
+			{ missionId: 'norse-3', nonce: 3 },
+			{ missionId: 'norse-4', nonce: 4 },
+			{ missionId: 'norse-5', nonce: 5 },
+			{ missionId: 'norse-6', nonce: 6 },
+			{ missionId: 'celtic-1', nonce: 7 },
+			{ missionId: 'celtic-2', nonce: 8 },
+			{ missionId: 'celtic-3', nonce: 9 },
+			{ missionId: 'norse-7', nonce: 10 },
+			{ missionId: 'norse-8', nonce: 11 },
+		];
+
+		for (const step of plan) {
+			const r = await applyCampaignResult(deps, step);
+			expect(r.status).toBe('applied');
+			expect((await state.getTokenBalance('alice')).RUNE).toBeLessThanOrEqual(10);
+		}
+
+		expect((await state.getTokenBalance('alice')).RUNE).toBe(10);
+		expect(await state.getRuneLedgerTotal({
+			seasonId: 'S01',
+			direction: 'credit',
+			sourceType: 'campaign_first_clear',
+			account: 'alice',
+		})).toBe(10);
+	});
+
+	it('binds the credit to op.broadcaster — different accounts get independent ledger entries', async () => {
+		const state = createStateAdapter();
+		const deps = createDeps(state);
+
+		await applyCampaignResult(deps, { account: 'alice', missionId: 'norse-1', nonce: 1 });
+		await applyCampaignResult(deps, { account: 'bob', missionId: 'norse-1', nonce: 1 });
+
+		expect((await state.getTokenBalance('alice')).RUNE).toBe(2);
+		expect((await state.getTokenBalance('bob')).RUNE).toBe(2);
+
+		const aliceEntry = state.runeLedger.get('S01:credit:campaign_first_clear:campaign:S01:alice:war-of-pantheons:norse-1');
+		const bobEntry = state.runeLedger.get('S01:credit:campaign_first_clear:campaign:S01:bob:war-of-pantheons:norse-1');
+		expect(aliceEntry?.account).toBe('alice');
+		expect(bobEntry?.account).toBe('bob');
+		expect(aliceEntry?.amount).toBe(2);
+		expect(bobEntry?.amount).toBe(2);
+	});
+
+	it('campaign credit pool is isolated from the P2P ranked pool (independent caps + sources)', async () => {
+		const state = createStateAdapter();
+		const deps = createDeps(state);
+
+		// Pre-seed alice at the P2P account cap (100 RUNE from p2p_ranked).
+		// Campaign credit must NOT see the P2P balance as filling its own cap.
+		await state.putRuneLedgerEntry({
+			entryId: 'S01:credit:p2p_ranked:p2p:S01:match-prefill',
+			seasonId: 'S01',
+			account: 'alice',
+			direction: 'credit',
+			sourceType: 'p2p_ranked',
+			sourceKey: 'p2p:S01:match-prefill',
+			amount: 100,
+			balanceBefore: 0,
+			balanceAfter: 100,
+			trxId: 'p2p-prefill',
+			blockNum: 1,
+			timestamp: 1,
+		});
+		await state.putTokenBalance({ account: 'alice', RUNE: 100 });
+
+		const result = await applyCampaignResult(deps, { missionId: 'norse-1', nonce: 1 });
+
+		expect(result.status).toBe('applied');
+		// P2P pool already maxed; campaign pool fresh → +2 RUNE on top.
+		expect((await state.getTokenBalance('alice')).RUNE).toBe(102);
+		expect(await state.getRuneLedgerTotal({
+			seasonId: 'S01',
+			direction: 'credit',
+			sourceType: 'campaign_first_clear',
+			account: 'alice',
+		})).toBe(2);
+		expect(await state.getRuneLedgerTotal({
+			seasonId: 'S01',
+			direction: 'credit',
+			sourceType: 'p2p_ranked',
+			account: 'alice',
+		})).toBe(100);
 	});
 });

@@ -68,6 +68,20 @@ Classic 1v1 card battles without the chess layer.
 Main Menu → Mode Selection → Standard Match → Hero Selection → Deck Building (optional) → Combat Arena → Mulligan Phase → Turn Loop → Victory/Defeat
 ```
 
+### Campaign Mode
+
+Scripted single-player missions grouped into faction chapters (Norse,
+Twilight, Greek, Egyptian, Celtic, Eastern). Each victory broadcasts a
+single `rp_campaign_result` op which writes verified campaign progress
+and credits any first-clear RUNE in the same chain apply step.
+
+Chapter mission counts are narrative — only the first six mission ordinals
+across all chapters participate in the campaign economy. Per-mission RUNE:
+ordinals `*-1`..`*-4` pay 2 RUNE, `*-5`..`*-6` pay 1 RUNE, and any later
+ordinal is narrative-only. The per-account season cap is 10 RUNE total
+from campaign first-clears; once reached, subsequent first-clears are
+recorded as progress but pay 0 RUNE.
+
 ---
 
 ## Heroes & Classes

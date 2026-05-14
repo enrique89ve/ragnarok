@@ -9,7 +9,6 @@ export const easternChapter: CampaignChapter = {
 	name: 'The Celestial Gate: Myths Beyond the Veil',
 	faction: 'eastern',
 	description: 'Beyond the myths of the West lies an ancient truth. Chinese, Japanese, and Hindu gods await those who proved worthy across all four realms.',
-	chapterReward: [{ type: 'pack', amount: 5 }, { type: 'rune', amount: 500 }],
 	cinematicIntro: {
 		title: 'The Celestial Gate: Myths Beyond the Veil',
 		style: 'Ink-wash painting dissolves into golden temple architecture, cherry blossoms drift across transitions, jade and vermillion palette',
@@ -69,7 +68,6 @@ export const easternChapter: CampaignChapter = {
 				{ narration: 'A blinding light rises from the east. The Sun Goddess Amaterasu has heard you are here, and she is curious.', visualCue: 'A figure in white robes stepping out of a cave-mouth, light pouring around her.', musicId: 'celestial_court', durationHint: 8 },
 			],
 			prerequisiteIds: [],
-			rewards: [{ type: 'rune', amount: 50 }],
 			campaignArmy: { king: 'king-brimir', queen: 'hero-fujin', rook: 'hero-sarutahiko', bishop: 'hero-kamimusubi', knight: 'hero-tsukuyomi' },
 		},
 		{
@@ -112,7 +110,6 @@ export const easternChapter: CampaignChapter = {
 				{ narration: 'You walk on. The Jade Palace rises through the clouds, halls of pure jade stretching beyond mortal sight. The Jade Emperor is waiting with a celestial ledger and a stamp.', visualCue: 'A vast green palace floating among clouds, an emperor checking a scroll at a desk.', musicId: 'celestial_court', durationHint: 8 },
 			],
 			prerequisiteIds: ['eastern-1'],
-			rewards: [{ type: 'rune', amount: 55 }],
 			campaignArmy: { king: 'king-audumbla', queen: 'hero-sol', rook: 'hero-baldur', bishop: 'hero-kamimusubi', knight: 'hero-apollo' },
 		},
 		{
@@ -155,7 +152,6 @@ export const easternChapter: CampaignChapter = {
 				{ narration: 'A storm gathers in the clouds outside the jade walls. Susanoo, banished from heaven for his destructiveness, has heard you are inside. He wants to test you.', visualCue: 'A storm-cloud roiling with a face. A long red beard inside the lightning.', musicId: 'jotun_rage', durationHint: 8 },
 			],
 			prerequisiteIds: ['eastern-2'],
-			rewards: [{ type: 'rune', amount: 60 }],
 			campaignArmy: { king: 'king-borr', queen: 'hero-odin', rook: 'hero-heimdall', bishop: 'hero-hera', knight: 'hero-hermes' },
 		},
 		{
@@ -198,7 +194,6 @@ export const easternChapter: CampaignChapter = {
 				{ narration: 'A golden-furred figure somersaults down from a cloud. The Monkey King has heard about you. He wants to play.', visualCue: 'A grinning monkey with a gold staff bouncing into frame.', musicId: 'celestial_court', durationHint: 8 },
 			],
 			prerequisiteIds: ['eastern-3'],
-			rewards: [{ type: 'rune', amount: 65 }, { type: 'eitr', amount: 100 }],
 			campaignArmy: { king: 'king-surtr', queen: 'hero-fujin', rook: 'hero-thor', bishop: 'hero-poseidon', knight: 'hero-tsukuyomi' },
 		},
 		{
@@ -241,7 +236,6 @@ export const easternChapter: CampaignChapter = {
 				{ narration: 'You walk on. The next gate opens onto a darkness deeper than any underworld you have visited. Yomi. The mother of Japan is waiting.', visualCue: 'A pale woman in white burial robes, half her face beautiful, half her face the slow ruin of grief.', musicId: 'shadow_root', durationHint: 9 },
 			],
 			prerequisiteIds: ['eastern-4'],
-			rewards: [{ type: 'rune', amount: 70 }],
 			campaignArmy: { king: 'king-ginnungagap', queen: 'hero-loki', rook: 'hero-sarutahiko', bishop: 'hero-kamimusubi', knight: 'hero-loki' },
 		},
 		{
@@ -284,7 +278,6 @@ export const easternChapter: CampaignChapter = {
 				{ narration: 'A four-armed god with the head of an elephant is sitting cross-legged in the next chamber, smiling. He has a puzzle for you.', visualCue: 'A round elephant-headed god in saffron robes, four hands resting on his knees, eyes warm.', musicId: 'celestial_court', durationHint: 8 },
 			],
 			prerequisiteIds: ['eastern-5'],
-			rewards: [{ type: 'rune', amount: 75 }, { type: 'card', cardId: 20021 }],
 			campaignArmy: { king: 'king-tartarus', queen: 'hero-izanami', rook: 'hero-vidar', bishop: 'hero-ran', knight: 'hero-tsukuyomi' },
 		},
 		{
@@ -327,7 +320,6 @@ export const easternChapter: CampaignChapter = {
 				{ narration: 'You walk on. The gods and demons are churning the cosmic ocean to make the elixir of immortality. They need a third party in the middle to keep things honest.', visualCue: 'A vast mountain spinning in a foaming sea, a colossal serpent wrapped around it as a churning rope.', musicId: 'celestial_court', durationHint: 9 },
 			],
 			prerequisiteIds: ['eastern-6'],
-			rewards: [{ type: 'rune', amount: 80 }],
 			campaignArmy: { king: 'king-yggdrasil', queen: 'hero-odin', rook: 'hero-sarutahiko', bishop: 'hero-kamimusubi', knight: 'hero-hermes' },
 		},
 		{
@@ -378,7 +370,6 @@ export const easternChapter: CampaignChapter = {
 				{ narration: 'A figure dances in the next chamber. Each step destroys a universe. Each spin creates a new one. She is black as the void between stars, wearing a garland of skulls. Time itself, with a tongue red with the blood of demons, looking right at you.', visualCue: 'A goddess in mid-dance, multiple arms in motion, a necklace of skulls swinging.', musicId: 'shadow_root', durationHint: 9 },
 			],
 			prerequisiteIds: ['eastern-7'],
-			rewards: [{ type: 'rune', amount: 85 }, { type: 'eitr', amount: 150 }],
 			campaignArmy: { king: 'king-brimir', queen: 'hero-fujin', rook: 'hero-thor', bishop: 'hero-poseidon', knight: 'hero-tsukuyomi' },
 		},
 		{
@@ -429,7 +420,6 @@ export const easternChapter: CampaignChapter = {
 				{ narration: 'And then the barriers between mythologies begin to crack. Norse, Greek, Egyptian, Celtic, Eastern \u2014 every pantheon\u2019s apocalypse is converging on a single point at the same instant. The final battle is about to begin.', visualCue: 'A black point in the sky widening into a portal. Every mythology\u2019s end-time symbol pouring out at once.', musicId: 'ragnarok', durationHint: 12 },
 			],
 			prerequisiteIds: ['eastern-8'],
-			rewards: [{ type: 'rune', amount: 90 }, { type: 'card', cardId: 20114 }],
 			campaignArmy: { king: 'king-ginnungagap', queen: 'hero-izanami', rook: 'hero-logi', bishop: 'hero-ran', knight: 'hero-nyx' },
 		},
 		{
@@ -504,7 +494,6 @@ export const easternChapter: CampaignChapter = {
 				{ narration: 'But even this is just a story. And stories can be retold.', musicId: 'rebirth', durationHint: 8 },
 			],
 			prerequisiteIds: ['eastern-9'],
-			rewards: [{ type: 'rune', amount: 200 }, { type: 'card', cardId: 20001 }, { type: 'pack', amount: 5 }],
 			campaignArmy: { king: 'king-ginnungagap', queen: 'hero-zeus', rook: 'hero-thor', bishop: 'hero-poseidon', knight: 'hero-loki' },
 			starThresholds: { threeStar: 20, twoStar: 30 },
 			isChapterFinale: true,

@@ -22,6 +22,7 @@ import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import type { CampaignMission, CampaignChapter, Difficulty } from '../../../campaign/campaignTypes';
 import { getMissionStars } from '../../../campaign';
+import { getCampaignFirstClearRuneReward } from '@shared/protocol-core/runeEconomy';
 import { useRivalryStore } from '../../../pvp/rivalryStore';
 import CinematicCrawl from '../../campaign/CinematicCrawl';
 import type { GameOverSubPhase } from '../../../flow/round/types';
@@ -225,29 +226,16 @@ const GameOverPhase: React.FC<GameOverPhaseProps> = ({
 						</motion.div>
 					)}
 
-					{isVictory && campaign.mission.rewards.length > 0 && (
+					{isVictory && getCampaignFirstClearRuneReward(campaign.mission.id) > 0 && (
 						<motion.div
 							className="cgo-rewards"
 							initial={{ opacity: 0 }}
 							animate={{ opacity: 1 }}
 							transition={{ delay: 2.2, duration: 0.8 }}
 						>
-							{campaign.mission.rewards.map((r, i) => (
-								<div key={`${r.type}-${r.amount ?? 1}-${i}`} className="cgo-reward-pill">
-									+{r.amount || 1} {r.type}
-								</div>
-							))}
-							{/* Difficulty-locked bonus rewards */}
-							{campaign.difficulty === 'heroic' && (
-								<div className="cgo-difficulty-bonus heroic">
-									+50 eitr (heroic)
-								</div>
-							)}
-							{campaign.difficulty === 'mythic' && (
-								<div className="cgo-difficulty-bonus mythic">
-									+150 eitr + bonus pack (mythic)
-								</div>
-							)}
+							<div className="cgo-reward-pill">
+								First clear: +{getCampaignFirstClearRuneReward(campaign.mission.id)} RUNE
+							</div>
 						</motion.div>
 					)}
 

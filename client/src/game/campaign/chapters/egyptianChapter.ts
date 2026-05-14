@@ -9,7 +9,6 @@ export const egyptianChapter: CampaignChapter = {
 	name: 'Duat: Shadows of the Pharaohs',
 	faction: 'egyptian',
 	description: 'Traverse the Egyptian underworld and face the judgment of the gods who weigh the hearts of mortals.',
-	chapterReward: [{ type: 'pack', amount: 3 }, { type: 'rune', amount: 200 }],
 	cinematicIntro: {
 		title: 'Duat: Shadows of the Pharaohs',
 		style: 'Golden hieroglyphics fade in on black, sand particles drift upward, warm amber lighting',
@@ -68,7 +67,6 @@ export const egyptianChapter: CampaignChapter = {
 			storyBridge: [
 				{ narration: 'You walk into the desert. The sun is overhead. The horizon is empty. And then a tail uncurls from the sand at your feet.', visualCue: 'A scorpion tail rising from sand, venom glistening on the stinger.', musicId: 'shadow_root', durationHint: 8 },
 			],
-			rewards: [{ type: 'rune', amount: 20 }],
 			campaignArmy: { king: 'king-gaia', queen: 'hero-ammit', rook: 'hero-baldur', bishop: 'hero-maat', knight: 'hero-khepri' },
 		},
 		{
@@ -107,7 +105,6 @@ export const egyptianChapter: CampaignChapter = {
 			storyBridge: [
 				{ narration: 'You walk on. The Hall of Two Truths rises out of the sand, golden scales gleaming in a light with no source. Ma\u2019at is waiting for you with her feather.', visualCue: 'Vast golden scales in a hall with no walls. A woman with a single white feather.', musicId: 'duat_passage', durationHint: 8 },
 			],
-			rewards: [{ type: 'rune', amount: 25 }],
 			campaignArmy: { king: 'king-gaia', queen: 'hero-ammit', rook: 'hero-hephaestus', bishop: 'hero-maat', knight: 'hero-serqet' },
 		},
 		{
@@ -147,7 +144,6 @@ export const egyptianChapter: CampaignChapter = {
 				{ narration: 'And then the air thickens with the smell of crocodile, lion, and hippo. Ammit, the Devourer, has been waiting in the corner of the hall for an age, watching every weighing.', visualCue: 'A monstrous chimera goddess unfolding from the dark behind the scales.', musicId: 'shadow_root', durationHint: 8 },
 			],
 			prerequisiteIds: ['egyptian-2'],
-			rewards: [{ type: 'rune', amount: 30 }],
 			campaignArmy: { king: 'king-yggdrasil', queen: 'hero-ammit', rook: 'hero-heimdall', bishop: 'hero-maat', knight: 'hero-khepri' },
 		},
 		{
@@ -187,7 +183,6 @@ export const egyptianChapter: CampaignChapter = {
 				{ narration: 'You walk further. The horizon turns red \u2014 not with sunrise, with the storm-god\u2019s temper. Set is awake.', visualCue: 'A blood-red horizon rising. A figure in the distance with long red ears.', musicId: 'jotun_rage', durationHint: 8 },
 			],
 			prerequisiteIds: ['egyptian-3'],
-			rewards: [{ type: 'rune', amount: 35 }, { type: 'eitr', amount: 50 }],
 			campaignArmy: { king: 'king-tartarus', queen: 'hero-ammit', rook: 'hero-ares', bishop: 'hero-aphrodite', knight: 'hero-serqet' },
 		},
 		{
@@ -237,7 +232,6 @@ export const egyptianChapter: CampaignChapter = {
 				{ narration: 'Beyond the storm, the sky brightens \u2014 it is the under-dawn, the hour Ra\u2019s barge sails through the deepest part of the night. The barge is calling for protection.', visualCue: 'A great gold ship sailing across an underworld river, surrounded by serpents.', musicId: 'duat_passage', durationHint: 8 },
 			],
 			prerequisiteIds: ['egyptian-4'],
-			rewards: [{ type: 'rune', amount: 40 }],
 			campaignArmy: { king: 'king-surtr', queen: 'hero-ammit', rook: 'hero-logi', bishop: 'hero-poseidon', knight: 'hero-serqet' },
 		},
 		{
@@ -287,7 +281,6 @@ export const egyptianChapter: CampaignChapter = {
 				{ narration: 'You walk on into a chamber of moonlight reflected on a still river. A goddess in pleated linen waits there with a sad smile and the strongest magic in any pantheon.', visualCue: 'Isis seated by water, two great wings folded, a slight knowing smile.', musicId: 'duat_passage', durationHint: 8 },
 			],
 			prerequisiteIds: ['egyptian-5'],
-			rewards: [{ type: 'rune', amount: 50 }, { type: 'card', cardId: 20108 }],
 			campaignArmy: { king: 'king-audumbla', queen: 'hero-fujin', rook: 'hero-baldur', bishop: 'hero-hestia', knight: 'hero-apollo' },
 		},
 		{
@@ -330,7 +323,6 @@ export const egyptianChapter: CampaignChapter = {
 				{ narration: 'A jackal-headed god in linen wraps is waiting in the next chamber. He has personally attended every funeral in the cosmos. He looks up and his ears prick.', visualCue: 'A jackal-headed god seated cross-legged with embalming tools, looking up.', musicId: 'duat_passage', durationHint: 8 },
 			],
 			prerequisiteIds: ['egyptian-6'],
-			rewards: [{ type: 'rune', amount: 55 }],
 			campaignArmy: { king: 'king-ginnungagap', queen: 'hero-sol', rook: 'hero-tyr', bishop: 'hero-freya', knight: 'hero-hermes' },
 		},
 		{
@@ -380,7 +372,6 @@ export const egyptianChapter: CampaignChapter = {
 				{ narration: 'And in the deepest abyss, far below even Anubis\u2019s chamber, something black and serpentine is uncoiling. The chaos serpent Apophis has been here since before the gods. It does not approve of dawns.', visualCue: 'A vast black serpent in a vast black sea, opening a single yellow eye.', musicId: 'shadow_root', durationHint: 8 },
 			],
 			prerequisiteIds: ['egyptian-7'],
-			rewards: [{ type: 'rune', amount: 60 }, { type: 'eitr', amount: 100 }],
 			campaignArmy: { king: 'king-tartarus', queen: 'hero-hel', rook: 'hero-vidar', bishop: 'hero-maat', knight: 'hero-nyx' },
 		},
 		{
@@ -430,7 +421,6 @@ export const egyptianChapter: CampaignChapter = {
 				{ narration: 'The barge sails on. At the end of its journey waits Osiris on the Throne of the Dead, green-skinned, wrapped in white, the husband Isis loved enough to remake from pieces.', musicId: 'duat_passage', durationHint: 8 },
 			],
 			prerequisiteIds: ['egyptian-8'],
-			rewards: [{ type: 'rune', amount: 75 }, { type: 'card', cardId: 20109 }],
 			campaignArmy: { king: 'king-ginnungagap', queen: 'hero-hades', rook: 'hero-logi', bishop: 'hero-ran', knight: 'hero-nyx' },
 		},
 		{
@@ -486,7 +476,6 @@ export const egyptianChapter: CampaignChapter = {
 				{ narration: 'Osiris shakes his head slowly. \u201cNot yet,\u201d he says. \u201cBut you will return. You always return.\u201d The Throne of the Dead waits.', musicId: 'duat_passage', durationHint: 9 },
 			],
 			prerequisiteIds: ['egyptian-9'],
-			rewards: [{ type: 'rune', amount: 100 }, { type: 'card', cardId: 20116 }, { type: 'pack', amount: 2 }],
 			campaignArmy: { king: 'king-yggdrasil', queen: 'hero-hel', rook: 'hero-tyr', bishop: 'hero-maat', knight: 'hero-khepri' },
 			starThresholds: { threeStar: 16, twoStar: 24 },
 			isChapterFinale: true,

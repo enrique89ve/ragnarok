@@ -111,12 +111,6 @@ export interface BossRule {
 	description: string;
 }
 
-export interface CampaignReward {
-	type: 'card' | 'rune' | 'pack' | 'eitr';
-	cardId?: number;
-	amount?: number;
-}
-
 export interface CampaignArmy {
 	king?: string;
 	queen?: string;
@@ -198,7 +192,6 @@ export interface CampaignMission {
 	aiProfile: AIBehaviorProfile;
 	bossRules: BossRule[];
 	prerequisiteIds: string[];
-	rewards: CampaignReward[];
 	realm?: string;
 	campaignArmy?: CampaignArmy;
 	bossQuips?: BossQuips;
@@ -276,7 +269,6 @@ export interface CampaignChapter {
 	description: string;
 	cinematicIntro?: CinematicIntro;
 	missions: CampaignMission[];
-	chapterReward: CampaignReward[];
 }
 
 export type Difficulty = 'normal' | 'heroic' | 'mythic';

@@ -206,7 +206,7 @@ function applyCampaignResult(payload: Record<string, unknown>): DerivedState | u
 		campaignDifficulty: difficulty,
 		campaignLocalRunId: localRunId,
 		campaignLocalStartedAt: localStartedAt,
-		campaignSubmissionStatus: 'queued',
+		campaignSubmissionStatus: 'consumed',
 		transcriptCID,
 	};
 }

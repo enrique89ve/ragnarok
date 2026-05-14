@@ -4,7 +4,6 @@ import type { Difficulty } from './campaignTypes';
 import { getNFTBridge } from '../nft';
 import { debug } from '../config/debugConfig';
 import { triggerAutoSave } from '../stores/saveStateManager';
-import { CAMPAIGN_ID } from '@shared/campaign/constants';
 import { createCampaignRunDraft, saveCampaignRunDraft } from './campaignResultAdapter';
 
 interface MissionCompletion {
@@ -19,7 +18,6 @@ interface CampaignState {
 	currentMission: string | null;
 	currentRunId: string | null;
 	currentDifficulty: Difficulty;
-	rewardsClaimed: string[];
 	seenCinematics: string[];
 	// Transient per-mission runtime state — never persisted. Resets on
 	// startMission/clearCurrent so a fresh mission boots clean.
@@ -29,7 +27,6 @@ interface CampaignState {
 interface CampaignActions {
 	startMission: (missionId: string, difficulty: Difficulty) => void;
 	completeMission: (missionId: string, difficulty: Difficulty, turns: number) => void;
-	claimReward: (missionId: string) => void;
 	isMissionCompleted: (missionId: string) => boolean;
 	isMissionUnlocked: (missionId: string, prerequisites: string[]) => boolean;
 	getChapterProgress: (chapterId: string, missionIds: string[]) => number;
@@ -49,7 +46,6 @@ export const useCampaignStore = create<CampaignState & CampaignActions>()(
 			currentMission: null,
 			currentRunId: null,
 			currentDifficulty: 'normal',
-			rewardsClaimed: [],
 			seenCinematics: [],
 			bossRulesApplied: false,
 
@@ -88,23 +84,11 @@ export const useCampaignStore = create<CampaignState & CampaignActions>()(
 				triggerAutoSave();
 			},
 
-			claimReward: (missionId) => {
-				if (get().rewardsClaimed.includes(missionId)) return;
-				set(state => ({
-					rewardsClaimed: [...state.rewardsClaimed, missionId],
-				}));
-				if (getNFTBridge().isHiveMode()) {
-					getNFTBridge().claimReward(`campaign:${CAMPAIGN_ID}:${missionId}`)
-					.then(r => { if (r.success && r.trxId) getNFTBridge().emitTransactionConfirmed(r.trxId); })
-					.catch(err => debug.warn('[campaignStore] Reward claim failed:', err));
-				}
-			},
-
 			isMissionCompleted: (missionId) => {
 				return !!get().completedMissions[missionId];
 			},
 
-			isMissionUnlocked: (missionId, prerequisites) => {
+			isMissionUnlocked: (_missionId, prerequisites) => {
 				if (prerequisites.length === 0) return true;
 				const completed = get().completedMissions;
 				return prerequisites.every(id => !!completed[id]);
@@ -142,7 +126,6 @@ export const useCampaignStore = create<CampaignState & CampaignActions>()(
 				currentMission: null,
 				currentRunId: null,
 				currentDifficulty: 'normal',
-				rewardsClaimed: [],
 				seenCinematics: [],
 				bossRulesApplied: false,
 			}),
@@ -154,7 +137,6 @@ export const useCampaignStore = create<CampaignState & CampaignActions>()(
 			name: 'ragnarok-campaign',
 			partialize: (state) => ({
 				completedMissions: state.completedMissions,
-				rewardsClaimed: state.rewardsClaimed,
 				seenCinematics: state.seenCinematics,
 			}),
 		}

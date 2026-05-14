@@ -98,8 +98,8 @@ _Avoid_: server as hidden truth, per-request heavyweight recomputation, gameplay
 - Campaign completion is declared with Hive `custom_json` id `rp_campaign_result`.
 - The Hive broadcaster is the authoritative player identity; payload usernames are ignored.
 - Local starts are stored as IndexedDB `campaign_runs`; `localRunId` and `localStartedAt` bind a result to a local draft but are not proof of start.
-- `campaignSubmissions` is only a verifier inbox for accepted result envelopes.
-- `campaignProgress` is the only final campaign state and the only state that unlocks campaign rewards.
+- `campaignSubmissions` is an inbox of accepted result envelopes, marked `consumed` after inline validation writes the corresponding progress record.
+- `campaignProgress` is the only final campaign state. `applyCampaignResult` writes it inline after registry hash, mission, prerequisite, and nonce checks pass, and credits first-clear RUNE in the same apply step. Transcript-replay verification is reserved for Phase 2 / mainnet hardening (see ADR 0004).
 - Testnet persistence can use local JSON or IndexedDB adapters; the protocol must stay rebuildable from chain history.
 
 ## Chain And RUNE Read Surface

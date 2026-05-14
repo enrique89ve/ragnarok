@@ -3,7 +3,8 @@ import { motion } from 'framer-motion';
 import { ChevronLeft, Play, Swords } from 'lucide-react';
 import { Button } from '../../../components/ui-norse';
 import { useCampaignStore } from '../../campaign';
-import type { CampaignChapter, CampaignMission, CampaignReward, Difficulty } from '../../campaign/campaignTypes';
+import type { CampaignChapter, CampaignMission, Difficulty } from '../../campaign/campaignTypes';
+import { getCampaignFirstClearRuneReward } from '@shared/protocol-core/runeEconomy';
 import {
 	KICKER_CLASS,
 	DISPLAY_TITLE_CLASS,
@@ -27,19 +28,9 @@ const DIFFICULTY_META: Record<Difficulty, { label: string; blurb: string }> = {
 	},
 };
 
-function describeReward(reward: CampaignReward): string {
-	switch (reward.type) {
-		case 'rune':
-			return `${reward.amount ?? 0} Rune`;
-		case 'card':
-			return `Card #${reward.cardId ?? '?'}`;
-		case 'pack':
-			return `${reward.amount ?? 0} Packs`;
-		case 'eitr':
-			return `${reward.amount ?? 0} Eitr`;
-		default:
-			return 'Campaign Reward';
-	}
+function describeMissionReward(missionId: string): string {
+	const rune = getCampaignFirstClearRuneReward(missionId);
+	return rune > 0 ? `First clear: +${rune} RUNE` : 'Narrative only';
 }
 
 function getEncounterTone(mission: CampaignMission): string {
@@ -326,12 +317,9 @@ export function MissionBriefing({
 					<div className="min-w-0">
 						<p className={`${KICKER_CLASS} text-left`}>Rewards on Clear</p>
 						<div className="mt-3 flex flex-wrap gap-2">
-							{mission.rewards.map((reward, index) => (
-								<span key={index} className={PILL_CLASS}>
-									{describeReward(reward)}
-								</span>
-							))}
+							<span className={PILL_CLASS}>{describeMissionReward(mission.id)}</span>
 						</div>
+						<p className="mt-2 text-xs opacity-70">Season cap: 10 RUNE per account from campaign first-clears.</p>
 					</div>
 
 					<Button
