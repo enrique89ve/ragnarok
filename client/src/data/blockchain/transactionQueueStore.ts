@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import { accountScopedStorage, registerAccountScopedStore } from '../../lib/storage/accountScopedStorage';
 import type {
 	TransactionEntry,
 	BlockchainActionType,
@@ -189,12 +190,15 @@ export const useTransactionQueueStore = create<TransactionQueueStore>()(
 		}),
 		{
 			name: 'ragnarok-blockchain-queue',
+			storage: createJSONStorage(() => accountScopedStorage),
 			partialize: (state) => ({
 				transactions: state.transactions.slice(0, MAX_QUEUE_SIZE),
 			}),
 		}
 	)
 );
+
+registerAccountScopedStore(useTransactionQueueStore);
 
 // Auto-cleanup on load and periodically (deferred to avoid TDZ in bundled chunks)
 const _doCleanup = () => {

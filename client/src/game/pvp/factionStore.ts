@@ -19,7 +19,8 @@
 */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import { accountScopedStorage, registerAccountScopedStore } from '../../lib/storage/accountScopedStorage';
 import type { FactionId } from './pvpData';
 
 interface FactionState {
@@ -70,6 +71,11 @@ export const useFactionStore = create<FactionState>()(
 				lastSeenRankId: 1,
 			}),
 		}),
-		{ name: 'ragnarok-faction-pledge' }
+		{
+			name: 'ragnarok-faction-pledge',
+			storage: createJSONStorage(() => accountScopedStorage),
+		},
 	)
 );
+
+registerAccountScopedStore(useFactionStore);

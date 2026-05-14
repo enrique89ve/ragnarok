@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import { accountScopedStorage, registerAccountScopedStore } from '../../lib/storage/accountScopedStorage';
 
 export interface Friend {
 	hiveUsername: string;
@@ -86,9 +87,12 @@ export const useFriendStore = create<FriendState & FriendActions>()(
 		}),
 		{
 			name: 'ragnarok-friends',
+			storage: createJSONStorage(() => accountScopedStorage),
 			partialize: (state) => ({
 				friends: state.friends,
 			}),
 		}
 	)
 );
+
+registerAccountScopedStore(useFriendStore);

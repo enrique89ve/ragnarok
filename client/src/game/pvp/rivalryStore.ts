@@ -22,7 +22,8 @@
 */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import { accountScopedStorage, registerAccountScopedStore } from '../../lib/storage/accountScopedStorage';
 
 const MAX_RIVALS = 10;
 
@@ -81,6 +82,11 @@ export const useRivalryStore = create<RivalryState>()(
 
 			clear: () => set({ rivals: [] }),
 		}),
-		{ name: 'ragnarok-pvp-rivalries' }
+		{
+			name: 'ragnarok-pvp-rivalries',
+			storage: createJSONStorage(() => accountScopedStorage),
+		},
 	)
 );
+
+registerAccountScopedStore(useRivalryStore);

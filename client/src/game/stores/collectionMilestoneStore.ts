@@ -11,7 +11,8 @@
 */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import { accountScopedStorage, registerAccountScopedStore } from '../../lib/storage/accountScopedStorage';
 
 export interface CollectionMilestone {
 	id: string;
@@ -70,6 +71,11 @@ export const useCollectionMilestoneStore = create<MilestoneState>()(
 				return newlyEarned;
 			},
 		}),
-		{ name: 'ragnarok-collection-milestones' }
+		{
+			name: 'ragnarok-collection-milestones',
+			storage: createJSONStorage(() => accountScopedStorage),
+		},
 	)
 );
+
+registerAccountScopedStore(useCollectionMilestoneStore);

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import type { Difficulty } from './campaignTypes';
+import { accountScopedStorage, registerAccountScopedStore } from '../../lib/storage/accountScopedStorage';
 import { getNFTBridge } from '../nft';
 import { debug } from '../config/debugConfig';
 import { triggerAutoSave } from '../stores/saveStateManager';
@@ -135,6 +136,7 @@ export const useCampaignStore = create<CampaignState & CampaignActions>()(
 		}),
 		{
 			name: 'ragnarok-campaign',
+			storage: createJSONStorage(() => accountScopedStorage),
 			partialize: (state) => ({
 				completedMissions: state.completedMissions,
 				seenCinematics: state.seenCinematics,
@@ -142,3 +144,5 @@ export const useCampaignStore = create<CampaignState & CampaignActions>()(
 		}
 	)
 );
+
+registerAccountScopedStore(useCampaignStore);

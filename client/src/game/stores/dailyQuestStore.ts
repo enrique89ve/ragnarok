@@ -1,7 +1,8 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import { toast } from 'sonner';
 import { TESTNET_RUNE_ECONOMY } from '@shared/protocol-core/runeEconomy';
+import { accountScopedStorage, registerAccountScopedStore } from '../../lib/storage/accountScopedStorage';
 import { pickRandomQuests, type DailyQuestType, type QuestTemplate } from '../data/dailyQuestPool';
 import { getNFTBridge } from '../nft';
 import { debug } from '../config/debugConfig';
@@ -172,6 +173,7 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 		}),
 		{
 			name: 'ragnarok-daily-quests',
+			storage: createJSONStorage(() => accountScopedStorage),
 			partialize: (state) => {
 				const {
 					refreshIfNeeded: _a,
@@ -186,3 +188,5 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 		},
 	),
 );
+
+registerAccountScopedStore(useDailyQuestStore);

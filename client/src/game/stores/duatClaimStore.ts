@@ -8,7 +8,8 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import { accountScopedStorage, registerAccountScopedStore } from '../../lib/storage/accountScopedStorage';
 import { debug } from '../config/debugConfig';
 import { getNFTBridge } from '../nft';
 import { isHiveMode, isSharedNetworkEnvironment } from '../config/featureFlags';
@@ -240,6 +241,7 @@ export const useDuatClaimStore = create<DuatClaimState>()(
 		}),
 		{
 			name: 'ragnarok-duat-claim',
+			storage: createJSONStorage(() => accountScopedStorage),
 			partialize: (state) => ({
 				pendingClaimTrxId: state.pendingClaimTrxId,
 				dismissed: state.dismissed,
@@ -247,3 +249,5 @@ export const useDuatClaimStore = create<DuatClaimState>()(
 		},
 	),
 );
+
+registerAccountScopedStore(useDuatClaimStore);

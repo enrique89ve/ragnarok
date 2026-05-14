@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import { accountScopedStorage, registerAccountScopedStore } from '../../lib/storage/accountScopedStorage';
 
 export interface ReplayMove {
 	type: string;
@@ -96,7 +97,10 @@ export const useReplayStore = create<ReplayState & ReplayActions>()(
 		}),
 		{
 			name: 'ragnarok-replays',
+			storage: createJSONStorage(() => accountScopedStorage),
 			partialize: (state) => ({ matchHistory: state.matchHistory }),
 		}
 	)
 );
+
+registerAccountScopedStore(useReplayStore);

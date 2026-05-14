@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import { accountScopedStorage, registerAccountScopedStore } from '../../lib/storage/accountScopedStorage';
 import { getCurrentSeasonNumber, calculateSoftReset } from '../utils/seasonUtils';
 
 interface SeasonState {
@@ -59,6 +60,7 @@ export const useSeasonStore = create<SeasonState & SeasonActions>()(
 		}),
 		{
 			name: 'ragnarok-season',
+			storage: createJSONStorage(() => accountScopedStorage),
 			partialize: (state) => ({
 				lastResetSeason: state.lastResetSeason,
 				seasonElo: state.seasonElo,
@@ -69,3 +71,5 @@ export const useSeasonStore = create<SeasonState & SeasonActions>()(
 		}
 	)
 );
+
+registerAccountScopedStore(useSeasonStore);

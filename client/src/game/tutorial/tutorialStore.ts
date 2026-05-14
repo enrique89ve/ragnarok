@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import { accountScopedStorage, registerAccountScopedStore } from '../../lib/storage/accountScopedStorage';
 
 export interface TutorialStep {
 	id: string;
@@ -91,6 +92,7 @@ export const useTutorialStore = create<TutorialState & TutorialActions>()(
 		}),
 		{
 			name: 'ragnarok-tutorial',
+			storage: createJSONStorage(() => accountScopedStorage),
 			partialize: (state) => ({
 				completedSteps: state.completedSteps,
 				tutorialDismissed: state.tutorialDismissed,
@@ -98,3 +100,5 @@ export const useTutorialStore = create<TutorialState & TutorialActions>()(
 		}
 	)
 );
+
+registerAccountScopedStore(useTutorialStore);
