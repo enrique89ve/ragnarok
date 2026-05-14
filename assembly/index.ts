@@ -51,6 +51,10 @@ export {
 	getTotalCommunityCards,
 } from './poker/phaseManager';
 
+// Chess exports (Phase 1 — geometry-only; mines/stamina stay TS hooks
+// in chessCombatSlice — see .scratch/game-protocol-v2-phase1/DECISIONS.md D1).
+export { applyChessAction } from './chess/reducer';
+
 export {
 	calculateFinalDamage,
 	createPokerDeck,

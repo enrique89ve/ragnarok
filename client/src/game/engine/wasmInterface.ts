@@ -31,6 +31,7 @@ interface WasmExports extends WasmCardLoader {
 	isRevealPhase(phase: number): boolean;
 	getCommunityCardsToReveal(phase: number): number;
 	getTotalCommunityCards(phase: number): number;
+	applyChessAction(snapshotJson: string, actionJson: string): string;
 }
 
 async function computeBinaryHash(bytes: ArrayBuffer): Promise<string> {
@@ -187,6 +188,11 @@ export async function initializeWasm(): Promise<boolean> {
 			getCardCount(): number {
 				return (rawExports.getCardCount as Function)();
 			},
+			applyChessAction(snapshotJson: string, actionJson: string): string {
+				const sPtr = lowerString(snapshotJson) || notnull();
+				const aPtr = lowerString(actionJson) || notnull();
+				return liftString((rawExports.applyChessAction as Function)(sPtr, aPtr) >>> 0);
+			},
 		};
 
 		return true;
@@ -244,6 +250,16 @@ export function wasmIsBettingPhase(phase: number): boolean {
 
 export function wasmIsRevealPhase(phase: number): boolean {
 	return requireWasm().isRevealPhase(phase);
+}
+
+/**
+ * applyChessActionWasm — Phase 1 chess reducer call. The TS shim at
+ * client/src/game/engine/chessReducer.ts (issue 03) wraps this with
+ * canonical serialization. Inputs must be canonical-form JSON per
+ * shared/protocol-core/chess/canonicalize.ts; output is canonical too.
+ */
+export function applyChessActionWasm(snapshotJson: string, actionJson: string): string {
+	return requireWasm().applyChessAction(snapshotJson, actionJson);
 }
 
 export async function loadCardDataIntoWasm(cards: import('../types').CardData[]): Promise<number> {
