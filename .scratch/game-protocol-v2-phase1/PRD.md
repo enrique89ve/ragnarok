@@ -1,10 +1,10 @@
 # PRD — Game protocol v2 Phase 1 (chess engine → `assembly/chess/`)
 
-**Status**: Accepted
+**Status**: **Pivoted to Phase 1-lite on 2026-05-13** — see [D12](./DECISIONS.md#d12--phase-1-lite-defer-runtime-flip-until-post-closed-beta). The runtime flip (original Phase 1) is deferred to **Phase 1.5 post-closed-beta**. Issues 01 + 02 (AS port + WASM surface) shipped; issue 03 (runtime flip) deferred; issues 04 + 05 + 06 + 07 reframed to validate the TS reducer path while the AS twin sits dormant. This PRD's "Goal", "Architecture", and acceptance criteria below describe the **original Phase 1 mission** and remain the Phase 1.5 implementation reference.
 **Owner**: enrique
-**Decision**: [docs/adr/0004-game-protocol-deterministic-engine.md §Decision.5 Phase 1](../../docs/adr/0004-game-protocol-deterministic-engine.md#5-phasing)
-**Resolved flags**: [DECISIONS.md](./DECISIONS.md) — 11 implementation flags (D1–D11) resolved 2026-05-13 via the `grill-with-docs` skill before agent kickoff.
-**Target milestone**: Phase 1 → Phase 2 promotion gate (closed beta hardening). Phase 0 (commits `ea833fa..439ff28`) is the foundation; this phase makes the chess phase deterministic across peers.
+**Decision**: [docs/adr/0004-game-protocol-deterministic-engine.md §Decision.5 Phase 1-lite + Phase 1.5](../../docs/adr/0004-game-protocol-deterministic-engine.md#5-phasing)
+**Resolved flags**: [DECISIONS.md](./DECISIONS.md) — 11 implementation flags (D1–D11) resolved 2026-05-13 via the `grill-with-docs` skill before agent kickoff; **D12 pivot to Phase 1-lite** added later same day after grill on issue 03 surfaced HIGH-risk concerns.
+**Target milestone (Phase 1-lite)**: Phase 1-lite → Phase 1.5 promotion gate per D12 — `smoke:phase1` (TS reducer) + `audit:determinism` + `parity.test.ts` all green, with the AS chess binary verified and dormant.
 **Created**: 2026-05-13
 
 ---

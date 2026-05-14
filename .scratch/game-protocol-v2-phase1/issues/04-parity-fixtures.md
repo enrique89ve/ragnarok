@@ -1,10 +1,22 @@
 # 04 — Parity fixture corpus + `parity.test.ts`
 
 **Status**: ready-for-agent
-**Depends on**: 03 (both reducer impls must be runnable side-by-side)
+**Depends on**: 02 (WASM surface, shipped at `1fa4247`).
 **Blocks**: 07 (RETRO references parity coverage)
-**ADR**: [docs/adr/0004-game-protocol-deterministic-engine.md §Decision.5 Phase 1](../../../docs/adr/0004-game-protocol-deterministic-engine.md#5-phasing)
-**Decisions**: [DECISIONS.md](../DECISIONS.md) — D3 (canonical-equivalence), D6 (vitest + shared fixtures)
+**ADR**: [docs/adr/0004-game-protocol-deterministic-engine.md §Decision.5 Phase 1-lite](../../../docs/adr/0004-game-protocol-deterministic-engine.md#5-phasing)
+**Decisions**: [DECISIONS.md](../DECISIONS.md) — D3 (canonical-equivalence), D6 (vitest + shared fixtures), **D12 (parity tests keep value under Phase 1-lite — AS twin stays correct while dormant; ready for Phase 1.5 flip)**
+
+---
+
+## Phase 1-lite scope note
+
+Per [D12](../DECISIONS.md#d12--phase-1-lite-defer-runtime-flip-until-post-closed-beta), the TS reducer remains the runtime authority during closed beta; the AS twin is built but dormant. **Parity tests still ship** because:
+
+- They catch AS-vs-TS drift the moment it appears, so when Phase 1.5 flips runtime to AS, the AS twin is already proven correct against ≥50 fixtures.
+- The TS reducer also benefits — the three-way equality assertion (TS-output vs expected vs AS-output) doubles as a regression gate on the TS spec.
+- The fixture corpus is reusable for Phase 1.5 acceptance.
+
+The `canonicalAction` helper that the original issue 03 would have introduced does **not** exist on `main` under Phase 1-lite. Therefore this issue **adds it directly under `shared/protocol-core/chess/canonicalAction.ts` (NEW)** so the parity test has a canonical-form action emitter to feed the AS call. Phase 1.5's shim re-uses the same helper.
 
 ---
 
@@ -143,7 +155,7 @@ Rejection fixtures use:
   });
   ```
 
-- The `canonicalAction` helper from issue 03 should be **extracted to a shared util** so the parity test imports it (avoid duplication). Suggested location: `shared/protocol-core/chess/canonicalAction.ts` (NEW).
+- `canonicalAction` helper is introduced by this issue as `shared/protocol-core/chess/canonicalAction.ts` (NEW) — Phase 1-lite scope note above explains why this lives here, not in a shim. Phase 1.5's `chessReducer.ts` shim will import the same helper.
 
 ## Acceptance criteria
 

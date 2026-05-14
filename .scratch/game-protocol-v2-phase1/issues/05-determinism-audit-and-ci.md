@@ -4,7 +4,15 @@
 **Depends on**: nothing (parallel from day 1)
 **Blocks**: 07 (RETRO + docs reference the gate)
 **ADR**: [docs/adr/0004-game-protocol-deterministic-engine.md §Implementation notes](../../../docs/adr/0004-game-protocol-deterministic-engine.md#implementation-notes-non-binding)
-**Decisions**: [DECISIONS.md](../DECISIONS.md) — D7 (two-scope audit), D11 (CI workflow)
+**Decisions**: [DECISIONS.md](../DECISIONS.md) — D7 (two-scope audit), D11 (CI workflow), **D12 (audit + CI gate value-positive under Phase 1-lite — TS path is now the chess authority, deny list must cover it; AS path stays guarded for Phase 1.5)**
+
+---
+
+## Phase 1-lite scope note
+
+Per [D12](../DECISIONS.md#d12--phase-1-lite-defer-runtime-flip-until-post-closed-beta), the chess-hook deny list is **more important under Phase 1-lite, not less** — the TS reducer is the runtime authority for closed beta, so any `Math.random` / `Date.now` accidentally introduced in `chessCombatSlice.ts` would break cross-peer determinism *immediately*. Audit scope #2 (chess-hooks) does the real work now; scope #1 (AS rules) protects the dormant AS twin for Phase 1.5.
+
+**Adjustment**: the chess-hook deny list's `match` pattern (`/client\/src\/game\/engine\/chessReducer\.ts$/`) targets a file that does **not exist** under Phase 1-lite. Leave the pattern in place — when the file is created in Phase 1.5, the audit auto-covers it without further work. The regex against a non-existent path is a no-op today.
 
 ---
 
@@ -194,7 +202,7 @@ This step is **F3 in DECISIONS.md follow-ups**, not part of this issue's diff �
 ## Acceptance criteria
 
 1. `scripts/audit-wasm-determinism.mjs` exists and is executable.
-2. `npm run audit:determinism` exits 0 on the clean tree as of `439ff28` + the parallel state of issues 01–02–03 (i.e. the new AS chess port + the new shim must not violate the audit when this issue is rebased atop them).
+2. `npm run audit:determinism` exits 0 on the clean tree as of `1fa4247` (post issues 01 + 02). Under Phase 1-lite the audit scans `assembly/` (AS scope) + `chessCombatSlice.ts` (chess-hooks scope); the regex against the not-yet-existing `chessReducer.ts` is a no-op and auto-activates in Phase 1.5.
 3. Injecting `Math.random()` into any file matching scope 1 OR scope 2 causes the audit to exit non-zero and print the violation with file:line, the rule name, and the hint.
 4. `.github/workflows/ci.yml` exists and runs on PRs.
 5. The first PR after this issue lands shows the `CI / check` job green.

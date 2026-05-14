@@ -326,18 +326,80 @@ Branch protection on `main` (one-time, manual setup outside Phase 1 issues — c
 
 ---
 
+## D12 — Phase 1-lite: defer runtime flip until post-closed-beta
+
+**Decision** (`2026-05-13`, post-grill): **Phase 1 ships as "Phase 1-lite"**. The `assembly/chess/` AS twin is built and exposed across the WASM boundary (issues 01 + 02, shipped), but the runtime authority for chess remains the TS reducer at [shared/protocol-core/chess/reducer.ts](../../shared/protocol-core/chess/reducer.ts). Issue 03 (the runtime flip via `chessReducer.ts` shim + `chessCombatSlice` import swap) is **deferred to Phase 1.5**, scheduled post-closed-beta.
+
+### Threat-model rationale
+
+Closed-beta peers are invited / known identities (not adversarial). The existing trust surface — pure TS reducer + Phase 0 wire transcript with `prevChessStateHash` — already detects the divergence vectors the runtime flip was designed to close:
+
+| Attack | Detected by | Phase 1 flip adds? |
+|---|---|---|
+| Peer A and B disagree on chess state because of non-determinism in reducer | Wire `prevChessStateHash` mismatch | No (TS reducer is already pure) |
+| Peer patches local TS reducer to accept illegal move; transmits valid action+hash | Remote peer's unpatched TS reducer rejects → wire-sync divergence | No |
+| Peer patches local TS reducer to *output a different state* while transmitting an action the remote will accept | Remote computes its own snapshot+hash from action; mismatch with transmitted hash | No (requires hash chain only) |
+| Peer modifies *both* their TS reducer and transmitted hash to produce a consistent-but-cheated state, hoping the remote replicates the cheat | Would require remote to also be patched — not closed-beta threat | Yes (AS binary + `engineHash` handshake gives a second verifiable layer) |
+
+The last row is the marginal gain Phase 1 was designed for. It is *not* the closed-beta threat. Phase 1.5 (post-beta) is when the threat model justifies the work.
+
+### Risks the deferral avoids
+
+Grill `2026-05-13` surfaced (see [issue 03](./issues/03-ts-bridge-and-slice-swap.md) "Why deferred" section):
+
+1. **Rich-field loss at slice seam** (HIGH) — AS reducer round-trips only the 5 `ChessProtocolPiece` keys. `ChessPiece`'s `heroClass`/`health`/`element`/`stamina`/`heroName`/`heroId`/`fixedCards`/`hasSpells` would silently drop on every action. `Math.floor(undefined/10) = NaN` propagating through stamina + mines. Mitigatable via re-merge in shim (~5 LOC) but adds implicit contract.
+2. **`isWasmReady()` throw vs caller paths** (HIGH) — `useChessBoardInteractions.ts` (UI click) and `useWireSync.ts:1124` (peer message) have no try/catch. Throw poisons wire-sync mid-match. Mitigatable via coordinator-level entry gate + try/catch but expands blast radius beyond the "1-line swap" promise.
+3. **`as ChessReduceResult<P>` trust boundary** (MED) — bare cast across WASM→TS. Mitigatable via discriminator check (5 LOC).
+
+Aggregate: ~15 LOC of shim work + entry gate + wire-sync wrapping + new acceptance criteria + manual smoke covering stamina/health post-roundtrip. Workable but not justified at closed-beta launch under "no risk" priority.
+
+### What Phase 1-lite still ships
+
+Issues that retain value without the runtime flip:
+
+| Issue | Scope under Phase 1-lite | Value |
+|---|---|---|
+| 01 (shipped) | AS chess port in `assembly/chess/` | Binary ready for Phase 1.5; standalone-compiles clean |
+| 02 (shipped) | `applyChessAction` exposed via `wasmInterface.ts` | Boundary verified; smoke:phase0 confirmed surface |
+| 03 | **DEFERRED** | Phase 1.5 |
+| 04 | Parity fixtures — TS-vs-AS three-way equality on ≥50 fixtures | Catches AS drift *before* Phase 1.5 flip; AS twin stays correct while dormant |
+| 05 | Determinism audit (D7 two scopes) + `.github/workflows/ci.yml` PR gate | Protects TS reducer + chess slice from non-determinism regressions; gate works regardless of which reducer is authoritative |
+| 06 | `smoke:phase1` runs against **TS reducer** (not the shim) | Asserts 2-peer determinism in real match flow; catches TS reducer + canonicalize regressions; harness ready to flip to shim in Phase 1.5 with a single import change |
+| 07 | Docs + RETRO reflect Phase 1-lite scope + Phase 1.5 plan | CONTEXT.md "AS twin" glossary entry stays accurate; ADR §Decision.5 row amended |
+
+### Rejected alternatives
+
+- **Ship issue 03 with full mitigation stack** — option remained on the table. Rejected because (a) user priority is "no risk, no bugs, ship for closed beta", (b) the marginal threat-model gain over Phase 0 hash chain is not the closed-beta surface, (c) issues 04/05/06 still produce useful value with TS path as authority.
+- **Cancel issues 01 + 02 retroactively** — rejected: binaries are clean, no behavior delta to revert, and Phase 1.5 needs them ready.
+- **Cancel issues 04/05/06 too** — rejected: parity, audit, and smoke each catch a distinct class of regression that helps Phase 1.5 land cleanly when it's time, *and* helps the TS path stay correct between now and then.
+
+### Phase 1.5 trigger conditions
+
+Phase 1.5 unlocks when **all** of the following hold:
+
+- Closed beta has run for ≥2 cycles with no hash-divergence incidents (telemetry F2 in place).
+- Issue 04 parity tests have been green on `main` for ≥4 weeks (proves the AS twin tracks the TS spec under change pressure).
+- Threat model evolution (e.g. moving from invited beta to open beta with stakes) justifies the elaborate-tamper defence layer.
+
+### Open follow-up
+
+- **F5 — Phase 1.5: runtime flip post-beta**. Re-open issue 03 with the three grill concerns explicitly addressed: (a) re-merge in shim, (b) entry gate + wire-sync try/catch, (c) discriminator check. Add an acceptance criterion that exercises stamina + health post-WASM-roundtrip in a real match.
+
+---
+
 ## Open follow-ups (not Phase 1 scope, captured for Phase 2 / post-Phase-1)
 
 - **F1** — Promote `stamina` + `KingDivineCommandState` (mines) into `shared/protocol-core/chess/` so they enter the canonical hash domain. Seeded RNG plumbing for Ginnungagap scatter ([ChessTypes.ts:176](../../client/src/game/types/ChessTypes.ts#L176)) required. Then port to `assembly/chess/`. Either Phase 2 (preferred per ADR) or a mini-Phase-1.5.
 - **F2** — Closed-beta dashboard for chess `prevChessStateHash` divergence telemetry. Post-Phase-1, not a merge gate, but a confidence signal before Phase 2 promotion.
 - **F3** — Branch-protection rule on `main` requiring `ci.yml` green. Manual GitHub UI action, outside Phase 1 issue scope. Captured here so it isn't forgotten.
 - **F4** — Reduce `chessHash.ts` to consume AS canonical output directly (skip re-canonicalize). Micro-optimization; valuable only at high move-rate, which chess doesn't have.
+- **F5** — Phase 1.5 runtime flip (see [D12](#d12--phase-1-lite-defer-runtime-flip-until-post-closed-beta)). Re-open issue 03 with the three grill concerns addressed; trigger conditions in D12.
 
 ---
 
-## Phase 1 → Phase 2 promotion gate (summary)
+## Phase 1-lite → Phase 1.5 promotion gate (summary)
 
-A single line: **green `npm run smoke:phase1` and `npm run audit:determinism`** on `main` for ≥3 consecutive commits with chess actions exercised in real (closed-beta) matches.
+Under [D12](#d12--phase-1-lite-defer-runtime-flip-until-post-closed-beta), Phase 1-lite's gate is: **`smoke:phase1` (TS reducer, two-peer determinism) + `audit:determinism` green on `main` for ≥3 consecutive commits with chess actions exercised in real closed-beta matches, AND `parity.test.ts` green for ≥4 weeks of `main` change pressure**.
 
-The smoke harness is the deterministic guarantee. The audit script is the *future* deterministic guarantee (catches the regression you'd otherwise ship on commit N+1). The 3-commit window is the human signal that the system holds under change pressure.
+Phase 1.5 unlock (see F5) additionally requires the threat-model evolution captured in D12 "Phase 1.5 trigger conditions".
 

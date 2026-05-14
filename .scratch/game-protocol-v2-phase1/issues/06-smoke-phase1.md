@@ -1,10 +1,18 @@
-# 06 — `smoke:phase1` harness (bit-identical cross-peer chess turns)
+# 06 — `smoke:phase1` harness (bit-identical cross-peer chess turns, TS reducer)
 
 **Status**: ready-for-agent
-**Depends on**: 03 (shim is what the smoke exercises), 05 (CI scaffold to append to)
+**Depends on**: 05 (CI scaffold to append to)
 **Blocks**: 07 (RETRO references the gate)
-**ADR**: [docs/adr/0004-game-protocol-deterministic-engine.md §Decision.5 Phase 1](../../../docs/adr/0004-game-protocol-deterministic-engine.md#5-phasing) — gate criterion *"Chess turns bit-identical cross-peer in real matches"*
-**Decisions**: [DECISIONS.md](../DECISIONS.md) — D9 (smoke:phase1 specification)
+**ADR**: [docs/adr/0004-game-protocol-deterministic-engine.md §Decision.5 Phase 1-lite](../../../docs/adr/0004-game-protocol-deterministic-engine.md#5-phasing) — gate criterion *"Chess turns bit-identical cross-peer in real matches"*
+**Decisions**: [DECISIONS.md](../DECISIONS.md) — D9 (smoke:phase1 specification), **D12 (smoke runs against TS reducer under Phase 1-lite; flips to AS shim in Phase 1.5 via single import change)**
+
+---
+
+## Phase 1-lite scope note
+
+Per [D12](../DECISIONS.md#d12--phase-1-lite-defer-runtime-flip-until-post-closed-beta), the harness imports `applyChessAction` from `@shared/protocol-core/chess` (TS reducer) — **not** from `@/game/engine/chessReducer` (the deferred shim). The harness still proves the property the gate cares about — *"chess turns bit-identical cross-peer"* — because the TS reducer is pure (no `Math.random` / `Date.now`) and is the runtime authority during closed beta.
+
+Phase 1.5 will flip the single import line to point at the new shim; the harness body, oracle, seed list, and assertions stay identical. The fixture corpus from issue 04 already proves the AS twin agrees with the TS reducer on ≥50 fixtures, so the Phase 1.5 swap is mechanical.
 
 ---
 
@@ -35,7 +43,9 @@ NEW `client/src/game/protocol/phase1.smoke.test.ts`:
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { loadWasmEngine } from '@/game/engine/wasmLoader';
-import { applyChessAction } from '@/game/engine/chessReducer';
+// Phase 1-lite: TS reducer is runtime authority. Phase 1.5 will swap this
+// single import to `@/game/engine/chessReducer` once the shim ships.
+import { applyChessAction } from '@shared/protocol-core/chess';
 import {
 	canonicalChessSnapshot,
 	PLAYER_INITIAL_POSITIONS,
@@ -155,9 +165,9 @@ describe('Phase 1 smoke: bit-identical chess turns cross-peer', () => {
 
 ## Acceptance criteria
 
-1. `npm run smoke:phase1` exits 0 locally on the post-issue-03 tree.
+1. `npm run smoke:phase1` exits 0 locally on the post-issue-05 tree (CI scaffold in place; TS reducer is authority).
 2. `npm run smoke:phase1` exits 0 in CI on every PR after this issue lands.
-3. Injecting a deliberate AS reducer bug (e.g. emit `"opponent"` as currentTurn after every move regardless) causes the smoke to fail clearly on the first turn boundary of seed 0 — verify locally before commit, then revert the injection.
+3. Injecting a deliberate TS reducer non-determinism (e.g. `if (Math.random() > 0.5) state.currentTurn = 'opponent'`) causes the smoke to fail clearly on the first turn boundary of seed 0 — verify locally before commit, then revert the injection. Under Phase 1.5 the same test would inject the equivalent into the AS reducer; the gate semantics are identical.
 4. `npm run smoke:phase0` still exits 0 (regression gate).
 5. The harness runs in < 60 s on CI (the existing CI runner spec, no special hardware).
 

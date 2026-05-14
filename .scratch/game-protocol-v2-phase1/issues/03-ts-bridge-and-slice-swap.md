@@ -1,10 +1,46 @@
 # 03 — TS bridge shim + `chessCombatSlice` import swap
 
-**Status**: ready-for-agent
-**Depends on**: 02 (WASM surface must exist)
-**Blocks**: 04 (parity tests assume the shim is canon), 06 (smoke uses the shim's flow)
+**Status**: **DEFERRED to Phase 1.5 (post-beta)** — see [DECISIONS.md D12](../DECISIONS.md).
+**Depends on**: 02 (WASM surface must exist) — already shipped (`1fa4247`).
+**Blocks**: nothing in Phase 1-lite. Original blockers (04, 06) reframed to use TS reducer.
 **ADR**: [docs/adr/0004-game-protocol-deterministic-engine.md §Decision.5 Phase 1](../../../docs/adr/0004-game-protocol-deterministic-engine.md#5-phasing)
-**Decisions**: [DECISIONS.md](../DECISIONS.md) — D4 (sync contract, no fallback), D5 (chessHash unchanged), D8 (animation seam invariant)
+**Decisions**: [DECISIONS.md](../DECISIONS.md) — D4, D5, D8 (original) + **D12 (pivot rationale)**.
+
+---
+
+## Why deferred
+
+Grill on `2026-05-13` surfaced two HIGH-risk concerns and one MED-risk concern in the runtime flip:
+
+1. **Rich-field loss at slice seam (HIGH)** — AS reducer round-trips only `ChessProtocolPiece` fields (5 keys). Rich client fields (`heroClass`, `health`, `element`, `stamina`, `heroName`, `heroId`, `fixedCards`, `hasSpells`) are dropped on every action. Silent `NaN`/`undefined` propagation through `incrementAllStamina` → `checkAndTriggerMine` → `updatePieceStamina`. Not caught by acceptance criterion 4 (5-move smoke). Mitigation: re-merge by `id` inside the shim (~5 LOC). Workable but adds a layer of implicit contract.
+
+2. **`isWasmReady()` throw vs caller paths (HIGH)** — D4 mandates throw. Verified caller paths in `useChessBoardInteractions.ts` (UI click) and `useWireSync.ts:1124` (peer message) have no try/catch. Throw poisons wire-sync queue mid-match. Mitigation: coordinator-level entry gate + wire-sync try/catch. Workable but expands blast radius beyond the 1-line swap.
+
+3. **`as ChessReduceResult<P>` trust boundary (MED)** — bare cast across WASM→TS boundary; technically violates [hive-payload-canon](../../../.claude/projects/-root-projects-norse-mythos-card-game/memory/hive-payload-canon.md). Mitigation: discriminator check (5 LOC).
+
+Aggregate mitigation is ~15 LOC of shim work + entry-gate + wire-sync try/catch + extra acceptance criteria + manual smoke covering stamina/health post-roundtrip. **None of this is necessary for closed-beta threat model**:
+
+- TS reducer at `shared/protocol-core/chess/reducer.ts` is pure (no `Math.random` / `Date.now`) — two peers with the same commit produce byte-identical output.
+- `chessHash.ts:39` already canonicalizes + hashes the snapshot; `prevChessStateHash` rides every chess envelope (Phase 0 wire transcript).
+- A peer who patches their TS reducer to accept an illegal move computes a snapshot the *remote* peer will reject under its own unpatched TS reducer → hash divergence detected immediately by wire-sync (already shipped).
+- Tampering scenarios that require the AS binary as a second line of defence (e.g. patcher modifies TS but replicates correct output) are not the closed-beta threat surface — invited players, known identities.
+
+What we gain by flipping in Phase 1-lite: marginal defence against an elaborate tampering pattern that is not the closed-beta threat. What we risk: shipping a NaN-stamina bug or wire-sync poisoning into the launch.
+
+The runtime flip ships in **Phase 1.5** (post-closed-beta), when the threat model justifies the work and there is time to address concerns 1–3 deliberately rather than under launch pressure.
+
+---
+
+## What stays from this issue's research
+
+- `assembly/chess/` is built and `applyChessAction` is exposed across the WASM boundary (issues 01 + 02, shipped). Binary is ready for Phase 1.5 flip.
+- The shim file `client/src/game/engine/chessReducer.ts` is **NOT created** in Phase 1-lite — adding it now would expose an unused code path and tempt premature swap.
+- The slice keeps its current import (`applyChessAction` from `@shared/protocol-core/chess`).
+- Issues 04 (parity), 05 (audit), 06 (smoke) reframe to validate the TS reducer path while the AS twin sits dormant.
+
+## Original spec (Phase 1.5 reference)
+
+The original spec for this issue (prior to the pivot) is preserved below for Phase 1.5 implementers. **Do not implement on `main` during Phase 1-lite.**
 
 ---
 

@@ -1,10 +1,16 @@
-# 07 — Docs + Phase 1 retrospective
+# 07 — Docs + Phase 1-lite retrospective
 
 **Status**: ready-for-agent
-**Depends on**: 01, 02, 03, 04, 05, 06 (all ship before docs are final)
-**Blocks**: nothing (Phase 1 closes here)
+**Depends on**: 01, 02, 04, 05, 06 (issue 03 deferred — see D12).
+**Blocks**: nothing (Phase 1-lite closes here)
 **ADR**: [docs/adr/0004-game-protocol-deterministic-engine.md](../../../docs/adr/0004-game-protocol-deterministic-engine.md)
-**Decisions**: [DECISIONS.md](../DECISIONS.md) — all (D1–D11)
+**Decisions**: [DECISIONS.md](../DECISIONS.md) — all (D1–D12)
+
+---
+
+## Phase 1-lite scope note
+
+Per [D12](../DECISIONS.md#d12--phase-1-lite-defer-runtime-flip-until-post-closed-beta), this issue closes Phase 1-lite, not Phase 1. The CONTEXT.md glossary entry "AS twin" still applies (the AS chess module exists, is exposed, and tracks the TS spec by parity test). The ADR §Decision.5 row was already amended in the D12 commit to reflect the lite scope and add the Phase 1.5 row. RETRO documents the pivot.
 
 ---
 
@@ -23,30 +29,22 @@ Phase 0's discipline (per [project_game_protocol_v2_adr0004 memoria](../../../.c
 Add a glossary entry under the existing domain-language section (find the alphabetical slot):
 
 ```markdown
-- **AS twin** — An AssemblyScript module under `assembly/` that structurally mirrors a TypeScript module under `shared/protocol-core/` and serves as the *runtime authority* for that domain. The TS twin remains as the *contract reference* (used by tests, server-side validators, fallback paths). The two implementations agree by construction because the AS twin is written to honor the TS twin's canonicalization spec byte-for-byte. First applied to chess in Phase 1 of [ADR 0004](docs/adr/0004-game-protocol-deterministic-engine.md). See [.scratch/game-protocol-v2-phase1/DECISIONS.md](.scratch/game-protocol-v2-phase1/DECISIONS.md) D3 + D4.
+- **AS twin** — An AssemblyScript module under `assembly/` that structurally mirrors a TypeScript module under `shared/protocol-core/`. Under Phase 1-lite of [ADR 0004](docs/adr/0004-game-protocol-deterministic-engine.md), the AS twin for chess is *built and exposed* but the TS twin remains the *runtime authority* during closed beta; the AS twin is verified continuously against the TS spec via [shared/protocol-core/chess/parity.test.ts](shared/protocol-core/chess/parity.test.ts) on ≥50 fixtures. Phase 1.5 flips runtime authority to the AS twin once the threat-model justifies the work; see [.scratch/game-protocol-v2-phase1/DECISIONS.md D3 + D4 + D12](.scratch/game-protocol-v2-phase1/DECISIONS.md).
 ```
 
-If a "Phasing" section already exists, append a one-liner pointing at Phase 1's promotion gate:
+If a "Phasing" section already exists, append a one-liner pointing at the Phase 1-lite gate:
 
 ```markdown
-- Phase 1 → Phase 2 promotion gate: `npm run smoke:phase1` green on `main` for ≥3 consecutive commits with chess actions exercised in real closed-beta matches.
+- Phase 1-lite → Phase 1.5 promotion gate: `npm run smoke:phase1` (TS reducer 2-peer determinism) + `npm run audit:determinism` + parity tests all green on `main` for ≥3 consecutive commits with chess actions exercised in real closed-beta matches, plus the threat-model evolution captured in D12.
 ```
 
 ### MODIFY `docs/adr/0004-game-protocol-deterministic-engine.md`
 
-Phase 1 row in the §Decision.5 table (line 124) already names the gate; add a footnote / cross-link to the smoke test path so future readers can land on the spec without searching:
-
-Locate line 124 and append a footnote-style reference:
+The §Decision.5 table and gate sentences were already amended in the D12 commit (Phase 1-lite + Phase 1.5 rows; Phase 1-lite → Phase 1.5 gate sentence). This issue only needs to **add cross-links to the now-shipped test files** so future readers can land on the spec without searching. Append the parity test + smoke test paths to the Phase 1-lite row's gate-criterion cell:
 
 ```diff
-- | **1** | Chess engine to `assembly/chess/`. Cards/poker stay TS. Mixed mode: chess actions cross to WASM, cards stay in TS. | WASM (chess) + TS (cards/poker) | Chess turns bit-identical cross-peer in real matches |
-+ | **1** | Chess engine to `assembly/chess/`. Cards/poker stay TS. Mixed mode: chess actions cross to WASM, cards stay in TS. | WASM (chess) + TS (cards/poker) | `npm run smoke:phase1` green ([client/src/game/protocol/phase1.smoke.test.ts](../../client/src/game/protocol/phase1.smoke.test.ts)). Bit-identical cross-peer in real matches confirmed by smoke + per-fixture parity ([shared/protocol-core/chess/parity.test.ts](../../shared/protocol-core/chess/parity.test.ts)). |
-```
-
-Also update line 137 (the Phase 0 → Phase 1 gate sentence) if a similar update for Phase 1 → Phase 2 is appropriate — append:
-
-```markdown
-**Phase 1 → Phase 2 promotion gate**: `npm run smoke:phase1` must exit 0 on `main`, AND `npm run audit:determinism` must exit 0 (both AS scope + chess-hook scope clean). Phase 2 (cards + poker WASM port) unlocks when these two are green for ≥3 consecutive commits with chess actions exercised in real (closed-beta) matches.
+- ... | `smoke:phase1` (TS reducer, 2-peer determinism) + `audit:determinism` + `parity.test.ts` (TS↔AS three-way equality) all green |
++ ... | [`npm run smoke:phase1`](../../client/src/game/protocol/phase1.smoke.test.ts) + [`npm run audit:determinism`](../../scripts/audit-wasm-determinism.mjs) + [`parity.test.ts`](../../shared/protocol-core/chess/parity.test.ts) all green |
 ```
 
 ### NEW `.scratch/game-protocol-v2-phase1/RETRO.md`
@@ -54,21 +52,23 @@ Also update line 137 (the Phase 0 → Phase 1 gate sentence) if a similar update
 Mirror Phase 0's RETRO if it exists, else use this template:
 
 ```markdown
-# RETRO — Game protocol v2 Phase 1
+# RETRO — Game protocol v2 Phase 1-lite
 
 **Shipped**: <date>
-**Commits**: <range> (issues 01–07)
-**Promotion gate**: `npm run smoke:phase1` + `npm run audit:determinism` both green.
+**Commits**: <range> (issues 01, 02, 04, 05, 06, 07 — issue 03 deferred per D12)
+**Promotion gate**: `npm run smoke:phase1` (TS reducer) + `npm run audit:determinism` + parity tests all green.
 
 ## What landed
 
-- `assembly/chess/` AS twin (6 files, ~400 LOC) — runtime authority for chess turns.
-- `client/src/game/engine/chessReducer.ts` — sync bridge shim.
-- `shared/protocol-core/chess/fixtures/` + `parity.test.ts` — three-way equality on ≥50 fixtures.
+- `assembly/chess/` AS twin (6 files, ~400 LOC) — built and exposed, dormant in Phase 1-lite.
+- `applyChessAction` re-exported across the WASM boundary via `wasmInterface.ts`.
+- `shared/protocol-core/chess/fixtures/` + `parity.test.ts` — three-way equality on ≥50 fixtures (TS ↔ AS).
+- `shared/protocol-core/chess/canonicalAction.ts` — canonical-form action emitter.
 - `scripts/audit-wasm-determinism.mjs` — two-scope deny lists; wired into CI.
 - `.github/workflows/ci.yml` — first PR gate workflow in the repo.
-- `client/src/game/protocol/phase1.smoke.test.ts` + `smoke:phase1` npm script — 100 seeds × 60 turns bit-identical.
-- ADR 0004 §Decision.5 + §Implementation notes amended with concrete gate references.
+- `client/src/game/protocol/phase1.smoke.test.ts` + `smoke:phase1` npm script — 100 seeds × 60 turns bit-identical, **driven by TS reducer**.
+- ADR 0004 §Decision.5 amended: Phase 1-lite row + Phase 1.5 row.
+- DECISIONS.md D12 + F5 capture the pivot and Phase 1.5 trigger conditions.
 
 ## What surprised us
 
@@ -76,12 +76,13 @@ Mirror Phase 0's RETRO if it exists, else use this template:
 
 ## What we deferred
 
+- **Phase 1.5 runtime flip (F5)** — see [D12](../DECISIONS.md). Re-opens issue 03 with the three grill concerns (rich-field re-merge, entry gate, discriminator check) addressed.
 - F1: Promote stamina + mines into protocol-core + AS (Phase 2 or mini-1.5).
 - F2: Closed-beta hash-divergence telemetry dashboard.
 - F3: Branch-protection rule on `main` (manual GitHub UI action).
 - F4: Skip re-canonicalize in `chessHash.ts` by consuming AS canonical output directly (micro-opt).
 
-## Lessons for Phase 2 onboarding
+## Lessons for Phase 2 / Phase 1.5 onboarding
 
 (Fill in post-ship — what was easy, what was hard, what the next AS port should do differently.)
 ```
