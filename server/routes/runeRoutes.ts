@@ -34,6 +34,7 @@ const RUNE_SOURCE_TYPES: readonly RuneSourceType[] = [
 	'p2p_ranked',
 	'campaign_first_clear',
 	'reward_claim',
+	'daily_quest_claim',
 	'rune_exchange',
 ];
 const RUNE_ACCOUNT_RE = /^[a-z][a-z0-9._-]{2,31}$/;
@@ -149,6 +150,7 @@ router.get('/state', (req: Request, res: Response) => {
 		totalCap: TESTNET_RUNE_ECONOMY.totalCap,
 		p2pCap: TESTNET_RUNE_ECONOMY.p2pCap,
 		campaignCap: TESTNET_RUNE_ECONOMY.campaignCap,
+		dailyQuestCap: TESTNET_RUNE_ECONOMY.dailyQuestCap,
 		activeBalanceTotal,
 		ledgerCreditTotal: runeStats.ledgerCreditTotal,
 		ledgerDebitTotal: runeStats.ledgerDebitTotal,
@@ -157,6 +159,7 @@ router.get('/state', (req: Request, res: Response) => {
 		p2pCreditTotal: runeStats.p2pCreditTotal,
 		campaignCreditTotal: runeStats.campaignCreditTotal,
 		rewardClaimCreditTotal: runeStats.rewardClaimCreditTotal,
+		dailyQuestCreditTotal: runeStats.dailyQuestCreditTotal,
 		runeExchangeDebitTotal: runeStats.runeExchangeDebitTotal,
 		lastBlock: getBlockCursor(),
 		generatedAt: new Date().toISOString(),

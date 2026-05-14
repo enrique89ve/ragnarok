@@ -1,13 +1,19 @@
 const API_BASE = import.meta.env.VITE_API_URL || window.location.origin;
 
 export type RuneDirection = 'credit' | 'debit';
-export type RuneSourceType = 'p2p_ranked' | 'campaign_first_clear' | 'reward_claim' | 'rune_exchange';
+export type RuneSourceType =
+	| 'p2p_ranked'
+	| 'campaign_first_clear'
+	| 'reward_claim'
+	| 'daily_quest_claim'
+	| 'rune_exchange';
 
 export type RuneStateSnapshot = {
 	seasonId: string;
 	totalCap: number;
 	p2pCap: number;
 	campaignCap: number;
+	dailyQuestCap: number;
 	activeBalanceTotal: number;
 	ledgerCreditTotal: number;
 	ledgerDebitTotal: number;
@@ -16,6 +22,7 @@ export type RuneStateSnapshot = {
 	p2pCreditTotal: number;
 	campaignCreditTotal: number;
 	rewardClaimCreditTotal: number;
+	dailyQuestCreditTotal: number;
 	runeExchangeDebitTotal: number;
 	lastBlock: number;
 	generatedAt: string;
@@ -66,6 +73,7 @@ const RUNE_SOURCE_TYPES: readonly RuneSourceType[] = [
 	'p2p_ranked',
 	'campaign_first_clear',
 	'reward_claim',
+	'daily_quest_claim',
 	'rune_exchange',
 ];
 
@@ -116,6 +124,7 @@ function parseRuneState(value: unknown): RuneStateSnapshot {
 		totalCap: readNumber(value, 'totalCap'),
 		p2pCap: readNumber(value, 'p2pCap'),
 		campaignCap: readNumber(value, 'campaignCap'),
+		dailyQuestCap: readNumber(value, 'dailyQuestCap'),
 		activeBalanceTotal: readNumber(value, 'activeBalanceTotal'),
 		ledgerCreditTotal: readNumber(value, 'ledgerCreditTotal'),
 		ledgerDebitTotal: readNumber(value, 'ledgerDebitTotal'),
@@ -124,6 +133,7 @@ function parseRuneState(value: unknown): RuneStateSnapshot {
 		p2pCreditTotal: readNumber(value, 'p2pCreditTotal'),
 		campaignCreditTotal: readNumber(value, 'campaignCreditTotal'),
 		rewardClaimCreditTotal: readNumber(value, 'rewardClaimCreditTotal'),
+		dailyQuestCreditTotal: readNumber(value, 'dailyQuestCreditTotal'),
 		runeExchangeDebitTotal: readNumber(value, 'runeExchangeDebitTotal'),
 		lastBlock: readNumber(value, 'lastBlock'),
 		generatedAt: readString(value, 'generatedAt'),

@@ -140,6 +140,7 @@ export interface RuneSeasonStats {
 	p2pCreditTotal: number;
 	campaignCreditTotal: number;
 	rewardClaimCreditTotal: number;
+	dailyQuestCreditTotal: number;
 	runeExchangeDebitTotal: number;
 }
 
@@ -817,6 +818,7 @@ export function getRuneSeasonStats(seasonId: string): RuneSeasonStats {
 		p2pCreditTotal: 0,
 		campaignCreditTotal: 0,
 		rewardClaimCreditTotal: 0,
+		dailyQuestCreditTotal: 0,
 		runeExchangeDebitTotal: 0,
 	};
 
@@ -828,6 +830,7 @@ export function getRuneSeasonStats(seasonId: string): RuneSeasonStats {
 			if (entry.sourceType === 'p2p_ranked') stats.p2pCreditTotal += entry.amount;
 			if (entry.sourceType === 'campaign_first_clear') stats.campaignCreditTotal += entry.amount;
 			if (entry.sourceType === 'reward_claim') stats.rewardClaimCreditTotal += entry.amount;
+			if (entry.sourceType === 'daily_quest_claim') stats.dailyQuestCreditTotal += entry.amount;
 			continue;
 		}
 

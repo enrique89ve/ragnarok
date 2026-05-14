@@ -4,6 +4,7 @@ export const SOURCE_LABELS: Record<RuneSourceType, string> = {
 	p2p_ranked: 'Ranked reward',
 	campaign_first_clear: 'Campaign clear',
 	reward_claim: 'Reward claim',
+	daily_quest_claim: 'Daily quest',
 	rune_exchange: 'Pack exchange',
 };
 

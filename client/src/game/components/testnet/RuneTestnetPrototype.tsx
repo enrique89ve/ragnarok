@@ -60,6 +60,7 @@ const SOURCE_LABELS: Record<RuneSourceType, string> = {
 	p2p_ranked: 'Ranked PvP',
 	campaign_first_clear: 'Campaign',
 	reward_claim: 'Reward Claim',
+	daily_quest_claim: 'Daily Quest',
 	rune_exchange: 'Pack Exchange',
 };
 

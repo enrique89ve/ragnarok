@@ -1,6 +1,7 @@
 import {
 	ArrowDownLeft,
 	ArrowUpRight,
+	CalendarCheck,
 	Coins,
 	PackageOpen,
 	Sparkles,
@@ -14,6 +15,7 @@ const SOURCE_ICONS: Record<RuneSourceType, LucideIcon> = {
 	p2p_ranked: Trophy,
 	campaign_first_clear: Sparkles,
 	reward_claim: Coins,
+	daily_quest_claim: CalendarCheck,
 	rune_exchange: PackageOpen,
 };
 

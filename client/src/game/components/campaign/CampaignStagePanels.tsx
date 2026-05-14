@@ -4,7 +4,7 @@ import { ChevronLeft, Play, Swords } from 'lucide-react';
 import { Button } from '../../../components/ui-norse';
 import { useCampaignStore } from '../../campaign';
 import type { CampaignChapter, CampaignMission, Difficulty } from '../../campaign/campaignTypes';
-import { getCampaignFirstClearRuneReward } from '@shared/protocol-core/runeEconomy';
+import { getCampaignFirstClearRuneReward, TESTNET_RUNE_ECONOMY } from '@shared/protocol-core/runeEconomy';
 import {
 	KICKER_CLASS,
 	DISPLAY_TITLE_CLASS,
@@ -319,7 +319,7 @@ export function MissionBriefing({
 						<div className="mt-3 flex flex-wrap gap-2">
 							<span className={PILL_CLASS}>{describeMissionReward(mission.id)}</span>
 						</div>
-						<p className="mt-2 text-xs opacity-70">Season cap: 10 RUNE per account from campaign first-clears.</p>
+						<p className="mt-2 text-xs opacity-70">Season cap: {TESTNET_RUNE_ECONOMY.maxCampaignRunePerAccount} RUNE per account from campaign first-clears.</p>
 					</div>
 
 					<Button

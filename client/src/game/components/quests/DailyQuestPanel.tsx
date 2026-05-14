@@ -8,7 +8,11 @@ import { useDailyQuestStore, type DailyQuest } from '../../stores/dailyQuestStor
  * State machine has two visible states now (claim is auto on completion):
  *   in_progress -> claimed.
  *
- *   [ rune  | TITLE · description · ━━━━ progress 0/30 ] [ +2 RUNE ] [ ↻ ]
+ *   [ rune  | TITLE · description · ━━━━ progress 0/30 ] [ +N RUNE ] [ ↻ ]
+ *
+ * The "+N RUNE" chip reads from quest.reward.rune, which the store sets from
+ * TESTNET_RUNE_ECONOMY.dailyQuestRunePerSlot — changing the canonical constant
+ * automatically reflects in every existing quest row on the next refresh.
  *
  * Left edge has a 2px state strip (gold-300/30 -> emerald) that reads
  * completion state at a glance.
