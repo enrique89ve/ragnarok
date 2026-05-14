@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { toast } from 'sonner';
 import { TESTNET_RUNE_ECONOMY } from '@shared/protocol-core/runeEconomy';
 import { pickRandomQuests, type DailyQuestType, type QuestTemplate } from '../data/dailyQuestPool';
 import { getNFTBridge } from '../nft';
@@ -24,12 +25,14 @@ interface DailyQuestState {
 	lastRefreshDate: string;
 	totalCompleted: number;
 	rerollsUsedToday: number;
+	flushing: boolean;
 }
 
 interface DailyQuestActions {
 	refreshIfNeeded: () => void;
 	updateProgress: (type: DailyQuestType, increment: number) => void;
 	rerollQuest: (questId: string) => void;
+	flushPendingClaims: () => Promise<void>;
 }
 
 const DAILY_QUEST_RUNE_REWARD = TESTNET_RUNE_ECONOMY.dailyQuestRunePerSlot;
@@ -54,12 +57,28 @@ function templateToQuest(template: QuestTemplate, slot: number, ymdUtc: string):
 	};
 }
 
-function broadcastDailyQuestClaim(quest: DailyQuest): void {
+async function broadcastDailyQuestClaim(quest: DailyQuest): Promise<boolean> {
 	const bridge = getNFTBridge();
-	if (!bridge.isHiveMode()) return;
-	bridge.claimDailyQuest(quest.ymdUtc, quest.slot, quest.type)
-		.then(r => { if (r.success && r.trxId) bridge.emitTransactionConfirmed(r.trxId); })
-		.catch(err => debug.warn('[DailyQuest] Claim broadcast error:', err));
+	if (!bridge.isHiveMode()) return false;
+	try {
+		const result = await bridge.claimDailyQuest(quest.ymdUtc, quest.slot, quest.type);
+		if (!result.success) {
+			debug.warn('[DailyQuest] Claim broadcast rejected:', result.error);
+			return false;
+		}
+		if (result.trxId) bridge.emitTransactionConfirmed(result.trxId);
+		return true;
+	} catch (err) {
+		debug.warn('[DailyQuest] Claim broadcast error:', err);
+		return false;
+	}
+}
+
+function emitClaimToast(quest: DailyQuest, slotOrdinal: number): void {
+	toast.success(quest.title, {
+		description: `+${quest.reward.rune} RUNE · Slot ${slotOrdinal} of ${TESTNET_RUNE_ECONOMY.dailyQuestSlotsPerDay} today`,
+		duration: 4000,
+	});
 }
 
 export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
@@ -69,6 +88,7 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 			lastRefreshDate: '',
 			totalCompleted: 0,
 			rerollsUsedToday: 0,
+			flushing: false,
 
 			refreshIfNeeded: () => {
 				const today = todayUtcString();
@@ -80,7 +100,6 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 			},
 
 			updateProgress: (type, increment) => {
-				const claims: DailyQuest[] = [];
 				set(state => {
 					let changed = false;
 					const quests = state.quests.map(q => {
@@ -88,23 +107,45 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 						changed = true;
 						const newProgress = Math.min(q.progress + increment, q.goal);
 						const isNowComplete = newProgress >= q.goal;
-						const next: DailyQuest = {
+						return {
 							...q,
 							progress: newProgress,
 							completed: isNowComplete,
-							claimed: isNowComplete ? true : q.claimed,
 						};
-						if (isNowComplete) claims.push(next);
-						return next;
 					});
 					if (!changed) return {};
-					return {
-						quests,
-						totalCompleted: state.totalCompleted + claims.length,
-					};
+					return { quests };
 				});
-				for (const claim of claims) {
-					broadcastDailyQuestClaim(claim);
+				// Broadcast is deferred to flushPendingClaims so a mid-combat
+				// completion does not trigger a Keychain confirmation dialog
+				// while the player is making a decision. See file header.
+			},
+
+			flushPendingClaims: async () => {
+				if (get().flushing) return;
+				const pending = get().quests.filter(q => q.completed && !q.claimed);
+				if (pending.length === 0) return;
+				const bridge = getNFTBridge();
+				if (!bridge.isHiveMode()) return;
+
+				set({ flushing: true });
+				try {
+					for (const quest of pending) {
+						const ok = await broadcastDailyQuestClaim(quest);
+						if (!ok) continue;
+
+						set(state => {
+							const quests = state.quests.map(q => q.id === quest.id ? { ...q, claimed: true } : q);
+							const claimedToday = quests.filter(q => q.claimed && q.ymdUtc === quest.ymdUtc).length;
+							emitClaimToast(quest, claimedToday);
+							return {
+								quests,
+								totalCompleted: state.totalCompleted + 1,
+							};
+						});
+					}
+				} finally {
+					set({ flushing: false });
 				}
 			},
 
@@ -132,7 +173,14 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 		{
 			name: 'ragnarok-daily-quests',
 			partialize: (state) => {
-				const { refreshIfNeeded: _a, updateProgress: _b, rerollQuest: _c, ...data } = state;
+				const {
+					refreshIfNeeded: _a,
+					updateProgress: _b,
+					rerollQuest: _c,
+					flushPendingClaims: _d,
+					flushing: _e,
+					...data
+				} = state;
 				return data;
 			},
 		},

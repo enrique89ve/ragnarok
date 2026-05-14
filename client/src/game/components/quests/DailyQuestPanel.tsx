@@ -1,12 +1,14 @@
 import React, { useEffect } from 'react';
-import { CheckCircle2, RotateCcw } from 'lucide-react';
+import { CheckCircle2, Hourglass, RotateCcw } from 'lucide-react';
 import { useDailyQuestStore, type DailyQuest } from '../../stores/dailyQuestStore';
 
 /**
  * QuestRow — compact horizontal quest entry.
  *
- * State machine has two visible states now (claim is auto on completion):
- *   in_progress -> claimed.
+ * State machine has three visible states. Completion is detected mid-match,
+ * but the chain broadcast is deferred (so Keychain doesn't pop during combat).
+ *
+ *   in_progress -> awaiting_claim -> claimed
  *
  *   [ rune  | TITLE · description · ━━━━ progress 0/30 ] [ +N RUNE ] [ ↻ ]
  *
@@ -14,8 +16,10 @@ import { useDailyQuestStore, type DailyQuest } from '../../stores/dailyQuestStor
  * TESTNET_RUNE_ECONOMY.dailyQuestRunePerSlot — changing the canonical constant
  * automatically reflects in every existing quest row on the next refresh.
  *
- * Left edge has a 2px state strip (gold-300/30 -> emerald) that reads
- * completion state at a glance.
+ * Left edge has a 2px state strip:
+ *   gold     -> in progress
+ *   amber    -> completed, broadcast pending (Keychain not yet confirmed)
+ *   emerald  -> chain has acknowledged the claim
  */
 function QuestRow({ quest, onReroll, canReroll }: {
 	quest: DailyQuest;
@@ -24,14 +28,19 @@ function QuestRow({ quest, onReroll, canReroll }: {
 }) {
 	const pct = Math.min((quest.progress / quest.goal) * 100, 100);
 	const isClaimed = quest.claimed;
+	const isAwaitingClaim = quest.completed && !quest.claimed;
 
 	const stripClass = isClaimed
 		? 'bg-emerald-400/70'
-		: 'bg-gold-300/25';
+		: isAwaitingClaim
+			? 'bg-amber-400/65'
+			: 'bg-gold-300/25';
 
 	const progressFill = isClaimed
 		? 'bg-linear-to-r from-emerald-600 to-emerald-300'
-		: 'bg-linear-to-r from-gold-600 to-gold-400';
+		: isAwaitingClaim
+			? 'bg-linear-to-r from-amber-600 to-amber-300'
+			: 'bg-linear-to-r from-gold-600 to-gold-400';
 
 	return (
 		<div className="relative group flex items-center gap-4 pl-5 pr-4 py-3.5 rounded-lg border border-obsidian-700 bg-linear-to-r from-obsidian-850 to-obsidian-900/80 transition-all hover:border-gold-600/40 hover:bg-obsidian-850">
@@ -67,7 +76,7 @@ function QuestRow({ quest, onReroll, canReroll }: {
 			</span>
 
 			<div className="shrink-0 w-[88px] flex justify-end">
-				{!isClaimed && canReroll && (
+				{!quest.completed && canReroll && (
 					<button
 						onClick={onReroll}
 						className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.22em] uppercase text-ink-300 hover:text-gold-300 transition-colors"
@@ -76,9 +85,18 @@ function QuestRow({ quest, onReroll, canReroll }: {
 						Recast
 					</button>
 				)}
-				{!isClaimed && !canReroll && (
+				{!quest.completed && !canReroll && (
 					<span className="font-mono text-[10px] tracking-[0.22em] uppercase text-ink-400">
 						Active
+					</span>
+				)}
+				{isAwaitingClaim && (
+					<span
+						className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.22em] uppercase text-amber-300"
+						title="Sign the next custom_json in Hive Keychain to credit the reward."
+					>
+						<Hourglass size={11} strokeWidth={2} />
+						Pending
 					</span>
 				)}
 				{isClaimed && (
@@ -97,8 +115,10 @@ export default function DailyQuestPanel() {
 	const rerollsUsed = useDailyQuestStore(s => s.rerollsUsedToday);
 	const refreshIfNeeded = useDailyQuestStore(s => s.refreshIfNeeded);
 	const rerollQuest = useDailyQuestStore(s => s.rerollQuest);
+	const flushPendingClaims = useDailyQuestStore(s => s.flushPendingClaims);
 
 	useEffect(() => { refreshIfNeeded(); }, [refreshIfNeeded]);
+	useEffect(() => { void flushPendingClaims(); }, [flushPendingClaims]);
 
 	if (quests.length === 0) return null;
 

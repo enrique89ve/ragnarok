@@ -5,7 +5,7 @@ import { ArmySelection as ArmySelectionType } from '../types/ChessTypes';
 import { useChessCombatAdapter } from '../hooks/useChessCombatAdapter';
 import { getDefaultArmySelection } from '../data/ChessPieceConfig';
 import { useCampaignStore } from '../campaign';
-import { deriveIntro, deriveIWonForPhase, deriveOpponentArmyForMode, selectOnWinHandler, useMatchStore } from '../match';
+import { deriveIntro, deriveIWonForPhase, deriveOpponentArmyForMode, flushDailyQuestClaimsAfterMatch, selectOnWinHandler, useMatchStore } from '../match';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { routes } from '../../lib/routes';
 import { usePokerCombatAdapter } from '../hooks/usePokerCombatAdapter';
@@ -576,6 +576,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       if (ctx) {
         selectOnWinHandler(ctx)({ iWon, turnCount });
       }
+      flushDailyQuestClaimsAfterMatch();
       const initialSub = getInitialGameOverSubPhase({
         iWon,
         isCampaign,
@@ -625,6 +626,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       if (ctx) {
         selectOnWinHandler(ctx)({ iWon, turnCount });
       }
+      flushDailyQuestClaimsAfterMatch();
       const initialSub = getInitialGameOverSubPhase({
         iWon,
         isCampaign,

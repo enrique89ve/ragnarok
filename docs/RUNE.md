@@ -83,12 +83,17 @@ Validation order matters: a duplicate nonce returns `'ignored'` before any state
 
 ## How a daily quest claim becomes RUNE
 
-Single broadcast per slot, single apply step. Auto-fired by the client when
-the slot's progress hits its goal — no manual "Claim" button.
+Single broadcast per slot, single apply step. The broadcast is **deferred**:
+goal-completion happens mid-combat, but the chain op fires at a neutral moment
+(match-end or daily-quest-panel mount) so a Keychain confirmation dialog does
+not interrupt gameplay. No manual "Claim" button.
 
 ```
-dailyQuestStore.updateProgress(type, delta)
-  └→ if (newProgress >= goal && !completed)
+dailyQuestStore.updateProgress(type, delta)        ─ mid-combat
+  └→ if (newProgress >= goal) set completed=true   (no broadcast yet)
+
+flushDailyQuestClaimsAfterMatch()                  ─ at match-end OR panel mount
+  └→ for each (completed && !claimed) quest:
        └→ getNFTBridge().claimDailyQuest(ymdUtc, slot, questType)
             └→ hiveSync.broadcastCustomJson('rp_daily_quest_claim', payload)
                  └→ chain replay: applyDailyQuestClaim(op, deps)
@@ -98,7 +103,11 @@ dailyQuestStore.updateProgress(type, delta)
                       └ calculateCappedRuneCredit + putRuneLedgerEntryAndBalance
                            ├ source: daily_quest_claim
                            └ key:    daily_quest:S01:{account}:{ymd}:{slot}
+       └→ on broadcast success: set claimed=true, emit "+N RUNE" toast
 ```
+
+Visible state machine in the quest panel:
+**in_progress** (gold) → **awaiting_claim** (amber, after goal hit) → **claimed** (emerald, after broadcast ack).
 
 `quest_type` is informational only — chain does NOT vary reward by it. Daily
 quest progress lives entirely client-side (event-bus subscribed), so a
