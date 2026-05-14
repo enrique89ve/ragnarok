@@ -4,6 +4,7 @@ import { BalanceOverview } from './WalletBalance';
 import { WalletDuatClaim } from './WalletDuatClaim';
 import { WalletHeader } from './WalletHeader';
 import { WalletConnectPrompt, WalletError, WalletLoading } from './WalletPrimitives';
+import { SeasonStateOverview } from './WalletSeasonState';
 import { useWalletData } from './useWalletData';
 
 export default function WalletPage() {
@@ -24,6 +25,7 @@ export default function WalletPage() {
 				{loadState.status === 'loaded' && (
 					<section className="mx-auto grid w-full max-w-5xl content-start gap-6">
 						<BalanceOverview account={loadState.data.selectedAccount} />
+						<SeasonStateOverview state={loadState.data.state} />
 						<WalletDuatClaim account={loadState.data.selectedAccount.account} />
 						<ActivityFeed entries={loadState.data.selectedAccountLedger} />
 					</section>
