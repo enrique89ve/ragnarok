@@ -93,7 +93,23 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 
 			refreshIfNeeded: () => {
 				const today = todayUtcString();
-				if (get().lastRefreshDate === today && get().quests.length > 0) return;
+				const current = get();
+
+				if (current.lastRefreshDate === today && current.quests.length > 0) {
+					// Same UTC day: keep progress but normalize reward.rune to the
+					// current canon constant in case it shifted under persisted
+					// quests (e.g. pre-flat-rate quests stored under reward.rune:50).
+					const needsRewardSync = current.quests.some(q => q.reward.rune !== DAILY_QUEST_RUNE_REWARD);
+					if (needsRewardSync) {
+						set(state => ({
+							quests: state.quests.map(q => ({
+								...q,
+								reward: { ...q.reward, rune: DAILY_QUEST_RUNE_REWARD },
+							})),
+						}));
+					}
+					return;
+				}
 
 				const templates = pickRandomQuests(TESTNET_RUNE_ECONOMY.dailyQuestSlotsPerDay);
 				const quests = templates.map((t, i) => templateToQuest(t, i, today));

@@ -87,10 +87,38 @@ export function registerAccountScopedStore(store: PersistableStore): void {
 	registeredStores.add(store);
 }
 
+/**
+ * When the player transitions from `guest` to a real Hive account
+ * (typical first-login flow), move every `:guest` bucket into the new
+ * account's bucket so progress from the pre-login session is retained.
+ * If the target bucket already has data, the guest copy is discarded
+ * (no merge — chain truth is the source of record for anything that
+ * matters across devices, and unmerged guest blobs are rare).
+ */
+function migrateGuestBucketTo(account: string): void {
+	if (account === GUEST_BUCKET) return;
+	const suffix = `:${GUEST_BUCKET}`;
+	const keys: string[] = [];
+	for (let i = 0; i < localStorage.length; i += 1) {
+		const key = localStorage.key(i);
+		if (key !== null && key.endsWith(suffix)) keys.push(key);
+	}
+	for (const key of keys) {
+		const targetKey = `${key.slice(0, -suffix.length)}:${account}`;
+		const value = localStorage.getItem(key);
+		if (value === null) continue;
+		if (localStorage.getItem(targetKey) === null) {
+			localStorage.setItem(targetKey, value);
+		}
+		localStorage.removeItem(key);
+	}
+}
+
 let lastAccount = readHiveAccount();
 useHiveDataStore.subscribe((state) => {
 	const next = state.user?.hiveUsername ?? GUEST_BUCKET;
 	if (next === lastAccount) return;
+	if (lastAccount === GUEST_BUCKET) migrateGuestBucketTo(next);
 	lastAccount = next;
 	for (const store of registeredStores) {
 		void store.persist.rehydrate();
