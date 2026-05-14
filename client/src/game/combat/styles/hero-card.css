@@ -1,0 +1,603 @@
+/* ═══════════════════════════════════════════════════
+   HERO CARD VISUALS
+   Ornate frame, portrait + interactions, tooltip,
+   name plate, stat bars, armor & attack badges.
+   Element/premium-glow variants live in
+   RagnarokCombatArena.css (still pending split).
+   ═══════════════════════════════════════════════════ */
+
+/* ========================================
+   ORNATE CARD FRAME - AAA Quality Design
+   Metallic textures with aged patina
+   ======================================== */
+
+/* Wrapper for external glow effects */
+.hero-card-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.hero-card-frame {
+  width: 100%;
+  height: 100%;
+  /* Removed max-height constraint - let hero art extend to fill available space */
+  display: flex;
+  flex-direction: column;
+  background:
+    linear-gradient(145deg,
+      rgba(40, 35, 28, 1) 0%,
+      rgba(25, 22, 18, 1) 50%,
+      rgba(15, 12, 10, 1) 100%);
+  border: 4px solid transparent;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  transition: transform 0.3s ease, opacity 0.3s ease, box-shadow 0.3s ease;
+  isolation: isolate;
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 2;
+}
+
+/* Ornate metallic border using pseudo-element */
+.hero-card-frame::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 13px;
+  background: #c9a227;
+  z-index: -2;
+  box-shadow: 0 0 14px rgba(201, 162, 39, 0.45);
+}
+
+/* Inner shadow for depth */
+.hero-card-frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  box-shadow:
+    inset 0 0 30px rgba(0, 0, 0, 0.6),
+    inset 0 2px 0 rgba(255, 215, 0, 0.1);
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Corner decorations */
+.hero-card-frame .hero-portrait::before {
+  content: '⚜';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  font-size: 14px;
+  color: rgba(201, 162, 39, 0.6);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  z-index: 10;
+}
+
+.battlefield-hero-square.opponent .hero-card-frame::before {
+  background: #c9272f;
+  box-shadow: 0 0 14px rgba(201, 39, 47, 0.45);
+}
+
+.hero-portrait {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.hero-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 15%;
+}
+
+.hero-portrait::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+/* Poker hole cards tucked behind the hero frame. The frame covers the lower
+   half, leaving the top half visibly protruding like cards in a pocket. */
+.hero-pocket-cards {
+  position: absolute;
+  left: 50%;
+  top: -86px;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0;
+  width: 176px;
+  pointer-events: none;
+  opacity: 0.92;
+  filter:
+    drop-shadow(0 -2px 8px rgba(0, 0, 0, 0.75))
+    saturate(0.9);
+  transform: translateX(-50%) scale(0.78);
+  transform-origin: center bottom;
+}
+
+.hero-pocket-cards--opponent {
+  opacity: 0.86;
+  top: -74px;
+  transform: translateX(-50%) scale(0.72);
+}
+
+.hero-pocket-cards .hole-card-slot {
+  flex: 0 0 auto;
+}
+
+.hero-pocket-cards .arena-poker-card.norse {
+  width: 108px;
+  height: 151px;
+}
+
+.hero-pocket-cards .arena-poker-card.norse:hover {
+  transform: none;
+}
+
+.hero-card-frame .hero-name-plate,
+.hero-card-frame .fighting-hp-bar-container,
+.hero-card-frame .hero-stat-bar {
+  position: relative;
+  z-index: 6;
+}
+
+/* ========================================
+   INTERACTIVE HERO PORTRAIT - Click for Hero Power
+   Single click = activate power, Double click = upgrade
+   ======================================== */
+.hero-portrait-interactive {
+  transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  z-index: 1; /* Ensure interaction surface is above backgrounds */
+  pointer-events: auto !important; /* Force pointer events */
+}
+
+.hero-portrait-interactive.has-power {
+  cursor: pointer;
+}
+
+.hero-portrait-interactive.has-power:hover {
+  filter: brightness(1.25) saturate(1.1);
+  transform: scale(1.03);
+}
+
+.hero-portrait-interactive.has-power:active {
+  filter: brightness(0.9);
+  transform: scale(0.97);
+  transition: transform 0.08s ease, opacity 0.08s ease, box-shadow 0.08s ease;
+}
+
+.hero-portrait-interactive.power-ready {
+  box-shadow:
+    inset 0 0 32px rgba(59, 130, 246, 0.85),
+    0 0 22px rgba(59, 130, 246, 0.5),
+    0 0 40px rgba(59, 130, 246, 0.2);
+  animation: heroPowerPulse 1.8s ease-in-out infinite;
+}
+
+.hero-portrait-interactive.power-ready:hover {
+  animation: none;
+  opacity: 1;
+  box-shadow:
+    inset 0 0 30px rgba(59, 130, 246, 0.8),
+    0 0 20px rgba(59, 130, 246, 0.5),
+    0 0 40px rgba(59, 130, 246, 0.25);
+}
+
+@keyframes heroPowerPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.hero-portrait-interactive.upgrade-ready {
+  animation: upgrade-pulse 1.5s ease-in-out infinite;
+}
+
+.hero-portrait-interactive.upgraded {
+  box-shadow: inset 0 0 18px rgba(234, 179, 8, 0.6), 0 0 12px rgba(234, 179, 8, 0.3);
+}
+
+@keyframes upgrade-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Hero Power Cost Badge - positioned on portrait */
+.portrait-power-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  z-index: 10;
+  transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+}
+
+.portrait-power-badge.affordable {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(37, 99, 235, 0.95));
+  color: white;
+  border: 2px solid rgba(147, 197, 253, 0.6);
+  box-shadow: 0 2px 14px rgba(59, 130, 246, 0.85), 0 0 20px rgba(59, 130, 246, 0.4);
+  animation: powerBadgePulse 1.8s ease-in-out infinite;
+}
+
+@keyframes powerBadgePulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+.portrait-power-badge.expensive {
+  background: rgba(55, 65, 81, 0.9);
+  color: rgba(156, 163, 175, 0.8);
+  border: 2px solid rgba(75, 85, 99, 0.5);
+}
+
+.portrait-power-badge.upgraded {
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.9), rgba(217, 119, 6, 0.95));
+  color: white;
+  border: 2px solid rgba(253, 224, 71, 0.6);
+  box-shadow: 0 2px 16px rgba(234, 179, 8, 0.9), 0 0 24px rgba(234, 179, 8, 0.4);
+  animation: upgradeBadgePulse 2s ease-in-out infinite;
+}
+
+@keyframes upgradeBadgePulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.portrait-power-badge .power-cost {
+  font-size: 0.9rem;
+}
+
+.portrait-power-badge .upgraded-icon {
+  font-size: 0.75rem;
+  margin-left: 2px;
+}
+
+/* Artifact Badge - shown below hero portrait when artifact equipped */
+.artifact-badge {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #6b21a8, #9333ea);
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: #fff;
+  font-weight: bold;
+  box-shadow: 0 0 10px rgba(147, 51, 234, 0.6);
+  white-space: nowrap;
+  z-index: 40;
+}
+
+/* Hero Power Tooltip - appears on portrait hover */
+.hero-portrait-tooltip {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  pointer-events: none;
+  animation: tooltip-fade-in 0.15s ease-out;
+}
+
+.hero-portrait-tooltip.above {
+  bottom: calc(100% + 12px);
+}
+
+.hero-portrait-tooltip.below {
+  top: calc(100% + 12px);
+}
+
+@keyframes tooltip-fade-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(4px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Hero Portrait Tooltip Portal - renders via React Portal to escape overflow:hidden */
+.hero-portrait-tooltip-portal {
+  pointer-events: none;
+  z-index: 10000;
+}
+
+.portrait-tooltip-content {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.98));
+  border: 2px solid rgba(59, 130, 246, 0.5);
+  border-radius: 12px;
+  padding: 12px 16px;
+  min-width: 220px;
+  max-width: 280px;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(59, 130, 246, 0.2);
+}
+
+.tooltip-power-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.tooltip-power-header .power-name {
+  font-weight: 700;
+  color: #60a5fa;
+  font-size: 0.95rem;
+}
+
+.tooltip-power-header .power-cost-display {
+  font-size: 0.8rem;
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.2);
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+.tooltip-power-desc {
+  color: rgba(226, 232, 240, 0.9);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+
+.tooltip-power-hint {
+  font-size: 0.75rem;
+  color: rgba(147, 197, 253, 0.8);
+  font-style: italic;
+  text-align: center;
+  padding: 4px 0;
+}
+
+.tooltip-upgrade-section {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+.tooltip-upgrade-section.can-upgrade {
+  background: rgba(234, 179, 8, 0.1);
+  margin: 10px -16px -12px;
+  padding: 10px 16px 12px;
+  border-radius: 0 0 10px 10px;
+}
+
+.tooltip-upgrade-section.is-upgraded {
+  background: rgba(34, 197, 94, 0.1);
+  margin: 10px -16px -12px;
+  padding: 10px 16px 12px;
+  border-radius: 0 0 10px 10px;
+  border-top-color: rgba(34, 197, 94, 0.3);
+}
+
+.tooltip-upgrade-section.is-upgraded .upgrade-header {
+  color: #4ade80;
+}
+
+.tooltip-upgrade-section .upgrade-header {
+  font-weight: 700;
+  color: #fcd34d;
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+}
+
+.tooltip-upgrade-section .upgrade-effect {
+  color: rgba(253, 224, 71, 0.9);
+  font-size: 0.8rem;
+  line-height: 1.3;
+  margin-bottom: 6px;
+}
+
+.tooltip-upgrade-section .upgrade-hint {
+  font-size: 0.75rem;
+  color: rgba(234, 179, 8, 0.9);
+  font-weight: 600;
+  text-align: center;
+  animation: hint-pulse 1.5s ease-in-out infinite;
+}
+
+.tooltip-upgrade-section .upgrade-hint.disabled {
+  color: rgba(156, 163, 175, 0.6);
+  animation: none;
+}
+
+@keyframes hint-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.tooltip-upgraded-badge {
+  margin-top: 8px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.3), rgba(217, 119, 6, 0.2));
+  border: 1px solid rgba(234, 179, 8, 0.5);
+  border-radius: 8px;
+  color: #fcd34d;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.hero-initial {
+  font-size: 2rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.hero-name-plate {
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.85) 15%,
+    rgba(0, 0, 0, 0.85) 85%,
+    transparent 100%
+  );
+  padding: 4px 8px;
+  text-align: center;
+  border-top: 1px solid rgba(218, 165, 32, 0.5);
+  border-bottom: 1px solid rgba(218, 165, 32, 0.3);
+}
+
+.hero-name {
+  font-family: 'Cinzel', 'Georgia', serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fcd34d;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.2;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+/* ========================================
+   HERO HP/STA BARS - Professional AAA Style
+   HP = Black background, STA = Orange themed
+   ======================================== */
+.hero-stat-bar {
+  height: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-stat-bar.hp-bar {
+  background: #0a0a0a;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.5);
+}
+
+.hero-stat-bar.sta-bar {
+  background: linear-gradient(180deg, #1a1a0a 0%, #2d2a10 100%);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.stat-bar-fill {
+  height: 100%;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  transform-origin: left;
+}
+
+.stat-bar-fill.hp-fill {
+  background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+}
+
+.stat-bar-fill.sta-fill {
+  background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+}
+
+.stat-bar-text {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  z-index: 2;
+  white-space: nowrap;
+}
+
+.hero-armor-badge {
+  position: absolute;
+  bottom: 28px;
+  right: -6px;
+  width: 32px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 15;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+  animation: armor-appear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.armor-shield-icon {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.armor-value {
+  position: relative;
+  z-index: 2;
+  font-size: 0.8rem;
+  font-weight: 900;
+  color: #ffffff;
+  text-shadow:
+    0 1px 2px rgba(0,0,0,0.8),
+    0 0 4px rgba(0,0,0,0.4);
+  line-height: 1;
+  margin-top: 2px;
+}
+
+@keyframes armor-appear {
+  0% {
+    transform: scale(0) rotate(-15deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15) rotate(3deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.hero-attack-badge {
+  position: absolute;
+  bottom: 32px;
+  left: -8px;
+  min-width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+  border: 2px solid #fca5a5;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  z-index: 10;
+}

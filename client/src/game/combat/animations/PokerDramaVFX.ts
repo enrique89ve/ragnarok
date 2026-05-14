@@ -22,10 +22,22 @@ function getOrCreateContainer(): HTMLDivElement {
 		el = document.createElement('div');
 		el.id = DRAMA_CONTAINER_ID;
 		Object.assign(el.style, {
-			position: 'fixed', inset: '0', pointerEvents: 'none',
-			zIndex: '9400', overflow: 'hidden'
+			// `position: absolute; inset: 0` — fills the layer-vfx mount.
+			// Layer architecture: docs/POKER_ARENA_UI.md §Layers
+			position: 'absolute', inset: '0', pointerEvents: 'none',
+			overflow: 'hidden'
 		});
-		document.body.appendChild(el);
+	}
+	// Always (re-)mount inside the dedicated VFX layer.  Fallback chain:
+	//   #arena-layer-vfx  (canonical — bounded by canvas, no transform on parent)
+	//   .ragnarok-combat-arena (arena root — bounded but pre-layer-refactor)
+	//   document.body (SSR / early init)
+	const target =
+		document.getElementById('arena-layer-vfx') ??
+		document.querySelector('.ragnarok-combat-arena') ??
+		document.body;
+	if (el.parentElement !== target) {
+		target.appendChild(el);
 	}
 	return el;
 }
@@ -39,6 +51,18 @@ function createDiv(styles: Partial<CSSStyleDeclaration>): HTMLDivElement {
 
 function cleanup(el: HTMLElement) {
 	if (el.parentNode) el.parentNode.removeChild(el);
+}
+
+/* Helper — screen-shake target.  `.game-viewport` carries the inline
+   `transform: translate(offsetX, offsetY) scale(scale)` set by
+   GameViewport.tsx for responsive canvas scaling. GSAP animations on
+   `x`/`y` overwrite the ENTIRE transform property, so shaking
+   `.game-viewport` blows away the scale on first shake (canvas appears
+   to "shift" and never restores correctly). The outer
+   `.game-viewport-wrapper` has no transform of its own, so it is the
+   correct shake target. */
+function getShakeTarget(): HTMLElement | null {
+	return document.querySelector('.game-viewport-wrapper');
 }
 
 export function killAllPokerVFX() {
@@ -133,11 +157,11 @@ export function playCardDealVFX(
 		ease: 'back.out(2)'
 	});
 
-	// Table shake on impact — move the viewport slightly
-	const viewport = document.querySelector('.game-viewport') as HTMLElement;
-	if (viewport) {
+	// Table shake on impact — shake the WRAPPER (see getShakeTarget).
+	const shakeTarget = getShakeTarget();
+	if (shakeTarget) {
 		const shakeIntensity = isRiver ? 4 : 2;
-		tl.to(viewport, {
+		tl.to(shakeTarget, {
 			x: `random(-${shakeIntensity}, ${shakeIntensity})`,
 			y: `random(-${shakeIntensity / 2}, ${shakeIntensity / 2})`,
 			duration: 0.08,
@@ -145,7 +169,7 @@ export function playCardDealVFX(
 			yoyo: true,
 			ease: 'none'
 		}, '-=0.2');
-		tl.set(viewport, { x: 0, y: 0 });
+		tl.set(shakeTarget, { x: 0, y: 0 });
 	}
 
 	// Particle impact at card position
@@ -277,7 +301,7 @@ export function playRaiseVFX(isPlayer: boolean) {
  */
 export function playReraiseVFX(isPlayer: boolean, reraiseLevel: number = 1) {
 	const container = getOrCreateContainer();
-	const viewport = document.querySelector('.game-viewport') as HTMLElement;
+	const shakeTarget = getShakeTarget();
 
 	// --- Tension vignette ---
 	const vignetteIntensity = Math.min(0.4 + reraiseLevel * 0.1, 0.7);
@@ -293,18 +317,18 @@ export function playReraiseVFX(isPlayer: boolean, reraiseLevel: number = 1) {
 	);
 
 	// --- Pressure shake (low frequency, not damage-like) ---
-	if (viewport) {
+	if (shakeTarget) {
 		const shakeIntensity = Math.min(2 + reraiseLevel, 5);
 		const shakeDuration = 0.15;
 		const repeats = 2 + reraiseLevel;
-		gsap.to(viewport, {
+		gsap.to(shakeTarget, {
 			x: `random(-${shakeIntensity}, ${shakeIntensity})`,
 			y: `random(-${shakeIntensity * 0.4}, ${shakeIntensity * 0.4})`,
 			duration: shakeDuration,
 			repeat: repeats,
 			yoyo: true,
 			ease: 'sine.inOut',
-			onComplete: () => { gsap.set(viewport, { x: 0, y: 0 }); }
+			onComplete: () => { gsap.set(shakeTarget, { x: 0, y: 0 }); }
 		});
 	}
 
@@ -622,10 +646,10 @@ export function playRagnarokVFX() {
 		setTimeout(() => spawnParticleBurst(cx + 100, cy, 20, ELEMENT_PALETTES.fire), 400);
 	}, 800);
 
-	// Heavy screen shake
-	const viewport = document.querySelector('.game-viewport') as HTMLElement;
-	if (viewport) {
-		gsap.to(viewport, {
+	// Heavy screen shake — wrapper, not viewport (see getShakeTarget)
+	const shakeTarget = getShakeTarget();
+	if (shakeTarget) {
+		gsap.to(shakeTarget, {
 			x: 'random(-6, 6)',
 			y: 'random(-4, 4)',
 			duration: 0.1,
@@ -633,7 +657,7 @@ export function playRagnarokVFX() {
 			yoyo: true,
 			ease: 'none',
 			delay: 0.8,
-			onComplete: () => { gsap.set(viewport, { x: 0, y: 0 }); }
+			onComplete: () => { gsap.set(shakeTarget, { x: 0, y: 0 }); }
 		});
 	}
 }
@@ -766,8 +790,6 @@ export function playShowdownDamageVFX(
  * Phase-specific screen effects triggered when a new phase banner shows
  */
 export function playPhaseDramaVFX(phase: string) {
-	const container = getOrCreateContainer();
-
 	const configs: Record<string, { color: string; burstElement: string }> = {
 		pre_flop: { color: '#ef4444', burstElement: 'fire' },
 		faith: { color: '#8b5cf6', burstElement: 'ice' },
@@ -778,45 +800,35 @@ export function playPhaseDramaVFX(phase: string) {
 	const config = configs[phase];
 	if (!config) return;
 
-	// Horizontal slash line
-	const slash = createDiv({
-		left: '0',
-		top: '50%',
-		width: '100%',
-		height: '2px',
-		background: `linear-gradient(90deg, transparent 0%, ${config.color}88 20%, ${config.color} 50%, ${config.color}88 80%, transparent 100%)`,
-		transform: 'translateY(-50%)',
-		zIndex: '5'
-	});
-	container.appendChild(slash);
+	/*
+	 * Horizontal slash line REMOVED.  Used to inject a `width: 100%` div
+	 * into the fixed `#poker-drama-vfx-layer` container (which is
+	 * `position: fixed; inset: 0` covering the entire viewport), painting
+	 * a 1920+ px coloured line straight across the screen. This is the
+	 * "linea roja que traspasa la mesa" the user reported on every PRE_FLOP
+	 * transition. If a phase-change accent is desired in the future, mount
+	 * it INSIDE `.zone-board` (the table) — never the document-level VFX
+	 * layer — and constrain to the table's dimensions.
+	 */
 
-	gsap.fromTo(slash,
-		{ scaleX: 0 },
-		{
-			scaleX: 1,
-			duration: 0.3,
-			ease: 'power2.out',
-			onComplete: () => {
-				gsap.to(slash, {
-					opacity: 0,
-					duration: 0.5,
-					delay: 1.2,
-					onComplete: () => cleanup(slash)
-				});
-			}
-		}
-	);
-
-	// Subtle screen shake
-	const viewport = document.querySelector('.game-viewport') as HTMLElement;
-	if (viewport) {
-		gsap.to(viewport, {
+	// Subtle screen shake (kept — it's vw-shake on the viewport itself,
+	// not a foreign element injected outside the canvas).
+	/* Screen shake target is the WRAPPER, not `.game-viewport`. The inner
+	   .game-viewport carries the critical inline transform
+	   `translate(offsetX, offsetY) scale(scale)` set by GameViewport.tsx for
+	   responsive canvas scaling — and GSAP overwrites the entire transform
+	   property when animating `x`/`y`, blowing away the scale on first
+	   shake and never restoring it. Targeting `.game-viewport-wrapper`
+	   (which has no transform of its own) is safe. */
+	const shakeTarget = document.querySelector('.game-viewport-wrapper') as HTMLElement;
+	if (shakeTarget) {
+		gsap.to(shakeTarget, {
 			x: 'random(-2, 2)',
 			duration: 0.08,
 			repeat: 2,
 			yoyo: true,
 			ease: 'none',
-			onComplete: () => { gsap.set(viewport, { x: 0, y: 0 }); }
+			onComplete: () => { gsap.set(shakeTarget, { x: 0, y: 0 }); }
 		});
 	}
 }
@@ -891,17 +903,17 @@ export function playHandImprovementVFX(tier: 'low' | 'mid' | 'high' | 'godly') {
 		});
 	}
 
-	// Rumble for godly hands
+	// Rumble for godly hands — wrapper, not viewport (see getShakeTarget)
 	if (tier === 'godly') {
-		const viewport = document.querySelector('.game-viewport') as HTMLElement;
-		if (viewport) {
-			gsap.to(viewport, {
+		const shakeTarget = getShakeTarget();
+		if (shakeTarget) {
+			gsap.to(shakeTarget, {
 				x: 'random(-1, 1)',
 				duration: 0.06,
 				repeat: 3,
 				yoyo: true,
 				ease: 'none',
-				onComplete: () => { gsap.set(viewport, { x: 0, y: 0 }); }
+				onComplete: () => { gsap.set(shakeTarget, { x: 0, y: 0 }); }
 			});
 		}
 	}

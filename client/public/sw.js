@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
 
 // Cache shared with assetCacheStore.ts bulk downloader
-var CACHE_NAME = 'ragnarok-assets-v2';
+var CACHE_NAME = 'ragnarok-assets-v3';
 
 var ASSET_DIRS = [
 	'/art/', '/portraits/', '/textures/', '/sounds/',
@@ -35,6 +35,15 @@ function isAssetRequest(url) {
 
 function isImmutableChunk(url) {
 	return IMMUTABLE_RE.test(url);
+}
+
+function isViteDevRequest(url) {
+	var parsed = new URL(url);
+	return parsed.pathname === '/@vite/client'
+		|| parsed.pathname === '/@react-refresh'
+		|| parsed.pathname.startsWith('/@fs/')
+		|| parsed.pathname.startsWith('/src/')
+		|| parsed.pathname.includes('/node_modules/.vite/');
 }
 
 // Install: pre-cache index.html for offline navigation, then activate immediately
@@ -89,6 +98,8 @@ self.addEventListener('fetch', function(event) {
 
 	var url = new URL(request.url);
 	if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+
+	if (isViteDevRequest(request.url)) return;
 
 	// Navigation: network-first with offline fallback to cached index.html
 	if (request.mode === 'navigate') {

@@ -57,6 +57,8 @@ export interface BattlefieldHeroProps {
   isWeaponUpgraded?: boolean;
   /** Equipped artifact card data (if any) */
   artifact?: { name: string; attack: number };
+  /** Poker hole cards tucked inside the hero frame */
+  pocketCardsOverlay?: React.ReactNode;
 }
 
 const getSecretColor = (heroClass: string) => {
@@ -99,7 +101,8 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
   onHeroPowerClick,
   onWeaponUpgradeClick,
   isWeaponUpgraded = false,
-  artifact
+  artifact,
+  pocketCardsOverlay
 }) => {
   const heroElement = useMemo(() => {
     if (elementProp) return elementProp;
@@ -276,6 +279,7 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
     >
       <div className={`hero-card-wrapper ${elementClass} premium-glow ${damageReaction ? `hero-${damageReaction}` : ''} ${healthPercent <= 20 ? 'hero-critical-hp' : healthPercent <= 40 ? 'hero-low-hp' : ''}`}>
         <div className={`hero-elemental-aura ${elementClass} premium-glow`} />
+        {pocketCardsOverlay}
 
         <div className={`hero-card-frame ${elementClass} premium-glow`}>
           <div className={`hero-particles ${elementClass} premium-glow`}>
@@ -534,7 +538,7 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
 
         {/* Risk chip — shows committed HP as poker chip badge */}
         {hpCommitted > 0 && (
-          <div className={`hero-risk-chip ${isOpponent ? 'opponent' : 'player'}`}>
+          <div className={`hero-risk-chip ${isOpponent ? 'opponent' : 'player'}`} title={`Stake: ${hpCommitted} HP committed`}>
             <span className="risk-chip-amount">{hpCommitted}</span>
             <span className="risk-chip-unit">HP</span>
           </div>

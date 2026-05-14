@@ -204,6 +204,16 @@ async function instantiate(module, imports = {}) {
       // assembly/poker/phaseManager/isRevealPhase(i32) => bool
       return exports.isRevealPhase(phase) != 0;
     },
+    applyChessAction(snapshotJson, actionJson) {
+      // assembly/chess/reducer/applyChessAction(~lib/string/String, ~lib/string/String) => ~lib/string/String
+      snapshotJson = __retain(__lowerString(snapshotJson) || __notnull());
+      actionJson = __lowerString(actionJson) || __notnull();
+      try {
+        return __liftString(exports.applyChessAction(snapshotJson, actionJson) >>> 0);
+      } finally {
+        __release(snapshotJson);
+      }
+    },
     createPokerDeck() {
       // assembly/types/PokerTypes/createPokerDeck() => ~lib/array/Array<assembly/types/PokerTypes/PokerCard>
       return __liftArray(pointer => __liftInternref(__getU32(pointer)), 2, exports.createPokerDeck() >>> 0);
@@ -351,6 +361,7 @@ export const {
   isRevealPhase,
   getCommunityCardsToReveal,
   getTotalCommunityCards,
+  applyChessAction,
   calculateFinalDamage,
   createPokerDeck,
 } = await (async url => instantiate(

@@ -6,7 +6,15 @@
   so multi-phase boss fights feel like a unified UI motif.
 */
 
+/* Anchored absolute over the opponent hero column so its mount/unmount
+   (depends on bossPhases data loading + opponentMaxHP) cannot push the
+   BattlefieldHero portrait or any sibling. The opponent-hero-container
+   is already `position: relative`. */
 .phase-pip-indicator {
+	position: absolute;
+	top: -8px;
+	left: 50%;
+	transform: translate(-50%, -100%);
 	display: flex;
 	flex-direction: column;
 	align-items: center;

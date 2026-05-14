@@ -29,8 +29,14 @@ import {
 import { useKingChessAbility } from '../../../hooks/useKingChessAbility';
 import { resolveHeroPortrait, DEFAULT_PORTRAIT } from '../../../utils/art/artMapping';
 import { useGameStore } from '../../../stores/gameStore';
+import { useChessHoverStore } from '../../../stores/chessHoverStore';
 import { Tooltip } from '../../ui/Tooltip';
 import ChessBoard from '../ChessBoard';
+import { ELEMENT_NAMES, PIECE_TYPE_NAMES } from '../ChessPiece';
+import { ELEMENT_COLORS, ELEMENT_ICONS } from '../../../types/ChessTypes';
+
+const COMPACT_FRAME_STYLE: React.CSSProperties = { width: 72, height: 90 };
+const FLANKING_FRAME_STYLE: React.CSSProperties = { width: 108, height: 135 };
 
 /* ============================================================
    HeroPortraitPanel — static portrait for the opponent side. The
@@ -42,25 +48,32 @@ type HeroPortraitPanelProps = {
 	readonly army: ArmySelectionType;
 	readonly side: 'player' | 'opponent';
 	readonly pieceCount?: number;
+	readonly compact?: boolean;
+	readonly frameStyle?: React.CSSProperties;
 };
 
-const HeroPortraitPanel: React.FC<HeroPortraitPanelProps> = ({ army, side, pieceCount }) => {
+const HeroPortraitPanel: React.FC<HeroPortraitPanelProps> = ({ army, side, pieceCount, compact, frameStyle }) => {
 	const king = army.king;
 	const kingPortrait = resolveHeroPortrait(king.id, king.portrait) ?? DEFAULT_PORTRAIT;
 	const fallbackPortrait = DEFAULT_PORTRAIT;
 	const safeFallback = DEFAULT_PORTRAIT;
 	const isPlayer = side === 'player';
 
+	const wrapperClass = compact
+		? `flex items-center gap-3 ${isPlayer ? 'flex-row-reverse text-right' : 'flex-row text-left'}`
+		: 'flex flex-col items-center';
+
 	return (
 		<motion.div
 			initial={{ opacity: 0, x: isPlayer ? -50 : 50 }}
 			animate={{ opacity: 1, x: 0 }}
 			transition={{ duration: 0.5, delay: 0.2 }}
-			className={`flex flex-col items-center ${isPlayer ? 'mr-6' : 'ml-6'}`}
+			className={wrapperClass}
 		>
 			<div
 				className={`hero-portrait-frame ${isPlayer ? 'hero-portrait-player' : 'hero-portrait-opponent'}`}
 				data-element={king.element || (isPlayer ? 'holy' : 'shadow')}
+				style={compact ? COMPACT_FRAME_STYLE : frameStyle}
 			>
 				<img
 					src={kingPortrait}
@@ -78,18 +91,35 @@ const HeroPortraitPanel: React.FC<HeroPortraitPanelProps> = ({ army, side, piece
 				/>
 			</div>
 
-			<div className="hero-nameplate">
-				<div className="hero-nameplate-text">{king.name}</div>
-				<div className="hero-nameplate-subtitle">
-					{isPlayer ? 'Aesir Commander' : 'Jotun Warlord'}
+			{compact ? (
+				<div className="flex flex-col gap-0.5 leading-tight">
+					<div className="text-sm font-bold text-amber-200">{king.name}</div>
+					<div className="text-[10px] uppercase tracking-wider text-amber-400/70">
+						{isPlayer ? 'Aesir Commander' : 'Jotun Warlord'}
+					</div>
+					{pieceCount !== undefined && (
+						<div className="text-[10px] text-gray-300 mt-0.5">
+							<span className="font-bold text-amber-300">{pieceCount}</span>
+							<span className="opacity-60 ml-1">pieces</span>
+						</div>
+					)}
 				</div>
-			</div>
+			) : (
+				<>
+					<div className="hero-nameplate">
+						<div className="hero-nameplate-text">{king.name}</div>
+						<div className="hero-nameplate-subtitle">
+							{isPlayer ? 'Aesir Commander' : 'Jotun Warlord'}
+						</div>
+					</div>
 
-			{pieceCount !== undefined && (
-				<div className={`chess-piece-count-shield mt-2 ${isPlayer ? 'chess-piece-count-player' : 'chess-piece-count-opponent'}`}>
-					<span className="font-bold text-sm">{pieceCount}</span>
-					<span className="text-[10px] opacity-60 ml-1">pieces</span>
-				</div>
+					{pieceCount !== undefined && (
+						<div className={`chess-piece-count-shield mt-2 ${isPlayer ? 'chess-piece-count-player' : 'chess-piece-count-opponent'}`}>
+							<span className="font-bold text-sm">{pieceCount}</span>
+							<span className="text-[10px] opacity-60 ml-1">pieces</span>
+						</div>
+					)}
+				</>
 			)}
 		</motion.div>
 	);
@@ -103,9 +133,11 @@ const HeroPortraitPanel: React.FC<HeroPortraitPanelProps> = ({ army, side, piece
 type PlayerPortraitProps = {
 	readonly army: ArmySelectionType;
 	readonly pieceCount?: number;
+	readonly compact?: boolean;
+	readonly frameStyle?: React.CSSProperties;
 };
 
-const PlayerHeroPortrait: React.FC<PlayerPortraitProps> = ({ army, pieceCount }) => {
+const PlayerHeroPortrait: React.FC<PlayerPortraitProps> = ({ army, pieceCount, compact, frameStyle: extraFrameStyle }) => {
 	const king = army.king;
 	const kingPortrait = resolveHeroPortrait(king.id, king.portrait) ?? DEFAULT_PORTRAIT;
 	const fallbackPortrait = DEFAULT_PORTRAIT;
@@ -167,87 +199,217 @@ const PlayerHeroPortrait: React.FC<PlayerPortraitProps> = ({ army, pieceCount })
 		</div>
 	);
 
+	const wrapperClass = compact
+		? 'flex flex-row-reverse items-center gap-3 text-right'
+		: 'flex flex-col items-center';
+
+	const frameStyle: React.CSSProperties = {
+		cursor: isClickable ? 'pointer' : 'default',
+		...(compact ? COMPACT_FRAME_STYLE : (extraFrameStyle || {})),
+	};
+
+	const portraitFrame = (
+		<div
+			className={`hero-portrait-frame hero-portrait-player ${isClickable ? 'king-clickable' : ''} ${isPlacementMode ? 'king-placement-active' : ''} ${isCasting ? 'king-casting' : ''}`}
+			data-element={king.element || 'holy'}
+			onClick={handlePortraitClick}
+			style={frameStyle}
+		>
+			<img
+				src={kingPortrait}
+				alt={king.name}
+				className="w-full h-full object-cover"
+				onError={(e) => {
+					const target = e.target as HTMLImageElement;
+					if (!target.src.includes(fallbackPortrait) && !target.src.startsWith('data:')) {
+						target.src = fallbackPortrait;
+					} else if (!target.src.startsWith('data:')) {
+						target.src = safeFallback;
+					}
+				}}
+				loading="lazy"
+			/>
+
+			<div className={`king-uses-badge ${minesRemaining === 0 ? 'king-uses-empty' : ''} ${isPlacementMode ? 'king-uses-active' : ''}`}>
+				{minesRemaining}/5
+			</div>
+
+			<AnimatePresence>
+				{isCasting && (
+					<motion.div
+						className="king-cast-burst"
+						initial={{ opacity: 1, scale: 0.3 }}
+						animate={{ opacity: 0, scale: 2.5 }}
+						exit={{ opacity: 0 }}
+						transition={{ duration: 0.8, ease: 'easeOut' }}
+					/>
+				)}
+			</AnimatePresence>
+		</div>
+	);
+
 	return (
 		<motion.div
 			initial={{ opacity: 0, x: -50 }}
 			animate={{ opacity: 1, x: 0 }}
 			transition={{ duration: 0.5, delay: 0.2 }}
-			className="flex flex-col items-center mr-6"
+			className={wrapperClass}
 		>
-			<Tooltip content={tooltipContent} position="right" delay={400}>
-				<div
-					className={`hero-portrait-frame hero-portrait-player ${isClickable ? 'king-clickable' : ''} ${isPlacementMode ? 'king-placement-active' : ''} ${isCasting ? 'king-casting' : ''}`}
-					data-element={king.element || 'holy'}
-					onClick={handlePortraitClick}
-					style={{ cursor: isClickable ? 'pointer' : 'default' }}
-				>
-					<img
-						src={kingPortrait}
-						alt={king.name}
-						className="w-full h-full object-cover"
-						onError={(e) => {
-							const target = e.target as HTMLImageElement;
-							if (!target.src.includes(fallbackPortrait) && !target.src.startsWith('data:')) {
-								target.src = fallbackPortrait;
-							} else if (!target.src.startsWith('data:')) {
-								target.src = safeFallback;
-							}
-						}}
-						loading="lazy"
-					/>
-
-					<div className={`king-uses-badge ${minesRemaining === 0 ? 'king-uses-empty' : ''} ${isPlacementMode ? 'king-uses-active' : ''}`}>
-						{minesRemaining}/5
-					</div>
-
-					<AnimatePresence>
-						{isCasting && (
-							<motion.div
-								className="king-cast-burst"
-								initial={{ opacity: 1, scale: 0.3 }}
-								animate={{ opacity: 0, scale: 2.5 }}
-								exit={{ opacity: 0 }}
-								transition={{ duration: 0.8, ease: 'easeOut' }}
-							/>
-						)}
-					</AnimatePresence>
-				</div>
+			<Tooltip content={tooltipContent} position={compact ? 'bottom' : 'right'} delay={400}>
+				{portraitFrame}
 			</Tooltip>
 
-			<div className="hero-nameplate">
-				<div className="hero-nameplate-text">{king.name}</div>
-				<div className="hero-nameplate-subtitle">Aesir Commander</div>
+			{compact ? (
+				<div className="flex flex-col gap-0.5 leading-tight items-end">
+					<div className="text-sm font-bold text-amber-200">{king.name}</div>
+					<div className="text-[10px] uppercase tracking-wider text-amber-400/70">Aesir Commander</div>
+					{pieceCount !== undefined && (
+						<div className="text-[10px] text-gray-300 mt-0.5">
+							<span className="font-bold text-amber-300">{pieceCount}</span>
+							<span className="opacity-60 ml-1">pieces</span>
+						</div>
+					)}
+					{needsDirection && isPlacementMode && (
+						<motion.div
+							initial={{ opacity: 0, scale: 0.9 }}
+							animate={{ opacity: 1, scale: 1 }}
+							className="mt-1 flex gap-1"
+						>
+							{availableDirections.map((dir) => (
+								<button
+									key={dir}
+									onClick={() => selectDirection(dir)}
+									className={`px-1.5 py-0.5 rounded text-[10px] font-semibold transition-all ${selectedDirection === dir ? 'bg-yellow-600 text-white border border-yellow-400' : 'bg-gray-700 text-gray-300 border border-gray-600 hover:bg-gray-600'}`}
+								>
+									{dir === 'horizontal' ? '↔' : dir === 'vertical' ? '↕' : dir === 'diagonal_up' ? '↗' : '↘'}
+								</button>
+							))}
+						</motion.div>
+					)}
+					{isPlacementMode && (
+						<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[10px] text-yellow-400 mt-0.5">
+							Click a tile to place trap
+						</motion.div>
+					)}
+				</div>
+			) : (
+				<>
+					<div className="hero-nameplate">
+						<div className="hero-nameplate-text">{king.name}</div>
+						<div className="hero-nameplate-subtitle">Aesir Commander</div>
+					</div>
+
+					{pieceCount !== undefined && (
+						<div className="chess-piece-count-shield mt-2 chess-piece-count-player">
+							<span className="font-bold text-sm">{pieceCount}</span>
+							<span className="text-[10px] opacity-60 ml-1">pieces</span>
+						</div>
+					)}
+
+					{needsDirection && isPlacementMode && (
+						<motion.div
+							initial={{ opacity: 0, scale: 0.9 }}
+							animate={{ opacity: 1, scale: 1 }}
+							className="mt-2 flex gap-1"
+						>
+							{availableDirections.map((dir) => (
+								<button
+									key={dir}
+									onClick={() => selectDirection(dir)}
+									className={`px-2 py-1 rounded text-xs font-semibold transition-all ${selectedDirection === dir ? 'bg-yellow-600 text-white border border-yellow-400' : 'bg-gray-700 text-gray-300 border border-gray-600 hover:bg-gray-600'}`}
+								>
+									{dir === 'horizontal' ? '↔' : dir === 'vertical' ? '↕' : dir === 'diagonal_up' ? '↗' : '↘'}
+								</button>
+							))}
+						</motion.div>
+					)}
+
+					{isPlacementMode && (
+						<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-1 text-center">
+							<div className="text-xs text-yellow-400">Click a tile to place trap</div>
+						</motion.div>
+					)}
+				</>
+			)}
+		</motion.div>
+	);
+};
+
+/* ============================================================
+   PieceInfoPanel — small side panel that mirrors the currently
+   hovered royal piece. Lives outside the board so the cells stay
+   visually clean while the panel carries the heavy info.
+   ============================================================ */
+
+type PieceInfoPanelProps = {
+	readonly boardState: ChessBoardState;
+};
+
+const PieceInfoPanel: React.FC<PieceInfoPanelProps> = ({ boardState }) => {
+	const hoveredId = useChessHoverStore(s => s.hoveredPieceId);
+	const myCanonicalSide = useGameStore(s => s.myCanonicalSide) ?? 'player';
+	const piece = hoveredId ? boardState.pieces.find(p => p.id === hoveredId) : undefined;
+
+	if (!piece) {
+		return (
+			<div className="w-full max-w-50 rounded-md border border-amber-500/20 bg-black/40 backdrop-blur-sm px-3 py-2 text-center">
+				<div className="text-[10px] uppercase tracking-wider text-amber-400/40">
+					Hover a piece
+				</div>
+			</div>
+		);
+	}
+
+	const isPlayer = piece.owner === myCanonicalSide;
+	const element = piece.element ?? 'neutral';
+	const hasElement = element !== 'neutral';
+	const elementColor = hasElement ? ELEMENT_COLORS[element] : '#9ca3af';
+	const isPawn = piece.type === 'pawn';
+	const isKing = piece.type === 'king';
+	const showStats = !isPawn && !isKing;
+
+	return (
+		<motion.div
+			key={piece.id}
+			initial={{ opacity: 0, y: 4 }}
+			animate={{ opacity: 1, y: 0 }}
+			transition={{ duration: 0.15 }}
+			className="mt-4 w-full max-w-50 rounded-md backdrop-blur-sm px-3 py-2"
+			style={{
+				background: 'rgba(0,0,0,0.55)',
+				borderWidth: '1px',
+				borderStyle: 'solid',
+				borderColor: elementColor + (hasElement ? '99' : '55'),
+				boxShadow: hasElement ? `0 0 18px ${elementColor}33` : '0 4px 12px rgba(0,0,0,0.4)',
+			}}
+		>
+			<div className="font-bold text-sm leading-tight truncate" style={{ color: elementColor }}>
+				{piece.heroName}
+			</div>
+			<div className="text-[10px] uppercase tracking-wider text-amber-400/70 mb-2">
+				{PIECE_TYPE_NAMES[piece.type]} · {isPlayer ? 'You' : 'Enemy'}
 			</div>
 
-			{pieceCount !== undefined && (
-				<div className="chess-piece-count-shield mt-2 chess-piece-count-player">
-					<span className="font-bold text-sm">{pieceCount}</span>
-					<span className="text-[10px] opacity-60 ml-1">pieces</span>
+			{showStats && (
+				<div className="flex items-center justify-between text-xs">
+					<span className="text-red-300 font-semibold">HP {piece.health}/{piece.maxHealth}</span>
+					{piece.stamina > 0 && (
+						<span className="text-amber-300 font-semibold">⚡{piece.stamina}</span>
+					)}
 				</div>
 			)}
 
-			{needsDirection && isPlacementMode && (
-				<motion.div
-					initial={{ opacity: 0, scale: 0.9 }}
-					animate={{ opacity: 1, scale: 1 }}
-					className="mt-2 flex gap-1"
+			{hasElement && (
+				<div
+					className="mt-1.5 flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[10px] font-medium"
+					style={{
+						background: `color-mix(in srgb, ${elementColor} 12%, transparent)`,
+						color: elementColor,
+					}}
 				>
-					{availableDirections.map((dir) => (
-						<button
-							key={dir}
-							onClick={() => selectDirection(dir)}
-							className={`px-2 py-1 rounded text-xs font-semibold transition-all ${selectedDirection === dir ? 'bg-yellow-600 text-white border border-yellow-400' : 'bg-gray-700 text-gray-300 border border-gray-600 hover:bg-gray-600'}`}
-						>
-							{dir === 'horizontal' ? '↔' : dir === 'vertical' ? '↕' : dir === 'diagonal_up' ? '↗' : '↘'}
-						</button>
-					))}
-				</motion.div>
-			)}
-
-			{isPlacementMode && (
-				<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-1 text-center">
-					<div className="text-xs text-yellow-400">Click a tile to place trap</div>
-				</motion.div>
+					<span>{ELEMENT_ICONS[element]}</span>
+					<span>{ELEMENT_NAMES[element]}</span>
+				</div>
 			)}
 		</motion.div>
 	);
@@ -255,7 +417,8 @@ const PlayerHeroPortrait: React.FC<PlayerPortraitProps> = ({ army, pieceCount })
 
 /* ============================================================
    ChessPhase — the entrypoint the coordinator renders. Composes
-   the title, check banner, the two king portraits, and the board.
+   the match header (opponent / mode / player), check banner, and
+   the centered board.
    ============================================================ */
 
 export type ChessPhaseProps = {
@@ -285,11 +448,26 @@ const ChessPhase: React.FC<ChessPhaseProps> = ({
 			initial={{ opacity: 0, scale: 0.9 }}
 			animate={{ opacity: 1, scale: 1 }}
 			exit={{ opacity: 0, scale: 0.9 }}
-			className="w-full h-full flex flex-col items-center justify-center p-4"
+			className="relative w-full h-full flex flex-col items-center justify-center p-4 gap-3"
 		>
-			<div className="mb-4 text-center">
-				<h1 className="text-4xl font-bold" style={{ background: 'linear-gradient(180deg, #ffd700, #ff8c00)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', textShadow: 'none', filter: 'drop-shadow(0 2px 4px rgba(255, 165, 0, 0.5))' }}>Ragnarok Chess</h1>
-			</div>
+			{/* Title chip — top-left corner, low-key identity anchor */}
+			<motion.div
+				initial={{ opacity: 0, y: -10 }}
+				animate={{ opacity: 1, y: 0 }}
+				transition={{ duration: 0.4, delay: 0.1 }}
+				className="absolute top-4 left-4 px-3 py-1.5 rounded-md bg-black/50 border border-amber-500/30 backdrop-blur-sm pointer-events-none"
+			>
+				<span
+					className="text-xs font-bold tracking-[2px] uppercase"
+					style={{
+						background: 'linear-gradient(180deg, #ffd700, #ff8c00)',
+						WebkitBackgroundClip: 'text',
+						WebkitTextFillColor: 'transparent',
+					}}
+				>
+					Ragnarok Chess
+				</span>
+			</motion.div>
 
 			<AnimatePresence>
 				{boardState.inCheck && (
@@ -297,47 +475,66 @@ const ChessPhase: React.FC<ChessPhaseProps> = ({
 						initial={{ opacity: 0, scale: 0.8, y: -20 }}
 						animate={{ opacity: 1, scale: 1, y: 0 }}
 						exit={{ opacity: 0, scale: 0.8, y: -20 }}
-						className="check-warning-banner mb-3"
+						className="check-warning-banner"
 					>
 						CHECK! {boardState.inCheck === myCanonicalSide ? 'Your King is in danger!' : "Enemy King is threatened!"}
 					</motion.div>
 				)}
 			</AnimatePresence>
 
-			<div className="flex items-center justify-center">
-				{playerArmy && (
-					<PlayerHeroPortrait army={playerArmy} pieceCount={playerPieceCount} />
-				)}
+			{/* Board flanked by heroes — flex centered + fixed-width side cols.
+				Heroes hug the board (gap-6) instead of spreading to viewport edges.
+				items-start anchors heroes to top so PieceInfoPanel growing
+				doesn't push opponent. */}
+			<div className="flex items-stretch justify-center w-full gap-6">
+				<div className="w-45 flex flex-col items-center justify-start">
+					<HeroPortraitPanel
+						army={opponentArmy}
+						side="opponent"
+						pieceCount={opponentPieceCount}
+						frameStyle={FLANKING_FRAME_STYLE}
+					/>
+				</div>
 
 				<div className="relative flex flex-col items-center">
 					<ChessBoard
 						onCombatTriggered={onCombatTriggered}
 						disabled={isPlacementMode}
 					/>
-
-					{boardState.inCheck === boardState.currentTurn && (
-						<div className="mt-2 text-center text-sm">
-							<p className="text-yellow-400 font-semibold">You must escape check! Move King, block, or capture the threat.</p>
-						</div>
-					)}
 				</div>
 
-				<HeroPortraitPanel army={opponentArmy} side="opponent" pieceCount={opponentPieceCount} />
-
-				{import.meta.env.DEV && (
-					<button
-						onClick={(e) => {
-							e.preventDefault();
-							e.stopPropagation();
-							onBattleMode();
-						}}
-						className="fixed bottom-2 left-2 z-hud opacity-20 hover:opacity-80 transition-opacity text-[10px] px-2 py-1 bg-gray-800/80 border border-gray-600/50 rounded text-gray-500 cursor-pointer"
-						title="Developer battle sandbox"
-					>
-						Battle Sandbox
-					</button>
-				)}
+				<div className="w-45 flex flex-col items-center justify-end gap-3">
+					<PieceInfoPanel boardState={boardState} />
+					{playerArmy && (
+						<PlayerHeroPortrait
+							army={playerArmy}
+							pieceCount={playerPieceCount}
+							frameStyle={FLANKING_FRAME_STYLE}
+						/>
+					)}
+				</div>
 			</div>
+
+			{/* Check escape hint — only when relevant. Turn indicator owned by ChessBoard's internal banner. */}
+			{boardState.inCheck === boardState.currentTurn && (
+				<p className="text-xs text-yellow-400 font-semibold mt-1 text-center">
+					You must escape check! Move King, block, or capture the threat.
+				</p>
+			)}
+
+			{import.meta.env.DEV && (
+				<button
+					onClick={(e) => {
+						e.preventDefault();
+						e.stopPropagation();
+						onBattleMode();
+					}}
+					className="fixed bottom-2 left-2 z-hud opacity-20 hover:opacity-80 transition-opacity text-[10px] px-2 py-1 bg-gray-800/80 border border-gray-600/50 rounded text-gray-500 cursor-pointer"
+					title="Developer battle sandbox"
+				>
+					Battle Sandbox
+				</button>
+			)}
 		</motion.div>
 	);
 };

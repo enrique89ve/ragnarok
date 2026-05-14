@@ -11,9 +11,6 @@ import {
   type ElementType,
 } from '../types/PokerCombatTypes';
 import { evaluatePokerHand } from '../stores/combat/pokerCombatSlice';
-import SimpleBattlefield from '../components/SimpleBattlefield';
-import HandFan from '../components/HandFan';
-import ManaBar from '../components/ManaBar';
 import { MulliganScreen } from '../components/MulliganScreen';
 import { adaptCardInstance } from '../utils/cards/cardInstanceAdapter';
 import { Position } from '../types/Position';
@@ -34,9 +31,6 @@ import { TurnBanner } from './components/TurnBanner';
 import { GameOverScreen } from './components/GameOverScreen';
 import { GameHUD } from './components/GameHUD';
 import { HeroDeathAnimation } from './components/HeroDeathAnimation';
-import { PlayingCard } from './components/PlayingCard';
-import { HoleCardsOverlay } from './components/HoleCardsOverlay';
-import { BattlefieldHero } from './components/BattlefieldHero';
 import HeroGearPanel from './components/HeroGearPanel';
 import { ElementBuffPopup } from './components/ElementBuffPopup';
 import { ElementMatchupBanner } from './components/ElementMatchupBanner';
@@ -45,12 +39,10 @@ import { PhaseBanner } from './components/PhaseBanner';
 import { useElementalBuff } from './hooks/useElementalBuff';
 import { GameViewport } from './GameViewport';
 import { useSettingsStore } from '../stores/settingsStore';
-import CardRenderer from '../components/CardRendering/CardRenderer';
 import { useRagnarokCombatController } from './hooks/useRagnarokCombatController';
 import { HeroBattlePopup } from './components/HeroBattlePopup';
 import { KingPassivePopup } from './components/KingPassivePopup';
 import type { ShowdownCelebration as ShowdownCelebrationState } from './hooks/useCombatEvents';
-import { isCardInWinningHand } from './utils/combatArenaUtils';
 import { debug } from '../config/debugConfig';
 import { GameLog } from '../components/GameLog';
 import { useGameLogIntegration } from '../hooks/useGameLogIntegration';
@@ -66,51 +58,26 @@ import { usePokerKeyboardShortcuts } from './hooks/usePokerKeyboardShortcuts';
 import { useRealmAnnouncement } from './hooks/useRealmAnnouncement';
 import { useHeroHealthEffects } from './hooks/useHeroHealthEffects';
 import { useAudio } from '../../lib/stores/useAudio';
-import { BossQuipBubble } from './components/BossQuipBubble';
 import { BossPhaseFlash } from './components/BossPhaseFlash';
-import { PhasePipIndicator } from './components/PhasePipIndicator';
-import { CombatPhaseDirector } from './components/CombatPhaseDirector';
+import { BettingPanel } from './components/BettingPanel';
+import { WagerInfoPanel } from './components/WagerInfoPanel';
 import type { BossPhaseFlash as BossPhaseFlashKind } from '../campaign/campaignTypes';
 import { useBossPhases } from './hooks/useBossPhases';
+import { getWagerDescription } from './data/wagerDescriptions';
+import { OpponentZone } from './zones/OpponentZone';
+import { BoardZone } from './zones/BoardZone';
+import { PlayerZone } from './zones/PlayerZone';
+import { MinionField } from './zones/MinionField';
 import { useCampaignStore, getMission } from '../campaign';
 import { isBettingPhase } from './modules/PhaseManager';
 import { resolveHeroPortrait } from '../utils/art/artMapping';
 import { getHeroFeud } from '../pvp/pvpData';
 import type { CardInstance } from '../types';
 
-const SwordIcon = () => (
-	<svg className="btn-icon" viewBox="0 0 20 20" fill="currentColor">
-		<path d="M16.5 1l-1 3.5-1.2 1.2-5.8 5.8-1.4-1.4 5.8-5.8L14 3.1 15.5 1h1zM7.6 11l1.4 1.4-2.3 2.3 1.1 1.1a1 1 0 01-1.4 1.4l-1.1-1.1-1.8 1.8a1 1 0 01-1.4-1.4l1.8-1.8-1.1-1.1a1 1 0 011.4-1.4l1.1 1.1L7.6 11z"/>
-	</svg>
-);
-
 const CrossedSwordsIcon = () => (
 	<svg className="btn-icon" viewBox="0 0 20 20" fill="currentColor">
 		<path d="M3.5 1l1 3.5 1.2 1.2 4.3 4.3 4.3-4.3L15.5 4.5l1-3.5h1L16 5.3l-1.2 1.2L10 11.3l-1.5 1.5 1.1 1.1a1 1 0 01-1.4 1.4l-1.1-1.1-1.8 1.8a1 1 0 01-1.4-1.4l1.8-1.8-1.1-1.1a1 1 0 011.4-1.4l1.1 1.1L8.6 10 4.3 5.7 3.1 4.5 1 5.5V4.5L2.5 1h1z"/>
 		<path d="M11.4 12.4l1.5-1.5 4.8 4.8-1.2 1.2L18 18.5a1 1 0 01-1.4 1.4l-1.6-1.6-1.2 1.2-4.8-4.8z" opacity="0.85"/>
-	</svg>
-);
-
-const ShieldIcon = () => (
-	<svg className="btn-icon" viewBox="0 0 20 20" fill="currentColor">
-		<path d="M10 1L3 4v5c0 4.5 3 8.3 7 9.8 4-1.5 7-5.3 7-9.8V4l-7-3zm0 2.2L15 5.8v3.4c0 3.5-2.2 6.5-5 7.8-2.8-1.3-5-4.3-5-7.8V5.8L10 3.2z"/>
-		<circle cx="10" cy="9.5" r="2.5" opacity="0.6"/>
-	</svg>
-);
-
-const HelmIcon = () => (
-	<svg className="btn-icon" viewBox="0 0 20 20" fill="currentColor">
-		<path d="M10 2C6.5 2 3.5 4.5 3 8v3c0 .6.4 1 1 1h1v2.5c0 .8.7 1.5 1.5 1.5h1c.6 0 1-.3 1.2-.8L10 13l1.3 2.2c.2.5.6.8 1.2.8h1c.8 0 1.5-.7 1.5-1.5V12h1c.6 0 1-.4 1-1V8c-.5-3.5-3.5-6-7-6zM5 8.5c.3-2.5 2.5-4.5 5-4.5s4.7 2 5 4.5V10H5V8.5z"/>
-		<path d="M9.2 7h1.6v3H9.2V7z" opacity="0.5"/>
-	</svg>
-);
-
-const CardFanIcon = () => (
-	<svg className="btn-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-		<path d="M5.2 4.6 10.1 3a1.7 1.7 0 0 1 2.1 1.1l2.2 6.8a1.7 1.7 0 0 1-1.1 2.1l-4.9 1.6a1.7 1.7 0 0 1-2.1-1.1L4 6.7a1.7 1.7 0 0 1 1.2-2.1Z"/>
-		<path d="m8.3 6.5 3.8-1.2"/>
-		<path d="m9.1 9 3.7-1.2"/>
-		<path d="M12.7 6.6 14.2 6a1.7 1.7 0 0 1 2.1 1.1l1.1 3.6a1.7 1.7 0 0 1-1.1 2.1l-1.7.6"/>
 	</svg>
 );
 
@@ -132,24 +99,9 @@ const PHASE_LABELS: Partial<Record<CombatPhase, string>> = {
 	[CombatPhase.FIRST_STRIKE]: 'First Strike',
 };
 
-const WAGER_DESCRIPTIONS: Record<string, string> = {
-	double_blinds: 'Blinds doubled',
-	reduce_fold_penalty: 'Fold penalty reduced',
-	showdown_coin_flip: 'Bonus showdown coin flip',
-	increase_min_bet: 'Minimum bet increased',
-	hide_actions: 'Betting actions obscured',
-	peek_next_card: 'Peek next community card',
-	all_in_bonus: 'All-in damage bonus',
-	showdown_armor: 'Showdown win grants armor',
-	strong_hand_draw: 'Strong hands draw cards',
-	showdown_aoe: 'Showdown hits the whole board',
-	fold_heal: 'Enemy folds heal you',
-	all_in_buff: 'All-in buffs minions',
-	hand_rank_up: 'Hand rank increased',
-	showdown_rank_damage: 'Showdown damage scales with rank',
-	see_hole_cards: 'See enemy hole cards',
-	double_showdown: 'Showdown stakes doubled',
-};
+// WAGER_DESCRIPTIONS map moved to client/src/game/combat/data/wagerDescriptions.ts
+// for sharing with future components (was previously duplicated across
+// WagerEffectsHUD — now deleted — and inline here).
 
 const BATTLE_INTEL_GLYPHS: Record<string, string> = {
 	buff_all_attack: 'ATK',
@@ -206,9 +158,7 @@ function getCombatElement(element?: ElementType | string): ElementType {
 	return (element as ElementType | undefined) ?? 'neutral';
 }
 
-// Stable reference for the face-down placeholder rendered before community
-// cards are dealt. Hoisted so the JSX prop is a constant ref across renders.
-const FACEDOWN_PLACEHOLDER_CARD: PokerCard = { suit: 'spades', value: 'A', numericValue: 14 };
+// FACEDOWN_PLACEHOLDER_CARD moved to utils/combatArenaUtils.ts (consumed by BoardZone).
 
 interface RagnarokCombatArenaProps {
   onCombatEnd?: (winner: 'player' | 'opponent' | 'draw') => void;
@@ -555,7 +505,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
 
   // Early return if no combat state
   if (!combatState) {
-    return <div className="unified-combat-arena">Loading...</div>;
+    return <div className="unified-combat-arena relative w-full h-full block">Loading...</div>;
   }
 
   const currentPhaseLabel = PHASE_LABELS[combatState.phase] || combatState.phase.replace(/_/g, ' ');
@@ -605,179 +555,126 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
       ];
 
   return (
-    <div className="unified-combat-arena" ref={battlefieldRef as React.RefObject<HTMLDivElement>}>
-      {/* Turn transition flash overlay */}
+    <div className="unified-combat-arena flex flex-col justify-center w-full h-full py-20" ref={battlefieldRef as React.RefObject<HTMLDivElement>}>
+      {/* ═══════════ ZONE 1 · OPP (hero + hand) ═══════════ */}
+      <OpponentZone
+        opponentPet={opponentPet ?? null}
+        enrichedOpponentPet={enrichedOpponentPet}
+        opponentLevel={opponentLevel}
+        opponentMana={opponentMana}
+        opponentMaxMana={opponentMaxMana}
+        opponentHpCommitted={opponentHpCommitted}
+        opponentPosition={combatState.opponentPosition}
+        isOpponentTargetable={isOpponentTargetable}
+        opponentSecrets={opponentSecrets}
+        opponentHeroClass={opponentHeroClass}
+        opponentHoleCards={combatState.opponent.holeCards}
+        opponentHand={(gameState?.players?.opponent?.hand ?? []) as CardInstance[]}
+        isAllInShowdown={combatState.isAllInShowdown}
+        showdownCelebration={showdownCelebration}
+        waitingForOpponent={!!basePermissions?.waitingForOpponent}
+        bossQuipText={bossQuipText}
+        bossQuipKey={bossQuipKey}
+        bossPortrait={bossPortrait}
+        opponentName={opponentPet?.name}
+        shakingHero={shakingTargets.has('opponent-hero')}
+        isPlayerTurn={isPlayerTurn}
+        onOpponentHeroClick={onOpponentHeroClick}
+      />
+
+      {/* ═══════════ ZONE 2 · OPP FIELD (minions) ═══════════ */}
+      <MinionField
+        role="opp"
+        playerCards={[]}
+        opponentCards={opponentBattlefield}
+        onCardClick={handlePlayerCardClick}
+        onOpponentCardClick={handleOpponentCardClick}
+        onOpponentHeroClick={onOpponentHeroClick}
+        attackingCard={attackingCard}
+        isPlayerTurn={isPlayerTurn}
+        registerCardPosition={registerCardPosition || noopRegisterCardPosition}
+        shakingTargets={shakingTargets}
+        isInteractionDisabled={gameState?.gamePhase === 'game_over'}
+      />
+
+      {/* ═══════════ ZONE 3 · BOARD (community cards) ═══════════ */}
+      <BoardZone
+        communityCards={combatState.communityCards}
+        showFaith={showFaith}
+        showForesight={showForesight}
+        showDestiny={showDestiny}
+        showdownWinningCards={showdownCelebration?.winningCards}
+      />
+
+      {/* ═══════════ ZONE 4 · PLAYER FIELD (minions) ═══════════ */}
+      <MinionField
+        role="player"
+        playerCards={playerBattlefield}
+        opponentCards={[]}
+        onCardClick={handlePlayerCardClick}
+        onOpponentCardClick={handleOpponentCardClick}
+        attackingCard={attackingCard}
+        isPlayerTurn={isPlayerTurn}
+        registerCardPosition={registerCardPosition || noopRegisterCardPosition}
+        shakingTargets={shakingTargets}
+        isInteractionDisabled={gameState?.gamePhase === 'game_over'}
+      />
+
+      {/* ═══════════ ZONE 5 · PLAYER (hero + hand) ═══════════ */}
+      <PlayerZone
+        playerPet={playerPet ?? null}
+        enrichedPlayerPet={enrichedPlayerPet}
+        playerLevel={playerLevel}
+        playerMana={playerMana}
+        playerMaxMana={playerMaxMana}
+        playerHpCommitted={playerHpCommitted}
+        playerPosition={combatState.playerPosition}
+        isPlayerTargetable={isPlayerTargetable}
+        playerSecrets={playerSecrets}
+        playerHeroClass={playerHeroClass}
+        playerHoleCards={combatState.player.holeCards}
+        artifact={gameState?.players?.player?.artifact ? {
+          name: gameState.players.player.artifact.card.name,
+          attack: asExtendedCardData(gameState.players.player.artifact.card).attack || 0,
+        } : undefined}
+        showdownCelebration={showdownCelebration}
+        isMyTurnToAct={!!basePermissions?.isMyTurnToAct}
+        playerHandEval={playerHandEval}
+        handStrengthClass={handStrengthClass}
+        handStrengthPercent={handStrengthPercent}
+        shakingHero={shakingTargets.has('player-hero')}
+        isPlayerTurn={isPlayerTurn}
+        onPlayerHeroClick={onPlayerHeroClick}
+        onOpenGearPanel={() => setShowGearPanel(true)}
+        onHeroPowerClick={onHeroPowerClick}
+        onWeaponUpgradeClick={onWeaponUpgradeClick}
+        isWeaponUpgraded={isWeaponUpgraded}
+        handCards={handCards}
+        handCurrentMana={handCurrentMana}
+        handIsPlayerTurn={handIsPlayerTurn}
+        heroHealth={gameState?.players?.player ? (gameState.players.player.heroHealth ?? gameState.players.player.health) : 0}
+        evolveReadyIds={evolveReadyIds}
+        playerBattlefield={playerBattlefield}
+        onCardPlay={onCardPlay}
+        handleCardPlay={handleCardPlay}
+        registerCardPosition={registerCardPosition || noopRegisterCardPosition}
+        battlefieldRef={battlefieldRef as React.RefObject<HTMLDivElement>}
+      />
+
+      {/* ═══════════ OVERLAY LAYER (absolute, layered on top of zones) ═══════════ */}
       {turnFlash && (
         <div className={`turn-flash-overlay turn-flash-${turnFlash}`} />
       )}
 
-      
       {isMulligan && (
-        <div className="mulligan-notice">
+        <div className="mulligan-notice absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none flex flex-col items-center gap-1">
           <span className="mulligan-text">Waiting for Mulligan...</span>
           <span className="mulligan-subtext">Complete your card selection first</span>
         </div>
       )}
 
-      {/* Opponent Hero - with hole cards overlay below (true mirror - opponent faces you across the table) */}
-      <div className={`unified-opponent-hero ${shakingTargets.has('opponent-hero') ? 'damage-shake damage-flash' : ''} ${!isPlayerTurn ? 'turn-active' : ''}`}>
-        {opponentPet && (
-          <div data-hero-role="opponent" className="opponent-hero-container">
-            {/* Boss dialogue bubble — campaign mode only, fires on combat
-                start and when opponent HP drops below 50%. Anchored left
-                of the hero portrait so it doesn't cover the face.
-                Text + key are owned by parent RagnarokCombatArena and
-                threaded through props because the campaign store + low-HP
-                effects can't be hooked from inside this presentational
-                subcomponent (it doesn't see useCampaignStore directly). */}
-            <BossQuipBubble
-              text={bossQuipText}
-              speakerName={opponentPet?.name}
-              speakerPortrait={bossPortrait}
-              triggerKey={bossQuipKey}
-            />
-            {/* Phase pip strip — only renders if the current campaign mission
-                has bossPhases declared. Renders nothing on non-boss / PvP /
-                non-campaign matches. Reads HP from the opponent pet stats so
-                the lit/unlit state stays in lockstep with phase fires. */}
-            <PhasePipIndicator
-              opponentCurrentHP={enrichedOpponentPet?.stats?.currentHealth ?? 0}
-              opponentMaxHP={enrichedOpponentPet?.stats?.maxHealth ?? 0}
-            />
-            <BattlefieldHero
-              pet={enrichedOpponentPet}
-              hpCommitted={opponentHpCommitted}
-              pokerPosition={combatState.opponentPosition}
-              level={opponentLevel}
-              onClick={onOpponentHeroClick}
-              isTargetable={isOpponentTargetable}
-              isOpponent={true}
-              secrets={opponentSecrets}
-              heroClass={opponentHeroClass}
-              mana={opponentMana}
-              maxMana={opponentMaxMana}
-            />
-            {/* Opponent hole cards - uses HoleCardsOverlay component for consistent rendering */}
-            <HoleCardsOverlay
-              cards={combatState.opponent.holeCards}
-              variant="opponent"
-              faceDown={!(combatState.isAllInShowdown || showdownCelebration?.resolution.resolutionType === 'showdown')}
-              winningCards={showdownCelebration?.winningCards}
-              isShowdown={showdownCelebration?.resolution.resolutionType === 'showdown'}
-              activeTurn={!!basePermissions?.waitingForOpponent}
-            />
-            <div className="opponent-hero-mana">
-              <ManaBar 
-                currentMana={opponentMana} 
-                maxMana={opponentMaxMana} 
-                overloadedMana={0} 
-                pendingOverload={0}
-              />
-            </div>
-          </div>
-        )}
-      </div>
-      
-      {/* Community Cards */}
-      <div className="unified-community community-cards-section">
-        <div className="zone-community">
-          {showFaith && combatState.communityCards.faith.length > 0 ? (
-            combatState.communityCards.faith.map((card: PokerCard, idx: number) => {
-              const isWinningCard = showdownCelebration ? isCardInWinningHand(card, showdownCelebration.winningCards) : false;
-              return (
-                <div key={`faith-${idx}`} className={`community-slot ${isWinningCard ? 'winning-card' : ''}`}>
-                  <div className={isWinningCard ? 'winning-card-glow celebration' : ''}>
-                    <PlayingCard card={card} />
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            [0, 1, 2].map(idx => (
-              <div key={`faith-placeholder-${idx}`} className="community-slot">
-                <PlayingCard card={FACEDOWN_PLACEHOLDER_CARD} faceDown />
-              </div>
-            ))
-          )}
-          
-          <div className={`community-slot ${showdownCelebration && showForesight && combatState.communityCards.foresight && isCardInWinningHand(combatState.communityCards.foresight, showdownCelebration.winningCards) ? 'winning-card' : ''}`}>
-            {showForesight && combatState.communityCards.foresight ? (
-              <div className={showdownCelebration && isCardInWinningHand(combatState.communityCards.foresight, showdownCelebration.winningCards) ? 'winning-card-glow celebration' : ''}>
-                <PlayingCard card={combatState.communityCards.foresight} />
-              </div>
-            ) : (
-              <div className="card-placeholder" />
-            )}
-          </div>
-          
-          <div className={`community-slot ${showdownCelebration && showDestiny && combatState.communityCards.destiny && isCardInWinningHand(combatState.communityCards.destiny, showdownCelebration.winningCards) ? 'winning-card' : ''}`}>
-            {showDestiny && combatState.communityCards.destiny ? (
-              <div className={showdownCelebration && isCardInWinningHand(combatState.communityCards.destiny, showdownCelebration.winningCards) ? 'winning-card-glow celebration' : ''}>
-                <PlayingCard card={combatState.communityCards.destiny} />
-              </div>
-            ) : (
-              <div className="card-placeholder" />
-            )}
-          </div>
-        </div>
-      </div>
-      
-      {/* Opponent Hand Display */}
-      <div className="unified-opponent-hand">
-        <div className="opponent-hand-display">
-          {((gameState?.players?.opponent?.hand ?? []) as CardInstance[]).slice(0, 10).map((card, index: number) => (
-            card.isRevealed ? (
-              <div key={card.instanceId || `opp-revealed-${index}`} className="opponent-revealed-card scale-[0.4] -mx-8">
-                <CardRenderer card={card} isInHand={true} size="small" />
-              </div>
-            ) : (
-              <div key={`opp-card-${index}`} className="opponent-card-back" />
-            )
-          ))}
-          {(gameState?.players?.opponent?.hand?.length || 0) > 0 && (
-            <div className="opponent-hand-count">
-              {gameState?.players?.opponent?.hand?.length || 0}
-            </div>
-          )}
-        </div>
-      </div>
-      
-      {/* Opponent Field */}
-      <div className="unified-opponent-field">
-        <SimpleBattlefield
-          playerCards={[]}
-          opponentCards={opponentBattlefield}
-          onCardClick={handlePlayerCardClick}
-          onOpponentCardClick={handleOpponentCardClick}
-          onOpponentHeroClick={onOpponentHeroClick}
-          attackingCard={attackingCard}
-          isPlayerTurn={isPlayerTurn}
-          registerCardPosition={registerCardPosition || noopRegisterCardPosition}
-          renderMode="opponent"
-          shakingTargets={shakingTargets}
-          isInteractionDisabled={gameState?.gamePhase === 'game_over'}
-        />
-      </div>
-
-      {/* Player Field */}
-      <div className="unified-player-field">
-        <SimpleBattlefield
-          playerCards={playerBattlefield}
-          opponentCards={[]}
-          onCardClick={handlePlayerCardClick}
-          onOpponentCardClick={handleOpponentCardClick}
-          attackingCard={attackingCard}
-          isPlayerTurn={isPlayerTurn}
-          registerCardPosition={registerCardPosition || noopRegisterCardPosition}
-          renderMode="player"
-          shakingTargets={shakingTargets}
-          isInteractionDisabled={gameState?.gamePhase === 'game_over'}
-        />
-      </div>
-
-      {/* Attack mode banner — shown while a minion is selected as attacker */}
       {attackingCard && (
-        <div className="attack-mode-banner">
+        <div className="attack-mode-banner absolute left-1/2 top-4 -translate-x-1/2 z-50">
           <span className="attack-mode-icon" aria-hidden="true">
             <CrossedSwordsIcon />
           </span>
@@ -795,92 +692,8 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
         </div>
       )}
 
-      {/* Info Row */}
-      <div className="unified-info-row">
-      </div>
-      
-      {/* Player Area - Hero + Hole Cards + Hand Cards in a row */}
-      <div className="unified-player-area">
-        <div className="unified-hero-hand-row">
-          {/* Hero section with hole cards behind */}
-          {playerPet && (
-            <div className={`unified-hero-section ${shakingTargets.has('player-hero') ? 'damage-shake damage-flash' : ''} ${isPlayerTurn ? 'turn-active' : ''}`}>
-              <div data-hero-role="player" className="poker-hero-container">
-                <BattlefieldHero
-                  pet={enrichedPlayerPet}
-                  hpCommitted={playerHpCommitted}
-                  pokerPosition={combatState.playerPosition}
-                  level={playerLevel}
-                  onClick={() => { onPlayerHeroClick?.(); setShowGearPanel(true); }}
-                  isTargetable={isPlayerTargetable}
-                  isOpponent={false}
-                  secrets={playerSecrets}
-                  heroClass={playerHeroClass}
-                  mana={playerMana}
-                  maxMana={playerMaxMana}
-                  onHeroPowerClick={onHeroPowerClick}
-                  onWeaponUpgradeClick={onWeaponUpgradeClick}
-                  isWeaponUpgraded={isWeaponUpgraded}
-                  artifact={gameState?.players?.player?.artifact ? {
-                    name: gameState.players.player.artifact.card.name,
-                    attack: asExtendedCardData(gameState.players.player.artifact.card).attack || 0
-                  } : undefined}
-                />
-                <div className="player-mana-display">
-                  <ManaBar 
-                    currentMana={playerMana} 
-                    maxMana={playerMaxMana} 
-                    overloadedMana={0} 
-                    pendingOverload={0}
-                  />
-                </div>
-                {/* Player hole cards - always visible (your own cards) */}
-                <HoleCardsOverlay
-                  cards={combatState.player.holeCards}
-                  variant="player"
-                  winningCards={showdownCelebration?.winningCards}
-                  isShowdown={showdownCelebration?.resolution.resolutionType === 'showdown'}
-                  activeTurn={!!basePermissions?.isMyTurnToAct}
-                />
-                {playerHandEval && playerHandEval.rank > PokerHandRank.HIGH_CARD && (
-                  <div className="hand-strength-compact">
-                    <span className="strength-icon" aria-hidden="true">
-                      <CardFanIcon />
-                    </span>
-                    <span className={`strength-name ${handStrengthClass}`}>{playerHandEval.displayName}</span>
-                    <div className="hand-strength-bar">
-                      <div className={`hand-strength-fill ${handStrengthClass}`} style={{ transform: `scaleX(${handStrengthPercent / 100})` }} />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          
-          {/* Hand cards next to hero */}
-          <div className="unified-hand-section">
-            {handCards && handCards.length > 0 && onCardPlay && (
-              <div className="poker-hand-container">
-                <HandFan
-                  cards={handCards}
-                  currentMana={handCurrentMana}
-                  heroHealth={gameState?.players?.player ? (gameState.players.player.heroHealth ?? gameState.players.player.health) : 0}
-                  isPlayerTurn={handIsPlayerTurn}
-                  onCardPlay={handleCardPlay}
-                  registerCardPosition={registerCardPosition || noopRegisterCardPosition}
-                  battlefieldRef={battlefieldRef as React.RefObject<HTMLDivElement>}
-                  evolveReadyIds={evolveReadyIds}
-                  battlefieldCount={playerBattlefield.length}
-                  playerBattlefield={playerBattlefield}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-      
       {showCombatDirector && (
-        <CombatPhaseDirector
+        <WagerInfoPanel
           phase={combatState.phase}
           phaseLabel={currentPhaseLabel}
           headline={phaseDirectorHeadline}
@@ -893,124 +706,15 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
         />
       )}
 
-      {/* Betting Actions Row - BELOW hand cards per user request */}
       {showBettingInteraction && (
-        <div className="unified-betting-actions-container">
-          {/* HP Slider + Quick-bet presets */}
-          <div className="poker-hp-slider-container">
-            <div className="poker-quick-bets">
-              {[
-                { label: '25%', pct: 0.25 },
-                { label: '50%', pct: 0.50 },
-                { label: 'ALL', pct: 1.0 },
-              ].map(({ label, pct }) => {
-                const maxBet = basePermissions?.maxBetAmount || 100;
-                const qb = Math.max(basePermissions?.minBet || 1, Math.floor(maxBet * pct));
-                return (
-                  <button
-                    key={label}
-                    type="button"
-                    className={`quick-bet-btn ${label === 'ALL' ? 'all-in' : ''}`}
-                    onClick={() => setBetAmount(Math.min(qb, maxBet))}
-                    disabled={!basePermissions?.isMyTurnToAct}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-            <input
-              type="range"
-              min={basePermissions?.minBet || 1}
-              max={basePermissions?.maxBetAmount || 100}
-              value={betAmount}
-              onChange={(e) => setBetAmount(Number(e.target.value))}
-              className="poker-hp-slider"
-              disabled={!basePermissions?.isMyTurnToAct}
-            />
-            <span className="slider-value">{betAmount} HP</span>
-          </div>
-          <div className="unified-betting-actions poker-actions">
-            {basePermissions && (() => {
-               const {
-                 hasBetToCall, toCall, availableHP, minBet,
-                 canCheck, canBet, canCall, canRaise, canFold, maxBetAmount, isAllIn,
-                 isMyTurnToAct
-               } = basePermissions;
-
-               const isDisabled = !isMyTurnToAct;
-
-               const maxBet = Math.max(1, availableHP);
-               const clampedBet = Math.min(betAmount, maxBet);
-               const maxSlider = maxBetAmount;
-               const effectiveBet = maxSlider >= minBet ? Math.min(Math.max(minBet, clampedBet), maxSlider) : 0;
-               const actualCanRaise = canRaise && maxSlider >= minBet && effectiveBet >= minBet;
-
-               const attackHP = hasBetToCall ? toCall + effectiveBet : effectiveBet;
-               const callHP = Math.min(toCall, availableHP);
-
-               return (
-                 <div className="action-buttons-group">
-                   <button
-                     className="poker-btn raise-btn"
-                     onClick={() => wrappedOnAction(
-                       hasBetToCall ? CombatAction.COUNTER_ATTACK : CombatAction.ATTACK,
-                       effectiveBet
-                     )}
-                     disabled={isDisabled || (hasBetToCall ? !actualCanRaise : !canBet)}
-                     title={hasBetToCall ? 'Raise — increase the stakes' : 'Bet — commit HP to the pot'}
-                   >
-                     <SwordIcon />
-                     <span className="btn-label">{hasBetToCall ? 'RAISE' : 'BET'}</span>
-                     <span className="btn-text">{attackHP} HP</span>
-                   </button>
-
-                   <button
-                     className="poker-btn call-btn"
-                     onClick={() => wrappedOnAction(canCall ? CombatAction.ENGAGE : CombatAction.DEFEND)}
-                     disabled={isDisabled || (!canCall && !canCheck)}
-                     title={canCall ? 'Call — match the bet' : 'Check — pass without betting'}
-                   >
-                     {canCall ? (
-                       <>
-                         <CrossedSwordsIcon />
-                         <span className="btn-label">CALL</span>
-                         <span className="btn-text">{isAllIn ? `ALL-IN ${callHP}` : `${callHP} HP`}</span>
-                       </>
-                     ) : (
-                       <>
-                         <HelmIcon />
-                         <span className="btn-label">CHECK</span>
-                       </>
-                     )}
-                   </button>
-
-                   <button
-                     className="poker-btn fold-btn"
-                     onClick={() => wrappedOnAction(CombatAction.BRACE)}
-                     disabled={isDisabled || !canFold}
-                     title="Fold — surrender this hand and lose committed HP"
-                   >
-                     <ShieldIcon />
-                     <span className="btn-label">FOLD</span>
-                   </button>
-
-                   {isPlayerTurn && playerBattlefield.length > 0 && (
-                     <button
-                       type="button"
-                       className="poker-btn auto-attack-btn"
-                       onClick={() => autoAttackAll('minion')}
-                       title="Order the frontline to attack enemy minions automatically"
-                     >
-                       <CrossedSwordsIcon />
-                       <span className="btn-text">Frontline</span>
-                     </button>
-                   )}
-                 </div>
-               );
-            })()}
-          </div>
-        </div>
+        <BettingPanel
+          permissions={basePermissions}
+          betAmount={betAmount}
+          onBetAmountChange={setBetAmount}
+          onAction={wrappedOnAction}
+          onAutoAttackFrontline={() => autoAttackAll('minion')}
+          showFrontlineButton={isPlayerTurn && playerBattlefield.length > 0}
+        />
       )}
       
       {/* Damage Animations — gated by showDamageNumbers setting */}
@@ -1294,7 +998,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
         if (!wager?.type) continue;
         result[side].push({
           cardName: minion.card?.name || 'Unknown',
-          description: WAGER_DESCRIPTIONS[wager.type] || wager.type.replace(/_/g, ' '),
+          description: getWagerDescription(wager.type),
         });
       }
     }
@@ -1358,7 +1062,21 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
 
   return (
     <GameViewport extraClassName={`${outerShakeClass} ${realmClass}`.trim()}>
-      <div className={`ragnarok-combat-arena viewport-mode ${isPlayerTurn ? 'player-turn' : 'opponent-turn'}`}>
+      <div className={`ragnarok-combat-arena bg-transparent ${isPlayerTurn ? 'player-turn' : 'opponent-turn'}`}>
+        {/* ═════════════════════════════════════════════════════════════
+            LAYERED ARCHITECTURE — see docs/POKER_ARENA_UI.md §Layers
+            5 stacked layers, each absolute inset-0, never escape canvas:
+              .layer-background  z 0-99    pointer-events: none
+              .layer-game        z 100-399 pointer-events: auto (interactive)
+              .layer-vfx         z 400-699 pointer-events: none (mount target
+                                            for PokerDramaVFX + PhaseBanner)
+              .layer-hud         z 700-899 pointer-events: auto (opt-in)
+              .layer-modal       z 900+   pointer-events: auto (blockers)
+            ═════════════════════════════════════════════════════════════ */}
+        <div className="layer-background absolute inset-0 pointer-events-none" style={{ zIndex: 0 }} />
+        <div id="arena-layer-vfx" className="layer-vfx absolute inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 500 }} />
+        <div id="arena-layer-modal" className="layer-modal absolute inset-0 pointer-events-none" style={{ zIndex: 900 }} />
+
         {/* Hourglass Timer at Top Center */}
         {(() => {
           const t = combatState.turnTimer;
@@ -1605,7 +1323,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
           )}
         </AnimatePresence>
 
-        <div className="arena-content">
+        <div className="arena-content relative w-full h-full block overflow-hidden">
           <UnifiedCombatArena
             onAction={handleAction}
             onEndTurn={handleUnifiedEndTurn}

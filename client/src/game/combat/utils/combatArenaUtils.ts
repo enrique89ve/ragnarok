@@ -19,3 +19,10 @@ export const isCardInWinningHand = (card: PokerCard, winningCards: PokerCard[]):
   return winningCards.some(wc => wc.suit === card.suit && wc.numericValue === card.numericValue);
 };
 
+/**
+ * Constant placeholder card used for face-down community card slots
+ * before they are revealed. The visible suit/value are never shown
+ * (the slot renders as a card back), so any valid PokerCard works.
+ */
+export const FACEDOWN_PLACEHOLDER_CARD: PokerCard = { suit: 'spades', value: 'A', numericValue: 14 };
+

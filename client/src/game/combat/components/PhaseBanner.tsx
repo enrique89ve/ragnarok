@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { CombatPhase } from '../../types/PokerCombatTypes';
 
 interface PhaseBannerProps {
@@ -67,7 +68,25 @@ export const PhaseBanner: React.FC<PhaseBannerProps> = ({ phase, forceHide = fal
 
 	if (!showBanner || !bannerData) return null;
 
-	return (
+	/*
+	 * Portal into the dedicated VFX layer — see layered arena
+	 * architecture in docs/POKER_ARENA_UI.md.  The VFX layer is
+	 * `position: absolute; inset: 0` inside `.ragnarok-combat-arena`
+	 * so the banner is bounded by the canvas, never escapes, never
+	 * affects flex flow of the gameplay zones.
+	 *
+	 * Fallback chain: arena-layer-vfx → .zone-board (mesa) →
+	 * .game-viewport → document.body (SSR/initial render).
+	 */
+	const portalTarget =
+		(typeof document !== 'undefined' && (
+			document.getElementById('arena-layer-vfx') ||
+			document.querySelector('.zone-board') ||
+			document.querySelector('.game-viewport')
+		)) ||
+		(typeof document !== 'undefined' ? document.body : null);
+
+	const banner = (
 		<div
 			className={`phase-banner ${isVisible ? 'phase-banner-enter' : 'phase-banner-exit'}`}
 			data-phase={bannerData.key}
@@ -82,4 +101,6 @@ export const PhaseBanner: React.FC<PhaseBannerProps> = ({ phase, forceHide = fal
 			</div>
 		</div>
 	);
+
+	return portalTarget ? createPortal(banner, portalTarget) : banner;
 };

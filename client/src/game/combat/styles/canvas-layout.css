@@ -1,0 +1,353 @@
+/* ═══════════════════════════════════════════════════
+   CANVAS-LAYOUT — virtual 1920×1080 poker board
+   ─────────────────────────────────────────────────
+   The GameViewport scales the whole canvas. These fixed
+   grid tracks define the in-canvas distribution only.
+   ═══════════════════════════════════════════════════ */
+
+.ragnarok-combat-arena .arena-content {
+  position: absolute !important;
+  inset: 0;
+  z-index: 120;
+  overflow: visible !important;
+}
+
+.unified-combat-arena {
+  --arena-col-edge: 86px;
+  --arena-col-left: 420px;
+  --arena-col-center: 620px;
+  --arena-col-right: 420px;
+  --arena-col-sidebar: 374px;
+  --arena-row-top: 78px;
+  --arena-row-opponent: 246px;
+  --arena-row-gap-upper: 52px;
+  --arena-row-board: 172px;
+  --arena-row-player-field: 168px;
+  --arena-row-gap-lower: 58px;
+  --arena-row-player: 266px;
+  --arena-row-bottom: 40px;
+  --arena-zone-min-height: 166px;
+  --arena-z-opponent-field: 150;
+  --arena-z-board: 160;
+  --arena-z-opponent: 180;
+  --arena-z-player-field: 190;
+  --arena-z-player: 220;
+  --arena-z-hover-field: 600;
+  --arena-z-wager-panel: 740;
+  --arena-z-betting-panel: 760;
+  --opponent-zone-gap: 14px;
+  --opponent-field-width: 680px;
+  --community-cards-width: 580px;
+  --community-cards-x: 0px;
+  --community-cards-y: 50px;
+  --community-cards-scale: 0.82;
+  --player-field-width: 640px;
+  --player-field-x: 290px;
+  --player-field-y: -82px;
+  --player-zone-width: 1220px;
+  --player-zone-gap: 20px;
+  --player-zone-padding-bottom: 34px;
+  --hero-card-width: 188px;
+  --hero-resource-dock-width: 248px;
+  --hero-resource-dock-y: -4px;
+  --hero-resource-dock-scale: 1;
+  --hero-resource-dock-gap: 7px;
+  --player-hand-strength-gap: 8px;
+  --opponent-hand-offset-top: 46px;
+  --opponent-hand-height: 122px;
+  --player-hand-width: 860px;
+  --player-hand-card-width: 132px;
+  --player-hand-card-height: 185px;
+  --player-hand-y: -80px;
+  --betting-panel-x: 520px;
+  --betting-panel-bottom: 18px;
+  --betting-panel-width: 330px;
+  --betting-panel-scale: 0.92;
+  --wager-panel-top: 118px;
+  --wager-panel-right: 28px;
+  --wager-panel-width: 310px;
+  --wager-panel-scale: 0.9;
+  display: grid !important;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 0 !important;
+  justify-content: stretch !important;
+  align-content: stretch !important;
+  grid-template-columns:
+    var(--arena-col-edge)
+    var(--arena-col-left)
+    var(--arena-col-center)
+    var(--arena-col-right)
+    var(--arena-col-sidebar);
+  grid-template-rows:
+    var(--arena-row-top)
+    var(--arena-row-opponent)
+    var(--arena-row-gap-upper)
+    var(--arena-row-board)
+    var(--arena-row-player-field)
+    var(--arena-row-gap-lower)
+    var(--arena-row-player)
+    var(--arena-row-bottom);
+  grid-template-areas:
+    ". . . . ."
+    ". opponent opponent . ."
+    ". . . . ."
+    ". board opponent-field . ."
+    ". . player-field . ."
+    ". . . . ."
+    ". player player player ."
+    ". . . . .";
+}
+
+.unified-combat-arena > .zone-opp,
+.unified-combat-arena > .zone-opp-field,
+.unified-combat-arena > .zone-board,
+.unified-combat-arena > .zone-player-field,
+.unified-combat-arena > .zone-player {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: visible;
+}
+
+.unified-combat-arena > .zone-opp {
+  grid-area: opponent;
+  align-self: start;
+  justify-self: start;
+  justify-content: flex-start !important;
+  align-items: flex-start !important;
+  width: 100%;
+  gap: var(--opponent-zone-gap) !important;
+  padding: 0 !important;
+  z-index: var(--arena-z-opponent);
+}
+
+.unified-combat-arena > .zone-opp-field {
+  grid-area: opponent-field;
+  align-self: center;
+  justify-self: start;
+  width: var(--opponent-field-width);
+  min-height: var(--arena-zone-min-height) !important;
+  justify-content: flex-start !important;
+  z-index: var(--arena-z-opponent-field);
+}
+
+.unified-combat-arena > .zone-board {
+  grid-area: board;
+  align-self: center;
+  justify-self: start;
+  width: var(--community-cards-width);
+  min-height: var(--arena-zone-min-height) !important;
+  justify-content: flex-start !important;
+  transform: translate3d(var(--community-cards-x), var(--community-cards-y), 0)
+    scale(var(--community-cards-scale));
+  transform-origin: center center;
+  z-index: var(--arena-z-board);
+}
+
+.unified-combat-arena > .zone-player-field {
+  grid-area: player-field;
+  align-self: center;
+  justify-self: start;
+  width: var(--player-field-width);
+  min-height: var(--arena-zone-min-height) !important;
+  justify-content: flex-start !important;
+  transform: translate3d(var(--player-field-x), var(--player-field-y), 0);
+  z-index: var(--arena-z-player-field);
+}
+
+.unified-combat-arena > .zone-player {
+  grid-area: player;
+  align-self: end;
+  justify-self: start;
+  width: var(--player-zone-width);
+  padding: 0 0 var(--player-zone-padding-bottom) 0 !important;
+  gap: var(--player-zone-gap) !important;
+  justify-content: flex-start !important;
+  z-index: var(--arena-z-player);
+}
+
+.ragnarok-combat-arena .poker-hero-container .battlefield-hero-square,
+.ragnarok-combat-arena .opponent-hero-container .battlefield-hero-square {
+  width: var(--hero-card-width) !important;
+  max-width: none !important;
+}
+
+.ragnarok-combat-arena .hero-resource-dock {
+  position: relative;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--hero-resource-dock-width) !important;
+  max-width: var(--hero-resource-dock-width) !important;
+  min-height: 32px;
+  margin: 0 !important;
+  padding: 3px 8px !important;
+  overflow: visible;
+  background:
+    linear-gradient(180deg, rgba(9, 13, 22, 0.88) 0%, rgba(3, 5, 10, 0.94) 100%) !important;
+  border: 1px solid rgba(96, 165, 250, 0.28) !important;
+  border-radius: 999px !important;
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(147, 197, 253, 0.08) !important;
+  transform: translate3d(0, var(--hero-resource-dock-y), 0);
+}
+
+.ragnarok-combat-arena .hero-resource-dock .mana-bar-container {
+  width: auto;
+  justify-content: center;
+  gap: var(--hero-resource-dock-gap) !important;
+  transform: scale(var(--hero-resource-dock-scale));
+  transform-origin: center center;
+}
+
+.ragnarok-combat-arena .hero-resource-dock .mana-tray {
+  flex: 0 0 auto;
+}
+
+.ragnarok-combat-arena .poker-hero-container .hand-strength-compact {
+  top: calc(100% + var(--player-hand-strength-gap)) !important;
+  bottom: auto !important;
+  z-index: 72;
+}
+
+.unified-combat-arena .opponent-hand-display {
+  margin-top: var(--opponent-hand-offset-top);
+  height: var(--opponent-hand-height) !important;
+  align-self: flex-start;
+}
+
+.unified-combat-arena .unified-hero-section {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.unified-combat-arena .unified-hand-section {
+  flex: 0 1 var(--player-hand-width) !important;
+  justify-content: flex-start !important;
+  min-width: 0;
+}
+
+.unified-combat-arena .poker-hand-container {
+  --hand-card-width: var(--player-hand-card-width);
+  --hand-card-height: var(--player-hand-card-height);
+  width: var(--player-hand-width);
+  justify-content: flex-start !important;
+  transform: translate3d(0, var(--player-hand-y), 0);
+}
+
+.unified-combat-arena [data-zone="betting-panel"] {
+  left: var(--betting-panel-x) !important;
+  right: auto !important;
+  bottom: var(--betting-panel-bottom) !important;
+  width: var(--betting-panel-width) !important;
+  transform: scale(var(--betting-panel-scale)) !important;
+  transform-origin: bottom left;
+  z-index: var(--arena-z-betting-panel) !important;
+}
+
+.unified-combat-arena [data-zone="wager-info-panel"] {
+  top: var(--wager-panel-top) !important;
+  right: var(--wager-panel-right) !important;
+  width: var(--wager-panel-width) !important;
+  max-width: var(--wager-panel-width) !important;
+  transform: scale(var(--wager-panel-scale));
+  transform-origin: top right;
+  z-index: var(--arena-z-wager-panel) !important;
+}
+
+.unified-combat-arena
+  [data-zone="wager-info-panel"]
+  :is(.combat-phase-director, .phase-director-card) {
+  max-width: 100%;
+}
+
+/* Boost field z-index when a card inside is hovered, so its
+   tooltip + lifted state are not clipped by neighbour zones. */
+.unified-combat-arena .zone-opp-field:has(.bf-card-wrapper:hover),
+.unified-combat-arena .zone-player-field:has(.bf-card-wrapper:hover) {
+  z-index: var(--arena-z-hover-field);
+}
+
+/* Hero portrait hover lift. The bare `.opponent-hero-container`
+   variant already lives in RagnarokCombatArena.css for the
+   non-hover state. */
+.poker-hero-container .battlefield-hero-square:hover {
+  transform: scale(1.02);
+}
+
+/* Minion card hover tilt — gives the row some physicality. */
+.unified-combat-arena .zone-player-field .battlefield-card {
+  transition: transform 0.15s ease;
+}
+
+.unified-combat-arena .zone-player-field .battlefield-card:hover {
+  transform: translateY(-6px) rotate(-2deg);
+}
+
+/* Hand card hover lift + scale. */
+.poker-hand-container .hand-card-wrapper {
+  transition:
+    transform 0.18s ease,
+    z-index 0.1s;
+}
+
+.poker-hand-container .hand-card-wrapper:hover {
+  transform: translateY(-12px) scale(1.05);
+  z-index: var(--z-hover, 500);
+}
+
+/* Bet button hover lift. */
+.poker-btn {
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease,
+    box-shadow 0.15s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.poker-btn:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(255, 215, 0, 0.4);
+}
+
+/* Keyboard focus ring (matches gold theme). */
+.poker-btn:focus-visible {
+  outline: 2px solid var(--color-gold, #ffd700);
+  outline-offset: 2px;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+}
+
+.poker-hand-container .hand-card-wrapper:focus-visible {
+  outline: 2px solid var(--color-gold, #ffd700);
+  outline-offset: 2px;
+  z-index: var(--z-hover, 500);
+}
+
+/* Touch and motion-reduce polish — disable hovers that don't
+   make sense without a mouse / for users with reduced motion. */
+@media (hover: none) {
+  .poker-hand-container .hand-card-wrapper:hover {
+    transform: none;
+    z-index: auto;
+  }
+
+  .poker-btn:not(:disabled):hover {
+    transform: none;
+  }
+
+  .unified-combat-arena .zone-player-field .battlefield-card:hover {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .poker-hand-container .hand-card-wrapper,
+  .unified-combat-arena .zone-player-field .battlefield-card,
+  .poker-btn {
+    transition: none;
+  }
+}

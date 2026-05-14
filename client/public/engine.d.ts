@@ -262,6 +262,13 @@ export declare function getCommunityCardsToReveal(phase: number): number;
  */
 export declare function getTotalCommunityCards(phase: number): number;
 /**
+ * assembly/chess/reducer/applyChessAction
+ * @param snapshotJson `~lib/string/String`
+ * @param actionJson `~lib/string/String`
+ * @returns `~lib/string/String`
+ */
+export declare function applyChessAction(snapshotJson: string, actionJson: string): string;
+/**
  * assembly/types/PokerTypes/calculateFinalDamage
  * @param baseAttack `i32`
  * @param hpBet `i32`

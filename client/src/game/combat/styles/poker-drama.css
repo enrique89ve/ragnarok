@@ -89,12 +89,15 @@
    PHASE BANNER — DRAMATIC OVERHAUL
    Full-width slash across screen
    ======================================== */
+/* Banner is portaled INSIDE `.zone-board` (the community-cards row).
+   inset:0 fills that row so the banner is automatically bounded by
+   the table width — never wider than the gameplay surface.  Per-phase
+   text length changes happen inside the centred flex content; the
+   outer box is dimensionally stable (board-zone size is driven by
+   flex distribution, not by banner content). */
 .phase-banner {
 	position: absolute;
-	left: 0;
-	right: 0;
-	top: 50%;
-	transform: translateY(-50%);
+	inset: 0;
 	z-index: var(--z-popup, 9000);
 	display: flex;
 	justify-content: center;
@@ -102,33 +105,44 @@
 	pointer-events: none;
 }
 
+/* Dramatic banner box — restored decoration now that the banner lives
+   inside the bounded `#arena-layer-vfx` (canvas-clipped, can't escape).
+   Width is % of layer = % of arena = % of canvas → scales with game. */
 .phase-banner-content {
 	display: flex;
 	align-items: center;
-	gap: 16px;
-	padding: 12px 40px;
+	justify-content: center;
+	gap: 1em;
+	padding: 0.85em 2em;
 	background: linear-gradient(90deg,
 		transparent 0%,
-		color-mix(in srgb, var(--obsidian-950) 85%, transparent) 15%,
-		color-mix(in srgb, var(--obsidian-950) 92%, transparent) 50%,
-		color-mix(in srgb, var(--obsidian-950) 85%, transparent) 85%,
+		color-mix(in srgb, var(--obsidian-950) 88%, transparent) 18%,
+		color-mix(in srgb, var(--obsidian-950) 94%, transparent) 50%,
+		color-mix(in srgb, var(--obsidian-950) 88%, transparent) 82%,
 		transparent 100%
 	);
-	width: 100%;
-	max-width: 900px;
-	justify-content: center;
+	border-top: 1px solid color-mix(in srgb, var(--phase-color, var(--gold-300)) 55%, transparent);
+	border-bottom: 1px solid color-mix(in srgb, var(--phase-color, var(--gold-300)) 55%, transparent);
+	width: 38%;
+	max-width: 100%;
 	position: relative;
 }
 
-/* Norse knotwork border lines */
+/* Norse knotwork accent lines — fixed % each side, scales with banner. */
 .phase-banner-line {
-	flex: 1;
+	flex: 0 0 14%;
 	height: 2px;
 	background: linear-gradient(90deg, transparent 0%, var(--phase-color, var(--gold-300)) 50%, transparent 100%);
-	max-width: 200px;
 }
 
 .phase-banner-text {
+	flex: 0 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.phase-banner-text-inner {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -189,25 +203,57 @@
 	animation: phaseBannerSlashOut 0.3s ease-in forwards;
 }
 
+/* Dramatic slam — scale-up overshoot + fade in.  Animates the OUTER
+   .phase-banner (inset: 0 layer), so all child content scales together
+   from a slight overshoot back to natural size.  No translate → cannot
+   create document overflow.  */
 @keyframes phaseBannerSlam {
 	0% {
-		transform: translateY(-50%) translateX(100%) scale(1.1);
 		opacity: 0;
+		transform: scale(0.7);
+		filter: blur(8px);
+	}
+	60% {
+		opacity: 1;
+		transform: scale(1.06);
+		filter: blur(0);
 	}
 	100% {
-		transform: translateY(-50%) translateX(0) scale(1);
 		opacity: 1;
+		transform: scale(1);
+		filter: blur(0);
 	}
 }
 
 @keyframes phaseBannerSlashOut {
 	0% {
-		transform: translateY(-50%) translateX(0);
 		opacity: 1;
+		transform: scale(1);
 	}
 	100% {
-		transform: translateY(-50%) translateX(-100%);
 		opacity: 0;
+		transform: scale(0.92);
+	}
+}
+
+/* Title flash on enter — adds urgency to the title text only. */
+.phase-banner-enter .phase-banner-title {
+	animation: phaseTitlePulse 0.45s ease-out;
+}
+
+@keyframes phaseTitlePulse {
+	0% {
+		letter-spacing: 0.18em;
+		text-shadow:
+			0 0 40px var(--phase-glow, var(--gold-glow)),
+			0 0 80px var(--phase-glow, var(--gold-glow));
+	}
+	100% {
+		letter-spacing: 0.25em;
+		text-shadow:
+			0 0 15px var(--phase-glow, var(--gold-glow)),
+			0 0 30px var(--phase-glow, color-mix(in srgb, var(--gold-300) 30%, transparent)),
+			0 2px 4px rgba(0, 0, 0, 0.8);
 	}
 }
 

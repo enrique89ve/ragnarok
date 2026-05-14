@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { playSound } from '../utils/soundUtils';
 import './ManaBar.css';
 
-const MAX_MANA_SLOTS = 9;
+const MAX_MANA_SLOTS = 10;
 const CRYSTAL_SIZE = 20; // Larger crystals for better visibility
 
 interface ManaBarProps {
@@ -13,6 +13,8 @@ interface ManaBarProps {
   pendingOverload?: number;
   registerPosition?: (type: 'mana', position: { x: number, y: number }) => void;
   vertical?: boolean;
+  variant?: 'default' | 'hero';
+  label?: string;
 }
 
 const ManaBar: React.FC<ManaBarProps> = ({
@@ -21,10 +23,14 @@ const ManaBar: React.FC<ManaBarProps> = ({
   overloadedMana = 0,
   pendingOverload = 0,
   registerPosition,
-  vertical = false
+  vertical = false,
+  variant = 'default',
+  label
 }) => {
   const manaBarId = useId();
   const manaBarRef = React.useRef<HTMLDivElement>(null);
+  const isHeroVariant = variant === 'hero';
+  const crystalSize = isHeroVariant ? 14 : CRYSTAL_SIZE;
 
   useEffect(() => {
     if (manaBarRef.current && registerPosition) {
@@ -48,50 +54,65 @@ const ManaBar: React.FC<ManaBarProps> = ({
   return (
     <div
       ref={manaBarRef}
-      className="mana-bar-container"
+      className={`mana-bar-container${isHeroVariant ? ' mana-bar-container--hero' : ''}`}
       style={{
         display: 'flex',
         flexDirection: vertical ? 'column' : 'row',
         alignItems: 'center',
-        gap: '4px'
+        gap: isHeroVariant ? '6px' : '4px'
       }}
     >
-      <div className="mana-counter" style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minWidth: '44px',
-        height: '32px',
-        padding: '0 10px',
-        background: 'linear-gradient(180deg, var(--rarity-rare-deep) 0%, var(--obsidian-950) 100%)',
-        borderRadius: '16px',
-        border: '2px solid var(--rarity-rare-mid)',
-        boxShadow: '0 0 12px color-mix(in srgb, var(--rarity-rare-color) 40%, transparent), 0 2px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15)'
-      }}>
-        <span style={{
-          fontFamily: "'Cinzel', Georgia, serif",
-          fontWeight: 800,
-          fontSize: '0.95rem',
-          color: 'var(--rarity-rare-bright)',
-          textShadow: '0 0 12px color-mix(in srgb, var(--rarity-rare-color) 80%, transparent), 0 1px 2px rgba(0,0,0,0.8)'
-        }}>
-          {currentMana}/{maxMana}
+      {isHeroVariant ? (
+        <span className="mana-label">
+          <span>{label ?? 'Mana'}</span>
+          <strong>{currentMana}/{maxMana}</strong>
         </span>
-      </div>
+      ) : (
+        <>
+          {label && (
+            <span className="mana-label">
+              {label}
+            </span>
+          )}
+
+          <div className="mana-counter" style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: '44px',
+            height: '32px',
+            padding: '0 10px',
+            background: 'linear-gradient(180deg, var(--rarity-rare-deep) 0%, var(--obsidian-950) 100%)',
+            borderRadius: '16px',
+            border: '2px solid var(--rarity-rare-mid)',
+            boxShadow: '0 0 12px color-mix(in srgb, var(--rarity-rare-color) 40%, transparent), 0 2px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15)'
+          }}>
+            <span style={{
+              fontFamily: "'Cinzel', Georgia, serif",
+              fontWeight: 800,
+              fontSize: '0.95rem',
+              color: 'var(--rarity-rare-bright)',
+              textShadow: '0 0 12px color-mix(in srgb, var(--rarity-rare-color) 80%, transparent), 0 1px 2px rgba(0,0,0,0.8)'
+            }}>
+              {currentMana}/{maxMana}
+            </span>
+          </div>
+        </>
+      )}
 
       <div className="mana-tray" style={{
         display: 'flex',
         flexDirection: vertical ? 'column' : 'row',
         alignItems: 'center',
-        gap: '2px',
-        padding: '3px 5px',
+        gap: isHeroVariant ? '1px' : '2px',
+        padding: isHeroVariant ? '2px 4px' : '3px 5px',
         background: 'linear-gradient(180deg, color-mix(in srgb, var(--obsidian-900) 95%, transparent) 0%, var(--obsidian-950) 100%)',
-        borderRadius: '12px',
+        borderRadius: isHeroVariant ? '10px' : '12px',
         border: '1px solid var(--rarity-rare-deep)',
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05)'
       }}>
         {crystals.map((crystal) => (
-          <ManaCrystal key={crystal.index} {...crystal} size={CRYSTAL_SIZE} uid={manaBarId} />
+          <ManaCrystal key={crystal.index} {...crystal} size={crystalSize} uid={manaBarId} />
         ))}
       </div>
 
@@ -195,7 +216,7 @@ const ManaCrystal: React.FC<ManaCrystalProps> = ({
 
         <motion.polygon
           points="10,1 18,6 18,14 10,19 2,14 2,6"
-          fill={`url(#crystal-grad-${index})`}
+          fill={`url(#${gradId})`}
           stroke={isAvailable ? 'var(--rarity-rare-bright)' : isLocked ? 'var(--obsidian-400)' : 'var(--rarity-rare-deep)'}
           strokeWidth="1.5"
           style={{

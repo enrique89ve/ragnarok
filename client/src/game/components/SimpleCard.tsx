@@ -56,6 +56,13 @@ interface SimpleCardProps {
   attackBuff?: number;
   healthBuff?: number;
   owned?: boolean;
+  /**
+   * Suppress the portaled keyword-badge tooltip. Use when the card lives
+   * inside an overlay (e.g. Mulligan) that surfaces card details in its
+   * own dedicated info panel — prevents the floating tooltip from
+   * occluding overlay controls or stacking above the modal veil.
+   */
+  disableTooltips?: boolean;
 }
 
 const ICE_RE = /\b(ymir|buri|niflheim|frost|ice|snow|skadi|jotun|glacier|blizzard|frozen|winter|cold)\b/i;
@@ -206,6 +213,7 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
   attackBuff = 0,
   healthBuff = 0,
   owned = true,
+  disableTooltips = false,
 }) => {
   const isMinion = card.type === 'minion';
   const isSpell = card.type === 'spell';
@@ -524,7 +532,7 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
 
       {cardTheme && <div className={`card-particles theme-${cardTheme}`} />}
 
-      {badgeTooltip && createPortal(
+      {!disableTooltips && badgeTooltip && createPortal(
         <div className={`keyword-badge-tooltip ${badgeTooltip.isEvolveInfo ? 'evolve-tooltip' : ''}`} style={tooltipStyle}>
           <div className="kbt-header">
             <span className="kbt-icon">{KEYWORD_ICON_MAP[badgeTooltip.keyword] ? React.createElement(KEYWORD_ICON_MAP[badgeTooltip.keyword], { style: { color: badgeTooltip.color, width: '1.2em', height: '1.2em' } }) : badgeTooltip.icon}</span>

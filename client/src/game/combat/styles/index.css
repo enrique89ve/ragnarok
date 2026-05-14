@@ -6,8 +6,8 @@
 
 /* 1. Base Framework & Resets */
 @import "./reset.css";
-@import "./arena-grid.css";
 @import "./zones.css";
+@import "./canvas-layout.css";
 
 /* 2. Visual Layer - Backgrounds & Atmosphere */
 @import "./norse-atmosphere.css";
@@ -26,6 +26,7 @@
 @import "./hole-cards.css";
 @import "./community-cards.css";
 @import "./battlefield.css";
+@import "./hero-card.css";
 
 /* 5. Combat Effects & Feedback */
 @import "./glow-effects.css";

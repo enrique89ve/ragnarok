@@ -1,9 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React from 'react';
+import { motion } from 'framer-motion';
 import { ChessPiece as ChessPieceType, ChessPieceType as PieceType, ELEMENT_COLORS, ELEMENT_ICONS, ElementType } from '../../types/ChessTypes';
 import type { MatchupGlow } from '../../utils/chess/elementMatchupUtils';
 import { assetPath } from '../../utils/assetPath';
 import { useGameStore } from '../../stores/gameStore';
+import { useChessHoverStore } from '../../stores/chessHoverStore';
 import './ChessPiece.css';
 
 const ELEMENT_IMAGES: Record<ElementType, string | null> = {
@@ -81,7 +82,7 @@ interface ChessPieceProps {
   matchupGlow?: MatchupGlow;
 }
 
-const PIECE_TYPE_NAMES: Record<PieceType, string> = {
+export const PIECE_TYPE_NAMES: Record<PieceType, string> = {
   king: 'Protogenoi',
   queen: 'Sovereign',
   rook: 'Shaper',
@@ -90,7 +91,7 @@ const PIECE_TYPE_NAMES: Record<PieceType, string> = {
   pawn: 'Einherjar'
 };
 
-const ELEMENT_NAMES: Record<ElementType, string> = {
+export const ELEMENT_NAMES: Record<ElementType, string> = {
   fire: 'Fire',
   water: 'Water',
   wind: 'Wind',
@@ -147,8 +148,7 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
   isPlayerTurn,
   matchupGlow,
 }) => {
-  const [showTooltip, setShowTooltip] = useState(false);
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const setHoveredPiece = useChessHoverStore(s => s.setHoveredPiece);
 
   // Viewer-relative: this piece belongs to ME (the local viewer) iff its
   // canonical owner matches my canonical side. Drives selection eligibility
@@ -169,26 +169,12 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
     : (isKing ? 1.05 : 1);
 
   const handleMouseEnter = () => {
-    hoverTimeoutRef.current = setTimeout(() => {
-      setShowTooltip(true);
-    }, 1000);
+    if (!isPawn) setHoveredPiece(piece.id);
   };
 
   const handleMouseLeave = () => {
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-      hoverTimeoutRef.current = null;
-    }
-    setShowTooltip(false);
+    if (!isPawn) setHoveredPiece(null);
   };
-
-  useEffect(() => {
-    return () => {
-      if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current);
-      }
-    };
-  }, []);
 
   return (
     <motion.div
@@ -216,71 +202,6 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
       transition={{ type: 'spring', stiffness: 300, damping: 25 }}
       style={hasElement ? { boxShadow: elementGlow.shadow } : undefined}
     >
-      <AnimatePresence>
-        {showTooltip && (
-          <motion.div
-            className="god-tooltip"
-            initial={{ opacity: 0, y: -10, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -5, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            style={{
-              position: 'absolute',
-              bottom: '110%',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              zIndex: 100,
-              pointerEvents: 'none',
-              minWidth: '180px'
-            }}
-          >
-            <div
-              className="rounded-lg p-3 text-white text-left shadow-xl"
-              style={{
-                background: 'linear-gradient(135deg, rgba(30, 30, 50, 0.98), rgba(20, 20, 35, 0.98))',
-                border: hasElement ? `2px solid ${ELEMENT_COLORS[pieceElement]}` : '2px solid rgba(100, 100, 150, 0.5)',
-                backdropFilter: 'blur(8px)'
-              }}
-            >
-              <div className="font-bold text-sm mb-1" style={{ color: hasElement ? ELEMENT_COLORS[pieceElement] : '#fff' }}>
-                {piece.heroName}
-              </div>
-              <div className="text-xs text-gray-300 mb-2">
-                {PIECE_TYPE_NAMES[piece.type]} • {isPlayer ? 'Your Piece' : 'Enemy'}
-              </div>
-              {hasElement && (
-                <div
-                  className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium"
-                  style={{
-                    background: `color-mix(in srgb, ${ELEMENT_COLORS[pieceElement]} 12%, transparent)`,
-                    border: `1px solid color-mix(in srgb, ${ELEMENT_COLORS[pieceElement]} 30%, transparent)`
-                  }}
-                >
-                  <span>{ELEMENT_ICONS[pieceElement]}</span>
-                  <span style={{ color: ELEMENT_COLORS[pieceElement] }}>{ELEMENT_NAMES[pieceElement]} Element</span>
-                </div>
-              )}
-              {(!isPawn && !isKing) && (
-                <div className="mt-2 text-xs text-gray-500 flex justify-between">
-                  <span>HP: {piece.health}/{piece.maxHealth}</span>
-                  {piece.stamina > 0 && <span>STA: {piece.stamina}</span>}
-                </div>
-              )}
-            </div>
-            <div
-              className="absolute left-1/2 -bottom-2"
-              style={{
-                transform: 'translateX(-50%)',
-                width: 0,
-                height: 0,
-                borderLeft: '8px solid transparent',
-                borderRight: '8px solid transparent',
-                borderTop: hasElement ? `8px solid ${ELEMENT_COLORS[pieceElement]}` : '8px solid var(--obsidian-500)'
-              }}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
       {hasElement && elementImage && (
         <>
           <div
@@ -312,7 +233,7 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
       )}
 
       <span
-        className={`${isPawn ? 'text-3xl' : 'text-4xl'} relative z-20 drop-shadow-lg ${isPlayer ? '' : 'transform rotate-180'}`}
+        className={`${isPawn ? 'text-[clamp(14px,36cqw,30px)]' : 'text-[clamp(16px,42cqw,36px)]'} relative z-20 drop-shadow-lg ${isPlayer ? '' : 'transform rotate-180'}`}
         style={{
           color: PIECE_COLORS[piece.type],
           textShadow: hasElement
@@ -323,18 +244,15 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
         {PIECE_ICONS[piece.type]}
       </span>
 
-      <div className="text-xs text-white font-bold mt-0.5 truncate max-w-full px-1 relative z-20 drop-shadow-md">
-        {piece.heroName.split(' ')[0]}
-      </div>
-
-      {(!isPawn && !isKing) && (
-        <div className="chess-piece-stats-overlay">
-          <span className="text-red-400">{piece.health}</span>
-          {piece.stamina > 0 && (
-            <span className="text-amber-400">⚡{piece.stamina}</span>
-          )}
+      {/* Stamina (power resource) — visible on cell. HP shown as bar (top).
+         Name + element shown in tooltip on info-icon hover. */}
+      {(!isPawn && !isKing) && piece.stamina > 0 && (
+        <div className="absolute bottom-0.5 right-1 text-amber-300 font-extrabold text-[clamp(7px,11cqw,10px)] drop-shadow-md z-30 pointer-events-none [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]">
+          ⚡{piece.stamina}
         </div>
       )}
+
+      {/* Hover routes to ChessHoverStore — PieceInfoPanel (outside board) renders the info. */}
 
       {hasElement && (
         <div

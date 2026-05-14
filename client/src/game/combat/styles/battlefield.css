@@ -3,11 +3,5 @@
    .opponent-hand-zone, field labels — replaced by .unified-* classes.
    Only .opponent-hand-display kept (still used in JSX). */
 
-.opponent-hand-display {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 0;
-  position: relative;
-  padding-top: 4px;
-}
+/* .opponent-hand-display layout migrated to Tailwind in JSX (zones/OpponentZone.tsx).
+   Hover variants still live in styles/face-down.css. */

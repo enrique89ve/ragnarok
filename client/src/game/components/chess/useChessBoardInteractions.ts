@@ -13,9 +13,11 @@ import { computeMatchupGlows } from '../../utils/chess/elementMatchupUtils';
 import {
   containsPosition,
   getBlockedPieceMessage,
+  getBoardHighlightKind,
   getCellClickAction,
   getLosingKingId,
   hasNoLegalMoves,
+  shouldShowEnemyHoverPreview,
 } from './chessBoardInteractionRules';
 
 type UseChessBoardInteractionsInput = {
@@ -39,6 +41,11 @@ type MineTriggerEffect = {
   readonly timestamp: number;
 };
 
+type EnemyHoverTarget = {
+  readonly pieceId: string;
+  readonly position: ChessBoardPosition;
+};
+
 type TimeoutId = ReturnType<typeof setTimeout>;
 
 const clearTimer = (timerRef: { current: TimeoutId | null }): void => {
@@ -53,10 +60,7 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
   const [noMovesMessage, setNoMovesMessage] = useState<string | null>(null);
   const [instantKillFlash, setInstantKillFlash] = useState<InstantKillFlash | null>(null);
   const [hoverPosition, setHoverPosition] = useState<ChessBoardPosition | null>(null);
-  const [enemyHoverPreview, setEnemyHoverPreview] = useState<{
-    readonly moves: readonly ChessBoardPosition[];
-    readonly attacks: readonly ChessBoardPosition[];
-  } | null>(null);
+  const [enemyHoverTarget, setEnemyHoverTarget] = useState<EnemyHoverTarget | null>(null);
   const [minePlacementEffect, setMinePlacementEffect] = useState<MinePlacementEffect | null>(null);
   const [mineTriggerEffect, setMineTriggerEffect] = useState<MineTriggerEffect | null>(null);
   const [screenShake, setScreenShake] = useState(false);
@@ -93,6 +97,24 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
   } = useKingChessAbility(myCanonicalSide);
 
   const { pieces, currentTurn, selectedPiece, validMoves, attackMoves, gameStatus } = boardState;
+  const matchId = useGameStore(s => s.matchId);
+  const isSingleMode = !matchId;
+
+  const enemyHoverPreview = useMemo(() => {
+    if (!enemyHoverTarget || isPlacementMode || !isSingleMode || pendingAttackAnimation) return null;
+
+    const piece = pieces.find(candidate => candidate.id === enemyHoverTarget.pieceId);
+    if (!piece) return null;
+    if (piece.owner === myCanonicalSide) return null;
+    if (
+      piece.position.row !== enemyHoverTarget.position.row ||
+      piece.position.col !== enemyHoverTarget.position.col
+    ) {
+      return null;
+    }
+
+    return getValidMoves(piece);
+  }, [enemyHoverTarget, isPlacementMode, isSingleMode, pendingAttackAnimation, pieces, getValidMoves, myCanonicalSide]);
 
   useEffect(() => {
     return () => {
@@ -371,57 +393,80 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
     getValidMoves,
   ]);
 
+  // MovePlates leak intent when the AI selects its piece during its turn:
+  // the slice populates validMoves/attackMoves regardless of ownership, so
+  // we gate by `selectedPiece.owner === myCanonicalSide` (matches the same
+  // gate already used for matchupGlowMap above). Hover-preview adds a
+  // separate, exclusive source for enemy pieces, except when the hovered
+  // enemy is the selected piece's active capture target.
+  const showsSelectionMoves = !!selectedPiece && selectedPiece.owner === myCanonicalSide;
+  const selectedHighlightSource = useMemo(() => {
+    if (!showsSelectionMoves) return null;
+    return { moves: validMoves, attacks: attackMoves };
+  }, [showsSelectionMoves, validMoves, attackMoves]);
+
   // Single-mode-only enemy preview: hovering an opponent piece reveals
   // its valid moves so the player can study the AI before/after its turn.
   // P2P stays opaque (fair play) — the matchId gate below disables it.
   // Mine placement mode owns the hover state during ability use, so we
   // skip the preview entirely while placing.
-  const matchId = useGameStore(s => s.matchId);
-  const isSingleMode = !matchId;
-
   const handleCellHover = useCallback((row: number, col: number) => {
     if (isPlacementMode) {
       setHoverPosition({ row, col });
       return;
     }
-    if (!isSingleMode) return;
-    const piece = getPieceAt({ row, col });
-    if (!piece || piece.owner === myCanonicalSide) {
-      setEnemyHoverPreview(null);
+    if (pendingAttackAnimation) {
+      setEnemyHoverTarget(null);
       return;
     }
-    const { moves, attacks } = getValidMoves(piece);
-    setEnemyHoverPreview({ moves, attacks });
-  }, [isPlacementMode, isSingleMode, getPieceAt, getValidMoves, myCanonicalSide]);
+    if (!isSingleMode) {
+      setEnemyHoverTarget(null);
+      return;
+    }
+    const piece = getPieceAt({ row, col });
+    if (!piece || piece.owner === myCanonicalSide) {
+      setEnemyHoverTarget(null);
+      return;
+    }
+    if (!shouldShowEnemyHoverPreview({ row, col, selectedSource: selectedHighlightSource })) {
+      setEnemyHoverTarget(null);
+      return;
+    }
+    setEnemyHoverTarget(previousTarget => {
+      if (
+        previousTarget?.pieceId === piece.id &&
+        previousTarget.position.row === piece.position.row &&
+        previousTarget.position.col === piece.position.col
+      ) {
+        return previousTarget;
+      }
+      return { pieceId: piece.id, position: piece.position };
+    });
+  }, [isPlacementMode, pendingAttackAnimation, isSingleMode, getPieceAt, myCanonicalSide, selectedHighlightSource]);
 
   const handleCellLeave = useCallback(() => {
     setHoverPosition(null);
-    setEnemyHoverPreview(null);
+    setEnemyHoverTarget(null);
   }, []);
 
-  // MovePlates leak intent when the AI selects its piece during its turn:
-  // the slice populates validMoves/attackMoves regardless of ownership, so
-  // we gate by `selectedPiece.owner === myCanonicalSide` (matches the same
-  // gate already used for matchupGlowMap above). Hover-preview adds a
-  // separate, hover-only source for enemy pieces.
-  const showsSelectionMoves = !!selectedPiece && selectedPiece.owner === myCanonicalSide;
-
   const isValidMovePosition = useCallback(
-    (row: number, col: number) => {
-      if (showsSelectionMoves && containsPosition(validMoves, row, col)) return true;
-      if (enemyHoverPreview && containsPosition(enemyHoverPreview.moves, row, col)) return true;
-      return false;
-    },
-    [showsSelectionMoves, validMoves, enemyHoverPreview],
+    (row: number, col: number) => getBoardHighlightKind({
+      row,
+      col,
+      selectedSource: selectedHighlightSource,
+      hoverPreviewSource: enemyHoverPreview,
+    }) === 'move',
+    [selectedHighlightSource, enemyHoverPreview],
   );
 
   const isAttackPosition = useCallback(
-    (row: number, col: number) => {
-      if (showsSelectionMoves && containsPosition(attackMoves, row, col)) return true;
-      if (enemyHoverPreview && containsPosition(enemyHoverPreview.attacks, row, col)) return true;
-      return false;
-    },
-    [showsSelectionMoves, attackMoves, enemyHoverPreview],
+    (row: number, col: number) => getBoardHighlightKind({
+      row,
+      col,
+      selectedSource: selectedHighlightSource,
+      hoverPreviewSource: enemyHoverPreview,
+    }) === 'attack',
+    [selectedHighlightSource, enemyHoverPreview],
   );
 
   const isMinePreviewTile = useCallback(

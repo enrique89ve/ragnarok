@@ -193,9 +193,6 @@ export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
           >
             {PIECE_ICONS[animation.attacker.type]}
           </span>
-          <div className="text-xs text-white font-bold mt-0.5 truncate max-w-full px-1">
-            {animation.attacker.heroName.split(' ')[0]}
-          </div>
         </motion.div>
 
         {/* Attack trail effect */}

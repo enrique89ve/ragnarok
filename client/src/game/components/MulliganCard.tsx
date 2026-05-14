@@ -19,9 +19,10 @@ interface MulliganCardProps {
   card: CardInstance;
   isSelected: boolean;
   onClick: () => void;
+  onHoverChange?: (card: CardInstance | null) => void;
 }
 
-export const MulliganCard: React.FC<MulliganCardProps> = React.memo(({ card, isSelected, onClick }) => {
+export const MulliganCard: React.FC<MulliganCardProps> = React.memo(({ card, isSelected, onClick, onHoverChange }) => {
   const cardData = card?.card;
 
   const simpleCardData: SimpleCardData | null = useMemo(() => {
@@ -66,11 +67,14 @@ export const MulliganCard: React.FC<MulliganCardProps> = React.memo(({ card, isS
       whileHover={isSelected ? HOVER_SELECTED : HOVER_DEFAULT}
       transition={SPRING_TRANSITION}
       onClick={onClick}
+      onMouseEnter={() => onHoverChange?.(card)}
+      onMouseLeave={() => onHoverChange?.(null)}
     >
       <SimpleCard
         card={simpleCardData}
         size="large"
         showDescription={false}
+        disableTooltips
       />
 
       {isSelected && (

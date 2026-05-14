@@ -91,6 +91,7 @@ __tests__/
 !client/src/game/stores/gameStore.test.ts
 !client/src/game/deck/heroDeckRules.test.ts
 !client/src/game/utils/cards/cardLevelScaling.test.ts
+!client/src/game/components/chess/chessBoardInteractionRules.test.ts
 !shared/protocol-core/cardProgression.test.ts
 !shared/protocol-core/campaignResult.test.ts
 !shared/protocol-core/packCatalog.test.ts

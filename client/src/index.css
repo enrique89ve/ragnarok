@@ -124,31 +124,18 @@
   font-size: inherit;
 }
 
-/* Card body description container */
-.card-description {
-  color: var(--ink-0);
-  padding: 0;
-  font-size: 0.85rem;
-  line-height: 1.4;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  height: 100%;
-  background: transparent;
-  border: none;
-  overflow: visible;
-}
-
-/* Mana cost badge text */
-.mana-value {
-  color: var(--stat-mana, var(--bifrost-300));
-  font-weight: 700;
-  font-size: inherit;
-}
+/* `.card-description` styles live in SimpleCard.css (the only consumer).
+   The previous global rule here forced `height: 100%` which clashed with
+   SimpleCard's absolute-positioned `top + bottom` and made the description
+   box overflow the card silhouette. */
 
 @layer base {
+  /* Reserve the scrollbar gutter at the html level so vertical scroll
+     appearing/disappearing never shifts horizontal layout. */
+  html {
+    scrollbar-gutter: stable;
+  }
+
   body {
     font-family: var(--type-ui);
     background: var(--obsidian-950);
@@ -156,8 +143,16 @@
     -webkit-font-smoothing: antialiased;
     margin: 0;
     padding: 0;
-    overflow: visible; /* Changed from hidden to visible to prevent card clipping */
-    width: 100vw;
+    /* `overflow-x: hidden` (broader browser support than `clip`)
+       prevents any descendant from extending the document past the
+       viewport.  This is the fix for the arena drift-left bug: the
+       slam banner + portal tooltips were briefly extending past
+       100vw, triggering a transient horizontal scrollbar that shifted
+       the body by gutter width (~15 px). `overflow-y: visible` keeps
+       card hover lifts that exit vertically still rendering. */
+    overflow-x: hidden;
+    overflow-y: visible;
+    width: 100%;
     height: 100dvh;
   }
 }

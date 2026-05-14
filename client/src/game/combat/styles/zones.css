@@ -1,69 +1,28 @@
 /**
- * ZONE POSITIONING — Single Source of Truth
- * ==========================================
- * All values in fixed px for the 1920×1080 virtual canvas.
- * GameViewport.tsx scales the canvas uniformly.
+ * ZONE TOKENS — leftover CSS variables consumed by sibling files.
  *
- * TO MOVE ANY ELEMENT: change its --zone-* value here.
- * No other files need editing.
+ * Most former tokens here (opponent/hero/hand coordinates, sizing)
+ * are now hardcoded in JSX via Tailwind utilities in
+ * RagnarokCombatArena.tsx. Only tokens that are still read by other
+ * CSS / components remain:
+ *
+ *   --zone-risk-*               → styles/pot-display.css
+ *   --zone-hole-cards-*-offset  → components/HoleCardsOverlay.tsx
+ *   --zone-poker-card-scale     → components/HoleCardsOverlay.tsx
+ *
+ * If you need to relocate any of those, update the consumer at the
+ * same time and you can drop the matching variable here.
  */
 
 :root {
-  /* ========================================
-     OPPONENT HERO — top-left
-     ======================================== */
-  --zone-opponent-hero-left: 24px;
-  --zone-opponent-hero-top: 16px;
+	/* Risk display — positioned by styles/pot-display.css */
+	--zone-risk-left: 320px;
+	--zone-risk-bottom: 540px;
 
-  /* ========================================
-     OPPONENT HAND — top-center
-     ======================================== */
-  --zone-opponent-hand-left: 346px;
+	/* Hole cards — applied via inline style in HoleCardsOverlay.tsx */
+	--zone-hole-cards-player-offset: -20px;
+	--zone-hole-cards-opponent-offset: 12px;
 
-  /* ========================================
-     OPPONENT MINION FIELD — center-right
-     ======================================== */
-  --zone-opponent-field-left: 1152px;
-  --zone-opponent-field-top: 260px;
-
-  /* ========================================
-     COMMUNITY CARDS (Flop/Turn/River) — left side
-     ======================================== */
-  --zone-community-left: 16px;
-  --zone-community-top: 518px;
-  --zone-community-z: var(--z-community, 25);
-
-  /* ========================================
-     RISK DISPLAY — left of center
-     ======================================== */
-  --zone-risk-left: 288px;
-  --zone-risk-bottom: 280px;
-
-  /* ========================================
-     PLAYER MINION FIELD — center-right, above player area
-     ======================================== */
-  --zone-player-field-left: 1152px;
-  --zone-player-field-bottom: 320px;
-
-  /* ========================================
-     BETTING ACTIONS — bottom, right of hero
-
-     Lifted from 8px to 60px so the action buttons (Attack/Brace/Camera)
-     don't sit at the absolute edge of the canvas. With the canvas
-     letterboxed on small windows the bottom 8px was visually "cut off".
-     ======================================== */
-  --zone-betting-left: 260px;
-  --zone-betting-bottom: 60px;
-  --zone-betting-z: var(--z-betting, 200);
-
-  /* ========================================
-     HOLE CARDS — offset from hero portraits
-     ======================================== */
-  --zone-hole-cards-player-offset: -20px;
-  --zone-hole-cards-opponent-offset: -80px;
-
-  /* ========================================
-     POKER CARD SIZING
-     ======================================== */
-  --zone-poker-card-scale: 1;
+	/* Poker card scaling — inline style in HoleCardsOverlay.tsx */
+	--zone-poker-card-scale: 1;
 }

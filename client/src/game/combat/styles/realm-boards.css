@@ -558,57 +558,14 @@
    NORSE KNOTWORK BORDER
    Decorative frame around the entire battlefield
    ============================================================ */
+/* board-border-ornament + ::before + ::after disabled — was drawing a
+   2 px gold gradient border around the entire arena (`inset: 0`),
+   visible as a line across the table. Disabled to confirm if this is
+   what the user has been reporting as "linea que traspasa la zona de
+   batalla". Re-enable selectively (only for realm-specific themes)
+   when needed by uncommenting + adjusting opacity. */
 .board-border-ornament {
-	position: absolute;
-	inset: 0;
-	pointer-events: none;
-	z-index: 4;
-	border: 2px solid transparent;
-	border-image: linear-gradient(
-		180deg,
-		rgba(212, 175, 55, 0.05) 0%,
-		rgba(212, 175, 55, 0.35) 15%,
-		rgba(212, 175, 55, 0.2) 50%,
-		rgba(212, 175, 55, 0.35) 85%,
-		rgba(212, 175, 55, 0.05) 100%
-	) 1;
-	box-shadow:
-		inset 0 0 1px rgba(212, 175, 55, 0.15);
-}
-
-/* Corner rune flourishes */
-.board-border-ornament::before {
-	content: '';
-	position: absolute;
-	width: 80px;
-	height: 80px;
-	pointer-events: none;
-	opacity: 0.5;
-	top: 4px;
-	left: 4px;
-	border-top: 2px solid rgba(212, 175, 55, 0.4);
-	border-left: 2px solid rgba(212, 175, 55, 0.4);
-	border-radius: 3px 0 0 0;
-	box-shadow:
-		inset 8px 8px 0 -6px rgba(212, 175, 55, 0.15),
-		4px 4px 12px rgba(212, 175, 55, 0.08);
-}
-
-.board-border-ornament::after {
-	content: '';
-	position: absolute;
-	width: 80px;
-	height: 80px;
-	pointer-events: none;
-	opacity: 0.5;
-	bottom: 4px;
-	right: 4px;
-	border-bottom: 2px solid rgba(212, 175, 55, 0.4);
-	border-right: 2px solid rgba(212, 175, 55, 0.4);
-	border-radius: 0 0 3px 0;
-	box-shadow:
-		inset -8px -8px 0 -6px rgba(212, 175, 55, 0.15),
-		-4px -4px 12px rgba(212, 175, 55, 0.08);
+	display: none;
 }
 
 /* Realm-tinted border */

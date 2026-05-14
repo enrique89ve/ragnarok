@@ -12,12 +12,48 @@ export type CellClickAction =
   | { readonly kind: 'clear_selection' }
   | { readonly kind: 'select_piece'; readonly piece: ChessPiece };
 
+export type BoardHighlightKind = 'none' | 'move' | 'attack';
+
+export interface BoardHighlightSource {
+  readonly moves: readonly ChessBoardPosition[];
+  readonly attacks: readonly ChessBoardPosition[];
+}
+
 export function containsPosition(
   positions: readonly ChessBoardPosition[],
   row: number,
   col: number,
 ): boolean {
   return positions.some(position => position.row === row && position.col === col);
+}
+
+export function getBoardHighlightKind(input: {
+  readonly row: number;
+  readonly col: number;
+  readonly selectedSource: BoardHighlightSource | null;
+  readonly hoverPreviewSource: BoardHighlightSource | null;
+}): BoardHighlightKind {
+  const { row, col, selectedSource, hoverPreviewSource } = input;
+
+  if (hoverPreviewSource) {
+    if (containsPosition(hoverPreviewSource.attacks, row, col)) return 'attack';
+    if (containsPosition(hoverPreviewSource.moves, row, col)) return 'move';
+    return 'none';
+  }
+
+  if (selectedSource && containsPosition(selectedSource.attacks, row, col)) return 'attack';
+  if (selectedSource && containsPosition(selectedSource.moves, row, col)) return 'move';
+
+  return 'none';
+}
+
+export function shouldShowEnemyHoverPreview(input: {
+  readonly row: number;
+  readonly col: number;
+  readonly selectedSource: BoardHighlightSource | null;
+}): boolean {
+  if (!input.selectedSource) return true;
+  return !containsPosition(input.selectedSource.attacks, input.row, input.col);
 }
 
 export function hasNoLegalMoves(input: {

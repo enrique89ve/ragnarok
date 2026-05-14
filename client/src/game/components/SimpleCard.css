@@ -14,29 +14,89 @@
 /* border-rotate and @property --border-angle removed for performance optimization.
    Using GPU-friendly background-position panning instead. */
 @keyframes diagonal-pan {
-  0% { background-position: 0% 0%; }
-  50% { background-position: 100% 100%; }
-  100% { background-position: 0% 0%; }
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
 }
 
 @keyframes rare-shimmer {
-  0%, 100% { background-position: 0% 0%; }
-  50%      { background-position: 100% 100%; }
+  0%,
+  100% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
 }
 
 @keyframes epic-sweep {
-  0%   { background-position: 0% 0%; }
-  100% { background-position: 100% 100%; }
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 100% 100%;
+  }
 }
 
 @keyframes rare-glint {
-  0%, 85%  { background-position: -100% 0; }
-  100%     { background-position: 200% 0; }
+  0%,
+  85% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 @keyframes common-breathe {
-  0%, 100% { opacity: 0.2; }
-  50%      { opacity: 0.45; }
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* =============================================================================
+   CARD LAYOUT TOKENS
+   --------------------------------------------------------------------------
+   Vertical band positions for the absolute-positioned children of .simple-card.
+   Change here, ripple everywhere — no more grep-and-replace across 5 size
+   variants of the same magic number.
+
+   The card vertical anatomy (top → bottom):
+     0%       cost diamond + element/pet badges
+     0..63%   card art image
+     63..75%  name banner (--card-banner-y, --card-banner-bottom)
+     76..96%  description / keyword footer band (--card-desc-y, --card-desc-bottom)
+     bottom:-16px  stat hexagons (ATK / HP) — overhang on .large
+   ========================================================================== */
+:root {
+  /* Default (.medium / unsized) */
+  --card-banner-y: 23%;
+  --card-desc-y: 76%;
+  --card-desc-bottom: 4%;
+
+  /* Per-size overrides applied via cascade in .simple-card.{size} blocks */
+  --card-banner-y-large: 63%;
+  --card-banner-y-preview: 63%;
+
+  --card-desc-y-small: 10%;
+  --card-desc-y-medium: 20%;
+  --card-desc-y-large: 76%;
+  --card-desc-y-preview: 46%;
+
+  --card-desc-bottom-small: 1%;
+  --card-desc-bottom-medium: 26px;
+  --card-desc-bottom-large: 36px;
+  --card-desc-bottom-preview: 10%;
 }
 
 /* Base card container - Deep premium dark theme */
@@ -50,15 +110,17 @@
   --bg-x: 50%;
   --bg-y: 50%;
   position: relative;
-  background: linear-gradient(180deg, #1E1E2E 0%, #151520 40%, #0C0C14 100%);
+  background: linear-gradient(180deg, #1e1e2e 0%, #151520 40%, #0c0c14 100%);
   border-radius: 10px;
   overflow: visible; /* Allows stat gems to hang below the card frame */
   cursor: grab;
-  transition: transform 0.5s cubic-bezier(0.03, 0.98, 0.52, 0.99), box-shadow 0.3s ease-out;
+  transition:
+    transform 0.5s cubic-bezier(0.03, 0.98, 0.52, 0.99),
+    box-shadow 0.3s ease-out;
   box-shadow:
-    0 2px 4px rgba(0,0,0,0.4),
-    0 8px 24px rgba(0,0,0,0.6),
-    0 16px 40px rgba(0,0,0,0.3);
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    0 8px 24px rgba(0, 0, 0, 0.6),
+    0 16px 40px rgba(0, 0, 0, 0.3);
   user-select: none;
   flex-shrink: 0;
   transform-style: preserve-3d;
@@ -66,25 +128,34 @@
 
 /* During active mouse tracking — fast transform response */
 .simple-card.holo-active {
-  transition: transform 0.05s ease-out, box-shadow 0.2s ease-out;
+  transition:
+    transform 0.05s ease-out,
+    box-shadow 0.2s ease-out;
 }
 
 /* Subtle top-edge metallic highlight */
 .simple-card::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 10%;
   right: 10%;
   height: 1px;
-  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 30%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0.25) 70%, transparent 100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.25) 30%,
+    rgba(255, 255, 255, 0.4) 50%,
+    rgba(255, 255, 255, 0.25) 70%,
+    transparent 100%
+  );
   pointer-events: none;
   z-index: 12;
 }
 
 /* Inner frame border texture */
 .simple-card::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   border-radius: 10px;
@@ -101,26 +172,37 @@
 .simple-card.small {
   width: 90px;
   height: 130px;
+  --card-desc-y: var(--card-desc-y-small);
+  --card-desc-bottom: var(--card-desc-bottom-small);
 }
 
 .simple-card.medium {
   width: 130px;
   height: 185px;
+  --card-desc-y: var(--card-desc-y-medium);
+  --card-desc-bottom: var(--card-desc-bottom-medium);
 }
 
 .simple-card.large {
   width: 180px;
   height: 280px;
+  --card-banner-y: var(--card-banner-y-large);
+  --card-desc-y: var(--card-desc-y-large);
+  --card-desc-bottom: var(--card-desc-bottom-large);
 }
 
 .simple-card.preview {
   width: 280px;
   height: 400px;
+  --card-banner-y: var(--card-banner-y-preview);
+  --card-desc-y: var(--card-desc-y-preview);
+  --card-desc-bottom: var(--card-desc-bottom-preview);
 }
 
 /* Hover effects - 3D tilt + lift (No longer recalculating shadows = GPU accelerated) */
 .simple-card:hover {
-  transform: perspective(800px) rotateY(var(--rotate-x)) rotateX(var(--rotate-y)) translateY(-6px) scale(1.03);
+  transform: perspective(800px) rotateY(var(--rotate-x))
+    rotateX(var(--rotate-y)) translateY(-6px) scale(1.03);
 }
 
 /* 
@@ -138,19 +220,28 @@
   transition: opacity 0.2s cubic-bezier(0.03, 0.98, 0.52, 0.99);
   will-change: opacity;
   z-index: -2;
-  box-shadow: 0 16px 32px rgba(0,0,0,0.7), 0 4px 8px rgba(0,0,0,0.5);
+  box-shadow:
+    0 16px 32px rgba(0, 0, 0, 0.7),
+    0 4px 8px rgba(0, 0, 0, 0.5);
 }
 
 .simple-card.rarity-rare .card-hover-glow {
-  box-shadow: 0 16px 32px rgba(0,0,0,0.7), 0 0 30px rgba(59,130,246,0.6);
+  box-shadow:
+    0 16px 32px rgba(0, 0, 0, 0.7),
+    0 0 30px rgba(59, 130, 246, 0.6);
 }
 
 .simple-card.rarity-epic .card-hover-glow {
-  box-shadow: 0 16px 32px rgba(0,0,0,0.7), 0 0 35px rgba(168,85,247,0.65);
+  box-shadow:
+    0 16px 32px rgba(0, 0, 0, 0.7),
+    0 0 35px rgba(168, 85, 247, 0.65);
 }
 
 .simple-card.rarity-mythic .card-hover-glow {
-  box-shadow: 0 16px 32px rgba(0,0,0,0.7), 0 0 40px rgba(168,85,247,0.5), 0 0 40px rgba(245,158,11,0.45);
+  box-shadow:
+    0 16px 32px rgba(0, 0, 0, 0.7),
+    0 0 40px rgba(168, 85, 247, 0.5),
+    0 0 40px rgba(245, 158, 11, 0.45);
 }
 
 /* Activate the glow smoothly without repaints */
@@ -160,8 +251,11 @@
 
 /* Active/click press-down feel */
 .simple-card:active:not(.not-playable) {
-  transform: perspective(800px) rotateY(var(--rotate-x)) rotateX(var(--rotate-y)) translateY(-2px) scale(1.01);
-  transition: transform 0.08s ease-out, box-shadow 0.08s ease-out;
+  transform: perspective(800px) rotateY(var(--rotate-x))
+    rotateX(var(--rotate-y)) translateY(-2px) scale(1.01);
+  transition:
+    transform 0.08s ease-out,
+    box-shadow 0.08s ease-out;
 }
 
 .simple-card.not-playable {
@@ -172,8 +266,8 @@
 .simple-card.not-playable:hover {
   transform: none;
   box-shadow:
-    0 2px 4px rgba(0,0,0,0.4),
-    0 8px 24px rgba(0,0,0,0.6);
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    0 8px 24px rgba(0, 0, 0, 0.6);
 }
 
 /* ==========================================================================
@@ -185,7 +279,7 @@
 /* --- Common: clean gunmetal steel, no animation --- */
 .simple-card.rarity-common::before {
   border: 2px solid var(--card-common-steel);
-  box-shadow: inset 0 0 12px rgba(0,0,0,0.4);
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.4);
 }
 
 /* --- Rare: blue shimmer sweep across border --- */
@@ -194,21 +288,24 @@
   padding: 2px;
   border-radius: 12px;
   border: none;
-  background:
-    linear-gradient(
-      135deg,
-      var(--card-rare-blue-deep) 0%,
-      var(--card-rare-blue-bright) 20%,
-      var(--card-rare-blue-pale) 45%,
-      #BFDBFE 50%,
-      var(--card-rare-blue-pale) 55%,
-      var(--card-rare-blue-bright) 80%,
-      var(--card-rare-blue-deep) 100%
-    );
+  background: linear-gradient(
+    135deg,
+    var(--card-rare-blue-deep) 0%,
+    var(--card-rare-blue-bright) 20%,
+    var(--card-rare-blue-pale) 45%,
+    #bfdbfe 50%,
+    var(--card-rare-blue-pale) 55%,
+    var(--card-rare-blue-bright) 80%,
+    var(--card-rare-blue-deep) 100%
+  );
   background-size: 300% 300%;
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
   mask-composite: exclude;
   animation: rare-shimmer 4s ease-in-out infinite;
 }
@@ -223,14 +320,18 @@
     135deg,
     var(--card-epic-purple-deep) 0%,
     var(--card-epic-purple-bright) 25%,
-    #E9D5FF 50%,
+    #e9d5ff 50%,
     var(--card-epic-purple-pale) 75%,
     var(--card-epic-purple-deep) 100%
   );
   background-size: 300% 300%;
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
   mask-composite: exclude;
   animation: diagonal-pan 5s linear infinite;
 }
@@ -243,12 +344,22 @@
   border: none;
   background: linear-gradient(
     135deg,
-    #ef4444, #f59e0b, #22c55e, #06b6d4, #8b5cf6, #ec4899, #ef4444
+    #ef4444,
+    #f59e0b,
+    #22c55e,
+    #06b6d4,
+    #8b5cf6,
+    #ec4899,
+    #ef4444
   );
   background-size: 300% 300%;
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
   mask-composite: exclude;
   animation: diagonal-pan 3s linear infinite;
 }
@@ -273,7 +384,8 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.7)) drop-shadow(0 0 8px rgba(0,0,0,0.4));
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.7))
+    drop-shadow(0 0 8px rgba(0, 0, 0, 0.4));
   pointer-events: none;
 }
 
@@ -307,7 +419,10 @@
   color: #ffffff;
   font-size: 16px;
   font-weight: 800;
-  text-shadow: 0 1px 0 rgba(0,0,0,1), 0 2px 4px rgba(0,0,0,0.9), 0 0 6px rgba(96,165,250,0.5);
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 1),
+    0 2px 4px rgba(0, 0, 0, 0.9),
+    0 0 6px rgba(96, 165, 250, 0.5);
   position: relative;
   z-index: 1;
 }
@@ -329,7 +444,9 @@
   align-items: center;
   justify-content: center;
   z-index: var(--z-cards, 20);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.6), 0 0 8px rgba(220,38,38,0.5);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.6),
+    0 0 8px rgba(220, 38, 38, 0.5);
   animation: blood-pulse 2s ease-in-out infinite;
 }
 
@@ -337,12 +454,20 @@
   color: #fecaca;
   font-size: 11px;
   font-weight: 800;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 @keyframes blood-pulse {
-  0%, 100% { opacity: 0.8; }
-  50% { opacity: 1; box-shadow: 0 2px 6px rgba(0,0,0,0.6), 0 0 14px rgba(220,38,38,0.7); }
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+    box-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.6),
+      0 0 14px rgba(220, 38, 38, 0.7);
+  }
 }
 
 .simple-card.small .blood-price-badge {
@@ -380,21 +505,21 @@
   pointer-events: none;
   background: var(--gradient-void);
   box-shadow:
-    inset 0 0 30px rgba(0,0,0,0.8),
-    inset 0 -4px 12px rgba(0,0,0,0.4),
-    inset 6px 0 12px rgba(0,0,0,0.3),
-    inset -6px 0 12px rgba(0,0,0,0.3);
+    inset 0 0 30px rgba(0, 0, 0, 0.8),
+    inset 0 -4px 12px rgba(0, 0, 0, 0.4),
+    inset 6px 0 12px rgba(0, 0, 0, 0.3),
+    inset -6px 0 12px rgba(0, 0, 0, 0.3);
 }
 
 /* Fade art into the nameplate — creates smooth nameplate-on-art transition */
 .card-art-container::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
   height: 55%;
-  background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.88) 100%);
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.88) 100%);
   pointer-events: none;
 }
 
@@ -468,11 +593,17 @@
   font-weight: 600;
 }
 
-.simple-card.small .card-art-locked .lock-icon { font-size: 18px; }
+.simple-card.small .card-art-locked .lock-icon {
+  font-size: 18px;
+}
 .simple-card.large .card-art-locked .lock-icon,
-.simple-card.preview .card-art-locked .lock-icon { font-size: 40px; }
+.simple-card.preview .card-art-locked .lock-icon {
+  font-size: 40px;
+}
 .simple-card.large .card-art-locked .lock-text,
-.simple-card.preview .card-art-locked .lock-text { font-size: 11px; }
+.simple-card.preview .card-art-locked .lock-text {
+  font-size: 11px;
+}
 
 /* ==========================================================================
    NAME BANNER — Shaped ribbon with dimensional depth
@@ -480,54 +611,65 @@
 
 .card-name-banner {
   position: absolute;
-  top: 63%;
+  top: var(--card-banner-y);
   left: 3%;
   right: 3%;
   min-height: 12%;
   max-height: 18%;
-  background:
-    linear-gradient(180deg, rgba(20,18,35,0.92) 0%, rgba(10,10,20,0.95) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(20, 18, 35, 0.92) 0%,
+    rgba(10, 10, 20, 0.95) 100%
+  );
   border-radius: 3px;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 4px 6px;
-  border: 1px solid rgba(255,215,100,0.18);
-  border-top: 1px solid rgba(255,215,100,0.25);
-  border-bottom: 1px solid rgba(0,0,0,0.6);
+  border: 1px solid rgba(255, 215, 100, 0.18);
+  border-top: 1px solid rgba(255, 215, 100, 0.25);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.6);
   box-shadow:
-    0 3px 10px rgba(0,0,0,0.5),
-    0 -1px 0 rgba(255,215,100,0.06),
-    inset 0 1px 0 rgba(255,255,255,0.06);
+    0 3px 10px rgba(0, 0, 0, 0.5),
+    0 -1px 0 rgba(255, 215, 100, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
   z-index: 18;
   overflow: visible;
 }
 
 /* Decorative scroll ends */
 .card-name-banner::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 50%;
   width: 6px;
   height: 14px;
-  background: linear-gradient(180deg, rgba(255,215,100,0.2) 0%, rgba(255,215,100,0.05) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 215, 100, 0.2) 0%,
+    rgba(255, 215, 100, 0.05) 100%
+  );
   border-radius: 2px;
   transform: translateY(-50%);
   left: -3px;
-  border-left: 1px solid rgba(255,215,100,0.2);
+  border-left: 1px solid rgba(255, 215, 100, 0.2);
 }
 
 .card-name-banner::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 50%;
   width: 6px;
   height: 14px;
-  background: linear-gradient(180deg, rgba(255,215,100,0.2) 0%, rgba(255,215,100,0.05) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 215, 100, 0.2) 0%,
+    rgba(255, 215, 100, 0.05) 100%
+  );
   border-radius: 2px;
   transform: translateY(-50%);
   right: -3px;
-  border-right: 1px solid rgba(255,215,100,0.2);
+  border-right: 1px solid rgba(255, 215, 100, 0.2);
 }
 
 .simple-card.small .card-name-banner::before,
@@ -539,19 +681,19 @@
   padding: 2px 6px;
 }
 
+/* Top position now driven by --card-banner-y (set per size variant on
+   the .simple-card.{size} rules). Variants only override padding here. */
 .simple-card.large .card-name-banner {
-  top: 63%;
   padding: 5px 10px;
 }
 
 .simple-card.preview .card-name-banner {
-  top: 63%;
   padding: 6px 12px;
 }
 
 /* Card name text - High contrast, slightly larger */
 .card-name {
-  color: #FFFFFF;
+  color: #ffffff;
   font-size: 12px;
   font-weight: 800;
   text-align: center;
@@ -560,7 +702,10 @@
   word-wrap: break-word;
   overflow-wrap: break-word;
   line-height: 1.2;
-  text-shadow: 0 1px 0 rgba(0,0,0,1), 0 2px 4px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.7);
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 1),
+    0 2px 4px rgba(0, 0, 0, 0.9),
+    0 0 10px rgba(0, 0, 0, 0.7);
 }
 
 .simple-card.small .card-name {
@@ -638,17 +783,26 @@
 /* Rarity-based name colors */
 .simple-card.rarity-mythic .card-name {
   color: var(--card-mythic-gold-bright);
-  text-shadow: 0 1px 0 rgba(0,0,0,1), 0 2px 4px rgba(0,0,0,0.9), 0 0 8px color-mix(in srgb, var(--card-mythic-gold-bright) 30%, transparent);
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 1),
+    0 2px 4px rgba(0, 0, 0, 0.9),
+    0 0 8px color-mix(in srgb, var(--card-mythic-gold-bright) 30%, transparent);
 }
 
 .simple-card.rarity-epic .card-name {
   color: var(--card-epic-purple-pale);
-  text-shadow: 0 1px 0 rgba(0,0,0,1), 0 2px 4px rgba(0,0,0,0.9), 0 0 8px color-mix(in srgb, var(--card-epic-purple-pale) 30%, transparent);
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 1),
+    0 2px 4px rgba(0, 0, 0, 0.9),
+    0 0 8px color-mix(in srgb, var(--card-epic-purple-pale) 30%, transparent);
 }
 
 .simple-card.rarity-rare .card-name {
   color: var(--card-rare-blue-pale);
-  text-shadow: 0 1px 0 rgba(0,0,0,1), 0 2px 4px rgba(0,0,0,0.9), 0 0 8px color-mix(in srgb, var(--card-rare-blue-pale) 30%, transparent);
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 1),
+    0 2px 4px rgba(0, 0, 0, 0.9),
+    0 0 8px color-mix(in srgb, var(--card-rare-blue-pale) 30%, transparent);
 }
 
 /* ==========================================================================
@@ -667,27 +821,60 @@
 }
 
 .rarity-gem-rare {
-  background: linear-gradient(135deg, var(--info-300) 0%, var(--card-rare-blue-mid) 50%, var(--card-rare-blue-deep) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--info-300) 0%,
+    var(--card-rare-blue-mid) 50%,
+    var(--card-rare-blue-deep) 100%
+  );
   border: 1px solid var(--card-rare-blue-pale);
-  box-shadow: 0 0 6px var(--card-rare-blue-glow), 0 2px 4px rgba(0,0,0,0.5);
+  box-shadow:
+    0 0 6px var(--card-rare-blue-glow),
+    0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .rarity-gem-epic {
-  background: linear-gradient(135deg, var(--card-epic-purple-pale) 0%, var(--card-epic-purple-mid) 50%, var(--card-epic-purple-deep) 100%);
-  border: 1px solid #DDD6FE;
-  box-shadow: 0 0 8px var(--card-epic-purple-glow), 0 2px 4px rgba(0,0,0,0.5);
+  background: linear-gradient(
+    135deg,
+    var(--card-epic-purple-pale) 0%,
+    var(--card-epic-purple-mid) 50%,
+    var(--card-epic-purple-deep) 100%
+  );
+  border: 1px solid #ddd6fe;
+  box-shadow:
+    0 0 8px var(--card-epic-purple-glow),
+    0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .rarity-gem-mythic {
-  background: linear-gradient(135deg, var(--card-mythic-gold-pale) 0%, var(--card-mythic-gold-mid) 40%, var(--card-mythic-gold-deep) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--card-mythic-gold-pale) 0%,
+    var(--card-mythic-gold-mid) 40%,
+    var(--card-mythic-gold-deep) 100%
+  );
   border: 1px solid var(--card-mythic-gold-bright);
-  box-shadow: 0 0 10px var(--card-mythic-gold-glow), 0 0 20px color-mix(in srgb, var(--card-mythic-gold-mid) 30%, transparent), 0 2px 4px rgba(0,0,0,0.5);
+  box-shadow:
+    0 0 10px var(--card-mythic-gold-glow),
+    0 0 20px color-mix(in srgb, var(--card-mythic-gold-mid) 30%, transparent),
+    0 2px 4px rgba(0, 0, 0, 0.5);
   animation: mythic-gem-pulse 3s ease-in-out infinite;
 }
 
 @keyframes mythic-gem-pulse {
-  0%, 100% { box-shadow: 0 0 10px rgba(245,158,11,0.7), 0 0 20px rgba(245,158,11,0.3), 0 2px 4px rgba(0,0,0,0.5); }
-  50% { box-shadow: 0 0 14px rgba(245,158,11,0.9), 0 0 28px rgba(245,158,11,0.5), 0 2px 4px rgba(0,0,0,0.5); }
+  0%,
+  100% {
+    box-shadow:
+      0 0 10px rgba(245, 158, 11, 0.7),
+      0 0 20px rgba(245, 158, 11, 0.3),
+      0 2px 4px rgba(0, 0, 0, 0.5);
+  }
+  50% {
+    box-shadow:
+      0 0 14px rgba(245, 158, 11, 0.9),
+      0 0 28px rgba(245, 158, 11, 0.5),
+      0 2px 4px rgba(0, 0, 0, 0.5);
+  }
 }
 
 /* ==========================================================================
@@ -711,7 +898,7 @@
 
 /* Mythic vignette — darkens edges of extended art so it fades into the frame */
 .simple-card.rarity-mythic .card-art-container::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   z-index: 1;
@@ -767,12 +954,12 @@
 }
 
 .tribe-text {
-  color: rgba(255,255,255,0.75);
+  color: rgba(255, 255, 255, 0.75);
   font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1.2px;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
 .simple-card.small .card-tribe-line {
@@ -787,16 +974,22 @@
 .simple-card.preview .tribe-text {
   font-size: 11px;
   letter-spacing: 1.5px;
-  color: rgba(255,255,255,0.8);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 /* Card description - Clear and readable */
+/* Description band — must sit BELOW the name banner.
+   Name banner (large): top 63%, min-height 12% → spans y=63%-75%.
+   So description starts at 76% to avoid overlap and keep the badge row
+   visually below the name. */
+/* Position consumes --card-desc-y / --card-desc-bottom (size variants on
+   .simple-card.{size} set these). Size-specific padding stays inline below. */
 .card-description {
   position: absolute;
-  top: 76%;
+  top: var(--card-desc-y);
   left: 5%;
   right: 5%;
-  bottom: 4%;
+  bottom: var(--card-desc-bottom);
   min-height: 14%;
   display: flex;
   align-items: flex-start;
@@ -812,42 +1005,20 @@
 }
 
 .simple-card.small .card-description {
-  top: 76%;
-  bottom: 18px;
-  background: transparent;
-  border: none;
-  align-items: flex-start;
   padding: 1px 2px;
-  overflow: visible;
-}
-
-.simple-card.large .card-description {
-  top: 76%;
-  bottom: 36px;
-  background: transparent;
-  border: none;
-  align-items: flex-start;
-  overflow: visible;
-}
-
-.simple-card.preview .card-description {
-  top: 76%;
-  bottom: 36px;
-  background: transparent;
-  border: none;
-  align-items: flex-start;
-  overflow: visible;
 }
 
 .card-description span {
-  color: #F7FAFC;
+  color: #f7fafc;
   font-size: 9px;
   font-weight: 600;
   line-height: 1.3;
   word-wrap: break-word;
   overflow-wrap: break-word;
   white-space: normal;
-  text-shadow: 0 1px 0 rgba(0,0,0,1), 0 2px 4px rgba(0,0,0,0.8);
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 1),
+    0 2px 4px rgba(0, 0, 0, 0.8);
 }
 
 .simple-card.small .card-description span {
@@ -864,18 +1035,22 @@
   line-height: 1.4;
 }
 
-/* Keyword icons container */
+/* Keyword icons container — LoL-style ability footer band.
+   Sits inside the card's lower description zone with a translucent dark
+   backdrop that visually anchors the badges to the card body instead of
+   letting them float over the art. */
 .keyword-icons-container {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  padding: 4px;
+  padding: 4px 8px;
   width: 100%;
   pointer-events: auto;
   position: relative;
   z-index: 20;
+  border-radius: 6px;
 }
 
 .keyword-icon-badge {
@@ -887,16 +1062,19 @@
   border-radius: 50%;
   background: linear-gradient(135deg, #1a1a2e 0%, #0d0d15 100%);
   border: 2px solid var(--badge-color, currentColor);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.6), 0 0 6px color-mix(in srgb, var(--badge-color, transparent) 53%, transparent);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.6),
+    0 0 6px color-mix(in srgb, var(--badge-color, transparent) 53%, transparent);
   font-size: 14px;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8));
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
   cursor: help;
   pointer-events: auto;
   position: relative;
   z-index: 20;
-  transition: transform 0.1s cubic-bezier(0.22, 1, 0.36, 1),
-              box-shadow 0.1s ease-out,
-              filter 0.1s ease-out;
+  transition:
+    transform 0.1s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.1s ease-out,
+    filter 0.1s ease-out;
 }
 
 .keyword-icon-badge:hover {
@@ -907,9 +1085,10 @@
     0 4px 12px rgba(0, 0, 0, 0.8);
   filter: brightness(1.3) saturate(1.2);
   z-index: 100;
-  transition: transform 0.12s cubic-bezier(0.22, 1, 0.36, 1),
-              box-shadow 0.12s ease-out,
-              filter 0.12s ease-out;
+  transition:
+    transform 0.12s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.12s ease-out,
+    filter 0.12s ease-out;
 }
 
 /* ==========================================================================
@@ -918,7 +1097,9 @@
 
 .evolve-info-badge {
   border-color: #00e5ff !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6), 0 0 6px rgba(0, 229, 255, 0.5) !important;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.6),
+    0 0 6px rgba(0, 229, 255, 0.5) !important;
   background: linear-gradient(135deg, #0a2a3a 0%, #051520 100%);
   animation: evolve-pulse 2s ease-in-out infinite;
 }
@@ -931,8 +1112,13 @@
 }
 
 @keyframes evolve-pulse {
-  0%, 100% { opacity: 0.7; }
-  50%      { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .evolve-tooltip {
@@ -977,13 +1163,7 @@
    Gem top = card_height(185) + 10 - 32 = 163px.
    Icons top-aligned at ~140px end at ~158px — clear of 163px gem. */
 .simple-card.medium .card-description {
-  top: 76%;
-  bottom: 26px;
-  background: transparent;
-  border: none;
-  align-items: flex-start;
   padding: 1px 4px;
-  overflow: visible;
 }
 
 .simple-card.medium .keyword-icons-container {
@@ -1009,7 +1189,7 @@
 .truncated-desc {
   font-size: 10px;
   font-weight: 600;
-  color: #E2E8F0;
+  color: #e2e8f0;
   text-align: center;
 }
 
@@ -1071,7 +1251,9 @@
   color: #ffffff;
   font-size: 16px;
   font-weight: 800;
-  text-shadow: 0 1px 0 rgba(0,0,0,1), 0 2px 4px rgba(0,0,0,0.9);
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 1),
+    0 2px 4px rgba(0, 0, 0, 0.9);
   position: relative;
   z-index: 1;
 }
@@ -1090,8 +1272,8 @@
   color: var(--success-300, #4ade80);
   text-shadow:
     0 0 6px var(--success-glow),
-    0 1px 0 rgba(0,0,0,1),
-    0 2px 4px rgba(0,0,0,0.9);
+    0 1px 0 rgba(0, 0, 0, 1),
+    0 2px 4px rgba(0, 0, 0, 0.9);
 }
 
 .stat-value.stat-unknown {
@@ -1100,7 +1282,7 @@
   text-shadow:
     0 0 8px color-mix(in srgb, var(--frost-400) 70%, transparent),
     0 0 16px color-mix(in srgb, var(--frost-400) 40%, transparent),
-    0 1px 0 rgba(0,0,0,1);
+    0 1px 0 rgba(0, 0, 0, 1);
 }
 
 /* ==========================================================================
@@ -1123,7 +1305,7 @@
 
 .card-particles::before,
 .card-particles::after {
-  content: '';
+  content: "";
   position: absolute;
   width: 3px;
   height: 3px;
@@ -1176,15 +1358,31 @@
 }
 
 .card-particles.theme-ice {
-  background: linear-gradient(180deg, rgba(200, 230, 255, 0.06) 0%, transparent 40%);
+  background: linear-gradient(
+    180deg,
+    rgba(200, 230, 255, 0.06) 0%,
+    transparent 40%
+  );
 }
 
 @keyframes snow-fall {
-  0%   { transform: translateY(-10px) translateX(0); opacity: 0; }
-  8%   { opacity: 1; }
-  50%  { transform: translateY(100px) translateX(6px); }
-  92%  { opacity: 0.7; }
-  100% { transform: translateY(210px) translateX(-2px); opacity: 0; }
+  0% {
+    transform: translateY(-10px) translateX(0);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(100px) translateX(6px);
+  }
+  92% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(210px) translateX(-2px);
+    opacity: 0;
+  }
 }
 
 /* --- FIRE — embers rising with glow --- */
@@ -1225,15 +1423,32 @@
 }
 
 .card-particles.theme-fire {
-  background: linear-gradient(0deg, rgba(255, 100, 20, 0.08) 0%, transparent 50%);
+  background: linear-gradient(
+    0deg,
+    rgba(255, 100, 20, 0.08) 0%,
+    transparent 50%
+  );
 }
 
 @keyframes fire-rise {
-  0%   { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
-  10%  { opacity: 1; }
-  40%  { transform: translateY(-60px) translateX(4px) scale(0.8); }
-  70%  { transform: translateY(-130px) translateX(-3px) scale(0.5); opacity: 0.6; }
-  100% { transform: translateY(-200px) translateX(2px) scale(0.2); opacity: 0; }
+  0% {
+    transform: translateY(0) translateX(0) scale(1);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  40% {
+    transform: translateY(-60px) translateX(4px) scale(0.8);
+  }
+  70% {
+    transform: translateY(-130px) translateX(-3px) scale(0.5);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-200px) translateX(2px) scale(0.2);
+    opacity: 0;
+  }
 }
 
 /* --- ELECTRIC — bright flashing sparks --- */
@@ -1272,13 +1487,34 @@
 }
 
 @keyframes spark-flash {
-  0%, 5%   { opacity: 0; }
-  6%, 8%   { opacity: 1; }
-  9%, 30%  { opacity: 0; }
-  31%, 33% { opacity: 0.8; }
-  34%, 60% { opacity: 0; }
-  61%, 63% { opacity: 1; }
-  64%, 100% { opacity: 0; }
+  0%,
+  5% {
+    opacity: 0;
+  }
+  6%,
+  8% {
+    opacity: 1;
+  }
+  9%,
+  30% {
+    opacity: 0;
+  }
+  31%,
+  33% {
+    opacity: 0.8;
+  }
+  34%,
+  60% {
+    opacity: 0;
+  }
+  61%,
+  63% {
+    opacity: 1;
+  }
+  64%,
+  100% {
+    opacity: 0;
+  }
 }
 
 /* --- SHADOW — dark wisps rising --- */
@@ -1325,31 +1561,48 @@
 }
 
 @keyframes shadow-rise {
-  0%   { transform: translateY(0) scale(1); opacity: 0; }
-  12%  { opacity: 0.6; }
-  50%  { transform: translateY(-80px) scale(1.3); opacity: 0.4; }
-  100% { transform: translateY(-180px) scale(0.6); opacity: 0; }
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-80px) scale(1.3);
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(-180px) scale(0.6);
+    opacity: 0;
+  }
 }
 
 /* Disable particles for reduced motion / touch */
 @media (prefers-reduced-motion: reduce) {
-  .card-particles { display: none; }
+  .card-particles {
+    display: none;
+  }
 }
 
 @media (hover: none) {
-  .card-particles { display: none; }
+  .card-particles {
+    display: none;
+  }
 }
 
 /* Highlighted state - white glow ring, lifted */
 .simple-card.highlighted {
-  transform: perspective(800px) rotateY(var(--rotate-x)) rotateX(var(--rotate-y)) translateY(-10px) scale(1.05);
+  transform: perspective(800px) rotateY(var(--rotate-x))
+    rotateX(var(--rotate-y)) translateY(-10px) scale(1.05);
   box-shadow:
-    0 8px 20px rgba(0,0,0,0.7),
-    0 20px 40px rgba(0,0,0,0.5),
-    0 0 0 2px rgba(255,255,255,0.5),
-    0 0 30px rgba(255,255,255,0.25);
-  transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1),
-              box-shadow 0.15s ease-out;
+    0 8px 20px rgba(0, 0, 0, 0.7),
+    0 20px 40px rgba(0, 0, 0, 0.5),
+    0 0 0 2px rgba(255, 255, 255, 0.5),
+    0 0 30px rgba(255, 255, 255, 0.25);
+  transition:
+    transform 0.15s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.15s ease-out;
 }
 
 .simple-card.highlighted::before {
@@ -1358,9 +1611,13 @@
   inset: -2px !important;
   padding: 2px !important;
   border-radius: 12px !important;
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0) !important;
   -webkit-mask-composite: xor !important;
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0) !important;
   mask-composite: exclude !important;
   animation: none !important;
 }
@@ -1370,30 +1627,30 @@
    ========================================================================== */
 
 .simple-card.card-type-spell {
-  background: linear-gradient(180deg, #1A1A30 0%, #14112B 40%, #0C0A1A 100%);
+  background: linear-gradient(180deg, #1a1a30 0%, #14112b 40%, #0c0a1a 100%);
 }
 
 .simple-card.card-type-spell .card-art-container {
-  background: linear-gradient(180deg, #2D2650 0%, #1A1633 100%);
+  background: linear-gradient(180deg, #2d2650 0%, #1a1633 100%);
 }
 
 .simple-card.card-type-spell .card-name-banner {
-  background: rgba(20,14,40,0.5);
+  background: rgba(20, 14, 40, 0.5);
 }
 
 .simple-card.card-type-spell.rarity-epic {
-  background: linear-gradient(180deg, #1F1A38 0%, #15112A 40%, #0D0B1A 100%);
+  background: linear-gradient(180deg, #1f1a38 0%, #15112a 40%, #0d0b1a 100%);
 }
 
 .simple-card.card-type-spell.rarity-epic::before {
   box-shadow:
-    0 0 20px rgba(168,85,247,0.6),
-    0 0 40px rgba(168,85,247,0.3),
-    inset 0 0 12px rgba(168,85,247,0.1);
+    0 0 20px rgba(168, 85, 247, 0.6),
+    0 0 40px rgba(168, 85, 247, 0.3),
+    inset 0 0 12px rgba(168, 85, 247, 0.1);
 }
 
 .simple-card.card-type-spell.rarity-mythic {
-  background: linear-gradient(180deg, #2A1F10 0%, #1F170A 40%, #140F05 100%);
+  background: linear-gradient(180deg, #2a1f10 0%, #1f170a 40%, #140f05 100%);
 }
 
 /* ==========================================================================
@@ -1401,30 +1658,30 @@
    ========================================================================== */
 
 .simple-card.card-type-weapon {
-  background: linear-gradient(180deg, #2D2D2D 0%, #1A1A1A 40%, #0F0F0F 100%);
+  background: linear-gradient(180deg, #2d2d2d 0%, #1a1a1a 40%, #0f0f0f 100%);
 }
 
 .simple-card.card-type-weapon .card-art-container {
-  background: linear-gradient(180deg, #3D3D3D 0%, #2A2A2A 100%);
+  background: linear-gradient(180deg, #3d3d3d 0%, #2a2a2a 100%);
 }
 
 .simple-card.card-type-weapon .card-name-banner {
-  background: rgba(30,30,30,0.5);
+  background: rgba(30, 30, 30, 0.5);
 }
 
 /* ==========================================================================
    ARTIFACT CARD STYLING - Purple mythic theme
    ========================================================================== */
 .simple-card.card-type-artifact {
-  background: linear-gradient(180deg, #2A1040 0%, #1A0A2A 40%, #0F0518 100%);
+  background: linear-gradient(180deg, #2a1040 0%, #1a0a2a 40%, #0f0518 100%);
 }
 
 .simple-card.card-type-artifact .card-art-container {
-  background: linear-gradient(180deg, #3A1860 0%, #251040 100%);
+  background: linear-gradient(180deg, #3a1860 0%, #251040 100%);
 }
 
 .simple-card.card-type-artifact .card-name-banner {
-  background: rgba(30,10,50,0.5);
+  background: rgba(30, 10, 50, 0.5);
 }
 
 .simple-card.card-type-artifact .card-attack {
@@ -1433,24 +1690,24 @@
 
 .simple-card.card-type-artifact::before {
   box-shadow:
-    0 0 20px rgba(147,51,234,0.5),
-    0 0 40px rgba(147,51,234,0.25),
-    inset 0 0 12px rgba(147,51,234,0.1);
+    0 0 20px rgba(147, 51, 234, 0.5),
+    0 0 40px rgba(147, 51, 234, 0.25),
+    inset 0 0 12px rgba(147, 51, 234, 0.1);
 }
 
 /* ==========================================================================
    ARMOR CARD STYLING - Steel/iron theme
    ========================================================================== */
 .simple-card.card-type-armor {
-  background: linear-gradient(180deg, #1E2830 0%, #141C22 40%, #0A1015 100%);
+  background: linear-gradient(180deg, #1e2830 0%, #141c22 40%, #0a1015 100%);
 }
 
 .simple-card.card-type-armor .card-art-container {
-  background: linear-gradient(180deg, #2A3A45 0%, #1C2830 100%);
+  background: linear-gradient(180deg, #2a3a45 0%, #1c2830 100%);
 }
 
 .simple-card.card-type-armor .card-name-banner {
-  background: rgba(15,25,35,0.5);
+  background: rgba(15, 25, 35, 0.5);
 }
 
 /* ==========================================================================
@@ -1459,41 +1716,52 @@
 
 /* Static outer glows per rarity — on the card element (mask clips ::before box-shadow) */
 .simple-card.rarity-rare {
-  box-shadow: 0 0 12px color-mix(in srgb, var(--card-rare-blue-bright) 40%, transparent), 0 0 24px color-mix(in srgb, var(--card-rare-blue-bright) 15%, transparent);
+  box-shadow:
+    0 0 12px color-mix(in srgb, var(--card-rare-blue-bright) 40%, transparent),
+    0 0 24px color-mix(in srgb, var(--card-rare-blue-bright) 15%, transparent);
 }
 
 .simple-card.rarity-epic {
-  box-shadow: 0 0 16px color-mix(in srgb, var(--card-epic-purple-bright) 45%, transparent), 0 0 32px color-mix(in srgb, var(--card-epic-purple-bright) 20%, transparent);
+  box-shadow:
+    0 0 16px color-mix(in srgb, var(--card-epic-purple-bright) 45%, transparent),
+    0 0 32px color-mix(in srgb, var(--card-epic-purple-bright) 20%, transparent);
 }
 
 .simple-card.rarity-mythic {
   box-shadow:
     0 0 20px color-mix(in srgb, var(--card-epic-purple-bright) 35%, transparent),
-    0 0 20px rgba(236,72,153,0.3),
+    0 0 20px rgba(236, 72, 153, 0.3),
     0 0 40px color-mix(in srgb, var(--card-rare-blue-bright) 20%, transparent);
 }
 
 /* Playable card glow indicator — static shadow + GPU-composited scale pulse */
 .simple-card.playable {
   box-shadow:
-    0 8px 24px rgba(0,0,0,0.6),
-    0 0 0 2px rgba(72,187,120,0.75),
-    0 0 16px rgba(72,187,120,0.4);
+    0 8px 24px rgba(0, 0, 0, 0.6),
+    0 0 0 2px rgba(72, 187, 120, 0.75),
+    0 0 16px rgba(72, 187, 120, 0.4);
   animation: playable-pulse 1.5s ease-in-out infinite;
 }
 
 .simple-card.playable:hover {
   box-shadow:
-    0 16px 36px rgba(0,0,0,0.65),
-    0 0 0 3px rgba(72,187,120,0.9),
-    0 0 28px rgba(72,187,120,0.5);
+    0 16px 36px rgba(0, 0, 0, 0.65),
+    0 0 0 3px rgba(72, 187, 120, 0.9),
+    0 0 28px rgba(72, 187, 120, 0.5);
   animation: none;
 }
 
 /* transform-only animation — runs on GPU compositor, zero repaints */
 @keyframes playable-pulse {
-  0%, 100% { transform: perspective(800px) rotateY(var(--rotate-x, 0deg)) rotateX(var(--rotate-y, 0deg)) scale(1); }
-  50%       { transform: perspective(800px) rotateY(var(--rotate-x, 0deg)) rotateX(var(--rotate-y, 0deg)) scale(1.028); }
+  0%,
+  100% {
+    transform: perspective(800px) rotateY(var(--rotate-x, 0deg))
+      rotateX(var(--rotate-y, 0deg)) scale(1);
+  }
+  50% {
+    transform: perspective(800px) rotateY(var(--rotate-x, 0deg))
+      rotateX(var(--rotate-y, 0deg)) scale(1.028);
+  }
 }
 
 /* ==========================================================================
@@ -1504,9 +1772,9 @@
   outline: 2px solid var(--color-gold, #ffd700);
   outline-offset: 3px;
   box-shadow:
-    0 2px 4px rgba(0,0,0,0.4),
-    0 8px 24px rgba(0,0,0,0.6),
-    0 0 0 4px rgba(255,215,0,0.25);
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    0 8px 24px rgba(0, 0, 0, 0.6),
+    0 0 0 4px rgba(255, 215, 0, 0.25);
 }
 
 /* ==========================================================================
@@ -1517,15 +1785,15 @@
   .simple-card:hover {
     transform: none;
     box-shadow:
-      0 2px 4px rgba(0,0,0,0.4),
-      0 8px 24px rgba(0,0,0,0.6),
-      0 16px 40px rgba(0,0,0,0.3);
+      0 2px 4px rgba(0, 0, 0, 0.4),
+      0 8px 24px rgba(0, 0, 0, 0.6),
+      0 16px 40px rgba(0, 0, 0, 0.3);
   }
 
   .simple-card.playable:hover {
     box-shadow:
-      0 8px 24px rgba(0,0,0,0.6),
-      0 0 0 2px rgba(72,187,120,0.6);
+      0 8px 24px rgba(0, 0, 0, 0.6),
+      0 0 0 2px rgba(72, 187, 120, 0.6);
   }
 
   .simple-card:hover .holo-foil,
@@ -1551,8 +1819,8 @@
   .simple-card.playable {
     animation: none;
     box-shadow:
-      0 8px 24px rgba(0,0,0,0.6),
-      0 0 0 3px rgba(72,187,120,0.8);
+      0 8px 24px rgba(0, 0, 0, 0.6),
+      0 0 0 3px rgba(72, 187, 120, 0.8);
   }
 
   .holo-foil,
@@ -1579,7 +1847,9 @@
   font-size: 10px;
   line-height: 1;
   letter-spacing: 1px;
-  text-shadow: 0 1px 2px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,0.8);
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 1),
+    0 0 6px rgba(0, 0, 0, 0.8);
   pointer-events: none;
 }
 
@@ -1598,7 +1868,7 @@
 
 /* Mortal (Level 1) — desaturated, bronze/iron tint */
 .evolution-mortal .evolution-stars {
-  color: #A0886C;
+  color: #a0886c;
 }
 
 .simple-card.evolution-mortal {
@@ -1606,8 +1876,8 @@
 }
 
 .simple-card.evolution-mortal::before {
-  border-color: #8B7355 !important;
-  box-shadow: inset 0 0 12px rgba(139,115,85,0.2) !important;
+  border-color: #8b7355 !important;
+  box-shadow: inset 0 0 12px rgba(139, 115, 85, 0.2) !important;
 }
 
 .simple-card.evolution-mortal .card-art-container {
@@ -1616,25 +1886,36 @@
 
 /* Ascended (Level 2) — normal saturation, silver accent */
 .evolution-ascended .evolution-stars {
-  color: #C0C0C0;
-  text-shadow: 0 1px 2px rgba(0,0,0,1), 0 0 8px rgba(192,192,192,0.4);
+  color: #c0c0c0;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 1),
+    0 0 8px rgba(192, 192, 192, 0.4);
 }
 
 .simple-card.evolution-ascended::before {
-  border-color: #A0A0B8 !important;
+  border-color: #a0a0b8 !important;
   box-shadow:
-    0 0 10px rgba(160,160,184,0.3),
-    inset 0 0 12px rgba(160,160,184,0.1) !important;
+    0 0 10px rgba(160, 160, 184, 0.3),
+    inset 0 0 12px rgba(160, 160, 184, 0.1) !important;
 }
 
 /* Divine (Level 3) — full saturation, golden glow (default look enhanced) */
 .evolution-divine .evolution-stars {
   color: var(--gold-300);
-  text-shadow: 0 1px 2px rgba(0,0,0,1), 0 0 8px color-mix(in srgb, var(--gold-300) 50%, transparent);
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 1),
+    0 0 8px color-mix(in srgb, var(--gold-300) 50%, transparent);
 }
 
 .simple-card.evolution-divine::after {
-  background: linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--gold-300) 15%, transparent) 30%, color-mix(in srgb, var(--gold-300) 25%, transparent) 50%, color-mix(in srgb, var(--gold-300) 15%, transparent) 70%, transparent 100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--gold-300) 15%, transparent) 30%,
+    color-mix(in srgb, var(--gold-300) 25%, transparent) 50%,
+    color-mix(in srgb, var(--gold-300) 15%, transparent) 70%,
+    transparent 100%
+  );
 }
 
 /* ==========================================================================
@@ -1676,8 +1957,10 @@
   line-height: 1;
   border-radius: 4px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.2);
-  font-family: 'Georgia', 'Times New Roman', serif;
+  box-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.6),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  font-family: "Georgia", "Times New Roman", serif;
   letter-spacing: -0.5px;
 }
 
@@ -1687,24 +1970,46 @@
 }
 
 .pet-stage-badge.stage-1 {
-  background: linear-gradient(160deg, #cd7f32 0%, #a0522d 40%, #cd9b5a 70%, #8b6914 100%);
+  background: linear-gradient(
+    160deg,
+    #cd7f32 0%,
+    #a0522d 40%,
+    #cd9b5a 70%,
+    #8b6914 100%
+  );
   color: #fff8e7;
   border: 1px solid rgba(205, 127, 50, 0.6);
 }
 
 .pet-stage-badge.stage-2 {
-  background: linear-gradient(160deg, #e8e8ee 0%, #b0b0c0 30%, #d8d8e8 60%, #a0a0b8 100%);
+  background: linear-gradient(
+    160deg,
+    #e8e8ee 0%,
+    #b0b0c0 30%,
+    #d8d8e8 60%,
+    #a0a0b8 100%
+  );
   color: #1a1a2e;
   border: 1px solid rgba(200, 200, 220, 0.7);
   text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
 }
 
 .pet-stage-badge.stage-3 {
-  background: linear-gradient(160deg, #ffd700 0%, #ffaa00 25%, #ffe066 50%, #ffcc00 75%, #ffd700 100%);
+  background: linear-gradient(
+    160deg,
+    #ffd700 0%,
+    #ffaa00 25%,
+    #ffe066 50%,
+    #ffcc00 75%,
+    #ffd700 100%
+  );
   color: #1a0f00;
   border: 1px solid rgba(255, 215, 0, 0.8);
   text-shadow: 0 0 4px rgba(255, 215, 0, 0.6);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6), 0 0 8px rgba(255, 215, 0, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.4);
+  box-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.6),
+    0 0 8px rgba(255, 215, 0, 0.3),
+    inset 0 1px 2px rgba(255, 255, 255, 0.4);
 }
 
 .simple-card.small .pet-stage-badge {
@@ -1720,11 +2025,19 @@
 
 .keyword-badge-tooltip {
   position: fixed;
-  z-index: 15000;
+  /* Was hardcoded 15000 (above --z-topmost: 10000). That worked by accident
+     and caused tooltips to leak above modals. Modal overlays now explicitly
+     suppress this tooltip via the `disableTooltips` prop on SimpleCard, so
+     `--z-tooltip` is the right semantic tier. */
+  z-index: var(--z-tooltip);
   pointer-events: none;
   max-width: 220px;
   padding: 10px 14px;
-  background: linear-gradient(180deg, rgba(18, 18, 30, 0.98) 0%, rgba(10, 10, 18, 1) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(18, 18, 30, 0.98) 0%,
+    rgba(10, 10, 18, 1) 100%
+  );
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 10px;
   box-shadow:
@@ -1737,8 +2050,14 @@
 }
 
 @keyframes kbt-enter {
-  from { opacity: 0; transform: translate(-50%, -100%) scale(0.85) translateY(6px); }
-  to   { opacity: 1; transform: translate(-50%, -100%) scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: translate(-50%, -100%) scale(0.85) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -100%) scale(1) translateY(0);
+  }
 }
 
 .kbt-header {
@@ -1766,7 +2085,7 @@
   font-size: 11px;
   line-height: 1.45;
   color: #d1d5db;
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: "Segoe UI", system-ui, sans-serif;
 }
 
 /* Responsive — smaller on mobile */
@@ -1776,8 +2095,12 @@
     padding: 6px 10px;
   }
 
-  .kbt-name { font-size: 10px; }
-  .kbt-effect { font-size: 10px; }
+  .kbt-name {
+    font-size: 10px;
+  }
+  .kbt-effect {
+    font-size: 10px;
+  }
 }
 
 /* ==========================================================================
@@ -1785,36 +2108,53 @@
    ========================================================================== */
 
 @keyframes golden-flow {
-  0%   { background-position: 0% 0%; }
-  25%  { background-position: 100% 50%; }
-  50%  { background-position: 50% 100%; }
-  75%  { background-position: 0% 50%; }
-  100% { background-position: 0% 0%; }
+  0% {
+    background-position: 0% 0%;
+  }
+  25% {
+    background-position: 100% 50%;
+  }
+  50% {
+    background-position: 50% 100%;
+  }
+  75% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
 }
 
 @keyframes golden-hue-shift {
-  0%   { filter: hue-rotate(0deg) saturate(1.2) brightness(1); }
-  33%  { filter: hue-rotate(15deg) saturate(1.4) brightness(1.1); }
-  66%  { filter: hue-rotate(-10deg) saturate(1.3) brightness(1.05); }
-  100% { filter: hue-rotate(0deg) saturate(1.2) brightness(1); }
+  0% {
+    filter: hue-rotate(0deg) saturate(1.2) brightness(1);
+  }
+  33% {
+    filter: hue-rotate(15deg) saturate(1.4) brightness(1.1);
+  }
+  66% {
+    filter: hue-rotate(-10deg) saturate(1.3) brightness(1.05);
+  }
+  100% {
+    filter: hue-rotate(0deg) saturate(1.2) brightness(1);
+  }
 }
 
 /* golden-warp removed — replaced by interactive mouse-tracked 3D tilt */
 
 .simple-card.rarity-mythic .card-art-container::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(
-      135deg,
-      transparent 20%,
-      rgba(255, 215, 0, 0.08) 30%,
-      rgba(255, 180, 0, 0.12) 40%,
-      transparent 50%,
-      rgba(255, 200, 50, 0.08) 60%,
-      transparent 80%
-    );
+  background: linear-gradient(
+    135deg,
+    transparent 20%,
+    rgba(255, 215, 0, 0.08) 30%,
+    rgba(255, 180, 0, 0.12) 40%,
+    transparent 50%,
+    rgba(255, 200, 50, 0.08) 60%,
+    transparent 80%
+  );
   background-size: 300% 300%;
   animation: golden-flow 8s ease-in-out infinite;
   pointer-events: none;
@@ -1823,17 +2163,16 @@
 }
 
 .simple-card.rarity-mythic:hover .card-art-container::after {
-  background:
-    linear-gradient(
-      135deg,
-      transparent 10%,
-      rgba(255, 215, 0, 0.15) 25%,
-      rgba(255, 180, 0, 0.22) 35%,
-      rgba(255, 255, 200, 0.18) 45%,
-      transparent 55%,
-      rgba(255, 200, 50, 0.15) 65%,
-      transparent 80%
-    );
+  background: linear-gradient(
+    135deg,
+    transparent 10%,
+    rgba(255, 215, 0, 0.15) 25%,
+    rgba(255, 180, 0, 0.22) 35%,
+    rgba(255, 255, 200, 0.18) 45%,
+    transparent 55%,
+    rgba(255, 200, 50, 0.15) 65%,
+    transparent 80%
+  );
   background-size: 300% 300%;
   animation: golden-flow 4s ease-in-out infinite;
 }
@@ -1841,19 +2180,18 @@
 /* Mythic hover — 3D tilt handled by mouse tracking */
 
 .simple-card.rarity-epic .card-art-container::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(
-      135deg,
-      transparent 20%,
-      rgba(168, 85, 247, 0.06) 30%,
-      rgba(139, 92, 246, 0.10) 40%,
-      transparent 50%,
-      rgba(192, 132, 252, 0.06) 60%,
-      transparent 80%
-    );
+  background: linear-gradient(
+    135deg,
+    transparent 20%,
+    rgba(168, 85, 247, 0.06) 30%,
+    rgba(139, 92, 246, 0.1) 40%,
+    transparent 50%,
+    rgba(192, 132, 252, 0.06) 60%,
+    transparent 80%
+  );
   background-size: 300% 300%;
   animation: golden-flow 10s ease-in-out infinite;
   pointer-events: none;
@@ -1862,17 +2200,16 @@
 }
 
 .simple-card.rarity-epic:hover .card-art-container::after {
-  background:
-    linear-gradient(
-      135deg,
-      transparent 10%,
-      rgba(168, 85, 247, 0.12) 25%,
-      rgba(139, 92, 246, 0.18) 35%,
-      rgba(192, 132, 252, 0.14) 45%,
-      transparent 55%,
-      rgba(168, 85, 247, 0.10) 65%,
-      transparent 80%
-    );
+  background: linear-gradient(
+    135deg,
+    transparent 10%,
+    rgba(168, 85, 247, 0.12) 25%,
+    rgba(139, 92, 246, 0.18) 35%,
+    rgba(192, 132, 252, 0.14) 45%,
+    transparent 55%,
+    rgba(168, 85, 247, 0.1) 65%,
+    transparent 80%
+  );
   background-size: 300% 300%;
   animation: golden-flow 5s ease-in-out infinite;
 }

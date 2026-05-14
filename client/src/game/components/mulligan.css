@@ -1,11 +1,66 @@
-/* Mulligan Card */
+/* =============================================================================
+   Mulligan — residual CSS.
+   Most styles moved to component-level Tailwind. This file keeps only:
 
+   1. Reach-into SimpleCard override (cross-component coupling that needs
+      !important to win the cascade vs SimpleCard's own .large rule).
+   2. Decorative rune rings — positioned with negative margins to play nicely
+      with framer-motion's inline `transform: rotate()` (translateX/Y in CSS
+      would be clobbered by the motion library's transform).
+   ========================================================================== */
+
+/* SimpleCard size override — make `size="large"` fill the wrapper width
+   instead of using its built-in fixed dimensions. The mulligan wrapper sets
+   the canvas; the card adapts. */
+.mulligan-card-wrapper .simple-card.large {
+  width: 100% !important;
+  height: auto !important;
+  aspect-ratio: 9 / 14;
+}
+
+/* Decorative rune rings — concentric circles rotating in opposite directions.
+   Negative margin centering (instead of transform) so framer-motion's
+   `animate={{ rotate }}` transform doesn't compete with translate. */
+.mulligan-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  border: 1px solid rgba(251, 191, 36, 0.06);
+  pointer-events: none;
+}
+
+.mulligan-ring-large {
+  width: 600px;
+  height: 600px;
+  margin-left: -300px;
+  margin-top: -300px;
+}
+
+.mulligan-ring-small {
+  width: 400px;
+  height: 400px;
+  margin-left: -200px;
+  margin-top: -200px;
+  border-color: rgba(251, 191, 36, 0.04);
+}
+
+/* Card wrapper for MulliganCard — width fixed here because MulliganCard's
+   motion.div needs a non-Tailwind sizing source the reach-into above can
+   target. Keep co-located with the override.
+
+   padding-bottom + bottom-aligned frame visually contains the attack/health
+   stat emblems that SimpleCard positions at `bottom: -16px` (intentional
+   CCG overhang). Without this, the emblems escape the card silhouette and
+   appear to float into the detail panel below. */
 .mulligan-card-wrapper {
   position: relative;
   cursor: pointer;
   width: 200px;
+  padding-bottom: 28px;
 }
 
+/* Card placeholder while data loads */
 .mulligan-card-placeholder {
   width: 100%;
   aspect-ratio: 9 / 13;
@@ -22,6 +77,8 @@
   font-size: 12px;
 }
 
+/* Selected card overlay (X badge + Replace label) — kept in CSS because the
+   X-badge gradient + glow is verbose as Tailwind arbitrary values. */
 .mulligan-card-selected-overlay {
   position: absolute;
   inset: 0;
@@ -56,171 +113,4 @@
   letter-spacing: 2px;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.85);
-}
-
-/* Mulligan Screen */
-
-.mulligan-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  z-index: var(--z-topmost);
-  background: radial-gradient(ellipse at center, rgba(10, 15, 30, 0.97) 0%, rgba(0, 0, 0, 0.99) 100%);
-}
-
-.mulligan-ring {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  border-radius: 50%;
-  border: 1px solid rgba(251, 191, 36, 0.06);
-  pointer-events: none;
-}
-
-.mulligan-ring-large {
-  width: 600px;
-  height: 600px;
-  margin-left: -300px;
-  margin-top: -300px;
-}
-
-.mulligan-ring-small {
-  width: 400px;
-  height: 400px;
-  margin-left: -200px;
-  margin-top: -200px;
-  border-color: rgba(251, 191, 36, 0.04);
-}
-
-.mulligan-container {
-  position: relative;
-  max-width: 1020px;
-  width: 100%;
-  padding: 0 16px;
-}
-
-.mulligan-header {
-  text-align: center;
-  margin-bottom: 32px;
-}
-
-.mulligan-title {
-  font-family: 'Cinzel', 'Georgia', serif;
-  font-size: 52px;
-  font-weight: 900;
-  color: white;
-  letter-spacing: 8px;
-  text-transform: uppercase;
-  line-height: 1;
-  margin-bottom: 12px;
-  text-shadow: 0 0 30px rgba(251, 191, 36, 0.5), 0 4px 8px rgba(0, 0, 0, 0.8);
-}
-
-.mulligan-subtitle {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 4px;
-  text-transform: uppercase;
-  color: rgba(251, 191, 36, 0.55);
-}
-
-.mulligan-cards-row {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 32px;
-  margin-bottom: 40px;
-  padding: 16px 0;
-  overflow: visible;
-}
-
-.mulligan-actions {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-}
-
-.mulligan-btn {
-  padding: 14px 36px;
-  color: white;
-  font-weight: 800;
-  font-size: 13px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  border-radius: 12px;
-  border: none;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.mulligan-btn:hover {
-  transform: translateY(-3px);
-}
-
-.mulligan-btn:active {
-  transform: translateY(0);
-  transition: transform 0.08s ease;
-}
-
-.mulligan-btn-keep {
-  background: linear-gradient(135deg, #7f1d1d, #991b1b);
-  border: 1px solid rgba(239, 68, 68, 0.35);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-}
-
-.mulligan-btn-keep:hover {
-  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.3);
-}
-
-.mulligan-btn-replace {
-  background: linear-gradient(135deg, #14532d, #166534);
-  border: 1px solid rgba(34, 197, 94, 0.4);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-}
-
-.mulligan-btn-replace:hover {
-  box-shadow: 0 8px 24px rgba(34, 197, 94, 0.4);
-}
-
-.mulligan-btn-replace.has-selection {
-  box-shadow: 0 4px 20px rgba(34, 197, 94, 0.35);
-  border-color: rgba(34, 197, 94, 0.6);
-}
-
-.mulligan-waiting {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 28px;
-}
-
-.mulligan-waiting-dots {
-  display: flex;
-  gap: 6px;
-}
-
-.mulligan-waiting-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: rgba(251, 191, 36, 0.7);
-}
-
-.mulligan-waiting-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: rgba(251, 191, 36, 0.65);
-}
-
-/* Make SimpleCard fill the wrapper instead of using fixed size */
-.mulligan-card-wrapper .simple-card.large {
-  width: 100% !important;
-  height: auto !important;
-  aspect-ratio: 9 / 14;
 }

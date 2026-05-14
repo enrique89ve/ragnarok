@@ -119,7 +119,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
       <div
         key={`${row}-${col}`}
         className={`
-          chess-cell relative aspect-square overflow-visible
+          chess-cell relative aspect-square overflow-visible [container-type:inline-size]
           ${isLight ? 'chess-cell-light' : 'chess-cell-dark'}
           ${gameStatus === 'playing' ? '' : 'opacity-75'}
           ${isPlacementMode ? 'cursor-crosshair' : ''}
@@ -407,18 +407,13 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
         </motion.div>
       )}
       
-      <div className="relative" style={{ perspective: '1200px' }}>
+      <div className="relative [perspective:1200px]">
         <motion.div
           ref={boardRef}
-          className="chess-board rounded-lg overflow-hidden"
+          className="chess-board rounded-lg overflow-hidden grid aspect-[5/7] origin-bottom [transform:rotateX(2deg)] w-[min(500px,85vw,calc(70vh*5/7))]"
           style={{
-            display: 'grid',
             gridTemplateRows: `repeat(${BOARD_ROWS}, 1fr)`,
             gridTemplateColumns: `repeat(${BOARD_COLS}, 1fr)`,
-            width: 'min(500px, 85vw)',
-            aspectRatio: `${BOARD_COLS}/${BOARD_ROWS}`,
-            transform: 'rotateX(2deg)',
-            transformOrigin: 'center bottom'
           }}
           animate={screenShake ? {
             x: [0, -5, 5, -5, 5, 0],

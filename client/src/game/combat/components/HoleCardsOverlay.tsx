@@ -9,6 +9,8 @@ interface HoleCardsOverlayProps {
   winningCards?: PokerCard[];
   isShowdown?: boolean;
   activeTurn?: boolean;
+  positionAbsolute?: boolean;
+  embedded?: boolean;
 }
 
 const FACE_DOWN_CARD: PokerCard = {
@@ -28,14 +30,70 @@ export const HoleCardsOverlay: React.FC<HoleCardsOverlayProps> = ({
   faceDown = false,
   winningCards,
   isShowdown = false,
-  activeTurn = false
+  activeTurn = false,
+  positionAbsolute = true,
+  embedded = false,
 }) => {
   const isOpponent = variant === 'opponent';
   const displayCards = cards.length > 0 ? cards : [FACE_DOWN_CARD, FACE_DOWN_CARD];
 
+  const renderCards = () => displayCards.map((card, idx) => {
+    const isWinning = isCardInWinningHand(card, winningCards);
+    const isFirst = idx === 0;
+
+    return (
+      <div
+        key={`${variant}-hole-${idx}`}
+        className={`
+          hole-card-slot
+          ${isFirst ? '-rotate-[8deg]' : 'rotate-[8deg] -ml-[15px]'}
+          ${isWinning ? 'winning-card-glow celebration' : ''}
+        `}
+        style={{
+          background: 'transparent',
+          border: 'none'
+        }}
+      >
+        <PlayingCard
+          card={card}
+          faceDown={faceDown && (!isShowdown || cards.length === 0) && !(card as any).isRevealed}
+          large={false}
+        />
+      </div>
+    );
+  });
+
+  if (embedded) {
+    return (
+      <div
+        className={`
+          hero-pocket-cards hero-pocket-cards--${variant}
+          ${activeTurn ? 'hole-cards-active-turn' : ''}
+        `}
+      >
+        {renderCards()}
+      </div>
+    );
+  }
+
   const positionClass = isOpponent
     ? 'top-full'
-    : 'bottom-full';
+    : 'top-0';
+
+  if (!positionAbsolute) {
+    return (
+      <div
+        className={`
+          flex flex-row items-center justify-center
+          pointer-events-none z-10 gap-1
+          ${activeTurn ? 'hole-cards-active-turn' : ''}
+        `}
+        style={{ transform: `scale(var(--zone-poker-card-scale, 1))` }}
+      >
+        {renderCards()}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -47,37 +105,15 @@ export const HoleCardsOverlay: React.FC<HoleCardsOverlayProps> = ({
         ${activeTurn ? 'hole-cards-active-turn' : ''}
       `}
       style={{
-        [isOpponent ? 'marginTop' : 'marginBottom']: isOpponent
+        [isOpponent ? 'marginTop' : 'marginTop']: isOpponent
           ? 'var(--zone-hole-cards-opponent-offset, -80px)'
-          : 'var(--zone-hole-cards-player-offset, -50px)',
-        transform: `translateX(-50%) scale(var(--zone-poker-card-scale, 1))`,
+          : undefined,
+        transform: isOpponent
+          ? `translateX(-50%) scale(var(--zone-poker-card-scale, 1))`
+          : `translate(-50%, -50%) scale(var(--zone-poker-card-scale, 1))`,
       }}
     >
-      {displayCards.map((card, idx) => {
-        const isWinning = isCardInWinningHand(card, winningCards);
-        const isFirst = idx === 0;
-
-        return (
-          <div
-            key={`${variant}-hole-${idx}`}
-            className={`
-              hole-card-slot
-              ${isFirst ? '-rotate-[8deg]' : 'rotate-[8deg] -ml-[15px]'}
-              ${isWinning ? 'winning-card-glow celebration' : ''}
-            `}
-            style={{
-              background: 'transparent',
-              border: 'none'
-            }}
-          >
-            <PlayingCard
-              card={card}
-              faceDown={faceDown && (!isShowdown || cards.length === 0) && !(card as any).isRevealed}
-              large={false}
-            />
-          </div>
-        );
-      })}
+      {renderCards()}
     </div>
   );
 };

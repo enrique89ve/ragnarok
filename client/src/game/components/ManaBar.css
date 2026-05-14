@@ -23,6 +23,27 @@
 	z-index: 2;
 }
 
+.mana-bar-container--hero .mana-label {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 4px;
+	flex: 0 0 auto;
+	font-family: "Cinzel", Georgia, serif;
+	font-size: 0.58rem;
+	font-weight: 800;
+	letter-spacing: 0.08em;
+	line-height: 1;
+	text-transform: uppercase;
+	color: var(--rarity-rare-bright);
+	text-shadow: 0 0 8px color-mix(in srgb, var(--rarity-rare-color) 65%, transparent);
+}
+
+.mana-bar-container--hero .mana-label strong {
+	font-size: 0.78rem;
+	letter-spacing: 0;
+	color: var(--ink-0);
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.mana-crystal.filling svg polygon,
 	.mana-crystal.spending svg polygon {
