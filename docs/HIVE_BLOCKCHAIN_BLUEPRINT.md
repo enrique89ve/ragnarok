@@ -449,11 +449,18 @@ After each match, `BlockchainSubscriber.ts`:
 
 ### 5.8 Reward Claiming on Chain
 
-Campaign mission rewards and daily quest rewards broadcast `reward_claim` via `hiveSync.claimReward()`:
-- `campaignStore.claimReward()` → `hiveSync.claimReward('campaign:{campaignId}:{missionId}')`
-- `dailyQuestStore.claimReward()` → `hiveSync.claimReward('daily_quest:{questId}')`
+Reward credits flow through different ops depending on the source:
 
-All chain broadcasts are gated behind `isHiveMode()` — zero impact in local/test mode.
+- **Campaign first-clear** — credited inline by `applyCampaignResult` when the
+  client broadcasts `rp_campaign_result`. There is **no** separate
+  `reward_claim` broadcast for campaign missions; the chain op carries
+  validation, `campaignProgress` write, and RUNE credit in one apply step.
+  See [RUNE.md](./RUNE.md) and [CAMPAIGN_PROTOCOL_V1.md](./CAMPAIGN_PROTOCOL_V1.md).
+- **Daily quests / generic rewards** — `dailyQuestStore.claimReward()` →
+  `hiveSync.claimReward('daily_quest:{questId}')` → `applyRewardClaim`.
+
+All chain broadcasts are gated behind `isHiveMode()` — zero impact in
+local/test mode.
 
 ---
 

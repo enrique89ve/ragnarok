@@ -118,34 +118,18 @@ S01 prize snapshot:
 RUNE is active during beta as resettable playtest progression. It is not a
 transferable token and it is not user-authored balance state.
 
-Canonical RUNE state is derived from Hive events:
-
-- `campaign_result` proves a campaign win and unlocks first-clear campaign RUNE.
-- `match_result` proves ranked P2P outcome and emits ranked RUNE.
-- `reward_claim` claims a replay-derived reward by source key.
-- `rune_exchange` spends existing RUNE and asks a RUNE exchange bridge to
-  fulfill testnet packs.
-- Optional verifier/admin summaries may compact claims for faster UI reads, but
-  the replay engine must be able to reject or rebuild them from source events.
+For caps, source types, source keys, code pointers, and the full credit flow,
+see [RUNE.md](./RUNE.md). This section restates the testnet-specific
+constraints only.
 
 RUNE payloads must never trust a client-supplied amount. The protocol computes
 the amount from season config, source type, account, and source key. If an op
 injects an amount or exceeds a cap, replay rejects it.
 
-RUNE read APIs are part of the chain read surface, not a separate testnet API.
-The canonical public endpoints are:
-
-- `GET /api/chain/player/:username/rune?seasonId=S01` — one account balance,
-  credits, debits, drift, last RUNE block, and indexed flag.
-- `GET /api/chain/rune/state?seasonId=S01` — global cap, emission, and drift
-  summary.
-- `GET /api/chain/rune/ledger?seasonId=S01&account=:username` — paginated
-  replay-derived ledger entries.
-- `GET /api/chain/rune/balances?seasonId=S01` — paginated account balance
-  summaries.
-
-Do not add or document parallel `/api/testnet/rune/*` endpoints. Testnet is a
-runtime profile; `/api/chain` is the single namespace for chain-derived reads.
+The canonical RUNE read endpoints (also listed in [RUNE.md](./RUNE.md)) live
+under `/api/chain/rune/*` and `/api/chain/player/:username/rune`. Do not add or
+document parallel `/api/testnet/rune/*` endpoints — testnet is a runtime
+profile, not an API namespace.
 
 Expected read cadence:
 

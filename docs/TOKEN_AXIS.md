@@ -43,11 +43,10 @@ The on-chain economic asset. One uid per minted card. Categorized via [SET_AXIS.
 
 Non-transferable season points used for ranking score bonus and for the `rune_exchange → pack` flow. Capped per-account and per-pool per season.
 
-- **Source ops**: `match_result` (P2P ranked), `campaign_result` (first-clear), `reward_claim`.
-- **Sink ops**: `rune_exchange` — debits RUNE, asks a RUNE exchange bridge to deliver packs.
-- **Visible at**: [client/src/data/runeAPI.ts](../client/src/data/runeAPI.ts), `rune_ledger` store in `replayDB.ts`.
-- **Caps (S01)**: 2,200,000 emission cap; 100 RUNE per account in P2P pool; 10 RUNE per account in campaign pool.
-- **Canonical doc**: [BETA_TESTNET_SCOPE.md](./BETA_TESTNET_SCOPE.md), [RAGNAROK_PROTOCOL_V1.md §13](./RAGNAROK_PROTOCOL_V1.md#L637).
+- **Canonical doc**: [RUNE.md](./RUNE.md) — caps, sources, source keys, endpoints, code pointers.
+- **Sources**: `match_result` (P2P ranked), `campaign_result` (first-clear inline credit), `reward_claim` (non-campaign rewards).
+- **Sink**: `rune_exchange`.
+- **Independent caps**: P2P (`maxP2PRunePerAccount: 100`) and campaign (`maxCampaignRunePerAccount: 10`) are separate pools — one account can earn both.
 
 ### Eitr
 
@@ -127,8 +126,9 @@ Anything outside this enum is either a bug or a missing ADR.
 
 ## See also
 
+- [docs/RUNE.md](./RUNE.md) — RUNE caps, sources, source keys, endpoints, tests, code pointers
 - [docs/SET_AXIS.md](./SET_AXIS.md) — card category axis (orthogonal to this)
 - [docs/RAGNAROK_PROTOCOL_V1.md](./RAGNAROK_PROTOCOL_V1.md) — protocol canon
 - [docs/adr/0001-eitr-v1-canonical.md](./adr/0001-eitr-v1-canonical.md) — Eitr design rationale
-- [docs/BETA_TESTNET_SCOPE.md](./BETA_TESTNET_SCOPE.md) — RUNE caps and exchange rates
+- [docs/BETA_TESTNET_SCOPE.md](./BETA_TESTNET_SCOPE.md) — beta scope (Playable Beta Flow gates)
 - [docs/DUAT_AIRDROP_DESIGN.md](./DUAT_AIRDROP_DESIGN.md) — DUAT external snapshot

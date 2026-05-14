@@ -685,14 +685,12 @@ so campaign participation matters without letting raw farming overpower ELO.
 
 ### RUNE
 
-Derived non-transferable reward points. Testnet S01 emission is capped at 2,200,000 RUNE: 2,000,000 for P2P and 200,000 for campaign. Ranked P2P currently pays +2 per win and +0 per loss, capped at 100 RUNE per target account; campaign first-clear claims are capped at 10 RUNE per target account. `rune_exchange` debits existing RUNE, rejects overspend, and enforces per-op, per-account pack-type, and global pack caps. Pack fulfillment is delegated to a RUNE exchange adapter/bridge; the RUNE ledger does not construct packs or cards. RUNE is used for progression thresholds and season rewards. Not a transferable token in v1.
+Derived non-transferable reward points. Caps, sources, source keys, read endpoints, and code pointers live in [RUNE.md](./RUNE.md) — that file is canon. The protocol-visible surface is:
 
-RUNE read endpoints are a chain-indexer convenience surface, not protocol
-authority. They live under `/api/chain`: account balance at
-`/api/chain/player/:username/rune`, global summaries at `/api/chain/rune/state`,
-ledger rows at `/api/chain/rune/ledger`, and balance pages at
-`/api/chain/rune/balances`. There is no separate `/api/testnet/rune/*`
-namespace; testnet is selected by runtime configuration and Hive protocol id.
+- **Sources**: `match_result` (P2P ranked, sourceType `p2p_ranked`), `campaign_result` (first-clear inline credit, sourceType `campaign_first_clear`), `reward_claim` (non-campaign rewards, sourceType `reward_claim`).
+- **Sink**: `rune_exchange` (debits RUNE, delegates pack delivery to the exchange adapter).
+- **Independent per-account pools**: P2P and campaign caps do not share quota.
+- **Read API**: under `/api/chain/rune/*` and `/api/chain/player/:username/rune`. No `/api/testnet/rune/*` parallel namespace.
 
 ### Eitr
 
