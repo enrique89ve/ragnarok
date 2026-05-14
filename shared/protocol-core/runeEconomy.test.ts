@@ -8,6 +8,7 @@ import {
 	calculateSeasonRuneEarned,
 	calculateSeasonScore,
 	createCampaignFirstClearRuneSourceKey,
+	createDailyQuestRuneSourceKey,
 	createRewardClaimRuneSourceKey,
 	getCampaignStageRuneTotal,
 	getCampaignFirstClearRuneReward,
@@ -21,12 +22,16 @@ import {
 } from './rewardCatalog';
 
 describe('rune economy', () => {
-	it('allocates S01 testnet RUNE emission to P2P and campaign pools', () => {
+	it('allocates S01 testnet RUNE emission to P2P, campaign, and daily quest pools', () => {
 		expect(getRuneEmissionCaps(TESTNET_RUNE_ECONOMY)).toEqual({
-			totalCap: 2_200_000,
+			totalCap: 2_600_000,
 			p2pCap: 2_000_000,
 			campaignCap: 200_000,
+			dailyQuestCap: 400_000,
 		});
+		expect(TESTNET_RUNE_ECONOMY.p2pCap
+			+ TESTNET_RUNE_ECONOMY.campaignCap
+			+ TESTNET_RUNE_ECONOMY.dailyQuestCap).toBe(TESTNET_RUNE_ECONOMY.totalCap);
 	});
 
 	it('keeps fixed ranked rewards compatible with the P2P cap', () => {
@@ -103,12 +108,38 @@ describe('rune economy', () => {
 		expect(calculateSeasonRuneEarned({
 			campaignRuneEarned: 999,
 			p2pRuneEarned: 999,
-		})).toBe(110);
-		expect(calculateRuneScoreBonus(110)).toBe(55);
+			dailyQuestRuneEarned: 999,
+		})).toBe(130);
+		expect(calculateRuneScoreBonus(130)).toBe(65);
 		expect(calculateSeasonScore({
 			finalElo: 1420,
 			campaignRuneEarned: 10,
 			p2pRuneEarned: 100,
-		})).toBe(1475);
+			dailyQuestRuneEarned: 20,
+		})).toBe(1485);
+	});
+
+	it('caps daily quest at 20 RUNE per target account and 400k pool', () => {
+		expect(TESTNET_RUNE_ECONOMY.maxDailyQuestRunePerAccount).toBe(20);
+		expect(TESTNET_RUNE_ECONOMY.dailyQuestRunePerSlot).toBe(2);
+		expect(TESTNET_RUNE_ECONOMY.dailyQuestSlotsPerDay).toBe(3);
+		expect(TESTNET_RUNE_ECONOMY.maxDailyQuestRunePerAccount
+			* TESTNET_RUNE_ECONOMY.targetAccounts).toBe(TESTNET_RUNE_ECONOMY.dailyQuestCap);
+	});
+
+	it('keeps P2P primary at 77% of Season Score bonus input', () => {
+		const total = TESTNET_RUNE_ECONOMY.maxP2PRunePerAccount
+			+ TESTNET_RUNE_ECONOMY.maxCampaignRunePerAccount
+			+ TESTNET_RUNE_ECONOMY.maxDailyQuestRunePerAccount;
+		expect(total).toBe(TESTNET_RUNE_ECONOMY.maxRuneScoreBonusInput);
+		expect(TESTNET_RUNE_ECONOMY.maxP2PRunePerAccount / total)
+			.toBeGreaterThanOrEqual(0.76);
+	});
+
+	it('derives daily quest source key from account + UTC day + slot', () => {
+		expect(createDailyQuestRuneSourceKey('alice', '2026-05-14', 0))
+			.toBe('daily_quest:S01:alice:2026-05-14:0');
+		expect(createDailyQuestRuneSourceKey('bob', '2026-05-14', 2))
+			.toBe('daily_quest:S01:bob:2026-05-14:2');
 	});
 });

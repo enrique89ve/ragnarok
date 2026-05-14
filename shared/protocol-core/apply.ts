@@ -29,6 +29,7 @@ import {
 	calculateCappedRuneCredit,
 	createBurnEitrSourceKey,
 	createCampaignFirstClearRuneSourceKey,
+	createDailyQuestRuneSourceKey,
 	createEitrLedgerEntryId,
 	createForgeCommitEitrSourceKey,
 	createForgeRefundEitrSourceKey,
@@ -138,6 +139,7 @@ const OP_HANDLERS: Record<ProtocolAction, OpHandler> = {
 	queue_join: (op, _ctx, deps) => applyQueueJoin(op, deps),
 	queue_leave: (op, _ctx, deps) => applyQueueLeave(op, deps),
 	reward_claim: (op, _ctx, deps) => applyRewardClaim(op, deps),
+	daily_quest_claim: (op, _ctx, deps) => applyDailyQuestClaim(op, deps),
 	slash_evidence: async () => IGNORE_RESULT,
 	pack_commit: (op, _ctx, deps) => applyPackCommit(op, deps),
 	pack_reveal: (op, ctx, deps) => applyPackReveal(op, ctx, deps),
@@ -1450,6 +1452,121 @@ function checkRewardCondition(
 		case 'matches_played': return (elo.wins + elo.losses) >= condition.value;
 		default: return false;
 	}
+}
+
+// ============================================================
+// daily_quest_claim
+// ============================================================
+
+type DailyQuestClaimPayloadFields = {
+	ymdUtc: string;
+	slot: number;
+	questType: string;
+};
+
+const DAILY_QUEST_YMD_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+const DAILY_QUEST_DAY_MS = 24 * 60 * 60 * 1000;
+const DAILY_QUEST_CLOCK_SKEW_MS = 2 * DAILY_QUEST_DAY_MS; // ±48h tolerance
+
+function parseDailyQuestYmdUtc(value: string): number | OpResult {
+	const match = DAILY_QUEST_YMD_RE.exec(value);
+	if (!match) return reject(`invalid ymd_utc: ${value}`);
+	const [, yyyy, mm, dd] = match;
+	const ms = Date.UTC(Number(yyyy), Number(mm) - 1, Number(dd));
+	if (!Number.isFinite(ms)) return reject(`invalid ymd_utc: ${value}`);
+	return ms;
+}
+
+function parseDailyQuestSlot(payload: Record<string, unknown>): number | OpResult {
+	const value = payload.slot;
+	if (typeof value !== 'number' || !Number.isInteger(value)) {
+		return reject('invalid slot');
+	}
+	const economy = TESTNET_RUNE_ECONOMY;
+	if (value < 0 || value >= economy.dailyQuestSlotsPerDay) {
+		return reject(`slot out of range: ${value}`);
+	}
+	return value;
+}
+
+function parseDailyQuestClaimPayload(op: ProtocolOp): DailyQuestClaimPayloadFields | OpResult {
+	const ymdUtc = readStringField(op.payload, 'ymd_utc');
+	if (isOpResult(ymdUtc)) return ymdUtc;
+
+	const ymdMs = parseDailyQuestYmdUtc(ymdUtc);
+	if (isOpResult(ymdMs)) return ymdMs;
+
+	const skew = Math.abs(op.timestamp - ymdMs);
+	if (skew > DAILY_QUEST_CLOCK_SKEW_MS) {
+		return reject(`daily_quest ymd_utc outside clock skew tolerance: ${ymdUtc}`);
+	}
+
+	const slot = parseDailyQuestSlot(op.payload);
+	if (isOpResult(slot)) return slot;
+
+	const questType = readStringField(op.payload, 'quest_type');
+	if (isOpResult(questType)) return questType;
+
+	return { ymdUtc, slot, questType };
+}
+
+async function applyDailyQuestClaim(
+	op: ProtocolOp,
+	deps: ProtocolCoreDeps,
+): Promise<OpResult> {
+	const parsed = parseDailyQuestClaimPayload(op);
+	if (isOpResult(parsed)) return parsed;
+
+	const economy = TESTNET_RUNE_ECONOMY;
+	const sourceKey = createDailyQuestRuneSourceKey(op.broadcaster, parsed.ymdUtc, parsed.slot);
+	const entryId = createRuneLedgerEntryId({
+		seasonId: TESTNET_RUNE_SEASON_ID,
+		direction: 'credit',
+		sourceType: 'daily_quest_claim',
+		sourceKey,
+	});
+
+	const existing = await deps.state.getRuneLedgerEntry(entryId);
+	if (existing) {
+		return existing.account === op.broadcaster
+			? { status: 'ignored' }
+			: reject('daily_quest source already credited to a different account');
+	}
+
+	const accountEarned = await deps.state.getRuneLedgerTotal({
+		seasonId: TESTNET_RUNE_SEASON_ID,
+		direction: 'credit',
+		sourceType: 'daily_quest_claim',
+		account: op.broadcaster,
+	});
+	const globalEarned = await deps.state.getRuneLedgerTotal({
+		seasonId: TESTNET_RUNE_SEASON_ID,
+		direction: 'credit',
+		sourceType: 'daily_quest_claim',
+	});
+	const runeAmount = calculateCappedRuneCredit({
+		requestedAmount: economy.dailyQuestRunePerSlot,
+		accountEarned,
+		globalEarned,
+		accountCap: economy.maxDailyQuestRunePerAccount,
+		globalCap: economy.dailyQuestCap,
+	});
+
+	const ledgerResult = await putRuneLedgerEntryAndBalance(deps, {
+		entryId,
+		seasonId: TESTNET_RUNE_SEASON_ID,
+		account: op.broadcaster,
+		direction: 'credit',
+		sourceType: 'daily_quest_claim',
+		sourceKey,
+		amount: runeAmount,
+		trxId: op.trxId,
+		blockNum: op.blockNum,
+		timestamp: op.timestamp,
+	});
+	if (ledgerResult) return ledgerResult;
+
+	return { status: 'applied' };
 }
 
 // ============================================================

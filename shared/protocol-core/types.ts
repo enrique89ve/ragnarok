@@ -23,6 +23,7 @@ export {
 	calculateSeasonRuneEarned,
 	calculateSeasonScore,
 	createCampaignFirstClearRuneSourceKey,
+	createDailyQuestRuneSourceKey,
 	createP2PRankedRuneSourceKey,
 	createRewardClaimRuneSourceKey,
 	createRuneExchangeSourceKey,
@@ -129,6 +130,7 @@ export type CanonicalAction =
 	| 'forge_commit'
 	| 'forge_reveal'
 	| 'reward_claim'
+	| 'daily_quest_claim'
 	| 'card_transfer'
 	| 'burn'
 	| 'level_up'
@@ -180,7 +182,7 @@ export const ACTIVE_AUTH_OPS: ReadonlySet<CanonicalAction> = new Set([
 export const POSTING_AUTH_OPS: ReadonlySet<CanonicalAction> = new Set([
 	'queue_join', 'queue_leave', 'match_anchor', 'match_result', 'campaign_result',
 	'rune_exchange',
-	'pack_commit', 'pack_reveal', 'reward_claim', 'level_up',
+	'pack_commit', 'pack_reveal', 'reward_claim', 'daily_quest_claim', 'level_up',
 	// Marketplace: listing/offers use posting key
 	'market_list', 'market_unlist', 'market_offer', 'market_reject',
 	// DUAT: claim uses posting key (user claims own packs)

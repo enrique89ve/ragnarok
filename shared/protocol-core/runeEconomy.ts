@@ -2,6 +2,7 @@ export type RuneEmissionCaps = {
 	totalCap: number;
 	p2pCap: number;
 	campaignCap: number;
+	dailyQuestCap: number;
 };
 
 export type RuneLedgerDirection = 'credit' | 'debit';
@@ -10,7 +11,8 @@ export type RuneSourceType =
 	| 'p2p_ranked'
 	| 'campaign_first_clear'
 	| 'rune_exchange'
-	| 'reward_claim';
+	| 'reward_claim'
+	| 'daily_quest_claim';
 
 export type RuneLedgerEntry = {
 	entryId: string;
@@ -67,6 +69,7 @@ export type SeasonScoreInput = {
 	finalElo: number;
 	campaignRuneEarned: number;
 	p2pRuneEarned: number;
+	dailyQuestRuneEarned: number;
 };
 
 export type RuneExchangeQuoteInput = {
@@ -104,15 +107,19 @@ export interface RuneExchangeAdapter {
 export const TESTNET_RUNE_ECONOMY = {
 	phase: 'testnet',
 	seasonId: 'S01',
-	totalCap: 2_200_000,
+	totalCap: 2_600_000,
 	targetAccounts: 20_000,
 	p2pCap: 2_000_000,
 	campaignCap: 200_000,
+	dailyQuestCap: 400_000,
 	p2pWinRune: 2,
 	p2pLossRune: 0,
 	maxP2PRunePerAccount: 100,
 	maxCampaignRunePerAccount: 10,
-	maxRuneScoreBonusInput: 110,
+	maxDailyQuestRunePerAccount: 20,
+	dailyQuestRunePerSlot: 2,
+	dailyQuestSlotsPerDay: 3,
+	maxRuneScoreBonusInput: 130,
 	runeScoreBonusMultiplier: 0.5,
 	maxRuneExchangeSpendPerOp: 50,
 	campaignStageRuneRewards: [2, 2, 2, 2, 1, 1],
@@ -127,6 +134,7 @@ export function getRuneEmissionCaps(economy = TESTNET_RUNE_ECONOMY): RuneEmissio
 		totalCap: economy.totalCap,
 		p2pCap: economy.p2pCap,
 		campaignCap: economy.campaignCap,
+		dailyQuestCap: economy.dailyQuestCap,
 	};
 }
 
@@ -148,11 +156,12 @@ export function getCampaignStageRuneTotal(economy = TESTNET_RUNE_ECONOMY): numbe
 }
 
 export function calculateSeasonRuneEarned(
-	input: Pick<SeasonScoreInput, 'campaignRuneEarned' | 'p2pRuneEarned'>,
+	input: Pick<SeasonScoreInput, 'campaignRuneEarned' | 'p2pRuneEarned' | 'dailyQuestRuneEarned'>,
 	economy = TESTNET_RUNE_ECONOMY,
 ): number {
 	return Math.min(input.campaignRuneEarned, economy.maxCampaignRunePerAccount)
-		+ Math.min(input.p2pRuneEarned, economy.maxP2PRunePerAccount);
+		+ Math.min(input.p2pRuneEarned, economy.maxP2PRunePerAccount)
+		+ Math.min(input.dailyQuestRuneEarned, economy.maxDailyQuestRunePerAccount);
 }
 
 export function calculateRuneScoreBonus(
@@ -222,6 +231,15 @@ export function createRuneExchangeSourceKey(
 	seasonId = TESTNET_RUNE_SEASON_ID,
 ): string {
 	return `pack:${seasonId}:${account}:${trxId}:${packType}:${quantity}`;
+}
+
+export function createDailyQuestRuneSourceKey(
+	account: string,
+	ymdUtc: string,
+	slot: number,
+	seasonId = TESTNET_RUNE_SEASON_ID,
+): string {
+	return `daily_quest:${seasonId}:${account}:${ymdUtc}:${slot}`;
 }
 
 export function getCampaignFirstClearRuneReward(

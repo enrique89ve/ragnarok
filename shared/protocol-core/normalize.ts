@@ -33,6 +33,7 @@ const LEGACY_MAP: Record<string, ProtocolAction> = {
 	'rp_queue_join': 'queue_join',
 	'rp_queue_leave': 'queue_leave',
 	'rp_reward_claim': 'reward_claim',
+	'rp_daily_quest_claim': 'daily_quest_claim',
 	'rp_slash_evidence': 'slash_evidence',
 	// rp_pack_open is NOT here — it maps to legacy_pack_open (special case)
 	'rp_pack_open': 'legacy_pack_open',
@@ -84,7 +85,7 @@ export function normalizeRawOp(raw: RawHiveOp): NormalizeResult {
 		// Check if it's a known canonical action
 		const known: ReadonlySet<string> = new Set([
 			'genesis', 'seal', 'mint_batch', 'pack_commit', 'pack_reveal',
-			'reward_claim', 'card_transfer', 'burn', 'level_up',
+			'reward_claim', 'daily_quest_claim', 'card_transfer', 'burn', 'level_up',
 			'queue_join', 'queue_leave', 'match_anchor', 'match_result',
 			'campaign_result', 'rune_exchange', 'slash_evidence',
 			// v1.1
