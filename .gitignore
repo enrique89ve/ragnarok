@@ -94,6 +94,7 @@ __tests__/
 !client/src/game/components/chess/chessBoardInteractionRules.test.ts
 !shared/protocol-core/cardProgression.test.ts
 !shared/protocol-core/campaignResult.test.ts
+!shared/protocol-core/dailyQuestClaim.test.ts
 !shared/protocol-core/packCatalog.test.ts
 !shared/protocol-core/packDraw.test.ts
 !shared/protocol-core/runeEconomy.test.ts
