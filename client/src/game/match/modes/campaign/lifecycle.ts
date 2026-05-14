@@ -17,6 +17,8 @@
  *     intentionally NOT idempotent — replay should refresh bests.
  */
 
+import { toast } from 'sonner';
+import { getCampaignFirstClearRuneReward } from '@shared/protocol-core/runeEconomy';
 import { debug } from '../../../config/debugConfig';
 import { publishCampaignVictoryResult, useCampaignStore } from '../../../campaign';
 import { getNFTBridge } from '../../../nft';
@@ -30,13 +32,32 @@ export function onCampaignMatchEnd(ctx: MatchContext, end: MatchEndContext): voi
 
 	const { mission, difficulty } = ctx.opponent.script;
 	const campaign = useCampaignStore.getState();
+	const isFirstClear = !campaign.completedMissions[mission.id];
+	const previewRune = isFirstClear ? getCampaignFirstClearRuneReward(mission.id) : 0;
 
 	campaign.completeMission(mission.id, difficulty, end.turnCount);
 
 	void publishCampaignVictoryResult(ctx, end)
 		.then(result => {
-			if (result.success && result.trxId) getNFTBridge().emitTransactionConfirmed(result.trxId);
-			if (!result.success) debug.warn('[Campaign] Result publication failed:', result.error);
+			if (!result.success) {
+				debug.warn('[Campaign] Result publication failed:', result.error);
+				return;
+			}
+			if (result.trxId) getNFTBridge().emitTransactionConfirmed(result.trxId);
+			showFirstClearRuneToast(isFirstClear, previewRune);
 		})
 		.catch(err => debug.warn('[Campaign] Result publication error:', err));
+}
+
+function showFirstClearRuneToast(isFirstClear: boolean, previewRune: number): void {
+	if (!isFirstClear) return;
+	if (previewRune > 0) {
+		toast.success(`First clear · +${previewRune} RUNE`, {
+			description: 'Reward submitted — chain reconciles within your S01 cap.',
+		});
+		return;
+	}
+	toast.success('First clear logged', {
+		description: 'No RUNE reward for this stage. Earlier missions in the chapter pay first-clear RUNE.',
+	});
 }
