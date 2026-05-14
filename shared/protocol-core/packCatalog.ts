@@ -87,7 +87,7 @@ export const PACK_DEFINITIONS: Record<PackKey, CanonicalPackDefinition> = {
 		cardCount: 5,
 		price: 250,
 		runeCost: 2,
-		runeExchangeLimitPerAccount: 1,
+		runeExchangeLimitPerAccount: 5,
 		commonSlots: 2,
 		rareSlots: 2,
 		epicSlots: 0,
@@ -107,7 +107,7 @@ export const PACK_DEFINITIONS: Record<PackKey, CanonicalPackDefinition> = {
 		cardCount: 7,
 		price: 500,
 		runeCost: 7,
-		runeExchangeLimitPerAccount: 1,
+		runeExchangeLimitPerAccount: 3,
 		commonSlots: 3,
 		rareSlots: 1,
 		epicSlots: 1,
@@ -199,12 +199,12 @@ export type RunePackPoolAllocation = {
 
 export const TESTNET_RUNE_PACK_POOL: RunePackPoolConfig = {
 	phase: 'testnet',
-	runeCap: 2_200_000,
+	runeCap: 2_600_000,
 	targetAccounts: 20_000,
 	freeStarterPacksPerAccount: PACK_DEFINITIONS.starter.freeClaimLimitPerAccount,
 	packCaps: {
-		standard: 20_000,
-		premium: 20_000,
+		standard: 100_000,
+		premium: 60_000,
 		mythic: 100_000,
 	},
 };

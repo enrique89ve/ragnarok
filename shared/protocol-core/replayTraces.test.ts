@@ -1687,7 +1687,7 @@ describe('Protocol Core: Replay Traces', () => {
 			expect(state.packSupply.get('standard')).toMatchObject({
 				minted: 1,
 				burned: 0,
-				cap: 20_000,
+				cap: 100_000,
 			});
 		});
 
@@ -1733,22 +1733,26 @@ describe('Protocol Core: Replay Traces', () => {
 
 		it('rejects rune_exchange above the per-account pack limit', async () => {
 			await seedSealedGenesis(state, deps);
-			await deps.state.putTokenBalance({ account: 'alice', RUNE: 10 });
+			await deps.state.putTokenBalance({ account: 'alice', RUNE: 20 });
 
-			const firstResult = await applyOp(makeOp('rune_exchange', {
+			// Standard pack per-account limit is 5 (TESTNET_RUNE_PACK_POOL). Buy 5 then expect rejection on 6th.
+			for (let i = 1; i <= 5; i++) {
+				const r = await applyOp(makeOp('rune_exchange', {
+					pack_type: 'standard',
+					quantity: 1,
+				}, { broadcaster: 'alice', trxId: `rune-x-limit-${i}`, blockNum: 2000 + i }), defaultCtx, deps);
+				expect(r.status).toBe('applied');
+			}
+
+			const overLimit = await applyOp(makeOp('rune_exchange', {
 				pack_type: 'standard',
 				quantity: 1,
-			}, { broadcaster: 'alice', trxId: 'rune-x-limit-1', blockNum: 2000 }), defaultCtx, deps);
-			const secondResult = await applyOp(makeOp('rune_exchange', {
-				pack_type: 'standard',
-				quantity: 1,
-			}, { broadcaster: 'alice', trxId: 'rune-x-limit-2', blockNum: 2001 }), defaultCtx, deps);
+			}, { broadcaster: 'alice', trxId: 'rune-x-limit-over', blockNum: 2010 }), defaultCtx, deps);
 
-			expect(firstResult.status).toBe('applied');
-			expect(secondResult.status).toBe('rejected');
-			expect((secondResult as { reason: string }).reason).toContain('account limit');
-			expect((await deps.state.getTokenBalance('alice')).RUNE).toBe(8);
-			expect(state.packs.size).toBe(1);
+			expect(overLimit.status).toBe('rejected');
+			expect((overLimit as { reason: string }).reason).toContain('account limit');
+			expect((await deps.state.getTokenBalance('alice')).RUNE).toBe(10);
+			expect(state.packs.size).toBe(5);
 		});
 
 		it('rejects rune_exchange above the per-op spend cap', async () => {
@@ -1770,9 +1774,9 @@ describe('Protocol Core: Replay Traces', () => {
 			await deps.state.putTokenBalance({ account: 'alice', RUNE: 10 });
 			await deps.state.putPackSupply({
 				packType: 'standard',
-				minted: 20_000,
+				minted: 100_000,
 				burned: 0,
-				cap: 20_000,
+				cap: 100_000,
 			});
 
 			const result = await applyOp(makeOp('rune_exchange', {
