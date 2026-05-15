@@ -109,6 +109,20 @@ flushDailyQuestClaimsAfterMatch()                  ─ at match-end OR panel mou
 Visible state machine in the quest panel:
 **in_progress** (gold) → **awaiting_claim** (amber, after goal hit) → **claimed** (emerald, after broadcast ack).
 
+### Local persistence
+
+Progress lives entirely client-side in `localStorage['ragnarok-daily-quests:{account}']` (account-scoped via [accountScopedStorage](../client/src/lib/storage/accountScopedStorage.ts)). The dev server is not in the data path — claim broadcasts go directly from Hive Keychain to a Hive RPC node, and chain idempotency is the only authoritative arbiter. A server outage does not affect quest progress, claim broadcasts, or RUNE crediting; it only blocks wallet read endpoints (`/api/chain/rune/*`).
+
+### Multi-device
+
+The quest pick is deterministic. `pickRandomQuests` seeds a mulberry32 PRNG with `sha256("daily:{account}:{ymd_utc}")`, so the same account logged into two browsers on the same UTC day sees the **same three quests** (and the same replacement when one is rerolled). Without this, two browsers would draw uncorrelated sets and a "complete slot 0" on each device could fire two different `quest_type` claims for the same `(account, ymd_utc, slot)` — chain would reject the second as duplicate but the local UI on the second device would still show a misleading "+2 RUNE" toast. Determinism keeps the local state honest.
+
+Progress and the `rerollsUsedToday` counter are still local-only and not synced across devices: each browser counts its own completions and gets its own daily reroll. The chain remains the single source of truth for what was actually credited.
+
+### Midnight UTC rollover
+
+At a UTC day change, `refreshIfNeeded` first awaits `flushPendingClaims` so any `completed && !claimed` quests from the previous day get one more chance to broadcast before the array is replaced. If a quest is still pending after the flush (Keychain rejected, guest mode, network down), the rotation is **held** — the panel keeps yesterday's quest visible so the player can retry. Holds last up to 2 days, matching the chain's `ymd_utc` acceptance window of ±48h; past that point the rotation force-completes to unblock the daily quest UI, accepting that the unclaimed quest can no longer be redeemed.
+
 `quest_type` is informational only — chain does NOT vary reward by it. Daily
 quest progress lives entirely client-side (event-bus subscribed), so a
 verifiable per-quest-type reward would require match transcripts (deferred
