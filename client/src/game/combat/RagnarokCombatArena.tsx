@@ -68,6 +68,7 @@ import { OpponentZone } from './zones/OpponentZone';
 import { BoardZone } from './zones/BoardZone';
 import { PlayerZone } from './zones/PlayerZone';
 import { MinionField } from './zones/MinionField';
+import { POKER_VIEWPORT_LAYOUT_STYLE, POKER_VIEWPORT_SAFE_AREA } from './layout/pokerViewportLayout';
 import { useCampaignStore, getMission } from '../campaign';
 import { isBettingPhase } from './modules/PhaseManager';
 import { resolveHeroPortrait } from '../utils/art/artMapping';
@@ -505,7 +506,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
 
   // Early return if no combat state
   if (!combatState) {
-    return <div className="unified-combat-arena relative w-full h-full block">Loading...</div>;
+    return <div className="unified-combat-arena">Loading...</div>;
   }
 
   const currentPhaseLabel = PHASE_LABELS[combatState.phase] || combatState.phase.replace(/_/g, ' ');
@@ -555,7 +556,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
       ];
 
   return (
-    <div className="unified-combat-arena flex flex-col justify-center w-full h-full py-20" ref={battlefieldRef as React.RefObject<HTMLDivElement>}>
+    <div className="unified-combat-arena" ref={battlefieldRef as React.RefObject<HTMLDivElement>}>
       {/* ═══════════ ZONE 1 · OPP (hero + hand) ═══════════ */}
       <OpponentZone
         opponentPet={opponentPet ?? null}
@@ -674,7 +675,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
       )}
 
       {attackingCard && (
-        <div className="attack-mode-banner absolute left-1/2 top-4 -translate-x-1/2 z-50">
+        <div className="attack-mode-banner">
           <span className="attack-mode-icon" aria-hidden="true">
             <CrossedSwordsIcon />
           </span>
@@ -1061,8 +1062,16 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
   }
 
   return (
-    <GameViewport extraClassName={`${outerShakeClass} ${realmClass}`.trim()}>
-      <div className={`ragnarok-combat-arena bg-transparent ${isPlayerTurn ? 'player-turn' : 'opponent-turn'}`}>
+    <GameViewport
+      extraClassName={`${outerShakeClass} ${realmClass}`.trim()}
+      safeX={POKER_VIEWPORT_SAFE_AREA.safeX}
+      safeY={POKER_VIEWPORT_SAFE_AREA.safeY}
+      maxScale={POKER_VIEWPORT_SAFE_AREA.maxScale}
+    >
+      <div
+        className={`ragnarok-combat-arena bg-transparent ${isPlayerTurn ? 'player-turn' : 'opponent-turn'}`}
+        style={POKER_VIEWPORT_LAYOUT_STYLE}
+      >
         {/* ═════════════════════════════════════════════════════════════
             LAYERED ARCHITECTURE — see docs/POKER_ARENA_UI.md §Layers
             5 stacked layers, each absolute inset-0, never escape canvas:

@@ -141,7 +141,7 @@
   }
 }
 
-/* Arena layout now lives as Tailwind utilities in RagnarokCombatArena.tsx.
+/* Arena layout lives in combat/styles/canvas-layout.css.
    This file keeps only viewport wrapper / scaling concerns.
    Remaining zone tokens consumed by sibling files: see styles/zones.css. */
 
@@ -175,17 +175,6 @@
 /* All responsive zone overrides moved to styles/zones.css for single source of truth */
 
 /* Container queries removed — virtual canvas is always 1920px, uniform scaling handles sizing */
-
-/* ========================================
-   LOCAL LAYOUT VARIABLES
-   Layout selectors moved to styles/canvas-layout.css
-   so HMR of this file (mostly wrapper / scaling work)
-   does not strip rules that position the arena zones.
-   ======================================== */
-:root {
-  --hero-z-index: var(--z-heroes, 30);
-  --hand-minion-card-spacing: -24px;
-}
 
 /* ========================================
    FOCUS-VISIBLE — keyboard navigation

@@ -7,6 +7,9 @@ interface GameViewportProps {
   aspectRatio?: number;
   referenceWidth?: number;
   referenceHeight?: number;
+  safeX?: number;
+  safeY?: number;
+  maxScale?: number;
   extraClassName?: string;
 }
 
@@ -18,17 +21,20 @@ const REF_H = 1080;
  * Pure function — used by both useState initializer (no first-paint flash)
  * and the resize listener.
  */
-function computeFit(refW: number, refH: number) {
+function computeFit(refW: number, refH: number, safeX: number, safeY: number, maxScale: number | undefined) {
   if (typeof window === 'undefined') {
     return { scale: 1, offsetX: 0, offsetY: 0 };
   }
   const w = window.innerWidth;
   const h = window.innerHeight;
-  const scale = Math.min(w / refW, h / refH);
+  const availableWidth = Math.max(1, w - safeX * 2);
+  const availableHeight = Math.max(1, h - safeY * 2);
+  const rawScale = Math.min(availableWidth / refW, availableHeight / refH);
+  const scale = maxScale === undefined ? rawScale : Math.min(rawScale, maxScale);
   return {
     scale,
-    offsetX: (w - refW * scale) / 2,
-    offsetY: (h - refH * scale) / 2,
+    offsetX: safeX + (availableWidth - refW * scale) / 2,
+    offsetY: safeY + (availableHeight - refH * scale) / 2,
   };
 }
 
@@ -53,13 +59,16 @@ export const GameViewport: React.FC<GameViewportProps> = ({
   children,
   referenceWidth = REF_W,
   referenceHeight = REF_H,
+  safeX = 0,
+  safeY = 0,
+  maxScale,
   extraClassName = '',
 }) => {
   // Sync init — first paint already has the correct scale, no flash.
-  const [fit, setFit] = useState(() => computeFit(referenceWidth, referenceHeight));
+  const [fit, setFit] = useState(() => computeFit(referenceWidth, referenceHeight, safeX, safeY, maxScale));
 
   useLayoutEffect(() => {
-    const update = () => setFit(computeFit(referenceWidth, referenceHeight));
+    const update = () => setFit(computeFit(referenceWidth, referenceHeight, safeX, safeY, maxScale));
     // Recompute once on mount in case window changed between initial state
     // and effect run (rare but real on slow loads).
     update();
@@ -69,7 +78,7 @@ export const GameViewport: React.FC<GameViewportProps> = ({
       window.removeEventListener('resize', update);
       window.removeEventListener('orientationchange', update);
     };
-  }, [referenceWidth, referenceHeight]);
+  }, [maxScale, referenceWidth, referenceHeight, safeX, safeY]);
 
   // Inline style — overrides any CSS `transform` rule on .game-viewport.
   // We use top/left absolute positioning + transform-origin top-left so the

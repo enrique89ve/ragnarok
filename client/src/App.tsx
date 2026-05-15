@@ -17,9 +17,9 @@ import { useIsHiveMode, useNFTUsername } from "./game/nft/hooks";
 import { getRagnarokNetworkConfig } from "./game/config/networkConfig";
 import { isTestnetStage } from "./game/config/featureFlags";
 import {
-  BridgeRuntimeBoundary,
-  CardDataRuntimeBoundary,
-  GameplayRuntimeBoundary,
+	BridgeRuntimeBoundary,
+	CardDataRuntimeBoundary,
+	GameplayRuntimeBoundary,
 } from "./game/runtime/RuntimeBoundary";
 import { MatchSetupCampaign, MatchSetupSingle } from "./game/match";
 
@@ -46,54 +46,54 @@ const WalletPage = lazy(() => import('./game/components/wallet/WalletPage'));
 const StarterPackCeremony = lazy(() => import('./game/components/StarterPackCeremony'));
 const DuatClaimPopup = lazy(() => import('./game/components/DuatClaimPopup'));
 const FactionPledgePopup = lazy(() =>
-  import('./game/pvp').then(m => ({ default: m.FactionPledgePopup }))
+	import('./game/pvp').then(m => ({ default: m.FactionPledgePopup }))
 );
 
 const prototypeModules = import.meta.glob('./game/combat/prototypes/PokerViewportSafeAreaPrototype.tsx');
 const PokerViewportSafeAreaPrototype = lazy(async () => {
-  const loadPrototype = prototypeModules['./game/combat/prototypes/PokerViewportSafeAreaPrototype.tsx'];
-  if (!import.meta.env.DEV || loadPrototype === undefined) {
-    return { default: () => <Navigate to={routes.home} replace /> };
-  }
+	const loadPrototype = prototypeModules['./game/combat/prototypes/PokerViewportSafeAreaPrototype.tsx'];
+	if (!import.meta.env.DEV || loadPrototype === undefined) {
+		return { default: () => <Navigate to={routes.home} replace /> };
+	}
 
-  return loadPrototype() as Promise<{ default: React.ComponentType }>;
+	return loadPrototype() as Promise<{ default: React.ComponentType }>;
 });
 
 type DeferredInstallPromptEvent = Event & {
-  prompt: () => Promise<void>;
+	prompt: () => Promise<void>;
 };
 
 // PWA install prompt
 let deferredInstallPrompt: DeferredInstallPromptEvent | null = null;
 if (typeof window !== 'undefined') {
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredInstallPrompt = e as DeferredInstallPromptEvent;
-  });
+	window.addEventListener('beforeinstallprompt', (e) => {
+		e.preventDefault();
+		deferredInstallPrompt = e as DeferredInstallPromptEvent;
+	});
 }
 
 // Offline wrapper for routes that need a server
 function OnlineOnly({ children, label }: { children: React.ReactNode; label: string }) {
-  const [online, setOnline] = useState(navigator.onLine);
-  useEffect(() => {
-    const on = () => setOnline(true);
-    const off = () => setOnline(false);
-    window.addEventListener('online', on);
-    window.addEventListener('offline', off);
-    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
-  }, []);
-  if (!online) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-obsidian-950 text-center px-8">
-        <div>
-          <p className="font-display text-gold-300 text-xl font-bold tracking-[0.18em] uppercase mb-2">Offline Mode</p>
-          <p className="text-ink-200 text-sm">{label} requires an internet connection.</p>
-          <p className="text-ink-400 text-xs mt-4">Campaign, Collection, Deck Builder, and Settings work offline.</p>
-        </div>
-      </div>
-    );
-  }
-  return <>{children}</>;
+	const [online, setOnline] = useState(navigator.onLine);
+	useEffect(() => {
+		const on = () => setOnline(true);
+		const off = () => setOnline(false);
+		window.addEventListener('online', on);
+		window.addEventListener('offline', off);
+		return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
+	}, []);
+	if (!online) {
+		return (
+			<div className="h-screen flex items-center justify-center bg-obsidian-950 text-center px-8">
+				<div>
+					<p className="font-display text-gold-300 text-xl font-bold tracking-[0.18em] uppercase mb-2">Offline Mode</p>
+					<p className="text-ink-200 text-sm">{label} requires an internet connection.</p>
+					<p className="text-ink-400 text-xs mt-4">Campaign, Collection, Deck Builder, and Settings work offline.</p>
+				</div>
+			</div>
+		);
+	}
+	return <>{children}</>;
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -384,12 +384,10 @@ function HomePage() {
 					<section className="relative grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-9 items-center px-10 py-10 rounded-2xl border border-obsidian-700 bg-linear-to-b from-obsidian-850 to-obsidian-900 overflow-hidden">
 						<div>
 							<div className="inline-flex items-center gap-2.5 mb-4">
-								<span className="w-2 h-2 rounded-full bg-ember-300" />
-								<span className="font-mono text-[11px] tracking-[0.32em] uppercase text-gold-300 font-semibold">
-									Live · Season 01 · The Forge Kindles
-								</span>
+
+
 							</div>
-							<h1 className="font-display font-black uppercase leading-[0.95] tracking-[0.10em] text-[clamp(2.4rem,5vw,4rem)] m-0">
+							<h1 className="font-display font-black uppercase leading-[0.95] tracking-[0.10em] text-[clamp(2.4rem,5vw,3rem)] m-0">
 								<span className="bg-linear-to-b from-gold-100 via-gold-300 to-gold-500 bg-clip-text text-transparent">
 									Claim the line.<br />March into battle.
 								</span>
@@ -458,11 +456,10 @@ function HomePage() {
 									<Link
 										key={mode.title}
 										to={mode.to}
-										className={`relative group flex flex-col min-h-[160px] p-4 rounded-xl border bg-linear-to-b overflow-hidden transition-all duration-300 ${a.border} ${
-											isCombat
-												? 'border-obsidian-700 from-obsidian-850 to-obsidian-950'
-												: 'border-obsidian-700/60 from-obsidian-900 to-obsidian-950'
-										}`}
+										className={`relative group flex flex-col min-h-[160px] p-4 rounded-xl border bg-linear-to-b overflow-hidden transition-all duration-300 ${a.border} ${isCombat
+											? 'border-obsidian-700 from-obsidian-850 to-obsidian-950'
+											: 'border-obsidian-700/60 from-obsidian-900 to-obsidian-950'
+											}`}
 									>
 										{/* Atmospheric color layer (mode-specific). Sits below content. */}
 										<div
@@ -629,163 +626,163 @@ function HomePage() {
   don't support the API (Safari, older Firefox).
 */
 function ViewTransitionBridge() {
-  const location = useLocation();
-  const prevPath = useRef(location.pathname);
+	const location = useLocation();
+	const prevPath = useRef(location.pathname);
 
-  useEffect(() => {
-    if (prevPath.current === location.pathname) return;
-    prevPath.current = location.pathname;
-    if (typeof document.startViewTransition === 'function') {
-      document.startViewTransition(() => { });
-    }
-  }, [location.pathname]);
+	useEffect(() => {
+		if (prevPath.current === location.pathname) return;
+		prevPath.current = location.pathname;
+		if (typeof document.startViewTransition === 'function') {
+			document.startViewTransition(() => { });
+		}
+	}, [location.pathname]);
 
-  return null;
+	return null;
 }
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
-  state = { error: null as Error | null };
-  static getDerivedStateFromError(error: Error) { return { error }; }
-  render() {
-    if (this.state.error) {
-      return (
-        <div style={{ padding: 40, color: 'var(--error-text)', background: 'var(--error-bg)', minHeight: '100vh', fontFamily: 'monospace' }}>
-          <h1>Runtime Error</h1>
-          <pre style={{ whiteSpace: 'pre-wrap', marginTop: 20 }}>{this.state.error.message}</pre>
-          <pre style={{ whiteSpace: 'pre-wrap', marginTop: 10, color: 'var(--error-stack)', fontSize: 12 }}>{this.state.error.stack}</pre>
-          <button onClick={() => { this.setState({ error: null }); window.location.hash = '/'; }} style={{ marginTop: 20, padding: '10px 20px', background: 'var(--error-accent)', border: 'none', borderRadius: 6, cursor: 'pointer', color: 'var(--error-bg)', fontWeight: 'bold' }}>Back to Home</button>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
+	state = { error: null as Error | null };
+	static getDerivedStateFromError(error: Error) { return { error }; }
+	render() {
+		if (this.state.error) {
+			return (
+				<div style={{ padding: 40, color: 'var(--error-text)', background: 'var(--error-bg)', minHeight: '100vh', fontFamily: 'monospace' }}>
+					<h1>Runtime Error</h1>
+					<pre style={{ whiteSpace: 'pre-wrap', marginTop: 20 }}>{this.state.error.message}</pre>
+					<pre style={{ whiteSpace: 'pre-wrap', marginTop: 10, color: 'var(--error-stack)', fontSize: 12 }}>{this.state.error.stack}</pre>
+					<button onClick={() => { this.setState({ error: null }); window.location.hash = '/'; }} style={{ marginTop: 20, padding: '10px 20px', background: 'var(--error-accent)', border: 'none', borderRadius: 6, cursor: 'pointer', color: 'var(--error-bg)', fontWeight: 'bold' }}>Back to Home</button>
+				</div>
+			);
+		}
+		return this.props.children;
+	}
 }
 
 function GlobalOverlaysLayout() {
-  return (
-    <>
-      <EnvironmentBanner />
-      <Outlet />
-      <Suspense fallback={null}><DuatClaimPopup /></Suspense>
-      <Suspense fallback={null}><FactionPledgePopup /></Suspense>
-    </>
-  );
+	return (
+		<>
+			<EnvironmentBanner />
+			<Outlet />
+			<Suspense fallback={null}><DuatClaimPopup /></Suspense>
+			<Suspense fallback={null}><FactionPledgePopup /></Suspense>
+		</>
+	);
 }
 
 function EnvironmentBanner() {
-  const dismissKey = 'ragnarok:testnet-banner-dismissed';
-  const [dismissed, setDismissed] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.localStorage.getItem(dismissKey) === 'true';
-  });
+	const dismissKey = 'ragnarok:testnet-banner-dismissed';
+	const [dismissed, setDismissed] = useState(() => {
+		if (typeof window === 'undefined') return false;
+		return window.localStorage.getItem(dismissKey) === 'true';
+	});
 
-  if (!isTestnetStage()) return null;
-  if (dismissed) return null;
+	if (!isTestnetStage()) return null;
+	if (dismissed) return null;
 
-  const config = getRagnarokNetworkConfig();
-  const dismiss = () => {
-    window.localStorage.setItem(dismissKey, 'true');
-    setDismissed(true);
-  };
+	const config = getRagnarokNetworkConfig();
+	const dismiss = () => {
+		window.localStorage.setItem(dismissKey, 'true');
+		setDismissed(true);
+	};
 
-  return (
-    <aside
-      aria-label="Testnet environment"
-      className="fixed bottom-4 left-4 z-50 max-w-[calc(100vw-2rem)] rounded-md border border-gold-300/40 bg-obsidian-950/95 px-3 py-2 pr-9 text-xs text-gold-100 shadow-lg shadow-black/40 backdrop-blur"
-    >
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="font-display font-semibold uppercase tracking-[0.18em] text-gold-300">Testnet</span>
-        <span className="text-ink-400">/</span>
-        <span className="text-ink-200">Resettable</span>
-        <span className="hidden text-ink-400 sm:inline">/</span>
-        <span className="hidden font-mono text-ink-300 sm:inline">{config.protocolId}</span>
-      </div>
-      <button
-        type="button"
-        aria-label="Dismiss testnet banner"
-        onClick={dismiss}
-        className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded border border-transparent text-ink-300 transition-colors hover:border-gold-300/30 hover:text-gold-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
-      >
-        <X className="h-3.5 w-3.5" aria-hidden="true" />
-      </button>
-    </aside>
-  );
+	return (
+		<aside
+			aria-label="Testnet environment"
+			className="fixed bottom-4 left-4 z-50 max-w-[calc(100vw-2rem)] rounded-md border border-gold-300/40 bg-obsidian-950/95 px-3 py-2 pr-9 text-xs text-gold-100 shadow-lg shadow-black/40 backdrop-blur"
+		>
+			<div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+				<span className="font-display font-semibold uppercase tracking-[0.18em] text-gold-300">Testnet</span>
+				<span className="text-ink-400">/</span>
+				<span className="text-ink-200">Resettable</span>
+				<span className="hidden text-ink-400 sm:inline">/</span>
+				<span className="hidden font-mono text-ink-300 sm:inline">{config.protocolId}</span>
+			</div>
+			<button
+				type="button"
+				aria-label="Dismiss testnet banner"
+				onClick={dismiss}
+				className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded border border-transparent text-ink-300 transition-colors hover:border-gold-300/30 hover:text-gold-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
+			>
+				<X className="h-3.5 w-3.5" aria-hidden="true" />
+			</button>
+		</aside>
+	);
 }
 
 function App() {
-  return (
-    <ErrorBoundary>
-      <CardTransformProvider>
-        <CardTransformBridgeInitializer />
-        <UnifiedCardSystem />
-        <GoldenCardFilter />
-        <EitrMigrationBanner />
+	return (
+		<ErrorBoundary>
+			<CardTransformProvider>
+				<CardTransformBridgeInitializer />
+				<UnifiedCardSystem />
+				<GoldenCardFilter />
+				<EitrMigrationBanner />
 
-        <ToastProvider position="top-right" richColors />
-        <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <ViewTransitionBridge />
-          <Suspense fallback={<LoadingScreen />}>
-            <Routes>
-              <Route path={routes.map} element={<MapPage />} />
-              <Route
-                path={routes.pokerViewportPrototype}
-                element={import.meta.env.DEV ? <PokerViewportSafeAreaPrototype /> : <Navigate to={routes.home} replace />}
-              />
+				<ToastProvider position="top-right" richColors />
+				<HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+					<ViewTransitionBridge />
+					<Suspense fallback={<LoadingScreen />}>
+						<Routes>
+							<Route path={routes.map} element={<MapPage />} />
+							<Route
+								path={routes.pokerViewportPrototype}
+								element={import.meta.env.DEV ? <PokerViewportSafeAreaPrototype /> : <Navigate to={routes.home} replace />}
+							/>
 
-              <Route element={<BridgeRuntimeBoundary />}>
-                <Route element={<GlobalOverlaysLayout />}>
-                  <Route path={routes.home} element={<HomePage />} />
-                  <Route path={routes.warband} element={<WarbandPage />} />
-                  <Route path={routes.campaign} element={<CampaignPage />} />
-                  <Route path={routes.collection} element={<CollectionPage />} />
-                  <Route path={routes.ladder} element={<RankedLadderPage />} />
-                  <Route path={routes.trading} element={<Navigate to={`${routes.marketplace}?tab=swaps`} replace />} />
-                  <Route path={routes.marketplace} element={<OnlineOnly label="Marketplace"><MarketplacePage /></OnlineOnly>} />
-                  <Route path={routes.treasury} element={<OnlineOnly label="Treasury"><TreasuryPage /></OnlineOnly>} />
-                  <Route path={routes.explorer} element={<ExplorerPage />} />
-                  <Route path={routes.admin} element={<AdminPanel />} />
-                  <Route path={routes.wallet} element={<WalletPage />} />
-                  <Route path={routes.runeTestnetPrototype} element={<Navigate to={routes.wallet} replace />} />
-                  <Route path={routes.tournaments} element={<OnlineOnly label="Tournaments"><TournamentListPage /></OnlineOnly>} />
-                  <Route path={routes.history} element={<MatchHistoryPage />} />
-                  <Route path={routes.settings} element={<SettingsPage />} />
+							<Route element={<BridgeRuntimeBoundary />}>
+								<Route element={<GlobalOverlaysLayout />}>
+									<Route path={routes.home} element={<HomePage />} />
+									<Route path={routes.warband} element={<WarbandPage />} />
+									<Route path={routes.campaign} element={<CampaignPage />} />
+									<Route path={routes.collection} element={<CollectionPage />} />
+									<Route path={routes.ladder} element={<RankedLadderPage />} />
+									<Route path={routes.trading} element={<Navigate to={`${routes.marketplace}?tab=swaps`} replace />} />
+									<Route path={routes.marketplace} element={<OnlineOnly label="Marketplace"><MarketplacePage /></OnlineOnly>} />
+									<Route path={routes.treasury} element={<OnlineOnly label="Treasury"><TreasuryPage /></OnlineOnly>} />
+									<Route path={routes.explorer} element={<ExplorerPage />} />
+									<Route path={routes.admin} element={<AdminPanel />} />
+									<Route path={routes.wallet} element={<WalletPage />} />
+									<Route path={routes.runeTestnetPrototype} element={<Navigate to={routes.wallet} replace />} />
+									<Route path={routes.tournaments} element={<OnlineOnly label="Tournaments"><TournamentListPage /></OnlineOnly>} />
+									<Route path={routes.history} element={<MatchHistoryPage />} />
+									<Route path={routes.settings} element={<SettingsPage />} />
 
-                  <Route element={<CardDataRuntimeBoundary />}>
-                    <Route path={routes.packs} element={<PacksPage />} />
-                  </Route>
+									<Route element={<CardDataRuntimeBoundary />}>
+										<Route path={routes.packs} element={<PacksPage />} />
+									</Route>
 
-                  <Route element={<GameplayRuntimeBoundary />}>
-                    <Route path={routes.game} element={<Navigate to={routes.singleGame} replace />} />
-                    <Route path={routes.singleGame} element={
-                      <MatchSetupSingle difficulty="normal" deckSource="warband">
-                        <RagnarokGameCoordinator />
-                      </MatchSetupSingle>
-                    } />
-                    <Route path={routes.campaignGame} element={
-                      <MatchSetupCampaign fallback={<Navigate to={routes.campaign} replace />}>
-                        <RagnarokGameCoordinator />
-                      </MatchSetupCampaign>
-                    } />
-                    <Route path={routes.multiplayer} element={<MultiplayerGame />} />
-                  </Route>
-                </Route>
-              </Route>
+									<Route element={<GameplayRuntimeBoundary />}>
+										<Route path={routes.game} element={<Navigate to={routes.singleGame} replace />} />
+										<Route path={routes.singleGame} element={
+											<MatchSetupSingle difficulty="normal" deckSource="warband">
+												<RagnarokGameCoordinator />
+											</MatchSetupSingle>
+										} />
+										<Route path={routes.campaignGame} element={
+											<MatchSetupCampaign fallback={<Navigate to={routes.campaign} replace />}>
+												<RagnarokGameCoordinator />
+											</MatchSetupCampaign>
+										} />
+										<Route path={routes.multiplayer} element={<MultiplayerGame />} />
+									</Route>
+								</Route>
+							</Route>
 
-              <Route path="*" element={
-                <div className="min-h-screen bg-obsidian-950 flex flex-col items-center justify-center text-ink-0 px-6">
-                  <h1 className="font-display text-6xl font-black tracking-[0.18em] text-gold-300 mb-4">404</h1>
-                  <p className="font-mono text-[11px] tracking-[0.32em] uppercase text-ink-300 mb-8">Page not found</p>
-                  <Link to={routes.home} className="px-6 py-3 bg-linear-to-b from-gold-300 to-gold-500 border border-gold-200 text-obsidian-950 font-display font-bold tracking-[0.18em] uppercase rounded-md transition-all hover:from-gold-200 hover:to-gold-400 hover:scale-[1.02]">
-                    Back to Home
-                  </Link>
-                </div>
-              } />
-            </Routes>
-          </Suspense>
-        </HashRouter>
-      </CardTransformProvider>
-    </ErrorBoundary>
-  );
+							<Route path="*" element={
+								<div className="min-h-screen bg-obsidian-950 flex flex-col items-center justify-center text-ink-0 px-6">
+									<h1 className="font-display text-6xl font-black tracking-[0.18em] text-gold-300 mb-4">404</h1>
+									<p className="font-mono text-[11px] tracking-[0.32em] uppercase text-ink-300 mb-8">Page not found</p>
+									<Link to={routes.home} className="px-6 py-3 bg-linear-to-b from-gold-300 to-gold-500 border border-gold-200 text-obsidian-950 font-display font-bold tracking-[0.18em] uppercase rounded-md transition-all hover:from-gold-200 hover:to-gold-400 hover:scale-[1.02]">
+										Back to Home
+									</Link>
+								</div>
+							} />
+						</Routes>
+					</Suspense>
+				</HashRouter>
+			</CardTransformProvider>
+		</ErrorBoundary>
+	);
 }
 
 export default App;

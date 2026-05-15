@@ -20,4 +20,5 @@ export const routes = {
   explorer: '/explorer',
   admin: '/admin',
   runeTestnetPrototype: '/testnet/rune',
+  pokerViewportPrototype: '/prototype/poker-viewport',
 };
