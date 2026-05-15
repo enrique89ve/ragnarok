@@ -92,6 +92,7 @@ __tests__/
 !client/src/game/deck/heroDeckRules.test.ts
 !client/src/game/utils/cards/cardLevelScaling.test.ts
 !client/src/game/components/chess/chessBoardInteractionRules.test.ts
+!client/src/game/components/marketplace/runePackExchange.test.ts
 !shared/protocol-core/cardProgression.test.ts
 !shared/protocol-core/campaignResult.test.ts
 !shared/protocol-core/dailyQuestClaim.test.ts
@@ -218,6 +219,10 @@ client/src/game/components/map/MapAtlasTerritoryEditor.tsx
 client/src/game/components/map/MapAtlasFxEditor.tsx
 client/src/game/components/map/MapAtlasPathEditor.tsx
 client/src/game/components/map/editor/
+
+# Local combat layout prototypes. Approved layout data belongs in
+# client/src/game/combat/layout/, not in throwaway prototype routes.
+client/src/game/combat/prototypes/
 
 # Server-side chain indexer state (runtime data)
 data/chain-state.json
