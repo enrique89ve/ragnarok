@@ -6,18 +6,47 @@ Scope: only the poker arena (`RagnarokCombatArena`). Chess board (`ChessPhase`) 
 
 ---
 
-## 0. Layered architecture (canonical contract)
+## 0. Responsive board contract
 
-Every visual element in the arena belongs to exactly **one** of five layers. Each layer is `position: absolute; inset: 0` inside `.ragnarok-combat-arena`, so nothing escapes the 1920×1080 canvas. Z-index ranges are reserved per layer — never collide across layers.
+The poker arena is a **fixed-ratio game board**, not a responsive document layout.
+
+| Concern | Canon |
+|---|---|
+| Base canvas | `1920×1080` virtual board, `16:9` |
+| Runtime scaler | `GameViewport.tsx` computes `scale = min(windowWidth / 1920, windowHeight / 1080)` |
+| Mobile target | Landscape. Portrait is not a poker layout target; do not reflow zones into a vertical board. |
+| Large screens | Preserve `16:9`; wrapper art fills letterbox/pillarbox space. Do not stretch the board. |
+| Ultra-large option | If the board feels too large on wall-sized displays, add a `maxScale`/presentation cap to `GameViewport`, not a second CSS layout. |
+| Coordinate system | All gameplay positions are authored inside the 1920×1080 board. Use board tokens/areas, not `vw`/`vh`, for pieces. |
+
+**Grammar**:
 
 ```
-.game-viewport (1920×1080, transform: scale by GameViewport.tsx)
-└── .ragnarok-combat-arena (position: relative; overflow: hidden)
+real viewport
+└── .game-viewport-wrapper        fixed inset-0, owns full-window background
+    └── .game-viewport            absolute 1920×1080, JS translate + scale
+        └── .ragnarok-combat-arena relative, overflow hidden
+            ├── canvas layers      absolute inset-0
+            └── .arena-content     absolute inset-0, grid-based board
+```
+
+**Editing rule**: moving a poker element should usually mean changing one token, grid area, or zone component. If moving a hero requires touching VFX, HUD, and card CSS at the same time, the layer contract has been broken.
+
+---
+
+## 1. Layered architecture (canonical contract)
+
+Every visual element in the arena belongs to exactly **one** logical layer. Background, VFX, and modal have dedicated wrapper nodes today; game and HUD elements are still partly direct children / `data-zone` panels, but they must obey the same z-index ranges. Nothing escapes the 1920×1080 canvas.
+
+```
+.game-viewport-wrapper (real viewport; fixed, overflow hidden)
+└── .game-viewport (1920×1080, transform: scale by GameViewport.tsx)
+    └── .ragnarok-combat-arena (position: relative; overflow: hidden)
     │
     ├── .layer-background      z: 0–99      pointer-events: none
     │   └── art, ambient dust, torch glow, realm bg, board border
     │
-    ├── .layer-game             z: 100–399   pointer-events: auto (default)
+    ├── .arena-content          z: 100–399   pointer-events: auto (game layer)
     │   └── zones (opp, opp-field, board, player-field, player),
     │       cards, heroes, mana bars, hole cards
     │
@@ -26,7 +55,7 @@ Every visual element in the arena belongs to exactly **one** of five layers. Eac
     │     PhaseBanner, PokerDramaVFX, FirstStrikeAnimation,
     │     screen flashes, vignettes, damage indicators
     │
-    ├── .layer-hud              z: 700–899   pointer-events: auto (opt-in)
+    ├── HUD elements            z: 700–899   pointer-events: auto (opt-in)
     │   └── GameHUD ribbon, hourglass, BattleIntel, BettingPanel,
     │       WagerInfoPanel, TurnBanner, hand-strength indicator
     │
@@ -43,6 +72,8 @@ Every visual element in the arena belongs to exactly **one** of five layers. Eac
 4. **`pointer-events: none` by default** on VFX + modal containers — children opt-in. Prevents accidental click-blocking.
 5. **GSAP shakes target `.game-viewport-wrapper`** (no transform). Targeting `.game-viewport` overwrites the responsive scale and breaks the canvas.
 6. **Width / height in %** of the layer (which is canvas-sized). Pixel sizes only for tiny visual primitives (borders, small badges).
+7. **No `vw`/`vh` inside gameplay zones.** The viewport is already normalized by `GameViewport`.
+8. **Mobile landscape is a scaled board.** Do not add vertical mobile variants for poker combat.
 
 ### Mount targets (canonical)
 
@@ -53,8 +84,8 @@ Every visual element in the arena belongs to exactly **one** of five layers. Eac
 | `MulliganScreen` (portal) | `#arena-layer-modal` | Blocks input until mulligan committed |
 | `ShowdownCelebration` (portal) | `#arena-layer-modal` | Blocks input during resolution |
 | `GameOverScreen` (portal) | `#arena-layer-modal` | Terminal modal |
-| `BettingPanel` | `.layer-hud` (any HUD slot) | Persistent control surface |
-| `WagerInfoPanel` | `.layer-hud` (top-right dock) | Persistent info panel |
+| `BettingPanel` | `[data-zone="betting-panel"]` in HUD z-range | Persistent control surface |
+| `WagerInfoPanel` | `[data-zone="wager-info-panel"]` in HUD z-range | Persistent info panel |
 | Particle bursts (Pixi) | `#arena-layer-vfx` | Canvas-bounded particles |
 
 ### Anti-patterns historically encountered
@@ -66,14 +97,14 @@ Every visual element in the arena belongs to exactly **one** of five layers. Eac
 
 ---
 
-## 1. Component dependency tree
+## 2. Component dependency tree
 
 ```
 RagnarokGameCoordinator (FSM root)
 └── PokerCombatPhase (lazy, mounts when flowState.tag === 'poker_combat')
-    └── RagnarokCombatArena (1670 LOC — god component, target for split)
+    └── RagnarokCombatArena (1516 LOC — god component, target for split)
         └── GameViewport (1920×1080 virtual canvas + JS scale)
-            └── .ragnarok-combat-arena (display:flex flex-col, full canvas)
+            └── .ragnarok-combat-arena (relative, overflow hidden, full canvas)
                 ├── HUD layer (absolute siblings)
                 │   ├── GameHUD              (top ribbon: turn/phase/stakes/committed)
                 │   ├── hourglass-timer      (top-center countdown)
@@ -83,13 +114,13 @@ RagnarokGameCoordinator (FSM root)
                 │   ├── realm-indicator
                 │   └── (board-ambient-dust, board-torch-glow, board-border-ornament)
                 │
-                ├── .arena-content (the only non-absolute flex child)
-                │   └── UnifiedCombatArena (inner JSX — zones live here)
-                │       ├── opp-zone        (opp hero + hole cards + hand-count)
-                │       ├── opp-field       (opp minions)
-                │       ├── board-zone      (community cards + pot info)
-                │       ├── player-field    (player minions)
-                │       └── player-zone     (player hero + hand + bet controls)
+                ├── .arena-content (absolute inset-0, game layer)
+                │   └── UnifiedCombatArena (CSS grid — zones live here)
+                │       ├── .zone-opp          (opp hero + hole cards + hand-count)
+                │       ├── .zone-opp-field    (opp minions)
+                │       ├── .zone-board        (community cards)
+                │       ├── .zone-player-field (player minions)
+                │       └── .zone-player       (player hero + hand fan)
                 │
                 └── Overlay layer (absolute siblings, animation/modal)
                     ├── PhaseBanner               (FIRST BLOOD / FAITH / etc. slash)
@@ -129,9 +160,9 @@ RagnarokGameCoordinator (FSM root)
 
 ---
 
-## 2. Target DOM zone layout
+## 3. Target DOM zone layout
 
-Canvas 1920×1080. Inner arena is `flex flex-col`. Each zone is a flex-row in flow. NO magic pixel positions for primary zones — those are reserved for overlays only.
+Canvas `1920×1080`. The gameplay layer is a CSS grid inside `.unified-combat-arena`, with semantic React zone components as grid children. Tailwind classes may describe local flex alignment inside a zone, but the board-level placement belongs to `combat/styles/canvas-layout.css`.
 
 ```
 ┌─────────────────────────────────────────── 1920×1080 ──┐
@@ -139,27 +170,20 @@ Canvas 1920×1080. Inner arena is `flex flex-col`. Each zone is a flex-row in fl
 │  │ [TURN N · PHASE X · INITIATIVE · STAKES · POT]   │  │ ← GameHUD
 │  └──────────────────────────────────────────────────┘  │
 │                                                         │
-│  ┌── .arena-content (flex flex-col) ─────────────────┐  │
-│  │  opp-zone        (min-h-[160px], py-2)            │  │
-│  │  ┌──────────────────────────────────────────────┐ │  │
-│  │  │  [OPP HERO]  [opp hole]  [opp deck count]    │ │  │
-│  │  └──────────────────────────────────────────────┘ │  │
-│  │  opp-field       (min-h-[140px])                  │  │
-│  │  ┌──────────────────────────────────────────────┐ │  │
-│  │  │           [opp minions row]                  │ │  │
-│  │  └──────────────────────────────────────────────┘ │  │
-│  │  board-zone      (min-h-[160px])                  │  │
-│  │  ┌──────────────────────────────────────────────┐ │  │
-│  │  │    [community cards 0→5]   [pot info pill]   │ │  │
-│  │  └──────────────────────────────────────────────┘ │  │
-│  │  player-field    (min-h-[140px])                  │  │
-│  │  ┌──────────────────────────────────────────────┐ │  │
-│  │  │           [player minions row]               │ │  │
-│  │  └──────────────────────────────────────────────┘ │  │
-│  │  player-zone     (min-h-[300px], py-2)            │  │
-│  │  ┌──────────────────────────────────────────────┐ │  │
-│  │  │  [PLAYER HERO]   [hand fan]   [bet stack]    │ │  │
-│  │  └──────────────────────────────────────────────┘ │  │
+│  ┌── .arena-content absolute inset-0 ────────────────┐  │
+│  │  .unified-combat-arena display:grid               │  │
+│  │                                                   │  │
+│  │     grid-area: opponent                           │  │
+│  │     [OPP HERO] [opp hole/hand/deck count]         │  │
+│  │                                                   │  │
+│  │     grid-area: board      grid-area: opp-field    │  │
+│  │     [community 0→5]       [opponent minions]      │  │
+│  │                                                   │  │
+│  │     grid-area: player-field                       │  │
+│  │     [player minions]                              │  │
+│  │                                                   │  │
+│  │     grid-area: player                             │  │
+│  │     [PLAYER HERO] [hand fan] [bet stack overlay]  │  │
 │  └───────────────────────────────────────────────────┘  │
 │                                                         │
 │  ┌── Overlay layer (absolute, inset-0, pointer-     │  │
@@ -169,16 +193,56 @@ Canvas 1920×1080. Inner arena is `flex flex-col`. Each zone is a flex-row in fl
 └─────────────────────────────────────────────────────────┘
 ```
 
-**Vertical budget**: 160+140+160+140+300 = 900 px for zones, leaving ~180px for HUD chrome + breathing.
+**Board tracks** live in `.unified-combat-arena`:
+
+```
+grid-template-columns:
+  edge | left | center | right | sidebar
+
+grid-template-rows:
+  top | opponent | upper-gap | board | player-field | lower-gap | player | bottom
+
+grid-template-areas:
+  ". . . . ."
+  ". opponent opponent . ."
+  ". . . . ."
+  ". board opponent-field . ."
+  ". . player-field . ."
+  ". . . . ."
+  ". player player player ."
+  ". . . . ."
+```
+
+**Zone vocabulary**:
+
+| Zone component | DOM class | Grid area | Contains |
+|---|---|---|---|
+| `OpponentZone` | `.zone-opp` | `opponent` | opponent hero, boss pips, hole cards, opponent hand count |
+| `MinionField role="opp"` | `.zone-opp-field` | `opponent-field` | opponent battlefield cards |
+| `BoardZone` | `.zone-board` | `board` | poker community cards / placeholders |
+| `MinionField role="player"` | `.zone-player-field` | `player-field` | player battlefield cards |
+| `PlayerZone` | `.zone-player` | `player` | player hero, hero resources, hole cards, hand fan |
+
+**Editable layout tokens** are in `client/src/game/combat/styles/canvas-layout.css`:
+
+| Move this | Prefer editing |
+|---|---|
+| Overall board tracks | `--arena-col-*`, `--arena-row-*`, `grid-template-areas` |
+| Community cards | `--community-cards-*` |
+| Minion rows | `--opponent-field-width`, `--player-field-*` |
+| Player hero + hand cluster | `--player-zone-*`, `--hero-card-width`, `--player-hand-*` |
+| Betting / wager panels | `--betting-panel-*`, `--wager-panel-*` |
+| Hero resource docks | `--hero-resource-dock-*` |
 
 **Anchors:**
-- Zone rows: `flex flex-row justify-center items-center gap-N`
-- Hero + Hand + Bet inside player-zone: `flex flex-row items-end gap-4 justify-center`
-- No `position: absolute` for zone-level wrappers — reserved for HUD/overlay siblings.
+- Board-level movement: CSS grid + layout tokens.
+- In-zone alignment: Tailwind or small component classes (`flex`, `items-*`, `gap-*`).
+- VFX/HUD/modal: absolute layer siblings, never grid children.
+- Do not put primary gameplay zones in `position: fixed`; they must remain inside the scaled canvas.
 
 ---
 
-## 3. State / data flow
+## 4. State / data flow
 
 ```
 useGameStore (top-level game state)
@@ -220,7 +284,7 @@ Inner UnifiedCombatArena render (zones)
 
 ---
 
-## 4. Phase lifecycle
+## 5. Phase lifecycle
 
 ```
 FIRST_STRIKE (15 dmg instant, no betting)
@@ -266,7 +330,7 @@ GAME_OVER (handled by FSM, not arena)
 
 ---
 
-## 5. Module layer (pure TS, no React)
+## 6. Module layer (pure TS, no React)
 
 | Module | Responsibility | LOC |
 |---|---|---|
@@ -280,9 +344,9 @@ These are dependency-free and unit-testable. Keep them in `combat/modules/`. No 
 
 ---
 
-## 6. CSS architecture
+## 7. CSS architecture
 
-**Current**: 31 CSS files + 4903-LOC monolith (`RagnarokCombatArena.css`). Target = stratified layers, one concern per file.
+**Current**: 33 combat style files + a 4443-LOC legacy shell (`RagnarokCombatArena.css`). Target = stratified layers, one concern per file, with the board grammar concentrated in `canvas-layout.css`.
 
 **Cascade order** (per `combat/styles/index.css`):
 1. **Base** — `reset.css`, `zones.css`, `canvas-layout.css`
@@ -294,9 +358,22 @@ These are dependency-free and unit-testable. Keep them in `combat/modules/`. No 
 7. **Utility** — `combat-animations.css`, `cursors.css`, `ragnarok-art-ui.css`, `responsive.css`
 
 **Rule of thumb (CSS vs Tailwind):**
-- **Tailwind in JSX** = layout (display/flex/grid/gap/justify/align/position/inset/translate)
-- **CSS file** = visual identity (colors/borders/shadows/animations/gradients/typography)
-- No overlap. If both define the same property, delete one.
+- **Tailwind in JSX** = local structure and component syntax (`section`, `footer`, `flex`, `items-*`, `gap-*`, `pointer-events-*`, simple transforms).
+- **`canvas-layout.css`** = board-level geometry: grid tracks, grid areas, cross-zone coordinates, scale tokens, and the editable positions of heroes/cards/panels.
+- **Other CSS files** = visual identity: colors, borders, shadows, animation keyframes, card art, typography, and state effects.
+- No overlap. If Tailwind and CSS both own the same board-level property, prefer a named layout token in `canvas-layout.css`.
+
+**Tailwind-as-base pattern**:
+
+```tsx
+<section className="zone-board" aria-label="Community cards">
+  <div className="unified-community community-cards-section zone-community">
+    ...
+  </div>
+</section>
+```
+
+The JSX names the semantic zone and small local alignment. The CSS grid decides where `.zone-board` lives on the board.
 
 **Known conflicts (already deduped in PR1):**
 - `.unified-hand-section { flex: 1 }` → removed (Tailwind centers via parent justify)
@@ -312,28 +389,24 @@ These are dependency-free and unit-testable. Keep them in `combat/modules/`. No 
 
 ---
 
-## 7. Migration plan (incremental, low-risk)
+## 8. Migration plan (incremental, low-risk)
 
 ### Phase A — Cleanup uncommitted state
 1. Commit current PR1 fixes
 2. Audit uncommitted files (`git status`): keep, fold, or revert per file
 3. Verify `npm run check` + `lint:css` clean
 
-### Phase B — Inner arena flex-column refactor
-1. Convert `UnifiedCombatArena` root from `relative block` to `flex flex-col`
-2. Replace each absolute zone with a flex row:
-   - `opp-zone` (replaces `unified-opponent-hero` + `unified-opponent-hand`)
-   - `opp-field` (replaces `unified-opponent-field`)
-   - `board-zone` (replaces `unified-community`)
-   - `player-field` (replaces `unified-player-field`)
-   - `player-zone` (replaces `unified-player-area` + nested `unified-hero-hand-row`)
-3. Make `.mulligan-notice` and `.attack-mode-banner` absolute or move them into Overlay layer
-4. Move `BettingPanel` + `WagerInfoPanel` into Overlay layer (no longer fight zone real estate)
-5. Smoke-test all phases visually
+### Phase B — Stabilize the board grammar
+1. Keep `GameViewport` as the only responsive scaler.
+2. Keep `.arena-content` absolute and `.unified-combat-arena` grid-based.
+3. Move every cross-zone coordinate into `canvas-layout.css` tokens.
+4. Add/keep `data-zone` markers for HUD controls that are visually attached to the board but not part of card flow.
+5. Smoke-test landscape mobile, 16:9 desktop, ultrawide desktop, and very large desktop.
 
-### Phase C — Kill magic offsets
-- Delete `margin-left: 240px`, `translateY(-50px/10px)` hacks
-- Replace with semantic spacing (gap, padding) or remove
+### Phase C — Kill unmanaged offsets
+- Replace anonymous `translateY(...)`, `margin-left: ...`, and raw pixel nudges with named tokens.
+- Keep intentional offsets, but name them by purpose (`--player-hand-y`, `--community-cards-scale`, etc.).
+- Delete offsets that no rendered element consumes.
 
 ### Phase D — Dedupe CSS↔Tailwind
 For each hotspot class:
@@ -344,7 +417,7 @@ For each hotspot class:
 - `ArenaPokerHand.tsx`, `HeroBridge.tsx`, `WagerEffectsHUD.tsx`
 - Audit `PotDisplay` + `PokerCombatAnimation` callers, delete if dead
 
-### Phase F — Split `RagnarokCombatArena.css` (4903 LOC)
+### Phase F — Split `RagnarokCombatArena.css` (4443 LOC)
 Move by concern into existing `combat/styles/*.css`:
 - Hero card visuals → `hero-card.css` (new)
 - Hero portrait → `hero-portrait.css` (new)
@@ -353,14 +426,19 @@ Move by concern into existing `combat/styles/*.css`:
 - Battle Intel panel → `battle-intel.css` (new)
 - Keep `RagnarokCombatArena.css` as only the `@import "./styles/index.css"` + viewport scaling (`GameViewport.css` already separate)
 
-### Phase G — Split `RagnarokCombatArena.tsx` (1670 LOC)
+### Phase G — Split `RagnarokCombatArena.tsx` (1516 LOC)
 Extract zone subcomponents:
 - `<OpponentZone />`, `<BoardZone />`, `<PlayerZone />`, `<OverlayLayer />`
 - Keep `RagnarokCombatArena` as the orchestration shell
 
+### Phase H — Optional ultra-large presentation cap
+- If large monitors make the board feel oversized, add `maxScale` to `GameViewport`.
+- Keep the canvas `1920×1080`; only cap the transform scale.
+- Do not create separate "desktop XL" coordinates unless playtesting proves a real gameplay need.
+
 ---
 
-## 8. Open questions
+## 9. Open questions
 
 - **PotDisplay vs hud-status-pot in GameHUD** — pot info is in BOTH places? Reconcile.
 - **WagerInfoPanel = CombatPhaseDirector?** WagerInfoPanel wraps CombatPhaseDirector with positioning. Either fold into Director or keep as positioning shell.
@@ -370,4 +448,4 @@ Extract zone subcomponents:
 
 ---
 
-*Document version 1 — 2026-05-13. Update as architecture stabilises.*
+*Document version 2 — 2026-05-14. Responsive board grammar aligned with current grid/canvas implementation.*

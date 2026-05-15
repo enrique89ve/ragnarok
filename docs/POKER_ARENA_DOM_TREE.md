@@ -2,7 +2,7 @@
 
 Every element in the runtime DOM, its position type, mount condition, and a flag for "can-this-shift-layout?".
 
-Generated 2026-05-13. Update when arena components change.
+Generated 2026-05-13. Updated 2026-05-14 to match the grid/canvas layout.
 
 ---
 
@@ -19,16 +19,16 @@ window
                         └── <GameViewport>  ← responsive scaling wrapper
                             ├── .game-viewport-wrapper  (position:fixed; inset:0; overflow:hidden)
                             │   └── .game-viewport  (position:absolute; size 1920×1080; JS transform: scale/translate)
-                            │       └── .ragnarok-combat-arena  ← FLEX COLUMN ROOT
+                            │       └── .ragnarok-combat-arena  ← CANVAS ROOT
                             │           └── …see "arena children" below…
                             └── …react portal targets (banner, particles, etc.)…
 ```
 
 ---
 
-## `.ragnarok-combat-arena` direct children — flex column root
+## `.ragnarok-combat-arena` direct children — canvas root
 
-Parent: `display: flex; flex-direction: column; overflow: hidden`. Children stack vertically. Anything **not** absolute pushes flex flow.
+Parent: `position: relative; width:100%; height:100%; overflow:hidden`. Gameplay layers are absolute inside the scaled 1920×1080 canvas. Any child that should not affect board geometry must remain absolute or portaled to `#arena-layer-vfx` / `#arena-layer-modal`.
 
 | # | Element | Position | Mount | Can shift? |
 |---|---|---|---|---|
@@ -42,7 +42,7 @@ Parent: `display: flex; flex-direction: column; overflow: hidden`. Children stac
 | 8 | `.realm-indicator` | absolute (right) | conditional (activeRealmId) | ✓ no |
 | 9 | `.battle-intel` button + `.battle-intel-panel` | absolute | conditional (hasBattleIntel) | ✓ no |
 | 10 | `.realm-announcement` | absolute (motion.div) | conditional (transient) | ✓ no |
-| 11 | `.arena-content` (relative w-full h-full **block**) | **STATIC (flex flow!)** | always | ⚠ owns vertical column space |
+| 11 | `.arena-content` (JSX says relative block, CSS overrides) | absolute inset-0 via `canvas-layout.css` | always | ✓ no |
 | 12 | `<TargetingOverlay>` | absolute (`.targeting-overlay`) | conditional | ✓ no |
 | 13 | `<CardBurnOverlay>` | absolute (`.card-burn-overlay`) | conditional | ✓ no |
 | 14 | `<ActionAnnouncement>` | absolute (`.action-announcement-container`) | always | ✓ no |
@@ -61,33 +61,33 @@ Parent: `display: flex; flex-direction: column; overflow: hidden`. Children stac
 | 27 | `<ShowdownCelebration>` | absolute (`.showdown-celebration-container`) | conditional (resolution) | ✓ no |
 | 28 | `<GameOverScreen>` | absolute (`.game-over-overlay`) | conditional (end of combat) | ✓ no |
 
-**Conclusion**: only `.arena-content` (`#11`) is non-absolute. All other arena children are absolute. So arena-content always takes the full flex-column space — no horizontal shift possible from siblings.
+**Conclusion**: `.arena-content` is the single game-layer host and is absolute. HUD/VFX/modal siblings do not push layout. Primary board geometry happens one level down in `.unified-combat-arena`.
 
 ---
 
 ## `.arena-content` → `UnifiedCombatArena` → 5 zones
 
-Parent of zones: `.unified-combat-arena` (`flex flex-col w-full h-full`). 5 flex children.
+Parent of zones: `.unified-combat-arena` (`display:grid; width:100%; height:100%`). 5 always-mounted grid children.
 
-| # | Zone | Tailwind | Mount | Can shift? |
+| # | Zone | Grid area | Mount | Can shift? |
 |---|---|---|---|---|
-| 1 | `<OpponentZone>` `<header>` | `zone-opp shrink-0 flex flex-row justify-start items-end gap-6 px-6 py-2` | always | content-fit |
-| 2 | `<MinionField role="opp">` `<section>` | `zone-opp-field grow shrink-0 basis-0 min-h-32 flex flex-row justify-center` | always | flex-1 distribute |
-| 3 | `<BoardZone>` `<section>` | `zone-board grow-2 shrink basis-0 min-h-40 flex flex-row justify-center` | always | flex-1 distribute |
-| 4 | `<MinionField role="player">` `<section>` | `zone-player-field grow shrink-0 basis-0 min-h-32 flex flex-row justify-center` | always | flex-1 distribute |
-| 5 | `<PlayerZone>` `<footer>` | `zone-player shrink-0 flex flex-row items-end justify-start gap-4 px-6 pb-1` | always | content-fit |
+| 1 | `<OpponentZone>` `<header>` | `opponent` | always | bounded by grid area |
+| 2 | `<MinionField role="opp">` `<section>` | `opponent-field` | always | bounded by grid area |
+| 3 | `<BoardZone>` `<section>` | `board` | always | bounded by grid area |
+| 4 | `<MinionField role="player">` `<section>` | `player-field` | always | bounded by grid area |
+| 5 | `<PlayerZone>` `<footer>` | `player` | always | bounded by grid area |
 
-All zones always mount. Their height distributes via flex-grow (board grow-2, fields grow-1, opp+player content-fit).
+All zones always mount. Their position is defined by `grid-template-areas` plus tokens in `client/src/game/combat/styles/canvas-layout.css`.
 
 **Inside OpponentZone**:
 ```
 <header zone-opp>
   <div .opponent-hero-container flex flex-col items-center gap-2>
     ├── <BossQuipBubble>          absolute (BossQuipBubble.css)
-    ├── <PhasePipIndicator>       STATIC (display:flex; flex-direction:column)  ← can push!
+    ├── <PhasePipIndicator>       absolute (PhasePipIndicator.css)
     ├── <BattlefieldHero>         block w/ background-image (220×293px)
     ├── <HoleCardsOverlay>        ?
-    └── <ManaBar wrap>            block (.opponent-hero-mana, Tailwind w-55 flex)
+    └── <HeroResourceDock>        block, fixed dock width token
   <div .opponent-hand-display>
     × ≤10 <CardRenderer> or <opponent-card-back>
     × 1 .opponent-hand-count badge (absolute, top-right)
@@ -99,9 +99,9 @@ All zones always mount. Their height distributes via flex-grow (board grow-2, fi
   <div .unified-hero-section shrink-0 z-30 pointer-events-auto>
     <div .poker-hero-container flex flex-col items-center gap-2>
       ├── <BattlefieldHero>      block w/ background-image
-      ├── <ManaBar wrap>          .player-mana-display (Tailwind w-55 flex)
+      ├── <HeroResourceDock>      block, fixed dock width token
       ├── <HoleCardsOverlay>      ?
-      └── .hand-strength-compact  STATIC (conditional on playerHandEval > HIGH_CARD)  ← can push!
+      └── .hand-strength-compact  absolute (conditional on playerHandEval > HIGH_CARD)
   <div .unified-hand-section flex flex-row items-end z-40 pointer-events-auto>
     <div .poker-hand-container flex flex-row justify-start items-end p-0>
       <HandFan />
@@ -111,15 +111,15 @@ All zones always mount. Their height distributes via flex-grow (board grow-2, fi
 
 ## ⚠ Suspects for layout shift on phase change
 
-### High suspicion (static, conditional rendering inside flex-col zones):
+### Resolved high-suspicion candidates:
 
-1. **PhasePipIndicator** (inside OpponentZone) — `display: flex; flex-direction: column` — STATIC. Renders only if `bossPhases` is set AND `opponentMaxHP > 0`. If conditions toggle during combat (e.g. data loads late), it appears/disappears, pushing the rest of the hero column.
+1. **PhasePipIndicator** (inside OpponentZone) — now `position:absolute` in `PhasePipIndicator.css`, anchored above the opponent hero column. It should no longer push the hero.
 
-2. **`.hand-strength-compact`** (inside PlayerZone) — STATIC inline `<div>`. Renders only when `playerHandEval && playerHandEval.rank > PokerHandRank.HIGH_CARD`. When community cards are revealed and the hand improves past HIGH_CARD, this element mounts and pushes the hand-strength badge below the hole cards. Vertical only, but combined with `align-items: center` in the flex-col can ripple.
+2. **`.hand-strength-compact`** (inside PlayerZone) — now rendered with `absolute -bottom-6 left-1/2`. It should no longer consume hero-column layout space.
 
-### Medium suspicion (CSS classes with no defined rules):
+### Remaining medium suspicion:
 
-3. **`.combat-phase-director-*`** (CombatPhaseDirector inside WagerInfoPanel) — **ZERO CSS rules** in entire codebase. Component renders unstyled divs. Content changes between phases (Spellcraft → First Blood → Faith …) — each change re-renders the panel with different text length. Since the parent WagerInfoPanel has fixed width (`w-85`) but no fixed height, height fluctuates per phase.
+3. **`.combat-phase-director-*`** (CombatPhaseDirector inside WagerInfoPanel) — CSS now exists in `RagnarokCombatArena.css`. Still verify fixed height/overflow behavior because content changes between phases (Spellcraft → First Blood → Faith …); the parent panel has fixed width but may still change height.
 
 4. **`<BossQuipBubble>`** — absolute (verified). OK on its own, but it uses AnimatePresence + motion.div which may force a re-flow of its absolute parent (`.opponent-hero-container`) during enter/exit transitions.
 
@@ -141,15 +141,13 @@ All zones always mount. Their height distributes via flex-grow (board grow-2, fi
 
 ---
 
-## Most likely root cause
+## Current layout-shift hypothesis
 
-**`.hand-strength-compact` and/or `PhasePipIndicator` toggling inside their respective hero columns.** Both are STATIC (in-flow) and conditionally rendered. When they appear/disappear:
+The previous likely root cause (`PhasePipIndicator` / `.hand-strength-compact` mounting in flow) has been addressed by absolute positioning. If phase changes still shift layout, inspect:
 
-- The hero column re-flows vertically (adds/removes ~30-50px of height).
-- This is inside a `flex flex-col items-center` column. The COLUMN re-centers its children → hero portrait shifts slightly.
-- Adjacent zones may re-flow if their `min-h` is tight.
-
-Fix: make both elements **absolute-positioned** (overlay style) so their appearance does not consume layout space.
+- Wager/HUD panel height changes in absolute overlays.
+- Any component using `position: fixed` instead of an arena layer.
+- Any cross-zone offset that is not represented by a named token in `canvas-layout.css`.
 
 ---
 
