@@ -5,9 +5,37 @@ One stop for everything RUNE. Other docs link here; this file is authoritative f
 ## TL;DR
 
 - Non-transferable, season-scoped, replay-derived from chain ops.
+- Bank-ledger model: every ledger entry has one balance owner, and that owner is derived from the authenticated Hive broadcaster or from a dual-signed match envelope.
 - Earned via P2P ranked wins, campaign first-clears, and daily quests. Spent via `rune_exchange` for packs.
 - Each source has an independent per-account cap. **P2P (100), campaign (10), and daily quest (20) do NOT share quota** — same account can hold up to 100 + 10 + 20 = 130 RUNE/season.
 - P2P is canon-only in closed beta: the on-chain handler is wired but the client does **not** broadcast `match_result` until the winner-arbiter / ranking server lands (see [Beta status](#beta-status)). Closed-beta earn surface is **campaign (10) + daily quest (20) = 30 RUNE/season per account**.
+
+## Bank-ledger anti-cheat contract
+
+RUNE is not a smart-contract token and not a client wallet balance. It is a
+reader-defined ledger over irreversible Hive ops. The protocol treats Hive as
+the ordered event log and `protocol-core` as the interpreter.
+
+Hard invariants:
+
+- **Signer owns self-directed balance changes.** For `campaign_result`,
+  `daily_quest_claim`, `reward_claim`, and `rune_exchange`, the RUNE balance
+  owner is `op.broadcaster`. Payload account fields are ignored or invalid.
+- **P2P is multi-party authority.** A ranked `match_result` may credit the
+  winner only when the result references a prior dual-anchored `match_anchor`
+  and is bound to the participants. The broadcaster alone is not enough to
+  choose the RUNE owner.
+- **Amounts are computed, never supplied.** The protocol computes credit/debit
+  amounts from source type, season config, account, source key, and pack quote.
+- **Ledger first, balance second.** Balance changes must go through a
+  `RuneLedgerEntry` with `balanceBefore`/`balanceAfter`; scalar token balances
+  are replay projections and drift-detection surfaces.
+- **One economic event, one idempotency key.** Replays and retries are safe
+  because every source key is deterministic and consumed once.
+- **Caps are protocol rules.** Account caps, source-pool caps, active-balance
+  caps, and total-emission caps are enforced during replay.
+- **Reads are not authority.** `/api/chain/rune/*` and wallet displays are
+  projections. Any disagreement with replay is a bug in the projection.
 
 ## Beta status
 
@@ -43,7 +71,7 @@ Constants live in [shared/protocol-core/runeEconomy.ts](../shared/protocol-core/
 
 | `sourceType` | Op | Per-clear | Source key | Notes |
 |---|---|---|---|---|
-| `p2p_ranked` | `match_result` (ranked) | win = 2, loss = 0 | `p2p:S01:{matchId}` | Loser RUNE credited via `TokenBalance` only, no ledger entry |
+| `p2p_ranked` | `match_result` (ranked) | win = 2, loss = 0 | `p2p:S01:{matchId}:{winner|loser}:{account}` | Match is consumed by prefix `p2p:S01:{matchId}:`; S01 loser reward is 0 so only the winner writes a ledger entry |
 | `campaign_first_clear` | `campaign_result` | per ordinal table `[2,2,2,2,1,1]` | `campaign:S01:{account}:{cid}:{m}` | Only first clear ever pays; replays update best stats, not RUNE |
 | `daily_quest_claim` | `daily_quest_claim` | flat 2 RUNE/slot | `daily_quest:S01:{account}:{ymd_utc}:{slot}` | Auto-claimed on completion; chain trusts client (no match transcript); per-day cap = 3 slots × 2 RUNE = 6 RUNE; ymd_utc validated within ±48h of `op.timestamp` |
 | `reward_claim` | `reward_claim` (generic) | per reward def | `reward:S01:{account}:{rewardId}` | Tournament rewards only (`first_victory`, `elo_*`, etc) — `reward_claim` campaign:* path was removed in [commit 00d48fb](../shared/protocol-core/apply.ts), `reward_claim` daily_quest:* path replaced by `daily_quest_claim` op |
@@ -139,9 +167,13 @@ uses the broadcast `ymd_utc` and rejects out-of-skew dates.
 > the winner-arbiter (post-beta scope).
 
 ```
-match_result (ranked) → applyRankedMatchSettlement → P2P RUNE credit
-                                                     ├ source: p2p_ranked
-                                                     └ key:    p2p:S01:{matchId}
+match_anchor (start) ─ pins participants, session pubkeys, deck hashes,
+                       engine hash, registry hash, seed commitments
+  └→ match_result (ranked, end) ─ dual-signed transcript settlement
+       └→ applyRankedMatchSettlement
+            └→ P2P RUNE credit
+                 ├ source: p2p_ranked
+                 └ key:    p2p:S01:{matchId}:winner:{winner}
 ```
 
 Implementation: [shared/protocol-core/apply.ts](../shared/protocol-core/apply.ts) — search `'p2p_ranked'`.
@@ -195,3 +227,4 @@ These are explicit non-goals of v1 and must not be implemented:
 - [BETA_TESTNET_SCOPE.md](./BETA_TESTNET_SCOPE.md) — beta scope including RUNE participation
 - [RAGNAROK_PROTOCOL_V1.md](./RAGNAROK_PROTOCOL_V1.md) — wire-level op canon
 - [ADR 0001](./adr/0001-eitr-v1-canonical.md) — Eitr, the sibling token (non-goals around RUNE/Eitr conversion)
+- [ADR 0005](./adr/0005-rune-owner-signed-ledger-protocol.md) — RUNE owner-signed bank-ledger model

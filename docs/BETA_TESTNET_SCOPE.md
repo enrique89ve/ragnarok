@@ -135,6 +135,12 @@ RUNE payloads must never trust a client-supplied amount. The protocol computes
 the amount from season config, source type, account, and source key. If an op
 injects an amount or exceeds a cap, replay rejects it.
 
+The balance owner is also derived, not accepted from client payloads. For
+self-directed RUNE ops the owner is the authenticated Hive broadcaster; for
+ranked P2P it is the winner or loser account proven by the dual-signed match
+envelope. Ranked P2P must also reference a prior dual-anchored `match_anchor`;
+there is no RUNE credit for result-only matches.
+
 The canonical RUNE read endpoints (also listed in [RUNE.md](./RUNE.md)) live
 under `/api/chain/rune/*` and `/api/chain/player/:username/rune`. Do not add or
 document parallel `/api/testnet/rune/*` endpoints — testnet is a runtime
@@ -176,7 +182,9 @@ Season S01 hard caps:
 Idempotency keys are mandatory:
 
 - Campaign first-clear: `campaign:S01:{account}:{campaignId}:{missionId}`.
-- P2P reward: `p2p:S01:{matchId}:{winner|loser}:{account}`.
+- P2P reward: `p2p:S01:{matchId}:{winner|loser}:{account}`; the match is
+  consumed by prefix `p2p:S01:{matchId}:` so a conflicting winner cannot settle
+  a second ledger entry.
 - Reward claim: `reward:S01:{account}:{rewardId}`.
 - Daily quest claim: `daily_quest:S01:{account}:{ymd_utc}:{slot}`.
 - RUNE pack spend: `pack:S01:{account}:{trxId}:{packType}:{quantity}`.
@@ -205,6 +213,17 @@ Pack exchange limits:
   `100_000` mythic.
 - Pack quantities must be derived from `packType * quantity`; direct negative
   spends or direct card mints are invalid.
+
+Beta HBD pack prices:
+
+- Standard pack: `20.000 HBD`.
+- Premium pack: `100.000 HBD`.
+- Mythic pack: `250.000 HBD`.
+- Source of truth: `HBD_PACK_SALE_SCENARIOS` and
+  `ACTIVE_HBD_PACK_SALE_SCENARIO_KEY` in
+  `shared/protocol-core/packCatalog.ts`.
+- Frontend must display HBD prices through the shared HBD helpers; do not
+  hardcode pack prices in React components.
 
 Replay rejection/cap rules:
 

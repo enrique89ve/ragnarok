@@ -47,9 +47,21 @@ _Avoid_: Claim as ownership transfer, claim as data mutation, "the player claims
 The external NFTLox layer that owns genesis NFT birth, ownership, distribution, transfer, burn, deterministic NFT ids, and instance DNA.
 _Avoid_: PostgreSQL ownership, Ragnarok-only custody, inventory rows as NFT truth
 
+**Ragnarok Pack Fulfillment**:
+The Ragnarok-owned flow that turns a pack trigger into concrete card instance distributions; NFTLox does not create, store, price, open, or randomize packs.
+_Avoid_: NFTLox pack, NFTLox drop table, NFTLox pack opening, pack as NFTLox custody object
+
 **Ragnarok Replay State**:
 State derived from irreversible Ragnarok Hive ops through `protocol-core`, including ranking, RUNE, Eitr, campaign progress, pack RNG resolution, and instance XP/level.
 _Avoid_: Client-authored balances, database-authored ranking, NFTLox-authored gameplay state
+
+**RUNE Ledger Protocol**:
+The bank-ledger-style protocol for RUNE. It accepts signed Hive events, derives the balance owner from protocol authority, computes amounts from season rules, writes append-only ledger entries, and treats scalar balances as replay projections.
+_Avoid_: user-authored RUNE amounts, direct balance edits, server-authored balance truth, treating RUNE like a transferable smart-contract token
+
+**RUNE Balance Owner**:
+The Hive account whose RUNE balance is credited or debited by a ledger entry. For self-directed ops, the owner is the authenticated `op.broadcaster`; for ranked P2P, the owner is the winner or loser account proven by the dual-signed match envelope.
+_Avoid_: trusting payload `account` fields, crediting a different account from a self-signed op, letting a client choose the balance owner
 
 **NFTLox Progress Mirror**:
 The NFTLox `mutableData` copy of replay-derived instance `xp`/`level`, written by a Ragnarok data operator for interoperability and backup.
@@ -86,12 +98,14 @@ _Avoid_: server as hidden truth, per-request heavyweight recomputation, gameplay
 ## Authority Relationships
 
 - **Starter Ownership** is a rule from **Starter Entitlement Source of Truth**, not **NFT Custody** or **Operational Projection**.
+- **Ragnarok Pack Fulfillment** decides pack contents before **NFT Custody** births or distributes the resulting card instances.
 - **NFT Custody** decides who owns a genesis NFT instance; **Ragnarok Replay State** decides what that instance has earned in gameplay.
 - **NFTLox Progress Mirror** may be repaired from **Ragnarok Replay State** whenever they drift.
 - **Operational Projection** must never be the only place a sensitive balance, ranking, ownership, or pack distribution decision exists.
 - **Player Collection Protocol** is the seam every UI, deck verification, and match packaging flow uses when it needs playable ownership.
 - **Deck Card Claim** is untrusted until resolved into a **Verified Deck Card** by the **Deck Verification Protocol**.
 - **Anti-Cheat Protocol** decides whether ranked evidence is acceptable; **Operational Projection** may only cache or summarize its result.
+- **RUNE Ledger Protocol** owns RUNE balance authority; every ledger entry must name exactly one **RUNE Balance Owner**.
 
 ## Campaign Protocol
 

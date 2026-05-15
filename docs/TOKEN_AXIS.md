@@ -43,10 +43,11 @@ The on-chain economic asset. One uid per minted card. Categorized via [SET_AXIS.
 
 Non-transferable season points used for ranking score bonus and for the `rune_exchange → pack` flow. Capped per-account and per-pool per season.
 
-- **Canonical doc**: [RUNE.md](./RUNE.md) — caps, sources, source keys, endpoints, code pointers.
-- **Sources**: `match_result` (P2P ranked), `campaign_result` (first-clear inline credit), `reward_claim` (non-campaign rewards).
+- **Canonical doc**: [RUNE.md](./RUNE.md) — caps, sources, source keys, endpoints, code pointers. Owner-signed ledger rules are recorded in [ADR 0005](./adr/0005-rune-owner-signed-ledger-protocol.md).
+- **Sources**: `match_result` (P2P ranked), `campaign_result` (first-clear inline credit), `daily_quest_claim` (slot/day credit), `reward_claim` (non-campaign rewards).
 - **Sink**: `rune_exchange`.
-- **Independent caps**: P2P (`maxP2PRunePerAccount: 100`) and campaign (`maxCampaignRunePerAccount: 10`) are separate pools — one account can earn both.
+- **Owner rule**: self-directed ops mutate only the authenticated Hive broadcaster's balance; ranked P2P uses the dual-signed match envelope.
+- **Independent caps**: P2P (`maxP2PRunePerAccount: 100`), campaign (`maxCampaignRunePerAccount: 10`), and daily quest (`maxDailyQuestRunePerAccount: 20`) are separate pools — one account can earn all three.
 
 ### Eitr
 

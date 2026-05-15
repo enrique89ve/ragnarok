@@ -69,6 +69,15 @@ Caps from `nftlox-sdk`:
 
 A 5-card pack fits trivially in one op; a 15-card mega pack also fits as long as it touches ≤ 50 distinct seeds. No batching needed for normal pack sizes.
 
+**Implementation audit (2026-05-15)**:
+
+- `client/src/data/HiveSync.ts` still exposes `nftloxCreatePack()` and `nftloxOpenPack()`, but those methods are stale placeholders. Do not wire UI or tests to them; NFTLox v0.4.0 has no corresponding actions.
+- `nftloxBulkDistribute()` is the target NFTLox write primitive for pack fulfillment. Ragnarok must resolve the pack outcome first, then send the resolved `{ seedId, quantity }` list.
+- Current Ragnarok pack openers are interim, not NFTLox-integrated:
+  - `shared/protocol-core/apply.ts::applyPackBurn` burns a Ragnarok sealed pack and derives card IDs from pack DNA + chain entropy, but it does not call NFTLox and does not use the catalog slot guarantees.
+  - `server/routes/packRoutes.ts` contains an older SQL-backed opener with deterministic slot selection, fallback rarity chains, and row locks against low liquidity. Treat it as useful reference material for the fulfillment algorithm, not as NFT custody truth.
+- `rune_exchange` currently mints sealed Ragnarok pack records. The NFTLox connector should either resolve those packs into final card instances with `bulk_distribute`, or keep the sealed-pack object strictly inside Ragnarok and only birth card instances on burn.
+
 ### Authority model (v0.4.0)
 
 The mapping is enforced by `ACTION_AUTH_LEVEL` in NFTLox's protocol package — there is no override.
@@ -108,7 +117,7 @@ The client never recomputes a hash. The comparison is `localCachedHash === remot
 | Trigger | Action |
 |---|---|
 | Login | Hash compare; re-sync on diverge |
-| Post-action (`nftloxTransferCard`, `nftloxBuyCard`, `nftloxOpenPack`, `nftloxBulkDistribute`, `nftloxLendCard`, `nftloxReturnCard`, `nftloxListCard`, `nftloxUnlistCard`, `nftloxBurnCard`, `nftloxReplicate`) | Poll `/api/operation-status/:txId` until confirmed, then re-sync |
+| Post-action (`nftloxTransferCard`, `nftloxBuyCard`, `nftloxBulkDistribute`, `nftloxLendCard`, `nftloxReturnCard`, `nftloxListCard`, `nftloxUnlistCard`, `nftloxBurnCard`) | Poll `/api/operation-status/:txId` until confirmed, then re-sync |
 | NFTLox API 5xx / timeout | Cache stays valid for gameplay; transfer/marketplace actions block until next successful sync |
 
 No periodic polling. Self-actions cover writes; login covers external transfers received while offline.
@@ -262,7 +271,7 @@ What we **don't** use: NFTLox marketplace, lending, multisig buy. We **do** use 
 | `client/src/data/nft/NFTLoxApiAdapter.ts` | Implementation against `api-nftlox.hivecreators.co` — paginated `/users/:u/nfts`, `/state-hash` |
 | `client/src/data/nft/nftloxSync.ts` | Orchestrator: hash compare → paginated re-sync → atomic IndexedDB transaction |
 | `client/src/data/nft/nftloxIndexedDB.ts` | IndexedDB schema (`nft_ownership`, `nft_meta`) and CRUD |
-| `HiveSync.ts` | Write side — broadcasts NFTLox protocol ops via `custom_json`. Already wired (`nftloxTransferCard`, `nftloxOpenPack`, …) |
+| `HiveSync.ts` | Write side — broadcasts NFTLox protocol ops via `custom_json`. `nftloxBulkDistribute` is the pack fulfillment target; `nftloxCreatePack` / `nftloxOpenPack` are stale placeholders to remove when the SDK lands. |
 | `genesisAdmin.ts` | Replace custom genesis with NFTLox `create_collection` + `bulk` seed mints |
 | `client/src/game/data/schemas/` | **Source of truth** — `immutableData` schema mirrors these primitives |
 

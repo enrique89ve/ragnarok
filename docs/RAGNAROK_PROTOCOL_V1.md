@@ -542,6 +542,7 @@ Settles a match with transcript commitment.
 ```
 
 - Referenced `match_anchor` MUST exist
+- Referenced `match_anchor` MUST be dual-anchored before result replay reaches this op
 - Both signatures MUST verify against anchored pubkeys (not current chain keys)
 - `winner` and `loser` MUST match anchored players
 - `result_nonce` MUST advance per broadcaster monotonic nonce rules
@@ -549,7 +550,7 @@ Settles a match with transcript commitment.
 - Ranked rewards, XP, and ELO changes are derived only from valid `match_result`
 - XP is accumulated only on winner-owned NFTs that match the card IDs encoded in the result
 - Starter entitlements, local/dev catalog cards, and combat tokens are excluded from protocol XP
-- RUNE rewards: +2 winner, +0 loser for ranked matches (deterministic, non-transferable)
+- RUNE rewards: +2 winner, +0 loser for ranked matches (deterministic, non-transferable); owner and source key are derived by the RUNE ledger protocol
 - ELO: K=32, derived from match history
 
 ## 10.14 `slash_evidence`
@@ -679,17 +680,18 @@ The indexer MUST NOT:
 
 Fully derived from verified ranked `match_result` history. Non-transferable.
 K=32. The official S01 leaderboard ranks eligible accounts by Season Score at
-the season-end snapshot: `finalElo + floor(min(seasonRuneEarned, 110) * 0.5)`.
-RUNE is capped in the formula (`10` campaign + `100` P2P, max `55` score bonus)
+the season-end snapshot: `finalElo + floor(min(seasonRuneEarned, 130) * 0.5)`.
+RUNE is capped in the formula (`10` campaign + `100` P2P + `20` daily quest, max `65` score bonus)
 so campaign participation matters without letting raw farming overpower ELO.
 
 ### RUNE
 
 Derived non-transferable reward points. Caps, sources, source keys, read endpoints, and code pointers live in [RUNE.md](./RUNE.md) — that file is canon. The protocol-visible surface is:
 
-- **Sources**: `match_result` (P2P ranked, sourceType `p2p_ranked`), `campaign_result` (first-clear inline credit, sourceType `campaign_first_clear`), `reward_claim` (non-campaign rewards, sourceType `reward_claim`).
+- **Owner rule**: self-directed RUNE ops mutate only the authenticated Hive broadcaster's balance; ranked P2P uses the balance owner proven by the dual-signed match envelope.
+- **Sources**: `match_result` (P2P ranked, sourceType `p2p_ranked`), `campaign_result` (first-clear inline credit, sourceType `campaign_first_clear`), `daily_quest_claim` (slot/day credit, sourceType `daily_quest_claim`), `reward_claim` (non-campaign rewards, sourceType `reward_claim`).
 - **Sink**: `rune_exchange` (debits RUNE, delegates pack delivery to the exchange adapter).
-- **Independent per-account pools**: P2P and campaign caps do not share quota.
+- **Independent per-account pools**: P2P, campaign, and daily quest caps do not share quota.
 - **Read API**: under `/api/chain/rune/*` and `/api/chain/player/:username/rune`. No `/api/testnet/rune/*` parallel namespace.
 
 ### Eitr
