@@ -14,7 +14,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { X as CloseIcon } from 'lucide-react';
 import { OrnateCorners } from '../../../components/ornaments/RunicSigils';
-import { AccountSlot } from '../../../components/account/AccountSlot';
+import { MetaPageHeader } from '../../../components/navigation/MetaPageHeader';
 import { routes } from '../../../lib/routes';
 import { useNFTUsername, useNFTCollection } from '../../nft/hooks';
 import { getCardById } from '../../data/allCards';
@@ -260,32 +260,12 @@ export default function MarketplacePage() {
 
 	return (
 		<div className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-vault-nav) text-ink-0">
-			{/* Header */}
-			<div className="border-b border-obsidian-700 bg-obsidian-950/85 backdrop-blur-md sticky top-0 z-40">
-				<div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
-					<div className="flex items-center gap-4 min-w-0">
-						<Link
-							to={routes.home}
-							className="inline-flex items-center h-8 px-3 rounded-full border border-obsidian-700 bg-obsidian-850 text-ink-200 hover:text-gold-300 hover:border-gold-600 font-display text-[11px] tracking-[0.18em] uppercase font-bold transition-colors"
-						>
-							Home
-						</Link>
-						<div>
-							<div className="font-mono text-[10px] tracking-[0.32em] uppercase text-ink-300">Forge · Bazaar</div>
-							<h1 className="font-display text-xl font-black tracking-[0.10em] uppercase text-gold-300">
-								Marketplace
-							</h1>
-						</div>
-					</div>
-					<AccountSlot
-						username={username}
-						tier="premium"
-						to={routes.settings}
-						secondary="Trader"
-						showSettings
-					/>
-				</div>
-			</div>
+			<MetaPageHeader
+				title="Marketplace"
+				kicker="Forge · Bazaar"
+				username={username}
+				accountSecondary="Trader"
+			/>
 
 			{/* Tabs */}
 			<div className="max-w-6xl mx-auto px-4 pt-4">

@@ -69,6 +69,97 @@
 }
 
 /* =============================================
+   2b. SHARED META PAGE HEADER — LoL-like landscape HUD
+   Wallet, Marketplace, Packs, Tournaments, History, Treasury, Explorer.
+   Keep the page nav on one low-height row; truncate identity/title details
+   instead of letting the header consume precious game-like viewport height.
+   ============================================= */
+
+@media (max-width: 640px) {
+	.meta-page-header-inner {
+		flex-wrap: nowrap;
+		padding-left: 0.75rem;
+		padding-right: 0.75rem;
+	}
+
+	.meta-page-header-title,
+	.meta-page-header-kicker {
+		max-width: 42vw;
+	}
+
+	.meta-page-header-actions {
+		max-width: 52vw;
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		overscroll-behavior-inline: contain;
+		scrollbar-width: none;
+	}
+
+	.meta-page-header-actions::-webkit-scrollbar {
+		display: none;
+	}
+
+	.meta-page-header-account span.font-mono {
+		display: none;
+	}
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+	.meta-page-header {
+		z-index: var(--z-hud);
+	}
+
+	.meta-page-header-inner {
+		min-height: 2.75rem;
+		max-width: none;
+		flex-wrap: nowrap;
+		padding-top: 0.25rem;
+		padding-bottom: 0.25rem;
+	}
+
+	.meta-page-header-kicker {
+		display: none;
+	}
+
+	.meta-page-header-title {
+		max-width: 34vw;
+		font-size: 0.875rem;
+		line-height: 1rem;
+		letter-spacing: 0.08em;
+	}
+
+	.meta-page-header-control {
+		height: 2rem;
+		padding-left: 0.625rem;
+		padding-right: 0.625rem;
+		font-size: 0.625rem;
+	}
+
+	.meta-page-header-actions {
+		max-width: 58vw;
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		overscroll-behavior-inline: contain;
+		scrollbar-width: none;
+	}
+
+	.meta-page-header-actions::-webkit-scrollbar {
+		display: none;
+	}
+
+	.meta-page-header-account > a,
+	.meta-page-header-account > div {
+		padding-top: 0.125rem;
+		padding-bottom: 0.125rem;
+	}
+
+	.meta-page-header-account span.font-mono,
+	.meta-page-header-account svg {
+		display: none;
+	}
+}
+
+/* =============================================
    3. KNOWN MODAL/PANEL HEIGHT OFFENDERS
    Caught by the audit. Each rule targets a unique signature.
    ============================================= */

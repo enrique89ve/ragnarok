@@ -20,7 +20,7 @@ import { useDuatClaimStore } from '../../stores/duatClaimStore';
 import { useIsHiveMode, useNFTUsername } from '../../nft/hooks';
 import { NumericRitual, OrnateCorners, SigilBackplate, type Tier } from '../../../components/ornaments/RunicSigils';
 import { SplashBackdrop } from '../../../components/ornaments/SplashBackdrop';
-import { AccountSlot } from '../../../components/account/AccountSlot';
+import { MetaPageHeader, MetaPageHeaderLink } from '../../../components/navigation/MetaPageHeader';
 
 // Lazy — the ceremony modal is a one-time-per-account event.
 const StarterPackCeremony = lazy(() => import('../StarterPackCeremony'));
@@ -160,41 +160,21 @@ export default function PacksPage() {
 
 	return (
 		<main className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-home-nav) text-ink-0">
-			{/* Sticky nav bar — matches Marketplace pattern */}
-			<div className="border-b border-obsidian-700 bg-obsidian-950/85 backdrop-blur-md sticky top-0 z-40">
-				<div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
-					<div className="flex items-center gap-4 min-w-0">
-						<Link
-							to={routes.home}
-							className="inline-flex items-center h-8 px-3 rounded-full border border-obsidian-700 bg-obsidian-850 text-ink-200 hover:text-gold-300 hover:border-gold-600 font-display text-[11px] tracking-[0.18em] uppercase font-bold transition-colors"
-						>
-							Home
-						</Link>
-						<div>
-							<div className="font-mono text-[10px] tracking-[0.32em] uppercase text-ink-300">Vault</div>
-							<h1 className="font-display text-xl font-black tracking-[0.10em] uppercase text-gold-300">
-								Your Packs
-							</h1>
-						</div>
-					</div>
-					<div className="flex items-center gap-3 flex-wrap">
-						<Link
-							to={`${routes.marketplace}?tab=packs`}
-							className="inline-flex items-center gap-2 h-8 px-3 rounded-full border border-obsidian-700 bg-obsidian-850 text-ink-300 hover:text-gold-300 hover:border-gold-600 font-display text-[11px] tracking-[0.18em] uppercase font-bold transition-colors"
-						>
-							<span>Marketplace</span>
-							<ArrowRight size={12} strokeWidth={2} aria-hidden="true" />
-						</Link>
-						<AccountSlot
-							username={hiveUsername}
-							tier="premium"
-							to={routes.settings}
-							secondary={`${sealedPacks.length} sealed`}
-							showSettings
-						/>
-					</div>
-				</div>
-			</div>
+			<MetaPageHeader
+				title="Your Packs"
+				kicker="Vault"
+				username={hiveUsername}
+				accountSecondary={`${sealedPacks.length} sealed`}
+				actions={
+					<MetaPageHeaderLink
+						to={`${routes.marketplace}?tab=packs`}
+						icon={ArrowRight}
+						iconPosition="end"
+					>
+						Marketplace
+					</MetaPageHeaderLink>
+				}
+			/>
 
 			<div className="max-w-5xl mx-auto px-4 py-8">
 				{/* Starter claim card — only when not yet claimed */}

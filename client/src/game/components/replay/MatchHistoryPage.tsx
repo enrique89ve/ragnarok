@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { routes } from '../../../lib/routes';
 import { useReplayStore, type MatchRecord } from '../../stores/replayStore';
 import { useNFTUsername } from '../../nft/hooks';
-import { AccountSlot } from '../../../components/account/AccountSlot';
+import { MetaPageHeader, MetaPageHeaderButton } from '../../../components/navigation/MetaPageHeader';
 import ReplayViewer from './ReplayViewer';
 
 function MatchCard({ match, onView }: { match: MatchRecord; onView: () => void }) {
@@ -76,57 +74,37 @@ export default function MatchHistoryPage() {
 
 	return (
 		<div className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-cosmos-nav) text-ink-0">
-			<div className="border-b border-obsidian-700 bg-obsidian-950/85 backdrop-blur-md sticky top-0 z-40">
-				<div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
-					<div className="flex items-center gap-4 min-w-0">
-						<Link
-							to={routes.home}
-							className="inline-flex items-center h-8 px-3 rounded-full border border-obsidian-700 bg-obsidian-850 text-ink-200 hover:text-gold-300 hover:border-gold-600 font-display text-[11px] tracking-[0.18em] uppercase font-bold transition-colors"
+			<MetaPageHeader
+				title="Match History"
+				kicker="Records"
+				username={username}
+				accountSecondary={historySecondary}
+				actions={matchHistory.length > 0 && (
+					confirmClear ? (
+						<>
+							<span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ember-300">
+								Are you sure?
+							</span>
+							<MetaPageHeaderButton
+								tone="danger"
+								onClick={() => { clearHistory(); setConfirmClear(false); }}
+							>
+								Confirm
+							</MetaPageHeaderButton>
+							<MetaPageHeaderButton onClick={() => setConfirmClear(false)}>
+								Cancel
+							</MetaPageHeaderButton>
+						</>
+					) : (
+						<MetaPageHeaderButton
+							tone="danger"
+							onClick={() => setConfirmClear(true)}
 						>
-							Home
-						</Link>
-						<div>
-							<div className="font-mono text-[10px] tracking-[0.32em] uppercase text-ink-300">Records</div>
-							<h1 className="font-display text-xl font-black tracking-[0.10em] uppercase text-gold-300">Match History</h1>
-						</div>
-					</div>
-					<div className="flex items-center gap-3 flex-wrap">
-						{matchHistory.length > 0 && (
-							confirmClear ? (
-								<div className="flex items-center gap-2">
-									<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ember-300">Are you sure?</span>
-									<button
-										onClick={() => { clearHistory(); setConfirmClear(false); }}
-										className="inline-flex items-center h-8 px-3 rounded-full border border-ember-400/60 bg-ember-600/30 text-ember-100 hover:bg-ember-600/45 hover:border-ember-400 font-display text-[11px] tracking-[0.18em] uppercase font-bold transition-colors"
-									>
-										Confirm
-									</button>
-									<button
-										onClick={() => setConfirmClear(false)}
-										className="inline-flex items-center h-8 px-3 rounded-full border border-obsidian-700 bg-obsidian-850 text-ink-200 hover:text-gold-300 hover:border-gold-600 font-display text-[11px] tracking-[0.18em] uppercase font-bold transition-colors"
-									>
-										Cancel
-									</button>
-								</div>
-							) : (
-								<button
-									onClick={() => setConfirmClear(true)}
-									className="inline-flex items-center h-8 px-3 rounded-full border border-ember-500/30 bg-obsidian-850 text-ember-300 hover:text-ember-200 hover:border-ember-400/55 font-display text-[11px] tracking-[0.18em] uppercase font-bold transition-colors"
-								>
-									Clear All
-								</button>
-							)
-						)}
-						<AccountSlot
-							username={username}
-							tier="premium"
-							to={routes.settings}
-							secondary={historySecondary}
-							showSettings
-						/>
-					</div>
-				</div>
-			</div>
+							Clear All
+						</MetaPageHeaderButton>
+					)
+				)}
+			/>
 
 			<div className="max-w-4xl mx-auto px-4 py-8">
 

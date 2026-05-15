@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import { routes } from '../../../lib/routes';
+import { MetaPageHeader } from '../../../components/navigation/MetaPageHeader';
+import { useNFTUsername } from '../../nft/hooks';
 
 const API_BASE = '/api/explorer';
 
@@ -774,70 +774,41 @@ const TABS: { key: Tab; label: string }[] = [
 
 export default function ExplorerPage() {
 	const [tab, setTab] = useState<Tab>('overview');
+	const username = useNFTUsername();
 
 	return (
 		<div
 			className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-vault-nav) text-ink-0"
 			style={{ fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif" }}
 		>
-			{/* Header */}
-			<div style={{
-				background: 'linear-gradient(180deg, rgba(212,175,55,0.08), transparent)',
-				borderBottom: '1px solid rgba(212,175,55,0.15)',
-				padding: '20px 24px',
-			}}>
-				<div style={{ maxWidth: 1200, margin: '0 auto' }}>
-					<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-						<div>
-							<h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#d4af37', margin: 0 }}>
-								Ragnarok NFT Explorer
-							</h1>
-							<p style={{ fontSize: '0.8rem', color: '#8a8a9a', margin: '4px 0 0' }}>
-								Browse cards, players, marketplace listings, and protocol statistics
-							</p>
-						</div>
-						<Link to={routes.home} style={{
-							padding: '8px 16px',
-							borderRadius: 6,
-							border: '1px solid rgba(255,255,255,0.1)',
-							background: 'rgba(30,30,40,0.6)',
-							color: '#ccc',
-							textDecoration: 'none',
-							fontSize: '0.85rem',
-						}}>
-							Back to Game
-						</Link>
-					</div>
+			<MetaPageHeader
+				title="Explorer"
+				kicker="Protocol · Indexer"
+				username={username}
+				accountSecondary="Explorer"
+			/>
 
-					{/* Tab bar */}
-					<div style={{ display: 'flex', gap: 4, overflowX: 'auto' }}>
-						{TABS.map(t => (
-							<button
-								key={t.key}
-								onClick={() => setTab(t.key)}
-								style={{
-									padding: '8px 18px',
-									borderRadius: '6px 6px 0 0',
-									border: 'none',
-									borderBottom: tab === t.key ? '2px solid #d4af37' : '2px solid transparent',
-									background: tab === t.key ? 'rgba(212,175,55,0.1)' : 'transparent',
-									color: tab === t.key ? '#d4af37' : '#8a8a9a',
-									cursor: 'pointer',
-									fontSize: '0.85rem',
-									fontWeight: tab === t.key ? 600 : 400,
-									transition: 'color 0.15s, border-color 0.15s',
-									whiteSpace: 'nowrap',
-								}}
-							>
-								{t.label}
-							</button>
-						))}
-					</div>
+			{/* Tab bar */}
+			<div className="mx-auto w-full max-w-6xl px-4 pt-4 sm:px-6 lg:px-8">
+				<div className="flex gap-1 overflow-x-auto border-b border-obsidian-700 [scrollbar-width:none]">
+					{TABS.map(t => (
+						<button
+							key={t.key}
+							onClick={() => setTab(t.key)}
+							className={`shrink-0 border-b-2 px-4 py-2.5 font-display text-xs font-bold uppercase tracking-[0.18em] transition-colors ${
+								tab === t.key
+									? 'border-gold-300 text-gold-300'
+									: 'border-transparent text-ink-300 hover:text-ink-0'
+							}`}
+						>
+							{t.label}
+						</button>
+					))}
 				</div>
 			</div>
 
 			{/* Content */}
-			<div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px' }}>
+			<div className="mx-auto w-full max-w-6xl p-4 sm:p-6 lg:p-8">
 				{tab === 'overview' && <OverviewTab />}
 				{tab === 'nfts' && <NftsTab />}
 				{tab === 'users' && <UsersTab />}
