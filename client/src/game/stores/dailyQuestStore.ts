@@ -145,7 +145,12 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 				const isStale = !isWithinChainAcceptanceWindow(refreshDate, today);
 				if (stillPending && !isStale) return;
 
-				const templates = pickRandomQuests(TESTNET_RUNE_ECONOMY.dailyQuestSlotsPerDay);
+				const account = getNFTBridge().getUsername() ?? 'guest';
+				const templates = pickRandomQuests(
+					TESTNET_RUNE_ECONOMY.dailyQuestSlotsPerDay,
+					[],
+					`daily:${account}:${today}`,
+				);
 				const quests = templates.map((t, i) => templateToQuest(t, i, today));
 				set({ quests, lastRefreshDate: today, rerollsUsedToday: 0 });
 			},
@@ -204,18 +209,25 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 				const current = get();
 				if (current.rerollsUsedToday >= 1) return;
 
+				const targetIndex = current.quests.findIndex(q => q.id === questId);
+				if (targetIndex === -1) return;
+
+				const target = current.quests[targetIndex];
 				const existingTitles = current.quests.map(q => q.title);
-				const newTemplates = pickRandomQuests(1, existingTitles);
+				const account = getNFTBridge().getUsername() ?? 'guest';
+				const newTemplates = pickRandomQuests(
+					1,
+					existingTitles,
+					`daily:${account}:${target.ymdUtc}:reroll:${target.slot}`,
+				);
 				if (newTemplates.length === 0) return;
 
 				set(state => {
-					const questIndex = state.quests.findIndex(q => q.id === questId);
-					if (questIndex === -1) return {};
-					const slot = state.quests[questIndex].slot;
-					const ymdUtc = state.quests[questIndex].ymdUtc;
-					const newQuest = templateToQuest(newTemplates[0], slot, ymdUtc);
+					const idx = state.quests.findIndex(q => q.id === questId);
+					if (idx === -1) return {};
+					const newQuest = templateToQuest(newTemplates[0], target.slot, target.ymdUtc);
 					return {
-						quests: state.quests.map((q, i) => i === questIndex ? newQuest : q),
+						quests: state.quests.map((q, i) => i === idx ? newQuest : q),
 						rerollsUsedToday: state.rerollsUsedToday + 1,
 					};
 				});

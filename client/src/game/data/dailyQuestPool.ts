@@ -1,4 +1,4 @@
-import { shuffleArray } from '../utils/seededRng';
+import { seededRngFromString, seededShuffle } from '../utils/seededRng';
 
 export type DailyQuestType =
 	| 'win_games'
@@ -49,8 +49,22 @@ export const QUEST_POOL: QuestTemplate[] = [
 	{ type: 'play_cards', title: 'The Great Saga', description: 'Play {goal} cards from your hand', goal: 30, xp: 65 },
 ];
 
-export function pickRandomQuests(count: number, exclude: string[] = []): QuestTemplate[] {
+/**
+ * Pick `count` quests from the pool deterministically.
+ *
+ * `seedKey` should incorporate the player identity and the UTC day so
+ * the same account sees the same set across browsers/devices on the
+ * same day (e.g. `daily:enrique89:2026-05-14`). Two different keys
+ * produce uncorrelated sets; the same key always reproduces the
+ * exact same picks even after a reload or on a fresh device.
+ */
+export function pickRandomQuests(
+	count: number,
+	exclude: string[],
+	seedKey: string,
+): QuestTemplate[] {
 	const available = QUEST_POOL.filter(q => !exclude.includes(q.title));
-	const shuffled = shuffleArray(available);
+	const rng = seededRngFromString(seedKey);
+	const shuffled = seededShuffle(available, rng);
 	return shuffled.slice(0, count);
 }

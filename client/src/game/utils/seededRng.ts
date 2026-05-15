@@ -31,6 +31,17 @@ export function createSeededRng(seedHex: string): SeededRng {
 	return brandSeededRng(mulberry32(numericSeed));
 }
 
+/**
+ * Mint a `SeededRng` from an arbitrary string key. Use this when the
+ * seed is identity-bearing (e.g. `daily:enrique89:2026-05-14`) so the
+ * same key produces the same stream on every device — required for
+ * features like daily quest pick where two browsers logged into the
+ * same account must see the same quest set on the same UTC day.
+ */
+export function seededRngFromString(seedKey: string): SeededRng {
+	return createSeededRng(sha256Hex(seedKey));
+}
+
 export function seededShuffle<T>(arr: T[], rng: () => number): T[] {
 	const result = [...arr];
 	for (let i = result.length - 1; i > 0; i--) {
