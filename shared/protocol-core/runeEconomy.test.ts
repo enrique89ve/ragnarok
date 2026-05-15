@@ -9,6 +9,8 @@ import {
 	calculateSeasonScore,
 	createCampaignFirstClearRuneSourceKey,
 	createDailyQuestRuneSourceKey,
+	createP2PRankedMatchSourceKeyPrefix,
+	createP2PRankedRuneSourceKey,
 	createRewardClaimRuneSourceKey,
 	getCampaignStageRuneTotal,
 	getCampaignFirstClearRuneReward,
@@ -70,6 +72,15 @@ describe('rune economy', () => {
 		expect(getCampaignFirstClearRuneReward('norse-5')).toBe(1);
 		expect(getCampaignFirstClearRuneReward('norse-6')).toBe(1);
 		expect(getCampaignFirstClearRuneReward('norse-7')).toBe(0);
+	});
+
+	it('derives P2P source keys from match id, role, and balance owner', () => {
+		expect(createP2PRankedMatchSourceKeyPrefix('match-123'))
+			.toBe('p2p:S01:match-123:');
+		expect(createP2PRankedRuneSourceKey('match-123', 'winner', 'alice'))
+			.toBe('p2p:S01:match-123:winner:alice');
+		expect(createP2PRankedRuneSourceKey('match-123', 'loser', 'bob'))
+			.toBe('p2p:S01:match-123:loser:bob');
 	});
 
 	it('exposes reward_claim RUNE through one shared protocol catalog', () => {

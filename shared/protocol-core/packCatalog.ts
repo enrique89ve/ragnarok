@@ -197,6 +197,29 @@ export type RunePackPoolAllocation = {
 	runeExposure: number;
 };
 
+export type HbdPackSaleScenarioKey = 'beta_full_cap' | 'beta_2m_tranche' | 'beta_500k_tranche';
+
+export type HbdPackSaleScenario = Readonly<{
+	key: HbdPackSaleScenarioKey;
+	label: string;
+	targetGrossHbd: number;
+	priceThousandths: Readonly<Record<RuneRedeemablePackKey, number>>;
+	packCaps: Readonly<Record<RuneRedeemablePackKey, number>>;
+	notes: string;
+}>;
+
+export type HbdPackSaleScenarioTotals = Readonly<{
+	key: HbdPackSaleScenarioKey;
+	packCap: number;
+	cardInstanceCap: number;
+	grossThousandths: number;
+	grossHbd: number;
+}>;
+
+export const HBD_CURRENCY_CODE = 'HBD' as const;
+export const HBD_PRICE_LOCALE = 'en-US' as const;
+export const ACTIVE_HBD_PACK_SALE_SCENARIO_KEY = 'beta_full_cap' satisfies HbdPackSaleScenarioKey;
+
 export const TESTNET_RUNE_PACK_POOL: RunePackPoolConfig = {
 	phase: 'testnet',
 	runeCap: 2_600_000,
@@ -208,6 +231,47 @@ export const TESTNET_RUNE_PACK_POOL: RunePackPoolConfig = {
 		mythic: 100_000,
 	},
 };
+
+const BETA_HBD_PRICE_GRID = {
+	standard: 20_000,
+	premium: 100_000,
+	mythic: 250_000,
+} as const satisfies Readonly<Record<RuneRedeemablePackKey, number>>;
+
+export const HBD_PACK_SALE_SCENARIOS = {
+	beta_full_cap: {
+		key: 'beta_full_cap',
+		label: 'Beta full-cap HBD sale capacity',
+		targetGrossHbd: 33_000_000,
+		priceThousandths: { ...BETA_HBD_PRICE_GRID },
+		packCaps: { ...TESTNET_RUNE_PACK_POOL.packCaps },
+		notes: 'Full sellout capacity using fixed 20/100/250 HBD beta prices and the canonical pack-cap grid.',
+	},
+	beta_2m_tranche: {
+		key: 'beta_2m_tranche',
+		label: 'Beta 2M HBD sale tranche',
+		targetGrossHbd: 2_000_000,
+		priceThousandths: { ...BETA_HBD_PRICE_GRID },
+		packCaps: {
+			standard: 6_061,
+			premium: 3_636,
+			mythic: 6_061,
+		},
+		notes: 'Launch tranche under the full-cap grid; it preserves the pack mix and does not reduce the global sale caps.',
+	},
+	beta_500k_tranche: {
+		key: 'beta_500k_tranche',
+		label: 'Beta 500k HBD sale tranche',
+		targetGrossHbd: 500_000,
+		priceThousandths: { ...BETA_HBD_PRICE_GRID },
+		packCaps: {
+			standard: 1_515,
+			premium: 909,
+			mythic: 1_515,
+		},
+		notes: 'Smaller sale tranche under the full-cap grid; it preserves the pack mix and does not reduce the global sale caps.',
+	},
+} as const satisfies Readonly<Record<HbdPackSaleScenarioKey, HbdPackSaleScenario>>;
 
 const PACK_KEY_SET: ReadonlySet<string> = new Set(PACK_KEYS);
 
@@ -249,6 +313,33 @@ export function getRuneExchangePackQuote(input: RuneExchangeQuoteInput): RuneExc
 	};
 }
 
+export function getActiveHbdPackSaleScenario(): HbdPackSaleScenario {
+	return HBD_PACK_SALE_SCENARIOS[ACTIVE_HBD_PACK_SALE_SCENARIO_KEY];
+}
+
+export function getHbdPackPriceThousandths(
+	packType: string,
+	scenario: HbdPackSaleScenario = getActiveHbdPackSaleScenario(),
+): number | null {
+	const key = normalizePackKey(packType);
+	if (!key || !isRuneRedeemablePackKey(key)) return null;
+	return scenario.priceThousandths[key];
+}
+
+export function formatHbdThousandths(priceThousandths: number): string {
+	if (!Number.isInteger(priceThousandths) || priceThousandths < 0) {
+		throw new Error(`Invalid HBD thousandths value: ${priceThousandths}`);
+	}
+
+	const whole = Math.trunc(priceThousandths / 1_000);
+	const fraction = priceThousandths % 1_000;
+	return `${whole.toLocaleString(HBD_PRICE_LOCALE)}.${fraction.toString().padStart(3, '0')}`;
+}
+
+export function formatHbdPrice(priceThousandths: number): string {
+	return `${formatHbdThousandths(priceThousandths)} ${HBD_CURRENCY_CODE}`;
+}
+
 export function getRunePackPoolAllocations(pool: RunePackPoolConfig = TESTNET_RUNE_PACK_POOL): RunePackPoolAllocation[] {
 	return RUNE_REDEEMABLE_PACK_KEYS.map((packKey) => {
 		const pack = PACK_DEFINITIONS[packKey];
@@ -273,4 +364,25 @@ export function getRunePackPoolTotals(pool: RunePackPoolConfig = TESTNET_RUNE_PA
 		}),
 		{ packCap: 0, cardInstanceCap: 0, runeExposure: 0 },
 	);
+}
+
+export function getHbdPackSaleScenarioTotals(
+	scenario: HbdPackSaleScenario = getActiveHbdPackSaleScenario(),
+): HbdPackSaleScenarioTotals {
+	const totals = RUNE_REDEEMABLE_PACK_KEYS.reduce(
+		(totals, packKey) => {
+			const pack = PACK_DEFINITIONS[packKey];
+			const packCap = scenario.packCaps[packKey];
+			const priceThousandths = scenario.priceThousandths[packKey];
+			return {
+				key: scenario.key,
+				packCap: totals.packCap + packCap,
+				cardInstanceCap: totals.cardInstanceCap + (pack.cardCount * packCap),
+				grossThousandths: totals.grossThousandths + (packCap * priceThousandths),
+				grossHbd: 0,
+			};
+		},
+		{ key: scenario.key, packCap: 0, cardInstanceCap: 0, grossThousandths: 0, grossHbd: 0 },
+	);
+	return { ...totals, grossHbd: totals.grossThousandths / 1_000 };
 }

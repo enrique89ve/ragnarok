@@ -361,6 +361,23 @@ async function makeRankedMatchPayload(input: {
 	return { ...payload, pow: await solvePow(payload) };
 }
 
+async function seedRankedMatchAnchor(
+	state: MemoryState,
+	matchId: string,
+	playerA = 'alice',
+	playerB = 'bob',
+): Promise<void> {
+	await state.putMatchAnchor({
+		matchId,
+		playerA,
+		playerB,
+		pubkeyA: `${playerA}-session-pubkey`,
+		pubkeyB: `${playerB}-session-pubkey`,
+		dualAnchored: true,
+		timestamp: 1,
+	});
+}
+
 function makeDeps(state: MemoryState): ProtocolCoreDeps {
 	return {
 		state,
@@ -996,6 +1013,7 @@ describe('Protocol Core: Replay Traces', () => {
 
 	it('ranked match_result credits P2P RUNE through one consumed source', async () => {
 		await seedGenesis(state, deps);
+		await seedRankedMatchAnchor(state, 'ledger-match-1');
 
 		const payload = await makeRankedMatchPayload({ matchId: 'ledger-match-1' });
 		const firstResult = await applyOp(makeOp('match_result', payload, {
@@ -1006,12 +1024,16 @@ describe('Protocol Core: Replay Traces', () => {
 
 		expect(firstResult.status).toBe('applied');
 		expect((await deps.state.getTokenBalance('alice')).RUNE).toBe(2);
+		expect((await deps.state.getTokenBalance('bob')).RUNE).toBe(0);
+		expect(state.runeLedger.size).toBe(1);
 		expect(await deps.state.getRuneLedgerTotal({
 			seasonId: 'S01',
 			direction: 'credit',
 			sourceType: 'p2p_ranked',
 			account: 'alice',
 		})).toBe(2);
+		expect([...state.runeLedger.values()][0]?.sourceKey)
+			.toBe('p2p:S01:ledger-match-1:winner:alice');
 
 		const duplicatePayload = await makeRankedMatchPayload({ matchId: 'ledger-match-1', nonce: 2 });
 		const duplicateResult = await applyOp(makeOp('match_result', duplicatePayload, {
@@ -1027,6 +1049,7 @@ describe('Protocol Core: Replay Traces', () => {
 
 	it('ranked match_result rejects conflicting winner for an already consumed RUNE source', async () => {
 		await seedGenesis(state, deps);
+		await seedRankedMatchAnchor(state, 'ledger-match-2');
 
 		const firstPayload = await makeRankedMatchPayload({ matchId: 'ledger-match-2' });
 		const firstResult = await applyOp(makeOp('match_result', firstPayload, {
@@ -1049,13 +1072,14 @@ describe('Protocol Core: Replay Traces', () => {
 		}), defaultCtx, deps);
 
 		expect(conflictingResult.status).toBe('rejected');
-		expect((conflictingResult as { reason: string }).reason).toContain('different account');
+		expect((conflictingResult as { reason: string }).reason).toContain('different result');
 		expect((await deps.state.getTokenBalance('bob')).RUNE).toBe(0);
 		expect((await deps.state.getElo('bob')).wins).toBe(0);
 	});
 
 	it('ranked match_result clamps P2P RUNE to the account cap', async () => {
 		await seedGenesis(state, deps);
+		await seedRankedMatchAnchor(state, 'ledger-match-3');
 		await deps.state.putRuneLedgerEntry({
 			entryId: 'S01:credit:p2p_ranked:prefill-account-cap',
 			seasonId: 'S01',
@@ -1091,6 +1115,7 @@ describe('Protocol Core: Replay Traces', () => {
 
 	it('ranked match_result clamps P2P RUNE to the global cap', async () => {
 		await seedGenesis(state, deps);
+		await seedRankedMatchAnchor(state, 'ledger-match-4');
 		await deps.state.putRuneLedgerEntry({
 			entryId: 'S01:credit:p2p_ranked:prefill-global-cap',
 			seasonId: 'S01',
@@ -1122,47 +1147,41 @@ describe('Protocol Core: Replay Traces', () => {
 		})).toBe(2_000_000);
 	});
 
-	// --- Post-seal signature enforcement ---
+	// --- Ranked match anchor enforcement ---
 
-	it('post-seal ranked match_result rejected without match_anchor pubkeys', async () => {
+	it('ranked match_result is rejected without match_anchor pubkeys', async () => {
 		await seedGenesis(state, deps);
-		// Seal the protocol
-		await applyOp(makeOp('seal', {}, { broadcaster: 'ragnarok', usedActiveAuth: true, blockNum: 900 }), defaultCtx, deps);
 
-		// Try to submit a ranked match result post-seal with NO anchor
-		// Note: PoW validation runs first and will also reject (zero nonces invalid)
-		// The key assertion: the op is REJECTED — it cannot pass any validation layer
-		const result = await applyOp(makeOp('match_result', {
-			m: 'match-001',
-			w: 'alice',
-			l: 'bob',
-			n: 1,
-			s: 'seed123',
-			v: 1,
-			pow: { nonces: new Array(64).fill(0) },
-			sig: { b: 'fake-sig-a', c: 'fake-sig-b' },
-		}, { broadcaster: 'alice', blockNum: 1000 }), defaultCtx, deps);
+		const payload = await makeRankedMatchPayload({ matchId: 'missing-anchor-1' });
+		const result = await applyOp(makeOp('match_result', payload, {
+			broadcaster: 'alice',
+			blockNum: 1000,
+		}), defaultCtx, deps);
 
 		expect(result.status).toBe('rejected');
-		// The rejection may come from PoW or from missing anchor — both are correct
-		// because a post-seal match without valid PoW AND without an anchor is doubly invalid
+		expect((result as { reason: string }).reason).toContain('requires match_anchor');
 	});
 
-	it('current-key fallback is ONLY available pre-seal, not post-seal', async () => {
+	it('ranked match_result requires a dual-anchored match_anchor', async () => {
 		await seedGenesis(state, deps);
-		// Pre-seal: genesis exists but not sealed — legacy current-key path exists
-		expect(state.genesis!.sealed).toBe(false);
+		await deps.state.putMatchAnchor({
+			matchId: 'single-anchor-1',
+			playerA: 'alice',
+			playerB: 'bob',
+			pubkeyA: 'alice-session-pubkey',
+			pubkeyB: 'bob-session-pubkey',
+			dualAnchored: false,
+			timestamp: 1,
+		});
 
-		// Seal
-		await applyOp(makeOp('seal', {}, { broadcaster: 'ragnarok', usedActiveAuth: true, blockNum: 900 }), defaultCtx, deps);
-		expect(state.genesis!.sealed).toBe(true);
+		const payload = await makeRankedMatchPayload({ matchId: 'single-anchor-1' });
+		const result = await applyOp(makeOp('match_result', payload, {
+			broadcaster: 'alice',
+			blockNum: 1000,
+		}), defaultCtx, deps);
 
-		// Post-seal: no match_anchor exists for 'match-002'
-		const anchor = await deps.state.getMatchAnchor('match-002');
-		expect(anchor).toBeNull();
-
-		// The apply.ts code now requires: if sealed AND no anchor with pubkeys → reject
-		// This is the spec invariant: post-seal ranked matches require match_anchor
+		expect(result.status).toBe('rejected');
+		expect((result as { reason: string }).reason).toContain('dual-anchored');
 	});
 
 	// --- Pack commit-reveal flow ---
@@ -1601,43 +1620,36 @@ describe('Protocol Core: Replay Traces', () => {
 		// (Actual result rejected by PoW — but the anchor storage is correct.)
 	});
 
-	it('post-seal match_result WITHOUT anchor is rejected', async () => {
+	it('ranked match_result WITHOUT anchor is rejected', async () => {
 		await seedGenesis(state, deps);
-		await applyOp(makeOp('seal', {}, { broadcaster: 'ragnarok', usedActiveAuth: true, blockNum: 900 }), defaultCtx, deps);
 
-		// No anchor exists for 'no-anchor-match'
 		const anchor = await deps.state.getMatchAnchor('no-anchor-match');
 		expect(anchor).toBeNull();
 
-		// match_result will be rejected (PoW fails first, but semantically
-		// it would also be rejected for missing anchor post-seal)
-		const result = await applyOp(makeOp('match_result', {
-			m: 'no-anchor-match',
-			w: 'alice',
-			l: 'bob',
-			n: 10,
-			s: 'seed',
-			v: 1,
-			pow: { nonces: new Array(64).fill(0) },
-			sig: { b: 'sig-a', c: 'sig-b' },
-		}, { broadcaster: 'alice', blockNum: 1000 }), defaultCtx, deps);
+		const payload = await makeRankedMatchPayload({ matchId: 'no-anchor-match', nonce: 10 });
+		const result = await applyOp(makeOp('match_result', payload, {
+			broadcaster: 'alice',
+			blockNum: 1000,
+		}), defaultCtx, deps);
 
 		expect(result.status).toBe('rejected');
+		expect((result as { reason: string }).reason).toContain('requires match_anchor');
 	});
 
-	it('pre-seal match can use current-key fallback (no anchor required)', async () => {
+	it('pre-seal ranked match still requires an anchor', async () => {
 		await seedGenesis(state, deps);
-		// NOT sealed — pre-seal mode
 
-		// No anchor for this match — that's OK pre-seal
 		const anchor = await deps.state.getMatchAnchor('preseal-match');
 		expect(anchor).toBeNull();
 
-		// Pre-seal: genesis exists, not sealed → legacy current-key path is available
-		// (In practice, PoW would also need to be valid, but the assertion is about
-		// the EXISTENCE of the current-key fallback path, not about PoW.)
-		expect(state.genesis).not.toBeNull();
-		expect(state.genesis!.sealed).toBe(false);
+		const payload = await makeRankedMatchPayload({ matchId: 'preseal-match', nonce: 11 });
+		const result = await applyOp(makeOp('match_result', payload, {
+			broadcaster: 'alice',
+			blockNum: 1000,
+		}), defaultCtx, deps);
+
+		expect(result.status).toBe('rejected');
+		expect((result as { reason: string }).reason).toContain('requires match_anchor');
 	});
 
 	// ==========================================================

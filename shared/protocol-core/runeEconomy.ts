@@ -14,6 +14,8 @@ export type RuneSourceType =
 	| 'reward_claim'
 	| 'daily_quest_claim';
 
+export type P2PRankedRuneRole = 'winner' | 'loser';
+
 export type RuneLedgerEntry = {
 	entryId: string;
 	seasonId: string;
@@ -199,11 +201,27 @@ export function calculateRuneBalanceTrace(input: RuneBalanceTraceInput): RuneBal
 	};
 }
 
-export function createP2PRankedRuneSourceKey(
+export function createP2PRankedMatchSourceKey(
 	matchId: string,
 	seasonId = TESTNET_RUNE_SEASON_ID,
 ): string {
-	return `match:${seasonId}:${matchId}`;
+	return `p2p:${seasonId}:${matchId}`;
+}
+
+export function createP2PRankedMatchSourceKeyPrefix(
+	matchId: string,
+	seasonId = TESTNET_RUNE_SEASON_ID,
+): string {
+	return `${createP2PRankedMatchSourceKey(matchId, seasonId)}:`;
+}
+
+export function createP2PRankedRuneSourceKey(
+	matchId: string,
+	role: P2PRankedRuneRole,
+	account: string,
+	seasonId = TESTNET_RUNE_SEASON_ID,
+): string {
+	return `${createP2PRankedMatchSourceKey(matchId, seasonId)}:${role}:${account}`;
 }
 
 export function createCampaignFirstClearRuneSourceKey(

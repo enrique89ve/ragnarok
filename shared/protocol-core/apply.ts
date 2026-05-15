@@ -10,10 +10,10 @@
 import type {
 	ProtocolOp, OpResult, ReplayContext, StateAdapter,
 	CardDataProvider, RewardProvider, SignatureVerifier,
-	CardAsset, GenesisRecord, EloRecord, PackAsset,
+	CardAsset, GenesisRecord, EloRecord, MatchAnchorRecord, PackAsset,
 	MarketListing, MarketOffer, ProtocolAction, RewardDefinition,
 	CampaignDifficulty, CampaignProgressRecord, CampaignRegistryProvider, CampaignSubmissionRecord,
-	RuneExchangeAdapter, RuneLedgerEntry, DuatEntitlementProvider,
+	RuneExchangeAdapter, RuneLedgerEntry, DuatEntitlementProvider, P2PRankedRuneRole,
 } from './types';
 import {
 	RAGNAROK_ADMIN_ACCOUNT, TRANSFER_COOLDOWN_BLOCKS, MAX_CARD_LEVEL,
@@ -33,6 +33,7 @@ import {
 	createEitrLedgerEntryId,
 	createForgeCommitEitrSourceKey,
 	createForgeRefundEitrSourceKey,
+	createP2PRankedMatchSourceKeyPrefix,
 	createP2PRankedRuneSourceKey,
 	createRewardClaimRuneSourceKey,
 	createRuneExchangeSourceKey,
@@ -663,7 +664,7 @@ async function applyMatchResult(
 	const compactHashResult = await validateCompactMatchHash(op, details);
 	if (compactHashResult) return compactHashResult;
 
-	const signatureResult = await validateRankedMatchSignatures(op, details, genesis, deps);
+	const signatureResult = await validateRankedMatchSignatures(op, details, deps);
 	if (signatureResult) return signatureResult;
 
 	const settlementResult = await applyRankedMatchSettlement(op, details, deps);
@@ -782,7 +783,6 @@ async function validateCompactMatchHash(
 async function validateRankedMatchSignatures(
 	op: ProtocolOp,
 	details: MatchResultDetails,
-	genesis: GenesisRecord,
 	deps: ProtocolCoreDeps,
 ): Promise<OpResult | null> {
 	if (details.matchType !== 'ranked') {
@@ -795,6 +795,9 @@ async function validateRankedMatchSignatures(
 	const anchor = details.matchId
 		? await deps.state.getMatchAnchor(details.matchId)
 		: null;
+	const anchorResult = validateRankedMatchAnchor(details, anchor);
+	if (anchorResult) return anchorResult;
+
 	// TODO(adr-0004-issue-01): cross-check (engineHash, cardRegistryHash) on
 	// the match_result payload against the values pinned in `anchor`. Reject
 	// with `anchor_mismatch` when either disagrees. Deferred to keep this
@@ -806,28 +809,39 @@ async function validateRankedMatchSignatures(
 		? `${details.matchId}:${details.winner}:${details.loser ?? ''}:${details.nonce}`
 		: `${details.matchId}:${details.winner}`;
 
-	let bValid: boolean;
-	let cValid: boolean;
-	if (anchor?.pubkeyA && anchor?.pubkeyB) {
-		const bKey = op.broadcaster === anchor.playerA ? anchor.pubkeyA : anchor.pubkeyB;
-		const cKey = op.broadcaster === anchor.playerA ? anchor.pubkeyB : anchor.pubkeyA;
-		[bValid, cValid] = await Promise.all([
-			deps.sigs.verifyAnchored(bKey, sigMessage, signatures.broadcasterSig),
-			deps.sigs.verifyAnchored(cKey, sigMessage, signatures.counterpartySig),
-		]);
-	} else if (!genesis.sealed) {
-		[bValid, cValid] = await Promise.all([
-			deps.sigs.verifyCurrentKey(op.broadcaster, sigMessage, signatures.broadcasterSig),
-			deps.sigs.verifyCurrentKey(details.counterparty, sigMessage, signatures.counterpartySig),
-		]);
-	} else {
-		return reject('post-seal ranked match requires match_anchor with pinned pubkeys');
-	}
+	const bKey = op.broadcaster === anchor!.playerA ? anchor!.pubkeyA! : anchor!.pubkeyB!;
+	const cKey = op.broadcaster === anchor!.playerA ? anchor!.pubkeyB! : anchor!.pubkeyA!;
+	const [bValid, cValid] = await Promise.all([
+		deps.sigs.verifyAnchored(bKey, sigMessage, signatures.broadcasterSig),
+		deps.sigs.verifyAnchored(cKey, sigMessage, signatures.counterpartySig),
+	]);
 
 	if (!bValid) return reject(`broadcaster signature failed for ${op.broadcaster}`);
 	return !cValid
 		? reject(`counterparty signature failed for ${details.counterparty}`)
 		: null;
+}
+
+function validateRankedMatchAnchor(
+	details: MatchResultDetails,
+	anchor: MatchAnchorRecord | null,
+): OpResult | null {
+	if (!anchor) {
+		return reject('ranked match requires match_anchor');
+	}
+	if (!anchor.dualAnchored) {
+		return reject('ranked match requires dual-anchored match_anchor');
+	}
+	if (!anchor.pubkeyA || !anchor.pubkeyB) {
+		return reject('ranked match requires match_anchor with pinned pubkeys');
+	}
+
+	const anchorPlayers = new Set([anchor.playerA, anchor.playerB]);
+	if (!anchorPlayers.has(details.p1) || !anchorPlayers.has(details.p2)) {
+		return reject('match_result participants do not match match_anchor');
+	}
+
+	return null;
 }
 
 function extractMatchResultSignatures(
@@ -864,18 +878,23 @@ async function applyRankedMatchSettlement(
 	}
 
 	const loserAccount = details.winner === details.p1 ? details.p2 : details.p1;
-	const sourceKey = createP2PRankedRuneSourceKey(details.matchId);
-	const entryId = createRuneLedgerEntryId({
+	const sourceKeyPrefix = createP2PRankedMatchSourceKeyPrefix(details.matchId);
+	const existingRuneEntries = await deps.state.getRuneLedgerEntries({
 		seasonId: TESTNET_RUNE_SEASON_ID,
 		direction: 'credit',
 		sourceType: 'p2p_ranked',
-		sourceKey,
+		sourceKeyPrefix,
 	});
-	const existingRuneEntry = await deps.state.getRuneLedgerEntry(entryId);
-	if (existingRuneEntry) {
-		return existingRuneEntry.account === details.winner
+	if (existingRuneEntries.length > 0) {
+		const winnerSourceKey = createP2PRankedRuneSourceKey(
+			details.matchId,
+			'winner',
+			details.winner,
+		);
+		return existingRuneEntries.some(entry =>
+			entry.account === details.winner && entry.sourceKey === winnerSourceKey)
 			? { status: 'ignored' }
-			: reject('p2p ranked rune source already credited to a different account');
+			: reject('p2p ranked match already settled for a different result');
 	}
 
 	const winnerElo = await deps.state.getElo(details.winner);
@@ -890,40 +909,87 @@ async function applyRankedMatchSettlement(
 	await deps.state.putElo({ ...winnerElo, elo: newWinnerElo, wins: winnerElo.wins + 1 });
 	await deps.state.putElo({ ...loserElo, elo: newLoserElo, losses: loserElo.losses + 1 });
 
+	const winnerRuneResult = await applyP2PRankedRuneCredit(op, deps, {
+		account: details.winner,
+		matchId: details.matchId,
+		requestedAmount: RUNE_WIN_RANKED,
+		role: 'winner',
+	});
+	if (winnerRuneResult) return winnerRuneResult;
+
+	if (RUNE_LOSS_RANKED > 0) {
+		const loserRuneResult = await applyP2PRankedRuneCredit(op, deps, {
+			account: loserAccount,
+			matchId: details.matchId,
+			requestedAmount: RUNE_LOSS_RANKED,
+			role: 'loser',
+		});
+		if (loserRuneResult) return loserRuneResult;
+	}
+
+	return null;
+}
+
+async function applyP2PRankedRuneCredit(
+	op: ProtocolOp,
+	deps: ProtocolCoreDeps,
+	input: {
+		account: string;
+		matchId: string;
+		requestedAmount: number;
+		role: P2PRankedRuneRole;
+	},
+): Promise<OpResult | null> {
+	const sourceKey = createP2PRankedRuneSourceKey(
+		input.matchId,
+		input.role,
+		input.account,
+	);
+	const entryId = createRuneLedgerEntryId({
+		seasonId: TESTNET_RUNE_SEASON_ID,
+		direction: 'credit',
+		sourceType: 'p2p_ranked',
+		sourceKey,
+	});
+	const existingRuneEntry = await deps.state.getRuneLedgerEntry(entryId);
+	if (existingRuneEntry) {
+		return existingRuneEntry.account === input.account
+			? null
+			: reject('p2p ranked rune source already credited to a different account');
+	}
+
 	const accountEarned = await deps.state.getRuneLedgerTotal({
 		seasonId: TESTNET_RUNE_SEASON_ID,
 		direction: 'credit',
 		sourceType: 'p2p_ranked',
-		account: details.winner,
+		account: input.account,
 	});
 	const globalEarned = await deps.state.getRuneLedgerTotal({
 		seasonId: TESTNET_RUNE_SEASON_ID,
 		direction: 'credit',
 		sourceType: 'p2p_ranked',
 	});
-	const winnerRune = calculateCappedRuneCredit({
-		requestedAmount: RUNE_WIN_RANKED,
+	const runeAmount = calculateCappedRuneCredit({
+		requestedAmount: input.requestedAmount,
 		accountEarned,
 		globalEarned,
 		accountCap: TESTNET_RUNE_ECONOMY.maxP2PRunePerAccount,
 		globalCap: TESTNET_RUNE_ECONOMY.p2pCap,
 	});
+
 	const ledgerResult = await putRuneLedgerEntryAndBalance(deps, {
 		entryId,
 		seasonId: TESTNET_RUNE_SEASON_ID,
-		account: details.winner,
+		account: input.account,
 		direction: 'credit',
 		sourceType: 'p2p_ranked',
 		sourceKey,
-		amount: winnerRune,
+		amount: runeAmount,
 		trxId: op.trxId,
 		blockNum: op.blockNum,
 		timestamp: op.timestamp,
 	});
 	if (ledgerResult) return ledgerResult;
-
-	const loserBal = await deps.state.getTokenBalance(loserAccount);
-	await deps.state.putTokenBalance({ ...loserBal, RUNE: loserBal.RUNE + RUNE_LOSS_RANKED });
 
 	return null;
 }

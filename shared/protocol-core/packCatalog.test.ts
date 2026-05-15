@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	ADMIN_MINTABLE_PACK_KEYS,
+	HBD_PACK_SALE_SCENARIOS,
 	PACK_DEFINITIONS,
 	PACK_DEFINITION_LIST,
 	PACK_RUNE_COSTS,
@@ -8,6 +9,11 @@ import {
 	PUBLIC_PACK_KEYS,
 	RUNE_REDEEMABLE_PACK_KEYS,
 	TESTNET_RUNE_PACK_POOL,
+	formatHbdPrice,
+	formatHbdThousandths,
+	getActiveHbdPackSaleScenario,
+	getHbdPackPriceThousandths,
+	getHbdPackSaleScenarioTotals,
 	getRuneExchangePackQuote,
 	getRunePackPoolAllocations,
 	getRunePackPoolTotals,
@@ -104,6 +110,41 @@ describe('pack catalog', () => {
 			expect(totals.runeExposure - TESTNET_RUNE_PACK_POOL.runeCap).toBe(20_000);
 			expect(TESTNET_RUNE_PACK_POOL.runeCap).toBe(TESTNET_RUNE_ECONOMY.totalCap);
 		});
+
+	it('defines HBD sale capacity and launch tranches', () => {
+		expect(getActiveHbdPackSaleScenario()).toBe(HBD_PACK_SALE_SCENARIOS.beta_full_cap);
+		expect(HBD_PACK_SALE_SCENARIOS.beta_full_cap.priceThousandths).toEqual({
+			standard: 20000,
+			premium: 100000,
+			mythic: 250000,
+		});
+		expect(getHbdPackPriceThousandths('Standard Pack')).toBe(20000);
+		expect(getHbdPackPriceThousandths('starter')).toBeNull();
+		expect(formatHbdThousandths(20000)).toBe('20.000');
+		expect(formatHbdPrice(250000)).toBe('250.000 HBD');
+
+		expect(getHbdPackSaleScenarioTotals(HBD_PACK_SALE_SCENARIOS.beta_full_cap)).toEqual({
+			key: 'beta_full_cap',
+			packCap: 260000,
+			cardInstanceCap: 1620000,
+			grossThousandths: 33000000000,
+			grossHbd: 33000000,
+		});
+		expect(getHbdPackSaleScenarioTotals(HBD_PACK_SALE_SCENARIOS.beta_2m_tranche)).toEqual({
+			key: 'beta_2m_tranche',
+			packCap: 15758,
+			cardInstanceCap: 98184,
+			grossThousandths: 2000070000,
+			grossHbd: 2000070,
+		});
+		expect(getHbdPackSaleScenarioTotals(HBD_PACK_SALE_SCENARIOS.beta_500k_tranche)).toEqual({
+			key: 'beta_500k_tranche',
+			packCap: 3939,
+			cardInstanceCap: 24543,
+			grossThousandths: 499950000,
+			grossHbd: 499950,
+		});
+	});
 
 	it('normalizes display names and protocol keys', () => {
 		expect(normalizePackKey('Standard Pack')).toBe('standard');
