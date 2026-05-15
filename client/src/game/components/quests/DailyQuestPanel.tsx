@@ -117,7 +117,12 @@ export default function DailyQuestPanel() {
 	const rerollQuest = useDailyQuestStore(s => s.rerollQuest);
 	const flushPendingClaims = useDailyQuestStore(s => s.flushPendingClaims);
 
-	useEffect(() => { refreshIfNeeded(); }, [refreshIfNeeded]);
+	// refreshIfNeeded now flushes pending claims internally before rotating
+	// at midnight UTC, so a separate flush call here would be redundant for
+	// the day-rollover path. We still kick a flush explicitly on mount to
+	// catch the "same-day, broadcast retry" case (e.g. previous Keychain
+	// cancel) without waiting for the next match-end.
+	useEffect(() => { void refreshIfNeeded(); }, [refreshIfNeeded]);
 	useEffect(() => { void flushPendingClaims(); }, [flushPendingClaims]);
 
 	if (quests.length === 0) return null;

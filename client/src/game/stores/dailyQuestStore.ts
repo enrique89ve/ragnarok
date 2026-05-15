@@ -30,7 +30,7 @@ interface DailyQuestState {
 }
 
 interface DailyQuestActions {
-	refreshIfNeeded: () => void;
+	refreshIfNeeded: () => Promise<void>;
 	updateProgress: (type: DailyQuestType, increment: number) => void;
 	rerollQuest: (questId: string) => void;
 	flushPendingClaims: () => Promise<void>;
@@ -40,6 +40,22 @@ const DAILY_QUEST_RUNE_REWARD = TESTNET_RUNE_ECONOMY.dailyQuestRunePerSlot;
 
 function todayUtcString(): string {
 	return new Date().toISOString().slice(0, 10);
+}
+
+/**
+ * The chain accepts daily_quest_claim ops whose `ymd_utc` is within ±48h
+ * of `op.timestamp`. Past that window a deferred claim cannot land, so
+ * holding the UI hostage for that quest only frustrates the player.
+ * After 2 days a held set is allowed to rotate.
+ */
+const CHAIN_CLAIM_GRACE_DAYS = 2;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+function isWithinChainAcceptanceWindow(refreshDate: string, today: string): boolean {
+	const refresh = Date.parse(`${refreshDate}T00:00:00Z`);
+	const now = Date.parse(`${today}T00:00:00Z`);
+	if (!Number.isFinite(refresh) || !Number.isFinite(now)) return false;
+	return (now - refresh) <= CHAIN_CLAIM_GRACE_DAYS * MS_PER_DAY;
 }
 
 function templateToQuest(template: QuestTemplate, slot: number, ymdUtc: string): DailyQuest {
@@ -91,7 +107,7 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 			rerollsUsedToday: 0,
 			flushing: false,
 
-			refreshIfNeeded: () => {
+			refreshIfNeeded: async () => {
 				const today = todayUtcString();
 				const current = get();
 
@@ -110,6 +126,24 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 					}
 					return;
 				}
+
+				// Day rolled over. Flush any completed-but-unclaimed quests from
+				// yesterday BEFORE we replace the array — otherwise a player who
+				// completed a quest mid-evening but never opened the panel or
+				// finished another match before midnight UTC would lose the RUNE.
+				// flushPendingClaims is idempotent and a no-op when nothing pends.
+				await get().flushPendingClaims();
+
+				// If anything still pending (Keychain cancelled, broadcast failed,
+				// guest mode), hold the rotation. The chain validates ymd_utc
+				// within ±48h of op.timestamp, so a held quest can still claim
+				// for up to 2 days; after that the player has effectively lost
+				// the reward but we stop blocking the daily quest UI by
+				// allowing the next refreshIfNeeded call to force-rotate.
+				const stillPending = get().quests.some(q => q.completed && !q.claimed);
+				const refreshDate = current.lastRefreshDate || today;
+				const isStale = !isWithinChainAcceptanceWindow(refreshDate, today);
+				if (stillPending && !isStale) return;
 
 				const templates = pickRandomQuests(TESTNET_RUNE_ECONOMY.dailyQuestSlotsPerDay);
 				const quests = templates.map((t, i) => templateToQuest(t, i, today));
