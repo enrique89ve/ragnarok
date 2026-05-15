@@ -81,7 +81,7 @@ export const BettingPanel: React.FC<BettingPanelProps> = ({
 
 	return (
 		<div
-			className="absolute left-1/2 bottom-67.5 z-200 flex w-80 -translate-x-1/2 flex-col items-stretch gap-1"
+			className="betting-panel"
 			data-zone="betting-panel"
 		>
 			<div className="poker-hp-slider-container">

@@ -9,46 +9,61 @@
 
 .hud-status-ribbon {
   position: absolute;
-  top: 2%;
-  left: 50%;
-  transform: translateX(-50%);
+  top: var(--poker-zone-topHud-y, 2%);
+  left: var(--poker-zone-topHud-x, 50%);
+  width: var(--poker-zone-topHud-w, auto);
+  min-height: 42px;
+  transform: rotate(var(--poker-zone-topHud-rot, 0deg));
+  transform-origin: top left;
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: center;
-  gap: 8px;
-  max-width: min(920px, calc(100% - 320px));
-  padding: 10px 14px;
-  border-radius: 18px;
-  background: var(--surface-overlay-deep);
-  border: 1px solid var(--border-chip);
+  gap: 7px;
+  max-width: var(--poker-zone-topHud-w, min(920px, calc(100% - 320px)));
+  padding: 7px 12px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--gold-300) 22%, transparent);
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--gold-300) 7%, transparent) 48%, transparent 100%),
+    color-mix(in srgb, var(--surface-overlay-deep) 82%, transparent);
   box-shadow:
-    0 14px 36px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    0 12px 30px rgba(0, 0, 0, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -1px 0 color-mix(in srgb, var(--gold-300) 9%, transparent);
+  backdrop-filter: blur(10px);
 }
 
 .hud-status-ribbon.player-active {
-  border-color: color-mix(in srgb, var(--warning-400) 28%, transparent);
+  border-color: color-mix(in srgb, var(--warning-400) 36%, transparent);
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.26),
+    0 0 20px color-mix(in srgb, var(--warning-400) 9%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .hud-status-ribbon.opponent-active {
-  border-color: color-mix(in srgb, var(--danger-400) 22%, transparent);
+  border-color: color-mix(in srgb, var(--danger-400) 28%, transparent);
 }
 
 :is(.hud-status-chip, .hud-status-breakdown) {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-height: 30px;
-  padding: 0 10px;
+  flex: 0 1 auto;
+  gap: 7px;
+  min-width: 0;
+  min-height: 26px;
+  padding: 0 9px;
   border-radius: 999px;
-  background: var(--surface-chip);
-  border: 1px solid var(--border-chip);
-  font-size: 12px;
+  background: color-mix(in srgb, var(--surface-chip) 78%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-chip) 80%, transparent);
+  font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--text-e2);
+  white-space: nowrap;
 }
 
 .hud-status-phase {
@@ -78,7 +93,10 @@
 }
 
 .hud-status-breakdown {
+  max-width: 190px;
+  overflow: hidden;
   color: var(--text-bright);
+  text-overflow: ellipsis;
 }
 
 /* Deck count badges — premium obsidian + gold material */
@@ -132,22 +150,29 @@
 
 /* Player deck — bottom right, anchored to player hero zone */
 .hud-player-deck {
-  right: 18px;
-  bottom: 26px;
+  left: var(--poker-zone-deckCounters-x, auto);
+  right: auto;
+  top: calc(var(--poker-zone-battleLog-y, 792px) + var(--poker-zone-battleLog-h, 232px) - 40px);
+  bottom: auto;
+  width: var(--poker-zone-deckCounters-w, auto);
   border-color: rgba(91, 140, 184, 0.55);
 }
 
 /* Opponent deck — top right, anchored to opponent hero zone */
 .hud-opponent-deck {
-  right: 18px;
-  top: 18px;
+  left: var(--poker-zone-deckCounters-x, auto);
+  right: auto;
+  top: var(--poker-zone-deckCounters-y, 18px);
+  width: var(--poker-zone-deckCounters-w, auto);
   border-color: rgba(200, 49, 42, 0.55);
 }
 
 /* Opponent hand count badge — hidden; shown via .opponent-hand-count on the hand display */
 .hud-opponent-hand {
-  right: 18px;
-  top: 70px;
+  left: var(--poker-zone-deckCounters-x, auto);
+  right: auto;
+  top: calc(var(--poker-zone-deckCounters-y, 18px) + 58px);
+  width: var(--poker-zone-deckCounters-w, auto);
   border-color: rgba(148, 163, 184, 0.4);
 }
 

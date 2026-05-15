@@ -42,7 +42,7 @@ export const MinionField: React.FC<MinionFieldProps> = ({
 }) => {
 	const zoneClass = role === 'opp' ? 'zone-opp-field' : 'zone-player-field';
 	return (
-		<section className={`${zoneClass} shrink-0 min-h-32 flex flex-row justify-center items-center gap-2 overflow-visible`}>
+		<section className={`${zoneClass} minion-field minion-field--${role}`}>
 			<SimpleBattlefield
 				playerCards={playerCards as any}
 				opponentCards={opponentCards as any}

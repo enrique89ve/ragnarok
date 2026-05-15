@@ -4,9 +4,12 @@
 
 .hourglass-timer {
   position: absolute;
-  top: 4px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: var(--poker-zone-hourglass-y, 4px);
+  left: var(--poker-zone-hourglass-x, 50%);
+  width: var(--poker-zone-hourglass-w, 48px);
+  min-height: var(--poker-zone-hourglass-h, 96px);
+  transform: rotate(var(--poker-zone-hourglass-rot, 0deg));
+  transform-origin: top left;
   z-index: var(--z-hud);
   display: flex;
   flex-direction: column;
@@ -16,8 +19,8 @@
 }
 
 .hourglass-svg {
-  width: 48px;
-  height: 80px;
+  width: var(--poker-zone-hourglass-w, 48px);
+  height: calc(var(--poker-zone-hourglass-h, 96px) - 16px);
 }
 
 /* Ambient glow behind the glass */

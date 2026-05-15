@@ -9,8 +9,8 @@
  * card backs (or face-up reveals) plus a count badge.
  *
  * All visual classes (`opponent-hero-container`, `opponent-hand-display`,
- * `opponent-revealed-card`, `opponent-card-back`, `opponent-hand-count`,
- * `opponent-hero-mana`) remain in the centralised arena CSS.
+ * `opponent-revealed-card`, `opponent-card-back`, `opponent-hand-count`)
+ * remain in the centralised arena CSS.
  */
 
 import React from 'react';
@@ -18,7 +18,7 @@ import { BossQuipBubble } from '../components/BossQuipBubble';
 import { PhasePipIndicator } from '../components/PhasePipIndicator';
 import { BattlefieldHero } from '../components/BattlefieldHero';
 import { HoleCardsOverlay } from '../components/HoleCardsOverlay';
-import ManaBar from '../../components/ManaBar';
+import { HeroResourceDock } from '../components/HeroResourceDock';
 import CardRenderer from '../../components/CardRendering/CardRenderer';
 import type { PokerCard } from '../../types/PokerCombatTypes';
 import type { CardInstance } from '../../types';
@@ -79,10 +79,10 @@ export const OpponentZone: React.FC<OpponentZoneProps> = ({
 
 	return (
 		<header
-			className={`zone-opp shrink-0 flex flex-row justify-center items-end gap-6 px-6 py-2 ${shakingHero ? 'damage-shake damage-flash' : ''} ${!isPlayerTurn ? 'turn-active' : ''}`}
+			className={`zone-opp combat-zone combat-zone--opponent ${shakingHero ? 'damage-shake damage-flash' : ''} ${!isPlayerTurn ? 'turn-active' : ''}`}
 		>
 			{opponentPet && (
-				<div data-hero-role="opponent" className="opponent-hero-container flex flex-col items-center gap-2">
+				<div data-hero-role="opponent" className="opponent-hero-container">
 					<BossQuipBubble
 						text={bossQuipText}
 						speakerName={opponentName}
@@ -115,21 +115,12 @@ export const OpponentZone: React.FC<OpponentZoneProps> = ({
 								activeTurn={waitingForOpponent}
 								embedded
 							/>
-						)}
-					/>
-					<div className="opponent-hero-mana hero-resource-dock w-55 mt-1 flex justify-center">
-						<ManaBar
-							currentMana={opponentMana}
-							maxMana={opponentMaxMana}
-							overloadedMana={0}
-							pendingOverload={0}
-							variant="hero"
-							label="Mana"
+							)}
 						/>
-					</div>
+					<HeroResourceDock owner="opponent" currentMana={opponentMana} maxMana={opponentMaxMana} />
 				</div>
 			)}
-			<div className="opponent-hand-display flex justify-center items-start gap-0 relative pt-1 h-15">
+			<div className="opponent-hand-display">
 				{opponentHand.slice(0, 10).map((card, index) => (
 					card.isRevealed ? (
 						<div key={card.instanceId || `opp-revealed-${index}`} className="opponent-revealed-card scale-[0.4] -mx-8">

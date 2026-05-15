@@ -10,32 +10,59 @@ interface TurnBannerProps {
 export const TurnBanner: React.FC<TurnBannerProps> = ({ currentTurn, turnNumber }) => {
 	const [visible, setVisible] = useState(false);
 	const [displayTurn, setDisplayTurn] = useState<'player' | 'opponent'>('player');
-	const prevTurnRef = useRef<string | undefined>(undefined);
 	const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const isPlayerTurn = currentTurn === 'player';
+	const badgeRotation = 'var(--poker-zone-turnBadge-rot, 0deg)';
 
 	useEffect(() => {
-		if (!currentTurn) return;
-		if (prevTurnRef.current === currentTurn) return;
-		prevTurnRef.current = currentTurn;
+		if (timeoutRef.current) {
+			clearTimeout(timeoutRef.current);
+			timeoutRef.current = null;
+		}
+
+		if (!currentTurn) {
+			setVisible(false);
+			return;
+		}
 
 		setDisplayTurn(currentTurn);
 		setVisible(true);
 
-		if (timeoutRef.current) clearTimeout(timeoutRef.current);
-		timeoutRef.current = setTimeout(() => setVisible(false), 2200);
+		timeoutRef.current = setTimeout(() => {
+			setVisible(false);
+			timeoutRef.current = null;
+		}, 2200);
 
 		return () => {
-			if (timeoutRef.current) clearTimeout(timeoutRef.current);
+			if (timeoutRef.current) {
+				clearTimeout(timeoutRef.current);
+				timeoutRef.current = null;
+			}
 		};
 	}, [currentTurn]);
 
 	return (
 		<>
-			{/* Persistent turn badge — always visible */}
-			<div className={`persistent-turn-badge ${currentTurn === 'player' ? 'your-turn' : 'enemy-turn'}`}>
-				<div className="persistent-turn-dot" />
-				<span>{currentTurn === 'player' ? 'YOUR TURN' : 'ENEMY TURN'}</span>
-			</div>
+			{/* Persistent badge: only anchors the actionable player turn state. */}
+			<AnimatePresence initial={false}>
+				{isPlayerTurn && (
+					<motion.div
+						key="persistent-player-turn"
+						className="persistent-turn-badge your-turn"
+						initial={{ opacity: 0, y: 10, scale: 0.94, rotate: badgeRotation }}
+						animate={{ opacity: 1, y: 0, scale: 1, rotate: badgeRotation }}
+						exit={{ opacity: 0, y: 8, scale: 0.96, rotate: badgeRotation }}
+						transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+						aria-live="polite"
+					>
+						<span className="persistent-turn-dot" aria-hidden="true" />
+						<span className="persistent-turn-copy">
+							<span className="persistent-turn-kicker">Your</span>
+							<span className="persistent-turn-main">Turn</span>
+						</span>
+					</motion.div>
+				)}
+			</AnimatePresence>
 
 			{/* Splash banner on turn change */}
 			<AnimatePresence>

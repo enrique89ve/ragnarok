@@ -18,7 +18,7 @@
 import React from 'react';
 import { BattlefieldHero } from '../components/BattlefieldHero';
 import { HoleCardsOverlay } from '../components/HoleCardsOverlay';
-import ManaBar from '../../components/ManaBar';
+import { HeroResourceDock } from '../components/HeroResourceDock';
 import HandFan from '../../components/HandFan';
 import { PokerHandRank, type PokerCard } from '../../types/PokerCombatTypes';
 import type { CardInstance } from '../../types';
@@ -111,12 +111,12 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({
 	const isShowdown = showdownCelebration?.resolution.resolutionType === 'showdown';
 
 	return (
-		<footer className="zone-player shrink-0 flex flex-row items-end justify-start gap-4 px-6 pb-1 pointer-events-none w-full">
+		<footer className="zone-player combat-zone combat-zone--player">
 			{playerPet && (
 				<div
-					className={`unified-hero-section shrink-0 z-30 pointer-events-auto ${shakingHero ? 'damage-shake damage-flash' : ''} ${isPlayerTurn ? 'turn-active' : ''}`}
+					className={`unified-hero-section ${shakingHero ? 'damage-shake damage-flash' : ''} ${isPlayerTurn ? 'turn-active' : ''}`}
 				>
-					<div data-hero-role="player" className="poker-hero-container relative flex flex-col items-center gap-2">
+					<div data-hero-role="player" className="poker-hero-container">
 						<BattlefieldHero
 							pet={enrichedPlayerPet}
 							hpCommitted={playerHpCommitted}
@@ -144,16 +144,7 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({
 								/>
 							)}
 						/>
-						<div className="player-mana-display hero-resource-dock w-55 mt-1 px-2 py-1 flex justify-center">
-							<ManaBar
-								currentMana={playerMana}
-								maxMana={playerMaxMana}
-								overloadedMana={0}
-								pendingOverload={0}
-								variant="hero"
-								label="Mana"
-							/>
-						</div>
+						<HeroResourceDock owner="player" currentMana={playerMana} maxMana={playerMaxMana} />
 						{playerHandEval && playerHandEval.rank > PokerHandRank.HIGH_CARD && (
 							<div className="hand-strength-compact absolute -bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 pointer-events-none whitespace-nowrap">
 								<span className="strength-icon" aria-hidden="true">
@@ -168,9 +159,9 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({
 					</div>
 				</div>
 			)}
-			<div className="unified-hand-section flex-1 flex flex-row justify-center items-end z-40 overflow-visible pointer-events-auto">
+			<div className="unified-hand-section">
 				{handCards.length > 0 && onCardPlay && (
-					<div className="poker-hand-container flex flex-row justify-start items-end p-0">
+					<div className="poker-hand-container">
 						<HandFan
 							cards={handCards as any}
 							currentMana={handCurrentMana}

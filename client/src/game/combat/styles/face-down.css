@@ -145,7 +145,7 @@
    ======================================== */
 /* Dead .opponent-hand-zone removed — class never in JSX */
 
-/* .opponent-hand-display layout migrated to Tailwind in JSX (zones/OpponentZone.tsx).
+/* .opponent-hand-display macro layout lives in canvas-layout.css.
    Hover variants below still rely on the class as a selector hook. */
 
 .opponent-card-back {

@@ -13,7 +13,7 @@ interface CombatPhaseDirectorProps {
 	mode: CombatPhaseDirectorMode;
 	isPlayerTurn: boolean;
 	isWaiting: boolean;
-	pills?: string[];
+	pills?: ReadonlyArray<string>;
 }
 
 const PHASE_RAIL: Array<{ phase: CombatPhase; label: string }> = [
@@ -29,6 +29,51 @@ function getPhaseIndex(phase: CombatPhase): number {
 	return PHASE_RAIL.findIndex(step => step.phase === phase);
 }
 
+interface DirectorMetric {
+	readonly label: string;
+	readonly value: string;
+	readonly tone: 'risk' | 'call' | 'board' | 'mana' | 'neutral';
+}
+
+function getModeLabel(mode: CombatPhaseDirectorMode): string {
+	if (mode === 'wager') return 'Wager Round';
+	if (mode === 'resolution') return 'Resolution';
+	return 'Setup Window';
+}
+
+function getWindowLabel(isWaiting: boolean, isPlayerTurn: boolean): string {
+	if (isWaiting) return 'Enemy Acting';
+	return isPlayerTurn ? 'Your Decision' : 'Enemy Window';
+}
+
+function toDirectorMetric(pill: string): DirectorMetric {
+	if (/^stakes\s+/i.test(pill)) {
+		return { label: 'Pot', value: pill.replace(/^stakes\s+/i, ''), tone: 'risk' };
+	}
+
+	if (/^to call\s+/i.test(pill)) {
+		return { label: 'Call', value: pill.replace(/^to call\s+/i, ''), tone: 'call' };
+	}
+
+	if (/^next stake\s+/i.test(pill)) {
+		return { label: 'Next', value: pill.replace(/^next stake\s+/i, ''), tone: 'call' };
+	}
+
+	if (/allies on board/i.test(pill)) {
+		return { label: 'Board', value: pill.replace(/\son board$/i, ''), tone: 'board' };
+	}
+
+	if (/mana$/i.test(pill)) {
+		return { label: 'Mana', value: pill.replace(/\smana$/i, ''), tone: 'mana' };
+	}
+
+	if (/cards ready$/i.test(pill)) {
+		return { label: 'Hand', value: pill.replace(/\sready$/i, ''), tone: 'neutral' };
+	}
+
+	return { label: 'Intel', value: pill, tone: 'neutral' };
+}
+
 export const CombatPhaseDirector: React.FC<CombatPhaseDirectorProps> = ({
 	phase,
 	phaseLabel,
@@ -41,20 +86,30 @@ export const CombatPhaseDirector: React.FC<CombatPhaseDirectorProps> = ({
 	pills = [],
 }) => {
 	const currentIndex = getPhaseIndex(phase);
+	const windowLabel = getWindowLabel(isWaiting, isPlayerTurn);
+	const modeLabel = getModeLabel(mode);
+	const metrics = pills.map(toDirectorMetric);
 
 	return (
-		<motion.div
+		<motion.section
 			initial={{ opacity: 0, y: 10, scale: 0.98 }}
 			animate={{ opacity: 1, y: 0, scale: 1 }}
 			transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
 			className={`combat-phase-director mode-${mode} ${isPlayerTurn ? 'player-window' : 'opponent-window'} ${isWaiting ? 'is-waiting' : ''}`}
+			aria-label={`${phaseLabel}: ${headline}`}
 		>
 			<div className="combat-phase-director-topline">
-				<span className="combat-phase-director-kicker">Battle Cadence</span>
-				<span className="combat-phase-director-cue">{cue}</span>
+				<div className="combat-phase-director-brand">
+					<span className="combat-phase-director-kicker">Battle Cadence</span>
+					<span className="combat-phase-director-mode">{modeLabel}</span>
+				</div>
+				<span className="combat-phase-director-window">
+					<span className="combat-phase-director-window-dot" aria-hidden="true" />
+					{windowLabel}
+				</span>
 			</div>
 
-			<div className="combat-phase-rail" aria-label="combat phase progression">
+			<ol className="combat-phase-rail" aria-label="combat phase progression">
 				{PHASE_RAIL.map((step, index) => {
 					const state =
 						currentIndex > index
@@ -64,34 +119,38 @@ export const CombatPhaseDirector: React.FC<CombatPhaseDirectorProps> = ({
 								: 'upcoming';
 
 					return (
-						<div
+						<li
 							key={step.phase}
 							className={`combat-phase-step ${state}`}
 							aria-current={state === 'current' ? 'step' : undefined}
 						>
 							<span className="combat-phase-step-marker">{index + 1}</span>
 							<span className="combat-phase-step-label">{step.label}</span>
-						</div>
+						</li>
 					);
 				})}
-			</div>
+			</ol>
 
 			<div className="combat-phase-director-copy">
-				<span className="combat-phase-director-phase">{phaseLabel}</span>
+				<div className="combat-phase-director-order">
+					<span className="combat-phase-director-phase">{phaseLabel}</span>
+					<span className="combat-phase-director-cue">{cue}</span>
+				</div>
 				<strong className="combat-phase-director-title">{headline}</strong>
 				<p className="combat-phase-director-text">{body}</p>
 			</div>
 
-			{pills.length > 0 && (
+			{metrics.length > 0 && (
 				<div className="combat-phase-director-pills">
-					{pills.map((pill, index) => (
-						<span key={`${pill}-${index}`} className="combat-phase-director-pill">
-							{pill}
+					{metrics.map((metric, index) => (
+						<span key={`${metric.label}-${metric.value}-${index}`} className={`combat-phase-director-pill tone-${metric.tone}`}>
+							<span className="combat-phase-director-pill-label">{metric.label}</span>
+							<span className="combat-phase-director-pill-value">{metric.value}</span>
 						</span>
 					))}
 				</div>
 			)}
-		</motion.div>
+		</motion.section>
 	);
 };
 

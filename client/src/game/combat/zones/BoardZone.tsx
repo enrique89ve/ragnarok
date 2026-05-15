@@ -47,8 +47,8 @@ export const BoardZone: React.FC<BoardZoneProps> = ({
 	showdownWinningCards,
 }) => {
 	return (
-		<section className="zone-board relative shrink-0 min-h-40 flex flex-row justify-center items-center gap-2">
-			<div className="unified-community community-cards-section zone-community flex flex-row gap-2 justify-center items-center">
+		<section className="zone-board" aria-label="Community cards">
+			<div className="unified-community community-cards-section zone-community">
 				{showFaith && communityCards.faith.length > 0 ? (
 					communityCards.faith.map((card, idx) => (
 						<div key={`faith-${idx}`} className={`community-slot ${highlightClass(card, showdownWinningCards)}`}>

@@ -1,70 +1,109 @@
-/* ═══ Persistent Turn Badge — always visible top-center ═══ */
+/* ═══ Persistent Player Turn Badge ═══ */
 
 .persistent-turn-badge {
 	position: absolute;
-	top: 14px;
-	left: 16px;
+	top: var(--poker-zone-turnBadge-y, 14px);
+	left: var(--poker-zone-turnBadge-x, 16px);
+	width: var(--poker-zone-turnBadge-w, 152px);
+	min-height: var(--poker-zone-turnBadge-h, 48px);
 	z-index: 9500;
-	display: flex;
+	display: inline-flex;
 	align-items: center;
-	gap: 10px;
-	padding: 10px 18px;
-	border-radius: 24px;
+	justify-content: center;
+	gap: 12px;
+	padding: 8px 18px;
+	border-radius: 999px;
 	font-family: var(--type-display);
 	font-weight: 900;
-	font-size: 13px;
-	letter-spacing: 2px;
 	text-transform: uppercase;
 	pointer-events: none;
-	transition: all 0.4s ease;
-	background: var(--ui-panel-bg);
-	box-shadow: var(--ui-panel-shadow);
+	transform: rotate(var(--poker-zone-turnBadge-rot, 0deg));
+	transform-origin: top left;
+	isolation: isolate;
+	overflow: hidden;
+	background:
+		linear-gradient(180deg, rgba(21, 18, 10, 0.96), rgba(4, 8, 14, 0.96)),
+		radial-gradient(circle at 30% 0%, color-mix(in srgb, var(--gold-300) 18%, transparent), transparent 55%);
+	box-shadow:
+		0 0 24px color-mix(in srgb, var(--gold-300) 38%, transparent),
+		0 12px 22px rgba(0, 0, 0, 0.58),
+		inset 0 1px 0 color-mix(in srgb, var(--gold-100) 24%, transparent);
+}
+
+.persistent-turn-badge::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	z-index: -1;
+	border: 1px solid var(--gold-300);
+	border-radius: inherit;
+	box-shadow:
+		inset 0 0 0 1px rgba(255, 236, 172, 0.1),
+		inset 0 -8px 18px rgba(211, 139, 30, 0.16);
+}
+
+.persistent-turn-badge::after {
+	content: '';
+	position: absolute;
+	inset: 7px 10px;
+	pointer-events: none;
+	z-index: -1;
+	border-top: 1px solid color-mix(in srgb, var(--gold-100) 28%, transparent);
+	border-radius: inherit;
+	opacity: 0.7;
 }
 
 .persistent-turn-badge.your-turn {
-	border: 2px solid var(--gold-300);
 	color: var(--gold-100);
-	box-shadow:
-		0 0 22px var(--gold-glow),
-		0 4px 14px rgba(0, 0, 0, 0.65),
-		inset 0 1px 0 color-mix(in srgb, var(--gold-200) 16%, transparent);
 	text-shadow:
-		0 0 10px var(--gold-glow),
-		0 1px 2px rgba(0, 0, 0, 0.95);
-}
-
-.persistent-turn-badge.enemy-turn {
-	border: 2px solid var(--danger-400);
-	color: color-mix(in srgb, var(--danger-100) 80%, white);
-	box-shadow:
-		0 0 22px var(--danger-glow),
-		0 4px 14px rgba(0, 0, 0, 0.65),
-		inset 0 1px 0 color-mix(in srgb, var(--danger-200) 14%, transparent);
-	text-shadow:
-		0 0 10px var(--danger-glow),
+		0 0 12px color-mix(in srgb, var(--gold-300) 70%, transparent),
 		0 1px 2px rgba(0, 0, 0, 0.95);
 }
 
 .persistent-turn-dot {
-	width: 10px;
-	height: 10px;
-	border-radius: 50%;
-	animation: turnDotPulse 1.5s ease-in-out infinite;
-}
-
-.your-turn .persistent-turn-dot {
+	width: 9px;
+	height: 9px;
+	border-radius: 2px;
 	background: var(--gold-300);
-	box-shadow: 0 0 10px var(--gold-glow);
+	box-shadow:
+		0 0 9px color-mix(in srgb, var(--gold-300) 88%, transparent),
+		0 0 18px color-mix(in srgb, var(--gold-300) 42%, transparent);
+	clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+	animation: turnRunePulse 1.55s ease-in-out infinite;
 }
 
-.enemy-turn .persistent-turn-dot {
-	background: var(--danger-400);
-	box-shadow: 0 0 10px var(--danger-glow);
+.persistent-turn-copy {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	line-height: 0.92;
 }
 
-@keyframes turnDotPulse {
-	0%, 100% { opacity: 1; transform: scale(1); }
-	50% { opacity: 0.5; transform: scale(0.7); }
+.persistent-turn-kicker {
+	display: block;
+	letter-spacing: 1.8px;
+	font-size: 10px;
+	color: color-mix(in srgb, var(--gold-100) 72%, transparent);
+}
+
+.persistent-turn-main {
+	display: block;
+	letter-spacing: 1.8px;
+	font-size: 15px;
+	color: var(--gold-200);
+}
+
+@keyframes turnRunePulse {
+	0%, 100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+
+	50% {
+		opacity: 0.55;
+		transform: scale(0.72);
+	}
 }
 
 /* ═══ Turn Banner - CCG-style "YOUR TURN" / "ENEMY TURN" announcement ═══ */

@@ -470,7 +470,7 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
 
           <div className="hero-stat-bar sta-bar">
             <div className="stat-bar-fill sta-fill" style={{ transform: `scaleX(${staminaPercent / 100})` }} />
-            <span className="stat-bar-text">⚡{currentSta}/{maxSta}</span>
+            <span className="stat-bar-text">STA {currentSta}/{maxSta}</span>
           </div>
 
           {armor > 0 && (
