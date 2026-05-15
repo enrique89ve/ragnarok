@@ -13,6 +13,7 @@ export interface PackType {
   name: string;
   description: string;
   price: number;
+  hbdPriceThousandths: number | null;
   runeCost: number | null;
   isFreeClaim: boolean;
   isRuneRedeemable: boolean;

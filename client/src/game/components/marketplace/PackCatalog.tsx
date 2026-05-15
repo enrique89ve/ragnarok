@@ -18,11 +18,15 @@ import { RichTooltip } from '../../../components/ornaments/RichTooltip';
 import { SplashBackdrop } from '../../../components/ornaments/SplashBackdrop';
 import { getNFTBridge } from '../../nft';
 import { useNFTUsername, useNFTTokenBalance } from '../../nft/hooks';
+import { HBD_CURRENCY_CODE, formatHbdPrice, formatHbdThousandths } from '@shared/protocol-core';
 import { RAGNAROK_ACCOUNT } from '../../../data/blockchain/hiveConfig';
 import { derivePackCards } from '../../../data/blockchain/packDerivation';
 import { forceSync } from '../../../data/blockchain/replayEngine';
 import { cardRegistry } from '../../data/cardRegistry';
 import { cryptoRng, cryptoIdGen } from '../../utils/seededRng';
+import { RuneExchangeModal } from './RuneExchangeModal';
+import { formatPackUnit } from './runePackExchange';
+import { useRunePackExchange } from './useRunePackExchange';
 import {
 	RARITY_COLORS,
 	RARITY_ORDER,
@@ -106,6 +110,7 @@ export default function PackCatalog() {
 	const tokenBalance = useNFTTokenBalance();
 	const hiveUsername = useNFTUsername();
 	const runeBalance = tokenBalance?.RUNE ?? 0;
+	const runeExchange = useRunePackExchange({ hiveUsername, runeBalance });
 
 	const [packTypes, setPackTypes] = useState<PackType[]>(FALLBACK_PACKS);
 	const [supplyStats, setSupplyStats] = useState<SupplyStats | null>(null);
@@ -114,7 +119,6 @@ export default function PackCatalog() {
 	const [revealedCards, setRevealedCards] = useState<RevealedCard[]>([]);
 	const [isOpening, setIsOpening] = useState(false);
 	const [packError, setPackError] = useState<string | null>(null);
-	const [runeOpening, setRuneOpening] = useState<string | null>(null);
 	const [testMinting, setTestMinting] = useState(false);
 
 	// Starter is a free per-account claim and lives in /packs (vault), not here.
@@ -307,25 +311,35 @@ export default function PackCatalog() {
 		fetchData();
 	};
 
-	const handleOpenWithRune = async (pack: PackType) => {
-		const packKey = pack.key;
-		const cost = pack.runeCost;
-		if (cost === null) return;
-		if (runeBalance < cost) return;
-		if (!hiveUsername) return;
-
-		setRuneOpening(pack.id.toString());
-		setPackError(null);
-
-		const result = await getNFTBridge().runeExchange(packKey, 1);
-		setRuneOpening(null);
+	const handleSubmitRuneExchange = async () => {
+		const quantity = runeExchange.quote?.quantity ?? 0;
+		const selectedPackName = runeExchange.selectedPack?.name ?? 'pack';
+		const result = await runeExchange.submitExchange();
 
 		if (result.success && result.trxId) {
-			forceSync(hiveUsername!).catch(err => debug.warn('[Catalog] Sync error:', err));
-			fetchData();
-			toast.success('RUNE exchange submitted. Your sealed pack will appear after replay sync.');
+			const trxId = result.trxId;
+			runeExchange.markIndexerValidation(trxId);
+			try {
+				if (!hiveUsername) {
+					throw new Error('Hive username missing during indexer validation.');
+				}
+
+				await forceSync(hiveUsername);
+				runeExchange.markIndexed(trxId);
+				await fetchData();
+				runeExchange.markConfirmed(trxId);
+				toast.success(`${quantity.toLocaleString()} ${formatPackUnit(quantity)} submitted for ${selectedPackName}.`);
+				window.setTimeout(() => runeExchange.closeExchange(), 900);
+			} catch (err) {
+				const errorMessage = err instanceof Error ? err.message : 'Indexer validation failed.';
+				debug.warn('[Catalog] Sync error:', err);
+				runeExchange.markFailed(errorMessage, trxId);
+				setPackError(errorMessage);
+			}
 		} else {
-			setPackError(result.error ?? 'RUNE exchange failed. Please try again.');
+			const errorMessage = result.error ?? 'RUNE exchange did not return a transaction id.';
+			runeExchange.markFailed(errorMessage, result.trxId);
+			setPackError(errorMessage);
 		}
 	};
 
@@ -452,6 +466,24 @@ export default function PackCatalog() {
 						✕
 					</button>
 				</motion.div>
+			)}
+
+			{runeExchange.selectedPack && runeExchange.quote && (
+				<RuneExchangeModal
+					pack={runeExchange.selectedPack}
+					quote={runeExchange.quote}
+					quantityInput={runeExchange.quantityInput}
+					runeBalance={runeBalance}
+					ledgerStatus={runeExchange.ledgerStatus}
+					ledgerError={runeExchange.ledgerError}
+					isSubmitting={runeExchange.isSubmitting}
+					confirmation={runeExchange.confirmation}
+					onQuantityInputChange={runeExchange.setQuantityInput}
+					onSetQuantity={runeExchange.setQuantity}
+					onSetMaxQuantity={runeExchange.setMaxQuantity}
+					onClose={runeExchange.closeExchange}
+					onSubmit={handleSubmitRuneExchange}
+				/>
 			)}
 
 			{/* Wallet chips row: balances on the left, admin actions on the right */}
@@ -606,9 +638,11 @@ export default function PackCatalog() {
 								pack={pack}
 								index={index}
 								onBuy={() => handleOpenPack(pack)}
-								onRuneExchange={hiveUsername && pack.isRuneRedeemable ? () => handleOpenWithRune(pack) : undefined}
-								runeBalance={runeBalance}
-								isRuneOpening={runeOpening === pack.id.toString()}
+								onRuneExchange={hiveUsername && pack.isRuneRedeemable ? () => {
+									setPackError(null);
+									runeExchange.openExchange(pack);
+								} : undefined}
+								isRuneOpening={runeExchange.isSubmitting && runeExchange.selectedPack?.id === pack.id}
 							/>
 						))}
 					</div>
@@ -662,14 +696,12 @@ function PackTile({
 	index,
 	onBuy,
 	onRuneExchange,
-	runeBalance,
 	isRuneOpening,
 }: {
 	pack: PackType;
 	index: number;
 	onBuy: () => void;
 	onRuneExchange?: () => void;
-	runeBalance: number;
 	isRuneOpening: boolean;
 }) {
 	const hexVariant = packHexVariantFor(pack.key);
@@ -677,7 +709,12 @@ function PackTile({
 	const tier = packTierFor(pack.key);
 	const guarantees = getPackGuarantees(pack);
 	const runeCost = pack.runeCost;
-	const canAffordRune = runeCost !== null && runeBalance >= runeCost;
+	const hbdPriceAmount = pack.hbdPriceThousandths === null
+		? 'Unavailable'
+		: formatHbdThousandths(pack.hbdPriceThousandths);
+	const hbdPriceLabel = pack.hbdPriceThousandths === null
+		? `${pack.name} HBD price unavailable`
+		: formatHbdPrice(pack.hbdPriceThousandths);
 
 	const isMythic = pack.key === 'mythic';
 	const inscription = PACK_INSCRIPTION[pack.key] ?? 'Tier · Sealed';
@@ -706,7 +743,7 @@ function PackTile({
 			initial={reducedMotion ? false : { opacity: 0, y: 24 }}
 			animate={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
 			transition={reducedMotion ? { duration: 0.15 } : { delay: 0.08 * index }}
-			aria-label={`${pack.name} — ${pack.price.toLocaleString()} ${pack.cardCount} cards`}
+			aria-label={`${pack.name} — ${hbdPriceLabel}, ${pack.cardCount} cards`}
 			className={`runic-panel ornate-corners-host ornate-corners-host--${tier} mystic-tile ${glowClass} ${isMythic ? 'texture-etched' : ''} relative rounded-xl p-6 flex flex-col overflow-hidden`}
 			style={{ background: surface }}
 		>
@@ -779,11 +816,11 @@ function PackTile({
 			<div className="relative z-10 flex flex-col items-center mb-6">
 				<NumericRitual tier={numericTier}>
 					<span className="numeric-display numeric-display--xl">
-						{pack.price.toLocaleString()}
+						{hbdPriceAmount}
 					</span>
 				</NumericRitual>
 				<span className="font-mono text-xs tracking-[0.22em] uppercase text-ink-300 mt-2">
-					{pack.cardCount === 1 ? 'one card' : `${pack.cardCount} cards`}
+					{HBD_CURRENCY_CODE} · {pack.cardCount === 1 ? 'one card' : `${pack.cardCount} cards`}
 				</span>
 			</div>
 
@@ -800,12 +837,12 @@ function PackTile({
 			{onRuneExchange && runeCost !== null && (
 				<button
 					type="button"
-					onClick={() => canAffordRune && !isRuneOpening && onRuneExchange()}
-					disabled={!canAffordRune || isRuneOpening}
-					aria-label={canAffordRune ? `Exchange ${runeCost} RUNE for one ${pack.name}` : `Need ${runeCost} RUNE`}
+					onClick={() => !isRuneOpening && onRuneExchange()}
+					disabled={isRuneOpening}
+					aria-label={`Open RUNE exchange for ${pack.name} at ${runeCost} RUNE each`}
 					className="btn-runic btn-runic--obsidian btn-runic--sm w-full mt-2 relative z-10"
 				>
-					{isRuneOpening ? '···' : `Exchange · ${runeCost} RUNE`}
+					{isRuneOpening ? 'Confirming...' : `Exchange · ${runeCost} RUNE`}
 				</button>
 			)}
 		</motion.article>

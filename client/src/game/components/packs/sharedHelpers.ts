@@ -10,6 +10,7 @@ import { cryptoRng } from '../../utils/seededRng';
 import {
 	PACK_DEFINITIONS,
 	PUBLIC_PACK_KEYS,
+	getHbdPackPriceThousandths,
 	getPackDefinition,
 	normalizePackKey,
 	type CanonicalPackDefinition,
@@ -65,6 +66,7 @@ export function packDefinitionToUiPack(pack: CanonicalPackDefinition, id: number
 		name: pack.name,
 		description: pack.description,
 		price: pack.price,
+		hbdPriceThousandths: getHbdPackPriceThousandths(pack.key),
 		runeCost: pack.runeCost,
 		isFreeClaim: pack.freeClaimLimitPerAccount > 0,
 		isRuneRedeemable: pack.runeCost !== null,
@@ -77,12 +79,14 @@ export function apiPackToUiPack(pack: PackTypeApiRow): PackType {
 	const definition = getPackDefinition(pack.name);
 	if (definition) return packDefinitionToUiPack(definition, pack.id);
 
+	const packKey = normalizePackKey(pack.name) ?? PACK_DEFINITIONS.standard.key;
 	return {
-		key: normalizePackKey(pack.name) ?? 'standard',
+		key: packKey,
 		id: pack.id,
 		name: pack.name,
 		description: pack.description ?? '',
 		price: pack.price,
+		hbdPriceThousandths: getHbdPackPriceThousandths(packKey),
 		runeCost: null,
 		isFreeClaim: false,
 		isRuneRedeemable: false,
