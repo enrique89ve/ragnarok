@@ -6,6 +6,7 @@ import {
   initializeGame,
   initializeGameSeeded,
   processAITurn,
+  processOpponentSpellPetSetup,
   autoAttackWithAllCards
 } from '../utils/gameUtils';
 import { cryptoRng, cryptoIdGen, createSeededRng, createSeededIdGen } from '../utils/seededRng';
@@ -102,7 +103,7 @@ interface GameStore {
   attackingCard: CardInstance | null;
   // For tracking hero power target selection
   heroTargetMode: boolean;
-  
+
   // Game actions
   initGame: () => void;
   /**
@@ -129,14 +130,15 @@ interface GameStore {
   resetGameState: () => void;
   setGameState: (state: Partial<GameState>) => void;
   selectDiscoveryOption: (card: CardData | null) => void;
-  
+
   // Mulligan actions
   toggleMulliganCard: (cardId: string) => void;
   confirmMulligan: () => void;
   skipMulligan: () => void;
-  
+
   // Poker hand rewards - give mana crystal and draw a card
   grantPokerHandRewards: () => void;
+  setupOpponentSpellPetCards: () => void;
 
   // WASM state hash
   updateStateHash: () => void;
@@ -358,19 +360,19 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
         return;
       }
       set({ attackingCard: card as CardInstance });
-      
+
       // Calculate valid targets for this attacker
       const { gameState } = get();
       const opponentBattlefield = gameState.players.opponent.battlefield || [];
-      
+
       // Check if any opponent minion has taunt
       const hasTaunt = opponentBattlefield.some((m: CardInstance) =>
         hasKeyword(m, 'taunt')
       );
-      
+
       // Build list of valid target IDs
       const validTargetIds: string[] = [];
-      
+
       if (hasTaunt) {
         // Can only attack taunt minions (stealth doesn't protect a taunt minion)
         opponentBattlefield.forEach((m: CardInstance) => {
@@ -387,7 +389,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
         });
         validTargetIds.push('opponent-hero');
       }
-      
+
       debug.log('[Targeting] Starting targeting for', card.instanceId, 'with valid targets:', validTargetIds);
       targetingStore.startTargeting(card.instanceId, validTargetIds);
     } else {
@@ -396,7 +398,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
       targetingStore.cancelTargeting();
     }
   },
-  
+
   // Execute an attack with the selected card against a target (or hero if no target)
   attackWithCard: (attackerId: string, defenderId?: string) => {
     // Prevent re-entry while a previous attack animation is in flight
@@ -503,7 +505,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
       if (attackWatchdogTimer) { clearTimeout(attackWatchdogTimer); attackWatchdogTimer = null; }
     }
   },
-  
+
   autoAttackAll: (mode: 'minion' | 'hero' = 'minion') => {
     const { gameState } = get();
     if (gameState.currentTurn !== 'player') return;
@@ -520,7 +522,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
       set({ selectedCard: null });
     }
   },
-  
+
   // Reset the game state to initial values
   resetGameState: () => {
     if (autoEndTurnTimer) { clearTimeout(autoEndTurnTimer); autoEndTurnTimer = null; }
@@ -536,7 +538,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
       heroTargetMode: false
     });
   },
-  
+
   setGameState: (state: Partial<GameState>) => {
     const { gameState } = get();
     set({
@@ -558,14 +560,14 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
       }, 0);
     }
   },
-  
+
   // Directly set the players (useful for AI simulation)
   setPlayers: (players: GameState['players']) => {
     if (process.env.NODE_ENV === 'development') {
       debug.log('Setting players directly');
     }
     const { gameState } = get();
-    
+
     const shallowEqual = (a: any, b: any) =>
       a.health === b.health &&
       a.heroHealth === b.heroHealth &&
@@ -580,8 +582,8 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
     ) {
       return;
     }
-    
-      set({ 
+
+      set({
         gameState: {
           ...gameState,
           players: players as any
@@ -596,16 +598,16 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
       set({ hoveredCard: null });
     }
   },
-  
+
   // Toggle hero power targeting mode
   toggleHeroTargetMode: () => {
     const { heroTargetMode, gameState } = get();
-    
+
     // Can only enter hero power mode if it's player's turn and hero power is not used
     if (!heroTargetMode && gameState.currentTurn === 'player' && !gameState.players.player.heroPower.used) {
       // Check if player has enough mana for hero power
       if (gameState.players.player.mana.current >= gameState.players.player.heroPower.cost) {
-        set({ 
+        set({
           heroTargetMode: true,
           attackingCard: null  // Clear any attack selection
         });
@@ -619,7 +621,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
       debug.log('Hero power mode deactivated');
     }
   },
-  
+
   // Toggle a card selection during mulligan phase
   toggleMulliganCard: (cardId: string) => {
     const { gameState } = get();
@@ -640,7 +642,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
     const newState = useMulliganStore.getState().skipMulligan(gameState);
     if (newState) set({ gameState: newState });
   },
-  
+
   // Use hero power on a target (or no target for some powers like Armor Up).
   // Note: this covers the GENERIC hero power path (mage fireblast, warrior armor, etc.,
   // including Norse heroes whose powers route through `executeNorseHeroPower` inside
@@ -707,7 +709,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
       params: { heroClass, effectType: player.heroPower.name },
     });
   },
-  
+
   grantPokerHandRewards: () => {
     const { gameState } = get();
     const rewardStore = usePokerRewardStore.getState();
@@ -724,6 +726,17 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
 
     const newState = rewardStore.grantPokerHandRewards(gameState);
     if (newState) {
+      set({ gameState: newState });
+    }
+  },
+
+  setupOpponentSpellPetCards: () => {
+    const { gameState } = get();
+    if (!gameState) return;
+    if (usePeerStore.getState().connectionState === 'connected') return;
+
+    const newState = processOpponentSpellPetSetup(gameState);
+    if (newState !== gameState) {
       set({ gameState: newState });
     }
   },
