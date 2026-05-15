@@ -1,6 +1,8 @@
-import React, { useEffect } from 'react';
-import { CheckCircle2, Hourglass, RotateCcw } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { CheckCircle2, Clock, Hourglass, Info, RotateCcw } from 'lucide-react';
 import { useDailyQuestStore, type DailyQuest } from '../../stores/dailyQuestStore';
+import { formatCountdown, useDailyResetCountdown } from '../../hooks/useDailyResetCountdown';
+import DailyQuestInfoDialog from './DailyQuestInfoDialog';
 
 /**
  * QuestRow — compact horizontal quest entry.
@@ -116,6 +118,7 @@ export default function DailyQuestPanel() {
 	const refreshIfNeeded = useDailyQuestStore(s => s.refreshIfNeeded);
 	const rerollQuest = useDailyQuestStore(s => s.rerollQuest);
 	const flushPendingClaims = useDailyQuestStore(s => s.flushPendingClaims);
+	const [infoOpen, setInfoOpen] = useState(false);
 
 	// refreshIfNeeded now flushes pending claims internally before rotating
 	// at midnight UTC, so a separate flush call here would be redundant for
@@ -128,15 +131,56 @@ export default function DailyQuestPanel() {
 	if (quests.length === 0) return null;
 
 	return (
-		<div className="flex flex-col gap-2 max-h-[480px] overflow-y-auto pr-1 -mr-1 [scrollbar-width:thin]">
-			{quests.map(quest => (
-				<QuestRow
-					key={quest.id}
-					quest={quest}
-					onReroll={() => rerollQuest(quest.id)}
-					canReroll={rerollsUsed < 1}
-				/>
-			))}
+		<>
+			<div className="flex flex-col gap-2 max-h-[480px] overflow-y-auto pr-1 -mr-1 [scrollbar-width:thin]">
+				<ResetCountdownChip onOpenInfo={() => setInfoOpen(true)} />
+				{quests.map(quest => (
+					<QuestRow
+						key={quest.id}
+						quest={quest}
+						onReroll={() => rerollQuest(quest.id)}
+						canReroll={rerollsUsed < 1}
+					/>
+				))}
+			</div>
+			{infoOpen && <DailyQuestInfoDialog onClose={() => setInfoOpen(false)} />}
+		</>
+	);
+}
+
+function ResetCountdownChip({ onOpenInfo }: { onOpenInfo: () => void }) {
+	const { remainingMs, sourceIsHive } = useDailyResetCountdown();
+	const sourceLabel = sourceIsHive ? 'Hive UTC' : 'Local clock';
+	const sourceTint = sourceIsHive ? 'text-bifrost-200' : 'text-ink-400';
+
+	return (
+		<div className="flex items-center justify-between rounded-md border border-obsidian-700 bg-obsidian-950/60 px-3.5 py-2">
+			<div className="flex items-center gap-2 font-mono text-[10px] tracking-[0.22em] uppercase text-ink-300">
+				<Clock size={11} strokeWidth={2} aria-hidden />
+				Next rotation
+				<button
+					type="button"
+					onClick={onOpenInfo}
+					aria-label="How daily quests work"
+					title="How daily quests work"
+					className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-obsidian-700 bg-obsidian-900/70 text-ink-300 transition-colors hover:border-gold-500/60 hover:text-gold-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
+				>
+					<Info size={12} strokeWidth={2.2} aria-hidden />
+				</button>
+			</div>
+			<div className="flex items-baseline gap-2">
+				<span className="font-mono text-sm font-bold tracking-wide text-ink-0 tabular-nums">
+					{formatCountdown(remainingMs)}
+				</span>
+				<span
+					className={`font-mono text-[9px] tracking-[0.22em] uppercase ${sourceTint}`}
+					title={sourceIsHive
+						? 'Synced to Hive head-block timestamp.'
+						: 'Hive RPC unreachable — countdown uses your device clock.'}
+				>
+					{sourceLabel}
+				</span>
+			</div>
 		</div>
 	);
 }
