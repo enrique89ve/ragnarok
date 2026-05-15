@@ -115,6 +115,15 @@ function migrateGuestBucketTo(account: string): void {
 }
 
 let lastAccount = readHiveAccount();
+// Boot-time migration: if a real account is already logged in (e.g. the
+// user reloaded the page after authing earlier), any `:guest` buckets
+// left over from a pre-login session should fold into the user's bucket
+// BEFORE any store hydrates — otherwise the stores generate fresh state
+// under the user bucket and the guest progress is orphaned forever.
+if (lastAccount !== GUEST_BUCKET) {
+	migrateGuestBucketTo(lastAccount);
+}
+
 useHiveDataStore.subscribe((state) => {
 	const next = state.user?.hiveUsername ?? GUEST_BUCKET;
 	if (next === lastAccount) return;
