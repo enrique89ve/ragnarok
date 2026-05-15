@@ -1,123 +1,233 @@
-import React, { useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useGameLogStore, GameLogEntry } from '../stores/gameLogStore';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+	EyeOff,
+	ScrollText,
+	Trash2,
+	X,
+} from 'lucide-react';
+import { useGameLogStore } from '../stores/gameLogStore';
+import {
+	buildBattleLogViewModel,
+	type BattleLogItem,
+} from './gameLogAdapter';
 import './GameLog.css';
 
-const TYPE_ICONS: Record<string, string> = {
-	play_card: '\uD83C\uDCCF',
-	attack: '\u2694',
-	hero_power: '\u26A1',
-	spell: '\u2728',
-	draw: '\uD83C\uDCA0',
-	death: '\uD83D\uDC80',
-	damage: '\uD83D\uDCA5',
-	heal: '\u2764',
-	secret: '\u2753',
-	end_turn: '\u27F3',
-	fatigue: '\uD83D\uDCA2',
-	battlecry: '\uD83D\uDCE3',
-	deathrattle: '\uD83D\uDD14'
-};
+interface GameLogProps {
+	readonly log?: readonly unknown[];
+	readonly maxEntries?: number;
+}
 
-const LogEntry: React.FC<{ entry: GameLogEntry }> = React.memo(({ entry }) => {
-	const icon = TYPE_ICONS[entry.type] || '\u2022';
-	const actorClass = entry.actor === 'player' ? 'log-player' : 'log-opponent';
+const cx = (...classes: Array<string | false | null | undefined>): string => classes.filter(Boolean).join(' ');
 
+const LOG_ROW_CLASS = 'relative flex h-auto w-full min-w-0 flex-col rounded-md border px-3 py-2 text-left shadow-sm transition-colors';
+const LOG_COPY_CLASS = 'flex min-w-0 flex-col gap-1';
+const LOG_TOPLINE_CLASS = 'flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1';
+const LOG_HEADER_CLASS = 'flex items-center justify-between gap-3';
+const LOG_TITLE_BUTTON_CLASS = 'flex min-w-0 flex-1 items-center gap-3 text-left';
+const LOG_TURN_CLASS = 'log-turn inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[11px] font-black leading-none tracking-wide';
+const LOG_ACTOR_CLASS = 'log-actor shrink-0 text-[12px] font-black uppercase leading-tight tracking-[0.08em]';
+const LOG_TITLE_CLASS = 'log-title min-w-0 flex-1 break-words text-[12px] font-black uppercase leading-tight tracking-[0.06em]';
+const LOG_MESSAGE_CLASS = 'log-message block whitespace-normal break-words text-[13px] font-normal leading-snug';
+const LOG_AMOUNT_CLASS = 'log-amount ml-auto inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[11px] font-bold leading-none';
+
+const BattleLogRow: React.FC<{ readonly item: BattleLogItem; readonly compact?: boolean }> = React.memo(({
+	item,
+	compact = false,
+}) => {
 	return (
-		<motion.div
-			className={`game-log-entry ${actorClass}`}
-			initial={{ opacity: 0, x: -20 }}
+		<motion.article
+			className={cx(LOG_ROW_CLASS, 'game-log-entry', `tone-${item.tone}`, compact && 'compact')}
+			initial={{ opacity: 0, x: -10 }}
 			animate={{ opacity: 1, x: 0 }}
-			transition={{ duration: 0.2 }}
+			transition={{ duration: 0.18 }}
 		>
-			<span className="log-icon">{icon}</span>
-			<span className="log-turn">T{entry.turn}</span>
-			<span className="log-message">{entry.message}</span>
-			{entry.details?.amount !== undefined && (
-				<span className={`log-amount ${entry.type === 'heal' ? 'heal' : 'damage'}`}>
-					{entry.type === 'heal' ? '+' : '-'}{entry.details.amount}
-				</span>
-			)}
-		</motion.div>
+			<div className={cx(LOG_COPY_CLASS, 'log-entry-copy')}>
+				<div className={cx(LOG_TOPLINE_CLASS, 'log-entry-topline')}>
+					<span className={LOG_TURN_CLASS}>{item.turnLabel}</span>
+					<span className={LOG_ACTOR_CLASS}>{item.actorLabel}</span>
+					<span className={LOG_TITLE_CLASS}>{item.title}</span>
+					{item.amountLabel && (
+						<span className={LOG_AMOUNT_CLASS}>
+							{item.amountLabel}
+						</span>
+					)}
+				</div>
+				<p className={LOG_MESSAGE_CLASS}>{item.message}</p>
+				{!compact && item.meta.length > 0 && (
+					<div className="log-meta mt-1 flex min-w-0 flex-wrap gap-1.5">
+						{item.meta.map(meta => (
+							<span key={meta}>{meta}</span>
+						))}
+					</div>
+				)}
+			</div>
+		</motion.article>
 	);
 });
 
-LogEntry.displayName = 'LogEntry';
+BattleLogRow.displayName = 'BattleLogRow';
 
-export const GameLog: React.FC = () => {
+export const GameLog: React.FC<GameLogProps> = ({ log: legacyLog, maxEntries }) => {
+	void legacyLog;
 	const entries = useGameLogStore(state => state.entries);
 	const isOpen = useGameLogStore(state => state.isOpen);
+	const isDockHidden = useGameLogStore(state => state.isDockHidden);
 	const toggleLog = useGameLogStore(state => state.toggleLog);
+	const hideDock = useGameLogStore(state => state.hideDock);
+	const showDock = useGameLogStore(state => state.showDock);
 	const clearLog = useGameLogStore(state => state.clearLog);
 	const scrollRef = useRef<HTMLDivElement>(null);
-	const latestEntry = entries[entries.length - 1];
+	const viewModel = useMemo(
+		() => buildBattleLogViewModel(entries, { dockLimit: 8, panelLimit: maxEntries ?? 40 }),
+		[entries, maxEntries],
+	);
 
 	useEffect(() => {
-		if (scrollRef.current && isOpen) {
-			scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-		}
-	}, [entries.length, isOpen]);
+		if (!scrollRef.current || !isOpen) return;
+		scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+	}, [viewModel.panelItems.length, isOpen]);
 
-	return (
-		<div className="game-log-container">
-			{latestEntry && !isOpen && (
+	const expandDockWithKeyboard = (event: React.KeyboardEvent<HTMLDivElement>) => {
+		if (event.key !== 'Enter' && event.key !== ' ') return;
+		event.preventDefault();
+		toggleLog();
+	};
+
+	if (isDockHidden) {
+		return (
+			<div className="game-log-container hidden-dock">
 				<button
 					type="button"
-					className="game-log-preview"
-					onClick={toggleLog}
-					title="Open battle log"
+					className="game-log-reveal"
+					onClick={showDock}
+					title="Show battle log"
+					aria-label="Show battle log"
 				>
-					<span className="game-log-preview-turn">T{latestEntry.turn}</span>
-					<span className="game-log-preview-text">{latestEntry.message}</span>
+					<ScrollText size={17} strokeWidth={2.2} />
+					{viewModel.total > 0 && (
+						<span className="log-badge">{Math.min(viewModel.total, 99)}</span>
+					)}
 				</button>
-			)}
+			</div>
+		);
+	}
 
-			<button
-				type="button"
-				className={`game-log-toggle ${isOpen ? 'open' : ''}`}
-				onClick={toggleLog}
-				title="Battle Log"
-			>
-				<span className="log-toggle-icon">{'\uD83D\uDCDC'}</span>
-				<span className="log-toggle-label">{isOpen ? 'Hide Log' : 'Battle Log'}</span>
-				{entries.length > 0 && !isOpen && (
-					<span className="log-badge">{Math.min(entries.length, 99)}</span>
-				)}
-			</button>
-
-			<AnimatePresence>
-				{isOpen && (
-					<motion.div
-						className="game-log-panel"
-						initial={{ x: 280, opacity: 0 }}
-						animate={{ x: 0, opacity: 1 }}
-						exit={{ x: 280, opacity: 0 }}
-						transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+	return (
+		<div className={`game-log-container ${isOpen ? 'is-open' : 'is-docked'}`}>
+			<AnimatePresence initial={false}>
+				{!isOpen && (
+					<motion.section
+						key="battle-log-dock"
+						className="game-log-dock relative flex w-full min-w-0 flex-col overflow-hidden rounded-md"
+						initial={{ opacity: 0, y: 8 }}
+						animate={{ opacity: 1, y: 0 }}
+						exit={{ opacity: 0, y: 8 }}
+						transition={{ duration: 0.18 }}
+						aria-label="Battle log summary"
 					>
-						<div className="game-log-header">
-							<div className="game-log-header-copy">
-								<span>Battle Log</span>
-								<span className="game-log-count">{entries.length} events</span>
-							</div>
-							<div className="game-log-header-actions">
-								{entries.length > 0 && (
-									<button type="button" className="game-log-clear" onClick={clearLog}>
-										Clear
-									</button>
-								)}
-								<button type="button" className="game-log-close" onClick={toggleLog}>{'\u2715'}</button>
+						<div className={cx(LOG_HEADER_CLASS, 'game-log-dock-header')}>
+							<button
+								type="button"
+								className={cx(LOG_TITLE_BUTTON_CLASS, 'game-log-title-button')}
+								onClick={toggleLog}
+								title="Expand battle log"
+								aria-label="Expand battle log"
+							>
+								<span className="game-log-title-block">
+									<span className="game-log-kicker">Battle Log</span>
+									<span className="game-log-count">{viewModel.total} events</span>
+								</span>
+							</button>
+							<div className="game-log-dock-actions">
+								<button
+									type="button"
+									className="game-log-icon-button"
+									onClick={hideDock}
+									title="Hide battle log"
+									aria-label="Hide battle log"
+								>
+									<EyeOff size={15} strokeWidth={2.2} />
+								</button>
 							</div>
 						</div>
-						<div className="game-log-entries" ref={scrollRef}>
-							{entries.length === 0 ? (
+
+						<div
+							className="game-log-dock-list flex min-h-0 flex-col gap-2 overflow-y-auto"
+							onClick={toggleLog}
+							onKeyDown={expandDockWithKeyboard}
+							role="button"
+							tabIndex={0}
+							aria-label="Expand battle log"
+						>
+							{viewModel.dockItems.length === 0 ? (
 								<div className="game-log-empty">No actions yet</div>
 							) : (
-								entries.map((entry) => (
-									<LogEntry key={entry.id} entry={entry} />
+								viewModel.dockItems.map(item => (
+									<BattleLogRow key={item.id} item={item} compact />
 								))
 							)}
 						</div>
-					</motion.div>
+					</motion.section>
+				)}
+
+				{isOpen && (
+					<motion.section
+						key="battle-log-panel"
+						className="game-log-panel relative flex w-full min-w-0 flex-col overflow-hidden rounded-md"
+						initial={{ opacity: 0, y: 10, scale: 0.98 }}
+						animate={{ opacity: 1, y: 0, scale: 1 }}
+						exit={{ opacity: 0, y: 10, scale: 0.98 }}
+						transition={{ duration: 0.18 }}
+						aria-label="Battle log"
+					>
+						<div className={cx(LOG_HEADER_CLASS, 'game-log-header')}>
+							<div className="game-log-title-block">
+								<span className="game-log-kicker">Battle Log</span>
+								<span className="game-log-count">{viewModel.total} events tracked</span>
+							</div>
+							<div className="game-log-header-actions">
+								{viewModel.total > 0 && (
+									<button
+										type="button"
+										className="game-log-icon-button"
+										onClick={clearLog}
+										title="Clear battle log"
+										aria-label="Clear battle log"
+									>
+										<Trash2 size={15} strokeWidth={2.2} />
+									</button>
+								)}
+								<button
+									type="button"
+									className="game-log-icon-button"
+									onClick={hideDock}
+									title="Hide battle log"
+									aria-label="Hide battle log"
+								>
+									<EyeOff size={15} strokeWidth={2.2} />
+								</button>
+								<button
+									type="button"
+									className="game-log-icon-button"
+									onClick={toggleLog}
+									title="Close battle log"
+									aria-label="Close battle log"
+								>
+									<X size={16} strokeWidth={2.2} />
+								</button>
+							</div>
+						</div>
+						<div className="game-log-entries flex min-h-0 flex-col gap-2 overflow-y-auto" ref={scrollRef}>
+							{viewModel.panelItems.length === 0 ? (
+								<div className="game-log-empty">No actions yet</div>
+							) : (
+								viewModel.panelItems.map(item => (
+									<BattleLogRow key={item.id} item={item} />
+								))
+							)}
+						</div>
+					</motion.section>
 				)}
 			</AnimatePresence>
 		</div>

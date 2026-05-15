@@ -1,3 +1,125 @@
+.mana-bar-container {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.mana-bar-container--horizontal {
+	flex-direction: row;
+}
+
+.mana-bar-container--vertical {
+	flex-direction: column;
+}
+
+.mana-bar-container--hero {
+	gap: 6px;
+}
+
+.mana-bar-counter {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 44px;
+	height: 32px;
+	padding: 0 10px;
+	background: linear-gradient(180deg, var(--rarity-rare-deep) 0%, var(--obsidian-950) 100%);
+	border: 2px solid var(--rarity-rare-mid);
+	border-radius: 16px;
+	box-shadow:
+		0 0 12px color-mix(in srgb, var(--rarity-rare-color) 40%, transparent),
+		0 2px 6px rgba(0, 0, 0, 0.5),
+		inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.mana-bar-counter-value {
+	font-family: "Cinzel", Georgia, serif;
+	font-size: 0.95rem;
+	font-weight: 800;
+	color: var(--rarity-rare-bright);
+	text-shadow:
+		0 0 12px color-mix(in srgb, var(--rarity-rare-color) 80%, transparent),
+		0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.mana-bar-tray {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 2px;
+	padding: 3px 5px;
+	background: linear-gradient(
+		180deg,
+		color-mix(in srgb, var(--obsidian-900) 95%, transparent) 0%,
+		var(--obsidian-950) 100%
+	);
+	border: 1px solid var(--rarity-rare-deep);
+	border-radius: 12px;
+	box-shadow:
+		0 2px 8px rgba(0, 0, 0, 0.5),
+		inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.mana-bar-container--vertical .mana-bar-tray {
+	flex-direction: column;
+}
+
+.mana-bar-container--hero .mana-bar-tray {
+	gap: 1px;
+	padding: 2px 4px;
+	border-radius: 10px;
+}
+
+.mana-crystal {
+	--mana-crystal-start: #1e3a5f;
+	--mana-crystal-fill: #1e3a5f;
+	--mana-crystal-stroke: var(--rarity-rare-deep);
+	--mana-crystal-filter: none;
+	--mana-crystal-opacity: 1;
+
+	position: relative;
+	width: var(--mana-crystal-size, 20px);
+	height: var(--mana-crystal-size, 20px);
+	opacity: var(--mana-crystal-opacity);
+}
+
+.mana-crystal svg {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+.mana-crystal.is-available {
+	--mana-crystal-start: #60a5fa;
+	--mana-crystal-fill: var(--rarity-rare-color);
+	--mana-crystal-stroke: var(--rarity-rare-bright);
+	--mana-crystal-filter: drop-shadow(0 0 6px color-mix(in srgb, var(--rarity-rare-color) 80%, transparent));
+}
+
+.mana-crystal.is-spent {
+	--mana-crystal-start: var(--rarity-rare-deep);
+	--mana-crystal-fill: var(--rarity-rare-deep);
+	--mana-crystal-opacity: 0.5;
+}
+
+.mana-crystal.is-locked {
+	--mana-crystal-start: var(--obsidian-500);
+	--mana-crystal-fill: var(--obsidian-500);
+	--mana-crystal-stroke: var(--obsidian-400);
+	--mana-crystal-opacity: 0.6;
+}
+
+.mana-crystal.is-overloaded {
+	--mana-crystal-start: var(--danger-900);
+	--mana-crystal-fill: var(--danger-900);
+}
+
+.mana-overload-badge {
+	margin-left: 4px;
+	font-size: 0.65rem;
+	color: var(--warning-400);
+}
+
 .mana-crystal.filling svg polygon {
 	animation: mana-fill-burst 0.5s ease-out;
 }

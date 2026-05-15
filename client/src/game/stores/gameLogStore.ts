@@ -17,14 +17,18 @@ export interface GameLogEntry {
 interface GameLogState {
 	entries: GameLogEntry[];
 	isOpen: boolean;
+	isDockHidden: boolean;
 	addEntry: (entry: Omit<GameLogEntry, 'id' | 'timestamp'>) => void;
 	toggleLog: () => void;
+	hideDock: () => void;
+	showDock: () => void;
 	clearLog: () => void;
 }
 
 export const useGameLogStore = create<GameLogState>((set) => ({
 	entries: [],
 	isOpen: false,
+	isDockHidden: false,
 	addEntry: (entry) => set((state) => {
 		const base = state.entries.length >= 100
 			? state.entries.slice(1)
@@ -36,6 +40,8 @@ export const useGameLogStore = create<GameLogState>((set) => ({
 		};
 		return { entries: [...base, newEntry] };
 	}),
-	toggleLog: () => set((state) => ({ isOpen: !state.isOpen })),
+	toggleLog: () => set((state) => ({ isOpen: !state.isOpen, isDockHidden: false })),
+	hideDock: () => set({ isOpen: false, isDockHidden: true }),
+	showDock: () => set({ isDockHidden: false }),
 	clearLog: () => set({ entries: [] })
 }));

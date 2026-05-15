@@ -31,6 +31,7 @@ const ManaBar: React.FC<ManaBarProps> = ({
   const manaBarRef = React.useRef<HTMLDivElement>(null);
   const isHeroVariant = variant === 'hero';
   const crystalSize = isHeroVariant ? 14 : CRYSTAL_SIZE;
+  const orientationClass = vertical ? 'mana-bar-container--vertical' : 'mana-bar-container--horizontal';
 
   useEffect(() => {
     if (manaBarRef.current && registerPosition) {
@@ -54,13 +55,7 @@ const ManaBar: React.FC<ManaBarProps> = ({
   return (
     <div
       ref={manaBarRef}
-      className={`mana-bar-container${isHeroVariant ? ' mana-bar-container--hero' : ''}`}
-      style={{
-        display: 'flex',
-        flexDirection: vertical ? 'column' : 'row',
-        alignItems: 'center',
-        gap: isHeroVariant ? '6px' : '4px'
-      }}
+      className={`mana-bar-container mana-bar-container--${variant} ${orientationClass}`}
     >
       {isHeroVariant ? (
         <span className="mana-label">
@@ -75,53 +70,22 @@ const ManaBar: React.FC<ManaBarProps> = ({
             </span>
           )}
 
-          <div className="mana-counter" style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minWidth: '44px',
-            height: '32px',
-            padding: '0 10px',
-            background: 'linear-gradient(180deg, var(--rarity-rare-deep) 0%, var(--obsidian-950) 100%)',
-            borderRadius: '16px',
-            border: '2px solid var(--rarity-rare-mid)',
-            boxShadow: '0 0 12px color-mix(in srgb, var(--rarity-rare-color) 40%, transparent), 0 2px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15)'
-          }}>
-            <span style={{
-              fontFamily: "'Cinzel', Georgia, serif",
-              fontWeight: 800,
-              fontSize: '0.95rem',
-              color: 'var(--rarity-rare-bright)',
-              textShadow: '0 0 12px color-mix(in srgb, var(--rarity-rare-color) 80%, transparent), 0 1px 2px rgba(0,0,0,0.8)'
-            }}>
+          <div className="mana-bar-counter">
+            <span className="mana-bar-counter-value">
               {currentMana}/{maxMana}
             </span>
           </div>
         </>
       )}
 
-      <div className="mana-tray" style={{
-        display: 'flex',
-        flexDirection: vertical ? 'column' : 'row',
-        alignItems: 'center',
-        gap: isHeroVariant ? '1px' : '2px',
-        padding: isHeroVariant ? '2px 4px' : '3px 5px',
-        background: 'linear-gradient(180deg, color-mix(in srgb, var(--obsidian-900) 95%, transparent) 0%, var(--obsidian-950) 100%)',
-        borderRadius: isHeroVariant ? '10px' : '12px',
-        border: '1px solid var(--rarity-rare-deep)',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05)'
-      }}>
+      <div className="mana-bar-tray">
         {crystals.map((crystal) => (
           <ManaCrystal key={crystal.index} {...crystal} size={crystalSize} uid={manaBarId} />
         ))}
       </div>
 
       {pendingOverload > 0 && (
-        <div style={{
-          fontSize: '0.65rem',
-          color: 'var(--warning-400)',
-          marginLeft: '4px'
-        }}>
+        <div className="mana-overload-badge">
           ⚡{pendingOverload}
         </div>
       )}
@@ -176,52 +140,41 @@ const ManaCrystal: React.FC<ManaCrystalProps> = ({
     return () => { if (t) clearTimeout(t); };
   }, [isAvailable, prevAvailable, isLocked]);
 
-  let fillColor = '#1e3a5f';
-  let glowColor = 'none';
-  let opacity = 1;
-
-  if (isLocked) {
-    fillColor = 'var(--obsidian-500)';
-    opacity = 0.6;
-  } else if (isOverloaded) {
-    fillColor = 'var(--danger-900)';
-  } else if (isAvailable) {
-    fillColor = 'var(--rarity-rare-color)';
-    glowColor = '0 0 6px color-mix(in srgb, var(--rarity-rare-color) 80%, transparent)';
-  } else if (isSpent) {
-    fillColor = 'var(--rarity-rare-deep)';
-    opacity = 0.5;
-  }
+  const stateClass = isLocked
+    ? 'is-locked'
+    : isOverloaded
+      ? 'is-overloaded'
+      : isAvailable
+        ? 'is-available'
+        : isSpent
+          ? 'is-spent'
+          : 'is-empty';
+  const crystalStyle: React.CSSProperties & { '--mana-crystal-size': string } = {
+    '--mana-crystal-size': `${size}px`,
+  };
 
   return (
     <motion.div
-      className={`mana-crystal ${animClass || ''}`}
+      className={`mana-crystal ${stateClass} ${animClass || ''}`}
       initial={{ scale: 0.8 }}
       animate={{ scale: 1 }}
       transition={{ delay: index * 0.02, duration: 0.2 }}
-      style={{
-        width: size,
-        height: size,
-        position: 'relative',
-        opacity
-      }}
+      style={crystalStyle}
     >
       <svg width={size} height={size} viewBox="0 0 20 20">
         <defs>
           <linearGradient id={`${gradId}`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor={isAvailable ? '#60a5fa' : fillColor} />
-            <stop offset="100%" stopColor={fillColor} />
+            <stop offset="0%" stopColor="var(--mana-crystal-start)" />
+            <stop offset="100%" stopColor="var(--mana-crystal-fill)" />
           </linearGradient>
         </defs>
 
         <motion.polygon
           points="10,1 18,6 18,14 10,19 2,14 2,6"
           fill={`url(#${gradId})`}
-          stroke={isAvailable ? 'var(--rarity-rare-bright)' : isLocked ? 'var(--obsidian-400)' : 'var(--rarity-rare-deep)'}
+          stroke="var(--mana-crystal-stroke)"
           strokeWidth="1.5"
-          style={{
-            filter: glowColor !== 'none' ? `drop-shadow(${glowColor})` : 'none'
-          }}
+          style={{ filter: 'var(--mana-crystal-filter)' }}
           animate={isAvailable ? {
             filter: ['drop-shadow(0 0 4px rgba(59, 130, 246, 0.6))', 'drop-shadow(0 0 8px rgba(59, 130, 246, 0.9))', 'drop-shadow(0 0 4px rgba(59, 130, 246, 0.6))']
           } : {}}
