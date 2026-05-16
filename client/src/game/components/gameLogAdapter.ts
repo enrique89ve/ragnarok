@@ -12,6 +12,8 @@ export type BattleLogIconName =
 	| 'shield'
 	| 'repeat'
 	| 'flame'
+	| 'clock'
+	| 'radio'
 	| 'dot';
 
 export interface BattleLogItem {
@@ -47,6 +49,9 @@ const EVENT_TITLES: Record<GameLogEntry['type'], string> = {
 	fatigue: 'Fatigue',
 	battlecry: 'Battlecry',
 	deathrattle: 'Deathrattle',
+	poker_turn: 'Poker decision',
+	poker_phase: 'Poker phase',
+	p2p_status: 'P2P status',
 };
 
 const EVENT_ICONS: Record<GameLogEntry['type'], BattleLogIconName> = {
@@ -63,13 +68,18 @@ const EVENT_ICONS: Record<GameLogEntry['type'], BattleLogIconName> = {
 	fatigue: 'flame',
 	battlecry: 'zap',
 	deathrattle: 'skull',
+	poker_turn: 'clock',
+	poker_phase: 'radio',
+	p2p_status: 'repeat',
 };
 
 function getActorLabel(actor: GameLogEntry['actor']): string {
+	if (actor === 'system') return 'System';
 	return actor === 'player' ? 'You' : 'Enemy';
 }
 
 function getTone(entry: GameLogEntry): BattleLogTone {
+	if (entry.actor === 'system' || entry.type === 'poker_phase' || entry.type === 'p2p_status') return 'neutral';
 	if (entry.type === 'damage' || entry.type === 'fatigue' || entry.type === 'death') return 'danger';
 	if (entry.type === 'heal') return 'heal';
 	return entry.actor === 'player' ? 'player' : 'opponent';
@@ -87,6 +97,9 @@ function getMeta(entry: GameLogEntry): string[] {
 	const meta = [getActorLabel(entry.actor)];
 	if (entry.details?.cardName) meta.push(entry.details.cardName);
 	if (entry.details?.targetName) meta.push(`Target: ${entry.details.targetName}`);
+	if (entry.details?.phaseLabel) meta.push(entry.details.phaseLabel);
+	if (entry.details?.statusLabel) meta.push(entry.details.statusLabel);
+	if (entry.details?.turnId) meta.push(`#${entry.details.turnId.slice(-6)}`);
 	return meta;
 }
 
