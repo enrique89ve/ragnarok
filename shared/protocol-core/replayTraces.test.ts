@@ -458,16 +458,23 @@ describe('Protocol Core: Replay Traces', () => {
 
 	it('admin-only ops use the injected runtime authority', async () => {
 		deps = { ...deps, runtime: RAGNAROK_RUNTIME_CONFIGS.testnet };
+		const genesisPayload = {
+			version: 1,
+			supply: {
+				pack_supply: { common: 2000, rare: 1000, epic: 500, mythic: 250 },
+				reward_supply: { epic: 150, mythic: 50 },
+			},
+		};
 
 		const mainnetAdminResult = await applyOp(
-			makeOp('genesis', { version: 1 }, { broadcaster: 'ragnarok', usedActiveAuth: true }),
+			makeOp('genesis', genesisPayload, { broadcaster: 'ragnarok', usedActiveAuth: true }),
 			defaultCtx,
 			deps,
 		);
 		expect(mainnetAdminResult.status).toBe('rejected');
 
 		const testnetAdminResult = await applyOp(
-			makeOp('genesis', { version: 1 }, { broadcaster: 'ragnarok-test', usedActiveAuth: true }),
+			makeOp('genesis', genesisPayload, { broadcaster: 'ragnarok-test', usedActiveAuth: true }),
 			defaultCtx,
 			deps,
 		);

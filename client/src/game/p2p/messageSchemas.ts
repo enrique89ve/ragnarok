@@ -23,6 +23,8 @@
 import { z } from 'zod';
 
 import { ChessCommandEnvelopeSchema } from '@shared/p2p-wire/chess';
+import { CompactPokerActionSchema, isPokerActionCompactConsistent } from '@shared/p2p-wire/combat';
+import { DeckCardClaimsSchema } from '@shared/protocol-core/deckVerification';
 
 import type { P2PMessage } from './messages';
 
@@ -31,6 +33,8 @@ import type { P2PMessage } from './messages';
 const NonEmptyString = (max: number) => z.string().min(1).max(max);
 const HashString = z.string().min(1).max(256);
 const NonNegativeInt = z.number().int().nonnegative();
+const PokerHpCommitment = z.number().int().min(0).max(500);
+const PokerTurnDurationMs = z.number().int().min(1).max(300_000);
 
 // `OpaqueObject` covers payloads we deliberately do not model (full game
 // state, packaged match results, army selections). Requiring an object
@@ -105,7 +109,8 @@ const PongSchema = z.object({ type: z.literal('pong') }).strict();
 const DeckVerifySchema = z.object({
 	type: z.literal('deck_verify'),
 	hiveAccount: NonEmptyString(32),
-	nftIds: z.array(NonEmptyString(128)).max(64),
+	protocolVersion: z.literal(2),
+	claims: DeckCardClaimsSchema,
 }).strict();
 
 // ── Commit-reveal seed (post-handshake symmetric chess derivation) ─────────
@@ -189,9 +194,36 @@ const HashMismatchSchema = z.object({
 
 const PokerActionSchema = z.object({
 	type: z.literal('poker_action'),
-	playerId: NonEmptyString(64),
-	action: NonEmptyString(64),
-	hpCommitment: NonNegativeInt.optional(),
+	playerId: NonEmptyString(128),
+	action: z.enum(['attack', 'counter', 'engage', 'brace', 'defend']),
+	hpCommitment: PokerHpCommitment.optional(),
+	compact: CompactPokerActionSchema.optional(),
+	turnId: NonEmptyString(256).optional(),
+	decisionId: NonEmptyString(256),
+	sentAtMs: NonNegativeInt.optional(),
+}).strict().superRefine((message, ctx) => {
+	if (!message.compact) return;
+	if (isPokerActionCompactConsistent({
+		action: message.action,
+		hpCommitment: message.hpCommitment,
+		compact: message.compact,
+	})) return;
+	ctx.addIssue({
+		code: z.ZodIssueCode.custom,
+		path: ['compact'],
+		message: 'compact poker tuple must match legacy action fields',
+	});
+});
+
+const PokerTurnStartedSchema = z.object({
+	type: z.literal('poker_turn_started'),
+	combatId: NonEmptyString(128),
+	turnId: NonEmptyString(256),
+	phase: z.enum(['pre_flop', 'faith', 'foresight', 'destiny']),
+	activePlayerId: NonEmptyString(128),
+	actionsThisRound: NonNegativeInt,
+	durationMs: PokerTurnDurationMs,
+	sentAtMs: NonNegativeInt,
 }).strict();
 
 // ── Heartbeat (peerStore-level keepalive) ──────────────────────────────────
@@ -280,6 +312,7 @@ const SCHEMA_BY_TYPE = {
 	hash_check: HashCheckSchema,
 	hash_mismatch: HashMismatchSchema,
 	poker_action: PokerActionSchema,
+	poker_turn_started: PokerTurnStartedSchema,
 	heartbeat: HeartbeatSchema,
 	session_authorize: SessionAuthorizeSchema,
 	session_renewal: SessionRenewalSchema,

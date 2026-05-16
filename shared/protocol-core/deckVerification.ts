@@ -18,7 +18,7 @@ export const DeckRejectionCodeSchema = z.union([
 	z.literal('unknown-nft'),
 	z.literal('not-owner'),
 	z.literal('duplicate-nft-uid'),
-	z.literal('hint-card-id-mismatch'),
+	z.literal('claim-card-id-mismatch'),
 ]);
 
 export type DeckRejectionCode = z.infer<typeof DeckRejectionCodeSchema>;
@@ -31,7 +31,7 @@ export type DeckCardClaim =
 	| {
 		readonly authority: 'nft-custody';
 		readonly nftUid: NftUid;
-		readonly cardIdHint?: CardId;
+		readonly cardId: CardId;
 	};
 
 export type VerifiedDeckCard =
@@ -97,28 +97,11 @@ export const StarterDeckCardClaimSchema = z.object({
 	cardId: StarterCardIdSchema,
 }).strict();
 
-const NftDeckCardClaimBaseSchema = z.object({
+export const NftDeckCardClaimSchema = z.object({
 	authority: z.literal('nft-custody'),
 	nftUid: NftUidSchema,
-	cardIdHint: CardIdSchema.optional(),
-	cardId: CardIdSchema.optional(),
+	cardId: CardIdSchema,
 }).strict();
-
-export const NftDeckCardClaimSchema = NftDeckCardClaimBaseSchema.transform((claim, ctx): DeckCardClaim => {
-	if (claim.cardIdHint !== undefined && claim.cardId !== undefined && claim.cardIdHint !== claim.cardId) {
-		ctx.addIssue({
-			code: z.ZodIssueCode.custom,
-			message: 'cardId and cardIdHint disagree',
-			path: ['cardIdHint'],
-		});
-		return z.NEVER;
-	}
-
-	const cardIdHint = claim.cardIdHint ?? claim.cardId;
-	return cardIdHint === undefined
-		? { authority: 'nft-custody', nftUid: claim.nftUid }
-		: { authority: 'nft-custody', nftUid: claim.nftUid, cardIdHint };
-});
 
 export const DeckCardClaimSchema = z.union([
 	StarterDeckCardClaimSchema,
@@ -194,9 +177,88 @@ export function toDeckClaimsFromLegacyCardIds(
 		}));
 	}
 
-	return rejections.length === 0
-		? { status: 'parsed', claims }
-		: { status: 'rejected', claims, rejections };
+	if (rejections.length === 0) return { status: 'parsed', claims };
+	return { status: 'rejected', claims, rejections };
+}
+
+type NftPlayerCollectionEntry = Extract<PlayerCollectionEntry, { authority: 'nft-custody' }>;
+
+function nftEntriesByCardId(
+	collection: readonly PlayerCollectionEntry[],
+): ReadonlyMap<number, readonly NftPlayerCollectionEntry[]> {
+	const entriesByCardId = new Map<number, NftPlayerCollectionEntry[]>();
+	for (const entry of collection) {
+		if (entry.authority !== 'nft-custody') continue;
+		const entries = entriesByCardId.get(entry.cardId) ?? [];
+		entries.push(entry);
+		entriesByCardId.set(entry.cardId, entries);
+	}
+	return entriesByCardId;
+}
+
+export function buildDeckClaimsFromCardIds(input: {
+	readonly cardIds: readonly number[];
+	readonly collection: readonly PlayerCollectionEntry[];
+}): DeckClaimParseResult {
+	const starterLookup = starterEntriesByCardId(input.collection);
+	const nftLookup = nftEntriesByCardId(input.collection);
+
+	const starterUseCounts = new Map<number, number>();
+	const usedNftUids = new Set<string>();
+	const claims: DeckCardClaim[] = [];
+	const rejections: DeckRejection[] = [];
+
+	for (const [index, rawCardId] of input.cardIds.entries()) {
+		const slotIndex = deckSlotIndex(index);
+		const cardId = CardIdSchema.safeParse(rawCardId);
+		if (!cardId.success) {
+			rejections.push(rejection({
+				slotIndex,
+				code: 'invalid-claim',
+				detail: 'selected card id is invalid',
+			}));
+			continue;
+		}
+
+		const starterCardId = StarterCardIdSchema.safeParse(rawCardId);
+		if (starterCardId.success) {
+			const entry = starterLookup.get(starterCardId.data);
+			const nextCount = (starterUseCounts.get(starterCardId.data) ?? 0) + 1;
+			if (entry && nextCount <= entry.ownedCopies) {
+				starterUseCounts.set(starterCardId.data, nextCount);
+				claims.push({
+					authority: 'starter-entitlement',
+					cardId: starterCardId.data,
+				});
+				continue;
+			}
+		}
+
+		const nftEntry = (nftLookup.get(cardId.data) ?? [])
+			.find(entry => !usedNftUids.has(entry.nftUid));
+		if (nftEntry) {
+			usedNftUids.add(nftEntry.nftUid);
+			claims.push({
+				authority: 'nft-custody',
+				nftUid: nftEntry.nftUid,
+				cardId: nftEntry.cardId,
+			});
+			continue;
+		}
+
+		rejections.push(rejection({
+			slotIndex,
+			code: starterCardId.success ? 'copy-limit-exceeded' : 'not-owner',
+			detail: starterCardId.success
+				? 'starter card copy limit exceeded and no NFT copy is available'
+				: 'selected card requires NFT custody evidence',
+			cardId: cardId.data,
+			...(starterCardId.success ? { authority: 'starter-entitlement' as const } : {}),
+		}));
+	}
+
+	if (rejections.length === 0) return { status: 'parsed', claims };
+	return { status: 'rejected', claims, rejections };
 }
 
 export function toDeckClaimsFromLegacyCardRefs(
@@ -210,7 +272,7 @@ export function toDeckClaimsFromLegacyCardRefs(
 		const rawNftUid = ref.nft_id ?? ref.nftUid ?? ref.instanceId;
 		if (rawNftUid !== undefined) {
 			const nftUid = NftUidSchema.safeParse(rawNftUid);
-			const cardIdHint = ref.cardId === undefined
+			const cardId = ref.cardId === undefined
 				? undefined
 				: CardIdSchema.safeParse(ref.cardId);
 
@@ -224,20 +286,33 @@ export function toDeckClaimsFromLegacyCardRefs(
 				continue;
 			}
 
-			if (cardIdHint !== undefined && !cardIdHint.success) {
+			if (cardId === undefined) {
 				rejections.push(rejection({
 					slotIndex,
 					code: 'invalid-claim',
-					detail: 'legacy NFT ref has invalid cardId hint',
+					detail: 'legacy NFT ref requires cardId',
 					authority: 'nft-custody',
 					nftUid: nftUid.data,
 				}));
 				continue;
 			}
 
-			claims.push(cardIdHint === undefined
-				? { authority: 'nft-custody', nftUid: nftUid.data }
-				: { authority: 'nft-custody', nftUid: nftUid.data, cardIdHint: cardIdHint.data });
+			if (!cardId.success) {
+				rejections.push(rejection({
+					slotIndex,
+					code: 'invalid-claim',
+					detail: 'legacy NFT ref has invalid cardId',
+					authority: 'nft-custody',
+					nftUid: nftUid.data,
+				}));
+				continue;
+			}
+
+			claims.push({
+				authority: 'nft-custody',
+				nftUid: nftUid.data,
+				cardId: cardId.data,
+			});
 			continue;
 		}
 
@@ -408,13 +483,13 @@ export function verifyDeckClaims(input: {
 			continue;
 		}
 
-		if (claim.cardIdHint !== undefined && claim.cardIdHint !== entry.cardId) {
+		if (claim.cardId !== entry.cardId) {
 			rejections.push(rejection({
 				slotIndex,
-				code: 'hint-card-id-mismatch',
-				detail: 'NFT cardId hint does not match resolved instance',
+				code: 'claim-card-id-mismatch',
+				detail: 'NFT cardId claim does not match resolved instance',
 				authority: claim.authority,
-				cardId: claim.cardIdHint,
+				cardId: claim.cardId,
 				nftUid: claim.nftUid,
 			}));
 			continue;

@@ -23,6 +23,7 @@
 import { debug } from '../config/debugConfig';
 
 type TransportEvent = 'data' | 'open' | 'close' | 'error';
+type TransportCloseReason = 'local' | 'opponent';
 type Listener = (...args: unknown[]) => void;
 
 interface OpenPayload {
@@ -58,7 +59,7 @@ export class LocalWebSocketTransport {
 		ws.onerror = () => this.emit('error', new Error('WebSocket error'));
 		ws.onclose = (ev: CloseEvent) => {
 			debug.log(`[WSTransport] closed code=${ev.code} reason=${ev.reason || 'n/a'}`);
-			if (this._open && !this._closed) this.emit('close');
+			if (this._open && !this._closed) this.emit('close', 'local' satisfies TransportCloseReason);
 			this._open = false;
 			this._closed = true;
 		};
@@ -148,7 +149,7 @@ export class LocalWebSocketTransport {
 			case 'close':
 				if (this._open) {
 					this._open = false;
-					this.emit('close');
+					this.emit('close', 'opponent' satisfies TransportCloseReason);
 				}
 				return;
 			case 'error': {

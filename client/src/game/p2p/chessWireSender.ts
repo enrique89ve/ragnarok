@@ -15,9 +15,8 @@
  *
  * Surface (post C-Chess.8):
  * - `sendChessMove`: quiet move (no capture).
- * - `sendChessAttack`: instant-kill capture only. The caller (the chess
- *   UI) verifies `isChessAttackInstantKill` before invoking; non-instant
- *   captures stay blocked at the UI layer.
+ * - `sendChessAttack`: instant-kill capture.
+ * - `sendChessCombatInitiated`: non-instant capture that enters poker.
  *
  * State hash (TD-27c-chess): each envelope carries `prevChessStateHash`
  * (over the protocol chess snapshot) AND `prevCardsStateHash` (over the
@@ -45,7 +44,8 @@ import { useGameStore } from '../stores/gameStore';
 import { usePeerStore } from '../stores/peerStore';
 import { useUnifiedCombatStore } from '../stores/unifiedCombatStore';
 import type { ChessBoardPosition } from '../types/ChessTypes';
-import type { ChessAttackCommand, ChessCommand, ChessCommandEnvelope, ChessMoveCommand } from '../../../../shared/p2p-wire/chess';
+import type { ChessAttackCommand, ChessCommand, ChessCommandEnvelope, ChessCombatInitiatedCommand, ChessMoveCommand } from '../../../../shared/p2p-wire/chess';
+import { encodeChessCombatInitiated } from '../../../../shared/p2p-wire/combat';
 import { computeChessPrevStateHash } from '../engine/chessHash';
 import { computeCardsPrevStateHash } from '../engine/wireHash';
 import { debug } from '../config/debugConfig';
@@ -155,6 +155,8 @@ export interface ChessAttackEmit {
 	readonly to: ChessBoardPosition;
 	readonly defenderId: string;
 }
+
+export type ChessCombatInitiatedEmit = ChessAttackEmit;
 
 /**
  * Build + send a chess_command envelope around the given inner command,
@@ -267,6 +269,26 @@ export function sendChessAttack(attack: ChessAttackEmit, prev: ChessPrevHashes):
 	return dispatchChessCommand(command, prev, {
 		defenderId: attack.defenderId,
 		isInstantKill: true,
+	});
+}
+
+/**
+ * Send a non-instant capture envelope. Receiver mirrors the same attack
+ * animation and then stages `pendingCombat`, which lets the existing poker
+ * bootstrap run on both peers.
+ */
+export function sendChessCombatInitiated(attack: ChessCombatInitiatedEmit, prev: ChessPrevHashes): boolean {
+	const command: ChessCombatInitiatedCommand = {
+		type: 'chess_combat_initiated',
+		pieceId: attack.pieceId,
+		from: attack.from,
+		to: attack.to,
+		defenderId: attack.defenderId,
+		compact: encodeChessCombatInitiated({ from: attack.from, to: attack.to }),
+	};
+	return dispatchChessCommand(command, prev, {
+		defenderId: attack.defenderId,
+		isInstantKill: false,
 	});
 }
 

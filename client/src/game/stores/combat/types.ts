@@ -21,7 +21,8 @@ import {
   PokerCard,
   CombatResolution,
   PetData,
-  CombatAction
+  CombatAction,
+  PokerCombatDeterministicOptions
 } from '../../types/PokerCombatTypes';
 import type { SeededRng, SeededIdGen } from '@shared/p2p-wire/rng';
 import type { HeroDeckLoadout } from '../../deck/heroDeckRules';
@@ -152,7 +153,8 @@ export interface PokerCombatSliceActions {
     skipMulligan?: boolean,
     playerKingId?: string,
     opponentKingId?: string,
-    firstStrikeTarget?: 'player' | 'opponent'
+    firstStrikeTarget?: 'player' | 'opponent',
+    deterministic?: PokerCombatDeterministicOptions
   ) => void;
   completeFirstStrike: () => void;
   completeMulligan: () => void;
@@ -162,6 +164,15 @@ export interface PokerCombatSliceActions {
   endPokerCombat: () => void;
   drawPokerCards: (count: number) => PokerCard[];
   updatePokerTimer: (newTime: number) => void;
+  syncPokerTurnClock: (input: {
+    turnId: string;
+    combatId: string;
+    phase: string;
+    activePlayerId: string;
+    actionsThisRound: number;
+    durationMs: number;
+    receivedAtMs: number;
+  }) => void;
   setPlayerReady: (playerId: string) => void;
   healPlayerHero: (amount: number) => void;
   healOpponentHero: (amount: number) => void;

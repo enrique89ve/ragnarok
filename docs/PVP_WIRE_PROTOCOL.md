@@ -104,6 +104,32 @@ hop. For a turn-based card game this latency is negligible.
 **Keepalive**: WS-level ping/pong every 15s (`p2pRelay.ts:235-243`). An
 app-level `heartbeat` envelope (sent by `useWireSync`) runs on top.
 
+**Latency and reconnect policy (P0)**:
+- User actions are sent as compact intent envelopes, not full state dumps.
+  Chess/poker carry the minimum semantic action plus optional compact tuples;
+  full `gameState` sync remains a transitional cards-phase fallback.
+- Same-tab network loss enters `grace_period`/`reconnecting`; the local seed,
+  transcript, seq counters, chess sender state, and queued messages are
+  preserved. Reconnect allows two automatic attempts inside a 60s window
+  (`2s`, then `15s` scheduling, with per-attempt transport timeout). If the
+  window expires, the disconnected side receives a local technical result.
+- On reconnect, `useWireSync` does not run a new seed handshake. It sends
+  version/engine probes and `state_sync_request` for transcript recovery.
+- P0 technical results are gameplay/UI outcomes only. They do not authorize
+  RUNE settlement. Ranked RUNE must stay `no settlement` unless a future
+  `timeout_claim`/`forfeit_claim` path can prove abandonment from a prior
+  `match_anchor`, signed transcript, reconnect window, silence proof, and
+  dispute window. A high win probability or "one move from victory" state is
+  not economic evidence by itself.
+- This mirrors the conservative esports/game precedent: Axie: Origins used a
+  60s disconnect threshold before match loss during its RPS / pre-battle flow,
+  while tournament rules often count a mid-match disconnect as a loss unless
+  both players/admin agree.
+- A hard page reload is still not full recovery: the browser loses in-memory
+  game/chess/poker stores. The UI warns via `beforeunload` during an active
+  P2P match. Full reload recovery requires a persisted match snapshot and a
+  replay-applying recovery path, not only the encrypted action log.
+
 ---
 
 ## §3 Match Lifecycle
@@ -247,8 +273,8 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `init` | host → client | host only | Phase 2: send authoritative initial gameState |
 | `game_command` (envelope) | client → host | client | Phase 3 cards: requests an action from host |
 | `gameState` | host → client | host | Phase 3 cards: sync authoritative state (debounced) |
-| `chess_command` (envelope) | both | both (symmetric) | Phase 3 chess: discriminated union of `chess_move` (quiet) and `chess_attack` (instant-kill capture) — see §5 |
-| `poker_action` | client → host | client | Phase 3 poker: action submitted to host |
+| `chess_command` (envelope) | both | both (symmetric) | Phase 3 chess: discriminated union of `chess_move` (quiet), `chess_attack` (instant-kill capture), and `chess_combat_initiated` (non-instant capture into poker) — see §5 |
+| `poker_action` | both | both (symmetric) | Phase 3 poker: deterministic local apply + relay to peer; includes optional compact tuple for transcript/DataChannel migration |
 | `hash_check` | host → client | host | Periodic state-hash sanity check |
 | `hash_mismatch` | client → host | client | Reports a divergent state hash |
 | `result_propose` | host → client | host | Phase 4: proposed match result with broadcaster sig |
@@ -294,8 +320,8 @@ exceptions, both tracked as open work:
 
 - **Cards phase** runs host-authoritative today (see subsection below).
   Migration to symmetric tracked in **OPEN-8**.
-- **Poker phase** runs host-authoritative today (see subsection below).
-  Migration tracked in **OPEN-4**.
+- **Poker phase** is being migrated to symmetric in P0: both peers apply
+  the same deterministic `poker_action`, with the relay carrying intent.
 
 While these transitions persist, the bridge layer (today
 `client/src/game/hooks/useWireSync.ts`, scheduled to move under
@@ -339,15 +365,18 @@ copy for QA export.
 Pattern: both peers validate AND apply each chess_command independently.
 No host-only routing.
 
-**Wire surface** (post C-Chess.8):
+**Wire surface** (P0 combat sync):
 - `chess_move`: quiet move (no capture). Both peers apply via
   `executeMove`.
-- `chess_attack`: instant-kill capture only. Receiver runs
+- `chess_attack`: instant-kill capture. Receiver runs
   `startAttackAnimation(attacker, defender, true)` and the existing
   `completeAttackAnimation` → `executeInstantKill` chain handles the
   apply locally on each peer. Schema in `shared/p2p-wire/chess.ts`
   (discriminated union; `defenderId` is explicit and verified against
   the local roster as defense-in-depth).
+- `chess_combat_initiated`: non-instant capture. Receiver mirrors the
+  same attack animation with `isInstantKill=false`; after animation,
+  `pendingCombat` boots poker on both peers.
 
 **Sender invariant** (`useChessBoardInteractions.ts:184-238`):
 **every wire envelope represents a mutation that the sender already
@@ -358,20 +387,12 @@ apply (illegal move, animation in progress, missing selection), no
 envelope is sent and the remote never sees a mutation that the sender
 itself didn't perform.
 
-**Instant-kill rule** (single source of truth:
+**Capture routing rule** (single source of truth:
 `shared/p2p-wire/chess.ts` `isChessAttackInstantKill`): an attack is
 instant-kill when `attacker.type ∈ {pawn, king}` (Valkyrie weapon) OR
-`defender.type === pawn` (too weak to defend). The predicate is consulted
-by the sender (to decide between `chess_attack` emit vs the
-non-instant-capture toast) and by the receiver (to reject envelopes that
-claim a non-instant outcome). Same module = no drift.
-
-**Non-instant captures** (queen vs rook, rook vs bishop, etc.) are
-**blocked at the UI layer** with a toast — they require the chess→poker
-phase to be wired symmetrically, which is a separate workstream tracked
-in §10 OPEN-3. The `executeInstantKill` chain bypasses the poker phase
-entirely; it's the only chess→state-mutation path safe to run on both
-peers without coordination today.
+`defender.type === pawn` (too weak to defend). Sender and receiver use
+the predicate to route `chess_attack` vs `chess_combat_initiated`; same
+module = no drift.
 
 **King ability (mine placement) blocked in P2P**: each peer's mines
 live in their local store and don't cross the wire today. If kept
@@ -420,14 +441,42 @@ The host still produces the authoritative transcript at match end
 (§7), but the chess move list is identical on both peers if determinism
 holds.
 
-### Poker Phase — Host-Authoritative (transitional, OPEN-4)
+### Poker Phase — Symmetric P0
 
-Pattern: similar to cards. Client sends `poker_action`; host validates
-the player turn and calls `pokerState.performAction`.
+Pattern: both peers initialize poker from the same chess combat seed and
+apply the same `poker_action` locally. The relay carries intent; it is not
+the source of poker state.
 
-Implementation: `useWireSync.ts:879-910`. The client does NOT apply
-locally; the host's resulting state is reflected via the next
-`gameState` sync.
+Implementation:
+- `RagnarokGameCoordinator` uses chess piece ids as poker participant ids
+  and derives deterministic combat/deck seeds from `matchSeed`, the piece
+  ids, positions, and chess move count.
+- `initializePokerCombat` accepts deterministic options so both peers deal
+  the same physical attacker/defender cards even when viewer slots are
+  swapped.
+- `poker_action` is applied locally by the sender and by the receiver in
+  `useWireSync`. The message keeps legacy object fields plus a compact
+  tuple from `shared/p2p-wire/combat.ts`, and carries a required `decisionId`
+  for receiver-side duplicate rejection.
+- Store-level validation is mandatory before any poker action mutates state:
+  phase must be a betting phase, `activePlayerId` must match, checks are
+  rejected when a wager is pending, folds require a wager to answer, and
+  bet/raise amounts are capped by `min(HP, stamina * 10)`. All-in showdown
+  windows are not actionable.
+- On receive, `poker_action.playerId` must be the local viewer's remote
+  poker actor (`pokerState.opponent.playerId`) and the active actor for the
+  current `turnId`; a peer cannot act for the local player's poker slot.
+- If `poker_action.compact` is present, it must agree with the legacy
+  `action` / `hpCommitment` fields. Peers reject mismatches before applying
+  the action so the transcript cannot carry two interpretations.
+- `poker_turn_started` is advisory clock sync only. A peer may not extend a
+  decision window: receivers accept the message only when `durationMs`
+  equals their local `maxTurnTime * 1000` for the same combat/phase/actor.
+- P2P poker freezes local input, timers, and AI fallback while the transport
+  is in reconnect/grace states. Local-only poker mutations must not happen
+  during reconnect.
+- Showdown wager coin flips are derived from deterministic combat metadata
+  instead of browser randomness so both peers can replay the same result.
 
 ---
 
@@ -628,12 +677,9 @@ only host's counts?
 
 ### OPEN-3 — Chess non-instant captures + state recovery
 
-**Where**: `useChessBoardInteractions.ts` blocks non-instant captures
-(queen vs rook etc.) with a toast. The chess→poker phase is not wired
-symmetrically: poker init uses `uuidv4()` for combat IDs (non-deterministic
-across peers), `Math.random()` for wager bonuses, and viewer-relative
-`pokerSlotsSwapped`. Adapting it for P2P requires a separate workstream
-similar in scope to chess Plan B applied to the poker phase.
+**Status**: P0 implementation in progress. Non-instant captures now emit
+`chess_combat_initiated` and no longer stop at the UI toast. Poker bootstrap
+uses deterministic participant ids and seeded deck order.
 
 Additionally: when chess_command is rejected mid-match with
 `attacker_not_found` / `defender_not_found` (post C-Chess.8 these are
@@ -641,10 +687,8 @@ rarer but possible under residual bugs), no state recovery is attempted.
 The roster dump diagnostic helps debug from logs but the match
 effectively freezes.
 
-**Decision needed (poker sync)**: design and implement
-`chess_combat_initiated` + symmetric poker phase wire envelopes, OR
-keep poker host-auth and design the cross-peer init handoff. Multi-step
-refactor; needs grilling.
+**Remaining P0 validation**: two-browser smoke for capture-combat-poker
+resolution, reconnect during poker, and state-sync recovery after mismatch.
 
 **Decision needed (state recovery)**: implement snapshot request
 between peers when divergence is detected, OR keep current
@@ -652,30 +696,30 @@ between peers when divergence is detected, OR keep current
 that the typical divergence sources (AI gate, mines, captures) are now
 each individually blocked or guarded.
 
-### OPEN-4 — Poker phase is host-only — should it migrate to symmetric?
+### OPEN-4 — Poker symmetric hardening
 
-**Where**: `useWireSync.ts:879-910` — only the host validates and applies
-poker actions. The client never executes locally; it waits for the host's
-`gameState` sync.
-
-**Risk**: same impedance mismatch that plagued chess pre-Plan-B. If poker
-has any client-driven UI state that depends on having applied locally,
-animations and selection may lag visibly.
-
-**Decision needed**: leave host-auth (poker phases are short, lag is
-tolerable), or migrate to symmetric (consistency with chess Plan B)?
+**Status**: migrated to symmetric P0 path. Action legality, stamina/HP
+capacity checks, compact tuple mismatch rejection, remote-actor binding,
+duplicate `decisionId` rejection, all-in action lockout, deterministic
+showdown coin flips, and turn-clock duration guards are implemented.
+Remaining hardening is hash coverage for poker snapshots, compact transcript
+replay from `shared/p2p-wire/combat.ts`, and two-browser smoke evidence.
 
 ### OPEN-5 — Disconnect / reconnect mid-match
 
-**Where**: `useWireSync.ts:284-325` — the `close` handler shows a
-disconnect toast and submits `fake_disconnect` slash evidence, but does
-NOT attempt reconnection or state recovery. The transcript is cleared
-on next mount.
+**Status**: P0 same-tab reconnect implemented. `peerStore` keeps the
+outgoing buffer during reconnect, gives the disconnected side up to 60s,
+uses two automatic reconnect attempts, and flushes queued messages after
+reopen. `useWireSync` preserves seed/session refs while the transport is in
+`grace_period`/`reconnecting`, avoids re-seeding on reconnect, and asks the
+peer for missing transcript leaves via `state_sync_request`. The close
+handler no longer treats a transient close as immediate slash evidence.
 
-**Decision needed**: implement reconnection with state recovery (snapshot
-from peer? from host's last gameState sync?), or keep the current
-"disconnect = forfeit" semantics? If reconnection lands, how is the
-transcript merged across the gap?
+**Remaining**: accidental hard reload is guarded by a `beforeunload` warning,
+not fully recovered. Full reload recovery needs persisted room metadata,
+match/chess/poker snapshots, and deterministic replay from the signed action
+log. Mobile `pagehide`/OS-kill cannot be prevented, so ranked public testing
+should still treat full reload recovery as a live risk until that slice lands.
 
 ### OPEN-6 — `result_propose` matchType field source-of-truth
 

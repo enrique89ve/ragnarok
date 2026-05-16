@@ -93,6 +93,9 @@ __tests__/
 !client/src/game/deck/heroDeckRules.test.ts
 !client/src/game/utils/cards/cardLevelScaling.test.ts
 !client/src/game/components/chess/chessBoardInteractionRules.test.ts
+!client/src/game/components/gameLogAdapter.test.ts
+!client/src/game/combat/rules/pokerActionRules.test.ts
+!client/src/game/combat/components/PokerP2PTurnStatus.test.ts
 !client/src/game/components/marketplace/runePackExchange.test.ts
 !shared/protocol-core/cardProgression.test.ts
 !shared/protocol-core/campaignResult.test.ts
@@ -119,6 +122,8 @@ __tests__/
 !server/routes/chainRoutes.matchPending.test.ts
 !client/src/game/protocol/sessionRenewal.test.ts
 !client/src/game/protocol/phase0.smoke.test.ts
+!shared/p2p-wire/chess.test.ts
+!shared/p2p-wire/combat.test.ts
 *.spec.js
 *.spec.ts
 *.test.tsx

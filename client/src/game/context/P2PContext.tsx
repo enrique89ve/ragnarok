@@ -20,6 +20,9 @@ export const P2PProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 		endTurn: gsEndTurn,
 		performHeroPower: gsPerformHeroPower,
 		dispatchGameCommand: () => undefined,
+		sendPokerAction: () => undefined,
+		sendPokerTurnStarted: () => undefined,
+		downloadSessionLog: () => undefined,
 		gameState: null,
 		isConnected: false,
 		isHost: false,
@@ -51,6 +54,9 @@ export const P2PProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 			selectDiscoveryOption: useGameStore.getState().selectDiscoveryOption,
 		});
 	};
+	ref.current.sendPokerAction = p2pSync.sendPokerAction;
+	ref.current.sendPokerTurnStarted = p2pSync.sendPokerTurnStarted;
+	ref.current.downloadSessionLog = p2pSync.downloadSessionLog;
 	ref.current.gameState = gameState;
 	ref.current.isConnected = p2pSync.isConnected;
 	ref.current.isHost = p2pSync.isHost;

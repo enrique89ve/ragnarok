@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { toast } from 'sonner';
 import { useAudio } from '../../../lib/stores/useAudio';
 import { debug } from '../../config/debugConfig';
 import { useChessCombatAdapter } from '../../hooks/useChessCombatAdapter';
 import { useKingChessAbility } from '../../hooks/useKingChessAbility';
 import { useGameStore } from '../../stores/gameStore';
 import { useUnifiedCombatStore } from '../../stores/unifiedCombatStore';
-import { captureChessPrevHashes, sendChessAttack, sendChessMove } from '../../p2p/chessWireSender';
+import { captureChessPrevHashes, sendChessAttack, sendChessCombatInitiated, sendChessMove } from '../../p2p/chessWireSender';
 import type { ChessBoardPosition } from '../../types/ChessTypes';
-import { isChessAttackInstantKill } from '../../../../../shared/p2p-wire/chess';
 import { computeMatchupGlows } from '../../utils/chess/elementMatchupUtils';
 import {
   containsPosition,
@@ -275,29 +273,7 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
         }
       }
 
-      // P2P chess pre-flight gate: only INSTANT-KILL captures cross the
-      // wire today (C-Chess.8 scope). Non-instant captures (queen vs
-      // rook etc.) require the chess<->poker phase to be wired
-      // symmetrically — separate workstream — so we block them here
-      // before any state mutation. Quiet moves and instant-kills fall
-      // through to movePiece + the appropriate wire emitter below.
       const matchId = useGameStore.getState().matchId;
-      if (matchId && isAttackMove) {
-        const defenderPiece = getPieceAt(position);
-        if (selectedPiece && defenderPiece) {
-          const instantKill = isChessAttackInstantKill({
-            attackerType: selectedPiece.type,
-            defenderType: defenderPiece.type,
-          });
-          if (!instantKill) {
-            toast.error('Complex capture not yet supported in multiplayer', {
-              description: 'This capture would enter the combat (poker) phase, which is not yet synchronized between peers. For now only instant captures are allowed (pawn vs anything, king attacks, or pawn defender).',
-              duration: 5000,
-            });
-            return;
-          }
-        }
-      }
 
       // Capture the moving piece BEFORE movePiece — it clears selectedPiece
       // as part of the move, so we can't read it post-call. Same with the
@@ -316,16 +292,18 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
       const collision = movePiece(position);
       if (collision) {
         debug.chess(`Attack initiated: ${collision.attacker.heroName} -> ${collision.defender.heroName}`);
-        // P2P instant-kill: emit chess_attack so the remote peer triggers
-        // the same animation + executeInstantKill chain. Non-instant
-        // attacks were rejected above.
         if (matchId && prevHashes && movingPiece && fromPos && defender) {
-          sendChessAttack({
+          const emit = {
             pieceId: movingPiece.id,
             from: fromPos,
             to: position,
             defenderId: defender.id,
-          }, prevHashes);
+          };
+          if (collision.instantKill) {
+            sendChessAttack(emit, prevHashes);
+          } else {
+            sendChessCombatInitiated(emit, prevHashes);
+          }
         }
         return;
       }

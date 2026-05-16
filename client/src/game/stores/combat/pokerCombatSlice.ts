@@ -20,7 +20,8 @@ import {
   PokerPosition,
   PokerHandRank,
   HAND_RANK_NAMES,
-  ElementBuff
+  ElementBuff,
+  PokerCombatDeterministicOptions
 } from '../../types/PokerCombatTypes';
 import {
   getActivePlayerForPhase,
@@ -40,7 +41,14 @@ import { getCachedHandEvaluation, clearHandCache } from '../../utils/poker/handC
 import { compareHands } from '../../combat/modules/HandEvaluator';
 import { debug } from '../../config/debugConfig';
 import { applyStaminaShield, getExtraFoldPenalty } from '../../utils/poker/pokerSpellUtils';
-import { cryptoRng } from '../../utils/seededRng';
+import { cryptoRng, seededRngFromString } from '../../utils/seededRng';
+import {
+  createPokerTurnClock,
+  createReceivedPokerTurnClock,
+  getPokerTurnRemainingSeconds,
+  type PokerTurnIdentityInput,
+} from '@shared/p2p-wire/pokerTurnClock';
+import { validatePokerActionIntent } from '../../combat/rules/pokerActionRules';
 
 // ── v1.1: Wager Keyword Utilities ──
 
@@ -56,6 +64,43 @@ interface WagerEffect {
 	minRank?: number;
 	drawCount?: number;
 	ranks?: number;
+}
+
+function getTurnDurationMs(state: Pick<PokerCombatState, 'maxTurnTime'>): number {
+  return Math.max(1, state.maxTurnTime) * 1_000;
+}
+
+function getTurnIdentity(state: PokerCombatState): PokerTurnIdentityInput {
+  return {
+    combatId: state.combatId,
+    phase: state.phase,
+    activePlayerId: state.activePlayerId,
+    actionsThisRound: state.actionsThisRound,
+  };
+}
+
+function applyLocalPokerTurnClock(state: PokerCombatState, nowMs = Date.now()): PokerCombatState {
+  const clock = createPokerTurnClock({
+    ...getTurnIdentity(state),
+    nowMs,
+    durationMs: getTurnDurationMs(state),
+  });
+  if (!clock) {
+    return {
+      ...state,
+      turnId: null,
+      turnStartedAtMs: null,
+      turnDeadlineAtMs: null,
+      turnTimer: state.maxTurnTime,
+    };
+  }
+  return {
+    ...state,
+    turnId: clock.turnId,
+    turnStartedAtMs: clock.startedAtMs,
+    turnDeadlineAtMs: clock.deadlineAtMs,
+    turnTimer: getPokerTurnRemainingSeconds({ nowMs, deadlineAtMs: clock.deadlineAtMs }),
+  };
 }
 
 function getActiveWagerEffects(playerType: 'player' | 'opponent'): WagerEffect[] {
@@ -95,6 +140,47 @@ export function shouldHideOpponentActions(): boolean {
 export const evaluatePokerHand = (holeCards: PokerCard[], communityCards: PokerCard[]): EvaluatedHand => {
   return getCachedHandEvaluation(holeCards, communityCards);
 };
+
+function createShuffledPokerDeck(seedKey?: string): PokerCard[] {
+  const rng = seedKey ? seededRngFromString(seedKey) : cryptoRng;
+  return shuffleDeck(createPokerDeck(), rng);
+}
+
+export function getShowdownCoinFlipRoll(input: {
+  readonly combatId: string;
+  readonly deterministicDeckSeed?: string;
+  readonly side: 'player' | 'opponent';
+  readonly index: number;
+}): number {
+  const seed = [
+    input.deterministicDeckSeed ?? 'local',
+    input.combatId,
+    'showdown_coin_flip',
+    input.side,
+    input.index,
+  ].join(':');
+  return seededRngFromString(seed)();
+}
+
+function dealCanonicalHoleCards(
+  deck: PokerCard[],
+  playerRole?: PokerCombatDeterministicOptions['playerRole']
+): { playerHoleCards: PokerCard[]; opponentHoleCards: PokerCard[] } {
+  const firstRoleCards = [deck.pop()!, deck.pop()!];
+  const secondRoleCards = [deck.pop()!, deck.pop()!];
+
+  if (playerRole === 'defender') {
+    return {
+      playerHoleCards: secondRoleCards,
+      opponentHoleCards: firstRoleCards,
+    };
+  }
+
+  return {
+    playerHoleCards: firstRoleCards,
+    opponentHoleCards: secondRoleCards,
+  };
+}
 
 /**
  * Compare tiebreakers between two hands.
@@ -226,9 +312,10 @@ export const createPokerCombatSlice: StateCreator<
   },
 
   endPokerRound: (winnerId, damage) => {
+    const tick = get()._nextLogTick();
     get().addLogEntry({
-      id: `poker_end_${Date.now()}`,
-      timestamp: Date.now(),
+      id: `poker_end_${tick}`,
+      timestamp: tick,
       type: 'poker',
       message: `${winnerId} wins poker round, deals ${damage} damage`,
     });
@@ -248,17 +335,19 @@ export const createPokerCombatSlice: StateCreator<
     skipMulligan = false,
     playerKingId?: string,
     opponentKingId?: string,
-    firstStrikeTarget?: 'player' | 'opponent'
+    firstStrikeTarget?: 'player' | 'opponent',
+    deterministic?: PokerCombatDeterministicOptions
   ) => {
     clearHandCache();
-    let deck = shuffleDeck(createPokerDeck());
+    let deck = createShuffledPokerDeck(deterministic?.deckSeed);
     
     let playerHoleCards: PokerCard[] = [];
     let opponentHoleCards: PokerCard[] = [];
     
     if (skipMulligan) {
-      playerHoleCards = [deck.pop()!, deck.pop()!];
-      opponentHoleCards = [deck.pop()!, deck.pop()!];
+      const dealt = dealCanonicalHoleCards(deck, deterministic?.playerRole);
+      playerHoleCards = dealt.playerHoleCards;
+      opponentHoleCards = dealt.opponentHoleCards;
     }
     
     const playerPosition: PokerPosition = 'small_blind';
@@ -353,8 +442,8 @@ export const createPokerCombatSlice: StateCreator<
     const initialActivePlayerId = getActivePlayerForPhase(startingPhase, activePlayerCtx);
     validateActivePlayer(startingPhase, initialActivePlayerId, 'initializePokerCombat');
     
-    const combatState: PokerCombatState = {
-      combatId: `combat_${Date.now()}`,
+    const combatState: PokerCombatState = applyLocalPokerTurnClock({
+      combatId: deterministic?.combatId ?? `combat_${get()._nextLogTick()}`,
       phase: startingPhase,
       player: playerCombatState,
       opponent: opponentCombatState,
@@ -363,6 +452,9 @@ export const createPokerCombatSlice: StateCreator<
       pot: 0,
       turnTimer: 60,
       maxTurnTime: 60,
+      turnId: null,
+      turnStartedAtMs: null,
+      turnDeadlineAtMs: null,
       actionHistory: [],
       minBet,
       openerIsPlayer,
@@ -380,8 +472,10 @@ export const createPokerCombatSlice: StateCreator<
         completed: false
       } : undefined,
       // Set SPELL_PET timing if starting in that phase (skipMulligan + no firstStrike)
-      spellPetPhaseStartTime: startingPhase === PokerCombatPhase.SPELL_PET ? Date.now() : undefined
-    };
+      spellPetPhaseStartTime: startingPhase === PokerCombatPhase.SPELL_PET ? Date.now() : undefined,
+      deterministicDeckSeed: deterministic?.deckSeed,
+      deterministicPlayerRole: deterministic?.playerRole
+    });
     
     set({
       pokerCombatState: combatState,
@@ -394,9 +488,10 @@ export const createPokerCombatSlice: StateCreator<
       pokerHandsWonOpponent: 0,
     });
     
+    const initTick = get()._nextLogTick();
     get().addLogEntry({
-      id: `poker_init_${Date.now()}`,
-      timestamp: Date.now(),
+      id: `poker_init_${initTick}`,
+      timestamp: initTick,
       type: 'poker',
       message: `Poker combat initialized: ${playerName} vs ${opponentName}`
     });
@@ -471,9 +566,10 @@ export const createPokerCombatSlice: StateCreator<
       }
     });
     
+    const firstStrikeTick = get()._nextLogTick();
     get().addLogEntry({
-      id: `first_strike_${Date.now()}`,
-      timestamp: Date.now(),
+      id: `first_strike_${firstStrikeTick}`,
+      timestamp: firstStrikeTick,
       type: 'attack',
       message: `First strike! ${target === 'player' ? 'Player' : 'Opponent'} takes ${damage} damage`
     });
@@ -484,8 +580,9 @@ export const createPokerCombatSlice: StateCreator<
     if (!state.pokerCombatState || state.mulliganComplete) return;
     
     let deck = [...state.pokerDeck];
-    const playerHoleCards = [deck.pop()!, deck.pop()!];
-    const opponentHoleCards = [deck.pop()!, deck.pop()!];
+    const dealt = dealCanonicalHoleCards(deck, state.pokerCombatState.deterministicPlayerRole);
+    const playerHoleCards = dealt.playerHoleCards;
+    const opponentHoleCards = dealt.opponentHoleCards;
     
     // Use centralized utility for activePlayerId
     const ctx: ActivePlayerContext = {
@@ -500,7 +597,7 @@ export const createPokerCombatSlice: StateCreator<
     // SPELL_PET is a timed phase where players can play cards/spells
     // usePokerPhases will auto-advance to FAITH after the timing window
     set({
-      pokerCombatState: {
+      pokerCombatState: applyLocalPokerTurnClock({
         ...state.pokerCombatState,
         phase: PokerCombatPhase.SPELL_PET,
         spellPetPhaseStartTime: Date.now(),
@@ -516,7 +613,7 @@ export const createPokerCombatSlice: StateCreator<
           holeCards: opponentHoleCards,
           isReady: false
         }
-      },
+      }),
       pokerDeck: deck,
       mulliganComplete: true
     });
@@ -525,17 +622,25 @@ export const createPokerCombatSlice: StateCreator<
   performPokerAction: (playerId: string, action: CombatAction, hpCommitment?: number) => {
     const state = get();
     if (!state.pokerCombatState) return;
-    
-    const newState = { ...state.pokerCombatState };
 
-    // Store-level turn validation: reject out-of-turn actions
-    // (SPELL_PET allows both players to act freely)
-    if (newState.activePlayerId !== null &&
-        newState.activePlayerId !== playerId &&
-        newState.phase !== PokerCombatPhase.SPELL_PET) {
-      debug.combat('[performPokerAction] REJECTED: not this player turn', { playerId, activePlayerId: newState.activePlayerId });
+    const validation = validatePokerActionIntent({
+      combatState: state.pokerCombatState,
+      playerId,
+      action,
+      hpCommitment,
+    });
+    if (!validation.ok) {
+      debug.combat('[performPokerAction] REJECTED:', {
+        playerId,
+        action,
+        reason: validation.reason,
+      });
       return;
     }
+
+    const newState = { ...state.pokerCombatState };
+    const permissions = validation.permissions;
+    const actionHpCommitment = validation.hpCommitment ?? 0;
 
     const isPlayer = playerId === newState.player.playerId;
     const playerState = isPlayer ? newState.player : newState.opponent;
@@ -544,9 +649,8 @@ export const createPokerCombatSlice: StateCreator<
     
     switch (action) {
       case CombatAction.ATTACK:
-        if (hpCommitment && hpCommitment > 0) {
-          const availableHP = playerState.pet.stats.currentHealth;
-          const actualBet = Math.min(hpCommitment, availableHP);
+        if (actionHpCommitment > 0) {
+          const actualBet = actionHpCommitment;
           playerState.hpCommitted += actualBet;
           playerState.pet.stats.currentHealth = Math.max(0, playerState.pet.stats.currentHealth - actualBet);
           newState.pot += actualBet;
@@ -569,11 +673,10 @@ export const createPokerCombatSlice: StateCreator<
 
       case CombatAction.COUNTER_ATTACK:
         {
-          const callAmount = Math.max(0, newState.currentBet - playerState.hpCommitted);
-          const raiseAmount = hpCommitment || 0;
+          const callAmount = permissions.toCall;
+          const raiseAmount = actionHpCommitment;
           const totalNeeded = callAmount + raiseAmount;
-          const availableHP = playerState.pet.stats.currentHealth;
-          const actualTotal = Math.min(totalNeeded, availableHP);
+          const actualTotal = totalNeeded;
           playerState.hpCommitted += actualTotal;
           playerState.pet.stats.currentHealth = Math.max(0, playerState.pet.stats.currentHealth - actualTotal);
           newState.pot += actualTotal;
@@ -595,13 +698,13 @@ export const createPokerCombatSlice: StateCreator<
         break;
         
       case CombatAction.ENGAGE:
-        const toMatch = Math.min(newState.currentBet - playerState.hpCommitted, playerState.pet.stats.currentHealth);
+        const toMatch = Math.min(permissions.toCall, permissions.availableHP);
         if (toMatch > 0) {
           playerState.hpCommitted += toMatch;
           playerState.pet.stats.currentHealth = Math.max(0, playerState.pet.stats.currentHealth - toMatch);
           newState.pot += toMatch;
         }
-        if (playerState.pet.stats.currentHealth === 0 && playerState.hpCommitted < newState.currentBet) {
+        if (playerState.hpCommitted < newState.currentBet) {
           const otherPlayer = isPlayer ? newState.opponent : newState.player;
           const excess = otherPlayer.hpCommitted - playerState.hpCommitted;
           if (excess > 0) {
@@ -610,6 +713,7 @@ export const createPokerCombatSlice: StateCreator<
             newState.pot -= excess;
             newState.currentBet = playerState.hpCommitted;
           }
+          newState.isAllInShowdown = true;
         }
         if (playerState.pet.stats.currentHealth === 0 || 
             (isPlayer ? newState.opponent : newState.player).pet.stats.currentHealth === 0) {
@@ -695,8 +799,8 @@ export const createPokerCombatSlice: StateCreator<
     
     newState.actionHistory.push({
       action,
-      hpCommitment: hpCommitment || 0,
-      timestamp: Date.now()
+      hpCommitment: actionHpCommitment,
+      timestamp: get()._nextLogTick()
     });
     
     // Calculate next active player based on action and state
@@ -733,7 +837,7 @@ export const createPokerCombatSlice: StateCreator<
       opponentReady: newState.opponent.isReady
     });
     
-    set({ pokerCombatState: newState });
+    set({ pokerCombatState: applyLocalPokerTurnClock(newState) });
   },
 
   advancePokerPhase: () => {
@@ -880,7 +984,7 @@ export const createPokerCombatSlice: StateCreator<
     
     set({
       pokerDeck: deck,
-      pokerCombatState: {
+      pokerCombatState: applyLocalPokerTurnClock({
         ...combatState,
         phase: newPhase,
         communityCards: newCommunityCards,
@@ -893,12 +997,13 @@ export const createPokerCombatSlice: StateCreator<
         isAllInShowdown: blindAllIn || combatState.isAllInShowdown,
         activePlayerId: newActivePlayerId,
         actionsThisRound: 0
-      }
+      })
     });
     
+    const phaseTick = get()._nextLogTick();
     get().addLogEntry({
-      id: `phase_${Date.now()}`,
-      timestamp: Date.now(),
+      id: `phase_${phaseTick}`,
+      timestamp: phaseTick,
       type: 'poker',
       message: `Poker phase advanced to ${newPhase}`
     });
@@ -1024,9 +1129,10 @@ export const createPokerCombatSlice: StateCreator<
         pokerHandsWonOpponent: winner === 'opponent' ? currentState.pokerHandsWonOpponent + 1 : currentState.pokerHandsWonOpponent,
       });
       
+      const foldTick = get()._nextLogTick();
       get().addLogEntry({
-        id: `poker_fold_${Date.now()}`,
-        timestamp: Date.now(),
+        id: `poker_fold_${foldTick}`,
+        timestamp: foldTick,
         type: 'poker',
         message: `${loser} folded - ${winner} recovers HP (${loserCommitted} HP lost by ${loser})`
       });
@@ -1084,6 +1190,8 @@ export const createPokerCombatSlice: StateCreator<
     let wagerAoeDamagePlayer = 0;
     let wagerAoeDamageOpponent = 0;
     let showdownMultiplier = 1;
+    let playerCoinFlipIndex = 0;
+    let opponentCoinFlipIndex = 0;
     try {
       const useGameStore = (globalThis as Record<string, any>).__ragnarokGameStore;
       const gameState = useGameStore?.getState()?.gameState;
@@ -1102,7 +1210,19 @@ export const createPokerCombatSlice: StateCreator<
               if (isWinner) { if (side === 'player') wagerHealPlayer += (wager.value || 0); else wagerHealOpponent += (wager.value || 0); }
               break;
             case 'showdown_coin_flip':
-              if (cryptoRng() < (wager.chance || 0.5)) { if (side === 'player') wagerBonusDamagePlayer += (wager.damage || 0); else wagerBonusDamageOpponent += (wager.damage || 0); }
+              {
+                const flipIndex = side === 'player' ? playerCoinFlipIndex++ : opponentCoinFlipIndex++;
+                const roll = getShowdownCoinFlipRoll({
+                  combatId: combatState.combatId,
+                  deterministicDeckSeed: combatState.deterministicDeckSeed,
+                  side,
+                  index: flipIndex,
+                });
+                if (roll < (wager.chance || 0.5)) {
+                  if (side === 'player') wagerBonusDamagePlayer += (wager.damage || 0);
+                  else wagerBonusDamageOpponent += (wager.damage || 0);
+                }
+              }
               break;
             case 'showdown_win_rank_damage':
               if (isWinner) { if (side === 'player') wagerBonusDamagePlayer += hand.rank; else wagerBonusDamageOpponent += hand.rank; }
@@ -1257,9 +1377,10 @@ export const createPokerCombatSlice: StateCreator<
       });
     }
     
+    const showdownTick = get()._nextLogTick();
     get().addLogEntry({
-      id: `poker_showdown_${Date.now()}`,
-      timestamp: Date.now(),
+      id: `poker_showdown_${showdownTick}`,
+      timestamp: showdownTick,
       type: 'poker',
       message: `Showdown: ${winner === 'draw' ? 'Draw' : winner + ' wins'} - Player: ${playerHand.displayName}, Opponent: ${opponentHand.displayName}`
     });
@@ -1277,9 +1398,10 @@ export const createPokerCombatSlice: StateCreator<
       combatPhase: 'CHESS_MOVEMENT'
     });
     
+    const endTick = get()._nextLogTick();
     get().addLogEntry({
-      id: `poker_end_${Date.now()}`,
-      timestamp: Date.now(),
+      id: `poker_end_${endTick}`,
+      timestamp: endTick,
       type: 'poker',
       message: 'Poker combat ended'
     });
@@ -1290,7 +1412,9 @@ export const createPokerCombatSlice: StateCreator<
     let deck = [...state.pokerDeck];
     
     if (deck.length < count) {
-      deck = shuffleDeck(createPokerDeck());
+      const seed = state.pokerCombatState?.deterministicDeckSeed;
+      const drawIndex = state.pokerCombatState?.actionHistory.length ?? 0;
+      deck = createShuffledPokerDeck(seed ? `${seed}:draw:${drawIndex}` : undefined);
     }
     
     const drawnCards: PokerCard[] = [];
@@ -1312,6 +1436,33 @@ export const createPokerCombatSlice: StateCreator<
         ...state.pokerCombatState,
         turnTimer: newTime
       }
+    });
+  },
+
+  syncPokerTurnClock: (input) => {
+    const state = get();
+    const combatState = state.pokerCombatState;
+    if (!combatState) return;
+    if (combatState.combatId !== input.combatId) return;
+    if (combatState.phase !== input.phase) return;
+    if (combatState.activePlayerId !== input.activePlayerId) return;
+    if (combatState.actionsThisRound !== input.actionsThisRound) return;
+    if (input.durationMs !== getTurnDurationMs(combatState)) return;
+
+    const clock = createReceivedPokerTurnClock(input);
+    if (!clock || clock.turnId !== input.turnId) return;
+
+    set({
+      pokerCombatState: {
+        ...combatState,
+        turnId: clock.turnId,
+        turnStartedAtMs: clock.startedAtMs,
+        turnDeadlineAtMs: clock.deadlineAtMs,
+        turnTimer: getPokerTurnRemainingSeconds({
+          nowMs: input.receivedAtMs,
+          deadlineAtMs: clock.deadlineAtMs,
+        }),
+      },
     });
   },
 
@@ -1489,11 +1640,13 @@ export const createPokerCombatSlice: StateCreator<
     
     let newDeck = [...state.pokerDeck];
     if (newDeck.length < 15) {
-      newDeck = shuffleDeck(createPokerDeck());
+      const seed = state.pokerCombatState.deterministicDeckSeed;
+      newDeck = createShuffledPokerDeck(seed ? `${seed}:next-hand:${state.pokerCombatState.actionHistory.length}` : undefined);
     }
     
-    const playerHoleCards = [newDeck.pop()!, newDeck.pop()!];
-    const opponentHoleCards = [newDeck.pop()!, newDeck.pop()!];
+    const dealt = dealCanonicalHoleCards(newDeck, state.pokerCombatState.deterministicPlayerRole);
+    const playerHoleCards = dealt.playerHoleCards;
+    const opponentHoleCards = dealt.opponentHoleCards;
     
     const STAMINA_REGEN_PER_HAND = 1;
     const playerNewStamina = Math.min(
@@ -1521,7 +1674,7 @@ export const createPokerCombatSlice: StateCreator<
     set({
       pokerDeck: newDeck,
       isTransitioningHand: false,
-      pokerCombatState: {
+      pokerCombatState: applyLocalPokerTurnClock({
         ...state.pokerCombatState,
         phase: PokerCombatPhase.SPELL_PET,
         spellPetPhaseStartTime: Date.now(),
@@ -1572,7 +1725,7 @@ export const createPokerCombatSlice: StateCreator<
             }
           }
         }
-      }
+      })
     });
   },
 
@@ -1666,9 +1819,10 @@ export const createPokerCombatSlice: StateCreator<
     
     const newHealth = Math.max(0, target.pet.stats.currentHealth - damage);
     
+    const damageTick = get()._nextLogTick();
     get().addLogEntry({
-      id: `damage_${Date.now()}`,
-      timestamp: Date.now(),
+      id: `damage_${damageTick}`,
+      timestamp: damageTick,
       type: 'damage',
       message: `${sourceDescription || 'Attack'} dealt ${damage} damage to ${target.playerName}`
     });

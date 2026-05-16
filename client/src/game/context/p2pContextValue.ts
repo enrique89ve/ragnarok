@@ -9,6 +9,7 @@
 
 import { createContext } from 'react';
 import type { GameCommand } from '../core/commands';
+import type { CombatAction } from '../types/PokerCombatTypes';
 import type { GameState } from '../types';
 
 export interface P2PActions {
@@ -17,6 +18,21 @@ export interface P2PActions {
 	endTurn: () => void;
 	performHeroPower: (targetId?: string) => void;
 	dispatchGameCommand: (command: GameCommand) => void;
+	sendPokerAction: (input: {
+		playerId: string;
+		action: CombatAction;
+		hpCommitment?: number;
+		turnId?: string | null;
+	}) => void;
+	sendPokerTurnStarted: (input: {
+		combatId: string;
+		turnId: string;
+		phase: string;
+		activePlayerId: string;
+		actionsThisRound: number;
+		durationMs: number;
+	}) => void;
+	downloadSessionLog: () => void;
 	gameState: GameState | null;
 	isConnected: boolean;
 	isHost: boolean;

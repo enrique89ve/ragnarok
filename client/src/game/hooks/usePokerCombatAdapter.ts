@@ -11,92 +11,23 @@ import {
   PokerCombatState,
   CombatAction,
   CombatResolution,
-  CombatPhase,
   PokerCard,
   PetData,
+  PokerCombatDeterministicOptions,
 } from '../types/PokerCombatTypes';
 import { initializeNorseContext, resetNorseContext } from '../utils/norseIntegration';
+import {
+  getPokerActionPermissions,
+  type ActionPermissions,
+} from '../combat/rules/pokerActionRules';
 
-export interface ActionPermissions {
-  isPreForesight: boolean;
-  hasBetToCall: boolean;
-  toCall: number;
-  availableHP: number;
-  minBet: number;
-  canCheck: boolean;
-  canBet: boolean;
-  canCall: boolean;
-  canRaise: boolean;
-  canFold: boolean;
-  maxBetAmount: number;
-  isAllIn: boolean;
-  isMyTurnToAct: boolean;
-  waitingForOpponent: boolean;
-}
+export type { ActionPermissions };
 
 export function getActionPermissions(
   combatState: PokerCombatState | null,
   isPlayer: boolean = true
 ): ActionPermissions | null {
-  if (!combatState) return null;
-  
-  const actor = isPlayer ? combatState.player : combatState.opponent;
-  const opponent = isPlayer ? combatState.opponent : combatState.player;
-  const minBet = combatState.minBet || 10;
-  
-  const toCall = Math.max(0, combatState.currentBet - actor.hpCommitted);
-  const hasBetToCall = toCall > 0;
-  const actorCurrentHP = Math.max(0, actor.pet.stats.currentHealth);
-  const actorStaminaCap = actor.pet.stats.currentStamina * 10;
-  const availableHP = Math.min(actorCurrentHP, actorStaminaCap);
-  
-  const isResolution = combatState.phase === CombatPhase.RESOLUTION;
-  
-  const isActorOpener = isPlayer ? combatState.openerIsPlayer : !combatState.openerIsPlayer;
-  const actorIsReady = actor.isReady;
-  const opponentIsReady = opponent.isReady;
-  
-  let isMyTurnToAct = false;
-  let waitingForOpponent = false;
-  
-  if (isResolution || combatState.foldWinner) {
-    isMyTurnToAct = false;
-    waitingForOpponent = false;
-  } else {
-    // Use activePlayerId as the single source of truth for whose turn it is
-    const myId = actor.playerId;
-    isMyTurnToAct = combatState.activePlayerId === myId;
-    waitingForOpponent = combatState.activePlayerId !== null && combatState.activePlayerId !== myId;
-  }
-  
-  const canCheck = !hasBetToCall && !isResolution;
-  const canBet = !hasBetToCall && availableHP >= minBet && !isResolution;
-  const canCall = hasBetToCall && availableHP > 0 && !isResolution;
-  const actualCallAmount = Math.min(toCall, availableHP);
-  const isAllIn = actualCallAmount < toCall;
-  const canRaise = hasBetToCall && (toCall + minBet) <= availableHP && !isResolution;
-  const canFold = !isResolution && hasBetToCall;
-  
-  const maxBetAmount = hasBetToCall 
-    ? Math.max(0, availableHP - toCall)
-    : availableHP;
-  
-  return {
-    isPreForesight: combatState.phase === CombatPhase.SPELL_PET || combatState.phase === CombatPhase.PRE_FLOP,
-    hasBetToCall,
-    toCall,
-    availableHP,
-    minBet,
-    canCheck,
-    canBet,
-    canCall,
-    canRaise,
-    canFold,
-    maxBetAmount,
-    isAllIn,
-    isMyTurnToAct,
-    waitingForOpponent
-  };
+  return getPokerActionPermissions(combatState, isPlayer);
 }
 
 export interface PokerCombatAdapter {
@@ -115,7 +46,8 @@ export interface PokerCombatAdapter {
     skipMulligan?: boolean,
     playerKingId?: string,
     opponentKingId?: string,
-    firstStrikeTarget?: 'player' | 'opponent'
+    firstStrikeTarget?: 'player' | 'opponent',
+    deterministic?: PokerCombatDeterministicOptions
   ) => void;
   performAction: (playerId: string, action: CombatAction, hpCommitment?: number) => void;
   advancePhase: () => void;
@@ -125,6 +57,15 @@ export interface PokerCombatAdapter {
   completeMulligan: () => void;
   setPlayerReady: (playerId: string) => void;
   updateTimer: (newTime: number) => void;
+  syncTurnClock: (input: {
+    turnId: string;
+    combatId: string;
+    phase: string;
+    activePlayerId: string;
+    actionsThisRound: number;
+    durationMs: number;
+    receivedAtMs: number;
+  }) => void;
   startNextHand: (resolution?: CombatResolution) => void;
   startNextHandDelayed: (resolution: CombatResolution) => void;
   setTransitioning: (value: boolean) => void;
@@ -160,6 +101,7 @@ export function usePokerCombatAdapter(): PokerCombatAdapter {
   const completeMulliganFn = useUnifiedCombatStore(s => s.completeMulligan);
   const setPlayerReadyFn = useUnifiedCombatStore(s => s.setPlayerReady);
   const updatePokerTimer = useUnifiedCombatStore(s => s.updatePokerTimer);
+  const syncPokerTurnClockFn = useUnifiedCombatStore(s => s.syncPokerTurnClock);
   const startNextHandDelayedFn = useUnifiedCombatStore(s => s.startNextHandDelayed);
   const startNextHandFn = useUnifiedCombatStore(s => s.startNextHand);
   const maybeCloseBettingRoundFn = useUnifiedCombatStore(s => s.maybeCloseBettingRound);
@@ -178,7 +120,7 @@ export function usePokerCombatAdapter(): PokerCombatAdapter {
     isActive,
     mulliganComplete,
 
-    initializeCombat: (playerId, playerName, playerPet, opponentId, opponentName, opponentPet, skipMulligan, playerKingId, opponentKingId, firstStrikeTarget?: 'player' | 'opponent') => {
+    initializeCombat: (playerId, playerName, playerPet, opponentId, opponentName, opponentPet, skipMulligan, playerKingId, opponentKingId, firstStrikeTarget?: 'player' | 'opponent', deterministic?: PokerCombatDeterministicOptions) => {
       initializePokerCombat(
         playerId,
         playerName,
@@ -189,7 +131,8 @@ export function usePokerCombatAdapter(): PokerCombatAdapter {
         skipMulligan,
         playerKingId,
         opponentKingId,
-        firstStrikeTarget
+        firstStrikeTarget,
+        deterministic
       );
 
       initializeNorseContext(
@@ -248,6 +191,10 @@ export function usePokerCombatAdapter(): PokerCombatAdapter {
 
     updateTimer: (newTime: number) => {
       updatePokerTimer(newTime);
+    },
+
+    syncTurnClock: (input) => {
+      syncPokerTurnClockFn(input);
     },
 
     startNextHandDelayed: (resolution: CombatResolution) => {
@@ -310,7 +257,7 @@ export function getPokerCombatAdapterState(): PokerCombatAdapter {
     isActive: getStore().pokerIsActive,
     mulliganComplete: getStore().mulliganComplete,
 
-    initializeCombat: (playerId, playerName, playerPet, opponentId, opponentName, opponentPet, skipMulligan, playerKingId, opponentKingId, firstStrikeTarget?: 'player' | 'opponent') => {
+    initializeCombat: (playerId, playerName, playerPet, opponentId, opponentName, opponentPet, skipMulligan, playerKingId, opponentKingId, firstStrikeTarget?: 'player' | 'opponent', deterministic?: PokerCombatDeterministicOptions) => {
       getStore().initializePokerCombat(
         playerId,
         playerName,
@@ -321,7 +268,8 @@ export function getPokerCombatAdapterState(): PokerCombatAdapter {
         skipMulligan,
         playerKingId,
         opponentKingId,
-        firstStrikeTarget
+        firstStrikeTarget,
+        deterministic
       );
       initializeNorseContext(
         playerKingId || null,
@@ -382,6 +330,10 @@ export function getPokerCombatAdapterState(): PokerCombatAdapter {
 
     updateTimer: (newTime: number) => {
       getStore().updatePokerTimer(newTime);
+    },
+
+    syncTurnClock: (input) => {
+      getStore().syncPokerTurnClock(input);
     },
 
     startNextHand: (resolution?: CombatResolution) => {

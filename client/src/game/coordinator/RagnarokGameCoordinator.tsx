@@ -10,7 +10,6 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { routes } from '../../lib/routes';
 import { usePokerCombatAdapter } from '../hooks/usePokerCombatAdapter';
 import { useAudio } from '../../lib/stores/useAudio';
-import { v4 as uuidv4 } from 'uuid';
 import { useKingChessAbility } from '../hooks/useKingChessAbility';
 import { useChessAITurn } from './hooks/useChessAITurn';
 import { useUnifiedCombatStore } from '../stores/unifiedCombatStore';
@@ -405,22 +404,31 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     // orientation so MY piece always shows up in the "player" slot.
     const localViewerIsAttacker = attacker.owner === myCanonicalSide;
     const { slotsSwapped, firstStrikeTarget } = getCombatSlotMapping(localViewerIsAttacker);
+    const deterministicCombat = matchSeed ? {
+      combatId: createSeededIdGen(
+        matchSeed,
+        `poker-combat:${attacker.id}:${defender.id}:${attacker.position.row}:${attacker.position.col}:${defender.position.row}:${defender.position.col}:${boardState.moveCount}`,
+      )(),
+      deckSeed: `${matchSeed}:poker-deck:${attacker.id}:${defender.id}:${boardState.moveCount}`,
+      playerRole: slotsSwapped ? 'defender' as const : 'attacker' as const,
+    } : undefined;
 
     if (!slotsSwapped) {
       // Human attacks AI: Human (attacker) = player, AI (defender) = opponent
       // First strike target is 'opponent' (the defender in the player slot)
       setPokerSlotsSwapped(false);
       initializeCombat(
-        uuidv4(),
+        attacker.id,
         attackerName,
         attackerPet,
-        uuidv4(),
+        defender.id,
         defenderName,
         defenderPet,
         true,
         attackerKingId,
         defenderKingId,
-        firstStrikeTarget
+        firstStrikeTarget,
+        deterministicCombat
       );
     } else {
       // AI attacks Human: Human (defender) = player, AI (attacker) = opponent
@@ -428,16 +436,17 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       // First strike target is 'player' (the human defender)
       setPokerSlotsSwapped(true);
       initializeCombat(
-        uuidv4(),
+        defender.id,
         defenderName,
         defenderPet,
-        uuidv4(),
+        attacker.id,
         attackerName,
         attackerPet,
         true,
         defenderKingId,
         attackerKingId,
-        firstStrikeTarget
+        firstStrikeTarget,
+        deterministicCombat
       );
     }
 
@@ -451,7 +460,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     };
     dispatchFlow({ type: 'VS_COMPLETE', handoff });
     playSoundEffect('game_start');
-  }, [flowState, playerArmy, opponentArmy, boardState.pieces, initializeCombat, playSoundEffect, setPokerSlotsSwapped, dispatchFlow]);
+  }, [flowState, playerArmy, opponentArmy, boardState.pieces, boardState.moveCount, initializeCombat, playSoundEffect, setPokerSlotsSwapped, dispatchFlow, matchSeed, myCanonicalSide]);
 
   const handleCombatEnd = useCallback((winner: 'player' | 'opponent' | 'draw') => {
     try {

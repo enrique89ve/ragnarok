@@ -14,9 +14,11 @@
  *     OR defender is pawn — see `isChessAttackInstantKill` below).
  *     Receiver runs `startAttackAnimation` with isInstantKill=true and
  *     the existing `completeAttackAnimation -> executeInstantKill`
- *     chain handles the apply. Non-instant captures stay blocked at the
- *     UI layer (toast in `useChessBoardInteractions`) until the
- *     chess<->poker phase sync lands as a separate workstream.
+ *     chain handles the apply.
+ *   - `chess_combat_initiated`: non-instant capture that enters the
+ *     poker/combat phase. Receiver runs the same attack animation with
+ *     isInstantKill=false; `completeAttackAnimation` stages `pendingCombat`
+ *     and the existing coordinator boots poker on both peers.
  *
  * Future surface (deferred): `chess_concede`, `chess_draw_offer`,
  * `chess_draw_accept`, `chess_mine_placement`. Each adds a member to
@@ -52,6 +54,7 @@
  */
 
 import { z } from 'zod';
+import { CompactChessCombatInitiatedSchema } from './combat';
 
 // ── Position ───────────────────────────────────────────────────────────────
 
@@ -104,11 +107,9 @@ export type ChessMoveCommand = z.infer<typeof ChessMoveCommandSchema>;
  * local roster, so a peer that tries to attack a defender id that
  * doesn't match the piece at `to` is rejected before any state mutation.
  *
- * Scope: only instant-kill captures cross the wire (attacker pawn/king
- * or defender pawn). Non-instant captures (queen vs rook etc.) require
- * the chess<->poker phase to be wired symmetrically, which is a
- * separate workstream. The receiver verifies the instant-kill rule
- * via `isChessAttackInstantKill` and rejects anything that isn't.
+ * Scope: instant-kill captures only. Non-instant captures use the sibling
+ * `chess_combat_initiated` command so the receiver can route them into
+ * the poker phase instead of direct capture resolution.
  */
 export const ChessAttackCommandSchema = z
 	.object({
@@ -121,6 +122,24 @@ export const ChessAttackCommandSchema = z
 	.strict();
 
 export type ChessAttackCommand = z.infer<typeof ChessAttackCommandSchema>;
+
+/**
+ * Non-instant capture envelope. Carries the same defensive ids as
+ * `chess_attack`, but the discriminator tells receivers to stage poker
+ * combat after the attack animation instead of executing an instant kill.
+ */
+export const ChessCombatInitiatedCommandSchema = z
+	.object({
+		type: z.literal('chess_combat_initiated'),
+		pieceId: z.string().min(1).max(128),
+		from: ChessBoardPositionSchema,
+		to: ChessBoardPositionSchema,
+		defenderId: z.string().min(1).max(128),
+		compact: CompactChessCombatInitiatedSchema.optional(),
+	})
+	.strict();
+
+export type ChessCombatInitiatedCommand = z.infer<typeof ChessCombatInitiatedCommandSchema>;
 
 /**
  * Sum type for chess commands. Discriminated on `type` so consumers'
@@ -140,6 +159,7 @@ export type ChessAttackCommand = z.infer<typeof ChessAttackCommandSchema>;
 export const ChessCommandSchema = z.discriminatedUnion('type', [
 	ChessMoveCommandSchema,
 	ChessAttackCommandSchema,
+	ChessCombatInitiatedCommandSchema,
 ]);
 
 export type ChessCommand = z.infer<typeof ChessCommandSchema>;
@@ -177,10 +197,11 @@ export const ChessCommandEnvelopeSchema = z
 				path: ['command', 'to'],
 			});
 		}
-		if (cmd.type === 'chess_attack' && cmd.pieceId === cmd.defenderId) {
+		if ((cmd.type === 'chess_attack' || cmd.type === 'chess_combat_initiated')
+			&& cmd.pieceId === cmd.defenderId) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
-				message: 'chess_attack: pieceId and defenderId must differ',
+				message: `${cmd.type}: pieceId and defenderId must differ`,
 				path: ['command', 'defenderId'],
 			});
 		}
@@ -243,17 +264,15 @@ export function deriveCanonicalSide(matchSeed: string, isHost: boolean): Canonic
 export type ChessAttackPieceKind = 'pawn' | 'knight' | 'bishop' | 'rook' | 'queen' | 'king';
 
 /**
- * Single source of truth for the instant-kill rule. Both the sender
- * (`useChessBoardInteractions`) and the receiver (`useWireSync`
- * chess_attack branch) consult this before accepting a capture: if the
- * predicate returns false, the capture cannot cross the wire under the
- * C-Chess.8 contract. Keeping the rule in one place guarantees the two
- * extremes never disagree about what counts as instant-kill.
+ * Single source of truth for routing capture commands. Instant captures use
+ * `chess_attack`; non-instant captures use `chess_combat_initiated` and enter
+ * the poker/combat phase. Keeping the rule in one place guarantees sender and
+ * receiver never disagree about which wire discriminator applies.
  *
  * Rule (mirrors `chessCombatSlice.movePiece` lines 693-695): an attack
  * is instant-kill when the attacker is a pawn or king (Valkyrie weapon)
- * OR the defender is a pawn (too weak to defend). Anything else needs
- * the chess<->poker resolution phase, which is not wired yet.
+ * OR the defender is a pawn (too weak to defend). Anything else enters
+ * poker/combat.
  */
 export function isChessAttackInstantKill(input: {
 	readonly attackerType: ChessAttackPieceKind;

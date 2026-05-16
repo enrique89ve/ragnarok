@@ -342,8 +342,11 @@ export interface PokerCombatState {
   communityCards: CommunityCards;
   currentBet: number;       // Current HP commitment to match
   pot: number;              // Total committed HP
-  turnTimer: number;        // Seconds remaining
-  maxTurnTime: number;      // Default 27 seconds
+  turnTimer: number;        // Seconds remaining, derived from turnDeadlineAtMs
+  maxTurnTime: number;      // Default turn duration in seconds
+  turnId: string | null;    // Stable id for the active decision window
+  turnStartedAtMs: number | null; // Local timestamp when the active decision window started
+  turnDeadlineAtMs: number | null;// Local timestamp when the active decision window expires
   actionHistory: CombatActionDetails[];
   winner?: 'player' | 'opponent' | 'draw' | null;
   minBet: number;           // Minimum bet/raise amount (5 HP = big blind in Ragnarok)
@@ -373,6 +376,17 @@ export interface PokerCombatState {
   
   // SPELL_PET phase timing - used to give players time to play cards
   spellPetPhaseStartTime?: number; // Timestamp when SPELL_PET phase started
+
+  // P2P deterministic replay metadata. When set, future reshuffles keep
+  // physical attacker/defender card assignment stable across viewer slots.
+  deterministicDeckSeed?: string;
+  deterministicPlayerRole?: 'attacker' | 'defender';
+}
+
+export interface PokerCombatDeterministicOptions {
+  combatId: string;
+  deckSeed: string;
+  playerRole: 'attacker' | 'defender';
 }
 
 /**
@@ -505,10 +519,10 @@ export function createPokerDeck(): PokerCard[] {
 /**
  * Shuffle a deck of cards
  */
-export function shuffleDeck(deck: PokerCard[]): PokerCard[] {
+export function shuffleDeck(deck: PokerCard[], rng: () => number = Math.random): PokerCard[] {
   const shuffled = [...deck];
   for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   return shuffled;

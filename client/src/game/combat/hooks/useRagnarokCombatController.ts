@@ -25,8 +25,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePokerCombatAdapter, getActionPermissions, getPokerCombatAdapterState } from '../../hooks/usePokerCombatAdapter';
 import { useGameStore, selectPlayerHand } from '../../stores/gameStore';
+import { usePeerStore } from '../../stores/peerStore';
 import { GAME_COMMAND_TYPES } from '../../core/commands';
 import { useP2PActions } from '../../context/useP2PActions';
+import { useMatchStore } from '../../match';
 import { CombatPhase, CombatAction } from '../../types/PokerCombatTypes';
 import type { CardInstance } from '../../types';
 import { fireAnnouncement } from '../../stores/unifiedUIStore';
@@ -43,8 +45,8 @@ import { COMBAT_DEBUG } from '../debugConfig';
 import { hasKeyword } from '../../utils/cards/keywordUtils';
 import { debug } from '../../config/debugConfig';
 import type { HeroBattlePopupData, BattlePopupAction, BattlePopupTarget } from '../components/HeroBattlePopup';
-import type { WireMessage } from '../../p2p/messages';
 import { getPokerDramaCallbacks } from './usePokerDrama';
+import { validatePokerActionIntent } from '../rules/pokerActionRules';
 
 /**
  * Hero power targeting state structure
@@ -183,12 +185,25 @@ export function useRagnarokCombatController(
 
   const aiResponseInProgressRef = useRef(false);
   const p2pActions = useP2PActions();
+  const activeMatch = useMatchStore(state => state.activeMatch);
+  const connectionState = usePeerStore(state => state.connectionState);
+  const isP2PCombat = activeMatch?.opponent.kind === 'peer';
+  const p2pTransportConnected = connectionState === 'connected';
+  const isP2PActionLocked = isP2PCombat && !p2pTransportConnected;
 
-  usePokerAI({ combatState, isActive, aiResponseInProgressRef, addHeroBattlePopup });
+  usePokerAI({ combatState, isActive: isActive && !isP2PCombat, aiResponseInProgressRef, addHeroBattlePopup });
 
-  usePokerPhases({ combatState, isActive });
+  usePokerPhases({ combatState, isActive: isActive && !isP2PActionLocked });
 
-  useCombatTimer({ combatState, isActive, updateTimer, addHeroBattlePopup });
+  useCombatTimer({
+    combatState,
+    isActive: isActive && !isP2PActionLocked,
+    updateTimer,
+    isP2PCombat,
+    sendPokerAction: p2pActions.sendPokerAction,
+    sendPokerTurnStarted: p2pActions.sendPokerTurnStarted,
+    addHeroBattlePopup,
+  });
   
   useCombatEvents({
     combatState,
@@ -846,8 +861,32 @@ export function useRagnarokCombatController(
   const grantPokerHandRewards = useGameStore(state => state.grantPokerHandRewards);
   
   const handleAction = useCallback((action: CombatAction, hp?: number) => {
+    if (isP2PActionLocked) {
+      fireAnnouncement('warning', 'P2P reconnecting', {
+        subtitle: 'Actions resume when the peer connection recovers.',
+        duration: 1800,
+      });
+      return;
+    }
     const freshState = getPokerCombatAdapterState().combatState;
     if (!freshState || freshState.player.isReady) {
+      return;
+    }
+    const validation = validatePokerActionIntent({
+      combatState: freshState,
+      playerId: freshState.player.playerId,
+      action,
+      hpCommitment: hp,
+    });
+    if (!validation.ok) {
+      debug.combat('[CombatController] poker action rejected before send', {
+        action,
+        reason: validation.reason,
+      });
+      return;
+    }
+    if (isP2PCombat && !freshState.turnId) {
+      debug.combat('[CombatController] poker action rejected before send: missing turnId');
       return;
     }
 
@@ -861,15 +900,20 @@ export function useRagnarokCombatController(
       addHeroBattlePopup({ action: 'brace', target: 'player', text: 'Brace' });
     }
 
-    // In P2P multiplayer (non-host), send poker action via P2P instead of executing locally
-    const peer = (globalThis as Record<string, unknown>).__ragnarokPeerStore as
-      { getState: () => { isHost: boolean; connectionState: string; send: (data: WireMessage) => void } } | undefined;
-    const peerState = peer?.getState();
-    if (peerState && peerState.connectionState === 'connected' && !peerState.isHost) {
-      peerState.send({ type: 'poker_action', playerId: freshState.player.playerId, action: action as string, hpCommitment: hp });
-    } else {
-      performAction(freshState.player.playerId, action, hp);
+    // In P2P multiplayer, both peers apply the same deterministic poker action.
+    // The P2P protocol layer owns the wire shape; this controller only commits
+    // the player's decision against the shared poker rules.
+    const connectedP2P = isP2PCombat && p2pTransportConnected;
+    if (connectedP2P) {
+      p2pActions.sendPokerAction({
+        playerId: freshState.player.playerId,
+        action,
+        hpCommitment: hp,
+        turnId: freshState.turnId,
+      });
     }
+    performAction(freshState.player.playerId, action, hp);
+    maybeCloseBettingRound();
 
     // Trigger poker drama VFX for the betting action
     try {
@@ -877,8 +921,11 @@ export function useRagnarokCombatController(
       dramaCallbacks.onBettingAction(action, true);
     } catch { /* drama VFX is non-critical */ }
 
-    if (action === CombatAction.BRACE) {
+    if (action === CombatAction.BRACE && !connectedP2P) {
       endTurn();
+    }
+    if (connectedP2P) {
+      return;
     }
 
     const phaseBeforeAction = freshState.phase;
@@ -978,7 +1025,16 @@ export function useRagnarokCombatController(
         aiResponseInProgressRef.current = false;
       }
     }, 1000);
-  }, [performAction, endTurn, addHeroBattlePopup]);
+  }, [
+    performAction,
+    maybeCloseBettingRound,
+    endTurn,
+    addHeroBattlePopup,
+    p2pActions,
+    isP2PActionLocked,
+    isP2PCombat,
+    p2pTransportConnected,
+  ]);
   
   useEffect(() => {
     if (resolution) {
@@ -1102,14 +1158,21 @@ export function useRagnarokCombatController(
 
   const handleUnifiedEndTurn = useCallback(() => {
     if (!combatState) return;
-    
+    if (isP2PActionLocked) {
+      fireAnnouncement('warning', 'P2P reconnecting', {
+        subtitle: 'Actions resume when the peer connection recovers.',
+        duration: 1800,
+      });
+      return;
+    }
+
     if (!combatState.player.isReady) {
       performAction(combatState.player.playerId, CombatAction.DEFEND);
     }
     
     endTurn();
     
-  }, [combatState, performAction, endTurn]);
+  }, [combatState, performAction, endTurn, isP2PActionLocked]);
 
   return {
     combatState,

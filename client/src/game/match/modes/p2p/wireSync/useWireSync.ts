@@ -11,6 +11,7 @@ import { verifyDeckClaims as verifyDeckClaimsOnServer } from '../../../../../dat
 import { getNFTBridge } from '../../../../nft';
 import type { PackagedMatchResult } from '../../../../../data/blockchain/types';
 import { NftUidSchema } from '../../../../../../../shared/protocol-core/playerCollection';
+import { CardIdSchema } from '../../../../../../../shared/schemas/ids';
 import type { DeckCardClaim } from '../../../../../../../shared/protocol-core/deckVerification';
 import { startNewTranscript, clearTranscript, recordSessionEvent, exportSessionLog, recordMove } from '../../../../../data/blockchain/transcriptBuilder';
 import { localPlayerId, remotePlayerId } from '../../../../../data/blockchain/playerIdentity';
@@ -27,6 +28,8 @@ import { deriveCanonicalSide, isChessAttackInstantKill, tryParseChessCommandEnve
 import { resetChessWireSender, setChessSendObserver } from '../../../../p2p/chessWireSender';
 import type { P2PMessage } from '../../../../p2p/messages';
 import { parseWireMessage } from '../../../../p2p/messageSchemas';
+import { CombatAction, CombatPhase, type PokerCombatState } from '../../../../types/PokerCombatTypes';
+import { encodePokerAction, isPokerActionCompactConsistent, type CompactPokerActionName } from '../../../../../../../shared/p2p-wire/combat';
 import { generateSessionKey, type SessionKey } from '../../../../protocol/sessionKey';
 import {
 	emptyTranscript,
@@ -174,6 +177,8 @@ export function useWireSync() {
 	const lastIncomingChessSeqRef = useRef<number>(-1);
 	const seenChessCommandIdsRef = useRef<Set<string>>(new Set());
 	const seenChessCommandIdsOrderRef = useRef<string[]>([]);
+	const seenPokerDecisionIdsRef = useRef<Set<string>>(new Set());
+	const seenPokerDecisionIdsOrderRef = useRef<string[]>([]);
 
 	// Last envelope send timestamp — used by `sendCommandEnvelope` to enforce a
 	// short cooldown that avoids the prevStateHash race when the user clicks
@@ -217,6 +222,9 @@ export function useWireSync() {
 	// Also send version_check and start a new transcript
 	useEffect(() => {
 		if (!connection || connectionState !== 'connected') {
+			if (connectionState === 'grace_period' || connectionState === 'reconnecting') {
+				return undefined;
+			}
 			mySaltRef.current = null;
 			theirCommitmentRef.current = null;
 			seedResolvedRef.current = false;
@@ -225,10 +233,12 @@ export function useWireSync() {
 			lastIncomingSeqRef.current = -1;
 			seenCommandIdsRef.current.clear();
 			seenCommandIdsOrderRef.current.length = 0;
-			lastIncomingChessSeqRef.current = -1;
-			seenChessCommandIdsRef.current.clear();
-			seenChessCommandIdsOrderRef.current.length = 0;
-			resetChessWireSender();
+				lastIncomingChessSeqRef.current = -1;
+				seenChessCommandIdsRef.current.clear();
+				seenChessCommandIdsOrderRef.current.length = 0;
+				seenPokerDecisionIdsRef.current.clear();
+				seenPokerDecisionIdsOrderRef.current.length = 0;
+				resetChessWireSender();
 			lastEnvelopeSentAtRef.current = 0;
 			sessionKeyRef.current = null;
 			actionLogDbRef.current = null;
@@ -238,7 +248,33 @@ export function useWireSync() {
 			opponentSessionHiveSigRef.current = null;
 			signedTranscriptRef.current = null;
 			myBroadcasterRef.current = null;
-			return;
+			return undefined;
+		}
+
+		if (seedResolvedRef.current && matchIdRef.current) {
+			const resumedMatchId = matchIdRef.current;
+			loadWasmEngine().then(() => {
+				const wasmHash = getWasmHash();
+				send({ type: 'wasm_hash_check', wasmHash });
+			}).catch(err => {
+				GameEventBus.emitNotification({
+					level: 'error',
+					message: `WASM engine failed to load after reconnect — ranked play blocked — ${err instanceof Error ? err.message : 'Unknown WASM error'}`,
+					duration: 15000,
+				});
+			});
+			const hash = typeof __BUILD_HASH__ !== 'undefined' ? __BUILD_HASH__ : 'dev';
+			send({ type: 'version_check', buildHash: hash });
+			send({
+				type: 'state_sync_request',
+				matchId: resumedMatchId,
+				fromTurn: signedTranscriptRef.current?.leaves.length ?? 0,
+			});
+			debug.log('[wireSync] Reconnected existing P2P session without reseeding', {
+				matchId: resumedMatchId,
+				localLeaves: signedTranscriptRef.current?.leaves.length ?? 0,
+			});
+			return undefined;
 		}
 
 		loadWasmEngine().then(() => {
@@ -278,20 +314,28 @@ export function useWireSync() {
 			debug.warn('[wireSync] Failed to send army_announcement:', err);
 		}
 
-		// Cross-verify deck NFT ownership: send our deck's NFT IDs so opponent can verify on-chain
+		// Cross-verify deck ownership with source-aware claims.
 		if (isSharedNetworkEnvironment()) {
 			try {
 				const bridge = getNFTBridge();
 				const username = bridge.getUsername();
 				if (username) {
 					const collection = bridge.getCardCollection();
-					const nftIds = collection
-						.filter(card => card.ownershipSource === 'nft')
-						.map(c => c.uid ?? '')
-						.filter(Boolean);
-					if (nftIds.length > 0) {
-						send({ type: 'deck_verify', hiveAccount: username, nftIds });
-						debug.combat(`[wireSync] Sent deck_verify: ${nftIds.length} NFTs for @${username}`);
+					const claims: DeckCardClaim[] = [];
+					for (const card of collection) {
+						if (card.ownershipSource !== 'nft') continue;
+						const nftUid = NftUidSchema.safeParse(card.uid);
+						const cardId = CardIdSchema.safeParse(card.cardId);
+						if (!nftUid.success || !cardId.success) continue;
+						claims.push({
+							authority: 'nft-custody',
+							nftUid: nftUid.data,
+							cardId: cardId.data,
+						});
+					}
+					if (claims.length > 0) {
+						send({ type: 'deck_verify', hiveAccount: username, protocolVersion: 2, claims });
+						debug.combat(`[wireSync] Sent deck_verify: ${claims.length} source-aware claim(s) for @${username}`);
 					}
 				}
 			} catch (err) {
@@ -300,16 +344,13 @@ export function useWireSync() {
 		}
 
 		startNewTranscript();
-
-		// Owner of `activeTranscript`: this effect started it, so it cleans it up on
-		// unmount or dep change. The early-return branch above also calls clearTranscript
-		// when the connection drops mid-mount; this return covers the unmount path
-		// (e.g., user navigates away while connected) where the early-return never fires.
-		// `clearTranscript` is idempotent — safe if both paths run on a state transition.
-		return () => {
-			clearTranscript();
-		};
+		return undefined;
 	}, [connection, connectionState, send]);
+
+	useEffect(() => () => {
+		clearTranscript();
+		resetChessWireSender();
+	}, []);
 
 	// Host sends init AFTER seed exchange completes (replaces old 200ms timer)
 	// Timeout after 10s if seed exchange stalls
@@ -362,26 +403,10 @@ export function useWireSync() {
 			isProcessingRef.current = false;
 			messageQueueRef.current = [];
 			GameEventBus.emitNotification({
-				level: 'error',
-				message: 'Opponent disconnected from the game. The connection was lost. You may need to start a new game.',
+				level: 'warning',
+				message: 'Connection lost. Reconnecting and preserving queued actions.',
 				duration: 8000,
 			});
-
-			if (isSharedNetworkEnvironment()) {
-				const gs = useGameStore.getState().gameState;
-				const matchSeed = useGameStore.getState().matchSeed;
-				const opponentName = usePeerStore.getState().remotePeerId ?? 'unknown';
-				if (gs && gs.gamePhase !== 'game_over' && gs.turnNumber > 0 && matchSeed) {
-					submitSlashEvidence({
-						matchId: matchSeed,
-						offender: opponentName,
-						reason: 'fake_disconnect',
-						trxId1: matchSeed,
-						trxId2: `disconnect_turn_${gs.turnNumber}_${Date.now()}`,
-						notes: `Opponent disconnected mid-match at turn ${gs.turnNumber}`,
-					}).catch(err => debug.warn('[wireSync] Failed to submit fake_disconnect slash:', err));
-				}
-			}
 		};
 
 		connection.on('close', handleClose);
@@ -933,11 +958,11 @@ export function useWireSync() {
 					//
 					// Surface (post C-Chess.8):
 					//   - chess_move: quiet moves via `executeMove`.
-					//   - chess_attack: instant-kill captures only — receiver runs
-					//     `startAttackAnimation(attacker, defender, true)` and the
-					//     existing animation->completeAttackAnimation->executeInstantKill
-					//     chain handles the apply locally.
-					// Non-instant captures stay blocked at the UI layer (toast).
+					//   - chess_attack: instant-kill captures — receiver runs
+					//     `startAttackAnimation(attacker, defender, true)`.
+					//   - chess_combat_initiated: non-instant captures — receiver
+					//     runs the same animation with `false`, then the existing
+					//     coordinator boots poker from pendingCombat.
 					console.log('[wireSync] RECV chess_command', {
 						seq: (data as { seq?: unknown }).seq,
 						commandId: typeof (data as { commandId?: unknown }).commandId === 'string'
@@ -1113,7 +1138,7 @@ export function useWireSync() {
 					}
 
 					// Branch by command discriminator.
-					let transcriptAction: 'chess_move' | 'chess_attack';
+					let transcriptAction: 'chess_move' | 'chess_attack' | 'chess_combat_initiated';
 					let transcriptExtra: Record<string, unknown> = {};
 
 					if (cmd.type === 'chess_move') {
@@ -1124,7 +1149,6 @@ export function useWireSync() {
 						cs.executeMove(cmd.from, cmd.to);
 						transcriptAction = 'chess_move';
 					} else {
-						// chess_attack — instant-kill capture only.
 						const defender = pieces.find(p => p.id === cmd.defenderId);
 						if (!defender) {
 							console.warn('[wireSync] chess defender_not_found roster dump', {
@@ -1144,10 +1168,6 @@ export function useWireSync() {
 							reject('cannot_attack_own_piece');
 							break;
 						}
-						if (!isChessAttackInstantKill({ attackerType: attacker.type, defenderType: defender.type })) {
-							reject('non_instant_capture_not_supported_p2p');
-							break;
-						}
 						if (cs.pendingAttackAnimation) {
 							reject('attack_animation_in_progress');
 							break;
@@ -1156,15 +1176,21 @@ export function useWireSync() {
 							reject('start_attack_animation_unavailable');
 							break;
 						}
-						// Apply: trigger the same animation chain the sender ran.
-						// `completeAttackAnimation` (called from the receiver's UI
-						// when its animation finishes) sees `isInstantKill=true` and
-						// invokes `executeInstantKill` locally — see chessCombatSlice.
-						cs.startAttackAnimation(attacker, defender, true);
-						transcriptAction = 'chess_attack';
+						const instantKill = isChessAttackInstantKill({ attackerType: attacker.type, defenderType: defender.type });
+						if (cmd.type === 'chess_attack' && !instantKill) {
+							reject('chess_attack_requires_instant_capture');
+							break;
+						}
+						if (cmd.type === 'chess_combat_initiated' && instantKill) {
+							reject('chess_combat_initiated_requires_non_instant_capture');
+							break;
+						}
+
+						cs.startAttackAnimation(attacker, defender, instantKill);
+						transcriptAction = cmd.type;
 						transcriptExtra = {
 							defenderId: cmd.defenderId,
-							isInstantKill: true,
+							isInstantKill: instantKill,
 						};
 					}
 
@@ -1196,41 +1222,145 @@ export function useWireSync() {
 					break;
 				}
 
-				case 'poker_action':
-					if (isCardsAuthority) {
-						// Rate limit
-						const nowP = Date.now();
-						actionTimestampsRef.current = actionTimestampsRef.current.filter(t => nowP - t < 1000);
-						if (actionTimestampsRef.current.length >= MAX_ACTIONS_PER_SEC) break;
-						actionTimestampsRef.current.push(nowP);
+				case 'poker_action': {
+					const nowP = Date.now();
+					actionTimestampsRef.current = actionTimestampsRef.current.filter(t => nowP - t < 1000);
+					if (actionTimestampsRef.current.length >= MAX_ACTIONS_PER_SEC) break;
+					actionTimestampsRef.current.push(nowP);
 
-						// Validate action is a known CombatAction value
-						const validActions = ['attack', 'counter', 'engage', 'brace', 'defend'];
-						if (!validActions.includes(data.action)) break;
-						if (data.hpCommitment !== undefined && (typeof data.hpCommitment !== 'number' || data.hpCommitment < 0 || data.hpCommitment > 500)) break;
-
-						// Access combat store via globalThis (set by unifiedCombatStore.ts)
-						const combatStore = (globalThis as Record<string, unknown>).__ragnarokCombatStore as
-							{ getState: () => { pokerState?: { activePlayerId?: string | null; foldWinner?: string; phase?: string }; performAction?: (playerId: string, action: string, hp?: number) => void } } | undefined;
-						if (!combatStore) break;
-						const cState = combatStore.getState();
-						if (!cState.pokerState || cState.pokerState.foldWinner) break;
-						if (cState.pokerState.phase === 'RESOLUTION' || cState.pokerState.phase === 'SHOWDOWN') break;
-
-						// Validate it's this player's turn in poker
-						if (typeof data.playerId !== 'string' || data.playerId.length > 64) break;
-						if (cState.pokerState.activePlayerId !== data.playerId) break;
-
-						recordMove('poker_action', { action: data.action, hpCommitment: data.hpCommitment }, remotePlayerId({
-							opponentUsername: opponentUsernameRef.current,
-							remotePeerId: usePeerStore.getState().remotePeerId,
-						}));
-						if (cState.performAction) {
-							cState.performAction(data.playerId, data.action, data.hpCommitment);
-						}
-						debouncedSync();
+					const validActions = Object.values(CombatAction) as string[];
+					if (!validActions.includes(data.action)) break;
+					if (data.hpCommitment !== undefined && (typeof data.hpCommitment !== 'number' || data.hpCommitment < 0 || data.hpCommitment > 500)) break;
+					if (!isPokerActionCompactConsistent({
+						action: data.action,
+						hpCommitment: data.hpCommitment,
+						compact: data.compact,
+					})) {
+						debug.warn('[wireSync] poker_action dropped — compact tuple mismatch', {
+							action: data.action,
+							hpCommitment: data.hpCommitment,
+						});
+						break;
 					}
+
+					const combatStore = (globalThis as Record<string, unknown>).__ragnarokCombatStore as
+						| {
+								getState: () => {
+									pokerCombatState?: PokerCombatState | null;
+									performPokerAction?: (playerId: string, action: CombatAction, hp?: number) => void;
+									maybeCloseBettingRound?: () => void;
+								};
+						  }
+						| undefined;
+					if (!combatStore) break;
+					const cState = combatStore.getState();
+					const pokerState = cState.pokerCombatState;
+					if (!pokerState || pokerState.foldWinner) break;
+					if (pokerState.phase === CombatPhase.RESOLUTION) break;
+
+					if (typeof data.playerId !== 'string' || data.playerId.length > 128) break;
+					if (!data.turnId || !pokerState.turnId || data.turnId !== pokerState.turnId) {
+						debug.warn('[wireSync] poker_action dropped — turnId mismatch', {
+							received: data.turnId,
+							expected: pokerState.turnId,
+						});
+						break;
+					}
+					if (data.playerId !== pokerState.opponent.playerId) {
+						debug.warn('[wireSync] poker_action dropped — remote actor mismatch', {
+							received: data.playerId,
+							expected: pokerState.opponent.playerId,
+						});
+						break;
+					}
+					if (pokerState.activePlayerId !== data.playerId) break;
+					if (seenPokerDecisionIdsRef.current.has(data.decisionId)) {
+						debug.warn('[wireSync] poker_action dropped — duplicate decisionId', {
+							decisionId: data.decisionId.slice(0, 24),
+						});
+						break;
+					}
+					seenPokerDecisionIdsRef.current.add(data.decisionId);
+					seenPokerDecisionIdsOrderRef.current.push(data.decisionId);
+					while (seenPokerDecisionIdsOrderRef.current.length > SEEN_COMMAND_IDS_MAX) {
+						const evicted = seenPokerDecisionIdsOrderRef.current.shift();
+						if (evicted !== undefined) seenPokerDecisionIdsRef.current.delete(evicted);
+					}
+
+					recordMove('poker_action', {
+						action: data.action,
+						hpCommitment: data.hpCommitment,
+						turnId: data.turnId,
+						decisionId: data.decisionId,
+					}, remotePlayerId({
+						opponentUsername: opponentUsernameRef.current,
+						remotePeerId: usePeerStore.getState().remotePeerId,
+					}));
+					cState.performPokerAction?.(data.playerId, data.action as CombatAction, data.hpCommitment);
+					cState.maybeCloseBettingRound?.();
 					break;
+				}
+
+				case 'poker_turn_started': {
+					const combatStore = (globalThis as Record<string, unknown>).__ragnarokCombatStore as
+						| {
+								getState: () => {
+									pokerCombatState?: {
+										combatId?: string;
+										phase?: CombatPhase;
+										activePlayerId?: string | null;
+										actionsThisRound?: number;
+										maxTurnTime?: number;
+									} | null;
+									syncPokerTurnClock?: (input: {
+										turnId: string;
+										combatId: string;
+										phase: string;
+										activePlayerId: string;
+										actionsThisRound: number;
+										durationMs: number;
+										receivedAtMs: number;
+									}) => void;
+								};
+						  }
+						| undefined;
+					const cState = combatStore?.getState();
+					const pokerState = cState?.pokerCombatState;
+					if (!pokerState) break;
+					if (pokerState.combatId !== data.combatId) break;
+					if (pokerState.phase !== data.phase) break;
+					if (pokerState.activePlayerId !== data.activePlayerId) break;
+					if (pokerState.actionsThisRound !== data.actionsThisRound) break;
+					const expectedDurationMs = Math.max(1, pokerState.maxTurnTime ?? 60) * 1_000;
+					if (data.durationMs !== expectedDurationMs) {
+						debug.warn('[wireSync] poker_turn_started dropped — duration mismatch', {
+							received: data.durationMs,
+							expected: expectedDurationMs,
+						});
+						break;
+					}
+					cState?.syncPokerTurnClock?.({
+						turnId: data.turnId,
+						combatId: data.combatId,
+						phase: data.phase,
+						activePlayerId: data.activePlayerId,
+						actionsThisRound: data.actionsThisRound,
+						durationMs: data.durationMs,
+						receivedAtMs: Date.now(),
+					});
+					recordMove('poker_turn_started', {
+						combatId: data.combatId,
+						phase: data.phase,
+						activePlayerId: data.activePlayerId,
+						turnId: data.turnId,
+						actionsThisRound: data.actionsThisRound,
+						durationMs: data.durationMs,
+					}, remotePlayerId({
+						opponentUsername: opponentUsernameRef.current,
+						remotePeerId: usePeerStore.getState().remotePeerId,
+					}));
+					break;
+				}
 
 				case 'gameState':
 					if (!isCardsAuthority) {
@@ -1295,10 +1425,11 @@ export function useWireSync() {
 						setTimeout(() => usePeerStore.getState().disconnect(), 2000);
 					};
 
-					verifyDeckOwnership(
-						data.hiveAccount,
-						data.nftIds.map(id => ({ nft_id: id })),
-					).then(result => {
+					verifyDeckOwnership(data.hiveAccount, data.claims.map(claim => (
+						claim.authority === 'nft-custody'
+							? { nft_id: claim.nftUid, cardId: claim.cardId }
+							: { cardId: claim.cardId, category: 'starter' as const }
+					))).then(result => {
 						if (!result.valid) {
 							GameEventBus.emitNotification({
 								level: 'error',
@@ -1309,28 +1440,19 @@ export function useWireSync() {
 						}
 					}).catch(() => { /* IndexedDB unavailable in dev mode — skip */ });
 
-					if (data.hiveAccount && data.nftIds.length > 0) {
-						const claims: DeckCardClaim[] = [];
-						for (const id of data.nftIds) {
-							const parsedUid = NftUidSchema.safeParse(id);
-							if (!parsedUid.success) continue;
-							claims.push({ authority: 'nft-custody', nftUid: parsedUid.data });
-						}
-
-						if (claims.length > 0) {
-							verifyDeckClaimsOnServer(data.hiveAccount, claims)
-								.then(sv => {
-									if (!sv.verified) {
-										GameEventBus.emitNotification({
-											level: 'error',
-											message: `Server deck verification failed — ${sv.rejections.length} card claim(s) rejected for ${data.hiveAccount}. Disconnecting.`,
-											duration: 5000,
-										});
-										disconnectOnce();
-									}
-								})
-								.catch(() => { /* Chain indexer unavailable — skip */ });
-						}
+					if (data.hiveAccount && data.claims.length > 0) {
+						verifyDeckClaimsOnServer(data.hiveAccount, data.claims)
+							.then(sv => {
+								if (!sv.verified) {
+									GameEventBus.emitNotification({
+										level: 'error',
+										message: `Server deck verification failed — ${sv.rejections.length} card claim(s) rejected for ${data.hiveAccount}. Disconnecting.`,
+										duration: 5000,
+									});
+									disconnectOnce();
+								}
+							})
+							.catch(() => { /* Chain indexer unavailable — skip */ });
 					}
 					break;
 				}
@@ -2000,11 +2122,55 @@ export function useWireSync() {
 		};
 	}, [connectionState, isCardsAuthority, send]);
 
-	// Send our deck's NFT IDs to the opponent for ownership verification
-	const sendDeckVerification = useCallback((hiveAccount: string, nftIds: string[]) => {
+	// Send source-aware deck claims to the opponent for ownership verification.
+	const sendDeckVerification = useCallback((hiveAccount: string, claims: readonly DeckCardClaim[]) => {
 		if (connectionState === 'connected') {
-			send({ type: 'deck_verify', hiveAccount, nftIds });
+			send({ type: 'deck_verify', hiveAccount, protocolVersion: 2, claims });
 		}
+	}, [connectionState, send]);
+
+	const sendPokerAction = useCallback((input: {
+		playerId: string;
+		action: CombatAction;
+		hpCommitment?: number;
+		turnId?: string | null;
+	}) => {
+		if (connectionState !== 'connected') return;
+		const sentAtMs = Date.now();
+		send({
+			type: 'poker_action',
+			playerId: input.playerId,
+			action: input.action,
+			hpCommitment: input.hpCommitment,
+			turnId: input.turnId ?? undefined,
+			decisionId: `${input.turnId ?? 'unclocked'}:${input.playerId}:${sentAtMs}`,
+			sentAtMs,
+			compact: encodePokerAction({
+				action: input.action as CompactPokerActionName,
+				hpCommitment: input.hpCommitment,
+			}),
+		});
+	}, [connectionState, send]);
+
+	const sendPokerTurnStarted = useCallback((input: {
+		combatId: string;
+		turnId: string;
+		phase: string;
+		activePlayerId: string;
+		actionsThisRound: number;
+		durationMs: number;
+	}) => {
+		if (connectionState !== 'connected') return;
+		send({
+			type: 'poker_turn_started',
+			combatId: input.combatId,
+			turnId: input.turnId,
+			phase: input.phase,
+			activePlayerId: input.activePlayerId,
+			actionsThisRound: input.actionsThisRound,
+			durationMs: input.durationMs,
+			sentAtMs: Date.now(),
+		});
 	}, [connectionState, send]);
 
 	/**
@@ -2075,6 +2241,8 @@ export function useWireSync() {
 		attackWithCard: wrappedAttack,
 		endTurn: wrappedEndTurn,
 		performHeroPower: wrappedUseHeroPower,
+		sendPokerAction,
+		sendPokerTurnStarted,
 		sendDeckVerification,
 		proposeResult,
 		downloadSessionLog,

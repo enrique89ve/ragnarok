@@ -1,4 +1,6 @@
 import type { ChessCommandEnvelope } from '../../../../shared/p2p-wire/chess';
+import type { CompactPokerAction } from '../../../../shared/p2p-wire/combat';
+import type { DeckCardClaim } from '../../../../shared/protocol-core/deckVerification';
 import type { PackagedMatchResult } from '../../data/blockchain/types';
 import type { GameCommandEnvelope } from '../hooks/p2pEnvelope';
 import type { GameState } from '../types';
@@ -18,7 +20,7 @@ export type WireMessage =
 	| { type: 'opponentDisconnected' }
 	| { type: 'ping' }
 	| { type: 'pong' }
-	| { type: 'deck_verify'; hiveAccount: string; nftIds: string[] }
+	| { type: 'deck_verify'; hiveAccount: string; protocolVersion: 2; claims: readonly DeckCardClaim[] }
 	| { type: 'seed_commit'; commitment: string }
 	| { type: 'seed_reveal'; salt: string; hiveUsername?: string }
 	| { type: 'army_announcement'; army: ArmySelection }
@@ -29,7 +31,8 @@ export type WireMessage =
 	| { type: 'wasm_hash_check'; wasmHash: string }
 	| { type: 'hash_check'; stateHash: string; chessStateHash: string; chessMoveCount: number; turnNumber: number }
 	| { type: 'hash_mismatch'; turnNumber: number; myHash: string }
-	| { type: 'poker_action'; playerId: string; action: string; hpCommitment?: number }
+	| { type: 'poker_action'; playerId: string; action: string; hpCommitment?: number; compact?: CompactPokerAction; turnId?: string; decisionId: string; sentAtMs?: number }
+	| { type: 'poker_turn_started'; combatId: string; turnId: string; phase: string; activePlayerId: string; actionsThisRound: number; durationMs: number; sentAtMs: number }
 	| ChessCommandEnvelope
 	// ── Phase 0 protocol-v2 envelopes (ADR 0004 §Decision.6) ─────────────
 	// Schema/wire only at this stage — handlers land in issues 02 / 06 / 03.

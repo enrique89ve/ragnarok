@@ -31,6 +31,9 @@ export function useP2PActions(): P2PActions {
 				selectDiscoveryOption: useGameStore.getState().selectDiscoveryOption,
 			});
 		},
+		sendPokerAction: () => undefined,
+		sendPokerTurnStarted: () => undefined,
+		downloadSessionLog: () => undefined,
 		gameState: gsGameState,
 		isConnected: false,
 		isHost: false,
