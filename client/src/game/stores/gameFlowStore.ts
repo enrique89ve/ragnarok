@@ -63,6 +63,10 @@ export const useGameFlowStore = create<GameFlowStore>()((set) => ({
 	},
 }));
 
+if (typeof globalThis !== 'undefined') {
+	(globalThis as Record<string, unknown>).__ragnarokFlowStore = useGameFlowStore;
+}
+
 /* ============================================================
    Selectors — colocated for ergonomic, type-safe consumption.
    ============================================================ */
