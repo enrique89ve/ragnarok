@@ -11,6 +11,11 @@
 
 import type { RuneLedgerEntry, RuneLedgerEntryQuery, RuneLedgerTotalQuery } from './runeEconomy';
 import type { EitrLedgerEntry, EitrLedgerEntryQuery, EitrLedgerTotalQuery } from './eitrEconomy';
+import {
+	RAGNAROK_PROTOCOL_IDS,
+	RAGNAROK_RUNTIME_CONFIGS,
+	type RagnarokRuntimeConfig,
+} from '../runtimeConfig';
 
 export {
 	RUNE_LOSS_RANKED,
@@ -74,8 +79,9 @@ export {
 // Protocol Constants
 // ============================================================
 
-export const RAGNAROK_ADMIN_ACCOUNT = 'ragnarok';
-export const RAGNAROK_PROTOCOL_IDS = ['ragnarok-cards', 'rk_game_testnet', 'ragnarok-cards-local'] as const;
+export const RAGNAROK_ADMIN_ACCOUNT = RAGNAROK_RUNTIME_CONFIGS.mainnet.adminAccount;
+export { RAGNAROK_PROTOCOL_IDS };
+export type { RagnarokRuntimeConfig };
 export const TRANSFER_COOLDOWN_BLOCKS = 10;
 export const PACK_REVEAL_DEADLINE_BLOCKS = 200;
 export const PACK_ENTROPY_DELAY_BLOCKS = 20;
@@ -98,29 +104,40 @@ export {
 	PACK_SIZES,
 	ADMIN_MINTABLE_PACK_KEYS,
 	ACTIVE_HBD_PACK_SALE_SCENARIO_KEY,
-	HBD_CURRENCY_CODE,
-	HBD_PACK_SALE_SCENARIOS,
-	HBD_PRICE_LOCALE,
-	PUBLIC_PACK_KEYS,
+		HBD_CURRENCY_CODE,
+		HBD_PACK_SALE_SCENARIOS,
+		HBD_PRICE_LOCALE,
+		MAX_HBD_PACK_PURCHASE_QUANTITY,
+		HBD_PACK_PURCHASE_MEMO_PREFIX,
+		PUBLIC_PACK_KEYS,
 	RUNE_REDEEMABLE_PACK_KEYS,
 	TESTNET_RUNE_PACK_POOL,
-	formatHbdPrice,
-	formatHbdThousandths,
-	getActiveHbdPackSaleScenario,
-	getPackDefinition,
+		buildHbdPackPurchaseMemo,
+		createHbdPackPurchaseMemoChecksum,
+		formatHbdPrice,
+		formatHbdThousandths,
+		formatHbdTransferAmount,
+		getActiveHbdPackSaleScenario,
+		getHbdPackPurchaseQuote,
+		getPackDefinition,
 	getHbdPackSaleScenarioTotals,
 	getHbdPackPriceThousandths,
 	getPackRuneCost,
-	getRuneExchangePackQuote,
-	getRunePackPoolAllocations,
-	getRunePackPoolTotals,
-	isPackKey,
-	isRuneRedeemablePackKey,
-	normalizePackKey,
+		getRuneExchangePackQuote,
+		getRunePackPoolAllocations,
+		getRunePackPoolTotals,
+		isPackKey,
+		isRuneRedeemablePackKey,
+		normalizePackKey,
+		parseHbdPackPurchaseMemo,
 	type CanonicalPackDefinition,
-	type HbdPackSaleScenario,
-	type HbdPackSaleScenarioKey,
-	type HbdPackSaleScenarioTotals,
+		type HbdPackSaleScenario,
+		type HbdPackSaleScenarioKey,
+		type HbdPackSaleScenarioTotals,
+		type HbdPackPurchaseQuote,
+		type HbdPackPurchaseQuoteInput,
+		type HbdPackPurchaseMemoInput,
+		type ParsedHbdPackPurchaseMemo,
 	type PackAcquisition,
 	type PackCategory,
 	type PackKey,
@@ -156,6 +173,7 @@ export type CanonicalAction =
 	| 'campaign_result'
 	| 'rune_exchange'
 	| 'slash_evidence'
+	| 'pack_purchase'
 	// v1.1: Pack NFTs
 	| 'pack_mint'
 	| 'pack_distribute'
@@ -186,6 +204,7 @@ export type ProtocolAction = CanonicalAction | LegacyAction;
 
 export const ACTIVE_AUTH_OPS: ReadonlySet<CanonicalAction> = new Set([
 	'card_transfer', 'burn', 'seal', 'mint_batch',
+	'pack_purchase',
 	'pack_mint', 'pack_distribute', 'pack_transfer', 'pack_burn',
 	'card_replicate', 'card_merge',
 	// Marketplace: buy requires active (bundles HIVE transfer)

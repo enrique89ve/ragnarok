@@ -1,10 +1,10 @@
 /**
  * AnimationOverlay.tsx
- * 
+ *
  * A unified portal-based animation overlay that renders all position-sensitive
  * effects outside of transformed containers. This ensures correct fixed positioning
  * relative to the viewport regardless of parent transforms.
- * 
+ *
  * This component consolidates rendering for:
  * - Summon effects
  * - Damage indicators
@@ -17,6 +17,8 @@ import React, { useMemo, useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAnimationOrchestrator, AnimationEffect, AnimationCategory } from '../animations/UnifiedAnimationOrchestrator';
+import type { Rarity } from '@shared/schemas/rarity';
+import { getRarityUi, normalizeRarityKey } from '../utils/rarityUtils';
 
 interface ParticleConfig {
   angle: number;
@@ -25,42 +27,40 @@ interface ParticleConfig {
   size: number;
 }
 
-const rarityColors: Record<string, { primary: string; secondary: string; glow: string }> = {
-  common: { primary: '#9d9d9d', secondary: '#c4c4c4', glow: 'rgba(157, 157, 157, 0.6)' },
-  rare: { primary: '#0070dd', secondary: '#4da6ff', glow: 'rgba(0, 112, 221, 0.6)' },
-  epic: { primary: '#a335ee', secondary: '#c77dff', glow: 'rgba(163, 53, 238, 0.6)' },
-  legendary: { primary: '#ff8000', secondary: '#ffb347', glow: 'rgba(255, 128, 0, 0.8)' },
-};
-
-const generateParticleConfigs = (count: number, isLegendary: boolean): ParticleConfig[] => {
+const generateParticleConfigs = (count: number, isMythic: boolean): ParticleConfig[] => {
   const configs: ParticleConfig[] = [];
   for (let i = 0; i < count; i++) {
     configs.push({
       angle: (i / count) * 360,
-      distance: isLegendary ? 150 : 100,
+      distance: isMythic ? 150 : 100,
       delay: i * 0.02,
-      size: isLegendary ? 12 : 8,
+      size: isMythic ? 12 : 8,
     });
   }
   return configs;
 };
 
-const MemoizedParticleConfigs = {
+const MemoizedParticleConfigs: Record<Rarity, ParticleConfig[]> = {
   common: generateParticleConfigs(8, false),
   rare: generateParticleConfigs(8, false),
   epic: generateParticleConfigs(12, false),
-  legendary: generateParticleConfigs(16, true),
+  mythic: generateParticleConfigs(16, true),
 };
 
 const SummonEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo(({ effect }) => {
   const { position, data } = effect;
-  const rarity = data.rarity || 'common';
-  const colors = rarityColors[rarity] || rarityColors.common;
-  const isLegendary = rarity === 'mythic';
+  const rarity = normalizeRarityKey(typeof data.rarity === 'string' ? data.rarity : undefined);
+  const rarityUi = getRarityUi(rarity);
+  const colors = {
+    primary: rarityUi.cssColor,
+    secondary: rarityUi.cssBright,
+    glow: rarityUi.cssGlow,
+  };
+  const isMythic = rarity === 'mythic';
   const isEpic = rarity === 'epic';
-  
-  const particleConfigs = useMemo(() => 
-    MemoizedParticleConfigs[rarity as keyof typeof MemoizedParticleConfigs] || MemoizedParticleConfigs.common,
+
+  const particleConfigs = useMemo(() =>
+    MemoizedParticleConfigs[rarity],
     [rarity]
   );
 
@@ -96,7 +96,7 @@ const SummonEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo((
         }}
       />
 
-      {(isLegendary || isEpic) && (
+      {(isMythic || isEpic) && (
         <motion.div
           initial={{ scale: 0.3, opacity: 0.8 }}
           animate={{ scale: 4, opacity: 0 }}
@@ -279,7 +279,7 @@ const SpellEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo(({
   const spellName = data.spellName || 'Spell';
   const description = data.description || '';
   const spellType = data.spellType || 'damage';
-  
+
   const spellColors: Record<string, { bg: string; border: string; glow: string; icon: string }> = {
     damage: { bg: 'rgba(255, 68, 68, 0.95)', border: '#ff6b6b', glow: 'rgba(255, 0, 0, 0.6)', icon: '🔥' },
     heal: { bg: 'rgba(68, 255, 68, 0.95)', border: '#6bff6b', glow: 'rgba(0, 255, 0, 0.6)', icon: '💚' },
@@ -292,7 +292,7 @@ const SpellEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo(({
     transform: { bg: 'rgba(147, 112, 219, 0.95)', border: '#9370db', glow: 'rgba(147, 112, 219, 0.6)', icon: '🔄' },
     default: { bg: 'rgba(70, 130, 180, 0.95)', border: '#4682b4', glow: 'rgba(70, 130, 180, 0.6)', icon: '✨' },
   };
-  
+
   const colors = spellColors[spellType] || spellColors.default;
 
   return (
@@ -300,8 +300,8 @@ const SpellEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo(({
       initial={{ opacity: 0, scale: 0.5, y: 50 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.8, y: -30 }}
-      transition={{ 
-        duration: 0.4, 
+      transition={{
+        duration: 0.4,
         ease: [0.25, 0.1, 0.25, 1],
         scale: { type: 'spring', stiffness: 300, damping: 20 }
       }}
@@ -316,7 +316,7 @@ const SpellEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo(({
     >
       <motion.div
         initial={{ boxShadow: `0 0 30px ${colors.glow}` }}
-        animate={{ 
+        animate={{
           boxShadow: [
             `0 0 30px ${colors.glow}`,
             `0 0 60px ${colors.glow}`,
@@ -345,7 +345,7 @@ const SpellEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo(({
         >
           {colors.icon}
         </motion.div>
-        
+
         <motion.h2
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -361,7 +361,7 @@ const SpellEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo(({
         >
           {spellName}
         </motion.h2>
-        
+
         {description && (
           <motion.p
             initial={{ opacity: 0 }}
@@ -379,7 +379,7 @@ const SpellEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo(({
           </motion.p>
         )}
       </motion.div>
-      
+
       <motion.div
         initial={{ scale: 0, opacity: 0.8 }}
         animate={{ scale: 3, opacity: 0 }}
@@ -458,22 +458,22 @@ const ShuffleEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo(
       {cardConfigs.map((config, i) => (
         <motion.div
           key={i}
-          initial={{ 
-            x: sourcePosition.x + config.offsetX, 
+          initial={{
+            x: sourcePosition.x + config.offsetX,
             y: sourcePosition.y + config.offsetY,
             rotate: config.rotation,
             scale: 1,
-            opacity: 1 
+            opacity: 1
           }}
-          animate={{ 
+          animate={{
             x: targetPosition.x,
             y: targetPosition.y,
             rotate: 360 + config.rotation,
             scale: 0.3,
             opacity: 0
           }}
-          transition={{ 
-            duration: 0.6, 
+          transition={{
+            duration: 0.6,
             delay: config.delay,
             ease: 'easeInOut'
           }}
@@ -568,7 +568,7 @@ const RENDERED_CATEGORIES: AnimationCategory[] = ['summon', 'damage', 'heal', 'a
 
 export const AnimationOverlay: React.FC = () => {
   const [activeEffects, setActiveEffects] = useState<AnimationEffect[]>([]);
-  
+
   useEffect(() => {
     const getFilteredEffects = (state: { activeEffects: Map<string, AnimationEffect> }): AnimationEffect[] => {
       const effects: AnimationEffect[] = [];
@@ -579,9 +579,9 @@ export const AnimationOverlay: React.FC = () => {
       });
       return effects;
     };
-    
+
     setActiveEffects(getFilteredEffects(useAnimationOrchestrator.getState()));
-    
+
     const unsubscribe = useAnimationOrchestrator.subscribe(state => {
       const newEffects = getFilteredEffects(state);
       setActiveEffects(prev => {
@@ -592,7 +592,7 @@ export const AnimationOverlay: React.FC = () => {
         return prev;
       });
     });
-    
+
     return unsubscribe;
   }, []);
 

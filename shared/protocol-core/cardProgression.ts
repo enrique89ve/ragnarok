@@ -1,4 +1,5 @@
 import type { Rarity } from '../schemas/rarity';
+import { tryAdaptRarity } from '../schemas/rarity';
 import { MAX_CARD_LEVEL } from './types';
 
 export type EconomicXPKey = Rarity;
@@ -19,13 +20,8 @@ export const ECONOMIC_XP_CONFIG: Record<EconomicXPKey, EconomicXPConfig> = {
 };
 
 export function getEconomicXPConfig(rarity: string): EconomicXPConfig {
-	const normalizedRarity = rarity.toLowerCase();
-	return normalizedRarity === 'rare' ||
-		normalizedRarity === 'epic' ||
-		normalizedRarity === 'mythic' ||
-		normalizedRarity === 'common'
-		? ECONOMIC_XP_CONFIG[normalizedRarity]
-		: ECONOMIC_XP_CONFIG.common;
+	const canonicalRarity = tryAdaptRarity(rarity);
+	return ECONOMIC_XP_CONFIG[canonicalRarity ?? 'common'];
 }
 
 export function getEconomicLevelForXP(rarity: string, xp: number): number {

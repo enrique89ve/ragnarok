@@ -35,6 +35,7 @@ const LEGACY_MAP: Record<string, ProtocolAction> = {
 	'rp_reward_claim': 'reward_claim',
 	'rp_daily_quest_claim': 'daily_quest_claim',
 	'rp_slash_evidence': 'slash_evidence',
+	'rp_pack_purchase': 'pack_purchase',
 	// rp_pack_open is NOT here — it maps to legacy_pack_open (special case)
 	'rp_pack_open': 'legacy_pack_open',
 	// rp_team_submit is informational-only, ignored
@@ -65,7 +66,15 @@ export type NormalizeResult =
 	| { status: 'ok'; op: ProtocolOp }
 	| { status: 'ignore'; reason: string };
 
-export function normalizeRawOp(raw: RawHiveOp): NormalizeResult {
+export interface NormalizeOptions {
+	readonly protocolIds?: readonly string[];
+	readonly acceptLegacyProtocolIds?: boolean;
+}
+
+export function normalizeRawOp(raw: RawHiveOp, options: NormalizeOptions = {}): NormalizeResult {
+	const protocolIds = options.protocolIds ?? RAGNAROK_PROTOCOL_IDS;
+	const acceptLegacyProtocolIds = options.acceptLegacyProtocolIds ?? true;
+
 	// Step 1: Determine action from custom_json id
 	let action: ProtocolAction | null = null;
 	let payload: Record<string, unknown>;
@@ -76,7 +85,7 @@ export function normalizeRawOp(raw: RawHiveOp): NormalizeResult {
 		return { status: 'ignore', reason: 'malformed JSON' };
 	}
 
-	if ((RAGNAROK_PROTOCOL_IDS as readonly string[]).includes(raw.customJsonId)) {
+	if (protocolIds.includes(raw.customJsonId)) {
 		// Canonical format: action is inside the JSON body
 		const bodyAction = payload.action as string | undefined;
 		if (!bodyAction) {
@@ -87,7 +96,8 @@ export function normalizeRawOp(raw: RawHiveOp): NormalizeResult {
 			'genesis', 'seal', 'mint_batch', 'pack_commit', 'pack_reveal',
 			'reward_claim', 'daily_quest_claim', 'card_transfer', 'burn', 'level_up',
 			'queue_join', 'queue_leave', 'match_anchor', 'match_result',
-			'campaign_result', 'rune_exchange', 'slash_evidence',
+				'campaign_result', 'rune_exchange', 'slash_evidence',
+				'pack_purchase',
 			// v1.1
 			'pack_mint', 'pack_distribute', 'pack_transfer', 'pack_burn',
 			'card_replicate', 'card_merge',
@@ -102,10 +112,10 @@ export function normalizeRawOp(raw: RawHiveOp): NormalizeResult {
 		} else {
 			return { status: 'ignore', reason: `unknown action: ${bodyAction}` };
 		}
-	} else if (raw.customJsonId === 'ragnarok_level_up') {
+	} else if (acceptLegacyProtocolIds && raw.customJsonId === 'ragnarok_level_up') {
 		// Legacy level_up format
 		action = 'level_up';
-	} else if (raw.customJsonId.startsWith('rp_')) {
+	} else if (acceptLegacyProtocolIds && raw.customJsonId.startsWith('rp_')) {
 		// Legacy rp_ prefix format
 		const mapped = LEGACY_MAP[raw.customJsonId];
 		if (mapped) {

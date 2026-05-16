@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { HiveCardAsset, ProvenanceStamp, CompactedProvenance } from '../../../data/schemas/HiveTypes';
 import { getTransactionUrl, getBlockUrl } from '../../../data/blockchain/explorerLinks';
+import { getRarityCssColor, getRarityLabel } from '../../utils/rarityUtils';
 
 interface NFTProvenanceViewerProps {
 	nft: HiveCardAsset | null;
@@ -9,17 +10,10 @@ interface NFTProvenanceViewerProps {
 	onSend?: (nft: HiveCardAsset) => void;
 }
 
-const rarityColors: Record<string, string> = {
-	common: '#FFFFFF',
-	rare: '#0070DD',
-	epic: '#A335EE',
-	mythic: '#FF8000',
-};
-
 const NFTProvenanceViewer: React.FC<NFTProvenanceViewerProps> = ({ nft, onClose, onSend }) => {
 	if (!nft) return null;
 
-	const rarityColor = rarityColors[nft.rarity] || rarityColors.common;
+	const rarityColor = getRarityCssColor(nft.rarity);
 
 	return (
 		<AnimatePresence>
@@ -58,7 +52,7 @@ const NFTProvenanceViewer: React.FC<NFTProvenanceViewerProps> = ({ nft, onClose,
 							<Field label="Card ID" value={String(nft.cardId)} />
 							<Field label="Owner" value={nft.ownerId} mono />
 							<Field label="Edition" value={nft.edition.toUpperCase()} />
-							<Field label="Rarity" value={nft.rarity.charAt(0).toUpperCase() + nft.rarity.slice(1)} color={rarityColor} />
+							<Field label="Rarity" value={getRarityLabel(nft.rarity)} color={rarityColor} />
 							<Field label="Level" value={`${nft.level} (${nft.xp} XP)`} />
 							{nft.race && <Field label="Race" value={nft.race} />}
 							<Field label="Type" value={nft.type} />

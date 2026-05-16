@@ -30,7 +30,7 @@ import { useGraveyardTracking } from '../hooks/useGraveyardTracking';
 import TurnTransition from '../animations/TurnTransition';
 import EnvironmentalEffect from '../animations/EnvironmentalEffect';
 
-import LegendaryEntrance from '../animations/LegendaryEntrance';
+import MythicEntrance from '../animations/MythicEntrance';
 import DynamicAudioLayer from '../audio/DynamicAudioLayer';
 import HeroPower from './HeroPower';
 
@@ -113,8 +113,8 @@ export const GameBoard: React.FC<{}> = () => {
   } = useAttackVisualization(battlefieldRef);
 
   const {
-    activeLegendaryCard,
-    setActiveLegendaryCard,
+    activeMythicCard,
+    setActiveMythicCard,
     activeEnvironmentalEffect,
     setActiveEnvironmentalEffect
   } = useGameAnimationEffects();
@@ -365,16 +365,16 @@ export const GameBoard: React.FC<{}> = () => {
 
     // Check if it's a mythic card and show special entrance animation
     if (card.card.rarity === 'mythic' && cardPosition) {
-      debug.log(`[LEGENDARY-DEBUG] Triggering mythic entrance for ${card.card.name}`);
+      debug.log(`[MYTHIC-DEBUG] Triggering mythic entrance for ${card.card.name}`);
 
       // Set the mythic card to trigger the animation component
-      setActiveLegendaryCard({
+      setActiveMythicCard({
         card: card.card,
         position: cardPosition
       });
 
       // Play special mythic sound effect
-      playSoundEffect('legendary_entrance');
+      playSoundEffect('mythic_entrance');
     }
 
     // Positional minions (magnetic, cleave, buff_adjacent) go to random position
@@ -1946,11 +1946,11 @@ export const GameBoard: React.FC<{}> = () => {
         )}
 
         {/* Mythic card entrance animation for when mythic cards are played */}
-        {activeLegendaryCard && (
-          <LegendaryEntrance
-            card={activeLegendaryCard.card}
-            position={activeLegendaryCard.position}
-            onComplete={() => setActiveLegendaryCard(null)}
+        {activeMythicCard && (
+          <MythicEntrance
+            card={activeMythicCard.card}
+            position={activeMythicCard.position}
+            onComplete={() => setActiveMythicCard(null)}
           />
         )}
 

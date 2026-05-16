@@ -14,7 +14,7 @@ function resolveCliMode(): string {
 loadDotenv();
 const envMode = resolveCliMode();
 if (envMode !== 'development' && envMode !== 'production') {
-  loadDotenv({ path: `.env.${envMode}` });
+  loadDotenv({ path: `.env.${envMode}`, override: true });
 }
 
 const app = express();

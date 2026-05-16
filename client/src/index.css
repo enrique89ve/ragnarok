@@ -37,32 +37,32 @@
      These reference the centralized design-tokens.css values.
      New code should use design-tokens.css variables directly.
      ============================================= */
-  
+
   /* Card dimensions - aliased to design-tokens */
   --card-margin: 4px;
   --grid-gap: var(--gap-sm, 6px);
-  
+
   /* Legacy color aliases */
   --primary-gold: var(--gold-300);
   --secondary-grey: var(--obsidian-600);
   --glow-yellow: var(--gold-glow);
   --shadow-black: rgba(0, 0, 0, 0.4);
   --game-bg-color: var(--obsidian-950);
-  
+
   /* Legacy Norse aliases */
   --norse-primary: var(--obsidian-800);
   --norse-secondary: var(--obsidian-900);
   --norse-accent: var(--gold-300);
   --norse-text: var(--ink-100);
   --norse-border: var(--ink-400);
-  
+
   /* UI scaling (game-specific) */
   --reference-width: 1920px;
   --reference-height: 1080px;
   --opponent-area-height: 15%;
   --battlefield-height: 75%;
   --player-area-height: 10%;
-  
+
   /* Legacy z-index aliases - prefer design-tokens vars */
   --z-background: 0;
   --z-board: var(--z-battlefield, 10);
@@ -74,12 +74,12 @@
   --z-end-turn-button: var(--z-betting, 200);
   --z-tooltips: var(--z-hover, 500);
   --z-modals: 1000;
-  
+
   /* Card glow effects (game-specific) - Fast GPU 1-layer versions */
   --card-playable-glow: 0 0 15px var(--success-glow);
   --card-targetable-glow: 0 0 15px var(--danger-glow);
   --card-highlighted-glow: 0 0 15px var(--gold-glow);
-  --card-legendary-glow: var(--shadow-glow-gold);
+  --card-mythic-glow: var(--shadow-glow-gold);
   --card-epic-glow: var(--rarity-epic-glow);
   --card-standard-glow: var(--rarity-rare-glow);
 
@@ -284,8 +284,8 @@ canvas {
   transition: none; /* No transition while dragging for responsiveness */
 }
 
-/* 
- * Special class for cards being played/placed on the battlefield 
+/*
+ * Special class for cards being played/placed on the battlefield
  * NOTE: This style has been moved to CardTransformationManager.ts
  * and is kept here only as a fallback. Optimized for GPU.
  */
@@ -317,7 +317,7 @@ canvas {
   opacity: 0.3; /* GPU friendly, instead of mix-blend-mode */
 }
 
-.legendary-holographic {
+.mythic-holographic {
   background-size: 150% 150%;
   animation: shine-gold 3s ease infinite;
   position: absolute;
@@ -732,7 +732,7 @@ canvas {
   margin: 0 auto;
   /* Ensure cards appear above background */
   position: relative;
-  z-index: 40; 
+  z-index: 40;
   transition: transform 0.3s ease, filter 0.2s ease;
   /* Fix unwanted hover effects */
   pointer-events: auto !important;
@@ -786,15 +786,15 @@ canvas {
   position: relative;
   z-index: 20; /* Higher than background, lower than cards */
   cursor: default !important;
-  
+
   /* Responsive scaling for different screen widths */
   max-width: 95vw; /* Increased from 90% to 95% */
-  
+
   /* Scale up for larger screens */
   @media (min-width: 1200px) {
     max-width: 85vw; /* Increased from 75% to 85% */
   }
-  
+
   /* Scale down for smaller screens */
   @media (max-width: 768px) {
     max-width: 95vw;
@@ -896,11 +896,8 @@ canvas {
 }
 
 /* REMOVED: CSS hover state handling
-   All hover effects are now managed through the CardTransformationManager
-   and React state in the SimpleHolographicCard component.
-   
-   This eliminates conflicts between CSS and JavaScript hover states
-   that were causing the visual artifacts.
+   Card hover effects are managed in the active SimpleCard renderer.
+   This avoids conflicts between CSS and JavaScript hover states.
 */
 
 /* Class that will be applied by JS when a card is hovered */
@@ -943,23 +940,23 @@ canvas {
 
 /* Elegant card falling animation when a card is placed on battlefield */
 @keyframes elegant-card-fall {
-  0% { 
+  0% {
     transform: translateY(-20px) scale(var(--dragging-card-scale)) rotate(0deg);
     box-shadow: 0 0 40px rgba(70, 130, 255, 0.9);
   }
-  30% { 
+  30% {
     transform: translateY(10px) scale(calc(var(--battlefield-card-scale) * 1.15)) rotate(2deg);
   }
-  45% { 
+  45% {
     transform: translateY(-5px) scale(calc(var(--battlefield-card-scale) * 1.1)) rotate(-1deg);
   }
-  60% { 
+  60% {
     transform: translateY(3px) scale(calc(var(--battlefield-card-scale) * 1.05)) rotate(1deg);
   }
-  75% { 
+  75% {
     transform: translateY(-2px) scale(calc(var(--battlefield-card-scale) * 1.02)) rotate(-0.5deg);
   }
-  100% { 
+  100% {
     transform: translateY(0) scale(var(--battlefield-card-scale)) rotate(0);
     box-shadow: none;
   }
@@ -996,15 +993,15 @@ canvas {
 }
 
 /* But ensure that deck cards and UI elements remain clickable */
-.deck-card, 
-.class-selection *, 
-button, 
-.saved-deck-item, 
-.deck-list-item, 
+.deck-card,
+.class-selection *,
+button,
+.saved-deck-item,
+.deck-list-item,
 .select-deck-button,
 [role="button"],
-a, 
-input, 
+a,
+input,
 select {
   pointer-events: auto !important;
   cursor: pointer !important;

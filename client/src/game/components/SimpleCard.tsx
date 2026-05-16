@@ -14,8 +14,23 @@ import { KEYWORD_DEFINITIONS } from './ui/UnifiedCardTooltip';
 import { KEYWORD_ICON_MAP } from './ui/CardIconsSVG';
 import { getCardArtPath } from '../utils/art/artMapping';
 import { useHoloTracking, getHoloTier } from '../hooks/useHoloTracking';
+import type { Rarity } from '@shared/schemas/rarity';
+import { normalizeRarityKey } from '../utils/rarityUtils';
 import './SimpleCard.css';
 import './styles/holoEffect.css';
+
+export type SimpleCardType =
+  | 'minion'
+  | 'spell'
+  | 'weapon'
+  | 'artifact'
+  | 'armor'
+  | 'hero'
+  | 'secret'
+  | 'location'
+  | 'poker_spell';
+
+export type SimpleCardRarity = Rarity;
 
 export interface SimpleCardData {
   id: number | string;
@@ -24,8 +39,8 @@ export interface SimpleCardData {
   attack?: number;
   health?: number;
   description?: string;
-  type: 'minion' | 'spell' | 'weapon' | 'artifact' | 'armor';
-  rarity?: 'common' | 'rare' | 'epic' | 'mythic';
+  type: SimpleCardType;
+  rarity?: SimpleCardRarity;
   tribe?: string;
   cardClass?: string;
   keywords?: string[];
@@ -42,6 +57,22 @@ export interface SimpleCardData {
   einpieces?: number;
 }
 
+export type SimpleCardStatTone = 'base' | 'buffed' | 'damaged' | 'unknown';
+
+export interface SimpleCardStatValue {
+  value: number | string;
+  tone?: SimpleCardStatTone;
+}
+
+export interface SimpleCardStatView {
+  attack?: SimpleCardStatValue;
+  health?: SimpleCardStatValue;
+}
+
+export type SimpleCardStatsMode = 'frame' | 'battlefield' | 'hidden';
+
+type SimpleCardVisualFamily = 'minion' | 'spell' | 'weapon' | 'artifact' | 'armor' | 'hero';
+
 interface SimpleCardProps {
   card: SimpleCardData;
   isPlayable?: boolean;
@@ -55,6 +86,8 @@ interface SimpleCardProps {
   style?: React.CSSProperties;
   attackBuff?: number;
   healthBuff?: number;
+  statView?: SimpleCardStatView;
+  statsMode?: SimpleCardStatsMode;
   owned?: boolean;
   /**
    * Suppress the portaled keyword-badge tooltip. Use when the card lives
@@ -90,7 +123,25 @@ const getCardTheme = (name: string, element?: string): string | null => {
   return null;
 };
 
-const getRarityClass = (rarity?: string): string => {
+export const normalizeSimpleCardRarity = normalizeRarityKey;
+
+export const normalizeSimpleCardType = (type?: string): SimpleCardType => {
+  switch (type) {
+    case 'spell':
+    case 'weapon':
+    case 'artifact':
+    case 'armor':
+    case 'hero':
+    case 'secret':
+    case 'location':
+    case 'poker_spell':
+      return type;
+    default:
+      return 'minion';
+  }
+};
+
+const getRarityClass = (rarity?: SimpleCardRarity): string => {
   switch (rarity) {
     case 'mythic': return 'rarity-mythic';
     case 'epic': return 'rarity-epic';
@@ -99,12 +150,40 @@ const getRarityClass = (rarity?: string): string => {
   }
 };
 
-const getCardTypeIcon = (type: string): string => {
+const getCardVisualFamily = (type: SimpleCardType): SimpleCardVisualFamily => {
+  switch (type) {
+    case 'spell':
+    case 'secret':
+    case 'location':
+    case 'poker_spell':
+      return 'spell';
+    case 'weapon':
+      return 'weapon';
+    case 'artifact':
+      return 'artifact';
+    case 'armor':
+      return 'armor';
+    case 'hero':
+      return 'hero';
+    default:
+      return 'minion';
+  }
+};
+
+const getCardTypeClass = (type: SimpleCardType): string => {
+  return `card-type-${getCardVisualFamily(type)} card-kind-${type}`;
+};
+
+const getCardTypeIcon = (type: SimpleCardType): string => {
   switch (type) {
     case 'spell': return '✨';
+    case 'secret': return '🔮';
+    case 'location': return '🧭';
+    case 'poker_spell': return '🃏';
     case 'weapon': return '⚔️';
     case 'artifact': return '🔱';
     case 'armor': return '🛡️';
+    case 'hero': return '👑';
     default: return '👤';
   }
 };
@@ -212,14 +291,15 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
   style = EMPTY_STYLE,
   attackBuff = 0,
   healthBuff = 0,
+  statView,
+  statsMode = 'frame',
   owned = true,
   disableTooltips = false,
 }) => {
   const isMinion = card.type === 'minion';
-  const isSpell = card.type === 'spell';
   const isWeapon = card.type === 'weapon';
   const isArtifact = card.type === 'artifact';
-  const isArmor = card.type === 'armor';
+  const cardVisualFamily = getCardVisualFamily(card.type);
 
   const classColor = getClassColor(card.cardClass);
   const artPath = getCardArtPath(card.id);
@@ -227,7 +307,7 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
 
   const nameClass = card.name.length > 24 ? 'name-extreme' : card.name.length > 18 ? 'name-very-long' : card.name.length > 13 ? 'name-long' : '';
 
-  const cardTypeClass = isSpell ? 'card-type-spell' : isWeapon ? 'card-type-weapon' : isArtifact ? 'card-type-artifact' : isArmor ? 'card-type-armor' : 'card-type-minion';
+  const cardTypeClass = getCardTypeClass(card.type);
 
   const evolutionClass = card.evolutionLevel === 1 ? 'evolution-mortal'
     : card.evolutionLevel === 2 ? 'evolution-ascended'
@@ -300,6 +380,29 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
     return lines.join('\n');
   }, [badgeTooltip, card.petStage, card.evolvesFromName, card.petFamily, card.evolutionCondition]);
 
+  const defaultStatsAreUnknown = card.petStage === 'master' && card.hasStage3Variants;
+  const attackStat: SimpleCardStatValue = statView?.attack ?? {
+    value: defaultStatsAreUnknown ? '?' : (card.attack ?? 0) + attackBuff,
+    tone: defaultStatsAreUnknown ? 'unknown' : attackBuff > 0 ? 'buffed' : 'base',
+  };
+  const healthStat: SimpleCardStatValue = statView?.health ?? {
+    value: defaultStatsAreUnknown ? '?' : (card.health ?? 0) + healthBuff,
+    tone: defaultStatsAreUnknown ? 'unknown' : healthBuff > 0 ? 'buffed' : 'base',
+  };
+  const showCombatStats = statsMode !== 'hidden' && (isMinion || isWeapon || isArtifact);
+
+  const statValueClass = (stat: SimpleCardStatValue): string => {
+    switch (stat.tone) {
+      case 'buffed': return 'stat-buffed';
+      case 'damaged': return 'stat-damaged';
+      case 'unknown': return 'stat-unknown';
+      case 'base':
+      case undefined:
+        return '';
+    }
+    return '';
+  };
+
   const tooltipEffectText = useMemo(() => {
     if (!badgeTooltip || badgeTooltip.isEvolveInfo || !card.description) return null;
     return extractKeywordEffect(badgeTooltip.keyword, card.description);
@@ -321,7 +424,7 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
     const effectIcons = getCardKeywordIcons(card.description, card.keywords);
     const hasContent = card.description || effectIcons.length > 0 || isEvolvePet;
     if (!hasContent) return null;
-    const isSpellOrWeapon = card.type === 'spell' || card.type === 'weapon';
+    const isSpellOrWeapon = cardVisualFamily === 'spell' || card.type === 'weapon';
     const noIcons = effectIcons.length === 0 && !isEvolvePet;
     return (
       <div className="card-description">
@@ -356,7 +459,7 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
         )}
       </div>
     );
-  }, [card.description, card.keywords, card.type, card.petStage, showDescription, isEvolvePet, handleBadgeEnter, handleBadgeLeave, handleEvolveEnter]);
+  }, [card.description, card.keywords, card.type, cardVisualFamily, card.petStage, showDescription, isEvolvePet, handleBadgeEnter, handleBadgeLeave, handleEvolveEnter]);
 
   const tooltipStyle = useMemo<React.CSSProperties>(() => {
     if (!badgeTooltip) return {};
@@ -377,6 +480,7 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
   return (
     <div
       className={`simple-card ${size} ${getRarityClass(card.rarity)} ${cardTypeClass} ${evolutionClass} ${isPlayable ? 'playable' : 'not-playable'} ${isHighlighted ? 'highlighted' : ''} ${cardTheme ? `element-holo-${cardTheme}` : ''} ${holoTier || ''} ${card.petStage === 'master' && card.element && !card.hasStage3Variants ? 'stage3-evolved' : ''} ${className}`}
+      data-stats-mode={statsMode}
       role="button"
       aria-label={`${card.name}, ${card.manaCost} mana ${card.type}${card.attack !== undefined ? `, ${card.attack} attack` : ''}${card.health !== undefined ? `, ${card.health} health` : ''}`}
       tabIndex={0}
@@ -393,7 +497,10 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
       data-card-id={card.id}
       data-rarity={card.rarity}
       data-card-type={card.type}
+      data-card-family={cardVisualFamily}
       data-evolution-level={card.evolutionLevel}
+      data-holo-tier={holoTier || undefined}
+      data-element-theme={cardTheme || undefined}
     >
       <div className="card-hover-glow" />
       <div className={`card-mana stat-emblem ${card.bloodPrice ? 'blood-price-mana' : ''}`}>
@@ -485,9 +592,9 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
 
       {descriptionContent}
 
-      {(isMinion || isWeapon || isArtifact) && (
+      {showCombatStats && (
         <>
-          <div className="card-attack stat-emblem">
+          <div className={`card-attack stat-emblem ${attackStat.tone ? `stat-tone-${attackStat.tone}` : ''}`}>
             <svg className="stat-emblem-bg" viewBox="0 0 40 44" xmlns="http://www.w3.org/2000/svg">
               <path d="M20 0L36 10V30L20 44L4 30V10L20 0Z" fill="url(#atk-emblem)" stroke="#FDE68A" strokeWidth="1.5" />
               <path d="M20 6L30 12V28L20 38L10 28V12L20 6Z" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="0.7" />
@@ -499,11 +606,11 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
                 </linearGradient>
               </defs>
             </svg>
-            <span className={`stat-value ${card.petStage === 'master' && card.hasStage3Variants ? 'stat-unknown' : ''} ${attackBuff > 0 ? 'stat-buffed' : ''}`}>
-              {card.petStage === 'master' && card.hasStage3Variants ? '?' : (card.attack ?? 0) + attackBuff}
+            <span className={`stat-value ${statValueClass(attackStat)}`}>
+              {attackStat.value}
             </span>
           </div>
-          <div className="card-health stat-emblem">
+          <div className={`card-health stat-emblem ${healthStat.tone ? `stat-tone-${healthStat.tone}` : ''}`}>
             <svg className="stat-emblem-bg" viewBox="0 0 40 44" xmlns="http://www.w3.org/2000/svg">
               <path d="M20 2C14 2 4 7 4 7V26C4 34 11 40 20 44C29 40 36 34 36 26V7S26 2 20 2Z" fill="url(#hp-emblem)" stroke="#FCA5A5" strokeWidth="1.5" />
               <path d="M20 8C16 8 8 11.5 8 11.5V25C8 31 13 35.5 20 38.5C27 35.5 32 31 32 25V11.5S24 8 20 8Z" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="0.7" />
@@ -515,8 +622,8 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
                 </linearGradient>
               </defs>
             </svg>
-            <span className={`stat-value ${card.petStage === 'master' && card.hasStage3Variants ? 'stat-unknown' : ''} ${healthBuff > 0 ? 'stat-buffed' : ''}`}>
-              {card.petStage === 'master' && card.hasStage3Variants ? '?' : (card.health ?? 0) + healthBuff}
+            <span className={`stat-value ${statValueClass(healthStat)}`}>
+              {healthStat.value}
             </span>
           </div>
         </>

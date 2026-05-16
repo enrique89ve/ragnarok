@@ -48,6 +48,18 @@ export interface CardRecord {
 	rarity: string;
 	level: number;
 	xp: number;
+	edition?: string;
+	foil?: string;
+	mintSource?: 'genesis' | 'pack' | 'reward' | 'replica' | 'merge' | 'forge';
+	mintTrxId?: string;
+	mintBlockNum?: number;
+	lastTransferBlock?: number;
+	originDna?: string;
+	instanceDna?: string;
+	parentInstanceDna?: string;
+	generation?: number;
+	replicaCount?: number;
+	mergedFrom?: string[];
 }
 
 export interface MatchRecord {

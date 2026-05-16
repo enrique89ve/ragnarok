@@ -105,7 +105,7 @@ function applyCardPlayedEffect(effect: Extract<GameCommandEffect, { readonly typ
 	if (effect.causedDiscovery) {
 		audioEventBus.emit('discover');
 	} else if (effect.rarity === 'mythic') {
-		audioEventBus.emit('legendary');
+		audioEventBus.emit('mythic');
 	} else if (effect.cardType === 'minion' && effect.keywords.includes('battlecry') && effect.battlecryType === 'damage') {
 		audioEventBus.emit('damage');
 	} else {

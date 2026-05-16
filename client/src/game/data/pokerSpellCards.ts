@@ -12,7 +12,7 @@
  * - Rogue (9110-9119): Deception and trickery (Trickster archetype)
  * - Mage (9120-9129): Variance control and foresight (Foresight archetype)
  * - Warlock (9130-9139): Punishing and debuffs (Hel, Hades archetype)
- * - Legendary (9140-9149): High-impact game changers (Neutral)
+ * - Mythic (9140-9149): High-impact game changers (Neutral)
  */
 
 import { PokerSpellCard } from '../types/CardTypes';

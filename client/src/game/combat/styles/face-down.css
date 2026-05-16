@@ -149,7 +149,7 @@
    Hover variants below still rely on the class as a selector hook. */
 
 .opponent-card-back {
-  width: 78px;
+  width: var(--opponent-hand-card-width, 78px);
   height: 110px;
   background: linear-gradient(160deg,
     var(--ui-iron-mid) 0%,
@@ -157,8 +157,9 @@
     var(--ui-obsidian) 100%);
   border: 2px solid var(--ui-gold-warm);
   border-radius: 7px;
+  flex: 0 0 var(--opponent-hand-card-width, 78px);
   position: relative;
-  margin-left: -22px;
+  margin-left: var(--opponent-hand-card-overlap, -39px);
   transition: transform 0.2s ease, margin 0.2s ease, box-shadow 0.2s ease;
   box-shadow:
     0 4px 14px rgba(0, 0, 0, 0.7),
@@ -213,7 +214,8 @@
 
 /* Fan effect on hover */
 .opponent-hand-display:hover .opponent-card-back {
-  margin-left: -16px;
+  margin-left: var(--opponent-hand-card-overlap, -39px);
+  transform: translateY(-4px);
 }
 
 .opponent-hand-display:hover .opponent-card-back:first-child {

@@ -35,7 +35,7 @@ describe('eitr economy', () => {
 	});
 
 	it('returns 0 dissolve value for unknown rarity', () => {
-		expect(getEitrDissolveValue('legendary')).toBe(0);
+		expect(getEitrDissolveValue('invalid')).toBe(0);
 		expect(getEitrDissolveValue('')).toBe(0);
 	});
 
@@ -45,7 +45,7 @@ describe('eitr economy', () => {
 	});
 
 	it('returns 0 forge cost for unknown rarity (caller must validate)', () => {
-		expect(getEitrForgeCost('legendary')).toBe(0);
+		expect(getEitrForgeCost('invalid')).toBe(0);
 	});
 
 	it('forge cost is strictly greater than dissolve value at every rarity', () => {

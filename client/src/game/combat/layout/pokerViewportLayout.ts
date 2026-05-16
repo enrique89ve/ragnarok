@@ -28,7 +28,10 @@ export type PokerViewportLayer = 'game' | 'hud' | 'vfx';
 export type PokerViewportCssVarName = `--poker-zone-${PokerViewportZoneId}-${'x' | 'y' | 'w' | 'h' | 'rot'}`
 	| '--poker-reference-width'
 	| '--poker-reference-height'
-	| '--poker-layout-grid';
+	| '--poker-layout-grid'
+	| '--poker-bottom-rail-y'
+	| '--poker-bottom-rail-gap'
+	| '--poker-hud-badge-height';
 
 export interface PokerViewportZone {
 	readonly layer: PokerViewportLayer;
@@ -75,6 +78,16 @@ export interface PokerViewportLayout {
 	};
 	readonly zones: PokerViewportZones;
 }
+
+const POKER_BOTTOM_RAIL_Y = 1024;
+const TURN_BADGE_HEIGHT = 48;
+const PLAYER_HERO_HEIGHT = 288;
+const BETTING_CONTROLS_HEIGHT = 96;
+const BATTLE_LOG_HEIGHT = 232;
+const BOTTOM_RAIL_GAP = 52;
+const HUD_BADGE_HEIGHT = 36;
+const DECK_COUNTERS_RIGHT_EDGE_X = 1864;
+const DECK_COUNTERS_WIDTH = 174;
 
 export const POKER_VIEWPORT_LAYOUT = {
 	schema: 'norse-poker-layout-draft/v1',
@@ -136,9 +149,9 @@ export const POKER_VIEWPORT_LAYOUT = {
 			layer: 'hud',
 			label: 'Persistent turn badge',
 			x: 1352,
-			y: 968,
+			y: POKER_BOTTOM_RAIL_Y - TURN_BADGE_HEIGHT,
 			width: 152,
-			height: 48,
+			height: TURN_BADGE_HEIGHT,
 			rotation: 0,
 		},
 		topHud: {
@@ -244,9 +257,9 @@ export const POKER_VIEWPORT_LAYOUT = {
 			layer: 'game',
 			label: 'Player hero card',
 			x: 56,
-			y: 736,
+			y: POKER_BOTTOM_RAIL_Y - PLAYER_HERO_HEIGHT,
 			width: 208,
-			height: 288,
+			height: PLAYER_HERO_HEIGHT,
 			rotation: 0,
 		},
 		playerHeroCards: {
@@ -271,9 +284,9 @@ export const POKER_VIEWPORT_LAYOUT = {
 			layer: 'hud',
 			label: 'Bet buttons and action controls',
 			x: 280,
-			y: 928,
+			y: POKER_BOTTOM_RAIL_Y - BETTING_CONTROLS_HEIGHT,
 			width: 608,
-			height: 96,
+			height: BETTING_CONTROLS_HEIGHT,
 			rotation: 0,
 		},
 		wagerPanel: {
@@ -288,9 +301,9 @@ export const POKER_VIEWPORT_LAYOUT = {
 		deckCounters: {
 			layer: 'hud',
 			label: 'Enemy and player deck counters',
-			x: 1616,
+			x: DECK_COUNTERS_RIGHT_EDGE_X - DECK_COUNTERS_WIDTH,
 			y: 48,
-			width: 248,
+			width: DECK_COUNTERS_WIDTH,
 			height: 144,
 			rotation: 0,
 		},
@@ -298,9 +311,9 @@ export const POKER_VIEWPORT_LAYOUT = {
 			layer: 'hud',
 			label: 'Battle log dock',
 			x: 1576,
-			y: 792,
+			y: POKER_BOTTOM_RAIL_Y - BATTLE_LOG_HEIGHT,
 			width: 288,
-			height: 232,
+			height: BATTLE_LOG_HEIGHT,
 			rotation: 0,
 		},
 		vfxFocus: {
@@ -325,6 +338,9 @@ export function buildPokerViewportLayoutStyle(layout: PokerViewportLayout = POKE
 		'--poker-reference-width': toPixels(layout.reference.width),
 		'--poker-reference-height': toPixels(layout.reference.height),
 		'--poker-layout-grid': toPixels(layout.grid.size),
+		'--poker-bottom-rail-y': toPixels(layout.zones.bettingControls.y + layout.zones.bettingControls.height),
+		'--poker-bottom-rail-gap': toPixels(BOTTOM_RAIL_GAP),
+		'--poker-hud-badge-height': toPixels(HUD_BADGE_HEIGHT),
 	};
 
 	for (const zoneId of POKER_VIEWPORT_ZONE_IDS) {

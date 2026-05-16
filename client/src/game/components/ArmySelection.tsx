@@ -16,7 +16,7 @@ import { ALL_NORSE_HEROES } from '../data/norseHeroes';
 import { preloadImages } from '../utils/assetPreloader';
 import { resolveHeroPortrait } from '../utils/art/artMapping';
 import { HeroArtImage } from './ui/HeroArtImage';
-import { getHeroRarity, RARITY_COLORS } from '../utils/heroRarity';
+import { getHeroEditionTier, HERO_TIER_UI } from '../utils/heroRarity';
 import { useHoloTracking, getHoloTier } from '../hooks/useHoloTracking';
 import { getNFTBridge } from '../nft';
 import { useNFTCollection, useNFTUsername } from '../nft/hooks';
@@ -453,7 +453,8 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
         <div className="norse-hero-grid">
           {currentHeroOptions.map((hero) => {
             const isCurrentSelection = currentSelection?.id === hero.id;
-            const rarity = getHeroRarity(hero.id);
+            const editionTier = getHeroEditionTier(hero.id);
+            const visualRarity = editionTier === 'starter' ? 'common' : editionTier;
 
             return (
               <motion.div
@@ -463,7 +464,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
                   setPopupHero(hero);
                   playSoundEffect('button_click');
                 }}
-                className={`norse-hero-card rarity-${rarity} ${getHoloTier(rarity) || ''} ${isCurrentSelection ? 'selected' : ''}`}
+                className={`norse-hero-card rarity-${visualRarity} ${getHoloTier(visualRarity) || ''} ${isCurrentSelection ? 'selected' : ''}`}
                 onMouseMove={holo.onMouseMove}
                 onMouseLeave={holo.onMouseLeave}
               >
@@ -481,7 +482,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
                       </div>
                     }
                   />
-                  {rarity !== 'common' && (
+                  {editionTier !== 'common' && editionTier !== 'starter' && (
                     <>
                       <div className="holo-foil" />
                       <div className="holo-glitter" />
@@ -490,9 +491,9 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
                   )}
                   {(() => { const t = getHeroTheme(hero.name, hero.element); return t ? <div className={`card-particles theme-${t}`} /> : null; })()}
                   <div className="norse-hero-gradient-overlay" />
-                  {rarity !== 'common' && (
-                    <span className={`norse-rarity-badge rarity-${rarity}`}>
-                      {RARITY_COLORS[rarity].label}
+                  {editionTier !== 'common' && editionTier !== 'starter' && (
+                    <span className={`norse-rarity-badge rarity-${editionTier}`}>
+                      {HERO_TIER_UI[editionTier].label}
                     </span>
                   )}
                   <div className="norse-hero-name-overlay">

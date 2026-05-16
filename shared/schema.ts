@@ -130,7 +130,7 @@ export const packTypes = pgTable("pack_types", {
   rareSlots: integer("rare_slots").notNull().default(1),
   epicSlots: integer("epic_slots").notNull().default(0),
   wildcardSlots: integer("wildcard_slots").notNull().default(1), // Can upgrade to epic/mythic
-  legendaryChance: integer("legendary_chance").notNull().default(8), // % chance wildcard upgrades to epic
+  epicChance: integer("epic_chance").notNull().default(8), // % chance wildcard upgrades to epic
   mythicChance: integer("mythic_chance").notNull().default(1), // % chance wildcard upgrades to mythic
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
@@ -173,7 +173,7 @@ export const insertPackTypeSchema = createInsertSchema(packTypes).pick({
   rareSlots: true,
   epicSlots: true,
   wildcardSlots: true,
-  legendaryChance: true,
+  epicChance: true,
   mythicChance: true,
   isActive: true,
 });

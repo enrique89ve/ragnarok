@@ -21,7 +21,7 @@ const PACK_TYPES = PACK_DEFINITION_LIST.map((pack) => ({
 	rare_slots: pack.rareSlots,
 	epic_slots: pack.epicSlots,
 	wildcard_slots: pack.wildcardSlots,
-	legendary_chance: pack.legendaryChance,
+	epic_chance: pack.epicChance,
 	mythic_chance: pack.mythicChance,
 	is_active: pack.isActive,
 }));

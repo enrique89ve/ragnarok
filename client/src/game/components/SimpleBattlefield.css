@@ -6,6 +6,7 @@
   --bf-slot-gap: 8px;
   --bf-row-height: 180px;
   
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -15,13 +16,18 @@
 
 /* Row container - horizontal layout */
 .bf-row {
+  box-sizing: border-box;
   display: flex;
   justify-content: center;
   gap: var(--bf-slot-gap);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: var(--bf-row-height);
   padding: 8px 16px;
   border-radius: 8px;
   background: none;
+  overflow: visible;
 }
 
 /* Opponent minions anchor to bottom of their zone (toward center battlefield) */
@@ -40,6 +46,8 @@
 
 /* Slot container — sized exactly to card, no extra hitbox */
 .bf-slot {
+  box-sizing: border-box;
+  flex: 0 0 var(--bf-card-width);
   width: var(--bf-card-width);
   height: var(--bf-card-height);
   display: flex;
@@ -162,16 +170,7 @@
   box-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
 
-/* Hide SimpleCard's built-in stat gems on battlefield — we use bf-card-stats instead */
-.bf-card-wrapper .card-attack,
-.bf-card-wrapper .card-health {
-  display: none;
-}
-
-/* Give description clearance above the hanging bf-card-stats gems.
-   bf-card-stats: bottom:-10px, size clamp(26-34px).
-   bottom:18% + align top ensures icons stay well above the gem zone.
-   overflow:visible lets icons slightly overhang the box without touching gems. */
+/* Give description clearance above the hanging battlefield stat gems. */
 .bf-card-wrapper .card-description {
   bottom: 18%;
   background: transparent;
@@ -200,98 +199,6 @@
   pointer-events: auto;
   position: relative;
   z-index: 50;
-}
-
-/* Attack/health gem overlay for battlefield minions — hang below card frame */
-.bf-card-stats {
-  position: absolute;
-  bottom: -10px;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: space-between;
-  padding: 0;
-  pointer-events: none;
-  z-index: 25;
-}
-
-:is(.bf-attack, .bf-health) {
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 15px;
-  font-weight: 800;
-  color: #ffffff;
-  border-radius: 6px;
-  text-shadow: 0 1px 0 rgba(0,0,0,1), 0 2px 4px rgba(0,0,0,0.9);
-}
-
-/* Attack gem — gold gradient with bevel */
-.bf-attack {
-  background: linear-gradient(135deg, #FBBF24 0%, #D97706 40%, #B45309 70%, #92400E 100%);
-  border: 2px solid #FDE68A;
-  box-shadow:
-    0 2px 8px rgba(0,0,0,0.6),
-    0 0 8px rgba(217,119,6,0.3),
-    inset 0 2px 3px rgba(255,255,255,0.4),
-    inset 0 -2px 3px rgba(0,0,0,0.4);
-}
-
-/* Health gem — red gradient with bevel */
-.bf-health {
-  background: linear-gradient(135deg, #EF4444 0%, #DC2626 40%, #B91C1C 70%, #7F1D1D 100%);
-  border: 2px solid #FCA5A5;
-  box-shadow:
-    0 2px 8px rgba(0,0,0,0.6),
-    0 0 8px rgba(220,38,38,0.3),
-    inset 0 2px 3px rgba(255,255,255,0.35),
-    inset 0 -2px 3px rgba(0,0,0,0.4);
-}
-
-/* Buffed stat — green glow (attack or health above base) */
-.bf-attack.buffed {
-  color: #4ade80;
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 40%, #15803d 70%, #166534 100%);
-  border-color: #86efac;
-  box-shadow:
-    0 2px 8px rgba(0,0,0,0.6),
-    0 0 14px rgba(34,197,94,0.55),
-    inset 0 2px 3px rgba(255,255,255,0.4),
-    inset 0 -2px 3px rgba(0,0,0,0.4);
-  animation: statGemBuffPop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.bf-health.buffed {
-  color: #4ade80;
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 40%, #15803d 70%, #166534 100%);
-  border-color: #86efac;
-  box-shadow:
-    0 2px 8px rgba(0,0,0,0.6),
-    0 0 14px rgba(34,197,94,0.55),
-    inset 0 2px 3px rgba(255,255,255,0.4),
-    inset 0 -2px 3px rgba(0,0,0,0.4);
-  animation: statGemBuffPop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-/* Damaged health — deeper red with warning glow */
-.bf-health.damaged {
-  color: #fca5a5;
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 40%, #991b1b 70%, #450a0a 100%);
-  border-color: #f87171;
-  box-shadow:
-    0 2px 8px rgba(0,0,0,0.6),
-    0 0 14px rgba(239,68,68,0.6),
-    inset 0 2px 3px rgba(255,255,255,0.3),
-    inset 0 -2px 3px rgba(0,0,0,0.5);
-}
-
-@keyframes statGemBuffPop {
-  0%   { transform: scale(1); }
-  35%  { transform: scale(1.55); }
-  65%  { transform: scale(0.92); }
-  100% { transform: scale(1); }
 }
 
 /* Shake — invalid action or damage hit feedback */
@@ -624,7 +531,7 @@
 .player-row .bf-card-wrapper.attacking { --lunge-y: -40px; --lunge-x: 0; }
 .opponent-row .bf-card-wrapper.attacking { --lunge-y: 40px; --lunge-x: 0; }
 
-/* Super Minion Hero Bonus - Golden legendary glow */
+/* Super Minion Hero Bonus - Golden mythic glow */
 .bf-card-wrapper.super-minion-bonus {
   border: 2px solid #fbbf24;
   border-radius: 6px;
@@ -717,7 +624,7 @@
 }
 
 /* HP gem flashes bright when minion takes damage */
-.bf-card-wrapper.shake .bf-health {
+.bf-card-wrapper.shake .simple-card[data-stats-mode="battlefield"] .card-health {
   animation: hpFlash 0.5s ease-out;
 }
 
@@ -1229,7 +1136,7 @@
     animation: none;
   }
 
-  .bf-card-wrapper.shake .bf-health {
+  .bf-card-wrapper.shake .simple-card[data-stats-mode="battlefield"] .card-health {
     animation: none;
     color: #fca5a5;
   }

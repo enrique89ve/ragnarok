@@ -5,24 +5,27 @@
  * Supply limits per rarity tier match the blockchain supply caps.
  */
 
-export type HeroRarity = 'base' | 'common' | 'rare' | 'epic' | 'mythic';
+import type { Rarity } from '@shared/schemas/rarity';
+import { supplyCap } from '@shared/schemas/rarity';
+import { getRarityCssColor, getRarityCssGlow, getRarityLabel } from './rarityUtils';
 
-/** NFT supply cap per rarity tier — base heroes are non-NFT (free starter) */
-export const PIECE_SUPPLY: Record<HeroRarity, number> = {
-	mythic: 250,
-	epic: 500,
-	rare: 1_000,
-	common: 2_000,
-	base: 0, // non-NFT, everyone gets these free
+export type HeroEditionTier = 'starter' | Rarity;
+
+/** NFT supply cap per canonical rarity tier. Starter pieces are off-chain. */
+export const PIECE_SUPPLY: Record<HeroEditionTier, number> = {
+	mythic: supplyCap('mythic'),
+	epic: supplyCap('epic'),
+	rare: supplyCap('rare'),
+	common: supplyCap('common'),
+	starter: 0,
 };
 
-/** Rarity-specific accent colors */
-export const RARITY_COLORS: Record<HeroRarity, { primary: string; glow: string; label: string }> = {
-	mythic: { primary: '#ff8c00', glow: 'rgba(255, 140, 0, 0.5)', label: 'MYTHIC' },
-	epic:   { primary: '#a855f7', glow: 'rgba(168, 85, 247, 0.5)', label: 'EPIC' },
-	rare:   { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.5)', label: 'RARE' },
-	common: { primary: '#9ca3af', glow: 'rgba(156, 163, 175, 0.3)', label: 'COMMON' },
-	base:   { primary: '#6b7280', glow: 'rgba(107, 114, 128, 0.2)', label: 'BASE' },
+export const HERO_TIER_UI: Record<HeroEditionTier, { primary: string; glow: string; label: string }> = {
+	mythic: { primary: getRarityCssColor('mythic'), glow: getRarityCssGlow('mythic'), label: getRarityLabel('mythic').toUpperCase() },
+	epic: { primary: getRarityCssColor('epic'), glow: getRarityCssGlow('epic'), label: getRarityLabel('epic').toUpperCase() },
+	rare: { primary: getRarityCssColor('rare'), glow: getRarityCssGlow('rare'), label: getRarityLabel('rare').toUpperCase() },
+	common: { primary: getRarityCssColor('common'), glow: getRarityCssGlow('common'), label: getRarityLabel('common').toUpperCase() },
+	starter: { primary: 'var(--ink-300)', glow: 'color-mix(in srgb, var(--ink-300) 20%, transparent)', label: 'STARTER' },
 };
 
 // ==================== BASE — free starter, non-NFT ====================
@@ -163,8 +166,8 @@ const RARE_PIECES = new Set([
 // Original game characters not from established mythology.
 // Any piece not listed above defaults to common.
 
-export function getHeroRarity(heroId: string): HeroRarity {
-	if (BASE_PIECES.has(heroId)) return 'base';
+export function getHeroEditionTier(heroId: string): HeroEditionTier {
+	if (BASE_PIECES.has(heroId)) return 'starter';
 	if (MYTHIC_PIECES.has(heroId)) return 'mythic';
 	if (EPIC_PIECES.has(heroId)) return 'epic';
 	if (RARE_PIECES.has(heroId)) return 'rare';
@@ -172,30 +175,30 @@ export function getHeroRarity(heroId: string): HeroRarity {
 }
 
 export interface EditionInfo {
-	rarity: HeroRarity;
+	tier: HeroEditionTier;
 	maxSupply: number;
 	mintNumber: number;
 	editionLabel: string;
-	rarityLabel: string;
+	tierLabel: string;
 	colors: { primary: string; glow: string };
 }
 
 export function getEditionInfo(heroId: string, _isKing: boolean): EditionInfo {
 	const hash = heroId.split('').reduce((a, c, i) => a + c.charCodeAt(0) * (i + 1), 0);
-	const rarity = getHeroRarity(heroId);
-	const maxSupply = PIECE_SUPPLY[rarity];
+	const tier = getHeroEditionTier(heroId);
+	const maxSupply = PIECE_SUPPLY[tier];
 
-	// Base pieces are non-NFT (free starter set) — there is no meaningful mint
+	// Starter pieces are non-NFT, so there is no meaningful mint
 	// number. Guard against `hash % 0 = NaN` and surface 0 so consumers can
-	// branch on rarity rather than checking NaN.
+	// branch on tier rather than checking NaN.
 	const mintNumber = maxSupply > 0 ? (hash % maxSupply) + 1 : 0;
 
 	return {
-		rarity,
+		tier,
 		maxSupply,
 		mintNumber,
-		editionLabel: RARITY_COLORS[rarity].label,
-		rarityLabel: RARITY_COLORS[rarity].label,
-		colors: RARITY_COLORS[rarity],
+		editionLabel: HERO_TIER_UI[tier].label,
+		tierLabel: HERO_TIER_UI[tier].label,
+		colors: HERO_TIER_UI[tier],
 	};
 }

@@ -3,13 +3,16 @@
  *
  * Used in local/test mode. All collection/stats/tokens delegate to
  * the existing useHiveDataStore Zustand store (persists to localStorage).
- * Chain operations (claimReward, transferCard, etc.) return success no-ops.
+ * Local-only gameplay operations return success no-ops; pack acquisition
+ * delegates to HiveSync so logged-in testnet users still sign via Keychain.
  * Events are silently swallowed.
  */
 
 import type { HiveCardAsset, HivePlayerStats, HiveTokenBalance } from '@/data/schemas/HiveTypes';
 import { useHiveDataStore } from '@/data/HiveDataLayer';
 import { DEFAULT_PLAYER_STATS } from '@/data/schemas/HiveTypes';
+import { getCurrentHiveUsername } from '@/data/HiveSessionIdentity';
+import { hiveSync } from '@/data/HiveSync';
 import type { PackAsset } from '../../../../shared/protocol-core/types';
 import type {
 	INFTBridge,
@@ -38,11 +41,11 @@ export class LocalNFTBridge implements INFTBridge {
 	// ── Identity ──
 
 	getUsername(): string | null {
-		return useHiveDataStore.getState().user?.hiveUsername ?? null;
+		return getCurrentHiveUsername();
 	}
 
 	isLoggedIn(): boolean {
-		return !!useHiveDataStore.getState().user;
+		return getCurrentHiveUsername() !== null;
 	}
 
 	// ── Collection ──
@@ -134,11 +137,22 @@ export class LocalNFTBridge implements INFTBridge {
 	}
 
 	async openPack(_packType: string, _quantity?: number): Promise<BroadcastResult> {
-		return SUCCESS;
+		return {
+			success: false,
+			error: 'Legacy local pack opening is disabled. Use sealed pack burn from the vault.',
+		};
 	}
 
-	async runeExchange(_packType: string, _quantity?: number): Promise<BroadcastResult> {
-		return SUCCESS;
+	async runeExchange(packType: string, quantity: number = 1): Promise<BroadcastResult> {
+		return hiveSync.runeExchange(packType, quantity);
+	}
+
+	async purchasePackHbd(
+		packType: string,
+		quantity: number,
+		totalPriceThousandths: number,
+	): Promise<BroadcastResult> {
+		return hiveSync.purchasePackHbd(packType, quantity, totalPriceThousandths);
 	}
 
 	async signResultHash(_hash: string): Promise<string> {
@@ -153,9 +167,8 @@ export class LocalNFTBridge implements INFTBridge {
 
 	async burnPack(packUid: string, _salt: string): Promise<BroadcastResult> {
 		// In local mode there is no chain to mint canonical cards. The ceremony
-		// flow still wants a trxId to seed `derivePackCards` so the open animation
-		// can reveal something — provide a deterministic synthetic one derived
-		// from the pack uid so re-opens are stable.
+		// flow still wants a trxId for sealed-pack derivation, so provide a
+		// deterministic synthetic one derived from the pack uid.
 		return {
 			success: true,
 			trxId: `local-burn-${packUid}`,

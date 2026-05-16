@@ -1,13 +1,13 @@
 /**
  * allCards.ts - Legacy Compatibility Layer
- * 
+ *
  * DEPRECATED: This file is maintained for backward compatibility only.
  * New code should import directly from cardRegistry:
  *   import { cardRegistry, getCardById } from './cardRegistry';
- * 
+ *
  * This file now re-exports from cardRegistry as the single source of truth.
  * All 1370+ cards are managed in cardRegistry/sets/ with proper organization.
- * 
+ *
  * @see cardRegistry/index.ts for the canonical card data source
  */
 import { CardData, CardType, HeroClass } from '../types';
@@ -80,8 +80,6 @@ export const getMythicCards = (): CardData[] => {
   return allCards.filter(card => card.rarity === 'mythic');
 };
 
-export const getLegendaryCards = getMythicCards;
-
 export const getSpellCards = (): CardData[] => getCardsByType('spell');
 
 export const getMinionCards = (): CardData[] => getCardsByType('minion');
@@ -96,18 +94,18 @@ export const getWeaponCards = (): CardData[] => getCardsByType('weapon');
 
 /** @deprecated Use getCardsByClass instead */
 export const getClassMinions = (): CardData[] => {
-  return allCards.filter(card => 
-    card.type === 'minion' && 
-    'heroClass' in card && 
+  return allCards.filter(card =>
+    card.type === 'minion' &&
+    'heroClass' in card &&
     card.heroClass !== 'neutral'
   );
 };
 
 /** @deprecated Use getCardsByKeyword('battlecry') or similar */
 export const getMechanicCards = (): CardData[] => {
-  return allCards.filter(card => 
+  return allCards.filter(card =>
     card.keywords && (
-      card.keywords.includes('battlecry') || 
+      card.keywords.includes('battlecry') ||
       card.keywords.includes('deathrattle') ||
       card.keywords.includes('combo')
     )

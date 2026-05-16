@@ -9,15 +9,19 @@ import {
 	PUBLIC_PACK_KEYS,
 	RUNE_REDEEMABLE_PACK_KEYS,
 	TESTNET_RUNE_PACK_POOL,
+	buildHbdPackPurchaseMemo,
 	formatHbdPrice,
 	formatHbdThousandths,
+	formatHbdTransferAmount,
 	getActiveHbdPackSaleScenario,
+	getHbdPackPurchaseQuote,
 	getHbdPackPriceThousandths,
 	getHbdPackSaleScenarioTotals,
 	getRuneExchangePackQuote,
 	getRunePackPoolAllocations,
 	getRunePackPoolTotals,
 	normalizePackKey,
+	parseHbdPackPurchaseMemo,
 } from './packCatalog';
 import { TESTNET_RUNE_ECONOMY } from './runeEconomy';
 
@@ -117,13 +121,42 @@ describe('pack catalog', () => {
 			standard: 20000,
 			premium: 100000,
 			mythic: 250000,
-		});
-		expect(getHbdPackPriceThousandths('Standard Pack')).toBe(20000);
-		expect(getHbdPackPriceThousandths('starter')).toBeNull();
-		expect(formatHbdThousandths(20000)).toBe('20.000');
-		expect(formatHbdPrice(250000)).toBe('250.000 HBD');
+			});
+			expect(getHbdPackPriceThousandths('Standard Pack')).toBe(20000);
+			expect(getHbdPackPriceThousandths('starter')).toBeNull();
+			expect(formatHbdThousandths(20000)).toBe('20');
+			expect(formatHbdThousandths(1000500)).toBe('1,000.5');
+			expect(formatHbdThousandths(1000525)).toBe('1,000.525');
+			expect(formatHbdPrice(250000)).toBe('250 HBD');
+			expect(formatHbdTransferAmount(20000)).toBe('20.000 HBD');
+			expect(formatHbdTransferAmount(1000000)).toBe('1000.000 HBD');
+			expect(getHbdPackPurchaseQuote({ packType: 'Standard Pack', quantity: 2 })).toEqual({
+				packType: 'standard',
+				quantity: 2,
+				unitPriceThousandths: 20000,
+				totalPriceThousandths: 40000,
+				globalPackCap: 100000,
+			});
+			expect(getHbdPackPurchaseQuote({ packType: 'starter', quantity: 1 })).toBeNull();
+			expect(getHbdPackPurchaseQuote({ packType: 'standard', quantity: 0 })).toBeNull();
 
-		expect(getHbdPackSaleScenarioTotals(HBD_PACK_SALE_SCENARIOS.beta_full_cap)).toEqual({
+			const memo = buildHbdPackPurchaseMemo({
+				account: 'alice',
+				packType: 'Standard Pack',
+				quantity: 2,
+				totalPriceThousandths: 40000,
+			});
+			expect(memo).toMatch(/^rkpack:v1:alice:standard:2:40000:[a-f0-9]{12}$/);
+			expect(parseHbdPackPurchaseMemo(memo)).toMatchObject({
+				account: 'alice',
+				packType: 'standard',
+				quantity: 2,
+				totalPriceThousandths: 40000,
+			});
+			const corruptedMemo = `${memo.slice(0, -1)}${memo.endsWith('0') ? '1' : '0'}`;
+			expect(parseHbdPackPurchaseMemo(corruptedMemo)).toBeNull();
+
+			expect(getHbdPackSaleScenarioTotals(HBD_PACK_SALE_SCENARIOS.beta_full_cap)).toEqual({
 			key: 'beta_full_cap',
 			packCap: 260000,
 			cardInstanceCap: 1620000,

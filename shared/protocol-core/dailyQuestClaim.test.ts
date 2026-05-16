@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { applyOp, type ProtocolCoreDeps } from './apply';
+import { RAGNAROK_RUNTIME_CONFIGS } from '../runtimeConfig';
 import { normalizeRawOp } from './normalize';
 import { TESTNET_RUNE_ECONOMY } from './runeEconomy';
 import type {
@@ -180,6 +181,7 @@ function createStateAdapter(): StateAdapter & {
 
 function createDeps(state: StateAdapter): ProtocolCoreDeps {
 	return {
+		runtime: RAGNAROK_RUNTIME_CONFIGS.mainnet,
 		state,
 		cards: {
 			getCardById: () => null,

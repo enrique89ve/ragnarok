@@ -3,7 +3,7 @@
  * =======================================
  * Centralized CSS variables for the entire application.
  * Import this file FIRST in index.css to ensure all components inherit these tokens.
- * 
+ *
  * ORGANIZATION:
  * 1. Colors - Brand, rarity, stats, semantic
  * 2. Spacing - Consistent spacing scale
@@ -13,7 +13,7 @@
  * 6. Z-Index - Layering hierarchy
  * 7. Layout Grid - Container widths, gaps, responsive breakpoints
  * 8. Component Sizes - Cards, heroes, panels
- * 
+ *
  * TO CUSTOMIZE: Change values here - all components will update automatically.
  */
 
@@ -126,30 +126,6 @@
   --rarity-mythic-pale: #fde68a; /* amber-200 */
   --rarity-mythic-deep: #d97706; /* amber-600 */
   --rarity-mythic-glow: rgba(245, 158, 11, 0.5);
-
-  /* Bifrost/Legendary — iridescent tri-color */
-  --rarity-bifrost-from: #7a5bd6;
-  --rarity-bifrost-mid: #4a8fd8;
-  --rarity-bifrost-to: #d97a9e;
-  --rarity-bifrost-glow: rgba(122, 91, 214, 0.5);
-
-  /* ── Aliases cortos (backward-compat, apuntan al sistema canónico) ── */
-  --card-common-steel: var(--rarity-common-deep);
-  --card-rare-blue-deep: var(--rarity-rare-deep);
-  --card-rare-blue-mid: var(--rarity-rare-mid);
-  --card-rare-blue-bright: var(--rarity-rare-color);
-  --card-rare-blue-pale: var(--rarity-rare-bright);
-  --card-rare-blue-glow: var(--rarity-rare-glow);
-  --card-epic-purple-deep: var(--rarity-epic-deep);
-  --card-epic-purple-mid: var(--rarity-epic-mid);
-  --card-epic-purple-bright: var(--rarity-epic-color);
-  --card-epic-purple-pale: var(--rarity-epic-bright);
-  --card-epic-purple-glow: var(--rarity-epic-glow);
-  --card-mythic-gold-deep: var(--rarity-mythic-deep);
-  --card-mythic-gold-mid: var(--rarity-mythic-color);
-  --card-mythic-gold-bright: var(--rarity-mythic-bright);
-  --card-mythic-gold-pale: var(--rarity-mythic-pale);
-  --card-mythic-gold-glow: var(--rarity-mythic-glow);
 
   /* ── Colores de estado semántico ── */
   --success-500: #16a34a; /* green-600 */
@@ -668,10 +644,10 @@
 
 /* =============================================
    RESPONSIVE OVERRIDES
-   
+
    NOTE: Combat-specific responsive overrides (card sizes, zone heights,
    poker panel scaling) are in: client/src/game/combat/styles/responsive.css
-   
+
    This file only contains general layout responsive overrides.
    ============================================= */
 

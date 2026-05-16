@@ -25,8 +25,10 @@ import {
 } from './replayDB';
 import { useHiveDataStore } from '../HiveDataLayer';
 import { HIVE_NODES, NFTLOX_PROTOCOL_ID } from './hiveConfig';
-import { RAGNAROK_APP_ID } from '../schemas/HiveTypes';
 import { clientStateAdapter } from './clientStateAdapter';
+import { PACK_ENTROPY_DELAY_BLOCKS } from '@shared/protocol-core';
+import { shouldAcceptCustomJsonId } from '@shared/runtimeConfig';
+import { getRagnarokNetworkConfig } from '@/game/config/networkConfig';
 
 const HISTORY_PAGE_SIZE = 1000;
 const NODE_TIMEOUT_MS = 8000;
@@ -107,6 +109,14 @@ async function fetchHistoryPage(
 	return callHive<HistoryPage>('condenser_api.get_account_history', [account, start, limit]);
 }
 
+async function getLastIrreversibleBlock(): Promise<number> {
+	const props = await callHive<{ last_irreversible_block_num: number }>(
+		'condenser_api.get_dynamic_global_properties',
+		[],
+	);
+	return props.last_irreversible_block_num;
+}
+
 // ---------------------------------------------------------------------------
 // Core sync
 // ---------------------------------------------------------------------------
@@ -126,6 +136,8 @@ async function _doSync(username: string): Promise<void> {
 	const cursor = await getSyncCursor(username);
 	// lastHistoryIndex = -1 means "never synced" (Hive indices start at 0)
 	const lastIndex = cursor?.lastHistoryIndex ?? -1;
+	const safeBlock = Math.max(0, (await getLastIrreversibleBlock()) - PACK_ENTROPY_DELAY_BLOCKS);
+	const runtime = getRagnarokNetworkConfig();
 
 	// Collect all ops with index > lastIndex by paging backwards through history
 	const opsToApply: Array<{
@@ -152,6 +164,7 @@ async function _doSync(username: string): Promise<void> {
 				done = true;
 				break;
 			}
+			if (entry.block > safeBlock) continue;
 
 			// Collect transfer ops for companion validation (v1.1 atomic transfers)
 			if (entry.op[0] === 'transfer') {
@@ -163,7 +176,10 @@ async function _doSync(username: string): Promise<void> {
 			// We only care about our app's custom_json ops
 			if (entry.op[0] !== 'custom_json') continue;
 			const opData = entry.op[1] as CustomJsonOpData;
-			if (!opData.id?.startsWith('rp_') && opData.id !== RAGNAROK_APP_ID && opData.id !== 'ragnarok_level_up' && opData.id !== NFTLOX_PROTOCOL_ID) continue;
+			if (
+				!shouldAcceptCustomJsonId(runtime, opData.id)
+				&& opData.id !== NFTLOX_PROTOCOL_ID
+			) continue;
 
 			const broadcaster =
 				opData.required_posting_auths?.[0] ??
@@ -219,15 +235,8 @@ async function _doSync(username: string): Promise<void> {
 			clientStateAdapter.setTrxSiblings(entry.trx_id, siblings);
 		}
 
-		// Normalize canonical protocol format by extracting the action from JSON.
-		// legacy "rp_*" format uses the id directly.
 		let opId = opData.id;
-		if (opId === RAGNAROK_APP_ID) {
-			try {
-				const parsed = JSON.parse(opData.json) as { action?: string };
-				if (parsed.action) opId = `rp_${parsed.action}`;
-			} catch { console.warn(`[replayEngine] malformed ${RAGNAROK_APP_ID} JSON:`, opData.json.slice(0, 100)); }
-		} else if (opId === 'ragnarok_level_up') {
+		if (runtime.acceptsLegacyProtocolIds && opId === 'ragnarok_level_up') {
 			opId = 'rp_level_up';
 		}
 
@@ -238,6 +247,8 @@ async function _doSync(username: string): Promise<void> {
 			trxId: entry.trx_id,
 			blockNum: entry.block,
 			timestamp: new Date(entry.timestamp).getTime(),
+			requiredPostingAuths: opData.required_posting_auths ?? [],
+			requiredAuths: opData.required_auths ?? [],
 		};
 		await applyOp(op);
 		if (idx > highestIdx) highestIdx = idx;

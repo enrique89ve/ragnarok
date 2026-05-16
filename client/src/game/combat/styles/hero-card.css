@@ -6,116 +6,8 @@
    RagnarokCombatArena.css (still pending split).
    ═══════════════════════════════════════════════════ */
 
-/* ========================================
-   ORNATE CARD FRAME - AAA Quality Design
-   Metallic textures with aged patina
-   ======================================== */
-
-/* Wrapper for external glow effects */
-.hero-card-wrapper {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow: visible;
-  pointer-events: auto;
-  cursor: pointer;
-}
-
-.hero-card-frame {
-  width: 100%;
-  height: 100%;
-  /* Removed max-height constraint - let hero art extend to fill available space */
-  display: flex;
-  flex-direction: column;
-  background:
-    linear-gradient(145deg,
-      rgba(40, 35, 28, 1) 0%,
-      rgba(25, 22, 18, 1) 50%,
-      rgba(15, 12, 10, 1) 100%);
-  border: 4px solid transparent;
-  border-radius: 12px;
-  overflow: hidden;
-  position: relative;
-  transition: transform 0.3s ease, opacity 0.3s ease, box-shadow 0.3s ease;
-  isolation: isolate;
-  pointer-events: auto;
-  cursor: pointer;
-  z-index: 2;
-}
-
-/* Ornate metallic border using pseudo-element */
-.hero-card-frame::before {
-  content: '';
-  position: absolute;
-  inset: -2px;
-  border-radius: 13px;
-  background: #c9a227;
-  z-index: -2;
-  box-shadow: 0 0 14px rgba(201, 162, 39, 0.45);
-}
-
-/* Inner shadow for depth */
-.hero-card-frame::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 10px;
-  box-shadow:
-    inset 0 0 30px rgba(0, 0, 0, 0.6),
-    inset 0 2px 0 rgba(255, 215, 0, 0.1);
-  pointer-events: none;
-  z-index: 5;
-}
-
-/* Corner decorations */
-.hero-card-frame .hero-portrait::before {
-  content: '⚜';
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  font-size: 14px;
-  color: rgba(201, 162, 39, 0.6);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-  z-index: 10;
-}
-
-.battlefield-hero-square.opponent .hero-card-frame::before {
-  background: #c9272f;
-  box-shadow: 0 0 14px rgba(201, 39, 47, 0.45);
-}
-
-.hero-portrait {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 0;
-  position: relative;
-  width: 100%;
-  overflow: hidden;
-  pointer-events: auto;
-  cursor: pointer;
-}
-
-.hero-portrait img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 15%;
-}
-
-.hero-portrait::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 40%;
-  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
-  pointer-events: none;
-}
+/* Base hero frame selectors live in card-frame.css. This file owns only hero
+   pocket cards, portrait interactions, tooltip, and combat status chrome. */
 
 /* Poker hole cards tucked behind the hero frame. The frame covers the lower
    half, leaving the top half visibly protruding like cards in a pocket. */
@@ -452,32 +344,6 @@
   font-weight: 800;
   color: rgba(255, 255, 255, 0.9);
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-}
-
-.hero-name-plate {
-  background: linear-gradient(90deg,
-    transparent 0%,
-    rgba(0, 0, 0, 0.85) 15%,
-    rgba(0, 0, 0, 0.85) 85%,
-    transparent 100%
-  );
-  padding: 4px 8px;
-  text-align: center;
-  border-top: 1px solid rgba(218, 165, 32, 0.5);
-  border-bottom: 1px solid rgba(218, 165, 32, 0.3);
-}
-
-.hero-name {
-  font-family: 'Cinzel', 'Georgia', serif;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #fcd34d;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  line-height: 1.2;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
 /* ========================================

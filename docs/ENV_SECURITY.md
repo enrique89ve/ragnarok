@@ -27,6 +27,13 @@ Allowed public values:
 overrides. Normal `local`, `testnet`, and `mainnet` runs derive those values
 from `VITE_NETWORK_STAGE`.
 
+Profile examples:
+
+- `.env.example` defaults to `VITE_NETWORK_STAGE=local`.
+- `.env.testnet.example` is the resettable shared beta profile.
+- `.env.mainnet.example` is the permanent economic profile for release
+  rehearsals and mainnet builds.
+
 ## Server And Operator Secrets
 
 These values are sensitive and must never use the `VITE_` prefix:

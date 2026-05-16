@@ -1,10 +1,10 @@
 /**
  * SimpleBattlefield.tsx
- * 
+ *
  * Clean, minimal battlefield component for CCG-style card game.
- * 7 slots per side, flexbox layout, direct card rendering.
+ * Uses MAX_BATTLEFIELD_SIZE slots per side, flexbox layout, direct card rendering.
  * Integrates UnifiedCardTooltip for consistent hover descriptions.
- * 
+ *
  * Replaces the bloated 3000+ line UnifiedBattlefield system.
  */
 
@@ -15,6 +15,7 @@ import { CardInstanceWithCardData } from '../types/interfaceExtensions';
 import CardRenderer from './CardRendering/CardRenderer';
 import { MAX_BATTLEFIELD_SIZE } from '../constants/gameConstants';
 import { hasKeyword } from '../utils/cards/keywordUtils';
+import type { SimpleCardStatTone, SimpleCardStatView } from './SimpleCard';
 import './SimpleBattlefield.css';
 
 interface SimpleBattlefieldProps {
@@ -37,6 +38,40 @@ interface SimpleBattlefieldProps {
 const MAX_SLOTS = MAX_BATTLEFIELD_SIZE;
 const SLOT_INDICES = Array.from({ length: MAX_BATTLEFIELD_SIZE }, (_, i) => i);
 const EMPTY_SET = new Set<string>();
+
+function compareStat(current: number, base: number): SimpleCardStatTone {
+  if (current > base) return 'buffed';
+  if (current < base) return 'damaged';
+  return 'base';
+}
+
+function readAttack(card: CardInstanceWithCardData['card']): number {
+  if ('attack' in card && typeof card.attack === 'number') return card.attack;
+  return 0;
+}
+
+function readHealth(card: CardInstanceWithCardData['card']): number {
+  if ('health' in card && typeof card.health === 'number') return card.health;
+  return 0;
+}
+
+function buildBattlefieldStatView(card: CardInstanceWithCardData): SimpleCardStatView {
+  const baseAttack = readAttack(card.card);
+  const baseHealth = readHealth(card.card);
+  const currentAttack = card.currentAttack ?? baseAttack;
+  const currentHealth = card.currentHealth ?? baseHealth;
+
+  return {
+    attack: {
+      value: currentAttack,
+      tone: compareStat(currentAttack, baseAttack),
+    },
+    health: {
+      value: currentHealth,
+      tone: compareStat(currentHealth, baseHealth),
+    },
+  };
+}
 
 export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
   playerCards,
@@ -179,21 +214,9 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
                   isPlayable={true}
                   isHighlighted={isAttacking || canAttack || isTarget}
                   size="medium"
+                  statView={buildBattlefieldStatView(card)}
+                  statsMode="battlefield"
                 />
-                {(() => {
-                  const curAtk = card.currentAttack ?? (card.card as any)?.attack ?? 0;
-                  const curHp = card.currentHealth ?? (card.card as any)?.health ?? 0;
-                  const baseAtk = (card.card as any)?.attack ?? 0;
-                  const baseHp = (card.card as any)?.health ?? 0;
-                  const atkClass = curAtk > baseAtk ? 'buffed' : '';
-                  const hpClass = curHp > baseHp ? 'buffed' : curHp < baseHp ? 'damaged' : '';
-                  return (
-                    <div className="bf-card-stats">
-                      <span className={`bf-attack ${atkClass}`}>{curAtk}</span>
-                      <span className={`bf-health ${hpClass}`}>{curHp}</span>
-                    </div>
-                  );
-                })()}
                 {hasAnyStatus && (
                   <div className="bf-status-badges">
                     {statusPoisoned && <span className="status-badge badge-poison" title="Poison: 3 damage per turn">☠️</span>}
@@ -269,8 +292,9 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
 
   const playerRowRef = useRef<HTMLDivElement>(null);
 
-  const occupiedCount = playerCards.length;
-  const isBoardFull = occupiedCount >= MAX_SLOTS;
+  const playerCardCount = Math.min(playerCards.length, MAX_SLOTS);
+  const opponentCardCount = Math.min(opponentCards.length, MAX_SLOTS);
+  const isBoardFull = playerCards.length >= MAX_SLOTS;
   const showGaps = showPositionPicker && !isBoardFull && showPlayer;
 
   const [hoveredGap, setHoveredGap] = useState(-1);
@@ -278,7 +302,7 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
   const playerSlotsWithGaps = useMemo(() => {
     if (!showGaps) return playerSlots;
     const result: React.ReactNode[] = [];
-    for (let i = 0; i <= occupiedCount; i++) {
+    for (let i = 0; i <= playerCardCount; i++) {
       const gapIndex = i;
       const isActive = hoveredGap === i;
       result.push(
@@ -295,20 +319,32 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
       }
     }
     return result;
-  }, [showGaps, showPositionPicker, playerSlots, occupiedCount, hoveredGap, onPositionSelect]);
+  }, [showGaps, showPositionPicker, playerSlots, playerCardCount, hoveredGap, onPositionSelect]);
 
   const targetClass = targetingMode === 'friendly' ? 'targeting-friendly' : targetingMode === 'enemy' ? 'targeting-enemy' : targetingMode === 'any' ? 'targeting-any' : '';
 
   return (
-    <div className={`simple-battlefield ${targetClass}`}>
+    <div className={`simple-battlefield ${targetClass}`} data-max-slots={MAX_SLOTS}>
       {showOpponent && (
-        <div className="bf-row opponent-row" aria-label="Opponent's battlefield">
+        <div
+          className="bf-row opponent-row"
+          aria-label="Opponent's battlefield"
+          data-card-count={opponentCardCount}
+          data-max-slots={MAX_SLOTS}
+        >
           {opponentSlots}
         </div>
       )}
 
       {showPlayer && (
-        <div ref={playerRowRef} className={`bf-row player-row ${showGaps ? 'dragging' : ''} ${showPositionPicker ? 'position-picking' : ''}`} aria-label="Player's battlefield">
+        <div
+          ref={playerRowRef}
+          className={`bf-row player-row ${showGaps ? 'dragging' : ''} ${showPositionPicker ? 'position-picking' : ''}`}
+          aria-label="Player's battlefield"
+          data-card-count={playerCardCount}
+          data-max-slots={MAX_SLOTS}
+          data-row-mode={showGaps ? 'position-picker' : 'normal'}
+        >
           {playerSlotsWithGaps}
         </div>
       )}

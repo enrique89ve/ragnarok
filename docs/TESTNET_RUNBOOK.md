@@ -44,10 +44,16 @@ VITE_RAGNAROK_ART_INDEXER_URL=
 npm run dev:testnet
 ```
 
+`dev:testnet` loads `.env` first and then `.env.testnet` with testnet taking
+priority. If both files set `VITE_NETWORK_STAGE`, the explicit `--mode testnet`
+profile wins.
+
 Expected UI signals:
 
 - Header shows `TESTNET`.
 - Dismissible lower-left banner shows `Testnet / Resettable / rk_game_testnet`.
+- `GET /api/health` reports `runtime.stage: "testnet"` and
+  `runtime.protocolId: "rk_game_testnet"`.
 
 The header badge remains visible after dismissing the lower-left banner.
 
@@ -84,13 +90,33 @@ and 120 requests/minute per IP for the global `/api` limiter.
 
 Passing this smoke test closes the testnet configuration gate and opens the next roadmap block: gameplay/P2P validation under the testnet namespace.
 
+## Local/Mainnet Profile Commands
+
+Local private development uses the default local profile:
+
+```bash
+npm run dev
+```
+
+Mainnet smoke/deployment uses the explicit mainnet profile:
+
+```bash
+cp .env.mainnet.example .env.mainnet
+npm run dev:mainnet      # local smoke with mainnet runtime constants
+npm run build:mainnet    # production browser bundle with mainnet constants
+npm run start:mainnet    # run the built server with .env.mainnet
+```
+
+Do not use `npm run dev:mainnet` as a shortcut for beta testing; testnet must
+stay on `npm run dev:testnet` so broadcasts use `rk_game_testnet`.
+
 ## Smoke Test — Local Single (Gate 2)
 
 Validates that a single-player practice match runs end-to-end on the local stack: `/warband` -> `/#/game/single` -> chess phase -> combat (cards) phase -> game over. Exercises the AI turn driver (`useChessAITurn`) responsible for the "doble movimiento" defense in `cc99e71`.
 
 **Prerequisites**
 
-- Dev server running: `npm run dev` (mainnet config). Testnet flags are not required for Gate 2.
+- Dev server running: `npm run dev` (local config). Testnet/mainnet flags are not required for Gate 2.
 - Browser at `http://localhost:5000/`.
 - A complete warband. Two ways to obtain one:
   - **Real path** (preferred for Gate 6 tester readiness): build all four piece decks via the deck builder UI on `/#/warband`.

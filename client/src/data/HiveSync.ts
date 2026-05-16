@@ -2,7 +2,7 @@
  * HiveSync - Hive transaction broadcaster
  *
  * Handles broadcasting via Hive Keychain for core transaction types:
- * rp_team_submit, rp_match_result, rp_card_transfer, rp_pack_open, rp_level_up
+ * rp_team_submit, rp_match_result, rp_card_transfer, sealed pack ops, rp_level_up
  *
  * Authentication/session ownership now lives in HiveAuth.
  */
@@ -13,14 +13,18 @@ import {
   RAGNAROK_APP_ID,
 } from "./schemas/HiveTypes";
 import {
-  getActiveHiveUsername,
   setActiveHiveSession,
   signHiveMessage,
 } from "./HiveAuth";
 import {
   getHiveKeychain,
   isHiveKeychainAvailable,
+  type HiveKeychainApi,
 } from "./HiveKeychain";
+import {
+  ensureActiveHiveSessionForCurrentUser,
+  getCurrentHiveUsername,
+} from "./HiveSessionIdentity";
 import { RAGNAROK_LEGACY_PREFIX } from "@shared/indexer-types";
 import {
   sanitizePayload,
@@ -28,9 +32,14 @@ import {
   buildTransferMemo,
 } from "../../../shared/protocol-core/broadcast-utils";
 import {
+  buildHbdPackPurchaseMemo,
+  formatHbdTransferAmount,
+} from "@shared/protocol-core";
+import {
   NFTLOX_PROTOCOL_ID,
   NFTLOX_PROTOCOL_VERSION,
   NFTLOX_COLLECTION_SYMBOL,
+  RAGNAROK_TREASURY_ACCOUNT,
 } from "./blockchain/hiveConfig";
 
 export interface HiveBroadcastResult {
@@ -63,6 +72,21 @@ export interface HiveSignatureResult {
 
 const KEYCHAIN_TIMEOUT_MS = 60_000;
 
+interface HiveKeychainContext {
+  username: string;
+  keychain: HiveKeychainApi;
+}
+
+type HiveKeychainContextResult =
+  | { success: true; context: HiveKeychainContext }
+  | { success: false; result: HiveBroadcastResult };
+
+export interface HiveOperationBroadcastRequest {
+  action: string;
+  operations: Array<[string, Record<string, unknown>]>;
+  keyType: "Active" | "Posting";
+}
+
 export class HiveSync {
   isKeychainAvailable(): boolean {
     return isHiveKeychainAvailable();
@@ -73,7 +97,25 @@ export class HiveSync {
   }
 
   getUsername(): string | null {
-    return getActiveHiveUsername();
+    return getCurrentHiveUsername();
+  }
+
+  private getKeychainContext(): HiveKeychainContextResult {
+    const username = ensureActiveHiveSessionForCurrentUser();
+    if (!username) {
+      return { success: false, result: { success: false, error: "No username set" } };
+    }
+
+    if (!this.isKeychainAvailable()) {
+      return { success: false, result: { success: false, error: "Hive Keychain not available" } };
+    }
+
+    const keychain = getHiveKeychain();
+    if (!keychain) {
+      return { success: false, result: { success: false, error: "Hive Keychain not available" } };
+    }
+
+    return { success: true, context: { username, keychain } };
   }
 
   async broadcastCustomJson(
@@ -81,14 +123,9 @@ export class HiveSync {
     payload: Record<string, unknown>,
     useActiveKey: boolean = false,
   ): Promise<HiveBroadcastResult> {
-    const username = this.getUsername();
-    if (!username) {
-      return { success: false, error: "No username set" };
-    }
-
-    if (!this.isKeychainAvailable()) {
-      return { success: false, error: "Hive Keychain not available" };
-    }
+    const contextResult = this.getKeychainContext();
+    if (!contextResult.success) return contextResult.result;
+    const { keychain, username } = contextResult.context;
 
     const cleanPayload = sanitizePayload(payload);
     const payloadAction = cleanPayload.action;
@@ -116,11 +153,6 @@ export class HiveSync {
     }
 
     const jsonStr = JSON.stringify(fullPayload);
-    const keychain = getHiveKeychain();
-    if (!keychain) {
-      return { success: false, error: "Hive Keychain not available" };
-    }
-
     const keychainPromise = new Promise<HiveBroadcastResult>((resolve) => {
       keychain.requestCustomJson(
         username,
@@ -128,6 +160,46 @@ export class HiveSync {
         useActiveKey ? "Active" : "Posting",
         jsonStr,
         `Ragnarok: ${action.replace(/_/g, " ")}`,
+        (response) => {
+          resolve({
+            success: response.success,
+            trxId: response.result?.id,
+            blockNum: response.result?.block_num,
+            error: response.error || response.message,
+          });
+        },
+      );
+    });
+
+    const timeout = new Promise<HiveBroadcastResult>((resolve) =>
+      setTimeout(
+        () => resolve({ success: false, error: "Keychain timeout (60s)" }),
+        KEYCHAIN_TIMEOUT_MS,
+      ),
+    );
+
+    return Promise.race([keychainPromise, timeout]);
+  }
+
+  async broadcastOperations({
+    action,
+    keyType,
+    operations,
+  }: HiveOperationBroadcastRequest): Promise<HiveBroadcastResult> {
+    const contextResult = this.getKeychainContext();
+    if (!contextResult.success) return contextResult.result;
+    const { keychain, username } = contextResult.context;
+
+    const requestBroadcast = keychain.requestBroadcast?.bind(keychain);
+    if (!requestBroadcast) {
+      return { success: false, error: `Hive Keychain broadcast API not available for ${action}` };
+    }
+
+    const keychainPromise = new Promise<HiveBroadcastResult>((resolve) => {
+      requestBroadcast(
+        username,
+        operations,
+        keyType,
         (response) => {
           resolve({
             success: response.success,
@@ -215,13 +287,13 @@ export class HiveSync {
   }
 
   async openPack(
-    packType: string,
-    quantity: number = 1,
+    _packType: string,
+    _quantity: number = 1,
   ): Promise<HiveBroadcastResult> {
-    return this.broadcastCustomJson("rp_pack_open", {
-      pack_type: packType,
-      quantity,
-    });
+    return {
+      success: false,
+      error: "Legacy rp_pack_open is disabled after genesis seal. Use rune_exchange to create sealed packs, then pack_burn from the vault.",
+    };
   }
 
   async runeExchange(
@@ -231,6 +303,59 @@ export class HiveSync {
     return this.broadcastCustomJson("rp_rune_exchange", {
       pack_type: packType,
       quantity,
+    });
+  }
+
+  async purchasePackHbd(
+    packType: string,
+    quantity: number,
+    totalPriceThousandths: number,
+  ): Promise<HiveBroadcastResult> {
+    const username = this.getUsername();
+    if (!username) return { success: false, error: "No username set" };
+
+    const payload = {
+      app: RAGNAROK_APP_ID,
+      p: RAGNAROK_APP_ID,
+      action: "pack_purchase",
+      pack_type: packType,
+      quantity,
+      currency: "HBD",
+    };
+    const sizeCheck = validatePayloadSize(payload);
+    if (!sizeCheck.valid) {
+      return {
+        success: false,
+        error: `Payload too large: ${sizeCheck.bytes} bytes (max ${sizeCheck.maxBytes}).`,
+      };
+    }
+
+    const amount = formatHbdTransferAmount(totalPriceThousandths);
+    const memo = buildHbdPackPurchaseMemo({
+      account: username,
+      packType,
+      quantity,
+      totalPriceThousandths,
+    });
+    const operations: Array<[string, Record<string, unknown>]> = [
+      ["transfer", {
+        from: username,
+        to: RAGNAROK_TREASURY_ACCOUNT,
+        amount,
+        memo,
+      }],
+      ["custom_json", {
+        required_auths: [username],
+        required_posting_auths: [],
+        id: RAGNAROK_APP_ID,
+        json: JSON.stringify(payload),
+      }],
+    ];
+
+    return this.broadcastOperations({
+      action: "pack_purchase",
+      keyType: "Active",
+      operations,
     });
   }
 

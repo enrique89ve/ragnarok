@@ -1,9 +1,9 @@
 /**
  * Priest Cards Collection
- * 
+ *
  * This file contains Priest-specific cards using the card builder API.
  * Priest cards focus on healing, control, and mind manipulation mechanics.
- * 
+ *
  * Core Mechanics:
  * - Healing: Restore health to friendly characters
  * - Mind Control: Take control of enemy minions
@@ -18,10 +18,10 @@ const IS_DEV = import.meta.env?.DEV ?? false;
 
 /**
  * Register all Priest cards in the registry
- * Card IDs: 
+ * Card IDs:
  * - Regular Priest cards: 9xxx series
  * - Priest spell cards: 6xxx series
- * - Priest legendary cards: 5xxx series (shared with other classes)
+ * - Priest mythic cards: 5xxx series (shared with other classes)
  * - Priest tokens: 9xxx series (usually 5xx+)
  */
 export function registerPriestCards(): void {
@@ -497,7 +497,7 @@ export function registerPriestCards(): void {
       }
     })
     .collectible(true)
-    .addCategory("legendary")
+    .addCategory("mythic")
     .build();
 
   // Soul Devourer
@@ -525,7 +525,7 @@ export function registerPriestCards(): void {
       targetFromBattlecry: true
     })
     .collectible(true)
-    .addCategory("legendary")
+    .addCategory("mythic")
     .build();
 
   // Nidhogg the Eternal
@@ -546,7 +546,7 @@ export function registerPriestCards(): void {
       targetType: 'none'
     })
     .collectible(true)
-    .addCategory("legendary")
+    .addCategory("mythic")
     .build();
 
   // The Chained Keeper (Highlander card)

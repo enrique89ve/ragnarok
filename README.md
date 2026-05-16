@@ -429,12 +429,29 @@ npm run dev
 
 Opens at `http://localhost:5000`. No database required for single-player — PostgreSQL is optional for server features.
 
+Runtime profile is explicit:
+
+```bash
+npm run dev             # local private development
+npm run dev:testnet     # shared resettable beta profile from .env.testnet
+npm run build:mainnet   # production browser bundle from .env.mainnet
+npm run start:mainnet   # built server with .env.mainnet
+```
+
+Copy `.env.testnet.example` to `.env.testnet` for beta testing and
+`.env.mainnet.example` to `.env.mainnet` for mainnet release rehearsals.
+`VITE_NETWORK_STAGE` is the source of truth; `VITE_DATA_LAYER_MODE` and
+`VITE_BLOCKCHAIN_PACKAGING` are debug overrides, not normal profile switches.
+
 ### Commands
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Development server (Vite + Express) |
+| `npm run dev` | Local development server (Vite + Express) |
+| `npm run dev:testnet` | Testnet development server using `.env.testnet` |
+| `npm run dev:mainnet` | Mainnet-profile local smoke using `.env.mainnet` |
 | `npm run build` | Production build |
+| `npm run build:mainnet` | Mainnet-profile production build using `.env.mainnet` |
 | `npm run check` | TypeScript type checking |
 | `npm run lint` | ESLint |
 | `npm run build:wasm` | Build WASM anti-cheat engine |
@@ -594,7 +611,8 @@ server/
 git checkout -b feature/your-feature
 
 # Develop
-npm run dev       # Hot reload at localhost:5000
+npm run dev       # Local hot reload at localhost:5000
+npm run dev:testnet # Beta profile when testing Hive/testnet flows
 npm run check     # TypeScript validation
 npm run build     # Production build test
 

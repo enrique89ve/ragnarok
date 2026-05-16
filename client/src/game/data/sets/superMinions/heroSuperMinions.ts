@@ -1,10 +1,10 @@
 /**
  * heroSuperMinions.ts
- * 
- * Super Minions - Legendary minions linked to heroes (76+ total)
+ *
+ * Super Minions - Mythic minions linked to heroes (76+ total)
  * These minions gain +2/+2 when played by their linked hero.
  * Some mythic heroes (like Loki) have multiple linked super minions.
- * 
+ *
  * ID Range: 95000-95999 (Super Minions)
  */
 
@@ -25,7 +25,7 @@ export const HERO_SUPER_MINION_LINKS: Record<string, number> = {
   'hero-athena': 95007,
   'hero-hyperion': 95008,
   'hero-chronos': 95010,
-  
+
   // QUEEN - Warlock (7)
   'hero-forseti': 95011,
   'hero-mani': 95012,
@@ -34,12 +34,12 @@ export const HERO_SUPER_MINION_LINKS: Record<string, number> = {
   'hero-dionysus': 95015,
   'king-tartarus': 95016,
   'hero-persephone': 95017,
-  
+
   // QUEEN - Necromancer (3)
   'hero-sol': 95018,
   'hero-sinmara': 95019,
   'hero-hel': 95020,
-  
+
   // ROOK - Warrior (6)
   'hero-thor': 95021,
   'hero-thorgrim': 95022,
@@ -47,18 +47,18 @@ export const HERO_SUPER_MINION_LINKS: Record<string, number> = {
   'hero-vili': 95024,
   'hero-ares': 95025,
   'hero-hephaestus': 95026,
-  
+
   // ROOK - Death Knight (2)
   'hero-magni': 95027,
   'hero-brakki': 95028,
-  
+
   // ROOK - Paladin (5)
   'hero-tyr': 95029,
   'hero-vidar': 95030,
   'hero-heimdall': 95031,
   'hero-baldur': 95032,
   'hero-solvi': 95033,
-  
+
   // BISHOP - Priest (8)
   'hero-freya': 95034,
   'hero-eir': 95035,
@@ -68,7 +68,7 @@ export const HERO_SUPER_MINION_LINKS: Record<string, number> = {
   'hero-hera': 95039,
   'hero-eros': 95040,
   'hero-hestia': 95041,
-  
+
   // BISHOP - Druid (6)
   'hero-idunn': 95042,
   'hero-ve': 95043,
@@ -76,14 +76,14 @@ export const HERO_SUPER_MINION_LINKS: Record<string, number> = {
   'hero-sigyn': 95045,
   'hero-demeter': 95046,
   'hero-blainn': 95047,
-  
+
   // BISHOP - Shaman (5)
   'hero-gerd': 95048,
   'hero-gefjon': 95049,
   'hero-ran': 95050,
   'hero-njord': 95051,
   'hero-poseidon': 95052,
-  
+
   // KNIGHT - Rogue (6)
   'hero-loki': 95053,
   'hero-hoder': 95054,
@@ -91,7 +91,7 @@ export const HERO_SUPER_MINION_LINKS: Record<string, number> = {
   'hero-lirien': 95056,
   'hero-hermes': 95057,
   'hero-nyx': 95058,
-  
+
   // KNIGHT - Hunter (6)
   'hero-skadi': 95059,
   'hero-aegir': 95060,
@@ -99,18 +99,18 @@ export const HERO_SUPER_MINION_LINKS: Record<string, number> = {
   'hero-ullr': 95062,
   'hero-apollo': 95063,
   'hero-artemis': 95064,
-  
+
   // KNIGHT - Berserker (2)
   'hero-myrka': 95065,
   'hero-ylva': 95066,
-  
+
   // Japanese Heroes (5)
   'hero-izanami': 95067,
   'hero-tsukuyomi': 95068,
   'hero-fujin': 95069,
   'hero-sarutahiko': 95070,
   'hero-kamimusubi': 95071,
-  
+
   // Egyptian Heroes (5)
   'hero-ammit': 95072,
   'hero-maat': 95073,
@@ -131,11 +131,11 @@ export const HERO_SUPER_MINION_LINKS: Record<string, number> = {
 export const BONUS_SUPER_MINION_LINKS: Record<string, number[]> = {
   // Loki's Children - Fenrir (primary) + Jormungandr (bonus)
   'hero-loki': [95077], // Jörmungandr, the World Serpent
-  
+
   // Norse Mythic Companions
   'hero-heimdall': [95078], // Gulltoppr, the Golden-Maned (his divine horse)
   'hero-freya': [95080], // Hildisvíni, the Battle Boar (her companion)
-  
+
   // Greek Mythic Companions
   'hero-artemis': [95079], // The Ceryneian Hind (sacred golden deer)
   'hero-poseidon': [95081], // Hippocampus, Steed of the Depths
@@ -147,19 +147,19 @@ export const BONUS_SUPER_MINION_LINKS: Record<string, number[]> = {
  */
 export const SUPER_MINION_TO_HERO: Record<number, string> = (() => {
   const result: Record<number, string> = {};
-  
+
   // Add primary super minions
   Object.entries(HERO_SUPER_MINION_LINKS).forEach(([heroId, minionId]) => {
     result[minionId] = heroId;
   });
-  
+
   // Add bonus super minions
   Object.entries(BONUS_SUPER_MINION_LINKS).forEach(([heroId, minionIds]) => {
     minionIds.forEach(minionId => {
       result[minionId] = heroId;
     });
   });
-  
+
   return result;
 })();
 
@@ -189,13 +189,13 @@ export function getSuperMinionForHero(heroId: string): number | undefined {
  */
 export function getAllSuperMinionsForHero(heroId: string): number[] {
   const result: number[] = [];
-  
+
   const primary = HERO_SUPER_MINION_LINKS[heroId];
   if (primary) result.push(primary);
-  
+
   const bonus = BONUS_SUPER_MINION_LINKS[heroId];
   if (bonus) result.push(...bonus);
-  
+
   return result;
 }
 
@@ -208,7 +208,7 @@ export function shouldGetHeroBonus(superMinionId: number, currentHeroId: string)
 }
 
 /**
- * Super Minion Collection - Legendary Minions (76 primary + bonus minions)
+ * Super Minion Collection - Mythic Minions (76 primary + bonus minions)
  * Each minion is linked to a specific hero and gains +2/+2 when played by that hero.
  * Mythic heroes like Loki have additional bonus super minions (Loki's children: Fenrir + Jörmungandr).
  */
@@ -216,7 +216,7 @@ export const heroSuperMinions: CardData[] = [
   // ═══════════════════════════════════════════════════════════════
   // QUEEN - MAGE CLASS (10 Super Minions)
   // ═══════════════════════════════════════════════════════════════
-  
+
   {
     id: 95001,
     name: "All-Seeing Ravens",
@@ -451,7 +451,7 @@ export const heroSuperMinions: CardData[] = [
   // ═══════════════════════════════════════════════════════════════
   // QUEEN - WARLOCK CLASS (7 Super Minions)
   // ═══════════════════════════════════════════════════════════════
-  
+
   {
     id: 95011,
     name: "Glitnir's Final Judgment",
@@ -626,7 +626,7 @@ export const heroSuperMinions: CardData[] = [
   // ═══════════════════════════════════════════════════════════════
   // QUEEN - NECROMANCER CLASS (3 Super Minions)
   // ═══════════════════════════════════════════════════════════════
-  
+
   {
     id: 95018,
     name: "Sun-Devourer Wolf",
@@ -713,7 +713,7 @@ export const heroSuperMinions: CardData[] = [
   // ═══════════════════════════════════════════════════════════════
   // ROOK - WARRIOR CLASS (6 Super Minions)
   // ═══════════════════════════════════════════════════════════════
-  
+
   {
     id: 95021,
     name: "Tanngrisnir & Tanngnjóstr",
@@ -867,7 +867,7 @@ export const heroSuperMinions: CardData[] = [
   // ═══════════════════════════════════════════════════════════════
   // ROOK - DEATH KNIGHT CLASS (2 Super Minions)
   // ═══════════════════════════════════════════════════════════════
-  
+
   {
     id: 95027,
     name: "Hammer of the Forge-Father",
@@ -924,7 +924,7 @@ export const heroSuperMinions: CardData[] = [
   // ═══════════════════════════════════════════════════════════════
   // ROOK - PALADIN CLASS (5 Super Minions)
   // ═══════════════════════════════════════════════════════════════
-  
+
   {
     id: 95029,
     name: "Gleipnir, the Binding Chain",
@@ -1053,7 +1053,7 @@ export const heroSuperMinions: CardData[] = [
   // ═══════════════════════════════════════════════════════════════
   // BISHOP - PRIEST CLASS (8 Super Minions)
   // ═══════════════════════════════════════════════════════════════
-  
+
   {
     id: 95034,
     name: "Brísingamen, Necklace of Flame",
@@ -1254,7 +1254,7 @@ export const heroSuperMinions: CardData[] = [
   // ═══════════════════════════════════════════════════════════════
   // BISHOP - DRUID CLASS (6 Super Minions)
   // ═══════════════════════════════════════════════════════════════
-  
+
   {
     id: 95042,
     name: "Golden Apple Tree",
@@ -1399,7 +1399,7 @@ export const heroSuperMinions: CardData[] = [
   // ═══════════════════════════════════════════════════════════════
   // BISHOP - SHAMAN CLASS (5 Super Minions)
   // ═══════════════════════════════════════════════════════════════
-  
+
   {
     id: 95048,
     name: "Frost Giant's Heart",
@@ -1522,7 +1522,7 @@ export const heroSuperMinions: CardData[] = [
   // ═══════════════════════════════════════════════════════════════
   // KNIGHT - ROGUE CLASS (6 Super Minions)
   // ═══════════════════════════════════════════════════════════════
-  
+
   {
     id: 95053,
     name: "Unbound Wolf of Ragnarok",
@@ -1671,7 +1671,7 @@ export const heroSuperMinions: CardData[] = [
   // ═══════════════════════════════════════════════════════════════
   // KNIGHT - HUNTER CLASS (6 Super Minions)
   // ═══════════════════════════════════════════════════════════════
-  
+
   {
     id: 95059,
     name: "Fenrisúlfr, Winter's Maw",
@@ -1817,7 +1817,7 @@ export const heroSuperMinions: CardData[] = [
   // ═══════════════════════════════════════════════════════════════
   // KNIGHT - BERSERKER CLASS (2 Super Minions)
   // ═══════════════════════════════════════════════════════════════
-  
+
   {
     id: 95065,
     name: "Void-Bound Behemoth",
@@ -1870,7 +1870,7 @@ export const heroSuperMinions: CardData[] = [
   // ═══════════════════════════════════════════════════════════════
   // JAPANESE HEROES (5 Super Minions)
   // ═══════════════════════════════════════════════════════════════
-  
+
   {
     id: 95067,
     name: "Yomotsu-Shikome",
@@ -1996,7 +1996,7 @@ export const heroSuperMinions: CardData[] = [
   // ═══════════════════════════════════════════════════════════════
   // EGYPTIAN HEROES (5 Super Minions)
   // ═══════════════════════════════════════════════════════════════
-  
+
   {
     id: 95072,
     name: "Scales of Ma'at",
@@ -2095,7 +2095,7 @@ export const heroSuperMinions: CardData[] = [
   // ═══════════════════════════════════════════════════════════════
   // LOKI'S CHILDREN - BONUS SUPER MINIONS
   // ═══════════════════════════════════════════════════════════════
-  
+
   {
     id: 95077,
     name: "Jörmungandr, the World Serpent",
@@ -2129,7 +2129,7 @@ export const heroSuperMinions: CardData[] = [
   // MYTHIC COMPANION BEASTS - BONUS SUPER MINIONS
   // Gods with legendary creature companions from mythology
   // ═══════════════════════════════════════════════════════════════
-  
+
   {
     id: 95078,
     name: "Gulltoppr, the Golden-Maned",

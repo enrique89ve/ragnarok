@@ -6,7 +6,6 @@
  */
 
 import { cardRegistry } from '../../data/cardRegistry';
-import { cryptoRng } from '../../utils/seededRng';
 import {
 	PACK_DEFINITIONS,
 	PUBLIC_PACK_KEYS,
@@ -15,19 +14,17 @@ import {
 	normalizePackKey,
 	type CanonicalPackDefinition,
 } from '@shared/protocol-core/packCatalog';
+import { RARITY_ORDER as CANON_RARITY_ORDER, type Rarity } from '@shared/schemas/rarity';
 import type { CardData } from '../../types';
+import { getRarityCssColor } from '../../utils/rarityUtils';
 import type { PackType, PackTypeApiRow, RevealedCard } from './types';
 
-export const RARITY_ORDER = ['mythic', 'epic', 'rare', 'common'] as const;
+export const RARITY_ORDER = (Object.keys(CANON_RARITY_ORDER) as Rarity[])
+	.sort((a, b) => CANON_RARITY_ORDER[b] - CANON_RARITY_ORDER[a]);
 
-// Canonical rarity colors — must match design-tokens.css `--rarity-*-color`.
-// Mythic is gold/amber per Norse rulebook, NOT pink.
-export const RARITY_COLORS: Record<string, string> = {
-	mythic: 'var(--rarity-mythic-color)',
-	epic: 'var(--rarity-epic-color)',
-	rare: 'var(--rarity-rare-color)',
-	common: 'var(--rarity-common-color)',
-};
+export const RARITY_COLORS: Record<Rarity, string> = Object.fromEntries(
+	RARITY_ORDER.map(rarity => [rarity, getRarityCssColor(rarity)]),
+) as Record<Rarity, string>;
 
 export const PACK_THEMES: Record<string, { seal: string; btn: string; card: string; icon: string }> = {
 	'Starter Pack': { seal: 'pack-seal-starter', btn: 'open-btn-starter', card: 'pack-card-starter', icon: '石' },
@@ -45,16 +42,16 @@ export function getPackTheme(name: string) {
 export function packRarityOdds(
 	pack: Pick<
 		CanonicalPackDefinition,
-		'cardCount' | 'commonSlots' | 'rareSlots' | 'epicSlots' | 'wildcardSlots' | 'legendaryChance' | 'mythicChance'
+		'cardCount' | 'commonSlots' | 'rareSlots' | 'epicSlots' | 'wildcardSlots' | 'epicChance' | 'mythicChance'
 	>,
 ): PackType['rarityOdds'] {
 	const guaranteedSlots = Math.max(pack.cardCount - pack.wildcardSlots, 1);
-	const wildcardRareWeight = Math.max(100 - pack.legendaryChance - pack.mythicChance, 0);
+	const wildcardRareWeight = Math.max(100 - pack.epicChance - pack.mythicChance, 0);
 
 	return {
 		common: Math.round((pack.commonSlots / guaranteedSlots) * 100),
 		rare: Math.min(100, Math.round((pack.rareSlots / guaranteedSlots) * 100) + Math.round((pack.wildcardSlots * wildcardRareWeight) / pack.cardCount)),
-		epic: Math.min(100, Math.round((pack.epicSlots / guaranteedSlots) * 100) + Math.round((pack.wildcardSlots * pack.legendaryChance) / pack.cardCount)),
+		epic: Math.min(100, Math.round((pack.epicSlots / guaranteedSlots) * 100) + Math.round((pack.wildcardSlots * pack.epicChance) / pack.cardCount)),
 		mythic: Math.min(100, Math.round((pack.wildcardSlots * pack.mythicChance) / pack.cardCount)),
 	};
 }
@@ -97,7 +94,7 @@ export function apiPackToUiPack(pack: PackTypeApiRow): PackType {
 			rareSlots: pack.rare_slots,
 			epicSlots: pack.epic_slots,
 			wildcardSlots: pack.wildcard_slots,
-			legendaryChance: pack.legendary_chance ?? 0,
+			epicChance: pack.epic_chance ?? 0,
 			mythicChance: pack.mythic_chance ?? 0,
 		}),
 	};
@@ -107,8 +104,6 @@ export const FALLBACK_PACKS: PackType[] = PUBLIC_PACK_KEYS.map((key, index) =>
 	packDefinitionToUiPack(PACK_DEFINITIONS[key], index + 1),
 );
 
-export const CARD_POOL = cardRegistry.filter(c => c.rarity && c.name && Number(c.id) >= 1000);
-
 export function starterCardToRevealedCard(card: CardData): RevealedCard {
 	return {
 		id: card.id as number,
@@ -117,43 +112,6 @@ export function starterCardToRevealedCard(card: CardData): RevealedCard {
 		type: card.type ?? 'minion',
 		heroClass: 'class' in card ? (card as { class: string }).class : 'Neutral',
 	};
-}
-
-export function openPackLocally(pack: PackType): RevealedCard[] {
-	const byRarity: Record<string, typeof CARD_POOL> = {};
-	for (const c of CARD_POOL) {
-		const r = (c.rarity ?? 'common').toLowerCase();
-		(byRarity[r] ??= []).push(c);
-	}
-	const pick = (rarity: string) => {
-		const pool = byRarity[rarity] ?? byRarity['common'] ?? [];
-		if (pool.length === 0) return null;
-		return pool[Math.floor(cryptoRng() * pool.length)];
-	};
-	const odds = pack.rarityOdds;
-	const totalWeight = odds.common + odds.rare + odds.epic + odds.mythic;
-	const rollRarity = () => {
-		let roll = cryptoRng() * totalWeight;
-		if ((roll -= odds.mythic) < 0) return 'mythic';
-		if ((roll -= odds.epic) < 0) return 'epic';
-		if ((roll -= odds.rare) < 0) return 'rare';
-		return 'common';
-	};
-	const cards: RevealedCard[] = [];
-	for (let i = 0; i < pack.cardCount; i++) {
-		const rarity = rollRarity();
-		const card = pick(rarity);
-		if (card) {
-			cards.push({
-				id: Number(card.id),
-				name: card.name,
-				rarity: (card.rarity ?? 'common').toLowerCase(),
-				type: card.type ?? 'minion',
-				heroClass: card.heroClass ?? 'neutral',
-			});
-		}
-	}
-	return cards;
 }
 
 export function getScarcityInfo(percentRemaining: number): { label: string; class: string } {

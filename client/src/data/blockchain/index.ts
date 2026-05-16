@@ -165,7 +165,7 @@ export {
 } from './hiveSignatureVerifier';
 
 export type { DerivedPackCard } from './packDerivation';
-export { derivePackCards } from './packDerivation';
+export { deriveSealedPackBurnCards } from './packDerivation';
 
 export type { RewardConditionType, RewardCondition, RewardCardDef, TournamentReward } from './tournamentRewards';
 export {

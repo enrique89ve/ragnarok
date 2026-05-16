@@ -12,6 +12,7 @@
 import {
 	normalizeRawOp,
 	applyOp,
+	PACK_ENTROPY_DELAY_BLOCKS,
 	type RawHiveOp,
 	type ReplayContext,
 	type ProtocolCoreDeps,
@@ -22,6 +23,7 @@ import { getProtocolRewardById } from '../../shared/protocol-core/rewardCatalog'
 import { serverStateAdapter } from './serverStateAdapter';
 import { serverSignatureVerifier } from './hiveSignatureVerifier';
 import { serverRuneExchangeAdapter } from './runeExchangeAdapter';
+import { getRagnarokServerRuntimeConfig } from './runtimeConfig';
 import { campaignRegistryProvider } from '../../shared/campaign/registry';
 import { getDuatEntitlement } from '../../shared/protocol-core/duatSnapshot';
 import {
@@ -32,7 +34,7 @@ import {
 	stopPersistence,
 	saveState,
 } from './chainState';
-import { RAGNAROK_APP_IDS, RAGNAROK_LEGACY_PREFIX } from '../../shared/indexer-types';
+import { shouldAcceptCustomJsonId } from '../../shared/runtimeConfig';
 
 // ---------------------------------------------------------------------------
 // Config
@@ -96,6 +98,16 @@ interface BlockOp {
 	op_in_trx: number;
 	timestamp: string;
 	op: [string, Record<string, unknown>];
+}
+
+function groupOpsByTransaction(ops: readonly BlockOp[]): Map<string, unknown[]> {
+	const grouped = new Map<string, unknown[]>();
+	for (const op of ops) {
+		const existing = grouped.get(op.trx_id) ?? [];
+		existing.push(op.op);
+		grouped.set(op.trx_id, existing);
+	}
+	return grouped;
 }
 
 async function getOpsInBlock(blockNum: number): Promise<BlockOp[]> {
@@ -162,6 +174,7 @@ const serverRewards: RewardProvider = {
 
 function buildDeps(): ProtocolCoreDeps {
 	return {
+		runtime: getRagnarokServerRuntimeConfig(),
 		state: serverStateAdapter,
 		cards: serverCardData,
 		rewards: serverRewards,
@@ -195,13 +208,15 @@ async function scanBlocks(): Promise<number> {
 		return 0;
 	}
 
-	if (cursor >= lib) return 0; // fully caught up
+	const effectiveLib = Math.max(0, lib - PACK_ENTROPY_DELAY_BLOCKS);
+	if (cursor >= effectiveLib) return 0; // fully caught up for entropy-dependent ops
 
 	const startBlock = cursor + 1;
-	const endBlock = Math.min(startBlock + BLOCKS_PER_BATCH - 1, lib);
+	const endBlock = Math.min(startBlock + BLOCKS_PER_BATCH - 1, effectiveLib);
 
 	const ctx: ReplayContext = { lastIrreversibleBlock: lib, getBlockId };
 	const deps = buildDeps();
+	const runtime = getRagnarokServerRuntimeConfig();
 	let totalApplied = 0;
 
 	for (let blockNum = startBlock; blockNum <= endBlock; blockNum++) {
@@ -215,6 +230,7 @@ async function scanBlocks(): Promise<number> {
 		}
 
 		let blockApplied = 0;
+		const siblingsByTrx = groupOpsByTransaction(ops);
 
 		// Process all protocol ops in this block, in order
 		for (const op of ops) {
@@ -227,9 +243,10 @@ async function scanBlocks(): Promise<number> {
 				json?: string;
 			};
 
-			// Quick pre-filter
+			// Quick pre-filter. Testnet only accepts its configured namespace;
+			// mainnet keeps legacy rp_* migration support.
 			const opId = opData.id ?? '';
-			if (!opId.startsWith(RAGNAROK_LEGACY_PREFIX) && !(RAGNAROK_APP_IDS as readonly string[]).includes(opId)) continue;
+			if (!shouldAcceptCustomJsonId(runtime, opId)) continue;
 
 			const broadcaster = opData.required_posting_auths?.[0] ?? opData.required_auths?.[0] ?? '';
 			if (!broadcaster) continue;
@@ -246,8 +263,13 @@ async function scanBlocks(): Promise<number> {
 			};
 
 			// Normalize through protocol-core
-			const normalized = normalizeRawOp(rawOp);
+			const normalized = normalizeRawOp(rawOp, {
+				protocolIds: [runtime.protocolId],
+				acceptLegacyProtocolIds: runtime.acceptsLegacyProtocolIds,
+			});
 			if (normalized.status === 'ignore') continue;
+
+			serverStateAdapter.setTrxSiblings(op.trx_id, siblingsByTrx.get(op.trx_id) ?? []);
 
 			// Apply through protocol-core (all validation lives here)
 			const result = await applyOp(normalized.op, ctx, deps);

@@ -11,12 +11,13 @@ import type {
 	ProtocolOp, OpResult, ReplayContext, StateAdapter,
 	CardDataProvider, RewardProvider, SignatureVerifier,
 	CardAsset, GenesisRecord, EloRecord, MatchAnchorRecord, PackAsset,
-	MarketListing, MarketOffer, ProtocolAction, RewardDefinition,
+	MarketListing, MarketOffer, ProtocolAction, RewardDefinition, SupplyRecord,
 	CampaignDifficulty, CampaignProgressRecord, CampaignRegistryProvider, CampaignSubmissionRecord,
 	RuneExchangeAdapter, RuneLedgerEntry, DuatEntitlementProvider, P2PRankedRuneRole,
+	RagnarokRuntimeConfig,
 } from './types';
 import {
-	RAGNAROK_ADMIN_ACCOUNT, TRANSFER_COOLDOWN_BLOCKS, MAX_CARD_LEVEL,
+	TRANSFER_COOLDOWN_BLOCKS, MAX_CARD_LEVEL,
 	ELO_K_FACTOR, ELO_FLOOR, RUNE_WIN_RANKED, RUNE_LOSS_RANKED,
 	HIVE_USERNAME_RE, ATOMIC_TRANSFER_AMOUNT, PACK_SIZES,
 	MAX_REPLICAS_PER_CARD, MAX_GENERATION, REPLICA_COOLDOWN_BLOCKS,
@@ -39,6 +40,9 @@ import {
 	createRuneExchangeSourceKey,
 	createRuneLedgerEntryId,
 	calculateRuneBalanceTrace,
+	formatHbdTransferAmount,
+	getHbdPackPurchaseQuote,
+	parseHbdPackPurchaseMemo,
 	getCampaignFirstClearRuneReward,
 	getEitrDissolveValue,
 	getEitrForgeCost,
@@ -58,6 +62,7 @@ import {
 // ============================================================
 
 export interface ProtocolCoreDeps {
+	runtime: RagnarokRuntimeConfig;
 	state: StateAdapter;
 	cards: CardDataProvider;
 	rewards: RewardProvider;
@@ -115,6 +120,22 @@ type RuneExchangeDetails = {
 	entryId: string;
 };
 
+type HbdPackPurchaseDetails = {
+	packType: string;
+	quantity: number;
+	unitPriceThousandths: number;
+	totalPriceThousandths: number;
+	globalPackCap: number;
+};
+
+type PackBurnResolvedCard = {
+	asset: CardAsset;
+};
+
+type PackBurnResolution =
+	| { status: 'ok'; cards: PackBurnResolvedCard[]; rarityIncrements: Map<string, number>; cardIncrements: Map<string, { cap: number; count: number }> }
+	| { status: 'rejected'; reason: string };
+
 const IGNORE_RESULT: OpResult = { status: 'ignored' };
 const GAME_ACTIONS_REQUIRING_SLASH_CHECK = new Set<ProtocolAction>([
 	'match_anchor', 'match_result', 'campaign_result', 'queue_join',
@@ -137,6 +158,7 @@ const OP_HANDLERS: Record<ProtocolAction, OpHandler> = {
 	match_result: (op, ctx, deps) => applyMatchResult(op, ctx, deps),
 	campaign_result: (op, _ctx, deps) => applyCampaignResult(op, deps),
 	rune_exchange: (op, _ctx, deps) => applyRuneExchange(op, deps),
+	pack_purchase: (op, _ctx, deps) => applyPackPurchase(op, deps),
 	queue_join: (op, _ctx, deps) => applyQueueJoin(op, deps),
 	queue_leave: (op, _ctx, deps) => applyQueueLeave(op, deps),
 	reward_claim: (op, _ctx, deps) => applyRewardClaim(op, deps),
@@ -260,7 +282,7 @@ async function putRuneLedgerEntryAndBalance(
 // ============================================================
 
 async function applyGenesis(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpResult> {
-	if (op.broadcaster !== RAGNAROK_ADMIN_ACCOUNT) return reject('not admin account');
+	if (op.broadcaster !== deps.runtime.adminAccount) return reject('not admin account');
 
 	const existing = await deps.state.getGenesis();
 	if (existing) return { status: 'ignored' }; // already applied
@@ -302,7 +324,7 @@ async function applyGenesis(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpR
 // ============================================================
 
 async function applySeal(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpResult> {
-	if (op.broadcaster !== RAGNAROK_ADMIN_ACCOUNT) return reject('not admin account');
+	if (op.broadcaster !== deps.runtime.adminAccount) return reject('not admin account');
 
 	const genesis = await deps.state.getGenesis();
 	if (!genesis) return reject('no genesis');
@@ -317,7 +339,7 @@ async function applySeal(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpResu
 // ============================================================
 
 async function applyMintBatch(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpResult> {
-	if (op.broadcaster !== RAGNAROK_ADMIN_ACCOUNT) return reject('not admin account');
+	if (op.broadcaster !== deps.runtime.adminAccount) return reject('not admin account');
 
 	const genesis = await deps.state.getGenesis();
 	if (!genesis) return reject('no genesis');
@@ -1798,6 +1820,145 @@ function parseRuneExchangeSourceKey(sourceKey: string): { packType: string; quan
 }
 
 // ============================================================
+// pack_purchase — HBD-only direct sale, creates sealed packs
+// ============================================================
+
+async function applyPackPurchase(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpResult> {
+	const genesis = await deps.state.getGenesis();
+	if (!genesis?.sealed) return reject('pack_purchase requires sealed genesis');
+
+	const details = parseHbdPackPurchaseDetails(op);
+	if (isOpResult(details)) return details;
+
+	const paymentResult = await verifyExactCompanionPayment(
+		op,
+		op.broadcaster,
+		deps.runtime.treasuryAccount,
+		formatHbdTransferAmount(details.totalPriceThousandths),
+		details,
+		deps,
+	);
+	if (paymentResult) return paymentResult;
+
+	const minted = (await deps.state.getPackSupply(details.packType))?.minted ?? 0;
+	if (minted + details.quantity > details.globalPackCap) {
+		return reject(`pack_purchase pack cap reached for ${details.packType}`);
+	}
+
+	const mintResult = await mintSealedPacksFromPurchase({
+		packType: details.packType,
+		quantity: details.quantity,
+		owner: op.broadcaster,
+		source: 'hbd',
+		op,
+		deps,
+		cap: details.globalPackCap,
+	});
+	if (mintResult) return mintResult;
+
+	return { status: 'applied' };
+}
+
+function parseHbdPackPurchaseDetails(op: ProtocolOp): HbdPackPurchaseDetails | OpResult {
+	const packTypeValue = op.payload.pack_type ?? op.payload.packType;
+	if (typeof packTypeValue !== 'string') {
+		return reject('missing pack_type');
+	}
+
+	const quantity = Number(op.payload.quantity ?? 1);
+	if (!Number.isInteger(quantity) || quantity < 1) {
+		return reject('quantity must be a positive integer');
+	}
+
+	const quote = getHbdPackPurchaseQuote({ packType: packTypeValue, quantity });
+	if (!quote) {
+		return reject(`invalid HBD pack_purchase: ${packTypeValue}`);
+	}
+
+	return {
+		packType: quote.packType,
+		quantity: quote.quantity,
+		unitPriceThousandths: quote.unitPriceThousandths,
+		totalPriceThousandths: quote.totalPriceThousandths,
+		globalPackCap: quote.globalPackCap,
+	};
+}
+
+async function verifyExactCompanionPayment(
+	op: ProtocolOp,
+	expectedSender: string,
+	expectedRecipient: string,
+	expectedAmount: string,
+	expectedDetails: HbdPackPurchaseDetails,
+	deps: ProtocolCoreDeps,
+): Promise<OpResult | null> {
+	const companion = await deps.state.getCompanionTransfer(op.trxId);
+	if (!companion) return reject('missing HBD payment transfer');
+	if (companion.from !== expectedSender) return reject('payment sender mismatch');
+	if (companion.to !== expectedRecipient) return reject('payment recipient mismatch');
+	if (companion.amount.trim() !== expectedAmount) {
+		return reject(`payment amount mismatch: expected ${expectedAmount}`);
+	}
+	const memo = parseHbdPackPurchaseMemo(companion.memo);
+	if (!memo) return reject('invalid HBD pack purchase memo');
+	if (memo.account !== expectedSender) return reject('memo account mismatch');
+	if (memo.packType !== expectedDetails.packType) return reject('memo pack type mismatch');
+	if (memo.quantity !== expectedDetails.quantity) return reject('memo quantity mismatch');
+	if (memo.totalPriceThousandths !== expectedDetails.totalPriceThousandths) {
+		return reject('memo amount mismatch');
+	}
+	return null;
+}
+
+async function mintSealedPacksFromPurchase(input: {
+	packType: string;
+	quantity: number;
+	owner: string;
+	source: 'hbd';
+	op: ProtocolOp;
+	deps: ProtocolCoreDeps;
+	cap: number;
+}): Promise<OpResult | null> {
+	const targetPacks = Array.from({ length: input.quantity }, (_, i) => ({
+		index: i,
+		uid: `pack_${input.op.trxId}:${input.source}:${i}`,
+	}));
+	const existingPacks = await Promise.all(targetPacks.map(({ uid }) => input.deps.state.getPack(uid)));
+	const existingCount = existingPacks.filter(Boolean).length;
+	if (existingCount === targetPacks.length) return { status: 'ignored' };
+	if (existingCount > 0) return reject('partial duplicate pack_purchase');
+
+	for (const { index, uid } of targetPacks) {
+		await input.deps.state.putPack({
+			uid,
+			packType: input.packType,
+			dna: await sha256Hash(`${input.op.trxId}:${input.source}:${index}:${input.packType}`),
+			owner: input.owner,
+			sealed: true,
+			mintTrxId: input.op.trxId,
+			mintBlockNum: input.op.blockNum,
+			lastTransferBlock: input.op.blockNum,
+			cardCount: PACK_SIZES[input.packType] ?? 0,
+			edition: 'alpha',
+		});
+	}
+
+	const createdPacks = await Promise.all(targetPacks.map(({ uid }) => input.deps.state.getPack(uid)));
+	if (createdPacks.some(pack => !pack || pack.owner !== input.owner || pack.mintTrxId !== input.op.trxId)) {
+		return reject('pack_purchase post-mint verification failed');
+	}
+
+	const supply = await input.deps.state.getPackSupply(input.packType);
+	await input.deps.state.putPackSupply({
+		packType: input.packType,
+		minted: (supply?.minted ?? 0) + input.quantity,
+		burned: supply?.burned ?? 0,
+		cap: supply?.cap ?? input.cap,
+	});
+	return null;
+}
+
+// ============================================================
 // pack_commit (v1 new flow)
 // ============================================================
 
@@ -2332,7 +2493,7 @@ async function mintLegacyPackCards(
 // ============================================================
 
 async function applyPackMint(op: ProtocolOp, _ctx: ReplayContext, deps: ProtocolCoreDeps): Promise<OpResult> {
-	if (op.broadcaster !== RAGNAROK_ADMIN_ACCOUNT) return reject('not admin account');
+	if (op.broadcaster !== deps.runtime.adminAccount) return reject('not admin account');
 
 	const genesis = await deps.state.getGenesis();
 	if (!genesis?.sealed) return reject('pack_mint requires sealed genesis');
@@ -2344,26 +2505,34 @@ async function applyPackMint(op: ProtocolOp, _ctx: ReplayContext, deps: Protocol
 	if (!packDefinition?.adminMintable || !PACK_SIZES[packType]) return reject(`invalid pack_type: ${packType}`);
 	if (quantity < 1 || quantity > 10) return reject('quantity must be 1-10');
 
+	const packUids = Array.from({ length: quantity }, (_, i) => `pack_${op.trxId}:${i}`);
+	const existingPacks = await Promise.all(packUids.map(uid => deps.state.getPack(uid)));
+	if (existingPacks.every(Boolean)) return { status: 'ignored' };
+	if (existingPacks.some(Boolean)) return reject('partial duplicate pack_mint');
+
+	const supply = await deps.state.getPackSupply(packType);
+	if (supply?.cap && supply.cap > 0 && supply.minted + quantity > supply.cap) {
+		return reject('pack supply cap reached');
+	}
+
 	for (let i = 0; i < quantity; i++) {
-		const uid = `pack_${op.trxId}:${i}`;
+		const uid = packUids[i];
 		const dna = await sha256Hash(`${op.trxId}:${i}:${packType}`);
 
 		const pack: PackAsset = {
-			uid, packType, dna, owner: RAGNAROK_ADMIN_ACCOUNT, sealed: true,
+			uid, packType, dna, owner: deps.runtime.adminAccount, sealed: true,
 			mintTrxId: op.trxId, mintBlockNum: op.blockNum,
 			lastTransferBlock: op.blockNum,
 			cardCount: PACK_SIZES[packType], edition: 'alpha',
 		};
 		await deps.state.putPack(pack);
-
-		const supply = await deps.state.getPackSupply(packType);
-		if (supply) {
-			if (supply.cap > 0 && supply.minted >= supply.cap) return reject('pack supply cap reached');
-			await deps.state.putPackSupply({ ...supply, minted: supply.minted + 1 });
-		} else {
-			await deps.state.putPackSupply({ packType, minted: 1, burned: 0, cap: 0 });
-		}
 	}
+
+	await deps.state.putPackSupply(
+		supply
+			? { ...supply, minted: supply.minted + quantity }
+			: { packType, minted: quantity, burned: 0, cap: 0 },
+	);
 
 	return { status: 'applied' };
 }
@@ -2373,7 +2542,7 @@ async function applyPackMint(op: ProtocolOp, _ctx: ReplayContext, deps: Protocol
 // ============================================================
 
 async function applyPackDistribute(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpResult> {
-	if (op.broadcaster !== RAGNAROK_ADMIN_ACCOUNT) return reject('not admin account');
+	if (op.broadcaster !== deps.runtime.adminAccount) return reject('not admin account');
 
 	const packUids = op.payload.pack_uids as string[];
 	const to = op.payload.to as string;
@@ -2390,7 +2559,7 @@ async function applyPackDistribute(op: ProtocolOp, deps: ProtocolCoreDeps): Prom
 		const pack = await deps.state.getPack(uid);
 		if (!pack) return reject(`pack ${uid} not found`);
 		if (!pack.sealed) return reject(`pack ${uid} already opened`);
-		if (pack.owner !== RAGNAROK_ADMIN_ACCOUNT) return reject(`pack ${uid} not in admin inventory`);
+		if (pack.owner !== deps.runtime.adminAccount) return reject(`pack ${uid} not in admin inventory`);
 
 		await deps.state.putPack({ ...pack, owner: to, lastTransferBlock: op.blockNum });
 	}
@@ -2408,7 +2577,7 @@ async function applyPackDistribute(op: ProtocolOp, deps: ProtocolCoreDeps): Prom
 // ============================================================
 
 async function applyPackTransfer(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpResult> {
-	if (op.broadcaster !== RAGNAROK_ADMIN_ACCOUNT) return reject('pack_transfer restricted to admin');
+	if (op.broadcaster !== deps.runtime.adminAccount) return reject('pack_transfer restricted to admin');
 	const packUid = op.payload.pack_uid as string;
 	const to = op.payload.to as string;
 	if (!packUid || !to) return reject('missing pack_uid or to');
@@ -2455,34 +2624,39 @@ async function applyPackBurn(op: ProtocolOp, ctx: ReplayContext, deps: ProtocolC
 	const entropyBlockId = await ctx.getBlockId(entropyBlock);
 	if (!entropyBlockId) return { status: 'ignored' };
 
-	// Derive cards from pack DNA + burn entropy
-	const seed = await sha256Hash(`${pack.dna}|${op.trxId}|${entropyBlockId}`);
-	const cardCount = pack.cardCount;
+	// Derive cards from pack DNA + caller salt + burn entropy. The whole draw is
+	// resolved before storage mutation so a failed draw cannot partially open a pack.
+	const seed = await sha256Hash(`${pack.dna}|${op.trxId}|${salt}|${entropyBlockId}`);
 	const idRanges = PACK_ID_RANGES[pack.packType] ?? PACK_ID_RANGES['standard'];
 	const collectibleIds = deps.cards.getCollectibleIdsInRanges(idRanges);
 
 	if (collectibleIds.length === 0) return reject('no collectible cards in range');
 
-	let rng = Math.max(parseInt(seed.slice(0, 8), 16) || 1, 1);
-	for (let i = 0; i < cardCount; i++) {
-		rng = lcgNext(rng);
-		const cardId = collectibleIds[rng % collectibleIds.length];
-		const cardData = deps.cards.getCardById(cardId);
-		const rarity = cardData?.rarity ?? 'common';
+	const resolved = await resolvePackBurnCards({
+		seed,
+		pack,
+		op,
+		collectibleIds,
+		deps,
+	});
+	if (resolved.status === 'rejected') return reject(resolved.reason);
 
-		const originDna = await sha256Hash(`${cardId}|${pack.edition}|${rarity}|${pack.mintTrxId}`);
-		const instanceDna = await sha256Hash(`${originDna}|genesis|${op.trxId}|${i}`);
-
-		const asset: CardAsset = {
-			uid: `${op.trxId}:${i}`, cardId, owner: op.broadcaster, rarity,
-			level: 1, xp: 0, edition: pack.edition, foil: 'standard',
-			mintSource: 'pack', mintTrxId: op.trxId, mintBlockNum: op.blockNum,
-			lastTransferBlock: 0,
-			originDna, instanceDna, generation: 0, replicaCount: 0,
-		};
-		await deps.state.putCard(asset);
-		rng = lcgNext(rng);
+	if (resolved.cards.length !== pack.cardCount) {
+		return reject(`pack burn incomplete: expected ${pack.cardCount}, got ${resolved.cards.length}`);
 	}
+
+	for (const { asset } of resolved.cards) {
+		await deps.state.putCard(asset);
+	}
+
+	const createdCards = await Promise.all(
+		resolved.cards.map(({ asset }) => deps.state.getCard(asset.uid)),
+	);
+	if (createdCards.some(card => !card || card.owner !== op.broadcaster || card.mintTrxId !== op.trxId)) {
+		return reject('pack burn post-open verification failed');
+	}
+
+	await persistPackBurnSupply(resolved, deps);
 
 	// Delete pack and update supply
 	await deps.state.deletePack(packUid);
@@ -2492,6 +2666,129 @@ async function applyPackBurn(op: ProtocolOp, ctx: ReplayContext, deps: ProtocolC
 	}
 
 	return { status: 'applied' };
+}
+
+async function resolvePackBurnCards(input: {
+	seed: string;
+	pack: PackAsset;
+	op: ProtocolOp;
+	collectibleIds: readonly number[];
+	deps: ProtocolCoreDeps;
+}): Promise<PackBurnResolution> {
+	let rng = Math.max(parseInt(input.seed.slice(0, 8), 16) || 1, 1);
+	const cards: PackBurnResolvedCard[] = [];
+	const rarityIncrements = new Map<string, number>();
+	const cardIncrements = new Map<string, { cap: number; count: number }>();
+
+	for (let i = 0; i < input.pack.cardCount; i++) {
+		const uid = `${input.op.trxId}:${i}`;
+		if (await input.deps.state.getCard(uid)) {
+			return { status: 'rejected', reason: `card uid collision for ${uid}` };
+		}
+
+		let selected: { cardId: number; rarity: string; cardKey: string; cardCap: number } | null = null;
+
+		for (let attempts = 0; attempts < input.collectibleIds.length; attempts++) {
+			rng = lcgNext(rng);
+			const cardId = input.collectibleIds[rng % input.collectibleIds.length];
+			const cardData = input.deps.cards.getCardById(cardId);
+			if (!cardData) continue;
+
+			const rarity = cardData.rarity ?? 'common';
+			if (!await hasRarityPackSupply(rarity, rarityIncrements, input.deps)) continue;
+
+			const cardKey = `card:${cardId}`;
+			const cardCap = await getAvailableCardPackCap(cardKey, rarity, cardIncrements, input.deps);
+			if (cardCap === null) continue;
+
+			selected = { cardId, rarity, cardKey, cardCap };
+			break;
+		}
+
+		if (!selected) break;
+
+		rarityIncrements.set(selected.rarity, (rarityIncrements.get(selected.rarity) ?? 0) + 1);
+		const cardIncrement = cardIncrements.get(selected.cardKey);
+		cardIncrements.set(selected.cardKey, {
+			cap: selected.cardCap,
+			count: (cardIncrement?.count ?? 0) + 1,
+		});
+
+		const originDna = await sha256Hash(`${selected.cardId}|${input.pack.edition}|${selected.rarity}|${input.pack.mintTrxId}`);
+		const instanceDna = await sha256Hash(`${originDna}|genesis|${input.op.trxId}|${i}`);
+
+		cards.push({
+			asset: {
+				uid,
+				cardId: selected.cardId,
+				owner: input.op.broadcaster,
+				rarity: selected.rarity,
+				level: 1,
+				xp: 0,
+				edition: input.pack.edition,
+				foil: 'standard',
+				mintSource: 'pack',
+				mintTrxId: input.op.trxId,
+				mintBlockNum: input.op.blockNum,
+				lastTransferBlock: 0,
+				originDna,
+				instanceDna,
+				generation: 0,
+				replicaCount: 0,
+			},
+		});
+
+		rng = lcgNext(rng);
+	}
+
+	return { status: 'ok', cards, rarityIncrements, cardIncrements };
+}
+
+async function hasRarityPackSupply(
+	rarity: string,
+	plannedIncrements: ReadonlyMap<string, number>,
+	deps: ProtocolCoreDeps,
+): Promise<boolean> {
+	const supply = await deps.state.getSupply(rarity, 'pack');
+	if (!supply) return true;
+	const planned = plannedIncrements.get(rarity) ?? 0;
+	return supply.minted + planned < supply.cap;
+}
+
+async function getAvailableCardPackCap(
+	cardKey: string,
+	rarity: string,
+	plannedIncrements: ReadonlyMap<string, { cap: number; count: number }>,
+	deps: ProtocolCoreDeps,
+): Promise<number | null> {
+	const supply = await deps.state.getSupply(cardKey, 'pack');
+	const planned = plannedIncrements.get(cardKey)?.count ?? 0;
+	const cap = supply?.cap ?? (RARITY_CARD_CAPS[rarity.toLowerCase()] ?? 2000);
+	const minted = supply?.minted ?? 0;
+	return minted + planned < cap ? cap : null;
+}
+
+async function persistPackBurnSupply(
+	resolved: Extract<PackBurnResolution, { status: 'ok' }>,
+	deps: ProtocolCoreDeps,
+): Promise<void> {
+	for (const [rarity, count] of resolved.rarityIncrements) {
+		const supply = await deps.state.getSupply(rarity, 'pack');
+		if (supply) {
+			await deps.state.putSupply({ ...supply, minted: supply.minted + count });
+		}
+	}
+
+	for (const [cardKey, increment] of resolved.cardIncrements) {
+		const supply = await deps.state.getSupply(cardKey, 'pack');
+		const nextSupply: SupplyRecord = {
+			key: cardKey,
+			pool: 'pack',
+			cap: supply?.cap ?? increment.cap,
+			minted: (supply?.minted ?? 0) + increment.count,
+		};
+		await deps.state.putSupply(nextSupply);
+	}
 }
 
 // ============================================================
@@ -2721,7 +3018,7 @@ async function applyDuatAirdropClaim(op: ProtocolOp, deps: ProtocolCoreDeps): Pr
 }
 
 async function applyDuatAirdropFinalize(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpResult> {
-	if (op.broadcaster !== RAGNAROK_ADMIN_ACCOUNT) return reject('not admin');
+	if (op.broadcaster !== deps.runtime.adminAccount) return reject('not admin');
 
 	const genesis = await deps.state.getGenesis();
 	if (!genesis) return reject('no genesis');

@@ -14,6 +14,8 @@ import { normalizeRawOp } from './normalize';
 import {
 	PACK_SIZES,
 	TESTNET_RUNE_ECONOMY,
+	buildHbdPackPurchaseMemo,
+	formatHbdTransferAmount,
 	getRuneExchangePackQuote,
 	type RuneExchangeAdapter,
 } from './types';
@@ -29,6 +31,7 @@ import type {
 } from './types';
 import { canonicalStringify, sha256Hash } from './hash';
 import { deriveChallenge, POW_CONFIG } from './pow';
+import { RAGNAROK_RUNTIME_CONFIGS } from '../runtimeConfig';
 
 // ============================================================
 // In-Memory StateAdapter (test harness)
@@ -380,6 +383,7 @@ async function seedRankedMatchAnchor(
 
 function makeDeps(state: MemoryState): ProtocolCoreDeps {
 	return {
+		runtime: RAGNAROK_RUNTIME_CONFIGS.mainnet,
 		state,
 		cards: mockCards,
 		rewards: mockRewards,
@@ -450,6 +454,24 @@ describe('Protocol Core: Replay Traces', () => {
 	it('genesis rejected from non-admin', async () => {
 		const result = await applyOp(makeOp('genesis', { version: 1 }, { broadcaster: 'mallory', usedActiveAuth: true }), defaultCtx, deps);
 		expect(result.status).toBe('rejected');
+	});
+
+	it('admin-only ops use the injected runtime authority', async () => {
+		deps = { ...deps, runtime: RAGNAROK_RUNTIME_CONFIGS.testnet };
+
+		const mainnetAdminResult = await applyOp(
+			makeOp('genesis', { version: 1 }, { broadcaster: 'ragnarok', usedActiveAuth: true }),
+			defaultCtx,
+			deps,
+		);
+		expect(mainnetAdminResult.status).toBe('rejected');
+
+		const testnetAdminResult = await applyOp(
+			makeOp('genesis', { version: 1 }, { broadcaster: 'ragnarok-test', usedActiveAuth: true }),
+			defaultCtx,
+			deps,
+		);
+		expect(testnetAdminResult.status).toBe('applied');
 	});
 
 	it('seal permanently blocks minting', async () => {
@@ -908,6 +930,24 @@ describe('Protocol Core: Replay Traces', () => {
 		if (result.status === 'ok') {
 			expect(result.op.action).toBe('match_anchor');
 		}
+	});
+
+	it('can disable legacy rp_ ids for isolated testnet replay', () => {
+		const result = normalizeRawOp({
+			customJsonId: 'rp_match_start',
+			json: JSON.stringify({ match_id: 'test' }),
+			broadcaster: 'alice',
+			trxId: 'abc',
+			blockNum: 100,
+			timestamp: Date.now(),
+			requiredPostingAuths: ['alice'],
+			requiredAuths: [],
+		}, {
+			protocolIds: [RAGNAROK_RUNTIME_CONFIGS.testnet.protocolId],
+			acceptLegacyProtocolIds: false,
+		});
+
+		expect(result.status).toBe('ignore');
 	});
 
 	it('maps rp_pack_open to legacy_pack_open, not pack_commit', () => {
@@ -1385,7 +1425,7 @@ describe('Protocol Core: Replay Traces', () => {
 
 		const { sha256Hash: hash } = await import('./hash');
 		const result = await applyOp(makeOp('forge_commit', {
-			rarity: 'legendary', salt_commit: await hash('x'),
+			rarity: 'invalid', salt_commit: await hash('x'),
 		}, { trxId: 'forge-commit-bad', blockNum: 5000 }), defaultCtx, deps);
 
 		expect(result.status).toBe('rejected');
@@ -1667,7 +1707,7 @@ describe('Protocol Core: Replay Traces', () => {
 		]);
 	}
 
-	describe('rune_exchange', () => {
+		describe('rune_exchange', () => {
 		it('spends RUNE and delegates sealed pack fulfillment to the adapter', async () => {
 			await seedSealedGenesis(state, deps);
 			await deps.state.putTokenBalance({ account: 'alice', RUNE: 10 });
@@ -1799,14 +1839,107 @@ describe('Protocol Core: Replay Traces', () => {
 			expect(result.status).toBe('rejected');
 			expect((result as { reason: string }).reason).toContain('pack cap');
 			expect(state.packs.size).toBe(0);
+			});
 		});
-	});
 
-	describe('v1.1: pack_mint', () => {
-		it('admin can mint packs into admin inventory', async () => {
-			await seedSealedGenesis(state, deps);
-			const result = await applyOp(makeOp('pack_mint', {
-				pack_type: 'standard', quantity: 3,
+		describe('pack_purchase', () => {
+			function withHbdPurchaseTransfer(trxId: string, amount: string, to = deps.runtime.treasuryAccount) {
+				state.setTrxSiblings(trxId, [
+					['transfer', {
+						from: 'alice',
+						to,
+						amount,
+						memo: buildHbdPackPurchaseMemo({
+							account: 'alice',
+							packType: 'standard',
+							quantity: 1,
+							totalPriceThousandths: 20_000,
+						}),
+					}],
+				]);
+			}
+
+			it('accepts exact HBD payment and creates sealed packs', async () => {
+				await seedSealedGenesis(state, deps);
+				withHbdPurchaseTransfer('hbd-pack-1', formatHbdTransferAmount(20_000));
+
+				const result = await applyOp(makeOp('pack_purchase', {
+					pack_type: 'standard',
+					quantity: 1,
+				}, { broadcaster: 'alice', trxId: 'hbd-pack-1', blockNum: 2000, usedActiveAuth: true }), defaultCtx, deps);
+
+				expect(result.status).toBe('applied');
+				expect(state.packs.get('pack_hbd-pack-1:hbd:0')).toMatchObject({
+					owner: 'alice',
+					packType: 'standard',
+					sealed: true,
+					cardCount: 5,
+				});
+				expect(state.packSupply.get('standard')).toMatchObject({
+					minted: 1,
+					burned: 0,
+					cap: 100_000,
+				});
+			});
+
+			it('ignores duplicate pack_purchase without double minting', async () => {
+				await seedSealedGenesis(state, deps);
+				withHbdPurchaseTransfer('hbd-pack-duplicate', formatHbdTransferAmount(20_000));
+				const op = makeOp('pack_purchase', {
+					pack_type: 'standard',
+					quantity: 1,
+				}, { broadcaster: 'alice', trxId: 'hbd-pack-duplicate', blockNum: 2000, usedActiveAuth: true });
+
+				const first = await applyOp(op, defaultCtx, deps);
+				const duplicate = await applyOp(op, defaultCtx, deps);
+
+				expect(first.status).toBe('applied');
+				expect(duplicate.status).toBe('ignored');
+				expect(state.packs.size).toBe(1);
+				expect(state.packSupply.get('standard')?.minted).toBe(1);
+			});
+
+			it('rejects non-HBD or wrong-amount payments', async () => {
+				await seedSealedGenesis(state, deps);
+				withHbdPurchaseTransfer('hbd-pack-wrong', '20.000 HIVE');
+
+				const result = await applyOp(makeOp('pack_purchase', {
+					pack_type: 'standard',
+					quantity: 1,
+				}, { broadcaster: 'alice', trxId: 'hbd-pack-wrong', blockNum: 2000, usedActiveAuth: true }), defaultCtx, deps);
+
+				expect(result.status).toBe('rejected');
+				expect((result as { reason: string }).reason).toContain('payment amount mismatch');
+				expect(state.packs.size).toBe(0);
+			});
+
+			it('rejects HBD payments without a valid protocol memo checksum', async () => {
+				await seedSealedGenesis(state, deps);
+				state.setTrxSiblings('hbd-pack-bad-memo', [
+					['transfer', {
+						from: 'alice',
+						to: deps.runtime.treasuryAccount,
+						amount: formatHbdTransferAmount(20_000),
+						memo: 'ragnarok:pack_purchase:standard:1',
+					}],
+				]);
+
+				const result = await applyOp(makeOp('pack_purchase', {
+					pack_type: 'standard',
+					quantity: 1,
+				}, { broadcaster: 'alice', trxId: 'hbd-pack-bad-memo', blockNum: 2000, usedActiveAuth: true }), defaultCtx, deps);
+
+				expect(result.status).toBe('rejected');
+				expect((result as { reason: string }).reason).toContain('memo');
+				expect(state.packs.size).toBe(0);
+			});
+		});
+
+		describe('v1.1: pack_mint', () => {
+			it('admin can mint packs into admin inventory', async () => {
+				await seedSealedGenesis(state, deps);
+				const result = await applyOp(makeOp('pack_mint', {
+					pack_type: 'standard', quantity: 3,
 			}, { broadcaster: 'ragnarok', trxId: 'mint-packs-1', usedActiveAuth: true }), defaultCtx, deps);
 
 			expect(result.status).toBe('applied');
@@ -1817,10 +1950,25 @@ describe('Protocol Core: Replay Traces', () => {
 				expect(pack.packType).toBe('standard');
 				expect(pack.cardCount).toBe(5);
 				expect(pack.dna).toBeTruthy();
-			}
-		});
+				}
+			});
 
-		it('rejects non-admin mint', async () => {
+			it('duplicate pack_mint does not increment pack supply twice', async () => {
+				await seedSealedGenesis(state, deps);
+				const op = makeOp('pack_mint', {
+					pack_type: 'standard', quantity: 2,
+				}, { broadcaster: 'ragnarok', trxId: 'mint-packs-dup', usedActiveAuth: true });
+
+				const first = await applyOp(op, defaultCtx, deps);
+				const second = await applyOp(op, defaultCtx, deps);
+
+				expect(first.status).toBe('applied');
+				expect(second.status).toBe('ignored');
+				expect(state.packs.size).toBe(2);
+				expect(state.packSupply.get('standard')?.minted).toBe(2);
+			});
+
+			it('rejects non-admin mint', async () => {
 			await seedSealedGenesis(state, deps);
 			const result = await applyOp(makeOp('pack_mint', {
 				pack_type: 'standard', quantity: 1,
@@ -1943,10 +2091,10 @@ describe('Protocol Core: Replay Traces', () => {
 		});
 	});
 
-	describe('v1.1: pack_burn', () => {
-		it('burns pack and derives cards from DNA + entropy', async () => {
-			await seedSealedGenesis(state, deps);
-			await applyOp(makeOp('pack_mint', { pack_type: 'standard', quantity: 1 },
+		describe('v1.1: pack_burn', () => {
+			it('burns pack and derives cards from DNA + entropy', async () => {
+				await seedSealedGenesis(state, deps);
+				await applyOp(makeOp('pack_mint', { pack_type: 'standard', quantity: 1 },
 				{ broadcaster: 'ragnarok', trxId: 'mint-b1', usedActiveAuth: true }), defaultCtx, deps);
 			const uid = [...state.packs.keys()][0];
 			withCompanion(state, 'dist-b1', 'alice');
@@ -1967,12 +2115,64 @@ describe('Protocol Core: Replay Traces', () => {
 				expect(card.instanceDna).toBeTruthy();
 				expect(card.owner).toBe('alice');
 				expect(card.mintSource).toBe('pack');
-			}
-		});
+				}
+			});
 
-		it('rejects burn of non-owned pack', async () => {
-			await seedSealedGenesis(state, deps);
-			await applyOp(makeOp('pack_mint', { pack_type: 'standard', quantity: 1 },
+			it('does not mint twice when the same burn op is replayed', async () => {
+				await seedSealedGenesis(state, deps);
+				await applyOp(makeOp('pack_mint', { pack_type: 'standard', quantity: 1 },
+					{ broadcaster: 'ragnarok', trxId: 'mint-b-dup', usedActiveAuth: true }), defaultCtx, deps);
+				const uid = [...state.packs.keys()][0];
+				withCompanion(state, 'dist-b-dup', 'alice');
+				await applyOp(makeOp('pack_distribute', { pack_uids: [uid], to: 'alice' },
+					{ broadcaster: 'ragnarok', trxId: 'dist-b-dup', usedActiveAuth: true }), defaultCtx, deps);
+
+				const burnOp = makeOp('pack_burn', { pack_uid: uid, salt: 'd'.repeat(64) },
+					{ broadcaster: 'alice', trxId: 'burn-dup', blockNum: 500, usedActiveAuth: true });
+				const first = await applyOp(burnOp, defaultCtx, deps);
+				const cardsAfterFirst = state.cards.size;
+				const second = await applyOp(burnOp, defaultCtx, deps);
+
+				expect(first.status).toBe('applied');
+				expect(second.status).toBe('rejected');
+				expect(state.cards.size).toBe(cardsAfterFirst);
+				expect(state.packs.has(uid)).toBe(false);
+			});
+
+			it('keeps the sealed pack when burn card uid verification fails', async () => {
+				await seedSealedGenesis(state, deps);
+				await applyOp(makeOp('pack_mint', { pack_type: 'standard', quantity: 1 },
+					{ broadcaster: 'ragnarok', trxId: 'mint-b-collision', usedActiveAuth: true }), defaultCtx, deps);
+				const uid = [...state.packs.keys()][0];
+				withCompanion(state, 'dist-b-collision', 'alice');
+				await applyOp(makeOp('pack_distribute', { pack_uids: [uid], to: 'alice' },
+					{ broadcaster: 'ragnarok', trxId: 'dist-b-collision', usedActiveAuth: true }), defaultCtx, deps);
+				state.cards.set('burn-collision:0', {
+					uid: 'burn-collision:0',
+					cardId: 20001,
+					owner: 'alice',
+					rarity: 'common',
+					level: 1,
+					xp: 0,
+					edition: 'alpha',
+					mintSource: 'pack',
+					mintTrxId: 'existing',
+					mintBlockNum: 1,
+					lastTransferBlock: 1,
+				});
+
+				const before = state.cards.size;
+				const result = await applyOp(makeOp('pack_burn', { pack_uid: uid, salt: 'c'.repeat(64) },
+					{ broadcaster: 'alice', trxId: 'burn-collision', blockNum: 500, usedActiveAuth: true }), defaultCtx, deps);
+
+				expect(result.status).toBe('rejected');
+				expect(state.cards.size).toBe(before);
+				expect(state.packs.has(uid)).toBe(true);
+			});
+
+			it('rejects burn of non-owned pack', async () => {
+				await seedSealedGenesis(state, deps);
+				await applyOp(makeOp('pack_mint', { pack_type: 'standard', quantity: 1 },
 				{ broadcaster: 'ragnarok', trxId: 'mint-b2', usedActiveAuth: true }), defaultCtx, deps);
 			const uid = [...state.packs.keys()][0];
 
@@ -2177,18 +2377,29 @@ describe('Protocol Core: Replay Traces', () => {
 			if (result.status === 'ok') expect(result.op.action).toBe('pack_distribute');
 		});
 
-		it('normalizes rp_rune_exchange to rune_exchange', () => {
-			const result = normalizeRawOp({
-				customJsonId: 'rp_rune_exchange',
-				json: '{"pack_type":"standard","quantity":1}',
-				broadcaster: 'alice', trxId: 'n-rune', blockNum: 100, timestamp: 0,
+			it('normalizes rp_rune_exchange to rune_exchange', () => {
+				const result = normalizeRawOp({
+					customJsonId: 'rp_rune_exchange',
+					json: '{"pack_type":"standard","quantity":1}',
+					broadcaster: 'alice', trxId: 'n-rune', blockNum: 100, timestamp: 0,
 				requiredPostingAuths: ['alice'], requiredAuths: [],
 			});
-			expect(result.status).toBe('ok');
-			if (result.status === 'ok') expect(result.op.action).toBe('rune_exchange');
-		});
+				expect(result.status).toBe('ok');
+				if (result.status === 'ok') expect(result.op.action).toBe('rune_exchange');
+			});
 
-		it('normalizes rp_card_replicate and rp_card_merge', () => {
+			it('normalizes rp_pack_purchase to pack_purchase with active auth', () => {
+				const result = normalizeRawOp({
+					customJsonId: 'rp_pack_purchase',
+					json: '{"pack_type":"standard","quantity":1,"currency":"HBD"}',
+					broadcaster: 'alice', trxId: 'n-hbd', blockNum: 100, timestamp: 0,
+					requiredPostingAuths: [], requiredAuths: ['alice'],
+				});
+				expect(result.status).toBe('ok');
+				if (result.status === 'ok') expect(result.op.action).toBe('pack_purchase');
+			});
+
+			it('normalizes rp_card_replicate and rp_card_merge', () => {
 			const rep = normalizeRawOp({
 				customJsonId: 'rp_card_replicate',
 				json: '{"source_uid":"x"}',

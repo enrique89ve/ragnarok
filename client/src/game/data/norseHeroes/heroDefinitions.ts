@@ -1,6 +1,6 @@
 /**
  * heroDefinitions.ts
- * 
+ *
  * Definitions for Norse Heroes in Ragnarok Poker.
  * Each hero has: Hero Power, Weapon Upgrade, Personal Passive, Fixed Cards.
  */
@@ -866,7 +866,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
     lore: 'Thor\'s mighty son who lifted the giant Hrungnir\'s corpse when even his father could not. He is destined to inherit Mjolnir and rebuild the world after Ragnarok.',
     gender: 'male',
     hasSpells: true,
-    fixedCardIds: [4350], // Surtr, Flame Giant - legendary fire giant
+    fixedCardIds: [4350], // Surtr, Flame Giant - mythic fire giant
     heroPower: {
       id: 'magni-power',
       name: 'Hammer Strike',
@@ -926,7 +926,7 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
     lore: 'The fire giantess who guards the flaming sword Lævateinn in the scorching realm of Muspelheim. Her blazing form rivals her husband Surtr in terrifying splendor.',
     gender: 'female',
     hasSpells: true,
-    fixedCardIds: [5009], // Muspelheim's Fury - fire legendary for Surtr's wife
+    fixedCardIds: [5009], // Muspelheim's Fury - fire mythic for Surtr's wife
     heroPower: {
       id: 'sinmara-power',
       name: 'Burning Gaze',
@@ -2469,11 +2469,11 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
       cost: 2,
       targetType: 'none',
       effectType: 'summon',
-      summonData: { 
-        name: 'Sapling', 
-        attack: 1, 
-        health: 1, 
-        deathrattle: { type: 'draw', value: 1 } 
+      summonData: {
+        name: 'Sapling',
+        attack: 1,
+        health: 1,
+        deathrattle: { type: 'draw', value: 1 }
       }
     },
     weaponUpgrade: {
@@ -2497,11 +2497,11 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
       cost: 2,
       targetType: 'none',
       effectType: 'summon',
-      summonData: { 
-        name: 'Sapling', 
-        attack: 2, 
-        health: 2, 
-        deathrattle: { type: 'draw', value: 1 } 
+      summonData: {
+        name: 'Sapling',
+        attack: 2,
+        health: 2,
+        deathrattle: { type: 'draw', value: 1 }
       },
       isUpgraded: true,
       baseHeroPowerId: 'demeter-power'
@@ -2912,9 +2912,9 @@ export const NORSE_HEROES: Record<string, NorseHero> = {
       description: 'Summon a 3/3 Shade with Deathrattle: Restore 3 HP to hero. Permanently upgrade your hero power.',
       immediateEffect: {
         type: 'summon',
-        summonData: { 
-          name: 'Shade', 
-          attack: 3, 
+        summonData: {
+          name: 'Shade',
+          attack: 3,
           health: 3
         },
         description: 'Summon a 3/3 Shade with Deathrattle: Restore 3 HP to hero.'

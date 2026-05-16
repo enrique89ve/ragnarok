@@ -80,10 +80,10 @@
 --info-300    / --info-400    / --info-glow
 
 /* Rarezas de Cartas (SimpleCard) */
---card-rare-blue-deep/mid/bright/pale/glow
---card-epic-purple-deep/mid/bright/pale/glow
---card-mythic-gold-deep/mid/bright/pale/glow
---card-common-steel
+--rarity-rare-deep/mid/bright/pale/glow
+--rarity-epic-deep/mid/bright/pale/glow
+--rarity-mythic-deep/mid/bright/pale/glow
+--rarity-common-deep
 ```
 
 ---
@@ -139,10 +139,10 @@ border: 1px solid var(--border-chip);
 ### Para transparencias de colores primarios
 ```css
 /* En lugar de rgba(168, 85, 247, 0.4) */
-color: color-mix(in srgb, var(--card-epic-purple-bright) 40%, transparent);
+color: color-mix(in srgb, var(--rarity-epic-color) 40%, transparent);
 
 /* En lugar de rgba(59, 130, 246, 0.15) */
-background: color-mix(in srgb, var(--card-rare-blue-bright) 15%, transparent);
+background: color-mix(in srgb, var(--rarity-rare-color) 15%, transparent);
 ```
 
 ---

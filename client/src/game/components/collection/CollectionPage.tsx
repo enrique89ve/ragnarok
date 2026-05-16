@@ -5,15 +5,15 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { routes } from '../../../lib/routes';
-import { getRarityColor, getTypeIcon } from '../../utils/rarityUtils';
+import { getRarityColor, getRaritySortRank, getTypeIcon } from '../../utils/rarityUtils';
 import { getCardArtPath } from '../../utils/art/artMapping';
 import { getHoloTier, applyHoloVars, resetHoloVars } from '../../hooks/useHoloTracking';
-import type { OwnedCard, InventoryResponse, InventoryCard } from '../packs/types';
+import type { OwnedCard } from '../packs/types';
 import { getMasteryTier } from '../../../data/blockchain/cardXPRewards';
 import { getEitrValue, getCraftCost } from '../../crafting/craftingConstants';
 import { cardRegistry } from '../../data/cardRegistry';
 import { getNFTBridge } from '../../nft';
-import { useNFTCollection } from '../../nft/hooks';
+import { useNFTCollection, useNFTUsername } from '../../nft/hooks';
 import NFTProvenanceViewer from './NFTProvenanceViewer';
 import SendCardModal from './SendCardModal';
 import { useCollectionMilestoneStore } from '../../stores/collectionMilestoneStore';
@@ -24,6 +24,8 @@ import { hiveSync } from '../../../data/HiveSync';
 import { sha256Hash } from '../../../../../shared/protocol-core/hash';
 import { PACK_ENTROPY_DELAY_BLOCKS } from '../../../../../shared/protocol-core/types';
 import { emitNotification } from '../../actions/gameActions';
+import type { HiveCardAsset } from '../../../data/schemas/HiveTypes';
+import type { CardData } from '../../types';
 
 type FilterRarity = 'all' | 'common' | 'rare' | 'epic' | 'mythic';
 type FilterType = 'all' | 'hero' | 'minion' | 'spell' | 'weapon';
@@ -38,14 +40,36 @@ interface CollectionStats {
 	byType: { type: string; uniqueCards: number; totalCards: number }[];
 }
 
-const RARITY_ORDER: Record<string, number> = { mythic: 0, epic: 1, rare: 2, common: 3, basic: 4 };
+interface ChainCardRecord {
+	uid: string;
+	cardId: number;
+	owner: string;
+	rarity: string;
+	level: number;
+	xp: number;
+	edition?: string;
+	foil?: string;
+	mintTrxId?: string;
+	mintBlockNum?: number;
+	lastTransferBlock?: number;
+}
+
+interface ChainCardsResponse {
+	success: boolean;
+	cards?: ChainCardRecord[];
+	error?: string;
+}
+
+const CARD_BY_ID = new Map<number, CardData>(
+	cardRegistry.map(card => [Number(card.id), card]),
+);
 
 const RARITY_PILLS: { value: FilterRarity; label: string; color: string; activeColor: string }[] = [
 	{ value: 'all', label: 'All', color: 'rgba(255,255,255,0.06)', activeColor: 'rgba(217,168,68,0.55)' },
-	{ value: 'mythic', label: 'Mythic', color: 'rgba(236,72,153,0.15)', activeColor: 'rgba(236,72,153,0.6)' },
-	{ value: 'epic', label: 'Epic', color: 'rgba(147,51,234,0.15)', activeColor: 'rgba(147,51,234,0.5)' },
-	{ value: 'rare', label: 'Rare', color: 'rgba(59,130,246,0.15)', activeColor: 'rgba(59,130,246,0.5)' },
-	{ value: 'common', label: 'Common', color: 'rgba(107,114,128,0.15)', activeColor: 'rgba(107,114,128,0.5)' },
+	{ value: 'mythic', label: 'Mythic', color: 'color-mix(in srgb, var(--rarity-mythic-color) 15%, transparent)', activeColor: 'color-mix(in srgb, var(--rarity-mythic-color) 60%, transparent)' },
+	{ value: 'epic', label: 'Epic', color: 'color-mix(in srgb, var(--rarity-epic-color) 15%, transparent)', activeColor: 'color-mix(in srgb, var(--rarity-epic-color) 50%, transparent)' },
+	{ value: 'rare', label: 'Rare', color: 'color-mix(in srgb, var(--rarity-rare-color) 15%, transparent)', activeColor: 'color-mix(in srgb, var(--rarity-rare-color) 50%, transparent)' },
+	{ value: 'common', label: 'Common', color: 'color-mix(in srgb, var(--rarity-common-color) 15%, transparent)', activeColor: 'color-mix(in srgb, var(--rarity-common-color) 50%, transparent)' },
 ];
 
 const TYPE_PILLS: { value: FilterType; label: string; icon: string }[] = [
@@ -60,6 +84,124 @@ const TYPE_PILLS: { value: FilterType; label: string; icon: string }[] = [
 // Padding/margin se concatena en cada call site según contexto.
 const VAULT_PANEL_CLASS = 'bg-obsidian-800/70 border border-obsidian-700/80 rounded-xl backdrop-blur-sm';
 const VAULT_INPUT_CLASS = 'bg-obsidian-900/70 border border-obsidian-700 text-ink-0 rounded-lg transition-colors placeholder:text-ink-300 focus:outline-hidden focus:border-gold-500 focus:ring-1 focus:ring-gold-500/40';
+
+function getCardHeroClass(card: CardData | undefined, fallback = 'neutral'): string {
+	return card?.heroClass ?? card?.class ?? fallback;
+}
+
+function getCardAttack(card: CardData | undefined): number | undefined {
+	return card && 'attack' in card && typeof card.attack === 'number' ? card.attack : undefined;
+}
+
+function getCardHealth(card: CardData | undefined): number | undefined {
+	return card && 'health' in card && typeof card.health === 'number' ? card.health : undefined;
+}
+
+function getCardManaCost(card: CardData | undefined): number | undefined {
+	return typeof card?.manaCost === 'number' ? card.manaCost : undefined;
+}
+
+function buildOwnedCard(input: {
+	cardId: number;
+	quantity: number;
+	rarity?: string;
+	type?: string;
+	name?: string;
+	mintNumber?: number | null;
+}): OwnedCard {
+	const card = CARD_BY_ID.get(input.cardId);
+	return {
+		id: input.cardId,
+		name: input.name || card?.name || `Card #${input.cardId}`,
+		rarity: input.rarity || card?.rarity || 'common',
+		type: input.type || card?.type || 'minion',
+		heroClass: getCardHeroClass(card),
+		quantity: input.quantity,
+		mintNumber: input.mintNumber,
+		description: card?.description,
+		attack: getCardAttack(card),
+		health: getCardHealth(card),
+		manaCost: getCardManaCost(card),
+	};
+}
+
+function localCollectionCards(): OwnedCard[] {
+	return cardRegistry
+		.filter(card => card.collectible !== false)
+		.map(card => buildOwnedCard({
+			cardId: Number(card.id),
+			quantity: 1,
+			rarity: card.rarity,
+			type: card.type,
+			name: card.name,
+		}));
+}
+
+function groupChainCards(records: readonly ChainCardRecord[]): OwnedCard[] {
+	const grouped = new Map<number, OwnedCard>();
+	for (const record of records) {
+		const existing = grouped.get(record.cardId);
+		if (existing) {
+			grouped.set(record.cardId, { ...existing, quantity: existing.quantity + 1 });
+			continue;
+		}
+		grouped.set(record.cardId, buildOwnedCard({
+			cardId: record.cardId,
+			quantity: 1,
+			rarity: record.rarity,
+		}));
+	}
+	return [...grouped.values()];
+}
+
+function groupHiveCards(records: readonly HiveCardAsset[]): OwnedCard[] {
+	const grouped = new Map<number, OwnedCard>();
+	for (const record of records) {
+		const existing = grouped.get(record.cardId);
+		if (existing) {
+			grouped.set(record.cardId, { ...existing, quantity: existing.quantity + 1 });
+			continue;
+		}
+		grouped.set(record.cardId, buildOwnedCard({
+			cardId: record.cardId,
+			quantity: 1,
+			rarity: record.rarity,
+			type: record.type,
+			name: record.name,
+		}));
+	}
+	return [...grouped.values()];
+}
+
+function buildCollectionStats(cards: readonly OwnedCard[]): CollectionStats {
+	const totalInGame = cardRegistry.filter(card => card.collectible !== false).length;
+	const totalCards = cards.reduce((total, card) => total + card.quantity, 0);
+	const byRarity = ['mythic', 'epic', 'rare', 'common', 'basic'].map(rarity => {
+		const matching = cards.filter(card => card.rarity === rarity);
+		return {
+			rarity,
+			uniqueCards: matching.length,
+			totalCards: matching.reduce((total, card) => total + card.quantity, 0),
+		};
+	});
+	const byType = ['hero', 'minion', 'spell', 'weapon'].map(type => {
+		const matching = cards.filter(card => card.type === type);
+		return {
+			type,
+			uniqueCards: matching.length,
+			totalCards: matching.reduce((total, card) => total + card.quantity, 0),
+		};
+	});
+
+	return {
+		uniqueCards: cards.length,
+		totalCards,
+		completionPercentage: totalInGame > 0 ? Number(((cards.length / totalInGame) * 100).toFixed(1)) : 0,
+		totalInGame,
+		byRarity,
+		byType,
+	};
+}
 
 function getClassGradient(heroClass: string): string {
 	switch (heroClass) {
@@ -94,7 +236,8 @@ function getShimmerClass(rarity: string): string {
 
 export default function CollectionPage() {
 	const hiveCards = useNFTCollection();
-	const currentAccount = hiveSync.getUsername();
+	const hiveUsername = useNFTUsername();
+	const currentAccount = hiveUsername ?? hiveSync.getUsername();
 	const { balance: eitr } = useEitrBalance(currentAccount, 'S01');
 	const [craftConfirm, setCraftConfirm] = useState<'craft' | 'disenchant' | null>(null);
 
@@ -146,13 +289,52 @@ export default function CollectionPage() {
 	const [page, setPage] = useState(1);
 	const [totalPages, setTotalPages] = useState(1);
 	const [isLoadingMore, setIsLoadingMore] = useState(false);
+	const [refreshNonce, setRefreshNonce] = useState(0);
 
 	useEffect(() => {
 		const controller = new AbortController();
-		fetchInventory(1, controller.signal);
-		fetchStats(controller.signal);
+
+		const applyCollection = (nextCards: OwnedCard[]) => {
+			setCards(nextCards);
+			setStats(buildCollectionStats(nextCards));
+			setTotalPages(1);
+			setPage(1);
+			setError(null);
+		};
+
+		const loadCollection = async () => {
+			setLoading(true);
+			setIsLoadingMore(false);
+
+			if (hiveUsername) {
+				try {
+					const res = await fetch(`/api/chain/player/${hiveUsername}/cards`, { signal: controller.signal });
+					if (res.ok) {
+						const data: ChainCardsResponse = await res.json();
+						if (data.success) {
+							applyCollection(groupChainCards(data.cards ?? []));
+							return;
+						}
+					}
+				} catch (err) {
+					if (err instanceof DOMException && err.name === 'AbortError') return;
+					debug.warn('Chain collection unavailable, falling back to local replay:', err);
+				}
+			}
+
+			if (hiveCards.length > 0 || getNFTBridge().isHiveMode()) {
+				applyCollection(groupHiveCards(hiveCards));
+			} else {
+				applyCollection(localCollectionCards());
+			}
+		};
+
+		void loadCollection().finally(() => {
+			if (!controller.signal.aborted) setLoading(false);
+		});
+
 		return () => { controller.abort(); };
-	}, []);
+	}, [hiveUsername, hiveCards, refreshNonce]);
 
 	useEffect(() => {
 		setPage(1);
@@ -170,90 +352,6 @@ export default function CollectionPage() {
 		}
 	}, [cards.length, checkMilestones]);
 
-	const loadLocalCollection = () => {
-		const allCards = cardRegistry.filter(c => c.collectible !== false);
-		const localCards: OwnedCard[] = allCards.map(c => ({
-			id: typeof c.id === 'string' ? parseInt(c.id, 10) : c.id,
-			name: c.name,
-			rarity: c.rarity || 'common',
-			type: c.type,
-			heroClass: (c as any).class || (c as any).heroClass || (c as any).cardClass || 'neutral',
-			quantity: 1,
-			description: (c as any).description,
-			attack: 'attack' in c ? (c as any).attack : undefined,
-			health: 'health' in c ? (c as any).health : undefined,
-			manaCost: (c as any).manaCost,
-		}));
-		setCards(localCards);
-		setTotalPages(1);
-		setPage(1);
-		setError(null);
-		setLoading(false);
-	};
-
-	const fetchInventory = async (pageNum: number, signal?: AbortSignal) => {
-		try {
-			if (pageNum === 1) setLoading(true);
-			else setIsLoadingMore(true);
-			setError(null);
-
-			const res = await fetch(`/api/inventory/1?page=${pageNum}&limit=30`, { signal });
-
-			if (res.ok) {
-				const data: InventoryResponse = await res.json();
-				const mappedCards = (data.inventory || []).map((card: InventoryCard) => ({
-					id: card.card_id,
-					name: card.card_name,
-					rarity: card.nft_rarity,
-					type: card.card_type,
-					heroClass: card.hero_class,
-					quantity: card.quantity,
-					mintNumber: card.mint_number,
-					maxSupply: card.max_supply,
-					imageUrl: card.imageUrl,
-				}));
-				setCards(mappedCards);
-
-				if (data.pagination) {
-					setPage(data.pagination.page);
-					setTotalPages(data.pagination.totalPages);
-				}
-			} else {
-				loadLocalCollection();
-			}
-		} catch (err) {
-			if (err instanceof DOMException && err.name === 'AbortError') return;
-			debug.warn('API unavailable, using local collection:', err);
-			loadLocalCollection();
-		} finally {
-			setLoading(false);
-			setIsLoadingMore(false);
-		}
-	};
-
-	const fetchStats = async (signal?: AbortSignal) => {
-		try {
-			const res = await fetch('/api/inventory/1/stats', { signal });
-			if (res.ok) {
-				const data = await res.json();
-				if (data.success && data.stats) {
-					const s = data.stats;
-					setStats({
-						uniqueCards: s.overall.uniqueCards,
-						totalCards: s.overall.totalCards,
-						completionPercentage: s.overall.completionPercentage,
-						totalInGame: Math.round(s.overall.uniqueCards / (s.overall.completionPercentage / 100)) || 0,
-						byRarity: s.byRarity || [],
-						byType: s.byType || [],
-					});
-				}
-			}
-		} catch (err) {
-			if (err instanceof DOMException && err.name === 'AbortError') return;
-			debug.error('Error fetching stats:', err);
-		}
-	};
-
 	const hiveCardMap = useMemo(
 		() => new Map(hiveCards.map(c => [c.cardId, c])),
 		[hiveCards],
@@ -270,7 +368,7 @@ export default function CollectionPage() {
 		result.sort((a, b) => {
 			switch (sortBy) {
 				case 'name': return a.name.localeCompare(b.name);
-				case 'rarity': return (RARITY_ORDER[a.rarity] ?? 5) - (RARITY_ORDER[b.rarity] ?? 5);
+				case 'rarity': return getRaritySortRank(a.rarity) - getRaritySortRank(b.rarity);
 				case 'mint': return (a.mintNumber ?? 99999) - (b.mintNumber ?? 99999);
 				case 'recent': default: return 0;
 			}
@@ -480,13 +578,13 @@ export default function CollectionPage() {
 				{error && (
 					<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-8 mb-8">
 						<p className="text-red-400 text-lg mb-4">{error}</p>
-						<motion.button
-							whileHover={{ scale: 1.05 }}
-							whileTap={{ scale: 0.95 }}
-							onClick={() => fetchInventory(1)}
-							className="px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-lg transition-colors"
-						>
-							Retry
+							<motion.button
+								whileHover={{ scale: 1.05 }}
+								whileTap={{ scale: 0.95 }}
+								onClick={() => setRefreshNonce(n => n + 1)}
+								className="px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-lg transition-colors"
+							>
+								Retry
 						</motion.button>
 					</motion.div>
 				)}
@@ -662,11 +760,11 @@ export default function CollectionPage() {
 								animate={{ opacity: 1, y: 0 }}
 								className="flex justify-center items-center gap-4 mt-8"
 							>
-								<motion.button
-									whileHover={{ scale: page === 1 ? 1 : 1.05 }}
-									whileTap={{ scale: page === 1 ? 1 : 0.95 }}
-									onClick={() => page > 1 && fetchInventory(page - 1)}
-									disabled={page === 1 || isLoadingMore}
+									<motion.button
+										whileHover={{ scale: page === 1 ? 1 : 1.05 }}
+										whileTap={{ scale: page === 1 ? 1 : 0.95 }}
+										onClick={() => page > 1 && setPage(page - 1)}
+										disabled={page === 1 || isLoadingMore}
 									className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-all ${
 										page === 1
 											? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
@@ -690,11 +788,11 @@ export default function CollectionPage() {
 									)}
 								</div>
 
-								<motion.button
-									whileHover={{ scale: page === totalPages ? 1 : 1.05 }}
-									whileTap={{ scale: page === totalPages ? 1 : 0.95 }}
-									onClick={() => page < totalPages && fetchInventory(page + 1)}
-									disabled={page === totalPages || isLoadingMore}
+									<motion.button
+										whileHover={{ scale: page === totalPages ? 1 : 1.05 }}
+										whileTap={{ scale: page === totalPages ? 1 : 0.95 }}
+										onClick={() => page < totalPages && setPage(page + 1)}
+										disabled={page === totalPages || isLoadingMore}
 									className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-all ${
 										page === totalPages
 											? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'

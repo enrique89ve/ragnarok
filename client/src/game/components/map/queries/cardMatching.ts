@@ -4,6 +4,8 @@ import { ALL_HERO_LIST } from '../../../data/norseHeroes';
 import { NINE_REALMS } from '../../../campaign/nineRealms';
 import type { CardData } from '../../../types';
 import type { NorseHero } from '../../../types/NorseTypes';
+import { RARITY_ORDER } from '@shared/schemas/rarity';
+import { normalizeRarityKey } from '../../../utils/rarityUtils';
 import { REALM_CARD_MATCHERS } from '../data/cardMatchers';
 import type { MapCardReference, MapCardSection, MapCardSectionId, MapRealmId, RealmShiftSummary } from '../types';
 import { isNonEmptyString, matchesTerm, normalizeText, titleCase } from './textUtils';
@@ -27,13 +29,6 @@ const CARD_SECTION_DEFINITIONS = [
 ] as const satisfies readonly { id: MapCardSectionId; title: string }[];
 
 const CARD_SECTION_LIMIT = 12;
-const RARITY_WEIGHT: Record<string, number> = {
-	mythic: 50,
-	legendary: 45,
-	epic: 35,
-	rare: 25,
-	common: 10,
-};
 
 function getSpellEffectView(card: (typeof realmShiftCards)[number]): RealmShiftCardView['spellEffect'] {
 	if (!('spellEffect' in card) || !card.spellEffect) return undefined;
@@ -181,7 +176,7 @@ function getCardScore(card: CardData, realmId: MapRealmId): number {
 		card.type === 'spell' && card.name.startsWith('Gate to ') ? 30 : 0,
 		petFamily && REALM_CARD_MATCHERS[realmId].petFamilies.includes(petFamily) ? 25 : 0,
 		card.collectible ? 8 : 0,
-		RARITY_WEIGHT[rarity] ?? 0,
+		(RARITY_ORDER[normalizeRarityKey(rarity)] + 1) * 10,
 	].reduce((total, value) => total + value, 0);
 }
 

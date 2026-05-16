@@ -13,7 +13,7 @@
  * CARD ID ALLOCATION (5200-5299 range reserved for Shaman):
  * - Classic minions: 5201-5220
  * - Classic spells: 5221-5250
- * - Legendary minions: 5115-5117 (legacy, kept for backwards compatibility)
+ * - Mythic minions: 5115-5117 (legacy, kept for backwards compatibility)
  * - Token cards: 5251-5260
  * - Additional spells: 5118-5125 (legacy, kept for backwards compatibility)
  */
@@ -227,7 +227,7 @@ export function registerShamanCards(): void {
       targetType: "none"
     })
     .collectible(true)
-    .addCategory("legendary")
+    .addCategory("mythic")
     .build();
 
   // Leviathan's Child
@@ -252,7 +252,7 @@ export function registerShamanCards(): void {
     })
     .customProperty("chainDamage", true)
     .collectible(true)
-    .addCategory("legendary")
+    .addCategory("mythic")
     .build();
 
   // Aeolus, Wind Tyrant
@@ -273,7 +273,7 @@ export function registerShamanCards(): void {
     .addKeyword("taunt")
     .addKeyword("windfury")
     .collectible(true)
-    .addCategory("legendary")
+    .addCategory("mythic")
     .build();
 
   // CLASSIC SHAMAN SPELLS

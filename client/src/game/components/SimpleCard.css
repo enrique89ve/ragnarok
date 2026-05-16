@@ -78,7 +78,8 @@
      76..96%  description / keyword footer band (--card-desc-y, --card-desc-bottom)
      bottom:-16px  stat hexagons (ATK / HP) — overhang on .large
    ========================================================================== */
-:root {
+/* Base card container - Deep premium dark theme */
+.simple-card {
   /* Default (.medium / unsized) */
   --card-banner-y: 23%;
   --card-desc-y: 76%;
@@ -87,20 +88,14 @@
   /* Per-size overrides applied via cascade in .simple-card.{size} blocks */
   --card-banner-y-large: 63%;
   --card-banner-y-preview: 63%;
-
   --card-desc-y-small: 10%;
   --card-desc-y-medium: 20%;
   --card-desc-y-large: 76%;
   --card-desc-y-preview: 46%;
-
   --card-desc-bottom-small: 1%;
   --card-desc-bottom-medium: 26px;
   --card-desc-bottom-large: 36px;
   --card-desc-bottom-preview: 10%;
-}
-
-/* Base card container - Deep premium dark theme */
-.simple-card {
   --rotate-x: 0deg;
   --rotate-y: 0deg;
   --pointer-x: 50%;
@@ -273,12 +268,12 @@
 /* ==========================================================================
    RARITY BORDERS - Animated gradient borders via mask-composite
    Common: static gunmetal | Rare: shimmer sweep | Epic: purple rotation
-   Legendary: gold rotation + white flash | Mythic: rainbow aurora
+   Mythic: rainbow aurora
    ========================================================================== */
 
 /* --- Common: clean gunmetal steel, no animation --- */
 .simple-card.rarity-common::before {
-  border: 2px solid var(--card-common-steel);
+  border: 2px solid var(--rarity-common-deep);
   box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.4);
 }
 
@@ -290,13 +285,13 @@
   border: none;
   background: linear-gradient(
     135deg,
-    var(--card-rare-blue-deep) 0%,
-    var(--card-rare-blue-bright) 20%,
-    var(--card-rare-blue-pale) 45%,
+    var(--rarity-rare-deep) 0%,
+    var(--rarity-rare-color) 20%,
+    var(--rarity-rare-bright) 45%,
     #bfdbfe 50%,
-    var(--card-rare-blue-pale) 55%,
-    var(--card-rare-blue-bright) 80%,
-    var(--card-rare-blue-deep) 100%
+    var(--rarity-rare-bright) 55%,
+    var(--rarity-rare-color) 80%,
+    var(--rarity-rare-deep) 100%
   );
   background-size: 300% 300%;
   -webkit-mask:
@@ -318,11 +313,11 @@
   border: none;
   background: linear-gradient(
     135deg,
-    var(--card-epic-purple-deep) 0%,
-    var(--card-epic-purple-bright) 25%,
+    var(--rarity-epic-deep) 0%,
+    var(--rarity-epic-color) 25%,
     #e9d5ff 50%,
-    var(--card-epic-purple-pale) 75%,
-    var(--card-epic-purple-deep) 100%
+    var(--rarity-epic-bright) 75%,
+    var(--rarity-epic-deep) 100%
   );
   background-size: 300% 300%;
   -webkit-mask:
@@ -782,27 +777,27 @@
 
 /* Rarity-based name colors */
 .simple-card.rarity-mythic .card-name {
-  color: var(--card-mythic-gold-bright);
+  color: var(--rarity-mythic-bright);
   text-shadow:
     0 1px 0 rgba(0, 0, 0, 1),
     0 2px 4px rgba(0, 0, 0, 0.9),
-    0 0 8px color-mix(in srgb, var(--card-mythic-gold-bright) 30%, transparent);
+    0 0 8px color-mix(in srgb, var(--rarity-mythic-bright) 30%, transparent);
 }
 
 .simple-card.rarity-epic .card-name {
-  color: var(--card-epic-purple-pale);
+  color: var(--rarity-epic-bright);
   text-shadow:
     0 1px 0 rgba(0, 0, 0, 1),
     0 2px 4px rgba(0, 0, 0, 0.9),
-    0 0 8px color-mix(in srgb, var(--card-epic-purple-pale) 30%, transparent);
+    0 0 8px color-mix(in srgb, var(--rarity-epic-bright) 30%, transparent);
 }
 
 .simple-card.rarity-rare .card-name {
-  color: var(--card-rare-blue-pale);
+  color: var(--rarity-rare-bright);
   text-shadow:
     0 1px 0 rgba(0, 0, 0, 1),
     0 2px 4px rgba(0, 0, 0, 0.9),
-    0 0 8px color-mix(in srgb, var(--card-rare-blue-pale) 30%, transparent);
+    0 0 8px color-mix(in srgb, var(--rarity-rare-bright) 30%, transparent);
 }
 
 /* ==========================================================================
@@ -824,39 +819,39 @@
   background: linear-gradient(
     135deg,
     var(--info-300) 0%,
-    var(--card-rare-blue-mid) 50%,
-    var(--card-rare-blue-deep) 100%
+    var(--rarity-rare-mid) 50%,
+    var(--rarity-rare-deep) 100%
   );
-  border: 1px solid var(--card-rare-blue-pale);
+  border: 1px solid var(--rarity-rare-bright);
   box-shadow:
-    0 0 6px var(--card-rare-blue-glow),
+    0 0 6px var(--rarity-rare-glow),
     0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .rarity-gem-epic {
   background: linear-gradient(
     135deg,
-    var(--card-epic-purple-pale) 0%,
-    var(--card-epic-purple-mid) 50%,
-    var(--card-epic-purple-deep) 100%
+    var(--rarity-epic-bright) 0%,
+    var(--rarity-epic-mid) 50%,
+    var(--rarity-epic-deep) 100%
   );
   border: 1px solid #ddd6fe;
   box-shadow:
-    0 0 8px var(--card-epic-purple-glow),
+    0 0 8px var(--rarity-epic-glow),
     0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .rarity-gem-mythic {
   background: linear-gradient(
     135deg,
-    var(--card-mythic-gold-pale) 0%,
-    var(--card-mythic-gold-mid) 40%,
-    var(--card-mythic-gold-deep) 100%
+    var(--rarity-mythic-pale) 0%,
+    var(--rarity-mythic-color) 40%,
+    var(--rarity-mythic-deep) 100%
   );
-  border: 1px solid var(--card-mythic-gold-bright);
+  border: 1px solid var(--rarity-mythic-bright);
   box-shadow:
-    0 0 10px var(--card-mythic-gold-glow),
-    0 0 20px color-mix(in srgb, var(--card-mythic-gold-mid) 30%, transparent),
+    0 0 10px var(--rarity-mythic-glow),
+    0 0 20px color-mix(in srgb, var(--rarity-mythic-color) 30%, transparent),
     0 2px 4px rgba(0, 0, 0, 0.5);
   animation: mythic-gem-pulse 3s ease-in-out infinite;
 }
@@ -1276,6 +1271,14 @@
     0 2px 4px rgba(0, 0, 0, 0.9);
 }
 
+.stat-value.stat-damaged {
+  color: #fca5a5;
+  text-shadow:
+    0 0 6px rgba(239, 68, 68, 0.6),
+    0 1px 0 rgba(0, 0, 0, 1),
+    0 2px 4px rgba(0, 0, 0, 0.9);
+}
+
 .stat-value.stat-unknown {
   color: var(--frost-400, #6ea5b3);
   font-style: italic;
@@ -1283,6 +1286,74 @@
     0 0 8px color-mix(in srgb, var(--frost-400) 70%, transparent),
     0 0 16px color-mix(in srgb, var(--frost-400) 40%, transparent),
     0 1px 0 rgba(0, 0, 0, 1);
+}
+
+/* Battlefield stat adapter: same card anatomy, combat-state values injected by caller. */
+.simple-card[data-stats-mode="battlefield"] :is(.card-attack, .card-health) {
+  bottom: -10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  z-index: 25;
+  text-shadow: 0 1px 0 rgba(0,0,0,1), 0 2px 4px rgba(0,0,0,0.9);
+}
+
+.simple-card[data-stats-mode="battlefield"] .card-attack {
+  left: 0;
+  background: linear-gradient(135deg, #FBBF24 0%, #D97706 40%, #B45309 70%, #92400E 100%);
+  border: 2px solid #FDE68A;
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.6),
+    0 0 8px rgba(217,119,6,0.3),
+    inset 0 2px 3px rgba(255,255,255,0.4),
+    inset 0 -2px 3px rgba(0,0,0,0.4);
+}
+
+.simple-card[data-stats-mode="battlefield"] .card-health {
+  right: 0;
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 40%, #B91C1C 70%, #7F1D1D 100%);
+  border: 2px solid #FCA5A5;
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.6),
+    0 0 8px rgba(220,38,38,0.3),
+    inset 0 2px 3px rgba(255,255,255,0.35),
+    inset 0 -2px 3px rgba(0,0,0,0.4);
+}
+
+.simple-card[data-stats-mode="battlefield"] .stat-emblem-bg {
+  display: none;
+}
+
+.simple-card[data-stats-mode="battlefield"] .stat-value {
+  font-size: 15px;
+}
+
+.simple-card[data-stats-mode="battlefield"] :is(.card-attack, .card-health).stat-tone-buffed {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 40%, #15803d 70%, #166534 100%);
+  border-color: #86efac;
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.6),
+    0 0 14px rgba(34,197,94,0.55),
+    inset 0 2px 3px rgba(255,255,255,0.4),
+    inset 0 -2px 3px rgba(0,0,0,0.4);
+  animation: statGemBuffPop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.simple-card[data-stats-mode="battlefield"] .card-health.stat-tone-damaged {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 40%, #991b1b 70%, #450a0a 100%);
+  border-color: #f87171;
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.6),
+    0 0 14px rgba(239,68,68,0.6),
+    inset 0 2px 3px rgba(255,255,255,0.3),
+    inset 0 -2px 3px rgba(0,0,0,0.5);
+}
+
+@keyframes statGemBuffPop {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.55); }
+  65%  { transform: scale(0.92); }
+  100% { transform: scale(1); }
 }
 
 /* ==========================================================================
@@ -1314,11 +1385,7 @@
 }
 
 .simple-card:hover .card-particles::before,
-.simple-card:hover .card-particles::after,
-.holographic-card-container:hover .card-particles::before,
-.holographic-card-container:hover .card-particles::after,
-.holographic-card-container.is-hovering .card-particles::before,
-.holographic-card-container.is-hovering .card-particles::after {
+.simple-card:hover .card-particles::after {
   animation-play-state: running;
 }
 
@@ -1653,6 +1720,18 @@
   background: linear-gradient(180deg, #2a1f10 0%, #1f170a 40%, #140f05 100%);
 }
 
+.simple-card.card-kind-secret .card-name-banner {
+  border-color: rgba(192, 132, 252, 0.32);
+}
+
+.simple-card.card-kind-location .card-name-banner {
+  border-color: rgba(45, 212, 191, 0.28);
+}
+
+.simple-card.card-kind-poker_spell .card-name-banner {
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
 /* ==========================================================================
    WEAPON CARD STYLING - Metallic theme
    ========================================================================== */
@@ -1711,27 +1790,43 @@
 }
 
 /* ==========================================================================
+   HERO CARD STYLING - Crowned champion theme
+   ========================================================================== */
+.simple-card.card-type-hero {
+  background: linear-gradient(180deg, #2b2112 0%, #1c160d 40%, #100c07 100%);
+}
+
+.simple-card.card-type-hero .card-art-container {
+  background: linear-gradient(180deg, #4a3718 0%, #2a1e0d 100%);
+}
+
+.simple-card.card-type-hero .card-name-banner {
+  background: rgba(48, 32, 12, 0.55);
+  border-color: rgba(251, 191, 36, 0.34);
+}
+
+/* ==========================================================================
    ANIMATIONS - Rarity glows (static — no repaint animation needed)
    ========================================================================== */
 
 /* Static outer glows per rarity — on the card element (mask clips ::before box-shadow) */
 .simple-card.rarity-rare {
   box-shadow:
-    0 0 12px color-mix(in srgb, var(--card-rare-blue-bright) 40%, transparent),
-    0 0 24px color-mix(in srgb, var(--card-rare-blue-bright) 15%, transparent);
+    0 0 12px color-mix(in srgb, var(--rarity-rare-color) 40%, transparent),
+    0 0 24px color-mix(in srgb, var(--rarity-rare-color) 15%, transparent);
 }
 
 .simple-card.rarity-epic {
   box-shadow:
-    0 0 16px color-mix(in srgb, var(--card-epic-purple-bright) 45%, transparent),
-    0 0 32px color-mix(in srgb, var(--card-epic-purple-bright) 20%, transparent);
+    0 0 16px color-mix(in srgb, var(--rarity-epic-color) 45%, transparent),
+    0 0 32px color-mix(in srgb, var(--rarity-epic-color) 20%, transparent);
 }
 
 .simple-card.rarity-mythic {
   box-shadow:
-    0 0 20px color-mix(in srgb, var(--card-epic-purple-bright) 35%, transparent),
+    0 0 20px color-mix(in srgb, var(--rarity-epic-color) 35%, transparent),
     0 0 20px rgba(236, 72, 153, 0.3),
-    0 0 40px color-mix(in srgb, var(--card-rare-blue-bright) 20%, transparent);
+    0 0 40px color-mix(in srgb, var(--rarity-rare-color) 20%, transparent);
 }
 
 /* Playable card glow indicator — static shadow + GPU-composited scale pulse */

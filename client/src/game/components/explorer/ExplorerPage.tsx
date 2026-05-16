@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { MetaPageHeader } from '../../../components/navigation/MetaPageHeader';
 import { useNFTUsername } from '../../nft/hooks';
+import { getRarityCssColor, normalizeRarityKey } from '../../utils/rarityUtils';
 
 const API_BASE = '/api/explorer';
 
@@ -74,13 +75,6 @@ interface SupplyCounter {
 
 type Tab = 'overview' | 'nfts' | 'users' | 'marketplace' | 'leaderboard' | 'supply';
 
-const RARITY_COLORS: Record<string, string> = {
-	common: '#9ca3af',
-	rare: '#3b82f6',
-	epic: '#a855f7',
-	mythic: '#f59e0b',
-};
-
 async function apiFetch<T>(path: string): Promise<T> {
 	const res = await fetch(`${API_BASE}${path}`);
 	if (!res.ok) throw new Error(`API error: ${res.status}`);
@@ -126,7 +120,8 @@ function StatCard({ label, value, color }: { label: string; value: string | numb
 }
 
 function RarityBadge({ rarity }: { rarity: string }) {
-	const color = RARITY_COLORS[rarity] ?? '#666';
+	const rarityKey = normalizeRarityKey(rarity);
+	const color = getRarityCssColor(rarityKey);
 	return (
 		<span style={{
 			display: 'inline-block',
@@ -139,7 +134,7 @@ function RarityBadge({ rarity }: { rarity: string }) {
 			background: color,
 			letterSpacing: 0.5,
 		}}>
-			{rarity}
+			{rarityKey}
 		</span>
 	);
 }

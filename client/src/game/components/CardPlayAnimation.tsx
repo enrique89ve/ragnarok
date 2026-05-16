@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
+import { getRarityCssColor, normalizeRarityKey } from '../utils/rarityUtils';
 import './CardPlayAnimation.css';
 
 interface FlyingCard {
@@ -17,14 +18,6 @@ interface CardPlayAnimationProps {
 	playCount: number;
 }
 
-const RARITY_COLORS: Record<string, string> = {
-	common: '#9ca3af',
-	rare: '#3b82f6',
-	epic: '#a855f7',
-	legendary: '#f59e0b',
-	mythic: '#ec4899'
-};
-
 export const CardPlayAnimation: React.FC<CardPlayAnimationProps> = ({ playedCard, playCount }) => {
 	const [flyingCards, setFlyingCards] = useState<FlyingCard[]>([]);
 	const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -36,7 +29,7 @@ export const CardPlayAnimation: React.FC<CardPlayAnimationProps> = ({ playedCard
 			id: `play-${Date.now()}-${Math.random()}`,
 			name: playedCard.name,
 			manaCost: playedCard.manaCost,
-			rarity: playedCard.rarity || 'common',
+			rarity: normalizeRarityKey(playedCard.rarity),
 			startX: window.innerWidth / 2,
 			startY: window.innerHeight - 100
 		};
@@ -57,7 +50,7 @@ export const CardPlayAnimation: React.FC<CardPlayAnimationProps> = ({ playedCard
 		<div className="card-play-layer">
 			<AnimatePresence>
 				{flyingCards.map(card => {
-					const glowColor = RARITY_COLORS[card.rarity] || RARITY_COLORS.common;
+					const glowColor = getRarityCssColor(card.rarity);
 					return (
 						<motion.div
 							key={card.id}

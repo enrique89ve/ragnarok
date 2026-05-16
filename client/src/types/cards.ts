@@ -1,6 +1,6 @@
 /**
  * Card Type Definitions
- * 
+ *
  * This file contains type definitions for card-related entities in the game.
  */
 
@@ -21,7 +21,7 @@ export interface Card {
   type: 'Minion' | 'Spell' | 'Weapon' | 'Hero';
   // Card class (e.g., 'Warrior', 'Mage', 'Neutral')
   class: string;
-  // Card rarity (e.g., 'Common', 'Rare', 'Epic', 'Legendary')
+  // Card rarity (e.g., 'Common', 'Rare', 'Epic', 'Mythic')
   rarity: 'Common' | 'Rare' | 'Epic' | 'Mythic';
   // Whether the card is collectible
   collectible?: boolean;

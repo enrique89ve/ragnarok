@@ -42,17 +42,17 @@ varying vec3 vWorldPosition;
 void main() {
   // Standard UV coordinates
   vUv = uv;
-  
+
   // Calculate transformed normal
   vNormal = normalize(normalMatrix * normal);
-  
+
   // Calculate world position for lighting
   vec4 worldPosition = modelMatrix * vec4(position, 1.0);
   vWorldPosition = worldPosition.xyz;
-  
+
   // Calculate view position for reflections and fresnel
   vViewPosition = cameraPosition - worldPosition.xyz;
-  
+
   // Standard vertex projection
   gl_Position = projectionMatrix * viewMatrix * worldPosition;
 }
@@ -71,7 +71,7 @@ vec4 triplaneGridSample(sampler2D tex, vec2 uv, float texelSize) {
   // Grid sampling for better quality
   vec2 texelSizeVec = vec2(texelSize) / resolution;
   vec4 samples[9];
-  
+
   // 3x3 grid sampling for smoother results
   for (int x = -1; x <= 1; x++) {
     for (int y = -1; y <= 1; y++) {
@@ -80,12 +80,12 @@ vec4 triplaneGridSample(sampler2D tex, vec2 uv, float texelSize) {
       samples[index] = texture2D(tex, uv + offset);
     }
   }
-  
+
   // Apply weighted average with more weight to center samples
   vec4 center = samples[4]; // Center sample
   vec4 sides = (samples[1] + samples[3] + samples[5] + samples[7]) * 0.15; // Direct neighbors
   vec4 corners = (samples[0] + samples[2] + samples[6] + samples[8]) * 0.05; // Corner samples
-  
+
   return center * 0.6 + sides + corners;
 }
 ```
@@ -100,18 +100,18 @@ vec3 perturbNormalEnhanced(vec3 eye_pos, vec3 surf_norm, vec2 uv) {
   vec3 q1 = dFdy(eye_pos.xyz);
   vec2 st0 = dFdx(uv);
   vec2 st1 = dFdy(uv);
-  
+
   vec3 S = normalize(q0 * st1.y - q1 * st0.y);
   vec3 T = normalize(-q0 * st1.x + q1 * st0.x);
   vec3 N = normalize(surf_norm);
-  
+
   // Multi-sample the normal map for better quality (triplane-inspired)
   vec3 mapN = texture2D(normalMap, uv).xyz * 2.0 - 1.0;
-  
+
   // Apply adjustable normal strength based on rarity
-  float normalStrength = 0.8 + isLegendary * 0.2;
+  float normalStrength = 0.8 + isMythic * 0.2;
   mapN.xy *= normalStrength;
-  
+
   // Build the tangent-to-world matrix and transform the normal
   mat3 tsn = mat3(S, T, N);
   return normalize(tsn * mapN);
@@ -133,17 +133,17 @@ float schlickFresnel(float cosTheta, float F0) {
 Different card rarities receive specific visual treatments:
 
 ```glsl
-// Legendary cards (gold)
-if (isLegendary > 0.5) {
-  // Legendary gold edge animation
+// Mythic cards (gold)
+if (isMythic > 0.5) {
+  // Mythic gold edge animation
   float glowPulse = (sin(time * 2.0) * 0.1) + 0.9;
-  vec3 legendaryEdgeColor = rarityColor * glowPulse;
-  finalColor = mix(finalColor, legendaryEdgeColor, edge * 0.7);
-  
+  vec3 mythicEdgeColor = rarityColor * glowPulse;
+  finalColor = mix(finalColor, mythicEdgeColor, edge * 0.7);
+
   // Subtle sparkle effect
   float sparkle = pow(sin(vUv.x * 100.0 + time) * sin(vUv.y * 100.0 + time * 1.3), 20.0);
   finalColor += rarityColor * sparkle * 0.2;
-} 
+}
 // Epic cards (purple)
 else if (isEpic > 0.5) {
   // Epic purple edge

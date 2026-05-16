@@ -12,6 +12,9 @@
   height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: visible;
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 .hero-card-frame {
@@ -30,6 +33,9 @@
   position: relative;
   transition: transform 0.3s ease, opacity 0.3s ease, box-shadow 0.3s ease;
   isolation: isolate;
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 2;
 }
 
 /* Engraved tarnished-gold metallic border (carved, not glossy) */
@@ -98,6 +104,8 @@
   position: relative;
   width: 100%;
   overflow: hidden;
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 .hero-portrait img {

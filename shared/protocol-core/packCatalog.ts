@@ -6,6 +6,7 @@
  */
 
 import type { RuneExchangeQuote, RuneExchangeQuoteInput } from './runeEconomy';
+import { fnv1a } from './broadcast-utils';
 
 export const PACK_KEYS = ['starter', 'booster', 'standard', 'premium', 'mythic', 'mega'] as const;
 export const PUBLIC_PACK_KEYS = ['starter', 'standard', 'premium', 'mythic'] as const;
@@ -30,7 +31,7 @@ export type CanonicalPackDefinition = {
 	rareSlots: number;
 	epicSlots: number;
 	wildcardSlots: number;
-	legendaryChance: number;
+	epicChance: number;
 	mythicChance: number;
 	isActive: boolean;
 	adminMintable: boolean;
@@ -52,7 +53,7 @@ export const PACK_DEFINITIONS: Record<PackKey, CanonicalPackDefinition> = {
 		rareSlots: 0,
 		epicSlots: 0,
 		wildcardSlots: 0,
-		legendaryChance: 0,
+		epicChance: 0,
 		mythicChance: 0,
 		isActive: true,
 		adminMintable: false,
@@ -72,7 +73,7 @@ export const PACK_DEFINITIONS: Record<PackKey, CanonicalPackDefinition> = {
 		rareSlots: 2,
 		epicSlots: 0,
 		wildcardSlots: 1,
-		legendaryChance: 10,
+		epicChance: 10,
 		mythicChance: 2,
 		isActive: false,
 		adminMintable: false,
@@ -92,7 +93,7 @@ export const PACK_DEFINITIONS: Record<PackKey, CanonicalPackDefinition> = {
 		rareSlots: 2,
 		epicSlots: 0,
 		wildcardSlots: 1,
-		legendaryChance: 10,
+		epicChance: 10,
 		mythicChance: 2,
 		isActive: true,
 		adminMintable: true,
@@ -112,7 +113,7 @@ export const PACK_DEFINITIONS: Record<PackKey, CanonicalPackDefinition> = {
 		rareSlots: 1,
 		epicSlots: 1,
 		wildcardSlots: 2,
-		legendaryChance: 15,
+		epicChance: 15,
 		mythicChance: 3,
 		isActive: true,
 		adminMintable: true,
@@ -132,7 +133,7 @@ export const PACK_DEFINITIONS: Record<PackKey, CanonicalPackDefinition> = {
 		rareSlots: 4,
 		epicSlots: 1,
 		wildcardSlots: 2,
-		legendaryChance: 25,
+		epicChance: 25,
 		mythicChance: 5,
 		isActive: true,
 		adminMintable: true,
@@ -152,7 +153,7 @@ export const PACK_DEFINITIONS: Record<PackKey, CanonicalPackDefinition> = {
 		rareSlots: 4,
 		epicSlots: 1,
 		wildcardSlots: 2,
-		legendaryChance: 20,
+		epicChance: 20,
 		mythicChance: 5,
 		isActive: false,
 		adminMintable: true,
@@ -216,9 +217,40 @@ export type HbdPackSaleScenarioTotals = Readonly<{
 	grossHbd: number;
 }>;
 
+export type HbdPackPurchaseQuoteInput = Readonly<{
+	packType: string;
+	quantity: number;
+}>;
+
+export type HbdPackPurchaseQuote = Readonly<{
+	packType: RuneRedeemablePackKey;
+	quantity: number;
+	unitPriceThousandths: number;
+	totalPriceThousandths: number;
+	globalPackCap: number;
+}>;
+
+export type HbdPackPurchaseMemoInput = Readonly<{
+	account: string;
+	packType: string;
+	quantity: number;
+	totalPriceThousandths: number;
+}>;
+
+export type ParsedHbdPackPurchaseMemo = Readonly<{
+	version: 1;
+	account: string;
+	packType: RuneRedeemablePackKey;
+	quantity: number;
+	totalPriceThousandths: number;
+	checksum: string;
+}>;
+
 export const HBD_CURRENCY_CODE = 'HBD' as const;
 export const HBD_PRICE_LOCALE = 'en-US' as const;
 export const ACTIVE_HBD_PACK_SALE_SCENARIO_KEY = 'beta_full_cap' satisfies HbdPackSaleScenarioKey;
+export const MAX_HBD_PACK_PURCHASE_QUANTITY = 100;
+export const HBD_PACK_PURCHASE_MEMO_PREFIX = 'rkpack' as const;
 
 export const TESTNET_RUNE_PACK_POOL: RunePackPoolConfig = {
 	phase: 'testnet',
@@ -326,6 +358,29 @@ export function getHbdPackPriceThousandths(
 	return scenario.priceThousandths[key];
 }
 
+export function getHbdPackPurchaseQuote(
+	input: HbdPackPurchaseQuoteInput,
+	scenario: HbdPackSaleScenario = getActiveHbdPackSaleScenario(),
+): HbdPackPurchaseQuote | null {
+	if (!Number.isInteger(input.quantity) || input.quantity < 1) return null;
+	if (input.quantity > MAX_HBD_PACK_PURCHASE_QUANTITY) return null;
+
+	const key = normalizePackKey(input.packType);
+	if (!key || !isRuneRedeemablePackKey(key)) return null;
+
+	const pack = PACK_DEFINITIONS[key];
+	if (!pack.isActive || !pack.acquisition.includes('direct_purchase')) return null;
+
+	const unitPriceThousandths = scenario.priceThousandths[key];
+	return {
+		packType: key,
+		quantity: input.quantity,
+		unitPriceThousandths,
+		totalPriceThousandths: unitPriceThousandths * input.quantity,
+		globalPackCap: scenario.packCaps[key],
+	};
+}
+
 export function formatHbdThousandths(priceThousandths: number): string {
 	if (!Number.isInteger(priceThousandths) || priceThousandths < 0) {
 		throw new Error(`Invalid HBD thousandths value: ${priceThousandths}`);
@@ -333,11 +388,92 @@ export function formatHbdThousandths(priceThousandths: number): string {
 
 	const whole = Math.trunc(priceThousandths / 1_000);
 	const fraction = priceThousandths % 1_000;
-	return `${whole.toLocaleString(HBD_PRICE_LOCALE)}.${fraction.toString().padStart(3, '0')}`;
+	if (fraction === 0) return whole.toLocaleString(HBD_PRICE_LOCALE);
+
+	const fractionText = fraction
+		.toString()
+		.padStart(3, '0')
+		.replace(/0+$/, '');
+	return `${whole.toLocaleString(HBD_PRICE_LOCALE)}.${fractionText}`;
 }
 
 export function formatHbdPrice(priceThousandths: number): string {
 	return `${formatHbdThousandths(priceThousandths)} ${HBD_CURRENCY_CODE}`;
+}
+
+export function formatHbdTransferAmount(priceThousandths: number): string {
+	if (!Number.isInteger(priceThousandths) || priceThousandths < 0) {
+		throw new Error(`Invalid HBD thousandths value: ${priceThousandths}`);
+	}
+
+	const whole = Math.trunc(priceThousandths / 1_000);
+	const fraction = priceThousandths % 1_000;
+	return `${whole}.${fraction.toString().padStart(3, '0')} ${HBD_CURRENCY_CODE}`;
+}
+
+export function createHbdPackPurchaseMemoChecksum(input: HbdPackPurchaseMemoInput): string {
+	const packKey = normalizePackKey(input.packType) ?? input.packType;
+	return fnv1a([
+		HBD_PACK_PURCHASE_MEMO_PREFIX,
+		'v1',
+		input.account,
+		packKey,
+		input.quantity,
+		input.totalPriceThousandths,
+	].join('|')).slice(0, 12);
+}
+
+export function buildHbdPackPurchaseMemo(input: HbdPackPurchaseMemoInput): string {
+	const packKey = normalizePackKey(input.packType);
+	if (!packKey || !isRuneRedeemablePackKey(packKey)) {
+		throw new Error(`Invalid HBD pack memo pack type: ${input.packType}`);
+	}
+	if (!Number.isInteger(input.quantity) || input.quantity < 1) {
+		throw new Error(`Invalid HBD pack memo quantity: ${input.quantity}`);
+	}
+	if (!Number.isInteger(input.totalPriceThousandths) || input.totalPriceThousandths < 1) {
+		throw new Error(`Invalid HBD pack memo amount: ${input.totalPriceThousandths}`);
+	}
+	return [
+		HBD_PACK_PURCHASE_MEMO_PREFIX,
+		'v1',
+		input.account,
+		packKey,
+		String(input.quantity),
+		String(input.totalPriceThousandths),
+		createHbdPackPurchaseMemoChecksum({ ...input, packType: packKey }),
+	].join(':');
+}
+
+export function parseHbdPackPurchaseMemo(memo: string): ParsedHbdPackPurchaseMemo | null {
+	const [prefix, version, account, packTypeValue, quantityValue, totalValue, checksum] = memo.trim().split(':');
+	if (prefix !== HBD_PACK_PURCHASE_MEMO_PREFIX || version !== 'v1') return null;
+	if (!account || !/^[a-z][a-z0-9.-]{2,15}$/.test(account)) return null;
+	if (!packTypeValue || !isRuneRedeemablePackKey(packTypeValue)) return null;
+	if (!checksum || !/^[a-f0-9]{12}$/.test(checksum)) return null;
+
+	const quantity = Number(quantityValue);
+	if (!Number.isInteger(quantity) || quantity < 1) return null;
+
+	const totalPriceThousandths = Number(totalValue);
+	if (!Number.isInteger(totalPriceThousandths) || totalPriceThousandths < 1) return null;
+
+	const expectedChecksum = createHbdPackPurchaseMemoChecksum({
+		account,
+		packType: packTypeValue,
+		quantity,
+		totalPriceThousandths,
+	});
+	if (checksum !== expectedChecksum) return null;
+
+	return {
+		version: 1,
+		account,
+		packType: packTypeValue,
+		quantity,
+		totalPriceThousandths,
+		checksum,
+	};
 }
 
 export function getRunePackPoolAllocations(pool: RunePackPoolConfig = TESTNET_RUNE_PACK_POOL): RunePackPoolAllocation[] {

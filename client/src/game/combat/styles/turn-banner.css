@@ -2,16 +2,18 @@
 
 .persistent-turn-badge {
 	position: absolute;
+	box-sizing: border-box;
 	top: var(--poker-zone-turnBadge-y, 14px);
 	left: var(--poker-zone-turnBadge-x, 16px);
 	width: var(--poker-zone-turnBadge-w, 152px);
-	min-height: var(--poker-zone-turnBadge-h, 48px);
+	height: var(--poker-zone-turnBadge-h, 48px);
+	min-height: 0;
 	z-index: 9500;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
 	gap: 12px;
-	padding: 8px 18px;
+	padding: 6px 18px;
 	border-radius: 999px;
 	font-family: var(--type-display);
 	font-weight: 900;

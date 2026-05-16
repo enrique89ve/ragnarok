@@ -24,7 +24,7 @@ export const ADDITIONAL_HEROES: Record<string, NorseHero> = {
     lore: 'A warrior who stood against a lightning bolt to prove his worth. Thor\'s thunder now courses through his veins, marking him as the storm\'s chosen champion.',
     gender: 'male',
     hasSpells: true,
-    fixedCardIds: [5309], // Frey's Thunder - lightning legendary
+    fixedCardIds: [5309], // Frey's Thunder - lightning mythic
     heroPower: {
       id: 'thorgrim-power',
       name: 'Lightning Strike',
@@ -241,7 +241,7 @@ export const ADDITIONAL_HEROES: Record<string, NorseHero> = {
     lore: 'An ancient völva who learned to interpret the voice of storms themselves. Each thunderclap carries prophecy to those with ears to hear the storm\'s wisdom.',
     gender: 'female',
     hasSpells: true,
-    fixedCardIds: [5307], // Skoll's Storm - lightning legendary
+    fixedCardIds: [5307], // Skoll's Storm - lightning mythic
     heroPower: {
       id: 'valthrud-power',
       name: 'Thunder Whisper',
@@ -574,7 +574,7 @@ export const ADDITIONAL_HEROES: Record<string, NorseHero> = {
     lore: 'Born during the worst tempest in a thousand years, lightning struck her cradle. Now storms answer to her will, and thunder speaks her name across the sky.',
     gender: 'female',
     hasSpells: true,
-    fixedCardIds: [5308], // Sleipnir's Charge - lightning legendary
+    fixedCardIds: [5308], // Sleipnir's Charge - lightning mythic
     heroPower: {
       id: 'thryma-power',
       name: 'Storm Step',

@@ -1,5 +1,5 @@
-/* Import all combat styles - order matters: tokens → zones → pot-display */
-@import "./styles/index.css";
+/* Viewport shell only. Combat component styles are imported once by
+   RagnarokCombatArena.css so this file does not re-inject the style manifest. */
 
 /* ========================================
    GAME VIEWPORT - 16:9 Fixed Aspect Container

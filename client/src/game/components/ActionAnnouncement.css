@@ -20,7 +20,7 @@
   );
   border: 2px solid var(--rarity-color, var(--gold-300));
   border-radius: 12px;
-  box-shadow: 
+  box-shadow:
     0 0 40px color-mix(in srgb, var(--rarity-color, var(--gold-300)) 50%, transparent),
     0 8px 32px rgba(0, 0, 0, 0.6);
   position: relative;
@@ -87,7 +87,7 @@
   font-size: 28px;
   font-weight: 800;
   color: var(--text-near-white);
-  text-shadow: 
+  text-shadow:
     0 0 10px var(--rarity-color, var(--gold-300)),
     0 2px 4px rgba(0, 0, 0, 0.8);
   margin: 0;
@@ -145,20 +145,20 @@
   --rarity-color: var(--rarity-epic-color);
 }
 
-.action-announcement-legendary {
+.action-announcement-mythic {
   --rarity-color: var(--rarity-mythic-color);
-  animation: legendaryShimmer 2s ease-in-out infinite;
+  animation: mythicShimmer 2s ease-in-out infinite;
 }
 
-@keyframes legendaryShimmer {
-  0%, 100% { 
-    box-shadow: 
+@keyframes mythicShimmer {
+  0%, 100% {
+    box-shadow:
       0 0 50px color-mix(in srgb, var(--rarity-mythic-color) 80%, transparent),
       0 0 80px color-mix(in srgb, var(--gold-300) 50%, transparent),
       inset 0 0 20px rgba(255, 255, 255, 0.1);
   }
-  50% { 
-    box-shadow: 
+  50% {
+    box-shadow:
       0 0 70px var(--rarity-mythic-color),
       0 0 100px color-mix(in srgb, var(--gold-200) 70%, transparent),
       inset 0 0 30px rgba(255, 255, 255, 0.2);

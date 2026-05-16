@@ -8,7 +8,12 @@
 import { debug } from '../../config/debugConfig';
 import React, { useMemo } from 'react';
 import { CardData, CardInstance } from '../../types';
-import { SimpleCard, SimpleCardData } from '../SimpleCard';
+import {
+  normalizeSimpleCardRarity,
+  normalizeSimpleCardType,
+  SimpleCard,
+} from '../SimpleCard';
+import type { SimpleCardData, SimpleCardStatsMode, SimpleCardStatView } from '../SimpleCard';
 import { getCardDataSafely } from '../../utils/cards/cardInstanceAdapter';
 import { getCardById } from '../../data/allCards';
 
@@ -36,6 +41,8 @@ interface CardRendererProps {
   size?: 'small' | 'medium' | 'large' | 'preview';
   attackBuff?: number;
   healthBuff?: number;
+  statView?: SimpleCardStatView;
+  statsMode?: SimpleCardStatsMode;
 }
 
 /**
@@ -54,7 +61,9 @@ const CardRenderer: React.FC<CardRendererProps> = React.memo(({
   style = EMPTY_STYLE,
   size = 'medium',
   attackBuff = 0,
-  healthBuff = 0
+  healthBuff = 0,
+  statView,
+  statsMode = 'frame'
 }) => {
   const processedCard = useMemo(() => getCardDataSafely(card), [card]);
 
@@ -72,8 +81,8 @@ const CardRenderer: React.FC<CardRendererProps> = React.memo(({
       attack: processedCard.attack,
       health: processedCard.health,
       description: processedCard.description || '',
-      type: (processedCard.type as 'minion' | 'spell' | 'weapon') || 'minion',
-      rarity: (processedCard.rarity as 'common' | 'rare' | 'epic' | 'mythic') || 'common',
+      type: normalizeSimpleCardType(processedCard.type),
+      rarity: normalizeSimpleCardRarity(processedCard.rarity),
       tribe: processedCard.tribe,
       cardClass: processedCard.cardClass || processedCard.class,
       keywords: processedCard.keywords || [],
@@ -112,6 +121,8 @@ const CardRenderer: React.FC<CardRendererProps> = React.memo(({
         showDescription={size === 'large' || size === 'preview'}
         attackBuff={attackBuff}
         healthBuff={healthBuff}
+        statView={statView}
+        statsMode={statsMode}
       />
     </div>
   );

@@ -7,9 +7,14 @@
  * compile errors via the `Record<Rarity, ...>` type.
  */
 import type { Rarity } from '@shared/schemas/rarity';
-import { tryAdaptRarity } from '@shared/schemas/rarity';
+import { RARITY_ORDER, tryAdaptRarity } from '@shared/schemas/rarity';
 
-interface RarityUi {
+export interface RarityUi {
+	key: Rarity;
+	label: string;
+	cssColor: string;
+	cssBright: string;
+	cssGlow: string;
 	color: string;
 	border: string;
 	glow: string;
@@ -17,49 +22,83 @@ interface RarityUi {
 	bgColor: string;
 }
 
-const RARITY_UI: Record<Rarity, RarityUi> = {
+export const RARITY_UI: Record<Rarity, RarityUi> = {
 	common: {
-		color:      'text-gray-300',
-		border:     'border-gray-500',
-		glow:       'shadow-[0_0_30px_rgba(255,255,255,0.5)]',
-		background: 'bg-linear-to-br from-gray-700 to-gray-800',
-		bgColor:    'bg-gray-600/30',
+		key:        'common',
+		label:      'Common',
+		cssColor:   'var(--rarity-common-color)',
+		cssBright:  'var(--rarity-common-bright)',
+		cssGlow:    'var(--rarity-common-glow)',
+		color:      'text-[var(--rarity-common-bright)]',
+		border:     'border-[var(--rarity-common-color)]',
+		glow:       'shadow-[0_0_30px_var(--rarity-common-glow)]',
+		background: 'bg-[color-mix(in_srgb,var(--rarity-common-deep)_70%,var(--obsidian-900))]',
+		bgColor:    'bg-[color-mix(in_srgb,var(--rarity-common-color)_18%,transparent)]',
 	},
 	rare: {
-		color:      'text-blue-400',
-		border:     'border-blue-500',
-		glow:       'shadow-[0_0_40px_rgba(59,130,246,0.8)]',
-		background: 'bg-linear-to-br from-blue-800 to-blue-900',
-		bgColor:    'bg-blue-600/30',
+		key:        'rare',
+		label:      'Rare',
+		cssColor:   'var(--rarity-rare-color)',
+		cssBright:  'var(--rarity-rare-bright)',
+		cssGlow:    'var(--rarity-rare-glow)',
+		color:      'text-[var(--rarity-rare-bright)]',
+		border:     'border-[var(--rarity-rare-color)]',
+		glow:       'shadow-[0_0_40px_var(--rarity-rare-glow)]',
+		background: 'bg-[color-mix(in_srgb,var(--rarity-rare-deep)_70%,var(--obsidian-900))]',
+		bgColor:    'bg-[color-mix(in_srgb,var(--rarity-rare-color)_22%,transparent)]',
 	},
 	epic: {
-		color:      'text-purple-400',
-		border:     'border-purple-500',
-		glow:       'shadow-[0_0_50px_rgba(147,51,234,0.9)]',
-		background: 'bg-linear-to-br from-purple-800 to-purple-900',
-		bgColor:    'bg-purple-600/30',
+		key:        'epic',
+		label:      'Epic',
+		cssColor:   'var(--rarity-epic-color)',
+		cssBright:  'var(--rarity-epic-bright)',
+		cssGlow:    'var(--rarity-epic-glow)',
+		color:      'text-[var(--rarity-epic-bright)]',
+		border:     'border-[var(--rarity-epic-color)]',
+		glow:       'shadow-[0_0_50px_var(--rarity-epic-glow)]',
+		background: 'bg-[color-mix(in_srgb,var(--rarity-epic-deep)_70%,var(--obsidian-900))]',
+		bgColor:    'bg-[color-mix(in_srgb,var(--rarity-epic-color)_24%,transparent)]',
 	},
 	mythic: {
-		color:      'text-transparent bg-clip-text bg-linear-to-r from-pink-500 via-purple-500 to-cyan-500',
-		border:     'border-pink-500',
-		glow:       'shadow-[0_0_80px_rgba(236,72,153,1),0_0_120px_rgba(139,92,246,0.8)]',
-		background: 'bg-linear-to-br from-pink-800 via-purple-800 to-cyan-800',
-		bgColor:    'bg-linear-to-r from-pink-600/30 via-purple-600/30 to-cyan-600/30',
+		key:        'mythic',
+		label:      'Mythic',
+		cssColor:   'var(--rarity-mythic-color)',
+		cssBright:  'var(--rarity-mythic-bright)',
+		cssGlow:    'var(--rarity-mythic-glow)',
+		color:      'text-[var(--rarity-mythic-bright)]',
+		border:     'border-[var(--rarity-mythic-color)]',
+		glow:       'shadow-[0_0_64px_var(--rarity-mythic-glow)]',
+		background: 'bg-[color-mix(in_srgb,var(--rarity-mythic-deep)_72%,var(--obsidian-900))]',
+		bgColor:    'bg-[color-mix(in_srgb,var(--rarity-mythic-color)_26%,transparent)]',
 	},
 };
 
 const FALLBACK: RarityUi = RARITY_UI.common;
 
-const resolve = (input: string): RarityUi => {
+export const normalizeRarityKey = (input?: string | null): Rarity => {
+	if (!input) return 'common';
 	const canon = tryAdaptRarity(input);
-	return canon ? RARITY_UI[canon] : FALLBACK;
+	return canon ?? 'common';
 };
 
-export const getRarityColor      = (r: string): string => resolve(r).color;
-export const getRarityBorder     = (r: string): string => resolve(r).border;
-export const getRarityGlow       = (r: string): string => resolve(r).glow;
-export const getRarityBackground = (r: string): string => resolve(r).background;
-export const getRarityBgColor    = (r: string): string => resolve(r).bgColor;
+export const getRarityUi = (input?: string | null): RarityUi => {
+	const canon = normalizeRarityKey(input);
+	return RARITY_UI[canon] ?? FALLBACK;
+};
+
+export const getRarityColor      = (r: string): string => getRarityUi(r).color;
+export const getRarityBorder     = (r: string): string => getRarityUi(r).border;
+export const getRarityGlow       = (r: string): string => getRarityUi(r).glow;
+export const getRarityBackground = (r: string): string => getRarityUi(r).background;
+export const getRarityBgColor    = (r: string): string => getRarityUi(r).bgColor;
+export const getRarityCssColor   = (r: string): string => getRarityUi(r).cssColor;
+export const getRarityCssBright  = (r: string): string => getRarityUi(r).cssBright;
+export const getRarityCssGlow    = (r: string): string => getRarityUi(r).cssGlow;
+export const getRarityLabel      = (r: string): string => getRarityUi(r).label;
+export const getRaritySortRank   = (r: string): number => {
+	const canon = normalizeRarityKey(r);
+	return -RARITY_ORDER[canon];
+};
 
 export function getTypeIcon(type: string): string {
 	switch (type) {

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { CardData } from '../types';
 import { Position } from '../types/Position';
 
-export interface ActiveLegendaryCard {
+export interface ActiveMythicCard {
 	card: CardData;
 	position: Position;
 }
@@ -14,12 +14,12 @@ export interface ActiveEnvironmentalEffect {
 }
 
 export function useGameAnimationEffects() {
-	const [activeLegendaryCard, setActiveLegendaryCard] = useState<ActiveLegendaryCard | null>(null);
+	const [activeMythicCard, setActiveMythicCard] = useState<ActiveMythicCard | null>(null);
 	const [activeEnvironmentalEffect, setActiveEnvironmentalEffect] = useState<ActiveEnvironmentalEffect | null>(null);
 
 	return {
-		activeLegendaryCard,
-		setActiveLegendaryCard,
+		activeMythicCard,
+		setActiveMythicCard,
 		activeEnvironmentalEffect,
 		setActiveEnvironmentalEffect
 	};

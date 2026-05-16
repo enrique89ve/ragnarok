@@ -2,6 +2,9 @@
 // Values must match the Card Rarity table in docs/RULEBOOK.md.
 // Eitr is non-transferable, season-scoped, mirror of RUNE ledger shape.
 
+import type { Rarity } from '../schemas/rarity';
+import { RARITY, eitrDissolve, eitrForge, tryAdaptRarity } from '../schemas/rarity';
+
 export const TESTNET_EITR_SEASON_ID = 'S01';
 
 export type EitrLedgerDirection = 'credit' | 'debit';
@@ -36,30 +39,24 @@ export type EitrLedgerEntryQuery = {
 
 export type EitrLedgerTotalQuery = EitrLedgerEntryQuery;
 
-export type EitrRarity = 'common' | 'rare' | 'epic' | 'mythic';
+export type EitrRarity = Rarity;
 
-export const EITR_DISSOLVE_VALUES: Record<EitrRarity, number> = {
-	common: 5,
-	rare: 20,
-	epic: 100,
-	mythic: 400,
-};
+export const EITR_DISSOLVE_VALUES: Record<EitrRarity, number> = Object.fromEntries(
+	RARITY.map(rarity => [rarity, eitrDissolve(rarity)]),
+) as Record<EitrRarity, number>;
 
-export const EITR_FORGE_COSTS: Record<EitrRarity, number> = {
-	common: 40,
-	rare: 100,
-	epic: 400,
-	mythic: 1600,
-};
+export const EITR_FORGE_COSTS: Record<EitrRarity, number> = Object.fromEntries(
+	RARITY.map(rarity => [rarity, eitrForge(rarity)]),
+) as Record<EitrRarity, number>;
 
 export function getEitrDissolveValue(rarity: string): number {
-	const key = rarity.toLowerCase() as EitrRarity;
-	return EITR_DISSOLVE_VALUES[key] ?? 0;
+	const key = tryAdaptRarity(rarity);
+	return key ? EITR_DISSOLVE_VALUES[key] : 0;
 }
 
 export function getEitrForgeCost(rarity: string): number {
-	const key = rarity.toLowerCase() as EitrRarity;
-	return EITR_FORGE_COSTS[key] ?? 0;
+	const key = tryAdaptRarity(rarity);
+	return key ? EITR_FORGE_COSTS[key] : 0;
 }
 
 export function createEitrLedgerEntryId(input: {

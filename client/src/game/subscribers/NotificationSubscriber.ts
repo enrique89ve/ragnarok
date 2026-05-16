@@ -3,7 +3,7 @@
  *
  * Subscribes to GameEventBus events and triggers UI notifications.
  * Decouples toast/notification logic from game logic.
- * 
+ *
  * Added by Enrique - Event-driven architecture integration
  */
 
@@ -58,7 +58,7 @@ export function initializeNotificationSubscriber(
   const cfg = { ...DEFAULT_CONFIG, ...config };
   const unsubscribes: UnsubscribeFn[] = [];
 
-  // Card Played (only for legendary cards)
+  // Card Played (only for mythic cards)
   if (cfg.showCardPlayed) {
     unsubscribes.push(
       GameEventBus.subscribe<CardPlayedEvent>('CARD_PLAYED', (event) => {

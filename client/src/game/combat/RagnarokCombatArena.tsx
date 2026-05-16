@@ -18,7 +18,6 @@ import { TargetingOverlay } from '../components/TargetingOverlay';
 import { CardBurnOverlay } from '../components/CardBurnOverlay';
 import { ActionAnnouncement } from '../components/ActionAnnouncement';
 import './RagnarokCombatArena.css';
-import './GameViewport.css';
 import AIAttackAnimationProcessor from '../components/AIAttackAnimationProcessor';
 import { PixiParticleCanvas } from '../animations/PixiParticleCanvas';
 

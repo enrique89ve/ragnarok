@@ -2,7 +2,7 @@
  * Super Minion Cards Registration
  * 
  * Registers all 76 hero-linked super minions in the card registry.
- * These legendary minions gain +2/+2 when played by their linked hero.
+ * These mythic minions gain +2/+2 when played by their linked hero.
  */
 import { debug } from '../../config/debugConfig';
 import { registerCard } from '../cardManagement/cardRegistry';

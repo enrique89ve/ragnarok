@@ -32,6 +32,7 @@ import { clientDuatEntitlementProvider } from './clientDuatEntitlementProvider';
 import { hiveEvents } from '../HiveEvents';
 import { getCardDataProvider } from './ICardDataProvider';
 import { HIVE_NODES } from './hiveConfig';
+import { getRagnarokNetworkConfig } from '@/game/config/networkConfig';
 
 // ============================================================
 // RawOp format (from replayEngine.ts)
@@ -44,6 +45,8 @@ export interface RawOp {
 	trxId: string;
 	blockNum: number;
 	timestamp: number;
+	requiredPostingAuths?: string[];
+	requiredAuths?: string[];
 }
 
 // ============================================================
@@ -133,6 +136,7 @@ async function getBlockId(blockNum: number): Promise<string | null> {
 
 function buildDeps(): ProtocolCoreDeps {
 	return {
+		runtime: getRagnarokNetworkConfig(),
 		state: clientStateAdapter,
 		cards: getCardDataProviderAdapter(),
 		rewards: rewardProviderAdapter,
@@ -158,13 +162,17 @@ export async function applyOp(op: RawOp): Promise<void> {
 		timestamp: op.timestamp,
 		// The replay engine normalizes these before calling us,
 		// but the protocol-core normalizer also handles them.
-		// Use op.id prefix to infer authority level.
-		requiredPostingAuths: [op.broadcaster],
-		requiredAuths: [],
+		requiredPostingAuths: op.requiredPostingAuths ?? [op.broadcaster],
+		requiredAuths: op.requiredAuths ?? [],
 	};
 
+	const runtime = getRagnarokNetworkConfig();
+
 	// Normalize through protocol-core (legacy mapping, authority check)
-	const normalized = normalizeRawOp(rawHiveOp);
+	const normalized = normalizeRawOp(rawHiveOp, {
+		protocolIds: [runtime.protocolId],
+		acceptLegacyProtocolIds: runtime.acceptsLegacyProtocolIds,
+	});
 	if (normalized.status === 'ignore') return;
 
 	// Build context with LIB + block-id lookup

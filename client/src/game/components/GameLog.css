@@ -1,12 +1,13 @@
 .game-log-container {
   --battle-log-deck-reserve: 52px;
+  --battle-log-bottom-lift: 56px;
   --battle-log-open-lift: 320px;
   --battle-log-width-boost: 128px;
   --battle-log-dock-height-boost: 88px;
   --battle-log-anchor-bottom: calc(
     var(--poker-reference-height, 1080px) -
-      var(--poker-zone-battleLog-y, 792px) -
-      var(--poker-zone-battleLog-h, 232px) + var(--battle-log-deck-reserve)
+      var(--poker-bottom-rail-y, 1024px) + var(--battle-log-deck-reserve) +
+      var(--battle-log-bottom-lift)
   );
   --battle-log-panel-bg: color-mix(
     in srgb,

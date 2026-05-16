@@ -1267,7 +1267,7 @@ export function HeroDetailPopup({ hero, isOpen, onClose, onSelect }: HeroDetailP
 
               {/* ===== FRONT FACE — Portrait ===== */}
               <div
-                className={`card-front rarity-${edition.rarity} ${getHoloTier(edition.rarity) || ''} holo-active`}
+                className={`card-front rarity-${edition.tier === 'starter' ? 'common' : edition.tier} ${getHoloTier(edition.tier === 'starter' ? 'common' : edition.tier) || ''} holo-active`}
                 onClick={handleFlip}
                 style={{
                   '--pointer-x': `${mousePercent.x}%`,
@@ -1336,7 +1336,7 @@ export function HeroDetailPopup({ hero, isOpen, onClose, onSelect }: HeroDetailP
                   ))}
 
                   <motion.div
-                    className={`edition-stamp edition-${edition.rarity}`}
+                    className={`edition-stamp edition-${edition.tier === 'starter' ? 'common' : edition.tier}`}
                     initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3, duration: 0.4 }}
@@ -1344,7 +1344,7 @@ export function HeroDetailPopup({ hero, isOpen, onClose, onSelect }: HeroDetailP
                     {edition.editionLabel} EDITION
                   </motion.div>
 
-                  {edition.rarity !== 'base' && (
+                  {edition.tier !== 'starter' && (
                     <motion.div
                       className="scarcity-badge"
                       initial={{ opacity: 0, y: 8 }}

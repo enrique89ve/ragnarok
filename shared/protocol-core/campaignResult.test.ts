@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { applyOp, type ProtocolCoreDeps } from './apply';
 import { canonicalStringify, sha256Hash } from './hash';
 import { normalizeRawOp } from './normalize';
+import { RAGNAROK_RUNTIME_CONFIGS } from '../runtimeConfig';
 import type {
 	CampaignProgressRecord,
 	CampaignSubmissionRecord,
@@ -181,6 +182,7 @@ function createStateAdapter(): StateAdapter & {
 
 function createDeps(state: StateAdapter, campaignId = CAMPAIGN_ID): ProtocolCoreDeps {
 	return {
+		runtime: RAGNAROK_RUNTIME_CONFIGS.mainnet,
 		state,
 		cards: {
 			getCardById: () => null,

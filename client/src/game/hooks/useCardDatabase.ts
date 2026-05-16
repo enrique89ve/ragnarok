@@ -1,6 +1,6 @@
 /**
  * useCardDatabase.ts
- * 
+ *
  * A hook that provides easy access to the card database service
  * for any component that needs to fetch card data.
  */
@@ -11,7 +11,7 @@ import CardDatabaseService from '../services/cardDatabase';
 
 export const useCardDatabase = () => {
   const [isLoaded, setIsLoaded] = useState(false);
-  
+
   useEffect(() => {
     // The CardDatabaseService auto-initializes with demo data
     // Just mark as loaded when ready
@@ -26,42 +26,42 @@ export const useCardDatabase = () => {
       return undefined;
     }
   }, []);
-  
+
   /**
    * Get a card by its ID
    */
   const getCardById = (id: number | string): CardData | undefined => {
     return CardDatabaseService.getCardById(id);
   };
-  
+
   /**
    * Get all cards in the database
    */
   const getAllCards = (): CardData[] => {
     return CardDatabaseService.getAllCards();
   };
-  
+
   /**
    * Get cards by class
    */
   const getCardsByClass = (className: string): CardData[] => {
     return CardDatabaseService.getCardsByClass(className);
   };
-  
+
   /**
    * Get cards by type
    */
   const getCardsByType = (type: string): CardData[] => {
     return CardDatabaseService.getCardsByType(type);
   };
-  
+
   /**
    * Get cards by rarity
    */
   const getCardsByRarity = (rarity: string): CardData[] => {
     return CardDatabaseService.getCardsByRarity(rarity);
   };
-  
+
   /**
    * Get random card from the database
    */
@@ -83,14 +83,14 @@ export const useCardDatabase = () => {
     }
     return cards[Math.floor(Math.random() * cards.length)];
   };
-  
+
   /**
    * Get mythic cards only
    */
   const getMythicCards = (): CardData[] => {
     return CardDatabaseService.getCardsByRarity('mythic');
   };
-  
+
   /**
    * Search cards by name, description, or other properties
    */
@@ -99,7 +99,7 @@ export const useCardDatabase = () => {
       nameContains: query
     });
   };
-  
+
   return {
     isLoaded,
     getCardById,
@@ -109,7 +109,6 @@ export const useCardDatabase = () => {
     getCardsByRarity,
     getRandomCard,
     getMythicCards,
-    getLegendaryCards: getMythicCards,
     searchCards
   };
 };

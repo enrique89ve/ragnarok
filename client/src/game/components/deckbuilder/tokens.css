@@ -14,25 +14,22 @@
 
 .deck-builder {
   /* ===== Rarity Colors — Text ===== */
-  --rarity-free-text:       var(--ink-200);
   --rarity-common-text:     var(--ink-0);
-  --rarity-rare-text:       var(--card-rare-blue-bright);
-  --rarity-epic-text:       var(--card-epic-purple-pale);
-  --rarity-legendary-text:  var(--warning-300);
+  --rarity-rare-text:       var(--rarity-rare-color);
+  --rarity-epic-text:       var(--rarity-epic-bright);
+  --rarity-mythic-text:     var(--rarity-mythic-bright);
 
   /* ===== Rarity Colors — Border ===== */
-  --rarity-free-border:     var(--ink-300);
   --rarity-common-border:   var(--ink-200);
-  --rarity-rare-border:     var(--card-rare-blue-bright);
-  --rarity-epic-border:     var(--card-epic-purple-bright);
-  --rarity-legendary-border:var(--warning-400);
+  --rarity-rare-border:     var(--rarity-rare-color);
+  --rarity-epic-border:     var(--rarity-epic-color);
+  --rarity-mythic-border:   var(--rarity-mythic-color);
 
   /* ===== Rarity Colors — Background ===== */
-  --rarity-free-bg:         var(--obsidian-600);
   --rarity-common-bg:       var(--obsidian-600);
-  --rarity-rare-bg:         color-mix(in srgb, var(--card-rare-blue-deep) 50%, transparent);
-  --rarity-epic-bg:         color-mix(in srgb, var(--card-epic-purple-deep) 50%, transparent);
-  --rarity-legendary-bg:    color-mix(in srgb, var(--ember-600) 50%, transparent);
+  --rarity-rare-bg:         color-mix(in srgb, var(--rarity-rare-deep) 50%, transparent);
+  --rarity-epic-bg:         color-mix(in srgb, var(--rarity-epic-deep) 50%, transparent);
+  --rarity-mythic-bg:       color-mix(in srgb, var(--rarity-mythic-deep) 50%, transparent);
 
   /* ===== Stat Colors ===== */
   --stat-mana:              var(--stat-mana, var(--bifrost-500));

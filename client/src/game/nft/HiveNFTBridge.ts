@@ -13,6 +13,7 @@ import { buildHiveAuthBody, loginWithHiveWallet } from '@/data/HiveAuth';
 import { hiveSync } from '@/data/HiveSync';
 import { hiveEvents } from '@/data/HiveEvents';
 import { useHiveDataStore } from '@/data/HiveDataLayer';
+import { getCurrentHiveUsername } from '@/data/HiveSessionIdentity';
 import { isBlockchainPackagingEnabled as checkPackaging } from '@/game/config/featureFlags';
 import { STARTER_ENTITLEMENT } from '@shared/schemas/starterEntitlement';
 import type {
@@ -40,11 +41,11 @@ export class HiveNFTBridge implements INFTBridge {
 	// ── Identity ──
 
 	getUsername(): string | null {
-		return useHiveDataStore.getState().user?.hiveUsername ?? null;
+		return getCurrentHiveUsername();
 	}
 
 	isLoggedIn(): boolean {
-		return !!useHiveDataStore.getState().user;
+		return getCurrentHiveUsername() !== null;
 	}
 
 	// ── Collection ──
@@ -141,12 +142,23 @@ export class HiveNFTBridge implements INFTBridge {
 		return hiveSync.transferCards(cardUids, toUser, memo);
 	}
 
-	async openPack(packType: string, quantity: number = 1): Promise<BroadcastResult> {
-		return hiveSync.openPack(packType, quantity);
+	async openPack(_packType: string, _quantity: number = 1): Promise<BroadcastResult> {
+		return {
+			success: false,
+			error: 'Legacy pack open is disabled. Use rune_exchange to create sealed packs, then burnPack from the vault.',
+		};
 	}
 
 	async runeExchange(packType: string, quantity: number = 1): Promise<BroadcastResult> {
 		return hiveSync.runeExchange(packType, quantity);
+	}
+
+	async purchasePackHbd(
+		packType: string,
+		quantity: number,
+		totalPriceThousandths: number,
+	): Promise<BroadcastResult> {
+		return hiveSync.purchasePackHbd(packType, quantity, totalPriceThousandths);
 	}
 
 	async signResultHash(hash: string): Promise<string> {

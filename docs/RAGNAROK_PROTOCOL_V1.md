@@ -755,7 +755,7 @@ The `starter` pack key in `packCatalog.ts` is intentionally **not** a chain-broa
 |---|---|
 | `cardCount` | 45 |
 | Slots | `commonSlots: 45` (all collapsed — pack is deterministic, no roll) |
-| `legendaryChance` / `mythicChance` | 0 |
+| `epicChance` / `mythicChance` | 0 |
 | `acquisition` | `['free_starter_claim']` (no `direct_purchase`, no `rune_exchange`) |
 | Source of card IDs | [`shared/schemas/starterEntitlement.ts`](../shared/schemas/starterEntitlement.ts) — `STARTER_ENTITLEMENT_CARD_IDS_BY_CLASS` (10 Mage + 10 Warrior + 10 Priest + 10 Rogue + 5 Neutral) |
 | Materialization | `materializeStarterEntitlement()` in `client/src/game/data/starterSet.ts` — writes 45 starter-category cards directly into the local collection. No Hive broadcast for the cards themselves. |

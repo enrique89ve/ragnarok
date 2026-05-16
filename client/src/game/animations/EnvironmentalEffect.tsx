@@ -1,10 +1,10 @@
 /**
  * EnvironmentalEffect.tsx
- * 
+ *
  * Renders class and rarity-specific environmental effects that
  * enhance the atmosphere based on cards in play.
  * This creates a cinematic experience when high-value cards
- * (especially legendary and epic) are drawn or played.
+ * (especially mythic and epic) are drawn or played.
  */
 
 import React, { useEffect, useState, useRef } from 'react';
@@ -29,11 +29,11 @@ const EnvironmentalEffect: React.FC<EnvironmentalEffectProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const particlesRef = useRef<HTMLDivElement>(null);
   const { playSoundEffect } = useAudio();
-  
+
   // Map card classes to color schemes and effect types
   const getClassColorScheme = () => {
     const className = (card.class || card.heroClass || 'Neutral').toLowerCase();
-    
+
     switch (className) {
       case 'warrior':
         return {
@@ -125,7 +125,7 @@ const EnvironmentalEffect: React.FC<EnvironmentalEffectProps> = ({
         };
     }
   };
-  
+
   // Apply intensity multiplier to effect strength
   const getIntensityMultiplier = () => {
     switch (intensity) {
@@ -134,11 +134,11 @@ const EnvironmentalEffect: React.FC<EnvironmentalEffectProps> = ({
       default: return 1.0; // medium
     }
   };
-  
-  // Further enhance effects for rare/epic/legendary cards
+
+  // Further enhance effects for rare/epic/mythic cards
   const getRarityBoost = () => {
     if (!card.rarity) return 1.0;
-    
+
     switch (card.rarity.toLowerCase()) {
       case 'mythic': return 2.0;
       case 'epic': return 1.5;
@@ -146,18 +146,18 @@ const EnvironmentalEffect: React.FC<EnvironmentalEffectProps> = ({
       default: return 1.0; // common
     }
   };
-  
+
   // Calculate final effect intensity
   const effectIntensity = getIntensityMultiplier() * getRarityBoost();
-  
+
   // Get color scheme based on card class
   const colorScheme = getClassColorScheme();
-  
+
   // Get particle shapes based on card class
   const getParticleShapes = () => {
     const shapes = [];
     const particleType = colorScheme.particles;
-    
+
     switch (particleType) {
       case 'weapon':
         shapes.push('M0,0 L10,0 L15,20 L5,20 Z'); // Sword
@@ -204,10 +204,10 @@ const EnvironmentalEffect: React.FC<EnvironmentalEffectProps> = ({
         shapes.push('M0,0 L20,0 L10,20 Z'); // Triangle
         break;
     }
-    
+
     return shapes;
   };
-  
+
   // Effect initialization
   useEffect(() => {
     if (!containerRef.current) return;
@@ -299,24 +299,24 @@ const EnvironmentalEffect: React.FC<EnvironmentalEffectProps> = ({
   if (!visible) return null;
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className="fixed inset-0 pointer-events-none z-40"
-      style={{ 
-        background: `radial-gradient(circle, ${colorScheme.glow} 0%, rgba(0,0,0,0) 70%)` 
+      style={{
+        background: `radial-gradient(circle, ${colorScheme.glow} 0%, rgba(0,0,0,0) 70%)`
       }}
     >
       {/* Particles container */}
-      <div 
+      <div
         ref={particlesRef}
         className="absolute inset-0"
       />
-      
+
       {/* Class-specific environmental overlay */}
-      <div className="absolute inset-0" 
-        style={{ 
+      <div className="absolute inset-0"
+        style={{
           boxShadow: `inset 0 0 ${50 * effectIntensity}px ${colorScheme.glow}`
-        }} 
+        }}
       />
     </div>
   );

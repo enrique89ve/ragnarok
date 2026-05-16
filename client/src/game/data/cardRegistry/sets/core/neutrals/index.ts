@@ -3,7 +3,7 @@ import { allYggdrasilGolemCards } from './yggdrasilGolems';
 import { elderTitanCards } from './elderTitans';
 import { allAdaptCards } from './adaptCards';
 import { allMechanicCards } from './mechanicCards';
-import { allLegendaryCards } from './legendaryCards';
+import { allMythicCards } from './mythicCards';
 import { allSpellCards } from './spellCards';
 import { vanillaMinions } from './vanillaMinions';
 import { einherjarCards } from './einherjarCards';
@@ -447,7 +447,7 @@ const commonNeutralMinions: CardData[] = [
     keywords: ['windfury'],
     collectible: true,
     set: 'genesis'
-  },
+  },
   {
     id: 29970,
     name: 'Volva of the Realms',
@@ -1685,7 +1685,7 @@ const rareNeutralMinions: CardData[] = [
       targetType: 'opponent',
       permanent: true
     }
-  },
+  },
   {
     id: 30016,
     name: 'Flame Juggler of Muspelheim',
@@ -2141,7 +2141,7 @@ const epicNeutralMinions: CardData[] = [
     keywords: ['battlecry'],
     collectible: true,
     set: 'genesis'
-  },
+  },
   {
     id: 29972,
     name: 'Shapeshifter of Loki',
@@ -2634,7 +2634,7 @@ const epicNeutralSpells: CardData[] = [
 // ============================================
 // MYTHIC NEUTRAL MINIONS
 // ============================================
-const legendaryNeutralMinions: CardData[] = [
+const mythicNeutralMinions: CardData[] = [
   {
     id: 2016,
     name: 'Daedalus the Inventor',
@@ -6634,7 +6634,7 @@ const mythologyEpicMinions: CardData[] = [
   }
 ];
 
-const mythologyLegendaryMinions: CardData[] = [
+const mythologyMythicMinions: CardData[] = [
   {
     id: 32056,
     name: 'Echo of the Undying Son',
@@ -7566,7 +7566,7 @@ const epicDragonMinions: CardData[] = [
 ];
 
 // Mythic Dragon Minions (5 cards)
-const legendaryDragonMinions: CardData[] = [
+const mythicDragonMinions: CardData[] = [
   {
     id: 33120,
     name: 'Niflheim Wyrm, Frost Queen',
@@ -8067,7 +8067,7 @@ const epicBeastMinions: CardData[] = [
 ];
 
 // Mythic Beast Minions (IDs 33145-33149)
-const legendaryBeastMinions: CardData[] = [
+const mythicBeastMinions: CardData[] = [
   {
     id: 33146,
     name: 'The Beast of Tartarus',
@@ -10240,11 +10240,11 @@ const epicNeutrals: CardData[] = [
   ...epicBeastMinions
 ];
 
-const legendaryNeutrals: CardData[] = [
-  ...legendaryNeutralMinions,
-  ...mythologyLegendaryMinions,
-  ...legendaryDragonMinions,
-  ...legendaryBeastMinions
+const mythicNeutrals: CardData[] = [
+  ...mythicNeutralMinions,
+  ...mythologyMythicMinions,
+  ...mythicDragonMinions,
+  ...mythicBeastMinions
 ];
 
 const tokenNeutrals: CardData[] = [
@@ -10269,7 +10269,7 @@ export const coreNeutralCards: CardData[] = [
   ...commonNeutrals,
   ...rareNeutrals,
   ...epicNeutrals,
-  ...legendaryNeutrals,
+  ...mythicNeutrals,
   ...tokenNeutrals,
   ...norseMythNeutrals,
   ...comboEngineCards,
@@ -10280,7 +10280,7 @@ export const coreNeutralCards: CardData[] = [
   ...elderTitanCards,
   ...allAdaptCards,
   ...allMechanicCards,
-  ...allLegendaryCards,
+  ...allMythicCards,
   ...allSpellCards,
   ...vanillaMinions,
   ...einherjarCards,
@@ -10300,5 +10300,5 @@ export const coreNeutralCards: CardData[] = [
   ...allBaseCards
 ];
 
-export { allYggdrasilGolemCards, elderTitanCards, allAdaptCards, allMechanicCards, allLegendaryCards, allSpellCards };
+export { allYggdrasilGolemCards, elderTitanCards, allAdaptCards, allMechanicCards, allMythicCards, allSpellCards };
 export default coreNeutralCards;

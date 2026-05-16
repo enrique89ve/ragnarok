@@ -3,7 +3,7 @@
  *
  * Subscribes to GameEventBus events and triggers appropriate audio.
  * This decouples audio logic from game logic.
- * 
+ *
  * Added by Enrique - Event-driven architecture integration
  */
 
@@ -36,7 +36,7 @@ type UnsubscribeFn = () => void;
  * Audio mapping for card rarities
  */
 const RARITY_SOUNDS: Record<string, SoundEffectType> = { // eslint-disable-line @typescript-eslint/no-unused-vars
-  mythic: 'legendary',
+  mythic: 'mythic',
   epic: 'spell',
   rare: 'card_play',
   common: 'card_play',
@@ -51,7 +51,7 @@ const CARD_TYPE_SOUNDS: Record<string, SoundEffectType> = {
   spell: 'spell',
   weapon: 'card_play',
   secret: 'card_play',
-  hero: 'legendary'
+  hero: 'mythic'
 };
 
 /**
@@ -67,7 +67,7 @@ export function initializeAudioSubscriber(): UnsubscribeFn {
 
       // Play rarity-specific sound for mythics
       if (event.rarity === 'mythic') {
-        audioStore.playSoundEffect('legendary');
+        audioStore.playSoundEffect('mythic');
       } else {
         const sound = CARD_TYPE_SOUNDS[event.cardType] ?? 'card_play';
         audioStore.playSoundEffect(sound);
@@ -244,7 +244,7 @@ export function initializeAudioSubscriber(): UnsubscribeFn {
       const audioStore = useAudio.getState();
       // Higher value hands get more dramatic sound
       if (event.value >= 7) {
-        audioStore.playSoundEffect('legendary');
+        audioStore.playSoundEffect('mythic');
       } else if (event.value >= 4) {
         audioStore.playSoundEffect('spell');
       } else {

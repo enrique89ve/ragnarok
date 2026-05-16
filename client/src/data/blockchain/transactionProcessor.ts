@@ -156,14 +156,15 @@ async function submitToMockServer(tx: TransactionEntry): Promise<void> {
 // Maps internal BlockchainActionType to Hive custom_json op id.
 // Exhaustive — adding a new BlockchainActionType is a compile error until
 // every variant has a chain op mapped.
-const ACTION_TO_OP_ID: Record<BlockchainActionType, RagnarokTransactionType> = {
-	match_result:  'rp_match_result',
-	campaign_result: 'rp_campaign_result',
-	rune_exchange: 'rp_rune_exchange',
-	level_up:      'rp_level_up',
-	card_transfer: 'rp_card_transfer',
-	nft_mint:      'rp_pack_open',
-};
+	type HiveBroadcastActionType = Exclude<BlockchainActionType, 'nft_mint'>;
+
+	const ACTION_TO_OP_ID: Record<HiveBroadcastActionType, RagnarokTransactionType> = {
+		match_result:  'rp_match_result',
+		campaign_result: 'rp_campaign_result',
+		rune_exchange: 'rp_rune_exchange',
+		level_up:      'rp_level_up',
+		card_transfer: 'rp_card_transfer',
+	};
 
 // Card transfers require Active key; everything else uses Posting key.
 const ACTIVE_KEY_ACTIONS: ReadonlySet<BlockchainActionType> = new Set(['card_transfer']);
@@ -177,6 +178,10 @@ async function submitToHive(tx: TransactionEntry): Promise<void> {
 	}
 	if (!hiveSync.isKeychainAvailable()) {
 		throw new Error('Hive Keychain extension not installed');
+	}
+
+	if (tx.actionType === 'nft_mint') {
+		throw new Error('Legacy nft_mint/rp_pack_open is disabled. Use rune_exchange and sealed pack burn.');
 	}
 
 	const opId = ACTION_TO_OP_ID[tx.actionType];

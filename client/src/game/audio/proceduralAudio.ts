@@ -243,7 +243,7 @@ export class ProceduralAudio {
 				case 'damage': this.soundDamage(); break;
 				case 'heal': this.soundHeal(); break;
 				case 'coin': this.soundCoin(); break;
-				case 'mythic': this.soundLegendary(); break;
+				case 'mythic': this.soundMythic(); break;
 				case 'spell': this.soundSpell(); break;
 				case 'freeze': this.soundFreeze(); break;
 				case 'deathrattle': this.soundDeathrattle(); break;
@@ -263,7 +263,7 @@ export class ProceduralAudio {
 				case 'spell_cast': this.soundSpellCast(); break;
 				case 'spell_impact': this.soundSpellImpact(); break;
 				case 'fire_impact': this.soundFireImpact(); break;
-				case 'mythic_entrance': this.soundLegendaryEntrance(); break;
+				case 'mythic_entrance': this.soundMythicEntrance(); break;
 				case 'turn_start': this.soundTurnStart(); break;
 				case 'turn_end': this.soundTurnEnd(); break;
 				case 'damage_hero': this.soundDamageHero(); break;
@@ -1453,7 +1453,7 @@ export class ProceduralAudio {
 		this.playFilteredNoiseBurst(now + 0.1, 0.3, 1500, 'bandpass', 0.06, this.getReverb(), 3);
 	}
 
-	private soundLegendary(): void {
+	private soundMythic(): void {
 		const ctx = this.getContext();
 		const now = ctx.currentTime;
 
@@ -1496,7 +1496,7 @@ export class ProceduralAudio {
 		this.playFilteredNoiseBurst(now, 0.12, 100, 'lowpass', 0.35);
 	}
 
-	private soundLegendaryEntrance(): void {
+	private soundMythicEntrance(): void {
 		const ctx = this.getContext();
 		const now = ctx.currentTime;
 

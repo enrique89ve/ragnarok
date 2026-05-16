@@ -1,27 +1,20 @@
 /**
- * packDerivation.ts — Optimistic preview of `legacy_pack_open` (pre-seal).
+ * packDerivation.ts — deterministic preview for sealed `pack_burn`.
  *
- * Pure function that mirrors `applyLegacyPackOpen` in `shared/protocol-core/apply.ts`
- * exactly. Given the Hive trxId returned by Keychain right after broadcast, derives
- * the same cards the replay engine will mint — so the UI can show them immediately
- * without waiting for the chain to confirm.
+ * Mirrors the post-seal burn derivation in `shared/protocol-core/apply.ts`.
+ * The UI can preview a burn only after the delayed entropy block is irreversible,
+ * because the seed includes pack DNA, burn trxId, user salt, and entropy block id.
  *
  * Rarity comes from the card definition (`cardDataProvider.getCardById(id).rarity`),
- * NOT from a client-side roll. The previous fake roll (mythic<1, epic<6, rare<20)
- * was inconsistent with the canon and produced previews that did not match the
- * chain-replayed state.
- *
- * Post-seal pack opens go through `pack_commit` + `pack_reveal` and CANNOT be
- * previewed instantly — the seed depends on the entropy block id which is only
- * known once the block is irreversible. Callers must not use this helper after
- * genesis seal.
+ * not from a client-side rarity roll.
  */
 
 import {
-	deriveLegacyPackSeed,
 	filterCollectibleIdsForPack,
-	pickLegacyPackCardIds,
+	lcgNext,
+	sha256Hash,
 } from '@shared/protocol-core';
+import type { PackAsset } from '@shared/protocol-core/types';
 import { getCardDataProvider } from './ICardDataProvider';
 
 export interface DerivedPackCard {
@@ -34,29 +27,35 @@ export interface DerivedPackCard {
 	foil: 'standard' | 'gold';
 }
 
-export function derivePackCards(
-	trxId: string,
-	packType: string,
-	quantity: number = 1,
-): DerivedPackCard[] {
+export async function deriveSealedPackBurnCards(input: {
+	pack: Pick<PackAsset, 'cardCount' | 'dna' | 'packType'>;
+	trxId: string;
+	salt: string;
+	entropyBlockId: string;
+}): Promise<DerivedPackCard[]> {
 	const provider = getCardDataProvider();
-	const mintableIds = filterCollectibleIdsForPack(provider.getAllCards(), packType);
+	const mintableIds = filterCollectibleIdsForPack(provider.getAllCards(), input.pack.packType);
 	if (mintableIds.length === 0) return [];
 
-	const seed = deriveLegacyPackSeed(trxId);
-	const clampedQuantity = Math.min(quantity, 10);
-	const cardIds = pickLegacyPackCardIds(seed, packType, clampedQuantity, mintableIds);
+	const seed = await sha256Hash(`${input.pack.dna}|${input.trxId}|${input.salt}|${input.entropyBlockId}`);
+	let rng = Math.max(parseInt(seed.slice(0, 8), 16) || 1, 1);
+	const cards: DerivedPackCard[] = [];
 
-	return cardIds.map((cardId, i) => {
+	for (let i = 0; i < input.pack.cardCount; i++) {
+		rng = lcgNext(rng);
+		const cardId = mintableIds[rng % mintableIds.length];
 		const def = provider.getCardById(cardId);
-		return {
-			uid: `${trxId}-${i}`,
+		cards.push({
+			uid: `${input.trxId}:${i}`,
 			cardId,
 			name: def?.name ?? `Card #${cardId}`,
 			rarity: def?.rarity ?? 'common',
 			type: def?.type ?? 'minion',
 			race: def?.race,
 			foil: 'standard',
-		};
-	});
+		});
+		rng = lcgNext(rng);
+	}
+
+	return cards;
 }

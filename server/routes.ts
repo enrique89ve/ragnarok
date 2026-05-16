@@ -1,35 +1,50 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
+import { getRagnarokServerRuntimeConfig } from "./services/runtimeConfig";
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Mount Pack and Inventory routes — DB-backed if DATABASE_URL set, otherwise stubs
-  if (process.env.DATABASE_URL) {
-    const packRoutes = (await import("./routes/packRoutes")).default;
-    const inventoryRoutes = (await import("./routes/inventoryRoutes")).default;
-    app.use('/api/packs', packRoutes);
-    app.use('/api/inventory', inventoryRoutes);
-  } else {
-    app.get('/api/packs', (_req: Request, res: Response) => {
-      res.json({ packs: [], message: 'Pack data is chain-derived. Connect Hive wallet to view.' });
+  const runtime = getRagnarokServerRuntimeConfig();
+
+  // Packs and inventory are chain-derived projections. The old SQL opener stays
+  // unmounted so DATABASE_URL cannot accidentally become an authority path.
+  const packRoutes = (await import("./routes/packRoutes")).default;
+  app.use('/api/packs', packRoutes);
+  app.get('/api/inventory/:userId/stats', (_req: Request, res: Response) => {
+    res.status(410).json({
+      success: false,
+      error: 'Legacy SQL inventory stats are disabled. Use /api/chain/player/:username/cards.',
     });
-    app.get('/api/inventory', (_req: Request, res: Response) => {
-      res.json({ cards: [], message: 'Inventory is chain-derived. Connect Hive wallet to view.' });
+  });
+  app.get('/api/inventory/:userId?', (_req: Request, res: Response) => {
+    res.status(410).json({
+      success: false,
+      error: 'Legacy SQL inventory is disabled. Use /api/chain/player/:username/cards.',
     });
-  }
+  });
 
   // Health check endpoint
   app.get('/api/health', (req: Request, res: Response) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      runtime: {
+        stage: runtime.stage,
+        protocolId: runtime.protocolId,
+        resettable: runtime.resettable,
+        economic: runtime.economic,
+      },
+    });
   });
 
   // Matchmaking routes (always available, no DB required)
   const matchmakingRoutes = (await import("./routes/matchmakingRoutes")).default;
   app.use('/api/matchmaking', matchmakingRoutes);
 
-  // Mock blockchain routes — development/test only, disabled in production
-  if (!IS_PRODUCTION) {
+  // Mock blockchain routes — local sandbox or explicit mock harness only.
+  // dev:testnet must not expose a parallel authority surface.
+  if (!IS_PRODUCTION && (runtime.stage === 'local' || process.env.VITE_DATA_LAYER_MODE === 'test')) {
     const mockBlockchainRoutes = (await import("./routes/mockBlockchainRoutes")).default;
     app.use('/api/mock-blockchain', mockBlockchainRoutes);
   }

@@ -51,6 +51,7 @@ mcp-server/src/sqlite/*.db
 .env
 .env.*
 !.env.example
+!.env.*.example
 *.pem
 *.key
 *.secret

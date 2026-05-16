@@ -53,6 +53,7 @@ import {
 	getKnownAccountCount,
 } from '../services/chainState';
 import { isValidHiveUsername } from '../services/hiveAuth';
+import { getRagnarokServerRuntimeConfig } from '../services/runtimeConfig';
 
 const MAX_KNOWN_ACCOUNTS = 10_000;
 
@@ -92,9 +93,13 @@ router.get('/health', (_req: Request, res: Response) => {
 
 router.get('/status', (_req: Request, res: Response) => {
 	const genesis = getGenesisState();
+	const runtime = getRagnarokServerRuntimeConfig();
 	res.json({
 		protocolVersion: '1.2.0',
-		protocolId: process.env.RAGNAROK_PROTOCOL_ID ?? process.env.VITE_RAGNAROK_PROTOCOL_ID ?? 'ragnarok-cards',
+		protocolId: runtime.protocolId,
+		stage: runtime.stage,
+		resettable: runtime.resettable,
+		economic: runtime.economic,
 		genesisBlock: genesis?.sealBlock ?? null,
 		sealed: genesis?.sealed ?? false,
 		lastBlock: getBlockCursor(),

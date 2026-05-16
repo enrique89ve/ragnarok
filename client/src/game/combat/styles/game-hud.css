@@ -71,7 +71,7 @@
 }
 
 .hud-status-pot {
-  color: var(--card-mythic-gold-pale);
+  color: var(--rarity-mythic-pale);
 }
 
 .hud-chip-icon {
@@ -102,15 +102,17 @@
 /* Deck count badges — premium obsidian + gold material */
 .hud-deck-badge {
   position: absolute;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
+  gap: 6px;
+  height: var(--poker-hud-badge-height, 36px);
+  padding: 7px 10px;
   background: var(--ui-panel-bg);
   border: 1px solid var(--ui-gold-shadow);
   border-radius: 10px;
   font-family: var(--type-display);
-  font-size: 17px;
+  font-size: 14px;
   font-weight: 800;
   color: var(--ui-gold-bright);
   box-shadow:
@@ -121,9 +123,9 @@
 }
 
 .hud-badge-label {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 900;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-bright);
 }
@@ -132,8 +134,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   opacity: 0.92;
   color: var(--ui-gold-bright);
 }
@@ -144,7 +146,7 @@
 }
 
 .hud-deck-badge .hud-count {
-  min-width: 22px;
+  min-width: 18px;
   text-align: center;
 }
 
@@ -152,7 +154,7 @@
 .hud-player-deck {
   left: var(--poker-zone-deckCounters-x, auto);
   right: auto;
-  top: calc(var(--poker-zone-battleLog-y, 792px) + var(--poker-zone-battleLog-h, 232px) - 40px);
+  top: calc(var(--poker-bottom-rail-y, 1024px) - var(--poker-hud-badge-height, 36px));
   bottom: auto;
   width: var(--poker-zone-deckCounters-w, auto);
   border-color: rgba(91, 140, 184, 0.55);

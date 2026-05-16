@@ -106,9 +106,11 @@ export interface INFTBridge {
 	submitCampaignResult(payload: CampaignResultBroadcastPayload): Promise<BroadcastResult>;
 	transferCard(cardUid: string, toUser: string, memo?: string): Promise<BroadcastResult>;
 	transferCards(cardUids: string[], toUser: string, memo?: string): Promise<BroadcastResult>;
-	openPack(packType: string, quantity?: number): Promise<BroadcastResult>;
-	runeExchange(packType: string, quantity?: number): Promise<BroadcastResult>;
-	signResultHash(hash: string): Promise<string>;
+		/** Legacy pre-seal opener. Disabled in Hive mode; use acquisition + burnPack. */
+		openPack(packType: string, quantity?: number): Promise<BroadcastResult>;
+		runeExchange(packType: string, quantity?: number): Promise<BroadcastResult>;
+		purchasePackHbd(packType: string, quantity: number, totalPriceThousandths: number): Promise<BroadcastResult>;
+		signResultHash(hash: string): Promise<string>;
 
 	// ── Pack Transactions (v1.1) ──
 	transferPack(packUid: string, toUser: string, memo?: string): Promise<BroadcastResult>;

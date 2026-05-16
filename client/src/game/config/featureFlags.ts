@@ -12,13 +12,19 @@
  * Defaults to safe local/off values when env vars are not set.
  */
 
+import {
+	isRagnarokNetworkStage,
+	type RagnarokNetworkStage,
+	type RagnarokRuntimeExecutionMode,
+} from '@shared/runtimeConfig';
+
 export type DataLayerMode = 'local' | 'test' | 'hive';
-export type NetworkStage = 'local' | 'testnet' | 'mainnet';
-export type RuntimeExecutionMode = 'local-dev' | 'testnet' | 'mainnet';
+export type NetworkStage = RagnarokNetworkStage;
+export type RuntimeExecutionMode = RagnarokRuntimeExecutionMode;
 
 function resolveNetworkStage(): NetworkStage {
 	const raw = import.meta.env.VITE_NETWORK_STAGE as string | undefined;
-	if (raw === 'testnet' || raw === 'mainnet' || raw === 'local') return raw;
+	if (isRagnarokNetworkStage(raw)) return raw;
 	return 'local';
 }
 

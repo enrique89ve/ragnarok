@@ -8,12 +8,12 @@
   height: 36px;
   z-index: 120; /* Lower z-index to appear more integrated */
   pointer-events: none;
-  
+
   /* Enhanced 3D recessed appearance with more refined styling */
   border-radius: 6px;
-  
+
   /* Multi-layered shadows for enhanced 3D braille-like depth effect */
-  box-shadow: 
+  box-shadow:
     /* Darkened outer edge simulating card material thickness */
     0 0 0 1px rgba(0, 0, 0, 0.5),
     /* Secondary outer bevel catching light at top */
@@ -28,31 +28,31 @@
     inset 1px 1px 1px rgba(255, 255, 255, 0.1),
     /* Ultra-fine dark line at bottom/right edge */
     inset -1px -1px 1px rgba(0, 0, 0, 0.3);
-  
+
   /* Center the icon */
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   /* Enhanced recessed metal texture with multi-tonal gradients */
-  background: 
+  background:
     /* Primary gradient for base metal color */
     linear-gradient(135deg, #2d2d2d 0%, #444 40%, #333 100%),
     /* Secondary micro-texture for surface irregularities */
     radial-gradient(circle at 30% 30%, rgba(255,255,255,0.05) 0%, transparent 50%),
     /* Tertiary diagonal texture for metal grain simulation */
     linear-gradient(45deg, transparent 0%, rgba(0,0,0,0.1) 50%, transparent 100%);
-  
+
   /* Enhanced seamless edge blending with card */
   outline: 1px solid rgba(0, 0, 0, 0.5);
   outline-offset: -1px;
-  
+
   /* For smoother transitions with enhanced easing */
   transition: transform 0.3s cubic-bezier(0.215, 0.61, 0.355, 1), box-shadow 0.3s cubic-bezier(0.215, 0.61, 0.355, 1), filter 0.3s cubic-bezier(0.215, 0.61, 0.355, 1);
-  
+
   /* Enhanced depth perception */
   transform: translateZ(-1px);
-  
+
 }
 
 /* Enhanced 3D Braille-like symbol inside */
@@ -65,10 +65,10 @@
   /* Force hardware acceleration */
   transform: translateZ(0);
   /* Enhanced transitions for realistic depth changes */
-  transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1), 
+  transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1),
               filter 0.3s cubic-bezier(0.19, 1, 0.22, 1),
               text-shadow 0.3s cubic-bezier(0.19, 1, 0.22, 1);
-  
+
   /* Multi-layered text shadow for 3D embossed effect */
   text-shadow:
     /* Deep shadow for maximum depth */
@@ -79,11 +79,11 @@
     0 0 1px rgba(0, 0, 0, 0.5),
     /* Top light highlight for contrast */
     0 -1px 1px rgba(255, 255, 255, 0.1);
-  
+
   /* Slight positioning adjustment for shadow alignment */
   position: relative;
   top: -1px;
-  
+
   /* Subtle emboss filter for additional depth */
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5));
 }
@@ -92,7 +92,7 @@
 .card:hover .race-icon-container {
   /* Enhanced depth translation to simulate pressure */
   transform: translateZ(-1.5px);
-  box-shadow: 
+  box-shadow:
     /* Enhanced edge detail for pressed appearance */
     0 0 0 1px rgba(0, 0, 0, 0.6),
     /* Subtle light rim at top */
@@ -107,14 +107,14 @@
     inset 1px 1px 2px rgba(255, 255, 255, 0.15),
     /* Enhanced deep shadow */
     inset -1px -1px 2px rgba(0, 0, 0, 0.35);
-  
+
   /* Enhanced color adjustments with multiple filters */
-  filter: 
+  filter:
     /* Subtle brightness increase */
-    brightness(1.15) 
+    brightness(1.15)
     /* Enhanced contrast for better edge definition */
     contrast(1.05);
-    
+
 }
 
 /* Enhanced symbol hover effect maintaining recessed appearance */
@@ -140,20 +140,20 @@
 /* Enhanced 3D Braille-like Common rarity style - recessed bronze */
 .race-icon-common {
   /* Multi-layered gradient for enhanced depth perception */
-  background: 
+  background:
     /* Primary bronze gradient */
     linear-gradient(135deg, #956b31 0%, #b0885c 40%, #7d5423 100%),
     /* Secondary micro-texture for material detail */
     radial-gradient(circle at 25% 25%, rgba(210, 180, 140, 0.12) 0%, transparent 50%),
     /* Tertiary texture for metal grain */
     repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 4px);
-  
+
   /* Enhanced card-matching rim with multiple layers */
   outline: 1px solid rgba(120, 80, 40, 0.5);
   outline-offset: -1px;
-  
+
   /* Multi-layered shadows for enhanced 3D braille-like depth */
-  box-shadow: 
+  box-shadow:
     /* Outer edge bevel */
     0 0 0 1px rgba(0, 0, 0, 0.5),
     /* Secondary outer rim catching light */
@@ -171,20 +171,20 @@
 /* Enhanced 3D Braille-like Rare rarity style - recessed silver */
 .race-icon-rare {
   /* Multi-layered gradient for enhanced depth perception */
-  background: 
+  background:
     /* Primary silver gradient */
     linear-gradient(135deg, #889eb7 0%, #acbed8 40%, #6d89a9 100%),
     /* Secondary micro-texture for material detail */
     radial-gradient(circle at 25% 25%, rgba(200, 220, 240, 0.15) 0%, transparent 50%),
     /* Tertiary texture for metal grain */
     repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
-  
+
   /* Enhanced card-matching rim with multiple layers */
   outline: 1px solid rgba(120, 140, 170, 0.5);
   outline-offset: -1px;
-  
+
   /* Multi-layered shadows for enhanced 3D braille-like depth */
-  box-shadow: 
+  box-shadow:
     /* Outer edge bevel */
     0 0 0 1px rgba(0, 0, 0, 0.5),
     /* Secondary outer rim catching light */
@@ -202,20 +202,20 @@
 /* Enhanced 3D Braille-like Epic rarity style - recessed purple */
 .race-icon-epic {
   /* Multi-layered gradient for enhanced depth perception */
-  background: 
+  background:
     /* Primary purple gradient */
     linear-gradient(135deg, #9573a7 0%, #b68fd0 40%, #805c97 100%),
     /* Secondary micro-texture for material detail */
     radial-gradient(circle at 25% 25%, rgba(210, 180, 230, 0.15) 0%, transparent 50%),
     /* Tertiary texture for metal grain */
     repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(100,50,150,0.04) 3px, rgba(100,50,150,0.04) 6px);
-  
+
   /* Enhanced card-matching rim with multiple layers */
   outline: 1px solid rgba(140, 100, 160, 0.5);
   outline-offset: -1px;
-  
+
   /* Multi-layered shadows for enhanced 3D braille-like depth */
-  box-shadow: 
+  box-shadow:
     /* Outer edge bevel */
     0 0 0 1px rgba(0, 0, 0, 0.5),
     /* Secondary outer rim catching light */
@@ -230,23 +230,23 @@
     inset -1px -1px 1px rgba(80, 50, 100, 0.4);
 }
 
-/* Enhanced 3D Braille-like Legendary rarity style - recessed gold */
-.race-icon-legendary {
+/* Enhanced 3D Braille-like Mythic rarity style - recessed gold */
+.race-icon-mythic {
   /* Multi-layered gradient for enhanced depth perception */
-  background: 
+  background:
     /* Primary gold gradient */
     linear-gradient(135deg, #c8a02e 0%, #e8c860 40%, #9f7d1f 100%),
     /* Secondary micro-texture for material detail */
     radial-gradient(circle at 25% 25%, rgba(255, 240, 180, 0.2) 0%, transparent 50%),
     /* Tertiary texture for metal grain with subtle sparkle */
     repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(150,120,0,0.05) 3px, rgba(150,120,0,0.05) 6px);
-  
+
   /* Enhanced card-matching rim with multiple layers and subtle glow */
   outline: 1px solid rgba(180, 150, 50, 0.6);
   outline-offset: -1px;
-  
+
   /* Multi-layered shadows for enhanced 3D braille-like depth */
-  box-shadow: 
+  box-shadow:
     /* Outer edge bevel */
     0 0 0 1px rgba(0, 0, 0, 0.45),
     /* Secondary outer rim catching light */
@@ -261,13 +261,13 @@
     inset 1px 1px 2px rgba(255, 240, 130, 0.25),
     /* Ultra-fine edge detail for realism */
     inset -1px -1px 1px rgba(120, 100, 20, 0.4);
-  
-  /* Subtle animation for legendary icons */
-  animation: legendary-shimmer 4s infinite alternate ease-in-out;
+
+  /* Subtle animation for mythic icons */
+  animation: mythic-shimmer 4s infinite alternate ease-in-out;
 }
 
-/* Subtle shimmer animation for legendary rarity */
-@keyframes legendary-shimmer {
+/* Subtle shimmer animation for mythic rarity */
+@keyframes mythic-shimmer {
   0% { background-position: 0% 0%; }
   100% { background-position: 100% 100%; }
 }
@@ -286,7 +286,7 @@
   z-index: 1;
   /* Very subtle texture movement to simulate light changes */
   animation: subtleDepthShine 12s infinite linear;
-  
+
   /* Creates an inset effect with the pattern */
   box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
 }
@@ -297,28 +297,28 @@
   position: absolute;
   inset: 0;
   /* Directional light creating shadows and highlights at the edges */
-  background: 
+  background:
     /* Top highlight - very subtle */
-    linear-gradient(to bottom, 
-      rgba(255,255,255,0.15) 0%, 
+    linear-gradient(to bottom,
+      rgba(255,255,255,0.15) 0%,
       transparent 15%),
     /* Left shadow - creates depth */
-    linear-gradient(to right, 
-      rgba(0,0,0,0.2) 0%, 
+    linear-gradient(to right,
+      rgba(0,0,0,0.2) 0%,
       transparent 15%),
     /* Bottom shadow - creates depth */
-    linear-gradient(to top, 
-      rgba(0,0,0,0.25) 0%, 
+    linear-gradient(to top,
+      rgba(0,0,0,0.25) 0%,
       transparent 15%),
     /* Right highlight - very subtle */
-    linear-gradient(to left, 
-      rgba(255,255,255,0.05) 0%, 
+    linear-gradient(to left,
+      rgba(255,255,255,0.05) 0%,
       transparent 15%);
-  
+
   border-radius: 4px;
   pointer-events: none;
   z-index: 2;
-  
+
   /* No animation - this simulates the carved surface having permanent shadows */
   opacity: 0.7;
 }

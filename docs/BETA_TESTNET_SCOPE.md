@@ -29,11 +29,11 @@ Beta-testnet state is temporary. Progress, rankings, rewards, packs, and NFTs cr
 Normal local/testnet/mainnet runs should not set `VITE_DATA_LAYER_MODE` or
 `VITE_BLOCKCHAIN_PACKAGING`; both are derived from `VITE_NETWORK_STAGE`.
 
-Network constants live in `client/src/game/config/networkConfig.ts`. They define protocol namespace, collection id, admin/index accounts, indexer endpoints, art endpoints, NFTLox protocol id, and reset/economic policy per stage.
+Network constants live in `shared/runtimeConfig.ts` and are consumed by both server and client wrappers. They define protocol namespace, collection id, admin/index accounts, indexer endpoints, art endpoints, NFTLox protocol id, and reset/economic policy per stage.
 
 The active frontend config is resolved once as `RAGNAROK_NETWORK_CONFIG`, so runtime consumers should import constants/helpers instead of rebuilding env-derived strings.
 
-Operational startup lives in `docs/TESTNET_RUNBOOK.md`. The canonical local command is:
+Operational startup lives in `docs/TESTNET_RUNBOOK.md`. The canonical testnet dev command is:
 
 ```bash
 npm run dev:testnet
@@ -50,7 +50,7 @@ The expected testnet shape is mainnet-like:
 
 ## Current Status — 2026-05-06
 
-- Central network config exists in `client/src/game/config/networkConfig.ts`.
+- Central network config exists in `shared/runtimeConfig.ts`, with client and server wrappers resolving from the same contract.
 - Testnet protocol id is `rk_game_testnet`.
 - Testnet collection id is `ragnarok-testnet`.
 - `npm run dev:testnet` starts the app with `.env.testnet`.

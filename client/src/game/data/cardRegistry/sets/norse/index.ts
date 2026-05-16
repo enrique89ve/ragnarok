@@ -9,7 +9,7 @@ import norseArmorCards from './armorCards';
 // Organized by category for maintainability
 
 // ============================================
-// NORSE GODS (Legendary Divine Minions)
+// NORSE GODS (Mythic Divine Minions)
 // ============================================
 const norseGods: CardData[] = [
   {
@@ -39,7 +39,7 @@ const norseGods: CardData[] = [
       statusEffect: 'vulnerable',
       targetType: 'target'
     },
-    categories: ["norse_mythology", "holy_legendary"],
+    categories: ["norse_mythology", "holy_mythic"],
     collectible: true
   },
   {
@@ -67,7 +67,7 @@ const norseGods: CardData[] = [
       statusEffect: 'burn',
       targetType: 'target'
     },
-    categories: ["norse_mythology", "holy_legendary"],
+    categories: ["norse_mythology", "holy_mythic"],
     collectible: true
   },
   {
@@ -94,7 +94,7 @@ const norseGods: CardData[] = [
       statusEffect: 'marked',
       targetType: 'target'
     },
-    categories: ["norse_mythology", "holy_legendary"],
+    categories: ["norse_mythology", "holy_mythic"],
     collectible: true
   },
   {
@@ -121,7 +121,7 @@ const norseGods: CardData[] = [
       statusEffect: 'weakness',
       targetType: 'target'
     },
-    categories: ["norse_mythology", "water_legendary"],
+    categories: ["norse_mythology", "water_mythic"],
     collectible: true
   },
   {
@@ -146,7 +146,7 @@ const norseGods: CardData[] = [
       statusEffect: 'freeze',
       targetType: 'target'
     },
-    categories: ["norse_mythology", "water_legendary"],
+    categories: ["norse_mythology", "water_mythic"],
     collectible: true
   },
 ];
@@ -154,7 +154,7 @@ const norseGods: CardData[] = [
 // ============================================
 // NORSE LEGENDARY CREATURES
 // ============================================
-const norseLegendaryCreatures: CardData[] = [
+const norseMythicCreatures: CardData[] = [
   {
     id: 20620,
     name: "World Serpent Spawn",
@@ -214,7 +214,7 @@ const norseLegendaryCreatures: CardData[] = [
       statusEffect: 'bleed',
       targetType: 'target'
     },
-    categories: ["norse_mythology", "dark_legendary"],
+    categories: ["norse_mythology", "dark_mythic"],
     collectible: true
   },
   {
@@ -247,7 +247,7 @@ const norseLegendaryCreatures: CardData[] = [
       statusEffect: 'poison_dot',
       targetType: 'target'
     },
-    categories: ["norse_mythology", "dark_legendary"],
+    categories: ["norse_mythology", "dark_mythic"],
     collectible: true
   },
   {
@@ -279,7 +279,7 @@ const norseLegendaryCreatures: CardData[] = [
       statusEffect: 'weakness',
       targetType: 'target'
     },
-    categories: ["norse_mythology", "dark_legendary"],
+    categories: ["norse_mythology", "dark_mythic"],
     collectible: true
   },
   {
@@ -311,7 +311,7 @@ const norseLegendaryCreatures: CardData[] = [
       statusEffect: 'poison_dot',
       targetType: 'target'
     },
-    categories: ["norse_mythology", "dark_legendary"],
+    categories: ["norse_mythology", "dark_mythic"],
     collectible: true
   },
   {
@@ -340,7 +340,7 @@ const norseLegendaryCreatures: CardData[] = [
       buffAttack: 1,
       buffHealth: 1
     },
-    categories: ["norse_mythology", "dark_legendary"],
+    categories: ["norse_mythology", "dark_mythic"],
     collectible: true
   },
   {
@@ -369,7 +369,7 @@ const norseLegendaryCreatures: CardData[] = [
       summonCardId: 4313,
       value: 1
     },
-    categories: ["norse_mythology", "dark_legendary"],
+    categories: ["norse_mythology", "dark_mythic"],
     collectible: true
   },
   {
@@ -403,7 +403,7 @@ const norseLegendaryCreatures: CardData[] = [
       targetType: "all_enemies",
       value: 5
     },
-    categories: ["norse_mythology", "mythological_legendary"],
+    categories: ["norse_mythology", "mythological_mythic"],
     collectible: true
   },
   {
@@ -432,7 +432,7 @@ const norseLegendaryCreatures: CardData[] = [
       targetType: "all_other_minions",
       value: 3
     },
-    categories: ["norse_mythology", "mythological_legendary"],
+    categories: ["norse_mythology", "mythological_mythic"],
     collectible: true
   },
   {
@@ -463,7 +463,7 @@ const norseLegendaryCreatures: CardData[] = [
       targetType: "all_enemies",
       value: 5
     },
-    categories: ["norse_mythology", "mythological_legendary"],
+    categories: ["norse_mythology", "mythological_mythic"],
     collectible: true
   },
   {
@@ -491,7 +491,7 @@ const norseLegendaryCreatures: CardData[] = [
       targetType: "friendly_hero",
       value: "damage_dealt"
     },
-    categories: ["norse_mythology", "mythological_legendary"],
+    categories: ["norse_mythology", "mythological_mythic"],
     collectible: true
   },
   {
@@ -514,7 +514,7 @@ const norseLegendaryCreatures: CardData[] = [
       keyword: "poisonous",
       duration: "this_turn"
     },
-    categories: ["norse_mythology", "mythological_legendary"],
+    categories: ["norse_mythology", "mythological_mythic"],
     collectible: true
   },
   {
@@ -541,7 +541,7 @@ const norseLegendaryCreatures: CardData[] = [
       buffAttack: 0,
       buffHealth: 2
     },
-    categories: ["norse_mythology", "mythological_legendary"],
+    categories: ["norse_mythology", "mythological_mythic"],
     collectible: true
   },
   {
@@ -567,7 +567,7 @@ const norseLegendaryCreatures: CardData[] = [
       type: "heal_self",
       value: 3
     },
-    categories: ["norse_mythology", "mythological_legendary"],
+    categories: ["norse_mythology", "mythological_mythic"],
     collectible: true
   },
   {
@@ -593,7 +593,7 @@ const norseLegendaryCreatures: CardData[] = [
       buffAttack: 1,
       buffHealth: 0
     },
-    categories: ["norse_mythology", "mythological_legendary"],
+    categories: ["norse_mythology", "mythological_mythic"],
     collectible: true
   },
   {
@@ -620,7 +620,7 @@ const norseLegendaryCreatures: CardData[] = [
       keyword: "stealth",
       duration: "until_next_turn"
     },
-    categories: ["norse_mythology", "mythological_legendary"],
+    categories: ["norse_mythology", "mythological_mythic"],
     collectible: true
   },
   {
@@ -646,7 +646,7 @@ const norseLegendaryCreatures: CardData[] = [
       targetType: "random_enemy_minion",
       requiresTarget: false
     },
-    categories: ["norse_mythology", "mythological_legendary"],
+    categories: ["norse_mythology", "mythological_mythic"],
     collectible: true
   },
   {
@@ -670,7 +670,7 @@ const norseLegendaryCreatures: CardData[] = [
       type: "destroy_frozen",
       condition: "target_is_frozen"
     },
-    categories: ["norse_mythology", "mythological_legendary"],
+    categories: ["norse_mythology", "mythological_mythic"],
     collectible: true
   },
 ];
@@ -703,7 +703,7 @@ const fireElementLegendaries: CardData[] = [
       statusEffect: 'burn',
       targetType: 'target'
     },
-    categories: ["norse_mythology", "fire_legendary"],
+    categories: ["norse_mythology", "fire_mythic"],
     collectible: true
   },
   {
@@ -730,7 +730,7 @@ const fireElementLegendaries: CardData[] = [
       statusEffect: 'vulnerable',
       targetType: 'target'
     },
-    categories: ["norse_mythology", "fire_legendary"],
+    categories: ["norse_mythology", "fire_mythic"],
     collectible: true
   },
   {
@@ -760,7 +760,7 @@ const fireElementLegendaries: CardData[] = [
       statusEffect: 'burn',
       targetType: 'target'
     },
-    categories: ["norse_mythology", "fire_legendary"],
+    categories: ["norse_mythology", "fire_mythic"],
     collectible: true
   },
   {
@@ -787,7 +787,7 @@ const fireElementLegendaries: CardData[] = [
       statusEffect: 'burn',
       targetType: 'target'
     },
-    categories: ["norse_mythology", "fire_legendary"],
+    categories: ["norse_mythology", "fire_mythic"],
     collectible: true
   },
   {
@@ -815,7 +815,7 @@ const fireElementLegendaries: CardData[] = [
       statusEffect: 'burn',
       targetType: 'target'
     },
-    categories: ["norse_mythology", "fire_legendary"],
+    categories: ["norse_mythology", "fire_mythic"],
     collectible: true
   },
 ];
@@ -854,7 +854,7 @@ const earthElementLegendaries: CardData[] = [
       statusEffect: 'freeze',
       targetType: 'target'
     },
-    categories: ["norse_mythology", "earth_legendary"],
+    categories: ["norse_mythology", "earth_mythic"],
     collectible: true
   },
   {
@@ -884,7 +884,7 @@ const earthElementLegendaries: CardData[] = [
       statusEffect: 'poison_dot',
       targetType: 'target'
     },
-    categories: ["norse_mythology", "earth_legendary"],
+    categories: ["norse_mythology", "earth_mythic"],
     collectible: true
   },
   {
@@ -907,7 +907,7 @@ const earthElementLegendaries: CardData[] = [
       summonCardId: 4377,
       summonCountCondition: "friendly_minion_count"
     },
-    categories: ["norse_mythology", "earth_legendary"],
+    categories: ["norse_mythology", "earth_mythic"],
     collectible: true
   },
   {
@@ -934,7 +934,7 @@ const earthElementLegendaries: CardData[] = [
       statusEffect: 'freeze',
       targetType: 'target'
     },
-    categories: ["norse_mythology", "earth_legendary"],
+    categories: ["norse_mythology", "earth_mythic"],
     collectible: true
   },
   {
@@ -966,7 +966,7 @@ const earthElementLegendaries: CardData[] = [
       statusEffect: 'freeze',
       targetType: 'target'
     },
-    categories: ["norse_mythology", "earth_legendary"],
+    categories: ["norse_mythology", "earth_mythic"],
     collectible: true
   },
   {
@@ -988,7 +988,7 @@ const earthElementLegendaries: CardData[] = [
       buffAttack: 0,
       buffHealth: 1
     },
-    categories: ["norse_mythology", "earth_legendary"],
+    categories: ["norse_mythology", "earth_mythic"],
     collectible: true
   },
 ];
@@ -1023,7 +1023,7 @@ const holyElementLegendaries: CardData[] = [
       statusEffect: 'marked',
       targetType: 'target'
     },
-    categories: ["norse_mythology", "holy_legendary"],
+    categories: ["norse_mythology", "holy_mythic"],
     collectible: true
   },
   {
@@ -1053,7 +1053,7 @@ const holyElementLegendaries: CardData[] = [
       statusEffect: 'marked',
       targetType: 'target'
     },
-    categories: ["norse_mythology", "holy_legendary"],
+    categories: ["norse_mythology", "holy_mythic"],
     collectible: true
   },
   {
@@ -1079,7 +1079,7 @@ const holyElementLegendaries: CardData[] = [
       statusEffect: 'marked',
       targetType: 'target'
     },
-    categories: ["norse_mythology", "holy_legendary"],
+    categories: ["norse_mythology", "holy_mythic"],
     collectible: true
   },
 ];
@@ -1116,7 +1116,7 @@ const waterElementLegendaries: CardData[] = [
       statusEffect: 'freeze',
       targetType: 'target'
     },
-    categories: ["norse_mythology", "water_legendary"],
+    categories: ["norse_mythology", "water_mythic"],
     collectible: true
   },
   {
@@ -1143,7 +1143,7 @@ const waterElementLegendaries: CardData[] = [
       statusEffect: 'freeze',
       targetType: 'target'
     },
-    categories: ["norse_mythology", "water_legendary"],
+    categories: ["norse_mythology", "water_mythic"],
     collectible: true
   },
   {
@@ -1169,7 +1169,7 @@ const waterElementLegendaries: CardData[] = [
       statusEffect: 'weakness',
       targetType: 'target'
     },
-    categories: ["norse_mythology", "water_legendary"],
+    categories: ["norse_mythology", "water_mythic"],
     collectible: true
   }
 ];
@@ -1198,7 +1198,7 @@ const lightningElementLegendaries: CardData[] = [
       buffAttack: 1,
       buffHealth: 0
     },
-    categories: ["norse_mythology", "lightning_legendary"],
+    categories: ["norse_mythology", "lightning_mythic"],
     collectible: true
   },
   {
@@ -1227,7 +1227,7 @@ const lightningElementLegendaries: CardData[] = [
       value: -2,
       duration: "end_of_turn"
     },
-    categories: ["norse_mythology", "lightning_legendary"],
+    categories: ["norse_mythology", "lightning_mythic"],
     collectible: true
   },
   {
@@ -1254,7 +1254,7 @@ const lightningElementLegendaries: CardData[] = [
       buffAttack: 1,
       buffHealth: 0
     },
-    categories: ["norse_mythology", "lightning_legendary"],
+    categories: ["norse_mythology", "lightning_mythic"],
     collectible: true
   },
   {
@@ -1276,7 +1276,7 @@ const lightningElementLegendaries: CardData[] = [
       value: 1,
       duration: "next_spell"
     },
-    categories: ["norse_mythology", "lightning_legendary"],
+    categories: ["norse_mythology", "lightning_mythic"],
     collectible: true
   }
 ];
@@ -1389,7 +1389,7 @@ const darkMinions: CardData[] = [
       value: 3,
       requiresTarget: true
     },
-    categories: ["norse_mythology", "dark_minion", "dark_legendary"],
+    categories: ["norse_mythology", "dark_minion", "dark_mythic"],
     collectible: true
   },
   {
@@ -1418,7 +1418,7 @@ const darkMinions: CardData[] = [
       attackThreshold: 2,
       requiresTarget: true
     },
-    categories: ["norse_mythology", "dark_minion", "dark_legendary"],
+    categories: ["norse_mythology", "dark_minion", "dark_mythic"],
     collectible: true
   }
 ];
@@ -1521,7 +1521,7 @@ const lightMinions: CardData[] = [
       buffHealth: 2,
       duration: "this_turn"
     },
-    categories: ["norse_mythology", "light_minion", "light_legendary"],
+    categories: ["norse_mythology", "light_minion", "light_mythic"],
     collectible: true
   },
 ];
@@ -1740,7 +1740,7 @@ const neutralMinions: CardData[] = [
       buffHealth: 3,
       duration: "this_turn"
     },
-    categories: ["norse_mythology", "neutral_minion", "neutral_legendary"],
+    categories: ["norse_mythology", "neutral_minion", "neutral_mythic"],
     collectible: true
   },
 ];
@@ -1777,7 +1777,7 @@ const greekLegendaries: CardData[] = [
         permanent: true
       }
     },
-    categories: ["norse_mythology", "greek_legendary"],
+    categories: ["norse_mythology", "greek_mythic"],
     collectible: true
   },
   {
@@ -1809,7 +1809,7 @@ const greekLegendaries: CardData[] = [
         buffHealth: 0
       }
     },
-    categories: ["norse_mythology", "greek_legendary"],
+    categories: ["norse_mythology", "greek_mythic"],
     collectible: true
   },
   {
@@ -1838,7 +1838,7 @@ const greekLegendaries: CardData[] = [
       value: 1,
       condition: "minion_count_7"
     },
-    categories: ["norse_mythology", "greek_legendary"],
+    categories: ["norse_mythology", "greek_mythic"],
     collectible: true
   }
 ];
@@ -1848,7 +1848,7 @@ const greekLegendaries: CardData[] = [
 // ============================================
 export const norseMythologyCards: CardData[] = [
   ...norseGods,
-  ...norseLegendaryCreatures,
+  ...norseMythicCreatures,
   ...fireElementLegendaries,
   ...earthElementLegendaries,
   ...holyElementLegendaries,

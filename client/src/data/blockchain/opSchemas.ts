@@ -206,6 +206,14 @@ export const RuneExchangePayload = z.object({
 	quantity: PositiveInt.default(1),
 });
 
+// ── rp_pack_purchase ──
+
+export const PackPurchasePayload = z.object({
+	pack_type: z.enum(['standard', 'premium', 'mythic']),
+	quantity: PositiveInt.default(1),
+	currency: z.literal('HBD'),
+});
+
 // ── rp_team_submit (informational only, no state change) ──
 
 export const TeamSubmitPayload = z.object({}).passthrough();
@@ -275,6 +283,7 @@ export const OP_SCHEMAS: Record<string, z.ZodType> = {
 	rp_reward_claim: RewardClaimPayload,
 	rp_campaign_result: CampaignResultPayload,
 	rp_rune_exchange: RuneExchangePayload,
+	rp_pack_purchase: PackPurchasePayload,
 	rp_team_submit: TeamSubmitPayload,
 	// v1.1
 	rp_pack_mint: PackMintPayload,

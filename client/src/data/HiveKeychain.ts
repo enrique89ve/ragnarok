@@ -10,6 +10,12 @@ export interface HiveKeychainResponse {
 }
 
 export interface HiveKeychainApi {
+  requestBroadcast?: (
+    username: string,
+    operations: Array<[string, Record<string, unknown>]>,
+    keyType: "Active" | "Posting",
+    callback: (response: HiveKeychainResponse) => void,
+  ) => void;
   requestCustomJson: (
     username: string,
     id: string,

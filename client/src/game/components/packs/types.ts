@@ -32,7 +32,7 @@ export interface PackTypeApiRow {
   rare_slots: number;
   epic_slots: number;
   wildcard_slots: number;
-  legendary_chance?: number | null;
+  epic_chance?: number | null;
   mythic_chance?: number | null;
 }
 

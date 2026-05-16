@@ -1,13 +1,13 @@
 /**
  * Card Registry - Single Source of Truth
- * 
+ *
  * CCG-style card organization:
  * - Core Set: Basic neutral and class cards
  * - Norse Set: Norse mythology themed expansion
  * - Tokens: Non-collectible cards summoned by other cards
  * - Mythic Sets: Additional mythic cards from various expansions
  * - Mechanic Cards: Cards with specific mechanics (quest, outcast, etc.)
- * 
+ *
  * All card data flows through this registry with validation.
  */
 
@@ -24,11 +24,11 @@ import { heroSuperMinions } from '../sets/superMinions/heroSuperMinions';
 import { pokerSpellCards } from '../pokerSpellCards';
 
 // Mythic expansion cards
-import { additionalLegendaryCards } from '../additionalLegendaryCards';
-import { iconicLegendaryCards } from '../iconicLegendaryCards';
-import { modernLegendaryCards } from '../modernLegendaryCards';
-import { finalLegendaryCards } from '../finalLegendaryCards';
-import { expansionLegendaryCards } from '../expansionLegendaryCards';
+import { additionalMythicCards } from '../additionalMythicCards';
+import { iconicMythicCards } from '../iconicMythicCards';
+import { modernMythicCards } from '../modernMythicCards';
+import { finalMythicCards } from '../finalMythicCards';
+import { expansionMythicCards } from '../expansionMythicCards';
 
 // Mechanic-specific cards
 import { questCards, questRewards } from '../questCards';
@@ -49,11 +49,11 @@ const rawRegistry: CardData[] = [
   ...heroSuperMinions,
   // PokerSpellCard extends Card with pokerSpellEffect; cast keeps registry homogeneous
   ...(pokerSpellCards as unknown as CardData[]),
-  ...additionalLegendaryCards,
-  ...iconicLegendaryCards,
-  ...modernLegendaryCards,
-  ...finalLegendaryCards,
-  ...expansionLegendaryCards,
+  ...additionalMythicCards,
+  ...iconicMythicCards,
+  ...modernMythicCards,
+  ...finalMythicCards,
+  ...expansionMythicCards,
   ...questCards,
   ...questRewards,
   ...outcastCards,

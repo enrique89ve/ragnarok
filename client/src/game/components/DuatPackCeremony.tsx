@@ -1,10 +1,9 @@
 /**
- * DuatPackCeremony — sequential opening flow for DUAT airdrop packs.
+ * DuatPackCeremony — sequential opening flow for sealed chain packs.
  *
  * After a holder claims their N airdrop packs, this ceremony burns and
  * reveals them one-by-one using the shared PackOpeningAnimation.
  *
- * Only canonical chain packs (uid prefix `duat_${trxId}:`) are openable.
  * While chain replay catches up, the ceremony can show a "Confirming
  * on-chain" state and polls `forceSync` until canonical packs land.
  *
@@ -17,17 +16,13 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { routes } from '../../lib/routes';
 import { getNFTBridge } from '../nft';
-import { derivePackCards } from '../../data/blockchain/packDerivation';
+import { deriveSealedPackBurnCards } from '../../data/blockchain/packDerivation';
 import { forceSync } from '../../data/blockchain/replayEngine';
+import { HIVE_NODES } from '../../data/blockchain/hiveConfig';
 import { ensureCardDataRuntime } from '../runtime/cardDataRuntime';
 import { debug } from '../config/debugConfig';
 import PackOpeningAnimation from './packs/PackOpeningAnimation';
-
-const CANONICAL_DUAT_PREFIX = 'duat_';
-
-function isCanonicalDuatPack(uid: string): boolean {
-	return uid.startsWith(CANONICAL_DUAT_PREFIX);
-}
+import { PACK_ENTROPY_DELAY_BLOCKS, type PackAsset } from '@shared/protocol-core/types';
 
 interface DuatPackCeremonyProps {
 	accountId: string;
@@ -49,20 +44,74 @@ function generateSalt(): string {
 		.join('');
 }
 
-function findOpenableDuatPacks(): string[] {
+function findOpenablePacks(): PackAsset[] {
 	return getNFTBridge()
 		.getPackCollection()
-		.filter(p => p.sealed && isCanonicalDuatPack(p.uid))
-		.map(p => p.uid);
+		.filter(p => p.sealed && p.packType !== 'starter');
 }
 
 const CHAIN_POLL_INTERVAL_MS = 5_000;
 const CHAIN_POLL_MAX_ATTEMPTS = 12; // ~60s before we stop polling and let user retry
+const ENTROPY_POLL_INTERVAL_MS = 3_000;
+const ENTROPY_POLL_MAX_ATTEMPTS = 30;
+
+interface HiveRpcResponse<T> {
+	result?: T;
+	error?: { message: string };
+}
+
+function sleep(ms: number): Promise<void> {
+	return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function callHive<T>(method: string, params: unknown[]): Promise<T> {
+	let lastError: Error = new Error('No Hive nodes configured');
+	for (const node of HIVE_NODES) {
+		try {
+			const res = await fetch(node, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ jsonrpc: '2.0', method, params, id: 1 }),
+			});
+			const data = await res.json() as HiveRpcResponse<T>;
+			if (data.result !== undefined) return data.result;
+			if (data.error) throw new Error(data.error.message);
+		} catch (err) {
+			lastError = err instanceof Error ? err : new Error(String(err));
+		}
+	}
+	throw lastError;
+}
+
+async function getLastIrreversibleBlock(): Promise<number> {
+	const props = await callHive<{ last_irreversible_block_num: number }>(
+		'condenser_api.get_dynamic_global_properties',
+		[],
+	);
+	return props.last_irreversible_block_num;
+}
+
+async function getBlockId(blockNum: number): Promise<string | null> {
+	const block = await callHive<{ block_id: string } | null>('condenser_api.get_block', [blockNum]);
+	return block?.block_id ?? null;
+}
+
+async function waitForEntropyBlockId(blockNum: number): Promise<string> {
+	for (let attempt = 0; attempt < ENTROPY_POLL_MAX_ATTEMPTS; attempt++) {
+		const lib = await getLastIrreversibleBlock();
+		if (lib >= blockNum) {
+			const blockId = await getBlockId(blockNum);
+			if (blockId) return blockId;
+		}
+		await sleep(ENTROPY_POLL_INTERVAL_MS);
+	}
+	throw new Error('Pack entropy block is not irreversible yet. Try again in a minute.');
+}
 
 export default function DuatPackCeremony({ accountId, expectedPacks = 0, onComplete }: DuatPackCeremonyProps) {
 	const navigate = useNavigate();
 	const [hiveMode] = useState(() => getNFTBridge().isHiveMode());
-	const [queue, setQueue] = useState<string[]>(() => findOpenableDuatPacks());
+	const [queue, setQueue] = useState<PackAsset[]>(() => findOpenablePacks());
 	const [opening, setOpening] = useState(false);
 	const [revealed, setRevealed] = useState<RevealedCard[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -88,20 +137,35 @@ export default function DuatPackCeremony({ accountId, expectedPacks = 0, onCompl
 		try {
 			// Card data may not be initialized — `DuatPackCeremony` mounts from
 			// the global popup (outside `CardDataRuntimeBoundary`) and local-mode
-			// bridges skip startSync. Without this, `derivePackCards` throws
+			// bridges skip startSync. Without this, sealed pack derivation throws
 			// `'Card data provider not initialized'` and the spinner hangs.
 			await ensureCardDataRuntime();
 
-			const result = await getNFTBridge().burnPack(next, generateSalt());
+			const salt = generateSalt();
+			const result = await getNFTBridge().burnPack(next.uid, salt);
 			if (!result.success || !result.trxId) {
 				setOpening(false);
 				setError(result.error ?? 'Failed to open pack — check Keychain');
 				return;
 			}
+			if (hiveMode && !result.blockNum) {
+				setOpening(false);
+				setError('Pack burn did not return a block number.');
+				return;
+			}
 
-			const derived = derivePackCards(result.trxId, 'standard', 1);
+			const entropyBlockId = hiveMode
+				? await waitForEntropyBlockId((result.blockNum ?? 0) + PACK_ENTROPY_DELAY_BLOCKS)
+				: `local-entropy-${next.uid}`;
+			const derived = await deriveSealedPackBurnCards({
+				pack: next,
+				trxId: result.trxId,
+				salt,
+				entropyBlockId,
+			});
 			debug.log('[DuatCeremony] Pack burned', {
-				uid: next,
+				uid: next.uid,
+				packType: next.packType,
 				trxId: result.trxId,
 				cardsDerived: derived.length,
 				firstCard: derived[0],
@@ -140,7 +204,7 @@ export default function DuatPackCeremony({ accountId, expectedPacks = 0, onCompl
 				});
 			});
 
-			getNFTBridge().removePack(next);
+			getNFTBridge().removePack(next.uid);
 			// Only converge against chain history when there is a chain replay
 			// running. Local-stage bridges have no replay; calling forceSync
 			// here would query Hive RPC and then `hydrateStore` would wipe the
@@ -181,7 +245,7 @@ export default function DuatPackCeremony({ accountId, expectedPacks = 0, onCompl
 			} catch (err) {
 				debug.warn('[DuatCeremony] poll forceSync error:', err);
 			}
-			setQueue(findOpenableDuatPacks());
+			setQueue(findOpenablePacks());
 			setPollAttempts(n => n + 1);
 		}, CHAIN_POLL_INTERVAL_MS);
 
@@ -195,7 +259,7 @@ export default function DuatPackCeremony({ accountId, expectedPacks = 0, onCompl
 		} catch (err) {
 			debug.warn('[DuatCeremony] retry forceSync error:', err);
 		}
-		setQueue(findOpenableDuatPacks());
+		setQueue(findOpenablePacks());
 	}, [accountId, hiveMode]);
 
 	const handleOpenAnother = useCallback(() => {

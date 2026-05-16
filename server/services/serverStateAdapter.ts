@@ -54,13 +54,42 @@ import {
 function cardRecordToAsset(r: CardRecord): CardAsset {
 	return {
 		uid: r.uid, cardId: r.cardId, owner: r.owner, rarity: r.rarity,
-		level: r.level, xp: r.xp, edition: 'alpha', mintSource: 'genesis',
-		mintTrxId: '', mintBlockNum: 0, lastTransferBlock: 0,
+		level: r.level, xp: r.xp, edition: r.edition ?? 'alpha',
+		foil: r.foil,
+		mintSource: r.mintSource ?? 'genesis',
+		mintTrxId: r.mintTrxId ?? '',
+		mintBlockNum: r.mintBlockNum ?? 0,
+		lastTransferBlock: r.lastTransferBlock ?? 0,
+		originDna: r.originDna,
+		instanceDna: r.instanceDna,
+		parentInstanceDna: r.parentInstanceDna,
+		generation: r.generation,
+		replicaCount: r.replicaCount,
+		mergedFrom: r.mergedFrom,
 	};
 }
 
 function assetToCardRecord(a: CardAsset): CardRecord {
-	return { uid: a.uid, cardId: a.cardId, owner: a.owner, rarity: a.rarity, level: a.level, xp: a.xp };
+	return {
+		uid: a.uid,
+		cardId: a.cardId,
+		owner: a.owner,
+		rarity: a.rarity,
+		level: a.level,
+		xp: a.xp,
+		edition: a.edition,
+		foil: a.foil,
+		mintSource: a.mintSource,
+		mintTrxId: a.mintTrxId,
+		mintBlockNum: a.mintBlockNum,
+		lastTransferBlock: a.lastTransferBlock,
+		originDna: a.originDna,
+		instanceDna: a.instanceDna,
+		parentInstanceDna: a.parentInstanceDna,
+		generation: a.generation,
+		replicaCount: a.replicaCount,
+		mergedFrom: a.mergedFrom,
+	};
 }
 
 function genesisToRecord(g: GenesisRecord): GenesisStateRecord {

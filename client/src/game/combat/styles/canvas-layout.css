@@ -219,13 +219,25 @@
 }
 
 .unified-combat-arena .opponent-hand-display {
+  --opponent-hand-card-width: 78px;
+  --opponent-hand-card-overlap: calc(var(--opponent-hand-card-width) / -2);
+
   position: absolute;
   left: var(--poker-zone-opponentHand-x, 256px);
   top: var(--poker-zone-opponentHand-y, 160px);
   width: var(--poker-zone-opponentHand-w, 320px);
   height: var(--poker-zone-opponentHand-h, 96px) !important;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
   margin-top: 0;
+  overflow: visible;
   pointer-events: auto;
+}
+
+.unified-combat-arena .opponent-hand-display > * {
+  flex: 0 0 var(--opponent-hand-card-width);
 }
 
 .unified-combat-arena > .zone-board {
@@ -287,15 +299,20 @@
   --bf-card-height: 161px;
   --bf-row-height: 176px;
   --bf-slot-gap: 6px;
+  box-sizing: border-box;
   width: 100%;
   height: 100%;
   padding: 0;
 }
 
 .unified-combat-arena .minion-field .bf-row {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
   min-height: var(--bf-row-height);
   padding: 0;
   gap: var(--bf-slot-gap);
+  overflow: visible;
 }
 
 .unified-combat-arena .unified-hero-section {
@@ -363,11 +380,14 @@
   right: auto;
   top: var(--poker-zone-bettingControls-y, auto);
   bottom: auto;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  justify-content: flex-end;
   gap: 4px;
   width: var(--poker-zone-bettingControls-w, var(--betting-panel-width));
+  height: var(--poker-zone-bettingControls-h, auto);
   min-height: var(--poker-zone-bettingControls-h, auto);
   transform: rotate(var(--poker-zone-bettingControls-rot, 0deg));
   transform-origin: top left;
