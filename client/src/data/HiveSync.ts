@@ -18,6 +18,9 @@ import {
 } from "./HiveAuth";
 import {
   getHiveKeychain,
+  getHiveKeychainBlockNum,
+  getHiveKeychainError,
+  getHiveKeychainResultId,
   isHiveKeychainAvailable,
   type HiveKeychainApi,
 } from "./HiveKeychain";
@@ -35,6 +38,7 @@ import {
   buildHbdPackPurchaseMemo,
   formatHbdTransferAmount,
 } from "@shared/protocol-core";
+import { buildMatchResultSignatureMessage } from "@shared/protocol-core/matchResultCommitment";
 import {
   NFTLOX_PROTOCOL_ID,
   NFTLOX_PROTOCOL_VERSION,
@@ -163,9 +167,11 @@ export class HiveSync {
         (response) => {
           resolve({
             success: response.success,
-            trxId: response.result?.id,
-            blockNum: response.result?.block_num,
-            error: response.error || response.message,
+            trxId: getHiveKeychainResultId(response),
+            blockNum: getHiveKeychainBlockNum(response),
+            error: response.success
+              ? undefined
+              : getHiveKeychainError(response, "Hive Keychain custom_json rejected"),
           });
         },
       );
@@ -203,9 +209,11 @@ export class HiveSync {
         (response) => {
           resolve({
             success: response.success,
-            trxId: response.result?.id,
-            blockNum: response.result?.block_num,
-            error: response.error || response.message,
+            trxId: getHiveKeychainResultId(response),
+            blockNum: getHiveKeychainBlockNum(response),
+            error: response.success
+              ? undefined
+              : getHiveKeychainError(response, "Hive Keychain broadcast rejected"),
           });
         },
       );
@@ -575,9 +583,11 @@ export class HiveSync {
         (response) => {
           resolve({
             success: response.success,
-            trxId: response.result?.id,
-            blockNum: response.result?.block_num,
-            error: response.error || response.message,
+            trxId: getHiveKeychainResultId(response),
+            blockNum: getHiveKeychainBlockNum(response),
+            error: response.success
+              ? undefined
+              : getHiveKeychainError(response, "Hive Keychain custom_json rejected"),
           });
         },
       );
@@ -840,7 +850,7 @@ export class HiveSync {
       throw new Error("Hive Keychain not available");
     }
 
-    const result = await signHiveMessage(hash, {
+    const result = await signHiveMessage(buildMatchResultSignatureMessage(hash), {
       keyType: "Posting",
       title: "Sign match result",
     });

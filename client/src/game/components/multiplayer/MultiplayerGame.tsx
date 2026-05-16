@@ -140,6 +140,9 @@ export const MultiplayerGame: React.FC = () => {
 	const { status: matchmakingStatus, roomId, joinQueue, leaveQueue } = useMatchmaking();
 	const opponentArmyFromPeer = usePeerStore(s => s.opponentArmy);
 	const p2pInitApplied = usePeerStore(s => s.p2pInitApplied);
+	const p2pSessionLocalAuthorized = usePeerStore(s => s.p2pSessionLocalAuthorized);
+	const p2pSessionRemoteAuthorized = usePeerStore(s => s.p2pSessionRemoteAuthorized);
+	const p2pSessionAuthError = usePeerStore(s => s.p2pSessionAuthError);
 	const connectionState = usePeerStore(s => s.connectionState);
 	const forfeitSide = usePeerStore(s => s.forfeitSide);
 	const hiveUser = useHiveDataStore(s => s.user);
@@ -305,12 +308,18 @@ export const MultiplayerGame: React.FC = () => {
 		//      non-null from its first render.
 		// The P2PProvider wrapping all of renderInner keeps useWireSync mounted
 		// behind the spinner so the init envelope is still received.
-		const guard = computeP2PRenderGuard({ opponentArmyFromPeer, p2pInitApplied });
+		const guard = computeP2PRenderGuard({
+			opponentArmyFromPeer,
+			p2pInitApplied,
+			p2pSessionLocalAuthorized,
+			p2pSessionRemoteAuthorized,
+			p2pSessionAuthError,
+		});
 		const spinner = (
 			<div className="flex items-center justify-center min-h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
-				<div className="text-center space-y-3">
+				<div className="text-center space-y-3 max-w-md px-4">
 					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-(--gold-400) mx-auto" />
-					<p className="text-sm text-(--ink-300)">{guard.kind === 'wait' ? guard.reason : 'Syncing match…'}</p>
+					<p className="text-sm text-(--ink-300) break-words">{guard.kind === 'wait' ? guard.reason : 'Syncing match…'}</p>
 				</div>
 			</div>
 		);

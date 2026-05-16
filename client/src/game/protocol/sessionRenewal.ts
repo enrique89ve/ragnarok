@@ -7,7 +7,7 @@
  *     session key dies; the match is still live on our side.
  *   - They generate a fresh Ed25519 keypair and sign the binding
  *     `'ragnarok session_renewal | matchId | newPubkey'` with their Hive
- *     Active key (one Keychain prompt per reload).
+ *     Posting key (one Keychain prompt per reload).
  *   - They WS-send `{ type: 'session_renewal', matchId, newPubkey,
  *     hiveSig }`. This module verifies the Hive sig against the
  *     opponent's known Hive account from `match_anchor` and decides
@@ -72,7 +72,7 @@ export interface RenewalVerifyInput {
 	/**
 	 * Caller-provided async predicate that validates `hiveSig` over
 	 * `buildRenewalMessage(matchId, newPubkey)` against the opponent's
-	 * known Hive Posting/Active authorities (from match_anchor).
+	 * known Hive Posting authority (from match_anchor identity binding).
 	 * Returns `true` if the sig was produced by an authorized key.
 	 */
 	readonly verifyHiveSig: (message: string, sig: string) => Promise<boolean>;

@@ -51,6 +51,11 @@ import type { ForgeCommitRecord } from './types';
 import { classifyCard } from '../schemas/cardCategory';
 import { verifyPoW, POW_CONFIG } from './pow';
 import { canonicalStringify, sha256Hash } from './hash';
+import {
+	buildCompactMatchResultCommitmentInput,
+	buildMatchResultSignatureMessage,
+	computeCompactMatchResultCommitmentHash,
+} from './matchResultCommitment';
 import { fnv1a } from './broadcast-utils';
 import { getEconomicLevelForXP, getEconomicXPPerWin } from './cardProgression';
 import {
@@ -96,6 +101,9 @@ type MatchResultDetails = MatchParticipants & {
 	counterparty: string;
 	cardHex?: string;
 	compactHash?: string;
+	resultHash?: string;
+	transcriptRoot?: string;
+	transcriptCid?: string;
 	seed: string;
 	version: number;
 };
@@ -683,7 +691,7 @@ async function applyMatchResult(
 	const nonceAndPowResult = await validateMatchResultNonceAndPow(op, details.nonce, deps);
 	if (nonceAndPowResult) return nonceAndPowResult;
 
-	const compactHashResult = await validateCompactMatchHash(op, details);
+	const compactHashResult = await validateCompactMatchHash(details);
 	if (compactHashResult) return compactHashResult;
 
 	const signatureResult = await validateRankedMatchSignatures(op, details, deps);
@@ -721,13 +729,16 @@ function extractMatchResultPayloadFields(
 		loser: (isCompact ? op.payload.l : null) as string | null,
 		nonce: Number(isCompact ? op.payload.n : op.payload.result_nonce ?? 0),
 		matchType: isCompact ? 'ranked' : ((op.payload.matchType as string) ?? 'casual'),
-		matchId: typeof matchIdValue === 'string' ? matchIdValue : '',
-		cardHex: isCompact ? op.payload.c as string | undefined : undefined,
-		compactHash: isCompact ? op.payload.ch as string | undefined : undefined,
-		seed: ((isCompact ? op.payload.s : op.payload.seed) as string | undefined) ?? '',
-		version: Number(isCompact ? op.payload.v : 0),
-	};
-}
+			matchId: typeof matchIdValue === 'string' ? matchIdValue : '',
+			cardHex: isCompact ? op.payload.c as string | undefined : undefined,
+			compactHash: isCompact ? op.payload.ch as string | undefined : undefined,
+			resultHash: isCompact ? op.payload.h as string | undefined : op.payload.hash as string | undefined,
+			transcriptRoot: isCompact ? op.payload.tr as string | undefined : op.payload.transcriptRoot as string | undefined,
+			transcriptCid: isCompact ? op.payload.tc as string | undefined : op.payload.transcriptCID as string | undefined,
+			seed: ((isCompact ? op.payload.s : op.payload.seed) as string | undefined) ?? '',
+			version: Number(isCompact ? op.payload.v : 0),
+		};
+	}
 
 function getMatchParticipants(
 	op: ProtocolOp,
@@ -780,23 +791,35 @@ async function validateMatchResultNonceAndPow(
 }
 
 async function validateCompactMatchHash(
-	op: ProtocolOp,
 	details: MatchResultDetails,
 ): Promise<OpResult | null> {
-	if (!details.isCompact || !details.compactHash || !details.cardHex) {
+	if (!details.isCompact) {
 		return null;
 	}
+	if (!details.compactHash) {
+		return reject('compact match missing commitment hash');
+	}
+	if (!details.resultHash) {
+		return reject('compact match missing result hash');
+	}
+	if (!details.transcriptRoot) {
+		return reject('compact match missing transcript root');
+	}
 
-	const chInput = {
-		m: op.payload.m,
-		w: details.winner,
-		l: details.loser ?? '',
-		n: details.nonce,
-		s: details.seed,
-		v: details.version,
-		c: details.cardHex,
-	};
-	const expectedCh = await sha256Hash(canonicalStringify(chInput));
+	const expectedCh = await computeCompactMatchResultCommitmentHash(
+		buildCompactMatchResultCommitmentInput({
+			matchId: details.matchId,
+			winner: details.winner,
+			loser: details.loser ?? '',
+			nonce: details.nonce,
+			resultHash: details.resultHash,
+			seed: details.seed,
+			version: details.version,
+			cardHex: details.cardHex,
+			transcriptRoot: details.transcriptRoot,
+			transcriptCid: details.transcriptCid,
+		}),
+	);
 	return expectedCh !== details.compactHash
 		? reject(`compact hash mismatch: expected=${expectedCh}, got=${details.compactHash}`)
 		: null;
@@ -828,7 +851,7 @@ async function validateRankedMatchSignatures(
 	// fields to compare today. Implement once match_result is extended in a
 	// follow-up issue.
 	const sigMessage = details.isCompact
-		? `${details.matchId}:${details.winner}:${details.loser ?? ''}:${details.nonce}`
+		? buildMatchResultSignatureMessage(details.compactHash!)
 		: `${details.matchId}:${details.winner}`;
 
 	const bKey = op.broadcaster === anchor!.playerA ? anchor!.pubkeyA! : anchor!.pubkeyB!;

@@ -135,7 +135,7 @@ Alternatives explicitly rejected (see §Rejected alternatives below):
 
 **Duration estimate**: 8–11 weeks total with explicit test gates between phases. Phase 0 alone (3–4 weeks) is sufficient for closed beta if false-positive slash is acceptable in low-stakes ranked.
 
-**Phase 0 → Phase 1 promotion gate**: `npm run smoke:phase0` must exit 0. The harness (`client/src/game/protocol/phase0.smoke.test.ts`) drives a 60-turn mock match through session_authorize + signed transcript + encrypted action log + session_renewal + server pending queue, with a stub engine. It asserts envelope integrity, prevHash chaining, Merkle root convergence, renewal idempotency, queue TTL, and the Keychain prompt budget (2 at start per peer, 0 mid-match). Green light = the protocol design holds end-to-end without an engine; Phase 1 (chess → WASM) is unlocked.
+**Phase 0 → Phase 1 promotion gate**: `npm run smoke:phase0` must exit 0. The harness (`client/src/game/protocol/phase0.smoke.test.ts`) drives a 60-turn mock match through session_authorize + signed transcript + encrypted action log + session_renewal + server pending queue, with a stub engine. It asserts envelope integrity, prevHash chaining, Merkle root convergence, renewal idempotency, queue TTL, and the Keychain prompt budget (1 at start per peer, 0 mid-match). Green light = the protocol design holds end-to-end without an engine; Phase 1 (chess → WASM) is unlocked.
 
 **Phase 1-lite → Phase 1.5 promotion gate** (per [.scratch/game-protocol-v2-phase1/DECISIONS.md D12](../../.scratch/game-protocol-v2-phase1/DECISIONS.md#d12--phase-1-lite-defer-runtime-flip-until-post-closed-beta)): `smoke:phase1` (TS reducer 2-peer determinism), `audit:determinism`, and `parity.test.ts` (TS↔AS canonical equality on ≥50 fixtures) all green on `main` for ≥3 consecutive commits with chess actions exercised in real closed-beta matches, plus the threat-model evolution captured in D12. When met, Phase 1.5 (runtime flip — original Phase 1 scope) is unlocked.
 
@@ -174,7 +174,7 @@ T+0–30s tab loads, app boots
 
 T+30–60s user clicks resume:
         client.generateNewEphemeralKeypair() → newPubkey
-        Hive Keychain prompt: sign 'session_renewal authorizing newPubkey for matchId X'
+        Hive Keychain Posting prompt: sign 'session_renewal authorizing newPubkey for matchId X'
         client WS→ opponent: { type: 'session_renewal', matchId, newPubkey, hiveSig }
 
 T+60–90s opponent verifies:
@@ -192,7 +192,7 @@ T+90s+  peer reconstructs match state:
 ```
 
 **Action log persistence** (optional but recommended):
-- Each peer writes their signed actions to IndexedDB, encrypted with their Hive Active key signature.
+- Each peer writes their signed actions to IndexedDB, encrypted with the same Hive Posting signature used for `session_authorize`.
 - On reload, action log is decryptable by user (with one Keychain prompt) and reconstructable.
 - Protects against XSS exfil: even if a script reads IndexedDB, it can't decrypt without the Hive key.
 
@@ -209,10 +209,10 @@ Slash window total:                    100 blocks post-match_result broadcast
 
 **Keychain prompts in recovery**:
 
-- Match start: 1 prompt (initial session_authorize)
+- Match start: 1 Posting prompt (`session_authorize`; reused for action-log encryption)
 - Mid-match: 0 prompts
-- Per reload: 1 prompt (session_renewal)
-- Match end: 1 prompt (final result envelope)
+- Per reload: 1 Posting prompt (session_renewal)
+- Match end: 1 Posting prompt (final result envelope)
 
 Worst case: user reloads 3 times during a match = 5 prompts total. Tolerable.
 

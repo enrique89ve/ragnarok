@@ -1,12 +1,17 @@
+export type HiveKeychainResultObject = {
+  id?: string;
+  block_num?: number;
+  trx_num?: number;
+  signature?: string;
+};
+
+export type HiveKeychainResult = string | HiveKeychainResultObject;
+
 export interface HiveKeychainResponse {
   success: boolean;
-  result?: {
-    id: string;
-    block_num: number;
-    trx_num: number;
-  };
-  error?: string;
-  message?: string;
+  result?: HiveKeychainResult | null;
+  error?: unknown;
+  message?: unknown;
 }
 
 export interface HiveKeychainApi {
@@ -17,7 +22,7 @@ export interface HiveKeychainApi {
     callback: (response: HiveKeychainResponse) => void,
   ) => void;
   requestCustomJson: (
-    username: string,
+    username: string | null,
     id: string,
     keyType: "Active" | "Posting",
     json: string,
@@ -25,7 +30,7 @@ export interface HiveKeychainApi {
     callback: (response: HiveKeychainResponse) => void,
   ) => void;
   requestSignBuffer: (
-    username: string,
+    username: string | null,
     message: string,
     keyType: "Active" | "Posting" | "Memo",
     callback: (response: HiveKeychainResponse) => void,
@@ -50,4 +55,67 @@ export function getHiveKeychain(): HiveKeychainApi | null {
 
 export function isHiveKeychainAvailable(): boolean {
   return getHiveKeychain() !== null;
+}
+
+export function getHiveKeychainResultObject(
+  response: HiveKeychainResponse,
+): HiveKeychainResultObject | null {
+  return typeof response.result === "object" && response.result !== null
+    ? response.result
+    : null;
+}
+
+export function getHiveKeychainResultId(response: HiveKeychainResponse): string | undefined {
+  return getHiveKeychainResultObject(response)?.id;
+}
+
+export function getHiveKeychainBlockNum(response: HiveKeychainResponse): number | undefined {
+  return getHiveKeychainResultObject(response)?.block_num;
+}
+
+export function getHiveKeychainSignature(response: HiveKeychainResponse): string | null {
+  if (typeof response.result === "string" && response.result.length > 0) {
+    return response.result;
+  }
+
+  const result = getHiveKeychainResultObject(response);
+  return result?.signature ?? result?.id ?? null;
+}
+
+function stringifyHiveKeychainMessage(value: unknown): string | null {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  if (value instanceof Error && value.message.trim().length > 0) {
+    return value.message;
+  }
+
+  if (value && typeof value === "object" && "message" in value) {
+    const message = (value as { readonly message?: unknown }).message;
+    if (typeof message === "string" && message.trim().length > 0) {
+      return message;
+    }
+  }
+
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  try {
+    const serialized = JSON.stringify(value);
+    return serialized && serialized !== "{}" ? serialized : String(value);
+  } catch {
+    return String(value);
+  }
+}
+
+export function getHiveKeychainError(
+  response: HiveKeychainResponse,
+  fallback: string,
+): string {
+  return stringifyHiveKeychainMessage(response.error)
+    ?? stringifyHiveKeychainMessage(response.message)
+    ?? fallback;
 }

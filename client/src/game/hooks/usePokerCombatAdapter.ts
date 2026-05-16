@@ -64,6 +64,8 @@ export interface PokerCombatAdapter {
     activePlayerId: string;
     actionsThisRound: number;
     durationMs: number;
+    sentAtMs?: number;
+    remainingMs?: number;
     receivedAtMs: number;
   }) => void;
   startNextHand: (resolution?: CombatResolution) => void;

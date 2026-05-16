@@ -52,13 +52,34 @@ export function createPokerTurnClock(input: PokerTurnIdentityInput & {
 
 export function createReceivedPokerTurnClock(input: PokerTurnIdentityInput & {
 	readonly receivedAtMs: number;
+	readonly sentAtMs?: number;
+	readonly remainingMs?: number;
 	readonly durationMs?: number;
 }): PokerTurnClock | null {
-	return createPokerTurnClock({
-		...input,
-		nowMs: input.receivedAtMs,
-		durationMs: input.durationMs,
-	});
+	if (!input.activePlayerId || !isTimedPokerDecisionPhase(input.phase)) return null;
+	const durationMs = normalizeDurationMs(input.durationMs);
+	const receivedAtMs = normalizeTimestampMs(input.receivedAtMs);
+	if (input.remainingMs !== undefined) {
+		const remainingMs = normalizeRemainingMs(input.remainingMs, durationMs);
+		const deadlineAtMs = receivedAtMs + remainingMs;
+		return {
+			turnId: buildPokerTurnId(input),
+			startedAtMs: deadlineAtMs - durationMs,
+			deadlineAtMs,
+			durationMs,
+		};
+	}
+	const sentAtMs = input.sentAtMs === undefined
+		? receivedAtMs
+		: normalizeTimestampMs(input.sentAtMs);
+	const elapsedMs = Math.min(durationMs, Math.max(0, receivedAtMs - sentAtMs));
+	const startedAtMs = receivedAtMs - elapsedMs;
+	return {
+		turnId: buildPokerTurnId(input),
+		startedAtMs,
+		deadlineAtMs: startedAtMs + durationMs,
+		durationMs,
+	};
 }
 
 export function getPokerTurnRemainingMs(input: {
@@ -85,4 +106,9 @@ function normalizeDurationMs(value: number | undefined): number {
 function normalizeTimestampMs(value: number): number {
 	if (!Number.isFinite(value) || value < 0) return 0;
 	return Math.floor(value);
+}
+
+function normalizeRemainingMs(value: number, durationMs: number): number {
+	if (!Number.isFinite(value) || value < 0) return 0;
+	return Math.min(durationMs, Math.floor(value));
 }

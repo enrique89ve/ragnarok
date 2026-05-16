@@ -109,6 +109,9 @@ export interface PeerStore {
 	forfeitSide: P2PDisconnectSide | null;
 	bufferedMessageCount: number;
 	opponentArmy: ArmySelection | null;
+	p2pSessionLocalAuthorized: boolean;
+	p2pSessionRemoteAuthorized: boolean;
+	p2pSessionAuthError: string | null;
 	/**
 	 * True once the P2P `init` envelope has been applied locally —
 	 * - host: set after `initGameWithSeed` populates gameState and the
@@ -134,6 +137,11 @@ export interface PeerStore {
 	setIsHost: (isHost: boolean) => void;
 	setError: (error: string | null) => void;
 	setOpponentArmy: (army: ArmySelection | null) => void;
+	setP2pSessionAuthorization: (state: {
+		readonly localAuthorized?: boolean;
+		readonly remoteAuthorized?: boolean;
+		readonly error?: string | null;
+	}) => void;
 	setP2pInitApplied: (applied: boolean) => void;
 
 	/** Generate a peerId for matchmaking without opening a transport yet.
@@ -476,6 +484,9 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 	forfeitSide: null,
 	bufferedMessageCount: 0,
 	opponentArmy: null,
+	p2pSessionLocalAuthorized: false,
+	p2pSessionRemoteAuthorized: false,
+	p2pSessionAuthError: null,
 	p2pInitApplied: false,
 
 	setMyPeerId: (id) => set({ myPeerId: id }),
@@ -485,6 +496,11 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 	setIsHost: (isHost) => set({ isHost }),
 	setError: (error) => set({ error }),
 	setOpponentArmy: (army) => set({ opponentArmy: army }),
+	setP2pSessionAuthorization: (state) => set({
+		...(state.localAuthorized !== undefined ? { p2pSessionLocalAuthorized: state.localAuthorized } : {}),
+		...(state.remoteAuthorized !== undefined ? { p2pSessionRemoteAuthorized: state.remoteAuthorized } : {}),
+		...(state.error !== undefined ? { p2pSessionAuthError: state.error } : {}),
+	}),
 	setP2pInitApplied: (applied) => set({ p2pInitApplied: applied }),
 
 	handleHeartbeat: () => {
@@ -530,6 +546,9 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			disconnectSide: null,
 			forfeitSide: null,
 			opponentArmy: null,
+			p2pSessionLocalAuthorized: false,
+			p2pSessionRemoteAuthorized: false,
+			p2pSessionAuthError: null,
 		});
 
 		debug.log(`[PeerStore][host] opening room=${peerId.slice(0, 8)}…`);
@@ -557,6 +576,9 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			disconnectSide: isReconnect ? get().disconnectSide : null,
 			forfeitSide: null,
 			opponentArmy: null,
+			p2pSessionLocalAuthorized: isReconnect ? get().p2pSessionLocalAuthorized : false,
+			p2pSessionRemoteAuthorized: isReconnect ? get().p2pSessionRemoteAuthorized : false,
+			p2pSessionAuthError: isReconnect ? get().p2pSessionAuthError : null,
 		});
 
 		debug.log(`[PeerStore][join] joining room=${remoteId.slice(0, 8)}… as peer=${peerId.slice(0, 8)}…`);
@@ -580,6 +602,9 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			disconnectSide: isReconnect ? get().disconnectSide : null,
 			forfeitSide: null,
 			opponentArmy: isReconnect ? get().opponentArmy : null,
+			p2pSessionLocalAuthorized: isReconnect ? get().p2pSessionLocalAuthorized : false,
+			p2pSessionRemoteAuthorized: isReconnect ? get().p2pSessionRemoteAuthorized : false,
+			p2pSessionAuthError: isReconnect ? get().p2pSessionAuthError : null,
 			bufferedMessageCount: messageBuffer.length,
 		});
 
@@ -602,6 +627,9 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			disconnectSide: null, forfeitSide: null,
 			bufferedMessageCount: 0,
 			opponentArmy: null,
+			p2pSessionLocalAuthorized: false,
+			p2pSessionRemoteAuthorized: false,
+			p2pSessionAuthError: null,
 			p2pInitApplied: false,
 		});
 	},

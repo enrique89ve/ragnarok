@@ -73,17 +73,24 @@ export const MatchStartPayload = z.object({
 });
 
 // ── rp_match_result ──
-// Supports both compact (m/w/l/n/s/v/c/ch/pow) and legacy formats
+// Supports both compact (m/w/l/n/h/s/v/c/ch/tr/tc/sig/pow) and legacy formats
 
 const CompactMatchResult = z.object({
 	m: z.string().min(1),
 	w: z.string().min(1),
 	l: z.string().min(1),
 	n: NonNegativeInt,
+	h: z.string().min(1),
 	s: z.string().min(1),
 	v: z.number().optional(),
 	c: z.string().optional(),
-	ch: z.string().optional(),
+	ch: z.string().min(1),
+	tr: z.string().min(1).optional(),
+	tc: z.string().min(1).optional(),
+	sig: z.object({
+		b: z.string().min(1),
+		c: z.string().min(1),
+	}).optional(),
 	pow: PoWBlock.optional(),
 });
 

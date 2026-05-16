@@ -7,9 +7,9 @@
  *     is mirrored into IndexedDB so a tab reload / crash / OOM can replay
  *     the in-progress match from local state, without depending on the
  *     opponent to dump their log.
- *   - The store is encrypted with an AES-GCM key derived (HKDF) from a
- *     match-scoped Hive Active signature, so an XSS reading IndexedDB
- *     cannot decrypt without the Hive key (which lives in Keychain).
+ *   - The store is encrypted with an AES-GCM key derived (HKDF) from the
+ *     match-scoped Hive Posting signature already used for session_authorize,
+ *     so local IndexedDB rows do not contain their own decryption material.
  *
  * Crypto choice (per D3):
  *   - WebCrypto `crypto.subtle` for both HKDF and AES-GCM. No `@noble/ciphers`
@@ -123,24 +123,24 @@ function openRealDb(): Promise<IDBDatabase> {
 /**
  * Derive an AES-GCM-256 non-extractable key from a Hive signature.
  *
- * @param hiveSigB64 — opaque sig string from Hive Keychain (base58 in
- *   practice, but we treat it as opaque IKM bytes via UTF-8). Must be ≥ 16
- *   chars so HKDF gets enough entropy.
+ * @param hiveSigHex — opaque hex signature string from Hive Keychain. We
+ *   treat it as opaque IKM bytes via UTF-8. Must be ≥ 16 chars so HKDF gets
+ *   enough entropy.
  * @param matchId — used as HKDF salt, ensures different matches under the
  *   same Hive account yield distinct keys (no cross-match decryption).
  */
 export async function deriveEncKey(
-	hiveSigB64: string,
+	hiveSigHex: string,
 	matchId: string,
 ): Promise<CryptoKey> {
-	if (!hiveSigB64 || hiveSigB64.length < 16) {
+	if (!hiveSigHex || hiveSigHex.length < 16) {
 		throw new Error('deriveEncKey: hiveSig too short (need >= 16 chars)');
 	}
 	if (!matchId) {
 		throw new Error('deriveEncKey: matchId required');
 	}
 	const enc = new TextEncoder();
-	const ikm = enc.encode(hiveSigB64);
+	const ikm = enc.encode(hiveSigHex);
 	const salt = enc.encode(matchId);
 	const ikmKey = await crypto.subtle.importKey(
 		'raw',

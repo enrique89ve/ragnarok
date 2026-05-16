@@ -171,6 +171,8 @@ export interface PokerCombatSliceActions {
     activePlayerId: string;
     actionsThisRound: number;
     durationMs: number;
+    sentAtMs?: number;
+    remainingMs?: number;
     receivedAtMs: number;
   }) => void;
   setPlayerReady: (playerId: string) => void;

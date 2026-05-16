@@ -8,8 +8,8 @@
  *   - Wrong prevHash rejected.
  *   - session_renewal idempotency.
  *   - Server pending queue happy path + opponent-pull + TTL + DELETE.
- *   - Keychain prompt budget: exactly 3 per peer per match (start +
- *     action-log + end), 0 mid-match.
+ *   - Keychain prompt budget: exactly 2 Posting prompts per peer at match
+ *     start (session_authorize + action-log), 0 mid-match.
  *
  * The stub engine deliberately does NOT mirror gameStore — its only job
  * is to make the harness deterministic so any divergence the harness
@@ -61,7 +61,7 @@ const BASE_BLOCK = 1_000_000;
 
 interface KeychainEvent {
 	peer: string;
-	kind: 'session_authorize' | 'action_log_access' | 'session_renewal' | 'result_sign';
+	kind: 'session_authorize' | 'session_renewal' | 'result_sign';
 	matchId: string;
 }
 
@@ -108,7 +108,6 @@ async function buildSmokeStack(peer: 'A' | 'B', hiveSig: string) {
 	recordKeychain({ peer, kind: 'session_authorize', matchId: MATCH_ID });
 	const db = await openActionLog();
 	const encKey = await deriveEncKey(hiveSig, matchIdForLog);
-	recordKeychain({ peer, kind: 'action_log_access', matchId: MATCH_ID });
 	const transcript = emptyTranscript(MATCH_ID);
 	return { key, db, encKey, transcript, matchIdForLog };
 }
@@ -246,15 +245,15 @@ describe('Phase 0 smoke — server pending queue (offline opponent)', () => {
 });
 
 describe('Phase 0 smoke — Keychain budget', () => {
-	it('exactly 2 prompts per peer at match start (session_authorize + action-log)', async () => {
+	it('exactly 1 prompt per peer at match start (session_authorize only)', async () => {
 		await buildSmokeStack('A', HIVE_SIG_ALICE);
 		await buildSmokeStack('B', HIVE_SIG_BOB);
 		const peerA = keychainEvents.filter((e) => e.peer === 'A');
 		const peerB = keychainEvents.filter((e) => e.peer === 'B');
-		expect(peerA).toHaveLength(2);
-		expect(peerB).toHaveLength(2);
-		expect(peerA.map((e) => e.kind)).toEqual(['session_authorize', 'action_log_access']);
-		expect(peerB.map((e) => e.kind)).toEqual(['session_authorize', 'action_log_access']);
+		expect(peerA).toHaveLength(1);
+		expect(peerB).toHaveLength(1);
+		expect(peerA.map((e) => e.kind)).toEqual(['session_authorize']);
+		expect(peerB.map((e) => e.kind)).toEqual(['session_authorize']);
 	});
 
 	it('mid-match action exchange triggers zero additional prompts', async () => {

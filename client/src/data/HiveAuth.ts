@@ -1,4 +1,9 @@
-import { getHiveKeychain, isHiveKeychainAvailable } from "./HiveKeychain";
+import {
+  getHiveKeychain,
+  getHiveKeychainError,
+  getHiveKeychainSignature,
+  isHiveKeychainAvailable,
+} from "./HiveKeychain";
 import type {
   SignMessageOptions,
   SignedMessageResult,
@@ -75,7 +80,7 @@ const hiveKeychainProvider: HiveWalletProvider = {
 
           resolve({
             success: false,
-            error: response.error || response.message,
+            error: getHiveKeychainError(response, "Hive Keychain login rejected"),
           });
         },
         undefined,
@@ -110,14 +115,20 @@ const hiveKeychainProvider: HiveWalletProvider = {
         message,
         keyType,
         (response) => {
-          if (response.success && response.result) {
-            resolve({ success: true, signature: response.result.id });
+          const signature = getHiveKeychainSignature(response);
+          if (response.success && signature) {
+            resolve({ success: true, signature });
             return;
           }
 
           resolve({
             success: false,
-            error: response.error || response.message,
+            error: getHiveKeychainError(
+              response,
+              response.success
+                ? "Hive Keychain returned no signature"
+                : "Hive Keychain signing rejected",
+            ),
           });
         },
         undefined,

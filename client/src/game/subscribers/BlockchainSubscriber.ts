@@ -2,7 +2,7 @@ import { GameEventBus } from '@/core/events/GameEventBus';
 import type { GameEndedEvent } from '@/core/events/GameEvents';
 import { useGameStore } from '../stores/gameStore';
 import { useTransactionQueueStore } from '@/data/blockchain/transactionQueueStore';
-import { packageMatchResult, packMatchResultForChain } from '@/data/blockchain/matchResultPackager';
+import { packageMatchResult, packMatchResultForChain, computeMatchResultCommitmentHash } from '@/data/blockchain/matchResultPackager';
 import { isBlockchainPackagingEnabled } from '../config/featureFlags';
 import { generateMatchId, useHiveDataStore } from '@/data/HiveDataLayer';
 import { getStarterUid, isStarterEntitlementAsset, type HiveCardAsset } from '@/data/schemas/HiveTypes';
@@ -326,13 +326,15 @@ type CountersignOutcome =
 
 async function attemptDualSig(result: PackagedMatchResult): Promise<PackagedMatchResult> {
 	const peer = usePeerStore.getState();
-	if (peer.connectionState !== 'connected' || !peer.isHost) return result;
+	if (peer.connectionState !== 'connected') return result;
 	if (result.matchType !== 'ranked') return result;
+	if (hiveSync.getUsername() !== result.winner.username) return result;
 
 	try {
-		const broadcasterSig = await hiveSync.signResultHash(result.hash);
+		const commitmentHash = await computeMatchResultCommitmentHash(result);
+		const broadcasterSig = await hiveSync.signResultHash(commitmentHash);
 		const proposalId = crypto.randomUUID();
-		peer.send({ type: 'result_propose', result, hash: result.hash, broadcasterSig, proposalId });
+		peer.send({ type: 'result_propose', result, hash: commitmentHash, broadcasterSig, proposalId });
 
 		const outcome = await waitForCountersign(DUAL_SIG_TIMEOUT_MS);
 		if (outcome.kind === 'signed') {
@@ -345,12 +347,13 @@ async function attemptDualSig(result: PackagedMatchResult): Promise<PackagedMatc
 		if (outcome.kind === 'rejected') {
 			debug.warn(`[BlockchainSubscriber] Dual-sig rejected by counterparty (reason=${outcome.reason}) — match result not broadcast`);
 			recordSessionEvent('result_rejection_received', {
-				reason: outcome.reason,
-				matchId: result.matchId,
-				proposerWinner: result.winner.username,
-				proposerLoser: result.loser.username,
-				proposalId,
-			});
+					reason: outcome.reason,
+					matchId: result.matchId,
+					proposerWinner: result.winner.username,
+					proposerLoser: result.loser.username,
+					proposalId,
+					commitmentHash,
+				});
 			GameEventBus.emitNotification({
 				level: 'warning',
 				message: `Opponent rejected match result (${outcome.reason}). Result was not broadcast on-chain.`,
@@ -360,11 +363,12 @@ async function attemptDualSig(result: PackagedMatchResult): Promise<PackagedMatc
 			debug.warn('[BlockchainSubscriber] Dual-sig timed out (30s) — match result not broadcast');
 			recordSessionEvent('result_countersign_timeout', {
 				matchId: result.matchId,
-				proposerWinner: result.winner.username,
-				proposerLoser: result.loser.username,
-				proposalId,
-				timeoutMs: DUAL_SIG_TIMEOUT_MS,
-			});
+					proposerWinner: result.winner.username,
+					proposerLoser: result.loser.username,
+					proposalId,
+					commitmentHash,
+					timeoutMs: DUAL_SIG_TIMEOUT_MS,
+				});
 			GameEventBus.emitNotification({
 				level: 'warning',
 				message: 'Opponent did not sign the match result in time. Result was not broadcast on-chain.',

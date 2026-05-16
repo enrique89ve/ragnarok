@@ -31,6 +31,7 @@ export interface P2PActions {
 		activePlayerId: string;
 		actionsThisRound: number;
 		durationMs: number;
+		remainingMs?: number;
 	}) => void;
 	downloadSessionLog: () => void;
 	gameState: GameState | null;

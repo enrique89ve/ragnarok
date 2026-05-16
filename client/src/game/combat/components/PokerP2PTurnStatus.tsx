@@ -1,7 +1,11 @@
 import React, { useMemo } from 'react';
 import { CheckCircle2, Clock3, Hourglass, Radio, WifiOff } from 'lucide-react';
-import { CombatPhase, type PokerCombatState } from '../../types/PokerCombatTypes';
+import type { PokerCombatState } from '../../types/PokerCombatTypes';
 import type { P2PConnectionState } from '../../stores/peerStore';
+import {
+	derivePokerDecisionView,
+	type PokerDecisionView,
+} from '../decision/pokerDecisionView';
 
 type PokerP2PTurnStatusVariant = 'player' | 'opponent' | 'reconnecting' | 'showdown' | 'syncing';
 
@@ -21,94 +25,37 @@ interface PokerP2PTurnStatusView {
 	readonly clockLabel: string;
 }
 
-const PHASE_LABELS: Partial<Record<CombatPhase, string>> = {
-	[CombatPhase.PRE_FLOP]: 'First Blood',
-	[CombatPhase.FAITH]: 'Faith',
-	[CombatPhase.FORESIGHT]: 'Foresight',
-	[CombatPhase.DESTINY]: 'Destiny',
-	[CombatPhase.RESOLUTION]: 'Showdown',
-};
-
-function formatPhaseLabel(phase: CombatPhase): string {
-	return PHASE_LABELS[phase] ?? phase.replace(/_/g, ' ');
-}
-
-function formatTurnLabel(turnId: string | null | undefined): string {
-	if (!turnId) return 'No clock';
-	return `#${turnId.slice(-6)}`;
-}
-
-function getClockLabel(combatState: PokerCombatState): string {
-	const seconds = Math.max(0, Math.ceil(combatState.turnTimer ?? combatState.maxTurnTime ?? 0));
-	return `${seconds}s`;
-}
-
 export function getPokerP2PTurnStatusView(input: {
 	readonly combatState: PokerCombatState;
 	readonly connectionState: P2PConnectionState;
+	readonly nowMs?: number;
 }): PokerP2PTurnStatusView {
-	const { combatState, connectionState } = input;
-	const phaseLabel = formatPhaseLabel(combatState.phase);
-	const turnLabel = formatTurnLabel(combatState.turnId);
-	const clockLabel = getClockLabel(combatState);
+	return toP2PTurnStatusView(derivePokerDecisionView({
+		combatState: input.combatState,
+		connectionState: input.connectionState,
+		isP2PCombat: true,
+		nowMs: input.nowMs,
+	}));
+}
 
-	if (connectionState !== 'connected') {
-		return {
-			variant: 'reconnecting',
-			label: 'Reconnecting',
-			title: 'Poker input paused',
-			detail: 'Waiting for peer connection',
-			phaseLabel,
-			turnLabel,
-			clockLabel,
-		};
-	}
-
-	if (combatState.phase === CombatPhase.RESOLUTION || combatState.foldWinner || combatState.isAllInShowdown) {
-		return {
-			variant: 'showdown',
-			label: 'Showdown',
-			title: 'Hand resolving',
-			detail: 'No wager actions available',
-			phaseLabel,
-			turnLabel,
-			clockLabel,
-		};
-	}
-
-	if (!combatState.activePlayerId) {
-		return {
-			variant: 'syncing',
-			label: 'Syncing',
-			title: 'Waiting for poker clock',
-			detail: 'Decision window not open',
-			phaseLabel,
-			turnLabel,
-			clockLabel,
-		};
-	}
-
-	const localDecision = combatState.activePlayerId === combatState.player.playerId;
-	if (localDecision) {
-		return {
-			variant: 'player',
-			label: 'Your Decision',
-			title: 'Choose wager action',
-			detail: 'Controls are live',
-			phaseLabel,
-			turnLabel,
-			clockLabel,
-		};
-	}
-
+function toP2PTurnStatusView(view: PokerDecisionView): PokerP2PTurnStatusView {
+	const variant = view.status === 'local_decision'
+		? 'player'
+		: view.status === 'remote_decision'
+			? 'opponent'
+			: view.status === 'reconnecting'
+				? 'reconnecting'
+				: view.status === 'showdown'
+					? 'showdown'
+					: 'syncing';
 	return {
-		variant: 'opponent',
-		label: 'Opponent Acting',
-		title: 'Waiting on opponent',
-		detail: 'Controls locked',
-		phaseLabel,
-		turnLabel,
-		clockLabel,
+		variant,
+		label: view.statusLabel,
+		title: view.statusTitle,
+		detail: view.statusDetail,
+		phaseLabel: view.phaseLabel,
+		turnLabel: view.turnLabel,
+		clockLabel: view.clockLabel,
 	};
 }
 

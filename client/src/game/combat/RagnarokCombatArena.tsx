@@ -76,6 +76,7 @@ import { isBettingPhase } from './modules/PhaseManager';
 import { resolveHeroPortrait } from '../utils/art/artMapping';
 import { getHeroFeud } from '../pvp/pvpData';
 import type { CardInstance } from '../types';
+import { derivePokerDecisionView } from './decision/pokerDecisionView';
 
 const CrossedSwordsIcon = () => (
 	<svg className="btn-icon" viewBox="0 0 20 20" fill="currentColor">
@@ -251,7 +252,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
   const activeMatch = useMatchStore(s => s.activeMatch);
   const connectionState = usePeerStore(s => s.connectionState);
 
-  const isPlayerTurn = gameState?.currentTurn === 'player';
+  const cardGameIsPlayerTurn = gameState?.currentTurn === 'player';
   const isP2PCombat = activeMatch?.opponent.kind === 'peer';
 
   const [communityCardsRevealed, setCommunityCardsRevealed] = useState(false);
@@ -348,6 +349,23 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
   const attackingCard = useMemo(() => {
     return rawAttackingCard ? adaptCardInstance(rawAttackingCard as CardInstance) : null;
   }, [rawAttackingCard]);
+
+  const basePermissions = useMemo(
+    () => getActionPermissions(combatState, true),
+    [combatState]
+  );
+  const pokerDecisionView = useMemo(
+    () => derivePokerDecisionView({
+      combatState,
+      connectionState,
+      isP2PCombat,
+      permissions: basePermissions,
+    }),
+    [combatState, connectionState, isP2PCombat, basePermissions]
+  );
+  const isPlayerTurn = pokerDecisionView.displayTurn
+    ? pokerDecisionView.displayTurn === 'player'
+    : cardGameIsPlayerTurn;
 
   // Turn transition flash
   const [turnFlash, setTurnFlash] = useState<'player' | 'opponent' | null>(null);
@@ -455,11 +473,6 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
     addShakingTarget,
     gameState,
   });
-  
-  const basePermissions = useMemo(
-    () => getActionPermissions(combatState, true),
-    [combatState]
-  );
 
   const combatPhase = combatState?.phase;
   const isMulligan = combatPhase === CombatPhase.MULLIGAN;
@@ -980,6 +993,20 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
   const gameWinner = useGameStore(state => state.gameState?.winner);
   const turnNumber = useGameStore(state => state.gameState?.turnNumber ?? 1);
   const currentTurnForBanner = useGameStore(state => state.gameState?.currentTurn);
+  const p2pDecisionConnectionState = usePeerStore(state => state.connectionState);
+  const p2pDecisionMatch = useMatchStore(state => state.activeMatch);
+  const outerDecisionView = useMemo(
+    () => derivePokerDecisionView({
+      combatState,
+      connectionState: p2pDecisionConnectionState,
+      isP2PCombat: p2pDecisionMatch?.opponent.kind === 'peer',
+    }),
+    [combatState, p2pDecisionConnectionState, p2pDecisionMatch]
+  );
+  const visibleTurnForBanner = outerDecisionView.displayTurn ?? currentTurnForBanner;
+  const gameOverWinner = gameWinner === 'player' || gameWinner === 'opponent' || gameWinner === 'draw'
+    ? gameWinner
+    : 'draw';
   const playerDeckCount = useGameStore(state => state.gameState?.players?.player?.deck?.length ?? 0);
   const opponentDeckCount = useGameStore(state => state.gameState?.players?.opponent?.deck?.length ?? 0);
   const opponentHandCount = useGameStore(state => state.gameState?.players?.opponent?.hand?.length ?? 0);
@@ -1099,13 +1126,13 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
 
         {/* Hourglass Timer at Top Center */}
         {(() => {
-          const t = combatState.turnTimer;
-          const maxT = 30;
-          const pct = Math.max(0, Math.min(1, t / maxT));
+          const t = outerDecisionView.remainingSeconds;
+          const maxT = outerDecisionView.durationSeconds;
+          const pct = outerDecisionView.timerProgress;
           const topH = pct * 30;
           const botH = (1 - pct) * 30;
           return (
-            <div className={`hourglass-timer ${t <= 10 ? 'low-time' : ''} ${t <= 5 ? 'critical' : ''}`}>
+            <div className={`hourglass-timer ${outerDecisionView.timerTone === 'low' ? 'low-time' : ''} ${outerDecisionView.timerTone === 'critical' || outerDecisionView.timerTone === 'expired' ? 'critical' : ''}`}>
               <svg className="hourglass-svg" viewBox="0 0 60 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <defs>
                   <linearGradient id="hg-gold" x1="0" y1="0" x2="1" y2="1">
@@ -1492,7 +1519,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
       </AnimatePresence>
 
       {/* Turn Banner - YOUR TURN / ENEMY TURN announcement */}
-      <TurnBanner currentTurn={currentTurnForBanner} turnNumber={turnNumber} />
+      <TurnBanner currentTurn={visibleTurnForBanner} turnNumber={turnNumber} />
 
       {/* Game HUD - deck count, hand count, turn counter */}
       <GameHUD
@@ -1504,7 +1531,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
         pot={combatState?.pot ?? 0}
         playerCommitted={combatState?.player.hpCommitted ?? 0}
         opponentCommitted={combatState?.opponent.hpCommitted ?? 0}
-        isPlayerTurn={currentTurnForBanner === 'player'}
+        isPlayerTurn={visibleTurnForBanner === 'player'}
         playerElement={combatState ? getCombatElement(combatState.player?.pet?.stats?.element) : undefined}
         opponentElement={combatState ? getCombatElement(combatState.opponent?.pet?.stats?.element) : undefined}
         playerHasAdvantage={elementalBuff.playerHasAdvantage}
@@ -1514,7 +1541,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
       {/* Game Over Screen - Victory/Defeat */}
       <GameOverScreen
         isVisible={gamePhase === 'game_over'}
-        winner={gameWinner === 'player' ? 'player' : gameWinner === 'opponent' ? 'opponent' : 'draw'}
+        winner={gameOverWinner}
         turnNumber={turnNumber}
         playerHeroName={combatState?.player?.pet?.name ?? 'You'}
         opponentHeroName={combatState?.opponent?.pet?.name ?? 'Opponent'}
@@ -1522,7 +1549,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
         opponentHeroClass={getCombatHeroClass(combatState?.opponent)}
         playerHeroPortrait={combatState?.player?.pet?.norseHeroId ? resolveHeroPortrait(combatState.player.pet.norseHeroId) : undefined}
         opponentHeroPortrait={combatState?.opponent?.pet?.norseHeroId ? resolveHeroPortrait(combatState.opponent.pet.norseHeroId) : undefined}
-        onPlayAgain={onCombatEnd ? () => onCombatEnd(gameWinner === 'player' ? 'player' : 'opponent') : undefined}
+        onPlayAgain={onCombatEnd ? () => onCombatEnd(gameOverWinner) : undefined}
         onMainMenu={() => { window.location.hash = '/'; }}
       />
 

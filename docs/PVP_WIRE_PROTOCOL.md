@@ -230,19 +230,30 @@ the result (`BlockchainSubscriber.ts:272-294`):
 1. Computes the merkle root of the transcript (`buildMerkleTree()`).
 2. Pins the transcript bundle to IPFS (best-effort, non-blocking).
 3. Calls `attemptDualSig` (`BlockchainSubscriber.ts:317-339`):
-   - HOST signs `result.hash` with their Hive posting key
-     (`hiveSync.signResultHash`).
-   - HOST sends `result_propose: { result, hash, broadcasterSig, proposalId }`
-     to the client.
-   - HOST waits up to 30s for `result_countersign`.
-4. CLIENT receives `result_propose` (`useWireSync.ts:1011-1057`):
+   - The winning peer computes the compact commitment hash `ch` over
+     `{m,w,l,n,h,s,v,c,tr,tc}` where `h = result.hash` and `tr` is the
+     transcript Merkle root.
+   - The winner signs `ragnarok match_result v1 | <ch>` with their Hive posting
+     key (`hiveSync.signResultHash`).
+   - The winner sends
+     `result_propose: { result, hash: ch, broadcasterSig, proposalId }` to the
+     opponent.
+   - The winner waits up to 30s for `result_countersign`.
+4. Opponent receives `result_propose` (`useWireSync.ts:1484-1542`):
+   - Builds its local transcript Merkle root and rejects
+     `missing_transcript_root`, `local_transcript_unavailable`, or
+     `transcript_root_mismatch` before signing if the proposed `tr` cannot be
+     certified locally.
+   - Recomputes `ch` locally from `result` and rejects
+     `commitment_mismatch` before signing if it differs.
    - Validates that the result names them as winner-or-loser by Hive
      username (NOT by peerId — identity is anchored to Hive account).
    - Validates that the proposal's winner agrees with the local
      `gameState.winner` field.
-   - On agreement: signs `data.hash` and sends `result_countersign`.
+   - On agreement: signs `ragnarok match_result v1 | <data.hash>` and sends
+     `result_countersign`.
    - On disagreement: sends `result_reject` with a reason code.
-5. HOST attaches both signatures to the result and broadcasts on-chain
+5. The winner attaches both signatures to the result and broadcasts on-chain
    (see §8). Without dual-sig the result is NOT broadcast for ranked
    matches (`BlockchainSubscriber.ts:298-301`).
 
@@ -277,15 +288,15 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `poker_action` | both | both (symmetric) | Phase 3 poker: deterministic local apply + relay to peer; includes optional compact tuple for transcript/DataChannel migration |
 | `hash_check` | host → client | host | Periodic state-hash sanity check |
 | `hash_mismatch` | client → host | client | Reports a divergent state hash |
-| `result_propose` | host → client | host | Phase 4: proposed match result with broadcaster sig |
-| `result_countersign` | client → host | client | Phase 4: client's signature on the same hash |
-| `result_reject` | client → host | client | Phase 4: client refuses to sign with reason |
+| `result_propose` | winner → loser | winner | Phase 4: proposed match result with broadcaster sig over compact commitment |
+| `result_countersign` | loser → winner | loser | Phase 4: opponent's signature on the same commitment |
+| `result_reject` | loser → winner | loser | Phase 4: opponent refuses to sign with reason |
 | `heartbeat` | both | both | App-level keepalive |
 | `ping` / `pong` | both | both | Lower-level RTT probe |
 | `opponentDisconnected` | (relay only) | relay | Surfaced to UI |
 | `spectator_state` | host | host | Future / unused in beta |
-| `session_authorize` | peer→peer | both | Phase 0 (ADR 0004): broadcast `{ matchId, ephemeralPubkey, hiveSig }` at match start so the opponent binds the ephemeral signing key to the Hive identity |
-| `session_renewal` | peer→peer | both | Phase 0 (ADR 0004): after reload/crash, broadcast `{ matchId, newPubkey, hiveSig }` so the opponent accepts a fresh ephemeral key for the same match |
+| `session_authorize` | peer→peer | both | Phase 0 (ADR 0004): broadcast `{ matchId, ephemeralPubkey, hiveSig }` signed with Hive Posting authority at match start so the opponent binds the ephemeral signing key to the Hive identity |
+| `session_renewal` | peer→peer | both | Phase 0 (ADR 0004): after reload/crash, broadcast `{ matchId, newPubkey, hiveSig }` signed with Hive Posting authority so the opponent accepts a fresh ephemeral key for the same match |
 | `session_resumed` | peer→peer | both | Phase 0 (ADR 0004): acknowledge a renewal with `{ matchId, lastSeenStateHash }` so the resuming peer can decide between replay-from-log and `state_sync_request` |
 | `state_sync_request` | peer→peer | both | Phase 0 (ADR 0004): request the signed action log from a turn onwards (`{ matchId, fromTurn }`) when local IndexedDB replay is unavailable or corrupted |
 | `action_envelope` | peer→peer | broadcaster | Phase 0 (ADR 0004): per-action signed envelope `{ matchId, seq, prevHash, action, sig }`. `action` stays `unknown` on this layer — issue 03 owns the inner schema and per-action validation |
@@ -472,6 +483,8 @@ Implementation:
 - `poker_turn_started` is advisory clock sync only. A peer may not extend a
   decision window: receivers accept the message only when `durationMs`
   equals their local `maxTurnTime * 1000` for the same combat/phase/actor.
+  Senders include `remainingMs`, so receivers derive their local deadline
+  from receipt time instead of trusting the sender's wall clock.
 - P2P poker freezes local input, timers, and AI fallback while the transport
   is in reconnect/grace states. Local-only poker mutations must not happen
   during reconnect.
@@ -563,12 +576,12 @@ tree at match end. The root is embedded in the on-chain `match_result`.
   hashed). Odd-out nodes hash with themselves.
 - Empty transcript → `SHA256('empty_transcript')`.
 
-**Authority rule** (CRITICAL): the **HOST's transcript is the only one that
-goes on-chain**. The client builds its own local transcript (for QA export
-via `exportSessionLog`), but `BlockchainSubscriber.attemptDualSig` is
-host-only (`BlockchainSubscriber.ts:319`). The client signs the host's
-result hash without comparing transcript roots
-(`useWireSync.ts:1046`). See §10 OPEN-1.
+**Authority rule** (CRITICAL): the **winner's compact commitment** is what
+goes on-chain. `BlockchainSubscriber.attemptDualSig` only proposes when the
+local Hive account is the winner. The opponent recomputes `ch` from the
+proposal before countersigning, so neither peer can swap `h`, `tr`, `tc`, or
+winner-card ids without invalidating the signed payload. See §10 OPEN-1 for
+the remaining local transcript-root comparison gap.
 
 **Arbitration surface** (off-wire, post-match):
 - Server-side arbitrator (NOT yet implemented as a service — see
@@ -599,9 +612,9 @@ custom_json with PoW (64 challenges × 6-bit). The on-chain shape lives in
   s: seed,
   v: version,
   c?: winnerCardIdsHex,
-  ch?: contentHash,            // sha256(canonical({m,w,l,n,s,v,c}))
-  sig?: { b, c },              // broadcaster + counterparty Hive sigs
-  tr?: transcriptMerkleRoot,
+  ch: commitmentHash,          // sha256(canonical({m,w,l,n,h,s,v,c,tr,tc}))
+  sig: { b, c },               // winner/proposer + opponent Hive sigs
+  tr: transcriptMerkleRoot,
   tc?: transcriptIPFSCID
 }
 ```
@@ -622,6 +635,7 @@ the `tc` CID; the chain only carries enough to verify integrity.
 | State hash mismatch (cards) | `hash_check` from host | Toast + `submitSlashEvidence({ reason: 'forged_move' })` |
 | Mid-match disconnect | WS close handler | If `gamePhase !== 'game_over'`: `submitSlashEvidence({ reason: 'fake_disconnect' })` |
 | Duplicate match_result on-chain | Found via `findExistingMatchResult` | `submitSlashEvidence({ reason: 'double_result' })` |
+| Transcript root mismatch at result proposal | Opponent local root check | Reject `result_propose`; ranked result is not broadcast |
 | Dual-sig timeout / rejection | 30s timer in `attemptDualSig` | Result NOT broadcast; both players may submit slash evidence |
 | Chess piece-not-found mid-move | Receive handler `piece_not_found_*` | `recordSessionEvent('chess_command_rejected', { cause })`; freeze (no auto-recovery — see §10 OPEN-3) |
 
@@ -636,21 +650,19 @@ custom_json. The server-side processor is part of HivePoA (separate spec).
 These are decisions that are **not** stable and which beta-blocking work
 should NOT depend on without first re-grilling and updating this spec.
 
-### OPEN-1 — Client signs host's merkle root without verification
+### OPEN-1 — Transcript root comparison can false-reject until ordering is deterministic
 
-**Where**: `useWireSync.ts:1046` — the client signs `data.hash` (which
-includes the host's `transcriptRoot`) without comparing against its own
-local transcript root.
+**Where**: `useWireSync.ts:1484-1542` — the opponent now compares
+`result.transcriptRoot` against its own local replay root before signing.
 
-**Risk**: a malicious host could omit moves from the transcript before
-broadcasting; the client's signature certifies "I agree on the winner",
-not "I agree on the move list". An honest server arbitrator would have
-no way to detect the omission from the signed payload alone (only via a
-dispute that surfaces the missing moves).
+**Risk**: this closes the "sign without local replay agreement" gap, but it
+turns OPEN-2 into a live availability risk. If honest peers record the same
+actions in a different order, the opponent rejects with
+`transcript_root_mismatch` and the ranked result is not broadcast.
 
-**Decision needed**: should the client validate the host's transcript root
-against its local one before countersigning? If so, what to do when they
-diverge (auto-reject? ask the user? request resync?).
+**Decision needed**: make transcript ordering deterministic, then collapse
+OPEN-1 into the normal Phase 4 contract. Until then, a mismatch is fail-closed
+and keeps the local action log for dispute export.
 
 **Dependency**: OPEN-1 cannot be safely closed while OPEN-2 is open.
 Verifying transcript roots between peers requires deterministic ordering;
@@ -664,11 +676,10 @@ and at receive time on the remote peer. Local-and-remote interleaving is
 race-dependent — peer A may record `[A1, B1]` while peer B records
 `[A1, B1]` OR `[B1, A1]` depending on socket scheduling.
 
-**Risk**: the host's transcript (the one that goes on-chain) is internally
-consistent — the host sees its own moves and remote moves in arrival
-order. The client's local transcript (QA export) may differ. Today this
-is masked by §10 OPEN-1, but if we ever validate roots cross-peer, this
-breaks.
+**Risk**: each peer's transcript can be internally consistent while still
+hashing to a different root because local and remote actions are interleaved
+by arrival time. This still blocks closing §10 OPEN-1 because root comparison
+would otherwise false-reject honest peers under socket scheduling races.
 
 **Decision needed**: order transcript by `(timestamp, commandId)` before
 hashing? Use a deterministic counter from the wire envelope (the
@@ -766,7 +777,7 @@ the design is settled.
 |---|---|
 | **canonical side** | Global side label (`'player'` = first-mover, `'opponent'` = second-mover). Decided at seed_reveal. NOT viewer-relative. |
 | **commandId** | UUID minted per envelope; used for dedup independent of seq. |
-| **dual-sig** | Both peers sign the same `result.hash` before on-chain broadcast. |
+| **dual-sig** | Both peers sign the same compact match-result commitment `ch` before on-chain broadcast. |
 | **envelope** | A wire frame — `chess_command`, `game_command`, `result_propose`, etc. |
 | **guest sentinel** | The `'guest:' + peerId.slice(0, 8)` playerId used when no Hive username is bound. Indicates a non-arbitrable move. |
 | **host** | The peer that arrived first at the relay. Authoritative for cards/poker; tied for chess. NOT a server. |

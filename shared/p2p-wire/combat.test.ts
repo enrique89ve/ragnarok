@@ -139,7 +139,7 @@ describe('poker turn clock contract', () => {
 		expect(getPokerTurnRemainingSeconds({ nowMs: 61_000, deadlineAtMs: clock!.deadlineAtMs })).toBe(0);
 	});
 
-	it('recreates a received turn window from local receipt time', () => {
+	it('recreates a received turn window from local receipt time when sender time is absent', () => {
 		const clock = createReceivedPokerTurnClock({
 			combatId: 'combat-a',
 			phase: 'destiny',
@@ -153,6 +153,45 @@ describe('poker turn clock contract', () => {
 			turnId: 'combat-a:destiny:piece-2:1',
 			startedAtMs: 5_000,
 			deadlineAtMs: 35_000,
+			durationMs: 30_000,
+		});
+	});
+
+	it('preserves sender elapsed time when receiving a turn window late', () => {
+		const clock = createReceivedPokerTurnClock({
+			combatId: 'combat-a',
+			phase: 'destiny',
+			activePlayerId: 'piece-2',
+			actionsThisRound: 1,
+			sentAtMs: 2_000,
+			receivedAtMs: 5_000,
+			durationMs: 30_000,
+		});
+
+		expect(clock).toEqual({
+			turnId: 'combat-a:destiny:piece-2:1',
+			startedAtMs: 2_000,
+			deadlineAtMs: 32_000,
+			durationMs: 30_000,
+		});
+	});
+
+	it('uses relative remaining time over sender wall-clock time when provided', () => {
+		const clock = createReceivedPokerTurnClock({
+			combatId: 'combat-a',
+			phase: 'destiny',
+			activePlayerId: 'piece-2',
+			actionsThisRound: 1,
+			sentAtMs: 3_600_000,
+			receivedAtMs: 100_000,
+			remainingMs: 24_000,
+			durationMs: 30_000,
+		});
+
+		expect(clock).toEqual({
+			turnId: 'combat-a:destiny:piece-2:1',
+			startedAtMs: 94_000,
+			deadlineAtMs: 124_000,
 			durationMs: 30_000,
 		});
 	});

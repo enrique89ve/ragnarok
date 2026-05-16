@@ -7,13 +7,14 @@ import { useGameStore } from '../../../../stores/gameStore';
 import { debug } from '../../../../config/debugConfig';
 import { verifyDeckOwnership } from '../../../../../data/blockchain/deckVerification';
 import { sha256Hash } from '../../../../../data/blockchain/hashUtils';
+import { computeMatchResultCommitmentHash } from '../../../../../data/blockchain/matchResultPackager';
 import { verifyDeckClaims as verifyDeckClaimsOnServer } from '../../../../../data/chainAPI';
 import { getNFTBridge } from '../../../../nft';
 import type { PackagedMatchResult } from '../../../../../data/blockchain/types';
 import { NftUidSchema } from '../../../../../../../shared/protocol-core/playerCollection';
 import { CardIdSchema } from '../../../../../../../shared/schemas/ids';
 import type { DeckCardClaim } from '../../../../../../../shared/protocol-core/deckVerification';
-import { startNewTranscript, clearTranscript, recordSessionEvent, exportSessionLog, recordMove } from '../../../../../data/blockchain/transcriptBuilder';
+import { startNewTranscript, clearTranscript, recordSessionEvent, exportSessionLog, recordMove, getActiveTranscript } from '../../../../../data/blockchain/transcriptBuilder';
 import { localPlayerId, remotePlayerId } from '../../../../../data/blockchain/playerIdentity';
 import { getWasmHash, loadWasmEngine } from '../../../../engine/wasmLoader';
 import { computeStateHash } from '../../../../engine/engineBridge';
@@ -38,7 +39,7 @@ import {
 	type Transcript,
 	type Broadcaster,
 } from '../../../../protocol/transcript';
-import { signSessionAuthorize, signActionLogAccess } from '../../../../../data/HiveDataLayer';
+import { buildSessionAuthorizeMessage, signSessionAuthorize } from '../../../../../data/HiveDataLayer';
 import { verifyInboundRenewal } from '../../../../protocol/sessionRenewal';
 import { verifyHiveSignature } from '../../../../../data/blockchain/hiveSignatureVerifier';
 import {
@@ -48,6 +49,7 @@ import {
 	pruneFinalized as pruneActionLog,
 	type StoredLeaf,
 } from '../../../../protocol/actionLog';
+import { verifyResultProposalTranscriptRoot } from './resultProposalGuard';
 
 export type { GameCommandEnvelope, WireGameCommand } from '../../../../hooks/p2pEnvelope';
 export type { P2PMessage } from '../../../../p2p/messages';
@@ -137,9 +139,9 @@ export function useWireSync() {
 	const myBroadcasterRef = useRef<Broadcaster | null>(null);
 	// ADR 0004 §Decision.6 (issue 04) — encrypted IndexedDB action log. The
 	// DB handle is opened lazily after session_authorize so the encKey
-	// derivation can use the Hive sig from `signActionLogAccess`. Both refs
-	// MAY be null during the early-handshake window; appendLeaf is then a
-	// no-op (Phase 0 accepts this loss; harden in issue 06).
+	// derivation can reuse the same Hive sig. Both refs MAY be null during
+	// the early-handshake window; appendLeaf is then a no-op (Phase 0 accepts
+	// this loss; harden in issue 06).
 	const actionLogDbRef = useRef<Awaited<ReturnType<typeof openActionLog>> | null>(null);
 	const actionLogEncKeyRef = useRef<CryptoKey | null>(null);
 	// Per-session seq tracking: monotonic, contiguous, reset on new session
@@ -246,6 +248,11 @@ export function useWireSync() {
 			sessionAuthorizeSentRef.current = false;
 			opponentSessionPubkeyRef.current = null;
 			opponentSessionHiveSigRef.current = null;
+			usePeerStore.getState().setP2pSessionAuthorization({
+				localAuthorized: false,
+				remoteAuthorized: false,
+				error: null,
+			});
 			signedTranscriptRef.current = null;
 			myBroadcasterRef.current = null;
 			return undefined;
@@ -682,9 +689,15 @@ export function useWireSync() {
 								const localUsername = getNFTBridge().getUsername();
 								if (!localUsername) {
 									debug.warn('[wireSync] session_authorize skipped — no local Hive username');
+									usePeerStore.getState().setP2pSessionAuthorization({
+										localAuthorized: false,
+										error: 'Missing local Hive session',
+									});
 									return;
 								}
-								const hiveSig = await signSessionAuthorize(localMatchId, sessionKey.pubkey);
+								const hiveSig = await signSessionAuthorize(localMatchId, sessionKey.pubkey, {
+									username: localUsername,
+								});
 								send({
 									type: 'session_authorize',
 									matchId: localMatchId,
@@ -696,16 +709,17 @@ export function useWireSync() {
 									mode: sessionKey.mode,
 									pubkeyPrefix: sessionKey.pubkey.slice(0, 8),
 								});
+								usePeerStore.getState().setP2pSessionAuthorization({
+									localAuthorized: true,
+									error: null,
+								});
 								// ADR 0004 §Decision.6 (issue 04) — open the encrypted
-								// action log alongside session_authorize. A second Hive
-								// sig (Active key) derives the per-match AES-GCM key.
-								// This is the second of the two prompts already budgeted
-								// at match start; mid-match remains zero prompts.
+								// action log alongside session_authorize. Reuse the same
+								// Posting signature so match start has one Keychain prompt.
 								try {
-									const logSig = await signActionLogAccess(localMatchId);
 									const [db, encKey] = await Promise.all([
 										openActionLog(),
-										deriveActionLogEncKey(logSig, localMatchId),
+										deriveActionLogEncKey(hiveSig, localMatchId),
 									]);
 									actionLogDbRef.current = db;
 									actionLogEncKeyRef.current = encKey;
@@ -715,6 +729,10 @@ export function useWireSync() {
 								}
 							} catch (err) {
 								debug.error('[wireSync] session_authorize failed:', err);
+								usePeerStore.getState().setP2pSessionAuthorization({
+									localAuthorized: false,
+									error: err instanceof Error ? err.message : String(err),
+								});
 							}
 						})();
 					}
@@ -1319,6 +1337,8 @@ export function useWireSync() {
 										activePlayerId: string;
 										actionsThisRound: number;
 										durationMs: number;
+										sentAtMs?: number;
+										remainingMs?: number;
 										receivedAtMs: number;
 									}) => void;
 								};
@@ -1346,6 +1366,8 @@ export function useWireSync() {
 						activePlayerId: data.activePlayerId,
 						actionsThisRound: data.actionsThisRound,
 						durationMs: data.durationMs,
+						sentAtMs: data.sentAtMs,
+						remainingMs: data.remainingMs,
 						receivedAtMs: Date.now(),
 					});
 					recordMove('poker_turn_started', {
@@ -1355,6 +1377,7 @@ export function useWireSync() {
 						turnId: data.turnId,
 						actionsThisRound: data.actionsThisRound,
 						durationMs: data.durationMs,
+						remainingMs: data.remainingMs,
 					}, remotePlayerId({
 						opponentUsername: opponentUsernameRef.current,
 						remotePeerId: usePeerStore.getState().remotePeerId,
@@ -1471,6 +1494,48 @@ export function useWireSync() {
 						break;
 					}
 
+					const localTranscript = getActiveTranscript();
+					let localTranscriptRoot: string | null = null;
+					if (localTranscript) {
+						try {
+							localTranscriptRoot = await localTranscript.buildMerkleTree();
+						} catch (err) {
+							debug.warn('[wireSync] Failed to build local transcript root for result proposal:', err);
+						}
+					}
+					const transcriptCheck = verifyResultProposalTranscriptRoot({
+						result: data.result as PackagedMatchResult,
+						localRoot: localTranscriptRoot,
+					});
+					if (transcriptCheck.status === 'rejected') {
+						recordSessionEvent('result_rejected', {
+							reason: transcriptCheck.reason,
+							proposalId: data.proposalId,
+							matchId: data.result.matchId,
+							proposerWinner: data.result.winner.username,
+							proposerLoser: data.result.loser.username,
+							localRootPrefix: transcriptCheck.localRoot?.slice(0, 12),
+							proposedRootPrefix: transcriptCheck.proposedRoot?.slice(0, 12),
+						});
+						send({ type: 'result_reject', reason: transcriptCheck.reason });
+						break;
+					}
+
+					const expectedCommitmentHash = await computeMatchResultCommitmentHash(data.result as PackagedMatchResult);
+					if (expectedCommitmentHash !== data.hash) {
+						recordSessionEvent('result_rejected', {
+							reason: 'commitment_mismatch',
+							proposalId: data.proposalId,
+							matchId: data.result.matchId,
+							proposerWinner: data.result.winner.username,
+							proposerLoser: data.result.loser.username,
+							expectedCommitmentHash,
+							proposedCommitmentHash: data.hash,
+						});
+						send({ type: 'result_reject', reason: 'commitment_mismatch' });
+						break;
+					}
+
 					if (isSharedNetworkEnvironment() && data.result.matchId) {
 						const proposerUsername = data.result.winner?.username || data.result.loser?.username;
 						findExistingMatchResult(data.result.matchId, proposerUsername)
@@ -1573,13 +1638,33 @@ export function useWireSync() {
 				case 'session_authorize': {
 					// ADR 0004 §Decision.3 — cache opponent's ephemeral pubkey +
 					// the Hive sig that binds it to their on-chain identity.
-					// Hive-sig verification + `match_anchor` cross-check belong
-					// to issue 03 (action_envelope wiring) and the broadcaster
-					// flow respectively; this layer only caches.
 					if (data.matchId !== matchIdRef.current) {
 						debug.warn('[wireSync] session_authorize matchId mismatch — ignoring', {
 							received: data.matchId,
 							expected: matchIdRef.current,
+						});
+						break;
+					}
+					const opponentUsername = opponentUsernameRef.current;
+					if (!opponentUsername) {
+						debug.warn('[wireSync] session_authorize dropped — no opponent Hive username');
+						usePeerStore.getState().setP2pSessionAuthorization({
+							remoteAuthorized: false,
+							error: 'Missing opponent Hive username',
+						});
+						break;
+					}
+					const authorizeMessage = buildSessionAuthorizeMessage(data.matchId, data.ephemeralPubkey);
+					const sigValid = await verifyHiveSignature(opponentUsername, authorizeMessage, data.hiveSig);
+					if (!sigValid) {
+						debug.warn('[wireSync] session_authorize dropped — Hive signature verification failed', {
+							opponentUsername,
+							matchId: data.matchId,
+							pubkeyPrefix: data.ephemeralPubkey.slice(0, 8),
+						});
+						usePeerStore.getState().setP2pSessionAuthorization({
+							remoteAuthorized: false,
+							error: 'Opponent Hive signature verification failed',
 						});
 						break;
 					}
@@ -1593,6 +1678,9 @@ export function useWireSync() {
 					}
 					opponentSessionPubkeyRef.current = data.ephemeralPubkey;
 					opponentSessionHiveSigRef.current = data.hiveSig;
+					usePeerStore.getState().setP2pSessionAuthorization({
+						remoteAuthorized: true,
+					});
 					debug.log('[wireSync] Cached opponent session_authorize', {
 						matchId: data.matchId,
 						pubkeyPrefix: data.ephemeralPubkey.slice(0, 8),
@@ -1622,7 +1710,7 @@ export function useWireSync() {
 							activeMatchId,
 							verifyHiveSig: async (message, sig) => {
 								// Recover the signing pubkey from the Hive sig
-								// and confirm it's a known Hive Posting/Active
+								// and confirm it's a known Hive Posting
 								// authority for the opponent. The existing
 								// p2pRelay path already attests the opponent's
 								// account via seed_reveal, so trusting the
@@ -1633,6 +1721,9 @@ export function useWireSync() {
 						if (result.accepted) {
 							opponentSessionPubkeyRef.current = data.newPubkey;
 							opponentSessionHiveSigRef.current = data.hiveSig;
+							usePeerStore.getState().setP2pSessionAuthorization({
+								remoteAuthorized: true,
+							});
 							const lastSeen = signedTranscriptRef.current?.merkleRoot ?? '0'.repeat(64);
 							send({ type: 'session_resumed', matchId: activeMatchId, lastSeenStateHash: lastSeen });
 							debug.log('[wireSync] Accepted opponent session_renewal', {
@@ -2159,6 +2250,7 @@ export function useWireSync() {
 		activePlayerId: string;
 		actionsThisRound: number;
 		durationMs: number;
+		remainingMs?: number;
 	}) => {
 		if (connectionState !== 'connected') return;
 		send({
@@ -2169,6 +2261,7 @@ export function useWireSync() {
 			activePlayerId: input.activePlayerId,
 			actionsThisRound: input.actionsThisRound,
 			durationMs: input.durationMs,
+			remainingMs: input.remainingMs,
 			sentAtMs: Date.now(),
 		});
 	}, [connectionState, send]);
@@ -2212,7 +2305,7 @@ export function useWireSync() {
 			const proposalId = crypto.randomUUID();
 			send({ type: 'result_propose', result, hash, broadcasterSig, proposalId });
 
-			// 30s timeout — fall back to single-sig
+				// 30s timeout — ranked settlement stays blocked without dual-sig.
 			timeoutId = setTimeout(() => {
 				if (pendingResultRef.current) {
 					pendingResultRef.current = null;

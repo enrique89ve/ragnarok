@@ -30,6 +30,31 @@ import {
 } from './schemas/HiveTypes';
 import { signHiveMessage } from './HiveAuth';
 
+type BattleHiveSignatureOptions = Readonly<{
+  username?: string;
+}>;
+
+function buildBattleHiveSignatureOptions(
+  title: string,
+  options: BattleHiveSignatureOptions,
+): {
+  keyType: 'Posting';
+  title: string;
+  username?: string;
+  providerId?: 'hive_keychain';
+} {
+  if (!options.username) {
+    return { keyType: 'Posting', title };
+  }
+
+  return {
+    keyType: 'Posting',
+    title,
+    username: options.username,
+    providerId: 'hive_keychain',
+  };
+}
+
 interface HiveDataStore extends HiveGameState {
   setUser: (user: HiveUserRecord) => void;
   updateStats: (stats: Partial<HivePlayerStats>) => void;
@@ -82,7 +107,7 @@ export const useHiveDataStore = create<HiveDataStore>()(
         const playerData = match.player1.hiveUsername === state.user?.hiveUsername
           ? match.player1
           : match.player2;
-        
+
         return {
           recentMatches: [match, ...state.recentMatches].slice(0, 100),
           stats: {
@@ -213,60 +238,28 @@ export function buildSessionAuthorizeMessage(
 
 /**
  * Prompt the user (via Hive Keychain) to sign the ephemeral session pubkey
- * with their Hive Active key, binding the match-scoped key to their on-chain
- * identity. Returns the base58 Hive signature.
+ * with their Hive Posting key, binding the match-scoped key to their on-chain
+ * identity. Returns the hex Hive signature emitted by requestSignBuffer.
  *
  * Confidence:
  *   - Message format is canonical and verbatim — Hive Keychain `signBuffer`
  *     signs the bytes as provided (MEDIUM per issue 02 confidence note).
- *   - Active key is required: this signature gates entry to a match and
- *     should not be reusable from a leaked Posting key.
+ *   - Posting key is intentional for battle/session authority. Match play,
+ *     `match_anchor`, and `match_result` do not transfer assets.
  */
 export async function signSessionAuthorize(
   matchId: string,
   ephemeralPubkey: string,
+  options: BattleHiveSignatureOptions = {},
 ): Promise<string> {
   if (!matchId || !ephemeralPubkey) {
     throw new Error('signSessionAuthorize: matchId and ephemeralPubkey required');
   }
   const message = buildSessionAuthorizeMessage(matchId, ephemeralPubkey);
-  const result = await signHiveMessage(message, {
-    keyType: 'Active',
-    title: 'Authorize session key',
-  });
-  if (!result.success || !result.signature) {
-    throw new Error(`Hive Keychain sign rejected: ${result.error ?? 'unknown error'}`);
-  }
-  return result.signature;
-}
-
-// ─── Action log access (ADR 0004 §Decision.6, issue 04) ───────────────────
-//
-// Per ADR's Keychain prompt budget: this fires exactly ONCE per match (at
-// session_authorize time) AND once per reload (session_renewal — issue 06).
-// The returned Hive sig is HKDF-input for the per-match AES-GCM key used
-// by `client/src/game/protocol/actionLog.ts` to encrypt the IndexedDB log,
-// so XSS reading IndexedDB cannot decrypt without the Hive key.
-
-const ACTION_LOG_ACCESS_PREFIX = 'ragnarok action-log-access';
-
-export function buildActionLogAccessMessage(matchId: string): string {
-  return `${ACTION_LOG_ACCESS_PREFIX} | ${matchId}`;
-}
-
-/**
- * Hive Active signature over `'ragnarok action-log-access | <matchId>'`.
- * The signature bytes are the IKM for HKDF — they never leave the client,
- * never appear in any wire message, and never decrypt anything off-device.
- * The Hive Active key never leaves Hive Keychain.
- */
-export async function signActionLogAccess(matchId: string): Promise<string> {
-  if (!matchId) throw new Error('signActionLogAccess: matchId required');
-  const message = buildActionLogAccessMessage(matchId);
-  const result = await signHiveMessage(message, {
-    keyType: 'Active',
-    title: 'Authorize action log access',
-  });
+  const result = await signHiveMessage(message, buildBattleHiveSignatureOptions(
+    'Authorize session key',
+    options,
+  ));
   if (!result.success || !result.signature) {
     throw new Error(`Hive Keychain sign rejected: ${result.error ?? 'unknown error'}`);
   }
@@ -278,7 +271,7 @@ export async function signActionLogAccess(matchId: string): Promise<string> {
 // After a tab reload / crash / OOM / sleep the in-memory ephemeral session
 // key dies but the match is still live on the opponent's side. The
 // resuming peer generates a fresh Ed25519 keypair and authorizes the new
-// pubkey under the SAME matchId via a single Hive Active signature. The
+// pubkey under the SAME matchId via a single Hive Posting signature. The
 // opponent verifies the Hive sig against the broadcaster's known Hive
 // account (from match_anchor) and accepts the new pubkey for the
 // remainder of the match. Per-reload prompt budget = 1.
@@ -292,15 +285,16 @@ export function buildSessionRenewalMessage(matchId: string, newPubkey: string): 
 export async function signSessionRenewal(
   matchId: string,
   newPubkey: string,
+  options: BattleHiveSignatureOptions = {},
 ): Promise<string> {
   if (!matchId || !newPubkey) {
     throw new Error('signSessionRenewal: matchId and newPubkey required');
   }
   const message = buildSessionRenewalMessage(matchId, newPubkey);
-  const result = await signHiveMessage(message, {
-    keyType: 'Active',
-    title: 'Renew session key',
-  });
+  const result = await signHiveMessage(message, buildBattleHiveSignatureOptions(
+    'Renew session key',
+    options,
+  ));
   if (!result.success || !result.signature) {
     throw new Error(`Hive Keychain sign rejected: ${result.error ?? 'unknown error'}`);
   }
@@ -308,4 +302,4 @@ export async function signSessionRenewal(
 }
 
 // Expose on globalThis so game-engine can access without circular chunk dependency
-(globalThis as any).__ragnarokHiveDataStore = useHiveDataStore;
+(globalThis as Record<string, unknown>).__ragnarokHiveDataStore = useHiveDataStore;

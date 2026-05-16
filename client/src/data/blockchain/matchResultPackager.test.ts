@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { HiveCardAsset } from '../schemas/HiveTypes';
 import type { MatchPackagerInput } from './types';
-import { packageMatchResult } from './matchResultPackager';
+import { computeMatchResultCommitmentHash, packageMatchResult, packMatchResultForChain } from './matchResultPackager';
 import type { CardData, CardInstance, GameState, Player } from '../../game/types';
 
 vi.mock('./replayDB', () => ({
@@ -117,5 +117,30 @@ describe('packageMatchResult', () => {
 			},
 		]);
 		expect(result.runeRewards).toEqual({ winner: 2, loser: 0 });
+	});
+
+	it('binds result hash and transcript root into the compact chain commitment', async () => {
+		const result = await packageMatchResult(
+			makeGameState('opponent'),
+			makeInput(),
+			makeCollection(),
+			new Map([[20001, 'common']]),
+		);
+		const enrichedResult = {
+			...result,
+			transcriptRoot: 'a'.repeat(64),
+			transcriptCID: 'bafybeigameproof',
+		};
+
+		const packed = await packMatchResultForChain(enrichedResult);
+
+		expect(packed.h).toBe(result.hash);
+		expect(packed.tr).toBe(enrichedResult.transcriptRoot);
+		expect(packed.tc).toBe(enrichedResult.transcriptCID);
+		expect(packed.ch).toBe(await computeMatchResultCommitmentHash(enrichedResult));
+		await expect(computeMatchResultCommitmentHash({
+			...enrichedResult,
+			transcriptRoot: 'b'.repeat(64),
+		})).resolves.not.toBe(packed.ch);
 	});
 });

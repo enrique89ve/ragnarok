@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MetaPageHeader } from '../../../components/navigation/MetaPageHeader';
+import { getHiveKeychainError, getHiveKeychainSignature } from '../../../data/HiveKeychain';
 
 interface Signer {
 	username: string;
@@ -73,10 +74,11 @@ function signAuthMessage(username: string): Promise<{ signature: string; timesta
 			return;
 		}
 		window.hive_keychain.requestSignBuffer(username, message, 'Active', (response) => {
-			if (response.success && response.result) {
-				resolve({ signature: response.result.id, timestamp });
+			const signature = getHiveKeychainSignature(response);
+			if (response.success && signature) {
+				resolve({ signature, timestamp });
 			} else {
-				reject(new Error(response.error || 'Signing failed'));
+				reject(new Error(getHiveKeychainError(response, 'Signing failed')));
 			}
 		});
 	});
@@ -675,7 +677,7 @@ function EmergencyControls({ status, currentUser, signers, onFreeze, onUnfreezeV
 	);
 }
 
-function PendingSigningPanel({ pending, username, onApprove, onReject }: {
+function PendingSigningPanel({ pending, username: _username, onApprove, onReject }: {
 	pending: PendingSigning[];
 	username: string;
 	onApprove: (txId: string, digest: string) => void;
@@ -896,8 +898,9 @@ export default function TreasuryPage() {
 		try {
 			const signature = await new Promise<string>((resolve, reject) => {
 				window.hive_keychain!.requestSignBuffer(username, txDigest, 'Active', (response) => {
-					if (response.success && response.result) resolve(response.result.id);
-					else reject(new Error(response.error || 'Signing cancelled'));
+					const signature = getHiveKeychainSignature(response);
+					if (response.success && signature) resolve(signature);
+					else reject(new Error(getHiveKeychainError(response, 'Signing cancelled')));
 				});
 			});
 

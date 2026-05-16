@@ -8,11 +8,16 @@ import type {
 	EloChange,
 } from './types';
 import { MATCH_RESULT_VERSION } from './types';
-import { hashMatchResult, sha256Hash, canonicalStringify } from './hashUtils';
+import { hashMatchResult } from './hashUtils';
 import { calculateXPRewards } from './cardXPRewards';
 import type { HiveCardAsset } from '../schemas/HiveTypes';
 import { getPlayerNonce, advancePlayerNonce } from './replayDB';
 import { RUNE_LOSS_RANKED, RUNE_WIN_RANKED } from '@shared/protocol-core/runeEconomy';
+import {
+	buildCompactMatchResultCommitmentInput,
+	computeCompactMatchResultCommitmentHash,
+	type CompactMatchResultCommitmentInput,
+} from '@shared/protocol-core/matchResultCommitment';
 // Access combat store lazily to break blockchain ↔ combat-stores circular dependency
 // The store registers itself on globalThis at creation time (see unifiedCombatStore.ts)
 function getPokerHandsWon(side: 'player' | 'opponent'): number {
@@ -162,6 +167,25 @@ export function decodeCardIds(hex: string): number[] {
 	return ids;
 }
 
+export function buildMatchResultCommitmentInput(result: PackagedMatchResult): CompactMatchResultCommitmentInput {
+	return buildCompactMatchResultCommitmentInput({
+		matchId: result.matchId,
+		winner: result.winner.username,
+		loser: result.loser.username,
+		nonce: result.result_nonce,
+		resultHash: result.hash,
+		seed: result.seed,
+		version: result.version,
+		cardHex: result.winner.cardsUsed.length > 0 ? encodeCardIds(result.winner.cardsUsed) : undefined,
+		transcriptRoot: result.transcriptRoot ?? '',
+		transcriptCid: result.transcriptCID,
+	});
+}
+
+export function computeMatchResultCommitmentHash(result: PackagedMatchResult): Promise<string> {
+	return computeCompactMatchResultCommitmentHash(buildMatchResultCommitmentInput(result));
+}
+
 export async function packMatchResultForChain(result: PackagedMatchResult): Promise<PackagedMatchResultOnChain> {
 	const packed: PackagedMatchResultOnChain = {
 		m: result.matchId,
@@ -175,19 +199,17 @@ export async function packMatchResultForChain(result: PackagedMatchResult): Prom
 	if (result.winner.cardsUsed.length > 0) {
 		packed.c = encodeCardIds(result.winner.cardsUsed);
 	}
-	// Compact hash: covers only on-chain fields so the replay engine can verify integrity.
-	// Tampering with `c` without updating `ch` → caught immediately.
-	// Tampering with both → caught once dual-sig verification on `ch` is added.
-	const chInput = { m: packed.m, w: packed.w, l: packed.l, n: packed.n, s: packed.s, v: packed.v, c: packed.c ?? '' };
-	packed.ch = await sha256Hash(canonicalStringify(chInput));
-	if (result.signatures) {
-		packed.sig = { b: result.signatures.broadcaster, c: result.signatures.counterparty };
-	}
 	if (result.transcriptRoot) {
 		packed.tr = result.transcriptRoot;
 	}
 	if (result.transcriptCID) {
 		packed.tc = result.transcriptCID;
+	}
+	// Compact commitment signed by both peers. It fits Hive custom_json and binds
+	// the off-chain result hash to the replay transcript root.
+	packed.ch = await computeMatchResultCommitmentHash(result);
+	if (result.signatures) {
+		packed.sig = { b: result.signatures.broadcaster, c: result.signatures.counterparty };
 	}
 	return packed;
 }

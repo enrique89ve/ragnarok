@@ -88,6 +88,9 @@ __tests__/
 !client/src/data/blockchain/cardXPRewards.test.ts
 !client/src/data/blockchain/deckVerification.test.ts
 !client/src/data/blockchain/matchResultPackager.test.ts
+!client/src/data/HiveAuth.test.ts
+!client/src/data/HiveDataLayer.test.ts
+!client/src/data/HiveKeychain.test.ts
 !client/src/game/stores/starterStore.test.ts
 !client/src/game/stores/gameStore.test.ts
 !client/src/game/deck/heroDeckRules.test.ts
@@ -112,6 +115,7 @@ __tests__/
 !client/src/game/match/modes/single/resolver.test.ts
 !client/src/game/match/modes/campaign/resolver.test.ts
 !client/src/game/match/modes/p2p/resolver.test.ts
+!client/src/game/match/modes/p2p/wireSync/resultProposalGuard.test.ts
 !client/src/game/coordinator/hooks/chessAITurnDriver.test.ts
 !client/src/lib/stores/useWarbandStore.test.ts
 !client/src/game/protocol/sessionKey.test.ts

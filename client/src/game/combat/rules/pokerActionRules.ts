@@ -197,12 +197,12 @@ function getPokerTurnFlags(
   actor: PlayerCombatState,
   isResolution: boolean,
 ): PokerTurnFlags {
-  const isResolvedOrReady = isResolution || Boolean(combatState.foldWinner) || actor.isReady;
+  const isResolved = isResolution || Boolean(combatState.foldWinner);
   const hasActiveActor = combatState.activePlayerId !== null;
 
   return {
-    isMyTurnToAct: !isResolvedOrReady && combatState.activePlayerId === actor.playerId,
-    waitingForOpponent: !isResolvedOrReady && hasActiveActor && combatState.activePlayerId !== actor.playerId,
+    isMyTurnToAct: !isResolved && !actor.isReady && combatState.activePlayerId === actor.playerId,
+    waitingForOpponent: !isResolved && hasActiveActor && combatState.activePlayerId !== actor.playerId,
   };
 }
 

@@ -223,6 +223,7 @@ const PokerTurnStartedSchema = z.object({
 	activePlayerId: NonEmptyString(128),
 	actionsThisRound: NonNegativeInt,
 	durationMs: PokerTurnDurationMs,
+	remainingMs: PokerTurnDurationMs.optional(),
 	sentAtMs: NonNegativeInt,
 }).strict();
 
@@ -246,8 +247,8 @@ const HeartbeatSchema = z.object({
 // changes encoding; the exact format is locked when issue 02 lands.
 const PubkeyString = z.string().min(32).max(256);
 
-// Hive signature payloads are base58 (Hive convention) and bounded in
-// length — we don't decode here, only require non-empty + reasonable cap.
+// Hive Keychain requestSignBuffer returns a hex signature. We don't decode
+// here, only require non-empty + reasonable cap.
 const HiveSigString = NonEmptyString(512);
 
 const SessionAuthorizeSchema = z.object({

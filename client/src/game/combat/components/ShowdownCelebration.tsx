@@ -24,6 +24,7 @@ interface ShowdownCelebrationProps {
 }
 
 const ENTRANCE_DELAY = 400;
+const BADGE_DISPLAY_MS = 3200;
 
 export const ShowdownCelebration: React.FC<ShowdownCelebrationProps> = ({
 	resolution,
@@ -50,7 +51,8 @@ export const ShowdownCelebration: React.FC<ShowdownCelebrationProps> = ({
 		return () => clearTimeout(t);
 	}, [ready, resolution.winner]);
 
-	// Auto-dismiss 1500ms after combat animation completes (badge display time)
+	// Keep the verdict visible long enough for both peers to read the winner
+	// and hand comparison before the next poker hand starts.
 	useEffect(() => {
 		if (!combatAnimDone) return;
 		if (resolution.winner === 'draw') {
@@ -62,7 +64,7 @@ export const ShowdownCelebration: React.FC<ShowdownCelebrationProps> = ({
 		}
 		const timer = setTimeout(() => {
 			onCompleteRef.current();
-		}, 1500);
+		}, BADGE_DISPLAY_MS);
 		return () => clearTimeout(timer);
 	}, [combatAnimDone, resolution.winner]);
 
@@ -94,7 +96,7 @@ export const ShowdownCelebration: React.FC<ShowdownCelebrationProps> = ({
 
 	const getWinnerText = () => {
 		if (resolution.winner === 'draw') return 'Draw!';
-		return resolution.winner === 'player' ? 'Victory!' : 'Defeat';
+		return resolution.winner === 'player' ? 'You Win' : 'Opponent Wins';
 	};
 
 	const getHandName = () => {

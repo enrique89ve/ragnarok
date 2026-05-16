@@ -8,6 +8,7 @@ import { proceduralAudio } from '../../audio/proceduralAudio';
 import type { BattlePopupAction, BattlePopupTarget } from '../components/HeroBattlePopup';
 import { getPokerTurnRemainingSeconds } from '../../../../../shared/p2p-wire/pokerTurnClock';
 import { GameEventBus } from '../../../core/events/GameEventBus';
+import { derivePokerDecisionView } from '../decision/pokerDecisionView';
 
 interface UseCombatTimerOptions {
   combatState: PokerCombatState | null;
@@ -27,6 +28,7 @@ interface UseCombatTimerOptions {
     activePlayerId: string;
     actionsThisRound: number;
     durationMs: number;
+    remainingMs?: number;
   }) => void;
   addHeroBattlePopup?: (params: { action: BattlePopupAction; target: BattlePopupTarget; text: string; subtitle?: string }) => void;
 }
@@ -44,21 +46,25 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
     if (combatState.phase === CombatPhase.MULLIGAN) return;
     if (combatState.phase === CombatPhase.SPELL_PET) return;
     if (cardGameMulliganActive) return;
-    
-    if (combatState.player.isReady) {
-      debug.combat('[Timer] SKIP: Player already ready (isReady=true)');
-      return;
-    }
-    
+
     if (combatState.isAllInShowdown) {
       debug.combat('[Timer] SKIP: All-in showdown in progress - auto-advance handles phases');
       return;
     }
-    
+
     if (isP2PCombat && combatState.turnId && announcedTurnIdRef.current !== combatState.turnId) {
       announcedTurnIdRef.current = combatState.turnId;
       if (combatState.activePlayerId) {
-        const localPlayerTurn = combatState.activePlayerId === combatState.player.playerId;
+        const nowMs = Date.now();
+        const decisionView = derivePokerDecisionView({
+          combatState,
+          isP2PCombat,
+          nowMs,
+        });
+        const remainingMs = combatState.turnDeadlineAtMs === null
+          ? decisionView.remainingSeconds * 1_000
+          : Math.max(0, combatState.turnDeadlineAtMs - nowMs);
+        const localPlayerTurn = decisionView.activeSide === 'local';
         if (localPlayerTurn) {
           sendPokerTurnStarted?.({
             combatId: combatState.combatId,
@@ -67,6 +73,7 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
             activePlayerId: combatState.activePlayerId,
             actionsThisRound: combatState.actionsThisRound,
             durationMs: combatState.maxTurnTime * 1_000,
+            remainingMs,
           });
         }
         GameEventBus.emitNotification({
@@ -79,6 +86,11 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
       }
     }
 
+    if (combatState.player.isReady && (!isP2PCombat || combatState.activePlayerId !== combatState.opponent.playerId)) {
+      debug.combat('[Timer] SKIP: Player already ready (isReady=true)');
+      return;
+    }
+
     const timer = setInterval(() => {
       const mulliganStillActive = useGameStore.getState().gameState?.mulligan?.active;
       if (mulliganStillActive) return;
@@ -86,11 +98,14 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
       const freshState = getPokerCombatAdapterState().combatState;
       if (!freshState) return;
       
-      if (freshState.phase === CombatPhase.MULLIGAN || 
+      if (freshState.phase === CombatPhase.MULLIGAN ||
           freshState.phase === CombatPhase.SPELL_PET ||
-          freshState.player.isReady ||
           freshState.isAllInShowdown) {
         debug.combat('[Timer] SKIP in interval: phase=', freshState.phase, 'playerReady=', freshState.player.isReady, 'allIn=', freshState.isAllInShowdown);
+        return;
+      }
+      if (freshState.player.isReady && (!isP2PCombat || freshState.activePlayerId !== freshState.opponent.playerId)) {
+        debug.combat('[Timer] SKIP in interval: playerReady=', freshState.player.isReady, 'activePlayerId=', freshState.activePlayerId);
         return;
       }
       

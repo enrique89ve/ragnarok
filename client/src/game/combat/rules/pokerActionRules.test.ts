@@ -8,7 +8,7 @@ import {
 } from '../../types/PokerCombatTypes';
 import { useUnifiedCombatStore } from '../../stores/unifiedCombatStore';
 import { getShowdownCoinFlipRoll } from '../../stores/combat/pokerCombatSlice';
-import { validatePokerActionIntent } from './pokerActionRules';
+import { getPokerActionPermissions, validatePokerActionIntent } from './pokerActionRules';
 
 function createPet(id: string, currentHealth = 100, currentStamina = 10): PetData {
   return {
@@ -152,6 +152,25 @@ describe('poker action intent rules', () => {
 
     expect(result).toMatchObject({ ok: false, reason: 'all_in_showdown' });
   });
+
+  it('keeps waiting-for-opponent true after the local actor has locked their action', () => {
+    const state = createCombatState({
+      activePlayerId: 'opponent-piece',
+      player: {
+        ...createCombatState().player,
+        isReady: true,
+      },
+      opponent: {
+        ...createCombatState().opponent,
+        isReady: false,
+      },
+    });
+
+    const permissions = getPokerActionPermissions(state, true);
+
+    expect(permissions?.isMyTurnToAct).toBe(false);
+    expect(permissions?.waitingForOpponent).toBe(true);
+  });
 });
 
 describe('poker combat store exploit shields', () => {
@@ -253,6 +272,69 @@ describe('poker combat store exploit shields', () => {
     const state = useUnifiedCombatStore.getState().pokerCombatState;
     expect(state?.turnStartedAtMs).toBe(0);
     expect(state?.turnDeadlineAtMs).toBe(60_000);
+  });
+
+  it('derives the same pre-flop turn identity from mirrored P2P combat slots', () => {
+    const store = useUnifiedCombatStore.getState();
+    store.initializePokerCombat(
+      'attacker-piece',
+      'Attacker',
+      createPet('attacker-pet'),
+      'defender-piece',
+      'Defender',
+      createPet('defender-pet'),
+      true,
+      undefined,
+      undefined,
+      undefined,
+      {
+        combatId: 'combat-canon',
+        deckSeed: 'deck-canon',
+        playerRole: 'attacker',
+      },
+    );
+    store.markBothPlayersReady();
+    store.advancePokerPhase();
+
+    const attackerView = useUnifiedCombatStore.getState().pokerCombatState;
+    expect(attackerView).toMatchObject({
+      phase: CombatPhase.PRE_FLOP,
+      activePlayerId: 'attacker-piece',
+      playerPosition: 'small_blind',
+      opponentPosition: 'big_blind',
+      turnId: 'combat-canon:pre_flop:attacker-piece:0',
+    });
+
+    useUnifiedCombatStore.getState().reset();
+    const defenderStore = useUnifiedCombatStore.getState();
+    defenderStore.initializePokerCombat(
+      'defender-piece',
+      'Defender',
+      createPet('defender-pet'),
+      'attacker-piece',
+      'Attacker',
+      createPet('attacker-pet'),
+      true,
+      undefined,
+      undefined,
+      undefined,
+      {
+        combatId: 'combat-canon',
+        deckSeed: 'deck-canon',
+        playerRole: 'defender',
+      },
+    );
+    defenderStore.markBothPlayersReady();
+    defenderStore.advancePokerPhase();
+
+    const defenderView = useUnifiedCombatStore.getState().pokerCombatState;
+    expect(defenderView).toMatchObject({
+      phase: CombatPhase.PRE_FLOP,
+      activePlayerId: 'attacker-piece',
+      playerPosition: 'big_blind',
+      opponentPosition: 'small_blind',
+      turnId: attackerView?.turnId,
+    });
   });
 });
 

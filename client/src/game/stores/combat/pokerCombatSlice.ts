@@ -350,8 +350,12 @@ export const createPokerCombatSlice: StateCreator<
       opponentHoleCards = dealt.opponentHoleCards;
     }
     
-    const playerPosition: PokerPosition = 'small_blind';
-    const opponentPosition: PokerPosition = 'big_blind';
+    const playerPosition: PokerPosition = deterministic?.playerRole === 'defender'
+      ? 'big_blind'
+      : 'small_blind';
+    const opponentPosition: PokerPosition = playerPosition === 'small_blind'
+      ? 'big_blind'
+      : 'small_blind';
     const openerIsPlayer = playerPosition === 'small_blind';
     const minBet = DEFAULT_BLIND_CONFIG.bigBlind;
     

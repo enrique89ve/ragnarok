@@ -30,6 +30,11 @@ import type {
 	ForgeCommitRecord,
 } from './types';
 import { canonicalStringify, sha256Hash } from './hash';
+import {
+	buildCompactMatchResultCommitmentInput,
+	buildMatchResultSignatureMessage,
+	computeCompactMatchResultCommitmentHash,
+} from './matchResultCommitment';
 import { deriveChallenge, POW_CONFIG } from './pow';
 import { RAGNAROK_RUNTIME_CONFIGS } from '../runtimeConfig';
 
@@ -351,16 +356,37 @@ async function makeRankedMatchPayload(input: {
 	winner?: string;
 	loser?: string;
 	nonce?: number;
+	resultHash?: string;
+	transcriptRoot?: string;
+	transcriptCid?: string;
 }): Promise<Record<string, unknown>> {
 	const payload: Record<string, unknown> = {
 		m: input.matchId,
 		w: input.winner ?? 'alice',
 		l: input.loser ?? 'bob',
 		n: input.nonce ?? 1,
+		h: input.resultHash ?? 'result-hash-1',
 		s: 'seed123',
 		v: 1,
+		tr: input.transcriptRoot ?? 'transcript-root-1',
 		sig: { b: 'sig-a', c: 'sig-b' },
 	};
+	if (input.transcriptCid) {
+		payload.tc = input.transcriptCid;
+	}
+	payload.ch = await computeCompactMatchResultCommitmentHash(
+		buildCompactMatchResultCommitmentInput({
+			matchId: payload.m as string,
+			winner: payload.w as string,
+			loser: payload.l as string,
+			nonce: payload.n as number,
+			resultHash: payload.h as string,
+			seed: payload.s as string,
+			version: payload.v as number,
+			transcriptRoot: payload.tr as string,
+			transcriptCid: payload.tc as string | undefined,
+		}),
+	);
 	return { ...payload, pow: await solvePow(payload) };
 }
 
@@ -1209,10 +1235,10 @@ describe('Protocol Core: Replay Traces', () => {
 		expect((result as { reason: string }).reason).toContain('requires match_anchor');
 	});
 
-	it('ranked match_result requires a dual-anchored match_anchor', async () => {
-		await seedGenesis(state, deps);
-		await deps.state.putMatchAnchor({
-			matchId: 'single-anchor-1',
+		it('ranked match_result requires a dual-anchored match_anchor', async () => {
+			await seedGenesis(state, deps);
+			await deps.state.putMatchAnchor({
+				matchId: 'single-anchor-1',
 			playerA: 'alice',
 			playerB: 'bob',
 			pubkeyA: 'alice-session-pubkey',
@@ -1227,11 +1253,76 @@ describe('Protocol Core: Replay Traces', () => {
 			blockNum: 1000,
 		}), defaultCtx, deps);
 
-		expect(result.status).toBe('rejected');
-		expect((result as { reason: string }).reason).toContain('dual-anchored');
-	});
+			expect(result.status).toBe('rejected');
+			expect((result as { reason: string }).reason).toContain('dual-anchored');
+		});
 
-	// --- Pack commit-reveal flow ---
+		it('ranked match_result requires a transcript root in the compact commitment', async () => {
+			await seedGenesis(state, deps);
+			await seedRankedMatchAnchor(state, 'missing-transcript-1');
+
+			const payload = await makeRankedMatchPayload({ matchId: 'missing-transcript-1' });
+			delete payload.tr;
+			delete payload.pow;
+			payload.pow = await solvePow(payload);
+
+			const result = await applyOp(makeOp('match_result', payload, {
+				broadcaster: 'alice',
+				blockNum: 1000,
+			}), defaultCtx, deps);
+
+			expect(result.status).toBe('rejected');
+			expect((result as { reason: string }).reason).toContain('missing transcript root');
+		});
+
+		it('ranked match_result rejects tampering with transcript root after commitment', async () => {
+			await seedGenesis(state, deps);
+			await seedRankedMatchAnchor(state, 'tampered-transcript-1');
+
+			const payload = await makeRankedMatchPayload({ matchId: 'tampered-transcript-1' });
+			payload.tr = 'tampered-transcript-root';
+			delete payload.pow;
+			payload.pow = await solvePow(payload);
+
+			const result = await applyOp(makeOp('match_result', payload, {
+				broadcaster: 'alice',
+				blockNum: 1000,
+			}), defaultCtx, deps);
+
+			expect(result.status).toBe('rejected');
+			expect((result as { reason: string }).reason).toContain('compact hash mismatch');
+		});
+
+		it('ranked match_result verifies dual signatures over the compact commitment', async () => {
+			await seedGenesis(state, deps);
+			await seedRankedMatchAnchor(state, 'commitment-signed-1');
+
+			const payload = await makeRankedMatchPayload({ matchId: 'commitment-signed-1' });
+			const expectedMessage = buildMatchResultSignatureMessage(payload.ch as string);
+			const seenMessages: string[] = [];
+			deps = {
+				...deps,
+				sigs: {
+					async verifyAnchored(_pubkey, message) {
+						seenMessages.push(message);
+						return message === expectedMessage;
+					},
+					async verifyCurrentKey() {
+						return false;
+					},
+				},
+			};
+
+			const result = await applyOp(makeOp('match_result', payload, {
+				broadcaster: 'alice',
+				blockNum: 1000,
+			}), defaultCtx, deps);
+
+			expect(result.status).toBe('applied');
+			expect(seenMessages).toEqual([expectedMessage, expectedMessage]);
+		});
+
+		// --- Pack commit-reveal flow ---
 
 	it('pack_commit → pack_reveal happy path mints cards', async () => {
 		await seedGenesis(state, deps);
