@@ -3818,6 +3818,122 @@
   letter-spacing: 0.04em;
 }
 
+.p2p-poker-turn-status {
+  --p2p-status-accent: color-mix(in srgb, var(--gold-300) 84%, white 8%);
+  --p2p-status-bg: color-mix(in srgb, var(--gold-300) 9%, transparent);
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 10px 12px;
+  align-items: center;
+  min-height: 86px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--p2p-status-accent) 42%, transparent);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, var(--p2p-status-bg), transparent 70%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--obsidian-850) 76%, transparent),
+      color-mix(in srgb, var(--obsidian-950) 92%, transparent)
+    );
+  color: var(--text-bright);
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 color-mix(in srgb, var(--ink-0) 7%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.p2p-poker-turn-status.state-opponent {
+  --p2p-status-accent: color-mix(in srgb, var(--danger-400) 82%, white 10%);
+  --p2p-status-bg: color-mix(in srgb, var(--danger-400) 9%, transparent);
+}
+
+.p2p-poker-turn-status.state-reconnecting {
+  --p2p-status-accent: color-mix(in srgb, var(--warning-400, #fbbf24) 82%, white 8%);
+  --p2p-status-bg: color-mix(in srgb, var(--warning-400, #fbbf24) 12%, transparent);
+}
+
+.p2p-poker-turn-status.state-showdown,
+.p2p-poker-turn-status.state-syncing {
+  --p2p-status-accent: color-mix(in srgb, var(--text-e2) 70%, transparent);
+  --p2p-status-bg: color-mix(in srgb, var(--text-e2) 8%, transparent);
+}
+
+.p2p-poker-turn-status-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--p2p-status-accent) 34%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--p2p-status-accent) 12%, transparent);
+  color: var(--p2p-status-accent);
+  box-shadow: inset 0 0 14px color-mix(in srgb, var(--p2p-status-accent) 10%, transparent);
+}
+
+.p2p-poker-turn-status-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.p2p-poker-turn-status-label {
+  color: var(--p2p-status-accent);
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.p2p-poker-turn-status-title {
+  overflow: hidden;
+  color: var(--text-white-full);
+  font-size: 0.94rem;
+  font-weight: 900;
+  line-height: 1.08;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.p2p-poker-turn-status-detail {
+  overflow: hidden;
+  color: color-mix(in srgb, var(--text-e2) 72%, transparent);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.p2p-poker-turn-status-meta {
+  display: flex;
+  grid-column: 1 / -1;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.p2p-poker-turn-status-meta span {
+  overflow: hidden;
+  min-width: 0;
+  padding: 4px 7px;
+  border: 1px solid color-mix(in srgb, var(--p2p-status-accent) 22%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-chip) 62%, transparent);
+  color: color-mix(in srgb, var(--text-bright) 82%, transparent);
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 /* Phase rail compacts on narrow browsers; width handled by WagerInfoPanel Tailwind wrapper. */
 @media (max-width: 1180px) {
   .combat-phase-rail {

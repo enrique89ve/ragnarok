@@ -8,12 +8,25 @@ import ArmySelectionComponent from '../ArmySelection';
 import { ArmySelection as ArmySelectionType } from '../../types/ChessTypes';
 import { useNavigate } from 'react-router-dom';
 import { routes } from '../../../lib/routes';
+import { useHiveDataStore } from '../../../data/HiveDataLayer';
+import { isHiveWalletAvailable } from '../../../data/HiveAuth';
+import {
+	Button,
+	Panel,
+	PanelContent,
+	PanelDescription,
+	PanelHeader,
+	PanelTitle,
+} from '../../../components/ui-norse';
 import { useMatchmaking } from '../../hooks/useMatchmaking';
 import { useWarbandStore, selectArmy } from '../../../lib/stores/useWarbandStore';
 import { P2PStatusBadge } from './P2PStatusBadge';
 import { resolveHeroPortrait } from '../../utils/art/artMapping';
 import { P2PProvider } from '../../context/P2PContext';
 import { computeP2PRenderGuard } from './multiplayerRenderGuard';
+import { isSharedNetworkEnvironment } from '../../config/featureFlags';
+import { HiveKeychainLogin } from '../HiveKeychainLogin';
+import { useGameStore } from '../../stores/gameStore';
 
 /*
   PvPVSScreen — 3-second dramatic splash showing "Player vs Opponent"
@@ -88,6 +101,34 @@ function PvPVSScreen({ playerArmy, opponentArmy, opponentPeerId, onComplete }: {
 	);
 }
 
+function P2PHiveSessionRequired({ onBack }: { readonly onBack: () => void }) {
+	const keychainAvailable = isHiveWalletAvailable();
+	return (
+		<div className="flex items-center justify-center min-h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
+			<Panel className="w-full max-w-md">
+				<PanelHeader>
+					<PanelTitle>Hive Keychain Required</PanelTitle>
+					<PanelDescription>
+						Testnet multiplayer needs a local Hive session before matchmaking or manual peer links can start.
+					</PanelDescription>
+				</PanelHeader>
+				<PanelContent className="space-y-4">
+					{!keychainAvailable && (
+						<div className="rounded-lg border border-(--blood-500)/20 bg-(--blood-500)/10 p-3">
+							<p className="text-sm text-(--blood-300)">
+								Hive Keychain is not available in this browser profile.
+							</p>
+						</div>
+					)}
+					<HiveKeychainLogin />
+					<Button onClick={onBack} variant="outline" className="w-full">
+						Back
+					</Button>
+				</PanelContent>
+			</Panel>
+		</div>
+	);
+}
 export const MultiplayerGame: React.FC = () => {
 	const [gameStarted, setGameStarted] = useState(false);
 	const [showVS, setShowVS] = useState(false);
@@ -99,6 +140,17 @@ export const MultiplayerGame: React.FC = () => {
 	const { status: matchmakingStatus, roomId, joinQueue, leaveQueue } = useMatchmaking();
 	const opponentArmyFromPeer = usePeerStore(s => s.opponentArmy);
 	const p2pInitApplied = usePeerStore(s => s.p2pInitApplied);
+	const connectionState = usePeerStore(s => s.connectionState);
+	const forfeitSide = usePeerStore(s => s.forfeitSide);
+	const hiveUser = useHiveDataStore(s => s.user);
+	const requiresHiveSession = isSharedNetworkEnvironment();
+	const hasHiveSession = !requiresHiveSession || (hiveUser !== null && isHiveWalletAvailable());
+	const shouldWarnBeforeUnload = gameStarted
+		&& (
+			connectionState === 'connected'
+			|| connectionState === 'reconnecting'
+			|| connectionState === 'grace_period'
+		);
 
 	// VS screen is now triggered ONLY when the lobby calls `onGameStart` (after its
 	// own connection-confirmation delay). The previous flow auto-fired VS the instant
@@ -137,6 +189,53 @@ export const MultiplayerGame: React.FC = () => {
 	const handleBack = () => {
 		navigate(routes.home);
 	};
+
+	useEffect(() => {
+		if (hasHiveSession) return;
+		usePeerStore.getState().disconnect();
+		leaveQueue().catch(() => { /* best effort while rendering auth gate */ });
+	}, [hasHiveSession, leaveQueue]);
+
+	useEffect(() => {
+		if (!shouldWarnBeforeUnload) return undefined;
+		const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+			const warning = 'A live P2P match is in progress. Reloading may forfeit the local session.';
+			event.preventDefault();
+			Reflect.set(event, 'returnValue', warning);
+			return warning;
+		};
+		window.addEventListener('beforeunload', handleBeforeUnload);
+		return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+	}, [shouldWarnBeforeUnload]);
+
+	useEffect(() => {
+		if (!gameStarted || !forfeitSide) return;
+		const { gameState } = useGameStore.getState();
+		if (!gameState || gameState.gamePhase === 'game_over') return;
+
+		const localLost = forfeitSide !== 'opponent';
+		const now = Date.now();
+		useGameStore.setState({
+			gameState: {
+				...gameState,
+				gamePhase: 'game_over',
+				winner: localLost ? 'opponent' : 'player',
+				gameLog: [
+					...gameState.gameLog,
+					{
+						id: `p2p_forfeit_${now}`,
+						type: 'effect',
+						player: localLost ? 'player' : 'opponent',
+						text: localLost
+							? 'Technical defeat: connection was not restored within 60 seconds.'
+							: 'Technical victory: opponent did not reconnect within 60 seconds.',
+						timestamp: now,
+						turn: gameState.turnNumber,
+					},
+				],
+			},
+		});
+	}, [gameStarted, forfeitSide]);
 
 	// Clean up peer + matchmaking queue when leaving the multiplayer screen.
 	// Without this, a peer created by host() in the lobby's Quick Match path
@@ -226,5 +325,8 @@ export const MultiplayerGame: React.FC = () => {
 		);
 	};
 
+	if (!hasHiveSession) {
+		return <P2PHiveSessionRequired onBack={handleBack} />;
+	}
 	return <P2PProvider>{renderInner()}</P2PProvider>;
 };

@@ -5,6 +5,9 @@
  * grace period (amber with countdown), error (red), buffered messages count.
  */
 
+import { Download } from 'lucide-react';
+
+import { useP2PActions } from '../../context/useP2PActions';
 import { usePeerStore } from '../../stores/peerStore';
 
 interface P2PStatusBadgeProps {
@@ -19,13 +22,23 @@ const STATUS_CONFIG = {
 };
 
 export const P2PStatusBadge: React.FC<P2PStatusBadgeProps> = ({ className = '' }) => {
-	const { connectionState, isHost, reconnectCountdown, bufferedMessageCount } = usePeerStore();
+	const {
+		connectionState,
+		isHost,
+		reconnectCountdown,
+		reconnectAttemptCount,
+		disconnectSide,
+		bufferedMessageCount,
+	} = usePeerStore();
+	const { downloadSessionLog } = useP2PActions();
 
 	const isActive = connectionState === 'connected' || connectionState === 'reconnecting' || connectionState === 'grace_period';
 	if (!isActive && connectionState !== 'error') return null;
 
 	const config = STATUS_CONFIG[connectionState as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.connected;
 	const showCountdown = (connectionState === 'reconnecting' || connectionState === 'grace_period') && reconnectCountdown > 0;
+	const unstableSubject = disconnectSide === 'opponent' ? 'Opponent unstable' : 'Connection unstable';
+	const reconnectLabel = reconnectAttemptCount > 0 ? `Attempt ${reconnectAttemptCount}/2` : 'Reconnecting';
 
 	return (
 		<>
@@ -49,7 +62,7 @@ export const P2PStatusBadge: React.FC<P2PStatusBadgeProps> = ({ className = '' }
 					fontWeight: 600,
 					color: config.color,
 					userSelect: 'none',
-					pointerEvents: 'none',
+					pointerEvents: 'auto',
 				}}
 			>
 				<span
@@ -64,13 +77,41 @@ export const P2PStatusBadge: React.FC<P2PStatusBadgeProps> = ({ className = '' }
 				/>
 				{connectionState === 'connected'
 					? `P2P · ${isHost ? 'Host' : 'Guest'}`
-					: config.label}
+					: connectionState === 'grace_period'
+						? unstableSubject
+						: connectionState === 'reconnecting'
+							? reconnectLabel
+							: config.label}
 				{showCountdown && ` (${reconnectCountdown}s)`}
 				{bufferedMessageCount > 0 && connectionState !== 'connected' && (
 					<span style={{ fontSize: '9px', opacity: 0.6, marginLeft: 2 }}>
 						{bufferedMessageCount} queued
 					</span>
 				)}
+				<button
+					type="button"
+					aria-label="Download P2P session log"
+					title="Download P2P session log"
+					onClick={(event) => {
+						event.stopPropagation();
+						downloadSessionLog();
+					}}
+					style={{
+						width: 22,
+						height: 22,
+						display: 'inline-flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						border: `1px solid ${config.border}`,
+						borderRadius: 6,
+						background: 'rgba(255,255,255,0.08)',
+						color: config.color,
+						cursor: 'pointer',
+						padding: 0,
+					}}
+				>
+					<Download size={13} strokeWidth={2.2} aria-hidden="true" />
+				</button>
 			</div>
 
 			{/* Reconnecting overlay (semi-transparent, doesn't block game — like Madden) */}
@@ -89,15 +130,15 @@ export const P2PStatusBadge: React.FC<P2PStatusBadgeProps> = ({ className = '' }
 					}}
 				>
 					<p style={{ color: config.color, fontSize: '16px', fontWeight: 700, letterSpacing: '0.05em' }}>
-						{connectionState === 'reconnecting' ? 'Reconnecting...' : 'Waiting for opponent...'}
+						{connectionState === 'reconnecting' ? reconnectLabel : unstableSubject}
 					</p>
 					{showCountdown && (
 						<p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '12px', marginTop: '4px' }}>
-							{reconnectCountdown}s remaining before match ends
+							{reconnectCountdown}s remaining before technical result
 						</p>
 					)}
 					<p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '11px', marginTop: '8px' }}>
-						Game state is preserved — actions will resume when connection restores
+						Two reconnect attempts are allowed. The disconnected side loses after 60s.
 					</p>
 				</div>
 			)}

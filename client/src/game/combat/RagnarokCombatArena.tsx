@@ -2,6 +2,8 @@ import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePokerCombatAdapter, getActionPermissions, getPokerCombatAdapterState } from '../hooks/usePokerCombatAdapter';
 import { useGameStore } from '../stores/gameStore';
+import { usePeerStore } from '../stores/peerStore';
+import { useMatchStore } from '../match/store';
 import {
   CombatPhase,
   CombatAction,
@@ -60,6 +62,7 @@ import { useAudio } from '../../lib/stores/useAudio';
 import { BossPhaseFlash } from './components/BossPhaseFlash';
 import { BettingPanel } from './components/BettingPanel';
 import { WagerInfoPanel } from './components/WagerInfoPanel';
+import { PokerP2PTurnStatus } from './components/PokerP2PTurnStatus';
 import type { BossPhaseFlash as BossPhaseFlashKind } from '../campaign/campaignTypes';
 import { useBossPhases } from './hooks/useBossPhases';
 import { getWagerDescription } from './data/wagerDescriptions';
@@ -245,8 +248,11 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
   const gameState = useGameStore(s => s.gameState);
   const autoAttackAll = useGameStore(s => s.autoAttackAll);
   const selectAttacker = useGameStore(s => s.selectAttacker);
+  const activeMatch = useMatchStore(s => s.activeMatch);
+  const connectionState = usePeerStore(s => s.connectionState);
 
   const isPlayerTurn = gameState?.currentTurn === 'player';
+  const isP2PCombat = activeMatch?.opponent.kind === 'peer';
 
   const [communityCardsRevealed, setCommunityCardsRevealed] = useState(false);
   const [showGearPanel, setShowGearPanel] = useState(false);
@@ -705,6 +711,12 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
           pills={phaseDirectorPills}
         />
       )}
+
+      <PokerP2PTurnStatus
+        combatState={combatState}
+        isP2PCombat={isP2PCombat}
+        connectionState={connectionState}
+      />
 
       {showBettingInteraction && (
         <BettingPanel

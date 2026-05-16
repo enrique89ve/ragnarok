@@ -417,6 +417,21 @@
   box-sizing: border-box;
 }
 
+.unified-combat-arena [data-zone="p2p-poker-turn-status"] {
+  position: absolute;
+  left: var(--poker-zone-wagerPanel-x, 1040px);
+  top: calc(
+    var(--poker-zone-wagerPanel-y, var(--wager-panel-top)) +
+      var(--poker-zone-wagerPanel-h, 188px) + 10px
+  );
+  right: auto;
+  box-sizing: border-box;
+  width: min(var(--poker-zone-wagerPanel-w, var(--wager-panel-width)), 360px);
+  transform: rotate(var(--poker-zone-wagerPanel-rot, 0deg));
+  transform-origin: top left;
+  z-index: calc(var(--arena-z-wager-panel) + 1);
+}
+
 /* Boost field z-index when a card inside is hovered, so its
    tooltip + lifted state are not clipped by neighbour zones. */
 .unified-combat-arena .zone-opp-field:has(.bf-card-wrapper:hover),
