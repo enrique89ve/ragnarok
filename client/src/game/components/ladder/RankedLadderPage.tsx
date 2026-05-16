@@ -200,7 +200,7 @@ export default function RankedLadderPage() {
 				<AccountSlot
 					username={myUsername}
 					tier={myRank && myRank <= 10 ? 'mythic' : myRank && myRank <= 50 ? 'premium' : 'standard'}
-					to={routes.settings}
+					to={routes.wallet}
 					secondary={myRank ? `Rank #${myRank}` : 'Unranked'}
 				/>
 

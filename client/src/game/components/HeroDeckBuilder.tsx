@@ -627,7 +627,6 @@ const RARITY_LABELS: Record<string, string> = {
 	epic: 'EPIC',
 	rare: 'RARE',
 	common: 'COMMON',
-	basic: 'BASIC',
 };
 
 const CardDetailFlip: React.FC<{

@@ -207,7 +207,7 @@ const MODE_CARDS: ReadonlyArray<ModeCard> = [
 	{
 		title: 'Collection',
 		kicker: 'Deckbuilding',
-		description: 'Review your cards, inspect rarity treatments, and tune the pieces behind your army.',
+		description: 'Review starter and NFT cards, inspect rarity treatments, and tune the pieces behind your army.',
 		to: routes.collection,
 		icon: LayoutGrid,
 		accent: 'bifrost',
@@ -296,7 +296,7 @@ function HomePage() {
 	}, [activeMission, completedMissions]);
 
 	const primaryLabel = !starterClaimed
-		? starterClaimBlocked ? 'Connect Hive to Claim' : 'Claim Starter Deck'
+		? starterClaimBlocked ? 'Connect Hive to Reveal' : 'Reveal Starter Deck'
 		: activeMission
 			? 'Resume Campaign'
 			: completedMissionCount > 0
@@ -389,11 +389,11 @@ function HomePage() {
 							</div>
 							<h1 className="font-display font-black uppercase leading-[0.95] tracking-[0.10em] text-[clamp(2.4rem,5vw,3rem)] m-0">
 								<span className="bg-linear-to-b from-gold-100 via-gold-300 to-gold-500 bg-clip-text text-transparent">
-									Claim the line.<br />March into battle.
+									Reveal the line.<br />March into battle.
 								</span>
 							</h1>
 							<p className="mt-5 mb-7 max-w-[540px] text-ink-200 text-[15px] leading-[1.65]">
-								Campaign is the clean front door — claim the starter line, stage a mission briefing, and break straight into live combat.
+								Campaign is the clean front door — reveal the starter line, stage a mission briefing, and break straight into live combat.
 							</p>
 							<div className="flex flex-wrap items-center gap-3">
 								{!starterClaimed ? (
@@ -549,8 +549,7 @@ function HomePage() {
 
 				{/* RIGHT RAIL — pure identity stack: Account → Warband (post-login).
 				    Warband has internal scroll so contacts can grow without breaking layout.
-				    Settings lives in the Account panel header (gear icon) — universal
-				    access without competing with the route-shortcut chips in the bottom bar. */}
+				    Settings lives here on Home; meta pages keep account chrome focused. */}
 				<aside className="grid gap-5 content-start pb-24">
 					<SideRailPanel
 						title="Account"

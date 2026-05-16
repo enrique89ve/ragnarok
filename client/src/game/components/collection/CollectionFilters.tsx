@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { CardType, CardRarity } from '../../types';
 
 interface CollectionFiltersProps {
@@ -102,7 +101,6 @@ const CollectionFilters: React.FC<CollectionFiltersProps> = ({
               onChange={(e) => onUpdateFilters({ rarity: e.target.value as CardRarity | 'all' })}
             >
               <option value="all">All Rarities</option>
-              <option value="basic">Basic</option>
               <option value="common">Common</option>
               <option value="rare">Rare</option>
               <option value="epic">Epic</option>
@@ -128,16 +126,12 @@ const CollectionFilters: React.FC<CollectionFiltersProps> = ({
           
           {/* Clear filters button */}
           {(filters.manaCost !== 'all' || filters.cardType !== 'all' || filters.rarity !== 'all' || filters.searchText || filters.hideNeutral) && (
-            <motion.button
+            <button
               className="clear-filters px-3 py-2 bg-red-600 hover:bg-red-700 rounded-full text-white text-sm"
               onClick={onClearFilters}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.2 }}
             >
               Clear Filters
-            </motion.button>
+            </button>
           )}
         </div>
       </div>

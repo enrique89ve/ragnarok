@@ -3,7 +3,9 @@
  *
  * Renders the player's UserChip when signed in, or a "Login" pill that
  * routes to `/settings` (where the HiveKeychainLogin widget lives) when
- * the slot is empty. Replaces the bare `{username && <UserChip />}`
+ * the slot is empty. The signed-in chip defaults to Wallet so shared
+ * headers do not double as Settings entry points. Replaces the bare
+ * `{username && <UserChip />}`
  * pattern that previously left a hole in every page header for guests.
  *
  * The `guest` username (server's anonymous fallback) is treated as
@@ -23,7 +25,6 @@ interface AccountSlotProps {
 	portraitUrl?: string;
 	to?: string;
 	compact?: boolean;
-	showSettings?: boolean;
 }
 
 function isSignedIn(username: string | null | undefined): username is string {
@@ -35,9 +36,8 @@ export function AccountSlot({
 	tier,
 	secondary,
 	portraitUrl,
-	to = routes.settings,
+	to = routes.wallet,
 	compact,
-	showSettings,
 }: AccountSlotProps) {
 	if (isSignedIn(username)) {
 		return (
@@ -48,7 +48,6 @@ export function AccountSlot({
 				portraitUrl={portraitUrl}
 				to={to}
 				compact={compact}
-				showSettings={showSettings}
 			/>
 		);
 	}

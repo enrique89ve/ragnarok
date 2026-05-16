@@ -182,7 +182,7 @@ export default function StarterPackCeremony({
 							The Norns have foreseen your arrival.
 						</p>
 						<p id={DESC_ID} className="text-ink-300 text-base mb-8 leading-relaxed">
-							Accept your birthright — a set of {starterCards.length} cards
+							Reveal your birthright — a set of {starterCards.length} starter cards
 							to begin your journey across the Nine Realms.
 						</p>
 
@@ -194,7 +194,7 @@ export default function StarterPackCeremony({
 							className="btn-runic btn-runic--gold btn-runic--lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-200 focus-visible:outline-offset-2"
 						>
 							<span className="btn-runic-stud" aria-hidden />
-							{isClaiming ? 'Signing Claim...' : 'Claim Your Birthright'}
+							{isClaiming ? 'Signing...' : 'Reveal Your Birthright'}
 							<span className="btn-runic-stud" aria-hidden />
 						</button>
 
@@ -223,7 +223,7 @@ export default function StarterPackCeremony({
 							transition={{ delay: 1.5 }}
 							className="font-mono text-ink-400 text-[11px] tracking-[0.22em] uppercase mt-4"
 						>
-							{starterCards.length} cards · Common &amp; Basic · Ready to battle
+							{starterCards.length} starter cards · Common rarity · Ready to battle
 						</motion.p>
 
 						{/* Secondary cancel — visible escape route below the primary CTA */}

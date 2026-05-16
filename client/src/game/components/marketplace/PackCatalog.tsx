@@ -12,7 +12,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Zap } from 'lucide-react';
 import PackOpeningAnimation from '../packs/PackOpeningAnimation';
-import { getRarityColor } from '../../utils/rarityUtils';
+import { getRarityColor, getRarityCssColor } from '../../utils/rarityUtils';
 import { NumericRitual, OrnateCorners, SigilBackplate, type Tier } from '../../../components/ornaments/RunicSigils';
 import { RichTooltip } from '../../../components/ornaments/RichTooltip';
 import { SplashBackdrop } from '../../../components/ornaments/SplashBackdrop';
@@ -29,7 +29,6 @@ import { useRunePackExchange } from './useRunePackExchange';
 import { HbdPurchaseModal } from './HbdPurchaseModal';
 import { useHbdPackPurchase } from './useHbdPackPurchase';
 import {
-	RARITY_COLORS,
 	RARITY_ORDER,
 	FALLBACK_PACKS,
 	apiPackToUiPack,
@@ -558,7 +557,7 @@ export default function PackCatalog() {
 
 						<div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
 							{supplyStats.byRarity.map(rs => {
-								const color = RARITY_COLORS[rs.rarity] || 'var(--rarity-common-color)';
+								const color = getRarityCssColor(rs.rarity);
 								const percentRemaining = rs.packSupply > 0 ? (rs.packRemaining / rs.packSupply) * 100 : 0;
 								return (
 									<div

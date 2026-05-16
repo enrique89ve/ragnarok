@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import ReactDOM from 'react-dom';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, CheckCircle2, Search, Shield, User } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Search, Settings, Shield, User } from 'lucide-react';
 import { ChessPieceType, ArmySelection as ArmySelectionType, ChessPieceHero } from '../types/ChessTypes';
 import { CHESS_PIECE_HEROES, getDefaultArmySelection, pieceHasSpells } from '../data/ChessPieceConfig';
 import { useAudio } from '../../lib/stores/useAudio';
@@ -22,6 +23,7 @@ import { getNFTBridge } from '../nft';
 import { useNFTCollection, useNFTUsername } from '../nft/hooks';
 import { getHeroDeckStatus, type HeroDeckStatus } from '../deck/heroDeckRules';
 import { cardRegistry } from '../data/cardRegistry';
+import { routes } from '../../lib/routes';
 import './styles/ArmySelectionNorse.css';
 import './styles/holoEffect.css';
 
@@ -376,6 +378,14 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
               </span>
             </span>
           </div>
+          <Link
+            to={routes.settings}
+            className="norse-settings-btn"
+            title="Settings"
+            aria-label="Open settings"
+          >
+            <Settings size={14} strokeWidth={1.9} />
+          </Link>
 
           {validDecks.length > 0 && onQuickStart && !isMultiplayer && (
             <div className="norse-quick-decks">

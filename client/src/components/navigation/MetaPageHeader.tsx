@@ -105,7 +105,7 @@ export function MetaPageHeader({
 	username,
 	accountSecondary,
 	accountTier = 'premium',
-	accountTo = routes.settings,
+	accountTo = routes.wallet,
 	actions,
 	showAccount = true,
 	className,
@@ -142,7 +142,6 @@ export function MetaPageHeader({
 								tier={accountTier}
 								to={accountTo}
 								secondary={accountSecondary}
-								showSettings
 							/>
 						</div>
 					)}

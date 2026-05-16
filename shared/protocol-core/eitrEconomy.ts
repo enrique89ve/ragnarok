@@ -49,13 +49,17 @@ export const EITR_FORGE_COSTS: Record<EitrRarity, number> = Object.fromEntries(
 	RARITY.map(rarity => [rarity, eitrForge(rarity)]),
 ) as Record<EitrRarity, number>;
 
+function normalizeEitrRarity(rarity: string): EitrRarity | null {
+	return tryAdaptRarity(rarity) ?? tryAdaptRarity(rarity.toLowerCase());
+}
+
 export function getEitrDissolveValue(rarity: string): number {
-	const key = tryAdaptRarity(rarity);
+	const key = normalizeEitrRarity(rarity);
 	return key ? EITR_DISSOLVE_VALUES[key] : 0;
 }
 
 export function getEitrForgeCost(rarity: string): number {
-	const key = tryAdaptRarity(rarity);
+	const key = normalizeEitrRarity(rarity);
 	return key ? EITR_FORGE_COSTS[key] : 0;
 }
 

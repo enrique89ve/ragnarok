@@ -7,7 +7,7 @@
  *
  * Variants:
  *   - compact: avatar + name only — fits a sticky header
- *   - full:    avatar + name + secondary line (balance / role / "Settings →")
+ *   - full:    avatar + name + secondary line (balance / role / status)
  *
  * The avatar is a hex-frame containing the first letter of the username,
  * tinted by tier (default gold). Real player portraits can be plugged in
@@ -16,7 +16,6 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Settings as SettingsIcon } from 'lucide-react';
 import type { Tier } from '../ornaments/RunicSigils';
 
 interface UserChipProps {
@@ -31,8 +30,6 @@ interface UserChipProps {
 	to?: string;
 	/** Compact removes the secondary line — useful for tight headers. */
 	compact?: boolean;
-	/** Show a small Settings affordance on the right edge. */
-	showSettings?: boolean;
 }
 
 export function UserChip({
@@ -42,7 +39,6 @@ export function UserChip({
 	portraitUrl,
 	to,
 	compact = false,
-	showSettings = false,
 }: UserChipProps) {
 	const initial = username.trim().charAt(0).toUpperCase() || '?';
 	const hexVariant =
@@ -83,15 +79,6 @@ export function UserChip({
 					</span>
 				)}
 			</div>
-
-			{showSettings && (
-				<SettingsIcon
-					size={12}
-					strokeWidth={1.8}
-					aria-hidden="true"
-					className="ml-0.5 shrink-0 text-ink-300"
-				/>
-			)}
 		</>
 	);
 

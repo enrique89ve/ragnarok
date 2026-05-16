@@ -1027,9 +1027,8 @@ function CampaignHeader({ title, subtitle }: { title: string; subtitle: string }
 				<AccountSlot
 					username={username}
 					tier="premium"
-					to={routes.settings}
+					to={routes.wallet}
 					secondary="Saga"
-					showSettings
 				/>
 			</div>
 		</header>

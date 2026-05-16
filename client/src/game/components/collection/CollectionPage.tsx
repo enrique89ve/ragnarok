@@ -4,13 +4,14 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { Package, Zap } from 'lucide-react';
+import { MetaPageHeader, MetaPageHeaderLink } from '../../../components/navigation/MetaPageHeader';
 import { routes } from '../../../lib/routes';
 import { getRarityColor, getRaritySortRank, getTypeIcon } from '../../utils/rarityUtils';
 import { getCardArtPath } from '../../utils/art/artMapping';
 import { getHoloTier, applyHoloVars, resetHoloVars } from '../../hooks/useHoloTracking';
 import type { OwnedCard } from '../packs/types';
 import { getMasteryTier } from '../../../data/blockchain/cardXPRewards';
-import { getEitrValue, getCraftCost } from '../../crafting/craftingConstants';
 import { cardRegistry } from '../../data/cardRegistry';
 import { getNFTBridge } from '../../nft';
 import { useNFTCollection, useNFTUsername } from '../../nft/hooks';
@@ -24,20 +25,31 @@ import { hiveSync } from '../../../data/HiveSync';
 import { sha256Hash } from '../../../../../shared/protocol-core/hash';
 import { PACK_ENTROPY_DELAY_BLOCKS } from '../../../../../shared/protocol-core/types';
 import { emitNotification } from '../../actions/gameActions';
-import type { HiveCardAsset } from '../../../data/schemas/HiveTypes';
+import { isStarterEntitlementAsset, type HiveCardAsset } from '../../../data/schemas/HiveTypes';
 import type { CardData } from '../../types';
+import { RARITY, RARITY_ORDER, type Rarity } from '@shared/schemas/rarity';
+import type { CardCategory } from '@shared/schemas/cardCategory';
+import { STARTER_ENTITLEMENT } from '@shared/schemas/starterEntitlement';
+import { getEitrDissolveValue, getEitrForgeCost } from '@shared/protocol-core/eitrEconomy';
 
-type FilterRarity = 'all' | 'common' | 'rare' | 'epic' | 'mythic';
+type FilterRarity = 'all' | Rarity;
 type FilterType = 'all' | 'hero' | 'minion' | 'spell' | 'weapon';
+type FilterSource = 'all' | 'starter' | 'nft';
+type CollectionSource = Exclude<FilterSource, 'all'>;
 type SortBy = 'recent' | 'name' | 'rarity' | 'mint';
+type CollectionOwnedCard = OwnedCard & {
+	category: CardCategory;
+	ownershipSource?: HiveCardAsset['ownershipSource'];
+};
 
 interface CollectionStats {
 	uniqueCards: number;
 	totalCards: number;
 	completionPercentage: number;
 	totalInGame: number;
-	byRarity: { rarity: string; uniqueCards: number; totalCards: number }[];
+	byRarity: { rarity: Rarity; uniqueCards: number; totalCards: number }[];
 	byType: { type: string; uniqueCards: number; totalCards: number }[];
+	bySource: { source: CollectionSource; label: string; uniqueCards: number; totalCards: number }[];
 }
 
 interface ChainCardRecord {
@@ -64,12 +76,16 @@ const CARD_BY_ID = new Map<number, CardData>(
 	cardRegistry.map(card => [Number(card.id), card]),
 );
 
+const DISPLAY_RARITIES = [...RARITY].sort((a, b) => RARITY_ORDER[b] - RARITY_ORDER[a]);
+
 const RARITY_PILLS: { value: FilterRarity; label: string; color: string; activeColor: string }[] = [
 	{ value: 'all', label: 'All', color: 'rgba(255,255,255,0.06)', activeColor: 'rgba(217,168,68,0.55)' },
-	{ value: 'mythic', label: 'Mythic', color: 'color-mix(in srgb, var(--rarity-mythic-color) 15%, transparent)', activeColor: 'color-mix(in srgb, var(--rarity-mythic-color) 60%, transparent)' },
-	{ value: 'epic', label: 'Epic', color: 'color-mix(in srgb, var(--rarity-epic-color) 15%, transparent)', activeColor: 'color-mix(in srgb, var(--rarity-epic-color) 50%, transparent)' },
-	{ value: 'rare', label: 'Rare', color: 'color-mix(in srgb, var(--rarity-rare-color) 15%, transparent)', activeColor: 'color-mix(in srgb, var(--rarity-rare-color) 50%, transparent)' },
-	{ value: 'common', label: 'Common', color: 'color-mix(in srgb, var(--rarity-common-color) 15%, transparent)', activeColor: 'color-mix(in srgb, var(--rarity-common-color) 50%, transparent)' },
+	...DISPLAY_RARITIES.map(rarity => ({
+		value: rarity,
+		label: `${rarity.charAt(0).toUpperCase()}${rarity.slice(1)}`,
+		color: `color-mix(in srgb, var(--rarity-${rarity}-color) 15%, transparent)`,
+		activeColor: `color-mix(in srgb, var(--rarity-${rarity}-color) ${rarity === 'mythic' ? 60 : 50}%, transparent)`,
+	})),
 ];
 
 const TYPE_PILLS: { value: FilterType; label: string; icon: string }[] = [
@@ -80,10 +96,24 @@ const TYPE_PILLS: { value: FilterType; label: string; icon: string }[] = [
 	{ value: 'weapon', label: 'Weapons', icon: '🗡️' },
 ];
 
+const SOURCE_PILLS: { value: FilterSource; label: string }[] = [
+	{ value: 'all', label: 'All Sources' },
+	{ value: 'starter', label: 'Starter' },
+	{ value: 'nft', label: 'NFT' },
+];
+
 // Vault surface treatments — used multiple times across the page.
 // Padding/margin se concatena en cada call site según contexto.
 const VAULT_PANEL_CLASS = 'bg-obsidian-800/70 border border-obsidian-700/80 rounded-xl backdrop-blur-sm';
 const VAULT_INPUT_CLASS = 'bg-obsidian-900/70 border border-obsidian-700 text-ink-0 rounded-lg transition-colors placeholder:text-ink-300 focus:outline-hidden focus:border-gold-500 focus:ring-1 focus:ring-gold-500/40';
+
+function getCollectionSource(card: CollectionOwnedCard): CollectionSource {
+	return card.category === 'starter' || card.ownershipSource === 'starter' ? 'starter' : 'nft';
+}
+
+function getCollectionSourceLabel(card: CollectionOwnedCard): string {
+	return getCollectionSource(card) === 'starter' ? 'Starter' : 'NFT';
+}
 
 function getCardHeroClass(card: CardData | undefined, fallback = 'neutral'): string {
 	return card?.heroClass ?? card?.class ?? fallback;
@@ -101,6 +131,15 @@ function getCardManaCost(card: CardData | undefined): number | undefined {
 	return typeof card?.manaCost === 'number' ? card.manaCost : undefined;
 }
 
+function resolveCardCategory(
+	card: CardData | undefined,
+	ownershipSource?: HiveCardAsset['ownershipSource'],
+): CardCategory {
+	if (ownershipSource === 'starter') return 'starter';
+	if (ownershipSource === 'nft') return 'genesis';
+	return card?.category ?? (card?.set === 'starter' ? 'starter' : 'genesis');
+}
+
 function buildOwnedCard(input: {
 	cardId: number;
 	quantity: number;
@@ -108,7 +147,8 @@ function buildOwnedCard(input: {
 	type?: string;
 	name?: string;
 	mintNumber?: number | null;
-}): OwnedCard {
+	ownershipSource?: HiveCardAsset['ownershipSource'];
+}): CollectionOwnedCard {
 	const card = CARD_BY_ID.get(input.cardId);
 	return {
 		id: input.cardId,
@@ -122,12 +162,28 @@ function buildOwnedCard(input: {
 		attack: getCardAttack(card),
 		health: getCardHealth(card),
 		manaCost: getCardManaCost(card),
+		category: resolveCardCategory(card, input.ownershipSource),
+		ownershipSource: input.ownershipSource,
 	};
 }
 
-function localCollectionCards(): OwnedCard[] {
+function starterCollectionCards(): CollectionOwnedCard[] {
+	return STARTER_ENTITLEMENT.cardIds.map(cardId => {
+		const card = CARD_BY_ID.get(cardId);
+		return buildOwnedCard({
+			cardId,
+			quantity: STARTER_ENTITLEMENT.copiesPerCardId[cardId] ?? STARTER_ENTITLEMENT.copiesPerCard,
+			rarity: card?.rarity,
+			type: card?.type,
+			name: card?.name,
+			ownershipSource: 'starter',
+		});
+	});
+}
+
+function genesisCatalogCards(): CollectionOwnedCard[] {
 	return cardRegistry
-		.filter(card => card.collectible !== false)
+		.filter(card => card.category === 'genesis')
 		.map(card => buildOwnedCard({
 			cardId: Number(card.id),
 			quantity: 1,
@@ -137,8 +193,22 @@ function localCollectionCards(): OwnedCard[] {
 		}));
 }
 
-function groupChainCards(records: readonly ChainCardRecord[]): OwnedCard[] {
-	const grouped = new Map<number, OwnedCard>();
+function localCollectionCards(): CollectionOwnedCard[] {
+	return [
+		...starterCollectionCards(),
+		...genesisCatalogCards(),
+	];
+}
+
+function withStarterCards(cards: CollectionOwnedCard[]): CollectionOwnedCard[] {
+	return [
+		...starterCollectionCards(),
+		...cards,
+	];
+}
+
+function groupChainCards(records: readonly ChainCardRecord[]): CollectionOwnedCard[] {
+	const grouped = new Map<number, CollectionOwnedCard>();
 	for (const record of records) {
 		const existing = grouped.get(record.cardId);
 		if (existing) {
@@ -149,14 +219,16 @@ function groupChainCards(records: readonly ChainCardRecord[]): OwnedCard[] {
 			cardId: record.cardId,
 			quantity: 1,
 			rarity: record.rarity,
+			ownershipSource: 'nft',
 		}));
 	}
 	return [...grouped.values()];
 }
 
-function groupHiveCards(records: readonly HiveCardAsset[]): OwnedCard[] {
-	const grouped = new Map<number, OwnedCard>();
+function groupHiveCards(records: readonly HiveCardAsset[]): CollectionOwnedCard[] {
+	const grouped = new Map<number, CollectionOwnedCard>();
 	for (const record of records) {
+		if (!isVisibleCollectionAsset(record)) continue;
 		const existing = grouped.get(record.cardId);
 		if (existing) {
 			grouped.set(record.cardId, { ...existing, quantity: existing.quantity + 1 });
@@ -168,15 +240,22 @@ function groupHiveCards(records: readonly HiveCardAsset[]): OwnedCard[] {
 			rarity: record.rarity,
 			type: record.type,
 			name: record.name,
+			ownershipSource: record.ownershipSource,
 		}));
 	}
 	return [...grouped.values()];
 }
 
-function buildCollectionStats(cards: readonly OwnedCard[]): CollectionStats {
-	const totalInGame = cardRegistry.filter(card => card.collectible !== false).length;
+function isVisibleCollectionAsset(record: HiveCardAsset): boolean {
+	return !isStarterEntitlementAsset(record);
+}
+
+function buildCollectionStats(cards: readonly CollectionOwnedCard[]): CollectionStats {
+	const totalInGame =
+		STARTER_ENTITLEMENT.cardIds.length +
+		cardRegistry.filter(card => card.category === 'genesis').length;
 	const totalCards = cards.reduce((total, card) => total + card.quantity, 0);
-	const byRarity = ['mythic', 'epic', 'rare', 'common', 'basic'].map(rarity => {
+	const byRarity = DISPLAY_RARITIES.map(rarity => {
 		const matching = cards.filter(card => card.rarity === rarity);
 		return {
 			rarity,
@@ -192,6 +271,18 @@ function buildCollectionStats(cards: readonly OwnedCard[]): CollectionStats {
 			totalCards: matching.reduce((total, card) => total + card.quantity, 0),
 		};
 	});
+	const bySource = ([
+		{ source: 'starter', label: 'Starter' },
+		{ source: 'nft', label: 'NFT' },
+	] as const).map(({ source, label }) => {
+		const matching = cards.filter(card => getCollectionSource(card) === source);
+		return {
+			source,
+			label,
+			uniqueCards: matching.length,
+			totalCards: matching.reduce((total, card) => total + card.quantity, 0),
+		};
+	});
 
 	return {
 		uniqueCards: cards.length,
@@ -200,6 +291,7 @@ function buildCollectionStats(cards: readonly OwnedCard[]): CollectionStats {
 		totalInGame,
 		byRarity,
 		byType,
+		bySource,
 	};
 }
 
@@ -277,15 +369,16 @@ export default function CollectionPage() {
 	const [provenanceNft, setProvenanceNft] = useState<typeof hiveCards[0] | null>(null);
 	const [sendNft, setSendNft] = useState<typeof hiveCards[0] | null>(null);
 
-	const [cards, setCards] = useState<OwnedCard[]>([]);
+	const [cards, setCards] = useState<CollectionOwnedCard[]>([]);
 	const [stats, setStats] = useState<CollectionStats | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [filterRarity, setFilterRarity] = useState<FilterRarity>('all');
 	const [filterType, setFilterType] = useState<FilterType>('all');
+	const [filterSource, setFilterSource] = useState<FilterSource>('all');
 	const [searchQuery, setSearchQuery] = useState('');
 	const [sortBy, setSortBy] = useState<SortBy>('rarity');
-	const [selectedCard, setSelectedCard] = useState<OwnedCard | null>(null);
+	const [selectedCard, setSelectedCard] = useState<CollectionOwnedCard | null>(null);
 	const [page, setPage] = useState(1);
 	const [totalPages, setTotalPages] = useState(1);
 	const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -294,7 +387,7 @@ export default function CollectionPage() {
 	useEffect(() => {
 		const controller = new AbortController();
 
-		const applyCollection = (nextCards: OwnedCard[]) => {
+		const applyCollection = (nextCards: CollectionOwnedCard[]) => {
 			setCards(nextCards);
 			setStats(buildCollectionStats(nextCards));
 			setTotalPages(1);
@@ -305,14 +398,17 @@ export default function CollectionPage() {
 		const loadCollection = async () => {
 			setLoading(true);
 			setIsLoadingMore(false);
+			const bridge = getNFTBridge();
+			const hiveMode = bridge.isHiveMode();
+			const visibleHiveCards = hiveCards.filter(isVisibleCollectionAsset);
 
-			if (hiveUsername) {
+			if (hiveMode && hiveUsername) {
 				try {
 					const res = await fetch(`/api/chain/player/${hiveUsername}/cards`, { signal: controller.signal });
 					if (res.ok) {
 						const data: ChainCardsResponse = await res.json();
 						if (data.success) {
-							applyCollection(groupChainCards(data.cards ?? []));
+							applyCollection(withStarterCards(groupChainCards(data.cards ?? [])));
 							return;
 						}
 					}
@@ -322,8 +418,8 @@ export default function CollectionPage() {
 				}
 			}
 
-			if (hiveCards.length > 0 || getNFTBridge().isHiveMode()) {
-				applyCollection(groupHiveCards(hiveCards));
+			if (visibleHiveCards.length > 0 || hiveMode) {
+				applyCollection(withStarterCards(groupHiveCards(visibleHiveCards)));
 			} else {
 				applyCollection(localCollectionCards());
 			}
@@ -338,7 +434,7 @@ export default function CollectionPage() {
 
 	useEffect(() => {
 		setPage(1);
-	}, [filterRarity, filterType, searchQuery]);
+	}, [filterRarity, filterType, filterSource, searchQuery]);
 
 	// Collection milestone check — runs when cards change
 	const checkMilestones = useCollectionMilestoneStore(s => s.checkMilestones);
@@ -350,15 +446,16 @@ export default function CollectionPage() {
 		for (const m of newlyEarned) {
 			showStatus(`${m.icon} ${m.name} — ${m.description}`, 'success', 5000);
 		}
-	}, [cards.length, checkMilestones]);
+	}, [cards, checkMilestones]);
 
 	const hiveCardMap = useMemo(
-		() => new Map(hiveCards.map(c => [c.cardId, c])),
+		() => new Map(hiveCards.filter(c => c.ownershipSource === 'nft').map(c => [c.cardId, c])),
 		[hiveCards],
 	);
 
 	const filteredAndSorted = useMemo(() => {
 		let result = cards.filter(card => {
+			if (filterSource !== 'all' && getCollectionSource(card) !== filterSource) return false;
 			if (filterRarity !== 'all' && card.rarity !== filterRarity) return false;
 			if (filterType !== 'all' && card.type !== filterType) return false;
 			if (searchQuery && !card.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
@@ -375,12 +472,12 @@ export default function CollectionPage() {
 		});
 
 		return result;
-	}, [cards, filterRarity, filterType, searchQuery, sortBy]);
+	}, [cards, filterRarity, filterType, filterSource, searchQuery, sortBy]);
 
 	const parentRef = useRef<HTMLDivElement>(null);
 	const COLUMNS = 6;
 	const rows = useMemo(() => {
-		const result: OwnedCard[][] = [];
+		const result: CollectionOwnedCard[][] = [];
 		for (let i = 0; i < filteredAndSorted.length; i += COLUMNS) {
 			result.push(filteredAndSorted.slice(i, i + COLUMNS));
 		}
@@ -396,63 +493,61 @@ export default function CollectionPage() {
 
 	if (loading) {
 		return (
-			<div className="h-screen w-full overflow-y-auto overflow-x-hidden flex items-center justify-center text-ink-0 bg-(image:--bg-vault-nav)">
-				<motion.div
-					animate={{ rotate: 360 }}
-					transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-					className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full"
+			<div className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-vault-nav) text-ink-0">
+				<MetaPageHeader
+					title="Collection"
+					kicker="Vault · Cards"
+					username={hiveUsername}
+					accountSecondary="Collection"
 				/>
+				<div className="flex min-h-[calc(100vh-64px)] items-center justify-center">
+					<motion.div
+						animate={{ rotate: 360 }}
+						transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+						className="h-12 w-12 rounded-full border-4 border-gold-500 border-t-transparent"
+					/>
+				</div>
 			</div>
 		);
 	}
 
 	return (
-		<div className="h-screen w-full overflow-y-auto overflow-x-hidden p-6 md:p-8 text-ink-0 bg-(image:--bg-vault-nav)">
-			<div className="max-w-7xl mx-auto">
-				{/* Header Nav */}
-				<div className="flex justify-between items-center mb-6">
-					<Link to={routes.home}>
-						<motion.button
-							whileHover={{ scale: 1.05 }}
-							whileTap={{ scale: 0.95 }}
-							className="px-5 py-2.5 bg-obsidian-800/80 hover:bg-obsidian-750/80 text-ink-0 rounded-lg border border-obsidian-700 flex items-center gap-2 text-sm transition-colors"
+		<div className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-vault-nav) text-ink-0">
+			<MetaPageHeader
+				title="Collection"
+				kicker="Vault · Cards"
+				username={hiveUsername}
+				accountSecondary={`${cards.length.toLocaleString()} cards`}
+				actions={
+					<>
+						<div
+							role="status"
+							aria-label={`${eitr.toLocaleString()} Eitr balance`}
+							className="inline-flex h-8 shrink-0 items-center gap-2 rounded-full border border-bifrost-500/35 bg-obsidian-850 px-3 text-ink-200"
 						>
-							<span>←</span> Back to Home
-						</motion.button>
-					</Link>
-					<div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-bifrost-500/30 bg-[color-mix(in_oklch,var(--bifrost-500)_12%,transparent)]">
-						<span className="text-bifrost-300 font-bold text-sm">{eitr}</span>
-						<span className="text-ink-300 text-xs">Eitr</span>
-					</div>
-					<Link to={routes.packs}>
-						<motion.button
-							whileHover={{ scale: 1.05 }}
-							whileTap={{ scale: 0.95 }}
-							className="px-5 py-2.5 bg-linear-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white rounded-lg text-sm font-semibold transition-colors"
+							<Zap className="h-3.5 w-3.5 text-bifrost-300" strokeWidth={2.4} aria-hidden="true" />
+							<span className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-bifrost-200">
+								{eitr.toLocaleString()}
+							</span>
+							<span className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink-400">Eitr</span>
+						</div>
+						<MetaPageHeaderLink
+							to={routes.packs}
+							icon={Package}
+							iconPosition="start"
+							tone="gold"
 						>
-							Open Packs →
-						</motion.button>
-					</Link>
-				</div>
+							Packs
+						</MetaPageHeaderLink>
+					</>
+				}
+			/>
 
-				{/* Title */}
-				<motion.h1
-					initial={{ opacity: 0, y: -20 }}
-					animate={{ opacity: 1, y: 0 }}
-					className="text-4xl md:text-5xl font-bold text-center mb-2 text-transparent bg-clip-text bg-linear-to-r from-(--gold-100) via-(--gold-300) to-(--gold-500)"
-					style={{ textShadow: '0 0 32px rgba(217, 168, 68, 0.35)' }}
-				>
-					My Collection
-				</motion.h1>
+			<div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
 
 				{/* Stats Dashboard */}
 				{stats && (
-					<motion.div
-						initial={{ opacity: 0, y: 20 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ delay: 0.1 }}
-						className="mt-6 mb-8"
-					>
+					<div className="mb-6">
 						{/* Completion Bar */}
 						<div className="mb-4">
 							<div className="flex justify-between items-baseline mb-2">
@@ -471,13 +566,28 @@ export default function CollectionPage() {
 							</div>
 						</div>
 
-						{/* Rarity + Type Breakdown */}
-						<div className="grid grid-cols-2 gap-4">
+						{/* Source + Rarity + Type Breakdown */}
+						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+							{/* Source Breakdown */}
+							<div className={`${VAULT_PANEL_CLASS} p-4`}>
+								<div className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-3">By Source</div>
+								<div className="flex flex-wrap gap-2">
+									{stats.bySource.map(sourceStat => (
+										<div key={sourceStat.source} className="px-3 py-2 rounded-lg text-center border border-ink-0/10 backdrop-blur-sm bg-white/3">
+											<div className="text-lg font-bold text-white">
+												{sourceStat.uniqueCards}
+											</div>
+											<div className="text-gray-500 text-[10px] uppercase">{sourceStat.label}</div>
+										</div>
+									))}
+								</div>
+							</div>
+
 							{/* Rarity Breakdown */}
 							<div className={`${VAULT_PANEL_CLASS} p-4`}>
 								<div className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-3">By Rarity</div>
 								<div className="flex flex-wrap gap-2">
-									{(['mythic', 'epic', 'rare', 'common', 'basic'] as const).map(rarity => {
+									{DISPLAY_RARITIES.map(rarity => {
 										const rs = stats.byRarity.find(r => r.rarity === rarity);
 										return (
 											<div key={rarity} className="px-3 py-2 rounded-lg text-center border border-ink-0/10 backdrop-blur-sm bg-white/3">
@@ -509,16 +619,11 @@ export default function CollectionPage() {
 								</div>
 							</div>
 						</div>
-					</motion.div>
+					</div>
 				)}
 
 				{/* Filter Bar */}
-				<motion.div
-					initial={{ opacity: 0, y: 20 }}
-					animate={{ opacity: 1, y: 0 }}
-					transition={{ delay: 0.2 }}
-					className={`${VAULT_PANEL_CLASS} p-4 mb-6`}
-				>
+				<div className={`${VAULT_PANEL_CLASS} p-4 mb-6`}>
 					{/* Search + Sort Row */}
 					<div className="flex gap-3 mb-3">
 						<div className="flex-1 relative">
@@ -542,6 +647,20 @@ export default function CollectionPage() {
 							<option value="mint">Sort: Mint # (Low)</option>
 							<option value="recent">Sort: Recent</option>
 						</select>
+					</div>
+
+					{/* Source Pills */}
+					<div className="flex flex-wrap gap-2 mb-2">
+						{SOURCE_PILLS.map(pill => (
+							<button
+								key={pill.value}
+								onClick={() => setFilterSource(pill.value)}
+								className={`filter-pill ${filterSource === pill.value ? 'filter-pill-active' : 'filter-pill-inactive'}`}
+								style={filterSource === pill.value ? { background: 'rgba(74,111,224,0.42)', borderColor: 'rgba(143,181,255,0.55)' } : {}}
+							>
+								{pill.label}
+							</button>
+						))}
 					</div>
 
 					{/* Rarity Pills */}
@@ -572,7 +691,7 @@ export default function CollectionPage() {
 							</button>
 						))}
 					</div>
-				</motion.div>
+				</div>
 
 				{/* Error State */}
 				{error && (
@@ -592,8 +711,8 @@ export default function CollectionPage() {
 				{/* Empty Collection */}
 				{cards.length === 0 && !error ? (
 					<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20">
-						<p className="text-gray-400 text-xl mb-4">Your collection is empty</p>
-						<p className="text-gray-500 mb-8">Open some packs to start building your collection!</p>
+						<p className="text-gray-400 text-xl mb-4">No persistent cards loaded</p>
+						<p className="text-gray-500 mb-8">Starter cards are universal, and NFT cards appear after pack opens.</p>
 						<Link to={routes.packs}>
 							<motion.button
 								whileHover={{ scale: 1.05 }}
@@ -610,7 +729,7 @@ export default function CollectionPage() {
 						<motion.button
 							whileHover={{ scale: 1.05 }}
 							whileTap={{ scale: 0.95 }}
-							onClick={() => { setFilterRarity('all'); setFilterType('all'); setSearchQuery(''); }}
+							onClick={() => { setFilterSource('all'); setFilterRarity('all'); setFilterType('all'); setSearchQuery(''); }}
 							className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
 						>
 							Clear Filters
@@ -723,6 +842,9 @@ export default function CollectionPage() {
 																			<div className="flex items-center justify-between">
 																				<span className={`text-[10px] font-semibold uppercase ${getRarityColor(card.rarity)}`} style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
 																					{card.rarity}
+																				</span>
+																				<span className="text-[9px] font-semibold uppercase tracking-wider text-ink-300" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+																					{getCollectionSourceLabel(card)}
 																				</span>
 																				{card.attack != null && card.health != null && (
 																					<span className="text-[10px] font-bold text-gray-200" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
@@ -882,19 +1004,29 @@ export default function CollectionPage() {
 									</p>
 								)}
 
-								{/* Mint Number Plate */}
+								{/* Source + Mint Number Plate */}
 								<div className="text-center mb-4">
-									<div className="mint-badge-modal inline-block">
-										<span className="text-white/90">
-											{selectedCard.mintNumber ? `# ${selectedCard.mintNumber}` : '—'}
-										</span>
-										<span className="text-gray-500 mx-2">of</span>
-										<span className="text-white/90">
-											{selectedCard.maxSupply?.toLocaleString() ?? '???'}
-										</span>
-									</div>
+									{getCollectionSource(selectedCard) === 'starter' ? (
+										<div className="mint-badge-modal inline-block">
+											<span className="text-white/90">Starter entitlement</span>
+										</div>
+									) : selectedCard.mintNumber != null || selectedCard.maxSupply != null ? (
+										<div className="mint-badge-modal inline-block">
+											<span className="text-white/90">
+												{selectedCard.mintNumber ? `# ${selectedCard.mintNumber}` : '—'}
+											</span>
+											<span className="text-gray-500 mx-2">of</span>
+											<span className="text-white/90">
+												{selectedCard.maxSupply?.toLocaleString() ?? '???'}
+											</span>
+										</div>
+									) : (
+										<div className="mint-badge-modal inline-block">
+											<span className="text-white/90">Genesis NFT</span>
+										</div>
+									)}
 									<div className={`text-xs mt-1 font-semibold uppercase tracking-widest ${getRarityColor(selectedCard.rarity)}`}>
-										{selectedCard.rarity} Edition
+										{selectedCard.rarity} rarity
 									</div>
 								</div>
 
@@ -960,8 +1092,11 @@ export default function CollectionPage() {
 
 								{/* Eitr Forge Actions — forge disabled in v1 (non-canonical until replay-derived) */}
 								{(() => {
-									const eitrVal = getEitrValue(selectedCard.rarity);
-									const craftCostVal = getCraftCost(selectedCard.rarity);
+									const nft = hiveCardMap.get(selectedCard.id);
+									if (!nft) return null;
+
+									const eitrVal = getEitrDissolveValue(selectedCard.rarity);
+									const craftCostVal = getEitrForgeCost(selectedCard.rarity);
 
 									if (craftConfirm) {
 										return (
@@ -975,12 +1110,6 @@ export default function CollectionPage() {
 													<button
 														onClick={() => {
 															if (craftConfirm === 'disenchant') {
-																const nft = hiveCards.find(c => c.cardId === selectedCard.id);
-																if (!nft) {
-																	showStatus('Card uid not found in collection', 'error');
-																	setCraftConfirm(null);
-																	return;
-																}
 																// Broadcast-only per ADR 0001. Balance arrives via
 																// chain-derived eitr_ledger entry — no local credit.
 																hiveSync.broadcastCustomJson('rp_burn', { nft_id: nft.uid })
