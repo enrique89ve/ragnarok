@@ -229,6 +229,10 @@ export interface ChessCombatSliceActions {
   executeInstantKill: (attacker: ChessPiece, defender: ChessPiece, targetPosition: ChessBoardPosition) => void;
   getValidMoves: (piece: ChessPiece) => { moves: ChessBoardPosition[]; attacks: ChessBoardPosition[] };
   getPieceAt: (position: ChessBoardPosition) => ChessPiece | null;
+  // Gameplay command for a legal chess capture. Records the presentation
+  // marker and applies the attack intent through chessCombatSlice; movement
+  // legality and instant-kill rules stay unchanged.
+  beginChessAttack: (attacker: ChessPiece, defender: ChessPiece, isInstantKill: boolean) => void;
   removePiece: (pieceId: string) => void;
   updatePieceHealth: (pieceId: string, newHealth: number) => void;
   updatePieceStamina: (pieceId: string, newStamina: number) => void;
@@ -248,9 +252,10 @@ export interface ChessCombatSliceActions {
   // by construction.
   _nextLogTick: () => number;
   clearPendingCombat: () => void;
-  // Orchestrator: reads the pending animation (owned by ChessAnimationSlice),
-  // clears it, then either runs the instant-kill resolution or stages
-  // pendingCombat for the poker phase.
+  // Presentation cleanup only. Attack mechanics are resolved when
+  // beginChessAttack records the attack intent; this clears the transient
+  // marker so the coordinator can advance from chess to poker after the strike
+  // animation has actually been visible.
   completeAttackAnimation: () => void;
   isKingInCheck: (side: ChessPlayerSide, pieces?: ChessPiece[]) => boolean;
   getThreateningPieces: (kingPosition: ChessBoardPosition, attackerSide: ChessPlayerSide, pieces?: ChessPiece[]) => ChessPiece[];
@@ -358,10 +363,10 @@ export interface ChessAnimationSliceState {
 }
 
 export interface ChessAnimationSliceActions {
-  // Public constructor: builds the PendingAttackAnimation struct from the
-  // chess pieces involved and stamps the deterministic timestamp via the
-  // chess slice's `_nextLogTick`. Called by both UI (local strike) and the
-  // P2P wire receiver (mirrored remote strike).
+  // Public presentation marker constructor: builds the PendingAttackAnimation
+  // struct from the chess pieces involved and stamps the deterministic
+  // timestamp via the chess slice's `_nextLogTick`. It does not apply
+  // gameplay mechanics.
   startAttackAnimation: (attacker: ChessPiece, defender: ChessPiece, isInstantKill: boolean) => void;
   clearAttackAnimation: () => void;
   // Internal-style setter consumed only by chessCombatSlice.executeInstantKill

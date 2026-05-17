@@ -102,9 +102,11 @@ __tests__/
 !client/src/game/combat/aiAttackResolution.test.ts
 !client/src/game/combat/rules/pokerActionRules.test.ts
 !client/src/game/combat/components/PokerP2PTurnStatus.test.ts
+!client/src/game/combat/decision/pokerTurnBadgePresentation.test.ts
 !client/src/game/components/marketplace/runePackExchange.test.ts
 !shared/protocol-core/cardProgression.test.ts
 !shared/protocol-core/campaignResult.test.ts
+!shared/protocol-core/chess/chessRules.test.ts
 !shared/protocol-core/dailyQuestClaim.test.ts
 !shared/protocol-core/packCatalog.test.ts
 !shared/protocol-core/packDraw.test.ts
@@ -119,7 +121,10 @@ __tests__/
 !client/src/game/match/modes/campaign/resolver.test.ts
 !client/src/game/match/modes/p2p/resolver.test.ts
 !client/src/game/match/modes/p2p/wireSync/resultProposalGuard.test.ts
+!client/src/game/combat/decision/pokerActionPresentation.test.ts
+!client/src/game/combat/decision/pokerAiDecisionPolicy.test.ts
 !client/src/game/combat/decision/pokerTurnPolicy.test.ts
+!client/src/game/data/battleHistory/battleHistoryRules.test.ts
 !client/src/game/coordinator/gameCoordinatorRules.test.ts
 !client/src/game/coordinator/hooks/chessTurnPolicy.test.ts
 !client/src/game/coordinator/hooks/chessAITurnDriver.test.ts

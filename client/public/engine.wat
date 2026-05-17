@@ -3971,7 +3971,7 @@
   i32.add
   i32.load
   local.set $0
-  block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1696"
+  block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1703"
    loop $while-continue|0
     local.get $0
     if
@@ -3988,7 +3988,7 @@
       local.get $1
       i32.eq
      end
-     br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1696"
+     br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1703"
      local.get $2
      i32.const -2
      i32.and
@@ -4242,7 +4242,7 @@
   i32.add
   i32.load
   local.set $2
-  block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1695"
+  block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1702"
    loop $while-continue|0
     local.get $2
     if
@@ -4259,7 +4259,7 @@
       local.get $4
       i32.eq
      end
-     br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1695"
+     br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1702"
      local.get $5
      i32.const -2
      i32.and
@@ -4445,11 +4445,11 @@
     local.get $2
     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
     local.set $4
-    block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1737
+    block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1744
      local.get $1
      i32.const 0
      i32.le_s
-     br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1737
+     br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1744
      local.get $1
      i32.const 3
      i32.add
@@ -4471,7 +4471,7 @@
       local.get $4
       i32.const 0
       i32.store8 offset=27
-      br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1737
+      br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1744
      end
      local.get $4
      local.get $4
@@ -4500,11 +4500,11 @@
     local.get $3
     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
     local.set $2
-    block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1739
+    block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1746
      local.get $1
      i32.const 0
      i32.le_s
-     br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1739
+     br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1746
      local.get $1
      i32.const 3
      i32.add
@@ -4526,7 +4526,7 @@
       local.get $2
       i32.const 0
       i32.store8 offset=27
-      br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1739
+      br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1746
      end
      local.get $2
      local.get $2
@@ -4708,7 +4708,7 @@
   i32.const 9088
   call $~lib/string/String.__eq
   if
-   block $__inlined_func$assembly/effects/effectInterpreter/applyDamage$37
+   block $__inlined_func$assembly/effects/effectInterpreter/applyDamage$38
     i32.const 0
     local.set $4
     local.get $3
@@ -4729,7 +4729,7 @@
      local.get $0
      i32.const 0
      i32.le_s
-     br_if $__inlined_func$assembly/effects/effectInterpreter/applyDamage$37
+     br_if $__inlined_func$assembly/effects/effectInterpreter/applyDamage$38
      local.get $2
      i32.load offset=52
      local.tee $1
@@ -4745,7 +4745,7 @@
        local.get $0
        i32.sub
        i32.store offset=52
-       br $__inlined_func$assembly/effects/effectInterpreter/applyDamage$37
+       br $__inlined_func$assembly/effects/effectInterpreter/applyDamage$38
       end
       local.get $0
       local.get $2
@@ -4768,7 +4768,7 @@
      local.get $0
      i32.sub
      i32.store offset=40
-     br $__inlined_func$assembly/effects/effectInterpreter/applyDamage$37
+     br $__inlined_func$assembly/effects/effectInterpreter/applyDamage$38
     end
     block $folding-inner0
      loop $for-loop|0
@@ -4829,13 +4829,13 @@
        br $for-loop|1
       end
      end
-     br $__inlined_func$assembly/effects/effectInterpreter/applyDamage$37
+     br $__inlined_func$assembly/effects/effectInterpreter/applyDamage$38
     end
-    block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1698
+    block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1705
      local.get $0
      i32.const 0
      i32.le_s
-     br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1698
+     br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1705
      local.get $0
      i32.const 3
      i32.add
@@ -4857,7 +4857,7 @@
       local.get $1
       i32.const 0
       i32.store8 offset=27
-      br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1698
+      br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1705
      end
      local.get $1
      local.get $1
@@ -4896,11 +4896,11 @@
        local.get $5
        call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
        local.set $3
-       block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1702
+       block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1709
         local.get $0
         i32.const 0
         i32.le_s
-        br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1702
+        br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1709
         local.get $0
         i32.const 3
         i32.add
@@ -4922,7 +4922,7 @@
          local.get $3
          i32.const 0
          i32.store8 offset=27
-         br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1702
+         br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1709
         end
         local.get $3
         local.get $3
@@ -4950,11 +4950,11 @@
        local.get $7
        call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
        local.set $1
-       block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1704
+       block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1711
         local.get $0
         i32.const 0
         i32.le_s
-        br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1704
+        br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1711
         local.get $0
         i32.const 3
         i32.add
@@ -4976,7 +4976,7 @@
          local.get $1
          i32.const 0
          i32.store8 offset=27
-         br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1704
+         br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1711
         end
         local.get $1
         local.get $1
@@ -5005,11 +5005,11 @@
        local.get $4
        call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
        local.set $1
-       block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1706
+       block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1713
         local.get $0
         i32.const 0
         i32.le_s
-        br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1706
+        br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1713
         local.get $0
         i32.const 3
         i32.add
@@ -5031,7 +5031,7 @@
          local.get $1
          i32.const 0
          i32.store8 offset=27
-         br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1706
+         br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1713
         end
         local.get $1
         local.get $1
@@ -5526,7 +5526,7 @@
          i32.add
          i32.load
          local.set $3
-         block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1695"
+         block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1702"
           loop $while-continue|0
            local.get $3
            if
@@ -5543,7 +5543,7 @@
              local.get $4
              i32.eq
             end
-            br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1695"
+            br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1702"
             local.get $5
             i32.const -2
             i32.and
@@ -5722,7 +5722,7 @@
          i32.const 9936
          call $~lib/string/String.__eq
          if
-          block $__inlined_func$assembly/effects/effectInterpreter/applyDestroy$1983
+          block $__inlined_func$assembly/effects/effectInterpreter/applyDestroy$1990
            loop $for-loop|007
             local.get $6
             local.get $2
@@ -5744,7 +5744,7 @@
               call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
               i32.const 0
               i32.store offset=12
-              br $__inlined_func$assembly/effects/effectInterpreter/applyDestroy$1983
+              br $__inlined_func$assembly/effects/effectInterpreter/applyDestroy$1990
              end
              local.get $6
              i32.const 1
@@ -5774,7 +5774,7 @@
               call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
               i32.const 0
               i32.store offset=12
-              br $__inlined_func$assembly/effects/effectInterpreter/applyDestroy$1983
+              br $__inlined_func$assembly/effects/effectInterpreter/applyDestroy$1990
              end
              local.get $8
              i32.const 1
@@ -5789,7 +5789,7 @@
           i32.const 9984
           call $~lib/string/String.__eq
           if
-           block $__inlined_func$assembly/effects/effectInterpreter/applyTransform$1984
+           block $__inlined_func$assembly/effects/effectInterpreter/applyTransform$1991
             global.get $assembly/util/cardLookup/cardRegistry
             local.tee $4
             i32.load
@@ -5831,7 +5831,7 @@
             i32.add
             i32.load
             local.set $7
-            block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$16950"
+            block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$17020"
              loop $while-continue|01
               local.get $7
               if
@@ -5848,7 +5848,7 @@
                 local.get $3
                 i32.eq
                end
-               br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$16950"
+               br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$17020"
                local.get $4
                i32.const -2
                i32.and
@@ -5869,7 +5869,7 @@
             end
             local.tee $4
             i32.eqz
-            br_if $__inlined_func$assembly/effects/effectInterpreter/applyTransform$1984
+            br_if $__inlined_func$assembly/effects/effectInterpreter/applyTransform$1991
             i32.const 2
             i32.const 2
             i32.const 20
@@ -5938,7 +5938,7 @@
                  local.get $1
                  local.get $0
                  call $~lib/array/Array<u32>#__set
-                 br $__inlined_func$assembly/effects/effectInterpreter/applyTransform$1984
+                 br $__inlined_func$assembly/effects/effectInterpreter/applyTransform$1991
                 end
                 local.get $1
                 i32.const 1
@@ -6114,7 +6114,7 @@
              i32.const 10128
              call $~lib/string/String.__eq
              if
-              block $__inlined_func$assembly/effects/effectInterpreter/applySetStats$1985
+              block $__inlined_func$assembly/effects/effectInterpreter/applySetStats$1992
                loop $for-loop|0512
                 local.get $6
                 local.get $1
@@ -6151,7 +6151,7 @@
                   local.get $3
                   i32.load offset=8
                   i32.store offset=16
-                  br $__inlined_func$assembly/effects/effectInterpreter/applySetStats$1985
+                  br $__inlined_func$assembly/effects/effectInterpreter/applySetStats$1992
                  end
                  local.get $6
                  i32.const 1
@@ -6196,7 +6196,7 @@
                   local.get $3
                   i32.load offset=8
                   i32.store offset=16
-                  br $__inlined_func$assembly/effects/effectInterpreter/applySetStats$1985
+                  br $__inlined_func$assembly/effects/effectInterpreter/applySetStats$1992
                  end
                  local.get $8
                  i32.const 1
@@ -6211,7 +6211,7 @@
               i32.const 10176
               call $~lib/string/String.__eq
               if
-               block $__inlined_func$assembly/effects/effectInterpreter/applyFreeze$1986
+               block $__inlined_func$assembly/effects/effectInterpreter/applyFreeze$1993
                 local.get $3
                 i32.load offset=12
                 i32.const 10208
@@ -6237,7 +6237,7 @@
                    br $for-loop|09
                   end
                  end
-                 br $__inlined_func$assembly/effects/effectInterpreter/applyFreeze$1986
+                 br $__inlined_func$assembly/effects/effectInterpreter/applyFreeze$1993
                 end
                 loop $for-loop|111
                  local.get $6
@@ -6260,7 +6260,7 @@
                    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
                    i32.const 1
                    i32.store8 offset=28
-                   br $__inlined_func$assembly/effects/effectInterpreter/applyFreeze$1986
+                   br $__inlined_func$assembly/effects/effectInterpreter/applyFreeze$1993
                   end
                   local.get $6
                   i32.const 1
@@ -6475,7 +6475,7 @@
                  i32.const 10464
                  call $~lib/string/String.__eq
                  if
-                  block $__inlined_func$assembly/effects/effectInterpreter/applyReturnToHand$1987
+                  block $__inlined_func$assembly/effects/effectInterpreter/applyReturnToHand$1994
                    i32.const 2
                    i32.const 2
                    i32.const 20
@@ -6535,7 +6535,7 @@
                         local.get $1
                         call $~lib/array/Array<assembly/types/GameState/CardInstance>#splice
                         drop
-                        br $__inlined_func$assembly/effects/effectInterpreter/applyReturnToHand$1987
+                        br $__inlined_func$assembly/effects/effectInterpreter/applyReturnToHand$1994
                        end
                        local.get $1
                        i32.const 1
@@ -6660,7 +6660,7 @@
                          i32.add
                          i32.load
                          local.set $5
-                         block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$16952"
+                         block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$17022"
                           loop $while-continue|03
                            local.get $5
                            if
@@ -6677,7 +6677,7 @@
                              local.get $2
                              i32.eq
                             end
-                            br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$16952"
+                            br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$17022"
                             local.get $3
                             i32.const -2
                             i32.and
@@ -6823,13 +6823,13 @@
                       i32.trunc_sat_f64_s
                       call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
                       local.set $0
-                      block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1745
+                      block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1752
                        local.get $3
                        i32.load offset=4
                        local.tee $1
                        i32.const 0
                        i32.le_s
-                       br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1745
+                       br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1752
                        local.get $1
                        i32.const 3
                        i32.add
@@ -6851,7 +6851,7 @@
                         local.get $0
                         i32.const 0
                         i32.store8 offset=27
-                        br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1745
+                        br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1752
                        end
                        local.get $0
                        local.get $0
@@ -7185,7 +7185,7 @@
   i32.add
   i32.load
   local.set $1
-  block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1695"
+  block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1702"
    loop $while-continue|0
     local.get $1
     if
@@ -7202,7 +7202,7 @@
       local.get $6
       i32.eq
      end
-     br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1695"
+     br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1702"
      local.get $4
      i32.const -2
      i32.and
@@ -7538,10 +7538,10 @@
    i32.const 0
    return
   end
-  block $__inlined_func$assembly/engine/combatProcessor/canMinionAttack$1989
+  block $__inlined_func$assembly/engine/combatProcessor/canMinionAttack$1996
    local.get $4
    i32.load8_u offset=28
-   br_if $__inlined_func$assembly/engine/combatProcessor/canMinionAttack$1989
+   br_if $__inlined_func$assembly/engine/combatProcessor/canMinionAttack$1996
    local.get $4
    i32.load8_u offset=25
    if (result i32)
@@ -7557,29 +7557,29 @@
     i32.load8_u offset=31
    end
    i32.eqz
-   br_if $__inlined_func$assembly/engine/combatProcessor/canMinionAttack$1989
+   br_if $__inlined_func$assembly/engine/combatProcessor/canMinionAttack$1996
    local.get $4
    i32.load offset=8
    i32.const 0
    i32.le_s
-   br_if $__inlined_func$assembly/engine/combatProcessor/canMinionAttack$1989
-   block $__inlined_func$assembly/engine/combatProcessor/getMaxAttacks$1773 (result i32)
+   br_if $__inlined_func$assembly/engine/combatProcessor/canMinionAttack$1996
+   block $__inlined_func$assembly/engine/combatProcessor/getMaxAttacks$1780 (result i32)
     i32.const 4
     local.get $4
     i32.load8_u offset=34
-    br_if $__inlined_func$assembly/engine/combatProcessor/getMaxAttacks$1773
+    br_if $__inlined_func$assembly/engine/combatProcessor/getMaxAttacks$1780
     drop
     i32.const 2
     local.get $4
     i32.load8_u offset=33
-    br_if $__inlined_func$assembly/engine/combatProcessor/getMaxAttacks$1773
+    br_if $__inlined_func$assembly/engine/combatProcessor/getMaxAttacks$1780
     drop
     i32.const 1
    end
    local.get $4
    i32.load offset=40
    i32.le_s
-   br_if $__inlined_func$assembly/engine/combatProcessor/canMinionAttack$1989
+   br_if $__inlined_func$assembly/engine/combatProcessor/canMinionAttack$1996
    i32.const 1
    local.set $3
   end
@@ -7683,13 +7683,13 @@
     end
    end
   end
-  block $__inlined_func$assembly/engine/combatProcessor/isValidTarget$1990
+  block $__inlined_func$assembly/engine/combatProcessor/isValidTarget$1997
    local.get $7
    if
     i32.const 0
     local.set $2
     local.get $3
-    br_if $__inlined_func$assembly/engine/combatProcessor/isValidTarget$1990
+    br_if $__inlined_func$assembly/engine/combatProcessor/isValidTarget$1997
     local.get $1
     if (result i32)
      local.get $1
@@ -7698,7 +7698,7 @@
      i32.const 1
     end
     i32.eqz
-    br_if $__inlined_func$assembly/engine/combatProcessor/isValidTarget$1990
+    br_if $__inlined_func$assembly/engine/combatProcessor/isValidTarget$1997
    end
    local.get $4
    i32.load8_u offset=31
@@ -7712,7 +7712,7 @@
     i32.const 0
     local.set $2
     local.get $3
-    br_if $__inlined_func$assembly/engine/combatProcessor/isValidTarget$1990
+    br_if $__inlined_func$assembly/engine/combatProcessor/isValidTarget$1997
    end
    i32.const 1
    local.set $2
@@ -7790,11 +7790,11 @@
    local.get $1
    i32.load offset=8
    local.set $3
-   block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1779
+   block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1786
     local.get $2
     i32.const 0
     i32.le_s
-    br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1779
+    br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1786
     local.get $2
     i32.const 3
     i32.add
@@ -7816,7 +7816,7 @@
      local.get $1
      i32.const 0
      i32.store8 offset=27
-     br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1779
+     br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1786
     end
     local.get $1
     local.get $1
@@ -7825,11 +7825,11 @@
     i32.sub
     i32.store offset=12
    end
-   block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1780
+   block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1787
     local.get $3
     i32.const 0
     i32.le_s
-    br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1780
+    br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1787
     local.get $3
     i32.const 3
     i32.add
@@ -7851,7 +7851,7 @@
      local.get $4
      i32.const 0
      i32.store8 offset=27
-     br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1780
+     br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1787
     end
     local.get $4
     local.get $4
@@ -7936,16 +7936,16 @@
   local.get $4
   i32.const 1
   i32.store8 offset=26
-  block $__inlined_func$assembly/engine/combatProcessor/getMaxAttacks$1781 (result i32)
+  block $__inlined_func$assembly/engine/combatProcessor/getMaxAttacks$1788 (result i32)
    i32.const 4
    local.get $4
    i32.load8_u offset=34
-   br_if $__inlined_func$assembly/engine/combatProcessor/getMaxAttacks$1781
+   br_if $__inlined_func$assembly/engine/combatProcessor/getMaxAttacks$1788
    drop
    i32.const 2
    local.get $4
    i32.load8_u offset=33
-   br_if $__inlined_func$assembly/engine/combatProcessor/getMaxAttacks$1781
+   br_if $__inlined_func$assembly/engine/combatProcessor/getMaxAttacks$1788
    drop
    i32.const 1
   end
@@ -8082,7 +8082,7 @@
     local.get $6
     i32.load8_u offset=52
     if
-     block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1783
+     block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1790
       i32.const 6
       i32.const 3
       local.get $6
@@ -8102,7 +8102,7 @@
        local.get $6
        i32.const 0
        i32.store8 offset=27
-       br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1783
+       br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1790
       end
       local.get $6
       local.get $6
@@ -8436,7 +8436,7 @@
       i32.const 3
       i32.eq
       if
-       block $__inlined_func$assembly/engine/actionProcessor/useHeroPower$1994 (result i32)
+       block $__inlined_func$assembly/engine/actionProcessor/useHeroPower$2001 (result i32)
         local.get $1
         i32.load offset=8
         drop
@@ -8465,7 +8465,7 @@
         i32.load offset=60
         local.tee $4
         i32.load8_u offset=8
-        br_if $__inlined_func$assembly/engine/actionProcessor/useHeroPower$1994
+        br_if $__inlined_func$assembly/engine/actionProcessor/useHeroPower$2001
         drop
         i32.const 0
         local.get $2
@@ -8477,7 +8477,7 @@
         i32.load offset=4
         local.tee $4
         i32.lt_s
-        br_if $__inlined_func$assembly/engine/actionProcessor/useHeroPower$1994
+        br_if $__inlined_func$assembly/engine/actionProcessor/useHeroPower$2001
         drop
         local.get $1
         local.get $5
@@ -8873,7 +8873,7 @@
   i32.add
   i32.load
   local.set $1
-  block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1837"
+  block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1844"
    loop $while-continue|0
     local.get $1
     if
@@ -8890,7 +8890,7 @@
       local.get $3
       i32.eq
      end
-     br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1837"
+     br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1844"
      local.get $4
      i32.const -2
      i32.and
@@ -9352,7 +9352,7 @@
   i32.add
   i32.load
   local.set $0
-  block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1847"
+  block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1854"
    loop $while-continue|0
     local.get $0
     if
@@ -9369,7 +9369,7 @@
       local.get $1
       i32.eq
      end
-     br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1847"
+     br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1854"
      local.get $2
      i32.const -2
      i32.and
@@ -9443,7 +9443,7 @@
   i32.add
   i32.load
   local.set $1
-  block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1850"
+  block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1857"
    loop $while-continue|0
     local.get $1
     if
@@ -9460,7 +9460,7 @@
       local.get $3
       i32.eq
      end
-     br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1850"
+     br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1857"
      local.get $4
      i32.const -2
      i32.and
@@ -10846,7 +10846,7 @@
     i32.add
     i32.load
     local.set $5
-    block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1695"
+    block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1702"
      loop $while-continue|0
       local.get $5
       if
@@ -10863,7 +10863,7 @@
         local.get $4
         i32.eq
        end
-       br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1695"
+       br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1702"
        local.get $2
        i32.const -2
        i32.and
@@ -11621,7 +11621,7 @@
     i32.add
     i32.load
     local.set $13
-    block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$16950"
+    block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$17020"
      loop $while-continue|01
       local.get $13
       if
@@ -11638,7 +11638,7 @@
         local.get $4
         i32.eq
        end
-       br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$16950"
+       br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$17020"
        local.get $3
        i32.const -2
        i32.and
@@ -12002,7 +12002,7 @@
             if (result i32)
              local.get $1
              local.get $0
-             block $__inlined_func$assembly/poker/handEvaluator/compareHandsInternal$1997 (result i32)
+             block $__inlined_func$assembly/poker/handEvaluator/compareHandsInternal$2004 (result i32)
               local.get $1
               i32.load
               local.tee $3
@@ -12014,7 +12014,7 @@
                local.get $3
                local.get $9
                i32.sub
-               br $__inlined_func$assembly/poker/handEvaluator/compareHandsInternal$1997
+               br $__inlined_func$assembly/poker/handEvaluator/compareHandsInternal$2004
               end
               local.get $1
               i32.load
@@ -12034,7 +12034,7 @@
                local.get $0
                i32.load offset=8
                i32.sub
-               br $__inlined_func$assembly/poker/handEvaluator/compareHandsInternal$1997
+               br $__inlined_func$assembly/poker/handEvaluator/compareHandsInternal$2004
               end
               local.get $1
               i32.load offset=4
@@ -12076,7 +12076,7 @@
                  call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
                  i32.load offset=4
                  i32.sub
-                 br $__inlined_func$assembly/poker/handEvaluator/compareHandsInternal$1997
+                 br $__inlined_func$assembly/poker/handEvaluator/compareHandsInternal$2004
                 end
                 local.get $3
                 i32.const 1
@@ -13902,6 +13902,12 @@
    call $~lib/string/String.__eq
    br_if $__inlined_func$assembly/chess/canonical/statusFromString$1341
    drop
+   i32.const 5
+   local.get $1
+   i32.const 9408
+   call $~lib/string/String.__eq
+   br_if $__inlined_func$assembly/chess/canonical/statusFromString$1341
+   drop
    i32.const 4
   end
   i32.store offset=8
@@ -13993,7 +13999,7 @@
     i32.const 12176
     call $assembly/chess/canonical/Cursor#expect
     local.get $3
-    block $__inlined_func$assembly/chess/canonical/Cursor#readBool$1921 (result i32)
+    block $__inlined_func$assembly/chess/canonical/Cursor#readBool$1928 (result i32)
      local.get $0
      i32.load offset=4
      local.tee $1
@@ -14026,7 +14032,7 @@
       i32.add
       i32.store offset=4
       i32.const 1
-      br $__inlined_func$assembly/chess/canonical/Cursor#readBool$1921
+      br $__inlined_func$assembly/chess/canonical/Cursor#readBool$1928
      end
      local.get $0
      local.get $0
@@ -15221,7 +15227,7 @@
   local.set $2
   i32.const 0
   local.set $0
-  block $__inlined_func$assembly/chess/rules/findPieceIdxById$2013
+  block $__inlined_func$assembly/chess/rules/findPieceIdxById$2020
    loop $for-loop|02
     local.get $0
     local.get $1
@@ -15234,7 +15240,7 @@
      i32.load
      local.get $2
      call $~lib/string/String.__eq
-     br_if $__inlined_func$assembly/chess/rules/findPieceIdxById$2013
+     br_if $__inlined_func$assembly/chess/rules/findPieceIdxById$2020
      local.get $0
      i32.const 1
      i32.add
@@ -15421,10 +15427,15 @@
   (local $4 i32)
   (local $5 i32)
   (local $6 i32)
+  (local $7 i32)
+  (local $8 i32)
+  (local $9 i32)
+  (local $10 i32)
+  (local $11 i32)
   i32.const 0
   local.get $1
   call $assembly/chess/rules/isKingInCheck
-  local.set $5
+  local.set $9
   i32.const 0
   i32.const 1
   i32.const -1
@@ -15432,55 +15443,153 @@
   local.get $1
   call $assembly/chess/rules/isKingInCheck
   select
-  local.get $5
+  local.get $9
   select
-  local.set $5
-  block $__inlined_func$assembly/chess/rules/checkWinCondition$2014 (result i32)
+  local.set $10
+  block $__inlined_func$assembly/chess/rules/checkWinCondition$34 (result i32)
    loop $for-loop|0
-    local.get $2
+    local.get $4
     local.get $1
     i32.load offset=12
     i32.lt_s
     if
      local.get $1
-     local.get $2
+     local.get $4
      call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-     local.tee $6
-     i32.load offset=4
-     i32.eqz
+     local.tee $9
+     i32.load offset=8
+     local.tee $11
      if
-      local.get $6
-      i32.load offset=8
-      local.tee $6
+      local.get $11
+      i32.const 1
+      i32.eq
       if
-       i32.const 1
+       local.get $9
+       i32.load offset=4
+       local.tee $11
+       if
+        local.get $2
+        i32.const 1
+        i32.add
+        local.set $2
+        i32.const 1
+        local.get $5
+        local.get $11
+        i32.const 1
+        i32.eq
+        if (result i32)
+         i32.const 1
+        else
+         local.get $9
+         i32.load offset=4
+         i32.const 2
+         i32.eq
+        end
+        if (result i32)
+         i32.const 1
+        else
+         local.get $9
+         i32.load offset=4
+         i32.const 5
+         i32.eq
+        end
+        select
+        local.set $5
+       else
+        i32.const 1
+        local.set $7
+       end
+      end
+     else
+      local.get $9
+      i32.load offset=4
+      local.tee $11
+      if
        local.get $3
+       i32.const 1
+       i32.add
+       local.set $3
+       i32.const 1
        local.get $6
+       local.get $11
        i32.const 1
        i32.eq
+       if (result i32)
+        i32.const 1
+       else
+        local.get $9
+        i32.load offset=4
+        i32.const 2
+        i32.eq
+       end
+       if (result i32)
+        i32.const 1
+       else
+        local.get $9
+        i32.load offset=4
+        i32.const 5
+        i32.eq
+       end
        select
-       local.set $3
+       local.set $6
       else
        i32.const 1
-       local.set $4
+       local.set $8
       end
      end
-     local.get $2
+     local.get $4
      i32.const 1
      i32.add
-     local.set $2
+     local.set $4
      br $for-loop|0
     end
    end
    i32.const 3
-   local.get $3
+   local.get $7
    i32.eqz
-   br_if $__inlined_func$assembly/chess/rules/checkWinCondition$2014
+   br_if $__inlined_func$assembly/chess/rules/checkWinCondition$34
    drop
    i32.const 4
-   local.get $4
+   local.get $8
    i32.eqz
-   br_if $__inlined_func$assembly/chess/rules/checkWinCondition$2014
+   br_if $__inlined_func$assembly/chess/rules/checkWinCondition$34
+   drop
+   i32.const 5
+   local.get $2
+   local.get $3
+   i32.or
+   i32.eqz
+   br_if $__inlined_func$assembly/chess/rules/checkWinCondition$34
+   drop
+   i32.const 3
+   local.get $6
+   local.get $2
+   i32.eqz
+   local.tee $4
+   i32.and
+   br_if $__inlined_func$assembly/chess/rules/checkWinCondition$34
+   drop
+   i32.const 4
+   local.get $5
+   local.get $3
+   i32.eqz
+   local.tee $5
+   i32.and
+   br_if $__inlined_func$assembly/chess/rules/checkWinCondition$34
+   drop
+   i32.const 5
+   local.get $4
+   local.get $3
+   i32.const 1
+   i32.eq
+   i32.and
+   local.get $5
+   local.get $2
+   i32.const 1
+   i32.eq
+   i32.and
+   i32.or
+   br_if $__inlined_func$assembly/chess/rules/checkWinCondition$34
    drop
    i32.const 1
   end
@@ -15498,7 +15607,7 @@
   i32.load offset=12
   i32.store offset=12
   local.get $3
-  local.get $5
+  local.get $10
   i32.store offset=16
   local.get $3
   local.get $2
@@ -15603,7 +15712,7 @@
      i32.load offset=12
      i32.lt_s
      if
-      block $__inlined_func$~lib/string/String.__lt$1483 (result i32)
+      block $__inlined_func$~lib/string/String.__lt$1490 (result i32)
        i32.const 0
        local.get $7
        local.get $6
@@ -15616,7 +15725,7 @@
        i32.load
        local.tee $1
        i32.eq
-       br_if $__inlined_func$~lib/string/String.__lt$1483
+       br_if $__inlined_func$~lib/string/String.__lt$1490
        drop
        i32.const 0
        local.get $1
@@ -15627,7 +15736,7 @@
        i32.shr_u
        local.tee $3
        i32.eqz
-       br_if $__inlined_func$~lib/string/String.__lt$1483
+       br_if $__inlined_func$~lib/string/String.__lt$1490
        drop
        i32.const 1
        local.get $2
@@ -15638,7 +15747,7 @@
        i32.shr_u
        local.tee $4
        i32.eqz
-       br_if $__inlined_func$~lib/string/String.__lt$1483
+       br_if $__inlined_func$~lib/string/String.__lt$1490
        drop
        block $__inlined_func$~lib/util/string/compareImpl$1 (result i32)
         local.get $4
@@ -15769,31 +15878,37 @@
   call $assembly/chess/canonical/escapeJsonString
   call $~lib/string/String.__concat
   i32.const 13840
-  block $__inlined_func$assembly/chess/canonical/statusToString$1498 (result i32)
+  block $__inlined_func$assembly/chess/canonical/statusToString$1505 (result i32)
    i32.const 11872
    local.get $0
    i32.load offset=8
    local.tee $1
    i32.eqz
-   br_if $__inlined_func$assembly/chess/canonical/statusToString$1498
+   br_if $__inlined_func$assembly/chess/canonical/statusToString$1505
    drop
    i32.const 11904
    local.get $1
    i32.const 1
    i32.eq
-   br_if $__inlined_func$assembly/chess/canonical/statusToString$1498
+   br_if $__inlined_func$assembly/chess/canonical/statusToString$1505
    drop
    i32.const 11952
    local.get $1
    i32.const 2
    i32.eq
-   br_if $__inlined_func$assembly/chess/canonical/statusToString$1498
+   br_if $__inlined_func$assembly/chess/canonical/statusToString$1505
    drop
    i32.const 11984
    local.get $1
    i32.const 3
    i32.eq
-   br_if $__inlined_func$assembly/chess/canonical/statusToString$1498
+   br_if $__inlined_func$assembly/chess/canonical/statusToString$1505
+   drop
+   i32.const 9408
+   local.get $1
+   i32.const 5
+   i32.eq
+   br_if $__inlined_func$assembly/chess/canonical/statusToString$1505
    drop
    i32.const 13888
   end
@@ -15891,37 +16006,37 @@
     call $~lib/string/String.__concat
     call $~lib/string/String.__concat
     i32.const 13984
-    block $__inlined_func$assembly/chess/canonical/pieceTypeToString$1493 (result i32)
+    block $__inlined_func$assembly/chess/canonical/pieceTypeToString$1500 (result i32)
      i32.const 12480
      local.get $1
      i32.load offset=4
      local.tee $1
      i32.eqz
-     br_if $__inlined_func$assembly/chess/canonical/pieceTypeToString$1493
+     br_if $__inlined_func$assembly/chess/canonical/pieceTypeToString$1500
      drop
      i32.const 12512
      local.get $1
      i32.const 1
      i32.eq
-     br_if $__inlined_func$assembly/chess/canonical/pieceTypeToString$1493
+     br_if $__inlined_func$assembly/chess/canonical/pieceTypeToString$1500
      drop
      i32.const 12544
      local.get $1
      i32.const 2
      i32.eq
-     br_if $__inlined_func$assembly/chess/canonical/pieceTypeToString$1493
+     br_if $__inlined_func$assembly/chess/canonical/pieceTypeToString$1500
      drop
      i32.const 12576
      local.get $1
      i32.const 3
      i32.eq
-     br_if $__inlined_func$assembly/chess/canonical/pieceTypeToString$1493
+     br_if $__inlined_func$assembly/chess/canonical/pieceTypeToString$1500
      drop
      i32.const 12608
      local.get $1
      i32.const 4
      i32.eq
-     br_if $__inlined_func$assembly/chess/canonical/pieceTypeToString$1493
+     br_if $__inlined_func$assembly/chess/canonical/pieceTypeToString$1500
      drop
      i32.const 14032
     end
@@ -16151,7 +16266,7 @@
   i32.load
   i32.eqz
   if
-   block $__inlined_func$assembly/chess/reducer/reduceMove$35 (result i32)
+   block $__inlined_func$assembly/chess/reducer/reduceMove$36 (result i32)
     local.get $5
     i32.load
     local.get $4
@@ -16167,7 +16282,7 @@
      call $~lib/string/String.__concat
      i32.const 7344
      call $~lib/string/String.__concat
-     br $__inlined_func$assembly/chess/reducer/reduceMove$35
+     br $__inlined_func$assembly/chess/reducer/reduceMove$36
     end
     local.get $5
     i32.load
@@ -16185,7 +16300,7 @@
      call $~lib/string/String.__concat
      i32.const 7344
      call $~lib/string/String.__concat
-     br $__inlined_func$assembly/chess/reducer/reduceMove$35
+     br $__inlined_func$assembly/chess/reducer/reduceMove$36
     end
     local.get $1
     local.get $5
@@ -16242,7 +16357,7 @@
      call $~lib/string/String.__concat
      i32.const 7344
      call $~lib/string/String.__concat
-     br $__inlined_func$assembly/chess/reducer/reduceMove$35
+     br $__inlined_func$assembly/chess/reducer/reduceMove$36
     end
     local.get $5
     i32.load
@@ -16303,7 +16418,7 @@
   i32.const 1
   i32.eq
   if
-   block $__inlined_func$assembly/chess/reducer/reduceCapture$36 (result i32)
+   block $__inlined_func$assembly/chess/reducer/reduceCapture$37 (result i32)
     local.get $5
     i32.load
     local.get $4
@@ -16326,7 +16441,7 @@
      call $~lib/string/String.__concat
      i32.const 7344
      call $~lib/string/String.__concat
-     br $__inlined_func$assembly/chess/reducer/reduceCapture$36
+     br $__inlined_func$assembly/chess/reducer/reduceCapture$37
     end
     local.get $5
     i32.load
@@ -16350,7 +16465,7 @@
      call $~lib/string/String.__concat
      i32.const 7344
      call $~lib/string/String.__concat
-     br $__inlined_func$assembly/chess/reducer/reduceCapture$36
+     br $__inlined_func$assembly/chess/reducer/reduceCapture$37
     end
     local.get $6
     i32.load offset=8
@@ -16364,7 +16479,7 @@
      call $~lib/string/String.__concat
      i32.const 7344
      call $~lib/string/String.__concat
-     br $__inlined_func$assembly/chess/reducer/reduceCapture$36
+     br $__inlined_func$assembly/chess/reducer/reduceCapture$37
     end
     local.get $6
     i32.load offset=12
@@ -16387,7 +16502,7 @@
      call $~lib/string/String.__concat
      i32.const 7344
      call $~lib/string/String.__concat
-     br $__inlined_func$assembly/chess/reducer/reduceCapture$36
+     br $__inlined_func$assembly/chess/reducer/reduceCapture$37
     end
     i32.const 0
     i32.const 2
@@ -16502,7 +16617,7 @@
   i32.const 2
   i32.eq
   if
-   block $__inlined_func$assembly/chess/reducer/reducePromote$1973 (result i32)
+   block $__inlined_func$assembly/chess/reducer/reducePromote$1980 (result i32)
     local.get $5
     i32.load
     local.get $4
@@ -16518,7 +16633,7 @@
      call $~lib/string/String.__concat
      i32.const 7344
      call $~lib/string/String.__concat
-     br $__inlined_func$assembly/chess/reducer/reducePromote$1973
+     br $__inlined_func$assembly/chess/reducer/reducePromote$1980
     end
     local.get $5
     i32.load
@@ -16535,7 +16650,7 @@
      call $~lib/string/String.__concat
      i32.const 7344
      call $~lib/string/String.__concat
-     br $__inlined_func$assembly/chess/reducer/reducePromote$1973
+     br $__inlined_func$assembly/chess/reducer/reducePromote$1980
     end
     local.get $4
     i32.load offset=24
@@ -16555,7 +16670,7 @@
      call $~lib/string/String.__concat
      i32.const 7344
      call $~lib/string/String.__concat
-     br $__inlined_func$assembly/chess/reducer/reducePromote$1973
+     br $__inlined_func$assembly/chess/reducer/reducePromote$1980
     end
     local.get $2
     i32.load offset=8
@@ -16592,7 +16707,7 @@
      call $~lib/string/String.__concat
      i32.const 7344
      call $~lib/string/String.__concat
-     br $__inlined_func$assembly/chess/reducer/reducePromote$1973
+     br $__inlined_func$assembly/chess/reducer/reducePromote$1980
     end
     local.get $5
     i32.load
@@ -16614,7 +16729,7 @@
    end
    return
   end
-  block $__inlined_func$assembly/chess/reducer/reduceEndTurn$2015 (result i32)
+  block $__inlined_func$assembly/chess/reducer/reduceEndTurn$2021 (result i32)
    local.get $5
    i32.load offset=8
    local.tee $0
@@ -16630,7 +16745,7 @@
     call $~lib/string/String.__concat
     i32.const 7344
     call $~lib/string/String.__concat
-    br $__inlined_func$assembly/chess/reducer/reduceEndTurn$2015
+    br $__inlined_func$assembly/chess/reducer/reduceEndTurn$2021
    end
    call $assembly/chess/state/Snapshot#constructor
    local.tee $0

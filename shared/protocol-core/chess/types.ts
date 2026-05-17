@@ -11,7 +11,7 @@
 
 export type ChessPieceType = 'king' | 'queen' | 'rook' | 'bishop' | 'knight' | 'pawn';
 export type ChessPlayerSide = 'player' | 'opponent';
-export type ChessGameStatus = 'setup' | 'playing' | 'combat' | 'player_wins' | 'opponent_wins';
+export type ChessGameStatus = 'setup' | 'playing' | 'combat' | 'player_wins' | 'opponent_wins' | 'draw';
 
 export interface ChessBoardPosition {
 	row: number;

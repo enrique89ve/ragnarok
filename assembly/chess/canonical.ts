@@ -43,6 +43,7 @@ import {
 	STATUS_COMBAT,
 	STATUS_PLAYER_WINS,
 	STATUS_OPPONENT_WINS,
+	STATUS_DRAW,
 } from './types';
 
 // ====================================================================
@@ -108,6 +109,7 @@ export function statusToString(s: i32): string {
 	if (s == STATUS_PLAYING) return 'playing';
 	if (s == STATUS_COMBAT) return 'combat';
 	if (s == STATUS_PLAYER_WINS) return 'player_wins';
+	if (s == STATUS_DRAW) return 'draw';
 	return 'opponent_wins';
 }
 
@@ -116,6 +118,7 @@ export function statusFromString(s: string): i32 {
 	if (s == 'playing') return STATUS_PLAYING;
 	if (s == 'combat') return STATUS_COMBAT;
 	if (s == 'player_wins') return STATUS_PLAYER_WINS;
+	if (s == 'draw') return STATUS_DRAW;
 	return STATUS_OPPONENT_WINS;
 }
 

@@ -59,6 +59,14 @@
 		0 4px 18px rgba(0, 0, 0, 0.95);
 }
 
+.cgo-title.draw {
+	color: #d7e3ef;
+	text-shadow:
+		0 0 22px rgba(215, 227, 239, 0.38),
+		0 0 48px rgba(88, 120, 148, 0.3),
+		0 4px 18px rgba(0, 0, 0, 0.95);
+}
+
 @keyframes victory-title-shimmer {
 	0%, 100% { opacity: 0.95; }
 	50% { opacity: 1; }

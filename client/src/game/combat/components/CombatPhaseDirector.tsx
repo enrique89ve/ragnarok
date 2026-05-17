@@ -43,8 +43,8 @@ function getModeLabel(mode: CombatPhaseDirectorMode): string {
 }
 
 function getWindowLabel(isWaiting: boolean, isPlayerTurn: boolean): string {
-	if (isWaiting) return 'Enemy Acting';
-	return isPlayerTurn ? 'Your Decision' : 'Enemy Window';
+	if (isWaiting) return 'Enemy Deciding';
+	return isPlayerTurn ? 'Your Decision' : 'Enemy Setup';
 }
 
 function toDirectorMetric(pill: string): DirectorMetric {

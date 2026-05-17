@@ -233,8 +233,9 @@ Row 6: Rook  | Bishop| King | Queen  | Knight
 
 When a piece moves to a square occupied by an enemy piece:
 
-1. **Pawn vs Any / Any vs King**: Instant kill (Valkyrie Weapon rule)
+1. **Pawn or King vs non-King / Any vs Pawn**: Instant kill (Valkyrie Weapon rule)
 2. **Major Piece vs Major Piece**: Triggers Poker Combat
+3. **Direct King capture**: Not legal. King pressure resolves through checkmate or explicit endgame rules.
 
 ### Stamina System
 
@@ -242,11 +243,14 @@ When a piece moves to a square occupied by an enemy piece:
 - Moving a piece grants +1 Stamina to ALL friendly pieces
 - Stamina is used for betting in Poker Combat
 
-### Check & Checkmate
+### Check, Checkmate & Endgame
 
 - **Check**: King is threatened by enemy piece
 - **Checkmate**: King cannot escape check = Game Over
-- Kings cannot attack (they can only be captured via instant kill)
+- **Bare King vs decisive material**: If a side has only its King and the opponent still has a Queen, Rook, or Pawn, the opponent wins
+- **Insufficient material draw**: King vs King, or King plus one Bishop/Knight vs lone King, is a draw
+- **Stalemate draw**: If no material terminal has already applied and the side to move has no legal moves while not in check, the game is a draw
+- Kings can attack non-King pieces, but Kings cannot be captured directly
 
 ### King Divine Command System
 

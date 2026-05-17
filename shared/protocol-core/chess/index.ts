@@ -10,7 +10,8 @@ export {
 	isKingInCheck,
 	isCheckmate,
 	checkPawnPromotion,
-	checkWinCondition
+	checkWinCondition,
+	getNoLegalMovesStatus
 } from './chessRules';
 export type { ValidMoves } from './chessRules';
 

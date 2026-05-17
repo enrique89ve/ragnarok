@@ -13,24 +13,16 @@
    ======================================== */
 
 /*
-  Wrapper carries the full-window background. Putting it here (instead of
-  on the inner .game-viewport) means the background fills the actual
-  viewport even when the canvas is letterboxed by aspect ratio — no more
-  black bars at top/bottom on ultrawide windows. The inner canvas keeps
-  its own dim overlay + vignettes which scale with the gameplay.
+  Wrapper fills the physical browser viewport behind the scaled 1920x1080
+  canvas. Keep it pure black so letterboxed space never reads as a separate
+  colored layer around the game surface.
 */
 .game-viewport-wrapper {
   position: fixed;
   inset: 0;
   overflow: hidden;
   z-index: 1;
-  background:
-    /* Soft fade so the canvas edges blend into the background */
-    radial-gradient(ellipse 100% 100% at 50% 50%, transparent 55%, rgba(0, 0, 0, 0.7) 100%),
-    /* Primary combat background — for ranked / play (non-campaign) only.
-       Campaign missions set .game-viewport.realm-* which overrides this
-       via realm-boards.css. The ?v= query is a cache-bust. */
-    url('/ui/pokerback.webp') center center / cover no-repeat #000;
+  background: #000;
 }
 
 /*
@@ -40,8 +32,7 @@
   in GameViewport.tsx, which sets `transform`, `top`, `left`, `width`, and
   `height` as INLINE styles. Inline always wins over CSS in the cascade,
   so this rule deliberately does NOT set any positioning or transform —
-  doing so would create dead rules that show up red in DevTools and
-  confuse anyone debugging.
+  doing so would create misleading inactive rules in DevTools.
 
   Why JS and not CSS calc(100vw / 1920px)? That uses CSS Values 4 type-
   altering calc which is only supported in Chrome 105+/Firefox 116+/
@@ -54,10 +45,8 @@
 .game-viewport {
   overflow: hidden;
   touch-action: none; /* Prevent pinch-zoom/pan during gameplay on mobile */
-  /* Background image now lives on .game-viewport-wrapper so it fills the
-     full window even when the 16:9 canvas is letterboxed. The canvas
-     itself only carries the dim overlays and cluster vignettes, which
-     should scale with the gameplay area. */
+  /* Realm/background rules live on the scaled canvas. The wrapper only fills
+     letterboxed space behind it. */
   background: transparent;
   container-type: inline-size;
   container-name: game-viewport;
@@ -162,8 +151,6 @@
   box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
 }
 
-/* Dead .zone-poker-sidebar, .has-poker-sidebar removed — never rendered in JSX */
-
 /* ========================================
    RESPONSIVE ADJUSTMENTS
    Scale factor handles most responsiveness,
@@ -173,8 +160,6 @@
    See styles/zones.css for all zone positioning.
    ======================================== */
 /* All responsive zone overrides moved to styles/zones.css for single source of truth */
-
-/* Container queries removed — virtual canvas is always 1920px, uniform scaling handles sizing */
 
 /* ========================================
    FOCUS-VISIBLE — keyboard navigation

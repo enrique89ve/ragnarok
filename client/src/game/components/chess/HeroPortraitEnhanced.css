@@ -11,41 +11,12 @@
   100% { background-position: 0% 0%; }
 }
 
-@keyframes playerPulse {
+@keyframes chess-hero-portrait-pulse {
   0%, 100% { opacity: 0.7; }
   50% { opacity: 1; }
 }
 
-@keyframes opponentPulse {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
-}
-
-@keyframes runicBorderPulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
-
-@keyframes divineParticle1 {
-  0% { transform: translate(-50%, -50%) rotate(0deg) translateX(60px) scale(0); opacity: 0; }
-  20% { scale: 1; opacity: 1; }
-  80% { opacity: 0.8; }
-  100% { transform: translate(-50%, -50%) rotate(360deg) translateX(60px) scale(0); opacity: 0; }
-}
-
-@keyframes divineParticle2 {
-  0% { transform: translate(-50%, -50%) rotate(180deg) translateX(55px) scale(0); opacity: 0; }
-  20% { scale: 1; opacity: 1; }
-  80% { opacity: 0.8; }
-  100% { transform: translate(-50%, -50%) rotate(540deg) translateX(55px) scale(0); opacity: 0; }
-}
-
-@keyframes badgePulse {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
-}
-
-@keyframes battlePulse {
+@keyframes chess-king-uses-pulse {
   0%, 100% { opacity: 0.7; }
   50% { opacity: 1; }
 }
@@ -78,12 +49,6 @@
   0%, 100% { opacity: 0.3; transform: translateY(0); }
   50% { opacity: 0.6; transform: translateY(-2px); }
 }
-
-@keyframes divineActivePulse {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
-}
-
 
 /* ============================================
    1. HERO PORTRAIT FRAME
@@ -168,7 +133,7 @@
     0 0 40px rgba(34, 211, 238, 0.35),
     0 8px 24px rgba(0, 0, 0, 0.5),
     inset 0 0 12px rgba(59, 130, 246, 0.25);
-  animation: playerPulse 3s ease-in-out infinite;
+  animation: chess-hero-portrait-pulse 3s ease-in-out infinite;
 }
 
 .hero-portrait-player::before {
@@ -195,7 +160,7 @@
     0 0 40px rgba(220, 38, 38, 0.35),
     0 8px 24px rgba(0, 0, 0, 0.5),
     inset 0 0 12px rgba(239, 68, 68, 0.25);
-  animation: opponentPulse 3s ease-in-out infinite;
+  animation: chess-hero-portrait-pulse 3s ease-in-out infinite;
 }
 
 .hero-portrait-opponent::before {
@@ -360,7 +325,7 @@
 .king-uses-active {
   border-color: rgba(251, 191, 36, 1);
   background: rgba(251, 191, 36, 0.2);
-  animation: badgePulse 1.5s ease-in-out infinite;
+  animation: chess-king-uses-pulse 1.5s ease-in-out infinite;
 }
 
 
@@ -438,12 +403,8 @@
     animation: none;
   }
 
-  .battle-mode-btn {
-    animation: none;
-  }
-
   .check-warning-banner {
-    animation: checkPulse 1.5s ease-in-out infinite;
+    animation: none;
   }
 
   .check-warning-banner::before,
@@ -451,7 +412,4 @@
     animation: none;
   }
 
-  .battle-mode-btn:hover {
-    transform: none;
-  }
 }

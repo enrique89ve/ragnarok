@@ -13,6 +13,7 @@
  */
 
 import { useEffect, useRef, useCallback } from 'react';
+import { ARENA_VFX_LAYERS, getArenaVfxLayer } from '../arenaVfxTargets';
 import {
 	CombatPhase,
 	CombatAction,
@@ -189,7 +190,7 @@ export function usePokerDrama(options: UsePokerDramaOptions): PokerDramaState {
 	useEffect(() => {
 		if (!combatState || !isActive) return;
 
-		const viewport = document.querySelector('.game-viewport') as HTMLElement;
+		const viewport = getArenaVfxLayer(ARENA_VFX_LAYERS.viewport);
 		if (!viewport) return;
 
 		const playerHP = combatState.player.pet.stats.currentHealth;
@@ -208,7 +209,7 @@ export function usePokerDrama(options: UsePokerDramaOptions): PokerDramaState {
 	useEffect(() => {
 		if (!combatState || !isActive) return;
 
-		const viewport = document.querySelector('.game-viewport') as HTMLElement;
+		const viewport = getArenaVfxLayer(ARENA_VFX_LAYERS.viewport);
 		if (viewport) {
 			viewport.dataset.playerStreak = String(playerStreakRef.current);
 			viewport.dataset.opponentStreak = String(opponentStreakRef.current);

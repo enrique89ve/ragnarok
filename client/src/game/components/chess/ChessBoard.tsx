@@ -394,6 +394,9 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
         {gameStatus === oppWinStatus && (
           <span className="ml-2 text-red-400 font-bold">Defeat</span>
         )}
+        {gameStatus === 'draw' && (
+          <span className="ml-2 text-slate-200 font-bold">Draw</span>
+        )}
       </div>
       
       {noMovesMessage && (

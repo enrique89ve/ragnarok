@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { CombatAction, CombatPhase, PokerCombatState } from '../../types/PokerCombatTypes';
 import { getPokerCombatAdapterState } from '../../hooks/usePokerCombatAdapter';
 import { getSmartAIAction } from '../modules/SmartAI';
@@ -9,6 +9,12 @@ import { ALL_NORSE_HEROES } from '../../data/norseHeroes';
 import type { BattlePopupAction, BattlePopupTarget } from '../components/HeroBattlePopup';
 import { useCampaignStore, getMission } from '../../campaign';
 import { profileToSmartAIConfig } from '../../campaign/campaignTypes';
+import { deriveLegalPokerAiAction } from '../decision/pokerAiDecisionPolicy';
+import {
+  getPokerActionPresentation,
+  POKER_AI_ACTION_SETTLE_DELAY_MS,
+} from '../decision/pokerActionPresentation';
+import { getPokerDramaCallbacks } from './usePokerDrama';
 
 interface UsePokerAIOptions {
   combatState: PokerCombatState | null;
@@ -19,6 +25,12 @@ interface UsePokerAIOptions {
 
 const AI_RESPONSE_DELAY_MS = 600;
 const AI_TIMEOUT_MS = 5000;
+
+function getOpponentHeroName(combatState: PokerCombatState): string {
+  const heroId = combatState.opponent.pet.norseHeroId;
+  const hero = heroId ? ALL_NORSE_HEROES[heroId] : null;
+  return hero?.name || 'Opponent';
+}
 
 /**
  * Simplified AI hook that uses activePlayerId as the single source of truth.
@@ -34,6 +46,13 @@ export function usePokerAI(options: UsePokerAIOptions): void {
   const watchdogTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const cardGameMulliganActive = useGameStore(state => state.gameState?.mulligan?.active);
+  const opponentPlayerId = combatState?.opponent.playerId;
+  const activePlayerId = combatState?.activePlayerId;
+  const combatPhase = combatState?.phase;
+  const foldWinner = combatState?.foldWinner;
+  const isAllInShowdown = combatState?.isAllInShowdown;
+  const currentBet = combatState?.currentBet;
+  const actionsThisRound = combatState?.actionsThisRound;
 
   /*
     Look up the active campaign mission to derive the AI config used in
@@ -67,6 +86,32 @@ export function usePokerAI(options: UsePokerAIOptions): void {
     }
   }, [currentMissionId, currentDifficulty]);
 
+  const presentOpponentAction = useCallback((
+    sourceState: PokerCombatState,
+    action: CombatAction,
+    hpCommitment?: number,
+  ) => {
+    const feedback = getPokerActionPresentation({
+      actor: 'opponent',
+      action,
+      amount: hpCommitment,
+      actorName: getOpponentHeroName(sourceState),
+    });
+    if (feedback.showPopup) {
+      addHeroBattlePopup?.({
+        action: feedback.popupAction,
+        target: feedback.target,
+        text: feedback.text,
+        subtitle: feedback.subtitle,
+      });
+    }
+
+    try {
+      const dramaCallbacks = getPokerDramaCallbacks();
+      dramaCallbacks.onBettingAction(action, false);
+    } catch { /* drama VFX is non-critical */ }
+  }, [addHeroBattlePopup]);
+
   useEffect(() => {
     let lastSetTime = 0;
 
@@ -97,33 +142,33 @@ export function usePokerAI(options: UsePokerAIOptions): void {
   }, [aiResponseInProgressRef]);
 
   useEffect(() => {
-    if (!combatState || !isActive) return;
+    if (!opponentPlayerId || !combatPhase || !isActive) return;
 
     if (cardGameMulliganActive) {
       if (COMBAT_DEBUG.AI) debug.ai('[AI Effect] Blocked: card game mulligan still active');
       return;
     }
 
-    const aiPlayerId = combatState.opponent.playerId;
-    const isAITurn = combatState.activePlayerId === aiPlayerId;
+    const aiPlayerId = opponentPlayerId;
+    const isAITurn = activePlayerId === aiPlayerId;
 
     if (!isAITurn) {
-      if (COMBAT_DEBUG.AI) debug.ai('[AI Effect] Not AI turn, activePlayerId:', combatState.activePlayerId);
+      if (COMBAT_DEBUG.AI) debug.ai('[AI Effect] Not AI turn, activePlayerId:', activePlayerId);
       return;
     }
 
     const isBettingPhase =
-      combatState.phase === CombatPhase.PRE_FLOP ||
-      combatState.phase === CombatPhase.FAITH ||
-      combatState.phase === CombatPhase.FORESIGHT ||
-      combatState.phase === CombatPhase.DESTINY;
+      combatPhase === CombatPhase.PRE_FLOP ||
+      combatPhase === CombatPhase.FAITH ||
+      combatPhase === CombatPhase.FORESIGHT ||
+      combatPhase === CombatPhase.DESTINY;
 
     if (!isBettingPhase) {
-      if (COMBAT_DEBUG.AI) debug.ai('[AI Effect] Not a betting phase:', combatState.phase);
+      if (COMBAT_DEBUG.AI) debug.ai('[AI Effect] Not a betting phase:', combatPhase);
       return;
     }
 
-    if (combatState.foldWinner || combatState.isAllInShowdown) {
+    if (foldWinner || isAllInShowdown) {
       if (COMBAT_DEBUG.AI) debug.ai('[AI Effect] Game over (fold or all-in showdown)');
       return;
     }
@@ -135,10 +180,10 @@ export function usePokerAI(options: UsePokerAIOptions): void {
 
     if (COMBAT_DEBUG.AI) {
       debug.ai('[AI Effect] AI turn detected, will act in', AI_RESPONSE_DELAY_MS, 'ms', {
-        phase: combatState.phase,
-        activePlayerId: combatState.activePlayerId,
-        currentBet: combatState.currentBet,
-        actionsThisRound: combatState.actionsThisRound
+        phase: combatPhase,
+        activePlayerId,
+        currentBet,
+        actionsThisRound
       });
     }
 
@@ -195,25 +240,22 @@ export function usePokerAI(options: UsePokerAIOptions): void {
         }
         const aiDecision = getSmartAIAction(freshState, false, escalatedConfig);
         if (COMBAT_DEBUG.AI) debug.ai('[AI Effect] AI decision:', aiDecision);
-
-        adapter.performAction(aiPlayerId, aiDecision.action, aiDecision.betAmount);
-
-        // Fire dramatic announcement for opponent poker actions
-        const heroId = freshState.opponent.pet.norseHeroId;
-        const hero = heroId ? ALL_NORSE_HEROES[heroId] : null;
-        const heroName = hero?.name || 'Opponent';
-
-        if (aiDecision.action === CombatAction.ATTACK) {
-          const amount = aiDecision.betAmount || freshState.currentBet || 0;
-          addHeroBattlePopup?.({ action: 'attack', target: 'opponent', text: `${heroName} attacks for ${amount} HP!`, subtitle: 'Match or brace!' });
-        } else if (aiDecision.action === CombatAction.COUNTER_ATTACK) {
-          const amount = aiDecision.betAmount || 0;
-          addHeroBattlePopup?.({ action: 'counter_attack', target: 'opponent', text: `${heroName} counters ${amount} HP!`, subtitle: 'The stakes grow higher!' });
-        } else if (aiDecision.action === CombatAction.ENGAGE) {
-          addHeroBattlePopup?.({ action: 'engage', target: 'both', text: `${heroName} engages!`, subtitle: 'Matched your attack' });
-        } else if (aiDecision.action === CombatAction.BRACE) {
-          addHeroBattlePopup?.({ action: 'brace', target: 'opponent', text: `${heroName} braces!`, subtitle: 'They yield the round' });
+        const legalDecision = deriveLegalPokerAiAction({
+          combatState: freshState,
+          aiPlayerId,
+          proposed: aiDecision,
+        });
+        if (legalDecision.wasAdjusted && COMBAT_DEBUG.AI) {
+          debug.ai('[AI Effect] Adjusted illegal AI poker decision:', {
+            proposedAction: legalDecision.proposedAction,
+            action: legalDecision.action,
+            hpCommitment: legalDecision.hpCommitment,
+          });
         }
+
+        adapter.performAction(aiPlayerId, legalDecision.action, legalDecision.hpCommitment);
+
+        presentOpponentAction(freshState, legalDecision.action, legalDecision.hpCommitment);
 
         setTimeout(() => {
           const adapterAfterAI = getPokerCombatAdapterState();
@@ -224,7 +266,7 @@ export function usePokerAI(options: UsePokerAIOptions): void {
             adapterAfterAI.maybeCloseBettingRound();
           }
           aiResponseInProgressRef.current = false;
-        }, 100);
+        }, POKER_AI_ACTION_SETTLE_DELAY_MS);
 
       } catch (error) {
         if (COMBAT_DEBUG.AI) debug.error('[AI Effect] ERROR:', error);
@@ -252,7 +294,17 @@ export function usePokerAI(options: UsePokerAIOptions): void {
             }
 
             debug.warn('[AI Effect] Fallback decision:', fallbackAction);
-            fallbackAdapter.performAction(aiPlayerId, fallbackAction, fallbackBetAmount);
+            const fallbackIntent = deriveLegalPokerAiAction({
+              combatState: fallbackState,
+              aiPlayerId,
+              proposed: {
+                action: fallbackAction,
+                betAmount: fallbackBetAmount,
+                reasoning: 'Emergency fallback decision',
+              },
+            });
+            fallbackAdapter.performAction(aiPlayerId, fallbackIntent.action, fallbackIntent.hpCommitment);
+            presentOpponentAction(fallbackState, fallbackIntent.action, fallbackIntent.hpCommitment);
 
             setTimeout(() => {
               const adapterAfterFallback = getPokerCombatAdapterState();
@@ -263,7 +315,7 @@ export function usePokerAI(options: UsePokerAIOptions): void {
                 adapterAfterFallback.maybeCloseBettingRound();
               }
               aiResponseInProgressRef.current = false;
-            }, 100);
+            }, POKER_AI_ACTION_SETTLE_DELAY_MS);
           } else {
             aiResponseInProgressRef.current = false;
           }
@@ -281,6 +333,17 @@ export function usePokerAI(options: UsePokerAIOptions): void {
         aiResponseInProgressRef.current = false;
       }
     };
-  }, [combatState?.activePlayerId, combatState?.phase, combatState?.foldWinner,
-      combatState?.isAllInShowdown, isActive, aiResponseInProgressRef, cardGameMulliganActive, addHeroBattlePopup]);
+  }, [
+    activePlayerId,
+    actionsThisRound,
+    aiResponseInProgressRef,
+    cardGameMulliganActive,
+    combatPhase,
+    currentBet,
+    foldWinner,
+    isActive,
+    isAllInShowdown,
+    opponentPlayerId,
+    presentOpponentAction,
+  ]);
 }

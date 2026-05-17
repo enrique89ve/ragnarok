@@ -33,7 +33,7 @@ export interface BattleHistoryEntry {
 	minionsKilled: number;
 	
 	// Optional metadata
-	mode?: 'pvp' | 'pve' | 'practice';
+	mode?: 'pvp' | 'pve' | 'practice' | 'campaign';
 	notes?: string;
 }
 

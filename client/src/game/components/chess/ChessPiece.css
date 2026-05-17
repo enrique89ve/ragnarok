@@ -12,20 +12,7 @@
   pointer-events: none;
   z-index: 1;
   mix-blend-mode: screen;
-  will-change: opacity;
   transform: translateZ(0);
-}
-
-.element-image-fire { animation: element-pulse-simple 1.5s ease-in-out infinite alternate; }
-.element-image-water { animation: element-pulse-simple 2s ease-in-out infinite; }
-.element-image-wind { animation: element-pulse-simple 2s ease-in-out infinite; }
-.element-image-earth { animation: element-pulse-simple 2.5s ease-in-out infinite; }
-.element-image-holy { animation: element-pulse-simple 1.2s ease-in-out infinite alternate; }
-.element-image-shadow { animation: element-pulse-simple 2s ease-in-out infinite; }
-
-@keyframes element-pulse-simple {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.6; }
 }
 
 .element-overlay {
@@ -67,7 +54,6 @@
   z-index: 5;
   border-radius: inherit;
   overflow: hidden;
-  will-change: transform, opacity;
   transform: translateZ(0);
 }
 
@@ -104,12 +90,12 @@
   background: 
     radial-gradient(ellipse at 50% 100%, rgba(139, 69, 19, 0.5) 0%, transparent 60%),
     radial-gradient(circle at 50% 50%, rgba(205, 133, 63, 0.3) 0%, transparent 50%);
-  animation: earth-pulse 2s ease-in-out infinite;
+  animation: chess-piece-earth-pulse 2s ease-in-out infinite;
 }
 
 .element-effect-holy {
   background: radial-gradient(circle at 50% 50%, rgba(255, 215, 0, 0.5) 0%, transparent 70%);
-  animation: holy-glow 1s ease-in-out infinite alternate;
+  animation: chess-piece-holy-glow 1s ease-in-out infinite alternate;
 }
 
 .element-effect-shadow {
@@ -129,24 +115,7 @@
   justify-content: center;
   border: clamp(1.5px, 3cqw, 3px) solid rgba(255, 255, 255, 0.9);
   z-index: 40;
-  animation: badge-pulse 1.5s ease-in-out infinite;
-  will-change: transform, opacity;
-  transform: translateZ(0);
 }
-
-.element-badge-fire { animation: badge-pulse-fire 1s ease-in-out infinite alternate; }
-.element-badge-water { animation: badge-pulse-water 1.5s ease-in-out infinite; }
-.element-badge-wind { animation: badge-pulse-water 2s ease-in-out infinite; }
-.element-badge-earth { animation: badge-pulse-earth 2s ease-in-out infinite; }
-.element-badge-holy { animation: badge-pulse-holy 0.8s ease-in-out infinite alternate; }
-.element-badge-shadow { animation: badge-pulse-shadow 1.5s ease-in-out infinite; }
-
-@keyframes badge-pulse-fire { 0% { transform: scale(1); } 100% { transform: scale(1.15); } }
-@keyframes badge-pulse-water { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
-@keyframes badge-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-@keyframes badge-pulse-earth { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
-@keyframes badge-pulse-holy { 0% { transform: scale(1); opacity: 0.9; } 100% { transform: scale(1.2); opacity: 1; } }
-@keyframes badge-pulse-shadow { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.8; } }
 
 .element-icon-large {
   font-size: 14px;
@@ -160,75 +129,40 @@
   border-radius: inherit;
   pointer-events: none;
   z-index: 0;
-  will-change: opacity;
-  transform: translateZ(0);
 }
 
 .element-border-fire {
   border: 2px solid rgba(255, 100, 0, 0.8);
-  animation: border-pulse 1.6s ease-in-out infinite;
 }
 
 .element-border-water {
   border: 2px solid rgba(0, 191, 255, 0.8);
-  animation: border-pulse 2s ease-in-out infinite;
 }
 
 .element-border-wind {
   border: 2px solid rgba(50, 205, 50, 0.8);
-  animation: border-pulse 1.5s ease-in-out infinite;
 }
 
 .element-border-earth {
   border: 2px solid rgba(170, 100, 40, 0.8);
-  animation: border-pulse 2.5s ease-in-out infinite;
 }
 
 .element-border-holy {
   border: 2px solid rgba(255, 235, 50, 0.9);
-  animation: border-pulse 1s ease-in-out infinite;
 }
 
 .element-border-shadow {
   border: 2px solid rgba(170, 70, 220, 0.8);
-  animation: border-pulse 2s ease-in-out infinite;
 }
-
-@keyframes border-pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
 
 @keyframes fire-dance {
   0% { opacity: 0.8; transform: scaleY(1); }
   100% { opacity: 1; transform: scaleY(1.1); }
 }
 
-@keyframes flame-rise {
-  0% { transform: translateY(5%) scaleX(0.9); opacity: 0.7; }
-  100% { transform: translateY(-5%) scaleX(1.1); opacity: 1; }
-}
-
-@keyframes flame-flicker {
-  0% { transform: translateX(-50%) scale(1); opacity: 0.8; }
-  100% { transform: translateX(-50%) scale(1.2); opacity: 1; }
-}
-
 @keyframes water-shimmer {
   0%, 100% { opacity: 0.7; }
   50% { opacity: 1; }
-}
-
-@keyframes water-ripple {
-  0% { transform: translateY(0); opacity: 0.3; }
-  100% { transform: translateY(16px); opacity: 0.6; }
-}
-
-@keyframes water-drop {
-  0%, 100% { transform: translateY(0); opacity: 0.8; }
-  50% { transform: translateY(5px); opacity: 1; }
-}
-
-@keyframes wind-spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
 }
 
 @keyframes wind-pulse {
@@ -241,39 +175,19 @@
   100% { transform: scale(1.2); opacity: 0; }
 }
 
-@keyframes earth-pulse {
+@keyframes chess-piece-earth-pulse {
   0%, 100% { opacity: 0.5; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.02); }
 }
 
-@keyframes holy-glow {
+@keyframes chess-piece-holy-glow {
   0% { opacity: 0.6; }
   100% { opacity: 1; }
-}
-
-@keyframes holy-rays {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-@keyframes holy-sparkle {
-  0% { transform: translateX(-50%) scale(1); opacity: 0.7; }
-  100% { transform: translateX(-50%) scale(1.3); opacity: 1; }
 }
 
 @keyframes shadow-throb {
   0%, 100% { opacity: 0.7; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.05); }
-}
-
-@keyframes shadow-swirl {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-@keyframes shadow-eye {
-  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
-  50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
 }
 
 .god-piece-aura {
@@ -283,8 +197,6 @@
   pointer-events: none;
   z-index: 0;
   animation: god-aura-breathe 3s ease-in-out infinite;
-  will-change: transform, opacity;
-  transform: translateZ(0);
 }
 
 @keyframes god-aura-breathe {
@@ -293,19 +205,8 @@
 }
 
 .element-piece {
-  transition: box-shadow 0.3s ease, transform 0.2s ease;
+  transition: box-shadow 0.3s ease;
 }
-
-.element-piece:hover {
-  filter: brightness(1.15);
-}
-
-.element-piece-fire:hover { box-shadow: 0 0 35px #ff4500, 0 0 70px rgba(255, 69, 0, 0.8), 0 0 100px rgba(255, 100, 0, 0.5) !important; }
-.element-piece-water:hover { box-shadow: 0 0 35px #00bfff, 0 0 70px rgba(0, 191, 255, 0.8), 0 0 100px rgba(30, 144, 255, 0.5) !important; }
-.element-piece-wind:hover { box-shadow: 0 0 35px #32cd32, 0 0 70px rgba(50, 205, 50, 0.8), 0 0 100px rgba(0, 255, 0, 0.5) !important; }
-.element-piece-earth:hover { box-shadow: 0 0 35px #cd853f, 0 0 70px rgba(205, 133, 63, 0.8), 0 0 100px rgba(139, 69, 19, 0.5) !important; }
-.element-piece-holy:hover { box-shadow: 0 0 40px #ffd700, 0 0 80px rgba(255, 215, 0, 0.9), 0 0 120px rgba(255, 255, 100, 0.6) !important; }
-.element-piece-shadow:hover { box-shadow: 0 0 35px #9932cc, 0 0 70px rgba(153, 50, 204, 0.8), 0 0 100px rgba(75, 0, 130, 0.5) !important; }
 
 .chess-piece[data-piece-type="king"],
 .chess-piece[data-piece-type="queen"],
@@ -324,7 +225,7 @@
   outline-offset: 2px;
   box-shadow: 0 0 20px rgba(34, 197, 94, 0.8), 0 0 40px rgba(34, 197, 94, 0.5), 0 0 60px rgba(34, 197, 94, 0.3), inset 0 0 15px rgba(34, 197, 94, 0.3);
   z-index: 50;
-  animation: matchup-advantage-pulse 1.2s ease-in-out infinite !important;
+  animation: chess-matchup-pulse 1.2s ease-in-out infinite !important;
 }
 
 .matchup-pulse-disadvantage {
@@ -332,7 +233,7 @@
   outline-offset: 2px;
   box-shadow: 0 0 20px rgba(239, 68, 68, 0.8), 0 0 40px rgba(239, 68, 68, 0.5), 0 0 60px rgba(239, 68, 68, 0.3), inset 0 0 15px rgba(239, 68, 68, 0.3);
   z-index: 50;
-  animation: matchup-disadvantage-pulse 1.2s ease-in-out infinite !important;
+  animation: chess-matchup-pulse 1.2s ease-in-out infinite !important;
 }
 
 .matchup-pulse-mutual {
@@ -340,7 +241,7 @@
   outline-offset: 2px;
   box-shadow: 0 0 20px rgba(192, 132, 252, 0.8), 0 0 40px rgba(192, 132, 252, 0.5), 0 0 60px rgba(192, 132, 252, 0.3), inset 0 0 15px rgba(192, 132, 252, 0.3);
   z-index: 50;
-  animation: matchup-mutual-pulse 1.2s ease-in-out infinite !important;
+  animation: chess-matchup-pulse 1.2s ease-in-out infinite !important;
 }
 
 /*
@@ -363,17 +264,7 @@
   }
 }
 
-@keyframes matchup-advantage-pulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
-
-@keyframes matchup-disadvantage-pulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
-
-@keyframes matchup-mutual-pulse {
+@keyframes chess-matchup-pulse {
   0%, 100% { opacity: 0.6; }
   50% { opacity: 1; }
 }
@@ -405,27 +296,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .element-image-bg,
   .element-effect-layer,
-  .element-effect-fire,
-  .element-effect-water,
-  .element-effect-wind,
-  .element-effect-earth,
-  .element-effect-holy,
-  .element-effect-shadow,
-  .element-effect-fire::before,
-  .element-effect-fire::after,
-  .element-effect-water::before,
-  .element-effect-water::after,
   .element-effect-wind::before,
-  .element-effect-wind::after,
-  .element-effect-earth::before,
-  .element-effect-holy::before,
-  .element-effect-holy::after,
-  .element-effect-shadow::before,
-  .element-effect-shadow::after,
-  .element-badge-large,
-  .element-border-glow,
+  .god-piece-aura,
+  .chess-piece-attackable,
   .matchup-pulse-advantage,
   .matchup-pulse-disadvantage,
   .matchup-pulse-mutual {

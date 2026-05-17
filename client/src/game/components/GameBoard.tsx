@@ -16,7 +16,6 @@ import { useCardPositions } from '../hooks/useCardPositions';
 import { AnimationLayer } from './AnimationLayer';
 import { useAnimations } from './AnimationContainer';
 import { useAIActionManager } from '../animations/AIActionManager';
-import { ToastProvider } from "../../components/ui-norse";
 import DebugRenderCheck from './DebugRenderCheck';
 import { preloadImages } from '../utils/assetPreloader';
 import { getCardArtPath } from '../utils/art/artMapping';
@@ -2045,9 +2044,6 @@ export const GameBoard: React.FC<{}> = () => {
           onOpponentCardClick={createHandleOpponentCardClick(attackingCard, attackWithCard)}
           onOpponentHeroClick={createHandleOpponentHeroClick(attackingCard, attackWithCard)}
         />
-
-        {/* Toast notifications */}
-        <ToastProvider position="top-right" richColors />
 
         {/* AI Action notifications */}
         <ActionNotification action={currentAction} />

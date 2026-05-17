@@ -55,7 +55,7 @@ function RivalryBadge() {
 }
 
 export type GameOverPhaseProps = {
-	readonly isVictory: boolean;
+	readonly result: 'victory' | 'defeat' | 'draw';
 	readonly sub: GameOverSubPhase;
 	readonly playerTurnCount: number;
 	// Campaign-only context. When null the phase renders the casual/PvP
@@ -70,7 +70,7 @@ export type GameOverPhaseProps = {
 };
 
 const GameOverPhase: React.FC<GameOverPhaseProps> = ({
-	isVictory,
+	result,
 	sub,
 	playerTurnCount,
 	campaign,
@@ -79,8 +79,10 @@ const GameOverPhase: React.FC<GameOverPhaseProps> = ({
 	onPrimaryAction,
 	onRetry,
 }) => {
+	const isVictory = result === 'victory';
+	const isDraw = result === 'draw';
 	// Sub-phase 1: victory / defeat cinematic. Campaign-authored only.
-	const cinematicScenes = sub === 'cinematic' && campaign
+	const cinematicScenes = sub === 'cinematic' && campaign && !isDraw
 		? (isVictory ? campaign.mission.victoryCinematic : campaign.mission.defeatCinematic)
 		: undefined;
 	const cinematicHasScenes = !!(cinematicScenes && cinematicScenes.length > 0);
@@ -142,18 +144,18 @@ const GameOverPhase: React.FC<GameOverPhaseProps> = ({
 			className="cgo-result"
 		>
 			<motion.div
-				className={`cgo-title ${isVictory ? 'victory' : 'defeat'}`}
+				className={`cgo-title ${isVictory ? 'victory' : isDraw ? 'draw' : 'defeat'}`}
 				initial={{ opacity: 0, y: -30 }}
 				animate={{ opacity: 1, y: 0 }}
 				transition={{ delay: 0.3, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
 			>
-				{isVictory ? 'VICTORY' : 'DEFEAT'}
+				{isVictory ? 'VICTORY' : isDraw ? 'DRAW' : 'DEFEAT'}
 			</motion.div>
 
 			{campaign ? (
 				<>
 					{/* Boss victory quip — the boss gloats when the player loses */}
-					{!isVictory && campaign.mission.bossQuips?.onVictory && (
+					{!isVictory && !isDraw && campaign.mission.bossQuips?.onVictory && (
 						<motion.p
 							className="cgo-boss-quip"
 							initial={{ opacity: 0, y: 10 }}
@@ -169,7 +171,9 @@ const GameOverPhase: React.FC<GameOverPhaseProps> = ({
 						animate={{ opacity: 1 }}
 						transition={{ delay: 1.0, duration: 0.8 }}
 					>
-						{isVictory
+						{isDraw
+							? 'Neither side can force a victory from the remaining board.'
+							: isVictory
 							? (campaign.mission.narrativeVictory ?? '')
 							: (campaign.mission.narrativeDefeat ?? 'The enemy stands triumphant. But your story is not yet over...')}
 					</motion.p>
@@ -268,7 +272,9 @@ const GameOverPhase: React.FC<GameOverPhaseProps> = ({
 			) : (
 				<>
 					<p className="cgo-subtitle">
-						{isVictory
+						{isDraw
+							? 'The remaining board cannot produce a forced win.'
+							: isVictory
 							? 'Checkmate! The enemy King has no escape.'
 							: 'Checkmate... Your King has been cornered.'}
 					</p>

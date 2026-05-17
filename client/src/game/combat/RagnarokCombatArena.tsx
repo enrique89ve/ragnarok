@@ -368,19 +368,6 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
     ? pokerDecisionView.displayTurn === 'player'
     : cardGameIsPlayerTurn;
 
-  // Turn transition flash
-  const [turnFlash, setTurnFlash] = useState<'player' | 'opponent' | null>(null);
-  const prevIsPlayerTurnRef = useRef(isPlayerTurn);
-  useEffect(() => {
-    let id: ReturnType<typeof setTimeout> | undefined;
-    if (prevIsPlayerTurnRef.current !== isPlayerTurn) {
-      setTurnFlash(isPlayerTurn ? 'player' : 'opponent');
-      id = setTimeout(() => setTurnFlash(null), 500);
-      prevIsPlayerTurnRef.current = isPlayerTurn;
-    }
-    return () => { if (id !== undefined) clearTimeout(id); };
-  }, [isPlayerTurn]);
-
   // Health change detection — triggers floating damage/heal numbers
   useEffect(() => {
     if (!gameState) return;
@@ -532,23 +519,23 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
   const phaseDirectorMode = isBettingRound ? 'wager' : 'setup';
   const phaseDirectorCue = isBettingRound
     ? basePermissions?.waitingForOpponent
-      ? 'Enemy wager window'
+      ? 'Enemy deciding'
       : basePermissions?.hasBetToCall
-        ? 'Answer the wager'
-        : 'Open the wager'
+        ? 'Your response'
+        : 'Open with HP'
     : isPlayerTurn
       ? 'Your setup window'
       : 'Enemy setup window';
   const phaseDirectorHeadline = combatState.phase === CombatPhase.SPELL_PET
     ? isPlayerTurn
       ? 'Shape the board before the wager opens'
-      : 'The enemy is shaping the board'
+      : 'Enemy setup is resolving'
     : isBettingRound
       ? basePermissions?.waitingForOpponent
-        ? 'Hold the line while the stake is set'
+        ? 'Waiting for enemy poker action'
         : basePermissions?.hasBetToCall
-          ? 'Match the stake or seize initiative'
-          : 'Name the opening stake'
+          ? 'Call, raise, or brace'
+          : 'Choose your opening stake'
       : 'Opening effects are resolving';
   const phaseDirectorBody = combatState.phase === CombatPhase.SPELL_PET
     ? isPlayerTurn
@@ -556,10 +543,10 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
       : 'The board is still being formed. Watch the opening pressure before the first wager decides the pace of the fight.'
     : isBettingRound
       ? basePermissions?.waitingForOpponent
-        ? 'The opponent has initiative. Wager controls stay quiet until they commit health and hand the decision back to you.'
+        ? 'Watch the enemy action. If they bet or raise, the choice comes back to you. If they check or match, the round can advance.'
         : basePermissions?.hasBetToCall
-          ? 'You can match the current stake to stay in the hand or raise to force the next decision at a higher price.'
-          : 'Choose the opening amount of health to commit. Bigger pots are only worth it if you can hold the board through showdown.'
+          ? 'Match the current stake to stay in, raise to increase pressure, or brace to give up the hand.'
+          : 'Commit health to open the wager. The enemy must answer before the round can close.'
       : 'Passive effects and opening reveals are resolving before the next live wager window begins.';
   const phaseDirectorPills = isBettingRound
     ? [
@@ -682,10 +669,6 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
       />
 
       {/* ═══════════ OVERLAY LAYER (absolute, layered on top of zones) ═══════════ */}
-      {turnFlash && (
-        <div className={`turn-flash-overlay turn-flash-${turnFlash}`} />
-      )}
-
       {isMulligan && (
         <div className="mulligan-notice absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none flex flex-col items-center gap-1">
           <span className="mulligan-text">Waiting for Mulligan...</span>
@@ -1257,22 +1240,6 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
           tier={pokerDrama.handTier}
         />
 
-        {/* Opponent thinking indicator — shown when it's not the player's turn */}
-        {!isPlayerTurn && (
-          <div className="opponent-thinking-indicator" aria-label="Opponent is thinking">
-            <span className="thinking-dot" />
-            <span className="thinking-dot" />
-            <span className="thinking-dot" />
-          </div>
-        )}
-
-        {/* Ambient board effects */}
-        <div className="board-ambient-dust" />
-        <div className="board-torch-glow" />
-
-        {/* Norse knotwork board border ornament */}
-        <div className="board-border-ornament" />
-
         {/* Realm indicator badge */}
         {activeRealmId && (
           <div className="realm-indicator">
@@ -1519,8 +1486,8 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
         )}
       </AnimatePresence>
 
-      {/* Turn Banner - YOUR TURN / ENEMY TURN announcement */}
-      <TurnBanner currentTurn={visibleTurnForBanner} turnNumber={turnNumber} />
+      {/* Persistent poker turn indicator */}
+      <TurnBanner currentTurn={visibleTurnForBanner} />
 
       {/* Game HUD - deck count, hand count, turn counter */}
       <GameHUD

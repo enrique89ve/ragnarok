@@ -11,8 +11,10 @@ import {
   getCombatSlotMapping,
   getInitialGameOverSubPhase,
   getRealmDisplayName,
+  getViewerChessResult,
   getWinnerFromGameStatus,
   resolveVisualRealm,
+  shouldTriggerChessCombatFlow,
 } from './gameCoordinatorRules';
 
 function makeHero(id: string, name: string, norseHeroId?: string): ChessPieceHero {
@@ -295,6 +297,58 @@ describe('gameCoordinatorRules', () => {
     expect(getWinnerFromGameStatus('opponent_wins')).toBe('opponent');
     expect(getWinnerFromGameStatus('combat')).toBeNull();
     expect(getWinnerFromGameStatus('playing')).toBeNull();
+    expect(getWinnerFromGameStatus('draw')).toBeNull();
+  });
+
+  it('maps chess terminal status to the local viewer result', () => {
+    expect(getViewerChessResult({
+      status: 'player_wins',
+      myWinStatus: 'player_wins',
+    })).toBe('victory');
+    expect(getViewerChessResult({
+      status: 'opponent_wins',
+      myWinStatus: 'player_wins',
+    })).toBe('defeat');
+    expect(getViewerChessResult({
+      status: 'draw',
+      myWinStatus: 'player_wins',
+    })).toBe('draw');
+    expect(getViewerChessResult({
+      status: 'playing',
+      myWinStatus: 'player_wins',
+    })).toBeNull();
+  });
+
+  it('holds chess-to-poker combat flow until the attack animation marker is cleared', () => {
+    expect(shouldTriggerChessCombatFlow({
+      hasPendingCombat: true,
+      chessGameStatus: 'combat',
+      flowTag: 'chess',
+      hasPendingAttackAnimation: true,
+    })).toBe(false);
+
+    expect(shouldTriggerChessCombatFlow({
+      hasPendingCombat: true,
+      chessGameStatus: 'combat',
+      flowTag: 'chess',
+      hasPendingAttackAnimation: false,
+    })).toBe(true);
+  });
+
+  it('does not trigger chess-to-poker combat outside the active chess flow', () => {
+    expect(shouldTriggerChessCombatFlow({
+      hasPendingCombat: true,
+      chessGameStatus: 'combat',
+      flowTag: 'vs_screen',
+      hasPendingAttackAnimation: false,
+    })).toBe(false);
+
+    expect(shouldTriggerChessCombatFlow({
+      hasPendingCombat: false,
+      chessGameStatus: 'combat',
+      flowTag: 'chess',
+      hasPendingAttackAnimation: false,
+    })).toBe(false);
   });
 
   describe('getInitialGameOverSubPhase', () => {

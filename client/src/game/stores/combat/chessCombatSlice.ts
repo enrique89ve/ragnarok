@@ -403,6 +403,19 @@ export const createChessCombatSlice: StateCreator<
     ) || null;
   },
 
+  beginChessAttack: (attacker: ChessPiece, defender: ChessPiece, isInstantKill: boolean) => {
+    const attack: ChessAttackResolutionInput = {
+      attacker,
+      defender,
+      attackerPosition: { ...attacker.position },
+      defenderPosition: { ...defender.position },
+      isInstantKill
+    };
+
+    get().startAttackAnimation(attacker, defender, isInstantKill);
+    resolveChessAttackIntent(get, set, attack);
+  },
+
   getThreateningPieces: (kingPosition: ChessBoardPosition, attackerSide: ChessPlayerSide, pieces?: ChessPiece[]): ChessPiece[] =>
     pureGetThreateningPieces(kingPosition, attackerSide, pieces ?? get().boardState.pieces),
 
@@ -568,7 +581,7 @@ export const createChessCombatSlice: StateCreator<
           }
         });
 
-        state.startAttackAnimation(selectedPiece, defender, isInstantKill);
+        state.beginChessAttack(selectedPiece, defender, isInstantKill);
 
         return collision;
       }

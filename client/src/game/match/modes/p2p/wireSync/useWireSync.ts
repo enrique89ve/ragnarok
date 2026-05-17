@@ -979,9 +979,9 @@ export function useWireSync() {
 					// Surface (post C-Chess.8):
 					//   - chess_move: quiet moves via `executeMove`.
 					//   - chess_attack: instant-kill captures — receiver runs
-					//     `startAttackAnimation(attacker, defender, true)`.
+					//     `beginChessAttack(attacker, defender, true)`.
 					//   - chess_combat_initiated: non-instant captures — receiver
-					//     runs the same animation with `false`, then the existing
+					//     runs the same attack command with `false`, then the
 					//     coordinator boots poker from pendingCombat.
 					console.log('[wireSync] RECV chess_command', {
 						seq: (data as { seq?: unknown }).seq,
@@ -1083,7 +1083,7 @@ export function useWireSync() {
 
 					// Combat store access pattern (D4 of the typescript-senior review —
 					// known debt; preserved here to avoid circular imports). Inline
-					// type extended with `startAttackAnimation` + `pendingAttackAnimation`
+					// type extended with `beginChessAttack` + `pendingAttackAnimation`
 					// for the chess_attack branch, plus piece `type` for the
 					// instant-kill predicate.
 					interface RemotePieceShape {
@@ -1101,7 +1101,7 @@ export function useWireSync() {
 									};
 									pendingAttackAnimation?: unknown;
 									executeMove?: (from: { row: number; col: number }, to: { row: number; col: number }) => void;
-									startAttackAnimation?: (attacker: RemotePieceShape, defender: RemotePieceShape, isInstantKill: boolean) => void;
+									beginChessAttack?: (attacker: RemotePieceShape, defender: RemotePieceShape, isInstantKill: boolean) => void;
 								};
 						  }
 						| undefined;
@@ -1192,8 +1192,8 @@ export function useWireSync() {
 							reject('attack_animation_in_progress');
 							break;
 						}
-						if (!cs.startAttackAnimation) {
-							reject('start_attack_animation_unavailable');
+						if (!cs.beginChessAttack) {
+							reject('begin_chess_attack_unavailable');
 							break;
 						}
 						const instantKill = isChessAttackInstantKill({ attackerType: attacker.type, defenderType: defender.type });
@@ -1206,7 +1206,7 @@ export function useWireSync() {
 							break;
 						}
 
-						cs.startAttackAnimation(attacker, defender, instantKill);
+						cs.beginChessAttack(attacker, defender, instantKill);
 						transcriptAction = cmd.type;
 						transcriptExtra = {
 							defenderId: cmd.defenderId,

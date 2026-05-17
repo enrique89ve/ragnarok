@@ -27,6 +27,7 @@ import { computeP2PRenderGuard } from './multiplayerRenderGuard';
 import { isSharedNetworkEnvironment } from '../../config/featureFlags';
 import { HiveKeychainLogin } from '../HiveKeychainLogin';
 import { useGameStore } from '../../stores/gameStore';
+import './MultiplayerGame.css';
 
 /*
   PvPVSScreen — 3-second dramatic splash showing "Player vs Opponent"
@@ -45,41 +46,32 @@ function PvPVSScreen({ playerArmy, opponentArmy, opponentPeerId, onComplete }: {
 	const playerPortrait = resolveHeroPortrait(playerHeroId);
 	const opponentHeroId = opponentArmy?.queen?.id || opponentArmy?.rook?.id || null;
 	const opponentPortrait = opponentHeroId ? resolveHeroPortrait(opponentHeroId) : null;
-	const opponentLabel = opponentArmy?.king?.name?.toUpperCase()
-		?? (opponentPeerId ? `${opponentPeerId.slice(0, 8)}…` : 'OPPONENT');
-	return (
-		<div style={{
-			position: 'fixed', inset: 0, zIndex: 9000, display: 'flex',
-			alignItems: 'center', justifyContent: 'center', gap: 60,
-			background: 'radial-gradient(ellipse, rgba(8,6,14,0.92) 0%, #000 100%)',
-			fontFamily: "'Cinzel', Georgia, serif",
-		}}>
-			{/* Player hero */}
-			<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, animation: 'pvp-vs-slide-left 0.6s ease-out' }}>
-				<div style={{
-					width: 140, height: 140, borderRadius: '50%', overflow: 'hidden',
-					border: '3px solid rgba(212,175,55,0.7)',
-					boxShadow: '0 0 30px rgba(212,175,55,0.3)',
-				}}>
-					<img src={playerPortrait} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+		const opponentLabel = opponentArmy?.king?.name?.toUpperCase()
+			?? (opponentPeerId ? `${opponentPeerId.slice(0, 8)}…` : 'OPPONENT');
+		return (
+			<div className="pvp-vs-screen">
+				{/* Player hero */}
+				<div className="pvp-vs-fighter pvp-vs-fighter-left">
+					<div style={{
+						width: 140, height: 140, borderRadius: '50%', overflow: 'hidden',
+						border: '3px solid rgba(212,175,55,0.7)',
+						boxShadow: '0 0 30px rgba(212,175,55,0.3)',
+					}}>
+						<img src={playerPortrait} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+					</div>
+					<span style={{ color: '#ffd97a', fontSize: 18, fontWeight: 700, letterSpacing: '0.1em' }}>YOU</span>
 				</div>
-				<span style={{ color: '#ffd97a', fontSize: 18, fontWeight: 700, letterSpacing: '0.1em' }}>YOU</span>
-			</div>
 
-			{/* VS text */}
-			<div style={{
-				fontSize: 56, fontWeight: 900, color: '#ef4444', letterSpacing: '0.15em',
-				textShadow: '0 0 40px rgba(239,68,68,0.6), 0 4px 20px rgba(0,0,0,0.9)',
-				animation: 'pvp-vs-pulse 1.5s ease-in-out infinite',
-			}}>
-				VS
-			</div>
+				{/* VS text */}
+				<div className="pvp-vs-mark">
+					VS
+				</div>
 
-			{/* Opponent — real portrait when army announced, mystery silhouette otherwise */}
-			<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, animation: 'pvp-vs-slide-right 0.6s ease-out' }}>
-				<div style={{
-					width: 140, height: 140, borderRadius: '50%', overflow: 'hidden',
-					border: '3px solid rgba(150,30,30,0.7)',
+				{/* Opponent — real portrait when army announced, mystery silhouette otherwise */}
+				<div className="pvp-vs-fighter pvp-vs-fighter-right">
+					<div style={{
+						width: 140, height: 140, borderRadius: '50%', overflow: 'hidden',
+						border: '3px solid rgba(150,30,30,0.7)',
 					boxShadow: '0 0 30px rgba(150,30,30,0.3)',
 					background: opponentPortrait ? undefined : 'radial-gradient(circle, rgba(60,20,20,0.8) 0%, rgba(20,5,5,0.9) 100%)',
 					display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -88,18 +80,12 @@ function PvPVSScreen({ playerArmy, opponentArmy, opponentPeerId, onComplete }: {
 					{opponentPortrait
 						? <img src={opponentPortrait} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
 						: '?'}
+					</div>
+					<span style={{ color: '#f17070', fontSize: 18, fontWeight: 700, letterSpacing: '0.1em' }}>{opponentLabel}</span>
 				</div>
-				<span style={{ color: '#f17070', fontSize: 18, fontWeight: 700, letterSpacing: '0.1em' }}>{opponentLabel}</span>
 			</div>
-
-			<style>{`
-				@keyframes pvp-vs-slide-left { from { opacity: 0; transform: translateX(-60px); } to { opacity: 1; transform: translateX(0); } }
-				@keyframes pvp-vs-slide-right { from { opacity: 0; transform: translateX(60px); } to { opacity: 1; transform: translateX(0); } }
-				@keyframes pvp-vs-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
-			`}</style>
-		</div>
-	);
-}
+		);
+	}
 
 function P2PHiveSessionRequired({ onBack }: { readonly onBack: () => void }) {
 	const keychainAvailable = isHiveWalletAvailable();

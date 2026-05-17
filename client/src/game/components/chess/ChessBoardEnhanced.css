@@ -8,8 +8,9 @@
   position: relative;
 }
 
-/* Deep vignette overlay */
-.ragnarok-chess-game::before {
+/* Deep vignette overlay for non-realm chess routes. Campaign realm skins
+   own these pseudo-elements, so keep this base layer out of realm screens. */
+.ragnarok-chess-game:not([class*="realm-"])::before {
   content: '';
   position: fixed;
   inset: 0;
@@ -18,8 +19,8 @@
   z-index: 0;
 }
 
-/* Falling ember particles */
-.ragnarok-chess-game::after {
+/* Falling ember particles for non-realm chess routes. */
+.ragnarok-chess-game:not([class*="realm-"])::after {
   content: '';
   position: fixed;
   inset: 0;
@@ -33,10 +34,10 @@
     radial-gradient(1px 1px at 30% 90%, rgba(255, 80, 0, 0.4), transparent),
     radial-gradient(1.5px 1.5px at 60% 10%, rgba(255, 200, 80, 0.3), transparent);
   background-size: 300px 400px;
-  animation: ember-drift 20s linear infinite;
+  animation: chess-root-ember-drift 20s linear infinite;
 }
 
-@keyframes ember-drift {
+@keyframes chess-root-ember-drift {
   0% { transform: translateY(0); }
   100% { transform: translateY(-400px); }
 }
@@ -150,7 +151,6 @@
   border-radius: 50%;
   background: radial-gradient(circle, rgba(251, 191, 36, 0.9) 0%, rgba(251, 191, 36, 0.3) 50%, transparent 100%);
   opacity: 0;
-  animation: chess-particle-drift-1 8s ease-in-out infinite;
   left: 65%;
   bottom: 0;
   width: 2px;
@@ -393,20 +393,8 @@
     animation: none !important;
   }
 
-  .chess-legend-dot::after {
-    animation: none !important;
-    opacity: 0.5 !important;
-  }
-
-  .ragnarok-chess-game::after {
+  .ragnarok-chess-game:not([class*="realm-"])::after {
     animation: none !important;
     opacity: 0 !important;
-  }
-
-  @keyframes chess-banner-enter {
-    0%, 100% {
-      transform: scale(1);
-      opacity: 1;
-    }
   }
 }

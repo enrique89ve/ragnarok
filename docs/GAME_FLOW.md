@@ -159,8 +159,9 @@ interface ChessCollision {
 ```
 
 **Instant Kill Conditions:**
-- Pawn attacks any piece → Instant kill
-- Any piece attacks King → Instant kill
+- Pawn or King attacks a non-King piece → Instant kill
+- Any piece attacks a Pawn → Instant kill
+- Direct King captures are not legal moves; King pressure resolves through checkmate or explicit endgame rules
 - All other collisions → Poker Combat
 
 ### 5. Poker Combat Flow
@@ -236,11 +237,11 @@ interface CombatResolution {
 }
 ```
 
-### 8. Chess Victory
+### 8. Chess Endgame
 
-- Capture enemy King
-- Eliminate all enemy pieces
-- Enemy cannot make legal move (stalemate = draw)
+- Checkmate the enemy King
+- Reduce the enemy army to a bare King while you still have decisive material: Queen, Rook, or Pawn
+- Draw if only Kings remain, if a lone King faces only one Bishop/Knight, or if no material terminal has applied and the side to move has no legal moves while not in check
 
 ---
 

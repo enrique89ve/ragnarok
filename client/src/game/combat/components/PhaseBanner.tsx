@@ -76,14 +76,11 @@ export const PhaseBanner: React.FC<PhaseBannerProps> = ({ phase, forceHide = fal
 	 * so the banner is bounded by the canvas, never escapes, never
 	 * affects flex flow of the gameplay zones.
 	 *
-	 * Fallback chain: data-vfx-layer="arena-vfx" → document.body
-	 * (SSR/initial render).
+	 * If the layer is not mounted yet, skip the visual. Poker flow must not
+	 * depend on this banner existing.
 	 */
 	const portalTarget =
-		(typeof document !== 'undefined' && (
-			getArenaVfxLayer(ARENA_VFX_LAYERS.vfx) ||
-			document.body
-		)) ||
+		(typeof document !== 'undefined' && getArenaVfxLayer(ARENA_VFX_LAYERS.vfx)) ||
 		null;
 
 	const banner = (
@@ -102,5 +99,5 @@ export const PhaseBanner: React.FC<PhaseBannerProps> = ({ phase, forceHide = fal
 		</div>
 	);
 
-	return portalTarget ? createPortal(banner, portalTarget) : banner;
+	return portalTarget ? createPortal(banner, portalTarget) : null;
 };

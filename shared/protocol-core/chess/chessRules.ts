@@ -136,8 +136,8 @@ export const isKingInCheck = (
 /**
  * Move/attack candidates for a piece, already filtered to only the moves
  * that do NOT leave the mover's king in check. Direct king captures are
- * stripped from the attack list (kings can only be eliminated through
- * checkmate — see `isCheckmate`).
+ * stripped from the attack list; king pressure resolves through terminal
+ * board rules rather than by removing the king from a legal attack list.
  */
 export interface ValidMoves {
 	moves: ChessBoardPosition[];
@@ -254,19 +254,67 @@ export const checkPawnPromotion = (piece: ChessProtocolPiece): boolean => {
 	return false;
 };
 
+const hasDecisiveBareKingMaterial = (
+	material: ReadonlyArray<ChessProtocolPiece>
+): boolean => material.some(piece =>
+	piece.type === 'queen' || piece.type === 'rook' || piece.type === 'pawn'
+);
+
+const winnerForSide = (side: ChessPlayerSide): ChessGameStatus =>
+	side === 'player' ? 'player_wins' : 'opponent_wins';
+
+const opponentOf = (side: ChessPlayerSide): ChessPlayerSide =>
+	side === 'player' ? 'opponent' : 'player';
+
 /**
- * Terminal status for the board: a side wins iff the opposing king is
- * absent. Both kings present => 'playing'. Both kings absent (impossible
- * by construction but defensive) => 'player_wins' has precedence so the
- * function never returns conflicting outcomes.
+ * Terminal status for the board. Missing king is a defensive terminal
+ * fallback. Real king pressure is checkmate/stalemate. Bare-king material
+ * is resolved explicitly:
+ *
+ * - King vs King: draw.
+ * - King + lone Bishop/Knight vs King: draw, because it cannot force mate.
+ * - King + Queen/Rook/Pawn vs bare King: decisive material wins, avoiding
+ *   endless local-AI chases without making every non-king piece a win.
  */
 export const checkWinCondition = (
 	pieces: ReadonlyArray<ChessProtocolPiece>
 ): ChessGameStatus => {
 	const playerKing = pieces.find(p => p.type === 'king' && p.owner === 'player');
 	const opponentKing = pieces.find(p => p.type === 'king' && p.owner === 'opponent');
+	const playerMaterial = pieces.filter(p => p.owner === 'player' && p.type !== 'king');
+	const opponentMaterial = pieces.filter(p => p.owner === 'opponent' && p.type !== 'king');
 
 	if (!opponentKing) return 'player_wins';
 	if (!playerKing) return 'opponent_wins';
+	if (playerMaterial.length === 0 && opponentMaterial.length === 0) return 'draw';
+	if (opponentMaterial.length === 0 && hasDecisiveBareKingMaterial(playerMaterial)) return 'player_wins';
+	if (playerMaterial.length === 0 && hasDecisiveBareKingMaterial(opponentMaterial)) return 'opponent_wins';
+	if (
+		(playerMaterial.length === 0 && opponentMaterial.length === 1) ||
+		(opponentMaterial.length === 0 && playerMaterial.length === 1)
+	) {
+		return 'draw';
+	}
 	return 'playing';
+};
+
+/**
+ * Terminal status when `side` has no legal move. Checkmate is a win for the
+ * opponent; stalemate is an explicit draw. If the board is already terminal
+ * by material/king presence, preserve that result.
+ */
+export const getNoLegalMovesStatus = (
+	side: ChessPlayerSide,
+	pieces: ReadonlyArray<ChessProtocolPiece>
+): ChessGameStatus => {
+	const materialStatus = checkWinCondition(pieces);
+	if (materialStatus !== 'playing') return materialStatus;
+
+	const sidePieces = pieces.filter(p => p.owner === side);
+	for (const piece of sidePieces) {
+		const { moves, attacks } = getValidMoves(piece, pieces);
+		if (moves.length > 0 || attacks.length > 0) return 'playing';
+	}
+
+	return isKingInCheck(side, pieces) ? winnerForSide(opponentOf(side)) : 'draw';
 };

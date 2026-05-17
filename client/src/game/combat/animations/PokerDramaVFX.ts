@@ -25,7 +25,10 @@ import {
 const DRAMA_CONTAINER_ID = 'poker-drama-vfx-layer';
 const MAX_ORPHAN_AGE_MS = 6000;
 
-function getOrCreateContainer(): HTMLDivElement {
+function getOrCreateContainer(): HTMLDivElement | null {
+	const target = getArenaVfxLayer(ARENA_VFX_LAYERS.vfx);
+	if (!target) return null;
+
 	let el = document.getElementById(DRAMA_CONTAINER_ID) as HTMLDivElement | null;
 	if (!el) {
 		el = document.createElement('div');
@@ -37,9 +40,6 @@ function getOrCreateContainer(): HTMLDivElement {
 			overflow: 'hidden'
 		});
 	}
-	// Always (re-)mount inside the dedicated VFX layer. Fallback to body
-	// only during early init before the arena layer has mounted.
-	const target = getArenaVfxLayer(ARENA_VFX_LAYERS.vfx) ?? document.body;
 	if (el.parentElement !== target) {
 		target.appendChild(el);
 	}
@@ -192,6 +192,7 @@ export function playCardDealVFX(
 			background: `radial-gradient(circle, ${color}44 0%, transparent 70%)`,
 		});
 		const container = getOrCreateContainer();
+		if (!container) return;
 		container.appendChild(flash);
 		gsap.to(flash, {
 			opacity: 0,
@@ -208,6 +209,7 @@ export function playCardDealVFX(
 			background: 'rgba(255, 255, 255, 0.15)',
 		});
 		const container = getOrCreateContainer();
+		if (!container) return;
 		container.appendChild(flash);
 		gsap.to(flash, {
 			opacity: 0,
@@ -298,6 +300,7 @@ export function playRaiseVFX(isPlayer: boolean) {
  */
 export function playReraiseVFX(isPlayer: boolean, reraiseLevel: number = 1) {
 	const container = getOrCreateContainer();
+	if (!container) return;
 	const shakeTarget = getShakeTarget();
 
 	// --- Tension vignette ---
@@ -482,6 +485,7 @@ export function playHandRankAnnouncement(
 	if (!rankName || rank <= 1) return; // Don't announce High Card
 
 	const container = getOrCreateContainer();
+	if (!container) return;
 
 	// Scale by rank (1-10)
 	const fontSize = Math.min(2 + rank * 0.3, 5);
@@ -556,6 +560,7 @@ export function playHandRankAnnouncement(
  */
 export function playRagnarokVFX() {
 	const container = getOrCreateContainer();
+	if (!container) return;
 
 	// White-out flash
 	const whiteout = createDiv({
@@ -651,15 +656,14 @@ export function playRagnarokVFX() {
  * Showdown damage delivery — damage number flies from winner to loser
  */
 /**
- * Lethal slow-motion — when the showdown damage is a killing blow,
- * the entire GSAP global timeline slows to 0.35x for 1.2s, then
- * ramps back to 1x. Creates a cinematic "last hit" feeling.
+ * Lethal cue for killing blows. Keep it local to poker's VFX layer so it
+ * cannot slow unrelated GSAP timelines or delay gameplay cleanup callbacks.
  */
-function lethalSlowMotion() {
-	gsap.globalTimeline.timeScale(0.35);
-	gsap.delayedCall(1.2, () => {
-		gsap.to(gsap.globalTimeline, { timeScale: 1, duration: 0.4, ease: 'power2.out' });
-	});
+function playLethalCue(container: HTMLElement) {
+	gsap.fromTo(container,
+		{ filter: 'contrast(1.25) saturate(1.35)' },
+		{ filter: 'none', duration: 1.2, ease: 'power2.out' }
+	);
 }
 
 export function playShowdownDamageVFX(
@@ -669,6 +673,7 @@ export function playShowdownDamageVFX(
 	isLethal: boolean = false
 ) {
 	const container = getOrCreateContainer();
+	if (!container) return;
 
 	const winner = getArenaVfxHeroTarget(isPlayerWinner ? 'player' : 'opponent');
 	const loser = getArenaVfxHeroTarget(isPlayerWinner ? 'opponent' : 'player');
@@ -740,7 +745,7 @@ export function playShowdownDamageVFX(
 
 	// Lethal slow-motion — cinematic killing blow
 	if (isLethal) {
-		lethalSlowMotion();
+		playLethalCue(container);
 	}
 
 	// Crushing win — screen flash
@@ -780,8 +785,7 @@ export function playPhaseDramaVFX(phase: string) {
 
 	/*
 	 * Horizontal slash line REMOVED.  Used to inject a `width: 100%` div
-	 * into the fixed `#poker-drama-vfx-layer` container (which is
-	 * `position: fixed; inset: 0` covering the entire viewport), painting
+		 * into the old document-level VFX container, painting
 	 * a 1920+ px coloured line straight across the screen. This is the
 	 * "linea roja que traspasa la mesa" the user reported on every PRE_FLOP
 	 * transition. If a phase-change accent is desired in the future, mount
@@ -824,6 +828,7 @@ export function playStreakAnnouncementVFX(
 	color: string
 ) {
 	const container = getOrCreateContainer();
+	if (!container) return;
 
 	const announcement = createDiv({
 		left: '50%',
@@ -869,6 +874,7 @@ export function playHandImprovementVFX(tier: 'low' | 'mid' | 'high' | 'godly') {
 	// Edge glow for high+ improvements
 	if (tier === 'high' || tier === 'godly') {
 		const container = getOrCreateContainer();
+		if (!container) return;
 		const glow = createDiv({
 			inset: '0',
 			boxShadow: `inset 0 0 40px ${color}33`,

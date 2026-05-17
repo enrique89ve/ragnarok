@@ -12,13 +12,12 @@
  *     `executeMove` independently.
  *   - `chess_attack`: instant-kill capture only (attacker is pawn/king
  *     OR defender is pawn — see `isChessAttackInstantKill` below).
- *     Receiver runs `startAttackAnimation` with isInstantKill=true and
- *     the existing `completeAttackAnimation -> executeInstantKill`
- *     chain handles the apply.
+ *     Receiver runs `beginChessAttack` with isInstantKill=true; animation
+ *     completion is presentation cleanup only.
  *   - `chess_combat_initiated`: non-instant capture that enters the
- *     poker/combat phase. Receiver runs the same attack animation with
- *     isInstantKill=false; `completeAttackAnimation` stages `pendingCombat`
- *     and the existing coordinator boots poker on both peers.
+ *     poker/combat phase. Receiver runs `beginChessAttack` with
+ *     isInstantKill=false; mechanics stage `pendingCombat` immediately,
+ *     and the coordinator boots poker after the visual marker clears.
  *
  * Future surface (deferred): `chess_concede`, `chess_draw_offer`,
  * `chess_draw_accept`, `chess_mine_placement`. Each adds a member to

@@ -16,6 +16,8 @@ import {
 	BOARD_ROWS,
 	BOARD_COLS,
 	PIECE_KING,
+	PIECE_QUEEN,
+	PIECE_ROOK,
 	PIECE_PAWN,
 	SIDE_PLAYER,
 	SIDE_OPPONENT,
@@ -23,6 +25,7 @@ import {
 	STATUS_PLAYING,
 	STATUS_PLAYER_WINS,
 	STATUS_OPPONENT_WINS,
+	STATUS_DRAW,
 	getPatternType,
 	getPatternDirections,
 } from './types';
@@ -320,7 +323,7 @@ export function getValidMoves(piece: Piece, pieces: Piece[]): ValidMoves {
 	for (let i = 0; i < rawAttacks.length; i++) {
 		const a = rawAttacks[i];
 		if (wouldExposeKing(pieces, moverIdx, a.row, a.col, true)) continue;
-		// Strip direct king captures — kings die only via checkmate.
+		// Strip direct king captures — king pressure resolves via terminal board rules.
 		const targetIdx = findPieceAt(a.row, a.col, pieces);
 		if (targetIdx >= 0 && pieces[targetIdx].pieceType == PIECE_KING) continue;
 		result.attacks.push(a);
@@ -362,20 +365,47 @@ export function checkPawnPromotion(piece: Piece): bool {
 }
 
 // ====================================================================
-// checkWinCondition — terminal status based on king presence.
+// checkWinCondition — terminal status based on king presence/material.
 // ====================================================================
 
 export function checkWinCondition(pieces: Piece[]): i32 {
 	let playerKing = false;
 	let opponentKing = false;
+	let playerMaterialCount = 0;
+	let opponentMaterialCount = 0;
+	let playerDecisiveMaterial = false;
+	let opponentDecisiveMaterial = false;
 	for (let i = 0; i < pieces.length; i++) {
 		const p = pieces[i];
-		if (p.pieceType != PIECE_KING) continue;
-		if (p.owner == SIDE_PLAYER) playerKing = true;
-		else if (p.owner == SIDE_OPPONENT) opponentKing = true;
+		if (p.owner == SIDE_PLAYER) {
+			if (p.pieceType == PIECE_KING) playerKing = true;
+			else {
+				playerMaterialCount++;
+				if (p.pieceType == PIECE_QUEEN || p.pieceType == PIECE_ROOK || p.pieceType == PIECE_PAWN) {
+					playerDecisiveMaterial = true;
+				}
+			}
+		} else if (p.owner == SIDE_OPPONENT) {
+			if (p.pieceType == PIECE_KING) opponentKing = true;
+			else {
+				opponentMaterialCount++;
+				if (p.pieceType == PIECE_QUEEN || p.pieceType == PIECE_ROOK || p.pieceType == PIECE_PAWN) {
+					opponentDecisiveMaterial = true;
+				}
+			}
+		}
 	}
-	// Match TS: player_wins has precedence when both kings absent.
+	// Match TS: player_wins has precedence when both kings are absent.
 	if (!opponentKing) return STATUS_PLAYER_WINS;
 	if (!playerKing) return STATUS_OPPONENT_WINS;
+	if (playerMaterialCount == 0 && opponentMaterialCount == 0) return STATUS_DRAW;
+	if (opponentMaterialCount == 0 && playerDecisiveMaterial) return STATUS_PLAYER_WINS;
+	if (playerMaterialCount == 0 && opponentDecisiveMaterial) return STATUS_OPPONENT_WINS;
+	if (
+		(playerMaterialCount == 0 && opponentMaterialCount == 1) ||
+		(opponentMaterialCount == 0 && playerMaterialCount == 1)
+	) {
+		return STATUS_DRAW;
+	}
 	return STATUS_PLAYING;
 }

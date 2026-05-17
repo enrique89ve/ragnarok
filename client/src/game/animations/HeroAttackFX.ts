@@ -7,6 +7,7 @@ import {
 	ELEMENT_PALETTES,
 	type ParticleColor
 } from './PixiParticleCanvas';
+import './dom-vfx.css';
 
 export interface AttackFXConfig {
 	attackerEl: HTMLElement | null;
@@ -101,15 +102,17 @@ export function playHeroAttackFX(config: AttackFXConfig): gsap.core.Timeline | n
 		shakeTl.to(document.body, { x: s * 0.4, y: -s * 0.2, duration: 0.04, ease: 'none' });
 		shakeTl.to(document.body, { x: 0, y: 0, duration: 0.06, ease: 'power2.out' });
 
-		// Screen flash for heavy hits
-		if (tier.flash !== 'none') {
-			const flash = document.createElement('div');
-			flash.style.cssText = `
-				position: fixed; inset: 0; z-index: 9200; pointer-events: none;
-				background: ${tier.flash === 'gold' ? 'rgba(255,215,0,0.35)' : 'rgba(255,255,255,0.4)'};
-			`;
-			document.body.appendChild(flash);
-			gsap.to(flash, {
+			// Screen flash for heavy hits
+			if (tier.flash !== 'none') {
+				const flash = document.createElement('div');
+				flash.className = 'vfx-screen-flash';
+				flash.style.setProperty('--vfx-screen-flash-z', '9200');
+				flash.style.setProperty(
+					'--vfx-screen-flash-bg',
+					tier.flash === 'gold' ? 'rgba(255,215,0,0.35)' : 'rgba(255,255,255,0.4)'
+				);
+				document.body.appendChild(flash);
+				gsap.to(flash, {
 				opacity: 0,
 				duration: tier.flash === 'gold' ? 0.15 : 0.1,
 				ease: 'power2.out',
@@ -151,21 +154,12 @@ export function playHeroAttackFX(config: AttackFXConfig): gsap.core.Timeline | n
 
 	// Floating damage number
 	const dmgEl = document.createElement('div');
+	dmgEl.className = 'vfx-floating-damage';
 	dmgEl.textContent = `-${damage}`;
-	dmgEl.style.cssText = `
-		position: fixed;
-		left: ${tgt.x}px;
-		top: ${tgt.y}px;
-		transform: translate(-50%, -50%);
-		font-family: 'Impact', 'Arial Black', sans-serif;
-		font-size: ${damage >= 15 ? '2.5rem' : '1.8rem'};
-		font-weight: 900;
-		color: ${damage >= 30 ? '#ffd700' : '#ff4444'};
-		text-shadow: 0 0 8px rgba(0,0,0,0.9), 0 2px 4px rgba(0,0,0,0.8);
-		pointer-events: none;
-		z-index: 9300;
-		opacity: 0;
-	`;
+	dmgEl.style.setProperty('--vfx-damage-x', `${tgt.x}px`);
+	dmgEl.style.setProperty('--vfx-damage-y', `${tgt.y}px`);
+	dmgEl.style.setProperty('--vfx-damage-size', damage >= 15 ? '2.5rem' : '1.8rem');
+	dmgEl.style.setProperty('--vfx-damage-color', damage >= 30 ? '#ffd700' : '#ff4444');
 	document.body.appendChild(dmgEl);
 
 	tl.fromTo(dmgEl,

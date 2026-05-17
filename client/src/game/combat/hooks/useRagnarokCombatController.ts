@@ -47,6 +47,7 @@ import type { HeroBattlePopupData, BattlePopupAction, BattlePopupTarget } from '
 import { getPokerDramaCallbacks } from './usePokerDrama';
 import { validatePokerActionIntent } from '../rules/pokerActionRules';
 import { getPokerTurnProcessMode } from '../decision/pokerTurnPolicy';
+import { getPokerActionPresentation } from '../decision/pokerActionPresentation';
 
 /**
  * Hero power targeting state structure
@@ -896,14 +897,18 @@ export function useRagnarokCombatController(
       return;
     }
 
-    if (action === CombatAction.DEFEND) {
-      addHeroBattlePopup({ action: 'defend', target: 'player', text: 'Defend', subtitle: '+1 STA' });
-    } else if (action === CombatAction.ATTACK) {
-      addHeroBattlePopup({ action: 'attack', target: 'player', text: hp ? `Attacks for ${hp} HP` : 'Attack' });
-    } else if (action === CombatAction.ENGAGE) {
-      addHeroBattlePopup({ action: 'engage', target: 'both', text: 'Engage!' });
-    } else if (action === CombatAction.BRACE) {
-      addHeroBattlePopup({ action: 'brace', target: 'player', text: 'Brace' });
+    const feedback = getPokerActionPresentation({
+      actor: 'player',
+      action,
+      amount: hp,
+    });
+    if (feedback.showPopup) {
+      addHeroBattlePopup({
+        action: feedback.popupAction,
+        target: feedback.target,
+        text: feedback.text,
+        subtitle: feedback.subtitle,
+      });
     }
 
     // In P2P multiplayer, both peers apply the same deterministic poker action.

@@ -1,0 +1,77 @@
+.pvp-vs-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 60px;
+  background: radial-gradient(ellipse, rgba(8, 6, 14, 0.92) 0%, #000 100%);
+  font-family: Cinzel, Georgia, serif;
+}
+
+.pvp-vs-fighter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.pvp-vs-fighter-left {
+  animation: pvp-vs-screen-slide-left 0.6s ease-out;
+}
+
+.pvp-vs-fighter-right {
+  animation: pvp-vs-screen-slide-right 0.6s ease-out;
+}
+
+.pvp-vs-mark {
+  color: #ef4444;
+  font-size: 56px;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  text-shadow: 0 0 40px rgba(239, 68, 68, 0.6), 0 4px 20px rgba(0, 0, 0, 0.9);
+  animation: pvp-vs-screen-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pvp-vs-screen-slide-left {
+  from {
+    opacity: 0;
+    transform: translateX(-60px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pvp-vs-screen-slide-right {
+  from {
+    opacity: 0;
+    transform: translateX(60px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pvp-vs-screen-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pvp-vs-fighter-left,
+  .pvp-vs-fighter-right,
+  .pvp-vs-mark {
+    animation: none;
+  }
+}

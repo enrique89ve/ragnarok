@@ -7,6 +7,7 @@ import { useAudio } from '../../lib/stores/useAudio';
 import { debug } from '../config/debugConfig';
 import { isMinion, isWeapon, getAttack, getHealth } from '../utils/cards/typeGuards';
 import { cryptoIdGen } from '../utils/seededRng';
+import './DiscoveryModal.css';
 
 interface DiscoveryModalProps {
   discoveryState: DiscoveryState;
@@ -101,17 +102,7 @@ export const DiscoveryModal: React.FC<DiscoveryModalProps> = ({
       }}
     >
       {selectedCard && (
-        <div 
-          style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            zIndex: 10001,
-            textAlign: 'center',
-            animation: 'discoveryConfirmFadeIn 0.3s ease-out'
-          }}
-        >
+        <div className="discovery-confirmation">
           <div style={{
             fontSize: '2rem',
             fontWeight: 'bold',
@@ -334,12 +325,6 @@ export const DiscoveryModal: React.FC<DiscoveryModalProps> = ({
           </button>
         </div>
       </div>
-      <style>{`
-        @keyframes discoveryConfirmFadeIn {
-          from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
-          to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-        }
-      `}</style>
     </div>
   );
 };

@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { getHeroAnimationProfile, ELEMENT_COLORS } from '../data/heroAnimationProfiles';
 import type { AnimationArchetype } from '../data/heroAnimationProfiles';
 import { proceduralAudio } from '../../audio/proceduralAudio';
+import { ARENA_VFX_LAYERS, getArenaVfxLayer } from '../arenaVfxTargets';
 import '../styles/combat-animations.css';
 
 interface PokerCombatAnimationProps {
@@ -37,7 +38,6 @@ function getAttackDuration(archetype: AnimationArchetype): number {
 
 export const PokerCombatAnimation: React.FC<PokerCombatAnimationProps> = ({
 	attackerHeroId,
-	defenderHeroId,
 	damage,
 	resolutionType,
 	winner,
@@ -57,18 +57,20 @@ export const PokerCombatAnimation: React.FC<PokerCombatAnimationProps> = ({
 		window.matchMedia('(prefers-reduced-motion: reduce)').matches
 	);
 
-	const attackerProfile = getHeroAnimationProfile(attackerHeroId);
-	const defenderProfile = getHeroAnimationProfile(defenderHeroId);
+	const attackerProfile = useMemo(() => getHeroAnimationProfile(attackerHeroId), [attackerHeroId]);
 	const attackerColors = ELEMENT_COLORS[attackerProfile.element];
-	const defenderColors = ELEMENT_COLORS[defenderProfile.element];
 
 	const isFold = resolutionType === 'fold';
-	const rawTier = getDamageTier(damage);
-	const tier = isFold
-		? { ...getDamageTier(damage), tier: 'light' as const, shakeClass: 'screen-shake-mild', particleCount: 8 }
-		: reducedMotion.current
-			? { ...rawTier, tier: 'light' as const, particleCount: 0, shakeClass: 'screen-shake-mild' }
-			: rawTier;
+	const tier = useMemo(() => {
+		const rawTier = getDamageTier(damage);
+		if (isFold) {
+			return { ...rawTier, tier: 'light' as const, shakeClass: 'screen-shake-mild', particleCount: 8 };
+		}
+		if (reducedMotion.current) {
+			return { ...rawTier, tier: 'light' as const, particleCount: 0, shakeClass: 'screen-shake-mild' };
+		}
+		return rawTier;
+	}, [damage, isFold]);
 
 	const attackDuration = getAttackDuration(attackerProfile.archetype);
 
@@ -83,15 +85,13 @@ export const PokerCombatAnimation: React.FC<PokerCombatAnimationProps> = ({
 			const distance = 60 + Math.random() * 120;
 			const tx = Math.cos(angle) * distance;
 			const ty = Math.sin(angle) * distance;
-			particle.style.cssText = `
-				left: 50%;
-				top: ${winner === 'player' ? '30%' : '70%'};
-				--tx: ${tx}px;
-				--ty: ${ty}px;
-				animation: particle-burst ${0.5 + Math.random() * 1}s ease-out forwards;
-				animation-delay: ${Math.random() * 0.2}s;
-				color: ${Math.random() > 0.5 ? colors.primary : colors.secondary};
-			`;
+			particle.style.left = '50%';
+			particle.style.top = winner === 'player' ? '30%' : '70%';
+			particle.style.color = Math.random() > 0.5 ? colors.primary : colors.secondary;
+			particle.style.animation = `particle-burst ${0.5 + Math.random() * 1}s ease-out forwards`;
+			particle.style.animationDelay = `${Math.random() * 0.2}s`;
+			particle.style.setProperty('--tx', `${tx}px`);
+			particle.style.setProperty('--ty', `${ty}px`);
 			container.appendChild(particle);
 		}
 	}, [winner]);
@@ -159,11 +159,22 @@ export const PokerCombatAnimation: React.FC<PokerCombatAnimationProps> = ({
 			timersRef.current.forEach(clearTimeout);
 			timersRef.current = [];
 		};
-	}, [attackerHeroId, defenderHeroId, damage, resolutionType, winner]);
+	}, [
+		attackDuration,
+		attackerColors,
+		attackerProfile.archetype,
+		attackerProfile.element,
+		attackerProfile.particleEmoji,
+		damage,
+		isFold,
+		spawnParticles,
+		tier.particleCount,
+		tier.tier,
+	]);
 
 	useEffect(() => {
+		const container = containerRef.current;
 		return () => {
-			const container = containerRef.current;
 			if (!container) return;
 			const particles = container.querySelectorAll('.combat-particle');
 			particles.forEach(p => p.remove());
@@ -314,7 +325,12 @@ export const PokerCombatAnimation: React.FC<PokerCombatAnimationProps> = ({
 		</div>
 	);
 
-	return createPortal(content, document.body);
+	const portalTarget =
+		typeof document !== 'undefined'
+			? getArenaVfxLayer(ARENA_VFX_LAYERS.vfx)
+			: null;
+
+	return portalTarget ? createPortal(content, portalTarget) : content;
 };
 
 export default PokerCombatAnimation;

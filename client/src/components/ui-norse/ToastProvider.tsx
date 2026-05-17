@@ -1,5 +1,6 @@
 import type { ComponentProps } from 'react';
 import { Toaster as SonnerToaster } from 'sonner';
+import './toast-provider.css';
 
 type SonnerProps = ComponentProps<typeof SonnerToaster>;
 
@@ -7,6 +8,7 @@ export function ToastProvider(props: SonnerProps) {
 	return (
 		<SonnerToaster
 			theme="dark"
+			containerAriaLabel="Game notifications"
 			className="toaster group"
 			toastOptions={{
 				classNames: {

@@ -14,7 +14,11 @@
  */
 
 import { pickChessMove } from '../../ai/chessAI';
-import type { ChessBoardPosition, ChessProtocolPiece } from '@shared/protocol-core/chess';
+import {
+	getNoLegalMovesStatus,
+	type ChessBoardPosition,
+	type ChessProtocolPiece
+} from '@shared/protocol-core/chess';
 import type {
 	ChessPiece,
 	ChessGameStatus,
@@ -130,8 +134,9 @@ export function createChessAITurnDriver(deps: ChessAIDriverDeps): ChessAITurnDri
 		});
 
 		if (!move) {
-			log('[AI] No valid moves — stalemate, awarding player_wins');
-			slice.setGameStatus('player_wins');
+			const terminalStatus = getNoLegalMovesStatus('opponent', slice.boardState.pieces);
+			log(`[AI] No valid moves — setting chess status ${terminalStatus}`);
+			if (terminalStatus !== 'playing') slice.setGameStatus(terminalStatus);
 			return;
 		}
 

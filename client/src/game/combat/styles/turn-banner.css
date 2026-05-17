@@ -1,4 +1,4 @@
-/* ═══ Persistent Player Turn Badge ═══ */
+/* Persistent poker turn badge */
 
 .persistent-turn-badge {
 	position: absolute;
@@ -23,13 +23,11 @@
 	transform-origin: top left;
 	isolation: isolate;
 	overflow: hidden;
-	background:
-		linear-gradient(180deg, rgba(21, 18, 10, 0.96), rgba(4, 8, 14, 0.96)),
-		radial-gradient(circle at 30% 0%, color-mix(in srgb, var(--gold-300) 18%, transparent), transparent 55%);
-	box-shadow:
-		0 0 24px color-mix(in srgb, var(--gold-300) 38%, transparent),
-		0 12px 22px rgba(0, 0, 0, 0.58),
-		inset 0 1px 0 color-mix(in srgb, var(--gold-100) 24%, transparent);
+	border: 1px solid var(--turn-badge-border);
+	color: var(--turn-badge-text);
+	background: var(--turn-badge-bg);
+	box-shadow: var(--turn-badge-shadow);
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
 }
 
 .persistent-turn-badge::before {
@@ -38,11 +36,9 @@
 	inset: 0;
 	pointer-events: none;
 	z-index: -1;
-	border: 1px solid var(--gold-300);
+	border: 1px solid color-mix(in srgb, var(--turn-badge-border) 72%, transparent);
 	border-radius: inherit;
-	box-shadow:
-		inset 0 0 0 1px rgba(255, 236, 172, 0.1),
-		inset 0 -8px 18px rgba(211, 139, 30, 0.16);
+	box-shadow: inset 0 -8px 18px var(--turn-badge-inner);
 }
 
 .persistent-turn-badge::after {
@@ -51,28 +47,56 @@
 	inset: 7px 10px;
 	pointer-events: none;
 	z-index: -1;
-	border-top: 1px solid color-mix(in srgb, var(--gold-100) 28%, transparent);
+	border-top: 1px solid color-mix(in srgb, var(--turn-badge-highlight) 28%, transparent);
 	border-radius: inherit;
 	opacity: 0.7;
 }
 
-.persistent-turn-badge.your-turn {
-	color: var(--gold-100);
-	text-shadow:
-		0 0 12px color-mix(in srgb, var(--gold-300) 70%, transparent),
-		0 1px 2px rgba(0, 0, 0, 0.95);
+.persistent-turn-badge.player-turn {
+	--turn-badge-bg:
+		linear-gradient(180deg, rgba(17, 44, 30, 0.98), rgba(5, 18, 14, 0.98)),
+		radial-gradient(circle at 30% 0%, color-mix(in srgb, var(--success-500) 20%, transparent), transparent 55%);
+	--turn-badge-border: var(--success-500);
+	--turn-badge-highlight: var(--success-500);
+	--turn-badge-inner: rgba(34, 197, 94, 0.16);
+	--turn-badge-shadow:
+		0 0 24px color-mix(in srgb, var(--success-500) 34%, transparent),
+		0 12px 22px rgba(0, 0, 0, 0.58),
+		inset 0 1px 0 color-mix(in srgb, var(--success-500) 24%, transparent);
+	--turn-badge-text: color-mix(in srgb, var(--success-500) 88%, white);
+	--turn-badge-dot: var(--success-500);
+	opacity: 1;
+}
+
+.persistent-turn-badge.opponent-turn {
+	--turn-badge-bg:
+		linear-gradient(180deg, rgba(32, 34, 38, 0.86), rgba(12, 14, 18, 0.86)),
+		radial-gradient(circle at 30% 0%, rgba(148, 163, 184, 0.1), transparent 55%);
+	--turn-badge-border: rgba(148, 163, 184, 0.5);
+	--turn-badge-highlight: rgba(203, 213, 225, 0.72);
+	--turn-badge-inner: rgba(148, 163, 184, 0.09);
+	--turn-badge-shadow:
+		0 10px 18px rgba(0, 0, 0, 0.48),
+		inset 0 1px 0 rgba(226, 232, 240, 0.12);
+	--turn-badge-text: rgba(226, 232, 240, 0.68);
+	--turn-badge-dot: rgba(148, 163, 184, 0.72);
+	opacity: 0.72;
 }
 
 .persistent-turn-dot {
 	width: 9px;
 	height: 9px;
 	border-radius: 2px;
-	background: var(--gold-300);
+	background: var(--turn-badge-dot);
 	box-shadow:
-		0 0 9px color-mix(in srgb, var(--gold-300) 88%, transparent),
-		0 0 18px color-mix(in srgb, var(--gold-300) 42%, transparent);
+		0 0 9px color-mix(in srgb, var(--turn-badge-dot) 88%, transparent),
+		0 0 18px color-mix(in srgb, var(--turn-badge-dot) 42%, transparent);
 	clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
 	animation: turnRunePulse 1.55s ease-in-out infinite;
+}
+
+.persistent-turn-badge.opponent-turn .persistent-turn-dot {
+	animation: none;
 }
 
 .persistent-turn-copy {
@@ -84,16 +108,16 @@
 
 .persistent-turn-kicker {
 	display: block;
-	letter-spacing: 1.8px;
+	letter-spacing: 1.2px;
 	font-size: 10px;
-	color: color-mix(in srgb, var(--gold-100) 72%, transparent);
+	color: color-mix(in srgb, var(--turn-badge-text) 72%, transparent);
 }
 
 .persistent-turn-main {
 	display: block;
-	letter-spacing: 1.8px;
+	letter-spacing: 1.2px;
 	font-size: 15px;
-	color: var(--gold-200);
+	color: var(--turn-badge-text);
 }
 
 @keyframes turnRunePulse {
@@ -108,162 +132,10 @@
 	}
 }
 
-/* ═══ Turn Banner - CCG-style "YOUR TURN" / "ENEMY TURN" announcement ═══ */
-
-.turn-banner-overlay {
-	position: absolute;
-	inset: 0;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	z-index: var(--z-cinematic);
-	pointer-events: none;
-}
-
-.turn-banner {
-	position: relative;
-	width: 100%;
-	padding: 18px 0;
-	text-align: center;
-	overflow: hidden;
-}
-
-.turn-banner::before {
-	content: '';
-	position: absolute;
-	inset: 0;
-	pointer-events: none;
-}
-
-/* Player turn - gold/amber theme */
-.turn-banner.player-turn {
-	background: linear-gradient(
-		180deg,
-		transparent 0%,
-		color-mix(in srgb, var(--gold-300) 15%, transparent) 20%,
-		color-mix(in srgb, var(--gold-300) 25%, transparent) 50%,
-		color-mix(in srgb, var(--gold-300) 15%, transparent) 80%,
-		transparent 100%
-	);
-	border-top: 2px solid color-mix(in srgb, var(--gold-300) 60%, transparent);
-	border-bottom: 2px solid color-mix(in srgb, var(--gold-300) 60%, transparent);
-}
-
-.turn-banner.player-turn::before {
-	background: linear-gradient(
-		90deg,
-		transparent 0%,
-		color-mix(in srgb, var(--gold-300) 10%, transparent) 30%,
-		color-mix(in srgb, var(--gold-300) 20%, transparent) 50%,
-		color-mix(in srgb, var(--gold-300) 10%, transparent) 70%,
-		transparent 100%
-	);
-}
-
-/* Opponent turn - red/crimson theme */
-.turn-banner.opponent-turn {
-	background: linear-gradient(
-		180deg,
-		transparent 0%,
-		color-mix(in srgb, var(--danger-400) 15%, transparent) 20%,
-		color-mix(in srgb, var(--danger-400) 25%, transparent) 50%,
-		color-mix(in srgb, var(--danger-400) 15%, transparent) 80%,
-		transparent 100%
-	);
-	border-top: 2px solid color-mix(in srgb, var(--danger-400) 60%, transparent);
-	border-bottom: 2px solid color-mix(in srgb, var(--danger-400) 60%, transparent);
-}
-
-.turn-banner.opponent-turn::before {
-	background: linear-gradient(
-		90deg,
-		transparent 0%,
-		color-mix(in srgb, var(--danger-400) 10%, transparent) 30%,
-		color-mix(in srgb, var(--danger-400) 20%, transparent) 50%,
-		color-mix(in srgb, var(--danger-400) 10%, transparent) 70%,
-		transparent 100%
-	);
-}
-
-.turn-banner-text {
-	font-family: var(--type-display);
-	font-size: 42px;
-	font-weight: 900;
-	letter-spacing: 8px;
-	text-transform: uppercase;
-	line-height: 1;
-}
-
-.turn-banner.player-turn .turn-banner-text {
-	color: var(--gold-300);
-	text-shadow:
-		0 0 20px color-mix(in srgb, var(--gold-300) 80%, transparent),
-		0 0 40px color-mix(in srgb, var(--gold-300) 40%, transparent),
-		0 2px 4px rgba(0, 0, 0, 0.8);
-}
-
-.turn-banner.opponent-turn .turn-banner-text {
-	color: var(--danger-400);
-	text-shadow:
-		0 0 20px color-mix(in srgb, var(--danger-400) 80%, transparent),
-		0 0 40px color-mix(in srgb, var(--danger-400) 40%, transparent),
-		0 2px 4px rgba(0, 0, 0, 0.8);
-}
-
-.turn-banner-sub {
-	font-family: var(--type-display);
-	font-size: 14px;
-	font-weight: 600;
-	letter-spacing: 3px;
-	text-transform: uppercase;
-	margin-top: 4px;
-	opacity: 0.6;
-}
-
-.turn-banner.player-turn .turn-banner-sub {
-	color: color-mix(in srgb, var(--gold-300) 70%, transparent);
-}
-
-.turn-banner.opponent-turn .turn-banner-sub {
-	color: color-mix(in srgb, var(--danger-400) 70%, transparent);
-}
-
-/* Decorative side lines */
-.turn-banner-line {
-	position: absolute;
-	top: 50%;
-	height: 2px;
-	width: 30%;
-	transform: translateY(-50%);
-}
-
-.turn-banner-line.left {
-	left: 0;
-}
-
-.turn-banner-line.right {
-	right: 0;
-}
-
-.turn-banner.player-turn .turn-banner-line {
-	background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--gold-300) 60%, transparent));
-}
-
-.turn-banner.player-turn .turn-banner-line.right {
-	background: linear-gradient(270deg, transparent, color-mix(in srgb, var(--gold-300) 60%, transparent));
-}
-
-.turn-banner.opponent-turn .turn-banner-line {
-	background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--danger-400) 60%, transparent));
-}
-
-.turn-banner.opponent-turn .turn-banner-line.right {
-	background: linear-gradient(270deg, transparent, color-mix(in srgb, var(--danger-400) 60%, transparent));
-}
-
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
-	.turn-banner {
+	.persistent-turn-badge,
+	.persistent-turn-dot {
 		animation: none !important;
 	}
 }

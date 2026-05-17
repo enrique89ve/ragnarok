@@ -72,7 +72,7 @@ describe('chessAnimationSlice', () => {
 		expect(animation?.defenderPosition).toEqual({ row: 2, col: 2 });
 	});
 
-	it('resolves a non-instant chess attack before animation cleanup', () => {
+	it('startAttackAnimation only records the presentation marker', () => {
 		const attacker = makePiece({ id: 'a1', type: 'queen', owner: 'player', position: { row: 1, col: 1 } });
 		const defender = makePiece({ id: 'd1', type: 'rook', owner: 'opponent', position: { row: 2, col: 2 } });
 
@@ -86,6 +86,27 @@ describe('chessAnimationSlice', () => {
 		});
 
 		useUnifiedCombatStore.getState().startAttackAnimation(attacker, defender, false);
+		const state = useUnifiedCombatStore.getState();
+
+		expect(state.pendingAttackAnimation).not.toBeNull();
+		expect(state.pendingCombat).toBeNull();
+		expect(state.boardState.gameStatus).toBe('playing');
+	});
+
+	it('beginChessAttack resolves a non-instant chess attack before animation cleanup', () => {
+		const attacker = makePiece({ id: 'a1', type: 'queen', owner: 'player', position: { row: 1, col: 1 } });
+		const defender = makePiece({ id: 'd1', type: 'rook', owner: 'opponent', position: { row: 2, col: 2 } });
+
+		useUnifiedCombatStore.setState({
+			boardState: {
+				...initialBoardState,
+				pieces: [attacker, defender],
+				currentTurn: 'player',
+				gameStatus: 'playing',
+			},
+		});
+
+		useUnifiedCombatStore.getState().beginChessAttack(attacker, defender, false);
 		const beforeCleanup = useUnifiedCombatStore.getState();
 
 		expect(beforeCleanup.pendingAttackAnimation).not.toBeNull();
@@ -102,7 +123,7 @@ describe('chessAnimationSlice', () => {
 		expect(afterCleanup.boardState.gameStatus).toBe('combat');
 	});
 
-	it('resolves an instant chess attack before animation cleanup', () => {
+	it('beginChessAttack resolves an instant chess attack before animation cleanup', () => {
 		const attacker = makePiece({ id: 'a1', type: 'pawn', owner: 'player', position: { row: 1, col: 1 } });
 		const defender = makePiece({ id: 'd1', type: 'queen', owner: 'opponent', position: { row: 2, col: 2 } });
 
@@ -115,7 +136,7 @@ describe('chessAnimationSlice', () => {
 			},
 		});
 
-		useUnifiedCombatStore.getState().startAttackAnimation(attacker, defender, true);
+		useUnifiedCombatStore.getState().beginChessAttack(attacker, defender, true);
 		const beforeCleanup = useUnifiedCombatStore.getState();
 
 		expect(beforeCleanup.pendingAttackAnimation).not.toBeNull();

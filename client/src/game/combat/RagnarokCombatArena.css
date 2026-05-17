@@ -112,40 +112,6 @@
   gap: 6px;
 }
 
-/* Turn transition flash — full-arena overlay that fades out immediately */
-.turn-flash-overlay {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 200;
-  animation: turnFlashFade 0.5s ease-out forwards;
-}
-
-.turn-flash-player {
-  background: radial-gradient(
-    ellipse at center,
-    rgba(59, 130, 246, 0.28) 0%,
-    transparent 70%
-  );
-}
-
-.turn-flash-opponent {
-  background: radial-gradient(
-    ellipse at center,
-    rgba(239, 68, 68, 0.22) 0%,
-    transparent 70%
-  );
-}
-
-@keyframes turnFlashFade {
-  0% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
 .attack-mode-cancel:hover {
   background: rgba(239, 68, 68, 0.25);
   color: #fca5a5;
@@ -1587,57 +1553,6 @@
   }
   100% {
     opacity: 0;
-  }
-}
-
-/* ========================================
-   Opponent Thinking Indicator
-   ======================================== */
-.opponent-thinking-indicator {
-  position: absolute;
-  top: 38%;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  background: rgba(15, 15, 25, 0.9);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 20px;
-  pointer-events: none;
-  z-index: 60;
-}
-
-.thinking-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: rgba(148, 163, 184, 0.7);
-  animation: thinkingBounce 1.2s ease-in-out infinite;
-}
-
-.thinking-dot:nth-child(1) {
-  animation-delay: 0s;
-}
-.thinking-dot:nth-child(2) {
-  animation-delay: 0.2s;
-}
-.thinking-dot:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-@keyframes thinkingBounce {
-  0%,
-  60%,
-  100% {
-    transform: translateY(0);
-    background: rgba(148, 163, 184, 0.5);
-  }
-  30% {
-    transform: translateY(-6px);
-    background: rgba(251, 191, 36, 0.9);
-    box-shadow: 0 0 8px rgba(251, 191, 36, 0.5);
   }
 }
 

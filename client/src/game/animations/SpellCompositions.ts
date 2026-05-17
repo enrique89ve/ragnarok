@@ -23,6 +23,8 @@ import {
 	spawnFireBurst, spawnIceShatter, spawnLightningSparks,
 	spawnShadowWisps, spawnNatureBloom, spawnBloodBurst, spawnDivineRadiance,
 } from './ElementalParticles';
+import { ARENA_VFX_LAYERS, getArenaVfxLayer } from '../combat/arenaVfxTargets';
+import './dom-vfx.css';
 
 let reducedMotion: boolean | null = null;
 function isReducedMotion(): boolean {
@@ -42,14 +44,18 @@ function isEnhancedVFXEnabled(): boolean {
 }
 
 function addScreenClass(className: string, duration: number): void {
-	const viewport = document.querySelector('.game-viewport');
-	if (!viewport) return;
-	viewport.classList.add(className);
-	gsap.delayedCall(duration, () => viewport.classList.remove(className));
+	const screenTarget = getArenaVfxLayer(ARENA_VFX_LAYERS.viewportWrapper);
+	if (!screenTarget) return;
+	screenTarget.classList.add(className);
+	gsap.delayedCall(duration, () => screenTarget.classList.remove(className));
+}
+
+function getScreenOverlayRoot(): HTMLElement | null {
+	return getArenaVfxLayer(ARENA_VFX_LAYERS.viewportWrapper);
 }
 
 function screenShake(intensity = 4, duration = 0.3): void {
-	const el = document.querySelector('.game-viewport') as HTMLElement;
+	const el = getArenaVfxLayer(ARENA_VFX_LAYERS.viewportWrapper);
 	if (!el) return;
 	gsap.to(el, {
 		x: `random(-${intensity}, ${intensity})`,
@@ -63,9 +69,13 @@ function screenShake(intensity = 4, duration = 0.3): void {
 }
 
 function screenFlash(color = 'rgba(255,255,255,0.3)', duration = 0.15): void {
+	const overlayRoot = getScreenOverlayRoot();
+	if (!overlayRoot) return;
+
 	const flash = document.createElement('div');
-	flash.style.cssText = `position:fixed;inset:0;background:${color};pointer-events:none;z-index:9999;opacity:1;`;
-	document.body.appendChild(flash);
+	flash.className = 'vfx-screen-flash';
+	flash.style.setProperty('--vfx-screen-flash-bg', color);
+	overlayRoot.appendChild(flash);
 	gsap.to(flash, { opacity: 0, duration, onComplete: () => flash.remove() });
 }
 

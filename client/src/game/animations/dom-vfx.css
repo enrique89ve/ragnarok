@@ -1,0 +1,28 @@
+.vfx-screen-flash {
+	position: fixed;
+	inset: 0;
+	z-index: var(--vfx-screen-flash-z, 9999);
+	background: var(--vfx-screen-flash-bg, rgba(255, 255, 255, 0.3));
+	pointer-events: none;
+	opacity: 1;
+}
+
+.vfx-floating-damage {
+	position: fixed;
+	left: var(--vfx-damage-x, 50%);
+	top: var(--vfx-damage-y, 50%);
+	z-index: 9300;
+	color: var(--vfx-damage-color, #ff4444);
+	font-family: Impact, 'Arial Black', sans-serif;
+	font-size: var(--vfx-damage-size, 1.8rem);
+	font-weight: 900;
+	text-shadow: 0 0 8px rgba(0, 0, 0, 0.9), 0 2px 4px rgba(0, 0, 0, 0.8);
+	pointer-events: none;
+	opacity: 0;
+	transform: translate(-50%, -50%);
+}
+
+[data-vfx-layer="game-viewport-wrapper"] > .vfx-screen-flash,
+[data-vfx-layer="arena-vfx"] > .vfx-screen-flash {
+	position: absolute;
+}

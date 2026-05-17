@@ -61,6 +61,13 @@ export type DeriveDeterministicPokerCombatInput = {
   readonly slotsSwapped: boolean;
 };
 
+export type ChessCombatFlowGateInput = {
+  readonly hasPendingCombat: boolean;
+  readonly chessGameStatus: ChessGameStatus;
+  readonly flowTag: string | null;
+  readonly hasPendingAttackAnimation: boolean;
+};
+
 /*
   Visual realm mapping is a coordinator rule, not React state. Campaign
   missions may come from any pantheon, but board/combat skins currently use
@@ -289,6 +296,13 @@ export function derivePokerCombatHandoff(
   };
 }
 
+export function shouldTriggerChessCombatFlow(input: ChessCombatFlowGateInput): boolean {
+  return input.hasPendingCombat
+    && input.chessGameStatus === 'combat'
+    && input.flowTag === 'chess'
+    && !input.hasPendingAttackAnimation;
+}
+
 export function buildPetDataFromChessPiece(input: BuildPetDataInput): PetData {
   const { piece, army, resolvePortrait } = input;
   const petClass = getPetClass(piece.type);
@@ -323,6 +337,19 @@ export function buildPetDataFromChessPiece(input: BuildPetDataInput): PetData {
 export function getWinnerFromGameStatus(status: ChessGameStatus): 'player' | 'opponent' | null {
   if (status === 'player_wins') return 'player';
   if (status === 'opponent_wins') return 'opponent';
+  return null;
+}
+
+export type ViewerChessResult = 'victory' | 'defeat' | 'draw' | null;
+
+export function getViewerChessResult(input: {
+  readonly status: ChessGameStatus;
+  readonly myWinStatus: 'player_wins' | 'opponent_wins';
+}): ViewerChessResult {
+  if (input.status === 'draw') return 'draw';
+  if (input.status === 'player_wins' || input.status === 'opponent_wins') {
+    return input.status === input.myWinStatus ? 'victory' : 'defeat';
+  }
   return null;
 }
 

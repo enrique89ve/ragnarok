@@ -9,10 +9,8 @@
  * useKingChessAbility, ChessBoard).
  *
  * Separating the marker fields from gameplay state keeps engines pure and
- * portable to shared/protocol-core/. `startAttackAnimation` remains the
- * existing command/event ingress for local and P2P attack envelopes, so it
- * queues the visual marker and immediately delegates mechanics to the chess
- * combat resolver. Animation completion may only clear this marker.
+ * portable to shared/protocol-core/. `startAttackAnimation` only queues the
+ * transient visual marker. Attack mechanics are owned by chessCombatSlice.
  */
 
 import { StateCreator } from 'zustand';
@@ -26,7 +24,6 @@ import {
   ChessAnimationSlice,
   UnifiedCombatStore
 } from './types';
-import { resolveChessAttackIntent } from './chessCombatSlice';
 
 export const createChessAnimationSlice: StateCreator<
   UnifiedCombatStore,
@@ -39,22 +36,16 @@ export const createChessAnimationSlice: StateCreator<
   lastMineTriggered: null,
 
   startAttackAnimation: (attacker: ChessPiece, defender: ChessPiece, isInstantKill: boolean) => {
-    const attack = {
-      attacker,
-      defender,
-      attackerPosition: { ...attacker.position },
-      defenderPosition: { ...defender.position },
-      isInstantKill
-    };
-
     set({
       pendingAttackAnimation: {
-        ...attack,
+        attacker,
+        defender,
+        attackerPosition: { ...attacker.position },
+        defenderPosition: { ...defender.position },
+        isInstantKill,
         timestamp: get()._nextLogTick()
       }
     });
-
-    resolveChessAttackIntent(get, set, attack);
   },
 
   clearAttackAnimation: () => {

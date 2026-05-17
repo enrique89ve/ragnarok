@@ -1,0 +1,12 @@
+/* Sonner renders an accessibility <section> around the fixed toast list.
+   Keep that live region out of document flow so it cannot create letterbox
+   space around the combat viewport. */
+section[aria-label^="Game notifications"] {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  outline: none;
+}

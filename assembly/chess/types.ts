@@ -36,7 +36,7 @@ export const SIDE_NONE: i32 = -1; // used by inCheck when neither side is in che
 
 // ====================================================================
 // Game status enum (canonical strings: "setup" | "playing" | "combat"
-// | "player_wins" | "opponent_wins"). Slice statuses preserved so the
+// | "player_wins" | "opponent_wins" | "draw"). Slice statuses preserved so the
 // reducer's refreshDerived only promotes to terminal when win-cond fires.
 // ====================================================================
 
@@ -45,6 +45,7 @@ export const STATUS_PLAYING: i32 = 1;
 export const STATUS_COMBAT: i32 = 2;
 export const STATUS_PLAYER_WINS: i32 = 3;
 export const STATUS_OPPONENT_WINS: i32 = 4;
+export const STATUS_DRAW: i32 = 5;
 
 // ====================================================================
 // Board geometry (5×7, NOT classical 8×8 — see TS twin).

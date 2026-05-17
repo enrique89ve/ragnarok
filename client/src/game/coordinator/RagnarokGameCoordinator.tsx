@@ -27,6 +27,7 @@ import {
   mapViewerValuesToCanonical,
 } from '../p2p/p2pPerspective';
 import { createSeededIdGen, cryptoIdGen, cryptoRng } from '../utils/seededRng';
+import { getNoLegalMovesStatus } from '@shared/protocol-core/chess';
 import { resolveHeroPortrait } from '../utils/art/artMapping';
 import { useCampaignGameBootstrap } from './hooks/useCampaignGameBootstrap';
 import { useBossRuleEffects } from './hooks/useBossRuleEffects';
@@ -35,9 +36,11 @@ import {
   getFinaleClass,
   getInitialGameOverSubPhase,
   getRealmDisplayName,
+  getViewerChessResult,
   getWinnerFromGameStatus,
   derivePokerCombatHandoff,
   resolveVisualRealm,
+  shouldTriggerChessCombatFlow,
 } from './gameCoordinatorRules';
 
 /*
@@ -160,6 +163,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     boardState,
     initializeBoard,
     pendingCombat,
+    pendingAttackAnimation,
     clearPendingCombat,
     resolveCombat,
     setSharedDeck,
@@ -168,7 +172,6 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     updatePieceHealth,
     incrementAllStamina,
     setGameStatus,
-    getValidMoves,
     nextTurn
   } = useChessCombatAdapter();
 
@@ -262,6 +265,10 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   );
   const enemyCanonicalSide: 'player' | 'opponent' = p2pPerspective.remoteCanonicalSide;
   const myWinStatus: 'player_wins' | 'opponent_wins' = myCanonicalSide === 'player' ? 'player_wins' : 'opponent_wins';
+  const viewerChessResult = getViewerChessResult({
+    status: boardState.gameStatus,
+    myWinStatus,
+  });
   const p2pBoardInitRef = useRef(false);
   useEffect(() => {
     if (p2pBoardInitRef.current) return;
@@ -494,25 +501,29 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     }
   }, [pokerSlotsSwapped, resolveCombat, clearPendingCombat, endCombat, playSoundEffect, updatePieceStamina, updatePieceHealth, incrementAllStamina, nextTurn, setPokerSlotsSwapped, dispatchFlow, flowState?.tag]);
 
-  // Chess-victory game-end pipeline. Fires when chess reaches checkmate /
-  // stalemate / king-down (boardState.gameStatus). The cards-victory
+  // Chess terminal game-end pipeline. Fires when chess reaches checkmate,
+  // explicit draw, or king/material terminal status (boardState.gameStatus). The cards-victory
   // pipeline (hero HP=0) lives in the next useEffect — they share
   // `gameEndProcessedRef` for idempotency so only the first signal wins.
   useEffect(() => {
     const winner = getWinnerFromGameStatus(boardState.gameStatus);
-    if (!winner) return;
+    const terminalResult = viewerChessResult;
+    if (!terminalResult) return;
     if (gameEndProcessedRef.current) return;
     gameEndProcessedRef.current = true;
 
     // Chess uses the CANONICAL frame ('player' = first-mover globally).
     // deriveIWonForPhase encapsulates the comparison rule so it can't get
     // mixed up with the viewer-relative cards path below.
-    const iWon = deriveIWonForPhase({
-      kind: 'chess',
-      canonicalWinner: winner,
-      myCanonicalSide,
-    });
-    playSoundEffect(iWon ? 'victory' : 'defeat');
+    const iWon = winner
+      ? deriveIWonForPhase({
+          kind: 'chess',
+          canonicalWinner: winner,
+          myCanonicalSide,
+        })
+      : false;
+    const isDraw = terminalResult === 'draw';
+    playSoundEffect(isDraw ? 'defeat' : iWon ? 'victory' : 'defeat');
     gameOverTimerRef.current = setTimeout(() => {
       gameOverTimerRef.current = null;
       // Fase 4 C10 — mode-specific reward dispatch lives in match/modes/X/lifecycle.ts.
@@ -520,15 +531,17 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       // each handler is responsible for its own gating (iWon check, idempotency,
       // store dispatch). Pre-Fase-4 inline campaign logic moved verbatim into
       // match/modes/campaign/lifecycle.ts.
-      if (ctx) {
+      if (ctx && !isDraw) {
         selectOnWinHandler(ctx)({ iWon, turnCount });
       }
       flushDailyQuestClaimsAfterMatch();
-      const initialSub = getInitialGameOverSubPhase({
-        iWon,
-        isCampaign,
-        campaignData,
-      });
+      const initialSub = isDraw
+        ? 'result'
+        : getInitialGameOverSubPhase({
+            iWon,
+            isCampaign,
+            campaignData,
+          });
       dispatchFlow({ type: 'GAME_ENDED', initialSub });
     }, 1500);
 
@@ -546,7 +559,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     // the 1.5s timer (cleanup runs on every re-render with new deps), losing
     // the dispatch entirely. eslint-disable to make the intent explicit.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [boardState.gameStatus, playSoundEffect]);
+  }, [boardState.gameStatus, viewerChessResult, playSoundEffect]);
 
   // Cards-victory match-end (hero HP=0 in cards combat). The 1.5s timeout
   // holds the GameOverScreen modal on screen before dispatching GAME_ENDED;
@@ -607,36 +620,32 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   useChessAITurn({ enabled: flowState?.tag === 'chess' });
 
   useEffect(() => {
-    if (pendingCombat && boardState.gameStatus === 'combat' && flowState?.tag === 'chess') {
+    if (shouldTriggerChessCombatFlow({
+      hasPendingCombat: !!pendingCombat,
+      chessGameStatus: boardState.gameStatus,
+      flowTag: flowState?.tag ?? null,
+      hasPendingAttackAnimation: pendingAttackAnimation !== null,
+    })) {
       debug.chess('pendingCombat detected (AI attack), triggering combat flow');
+      if (!pendingCombat) return;
       const { attacker, defender } = pendingCombat;
 
       dispatchFlow({ type: 'COMBAT_TRIGGERED', pieces: { attacker, defender } });
       playSoundEffect('card_draw');
     }
-  }, [pendingCombat, boardState.gameStatus, flowState, playSoundEffect, dispatchFlow]);
+  }, [pendingCombat, pendingAttackAnimation, boardState.gameStatus, flowState?.tag, playSoundEffect, dispatchFlow]);
 
   useEffect(() => {
     if (flowState?.tag === 'chess' && boardState.gameStatus === 'playing') {
       const currentSide = boardState.currentTurn;
-      const pieces = boardState.pieces.filter(p => p.owner === currentSide);
-      let hasValidMove = false;
+      const terminalStatus = getNoLegalMovesStatus(currentSide, boardState.pieces);
 
-      for (const piece of pieces) {
-        const { moves, attacks } = getValidMoves(piece);
-        if (moves.length > 0 || attacks.length > 0) {
-          hasValidMove = true;
-          break;
-        }
-      }
-
-      if (!hasValidMove && pieces.length > 0) {
-        const winnerStatus = currentSide === 'player' ? 'opponent_wins' : 'player_wins';
-        debug.chess(`${currentSide} has no valid moves - stalemate, ${winnerStatus}`);
-        setGameStatus(winnerStatus);
+      if (terminalStatus !== 'playing') {
+        debug.chess(`${currentSide} has no valid moves - ${terminalStatus}`);
+        setGameStatus(terminalStatus);
       }
     }
-  }, [flowState, boardState.currentTurn, boardState.gameStatus, boardState.pieces, getValidMoves, setGameStatus]);
+  }, [flowState, boardState.currentTurn, boardState.gameStatus, boardState.pieces, setGameStatus]);
 
   const handleRestart = useCallback(() => {
     resetBoard();
@@ -770,7 +779,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
 
           {flowState !== null && flowState.tag === 'game_over' && (
             <GameOverPhase
-              isVictory={boardState.gameStatus === myWinStatus}
+              result={viewerChessResult ?? 'defeat'}
               sub={flowState.sub}
               playerTurnCount={turnCount}
               campaign={isCampaign && campaignData ? { mission: campaignData.mission, chapter: campaignData.chapter, difficulty: campaignDifficulty } : null}
