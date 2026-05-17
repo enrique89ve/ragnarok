@@ -70,6 +70,7 @@ import { OpponentZone } from './zones/OpponentZone';
 import { BoardZone } from './zones/BoardZone';
 import { PlayerZone } from './zones/PlayerZone';
 import { MinionField } from './zones/MinionField';
+import { ARENA_VFX_LAYERS, arenaVfxLayerProps } from './arenaVfxTargets';
 import { POKER_VIEWPORT_LAYOUT_STYLE, POKER_VIEWPORT_SAFE_AREA } from './layout/pokerViewportLayout';
 import { useCampaignStore, getMission } from '../campaign';
 import { isBettingPhase } from './modules/PhaseManager';
@@ -1121,8 +1122,8 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
               .layer-modal       z 900+   pointer-events: auto (blockers)
             ═════════════════════════════════════════════════════════════ */}
         <div className="layer-background absolute inset-0 pointer-events-none" style={{ zIndex: 0 }} />
-        <div id="arena-layer-vfx" className="layer-vfx absolute inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 500 }} />
-        <div id="arena-layer-modal" className="layer-modal absolute inset-0 pointer-events-none" style={{ zIndex: 900 }} />
+        <div id="arena-layer-vfx" className="layer-vfx absolute inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 500 }} {...arenaVfxLayerProps(ARENA_VFX_LAYERS.vfx)} />
+        <div id="arena-layer-modal" className="layer-modal absolute inset-0 pointer-events-none" style={{ zIndex: 900 }} {...arenaVfxLayerProps(ARENA_VFX_LAYERS.modal)} />
 
         {/* Hourglass Timer at Top Center */}
         {(() => {

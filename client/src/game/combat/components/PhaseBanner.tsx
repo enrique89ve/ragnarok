@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { CombatPhase } from '../../types/PokerCombatTypes';
+import { ARENA_VFX_LAYERS, getArenaVfxLayer } from '../arenaVfxTargets';
 
 interface PhaseBannerProps {
 	phase: CombatPhase;
@@ -75,16 +76,15 @@ export const PhaseBanner: React.FC<PhaseBannerProps> = ({ phase, forceHide = fal
 	 * so the banner is bounded by the canvas, never escapes, never
 	 * affects flex flow of the gameplay zones.
 	 *
-	 * Fallback chain: arena-layer-vfx → .zone-board (mesa) →
-	 * .game-viewport → document.body (SSR/initial render).
+	 * Fallback chain: data-vfx-layer="arena-vfx" → document.body
+	 * (SSR/initial render).
 	 */
 	const portalTarget =
 		(typeof document !== 'undefined' && (
-			document.getElementById('arena-layer-vfx') ||
-			document.querySelector('.zone-board') ||
-			document.querySelector('.game-viewport')
+			getArenaVfxLayer(ARENA_VFX_LAYERS.vfx) ||
+			document.body
 		)) ||
-		(typeof document !== 'undefined' ? document.body : null);
+		null;
 
 	const banner = (
 		<div

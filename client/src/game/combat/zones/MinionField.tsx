@@ -12,6 +12,7 @@
 
 import React from 'react';
 import SimpleBattlefield from '../../components/SimpleBattlefield';
+import { ARENA_VFX_TARGETS, arenaVfxTargetProps } from '../arenaVfxTargets';
 
 export interface MinionFieldProps {
 	readonly role: 'opp' | 'player';
@@ -41,8 +42,9 @@ export const MinionField: React.FC<MinionFieldProps> = ({
 	isInteractionDisabled,
 }) => {
 	const zoneClass = role === 'opp' ? 'zone-opp-field' : 'zone-player-field';
+	const vfxTarget = role === 'opp' ? ARENA_VFX_TARGETS.opponentMinion : ARENA_VFX_TARGETS.playerMinion;
 	return (
-		<section className={`${zoneClass} minion-field minion-field--${role}`}>
+		<section className={`${zoneClass} minion-field minion-field--${role}`} {...arenaVfxTargetProps(vfxTarget)}>
 			<SimpleBattlefield
 				playerCards={playerCards as any}
 				opponentCards={opponentCards as any}

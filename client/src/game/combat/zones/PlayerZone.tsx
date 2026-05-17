@@ -24,6 +24,7 @@ import { PokerHandRank, type PokerCard } from '../../types/PokerCombatTypes';
 import type { CardInstance } from '../../types';
 import type { Position } from '../../types/Position';
 import type { ShowdownCelebration } from '../hooks/useCombatEvents';
+import { ARENA_VFX_TARGETS, arenaVfxTargetProps } from '../arenaVfxTargets';
 
 // Inline SVG used by the small hand-strength badge under the hero portrait.
 const CardFanIcon = () => (
@@ -116,7 +117,7 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({
 				<div
 					className={`unified-hero-section ${shakingHero ? 'damage-shake damage-flash' : ''} ${isPlayerTurn ? 'turn-active' : ''}`}
 				>
-					<div data-hero-role="player" className="poker-hero-container">
+					<div data-hero-role="player" className="poker-hero-container" {...arenaVfxTargetProps(ARENA_VFX_TARGETS.playerHero)}>
 						<BattlefieldHero
 							pet={enrichedPlayerPet}
 							hpCommitted={playerHpCommitted}

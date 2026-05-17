@@ -1968,14 +1968,6 @@
   }
 }
 
-/* ============================================
-   THEME PARTICLES — activate SimpleCard.css particles on hero grid hover
-   ============================================ */
-.norse-hero-card:hover .card-particles::before,
-.norse-hero-card:hover .card-particles::after {
-  animation-play-state: running;
-}
-
 /* User pill — very narrow viewports drop the secondary label so the
    handle stays legible without truncating the @username badly. */
 @media (max-width: 480px) {

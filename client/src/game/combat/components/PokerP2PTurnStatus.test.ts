@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CombatPhase, type PokerCombatState } from '../../types/PokerCombatTypes';
 import { getPokerP2PTurnStatusView } from './PokerP2PTurnStatus';
 import { derivePokerDecisionView } from '../decision/pokerDecisionView';
+import { derivePokerTurnPolicy } from '../decision/pokerTurnPolicy';
 
 function makeState(overrides: Partial<PokerCombatState> = {}): PokerCombatState {
 	return {
@@ -62,12 +63,13 @@ describe('getPokerP2PTurnStatusView', () => {
 	});
 
 	it('derives remote decision visibility even after local action is ready', () => {
+		const combatState = makeState({
+			activePlayerId: 'opponent-1',
+			player: { playerId: 'player-1', isReady: true },
+			opponent: { playerId: 'opponent-1', isReady: false },
+		});
 		const view = derivePokerDecisionView({
-			combatState: makeState({
-				activePlayerId: 'opponent-1',
-				player: { playerId: 'player-1', isReady: true },
-				opponent: { playerId: 'opponent-1', isReady: false },
-			}),
+			combatState,
 			connectionState: 'connected',
 			isP2PCombat: true,
 		});
@@ -76,6 +78,43 @@ describe('getPokerP2PTurnStatusView', () => {
 		expect(view.waitingForPeer).toBe(true);
 		expect(view.displayTurn).toBe('opponent');
 		expect(view.windowLabel).toBe('Enemy Acting');
+		expect(derivePokerTurnPolicy({
+			localPlayerIsReady: combatState.player.isReady,
+			activePlayerId: combatState.activePlayerId,
+			localPlayerId: combatState.player.playerId,
+			remotePlayerId: combatState.opponent.playerId,
+			isP2PCombat: true,
+		}).shouldSkipTimerAfterLocalReady).toBe(false);
+	});
+
+	it('skips the local timer only when the ready local side owns no remote decision window', () => {
+		const localReady = makeState({
+			activePlayerId: 'player-1',
+			player: { playerId: 'player-1', isReady: true },
+			opponent: { playerId: 'opponent-1', isReady: false },
+		});
+
+		expect(derivePokerTurnPolicy({
+			localPlayerIsReady: localReady.player.isReady,
+			activePlayerId: localReady.activePlayerId,
+			localPlayerId: localReady.player.playerId,
+			remotePlayerId: localReady.opponent.playerId,
+			isP2PCombat: true,
+		}).shouldSkipTimerAfterLocalReady).toBe(true);
+		expect(derivePokerTurnPolicy({
+			localPlayerIsReady: localReady.player.isReady,
+			activePlayerId: localReady.activePlayerId,
+			localPlayerId: localReady.player.playerId,
+			remotePlayerId: localReady.opponent.playerId,
+			isP2PCombat: false,
+		}).shouldSkipTimerAfterLocalReady).toBe(true);
+		expect(derivePokerTurnPolicy({
+			localPlayerIsReady: false,
+			activePlayerId: 'player-1',
+			localPlayerId: 'player-1',
+			remotePlayerId: 'opponent-1',
+			isP2PCombat: true,
+		}).shouldSkipTimerAfterLocalReady).toBe(false);
 	});
 
 	it('derives countdown from the deadline when a decision window has one', () => {

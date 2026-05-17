@@ -2,6 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { proceduralAudio } from '../../audio/proceduralAudio';
+import { getArenaVfxHeroTarget } from '../arenaVfxTargets';
 import './HeroBattlePopup.css';
 
 export type BattlePopupAction = 'brace' | 'attack' | 'counter_attack' | 'engage' | 'defend';
@@ -32,10 +33,7 @@ const ACTION_CONFIG: Record<BattlePopupAction, { color: string; sound: Parameter
 };
 
 function getHeroCenter(target: 'player' | 'opponent'): { x: number; y: number } {
-	const selector = target === 'player'
-		? '.battlefield-hero-square.player'
-		: '.battlefield-hero-square.opponent';
-	const el = document.querySelector(selector);
+	const el = getArenaVfxHeroTarget(target);
 	if (el) {
 		const rect = el.getBoundingClientRect();
 		return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };

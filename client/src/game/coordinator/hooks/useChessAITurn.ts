@@ -1,21 +1,20 @@
 /**
  * useChessAITurn — wires the AI turn factory into the chess phase.
  *
- * The hook owns React lifecycle: gating on `enabled`, `currentTurn`,
- * `gameStatus`, and `matchSeed`; allocating the timeout batch; and clearing
- * it on every effect re-run so a turn flip mid-chain cannot leave a stray
- * `attemptMove` queued behind us. The turn logic itself lives in
+ * The hook owns React lifecycle: gating on the derived chess turn policy,
+ * allocating the timeout batch, and clearing it on every effect re-run so a
+ * turn flip mid-chain cannot leave a stray `attemptMove` queued behind us.
+ * The turn logic itself lives in
  * `chessAITurnDriver` (pure factory, testable without React).
  *
- * `matchSeed` gate: in single mode no peer exists so the AI plays the
- * opponent; in P2P the seed is set at seed_reveal and remote envelopes
- * drive the opponent instead — firing the AI there would mutate state the
- * remote never agreed to.
+ * Mode gate: in local AI/campaign, the browser drives the opponent. In P2P,
+ * the remote peer drives that side over the wire, so scheduling local AI would
+ * mutate state the remote never agreed to.
  */
 
 import { useEffect, useRef } from 'react';
 import { useUnifiedCombatStore } from '../../stores/unifiedCombatStore';
-import { useGameStore } from '../../stores/gameStore';
+import { useMatchStore } from '../../match';
 import { cryptoRng } from '../../utils/seededRng';
 import { debug } from '../../config/debugConfig';
 import {
@@ -23,6 +22,7 @@ import {
 	CHESS_AI_FIRST_ATTEMPT_DELAY_MS,
 	type ChessAIDriverSlice,
 } from './chessAITurnDriver';
+import { deriveChessTurnPolicy } from './chessTurnPolicy';
 
 interface ChessAITurnOptions {
 	readonly enabled: boolean;
@@ -33,7 +33,8 @@ type TimeoutId = ReturnType<typeof setTimeout>;
 export function useChessAITurn({ enabled }: ChessAITurnOptions): void {
 	const currentTurn = useUnifiedCombatStore((s) => s.boardState.currentTurn);
 	const gameStatus = useUnifiedCombatStore((s) => s.boardState.gameStatus);
-	const matchSeed = useGameStore((s) => s.matchSeed);
+	const activeMatch = useMatchStore((s) => s.activeMatch);
+	const isP2PMatch = activeMatch?.opponent.kind === 'peer';
 
 	const timeoutsRef = useRef<TimeoutId[]>([]);
 
@@ -45,6 +46,13 @@ export function useChessAITurn({ enabled }: ChessAITurnOptions): void {
 			timeouts.length = 0;
 		};
 
+		const policy = deriveChessTurnPolicy({
+			enabled,
+			currentTurn,
+			gameStatus,
+			isP2PMatch,
+		});
+
 		const schedule = (fn: () => void, ms: number): void => {
 			const id = setTimeout(() => {
 				const idx = timeouts.indexOf(id);
@@ -54,10 +62,7 @@ export function useChessAITurn({ enabled }: ChessAITurnOptions): void {
 			timeouts.push(id);
 		};
 
-		if (!enabled) return clearAllTimeouts;
-		if (currentTurn !== 'opponent') return clearAllTimeouts;
-		if (gameStatus !== 'playing') return clearAllTimeouts;
-		if (matchSeed) return clearAllTimeouts;
+		if (!policy.shouldScheduleAiTurn) return clearAllTimeouts;
 
 		const driver = createChessAITurnDriver({
 			getSlice: () => useUnifiedCombatStore.getState() as unknown as ChessAIDriverSlice,
@@ -68,5 +73,5 @@ export function useChessAITurn({ enabled }: ChessAITurnOptions): void {
 
 		schedule(() => driver.runAITurn(), CHESS_AI_FIRST_ATTEMPT_DELAY_MS);
 		return clearAllTimeouts;
-	}, [enabled, currentTurn, gameStatus, matchSeed]);
+	}, [enabled, currentTurn, gameStatus, isP2PMatch]);
 }

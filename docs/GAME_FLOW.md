@@ -397,13 +397,24 @@ type AnimationType =
   | 'showdown';
 ```
 
-### Animation Flow
+### Gameplay Animation Authority
 
-1. Action triggers animation
-2. AnimationOverlay renders visual
-3. Animation completes
-4. State updates
-5. Next animation or unlock
+Gameplay state resolves before visual cleanup. CSS, GSAP, timers, and React
+animation completion callbacks are subscribers to game events; they do not own
+combat rules, HP mutation, turn progression, winner selection, or protocol
+state.
+
+1. User input, AI intent, or network event dispatches a command.
+2. Store/protocol code validates the command and mutates canonical state.
+3. The resolver emits a domain event or writes a transient visual marker.
+4. Animation subscribers render CSS/GSAP/audio/VFX from that event or marker.
+5. Animation completion clears only transient visual markers and unlocks the
+   next queued visual effect.
+
+If an animation is cancelled, skipped by reduced motion, killed by HMR, or
+never mounted, gameplay state must already be correct. A completion callback may
+call visual cleanup such as `clearAttackAnimation`; it must not apply damage,
+start combat resolution, advance turns, or write canonical match state.
 
 ---
 

@@ -23,6 +23,7 @@ import CardRenderer from '../../components/CardRendering/CardRenderer';
 import type { PokerCard } from '../../types/PokerCombatTypes';
 import type { CardInstance } from '../../types';
 import type { ShowdownCelebration } from '../hooks/useCombatEvents';
+import { ARENA_VFX_TARGETS, arenaVfxTargetProps } from '../arenaVfxTargets';
 
 export interface OpponentZoneProps {
 	readonly opponentPet: object | null | undefined;
@@ -82,7 +83,7 @@ export const OpponentZone: React.FC<OpponentZoneProps> = ({
 			className={`zone-opp combat-zone combat-zone--opponent ${shakingHero ? 'damage-shake damage-flash' : ''} ${!isPlayerTurn ? 'turn-active' : ''}`}
 		>
 			{opponentPet && (
-				<div data-hero-role="opponent" className="opponent-hero-container">
+				<div data-hero-role="opponent" className="opponent-hero-container" {...arenaVfxTargetProps(ARENA_VFX_TARGETS.opponentHero)}>
 					<BossQuipBubble
 						text={bossQuipText}
 						speakerName={opponentName}

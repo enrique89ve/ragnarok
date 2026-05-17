@@ -74,6 +74,10 @@ Every visual element in the arena belongs to exactly **one** logical layer. Back
 6. **Width / height in %** of the layer (which is canvas-sized). Pixel sizes only for tiny visual primitives (borders, small badges).
 7. **No `vw`/`vh` inside gameplay zones.** The viewport is already normalized by `GameViewport`.
 8. **Mobile landscape is a scaled board.** Do not add vertical mobile variants for poker combat.
+9. **VFX selectors are data contracts.** Imperative VFX code resolves targets
+   through `client/src/game/combat/arenaVfxTargets.ts` and `data-vfx-target`
+   / `data-hero-role` attributes. CSS class names are styling hooks, not VFX
+   API.
 
 ### Mount targets (canonical)
 
@@ -87,6 +91,22 @@ Every visual element in the arena belongs to exactly **one** logical layer. Back
 | `BettingPanel` | `[data-zone="betting-panel"]` in HUD z-range | Persistent control surface |
 | `WagerInfoPanel` | `[data-zone="wager-info-panel"]` in HUD z-range | Persistent info panel |
 | Particle bursts (Pixi) | `#arena-layer-vfx` | Canvas-bounded particles |
+
+### VFX target contract
+
+`arenaVfxTargets.ts` is the central selector registry for arena VFX. Components
+that need to be animated expose a stable attribute, for example:
+
+- `data-vfx-target="community-slot"` for each board card slot.
+- `data-vfx-slot-index="0"` through `data-vfx-slot-index="4"` for ordered
+  board cards.
+- `data-vfx-target="risk-display"` for the current wager/risk display.
+- `data-vfx-layer="game-viewport"` and
+  `data-vfx-layer="game-viewport-wrapper"` for viewport-level effects.
+
+Imperative animation modules may query these attributes through the helper
+functions. They should not fall back to `.community-slot`, `.risk-display`,
+`.pot-display`, `.game-viewport`, or broad `[class*="..."]` selectors.
 
 ### Anti-patterns historically encountered
 

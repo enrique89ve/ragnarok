@@ -16,6 +16,7 @@ import { useElementalBuff } from '../combat/hooks/useElementalBuff';
 import { CardDrawAnimation } from './CardDrawAnimation';
 import { CardPlayAnimation } from './CardPlayAnimation';
 import { MAX_BATTLEFIELD_SIZE } from '../constants/gameConstants';
+import { canPlayHandCard } from './handFanPlayability';
 import './HandFan.css';
 
 interface HandFanProps {
@@ -104,9 +105,7 @@ export const HandFan = React.memo<HandFanProps>(({
     if (originalCard) {
       playingRef.current = true;
       const useBlood = bloodModeCardId === card.instanceId && !!(card.card as any)?.bloodPrice;
-      if (useBlood) {
-        (originalCard as any).payWithBlood = true;
-      }
+      (originalCard as any).payWithBlood = useBlood;
       setPlayedCardData({ name: card.card.name, manaCost: card.card.manaCost || 0, rarity: (card.card as any).rarity });
       setPlayCounter(prev => prev + 1);
       setBloodModeCardId(null);
@@ -224,7 +223,15 @@ export const HandFan = React.memo<HandFanProps>(({
           }
         }
 
-        const canPlay = isPlayerTurn && !isInteractionDisabled && !boardFull && meetsPetEvolution && (isBloodMode ? canAffordBlood : (canAffordMana || canAffordBlood));
+        const canPlay = canPlayHandCard({
+          isPlayerTurn,
+          isInteractionDisabled,
+          boardFull,
+          meetsPetEvolution,
+          isBloodMode,
+          canAffordMana,
+          canAffordBlood,
+        });
         const isHovered = hoveredIndex === index;
         
         const isShaking = shakingCardId === card.instanceId;

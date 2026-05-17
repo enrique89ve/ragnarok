@@ -16,6 +16,7 @@ import React from 'react';
 import { PlayingCard } from '../components/PlayingCard';
 import { PokerCard } from '../../types/PokerCombatTypes';
 import { isCardInWinningHand, FACEDOWN_PLACEHOLDER_CARD } from '../utils/combatArenaUtils';
+import { arenaVfxCommunitySlotProps } from '../arenaVfxTargets';
 
 export interface BoardZoneProps {
 	readonly communityCards: {
@@ -51,7 +52,7 @@ export const BoardZone: React.FC<BoardZoneProps> = ({
 			<div className="unified-community community-cards-section zone-community">
 				{showFaith && communityCards.faith.length > 0 ? (
 					communityCards.faith.map((card, idx) => (
-						<div key={`faith-${idx}`} className={`community-slot ${highlightClass(card, showdownWinningCards)}`}>
+						<div key={`faith-${idx}`} className={`community-slot ${highlightClass(card, showdownWinningCards)}`} {...arenaVfxCommunitySlotProps(idx)}>
 							<div className={glowClass(card, showdownWinningCards)}>
 								<PlayingCard card={card} />
 							</div>
@@ -59,13 +60,13 @@ export const BoardZone: React.FC<BoardZoneProps> = ({
 					))
 				) : (
 					[0, 1, 2].map(idx => (
-						<div key={`faith-placeholder-${idx}`} className="community-slot">
+						<div key={`faith-placeholder-${idx}`} className="community-slot" {...arenaVfxCommunitySlotProps(idx)}>
 							<PlayingCard card={FACEDOWN_PLACEHOLDER_CARD} faceDown />
 						</div>
 					))
 				)}
 
-				<div className={`community-slot ${showForesight ? highlightClass(communityCards.foresight, showdownWinningCards) : ''}`}>
+				<div className={`community-slot ${showForesight ? highlightClass(communityCards.foresight, showdownWinningCards) : ''}`} {...arenaVfxCommunitySlotProps(3)}>
 					{showForesight && communityCards.foresight ? (
 						<div className={glowClass(communityCards.foresight, showdownWinningCards)}>
 							<PlayingCard card={communityCards.foresight} />
@@ -75,7 +76,7 @@ export const BoardZone: React.FC<BoardZoneProps> = ({
 					)}
 				</div>
 
-				<div className={`community-slot ${showDestiny ? highlightClass(communityCards.destiny, showdownWinningCards) : ''}`}>
+				<div className={`community-slot ${showDestiny ? highlightClass(communityCards.destiny, showdownWinningCards) : ''}`} {...arenaVfxCommunitySlotProps(4)}>
 					{showDestiny && communityCards.destiny ? (
 						<div className={glowClass(communityCards.destiny, showdownWinningCards)}>
 							<PlayingCard card={communityCards.destiny} />

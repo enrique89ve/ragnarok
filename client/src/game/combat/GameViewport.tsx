@@ -1,4 +1,5 @@
 import React, { useLayoutEffect, useState } from 'react';
+import { ARENA_VFX_LAYERS, arenaVfxLayerProps } from './arenaVfxTargets';
 import './GameViewport.css';
 
 interface GameViewportProps {
@@ -107,8 +108,8 @@ export const GameViewport: React.FC<GameViewportProps> = ({
     .join(' ');
 
   return (
-    <div className={`game-viewport-wrapper ${shakeClasses}`.trim()}>
-      <div className={`game-viewport ${innerClasses}`.trim()} style={style}>
+    <div className={`game-viewport-wrapper ${shakeClasses}`.trim()} {...arenaVfxLayerProps(ARENA_VFX_LAYERS.viewportWrapper)}>
+      <div className={`game-viewport ${innerClasses}`.trim()} style={style} {...arenaVfxLayerProps(ARENA_VFX_LAYERS.viewport)}>
         {children}
       </div>
     </div>

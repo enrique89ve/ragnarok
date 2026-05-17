@@ -32,7 +32,7 @@ import { useGameStore } from '../../../stores/gameStore';
 import { useChessHoverStore } from '../../../stores/chessHoverStore';
 import { Tooltip } from '../../ui/Tooltip';
 import ChessBoard from '../ChessBoard';
-import { ELEMENT_NAMES, PIECE_TYPE_NAMES } from '../ChessPiece';
+import { ELEMENT_NAMES, PIECE_TYPE_NAMES } from '../chessPieceLabels';
 import { ELEMENT_COLORS, ELEMENT_ICONS } from '../../../types/ChessTypes';
 
 const COMPACT_FRAME_STYLE: React.CSSProperties = { width: 72, height: 90 };

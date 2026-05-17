@@ -10,9 +10,16 @@ import {
   calculateStaminaFromHP,
   DEFAULT_PET_STATS,
   type PetData,
+  type PokerCombatDeterministicOptions,
 } from '../types/PokerCombatTypes';
+import type { PokerCombatAdapterInit } from '../combat/pokerCombatAdapterContract';
+import {
+  canonicalOwnerToViewerActor,
+  type P2PViewerPerspective,
+} from '../p2p/p2pPerspective';
+import { createSeededIdGen } from '../utils/seededRng';
 import { DEFAULT_PORTRAIT } from '../utils/art/artMapping';
-import type { GameOverSubPhase } from '../flow/round/types';
+import type { CombatHandoff, GameOverSubPhase } from '../flow/round/types';
 
 export type CampaignData = {
   readonly mission: CampaignMission;
@@ -28,6 +35,30 @@ export type BuildPetDataInput = {
   readonly piece: ChessPiece;
   readonly army: ArmySelection;
   readonly resolvePortrait: (norseHeroId: string) => string | undefined;
+};
+
+export type PokerCombatHandoffPlan = {
+  readonly handoff: CombatHandoff;
+  readonly adapterInit: PokerCombatAdapterInit;
+};
+
+export type DerivePokerCombatHandoffInput = {
+  readonly attacker: ChessPiece;
+  readonly defender: ChessPiece;
+  readonly localArmy: ArmySelection | null;
+  readonly remoteArmy: ArmySelection;
+  readonly perspective: P2PViewerPerspective;
+  readonly matchSeed: string | null | undefined;
+  readonly chessMoveCount: number;
+  readonly resolvePortrait: (norseHeroId: string) => string | undefined;
+};
+
+export type DeriveDeterministicPokerCombatInput = {
+  readonly matchSeed: string;
+  readonly attacker: Pick<ChessPiece, 'id' | 'position'>;
+  readonly defender: Pick<ChessPiece, 'id' | 'position'>;
+  readonly chessMoveCount: number;
+  readonly slotsSwapped: boolean;
 };
 
 /*
@@ -151,6 +182,110 @@ export function getCombatSlotMapping(localViewerIsAttacker: boolean): CombatSlot
   return {
     slotsSwapped: !localViewerIsAttacker,
     firstStrikeTarget: localViewerIsAttacker ? 'opponent' : 'player',
+  };
+}
+
+export function deriveDeterministicPokerCombat(
+  input: DeriveDeterministicPokerCombatInput,
+): PokerCombatDeterministicOptions {
+  const combatScope = [
+    'poker-combat',
+    input.attacker.id,
+    input.defender.id,
+    input.attacker.position.row,
+    input.attacker.position.col,
+    input.defender.position.row,
+    input.defender.position.col,
+    input.chessMoveCount,
+  ].join(':');
+
+  return {
+    combatId: createSeededIdGen(input.matchSeed, combatScope)(),
+    deckSeed: `${input.matchSeed}:poker-deck:${input.attacker.id}:${input.defender.id}:${input.chessMoveCount}`,
+    playerRole: input.slotsSwapped ? 'defender' : 'attacker',
+  };
+}
+
+export function derivePokerCombatHandoff(
+  input: DerivePokerCombatHandoffInput,
+): PokerCombatHandoffPlan | null {
+  const canonicalArmies = input.perspective.localCanonicalSide === 'player'
+    ? {
+        player: input.localArmy,
+        opponent: input.remoteArmy,
+      }
+    : {
+        player: input.remoteArmy,
+        opponent: input.localArmy ?? input.remoteArmy,
+      };
+  const attackerArmy = getArmyForOwner(input.attacker.owner, canonicalArmies.player, canonicalArmies.opponent);
+  const defenderArmy = getArmyForOwner(input.defender.owner, canonicalArmies.player, canonicalArmies.opponent);
+
+  if (!attackerArmy || !defenderArmy) return null;
+
+  const attackerPet = buildPetDataFromChessPiece({
+    piece: input.attacker,
+    army: attackerArmy,
+    resolvePortrait: input.resolvePortrait,
+  });
+  const defenderPet = buildPetDataFromChessPiece({
+    piece: input.defender,
+    army: defenderArmy,
+    resolvePortrait: input.resolvePortrait,
+  });
+  const attackerActor = canonicalOwnerToViewerActor(input.attacker.owner, input.perspective);
+  const defenderActor = canonicalOwnerToViewerActor(input.defender.owner, input.perspective);
+  const attackerName = attackerPet.name || `${attackerActor === 'local' ? 'Player' : 'Opponent'} ${input.attacker.type}`;
+  const defenderName = defenderPet.name || `${defenderActor === 'local' ? 'Player' : 'Opponent'} ${input.defender.type}`;
+  const { slotsSwapped, firstStrikeTarget } = getCombatSlotMapping(attackerActor === 'local');
+  const deterministic = input.matchSeed
+    ? deriveDeterministicPokerCombat({
+        matchSeed: input.matchSeed,
+        attacker: input.attacker,
+        defender: input.defender,
+        chessMoveCount: input.chessMoveCount,
+        slotsSwapped,
+      })
+    : undefined;
+
+  const adapterInit: PokerCombatAdapterInit = !slotsSwapped
+    ? {
+        playerId: input.attacker.id,
+        playerName: attackerName,
+        playerPet: attackerPet,
+        opponentId: input.defender.id,
+        opponentName: defenderName,
+        opponentPet: defenderPet,
+        skipMulligan: true,
+        playerKingId: attackerArmy.king?.id,
+        opponentKingId: defenderArmy.king?.id,
+        firstStrikeTarget,
+        deterministic,
+      }
+    : {
+        playerId: input.defender.id,
+        playerName: defenderName,
+        playerPet: defenderPet,
+        opponentId: input.attacker.id,
+        opponentName: attackerName,
+        opponentPet: attackerPet,
+        skipMulligan: true,
+        playerKingId: defenderArmy.king?.id,
+        opponentKingId: attackerArmy.king?.id,
+        firstStrikeTarget,
+        deterministic,
+      };
+
+  return {
+    handoff: {
+      attacker: input.attacker,
+      defender: input.defender,
+      playerArmy: attackerArmy,
+      opponentArmy: defenderArmy,
+      slotsSwapped,
+      firstStrikeTarget,
+    },
+    adapterInit,
   };
 }
 

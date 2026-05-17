@@ -112,7 +112,7 @@ Prioridad alta (mayor impacto visual):
 | `game/components/HUDOverlay.css` | Overlay colors |
 
 ### 🟢 Baja Prioridad (efectos especiales — OK mantener valores raw)
-- Archivos de partículas/animaciones (`card-particles`, `combat-animations.css`)
+- Archivos de partículas/animaciones (`combat-animations.css`)
 - Efectos holográficos (`holoEffect.css`) — dependen de Physics exactos
 - `AttackStyles.css`, `spell-screen-effects.css` — efectos vibrantes intencionales
 

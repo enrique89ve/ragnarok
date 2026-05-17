@@ -93,10 +93,13 @@ __tests__/
 !client/src/data/HiveKeychain.test.ts
 !client/src/game/stores/starterStore.test.ts
 !client/src/game/stores/gameStore.test.ts
+!client/src/game/stores/combat/chessAnimationSlice.test.ts
 !client/src/game/deck/heroDeckRules.test.ts
 !client/src/game/utils/cards/cardLevelScaling.test.ts
 !client/src/game/components/chess/chessBoardInteractionRules.test.ts
 !client/src/game/components/gameLogAdapter.test.ts
+!client/src/game/components/handFanPlayability.test.ts
+!client/src/game/combat/aiAttackResolution.test.ts
 !client/src/game/combat/rules/pokerActionRules.test.ts
 !client/src/game/combat/components/PokerP2PTurnStatus.test.ts
 !client/src/game/components/marketplace/runePackExchange.test.ts
@@ -116,6 +119,9 @@ __tests__/
 !client/src/game/match/modes/campaign/resolver.test.ts
 !client/src/game/match/modes/p2p/resolver.test.ts
 !client/src/game/match/modes/p2p/wireSync/resultProposalGuard.test.ts
+!client/src/game/combat/decision/pokerTurnPolicy.test.ts
+!client/src/game/coordinator/gameCoordinatorRules.test.ts
+!client/src/game/coordinator/hooks/chessTurnPolicy.test.ts
 !client/src/game/coordinator/hooks/chessAITurnDriver.test.ts
 !client/src/lib/stores/useWarbandStore.test.ts
 !client/src/game/protocol/sessionKey.test.ts
@@ -128,6 +134,7 @@ __tests__/
 !client/src/game/protocol/phase0.smoke.test.ts
 !shared/p2p-wire/chess.test.ts
 !shared/p2p-wire/combat.test.ts
+!client/src/game/p2p/p2pPerspective.test.ts
 *.spec.js
 *.spec.ts
 *.test.tsx

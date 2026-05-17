@@ -53,7 +53,7 @@ const clearTimer = (timerRef: { current: TimeoutId | null }): void => {
 };
 
 export function useChessBoardInteractions(input: UseChessBoardInteractionsInput) {
-  const { disabled, onCombatTriggered } = input;
+  const { disabled } = input;
   const { playSoundEffect } = useAudio();
   const [noMovesMessage, setNoMovesMessage] = useState<string | null>(null);
   const [instantKillFlash, setInstantKillFlash] = useState<InstantKillFlash | null>(null);
@@ -164,11 +164,7 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
     }
 
     completeAttackAnimation();
-
-    if (!animation.isInstantKill) {
-      onCombatTriggered?.(animation.attacker.id, animation.defender.id);
-    }
-  }, [pendingAttackAnimation, completeAttackAnimation, onCombatTriggered, playSoundEffect]);
+  }, [pendingAttackAnimation, completeAttackAnimation, playSoundEffect]);
 
   useEffect(() => {
     if (!lastInstantKill) return undefined;

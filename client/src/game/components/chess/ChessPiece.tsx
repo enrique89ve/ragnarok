@@ -5,6 +5,7 @@ import type { MatchupGlow } from '../../utils/chess/elementMatchupUtils';
 import { assetPath } from '../../utils/assetPath';
 import { useGameStore } from '../../stores/gameStore';
 import { useChessHoverStore } from '../../stores/chessHoverStore';
+import { PIECE_TYPE_NAMES } from './chessPieceLabels';
 import './ChessPiece.css';
 
 const ELEMENT_IMAGES: Record<ElementType, string | null> = {
@@ -81,25 +82,6 @@ interface ChessPieceProps {
   isPlayerTurn: boolean;
   matchupGlow?: MatchupGlow;
 }
-
-export const PIECE_TYPE_NAMES: Record<PieceType, string> = {
-  king: 'Protogenoi',
-  queen: 'Sovereign',
-  rook: 'Shaper',
-  bishop: 'Luminary',
-  knight: 'Ethereal',
-  pawn: 'Einherjar'
-};
-
-export const ELEMENT_NAMES: Record<ElementType, string> = {
-  fire: 'Fire',
-  water: 'Water',
-  wind: 'Wind',
-  earth: 'Earth',
-  holy: 'Holy',
-  shadow: 'Shadow',
-  neutral: 'Neutral'
-};
 
 const OWNER_CLASSES = {
   player: 'bg-linear-to-b from-blue-900 to-blue-950',

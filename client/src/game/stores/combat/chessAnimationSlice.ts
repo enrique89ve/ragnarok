@@ -8,11 +8,11 @@
  * freshness markers consumed by UI hooks (useChessBoardInteractions,
  * useKingChessAbility, ChessBoard).
  *
- * Separating them from gameplay slices keeps engines pure and portable
- * to shared/protocol-core/. Cross-slice writes from chessCombatSlice
- * (instant-kill recording) and kingAbilitySlice (mine-trigger recording)
- * route through this slice's setters via `get()` — see SCOPE A of the
- * separation-of-layers plan.
+ * Separating the marker fields from gameplay state keeps engines pure and
+ * portable to shared/protocol-core/. `startAttackAnimation` remains the
+ * existing command/event ingress for local and P2P attack envelopes, so it
+ * queues the visual marker and immediately delegates mechanics to the chess
+ * combat resolver. Animation completion may only clear this marker.
  */
 
 import { StateCreator } from 'zustand';
@@ -26,6 +26,7 @@ import {
   ChessAnimationSlice,
   UnifiedCombatStore
 } from './types';
+import { resolveChessAttackIntent } from './chessCombatSlice';
 
 export const createChessAnimationSlice: StateCreator<
   UnifiedCombatStore,
@@ -38,16 +39,22 @@ export const createChessAnimationSlice: StateCreator<
   lastMineTriggered: null,
 
   startAttackAnimation: (attacker: ChessPiece, defender: ChessPiece, isInstantKill: boolean) => {
+    const attack = {
+      attacker,
+      defender,
+      attackerPosition: { ...attacker.position },
+      defenderPosition: { ...defender.position },
+      isInstantKill
+    };
+
     set({
       pendingAttackAnimation: {
-        attacker,
-        defender,
-        attackerPosition: { ...attacker.position },
-        defenderPosition: { ...defender.position },
-        isInstantKill,
+        ...attack,
         timestamp: get()._nextLogTick()
       }
     });
+
+    resolveChessAttackIntent(get, set, attack);
   },
 
   clearAttackAnimation: () => {

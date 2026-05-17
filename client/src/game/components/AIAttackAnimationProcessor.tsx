@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useAIAttackAnimationStore, AIAttackEvent } from '../stores/aiAttackAnimationStore';
-import { useGameStore } from '../stores/gameStore';
-import { applyDamageToState, CombatStep } from '../services/AttackResolutionService';
-import { CombatEventBus } from '../services/CombatEventBus';
+import {
+  createAIAttackResolutionStoreDeps,
+  resolveAIAttackEvent
+} from '../combat/aiAttackResolution';
 import { playHeroAttackFX } from '../animations/HeroAttackFX';
 import gsap from 'gsap';
 import { debug } from '../config/debugConfig';
@@ -19,9 +20,7 @@ const AIAttackAnimationProcessor: React.FC = () => {
   const isAnimating = useAIAttackAnimationStore(state => state.isAnimating);
   const startAnimation = useAIAttackAnimationStore(state => state.startAnimation);
   const completeAnimation = useAIAttackAnimationStore(state => state.completeAnimation);
-  const markDamageApplied = useAIAttackAnimationStore(state => state.markDamageApplied);
-  const deferDamage = useAIAttackAnimationStore(state => state.deferDamage);
-  
+
   // Debug: Log component render with store state on every render
   debug.animation(`[AI-ATTACK-ANIM-PROC] Component render - pendingAttacks: ${pendingAttacks.length}, isAnimating: ${isAnimating}`);
   
@@ -33,95 +32,64 @@ const AIAttackAnimationProcessor: React.FC = () => {
     }
   }, [pendingAttacks]);
   
-  const [animState, setAnimState] = useState<AnimationState>({
+  const [, setAnimState] = useState<AnimationState>({
     attackerPos: null,
     targetPos: null,
     phase: 'idle'
   });
-  const [displayEvent, setDisplayEvent] = useState<AIAttackEvent | null>(null);
-  
-  const applyDamageFromEvent = useCallback((event: AIAttackEvent) => {
-    const currentDeferDamage = useAIAttackAnimationStore.getState().deferDamage;
-    debug.animation(`[AI-ATTACK-ANIM] applyDamageFromEvent called: deferDamage=${currentDeferDamage}, damageApplied=${event.damageApplied}`);
-    
-    if (!currentDeferDamage) {
-      debug.animation(`[AI-ATTACK-ANIM] Skipping - damage not deferred (legacy mode)`);
-      markDamageApplied();
-      return;
-    }
-    
-    if (event.damageApplied) {
-      debug.animation(`[AI-ATTACK-ANIM] Skipping - damage already applied for: ${event.attackerName}`);
-      markDamageApplied();
-      return;
-    }
-    
-    debug.animation(`[AI-ATTACK-ANIM] Applying real-time damage: ${event.attackerName} -> ${event.targetName} (${event.damage} dmg)`);
-    
-    // PROFESSIONAL EVENT-DRIVEN DAMAGE: Emit IMPACT_PHASE event for AI attacks
-    // This ensures poker HP syncs for AI attacks just like player attacks
-    // Hero targetId uses consistent format: 'player-hero' or 'opponent-hero'
-    // Minion targetId uses the actual instanceId from the event
-    const isHeroTarget = event.targetType === 'hero';
-    let targetId: string | null = null;
-    
-    if (isHeroTarget) {
-      // AI-initiated attacks (attackerSide='opponent') target the player hero
-      // Player-initiated attacks (attackerSide='player') target the opponent hero
-      targetId = event.attackerSide === 'opponent' ? 'player-hero' : 'opponent-hero';
-    } else if (event.targetId) {
-      // For minion attacks, use the actual instanceId
-      targetId = event.targetId;
-    }
-    
-    // Emit event only if we have a valid targetId
-    if (targetId) {
-      CombatEventBus.emitImpactPhase({
-        attackerId: event.attackerId,
-        targetId: targetId,
-        damageToTarget: event.damage,
-        damageToAttacker: event.counterDamage
-      });
-      debug.animation(`[AI-ATTACK-ANIM] Emitted IMPACT_PHASE: ${event.attackerId} -> ${targetId} (${event.damage} dmg)`);
-    } else {
-      debug.warn(`[AI-ATTACK-ANIM] Skipping IMPACT_PHASE: missing targetId for minion attack (damage still applied)`);
-    }
-    
-    const step: CombatStep = {
-      id: event.combatStepId,
-      attackerId: event.attackerId,
-      attackerName: event.attackerName,
-      attackerAttack: event.damage,
-      targetId: event.targetId,
-      targetName: event.targetName,
-      targetType: event.targetType,
-      targetAttack: event.counterDamage,
-      damage: event.damage,
-      counterDamage: event.counterDamage,
-      attackerHasDivineShield: event.attackerHasDivineShield,
-      defenderHasDivineShield: event.defenderHasDivineShield,
-      resolved: false,
-      timestamp: event.timestamp,
-      attackerSide: event.attackerSide
-    };
-    
-    const currentGameState = useGameStore.getState().gameState;
-    const newState = applyDamageToState(currentGameState, step);
-    useGameStore.getState().setGameState(newState);
-    markDamageApplied();
-  }, [markDamageApplied]);
+  const [, setDisplayEvent] = useState<AIAttackEvent | null>(null);
+  const resolvedAttackIdsRef = useRef<Set<string>>(new Set());
 
   const getCardElement = useCallback((instanceId: string): HTMLElement | null => {
     return document.querySelector(`[data-instance-id="${instanceId}"]`);
   }, []);
 
-  const getHeroElement = (hero: 'player' | 'opponent'): HTMLElement | null => {
+  const getHeroElement = useCallback((hero: 'player' | 'opponent'): HTMLElement | null => {
     return document.querySelector(`.${hero}-hero-zone, .battlefield-hero-square.${hero}`);
-  };
+  }, []);
 
   const fxTimelineRef = useRef<gsap.core.Timeline | null>(null);
 
   const fallbackTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const clearFallbackTimers = useCallback(() => {
+    fallbackTimersRef.current.forEach(clearTimeout);
+    fallbackTimersRef.current = [];
+  }, []);
+
+  const killActiveTimeline = useCallback(() => {
+    if (fxTimelineRef.current) {
+      fxTimelineRef.current.kill();
+      fxTimelineRef.current = null;
+    }
+  }, []);
+
+  const completeVisualAnimation = useCallback(() => {
+    clearFallbackTimers();
+    setAnimState({ attackerPos: null, targetPos: null, phase: 'idle' });
+    setDisplayEvent(null);
+    fxTimelineRef.current = null;
+    completeAnimation();
+  }, [clearFallbackTimers, completeAnimation]);
+
+  const resolveStartedAttack = useCallback((event: AIAttackEvent) => {
+    resolveAIAttackEvent(
+      event,
+      createAIAttackResolutionStoreDeps({
+        hasDamageBeenApplied: (attackEvent) => resolvedAttackIdsRef.current.has(attackEvent.id),
+        onDamageApplied: (attackEvent) => {
+          resolvedAttackIdsRef.current.add(attackEvent.id);
+        }
+      })
+    );
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      clearFallbackTimers();
+      killActiveTimeline();
+    };
+  }, [clearFallbackTimers, killActiveTimeline]);
 
   useEffect(() => {
     debug.animation(`[AI-ATTACK-ANIM-PROC] useEffect triggered: pendingAttacks=${pendingAttacks.length}, isAnimating=${isAnimating}`);
@@ -129,7 +97,10 @@ const AIAttackAnimationProcessor: React.FC = () => {
       const event = startAnimation();
       debug.animation(`[AI-ATTACK-ANIM-PROC] Starting animation event:`, event?.attackerName, '->', event?.targetName);
       if (event) {
+        clearFallbackTimers();
+        killActiveTimeline();
         setDisplayEvent(event);
+        resolveStartedAttack(event);
 
         // Use GSAP+Pixi FX for hero attacks
         const attackerEl = getCardElement(event.attackerId);
@@ -147,13 +118,9 @@ const AIAttackAnimationProcessor: React.FC = () => {
             element: 'neutral',
             onImpact: () => {
               setAnimState(prev => ({ ...prev, phase: 'impact' }));
-              applyDamageFromEvent(event);
             },
             onComplete: () => {
-              setAnimState({ attackerPos: null, targetPos: null, phase: 'idle' });
-              setDisplayEvent(null);
-              fxTimelineRef.current = null;
-              completeAnimation();
+              completeVisualAnimation();
             }
           });
           return;
@@ -182,38 +149,35 @@ const AIAttackAnimationProcessor: React.FC = () => {
             .to(minionAttackerEl, { x: dx * lungePercent, y: dy * lungePercent, scale: 1.05, duration: 0.18, ease: 'power2.out' })
             .call(() => {
               setAnimState(prev => ({ ...prev, phase: 'impact' }));
-              applyDamageFromEvent(event);
             })
             .to(minionAttackerEl, { duration: 0.08 })
             .to(minionAttackerEl, { x: 0, y: 0, scale: 1, duration: 0.22, ease: 'power2.inOut' })
             .call(() => {
-              setAnimState({ attackerPos: null, targetPos: null, phase: 'idle' });
-              setDisplayEvent(null);
-              completeAnimation();
+              completeVisualAnimation();
             });
           fxTimelineRef.current = tl;
         } else {
           const t1 = setTimeout(() => {
-            applyDamageFromEvent(event);
+            setAnimState(prev => ({ ...prev, phase: 'impact' }));
           }, 300);
           const t2 = setTimeout(() => {
-            setDisplayEvent(null);
-            completeAnimation();
+            completeVisualAnimation();
           }, 1500);
           fallbackTimersRef.current.push(t1, t2);
         }
       }
     }
-
-    return () => {
-      fallbackTimersRef.current.forEach(clearTimeout);
-      fallbackTimersRef.current = [];
-      if (fxTimelineRef.current) {
-        fxTimelineRef.current.kill();
-        fxTimelineRef.current = null;
-      }
-    };
-  }, [pendingAttacks.length, isAnimating, startAnimation, completeAnimation, getCardElement, applyDamageFromEvent]);
+  }, [
+    pendingAttacks.length,
+    isAnimating,
+    startAnimation,
+    getCardElement,
+    getHeroElement,
+    clearFallbackTimers,
+    killActiveTimeline,
+    completeVisualAnimation,
+    resolveStartedAttack
+  ]);
 
   // GSAP handles all animations via direct DOM manipulation — no visual overlay needed
   return null;

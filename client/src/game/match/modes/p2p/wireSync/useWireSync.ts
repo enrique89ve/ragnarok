@@ -27,6 +27,7 @@ import type { GameCommandEnvelope, WireGameCommand } from '../../../../hooks/p2p
 import { useWarbandStore, selectArmy } from '../../../../../lib/stores/useWarbandStore';
 import { deriveCanonicalSide, isChessAttackInstantKill, tryParseChessCommandEnvelope, type ChessAttackPieceKind, type ChessCommandEnvelope } from '../../../../../../../shared/p2p-wire/chess';
 import { resetChessWireSender, setChessSendObserver } from '../../../../p2p/chessWireSender';
+import { getP2PProcessFlags, getP2PTransportRole } from '../../../../p2p/p2pPerspective';
 import type { P2PMessage } from '../../../../p2p/messages';
 import { parseWireMessage } from '../../../../p2p/messageSchemas';
 import { CombatAction, CombatPhase, type PokerCombatState } from '../../../../types/PokerCombatTypes';
@@ -86,13 +87,14 @@ export function useWireSync() {
 	//   - `isWsHost` — WS-resolved host hint. Used by the seed_reveal handshake to
 	//     derive the canonical chess side via `deriveCanonicalSide(matchSeed,
 	//     isWsHost)`. This is the legitimate use of the WS hint.
-	//   - `isCardsAuthority` — "am I authoritative for cards game commands?". Today
-	//     cards is host-auth so this aliases isWsHost. OPEN-8 will migrate cards
-	//     to symmetric (chess-style); when that lands, isCardsAuthority disappears
-	//     and `isFirstMover` (below, derived from Authority) becomes the gate.
-	//     Audit grep target during the migration.
+	//   - `processFlags` — pure process gates derived from transport role and
+	//     current authority mode. UI code should consume viewer/canonical
+	//     perspective instead of branching on these flags.
 	const isWsHost = usePeerStore(state => state.isHost);
-	const isCardsAuthority = isWsHost;
+	const transportRole = getP2PTransportRole(isWsHost);
+	const processFlags = getP2PProcessFlags({ transportRole });
+	const isCardsAuthority = processFlags.broadcastsCardsState;
+	const shouldSendGuestKeepAlive = processFlags.sendsGuestKeepAlive;
 	// `isFirstMover` is the canonical symmetric-protocol concept (chess uses it
 	// implicitly; cards will after OPEN-8). Derived from MatchContext.activeMatch
 	// via `deriveAuthority`. Today no chess auth code reads isHost, so this
@@ -2165,12 +2167,12 @@ export function useWireSync() {
 
 	// Client pings host every 10s to keep the connection alive
 	useEffect(() => {
-		if (connectionState !== 'connected' || isCardsAuthority) return;
+		if (connectionState !== 'connected' || !shouldSendGuestKeepAlive) return;
 		const interval = setInterval(() => {
 			send({ type: 'ping' });
 		}, 10_000);
 		return () => clearInterval(interval);
-	}, [connectionState, isCardsAuthority, send]);
+	}, [connectionState, shouldSendGuestKeepAlive, send]);
 
 	// Host sends state hash check every 2s for anti-cheat verification
 	useEffect(() => {
@@ -2341,6 +2343,6 @@ export function useWireSync() {
 		downloadSessionLog,
 		getSignedTranscriptRoot,
 		isConnected: connectionState === 'connected',
-		isHost: isCardsAuthority,
+		isHost: transportRole === 'host',
 	};
 }

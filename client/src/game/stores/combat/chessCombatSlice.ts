@@ -40,6 +40,60 @@ import {
 } from '@shared/protocol-core/chess';
 import type { ChessReduceResult } from '@shared/protocol-core/chess';
 
+export interface ChessAttackResolutionInput {
+  attacker: ChessPiece;
+  defender: ChessPiece;
+  attackerPosition: ChessBoardPosition;
+  defenderPosition: ChessBoardPosition;
+  isInstantKill: boolean;
+}
+
+export function resolveChessAttackIntent(
+  getState: () => UnifiedCombatStore,
+  setState: (partial: Partial<UnifiedCombatStore>) => void,
+  attack: ChessAttackResolutionInput
+): void {
+  const state = getState();
+
+  debug.chess(`[Chess] Resolving attack intent: ${attack.attacker.heroName} -> ${attack.defender.heroName}`);
+
+  if (attack.isInstantKill) {
+    state.executeInstantKill(attack.attacker, attack.defender, attack.defenderPosition);
+    return;
+  }
+
+  const mineResult = state.checkAndTriggerMine(
+    attack.defenderPosition,
+    attack.attacker.owner,
+    attack.attacker.id,
+    attack.attacker.type
+  );
+  if (mineResult && mineResult.triggered) {
+    debug.chess(`[Chess] Mine triggered before combat! ${attack.attacker.owner} loses ${mineResult.staPenalty} STA`);
+    const attackerPiece = getState().boardState.pieces.find(p => p.id === attack.attacker.id);
+    if (attackerPiece) {
+      const newStamina = Math.max(0, attackerPiece.stamina - mineResult.staPenalty);
+      state.updatePieceStamina(attack.attacker.id, newStamina);
+    }
+  }
+
+  const collision: ChessCollision = {
+    attacker: attack.attacker,
+    defender: attack.defender,
+    attackerPosition: attack.attackerPosition,
+    defenderPosition: attack.defenderPosition
+  };
+  const latestState = getState();
+
+  setState({
+    pendingCombat: collision,
+    boardState: {
+      ...latestState.boardState,
+      gameStatus: 'combat'
+    }
+  });
+}
+
 export const createChessCombatSlice: StateCreator<
   UnifiedCombatStore,
   [],
@@ -498,15 +552,13 @@ export const createChessCombatSlice: StateCreator<
         const isInstantKill = isInstantKillAttacker || isInstantKillDefender;
         
         if (isInstantKill) {
-          const reason = isInstantKillAttacker 
-            ? `${selectedPiece.type} uses Valkyrie weapon` 
+          const reason = isInstantKillAttacker
+            ? `${selectedPiece.type} uses Valkyrie weapon`
             : `pawn is weak and cannot defend`;
           debug.chess(`[Chess] Instant kill queued: ${selectedPiece.heroName} -> ${defender.heroName} (${reason})`);
           collision.instantKill = true;
         }
-        
-        state.startAttackAnimation(selectedPiece, defender, isInstantKill);
-        
+
         set({
           boardState: {
             ...state.boardState,
@@ -515,7 +567,9 @@ export const createChessCombatSlice: StateCreator<
             attackMoves: []
           }
         });
-        
+
+        state.startAttackAnimation(selectedPiece, defender, isInstantKill);
+
         return collision;
       }
     }
@@ -634,47 +688,12 @@ export const createChessCombatSlice: StateCreator<
     const animation = state.pendingAttackAnimation;
 
     if (!animation) {
-      debug.chess('[Chess] No pending animation to complete');
+      debug.chess('[Chess] No pending animation to clear');
       return;
     }
 
-    debug.chess(`[Chess] Completing attack animation: ${animation.attacker.heroName} -> ${animation.defender.heroName}`);
-
+    debug.chess(`[Chess] Clearing attack animation marker: ${animation.attacker.heroName} -> ${animation.defender.heroName}`);
     state.clearAttackAnimation();
-
-    if (animation.isInstantKill) {
-      state.executeInstantKill(animation.attacker, animation.defender, animation.defenderPosition);
-    } else {
-      const mineResult = state.checkAndTriggerMine(
-        animation.defenderPosition,
-        animation.attacker.owner,
-        animation.attacker.id,
-        animation.attacker.type
-      );
-      if (mineResult && mineResult.triggered) {
-        debug.chess(`[Chess] Mine triggered before combat! ${animation.attacker.owner} loses ${mineResult.staPenalty} STA`);
-        const attackerPiece = get().boardState.pieces.find(p => p.id === animation.attacker.id);
-        if (attackerPiece) {
-          const newStamina = Math.max(0, attackerPiece.stamina - mineResult.staPenalty);
-          state.updatePieceStamina(animation.attacker.id, newStamina);
-        }
-      }
-
-      const collision: ChessCollision = {
-        attacker: animation.attacker,
-        defender: animation.defender,
-        attackerPosition: animation.attackerPosition,
-        defenderPosition: animation.defenderPosition
-      };
-
-      set({
-        pendingCombat: collision,
-        boardState: {
-          ...state.boardState,
-          gameStatus: 'combat'
-        }
-      });
-    }
   },
 
   resolveCombat: (result: ChessCombatResult) => {

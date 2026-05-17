@@ -12,11 +12,17 @@
  * - Combat Log: Records combat history for debugging
  */
 
-import { CombatEventBus, CombatEvent, DamageResolvedEvent, AttackBlockedEvent, ImpactPhaseEvent } from './CombatEventBus';
+import { CombatEventBus, CombatEvent, AttackBlockedEvent, ImpactPhaseEvent } from './CombatEventBus';
 import { getPokerCombatAdapterState } from '../hooks/usePokerCombatAdapter';
 import { useUnifiedUIStore } from '../stores/unifiedUIStore';
 import { scheduleDamageEffect } from '../animations/UnifiedAnimationOrchestrator';
 import { debug } from '../config/debugConfig';
+import {
+  getArenaVfxCombatantTarget,
+  getArenaVfxHeroTarget,
+  getArenaVfxMinionFieldTarget,
+  getElementCenter,
+} from '../combat/arenaVfxTargets';
 
 let initialized = false;
 const unsubscribers: (() => void)[] = [];
@@ -204,64 +210,32 @@ function getPositionForTarget(targetId: string): { x: number; y: number } | null
   // Check for hero targets
   if (targetId.includes('hero') || targetId === 'opponent-hero' || targetId === 'player-hero') {
     const isOpponent = targetId.includes('opponent') || targetId === 'opponent-hero';
-    const heroSelector = isOpponent 
-      ? '.opponent-hero-zone, .opponent-hero-portrait, [class*="opponent-hero"]'
-      : '.player-hero-zone, .player-hero-portrait, [class*="player-hero"]';
-    
-    const heroElement = document.querySelector(heroSelector);
+    const heroElement = getArenaVfxHeroTarget(isOpponent ? 'opponent' : 'player');
     if (heroElement) {
-      const rect = heroElement.getBoundingClientRect();
-      return {
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 3 // Position damage near top of hero (health area)
-      };
+      return getElementCenter(heroElement, 1 / 3);
     }
-    
+
     // Fallback positions if DOM element not found
     return isOpponent 
       ? { x: window.innerWidth / 2, y: window.innerHeight * 0.2 }
       : { x: window.innerWidth / 2, y: window.innerHeight * 0.8 };
   }
-  
+
   // Try to find minion by instance ID in DOM
-  const minionSelector = `[data-instance-id="${targetId}"], [data-card-id="${targetId}"]`;
-  let minionElement = document.querySelector(minionSelector);
-  
-  // Try finding by card in battlefield
-  if (!minionElement) {
-    const allCards = document.querySelectorAll('.battlefield-card, .card-frame, [class*="minion"]');
-    // Look for card with matching ID in any attribute
-    for (const card of allCards) {
-      const instanceId = card.getAttribute('data-instance-id') || 
-                        card.getAttribute('data-card-id') ||
-                        card.getAttribute('id');
-      if (instanceId === targetId || instanceId?.includes(targetId)) {
-        minionElement = card;
-        break;
-      }
-    }
-  }
-  
+  const minionElement = getArenaVfxCombatantTarget(targetId);
+
   if (minionElement) {
-    const rect = minionElement.getBoundingClientRect();
-    return {
-      x: rect.left + rect.width / 2,
-      y: rect.top + rect.height / 4 // Position damage near top of card (health area)
-    };
+    return getElementCenter(minionElement, 1 / 4);
   }
-  
-  const opponentBattlefield = document.querySelector('.opponent-battlefield, [class*="opponent-field"], [class*="enemy-field"]');
-  const playerBattlefield = document.querySelector('.player-battlefield, [class*="player-field"], [class*="friendly-field"]');
-  
-  if (opponentBattlefield) {
-    const rect = opponentBattlefield.getBoundingClientRect();
-    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+
+  const opponentBattlefield = getArenaVfxMinionFieldTarget('opponent');
+  const playerBattlefield = getArenaVfxMinionFieldTarget('player');
+  const preferredBattlefield = opponentBattlefield ?? playerBattlefield;
+
+  if (preferredBattlefield) {
+    return getElementCenter(preferredBattlefield);
   }
-  if (playerBattlefield) {
-    const rect = playerBattlefield.getBoundingClientRect();
-    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-  }
-  
+
   return { x: window.innerWidth / 2, y: window.innerHeight * 0.4 };
 }
 

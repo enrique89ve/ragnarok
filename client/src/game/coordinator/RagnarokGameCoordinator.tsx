@@ -14,7 +14,6 @@ import { useKingChessAbility } from '../hooks/useKingChessAbility';
 import { useChessAITurn } from './hooks/useChessAITurn';
 import { useUnifiedCombatStore } from '../stores/unifiedCombatStore';
 import { useGameFlowStore } from '../stores/gameFlowStore';
-import type { CombatHandoff } from '../flow/round/types';
 import { debug } from '../config/debugConfig';
 import {
   selectArmy,
@@ -23,19 +22,21 @@ import {
   useWarbandStore,
 } from '../../lib/stores/useWarbandStore';
 import { useGameStore } from '../stores/gameStore';
+import {
+  createP2PViewerPerspective,
+  mapViewerValuesToCanonical,
+} from '../p2p/p2pPerspective';
 import { createSeededIdGen, cryptoIdGen, cryptoRng } from '../utils/seededRng';
 import { resolveHeroPortrait } from '../utils/art/artMapping';
 import { useCampaignGameBootstrap } from './hooks/useCampaignGameBootstrap';
 import { useBossRuleEffects } from './hooks/useBossRuleEffects';
 import {
-  buildPetDataFromChessPiece,
-  getArmyForOwner,
   getChessRealmClass,
-  getCombatSlotMapping,
   getFinaleClass,
   getInitialGameOverSubPhase,
   getRealmDisplayName,
   getWinnerFromGameStatus,
+  derivePokerCombatHandoff,
   resolveVisualRealm,
 } from './gameCoordinatorRules';
 
@@ -171,7 +172,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     nextTurn
   } = useChessCombatAdapter();
 
-  const { initializeCombat, endCombat } = usePokerCombatAdapter();
+  const { initializeCombatFromPayload, endCombat } = usePokerCombatAdapter();
 
   const opponentArmy = useMemo(() => {
     // P2P wire prop wins for peer matches — opponent army comes off
@@ -255,7 +256,11 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   // P2P board initialization (canonical first-mover army goes into
   // PLAYER_INITIAL_POSITIONS so both peers compute identical piece ids).
   const myCanonicalSide = useGameStore(s => s.myCanonicalSide) ?? 'player';
-  const enemyCanonicalSide: 'player' | 'opponent' = myCanonicalSide === 'player' ? 'opponent' : 'player';
+  const p2pPerspective = useMemo(
+    () => createP2PViewerPerspective(myCanonicalSide),
+    [myCanonicalSide]
+  );
+  const enemyCanonicalSide: 'player' | 'opponent' = p2pPerspective.remoteCanonicalSide;
   const myWinStatus: 'player_wins' | 'opponent_wins' = myCanonicalSide === 'player' ? 'player_wins' : 'opponent_wins';
   const p2pBoardInitRef = useRef(false);
   useEffect(() => {
@@ -271,10 +276,13 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     // (viewer-relative props) to canonical (whiteArmy=first-mover) before
     // calling `initializeBoard`. Same idGen sequence on identical canonical
     // layout → identical piece ids on both peers.
-    const canonicalPlayerArmy = myCanonicalSide === 'player' ? initialArmy : opponentArmy;
-    const canonicalOpponentArmy = myCanonicalSide === 'player' ? opponentArmy : initialArmy;
-    initializeBoard(canonicalPlayerArmy, canonicalOpponentArmy, idGen);
-  }, [isP2PConnected, matchSeed, initialArmy, opponentArmy, initializeBoard, myCanonicalSide]);
+    const canonicalArmies = mapViewerValuesToCanonical({
+      perspective: p2pPerspective,
+      localValue: initialArmy,
+      remoteValue: opponentArmy,
+    });
+    initializeBoard(canonicalArmies.player, canonicalArmies.opponent, idGen);
+  }, [isP2PConnected, matchSeed, initialArmy, opponentArmy, initializeBoard, p2pPerspective]);
 
   useCampaignGameBootstrap({
     isCampaign,
@@ -363,104 +371,34 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     debug.combat(`Defender ${defender.type} (${defender.owner}): HP=${defender.health}, Stamina=${defender.stamina}`);
     debug.combat(`First strike will be applied via animation in poker combat`);
 
-    // Map local-viewer-relative props (`playerArmy` = my army, `opponentArmy`
-    // = remote's army) into canonical positions (canonicalPlayerArmy =
-    // first-mover's army globally) so `getArmyForOwner` can resolve a
-    // canonical `owner` field correctly.
-    const canonicalPlayerArmyForLookup = myCanonicalSide === 'player' ? playerArmy : opponentArmy;
-    const canonicalOpponentArmyForLookup = myCanonicalSide === 'player' ? opponentArmy : (playerArmy ?? opponentArmy);
-    const attackerArmy = getArmyForOwner(attacker.owner, canonicalPlayerArmyForLookup, canonicalOpponentArmyForLookup);
-    const defenderArmy = getArmyForOwner(defender.owner, canonicalPlayerArmyForLookup, canonicalOpponentArmyForLookup);
-
-    if (!attackerArmy || !defenderArmy) return;
-
-    const attackerPet = buildPetDataFromChessPiece({
-      piece: attacker,
-      army: attackerArmy,
-      resolvePortrait: resolveHeroPortrait,
-    });
-    const defenderPet = buildPetDataFromChessPiece({
-      piece: defender,
-      army: defenderArmy,
+    const handoffPlan = derivePokerCombatHandoff({
+      attacker,
+      defender,
+      localArmy: playerArmy,
+      remoteArmy: opponentArmy,
+      perspective: p2pPerspective,
+      matchSeed,
+      chessMoveCount: boardState.moveCount,
       resolvePortrait: resolveHeroPortrait,
     });
 
-    debug.combat(`AttackerPet stamina: ${attackerPet.stats.currentStamina}/${attackerPet.stats.maxStamina}`);
-    debug.combat(`DefenderPet stamina: ${defenderPet.stats.currentStamina}/${defenderPet.stats.maxStamina}`);
+    if (!handoffPlan) return;
 
-    const attackerName = attackerPet.name || `${attacker.owner === myCanonicalSide ? 'Player' : 'Opponent'} ${attacker.type}`;
-    const defenderName = defenderPet.name || `${defender.owner === myCanonicalSide ? 'Player' : 'Opponent'} ${defender.type}`;
-
-    // Pass king IDs to apply king passive aura buffs
-    const attackerKingId = attackerArmy.king?.id;
-    const defenderKingId = defenderArmy.king?.id;
+    const { handoff, adapterInit } = handoffPlan;
 
     // (Realm background is now set earlier — see useEffect that watches
     //  campaignData.mission.realm. The chess phase needs the realm class
     //  applied before combat starts, not just at piece collision.)
 
-    // Local viewer is the attacker when the chess attacker piece's
-    // canonical owner matches our canonical side. Drives poker slot
-    // orientation so MY piece always shows up in the "player" slot.
-    const localViewerIsAttacker = attacker.owner === myCanonicalSide;
-    const { slotsSwapped, firstStrikeTarget } = getCombatSlotMapping(localViewerIsAttacker);
-    const deterministicCombat = matchSeed ? {
-      combatId: createSeededIdGen(
-        matchSeed,
-        `poker-combat:${attacker.id}:${defender.id}:${attacker.position.row}:${attacker.position.col}:${defender.position.row}:${defender.position.col}:${boardState.moveCount}`,
-      )(),
-      deckSeed: `${matchSeed}:poker-deck:${attacker.id}:${defender.id}:${boardState.moveCount}`,
-      playerRole: slotsSwapped ? 'defender' as const : 'attacker' as const,
-    } : undefined;
+    debug.combat(`Poker player pet stamina: ${adapterInit.playerPet.stats.currentStamina}/${adapterInit.playerPet.stats.maxStamina}`);
+    debug.combat(`Poker opponent pet stamina: ${adapterInit.opponentPet.stats.currentStamina}/${adapterInit.opponentPet.stats.maxStamina}`);
 
-    if (!slotsSwapped) {
-      // Human attacks AI: Human (attacker) = player, AI (defender) = opponent
-      // First strike target is 'opponent' (the defender in the player slot)
-      setPokerSlotsSwapped(false);
-      initializeCombat(
-        attacker.id,
-        attackerName,
-        attackerPet,
-        defender.id,
-        defenderName,
-        defenderPet,
-        true,
-        attackerKingId,
-        defenderKingId,
-        firstStrikeTarget,
-        deterministicCombat
-      );
-    } else {
-      // AI attacks Human: Human (defender) = player, AI (attacker) = opponent
-      // Swap the parameters so human is always "player" in combat UI
-      // First strike target is 'player' (the human defender)
-      setPokerSlotsSwapped(true);
-      initializeCombat(
-        defender.id,
-        defenderName,
-        defenderPet,
-        attacker.id,
-        attackerName,
-        attackerPet,
-        true,
-        defenderKingId,
-        attackerKingId,
-        firstStrikeTarget,
-        deterministicCombat
-      );
-    }
+    setPokerSlotsSwapped(handoff.slotsSwapped);
+    initializeCombatFromPayload(adapterInit);
 
-    const handoff: CombatHandoff = {
-      attacker,
-      defender,
-      playerArmy: attackerArmy,
-      opponentArmy: defenderArmy,
-      slotsSwapped,
-      firstStrikeTarget,
-    };
     dispatchFlow({ type: 'VS_COMPLETE', handoff });
     playSoundEffect('game_start');
-  }, [flowState, playerArmy, opponentArmy, boardState.pieces, boardState.moveCount, initializeCombat, playSoundEffect, setPokerSlotsSwapped, dispatchFlow, matchSeed, myCanonicalSide]);
+  }, [flowState, playerArmy, opponentArmy, boardState.pieces, boardState.moveCount, initializeCombatFromPayload, playSoundEffect, setPokerSlotsSwapped, dispatchFlow, matchSeed, p2pPerspective]);
 
   const handleCombatEnd = useCallback((winner: 'player' | 'opponent' | 'draw') => {
     try {

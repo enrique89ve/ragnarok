@@ -12,6 +12,15 @@
 
 import gsap from 'gsap';
 import { spawnParticleBurst, spawnImpactRing, ELEMENT_PALETTES, type ParticleColor } from '../../animations/PixiParticleCanvas';
+import {
+	ARENA_VFX_LAYERS,
+	ARENA_VFX_TARGETS,
+	getArenaVfxCommunitySlot,
+	getArenaVfxHeroTarget,
+	getArenaVfxLayer,
+	getArenaVfxTarget,
+	getArenaVfxTargets,
+} from '../arenaVfxTargets';
 
 const DRAMA_CONTAINER_ID = 'poker-drama-vfx-layer';
 const MAX_ORPHAN_AGE_MS = 6000;
@@ -28,14 +37,9 @@ function getOrCreateContainer(): HTMLDivElement {
 			overflow: 'hidden'
 		});
 	}
-	// Always (re-)mount inside the dedicated VFX layer.  Fallback chain:
-	//   #arena-layer-vfx  (canonical — bounded by canvas, no transform on parent)
-	//   .ragnarok-combat-arena (arena root — bounded but pre-layer-refactor)
-	//   document.body (SSR / early init)
-	const target =
-		document.getElementById('arena-layer-vfx') ??
-		document.querySelector('.ragnarok-combat-arena') ??
-		document.body;
+	// Always (re-)mount inside the dedicated VFX layer. Fallback to body
+	// only during early init before the arena layer has mounted.
+	const target = getArenaVfxLayer(ARENA_VFX_LAYERS.vfx) ?? document.body;
 	if (el.parentElement !== target) {
 		target.appendChild(el);
 	}
@@ -62,7 +66,7 @@ function cleanup(el: HTMLElement) {
    `.game-viewport-wrapper` has no transform of its own, so it is the
    correct shake target. */
 function getShakeTarget(): HTMLElement | null {
-	return document.querySelector('.game-viewport-wrapper');
+	return getArenaVfxLayer(ARENA_VFX_LAYERS.viewportWrapper);
 }
 
 export function killAllPokerVFX() {
@@ -126,8 +130,7 @@ export function playCardDealVFX(
 	value: string,
 	isRiver: boolean = false
 ) {
-	const slots = document.querySelectorAll('.community-slot');
-	const slot = slots[slotIndex] as HTMLElement | undefined;
+	const slot = getArenaVfxCommunitySlot(slotIndex);
 	if (!slot) return;
 
 	const rect = slot.getBoundingClientRect();
@@ -251,10 +254,7 @@ export function playRiverRevealVFX(card: { suit: string; value: string }) {
  * ATTACK (raise) — hero lunges forward, gold flash
  */
 export function playRaiseVFX(isPlayer: boolean) {
-	const selector = isPlayer
-		? '[data-hero-role="player"]'
-		: '[data-hero-role="opponent"]';
-	const hero = document.querySelector(selector) as HTMLElement;
+	const hero = getArenaVfxHeroTarget(isPlayer ? 'player' : 'opponent');
 	if (!hero) return;
 
 	const tl = gsap.timeline();
@@ -280,10 +280,7 @@ export function playRaiseVFX(isPlayer: boolean) {
 	spawnImpactRing(cx, cy, GOLD_PALETTE);
 
 	// Dim opponent side slightly
-	const otherSelector = isPlayer
-		? '[data-hero-role="opponent"]'
-		: '[data-hero-role="player"]';
-	const otherHero = document.querySelector(otherSelector) as HTMLElement;
+	const otherHero = getArenaVfxHeroTarget(isPlayer ? 'opponent' : 'player');
 	if (otherHero) {
 		gsap.to(otherHero, {
 			filter: 'brightness(0.85)',
@@ -333,10 +330,7 @@ export function playReraiseVFX(isPlayer: boolean, reraiseLevel: number = 1) {
 	}
 
 	// --- Hero SLAM forward ---
-	const heroSelector = isPlayer
-		? '[data-hero-role="player"]'
-		: '[data-hero-role="opponent"]';
-	const hero = document.querySelector(heroSelector) as HTMLElement;
+	const hero = getArenaVfxHeroTarget(isPlayer ? 'player' : 'opponent');
 	if (hero) {
 		const tl = gsap.timeline();
 		tl.to(hero, {
@@ -361,10 +355,7 @@ export function playReraiseVFX(isPlayer: boolean, reraiseLevel: number = 1) {
 	}
 
 	// --- Opponent recoil ---
-	const otherSelector = isPlayer
-		? '[data-hero-role="opponent"]'
-		: '[data-hero-role="player"]';
-	const otherHero = document.querySelector(otherSelector) as HTMLElement;
+	const otherHero = getArenaVfxHeroTarget(isPlayer ? 'opponent' : 'player');
 	if (otherHero) {
 		gsap.to(otherHero, {
 			y: isPlayer ? 4 : -4,
@@ -376,7 +367,7 @@ export function playReraiseVFX(isPlayer: boolean, reraiseLevel: number = 1) {
 	}
 
 	// --- Risk badge pulse ---
-	const riskBadge = document.querySelector('.risk-display, .pot-display') as HTMLElement;
+	const riskBadge = getArenaVfxTarget(ARENA_VFX_TARGETS.riskDisplay);
 	if (riskBadge) {
 		gsap.fromTo(riskBadge,
 			{ scale: 1 },
@@ -408,7 +399,10 @@ export function playReraiseVFX(isPlayer: boolean, reraiseLevel: number = 1) {
  */
 export function playCallVFX() {
 	// Both heroes flash white briefly
-	const heroes = document.querySelectorAll('[data-hero-role]');
+	const heroes = [
+		...getArenaVfxTargets(ARENA_VFX_TARGETS.playerHero),
+		...getArenaVfxTargets(ARENA_VFX_TARGETS.opponentHero),
+	];
 	heroes.forEach(hero => {
 		gsap.fromTo(hero,
 			{ filter: 'brightness(1.6)' },
@@ -427,10 +421,7 @@ export function playCallVFX() {
  * DEFEND (check) — subtle shield tint
  */
 export function playCheckVFX(isPlayer: boolean) {
-	const selector = isPlayer
-		? '[data-hero-role="player"]'
-		: '[data-hero-role="opponent"]';
-	const hero = document.querySelector(selector) as HTMLElement;
+	const hero = getArenaVfxHeroTarget(isPlayer ? 'player' : 'opponent');
 	if (!hero) return;
 
 	gsap.to(hero, {
@@ -446,10 +437,7 @@ export function playCheckVFX(isPlayer: boolean) {
  * BRACE (fold) — hero retreats, cards fly off
  */
 export function playFoldVFX(isPlayer: boolean) {
-	const selector = isPlayer
-		? '[data-hero-role="player"]'
-		: '[data-hero-role="opponent"]';
-	const hero = document.querySelector(selector) as HTMLElement;
+	const hero = getArenaVfxHeroTarget(isPlayer ? 'player' : 'opponent');
 	if (hero) {
 		gsap.to(hero, {
 			y: isPlayer ? 8 : -8,
@@ -467,10 +455,7 @@ export function playFoldVFX(isPlayer: boolean) {
 	}
 
 	// Brighten the winner side
-	const otherSelector = isPlayer
-		? '[data-hero-role="opponent"]'
-		: '[data-hero-role="player"]';
-	const otherHero = document.querySelector(otherSelector) as HTMLElement;
+	const otherHero = getArenaVfxHeroTarget(isPlayer ? 'opponent' : 'player');
 	if (otherHero) {
 		gsap.fromTo(otherHero,
 			{ filter: 'brightness(1.2)' },
@@ -685,15 +670,8 @@ export function playShowdownDamageVFX(
 ) {
 	const container = getOrCreateContainer();
 
-	const winnerSelector = isPlayerWinner
-		? '[data-hero-role="player"]'
-		: '[data-hero-role="opponent"]';
-	const loserSelector = isPlayerWinner
-		? '[data-hero-role="opponent"]'
-		: '[data-hero-role="player"]';
-
-	const winner = document.querySelector(winnerSelector) as HTMLElement;
-	const loser = document.querySelector(loserSelector) as HTMLElement;
+	const winner = getArenaVfxHeroTarget(isPlayerWinner ? 'player' : 'opponent');
+	const loser = getArenaVfxHeroTarget(isPlayerWinner ? 'opponent' : 'player');
 	if (!winner || !loser) return;
 
 	const winRect = winner.getBoundingClientRect();
@@ -820,7 +798,7 @@ export function playPhaseDramaVFX(phase: string) {
 	   property when animating `x`/`y`, blowing away the scale on first
 	   shake and never restoring it. Targeting `.game-viewport-wrapper`
 	   (which has no transform of its own) is safe. */
-	const shakeTarget = document.querySelector('.game-viewport-wrapper') as HTMLElement;
+	const shakeTarget = getShakeTarget();
 	if (shakeTarget) {
 		gsap.to(shakeTarget, {
 			x: 'random(-2, 2)',
@@ -928,7 +906,7 @@ export function playHandImprovementVFX(tier: 'low' | 'mid' | 'high' | 'godly') {
  * Set tension level on the viewport — controls ambient CSS variables
  */
 export function setTensionLevel(level: 'low' | 'medium' | 'high' | 'allin') {
-	const viewport = document.querySelector('.game-viewport') as HTMLElement;
+	const viewport = getArenaVfxLayer(ARENA_VFX_LAYERS.viewport);
 	if (!viewport) return;
 
 	viewport.dataset.tensionLevel = level;

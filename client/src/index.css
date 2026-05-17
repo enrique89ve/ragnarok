@@ -251,7 +251,6 @@ canvas {
   transition: none !important;
   /* Removed box-shadow to eliminate unwanted outline when dragging */
   box-shadow: none !important;
-  /* Still allow the CardDragAnimation component to handle transform */
 }
 
 /* CRITICAL FIX: Make sure parent container hover only affects the exact card element */

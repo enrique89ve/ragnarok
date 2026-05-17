@@ -212,6 +212,8 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
       // SP convention: human is always first-mover globally → 'player'.
       // P2P sets this from `deriveCanonicalSide` after seed_reveal instead;
       // SP never goes through that path.
+      matchSeed: null,
+      matchId: null,
       myCanonicalSide: 'player',
       selectedCard: null,
       hoveredCard: null,
@@ -530,6 +532,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
     debug.log('Resetting game state to initial values');
     set({
       gameState: initializeGame(),
+      matchSeed: null,
       myCanonicalSide: null,
       matchId: null,
       selectedCard: null,

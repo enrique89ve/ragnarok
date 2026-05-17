@@ -637,8 +637,6 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
         </>
       )}
 
-      {cardTheme && <div className={`card-particles theme-${cardTheme}`} />}
-
       {!disableTooltips && badgeTooltip && createPortal(
         <div className={`keyword-badge-tooltip ${badgeTooltip.isEvolveInfo ? 'evolve-tooltip' : ''}`} style={tooltipStyle}>
           <div className="kbt-header">

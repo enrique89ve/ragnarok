@@ -8,6 +8,7 @@
 import { Download } from 'lucide-react';
 
 import { useP2PActions } from '../../context/useP2PActions';
+import { formatP2PTransportRole, getP2PTransportRole } from '../../p2p/p2pPerspective';
 import { usePeerStore } from '../../stores/peerStore';
 
 interface P2PStatusBadgeProps {
@@ -36,6 +37,7 @@ export const P2PStatusBadge: React.FC<P2PStatusBadgeProps> = ({ className = '' }
 	if (!isActive && connectionState !== 'error') return null;
 
 	const config = STATUS_CONFIG[connectionState as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.connected;
+	const transportRoleLabel = formatP2PTransportRole(getP2PTransportRole(isHost));
 	const showCountdown = (connectionState === 'reconnecting' || connectionState === 'grace_period') && reconnectCountdown > 0;
 	const unstableSubject = disconnectSide === 'opponent' ? 'Opponent unstable' : 'Connection unstable';
 	const reconnectLabel = reconnectAttemptCount > 0 ? `Attempt ${reconnectAttemptCount}/2` : 'Reconnecting';
@@ -45,7 +47,7 @@ export const P2PStatusBadge: React.FC<P2PStatusBadgeProps> = ({ className = '' }
 			{/* Badge */}
 			<div
 				className={`p2p-status-badge ${className}`}
-				title={`P2P Multiplayer — ${isHost ? 'Host' : 'Guest'} — ${config.label}`}
+				title={`P2P Multiplayer — ${transportRoleLabel} — ${config.label}`}
 				style={{
 					position: 'fixed',
 					top: '8px',
@@ -76,7 +78,7 @@ export const P2PStatusBadge: React.FC<P2PStatusBadgeProps> = ({ className = '' }
 					}}
 				/>
 				{connectionState === 'connected'
-					? `P2P · ${isHost ? 'Host' : 'Guest'}`
+					? `P2P · ${transportRoleLabel}`
 					: connectionState === 'grace_period'
 						? unstableSubject
 						: connectionState === 'reconnecting'

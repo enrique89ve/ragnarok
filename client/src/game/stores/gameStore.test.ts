@@ -158,3 +158,35 @@ describe('setupOpponentSpellPetCards', () => {
 		expect(nextState.players.opponent.battlefield[0].instanceId).toBe(freeMinion.instanceId);
 	});
 });
+
+describe('local match identity reset', () => {
+	it('clears stale P2P transport identity when starting a local game', () => {
+		useGameStore.setState({
+			matchSeed: 'stale-p2p-seed',
+			matchId: 'stale-p2p-match',
+			myCanonicalSide: 'opponent',
+		});
+
+		useGameStore.getState().initGame();
+
+		const state = useGameStore.getState();
+		expect(state.matchSeed).toBeNull();
+		expect(state.matchId).toBeNull();
+		expect(state.myCanonicalSide).toBe('player');
+	});
+
+	it('clears stale P2P seed on full game reset', () => {
+		useGameStore.setState({
+			matchSeed: 'stale-p2p-seed',
+			matchId: 'stale-p2p-match',
+			myCanonicalSide: 'opponent',
+		});
+
+		useGameStore.getState().resetGameState();
+
+		const state = useGameStore.getState();
+		expect(state.matchSeed).toBeNull();
+		expect(state.matchId).toBeNull();
+		expect(state.myCanonicalSide).toBeNull();
+	});
+});

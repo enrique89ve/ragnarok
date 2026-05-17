@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { CombatPhase, CombatAction, PokerCombatState } from '../../types/PokerCombatTypes';
 import { getPokerCombatAdapterState, getActionPermissions } from '../../hooks/usePokerCombatAdapter';
-import { getSmartAIAction } from '../modules/SmartAI';
 import { useGameStore } from '../../stores/gameStore';
 import { debug } from '../../config/debugConfig';
 import { proceduralAudio } from '../../audio/proceduralAudio';
@@ -9,6 +8,7 @@ import type { BattlePopupAction, BattlePopupTarget } from '../components/HeroBat
 import { getPokerTurnRemainingSeconds } from '../../../../../shared/p2p-wire/pokerTurnClock';
 import { GameEventBus } from '../../../core/events/GameEventBus';
 import { derivePokerDecisionView } from '../decision/pokerDecisionView';
+import { derivePokerTurnPolicy } from '../decision/pokerTurnPolicy';
 
 interface UseCombatTimerOptions {
   combatState: PokerCombatState | null;
@@ -35,7 +35,6 @@ interface UseCombatTimerOptions {
 
 export function useCombatTimer(options: UseCombatTimerOptions): void {
   const { combatState, isActive, updateTimer, isP2PCombat = false, sendPokerAction, sendPokerTurnStarted, addHeroBattlePopup } = options;
-  const nestedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const announcedTurnIdRef = useRef<string | null>(null);
   const expiredTurnIdRef = useRef<string | null>(null);
 
@@ -52,6 +51,14 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
       return;
     }
 
+    const turnPolicy = derivePokerTurnPolicy({
+      activePlayerId: combatState.activePlayerId,
+      localPlayerId: combatState.player.playerId,
+      remotePlayerId: combatState.opponent.playerId,
+      localPlayerIsReady: combatState.player.isReady,
+      isP2PCombat,
+    });
+
     if (isP2PCombat && combatState.turnId && announcedTurnIdRef.current !== combatState.turnId) {
       announcedTurnIdRef.current = combatState.turnId;
       if (combatState.activePlayerId) {
@@ -64,8 +71,7 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
         const remainingMs = combatState.turnDeadlineAtMs === null
           ? decisionView.remainingSeconds * 1_000
           : Math.max(0, combatState.turnDeadlineAtMs - nowMs);
-        const localPlayerTurn = decisionView.activeSide === 'local';
-        if (localPlayerTurn) {
+        if (turnPolicy.shouldBroadcastTurnStart) {
           sendPokerTurnStarted?.({
             combatId: combatState.combatId,
             turnId: combatState.turnId,
@@ -77,8 +83,8 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
           });
         }
         GameEventBus.emitNotification({
-          level: localPlayerTurn ? 'info' : 'warning',
-          message: localPlayerTurn
+          level: turnPolicy.actor === 'local_human' ? 'info' : 'warning',
+          message: turnPolicy.actor === 'local_human'
             ? 'Your poker decision started.'
             : 'Opponent poker decision started.',
           duration: 1800,
@@ -86,10 +92,11 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
       }
     }
 
-    if (combatState.player.isReady && (!isP2PCombat || combatState.activePlayerId !== combatState.opponent.playerId)) {
+    if (turnPolicy.shouldSkipTimerAfterLocalReady) {
       debug.combat('[Timer] SKIP: Player already ready (isReady=true)');
       return;
     }
+    if (!turnPolicy.shouldTickTimer) return;
 
     const timer = setInterval(() => {
       const mulliganStillActive = useGameStore.getState().gameState?.mulligan?.active;
@@ -104,11 +111,21 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
         debug.combat('[Timer] SKIP in interval: phase=', freshState.phase, 'playerReady=', freshState.player.isReady, 'allIn=', freshState.isAllInShowdown);
         return;
       }
-      if (freshState.player.isReady && (!isP2PCombat || freshState.activePlayerId !== freshState.opponent.playerId)) {
+
+      const freshTurnPolicy = derivePokerTurnPolicy({
+        activePlayerId: freshState.activePlayerId,
+        localPlayerId: freshState.player.playerId,
+        remotePlayerId: freshState.opponent.playerId,
+        localPlayerIsReady: freshState.player.isReady,
+        isP2PCombat,
+      });
+
+      if (freshTurnPolicy.shouldSkipTimerAfterLocalReady) {
         debug.combat('[Timer] SKIP in interval: playerReady=', freshState.player.isReady, 'activePlayerId=', freshState.activePlayerId);
         return;
       }
-      
+      if (!freshTurnPolicy.shouldTickTimer) return;
+
       const newTime = freshState.turnDeadlineAtMs !== null
         ? getPokerTurnRemainingSeconds({ nowMs: Date.now(), deadlineAtMs: freshState.turnDeadlineAtMs })
         : Math.max(0, freshState.turnTimer - 1);
@@ -120,9 +137,7 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
         updateTimer(newTime);
       } else {
         updateTimer(0);
-        if (isP2PCombat && freshState.activePlayerId !== freshState.player.playerId) {
-          return;
-        }
+        if (!freshTurnPolicy.shouldAutoActOnTimeout) return;
         if (isP2PCombat && freshState.turnId && expiredTurnIdRef.current === freshState.turnId) {
           return;
         }
@@ -137,9 +152,7 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
         } else {
           addHeroBattlePopup?.({ action: 'defend', target: 'player', text: 'Defend', subtitle: 'Time expired' });
         }
-        
-        const phaseBeforeAutoAction = freshState.phase;
-        
+
         if (isP2PCombat) {
           sendPokerAction?.({
             playerId: freshState.player.playerId,
@@ -149,34 +162,11 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
         }
         getPokerCombatAdapterState().performAction(freshState.player.playerId, autoAction);
         getPokerCombatAdapterState().maybeCloseBettingRound();
-
-        if (isP2PCombat) return;
-
-        if (nestedTimerRef.current) clearTimeout(nestedTimerRef.current);
-        nestedTimerRef.current = setTimeout(() => {
-          const stateAfterAction = getPokerCombatAdapterState().combatState;
-          if (!stateAfterAction || stateAfterAction.opponent.isReady) return;
-          
-          if (stateAfterAction.phase !== phaseBeforeAutoAction) {
-            return;
-          }
-          
-          if (stateAfterAction.phase === CombatPhase.RESOLUTION || stateAfterAction.foldWinner) {
-            return;
-          }
-          
-          const aiDecision = getSmartAIAction(stateAfterAction, false);
-          getPokerCombatAdapterState().performAction(stateAfterAction.opponent.playerId, aiDecision.action, aiDecision.betAmount);
-        }, 500);
       }
     }, 1000);
-    
+
     return () => {
       clearInterval(timer);
-      if (nestedTimerRef.current) {
-        clearTimeout(nestedTimerRef.current);
-        nestedTimerRef.current = null;
-      }
     };
   }, [
     combatState?.combatId,
@@ -186,6 +176,8 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
     combatState?.activePlayerId,
     combatState?.actionsThisRound,
     combatState?.player?.isReady,
+    combatState?.player?.playerId,
+    combatState?.opponent?.playerId,
     combatState?.isAllInShowdown,
     isActive,
     updateTimer,

@@ -20,6 +20,7 @@ import {
   getPokerActionPermissions,
   type ActionPermissions,
 } from '../combat/rules/pokerActionRules';
+import type { PokerCombatAdapterInit } from '../combat/pokerCombatAdapterContract';
 
 export type { ActionPermissions };
 
@@ -35,7 +36,7 @@ export interface PokerCombatAdapter {
   deck: PokerCard[];
   isActive: boolean;
   mulliganComplete: boolean;
-  
+
   initializeCombat: (
     playerId: string,
     playerName: string,
@@ -49,6 +50,7 @@ export interface PokerCombatAdapter {
     firstStrikeTarget?: 'player' | 'opponent',
     deterministic?: PokerCombatDeterministicOptions
   ) => void;
+  initializeCombatFromPayload: (payload: PokerCombatAdapterInit) => void;
   performAction: (playerId: string, action: CombatAction, hpCommitment?: number) => void;
   advancePhase: () => void;
   maybeCloseBettingRound: () => void;
@@ -116,14 +118,58 @@ export function usePokerCombatAdapter(): PokerCombatAdapter {
   const markBothPlayersReadyFn = useUnifiedCombatStore(s => s.markBothPlayersReady);
   const completeFirstStrikeFn = useUnifiedCombatStore(s => s.completeFirstStrike);
 
-  return React.useMemo(() => ({
-    combatState,
-    deck,
-    isActive,
-    mulliganComplete,
-
-    initializeCombat: (playerId, playerName, playerPet, opponentId, opponentName, opponentPet, skipMulligan, playerKingId, opponentKingId, firstStrikeTarget?: 'player' | 'opponent', deterministic?: PokerCombatDeterministicOptions) => {
+  return React.useMemo(() => {
+    const initializeCombatFromPayload = (payload: PokerCombatAdapterInit) => {
       initializePokerCombat(
+        payload.playerId,
+        payload.playerName,
+        payload.playerPet,
+        payload.opponentId,
+        payload.opponentName,
+        payload.opponentPet,
+        payload.skipMulligan,
+        payload.playerKingId,
+        payload.opponentKingId,
+        payload.firstStrikeTarget,
+        payload.deterministic
+      );
+
+      initializeNorseContext(
+        payload.playerKingId || null,
+        payload.opponentKingId || null,
+        payload.playerPet.norseHeroId || null,
+        payload.opponentPet.norseHeroId || null
+      );
+
+      initializeCombat(
+        [{
+          id: 'player-king',
+          type: 'king',
+          heroId: payload.playerId,
+          position: { row: 0, col: 4 },
+          isAlive: true,
+          hasMoved: false,
+          ownerId: 'player',
+        }],
+        [{
+          id: 'opponent-king',
+          type: 'king',
+          heroId: payload.opponentId,
+          position: { row: 7, col: 4 },
+          isAlive: true,
+          hasMoved: false,
+          ownerId: 'opponent',
+        }]
+      );
+    };
+
+    return {
+      combatState,
+      deck,
+      isActive,
+      mulliganComplete,
+
+      initializeCombat: (
         playerId,
         playerName,
         playerPet,
@@ -135,123 +181,153 @@ export function usePokerCombatAdapter(): PokerCombatAdapter {
         opponentKingId,
         firstStrikeTarget,
         deterministic
-      );
+      ) => {
+        initializeCombatFromPayload({
+          playerId,
+          playerName,
+          playerPet,
+          opponentId,
+          opponentName,
+          opponentPet,
+          skipMulligan: skipMulligan ?? false,
+          playerKingId,
+          opponentKingId,
+          firstStrikeTarget,
+          deterministic,
+        });
+      },
+      initializeCombatFromPayload,
 
-      initializeNorseContext(
-        playerKingId || null,
-        opponentKingId || null,
-        playerPet.norseHeroId || null,
-        opponentPet.norseHeroId || null
-      );
+      performAction: (playerId, action, hpCommitment) => {
+        performPokerAction(playerId, action, hpCommitment);
+      },
 
-      initializeCombat(
-        [{
-          id: 'player-king',
-          type: 'king',
-          heroId: playerId,
-          position: { row: 0, col: 4 },
-          isAlive: true,
-          hasMoved: false,
-          ownerId: 'player',
-        }],
-        [{
-          id: 'opponent-king',
-          type: 'king',
-          heroId: opponentId,
-          position: { row: 7, col: 4 },
-          isAlive: true,
-          hasMoved: false,
-          ownerId: 'opponent',
-        }]
-      );
-    },
+      advancePhase: () => {
+        advancePokerPhase();
+      },
 
-    performAction: (playerId, action, hpCommitment) => {
-      performPokerAction(playerId, action, hpCommitment);
-    },
+      resolveCombat: () => {
+        return resolvePokerCombat();
+      },
 
-    advancePhase: () => {
-      advancePokerPhase();
-    },
+      endCombat: () => {
+        resetNorseContext();
+        endPokerCombat();
+      },
 
-    resolveCombat: () => {
-      return resolvePokerCombat();
-    },
+      completeMulligan: () => {
+        completeMulliganFn();
+      },
 
-    endCombat: () => {
-      resetNorseContext();
-      endPokerCombat();
-    },
+      setPlayerReady: (playerId: string) => {
+        setPlayerReadyFn(playerId);
+      },
 
-    completeMulligan: () => {
-      completeMulliganFn();
-    },
+      updateTimer: (newTime: number) => {
+        updatePokerTimer(newTime);
+      },
 
-    setPlayerReady: (playerId: string) => {
-      setPlayerReadyFn(playerId);
-    },
+      syncTurnClock: (input) => {
+        syncPokerTurnClockFn(input);
+      },
 
-    updateTimer: (newTime: number) => {
-      updatePokerTimer(newTime);
-    },
+      startNextHandDelayed: (resolution: CombatResolution) => {
+        startNextHandDelayedFn(resolution);
+      },
 
-    syncTurnClock: (input) => {
-      syncPokerTurnClockFn(input);
-    },
+      startNextHand: (resolution?: CombatResolution) => {
+        startNextHandFn(resolution);
+      },
 
-    startNextHandDelayed: (resolution: CombatResolution) => {
-      startNextHandDelayedFn(resolution);
-    },
+      setTransitioning: (value: boolean) => {
+        useUnifiedCombatStore.setState({ isTransitioningHand: value });
+      },
 
-    startNextHand: (resolution?: CombatResolution) => {
-      startNextHandFn(resolution);
-    },
+      maybeCloseBettingRound: () => {
+        maybeCloseBettingRoundFn();
+      },
 
-    setTransitioning: (value: boolean) => {
-      useUnifiedCombatStore.setState({ isTransitioningHand: value });
-    },
+      applyDirectDamage: (targetPlayerId: 'player' | 'opponent', damage: number, sourceDescription?: string) => {
+        applyDirectDamageFn(targetPlayerId, damage, sourceDescription);
+      },
 
-    maybeCloseBettingRound: () => {
-      maybeCloseBettingRoundFn();
-    },
+      healPlayerHero: (amount: number) => {
+        healPlayerHeroFn(amount);
+      },
 
-    applyDirectDamage: (targetPlayerId: 'player' | 'opponent', damage: number, sourceDescription?: string) => {
-      applyDirectDamageFn(targetPlayerId, damage, sourceDescription);
-    },
+      healOpponentHero: (amount: number) => {
+        healOpponentHeroFn(amount);
+      },
 
-    healPlayerHero: (amount: number) => {
-      healPlayerHeroFn(amount);
-    },
+      setPlayerHeroBuffs: (attack: number, armor: number) => {
+        setPlayerHeroBuffsFn({ attack, armor });
+      },
 
-    healOpponentHero: (amount: number) => {
-      healOpponentHeroFn(amount);
-    },
+      addPlayerArmor: (amount: number) => {
+        addPlayerArmorFn(amount);
+      },
 
-    setPlayerHeroBuffs: (attack: number, armor: number) => {
-      setPlayerHeroBuffsFn({ attack, armor });
-    },
+      addOpponentArmor: (amount: number) => {
+        addOpponentArmorFn(amount);
+      },
 
-    addPlayerArmor: (amount: number) => {
-      addPlayerArmorFn(amount);
-    },
+      markBothPlayersReady: () => {
+        markBothPlayersReadyFn();
+      },
 
-    addOpponentArmor: (amount: number) => {
-      addOpponentArmorFn(amount);
-    },
-
-    markBothPlayersReady: () => {
-      markBothPlayersReadyFn();
-    },
-
-    completeFirstStrike: () => {
-      completeFirstStrikeFn();
-    },
-  // Deps intentionally limited — adapter identity should only change on these 4 values
-  }), [combatState, deck, isActive, mulliganComplete]);
+      completeFirstStrike: () => {
+        completeFirstStrikeFn();
+      },
+    };
+  // Deps intentionally limited - adapter identity should only change on these 4 values
+  }, [combatState, deck, isActive, mulliganComplete]);
 }
 
 export function getPokerCombatAdapterState(): PokerCombatAdapter {
   const getStore = () => useUnifiedCombatStore.getState();
+  const initializeCombatFromPayload = (payload: PokerCombatAdapterInit) => {
+    const store = getStore();
+
+    store.initializePokerCombat(
+      payload.playerId,
+      payload.playerName,
+      payload.playerPet,
+      payload.opponentId,
+      payload.opponentName,
+      payload.opponentPet,
+      payload.skipMulligan,
+      payload.playerKingId,
+      payload.opponentKingId,
+      payload.firstStrikeTarget,
+      payload.deterministic
+    );
+    initializeNorseContext(
+      payload.playerKingId || null,
+      payload.opponentKingId || null,
+      payload.playerPet.norseHeroId || null,
+      payload.opponentPet.norseHeroId || null
+    );
+    store.initializeCombat(
+      [{
+        id: 'player-king',
+        type: 'king',
+        heroId: payload.playerId,
+        position: { row: 0, col: 4 },
+        isAlive: true,
+        hasMoved: false,
+        ownerId: 'player',
+      }],
+      [{
+        id: 'opponent-king',
+        type: 'king',
+        heroId: payload.opponentId,
+        position: { row: 7, col: 4 },
+        isAlive: true,
+        hasMoved: false,
+        ownerId: 'opponent',
+      }]
+    );
+  };
 
   return {
     combatState: getStore().pokerCombatState,
@@ -260,46 +336,22 @@ export function getPokerCombatAdapterState(): PokerCombatAdapter {
     mulliganComplete: getStore().mulliganComplete,
 
     initializeCombat: (playerId, playerName, playerPet, opponentId, opponentName, opponentPet, skipMulligan, playerKingId, opponentKingId, firstStrikeTarget?: 'player' | 'opponent', deterministic?: PokerCombatDeterministicOptions) => {
-      getStore().initializePokerCombat(
+      initializeCombatFromPayload({
         playerId,
         playerName,
         playerPet,
         opponentId,
         opponentName,
         opponentPet,
-        skipMulligan,
+        skipMulligan: skipMulligan ?? false,
         playerKingId,
         opponentKingId,
         firstStrikeTarget,
-        deterministic
-      );
-      initializeNorseContext(
-        playerKingId || null,
-        opponentKingId || null,
-        playerPet.norseHeroId || null,
-        opponentPet.norseHeroId || null
-      );
-      getStore().initializeCombat(
-        [{
-          id: 'player-king',
-          type: 'king',
-          heroId: playerId,
-          position: { row: 0, col: 4 },
-          isAlive: true,
-          hasMoved: false,
-          ownerId: 'player',
-        }],
-        [{
-          id: 'opponent-king',
-          type: 'king',
-          heroId: opponentId,
-          position: { row: 7, col: 4 },
-          isAlive: true,
-          hasMoved: false,
-          ownerId: 'opponent',
-        }]
-      );
+        deterministic,
+      });
     },
+
+    initializeCombatFromPayload,
 
     completeMulligan: () => {
       getStore().completeMulligan();

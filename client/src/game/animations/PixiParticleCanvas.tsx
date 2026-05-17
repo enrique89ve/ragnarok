@@ -35,6 +35,8 @@ let emitterContainer: Container | null = null;
 let ambientTimers: ReturnType<typeof setTimeout>[] = [];
 let currentRealm: string | undefined;
 
+const PARTICLE_CANVAS_MAX_DPR = 1.5;
+
 export function getPixiApp(): Application | null { return pixiApp; }
 export function getBurstContainer(): Container | null { return burstContainer; }
 export function getFilterContainer(): Container | null { return filterContainer; }
@@ -336,11 +338,11 @@ export const PixiParticleCanvas: React.FC<{ realm?: string }> = ({ realm }) => {
 		const app = new Application();
 		let mounted = true;
 		let initialized = false;
+		let destroyRequested = false;
 		let destroyed = false;
 
 		const destroyApp = () => {
-			if (destroyed) return;
-			destroyed = true;
+			destroyRequested = true;
 			clearAmbientTimers();
 			[
 				ambientContainer,
@@ -350,6 +352,7 @@ export const PixiParticleCanvas: React.FC<{ realm?: string }> = ({ realm }) => {
 				burstContainer,
 			].forEach(killContainerTweens);
 			resetPixiGlobals(app);
+			if (destroyed) return;
 
 			const runtimeApp = app as Application & {
 				stage?: Container | null;
@@ -357,6 +360,7 @@ export const PixiParticleCanvas: React.FC<{ realm?: string }> = ({ realm }) => {
 			};
 			if (!initialized || !runtimeApp.stage || !runtimeApp.renderer) return;
 
+			destroyed = true;
 			app.destroy(false, { children: true });
 		};
 
@@ -364,11 +368,11 @@ export const PixiParticleCanvas: React.FC<{ realm?: string }> = ({ realm }) => {
 			backgroundAlpha: 0,
 			resizeTo: window,
 			antialias: true,
-			resolution: window.devicePixelRatio || 1,
+			resolution: Math.min(window.devicePixelRatio || 1, PARTICLE_CANVAS_MAX_DPR),
 			autoDensity: true,
 		}).then(() => {
 			initialized = true;
-			if (!mounted || !containerRef.current) {
+			if (destroyRequested || !mounted || !containerRef.current) {
 				destroyApp();
 				return;
 			}
