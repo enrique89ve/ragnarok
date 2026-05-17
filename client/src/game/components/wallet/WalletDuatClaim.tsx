@@ -16,6 +16,7 @@ export function WalletDuatClaim({ account }: { account: string }) {
 	const currentUserEntry = useDuatClaimStore(state => state.currentUserEntry);
 	const pendingClaimTrxId = useDuatClaimStore(state => state.pendingClaimTrxId);
 	const checkAccount = useDuatClaimStore(state => state.checkAccount);
+	const openClaimPopup = useDuatClaimStore(state => state.openClaimPopup);
 	// Onboarding order — match the DUAT popup gate so the wallet chip does
 	// not invite the user to claim DUAT before the starter ceremony runs.
 	const starterClaimed = useStarterStore(state => state.hasClaimed(account));
@@ -27,15 +28,15 @@ export function WalletDuatClaim({ account }: { account: string }) {
 	if (!eligibilityLoaded || !currentUserEntry || currentUserEntry.claimed || pendingClaimTrxId || !starterClaimed) return null;
 
 	const claimablePacks = currentUserEntry.packsEarned;
-	const reopenPopup = () => useDuatClaimStore.setState({ dismissed: false });
+	const claimReady = currentUserEntry.claimReady;
 
 	return (
 		<motion.button
 			type="button"
 			whileHover={{ scale: 1.03 }}
 			whileTap={{ scale: 0.97 }}
-			onClick={reopenPopup}
-			aria-label={`Claim ${claimablePacks} DUAT airdrop pack${claimablePacks === 1 ? '' : 's'}`}
+			onClick={openClaimPopup}
+			aria-label={`${claimReady ? 'Claim' : 'View'} ${claimablePacks} DUAT airdrop pack${claimablePacks === 1 ? '' : 's'}`}
 			className="inline-flex w-fit items-center gap-2 px-3.5 py-1.5 rounded-md border border-bifrost-300/50 bg-bifrost-500/20 hover:bg-bifrost-500/35 hover:border-bifrost-300 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-bifrost-300"
 		>
 			<Package
@@ -48,7 +49,7 @@ export function WalletDuatClaim({ account }: { account: string }) {
 				{claimablePacks}
 			</span>
 			<span className="font-mono text-[10px] tracking-[0.22em] uppercase text-bifrost-300">
-				DUAT · Claim
+				DUAT · {claimReady ? 'Claim' : 'Pending'}
 			</span>
 		</motion.button>
 	);

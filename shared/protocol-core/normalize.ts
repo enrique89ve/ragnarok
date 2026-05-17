@@ -12,7 +12,7 @@
 import type {
 	RawHiveOp, ProtocolOp, ProtocolAction, CanonicalAction,
 } from './types';
-import { ACTIVE_AUTH_OPS, RAGNAROK_PROTOCOL_IDS } from './types';
+import { ACTIVE_AUTH_OPS, RAGNAROK_PROTOCOL_IDS, isCanonicalAction } from './types';
 
 // ============================================================
 // Legacy → Canonical Mapping
@@ -91,23 +91,7 @@ export function normalizeRawOp(raw: RawHiveOp, options: NormalizeOptions = {}): 
 		if (!bodyAction) {
 			return { status: 'ignore', reason: `${raw.customJsonId} op missing action field` };
 		}
-		// Check if it's a known canonical action
-		const known: ReadonlySet<string> = new Set([
-			'genesis', 'seal', 'mint_batch', 'pack_commit', 'pack_reveal',
-			'reward_claim', 'daily_quest_claim', 'card_transfer', 'burn', 'level_up',
-			'queue_join', 'queue_leave', 'match_anchor', 'match_result',
-				'campaign_result', 'rune_exchange', 'slash_evidence',
-				'pack_purchase',
-			// v1.1
-			'pack_mint', 'pack_distribute', 'pack_transfer', 'pack_burn',
-			'card_replicate', 'card_merge',
-			// v1.2: Marketplace
-			'market_list', 'market_unlist', 'market_buy',
-			'market_offer', 'market_accept', 'market_reject',
-			// v1.2: DUAT Airdrop
-			'duat_airdrop_claim', 'duat_airdrop_finalize',
-		]);
-		if (known.has(bodyAction)) {
+		if (isCanonicalAction(bodyAction)) {
 			action = bodyAction as CanonicalAction;
 		} else {
 			return { status: 'ignore', reason: `unknown action: ${bodyAction}` };

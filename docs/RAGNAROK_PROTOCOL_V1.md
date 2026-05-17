@@ -31,6 +31,9 @@ Where:
 - Server cache / REST snapshots
 - IndexedDB local state
 - Any off-chain state
+- Portable save files, settings, tutorial flags, and UI-local progress. Writers
+  MUST NOT broadcast `save_state` or any full client-store snapshot under the
+  Ragnarok protocol id.
 
 ## 3. Canonical Ordering
 

@@ -25,6 +25,8 @@ interface DuatEligibility {
 	claimed: boolean;
 	claimTrxId: string | null;
 	claimBlockNum: number | null;
+	claimReady: boolean;
+	claimBlockedReason: string | null;
 }
 
 export interface DuatClaimResult {
@@ -37,6 +39,7 @@ interface DuatClaimState {
 	eligibilityLoaded: boolean;
 	eligibilityLoading: boolean;
 	dismissed: boolean;
+	claimPromptOpen: boolean;
 	currentUserEntry: DuatEligibility | null;
 	pendingClaimTrxId: string | null;
 	claiming: boolean;
@@ -44,6 +47,7 @@ interface DuatClaimState {
 
 	checkAccount: (username: string) => Promise<void>;
 	claimPacks: () => Promise<DuatClaimResult>;
+	openClaimPopup: () => void;
 	dismiss: () => void;
 	reset: () => void;
 }
@@ -59,7 +63,7 @@ function isDuatClaimRuntimeEnabled(): boolean {
 async function findDuatEligibility(account: string, allowDemoFallback: boolean): Promise<DuatEligibility | null> {
 	const [
 		{ getDuatPacksFor, lookupDuatSnapshot },
-		{ getDuatClaim },
+		{ getDuatClaim, getGenesisState },
 	] = await Promise.all([
 		import('@shared/protocol-core/duatSnapshot'),
 		import('../../data/blockchain/replayDB'),
@@ -68,6 +72,17 @@ async function findDuatEligibility(account: string, allowDemoFallback: boolean):
 	const entry = lookupDuatSnapshot(account);
 	if (!entry && !allowDemoFallback) return null;
 
+	let claimReady = true;
+	let claimBlockedReason: string | null = null;
+	if (!allowDemoFallback) {
+		const genesis = await getGenesisState();
+		// Protocol-core rejects DUAT claims before genesis exists. The user can
+		// still see the snapshot entitlement, but the claim button must stay
+		// closed until replay has the collection prerequisite.
+		claimReady = Boolean(genesis.version && genesis.sealed);
+		claimBlockedReason = claimReady ? null : 'Ragnarok collection is not initialized yet.';
+	}
+
 	const claim = await getDuatClaim(account);
 	return {
 		account,
@@ -75,6 +90,8 @@ async function findDuatEligibility(account: string, allowDemoFallback: boolean):
 		claimed: Boolean(claim),
 		claimTrxId: claim?.trxId ?? null,
 		claimBlockNum: claim?.blockNum ?? null,
+		claimReady,
+		claimBlockedReason,
 	};
 }
 
@@ -121,6 +138,7 @@ export const useDuatClaimStore = create<DuatClaimState>()(
 			eligibilityLoaded: false,
 			eligibilityLoading: false,
 			dismissed: false,
+			claimPromptOpen: false,
 			currentUserEntry: null,
 			pendingClaimTrxId: null,
 			claiming: false,
@@ -149,7 +167,7 @@ export const useDuatClaimStore = create<DuatClaimState>()(
 						eligibilityLoaded: true,
 						eligibilityLoading: false,
 						currentUserEntry: eligibility,
-						pendingClaimTrxId: state.pendingClaimTrxId,
+						pendingClaimTrxId: eligibility?.claimReady === false ? null : state.pendingClaimTrxId,
 						error: null,
 					}));
 					if (eligibility && !eligibility.claimed) {
@@ -179,6 +197,12 @@ export const useDuatClaimStore = create<DuatClaimState>()(
 						trxId: currentUserEntry.claimTrxId ?? pendingClaimTrxId,
 						error: null,
 					};
+				}
+
+				if (!currentUserEntry.claimReady) {
+					const error = currentUserEntry.claimBlockedReason ?? 'DUAT claim is not ready yet';
+					set({ error });
+					return { broadcasted: false, trxId: null, error };
 				}
 
 				if (!isDuatClaimRuntimeEnabled()) {
@@ -224,8 +248,11 @@ export const useDuatClaimStore = create<DuatClaimState>()(
 				}
 			},
 
+			openClaimPopup: () => set({ claimPromptOpen: true, dismissed: false }),
+
 			dismiss: () => set(state => ({
 				dismissed: true,
+				claimPromptOpen: false,
 				pendingClaimTrxId: state.currentUserEntry?.claimed ? null : state.pendingClaimTrxId,
 			})),
 
@@ -233,6 +260,7 @@ export const useDuatClaimStore = create<DuatClaimState>()(
 				eligibilityLoaded: false,
 				eligibilityLoading: false,
 				dismissed: false,
+				claimPromptOpen: false,
 				currentUserEntry: null,
 				pendingClaimTrxId: null,
 				claiming: false,

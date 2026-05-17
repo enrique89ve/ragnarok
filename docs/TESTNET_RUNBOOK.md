@@ -86,7 +86,11 @@ and 120 requests/minute per IP for the global `/api` limiter.
 3. Connect Hive Keychain.
 4. Broadcast a low-risk operation first, such as queue join/leave or match anchor.
 5. Confirm the Hive `custom_json` id is `rk_game_testnet`.
-6. Confirm client replay reads the same namespace.
+6. Confirm the JSON body has a canonical protocol `action` such as
+   `queue_join`, `queue_leave`, or `match_anchor`. If Keychain shows
+   `save_state`, cancel the prompt; portable saves must not be broadcast under
+   `rk_game_testnet`.
+7. Confirm client replay reads the same namespace.
 
 Passing this smoke test closes the testnet configuration gate and opens the next roadmap block: gameplay/P2P validation under the testnet namespace.
 

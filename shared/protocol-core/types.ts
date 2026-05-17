@@ -152,46 +152,55 @@ export {
 // Canonical Op Actions (v1.0 base + v1.1/v1.2 extensions)
 // ============================================================
 
-export type CanonicalAction =
-	| 'genesis'
-	| 'seal'
-	| 'mint_batch'
-	| 'pack_commit'
-	| 'pack_reveal'
+export const CANONICAL_ACTIONS = [
+	'genesis',
+	'seal',
+	'mint_batch',
+	'pack_commit',
+	'pack_reveal',
 	// Eitr canonical forge per ADR 0001 §3
-	| 'forge_commit'
-	| 'forge_reveal'
-	| 'reward_claim'
-	| 'daily_quest_claim'
-	| 'card_transfer'
-	| 'burn'
-	| 'level_up'
-	| 'queue_join'
-	| 'queue_leave'
-	| 'match_anchor'
-	| 'match_result'
-	| 'campaign_result'
-	| 'rune_exchange'
-	| 'slash_evidence'
-	| 'pack_purchase'
+	'forge_commit',
+	'forge_reveal',
+	'reward_claim',
+	'daily_quest_claim',
+	'card_transfer',
+	'burn',
+	'level_up',
+	'queue_join',
+	'queue_leave',
+	'match_anchor',
+	'match_result',
+	'campaign_result',
+	'rune_exchange',
+	'slash_evidence',
+	'pack_purchase',
 	// v1.1: Pack NFTs
-	| 'pack_mint'
-	| 'pack_distribute'
-	| 'pack_transfer'
-	| 'pack_burn'
+	'pack_mint',
+	'pack_distribute',
+	'pack_transfer',
+	'pack_burn',
 	// v1.1: DNA Lineage
-	| 'card_replicate'
-	| 'card_merge'
+	'card_replicate',
+	'card_merge',
 	// v1.2: Marketplace (NFTLox-inspired)
-	| 'market_list'
-	| 'market_unlist'
-	| 'market_buy'
-	| 'market_offer'
-	| 'market_accept'
-	| 'market_reject'
+	'market_list',
+	'market_unlist',
+	'market_buy',
+	'market_offer',
+	'market_accept',
+	'market_reject',
 	// v1.2: DUAT Airdrop
-	| 'duat_airdrop_claim'
-	| 'duat_airdrop_finalize';
+	'duat_airdrop_claim',
+	'duat_airdrop_finalize',
+] as const;
+
+export type CanonicalAction = typeof CANONICAL_ACTIONS[number];
+
+export const CANONICAL_ACTION_SET: ReadonlySet<string> = new Set(CANONICAL_ACTIONS);
+
+export function isCanonicalAction(value: unknown): value is CanonicalAction {
+	return typeof value === 'string' && CANONICAL_ACTION_SET.has(value);
+}
 
 // Legacy op that is NOT a canonical alias (valid only pre-seal)
 export type LegacyAction = 'legacy_pack_open';
@@ -217,6 +226,7 @@ export const POSTING_AUTH_OPS: ReadonlySet<CanonicalAction> = new Set([
 	'queue_join', 'queue_leave', 'match_anchor', 'match_result', 'campaign_result',
 	'rune_exchange',
 	'pack_commit', 'pack_reveal', 'reward_claim', 'daily_quest_claim', 'level_up',
+	'forge_commit', 'forge_reveal',
 	// Marketplace: listing/offers use posting key
 	'market_list', 'market_unlist', 'market_offer', 'market_reject',
 	// DUAT: claim uses posting key (user claims own packs)

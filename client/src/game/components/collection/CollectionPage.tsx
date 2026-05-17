@@ -18,6 +18,7 @@ import { useNFTCollection, useNFTUsername } from '../../nft/hooks';
 import NFTProvenanceViewer from './NFTProvenanceViewer';
 import SendCardModal from './SendCardModal';
 import { useCollectionMilestoneStore } from '../../stores/collectionMilestoneStore';
+import { useDuatClaimStore } from '../../stores/duatClaimStore';
 import './collection.css';
 import '../styles/holoEffect.css';
 import { useEitrBalance } from '../../hooks/useEitrBalance';
@@ -383,6 +384,10 @@ export default function CollectionPage() {
 	const [totalPages, setTotalPages] = useState(1);
 	const [isLoadingMore, setIsLoadingMore] = useState(false);
 	const [refreshNonce, setRefreshNonce] = useState(0);
+	const duatEntry = useDuatClaimStore(state => state.currentUserEntry);
+	const duatPendingClaimTrxId = useDuatClaimStore(state => state.pendingClaimTrxId);
+	const showDuatCollectionNotice = Boolean(duatEntry && !duatEntry.claimed);
+	const duatCollectionConfirming = Boolean(duatPendingClaimTrxId && duatEntry?.claimReady);
 
 	useEffect(() => {
 		const controller = new AbortController();
@@ -544,6 +549,26 @@ export default function CollectionPage() {
 			/>
 
 			<div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+				{showDuatCollectionNotice && duatEntry && (
+					<div className={`${VAULT_PANEL_CLASS} mb-6 p-4 flex flex-wrap items-center gap-4`}>
+						<div className="grid h-10 w-10 place-items-center rounded-md border border-bifrost-300/45 bg-bifrost-500/15 text-bifrost-100">
+							<Package className="h-5 w-5" strokeWidth={2.4} aria-hidden="true" />
+						</div>
+						<div className="min-w-0 flex-1">
+							<div className="font-mono text-[10px] uppercase tracking-[0.24em] text-bifrost-300">
+								DUAT Packs · {duatCollectionConfirming ? 'Confirming' : duatEntry.claimReady ? 'Ready' : 'Collection pending'}
+							</div>
+							<p className="mt-1 text-sm text-ink-200">
+								{duatEntry.packsEarned} sealed pack{duatEntry.packsEarned === 1 ? '' : 's'} assigned. Cards appear in Collection only after you claim and open the packs.
+							</p>
+						</div>
+						<Link to={routes.packs} className="btn-runic btn-runic--bifrost btn-runic--sm">
+							<span className="btn-runic-stud" aria-hidden />
+							View Packs
+							<span className="btn-runic-stud" aria-hidden />
+						</Link>
+					</div>
+				)}
 
 				{/* Stats Dashboard */}
 				{stats && (

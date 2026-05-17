@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useDuatClaimStore } from '../stores/duatClaimStore';
 import { useStarterStore } from '../stores/starterStore';
 import { useNFTUsername } from '../nft/hooks';
+import { getDuatPopupVisibility } from './duatClaimVisibility';
 
 // Lazy — ceremony is only mounted after a successful claim.
 const DuatPackCeremony = lazy(() => import('./DuatPackCeremony'));
@@ -19,6 +20,7 @@ export default function DuatClaimPopup() {
 	const eligibilityLoaded = useDuatClaimStore(s => s.eligibilityLoaded);
 	const currentUserEntry = useDuatClaimStore(s => s.currentUserEntry);
 	const dismissed = useDuatClaimStore(s => s.dismissed);
+	const claimPromptOpen = useDuatClaimStore(s => s.claimPromptOpen);
 	const claiming = useDuatClaimStore(s => s.claiming);
 	const pendingClaimTrxId = useDuatClaimStore(s => s.pendingClaimTrxId);
 	const checkAccount = useDuatClaimStore(s => s.checkAccount);
@@ -36,6 +38,8 @@ export default function DuatClaimPopup() {
 	const claimConfirmed = Boolean(currentUserEntry?.claimed && pendingClaimTrxId);
 	const claimPending = Boolean(pendingClaimTrxId && !currentUserEntry?.claimed);
 	const activeClaimTrxId = currentUserEntry?.claimTrxId ?? pendingClaimTrxId;
+	const claimBlockedReason = currentUserEntry?.claimBlockedReason ?? null;
+	const claimDisabled = claiming || Boolean(claimBlockedReason);
 
 	// Check account when username changes
 	useEffect(() => {
@@ -43,11 +47,17 @@ export default function DuatClaimPopup() {
 		void checkAccount(username);
 	}, [username, checkAccount]);
 
-	// Don't show if: no user, not loaded, not eligible, already claimed,
-	// dismissed, OR starter not yet claimed (defer to starter ceremony first).
-	const visible = username && eligibilityLoaded && currentUserEntry && !currentUserEntry.claimed && !claimPending && !dismissed && starterClaimed;
-
-	const statusVisible = username && currentUserEntry && (claimPending || claimConfirmed) && !dismissed && starterClaimed;
+	// DUAT is an explicit wallet/vault action. Starter completion alone must
+	// never open this overlay over the starter reveal or first-mode decision.
+	const { visible, statusVisible } = getDuatPopupVisibility({
+		username,
+		eligibilityLoaded,
+		currentUserEntry,
+		dismissed,
+		claimPromptOpen,
+		pendingClaimTrxId,
+		starterClaimed,
+	});
 
 	if (showCeremony && username) {
 		return (
@@ -181,7 +191,7 @@ export default function DuatClaimPopup() {
 									</div>
 
 									<p className="text-gray-500 text-xs mb-6 leading-relaxed">
-										Claim once with Hive Keychain. Packs appear after chain confirmation.
+										{claimBlockedReason ?? 'Claim once with Hive Keychain. Packs appear after chain confirmation.'}
 									</p>
 
 									<div className="flex gap-3">
@@ -194,15 +204,15 @@ export default function DuatClaimPopup() {
 										</button>
 										<button
 											onClick={claimPacks}
-											disabled={claiming}
+											disabled={claimDisabled}
 											className="flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-all disabled:opacity-50"
 											style={{
-												background: claiming ? 'rgba(201, 164, 76, 0.2)' : 'linear-gradient(135deg, #c9a44c, #a07830)',
+												background: claimDisabled ? 'rgba(201, 164, 76, 0.2)' : 'linear-gradient(135deg, #c9a44c, #a07830)',
 												color: '#fff',
-												boxShadow: claiming ? 'none' : '0 0 20px rgba(201, 164, 76, 0.3)',
+												boxShadow: claimDisabled ? 'none' : '0 0 20px rgba(201, 164, 76, 0.3)',
 											}}
 										>
-											{claiming ? 'Claiming...' : 'Claim Packs'}
+											{claiming ? 'Claiming...' : claimBlockedReason ? 'Collection Pending' : 'Claim Packs'}
 										</button>
 									</div>
 								</>

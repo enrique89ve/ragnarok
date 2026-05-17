@@ -82,7 +82,7 @@ export async function broadcastSeal(): Promise<HiveBroadcastResult> {
 	return hiveSync.broadcastCustomJson(RAGNAROK_APP_ID, {
 		action: 'seal',
 		version: 1,
-	});
+	}, true);
 }
 
 export async function broadcastMint(params: {
@@ -109,7 +109,7 @@ export async function broadcastMint(params: {
 		action: 'mint_batch',
 		to: params.to,
 		cards: params.cards,
-	});
+	}, true);
 }
 
 export interface UnsignedGenesisTx {

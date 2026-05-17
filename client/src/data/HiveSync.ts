@@ -36,6 +36,9 @@ import {
 } from "../../../shared/protocol-core/broadcast-utils";
 import {
   buildHbdPackPurchaseMemo,
+  ACTIVE_AUTH_OPS,
+  isCanonicalAction,
+  type CanonicalAction,
   formatHbdTransferAmount,
 } from "@shared/protocol-core";
 import { buildMatchResultSignatureMessage } from "@shared/protocol-core/matchResultCommitment";
@@ -75,6 +78,76 @@ export interface HiveSignatureResult {
 }
 
 const KEYCHAIN_TIMEOUT_MS = 60_000;
+
+const LEGACY_BROADCAST_ACTIONS: Readonly<Record<string, CanonicalAction>> = {
+  rp_genesis: "genesis",
+  rp_seal: "seal",
+  rp_mint: "mint_batch",
+  rp_transfer: "card_transfer",
+  rp_card_transfer: "card_transfer",
+  rp_burn: "burn",
+  rp_match_start: "match_anchor",
+  rp_match_result: "match_result",
+  rp_campaign_result: "campaign_result",
+  rp_rune_exchange: "rune_exchange",
+  rp_level_up: "level_up",
+  rp_queue_join: "queue_join",
+  rp_queue_leave: "queue_leave",
+  rp_reward_claim: "reward_claim",
+  rp_daily_quest_claim: "daily_quest_claim",
+  rp_slash_evidence: "slash_evidence",
+  rp_pack_purchase: "pack_purchase",
+  rp_pack_mint: "pack_mint",
+  rp_pack_distribute: "pack_distribute",
+  rp_pack_transfer: "pack_transfer",
+  rp_pack_burn: "pack_burn",
+  rp_card_replicate: "card_replicate",
+  rp_card_merge: "card_merge",
+  rp_duat_airdrop_claim: "duat_airdrop_claim",
+  rp_duat_airdrop_finalize: "duat_airdrop_finalize",
+  rp_market_list: "market_list",
+  rp_market_unlist: "market_unlist",
+  rp_market_buy: "market_buy",
+  rp_market_offer: "market_offer",
+  rp_market_accept: "market_accept",
+  rp_market_reject: "market_reject",
+};
+
+type BroadcastActionResult =
+  | { success: true; action: CanonicalAction }
+  | { success: false; error: string };
+
+function resolveBroadcastAction(
+  type: RagnarokTransactionType | string,
+  payload: Record<string, unknown>,
+): BroadcastActionResult {
+  if (type.startsWith(RAGNAROK_LEGACY_PREFIX)) {
+    const action = LEGACY_BROADCAST_ACTIONS[type];
+    if (!action) {
+      return { success: false, error: `Unsupported Ragnarok custom_json id: ${type}` };
+    }
+    return { success: true, action };
+  }
+
+  if (isCanonicalAction(type)) {
+    return { success: true, action: type };
+  }
+
+  if (type === RAGNAROK_APP_ID) {
+    const payloadAction = payload.action;
+    if (!isCanonicalAction(payloadAction)) {
+      return {
+        success: false,
+        error: typeof payloadAction === "string"
+          ? `Unsupported Ragnarok action: ${payloadAction}`
+          : "Ragnarok custom_json payload is missing a canonical action",
+      };
+    }
+    return { success: true, action: payloadAction };
+  }
+
+  return { success: false, error: `Unsupported Ragnarok custom_json id: ${type}` };
+}
 
 interface HiveKeychainContext {
   username: string;
@@ -132,12 +205,15 @@ export class HiveSync {
     const { keychain, username } = contextResult.context;
 
     const cleanPayload = sanitizePayload(payload);
-    const payloadAction = cleanPayload.action;
-    const action = type.startsWith(RAGNAROK_LEGACY_PREFIX)
-      ? type.replace(RAGNAROK_LEGACY_PREFIX, "")
-      : typeof payloadAction === "string" && payloadAction.length > 0
-        ? payloadAction
-        : type;
+    const actionResult = resolveBroadcastAction(type, cleanPayload);
+    if (!actionResult.success) {
+      return { success: false, error: actionResult.error };
+    }
+    const { action } = actionResult;
+
+    if (ACTIVE_AUTH_OPS.has(action) && !useActiveKey) {
+      return { success: false, error: `${action} requires Active authority` };
+    }
 
     // Sanitize string fields before broadcast (defense-in-depth)
     const fullPayload = {

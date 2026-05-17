@@ -68,8 +68,7 @@ export type RagnarokTransactionType =
   | 'rp_pack_transfer'
   | 'rp_pack_burn'
   | 'rp_card_replicate'
-  | 'rp_card_merge'
-  | 'rp_save_state';
+  | 'rp_card_merge';
 
 export interface HiveUserRecord {
   hiveUsername: string;

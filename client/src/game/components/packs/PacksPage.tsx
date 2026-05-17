@@ -109,7 +109,9 @@ export default function PacksPage() {
 	const claimDuatPacks = useDuatClaimStore(s => s.claimPacks);
 	const duatPacksEarned = duatEntry?.packsEarned ?? 0;
 	const duatClaimed = duatEntry?.claimed ?? false;
-	const duatConfirming = Boolean(duatPendingClaimTrxId && !duatClaimed);
+	const duatClaimReady = duatEntry?.claimReady ?? false;
+	const duatClaimBlockedReason = duatEntry?.claimBlockedReason ?? null;
+	const duatConfirming = duatClaimReady && Boolean(duatPendingClaimTrxId && !duatClaimed);
 	const showDuatRow = Boolean(duatEntry) && !duatClaimed;
 
 	const [showCeremony, setShowCeremony] = useState(false);
@@ -192,6 +194,7 @@ export default function PacksPage() {
 						onClaim={handleDuatClaim}
 						loading={duatClaiming}
 						confirming={duatConfirming}
+						blockedReason={duatClaimBlockedReason}
 					/>
 				)}
 
@@ -413,13 +416,16 @@ function DuatClaimCard({
 	onClaim,
 	loading,
 	confirming,
+	blockedReason,
 }: {
 	packsEarned: number;
 	onClaim: () => void;
 	loading: boolean;
 	confirming: boolean;
+	blockedReason: string | null;
 }) {
-	const disabled = loading || confirming;
+	const blocked = Boolean(blockedReason);
+	const disabled = loading || confirming || blocked;
 
 	return (
 		<motion.section
@@ -443,7 +449,7 @@ function DuatClaimCard({
 
 			<div className="relative z-10 min-w-0 flex-1">
 				<div className="tier-inscription tier-inscription--standard mb-2">
-					DUAT Airdrop · {confirming ? 'Confirming' : 'Eligible'}
+					DUAT Airdrop · {confirming ? 'Confirming' : blocked ? 'Collection pending' : 'Eligible'}
 				</div>
 				<h2 id="duat-claim-heading" className="font-display text-xl font-bold text-ink-0 tracking-[0.10em] uppercase mb-2">
 					{packsEarned} sealed pack{packsEarned === 1 ? '' : 's'} {confirming ? 'confirming' : 'await'}
@@ -451,7 +457,7 @@ function DuatClaimCard({
 				<p className="text-ink-200 text-sm leading-snug max-w-[44ch]">
 					{confirming
 						? 'Your claim is on-chain. Packs appear here after replay confirms it.'
-						: 'Claim once during the 90-day window. Unclaimed packs return to the treasury.'}
+						: blockedReason ?? 'Claim once during the 90-day window. Unclaimed packs return to the treasury.'}
 				</p>
 			</div>
 
@@ -463,7 +469,7 @@ function DuatClaimCard({
 				className="btn-runic btn-runic--bifrost shrink-0 relative z-10 disabled:opacity-60"
 			>
 				<span className="btn-runic-stud" aria-hidden />
-				{loading ? 'Claiming...' : confirming ? 'Confirming...' : 'Claim Packs'}
+				{loading ? 'Claiming...' : confirming ? 'Confirming...' : blocked ? 'Collection Pending' : 'Claim Packs'}
 				<span className="btn-runic-stud" aria-hidden />
 			</button>
 		</motion.section>

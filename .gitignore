@@ -91,12 +91,15 @@ __tests__/
 !client/src/data/HiveAuth.test.ts
 !client/src/data/HiveDataLayer.test.ts
 !client/src/data/HiveKeychain.test.ts
+!client/src/data/HiveSync.test.ts
+!client/src/game/stores/saveStateManager.test.ts
 !client/src/game/stores/starterStore.test.ts
 !client/src/game/stores/gameStore.test.ts
 !client/src/game/stores/combat/chessAnimationSlice.test.ts
 !client/src/game/deck/heroDeckRules.test.ts
 !client/src/game/utils/cards/cardLevelScaling.test.ts
 !client/src/game/components/chess/chessBoardInteractionRules.test.ts
+!client/src/game/components/duatClaimVisibility.test.ts
 !client/src/game/components/gameLogAdapter.test.ts
 !client/src/game/components/handFanPlayability.test.ts
 !client/src/game/combat/aiAttackResolution.test.ts
@@ -105,6 +108,7 @@ __tests__/
 !client/src/game/combat/decision/pokerTurnBadgePresentation.test.ts
 !client/src/game/components/marketplace/runePackExchange.test.ts
 !shared/protocol-core/cardProgression.test.ts
+!shared/protocol-core/broadcast-utils.test.ts
 !shared/protocol-core/campaignResult.test.ts
 !shared/protocol-core/chess/chessRules.test.ts
 !shared/protocol-core/dailyQuestClaim.test.ts

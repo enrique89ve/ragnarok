@@ -9,24 +9,6 @@ export default function SettingsPage() {
 	const [saving, setSaving] = useState(false);
 	const fileRef = useRef<HTMLInputElement>(null);
 
-	const handleHiveSave = async () => {
-		setSaving(true);
-		setSaveStatus(null);
-		const { saveToHive } = await import('../../stores/saveStateManager');
-		const result = await saveToHive();
-		setSaveStatus(result.success ? `Saved to Hive! (tx: ${result.trxId?.slice(0, 8)}...)` : `Failed: ${result.error}`);
-		setSaving(false);
-	};
-
-	const handleHiveRestore = async () => {
-		setSaving(true);
-		setSaveStatus(null);
-		const { restoreFromHive } = await import('../../stores/saveStateManager');
-		const result = await restoreFromHive();
-		setSaveStatus(result.success ? 'Restored from Hive!' : `Failed: ${result.error}`);
-		setSaving(false);
-	};
-
 	const handleExportFile = async () => {
 		const { exportToFile } = await import('../../stores/saveStateManager');
 		await exportToFile();
@@ -59,7 +41,7 @@ export default function SettingsPage() {
 				<div className="bg-gray-900/60 border border-gray-800/60 rounded-xl p-6 mb-6">
 					<h2 className="text-lg font-bold text-amber-300 mb-1">Portable Save</h2>
 					<p className="text-gray-400 text-sm mb-4">
-						Your progress, base cards, decks, and campaign state. NFT cards sync automatically from the blockchain.
+						Your settings, campaign progress, starter flag, and decks. NFT cards and RUNE sync from chain replay.
 					</p>
 
 					{saveStatus && (
@@ -71,38 +53,8 @@ export default function SettingsPage() {
 					)}
 
 					<div className="space-y-3">
-						{/* Tier 1: Hive Save */}
-						{hiveUsername ? (
-							<div className="bg-indigo-900/20 border border-indigo-600/30 rounded-lg p-4">
-								<div className="flex items-center gap-2 mb-2">
-									<span className="text-indigo-400 text-sm font-bold">Hive Cloud Save</span>
-									<span className="text-xs text-indigo-400/60">@{hiveUsername}</span>
-								</div>
-								<p className="text-gray-400 text-xs mb-3">
-									Save to the Hive blockchain. Restores automatically on any device when you log in.
-								</p>
-								<div className="flex gap-2">
-									<button type="button" onClick={handleHiveSave} disabled={saving}
-										className="flex-1 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm rounded-lg transition-colors font-medium">
-										{saving ? 'Saving...' : 'Save to Hive'}
-									</button>
-									<button type="button" onClick={handleHiveRestore} disabled={saving}
-										className="flex-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white text-sm rounded-lg transition-colors font-medium">
-										{saving ? 'Restoring...' : 'Restore from Hive'}
-									</button>
-								</div>
-							</div>
-						) : (
-							<div className="bg-gray-800/40 border border-gray-700/40 rounded-lg p-4">
-								<p className="text-gray-400 text-sm">
-									Connect Hive Keychain for automatic cross-device saves. Your progress lives on the blockchain — never lost.
-								</p>
-							</div>
-						)}
-
-						{/* Tier 2: File Export/Import */}
 						<div className="bg-gray-800/40 border border-gray-700/40 rounded-lg p-4">
-							<div className="text-gray-300 text-sm font-bold mb-2">Local Backup File</div>
+							<div className="text-gray-300 text-sm font-bold mb-2">Backup File {hiveUsername ? `· @${hiveUsername}` : ''}</div>
 							<p className="text-gray-400 text-xs mb-3">
 								Download your save as a file. Transfer it via email, USB, or cloud drive to another device.
 							</p>

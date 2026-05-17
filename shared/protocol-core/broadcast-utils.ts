@@ -3,7 +3,7 @@
  *
  * 1. BuildResult<T> — structured broadcast results with all errors/warnings
  * 2. Operation size estimation + auto-batch splitting
- * 3. Input sanitization (HTML entity stripping)
+ * 3. Input sanitization (wire-safe control character stripping)
  * 4. Deterministic UID generation (anti-duplication)
  * 5. Structured transfer memos for L1 explorer readability
  */
@@ -139,22 +139,17 @@ export function estimateBatchCount<T>(
 // 3. Input sanitization
 // ============================================================
 
-const HTML_ENTITY_RE = /[&<>"']/g;
-const HTML_ENTITY_MAP: Record<string, string> = {
-	'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#x27;',
-};
-
 // eslint-disable-next-line no-control-regex
 const CONTROL_CHAR_RE = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
 
 /**
  * Sanitize a string for safe inclusion in custom_json payloads.
- * Strips HTML entities and control characters.
+ * Strips invalid control characters only. HTML escaping belongs at render
+ * time; mutating protocol strings before Hive broadcast changes on-chain data.
  */
 export function sanitizeString(input: string): string {
 	return input
 		.replace(CONTROL_CHAR_RE, '')
-		.replace(HTML_ENTITY_RE, (char) => HTML_ENTITY_MAP[char] || char)
 		.trim();
 }
 

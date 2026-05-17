@@ -1,9 +1,8 @@
 /**
  * saveStateManager.ts — Portable Save State (3-Tier System)
  *
- * Tier 1: Hive custom_json — auto-sync for authenticated players
- * Tier 2: File export/import — universal fallback for all players
- * Tier 3: QR/WebRTC transfer — convenience (handled by existing PeerJS infra)
+ * Tier 1: File export/import — universal fallback for all players
+ * Tier 2: QR/WebRTC transfer — convenience (handled by existing PeerJS infra)
  *
  * State payload: ~2KB compressed (campaign progress, decks, quest state,
  * Eitr balance, settings, tutorial flags). Does NOT include NFT cards or
@@ -11,7 +10,6 @@
  */
 
 import { debug } from '../config/debugConfig';
-import { RAGNAROK_APP_ID } from '../../data/schemas/HiveTypes';
 
 // ── Auto-Save on Milestones ──
 
@@ -19,19 +17,8 @@ let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function triggerAutoSave(): void {
 	if (autoSaveTimer) clearTimeout(autoSaveTimer);
-	autoSaveTimer = setTimeout(async () => {
+	autoSaveTimer = setTimeout(() => {
 		autoSaveTimer = null;
-		try {
-			const { getNFTBridge } = await import('../nft');
-			const bridge = getNFTBridge();
-			if (bridge.isHiveMode()) {
-				const result = await saveToHive();
-				if (result.success) debug.log('[AutoSave] Saved to Hive:', result.trxId);
-				else debug.warn('[AutoSave] Hive save failed:', result.error);
-			}
-		} catch (err) {
-			debug.warn('[AutoSave] Skipped (bridge not ready):', err);
-		}
 	}, 5000);
 }
 
@@ -205,74 +192,17 @@ export async function restoreSaveState(state: PortableSaveState): Promise<{ succ
 	}
 }
 
-// ── Tier 1: Hive Save/Restore ──
+// ── Legacy Hive Save/Restore ──
+
+const HIVE_SAVE_DISABLED_ERROR =
+	'Hive cloud save is disabled. Ragnarok only broadcasts canonical protocol ops; use a local backup file for portable saves.';
 
 export async function saveToHive(): Promise<{ success: boolean; trxId?: string; error?: string }> {
-	const { hiveSync } = await import('../../data/HiveSync');
-	if (!hiveSync.getUsername()) return { success: false, error: 'Not logged in to Hive' };
-
-	const state = await collectSaveState();
-	const compressed = JSON.stringify(state);
-
-	if (compressed.length > 7500) {
-		debug.warn(`[SaveState] State too large for single custom_json: ${compressed.length} bytes`);
-		return { success: false, error: 'State exceeds 8KB limit' };
-	}
-
-	const result = await hiveSync.broadcastCustomJson('rp_save_state' as any, {
-		action: 'save_state',
-		state: compressed,
-	}, false); // Posting key — save state is not a value transfer
-
-	return {
-		success: result.success,
-		trxId: result.trxId,
-		error: result.error,
-	};
+	return { success: false, error: HIVE_SAVE_DISABLED_ERROR };
 }
 
 export async function restoreFromHive(): Promise<{ success: boolean; error?: string }> {
-	try {
-		const { hiveSync } = await import('../../data/HiveSync');
-		const username = hiveSync.getUsername();
-		if (!username) return { success: false, error: 'Not logged in' };
-
-		// Fetch latest save_state from account history
-		const { HIVE_NODES } = await import('../../data/blockchain/hiveConfig');
-		const node = HIVE_NODES[0];
-		const resp = await fetch(node, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				jsonrpc: '2.0', method: 'condenser_api.get_account_history',
-				params: [username, -1, 100], id: 1,
-			}),
-		});
-		const data = await resp.json();
-		const history = data.result || [];
-
-		// Find latest save_state op
-		let latestState: PortableSaveState | null = null;
-		for (let i = history.length - 1; i >= 0; i--) {
-			const [, entry] = history[i];
-			if (entry.op[0] !== 'custom_json') continue;
-			const opData = entry.op[1];
-			if (opData.id !== RAGNAROK_APP_ID) continue;
-			try {
-				const payload = JSON.parse(opData.json);
-				if (payload.action === 'save_state' && payload.state) {
-					latestState = JSON.parse(payload.state);
-					break;
-				}
-			} catch { continue; }
-		}
-
-		if (!latestState) return { success: false, error: 'No save state found on chain' };
-
-		return restoreSaveState(latestState);
-	} catch (err) {
-		return { success: false, error: String(err) };
-	}
+	return { success: false, error: HIVE_SAVE_DISABLED_ERROR };
 }
 
 // ── Tier 2: File Export/Import ──
