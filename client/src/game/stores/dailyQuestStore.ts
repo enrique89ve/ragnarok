@@ -6,6 +6,10 @@ import { accountScopedStorage, registerAccountScopedStore } from '../../lib/stor
 import { pickRandomQuests, type DailyQuestType, type QuestTemplate } from '../data/dailyQuestPool';
 import { getNFTBridge } from '../nft';
 import { debug } from '../config/debugConfig';
+import {
+	assertClientWalletInvocation,
+	type ClientWalletInvocation,
+} from '../../data/wallet/clientWalletInvocation';
 
 export interface DailyQuest {
 	id: string;
@@ -33,7 +37,7 @@ interface DailyQuestActions {
 	refreshIfNeeded: () => Promise<void>;
 	updateProgress: (type: DailyQuestType, increment: number) => void;
 	rerollQuest: (questId: string) => void;
-	flushPendingClaims: () => Promise<void>;
+	flushPendingClaims: (invocation: ClientWalletInvocation) => Promise<void>;
 }
 
 const DAILY_QUEST_RUNE_REWARD = TESTNET_RUNE_ECONOMY.dailyQuestRunePerSlot;
@@ -127,14 +131,10 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 					return;
 				}
 
-				// Day rolled over. Flush any completed-but-unclaimed quests from
-				// yesterday BEFORE we replace the array — otherwise a player who
-				// completed a quest mid-evening but never opened the panel or
-				// finished another match before midnight UTC would lose the RUNE.
-				// flushPendingClaims is idempotent and a no-op when nothing pends.
-				await get().flushPendingClaims();
-
-				// If anything still pending (Keychain cancelled, broadcast failed,
+				// Day rolled over. Completed-but-unclaimed quests are held, but
+				// refresh never opens Keychain. The wallet prompt belongs to the
+				// explicit Claim button in the quest panel.
+				// If anything is still pending (not yet claimed, Keychain rejected,
 				// guest mode), hold the rotation. The chain validates ymd_utc
 				// within ±48h of op.timestamp, so a held quest can still claim
 				// for up to 2 days; after that the player has effectively lost
@@ -177,7 +177,8 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 				// while the player is making a decision. See file header.
 			},
 
-			flushPendingClaims: async () => {
+			flushPendingClaims: async (invocation) => {
+				assertClientWalletInvocation(invocation, 'daily_quest_claim', 'Posting');
 				if (get().flushing) return;
 				const pending = get().quests.filter(q => q.completed && !q.claimed);
 				if (pending.length === 0) return;

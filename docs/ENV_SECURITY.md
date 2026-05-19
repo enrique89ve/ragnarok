@@ -13,6 +13,7 @@ Allowed public values:
 - `VITE_RAGNAROK_PROTOCOL_ID`
 - `VITE_RAGNAROK_COLLECTION_ID`
 - `VITE_RAGNAROK_ADMIN_ACCOUNT`
+- `VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT`
 - `VITE_RAGNAROK_GENESIS_ACCOUNT`
 - `VITE_RAGNAROK_TREASURY_ACCOUNT`
 - `VITE_RAGNAROK_INDEX_ACCOUNT`
@@ -43,6 +44,7 @@ These values are sensitive and must never use the `VITE_` prefix:
 - `SESSION_SECRET`
 - `HIVE_POSTING_KEY`
 - `HIVE_ACTIVE_KEY`
+- `RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY`
 - any Hive WIF private key
 - any Hive `PVT_*` private key
 - `ANTHROPIC_API_KEY`
@@ -57,6 +59,15 @@ files. Deployed environments should use the hosting provider's secret manager.
 
 Player keys live in Hive Keychain. The browser app asks Keychain to sign; it
 does not receive, persist, or transmit private keys.
+
+Admin Panel actions use two accounts when operator signing is enabled:
+
+- `VITE_RAGNAROK_ADMIN_ACCOUNT` is the frontend account allowed to log in and
+  approve admin actions with Hive Keychain Active authority.
+- `VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT` is the public account that broadcasts
+  approved admin ops.
+- `RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY` is the server/operator-only Active key
+  for that operator account. It must never use the `VITE_` prefix.
 
 Operator posting keys live only in a server/operator process when automation is
 required. Use a non-public name such as:
@@ -73,6 +84,7 @@ multisig for the action:
 ```env
 HIVE_ACTIVE_KEY=...
 RAGNAROK_OPERATOR_ACTIVE_KEY=...
+RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY=...
 ```
 
 Genesis and treasury signer active keys should remain in Hive Keychain on each

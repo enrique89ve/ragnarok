@@ -229,17 +229,14 @@ When `gameState.gamePhase === 'game_over'`, `BlockchainSubscriber` packages
 the result (`BlockchainSubscriber.ts:272-294`):
 1. Computes the merkle root of the transcript (`buildMerkleTree()`).
 2. Pins the transcript bundle to IPFS (best-effort, non-blocking).
-3. Calls `attemptDualSig` (`BlockchainSubscriber.ts:317-339`):
+3. Calls `attemptDualSig`:
    - The winning peer computes the compact commitment hash `ch` over
      `{m,w,l,n,h,s,v,c,tr,tc}` where `h = result.hash` and `tr` is the
      transcript Merkle root.
-   - The winner signs `ragnarok match_result v1 | <ch>` with their Hive posting
-     key (`hiveSync.signResultHash`).
-   - The winner sends
-     `result_propose: { result, hash: ch, broadcasterSig, proposalId }` to the
-     opponent.
-   - The winner waits up to 30s for `result_countersign`.
-4. Opponent receives `result_propose` (`useWireSync.ts:1484-1542`):
+   - Current client behavior: record `result_signature_deferred` and do NOT
+     open Keychain from match end.
+   - Future behavior must route this through a visible result review/sign flow.
+4. Opponent receives `result_propose` from an older peer:
    - Builds its local transcript Merkle root and rejects
      `missing_transcript_root`, `local_transcript_unavailable`, or
      `transcript_root_mismatch` before signing if the proposed `tr` cannot be
@@ -250,12 +247,10 @@ the result (`BlockchainSubscriber.ts:272-294`):
      username (NOT by peerId — identity is anchored to Hive account).
    - Validates that the proposal's winner agrees with the local
      `gameState.winner` field.
-   - On agreement: signs `ragnarok match_result v1 | <data.hash>` and sends
-     `result_countersign`.
+   - On agreement: sends `result_reject: signature_deferred` instead of opening
+     Keychain. Countersigning needs a visible wallet action.
    - On disagreement: sends `result_reject` with a reason code.
-5. The winner attaches both signatures to the result and broadcasts on-chain
-   (see §8). Without dual-sig the result is NOT broadcast for ranked
-   matches (`BlockchainSubscriber.ts:298-301`).
+5. Without dual-sig the result is NOT broadcast for ranked matches.
 
 ### Phase 5 — Cleanup
 
@@ -577,19 +572,17 @@ tree at match end. The root is embedded in the on-chain `match_result`.
 - Empty transcript → `SHA256('empty_transcript')`.
 
 **Authority rule** (CRITICAL): the **winner's compact commitment** is what
-goes on-chain. `BlockchainSubscriber.attemptDualSig` only proposes when the
-local Hive account is the winner. The opponent recomputes `ch` from the
-proposal before countersigning, so neither peer can swap `h`, `tr`, `tc`, or
-winner-card ids without invalidating the signed payload. See §10 OPEN-1 for
-the remaining local transcript-root comparison gap.
+would go on-chain once the visible result review/sign flow exists. Current
+client behavior defers both proposal signing and countersigning so match-end
+and inbound P2P messages cannot open Keychain.
 
 **Arbitration surface** (off-wire, post-match):
 - Server-side arbitrator (NOT yet implemented as a service — see
   HivePoA design) consumes the on-chain `match_result.tr` (transcript
   root) and `match_result.tc` (transcript IPFS CID).
-- A player can submit a dispute via `submitSlashEvidence` (already wired
-  for `forged_move`, `fake_disconnect`, `double_result` — see
-  `useWireSync.ts:309-317, 397-405, 1024-1031`).
+- Current client behavior records `slash_evidence_deferred` for detected
+  `forged_move` / `double_result` cases. Broadcasting slash evidence needs a
+  future visible Submit evidence wallet action.
 - The arbitrator fetches the IPFS bundle, verifies the merkle root,
   walks the move list, and resolves the dispute.
 
@@ -632,16 +625,17 @@ the `tc` CID; the chain only carries enough to verify integrity.
 | WASM-engine version mismatch | `wasm_hash_check` envelope | Disconnect immediately (both peers know) |
 | Build-hash mismatch | `version_check` envelope | Toast warning, continue (not a slash) |
 | Seed commitment mismatch | `seed_reveal` validation | Disconnect; possible cheating |
-| State hash mismatch (cards) | `hash_check` from host | Toast + `submitSlashEvidence({ reason: 'forged_move' })` |
-| Mid-match disconnect | WS close handler | If `gamePhase !== 'game_over'`: `submitSlashEvidence({ reason: 'fake_disconnect' })` |
-| Duplicate match_result on-chain | Found via `findExistingMatchResult` | `submitSlashEvidence({ reason: 'double_result' })` |
+| State hash mismatch (cards) | `hash_check` from host | Toast + `slash_evidence_deferred` record |
+| Mid-match disconnect | WS close handler | No auto-broadcast; future evidence flow required |
+| Duplicate match_result on-chain | Found via `findExistingMatchResult` | `slash_evidence_deferred` record |
 | Transcript root mismatch at result proposal | Opponent local root check | Reject `result_propose`; ranked result is not broadcast |
-| Dual-sig timeout / rejection | 30s timer in `attemptDualSig` | Result NOT broadcast; both players may submit slash evidence |
+| Result signature deferred | `attemptDualSig` or inbound `result_propose` | Result NOT broadcast; future result review/sign flow required |
 | Chess piece-not-found mid-move | Receive handler `piece_not_found_*` | `recordSessionEvent('chess_command_rejected', { cause })`; freeze (no auto-recovery — see §10 OPEN-3) |
 
-Slash evidence is submitted via `submitSlashEvidence`
-(`client/src/data/blockchain/slashEvidence.ts`) which broadcasts another
-custom_json. The server-side processor is part of HivePoA (separate spec).
+Slash evidence broadcasting is implemented by `submitSlashEvidence`
+(`client/src/data/blockchain/slashEvidence.ts`), but P2P runtime paths must not
+call it directly. They record deferred evidence until a visible wallet action
+exists.
 
 ---
 
@@ -747,8 +741,8 @@ authoritative? Or is it OK to derive client-side from local context?
 
 **Where**: today the host sends full `gameState` snapshots (~10KB)
 debounced post-command (host→client) regardless of whether the client
-needs it. `hash_check` exists but only triggers `slash_evidence`, not
-state recovery.
+needs it. `hash_check` currently records deferred slash evidence, not state
+recovery.
 
 **Decision needed**: refactor so `gameState` flows ONLY when a
 `hash_mismatch` is observed by the receiver — i.e., the wire becomes

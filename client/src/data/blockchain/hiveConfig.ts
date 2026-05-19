@@ -9,6 +9,7 @@ export const HIVE_NODES = [
 ] as const;
 
 export const RAGNAROK_ACCOUNT = networkConfig.adminAccount;
+export const RAGNAROK_ADMIN_OPERATOR_ACCOUNT = networkConfig.adminOperatorAccount;
 export const RAGNAROK_GENESIS_ACCOUNT = networkConfig.genesisAccount;
 export const RAGNAROK_TREASURY_ACCOUNT = networkConfig.treasuryAccount;
 export const RAGNAROK_INDEX_ACCOUNT = networkConfig.indexAccount;

@@ -1,4 +1,4 @@
-import { PublicKey, Signature } from 'hive-tx';
+import { Signature } from 'hive-tx';
 import { HIVE_NODES } from './hiveConfig';
 const FETCH_TIMEOUT_MS = 8000;
 const KEY_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -57,6 +57,23 @@ export async function verifyHiveSignature(
 	message: string,
 	signatureHex: string,
 ): Promise<boolean> {
+	return verifyHiveSignatureWithAuthority(username, message, signatureHex, 'posting');
+}
+
+export async function verifyHiveActiveSignature(
+	username: string,
+	message: string,
+	signatureHex: string,
+): Promise<boolean> {
+	return verifyHiveSignatureWithAuthority(username, message, signatureHex, 'active');
+}
+
+async function verifyHiveSignatureWithAuthority(
+	username: string,
+	message: string,
+	signatureHex: string,
+	authority: 'posting' | 'active',
+): Promise<boolean> {
 	if (!signatureHex || signatureHex.length < 10) return false;
 
 	try {
@@ -73,7 +90,7 @@ export async function verifyHiveSignature(
 		const recoveredKey = sig.getPublicKey(hashHex);
 		const recoveredKeyStr = recoveredKey.toString();
 
-		return keys.posting.includes(recoveredKeyStr);
+		return keys[authority].includes(recoveredKeyStr);
 	} catch {
 		return false;
 	}

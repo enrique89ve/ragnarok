@@ -18,6 +18,8 @@ Required values for the current profile:
 VITE_NETWORK_STAGE=testnet
 VITE_RAGNAROK_PROTOCOL_ID=rk_game_testnet
 VITE_RAGNAROK_COLLECTION_ID=ragnarok-testnet
+VITE_RAGNAROK_ADMIN_ACCOUNT=ragnarok-test
+VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT=ragnarok-test-operator
 VITE_NFTLOX_PROTOCOL_ID=nftlox_testnet
 ```
 
@@ -28,7 +30,10 @@ testnet runs.
 Hive private keys are server/operator-only. Never put posting, active, owner,
 memo, or WIF keys in a `VITE_*` variable; `VITE_*` is bundled into browser code.
 Public `VITE_*` values may include network stage, protocol ids, collection ids,
-Hive account names, and public endpoints. Do not put credentials in public URLs.
+Hive account names, and public endpoints. Admin actions require the frontend
+admin account to approve with Keychain Active authority and the server operator
+account to broadcast with `RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY`. Do not put
+credentials in public URLs.
 See [`ENV_SECURITY.md`](ENV_SECURITY.md) for the canonical key-placement rules.
 
 Indexer and art endpoints can stay empty until those services are deployed:

@@ -2,7 +2,8 @@
 
 Question: which internal UI layout helps the team understand real RUNE balances, ledger trace, caps, and drift fastest before final UI integration?
 
-Route: `/#/testnet/rune?variant=A`
+Status: archived. The legacy route `/#/testnet/rune` now redirects to `/#/wallet`;
+do not remount this prototype as a player-facing RUNE surface.
 
 Data source: `/api/chain/rune/*` read-only endpoints backed by server chain state.
 
@@ -12,4 +13,5 @@ Variants:
 - `B` - Account First: account search and per-account trace first.
 - `C` - Ledger Inspector: filters, table density, and JSON preview first.
 
-Verdict: pending team review. Delete losing variants and fold the chosen layout into the real testnet panel.
+Verdict: wallet is the canonical player-facing RUNE surface. Keep RUNE reads on
+`/api/chain/rune/*` and `/api/chain/player/:username/rune`.

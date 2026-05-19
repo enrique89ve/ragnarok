@@ -65,11 +65,11 @@ export default function DailyQuestInfoDialog({ onClose }: DailyQuestInfoDialogPr
 							title="What counts"
 							body="Your wins, cards played, minions, spells, weapons, mythic cards, hero power uses, enemy minion kills, and damage dealt by your side."
 						/>
-						<InfoRow
-							icon={<CheckCircle2 size={14} strokeWidth={2.2} aria-hidden />}
-							title="Claim timing"
-							body="Completed quests become Pending. In Hive mode, the claim broadcasts after the match or when this panel opens; Keychain signs it, then the chain confirms the RUNE."
-						/>
+							<InfoRow
+								icon={<CheckCircle2 size={14} strokeWidth={2.2} aria-hidden />}
+								title="Claim timing"
+								body="Completed quests become Pending. In Hive mode, use Claim to open Keychain; the chain confirms the RUNE after the signed custom_json lands."
+							/>
 						<InfoRow
 							icon={<Coins size={14} strokeWidth={2.2} aria-hidden />}
 							title="RUNE limits"

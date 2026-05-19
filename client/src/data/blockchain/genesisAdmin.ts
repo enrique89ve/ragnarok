@@ -8,15 +8,20 @@
  *
  * Ceremony ops use v1 canonical format: custom_json id="ragnarok-cards"
  * with { p: "ragnarok-cards", action: "genesis"|"mint_batch"|"seal" }.
- * Unsigned tx builders produce the same canonical payloads for multisig signing.
- * Only the @ragnarok account (2-of-3 multisig) can execute these.
+ * Browser admin approval is signed with Active authority, then the server
+ * broadcasts with the configured operator Active key.
  */
 
 import { hiveSync } from '../HiveSync';
 import type { HiveBroadcastResult } from '../HiveSync';
-import { RAGNAROK_ACCOUNT, RAGNAROK_GENESIS_ACCOUNT } from './hiveConfig';
+import {
+	RAGNAROK_ACCOUNT,
+	RAGNAROK_GENESIS_ACCOUNT,
+} from './hiveConfig';
+import { ragnarokAdminAdapter } from './adminAdapters';
 import { RAGNAROK_APP_ID } from '../schemas/HiveTypes';
 import { getRagnarokCollectionId } from '../../game/config/networkConfig';
+import { debug } from '../../game/config/debugConfig';
 
 /** Per-card supply caps — each unique card_id can have at most this many NFTs */
 const SUPPLY_CAPS: Record<string, number> = {
@@ -60,11 +65,10 @@ export async function broadcastGenesis(): Promise<HiveBroadcastResult> {
 		const hashBuffer = await crypto.subtle.digest('SHA-256', wasmBinary);
 		readerHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 	} catch (err) {
-		console.warn('[genesisAdmin] Could not hash WASM binary:', err);
+		debug.warn('[genesisAdmin] Could not hash WASM binary:', err);
 	}
 
-	return hiveSync.broadcastCustomJson(RAGNAROK_APP_ID, {
-		action: 'genesis',
+	return ragnarokAdminAdapter.broadcast('genesis', {
 		version: 1,
 		collection: getRagnarokCollectionId(),
 		engine_hash: readerHash,
@@ -79,10 +83,9 @@ export async function broadcastSeal(): Promise<HiveBroadcastResult> {
 	const err = requireAdmin();
 	if (err) return err;
 
-	return hiveSync.broadcastCustomJson(RAGNAROK_APP_ID, {
-		action: 'seal',
+	return ragnarokAdminAdapter.broadcast('seal', {
 		version: 1,
-	}, true);
+	});
 }
 
 export async function broadcastMint(params: {
@@ -105,11 +108,36 @@ export async function broadcastMint(params: {
 		return { success: false, error: 'to and cards[] are required' };
 	}
 
-	return hiveSync.broadcastCustomJson(RAGNAROK_APP_ID, {
-		action: 'mint_batch',
+	return ragnarokAdminAdapter.broadcast('mint_batch', {
 		to: params.to,
 		cards: params.cards,
-	}, true);
+	});
+}
+
+export async function broadcastPackMint(params: {
+	packType: string;
+	quantity: number;
+	to: string;
+}): Promise<HiveBroadcastResult> {
+	const err = requireAdmin();
+	if (err) return err;
+	return ragnarokAdminAdapter.broadcast('pack_mint', {
+		pack_type: params.packType,
+		quantity: params.quantity,
+		to: params.to,
+	});
+}
+
+export async function broadcastPackDistribute(params: {
+	packUids: string[];
+	to: string;
+}): Promise<HiveBroadcastResult> {
+	const err = requireAdmin();
+	if (err) return err;
+	return ragnarokAdminAdapter.broadcast('pack_distribute', {
+		pack_uids: params.packUids,
+		to: params.to,
+	});
 }
 
 export interface UnsignedGenesisTx {

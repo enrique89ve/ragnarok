@@ -11,6 +11,7 @@ import { useDuatClaimStore } from '../stores/duatClaimStore';
 import { useStarterStore } from '../stores/starterStore';
 import { useNFTUsername } from '../nft/hooks';
 import { getDuatPopupVisibility } from './duatClaimVisibility';
+import { invokeClientWalletAction } from '../../data/wallet/clientWalletInvocation';
 
 // Lazy — ceremony is only mounted after a successful claim.
 const DuatPackCeremony = lazy(() => import('./DuatPackCeremony'));
@@ -40,6 +41,17 @@ export default function DuatClaimPopup() {
 	const activeClaimTrxId = currentUserEntry?.claimTrxId ?? pendingClaimTrxId;
 	const claimBlockedReason = currentUserEntry?.claimBlockedReason ?? null;
 	const claimDisabled = claiming || Boolean(claimBlockedReason);
+
+	const handleClaimPacks = () => {
+		void invokeClientWalletAction(
+			{
+				kind: 'duat_airdrop_claim',
+				authority: 'Posting',
+				label: 'Claim DUAT airdrop packs',
+			},
+			claimPacks,
+		);
+	};
 
 	// Check account when username changes
 	useEffect(() => {
@@ -203,7 +215,7 @@ export default function DuatClaimPopup() {
 											Maybe Later
 										</button>
 										<button
-											onClick={claimPacks}
+											onClick={handleClaimPacks}
 											disabled={claimDisabled}
 											className="flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-all disabled:opacity-50"
 											style={{

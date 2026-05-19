@@ -13,6 +13,10 @@ import { accountScopedStorage, registerAccountScopedStore } from '../../lib/stor
 import { debug } from '../config/debugConfig';
 import { getNFTBridge } from '../nft';
 import { isHiveMode, isSharedNetworkEnvironment } from '../config/featureFlags';
+import {
+	assertClientWalletInvocation,
+	type ClientWalletInvocation,
+} from '../../data/wallet/clientWalletInvocation';
 
 type DuatClaimError = string | null;
 
@@ -46,7 +50,7 @@ interface DuatClaimState {
 	error: DuatClaimError;
 
 	checkAccount: (username: string) => Promise<void>;
-	claimPacks: () => Promise<DuatClaimResult>;
+	claimPacks: (invocation: ClientWalletInvocation) => Promise<DuatClaimResult>;
 	openClaimPopup: () => void;
 	dismiss: () => void;
 	reset: () => void;
@@ -185,7 +189,8 @@ export const useDuatClaimStore = create<DuatClaimState>()(
 				}
 			},
 
-			claimPacks: async () => {
+			claimPacks: async (invocation) => {
+				assertClientWalletInvocation(invocation, 'duat_airdrop_claim', 'Posting');
 				const { currentUserEntry, claiming, pendingClaimTrxId } = get();
 				if (!currentUserEntry || claiming) {
 					return { broadcasted: false, trxId: null, error: null };

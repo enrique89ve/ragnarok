@@ -21,7 +21,7 @@ import { computeStateHash } from '../../../../engine/engineBridge';
 import { flipGameState, computeCardsPrevStateHash } from '../../../../engine/wireHash';
 import { computeChessPrevStateHash } from '../../../../engine/chessHash';
 import { isSharedNetworkEnvironment } from '../../../../config/featureFlags';
-import { submitSlashEvidence, findExistingMatchResult } from '../../../../../data/blockchain/slashEvidence';
+import { findExistingMatchResult, type SlashEvidenceParams } from '../../../../../data/blockchain/slashEvidence';
 import { GAME_COMMAND_TYPES } from '../../../../core/commands';
 import type { GameCommandEnvelope, WireGameCommand } from '../../../../hooks/p2pEnvelope';
 import { useWarbandStore, selectArmy } from '../../../../../lib/stores/useWarbandStore';
@@ -47,7 +47,6 @@ import {
 	open as openActionLog,
 	deriveEncKey as deriveActionLogEncKey,
 	appendLeaf as appendActionLogLeaf,
-	pruneFinalized as pruneActionLog,
 	type StoredLeaf,
 } from '../../../../protocol/actionLog';
 import { verifyResultProposalTranscriptRoot } from './resultProposalGuard';
@@ -77,6 +76,16 @@ let outgoingSeqCounter = 0;
 // not a hook) can record without dragging in this file's React context. The
 // counter must be a singleton — splitting it would break monotonic moveNumber
 // across the cards / chess / poker entry points.
+
+function deferSlashEvidence(params: SlashEvidenceParams): void {
+	recordSessionEvent('slash_evidence_deferred', { ...params });
+	debug.warn(`[wireSync] Slash evidence deferred (${params.reason}) — hidden Keychain prompts are disabled`);
+	GameEventBus.emitNotification({
+		level: 'warning',
+		message: 'Evidence captured. Submit evidence needs a visible wallet action.',
+		duration: 8000,
+	});
+}
 
 const RESULT_SIGN_TIMEOUT_MS = 30_000;
 
@@ -496,17 +505,17 @@ export function useWireSync() {
 							lastSlashTurnRef.current = data.turnNumber;
 							const matchSeed = useGameStore.getState().matchSeed;
 							const opponentName = usePeerStore.getState().remotePeerId ?? 'unknown';
-							if (matchSeed) {
-								submitSlashEvidence({
-									matchId: matchSeed,
-									offender: opponentName,
-									reason: 'forged_move',
-									trxId1: matchSeed,
-									trxId2: `hash_check_fail_cards_turn_${data.turnNumber}_${myHash.slice(0, 16)}`,
-									notes: `Cards hash check failed at turn ${data.turnNumber}. Local: ${myHash.slice(0, 16)}, remote: ${data.stateHash.slice(0, 16)}`,
-								}).catch(err => debug.warn('[wireSync] Failed to submit forged_move slash:', err));
+								if (matchSeed) {
+									deferSlashEvidence({
+										matchId: matchSeed,
+										offender: opponentName,
+										reason: 'forged_move',
+										trxId1: matchSeed,
+										trxId2: `hash_check_fail_cards_turn_${data.turnNumber}_${myHash.slice(0, 16)}`,
+										notes: `Cards hash check failed at turn ${data.turnNumber}. Local: ${myHash.slice(0, 16)}, remote: ${data.stateHash.slice(0, 16)}`,
+									});
+								}
 							}
-						}
 					}
 
 					// Chess hash check (TD-27c-chess F3). Empty on either side means
@@ -541,17 +550,17 @@ export function useWireSync() {
 								lastChessSlashTurnRef.current = data.turnNumber;
 								const matchSeed = useGameStore.getState().matchSeed;
 								const opponentName = usePeerStore.getState().remotePeerId ?? 'unknown';
-								if (matchSeed) {
-									submitSlashEvidence({
-										matchId: matchSeed,
-										offender: opponentName,
-										reason: 'forged_move',
-										trxId1: matchSeed,
-										trxId2: `hash_check_fail_chess_turn_${data.turnNumber}_${myChessHash.slice(0, 16)}`,
-										notes: `Chess hash check failed at turn ${data.turnNumber}. Local: ${myChessHash.slice(0, 16)}, remote: ${data.chessStateHash.slice(0, 16)}`,
-									}).catch(err => debug.warn('[wireSync] Failed to submit chess forged_move slash:', err));
+									if (matchSeed) {
+										deferSlashEvidence({
+											matchId: matchSeed,
+											offender: opponentName,
+											reason: 'forged_move',
+											trxId1: matchSeed,
+											trxId2: `hash_check_fail_chess_turn_${data.turnNumber}_${myChessHash.slice(0, 16)}`,
+											notes: `Chess hash check failed at turn ${data.turnNumber}. Local: ${myChessHash.slice(0, 16)}, remote: ${data.chessStateHash.slice(0, 16)}`,
+										});
+									}
 								}
-							}
 						}
 					}
 					break;
@@ -568,17 +577,17 @@ export function useWireSync() {
 					if (isSharedNetworkEnvironment()) {
 						const matchSeed = useGameStore.getState().matchSeed;
 						const opponentName = usePeerStore.getState().remotePeerId ?? 'unknown';
-						if (matchSeed) {
-							submitSlashEvidence({
-								matchId: matchSeed,
-								offender: opponentName,
-								reason: 'forged_move',
-								trxId1: matchSeed,
-								trxId2: `hash_mismatch_turn_${data.turnNumber}_${data.myHash.slice(0, 16)}`,
-								notes: `State hash mismatch at turn ${data.turnNumber}. Opponent hash: ${data.myHash.slice(0, 16)}`,
-							}).catch(err => debug.warn('[wireSync] Failed to submit forged_move slash:', err));
+							if (matchSeed) {
+								deferSlashEvidence({
+									matchId: matchSeed,
+									offender: opponentName,
+									reason: 'forged_move',
+									trxId1: matchSeed,
+									trxId2: `hash_mismatch_turn_${data.turnNumber}_${data.myHash.slice(0, 16)}`,
+									notes: `State hash mismatch at turn ${data.turnNumber}. Opponent hash: ${data.myHash.slice(0, 16)}`,
+								});
+							}
 						}
-					}
 					break;
 
 				case 'seed_commit':
@@ -1542,17 +1551,17 @@ export function useWireSync() {
 						const proposerUsername = data.result.winner?.username || data.result.loser?.username;
 						findExistingMatchResult(data.result.matchId, proposerUsername)
 							.then(existingTrxId => {
-								if (existingTrxId) {
-									submitSlashEvidence({
-										matchId: data.result.matchId,
-										offender: proposerUsername,
-										reason: 'double_result',
-										trxId1: existingTrxId,
-										trxId2: data.hash,
-										notes: `Duplicate match result proposed for matchId ${data.result.matchId}`,
-									}).catch(err => debug.warn('[wireSync] Failed to submit double_result slash:', err));
-								}
-							})
+									if (existingTrxId) {
+										deferSlashEvidence({
+											matchId: data.result.matchId,
+											offender: proposerUsername,
+											reason: 'double_result',
+											trxId1: existingTrxId,
+											trxId2: data.hash,
+											notes: `Duplicate match result proposed for matchId ${data.result.matchId}`,
+										});
+									}
+								})
 							.catch(err => debug.warn('[wireSync] Failed to check existing match result:', err));
 					}
 
@@ -1564,22 +1573,9 @@ export function useWireSync() {
 					const resultSaysIWon = data.result.winner.username === clientUsername;
 					const resultSaysILost = data.result.loser.username === clientUsername;
 
-					if ((iAmWinner && resultSaysIWon) || (!iAmWinner && resultSaysILost)) {
-						try {
-							const sig = await getNFTBridge().signResultHash(data.hash);
-							send({ type: 'result_countersign', counterpartySig: sig, proposalId: data.proposalId });
-							// ADR 0004 §Decision.6 (issue 04) — match finalized,
-							// prune the action log. Idempotent; second prune is
-							// a no-op if the connection cleanup ran first.
-							const logDb = actionLogDbRef.current;
-							if (logDb) {
-								void pruneActionLog(logDb, data.result.matchId).catch((e) => {
-									debug.warn('[wireSync] action log prune failed:', e);
-								});
-							}
-						} catch {
+						if ((iAmWinner && resultSaysIWon) || (!iAmWinner && resultSaysILost)) {
 							recordSessionEvent('result_rejected', {
-								reason: 'signing_failed',
+								reason: 'signature_deferred',
 								proposalId: data.proposalId,
 								matchId: data.result.matchId,
 								proposerWinner: data.result.winner.username,
@@ -1587,8 +1583,12 @@ export function useWireSync() {
 								clientUsername,
 								myWinner,
 							});
-							send({ type: 'result_reject', reason: 'signing_failed' });
-						}
+							GameEventBus.emitNotification({
+								level: 'warning',
+								message: 'Opponent requested result signing. Hidden Keychain prompts are disabled until the result review flow is ready.',
+								duration: 8000,
+							});
+							send({ type: 'result_reject', reason: 'signature_deferred' });
 					} else if (!clientUsername) {
 						recordSessionEvent('result_rejected', {
 							reason: 'no_hive_account',

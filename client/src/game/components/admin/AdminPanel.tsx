@@ -1,7 +1,7 @@
 /**
  * AdminPanel.tsx — Genesis Ceremony & NFT Administration
  *
- * Only accessible to @ragnarok account. Provides UI for:
+ * Only accessible to the configured Ragnarok admin account. Provides UI for:
  * 1. Genesis broadcast (one-time protocol init)
  * 2. Batch minting (all collectible cards)
  * 3. Seal (permanently lock minting)
@@ -32,10 +32,6 @@ async function getMintSession() {
 }
 async function getReplayDB() {
 	return import('../../../data/blockchain/replayDB');
-}
-async function getHiveSync() {
-	const { hiveSync } = await import('../../../data/HiveSync');
-	return hiveSync;
 }
 async function getReplayEngine() {
 	return import('../../../data/blockchain/replayEngine');
@@ -267,8 +263,8 @@ export default function AdminPanel() {
 		setLoading(true);
 		setResult(null);
 		try {
-			const sync = await getHiveSync();
-			const res = await sync.mintPack(packType, quantity, RAGNAROK_ACCOUNT);
+			const admin = await getAdminFns();
+			const res = await admin.broadcastPackMint({ packType, quantity, to: RAGNAROK_ACCOUNT });
 			setResult({
 				success: res.success,
 				message: res.success
@@ -290,8 +286,8 @@ export default function AdminPanel() {
 		setLoading(true);
 		setResult(null);
 		try {
-			const sync = await getHiveSync();
-			const res = await sync.distributePacks(packUids, recipient);
+			const admin = await getAdminFns();
+			const res = await admin.broadcastPackDistribute({ packUids, to: recipient });
 			setResult({
 				success: res.success,
 				message: res.success
@@ -327,7 +323,7 @@ export default function AdminPanel() {
 					<div className="text-6xl mb-4">⛔</div>
 					<h1 className="text-2xl font-bold text-red-400 mb-2">Access Denied</h1>
 					<p className="text-gray-400 mb-6">
-						{hiveUsername ? `@${hiveUsername} is not authorized.` : 'Log in with Hive Keychain as @ragnarok.'}
+						{hiveUsername ? `@${hiveUsername} is not authorized.` : `Log in with Hive Keychain as @${RAGNAROK_ACCOUNT}.`}
 					</p>
 					<Link to={routes.home} className="text-amber-400 hover:text-amber-300 underline">Back to Home</Link>
 				</div>

@@ -130,4 +130,16 @@ export const serverSignatureVerifier: SignatureVerifier = {
 			return false;
 		}
 	},
+
+	async verifyCurrentActiveKey(account: string, message: string, signatureHex: string): Promise<boolean> {
+		if (!signatureHex || signatureHex.length < 10) return false;
+		try {
+			const recovered = await recoverPublicKey(message, signatureHex);
+			if (!recovered) return false;
+			const keys = await fetchAccountKeys(account);
+			return keys.active.includes(recovered);
+		} catch {
+			return false;
+		}
+	},
 };

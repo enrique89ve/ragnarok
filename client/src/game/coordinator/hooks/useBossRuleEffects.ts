@@ -33,23 +33,35 @@ function getDifficultyPassiveDamage(difficulty: Difficulty): number {
 }
 
 export function useBossRuleEffects(input: BossRuleEffectsInput): void {
+  const {
+    isCampaign,
+    campaignData,
+    campaignDifficulty,
+    flowState,
+    boardState,
+    turnCount,
+    bossRulesApplied,
+    markBossRulesApplied,
+    updatePieceHealth,
+  } = input;
   const bossRulesInitRef = useRef(false);
   const lastBossRuleTurnRef = useRef('');
 
   useEffect(() => {
-    if (!input.isCampaign || !input.campaignData) return;
-    if (input.bossRulesApplied || bossRulesInitRef.current) return;
+    if (!isCampaign || !campaignData) return;
+    if (bossRulesApplied || bossRulesInitRef.current) return;
 
     const store = useUnifiedCombatStore.getState();
     if (store.boardState.pieces.length === 0) return;
 
     bossRulesInitRef.current = true;
 
-    const rules = input.campaignData.mission.bossRules;
+    const rules = campaignData.mission.bossRules;
     const bossExtraHealth = rules.find(rule => rule.type === 'extra_health')?.value ?? 0;
-    const totalExtraHealth = bossExtraHealth + getDifficultyHealthBonus(input.campaignDifficulty);
+    const totalExtraHealth = bossExtraHealth + getDifficultyHealthBonus(campaignDifficulty);
 
-    let boostedPieces = [...store.boardState.pieces];
+    let boostedPieces = store.boardState.pieces;
+    let boardChanged = false;
 
     if (totalExtraHealth > 0) {
       boostedPieces = boostedPieces.map(piece => {
@@ -61,6 +73,7 @@ export function useBossRuleEffects(input: BossRuleEffectsInput): void {
           maxHealth: piece.maxHealth + totalExtraHealth,
         };
       });
+      boardChanged = true;
       debug.chess(`[Boss Rules] Applied +${totalExtraHealth} health to opponent (boss: ${bossExtraHealth})`);
     }
 
@@ -72,6 +85,7 @@ export function useBossRuleEffects(input: BossRuleEffectsInput): void {
         const maxStamina = Math.floor(piece.maxHealth / 10) + extraMana;
         return { ...piece, stamina: maxStamina };
       });
+      boardChanged = true;
       debug.chess(`[Boss Rules] Applied +${extraMana} stamina to opponent pieces`);
     }
 
@@ -88,6 +102,7 @@ export function useBossRuleEffects(input: BossRuleEffectsInput): void {
       if (emptySpots.length > 0) {
         const col = emptySpots[Math.floor(emptySpots.length / 2)];
         const pawnHealth = 100 + totalExtraHealth;
+        if (!boardChanged) boostedPieces = [...boostedPieces];
         const extraPawn: ChessPiece = {
           id: crypto.randomUUID(),
           type: 'pawn',
@@ -106,35 +121,38 @@ export function useBossRuleEffects(input: BossRuleEffectsInput): void {
         };
 
         boostedPieces.push(extraPawn);
+        boardChanged = true;
         debug.chess(`[Boss Rules] Spawned extra pawn at row 4, col ${col}`);
       }
     }
 
-    useUnifiedCombatStore.setState({
-      boardState: { ...store.boardState, pieces: boostedPieces },
-    });
+    if (boardChanged) {
+      useUnifiedCombatStore.setState({
+        boardState: { ...store.boardState, pieces: boostedPieces },
+      });
+    }
 
-    input.markBossRulesApplied();
+    markBossRulesApplied();
   }, [
-    input.bossRulesApplied,
-    input.campaignData,
-    input.campaignDifficulty,
-    input.isCampaign,
-    input.markBossRulesApplied,
+    bossRulesApplied,
+    campaignData,
+    campaignDifficulty,
+    isCampaign,
+    markBossRulesApplied,
   ]);
 
   useEffect(() => {
-    if (!input.isCampaign || !input.campaignData || input.flowState?.tag !== 'chess') return;
+    if (!isCampaign || !campaignData || flowState?.tag !== 'chess') return;
 
-    const turnKey = `${input.boardState.currentTurn}-${input.turnCount}`;
+    const turnKey = `${boardState.currentTurn}-${turnCount}`;
     if (lastBossRuleTurnRef.current === turnKey) return;
     lastBossRuleTurnRef.current = turnKey;
 
-    const rules = input.campaignData.mission.bossRules;
+    const rules = campaignData.mission.bossRules;
 
-    if (input.boardState.currentTurn === 'player') {
+    if (boardState.currentTurn === 'player') {
       const bossPassive = rules.find(rule => rule.type === 'passive_damage')?.value ?? 0;
-      const passiveDamage = bossPassive + getDifficultyPassiveDamage(input.campaignDifficulty);
+      const passiveDamage = bossPassive + getDifficultyPassiveDamage(campaignDifficulty);
 
       if (passiveDamage > 0) {
         const store = useUnifiedCombatStore.getState();
@@ -142,13 +160,13 @@ export function useBossRuleEffects(input: BossRuleEffectsInput): void {
 
         if (playerKing) {
           const newHealth = Math.max(1, playerKing.health - passiveDamage);
-          input.updatePieceHealth(playerKing.id, newHealth);
+          updatePieceHealth(playerKing.id, newHealth);
           debug.chess(`[Boss Rules] Passive damage: player king takes ${passiveDamage} (HP: ${playerKing.health} -> ${newHealth})`);
         }
       }
     }
 
-    if (input.boardState.currentTurn === 'opponent') {
+    if (boardState.currentTurn === 'opponent') {
       const store = useUnifiedCombatStore.getState();
       let pieces = [...store.boardState.pieces];
       let storeChanged = false;
@@ -188,12 +206,12 @@ export function useBossRuleEffects(input: BossRuleEffectsInput): void {
       }
     }
   }, [
-    input.boardState.currentTurn,
-    input.campaignData,
-    input.campaignDifficulty,
-    input.flowState,
-    input.isCampaign,
-    input.turnCount,
-    input.updatePieceHealth,
+    boardState.currentTurn,
+    campaignData,
+    campaignDifficulty,
+    flowState,
+    isCampaign,
+    turnCount,
+    updatePieceHealth,
   ]);
 }

@@ -6,15 +6,14 @@
  *
  *   'local' → no-op (transactions stay queued, never submitted)
  *   'test'  → POST to local Express mock-blockchain endpoints
- *   'hive'  → broadcast via Hive Keychain (requestCustomJson)
+ *   'hive'  → stays queued until a visible client wallet action submits it
  *
  * Usage:
  *   startTransactionProcessor()   — call once at app start (idempotent)
  *   stopTransactionProcessor()    — call on unmount / test teardown
  *
- * The processor polls every POLL_INTERVAL_MS for queued transactions,
- * submits them one at a time (sequential to avoid double-submission), and
- * marks each as confirmed/failed in the store.
+ * The processor polls every POLL_INTERVAL_MS for queued transactions in test
+ * mode only. Hive mode must never open Keychain from this background loop.
  */
 
 import { useTransactionQueueStore } from './transactionQueueStore';
@@ -23,6 +22,11 @@ import type { BlockchainActionType, TransactionEntry, PackagedMatchResult } from
 import { hiveSync } from '../HiveSync';
 import { hiveEvents } from '../HiveEvents';
 import type { RagnarokTransactionType } from '../schemas/HiveTypes';
+import {
+	assertClientWalletInvocation,
+	type ClientWalletAuthority,
+	type ClientWalletInvocation,
+} from '../wallet/clientWalletInvocation';
 
 const POLL_INTERVAL_MS = 2000;
 const MOCK_API_BASE = '/api/mock-blockchain';
@@ -40,6 +44,10 @@ export function startTransactionProcessor(): void {
 	const mode = getDataLayerMode();
 	if (mode === 'local') {
 		// In local mode there's no server to send to — leave queue in-memory only
+		return;
+	}
+	if (mode === 'hive') {
+		// Hive broadcasts require a visible user action because they open Keychain.
 		return;
 	}
 
@@ -78,9 +86,9 @@ async function processNextTransaction(): Promise<void> {
 		if (mode === 'test') {
 			await submitToMockServer(tx);
 		} else if (mode === 'hive') {
-			await submitToHive(tx);
+			throw new Error('Hive queue submission requires an explicit client wallet invocation');
 		}
-		// 'local' never reaches here (processor doesn't start)
+		// 'local' and 'hive' never reach here (processor doesn't start)
 
 	} catch (err) {
 		const canRetry = useTransactionQueueStore.getState().retry(tx.id);
@@ -156,20 +164,24 @@ async function submitToMockServer(tx: TransactionEntry): Promise<void> {
 // Maps internal BlockchainActionType to Hive custom_json op id.
 // Exhaustive — adding a new BlockchainActionType is a compile error until
 // every variant has a chain op mapped.
-	type HiveBroadcastActionType = Exclude<BlockchainActionType, 'nft_mint'>;
+type HiveBroadcastActionType = Exclude<BlockchainActionType, 'nft_mint'>;
 
-	const ACTION_TO_OP_ID: Record<HiveBroadcastActionType, RagnarokTransactionType> = {
-		match_result:  'rp_match_result',
-		campaign_result: 'rp_campaign_result',
-		rune_exchange: 'rp_rune_exchange',
-		level_up:      'rp_level_up',
-		card_transfer: 'rp_card_transfer',
-	};
+const ACTION_TO_OP_ID: Record<HiveBroadcastActionType, RagnarokTransactionType> = {
+	match_result: 'rp_match_result',
+	campaign_result: 'rp_campaign_result',
+	rune_exchange: 'rp_rune_exchange',
+	level_up: 'rp_level_up',
+	card_transfer: 'rp_card_transfer',
+};
 
 // Card transfers require Active key; everything else uses Posting key.
 const ACTIVE_KEY_ACTIONS: ReadonlySet<BlockchainActionType> = new Set(['card_transfer']);
 
-async function submitToHive(tx: TransactionEntry): Promise<void> {
+function getRequiredAuthority(tx: TransactionEntry): ClientWalletAuthority {
+	return ACTIVE_KEY_ACTIONS.has(tx.actionType) ? 'Active' : 'Posting';
+}
+
+async function submitToHive(tx: TransactionEntry, invocation: ClientWalletInvocation): Promise<void> {
 	const store = useTransactionQueueStore.getState();
 
 	const username = hiveSync.getUsername();
@@ -185,7 +197,9 @@ async function submitToHive(tx: TransactionEntry): Promise<void> {
 	}
 
 	const opId = ACTION_TO_OP_ID[tx.actionType];
-	const useActiveKey = ACTIVE_KEY_ACTIONS.has(tx.actionType);
+	const requiredAuthority = getRequiredAuthority(tx);
+	assertClientWalletInvocation(invocation, 'transaction_queue_submit', requiredAuthority);
+	const useActiveKey = requiredAuthority === 'Active';
 
 	const result = await hiveSync.broadcastCustomJson(
 		opId,
@@ -212,7 +226,10 @@ async function submitToHive(tx: TransactionEntry): Promise<void> {
 /**
  * Manually submit a single transaction by ID (for retry UI).
  */
-export async function resubmitTransaction(txId: string): Promise<void> {
+export async function resubmitTransaction(
+	txId: string,
+	invocation?: ClientWalletInvocation,
+): Promise<void> {
 	const store = useTransactionQueueStore.getState();
 	const tx = store.transactions.find(t => t.id === txId);
 	if (!tx) throw new Error(`Transaction ${txId} not found`);
@@ -223,7 +240,10 @@ export async function resubmitTransaction(txId: string): Promise<void> {
 	if (mode === 'test') {
 		await submitToMockServer(tx);
 	} else if (mode === 'hive') {
-		await submitToHive(tx);
+		if (!invocation) {
+			throw new Error('Hive queue submission requires an explicit client wallet invocation');
+		}
+		await submitToHive(tx, invocation);
 	}
 }
 

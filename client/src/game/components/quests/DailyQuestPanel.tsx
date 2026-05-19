@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle2, Clock, Hourglass, Info, RotateCcw } from 'lucide-react';
+import { CheckCircle2, Clock, Info, RotateCcw, Wallet } from 'lucide-react';
 import { useDailyQuestStore, type DailyQuest } from '../../stores/dailyQuestStore';
 import { formatCountdown, useDailyResetCountdown } from '../../hooks/useDailyResetCountdown';
+import { invokeClientWalletAction } from '../../../data/wallet/clientWalletInvocation';
 import DailyQuestInfoDialog from './DailyQuestInfoDialog';
 
 /**
@@ -23,10 +24,12 @@ import DailyQuestInfoDialog from './DailyQuestInfoDialog';
  *   amber    -> completed, broadcast pending (Keychain not yet confirmed)
  *   emerald  -> chain has acknowledged the claim
  */
-function QuestRow({ quest, onReroll, canReroll }: {
+function QuestRow({ quest, onReroll, onClaim, canReroll, claiming }: {
 	quest: DailyQuest;
 	onReroll: () => void;
+	onClaim: () => void;
 	canReroll: boolean;
+	claiming: boolean;
 }) {
 	const pct = Math.min((quest.progress / quest.goal) * 100, 100);
 	const isClaimed = quest.claimed;
@@ -93,13 +96,16 @@ function QuestRow({ quest, onReroll, canReroll }: {
 					</span>
 				)}
 				{isAwaitingClaim && (
-					<span
-						className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.22em] uppercase text-amber-300"
+					<button
+						type="button"
+						onClick={onClaim}
+						disabled={claiming}
+						className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.18em] uppercase text-amber-300 transition-colors hover:text-gold-200 disabled:cursor-not-allowed disabled:opacity-50"
 						title="Sign the next custom_json in Hive Keychain to credit the reward."
 					>
-						<Hourglass size={11} strokeWidth={2} />
-						Pending
-					</span>
+						<Wallet size={11} strokeWidth={2} />
+						{claiming ? 'Wait' : 'Claim'}
+					</button>
 				)}
 				{isClaimed && (
 					<span className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.22em] uppercase text-emerald-300">
@@ -115,18 +121,24 @@ function QuestRow({ quest, onReroll, canReroll }: {
 export default function DailyQuestPanel() {
 	const quests = useDailyQuestStore(s => s.quests);
 	const rerollsUsed = useDailyQuestStore(s => s.rerollsUsedToday);
+	const claiming = useDailyQuestStore(s => s.flushing);
 	const refreshIfNeeded = useDailyQuestStore(s => s.refreshIfNeeded);
 	const rerollQuest = useDailyQuestStore(s => s.rerollQuest);
 	const flushPendingClaims = useDailyQuestStore(s => s.flushPendingClaims);
 	const [infoOpen, setInfoOpen] = useState(false);
 
-	// refreshIfNeeded now flushes pending claims internally before rotating
-	// at midnight UTC, so a separate flush call here would be redundant for
-	// the day-rollover path. We still kick a flush explicitly on mount to
-	// catch the "same-day, broadcast retry" case (e.g. previous Keychain
-	// cancel) without waiting for the next match-end.
 	useEffect(() => { void refreshIfNeeded(); }, [refreshIfNeeded]);
-	useEffect(() => { void flushPendingClaims(); }, [flushPendingClaims]);
+
+	const claimPending = () => {
+		void invokeClientWalletAction(
+			{
+				kind: 'daily_quest_claim',
+				authority: 'Posting',
+				label: 'Claim daily quest rewards',
+			},
+			flushPendingClaims,
+		);
+	};
 
 	if (quests.length === 0) return null;
 
@@ -139,7 +151,9 @@ export default function DailyQuestPanel() {
 						key={quest.id}
 						quest={quest}
 						onReroll={() => rerollQuest(quest.id)}
+						onClaim={claimPending}
 						canReroll={rerollsUsed < 1}
+						claiming={claiming}
 					/>
 				))}
 			</div>

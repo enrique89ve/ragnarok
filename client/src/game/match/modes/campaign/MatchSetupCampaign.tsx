@@ -6,13 +6,15 @@
  * stable through game-over, retry, and story-bridge rendering.
  */
 
-import { useEffect, useState, type ReactNode } from 'react';
+import React, { useEffect, useState, type ReactNode } from 'react';
 
 import { useCampaignStore } from '../../../campaign';
 import { cryptoMatchIdentityFactory, type MatchIdentityFactory } from '../../identityFactory';
 import { useMatchStore } from '../../store';
 import type { CampaignResolveArgs } from './resolver';
 import { resolveCampaign } from './resolver';
+
+type CampaignSetupStatus = 'pending' | 'ready' | 'failed';
 
 interface MatchSetupCampaignProps {
 	readonly children: ReactNode;
@@ -37,7 +39,7 @@ export function MatchSetupCampaign({
 	identityFactory = cryptoMatchIdentityFactory,
 }: MatchSetupCampaignProps) {
 	const [stagedArgs] = useState(() => getStagedCampaignArgs(identityFactory));
-	const [ready, setReady] = useState(false);
+	const [status, setStatus] = useState<CampaignSetupStatus>(() => stagedArgs ? 'pending' : 'failed');
 
 	useEffect(() => {
 		if (!stagedArgs) return;
@@ -45,18 +47,20 @@ export function MatchSetupCampaign({
 		const result = resolveCampaign(stagedArgs);
 		if (!result.ok) {
 			useCampaignStore.getState().clearCurrent();
+			setStatus('failed');
 			return;
 		}
 
 		useMatchStore.getState().setMatch(result.ctx);
-		setReady(true);
+		setStatus('ready');
 
 		return () => {
 			useMatchStore.getState().clearMatch();
 		};
 	}, [stagedArgs]);
 
-	if (!ready) return <>{fallback}</>;
+	if (status === 'failed') return <>{fallback}</>;
+	if (status === 'pending') return null;
 
 	return <>{children}</>;
 }

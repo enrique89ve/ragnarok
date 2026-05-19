@@ -43,7 +43,7 @@ Hard invariants:
 |---|---|---|---|
 | `p2p_ranked` | live (`applyRankedMatchSettlement`) | **stub** (no arbiter yet) | **deferred** |
 | `campaign_first_clear` | live | live (`publishCampaignVictoryResult`) | active |
-| `daily_quest_claim` | live | live (auto-claim on goal) | active |
+| `daily_quest_claim` | live | live (explicit Claim button after goal) | active |
 | `reward_claim` (tournament) | live | tournament server pending | deferred |
 | `rune_exchange` (sink) | live | live (pack purchase) | active |
 
@@ -73,7 +73,7 @@ Constants live in [shared/protocol-core/runeEconomy.ts](../shared/protocol-core/
 |---|---|---|---|---|
 | `p2p_ranked` | `match_result` (ranked) | win = 2, loss = 0 | `p2p:S01:{matchId}:{winner|loser}:{account}` | Match is consumed by prefix `p2p:S01:{matchId}:`; S01 loser reward is 0 so only the winner writes a ledger entry |
 | `campaign_first_clear` | `campaign_result` | per ordinal table `[2,2,2,2,1,1]` | `campaign:S01:{account}:{cid}:{m}` | Only first clear ever pays; replays update best stats, not RUNE |
-| `daily_quest_claim` | `daily_quest_claim` | flat 2 RUNE/slot | `daily_quest:S01:{account}:{ymd_utc}:{slot}` | Auto-claimed on completion; chain trusts client (no match transcript); per-day cap = 3 slots × 2 RUNE = 6 RUNE; ymd_utc validated within ±48h of `op.timestamp` |
+| `daily_quest_claim` | `daily_quest_claim` | flat 2 RUNE/slot | `daily_quest:S01:{account}:{ymd_utc}:{slot}` | Completed locally, then claimed from an explicit wallet action; chain trusts client (no match transcript); per-day cap = 3 slots × 2 RUNE = 6 RUNE; ymd_utc validated within ±48h of `op.timestamp` |
 | `reward_claim` | `reward_claim` (generic) | per reward def | `reward:S01:{account}:{rewardId}` | Tournament rewards only (`first_victory`, `elo_*`, etc) — `reward_claim` campaign:* path was removed in [commit 00d48fb](../shared/protocol-core/apply.ts), `reward_claim` daily_quest:* path replaced by `daily_quest_claim` op |
 
 ## Sink (debit op)
@@ -111,16 +111,15 @@ Validation order matters: a duplicate nonce returns `'ignored'` before any state
 
 ## How a daily quest claim becomes RUNE
 
-Single broadcast per slot, single apply step. The broadcast is **deferred**:
-goal-completion happens mid-combat, but the chain op fires at a neutral moment
-(match-end or daily-quest-panel mount) so a Keychain confirmation dialog does
-not interrupt gameplay. No manual "Claim" button.
+Single broadcast per slot, single apply step. Goal-completion happens mid-combat,
+but the chain op only fires from an explicit client wallet action. Match-end,
+panel mount, day refresh, and server reads must not open Keychain.
 
 ```
 dailyQuestStore.updateProgress(type, delta)        ─ mid-combat
   └→ if (newProgress >= goal) set completed=true   (no broadcast yet)
 
-flushDailyQuestClaimsAfterMatch()                  ─ at match-end OR panel mount
+DailyQuestPanel Claim button                       ─ explicit wallet invocation
   └→ for each (completed && !claimed) quest:
        └→ getNFTBridge().claimDailyQuest(ymdUtc, slot, questType)
             └→ hiveSync.broadcastCustomJson('rp_daily_quest_claim', payload)
@@ -135,7 +134,7 @@ flushDailyQuestClaimsAfterMatch()                  ─ at match-end OR panel mou
 ```
 
 Visible state machine in the quest panel:
-**in_progress** (gold) → **awaiting_claim** (amber, after goal hit) → **claimed** (emerald, after broadcast ack).
+**in_progress** (gold) → **awaiting_claim** (amber, after goal hit) → **claimed** (emerald, after explicit Claim broadcast ack).
 
 ### Local persistence
 
@@ -149,7 +148,7 @@ Progress and the `rerollsUsedToday` counter are still local-only and not synced 
 
 ### Midnight UTC rollover
 
-At a UTC day change, `refreshIfNeeded` first awaits `flushPendingClaims` so any `completed && !claimed` quests from the previous day get one more chance to broadcast before the array is replaced. If a quest is still pending after the flush (Keychain rejected, guest mode, network down), the rotation is **held** — the panel keeps yesterday's quest visible so the player can retry. Holds last up to 2 days, matching the chain's `ymd_utc` acceptance window of ±48h; past that point the rotation force-completes to unblock the daily quest UI, accepting that the unclaimed quest can no longer be redeemed.
+At a UTC day change, `refreshIfNeeded` never opens Keychain. If a quest is still pending (not claimed yet, Keychain rejected, guest mode, network down), the rotation is **held** — the panel keeps yesterday's quest visible so the player can use the explicit Claim action. Holds last up to 2 days, matching the chain's `ymd_utc` acceptance window of ±48h; past that point the rotation force-completes to unblock the daily quest UI, accepting that the unclaimed quest can no longer be redeemed.
 
 `quest_type` is informational only — chain does NOT vary reward by it. Daily
 quest progress lives entirely client-side (event-bus subscribed), so a

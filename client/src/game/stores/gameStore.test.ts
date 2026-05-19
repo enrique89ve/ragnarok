@@ -24,6 +24,11 @@ vi.hoisted(() => {
 import { useGameStore, selectPlayerHand, EMPTY_HAND } from './gameStore';
 import { initializeGame, processAITurn } from '../utils/gameUtils';
 import type { CardData, CardInstance, GameState, HeroClass, Player } from '../types';
+import {
+	shouldBootstrapCampaignBoard,
+	syncCampaignActiveRealm,
+} from '../coordinator/hooks/useCampaignGameBootstrap';
+import type { ArmySelection } from '../types/ChessTypes';
 
 const createAiMinionCard = (overrides: Partial<CardData> = {}): CardData => ({
 	id: 'free-minion',
@@ -188,5 +193,84 @@ describe('local match identity reset', () => {
 		expect(state.matchSeed).toBeNull();
 		expect(state.matchId).toBeNull();
 		expect(state.myCanonicalSide).toBeNull();
+	});
+});
+
+describe('campaign active realm bootstrap', () => {
+	beforeEach(() => {
+		useGameStore.setState({ gameState: initializeGame() });
+	});
+
+	it('does not emit another gameState update for the same campaign realm', () => {
+		let gameStateUpdates = 0;
+		const unsubscribe = useGameStore.subscribe(
+			(state) => state.gameState,
+			() => {
+				gameStateUpdates += 1;
+			},
+		);
+
+		try {
+			const input = {
+				isCampaign: true,
+				missionRealm: 'olympus',
+				visualRealm: 'asgard' as const,
+				realmDisplayName: 'Asgard',
+			};
+
+			expect(syncCampaignActiveRealm(input)).toBe(true);
+			expect(useGameStore.getState().gameState.activeRealm?.id).toBe('asgard');
+			expect(gameStateUpdates).toBe(1);
+
+			expect(syncCampaignActiveRealm(input)).toBe(false);
+			expect(gameStateUpdates).toBe(1);
+		} finally {
+			unsubscribe();
+		}
+	});
+});
+
+describe('campaign board bootstrap guard', () => {
+	const army = {} as ArmySelection;
+
+	it('allows exactly the first campaign board bootstrap without local armies', () => {
+		expect(shouldBootstrapCampaignBoard({
+			isCampaign: true,
+			playerArmy: null,
+			initialArmy: null,
+			alreadyBootstrapped: false,
+		})).toBe(true);
+
+		expect(shouldBootstrapCampaignBoard({
+			isCampaign: true,
+			playerArmy: null,
+			initialArmy: null,
+			alreadyBootstrapped: true,
+		})).toBe(false);
+	});
+
+	it('does not bootstrap campaign board over an existing army source', () => {
+		expect(shouldBootstrapCampaignBoard({
+			isCampaign: true,
+			playerArmy: army,
+			initialArmy: null,
+			alreadyBootstrapped: false,
+		})).toBe(false);
+
+		expect(shouldBootstrapCampaignBoard({
+			isCampaign: true,
+			playerArmy: null,
+			initialArmy: army,
+			alreadyBootstrapped: false,
+		})).toBe(false);
+	});
+
+	it('does not run for non-campaign matches', () => {
+		expect(shouldBootstrapCampaignBoard({
+			isCampaign: false,
+			playerArmy: null,
+			initialArmy: null,
+			alreadyBootstrapped: false,
+		})).toBe(false);
 	});
 });

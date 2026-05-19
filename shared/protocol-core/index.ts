@@ -11,6 +11,31 @@ export { applyOp, autoFinalizeExpiredCommits } from './apply';
 export type { ProtocolCoreDeps } from './apply';
 export { canonicalStringify, sha256Hash } from './hash';
 export {
+	ADMIN_APPROVAL_DOMAIN,
+	ADMIN_APPROVAL_KEY_TYPE,
+	ADMIN_BROADCAST_PROTOCOLS,
+	ADMIN_MULTISIG_ACTIONS,
+	NFTLOX_ADMIN_ACTIONS,
+	attachAdminApproval,
+	buildAdminApprovalMessage,
+	isAdminBroadcastProtocol,
+	isAdminMultisigAction,
+	isNftLoxAdminAction,
+	isSupportedAdminBroadcastAction,
+	parseAdminBroadcastBody,
+	readAdminApproval,
+	stripAdminApprovalFields,
+} from './adminMultisig';
+export type {
+	AdminApproval,
+	AdminBroadcastAction,
+	AdminBroadcastBodyResult,
+	AdminBroadcastProtocol,
+	AdminApprovalReadResult,
+	AdminMultisigAction,
+	NftLoxAdminAction,
+} from './adminMultisig';
+export {
 	PACK_ID_RANGES, getPackIdRanges,
 	lcgNext, deriveLegacyPackSeed,
 	getLegacyPackCardCount, pickLegacyPackCardIds,

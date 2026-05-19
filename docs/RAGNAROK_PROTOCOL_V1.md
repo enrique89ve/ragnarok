@@ -139,18 +139,48 @@ Hive `custom_json` supports both `required_posting_auths` and `required_auths`.
 - `pack_commit`
 - `pack_reveal`
 - `reward_claim`
+- `daily_quest_claim`
 - `level_up`
+- `forge_commit`
+- `forge_reveal`
+- `duat_airdrop_claim`
 
 **Active authority** (custody-changing, irreversible asset mutations):
 
+- `genesis`
 - `card_transfer`
 - `burn`
 - `seal`
 - `mint_batch`
-- `forge_commit`
-- `forge_reveal`
+- `pack_purchase`
+- `pack_mint`
+- `pack_distribute`
+- `pack_transfer`
+- `pack_burn`
+- `card_replicate`
+- `card_merge`
+- `market_buy`
+- `market_accept`
+- `duat_airdrop_finalize`
 
 Rule: any op that changes NFT custody or irreversibly destroys an NFT MUST require active auth. Routine signaling and self-serve gameplay ops MAY use posting auth.
+
+Admin-only Active ops support a two-account operator path. The browser admin
+account from `VITE_RAGNAROK_ADMIN_ACCOUNT` signs an Active approval over the
+canonical payload, including `protocol: "ragnarok"` and `admin_nonce`. The
+server/operator account from `VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT` /
+`RAGNAROK_ADMIN_OPERATOR_ACCOUNT` broadcasts the `custom_json` with its server-only
+`RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY`. Readers accept the op only when:
+
+- `required_auths[0]` is the configured operator account.
+- payload `admin_approver` is the configured admin account.
+- payload `admin_sig_key` is `active`.
+- payload `admin_sig` verifies against the admin account's current Active
+  authority.
+- `admin_nonce` is higher than the last accepted admin nonce.
+
+Direct broadcasts by `RAGNAROK_ADMIN_ACCOUNT` remain valid for legacy/manual
+ceremony flows.
 
 ## 8. Asset Model
 
@@ -217,7 +247,8 @@ One-time collection initialization.
 ```
 
 - MUST appear exactly once
-- Broadcaster MUST be `ragnarok` (genesis multisig account)
+- Broadcaster MUST be `RAGNAROK_ADMIN_ACCOUNT`, or the configured admin
+  operator account with valid frontend-admin Active approval.
 - Active auth REQUIRED
 - Initializes protocol constants
 - No later `genesis` is valid
@@ -231,7 +262,8 @@ Irreversibly disables future admin minting.
 ```
 
 - MUST appear after `genesis`
-- Broadcaster MUST be `ragnarok`
+- Broadcaster MUST be `RAGNAROK_ADMIN_ACCOUNT`, or the configured admin
+  operator account with valid frontend-admin Active approval.
 - Active auth REQUIRED
 - After `seal`, all future `mint_batch` ops are permanently invalid
 
@@ -251,7 +283,8 @@ Pre-seal admin mint only.
 ```
 
 - Valid only before `seal`
-- Broadcaster MUST be `ragnarok`
+- Broadcaster MUST be `RAGNAROK_ADMIN_ACCOUNT`, or the configured admin
+  operator account with valid frontend-admin Active approval.
 - Active auth REQUIRED
 - Each `uid` MUST be unique
 - Each `card_id` MUST exist in the pinned card registry (reject undefined card IDs)
@@ -331,7 +364,8 @@ Pre-burn sealed-pack mint. Admin-only.
 { "p": "ragnarok-cards", "action": "pack_mint", "pack_type": "standard", "quantity": 1 }
 ```
 
-- Broadcaster MUST be `RAGNAROK_ADMIN_ACCOUNT` (the genesis multisig).
+- Broadcaster MUST be `RAGNAROK_ADMIN_ACCOUNT`, or the configured admin
+  operator account with valid frontend-admin Active approval.
 - Genesis MUST be `sealed` (post-v1).
 - `pack_type` MUST be `adminMintable: true` in `packCatalog`.
 - `quantity` ∈ [1, 10].
@@ -345,7 +379,8 @@ Atomic admin → player batch distribution of previously-minted sealed packs.
 { "p": "ragnarok-cards", "action": "pack_distribute", "pack_uids": ["..."], "to": "player" }
 ```
 
-- Broadcaster MUST be `RAGNAROK_ADMIN_ACCOUNT`.
+- Broadcaster MUST be `RAGNAROK_ADMIN_ACCOUNT`, or the configured admin
+  operator account with valid frontend-admin Active approval.
 - Every `pack_uid` MUST exist, be sealed, and currently owned by admin.
 - Atomic: either every uid transfers to `to`, or none of them do.
 
@@ -357,7 +392,11 @@ Atomic admin → player batch distribution of previously-minted sealed packs.
 { "p": "ragnarok-cards", "action": "pack_transfer", "pack_uid": "...", "to": "player" }
 ```
 
-- Broadcaster MUST be `RAGNAROK_ADMIN_ACCOUNT`. **Player-to-player pack transfers are not supported in v1.1.** Player wallets MUST NOT broadcast `pack_transfer`; readers reject all non-admin broadcasters.
+- Broadcaster MUST be `RAGNAROK_ADMIN_ACCOUNT`, or the configured admin
+  operator account with valid frontend-admin Active approval.
+  **Player-to-player pack transfers are not supported in v1.1.** Player
+  wallets MUST NOT broadcast `pack_transfer`; readers reject all non-admin
+  broadcasters.
 - Companion atomic HIVE transfer (escrow proof) MUST exist for the trxId.
 - Pack MUST be sealed and currently owned by admin (admin can only move their own holdings).
 - Cooldown: pack MUST NOT have been transferred in the last `TRANSFER_COOLDOWN_BLOCKS`.
@@ -372,7 +411,7 @@ Opens a sealed pack — burns the NFT, draws cards from DNA + chain entropy.
 { "p": "ragnarok-cards", "action": "pack_burn", "pack_uid": "...", "salt": "randomstring" }
 ```
 
-- Posting auth by pack owner.
+- Active auth by pack owner.
 - Pack MUST exist, be sealed, and owned by broadcaster.
 - Entropy block = `op.blockNum + PACK_ENTROPY_DELAY_BLOCKS`; reveal is valid only when entropy block ≤ LIB.
 - `seed = sha256(pack.dna || trxId || entropy_block_id)`.
@@ -762,7 +801,7 @@ The `starter` pack key in `packCatalog.ts` is intentionally **not** a chain-broa
 | `acquisition` | `['free_starter_claim']` (no `direct_purchase`, no `rune_exchange`) |
 | Source of card IDs | [`shared/schemas/starterEntitlement.ts`](../shared/schemas/starterEntitlement.ts) — `STARTER_ENTITLEMENT_CARD_IDS_BY_CLASS` (10 Mage + 10 Warrior + 10 Priest + 10 Rogue + 5 Neutral) |
 | Materialization | `materializeStarterEntitlement()` in `client/src/game/data/starterSet.ts` — writes 45 starter-category cards directly into the local collection. No Hive broadcast for the cards themselves. |
-| `claimStarterEntitlement` | OPTIONAL signed claim record (testnet flag `requireSignature`) for accounting; cards are entitled regardless. |
+| `claimStarterEntitlement` | Client-local ceremony state only. No Hive broadcast and no Keychain signature; cards are entitled regardless. |
 
 Protocol-level rejection rules:
 

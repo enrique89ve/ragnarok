@@ -6,8 +6,8 @@
  */
 
 import type { SignatureVerifier } from '../../../../shared/protocol-core/types';
-import { verifyHiveSignature } from './hiveSignatureVerifier';
-import { PublicKey, Signature } from 'hive-tx';
+import { verifyHiveActiveSignature, verifyHiveSignature } from './hiveSignatureVerifier';
+import { Signature } from 'hive-tx';
 
 export const clientSignatureVerifier: SignatureVerifier = {
 	async verifyAnchored(pubkey: string, message: string, signatureHex: string): Promise<boolean> {
@@ -29,5 +29,9 @@ export const clientSignatureVerifier: SignatureVerifier = {
 
 	async verifyCurrentKey(account: string, message: string, signatureHex: string): Promise<boolean> {
 		return verifyHiveSignature(account, message, signatureHex);
+	},
+
+	async verifyCurrentActiveKey(account: string, message: string, signatureHex: string): Promise<boolean> {
+		return verifyHiveActiveSignature(account, message, signatureHex);
 	},
 };

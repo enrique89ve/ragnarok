@@ -793,11 +793,11 @@ export class HiveSync {
     nftId: string,
     borrower: string,
   ): Promise<HiveBroadcastResult> {
-    return this.broadcastNFTLoxJson("nft_lend", { nftId, to: borrower });
+    return this.broadcastNFTLoxJson("nft_lend", { nftId, to: borrower }, true);
   }
 
   async nftloxReturnCard(nftId: string): Promise<HiveBroadcastResult> {
-    return this.broadcastNFTLoxJson("nft_return", { nftId });
+    return this.broadcastNFTLoxJson("nft_return", { nftId }, true);
   }
 
   async nftloxListCard(

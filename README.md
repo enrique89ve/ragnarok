@@ -412,6 +412,7 @@ Genesis → Mint Batches → Seal → Admin minting permanently closed
 
 - Browser code may receive only public `VITE_*` values: network stage, protocol ids, collection ids, account names, and public endpoints.
 - Player keys stay in Hive Keychain. The app asks Keychain to sign and never stores private keys.
+- Admin Panel login uses `VITE_RAGNAROK_ADMIN_ACCOUNT`; admin broadcasts can require that account's Active Keychain approval plus `RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY` from the server/operator env.
 - Operator posting keys belong only in server/operator runtime env vars such as `HIVE_POSTING_KEY` or `RAGNAROK_OPERATOR_POSTING_KEY`.
 - Active keys should stay in Keychain/manual multisig unless a dedicated operator process explicitly needs one.
 - See [`docs/ENV_SECURITY.md`](docs/ENV_SECURITY.md) before adding any env var or signing automation.

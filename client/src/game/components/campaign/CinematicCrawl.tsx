@@ -6,7 +6,7 @@
  * scene-by-scene narration with visual cues, progress tracking.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { CinematicIntro, MusicCueId } from '../../campaign/campaignTypes';
 import { useAudio, type BackgroundMusicTrack } from '../../../lib/stores/useAudio';
@@ -35,6 +35,8 @@ interface CinematicCrawlProps {
 const CinematicCrawl: React.FC<CinematicCrawlProps> = ({ intro, onComplete, openingMusic }) => {
 	const [phase, setPhase] = useState<'prelude' | 'title' | 'scenes' | 'done'>('prelude');
 	const [sceneIndex, setSceneIndex] = useState(0);
+	const completeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const completedRef = useRef(false);
 	const playBackgroundMusic = useAudio(s => s.playBackgroundMusic);
 	const stopBackgroundMusic = useAudio(s => s.stopBackgroundMusic);
 	const currentMusicTrack = useAudio(s => s.currentMusicTrack);
@@ -48,6 +50,35 @@ const CinematicCrawl: React.FC<CinematicCrawlProps> = ({ intro, onComplete, open
 		};
 	}, [playBackgroundMusic, stopBackgroundMusic, openingMusic]);
 
+	useEffect(() => {
+		return () => {
+			if (completeTimeoutRef.current) {
+				clearTimeout(completeTimeoutRef.current);
+				completeTimeoutRef.current = null;
+			}
+		};
+	}, []);
+
+	const completeCinematic = useCallback((delayMs = 0) => {
+		if (completedRef.current) return;
+		completedRef.current = true;
+
+		if (completeTimeoutRef.current) {
+			clearTimeout(completeTimeoutRef.current);
+			completeTimeoutRef.current = null;
+		}
+
+		if (delayMs > 0) {
+			completeTimeoutRef.current = setTimeout(() => {
+				completeTimeoutRef.current = null;
+				onComplete();
+			}, delayMs);
+			return;
+		}
+
+		onComplete();
+	}, [onComplete]);
+
 	// Per-scene music — when a scene with a musicId mounts, switch to it
 	useEffect(() => {
 		if (phase !== 'scenes') return;
@@ -60,16 +91,17 @@ const CinematicCrawl: React.FC<CinematicCrawlProps> = ({ intro, onComplete, open
 	}, [phase, sceneIndex, intro.scenes, currentMusicTrack, playBackgroundMusic]);
 
 	const advanceScene = useCallback(() => {
+		if (completedRef.current) return;
 		setSceneIndex(prev => {
 			const next = prev + 1;
 			if (next >= intro.scenes.length) {
 				setPhase('done');
-				setTimeout(onComplete, 500);
+				completeCinematic(500);
 				return prev;
 			}
 			return next;
 		});
-	}, [intro.scenes.length, onComplete]);
+	}, [completeCinematic, intro.scenes.length]);
 
 	// Prelude → Title → Scenes
 	useEffect(() => {
@@ -96,8 +128,8 @@ const CinematicCrawl: React.FC<CinematicCrawlProps> = ({ intro, onComplete, open
 
 	const handleSkip = useCallback((e: React.MouseEvent) => {
 		e.stopPropagation();
-		onComplete();
-	}, [onComplete]);
+		completeCinematic();
+	}, [completeCinematic]);
 
 	const handleClick = useCallback(() => {
 		if (phase === 'prelude' || phase === 'title') {

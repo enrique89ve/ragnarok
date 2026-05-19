@@ -56,6 +56,11 @@ import {
 	buildMatchResultSignatureMessage,
 	computeCompactMatchResultCommitmentHash,
 } from './matchResultCommitment';
+import {
+	buildAdminApprovalMessage,
+	isAdminMultisigAction,
+	readAdminApproval,
+} from './adminMultisig';
 import { fnv1a } from './broadcast-utils';
 import { getEconomicLevelForXP, getEconomicXPPerWin } from './cardProgression';
 import {
@@ -154,6 +159,7 @@ const RARITY_CARD_CAPS: Record<string, number> = {
 	epic: 500,
 	mythic: 250,
 };
+const ADMIN_NONCE_SCOPE_SUFFIX = ':admin';
 
 const OP_HANDLERS: Record<ProtocolAction, OpHandler> = {
 	genesis: (op, _ctx, deps) => applyGenesis(op, deps),
@@ -217,6 +223,44 @@ export async function applyOp(
 
 function reject(reason: string): OpResult {
 	return { status: 'rejected', reason };
+}
+
+async function requireAdminAuthority(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpResult | null> {
+	if (op.broadcaster === deps.runtime.adminAccount) return null;
+
+	const operatorAccount = deps.runtime.adminOperatorAccount;
+	if (!operatorAccount || operatorAccount === deps.runtime.adminAccount) {
+		return reject('not admin account');
+	}
+	if (op.broadcaster !== operatorAccount) return reject('not admin account');
+	if (!isAdminMultisigAction(op.action)) return reject('admin multisig unsupported action');
+
+	const approvalResult = readAdminApproval(op.payload);
+	if (!approvalResult.success) return reject(approvalResult.reason);
+	const { approval } = approvalResult;
+
+	if (approval.approver !== deps.runtime.adminAccount) {
+		return reject('admin approval account mismatch');
+	}
+
+	const verifyActive = deps.sigs.verifyCurrentActiveKey;
+	if (!verifyActive) return reject('active admin signature verifier unavailable');
+
+	const message = buildAdminApprovalMessage({
+		protocol: 'ragnarok',
+		action: op.action,
+		adminAccount: deps.runtime.adminAccount,
+		operatorAccount,
+		payload: op.payload,
+	});
+	const signatureValid = await verifyActive(approval.approver, message, approval.signature);
+	if (!signatureValid) return reject('admin active approval signature invalid');
+
+	const nonceScope = `${deps.runtime.adminAccount}${ADMIN_NONCE_SCOPE_SUFFIX}`;
+	const nonceOk = await deps.state.advanceNonce(nonceScope, approval.nonce);
+	if (!nonceOk) return reject(`admin nonce ${approval.nonce} not higher than last seen`);
+
+	return null;
 }
 
 function readOptionalPayloadNumber(payload: Record<string, unknown>, key: string): number | null {
@@ -290,7 +334,8 @@ async function putRuneLedgerEntryAndBalance(
 // ============================================================
 
 async function applyGenesis(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpResult> {
-	if (op.broadcaster !== deps.runtime.adminAccount) return reject('not admin account');
+	const authResult = await requireAdminAuthority(op, deps);
+	if (authResult) return authResult;
 
 	const existing = await deps.state.getGenesis();
 	if (existing) return { status: 'ignored' }; // already applied
@@ -332,7 +377,8 @@ async function applyGenesis(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpR
 // ============================================================
 
 async function applySeal(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpResult> {
-	if (op.broadcaster !== deps.runtime.adminAccount) return reject('not admin account');
+	const authResult = await requireAdminAuthority(op, deps);
+	if (authResult) return authResult;
 
 	const genesis = await deps.state.getGenesis();
 	if (!genesis) return reject('no genesis');
@@ -347,7 +393,8 @@ async function applySeal(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpResu
 // ============================================================
 
 async function applyMintBatch(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpResult> {
-	if (op.broadcaster !== deps.runtime.adminAccount) return reject('not admin account');
+	const authResult = await requireAdminAuthority(op, deps);
+	if (authResult) return authResult;
 
 	const genesis = await deps.state.getGenesis();
 	if (!genesis) return reject('no genesis');
@@ -2516,7 +2563,8 @@ async function mintLegacyPackCards(
 // ============================================================
 
 async function applyPackMint(op: ProtocolOp, _ctx: ReplayContext, deps: ProtocolCoreDeps): Promise<OpResult> {
-	if (op.broadcaster !== deps.runtime.adminAccount) return reject('not admin account');
+	const authResult = await requireAdminAuthority(op, deps);
+	if (authResult) return authResult;
 
 	const genesis = await deps.state.getGenesis();
 	if (!genesis?.sealed) return reject('pack_mint requires sealed genesis');
@@ -2565,7 +2613,8 @@ async function applyPackMint(op: ProtocolOp, _ctx: ReplayContext, deps: Protocol
 // ============================================================
 
 async function applyPackDistribute(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpResult> {
-	if (op.broadcaster !== deps.runtime.adminAccount) return reject('not admin account');
+	const authResult = await requireAdminAuthority(op, deps);
+	if (authResult) return authResult;
 
 	const packUids = op.payload.pack_uids as string[];
 	const to = op.payload.to as string;
@@ -2600,17 +2649,18 @@ async function applyPackDistribute(op: ProtocolOp, deps: ProtocolCoreDeps): Prom
 // ============================================================
 
 async function applyPackTransfer(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpResult> {
-	if (op.broadcaster !== deps.runtime.adminAccount) return reject('pack_transfer restricted to admin');
+	const authResult = await requireAdminAuthority(op, deps);
+	if (authResult) return authResult;
 	const packUid = op.payload.pack_uid as string;
 	const to = op.payload.to as string;
 	if (!packUid || !to) return reject('missing pack_uid or to');
 	if (!HIVE_USERNAME_RE.test(to)) return reject(`invalid recipient: ${to}`);
-	if (to === op.broadcaster) return reject('cannot transfer to self');
+	if (to === deps.runtime.adminAccount) return reject('cannot transfer to admin inventory owner');
 
 	const pack = await deps.state.getPack(packUid);
 	if (!pack) return reject(`pack ${packUid} not found`);
 	if (!pack.sealed) return reject('cannot transfer opened pack');
-	if (pack.owner !== op.broadcaster) return reject('not pack owner');
+	if (pack.owner !== deps.runtime.adminAccount) return reject('not admin-owned pack');
 
 	if (pack.lastTransferBlock && (op.blockNum - pack.lastTransferBlock) < TRANSFER_COOLDOWN_BLOCKS) {
 		return reject('pack transfer cooldown');
@@ -3041,7 +3091,8 @@ async function applyDuatAirdropClaim(op: ProtocolOp, deps: ProtocolCoreDeps): Pr
 }
 
 async function applyDuatAirdropFinalize(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpResult> {
-	if (op.broadcaster !== deps.runtime.adminAccount) return reject('not admin');
+	const authResult = await requireAdminAuthority(op, deps);
+	if (authResult) return authResult;
 
 	const genesis = await deps.state.getGenesis();
 	if (!genesis) return reject('no genesis');

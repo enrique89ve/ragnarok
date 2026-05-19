@@ -19,6 +19,6 @@ export const routes = {
   marketplace: '/marketplace',
   explorer: '/explorer',
   admin: '/admin',
-  runeTestnetPrototype: '/testnet/rune',
+  legacyRuneTestnet: '/testnet/rune',
   pokerViewportPrototype: '/prototype/poker-viewport',
 };

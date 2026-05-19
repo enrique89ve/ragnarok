@@ -267,8 +267,7 @@ function HomePage() {
 	const currentMissionId = useCampaignStore(s => s.currentMission);
 	const hiveUsername = useNFTUsername();
 	const isHiveMode = useIsHiveMode();
-	const starterClaimed = useStarterStore(s => isHiveMode && !hiveUsername ? false : s.hasClaimed(hiveUsername));
-	const starterClaimBlocked = isHiveMode && !hiveUsername;
+	const starterClaimed = useStarterStore(s => s.hasClaimed(hiveUsername));
 	const syncLegacyStarterClaim = useStarterStore(s => s.syncLegacyClaimToAccount);
 	const [showCeremony, setShowCeremony] = useState(false);
 	const [canInstall, setCanInstall] = useState(!!deferredInstallPrompt);
@@ -296,7 +295,7 @@ function HomePage() {
 	}, [activeMission, completedMissions]);
 
 	const primaryLabel = !starterClaimed
-		? starterClaimBlocked ? 'Connect Hive to Reveal' : 'Reveal Starter Deck'
+		? 'Reveal Starter Deck'
 		: activeMission
 			? 'Resume Campaign'
 			: completedMissionCount > 0
@@ -400,10 +399,7 @@ function HomePage() {
 									<Button
 										variant="primary"
 										size="lg"
-										onClick={() => {
-											if (!starterClaimBlocked) setShowCeremony(true);
-										}}
-										disabled={starterClaimBlocked}
+										onClick={() => setShowCeremony(true)}
 									>
 										{primaryLabel}
 									</Button>
@@ -609,7 +605,6 @@ function HomePage() {
 				<Suspense fallback={null}>
 					<StarterPackCeremony
 						accountId={hiveUsername}
-						requireSignedClaim={isHiveMode}
 						onComplete={() => setShowCeremony(false)}
 					/>
 				</Suspense>
@@ -741,7 +736,7 @@ function App() {
 									<Route path={routes.explorer} element={<ExplorerPage />} />
 									<Route path={routes.admin} element={<AdminPanel />} />
 									<Route path={routes.wallet} element={<WalletPage />} />
-									<Route path={routes.runeTestnetPrototype} element={<Navigate to={routes.wallet} replace />} />
+									<Route path={routes.legacyRuneTestnet} element={<Navigate to={routes.wallet} replace />} />
 									<Route path={routes.tournaments} element={<OnlineOnly label="Tournaments"><TournamentListPage /></OnlineOnly>} />
 									<Route path={routes.history} element={<MatchHistoryPage />} />
 									<Route path={routes.settings} element={<SettingsPage />} />

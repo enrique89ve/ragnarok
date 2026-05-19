@@ -3,8 +3,9 @@
  *
  * Used in local/test mode. All collection/stats/tokens delegate to
  * the existing useHiveDataStore Zustand store (persists to localStorage).
- * Local-only gameplay operations return success no-ops; pack acquisition
- * delegates to HiveSync so logged-in testnet users still sign via Keychain.
+ * Local-only gameplay operations return success no-ops. Hive wallet
+ * transactions are rejected here so local/dev mode cannot open Keychain by
+ * accident.
  * Events are silently swallowed.
  */
 
@@ -12,7 +13,6 @@ import type { HiveCardAsset, HivePlayerStats, HiveTokenBalance } from '@/data/sc
 import { useHiveDataStore } from '@/data/HiveDataLayer';
 import { DEFAULT_PLAYER_STATS } from '@/data/schemas/HiveTypes';
 import { getCurrentHiveUsername } from '@/data/HiveSessionIdentity';
-import { hiveSync } from '@/data/HiveSync';
 import type { PackAsset } from '../../../../shared/protocol-core/types';
 import type {
 	INFTBridge,
@@ -144,7 +144,9 @@ export class LocalNFTBridge implements INFTBridge {
 	}
 
 	async runeExchange(packType: string, quantity: number = 1): Promise<BroadcastResult> {
-		return hiveSync.runeExchange(packType, quantity);
+		void packType;
+		void quantity;
+		return { success: false, error: 'RUNE exchange requires Hive mode.' };
 	}
 
 	async purchasePackHbd(
@@ -152,7 +154,10 @@ export class LocalNFTBridge implements INFTBridge {
 		quantity: number,
 		totalPriceThousandths: number,
 	): Promise<BroadcastResult> {
-		return hiveSync.purchasePackHbd(packType, quantity, totalPriceThousandths);
+		void packType;
+		void quantity;
+		void totalPriceThousandths;
+		return { success: false, error: 'HBD pack purchase requires Hive mode.' };
 	}
 
 	async signResultHash(_hash: string): Promise<string> {

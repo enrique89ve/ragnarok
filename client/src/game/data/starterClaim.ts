@@ -1,5 +1,4 @@
 import type { CardData } from '../types';
-import { getNFTBridge } from '../nft';
 import { getStarterCards, seedStarterHeroDecks } from './starterSet';
 import { useStarterStore } from '../stores/starterStore';
 
@@ -9,7 +8,6 @@ export type StarterClaimResult =
 
 interface ClaimStarterEntitlementParams {
 	accountId?: string | null;
-	requireSignature: boolean;
 }
 
 function normalizeAccountId(accountId: string | null | undefined): string | null {
@@ -19,29 +17,8 @@ function normalizeAccountId(accountId: string | null | undefined): string | null
 
 export async function claimStarterEntitlement({
 	accountId,
-	requireSignature,
 }: ClaimStarterEntitlementParams): Promise<StarterClaimResult> {
 	const normalizedAccountId = normalizeAccountId(accountId);
-
-	if (requireSignature) {
-		if (!normalizedAccountId) {
-			return { success: false, error: 'Connect Hive before claiming starter.' };
-		}
-
-		const bridge = getNFTBridge();
-		const activeAccountId = normalizeAccountId(bridge.getUsername());
-		if (activeAccountId !== normalizedAccountId) {
-			return { success: false, error: 'Active Hive account does not match the starter claim account.' };
-		}
-
-		const authBody = await bridge.buildAuthBody(normalizedAccountId, 'starter-claim', {
-			claim: 'starter',
-			v: 1,
-		});
-		if (!authBody.signature) {
-			return { success: false, error: 'Starter claim signature was rejected.' };
-		}
-	}
 
 	// Ownership is universal — no materialization needed. The claim ceremony's
 	// only data effect is (a) seeding the 4 pre-built hero decks for convenience

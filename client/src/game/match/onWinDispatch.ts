@@ -12,7 +12,6 @@
  *   if (ctx) selectOnWinHandler(ctx)({ iWon, turnCount });
  */
 
-import { useDailyQuestStore } from '../stores/dailyQuestStore';
 import { onCampaignMatchEnd } from './modes/campaign/lifecycle';
 import { onP2PMatchEnd } from './modes/p2p/lifecycle';
 import { onSingleMatchEnd } from './modes/single/lifecycle';
@@ -55,14 +54,12 @@ export function selectOnWinHandler(
 }
 
 /**
- * Match-end side effects that run for every mode (win or loss) — flushes
- * any daily-quest progress that crossed its goal mid-combat so the chain
- * broadcasts happen now, at the neutral moment after the match, instead
- * of popping a Keychain dialog while the player was deciding their move.
+ * Match-end side effects that run for every mode (win or loss). Daily-quest
+ * progress may cross its goal mid-combat, but match-end must not open
+ * Keychain. The quest panel exposes an explicit Claim action for the wallet
+ * prompt.
  *
- * Idempotent — completed-but-unclaimed is the filter. Re-entering this
- * after a successful flush is a no-op.
+ * Idempotent no-op; the completed-but-unclaimed state already lives in the
+ * daily quest store.
  */
-export function flushDailyQuestClaimsAfterMatch(): void {
-	void useDailyQuestStore.getState().flushPendingClaims();
-}
+export function markDailyQuestClaimsPendingAfterMatch(): void {}

@@ -10,7 +10,6 @@ import TreasureChestSVG from './packs/TreasureChestSVG';
 
 interface StarterPackCeremonyProps {
 	accountId?: string | null;
-	requireSignedClaim?: boolean;
 	/** Called when the ceremony finishes (claim succeeded or user cancelled). */
 	onComplete: () => void;
 	/**
@@ -28,7 +27,6 @@ type CeremonyPhase = 'welcome' | 'opening' | 'mode-select';
 
 export default function StarterPackCeremony({
 	accountId,
-	requireSignedClaim = false,
 	onComplete,
 	onCancel,
 }: StarterPackCeremonyProps) {
@@ -60,7 +58,6 @@ export default function StarterPackCeremony({
 		setClaimError(null);
 		const result = await claimStarterEntitlement({
 			accountId,
-			requireSignature: requireSignedClaim,
 		});
 		setIsClaiming(false);
 
@@ -70,7 +67,7 @@ export default function StarterPackCeremony({
 		}
 
 		setPhase('opening');
-	}, [accountId, isClaiming, requireSignedClaim]);
+	}, [accountId, isClaiming]);
 
 	// Both the close (X / backdrop / "Done") and the explicit "Continue" path
 	// land on the mode-select phase — the player chooses where to play first.

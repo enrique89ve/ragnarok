@@ -212,7 +212,7 @@ export type ProtocolAction = CanonicalAction | LegacyAction;
 // ============================================================
 
 export const ACTIVE_AUTH_OPS: ReadonlySet<CanonicalAction> = new Set([
-	'card_transfer', 'burn', 'seal', 'mint_batch',
+	'genesis', 'card_transfer', 'burn', 'seal', 'mint_batch',
 	'pack_purchase',
 	'pack_mint', 'pack_distribute', 'pack_transfer', 'pack_burn',
 	'card_replicate', 'card_merge',
@@ -589,6 +589,13 @@ export interface SignatureVerifier {
 	 * Legacy: verify against current chain posting keys (pre-v1 matches only).
 	 */
 	verifyCurrentKey(account: string, message: string, signatureHex: string): Promise<boolean>;
+
+	/**
+	 * Verify against the account's current Active authority.
+	 * Used for admin two-account approvals where the browser signer must not be
+	 * downgraded to Posting authority.
+	 */
+	verifyCurrentActiveKey?(account: string, message: string, signatureHex: string): Promise<boolean>;
 }
 
 // ============================================================

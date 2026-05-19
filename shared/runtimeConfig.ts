@@ -10,6 +10,7 @@ export type RagnarokRuntimeConfig = {
 	readonly protocolId: string;
 	readonly collectionId: string;
 	readonly adminAccount: string;
+	readonly adminOperatorAccount: string;
 	readonly genesisAccount: string;
 	readonly treasuryAccount: string;
 	readonly indexAccount: string;
@@ -28,6 +29,7 @@ export type RagnarokRuntimeEnv = Partial<Record<
 	| 'VITE_RAGNAROK_PROTOCOL_ID'
 	| 'VITE_RAGNAROK_COLLECTION_ID'
 	| 'VITE_RAGNAROK_ADMIN_ACCOUNT'
+	| 'VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT'
 	| 'VITE_RAGNAROK_GENESIS_ACCOUNT'
 	| 'VITE_RAGNAROK_TREASURY_ACCOUNT'
 	| 'VITE_RAGNAROK_INDEX_ACCOUNT'
@@ -36,7 +38,8 @@ export type RagnarokRuntimeEnv = Partial<Record<
 	| 'VITE_NFTLOX_PROTOCOL_ID'
 	| 'VITE_NFT_ART_BASE_URL'
 	| 'VITE_EXTERNAL_URL_BASE'
-	| 'RAGNAROK_PROTOCOL_ID',
+	| 'RAGNAROK_PROTOCOL_ID'
+	| 'RAGNAROK_ADMIN_OPERATOR_ACCOUNT',
 	string | undefined
 >>;
 
@@ -49,6 +52,7 @@ export const RAGNAROK_RUNTIME_CONFIGS = {
 		protocolId: 'ragnarok-cards-local',
 		collectionId: 'ragnarok-local',
 		adminAccount: 'ragnarok',
+		adminOperatorAccount: '',
 		genesisAccount: 'ragnarok-genesis',
 		treasuryAccount: 'ragnarok-treasury',
 		indexAccount: 'ragnarok-index',
@@ -67,6 +71,7 @@ export const RAGNAROK_RUNTIME_CONFIGS = {
 		protocolId: 'rk_game_testnet',
 		collectionId: 'ragnarok-testnet',
 		adminAccount: 'ragnarok-test',
+		adminOperatorAccount: '',
 		genesisAccount: 'ragnarok-test',
 		treasuryAccount: 'ragnarok-test',
 		indexAccount: 'ragnarok-test-index',
@@ -85,6 +90,7 @@ export const RAGNAROK_RUNTIME_CONFIGS = {
 		protocolId: 'ragnarok-cards',
 		collectionId: 'ragnarok-alpha',
 		adminAccount: 'ragnarok',
+		adminOperatorAccount: '',
 		genesisAccount: 'ragnarok-genesis',
 		treasuryAccount: 'ragnarok-treasury',
 		indexAccount: 'ragnarok-index',
@@ -128,6 +134,10 @@ export function resolveRagnarokRuntimeConfig(env: RagnarokRuntimeEnv): RagnarokR
 		protocolId: overrideString(env.RAGNAROK_PROTOCOL_ID, overrideString(env.VITE_RAGNAROK_PROTOCOL_ID, base.protocolId)),
 		collectionId: overrideString(env.VITE_RAGNAROK_COLLECTION_ID, base.collectionId),
 		adminAccount: overrideString(env.VITE_RAGNAROK_ADMIN_ACCOUNT, base.adminAccount),
+		adminOperatorAccount: overrideString(
+			env.RAGNAROK_ADMIN_OPERATOR_ACCOUNT,
+			overrideString(env.VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT, base.adminOperatorAccount),
+		),
 		genesisAccount: overrideString(env.VITE_RAGNAROK_GENESIS_ACCOUNT, base.genesisAccount),
 		treasuryAccount: overrideString(env.VITE_RAGNAROK_TREASURY_ACCOUNT, base.treasuryAccount),
 		indexAccount: overrideString(env.VITE_RAGNAROK_INDEX_ACCOUNT, base.indexAccount),

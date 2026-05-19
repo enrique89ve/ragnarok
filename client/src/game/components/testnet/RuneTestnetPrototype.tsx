@@ -1,5 +1,9 @@
 /**
- * RUNE testnet internal panel.
+ * Archived RUNE testnet internal panel.
+ *
+ * This component is not mounted by the app. The legacy `/#/testnet/rune`
+ * route redirects to `/wallet`, which is the canonical player-facing RUNE
+ * surface.
  *
  * Data is read from `/api/chain/rune/*`. The variant switcher is still a
  * layout prototype aid and should be removed when the final surface is chosen.

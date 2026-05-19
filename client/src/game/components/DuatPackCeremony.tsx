@@ -19,6 +19,11 @@ import { getNFTBridge } from '../nft';
 import { deriveSealedPackBurnCards } from '../../data/blockchain/packDerivation';
 import { forceSync } from '../../data/blockchain/replayEngine';
 import { HIVE_NODES } from '../../data/blockchain/hiveConfig';
+import {
+	assertClientWalletInvocation,
+	invokeClientWalletAction,
+	type ClientWalletInvocation,
+} from '../../data/wallet/clientWalletInvocation';
 import { ensureCardDataRuntime } from '../runtime/cardDataRuntime';
 import { debug } from '../config/debugConfig';
 import PackOpeningAnimation from './packs/PackOpeningAnimation';
@@ -126,7 +131,8 @@ export default function DuatPackCeremony({ accountId, expectedPacks = 0, onCompl
 	const currentIndex = revealed ? opensCompleted : Math.min(opensCompleted + 1, initialPackCount);
 	const totalPacks = initialPackCount;
 
-	const burnNext = useCallback(async () => {
+	const burnNext = useCallback(async (invocation: ClientWalletInvocation) => {
+		assertClientWalletInvocation(invocation, 'pack_burn', 'Active');
 		const next = queue[0];
 		if (!next) return;
 
@@ -223,11 +229,16 @@ export default function DuatPackCeremony({ accountId, expectedPacks = 0, onCompl
 		}
 	}, [accountId, queue, hiveMode]);
 
-	useEffect(() => {
-		if (queue.length > 0 && !revealed && !opening && !error) {
-			void burnNext();
-		}
-	}, [queue.length, revealed, opening, error, burnNext]);
+	const handleOpenCurrentPack = useCallback(() => {
+		void invokeClientWalletAction(
+			{
+				kind: 'pack_burn',
+				authority: 'Active',
+				label: 'Open sealed DUAT pack',
+			},
+			burnNext,
+		);
+	}, [burnNext]);
 
 	// Poll for canonical packs while the chain replay catches up. Each tick
 	// forceSync's IDB → Zustand, then we re-read both queues. As soon as a
@@ -315,7 +326,7 @@ export default function DuatPackCeremony({ accountId, expectedPacks = 0, onCompl
 					</h2>
 					<p className="text-ink-200 text-sm mb-6 leading-relaxed">
 						{expectedPacks} airdrop pack{expectedPacks === 1 ? '' : 's'} {expectedPacks === 1 ? 'is' : 'are'} waiting for chain confirmation.
-						{!exhausted && ' Opening will start automatically when the indexer reaches your claim.'}
+						{!exhausted && ' When the indexer reaches your claim, choose Open pack to sign the burn.'}
 					</p>
 					<div className="flex gap-3 justify-center">
 						{exhausted && (
@@ -371,7 +382,7 @@ export default function DuatPackCeremony({ accountId, expectedPacks = 0, onCompl
 					<span className="text-sm">{error}</span>
 					<button
 						type="button"
-						onClick={burnNext}
+						onClick={handleOpenCurrentPack}
 						className="font-display text-xs tracking-[0.18em] uppercase font-bold underline hover:no-underline"
 					>
 						Retry
@@ -397,6 +408,38 @@ export default function DuatPackCeremony({ accountId, expectedPacks = 0, onCompl
 						<p className="font-mono text-[10px] tracking-[0.22em] uppercase text-bifrost-200">
 							Sealing the rite · Sign in Keychain
 						</p>
+					</div>
+				</div>
+			)}
+
+			{!opening && !revealed && !error && queue.length > 0 && (
+				<div className="absolute inset-0 flex items-center justify-center bg-obsidian-950/95 px-6">
+					<div className="max-w-md text-center">
+						<div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-lg border border-bifrost-300/35 bg-bifrost-500/15">
+							<span aria-hidden className="h-4 w-4 rotate-45 bg-bifrost-200/80" />
+						</div>
+						<h2 className="font-display text-xl font-bold tracking-[0.10em] uppercase text-bifrost-100 mb-3">
+							Open sealed pack
+						</h2>
+						<p className="text-ink-200 text-sm leading-relaxed mb-6">
+							Pack {currentIndex} of {totalPacks} is ready. Burning it uses your Active key and creates the reveal entropy on Hive.
+						</p>
+						<div className="flex justify-center gap-3">
+							<button
+								type="button"
+								onClick={handleOpenCurrentPack}
+								className="px-5 py-2.5 rounded-md border border-bifrost-300/45 bg-bifrost-500/25 hover:bg-bifrost-500/40 font-display text-xs tracking-[0.18em] uppercase font-bold text-bifrost-100 transition-colors"
+							>
+								Open pack
+							</button>
+							<button
+								type="button"
+								onClick={handleSkipAll}
+								className="px-5 py-2.5 rounded-md border border-obsidian-700 bg-obsidian-900/65 hover:border-gold-600 hover:text-gold-300 font-display text-xs tracking-[0.18em] uppercase font-bold text-ink-300 transition-colors"
+							>
+								Open later
+							</button>
+						</div>
 					</div>
 				</div>
 			)}

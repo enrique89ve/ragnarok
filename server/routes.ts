@@ -69,6 +69,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const treasuryRoutes = (await import("./routes/treasuryRoutes")).default;
   app.use('/api/treasury', treasuryRoutes);
 
+  // Admin operator broadcasts: frontend Active approval + server operator Active key.
+  const adminRoutes = (await import("./routes/adminRoutes")).default;
+  app.use('/api/admin', adminRoutes);
+
   // NFT Explorer public API (NFTLox-compatible structure)
   const explorerRoutes = (await import("./routes/explorerRoutes")).default;
   app.use('/api/explorer', explorerRoutes);

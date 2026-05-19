@@ -23,7 +23,7 @@ export { useMatchStore } from './store';
 export { deriveAuthority, deriveOpponentArmyForMode, deriveIntro, deriveIWonForPhase } from './derived';
 export type { Authority, IntroSpec, WinnerSignal } from './derived';
 
-export { selectOnWinHandler, flushDailyQuestClaimsAfterMatch } from './onWinDispatch';
+export { selectOnWinHandler, markDailyQuestClaimsPendingAfterMatch } from './onWinDispatch';
 export type { MatchEndContext } from './onWinDispatch';
 
 // ── Economy surface ───────────────────────────────────────────────────────

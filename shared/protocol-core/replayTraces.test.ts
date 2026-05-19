@@ -35,6 +35,7 @@ import {
 	buildMatchResultSignatureMessage,
 	computeCompactMatchResultCommitmentHash,
 } from './matchResultCommitment';
+import { buildAdminApprovalMessage } from './adminMultisig';
 import { deriveChallenge, POW_CONFIG } from './pow';
 import { RAGNAROK_RUNTIME_CONFIGS } from '../runtimeConfig';
 
@@ -251,6 +252,7 @@ const mockRewards: RewardProvider = {
 const mockSigs: SignatureVerifier = {
 	async verifyAnchored() { return true; },
 	async verifyCurrentKey() { return true; },
+	async verifyCurrentActiveKey() { return true; },
 };
 
 const getTestRuneExchangeQuote: RuneExchangeAdapter['getQuote'] = getRuneExchangePackQuote;
@@ -480,6 +482,78 @@ describe('Protocol Core: Replay Traces', () => {
 	it('genesis rejected from non-admin', async () => {
 		const result = await applyOp(makeOp('genesis', { version: 1 }, { broadcaster: 'mallory', usedActiveAuth: true }), defaultCtx, deps);
 		expect(result.status).toBe('rejected');
+	});
+
+	it('accepts operator-broadcast genesis with frontend admin active approval', async () => {
+		const runtime = {
+			...RAGNAROK_RUNTIME_CONFIGS.mainnet,
+			adminOperatorAccount: 'ragnarok-operator',
+		};
+		const payload = {
+			app: 'ragnarok-cards',
+			p: 'ragnarok-cards',
+			action: 'genesis',
+			admin_nonce: 1001,
+			admin_approver: 'ragnarok',
+			admin_sig: 'active-signature',
+			admin_sig_key: 'active',
+			version: 1,
+			supply: {
+				pack_supply: { common: 2000, rare: 1000, epic: 500, mythic: 250 },
+				reward_supply: { epic: 150, mythic: 50 },
+			},
+		};
+		const expectedMessage = buildAdminApprovalMessage({
+			protocol: 'ragnarok',
+			action: 'genesis',
+			adminAccount: runtime.adminAccount,
+			operatorAccount: runtime.adminOperatorAccount,
+			payload,
+		});
+		deps = {
+			...deps,
+			runtime,
+			sigs: {
+				...mockSigs,
+				async verifyCurrentActiveKey(account, message, signature) {
+					return account === 'ragnarok'
+						&& message === expectedMessage
+						&& signature === 'active-signature';
+				},
+			},
+		};
+
+		const result = await applyOp(makeOp('genesis', payload, {
+			broadcaster: 'ragnarok-operator',
+			usedActiveAuth: true,
+		}), defaultCtx, deps);
+
+		expect(result.status).toBe('applied');
+		expect(state.genesis).not.toBeNull();
+	});
+
+	it('rejects operator-broadcast genesis without frontend admin active approval', async () => {
+		deps = {
+			...deps,
+			runtime: {
+				...RAGNAROK_RUNTIME_CONFIGS.mainnet,
+				adminOperatorAccount: 'ragnarok-operator',
+			},
+		};
+
+		const result = await applyOp(makeOp('genesis', {
+			version: 1,
+			supply: {
+				pack_supply: { common: 2000 },
+				reward_supply: {},
+			},
+		}, {
+			broadcaster: 'ragnarok-operator',
+			usedActiveAuth: true,
+		}), defaultCtx, deps);
+
+		expect(result.status).toBe('rejected');
+		expect((result as { reason: string }).reason).toBe('missing admin approver');
 	});
 
 	it('admin-only ops use the injected runtime authority', async () => {

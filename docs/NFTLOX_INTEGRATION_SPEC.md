@@ -78,12 +78,17 @@ A 5-card pack fits trivially in one op; a 15-card mega pack also fits as long as
   - `server/routes/packRoutes.ts` contains an older SQL-backed opener with deterministic slot selection, fallback rarity chains, and row locks against low liquidity. Treat it as useful reference material for the fulfillment algorithm, not as NFT custody truth.
 - `rune_exchange` currently mints sealed Ragnarok pack records. The NFTLox connector should either resolve those packs into final card instances with `bulk_distribute`, or keep the sealed-pack object strictly inside Ragnarok and only birth card instances on burn.
 
-### Authority model (v0.4.0)
+### Authority model (Ragnarok client policy)
 
-The mapping is enforced by `ACTION_AUTH_LEVEL` in NFTLox's protocol package — there is no override.
+Ragnarok keeps the NFTLox boundary stricter than routine gameplay ops:
+custody-changing or payment-sensitive NFT operations are signed with Active
+authority in the client helper.
 
-- **Active key (3 ops only)**: `create_collection`, `buy_commitment`, `buy`.
-- **Posting key (everything else)**: `mint`, `bulk_distribute`, `transfer`, `burn`, `list`, `unlist`, `set_data`, `set_data_from`, `extend_schema`, `archive_collection`, `nft_approve`, `nft_approve_all`, `data_operator_approve`, `nft_transfer_from`, `nft_lend`, `nft_return`.
+- **Active key**: `buy`, `transfer`, `burn`, `list`, `data_operator_approve`,
+  `nft_lend`, and `nft_return`.
+- **Posting key**: non-custody metadata or fulfillment helpers such as `mint`,
+  `bulk_distribute`, `set_data`, `set_data_from`, `extend_schema`,
+  `archive_collection`, `nft_approve`, and `nft_approve_all`.
 
 A subset of active actions also requires the signer to be a **registered active settlement node** (`NODE_SIGNED_ACTIONS` — currently `buy_commitment` and `buy`). `create_collection` is active-signed by the creator, not by a node.
 
@@ -271,8 +276,9 @@ What we **don't** use: NFTLox marketplace, lending, multisig buy. We **do** use 
 | `client/src/data/nft/NFTLoxApiAdapter.ts` | Implementation against `api-nftlox.hivecreators.co` — paginated `/users/:u/nfts`, `/state-hash` |
 | `client/src/data/nft/nftloxSync.ts` | Orchestrator: hash compare → paginated re-sync → atomic IndexedDB transaction |
 | `client/src/data/nft/nftloxIndexedDB.ts` | IndexedDB schema (`nft_ownership`, `nft_meta`) and CRUD |
-| `HiveSync.ts` | Write side — broadcasts NFTLox protocol ops via `custom_json`. `nftloxBulkDistribute` is the pack fulfillment target; `nftloxCreatePack` / `nftloxOpenPack` are stale placeholders to remove when the SDK lands. |
-| `genesisAdmin.ts` | Replace custom genesis with NFTLox `create_collection` + `bulk` seed mints |
+| `HiveSync.ts` | Player/owner write side — broadcasts NFTLox protocol ops via `custom_json`. `nftloxBulkDistribute` is the pack fulfillment target; `nftloxCreatePack` / `nftloxOpenPack` are stale placeholders to remove when the SDK lands. |
+| `client/src/data/blockchain/adminAdapters.ts` | Admin/operator write side — `nftLoxAdminAdapter` uses frontend Active approval plus server operator Active signing for `create_collection`, `mint`, `bulk_distribute`, schema/data-operator ops, and other NFTLox admin actions. |
+| `genesisAdmin.ts` | Facade for Ragnarok genesis actions; should delegate admin broadcasts to protocol-specific adapters instead of owning signing logic directly. |
 | `client/src/game/data/schemas/` | **Source of truth** — `immutableData` schema mirrors these primitives |
 
 Total NFT supply at full mint: ~2.76M instances across ~2,134 seeds.

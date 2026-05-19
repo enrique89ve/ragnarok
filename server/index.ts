@@ -164,6 +164,13 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use('/api/testnet/rune', (_req, res) => {
+  res.status(410).json({
+    success: false,
+    error: 'Legacy RUNE testnet API has been removed. Use /api/chain/rune/* or /api/chain/player/:username/rune.',
+  });
+});
+
 (async () => {
   // ADR 0004 §Decision.3 (issue 05) — validate witness signing config at
   // boot when env vars are set. Non-fatal if absent (match/pending routes
@@ -181,6 +188,25 @@ app.use((req, res, next) => {
     }
   } else {
     log('witness signer not configured — /api/chain/match/pending routes will return 503');
+  }
+
+  {
+    const {
+      shouldValidateAdminOperatorConfig,
+      validateAdminOperatorConfig,
+    } = await import('./services/adminOperatorBroadcaster');
+    if (shouldValidateAdminOperatorConfig()) {
+      const { getRagnarokServerRuntimeConfig } = await import('./services/runtimeConfig');
+      try {
+        const signer = await validateAdminOperatorConfig(getRagnarokServerRuntimeConfig());
+        log(`admin operator signer ready: ${signer.account} (${signer.publicKey.slice(0, 12)}…)`);
+      } catch (err) {
+        console.error('[boot] admin operator config invalid:', err instanceof Error ? err.message : err);
+        throw err;
+      }
+    } else {
+      log('admin operator signer not configured — /api/admin/broadcast will return 503');
+    }
   }
 
   const server = await registerRoutes(app);

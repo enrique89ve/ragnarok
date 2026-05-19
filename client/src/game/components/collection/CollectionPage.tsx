@@ -1137,7 +1137,7 @@ export default function CollectionPage() {
 															if (craftConfirm === 'disenchant') {
 																// Broadcast-only per ADR 0001. Balance arrives via
 																// chain-derived eitr_ledger entry — no local credit.
-																hiveSync.broadcastCustomJson('rp_burn', { nft_id: nft.uid })
+																hiveSync.broadcastCustomJson('rp_burn', { nft_id: nft.uid }, true)
 																	.then(res => {
 																		if (!res.success) {
 																			showStatus(res.error ?? 'Burn broadcast failed', 'error');

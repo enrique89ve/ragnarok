@@ -1,9 +1,10 @@
-import { useEffect, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import { getDefaultArmySelection } from '../../data/ChessPieceConfig';
 import type { CampaignChapter, CampaignMission } from '../../campaign';
 import type { InitialFlowInput, PostCinematicPlan, RoundFlowState } from '../../flow/round/types';
 import type { ArmySelection } from '../../types/ChessTypes';
 import type { RealmId } from '../../types/NorseTypes';
+import type { RealmState } from '../../types';
 import { useGameStore } from '../../stores/gameStore';
 import { cryptoIdGen } from '../../utils/seededRng';
 import type { SoundEffectType } from '../../../lib/stores/useAudio';
@@ -13,12 +14,14 @@ type CampaignData = {
   readonly chapter: CampaignChapter;
 } | null;
 
-type ActiveRealmInput = {
+export type CampaignActiveRealmSyncInput = {
   readonly isCampaign: boolean;
   readonly missionRealm: string | undefined;
   readonly visualRealm: RealmId;
   readonly realmDisplayName: string;
 };
+
+type ActiveRealmInput = CampaignActiveRealmSyncInput;
 
 type FlowBootstrapInput = {
   readonly flowState: RoundFlowState | null;
@@ -40,6 +43,13 @@ type BoardBootstrapInput = {
   readonly initializeBoard: (playerArmy: ArmySelection, opponentArmy: ArmySelection, idGen: () => string) => void;
   readonly resetBossRulesApplied: () => void;
   readonly playSoundEffect: (sound: SoundEffectType) => void;
+};
+
+export type CampaignBoardBootstrapGuardInput = {
+  readonly isCampaign: boolean;
+  readonly playerArmy: ArmySelection | null;
+  readonly initialArmy: ArmySelection | null;
+  readonly alreadyBootstrapped: boolean;
 };
 
 type CampaignGameBootstrapInput =
@@ -64,87 +74,146 @@ function buildPostCinematicPlan(campaignData: NonNullable<CampaignData>): PostCi
   };
 }
 
+function isMatchingCampaignRealm(
+  activeRealm: RealmState | undefined,
+  visualRealm: RealmId,
+  realmDisplayName: string,
+): boolean {
+  return activeRealm?.id === visualRealm && activeRealm.name === realmDisplayName;
+}
+
+export function syncCampaignActiveRealm(input: CampaignActiveRealmSyncInput): boolean {
+  if (!input.isCampaign || !input.missionRealm) return false;
+
+  const { activeRealm } = useGameStore.getState().gameState;
+  if (isMatchingCampaignRealm(activeRealm, input.visualRealm, input.realmDisplayName)) {
+    return false;
+  }
+
+  useGameStore.getState().setGameState({
+    activeRealm: {
+      id: input.visualRealm,
+      name: input.realmDisplayName,
+      description: '',
+      owner: 'player',
+      effects: [],
+    },
+  });
+
+  return true;
+}
+
+export function shouldBootstrapCampaignBoard(input: CampaignBoardBootstrapGuardInput): boolean {
+  return input.isCampaign
+    && !input.alreadyBootstrapped
+    && !input.playerArmy
+    && !input.initialArmy;
+}
+
 export function useCampaignGameBootstrap(input: CampaignGameBootstrapInput): void {
+  const {
+    isCampaign,
+    missionRealm,
+    realmDisplayName,
+    visualRealm,
+    flowState,
+    effectiveInitialArmy,
+    hasCinematic,
+    campaignData,
+    startFlow,
+    initialArmy,
+    playerArmy,
+    opponentArmy,
+    setPlayerArmy,
+    initializeBoard,
+    resetBossRulesApplied,
+    playSoundEffect,
+  } = input;
+  const boardBootstrappedRef = useRef(false);
+
   useEffect(() => {
-    if (!input.isCampaign || !input.missionRealm) return;
-
-    useGameStore.getState().setGameState({
-      activeRealm: {
-        id: input.visualRealm,
-        name: input.realmDisplayName,
-        description: '',
-        owner: 'player',
-        effects: [],
-      },
-    });
-  }, [input.isCampaign, input.missionRealm, input.realmDisplayName, input.visualRealm]);
+    syncCampaignActiveRealm({ isCampaign, missionRealm, realmDisplayName, visualRealm });
+  }, [isCampaign, missionRealm, realmDisplayName, visualRealm]);
 
   useEffect(() => {
-    if (input.flowState !== null) return;
+    if (flowState !== null) return;
 
-    if (input.effectiveInitialArmy && !input.isCampaign) {
-      input.startFlow({ kind: 'chess' });
+    if (effectiveInitialArmy && !isCampaign) {
+      startFlow({ kind: 'chess' });
       return;
     }
 
-    if (!input.isCampaign || !input.campaignData) return;
+    if (!isCampaign || !campaignData) return;
 
-    const intro = input.campaignData.chapter.cinematicIntro;
-    const narrative = input.campaignData.mission.narrativeBefore;
-    const planAfterCinematic = buildPostCinematicPlan(input.campaignData);
+    const intro = campaignData.chapter.cinematicIntro;
+    const narrative = campaignData.mission.narrativeBefore;
+    const planAfterCinematic = buildPostCinematicPlan(campaignData);
 
-    if (input.hasCinematic && intro) {
-      input.startFlow({
+    if (hasCinematic && intro) {
+      startFlow({
         kind: 'cinematic',
-        cinematic: { chapterId: input.campaignData.chapter.id, intro },
+        cinematic: { chapterId: campaignData.chapter.id, intro },
         then: planAfterCinematic,
       });
       return;
     }
 
     if (narrative) {
-      input.startFlow({
+      startFlow({
         kind: 'mission_intro',
         mission: {
-          missionId: input.campaignData.mission.id,
+          missionId: campaignData.mission.id,
           narrativeBefore: narrative,
-          isChapterFinale: !!input.campaignData.mission.isChapterFinale,
+          isChapterFinale: !!campaignData.mission.isChapterFinale,
         },
       });
       return;
     }
 
-    input.startFlow({ kind: 'chess' });
+    startFlow({ kind: 'chess' });
   }, [
-    input.campaignData,
-    input.effectiveInitialArmy,
-    input.flowState,
-    input.hasCinematic,
-    input.isCampaign,
-    input.startFlow,
+    campaignData,
+    effectiveInitialArmy,
+    flowState,
+    hasCinematic,
+    isCampaign,
+    startFlow,
   ]);
 
   useEffect(() => {
-    if (!input.isCampaign || input.playerArmy || input.initialArmy) return;
+    if (!isCampaign) {
+      boardBootstrappedRef.current = false;
+      return;
+    }
 
+    if (!shouldBootstrapCampaignBoard({
+      isCampaign,
+      playerArmy,
+      initialArmy,
+      alreadyBootstrapped: boardBootstrappedRef.current,
+    })) {
+      return;
+    }
+
+    boardBootstrappedRef.current = true;
     const defaultArmy = getDefaultArmySelection();
-    input.setPlayerArmy(defaultArmy);
-    input.initializeBoard(defaultArmy, input.opponentArmy, cryptoIdGen);
-    input.resetBossRulesApplied();
+    setPlayerArmy(defaultArmy);
+    initializeBoard(defaultArmy, opponentArmy, cryptoIdGen);
+    resetBossRulesApplied();
 
-    if (!input.hasCinematic && !input.campaignData?.mission.narrativeBefore) {
-      input.playSoundEffect('game_start');
+    if (!hasCinematic && !campaignData?.mission.narrativeBefore) {
+      playSoundEffect('game_start');
     }
   }, [
-    input.campaignData,
-    input.hasCinematic,
-    input.initialArmy,
-    input.initializeBoard,
-    input.isCampaign,
-    input.opponentArmy,
-    input.playSoundEffect,
-    input.playerArmy,
-    input.resetBossRulesApplied,
-    input.setPlayerArmy,
+    campaignData,
+    hasCinematic,
+    initialArmy,
+    initializeBoard,
+    isCampaign,
+    opponentArmy,
+    playSoundEffect,
+    playerArmy,
+    resetBossRulesApplied,
+    setPlayerArmy,
   ]);
 }

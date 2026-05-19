@@ -12,7 +12,6 @@ import { getCard, putCard } from '@/data/blockchain/replayDB';
 import { xpKeyFor } from '@/data/blockchain/cardXPRewards';
 import { getEconomicLevelForXP } from '@shared/protocol-core/cardProgression';
 import { usePeerStore } from '../stores/peerStore';
-import { hiveSync } from '@/data/HiveSync';
 import { getActiveTranscript, clearTranscript, recordSessionEvent } from '@/data/blockchain/transcriptBuilder';
 import { pinTranscript } from '@/data/blockchain/transcriptIPFS';
 import { registerAccount, fetchPlayerElo } from '@/data/chainAPI';
@@ -311,111 +310,31 @@ async function handleGameEnded(_event: GameEndedEvent): Promise<void> {
 // Dual-signature proposal (P2P ranked matches)
 // ---------------------------------------------------------------------------
 
-const DUAL_SIG_TIMEOUT_MS = 30_000;
-
-/**
- * Distinguishes proposer-side outcomes that require different UX:
- * `rejected` = peer actively said no (with reason); `timeout` =
- * silence (network drop, client crash). Reason is also persisted
- * via recordSessionEvent for forensic audit.
- */
-type CountersignOutcome =
-	| { kind: 'signed'; sig: string }
-	| { kind: 'rejected'; reason: string }
-	| { kind: 'timeout' };
-
 async function attemptDualSig(result: PackagedMatchResult): Promise<PackagedMatchResult> {
 	const peer = usePeerStore.getState();
 	if (peer.connectionState !== 'connected') return result;
 	if (result.matchType !== 'ranked') return result;
-	if (hiveSync.getUsername() !== result.winner.username) return result;
 
 	try {
 		const commitmentHash = await computeMatchResultCommitmentHash(result);
-		const broadcasterSig = await hiveSync.signResultHash(commitmentHash);
 		const proposalId = crypto.randomUUID();
-		peer.send({ type: 'result_propose', result, hash: commitmentHash, broadcasterSig, proposalId });
-
-		const outcome = await waitForCountersign(DUAL_SIG_TIMEOUT_MS);
-		if (outcome.kind === 'signed') {
-			return { ...result, signatures: { broadcaster: broadcasterSig, counterparty: outcome.sig } };
-		}
-
-		// Ranked matches MUST have dual signatures — do NOT broadcast with empty counterparty.
-		// Surface the failure mode to the user so a silently-blocked broadcast doesn't look
-		// like the match was registered on-chain. Persist context for forensic audit.
-		if (outcome.kind === 'rejected') {
-			debug.warn(`[BlockchainSubscriber] Dual-sig rejected by counterparty (reason=${outcome.reason}) — match result not broadcast`);
-			recordSessionEvent('result_rejection_received', {
-					reason: outcome.reason,
-					matchId: result.matchId,
-					proposerWinner: result.winner.username,
-					proposerLoser: result.loser.username,
-					proposalId,
-					commitmentHash,
-				});
-			GameEventBus.emitNotification({
-				level: 'warning',
-				message: `Opponent rejected match result (${outcome.reason}). Result was not broadcast on-chain.`,
-				duration: 8000,
-			});
-		} else {
-			debug.warn('[BlockchainSubscriber] Dual-sig timed out (30s) — match result not broadcast');
-			recordSessionEvent('result_countersign_timeout', {
-				matchId: result.matchId,
-					proposerWinner: result.winner.username,
-					proposerLoser: result.loser.username,
-					proposalId,
-					commitmentHash,
-					timeoutMs: DUAL_SIG_TIMEOUT_MS,
-				});
-			GameEventBus.emitNotification({
-				level: 'warning',
-				message: 'Opponent did not sign the match result in time. Result was not broadcast on-chain.',
-				duration: 8000,
-			});
-		}
-		return result; // No signatures attached = downstream won't broadcast
+		recordSessionEvent('result_signature_deferred', {
+			matchId: result.matchId,
+			proposerWinner: result.winner.username,
+			proposerLoser: result.loser.username,
+			proposalId,
+			commitmentHash,
+		});
+		debug.warn('[BlockchainSubscriber] Ranked result signature deferred — hidden Keychain prompts are disabled');
+		GameEventBus.emitNotification({
+			level: 'warning',
+			message: 'Ranked result needs wallet review before on-chain submit. Hidden Keychain prompts are disabled.',
+			duration: 8000,
+		});
 	} catch (err) {
-		debug.warn('[BlockchainSubscriber] Dual-sig signing failed — match result will not be broadcast:', err);
-		return result;
+		debug.warn('[BlockchainSubscriber] Failed to prepare ranked result signature prompt:', err);
 	}
-}
-
-function waitForCountersign(timeoutMs: number): Promise<CountersignOutcome> {
-	return new Promise((resolve) => {
-		const conn = usePeerStore.getState().connection;
-		if (!conn) { resolve({ kind: 'timeout' }); return; }
-
-		let settled = false;
-		const c = conn; // capture non-null ref for closures
-
-		const timer = setTimeout(() => {
-			if (!settled) { settled = true; c.off('data', handler); resolve({ kind: 'timeout' }); }
-		}, timeoutMs);
-
-		function handler(data: unknown) {
-			const msg = data as Record<string, unknown>;
-			if (msg.type === 'result_countersign' && typeof msg.counterpartySig === 'string') {
-				if (!settled) {
-					settled = true;
-					clearTimeout(timer);
-					c.off('data', handler);
-					resolve({ kind: 'signed', sig: msg.counterpartySig });
-				}
-			} else if (msg.type === 'result_reject') {
-				if (!settled) {
-					settled = true;
-					clearTimeout(timer);
-					c.off('data', handler);
-					const reason = typeof msg.reason === 'string' ? msg.reason : 'unknown';
-					resolve({ kind: 'rejected', reason });
-				}
-			}
-		}
-
-		c.on('data', handler);
-	});
+	return result;
 }
 
 async function applyLocalXPAndStampLevelUps(result: PackagedMatchResult): Promise<number> {

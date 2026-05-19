@@ -265,8 +265,23 @@ export default function CosmicCanvas({ realms, connections, className }: CosmicC
 		let destroyed = false;
 
 		(async () => {
-			app = await initApp() ?? null;
-			if (destroyed || !app) return;
+			let initializedApp: Application | null = null;
+			try {
+				initializedApp = await initApp() ?? null;
+			} catch {
+				// Decorative background only: campaign navigation must remain usable
+				// when Pixi cannot create a renderer in headless or GPU-disabled browsers.
+				return;
+			}
+			if (destroyed) {
+				if (initializedApp) {
+					initializedApp.destroy(true, { children: true, texture: true });
+					if (appRef.current === initializedApp) appRef.current = null;
+				}
+				return;
+			}
+			app = initializedApp;
+			if (!app) return;
 
 			let time = 0;
 			const tick = () => {
@@ -333,10 +348,11 @@ export default function CosmicCanvas({ realms, connections, className }: CosmicC
 		return () => {
 			destroyed = true;
 			cancelAnimationFrame(animFrameRef.current);
-			if (app) {
-				app.destroy(true, { children: true, texture: true });
+			const appToDestroy = app ?? appRef.current;
+			if (appToDestroy) {
+				appToDestroy.destroy(true, { children: true, texture: true });
 			}
-			appRef.current = null;
+			if (appRef.current === appToDestroy) appRef.current = null;
 			starDataRef.current = [];
 			nebulaRef.current = [];
 			dustRef.current = undefined;

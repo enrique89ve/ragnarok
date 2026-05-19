@@ -17,10 +17,11 @@ import { routes } from '../../../lib/routes';
 import { getNFTBridge } from '../../nft';
 import { useStarterStore } from '../../stores/starterStore';
 import { useDuatClaimStore } from '../../stores/duatClaimStore';
-import { useIsHiveMode, useNFTUsername } from '../../nft/hooks';
+import { useNFTUsername } from '../../nft/hooks';
 import { NumericRitual, OrnateCorners, SigilBackplate, type Tier } from '../../../components/ornaments/RunicSigils';
 import { SplashBackdrop } from '../../../components/ornaments/SplashBackdrop';
 import { MetaPageHeader, MetaPageHeaderLink } from '../../../components/navigation/MetaPageHeader';
+import { invokeClientWalletAction } from '../../../data/wallet/clientWalletInvocation';
 
 // Lazy — the ceremony modal is a one-time-per-account event.
 const StarterPackCeremony = lazy(() => import('../StarterPackCeremony'));
@@ -93,11 +94,7 @@ export default function PacksPage() {
 	const sealedPacks = getNFTBridge().getPackCollection().filter(p => p.sealed);
 
 	const hiveUsername = useNFTUsername();
-	const isHiveMode = useIsHiveMode();
-	const starterClaimed = useStarterStore(s =>
-		isHiveMode && !hiveUsername ? false : s.hasClaimed(hiveUsername),
-	);
-	const starterClaimBlocked = isHiveMode && !hiveUsername;
+	const starterClaimed = useStarterStore(s => s.hasClaimed(hiveUsername));
 
 	// DUAT airdrop awareness — vault is the primary surface for the claim CTA.
 	// The claim has one authority: Hive broadcast + replay. While a broadcast
@@ -123,7 +120,14 @@ export default function PacksPage() {
 	const handleDuatClaim = async () => {
 		if (!duatEntry || !hiveUsername) return;
 
-		const result = await claimDuatPacks();
+		const result = await invokeClientWalletAction(
+			{
+				kind: 'duat_airdrop_claim',
+				authority: 'Posting',
+				label: 'Claim DUAT airdrop packs',
+			},
+			claimDuatPacks,
+		);
 
 		refresh();
 		if (result.error) {
@@ -182,8 +186,7 @@ export default function PacksPage() {
 				{/* Starter claim card — only when not yet claimed */}
 				{showStarterRow && (
 					<StarterClaimCard
-						blocked={starterClaimBlocked}
-						onClaim={() => { if (!starterClaimBlocked) setShowCeremony(true); }}
+						onClaim={() => setShowCeremony(true)}
 					/>
 				)}
 
@@ -250,7 +253,6 @@ export default function PacksPage() {
 				<Suspense fallback={null}>
 					<StarterPackCeremony
 						accountId={hiveUsername}
-						requireSignedClaim={isHiveMode}
 						onComplete={() => { setShowCeremony(false); refresh(); }}
 					/>
 				</Suspense>
@@ -355,7 +357,7 @@ function SealedPackTile({
  * The birthright artifact: ornate corners, etched texture, gold sigil
  * backplate behind the seal icon, ritual heading.
  */
-function StarterClaimCard({ blocked, onClaim }: { blocked: boolean; onClaim: () => void }) {
+function StarterClaimCard({ onClaim }: { onClaim: () => void }) {
 	return (
 		<motion.section
 			initial={{ opacity: 0, y: 8 }}
@@ -384,16 +386,13 @@ function StarterClaimCard({ blocked, onClaim }: { blocked: boolean; onClaim: () 
 					Your starter line awaits
 				</h2>
 				<p className="text-ink-200 text-sm leading-snug max-w-[44ch]">
-					{blocked
-						? 'Connect Hive Keychain to claim your starter line.'
-						: 'A 5-card starter line, one-time per account. No cost.'}
+					A 45-card starter line, one-time per profile. No cost.
 				</p>
 			</div>
 
 			<button
 				type="button"
 				onClick={onClaim}
-				disabled={blocked}
 				className="btn-runic btn-runic--gold shrink-0 relative z-10"
 			>
 				<span className="btn-runic-stud" aria-hidden />

@@ -79,6 +79,13 @@ export {
 	SUPPLY_CAPS,
 } from './genesisAdmin';
 
+export {
+	createNftLoxAdminAdapter,
+	createRagnarokAdminAdapter,
+	nftLoxAdminAdapter,
+	ragnarokAdminAdapter,
+} from './adminAdapters';
+
 export type { PoWConfig, PoWResult } from './proofOfWork';
 export {
 	POW_CONFIG,
