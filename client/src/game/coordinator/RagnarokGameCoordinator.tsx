@@ -782,7 +782,12 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
               result={viewerChessResult ?? 'defeat'}
               sub={flowState.sub}
               playerTurnCount={turnCount}
-              campaign={isCampaign && campaignData ? { mission: campaignData.mission, chapter: campaignData.chapter, difficulty: campaignDifficulty } : null}
+              campaign={isCampaign && campaignData ? {
+                mission: campaignData.mission,
+                chapter: campaignData.chapter,
+                difficulty: campaignDifficulty,
+                localRunId: campaignMatch?.localRunId ?? null,
+              } : null}
               onCinematicEnd={() => dispatchFlow({ type: 'GAME_OVER_ADVANCE', nextSub: 'result' })}
               onBridgeEnd={() => { clearCurrent(); navigate(routes.campaign); }}
               onPrimaryAction={isCampaign ? handleBackToCampaign : handleRestart}

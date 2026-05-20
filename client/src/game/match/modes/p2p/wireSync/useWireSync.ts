@@ -340,7 +340,7 @@ export function useWireSync() {
 						const deckCardIds = selectDeckCardIds(useWarbandStore.getState());
 						const parsed = buildClientDeckClaimsFromCardIds(deckCardIds, bridge);
 						if (parsed.status === 'parsed') {
-							send({ type: 'deck_verify', hiveAccount: username, protocolVersion: 2, version: 2, claims: parsed.claims });
+							send({ type: 'deck_verify', hiveAccount: username, protocolVersion: 2, claims: parsed.claims });
 							debug.combat(`[wireSync] Sent deck_verify: ${parsed.claims.length} source-aware claim(s) for @${username}`);
 						} else {
 							debug.warn('[wireSync] Could not derive deck_verify claims:', parsed.rejections);
@@ -1449,7 +1449,7 @@ export function useWireSync() {
 						setTimeout(() => usePeerStore.getState().disconnect(), 2000);
 					};
 
-					const claims = data.claims ?? [];
+					const claims = data.claims;
 					verifyDeckOwnership(data.hiveAccount, claims.map(claim => (
 						claim.authority === 'nft-custody'
 							? { nft_id: claim.nftUid, cardId: claim.cardId }
@@ -1468,34 +1468,18 @@ export function useWireSync() {
 						}
 					}).catch(() => { /* IndexedDB unavailable in dev mode — skip */ });
 
-					if (data.version === 'starter-shortcut' && data.heroClass) {
-						const { verifyStarterDeckShortcut } = await import('../../../../../data/chainAPI');
-						verifyStarterDeckShortcut(data.hiveAccount, data.heroClass)
-							.then(sv => {
-								if (!sv.verified) {
-									GameEventBus.emitNotification({
-										level: 'error',
-										message: `Server starter-deck verification failed for ${data.hiveAccount}. Disconnecting.`,
-										duration: 5000,
-									});
-									disconnectOnce();
-								}
-							})
-							.catch(() => { /* Chain indexer unavailable — skip */ });
-					} else if (data.hiveAccount && data.claims && data.claims.length > 0) {
-						verifyDeckClaimsOnServer(data.hiveAccount, data.claims)
-							.then(sv => {
-								if (!sv.verified) {
-									GameEventBus.emitNotification({
-										level: 'error',
-										message: `Server deck verification failed — ${sv.rejections.length} card claim(s) rejected for ${data.hiveAccount}. Disconnecting.`,
-										duration: 5000,
-									});
-									disconnectOnce();
-								}
-							})
-							.catch(() => { /* Chain indexer unavailable — skip */ });
-					}
+					verifyDeckClaimsOnServer(data.hiveAccount, claims)
+						.then(sv => {
+							if (!sv.verified) {
+								GameEventBus.emitNotification({
+									level: 'error',
+									message: `Server deck verification failed — ${sv.rejections.length} card claim(s) rejected for ${data.hiveAccount}. Disconnecting.`,
+									duration: 5000,
+								});
+								disconnectOnce();
+							}
+						})
+						.catch(() => { /* Chain indexer unavailable — skip */ });
 					break;
 				}
 

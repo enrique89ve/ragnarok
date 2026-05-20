@@ -265,7 +265,7 @@ the result (`BlockchainSubscriber.ts:272-294`):
 
 ## §4 Wire Envelopes (`P2PMessage` union)
 
-The complete union is defined in `client/src/game/hooks/useWireSync.ts:78-91`.
+The complete union is defined in `client/src/game/p2p/messages.ts`.
 The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 
 | `type` | Direction | Sender authority | Purpose |
@@ -275,7 +275,7 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `version_check` | both | both | Phase 2: build-hash diagnostic |
 | `wasm_hash_check` | both | both | Phase 2: engine-hash check (disconnect on mismatch) |
 | `army_announcement` | both | both | Phase 2: announce selected chess army |
-| `deck_verify` | both | both | Phase 2: announce owned NFT card ids for cross-verification |
+| `deck_verify` | both | both | Phase 2: announce source-aware `protocolVersion: 2` deck claims for cross-verification |
 | `init` | host → client | host only | Phase 2: send authoritative initial gameState |
 | `game_command` (envelope) | client → host | client | Phase 3 cards: requests an action from host |
 | `gameState` | host → client | host | Phase 3 cards: sync authoritative state (debounced) |
@@ -523,7 +523,9 @@ effect):
    across matches are rejected.
 2. `gameState` carries `stateHash` for tamper detection (cards path).
 3. `seed_reveal.hiveUsername` is the only place identity is announced;
-   `deck_verify` cross-verifies NFT ownership against Hive chain.
+   `deck_verify` cross-verifies source-aware deck claims (`starter-entitlement`,
+   `nft-custody`, or reset-epoch-scoped `qa_full_catalog`) against the chain
+   projection and runtime entitlement rules.
 4. `result_propose.proposalId` correlates the proposal with its
    countersignature (prevents pairing two simultaneous proposals).
 5. Ranked matches require dual-sig — no single-sig fallback broadcast.

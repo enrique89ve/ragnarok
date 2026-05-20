@@ -1,12 +1,20 @@
 import { describe, expect, it } from 'vitest';
+import { RAGNAROK_RUNTIME_CONFIGS } from '@shared/runtimeConfig';
+import { buildDeckClaimsFromCardIds, verifyDeckClaims } from '@shared/protocol-core/deckVerification';
+import { buildPlayerCollection } from '@shared/protocol-core/playerCollection';
 import type { CardData } from '../types';
 import type { ArmySelection, ChessPieceHero } from '../types/ChessTypes';
+import { cardRegistry } from '../data/cardRegistry';
+import { getQaFullCatalogCardsForRuntime } from '../protocol/qaFullCatalogEntitlement';
 import {
   buildWarbandLoadout,
+  filterCardsByHero,
   generateAutoFillCards,
+  getMaxCopies,
   getHeroDeckStatus,
   HERO_DECK_PIECE_TYPES,
   HERO_DECK_SIZE,
+  validateHeroDeck,
   type HeroDeck,
   type PieceType,
 } from './heroDeckRules';
@@ -55,6 +63,33 @@ function makeDeck(pieceType: PieceType, heroId: string, cardIds = makeDeckCardId
 
 const registry = Array.from({ length: 20 }, (_, index) => makeCard(index + 1));
 const getCardById = (cardId: number): CardData | undefined => registry.find(card => Number(card.id) === cardId);
+const QA_SEASON_0_CONFIG = {
+  ...RAGNAROK_RUNTIME_CONFIGS.testnet,
+  resetEpoch: 'qa-s0-campaign-pass',
+};
+
+function buildCompleteDeckIds(cards: readonly CardData[]): number[] {
+  const deckCardIds: number[] = [];
+  const usedCardIds = new Set<number>();
+
+  for (const card of cards) {
+    const cardId = Number(card.id);
+    if (!Number.isInteger(cardId) || usedCardIds.has(cardId)) continue;
+    usedCardIds.add(cardId);
+
+    for (let copy = 0; copy < getMaxCopies(card) && deckCardIds.length < HERO_DECK_SIZE; copy++) {
+      deckCardIds.push(cardId);
+    }
+
+    if (deckCardIds.length === HERO_DECK_SIZE) break;
+  }
+
+  if (deckCardIds.length !== HERO_DECK_SIZE) {
+    throw new Error(`not enough QA catalog cards to build campaign deck: ${deckCardIds.length}`);
+  }
+
+  return deckCardIds;
+}
 
 describe('heroDeckRules', () => {
   it('marks a complete saved deck as a hero mismatch when the selected hero changed', () => {
@@ -130,5 +165,50 @@ describe('heroDeckRules', () => {
     expect(invalid.kind).toBe('invalid');
     if (invalid.kind !== 'invalid') return;
     expect(invalid.statuses.rook.kind).toBe('hero_mismatch');
+  });
+
+  it('builds a campaign-legal deck from QA full-catalog access without NFT ownership or CardXP', () => {
+    const qaCards = getQaFullCatalogCardsForRuntime(QA_SEASON_0_CONFIG);
+    const qaCopiesByCardId = new Map(qaCards.map(card => [card.cardId, card.ownedCopies]));
+    const validMageGenesisCards = filterCardsByHero(cardRegistry, 'mage', 'hero-erik-flameheart')
+      .filter(card => card.category === 'genesis');
+    const deckCardIds = buildCompleteDeckIds(validMageGenesisCards);
+    const deck: HeroDeck = {
+      pieceType: 'queen',
+      heroId: 'hero-erik-flameheart',
+      heroClass: 'mage',
+      cardIds: deckCardIds,
+    };
+
+    const localValidation = validateHeroDeck(deck, {
+      pieceType: 'queen',
+      heroId: deck.heroId,
+      heroClass: deck.heroClass,
+      getCardById: cardId => cardRegistry.find(card => Number(card.id) === cardId),
+      getOwnedCopies: cardId => qaCopiesByCardId.get(cardId) ?? 0,
+      enforceOwnership: true,
+    });
+
+    expect(localValidation.valid).toBe(true);
+
+    const collection = buildPlayerCollection({ qaFullCatalogCards: qaCards });
+    const parsed = buildDeckClaimsFromCardIds({ cardIds: deckCardIds, collection });
+    expect(parsed.status).toBe('parsed');
+    if (parsed.status !== 'parsed') throw new Error('expected QA deck claims to parse');
+    expect(parsed.claims.every(claim => claim.authority === 'qa_full_catalog')).toBe(true);
+
+    const decision = verifyDeckClaims({ claims: parsed.claims, collection });
+    expect(decision.status).toBe('verified');
+    if (decision.status !== 'verified') throw new Error('expected QA deck to verify');
+    expect(decision.cards).toHaveLength(HERO_DECK_SIZE);
+    for (const card of decision.cards) {
+      expect(card.authority).toBe('qa_full_catalog');
+      expect(card.transferable).toBe(false);
+      expect(card.earnsCardXp).toBe(false);
+      expect(card).toHaveProperty('resetEpoch', QA_SEASON_0_CONFIG.resetEpoch);
+      expect('nftUid' in card).toBe(false);
+      expect('xp' in card).toBe(false);
+      expect('level' in card).toBe(false);
+    }
   });
 });

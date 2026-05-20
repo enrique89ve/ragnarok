@@ -55,6 +55,40 @@ describe('ceremonyFeedback', () => {
 		vi.restoreAllMocks();
 	});
 
+	it('keeps campaign reward evidence reportable with reset epoch and local run id', () => {
+		const payload = buildCeremonyEvidencePayload(
+			{
+				ceremony: 'campaign_reward',
+				account: 'Alice',
+				context: {
+					campaignId: 'war-of-pantheons',
+					missionId: 'norse-1',
+					localRunId: 'campaign-run-1',
+					difficulty: 'normal',
+					rewardEvidence: {
+						status: 'first_clear_published',
+						previewRune: 2,
+						trxId: 'trx-campaign-1',
+					},
+				},
+			},
+			QA_CONFIG,
+			[],
+		);
+
+		expect(payload.runtime.resetEpoch).toBe('qa-s0-feedback-pass');
+		expect(payload.context).toMatchObject({
+			campaignId: 'war-of-pantheons',
+			missionId: 'norse-1',
+			localRunId: 'campaign-run-1',
+			rewardEvidence: {
+				status: 'first_clear_published',
+				previewRune: 2,
+				trxId: 'trx-campaign-1',
+			},
+		});
+	});
+
 	it('builds deterministic, safe filenames', () => {
 		const filename = buildCeremonyEvidenceFilename({
 			ceremony: 'daily_quest_claim',

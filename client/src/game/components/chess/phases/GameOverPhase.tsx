@@ -21,12 +21,14 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import type { CampaignMission, CampaignChapter, Difficulty } from '../../../campaign/campaignTypes';
-import { getCampaignResultRewardCopy, getMissionStars, useCampaignStore } from '../../../campaign';
+import { buildCampaignRewardEvidenceContext, getCampaignResultRewardCopy, getMissionStars, useCampaignStore } from '../../../campaign';
+import { CAMPAIGN_ID } from '@shared/campaign/constants';
 import { useRivalryStore } from '../../../pvp/rivalryStore';
 import CinematicCrawl from '../../campaign/CinematicCrawl';
 import type { GameOverSubPhase } from '../../../flow/round/types';
 import CeremonyEvidenceButton from '../../CeremonyEvidenceButton';
 import { useNFTUsername } from '../../../nft/hooks';
+import { useMatchStore } from '../../../match/store';
 
 /*
   RivalryBadge — head-to-head PvP record on the result card. Reads the
@@ -62,7 +64,12 @@ export type GameOverPhaseProps = {
 	// Campaign-only context. When null the phase renders the casual/PvP
 	// result card (no narrative, no stars, no rewards, no retry button).
 	readonly campaign:
-		| { readonly mission: CampaignMission; readonly chapter: CampaignChapter; readonly difficulty: Difficulty }
+		| {
+			readonly mission: CampaignMission;
+			readonly chapter: CampaignChapter;
+			readonly difficulty: Difficulty;
+			readonly localRunId: string | null;
+		}
 		| null;
 	readonly onCinematicEnd: () => void;
 	readonly onBridgeEnd: () => void;
@@ -83,6 +90,7 @@ const GameOverPhase: React.FC<GameOverPhaseProps> = ({
 	const isVictory = result === 'victory';
 	const isDraw = result === 'draw';
 	const account = useNFTUsername();
+	const isPeerMatch = useMatchStore(state => state.activeMatch?.opponent.kind === 'peer');
 	const lastRewardFeedback = useCampaignStore(state => state.lastRewardFeedback);
 	const activeRewardFeedback = campaign && lastRewardFeedback?.missionId === campaign.mission.id
 		? lastRewardFeedback
@@ -251,14 +259,16 @@ const GameOverPhase: React.FC<GameOverPhaseProps> = ({
 							<CeremonyEvidenceButton
 								ceremony="campaign_reward"
 								account={account}
-								context={{
+								context={buildCampaignRewardEvidenceContext({
+									campaignId: CAMPAIGN_ID,
 									missionId: campaign.mission.id,
+									localRunId: campaign.localRunId,
 									difficulty: campaign.difficulty,
 									result,
 									playerTurnCount,
-									feedback: activeRewardFeedback,
+									rewardEvidence: activeRewardFeedback,
 									location: 'campaign_game_over',
-								}}
+								})}
 								className="cgo-evidence-btn"
 							/>
 						</motion.div>
@@ -299,6 +309,11 @@ const GameOverPhase: React.FC<GameOverPhaseProps> = ({
 							? 'Checkmate! The enemy King has no escape.'
 							: 'Checkmate... Your King has been cornered.'}
 					</p>
+					{isPeerMatch && (
+						<p className="cgo-p2p-result-note">
+							P2P result: {isDraw ? 'draw' : isVictory ? 'you won' : 'you lost'}. Ranked RUNE waits for dual-signed match evidence.
+						</p>
+					)}
 					{/* PvP rivalry record — show head-to-head if we have history */}
 					<RivalryBadge />
 					<button

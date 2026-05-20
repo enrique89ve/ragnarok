@@ -173,6 +173,74 @@ wallet balance, seed a parallel API, or use `/api/testnet/rune/*`.
     exchange, and RUNE pack opening. The JSON should include the account,
     `custom_json` id, source keys, reset epoch, and relevant ledger entries.
 
+## Smoke Test — Campaign QA Season 0
+
+Run once per QA reset epoch with `qa_full_catalog` enabled. This smoke validates
+campaign mechanics coverage only; it does not validate NFT custody, marketplace
+ownership, CardXP, or ranked economy proof.
+
+1. Confirm `GET /api/health` reports `runtime.stage: "testnet"`,
+   `runtime.protocolId: "rk_game_testnet"`, and the active QA reset epoch.
+2. In `/#/warband`, build at least one 30-card campaign hero deck using
+   non-starter QA Access cards. The deck may verify through
+   `qa_full_catalog`, but verified cards must remain non-transferable and
+   `earnsCardXp: false`.
+3. Start a campaign mission from `/#/campaign`. Record the local run id from
+   the campaign evidence export when available.
+4. Win one configured reward-paying first-clear mission. Confirm
+   `rp_campaign_result` is broadcast under `rk_game_testnet` and replay creates
+   one `campaign_first_clear` RUNE credit with source key
+   `campaign:S01:<account>:<campaign_id>:<mission_id>`.
+5. Replay the same mission. Confirm progress may update best turns/stars, but
+   the RUNE balance and `campaign_first_clear` ledger count do not increase.
+6. Clear or replay a non-paying/narrative mission. Confirm campaign progress is
+   visible after sync even when no RUNE ledger entry is created.
+7. Submit or replay an invalid campaign result, such as a mission with unmet
+   prerequisites or mismatched registry hash. Confirm it is rejected and creates
+   no campaign progress or RUNE ledger entry.
+8. Export campaign reward evidence from the briefing and game-over result. The
+   JSON must include `runtime.resetEpoch`, `campaignId`, `missionId`,
+   `localRunId` when available, difficulty, result/turn count when available,
+   and reward evidence (`status`, preview RUNE, transaction id or error).
+9. Confirm the campaign evidence and collection UI do not describe QA Access
+   as NFT ownership, DUAT provenance, marketplace value, or CardXP eligibility.
+
+## Smoke Test — P2P QA Season 0
+
+Run once per QA reset epoch with two browser profiles and two Hive testnet
+identities. This smoke validates the networked peer path only; do not use
+campaign/local AI behavior as proof for P2P.
+
+1. Confirm both profiles report `runtime.stage: "testnet"`,
+   `runtime.protocolId: "rk_game_testnet"`, and the same QA reset epoch.
+2. Connect Hive Keychain in both profiles before opening multiplayer. The P2P
+   screen should block matchmaking/manual peer links until a Hive session is
+   present in shared-network runtime.
+3. In each profile, build complete 30-card loadouts for queen, rook, bishop,
+   and knight using at least one non-starter QA Access card. Start P2P from
+   `/#/multiplayer`; the wire `deck_verify` message must use
+   `protocolVersion: 2` and `claims[]` only.
+4. Start one manual or quick match. Confirm both peers pass the Hive session
+   authorization gate and the board renders with the announced armies.
+5. Make at least one quiet chess move from each side. Record any
+   `chess_command_rejected` event, reject code, command id, or state-hash
+   prefix from the P2P session log instead of guessing.
+6. Force an instant capture and then a non-instant capture into poker/combat.
+   Confirm host and guest both enter poker, apply the same poker decision
+   sequence, and return to the shared chess board without divergent pieces.
+7. Disconnect one tab briefly without reloading it. Confirm the visible P2P
+   badge enters grace/reconnect state, queued actions stay visible when
+   applicable, and the same match resumes inside the current reconnect policy.
+8. Attempt a hard reload during an active match and cancel the browser prompt.
+   Use the P2P badge download button to export the session log; confirm it
+   includes `p2p_reload_guard_prompted`.
+9. Finish or technically resolve the match. Confirm both peers see an explicit
+   win/loss/draw result. The P2P result note must say ranked RUNE waits for
+   dual-signed match evidence.
+10. Submit or replay result-only ranked evidence without a prior dual-anchored
+    `match_anchor`. Confirm it is rejected and no `p2p_ranked` RUNE ledger
+    entry appears for either account.
+
 ## Local/Mainnet Profile Commands
 
 Local private development uses the default local profile:

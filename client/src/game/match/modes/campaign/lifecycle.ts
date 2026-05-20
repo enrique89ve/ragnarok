@@ -19,6 +19,7 @@
 
 import { toast } from 'sonner';
 import { getCampaignFirstClearRuneReward } from '@shared/protocol-core/runeEconomy';
+import { CAMPAIGN_ID } from '@shared/campaign/constants';
 import { debug } from '../../../config/debugConfig';
 import { publishCampaignVictoryResult, useCampaignStore } from '../../../campaign';
 import { getNFTBridge } from '../../../nft';
@@ -33,11 +34,14 @@ export function onCampaignMatchEnd(ctx: MatchContext, end: MatchEndContext): voi
 	if (!end.iWon) return;
 
 	const { mission, difficulty } = ctx.opponent.script;
+	const localRunId = ctx.opponent.script.localRunId ?? null;
 	const campaign = useCampaignStore.getState();
 	const isFirstClear = !campaign.completedMissions[mission.id];
 	const previewRune = isFirstClear ? getCampaignFirstClearRuneReward(mission.id) : 0;
 	const baseFeedback = {
+		campaignId: CAMPAIGN_ID,
 		missionId: mission.id,
+		localRunId,
 		difficulty,
 		isFirstClear,
 		previewRune,
@@ -98,6 +102,8 @@ function recordCampaignRewardFeedback(input: CampaignRewardFeedbackInput): void 
 	useCampaignStore.getState().recordRewardFeedback(input);
 	recordCeremonyFeedbackEvent('campaign_reward', input.status, {
 		missionId: input.missionId,
+		campaignId: input.campaignId,
+		localRunId: input.localRunId ?? null,
 		difficulty: input.difficulty,
 		isFirstClear: input.isFirstClear,
 		previewRune: input.previewRune,

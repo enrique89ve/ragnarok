@@ -438,6 +438,36 @@ describe('campaign_result protocol op', () => {
 		expect(state.campaignProgress.get('alice:war-of-pantheons:norse-7')?.status).toBe('verified');
 	});
 
+	it('rejects a campaign result when prerequisites are not replay-visible', async () => {
+		const state = createStateAdapter();
+		const baseDeps = createDeps(state);
+		const deps: ProtocolCoreDeps = {
+			...baseDeps,
+			campaigns: {
+				...baseDeps.campaigns,
+				getMission: missionId => ({
+					id: missionId,
+					campaignId: CAMPAIGN_ID,
+					chapterId: 'norse',
+					prerequisiteIds: ['norse-1'],
+					allowedDifficulties: ['normal', 'heroic', 'mythic'],
+					starThresholds: { threeStar: 12, twoStar: 20 },
+				}),
+			},
+		};
+
+		const result = await applyCampaignResult(deps, { missionId: 'norse-2', nonce: 1 });
+
+		expect(result).toEqual({
+			status: 'rejected',
+			reason: 'campaign prerequisite not met: norse-1',
+		});
+		expect(state.campaignSubmissions.size).toBe(0);
+		expect(state.campaignProgress.size).toBe(0);
+		expect(state.runeLedger.size).toBe(0);
+		expect((await state.getTokenBalance('alice')).RUNE).toBe(0);
+	});
+
 	it('never credits more than 10 RUNE per account across all paying missions and chapters', async () => {
 		const state = createStateAdapter();
 		const deps = createDeps(state);

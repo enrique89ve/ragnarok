@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, Play, Swords } from 'lucide-react';
 import { Button } from '../../../components/ui-norse';
-import { getCampaignBriefingRewardCopy, useCampaignStore } from '../../campaign';
+import { buildCampaignRewardEvidenceContext, getCampaignBriefingRewardCopy, useCampaignStore } from '../../campaign';
 import type { CampaignChapter, CampaignMission, Difficulty } from '../../campaign/campaignTypes';
 import { getCampaignFirstClearRuneReward, TESTNET_RUNE_ECONOMY } from '@shared/protocol-core/runeEconomy';
+import { CAMPAIGN_ID } from '@shared/campaign/constants';
 import CeremonyEvidenceButton from '../CeremonyEvidenceButton';
 import { useNFTUsername } from '../../nft/hooks';
 import {
@@ -339,13 +340,16 @@ export function MissionBriefing({
 						<CeremonyEvidenceButton
 							ceremony="campaign_reward"
 							account={account}
-							context={{
+							context={buildCampaignRewardEvidenceContext({
+								campaignId: CAMPAIGN_ID,
 								missionId: mission.id,
+								localRunId: null,
 								difficulty,
 								completed: Boolean(completed),
 								firstClearRune,
+								rewardEvidence: null,
 								location: 'campaign_mission_briefing',
-							}}
+							})}
 							className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md border border-obsidian-700 bg-obsidian-900/60 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-300 transition-colors hover:border-gold-500/60 hover:text-gold-200"
 						/>
 					</div>

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+	buildCampaignRewardEvidenceContext,
 	createCampaignRewardFeedback,
 	getCampaignBriefingRewardCopy,
 	getCampaignResultRewardCopy,
@@ -12,7 +13,9 @@ describe('campaignRewardFeedback', () => {
 
 		const feedback = createCampaignRewardFeedback({
 			status: 'first_clear_published',
+			campaignId: 'war-of-pantheons',
 			missionId: 'norse-1',
+			localRunId: 'local-run-1',
 			difficulty: 'normal',
 			isFirstClear: true,
 			previewRune: 2,
@@ -23,6 +26,7 @@ describe('campaignRewardFeedback', () => {
 
 		expect(feedback.updatedAt).toBe(1_765_000_000_000);
 		expect(feedback.trxId).toBe('trx-1');
+		expect(feedback.localRunId).toBe('local-run-1');
 
 		vi.restoreAllMocks();
 	});
@@ -50,7 +54,9 @@ describe('campaignRewardFeedback', () => {
 	it('labels game-over replay feedback without implying another reward', () => {
 		const copy = getCampaignResultRewardCopy({
 			status: 'replay_no_reward',
+			campaignId: 'war-of-pantheons',
 			missionId: 'norse-1',
+			localRunId: 'local-run-2',
 			difficulty: 'heroic',
 			isFirstClear: false,
 			previewRune: 0,
@@ -62,5 +68,41 @@ describe('campaignRewardFeedback', () => {
 
 		expect(copy?.label).toBe('Replay: no new RUNE');
 		expect(copy?.tone).toBe('no_reward');
+	});
+
+	it('builds campaign reward evidence with campaign, run, and reward fields', () => {
+		const rewardEvidence = createCampaignRewardFeedback({
+			status: 'first_clear_published',
+			campaignId: 'war-of-pantheons',
+			missionId: 'norse-1',
+			localRunId: 'local-run-3',
+			difficulty: 'normal',
+			isFirstClear: true,
+			previewRune: 2,
+			turnCount: 11,
+			trxId: 'trx-3',
+			error: null,
+			updatedAt: 1_765_000_000_000,
+		});
+
+		expect(buildCampaignRewardEvidenceContext({
+			campaignId: 'war-of-pantheons',
+			missionId: 'norse-1',
+			localRunId: 'local-run-3',
+			difficulty: 'normal',
+			result: 'victory',
+			playerTurnCount: 11,
+			location: 'campaign_game_over',
+			rewardEvidence,
+		})).toEqual({
+			campaignId: 'war-of-pantheons',
+			missionId: 'norse-1',
+			localRunId: 'local-run-3',
+			difficulty: 'normal',
+			result: 'victory',
+			playerTurnCount: 11,
+			location: 'campaign_game_over',
+			rewardEvidence,
+		});
 	});
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { debug } from '../../config/debugConfig';
 import { usePeerStore } from '../../stores/peerStore';
 import { MultiplayerLobby } from './MultiplayerLobby';
@@ -27,6 +27,8 @@ import { computeP2PRenderGuard } from './multiplayerRenderGuard';
 import { isSharedNetworkEnvironment } from '../../config/featureFlags';
 import { HiveKeychainLogin } from '../HiveKeychainLogin';
 import { useGameStore } from '../../stores/gameStore';
+import { recordSessionEvent } from '../../../data/blockchain/transcriptBuilder';
+import { buildReadyWarbandLoadout } from '../../deck/readyWarbandLoadout';
 import './MultiplayerGame.css';
 
 /*
@@ -132,6 +134,7 @@ export const MultiplayerGame: React.FC = () => {
 	const connectionState = usePeerStore(s => s.connectionState);
 	const forfeitSide = usePeerStore(s => s.forfeitSide);
 	const hiveUser = useHiveDataStore(s => s.user);
+	const reloadGuardPromptedRef = useRef(false);
 	const requiresHiveSession = isSharedNetworkEnvironment();
 	const hasHiveSession = !requiresHiveSession || (hiveUser !== null && isHiveWalletAvailable());
 	const shouldWarnBeforeUnload = gameStarted
@@ -159,7 +162,12 @@ export const MultiplayerGame: React.FC = () => {
 	}, [matchmakingStatus, roomId, armySelected, gameStarted]);
 
 	const handleArmyComplete = (army: ArmySelectionType) => {
-		setWarband(army, []);
+		const loadout = buildReadyWarbandLoadout(army);
+		if (loadout.kind !== 'ready') {
+			debug.warn('[MultiplayerGame] Refused P2P start with invalid warband loadout', loadout.statuses);
+			return;
+		}
+		setWarband(army, loadout.deckCardIds, loadout.deckCardIdsByPiece);
 		setPlayerArmy(army);
 		setArmySelected(true);
 	};
@@ -170,7 +178,12 @@ export const MultiplayerGame: React.FC = () => {
 	// `matchmakingStatus === 'queued'` — hiding the Host Game / Join Game options
 	// the user expected to see.
 	const handleMatchmakingStart = async (army: ArmySelectionType) => {
-		setWarband(army, []);
+		const loadout = buildReadyWarbandLoadout(army);
+		if (loadout.kind !== 'ready') {
+			debug.warn('[MultiplayerGame] Refused P2P matchmaking with invalid warband loadout', loadout.statuses);
+			return;
+		}
+		setWarband(army, loadout.deckCardIds, loadout.deckCardIdsByPiece);
 		setPlayerArmy(army);
 		setArmySelected(true);
 	};
@@ -186,8 +199,19 @@ export const MultiplayerGame: React.FC = () => {
 	}, [hasHiveSession, leaveQueue]);
 
 	useEffect(() => {
-		if (!shouldWarnBeforeUnload) return undefined;
+		if (!shouldWarnBeforeUnload) {
+			reloadGuardPromptedRef.current = false;
+			return undefined;
+		}
 		const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+			if (!reloadGuardPromptedRef.current) {
+				reloadGuardPromptedRef.current = true;
+				recordSessionEvent('p2p_reload_guard_prompted', {
+					connectionState,
+					policy: 'hard_reload_loses_in_memory_game_state',
+					evidence: 'download_session_log_if_reload_is_cancelled',
+				});
+			}
 			const warning = 'A live P2P match is in progress. Reloading may forfeit the local session.';
 			event.preventDefault();
 			Reflect.set(event, 'returnValue', warning);
@@ -195,7 +219,7 @@ export const MultiplayerGame: React.FC = () => {
 		};
 		window.addEventListener('beforeunload', handleBeforeUnload);
 		return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-	}, [shouldWarnBeforeUnload]);
+	}, [connectionState, shouldWarnBeforeUnload]);
 
 	useEffect(() => {
 		if (!gameStarted || !forfeitSide) return;
@@ -204,6 +228,12 @@ export const MultiplayerGame: React.FC = () => {
 
 		const localLost = forfeitSide !== 'opponent';
 		const now = Date.now();
+		recordSessionEvent('p2p_technical_result', {
+			forfeitSide,
+			localOutcome: localLost ? 'defeat' : 'victory',
+			reason: 'reconnect_window_expired',
+			runeSettlement: 'not_credited_from_result_only',
+		});
 		useGameStore.setState({
 			gameState: {
 				...gameState,

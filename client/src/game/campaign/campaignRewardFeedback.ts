@@ -10,7 +10,9 @@ export type CampaignRewardFeedbackStatus =
 
 export interface CampaignRewardFeedback {
 	readonly status: CampaignRewardFeedbackStatus;
+	readonly campaignId: string;
 	readonly missionId: string;
+	readonly localRunId: string | null;
 	readonly difficulty: Difficulty;
 	readonly isFirstClear: boolean;
 	readonly previewRune: number;
@@ -21,7 +23,8 @@ export interface CampaignRewardFeedback {
 }
 
 export type CampaignRewardFeedbackInput =
-	Omit<CampaignRewardFeedback, 'updatedAt'> & {
+	Omit<CampaignRewardFeedback, 'updatedAt' | 'localRunId'> & {
+		readonly localRunId?: string | null;
 		readonly updatedAt?: number;
 	};
 
@@ -31,13 +34,47 @@ export interface CampaignRewardCopy {
 	readonly tone: 'reward' | 'pending' | 'no_reward' | 'failed';
 }
 
+export type CampaignRewardEvidenceContextInput = {
+	readonly campaignId: string;
+	readonly missionId: string;
+	readonly localRunId?: string | null;
+	readonly difficulty: Difficulty;
+	readonly location: string;
+	readonly rewardEvidence?: CampaignRewardFeedback | null;
+	readonly result?: 'victory' | 'defeat' | 'draw';
+	readonly playerTurnCount?: number;
+	readonly completed?: boolean;
+	readonly firstClearRune?: number;
+};
+
 export function createCampaignRewardFeedback(
 	input: CampaignRewardFeedbackInput,
 ): CampaignRewardFeedback {
 	return {
 		...input,
+		localRunId: input.localRunId ?? null,
 		updatedAt: input.updatedAt ?? Date.now(),
 	};
+}
+
+export function buildCampaignRewardEvidenceContext(
+	input: CampaignRewardEvidenceContextInput,
+): Record<string, unknown> {
+	const context: Record<string, unknown> = {
+		campaignId: input.campaignId,
+		missionId: input.missionId,
+		localRunId: input.localRunId ?? null,
+		difficulty: input.difficulty,
+		location: input.location,
+		rewardEvidence: input.rewardEvidence ?? null,
+	};
+
+	if (input.result !== undefined) context.result = input.result;
+	if (input.playerTurnCount !== undefined) context.playerTurnCount = input.playerTurnCount;
+	if (input.completed !== undefined) context.completed = input.completed;
+	if (input.firstClearRune !== undefined) context.firstClearRune = input.firstClearRune;
+
+	return context;
 }
 
 export function getCampaignBriefingRewardCopy(input: {

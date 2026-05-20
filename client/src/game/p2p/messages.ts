@@ -24,10 +24,8 @@ export type WireMessage =
 			type: 'deck_verify';
 			hiveAccount: string;
 			protocolVersion: 2;
-			version?: 'legacy' | 2 | 'starter-shortcut';
-			claims?: readonly DeckCardClaim[];
-			heroClass?: string;
-	  }
+			claims: readonly DeckCardClaim[];
+		}
 	| { type: 'seed_commit'; commitment: string }
 	| { type: 'seed_reveal'; salt: string; hiveUsername?: string }
 	| { type: 'army_announcement'; army: ArmySelection }

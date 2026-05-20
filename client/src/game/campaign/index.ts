@@ -8,9 +8,11 @@ export type { CampaignChapter, CampaignMission, CampaignArmy, AIBehaviorProfile,
 export { AI_PROFILES, getMissionStars, DEFAULT_STAR_THRESHOLDS } from './campaignTypes';
 export { useCampaignStore } from './campaignStore';
 export {
+	buildCampaignRewardEvidenceContext,
 	getCampaignBriefingRewardCopy,
 	getCampaignResultRewardCopy,
 	type CampaignRewardFeedback,
+	type CampaignRewardEvidenceContextInput,
 	type CampaignRewardFeedbackInput,
 } from './campaignRewardFeedback';
 export { publishCampaignVictoryResult, recordCampaignRunStart } from './campaignResultAdapter';
