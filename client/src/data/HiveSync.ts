@@ -446,49 +446,35 @@ export class HiveSync {
   // ── v1.1: Pack NFT operations ──
 
   async mintPack(
-    packType: string,
-    quantity: number,
-    toUser: string,
+    _packType: string,
+    _quantity: number,
+    _toUser: string,
   ): Promise<HiveBroadcastResult> {
-    return this.broadcastCustomJson(
-      "rp_pack_mint",
-      {
-        pack_type: packType,
-        quantity,
-        to: toUser,
-      },
-      true,
-    );
+    return {
+      success: false,
+      error: "Admin pack minting must use the server-backed AdminPanel flow.",
+    };
   }
 
   async distributePacks(
-    packUids: string[],
-    toUser: string,
+    _packUids: string[],
+    _toUser: string,
   ): Promise<HiveBroadcastResult> {
-    return this.broadcastCustomJson(
-      "rp_pack_distribute",
-      {
-        pack_uids: packUids,
-        to: toUser,
-      },
-      true,
-    );
+    return {
+      success: false,
+      error: "Admin pack distribution is disabled until atomic transfer bundling is implemented.",
+    };
   }
 
   async transferPack(
-    packUid: string,
-    toUser: string,
-    memo?: string,
+    _packUid: string,
+    _toUser: string,
+    _memo?: string,
   ): Promise<HiveBroadcastResult> {
-    return this.broadcastCustomJson(
-      "rp_pack_transfer",
-      {
-        pack_uid: packUid,
-        to: toUser,
-        memo,
-      },
-      true,
-    );
+    return {
+      success: false,
+      error: "Admin pack transfer must use an explicitly validated admin flow.",
+    };
   }
 
   async burnPack(

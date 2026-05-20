@@ -24,7 +24,7 @@ import {
 	PACK_ENTROPY_DELAY_BLOCKS, PACK_REVEAL_DEADLINE_BLOCKS,
 	DUAT_CLAIM_WINDOW_BLOCKS,
 	getPackDefinition,
-	TESTNET_RUNE_ECONOMY,
+	getRuneEconomy,
 	TESTNET_RUNE_SEASON_ID,
 	TESTNET_EITR_SEASON_ID,
 	calculateCappedRuneCredit,
@@ -181,7 +181,7 @@ const OP_HANDLERS: Record<ProtocolAction, OpHandler> = {
 	pack_commit: (op, _ctx, deps) => applyPackCommit(op, deps),
 	pack_reveal: (op, ctx, deps) => applyPackReveal(op, ctx, deps),
 	forge_commit: (op, _ctx, deps) => applyForgeCommit(op, deps),
-	forge_reveal: (op, ctx, deps) => applyForgeReveal(op, ctx, deps),
+	forge_reveal: (op, ctx, deps) => applyForgeReveal(op, deps),
 	legacy_pack_open: (op, _ctx, deps) => applyLegacyPackOpen(op, deps),
 	pack_mint: (op, ctx, deps) => applyPackMint(op, ctx, deps),
 	pack_distribute: (op, _ctx, deps) => applyPackDistribute(op, deps),
@@ -305,11 +305,12 @@ async function putRuneLedgerEntryAndBalance(
 		return reject('insufficient RUNE balance');
 	}
 
+	const economy = getRuneEconomy(deps.runtime.stage);
 	const currentRuneBalanceTotal = await deps.state.getRuneBalanceTotal();
 	const projectedRuneBalanceTotal = currentRuneBalanceTotal - balance.RUNE + trace.balanceAfter;
 	if (
-		currentRuneBalanceTotal > TESTNET_RUNE_ECONOMY.totalCap
-		|| projectedRuneBalanceTotal > TESTNET_RUNE_ECONOMY.totalCap
+		currentRuneBalanceTotal > economy.totalCap
+		|| projectedRuneBalanceTotal > economy.totalCap
 	) {
 		return reject('RUNE active balance cap exceeded');
 	}
@@ -319,7 +320,7 @@ async function putRuneLedgerEntryAndBalance(
 			seasonId: entry.seasonId,
 			direction: 'credit',
 		});
-		if (totalCredited + entry.amount > TESTNET_RUNE_ECONOMY.totalCap) {
+		if (totalCredited + entry.amount > economy.totalCap) {
 			return reject('RUNE total emission cap exceeded');
 		}
 	}
@@ -331,7 +332,7 @@ async function putRuneLedgerEntryAndBalance(
 
 // ============================================================
 // genesis
-// ============================================================
+// ===================================
 
 async function applyGenesis(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpResult> {
 	const authResult = await requireAdminAuthority(op, deps);
@@ -1065,8 +1066,8 @@ async function applyP2PRankedRuneCredit(
 		requestedAmount: input.requestedAmount,
 		accountEarned,
 		globalEarned,
-		accountCap: TESTNET_RUNE_ECONOMY.maxP2PRunePerAccount,
-		globalCap: TESTNET_RUNE_ECONOMY.p2pCap,
+		accountCap: getRuneEconomy(deps.runtime.stage).maxP2PRunePerAccount,
+		globalCap: getRuneEconomy(deps.runtime.stage).p2pCap,
 	});
 
 	const ledgerResult = await putRuneLedgerEntryAndBalance(deps, {
@@ -1498,8 +1499,8 @@ async function applyCampaignFirstClearRuneCredit(
 		requestedAmount,
 		accountEarned,
 		globalEarned,
-		accountCap: TESTNET_RUNE_ECONOMY.maxCampaignRunePerAccount,
-		globalCap: TESTNET_RUNE_ECONOMY.campaignCap,
+		accountCap: getRuneEconomy(deps.runtime.stage).maxCampaignRunePerAccount,
+		globalCap: getRuneEconomy(deps.runtime.stage).campaignCap,
 	});
 
 	const ledgerResult = await putRuneLedgerEntryAndBalance(deps, {
@@ -1812,7 +1813,7 @@ function parseRuneExchangeDetails(
 	if (!quote) {
 		return reject(`invalid rune_exchange pack_type: ${packTypeValue}`);
 	}
-	if (quote.totalCost > TESTNET_RUNE_ECONOMY.maxRuneExchangeSpendPerOp) {
+	if (quote.totalCost > getRuneEconomy(deps.runtime.stage).maxRuneExchangeSpendPerOp) {
 		return reject('rune_exchange spend exceeds per-op cap');
 	}
 

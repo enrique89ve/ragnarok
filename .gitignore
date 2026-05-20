@@ -90,6 +90,7 @@ __tests__/
 !client/src/data/blockchain/matchResultPackager.test.ts
 !client/src/data/HiveAuth.test.ts
 !client/src/data/HiveDataLayer.test.ts
+!server/services/adminApprovalReplayGuard.test.ts
 !client/src/data/HiveKeychain.test.ts
 !client/src/data/HiveSync.test.ts
 !client/src/game/stores/saveStateManager.test.ts

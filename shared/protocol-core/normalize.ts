@@ -129,6 +129,7 @@ export function normalizeRawOp(raw: RawHiveOp, options: NormalizeOptions = {}): 
 		payload,
 		broadcaster: raw.broadcaster,
 		trxId: raw.trxId,
+		operationId: `${raw.trxId}:${raw.opInTrx}`,
 		blockNum: raw.blockNum,
 		timestamp: raw.timestamp,
 		usedActiveAuth,

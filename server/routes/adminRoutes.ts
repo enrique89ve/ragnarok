@@ -1,11 +1,17 @@
 import { Router, type Request, type Response } from 'express';
 import {
+	attachAdminApproval,
 	buildAdminApprovalMessage,
 	parseAdminBroadcastBody,
+	validatePayloadSize,
 } from '../../shared/protocol-core';
 import { getRagnarokServerRuntimeConfig } from '../services/runtimeConfig';
 import { serverSignatureVerifier } from '../services/hiveSignatureVerifier';
 import { broadcastAdminCustomJson } from '../services/adminOperatorBroadcaster';
+import {
+	reserveAdminApproval,
+	validateAdminApprovalNonceFreshness,
+} from '../services/adminApprovalReplayGuard';
 
 const router = Router();
 
@@ -33,6 +39,10 @@ router.post('/broadcast', async (req: Request, res: Response) => {
 		sendError(res, 400, parsed.reason);
 		return;
 	}
+	if (parsed.protocol !== 'ragnarok') {
+		sendError(res, 501, 'NFTLox admin broadcasts are disabled until the NFTLox protocol is finalized');
+		return;
+	}
 
 	const operatorAccount = runtime.adminOperatorAccount;
 	if (!operatorAccount || operatorAccount === runtime.adminAccount) {
@@ -52,6 +62,12 @@ router.post('/broadcast', async (req: Request, res: Response) => {
 		return;
 	}
 
+	const fresh = validateAdminApprovalNonceFreshness(approval);
+	if (!fresh.success) {
+		sendError(res, 401, fresh.reason);
+		return;
+	}
+
 	const message = buildAdminApprovalMessage({
 		protocol: parsed.protocol,
 		action: parsed.action,
@@ -62,6 +78,24 @@ router.post('/broadcast', async (req: Request, res: Response) => {
 	const valid = await verifyActive(approval.approver, message, approval.signature);
 	if (!valid) {
 		sendError(res, 401, 'Admin Active signature is invalid');
+		return;
+	}
+
+	const sizeCheck = validatePayloadSize(attachAdminApproval(parsed.payload, approval));
+	if (!sizeCheck.valid) {
+		sendError(res, 413, `Admin payload too large: ${sizeCheck.bytes} bytes (max ${sizeCheck.maxBytes})`);
+		return;
+	}
+
+	const reserved = reserveAdminApproval({
+		protocol: parsed.protocol,
+		action: parsed.action,
+		approval,
+		operatorAccount,
+		signedMessage: message,
+	});
+	if (!reserved.success) {
+		sendError(res, 409, reserved.reason);
 		return;
 	}
 

@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { toast } from 'sonner';
-import { TESTNET_RUNE_ECONOMY } from '@shared/protocol-core/runeEconomy';
+import { TESTNET_RUNE_ECONOMY, MAINNET_RUNE_ECONOMY, getRuneEconomy } from '@shared/protocol-core/runeEconomy';
+import { getRuntimeExecutionMode } from '../config/featureFlags';
 import { accountScopedStorage, registerAccountScopedStore } from '../../lib/storage/accountScopedStorage';
 import { pickRandomQuests, type DailyQuestType, type QuestTemplate } from '../data/dailyQuestPool';
 import { getNFTBridge } from '../nft';
@@ -23,6 +24,7 @@ export interface DailyQuest {
 	completed: boolean;
 	claimed: boolean;
 	reward: { rune: number; xp: number };
+	verificationHash?: string;
 }
 
 interface DailyQuestState {
@@ -31,6 +33,8 @@ interface DailyQuestState {
 	totalCompleted: number;
 	rerollsUsedToday: number;
 	flushing: boolean;
+	claimHistory: Record<string, string>; // Map of "ymdUtc:slot" -> "trxId" to prevent redundant broadcasts
+	clientSalt: string;
 }
 
 interface DailyQuestActions {
@@ -40,7 +44,10 @@ interface DailyQuestActions {
 	flushPendingClaims: (invocation: ClientWalletInvocation) => Promise<void>;
 }
 
-const DAILY_QUEST_RUNE_REWARD = TESTNET_RUNE_ECONOMY.dailyQuestRunePerSlot;
+const getActiveEconomy = () => getRuneEconomy(getRuntimeExecutionMode());
+
+const DAILY_QUEST_RUNE_REWARD = () => getActiveEconomy().dailyQuestRunePerSlot;
+const DAILY_QUEST_SLOTS_PER_DAY = () => getActiveEconomy().dailyQuestSlotsPerDay;
 
 function todayUtcString(): string {
 	return new Date().toISOString().slice(0, 10);
@@ -62,8 +69,19 @@ function isWithinChainAcceptanceWindow(refreshDate: string, today: string): bool
 	return (now - refresh) <= CHAIN_CLAIM_GRACE_DAYS * MS_PER_DAY;
 }
 
-function templateToQuest(template: QuestTemplate, slot: number, ymdUtc: string): DailyQuest {
-	return {
+function computeQuestHash(quest: Partial<DailyQuest>, salt: string): string {
+	const data = `${quest.ymdUtc}|${quest.slot}|${quest.type}|${salt}`;
+	let hash = 0;
+	for (let i = 0; i < data.length; i++) {
+		const char = data.charCodeAt(i);
+		hash = ((hash << 5) - hash) + char;
+		hash |= 0; // Convert to 32bit integer
+	}
+	return hash.toString(16);
+}
+
+function templateToQuest(template: QuestTemplate, slot: number, ymdUtc: string, salt: string): DailyQuest {
+	const quest: Partial<DailyQuest> = {
 		id: `dq-${ymdUtc}-${slot}`,
 		slot,
 		ymdUtc,
@@ -74,8 +92,13 @@ function templateToQuest(template: QuestTemplate, slot: number, ymdUtc: string):
 		goal: template.goal,
 		completed: false,
 		claimed: false,
-		reward: { rune: DAILY_QUEST_RUNE_REWARD, xp: template.xp },
+		reward: { rune: DAILY_QUEST_RUNE_REWARD(), xp: template.xp },
 	};
+	
+	return {
+		...quest,
+		verificationHash: computeQuestHash(quest, salt),
+	} as DailyQuest;
 }
 
 async function broadcastDailyQuestClaim(quest: DailyQuest): Promise<boolean> {
@@ -110,6 +133,8 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 			totalCompleted: 0,
 			rerollsUsedToday: 0,
 			flushing: false,
+			claimHistory: {},
+			clientSalt: Math.random().toString(36).substring(2),
 
 			refreshIfNeeded: async () => {
 				const today = todayUtcString();
@@ -119,12 +144,13 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 					// Same UTC day: keep progress but normalize reward.rune to the
 					// current canon constant in case it shifted under persisted
 					// quests (e.g. pre-flat-rate quests stored under reward.rune:50).
-					const needsRewardSync = current.quests.some(q => q.reward.rune !== DAILY_QUEST_RUNE_REWARD);
+					const reward = DAILY_QUEST_RUNE_REWARD();
+					const needsRewardSync = current.quests.some(q => q.reward.rune !== reward);
 					if (needsRewardSync) {
 						set(state => ({
 							quests: state.quests.map(q => ({
 								...q,
-								reward: { ...q.reward, rune: DAILY_QUEST_RUNE_REWARD },
+								reward: { ...q.reward, rune: reward },
 							})),
 						}));
 					}
@@ -146,12 +172,13 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 				if (stillPending && !isStale) return;
 
 				const account = getNFTBridge().getUsername() ?? 'guest';
+				const economy = getActiveEconomy();
 				const templates = pickRandomQuests(
-					TESTNET_RUNE_ECONOMY.dailyQuestSlotsPerDay,
+					economy.dailyQuestSlotsPerDay,
 					[],
 					`daily:${account}:${today}`,
 				);
-				const quests = templates.map((t, i) => templateToQuest(t, i, today));
+				const quests = templates.map((t, i) => templateToQuest(t, i, today, current.clientSalt));
 				set({ quests, lastRefreshDate: today, rerollsUsedToday: 0 });
 			},
 
@@ -188,6 +215,24 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 				set({ flushing: true });
 				try {
 					for (const quest of pending) {
+						// Anti-Double Claim Protection: check local history
+						const claimKey = `${quest.ymdUtc}:${quest.slot}`;
+						if (get().claimHistory[claimKey]) {
+							debug.warn(`[DailyQuest] Claim already in history for ${claimKey}, skipping redundant broadcast.`);
+							set(state => ({
+								quests: state.quests.map(q => q.id === quest.id ? { ...q, claimed: true } : q)
+							}));
+							continue;
+						}
+
+						// Cache Injection Protection: verify the quest integrity
+						const expectedHash = computeQuestHash(quest, get().clientSalt);
+						if (quest.verificationHash !== expectedHash) {
+							debug.error(`[DailyQuest] Cache injection detected! Hash mismatch for quest ${quest.id}. Claim aborted.`);
+							toast.error('Security alert: Daily quest data integrity check failed.');
+							continue;
+						}
+
 						const ok = await broadcastDailyQuestClaim(quest);
 						if (!ok) continue;
 
@@ -198,6 +243,7 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 							return {
 								quests,
 								totalCompleted: state.totalCompleted + 1,
+								claimHistory: { ...state.claimHistory, [claimKey]: 'in-flight' },
 							};
 						});
 					}
@@ -226,7 +272,7 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 				set(state => {
 					const idx = state.quests.findIndex(q => q.id === questId);
 					if (idx === -1) return {};
-					const newQuest = templateToQuest(newTemplates[0], target.slot, target.ymdUtc);
+					const newQuest = templateToQuest(newTemplates[0], target.slot, target.ymdUtc, state.clientSalt);
 					return {
 						quests: state.quests.map((q, i) => i === idx ? newQuest : q),
 						rerollsUsedToday: state.rerollsUsedToday + 1,

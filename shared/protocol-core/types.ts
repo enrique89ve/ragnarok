@@ -22,6 +22,8 @@ export {
 	RUNE_WIN_RANKED,
 	TESTNET_RUNE_SEASON_ID,
 	TESTNET_RUNE_ECONOMY,
+	MAINNET_RUNE_ECONOMY,
+	getRuneEconomy,
 	calculateCappedRuneCredit,
 	calculateRuneBalanceTrace,
 	calculateRuneScoreBonus,
@@ -242,6 +244,7 @@ export interface RawHiveOp {
 	json: string;                // raw JSON payload string
 	broadcaster: string;         // account that signed the op
 	trxId: string;               // transaction id
+	opInTrx: number;             // index of operation within transaction
 	blockNum: number;            // block number
 	timestamp: number;           // unix ms
 	requiredPostingAuths: string[];
@@ -257,6 +260,7 @@ export interface ProtocolOp {
 	payload: Record<string, unknown>;
 	broadcaster: string;
 	trxId: string;
+	operationId: string;      // Canonical ID: "{trxId}:{op_in_trx}"
 	blockNum: number;
 	timestamp: number;
 	usedActiveAuth: boolean;

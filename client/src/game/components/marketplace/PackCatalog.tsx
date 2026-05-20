@@ -1,9 +1,8 @@
 /**
  * PackCatalog — sealed pack store, lives inside MarketplacePage as a tab.
- * Owns: pack catalog fetch, supply stats, RUNE balance, buy + open animation.
+ * Owns: pack catalog fetch, supply stats, RUNE balance, and pack purchase flows.
  *
- * Buying a pack triggers PackOpeningAnimation in-place. Sealed packs you
- * already own are managed in /packs (vault), not here.
+ * Sealed packs you already own are managed in /packs (vault), not here.
  */
 
 import { debug } from '../../config/debugConfig';
@@ -11,18 +10,13 @@ import React, { useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Zap } from 'lucide-react';
-import PackOpeningAnimation from '../packs/PackOpeningAnimation';
 import { getRarityColor, getRarityCssColor } from '../../utils/rarityUtils';
 import { NumericRitual, OrnateCorners, SigilBackplate, type Tier } from '../../../components/ornaments/RunicSigils';
 import { RichTooltip } from '../../../components/ornaments/RichTooltip';
 import { SplashBackdrop } from '../../../components/ornaments/SplashBackdrop';
-import { getNFTBridge } from '../../nft';
 import { useNFTUsername, useNFTTokenBalance } from '../../nft/hooks';
 import { HBD_CURRENCY_CODE, formatHbdPrice, formatHbdThousandths } from '@shared/protocol-core';
-import { RAGNAROK_ACCOUNT } from '../../../data/blockchain/hiveConfig';
 import { forceSync } from '../../../data/blockchain/replayEngine';
-import { cardRegistry } from '../../data/cardRegistry';
-import { cryptoRng, cryptoIdGen } from '../../utils/seededRng';
 import { RuneExchangeModal } from './RuneExchangeModal';
 import { formatPackUnit } from './runePackExchange';
 import { useRunePackExchange } from './useRunePackExchange';
@@ -98,7 +92,6 @@ import type {
 	PackType,
 	PackTypeResponse,
 	RarityStats,
-	RevealedCard,
 	SupplyStats,
 	SupplyStatsResponse,
 } from '../packs/types';
@@ -113,11 +106,7 @@ export default function PackCatalog() {
 	const [packTypes, setPackTypes] = useState<PackType[]>(FALLBACK_PACKS);
 	const [supplyStats, setSupplyStats] = useState<SupplyStats | null>(null);
 	const [loading, setLoading] = useState(true);
-	const [openingPack, setOpeningPack] = useState<PackType | null>(null);
-	const [revealedCards, setRevealedCards] = useState<RevealedCard[]>([]);
-	const [isOpening, setIsOpening] = useState(false);
 	const [packError, setPackError] = useState<string | null>(null);
-	const [testMinting, setTestMinting] = useState(false);
 
 	// Starter is a free per-account claim and lives in /packs (vault), not here.
 	// Defense in depth: exclude by key AND by free-claim flag — no free-claim
@@ -247,13 +236,6 @@ export default function PackCatalog() {
 		runeExchange.openExchange(pack);
 	};
 
-	const handleCloseAnimation = () => {
-		setOpeningPack(null);
-		setRevealedCards([]);
-		setIsOpening(false);
-		fetchData();
-	};
-
 	const handleSubmitRuneExchange = async () => {
 		const quantity = runeExchange.quote?.quantity ?? 0;
 		const selectedPackName = runeExchange.selectedPack?.name ?? 'pack';
@@ -318,85 +300,6 @@ export default function PackCatalog() {
 		}
 	};
 
-	const handleTestMint = async () => {
-		if (!hiveUsername || testMinting) return;
-		setTestMinting(true);
-		try {
-			const { getGenesisState } = await import('../../../data/blockchain/replayDB');
-			const { broadcastGenesis, broadcastMint } = await import('../../../data/blockchain/genesisAdmin');
-
-			const genesis = await getGenesisState();
-			if (!genesis.version) {
-				toast.info('Broadcasting genesis (one-time setup)...');
-				const genesisResult = await broadcastGenesis();
-				if (!genesisResult.success) {
-					toast.error(`Genesis failed: ${genesisResult.error}`);
-					return;
-				}
-				toast.success('Genesis broadcast complete!');
-			}
-
-			const testCards = [];
-			const pool = cardRegistry.filter(c => c.rarity && Number(c.id) >= 1000);
-			for (let i = 0; i < 5; i++) {
-				const card = pool[Math.floor(cryptoRng() * pool.length)];
-				testCards.push({
-					nft_id: `test-${cryptoIdGen()}-${i}`,
-					card_id: Number(card.id),
-					rarity: (card.rarity ?? 'common').toLowerCase(),
-					name: card.name,
-					type: card.type ?? 'minion',
-					race: card.race,
-				});
-			}
-
-			const mintResult = await broadcastMint({ to: hiveUsername!, cards: testCards });
-			if (mintResult.success) {
-				const mapped: RevealedCard[] = testCards.map(c => ({
-					id: c.card_id,
-					name: c.name ?? `Card #${c.card_id}`,
-					rarity: c.rarity,
-					type: c.type,
-					heroClass: 'neutral',
-				}));
-
-				testCards.forEach(c => {
-					getNFTBridge().addCard({
-						uid: c.nft_id,
-						cardId: c.card_id,
-						ownerId: hiveUsername!,
-						ownershipSource: 'nft',
-						edition: 'alpha',
-						foil: 'standard',
-						rarity: c.rarity,
-						level: 1,
-						xp: 0,
-						lastTransferBlock: mintResult.blockNum,
-						lastTransferTrxId: mintResult.trxId,
-						mintBlockNum: mintResult.blockNum,
-						mintTrxId: mintResult.trxId,
-						name: c.name ?? '',
-						type: c.type,
-						race: c.race,
-					});
-				});
-
-				setOpeningPack(FALLBACK_PACKS[0]);
-				setRevealedCards(mapped);
-				setIsOpening(true);
-
-				forceSync(hiveUsername!).catch(err => debug.warn('[Catalog] Sync error:', err));
-				toast.success(`Minted ${testCards.length} test NFTs on-chain!`);
-			} else {
-				toast.error(`Mint failed: ${mintResult.error}`);
-			}
-		} catch (err) {
-			toast.error(`Test mint error: ${err instanceof Error ? err.message : 'unknown'}`);
-		} finally {
-			setTestMinting(false);
-		}
-	};
-
 	if (loading) {
 		return (
 			<div className="flex items-center justify-center py-20">
@@ -416,15 +319,6 @@ export default function PackCatalog() {
 
 	return (
 		<div>
-			{isOpening && openingPack && revealedCards.length > 0 && (
-				<PackOpeningAnimation
-					packName={openingPack.name}
-					cards={revealedCards}
-					onClose={handleCloseAnimation}
-					onOpenAnother={() => { void handleTestMint(); }}
-				/>
-			)}
-
 			{packError && (
 				<motion.div
 					initial={{ opacity: 0, y: -20 }}
@@ -475,7 +369,7 @@ export default function PackCatalog() {
 					/>
 				)}
 
-			{/* Wallet chips row: balances on the left, admin actions on the right */}
+			{/* Wallet chips row */}
 			{hiveUsername && (
 				<div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
 					<div className="flex items-center gap-2 flex-wrap">
@@ -504,18 +398,6 @@ export default function PackCatalog() {
 						</div>
 
 					</div>
-
-					{getNFTBridge().isHiveMode() && hiveUsername === RAGNAROK_ACCOUNT && (
-						<motion.button
-							whileHover={{ scale: 1.03 }}
-							whileTap={{ scale: 0.97 }}
-							onClick={handleTestMint}
-							disabled={testMinting}
-							className="px-5 py-2 bg-rune-500 hover:bg-rune-300 disabled:opacity-50 disabled:cursor-not-allowed text-ink-0 rounded-md border border-rune-300 font-display text-xs font-bold tracking-[0.18em] uppercase transition-colors"
-						>
-							{testMinting ? 'Minting...' : 'Test Mint 5 NFTs'}
-						</motion.button>
-					)}
 				</div>
 			)}
 

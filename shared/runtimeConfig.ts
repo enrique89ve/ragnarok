@@ -22,6 +22,7 @@ export type RagnarokRuntimeConfig = {
 	readonly resettable: boolean;
 	readonly economic: boolean;
 	readonly acceptsLegacyProtocolIds: boolean;
+	readonly seasonStart: string;
 };
 
 export type RagnarokRuntimeEnv = Partial<Record<
@@ -38,8 +39,10 @@ export type RagnarokRuntimeEnv = Partial<Record<
 	| 'VITE_NFTLOX_PROTOCOL_ID'
 	| 'VITE_NFT_ART_BASE_URL'
 	| 'VITE_EXTERNAL_URL_BASE'
+	| 'VITE_SEASON_START'
 	| 'RAGNAROK_PROTOCOL_ID'
-	| 'RAGNAROK_ADMIN_OPERATOR_ACCOUNT',
+	| 'RAGNAROK_ADMIN_OPERATOR_ACCOUNT'
+	| 'RAGNAROK_SEASON_START',
 	string | undefined
 >>;
 
@@ -64,6 +67,7 @@ export const RAGNAROK_RUNTIME_CONFIGS = {
 		resettable: true,
 		economic: false,
 		acceptsLegacyProtocolIds: true,
+		seasonStart: '2026-05-19T00:00:00Z',
 	},
 	testnet: {
 		stage: 'testnet',
@@ -83,6 +87,7 @@ export const RAGNAROK_RUNTIME_CONFIGS = {
 		resettable: true,
 		economic: false,
 		acceptsLegacyProtocolIds: false,
+		seasonStart: '2026-05-19T00:00:00Z',
 	},
 	mainnet: {
 		stage: 'mainnet',
@@ -102,6 +107,7 @@ export const RAGNAROK_RUNTIME_CONFIGS = {
 		resettable: false,
 		economic: true,
 		acceptsLegacyProtocolIds: true,
+		seasonStart: '2026-05-19T00:00:00Z',
 	},
 } as const satisfies Record<RagnarokNetworkStage, RagnarokRuntimeConfig>;
 
@@ -146,6 +152,7 @@ export function resolveRagnarokRuntimeConfig(env: RagnarokRuntimeEnv): RagnarokR
 		nftLoxProtocolId: overrideString(env.VITE_NFTLOX_PROTOCOL_ID, base.nftLoxProtocolId),
 		nftArtBaseUrl: overrideString(env.VITE_NFT_ART_BASE_URL, base.nftArtBaseUrl),
 		externalUrlBase: overrideString(env.VITE_EXTERNAL_URL_BASE, base.externalUrlBase),
+		seasonStart: overrideString(env.RAGNAROK_SEASON_START, overrideString(env.VITE_SEASON_START, base.seasonStart)),
 	};
 }
 

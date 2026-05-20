@@ -21,7 +21,7 @@ import {
 	getStats,
 	getKnownAccountCount,
 } from '../services/chainState';
-import { syncAccountNow } from '../services/chainIndexer';
+import { syncAccountNow } from '../services/indexerManager';
 import { isValidHiveUsername } from '../services/hiveAuth';
 import {
 	deleteByMatchId,

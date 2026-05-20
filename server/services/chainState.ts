@@ -199,6 +199,10 @@ interface SerializedState {
 	packs?: [string, PackAsset][];
 	packSupply?: [string, PackSupplyRecord][];
 	slashedAccounts?: string[];
+	// Sync status
+	inSync?: boolean;
+	headBlock?: number;
+	irreversibleBlock?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -232,6 +236,11 @@ const packs = new Map<string, PackAsset>();
 const packSupply = new Map<string, PackSupplyRecord>();
 const slashedAccounts = new Set<string>();
 const queueEntries = new Map<string, QueueStateRecord>();
+
+// Sync health
+let _inSync = false;
+let _headBlock = 0;
+let _irreversibleBlock = 0;
 
 // Marketplace state (v1.2)
 export interface ListingRecord {
@@ -382,33 +391,7 @@ export function saveState(): void {
 	if (!_dirty) return;
 	try {
 		ensureDataDir();
-		const data: SerializedState = {
-			players: [...players.entries()],
-			cards: [...cards.entries()],
-			matches,
-			knownAccounts: [...knownAccounts],
-			syncCursors: [...syncCursors.entries()],
-			lastSyncedAt,
-			playerNonces: [...playerNonces.entries()],
-			// PR 2B: protocol-core state
-			lastIrreversibleBlockProcessed,
-			genesis: genesisState,
-			supplyCounters: [...supplyCounters.entries()],
-			tokenBalances: [...tokenBalances.entries()],
-			matchAnchors: [...matchAnchors.entries()],
-			packCommits: [...packCommits.entries()],
-			rewardClaims: [...rewardClaims],
-			duatClaims: [...duatClaims.entries()],
-			campaignNonces: [...campaignNonces.entries()],
-			campaignSubmissions: [...campaignSubmissions.entries()],
-			campaignProgress: [...campaignProgress.entries()],
-			runeLedger: [...runeLedger.entries()],
-			eitrLedger: [...eitrLedger.entries()],
-			forgeCommits: [...forgeCommits.entries()],
-			packs: [...packs.entries()],
-			packSupply: [...packSupply.entries()],
-			slashedAccounts: [...slashedAccounts],
-		};
+		const data = exportState();
 		const tmpFile = STATE_FILE + '.tmp';
 		fs.writeFileSync(tmpFile, JSON.stringify(data), { encoding: 'utf8', mode: STATE_FILE_MODE });
 		fs.renameSync(tmpFile, STATE_FILE);
@@ -416,6 +399,114 @@ export function saveState(): void {
 	} catch (err) {
 		console.warn('[chainState] Failed to save state:', err);
 	}
+}
+
+export function exportState(): SerializedState {
+	return {
+		players: [...players.entries()],
+		cards: [...cards.entries()],
+		matches,
+		knownAccounts: [...knownAccounts],
+		syncCursors: [...syncCursors.entries()],
+		lastSyncedAt,
+		playerNonces: [...playerNonces.entries()],
+		// PR 2B: protocol-core state
+		lastIrreversibleBlockProcessed,
+		genesis: genesisState,
+		supplyCounters: [...supplyCounters.entries()],
+		tokenBalances: [...tokenBalances.entries()],
+		matchAnchors: [...matchAnchors.entries()],
+		packCommits: [...packCommits.entries()],
+		rewardClaims: [...rewardClaims],
+		duatClaims: [...duatClaims.entries()],
+		campaignNonces: [...campaignNonces.entries()],
+		campaignSubmissions: [...campaignSubmissions.entries()],
+		campaignProgress: [...campaignProgress.entries()],
+		runeLedger: [...runeLedger.entries()],
+		eitrLedger: [...eitrLedger.entries()],
+		forgeCommits: [...forgeCommits.entries()],
+		packs: [...packs.entries()],
+		packSupply: [...packSupply.entries()],
+		slashedAccounts: [...slashedAccounts],
+		inSync: _inSync,
+		headBlock: _headBlock,
+		irreversibleBlock: _irreversibleBlock,
+	};
+}
+
+export function importState(data: SerializedState): void {
+	players.clear();
+	for (const [k, v] of data.players ?? []) players.set(k, v);
+
+	cards.clear();
+	for (const [k, v] of data.cards ?? []) cards.set(k, v);
+
+	matches.length = 0;
+	matches.push(...(data.matches ?? []));
+
+	knownAccounts.clear();
+	for (const a of data.knownAccounts ?? []) knownAccounts.add(a);
+
+	syncCursors.clear();
+	for (const [k, v] of data.syncCursors ?? []) syncCursors.set(k, v);
+
+	playerNonces.clear();
+	for (const [k, v] of data.playerNonces ?? []) playerNonces.set(k, v);
+
+	lastSyncedAt = data.lastSyncedAt ?? 0;
+
+	lastIrreversibleBlockProcessed = data.lastIrreversibleBlockProcessed ?? 0;
+	genesisState = data.genesis ?? null;
+
+	supplyCounters.clear();
+	for (const [k, v] of data.supplyCounters ?? []) supplyCounters.set(k, v);
+
+	tokenBalances.clear();
+	for (const [k, v] of data.tokenBalances ?? []) tokenBalances.set(k, v);
+
+	matchAnchors.clear();
+	for (const [k, v] of data.matchAnchors ?? []) matchAnchors.set(k, v);
+
+	packCommits.clear();
+	for (const [k, v] of data.packCommits ?? []) packCommits.set(k, v);
+
+	rewardClaims.clear();
+	for (const c of data.rewardClaims ?? []) rewardClaims.add(c);
+
+	duatClaims.clear();
+	for (const [k, v] of data.duatClaims ?? []) duatClaims.set(k, v);
+
+	campaignNonces.clear();
+	for (const [k, v] of data.campaignNonces ?? []) campaignNonces.set(k, v);
+
+	campaignSubmissions.clear();
+	for (const [k, v] of data.campaignSubmissions ?? []) campaignSubmissions.set(k, v);
+
+	campaignProgress.clear();
+	for (const [k, v] of data.campaignProgress ?? []) campaignProgress.set(k, v);
+
+	runeLedger.clear();
+	for (const [k, v] of data.runeLedger ?? []) runeLedger.set(k, v);
+	eitrLedger.clear();
+	for (const [k, v] of data.eitrLedger ?? []) eitrLedger.set(k, v);
+	forgeCommits.clear();
+	for (const [k, v] of data.forgeCommits ?? []) forgeCommits.set(k, v);
+
+	packs.clear();
+	for (const [k, v] of data.packs ?? []) packs.set(k, v);
+
+	packSupply.clear();
+	for (const [k, v] of data.packSupply ?? []) packSupply.set(k, v);
+
+	slashedAccounts.clear();
+	for (const a of data.slashedAccounts ?? []) slashedAccounts.add(a);
+
+	_inSync = data.inSync ?? false;
+	_headBlock = data.headBlock ?? 0;
+	_irreversibleBlock = data.irreversibleBlock ?? 0;
+
+	_dirty = false;
+	console.log(`[chainState] Imported: ${players.size} players, ${cards.size} cards, blockCursor=${lastIrreversibleBlockProcessed}, inSync=${_inSync}`);
 }
 
 function markDirty(): void {
@@ -618,6 +709,10 @@ export function getStats(): {
 	knownAccounts: number;
 	lastSyncedAt: number;
 	lastIrreversibleBlockProcessed: number;
+	inSync: boolean;
+	headBlock: number;
+	irreversibleBlock: number;
+	blocksBehind: number;
 } {
 	return {
 		totalPlayers: players.size,
@@ -626,7 +721,19 @@ export function getStats(): {
 		knownAccounts: knownAccounts.size,
 		lastSyncedAt,
 		lastIrreversibleBlockProcessed,
+		inSync: _inSync,
+		headBlock: _headBlock,
+		irreversibleBlock: _irreversibleBlock,
+		blocksBehind: Math.max(0, _irreversibleBlock - lastIrreversibleBlockProcessed),
 	};
+}
+
+export function setSyncStatus(lastBlock: number, irreversibleBlock: number, headBlock: number, inSync: boolean): void {
+	lastIrreversibleBlockProcessed = lastBlock;
+	_irreversibleBlock = irreversibleBlock;
+	_headBlock = headBlock;
+	_inSync = inSync;
+	markDirty();
 }
 
 // ---------------------------------------------------------------------------

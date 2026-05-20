@@ -127,9 +127,34 @@ export const TESTNET_RUNE_ECONOMY = {
 	campaignStageRuneRewards: [2, 2, 2, 2, 1, 1],
 } as const;
 
+export const MAINNET_RUNE_ECONOMY = {
+	phase: 'mainnet',
+	seasonId: 'M01',
+	totalCap: 1_000_000,
+	targetAccounts: 50_000,
+	p2pCap: 600_000,
+	campaignCap: 100_000,
+	dailyQuestCap: 300_000,
+	p2pWinRune: 1,
+	p2pLossRune: 0,
+	maxP2PRunePerAccount: 500,
+	maxCampaignRunePerAccount: 50,
+	maxDailyQuestRunePerAccount: 100,
+	dailyQuestRunePerSlot: 1,
+	dailyQuestSlotsPerDay: 3,
+	maxRuneScoreBonusInput: 1000,
+	runeScoreBonusMultiplier: 0.1,
+	maxRuneExchangeSpendPerOp: 100,
+	campaignStageRuneRewards: [1, 1, 1, 1, 1, 1],
+} as const;
+
 export const RUNE_WIN_RANKED = TESTNET_RUNE_ECONOMY.p2pWinRune;
 export const RUNE_LOSS_RANKED = TESTNET_RUNE_ECONOMY.p2pLossRune;
 export const TESTNET_RUNE_SEASON_ID = TESTNET_RUNE_ECONOMY.seasonId;
+
+export function getRuneEconomy(phase: 'testnet' | 'mainnet' | string = 'testnet') {
+	return phase === 'mainnet' ? MAINNET_RUNE_ECONOMY : TESTNET_RUNE_ECONOMY;
+}
 
 export function getRuneEmissionCaps(economy = TESTNET_RUNE_ECONOMY): RuneEmissionCaps {
 	return {

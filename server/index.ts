@@ -51,6 +51,15 @@ const apiLimiter = rateLimit({
 });
 app.use('/api', apiLimiter);
 
+const adminBroadcastLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: isDev ? 20 : 5,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { success: false, error: 'Admin broadcast rate limit exceeded' },
+});
+app.use('/api/admin/broadcast', adminBroadcastLimiter);
+
 // Chain reads are public, but some routes can trigger a bounded Hive scan when
 // the account is unknown. Keep those below normal UI retry/refresh rates.
 const chainOnDemandSyncLimiter = rateLimit({
@@ -247,10 +256,10 @@ app.use('/api/testnet/rune', (_req, res) => {
     log(`received ${signal}, flushing chain state`);
 
     try {
-      const { stopIndexer } = await import("./services/chainIndexer");
-      stopIndexer();
+      const { stopIndexerWorker } = await import("./services/indexerManager");
+      stopIndexerWorker();
     } catch (err) {
-      log(`[shutdown] failed to stop chain indexer: ${formatShutdownError(err)}`);
+      log(`[shutdown] failed to stop chain indexer worker: ${formatShutdownError(err)}`);
     }
 
     const forcedExit = setTimeout(() => {

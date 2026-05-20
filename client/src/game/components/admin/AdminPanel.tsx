@@ -15,7 +15,6 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { routes } from '../../../lib/routes';
 import { useNFTUsername } from '../../nft/hooks';
-import { RAGNAROK_ACCOUNT } from '../../../data/blockchain/hiveConfig';
 import { cardRegistry } from '../../data/cardRegistry';
 import { debug } from '../../config/debugConfig';
 import { getRagnarokCollectionId } from '../../config/networkConfig';
@@ -57,7 +56,24 @@ interface SupplyInfo {
 	minted: number;
 }
 
+type AdminConfig = {
+	readonly adminAccount: string;
+	readonly adminOperatorAccount: string;
+	readonly multisigConfigured: boolean;
+};
+
 type Tab = 'status' | 'genesis' | 'mint' | 'seal' | 'packs' | 'sync';
+
+function isAdminConfig(value: unknown): value is AdminConfig {
+	if (typeof value !== 'object' || value === null) return false;
+	const body = value as Record<string, unknown>;
+	return body.success === true
+		&& typeof body.adminAccount === 'string'
+		&& body.adminAccount.trim().length > 0
+		&& typeof body.adminOperatorAccount === 'string'
+		&& body.adminOperatorAccount.trim().length > 0
+		&& typeof body.multisigConfigured === 'boolean';
+}
 
 // ── Component ──
 
@@ -69,9 +85,47 @@ export default function AdminPanel() {
 	const [loading, setLoading] = useState(false);
 	const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
 	const [mintProgress, setMintProgress] = useState({ done: 0, total: 0, running: false });
+	const [adminConfig, setAdminConfig] = useState<AdminConfig | null>(null);
+	const [adminConfigError, setAdminConfigError] = useState<string | null>(null);
 
 	// ── Auth Guard ──
-	const isAdmin = hiveUsername === RAGNAROK_ACCOUNT;
+	const isAdmin = Boolean(hiveUsername && adminConfig && hiveUsername === adminConfig.adminAccount);
+
+	useEffect(() => {
+		let cancelled = false;
+		async function loadAdminConfig() {
+			try {
+				const response = await fetch('/api/admin/config');
+				const body: unknown = await response.json().catch(() => null);
+				if (!response.ok) {
+					throw new Error(`Admin config failed with HTTP ${response.status}`);
+				}
+				if (!isAdminConfig(body)) {
+					throw new Error('Admin config response is invalid');
+				}
+				if (!body.multisigConfigured) {
+					throw new Error('Admin operator account is not configured');
+				}
+				if (!cancelled) {
+					setAdminConfig({
+						adminAccount: body.adminAccount.trim(),
+						adminOperatorAccount: body.adminOperatorAccount.trim(),
+						multisigConfigured: body.multisigConfigured,
+					});
+					setAdminConfigError(null);
+				}
+			} catch (err) {
+				if (!cancelled) {
+					setAdminConfig(null);
+					setAdminConfigError(err instanceof Error ? err.message : 'Admin config unavailable');
+				}
+			}
+		}
+		void loadAdminConfig();
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	// ── Load Genesis State ──
 	const refreshState = useCallback(async () => {
@@ -143,6 +197,7 @@ export default function AdminPanel() {
 	};
 
 	const handleBatchMint = async () => {
+		if (!adminConfig) { setResult({ success: false, message: 'Admin config is unavailable' }); return; }
 		const collectible = cardRegistry.filter(c => c.collectible !== false && c.rarity);
 		const BATCH_SIZE = 50;
 		const batches: typeof collectible[] = [];
@@ -208,7 +263,7 @@ export default function AdminPanel() {
 			session.saveMintSession(mintSession);
 
 			try {
-				const res = await admin.broadcastMint({ to: RAGNAROK_ACCOUNT, cards });
+				const res = await admin.broadcastMint({ to: adminConfig.adminAccount, cards });
 				if (res.success) {
 					succeeded++;
 					mintSession.batches[i].status = 'confirmed';
@@ -255,6 +310,7 @@ export default function AdminPanel() {
 	};
 
 	const handleMintPacks = async () => {
+		if (!adminConfig) { setResult({ success: false, message: 'Admin config is unavailable' }); return; }
 		const packType = (document.getElementById('pack-type-select') as HTMLSelectElement)?.value || 'standard';
 		const quantity = parseInt((document.getElementById('pack-qty-input') as HTMLInputElement)?.value || '1', 10);
 		if (quantity < 1 || quantity > 10) { setResult({ success: false, message: 'Quantity must be 1-10' }); return; }
@@ -264,7 +320,7 @@ export default function AdminPanel() {
 		setResult(null);
 		try {
 			const admin = await getAdminFns();
-			const res = await admin.broadcastPackMint({ packType, quantity, to: RAGNAROK_ACCOUNT });
+			const res = await admin.broadcastPackMint({ packType, quantity, to: adminConfig.adminAccount });
 			setResult({
 				success: res.success,
 				message: res.success
@@ -278,26 +334,10 @@ export default function AdminPanel() {
 	};
 
 	const handleDistributePacks = async () => {
-		const recipient = (document.getElementById('dist-recipient') as HTMLInputElement)?.value?.trim();
-		const packUids = (document.getElementById('dist-uids') as HTMLTextAreaElement)?.value?.trim().split('\n').filter(Boolean);
-		if (!recipient || !packUids?.length) { setResult({ success: false, message: 'Enter recipient and pack UIDs' }); return; }
-
-		if (!confirm(`Distribute ${packUids.length} pack(s) to @${recipient}?`)) return;
-		setLoading(true);
-		setResult(null);
-		try {
-			const admin = await getAdminFns();
-			const res = await admin.broadcastPackDistribute({ packUids, to: recipient });
-			setResult({
-				success: res.success,
-				message: res.success
-					? `Distributed ${packUids.length} pack(s) to @${recipient}! TxID: ${res.trxId}`
-					: `Failed: ${res.error}`,
-			});
-		} catch (err) {
-			setResult({ success: false, message: String(err) });
-		}
-		setLoading(false);
+		setResult({
+			success: false,
+			message: 'Pack distribution is disabled until the admin route can bundle the required atomic HIVE transfer.',
+		});
 	};
 
 	const handleSync = async () => {
@@ -316,6 +356,17 @@ export default function AdminPanel() {
 	};
 
 	// ── Access Denied ──
+	if (!adminConfig && !adminConfigError) {
+		return (
+			<div className="h-full flex items-center justify-center bg-gray-950">
+				<div className="text-center">
+					<div className="text-2xl font-bold text-amber-300 mb-2">Loading admin config...</div>
+					<p className="text-gray-400">Validating the server admin authority.</p>
+				</div>
+			</div>
+		);
+	}
+
 	if (!isAdmin) {
 		return (
 			<div className="h-full flex items-center justify-center bg-gray-950">
@@ -323,7 +374,11 @@ export default function AdminPanel() {
 					<div className="text-6xl mb-4">⛔</div>
 					<h1 className="text-2xl font-bold text-red-400 mb-2">Access Denied</h1>
 					<p className="text-gray-400 mb-6">
-						{hiveUsername ? `@${hiveUsername} is not authorized.` : `Log in with Hive Keychain as @${RAGNAROK_ACCOUNT}.`}
+						{adminConfigError
+							? adminConfigError
+							: hiveUsername
+								? `@${hiveUsername} is not authorized.`
+								: `Log in with Hive Keychain as @${adminConfig?.adminAccount ?? 'the configured admin'}.`}
 					</p>
 					<Link to={routes.home} className="text-amber-400 hover:text-amber-300 underline">Back to Home</Link>
 				</div>
@@ -379,8 +434,8 @@ export default function AdminPanel() {
 							help="Click Seal tab → press button → confirm TWICE. This is permanent and cannot be undone!" />
 						<CeremonyStep num={4} label="Mint Packs" done={false} active={isSealed}
 							help="Click Packs tab → choose type/qty → press Mint. Creates sealed packs in your inventory." />
-						<CeremonyStep num={5} label="Distribute" done={false} active={isSealed}
-							help="Enter player @username + pack IDs → press Distribute. Sends packs to players." />
+						<CeremonyStep num={5} label="Distribute" done={false} active={false}
+							help="Pending atomic transfer bundling in the admin route." />
 					</div>
 				</div>
 
@@ -564,16 +619,18 @@ export default function AdminPanel() {
 						{/* Distribute Packs */}
 						<div className="bg-gray-900/60 rounded-lg p-6 border border-gray-700/50">
 							<h3 className="text-amber-300 font-bold text-lg mb-2">Distribute Packs</h3>
-							<p className="text-gray-400 text-sm mb-4">Send sealed packs from admin inventory to a player (0.001 HIVE atomic transfer).</p>
+							<p className="text-gray-400 text-sm mb-4">Disabled until the server can bundle the required 0.001 HIVE atomic transfer.</p>
 							<div className="space-y-3 mb-4">
 								<input id="dist-recipient" type="text" placeholder="Recipient @username"
-									className="w-full bg-gray-800 text-white px-3 py-2 rounded-lg border border-gray-600" />
+									disabled
+									className="w-full bg-gray-800 text-white px-3 py-2 rounded-lg border border-gray-600 opacity-50" />
 								<textarea id="dist-uids" placeholder="Pack UIDs (one per line)" rows={3}
-									className="w-full bg-gray-800 text-white px-3 py-2 rounded-lg border border-gray-600 font-mono text-xs" />
+									disabled
+									className="w-full bg-gray-800 text-white px-3 py-2 rounded-lg border border-gray-600 font-mono text-xs opacity-50" />
 								<motion.button type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-									onClick={handleDistributePacks} disabled={loading}
+									onClick={handleDistributePacks} disabled
 									className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold rounded-lg transition-colors">
-									{loading ? 'Distributing...' : 'Distribute Packs'}
+									Distribution Disabled
 								</motion.button>
 							</div>
 						</div>

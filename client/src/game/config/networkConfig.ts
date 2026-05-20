@@ -22,6 +22,7 @@ const CLIENT_RUNTIME_ENV = {
 	VITE_NFTLOX_PROTOCOL_ID: import.meta.env.VITE_NFTLOX_PROTOCOL_ID,
 	VITE_NFT_ART_BASE_URL: import.meta.env.VITE_NFT_ART_BASE_URL,
 	VITE_EXTERNAL_URL_BASE: import.meta.env.VITE_EXTERNAL_URL_BASE,
+	VITE_SEASON_START: import.meta.env.VITE_SEASON_START,
 };
 
 export const RAGNAROK_NETWORK_CONFIG = Object.freeze(resolveRagnarokRuntimeConfig(CLIENT_RUNTIME_ENV));

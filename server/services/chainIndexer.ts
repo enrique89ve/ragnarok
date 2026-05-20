@@ -28,7 +28,7 @@ import { campaignRegistryProvider } from '../../shared/campaign/registry';
 import { getDuatEntitlement } from '../../shared/protocol-core/duatSnapshot';
 import {
 	registerAccount,
-	getBlockCursor, setBlockCursor,
+	getBlockCursor, setBlockCursor, setSyncStatus,
 	loadState,
 	startPersistence,
 	stopPersistence,
@@ -48,7 +48,8 @@ const HIVE_NODES = [
 
 const NODE_TIMEOUT_MS = 8000;
 const POLL_INTERVAL_MS = 10_000;
-const BLOCKS_PER_BATCH = 50;
+const BLOCKS_PER_BATCH = 100; // Increased for faster catch-up
+const SYNC_TOLERANCE_BLOCKS = 5;
 
 // ---------------------------------------------------------------------------
 // Hive RPC
@@ -114,11 +115,11 @@ async function getOpsInBlock(blockNum: number): Promise<BlockOp[]> {
 	return callHive<BlockOp[]>('condenser_api.get_ops_in_block', [blockNum, false]);
 }
 
-async function getLastIrreversibleBlock(): Promise<number> {
-	const props = await callHive<{ last_irreversible_block_num: number }>(
+async function getBlockchainStatus(): Promise<{ head_block_number: number, last_irreversible_block_num: number }> {
+	const props = await callHive<{ head_block_number: number, last_irreversible_block_num: number }>(
 		'condenser_api.get_dynamic_global_properties', [],
 	);
-	return props.last_irreversible_block_num;
+	return props;
 }
 
 // Block ID lookup for pack entropy (uses get_block, not get_block_header,
@@ -199,17 +200,24 @@ let _scanPromise: Promise<number> | null = null;
 
 async function scanBlocks(): Promise<number> {
 	const cursor = getBlockCursor();
-	let lib: number;
+	let status: { head_block_number: number, last_irreversible_block_num: number };
 
 	try {
-		lib = await getLastIrreversibleBlock();
+		status = await getBlockchainStatus();
 	} catch (err) {
-		console.warn('[chainIndexer] Failed to get LIB:', err instanceof Error ? err.message : err);
+		console.warn('[chainIndexer] Failed to get chain status:', err instanceof Error ? err.message : err);
 		return 0;
 	}
 
+	const lib = status.last_irreversible_block_num;
+	const head = status.head_block_number;
 	const effectiveLib = Math.max(0, lib - PACK_ENTROPY_DELAY_BLOCKS);
-	if (cursor >= effectiveLib) return 0; // fully caught up for entropy-dependent ops
+
+	// Sync status update
+	const behind = Math.max(0, lib - cursor);
+	setSyncStatus(cursor, lib, head, behind <= SYNC_TOLERANCE_BLOCKS);
+
+	if (cursor >= effectiveLib) return 0;
 
 	const startBlock = cursor + 1;
 	const endBlock = Math.min(startBlock + BLOCKS_PER_BATCH - 1, effectiveLib);
@@ -256,6 +264,7 @@ async function scanBlocks(): Promise<number> {
 				json: opData.json ?? '{}',
 				broadcaster,
 				trxId: op.trx_id,
+				opInTrx: op.op_in_trx,
 				blockNum: op.block,
 				timestamp: new Date(op.timestamp + 'Z').getTime(),
 				requiredPostingAuths: opData.required_posting_auths ?? [],

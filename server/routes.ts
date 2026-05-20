@@ -77,10 +77,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const explorerRoutes = (await import("./routes/explorerRoutes")).default;
   app.use('/api/explorer', explorerRoutes);
 
-  // Start the server-side chain indexer (polls Hive RPC for ragnarok-cards ops)
+  // Start the server-side chain indexer (Worker Thread version)
   if (process.env.ENABLE_CHAIN_INDEXER !== 'false') {
-    const { startIndexer } = await import("./services/chainIndexer");
-    startIndexer();
+    const { startIndexerWorker } = await import("./services/indexerManager");
+    startIndexerWorker();
   } else {
     const { loadState, startPersistence } = await import("./services/chainState");
     loadState();

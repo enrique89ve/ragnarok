@@ -2,17 +2,12 @@ import { signHiveMessage } from '../HiveAuth';
 import type { HiveBroadcastResult } from '../HiveSync';
 import {
 	NFTLOX_COLLECTION_SYMBOL,
-	NFTLOX_PROTOCOL_ID,
-	NFTLOX_PROTOCOL_VERSION,
-	RAGNAROK_ACCOUNT,
 	RAGNAROK_ADMIN_OPERATOR_ACCOUNT,
 } from './hiveConfig';
 import { hiveSync } from '../HiveSync';
 import { RAGNAROK_APP_ID } from '../schemas/HiveTypes';
 import {
 	buildAdminApprovalMessage,
-	sanitizePayload,
-	validatePayloadSize,
 	type AdminBroadcastProtocol,
 	type AdminMultisigAction,
 	type NftLoxAdminAction,
@@ -33,7 +28,27 @@ type NftLoxBulkDistributeItem = {
 	readonly originBlock?: number;
 };
 
+const NFTLOX_ADMIN_DISABLED_ERROR = 'NFTLox admin actions are disabled until the NFTLox protocol is finalized.';
+
+type AdminServerConfig = {
+	readonly adminAccount: string;
+	readonly adminOperatorAccount: string;
+	readonly multisigConfigured: boolean;
+};
+
+type AdminSession =
+	| {
+		readonly success: true;
+		readonly username: string;
+		readonly config: AdminServerConfig;
+	}
+	| {
+		readonly success: false;
+		readonly error: string;
+	};
+
 let lastAdminNonce = 0;
+let adminConfigPromise: Promise<AdminServerConfig> | null = null;
 
 function nextAdminNonce(): number {
 	const now = Date.now();
@@ -41,18 +56,66 @@ function nextAdminNonce(): number {
 	return lastAdminNonce;
 }
 
-function requireFrontendAdmin(): HiveBroadcastResult | null {
+function isAdminServerConfig(value: unknown): value is AdminServerConfig {
+	if (typeof value !== 'object' || value === null) return false;
+	const body = value as Record<string, unknown>;
+	return body.success === true
+		&& typeof body.adminAccount === 'string'
+		&& body.adminAccount.trim().length > 0
+		&& typeof body.adminOperatorAccount === 'string'
+		&& body.adminOperatorAccount.trim().length > 0
+		&& typeof body.multisigConfigured === 'boolean';
+}
+
+async function getAdminServerConfig(): Promise<AdminServerConfig> {
+	adminConfigPromise ??= fetch('/api/admin/config')
+		.then(async response => {
+			const body: unknown = await response.json().catch(() => null);
+			if (!response.ok) {
+				const error = typeof body === 'object'
+					&& body !== null
+					&& typeof (body as { error?: unknown }).error === 'string'
+					? (body as { error: string }).error
+					: `Admin config failed with HTTP ${response.status}`;
+				throw new Error(error);
+			}
+			if (!isAdminServerConfig(body)) {
+				throw new Error('Admin config response is invalid');
+			}
+			if (!body.multisigConfigured) {
+				throw new Error('Admin operator account is not configured');
+			}
+			return {
+				adminAccount: body.adminAccount.trim(),
+				adminOperatorAccount: body.adminOperatorAccount.trim(),
+				multisigConfigured: body.multisigConfigured,
+			};
+		})
+		.catch(err => {
+			adminConfigPromise = null;
+			throw err;
+		});
+	return adminConfigPromise;
+}
+
+async function requireFrontendAdmin(): Promise<AdminSession> {
 	const username = hiveSync.getUsername();
 	if (!username) {
 		return { success: false, error: 'Not logged in. Connect a Hive wallet first.' };
 	}
-	if (username !== RAGNAROK_ACCOUNT) {
-		return { success: false, error: `Must be logged in as @${RAGNAROK_ACCOUNT}, currently @${username}` };
+	let config: AdminServerConfig;
+	try {
+		config = await getAdminServerConfig();
+	} catch (err) {
+		return {
+			success: false,
+			error: err instanceof Error ? err.message : 'Admin config is unavailable',
+		};
 	}
-	if (!RAGNAROK_ADMIN_OPERATOR_ACCOUNT) {
-		return { success: false, error: 'Admin operator account is not configured.' };
+	if (username !== config.adminAccount) {
+		return { success: false, error: `Must be logged in as @${config.adminAccount}, currently @${username}` };
 	}
-	return null;
+	return { success: true, username, config };
 }
 
 async function readAdminResponse(response: Response): Promise<HiveBroadcastResult> {
@@ -89,21 +152,18 @@ async function requestApprovedAdminBroadcast(input: {
 	readonly payload: Record<string, unknown>;
 	readonly title: string;
 }): Promise<HiveBroadcastResult> {
-	const err = requireFrontendAdmin();
-	if (err) return err;
-
-	const username = hiveSync.getUsername();
-	if (!username) return { success: false, error: 'Not logged in. Connect a Hive wallet first.' };
+	const session = await requireFrontendAdmin();
+	if (!session.success) return { success: false, error: session.error };
 
 	const message = buildAdminApprovalMessage({
 		protocol: input.protocol,
 		action: input.action,
-		adminAccount: RAGNAROK_ACCOUNT,
-		operatorAccount: RAGNAROK_ADMIN_OPERATOR_ACCOUNT,
+		adminAccount: session.config.adminAccount,
+		operatorAccount: session.config.adminOperatorAccount,
 		payload: input.payload,
 	});
 	const signed = await signHiveMessage(message, {
-		username,
+		username: session.username,
 		keyType: 'Active',
 		title: input.title,
 	});
@@ -121,7 +181,7 @@ async function requestApprovedAdminBroadcast(input: {
 			protocol: input.protocol,
 			action: input.action,
 			payload: input.payload,
-			approver: username,
+			approver: session.username,
 			signature: signed.signature,
 		}),
 	});
@@ -152,29 +212,12 @@ export function createRagnarokAdminAdapter() {
 
 export function createNftLoxAdminAdapter() {
 	function broadcast(
-		action: NftLoxAdminAction,
-		data: Record<string, unknown>,
+		_action: NftLoxAdminAction,
+		_data: Record<string, unknown>,
 	): Promise<HiveBroadcastResult> {
-		const payload = {
-			protocol: NFTLOX_PROTOCOL_ID,
-			version: NFTLOX_PROTOCOL_VERSION,
-			action,
-			data: sanitizePayload(data),
-			admin_nonce: nextAdminNonce(),
-		};
-		const sizeCheck = validatePayloadSize(payload);
-		if (!sizeCheck.valid) {
-			return Promise.resolve({
-				success: false,
-				error: `Payload too large: ${sizeCheck.bytes} bytes (max ${sizeCheck.maxBytes})`,
-			});
-		}
-
-		return requestApprovedAdminBroadcast({
-			protocol: 'nftlox',
-			action,
-			payload,
-			title: `Approve NFTLox admin ${action.replace(/_/g, ' ')}`,
+		return Promise.resolve({
+			success: false,
+			error: NFTLOX_ADMIN_DISABLED_ERROR,
 		});
 	}
 

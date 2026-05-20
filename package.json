@@ -30,6 +30,7 @@
 		"lint:css:dupes:infile": "node scripts/check-css-infile-dupes.mjs",
 		"lint:css:dupes:infile:baseline": "node scripts/check-css-infile-dupes.mjs --baseline",
 		"bench:claim-store": "tsx scripts/benchClaimStore.ts",
+		"prototype:admin-dual-signature": "tsx server/services/prototypes/adminDualSignatureGate/prototype.ts",
 		"prototype:db-boundary": "tsx server/services/prototypes/dbAdapterBoundary/prototype.ts",
 		"db:push": "drizzle-kit push",
 		"db:setup": "tsx server/setupDatabase.ts",
@@ -39,7 +40,6 @@
 		"audit:art": "tsx scripts/auditArt.ts",
 		"build:wasm": "asc assembly/index.ts -o client/public/engine.wasm -t client/public/engine.wat --optimize --noAssert --runtime stub --exportRuntime --bindings esm",
 		"build:wasm:debug": "asc assembly/index.ts -o client/public/engine.wasm -t client/public/engine.wat --debug --runtime stub --exportRuntime --bindings esm",
-		"prepare": "husky",
 		"triage:art": "tsx scripts/triagePendingArt.ts"
 	},
 	"dependencies": {
@@ -119,8 +119,6 @@
 		"esbuild": "^0.25.0",
 		"eslint-plugin-react-hooks": "^5.1.0",
 		"fake-indexeddb": "^6.2.5",
-		"husky": "^9.1.7",
-		"lint-staged": "^16.2.7",
 		"postcss": "^8.4.47",
 		"rollup-plugin-visualizer": "^7.0.1",
 		"sharp": "^0.34.5",

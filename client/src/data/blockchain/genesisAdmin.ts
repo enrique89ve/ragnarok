@@ -1,7 +1,7 @@
 /**
  * genesisAdmin.ts - Admin tools for initializing the Ragnarok NFT system on Hive
  *
- * Usage (from browser console after Keychain login as @ragnarok):
+ * Usage (from browser console after Keychain login as the configured admin):
  *   import { broadcastGenesis, broadcastSeal, broadcastMint } from '@/data/blockchain/genesisAdmin';
  *   await broadcastGenesis();   // Initialize supply caps (one-time, irreversible)
  *   await broadcastSeal();      // Permanently lock direct minting
@@ -44,21 +44,7 @@ function requireGenesisSigner(): HiveBroadcastResult | null {
 	return null;
 }
 
-function requireAdmin(): HiveBroadcastResult | null {
-	const username = hiveSync.getUsername();
-	if (!username) {
-		return { success: false, error: 'Not logged in. Connect a Hive wallet first.' };
-	}
-	if (username !== RAGNAROK_ACCOUNT) {
-		return { success: false, error: `Must be logged in as @${RAGNAROK_ACCOUNT}, currently @${username}` };
-	}
-	return null;
-}
-
 export async function broadcastGenesis(): Promise<HiveBroadcastResult> {
-	const err = requireAdmin();
-	if (err) return err;
-
 	let readerHash = '';
 	try {
 		const wasmBinary = await fetch(import.meta.env.BASE_URL + 'engine.wasm').then(r => r.arrayBuffer());
@@ -80,9 +66,6 @@ export async function broadcastGenesis(): Promise<HiveBroadcastResult> {
 }
 
 export async function broadcastSeal(): Promise<HiveBroadcastResult> {
-	const err = requireAdmin();
-	if (err) return err;
-
 	return ragnarokAdminAdapter.broadcast('seal', {
 		version: 1,
 	});
@@ -101,9 +84,6 @@ export async function broadcastMint(params: {
 		foil?: string;
 	}>;
 }): Promise<HiveBroadcastResult> {
-	const err = requireAdmin();
-	if (err) return err;
-
 	if (!params.to || !params.cards?.length) {
 		return { success: false, error: 'to and cards[] are required' };
 	}
@@ -119,8 +99,6 @@ export async function broadcastPackMint(params: {
 	quantity: number;
 	to: string;
 }): Promise<HiveBroadcastResult> {
-	const err = requireAdmin();
-	if (err) return err;
 	return ragnarokAdminAdapter.broadcast('pack_mint', {
 		pack_type: params.packType,
 		quantity: params.quantity,
@@ -128,16 +106,14 @@ export async function broadcastPackMint(params: {
 	});
 }
 
-export async function broadcastPackDistribute(params: {
+export async function broadcastPackDistribute(_params: {
 	packUids: string[];
 	to: string;
 }): Promise<HiveBroadcastResult> {
-	const err = requireAdmin();
-	if (err) return err;
-	return ragnarokAdminAdapter.broadcast('pack_distribute', {
-		pack_uids: params.packUids,
-		to: params.to,
-	});
+	return {
+		success: false,
+		error: 'Pack distribution is disabled until the admin route can bundle the required atomic HIVE transfer.',
+	};
 }
 
 export interface UnsignedGenesisTx {

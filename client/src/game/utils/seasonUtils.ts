@@ -1,4 +1,6 @@
-const SEASON_START = new Date('2026-03-01T00:00:00Z').getTime();
+import { getRagnarokNetworkConfig } from '../config/networkConfig';
+
+const SEASON_START = new Date(getRagnarokNetworkConfig().seasonStart).getTime();
 const SEASON_DURATION_MS = 90 * 24 * 60 * 60 * 1000;
 
 const SEASON_NAMES = [

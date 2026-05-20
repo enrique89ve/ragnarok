@@ -22,6 +22,7 @@ import {
 	GameplayRuntimeBoundary,
 } from "./game/runtime/RuntimeBoundary";
 import { MatchSetupCampaign, MatchSetupSingle } from "./game/match";
+import { getSeasonInfo, formatTimeRemaining } from './game/utils/seasonUtils';
 
 const HiveKeychainLogin = lazy(() => import("./game/components/HiveKeychainLogin").then(m => ({ default: m.HiveKeychainLogin })));
 const DailyQuestPanel = lazy(() => import("./game/components/quests/DailyQuestPanel"));
@@ -317,6 +318,14 @@ function HomePage() {
 		? Math.round((completedMissionCount / totalMissionCount) * 100)
 		: 0;
 	const accountInitials = hiveUsername?.slice(0, 2).toUpperCase();
+	const [now, setNow] = useState(Date.now());
+
+	useEffect(() => {
+		const interval = setInterval(() => setNow(Date.now()), 60000); // update every minute
+		return () => clearInterval(interval);
+	}, []);
+
+	const season = getSeasonInfo(now);
 
 	useEffect(() => {
 		const handler = () => setCanInstall(true);
@@ -355,7 +364,9 @@ function HomePage() {
 									</span>
 								)}
 							</div>
-							<div className="font-mono text-[10px] tracking-[0.16em] text-ink-300 mt-1">FORGE &amp; EMBER · S01</div>
+							<div className="font-mono text-[10px] tracking-[0.16em] text-ink-300 mt-1">
+								FORGE &amp; EMBER · {season.seasonNumber.toString().padStart(2, '0')}
+							</div>
 						</div>
 					</div>
 					{hiveUsername && (
@@ -421,7 +432,15 @@ function HomePage() {
 							<StatRow label="Saga" value={`${completedMissionCount} / ${totalMissionCount}`} highlight />
 							<StatRow label="Active" value={activeFocusTitle} />
 							<StatRow label="Chapter" value={activeFocusChapter} />
-							<StatRow label="Season" value="01 · Forge" />
+							<StatRow
+								label="Season"
+								value={`${season.seasonNumber.toString().padStart(2, '0')} · ${season.seasonName}`}
+							/>
+							<StatRow
+								label="Ends In"
+								value={formatTimeRemaining(season.timeRemainingMs)}
+								highlight
+							/>
 							<div className="mt-1 pt-3 border-t border-obsidian-700">
 								<div className="flex items-center justify-between mb-1.5">
 									<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300">Saga progress</span>
