@@ -38,11 +38,34 @@ const NFTLOX_ADMIN_ACTION_SET: ReadonlySet<string> = new Set(NFTLOX_ADMIN_ACTION
 
 export const ADMIN_APPROVAL_KEY_TYPE = 'active' as const;
 export const ADMIN_APPROVAL_DOMAIN = 'ragnarok-admin-approval-v1' as const;
+export const ADMIN_SESSION_LOGIN_DOMAIN = 'ragnarok-admin-session-login-v1' as const;
+export const ADMIN_SESSION_LOGIN_ACTION = 'admin_login' as const;
 
 export type AdminApproval = {
 	readonly approver: string;
 	readonly nonce: number;
 	readonly signature: string;
+};
+
+export type AdminSessionLoginInput = {
+	readonly adminAccount: string;
+	readonly protocolId: string;
+	readonly stage: string;
+	readonly nonce: number;
+	readonly issuedAt: number;
+	readonly expiresAt: number;
+};
+
+export type AdminSessionLoginPayload = {
+	readonly action: typeof ADMIN_SESSION_LOGIN_ACTION;
+	readonly version: 1;
+	readonly domain: typeof ADMIN_SESSION_LOGIN_DOMAIN;
+	readonly adminAccount: string;
+	readonly protocolId: string;
+	readonly stage: string;
+	readonly nonce: number;
+	readonly issuedAt: number;
+	readonly expiresAt: number;
 };
 
 export type AdminApprovalReadResult =
@@ -56,6 +79,15 @@ export type AdminBroadcastBodyResult =
 		readonly action: AdminBroadcastAction;
 		readonly payload: Record<string, unknown>;
 		readonly approval: AdminApproval;
+	}
+	| { readonly success: false; readonly reason: string };
+
+export type AdminMultisigPrepareBodyResult =
+	| {
+		readonly success: true;
+		readonly protocol: AdminBroadcastProtocol;
+		readonly action: AdminBroadcastAction;
+		readonly payload: Record<string, unknown>;
 	}
 	| { readonly success: false; readonly reason: string };
 
@@ -165,6 +197,35 @@ export function buildAdminApprovalMessage(input: {
 	});
 }
 
+export function buildAdminSessionLoginPayload(
+	input: AdminSessionLoginInput,
+): AdminSessionLoginPayload {
+	return {
+		action: ADMIN_SESSION_LOGIN_ACTION,
+		version: 1,
+		domain: ADMIN_SESSION_LOGIN_DOMAIN,
+		adminAccount: input.adminAccount,
+		protocolId: input.protocolId,
+		stage: input.stage,
+		nonce: input.nonce,
+		issuedAt: input.issuedAt,
+		expiresAt: input.expiresAt,
+	};
+}
+
+export function buildAdminSessionLoginMessage(
+	input: AdminSessionLoginInput,
+): string {
+	const payload = buildAdminSessionLoginPayload(input);
+	return canonicalStringify({
+		type: 'custom_json',
+		id: `${input.protocolId}_admin_login`,
+		required_auths: [],
+		required_posting_auths: [input.adminAccount],
+		json: payload,
+	});
+}
+
 export function parseAdminBroadcastBody(body: unknown): AdminBroadcastBodyResult {
 	if (!isRecord(body)) {
 		return { success: false, reason: 'request body must be an object' };
@@ -200,5 +261,33 @@ export function parseAdminBroadcastBody(body: unknown): AdminBroadcastBodyResult
 		protocol: body.protocol,
 		action: body.action,
 		payload,
+	};
+}
+
+export function parseAdminMultisigPrepareBody(body: unknown): AdminMultisigPrepareBodyResult {
+	if (!isRecord(body)) {
+		return { success: false, reason: 'request body must be an object' };
+	}
+
+	if (!isAdminBroadcastProtocol(body.protocol)) {
+		return { success: false, reason: 'unsupported admin protocol' };
+	}
+
+	if (!isSupportedAdminBroadcastAction(body.protocol, body.action)) {
+		return { success: false, reason: 'unsupported admin action' };
+	}
+
+	if (!isRecord(body.payload)) {
+		return { success: false, reason: 'payload must be an object' };
+	}
+
+	return {
+		success: true,
+		protocol: body.protocol,
+		action: body.action,
+		payload: stripAdminApprovalFields({
+			...body.payload,
+			action: body.action,
+		}),
 	};
 }

@@ -30,7 +30,6 @@
 		"lint:css:dupes:infile": "node scripts/check-css-infile-dupes.mjs",
 		"lint:css:dupes:infile:baseline": "node scripts/check-css-infile-dupes.mjs --baseline",
 		"bench:claim-store": "tsx scripts/benchClaimStore.ts",
-		"prototype:admin-dual-signature": "tsx server/services/prototypes/adminDualSignatureGate/prototype.ts",
 		"prototype:db-boundary": "tsx server/services/prototypes/dbAdapterBoundary/prototype.ts",
 		"db:push": "drizzle-kit push",
 		"db:setup": "tsx server/setupDatabase.ts",

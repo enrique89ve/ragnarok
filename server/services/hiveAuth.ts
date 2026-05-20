@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import { loadHiveTx } from './hiveTx';
 
 const HIVE_NODES = [
 	'https://api.hive.blog',
@@ -88,7 +89,7 @@ export async function verifyHiveAuth(
 	}
 
 	try {
-		const { Signature } = await import('hive-tx');
+		const { Signature } = await loadHiveTx();
 		const hashHex = createHash('sha256').update(message).digest('hex');
 		const sig = Signature.from(signatureHex);
 		const recoveredKey = sig.getPublicKey(hashHex);

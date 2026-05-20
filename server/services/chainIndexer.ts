@@ -34,6 +34,7 @@ import {
 	stopPersistence,
 	saveState,
 } from './chainState';
+import { maybePublishIndexCheckpoint } from './indexCheckpointPublisher';
 import { shouldAcceptCustomJsonId } from '../../shared/runtimeConfig';
 
 // ---------------------------------------------------------------------------
@@ -214,8 +215,8 @@ async function scanBlocks(): Promise<number> {
 	const effectiveLib = Math.max(0, lib - PACK_ENTROPY_DELAY_BLOCKS);
 
 	// Sync status update
-	const behind = Math.max(0, lib - cursor);
-	setSyncStatus(cursor, lib, head, behind <= SYNC_TOLERANCE_BLOCKS);
+	const behind = Math.max(0, effectiveLib - cursor);
+	setSyncStatus(cursor, lib, head, behind <= SYNC_TOLERANCE_BLOCKS, effectiveLib);
 
 	if (cursor >= effectiveLib) return 0;
 
@@ -317,6 +318,18 @@ async function pollNext(): Promise<void> {
 		if (applied > 0) {
 			console.log(`[chainIndexer] Processed ${applied} ops, cursor now at block ${getBlockCursor()}`);
 		}
+		const runtime = getRagnarokServerRuntimeConfig();
+		void maybePublishIndexCheckpoint(runtime)
+			.then((result) => {
+				if (result.status === 'published') {
+					console.log(`[chainIndexer] Published index checkpoint block=${result.block} tx=${result.trxId ?? 'unknown'}`);
+				} else if (result.status === 'dry_run') {
+					console.log(`[chainIndexer] Dry-run index checkpoint block=${result.block} hash=${result.stateHash.slice(0, 12)}`);
+				}
+			})
+			.catch((err) => {
+				console.warn('[chainIndexer] Failed to publish index checkpoint:', err instanceof Error ? err.message : err);
+			});
 	} catch (err) {
 		console.warn('[chainIndexer] Poll error:', err instanceof Error ? err.message : err);
 	} finally {

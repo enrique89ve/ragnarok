@@ -11,13 +11,14 @@
 
 import type { SignatureVerifier } from '../../shared/protocol-core/types';
 import { createHash } from 'crypto';
+import { loadHiveTx } from './hiveTx';
 
 // hive-tx is ESM; we dynamic-import to avoid CJS/ESM issues in Node
 let _hiveTx: { PublicKey: typeof import('hive-tx').PublicKey; Signature: typeof import('hive-tx').Signature } | null = null;
 
 async function getHiveTx() {
 	if (!_hiveTx) {
-		const mod = await import('hive-tx');
+		const mod = await loadHiveTx();
 		_hiveTx = { PublicKey: mod.PublicKey, Signature: mod.Signature };
 	}
 	return _hiveTx;
@@ -126,6 +127,18 @@ export const serverSignatureVerifier: SignatureVerifier = {
 			if (!recovered) return false;
 			const keys = await fetchAccountKeys(account);
 			return keys.posting.includes(recovered) || keys.active.includes(recovered);
+		} catch {
+			return false;
+		}
+	},
+
+	async verifyCurrentPostingKey(account: string, message: string, signatureHex: string): Promise<boolean> {
+		if (!signatureHex || signatureHex.length < 10) return false;
+		try {
+			const recovered = await recoverPublicKey(message, signatureHex);
+			if (!recovered) return false;
+			const keys = await fetchAccountKeys(account);
+			return keys.posting.includes(recovered);
 		} catch {
 			return false;
 		}

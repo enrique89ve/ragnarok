@@ -35,6 +35,7 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { canonicalStringify } from '../../shared/protocol-core/hash';
 import { fetchAccountKeys } from './hiveSignatureVerifier';
+import { loadHiveTx } from './hiveTx';
 
 // ─── Public types ──────────────────────────────────────────────────────────
 
@@ -115,7 +116,7 @@ async function getWitnessSigner(): Promise<WitnessSigner> {
 		if (!account || !wif) {
 			throw new Error('Witness signing unavailable: WITNESS_HIVE_ACCOUNT and WITNESS_HIVE_POSTING_KEY required');
 		}
-		const { PrivateKey } = await import('hive-tx');
+		const { PrivateKey } = await loadHiveTx();
 		const pk = PrivateKey.fromString(wif);
 		const pubkey = pk.createPublic().toString();
 		cachedSigner = {

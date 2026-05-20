@@ -26,6 +26,7 @@ import type {
 	EitrLedgerTotalQuery,
 	ForgeCommitRecord,
 } from '../../shared/protocol-core/types';
+import type { AcquisitionProvenance } from '../../shared/protocol-core/acquisitionProvenance';
 
 const DEFAULT_ELO_RATING = 1000;
 
@@ -60,6 +61,7 @@ export interface CardRecord {
 	generation?: number;
 	replicaCount?: number;
 	mergedFrom?: string[];
+	acquisition?: AcquisitionProvenance;
 }
 
 export interface MatchRecord {
@@ -203,6 +205,7 @@ interface SerializedState {
 	inSync?: boolean;
 	headBlock?: number;
 	irreversibleBlock?: number;
+	syncTargetBlock?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -241,6 +244,7 @@ const queueEntries = new Map<string, QueueStateRecord>();
 let _inSync = false;
 let _headBlock = 0;
 let _irreversibleBlock = 0;
+let _syncTargetBlock = 0;
 
 // Marketplace state (v1.2)
 export interface ListingRecord {
@@ -269,6 +273,7 @@ const marketOffers = new Map<string, OfferRecord>();
 
 const MAX_MATCHES = 10000;
 const STATE_FILE_ENV = 'RAGNAROK_CHAIN_STATE_FILE';
+const INDEX_START_BLOCK_ENV = 'RAGNAROK_INDEX_START_BLOCK';
 const STATE_FILE_MODE = 0o600;
 const STATE_DIR_MODE = 0o700;
 const STATE_FILE = process.env[STATE_FILE_ENV] ?? path.join(process.cwd(), 'data', 'chain-state.json');
@@ -304,13 +309,30 @@ function assertStateFileWritable(): void {
 	fs.unlinkSync(probeFile);
 }
 
+function getConfiguredInitialBlockCursor(): number {
+	const raw = process.env[INDEX_START_BLOCK_ENV];
+	if (!raw) return 0;
+
+	const startBlock = Number(raw);
+	if (!Number.isInteger(startBlock) || startBlock < 1) {
+		console.warn(`[chainState] Ignoring invalid ${INDEX_START_BLOCK_ENV}=${raw}`);
+		return 0;
+	}
+
+	return startBlock - 1;
+}
+
 export function getStateFilePath(): string {
 	return STATE_FILE;
 }
 
 export function loadState(): void {
 	try {
-		if (!fs.existsSync(STATE_FILE)) return;
+		const initialBlockCursor = getConfiguredInitialBlockCursor();
+		if (!fs.existsSync(STATE_FILE)) {
+			lastIrreversibleBlockProcessed = initialBlockCursor;
+			return;
+		}
 		const raw = fs.readFileSync(STATE_FILE, 'utf8');
 		const data: SerializedState = JSON.parse(raw);
 
@@ -335,7 +357,10 @@ export function loadState(): void {
 		lastSyncedAt = data.lastSyncedAt ?? 0;
 
 		// PR 2B: protocol-core state
-		lastIrreversibleBlockProcessed = data.lastIrreversibleBlockProcessed ?? 0;
+		lastIrreversibleBlockProcessed = Math.max(
+			data.lastIrreversibleBlockProcessed ?? initialBlockCursor,
+			initialBlockCursor,
+		);
 		genesisState = data.genesis ?? null;
 
 		supplyCounters.clear();
@@ -431,6 +456,7 @@ export function exportState(): SerializedState {
 		inSync: _inSync,
 		headBlock: _headBlock,
 		irreversibleBlock: _irreversibleBlock,
+		syncTargetBlock: _syncTargetBlock,
 	};
 }
 
@@ -504,6 +530,7 @@ export function importState(data: SerializedState): void {
 	_inSync = data.inSync ?? false;
 	_headBlock = data.headBlock ?? 0;
 	_irreversibleBlock = data.irreversibleBlock ?? 0;
+	_syncTargetBlock = data.syncTargetBlock ?? _irreversibleBlock;
 
 	_dirty = false;
 	console.log(`[chainState] Imported: ${players.size} players, ${cards.size} cards, blockCursor=${lastIrreversibleBlockProcessed}, inSync=${_inSync}`);
@@ -712,8 +739,10 @@ export function getStats(): {
 	inSync: boolean;
 	headBlock: number;
 	irreversibleBlock: number;
+	syncTargetBlock: number;
 	blocksBehind: number;
 } {
+	const blocksBehind = Math.max(0, _syncTargetBlock - lastIrreversibleBlockProcessed);
 	return {
 		totalPlayers: players.size,
 		totalCards: cards.size,
@@ -724,15 +753,23 @@ export function getStats(): {
 		inSync: _inSync,
 		headBlock: _headBlock,
 		irreversibleBlock: _irreversibleBlock,
-		blocksBehind: Math.max(0, _irreversibleBlock - lastIrreversibleBlockProcessed),
+		syncTargetBlock: _syncTargetBlock,
+		blocksBehind,
 	};
 }
 
-export function setSyncStatus(lastBlock: number, irreversibleBlock: number, headBlock: number, inSync: boolean): void {
+export function setSyncStatus(
+	lastBlock: number,
+	irreversibleBlock: number,
+	headBlock: number,
+	inSync: boolean,
+	syncTargetBlock = irreversibleBlock,
+): void {
 	lastIrreversibleBlockProcessed = lastBlock;
 	_irreversibleBlock = irreversibleBlock;
 	_headBlock = headBlock;
 	_inSync = inSync;
+	_syncTargetBlock = syncTargetBlock;
 	markDirty();
 }
 

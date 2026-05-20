@@ -165,22 +165,30 @@ Hive `custom_json` supports both `required_posting_auths` and `required_auths`.
 
 Rule: any op that changes NFT custody or irreversibly destroys an NFT MUST require active auth. Routine signaling and self-serve gameplay ops MAY use posting auth.
 
-Admin-only Active ops support a two-account operator path. The browser admin
-account from `VITE_RAGNAROK_ADMIN_ACCOUNT` signs an Active approval over the
-canonical payload, including `protocol: "ragnarok"` and `admin_nonce`. The
-server/operator account from `VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT` /
-`RAGNAROK_ADMIN_OPERATOR_ACCOUNT` broadcasts the `custom_json` with its server-only
-`RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY`. Readers accept the op only when:
+Admin-only Active ops use a native Hive two-account transaction path from the
+Admin Panel. The server prepares a Hive transaction through
+`/api/admin/multisig/prepare` with `required_auths: [admin, operator]`. The
+browser admin account from `VITE_RAGNAROK_ADMIN_ACCOUNT` signs that exact
+transaction with Keychain Active authority. The server then verifies the admin
+signature, adds the operator Active signature from
+`RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY`, and broadcasts through
+`/api/admin/multisig/broadcast`. Readers accept the op when:
 
-- `required_auths[0]` is the configured operator account.
-- payload `admin_approver` is the configured admin account.
-- payload `admin_sig_key` is `active`.
-- payload `admin_sig` verifies against the admin account's current Active
-  authority.
-- `admin_nonce` is higher than the last accepted admin nonce.
+- `required_auths[0]` is the configured admin account.
+- `required_auths[1]` is the configured operator account.
+- Hive consensus accepted both Active signatures for the same transaction.
 
 Direct broadcasts by `RAGNAROK_ADMIN_ACCOUNT` remain valid for legacy/manual
 ceremony flows.
+
+Admin panel access uses a single off-chain login signature before any admin UI
+action is available. The frontend admin account signs a canonical
+`ragnarok-admin-session-login-v1` custom_json-shaped payload with Posting
+authority and sends the payload, message, and signature to the server in one
+request. The server verifies the admin Posting signature, rejects stale or
+replayed payloads, and stores the result in an HttpOnly `ragnarok_admin_session`
+cookie. This login payload is not broadcast to Hive. `/api/admin/multisig/*`
+requires that session; new panel actions use the native multisig endpoints.
 
 ## 8. Asset Model
 
@@ -247,8 +255,8 @@ One-time collection initialization.
 ```
 
 - MUST appear exactly once
-- Broadcaster MUST be `RAGNAROK_ADMIN_ACCOUNT`, or the configured admin
-  operator account with valid frontend-admin Active approval.
+- Broadcaster MUST be `RAGNAROK_ADMIN_ACCOUNT`; Admin Panel broadcasts use a
+  Hive transaction also co-signed by the configured operator account.
 - Active auth REQUIRED
 - Initializes protocol constants
 - No later `genesis` is valid
@@ -262,8 +270,8 @@ Irreversibly disables future admin minting.
 ```
 
 - MUST appear after `genesis`
-- Broadcaster MUST be `RAGNAROK_ADMIN_ACCOUNT`, or the configured admin
-  operator account with valid frontend-admin Active approval.
+- Broadcaster MUST be `RAGNAROK_ADMIN_ACCOUNT`; Admin Panel broadcasts use a
+  Hive transaction also co-signed by the configured operator account.
 - Active auth REQUIRED
 - After `seal`, all future `mint_batch` ops are permanently invalid
 
@@ -283,8 +291,8 @@ Pre-seal admin mint only.
 ```
 
 - Valid only before `seal`
-- Broadcaster MUST be `RAGNAROK_ADMIN_ACCOUNT`, or the configured admin
-  operator account with valid frontend-admin Active approval.
+- Broadcaster MUST be `RAGNAROK_ADMIN_ACCOUNT`; Admin Panel broadcasts use a
+  Hive transaction also co-signed by the configured operator account.
 - Active auth REQUIRED
 - Each `uid` MUST be unique
 - Each `card_id` MUST exist in the pinned card registry (reject undefined card IDs)
@@ -364,8 +372,8 @@ Pre-burn sealed-pack mint. Admin-only.
 { "p": "ragnarok-cards", "action": "pack_mint", "pack_type": "standard", "quantity": 1 }
 ```
 
-- Broadcaster MUST be `RAGNAROK_ADMIN_ACCOUNT`, or the configured admin
-  operator account with valid frontend-admin Active approval.
+- Broadcaster MUST be `RAGNAROK_ADMIN_ACCOUNT`; Admin Panel broadcasts use a
+  Hive transaction also co-signed by the configured operator account.
 - Genesis MUST be `sealed` (post-v1).
 - `pack_type` MUST be `adminMintable: true` in `packCatalog`.
 - `quantity` ∈ [1, 10].
@@ -379,8 +387,8 @@ Atomic admin → player batch distribution of previously-minted sealed packs.
 { "p": "ragnarok-cards", "action": "pack_distribute", "pack_uids": ["..."], "to": "player" }
 ```
 
-- Broadcaster MUST be `RAGNAROK_ADMIN_ACCOUNT`, or the configured admin
-  operator account with valid frontend-admin Active approval.
+- Broadcaster MUST be `RAGNAROK_ADMIN_ACCOUNT`; Admin Panel broadcasts use a
+  Hive transaction also co-signed by the configured operator account.
 - Every `pack_uid` MUST exist, be sealed, and currently owned by admin.
 - Atomic: either every uid transfers to `to`, or none of them do.
 
@@ -392,8 +400,8 @@ Atomic admin → player batch distribution of previously-minted sealed packs.
 { "p": "ragnarok-cards", "action": "pack_transfer", "pack_uid": "...", "to": "player" }
 ```
 
-- Broadcaster MUST be `RAGNAROK_ADMIN_ACCOUNT`, or the configured admin
-  operator account with valid frontend-admin Active approval.
+- Broadcaster MUST be `RAGNAROK_ADMIN_ACCOUNT`; Admin Panel broadcasts use a
+  Hive transaction also co-signed by the configured operator account.
   **Player-to-player pack transfers are not supported in v1.1.** Player
   wallets MUST NOT broadcast `pack_transfer`; readers reject all non-admin
   broadcasters.
@@ -701,6 +709,24 @@ The indexer MUST NOT:
 - Advance cursor on reversible head blocks
 - Treat REST output as authoritative over chain replay
 - Use simplified validation handlers that skip PoW, signatures, cooldowns, or supply caps
+
+### Index checkpoints
+
+The server indexer MAY publish compact projection checkpoints to Hive when
+`ENABLE_INDEX_CHECKPOINT_PUBLISHER=true`.
+
+- Signer: `RAGNAROK_INDEX_ACCOUNT` with server-only `RAGNAROK_INDEX_POSTING_KEY`.
+- Authority: Posting.
+- `custom_json` id: `${RAGNAROK_PROTOCOL_ID}_index`, separate from protocol
+  state ops so checkpoints do not mutate Ragnarok replay state.
+- Payload action: `index_checkpoint`.
+- Payload includes the indexed block cursor, irreversible block, sync target block,
+  deterministic projection `stateHash`, and summary counts.
+- Interval: `RAGNAROK_INDEX_CHECKPOINT_INTERVAL_BLOCKS`.
+
+Checkpoints are attestations over a replay-derived projection. They are useful
+for drift detection and client verification shortcuts, but chain replay remains
+the source of truth.
 
 # 12. Client Spec
 

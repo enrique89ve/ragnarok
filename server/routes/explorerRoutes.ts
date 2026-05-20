@@ -98,6 +98,7 @@ router.get('/status', (_req: Request, res: Response) => {
 		protocolVersion: '1.2.0',
 		protocolId: runtime.protocolId,
 		stage: runtime.stage,
+		resetEpoch: runtime.resetEpoch,
 		resettable: runtime.resettable,
 		economic: runtime.economic,
 		genesisBlock: genesis?.sealBlock ?? null,

@@ -15,6 +15,12 @@ export interface HiveKeychainResponse {
 }
 
 export interface HiveKeychainApi {
+  requestSignTx?: (
+    username: string,
+    transaction: Record<string, unknown>,
+    keyType: "Active" | "Posting",
+    callback: (response: HiveKeychainResponse) => void,
+  ) => void;
   requestBroadcast?: (
     username: string,
     operations: Array<[string, Record<string, unknown>]>,

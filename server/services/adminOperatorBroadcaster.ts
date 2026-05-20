@@ -5,6 +5,7 @@ import {
 	type AdminBroadcastProtocol,
 } from '../../shared/protocol-core';
 import { fetchAccountKeys } from './hiveSignatureVerifier';
+import { loadHiveTx } from './hiveTx';
 
 export type AdminOperatorBroadcastResult = {
 	readonly success: boolean;
@@ -13,14 +14,16 @@ export type AdminOperatorBroadcastResult = {
 	readonly error?: string;
 };
 
-type AdminOperatorSigner = {
+export type AdminOperatorSigner = {
 	readonly account: string;
 	readonly publicKey: string;
 	readonly privateKey: import('hive-tx').PrivateKey;
 };
 
-let cachedSigner: AdminOperatorSigner | null = null;
-let cachedSignerError: Error | null = null;
+const ADMIN_OPERATOR_ACTIVE_KEY_ENV = 'RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY';
+
+let cachedActiveSigner: AdminOperatorSigner | null = null;
+let cachedActiveSignerError: Error | null = null;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null;
@@ -46,61 +49,74 @@ function getAdminCustomJsonId(
 	return protocol === 'ragnarok' ? runtime.protocolId : runtime.nftLoxProtocolId;
 }
 
-async function getAdminOperatorSigner(runtime: RagnarokRuntimeConfig): Promise<AdminOperatorSigner> {
-	if (cachedSigner) return cachedSigner;
-	if (cachedSignerError) throw cachedSignerError;
+export async function getAdminOperatorActiveSigner(runtime: RagnarokRuntimeConfig): Promise<AdminOperatorSigner> {
+	if (cachedActiveSigner) return cachedActiveSigner;
+	if (cachedActiveSignerError) throw cachedActiveSignerError;
 
 	try {
 		const account = getConfiguredOperatorAccount(runtime);
-		const activeKey = process.env.RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY?.trim();
-		if (!account || !activeKey) {
+		if (!account) {
+			throw new Error('Admin operator account is not configured');
+		}
+		const activeKey = process.env[ADMIN_OPERATOR_ACTIVE_KEY_ENV]?.trim();
+		if (!activeKey) {
 			throw new Error(
-				'Admin operator signing unavailable: RAGNAROK_ADMIN_OPERATOR_ACCOUNT ' +
-				'and RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY are required',
+				`Admin operator active signing unavailable: ${ADMIN_OPERATOR_ACTIVE_KEY_ENV} is required`,
 			);
 		}
 		if (account === runtime.adminAccount) {
 			throw new Error('Admin operator account must be different from the frontend admin account');
 		}
 
-		const { PrivateKey } = await import('hive-tx');
+		const { PrivateKey } = await loadHiveTx();
 		const privateKey = PrivateKey.fromString(activeKey);
 		const publicKey = privateKey.createPublic().toString();
-		cachedSigner = { account, publicKey, privateKey };
-		return cachedSigner;
+		cachedActiveSigner = { account, publicKey, privateKey };
+		return cachedActiveSigner;
 	} catch (err) {
-		cachedSignerError = err instanceof Error ? err : new Error(String(err));
-		throw cachedSignerError;
+		cachedActiveSignerError = err instanceof Error ? err : new Error(String(err));
+		throw cachedActiveSignerError;
 	}
 }
 
 export function resetAdminOperatorSignerForTests(): void {
-	cachedSigner = null;
-	cachedSignerError = null;
+	cachedActiveSigner = null;
+	cachedActiveSignerError = null;
 }
 
 export async function validateAdminOperatorConfig(
 	runtime: RagnarokRuntimeConfig,
 ): Promise<{ account: string; publicKey: string }> {
-	const signer = await getAdminOperatorSigner(runtime);
-	const keys = await fetchAccountKeys(signer.account);
-	if (!keys.active.includes(signer.publicKey)) {
+	const activeKeyConfigured = Boolean(process.env[ADMIN_OPERATOR_ACTIVE_KEY_ENV]?.trim());
+	if (!activeKeyConfigured) {
+		throw new Error(
+			`Admin operator active signing unavailable: ${ADMIN_OPERATOR_ACTIVE_KEY_ENV} is required for private admin broadcasts`,
+		);
+	}
+
+	const account = getConfiguredOperatorAccount(runtime);
+	if (!account) {
+		throw new Error('Admin operator account is not configured');
+	}
+	if (account === runtime.adminAccount) {
+		throw new Error('Admin operator account must be different from the frontend admin account');
+	}
+	const keys = await fetchAccountKeys(account);
+	const activeSigner = await getAdminOperatorActiveSigner(runtime);
+	if (!keys.active.includes(activeSigner.publicKey)) {
 		const err = new Error(
-			`Admin operator pubkey ${signer.publicKey} is not an Active authority for ${signer.account}. ` +
+			`Admin operator pubkey ${activeSigner.publicKey} is not an Active authority for ${activeSigner.account}. ` +
 			`Authorities on chain: ${keys.active.join(', ')}`,
 		);
-		cachedSigner = null;
-		cachedSignerError = err;
+		cachedActiveSigner = null;
+		cachedActiveSignerError = err;
 		throw err;
 	}
-	return { account: signer.account, publicKey: signer.publicKey };
+	return { account: activeSigner.account, publicKey: activeSigner.publicKey };
 }
 
 export function shouldValidateAdminOperatorConfig(): boolean {
-	return Boolean(
-		process.env.RAGNAROK_ADMIN_OPERATOR_ACCOUNT
-		|| process.env.RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY,
-	);
+	return Boolean(process.env[ADMIN_OPERATOR_ACTIVE_KEY_ENV]);
 }
 
 export async function broadcastAdminCustomJson(input: {
@@ -109,8 +125,8 @@ export async function broadcastAdminCustomJson(input: {
 	readonly payload: Record<string, unknown>;
 	readonly approval: AdminApproval;
 }): Promise<AdminOperatorBroadcastResult> {
-	const signer = await getAdminOperatorSigner(input.runtime);
-	const { Transaction } = await import('hive-tx');
+	const signer = await getAdminOperatorActiveSigner(input.runtime);
+	const { Transaction } = await loadHiveTx();
 	const fullPayload = attachAdminApproval(input.payload, input.approval);
 
 	const tx = new Transaction();

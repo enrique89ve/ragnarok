@@ -13,12 +13,29 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import {
+	ArrowLeft,
+	CheckCircle2,
+	Circle,
+	Clock3,
+	LockKeyhole,
+	LogOut,
+	Package,
+	PlayCircle,
+	RefreshCw,
+	ServerCog,
+	ShieldAlert,
+	ShieldCheck,
+	XCircle,
+	type LucideIcon,
+} from 'lucide-react';
 import { routes } from '../../../lib/routes';
 import { useNFTUsername } from '../../nft/hooks';
 import { cardRegistry } from '../../data/cardRegistry';
 import { debug } from '../../config/debugConfig';
 import { getRagnarokCollectionId } from '../../config/networkConfig';
 import { ADMIN_MINTABLE_PACK_KEYS, PACK_DEFINITIONS } from '@shared/protocol-core/packCatalog';
+import type { AdminServerConfig, AdminSessionStatus } from '../../../data/blockchain/adminAdapters';
 
 // Lazy-import admin functions to avoid loading blockchain code on non-admin pages
 async function getAdminFns() {
@@ -37,6 +54,8 @@ async function getReplayEngine() {
 }
 
 const ADMIN_MINTABLE_PACKS = ADMIN_MINTABLE_PACK_KEYS.map((key) => PACK_DEFINITIONS[key]);
+const ADMIN_BATCH_SIZE = 50;
+const DEFAULT_ADMIN_PACK_KEY = ADMIN_MINTABLE_PACKS[0]?.key ?? 'standard';
 
 // ── Types ──
 
@@ -56,22 +75,29 @@ interface SupplyInfo {
 	minted: number;
 }
 
-type AdminConfig = {
-	readonly adminAccount: string;
-	readonly adminOperatorAccount: string;
-	readonly multisigConfigured: boolean;
-};
-
 type Tab = 'status' | 'genesis' | 'mint' | 'seal' | 'packs' | 'sync';
+type CeremonyStepStatus = 'complete' | 'current' | 'locked';
 
-function isAdminConfig(value: unknown): value is AdminConfig {
+interface CeremonyStepDefinition {
+	readonly num: number;
+	readonly label: string;
+	readonly tab: Tab;
+	readonly status: CeremonyStepStatus;
+	readonly metric: string;
+	readonly help: string;
+}
+
+function isAdminConfig(value: unknown): value is AdminServerConfig {
 	if (typeof value !== 'object' || value === null) return false;
 	const body = value as Record<string, unknown>;
 	return body.success === true
+		&& typeof body.stage === 'string'
+		&& body.stage.trim().length > 0
+		&& typeof body.protocolId === 'string'
+		&& body.protocolId.trim().length > 0
 		&& typeof body.adminAccount === 'string'
 		&& body.adminAccount.trim().length > 0
 		&& typeof body.adminOperatorAccount === 'string'
-		&& body.adminOperatorAccount.trim().length > 0
 		&& typeof body.multisigConfigured === 'boolean';
 }
 
@@ -85,11 +111,23 @@ export default function AdminPanel() {
 	const [loading, setLoading] = useState(false);
 	const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
 	const [mintProgress, setMintProgress] = useState({ done: 0, total: 0, running: false });
-	const [adminConfig, setAdminConfig] = useState<AdminConfig | null>(null);
+	const [adminConfig, setAdminConfig] = useState<AdminServerConfig | null>(null);
 	const [adminConfigError, setAdminConfigError] = useState<string | null>(null);
+	const [adminSession, setAdminSession] = useState<AdminSessionStatus | null>(null);
+	const [adminSessionError, setAdminSessionError] = useState<string | null>(null);
+	const [adminSessionLoading, setAdminSessionLoading] = useState(false);
+	const [adminSessionAuthorizing, setAdminSessionAuthorizing] = useState(false);
+	const [packType, setPackType] = useState<string>(DEFAULT_ADMIN_PACK_KEY);
+	const [packQuantity, setPackQuantity] = useState(1);
 
 	// ── Auth Guard ──
-	const isAdmin = Boolean(hiveUsername && adminConfig && hiveUsername === adminConfig.adminAccount);
+	const isAdminWallet = Boolean(hiveUsername && adminConfig && hiveUsername === adminConfig.adminAccount);
+	const isAdmin = Boolean(
+		isAdminWallet
+		&& adminConfig
+		&& adminSession?.authenticated
+		&& adminSession.account === adminConfig.adminAccount,
+	);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -108,6 +146,8 @@ export default function AdminPanel() {
 				}
 				if (!cancelled) {
 					setAdminConfig({
+						stage: body.stage.trim(),
+						protocolId: body.protocolId.trim(),
 						adminAccount: body.adminAccount.trim(),
 						adminOperatorAccount: body.adminOperatorAccount.trim(),
 						multisigConfigured: body.multisigConfigured,
@@ -126,6 +166,26 @@ export default function AdminPanel() {
 			cancelled = true;
 		};
 	}, []);
+
+	const refreshAdminSession = useCallback(async () => {
+		setAdminSessionLoading(true);
+		try {
+			const { getAdminSessionStatus } = await import('../../../data/blockchain/adminAdapters');
+			const status = await getAdminSessionStatus();
+			setAdminSession(status);
+			setAdminSessionError(status.authenticated ? null : status.reason ?? null);
+		} catch (err) {
+			setAdminSession(null);
+			setAdminSessionError(err instanceof Error ? err.message : 'Admin session unavailable');
+		} finally {
+			setAdminSessionLoading(false);
+		}
+	}, []);
+
+	useEffect(() => {
+		if (!adminConfig) return;
+		void refreshAdminSession();
+	}, [adminConfig, refreshAdminSession]);
 
 	// ── Load Genesis State ──
 	const refreshState = useCallback(async () => {
@@ -199,10 +259,9 @@ export default function AdminPanel() {
 	const handleBatchMint = async () => {
 		if (!adminConfig) { setResult({ success: false, message: 'Admin config is unavailable' }); return; }
 		const collectible = cardRegistry.filter(c => c.collectible !== false && c.rarity);
-		const BATCH_SIZE = 50;
 		const batches: typeof collectible[] = [];
-		for (let i = 0; i < collectible.length; i += BATCH_SIZE) {
-			batches.push(collectible.slice(i, i + BATCH_SIZE));
+		for (let i = 0; i < collectible.length; i += ADMIN_BATCH_SIZE) {
+			batches.push(collectible.slice(i, i + ADMIN_BATCH_SIZE));
 		}
 
 		// Check for recoverable session from a previous crash
@@ -216,7 +275,7 @@ export default function AdminPanel() {
 			} else {
 				session.clearMintSession();
 			}
-		} else if (!confirm(`Mint ${collectible.length} cards in ${batches.length} batches of ${BATCH_SIZE}? Each batch requires a Keychain signature.`)) {
+		} else if (!confirm(`Mint ${collectible.length} cards in ${batches.length} batches of ${ADMIN_BATCH_SIZE}? Each batch requires a Keychain signature.`)) {
 			return;
 		}
 
@@ -311,9 +370,11 @@ export default function AdminPanel() {
 
 	const handleMintPacks = async () => {
 		if (!adminConfig) { setResult({ success: false, message: 'Admin config is unavailable' }); return; }
-		const packType = (document.getElementById('pack-type-select') as HTMLSelectElement)?.value || 'standard';
-		const quantity = parseInt((document.getElementById('pack-qty-input') as HTMLInputElement)?.value || '1', 10);
-		if (quantity < 1 || quantity > 10) { setResult({ success: false, message: 'Quantity must be 1-10' }); return; }
+		const quantity = Number.isInteger(packQuantity) ? packQuantity : 0;
+		if (quantity < 1 || quantity > 10) {
+			setResult({ success: false, message: 'Choose 1 to 10 packs.' });
+			return;
+		}
 
 		if (!confirm(`Mint ${quantity} ${packType} pack(s) into admin inventory?`)) return;
 		setLoading(true);
@@ -355,6 +416,45 @@ export default function AdminPanel() {
 		setLoading(false);
 	};
 
+	const handleAuthorizeAdminSession = async () => {
+		setAdminSessionAuthorizing(true);
+		setResult(null);
+		try {
+			const { requestAdminPanelSession } = await import('../../../data/blockchain/adminAdapters');
+			const res = await requestAdminPanelSession(adminConfig ?? undefined);
+			if (!res.success) {
+				setAdminSessionError(res.error);
+				setResult({ success: false, message: res.error });
+				return;
+			}
+			setAdminSession(res.session);
+			setAdminSessionError(null);
+			setResult({ success: true, message: 'Admin session authorized.' });
+		} catch (err) {
+			const message = err instanceof Error ? err.message : String(err);
+			setAdminSessionError(message);
+			setResult({ success: false, message });
+		} finally {
+			setAdminSessionAuthorizing(false);
+		}
+	};
+
+	const handleLogoutAdminSession = async () => {
+		setLoading(true);
+		setResult(null);
+		try {
+			const { logoutAdminPanelSession } = await import('../../../data/blockchain/adminAdapters');
+			await logoutAdminPanelSession();
+			setAdminSession(null);
+			setAdminSessionError('Admin session closed.');
+			setResult({ success: true, message: 'Admin session closed.' });
+		} catch (err) {
+			setResult({ success: false, message: err instanceof Error ? err.message : String(err) });
+		} finally {
+			setLoading(false);
+		}
+	};
+
 	// ── Access Denied ──
 	if (!adminConfig && !adminConfigError) {
 		return (
@@ -367,11 +467,43 @@ export default function AdminPanel() {
 		);
 	}
 
+	if (isAdminWallet && !isAdmin) {
+		return (
+			<div className="h-full flex items-center justify-center bg-gray-950">
+				<div className="text-center max-w-md px-6">
+					<ShieldAlert className="mx-auto mb-4 h-10 w-10 text-amber-300" aria-hidden="true" />
+					<div className="text-2xl font-bold text-amber-300 mb-2">Admin Session Required</div>
+					<p className="text-gray-400 mb-4">
+						Authorize panel access with one Posting Keychain signature. The signed custom JSON payload is verified by the server but is not broadcast to Hive.
+					</p>
+					{adminSessionError && (
+						<p className="text-red-300 text-sm mb-4">{adminSessionError}</p>
+					)}
+					<button type="button"
+						onClick={handleAuthorizeAdminSession}
+						disabled={adminSessionLoading || adminSessionAuthorizing}
+						className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold rounded-lg transition-colors">
+						<ShieldCheck className="h-4 w-4" aria-hidden="true" />
+						{adminSessionAuthorizing
+							? 'Authorizing...'
+							: adminSessionLoading
+								? 'Checking Session...'
+								: 'Authorize Admin Session'}
+					</button>
+					<div className="text-gray-500 text-xs mt-4">
+						Admin @{adminConfig?.adminAccount} · Operator @{adminConfig?.adminOperatorAccount}
+					</div>
+					<Link to={routes.home} className="inline-block mt-6 text-amber-400 hover:text-amber-300 underline">Back to Home</Link>
+				</div>
+			</div>
+		);
+	}
+
 	if (!isAdmin) {
 		return (
 			<div className="h-full flex items-center justify-center bg-gray-950">
 				<div className="text-center">
-					<div className="text-6xl mb-4">⛔</div>
+					<XCircle className="mx-auto mb-4 h-12 w-12 text-red-400" aria-hidden="true" />
 					<h1 className="text-2xl font-bold text-red-400 mb-2">Access Denied</h1>
 					<p className="text-gray-400 mb-6">
 						{adminConfigError
@@ -390,75 +522,207 @@ export default function AdminPanel() {
 	const collectibleCount = cardRegistry.filter(c => c.collectible !== false).length;
 	const isSealed = genesis?.sealed === true;
 	const hasGenesis = !!genesis?.version;
+	const batchCount = Math.ceil(collectibleCount / ADMIN_BATCH_SIZE);
+	const mintedCardTotal = supply.reduce((total, counter) => total + counter.minted, 0);
+	const mintProgressDone = mintProgress.total > 0
+		? mintProgress.done >= mintProgress.total && !mintProgress.running
+		: false;
+	const mintComplete = collectibleCount > 0 && (mintedCardTotal >= collectibleCount || mintProgressDone);
+	const mintedPercent = collectibleCount > 0
+		? Math.min(100, Math.round((mintedCardTotal / collectibleCount) * 100))
+		: 0;
+	const currentFlowTab: Tab = !hasGenesis
+		? 'genesis'
+		: !mintComplete && !isSealed
+			? 'mint'
+			: !isSealed
+				? 'seal'
+				: 'packs';
+	const flowSteps: CeremonyStepDefinition[] = [
+		{
+			num: 1,
+			label: 'Broadcast Genesis',
+			tab: 'genesis',
+			status: hasGenesis ? 'complete' : 'current',
+			metric: hasGenesis ? `v${genesis?.version ?? 1}` : 'Required',
+			help: 'Creates the protocol, supply caps, and engine hash.',
+		},
+		{
+			num: 2,
+			label: 'Mint All Cards',
+			tab: 'mint',
+			status: mintComplete ? 'complete' : hasGenesis && !isSealed ? 'current' : 'locked',
+			metric: `${Math.min(mintedCardTotal, collectibleCount).toLocaleString()} / ${collectibleCount.toLocaleString()}`,
+			help: `${batchCount} batches, ${ADMIN_BATCH_SIZE} cards per approval.`,
+		},
+		{
+			num: 3,
+			label: 'Seal Protocol',
+			tab: 'seal',
+			status: isSealed ? 'complete' : hasGenesis && mintComplete ? 'current' : 'locked',
+			metric: isSealed ? `Block ${genesis?.sealedAtBlock ?? 'pending'}` : 'Permanent',
+			help: 'Locks direct minting after cards are minted.',
+		},
+		{
+			num: 4,
+			label: 'Mint Packs',
+			tab: 'packs',
+			status: isSealed ? 'current' : 'locked',
+			metric: isSealed ? 'Ready' : 'After seal',
+			help: 'Creates sealed pack inventory for the admin account.',
+		},
+		{
+			num: 5,
+			label: 'Distribute',
+			tab: 'packs',
+			status: 'locked',
+			metric: 'Disabled',
+			help: 'Blocked until atomic HIVE transfer bundling is implemented.',
+		},
+	];
+	const activeFlowStep = flowSteps.find(step => step.tab === currentFlowTab && step.status === 'current')
+		?? flowSteps.find(step => step.status === 'current')
+		?? flowSteps[flowSteps.length - 1];
+	const sessionExpiresLabel = adminSession?.expiresAt
+		? new Date(adminSession.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+		: 'Not active';
 
-	const TABS: { id: Tab; label: string; icon: string }[] = [
-		{ id: 'status', label: 'Status', icon: '◎' },
-		{ id: 'genesis', label: 'Genesis', icon: '☉' },
-		{ id: 'mint', label: 'Batch Mint', icon: '⚒' },
-		{ id: 'seal', label: 'Seal', icon: '🔏' },
-		{ id: 'packs', label: 'Packs', icon: '▣' },
-		{ id: 'sync', label: 'Sync', icon: '⟳' },
+	const TABS: { id: Tab; label: string; icon: LucideIcon }[] = [
+		{ id: 'status', label: 'Status', icon: ServerCog },
+		{ id: 'genesis', label: 'Genesis', icon: PlayCircle },
+		{ id: 'mint', label: 'Batch Mint', icon: Circle },
+		{ id: 'seal', label: 'Seal', icon: LockKeyhole },
+		{ id: 'packs', label: 'Packs', icon: Package },
+		{ id: 'sync', label: 'Sync', icon: RefreshCw },
 	];
 
 	return (
-		<div className="h-full overflow-y-auto bg-linear-to-b from-gray-950 via-red-950/20 to-gray-950 p-6">
-			<div className="max-w-5xl mx-auto">
+		<div className="h-full overflow-y-auto bg-linear-to-b from-gray-950 via-red-950/20 to-gray-950 p-6 text-ink-0">
+			<div className="mx-auto max-w-6xl">
 				{/* Header */}
-				<div className="flex justify-between items-center mb-6">
+				<header className="mb-6 flex items-center justify-between gap-4">
 					<Link to={routes.home}>
-						<motion.button type="button" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-							className="px-4 py-2 bg-gray-800/80 hover:bg-gray-700/80 text-white rounded-lg border border-gray-600 text-sm">
-							← Home
+						<motion.button type="button" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+							className="inline-flex items-center gap-2 rounded-lg border border-gray-600 bg-gray-800/80 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-700/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300">
+							<ArrowLeft className="h-4 w-4" aria-hidden="true" />
+							Home
 						</motion.button>
 					</Link>
 					<div className="text-right">
 						<div className="text-amber-400 font-bold text-sm">@{hiveUsername}</div>
-						<div className="text-gray-500 text-xs">Admin Panel</div>
+						<div className="text-gray-500 text-xs">
+							{adminConfig?.stage} · expires {sessionExpiresLabel}
+						</div>
 					</div>
-				</div>
+				</header>
 
-				<h1 className="text-3xl font-bold text-center mb-1 text-transparent bg-clip-text bg-linear-to-r from-red-400 via-amber-400 to-red-400">
-					Genesis Command Center
-				</h1>
-				<p className="text-gray-500 text-center text-sm mb-4">Ragnarok NFT Protocol Administration</p>
+				<section className="mb-5 grid gap-4 lg:grid-cols-[1.45fr_0.85fr]">
+					<div className="rounded-lg border border-amber-600/30 bg-gray-900/70 p-5 shadow-lg shadow-black/20">
+						<div className="mb-2 text-xs font-bold uppercase tracking-[0.24em] text-amber-300">
+							Genesis Command Center
+						</div>
+						<h1 className="text-2xl font-bold text-white md:text-3xl">
+							{activeFlowStep?.label ?? 'Review protocol status'}
+						</h1>
+						<p className="mt-2 max-w-2xl text-sm leading-6 text-gray-400">
+							{activeFlowStep?.help ?? 'Review the current chain state before broadcasting an admin operation.'}
+						</p>
+						<div className="mt-4 flex flex-wrap gap-3">
+							<button
+								type="button"
+								onClick={() => {
+									if (activeFlowStep) setTab(activeFlowStep.tab);
+									setResult(null);
+								}}
+								className="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-amber-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-200"
+							>
+								<PlayCircle className="h-4 w-4" aria-hidden="true" />
+								Open next step
+							</button>
+							<button
+								type="button"
+								onClick={refreshState}
+								className="inline-flex items-center gap-2 rounded-lg border border-gray-700 bg-gray-900 px-4 py-2 text-sm font-semibold text-gray-200 transition-colors hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300"
+							>
+								<RefreshCw className="h-4 w-4" aria-hidden="true" />
+								Refresh state
+							</button>
+						</div>
+					</div>
+
+					<aside className="rounded-lg border border-gray-700/70 bg-gray-900/60 p-5">
+						<div className="mb-4 flex items-center justify-between gap-3">
+							<div>
+								<div className="text-xs font-bold uppercase tracking-[0.22em] text-gray-500">Authority</div>
+								<div className="mt-1 text-sm font-semibold text-white">@{adminConfig?.adminAccount}</div>
+							</div>
+							<ShieldCheck className="h-5 w-5 text-emerald-300" aria-hidden="true" />
+						</div>
+						<div className="space-y-2 text-sm">
+							<AdminConsumerRow label="Operator" value={`@${adminConfig?.adminOperatorAccount ?? 'missing'}`} ok={Boolean(adminConfig?.adminOperatorAccount)} />
+							<AdminConsumerRow label="Session" value={adminSession?.authenticated ? 'Authorized' : 'Required'} ok={Boolean(adminSession?.authenticated)} />
+							<AdminConsumerRow label="Protocol" value={hasGenesis ? `v${genesis.version}` : 'Not initialized'} ok={hasGenesis} />
+							<AdminConsumerRow label="Cards minted" value={`${Math.min(mintedCardTotal, collectibleCount).toLocaleString()} / ${collectibleCount.toLocaleString()}`} ok={mintComplete} />
+						</div>
+						<button
+							type="button"
+							onClick={handleLogoutAdminSession}
+							disabled={loading}
+							className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-gray-300 transition-colors hover:border-red-500/50 hover:text-red-200 disabled:opacity-50"
+						>
+							<LogOut className="h-3.5 w-3.5" aria-hidden="true" />
+							Close session
+						</button>
+					</aside>
+				</section>
 
 				{/* ── Ceremony Checklist (always visible) ── */}
-				<div className="bg-gray-900/60 rounded-lg p-4 border border-gray-700/50 mb-6">
-					<h3 className="text-amber-300 font-bold text-xs uppercase tracking-wider mb-3">Launch Ceremony — Follow Steps 1 → 5 in Order</h3>
-					<div className="grid grid-cols-1 md:grid-cols-5 gap-2 text-xs">
-						<CeremonyStep num={1} label="Broadcast Genesis" done={hasGenesis} active={!hasGenesis}
-							help="Click Genesis tab → press button → approve Keychain popup. Sets supply caps." />
-						<CeremonyStep num={2} label="Mint All Cards" done={mintProgress.done > 0 && !mintProgress.running} active={hasGenesis && !isSealed && mintProgress.done === 0}
-							help="Click Batch Mint tab → press button → approve ~39 Keychain popups (one per 50 cards)." />
-						<CeremonyStep num={3} label="Seal Protocol" done={isSealed} active={hasGenesis && !isSealed}
-							help="Click Seal tab → press button → confirm TWICE. This is permanent and cannot be undone!" />
-						<CeremonyStep num={4} label="Mint Packs" done={false} active={isSealed}
-							help="Click Packs tab → choose type/qty → press Mint. Creates sealed packs in your inventory." />
-						<CeremonyStep num={5} label="Distribute" done={false} active={false}
-							help="Pending atomic transfer bundling in the admin route." />
+				<section className="mb-6 rounded-lg border border-gray-700/50 bg-gray-900/60 p-4">
+					<div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+						<h2 className="text-xs font-bold uppercase tracking-wider text-amber-300">Launch Flow</h2>
+						<div className="text-xs text-gray-500">{mintedPercent}% card mint progress</div>
 					</div>
-				</div>
+					<div className="grid grid-cols-1 md:grid-cols-5 gap-2 text-xs">
+						{flowSteps.map(step => (
+							<CeremonyStep
+								key={`${step.num}-${step.label}`}
+								step={step}
+								onSelect={() => {
+									setTab(step.tab);
+									setResult(null);
+								}}
+							/>
+						))}
+					</div>
+				</section>
 
 				{/* Tabs */}
-				<div className="flex gap-1 mb-6 bg-gray-900/50 p-1 rounded-lg border border-gray-800">
+				<nav className="mb-6 grid grid-cols-2 gap-1 rounded-lg border border-gray-800 bg-gray-900/50 p-1 md:grid-cols-6" aria-label="Admin panel sections">
 					{TABS.map(t => (
-						<button key={t.id} type="button"
+						<button
+							key={t.id}
+							type="button"
 							onClick={() => { setTab(t.id); setResult(null); }}
-							className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${tab === t.id
+							className={`inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300 ${tab === t.id
 								? 'bg-amber-600/20 text-amber-300 border border-amber-600/40'
-								: 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'}`}>
-							<span className="mr-1">{t.icon}</span> {t.label}
+								: 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'}`}
+						>
+							<t.icon className="h-4 w-4" aria-hidden="true" />
+							{t.label}
 						</button>
 					))}
-				</div>
+				</nav>
 
 				{/* Result Banner */}
 				{result && (
 					<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-						className={`mb-4 p-3 rounded-lg border text-sm ${result.success
+						className={`mb-4 flex items-start gap-2 rounded-lg border p-3 text-sm ${result.success
 							? 'bg-green-900/30 border-green-600/40 text-green-300'
 							: 'bg-red-900/30 border-red-600/40 text-red-300'}`}>
-						{result.success ? '✓' : '✗'} {result.message}
+						{result.success
+							? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+							: <XCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />}
+						<span>{result.message}</span>
 					</motion.div>
 				)}
 
@@ -473,23 +737,33 @@ export default function AdminPanel() {
 						</div>
 
 						<h3 className="text-amber-300 font-bold text-sm uppercase tracking-wider mt-6 mb-2">Supply Counters</h3>
-						<div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-							{supply.map(s => (
-								<div key={s.rarity} className="bg-gray-900/60 rounded-lg p-3 border border-gray-700/50">
-									<div className="text-gray-400 text-xs uppercase">{s.rarity}</div>
-									<div className="text-white font-bold text-lg">{s.minted.toLocaleString()}</div>
-									<div className="text-gray-500 text-xs">/ {s.cap.toLocaleString()} cap</div>
-									{s.cap > 0 && (
-										<div className="mt-1 h-1 bg-gray-800 rounded-full overflow-hidden">
-											<div className="h-full bg-amber-500 rounded-full" style={{ width: `${Math.min(100, (s.minted / s.cap) * 100)}%` }} />
-										</div>
-									)}
-								</div>
-							))}
-						</div>
+						{supply.length > 0 ? (
+							<div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+								{supply.map(s => (
+									<div key={s.rarity} className="bg-gray-900/60 rounded-lg p-3 border border-gray-700/50">
+										<div className="text-gray-400 text-xs uppercase">{s.rarity}</div>
+										<div className="text-white font-bold text-lg">{s.minted.toLocaleString()}</div>
+										<div className="text-gray-500 text-xs">/ {s.cap.toLocaleString()} cap</div>
+										{s.cap > 0 && (
+											<div className="mt-1 h-1 bg-gray-800 rounded-full overflow-hidden">
+												<div className="h-full bg-amber-500 rounded-full" style={{ width: `${Math.min(100, (s.minted / s.cap) * 100)}%` }} />
+											</div>
+										)}
+									</div>
+								))}
+							</div>
+						) : (
+							<div className="rounded-lg border border-dashed border-gray-700 bg-gray-900/40 p-4 text-sm text-gray-500">
+								No supply counters yet. Broadcast Genesis, then refresh state.
+							</div>
+						)}
 
-						<button type="button" onClick={refreshState}
-							className="mt-4 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm border border-gray-600 transition-colors">
+						<button
+							type="button"
+							onClick={refreshState}
+							className="mt-4 inline-flex items-center gap-2 rounded-lg border border-gray-600 bg-gray-800 px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300"
+						>
+							<RefreshCw className="h-4 w-4" aria-hidden="true" />
 							Refresh State
 						</button>
 					</div>
@@ -501,8 +775,7 @@ export default function AdminPanel() {
 						<div className="bg-gray-900/60 rounded-lg p-6 border border-gray-700/50">
 							<h3 className="text-amber-300 font-bold text-lg mb-2">Broadcast Genesis</h3>
 							<p className="text-gray-400 text-sm mb-4">
-								One-time operation. Sets supply caps (common: 1,800 / rare: 1,250 / epic: 750 / mythic: 500 per card).
-								Includes WASM engine hash for anti-cheat verification.
+								One-time operation. Sets the collection id, supply caps, reward caps, and WASM engine hash.
 							</p>
 							{hasGenesis ? (
 								<div className="text-green-400 text-sm p-3 bg-green-900/20 rounded-lg border border-green-700/30">
@@ -525,8 +798,8 @@ export default function AdminPanel() {
 						<div className="bg-gray-900/60 rounded-lg p-6 border border-gray-700/50">
 							<h3 className="text-amber-300 font-bold text-lg mb-2">Batch Mint All Cards</h3>
 							<p className="text-gray-400 text-sm mb-4">
-								Mints all {collectibleCount} collectible cards in batches of 50.
-								Each batch requires a Hive Keychain signature ({Math.ceil(collectibleCount / 50)} signatures total).
+								Mints all {collectibleCount.toLocaleString()} collectible cards in batches of {ADMIN_BATCH_SIZE}.
+								Each batch requires one Hive Keychain approval ({batchCount} approvals total).
 							</p>
 
 							{!hasGenesis && (
@@ -537,6 +810,11 @@ export default function AdminPanel() {
 							{isSealed && (
 								<div className="text-red-400 text-sm p-3 bg-red-900/20 rounded-lg border border-red-700/30 mb-4">
 									Protocol is sealed. No more minting is possible.
+								</div>
+							)}
+							{hasGenesis && !isSealed && mintedCardTotal > 0 && !mintComplete && (
+								<div className="mb-4 rounded-lg border border-amber-700/30 bg-amber-900/20 p-3 text-sm text-amber-200">
+									{mintedCardTotal.toLocaleString()} cards are already recorded. Resume minting to complete the remaining supply.
 								</div>
 							)}
 
@@ -556,7 +834,7 @@ export default function AdminPanel() {
 							<motion.button type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
 								onClick={handleBatchMint} disabled={loading || !hasGenesis || isSealed || mintProgress.running}
 								className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold rounded-lg transition-colors">
-								{mintProgress.running ? `Minting... (${mintProgress.done}/${mintProgress.total})` : `Mint All ${collectibleCount} Cards`}
+								{mintProgress.running ? `Minting... (${mintProgress.done}/${mintProgress.total})` : `Mint All ${collectibleCount.toLocaleString()} Cards`}
 							</motion.button>
 						</div>
 					</div>
@@ -581,11 +859,15 @@ export default function AdminPanel() {
 								<div className="text-red-400 text-sm p-3 bg-red-900/20 rounded-lg border border-red-700/30">
 									Genesis must be broadcast first.
 								</div>
+							) : !mintComplete ? (
+								<div className="text-amber-200 text-sm p-3 bg-amber-900/20 rounded-lg border border-amber-700/30">
+									Mint all collectible cards before sealing. Current mint count: {Math.min(mintedCardTotal, collectibleCount).toLocaleString()} / {collectibleCount.toLocaleString()}.
+								</div>
 							) : (
 								<motion.button type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-									onClick={handleSeal} disabled={loading}
+									onClick={handleSeal} disabled={loading || !mintComplete}
 									className="px-6 py-3 bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white font-bold rounded-lg transition-colors border border-red-500">
-									{loading ? 'Sealing...' : 'SEAL PROTOCOL PERMANENTLY'}
+									{loading ? 'Sealing...' : 'Seal Protocol Permanently'}
 								</motion.button>
 							)}
 						</div>
@@ -599,21 +881,38 @@ export default function AdminPanel() {
 						<div className="bg-gray-900/60 rounded-lg p-6 border border-gray-700/50">
 							<h3 className="text-amber-300 font-bold text-lg mb-2">Mint Pack NFTs</h3>
 							<p className="text-gray-400 text-sm mb-4">Create sealed packs into admin inventory. Packs must be distributed separately.</p>
-							<div className="flex gap-3 mb-4">
-								<select id="pack-type-select" className="bg-gray-800 text-white px-3 py-2 rounded-lg border border-gray-600">
-									{ADMIN_MINTABLE_PACKS.map((pack) => (
-										<option key={pack.key} value={pack.key}>{pack.name.replace(' Pack', '')} ({pack.cardCount} cards)</option>
-									))}
-								</select>
-								<input id="pack-qty-input" type="number" min="1" max="10" defaultValue="1"
-									className="bg-gray-800 text-white px-3 py-2 rounded-lg border border-gray-600 w-20" />
+							<div className="mb-4 grid gap-3 md:grid-cols-[1fr_120px_auto]">
+								<label className="grid gap-1 text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
+									Pack type
+									<select
+										value={packType}
+										onChange={(event) => setPackType(event.target.value)}
+										className="rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-sm font-medium normal-case tracking-normal text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300"
+									>
+										{ADMIN_MINTABLE_PACKS.map((pack) => (
+											<option key={pack.key} value={pack.key}>{pack.name.replace(' Pack', '')} ({pack.cardCount} cards)</option>
+										))}
+									</select>
+								</label>
+								<label className="grid gap-1 text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
+									Quantity
+									<input
+										type="number"
+										min="1"
+										max="10"
+										value={packQuantity}
+										onChange={(event) => setPackQuantity(Number.parseInt(event.target.value, 10) || 0)}
+										className="rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-sm font-medium normal-case tracking-normal text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300"
+									/>
+								</label>
 								<motion.button type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
 									onClick={handleMintPacks} disabled={loading || !isSealed}
-									className="px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold rounded-lg transition-colors">
+									className="inline-flex items-center justify-center gap-2 rounded-lg bg-amber-600 px-4 py-2 font-bold text-white transition-colors hover:bg-amber-500 disabled:opacity-50">
+									<Package className="h-4 w-4" aria-hidden="true" />
 									{loading ? 'Minting...' : 'Mint Packs'}
 								</motion.button>
 							</div>
-							{!isSealed && <p className="text-gray-500 text-xs">Pack minting requires a sealed protocol.</p>}
+							{!isSealed && <p className="text-gray-500 text-xs">Pack minting unlocks after the protocol is sealed.</p>}
 						</div>
 
 						{/* Distribute Packs */}
@@ -648,7 +947,8 @@ export default function AdminPanel() {
 							</p>
 							<motion.button type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
 								onClick={handleSync} disabled={loading}
-								className="px-6 py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-lg transition-colors">
+								className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-bold text-white transition-colors hover:bg-blue-500 disabled:opacity-50">
+								<RefreshCw className="h-4 w-4" aria-hidden="true" />
 								{loading ? 'Syncing...' : 'Force Full Sync'}
 							</motion.button>
 						</div>
@@ -678,25 +978,53 @@ function StatCard({ label, value, color }: { label: string; value: string; color
 	);
 }
 
+function AdminConsumerRow({ label, value, ok }: { label: string; value: string; ok: boolean }) {
+	return (
+		<div className="flex items-center justify-between gap-3 rounded-md border border-gray-800 bg-gray-950/50 px-3 py-2">
+			<span className="text-gray-500">{label}</span>
+			<span className={`inline-flex items-center gap-1.5 font-semibold ${ok ? 'text-emerald-300' : 'text-amber-300'}`}>
+				{ok
+					? <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+					: <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />}
+				{value}
+			</span>
+		</div>
+	);
+}
+
 // ── Ceremony Step Sub-Component ──
 
-function CeremonyStep({ num, label, done, active, help }: {
-	num: number; label: string; done: boolean; active: boolean; help: string;
+function CeremonyStep({
+	step,
+	onSelect,
+}: {
+	step: CeremonyStepDefinition;
+	onSelect: () => void;
 }) {
+	const complete = step.status === 'complete';
+	const current = step.status === 'current';
+	const locked = step.status === 'locked';
 	return (
-		<div className={`rounded-lg p-2 border ${done
-			? 'bg-green-900/20 border-green-700/40'
-			: active
-				? 'bg-amber-900/20 border-amber-600/40 ring-1 ring-amber-500/30'
-				: 'bg-gray-900/40 border-gray-700/30 opacity-50'}`}>
+		<button
+			type="button"
+			onClick={onSelect}
+			disabled={locked}
+			className={`rounded-lg border p-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300 ${complete
+				? 'bg-green-900/20 border-green-700/40'
+				: current
+					? 'bg-amber-900/20 border-amber-600/40 ring-1 ring-amber-500/30 hover:bg-amber-900/30'
+					: 'bg-gray-900/40 border-gray-700/30 opacity-55'}`}
+		>
 			<div className="flex items-center gap-1.5 mb-1">
-				<span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${done
-					? 'bg-green-600 text-white' : active ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-400'}`}>
-					{done ? '✓' : num}
+				<span className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${complete
+					? 'bg-green-600 text-white' : current ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-400'}`}>
+					{complete ? <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> : step.num}
 				</span>
-				<span className={`font-bold ${done ? 'text-green-400' : active ? 'text-amber-300' : 'text-gray-500'}`}>{label}</span>
+				<span className={`font-bold ${complete ? 'text-green-400' : current ? 'text-amber-300' : 'text-gray-500'}`}>{step.label}</span>
+				{locked && <LockKeyhole className="ml-auto h-3.5 w-3.5 text-gray-500" aria-hidden="true" />}
 			</div>
-			<p className="text-gray-400 leading-tight">{help}</p>
-		</div>
+			<div className="mb-1 font-mono text-[10px] uppercase tracking-[0.16em] text-gray-500">{step.metric}</div>
+			<p className="text-gray-400 leading-tight">{step.help}</p>
+		</button>
 	);
 }

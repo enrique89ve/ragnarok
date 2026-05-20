@@ -36,6 +36,10 @@ function getErrorMessage(error: unknown): string {
   return 'Internal Server Error';
 }
 
+type ListenError = Error & {
+  readonly code?: string;
+};
+
 app.use(helmet({
   contentSecurityPolicy: isDev ? false : undefined,
 }));
@@ -59,6 +63,27 @@ const adminBroadcastLimiter = rateLimit({
   message: { success: false, error: 'Admin broadcast rate limit exceeded' },
 });
 app.use('/api/admin/broadcast', adminBroadcastLimiter);
+app.use('/api/admin/multisig', adminBroadcastLimiter);
+
+const adminSessionLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: isDev ? 30 : 8,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { success: false, error: 'Admin session rate limit exceeded' },
+});
+app.use('/api/admin/session', adminSessionLimiter);
+
+// Status and health checks should be frequent but not abused.
+const statusLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: isDev ? 120 : 60,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { success: false, error: 'Status check rate limit exceeded' },
+});
+app.use('/api/health', statusLimiter);
+app.use('/api/chain/status', statusLimiter);
 
 // Chain reads are public, but some routes can trigger a bounded Hive scan when
 // the account is unknown. Keep those below normal UI retry/refresh rates.
@@ -214,7 +239,30 @@ app.use('/api/testnet/rune', (_req, res) => {
         throw err;
       }
     } else {
-      log('admin operator signer not configured — /api/admin/broadcast will return 503');
+      log('admin operator signer not configured — admin broadcast/multisig routes will return 503');
+    }
+  }
+
+  {
+    const {
+      shouldValidateIndexCheckpointPublisherConfig,
+      validateIndexCheckpointPublisherConfig,
+    } = await import('./services/indexCheckpointPublisher');
+    if (shouldValidateIndexCheckpointPublisherConfig()) {
+      const { getRagnarokServerRuntimeConfig } = await import('./services/runtimeConfig');
+      try {
+        const signer = await validateIndexCheckpointPublisherConfig(getRagnarokServerRuntimeConfig());
+        const { isIndexCheckpointDryRun } = await import('./services/indexCheckpointPublisher');
+        const mode = signer.enabled
+          ? (isIndexCheckpointDryRun() ? 'enabled dry-run' : 'enabled')
+          : 'configured but disabled';
+        log(`index checkpoint publisher ${mode}: ${signer.account} (${signer.publicKey.slice(0, 12)}…)`);
+      } catch (err) {
+        console.error('[boot] index checkpoint publisher config invalid:', err instanceof Error ? err.message : err);
+        throw err;
+      }
+    } else {
+      log('index checkpoint publisher disabled — no checkpoint signer configured');
     }
   }
 
@@ -238,9 +286,15 @@ app.use('/api/testnet/rune', (_req, res) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client
+  // Serve both the API and client from one HTTP server.
   const port = parseInt(process.env.PORT || '5000', 10);
+  server.on('error', (error: ListenError) => {
+    if (error.code === 'EADDRINUSE') {
+      log(`port ${port} is already in use; stop the existing server or run with PORT=<free-port> npm run dev:testnet`);
+      process.exit(1);
+    }
+    throw error;
+  });
   server.listen(port, "0.0.0.0", () => {
     log(`serving on port ${port}`);
   });

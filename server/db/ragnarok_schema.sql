@@ -31,7 +31,8 @@ CREATE TABLE IF NOT EXISTS cards (
     parent_instance_dna TEXT,
     generation INTEGER DEFAULT 0,
     replica_count INTEGER DEFAULT 0,
-    merged_from TEXT[] -- Array of UIDs
+    merged_from TEXT[], -- Array of UIDs
+    acquisition JSONB
 );
 
 -- 3. Packs (Pack Assets)
@@ -45,7 +46,8 @@ CREATE TABLE IF NOT EXISTS packs (
     mint_block_num INTEGER,
     last_transfer_block INTEGER,
     card_count INTEGER DEFAULT 5,
-    edition VARCHAR(32) DEFAULT 'alpha'
+    edition VARCHAR(32) DEFAULT 'alpha',
+    acquisition JSONB
 );
 
 -- 4. Rune Economy Ledger

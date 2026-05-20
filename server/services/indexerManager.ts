@@ -6,26 +6,31 @@
  */
 
 import { Worker } from 'worker_threads';
-import * as path from 'path';
 import { importState } from './chainState';
 
 let worker: Worker | null = null;
 
+function getIndexerWorkerBootstrap(): string {
+  const workerUrl = new URL('./indexer.worker.ts', import.meta.url).href;
+  const encodedWorkerUrl = JSON.stringify(workerUrl);
+  return `(async () => {
+    const { tsImport } = await import('tsx/esm/api');
+    await tsImport(${encodedWorkerUrl}, { parentURL: ${encodedWorkerUrl} });
+  })().catch((err) => {
+    console.error('[IndexerWorker] Bootstrap error:', err);
+    process.exit(1);
+  });`;
+}
+
 export function startIndexerWorker(): void {
   if (worker) return;
 
-  const workerPath = path.resolve(__dirname, 'indexer.worker.ts');
-  
   // Create the worker
-  // Note: We use ts-node or similar in dev, but in prod it might be .js
-  // For simplicity here, we assume the environment can handle .ts 
-  // (the server usually runs with ts-node or vite-node)
-  worker = new Worker(workerPath, {
+  worker = new Worker(getIndexerWorkerBootstrap(), {
+    eval: true,
     workerData: {
       POLL_INTERVAL_MS: 10_000
     },
-    // Required to allow the worker to import TypeScript files if we are running in ts-node
-    execArgv: process.execArgv.includes('--loader') ? process.execArgv : [...process.execArgv, '--loader', 'ts-node/esm']
   });
 
   worker.on('message', (msg) => {

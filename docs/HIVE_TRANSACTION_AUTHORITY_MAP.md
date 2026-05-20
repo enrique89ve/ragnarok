@@ -139,18 +139,18 @@ destroy an NFT, or mutate admin supply.
 | `card_transfer` | NFT owner | Active custom_json | Live through bridge/send/trade. |
 | `burn` | NFT owner | Active custom_json | Live from Collection disenchant/burn flow. |
 | `pack_purchase` | buyer | Active `requestBroadcast`: HBD transfer + custom_json | Live. Replay validates companion payment. |
-| `pack_mint` | admin | Active custom_json | Admin/operator path. |
-| `pack_distribute` | admin | Active custom_json | Admin/operator path. |
-| `pack_transfer` | admin | Active custom_json in code | Admin-only in replay. |
+| `pack_mint` | admin + operator | Active multisig transaction | Admin panel uses `/api/admin/multisig/*`; Hive requires both signatures. |
+| `pack_distribute` | admin + operator | Active multisig transaction: transfer + custom_json | Admin panel adds the atomic companion transfer before server co-sign. |
+| `pack_transfer` | admin + operator | Active multisig transaction: transfer + custom_json | Admin-only in replay. |
 | `pack_burn` | pack owner | Active custom_json | Live from DUAT pack ceremony / bridge. Each burn now requires an explicit Open pack action. |
 | `card_replicate` | card owner | Active custom_json in code | Method exists. |
 | `card_merge` | card owner | Active custom_json in code | Method exists. |
 | `market_buy` | buyer | Active custom_json in code | Method exists; replay checks companion payment. |
 | `market_accept` | NFT owner | Active custom_json in code | Method exists; replay checks companion payment from offer buyer. |
-| `duat_airdrop_finalize` | admin | Active custom_json in code | Admin-only after claim window. |
-| `genesis` | admin | Active custom_json | Admin genesis ceremony path. |
-| `seal` | admin | Active custom_json | Admin genesis ceremony path. |
-| `mint_batch` | admin | Active custom_json | Admin pre-seal mint path. |
+| `duat_airdrop_finalize` | admin + operator | Active multisig transaction | Admin-only after claim window. |
+| `genesis` | admin + operator | Active multisig transaction | Admin genesis ceremony path. |
+| `seal` | admin + operator | Active multisig transaction | Admin genesis ceremony path. |
+| `mint_batch` | admin + operator | Active multisig transaction | Admin pre-seal mint path. |
 
 ## Server-Side Hive Responsibilities
 
@@ -178,14 +178,19 @@ they matter because NFTLox is the custody layer for genesis NFTs.
 Admin automation should use protocol-specific adapters, not raw `HiveSync`
 calls from UI surfaces:
 
-- `ragnarokAdminAdapter` broadcasts Ragnarok replay ops through
-  `/api/admin/broadcast` with `protocol: "ragnarok"`.
+- `ragnarokAdminAdapter` prepares Ragnarok replay ops through
+  `/api/admin/multisig/prepare`, signs the returned transaction with Keychain
+  Active authority, then submits it to `/api/admin/multisig/broadcast`.
 - `nftLoxAdminAdapter` broadcasts NFTLox birth/custody ops through the same
   route with `protocol: "nftlox"`.
-- The frontend admin account signs an Active approval; the server operator
-  signs the final `custom_json` with `RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY`.
-  The signed approval includes the protocol name so approvals cannot be reused
-  across Ragnarok and NFTLox.
+- Panel login is off-chain: the frontend admin account signs a custom_json-shaped
+  login payload with Posting authority. The server verifies the signature and
+  does not broadcast the payload.
+- Admin broadcasts are on-chain native multisig: the prepared transaction uses
+  `required_auths: [admin, operator]`. The frontend admin signs the exact Hive
+  transaction with Active authority; the server verifies that signature, adds
+  the operator Active signature from `RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY`, and
+  broadcasts.
 
 ## Remaining Ambiguities
 
