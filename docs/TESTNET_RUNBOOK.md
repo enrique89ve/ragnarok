@@ -138,6 +138,41 @@ recent ceremony/session events.
    sealed RUNE pack from `/#/packs`. Confirm spend, rejection/failure, indexing,
    confirmed, and reveal states are distinguishable from DUAT and HBD packs.
 
+## Smoke Test — RUNE Rewards and Pack Flow
+
+Run once per QA reset epoch after the configuration gate passes. This smoke uses
+only replay-derived RUNE and the public `/api/chain/*` read model; do not edit a
+wallet balance, seed a parallel API, or use `/api/testnet/rune/*`.
+
+1. Confirm `GET /api/health` reports `runtime.protocolId: "rk_game_testnet"`
+   and the active `runtime.resetEpoch`.
+2. Claim one daily quest slot. Record the `custom_json` id, transaction id,
+   `daily_quest:S01:<account>:<ymd_utc>:<slot>` source key, and the
+   `/api/chain/rune/ledger?account=<account>&sourceType=daily_quest_claim`
+   entry.
+3. Claim the same daily quest slot again. Confirm replay ignores or no-ops the
+   duplicate and the account balance does not increase.
+4. Clear a campaign mission for the first time, then replay the same mission.
+   Confirm only the first clear creates a
+   `campaign:S01:<account>:<campaign_id>:<mission_id>` ledger credit.
+5. Exchange RUNE for a standard pack from `/#/marketplace?tab=packs`. Confirm a
+   `rune_exchange` debit exists with a
+   `pack:S01:<account>:<trx_id>:<pack_type>:<quantity>` source key.
+6. Open the sealed RUNE pack from `/#/packs`. Confirm the pack burn removes the
+   sealed pack and produces replay-visible card results tied to the burn
+   transaction.
+7. Attempt a RUNE pack exchange from an account with insufficient balance.
+   Confirm the failure is reportable and no pack or debit ledger entry appears.
+8. Submit or replay ranked result-only evidence without a prior dual-anchored
+   `match_anchor`. Confirm it is rejected and no `p2p_ranked` RUNE ledger entry
+   appears.
+9. Compare `/api/chain/player/<account>/rune?seasonId=S01` with
+   `/api/chain/rune/ledger?seasonId=S01&account=<account>`: credits minus debits
+   must equal `runeBalance`, and `drift` must be `0`.
+10. Export ceremony evidence for the daily quest, campaign reward, RUNE
+    exchange, and RUNE pack opening. The JSON should include the account,
+    `custom_json` id, source keys, reset epoch, and relevant ledger entries.
+
 ## Local/Mainnet Profile Commands
 
 Local private development uses the default local profile:

@@ -53,6 +53,7 @@ export { verifyPoW, deriveChallenge, POW_CONFIG } from './pow';
 export type { PoWConfig, PoWResult } from './pow';
 export * from './types';
 export * from './rewardCatalog';
+export * from './runeSeason0Smoke';
 export * from './acquisitionProvenance';
 export * from './playerCollection';
 export * from './deckVerification';

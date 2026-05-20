@@ -36,6 +36,11 @@ import {
 	computeCompactMatchResultCommitmentHash,
 } from './matchResultCommitment';
 import { buildAdminApprovalMessage } from './adminMultisig';
+import {
+	buildRuneSeason0SmokeEvidence,
+	isRuneSeason0SmokeEvidencePassing,
+	type RuneSeason0SmokeOperation,
+} from './runeSeason0Smoke';
 import { deriveChallenge, POW_CONFIG } from './pow';
 import { RAGNAROK_RUNTIME_CONFIGS } from '../runtimeConfig';
 
@@ -447,6 +452,54 @@ async function seedGenesis(state: MemoryState, deps: ProtocolCoreDeps) {
 			reward_supply: { common: 0, rare: 0, epic: 150, mythic: 50 },
 		},
 	}, { broadcaster: 'ragnarok', usedActiveAuth: true }), defaultCtx, deps);
+}
+
+function makeCampaignSmokePayload(input: {
+	readonly campaignId: string;
+	readonly missionId: string;
+	readonly nonce: number;
+	readonly rulesetHash: string;
+	readonly turnCount?: number;
+}): Record<string, unknown> {
+	return {
+		v: 1,
+		cid: input.campaignId,
+		m: input.missionId,
+		d: 'normal',
+		n: input.nonce,
+		rid: `season0-${input.missionId}-${input.nonce}`,
+		lst: 1736200000000,
+		rh: input.rulesetHash,
+		tr: `season0-transcript-${input.nonce}`,
+		tc: `ipfs://season0-${input.nonce}`,
+		fh: `season0-final-${input.nonce}`,
+		t: input.turnCount ?? 9,
+	};
+}
+
+async function buildSmokeAccountSummary(state: MemoryState, account: string) {
+	const credits = await state.getRuneLedgerTotal({
+		seasonId: 'S01',
+		account,
+		direction: 'credit',
+	});
+	const debits = await state.getRuneLedgerTotal({
+		seasonId: 'S01',
+		account,
+		direction: 'debit',
+	});
+	const balance = (await state.getTokenBalance(account)).RUNE;
+	const entries = [...state.runeLedger.values()].filter(entry => entry.account === account);
+
+	return {
+		account,
+		runeBalance: balance,
+		credits,
+		debits,
+		drift: balance - (credits - debits),
+		lastBlock: Math.max(0, ...entries.map(entry => entry.blockNum)),
+		indexed: true,
+	};
 }
 
 // ============================================================
@@ -1960,6 +2013,229 @@ describe('Protocol Core: Replay Traces', () => {
 			['transfer', { from: 'ragnarok', to, amount: '0.001 HIVE', memo: `ragnarok:test` }],
 		]);
 	}
+
+	it('runs the QA Season 0 RUNE reward pack smoke path with reportable ledger evidence', async () => {
+		await seedSealedGenesis(state, deps);
+
+		const campaignId = 'test-campaign';
+		const rulesetHash = 'season0-smoke-rules';
+		const smokeDeps: ProtocolCoreDeps = {
+			...deps,
+			campaigns: {
+				getRegistryHash: () => rulesetHash,
+				getCampaignId: () => campaignId,
+				getMission: missionId => ({
+					id: missionId,
+					campaignId,
+					chapterId: 'norse',
+					prerequisiteIds: [],
+					allowedDifficulties: ['normal', 'heroic', 'mythic'],
+					starThresholds: { threeStar: 12, twoStar: 20 },
+				}),
+			},
+		};
+		const protocolId = smokeDeps.runtime.protocolId;
+		const operations: RuneSeason0SmokeOperation[] = [];
+
+		const dailySourceKey = 'daily_quest:S01:alice:2026-05-20:0';
+		const daily = await applyOp(makeOp('daily_quest_claim', {
+			ymd_utc: '2026-05-20',
+			slot: 0,
+			quest_type: 'win_games',
+		}, {
+			broadcaster: 'alice',
+			trxId: 'season0-daily-1',
+			blockNum: 2100,
+			timestamp: Date.UTC(2026, 4, 20, 12),
+		}), defaultCtx, smokeDeps);
+		expect(daily.status).toBe('applied');
+		operations.push({
+			action: 'daily_quest_claim',
+			customJsonId: protocolId,
+			status: 'applied',
+			trxId: 'season0-daily-1',
+			sourceKeys: [dailySourceKey],
+		});
+
+		const dailyDuplicate = await applyOp(makeOp('daily_quest_claim', {
+			ymd_utc: '2026-05-20',
+			slot: 0,
+			quest_type: 'win_games',
+		}, {
+			broadcaster: 'alice',
+			trxId: 'season0-daily-duplicate',
+			blockNum: 2101,
+			timestamp: Date.UTC(2026, 4, 20, 12),
+		}), defaultCtx, smokeDeps);
+		expect(dailyDuplicate.status).toBe('ignored');
+		operations.push({
+			action: 'daily_quest_claim',
+			customJsonId: protocolId,
+			status: 'ignored',
+			trxId: 'season0-daily-duplicate',
+			sourceKeys: [dailySourceKey],
+		});
+
+		const campaignSourceKey = `campaign:S01:alice:${campaignId}:norse-1`;
+		const campaignFirstClear = await applyOp(makeOp('campaign_result', makeCampaignSmokePayload({
+			campaignId,
+			missionId: 'norse-1',
+			nonce: 1,
+			rulesetHash,
+		}), {
+			broadcaster: 'alice',
+			trxId: 'season0-campaign-1',
+			blockNum: 2110,
+		}), defaultCtx, smokeDeps);
+		expect(campaignFirstClear.status).toBe('applied');
+		operations.push({
+			action: 'campaign_result',
+			customJsonId: protocolId,
+			status: 'applied',
+			trxId: 'season0-campaign-1',
+			sourceKeys: [campaignSourceKey],
+		});
+
+		const campaignReplay = await applyOp(makeOp('campaign_result', makeCampaignSmokePayload({
+			campaignId,
+			missionId: 'norse-1',
+			nonce: 2,
+			rulesetHash,
+			turnCount: 7,
+		}), {
+			broadcaster: 'alice',
+			trxId: 'season0-campaign-replay',
+			blockNum: 2111,
+		}), defaultCtx, smokeDeps);
+		expect(campaignReplay.status).toBe('applied');
+		operations.push({
+			action: 'campaign_result',
+			customJsonId: protocolId,
+			status: 'applied',
+			trxId: 'season0-campaign-replay',
+			sourceKeys: [campaignSourceKey],
+		});
+
+		const exchangeSourceKey = 'pack:S01:alice:season0-rune-1:standard:1';
+		const exchange = await applyOp(makeOp('rune_exchange', {
+			pack_type: 'standard',
+			quantity: 1,
+		}, {
+			broadcaster: 'alice',
+			trxId: 'season0-rune-1',
+			blockNum: 2120,
+		}), defaultCtx, smokeDeps);
+		expect(exchange.status).toBe('applied');
+		operations.push({
+			action: 'rune_exchange',
+			customJsonId: protocolId,
+			status: 'applied',
+			trxId: 'season0-rune-1',
+			sourceKeys: [exchangeSourceKey],
+		});
+
+		const packUid = 'pack_season0-rune-1:rune:0';
+		expect(state.packs.get(packUid)).toMatchObject({
+			owner: 'alice',
+			packType: 'standard',
+			sealed: true,
+		});
+		const burn = await applyOp(makeOp('pack_burn', {
+			pack_uid: packUid,
+			salt: 'season0-smoke-salt',
+		}, {
+			broadcaster: 'alice',
+			trxId: 'season0-pack-burn',
+			blockNum: 2130,
+		}), defaultCtx, smokeDeps);
+		expect(burn.status).toBe('applied');
+		operations.push({
+			action: 'pack_burn',
+			customJsonId: protocolId,
+			status: 'applied',
+			trxId: 'season0-pack-burn',
+		});
+
+		const lowBalanceExchange = await applyOp(makeOp('rune_exchange', {
+			pack_type: 'standard',
+			quantity: 1,
+		}, {
+			broadcaster: 'bob',
+			trxId: 'season0-bob-low-balance',
+			blockNum: 2140,
+		}), defaultCtx, smokeDeps);
+		expect(lowBalanceExchange.status).toBe('rejected');
+		const lowBalanceReason = (lowBalanceExchange as { reason: string }).reason;
+		operations.push({
+			action: 'rune_exchange',
+			customJsonId: protocolId,
+			status: 'rejected',
+			trxId: 'season0-bob-low-balance',
+			reason: lowBalanceReason,
+		});
+
+		const p2pResultOnly = await applyOp(makeOp('match_result', await makeRankedMatchPayload({
+			matchId: 'season0-result-only',
+			nonce: 77,
+		}), {
+			broadcaster: 'alice',
+			trxId: 'season0-result-only',
+			blockNum: 2150,
+		}), defaultCtx, smokeDeps);
+		expect(p2pResultOnly.status).toBe('rejected');
+		const p2pReason = (p2pResultOnly as { reason: string }).reason;
+		expect(p2pReason).toContain('match_anchor');
+		operations.push({
+			action: 'match_result',
+			customJsonId: protocolId,
+			status: 'rejected',
+			trxId: 'season0-result-only',
+			reason: p2pReason,
+		});
+
+		const revealedCardUids = [...state.cards.values()]
+			.filter(card => card.owner === 'alice' && card.mintTrxId === 'season0-pack-burn')
+			.map(card => card.uid);
+		expect(revealedCardUids).toHaveLength(PACK_SIZES.standard);
+		expect(state.packs.has(packUid)).toBe(false);
+		expect((await state.getTokenBalance('alice')).RUNE).toBe(2);
+		expect((await state.getRuneLedgerEntries({
+			seasonId: 'S01',
+			sourceType: 'p2p_ranked',
+			account: 'alice',
+		}))).toHaveLength(0);
+
+		const evidence = buildRuneSeason0SmokeEvidence({
+			account: 'alice',
+			runtime: smokeDeps.runtime,
+			apiSummary: await buildSmokeAccountSummary(state, 'alice'),
+			ledgerEntries: [...state.runeLedger.values()],
+			operations,
+			openedPackUids: [packUid],
+			revealedCardUids,
+		});
+
+		expect(isRuneSeason0SmokeEvidencePassing(evidence)).toBe(true);
+		expect(evidence.runtime.resetEpoch).toBe(smokeDeps.runtime.resetEpoch);
+		expect(evidence.customJsonIds).toEqual([protocolId]);
+		expect(evidence.sourceKeys).toEqual(expect.arrayContaining([
+			dailySourceKey,
+			campaignSourceKey,
+			exchangeSourceKey,
+		]));
+		expect(evidence.apiSummary).toMatchObject({
+			account: 'alice',
+			runeBalance: 2,
+			credits: 4,
+			debits: 2,
+			drift: 0,
+		});
+		expect(evidence.ledgerEntries.map(entry => entry.sourceType)).toEqual([
+			'daily_quest_claim',
+			'campaign_first_clear',
+			'rune_exchange',
+		]);
+	});
 
 		describe('rune_exchange', () => {
 		it('spends RUNE and delegates sealed pack fulfillment to the adapter', async () => {
