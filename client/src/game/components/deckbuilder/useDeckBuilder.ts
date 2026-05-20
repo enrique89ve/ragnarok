@@ -5,6 +5,7 @@
  */
 
 import { useState, useMemo, useCallback } from 'react';
+import { debug } from '../../config/debugConfig';
 import { CardData } from '../../types';
 import { cardRegistry } from '../../data/cardRegistry';
 import { useHeroDeckStore, validateHeroDeck, HeroDeck, PieceType } from '../../stores/heroDeckStore';
@@ -12,6 +13,8 @@ import { useAudio } from '../../../lib/stores/useAudio';
 import { getNFTBridge } from '../../nft';
 import { useNFTCollection } from '../../nft/hooks';
 import { isHeroDeckForHero, normalizeHeroClass } from '../../deck/heroDeckRules';
+import { verifyDeckClaims } from '../../../data/chainAPI';
+import { buildClientDeckClaimsFromCardIds } from '../../protocol/playerCollectionAdapter';
 import {
   DECK_SIZE,
   SortOption,
@@ -68,7 +71,7 @@ export interface UseDeckBuilderReturn {
   isDeckComplete: boolean;
   totalValidCards: number;
   totalFilteredCards: number;
-  
+
   // Setters
   setSearchTerm: (term: string) => void;
   setSortBy: (sort: SortOption) => void;
@@ -76,7 +79,7 @@ export interface UseDeckBuilderReturn {
   setSelectedCard: (card: CardData | null) => void;
   setMinCost: (cost: number | null) => void;
   setMaxCost: (cost: number | null) => void;
-  
+
   // Actions
   handleAddCard: (card: CardData) => void;
   handleRemoveCard: (card: CardData) => void;
@@ -111,18 +114,18 @@ export function useDeckBuilder({
   const [deckCardIds, setDeckCardIds] = useState<number[]>(
     existingDeckCardIds
   );
-  
+
   // Filter state
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('cost');
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [minCost, setMinCost] = useState<number | null>(null);
   const [maxCost, setMaxCost] = useState<number | null>(null);
-  
+
   // UI state
   const [selectedCard, setSelectedCard] = useState<CardData | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
-  
+
   // Derived: Valid cards for this hero's class (artifacts filtered by heroId)
   const validCards = useMemo(() => {
     return filterCardsByClass(cardRegistry, normalizedHeroClass, heroId);
@@ -132,7 +135,7 @@ export function useDeckBuilder({
     if (!nftBridge.isHiveMode()) return validCards;
     return validCards.filter(card => nftBridge.getOwnedCopies(Number(card.id)) > 0);
   }, [validCards, nftBridge, nftCollection]);
-  
+
   // Derived: Filtered and sorted cards
   const filteredAndSortedCards = useMemo(() => {
     const filters: CardFilters = {
@@ -144,7 +147,7 @@ export function useDeckBuilder({
     };
     return filterAndSortCards(visibleCards, filters);
   }, [visibleCards, searchTerm, filterType, sortBy, minCost, maxCost]);
-  
+
   // Derived: Cards grouped by class (hero class first, then neutral)
   const groupedCards = useMemo(() => {
     const classCards: CardData[] = [];
@@ -167,15 +170,15 @@ export function useDeckBuilder({
   const deckCardCounts = useMemo(() => {
     return countCards(deckCardIds);
   }, [deckCardIds]);
-  
+
   // Derived: Deck cards with count info
   const deckCardsWithCounts = useMemo(() => {
     return getDeckCardsWithCounts(deckCardIds, cardRegistry);
   }, [deckCardIds]);
-  
+
   // Derived: Is deck complete?
   const isDeckComplete = deckCardIds.length === DECK_SIZE;
-  
+
   // Check if a card can be added
   const canAddCard = useCallback((cardId: number): boolean => {
     const card = cardRegistry.find(c => Number(c.id) === cardId);
@@ -184,22 +187,22 @@ export function useDeckBuilder({
     const currentCount = deckCardCounts[cardId] ?? 0;
     return currentCount < nftBridge.getOwnedCopies(cardId);
   }, [deckCardIds, deckCardCounts, nftBridge, nftCollection]);
-  
+
   // Add card to deck
   const handleAddCard = useCallback((card: CardData) => {
     const cardId = Number(card.id);
     if (!canAddCard(cardId)) return;
-    
+
     setDeckCardIds(prev => [...prev, cardId]);
     playSoundEffect('card_play');
   }, [canAddCard, playSoundEffect]);
-  
+
   // Remove card from deck
   const handleRemoveCard = useCallback((card: CardData) => {
     const cardId = Number(card.id);
     const index = deckCardIds.indexOf(cardId);
     if (index === -1) return;
-    
+
     setDeckCardIds(prev => {
       const newIds = [...prev];
       newIds.splice(index, 1);
@@ -207,7 +210,7 @@ export function useDeckBuilder({
     });
     playSoundEffect('button_click');
   }, [deckCardIds, playSoundEffect]);
-  
+
   // Auto-fill deck
   const handleAutoFill = useCallback(() => {
     if (deckCardIds.length >= DECK_SIZE) return;
@@ -222,17 +225,19 @@ export function useDeckBuilder({
     });
     playSoundEffect('card_draw');
   }, [deckCardIds.length, visibleCards, nftBridge, nftCollection, playSoundEffect]);
-  
+
+  // Clear deck
+
   // Clear deck
   const handleClearDeck = useCallback(() => {
     setDeckCardIds([]);
     playSoundEffect('button_click');
   }, [playSoundEffect]);
-  
+
   // Save deck
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     setSaveError(null);
-    
+
     const deck: HeroDeck = {
       pieceType,
       heroId,
@@ -245,6 +250,34 @@ export function useDeckBuilder({
       setSaveError(validation.errors.join('\n'));
       playSoundEffect('error');
       return;
+    }
+
+    // Server-side verification for Hive mode
+    if (nftBridge.isHiveMode()) {
+      const username = nftBridge.getUsername();
+      if (username) {
+        try {
+          const parsed = buildClientDeckClaimsFromCardIds(deckCardIds, nftBridge);
+          if (parsed.status === 'rejected') {
+            setSaveError(`Deck verification failed: ${parsed.rejections.map(r => r.detail).join('\n')}`);
+            playSoundEffect('error');
+            return;
+          }
+
+          const result = await verifyDeckClaims(username, parsed.claims);
+          const verified = result.verified;
+
+          if (!verified) {
+            setSaveError("Server verification failed: You may not own all the cards in this deck according to the chain indexer.");
+            playSoundEffect('error');
+            return;
+          }
+        } catch (err) {
+          debug.warn('[useDeckBuilder] Server verification failed or skipped:', err);
+          // Optional: allow save if server is down? Or block?
+          // For now we allow but log.
+        }
+      }
     }
 
     const latestSavedDeck = getDeck(pieceType);
@@ -261,8 +294,8 @@ export function useDeckBuilder({
     playSoundEffect('button_click');
     onSave?.();
     onClose();
-  }, [pieceType, heroId, normalizedHeroClass, deckCardIds, getDeck, setDeck, playSoundEffect, onSave, onClose]);
-  
+  }, [pieceType, heroId, normalizedHeroClass, deckCardIds, getDeck, setDeck, playSoundEffect, onSave, onClose, nftBridge]);
+
   // Mana cost filter toggle
   const handleManaFilter = useCallback((cost: number) => {
     if (minCost === cost && maxCost === (cost === 7 ? 99 : cost)) {
@@ -273,13 +306,13 @@ export function useDeckBuilder({
       setMaxCost(cost === 7 ? 99 : cost);
     }
   }, [minCost, maxCost]);
-  
+
   // Clear mana filter
   const handleClearManaFilter = useCallback(() => {
     setMinCost(null);
     setMaxCost(null);
   }, []);
-  
+
   return {
     // State
     deckCardIds,
@@ -290,7 +323,7 @@ export function useDeckBuilder({
     minCost,
     maxCost,
     saveError,
-    
+
     heroId,
 
     // Derived
@@ -301,7 +334,7 @@ export function useDeckBuilder({
     isDeckComplete,
     totalValidCards: visibleCards.length,
     totalFilteredCards: filteredAndSortedCards.length,
-    
+
     // Setters
     setSearchTerm,
     setSortBy,
@@ -309,7 +342,7 @@ export function useDeckBuilder({
     setSelectedCard,
     setMinCost,
     setMaxCost,
-    
+
     // Actions
     handleAddCard,
     handleRemoveCard,

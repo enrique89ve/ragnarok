@@ -23,6 +23,8 @@ import {
 } from '../services/chainState';
 import { syncAccountNow } from '../services/indexerManager';
 import { isValidHiveUsername } from '../services/hiveAuth';
+import { createValidationMiddleware } from '../middleware/validation';
+import { z } from 'zod';
 import {
 	deleteByMatchId,
 	enqueue,
@@ -45,6 +47,8 @@ import {
 } from '../../shared/protocol-core/deckVerification';
 import runeRoutes from './runeRoutes';
 import eitrRoutes from './eitrRoutes';
+import { getRagnarokServerRuntimeConfig } from '../services/runtimeConfig';
+import { getQaFullCatalogCardsForServerRuntime } from '../services/qaFullCatalogEntitlement';
 
 const MAX_KNOWN_ACCOUNTS = 10_000;
 const MAX_CARD_IDS = 100;
@@ -84,39 +88,30 @@ function validateSeasonId(value: unknown): SeasonIdValidation {
 	return { status: 'valid', value: raw };
 }
 
-function validateDeckVerificationRequest(body: unknown): DeckVerificationRequest {
-	const username = isRecord(body) ? body.username : undefined;
-	const cardIds = isRecord(body) ? body.cardIds : undefined;
-	const claims = isRecord(body) ? body.claims : undefined;
-	const protocolVersion = isRecord(body) ? body.protocolVersion : undefined;
+const DeckVerificationSchema = z.discriminatedUnion('version', [
+	z.object({
+		version: z.literal('legacy').default('legacy'),
+		username: z.string().refine(isValidHiveUsername),
+		cardIds: z.array(z.number()).min(1).max(MAX_CARD_IDS),
+	}),
+	z.object({
+		version: z.literal(2),
+		username: z.string().refine(isValidHiveUsername),
+		claims: z.array(z.any()).optional(), // Detailed parsing happens in parseDeckCardClaims
+		protocolVersion: z.literal(2),
+	}),
+	z.object({
+		version: z.literal('starter-shortcut'),
+		username: z.string().refine(isValidHiveUsername),
+		heroClass: z.string(),
+	}),
+]);
 
-	if (typeof username !== 'string' || !isValidHiveUsername(username)) {
-		return { status: 'invalid', code: 400, error: 'Valid username required' };
-	}
-
-	if (claims !== undefined || protocolVersion === 2) {
-		if (protocolVersion !== 2) {
-			return { status: 'invalid', code: 400, error: 'protocolVersion 2 required for claims[]' };
-		}
-		const parsed = parseDeckCardClaims(claims);
-		return parsed.status === 'parsed'
-			? { status: 'valid', version: 2, username, claims: parsed.claims, parseRejections: [] }
-			: { status: 'valid', version: 2, username, claims: parsed.claims, parseRejections: parsed.rejections };
-	}
-
-	if (!Array.isArray(cardIds) || cardIds.length === 0 || cardIds.length > MAX_CARD_IDS) {
-		return { status: 'invalid', code: 400, error: `cardIds[] required (max ${MAX_CARD_IDS})` };
-	}
-
-	if (!cardIds.every(id => typeof id === 'number' && Number.isFinite(id))) {
-		return { status: 'invalid', code: 400, error: 'All cardIds must be finite numbers' };
-	}
-
-	return { status: 'valid', version: 'legacy', username, cardIds };
-}
+type DeckVerificationBody = z.infer<typeof DeckVerificationSchema>;
 
 function buildCollectionForOwner(username: string) {
 	const ownedCards = getCardsByOwner(username);
+	const runtimeConfig = getRagnarokServerRuntimeConfig();
 	return {
 		ownedCards,
 		collection: buildPlayerCollection({
@@ -127,6 +122,7 @@ function buildCollectionForOwner(username: string) {
 				xp: card.xp,
 				level: card.level,
 			})),
+			qaFullCatalogCards: getQaFullCatalogCardsForServerRuntime(runtimeConfig),
 		}),
 	};
 }
@@ -379,16 +375,11 @@ router.get('/player/:username/matches', (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 // POST /verify-deck — check if player owns cards with given template IDs
 // ---------------------------------------------------------------------------
-
-router.post('/verify-deck', async (req: Request, res: Response) => {
+router.post('/verify-deck', createValidationMiddleware(DeckVerificationSchema), async (req: Request, res: Response) => {
 	try {
-		const validation = validateDeckVerificationRequest(req.body);
-		if (validation.status === 'invalid') {
-			res.status(validation.code).json({ success: false, error: validation.error });
-			return;
-		}
+		const body = req.body as DeckVerificationBody;
+		const { username } = body;
 
-		const { username } = validation;
 		if (!hasAccountRegistryCapacity(username)) {
 			res.status(503).json({ success: false, error: 'Account registry full' });
 			return;
@@ -398,23 +389,41 @@ router.post('/verify-deck', async (req: Request, res: Response) => {
 			await syncAccountNow(username);
 		}
 
+		// Shortcut: Predefined Starter Decks
+		if (body.version === 'starter-shortcut') {
+			const { isStarterHeroClass } = await import('../../shared/schemas/starterEntitlement');
+			if (!isStarterHeroClass(body.heroClass)) {
+				res.status(400).json({ success: false, error: 'Invalid starter hero class' });
+				return;
+			}
+			res.json({
+				success: true,
+				verified: true,
+				version: 'starter-shortcut',
+				heroClass: body.heroClass,
+				totalOwned: 45, // Universal starters
+			});
+			return;
+		}
+
 		const { ownedCards, collection } = buildCollectionForOwner(username);
 
-		if (validation.version === 2) {
-			if (validation.parseRejections.length > 0) {
+		if (body.version === 2) {
+			const parsed = parseDeckCardClaims(body.claims);
+			if (parsed.status === 'rejected' && parsed.rejections.length > 0) {
 				res.json({
 					success: true,
 					protocolVersion: 2,
 					verified: false,
 					verifiedCards: [],
-					rejections: validation.parseRejections,
+					rejections: parsed.rejections,
 					totalOwned: collection.length,
 				});
 				return;
 			}
 
 			const decision = verifyDeckClaims({
-				claims: validation.claims,
+				claims: parsed.claims,
 				collection,
 			});
 
@@ -429,13 +438,14 @@ router.post('/verify-deck', async (req: Request, res: Response) => {
 			return;
 		}
 
-		const parsed = toDeckClaimsFromLegacyCardIds(validation.cardIds);
+		// Legacy version
+		const parsed = toDeckClaimsFromLegacyCardIds(body.cardIds);
 		const decision = parsed.status === 'parsed'
 			? verifyDeckClaims({ claims: parsed.claims, collection })
 			: { status: 'rejected' as const, cards: [], rejections: parsed.rejections };
 		const rejections = decision.status === 'rejected' ? decision.rejections : [];
 		const owned = cardIdsFromVerifiedCards(decision.cards);
-		const missing = legacyMissingCardIds(validation.cardIds, rejections);
+		const missing = legacyMissingCardIds(body.cardIds, rejections);
 
 		res.json({
 			success: true,
@@ -456,12 +466,12 @@ router.post('/verify-deck', async (req: Request, res: Response) => {
 // POST /register — register an account for indexing
 // ---------------------------------------------------------------------------
 
-router.post('/register', (req: Request, res: Response) => {
-	const { username } = req.body as { username?: string };
-	if (!username || !isValidHiveUsername(username)) {
-		res.status(400).json({ success: false, error: 'Invalid username' });
-		return;
-	}
+const RegisterRequestSchema = z.object({
+	username: z.string().refine(isValidHiveUsername),
+});
+
+router.post('/register', createValidationMiddleware(RegisterRequestSchema), (req: Request, res: Response) => {
+	const { username } = req.body as z.infer<typeof RegisterRequestSchema>;
 
 	if (getKnownAccountCount() >= MAX_KNOWN_ACCOUNTS) {
 		res.status(503).json({ success: false, error: 'Account registry full' });

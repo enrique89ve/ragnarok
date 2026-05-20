@@ -66,6 +66,10 @@ import { getEconomicLevelForXP, getEconomicXPPerWin } from './cardProgression';
 import {
 	PACK_ID_RANGES, lcgNext, deriveLegacyPackSeed, pickLegacyPackCardIds,
 } from './packDraw';
+import {
+	createDuatCardAcquisition,
+	createDuatPackAcquisition,
+} from './acquisitionProvenance';
 
 // ============================================================
 // Dependencies injected at init, not imported
@@ -181,7 +185,7 @@ const OP_HANDLERS: Record<ProtocolAction, OpHandler> = {
 	pack_commit: (op, _ctx, deps) => applyPackCommit(op, deps),
 	pack_reveal: (op, ctx, deps) => applyPackReveal(op, ctx, deps),
 	forge_commit: (op, _ctx, deps) => applyForgeCommit(op, deps),
-	forge_reveal: (op, ctx, deps) => applyForgeReveal(op, deps),
+	forge_reveal: (op, ctx, deps) => applyForgeReveal(op, ctx, deps),
 	legacy_pack_open: (op, _ctx, deps) => applyLegacyPackOpen(op, deps),
 	pack_mint: (op, ctx, deps) => applyPackMint(op, ctx, deps),
 	pack_distribute: (op, _ctx, deps) => applyPackDistribute(op, deps),
@@ -1636,19 +1640,21 @@ function parseDailyQuestYmdUtc(value: string): number | OpResult {
 	return ms;
 }
 
-function parseDailyQuestSlot(payload: Record<string, unknown>): number | OpResult {
+function parseDailyQuestSlot(payload: Record<string, unknown>, dailyQuestSlotsPerDay: number): number | OpResult {
 	const value = payload.slot;
 	if (typeof value !== 'number' || !Number.isInteger(value)) {
 		return reject('invalid slot');
 	}
-	const economy = TESTNET_RUNE_ECONOMY;
-	if (value < 0 || value >= economy.dailyQuestSlotsPerDay) {
+	if (value < 0 || value >= dailyQuestSlotsPerDay) {
 		return reject(`slot out of range: ${value}`);
 	}
 	return value;
 }
 
-function parseDailyQuestClaimPayload(op: ProtocolOp): DailyQuestClaimPayloadFields | OpResult {
+function parseDailyQuestClaimPayload(
+	op: ProtocolOp,
+	dailyQuestSlotsPerDay: number,
+): DailyQuestClaimPayloadFields | OpResult {
 	const ymdUtc = readStringField(op.payload, 'ymd_utc');
 	if (isOpResult(ymdUtc)) return ymdUtc;
 
@@ -1660,7 +1666,7 @@ function parseDailyQuestClaimPayload(op: ProtocolOp): DailyQuestClaimPayloadFiel
 		return reject(`daily_quest ymd_utc outside clock skew tolerance: ${ymdUtc}`);
 	}
 
-	const slot = parseDailyQuestSlot(op.payload);
+	const slot = parseDailyQuestSlot(op.payload, dailyQuestSlotsPerDay);
 	if (isOpResult(slot)) return slot;
 
 	const questType = readStringField(op.payload, 'quest_type');
@@ -1673,10 +1679,10 @@ async function applyDailyQuestClaim(
 	op: ProtocolOp,
 	deps: ProtocolCoreDeps,
 ): Promise<OpResult> {
-	const parsed = parseDailyQuestClaimPayload(op);
+	const economy = getRuneEconomy(deps.runtime.stage);
+	const parsed = parseDailyQuestClaimPayload(op, economy.dailyQuestSlotsPerDay);
 	if (isOpResult(parsed)) return parsed;
 
-	const economy = TESTNET_RUNE_ECONOMY;
 	const sourceKey = createDailyQuestRuneSourceKey(op.broadcaster, parsed.ymdUtc, parsed.slot);
 	const entryId = createRuneLedgerEntryId({
 		seasonId: TESTNET_RUNE_SEASON_ID,
@@ -1736,7 +1742,11 @@ async function applyRuneExchange(op: ProtocolOp, deps: ProtocolCoreDeps): Promis
 	const genesis = await deps.state.getGenesis();
 	if (!genesis?.sealed) return reject('rune_exchange requires sealed genesis');
 
-	const details = parseRuneExchangeDetails(op, deps.runeExchange);
+	const details = parseRuneExchangeDetails(
+		op,
+		deps.runeExchange,
+		getRuneEconomy(deps.runtime.stage).maxRuneExchangeSpendPerOp,
+	);
 	if (isOpResult(details)) return details;
 
 	const existingEntry = await deps.state.getRuneLedgerEntry(details.entryId);
@@ -1798,6 +1808,7 @@ async function applyRuneExchange(op: ProtocolOp, deps: ProtocolCoreDeps): Promis
 function parseRuneExchangeDetails(
 	op: ProtocolOp,
 	runeExchange: RuneExchangeAdapter,
+	maxRuneExchangeSpendPerOp: number,
 ): RuneExchangeDetails | OpResult {
 	const packTypeValue = op.payload.pack_type ?? op.payload.packType;
 	if (typeof packTypeValue !== 'string') {
@@ -1813,7 +1824,7 @@ function parseRuneExchangeDetails(
 	if (!quote) {
 		return reject(`invalid rune_exchange pack_type: ${packTypeValue}`);
 	}
-	if (quote.totalCost > getRuneEconomy(deps.runtime.stage).maxRuneExchangeSpendPerOp) {
+	if (quote.totalCost > maxRuneExchangeSpendPerOp) {
 		return reject('rune_exchange spend exceeds per-op cap');
 	}
 
@@ -2809,6 +2820,12 @@ async function resolvePackBurnCards(input: {
 				instanceDna,
 				generation: 0,
 				replicaCount: 0,
+				acquisition: createDuatCardAcquisition({
+					packAcquisition: input.pack.acquisition,
+					fallbackPackUid: input.pack.uid,
+					burnTrxId: input.op.trxId,
+					burnBlockNum: input.op.blockNum,
+				}),
 			},
 		});
 
@@ -3076,6 +3093,14 @@ async function applyDuatAirdropClaim(op: ProtocolOp, deps: ProtocolCoreDeps): Pr
 			lastTransferBlock: op.blockNum,
 			cardCount: 5,
 			edition: 'alpha',
+			acquisition: createDuatPackAcquisition({
+				account,
+				claimTrxId: op.trxId,
+				claimBlockNum: op.blockNum,
+				packsEarned,
+				packUid,
+				packIndex: i,
+			}),
 		});
 	}
 

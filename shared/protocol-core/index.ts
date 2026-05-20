@@ -14,15 +14,20 @@ export {
 	ADMIN_APPROVAL_DOMAIN,
 	ADMIN_APPROVAL_KEY_TYPE,
 	ADMIN_BROADCAST_PROTOCOLS,
+	ADMIN_SESSION_LOGIN_ACTION,
+	ADMIN_SESSION_LOGIN_DOMAIN,
 	ADMIN_MULTISIG_ACTIONS,
 	NFTLOX_ADMIN_ACTIONS,
 	attachAdminApproval,
 	buildAdminApprovalMessage,
+	buildAdminSessionLoginMessage,
+	buildAdminSessionLoginPayload,
 	isAdminBroadcastProtocol,
 	isAdminMultisigAction,
 	isNftLoxAdminAction,
 	isSupportedAdminBroadcastAction,
 	parseAdminBroadcastBody,
+	parseAdminMultisigPrepareBody,
 	readAdminApproval,
 	stripAdminApprovalFields,
 } from './adminMultisig';
@@ -33,6 +38,9 @@ export type {
 	AdminBroadcastProtocol,
 	AdminApprovalReadResult,
 	AdminMultisigAction,
+	AdminMultisigPrepareBodyResult,
+	AdminSessionLoginInput,
+	AdminSessionLoginPayload,
 	NftLoxAdminAction,
 } from './adminMultisig';
 export {
@@ -45,6 +53,7 @@ export { verifyPoW, deriveChallenge, POW_CONFIG } from './pow';
 export type { PoWConfig, PoWResult } from './pow';
 export * from './types';
 export * from './rewardCatalog';
+export * from './acquisitionProvenance';
 export * from './playerCollection';
 export * from './deckVerification';
 

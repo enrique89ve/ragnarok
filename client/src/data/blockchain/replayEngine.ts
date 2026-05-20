@@ -94,6 +94,7 @@ type CustomJsonOpData = {
 
 type HiveHistoryEntry = {
 	trx_id: string;
+	op_in_trx?: number;
 	block: number;
 	timestamp: string; // ISO 8601
 	op: ['custom_json', CustomJsonOpData] | [string, unknown];
@@ -245,6 +246,7 @@ async function _doSync(username: string): Promise<void> {
 			json: opData.json,
 			broadcaster,
 			trxId: entry.trx_id,
+			opInTrx: entry.op_in_trx ?? 0,
 			blockNum: entry.block,
 			timestamp: new Date(entry.timestamp).getTime(),
 			requiredPostingAuths: opData.required_posting_auths ?? [],

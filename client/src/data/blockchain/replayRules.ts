@@ -43,6 +43,7 @@ export interface RawOp {
 	json: string;
 	broadcaster: string;
 	trxId: string;
+	opInTrx?: number;
 	blockNum: number;
 	timestamp: number;
 	requiredPostingAuths?: string[];
@@ -158,6 +159,7 @@ export async function applyOp(op: RawOp): Promise<void> {
 		json: op.json,
 		broadcaster: op.broadcaster,
 		trxId: op.trxId,
+		opInTrx: op.opInTrx ?? 0,
 		blockNum: op.blockNum,
 		timestamp: op.timestamp,
 		// The replay engine normalizes these before calling us,

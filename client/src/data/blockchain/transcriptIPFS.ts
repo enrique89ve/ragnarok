@@ -16,6 +16,7 @@
 
 import type { TranscriptBundle } from './transcriptBuilder';
 import { debug } from '../../game/config/debugConfig';
+import { createRuntimeDatabaseName } from '../../game/config/networkConfig';
 
 const IPFS_GATEWAYS = [
 	'https://ipfs.io/ipfs/',
@@ -25,7 +26,7 @@ const IPFS_GATEWAYS = [
 ];
 
 const OPERATOR_RELAY_ENDPOINT = '/api/transcript';
-const TRANSCRIPT_DB_NAME = 'ragnarok-transcripts';
+const TRANSCRIPT_DB_NAME = createRuntimeDatabaseName('transcripts');
 const TRANSCRIPT_STORE = 'transcripts';
 
 /**

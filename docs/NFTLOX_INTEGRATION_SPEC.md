@@ -277,7 +277,7 @@ What we **don't** use: NFTLox marketplace, lending, multisig buy. We **do** use 
 | `client/src/data/nft/nftloxSync.ts` | Orchestrator: hash compare → paginated re-sync → atomic IndexedDB transaction |
 | `client/src/data/nft/nftloxIndexedDB.ts` | IndexedDB schema (`nft_ownership`, `nft_meta`) and CRUD |
 | `HiveSync.ts` | Player/owner write side — broadcasts NFTLox protocol ops via `custom_json`. `nftloxBulkDistribute` is the pack fulfillment target; `nftloxCreatePack` / `nftloxOpenPack` are stale placeholders to remove when the SDK lands. |
-| `client/src/data/blockchain/adminAdapters.ts` | Admin/operator write side — `nftLoxAdminAdapter` uses frontend Active approval plus server operator Active signing for `create_collection`, `mint`, `bulk_distribute`, schema/data-operator ops, and other NFTLox admin actions. |
+| `client/src/data/blockchain/adminAdapters.ts` | Admin/operator write side — Ragnarok admin actions use native Hive multisig through `/api/admin/multisig/*`; NFTLox admin actions stay disabled until the NFTLox protocol is finalized. |
 | `genesisAdmin.ts` | Facade for Ragnarok genesis actions; should delegate admin broadcasts to protocol-specific adapters instead of owning signing logic directly. |
 | `client/src/game/data/schemas/` | **Source of truth** — `immutableData` schema mirrors these primitives |
 

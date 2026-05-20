@@ -11,9 +11,8 @@ import { computeMatchResultCommitmentHash } from '../../../../../data/blockchain
 import { verifyDeckClaims as verifyDeckClaimsOnServer } from '../../../../../data/chainAPI';
 import { getNFTBridge } from '../../../../nft';
 import type { PackagedMatchResult } from '../../../../../data/blockchain/types';
-import { NftUidSchema } from '../../../../../../../shared/protocol-core/playerCollection';
-import { CardIdSchema } from '../../../../../../../shared/schemas/ids';
 import type { DeckCardClaim } from '../../../../../../../shared/protocol-core/deckVerification';
+import { buildClientDeckClaimsFromCardIds } from '../../../../protocol/playerCollectionAdapter';
 import { startNewTranscript, clearTranscript, recordSessionEvent, exportSessionLog, recordMove, getActiveTranscript } from '../../../../../data/blockchain/transcriptBuilder';
 import { localPlayerId, remotePlayerId } from '../../../../../data/blockchain/playerIdentity';
 import { getWasmHash, loadWasmEngine } from '../../../../engine/wasmLoader';
@@ -24,7 +23,7 @@ import { isSharedNetworkEnvironment } from '../../../../config/featureFlags';
 import { findExistingMatchResult, type SlashEvidenceParams } from '../../../../../data/blockchain/slashEvidence';
 import { GAME_COMMAND_TYPES } from '../../../../core/commands';
 import type { GameCommandEnvelope, WireGameCommand } from '../../../../hooks/p2pEnvelope';
-import { useWarbandStore, selectArmy } from '../../../../../lib/stores/useWarbandStore';
+import { useWarbandStore, selectArmy, selectDeckCardIds } from '../../../../../lib/stores/useWarbandStore';
 import { deriveCanonicalSide, isChessAttackInstantKill, tryParseChessCommandEnvelope, type ChessAttackPieceKind, type ChessCommandEnvelope } from '../../../../../../../shared/p2p-wire/chess';
 import { resetChessWireSender, setChessSendObserver } from '../../../../p2p/chessWireSender';
 import { getP2PProcessFlags, getP2PTransportRole } from '../../../../p2p/p2pPerspective';
@@ -335,27 +334,18 @@ export function useWireSync() {
 		// Cross-verify deck ownership with source-aware claims.
 		if (isSharedNetworkEnvironment()) {
 			try {
-				const bridge = getNFTBridge();
-				const username = bridge.getUsername();
-				if (username) {
-					const collection = bridge.getCardCollection();
-					const claims: DeckCardClaim[] = [];
-					for (const card of collection) {
-						if (card.ownershipSource !== 'nft') continue;
-						const nftUid = NftUidSchema.safeParse(card.uid);
-						const cardId = CardIdSchema.safeParse(card.cardId);
-						if (!nftUid.success || !cardId.success) continue;
-						claims.push({
-							authority: 'nft-custody',
-							nftUid: nftUid.data,
-							cardId: cardId.data,
-						});
+					const bridge = getNFTBridge();
+					const username = bridge.getUsername();
+					if (username) {
+						const deckCardIds = selectDeckCardIds(useWarbandStore.getState());
+						const parsed = buildClientDeckClaimsFromCardIds(deckCardIds, bridge);
+						if (parsed.status === 'parsed') {
+							send({ type: 'deck_verify', hiveAccount: username, protocolVersion: 2, version: 2, claims: parsed.claims });
+							debug.combat(`[wireSync] Sent deck_verify: ${parsed.claims.length} source-aware claim(s) for @${username}`);
+						} else {
+							debug.warn('[wireSync] Could not derive deck_verify claims:', parsed.rejections);
+						}
 					}
-					if (claims.length > 0) {
-						send({ type: 'deck_verify', hiveAccount: username, protocolVersion: 2, claims });
-						debug.combat(`[wireSync] Sent deck_verify: ${claims.length} source-aware claim(s) for @${username}`);
-					}
-				}
 			} catch (err) {
 				debug.warn('[wireSync] Failed to send deck verification:', err);
 			}
@@ -1459,10 +1449,14 @@ export function useWireSync() {
 						setTimeout(() => usePeerStore.getState().disconnect(), 2000);
 					};
 
-					verifyDeckOwnership(data.hiveAccount, data.claims.map(claim => (
+					const claims = data.claims ?? [];
+					verifyDeckOwnership(data.hiveAccount, claims.map(claim => (
 						claim.authority === 'nft-custody'
 							? { nft_id: claim.nftUid, cardId: claim.cardId }
-							: { cardId: claim.cardId, category: 'starter' as const }
+							: {
+								cardId: claim.cardId,
+								category: claim.authority === 'starter-entitlement' ? 'starter' as const : 'genesis' as const,
+							}
 					))).then(result => {
 						if (!result.valid) {
 							GameEventBus.emitNotification({
@@ -1474,7 +1468,21 @@ export function useWireSync() {
 						}
 					}).catch(() => { /* IndexedDB unavailable in dev mode — skip */ });
 
-					if (data.hiveAccount && data.claims.length > 0) {
+					if (data.version === 'starter-shortcut' && data.heroClass) {
+						const { verifyStarterDeckShortcut } = await import('../../../../../data/chainAPI');
+						verifyStarterDeckShortcut(data.hiveAccount, data.heroClass)
+							.then(sv => {
+								if (!sv.verified) {
+									GameEventBus.emitNotification({
+										level: 'error',
+										message: `Server starter-deck verification failed for ${data.hiveAccount}. Disconnecting.`,
+										duration: 5000,
+									});
+									disconnectOnce();
+								}
+							})
+							.catch(() => { /* Chain indexer unavailable — skip */ });
+					} else if (data.hiveAccount && data.claims && data.claims.length > 0) {
 						verifyDeckClaimsOnServer(data.hiveAccount, data.claims)
 							.then(sv => {
 								if (!sv.verified) {

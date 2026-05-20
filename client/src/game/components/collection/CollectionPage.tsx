@@ -7,6 +7,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { Package, Zap } from 'lucide-react';
 import { MetaPageHeader, MetaPageHeaderLink } from '../../../components/navigation/MetaPageHeader';
 import { routes } from '../../../lib/routes';
+import { recordSessionEvent } from '../../../data/blockchain/transcriptBuilder';
 import { getRarityColor, getRaritySortRank, getTypeIcon } from '../../utils/rarityUtils';
 import { getCardArtPath } from '../../utils/art/artMapping';
 import { getHoloTier, applyHoloVars, resetHoloVars } from '../../hooks/useHoloTracking';
@@ -17,8 +18,22 @@ import { getNFTBridge } from '../../nft';
 import { useNFTCollection, useNFTUsername } from '../../nft/hooks';
 import NFTProvenanceViewer from './NFTProvenanceViewer';
 import SendCardModal from './SendCardModal';
+import {
+	STARTER_COLLECTION_GATE_COPY,
+	shouldGateCollectionBehindStarter,
+} from './collectionStarterGate';
+import {
+	DUAT_COLLECTION_LABEL,
+	classifyHiveCollectionSource,
+	collectionSourceLabel,
+	countCardsByCollectionSource,
+	filterCollectionBySource,
+	type CollectionFilterSource,
+	type CollectionSource,
+} from './collectionAcquisition';
 import { useCollectionMilestoneStore } from '../../stores/collectionMilestoneStore';
 import { useDuatClaimStore } from '../../stores/duatClaimStore';
+import { useStarterStore } from '../../stores/starterStore';
 import './collection.css';
 import '../styles/holoEffect.css';
 import { useEitrBalance } from '../../hooks/useEitrBalance';
@@ -32,15 +47,21 @@ import { RARITY, RARITY_ORDER, type Rarity } from '@shared/schemas/rarity';
 import type { CardCategory } from '@shared/schemas/cardCategory';
 import { STARTER_ENTITLEMENT } from '@shared/schemas/starterEntitlement';
 import { getEitrDissolveValue, getEitrForgeCost } from '@shared/protocol-core/eitrEconomy';
+import {
+	QA_FULL_CATALOG_LABEL,
+	getQaFullCatalogCardsForRuntime,
+	isQaFullCatalogRuntime,
+} from '../../protocol/qaFullCatalogEntitlement';
 
 type FilterRarity = 'all' | Rarity;
 type FilterType = 'all' | 'hero' | 'minion' | 'spell' | 'weapon';
-type FilterSource = 'all' | 'starter' | 'nft';
-type CollectionSource = Exclude<FilterSource, 'all'>;
+type FilterSource = CollectionFilterSource;
 type SortBy = 'recent' | 'name' | 'rarity' | 'mint';
 type CollectionOwnedCard = OwnedCard & {
 	category: CardCategory;
 	ownershipSource?: HiveCardAsset['ownershipSource'];
+	collectionSource: CollectionSource;
+	acquisition?: HiveCardAsset['acquisition'];
 };
 
 interface CollectionStats {
@@ -65,6 +86,7 @@ interface ChainCardRecord {
 	mintTrxId?: string;
 	mintBlockNum?: number;
 	lastTransferBlock?: number;
+	acquisition?: HiveCardAsset['acquisition'];
 }
 
 interface ChainCardsResponse {
@@ -100,7 +122,9 @@ const TYPE_PILLS: { value: FilterType; label: string; icon: string }[] = [
 const SOURCE_PILLS: { value: FilterSource; label: string }[] = [
 	{ value: 'all', label: 'All Sources' },
 	{ value: 'starter', label: 'Starter' },
+	{ value: 'duat_airdrop', label: DUAT_COLLECTION_LABEL },
 	{ value: 'nft', label: 'NFT' },
+	{ value: 'qa_full_catalog', label: QA_FULL_CATALOG_LABEL },
 ];
 
 // Vault surface treatments — used multiple times across the page.
@@ -109,11 +133,11 @@ const VAULT_PANEL_CLASS = 'bg-obsidian-800/70 border border-obsidian-700/80 roun
 const VAULT_INPUT_CLASS = 'bg-obsidian-900/70 border border-obsidian-700 text-ink-0 rounded-lg transition-colors placeholder:text-ink-300 focus:outline-hidden focus:border-gold-500 focus:ring-1 focus:ring-gold-500/40';
 
 function getCollectionSource(card: CollectionOwnedCard): CollectionSource {
-	return card.category === 'starter' || card.ownershipSource === 'starter' ? 'starter' : 'nft';
+	return card.collectionSource;
 }
 
 function getCollectionSourceLabel(card: CollectionOwnedCard): string {
-	return getCollectionSource(card) === 'starter' ? 'Starter' : 'NFT';
+	return collectionSourceLabel(getCollectionSource(card), QA_FULL_CATALOG_LABEL);
 }
 
 function getCardHeroClass(card: CardData | undefined, fallback = 'neutral'): string {
@@ -149,8 +173,12 @@ function buildOwnedCard(input: {
 	name?: string;
 	mintNumber?: number | null;
 	ownershipSource?: HiveCardAsset['ownershipSource'];
+	collectionSource?: CollectionSource;
+	acquisition?: HiveCardAsset['acquisition'];
 }): CollectionOwnedCard {
 	const card = CARD_BY_ID.get(input.cardId);
+	const collectionSource = input.collectionSource
+		?? (input.ownershipSource === 'starter' ? 'starter' : input.ownershipSource === 'nft' ? 'nft' : 'nft');
 	return {
 		id: input.cardId,
 		name: input.name || card?.name || `Card #${input.cardId}`,
@@ -165,6 +193,8 @@ function buildOwnedCard(input: {
 		manaCost: getCardManaCost(card),
 		category: resolveCardCategory(card, input.ownershipSource),
 		ownershipSource: input.ownershipSource,
+		collectionSource,
+		...(input.acquisition ? { acquisition: input.acquisition } : {}),
 	};
 }
 
@@ -178,11 +208,12 @@ function starterCollectionCards(): CollectionOwnedCard[] {
 			type: card?.type,
 			name: card?.name,
 			ownershipSource: 'starter',
+			collectionSource: 'starter',
 		});
 	});
 }
 
-function genesisCatalogCards(): CollectionOwnedCard[] {
+function catalogAccessCards(): CollectionOwnedCard[] {
 	return cardRegistry
 		.filter(card => card.category === 'genesis')
 		.map(card => buildOwnedCard({
@@ -191,13 +222,28 @@ function genesisCatalogCards(): CollectionOwnedCard[] {
 			rarity: card.rarity,
 			type: card.type,
 			name: card.name,
+			collectionSource: 'qa_full_catalog',
 		}));
+}
+
+function qaRuntimeCatalogCards(): CollectionOwnedCard[] {
+	return getQaFullCatalogCardsForRuntime().map(entry => {
+		const card = CARD_BY_ID.get(entry.cardId);
+		return buildOwnedCard({
+			cardId: entry.cardId,
+			quantity: entry.ownedCopies,
+			rarity: card?.rarity,
+			type: card?.type,
+			name: card?.name,
+			collectionSource: 'qa_full_catalog',
+		});
+	});
 }
 
 function localCollectionCards(): CollectionOwnedCard[] {
 	return [
 		...starterCollectionCards(),
-		...genesisCatalogCards(),
+		...catalogAccessCards(),
 	];
 }
 
@@ -221,6 +267,11 @@ function groupChainCards(records: readonly ChainCardRecord[]): CollectionOwnedCa
 			quantity: 1,
 			rarity: record.rarity,
 			ownershipSource: 'nft',
+			collectionSource: classifyHiveCollectionSource({
+				ownershipSource: 'nft',
+				acquisition: record.acquisition,
+			}),
+			acquisition: record.acquisition,
 		}));
 	}
 	return [...grouped.values()];
@@ -242,9 +293,18 @@ function groupHiveCards(records: readonly HiveCardAsset[]): CollectionOwnedCard[
 			type: record.type,
 			name: record.name,
 			ownershipSource: record.ownershipSource,
+			collectionSource: classifyHiveCollectionSource(record),
+			acquisition: record.acquisition,
 		}));
 	}
 	return [...grouped.values()];
+}
+
+function withQaFullCatalogCards(cards: CollectionOwnedCard[]): CollectionOwnedCard[] {
+	if (!isQaFullCatalogRuntime()) return cards;
+	const existingPersistentIds = new Set(cards.map(card => card.id));
+	const qaCards = qaRuntimeCatalogCards().filter(card => !existingPersistentIds.has(card.id));
+	return [...cards, ...qaCards];
 }
 
 function isVisibleCollectionAsset(record: HiveCardAsset): boolean {
@@ -274,14 +334,16 @@ function buildCollectionStats(cards: readonly CollectionOwnedCard[]): Collection
 	});
 	const bySource = ([
 		{ source: 'starter', label: 'Starter' },
+		{ source: 'duat_airdrop', label: DUAT_COLLECTION_LABEL },
 		{ source: 'nft', label: 'NFT' },
+		{ source: 'qa_full_catalog', label: QA_FULL_CATALOG_LABEL },
 	] as const).map(({ source, label }) => {
-		const matching = cards.filter(card => getCollectionSource(card) === source);
+		const counts = countCardsByCollectionSource(cards, source);
 		return {
 			source,
 			label,
-			uniqueCards: matching.length,
-			totalCards: matching.reduce((total, card) => total + card.quantity, 0),
+			uniqueCards: counts.uniqueCards,
+			totalCards: counts.totalCards,
 		};
 	});
 
@@ -330,7 +392,15 @@ function getShimmerClass(rarity: string): string {
 export default function CollectionPage() {
 	const hiveCards = useNFTCollection();
 	const hiveUsername = useNFTUsername();
-	const currentAccount = hiveUsername ?? hiveSync.getUsername();
+	const bridge = getNFTBridge();
+	const bridgeHiveMode = bridge.isHiveMode();
+	const currentAccount = hiveUsername ?? bridge.getUsername() ?? hiveSync.getUsername();
+	const starterClaimed = useStarterStore(state => (
+		bridgeHiveMode
+			? Boolean(currentAccount && state.hasClaimed(currentAccount))
+			: state.hasClaimed(currentAccount)
+	));
+	const starterGateActive = shouldGateCollectionBehindStarter(starterClaimed);
 	const { balance: eitr } = useEitrBalance(currentAccount, 'S01');
 	const [craftConfirm, setCraftConfirm] = useState<'craft' | 'disenchant' | null>(null);
 
@@ -387,6 +457,7 @@ export default function CollectionPage() {
 	const duatEntry = useDuatClaimStore(state => state.currentUserEntry);
 	const duatPendingClaimTrxId = useDuatClaimStore(state => state.pendingClaimTrxId);
 	const showDuatCollectionNotice = Boolean(duatEntry && !duatEntry.claimed);
+	const duatEligible = duatEntry?.eligible ?? false;
 	const duatCollectionConfirming = Boolean(duatPendingClaimTrxId && duatEntry?.claimReady);
 
 	useEffect(() => {
@@ -403,6 +474,10 @@ export default function CollectionPage() {
 		const loadCollection = async () => {
 			setLoading(true);
 			setIsLoadingMore(false);
+			if (starterGateActive) {
+				applyCollection([]);
+				return;
+			}
 			const bridge = getNFTBridge();
 			const hiveMode = bridge.isHiveMode();
 			const visibleHiveCards = hiveCards.filter(isVisibleCollectionAsset);
@@ -413,7 +488,7 @@ export default function CollectionPage() {
 					if (res.ok) {
 						const data: ChainCardsResponse = await res.json();
 						if (data.success) {
-							applyCollection(withStarterCards(groupChainCards(data.cards ?? [])));
+							applyCollection(withQaFullCatalogCards(withStarterCards(groupChainCards(data.cards ?? []))));
 							return;
 						}
 					}
@@ -424,7 +499,7 @@ export default function CollectionPage() {
 			}
 
 			if (visibleHiveCards.length > 0 || hiveMode) {
-				applyCollection(withStarterCards(groupHiveCards(visibleHiveCards)));
+				applyCollection(withQaFullCatalogCards(withStarterCards(groupHiveCards(visibleHiveCards))));
 			} else {
 				applyCollection(localCollectionCards());
 			}
@@ -435,7 +510,7 @@ export default function CollectionPage() {
 		});
 
 		return () => { controller.abort(); };
-	}, [hiveUsername, hiveCards, refreshNonce]);
+	}, [hiveUsername, hiveCards, refreshNonce, starterGateActive]);
 
 	useEffect(() => {
 		setPage(1);
@@ -459,8 +534,7 @@ export default function CollectionPage() {
 	);
 
 	const filteredAndSorted = useMemo(() => {
-		let result = cards.filter(card => {
-			if (filterSource !== 'all' && getCollectionSource(card) !== filterSource) return false;
+		let result = filterCollectionBySource(cards, filterSource).filter(card => {
 			if (filterRarity !== 'all' && card.rarity !== filterRarity) return false;
 			if (filterType !== 'all' && card.type !== filterType) return false;
 			if (searchQuery && !card.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
@@ -478,6 +552,19 @@ export default function CollectionPage() {
 
 		return result;
 	}, [cards, filterRarity, filterType, filterSource, searchQuery, sortBy]);
+
+	useEffect(() => {
+		if (filterSource !== 'duat_airdrop') return;
+		const duatCounts = countCardsByCollectionSource(cards, 'duat_airdrop');
+		recordSessionEvent('collection_duat_filter_viewed', {
+			account: currentAccount ?? null,
+			filteredUniqueCards: filteredAndSorted.length,
+			filteredTotalCards: filteredAndSorted.reduce((total, card) => total + card.quantity, 0),
+			duatUniqueCards: duatCounts.uniqueCards,
+			duatTotalCards: duatCounts.totalCards,
+			qaFullCatalogVisible: cards.some(card => card.collectionSource === 'qa_full_catalog'),
+		});
+	}, [cards, currentAccount, filterSource, filteredAndSorted]);
 
 	const parentRef = useRef<HTMLDivElement>(null);
 	const COLUMNS = 6;
@@ -522,7 +609,7 @@ export default function CollectionPage() {
 				title="Collection"
 				kicker="Vault · Cards"
 				username={hiveUsername}
-				accountSecondary={`${cards.length.toLocaleString()} cards`}
+				accountSecondary={starterGateActive ? '0 cards' : `${cards.length.toLocaleString()} cards`}
 				actions={
 					<>
 						<div
@@ -549,17 +636,19 @@ export default function CollectionPage() {
 			/>
 
 			<div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-				{showDuatCollectionNotice && duatEntry && (
+				{!starterGateActive && showDuatCollectionNotice && duatEntry && (
 					<div className={`${VAULT_PANEL_CLASS} mb-6 p-4 flex flex-wrap items-center gap-4`}>
 						<div className="grid h-10 w-10 place-items-center rounded-md border border-bifrost-300/45 bg-bifrost-500/15 text-bifrost-100">
 							<Package className="h-5 w-5" strokeWidth={2.4} aria-hidden="true" />
 						</div>
 						<div className="min-w-0 flex-1">
 							<div className="font-mono text-[10px] uppercase tracking-[0.24em] text-bifrost-300">
-								DUAT Packs · {duatCollectionConfirming ? 'Confirming' : duatEntry.claimReady ? 'Ready' : 'Collection pending'}
+								DUAT Packs · {duatCollectionConfirming ? 'Confirming' : duatEligible ? duatEntry.claimReady ? 'Ready' : 'Collection pending' : 'Ineligible'}
 							</div>
 							<p className="mt-1 text-sm text-ink-200">
-								{duatEntry.packsEarned} sealed pack{duatEntry.packsEarned === 1 ? '' : 's'} assigned. Cards appear in Collection only after you claim and open the packs.
+								{duatEligible
+									? `${duatEntry.packsEarned} sealed pack${duatEntry.packsEarned === 1 ? '' : 's'} assigned. Cards appear in Collection only after you claim and open the packs.`
+									: duatEntry.claimBlockedReason ?? 'This account has no DUAT airdrop packs assigned.'}
 							</p>
 						</div>
 						<Link to={routes.packs} className="btn-runic btn-runic--bifrost btn-runic--sm">
@@ -571,7 +660,7 @@ export default function CollectionPage() {
 				)}
 
 				{/* Stats Dashboard */}
-				{stats && (
+				{!starterGateActive && stats && (
 					<div className="mb-6">
 						{/* Completion Bar */}
 						<div className="mb-4">
@@ -648,6 +737,7 @@ export default function CollectionPage() {
 				)}
 
 				{/* Filter Bar */}
+				{!starterGateActive && (
 				<div className={`${VAULT_PANEL_CLASS} p-4 mb-6`}>
 					{/* Search + Sort Row */}
 					<div className="flex gap-3 mb-3">
@@ -717,6 +807,7 @@ export default function CollectionPage() {
 						))}
 					</div>
 				</div>
+				)}
 
 				{/* Error State */}
 				{error && (
@@ -734,7 +825,21 @@ export default function CollectionPage() {
 				)}
 
 				{/* Empty Collection */}
-				{cards.length === 0 && !error ? (
+				{starterGateActive ? (
+					<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20">
+						<p className="text-gray-400 text-xl mb-4">{STARTER_COLLECTION_GATE_COPY.title}</p>
+						<p className="text-gray-500 mb-8">{STARTER_COLLECTION_GATE_COPY.body}</p>
+						<Link to={routes.packs}>
+							<motion.button
+								whileHover={{ scale: 1.05 }}
+								whileTap={{ scale: 0.95 }}
+								className="px-8 py-4 bg-linear-to-r from-amber-600 to-amber-500 text-white font-bold rounded-xl"
+							>
+								{STARTER_COLLECTION_GATE_COPY.cta}
+							</motion.button>
+						</Link>
+					</motion.div>
+				) : cards.length === 0 && !error ? (
 					<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20">
 						<p className="text-gray-400 text-xl mb-4">No persistent cards loaded</p>
 						<p className="text-gray-500 mb-8">Starter cards are universal, and NFT cards appear after pack opens.</p>
@@ -1035,6 +1140,14 @@ export default function CollectionPage() {
 										<div className="mint-badge-modal inline-block">
 											<span className="text-white/90">Starter entitlement</span>
 										</div>
+									) : getCollectionSource(selectedCard) === 'duat_airdrop' ? (
+										<div className="mint-badge-modal inline-block">
+											<span className="text-white/90">DUAT airdrop NFT</span>
+										</div>
+									) : getCollectionSource(selectedCard) === 'qa_full_catalog' ? (
+										<div className="mint-badge-modal inline-block">
+											<span className="text-white/90">QA full-catalog access</span>
+										</div>
 									) : selectedCard.mintNumber != null || selectedCard.maxSupply != null ? (
 										<div className="mint-badge-modal inline-block">
 											<span className="text-white/90">
@@ -1111,7 +1224,8 @@ export default function CollectionPage() {
 
 								{/* Owned Count */}
 								<div className="text-center text-gray-400 text-sm mb-4">
-									Owned: <span className="text-white font-bold">{selectedCard.quantity}</span>
+									{getCollectionSource(selectedCard) === 'qa_full_catalog' ? 'Playable copies' : 'Owned'}:{' '}
+									<span className="text-white font-bold">{selectedCard.quantity}</span>
 									{selectedCard.quantity > 1 && <span className="text-gray-500"> copies</span>}
 								</div>
 

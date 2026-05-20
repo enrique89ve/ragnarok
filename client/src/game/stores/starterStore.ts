@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
+import { createRuntimeStorageKey } from '../config/networkConfig';
 
 export interface StarterReputationEntry {
 	cardId: number;
@@ -36,7 +37,7 @@ interface StarterState {
 
 const STARTER_REPUTATION_PER_GAME = 1;
 const STARTER_REPUTATION_WIN_BONUS = 1;
-const STARTER_STORE_STORAGE_KEY = 'ragnarok-starter-claimed';
+const STARTER_STORE_STORAGE_KEY = createRuntimeStorageKey('ragnarok-starter-claimed');
 const LOCAL_STARTER_CLAIM_ID = 'local';
 
 const memoryStorage = new Map<string, string>();
@@ -170,7 +171,7 @@ export const useStarterStore = create<StarterState>()(
 				get().starterReputationByAccount[accountId]?.[cardId] ?? null,
 		}),
 		{
-			// Legacy key retained so existing players keep their starter claim state.
+			// Reset-epoch scoped so starter ceremony state cannot bleed between QA/beta phases.
 			name: STARTER_STORE_STORAGE_KEY,
 			storage: createJSONStorage(getStarterStorage),
 		}

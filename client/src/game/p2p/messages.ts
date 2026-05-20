@@ -20,7 +20,14 @@ export type WireMessage =
 	| { type: 'opponentDisconnected' }
 	| { type: 'ping' }
 	| { type: 'pong' }
-	| { type: 'deck_verify'; hiveAccount: string; protocolVersion: 2; claims: readonly DeckCardClaim[] }
+	| {
+			type: 'deck_verify';
+			hiveAccount: string;
+			protocolVersion: 2;
+			version?: 'legacy' | 2 | 'starter-shortcut';
+			claims?: readonly DeckCardClaim[];
+			heroClass?: string;
+	  }
 	| { type: 'seed_commit'; commitment: string }
 	| { type: 'seed_reveal'; salt: string; hiveUsername?: string }
 	| { type: 'army_announcement'; army: ArmySelection }

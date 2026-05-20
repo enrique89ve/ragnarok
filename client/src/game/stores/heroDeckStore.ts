@@ -10,6 +10,7 @@ import { create } from 'zustand';
 import type { CardData } from '../types';
 import { cardRegistry } from '../data/cardRegistry';
 import { debug } from '../config/debugConfig';
+import { createRuntimeStorageKey } from '../config/networkConfig';
 import { getNFTBridge } from '../nft';
 import { triggerAutoSave } from './saveStateManager';
 import {
@@ -47,7 +48,7 @@ type HeroDeckActions = {
   readonly saveToStorage: () => void;
 };
 
-const STORAGE_KEY = 'ragnarok_hero_decks';
+const STORAGE_KEY = createRuntimeStorageKey('ragnarok-hero-decks');
 
 const createInitialState = (): HeroDeckState => ({
   decks: {

@@ -66,6 +66,7 @@ function cardRecordToAsset(r: CardRecord): CardAsset {
 		generation: r.generation,
 		replicaCount: r.replicaCount,
 		mergedFrom: r.mergedFrom,
+		acquisition: r.acquisition,
 	};
 }
 
@@ -89,6 +90,7 @@ function assetToCardRecord(a: CardAsset): CardRecord {
 		generation: a.generation,
 		replicaCount: a.replicaCount,
 		mergedFrom: a.mergedFrom,
+		acquisition: a.acquisition,
 	};
 }
 

@@ -240,6 +240,14 @@ const mockCards: CardDataProvider = {
 	},
 };
 
+const TESTNET_TRACE_RUNTIME = {
+	...RAGNAROK_RUNTIME_CONFIGS.testnet,
+	adminAccount: 'ragnarok',
+	genesisAccount: 'ragnarok',
+	treasuryAccount: 'ragnarok-treasury',
+	indexAccount: 'ragnarok-index',
+};
+
 const mockRewards: RewardProvider = {
 	getRewardById(id: string) {
 		if (id === 'first_victory') {
@@ -411,7 +419,7 @@ async function seedRankedMatchAnchor(
 
 function makeDeps(state: MemoryState): ProtocolCoreDeps {
 	return {
-		runtime: RAGNAROK_RUNTIME_CONFIGS.mainnet,
+		runtime: TESTNET_TRACE_RUNTIME,
 		state,
 		cards: mockCards,
 		rewards: mockRewards,
@@ -616,6 +624,80 @@ describe('Protocol Core: Replay Traces', () => {
 			owner: 'alice',
 			packType: 'standard',
 			sealed: true,
+			acquisition: {
+				source: 'duat_airdrop',
+				account: 'alice',
+				claimTrxId: 'duat-claim-trx',
+				claimBlockNum: 1000,
+				packsEarned: 1,
+				packUid: 'duat_duat-claim-trx:0',
+				packIndex: 0,
+			},
+		});
+	});
+
+	it('duat_airdrop_claim rejects ineligible accounts without creating packs', async () => {
+		await seedGenesis(state, deps);
+
+		const result = await applyOp(makeOp('duat_airdrop_claim', {}, {
+			broadcaster: 'bob',
+			trxId: 'bob-duat-claim',
+		}), defaultCtx, deps);
+
+		expect(result.status).toBe('rejected');
+		expect((result as { reason: string }).reason).toBe('account not in duat snapshot');
+		expect(state.duatClaims.has('bob')).toBe(false);
+		expect(await state.getPacksByOwner('bob')).toHaveLength(0);
+	});
+
+	it('duat_airdrop_claim rejects an already-claimed account', async () => {
+		await seedGenesis(state, deps);
+
+		const first = await applyOp(makeOp('duat_airdrop_claim', {}, {
+			broadcaster: 'alice',
+			trxId: 'duat-claim-first',
+		}), defaultCtx, deps);
+		const second = await applyOp(makeOp('duat_airdrop_claim', {}, {
+			broadcaster: 'alice',
+			trxId: 'duat-claim-second',
+		}), defaultCtx, deps);
+
+		expect(first.status).toBe('applied');
+		expect(second.status).toBe('rejected');
+		expect((second as { reason: string }).reason).toBe('duat already claimed');
+		expect(await state.getPacksByOwner('alice')).toHaveLength(1);
+	});
+
+	it('pack_burn preserves DUAT claim and open provenance on revealed cards', async () => {
+		await seedGenesis(state, deps);
+		await applyOp(makeOp('duat_airdrop_claim', {}, {
+			broadcaster: 'alice',
+			trxId: 'duat-claim-open',
+		}), defaultCtx, deps);
+		const packUid = 'duat_duat-claim-open:0';
+
+		const result = await applyOp(makeOp('pack_burn', {
+			pack_uid: packUid,
+			salt: 'a'.repeat(64),
+		}, {
+			broadcaster: 'alice',
+			trxId: 'duat-burn-open',
+			blockNum: 1200,
+			usedActiveAuth: true,
+		}), defaultCtx, deps);
+
+		expect(result.status).toBe('applied');
+		expect(state.packs.has(packUid)).toBe(false);
+		const openedCards = [...state.cards.values()].filter(card => card.mintTrxId === 'duat-burn-open');
+		expect(openedCards).toHaveLength(5);
+		expect(openedCards.every(card => card.acquisition?.source === 'duat_airdrop')).toBe(true);
+		expect(openedCards[0].acquisition).toMatchObject({
+			source: 'duat_airdrop',
+			account: 'alice',
+			claimTrxId: 'duat-claim-open',
+			packUid,
+			burnTrxId: 'duat-burn-open',
+			burnBlockNum: 1200,
 		});
 	});
 

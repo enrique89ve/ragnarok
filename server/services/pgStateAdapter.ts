@@ -43,12 +43,12 @@ export const pgStateAdapter: StateAdapter = {
 	},
 	async putCard(card) {
 		const sql = `
-			INSERT INTO cards (uid, card_id, owner, rarity, level, xp, edition, foil, mint_source, mint_trx_id, mint_block_num, last_transfer_block)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+			INSERT INTO cards (uid, card_id, owner, rarity, level, xp, edition, foil, mint_source, mint_trx_id, mint_block_num, last_transfer_block, acquisition)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 			ON CONFLICT (uid) DO UPDATE SET
-				owner = $3, level = $5, xp = $6, last_transfer_block = $12
+				owner = $3, level = $5, xp = $6, last_transfer_block = $12, acquisition = $13
 		`;
-		await query(sql, [card.uid, card.cardId, card.owner, card.rarity, card.level, card.xp, card.edition, card.foil, card.mintSource, card.mintTrxId, card.mintBlockNum, card.lastTransferBlock]);
+		await query(sql, [card.uid, card.cardId, card.owner, card.rarity, card.level, card.xp, card.edition, card.foil, card.mintSource, card.mintTrxId, card.mintBlockNum, card.lastTransferBlock, card.acquisition ? JSON.stringify(card.acquisition) : null]);
 	},
 	async deleteCard(uid) {
 		await query('DELETE FROM cards WHERE uid = $1', [uid]);
@@ -125,6 +125,10 @@ export const pgStateAdapter: StateAdapter = {
 	async getPacksByOwner(o) { return []; },
 	async getPackSupply(t) { return null; },
 	async putPackSupply(r) { },
+	async getPackCommit(_trxId) { return null; },
+	async putPackCommit(_commit) {
+		throw new Error('PostgreSQL pack commit persistence is not implemented.');
+	},
 	async getCompanionTransfer(t) { return null; },
 	setTrxSiblings(t, o) { },
 

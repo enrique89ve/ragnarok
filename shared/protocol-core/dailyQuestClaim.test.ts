@@ -181,7 +181,7 @@ function createStateAdapter(): StateAdapter & {
 
 function createDeps(state: StateAdapter): ProtocolCoreDeps {
 	return {
-		runtime: RAGNAROK_RUNTIME_CONFIGS.mainnet,
+		runtime: RAGNAROK_RUNTIME_CONFIGS.testnet,
 		state,
 		cards: {
 			getCardById: () => null,

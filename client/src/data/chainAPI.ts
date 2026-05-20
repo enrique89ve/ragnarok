@@ -60,6 +60,14 @@ export interface DeckVerificationV2 {
 	totalOwned: number;
 }
 
+export interface StarterDeckVerification {
+	success: boolean;
+	verified: boolean;
+	version: 'starter-shortcut';
+	heroClass: string;
+	totalOwned: number;
+}
+
 const FETCH_TIMEOUT_MS = 10_000;
 
 async function fetchJSON<T>(path: string, init?: globalThis.RequestInit): Promise<T> {
@@ -106,7 +114,7 @@ export async function fetchPlayerCards(username: string): Promise<CardRecord[]> 
 export async function verifyDeck(username: string, cardIds: number[]): Promise<DeckVerification> {
 	const data = await fetchJSON<DeckVerification>('/api/chain/verify-deck', {
 		method: 'POST',
-		body: JSON.stringify({ username, cardIds }),
+		body: JSON.stringify({ username, cardIds, version: 'legacy' }),
 	});
 	return data;
 }
@@ -117,7 +125,26 @@ export async function verifyDeckClaims(
 ): Promise<DeckVerificationV2> {
 	return fetchJSON<DeckVerificationV2>('/api/chain/verify-deck', {
 		method: 'POST',
-		body: JSON.stringify({ username, protocolVersion: 2, claims }),
+		body: JSON.stringify({
+			username,
+			version: 2,
+			protocolVersion: 2,
+			claims,
+		}),
+	});
+}
+
+export async function verifyStarterDeckShortcut(
+	username: string,
+	heroClass: string,
+): Promise<StarterDeckVerification> {
+	return fetchJSON<StarterDeckVerification>('/api/chain/verify-deck', {
+		method: 'POST',
+		body: JSON.stringify({
+			username,
+			version: 'starter-shortcut',
+			heroClass,
+		}),
 	});
 }
 

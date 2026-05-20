@@ -8,6 +8,14 @@ This context defines the release language for taking Ragnarok from internal deve
 A resettable shared environment used to validate gameplay, P2P, NFT, rewards, replay, and economy flows without permanent value.
 _Avoid_: Production, mainnet, permanent economy
 
+**QA Testnet Season 0**:
+A resettable Testnet rehearsal that uses a separate Hive protocol id, fresh index start, and real replay-derived RUNE while deliberately granting testers full-catalog gameplay access for mechanics coverage. Its card access is a QA entitlement, not ownership, and it must not validate NFT custody, scarcity, marketplace value, or official ranking.
+_Avoid_: Local sandbox, mainnet season, NFT ownership test, public beta
+
+**Testnet Reset Epoch**:
+The explicit identity of a resettable test phase. It binds the Hive protocol id, index start boundary, season start, collection id, and browser/server projection namespace into one reset contract so old local projections cannot bleed into a new QA or beta phase.
+_Avoid_: Hardcoded cache buckets, manual browser cleanup, reusing local projections across reset phases
+
 **Closed Testnet Beta**:
 The next release milestone where a limited group of testers validates the full playable flow before public access.
 _Avoid_: Public beta, mainnet launch, finished testnet
@@ -23,8 +31,12 @@ _Avoid_: Full catalog audit, every card validated, final balance
 ## Relationships
 
 - A **Closed Testnet Beta** runs inside **Testnet**.
+- **QA Testnet Season 0** may run before **Closed Testnet Beta** to stress gameplay with full-catalog access while still using resettable Hive replay and RUNE.
+- Every resettable QA or beta phase must declare a **Testnet Reset Epoch** before testers start.
 - A **Public Testnet Beta** follows a successful **Closed Testnet Beta**.
 - **Testnet** state is reset before mainnet and does not create permanent ownership or rewards.
+- **QA Testnet Season 0** does not prove NFT custody or player ownership because its card access is intentionally broader than **NFT Custody**.
+- Client-local replay, tester progress, and operational projections must be isolated by **Testnet Reset Epoch** rather than cleaned manually between phases.
 - The **Playable Beta Flow** must be stable before **Closed Testnet Beta** opens.
 
 ## Starter Entitlement
@@ -40,6 +52,10 @@ _Avoid_: Recomputing starter card lists, hardcoding copies counts in bridges, du
 **Starter Claim Ceremony**:
 A one-time-per-account UX ritual that reveals the universal starter ownership to the player with animation and narrative. The ceremony does NOT grant ownership (already universal); it only records `claimedAt` so the ritual is not shown again, and triggers the seeding of 4 pre-built hero decks (queen=Mage, rook=Warrior, bishop=Priest, knight=Rogue) into the player's `useHeroDeckStore` for convenience. If the player skips the ceremony ("Maybe later"), the seed does NOT run; the player still owns all starter cards but must build decks manually. A persistent "Claim" CTA stays visible until the ceremony is accepted.
 _Avoid_: Claim as ownership transfer, claim as data mutation, "the player claims their cards", auto-seeding decks without explicit player action
+
+**DUAT Airdrop Ceremony**:
+The tester-facing ritual where an eligible Hive account claims its DUAT-derived sealed packs, opens those packs, and can inspect the resulting cards as a distinct ceremony outcome. In **QA Testnet Season 0**, this ceremony must remain visible and filterable even when full-catalog QA access is enabled, so testers can give feedback on the DUAT flow without confusing QA access with ownership.
+_Avoid_: Hiding DUAT results inside the full catalog, treating DUAT as an in-game balance, implying full-catalog access came from DUAT
 
 ## State Authority
 
@@ -76,15 +92,15 @@ The shared read protocol that answers "what can this account play with?" by comb
 _Avoid_: UI-only collection shape, server-only inventory endpoint, `user_inventory` as ownership truth, losing the `starter` vs `nft` discriminator
 
 **Deck Card Claim**:
-An untrusted deck-submission assertion that a player intends to use a card under one explicit authority: `starter-entitlement` for universal starter cards by card-id, or `nft-custody` for genesis NFT instances by NFT uid. A claim is not gameplay truth until the **Deck Verification Protocol** resolves it into a verified card. For NFT claims, the card-id is derived from the NFT instance; any submitted card-id is only display/hint data and must not be trusted as authority.
+An untrusted deck-submission assertion that a player intends to use a card under one explicit authority: `starter-entitlement` for universal starter cards by card-id, `nft-custody` for genesis NFT instances by NFT uid plus card-id, or `qa_full_catalog` for reset-epoch-scoped QA gameplay access. A claim is not gameplay truth until the **Deck Verification Protocol** resolves it into a verified card. QA claims are never NFT custody, marketplace ownership, CardXP eligibility, or ranked economy proof.
 _Avoid_: treating `cardId` as proof of genesis ownership, optional `nft_id` refs with implicit meaning, mixing starter entitlement and NFT custody in the same branch
 
 **Verified Deck Card**:
-A slot-preserving card fact produced by the **Deck Verification Protocol** from a **Deck Card Claim**. It is safe for match packaging, replay, XP, and anti-cheat to consume because the authority branch has already been resolved. A verified starter card carries only starter card-id and non-transferable/no-CardXP facts. A verified NFT card carries concrete NFT uid plus replay-derived instance data.
+A slot-preserving card fact produced by the **Deck Verification Protocol** from a **Deck Card Claim**. It is safe for match packaging, replay, XP, and anti-cheat to consume because the authority branch has already been resolved. A verified starter card carries only starter card-id and non-transferable/no-CardXP facts. A verified NFT card carries concrete NFT uid plus replay-derived instance data. A verified QA card carries only card-id, reset epoch, and gameplay-only/no-CardXP facts.
 _Avoid_: deduplicating a deck into collection entries, awarding NFT XP from `cardId` alone, using verified deck cards before runtime boundary validation
 
 **Protocol Authority**:
-The explicit authority named by a protocol claim, currently `starter-entitlement` or `nft-custody`. It is not the same as the legacy local `CardOwnershipSource` string (`starter` or `nft`); adapters may map between them, but protocol validation should keep the authority vocabulary intact.
+The explicit authority named by a protocol claim, currently `starter-entitlement`, `nft-custody`, or `qa_full_catalog`. It is not the same as the legacy local `CardOwnershipSource` string (`starter` or `nft`); adapters may map between them, but protocol validation should keep the authority vocabulary intact.
 _Avoid_: silently aliasing protocol authority to UI/source labels, replacing legacy local source strings in one broad migration, using optional fields to infer authority
 
 **Anti-Cheat Protocol**:
@@ -99,6 +115,7 @@ _Avoid_: server as hidden truth, per-request heavyweight recomputation, gameplay
 
 - **Starter Ownership** is a rule from **Starter Entitlement Source of Truth**, not **NFT Custody** or **Operational Projection**.
 - **Ragnarok Pack Fulfillment** decides pack contents before **NFT Custody** births or distributes the resulting card instances.
+- **DUAT Airdrop Ceremony** is a claim/open/inspect UX over **Ragnarok Pack Fulfillment** and **NFT Custody**; it must expose the resulting cards as a filterable acquisition path even when **QA Testnet Season 0** grants broader full-catalog access.
 - **NFT Custody** decides who owns a genesis NFT instance; **Ragnarok Replay State** decides what that instance has earned in gameplay.
 - **NFTLox Progress Mirror** may be repaired from **Ragnarok Replay State** whenever they drift.
 - **Operational Projection** must never be the only place a sensitive balance, ranking, ownership, or pack distribution decision exists.

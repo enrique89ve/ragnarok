@@ -6,6 +6,16 @@ import { getPokerTurnRemainingSeconds } from '../../../../../shared/p2p-wire/pok
 export type PokerDecisionStatus =
 	| 'inactive'
 	| 'reconnecting'
+	| 'expired'
+	| 'showdown'
+	| 'syncing'
+	| 'local_decision'
+	| 'remote_decision';
+
+export type PokerDecisionProtocolStatus =
+	| 'inactive'
+	| 'connection_paused'
+	| 'expired'
 	| 'showdown'
 	| 'syncing'
 	| 'local_decision'
@@ -14,6 +24,54 @@ export type PokerDecisionStatus =
 export type PokerDecisionActorSide = 'local' | 'remote' | 'none';
 
 export type PokerTimerTone = 'normal' | 'low' | 'critical' | 'expired';
+
+export interface PokerDecisionStateInput {
+	readonly combatId: string;
+	readonly phase: CombatPhase;
+	readonly player: {
+		readonly playerId: string;
+		readonly isReady?: boolean;
+	};
+	readonly opponent: {
+		readonly playerId: string;
+		readonly isReady?: boolean;
+	};
+	readonly activePlayerId: string | null;
+	readonly turnId?: string | null;
+	readonly turnTimer?: number | null;
+	readonly turnStartedAtMs?: number | null;
+	readonly turnDeadlineAtMs?: number | null;
+	readonly maxTurnTime?: number;
+	readonly actionsThisRound?: number;
+	readonly foldWinner?: string | null;
+	readonly isAllInShowdown?: boolean;
+}
+
+export interface PokerDecisionProtocolMetadata {
+	readonly combatId: string;
+	readonly activePlayerId: string | null;
+	readonly localPlayerId: string;
+	readonly remotePlayerId: string;
+	readonly turnId: string | null;
+	readonly turnStartedAtMs: number | null;
+	readonly turnDeadlineAtMs: number | null;
+	readonly actionsThisRound: number;
+	readonly connectionState: P2PConnectionState;
+}
+
+export interface PokerDecisionProtocolView {
+	readonly status: PokerDecisionProtocolStatus;
+	readonly decisionSide: PokerDecisionActorSide;
+	readonly canAct: boolean;
+	readonly phaseLabel: string;
+	readonly turnLabel: string;
+	readonly clockLabel: string;
+	readonly remainingSeconds: number | null;
+	readonly label: string;
+	readonly title: string;
+	readonly detail: string;
+	readonly protocol: PokerDecisionProtocolMetadata | null;
+}
 
 export interface PokerDecisionView {
 	readonly status: PokerDecisionStatus;
@@ -44,6 +102,137 @@ const PHASE_LABELS: Partial<Record<CombatPhase, string>> = {
 	[CombatPhase.RESOLUTION]: 'Showdown',
 };
 
+export function getPokerDecisionView(input: {
+	readonly combatState: PokerDecisionStateInput | null;
+	readonly connectionState?: P2PConnectionState;
+	readonly nowMs?: number;
+}): PokerDecisionProtocolView {
+	const {
+		combatState,
+		connectionState = 'connected',
+		nowMs = Date.now(),
+	} = input;
+
+	if (!combatState) {
+		return {
+			status: 'inactive',
+			decisionSide: 'none',
+			canAct: false,
+			phaseLabel: 'Battle Ready',
+			turnLabel: 'No clock',
+			clockLabel: 'No clock',
+			remainingSeconds: null,
+			label: 'Inactive',
+			title: 'Poker inactive',
+			detail: 'No decision window',
+			protocol: null,
+		};
+	}
+
+	const protocol = createProtocolMetadata(combatState, connectionState);
+	const phaseLabel = formatPhaseLabel(combatState.phase);
+	const turnLabel = formatTurnLabel(combatState.turnId);
+	const activeSide = getActiveSide(combatState);
+	const hasClock = hasActiveDecisionClock(combatState);
+	const remainingSeconds = hasClock ? getRemainingSeconds(combatState, nowMs) : null;
+	const clockLabel = remainingSeconds === null ? 'No clock' : `${remainingSeconds}s`;
+	const terminal = isTerminalDecisionState(combatState);
+
+	if (connectionState !== 'connected') {
+		return {
+			status: 'connection_paused',
+			decisionSide: 'none',
+			canAct: false,
+			phaseLabel,
+			turnLabel,
+			clockLabel,
+			remainingSeconds,
+			label: 'Reconnecting',
+			title: 'Poker input paused',
+			detail: 'Waiting for peer connection',
+			protocol,
+		};
+	}
+
+	if (terminal) {
+		return {
+			status: 'showdown',
+			decisionSide: 'none',
+			canAct: false,
+			phaseLabel,
+			turnLabel,
+			clockLabel,
+			remainingSeconds,
+			label: 'Showdown',
+			title: 'Hand resolving',
+			detail: 'No wager actions available',
+			protocol,
+		};
+	}
+
+	if (activeSide === 'none' || !hasClock) {
+		return {
+			status: 'syncing',
+			decisionSide: 'none',
+			canAct: false,
+			phaseLabel,
+			turnLabel,
+			clockLabel,
+			remainingSeconds,
+			label: 'Syncing',
+			title: 'Waiting for poker clock',
+			detail: 'Decision window not open',
+			protocol,
+		};
+	}
+
+	if (remainingSeconds !== null && remainingSeconds <= 0) {
+		return {
+			status: 'expired',
+			decisionSide: activeSide,
+			canAct: false,
+			phaseLabel,
+			turnLabel,
+			clockLabel,
+			remainingSeconds,
+			label: 'Time Expired',
+			title: 'Decision window closed',
+			detail: 'Controls locked',
+			protocol,
+		};
+	}
+
+	if (activeSide === 'local') {
+		return {
+			status: 'local_decision',
+			decisionSide: 'local',
+			canAct: true,
+			phaseLabel,
+			turnLabel,
+			clockLabel,
+			remainingSeconds,
+			label: 'Your Decision',
+			title: 'Choose wager action',
+			detail: 'Controls are live',
+			protocol,
+		};
+	}
+
+	return {
+		status: 'remote_decision',
+		decisionSide: 'remote',
+		canAct: false,
+		phaseLabel,
+		turnLabel,
+		clockLabel,
+		remainingSeconds,
+		label: 'Opponent Acting',
+		title: 'Waiting on opponent',
+		detail: 'Controls locked',
+		protocol,
+	};
+}
+
 export function derivePokerDecisionView(input: {
 	readonly combatState: PokerCombatState | null;
 	readonly connectionState?: P2PConnectionState;
@@ -63,20 +252,21 @@ export function derivePokerDecisionView(input: {
 		return createInactiveView();
 	}
 
-	const remainingSeconds = getRemainingSeconds(combatState, nowMs);
+	const protocolView = getPokerDecisionView({
+		combatState,
+		connectionState: isP2PCombat ? connectionState : 'connected',
+		nowMs,
+	});
+	const remainingSeconds = protocolView.remainingSeconds ?? 0;
 	const durationSeconds = Math.max(1, Math.ceil(combatState.maxTurnTime || 1));
 	const timerProgress = clamp(remainingSeconds / durationSeconds, 0, 1);
 	const timerTone = getTimerTone(remainingSeconds);
-	const phaseLabel = formatPhaseLabel(combatState.phase);
-	const turnLabel = formatTurnLabel(combatState.turnId);
-	const clockLabel = `${remainingSeconds}s`;
-	const activeSide = getActiveSide(combatState);
-	const terminal = combatState.phase === CombatPhase.RESOLUTION
-		|| Boolean(combatState.foldWinner)
-		|| combatState.isAllInShowdown;
-	const inputPaused = isP2PCombat && connectionState !== 'connected';
+	const phaseLabel = protocolView.phaseLabel;
+	const turnLabel = protocolView.turnLabel;
+	const clockLabel = protocolView.clockLabel;
+	const activeSide = protocolView.decisionSide;
 
-	if (inputPaused) {
+	if (protocolView.status === 'connection_paused') {
 		return {
 			...createBaseView({
 				activeSide,
@@ -97,7 +287,27 @@ export function derivePokerDecisionView(input: {
 		};
 	}
 
-	if (terminal) {
+	if (protocolView.status === 'expired') {
+		return {
+			...createBaseView({
+				activeSide,
+				phaseLabel,
+				turnLabel,
+				clockLabel,
+				remainingSeconds,
+				durationSeconds,
+				timerProgress,
+				timerTone,
+			}),
+			status: 'expired',
+			statusLabel: 'Time Expired',
+			statusTitle: 'Decision window closed',
+			statusDetail: 'Controls locked',
+			windowLabel: 'Time Expired',
+		};
+	}
+
+	if (protocolView.status === 'showdown') {
 		return {
 			...createBaseView({
 				activeSide,
@@ -117,7 +327,7 @@ export function derivePokerDecisionView(input: {
 		};
 	}
 
-	if (activeSide === 'none') {
+	if (protocolView.status === 'syncing') {
 		return {
 			...createBaseView({
 				activeSide,
@@ -137,7 +347,7 @@ export function derivePokerDecisionView(input: {
 		};
 	}
 
-	if (activeSide === 'local') {
+	if (protocolView.status === 'local_decision') {
 		const localCanAct = permissions?.isMyTurnToAct
 			?? !combatState.player.isReady;
 		return {
@@ -182,6 +392,40 @@ export function derivePokerDecisionView(input: {
 		statusDetail: 'Controls locked',
 		windowLabel: 'Enemy Acting',
 	};
+}
+
+function createProtocolMetadata(
+	combatState: PokerDecisionStateInput,
+	connectionState: P2PConnectionState,
+): PokerDecisionProtocolMetadata {
+	return {
+		combatId: combatState.combatId,
+		activePlayerId: combatState.activePlayerId,
+		localPlayerId: combatState.player.playerId,
+		remotePlayerId: combatState.opponent.playerId,
+		turnId: combatState.turnId ?? null,
+		turnStartedAtMs: combatState.turnStartedAtMs ?? null,
+		turnDeadlineAtMs: combatState.turnDeadlineAtMs ?? null,
+		actionsThisRound: combatState.actionsThisRound ?? 0,
+		connectionState,
+	};
+}
+
+function hasActiveDecisionClock(combatState: PokerDecisionStateInput): boolean {
+	return Boolean(combatState.activePlayerId)
+		&& Boolean(combatState.turnId)
+		&& (
+			combatState.turnDeadlineAtMs !== null
+			&& combatState.turnDeadlineAtMs !== undefined
+			|| combatState.turnTimer !== null
+			&& combatState.turnTimer !== undefined
+		);
+}
+
+function isTerminalDecisionState(combatState: PokerDecisionStateInput): boolean {
+	return combatState.phase === CombatPhase.RESOLUTION
+		|| Boolean(combatState.foldWinner)
+		|| Boolean(combatState.isAllInShowdown);
 }
 
 function createInactiveView(): PokerDecisionView {
@@ -239,14 +483,14 @@ function createBaseView(input: {
 	};
 }
 
-function getRemainingSeconds(combatState: PokerCombatState, nowMs: number): number {
+function getRemainingSeconds(combatState: PokerDecisionStateInput, nowMs: number): number {
 	if (combatState.turnDeadlineAtMs !== null && combatState.turnDeadlineAtMs !== undefined) {
 		return getPokerTurnRemainingSeconds({ nowMs, deadlineAtMs: combatState.turnDeadlineAtMs });
 	}
 	return Math.max(0, Math.ceil(combatState.turnTimer ?? combatState.maxTurnTime ?? 0));
 }
 
-function getActiveSide(combatState: PokerCombatState): PokerDecisionActorSide {
+function getActiveSide(combatState: PokerDecisionStateInput): PokerDecisionActorSide {
 	if (!combatState.activePlayerId) return 'none';
 	if (combatState.activePlayerId === combatState.player.playerId) return 'local';
 	if (combatState.activePlayerId === combatState.opponent.playerId) return 'remote';

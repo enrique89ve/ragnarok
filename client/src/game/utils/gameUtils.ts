@@ -1,6 +1,7 @@
 import { GameState, CardInstance, Player, HeroClass, CardData } from '../types';
 import type { HiveCardAsset } from '../../data/schemas/HiveTypes';
 import { debug, isAISimulationMode } from '../config/debugConfig';
+import { createRuntimeStorageKey } from '../config/networkConfig';
 import { createStartingDeck, createClassDeck, drawCards, findCardInstance, createCardInstance } from './cards/cardUtils';
 import { isMinion, getAttack, getHealth } from './cards/typeGuards';
 import { getDefaultHeroPower, resetHeroPower, executeHeroPower } from './heroPowerUtils';
@@ -248,7 +249,7 @@ export function initializeGameSeeded(opts: InitializeGameSeededOpts): GameState 
   let playerClass: HeroClass;
 
   if (opts.selectedDeckId && opts.selectedHeroClass) {
-    const savedDecks = JSON.parse(localStorage.getItem('ragnarok_decks') || '[]');
+    const savedDecks = JSON.parse(localStorage.getItem(createRuntimeStorageKey('ragnarok-decks')) || '[]');
     const selectedDeck = savedDecks.find((deck: any) => deck.id === opts.selectedDeckId);
 
     if (selectedDeck) {

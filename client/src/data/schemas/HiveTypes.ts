@@ -14,6 +14,7 @@
  */
 
 import { isStarterEntitlementCardId } from '@shared/schemas/starterEntitlement';
+import type { AcquisitionProvenance } from '@shared/protocol-core/acquisitionProvenance';
 import { getRagnarokProtocolId } from '../../game/config/networkConfig';
 
 export const RAGNAROK_APP_ID = getRagnarokProtocolId();
@@ -175,6 +176,7 @@ export interface HiveCardAsset {
   provenanceChain?: ProvenanceStamp[];
   compactedProvenance?: CompactedProvenance;
   officialMint?: OfficialMint;
+  acquisition?: AcquisitionProvenance;
 }
 
 export function isStarterEntitlementAsset(

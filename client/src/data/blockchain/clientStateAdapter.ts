@@ -55,6 +55,7 @@ function hiveCardToAsset(c: HiveCardAsset): CardAsset {
 		level: c.level || 1, xp: c.xp || 0, edition: c.edition || 'alpha',
 		mintSource: 'genesis', mintTrxId: c.mintTrxId || '', mintBlockNum: c.mintBlockNum || 0,
 		lastTransferBlock: c.lastTransferBlock || 0,
+		acquisition: c.acquisition,
 	};
 }
 
@@ -66,6 +67,7 @@ function assetToHiveCard(a: CardAsset): HiveCardAsset {
 		foil: 'standard', lastTransferBlock: a.lastTransferBlock,
 		lastTransferTrxId: '', mintBlockNum: a.mintBlockNum, mintTrxId: a.mintTrxId,
 		name: '', type: 'minion',
+		acquisition: a.acquisition,
 	};
 }
 

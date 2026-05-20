@@ -25,10 +25,13 @@ import {
 import {
 	toDeckClaimsFromLegacyCardRefs,
 	verifyDeckClaims,
+	type DeckCardClaim,
 	type DeckRejection,
 	type LegacyCardRefLike,
 } from '@shared/protocol-core/deckVerification';
 import type { HiveCardAsset } from '../schemas/HiveTypes';
+import { getQaFullCatalogCardsForRuntime, getQaFullCatalogOwnedCopies } from '../../game/protocol/qaFullCatalogEntitlement';
+import { CardIdSchema } from '@shared/schemas/ids';
 
 export interface CardRef {
 	nft_id?: string;
@@ -67,6 +70,7 @@ export async function verifyDeckOwnership(
 ): Promise<DeckVerificationResult> {
 	const requireNft = isSharedNetworkEnvironment();
 	const refsForVerification: LegacyCardRefLike[] = [];
+	const qaClaims: DeckCardClaim[] = [];
 	const invalidCards: string[] = [];
 
 	for (const card of deck) {
@@ -80,13 +84,23 @@ export async function verifyDeckOwnership(
 			continue;
 		}
 
+		const parsedCardId = card.cardId === undefined ? null : CardIdSchema.safeParse(card.cardId);
+		if (parsedCardId?.success && getQaFullCatalogOwnedCopies(parsedCardId.data) > 0) {
+			qaClaims.push({
+				authority: 'qa_full_catalog',
+				cardId: parsedCardId.data,
+			});
+			continue;
+		}
+
 		if (requireNft) {
 			invalidCards.push(`no-nft:${card.cardId ?? 'unknown'}`);
 		}
 	}
 
 	const parsed = toDeckClaimsFromLegacyCardRefs(refsForVerification);
-	const nftClaims = parsed.claims.filter(claim => claim.authority === 'nft-custody');
+	const claims = [...parsed.claims, ...qaClaims];
+	const nftClaims = claims.filter(claim => claim.authority === 'nft-custody');
 	const storedCards = await Promise.all(nftClaims.map(claim => getCard(claim.nftUid)));
 	const ownedNfts = storedCards
 		.filter(isOwnedCardFor(hiveAccount))
@@ -98,9 +112,12 @@ export async function verifyDeckOwnership(
 			level: card.level,
 		}));
 
-	const collection = buildPlayerCollection({ nftCards: ownedNfts });
+	const collection = buildPlayerCollection({
+		nftCards: ownedNfts,
+		qaFullCatalogCards: getQaFullCatalogCardsForRuntime(),
+	});
 	const decision = verifyDeckClaims({
-		claims: parsed.claims,
+		claims,
 		collection,
 	});
 	const verificationRejections = decision.status === 'rejected' ? decision.rejections : [];

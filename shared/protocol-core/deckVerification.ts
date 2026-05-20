@@ -32,6 +32,10 @@ export type DeckCardClaim =
 		readonly authority: 'nft-custody';
 		readonly nftUid: NftUid;
 		readonly cardId: CardId;
+	}
+	| {
+		readonly authority: 'qa_full_catalog';
+		readonly cardId: CardId;
 	};
 
 export type VerifiedDeckCard =
@@ -51,6 +55,14 @@ export type VerifiedDeckCard =
 		readonly level: number;
 		readonly transferable: true;
 		readonly earnsCardXp: true;
+	}
+	| {
+		readonly slotIndex: DeckSlotIndex;
+		readonly authority: 'qa_full_catalog';
+		readonly cardId: CardId;
+		readonly resetEpoch: string;
+		readonly transferable: false;
+		readonly earnsCardXp: false;
 	};
 
 export type DeckRejection = {
@@ -103,9 +115,15 @@ export const NftDeckCardClaimSchema = z.object({
 	cardId: CardIdSchema,
 }).strict();
 
+export const QaFullCatalogDeckCardClaimSchema = z.object({
+	authority: z.literal('qa_full_catalog'),
+	cardId: CardIdSchema,
+}).strict();
+
 export const DeckCardClaimSchema = z.union([
 	StarterDeckCardClaimSchema,
 	NftDeckCardClaimSchema,
+	QaFullCatalogDeckCardClaimSchema,
 ]);
 
 export const DeckCardClaimsSchema = z.array(DeckCardClaimSchema).min(1).max(100);
@@ -129,9 +147,19 @@ export const NftVerifiedDeckCardSchema = z.object({
 	earnsCardXp: z.literal(true),
 }).strict();
 
+export const QaFullCatalogVerifiedDeckCardSchema = z.object({
+	slotIndex: DeckSlotIndexSchema,
+	authority: z.literal('qa_full_catalog'),
+	cardId: CardIdSchema,
+	resetEpoch: z.string().trim().min(1),
+	transferable: z.literal(false),
+	earnsCardXp: z.literal(false),
+}).strict();
+
 export const VerifiedDeckCardSchema = z.discriminatedUnion('authority', [
 	StarterVerifiedDeckCardSchema,
 	NftVerifiedDeckCardSchema,
+	QaFullCatalogVerifiedDeckCardSchema,
 ]);
 
 function deckSlotIndex(index: number): DeckSlotIndex {
@@ -182,6 +210,7 @@ export function toDeckClaimsFromLegacyCardIds(
 }
 
 type NftPlayerCollectionEntry = Extract<PlayerCollectionEntry, { authority: 'nft-custody' }>;
+type QaFullCatalogPlayerCollectionEntry = Extract<PlayerCollectionEntry, { authority: 'qa_full_catalog' }>;
 
 function nftEntriesByCardId(
 	collection: readonly PlayerCollectionEntry[],
@@ -196,15 +225,28 @@ function nftEntriesByCardId(
 	return entriesByCardId;
 }
 
+function qaEntriesByCardId(
+	collection: readonly PlayerCollectionEntry[],
+): ReadonlyMap<number, QaFullCatalogPlayerCollectionEntry> {
+	const entries = new Map<number, QaFullCatalogPlayerCollectionEntry>();
+	for (const entry of collection) {
+		if (entry.authority !== 'qa_full_catalog') continue;
+		entries.set(entry.cardId, entry);
+	}
+	return entries;
+}
+
 export function buildDeckClaimsFromCardIds(input: {
 	readonly cardIds: readonly number[];
 	readonly collection: readonly PlayerCollectionEntry[];
 }): DeckClaimParseResult {
 	const starterLookup = starterEntriesByCardId(input.collection);
 	const nftLookup = nftEntriesByCardId(input.collection);
+	const qaLookup = qaEntriesByCardId(input.collection);
 
 	const starterUseCounts = new Map<number, number>();
 	const usedNftUids = new Set<string>();
+	const qaUseCounts = new Map<number, number>();
 	const claims: DeckCardClaim[] = [];
 	const rejections: DeckRejection[] = [];
 
@@ -242,6 +284,17 @@ export function buildDeckClaimsFromCardIds(input: {
 				authority: 'nft-custody',
 				nftUid: nftEntry.nftUid,
 				cardId: nftEntry.cardId,
+			});
+			continue;
+		}
+
+		const qaEntry = qaLookup.get(cardId.data);
+		const qaNextCount = (qaUseCounts.get(cardId.data) ?? 0) + 1;
+		if (qaEntry && qaNextCount <= qaEntry.ownedCopies) {
+			qaUseCounts.set(cardId.data, qaNextCount);
+			claims.push({
+				authority: 'qa_full_catalog',
+				cardId: cardId.data,
 			});
 			continue;
 		}
@@ -414,7 +467,9 @@ export function verifyDeckClaims(input: {
 }): DeckVerificationDecision {
 	const starterLookup = starterEntriesByCardId(input.collection);
 	const nftLookup = nftEntriesByUid(input.collection);
+	const qaLookup = qaEntriesByCardId(input.collection);
 	const starterUseCounts = new Map<number, number>();
+	const qaUseCounts = new Map<number, number>();
 	const seenNftUids = new Set<string>();
 	const cards: VerifiedDeckCard[] = [];
 	const rejections: DeckRejection[] = [];
@@ -453,6 +508,44 @@ export function verifyDeckClaims(input: {
 				slotIndex,
 				authority: 'starter-entitlement',
 				cardId: claim.cardId,
+				transferable: false,
+				earnsCardXp: false,
+			});
+			continue;
+		}
+
+		if (claim.authority === 'qa_full_catalog') {
+			const entry = qaLookup.get(claim.cardId);
+			const nextCount = (qaUseCounts.get(claim.cardId) ?? 0) + 1;
+			qaUseCounts.set(claim.cardId, nextCount);
+
+			if (!entry || entry.ownedCopies <= 0) {
+				rejections.push(rejection({
+					slotIndex,
+					code: 'not-owner',
+					detail: 'QA full-catalog entitlement is not active for this card',
+					authority: claim.authority,
+					cardId: claim.cardId,
+				}));
+				continue;
+			}
+
+			if (nextCount > entry.ownedCopies) {
+				rejections.push(rejection({
+					slotIndex,
+					code: 'copy-limit-exceeded',
+					detail: 'QA full-catalog copy limit exceeded',
+					authority: claim.authority,
+					cardId: claim.cardId,
+				}));
+				continue;
+			}
+
+			cards.push({
+				slotIndex,
+				authority: 'qa_full_catalog',
+				cardId: claim.cardId,
+				resetEpoch: entry.resetEpoch,
 				transferable: false,
 				earnsCardXp: false,
 			});

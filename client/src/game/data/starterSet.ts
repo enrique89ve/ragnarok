@@ -34,11 +34,13 @@ import {
 import { useHeroDeckStore } from '../stores/heroDeckStore';
 import { HERO_DECK_PIECE_TYPES } from '../deck/heroDeckRules';
 import { getDefaultArmySelection } from './ChessPieceConfig';
+import { createRuntimeStorageKey } from '../config/networkConfig';
 
 // Hero class → card IDs mapping (matches getDefaultArmySelection heroes).
 // @deprecated — derived from STARTER_ENTITLEMENT_CARD_IDS_BY_CLASS for back-compat.
 // Phase 3 deletes this alias.
 const CLASS_CARD_SETS: Record<string, readonly number[]> = STARTER_ENTITLEMENT_CARD_IDS_BY_CLASS;
+const LEGACY_STARTER_DECKS_STORAGE_KEY = createRuntimeStorageKey('ragnarok-decks');
 
 /**
  * Get the 45 starter cards for a new player.
@@ -133,7 +135,7 @@ export function buildStarterDecks(): Array<{ name: string; heroId: string; cardI
 		decks.push({ name: hero.name, heroId: hero.heroId, cardIds: [...classIds] });
 	}
 
-	localStorage.setItem('ragnarok-decks', JSON.stringify(decks));
+	localStorage.setItem(LEGACY_STARTER_DECKS_STORAGE_KEY, JSON.stringify(decks));
 	return decks;
 }
 
@@ -144,7 +146,7 @@ export function buildStarterDecks(): Array<{ name: string; heroId: string; cardI
  * @deprecated Use seedStarterHeroDecks() — Phase 3 deletes this function.
  */
 export function ensureStarterDecks(): void {
-	const existing = localStorage.getItem('ragnarok-decks');
+	const existing = localStorage.getItem(LEGACY_STARTER_DECKS_STORAGE_KEY);
 	if (existing) return;
 	buildStarterDecks();
 }

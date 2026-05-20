@@ -9,6 +9,8 @@
  * Tests: client/src/data/blockchain/protocolConformance.test.ts
  */
 
+import type { AcquisitionProvenance } from './acquisitionProvenance';
+
 import type { RuneLedgerEntry, RuneLedgerEntryQuery, RuneLedgerTotalQuery } from './runeEconomy';
 import type { EitrLedgerEntry, EitrLedgerEntryQuery, EitrLedgerTotalQuery } from './eitrEconomy';
 import {
@@ -311,6 +313,7 @@ export interface CardAsset {
 	generation?: number;         // 0 = original, 1+ = replica depth
 	replicaCount?: number;       // How many replicas minted FROM this instance
 	mergedFrom?: string[];       // If merged, UIDs of the two source cards
+	acquisition?: AcquisitionProvenance;
 }
 
 // v1.1: Pack NFT — a sealed, tradeable pack with deterministic DNA
@@ -325,6 +328,7 @@ export interface PackAsset {
 	lastTransferBlock: number;
 	cardCount: number;           // Cards inside (5, 7, or 15)
 	edition: string;
+	acquisition?: AcquisitionProvenance;
 }
 
 // v1.1: Companion transfer in same Hive transaction (atomic anchoring)
@@ -593,6 +597,13 @@ export interface SignatureVerifier {
 	 * Legacy: verify against current chain posting keys (pre-v1 matches only).
 	 */
 	verifyCurrentKey(account: string, message: string, signatureHex: string): Promise<boolean>;
+
+	/**
+	 * Verify against the account's current Posting authority.
+	 * Used for login/session messages where no chain-mutating authority is
+	 * needed.
+	 */
+	verifyCurrentPostingKey?(account: string, message: string, signatureHex: string): Promise<boolean>;
 
 	/**
 	 * Verify against the account's current Active authority.
