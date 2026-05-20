@@ -21,11 +21,12 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import type { CampaignMission, CampaignChapter, Difficulty } from '../../../campaign/campaignTypes';
-import { getMissionStars } from '../../../campaign';
-import { getCampaignFirstClearRuneReward } from '@shared/protocol-core/runeEconomy';
+import { getCampaignResultRewardCopy, getMissionStars, useCampaignStore } from '../../../campaign';
 import { useRivalryStore } from '../../../pvp/rivalryStore';
 import CinematicCrawl from '../../campaign/CinematicCrawl';
 import type { GameOverSubPhase } from '../../../flow/round/types';
+import CeremonyEvidenceButton from '../../CeremonyEvidenceButton';
+import { useNFTUsername } from '../../../nft/hooks';
 
 /*
   RivalryBadge — head-to-head PvP record on the result card. Reads the
@@ -81,6 +82,12 @@ const GameOverPhase: React.FC<GameOverPhaseProps> = ({
 }) => {
 	const isVictory = result === 'victory';
 	const isDraw = result === 'draw';
+	const account = useNFTUsername();
+	const lastRewardFeedback = useCampaignStore(state => state.lastRewardFeedback);
+	const activeRewardFeedback = campaign && lastRewardFeedback?.missionId === campaign.mission.id
+		? lastRewardFeedback
+		: null;
+	const rewardCopy = campaign ? getCampaignResultRewardCopy(activeRewardFeedback) : null;
 	// Sub-phase 1: victory / defeat cinematic. Campaign-authored only.
 	const cinematicScenes = sub === 'cinematic' && campaign && !isDraw
 		? (isVictory ? campaign.mission.victoryCinematic : campaign.mission.defeatCinematic)
@@ -230,16 +237,30 @@ const GameOverPhase: React.FC<GameOverPhaseProps> = ({
 						</motion.div>
 					)}
 
-					{isVictory && getCampaignFirstClearRuneReward(campaign.mission.id) > 0 && (
+					{rewardCopy && (
 						<motion.div
-							className="cgo-rewards"
+							className={`cgo-rewards cgo-rewards--${rewardCopy.tone}`}
 							initial={{ opacity: 0 }}
 							animate={{ opacity: 1 }}
 							transition={{ delay: 2.2, duration: 0.8 }}
 						>
 							<div className="cgo-reward-pill">
-								First clear: +{getCampaignFirstClearRuneReward(campaign.mission.id)} RUNE
+								{rewardCopy.label}
 							</div>
+							<p className="cgo-reward-note">{rewardCopy.detail}</p>
+							<CeremonyEvidenceButton
+								ceremony="campaign_reward"
+								account={account}
+								context={{
+									missionId: campaign.mission.id,
+									difficulty: campaign.difficulty,
+									result,
+									playerTurnCount,
+									feedback: activeRewardFeedback,
+									location: 'campaign_game_over',
+								}}
+								className="cgo-evidence-btn"
+							/>
 						</motion.div>
 					)}
 

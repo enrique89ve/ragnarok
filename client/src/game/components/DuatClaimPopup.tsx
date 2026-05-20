@@ -12,6 +12,7 @@ import { useStarterStore } from '../stores/starterStore';
 import { useNFTUsername } from '../nft/hooks';
 import { getDuatPopupVisibility } from './duatClaimVisibility';
 import { invokeClientWalletAction } from '../../data/wallet/clientWalletInvocation';
+import CeremonyEvidenceButton from './CeremonyEvidenceButton';
 
 // Lazy — ceremony is only mounted after a successful claim.
 const DuatPackCeremony = lazy(() => import('./DuatPackCeremony'));
@@ -36,11 +37,12 @@ export default function DuatClaimPopup() {
 	const [showCeremony, setShowCeremony] = useState(false);
 
 	const earnedPacks = currentUserEntry?.packsEarned ?? 0;
+	const eligible = currentUserEntry?.eligible ?? false;
 	const claimConfirmed = Boolean(currentUserEntry?.claimed && pendingClaimTrxId);
 	const claimPending = Boolean(pendingClaimTrxId && !currentUserEntry?.claimed);
 	const activeClaimTrxId = currentUserEntry?.claimTrxId ?? pendingClaimTrxId;
 	const claimBlockedReason = currentUserEntry?.claimBlockedReason ?? null;
-	const claimDisabled = claiming || Boolean(claimBlockedReason);
+	const claimDisabled = claiming || !eligible || Boolean(claimBlockedReason);
 
 	const handleClaimPacks = () => {
 		void invokeClientWalletAction(
@@ -77,6 +79,7 @@ export default function DuatClaimPopup() {
 				<DuatPackCeremony
 					accountId={username}
 					expectedPacks={earnedPacks}
+					packSource="duat_airdrop"
 					onComplete={() => {
 						setShowCeremony(false);
 						dismiss();
@@ -146,6 +149,18 @@ export default function DuatClaimPopup() {
 										>
 											{claimConfirmed ? 'Open Later' : 'Close'}
 										</button>
+										<CeremonyEvidenceButton
+											ceremony="duat_airdrop_claim"
+											account={username}
+											context={{
+												eligible,
+												packsEarned: earnedPacks,
+												claimConfirmed,
+												claimPending,
+												claimTrxId: activeClaimTrxId ?? null,
+											}}
+											className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-sm transition-colors border border-white/10 bg-white/5 text-white/60 hover:text-white/90"
+										/>
 										{claimConfirmed && (
 											<button
 												onClick={() => setShowCeremony(true)}
@@ -173,7 +188,7 @@ export default function DuatClaimPopup() {
 									</motion.div>
 
 									<h2 className="text-2xl font-bold mb-1" style={{ color: '#c9a44c', letterSpacing: '0.05em' }}>
-										DUAT Packs Ready
+										{eligible ? 'DUAT Packs Ready' : 'No DUAT Packs Assigned'}
 									</h2>
 
 									<p className="text-gray-500 text-xs uppercase tracking-widest mb-6">
@@ -187,7 +202,7 @@ export default function DuatClaimPopup() {
 										<div className="flex justify-between items-center mb-3">
 											<span className="text-gray-500 text-sm">Eligibility</span>
 											<span className="text-lg font-bold" style={{ color: '#c9a44c' }}>
-												Verified
+												{eligible ? 'Verified' : 'Not eligible'}
 											</span>
 										</div>
 										<div
@@ -214,6 +229,17 @@ export default function DuatClaimPopup() {
 										>
 											Maybe Later
 										</button>
+										<CeremonyEvidenceButton
+											ceremony="duat_airdrop_claim"
+											account={username}
+											context={{
+												eligible,
+												packsEarned: earnedPacks,
+												claimReady: currentUserEntry?.claimReady ?? false,
+												claimBlockedReason,
+											}}
+											className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg text-sm transition-colors border border-white/10 bg-white/5 text-white/60 hover:text-white/90"
+										/>
 										<button
 											onClick={handleClaimPacks}
 											disabled={claimDisabled}
@@ -224,7 +250,7 @@ export default function DuatClaimPopup() {
 												boxShadow: claimDisabled ? 'none' : '0 0 20px rgba(201, 164, 76, 0.3)',
 											}}
 										>
-											{claiming ? 'Claiming...' : claimBlockedReason ? 'Collection Pending' : 'Claim Packs'}
+											{claiming ? 'Claiming...' : !eligible ? 'Not Eligible' : claimBlockedReason ? 'Collection Pending' : 'Claim Packs'}
 										</button>
 									</div>
 								</>

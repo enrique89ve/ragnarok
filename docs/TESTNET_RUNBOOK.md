@@ -18,6 +18,7 @@ Required values for the current profile:
 VITE_NETWORK_STAGE=testnet
 VITE_RAGNAROK_PROTOCOL_ID=rk_game_testnet
 VITE_RAGNAROK_COLLECTION_ID=ragnarok-testnet
+VITE_RAGNAROK_RESET_EPOCH=testnet-s01-2026-05-19
 VITE_RAGNAROK_ADMIN_ACCOUNT=ragnarok-test
 VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT=ragnarok-test-operator
 VITE_NFTLOX_PROTOCOL_ID=nftlox_testnet
@@ -27,13 +28,25 @@ VITE_NFTLOX_PROTOCOL_ID=nftlox_testnet
 Do not set `VITE_DATA_LAYER_MODE` or `VITE_BLOCKCHAIN_PACKAGING` for normal
 testnet runs.
 
+`VITE_RAGNAROK_RESET_EPOCH` is the browser/server projection boundary for a
+resettable phase. Change it when opening QA Testnet Season 0, Closed Testnet
+Beta, or any wipe so old IndexedDB, localStorage, service-worker caches, RUNE
+ledger projections, DUAT claims, and decks cannot bleed into the new phase.
+Use a `qa-s0-*` or `QA Season 0 / ...` reset epoch only for the QA full-catalog
+rehearsal. Closed Testnet Beta must rotate to a different epoch such as
+`closed-beta-*`, which disables the `qa_full_catalog` deck entitlement and
+returns verification to starter, NFT custody, and replay-derived acquisition.
+
 Hive private keys are server/operator-only. Never put posting, active, owner,
 memo, or WIF keys in a `VITE_*` variable; `VITE_*` is bundled into browser code.
 Public `VITE_*` values may include network stage, protocol ids, collection ids,
-Hive account names, and public endpoints. Admin actions require the frontend
-admin account to approve with Keychain Active authority and the server operator
-account to broadcast with `RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY`. Do not put
-credentials in public URLs.
+Hive account names, and public endpoints. Admin panel login requires the
+frontend admin account to sign a custom_json-shaped login payload with Keychain
+Posting authority; that payload is verified by the server but not broadcast to
+Hive. Private admin operations use the `/api/admin/multisig/*` flow: Keychain
+signs the prepared Hive transaction with admin Active authority, then the server
+adds the operator Active signature from `RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY` and
+broadcasts. Treasury is payments-only. Do not put credentials in public URLs.
 See [`ENV_SECURITY.md`](ENV_SECURITY.md) for the canonical key-placement rules.
 
 Indexer and art endpoints can stay empty until those services are deployed:
@@ -58,7 +71,7 @@ Expected UI signals:
 - Header shows `TESTNET`.
 - Dismissible lower-left banner shows `Testnet / Resettable / rk_game_testnet`.
 - `GET /api/health` reports `runtime.stage: "testnet"` and
-  `runtime.protocolId: "rk_game_testnet"`.
+  `runtime.protocolId: "rk_game_testnet"` plus the active reset epoch.
 
 The header badge remains visible after dismissing the lower-left banner.
 
@@ -98,6 +111,32 @@ and 120 requests/minute per IP for the global `/api` limiter.
 7. Confirm client replay reads the same namespace.
 
 Passing this smoke test closes the testnet configuration gate and opens the next roadmap block: gameplay/P2P validation under the testnet namespace.
+
+## Quick Manual Checklist — Ceremony Feedback
+
+Run once per QA reset epoch. For every ceremony, use the visible Evidence
+button and confirm the JSON includes `runtime.resetEpoch`,
+`runtime.protocolId`, `runtime.qaFullCatalogEnabled`, the active account, and
+recent ceremony/session events.
+
+1. Open `/#/packs` with a fresh account and claim the starter line. Confirm the
+   copy says starter/birthright only and does not mention DUAT, NFT custody, or
+   QA full-catalog access.
+2. Open the DUAT airdrop surface from `/#/packs` or the wallet claim entry.
+   Confirm eligible, ineligible, pending, and claimed states stay labeled as
+   DUAT airdrop provenance only.
+3. After DUAT replay creates sealed packs, open one from `/#/packs`. Confirm the
+   reveal labels the source as DUAT and the result inspection can export
+   evidence.
+4. Complete a daily quest, use its Claim action, then click Claim again after it
+   is already claimed. Confirm the panel shows earned RUNE and the
+   already-claimed/idempotent state.
+5. Clear a campaign mission for the first time, then replay the same mission.
+   Confirm the first clear shows the configured RUNE preview/result and the
+   replay says no new RUNE.
+6. Open `/#/marketplace?tab=packs`, exchange RUNE for a pack, then open that
+   sealed RUNE pack from `/#/packs`. Confirm spend, rejection/failure, indexing,
+   confirmed, and reveal states are distinguishable from DUAT and HBD packs.
 
 ## Local/Mainnet Profile Commands
 

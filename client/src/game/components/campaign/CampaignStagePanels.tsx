@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, Play, Swords } from 'lucide-react';
 import { Button } from '../../../components/ui-norse';
-import { useCampaignStore } from '../../campaign';
+import { getCampaignBriefingRewardCopy, useCampaignStore } from '../../campaign';
 import type { CampaignChapter, CampaignMission, Difficulty } from '../../campaign/campaignTypes';
 import { getCampaignFirstClearRuneReward, TESTNET_RUNE_ECONOMY } from '@shared/protocol-core/runeEconomy';
+import CeremonyEvidenceButton from '../CeremonyEvidenceButton';
+import { useNFTUsername } from '../../nft/hooks';
 import {
 	KICKER_CLASS,
 	DISPLAY_TITLE_CLASS,
@@ -27,11 +29,6 @@ const DIFFICULTY_META: Record<Difficulty, { label: string; blurb: string }> = {
 		blurb: 'Full-intensity boss pressure for players who already know the encounter.',
 	},
 };
-
-function describeMissionReward(missionId: string): string {
-	const rune = getCampaignFirstClearRuneReward(missionId);
-	return rune > 0 ? `First clear: +${rune} RUNE` : 'Narrative only';
-}
 
 function getEncounterTone(mission: CampaignMission): string {
 	if (mission.isChapterFinale) return 'Final confrontation';
@@ -121,9 +118,15 @@ export function MissionBriefing({
 }: MissionBriefingProps) {
 	const [difficulty, setDifficulty] = useState<Difficulty>('normal');
 	const completed = useCampaignStore(state => state.completedMissions[mission.id]);
+	const account = useNFTUsername();
 	const encounterTone = getEncounterTone(mission);
 	const phaseCount = mission.bossPhases?.length ?? 0;
 	const bridgeCount = mission.storyBridge?.length ?? 0;
+	const firstClearRune = getCampaignFirstClearRuneReward(mission.id);
+	const rewardCopy = getCampaignBriefingRewardCopy({
+		completed: Boolean(completed),
+		firstClearRune,
+	});
 
 	return (
 		<motion.div
@@ -317,20 +320,35 @@ export function MissionBriefing({
 					<div className="min-w-0">
 						<p className={`${KICKER_CLASS} text-left`}>Rewards on Clear</p>
 						<div className="mt-3 flex flex-wrap gap-2">
-							<span className={PILL_CLASS}>{describeMissionReward(mission.id)}</span>
+							<span className={PILL_CLASS}>{rewardCopy.label}</span>
 						</div>
-						<p className="mt-2 text-xs opacity-70">Season cap: {TESTNET_RUNE_ECONOMY.maxCampaignRunePerAccount} RUNE per account from campaign first-clears.</p>
+						<p className="mt-2 max-w-[58ch] text-xs leading-relaxed opacity-70">{rewardCopy.detail}</p>
+						<p className="mt-1 text-xs opacity-70">Season cap: {TESTNET_RUNE_ECONOMY.maxCampaignRunePerAccount} RUNE per account from campaign first-clears.</p>
 					</div>
 
-					<Button
-						variant="primary"
-						size="lg"
-						className="whitespace-nowrap"
-						onClick={() => onStart(difficulty)}
-					>
-						<Play size={14} strokeWidth={2.4} fill="currentColor" />
-						Enter Battle
-					</Button>
+					<div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
+						<Button
+							variant="primary"
+							size="lg"
+							className="whitespace-nowrap"
+							onClick={() => onStart(difficulty)}
+						>
+							<Play size={14} strokeWidth={2.4} fill="currentColor" />
+							Enter Battle
+						</Button>
+						<CeremonyEvidenceButton
+							ceremony="campaign_reward"
+							account={account}
+							context={{
+								missionId: mission.id,
+								difficulty,
+								completed: Boolean(completed),
+								firstClearRune,
+								location: 'campaign_mission_briefing',
+							}}
+							className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md border border-obsidian-700 bg-obsidian-900/60 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-300 transition-colors hover:border-gold-500/60 hover:text-gold-200"
+						/>
+					</div>
 				</div>
 			</div>
 		</motion.div>

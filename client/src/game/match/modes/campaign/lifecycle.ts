@@ -24,6 +24,8 @@ import { publishCampaignVictoryResult, useCampaignStore } from '../../../campaig
 import { getNFTBridge } from '../../../nft';
 import type { MatchEndContext } from '../../onWinDispatch';
 import type { MatchContext } from '../../types';
+import { recordCeremonyFeedbackEvent } from '../../../protocol/ceremonyFeedback';
+import type { CampaignRewardFeedbackInput } from '../../../campaign';
 
 export function onCampaignMatchEnd(ctx: MatchContext, end: MatchEndContext): void {
 	if (ctx.opponent.kind !== 'scripted') return;
@@ -34,6 +36,28 @@ export function onCampaignMatchEnd(ctx: MatchContext, end: MatchEndContext): voi
 	const campaign = useCampaignStore.getState();
 	const isFirstClear = !campaign.completedMissions[mission.id];
 	const previewRune = isFirstClear ? getCampaignFirstClearRuneReward(mission.id) : 0;
+	const baseFeedback = {
+		missionId: mission.id,
+		difficulty,
+		isFirstClear,
+		previewRune,
+		turnCount: end.turnCount,
+		trxId: null,
+		error: null,
+	} satisfies Omit<CampaignRewardFeedbackInput, 'status'>;
+
+	if (!end.iWon) {
+		recordCampaignRewardFeedback({
+			...baseFeedback,
+			status: 'defeat_no_reward',
+		});
+		return;
+	}
+
+	recordCampaignRewardFeedback({
+		...baseFeedback,
+		status: isFirstClear ? 'first_clear_pending' : 'replay_no_reward',
+	});
 
 	campaign.completeMission(mission.id, difficulty, end.turnCount);
 
@@ -41,12 +65,46 @@ export function onCampaignMatchEnd(ctx: MatchContext, end: MatchEndContext): voi
 		.then(result => {
 			if (!result.success) {
 				debug.warn('[Campaign] Result publication failed:', result.error);
+				recordCampaignRewardFeedback({
+					...baseFeedback,
+					status: 'publish_failed',
+					trxId: result.trxId ?? null,
+					error: result.error ?? 'Campaign result publication failed.',
+				});
 				return;
 			}
 			if (result.trxId) getNFTBridge().emitTransactionConfirmed(result.trxId);
+			recordCampaignRewardFeedback({
+				...baseFeedback,
+				status: isFirstClear
+					? previewRune > 0 ? 'first_clear_published' : 'first_clear_no_rune'
+					: 'replay_no_reward',
+				trxId: result.trxId ?? null,
+			});
 			showFirstClearRuneToast(isFirstClear, previewRune);
 		})
-		.catch(err => debug.warn('[Campaign] Result publication error:', err));
+		.catch(err => {
+			const error = err instanceof Error ? err.message : 'Campaign result publication failed.';
+			debug.warn('[Campaign] Result publication error:', err);
+			recordCampaignRewardFeedback({
+				...baseFeedback,
+				status: 'publish_failed',
+				error,
+			});
+		});
+}
+
+function recordCampaignRewardFeedback(input: CampaignRewardFeedbackInput): void {
+	useCampaignStore.getState().recordRewardFeedback(input);
+	recordCeremonyFeedbackEvent('campaign_reward', input.status, {
+		missionId: input.missionId,
+		difficulty: input.difficulty,
+		isFirstClear: input.isFirstClear,
+		previewRune: input.previewRune,
+		turnCount: input.turnCount,
+		trxId: input.trxId,
+		error: input.error,
+	});
 }
 
 function showFirstClearRuneToast(isFirstClear: boolean, previewRune: number): void {

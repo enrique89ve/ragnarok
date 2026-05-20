@@ -7,6 +7,8 @@ import { getRarityColor, getRarityBorder, getRarityGlow, getRarityBackground, ge
 import { getCardArtPath } from '../../utils/art/artMapping';
 import TreasureChestSVG from './TreasureChestSVG';
 import { OrnateCorners, SigilBackplate, NumericRitual, type Tier } from '../../../components/ornaments/RunicSigils';
+import CeremonyEvidenceButton from '../CeremonyEvidenceButton';
+import type { CeremonyKind } from '../../protocol/ceremonyFeedback';
 
 interface RevealedCard {
 	id: number;
@@ -38,6 +40,11 @@ interface PackOpeningAnimationProps {
 	 * dominant element instead of competing with stacked chrome.
 	 */
 	compactLayout?: boolean;
+	evidence?: {
+		readonly ceremony: CeremonyKind;
+		readonly account: string | null;
+		readonly context?: Record<string, unknown>;
+	};
 }
 
 type RevealColor = 'bifrost' | 'ember' | 'gold' | 'rune' | 'ink';
@@ -114,6 +121,7 @@ export default function PackOpeningAnimation({
 	oneShot = false,
 	hideCollectionLink = false,
 	compactLayout = false,
+	evidence,
 }: PackOpeningAnimationProps) {
 	const [phase, setPhase] = useState<'intro' | 'opening' | 'reveal' | 'complete'>('intro');
 	const [currentCardIndex, setCurrentCardIndex] = useState(-1);
@@ -512,6 +520,15 @@ export default function PackOpeningAnimation({
 											Open Another
 											<span className="btn-runic-stud" aria-hidden />
 										</button>
+									)}
+
+									{evidence && (
+										<CeremonyEvidenceButton
+											ceremony={evidence.ceremony}
+											account={evidence.account}
+											context={evidence.context}
+											className="btn-runic btn-runic--obsidian"
+										/>
 									)}
 								</div>
 							</motion.div>

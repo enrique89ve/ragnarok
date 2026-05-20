@@ -11,6 +11,7 @@ import {
 	assertClientWalletInvocation,
 	type ClientWalletInvocation,
 } from '../../data/wallet/clientWalletInvocation';
+import { recordCeremonyFeedbackEvent } from '../protocol/ceremonyFeedback';
 
 export interface DailyQuest {
 	id: string;
@@ -27,12 +28,22 @@ export interface DailyQuest {
 	verificationHash?: string;
 }
 
+export interface DailyQuestClaimFeedback {
+	status: 'claimed' | 'already_claimed' | 'partial' | 'rejected' | 'unavailable';
+	claimedCount: number;
+	alreadyClaimedCount: number;
+	runeEarned: number;
+	errors: string[];
+	updatedAt: number;
+}
+
 interface DailyQuestState {
 	quests: DailyQuest[];
 	lastRefreshDate: string;
 	totalCompleted: number;
 	rerollsUsedToday: number;
 	flushing: boolean;
+	lastClaimFeedback: DailyQuestClaimFeedback | null;
 	claimHistory: Record<string, string>; // Map of "ymdUtc:slot" -> "trxId" to prevent redundant broadcasts
 	clientSalt: string;
 }
@@ -125,6 +136,13 @@ function emitClaimToast(quest: DailyQuest, slotOrdinal: number): void {
 	});
 }
 
+function buildClaimFeedback(input: Omit<DailyQuestClaimFeedback, 'updatedAt'>): DailyQuestClaimFeedback {
+	return {
+		...input,
+		updatedAt: Date.now(),
+	};
+}
+
 export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 	persist(
 		(set, get) => ({
@@ -133,6 +151,7 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 			totalCompleted: 0,
 			rerollsUsedToday: 0,
 			flushing: false,
+			lastClaimFeedback: null,
 			claimHistory: {},
 			clientSalt: Math.random().toString(36).substring(2),
 
@@ -208,20 +227,68 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 				assertClientWalletInvocation(invocation, 'daily_quest_claim', 'Posting');
 				if (get().flushing) return;
 				const pending = get().quests.filter(q => q.completed && !q.claimed);
-				if (pending.length === 0) return;
+				if (pending.length === 0) {
+					const alreadyClaimed = get().quests.filter(q => q.completed && q.claimed);
+					const runeEarned = alreadyClaimed.reduce((total, quest) => total + quest.reward.rune, 0);
+					const feedback = buildClaimFeedback({
+						status: alreadyClaimed.length > 0 ? 'already_claimed' : 'rejected',
+						claimedCount: 0,
+						alreadyClaimedCount: alreadyClaimed.length,
+						runeEarned,
+						errors: alreadyClaimed.length > 0 ? [] : ['No completed daily quest is ready to claim.'],
+					});
+					set({ lastClaimFeedback: feedback });
+					recordCeremonyFeedbackEvent('daily_quest_claim', 'no_pending', {
+						status: feedback.status,
+						alreadyClaimedCount: feedback.alreadyClaimedCount,
+						runeEarned: feedback.runeEarned,
+						errors: feedback.errors,
+					});
+					if (alreadyClaimed.length > 0) {
+						toast.info('Daily quest rewards already claimed.', {
+							description: `${runeEarned} RUNE recorded across ${alreadyClaimed.length} slot${alreadyClaimed.length === 1 ? '' : 's'}.`,
+						});
+					}
+					return;
+				}
 				const bridge = getNFTBridge();
-				if (!bridge.isHiveMode()) return;
+				if (!bridge.isHiveMode()) {
+					const feedback = buildClaimFeedback({
+						status: 'unavailable',
+						claimedCount: 0,
+						alreadyClaimedCount: 0,
+						runeEarned: 0,
+						errors: ['Daily quest RUNE claims require Hive testnet mode.'],
+					});
+					set({ lastClaimFeedback: feedback });
+					recordCeremonyFeedbackEvent('daily_quest_claim', 'unavailable', {
+						status: feedback.status,
+						errors: feedback.errors,
+					});
+					toast.error('Daily quest RUNE claims require Hive testnet mode.');
+					return;
+				}
 
 				set({ flushing: true });
+				let claimedCount = 0;
+				let alreadyClaimedCount = 0;
+				const errors: string[] = [];
 				try {
 					for (const quest of pending) {
 						// Anti-Double Claim Protection: check local history
 						const claimKey = `${quest.ymdUtc}:${quest.slot}`;
 						if (get().claimHistory[claimKey]) {
 							debug.warn(`[DailyQuest] Claim already in history for ${claimKey}, skipping redundant broadcast.`);
+							alreadyClaimedCount++;
 							set(state => ({
 								quests: state.quests.map(q => q.id === quest.id ? { ...q, claimed: true } : q)
 							}));
+							recordCeremonyFeedbackEvent('daily_quest_claim', 'already_recorded', {
+								ymdUtc: quest.ymdUtc,
+								slot: quest.slot,
+								questType: quest.type,
+								rune: quest.reward.rune,
+							});
 							continue;
 						}
 
@@ -229,12 +296,22 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 						const expectedHash = computeQuestHash(quest, get().clientSalt);
 						if (quest.verificationHash !== expectedHash) {
 							debug.error(`[DailyQuest] Cache injection detected! Hash mismatch for quest ${quest.id}. Claim aborted.`);
+							errors.push(`Slot ${quest.slot + 1}: quest integrity check failed.`);
 							toast.error('Security alert: Daily quest data integrity check failed.');
 							continue;
 						}
 
 						const ok = await broadcastDailyQuestClaim(quest);
-						if (!ok) continue;
+						if (!ok) {
+							errors.push(`Slot ${quest.slot + 1}: broadcast rejected.`);
+							recordCeremonyFeedbackEvent('daily_quest_claim', 'broadcast_rejected', {
+								ymdUtc: quest.ymdUtc,
+								slot: quest.slot,
+								questType: quest.type,
+								rune: quest.reward.rune,
+							});
+							continue;
+						}
 
 						set(state => {
 							const quests = state.quests.map(q => q.id === quest.id ? { ...q, claimed: true } : q);
@@ -246,9 +323,36 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 								claimHistory: { ...state.claimHistory, [claimKey]: 'in-flight' },
 							};
 						});
+						claimedCount++;
+						recordCeremonyFeedbackEvent('daily_quest_claim', 'broadcasted', {
+							ymdUtc: quest.ymdUtc,
+							slot: quest.slot,
+							questType: quest.type,
+							rune: quest.reward.rune,
+						});
 					}
 				} finally {
-					set({ flushing: false });
+					const runeEarned = pending
+						.filter(quest => get().quests.some(current => current.id === quest.id && current.claimed))
+						.reduce((total, quest) => total + quest.reward.rune, 0);
+					const status: DailyQuestClaimFeedback['status'] = errors.length > 0
+						? claimedCount > 0 || alreadyClaimedCount > 0 ? 'partial' : 'rejected'
+						: claimedCount > 0 ? 'claimed' : 'already_claimed';
+					const feedback = buildClaimFeedback({
+						status,
+						claimedCount,
+						alreadyClaimedCount,
+						runeEarned,
+						errors,
+					});
+					set({ flushing: false, lastClaimFeedback: feedback });
+					recordCeremonyFeedbackEvent('daily_quest_claim', 'finished', {
+						status: feedback.status,
+						claimedCount,
+						alreadyClaimedCount,
+						runeEarned,
+						errors,
+					});
 				}
 			},
 
@@ -290,6 +394,7 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 					rerollQuest: _c,
 					flushPendingClaims: _d,
 					flushing: _e,
+					lastClaimFeedback: _f,
 					...data
 				} = state;
 				return data;

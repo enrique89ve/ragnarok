@@ -20,6 +20,7 @@ import { forceSync } from '../../../data/blockchain/replayEngine';
 import { RuneExchangeModal } from './RuneExchangeModal';
 import { formatPackUnit } from './runePackExchange';
 import { useRunePackExchange } from './useRunePackExchange';
+import { recordCeremonyFeedbackEvent } from '../../protocol/ceremonyFeedback';
 import { HbdPurchaseModal } from './HbdPurchaseModal';
 import { useHbdPackPurchase } from './useHbdPackPurchase';
 import {
@@ -253,17 +254,37 @@ export default function PackCatalog() {
 				runeExchange.markIndexed(trxId);
 				await fetchData();
 				runeExchange.markConfirmed(trxId);
+				recordCeremonyFeedbackEvent('rune_pack_exchange', 'confirmed', {
+					account: hiveUsername,
+					packType: runeExchange.selectedPack?.key ?? null,
+					quantity,
+					trxId,
+				});
 				toast.success(`${quantity.toLocaleString()} ${formatPackUnit(quantity)} submitted for ${selectedPackName}.`);
 				window.setTimeout(() => runeExchange.closeExchange(), 900);
 			} catch (err) {
 				const errorMessage = err instanceof Error ? err.message : 'Indexer validation failed.';
 				debug.warn('[Catalog] Sync error:', err);
 				runeExchange.markFailed(errorMessage, trxId);
+				recordCeremonyFeedbackEvent('rune_pack_exchange', 'indexing_failed', {
+					account: hiveUsername,
+					packType: runeExchange.selectedPack?.key ?? null,
+					quantity,
+					trxId,
+					error: errorMessage,
+				});
 				setPackError(errorMessage);
 			}
 		} else {
 			const errorMessage = result.error ?? 'RUNE exchange did not return a transaction id.';
 			runeExchange.markFailed(errorMessage, result.trxId);
+			recordCeremonyFeedbackEvent('rune_pack_exchange', 'failed', {
+				account: hiveUsername,
+				packType: runeExchange.selectedPack?.key ?? null,
+				quantity,
+				trxId: result.trxId ?? null,
+				error: errorMessage,
+			});
 			setPackError(errorMessage);
 		}
 	};
@@ -342,6 +363,7 @@ export default function PackCatalog() {
 					pack={runeExchange.selectedPack}
 					quote={runeExchange.quote}
 					quantityInput={runeExchange.quantityInput}
+					account={hiveUsername}
 					runeBalance={runeBalance}
 					ledgerStatus={runeExchange.ledgerStatus}
 					ledgerError={runeExchange.ledgerError}

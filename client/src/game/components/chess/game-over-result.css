@@ -235,6 +235,9 @@
 	flex-wrap: wrap;
 	gap: 12px;
 	justify-content: center;
+	align-items: center;
+	max-width: 760px;
+	padding: 0 16px;
 }
 
 .cgo-reward-pill {
@@ -252,6 +255,59 @@
 	box-shadow:
 		0 4px 14px rgba(0, 0, 0, 0.7),
 		inset 0 1px 0 rgba(255, 220, 140, 0.25);
+}
+
+.cgo-rewards--pending .cgo-reward-pill {
+	border-color: rgba(135, 190, 255, 0.55);
+	background: linear-gradient(180deg, rgba(34, 58, 86, 0.85) 0%, rgba(20, 38, 62, 0.92) 100%);
+	color: #cce4ff;
+}
+
+.cgo-rewards--no_reward .cgo-reward-pill {
+	border-color: rgba(170, 156, 126, 0.5);
+	background: linear-gradient(180deg, rgba(48, 43, 34, 0.85) 0%, rgba(32, 28, 22, 0.92) 100%);
+	color: #e2d4b5;
+}
+
+.cgo-rewards--failed .cgo-reward-pill {
+	border-color: rgba(255, 120, 120, 0.58);
+	background: linear-gradient(180deg, rgba(92, 32, 32, 0.86) 0%, rgba(58, 18, 18, 0.94) 100%);
+	color: #ffc1b8;
+}
+
+.cgo-reward-note {
+	flex-basis: 100%;
+	margin: -2px auto 0;
+	max-width: 620px;
+	font-size: 12px;
+	line-height: 1.55;
+	text-align: center;
+	color: rgba(245, 232, 198, 0.72);
+}
+
+.cgo-evidence-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	min-height: 34px;
+	padding: 8px 14px;
+	border: 1px solid rgba(168, 143, 83, 0.42);
+	border-radius: 6px;
+	background: rgba(12, 11, 18, 0.72);
+	color: rgba(245, 232, 198, 0.72);
+	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	transition: border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
+}
+
+.cgo-evidence-btn:hover {
+	border-color: rgba(255, 217, 122, 0.72);
+	background: rgba(32, 27, 16, 0.82);
+	color: #ffe6a0;
 }
 
 /* Button row */

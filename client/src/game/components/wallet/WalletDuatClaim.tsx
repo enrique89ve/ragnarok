@@ -25,7 +25,14 @@ export function WalletDuatClaim({ account }: { account: string }) {
 		void checkAccount(account);
 	}, [account, checkAccount]);
 
-	if (!eligibilityLoaded || !currentUserEntry || currentUserEntry.claimed || pendingClaimTrxId || !starterClaimed) return null;
+	if (
+		!eligibilityLoaded
+		|| !currentUserEntry
+		|| !currentUserEntry.eligible
+		|| currentUserEntry.claimed
+		|| pendingClaimTrxId
+		|| !starterClaimed
+	) return null;
 
 	const claimablePacks = currentUserEntry.packsEarned;
 	const claimReady = currentUserEntry.claimReady;

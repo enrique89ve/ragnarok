@@ -7,6 +7,12 @@ export { easternChapter } from './chapters/easternChapter';
 export type { CampaignChapter, CampaignMission, CampaignArmy, AIBehaviorProfile, BossRule, Difficulty, CinematicIntro, CinematicScene, BossQuips, BossPhase, BossPhaseEffect, BossPhaseFlash, MusicCueId } from './campaignTypes';
 export { AI_PROFILES, getMissionStars, DEFAULT_STAR_THRESHOLDS } from './campaignTypes';
 export { useCampaignStore } from './campaignStore';
+export {
+	getCampaignBriefingRewardCopy,
+	getCampaignResultRewardCopy,
+	type CampaignRewardFeedback,
+	type CampaignRewardFeedbackInput,
+} from './campaignRewardFeedback';
 export { publishCampaignVictoryResult, recordCampaignRunStart } from './campaignResultAdapter';
 export { buildCampaignArmy } from './campaignArmyBuilder';
 export { NINE_REALMS, REALM_MAP, MISSION_REALM_MAP, getMissionsForRealm, getRealmProgress } from './nineRealms';

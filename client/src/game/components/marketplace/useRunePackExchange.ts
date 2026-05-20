@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchRuneLedger, type RuneLedgerEntryView } from '../../../data/runeAPI';
 import { getNFTBridge, type BroadcastResult } from '../../nft';
+import { recordCeremonyFeedbackEvent } from '../../protocol/ceremonyFeedback';
 import type { PackType } from '../packs/types';
 import {
 	buildRunePackExchangeQuote,
@@ -130,7 +131,13 @@ export function useRunePackExchange({
 		setSelectedPack(pack);
 		setQuantityInput('1');
 		setConfirmation(IDLE_CONFIRMATION);
-	}, []);
+		recordCeremonyFeedbackEvent('rune_pack_exchange', 'opened', {
+			account: hiveUsername,
+			packType: pack.key,
+			runeCost: pack.runeCost,
+			runeBalance,
+		});
+	}, [hiveUsername, runeBalance]);
 
 	const closeExchange = useCallback(() => {
 		setSelectedPack(null);
@@ -196,6 +203,10 @@ export function useRunePackExchange({
 				trxId: null,
 				error: 'Connect Hive Keychain first.',
 			});
+			recordCeremonyFeedbackEvent('rune_pack_exchange', 'rejected', {
+				account: null,
+				reason: 'missing_hive_account',
+			});
 			return { success: false, error: 'Connect Hive Keychain first.' };
 		}
 
@@ -207,6 +218,13 @@ export function useRunePackExchange({
 				message: errorMessage,
 				trxId: null,
 				error: errorMessage,
+			});
+			recordCeremonyFeedbackEvent('rune_pack_exchange', 'rejected', {
+				account: hiveUsername,
+				packType: selectedPack?.key ?? null,
+				quantity: quote?.quantity ?? null,
+				totalCost: quote?.totalCost ?? null,
+				reason: errorMessage,
 			});
 			return { success: false, error: errorMessage };
 		}
@@ -236,6 +254,14 @@ export function useRunePackExchange({
 					...current,
 					[packKey]: (current[packKey] ?? 0) + submittedQuantity,
 				}));
+				recordCeremonyFeedbackEvent('rune_pack_exchange', 'broadcasted', {
+					account: hiveUsername,
+					packType: packKey,
+					quantity: submittedQuantity,
+					totalCost: quote.totalCost,
+					trxId: result.trxId,
+					blockNum: result.blockNum ?? null,
+				});
 			} else if (!result.success) {
 				setConfirmation({
 					stage: 'failed',
@@ -243,6 +269,14 @@ export function useRunePackExchange({
 					message: 'Wallet did not broadcast the exchange.',
 					trxId: result.trxId ?? null,
 					error: result.error ?? 'RUNE exchange failed.',
+				});
+				recordCeremonyFeedbackEvent('rune_pack_exchange', 'rejected', {
+					account: hiveUsername,
+					packType: packKey,
+					quantity: submittedQuantity,
+					totalCost: quote.totalCost,
+					trxId: result.trxId ?? null,
+					reason: result.error ?? 'RUNE exchange failed.',
 				});
 			}
 			return result;
@@ -254,6 +288,13 @@ export function useRunePackExchange({
 				message: 'Wallet did not broadcast the exchange.',
 				trxId: null,
 				error: errorMessage,
+			});
+			recordCeremonyFeedbackEvent('rune_pack_exchange', 'failed', {
+				account: hiveUsername,
+				packType: packKey,
+				quantity: submittedQuantity,
+				totalCost: quote.totalCost,
+				reason: errorMessage,
 			});
 			return {
 				success: false,

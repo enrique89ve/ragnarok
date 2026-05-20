@@ -6,6 +6,11 @@ import { getNFTBridge } from '../nft';
 import { debug } from '../config/debugConfig';
 import { triggerAutoSave } from '../stores/saveStateManager';
 import { createCampaignRunDraft, saveCampaignRunDraft } from './campaignResultAdapter';
+import {
+	createCampaignRewardFeedback,
+	type CampaignRewardFeedback,
+	type CampaignRewardFeedbackInput,
+} from './campaignRewardFeedback';
 
 interface MissionCompletion {
 	difficulty: Difficulty;
@@ -23,6 +28,9 @@ interface CampaignState {
 	// Transient per-mission runtime state — never persisted. Resets on
 	// startMission/clearCurrent so a fresh mission boots clean.
 	bossRulesApplied: boolean;
+	// Transient result feedback for the last campaign ceremony. Excluded
+	// from persistence because replay/chain projection remains authoritative.
+	lastRewardFeedback: CampaignRewardFeedback | null;
 }
 
 interface CampaignActions {
@@ -38,6 +46,7 @@ interface CampaignActions {
 	reset: () => void;
 	markBossRulesApplied: () => void;
 	resetBossRulesApplied: () => void;
+	recordRewardFeedback: (input: CampaignRewardFeedbackInput) => void;
 }
 
 export const useCampaignStore = create<CampaignState & CampaignActions>()(
@@ -49,6 +58,7 @@ export const useCampaignStore = create<CampaignState & CampaignActions>()(
 			currentDifficulty: 'normal',
 			seenCinematics: [],
 			bossRulesApplied: false,
+			lastRewardFeedback: null,
 
 			startMission: (missionId, difficulty) => {
 				const account = getNFTBridge().getUsername();
@@ -60,6 +70,7 @@ export const useCampaignStore = create<CampaignState & CampaignActions>()(
 					currentRunId: run.localRunId,
 					currentDifficulty: difficulty,
 					bossRulesApplied: false,
+					lastRewardFeedback: null,
 				});
 			},
 
@@ -129,10 +140,14 @@ export const useCampaignStore = create<CampaignState & CampaignActions>()(
 				currentDifficulty: 'normal',
 				seenCinematics: [],
 				bossRulesApplied: false,
+				lastRewardFeedback: null,
 			}),
 
 			markBossRulesApplied: () => set({ bossRulesApplied: true }),
 			resetBossRulesApplied: () => set({ bossRulesApplied: false }),
+			recordRewardFeedback: (input) => set({
+				lastRewardFeedback: createCampaignRewardFeedback(input),
+			}),
 		}),
 		{
 			name: 'ragnarok-campaign',

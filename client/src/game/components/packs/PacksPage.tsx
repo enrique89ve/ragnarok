@@ -22,6 +22,13 @@ import { NumericRitual, OrnateCorners, SigilBackplate, type Tier } from '../../.
 import { SplashBackdrop } from '../../../components/ornaments/SplashBackdrop';
 import { MetaPageHeader, MetaPageHeaderLink } from '../../../components/navigation/MetaPageHeader';
 import { invokeClientWalletAction } from '../../../data/wallet/clientWalletInvocation';
+import CeremonyEvidenceButton from '../CeremonyEvidenceButton';
+import {
+	recordCeremonyFeedbackEvent,
+	type CeremonyKind,
+} from '../../protocol/ceremonyFeedback';
+import { isDuatAcquisitionProvenance } from '@shared/protocol-core/acquisitionProvenance';
+import type { PackAsset } from '@shared/protocol-core/types';
 
 // Lazy — the ceremony modal is a one-time-per-account event.
 const StarterPackCeremony = lazy(() => import('../StarterPackCeremony'));
@@ -89,6 +96,35 @@ function packTierFor(packType: string): Tier {
 	return PACK_TIER[packType] ?? 'obsidian';
 }
 
+type PackCeremonySource = 'duat_airdrop' | 'rune_exchange' | 'hbd_purchase' | 'vault';
+
+function getPackCeremonySource(pack: PackAsset): PackCeremonySource {
+	if (isDuatAcquisitionProvenance(pack.acquisition)) return 'duat_airdrop';
+	if (pack.uid.includes(':rune:')) return 'rune_exchange';
+	if (pack.uid.includes(':hbd:')) return 'hbd_purchase';
+	return 'vault';
+}
+
+function getPackSourceLabel(source: PackCeremonySource): string {
+	if (source === 'duat_airdrop') return 'DUAT airdrop';
+	if (source === 'rune_exchange') return 'RUNE exchange';
+	if (source === 'hbd_purchase') return 'HBD purchase';
+	return 'Vault';
+}
+
+function getPackSourceInscription(source: PackCeremonySource, packType: string): string {
+	if (source === 'duat_airdrop') return `DUAT · ${packType}`;
+	if (source === 'rune_exchange') return `RUNE · ${packType}`;
+	if (source === 'hbd_purchase') return `HBD · ${packType}`;
+	return PACK_INSCRIPTION[packType] ?? 'Owned · Sealed';
+}
+
+function getPackOpeningCeremony(source: PackCeremonySource): CeremonyKind {
+	if (source === 'duat_airdrop') return 'duat_pack_opening';
+	if (source === 'rune_exchange') return 'rune_pack_opening';
+	return 'vault_pack_opening';
+}
+
 export default function PacksPage() {
 	// Re-read on every render — sealed pack inventory mutates after burn/send.
 	const sealedPacks = getNFTBridge().getPackCollection().filter(p => p.sealed);
@@ -105,6 +141,7 @@ export default function PacksPage() {
 	const duatPendingClaimTrxId = useDuatClaimStore(s => s.pendingClaimTrxId);
 	const claimDuatPacks = useDuatClaimStore(s => s.claimPacks);
 	const duatPacksEarned = duatEntry?.packsEarned ?? 0;
+	const duatEligible = duatEntry?.eligible ?? false;
 	const duatClaimed = duatEntry?.claimed ?? false;
 	const duatClaimReady = duatEntry?.claimReady ?? false;
 	const duatClaimBlockedReason = duatEntry?.claimBlockedReason ?? null;
@@ -113,6 +150,10 @@ export default function PacksPage() {
 
 	const [showCeremony, setShowCeremony] = useState(false);
 	const [showPackCeremony, setShowPackCeremony] = useState(false);
+	const [packCeremonyFilter, setPackCeremonyFilter] = useState<{
+		packType: string;
+		packSource: PackCeremonySource;
+	} | null>(null);
 	const [, forceRerender] = useState(0);
 
 	const refresh = () => forceRerender(n => n + 1);
@@ -131,12 +172,31 @@ export default function PacksPage() {
 
 		refresh();
 		if (result.error) {
+			recordCeremonyFeedbackEvent('duat_airdrop_claim', 'rejected', {
+				account: hiveUsername,
+				packsEarned: duatPacksEarned,
+				error: result.error,
+			});
 			toast.error(result.error);
 		} else if (result.trxId) {
+			recordCeremonyFeedbackEvent('duat_airdrop_claim', 'submitted', {
+				account: hiveUsername,
+				packsEarned: duatPacksEarned,
+				claimTrxId: result.trxId,
+			});
 			toast.success('Claim submitted. Packs appear after chain confirmation.');
 		} else if (duatClaimed) {
+			recordCeremonyFeedbackEvent('duat_airdrop_claim', 'already_claimed', {
+				account: hiveUsername,
+				packsEarned: duatPacksEarned,
+			});
 			toast(`${duatPacksEarned} sealed packs already claimed`);
 		} else {
+			recordCeremonyFeedbackEvent('duat_airdrop_claim', 'already_confirming', {
+				account: hiveUsername,
+				packsEarned: duatPacksEarned,
+				claimTrxId: duatPendingClaimTrxId,
+			});
 			toast('Claim is already confirming on-chain.');
 		}
 	};
@@ -146,17 +206,33 @@ export default function PacksPage() {
 	// card derivation per pack and exposes Next/Skip controls. Direct burn
 	// (without the modal) is intentionally not the /packs path; the user
 	// expects to see the cards their packs contained.
-	const launchPackCeremony = () => {
+	const launchPackCeremony = (packType: string, packSource: PackCeremonySource) => {
+		recordCeremonyFeedbackEvent(getPackOpeningCeremony(packSource), 'opened_from_vault', {
+			account: hiveUsername,
+			packType,
+			packSource,
+		});
+		setPackCeremonyFilter({ packType, packSource });
 		setShowPackCeremony(true);
 	};
 
 	// Group sealed packs by type. DUAT packs only enter this collection after
 	// canonical replay writes them, so every listed pack is openable.
-	const openableByType = new Map<string, typeof sealedPacks>();
+	const openableByType = new Map<string, {
+		packType: string;
+		packSource: PackCeremonySource;
+		packs: typeof sealedPacks;
+	}>();
 	for (const p of sealedPacks) {
-		const list = openableByType.get(p.packType) ?? [];
-		list.push(p);
-		openableByType.set(p.packType, list);
+		const packSource = getPackCeremonySource(p);
+		const key = `${packSource}:${p.packType}`;
+		const entry = openableByType.get(key) ?? {
+			packType: p.packType,
+			packSource,
+			packs: [],
+		};
+		entry.packs.push(p);
+		openableByType.set(key, entry);
 	}
 
 	const showStarterRow = !starterClaimed;
@@ -186,14 +262,17 @@ export default function PacksPage() {
 				{/* Starter claim card — only when not yet claimed */}
 				{showStarterRow && (
 					<StarterClaimCard
+						account={hiveUsername}
 						onClaim={() => setShowCeremony(true)}
 					/>
 				)}
 
-				{/* DUAT airdrop claim card — only when eligible & unclaimed */}
+				{/* DUAT airdrop state — eligible claim or explicit ineligible snapshot state */}
 				{showDuatRow && duatEntry && (
 					<DuatClaimCard
+						account={hiveUsername}
 						packsEarned={duatPacksEarned}
+						eligible={duatEligible}
 						onClaim={handleDuatClaim}
 						loading={duatClaiming}
 						confirming={duatConfirming}
@@ -229,12 +308,14 @@ export default function PacksPage() {
 							</header>
 						)}
 						<div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-							{[...openableByType.entries()].map(([packType, typePacks]) => (
+							{[...openableByType.values()].map(({ packType, packSource, packs: typePacks }) => (
 								<SealedPackTile
-									key={`open-${packType}`}
+									key={`open-${packSource}-${packType}`}
 									packType={packType}
+									packSource={packSource}
 									count={typePacks.length}
-									onOpen={launchPackCeremony}
+									onOpen={() => launchPackCeremony(packType, packSource)}
+									account={hiveUsername}
 								/>
 							))}
 						</div>
@@ -263,7 +344,13 @@ export default function PacksPage() {
 				<Suspense fallback={null}>
 					<DuatPackCeremony
 						accountId={hiveUsername}
-						onComplete={() => { setShowPackCeremony(false); refresh(); }}
+						packType={packCeremonyFilter?.packType}
+						packSource={packCeremonyFilter?.packSource}
+						onComplete={() => {
+							setShowPackCeremony(false);
+							setPackCeremonyFilter(null);
+							refresh();
+						}}
 					/>
 				</Suspense>
 			)}
@@ -279,13 +366,17 @@ export default function PacksPage() {
  */
 function SealedPackTile({
 	packType,
+	packSource,
 	count,
 	onOpen,
+	account,
 	pending = false,
 }: {
 	packType: string;
+	packSource: PackCeremonySource;
 	count: number;
 	onOpen: () => void;
+	account: string | null;
 	pending?: boolean;
 }) {
 	const hexVariant = packHexVariantFor(packType);
@@ -293,7 +384,7 @@ function SealedPackTile({
 	const tier = packTierFor(packType);
 	const inscription = pending
 		? 'Confirming · On-chain'
-		: (PACK_INSCRIPTION[packType] ?? 'Owned · Sealed');
+		: getPackSourceInscription(packSource, packType);
 	const numericTier = PACK_NUMERIC_TIER[packType] ?? 'gold';
 	const surface = PACK_SURFACE_VAR[packType] ?? 'var(--surface-mystic-obsidian)';
 	const glowClass = PACK_GLOW_CLASS[packType] ?? 'mystic-tile--gold';
@@ -340,13 +431,24 @@ function SealedPackTile({
 					disabled={pending}
 					aria-label={pending
 						? `${count} ${packType} pack${count === 1 ? '' : 's'} confirming on chain`
-						: `Open one ${packType} pack`}
+						: `Open one ${getPackSourceLabel(packSource)} ${packType} pack`}
 					className="btn-runic btn-runic--gold btn-runic--sm w-full disabled:cursor-not-allowed disabled:opacity-60"
 				>
 					<span className="btn-runic-stud" aria-hidden />
 					{pending ? 'Confirming…' : 'Open'}
 					<span className="btn-runic-stud" aria-hidden />
 				</button>
+				<CeremonyEvidenceButton
+					ceremony={getPackOpeningCeremony(packSource)}
+					account={account}
+					context={{
+						packType,
+						packSource,
+						count,
+						location: 'packs_vault_tile',
+					}}
+					className="mt-2 w-full inline-flex items-center justify-center gap-1.5 rounded-md border border-obsidian-700 bg-obsidian-900/55 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-300 transition-colors hover:border-gold-500/60 hover:text-gold-200"
+				/>
 			</div>
 		</motion.article>
 	);
@@ -357,7 +459,7 @@ function SealedPackTile({
  * The birthright artifact: ornate corners, etched texture, gold sigil
  * backplate behind the seal icon, ritual heading.
  */
-function StarterClaimCard({ onClaim }: { onClaim: () => void }) {
+function StarterClaimCard({ account, onClaim }: { account: string | null; onClaim: () => void }) {
 	return (
 		<motion.section
 			initial={{ opacity: 0, y: 8 }}
@@ -390,15 +492,27 @@ function StarterClaimCard({ onClaim }: { onClaim: () => void }) {
 				</p>
 			</div>
 
-			<button
-				type="button"
-				onClick={onClaim}
-				className="btn-runic btn-runic--gold shrink-0 relative z-10"
-			>
-				<span className="btn-runic-stud" aria-hidden />
-				Claim
-				<span className="btn-runic-stud" aria-hidden />
-			</button>
+			<div className="relative z-10 flex shrink-0 flex-col gap-2">
+				<button
+					type="button"
+					onClick={onClaim}
+					className="btn-runic btn-runic--gold"
+				>
+					<span className="btn-runic-stud" aria-hidden />
+					Claim
+					<span className="btn-runic-stud" aria-hidden />
+				</button>
+				<CeremonyEvidenceButton
+					ceremony="starter_claim"
+					account={account}
+					context={{
+						source: 'starter_entitlement',
+						location: 'packs_vault_card',
+						state: 'unclaimed',
+					}}
+					className="inline-flex items-center justify-center gap-1.5 rounded-md border border-obsidian-700 bg-obsidian-900/55 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-300 transition-colors hover:border-gold-500/60 hover:text-gold-200"
+				/>
+			</div>
 		</motion.section>
 	);
 }
@@ -411,20 +525,28 @@ function StarterClaimCard({ onClaim }: { onClaim: () => void }) {
  * Temporary surface — visible only during the 90-day claim window.
  */
 function DuatClaimCard({
+	account,
 	packsEarned,
+	eligible,
 	onClaim,
 	loading,
 	confirming,
 	blockedReason,
 }: {
+	account: string | null;
 	packsEarned: number;
+	eligible: boolean;
 	onClaim: () => void;
 	loading: boolean;
 	confirming: boolean;
 	blockedReason: string | null;
 }) {
 	const blocked = Boolean(blockedReason);
-	const disabled = loading || confirming || blocked;
+	const disabled = loading || confirming || blocked || !eligible;
+	const statusLabel = confirming ? 'Confirming' : !eligible ? 'Ineligible' : blocked ? 'Collection pending' : 'Eligible';
+	const heading = eligible
+		? `${packsEarned} sealed pack${packsEarned === 1 ? '' : 's'} ${confirming ? 'confirming' : 'await'}`
+		: 'No DUAT packs assigned';
 
 	return (
 		<motion.section
@@ -448,10 +570,10 @@ function DuatClaimCard({
 
 			<div className="relative z-10 min-w-0 flex-1">
 				<div className="tier-inscription tier-inscription--standard mb-2">
-					DUAT Airdrop · {confirming ? 'Confirming' : blocked ? 'Collection pending' : 'Eligible'}
+					DUAT Airdrop · {statusLabel}
 				</div>
 				<h2 id="duat-claim-heading" className="font-display text-xl font-bold text-ink-0 tracking-[0.10em] uppercase mb-2">
-					{packsEarned} sealed pack{packsEarned === 1 ? '' : 's'} {confirming ? 'confirming' : 'await'}
+					{heading}
 				</h2>
 				<p className="text-ink-200 text-sm leading-snug max-w-[44ch]">
 					{confirming
@@ -460,17 +582,31 @@ function DuatClaimCard({
 				</p>
 			</div>
 
-			<button
-				type="button"
-				onClick={onClaim}
-				disabled={disabled}
-				aria-busy={loading || confirming}
-				className="btn-runic btn-runic--bifrost shrink-0 relative z-10 disabled:opacity-60"
-			>
-				<span className="btn-runic-stud" aria-hidden />
-				{loading ? 'Claiming...' : confirming ? 'Confirming...' : blocked ? 'Collection Pending' : 'Claim Packs'}
-				<span className="btn-runic-stud" aria-hidden />
-			</button>
+			<div className="relative z-10 flex shrink-0 flex-col gap-2">
+				<button
+					type="button"
+					onClick={onClaim}
+					disabled={disabled}
+					aria-busy={loading || confirming}
+					className="btn-runic btn-runic--bifrost disabled:opacity-60"
+				>
+					<span className="btn-runic-stud" aria-hidden />
+					{loading ? 'Claiming...' : confirming ? 'Confirming...' : !eligible ? 'Not Eligible' : blocked ? 'Collection Pending' : 'Claim Packs'}
+					<span className="btn-runic-stud" aria-hidden />
+				</button>
+				<CeremonyEvidenceButton
+					ceremony="duat_airdrop_claim"
+					account={account}
+					context={{
+						packsEarned,
+						eligible,
+						confirming,
+						blockedReason,
+						location: 'packs_vault_card',
+					}}
+					className="inline-flex items-center justify-center gap-1.5 rounded-md border border-obsidian-700 bg-obsidian-900/55 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-300 transition-colors hover:border-bifrost-300/60 hover:text-bifrost-100"
+				/>
+			</div>
 		</motion.section>
 	);
 }

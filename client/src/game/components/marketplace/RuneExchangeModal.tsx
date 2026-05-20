@@ -1,6 +1,7 @@
 import { ArrowDownUp, Minus, Plus, Wallet, X, Zap, Package } from 'lucide-react';
 import type { FormEvent, MouseEvent } from 'react';
 import { useId } from 'react';
+import CeremonyEvidenceButton from '../CeremonyEvidenceButton';
 import type { PackType } from '../packs/types';
 import {
 	formatPackUnit,
@@ -12,6 +13,7 @@ export interface RuneExchangeModalProps {
 	pack: PackType;
 	quote: RunePackExchangeQuote;
 	quantityInput: string;
+	account: string | null;
 	runeBalance: number;
 	ledgerStatus: RuneExchangeLedgerStatus;
 	ledgerError: string | null;
@@ -41,6 +43,7 @@ export function RuneExchangeModal({
 	pack,
 	quote,
 	quantityInput,
+	account,
 	runeBalance,
 	ledgerStatus,
 	ledgerError,
@@ -277,7 +280,7 @@ export function RuneExchangeModal({
 					</section>
 				)}
 
-				<div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]">
+				<div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto_auto]">
 					<button
 						type="submit"
 						disabled={!quote.canSubmit || viewState.isExchangeLocked}
@@ -295,6 +298,23 @@ export function RuneExchangeModal({
 					>
 						Cancel
 					</button>
+					<CeremonyEvidenceButton
+						ceremony="rune_pack_exchange"
+						account={account}
+						context={{
+							packType: pack.key,
+							quantity: quote.quantity,
+							totalCost: quote.totalCost,
+							remainingBalance: quote.remainingBalance,
+							accountRedeemed: quote.accountRedeemed,
+							accountLimit: quote.accountLimit,
+							confirmationStage: confirmation.stage,
+							confirmationStep: confirmation.step,
+							trxId: confirmation.trxId,
+							error: confirmation.error,
+						}}
+						className="btn-runic btn-runic--obsidian min-h-12 w-full sm:w-auto"
+					/>
 				</div>
 			</form>
 		</div>

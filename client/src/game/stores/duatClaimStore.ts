@@ -10,9 +10,11 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { accountScopedStorage, registerAccountScopedStore } from '../../lib/storage/accountScopedStorage';
+import { recordSessionEvent } from '../../data/blockchain/transcriptBuilder';
 import { debug } from '../config/debugConfig';
 import { getNFTBridge } from '../nft';
 import { isHiveMode, isSharedNetworkEnvironment } from '../config/featureFlags';
+import { createDuatPackAcquisition } from '@shared/protocol-core/acquisitionProvenance';
 import {
 	assertClientWalletInvocation,
 	type ClientWalletInvocation,
@@ -25,6 +27,7 @@ const LOCAL_DEMO_CONFIRMATION_MS = 1_200;
 
 interface DuatEligibility {
 	account: string;
+	eligible: boolean;
 	packsEarned: number;
 	claimed: boolean;
 	claimTrxId: string | null;
@@ -74,7 +77,19 @@ async function findDuatEligibility(account: string, allowDemoFallback: boolean):
 	]);
 
 	const entry = lookupDuatSnapshot(account);
-	if (!entry && !allowDemoFallback) return null;
+	if (!entry && !allowDemoFallback) {
+		const claim = await getDuatClaim(account);
+		return {
+			account,
+			eligible: false,
+			packsEarned: 0,
+			claimed: Boolean(claim),
+			claimTrxId: claim?.trxId ?? null,
+			claimBlockNum: claim?.blockNum ?? null,
+			claimReady: false,
+			claimBlockedReason: 'This Hive account is not in the DUAT holder snapshot.',
+		};
+	}
 
 	let claimReady = true;
 	let claimBlockedReason: string | null = null;
@@ -90,6 +105,7 @@ async function findDuatEligibility(account: string, allowDemoFallback: boolean):
 	const claim = await getDuatClaim(account);
 	return {
 		account,
+		eligible: true,
 		packsEarned: entry ? getDuatPacksFor(entry) : LOCAL_DEMO_DUAT_PACKS,
 		claimed: Boolean(claim),
 		claimTrxId: claim?.trxId ?? null,
@@ -117,6 +133,14 @@ function mintLocalDemoDuatPacks(account: string, packsEarned: number, trxId: str
 			lastTransferBlock: 0,
 			cardCount: 5,
 			edition: 'alpha',
+			acquisition: createDuatPackAcquisition({
+				account,
+				claimTrxId: trxId,
+				claimBlockNum: 0,
+				packsEarned,
+				packUid: `${prefix}${i}`,
+				packIndex: i,
+			}),
 		});
 	}
 }
@@ -174,6 +198,15 @@ export const useDuatClaimStore = create<DuatClaimState>()(
 						pendingClaimTrxId: eligibility?.claimReady === false ? null : state.pendingClaimTrxId,
 						error: null,
 					}));
+					recordSessionEvent('duat_eligibility_checked', {
+						account: normalized,
+						eligible: eligibility?.eligible ?? false,
+						packsEarned: eligibility?.packsEarned ?? 0,
+						claimed: eligibility?.claimed ?? false,
+						claimTrxId: eligibility?.claimTrxId ?? null,
+						claimBlockNum: eligibility?.claimBlockNum ?? null,
+						claimReady: eligibility?.claimReady ?? false,
+					});
 					if (eligibility && !eligibility.claimed) {
 						debug.log(`[DUAT] Eligible: @${normalized} -> ${eligibility.packsEarned} packs`);
 					}
@@ -183,6 +216,10 @@ export const useDuatClaimStore = create<DuatClaimState>()(
 						eligibilityLoaded: true,
 						eligibilityLoading: false,
 						currentUserEntry: null,
+						error: message,
+					});
+					recordSessionEvent('duat_eligibility_failed', {
+						account: normalized,
 						error: message,
 					});
 					debug.warn('[DUAT] Eligibility check failed:', err);
@@ -197,6 +234,12 @@ export const useDuatClaimStore = create<DuatClaimState>()(
 				}
 
 				if (currentUserEntry.claimed || pendingClaimTrxId) {
+					recordSessionEvent('duat_claim_already_recorded', {
+						account: currentUserEntry.account,
+						eligible: currentUserEntry.eligible,
+						claimTrxId: currentUserEntry.claimTrxId ?? pendingClaimTrxId,
+						packsEarned: currentUserEntry.packsEarned,
+					});
 					return {
 						broadcasted: false,
 						trxId: currentUserEntry.claimTrxId ?? pendingClaimTrxId,
@@ -213,11 +256,17 @@ export const useDuatClaimStore = create<DuatClaimState>()(
 				if (!isDuatClaimRuntimeEnabled()) {
 					const trxId = `duat-demo-${currentUserEntry.account}-${Date.now()}`;
 					set({ pendingClaimTrxId: trxId, claiming: true, error: null });
+					recordSessionEvent('duat_claim_submitted', {
+						account: currentUserEntry.account,
+						claimTrxId: trxId,
+						packsEarned: currentUserEntry.packsEarned,
+						broadcasted: false,
+					});
 					window.setTimeout(() => {
 						mintLocalDemoDuatPacks(currentUserEntry.account, currentUserEntry.packsEarned, trxId);
 						set({
 							claiming: false,
-							currentUserEntry: {
+						currentUserEntry: {
 								...currentUserEntry,
 								claimed: true,
 								claimTrxId: trxId,
@@ -237,6 +286,12 @@ export const useDuatClaimStore = create<DuatClaimState>()(
 							pendingClaimTrxId: result.trxId || null,
 							claiming: false,
 							error: null,
+						});
+						recordSessionEvent('duat_claim_submitted', {
+							account: currentUserEntry.account,
+							claimTrxId: result.trxId || null,
+							packsEarned: currentUserEntry.packsEarned,
+							broadcasted: true,
 						});
 						debug.log(`[DUAT] Claim submitted — trxId: ${result.trxId}`);
 						scheduleClaimRefresh(currentUserEntry.account, get().checkAccount);

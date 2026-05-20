@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle2, Clock, Info, RotateCcw, Wallet } from 'lucide-react';
-import { useDailyQuestStore, type DailyQuest } from '../../stores/dailyQuestStore';
+import { useDailyQuestStore, type DailyQuest, type DailyQuestClaimFeedback } from '../../stores/dailyQuestStore';
 import { formatCountdown, useDailyResetCountdown } from '../../hooks/useDailyResetCountdown';
 import { invokeClientWalletAction } from '../../../data/wallet/clientWalletInvocation';
 import DailyQuestInfoDialog from './DailyQuestInfoDialog';
+import CeremonyEvidenceButton from '../CeremonyEvidenceButton';
+import { useNFTUsername } from '../../nft/hooks';
 
 /**
  * QuestRow — compact horizontal quest entry.
@@ -122,9 +124,11 @@ export default function DailyQuestPanel() {
 	const quests = useDailyQuestStore(s => s.quests);
 	const rerollsUsed = useDailyQuestStore(s => s.rerollsUsedToday);
 	const claiming = useDailyQuestStore(s => s.flushing);
+	const claimFeedback = useDailyQuestStore(s => s.lastClaimFeedback);
 	const refreshIfNeeded = useDailyQuestStore(s => s.refreshIfNeeded);
 	const rerollQuest = useDailyQuestStore(s => s.rerollQuest);
 	const flushPendingClaims = useDailyQuestStore(s => s.flushPendingClaims);
+	const account = useNFTUsername();
 	const [infoOpen, setInfoOpen] = useState(false);
 
 	useEffect(() => { void refreshIfNeeded(); }, [refreshIfNeeded]);
@@ -146,6 +150,11 @@ export default function DailyQuestPanel() {
 		<>
 			<div className="flex flex-col gap-2 max-h-[480px] overflow-y-auto pr-1 -mr-1 [scrollbar-width:thin]">
 				<ResetCountdownChip onOpenInfo={() => setInfoOpen(true)} />
+				<DailyQuestClaimSummary
+					account={account}
+					quests={quests}
+					claimFeedback={claimFeedback}
+				/>
 				{quests.map(quest => (
 					<QuestRow
 						key={quest.id}
@@ -160,6 +169,97 @@ export default function DailyQuestPanel() {
 			{infoOpen && <DailyQuestInfoDialog onClose={() => setInfoOpen(false)} />}
 		</>
 	);
+}
+
+function DailyQuestClaimSummary({
+	account,
+	quests,
+	claimFeedback,
+}: {
+	account: string | null;
+	quests: DailyQuest[];
+	claimFeedback: DailyQuestClaimFeedback | null;
+}) {
+	const completed = quests.filter(quest => quest.completed);
+	const claimable = completed.filter(quest => !quest.claimed);
+	const claimed = completed.filter(quest => quest.claimed);
+	const claimableRune = claimable.reduce((total, quest) => total + quest.reward.rune, 0);
+	const claimedRune = claimed.reduce((total, quest) => total + quest.reward.rune, 0);
+	const totalEarnedRune = claimableRune + claimedRune;
+	const statusCopy = getDailyQuestStatusCopy({
+		claimableCount: claimable.length,
+		claimedCount: claimed.length,
+		totalEarnedRune,
+		claimFeedback,
+	});
+
+	return (
+		<section className="rounded-md border border-obsidian-700 bg-obsidian-950/60 px-3.5 py-3">
+			<div className="flex items-start justify-between gap-3">
+				<div className="min-w-0">
+					<div className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink-400">
+						Daily reward feedback
+					</div>
+					<p className="mt-1 text-sm font-semibold text-ink-100">
+						{statusCopy.title}
+					</p>
+					<p className="mt-1 text-[12px] leading-snug text-ink-300">
+						{statusCopy.detail}
+					</p>
+				</div>
+				<CeremonyEvidenceButton
+					ceremony="daily_quest_claim"
+					account={account}
+					context={{
+						claimableCount: claimable.length,
+						claimedCount: claimed.length,
+						claimableRune,
+						claimedRune,
+						totalEarnedRune,
+						lastFeedbackStatus: claimFeedback?.status ?? null,
+						lastFeedbackErrors: claimFeedback?.errors ?? [],
+					}}
+					className="shrink-0 inline-flex items-center gap-1.5 rounded-md border border-obsidian-700 bg-obsidian-900/70 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-300 transition-colors hover:border-gold-500/60 hover:text-gold-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
+				/>
+			</div>
+		</section>
+	);
+}
+
+function getDailyQuestStatusCopy(input: {
+	claimableCount: number;
+	claimedCount: number;
+	totalEarnedRune: number;
+	claimFeedback: DailyQuestClaimFeedback | null;
+}): { title: string; detail: string } {
+	if (input.claimFeedback?.status === 'unavailable') {
+		return {
+			title: 'Claim unavailable in this runtime',
+			detail: input.claimFeedback.errors[0] ?? 'Daily quest RUNE claims require Hive testnet mode.',
+		};
+	}
+	if (input.claimFeedback?.status === 'rejected' || input.claimFeedback?.status === 'partial') {
+		return {
+			title: input.claimFeedback.status === 'partial' ? 'Some daily rewards need attention' : 'Daily claim rejected',
+			detail: input.claimFeedback.errors[0] ?? 'Download evidence and retry after checking Keychain/replay state.',
+		};
+	}
+	if (input.claimableCount > 0) {
+		return {
+			title: `${input.totalEarnedRune} RUNE earned today`,
+			detail: `${input.claimableCount} completed slot${input.claimableCount === 1 ? '' : 's'} ready for a Posting-key claim. ${input.claimedCount} already claimed.`,
+		};
+	}
+	if (input.claimedCount > 0) {
+		return {
+			title: `${input.totalEarnedRune} RUNE already claimed`,
+			detail: 'All completed daily quest slots are marked claimed for this reset day.',
+		};
+	}
+	return {
+		title: 'No daily RUNE ready yet',
+		detail: 'Complete a listed quest, then claim from the row to broadcast the reward.',
+	};
 }
 
 function ResetCountdownChip({ onOpenInfo }: { onOpenInfo: () => void }) {

@@ -7,6 +7,8 @@ import { getStarterCards, STARTER_PACK_NAME } from '../data/starterSet';
 import { claimStarterEntitlement } from '../data/starterClaim';
 import PackOpeningAnimation from './packs/PackOpeningAnimation';
 import TreasureChestSVG from './packs/TreasureChestSVG';
+import CeremonyEvidenceButton from './CeremonyEvidenceButton';
+import { recordCeremonyFeedbackEvent } from '../protocol/ceremonyFeedback';
 
 interface StarterPackCeremonyProps {
 	accountId?: string | null;
@@ -48,14 +50,22 @@ export default function StarterPackCeremony({
 
 	const handleCancel = useCallback(() => {
 		if (isClaiming) return;
+		recordCeremonyFeedbackEvent('starter_claim', 'cancelled', {
+			account: accountId ?? null,
+			cardCount: starterCards.length,
+		});
 		(onCancel ?? onComplete)();
-	}, [isClaiming, onCancel, onComplete]);
+	}, [accountId, isClaiming, onCancel, onComplete, starterCards.length]);
 
 	const handleClaimBirthright = useCallback(async () => {
 		if (isClaiming) return;
 
 		setIsClaiming(true);
 		setClaimError(null);
+		recordCeremonyFeedbackEvent('starter_claim', 'started', {
+			account: accountId ?? null,
+			cardCount: starterCards.length,
+		});
 		const result = await claimStarterEntitlement({
 			accountId,
 		});
@@ -63,11 +73,20 @@ export default function StarterPackCeremony({
 
 		if (!result.success) {
 			setClaimError(result.error);
+			recordCeremonyFeedbackEvent('starter_claim', 'failed', {
+				account: accountId ?? null,
+				error: result.error,
+			});
 			return;
 		}
 
+		recordCeremonyFeedbackEvent('starter_claim', 'revealed', {
+			account: accountId ?? null,
+			cardCount: result.cards.length,
+			source: 'starter_entitlement',
+		});
 		setPhase('opening');
-	}, [accountId, isClaiming]);
+	}, [accountId, isClaiming, starterCards.length]);
 
 	// Both the close (X / backdrop / "Done") and the explicit "Continue" path
 	// land on the mode-select phase — the player chooses where to play first.
@@ -116,6 +135,15 @@ export default function StarterPackCeremony({
 					onClose={handlePackClose}
 					onOpenAnother={handlePlayFirstGame}
 					oneShot
+					evidence={{
+						ceremony: 'starter_claim',
+						account: accountId ?? null,
+						context: {
+							cardCount: revealCards.length,
+							source: 'starter_entitlement',
+							claimState: 'revealed',
+						},
+					}}
 				/>
 			</div>
 		);
@@ -232,6 +260,19 @@ export default function StarterPackCeremony({
 						>
 							Maybe later
 						</button>
+						<div className="mt-3">
+							<CeremonyEvidenceButton
+								ceremony="starter_claim"
+								account={accountId ?? null}
+								context={{
+									cardCount: starterCards.length,
+									source: 'starter_entitlement',
+									claimState: claimError ? 'error' : 'welcome',
+									claimError,
+								}}
+								className="inline-flex items-center gap-1.5 font-mono text-[11px] tracking-[0.22em] uppercase text-ink-400 hover:text-gold-300 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300 focus-visible:outline-offset-2 rounded-sm"
+							/>
+						</div>
 					</motion.div>
 				</motion.div>
 			)}
