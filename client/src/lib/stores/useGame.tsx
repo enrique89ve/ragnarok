@@ -3,6 +3,9 @@ import { subscribeWithSelector } from "zustand/middleware";
 import { HeroClass, DeckInfo } from "../../game/types";
 import { getDefaultHeroPower } from "../../game/data/heroes";
 import { debug } from "../../game/config/debugConfig";
+import { createRuntimeStorageKey } from "../../game/config/networkConfig";
+
+const SAVED_DECKS_STORAGE_KEY = createRuntimeStorageKey('ragnarok-decks');
 
 export type GamePhase = "setup" | "ready" | "playing" | "ended";
 export type SetupStage = "hero_selection" | "deck_building";
@@ -104,7 +107,7 @@ const useGame = create<GameState>()(
       
       // In a real app, we'd save this to localStorage or a backend
       try {
-        localStorage.setItem('ragnarok_decks', JSON.stringify(decks));
+        localStorage.setItem(SAVED_DECKS_STORAGE_KEY, JSON.stringify(decks));
       } catch (e) {
         debug.error("Failed to save decks to localStorage", e);
       }
@@ -133,7 +136,7 @@ const useGame = create<GameState>()(
       
       // Save to localStorage
       try {
-        localStorage.setItem('ragnarok_decks', JSON.stringify(updatedDecks));
+        localStorage.setItem(SAVED_DECKS_STORAGE_KEY, JSON.stringify(updatedDecks));
       } catch (e) {
         debug.error("Failed to save decks to localStorage", e);
       }
@@ -143,7 +146,7 @@ const useGame = create<GameState>()(
 
 // Initialize with saved decks from localStorage if available
 try {
-  const savedDecks = localStorage.getItem('ragnarok_decks');
+  const savedDecks = localStorage.getItem(SAVED_DECKS_STORAGE_KEY);
   if (savedDecks) {
     // Parse the saved decks
     let decks: DeckInfo[] = [];
@@ -180,7 +183,7 @@ try {
 } catch (e) {
   debug.error("Failed to load decks from localStorage", e);
   // Clear potentially corrupted data
-  localStorage.removeItem('ragnarok_decks');
+  localStorage.removeItem(SAVED_DECKS_STORAGE_KEY);
 }
 
 export default useGame;

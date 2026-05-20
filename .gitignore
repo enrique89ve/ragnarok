@@ -90,9 +90,14 @@ __tests__/
 !client/src/data/blockchain/matchResultPackager.test.ts
 !client/src/data/HiveAuth.test.ts
 !client/src/data/HiveDataLayer.test.ts
+!client/src/main/swCacheName.test.ts
+!shared/runtimeConfig.test.ts
 !server/services/adminApprovalReplayGuard.test.ts
+!server/services/adminSession.test.ts
+!server/services/indexCheckpointPublisher.test.ts
 !client/src/data/HiveKeychain.test.ts
 !client/src/data/HiveSync.test.ts
+!client/src/game/nft/LocalNFTBridge.test.ts
 !client/src/game/stores/saveStateManager.test.ts
 !client/src/game/stores/starterStore.test.ts
 !client/src/game/stores/gameStore.test.ts
@@ -100,13 +105,18 @@ __tests__/
 !client/src/game/deck/heroDeckRules.test.ts
 !client/src/game/utils/cards/cardLevelScaling.test.ts
 !client/src/game/components/chess/chessBoardInteractionRules.test.ts
+!client/src/game/components/collection/collectionStarterGate.test.ts
+!client/src/game/components/collection/collectionAcquisition.test.ts
 !client/src/game/components/duatClaimVisibility.test.ts
 !client/src/game/components/gameLogAdapter.test.ts
 !client/src/game/components/handFanPlayability.test.ts
 !client/src/game/combat/aiAttackResolution.test.ts
 !client/src/game/combat/rules/pokerActionRules.test.ts
 !client/src/game/combat/components/PokerP2PTurnStatus.test.ts
+!client/src/game/combat/decision/pokerDecisionView.test.ts
 !client/src/game/combat/decision/pokerTurnBadgePresentation.test.ts
+!client/src/game/protocol/ceremonyFeedback.test.ts
+!client/src/game/campaign/campaignRewardFeedback.test.ts
 !client/src/game/components/marketplace/runePackExchange.test.ts
 !shared/protocol-core/cardProgression.test.ts
 !shared/protocol-core/broadcast-utils.test.ts
@@ -253,6 +263,7 @@ client/src/game/combat/prototypes/
 
 # Server-side chain indexer state (runtime data)
 data/chain-state.json
+data/chain-state.*.json
 
 # Claude Code local settings
 .claude/

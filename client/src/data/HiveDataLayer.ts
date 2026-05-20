@@ -29,6 +29,7 @@ import {
   DEFAULT_TOKEN_BALANCE,
 } from './schemas/HiveTypes';
 import { signHiveMessage } from './HiveAuth';
+import { createRuntimeStorageKey } from '../game/config/networkConfig';
 
 type BattleHiveSignatureOptions = Readonly<{
   username?: string;
@@ -191,7 +192,7 @@ export const useHiveDataStore = create<HiveDataStore>()(
       }),
     }),
     {
-      name: 'ragnarok-hive-data',
+      name: createRuntimeStorageKey('ragnarok-hive-data'),
       partialize: (state) => ({
         user: state.user,
         stats: state.stats,

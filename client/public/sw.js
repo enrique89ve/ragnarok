@@ -1,7 +1,23 @@
 /* eslint-disable no-undef */
 
+function normalizeSegment(value) {
+	return String(value || 'default')
+		.trim()
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '') || 'default';
+}
+
+function readResetEpoch() {
+	try {
+		return new URL(self.location.href).searchParams.get('resetEpoch') || 'default';
+	} catch (error) {
+		return 'default';
+	}
+}
+
 // Cache shared with assetCacheStore.ts bulk downloader
-var CACHE_NAME = 'ragnarok-assets-v3';
+var CACHE_NAME = 'ragnarok-assets-v3-' + normalizeSegment(readResetEpoch());
 
 var ASSET_DIRS = [
 	'/art/', '/portraits/', '/textures/', '/sounds/',

@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { getRagnarokServerRuntimeConfig } from "./services/runtimeConfig";
+import { getStats } from "./services/chainState";
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
@@ -26,12 +27,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Health check endpoint
   app.get('/api/health', (req: Request, res: Response) => {
+    const stats = getStats();
     res.json({
       status: 'ok',
       timestamp: new Date().toISOString(),
+      indexer: {
+        inSync: stats.inSync,
+        lastIrreversibleBlockProcessed: stats.lastIrreversibleBlockProcessed,
+        irreversibleBlock: stats.irreversibleBlock,
+        syncTargetBlock: stats.syncTargetBlock,
+        blocksBehind: stats.blocksBehind,
+      },
       runtime: {
         stage: runtime.stage,
         protocolId: runtime.protocolId,
+        resetEpoch: runtime.resetEpoch,
         resettable: runtime.resettable,
         economic: runtime.economic,
       },
@@ -69,7 +79,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const treasuryRoutes = (await import("./routes/treasuryRoutes")).default;
   app.use('/api/treasury', treasuryRoutes);
 
-  // Admin operator broadcasts: frontend Active approval + server operator Active key.
+  // Admin operator broadcasts: frontend Active transaction signature + server operator Active key.
   const adminRoutes = (await import("./routes/adminRoutes")).default;
   app.use('/api/admin', adminRoutes);
 

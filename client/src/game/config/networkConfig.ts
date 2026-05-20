@@ -1,5 +1,8 @@
 import {
 	RAGNAROK_RUNTIME_CONFIGS,
+	createRagnarokDatabaseName,
+	createRagnarokStorageKey,
+	getRagnarokStorageNamespace,
 	resolveRagnarokRuntimeConfig,
 	type RagnarokRuntimeConfig,
 } from '@shared/runtimeConfig';
@@ -22,6 +25,7 @@ const CLIENT_RUNTIME_ENV = {
 	VITE_NFTLOX_PROTOCOL_ID: import.meta.env.VITE_NFTLOX_PROTOCOL_ID,
 	VITE_NFT_ART_BASE_URL: import.meta.env.VITE_NFT_ART_BASE_URL,
 	VITE_EXTERNAL_URL_BASE: import.meta.env.VITE_EXTERNAL_URL_BASE,
+	VITE_RAGNAROK_RESET_EPOCH: import.meta.env.VITE_RAGNAROK_RESET_EPOCH,
 	VITE_SEASON_START: import.meta.env.VITE_SEASON_START,
 };
 
@@ -37,4 +41,16 @@ export function getRagnarokProtocolId(): string {
 
 export function getRagnarokCollectionId(): string {
 	return RAGNAROK_NETWORK_CONFIG.collectionId;
+}
+
+export function getRagnarokRuntimeStorageNamespace(): string {
+	return getRagnarokStorageNamespace(RAGNAROK_NETWORK_CONFIG);
+}
+
+export function createRuntimeStorageKey(key: string): string {
+	return createRagnarokStorageKey(RAGNAROK_NETWORK_CONFIG, key);
+}
+
+export function createRuntimeDatabaseName(name: string): string {
+	return createRagnarokDatabaseName(RAGNAROK_NETWORK_CONFIG, name);
 }

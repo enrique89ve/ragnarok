@@ -405,6 +405,7 @@ Genesis → Mint Batches → Seal → Admin minting permanently closed
 - **Protocol spec**: [`docs/RAGNAROK_PROTOCOL_V1.md`](docs/RAGNAROK_PROTOCOL_V1.md) — frozen normative specification
 - **Conformance suite**: 170 tests (37 golden vectors + 38 replay traces + 95 existing)
 - **Server indexer**: Sequential irreversible block scan via `get_ops_in_block` + LIB cursor; starts by default unless `ENABLE_CHAIN_INDEXER=false`
+- **Index checkpoints**: Optional server-side `hive-tx` publisher writes compact projection hashes with `RAGNAROK_INDEX_ACCOUNT` Posting authority when `ENABLE_INDEX_CHECKPOINT_PUBLISHER=true`
 - **Client replay**: Shared `protocol-core` module with LIB-gated application
 - **Chain read API**: Public read-only chain-derived reads live under `/api/chain`; RUNE uses `/api/chain/player/:username/rune` plus `/api/chain/rune/{state,ledger,balances}`
 
@@ -412,7 +413,9 @@ Genesis → Mint Batches → Seal → Admin minting permanently closed
 
 - Browser code may receive only public `VITE_*` values: network stage, protocol ids, collection ids, account names, and public endpoints.
 - Player keys stay in Hive Keychain. The app asks Keychain to sign and never stores private keys.
-- Admin Panel login uses `VITE_RAGNAROK_ADMIN_ACCOUNT`; admin broadcasts can require that account's Active Keychain approval plus `RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY` from the server/operator env.
+- Admin Panel login requires one `VITE_RAGNAROK_ADMIN_ACCOUNT` Posting Keychain signature over a canonical custom_json-shaped payload that is verified by the server but not broadcast to Hive.
+- Admin actions use `/api/admin/multisig/prepare` and `/api/admin/multisig/broadcast`: Keychain signs the prepared Hive transaction with admin Active authority, then the server validates that signature, adds the operator Active signature from `RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY`, and broadcasts a transaction whose `required_auths` are `[admin, operator]`.
+- Index checkpoints require `RAGNAROK_INDEX_POSTING_KEY`; the public account name is `VITE_RAGNAROK_INDEX_ACCOUNT` / `RAGNAROK_INDEX_ACCOUNT`.
 - Operator posting keys belong only in server/operator runtime env vars such as `HIVE_POSTING_KEY` or `RAGNAROK_OPERATOR_POSTING_KEY`.
 - Active keys should stay in Keychain/manual multisig unless a dedicated operator process explicitly needs one.
 - See [`docs/ENV_SECURITY.md`](docs/ENV_SECURITY.md) before adding any env var or signing automation.
@@ -443,6 +446,10 @@ Copy `.env.testnet.example` to `.env.testnet` for beta testing and
 `.env.mainnet.example` to `.env.mainnet` for mainnet release rehearsals.
 `VITE_NETWORK_STAGE` is the source of truth; `VITE_DATA_LAYER_MODE` and
 `VITE_BLOCKCHAIN_PACKAGING` are debug overrides, not normal profile switches.
+For resettable shared phases, set `VITE_RAGNAROK_RESET_EPOCH` deliberately
+before testers start. A new epoch isolates IndexedDB, localStorage stores,
+service-worker caches, RUNE/DUAT projections, action logs, and decks from any
+previous QA or beta wipe.
 
 ### Commands
 

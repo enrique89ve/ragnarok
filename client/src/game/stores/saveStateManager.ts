@@ -10,6 +10,9 @@
  */
 
 import { debug } from '../config/debugConfig';
+import { createRuntimeStorageKey } from '../config/networkConfig';
+
+const LEGACY_STARTER_DECKS_STORAGE_KEY = createRuntimeStorageKey('ragnarok-decks');
 
 // ── Auto-Save on Milestones ──
 
@@ -89,7 +92,7 @@ export async function collectSaveState(): Promise<PortableSaveState> {
 		: Array.isArray(rawMissions) ? rawMissions as string[] : [];
 
 	// Collect deck configs from localStorage
-	const decksRaw = localStorage.getItem('ragnarok-decks');
+	const decksRaw = localStorage.getItem(LEGACY_STARTER_DECKS_STORAGE_KEY);
 	let decks: PortableSaveState['decks'] = [];
 	if (decksRaw) {
 		try {
@@ -181,7 +184,7 @@ export async function restoreSaveState(state: PortableSaveState): Promise<{ succ
 
 		// Restore decks
 		if (state.decks.length > 0) {
-			localStorage.setItem('ragnarok-decks', JSON.stringify(state.decks));
+			localStorage.setItem(LEGACY_STARTER_DECKS_STORAGE_KEY, JSON.stringify(state.decks));
 		}
 
 		debug.log(`[SaveState] Restored: starter=${state.starterClaimed}, ${state.decks.length} decks, Eitr: ${state.eitr}`);

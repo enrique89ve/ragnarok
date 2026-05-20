@@ -31,12 +31,13 @@
 
 import { canonicalize } from './canonicalJson';
 import type { ActionLeaf } from './transcript';
+import { createRuntimeDatabaseName } from '../config/networkConfig';
 
 // ─── Public surface ────────────────────────────────────────────────────────
 
 export type StoredLeaf = ActionLeaf & { readonly matchId: string };
 
-const DB_NAME = 'ragnarok-action-log';
+const DB_NAME = createRuntimeDatabaseName('action-log');
 const DB_VERSION = 1;
 const STORE_NAME = 'leaves';
 const INDEX_BY_MATCH = 'byMatch';

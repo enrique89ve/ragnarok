@@ -47,8 +47,9 @@ import type {
 	EitrLedgerTotalQuery,
 	ForgeCommitRecord,
 } from '../../../../shared/protocol-core/types';
+import { createRuntimeDatabaseName } from '../../game/config/networkConfig';
 
-const DB_NAME = 'ragnarok-chain-v1';
+const DB_NAME = createRuntimeDatabaseName('chain-v1');
 const DB_VERSION = 15;
 
 let _db: IDBDatabase | null = null;

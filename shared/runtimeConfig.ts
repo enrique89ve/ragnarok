@@ -19,6 +19,7 @@ export type RagnarokRuntimeConfig = {
 	readonly nftLoxProtocolId: string;
 	readonly nftArtBaseUrl: string;
 	readonly externalUrlBase: string;
+	readonly resetEpoch: string;
 	readonly resettable: boolean;
 	readonly economic: boolean;
 	readonly acceptsLegacyProtocolIds: boolean;
@@ -39,8 +40,10 @@ export type RagnarokRuntimeEnv = Partial<Record<
 	| 'VITE_NFTLOX_PROTOCOL_ID'
 	| 'VITE_NFT_ART_BASE_URL'
 	| 'VITE_EXTERNAL_URL_BASE'
+	| 'VITE_RAGNAROK_RESET_EPOCH'
 	| 'VITE_SEASON_START'
 	| 'RAGNAROK_PROTOCOL_ID'
+	| 'RAGNAROK_RESET_EPOCH'
 	| 'RAGNAROK_ADMIN_OPERATOR_ACCOUNT'
 	| 'RAGNAROK_SEASON_START',
 	string | undefined
@@ -64,6 +67,7 @@ export const RAGNAROK_RUNTIME_CONFIGS = {
 		nftLoxProtocolId: 'nftlox_testnet',
 		nftArtBaseUrl: GITHUB_PAGES_BASE_URL,
 		externalUrlBase: GITHUB_PAGES_BASE_URL,
+		resetEpoch: 'local-dev',
 		resettable: true,
 		economic: false,
 		acceptsLegacyProtocolIds: true,
@@ -84,6 +88,7 @@ export const RAGNAROK_RUNTIME_CONFIGS = {
 		nftLoxProtocolId: 'nftlox_testnet',
 		nftArtBaseUrl: GITHUB_PAGES_BASE_URL,
 		externalUrlBase: GITHUB_PAGES_BASE_URL,
+		resetEpoch: 'testnet-s01-2026-05-19',
 		resettable: true,
 		economic: false,
 		acceptsLegacyProtocolIds: false,
@@ -104,6 +109,7 @@ export const RAGNAROK_RUNTIME_CONFIGS = {
 		nftLoxProtocolId: 'nftlox',
 		nftArtBaseUrl: GITHUB_PAGES_BASE_URL,
 		externalUrlBase: GITHUB_PAGES_BASE_URL,
+		resetEpoch: 'mainnet-genesis',
 		resettable: false,
 		economic: true,
 		acceptsLegacyProtocolIds: true,
@@ -132,6 +138,22 @@ function overrideString(value: string | undefined, fallback: string): string {
 	return value && value.trim().length > 0 ? value.trim() : fallback;
 }
 
+function optionalString(value: string | undefined): string | undefined {
+	const trimmed = value?.trim();
+	return trimmed && trimmed.length > 0 ? trimmed : undefined;
+}
+
+function resolveResetEpoch(env: RagnarokRuntimeEnv, base: RagnarokRuntimeConfig): string {
+	const explicitEpoch = optionalString(env.RAGNAROK_RESET_EPOCH) ?? optionalString(env.VITE_RAGNAROK_RESET_EPOCH);
+	if (explicitEpoch) return explicitEpoch;
+	if (base.stage === 'testnet') {
+		throw new Error(
+			'VITE_RAGNAROK_RESET_EPOCH or RAGNAROK_RESET_EPOCH is required for the testnet runtime profile.',
+		);
+	}
+	return base.resetEpoch;
+}
+
 export function resolveRagnarokRuntimeConfig(env: RagnarokRuntimeEnv): RagnarokRuntimeConfig {
 	const base = RAGNAROK_RUNTIME_CONFIGS[resolveRagnarokNetworkStage(env)];
 
@@ -152,6 +174,7 @@ export function resolveRagnarokRuntimeConfig(env: RagnarokRuntimeEnv): RagnarokR
 		nftLoxProtocolId: overrideString(env.VITE_NFTLOX_PROTOCOL_ID, base.nftLoxProtocolId),
 		nftArtBaseUrl: overrideString(env.VITE_NFT_ART_BASE_URL, base.nftArtBaseUrl),
 		externalUrlBase: overrideString(env.VITE_EXTERNAL_URL_BASE, base.externalUrlBase),
+		resetEpoch: resolveResetEpoch(env, base),
 		seasonStart: overrideString(env.RAGNAROK_SEASON_START, overrideString(env.VITE_SEASON_START, base.seasonStart)),
 	};
 }
@@ -160,4 +183,49 @@ export function shouldAcceptCustomJsonId(config: RagnarokRuntimeConfig, customJs
 	if (customJsonId === config.protocolId) return true;
 	if (!config.acceptsLegacyProtocolIds) return false;
 	return customJsonId.startsWith('rp_') || customJsonId === 'ragnarok_level_up';
+}
+
+export function normalizeRuntimeNamespaceSegment(value: string): string {
+	const normalized = value
+		.trim()
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '');
+	return normalized.length > 0 ? normalized : 'default';
+}
+
+export function isQaFullCatalogResetEpoch(resetEpoch: string): boolean {
+	const normalized = normalizeRuntimeNamespaceSegment(resetEpoch);
+	return (
+		normalized === 'qa-s0'
+		|| normalized.startsWith('qa-s0-')
+		|| normalized === 'qa-season-0'
+		|| normalized.startsWith('qa-season-0-')
+	);
+}
+
+export function isQaFullCatalogEntitlementEnabled(config: RagnarokRuntimeConfig): boolean {
+	return (
+		config.stage === 'testnet'
+		&& config.resettable
+		&& !config.economic
+		&& isQaFullCatalogResetEpoch(config.resetEpoch)
+	);
+}
+
+export function getRagnarokStorageNamespace(config: RagnarokRuntimeConfig): string {
+	return [
+		'ragnarok',
+		normalizeRuntimeNamespaceSegment(config.stage),
+		normalizeRuntimeNamespaceSegment(config.resetEpoch),
+		normalizeRuntimeNamespaceSegment(config.protocolId),
+	].join('-');
+}
+
+export function createRagnarokStorageKey(config: RagnarokRuntimeConfig, key: string): string {
+	return `${getRagnarokStorageNamespace(config)}:${normalizeRuntimeNamespaceSegment(key)}`;
+}
+
+export function createRagnarokDatabaseName(config: RagnarokRuntimeConfig, name: string): string {
+	return `${getRagnarokStorageNamespace(config)}-${normalizeRuntimeNamespaceSegment(name)}`;
 }

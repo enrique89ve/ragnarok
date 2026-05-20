@@ -29,9 +29,14 @@ Beta-testnet state is temporary. Progress, rankings, rewards, packs, and NFTs cr
 Normal local/testnet/mainnet runs should not set `VITE_DATA_LAYER_MODE` or
 `VITE_BLOCKCHAIN_PACKAGING`; both are derived from `VITE_NETWORK_STAGE`.
 
-Network constants live in `shared/runtimeConfig.ts` and are consumed by both server and client wrappers. They define protocol namespace, collection id, admin/index accounts, indexer endpoints, art endpoints, NFTLox protocol id, and reset/economic policy per stage.
+Network constants live in `shared/runtimeConfig.ts` and are consumed by both server and client wrappers. They define protocol namespace, collection id, admin/index accounts, indexer endpoints, art endpoints, NFTLox protocol id, reset epoch, and reset/economic policy per stage.
 
 The active frontend config is resolved once as `RAGNAROK_NETWORK_CONFIG`, so runtime consumers should import constants/helpers instead of rebuilding env-derived strings.
+
+`VITE_RAGNAROK_RESET_EPOCH` is mandatory for shared resettable phases. It
+separates IndexedDB, localStorage-backed stores, service-worker caches, action
+logs, RUNE/DUAT projections, and deck state between QA Season 0, Closed Testnet
+Beta, and later wipes. Do not reuse an epoch after a reset.
 
 Operational startup lives in `docs/TESTNET_RUNBOOK.md`. The canonical testnet dev command is:
 
@@ -53,6 +58,7 @@ The expected testnet shape is mainnet-like:
 - Central network config exists in `shared/runtimeConfig.ts`, with client and server wrappers resolving from the same contract.
 - Testnet protocol id is `rk_game_testnet`.
 - Testnet collection id is `ragnarok-testnet`.
+- Testnet reset epoch is `testnet-s01-2026-05-19` unless explicitly changed for a QA/beta wipe.
 - `npm run dev:testnet` starts the app with `.env.testnet`.
 - The UI shows a persistent `TESTNET` header badge.
 - The resettable testnet banner is dismissible.

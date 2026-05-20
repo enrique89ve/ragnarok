@@ -1,8 +1,12 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
+import {
+  RAGNAROK_NETWORK_CONFIG,
+  createRuntimeStorageKey,
+} from "./game/config/networkConfig";
 
-const DEV_SW_RESET_KEY = 'ragnarok-dev-sw-reset';
+const DEV_SW_RESET_KEY = createRuntimeStorageKey('dev-sw-reset');
 
 function hasServiceWorkerSupport(): boolean {
   return 'serviceWorker' in navigator;
@@ -79,7 +83,8 @@ function registerProductionServiceWorker(): void {
   if (!hasServiceWorkerSupport()) return;
 
   window.addEventListener('load', () => {
-    const swPath = `${import.meta.env.BASE_URL}sw.js`;
+    const resetEpoch = encodeURIComponent(RAGNAROK_NETWORK_CONFIG.resetEpoch);
+    const swPath = `${import.meta.env.BASE_URL}sw.js?resetEpoch=${resetEpoch}`;
     navigator.serviceWorker.register(swPath, { scope: import.meta.env.BASE_URL, updateViaCache: 'none' })
       .then((reg) => {
         // Check for updates every 30 minutes

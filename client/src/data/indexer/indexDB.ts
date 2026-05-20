@@ -10,8 +10,9 @@
 import type {
 	IndexEntry, LeaderboardEntry, IndexSyncMeta,
 } from '../../../../shared/indexer-types';
+import { createRuntimeDatabaseName } from '../../game/config/networkConfig';
 
-const DB_NAME = 'ragnarok-index-v1';
+const DB_NAME = createRuntimeDatabaseName('index-v1');
 const DB_VERSION = 1;
 
 let dbInstance: IDBDatabase | null = null;

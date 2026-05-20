@@ -20,12 +20,22 @@
 
 import type { StateStorage } from 'zustand/middleware';
 import { useHiveDataStore } from '../../data/HiveDataLayer';
+import {
+	getRagnarokRuntimeStorageNamespace,
+	createRuntimeStorageKey,
+	getRagnarokNetworkConfig,
+} from '../../game/config/networkConfig';
 
 const GUEST_BUCKET = 'guest';
-const HIVE_STORE_KEY = 'ragnarok-hive-data';
+const LEGACY_HIVE_STORE_KEY = 'ragnarok-hive-data';
+const HIVE_STORE_KEY = createRuntimeStorageKey(LEGACY_HIVE_STORE_KEY);
 
 interface PersistedHiveBlob {
 	state?: { user?: { hiveUsername?: string } };
+}
+
+function getLocalStorage(): Storage | null {
+	return typeof localStorage === 'undefined' ? null : localStorage;
 }
 
 /**
@@ -34,9 +44,12 @@ interface PersistedHiveBlob {
  */
 function readHiveAccount(): string {
 	try {
-		const raw = localStorage.getItem(HIVE_STORE_KEY);
-		if (!raw) return GUEST_BUCKET;
-		const parsed = JSON.parse(raw) as PersistedHiveBlob;
+		const storage = getLocalStorage();
+		if (!storage) return GUEST_BUCKET;
+		const raw = storage.getItem(HIVE_STORE_KEY);
+		const legacyRaw = raw ?? (shouldMigrateLegacyStorage() ? storage.getItem(LEGACY_HIVE_STORE_KEY) : null);
+		if (!legacyRaw) return GUEST_BUCKET;
+		const parsed = JSON.parse(legacyRaw) as PersistedHiveBlob;
 		const username = parsed.state?.user?.hiveUsername;
 		return typeof username === 'string' && username.length > 0 ? username : GUEST_BUCKET;
 	} catch {
@@ -44,32 +57,63 @@ function readHiveAccount(): string {
 	}
 }
 
+function shouldMigrateLegacyStorage(): boolean {
+	return getRagnarokNetworkConfig().stage === 'local';
+}
+
+function storageKey(name: string, account: string): string {
+	return `${createRuntimeStorageKey(name)}:${account}`;
+}
+
+function migrateLegacyHiveStore(): void {
+	if (!shouldMigrateLegacyStorage()) return;
+	const storage = getLocalStorage();
+	if (!storage) return;
+	if (storage.getItem(HIVE_STORE_KEY) !== null) return;
+	const legacy = storage.getItem(LEGACY_HIVE_STORE_KEY);
+	if (legacy !== null) storage.setItem(HIVE_STORE_KEY, legacy);
+}
+
 /**
- * One-shot migration: if `ragnarok-X` exists without a bucketed twin,
- * copy it into `ragnarok-X:{account}` and delete the unscoped key.
- * Subsequent reads find the scoped value and skip the migration branch.
+ * One-shot migration for local dev only. Shared-network reset epochs must not
+ * inherit unscoped or pre-epoch browser state.
  */
 function migrateUnscopedKey(name: string, account: string): void {
-	const unscoped = localStorage.getItem(name);
-	if (unscoped === null) return;
-	const scopedKey = `${name}:${account}`;
-	if (localStorage.getItem(scopedKey) === null) {
-		localStorage.setItem(scopedKey, unscoped);
+	if (!shouldMigrateLegacyStorage()) return;
+	const storage = getLocalStorage();
+	if (!storage) return;
+	const targetKey = storageKey(name, account);
+	const oldScoped = storage.getItem(`${name}:${account}`);
+	if (oldScoped !== null && storage.getItem(targetKey) === null) {
+		storage.setItem(targetKey, oldScoped);
 	}
-	localStorage.removeItem(name);
+	if (oldScoped !== null) storage.removeItem(`${name}:${account}`);
+
+	const unscoped = storage.getItem(name);
+	if (unscoped === null) return;
+	if (storage.getItem(targetKey) === null) {
+		storage.setItem(targetKey, unscoped);
+	}
+	storage.removeItem(name);
 }
 
 export const accountScopedStorage: StateStorage = {
 	getItem: (name) => {
+		const storage = getLocalStorage();
+		if (!storage) return null;
 		const account = readHiveAccount();
 		migrateUnscopedKey(name, account);
-		return localStorage.getItem(`${name}:${account}`);
+		return storage.getItem(storageKey(name, account));
 	},
 	setItem: (name, value) => {
-		localStorage.setItem(`${name}:${readHiveAccount()}`, value);
+		const storage = getLocalStorage();
+		if (!storage) return;
+		storage.setItem(storageKey(name, readHiveAccount()), value);
 	},
 	removeItem: (name) => {
-		localStorage.removeItem(`${name}:${readHiveAccount()}`);
+		const storage = getLocalStorage();
+		if (!storage) return;
+		storage.removeItem(storageKey(name, readHiveAccount()));
 	},
 };
 
@@ -97,22 +141,27 @@ export function registerAccountScopedStore(store: PersistableStore): void {
  */
 function migrateGuestBucketTo(account: string): void {
 	if (account === GUEST_BUCKET) return;
+	const storage = getLocalStorage();
+	if (!storage) return;
 	const suffix = `:${GUEST_BUCKET}`;
 	const keys: string[] = [];
-	for (let i = 0; i < localStorage.length; i += 1) {
-		const key = localStorage.key(i);
-		if (key !== null && key.endsWith(suffix)) keys.push(key);
+	const prefix = `${getRagnarokRuntimeStorageNamespace()}:`;
+	for (let i = 0; i < storage.length; i += 1) {
+		const key = storage.key(i);
+		if (key !== null && key.startsWith(prefix) && key.endsWith(suffix)) keys.push(key);
 	}
 	for (const key of keys) {
 		const targetKey = `${key.slice(0, -suffix.length)}:${account}`;
-		const value = localStorage.getItem(key);
+		const value = storage.getItem(key);
 		if (value === null) continue;
-		if (localStorage.getItem(targetKey) === null) {
-			localStorage.setItem(targetKey, value);
+		if (storage.getItem(targetKey) === null) {
+			storage.setItem(targetKey, value);
 		}
-		localStorage.removeItem(key);
+		storage.removeItem(key);
 	}
 }
+
+migrateLegacyHiveStore();
 
 let lastAccount = readHiveAccount();
 // Boot-time migration: if a real account is already logged in (e.g. the
