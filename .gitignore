@@ -155,6 +155,8 @@ __tests__/
 !shared/p2p-wire/chess.test.ts
 !shared/p2p-wire/combat.test.ts
 !client/src/game/p2p/p2pPerspective.test.ts
+!client/src/game/components/social/SocialPresenceHeartbeat.test.ts
+!client/src/game/match/modes/p2p/qaLocalRewardPreview.test.ts
 *.spec.js
 *.spec.ts
 *.test.tsx
@@ -189,6 +191,8 @@ Thumbs.db
 # Each AI-coding tool drops its own state/config directory.
 # These should never be committed — they're per-developer environment.
 .agents/
+.codex/
+.gstack/
 .scratch/*
 # Exception: protocol workstream scratch dirs are tracked because their PRD +
 # DECISIONS + issue files are referenced from committed ADRs and act as the

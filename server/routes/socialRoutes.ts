@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { isValidHiveUsername } from '../services/hiveAuth';
+import { hasAcceptedWarbandRelation } from '../services/warbandRelations';
 
 const router = Router();
 
@@ -7,7 +8,8 @@ const presenceMap = new Map<string, { peerId?: string; lastSeen: number }>();
 const challenges = new Map<string, { from: string; peerId: string; timestamp: number }[]>();
 const challengeTimestamps = new Map<string, number>();
 
-const STALE_THRESHOLD = 90_000;
+const PRESENCE_STALE_THRESHOLD_MS = 180_000;
+const CHALLENGE_STALE_THRESHOLD_MS = 90_000;
 const CHALLENGE_COOLDOWN_MS = 5_000;
 const MAX_FRIENDS_LIST = 200;
 const MAX_PEER_ID_LENGTH = 64;
@@ -15,14 +17,14 @@ const MAX_PEER_ID_LENGTH = 64;
 function pruneStale() {
 	const now = Date.now();
 	for (const [user, data] of presenceMap) {
-		if (now - data.lastSeen > STALE_THRESHOLD) {
+		if (now - data.lastSeen > PRESENCE_STALE_THRESHOLD_MS) {
 			presenceMap.delete(user);
 			challenges.delete(user);
 			challengeTimestamps.delete(user);
 		}
 	}
 	for (const [user, list] of challenges) {
-		const fresh = list.filter(c => now - c.timestamp < STALE_THRESHOLD);
+		const fresh = list.filter(c => now - c.timestamp < CHALLENGE_STALE_THRESHOLD_MS);
 		if (fresh.length === 0) challenges.delete(user);
 		else challenges.set(user, fresh);
 	}
@@ -64,6 +66,11 @@ router.post('/heartbeat', (req: Request, res: Response) => {
 
 	for (const friend of friendList) {
 		const normalized = friend.toLowerCase();
+		if (!hasAcceptedWarbandRelation(username, normalized)) {
+			statuses[normalized] = { online: false };
+			continue;
+		}
+
 		const presence = presenceMap.get(normalized);
 		statuses[normalized] = presence
 			? { online: true, peerId: presence.peerId, lastSeen: presence.lastSeen }
@@ -92,6 +99,10 @@ router.post('/challenge', (req: Request, res: Response) => {
 	}
 	if (from.toLowerCase() === to.toLowerCase()) {
 		res.status(400).json({ error: 'Cannot challenge yourself' });
+		return;
+	}
+	if (!hasAcceptedWarbandRelation(from, to)) {
+		res.status(403).json({ error: 'Warband relation required' });
 		return;
 	}
 

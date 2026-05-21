@@ -31,11 +31,15 @@ testnet runs.
 `VITE_RAGNAROK_RESET_EPOCH` is the browser/server projection boundary for a
 resettable phase. Change it when opening QA Testnet Season 0, Closed Testnet
 Beta, or any wipe so old IndexedDB, localStorage, service-worker caches, RUNE
-ledger projections, DUAT claims, and decks cannot bleed into the new phase.
+ledger projections, DUAT claims, decks, and QA local reward previews cannot
+bleed into the new phase.
 Use a `qa-s0-*` or `QA Season 0 / ...` reset epoch only for the QA full-catalog
 rehearsal. Closed Testnet Beta must rotate to a different epoch such as
 `closed-beta-*`, which disables the `qa_full_catalog` deck entitlement and
 returns verification to starter, NFT custody, and replay-derived acquisition.
+QA reward preview caches must include at least stage, protocol id, reset epoch,
+account, and match id in their key; on stage/epoch/account mismatch they must be
+ignored or purged before UI render.
 
 Hive private keys are server/operator-only. Never put posting, active, owner,
 memo, or WIF keys in a `VITE_*` variable; `VITE_*` is bundled into browser code.
@@ -235,11 +239,23 @@ campaign/local AI behavior as proof for P2P.
    Use the P2P badge download button to export the session log; confirm it
    includes `p2p_reload_guard_prompted`.
 9. Finish or technically resolve the match. Confirm both peers see an explicit
-   win/loss/draw result. The P2P result note must say ranked RUNE waits for
-   dual-signed match evidence.
-10. Submit or replay result-only ranked evidence without a prior dual-anchored
+   win/loss/draw result. In QA full-catalog mode the result may calculate and
+   show local reward feedback (projected winner RUNE and match/profile XP), but
+   it must be labeled local/resettable and must not say it was credited on
+   chain.
+10. Confirm QA cards do not earn CardXP: no `level_up`, no NFTLox
+    `mutableData` write, no marketplace ownership change, and no Season Score
+    input is created from the QA result.
+11. Submit or replay result-only ranked evidence without a prior dual-anchored
     `match_anchor`. Confirm it is rejected and no `p2p_ranked` RUNE ledger
-    entry appears for either account.
+    entry appears for either account. The required Closed Beta arbiter gates are
+    tracked in [`P2P_WINNER_ARBITER.md`](./P2P_WINNER_ARBITER.md).
+12. Open wallet/RUNE reads and collection/NFT details for both accounts. Confirm
+    the QA preview amount is absent from `/api/chain/player/:account/rune`,
+    `/api/chain/rune/ledger`, NFT CardXP, and NFTLox ownership/progress views.
+13. Rotate to a non-QA reset epoch or a mainnet profile. Confirm the previous QA
+    preview does not appear in result history, wallet balance, collection, or
+    matchmaking/ranking surfaces.
 
 ## Local/Mainnet Profile Commands
 

@@ -53,7 +53,7 @@ The codebase currently uses `rp_match_start` for match anchoring. The v1 spec re
 - Writers MUST emit the canonical form (`ragnarok-cards` with `"action": "match_anchor"`) for all new ops.
 - No cutover block is defined; both forms are valid indefinitely. The legacy form is a compatibility alias, not a separate op.
 
-This same rule applies to all legacy `rp_*` ids: `rp_mint` = `mint_batch`, `rp_transfer` = `card_transfer`, `rp_burn` = `burn`, `rp_match_result` = `match_result`, `rp_campaign_result` = `campaign_result`, `rp_rune_exchange` = `rune_exchange`, `rp_level_up` = `level_up`, `rp_queue_join` = `queue_join`, `rp_queue_leave` = `queue_leave`, `rp_reward_claim` = `reward_claim`, `rp_slash_evidence` = `slash_evidence`.
+This same rule applies to all legacy `rp_*` ids: `rp_mint` = `mint_batch`, `rp_transfer` = `card_transfer`, `rp_burn` = `burn`, `rp_match_result` = `match_result`, `rp_campaign_result` = `campaign_result`, `rp_warband_request` = `warband_request`, `rp_warband_accept` = `warband_accept`, `rp_warband_remove` = `warband_remove`, `rp_warband_block` = `warband_block`, `rp_rune_exchange` = `rune_exchange`, `rp_level_up` = `level_up`, `rp_queue_join` = `queue_join`, `rp_queue_leave` = `queue_leave`, `rp_reward_claim` = `reward_claim`, `rp_slash_evidence` = `slash_evidence`.
 
 ### 3.1.1 Legacy `rp_pack_open` Replay Rule
 
@@ -135,6 +135,10 @@ Hive `custom_json` supports both `required_posting_auths` and `required_auths`.
 - `match_anchor`
 - `match_result`
 - `campaign_result`
+- `warband_request`
+- `warband_accept`
+- `warband_remove`
+- `warband_block`
 - `rune_exchange`
 - `pack_commit`
 - `pack_reveal`
@@ -164,6 +168,107 @@ Hive `custom_json` supports both `required_posting_auths` and `required_auths`.
 - `duat_airdrop_finalize`
 
 Rule: any op that changes NFT custody or irreversibly destroys an NFT MUST require active auth. Routine signaling and self-serve gameplay ops MAY use posting auth.
+
+## 7.1 Warband Relationship Ops
+
+Warband contacts are a game-level relationship, separate from Hive's generic
+social follow graph. A local Warband entry is only a private address-book row.
+It does not grant presence visibility, chat, or challenge permission.
+
+All Warband relationship ops use Posting authority and MUST be emitted under
+the canonical `ragnarok-cards` custom_json id with an `action` field.
+
+### `warband_request`
+
+Creates a pending outbound request from the broadcaster to another Hive account.
+
+Payload:
+
+```json
+{
+  "action": "warband_request",
+  "v": 1,
+  "to": "bob",
+  "nonce": "alice-bob-unique-request-id",
+  "expiresAt": 1760000000000
+}
+```
+
+Rules:
+
+- `broadcaster` is the requester; any `from` payload field is ignored.
+- `to` MUST be a valid Hive username and MUST NOT equal `broadcaster`.
+- `nonce` MUST identify this request uniquely for the requester/target pair.
+- `expiresAt` is a Unix millisecond timestamp used by UIs and caches to hide
+  stale requests; readers MAY keep expired requests for audit but MUST NOT use
+  them to grant presence or challenge permission.
+
+### `warband_accept`
+
+Accepts an existing request. The accepter is the broadcaster.
+
+Payload:
+
+```json
+{
+  "action": "warband_accept",
+  "v": 1,
+  "requester": "alice",
+  "requestNonce": "alice-bob-unique-request-id"
+}
+```
+
+Rules:
+
+- `broadcaster` is the accepter.
+- A relationship becomes accepted only when a valid non-expired
+  `warband_request` from `requester` to `broadcaster` exists and this accept
+  references its `nonce`.
+- Accepted Warband pairs are symmetric for presence, chat, and challenge
+  permission.
+
+### `warband_remove`
+
+Ends an accepted Warband relationship for both sides.
+
+Payload:
+
+```json
+{
+  "action": "warband_remove",
+  "v": 1,
+  "account": "bob"
+}
+```
+
+Either side may remove. After removal, presence, chat, and challenge permission
+are revoked until a new request/accept pair is replayed.
+
+### `warband_block`
+
+Blocks an account from opening Warband relationship or invite surfaces with the
+broadcaster.
+
+Payload:
+
+```json
+{
+  "action": "warband_block",
+  "v": 1,
+  "account": "bob"
+}
+```
+
+Readers MUST treat a block by either side as overriding pending and accepted
+Warband relationships. UIs SHOULD hide presence and prevent challenge/chat
+invites when either side has blocked the other.
+
+### Presence Privacy Rule
+
+The social presence server MAY keep a temporary connected-user pool, but it MUST
+only return presence, challenge, or chat-routing metadata for accepted,
+unblocked Warband pairs. A locally saved contact, or a Hive social follow, is
+not sufficient authority to reveal online status.
 
 Admin-only Active ops use a native Hive two-account transaction path from the
 Admin Panel. The server prepares a Hive transaction through

@@ -1,11 +1,13 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { accountScopedStorage, registerAccountScopedStore } from '../../lib/storage/accountScopedStorage';
+import type { WarbandRelationStatus } from '@shared/warbandRelations';
 
 export interface Friend {
 	hiveUsername: string;
 	addedAt: number;
 	nickname?: string;
+	relationStatus?: WarbandRelationStatus;
 }
 
 export interface FriendPresence {
@@ -42,7 +44,7 @@ export const useFriendStore = create<FriendState & FriendActions>()(
 				const normalized = hiveUsername.toLowerCase().replace(/^@/, '');
 				if (get().friends.some(f => f.hiveUsername === normalized)) return;
 				set(state => ({
-					friends: [...state.friends, { hiveUsername: normalized, addedAt: Date.now() }],
+					friends: [...state.friends, { hiveUsername: normalized, addedAt: Date.now(), relationStatus: 'local' }],
 				}));
 			},
 

@@ -23,6 +23,7 @@ import {
 } from "./game/runtime/RuntimeBoundary";
 import { MatchSetupCampaign, MatchSetupSingle } from "./game/match";
 import { getSeasonInfo, formatTimeRemaining } from './game/utils/seasonUtils';
+import SocialPresenceHeartbeat from './game/components/social/SocialPresenceHeartbeat';
 
 const HiveKeychainLogin = lazy(() => import("./game/components/HiveKeychainLogin").then(m => ({ default: m.HiveKeychainLogin })));
 const DailyQuestPanel = lazy(() => import("./game/components/quests/DailyQuestPanel"));
@@ -675,6 +676,7 @@ function GlobalOverlaysLayout() {
 	return (
 		<>
 			<EnvironmentBanner />
+			<SocialPresenceHeartbeat />
 			<Outlet />
 			<Suspense fallback={null}><DuatClaimPopup /></Suspense>
 			<Suspense fallback={null}><FactionPledgePopup /></Suspense>

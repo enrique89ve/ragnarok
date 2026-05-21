@@ -1,0 +1,412 @@
+import React from 'react';
+import { motion } from 'framer-motion';
+import type { CampaignChapter, CampaignMission, Difficulty } from '../../../campaign/campaignTypes';
+import { buildCampaignRewardEvidenceContext, getCampaignResultRewardCopy, getMissionStars, useCampaignStore } from '../../../campaign';
+import { CAMPAIGN_ID } from '@shared/campaign/constants';
+import { useRivalryStore } from '../../../pvp/rivalryStore';
+import CeremonyEvidenceButton from '../../CeremonyEvidenceButton';
+import { useNFTUsername } from '../../../nft/hooks';
+import { useMatchStore } from '../../../match/store';
+import { getRagnarokNetworkConfig } from '../../../config/networkConfig';
+import {
+	createP2PQaLocalRewardPreview,
+	type P2PQaLocalRewardPreview,
+} from '../../../match/modes/p2p/qaLocalRewardPreview';
+
+type GameOverResult = 'victory' | 'defeat' | 'draw';
+
+export type GameOverCampaignContext = {
+	readonly mission: CampaignMission;
+	readonly chapter: CampaignChapter;
+	readonly difficulty: Difficulty;
+	readonly localRunId: string | null;
+};
+
+export function CampaignResultPanel({
+	result,
+	playerTurnCount,
+	campaign,
+	onPrimaryAction,
+	onRetry,
+}: {
+	readonly result: GameOverResult;
+	readonly playerTurnCount: number;
+	readonly campaign: GameOverCampaignContext;
+	readonly onPrimaryAction: () => void;
+	readonly onRetry: () => void;
+}) {
+	const account = useNFTUsername();
+	const lastRewardFeedback = useCampaignStore(state => state.lastRewardFeedback);
+	const activeRewardFeedback = lastRewardFeedback?.missionId === campaign.mission.id
+		? lastRewardFeedback
+		: null;
+	const rewardCopy = getCampaignResultRewardCopy(activeRewardFeedback);
+	const isVictory = result === 'victory';
+	const isDraw = result === 'draw';
+
+	return (
+		<>
+			<CampaignBossQuip campaign={campaign} isDraw={isDraw} isVictory={isVictory} />
+			<CampaignSubtitle campaign={campaign} isDraw={isDraw} isVictory={isVictory} />
+			<CampaignNarrativeAfter campaign={campaign} isVictory={isVictory} />
+			<CampaignStars campaign={campaign} isVictory={isVictory} playerTurnCount={playerTurnCount} />
+			<CampaignChapterSplash campaign={campaign} isVictory={isVictory} />
+			{rewardCopy && (
+				<CampaignRewardBlock
+					account={account}
+					activeRewardFeedback={activeRewardFeedback}
+					campaign={campaign}
+					playerTurnCount={playerTurnCount}
+					result={result}
+					rewardCopy={rewardCopy}
+				/>
+			)}
+			<CampaignResultActions
+				campaign={campaign}
+				isVictory={isVictory}
+				onPrimaryAction={onPrimaryAction}
+				onRetry={onRetry}
+			/>
+		</>
+	);
+}
+
+function CampaignBossQuip({
+	campaign,
+	isDraw,
+	isVictory,
+}: {
+	readonly campaign: GameOverCampaignContext;
+	readonly isDraw: boolean;
+	readonly isVictory: boolean;
+}) {
+	if (isVictory || isDraw || !campaign.mission.bossQuips?.onVictory) return null;
+
+	return (
+		<motion.p
+			className="cgo-boss-quip"
+			initial={{ opacity: 0, y: 10 }}
+			animate={{ opacity: 1, y: 0 }}
+			transition={{ delay: 0.6, duration: 1.0 }}
+		>
+			&ldquo;{campaign.mission.bossQuips.onVictory}&rdquo;
+		</motion.p>
+	);
+}
+
+function CampaignSubtitle({
+	campaign,
+	isDraw,
+	isVictory,
+}: {
+	readonly campaign: GameOverCampaignContext;
+	readonly isDraw: boolean;
+	readonly isVictory: boolean;
+}) {
+	const copy = isDraw
+		? 'Neither side can force a victory from the remaining board.'
+		: isVictory
+		? (campaign.mission.narrativeVictory ?? '')
+		: (campaign.mission.narrativeDefeat ?? 'The enemy stands triumphant. But your story is not yet over...');
+
+	return (
+		<motion.p
+			className="cgo-subtitle"
+			initial={{ opacity: 0 }}
+			animate={{ opacity: 1 }}
+			transition={{ delay: 1.0, duration: 0.8 }}
+		>
+			{copy}
+		</motion.p>
+	);
+}
+
+function CampaignNarrativeAfter({
+	campaign,
+	isVictory,
+}: {
+	readonly campaign: GameOverCampaignContext;
+	readonly isVictory: boolean;
+}) {
+	if (!isVictory || !campaign.mission.narrativeAfter) return null;
+
+	return (
+		<motion.div
+			className="cgo-narrative-scroll"
+			initial={{ opacity: 0, y: 20 }}
+			animate={{ opacity: 1, y: 0 }}
+			transition={{ delay: 1.6, duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+		>
+			<div className="cgo-narrative-divider">
+				<span>&#x16A0;</span>
+			</div>
+			<p>{campaign.mission.narrativeAfter}</p>
+		</motion.div>
+	);
+}
+
+function CampaignStars({
+	campaign,
+	isVictory,
+	playerTurnCount,
+}: {
+	readonly campaign: GameOverCampaignContext;
+	readonly isVictory: boolean;
+	readonly playerTurnCount: number;
+}) {
+	if (!isVictory) return null;
+
+	return (
+		<motion.div
+			className="cgo-stars"
+			initial={{ opacity: 0, scale: 0.8 }}
+			animate={{ opacity: 1, scale: 1 }}
+			transition={{ delay: 1.4, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+		>
+			{[1, 2, 3].map(star => {
+				const earned = getMissionStars(playerTurnCount, campaign.mission) >= star;
+				return (
+					<span key={star} className={`cgo-star ${earned ? 'earned' : 'empty'}`}>
+						&#9733;
+					</span>
+				);
+			})}
+		</motion.div>
+	);
+}
+
+function CampaignChapterSplash({
+	campaign,
+	isVictory,
+}: {
+	readonly campaign: GameOverCampaignContext;
+	readonly isVictory: boolean;
+}) {
+	if (!isVictory || !campaign.mission.isChapterFinale) return null;
+
+	return (
+		<motion.div
+			className="cgo-chapter-splash"
+			initial={{ opacity: 0, y: -20 }}
+			animate={{ opacity: 1, y: 0 }}
+			transition={{ delay: 1.8, duration: 1.0, ease: [0.16, 1, 0.3, 1] }}
+		>
+			<div className="cgo-chapter-label">Chapter Complete</div>
+			<div className="cgo-chapter-name">{campaign.chapter.name}</div>
+		</motion.div>
+	);
+}
+
+function CampaignRewardBlock({
+	account,
+	activeRewardFeedback,
+	campaign,
+	playerTurnCount,
+	result,
+	rewardCopy,
+}: {
+	readonly account: string | null;
+	readonly activeRewardFeedback: ReturnType<typeof useCampaignStore.getState>['lastRewardFeedback'] | null;
+	readonly campaign: GameOverCampaignContext;
+	readonly playerTurnCount: number;
+	readonly result: GameOverResult;
+	readonly rewardCopy: NonNullable<ReturnType<typeof getCampaignResultRewardCopy>>;
+}) {
+	return (
+		<motion.div
+			className={`cgo-rewards cgo-rewards--${rewardCopy.tone}`}
+			initial={{ opacity: 0 }}
+			animate={{ opacity: 1 }}
+			transition={{ delay: 2.2, duration: 0.8 }}
+		>
+			<div className="cgo-reward-pill">
+				{rewardCopy.label}
+			</div>
+			<p className="cgo-reward-note">{rewardCopy.detail}</p>
+			<CeremonyEvidenceButton
+				ceremony="campaign_reward"
+				account={account}
+				context={buildCampaignRewardEvidenceContext({
+					campaignId: CAMPAIGN_ID,
+					missionId: campaign.mission.id,
+					localRunId: campaign.localRunId,
+					difficulty: campaign.difficulty,
+					result,
+					playerTurnCount,
+					rewardEvidence: activeRewardFeedback,
+					location: 'campaign_game_over',
+				})}
+				className="cgo-evidence-btn"
+			/>
+		</motion.div>
+	);
+}
+
+function CampaignResultActions({
+	campaign,
+	isVictory,
+	onPrimaryAction,
+	onRetry,
+}: {
+	readonly campaign: GameOverCampaignContext;
+	readonly isVictory: boolean;
+	readonly onPrimaryAction: () => void;
+	readonly onRetry: () => void;
+}) {
+	const primaryLabel = isVictory && (campaign.mission.storyBridge?.length ?? 0) > 0
+		? 'Continue the Saga'
+		: 'Back to Campaign';
+
+	return (
+		<motion.div
+			className="cgo-buttons"
+			initial={{ opacity: 0 }}
+			animate={{ opacity: 1 }}
+			transition={{ delay: 2.6, duration: 0.6 }}
+		>
+			<button
+				type="button"
+				onClick={onPrimaryAction}
+				className="cgo-btn-primary"
+			>
+				{primaryLabel}
+			</button>
+			{!isVictory && (
+				<button
+					type="button"
+					onClick={onRetry}
+					className="cgo-btn-retry"
+				>
+					Retry Mission
+				</button>
+			)}
+		</motion.div>
+	);
+}
+
+export function CasualResultPanel({
+	result,
+	onPrimaryAction,
+}: {
+	readonly result: GameOverResult;
+	readonly onPrimaryAction: () => void;
+}) {
+	const account = useNFTUsername();
+	const activeMatch = useMatchStore(state => state.activeMatch);
+	const isPeerMatch = activeMatch?.opponent.kind === 'peer';
+	const p2pQaRewardPreview = createP2PQaLocalRewardPreview({
+		match: activeMatch,
+		result,
+		runtime: getRagnarokNetworkConfig(),
+		account,
+	});
+
+	return (
+		<>
+			<p className="cgo-subtitle">{getCasualResultSubtitle(result)}</p>
+			{isPeerMatch && (
+				<P2PResultNotice
+					preview={p2pQaRewardPreview}
+					result={result}
+				/>
+			)}
+			<RivalryBadge />
+			<button
+				type="button"
+				onClick={onPrimaryAction}
+				className="cgo-btn-primary"
+			>
+				Play Again
+			</button>
+		</>
+	);
+}
+
+function getCasualResultSubtitle(result: GameOverResult): string {
+	if (result === 'draw') return 'The remaining board cannot produce a forced win.';
+	if (result === 'victory') return 'Checkmate! The enemy King has no escape.';
+	return 'Checkmate... Your King has been cornered.';
+}
+
+function P2PResultNotice({
+	preview,
+	result,
+}: {
+	readonly preview: P2PQaLocalRewardPreview | null;
+	readonly result: GameOverResult;
+}) {
+	if (preview) return <P2PQaRewardPreviewPanel preview={preview} />;
+
+	return (
+		<p className="cgo-p2p-result-note">
+			P2P result: {getP2PResultLabel(result)}. Ranked RUNE waits for dual-signed match evidence.
+		</p>
+	);
+}
+
+function getP2PResultLabel(result: GameOverResult): string {
+	if (result === 'draw') return 'draw';
+	if (result === 'victory') return 'you won';
+	return 'you lost';
+}
+
+function P2PQaRewardPreviewPanel({
+	preview,
+}: {
+	readonly preview: P2PQaLocalRewardPreview;
+}) {
+	return (
+		<motion.div
+			className="cgo-p2p-qa-preview"
+			initial={{ opacity: 0, y: 10 }}
+			animate={{ opacity: 1, y: 0 }}
+			transition={{ delay: 0.75, duration: 0.45 }}
+		>
+			<div className="cgo-p2p-qa-preview__header">
+				<span>{preview.label}</span>
+				<span>local qa</span>
+			</div>
+			<div className="cgo-p2p-qa-preview__values" aria-label="QA local reward preview">
+				<span>
+					<strong>{formatRewardAmount(preview.runeShown)}</strong>
+					Projected RUNE
+				</span>
+				<span>
+					<strong>{formatRewardAmount(preview.matchXpShown)}</strong>
+					Match XP
+				</span>
+				<span>
+					<strong>{preview.cardXpShown}</strong>
+					CardXP
+				</span>
+			</div>
+			<p>{preview.persistence} {preview.settlementNote}</p>
+		</motion.div>
+	);
+}
+
+function formatRewardAmount(value: number): string {
+	return value > 0 ? `+${value}` : String(value);
+}
+
+function RivalryBadge() {
+	const rivals = useRivalryStore(state => state.rivals);
+	const latest = rivals.length > 0 ? rivals[0] : null;
+	if (!latest) return null;
+
+	return (
+		<motion.div
+			className="cgo-rivalry"
+			initial={{ opacity: 0, y: 10 }}
+			animate={{ opacity: 1, y: 0 }}
+			transition={{ delay: 0.8, duration: 0.6 }}
+		>
+				<span className="cgo-rivalry-label">vs {latest.displayName}</span>
+				<span className="cgo-rivalry-record">
+					<span className="cgo-rivalry-wins">{latest.wins}W</span>
+					{' — '}
+					<span className="cgo-rivalry-losses">{latest.losses}L</span>
+				</span>
+		</motion.div>
+	);
+}

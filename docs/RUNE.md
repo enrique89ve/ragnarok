@@ -8,7 +8,8 @@ One stop for everything RUNE. Other docs link here; this file is authoritative f
 - Bank-ledger model: every ledger entry has one balance owner, and that owner is derived from the authenticated Hive broadcaster or from a dual-signed match envelope.
 - Earned via P2P ranked wins, campaign first-clears, and daily quests. Spent via `rune_exchange` for packs.
 - Each source has an independent per-account cap. **P2P (100), campaign (10), and daily quest (20) do NOT share quota** — same account can hold up to 100 + 10 + 20 = 130 RUNE/season.
-- P2P is canon-only in closed beta: the on-chain handler is wired but the client does **not** broadcast `match_result` until the winner-arbiter / ranking server lands (see [Beta status](#beta-status)). Closed-beta earn surface is **campaign (10) + daily quest (20) = 30 RUNE/season per account**.
+- P2P is canon-only in closed beta: the on-chain handler is wired but the client does **not** broadcast `match_result` until the [winner-arbiter](./P2P_WINNER_ARBITER.md) / ranking server lands (see [Beta status](#beta-status)). Closed-beta earn surface is **campaign (10) + daily quest (20) = 30 RUNE/season per account**.
+- QA full-catalog P2P may show a local projected reward after victory, but that preview is not RUNE until a replay-derived ledger entry exists.
 
 ## Bank-ledger anti-cheat contract
 
@@ -47,7 +48,33 @@ Hard invariants:
 | `reward_claim` (tournament) | live | tournament server pending | deferred |
 | `rune_exchange` (sink) | live | live (pack purchase) | active |
 
-The P2P broadcast stub lives in [client/src/game/match/modes/p2p/lifecycle.ts](../client/src/game/match/modes/p2p/lifecycle.ts) and will be wired once the arbiter can verify the winner from a signed transcript. Until then, P2P matches produce no RUNE on either side; canon emission caps stay declared so the cap structure is forward-compatible.
+The P2P broadcast stub lives in [client/src/game/match/modes/p2p/lifecycle.ts](../client/src/game/match/modes/p2p/lifecycle.ts) and will be wired once the [winner-arbiter](./P2P_WINNER_ARBITER.md) can verify the winner from a signed transcript. Until then, P2P matches produce no RUNE on either side; canon emission caps stay declared so the cap structure is forward-compatible.
+
+## QA full-catalog reward preview
+
+QA Testnet Season 0 may calculate and display local reward feedback at P2P
+game-over so testers can validate the future reward UX. The projected winner
+RUNE should use the same current testnet season value as ranked P2P
+(`TESTNET_RUNE_ECONOMY.p2pWinRune`, currently `2`), and local match/profile XP
+should come from the P2P reward channel. This calculation is display/local
+progress only.
+
+It must not:
+
+- write a `RuneLedgerEntry`;
+- appear in `/api/chain/player/:username/rune`, `/api/chain/rune/state`,
+  `/api/chain/rune/ledger`, or `/api/chain/rune/balances`;
+- affect wallet balance, Season Score, ELO, caps, source keys, or prize
+  eligibility;
+- create CardXP, `level_up`, or NFTLox `mutableData` writes;
+- survive a stage, protocol id, reset epoch, account, profile, or mainnet
+  migration boundary.
+
+Cache keys for this preview must include stage, protocol id, reset epoch,
+account, and match id. On any mismatch, the UI must ignore or purge the preview
+before rendering. Result-only evidence remains insufficient for `p2p_ranked`;
+the economic path still starts at dual `match_anchor` plus a dual-signed,
+deterministically replayable result.
 
 ## Caps (S01)
 
@@ -163,7 +190,7 @@ uses the broadcast `ymd_utc` and rejects out-of-skew dates.
 
 > **Closed-beta status:** the client does not yet broadcast `match_result`. The
 > chain handler below is fully wired and tested; flipping the bit will require
-> the winner-arbiter (post-beta scope).
+> the [winner-arbiter](./P2P_WINNER_ARBITER.md) (post-beta scope).
 
 ```
 match_anchor (start) ─ pins participants, session pubkeys, deck hashes,

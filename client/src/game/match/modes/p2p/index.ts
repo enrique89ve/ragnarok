@@ -21,3 +21,11 @@ export { resolveP2P } from './resolver';
 export type { P2PHandshake } from './resolver';
 export { onP2PMatchEnd } from './lifecycle';
 export { MatchSetupP2P } from './MatchSetupP2P';
+export {
+	calculateP2PQaLocalMatchXp,
+	createP2PQaLocalRewardPreview,
+} from './qaLocalRewardPreview';
+export type {
+	P2PQaLocalRewardPreview,
+	P2PQaResult,
+} from './qaLocalRewardPreview';

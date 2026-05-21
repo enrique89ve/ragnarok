@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronUp, Crosshair, UserPlus, Users, Wifi, WifiOff } from 'lucide-react';
 import { useFriendStore, type Friend, type FriendPresence } from '../../stores/friendStore';
-import { useNFTUsername } from '../../nft/hooks';
 import { routes } from '../../../lib/routes';
 
 function AddFriendDialog({ onAdd, onClose }: { onAdd: (name: string) => void; onClose: () => void }) {
@@ -38,20 +37,25 @@ function AddFriendDialog({ onAdd, onClose }: { onAdd: (name: string) => void; on
 
 function FriendCard({ friend, presence, onChallenge }: { friend: Friend; presence?: FriendPresence; onChallenge: (username: string) => void }) {
 	const removeFriend = useFriendStore(s => s.removeFriend);
+	const isAccepted = friend.relationStatus === 'accepted';
 	const isOnline = presence?.online ?? false;
 
 		return (
 			<div className="flex items-center justify-between rounded-xl border border-white/5 bg-gray-900/35 px-3 py-2.5 transition-colors hover:bg-gray-800/40 group">
 				<div className="flex items-center gap-2">
-					<div className={`inline-flex h-7 w-7 items-center justify-center rounded-full ${isOnline ? 'bg-green-500/12 text-green-300' : 'bg-slate-500/12 text-slate-400'}`}>
-						{isOnline ? <Wifi size={14} strokeWidth={2} /> : <WifiOff size={14} strokeWidth={2} />}
+					<div className={`inline-flex h-7 w-7 items-center justify-center rounded-full ${isAccepted && isOnline ? 'bg-green-500/12 text-green-300' : 'bg-slate-500/12 text-slate-400'}`}>
+						{isAccepted && isOnline
+							? <Wifi size={14} strokeWidth={2} />
+							: isAccepted
+								? <WifiOff size={14} strokeWidth={2} />
+								: <UserPlus size={14} strokeWidth={2} />}
 					</div>
 					<span className="text-sm font-medium text-gray-200">
 						{friend.nickname || `@${friend.hiveUsername}`}
 					</span>
 				</div>
 				<div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-					{isOnline && (
+					{isAccepted && isOnline && (
 						<button
 							type="button"
 							onClick={() => onChallenge(friend.hiveUsername)}
@@ -74,11 +78,9 @@ function FriendCard({ friend, presence, onChallenge }: { friend: Friend; presenc
 }
 
 export default function FriendsPanel() {
-	const hiveUsername = useNFTUsername();
 	const friends = useFriendStore(s => s.friends);
 	const onlineStatus = useFriendStore(s => s.onlineStatus);
 	const addFriend = useFriendStore(s => s.addFriend);
-	const updatePresence = useFriendStore(s => s.updatePresence);
 	const navigate = useNavigate();
 	const [showAdd, setShowAdd] = useState(false);
 	const [expanded, setExpanded] = useState(true);
@@ -87,39 +89,10 @@ export default function FriendsPanel() {
 		navigate(`${routes.multiplayer}?challenge=${encodeURIComponent(username)}`);
 	}, [navigate]);
 
-	const pollPresence = useCallback(async (signal?: AbortSignal) => {
-		if (!hiveUsername || friends.length === 0) return;
-		try {
-			const res = await fetch('/api/friends/heartbeat', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					username: hiveUsername,
-					friends: friends.map(f => f.hiveUsername),
-				}),
-				signal,
-			});
-			if (res.ok) {
-				const data = await res.json();
-				updatePresence(data.statuses ?? {});
-			}
-		} catch (e) {
-			if (e instanceof Error && e.name === 'AbortError') return;
-		}
-	}, [hiveUsername, friends, updatePresence]);
-
-	useEffect(() => {
-		const controller = new AbortController();
-		pollPresence(controller.signal);
-		const interval = setInterval(() => pollPresence(controller.signal), 30000);
-		return () => {
-			controller.abort();
-			clearInterval(interval);
-		};
-	}, [pollPresence]);
-
-	const onlineFriends = friends.filter(f => onlineStatus[f.hiveUsername]?.online);
-	const offlineFriends = friends.filter(f => !onlineStatus[f.hiveUsername]?.online);
+	const acceptedFriends = friends.filter(f => f.relationStatus === 'accepted');
+	const localFriends = friends.filter(f => f.relationStatus !== 'accepted');
+	const onlineFriends = acceptedFriends.filter(f => onlineStatus[f.hiveUsername]?.online);
+	const offlineFriends = acceptedFriends.filter(f => !onlineStatus[f.hiveUsername]?.online);
 
 	return (
 		<div className="w-64 space-y-3">
@@ -152,6 +125,14 @@ export default function FriendsPanel() {
 						<>
 							<p className="px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400/75">Offline</p>
 							{offlineFriends.map(f => (
+								<FriendCard key={f.hiveUsername} friend={f} presence={onlineStatus[f.hiveUsername]} onChallenge={handleChallenge} />
+							))}
+						</>
+					)}
+					{localFriends.length > 0 && (
+						<>
+							<p className="px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-200/70">Invite required</p>
+							{localFriends.map(f => (
 								<FriendCard key={f.hiveUsername} friend={f} presence={onlineStatus[f.hiveUsername]} onChallenge={handleChallenge} />
 							))}
 						</>

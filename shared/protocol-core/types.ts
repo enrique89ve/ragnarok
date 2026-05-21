@@ -175,6 +175,10 @@ export const CANONICAL_ACTIONS = [
 	'match_anchor',
 	'match_result',
 	'campaign_result',
+	'warband_request',
+	'warband_accept',
+	'warband_remove',
+	'warband_block',
 	'rune_exchange',
 	'slash_evidence',
 	'pack_purchase',
@@ -228,6 +232,7 @@ export const ACTIVE_AUTH_OPS: ReadonlySet<CanonicalAction> = new Set([
 
 export const POSTING_AUTH_OPS: ReadonlySet<CanonicalAction> = new Set([
 	'queue_join', 'queue_leave', 'match_anchor', 'match_result', 'campaign_result',
+	'warband_request', 'warband_accept', 'warband_remove', 'warband_block',
 	'rune_exchange',
 	'pack_commit', 'pack_reveal', 'reward_claim', 'daily_quest_claim', 'level_up',
 	'forge_commit', 'forge_reveal',

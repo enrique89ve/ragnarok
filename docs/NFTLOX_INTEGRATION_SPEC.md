@@ -19,6 +19,12 @@
 
 Ownership comes from the NFTLox indexer API, cached in local IndexedDB with state-hash invalidation. Game state (matches, ELO, decks, `level`/`xp`) comes from the Ragnarok protocol via the client-side replay engine. The two layers cache and invalidate independently — see [Read-side architecture](#read-side-architecture-testnet-target) below.
 
+QA full-catalog reward previews are outside NFTLox. They may show local
+projected P2P RUNE and match/profile XP during a resettable QA epoch, but they
+must not write NFTLox `mutableData`, CardXP, ownership, listings, or transfer
+state. Only replay-derived, NFT-owned progress may be mirrored to NFTLox by the
+approved Ragnarok data operator.
+
 ---
 
 ## Current decisions (target v0.4.0)
@@ -126,6 +132,14 @@ The client never recomputes a hash. The comparison is `localCachedHash === remot
 | NFTLox API 5xx / timeout | Cache stays valid for gameplay; transfer/marketplace actions block until next successful sync |
 
 No periodic polling. Self-actions cover writes; login covers external transfers received while offline.
+
+QA full-catalog caches must not share object stores or keys with NFTLox
+ownership/progress caches. If a local reward preview is stored for QA UX, its
+key must include Ragnarok stage, Ragnarok protocol id, reset epoch, account, and
+match id. NFTLox ownership keys must include collection id and owner. Changing
+from `nftlox_testnet` to a production NFTLox protocol/collection, changing the
+Ragnarok reset epoch, or entering mainnet must make old QA reward previews and
+testnet ownership projections unreadable before UI render.
 
 ### Endpoint contract (NFTLox-side)
 

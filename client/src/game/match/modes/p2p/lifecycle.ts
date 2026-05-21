@@ -18,12 +18,19 @@
  */
 
 import { debug } from '../../../config/debugConfig';
+import { getRagnarokNetworkConfig } from '../../../config/networkConfig';
 import { recordSessionEvent } from '../../../../data/blockchain/transcriptBuilder';
 import type { MatchEndContext } from '../../onWinDispatch';
 import type { MatchContext } from '../../types';
+import { createP2PQaLocalRewardPreview } from './qaLocalRewardPreview';
 
 export function onP2PMatchEnd(ctx: MatchContext, end: MatchEndContext): void {
 	if (ctx.opponent.kind !== 'peer') return;
+	const qaLocalRewardPreview = createP2PQaLocalRewardPreview({
+		match: ctx,
+		result: end.iWon ? 'victory' : 'defeat',
+		runtime: getRagnarokNetworkConfig(),
+	});
 	// P2P RUNE/ELO deferred — wait for winner-arbiter (see file header).
 	recordSessionEvent('p2p_match_end_deferred_settlement', {
 		matchId: ctx.matchId,
@@ -31,6 +38,16 @@ export function onP2PMatchEnd(ctx: MatchContext, end: MatchEndContext): void {
 		turnCount: end.turnCount,
 		reason: 'ranked_settlement_requires_dual_signed_match_anchor',
 		runeSettlement: 'not_credited_from_result_only',
+		qaLocalRewardPreview: qaLocalRewardPreview
+			? {
+				scope: qaLocalRewardPreview.scope,
+				runeShown: qaLocalRewardPreview.runeShown,
+				matchXpShown: qaLocalRewardPreview.matchXpShown,
+				cardXpShown: qaLocalRewardPreview.cardXpShown,
+				cacheKey: qaLocalRewardPreview.cacheKey,
+				persistence: qaLocalRewardPreview.persistence,
+			}
+			: null,
 	});
 	debug.chess(
 		`[P2P] Match ended (matchId=${ctx.matchId.slice(0, 8)}, iWon=${end.iWon}, turns=${end.turnCount}). RUNE/ELO settlement deferred — no arbiter.`,

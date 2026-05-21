@@ -16,6 +16,10 @@ _Avoid_: Local sandbox, mainnet season, NFT ownership test, public beta
 The explicit identity of a resettable test phase. It binds the Hive protocol id, index start boundary, season start, collection id, and browser/server projection namespace into one reset contract so old local projections cannot bleed into a new QA or beta phase.
 _Avoid_: Hardcoded cache buckets, manual browser cleanup, reusing local projections across reset phases
 
+**QA Local Reward Feedback**:
+The reset-epoch-scoped UX calculation shown after QA full-catalog P2P results so testers can validate victory rewards before winner-arbiter settlement. It may calculate and display projected winner RUNE from the current testnet season constants and local/profile XP from the P2P reward channel. If retained after display, it may live only in browser/profile QA state. It must not create a RUNE ledger entry, update `/api/chain/*`, update CardXP/`level_up`/NFTLox `mutableData`, affect Season Score, or become marketplace/ownership evidence.
+_Avoid_: Local wallet credit, NFT XP, NFTLox data mutation, ranked settlement, mainnet reward history
+
 **Closed Testnet Beta**:
 The next release milestone where a limited group of testers validates the full playable flow before public access.
 _Avoid_: Public beta, mainnet launch, finished testnet
@@ -37,6 +41,8 @@ _Avoid_: Full catalog audit, every card validated, final balance
 - **Testnet** state is reset before mainnet and does not create permanent ownership or rewards.
 - **QA Testnet Season 0** does not prove NFT custody or player ownership because its card access is intentionally broader than **NFT Custody**.
 - Client-local replay, tester progress, and operational projections must be isolated by **Testnet Reset Epoch** rather than cleaned manually between phases.
+- **QA Local Reward Feedback** may run only inside the QA full-catalog reset epoch. It is UX rehearsal for reward math, not **RUNE Ledger Protocol**, **NFTLox Progress Mirror**, or official ranking.
+- Any QA local reward cache must be keyed by stage, protocol id, reset epoch, account, and match id, and must be ignored or purged on stage/epoch/account change so QA feedback cannot leak into Closed Testnet Beta, NFTLox custody, or mainnet.
 - The **Playable Beta Flow** must be stable before **Closed Testnet Beta** opens.
 
 ## Starter Entitlement
@@ -123,6 +129,7 @@ _Avoid_: server as hidden truth, per-request heavyweight recomputation, gameplay
 - **Deck Card Claim** is untrusted until resolved into a **Verified Deck Card** by the **Deck Verification Protocol**.
 - **Anti-Cheat Protocol** decides whether ranked evidence is acceptable; **Operational Projection** may only cache or summarize its result.
 - **RUNE Ledger Protocol** owns RUNE balance authority; every ledger entry must name exactly one **RUNE Balance Owner**.
+- **QA Local Reward Feedback** may display projected match/profile progress for QA cards, but verified QA cards still earn `0` CardXP and must never produce `level_up` or NFTLox `mutableData` writes.
 
 ## Campaign Protocol
 
@@ -141,6 +148,7 @@ _Avoid_: server as hidden truth, per-request heavyweight recomputation, gameplay
 - RUNE account balance is `GET /api/chain/player/:username/rune?seasonId=S01`.
 - Global RUNE reads are `GET /api/chain/rune/state`, `GET /api/chain/rune/ledger`, and `GET /api/chain/rune/balances`.
 - Testnet is a runtime profile, not a separate API namespace.
+- **QA Local Reward Feedback** must not be exposed under `/api/chain/*`, merged into wallet balances, or used as an input to Season Score; those surfaces read only replay-derived RUNE.
 _Avoid_: `/api/testnet/rune/*`, duplicate RUNE read sources, client-authored RUNE amounts, treating the server indexer as canonical authority, high-frequency polling of RUNE reads
 
 ## Example Dialogue
