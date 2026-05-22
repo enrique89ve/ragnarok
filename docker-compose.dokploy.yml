@@ -7,8 +7,9 @@ services:
         VITE_NETWORK_STAGE: ${VITE_NETWORK_STAGE:-testnet}
         VITE_RAGNAROK_PROTOCOL_ID: ${VITE_RAGNAROK_PROTOCOL_ID:-rk_game_testnet}
         VITE_RAGNAROK_COLLECTION_ID: ${VITE_RAGNAROK_COLLECTION_ID:-ragnarok-testnet}
-        # NFT-full beta should use a closed-beta-* epoch. qa-s0-* enables
-        # QA full-catalog access and is not NFT custody evidence.
+        # Alfa Testnet should use an alfa-testnet-* epoch. NFT-full beta should
+        # use a closed-beta-* epoch. qa-s0-* enables QA full-catalog access and
+        # is not NFT custody evidence.
         VITE_RAGNAROK_RESET_EPOCH: ${VITE_RAGNAROK_RESET_EPOCH:?Set VITE_RAGNAROK_RESET_EPOCH in Dokploy}
         VITE_RAGNAROK_ADMIN_ACCOUNT: ${VITE_RAGNAROK_ADMIN_ACCOUNT:-ragnarok-test}
         VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT: ${VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT:-ragnarok-test-operator}
@@ -28,8 +29,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: 5000
-      RAGNAROK_RUNTIME_MODE: ${RAGNAROK_RUNTIME_MODE:-testnet}
-      RAGNAROK_CHAIN_STATE_FILE: ${RAGNAROK_CHAIN_STATE_FILE:-data/chain-state.testnet.json}
+      RAGNAROK_RUNTIME_MODE: ${RAGNAROK_RUNTIME_MODE:-alfa-testnet}
+      RAGNAROK_CHAIN_STATE_FILE: ${RAGNAROK_CHAIN_STATE_FILE:-data/chain-state.alfa-testnet.json}
+      RAGNAROK_NFT_OWNERSHIP_SOURCE: ${RAGNAROK_NFT_OWNERSHIP_SOURCE:-json}
       ENABLE_CHAIN_INDEXER: ${ENABLE_CHAIN_INDEXER:-true}
       ENABLE_INDEX_CHECKPOINT_PUBLISHER: ${ENABLE_INDEX_CHECKPOINT_PUBLISHER:-false}
     ports:

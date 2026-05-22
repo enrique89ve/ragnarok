@@ -301,7 +301,7 @@ export default function FriendsPanel() {
 	const offlineFriends = acceptedFriends.filter(f => !onlineStatus[f.hiveUsername]?.online);
 
 	return (
-		<div className="w-64 space-y-3">
+		<div className="social-warband-panel w-64 space-y-3">
 			<button
 				onClick={() => setExpanded(!expanded)}
 				className="flex w-full items-center justify-between rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2 text-left"

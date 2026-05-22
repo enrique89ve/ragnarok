@@ -12,6 +12,7 @@ import {
 	validatePayloadSize,
 } from '../../shared/protocol-core';
 import { getRagnarokServerRuntimeConfig } from '../services/runtimeConfig';
+import { buildServerStateEvidence } from '../services/runtimeStateEvidence';
 import { serverSignatureVerifier } from '../services/hiveSignatureVerifier';
 import { broadcastAdminCustomJson } from '../services/adminOperatorBroadcaster';
 import {
@@ -92,6 +93,7 @@ router.get('/config', (_req: Request, res: Response) => {
 			runtime.adminOperatorAccount
 			&& runtime.adminOperatorAccount !== runtime.adminAccount,
 		),
+		state: buildServerStateEvidence(runtime),
 		closedBetaCutover: buildClosedBetaCutoverGate(runtime),
 	});
 });

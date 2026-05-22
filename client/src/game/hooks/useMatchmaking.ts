@@ -12,13 +12,13 @@ import {
 	broadcastQueueLeave,
 	startQueuePoller,
 } from '../../data/blockchain/matchmakingOnChain';
-import { buildRagnarokRuntimeEvidence } from '@shared/runtimeConfig';
+import { buildRagnarokRuntimeEvidence, isNftFullTestnetRuntimePhase } from '@shared/runtimeConfig';
 
 const API_BASE = import.meta.env.VITE_API_URL || (window.location.origin);
 
 function shouldUseUnsignedServerMatchmaking(): boolean {
 	const runtime = buildRagnarokRuntimeEvidence(getRagnarokNetworkConfig());
-	return runtime.runtimePhase === 'closed-beta';
+	return isNftFullTestnetRuntimePhase(runtime.runtimePhase);
 }
 
 export function useMatchmaking() {
@@ -100,13 +100,13 @@ export function useMatchmaking() {
 				return true;
 			}
 
-			// Build the request body. Closed-beta full NFT uses unsigned server
+			// Build the request body. Full NFT testnet aliases use unsigned server
 			// matchmaking by design: searching for a battle must not open a Posting
 			// Keychain prompt. NFT custody is still verified during the P2P deck
 			// handshake before gameplay.
 			//
 			// Only include `username` (and request a signed auth body) when we're
-			// actually in Hive mode, have a username, and are not in that closed-beta
+			// actually in Hive mode, have a username, and are not in that full NFT
 			// no-prompt matchmaking path.
 			//
 			// In LOCAL mode, `LocalNFTBridge.buildAuthBody` returns `{...fields,

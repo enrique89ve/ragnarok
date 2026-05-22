@@ -14,8 +14,9 @@ import { EitrMigrationBanner } from "./game/components/migrations/EitrMigrationB
 import { ALL_CHAPTERS, getMission, useCampaignStore } from "./game/campaign";
 import { useStarterStore } from "./game/stores/starterStore";
 import { useIsHiveMode, useNFTUsername } from "./game/nft/hooks";
-import { getRagnarokNetworkConfig } from "./game/config/networkConfig";
+import { createRuntimeStorageKey, getRagnarokNetworkConfig } from "./game/config/networkConfig";
 import { isSharedNetworkEnvironment, isTestnetStage } from "./game/config/featureFlags";
+import { getRagnarokRuntimePhase } from '@shared/runtimeConfig';
 import { resolveProtectedFlowAccess, type ProtectedFlowSurface } from "./game/auth/protectedFlowAccess";
 import {
 	BridgeRuntimeBoundary,
@@ -45,6 +46,12 @@ const TreasuryPage = lazy(() => import('./game/components/treasury/TreasuryPage'
 const MarketplacePage = lazy(() => import('./game/components/marketplace/MarketplacePage'));
 const ExplorerPage = lazy(() => import('./game/components/explorer/ExplorerPage'));
 const AdminPanel = lazy(() => import('./game/components/admin/AdminPanel'));
+
+function getRuntimeProductLabel(): string {
+	return getRagnarokRuntimePhase(getRagnarokNetworkConfig()) === 'alfa-testnet'
+		? 'Alfa Practice'
+		: 'Testnet';
+}
 const WalletPage = lazy(() => import('./game/components/wallet/WalletPage'));
 const StarterPackCeremony = lazy(() => import('./game/components/StarterPackCeremony'));
 const DuatClaimPopup = lazy(() => import('./game/components/DuatClaimPopup'));
@@ -449,6 +456,7 @@ function HomePage() {
 	}, []);
 
 	const season = getSeasonInfo(now);
+	const runtimeProductLabel = getRuntimeProductLabel();
 
 	useEffect(() => {
 		const handler = () => setCanInstall(true);
@@ -472,22 +480,22 @@ function HomePage() {
 	};
 
 	return (
-		<div className="h-screen w-screen overflow-y-auto overflow-x-hidden text-ink-0 bg-(image:--bg-home-nav)">
+		<div className="home-landscape-shell h-screen w-screen overflow-y-auto overflow-x-hidden text-ink-0 bg-(image:--bg-home-nav)">
 			{/* ── HEADER ─────────────────────────────────────────────────────── */}
-			<header className="sticky top-0 z-50 backdrop-blur-md bg-obsidian-950/80 border-b border-obsidian-700">
-				<div className="mx-auto max-w-[1600px] h-14 px-6 flex items-center justify-between gap-4">
+			<header className="home-landscape-header sticky top-0 z-50 backdrop-blur-md bg-obsidian-950/80 border-b border-obsidian-700">
+				<div className="home-landscape-header-inner mx-auto max-w-[1600px] h-14 px-6 flex items-center justify-between gap-4">
 					<div className="flex items-center gap-3">
-						<img src={ragnarokLogo} alt="" className="w-8 h-8 rounded-md border border-obsidian-600 object-cover" />
+						<img src={ragnarokLogo} alt="" className="home-landscape-logo w-8 h-8 rounded-md border border-obsidian-600 object-cover" />
 						<div className="leading-none">
 							<div className="flex items-center gap-2">
 								<div className="font-display text-sm font-bold tracking-[0.18em] text-gold-300">RAGNAROK</div>
 								{isTestnetStage() && (
 									<span className="rounded border border-gold-300/40 bg-gold-300/10 px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-gold-100">
-										Testnet
+										{runtimeProductLabel}
 									</span>
 								)}
 							</div>
-							<div className="font-mono text-[10px] tracking-[0.16em] text-ink-300 mt-1">
+							<div className="home-landscape-season font-mono text-[10px] tracking-[0.16em] text-ink-300 mt-1">
 								FORGE &amp; EMBER · {season.seasonNumber.toString().padStart(2, '0')}
 							</div>
 						</div>
@@ -508,13 +516,13 @@ function HomePage() {
 			</header>
 
 			{/* ── PAGE GRID: full-height main column + persistent right rail ──── */}
-			<div className="mx-auto max-w-[1600px] px-6 mt-7 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-7 items-start">
+			<div className="home-landscape-main-grid mx-auto max-w-[1600px] px-6 mt-7 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-7 items-start">
 				{/* MAIN COLUMN: banner + routes + daily quests.
 				    pb-24 mirrors the right aside so neither column slides under
 				    the anchored utility bar at the bottom. */}
-				<main className="grid gap-7 content-start min-w-0 pb-24">
+				<main className="home-landscape-main-column grid gap-7 content-start min-w-0 pb-24">
 					{/* Banner */}
-					<section className="relative grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-9 items-center px-10 py-10 rounded-2xl border border-obsidian-700 bg-linear-to-b from-obsidian-850 to-obsidian-900 overflow-hidden">
+					<section className="home-landscape-hero relative grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-9 items-center px-10 py-10 rounded-2xl border border-obsidian-700 bg-linear-to-b from-obsidian-850 to-obsidian-900 overflow-hidden">
 						<div>
 							<div className="inline-flex items-center gap-2.5 mb-4">
 
@@ -602,7 +610,7 @@ function HomePage() {
 									<Link
 										key={mode.title}
 										to={mode.to}
-										className={`relative group flex flex-col min-h-[160px] p-4 rounded-xl border bg-linear-to-b overflow-hidden transition-all duration-300 ${a.border} ${isCombat
+										className={`home-landscape-route-card relative group flex flex-col min-h-[160px] p-4 rounded-xl border bg-linear-to-b overflow-hidden transition-all duration-300 ${a.border} ${isCombat
 											? 'border-obsidian-700 from-obsidian-850 to-obsidian-950'
 											: 'border-obsidian-700/60 from-obsidian-900 to-obsidian-950'
 											}`}
@@ -696,7 +704,7 @@ function HomePage() {
 				{/* RIGHT RAIL — pure identity stack: Account → Warband (post-login).
 				    Warband has internal scroll so contacts can grow without breaking layout.
 				    Settings lives here on Home; meta pages keep account chrome focused. */}
-				<aside className="grid gap-5 content-start pb-24">
+				<aside className="home-landscape-right-rail grid gap-5 content-start pb-24">
 					<SideRailPanel
 						title="Account"
 						action={
@@ -715,7 +723,7 @@ function HomePage() {
 					</SideRailPanel>
 					{hiveUsername && (
 						<SideRailPanel title="Warband">
-							<div className="max-h-[420px] overflow-y-auto pr-1 -mr-1 [scrollbar-width:thin]">
+							<div className="home-warband-scroll max-h-[420px] overflow-y-auto pr-1 -mr-1 [scrollbar-width:thin]">
 								<Suspense fallback={<div className="animate-pulse h-32 rounded-xl bg-obsidian-800" />}>
 									<FriendsPanel />
 								</Suspense>
@@ -729,8 +737,8 @@ function HomePage() {
 			    Sticky bottom — always visible across home scroll. Mirrors the
 			    sticky header above to bracket the page. Horizontal scroll on
 			    overflow keeps it single-line on narrow viewports. */}
-			<nav className="sticky bottom-0 z-40 backdrop-blur-md bg-obsidian-950/85 border-t border-obsidian-700">
-				<div className="mx-auto max-w-[1600px] px-6 h-12 flex items-center justify-center gap-2 overflow-x-auto [scrollbar-width:none]">
+			<nav className="home-landscape-utility-bar sticky bottom-0 z-40 backdrop-blur-md bg-obsidian-950/85 border-t border-obsidian-700">
+				<div className="home-landscape-utility-inner mx-auto max-w-[1600px] px-6 h-12 flex items-center justify-center gap-2 overflow-x-auto [scrollbar-width:none]">
 					{UTILITY_LINKS.map(link => (
 						<Link
 							key={link.label}
@@ -815,7 +823,10 @@ function GlobalOverlaysLayout() {
 }
 
 function EnvironmentBanner() {
-	const dismissKey = 'ragnarok:testnet-banner-dismissed';
+	const config = getRagnarokNetworkConfig();
+	const runtimePhase = getRagnarokRuntimePhase(config);
+	const productLabel = getRuntimeProductLabel();
+	const dismissKey = createRuntimeStorageKey('testnet-banner-dismissed');
 	const [dismissed, setDismissed] = useState(() => {
 		if (typeof window === 'undefined') return false;
 		return window.localStorage.getItem(dismissKey) === 'true';
@@ -824,7 +835,6 @@ function EnvironmentBanner() {
 	if (!isTestnetStage()) return null;
 	if (dismissed) return null;
 
-	const config = getRagnarokNetworkConfig();
 	const dismiss = () => {
 		window.localStorage.setItem(dismissKey, 'true');
 		setDismissed(true);
@@ -832,13 +842,13 @@ function EnvironmentBanner() {
 
 	return (
 		<aside
-			aria-label="Testnet environment"
+			aria-label={`${productLabel} environment`}
 			className="fixed bottom-4 left-4 z-50 max-w-[calc(100vw-2rem)] rounded-md border border-gold-300/40 bg-obsidian-950/95 px-3 py-2 pr-9 text-xs text-gold-100 shadow-lg shadow-black/40 backdrop-blur"
 		>
 			<div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-				<span className="font-display font-semibold uppercase tracking-[0.18em] text-gold-300">Testnet</span>
+				<span className="font-display font-semibold uppercase tracking-[0.18em] text-gold-300">{productLabel}</span>
 				<span className="text-ink-400">/</span>
-				<span className="text-ink-200">Resettable</span>
+				<span className="text-ink-200">{runtimePhase === 'alfa-testnet' ? 'stage=testnet' : 'Resettable'}</span>
 				<span className="hidden text-ink-400 sm:inline">/</span>
 				<span className="hidden font-mono text-ink-300 sm:inline">{config.protocolId}</span>
 			</div>

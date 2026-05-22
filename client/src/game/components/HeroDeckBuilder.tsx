@@ -168,7 +168,7 @@ export const HeroDeckBuilder: React.FC<HeroDeckBuilderProps> = ({
 				animate={{ scale: 1, opacity: 1 }}
 				exit={{ scale: 0.95, opacity: 0 }}
 				transition={{ duration: 0.2 }}
-				className="db-main-container w-[96vw] max-w-[1400px] h-[92vh] rounded-xl shadow-2xl flex flex-col overflow-hidden"
+				className="db-main-container db-landscape-safe w-[96vw] max-w-[1400px] h-[92vh] rounded-xl shadow-2xl flex flex-col overflow-hidden"
 				onClick={e => e.stopPropagation()}
 			>
 				{/* Header */}

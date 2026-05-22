@@ -51,6 +51,12 @@ Use a `qa-s0-*` or `QA Season 0 / ...` reset epoch only for the QA full-catalog
 rehearsal. Closed Testnet Beta must rotate to a different epoch such as
 `closed-beta-*`, which disables the `qa_full_catalog` deck entitlement and
 returns verification to starter, NFT custody, and replay-derived acquisition.
+Alfa Testnet must use an `alfa-testnet-*` reset epoch. It is a temporary
+production-hosted testnet alias for finding Dokploy, SSL, Cloudflare, WebSocket,
+and JSON-state failures with full NFT mechanics. It still keeps
+`VITE_NETWORK_STAGE=testnet`, uses `rk_game_testnet`, disables QA full-catalog
+access, keeps RUNE/P2P active, and differs from later Beta Testnet only in the
+NFT ownership source: JSON-backed provenance now, NFTLoX/Hive custody later.
 QA reward preview caches must include at least stage, protocol id, reset epoch,
 account, and match id in their key; on stage/epoch/account mismatch they must be
 ignored or purged before UI render.
@@ -92,6 +98,39 @@ Expected UI signals:
   `runtime.protocolId: "rk_game_testnet"` plus the active reset epoch.
 
 The header badge remains visible after dismissing the lower-left banner.
+
+## Alfa Testnet Production Profile
+
+For the one-week Dokploy-hosted Alfa Testnet profile:
+
+```bash
+cp .env.alfa-testnet.example .env.alfa-testnet
+npm run build:alfa-testnet
+npm run start:alfa-testnet
+```
+
+The Alfa env must keep:
+
+```env
+VITE_NETWORK_STAGE=testnet
+VITE_RAGNAROK_PROTOCOL_ID=rk_game_testnet
+VITE_RAGNAROK_COLLECTION_ID=ragnarok-testnet
+VITE_RAGNAROK_RESET_EPOCH=alfa-testnet-full-nft-2026-05-22
+ENABLE_CHAIN_INDEXER=true
+RAGNAROK_CHAIN_STATE_FILE=data/chain-state.alfa-testnet.json
+RAGNAROK_NFT_OWNERSHIP_SOURCE=json
+```
+
+Expected Alfa signals:
+
+- Product copy says `Alfa Practice` or equivalent Practice/Alfa wording.
+- Diagnostics still report `runtime.stage: "testnet"`.
+- `GET /api/health` and `GET /api/admin/config` report
+  `runtimePhase: "alfa-testnet"`, an `alfa-testnet-*` reset epoch,
+  `qaFullCatalogEnabled: false`, `resettable: true`, `economic: false`, and
+  JSON state evidence.
+- Alfa is not mainnet acceptance and does not open Beta Testnet invites by
+  itself.
 
 For a low-risk local runtime sanity check that does not start the chain indexer
 or checkpoint publisher, use an ephemeral port and explicit QA epoch:

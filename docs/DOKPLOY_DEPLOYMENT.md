@@ -2,8 +2,9 @@
 
 This deployment path runs the full Ragnarok app as one persistent Node process:
 the Vite static build, Express `/api/*` routes, the chain indexer, and the
-`/ws/p2p` WebSocket relay. The intended Dokploy profile is the NFT-full
-testnet path: Hive/NFTLox custody validation enabled, QA full-catalog access
+`/ws/p2p` WebSocket relay. The current intended Dokploy profile is **Alfa
+Testnet**: a one-week, NFT-full testnet alias with JSON-backed
+ownership/provenance evidence, RUNE/P2P active, and QA full-catalog access
 disabled.
 
 ## Dokploy Project
@@ -27,11 +28,11 @@ Public build-time variables are passed as Docker build args because Vite embeds
 `VITE_*` values into the browser bundle:
 
 ```dotenv
-RAGNAROK_RUNTIME_MODE=testnet
+RAGNAROK_RUNTIME_MODE=alfa-testnet
 VITE_NETWORK_STAGE=testnet
 VITE_RAGNAROK_PROTOCOL_ID=rk_game_testnet
 VITE_RAGNAROK_COLLECTION_ID=ragnarok-testnet
-VITE_RAGNAROK_RESET_EPOCH=closed-beta-nftfull-2026-05
+VITE_RAGNAROK_RESET_EPOCH=alfa-testnet-full-nft-2026-05-22
 VITE_RAGNAROK_ADMIN_ACCOUNT=ragnarok-test
 VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT=ragnarok-test-operator
 VITE_RAGNAROK_GENESIS_ACCOUNT=ragnarok-test
@@ -42,15 +43,19 @@ VITE_NFT_ART_BASE_URL=https://your-domain.example
 VITE_EXTERNAL_URL_BASE=https://your-domain.example
 ```
 
-Use a `closed-beta-*` reset epoch for NFT-full beta. Do not use `qa-s0-*` or
-`qa-season-0-*` here; those epochs deliberately enable QA full-catalog
-entitlement and are not NFT custody evidence.
+Keep `VITE_NETWORK_STAGE=testnet`. Do not set `VITE_NETWORK_STAGE=practice` or
+`VITE_NETWORK_STAGE=alfa-testnet`; Alfa is derived from the
+`alfa-testnet-*` reset epoch. Later NFT-full beta profiles should rotate to a
+`closed-beta-*` reset epoch. Do not use `qa-s0-*` or `qa-season-0-*` here;
+those epochs deliberately enable QA full-catalog entitlement and are not NFT
+custody evidence.
 
 Server-only variables must stay unprefixed. Do not add `VITE_` to private keys:
 
 ```dotenv
 ENABLE_CHAIN_INDEXER=true
-RAGNAROK_CHAIN_STATE_FILE=data/chain-state.testnet.json
+RAGNAROK_CHAIN_STATE_FILE=data/chain-state.alfa-testnet.json
+RAGNAROK_NFT_OWNERSHIP_SOURCE=json
 RAGNAROK_INDEX_START_BLOCK=106536940
 
 ENABLE_INDEX_CHECKPOINT_PUBLISHER=false
@@ -67,18 +72,21 @@ WITNESS_HIVE_POSTING_KEY=
 
 For mainnet, switch `RAGNAROK_RUNTIME_MODE` and `VITE_NETWORK_STAGE` to
 `mainnet`, then replace the protocol, collection, account, reset epoch, start
-block, and key values with mainnet values before deploying.
+block, ownership source, and key values with mainnet values before deploying.
 
 ## Persistent Data
 
 `docker-compose.dokploy.yml` mounts a named volume at `/app/data`. The default
-chain-state file lives under that volume:
+Alfa's chain-state file should live under that volume:
 
 ```text
-/app/data/chain-state.testnet.json
+/app/data/chain-state.alfa-testnet.json
 ```
 
 Use Dokploy volume backups for this volume if the server-side indexer is enabled.
+Alfa stores chain projections, RUNE projections, ceremony/session evidence, and
+JSON-backed ownership/provenance under this JSON state path. This is a testnet
+adapter, not mainnet custody.
 
 ## Smoke Checks
 
@@ -89,19 +97,37 @@ curl https://your-domain.example/api/health
 ```
 
 Confirm the response reports the expected runtime stage, protocol id, reset
-epoch, and indexer status. For the NFT-full Dokploy profile, these fields
+epoch, state evidence, and indexer status. For the Alfa Testnet Dokploy profile,
+these fields
 should be:
 
 ```json
 {
   "runtime": {
     "stage": "testnet",
-    "runtimePhase": "closed-beta",
-    "resetEpoch": "closed-beta-nftfull-2026-05",
-    "qaFullCatalogEnabled": false
+    "runtimePhase": "alfa-testnet",
+    "resetEpoch": "alfa-testnet-full-nft-2026-05-22",
+    "qaFullCatalogEnabled": false,
+    "resettable": true,
+    "economic": false,
+    "state": {
+      "persistence": "json-file",
+      "chainStateFile": "data/chain-state.alfa-testnet.json",
+      "ownershipSource": "json"
+    }
   }
 }
 ```
+
+Also check:
+
+```bash
+curl https://your-domain.example/api/admin/config
+```
+
+The admin config should expose the same non-secret runtime and JSON state
+evidence. Product UI may say Alfa Practice; diagnostic rows should still show
+`stage=testnet`.
 
 Then test the browser P2P path. The client derives:
 

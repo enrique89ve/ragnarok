@@ -276,7 +276,6 @@ const STATE_FILE_ENV = 'RAGNAROK_CHAIN_STATE_FILE';
 const INDEX_START_BLOCK_ENV = 'RAGNAROK_INDEX_START_BLOCK';
 const STATE_FILE_MODE = 0o600;
 const STATE_DIR_MODE = 0o700;
-const STATE_FILE = process.env[STATE_FILE_ENV] ?? path.join(process.cwd(), 'data', 'chain-state.json');
 const SAVE_INTERVAL_MS = 30_000;
 const QUEUE_STATE_EXPIRY_MS = 10 * 60 * 1000;
 
@@ -287,8 +286,12 @@ let _dirty = false;
 // Persistence
 // ---------------------------------------------------------------------------
 
+export function getStateFilePath(): string {
+	return process.env[STATE_FILE_ENV] ?? path.join(process.cwd(), 'data', 'chain-state.json');
+}
+
 function ensureDataDir(): void {
-	const dir = path.dirname(STATE_FILE);
+	const dir = path.dirname(getStateFilePath());
 	if (!fs.existsSync(dir)) {
 		fs.mkdirSync(dir, { recursive: true, mode: STATE_DIR_MODE });
 	}
@@ -296,11 +299,12 @@ function ensureDataDir(): void {
 
 function assertStateFileWritable(): void {
 	ensureDataDir();
-	const dir = path.dirname(STATE_FILE);
+	const stateFile = getStateFilePath();
+	const dir = path.dirname(stateFile);
 	fs.accessSync(dir, fs.constants.R_OK | fs.constants.W_OK | fs.constants.X_OK);
 
-	if (fs.existsSync(STATE_FILE)) {
-		fs.accessSync(STATE_FILE, fs.constants.R_OK | fs.constants.W_OK);
+	if (fs.existsSync(stateFile)) {
+		fs.accessSync(stateFile, fs.constants.R_OK | fs.constants.W_OK);
 	}
 
 	const probeFile = path.join(dir, `.chain-state-write-check-${process.pid}-${Date.now()}.tmp`);
@@ -322,18 +326,15 @@ function getConfiguredInitialBlockCursor(): number {
 	return startBlock - 1;
 }
 
-export function getStateFilePath(): string {
-	return STATE_FILE;
-}
-
 export function loadState(): void {
 	try {
 		const initialBlockCursor = getConfiguredInitialBlockCursor();
-		if (!fs.existsSync(STATE_FILE)) {
+		const stateFile = getStateFilePath();
+		if (!fs.existsSync(stateFile)) {
 			lastIrreversibleBlockProcessed = initialBlockCursor;
 			return;
 		}
-		const raw = fs.readFileSync(STATE_FILE, 'utf8');
+		const raw = fs.readFileSync(stateFile, 'utf8');
 		const data: SerializedState = JSON.parse(raw);
 
 		players.clear();
@@ -417,9 +418,10 @@ export function saveState(): void {
 	try {
 		ensureDataDir();
 		const data = exportState();
-		const tmpFile = STATE_FILE + '.tmp';
+		const stateFile = getStateFilePath();
+		const tmpFile = `${stateFile}.tmp`;
 		fs.writeFileSync(tmpFile, JSON.stringify(data), { encoding: 'utf8', mode: STATE_FILE_MODE });
-		fs.renameSync(tmpFile, STATE_FILE);
+		fs.renameSync(tmpFile, stateFile);
 		_dirty = false;
 	} catch (err) {
 		console.warn('[chainState] Failed to save state:', err);

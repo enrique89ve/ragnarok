@@ -50,7 +50,7 @@ import {
 	type StoredLeaf,
 } from '../../../../protocol/actionLog';
 import { verifyResultProposalTranscriptRoot } from './resultProposalGuard';
-import { buildRagnarokRuntimeEvidence } from '@shared/runtimeConfig';
+import { buildRagnarokRuntimeEvidence, isNftFullTestnetRuntimePhase } from '@shared/runtimeConfig';
 
 export type { GameCommandEnvelope, WireGameCommand } from '../../../../hooks/p2pEnvelope';
 export type { P2PMessage } from '../../../../p2p/messages';
@@ -92,7 +92,7 @@ const RESULT_SIGN_TIMEOUT_MS = 30_000;
 
 function shouldRequestP2PSessionAuthorizePrompt(): boolean {
 	const runtime = buildRagnarokRuntimeEvidence(getRagnarokNetworkConfig());
-	return runtime.runtimePhase !== 'closed-beta';
+	return !isNftFullTestnetRuntimePhase(runtime.runtimePhase);
 }
 
 export function useWireSync() {
@@ -153,7 +153,7 @@ export function useWireSync() {
 	const signedTranscriptRef = useRef<Transcript | null>(null);
 	const myBroadcasterRef = useRef<Broadcaster | null>(null);
 	// ADR 0004 §Decision.6 (issue 04) — encrypted IndexedDB action log. This is
-	// available only when session_authorize is enabled; closed-beta full NFT P2P
+	// available only when session_authorize is enabled; full NFT testnet P2P
 	// skips it to avoid hidden or premature Posting prompts.
 	const actionLogDbRef = useRef<Awaited<ReturnType<typeof openActionLog>> | null>(null);
 	const actionLogEncKeyRef = useRef<CryptoKey | null>(null);
@@ -685,7 +685,7 @@ export function useWireSync() {
 					}
 
 					// Future ranked settlement can bind an ephemeral action-signing
-					// key to the Hive identity here. Closed-beta full NFT gameplay
+					// key to the Hive identity here. Full NFT testnet gameplay
 					// intentionally does not request this Posting signature: the
 					// match can be played with NFT custody verification, while P2P
 					// RUNE/ELO settlement remains disabled until the winner arbiter.
@@ -693,7 +693,7 @@ export function useWireSync() {
 						sessionAuthorizeSentRef.current = true;
 						const localMatchId = truncatedMatchId;
 						if (!shouldRequestP2PSessionAuthorizePrompt()) {
-							debug.log('[wireSync] session_authorize skipped — closed-beta full NFT P2P does not request Posting signature');
+							debug.log('[wireSync] session_authorize skipped — full NFT testnet P2P does not request Posting signature');
 							usePeerStore.getState().setP2pSessionAuthorization({
 								localAuthorized: false,
 								remoteAuthorized: false,

@@ -148,7 +148,7 @@ export default function DailyQuestPanel() {
 
 	return (
 		<>
-			<div className="flex flex-col gap-2 max-h-[480px] overflow-y-auto pr-1 -mr-1 [scrollbar-width:thin]">
+			<div className="daily-quest-landscape-list flex flex-col gap-2 max-h-[480px] overflow-y-auto pr-1 -mr-1 [scrollbar-width:thin]">
 				<ResetCountdownChip onOpenInfo={() => setInfoOpen(true)} />
 				<DailyQuestClaimSummary
 					account={account}

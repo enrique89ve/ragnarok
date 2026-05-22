@@ -6,6 +6,7 @@ import {
   buildClosedBetaCutoverGate,
   buildRagnarokRuntimeEvidence,
 } from "../shared/runtimeConfig";
+import { buildServerStateEvidence } from "./services/runtimeStateEvidence";
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
@@ -44,6 +45,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       },
       runtime: {
         ...buildRagnarokRuntimeEvidence(runtime),
+        state: buildServerStateEvidence(runtime),
         closedBetaCutover: buildClosedBetaCutoverGate(runtime),
       },
     });

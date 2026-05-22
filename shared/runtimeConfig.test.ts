@@ -8,6 +8,7 @@ import {
 	getRagnarokStorageNamespace,
 	getRagnarokRuntimePhase,
 	isClosedTestnetBetaResetEpoch,
+	isAlfaTestnetResetEpoch,
 	isQaFullCatalogEntitlementEnabled,
 	resolveRagnarokRuntimeConfig,
 	shouldAcceptCustomJsonId,
@@ -113,6 +114,22 @@ describe('runtimeConfig', () => {
 		expect(isClosedTestnetBetaResetEpoch(closedBeta.resetEpoch)).toBe(true);
 		expect(getRagnarokRuntimePhase(closedBeta)).toBe('closed-beta');
 		expect(isQaFullCatalogEntitlementEnabled(closedBeta)).toBe(false);
+	});
+
+	it('classifies alfa testnet reset epochs as a testnet alias without enabling QA full-catalog access', () => {
+		const alfa = resolveRagnarokRuntimeConfig({
+			VITE_NETWORK_STAGE: 'testnet',
+			VITE_RAGNAROK_RESET_EPOCH: 'alfa-testnet-full-nft-2026-05-22',
+		});
+
+		expect(alfa.stage).toBe('testnet');
+		expect(alfa.executionMode).toBe('testnet');
+		expect(alfa.protocolId).toBe('rk_game_testnet');
+		expect(alfa.collectionId).toBe('ragnarok-testnet');
+		expect(isAlfaTestnetResetEpoch(alfa.resetEpoch)).toBe(true);
+		expect(getRagnarokRuntimePhase(alfa)).toBe('alfa-testnet');
+		expect(isQaFullCatalogEntitlementEnabled(alfa)).toBe(false);
+		expect(getRagnarokStorageNamespace(alfa)).toBe('ragnarok-testnet-alfa-testnet-full-nft-2026-05-22-rk-game-testnet');
 	});
 
 	it('namespaces storage and IndexedDB by stage, reset epoch, and protocol id', () => {

@@ -7,6 +7,8 @@ Norse Mythos Card Game — Hive-anchored card battler.
 ```bash
 npm run dev       # Vite + Express dev server → http://localhost:5000
 npm run dev:testnet # Same server with .env.testnet / rk_game_testnet
+npm run build:alfa-testnet # Production Alfa Testnet bundle; stage stays testnet
+npm run start:alfa-testnet # Built server with alfa-testnet reset epoch / JSON state
 npm run build:mainnet # Production browser bundle with .env.mainnet
 npm run check     # TypeScript type check
 npm run lint      # ESLint (use --fix to autofix)

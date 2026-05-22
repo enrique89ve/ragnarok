@@ -27,6 +27,14 @@ function adminConfigResponse(overrides: Record<string, unknown> = {}): Record<st
 		seasonStart: '2026-05-19T00:00:00Z',
 		storageNamespace: 'ragnarok-testnet-closed-beta-2026-06-rk-game-testnet',
 		qaFullCatalogEnabled: false,
+		state: {
+			persistence: 'json-file',
+			chainStateFile: 'data/chain-state.testnet.json',
+			stateDirectory: 'data',
+			chainStateFileConfigured: true,
+			ownershipSource: 'nftlox',
+			ownershipSourceConfigured: true,
+		},
 		adminAccount: 'ragnarok-test',
 		adminOperatorAccount: 'ragnarok-test-operator',
 		multisigConfigured: true,
@@ -98,6 +106,10 @@ describe('admin blockchain adapters', () => {
 			resetEpoch: 'closed-beta-2026-06',
 			runtimePhase: 'closed-beta',
 			qaFullCatalogEnabled: false,
+			state: {
+				persistence: 'json-file',
+				ownershipSource: 'nftlox',
+			},
 			multisigConfigured: true,
 		});
 		expect(config.closedBetaCutover.inviteBlocked).toBe(false);

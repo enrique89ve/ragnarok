@@ -4,7 +4,7 @@ export type RagnarokNetworkStage = typeof RAGNAROK_NETWORK_STAGES[number];
 export const RAGNAROK_RUNTIME_EXECUTION_MODES = ['local-dev', 'testnet', 'mainnet'] as const;
 export type RagnarokRuntimeExecutionMode = typeof RAGNAROK_RUNTIME_EXECUTION_MODES[number];
 
-export const RAGNAROK_RUNTIME_PHASES = ['local', 'qa-season-0', 'closed-beta', 'generic-testnet', 'mainnet'] as const;
+export const RAGNAROK_RUNTIME_PHASES = ['local', 'qa-season-0', 'alfa-testnet', 'closed-beta', 'generic-testnet', 'mainnet'] as const;
 export type RagnarokRuntimePhase = typeof RAGNAROK_RUNTIME_PHASES[number];
 
 export const RAGNAROK_CLOSED_BETA_CUTOVER_CHECK_IDS = [
@@ -252,9 +252,18 @@ export function isQaFullCatalogResetEpoch(resetEpoch: string): boolean {
 	);
 }
 
+export function isAlfaTestnetResetEpoch(resetEpoch: string): boolean {
+	const normalized = normalizeRuntimeNamespaceSegment(resetEpoch);
+	return normalized === 'alfa-testnet' || normalized.startsWith('alfa-testnet-');
+}
+
 export function isClosedTestnetBetaResetEpoch(resetEpoch: string): boolean {
 	const normalized = normalizeRuntimeNamespaceSegment(resetEpoch);
 	return normalized === 'closed-beta' || normalized.startsWith('closed-beta-');
+}
+
+export function isNftFullTestnetRuntimePhase(phase: RagnarokRuntimePhase): boolean {
+	return phase === 'alfa-testnet' || phase === 'closed-beta';
 }
 
 export function isQaFullCatalogEntitlementEnabled(config: RagnarokRuntimeConfig): boolean {
@@ -270,6 +279,7 @@ export function getRagnarokRuntimePhase(config: RagnarokRuntimeConfig): Ragnarok
 	if (config.stage === 'local') return 'local';
 	if (config.stage === 'mainnet') return 'mainnet';
 	if (isQaFullCatalogResetEpoch(config.resetEpoch)) return 'qa-season-0';
+	if (isAlfaTestnetResetEpoch(config.resetEpoch)) return 'alfa-testnet';
 	if (isClosedTestnetBetaResetEpoch(config.resetEpoch)) return 'closed-beta';
 	return 'generic-testnet';
 }

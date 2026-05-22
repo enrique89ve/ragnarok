@@ -438,14 +438,20 @@ Runtime profile is explicit:
 ```bash
 npm run dev             # local private development
 npm run dev:testnet     # shared resettable beta profile from .env.testnet
+npm run build:alfa-testnet # production Alfa Testnet bundle, stage=testnet
+npm run start:alfa-testnet # built server with Alfa Testnet JSON state
 npm run build:mainnet   # production browser bundle from .env.mainnet
 npm run start:mainnet   # built server with .env.mainnet
 ```
 
-Copy `.env.testnet.example` to `.env.testnet` for beta testing and
-`.env.mainnet.example` to `.env.mainnet` for mainnet release rehearsals.
+Copy `.env.testnet.example` to `.env.testnet` for beta testing,
+`.env.alfa-testnet.example` to `.env.alfa-testnet` for the one-week
+Dokploy-hosted Alfa Testnet profile, and `.env.mainnet.example` to
+`.env.mainnet` for mainnet release rehearsals.
 `VITE_NETWORK_STAGE` is the source of truth; `VITE_DATA_LAYER_MODE` and
 `VITE_BLOCKCHAIN_PACKAGING` are debug overrides, not normal profile switches.
+Alfa Testnet still uses `VITE_NETWORK_STAGE=testnet`; `alfa-testnet` is only the
+reset epoch/release alias and should persist state to JSON.
 For resettable shared phases, set `VITE_RAGNAROK_RESET_EPOCH` deliberately
 before testers start. A new epoch isolates IndexedDB, localStorage stores,
 service-worker caches, RUNE/DUAT projections, action logs, and decks from any
@@ -459,6 +465,8 @@ previous QA or beta wipe.
 | `npm run dev:testnet` | Testnet development server using `.env.testnet` |
 | `npm run dev:mainnet` | Mainnet-profile local smoke using `.env.mainnet` |
 | `npm run build` | Production build |
+| `npm run build:alfa-testnet` | Alfa Testnet production build with `stage=testnet` and an `alfa-testnet-*` reset epoch |
+| `npm run start:alfa-testnet` | Run the built server with Alfa Testnet JSON state defaults |
 | `npm run build:mainnet` | Mainnet-profile production build using `.env.mainnet` |
 | `npm run check` | TypeScript type checking |
 | `npm run lint` | ESLint |

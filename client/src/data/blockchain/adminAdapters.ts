@@ -69,10 +69,20 @@ export type AdminServerConfig = {
 	readonly seasonStart: string;
 	readonly storageNamespace: string;
 	readonly qaFullCatalogEnabled: boolean;
+	readonly state: AdminServerStateEvidence;
 	readonly closedBetaCutover: RagnarokClosedBetaCutoverGate;
 	readonly adminAccount: string;
 	readonly adminOperatorAccount: string;
 	readonly multisigConfigured: boolean;
+};
+
+export type AdminServerStateEvidence = {
+	readonly persistence: string;
+	readonly chainStateFile: string;
+	readonly stateDirectory: string;
+	readonly chainStateFileConfigured: boolean;
+	readonly ownershipSource: string;
+	readonly ownershipSourceConfigured: boolean;
 };
 
 export type AdminSessionStatus = {
@@ -206,8 +216,23 @@ function isAdminServerConfig(value: unknown): value is AdminServerConfig {
 		&& hasNonEmptyStringFields(body, ADMIN_CONFIG_REQUIRED_STRING_FIELDS)
 		&& hasBooleanFields(body, ADMIN_CONFIG_REQUIRED_BOOLEAN_FIELDS)
 		&& isRagnarokRuntimePhase(body.runtimePhase)
+		&& isAdminServerStateEvidence(body.state)
 		&& isRagnarokClosedBetaCutoverGate(body.closedBetaCutover)
 		&& typeof body.adminOperatorAccount === 'string';
+}
+
+function isAdminServerStateEvidence(value: unknown): value is AdminServerStateEvidence {
+	if (!isRecord(value)) return false;
+	return typeof value.persistence === 'string'
+		&& value.persistence.trim().length > 0
+		&& typeof value.chainStateFile === 'string'
+		&& value.chainStateFile.trim().length > 0
+		&& typeof value.stateDirectory === 'string'
+		&& value.stateDirectory.trim().length > 0
+		&& typeof value.chainStateFileConfigured === 'boolean'
+		&& typeof value.ownershipSource === 'string'
+		&& value.ownershipSource.trim().length > 0
+		&& typeof value.ownershipSourceConfigured === 'boolean';
 }
 
 function isRagnarokRuntimePhase(value: unknown): value is RagnarokRuntimePhase {
@@ -343,6 +368,14 @@ export async function getAdminServerConfig(options: AdminServerConfigOptions = {
 				seasonStart: body.seasonStart.trim(),
 				storageNamespace: body.storageNamespace.trim(),
 				qaFullCatalogEnabled: body.qaFullCatalogEnabled,
+				state: {
+					persistence: body.state.persistence.trim(),
+					chainStateFile: body.state.chainStateFile.trim(),
+					stateDirectory: body.state.stateDirectory.trim(),
+					chainStateFileConfigured: body.state.chainStateFileConfigured,
+					ownershipSource: body.state.ownershipSource.trim(),
+					ownershipSourceConfigured: body.state.ownershipSourceConfigured,
+				},
 				closedBetaCutover: body.closedBetaCutover,
 				adminAccount: body.adminAccount.trim(),
 				adminOperatorAccount: body.adminOperatorAccount.trim(),

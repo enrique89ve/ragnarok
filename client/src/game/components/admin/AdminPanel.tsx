@@ -46,6 +46,7 @@ import {
 } from '@shared/protocol-core/packCatalog';
 import { fetchChainStatus, type ChainStatusResponse } from '../../../data/chainAPI';
 import type { AdminP2PStatus, AdminServerConfig, AdminSessionStatus } from '../../../data/blockchain/adminAdapters';
+import { isNftFullTestnetRuntimePhase } from '@shared/runtimeConfig';
 
 // Lazy-import admin functions to avoid loading blockchain code on non-admin pages
 async function getAdminFns() {
@@ -558,7 +559,7 @@ export default function AdminPanel() {
 					</p>
 					<div className="mt-5 space-y-2 text-left text-sm">
 						<AdminConsumerRow label="Stage" value={adminConfig.stage} ok={adminConfig.stage === 'testnet'} />
-						<AdminConsumerRow label="Phase" value={adminConfig.runtimePhase} ok={adminConfig.runtimePhase === 'closed-beta'} />
+						<AdminConsumerRow label="Phase" value={adminConfig.runtimePhase} ok={isNftFullTestnetRuntimePhase(adminConfig.runtimePhase)} />
 						<AdminConsumerRow label="Reset epoch" value={adminConfig.resetEpoch} ok={adminConfig.resetEpoch.length > 0} />
 						<AdminConsumerRow label="Admin" value={`@${adminConfig.adminAccount}`} ok={adminConfig.adminAccount.length > 0} />
 						<AdminConsumerRow label="Operator" value="Missing" ok={false} />
@@ -695,6 +696,7 @@ export default function AdminPanel() {
 	const closedBetaCutover = adminConfig?.closedBetaCutover ?? null;
 	const cutoverBlocked = closedBetaCutover?.inviteBlocked === true;
 	const runtimePhaseLabel = adminConfig?.runtimePhase ?? 'unknown';
+	const fullNftPhase = adminConfig ? isNftFullTestnetRuntimePhase(adminConfig.runtimePhase) : false;
 	const adminActionsLocked = adminConfig?.multisigConfigured !== true;
 	const panelEyebrow = isLocalReadOnlyRuntime ? 'Admin Runtime' : 'Genesis Command Center';
 	const panelTitle = isLocalReadOnlyRuntime
@@ -707,7 +709,7 @@ export default function AdminPanel() {
 	const authorityValue = isLocalReadOnlyRuntime
 		? runtimePhaseLabel
 		: adminConfig?.adminAccount ? `@${adminConfig.adminAccount}` : 'missing';
-	const phaseOk = isLocalReadOnlyRuntime || adminConfig?.runtimePhase === 'closed-beta';
+	const phaseOk = isLocalReadOnlyRuntime || fullNftPhase;
 	const inviteGateValue = cutoverBlocked ? 'Blocked' : 'Runtime pass';
 	const inviteGateOk = isLocalReadOnlyRuntime || !cutoverBlocked;
 	const collectibleByRarity = collectibleCards.reduce<Record<string, number>>((totals, card) => {
@@ -944,10 +946,18 @@ export default function AdminPanel() {
 											</span>
 										</div>
 										<div className="grid gap-3 md:grid-cols-4">
-											<StatCard label="Phase" value={runtimePhaseLabel} color={adminConfig?.runtimePhase === 'closed-beta' ? 'green' : 'amber'} />
+											<StatCard label="Phase" value={runtimePhaseLabel} color={fullNftPhase ? 'green' : 'amber'} />
 											<StatCard label="Reset Epoch" value={adminConfig?.resetEpoch ?? 'missing'} color={adminConfig?.resetEpoch ? 'blue' : 'red'} />
 											<StatCard label="QA Catalog" value={adminConfig?.qaFullCatalogEnabled ? 'Enabled' : 'Disabled'} color={adminConfig?.qaFullCatalogEnabled ? 'red' : 'green'} />
 											<StatCard label="NFTLox" value={adminConfig?.nftLoxProtocolId ?? 'missing'} color={adminConfig?.nftLoxProtocolId ? 'blue' : 'red'} />
+											<StatCard label="State" value={adminConfig?.state.persistence ?? 'unknown'} color={adminConfig?.state.persistence === 'json-file' ? 'green' : 'amber'} />
+											<StatCard label="Ownership" value={adminConfig?.state.ownershipSource ?? 'unknown'} color={adminConfig?.state.ownershipSource === 'json' ? 'green' : 'blue'} />
+										</div>
+										<div className="mt-3 grid gap-2 md:grid-cols-2">
+											<AdminConsumerRow label="State file" value={adminConfig?.state.chainStateFile ?? 'unknown'} ok={Boolean(adminConfig?.state.chainStateFile)} />
+											<AdminConsumerRow label="State dir" value={adminConfig?.state.stateDirectory ?? 'unknown'} ok={Boolean(adminConfig?.state.stateDirectory)} />
+											<AdminConsumerRow label="State env" value={adminConfig?.state.chainStateFileConfigured ? 'Configured' : 'Default'} ok={adminConfig?.state.chainStateFileConfigured === true} />
+											<AdminConsumerRow label="Ownership env" value={adminConfig?.state.ownershipSourceConfigured ? 'Configured' : 'Default'} ok={adminConfig?.runtimePhase === 'alfa-testnet' ? adminConfig?.state.ownershipSource === 'json' : true} />
 										</div>
 										{closedBetaCutover && (
 											<div className="mt-3 grid gap-2 md:grid-cols-2">
