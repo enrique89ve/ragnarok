@@ -10,6 +10,10 @@ import { importState } from './chainState';
 
 let worker: Worker | null = null;
 
+function isProductionRuntime(): boolean {
+  return process.env.NODE_ENV === 'production';
+}
+
 function getIndexerWorkerBootstrap(): string {
   const workerUrl = new URL('./indexer.worker.ts', import.meta.url).href;
   const encodedWorkerUrl = JSON.stringify(workerUrl);
@@ -25,13 +29,18 @@ function getIndexerWorkerBootstrap(): string {
 export function startIndexerWorker(): void {
   if (worker) return;
 
-  // Create the worker
-  worker = new Worker(getIndexerWorkerBootstrap(), {
-    eval: true,
-    workerData: {
-      POLL_INTERVAL_MS: 10_000
-    },
-  });
+  worker = isProductionRuntime()
+    ? new Worker(new URL('./indexer.worker.js', import.meta.url), {
+      workerData: {
+        POLL_INTERVAL_MS: 10_000
+      },
+    })
+    : new Worker(getIndexerWorkerBootstrap(), {
+      eval: true,
+      workerData: {
+        POLL_INTERVAL_MS: 10_000
+      },
+    });
 
   worker.on('message', (msg) => {
     if (msg.type === 'STATE_UPDATE') {
