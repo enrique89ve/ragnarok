@@ -47,8 +47,9 @@ The current TypeScript seam is:
 
 ## Remaining Migration Targets
 
-- P2P `session_authorize` and `result_countersign` need visible authorize/sign
-  surfaces.
+- P2P ranked settlement `session_authorize` and `result_countersign` need
+  visible authorize/sign surfaces before P2P RUNE/ELO is enabled. Closed-beta
+  full NFT gameplay currently skips the `session_authorize` Posting prompt.
 - The transaction queue needs a visible wallet outbox UI for manual Hive
   submission and retry.
 - `slash_evidence` needs a durable evidence queue and a Submit evidence action.

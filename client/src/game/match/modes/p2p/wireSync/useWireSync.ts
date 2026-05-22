@@ -90,6 +90,11 @@ function deferSlashEvidence(params: SlashEvidenceParams): void {
 
 const RESULT_SIGN_TIMEOUT_MS = 30_000;
 
+function shouldRequestP2PSessionAuthorizePrompt(): boolean {
+	const runtime = buildRagnarokRuntimeEvidence(getRagnarokNetworkConfig());
+	return runtime.runtimePhase !== 'closed-beta';
+}
+
 export function useWireSync() {
 	const connection = usePeerStore(state => state.connection);
 	const connectionState = usePeerStore(state => state.connectionState);
@@ -132,12 +137,10 @@ export function useWireSync() {
 
 	// Session binding: matchId derived from seed exchange
 	const matchIdRef = useRef<string | null>(null);
-	// ADR 0004 §Decision.3 — ephemeral session keys. The local SessionKey
-	// is the in-process keypair signing every action envelope (issue 03).
-	// `sessionAuthorizeSentRef` guards against re-firing the Hive Keychain
-	// prompt if seed_reveal arrives twice (network retry, reconnect).
-	// Opponent state is captured when their `session_authorize` arrives;
-	// both halves must be present before any action_envelope is sent.
+	// ADR 0004 §Decision.3 — ephemeral session keys for future ranked
+	// settlement. Closed-beta full NFT gameplay deliberately skips this wallet
+	// prompt: NFT custody is enforced by deck verification, while P2P RUNE/ELO
+	// settlement waits for the winner arbiter.
 	const sessionKeyRef = useRef<SessionKey | null>(null);
 	const sessionAuthorizeSentRef = useRef(false);
 	const opponentSessionPubkeyRef = useRef<string | null>(null);
@@ -149,11 +152,9 @@ export function useWireSync() {
 	// derived from the WS host hint at seed_reveal — see seed_reveal handler.
 	const signedTranscriptRef = useRef<Transcript | null>(null);
 	const myBroadcasterRef = useRef<Broadcaster | null>(null);
-	// ADR 0004 §Decision.6 (issue 04) — encrypted IndexedDB action log. The
-	// DB handle is opened lazily after session_authorize so the encKey
-	// derivation can reuse the same Hive sig. Both refs MAY be null during
-	// the early-handshake window; appendLeaf is then a no-op (Phase 0 accepts
-	// this loss; harden in issue 06).
+	// ADR 0004 §Decision.6 (issue 04) — encrypted IndexedDB action log. This is
+	// available only when session_authorize is enabled; closed-beta full NFT P2P
+	// skips it to avoid hidden or premature Posting prompts.
 	const actionLogDbRef = useRef<Awaited<ReturnType<typeof openActionLog>> | null>(null);
 	const actionLogEncKeyRef = useRef<CryptoKey | null>(null);
 	// Per-session seq tracking: monotonic, contiguous, reset on new session
@@ -683,80 +684,88 @@ export function useWireSync() {
 						opponentUsernameRef.current = data.hiveUsername;
 					}
 
-					// ADR 0004 §Decision.3 — generate per-match ephemeral Ed25519
-					// session key and request Hive Keychain to authorize the
-					// pubkey. Fire-and-forget: the prompt is async and must not
-					// block seed_reveal completion. Issue 03 will block envelope
-					// sends on both `sessionKeyRef.current` and
-					// `opponentSessionPubkeyRef.current` being populated.
+					// Future ranked settlement can bind an ephemeral action-signing
+					// key to the Hive identity here. Closed-beta full NFT gameplay
+					// intentionally does not request this Posting signature: the
+					// match can be played with NFT custody verification, while P2P
+					// RUNE/ELO settlement remains disabled until the winner arbiter.
 					if (!sessionAuthorizeSentRef.current) {
 						sessionAuthorizeSentRef.current = true;
 						const localMatchId = truncatedMatchId;
-						(async () => {
-							try {
-								const sessionKey = await generateSessionKey(localMatchId);
-								sessionKeyRef.current = sessionKey;
-								const localUsername = getNFTBridge().getUsername();
-								if (!localUsername) {
-									debug.warn('[wireSync] session_authorize skipped — no local Hive username');
+						if (!shouldRequestP2PSessionAuthorizePrompt()) {
+							debug.log('[wireSync] session_authorize skipped — closed-beta full NFT P2P does not request Posting signature');
+							usePeerStore.getState().setP2pSessionAuthorization({
+								localAuthorized: false,
+								remoteAuthorized: false,
+								error: null,
+							});
+						} else {
+							(async () => {
+								try {
+									const sessionKey = await generateSessionKey(localMatchId);
+									sessionKeyRef.current = sessionKey;
+									const localUsername = getNFTBridge().getUsername();
+									if (!localUsername) {
+										debug.warn('[wireSync] session_authorize skipped — no local Hive username');
+										usePeerStore.getState().setP2pSessionAuthorization({
+											localAuthorized: false,
+											error: 'Missing local Hive session',
+										});
+										return;
+									}
+									if (!isCurrentConnectedMatch(localMatchId)) {
+										debug.warn('[wireSync] session_authorize skipped — match no longer connected');
+										return;
+									}
+									const hiveSig = await signSessionAuthorize(localMatchId, sessionKey.pubkey, {
+										username: localUsername,
+									});
+									if (!isCurrentConnectedMatch(localMatchId)) {
+										debug.warn('[wireSync] session_authorize signature ignored — match disconnected before approval');
+										return;
+									}
+									send({
+										type: 'session_authorize',
+										matchId: localMatchId,
+										ephemeralPubkey: sessionKey.pubkey,
+										hiveSig,
+									});
+									debug.log('[wireSync] Sent session_authorize', {
+										matchId: localMatchId,
+										mode: sessionKey.mode,
+										pubkeyPrefix: sessionKey.pubkey.slice(0, 8),
+									});
+									usePeerStore.getState().setP2pSessionAuthorization({
+										localAuthorized: true,
+										error: null,
+									});
+									// ADR 0004 §Decision.6 (issue 04) — open the encrypted
+									// action log alongside session_authorize. Reuse the same
+									// Posting signature so match start has one Keychain prompt.
+									try {
+										const [db, encKey] = await Promise.all([
+											openActionLog(),
+											deriveActionLogEncKey(hiveSig, localMatchId),
+										]);
+										actionLogDbRef.current = db;
+										actionLogEncKeyRef.current = encKey;
+										debug.log('[wireSync] Action log opened', { matchId: localMatchId });
+									} catch (logErr) {
+										debug.warn('[wireSync] Action log unavailable — running without reload safety', logErr);
+									}
+								} catch (err) {
+									if (!isCurrentConnectedMatch(localMatchId)) {
+										debug.warn('[wireSync] session_authorize cancelled after disconnect');
+										return;
+									}
+									debug.error('[wireSync] session_authorize failed:', err);
 									usePeerStore.getState().setP2pSessionAuthorization({
 										localAuthorized: false,
-										error: 'Missing local Hive session',
+										error: err instanceof Error ? err.message : String(err),
 									});
-									return;
 								}
-								if (!isCurrentConnectedMatch(localMatchId)) {
-									debug.warn('[wireSync] session_authorize skipped — match no longer connected');
-									return;
-								}
-								const hiveSig = await signSessionAuthorize(localMatchId, sessionKey.pubkey, {
-									username: localUsername,
-								});
-								if (!isCurrentConnectedMatch(localMatchId)) {
-									debug.warn('[wireSync] session_authorize signature ignored — match disconnected before approval');
-									return;
-								}
-								send({
-									type: 'session_authorize',
-									matchId: localMatchId,
-									ephemeralPubkey: sessionKey.pubkey,
-									hiveSig,
-								});
-								debug.log('[wireSync] Sent session_authorize', {
-									matchId: localMatchId,
-									mode: sessionKey.mode,
-									pubkeyPrefix: sessionKey.pubkey.slice(0, 8),
-								});
-								usePeerStore.getState().setP2pSessionAuthorization({
-									localAuthorized: true,
-									error: null,
-								});
-								// ADR 0004 §Decision.6 (issue 04) — open the encrypted
-								// action log alongside session_authorize. Reuse the same
-								// Posting signature so match start has one Keychain prompt.
-								try {
-									const [db, encKey] = await Promise.all([
-										openActionLog(),
-										deriveActionLogEncKey(hiveSig, localMatchId),
-									]);
-									actionLogDbRef.current = db;
-									actionLogEncKeyRef.current = encKey;
-									debug.log('[wireSync] Action log opened', { matchId: localMatchId });
-								} catch (logErr) {
-									debug.warn('[wireSync] Action log unavailable — running without reload safety', logErr);
-								}
-							} catch (err) {
-								if (!isCurrentConnectedMatch(localMatchId)) {
-									debug.warn('[wireSync] session_authorize cancelled after disconnect');
-									return;
-								}
-								debug.error('[wireSync] session_authorize failed:', err);
-								usePeerStore.getState().setP2pSessionAuthorization({
-									localAuthorized: false,
-									error: err instanceof Error ? err.message : String(err),
-								});
-							}
-						})();
+							})();
+						}
 					}
 
 					if (isCardsAuthority) {

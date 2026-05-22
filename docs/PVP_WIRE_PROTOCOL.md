@@ -290,7 +290,7 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `ping` / `pong` | both | both | Lower-level RTT probe |
 | `opponentDisconnected` | (relay only) | relay | Surfaced to UI |
 | `spectator_state` | host | host | Future / unused in beta |
-| `session_authorize` | peer→peer | both | Phase 0 (ADR 0004): broadcast `{ matchId, ephemeralPubkey, hiveSig }` signed with Hive Posting authority at match start so the opponent binds the ephemeral signing key to the Hive identity |
+| `session_authorize` | peer→peer | both | Future ranked/settlement path: broadcast `{ matchId, ephemeralPubkey, hiveSig }` signed with Hive Posting authority so the opponent binds the ephemeral signing key to the Hive identity. Closed-beta full NFT gameplay skips this prompt; NFT custody is enforced by deck verification while P2P RUNE/ELO settlement remains disabled. |
 | `session_renewal` | peer→peer | both | Phase 0 (ADR 0004): after reload/crash, broadcast `{ matchId, newPubkey, hiveSig }` signed with Hive Posting authority so the opponent accepts a fresh ephemeral key for the same match |
 | `session_resumed` | peer→peer | both | Phase 0 (ADR 0004): acknowledge a renewal with `{ matchId, lastSeenStateHash }` so the resuming peer can decide between replay-from-log and `state_sync_request` |
 | `state_sync_request` | peer→peer | both | Phase 0 (ADR 0004): request the signed action log from a turn onwards (`{ matchId, fromTurn }`) when local IndexedDB replay is unavailable or corrupted |
