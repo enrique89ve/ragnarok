@@ -53,6 +53,23 @@ function isImmutableChunk(url) {
 	return IMMUTABLE_RE.test(url);
 }
 
+function isValidImmutableChunkResponse(requestUrl, response) {
+	if (!response || !response.ok) return false;
+
+	var contentType = response.headers.get('content-type') || '';
+	if (requestUrl.endsWith('.js')) {
+		return contentType.indexOf('javascript') !== -1
+			|| contentType.indexOf('ecmascript') !== -1
+			|| contentType.indexOf('text/plain') !== -1;
+	}
+
+	if (requestUrl.endsWith('.css')) {
+		return contentType.indexOf('text/css') !== -1;
+	}
+
+	return true;
+}
+
 function isViteDevRequest(url) {
 	var parsed = new URL(url);
 	return parsed.pathname === '/@vite/client'
@@ -143,7 +160,7 @@ self.addEventListener('fetch', function(event) {
 			caches.match(request).then(function(cached) {
 				if (cached) return cached;
 				return fetch(request).then(function(response) {
-					if (response.ok) {
+					if (isValidImmutableChunkResponse(request.url, response)) {
 						var clone = response.clone();
 						caches.open(CACHE_NAME).then(function(cache) {
 							cache.put(request, clone);

@@ -26,10 +26,36 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  app.use(express.static(distPath, {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith("index.html")) {
+        res.setHeader("Cache-Control", "no-cache");
+        return;
+      }
+
+      if (filePath.endsWith("sw.js") || filePath.endsWith("manifest.json")) {
+        res.setHeader("Cache-Control", "no-cache");
+        return;
+      }
+
+      if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      }
+    },
+  }));
+
+  app.use("/assets", (_req, res) => {
+    res
+      .status(404)
+      .type("text/plain")
+      .set("Cache-Control", "no-store")
+      .send("Asset not found");
+  });
 
   // Fall through to index.html if the file doesn't exist.
   app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+    res
+      .set("Cache-Control", "no-cache")
+      .sendFile(path.resolve(distPath, "index.html"));
   });
 }
