@@ -41,7 +41,34 @@ type ListenError = Error & {
 };
 
 app.use(helmet({
-  contentSecurityPolicy: isDev ? false : undefined,
+  contentSecurityPolicy: isDev ? false : {
+    directives: {
+      defaultSrc: ["'self'"],
+      baseUri: ["'self'"],
+      connectSrc: [
+        "'self'",
+        "https://api.hive.blog",
+        "https://api.deathwing.me",
+        "https://api.openhive.network",
+        "https://api-nftlox.hivecreators.co",
+        "https://hafsql-api.mahdiyari.info",
+        "https://ipfs.io",
+        "https://cloudflare-ipfs.com",
+        "https://gateway.pinata.cloud",
+        "https://dweb.link",
+        "wss:",
+      ],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "https:", "data:"],
+      formAction: ["'self'"],
+      frameAncestors: ["'self'"],
+      imgSrc: ["'self'", "https:", "data:", "blob:"],
+      objectSrc: ["'none'"],
+      scriptSrc: ["'self'"],
+      scriptSrcAttr: ["'none'"],
+      styleSrc: ["'self'", "https://fonts.googleapis.com", "https:", "'unsafe-inline'"],
+      upgradeInsecureRequests: [],
+    },
+  },
 }));
 app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: false }));

@@ -114,6 +114,7 @@ self.addEventListener('fetch', function(event) {
 
 	var url = new URL(request.url);
 	if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+	if (url.origin !== self.location.origin) return;
 
 	if (isViteDevRequest(request.url)) return;
 
@@ -200,16 +201,18 @@ self.addEventListener('fetch', function(event) {
 
 	// Everything else: network-first with cache fallback
 	event.respondWith(
-		fetch(request).then(function(response) {
-			if (response.ok) {
-				var clone = response.clone();
-				caches.open(CACHE_NAME).then(function(cache) {
-					cache.put(request, clone);
+			fetch(request).then(function(response) {
+				if (response.ok) {
+					var clone = response.clone();
+					caches.open(CACHE_NAME).then(function(cache) {
+						cache.put(request, clone);
+					});
+				}
+				return response;
+			}).catch(function() {
+				return caches.match(request).then(function(cached) {
+					return cached || new Response('', { status: 504, statusText: 'Gateway Timeout' });
 				});
-			}
-			return response;
-		}).catch(function() {
-			return caches.match(request);
-		})
-	);
+			})
+		);
 });
