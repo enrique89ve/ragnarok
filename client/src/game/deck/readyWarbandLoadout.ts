@@ -7,6 +7,10 @@ import {
 	type WarbandLoadoutResult,
 } from './heroDeckRules';
 
+const CARD_BY_ID = new Map<number, (typeof cardRegistry)[number]>(
+	cardRegistry.map(card => [Number(card.id), card]),
+);
+
 export function buildReadyWarbandLoadout(
 	army: ArmySelection,
 ): WarbandLoadoutResult {
@@ -15,7 +19,7 @@ export function buildReadyWarbandLoadout(
 		army,
 		useHeroDeckStore.getState().decks,
 		{
-			getCardById: (cardId) => cardRegistry.find(card => Number(card.id) === cardId),
+			getCardById: (cardId) => CARD_BY_ID.get(cardId),
 			getOwnedCopies: (cardId) => nftBridge.getOwnedCopies(cardId),
 			enforceOwnership: nftBridge.isHiveMode(),
 		},

@@ -2,6 +2,10 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { getRagnarokServerRuntimeConfig } from "./services/runtimeConfig";
 import { getStats } from "./services/chainState";
+import {
+  buildClosedBetaCutoverGate,
+  buildRagnarokRuntimeEvidence,
+} from "../shared/runtimeConfig";
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
@@ -39,11 +43,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         blocksBehind: stats.blocksBehind,
       },
       runtime: {
-        stage: runtime.stage,
-        protocolId: runtime.protocolId,
-        resetEpoch: runtime.resetEpoch,
-        resettable: runtime.resettable,
-        economic: runtime.economic,
+        ...buildRagnarokRuntimeEvidence(runtime),
+        closedBetaCutover: buildClosedBetaCutoverGate(runtime),
       },
     });
   });

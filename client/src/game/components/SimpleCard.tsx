@@ -16,6 +16,7 @@ import { getCardArtPath } from '../utils/art/artMapping';
 import { useHoloTracking, getHoloTier } from '../hooks/useHoloTracking';
 import type { Rarity } from '@shared/schemas/rarity';
 import { normalizeRarityKey } from '../utils/rarityUtils';
+import { parseNorseElement, type NorseElement } from '../types/NorseTypes';
 import './SimpleCard.css';
 import './styles/holoEffect.css';
 
@@ -45,7 +46,7 @@ export interface SimpleCardData {
   cardClass?: string;
   keywords?: string[];
   evolutionLevel?: 1 | 2 | 3;
-  element?: string;
+  element?: NorseElement;
   petStage?: string;
   petFamily?: string;
   evolvesFrom?: number;
@@ -106,13 +107,21 @@ const WATER_RE = /\b(aegir|njord|ocean|sea|tide|wave|aqua|rain|river|lake|flood)
 const GRASS_RE = /\b(idunn|yggdrasil|vine|leaf|root|bloom|grove|forest|nature|verdant)\b/i;
 const LIGHT_RE = /\b(baldur|heimdall|sol|dawn|radiant|holy|divine|celestial|sun|bright)\b/i;
 
-const getCardTheme = (name: string, element?: string): string | null => {
-  if (element === 'ice' || element === 'water') return element;
-  if (element === 'fire') return 'fire';
-  if (element === 'electric') return 'electric';
-  if (element === 'dark') return 'shadow';
-  if (element === 'grass') return 'grass';
-  if (element === 'light') return 'light';
+const getCardTheme = (name: string, element?: NorseElement): string | null => {
+  switch (element) {
+    case 'ice':
+    case 'water':
+    case 'fire':
+    case 'electric':
+    case 'grass':
+    case 'light':
+      return element;
+    case 'dark':
+      return 'shadow';
+    case 'neutral':
+    case undefined:
+      break;
+  }
   if (ICE_RE.test(name)) return 'ice';
   if (FIRE_RE.test(name)) return 'fire';
   if (ELECTRIC_RE.test(name)) return 'electric';
@@ -124,6 +133,7 @@ const getCardTheme = (name: string, element?: string): string | null => {
 };
 
 export const normalizeSimpleCardRarity = normalizeRarityKey;
+export const normalizeSimpleCardElement = parseNorseElement;
 
 export const normalizeSimpleCardType = (type?: string): SimpleCardType => {
   switch (type) {
@@ -188,14 +198,15 @@ const getCardTypeIcon = (type: SimpleCardType): string => {
   }
 };
 
-const ELEMENT_BADGE: Record<string, { icon: string; color: string }> = {
+const ELEMENT_BADGE: Record<NorseElement, { icon: string; color: string }> = {
   fire: { icon: '\u{1F525}', color: 'var(--element-fire)' },
   water: { icon: '\u{1F4A7}', color: 'var(--element-water)' },
-  grass: { icon: '\u{1F33F}', color: 'var(--element-wind)' },
-  electric: { icon: '\u{26A1}', color: 'var(--warning-400)' },
-  light: { icon: '\u{2728}', color: 'var(--element-holy)' },
-  dark: { icon: '\u{1F311}', color: 'var(--element-shadow)' },
-  ice: { icon: '\u{2744}\u{FE0F}', color: 'var(--element-water)' }
+  grass: { icon: '\u{1F33F}', color: 'var(--element-grass)' },
+  electric: { icon: '\u{26A1}', color: 'var(--element-electric)' },
+  light: { icon: '\u{2728}', color: 'var(--element-light)' },
+  dark: { icon: '\u{1F311}', color: 'var(--element-dark)' },
+  ice: { icon: '\u{2744}\u{FE0F}', color: 'var(--element-ice)' },
+  neutral: { icon: '\u{26AA}', color: 'var(--element-neutral)' }
 };
 
 const getClassColor = (cardClass?: string): string => {

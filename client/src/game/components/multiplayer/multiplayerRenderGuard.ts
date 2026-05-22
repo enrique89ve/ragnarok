@@ -1,4 +1,5 @@
 import type { ArmySelection } from '../../types/ChessTypes';
+import type { P2PConnectionState } from '../../stores/peerStore';
 
 /**
  * Pure decision used by `MultiplayerGame.tsx` to choose between the
@@ -30,6 +31,9 @@ export interface P2PRenderGuardInput {
 	readonly p2pSessionLocalAuthorized: boolean;
 	readonly p2pSessionRemoteAuthorized: boolean;
 	readonly p2pSessionAuthError: string | null;
+	readonly connectionState: P2PConnectionState;
+	readonly reconnectCountdown: number;
+	readonly reconnectAttemptCount: number;
 }
 
 export type P2PRenderGuardDecision =
@@ -37,11 +41,25 @@ export type P2PRenderGuardDecision =
 	| { readonly kind: 'render' };
 
 export function computeP2PRenderGuard(input: P2PRenderGuardInput): P2PRenderGuardDecision {
+	if (input.connectionState === 'connecting' || input.connectionState === 'waiting') {
+		return { kind: 'wait', reason: 'Connecting with opponent…' };
+	}
+	if (input.connectionState === 'reconnecting' || input.connectionState === 'grace_period') {
+		const attempt = input.reconnectAttemptCount > 0 ? ` Attempt ${input.reconnectAttemptCount}/2.` : '';
+		const countdown = input.reconnectCountdown > 0 ? ` ${input.reconnectCountdown}s before technical result.` : '';
+		return { kind: 'wait', reason: `Reconnecting with opponent…${attempt}${countdown}` };
+	}
+	if (input.connectionState === 'error') {
+		return { kind: 'wait', reason: 'P2P connection failed. Return to the lobby and try again.' };
+	}
+	if (input.connectionState !== 'connected') {
+		return { kind: 'wait', reason: 'Waiting for opponent connection…' };
+	}
 	if (!input.opponentArmyFromPeer) {
-		return { kind: 'wait', reason: 'Syncing opponent army…' };
+		return { kind: 'wait', reason: 'Connected. Waiting for opponent loadout…' };
 	}
 	if (!input.p2pInitApplied) {
-		return { kind: 'wait', reason: 'Syncing initial state…' };
+		return { kind: 'wait', reason: 'Connected. Syncing match state…' };
 	}
 	if (input.p2pSessionAuthError) {
 		return { kind: 'wait', reason: `Hive session authorization failed: ${input.p2pSessionAuthError}` };

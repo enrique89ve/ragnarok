@@ -8,9 +8,18 @@
 import { ElementType } from './ChessTypes';
 
 /**
- * Norse element types (extended from base ElementType)
+ * Norse element types (extended from base ElementType).
  */
-export type NorseElement = 'fire' | 'water' | 'grass' | 'electric' | 'light' | 'dark' | 'ice' | 'neutral';
+export const NORSE_ELEMENTS = ['fire', 'water', 'grass', 'electric', 'light', 'dark', 'ice', 'neutral'] as const;
+export type NorseElement = (typeof NORSE_ELEMENTS)[number];
+
+export function isNorseElement(value: unknown): value is NorseElement {
+  return typeof value === 'string' && (NORSE_ELEMENTS as readonly string[]).includes(value);
+}
+
+export function parseNorseElement(value: unknown): NorseElement | undefined {
+  return isNorseElement(value) ? value : undefined;
+}
 
 /**
  * The Nine Realms of Yggdrasil — canonical realms tagged on card origin.

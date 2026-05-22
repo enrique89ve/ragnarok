@@ -29,6 +29,9 @@ import { ensureCardDataRuntime } from '../runtime/cardDataRuntime';
 import { debug } from '../config/debugConfig';
 import PackOpeningAnimation from './packs/PackOpeningAnimation';
 import CeremonyEvidenceButton from './CeremonyEvidenceButton';
+import { NumericRitual, OrnateCorners, SigilBackplate } from '../../components/ornaments/RunicSigils';
+import { getCardArtPath } from '../utils/art/artMapping';
+import { getTypeIcon } from '../utils/rarityUtils';
 import {
 	createDuatCardAcquisition,
 	isDuatAcquisitionProvenance,
@@ -60,6 +63,13 @@ interface RevealedCard {
 	rarity: string;
 	type: string;
 	heroClass: string;
+}
+
+interface OpenedPackResult {
+	readonly packUid: string;
+	readonly packType: string;
+	readonly packSource: PackCeremonySource;
+	readonly cards: readonly RevealedCard[];
 }
 
 interface PackCeremonyCopy {
@@ -211,6 +221,157 @@ async function waitForEntropyBlockId(blockNum: number): Promise<string> {
 	throw new Error('Pack entropy block is not irreversible yet. Try again in a minute.');
 }
 
+function DuatPackReadyVisual({
+	currentIndex,
+	totalPacks,
+}: {
+	readonly currentIndex: number;
+	readonly totalPacks: number;
+}) {
+	return (
+		<div className="relative mx-auto mb-7 w-[220px] sm:w-[260px]" aria-hidden="true">
+			<motion.div
+				animate={{ y: [0, -8, 0] }}
+				transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+				className="runic-panel ornate-corners-host mystic-tile mystic-tile--bifrost texture-etched relative aspect-[5/7] overflow-hidden rounded-xl border border-bifrost-300/45 bg-obsidian-950 shadow-[0_0_40px_rgba(72,147,255,0.20)] transform-gpu"
+				style={{
+					contain: 'layout paint',
+					background:
+						'linear-gradient(180deg, color-mix(in srgb, var(--bifrost-500) 18%, transparent) 0%, transparent 48%), var(--surface-mystic-obsidian)',
+				}}
+			>
+				<OrnateCorners />
+				<span className="aura-mystic aura-mystic--bifrost opacity-35" />
+				<div className="absolute inset-x-0 top-0 h-20 bg-linear-to-b from-bifrost-300/18 to-transparent" />
+				<div className="absolute -left-10 top-12 h-32 w-32 rounded-full border border-bifrost-200/15" />
+				<div className="absolute -right-10 bottom-14 h-36 w-36 rounded-full border border-gold-300/15" />
+
+				<div className="relative z-10 flex h-full flex-col items-center justify-between px-5 py-6 text-center">
+					<div>
+						<div className="tier-inscription tier-inscription--standard mb-3">
+							DUAT Airdrop
+						</div>
+						<div className="sigil-host mx-auto">
+							<SigilBackplate tier="standard" />
+							<div className="hex-frame hex-frame--bifrost hex-frame--md">
+								<div className="hex-frame-inner">
+									<span className="text-3xl text-bifrost-100/95">𓂀</span>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div className="w-full">
+						<div className="mx-auto mb-4 grid h-20 w-24 place-items-center">
+							<div className="relative h-16 w-20">
+								<span className="absolute left-0 top-3 h-12 w-9 rotate-[-10deg] rounded border border-bifrost-300/25 bg-bifrost-500/10" />
+								<span className="absolute left-7 top-1 h-14 w-10 rotate-[8deg] rounded border border-gold-300/25 bg-gold-500/10" />
+								<span className="absolute left-4 top-0 h-16 w-11 rounded border border-ink-100/35 bg-obsidian-900/80 shadow-[0_0_18px_rgba(72,147,255,0.20)]" />
+							</div>
+						</div>
+						<div className="font-display text-lg font-bold uppercase tracking-[0.18em] text-ink-0">
+							Sealed Pack
+						</div>
+						<NumericRitual tier="bifrost" className="mt-3 justify-center">
+							<span className="numeric-display">{currentIndex}/{totalPacks}</span>
+						</NumericRitual>
+					</div>
+				</div>
+			</motion.div>
+		</div>
+	);
+}
+
+function OpenedPackResults({
+	results,
+	onClose,
+}: {
+	readonly results: readonly OpenedPackResult[];
+	readonly onClose: () => void;
+}) {
+	const totalCards = results.reduce((sum, result) => sum + result.cards.length, 0);
+
+	return (
+		<div className="absolute inset-0 overflow-y-auto overflow-x-hidden bg-obsidian-950 px-6 py-16">
+			<button
+				type="button"
+				onClick={onClose}
+				aria-label="Close pack opening"
+				className="fixed top-14 right-5 z-[10050] inline-flex h-12 min-w-12 items-center justify-center gap-2 rounded-md border border-ink-200/35 bg-obsidian-950/95 px-3 text-ink-0 shadow-[0_0_24px_rgba(0,0,0,0.75)] hover:border-gold-300 hover:text-gold-200 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
+			>
+				<span className="text-2xl leading-none" aria-hidden="true">×</span>
+				<span className="hidden sm:inline font-mono text-[10px] uppercase tracking-[0.18em]">Close</span>
+			</button>
+			<div className="mx-auto max-w-6xl">
+				<header className="mb-8 text-center">
+					<div className="tier-inscription tier-inscription--standard mb-2">
+						DUAT Airdrop · Open All
+					</div>
+					<h2 className="font-display text-2xl font-black uppercase tracking-[0.14em] text-ink-0">
+						{results.length} Packs Opened
+					</h2>
+					<p className="mt-2 text-sm text-ink-200">
+						{totalCards} cards revealed, grouped by pack.
+					</p>
+				</header>
+
+				<div className="space-y-8 pb-20">
+					{results.map((result, resultIndex) => (
+						<section
+							key={result.packUid}
+							className="runic-panel ornate-corners-host relative overflow-hidden rounded-lg border border-bifrost-300/20 bg-obsidian-900/70 p-5"
+						>
+							<OrnateCorners />
+							<div className="relative z-10 mb-4 flex items-center justify-between gap-4">
+								<div>
+									<div className="font-mono text-[10px] uppercase tracking-[0.22em] text-bifrost-200">
+										Pack {resultIndex + 1} · {result.packType}
+									</div>
+									<div className="mt-1 text-xs text-ink-300">
+										{result.cards.length} cards
+									</div>
+								</div>
+								<NumericRitual tier="bifrost">
+									<span className="numeric-display">{resultIndex + 1}/{results.length}</span>
+								</NumericRitual>
+							</div>
+							<div className="relative z-10 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
+								{result.cards.map((card, cardIndex) => {
+									const artPath = getCardArtPath(card.id);
+									return (
+										<article
+											key={`${result.packUid}-${card.id}-${cardIndex}`}
+											className="relative aspect-[5/7] overflow-hidden rounded-lg border border-ink-200/25 bg-obsidian-950"
+											aria-label={`${card.rarity} ${card.type}: ${card.name}`}
+										>
+											{artPath ? (
+												<img src={artPath} alt={card.name} className="h-full w-full object-cover" loading="lazy" />
+											) : (
+												<div className="grid h-full w-full place-items-center text-4xl text-ink-300">
+													{getTypeIcon(card.type)}
+												</div>
+											)}
+											<div className="absolute inset-x-0 bottom-0 h-1/2 bg-linear-to-t from-obsidian-950 via-obsidian-950/80 to-transparent" />
+											<div className="absolute inset-x-0 bottom-0 p-2 text-center">
+												<div className="truncate font-display text-xs font-bold text-ink-0">
+													{card.name}
+												</div>
+												<div className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.14em] text-ink-300">
+													{card.rarity}
+												</div>
+											</div>
+										</article>
+									);
+								})}
+							</div>
+						</section>
+					))}
+				</div>
+			</div>
+		</div>
+	);
+}
+
 export default function DuatPackCeremony({
 	accountId,
 	expectedPacks = 0,
@@ -224,6 +385,8 @@ export default function DuatPackCeremony({
 	const [queue, setQueue] = useState<PackAsset[]>(() => findOpenablePacks(queueFilter));
 	const [opening, setOpening] = useState(false);
 	const [revealed, setRevealed] = useState<RevealedCard[] | null>(null);
+	const [batchOpening, setBatchOpening] = useState(false);
+	const [batchResults, setBatchResults] = useState<OpenedPackResult[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [pollAttempts, setPollAttempts] = useState(0);
 	const activeSource = packSource ?? (queue[0] ? getPackCeremonySource(queue[0]) : 'vault');
@@ -239,152 +402,154 @@ export default function DuatPackCeremony({
 	const currentIndex = revealed ? opensCompleted : Math.min(opensCompleted + 1, initialPackCount);
 	const totalPacks = initialPackCount;
 
+	const openPackAsset = useCallback(async (next: PackAsset): Promise<OpenedPackResult> => {
+		const nextSource = getPackCeremonySource(next);
+		const nextCeremony = getOpeningCeremonyKind(nextSource);
+
+		await ensureCardDataRuntime();
+
+		const salt = generateSalt();
+		const result = await getNFTBridge().burnPack(next.uid, salt);
+		if (!result.success || !result.trxId) {
+			const message = result.error ?? 'Failed to open pack - check Keychain';
+			recordCeremonyFeedbackEvent(nextCeremony, 'burn_rejected', {
+				account: accountId,
+				packUid: next.uid,
+				packType: next.packType,
+				packSource: nextSource,
+				error: message,
+			});
+			throw new Error(message);
+		}
+		if (hiveMode && !result.blockNum) {
+			const message = 'Pack burn did not return a block number.';
+			recordCeremonyFeedbackEvent(nextCeremony, 'burn_rejected', {
+				account: accountId,
+				packUid: next.uid,
+				packType: next.packType,
+				packSource: nextSource,
+				burnTrxId: result.trxId,
+				error: message,
+			});
+			throw new Error(message);
+		}
+		recordCeremonyFeedbackEvent(nextCeremony, 'burn_broadcasted', {
+			account: accountId,
+			packUid: next.uid,
+			packType: next.packType,
+			packSource: nextSource,
+			burnTrxId: result.trxId,
+			burnBlockNum: result.blockNum ?? null,
+		});
+
+		const entropyBlockId = hiveMode
+			? await waitForEntropyBlockId((result.blockNum ?? 0) + PACK_ENTROPY_DELAY_BLOCKS)
+			: `local-entropy-${next.uid}`;
+		const derived = await deriveSealedPackBurnCards({
+			pack: next,
+			trxId: result.trxId,
+			salt,
+			entropyBlockId,
+		});
+		debug.log('[DuatCeremony] Pack burned', {
+			uid: next.uid,
+			packType: next.packType,
+			trxId: result.trxId,
+			cardsDerived: derived.length,
+			firstCard: derived[0],
+		});
+		if (derived.length === 0) {
+			const message = 'No cards derived - pack catalog may be empty for this type.';
+			recordCeremonyFeedbackEvent(nextCeremony, 'reveal_rejected', {
+				account: accountId,
+				packUid: next.uid,
+				packType: next.packType,
+				packSource: nextSource,
+				burnTrxId: result.trxId,
+				error: message,
+			});
+			throw new Error(message);
+		}
+		const acquisition = createDuatCardAcquisition({
+			packAcquisition: next.acquisition,
+			fallbackPackUid: next.uid,
+			burnTrxId: result.trxId,
+			burnBlockNum: result.blockNum ?? 0,
+		});
+		const mappedCards: RevealedCard[] = derived.map(c => ({
+			id: c.cardId,
+			name: c.name,
+			rarity: c.rarity,
+			type: c.type,
+			heroClass: 'neutral',
+		}));
+
+		derived.forEach(c => {
+			getNFTBridge().addCard({
+				uid: c.uid,
+				cardId: c.cardId,
+				ownerId: accountId,
+				ownershipSource: 'nft',
+				edition: 'alpha',
+				foil: c.foil,
+				rarity: c.rarity,
+				level: 1,
+				xp: 0,
+				lastTransferBlock: result.blockNum,
+				lastTransferTrxId: result.trxId,
+				mintBlockNum: result.blockNum,
+				mintTrxId: result.trxId,
+				name: c.name,
+				type: c.type,
+				race: c.race,
+				...(acquisition ? { acquisition } : {}),
+			});
+		});
+		recordSessionEvent(nextSource === 'duat_airdrop' ? 'duat_pack_opened' : 'pack_opened', {
+			account: accountId,
+			packUid: next.uid,
+			packType: next.packType,
+			packSource: nextSource,
+			claimTrxId: acquisition?.claimTrxId ?? null,
+			burnTrxId: result.trxId,
+			burnBlockNum: result.blockNum ?? null,
+			cardCount: derived.length,
+			cardIds: derived.map(card => card.cardId),
+		});
+		recordCeremonyFeedbackEvent(nextCeremony, 'revealed', {
+			account: accountId,
+			packUid: next.uid,
+			packType: next.packType,
+			packSource: nextSource,
+			claimTrxId: acquisition?.claimTrxId ?? null,
+			burnTrxId: result.trxId,
+			burnBlockNum: result.blockNum ?? null,
+			cardCount: derived.length,
+			cardIds: derived.map(card => card.cardId),
+			cardNames: derived.map(card => card.name),
+		});
+
+		getNFTBridge().removePack(next.uid);
+		return {
+			packUid: next.uid,
+			packType: next.packType,
+			packSource: nextSource,
+			cards: mappedCards,
+		};
+	}, [accountId, hiveMode]);
+
 	const burnNext = useCallback(async (invocation: ClientWalletInvocation) => {
 		assertClientWalletInvocation(invocation, 'pack_burn', 'Active');
 		const next = queue[0];
 		if (!next) return;
-		const nextSource = getPackCeremonySource(next);
-		const nextCeremony = getOpeningCeremonyKind(nextSource);
 
 		setOpening(true);
 		setError(null);
 		setRevealed(null);
+		setBatchResults(null);
 
 		try {
-			// Card data may not be initialized — `DuatPackCeremony` mounts from
-			// the global popup (outside `CardDataRuntimeBoundary`) and local-mode
-			// bridges skip startSync. Without this, sealed pack derivation throws
-			// `'Card data provider not initialized'` and the spinner hangs.
-			await ensureCardDataRuntime();
-
-			const salt = generateSalt();
-			const result = await getNFTBridge().burnPack(next.uid, salt);
-			if (!result.success || !result.trxId) {
-				setOpening(false);
-				const message = result.error ?? 'Failed to open pack - check Keychain';
-				setError(message);
-				recordCeremonyFeedbackEvent(nextCeremony, 'burn_rejected', {
-					account: accountId,
-					packUid: next.uid,
-					packType: next.packType,
-					packSource: nextSource,
-					error: message,
-				});
-				return;
-			}
-			if (hiveMode && !result.blockNum) {
-				setOpening(false);
-				const message = 'Pack burn did not return a block number.';
-				setError(message);
-				recordCeremonyFeedbackEvent(nextCeremony, 'burn_rejected', {
-					account: accountId,
-					packUid: next.uid,
-					packType: next.packType,
-					packSource: nextSource,
-					burnTrxId: result.trxId,
-					error: message,
-				});
-				return;
-			}
-			recordCeremonyFeedbackEvent(nextCeremony, 'burn_broadcasted', {
-				account: accountId,
-				packUid: next.uid,
-				packType: next.packType,
-				packSource: nextSource,
-				burnTrxId: result.trxId,
-				burnBlockNum: result.blockNum ?? null,
-			});
-
-			const entropyBlockId = hiveMode
-				? await waitForEntropyBlockId((result.blockNum ?? 0) + PACK_ENTROPY_DELAY_BLOCKS)
-				: `local-entropy-${next.uid}`;
-			const derived = await deriveSealedPackBurnCards({
-				pack: next,
-				trxId: result.trxId,
-				salt,
-				entropyBlockId,
-			});
-			debug.log('[DuatCeremony] Pack burned', {
-				uid: next.uid,
-				packType: next.packType,
-				trxId: result.trxId,
-				cardsDerived: derived.length,
-				firstCard: derived[0],
-			});
-			if (derived.length === 0) {
-				setOpening(false);
-				const message = 'No cards derived - pack catalog may be empty for this type.';
-				setError(message);
-				recordCeremonyFeedbackEvent(nextCeremony, 'reveal_rejected', {
-					account: accountId,
-					packUid: next.uid,
-					packType: next.packType,
-					packSource: nextSource,
-					burnTrxId: result.trxId,
-					error: message,
-				});
-				return;
-			}
-			const acquisition = createDuatCardAcquisition({
-				packAcquisition: next.acquisition,
-				fallbackPackUid: next.uid,
-				burnTrxId: result.trxId,
-				burnBlockNum: result.blockNum ?? 0,
-			});
-			const mappedCards: RevealedCard[] = derived.map(c => ({
-				id: c.cardId,
-				name: c.name,
-				rarity: c.rarity,
-				type: c.type,
-				heroClass: 'neutral',
-			}));
-
-			derived.forEach(c => {
-				getNFTBridge().addCard({
-					uid: c.uid,
-					cardId: c.cardId,
-					ownerId: accountId,
-					ownershipSource: 'nft',
-					edition: 'alpha',
-					foil: c.foil,
-					rarity: c.rarity,
-					level: 1,
-					xp: 0,
-					lastTransferBlock: result.blockNum,
-					lastTransferTrxId: result.trxId,
-					mintBlockNum: result.blockNum,
-					mintTrxId: result.trxId,
-					name: c.name,
-					type: c.type,
-					race: c.race,
-					...(acquisition ? { acquisition } : {}),
-				});
-			});
-			recordSessionEvent(nextSource === 'duat_airdrop' ? 'duat_pack_opened' : 'pack_opened', {
-				account: accountId,
-				packUid: next.uid,
-				packType: next.packType,
-				packSource: nextSource,
-				claimTrxId: acquisition?.claimTrxId ?? null,
-				burnTrxId: result.trxId,
-				burnBlockNum: result.blockNum ?? null,
-				cardCount: derived.length,
-				cardIds: derived.map(card => card.cardId),
-			});
-			recordCeremonyFeedbackEvent(nextCeremony, 'revealed', {
-				account: accountId,
-				packUid: next.uid,
-				packType: next.packType,
-				packSource: nextSource,
-				claimTrxId: acquisition?.claimTrxId ?? null,
-				burnTrxId: result.trxId,
-				burnBlockNum: result.blockNum ?? null,
-				cardCount: derived.length,
-				cardIds: derived.map(card => card.cardId),
-				cardNames: derived.map(card => card.name),
-			});
-
-			getNFTBridge().removePack(next.uid);
+			const opened = await openPackAsset(next);
 			// Only converge against chain history when there is a chain replay
 			// running. Local-stage bridges have no replay; calling forceSync
 			// here would query Hive RPC and then `hydrateStore` would wipe the
@@ -394,22 +559,22 @@ export default function DuatPackCeremony({
 			}
 
 			setQueue(prev => prev.slice(1));
-			setRevealed(mappedCards);
+			setRevealed([...opened.cards]);
 			setOpening(false);
 		} catch (err) {
 			debug.warn('[DuatCeremony] burnNext error:', err);
 			const message = err instanceof Error ? err.message : 'Failed to open pack';
 			setOpening(false);
 			setError(message);
-			recordCeremonyFeedbackEvent(nextCeremony, 'open_failed', {
+			recordCeremonyFeedbackEvent(getOpeningCeremonyKind(getPackCeremonySource(next)), 'open_failed', {
 				account: accountId,
 				packUid: next.uid,
 				packType: next.packType,
-				packSource: nextSource,
+				packSource: getPackCeremonySource(next),
 				error: message,
 			});
 		}
-	}, [accountId, queue, hiveMode]);
+	}, [accountId, queue, hiveMode, openPackAsset]);
 
 	const handleOpenCurrentPack = useCallback(() => {
 		void invokeClientWalletAction(
@@ -421,6 +586,55 @@ export default function DuatPackCeremony({
 			burnNext,
 		);
 	}, [burnNext, ceremonyCopy.readyTitle]);
+
+	const openAllPacks = useCallback(async (invocation: ClientWalletInvocation) => {
+		assertClientWalletInvocation(invocation, 'pack_burn', 'Active');
+		const packsToOpen = [...queue];
+		if (packsToOpen.length === 0) return;
+
+		setBatchOpening(true);
+		setOpening(true);
+		setError(null);
+		setRevealed(null);
+		setBatchResults([]);
+
+		const opened: OpenedPackResult[] = [];
+		try {
+			for (const pack of packsToOpen) {
+				const result = await openPackAsset(pack);
+				opened.push(result);
+				setBatchResults([...opened]);
+				setQueue(prev => prev.filter(item => item.uid !== pack.uid));
+			}
+
+			if (hiveMode) {
+				forceSync(accountId).catch(err => debug.warn('[DuatCeremony] batch sync error:', err));
+			}
+			setOpening(false);
+			setBatchOpening(false);
+			toast.success(`${opened.length} ${ceremonyCopy.keptSealedNoun}${opened.length === 1 ? '' : 's'} opened.`);
+		} catch (err) {
+			debug.warn('[DuatCeremony] openAll error:', err);
+			const message = err instanceof Error ? err.message : 'Failed to open all packs';
+			setOpening(false);
+			setBatchOpening(false);
+			setError(message);
+			if (opened.length > 0) {
+				setBatchResults([...opened]);
+			}
+		}
+	}, [accountId, ceremonyCopy.keptSealedNoun, hiveMode, openPackAsset, queue]);
+
+	const handleOpenAllPacks = useCallback(() => {
+		void invokeClientWalletAction(
+			{
+				kind: 'pack_burn',
+				authority: 'Active',
+				label: `Open all ${ceremonyCopy.keptSealedNoun}s`,
+			},
+			openAllPacks,
+		);
+	}, [ceremonyCopy.keptSealedNoun, openAllPacks]);
 
 	// Poll for canonical packs while the chain replay catches up. Each tick
 	// forceSync's IDB → Zustand, then we re-read both queues. As soon as a
@@ -549,26 +763,28 @@ export default function DuatPackCeremony({
 	}
 
 	return (
-		<div className="fixed inset-0 z-[10000]">
+		<div className="fixed inset-0 z-[10000] overflow-hidden overscroll-contain">
 			{/* Progress + skip overlay */}
-			<motion.div
-				initial={{ opacity: 0, y: -10 }}
-				animate={{ opacity: 1, y: 0 }}
-				className="absolute top-4 left-1/2 -translate-x-1/2 z-[10001] flex items-center gap-4 px-5 py-2 rounded-full border border-bifrost-300/40 bg-obsidian-950/85 backdrop-blur-sm"
-			>
-				<span className="font-mono text-[10px] tracking-[0.22em] uppercase text-bifrost-200">
-					{ceremonyCopy.progressLabel} · {currentIndex} / {totalPacks}
-				</span>
-				{queue.length > 0 && (
-					<button
-						type="button"
-						onClick={handleSkipAll}
-						className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300 hover:text-gold-300 transition-colors"
-					>
-						Skip all
-					</button>
-				)}
-			</motion.div>
+			{!revealed && !batchResults && (
+				<motion.div
+					initial={{ opacity: 0, y: -10 }}
+					animate={{ opacity: 1, y: 0 }}
+					className="absolute top-4 left-1/2 -translate-x-1/2 z-[10001] flex items-center gap-4 px-5 py-2 rounded-full border border-bifrost-300/40 bg-obsidian-950/85 backdrop-blur-sm"
+				>
+					<span className="font-mono text-[10px] tracking-[0.22em] uppercase text-bifrost-200">
+						{ceremonyCopy.progressLabel} · {currentIndex} / {totalPacks}
+					</span>
+					{queue.length > 0 && (
+						<button
+							type="button"
+							onClick={handleSkipAll}
+							className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300 hover:text-gold-300 transition-colors"
+						>
+							Skip all
+						</button>
+					)}
+				</motion.div>
+			)}
 
 			{error && (
 				<motion.div
@@ -603,7 +819,7 @@ export default function DuatPackCeremony({
 				</motion.div>
 			)}
 
-			{opening && !revealed && !error && (
+			{opening && !revealed && !error && !batchResults && (
 				<div className="absolute inset-0 flex items-center justify-center bg-obsidian-950/90">
 					<div className="text-center">
 						<motion.div
@@ -618,12 +834,25 @@ export default function DuatPackCeremony({
 				</div>
 			)}
 
+			{batchOpening && batchResults && (
+				<div className="absolute inset-0 flex items-center justify-center bg-obsidian-950/90">
+					<div className="text-center">
+						<motion.div
+							animate={{ rotate: 360 }}
+							transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+							className="w-12 h-12 mx-auto mb-4 border-2 border-bifrost-300/30 border-t-bifrost-300 rounded-full"
+						/>
+						<p className="font-mono text-[10px] tracking-[0.22em] uppercase text-bifrost-200">
+							Opening all · {batchResults.length} / {totalPacks}
+						</p>
+					</div>
+				</div>
+			)}
+
 			{!opening && !revealed && !error && queue.length > 0 && (
-				<div className="absolute inset-0 flex items-center justify-center bg-obsidian-950/95 px-6">
-					<div className="max-w-md text-center">
-						<div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-lg border border-bifrost-300/35 bg-bifrost-500/15">
-							<span aria-hidden className="h-4 w-4 rotate-45 bg-bifrost-200/80" />
-						</div>
+				<div className="absolute inset-0 flex items-center justify-center overflow-hidden bg-obsidian-950/95 px-6">
+					<div className="max-w-xl text-center">
+						<DuatPackReadyVisual currentIndex={currentIndex} totalPacks={totalPacks} />
 						<h2 className="font-display text-xl font-bold tracking-[0.10em] uppercase text-bifrost-100 mb-3">
 							{ceremonyCopy.readyTitle}
 						</h2>
@@ -640,6 +869,13 @@ export default function DuatPackCeremony({
 							</button>
 							<button
 								type="button"
+								onClick={handleOpenAllPacks}
+								className="px-5 py-2.5 rounded-md border border-gold-300/45 bg-gold-500/20 hover:bg-gold-500/35 font-display text-xs tracking-[0.18em] uppercase font-bold text-gold-100 transition-colors"
+							>
+								Open all
+							</button>
+							<button
+								type="button"
 								onClick={handleSkipAll}
 								className="px-5 py-2.5 rounded-md border border-obsidian-700 bg-obsidian-900/65 hover:border-gold-600 hover:text-gold-300 font-display text-xs tracking-[0.18em] uppercase font-bold text-ink-300 transition-colors"
 							>
@@ -650,12 +886,20 @@ export default function DuatPackCeremony({
 				</div>
 			)}
 
+			{batchResults && !batchOpening && (
+				<OpenedPackResults
+					results={batchResults}
+					onClose={handleClose}
+				/>
+			)}
+
 			{revealed && (
 				<PackOpeningAnimation
 					packName={`${ceremonyCopy.revealName} ${currentIndex} / ${totalPacks}`}
 					cards={revealed}
 					onClose={handleClose}
 					onOpenAnother={handleOpenAnother}
+					onOpenAll={queue.length > 0 ? handleOpenAllPacks : undefined}
 					hideCollectionLink
 					compactLayout
 					evidence={{

@@ -1,18 +1,87 @@
 import { Router, type Request, type Response } from 'express';
 import { isValidHiveUsername } from '../services/hiveAuth';
 import { hasAcceptedWarbandRelation } from '../services/warbandRelations';
+import { buildServerSignedChallenge } from '../services/p2pChallengeSigner';
+import { consumeWindowRateLimit, type RateLimitBucket } from '../services/p2pRateLimit';
+import {
+	CHALLENGE_RATE_LIMIT_MAX_ACCEPTED,
+	CHALLENGE_RATE_LIMIT_WINDOW_MS,
+	CHALLENGE_STALE_THRESHOLD_MS,
+	MAX_PEER_ID_LENGTH,
+	PRESENCE_RATE_LIMIT_MAX_ACCEPTED,
+	PRESENCE_RATE_LIMIT_WINDOW_MS,
+	isSafePeerId,
+	normalizeHiveUsername,
+	parsePresenceHeartbeatBody,
+	type ChallengeRejectReason,
+	type P2PAvailabilityState,
+	type ServerSignedChallenge,
+} from '../../shared/p2pAvailability';
 
 const router = Router();
 
-const presenceMap = new Map<string, { peerId?: string; lastSeen: number }>();
-const challenges = new Map<string, { from: string; peerId: string; timestamp: number }[]>();
-const challengeTimestamps = new Map<string, number>();
+const presenceMap = new Map<string, { peerId?: string; lastSeen: number; availability: P2PAvailabilityState }>();
+const challenges = new Map<string, ServerSignedChallenge[]>();
+const presenceRateLimit: RateLimitBucket = new Map();
+const challengeRateLimit: RateLimitBucket = new Map();
 
 const PRESENCE_STALE_THRESHOLD_MS = 180_000;
-const CHALLENGE_STALE_THRESHOLD_MS = 90_000;
-const CHALLENGE_COOLDOWN_MS = 5_000;
 const MAX_FRIENDS_LIST = 200;
-const MAX_PEER_ID_LENGTH = 64;
+const CHALLENGE_BODY_KEYS = new Set(['from', 'to', 'peerId']);
+
+type P2PSocialStats = Readonly<{
+	onlineUsers: number;
+	availableUsers: number;
+	matchmakingUsers: number;
+	inMatchUsers: number;
+	reconnectingUsers: number;
+	busyUsers: number;
+	pendingChallenges: number;
+}>;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function hasOnlyKeys(value: Record<string, unknown>, allowed: ReadonlySet<string>): boolean {
+	for (const key of Object.keys(value)) {
+		if (!allowed.has(key)) return false;
+	}
+	return true;
+}
+
+function getRequestIp(req: Request): string {
+	return req.ip || req.socket.remoteAddress || 'unknown';
+}
+
+function sendReject(res: Response, status: number, reason: ChallengeRejectReason, retryAfterMs?: number): void {
+	res.status(status).json({
+		ok: false,
+		reason,
+		...(retryAfterMs !== undefined ? { retryAfterMs } : {}),
+	});
+}
+
+function challengeRejectStatus(reason: ChallengeRejectReason): number {
+	if (reason === 'rate_limited') return 429;
+	if (reason === 'not_warband') return 403;
+	if (reason === 'invalid_input') return 400;
+	if (reason === 'offline' || reason === 'stale_peer') return 404;
+	return 409;
+}
+
+function challengeReasonForAvailability(availability: P2PAvailabilityState): ChallengeRejectReason | null {
+	if (availability === 'available') return null;
+	if (availability === 'offline') return 'offline';
+	if (availability === 'matchmaking') return 'matchmaking';
+	if (availability === 'in_match') return 'in_match';
+	if (availability === 'reconnecting') return 'reconnecting';
+	return 'busy';
+}
+
+function isChallengeable(presence: { peerId?: string; availability: P2PAvailabilityState } | undefined): boolean {
+	return !!presence?.peerId && presence.availability === 'available';
+}
 
 function pruneStale() {
 	const now = Date.now();
@@ -20,28 +89,63 @@ function pruneStale() {
 		if (now - data.lastSeen > PRESENCE_STALE_THRESHOLD_MS) {
 			presenceMap.delete(user);
 			challenges.delete(user);
-			challengeTimestamps.delete(user);
 		}
 	}
 	for (const [user, list] of challenges) {
-		const fresh = list.filter(c => now - c.timestamp < CHALLENGE_STALE_THRESHOLD_MS);
+		const fresh = list.filter(c => c.expiresAt > now);
 		if (fresh.length === 0) challenges.delete(user);
 		else challenges.set(user, fresh);
 	}
 }
 
+export function getP2PSocialStats(): P2PSocialStats {
+	pruneStale();
+	let availableUsers = 0;
+	let matchmakingUsers = 0;
+	let inMatchUsers = 0;
+	let reconnectingUsers = 0;
+	let busyUsers = 0;
+
+	for (const presence of presenceMap.values()) {
+		if (presence.availability === 'available') availableUsers += 1;
+		else if (presence.availability === 'matchmaking') matchmakingUsers += 1;
+		else if (presence.availability === 'in_match') inMatchUsers += 1;
+		else if (presence.availability === 'reconnecting') reconnectingUsers += 1;
+		else if (presence.availability !== 'offline') busyUsers += 1;
+	}
+
+	let pendingChallenges = 0;
+	for (const list of challenges.values()) {
+		pendingChallenges += list.length;
+	}
+
+	return {
+		onlineUsers: presenceMap.size,
+		availableUsers,
+		matchmakingUsers,
+		inMatchUsers,
+		reconnectingUsers,
+		busyUsers,
+		pendingChallenges,
+	};
+}
+
 router.post('/heartbeat', (req: Request, res: Response) => {
-	const { username, peerId, friends } = req.body;
-	if (!username || typeof username !== 'string') {
-		res.status(400).json({ error: 'username required' });
+	const parsed = parsePresenceHeartbeatBody(req.body);
+	if (!parsed.ok) {
+		sendReject(res, 400, parsed.reason);
 		return;
 	}
-	if (!isValidHiveUsername(username)) {
-		res.status(400).json({ error: 'Invalid username format' });
-		return;
-	}
-	if (!Array.isArray(friends)) {
-		res.status(400).json({ error: 'friends must be an array' });
+
+	const { username, peerId, friends, availability } = parsed.value;
+	const limit = consumeWindowRateLimit({
+		bucket: presenceRateLimit,
+		key: `${username}:${getRequestIp(req)}`,
+		limit: PRESENCE_RATE_LIMIT_MAX_ACCEPTED,
+		windowMs: PRESENCE_RATE_LIMIT_WINDOW_MS,
+	});
+	if (!limit.allowed) {
+		sendReject(res, 429, 'rate_limited', limit.retryAfterMs);
 		return;
 	}
 	const seen = new Set<string>();
@@ -57,75 +161,136 @@ router.post('/heartbeat', (req: Request, res: Response) => {
 
 	pruneStale();
 
-	presenceMap.set(username.toLowerCase(), {
+	presenceMap.set(username, {
 		peerId: typeof peerId === 'string' ? peerId.slice(0, MAX_PEER_ID_LENGTH) : undefined,
 		lastSeen: Date.now(),
+		availability: availability ?? (peerId ? 'available' : 'offline'),
 	});
 
-	const statuses: Record<string, { online: boolean; peerId?: string; lastSeen?: number }> = {};
+	const statuses: Record<string, { online: boolean; peerId?: string; lastSeen?: number; availability?: P2PAvailabilityState; canReceiveChallenge?: boolean }> = {};
 
 	for (const friend of friendList) {
 		const normalized = friend.toLowerCase();
 		if (!hasAcceptedWarbandRelation(username, normalized)) {
-			statuses[normalized] = { online: false };
+			statuses[normalized] = { online: false, availability: 'offline', canReceiveChallenge: false };
 			continue;
 		}
 
 		const presence = presenceMap.get(normalized);
 		statuses[normalized] = presence
-			? { online: true, peerId: presence.peerId, lastSeen: presence.lastSeen }
-			: { online: false };
+			? {
+				online: true,
+				peerId: presence.peerId,
+				lastSeen: presence.lastSeen,
+				availability: presence.availability,
+				canReceiveChallenge: isChallengeable(presence),
+			}
+			: { online: false, availability: 'offline', canReceiveChallenge: false };
 	}
 
-	const pending = challenges.get(username.toLowerCase()) || [];
-	challenges.delete(username.toLowerCase());
+	const pending = challenges.get(username) || [];
+	challenges.delete(username);
 
 	res.json({ statuses, challenges: pending });
 });
 
 router.post('/challenge', (req: Request, res: Response) => {
+	if (!isRecord(req.body) || !hasOnlyKeys(req.body, CHALLENGE_BODY_KEYS)) {
+		sendReject(res, 400, 'invalid_input');
+		return;
+	}
 	const { from, to, peerId } = req.body;
 	if (!from || typeof from !== 'string' || !to || typeof to !== 'string' || !peerId || typeof peerId !== 'string') {
-		res.status(400).json({ error: 'from, to, peerId required as strings' });
+		sendReject(res, 400, 'invalid_input');
 		return;
 	}
-	if (!isValidHiveUsername(from) || !isValidHiveUsername(to)) {
-		res.status(400).json({ error: 'Invalid username format' });
+	const normalizedFrom = normalizeHiveUsername(from);
+	const normalizedTo = normalizeHiveUsername(to);
+	if (!isValidHiveUsername(normalizedFrom) || !isValidHiveUsername(normalizedTo)) {
+		sendReject(res, 400, 'invalid_input');
 		return;
 	}
-	if (peerId.length > MAX_PEER_ID_LENGTH) {
-		res.status(400).json({ error: 'peerId too long' });
+	if (!isSafePeerId(peerId)) {
+		sendReject(res, 400, 'invalid_input');
 		return;
 	}
-	if (from.toLowerCase() === to.toLowerCase()) {
-		res.status(400).json({ error: 'Cannot challenge yourself' });
+	if (normalizedFrom === normalizedTo) {
+		sendReject(res, 400, 'self_challenge');
 		return;
 	}
-	if (!hasAcceptedWarbandRelation(from, to)) {
-		res.status(403).json({ error: 'Warband relation required' });
+	if (!hasAcceptedWarbandRelation(normalizedFrom, normalizedTo)) {
+		sendReject(res, 403, 'not_warband');
 		return;
 	}
 
-	const pairKey = `${from.toLowerCase()}:${to.toLowerCase()}`;
-	const lastChallenge = challengeTimestamps.get(pairKey);
+	pruneStale();
 	const now = Date.now();
-	if (lastChallenge && now - lastChallenge < CHALLENGE_COOLDOWN_MS) {
-		res.status(429).json({ error: 'Challenge rate limit exceeded, wait 5 seconds' });
+
+	const senderPresence = presenceMap.get(normalizedFrom);
+	if (senderPresence) {
+		const senderReason = challengeReasonForAvailability(senderPresence.availability);
+		if (senderReason) {
+			sendReject(res, challengeRejectStatus(senderReason), senderReason);
+			return;
+		}
+	}
+	presenceMap.set(normalizedFrom, {
+		peerId,
+		lastSeen: now,
+		availability: 'available',
+	});
+
+	const targetPresence = presenceMap.get(normalizedTo);
+	if (!targetPresence) {
+		sendReject(res, 404, 'offline');
 		return;
 	}
-	challengeTimestamps.set(pairKey, now);
+	const targetReason = challengeReasonForAvailability(targetPresence.availability);
+	if (targetReason) {
+		sendReject(res, challengeRejectStatus(targetReason), targetReason);
+		return;
+	}
+	if (!targetPresence.peerId) {
+		sendReject(res, 404, 'stale_peer');
+		return;
+	}
 
-	const target = to.toLowerCase();
+	const limit = consumeWindowRateLimit({
+		bucket: challengeRateLimit,
+		key: `${normalizedFrom}:${normalizedTo}`,
+		limit: CHALLENGE_RATE_LIMIT_MAX_ACCEPTED,
+		windowMs: CHALLENGE_RATE_LIMIT_WINDOW_MS,
+		now,
+	});
+	if (!limit.allowed) {
+		sendReject(res, 429, 'rate_limited', limit.retryAfterMs);
+		return;
+	}
+
+	const target = normalizedTo;
 	const existing = challenges.get(target) || [];
-	existing.push({ from: from.toLowerCase(), peerId, timestamp: now });
+	const challenge = buildServerSignedChallenge({
+		from: normalizedFrom,
+		to: normalizedTo,
+		peerId,
+		timestamp: now,
+		expiresAt: now + CHALLENGE_STALE_THRESHOLD_MS,
+	});
+	existing.push(challenge);
 	challenges.set(target, existing.slice(-10));
 
-	res.json({ ok: true });
+	res.json({ ok: true, challenge });
 });
 
 router.get('/challenges/:username', (req: Request, res: Response) => {
-	const username = req.params.username.toLowerCase();
+	const username = normalizeHiveUsername(req.params.username);
+	if (!isValidHiveUsername(username)) {
+		sendReject(res, 400, 'invalid_input');
+		return;
+	}
+	pruneStale();
 	const pending = challenges.get(username) || [];
+	challenges.delete(username);
 	res.json({ challenges: pending });
 });
 

@@ -20,6 +20,15 @@
 import type { Server as HttpServer, IncomingMessage } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { z } from 'zod';
+import { isSafePeerId, isSafeRoomOrMatchId } from '../../shared/p2pAvailability';
+import {
+	getP2PRelayTelemetrySnapshot,
+	recordP2PRelayConnection,
+	recordP2PRelayDrop,
+	recordP2PRelayError,
+	recordP2PRelayMessage,
+	type P2PRelayTelemetrySnapshot,
+} from '../services/p2pTelemetry';
 
 interface RoomMember {
 	readonly peerId: string;
@@ -30,9 +39,9 @@ const rooms = new Map<string, RoomMember[]>();
 
 const ROOM_MAX_PEERS = 2;
 const KEEPALIVE_INTERVAL_MS = 15_000;
-const MAX_PAYLOAD_BYTES = 64 * 1024; // 64 KB per frame — sane upper bound for any
-                                     // game message; full GameState snapshots are
-                                     // the largest legit payload at ~10 KB.
+const MAX_PAYLOAD_BYTES = 16 * 1024; // 16 KB per frame. Full GameState snapshots
+                                     // are the largest legit payload at ~10 KB;
+                                     // reject oversized tunnel frames before fan-out.
 
 /**
  * Whitelist of message `type` values the relay will fan out. Everything else
@@ -128,6 +137,20 @@ function notifyRoomFull(room: readonly RoomMember[]): void {
 	sendSys(second.ws, { event: 'open', isHost: false, remotePeerId: first.peerId });
 }
 
+export function getP2PRelayStats(): P2PRelayTelemetrySnapshot {
+	let activeConnections = 0;
+	let activeFullRooms = 0;
+	for (const room of rooms.values()) {
+		activeConnections += room.length;
+		if (room.length === ROOM_MAX_PEERS) activeFullRooms += 1;
+	}
+	return getP2PRelayTelemetrySnapshot({
+		activeRooms: rooms.size,
+		activeConnections,
+		activeFullRooms,
+	});
+}
+
 export function attachP2PRelay(server: HttpServer): void {
 	const wss = new WebSocketServer({ noServer: true, maxPayload: MAX_PAYLOAD_BYTES });
 
@@ -148,13 +171,14 @@ export function attachP2PRelay(server: HttpServer): void {
 		const peerId = url.searchParams.get('peer');
 
 		if (!roomId || !peerId) {
+			recordP2PRelayError('missing_room_or_peer');
 			sendSys(ws, { event: 'error', reason: 'missing_room_or_peer' });
 			ws.close();
 			return;
 		}
-		// Length sanity — matchId is `${peerA}-${peerB}` so worst case ~80 chars.
-		if (roomId.length > 256 || peerId.length > 64) {
-			sendSys(ws, { event: 'error', reason: 'room_or_peer_too_long' });
+		if (!isSafeRoomOrMatchId(roomId) || !isSafePeerId(peerId)) {
+			recordP2PRelayError('invalid_room_or_peer');
+			sendSys(ws, { event: 'error', reason: 'invalid_room_or_peer' });
 			ws.close();
 			return;
 		}
@@ -166,17 +190,20 @@ export function attachP2PRelay(server: HttpServer): void {
 		}
 
 		if (room.length >= ROOM_MAX_PEERS) {
+			recordP2PRelayError('room_full');
 			sendSys(ws, { event: 'error', reason: 'room_full' });
 			ws.close();
 			return;
 		}
 		if (room.some(m => m.peerId === peerId)) {
+			recordP2PRelayError('duplicate_peer');
 			sendSys(ws, { event: 'error', reason: 'duplicate_peer' });
 			ws.close();
 			return;
 		}
 
 		room.push({ peerId, ws });
+		recordP2PRelayConnection();
 		console.log(`[Relay] room=${roomId.slice(0, 16)}… peer=${peerId.slice(0, 8)}… joined (${room.length}/${ROOM_MAX_PEERS})`);
 
 		(ws as WebSocket & { isAlive?: boolean }).isAlive = true;
@@ -206,11 +233,17 @@ export function attachP2PRelay(server: HttpServer): void {
 			// info-leak channel for probing the whitelist.
 			const validation = validateRelayFrame(text);
 			if (!validation.ok) {
+				recordP2PRelayDrop(validation.reason);
 				console.warn(`[Relay] dropping frame room=${roomId.slice(0, 16)}… peer=${peerId.slice(0, 8)}… reason=${validation.reason}`);
 				return;
 			}
 
-			try { other.ws.send(text); } catch { /* peer closed mid-send */ }
+			try {
+				other.ws.send(text);
+				recordP2PRelayMessage();
+			} catch {
+				recordP2PRelayError('send_failed');
+			}
 		});
 
 		const handleDeparture = () => {
@@ -230,6 +263,7 @@ export function attachP2PRelay(server: HttpServer): void {
 
 		ws.on('close', handleDeparture);
 		ws.on('error', (err) => {
+			recordP2PRelayError('socket_error');
 			console.warn(`[Relay] room=${roomId.slice(0, 16)}… peer=${peerId.slice(0, 8)}… error:`, err.message);
 		});
 	});
@@ -241,7 +275,11 @@ export function attachP2PRelay(server: HttpServer): void {
 	const keepaliveTimer = setInterval(() => {
 		wss.clients.forEach((ws) => {
 			const w = ws as WebSocket & { isAlive?: boolean };
-			if (w.isAlive === false) { ws.terminate(); return; }
+			if (w.isAlive === false) {
+				recordP2PRelayError('keepalive_timeout');
+				ws.terminate();
+				return;
+			}
 			w.isAlive = false;
 			try { ws.ping(); } catch { /* socket closed */ }
 		});

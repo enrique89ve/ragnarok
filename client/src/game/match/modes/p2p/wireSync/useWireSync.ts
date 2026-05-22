@@ -5,6 +5,7 @@ import { useMatchStore } from '../../../store';
 import { deriveAuthority } from '../../../derived';
 import { useGameStore } from '../../../../stores/gameStore';
 import { debug } from '../../../../config/debugConfig';
+import { getRagnarokNetworkConfig } from '../../../../config/networkConfig';
 import { verifyDeckOwnership } from '../../../../../data/blockchain/deckVerification';
 import { sha256Hash } from '../../../../../data/blockchain/hashUtils';
 import { computeMatchResultCommitmentHash } from '../../../../../data/blockchain/matchResultPackager';
@@ -49,6 +50,7 @@ import {
 	type StoredLeaf,
 } from '../../../../protocol/actionLog';
 import { verifyResultProposalTranscriptRoot } from './resultProposalGuard';
+import { buildRagnarokRuntimeEvidence } from '@shared/runtimeConfig';
 
 export type { GameCommandEnvelope, WireGameCommand } from '../../../../hooks/p2pEnvelope';
 export type { P2PMessage } from '../../../../p2p/messages';
@@ -2130,6 +2132,7 @@ export function useWireSync() {
 			const blob = exportSessionLog({
 				matchId: matchIdRef.current,
 				buildHash: typeof __BUILD_HASH__ !== 'undefined' ? __BUILD_HASH__ : 'dev',
+				runtime: buildRagnarokRuntimeEvidence(getRagnarokNetworkConfig()),
 				connectionState,
 				isHost: isCardsAuthority,
 			});

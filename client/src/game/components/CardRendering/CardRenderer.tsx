@@ -10,6 +10,7 @@ import React, { useMemo } from 'react';
 import { CardData, CardInstance } from '../../types';
 import {
   normalizeSimpleCardRarity,
+  normalizeSimpleCardElement,
   normalizeSimpleCardType,
   SimpleCard,
 } from '../SimpleCard';
@@ -87,7 +88,7 @@ const CardRenderer: React.FC<CardRendererProps> = React.memo(({
       cardClass: processedCard.cardClass || processedCard.class,
       keywords: processedCard.keywords || [],
       evolutionLevel,
-      element: cardAny.element,
+      element: normalizeSimpleCardElement(cardAny.element),
       petStage: cardAny.petStage,
       petFamily: cardAny.petFamily,
       evolvesFrom,

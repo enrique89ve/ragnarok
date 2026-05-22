@@ -91,6 +91,26 @@ function removeStaleQueueEntries() {
 // Clean stale entries every 60 seconds
 setInterval(removeStaleQueueEntries, 60_000);
 
+export function getP2PMatchmakingStats(): {
+	readonly queueLength: number;
+	readonly activeMatches: number;
+	readonly queuedPlayersWithUsername: number;
+	readonly oldestQueuedMs: number | null;
+} {
+	removeStaleQueueEntries();
+	const now = Date.now();
+	const oldestTimestamp = matchmakingQueue.reduce<number | null>(
+		(oldest, player) => oldest === null ? player.timestamp : Math.min(oldest, player.timestamp),
+		null,
+	);
+	return {
+		queueLength: matchmakingQueue.length,
+		activeMatches: activeMatches.size,
+		queuedPlayersWithUsername: matchmakingQueue.filter(player => typeof player.username === 'string').length,
+		oldestQueuedMs: oldestTimestamp === null ? null : Math.max(0, now - oldestTimestamp),
+	};
+}
+
 function findBestEloMatch(newPlayer: QueuedPlayer): QueuedPlayer | null {
 	if (matchmakingQueue.length === 0) return null;
 

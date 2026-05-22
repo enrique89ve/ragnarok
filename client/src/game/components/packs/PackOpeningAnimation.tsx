@@ -24,6 +24,7 @@ interface PackOpeningAnimationProps {
 	cards: RevealedCard[];
 	onClose: () => void;
 	onOpenAnother: () => void;
+	onOpenAll?: () => void;
 	/** True for one-shot ceremonies (e.g. starter pack). Hides "Open Another". */
 	oneShot?: boolean;
 	/**
@@ -118,14 +119,15 @@ export default function PackOpeningAnimation({
 	cards,
 	onClose,
 	onOpenAnother,
+	onOpenAll,
 	oneShot = false,
 	hideCollectionLink = false,
 	compactLayout = false,
 	evidence,
 }: PackOpeningAnimationProps) {
-	const [phase, setPhase] = useState<'intro' | 'opening' | 'reveal' | 'complete'>('intro');
+	const [phase, setPhase] = useState<'intro' | 'opening' | 'reveal' | 'complete'>(compactLayout ? 'complete' : 'intro');
 	const [currentCardIndex, setCurrentCardIndex] = useState(-1);
-	const [showAllCards, setShowAllCards] = useState(false);
+	const [showAllCards, setShowAllCards] = useState(compactLayout);
 	const reducedMotion = useReducedMotion();
 
 	// Sequential reveal is delightful for 5-7-card packs but becomes a wall of
@@ -141,6 +143,12 @@ export default function PackOpeningAnimation({
 	const useBatchReveal = cards.length === 0 || cards.length > BATCH_REVEAL_THRESHOLD;
 
 	useEffect(() => {
+		if (compactLayout) {
+			setPhase('complete');
+			setShowAllCards(true);
+			return undefined;
+		}
+
 		const introTimer = setTimeout(() => setPhase('opening'), 1000);
 		const openingTimer = setTimeout(() => {
 			if (useBatchReveal) {
@@ -156,7 +164,7 @@ export default function PackOpeningAnimation({
 			clearTimeout(introTimer);
 			clearTimeout(openingTimer);
 		};
-	}, [useBatchReveal]);
+	}, [compactLayout, useBatchReveal]);
 
 	useEffect(() => {
 		if (phase === 'reveal' && currentCardIndex >= 0 && currentCardIndex < cards.length && !showAllCards) {
@@ -203,9 +211,10 @@ export default function PackOpeningAnimation({
 				type="button"
 				onClick={onClose}
 				aria-label="Close pack opening"
-				className="absolute top-4 right-4 z-40 grid h-11 w-11 place-items-center rounded-full border border-obsidian-700 bg-obsidian-900/80 text-ink-300 hover:text-gold-300 hover:border-gold-600 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
+				className="fixed top-14 right-5 z-[10050] inline-flex h-12 min-w-12 items-center justify-center gap-2 rounded-md border border-ink-200/35 bg-obsidian-950/95 px-3 text-ink-0 shadow-[0_0_24px_rgba(0,0,0,0.75)] hover:border-gold-300 hover:text-gold-200 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
 			>
-				<X size={20} aria-hidden="true" />
+				<X size={24} strokeWidth={2.5} aria-hidden="true" />
+				<span className="hidden sm:inline font-mono text-[10px] uppercase tracking-[0.18em]">Close</span>
 			</button>
 
 			<AnimatePresence mode="wait">
@@ -386,7 +395,7 @@ export default function PackOpeningAnimation({
 												key={section.key}
 												className="min-h-[70vh] flex items-center justify-center px-6 py-8"
 											>
-												<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5 justify-items-center max-w-6xl">
+												<div className="grid w-full max-w-6xl grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5 justify-items-center">
 													{sectionCards.map((card, cardIdx) => (
 														<CardTile
 															key={`${card.id}-${cardIdx}`}
@@ -494,11 +503,11 @@ export default function PackOpeningAnimation({
 								<div className="max-w-6xl mx-auto flex items-center justify-center gap-3 flex-wrap">
 									<button
 										type="button"
-										onClick={onClose}
+										onClick={compactLayout && !oneShot ? onOpenAnother : onClose}
 										className="btn-runic btn-runic--gold btn-runic--lg"
 									>
 										<span className="btn-runic-stud" aria-hidden />
-										Continue
+										{compactLayout && !oneShot ? 'Open Another' : 'Continue'}
 										<span className="btn-runic-stud" aria-hidden />
 									</button>
 
@@ -510,7 +519,19 @@ export default function PackOpeningAnimation({
 										</Link>
 									)}
 
-									{!oneShot && (
+									{compactLayout && !oneShot && onOpenAll && (
+										<button
+											type="button"
+											onClick={onOpenAll}
+											className="btn-runic btn-runic--obsidian"
+										>
+											<span className="btn-runic-stud" aria-hidden />
+											Open All
+											<span className="btn-runic-stud" aria-hidden />
+										</button>
+									)}
+
+									{!oneShot && !compactLayout && (
 										<button
 											type="button"
 											onClick={onOpenAnother}

@@ -14,6 +14,7 @@
 
 import type { GameMove, MoveRecord, MerkleProof } from './signedMove';
 import { sha256Hash, canonicalStringify } from './hashUtils';
+import type { RagnarokRuntimeEvidence } from '@shared/runtimeConfig';
 export type { GameMove };
 
 export interface TranscriptBundle {
@@ -35,6 +36,7 @@ export interface SessionEvent {
 export interface SessionLogPayload {
 	matchId: string | null;
 	buildHash: string;
+	runtime: RagnarokRuntimeEvidence;
 	connectionState: string;
 	isHost: boolean;
 	exportedAt: number;
@@ -112,6 +114,7 @@ export function getSessionEvents(): SessionEvent[] {
 export function exportSessionLog(meta: {
 	matchId: string | null;
 	buildHash: string;
+	runtime: RagnarokRuntimeEvidence;
 	connectionState: string;
 	isHost: boolean;
 }): Blob {
@@ -120,6 +123,7 @@ export function exportSessionLog(meta: {
 	const payload: SessionLogPayload = {
 		matchId: meta.matchId,
 		buildHash: meta.buildHash,
+		runtime: meta.runtime,
 		connectionState: meta.connectionState,
 		isHost: meta.isHost,
 		exportedAt: Date.now(),

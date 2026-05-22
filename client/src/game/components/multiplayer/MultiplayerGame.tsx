@@ -8,7 +8,6 @@ import ArmySelectionComponent from '../ArmySelection';
 import { ArmySelection as ArmySelectionType } from '../../types/ChessTypes';
 import { useNavigate } from 'react-router-dom';
 import { routes } from '../../../lib/routes';
-import { useHiveDataStore } from '../../../data/HiveDataLayer';
 import { isHiveWalletAvailable } from '../../../data/HiveAuth';
 import {
 	Button,
@@ -26,6 +25,8 @@ import { P2PProvider } from '../../context/P2PContext';
 import { computeP2PRenderGuard } from './multiplayerRenderGuard';
 import { isSharedNetworkEnvironment } from '../../config/featureFlags';
 import { HiveKeychainLogin } from '../HiveKeychainLogin';
+import { useNFTUsername } from '../../nft/hooks';
+import { resolveProtectedFlowAccess } from '../../auth/protectedFlowAccess';
 import { useGameStore } from '../../stores/gameStore';
 import { recordSessionEvent } from '../../../data/blockchain/transcriptBuilder';
 import { buildReadyWarbandLoadout } from '../../deck/readyWarbandLoadout';
@@ -132,11 +133,18 @@ export const MultiplayerGame: React.FC = () => {
 	const p2pSessionRemoteAuthorized = usePeerStore(s => s.p2pSessionRemoteAuthorized);
 	const p2pSessionAuthError = usePeerStore(s => s.p2pSessionAuthError);
 	const connectionState = usePeerStore(s => s.connectionState);
+	const reconnectCountdown = usePeerStore(s => s.reconnectCountdown);
+	const reconnectAttemptCount = usePeerStore(s => s.reconnectAttemptCount);
 	const forfeitSide = usePeerStore(s => s.forfeitSide);
-	const hiveUser = useHiveDataStore(s => s.user);
+	const hiveUsername = useNFTUsername();
 	const reloadGuardPromptedRef = useRef(false);
 	const requiresHiveSession = isSharedNetworkEnvironment();
-	const hasHiveSession = !requiresHiveSession || (hiveUser !== null && isHiveWalletAvailable());
+	const p2pAccess = resolveProtectedFlowAccess({
+		accountId: hiveUsername,
+		sharedNetwork: requiresHiveSession,
+		surface: 'multiplayer',
+	});
+	const hasHiveSession = p2pAccess.kind === 'allowed' && (!requiresHiveSession || isHiveWalletAvailable());
 	const shouldWarnBeforeUnload = gameStarted
 		&& (
 			connectionState === 'connected'
@@ -330,6 +338,9 @@ export const MultiplayerGame: React.FC = () => {
 			p2pSessionLocalAuthorized,
 			p2pSessionRemoteAuthorized,
 			p2pSessionAuthError,
+			connectionState,
+			reconnectCountdown,
+			reconnectAttemptCount,
 		});
 		const spinner = (
 			<div className="flex items-center justify-center min-h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900 p-4">

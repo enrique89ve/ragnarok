@@ -15,7 +15,8 @@ import { ALL_CHAPTERS, getMission, useCampaignStore } from "./game/campaign";
 import { useStarterStore } from "./game/stores/starterStore";
 import { useIsHiveMode, useNFTUsername } from "./game/nft/hooks";
 import { getRagnarokNetworkConfig } from "./game/config/networkConfig";
-import { isTestnetStage } from "./game/config/featureFlags";
+import { isSharedNetworkEnvironment, isTestnetStage } from "./game/config/featureFlags";
+import { resolveProtectedFlowAccess, type ProtectedFlowSurface } from "./game/auth/protectedFlowAccess";
 import {
 	BridgeRuntimeBoundary,
 	CardDataRuntimeBoundary,
@@ -96,6 +97,115 @@ function OnlineOnly({ children, label }: { children: React.ReactNode; label: str
 		);
 	}
 	return <>{children}</>;
+}
+
+function ProtectedAccountGate({
+	children,
+	surface,
+}: {
+	children: React.ReactNode;
+	surface: ProtectedFlowSurface;
+}) {
+	const hiveUsername = useNFTUsername();
+	const access = resolveProtectedFlowAccess({
+		accountId: hiveUsername,
+		sharedNetwork: isSharedNetworkEnvironment(),
+		surface,
+	});
+
+	if (access.kind === 'allowed') return <>{children}</>;
+
+	return (
+		<div className="min-h-screen bg-obsidian-950 text-ink-0 flex items-center justify-center px-6">
+			<div className="w-full max-w-md rounded-xl border border-obsidian-700 bg-obsidian-900/90 p-6 text-center shadow-2xl shadow-black/40">
+				<div className="font-mono text-[10px] uppercase tracking-[0.28em] text-gold-300 mb-3">
+					Account required
+				</div>
+				<h1 className="font-display text-2xl font-black uppercase tracking-[0.12em] text-ink-0 mb-3">
+					{access.title}
+				</h1>
+				<p className="text-sm leading-6 text-ink-200 mb-6">
+					{access.message}
+				</p>
+				<Suspense fallback={null}>
+					<HiveKeychainLogin />
+				</Suspense>
+				<div className="mt-5">
+					<Link to={routes.home} className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-400 hover:text-gold-300">
+						Back Home
+					</Link>
+				</div>
+			</div>
+		</div>
+	);
+}
+
+function StarterEntitlementGate({
+	children,
+	surface,
+}: {
+	children: React.ReactNode;
+	surface: ProtectedFlowSurface;
+}) {
+	const hiveUsername = useNFTUsername();
+	const sharedNetwork = isSharedNetworkEnvironment();
+	const starterClaimed = useStarterStore(state => (
+		sharedNetwork
+			? Boolean(hiveUsername && state.hasClaimed(hiveUsername))
+			: state.hasClaimed(hiveUsername)
+	));
+	const [showCeremony, setShowCeremony] = useState(false);
+	const access = resolveProtectedFlowAccess({
+		accountId: hiveUsername,
+		sharedNetwork,
+		surface,
+	});
+
+	if (starterClaimed) return <>{children}</>;
+
+	const requiresAccount = access.kind === 'blocked';
+
+	return (
+		<div className="min-h-screen bg-obsidian-950 text-ink-0 flex items-center justify-center px-6">
+			<div className="w-full max-w-md rounded-xl border border-obsidian-700 bg-obsidian-900/90 p-6 text-center shadow-2xl shadow-black/40">
+				<div className="font-mono text-[10px] uppercase tracking-[0.28em] text-gold-300 mb-3">
+					Starter required
+				</div>
+				<h1 className="font-display text-2xl font-black uppercase tracking-[0.12em] text-ink-0 mb-3">
+					Claim before loadouts
+				</h1>
+				<p className="text-sm leading-6 text-ink-200 mb-6">
+					{requiresAccount
+						? access.message
+						: 'This surface opens after the account claims its starter entitlement. This keeps deck building tied to the account-scoped protocol state before any battle can start.'}
+				</p>
+				{requiresAccount ? (
+					<Suspense fallback={null}>
+						<HiveKeychainLogin />
+					</Suspense>
+				) : (
+					<Button variant="primary" size="lg" onClick={() => setShowCeremony(true)}>
+						Reveal Starter Deck
+					</Button>
+				)}
+				<div className="mt-4">
+					<Link to={routes.home} className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-400 hover:text-gold-300">
+						Back Home
+					</Link>
+				</div>
+			</div>
+
+			{showCeremony && (
+				<Suspense fallback={null}>
+					<StarterPackCeremony
+						accountId={hiveUsername}
+						onComplete={() => setShowCeremony(false)}
+						onCancel={() => setShowCeremony(false)}
+					/>
+				</Suspense>
+			)}
+		</div>
+	);
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -269,10 +379,20 @@ function HomePage() {
 	const currentMissionId = useCampaignStore(s => s.currentMission);
 	const hiveUsername = useNFTUsername();
 	const isHiveMode = useIsHiveMode();
-	const starterClaimed = useStarterStore(s => s.hasClaimed(hiveUsername));
+	const sharedNetwork = isSharedNetworkEnvironment();
+	const starterClaimed = useStarterStore(s => (
+		sharedNetwork
+			? Boolean(hiveUsername && s.hasClaimed(hiveUsername))
+			: s.hasClaimed(hiveUsername)
+	));
 	const syncLegacyStarterClaim = useStarterStore(s => s.syncLegacyClaimToAccount);
 	const [showCeremony, setShowCeremony] = useState(false);
 	const [canInstall, setCanInstall] = useState(!!deferredInstallPrompt);
+	const starterClaimAccess = resolveProtectedFlowAccess({
+		accountId: hiveUsername,
+		sharedNetwork,
+		surface: 'starter_claim',
+	});
 
 	const completedMissionCount = Object.keys(completedMissions).length;
 	const totalMissionCount = useMemo(
@@ -297,7 +417,9 @@ function HomePage() {
 	}, [activeMission, completedMissions]);
 
 	const primaryLabel = !starterClaimed
-		? 'Reveal Starter Deck'
+		? starterClaimAccess.kind === 'blocked'
+			? 'Connect Hive First'
+			: 'Reveal Starter Deck'
 		: activeMission
 			? 'Resume Campaign'
 			: completedMissionCount > 0
@@ -335,12 +457,12 @@ function HomePage() {
 	}, []);
 
 	useEffect(() => {
-		if (isHiveMode && !hiveUsername) return;
+		if ((isHiveMode || sharedNetwork) && !hiveUsername) return;
 		// Re-seed of hero decks on account load is handled by ensureBridgeRuntime
 		// (bridgeRuntime.ts). Here we only need the legacy claim sync so the
 		// starter store reflects the active account.
 		syncLegacyStarterClaim(hiveUsername);
-	}, [hiveUsername, isHiveMode, syncLegacyStarterClaim]);
+	}, [hiveUsername, isHiveMode, sharedNetwork, syncLegacyStarterClaim]);
 
 	const triggerInstall = () => {
 		if (deferredInstallPrompt) {
@@ -408,13 +530,21 @@ function HomePage() {
 							</p>
 							<div className="flex flex-wrap items-center gap-3">
 								{!starterClaimed ? (
-									<Button
-										variant="primary"
-										size="lg"
-										onClick={() => setShowCeremony(true)}
-									>
-										{primaryLabel}
-									</Button>
+									starterClaimAccess.kind === 'blocked' ? (
+										<Link to={routes.settings}>
+											<Button variant="primary" size="lg">
+												{primaryLabel}
+											</Button>
+										</Link>
+									) : (
+										<Button
+											variant="primary"
+											size="lg"
+											onClick={() => setShowCeremony(true)}
+										>
+											{primaryLabel}
+										</Button>
+									)
 								) : (
 									<Link to={routes.campaign}>
 										<Button variant="primary" size="lg">{primaryLabel}</Button>
@@ -747,8 +877,8 @@ function App() {
 							<Route element={<BridgeRuntimeBoundary />}>
 								<Route element={<GlobalOverlaysLayout />}>
 									<Route path={routes.home} element={<HomePage />} />
-									<Route path={routes.warband} element={<WarbandPage />} />
-									<Route path={routes.campaign} element={<CampaignPage />} />
+									<Route path={routes.warband} element={<StarterEntitlementGate surface="warband"><WarbandPage /></StarterEntitlementGate>} />
+									<Route path={routes.campaign} element={<ProtectedAccountGate surface="campaign"><CampaignPage /></ProtectedAccountGate>} />
 									<Route path={routes.collection} element={<CollectionPage />} />
 									<Route path={routes.ladder} element={<RankedLadderPage />} />
 									<Route path={routes.trading} element={<Navigate to={`${routes.marketplace}?tab=swaps`} replace />} />
@@ -756,6 +886,7 @@ function App() {
 									<Route path={routes.treasury} element={<OnlineOnly label="Treasury"><TreasuryPage /></OnlineOnly>} />
 									<Route path={routes.explorer} element={<ExplorerPage />} />
 									<Route path={routes.admin} element={<AdminPanel />} />
+									<Route path={routes.adminNfts} element={<AdminPanel />} />
 									<Route path={routes.wallet} element={<WalletPage />} />
 									<Route path={routes.legacyRuneTestnet} element={<Navigate to={routes.wallet} replace />} />
 									<Route path={routes.tournaments} element={<OnlineOnly label="Tournaments"><TournamentListPage /></OnlineOnly>} />
@@ -769,16 +900,26 @@ function App() {
 									<Route element={<GameplayRuntimeBoundary />}>
 										<Route path={routes.game} element={<Navigate to={routes.singleGame} replace />} />
 										<Route path={routes.singleGame} element={
-											<MatchSetupSingle difficulty="normal" deckSource="warband">
-												<RagnarokGameCoordinator />
-											</MatchSetupSingle>
+											<StarterEntitlementGate surface="quick_match">
+												<MatchSetupSingle difficulty="normal" deckSource="warband">
+													<RagnarokGameCoordinator />
+												</MatchSetupSingle>
+											</StarterEntitlementGate>
 										} />
 										<Route path={routes.campaignGame} element={
-											<MatchSetupCampaign fallback={<Navigate to={routes.campaign} replace />}>
-												<RagnarokGameCoordinator />
-											</MatchSetupCampaign>
+											<ProtectedAccountGate surface="campaign_battle">
+												<StarterEntitlementGate surface="campaign_battle">
+													<MatchSetupCampaign fallback={<Navigate to={routes.campaign} replace />}>
+														<RagnarokGameCoordinator />
+													</MatchSetupCampaign>
+												</StarterEntitlementGate>
+											</ProtectedAccountGate>
 										} />
-										<Route path={routes.multiplayer} element={<MultiplayerGame />} />
+										<Route path={routes.multiplayer} element={
+											<ProtectedAccountGate surface="multiplayer">
+												<StarterEntitlementGate surface="multiplayer"><MultiplayerGame /></StarterEntitlementGate>
+											</ProtectedAccountGate>
+										} />
 									</Route>
 								</Route>
 							</Route>

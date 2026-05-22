@@ -29,12 +29,16 @@ A settlement candidate must include:
 - prior dual `match_anchor` evidence for the same match and participants;
 - deck evidence resolved before match start, with `nft_custody` required for
   economic ranked settlement;
+- a pre-match deck verification decision tied to the deck hashes pinned by the
+  anchor, not raw client-submitted claims alone;
 - engine hash, registry hash, deck hashes, and seed commitments pinned by the
   anchor once those fields are present in the match-result contract;
-- deterministic transcript root and optional transcript CID;
+- deterministic transcript root from the transcript finalizer and optional
+  transcript CID;
 - winner, loser, and final result facts derived from replay;
 - both peer signatures over the same compact match-result commitment using the
-  `ragnarok match_result v1` domain prefix.
+  `ragnarok match_result v1` domain prefix, verified against the public keys
+  pinned by `match_anchor`.
 
 ## State Machine
 
@@ -62,10 +66,12 @@ The arbiter must fail closed unless every gate passes:
 | Anchor pins participant keys | `match_anchor is missing pinned pubkeys` |
 | Result participants match anchor participants | `match_result participants do not match match_anchor` |
 | Economic deck evidence is full NFT custody | `full NFT ranked requires nft-custody deck evidence` |
+| NFT custody evidence was verified before match start and matches pinned deck hashes | `full NFT ranked requires nft-custody deck evidence` |
 | Transcript root exists and is deterministic | `missing signed transcript roots` |
 | Local/remote transcript roots match | `transcript_root_mismatch` |
 | Winner is a participant and matches replay | `winner mismatch` |
 | Result review was visible before signing | `visible result review/sign flow required before Keychain` |
+| Signatures verify against anchored participant keys | `ranked match_result signatures must verify against anchored pubkeys` |
 | Winner and loser both signed the same commitment | `ranked match_result requires winner and loser signatures` |
 | QA full-catalog is not used as economic evidence | `QA full-catalog rewards are local feedback` |
 
@@ -73,6 +79,12 @@ The arbiter must fail closed unless every gate passes:
 
 1. Extract an importable P2P-only arbiter contract with typed candidate,
    decision, and rejection reasons. Keep it out of campaign/local AI modules.
+   - Slice 1 lives at
+     `client/src/game/match/modes/p2p/winnerArbiter.ts`. It verifies typed
+     candidates and returns fail-closed effects. It now requires pre-match
+     deck verification, deck hashes matching the anchor, deterministic
+     transcript finalizer evidence, and signatures already verified against
+     anchored pubkeys. It is not wired to `onP2PMatchEnd` yet.
 2. Add a deterministic transcript finalizer so both peers hash identical ordered
    leaves before the review screen opens.
 3. Replace the current result-signature stub with a visible review/sign flow.

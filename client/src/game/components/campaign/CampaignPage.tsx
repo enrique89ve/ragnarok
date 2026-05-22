@@ -6,6 +6,9 @@ import { routes } from '../../../lib/routes';
 import { Button } from '../../../components/ui-norse';
 import { AccountSlot } from '../../../components/account/AccountSlot';
 import { useNFTUsername } from '../../nft/hooks';
+import { isSharedNetworkEnvironment } from '../../config/featureFlags';
+import { resolveProtectedFlowAccess } from '../../auth/protectedFlowAccess';
+import { HiveKeychainLogin } from '../HiveKeychainLogin';
 import {
 	ALL_CHAPTERS, EASTERN_CHAPTER, BASE_CHAPTER_MISSION_IDS, useCampaignStore,
 	NINE_REALMS, REALM_MAP, MISSION_REALM_MAP, getMissionsForRealm, getRealmProgress,
@@ -489,6 +492,12 @@ export default function CampaignPage() {
 	const completedMissions = useCampaignStore(state => state.completedMissions);
 	const seenCinematics = useCampaignStore(state => state.seenCinematics);
 	const isAllComplete = useCampaignStore(state => state.isAllBaseChaptersComplete(BASE_CHAPTER_MISSION_IDS));
+	const hiveUsername = useNFTUsername();
+	const campaignAccess = resolveProtectedFlowAccess({
+		accountId: hiveUsername,
+		sharedNetwork: isSharedNetworkEnvironment(),
+		surface: 'campaign',
+	});
 
 	const norseChapter = ALL_CHAPTERS.find(chapter => chapter.faction === 'norse')!;
 	const greekChapter = ALL_CHAPTERS.find(chapter => chapter.faction === 'greek')!;
@@ -638,6 +647,7 @@ export default function CampaignPage() {
 	};
 
 	const handleStartMission = (difficulty: Difficulty) => {
+		if (campaignAccess.kind === 'blocked') return;
 		if (!selectedMission) return;
 		startMission(selectedMission.id, difficulty);
 		navigate(routes.campaignGame);
@@ -650,6 +660,28 @@ export default function CampaignPage() {
 	const hasCurrentPrologue = currentDisplayChapter?.cinematicIntro != null;
 	const hasSeenCurrentPrologue = currentDisplayChapter ? seenCinematics.includes(currentDisplayChapter.id) : false;
 	const currentDisplayNextMission = currentDisplayChapter ? nextMissionByChapter.get(currentDisplayChapter.id) ?? null : null;
+
+	if (campaignAccess.kind === 'blocked') {
+		return (
+			<div className="relative h-screen w-full overflow-y-auto overflow-x-hidden text-ink-0 bg-(image:--bg-cosmos-nav)">
+				<CampaignHeader title="Campaign" subtitle="Hive account required" />
+				<div className="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-md items-center px-4">
+					<div className={`${SURFACE_STRONG_CLASS} w-full p-6 text-center`}>
+						<div className="font-mono text-[10px] uppercase tracking-[0.28em] text-gold-300 mb-3">
+							Account required
+						</div>
+						<h1 className="font-display text-2xl font-black uppercase tracking-[0.12em] text-ink-0 mb-3">
+							{campaignAccess.title}
+						</h1>
+						<p className="text-sm leading-6 text-ink-200 mb-6">
+							{campaignAccess.message}
+						</p>
+						<HiveKeychainLogin />
+					</div>
+				</div>
+			</div>
+		);
+	}
 
 	if (selectedMission) {
 		const chapter = selectedChapter ?? norseChapter;

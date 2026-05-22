@@ -86,8 +86,11 @@ __tests__/
 *.test.ts
 !**/protocolConformance.test.ts
 !client/src/data/blockchain/cardXPRewards.test.ts
+!client/src/data/blockchain/adminAdapters.test.ts
 !client/src/data/blockchain/deckVerification.test.ts
 !client/src/data/blockchain/matchResultPackager.test.ts
+!client/src/data/blockchain/transcriptBuilder.test.ts
+!client/src/game/match/modes/p2p/winnerArbiter.test.ts
 !client/src/data/HiveAuth.test.ts
 !client/src/data/HiveDataLayer.test.ts
 !client/src/main/swCacheName.test.ts
@@ -108,6 +111,7 @@ __tests__/
 !client/src/game/components/collection/collectionStarterGate.test.ts
 !client/src/game/components/collection/collectionAcquisition.test.ts
 !client/src/game/components/duatClaimVisibility.test.ts
+!client/src/game/auth/protectedFlowAccess.test.ts
 !client/src/game/components/gameLogAdapter.test.ts
 !client/src/game/components/handFanPlayability.test.ts
 !client/src/game/combat/aiAttackResolution.test.ts
@@ -152,11 +156,17 @@ __tests__/
 !server/routes/chainRoutes.matchPending.test.ts
 !client/src/game/protocol/sessionRenewal.test.ts
 !client/src/game/protocol/phase0.smoke.test.ts
+!client/src/game/data/starterClaim.test.ts
 !shared/p2p-wire/chess.test.ts
 !shared/p2p-wire/combat.test.ts
 !client/src/game/p2p/p2pPerspective.test.ts
 !client/src/game/components/social/SocialPresenceHeartbeat.test.ts
+!client/src/game/components/social/FriendsPanel.test.ts
+!client/src/game/components/multiplayer/MultiplayerLobby.test.ts
 !client/src/game/match/modes/p2p/qaLocalRewardPreview.test.ts
+!server/services/p2pChallengeSigner.test.ts
+!server/services/p2pRateLimit.test.ts
+!shared/p2pAvailability.test.ts
 *.spec.js
 *.spec.ts
 *.test.tsx

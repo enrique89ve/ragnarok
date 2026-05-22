@@ -508,51 +508,60 @@
    ============================================ */
 .norse-army-selection .norse-hero-card {
   position: relative;
-  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-  border: 2px solid #6B5B45;
-  border-radius: 10px;
-  overflow: visible;
+  isolation: isolate;
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.32) 0%, rgba(5, 8, 14, 0.96) 100%),
+    var(--obsidian-900);
+  border: 1px solid color-mix(in srgb, var(--gold-400) 46%, var(--obsidian-700));
+  border-radius: 5px 3px 6px 3px;
+  overflow: hidden;
   cursor: pointer;
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   display: flex;
   flex-direction: column;
-  min-height: 220px;
-  max-height: 280px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  justify-content: flex-end;
+  min-height: 270px;
+  max-height: 310px;
+  box-shadow:
+    inset 0 0 0 1px rgba(245, 237, 224, 0.04),
+    0 8px 18px rgba(0, 0, 0, 0.42);
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 8px) 100%, 0 100%, 0 9px);
 }
 
 .norse-army-selection .norse-hero-card:hover {
-  transform: translateY(-6px) scale(1.02);
-  border-color: #00ffcc;
+  transform: translateY(-5px) scale(1.01);
+  border-color: color-mix(in srgb, var(--gold-300) 70%, var(--ink-100));
   box-shadow: 
-    0 12px 30px rgba(0, 0, 0, 0.6),
-    0 0 20px rgba(0, 255, 204, 0.2),
-    0 0 40px rgba(0, 255, 204, 0.1);
+    inset 0 0 0 1px rgba(245, 237, 224, 0.08),
+    0 14px 32px rgba(0, 0, 0, 0.58),
+    0 0 24px color-mix(in srgb, var(--gold-300) 18%, transparent);
 }
 
 .norse-army-selection .norse-hero-card.selected {
-  border-color: #22c55e;
+  border-color: var(--success-400);
   box-shadow: 
-    0 0 20px rgba(34, 197, 94, 0.4),
-    0 8px 25px rgba(0, 0, 0, 0.5);
+    inset 0 0 0 1px color-mix(in srgb, var(--success-300) 34%, transparent),
+    0 0 20px rgba(34, 197, 94, 0.28),
+    0 10px 26px rgba(0, 0, 0, 0.52);
 }
 
 .norse-army-selection .norse-hero-card.selected::after {
   content: '✓';
   position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 24px;
-  height: 24px;
-  background: #22c55e;
-  border-radius: 50%;
+  top: 10px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  background: linear-gradient(180deg, var(--success-300), var(--success-500));
+  border: 1px solid rgba(245, 237, 224, 0.55);
+  border-radius: 4px 2px 5px 2px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 14px;
-  color: white;
+  color: var(--obsidian-950);
   font-weight: bold;
-  box-shadow: 0 0 10px rgba(34, 197, 94, 0.6);
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.46);
   z-index: 10;
 }
 
@@ -564,47 +573,44 @@
 .norse-army-selection .norse-hero-card::before {
   content: '';
   position: absolute;
-  inset: 0;
-  border-radius: 10px;
+  inset: 1px;
+  border-radius: 4px 2px 5px 2px;
   pointer-events: none;
   z-index: 5;
   transition: opacity 0.3s ease;
+  opacity: 0.86;
 }
 
 /* --- MYTHIC: rainbow aurora border + golden glow --- */
 .norse-army-selection .norse-hero-card.rarity-mythic {
   border-color: transparent;
-  background: linear-gradient(180deg, #2a1f10 0%, #1a1008 100%);
   box-shadow:
-    0 0 18px rgba(245, 158, 11, 0.4),
-    0 0 36px rgba(236, 72, 153, 0.2),
-    0 0 54px rgba(139, 92, 246, 0.15);
+    inset 0 0 0 1px rgba(252, 211, 77, 0.08),
+    0 0 18px rgba(245, 158, 11, 0.25),
+    0 10px 26px rgba(0, 0, 0, 0.55);
 }
 
 .norse-army-selection .norse-hero-card.rarity-mythic::before {
-  inset: -3px;
-  padding: 3px;
-  border-radius: 12px;
+  inset: 0;
+  padding: 2px;
+  border-radius: 5px 3px 6px 3px;
   border: none;
   background: linear-gradient(
     135deg,
-    #ef4444, #f59e0b, #22c55e, #06b6d4, #8b5cf6, #ec4899, #ef4444
+    var(--ember-400), var(--rarity-mythic-color), var(--gold-100), var(--rarity-mythic-deep), var(--ember-400)
   );
-  background-size: 300% 300%;
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
-  animation: hero-diagonal-pan 3s linear infinite;
 }
 
 .norse-army-selection .norse-hero-card.rarity-mythic:hover {
   border-color: transparent;
   box-shadow:
-    0 0 24px rgba(245, 158, 11, 0.6),
-    0 0 48px rgba(236, 72, 153, 0.35),
-    0 0 72px rgba(139, 92, 246, 0.25),
-    0 8px 25px rgba(0, 0, 0, 0.5);
+    inset 0 0 0 1px rgba(252, 211, 77, 0.14),
+    0 0 28px rgba(245, 158, 11, 0.36),
+    0 14px 32px rgba(0, 0, 0, 0.58);
 }
 
 .norse-army-selection .norse-hero-card.rarity-mythic .norse-hero-name {
@@ -617,35 +623,33 @@
 /* --- EPIC: purple crystalline border + purple glow --- */
 .norse-army-selection .norse-hero-card.rarity-epic {
   border-color: transparent;
-  background: linear-gradient(180deg, #1e1530 0%, #110e20 100%);
   box-shadow:
-    0 0 14px rgba(168, 85, 247, 0.35),
-    0 0 28px rgba(168, 85, 247, 0.15);
+    inset 0 0 0 1px rgba(192, 132, 252, 0.07),
+    0 0 16px rgba(168, 85, 247, 0.2),
+    0 10px 24px rgba(0, 0, 0, 0.5);
 }
 
 .norse-army-selection .norse-hero-card.rarity-epic::before {
-  inset: -2px;
+  inset: 0;
   padding: 2px;
-  border-radius: 11px;
+  border-radius: 5px 3px 6px 3px;
   border: none;
   background: linear-gradient(
     135deg,
-    #581C87 0%, #A855F7 25%, #E9D5FF 50%, #C084FC 75%, #581C87 100%
+    var(--rarity-epic-deep) 0%, var(--rarity-epic-color) 34%, var(--rarity-epic-pale) 50%, var(--rarity-epic-color) 66%, var(--rarity-epic-deep) 100%
   );
-  background-size: 300% 300%;
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
-  animation: hero-diagonal-pan 5s linear infinite;
 }
 
 .norse-army-selection .norse-hero-card.rarity-epic:hover {
   border-color: transparent;
   box-shadow:
-    0 0 22px rgba(168, 85, 247, 0.55),
-    0 0 44px rgba(168, 85, 247, 0.25),
-    0 8px 25px rgba(0, 0, 0, 0.5);
+    inset 0 0 0 1px rgba(192, 132, 252, 0.12),
+    0 0 24px rgba(168, 85, 247, 0.32),
+    0 14px 32px rgba(0, 0, 0, 0.58);
 }
 
 .norse-army-selection .norse-hero-card.rarity-epic .norse-hero-name {
@@ -659,40 +663,37 @@
 .norse-army-selection .norse-hero-card.rarity-rare {
   border-color: transparent;
   box-shadow:
-    0 0 10px rgba(59, 130, 246, 0.3),
-    0 0 20px rgba(59, 130, 246, 0.12);
+    inset 0 0 0 1px rgba(147, 197, 253, 0.07),
+    0 0 14px rgba(59, 130, 246, 0.18),
+    0 10px 24px rgba(0, 0, 0, 0.48);
 }
 
 .norse-army-selection .norse-hero-card.rarity-rare::before {
-  inset: -2px;
+  inset: 0;
   padding: 2px;
-  border-radius: 11px;
+  border-radius: 5px 3px 6px 3px;
   border: none;
   background:
     linear-gradient(
       135deg,
-      #1E3A8A 0%,
-      #3B82F6 20%,
-      #93C5FD 45%,
-      #BFDBFE 50%,
-      #93C5FD 55%,
-      #3B82F6 80%,
-      #1E3A8A 100%
+      var(--rarity-rare-deep) 0%,
+      var(--rarity-rare-color) 32%,
+      var(--rarity-rare-pale) 50%,
+      var(--rarity-rare-color) 68%,
+      var(--rarity-rare-deep) 100%
     );
-  background-size: 300% 300%;
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
-  animation: hero-rare-shimmer 4s ease-in-out infinite;
 }
 
 .norse-army-selection .norse-hero-card.rarity-rare:hover {
   border-color: transparent;
   box-shadow:
-    0 0 18px rgba(59, 130, 246, 0.5),
-    0 0 36px rgba(59, 130, 246, 0.2),
-    0 8px 25px rgba(0, 0, 0, 0.5);
+    inset 0 0 0 1px rgba(147, 197, 253, 0.12),
+    0 0 22px rgba(59, 130, 246, 0.28),
+    0 14px 32px rgba(0, 0, 0, 0.58);
 }
 
 .norse-army-selection .norse-hero-card.rarity-rare .norse-hero-name {
@@ -710,34 +711,35 @@
 /* --- Rarity badge — top-left pill over portrait --- */
 .norse-army-selection .norse-rarity-badge {
   position: absolute;
-  top: 6px;
-  left: 6px;
+  top: 8px;
+  left: 8px;
   z-index: 10;
-  padding: 2px 8px;
-  border-radius: 3px;
+  padding: 3px 8px;
+  border: 1px solid rgba(245, 237, 224, 0.24);
+  border-radius: 3px 2px 4px 2px;
   font-size: 8px;
   font-weight: 800;
-  letter-spacing: 1.5px;
+  letter-spacing: 1.3px;
   text-transform: uppercase;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
 .norse-army-selection .norse-rarity-badge.rarity-mythic {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(255, 140, 0, 0.9));
-  color: #fff;
-  box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+  background: color-mix(in srgb, var(--rarity-mythic-color) 88%, var(--obsidian-950));
+  color: var(--obsidian-950);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.34);
 }
 
 .norse-army-selection .norse-rarity-badge.rarity-epic {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.85), rgba(168, 85, 247, 0.85));
-  color: #fff;
-  box-shadow: 0 0 6px rgba(168, 85, 247, 0.4);
+  background: color-mix(in srgb, var(--rarity-epic-color) 82%, var(--obsidian-950));
+  color: var(--ink-0);
+  box-shadow: 0 0 9px rgba(168, 85, 247, 0.28);
 }
 
 .norse-army-selection .norse-rarity-badge.rarity-rare {
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.8), rgba(59, 130, 246, 0.8));
-  color: #fff;
-  box-shadow: 0 0 6px rgba(59, 130, 246, 0.35);
+  background: color-mix(in srgb, var(--rarity-rare-color) 82%, var(--obsidian-950));
+  color: var(--ink-0);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.24);
 }
 
 /* Holo effects moved to styles/holoEffect.css */
@@ -1135,25 +1137,66 @@
 .norse-army-selection .hero-portrait {
   width: 100%;
   height: 100%;
-  border-radius: 0;
+  border-radius: inherit;
 }
 
 /* ============================================
    HERO CARD - Extended styles from JSX
    ============================================ */
 .norse-army-selection .norse-hero-media {
-  position: relative;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
   width: 100%;
-  height: 150px;
+  height: 100%;
   overflow: hidden;
-  flex-shrink: 0;
+  border-radius: inherit;
+}
+
+.norse-army-selection .norse-hero-media::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 1;
+  opacity: 0;
+  mix-blend-mode: overlay;
+  background-image: none;
+  background-repeat: repeat;
+  background-size: 64px 64px;
+  transition: opacity 0.16s ease;
+}
+
+.norse-army-selection .norse-hero-card.art-ready .norse-hero-media::before {
+  opacity: 0.14;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.92' numOctaves='2' stitchTiles='stitch' seed='11'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='table' tableValues='0 0.62'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='64' height='64' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 .norse-army-selection .norse-hero-image {
+  position: relative;
+  z-index: 0;
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center top;
+  object-position: center 18%;
+  transform: scale(1.2);
+  filter: saturate(1.05) contrast(1.04);
+  transition: transform 0.28s ease, filter 0.28s ease;
+}
+
+.norse-army-selection .norse-hero-card.art-loading {
+  cursor: wait;
+}
+
+.norse-army-selection .norse-hero-card.art-loading.selected::after {
+  content: none;
+}
+
+.norse-army-selection .norse-hero-card:hover .norse-hero-image {
+  transform: scale(1.25);
+  filter: saturate(1.12) contrast(1.08);
 }
 
 .norse-army-selection .norse-hero-placeholder {
@@ -1167,120 +1210,182 @@
 
 .norse-army-selection .norse-hero-gradient-overlay {
   position: absolute;
-  bottom: 0;
+  inset: 0;
+  z-index: 3;
+  height: auto;
   left: 0;
   right: 0;
-  height: 50%;
-  background: linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, transparent 100%);
+  background:
+    linear-gradient(180deg, rgba(3, 6, 12, 0.16) 0%, rgba(3, 6, 12, 0.12) 42%, rgba(5, 8, 14, 0.82) 74%, rgba(3, 6, 12, 0.96) 100%),
+    radial-gradient(ellipse 80% 48% at 50% 12%, rgba(245, 237, 224, 0.08), transparent 62%);
   pointer-events: none;
 }
 
 .norse-army-selection .norse-hero-name-overlay {
   position: absolute;
-  bottom: 0;
+  z-index: 4;
+  bottom: 84px;
   left: 0;
   right: 0;
-  padding: 8px;
+  padding: 0 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
 }
 
 .norse-army-selection .norse-hero-name {
-  font-size: 15px;
+  font-family: 'Cinzel', 'Trajan Pro', Georgia, serif;
+  font-size: 17px;
   font-weight: 700;
-  color: #f1f5f9;
+  color: var(--ink-0);
   text-align: center;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+  line-height: 1.08;
+  letter-spacing: 0.02em;
+  text-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.95),
+    0 0 14px rgba(0, 0, 0, 0.7);
 }
 
 .norse-army-selection .norse-hero-class-badge {
-  padding: 2px 8px;
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(139, 115, 85, 0.4);
-  border-radius: 4px;
+  padding: 2px 7px;
+  background: rgba(5, 8, 14, 0.62);
+  border: 1px solid rgba(221, 184, 74, 0.22);
+  border-radius: 3px 2px 4px 2px;
   font-size: 9px;
   text-align: center;
   text-transform: uppercase;
   letter-spacing: 1px;
+  backdrop-filter: blur(4px);
+}
+
+.norse-army-selection .norse-hero-name-overlay > span {
+  border-radius: 3px 2px 4px 2px !important;
+  box-shadow: none !important;
 }
 
 .norse-army-selection .norse-hero-rune {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  font-size: 20px;
-  color: rgba(0, 255, 204, 0.4);
-  text-shadow: 0 0 8px rgba(0, 255, 204, 0.4);
+  top: 9px;
+  right: 11px;
+  font-size: 18px;
+  color: rgba(245, 237, 224, 0.34);
+  text-shadow: 0 0 8px rgba(221, 184, 74, 0.22);
   font-family: 'Norse', serif;
+  z-index: 7;
 }
 
 .norse-army-selection .norse-hero-info-panel {
-  padding: 10px;
+  position: relative;
+  z-index: 2;
+  margin-top: auto;
+  padding: 64px 10px 10px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  flex: 1;
+  justify-content: flex-end;
+  gap: 7px;
+  min-height: 132px;
+  background: linear-gradient(180deg, transparent 0%, rgba(5, 8, 14, 0.74) 42%, rgba(5, 8, 14, 0.94) 100%);
 }
 
 .norse-army-selection .norse-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  min-height: 28px;
+}
+
+.norse-army-selection .norse-stat-chip {
   display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 8px;
-  font-size: 11px;
-}
-
-.norse-army-selection .norse-stat-hp {
-  color: #ef4444;
-}
-
-.norse-army-selection .norse-stat-sta {
-  color: #fbbf24;
-}
-
-.norse-army-selection .norse-element-badge {
-  padding: 1px 6px;
-  border-radius: 3px;
-  font-size: 9px;
-  font-weight: 600;
+  gap: 3px;
+  min-width: 0;
+  min-height: 26px;
+  padding: 2px 4px;
+  border: 1px solid rgba(245, 237, 224, 0.14);
+  border-radius: 3px 2px 4px 2px;
+  background:
+    linear-gradient(180deg, rgba(20, 29, 44, 0.76), rgba(5, 8, 14, 0.82)),
+    rgba(5, 8, 14, 0.72);
+  color: rgba(245, 237, 224, 0.88);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 1px 4px rgba(0, 0, 0, 0.26);
   text-transform: uppercase;
 }
 
-.norse-army-selection .element-fire { background: rgba(239, 68, 68, 0.3); color: #fca5a5; }
-.norse-army-selection .element-water { background: rgba(59, 130, 246, 0.3); color: #93c5fd; }
-.norse-army-selection .element-electric { background: rgba(234, 179, 8, 0.3); color: #fde047; }
-.norse-army-selection .element-grass { background: rgba(34, 197, 94, 0.3); color: #86efac; }
-.norse-army-selection .element-light { background: rgba(251, 191, 36, 0.3); color: #fef08a; }
-.norse-army-selection .element-dark { background: rgba(139, 92, 246, 0.3); color: #c4b5fd; }
+.norse-army-selection .norse-stat-chip svg {
+  flex: 0 0 auto;
+  opacity: 0.9;
+}
+
+.norse-army-selection .norse-stat-value {
+  min-width: 0;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.norse-army-selection .norse-stat-label {
+  min-width: 0;
+  font-size: 7px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  opacity: 0.66;
+}
+
+.norse-army-selection .norse-stat-health {
+  border-color: rgba(239, 68, 68, 0.32);
+  color: #fecaca;
+}
+
+.norse-army-selection .norse-stat-loadout {
+  border-color: rgba(96, 165, 250, 0.28);
+  color: #bfdbfe;
+}
+
+.norse-army-selection .norse-stat-element {
+  border-color: rgba(245, 237, 224, 0.18);
+}
+
+.norse-army-selection .element-fire { background: linear-gradient(180deg, rgba(127, 29, 29, 0.42), rgba(5, 8, 14, 0.82)); color: #fca5a5; }
+.norse-army-selection .element-water { background: linear-gradient(180deg, rgba(30, 64, 175, 0.38), rgba(5, 8, 14, 0.82)); color: #93c5fd; }
+.norse-army-selection .element-electric { background: linear-gradient(180deg, rgba(133, 77, 14, 0.42), rgba(5, 8, 14, 0.82)); color: #fde047; }
+.norse-army-selection .element-grass { background: linear-gradient(180deg, rgba(22, 101, 52, 0.4), rgba(5, 8, 14, 0.82)); color: #86efac; }
+.norse-army-selection .element-light { background: linear-gradient(180deg, rgba(180, 83, 9, 0.36), rgba(5, 8, 14, 0.82)); color: #fef08a; }
+.norse-army-selection .element-dark { background: linear-gradient(180deg, rgba(88, 28, 135, 0.42), rgba(5, 8, 14, 0.84)); color: #c4b5fd; }
+.norse-army-selection .element-ice { background: linear-gradient(180deg, rgba(14, 116, 144, 0.36), rgba(5, 8, 14, 0.82)); color: #cffafe; }
 
 .norse-army-selection .norse-select-btn {
   width: 100%;
-  padding: 8px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  background: linear-gradient(135deg, #475569 0%, #334155 100%);
-  border: 1px solid #64748b;
-  border-radius: 6px;
-  color: #e2e8f0;
+  padding: 8px 12px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  background: linear-gradient(180deg, rgba(71, 85, 105, 0.82) 0%, rgba(30, 41, 59, 0.92) 100%);
+  border: 1px solid rgba(226, 232, 240, 0.24);
+  border-radius: 4px 2px 5px 2px;
+  color: var(--ink-100);
   cursor: pointer;
   transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
   font-family: inherit;
+  letter-spacing: 0.02em;
 }
 
 .norse-army-selection .norse-select-btn:hover {
-  background: linear-gradient(135deg, #00ffcc 0%, #00e6b8 100%);
-  border-color: #00ffcc;
-  color: #0f172a;
-  box-shadow: 0 0 15px rgba(0, 255, 204, 0.4), 0 0 30px rgba(0, 255, 204, 0.2);
+  background: linear-gradient(180deg, var(--gold-200), var(--gold-500));
+  border-color: var(--gold-100);
+  color: var(--obsidian-950);
+  box-shadow: 0 0 18px rgba(221, 184, 74, 0.32);
 }
 
 .norse-army-selection .norse-select-btn.selected {
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-  border-color: #22c55e;
-  color: white;
+  background: linear-gradient(180deg, var(--success-300), var(--success-500));
+  border-color: var(--success-200);
+  color: var(--obsidian-950);
   box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
-  animation: selectedBtnGlow 2s ease-in-out infinite;
 }
 
 /* ============================================
@@ -1918,16 +2023,17 @@
 }
 
 .norse-army-selection .norse-hero-desc-preview {
-  font-size: 11px;
-  color: rgba(148, 163, 184, 0.7);
-  line-height: 1.3;
+  font-size: 10px;
+  color: rgba(230, 220, 200, 0.58);
+  line-height: 1.25;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
   font-style: italic;
+  min-height: 13px;
 }
 
 /* Responsive updates */
@@ -1939,12 +2045,12 @@
   }
 
   .norse-army-selection .norse-hero-card {
-    min-height: 180px;
-    max-height: 240px;
+    min-height: 248px;
+    max-height: 290px;
   }
 
   .norse-army-selection .norse-hero-media {
-    height: 120px;
+    height: 100%;
   }
 }
 

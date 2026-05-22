@@ -8,6 +8,7 @@ import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Howl } from 'howler';
 import { assetPath } from '../../utils/assetPath';
+import '../styles/hero-death.css';
 
 interface HeroDeathAnimationProps {
 	heroName: string;

@@ -4,6 +4,10 @@
 
 Run Ragnarok in a mainnet-like beta environment with a separate Hive namespace, collection id, accounts, and service endpoints. Testnet validates the full architecture but remains resettable.
 
+For the one-week QA Testnet Season 0 operating script, use
+[`TESTNET_WEEK_ONE_SPEC.md`](./TESTNET_WEEK_ONE_SPEC.md). That spec is the
+day-by-day checklist; this runbook remains the command and smoke reference.
+
 ## First Setup
 
 Create the local testnet env file:
@@ -23,6 +27,16 @@ VITE_RAGNAROK_ADMIN_ACCOUNT=ragnarok-test
 VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT=ragnarok-test-operator
 VITE_NFTLOX_PROTOCOL_ID=nftlox_testnet
 ```
+
+For QA Testnet Season 0, rotate the reset epoch to a `qa-s0-*` value before
+testers start, for example:
+
+```env
+VITE_RAGNAROK_RESET_EPOCH=qa-s0-2026-05-21
+```
+
+The default `testnet-s01-*` example is not enough for the QA full-catalog
+rehearsal because it intentionally keeps `qaFullCatalogEnabled=false`.
 
 `VITE_NETWORK_STAGE=testnet` derives Hive data mode and blockchain packaging.
 Do not set `VITE_DATA_LAYER_MODE` or `VITE_BLOCKCHAIN_PACKAGING` for normal
@@ -78,6 +92,26 @@ Expected UI signals:
   `runtime.protocolId: "rk_game_testnet"` plus the active reset epoch.
 
 The header badge remains visible after dismissing the lower-left banner.
+
+For a low-risk local runtime sanity check that does not start the chain indexer
+or checkpoint publisher, use an ephemeral port and explicit QA epoch:
+
+```bash
+PORT=5010 \
+VITE_NETWORK_STAGE=testnet \
+VITE_RAGNAROK_PROTOCOL_ID=rk_game_testnet \
+VITE_RAGNAROK_COLLECTION_ID=ragnarok-testnet \
+VITE_RAGNAROK_RESET_EPOCH=qa-s0-2026-05-21 \
+ENABLE_CHAIN_INDEXER=false \
+ENABLE_INDEX_CHECKPOINT_PUBLISHER=false \
+./node_modules/.bin/tsx server/index.ts --mode testnet-safe
+```
+
+Then verify:
+
+```bash
+node -e "fetch('http://127.0.0.1:5010/api/health').then(r=>r.json()).then(j=>console.log(JSON.stringify(j.runtime,null,2)))"
+```
 
 ## Chain Read API
 
@@ -256,6 +290,66 @@ campaign/local AI behavior as proof for P2P.
 13. Rotate to a non-QA reset epoch or a mainnet profile. Confirm the previous QA
     preview does not appear in result history, wallet balance, collection, or
     matchmaking/ranking surfaces.
+
+## Smoke Test — Closed Beta Cutover Gate
+
+Run before inviting the first Closed Testnet Beta cohort. This gate is not a
+replacement for owner/operator sign-off; it only proves that the active runtime
+is no longer the QA full-catalog rehearsal.
+
+Start a closed-beta testnet runtime on an isolated port:
+
+```bash
+PORT=5011 \
+VITE_NETWORK_STAGE=testnet \
+VITE_RAGNAROK_PROTOCOL_ID=rk_game_testnet \
+VITE_RAGNAROK_COLLECTION_ID=ragnarok-testnet \
+VITE_RAGNAROK_RESET_EPOCH=closed-beta-2026-06 \
+VITE_NFTLOX_PROTOCOL_ID=nftlox_testnet \
+ENABLE_CHAIN_INDEXER=false \
+ENABLE_INDEX_CHECKPOINT_PUBLISHER=false \
+./node_modules/.bin/tsx server/index.ts --mode testnet-safe
+```
+
+Then verify the runtime gate:
+
+```bash
+node -e "fetch('http://127.0.0.1:5011/api/health').then(r=>r.json()).then(j=>console.log(JSON.stringify({phase:j.runtime.runtimePhase,qa:j.runtime.qaFullCatalogEnabled,blocked:j.runtime.closedBetaCutover.inviteBlocked,blockers:j.runtime.closedBetaCutover.blockerIds,signoff:j.runtime.closedBetaCutover.operatorSignoffRequired},null,2)))"
+```
+
+Expected automated result:
+
+- `phase` is `"closed-beta"`.
+- `qa` is `false`.
+- `blocked` is `false`.
+- `blockers` is `[]`.
+- `signoff` is `true`.
+
+If any blocker appears, do not invite testers. Common blockers are a QA reset
+epoch, missing collection id, missing NFTLoX protocol id, or a non-testnet /
+economic profile.
+
+Operator UI check:
+
+1. Open `/#/admin` as the configured admin account.
+2. Confirm the header/status panel shows the active phase, reset epoch, QA
+   catalog disabled, NFTLoX protocol id, and Closed Beta cutover checks.
+3. Confirm the admin panel still requires the normal admin session and
+   multisig/operator configuration.
+
+Ownership smoke for the same epoch:
+
+1. Run `npx vitest run shared/runtimeConfig.test.ts client/src/data/blockchain/deckVerification.test.ts`.
+2. Confirm starter cards still verify for every account.
+3. Confirm a non-starter genesis card without `nft_id` is rejected.
+4. Confirm QA full-catalog cards from a previous `qa-s0-*` epoch are not
+   accepted under the `closed-beta-*` epoch.
+5. Confirm DUAT and RUNE pack cards are playable only after replay/custody
+   evidence exists for that account.
+
+Final invite approval remains HITL: record the NFTLoX collection/schema proof,
+starter/DUAT/RUNE pack evidence, tester cohort, and invite timing before
+opening access.
 
 ## Local/Mainnet Profile Commands
 

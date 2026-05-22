@@ -19,6 +19,7 @@ export const routes = {
   marketplace: '/marketplace',
   explorer: '/explorer',
   admin: '/admin',
+  adminNfts: '/admin/nfts',
   legacyRuneTestnet: '/testnet/rune',
   pokerViewportPrototype: '/prototype/poker-viewport',
 };

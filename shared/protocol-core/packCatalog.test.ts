@@ -16,6 +16,7 @@ import {
 	getActiveHbdPackSaleScenario,
 	getHbdPackPurchaseQuote,
 	getHbdPackPriceThousandths,
+	getHbdPackSaleScenarioAllocations,
 	getHbdPackSaleScenarioTotals,
 	getRuneExchangePackQuote,
 	getRunePackPoolAllocations,
@@ -139,6 +140,36 @@ describe('pack catalog', () => {
 			});
 			expect(getHbdPackPurchaseQuote({ packType: 'starter', quantity: 1 })).toBeNull();
 			expect(getHbdPackPurchaseQuote({ packType: 'standard', quantity: 0 })).toBeNull();
+
+			expect(getHbdPackSaleScenarioAllocations(HBD_PACK_SALE_SCENARIOS.beta_full_cap)).toEqual([
+				{
+					packKey: 'standard',
+					packCap: 100000,
+					cardCount: 5,
+					cardInstanceCap: 500000,
+					unitPriceThousandths: 20000,
+					grossThousandths: 2000000000,
+					grossHbd: 2000000,
+				},
+				{
+					packKey: 'premium',
+					packCap: 60000,
+					cardCount: 7,
+					cardInstanceCap: 420000,
+					unitPriceThousandths: 100000,
+					grossThousandths: 6000000000,
+					grossHbd: 6000000,
+				},
+				{
+					packKey: 'mythic',
+					packCap: 100000,
+					cardCount: 7,
+					cardInstanceCap: 700000,
+					unitPriceThousandths: 250000,
+					grossThousandths: 25000000000,
+					grossHbd: 25000000,
+				},
+			]);
 
 			const memo = buildHbdPackPurchaseMemo({
 				account: 'alice',

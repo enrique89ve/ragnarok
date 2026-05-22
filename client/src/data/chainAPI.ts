@@ -68,6 +68,21 @@ export interface StarterDeckVerification {
 	totalOwned: number;
 }
 
+export interface ChainStatusResponse {
+	success: boolean;
+	totalPlayers: number;
+	totalCards: number;
+	totalMatches: number;
+	knownAccounts: number;
+	lastSyncedAt: number;
+	lastIrreversibleBlockProcessed: number;
+	inSync: boolean;
+	headBlock: number;
+	irreversibleBlock: number;
+	syncTargetBlock: number;
+	blocksBehind: number;
+}
+
 const FETCH_TIMEOUT_MS = 10_000;
 
 async function fetchJSON<T>(path: string, init?: globalThis.RequestInit): Promise<T> {
@@ -157,12 +172,6 @@ export async function registerAccount(username: string): Promise<void> {
 	});
 }
 
-export async function fetchChainStatus(): Promise<{
-	totalPlayers: number;
-	totalCards: number;
-	totalMatches: number;
-	knownAccounts: number;
-	lastSyncedAt: number;
-}> {
+export async function fetchChainStatus(): Promise<ChainStatusResponse> {
 	return fetchJSON('/api/chain/status');
 }

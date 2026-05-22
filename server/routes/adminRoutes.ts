@@ -1,5 +1,9 @@
 import { Router, type Request, type Response } from 'express';
 import {
+	buildClosedBetaCutoverGate,
+	buildRagnarokRuntimeEvidence,
+} from '../../shared/runtimeConfig';
+import {
 	attachAdminApproval,
 	buildAdminApprovalMessage,
 	parseAdminBroadcastBody,
@@ -24,6 +28,9 @@ import {
 	prepareAdminMultisigTransaction,
 	readAdminMultisigBroadcastBody,
 } from '../services/adminMultisigTransaction';
+import { getP2PRelayStats } from './p2pRelay';
+import { getP2PMatchmakingStats } from './matchmakingRoutes';
+import { getP2PSocialStats } from './socialRoutes';
 
 const router = Router();
 
@@ -75,17 +82,40 @@ function readLoginBody(body: unknown): {
 
 router.get('/config', (_req: Request, res: Response) => {
 	const runtime = getRagnarokServerRuntimeConfig();
+	const runtimeEvidence = buildRagnarokRuntimeEvidence(runtime);
 	res.json({
 		success: true,
-		stage: runtime.stage,
-		protocolId: runtime.protocolId,
-		resetEpoch: runtime.resetEpoch,
+		...runtimeEvidence,
 		adminAccount: runtime.adminAccount,
 		adminOperatorAccount: runtime.adminOperatorAccount,
 		multisigConfigured: Boolean(
 			runtime.adminOperatorAccount
 			&& runtime.adminOperatorAccount !== runtime.adminAccount,
 		),
+		closedBetaCutover: buildClosedBetaCutoverGate(runtime),
+	});
+});
+
+router.get('/p2p/status', (_req: Request, res: Response) => {
+	const relay = getP2PRelayStats();
+	const matchmaking = getP2PMatchmakingStats();
+	const social = getP2PSocialStats();
+	res.json({
+		success: true,
+		updatedAt: Date.now(),
+		relay,
+		matchmaking,
+		social,
+		summary: {
+			playersInRelayMatches: relay.activePlayersInMatches,
+			activeRelayRooms: relay.activeFullRooms,
+			activeMatchmakingPairs: matchmaking.activeMatches,
+			onlinePresenceUsers: social.onlineUsers,
+			pendingChallenges: social.pendingChallenges,
+			totalErrors: relay.totalErrors,
+			lastErrorAt: relay.lastErrorAt,
+			lastErrorReason: relay.lastErrorReason,
+		},
 	});
 });
 

@@ -1,8 +1,126 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronUp, Crosshair, UserPlus, Users, Wifi, WifiOff } from 'lucide-react';
-import { useFriendStore, type Friend, type FriendPresence } from '../../stores/friendStore';
+import { toast } from 'sonner';
+import { useNFTUsername } from '../../nft/hooks';
+import { useFriendStore, type Friend, type FriendPresence, type OutgoingFriendChallenge } from '../../stores/friendStore';
+import { usePeerStore } from '../../stores/peerStore';
 import { routes } from '../../../lib/routes';
+import {
+	CHALLENGE_STALE_THRESHOLD_MS,
+	readChallengeSendResponse,
+	type ChallengeRejectReason,
+	type P2PAvailabilityState,
+} from '@shared/p2pAvailability';
+
+type ChallengeButtonState = {
+	readonly disabled: boolean;
+	readonly label: string;
+	readonly detail: string;
+};
+
+const AVAILABILITY_LABELS: Record<P2PAvailabilityState, string> = {
+	available: 'Available',
+	challenging: 'Challenging',
+	challenge_pending: 'Pending',
+	matchmaking: 'Matchmaking',
+	in_match: 'In match',
+	reconnecting: 'Reconnecting',
+	busy: 'Busy',
+	offline: 'Offline',
+};
+
+const CHALLENGE_REJECT_LABELS: Record<ChallengeRejectReason, string> = {
+	offline: 'Player is offline.',
+	busy: 'Player is busy.',
+	matchmaking: 'Player is matchmaking.',
+	in_match: 'Player is in a match.',
+	reconnecting: 'Player is reconnecting.',
+	not_warband: 'Warband acceptance is required.',
+	rate_limited: 'Challenge cooldown active.',
+	stale_peer: 'Refresh presence before challenging.',
+	self_challenge: 'You cannot challenge yourself.',
+	invalid_input: 'Challenge request was invalid.',
+};
+
+function normalizeFriendUsername(value: string): string {
+	return value.trim().toLowerCase().replace(/^@/, '');
+}
+
+export function formatRetryAfterMs(retryAfterMs: number): string {
+	const seconds = Math.max(1, Math.ceil(retryAfterMs / 1000));
+	if (seconds < 60) return `${seconds}s`;
+	const minutes = Math.ceil(seconds / 60);
+	return `${minutes}m`;
+}
+
+export function challengeRejectReasonLabel(reason: ChallengeRejectReason, retryAfterMs?: number): string {
+	if (reason === 'rate_limited' && typeof retryAfterMs === 'number') {
+		return `Wait ${formatRetryAfterMs(retryAfterMs)} before challenging again.`;
+	}
+	return CHALLENGE_REJECT_LABELS[reason];
+}
+
+export function buildFriendChallengeRequest(params: {
+	readonly from: string;
+	readonly to: string;
+	readonly peerId: string;
+}): { readonly from: string; readonly to: string; readonly peerId: string } {
+	return {
+		from: normalizeFriendUsername(params.from),
+		to: normalizeFriendUsername(params.to),
+		peerId: params.peerId,
+	};
+}
+
+export function getFriendChallengeButtonState(params: {
+	readonly friend: Pick<Friend, 'hiveUsername' | 'relationStatus'>;
+	readonly presence?: FriendPresence;
+	readonly hiveUsername?: string | null;
+	readonly cooldownUntil?: number;
+	readonly outgoingChallenge?: OutgoingFriendChallenge | null;
+	readonly now: number;
+}): ChallengeButtonState {
+	const friendName = normalizeFriendUsername(params.friend.hiveUsername);
+	const hiveUsername = params.hiveUsername ? normalizeFriendUsername(params.hiveUsername) : null;
+	if (params.friend.relationStatus !== 'accepted') {
+		return { disabled: true, label: 'Challenge', detail: 'Invite required' };
+	}
+	if (!hiveUsername) {
+		return { disabled: true, label: 'Challenge', detail: 'Connect Hive' };
+	}
+	if (hiveUsername === friendName) {
+		return { disabled: true, label: 'Challenge', detail: 'Self challenge' };
+	}
+	if (params.cooldownUntil && params.cooldownUntil > params.now) {
+		return {
+			disabled: true,
+			label: 'Cooldown',
+			detail: `Wait ${formatRetryAfterMs(params.cooldownUntil - params.now)}`,
+		};
+	}
+	if (
+		params.outgoingChallenge
+		&& params.outgoingChallenge.to === friendName
+		&& params.outgoingChallenge.expiresAt > params.now
+	) {
+		return { disabled: true, label: 'Pending', detail: 'Challenge sent' };
+	}
+	if (!params.presence?.online) {
+		return { disabled: true, label: 'Challenge', detail: 'Offline' };
+	}
+
+	const availability = params.presence.availability ?? 'available';
+	if (params.presence.canReceiveChallenge === false || availability !== 'available') {
+		return {
+			disabled: true,
+			label: 'Challenge',
+			detail: AVAILABILITY_LABELS[availability],
+		};
+	}
+
+	return { disabled: false, label: 'Challenge', detail: 'Available' };
+}
 
 function AddFriendDialog({ onAdd, onClose }: { onAdd: (name: string) => void; onClose: () => void }) {
 	const [name, setName] = useState('');
@@ -35,14 +153,29 @@ function AddFriendDialog({ onAdd, onClose }: { onAdd: (name: string) => void; on
 	);
 }
 
-function FriendCard({ friend, presence, onChallenge }: { friend: Friend; presence?: FriendPresence; onChallenge: (username: string) => void }) {
+function FriendCard({
+	friend,
+	presence,
+	buttonState,
+	isSending,
+	onChallenge,
+}: {
+	readonly friend: Friend;
+	readonly presence?: FriendPresence;
+	readonly buttonState: ChallengeButtonState;
+	readonly isSending: boolean;
+	readonly onChallenge: (username: string) => void;
+}) {
 	const removeFriend = useFriendStore(s => s.removeFriend);
 	const isAccepted = friend.relationStatus === 'accepted';
 	const isOnline = presence?.online ?? false;
+	const statusLabel = isAccepted
+		? (isOnline ? AVAILABILITY_LABELS[presence?.availability ?? 'available'] : 'Offline')
+		: 'Invite required';
 
 		return (
 			<div className="flex items-center justify-between rounded-xl border border-white/5 bg-gray-900/35 px-3 py-2.5 transition-colors hover:bg-gray-800/40 group">
-				<div className="flex items-center gap-2">
+				<div className="flex min-w-0 items-center gap-2">
 					<div className={`inline-flex h-7 w-7 items-center justify-center rounded-full ${isAccepted && isOnline ? 'bg-green-500/12 text-green-300' : 'bg-slate-500/12 text-slate-400'}`}>
 						{isAccepted && isOnline
 							? <Wifi size={14} strokeWidth={2} />
@@ -50,20 +183,30 @@ function FriendCard({ friend, presence, onChallenge }: { friend: Friend; presenc
 								? <WifiOff size={14} strokeWidth={2} />
 								: <UserPlus size={14} strokeWidth={2} />}
 					</div>
-					<span className="text-sm font-medium text-gray-200">
-						{friend.nickname || `@${friend.hiveUsername}`}
-					</span>
+					<div className="min-w-0">
+						<span className="block truncate text-sm font-medium text-gray-200">
+							{friend.nickname || `@${friend.hiveUsername}`}
+						</span>
+						<span className="block truncate text-[11px] text-gray-500">{statusLabel}</span>
+					</div>
 				</div>
 				<div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-					{isAccepted && isOnline && (
+					{isAccepted && (
 						<button
 							type="button"
+							title={buttonState.detail}
 							onClick={() => onChallenge(friend.hiveUsername)}
-							className="inline-flex items-center gap-1 text-xs font-semibold text-amber-300 hover:text-amber-100"
+							disabled={buttonState.disabled || isSending}
+							className="inline-flex items-center gap-1 text-xs font-semibold text-amber-300 transition-colors hover:text-amber-100 disabled:cursor-not-allowed disabled:text-gray-500"
 						>
 							<Crosshair size={13} strokeWidth={2} />
-							Challenge
+							{isSending ? 'Sending' : buttonState.label}
 						</button>
+					)}
+					{isAccepted && buttonState.disabled && !isSending && (
+						<span className="max-w-24 truncate text-[11px] text-gray-500" title={buttonState.detail}>
+							{buttonState.detail}
+						</span>
 					)}
 					<button
 						type="button"
@@ -78,16 +221,79 @@ function FriendCard({ friend, presence, onChallenge }: { friend: Friend; presenc
 }
 
 export default function FriendsPanel() {
+	const hiveUsername = useNFTUsername();
 	const friends = useFriendStore(s => s.friends);
 	const onlineStatus = useFriendStore(s => s.onlineStatus);
+	const outgoingChallenge = useFriendStore(s => s.outgoingChallenge);
+	const challengeCooldowns = useFriendStore(s => s.challengeCooldowns);
+	const presenceCooldownUntil = useFriendStore(s => s.presenceCooldownUntil);
 	const addFriend = useFriendStore(s => s.addFriend);
+	const setOutgoingChallenge = useFriendStore(s => s.setOutgoingChallenge);
+	const setChallengeCooldown = useFriendStore(s => s.setChallengeCooldown);
+	const clearChallengeCooldown = useFriendStore(s => s.clearChallengeCooldown);
+	const pruneExpiredChallenges = useFriendStore(s => s.pruneExpiredChallenges);
 	const navigate = useNavigate();
 	const [showAdd, setShowAdd] = useState(false);
 	const [expanded, setExpanded] = useState(true);
+	const [sendingTo, setSendingTo] = useState<string | null>(null);
+	const now = Date.now();
 
-	const handleChallenge = useCallback((username: string) => {
-		navigate(`${routes.multiplayer}?challenge=${encodeURIComponent(username)}`);
-	}, [navigate]);
+	const handleChallenge = useCallback(async (username: string) => {
+		if (!hiveUsername) {
+			toast.error('Connect Hive before sending a challenge.');
+			return;
+		}
+		const target = normalizeFriendUsername(username);
+		setSendingTo(target);
+		try {
+			let peerId = usePeerStore.getState().myPeerId;
+			if (!peerId) {
+				usePeerStore.getState().prepareForMatchmaking();
+				peerId = usePeerStore.getState().myPeerId;
+			}
+			if (!peerId) {
+				toast.error('Could not create a peer reservation.');
+				return;
+			}
+
+			const response = await fetch('/api/friends/challenge', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(buildFriendChallengeRequest({
+					from: hiveUsername,
+					to: target,
+					peerId,
+				})),
+			});
+			const payload: unknown = await response.json().catch(() => null);
+			const parsed = readChallengeSendResponse(payload);
+
+			if (!response.ok || !parsed.ok) {
+				const reason = parsed.ok ? 'invalid_input' : parsed.reason;
+				if (!parsed.ok && reason === 'rate_limited' && typeof parsed.retryAfterMs === 'number') {
+					setChallengeCooldown(target, parsed.retryAfterMs);
+				}
+				toast.error(challengeRejectReasonLabel(reason, !parsed.ok ? parsed.retryAfterMs : undefined));
+				return;
+			}
+
+			const sentAt = Date.now();
+			setOutgoingChallenge({
+				to: target,
+				peerId,
+				sentAt,
+				expiresAt: parsed.challenge?.expiresAt ?? sentAt + CHALLENGE_STALE_THRESHOLD_MS,
+			});
+			clearChallengeCooldown(target);
+			pruneExpiredChallenges(sentAt);
+			toast.success(`Challenge sent to @${target}.`);
+			navigate(routes.multiplayer);
+		} catch {
+			toast.error('Challenge service is unavailable.');
+		} finally {
+			setSendingTo(null);
+		}
+	}, [hiveUsername, setOutgoingChallenge, setChallengeCooldown, clearChallengeCooldown, pruneExpiredChallenges, navigate]);
 
 	const acceptedFriends = friends.filter(f => f.relationStatus === 'accepted');
 	const localFriends = friends.filter(f => f.relationStatus !== 'accepted');
@@ -106,18 +312,37 @@ export default function FriendsPanel() {
 						Warband ({friends.length})
 					</h3>
 				</div>
-				<span className="text-gray-500 text-xs">
+				<span className="text-gray-500 text-xs" title={presenceCooldownUntil !== null && presenceCooldownUntil > now ? `Refresh cooldown: ${formatRetryAfterMs(presenceCooldownUntil - now)}` : undefined}>
 					{expanded ? <ChevronUp size={15} strokeWidth={2} /> : <ChevronDown size={15} strokeWidth={2} />}
 				</span>
 			</button>
 
 			{expanded && (
 				<div className="space-y-2">
+					{presenceCooldownUntil !== null && presenceCooldownUntil > now && (
+						<p className="px-1 text-[11px] text-amber-300">
+							Presence refresh cooldown: wait {formatRetryAfterMs(presenceCooldownUntil - now)}.
+						</p>
+					)}
 					{onlineFriends.length > 0 && (
 						<>
 							<p className="px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-green-400/75">Online</p>
 							{onlineFriends.map(f => (
-								<FriendCard key={f.hiveUsername} friend={f} presence={onlineStatus[f.hiveUsername]} onChallenge={handleChallenge} />
+								<FriendCard
+									key={f.hiveUsername}
+									friend={f}
+									presence={onlineStatus[f.hiveUsername]}
+									buttonState={getFriendChallengeButtonState({
+										friend: f,
+										presence: onlineStatus[f.hiveUsername],
+										hiveUsername,
+										cooldownUntil: challengeCooldowns[f.hiveUsername]?.until,
+										outgoingChallenge,
+										now,
+									})}
+									isSending={sendingTo === f.hiveUsername}
+									onChallenge={handleChallenge}
+								/>
 							))}
 						</>
 					)}
@@ -125,7 +350,21 @@ export default function FriendsPanel() {
 						<>
 							<p className="px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400/75">Offline</p>
 							{offlineFriends.map(f => (
-								<FriendCard key={f.hiveUsername} friend={f} presence={onlineStatus[f.hiveUsername]} onChallenge={handleChallenge} />
+								<FriendCard
+									key={f.hiveUsername}
+									friend={f}
+									presence={onlineStatus[f.hiveUsername]}
+									buttonState={getFriendChallengeButtonState({
+										friend: f,
+										presence: onlineStatus[f.hiveUsername],
+										hiveUsername,
+										cooldownUntil: challengeCooldowns[f.hiveUsername]?.until,
+										outgoingChallenge,
+										now,
+									})}
+									isSending={sendingTo === f.hiveUsername}
+									onChallenge={handleChallenge}
+								/>
 							))}
 						</>
 					)}
@@ -133,7 +372,21 @@ export default function FriendsPanel() {
 						<>
 							<p className="px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-200/70">Invite required</p>
 							{localFriends.map(f => (
-								<FriendCard key={f.hiveUsername} friend={f} presence={onlineStatus[f.hiveUsername]} onChallenge={handleChallenge} />
+								<FriendCard
+									key={f.hiveUsername}
+									friend={f}
+									presence={onlineStatus[f.hiveUsername]}
+									buttonState={getFriendChallengeButtonState({
+										friend: f,
+										presence: onlineStatus[f.hiveUsername],
+										hiveUsername,
+										cooldownUntil: challengeCooldowns[f.hiveUsername]?.until,
+										outgoingChallenge,
+										now,
+									})}
+									isSending={sendingTo === f.hiveUsername}
+									onChallenge={handleChallenge}
+								/>
 							))}
 						</>
 					)}

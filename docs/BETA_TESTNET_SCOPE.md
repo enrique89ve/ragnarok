@@ -53,12 +53,15 @@ The expected testnet shape is mainnet-like:
 - Different admin/index accounts when needed.
 - Resettable state with no permanent economic value.
 
-## Current Status — 2026-05-06
+## Current Status — 2026-05-21
 
 - Central network config exists in `shared/runtimeConfig.ts`, with client and server wrappers resolving from the same contract.
 - Testnet protocol id is `rk_game_testnet`.
 - Testnet collection id is `ragnarok-testnet`.
-- Testnet reset epoch is `testnet-s01-2026-05-19` unless explicitly changed for a QA/beta wipe.
+- Testnet reset epoch is `testnet-s01-2026-05-19` unless explicitly changed for
+  a QA/beta wipe. QA Testnet Season 0 must use a `qa-s0-*` or
+  `QA Season 0 / ...` epoch; Closed Testnet Beta must rotate to a non-QA
+  epoch such as `closed-beta-*`.
 - `npm run dev:testnet` starts the app with `.env.testnet`.
 - The UI shows a persistent `TESTNET` header badge.
 - The resettable testnet banner is dismissible.
@@ -68,16 +71,38 @@ The expected testnet shape is mainnet-like:
 - Per-command divergence detection uses WASM canonical state hashes for both wire paths: cards `game_command` envelopes carry `prevStateHash` over `computeStateHashSync` (TD-27c-cards, 2026-05-05), and chess `chess_command` envelopes carry a dual hash `prevChessStateHash` + `prevCardsStateHash` over canonical chess snapshot + cards GameState (TD-27c-chess, 2026-05-06). Domain-specific reject codes (`prev_chess_state_hash_mismatch` / `prev_cards_state_hash_mismatch`) localize forensics to the diverging slice.
 - Periodic 2s `hash_check` beacon broadcasts both cards and chess hashes (TD-27c-chess F3, 2026-05-06); cross-peer divergence is detected per-envelope at move time and per-beacon while idle. Slash evidence trxIds carry `cards_` / `chess_` infix for slice attribution.
 - Match modes are physically separated under `client/src/game/match/modes/{single,campaign,p2p}/` with ESLint-enforced isolation; gameplay routes split as `/game/single` and `/game/campaign`, while legacy `/game` redirects to `/game/single`.
+- QA Season 0 slices 01-06 are closed: reset epoch, QA full-catalog
+  entitlement, DUAT provenance/filter, ceremony feedback, RUNE/pack smoke, and
+  campaign QA pass.
+- P2P Season 0 is code-hardened and waiting on the real two-browser Hive
+  Keychain smoke.
+- P2P session-log exports now carry shared runtime evidence, including reset
+  epoch and QA full-catalog state.
+- `/api/health` and `/api/admin/config` expose `runtimePhase`,
+  `qaFullCatalogEnabled`, `storageNamespace`, and the automated
+  `closedBetaCutover` gate. A Closed Beta invite run should not proceed while
+  `closedBetaCutover.inviteBlocked` is `true`.
+- The Week One operator plan lives in
+  [`TESTNET_WEEK_ONE_SPEC.md`](./TESTNET_WEEK_ONE_SPEC.md).
 
 ## Next Gate
 
-Perform the first Hive smoke test:
+Complete the QA Season 0 week-one readiness gate:
 
-1. Start with `npm run dev:testnet`.
-2. Connect Hive Keychain.
-3. Broadcast a low-risk op, preferably queue join/leave or match anchor.
-4. Verify Hive shows `custom_json` id `rk_game_testnet`.
-5. Verify client replay sees the same op.
+1. Start with a `qa-s0-*` reset epoch, not the default `testnet-s01-*` epoch.
+2. Confirm `/api/health` reports testnet, `rk_game_testnet`, the QA epoch, and
+   resettable mode. During QA Season 0, `runtime.runtimePhase` must be
+   `qa-season-0` and `runtime.closedBetaCutover.inviteBlocked` should remain
+   `true`.
+3. Run the focused Season 0/P2P/RUNE verification matrix from
+   [`TESTNET_WEEK_ONE_SPEC.md`](./TESTNET_WEEK_ONE_SPEC.md).
+4. Complete the two-browser P2P Hive Keychain smoke from
+   [`TESTNET_RUNBOOK.md`](./TESTNET_RUNBOOK.md#smoke-test--p2p-qa-season-0).
+5. Keep Closed Testnet Beta invites blocked until issue 08 proves a non-QA
+   `closed-beta-*` epoch, `qaFullCatalogEnabled: false`,
+   `closedBetaCutover.inviteBlocked: false`, and the NFTLoX/starter/DUAT/RUNE
+   ownership gates. The final NFTLoX schema, tester cohort, and invite timing
+   still require owner/operator sign-off.
 
 ## Beta Modes
 

@@ -3,7 +3,11 @@ import {
 	recordSessionEvent,
 	type SessionEvent,
 } from '../../data/blockchain/transcriptBuilder';
-import { getRagnarokStorageNamespace, isQaFullCatalogEntitlementEnabled, type RagnarokRuntimeConfig } from '@shared/runtimeConfig';
+import {
+	buildRagnarokRuntimeEvidence,
+	type RagnarokRuntimeConfig,
+	type RagnarokRuntimeEvidence,
+} from '@shared/runtimeConfig';
 import { RAGNAROK_NETWORK_CONFIG } from '../config/networkConfig';
 
 declare const __BUILD_HASH__: string;
@@ -24,19 +28,7 @@ export interface CeremonyEvidenceInput {
 	readonly context?: Record<string, unknown>;
 }
 
-export interface CeremonyRuntimeEvidence {
-	readonly stage: RagnarokRuntimeConfig['stage'];
-	readonly executionMode: RagnarokRuntimeConfig['executionMode'];
-	readonly protocolId: string;
-	readonly collectionId: string;
-	readonly nftLoxProtocolId: string;
-	readonly resetEpoch: string;
-	readonly resettable: boolean;
-	readonly economic: boolean;
-	readonly seasonStart: string;
-	readonly storageNamespace: string;
-	readonly qaFullCatalogEnabled: boolean;
-}
+export type CeremonyRuntimeEvidence = RagnarokRuntimeEvidence;
 
 export interface CeremonyEvidencePayload {
 	readonly version: 1;
@@ -50,19 +42,7 @@ export interface CeremonyEvidencePayload {
 }
 
 export function buildCeremonyRuntimeEvidence(config: RagnarokRuntimeConfig): CeremonyRuntimeEvidence {
-	return {
-		stage: config.stage,
-		executionMode: config.executionMode,
-		protocolId: config.protocolId,
-		collectionId: config.collectionId,
-		nftLoxProtocolId: config.nftLoxProtocolId,
-		resetEpoch: config.resetEpoch,
-		resettable: config.resettable,
-		economic: config.economic,
-		seasonStart: config.seasonStart,
-		storageNamespace: getRagnarokStorageNamespace(config),
-		qaFullCatalogEnabled: isQaFullCatalogEntitlementEnabled(config),
-	};
+	return buildRagnarokRuntimeEvidence(config);
 }
 
 export function buildCeremonyEvidencePayload(

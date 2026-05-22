@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
 	RAGNAROK_RUNTIME_CONFIGS,
+	buildClosedBetaCutoverGate,
+	buildRagnarokRuntimeEvidence,
 	createRagnarokDatabaseName,
 	createRagnarokStorageKey,
 	getRagnarokStorageNamespace,
+	getRagnarokRuntimePhase,
+	isClosedTestnetBetaResetEpoch,
 	isQaFullCatalogEntitlementEnabled,
 	resolveRagnarokRuntimeConfig,
 	shouldAcceptCustomJsonId,
@@ -100,6 +104,17 @@ describe('runtimeConfig', () => {
 		expect(isQaFullCatalogEntitlementEnabled(mainnet)).toBe(false);
 	});
 
+	it('classifies closed beta reset epochs without enabling QA full-catalog access', () => {
+		const closedBeta = resolveRagnarokRuntimeConfig({
+			VITE_NETWORK_STAGE: 'testnet',
+			VITE_RAGNAROK_RESET_EPOCH: 'Closed Beta / 2026-06',
+		});
+
+		expect(isClosedTestnetBetaResetEpoch(closedBeta.resetEpoch)).toBe(true);
+		expect(getRagnarokRuntimePhase(closedBeta)).toBe('closed-beta');
+		expect(isQaFullCatalogEntitlementEnabled(closedBeta)).toBe(false);
+	});
+
 	it('namespaces storage and IndexedDB by stage, reset epoch, and protocol id', () => {
 		const qaSeason0 = resolveRagnarokRuntimeConfig({
 			VITE_NETWORK_STAGE: 'testnet',
@@ -128,5 +143,77 @@ describe('runtimeConfig', () => {
 		expect(createRagnarokDatabaseName(qaSeason0, 'chain-v1')).not.toBe(
 			createRagnarokDatabaseName(closedBeta, 'chain-v1'),
 		);
+	});
+
+	it('builds shared runtime evidence for tester exports', () => {
+		const config = resolveRagnarokRuntimeConfig({
+			VITE_NETWORK_STAGE: 'testnet',
+			VITE_RAGNAROK_RESET_EPOCH: 'qa-s0-export-evidence',
+			RAGNAROK_PROTOCOL_ID: 'rk_game_testnet',
+		});
+
+		expect(buildRagnarokRuntimeEvidence(config)).toEqual({
+			stage: 'testnet',
+			executionMode: 'testnet',
+			protocolId: 'rk_game_testnet',
+			collectionId: 'ragnarok-testnet',
+			nftLoxProtocolId: 'nftlox_testnet',
+			resetEpoch: 'qa-s0-export-evidence',
+			resettable: true,
+			economic: false,
+			runtimePhase: 'qa-season-0',
+			seasonStart: '2026-05-19T00:00:00Z',
+			storageNamespace: 'ragnarok-testnet-qa-s0-export-evidence-rk-game-testnet',
+			qaFullCatalogEnabled: true,
+		});
+	});
+
+	it('passes the automated closed beta cutover gate for a configured closed-beta epoch', () => {
+		const config = resolveRagnarokRuntimeConfig({
+			VITE_NETWORK_STAGE: 'testnet',
+			VITE_RAGNAROK_RESET_EPOCH: 'closed-beta-2026-06',
+			RAGNAROK_PROTOCOL_ID: 'rk_game_testnet',
+		});
+		const gate = buildClosedBetaCutoverGate(config);
+
+		expect(gate).toMatchObject({
+			targetPhase: 'closed-beta',
+			activePhase: 'closed-beta',
+			resetEpoch: 'closed-beta-2026-06',
+			operatorSignoffRequired: true,
+			inviteBlocked: false,
+			blockerIds: [],
+		});
+		expect(gate.checks.every((check) => check.status === 'pass')).toBe(true);
+		expect(gate.storageNamespace).toBe('ragnarok-testnet-closed-beta-2026-06-rk-game-testnet');
+	});
+
+	it('blocks closed beta invites while the active epoch is still QA Season 0', () => {
+		const config = resolveRagnarokRuntimeConfig({
+			VITE_NETWORK_STAGE: 'testnet',
+			VITE_RAGNAROK_RESET_EPOCH: 'qa-s0-2026-05',
+			RAGNAROK_PROTOCOL_ID: 'rk_game_testnet',
+		});
+		const gate = buildClosedBetaCutoverGate(config);
+
+		expect(gate.activePhase).toBe('qa-season-0');
+		expect(gate.inviteBlocked).toBe(true);
+		expect(gate.blockerIds).toContain('closed_beta_reset_epoch');
+		expect(gate.blockerIds).toContain('qa_full_catalog_disabled');
+		expect(gate.blockerIds).toContain('ownership_authority_scope');
+	});
+
+	it('blocks closed beta invites when NFT custody configuration is missing', () => {
+		const config = {
+			...RAGNAROK_RUNTIME_CONFIGS.testnet,
+			resetEpoch: 'closed-beta-2026-06',
+			collectionId: '',
+			nftLoxProtocolId: '',
+		};
+		const gate = buildClosedBetaCutoverGate(config);
+
+		expect(gate.activePhase).toBe('closed-beta');
+		expect(gate.inviteBlocked).toBe(true);
+		expect(gate.blockerIds).toEqual(['collection_id_configured', 'nftlox_protocol_configured']);
 	});
 });

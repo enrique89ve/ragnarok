@@ -127,9 +127,11 @@ function getPackOpeningCeremony(source: PackCeremonySource): CeremonyKind {
 
 export default function PacksPage() {
 	// Re-read on every render — sealed pack inventory mutates after burn/send.
-	const sealedPacks = getNFTBridge().getPackCollection().filter(p => p.sealed);
+	const bridge = getNFTBridge();
+	const sealedPacks = bridge.getPackCollection().filter(p => p.sealed);
 
 	const hiveUsername = useNFTUsername();
+	const normalizedHiveUsername = hiveUsername?.toLowerCase() ?? null;
 	const starterClaimed = useStarterStore(s => s.hasClaimed(hiveUsername));
 
 	// DUAT airdrop awareness — vault is the primary surface for the claim CTA.
@@ -145,8 +147,14 @@ export default function PacksPage() {
 	const duatClaimed = duatEntry?.claimed ?? false;
 	const duatClaimReady = duatEntry?.claimReady ?? false;
 	const duatClaimBlockedReason = duatEntry?.claimBlockedReason ?? null;
-	const duatConfirming = duatClaimReady && Boolean(duatPendingClaimTrxId && !duatClaimed);
-	const showDuatRow = Boolean(duatEntry) && !duatClaimed;
+	const duatSealedPackCount = sealedPacks.filter(pack => getPackCeremonySource(pack) === 'duat_airdrop').length;
+	const duatOpenedCardCount = bridge.getCardCollection().filter(card =>
+		(!normalizedHiveUsername || card.ownerId.toLowerCase() === normalizedHiveUsername)
+		&& isDuatAcquisitionProvenance(card.acquisition)
+	).length;
+	const duatInventoryMaterialized = duatSealedPackCount > 0 || duatOpenedCardCount > 0;
+	const duatConfirming = duatClaimReady && Boolean(duatPendingClaimTrxId && !duatClaimed && !duatInventoryMaterialized);
+	const showDuatRow = Boolean(duatEntry) && !duatClaimed && !duatInventoryMaterialized;
 
 	const [showCeremony, setShowCeremony] = useState(false);
 	const [showPackCeremony, setShowPackCeremony] = useState(false);

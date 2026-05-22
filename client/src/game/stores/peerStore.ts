@@ -31,6 +31,8 @@ import { debug } from '../config/debugConfig';
 import { LocalWebSocketTransport, deriveRelayUrl } from './wsTransport';
 import type { ArmySelection } from '../types/ChessTypes';
 import type { P2PMessage, WireMessage } from '../p2p/messages';
+import type { P2PConnectionAvailabilityState } from '@shared/p2pAvailability';
+export { isP2PConnectionStateBusy } from '@shared/p2pAvailability';
 
 // ── Timing Constants ──
 
@@ -87,14 +89,7 @@ export interface P2PConnection {
 
 export type P2PDisconnectSide = 'local' | 'opponent' | 'unknown';
 
-export type P2PConnectionState =
-	| 'disconnected'
-	| 'connecting'
-	| 'waiting'
-	| 'connected'
-	| 'reconnecting'
-	| 'grace_period'
-	| 'error';
+export type P2PConnectionState = P2PConnectionAvailabilityState;
 
 export interface PeerStore {
 	myPeerId: string | null;

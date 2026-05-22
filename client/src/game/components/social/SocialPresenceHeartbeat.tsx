@@ -1,36 +1,39 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useNFTUsername } from '../../nft/hooks';
-import { useFriendStore, type Friend, type FriendPresence } from '../../stores/friendStore';
+import { useFriendStore, type Friend } from '../../stores/friendStore';
 import { usePeerStore } from '../../stores/peerStore';
+import { useMatchmakingStore } from '../../stores/matchmakingStore';
+import {
+	availabilityFromConnectionState,
+	isValidAvailabilityHiveUsername,
+	readChallengeSendResponse,
+	readPresenceHeartbeatResponse,
+	type FriendPresenceSnapshot,
+	type P2PAvailabilityState,
+	type ServerSignedChallenge,
+} from '@shared/p2pAvailability';
 
 const PRESENCE_HEARTBEAT_INTERVAL_MS = 120_000;
+const PRESENCE_HEARTBEAT_MIN_GAP_MS = 120_000;
+const presenceHeartbeatNextAllowedAt = new Map<string, number>();
 
 type PresenceHeartbeatBody = {
 	readonly username: string;
 	readonly friends: readonly string[];
 	readonly peerId?: string;
+	readonly availability?: P2PAvailabilityState;
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function isFriendPresence(value: unknown): value is FriendPresence {
-	if (!isRecord(value)) return false;
-	if (typeof value.online !== 'boolean') return false;
-	if ('peerId' in value && typeof value.peerId !== 'string') return false;
-	if ('lastSeen' in value && typeof value.lastSeen !== 'number') return false;
-	return true;
-}
 
 export function buildPresenceHeartbeatBody(params: {
 	readonly username: string;
 	readonly friends: ReadonlyArray<Pick<Friend, 'hiveUsername'>>;
 	readonly peerId?: string | null;
+	readonly availability?: P2PAvailabilityState;
 }): PresenceHeartbeatBody {
 	const body: PresenceHeartbeatBody = {
 		username: params.username.toLowerCase(),
 		friends: params.friends.map(friend => friend.hiveUsername.toLowerCase()),
+		...(params.availability ? { availability: params.availability } : {}),
 	};
 
 	if (typeof params.peerId === 'string' && params.peerId.length > 0) {
@@ -45,29 +48,51 @@ export function getPresenceEligibleFriends(
 ): ReadonlyArray<Pick<Friend, 'hiveUsername'>> {
 	return friends
 		.filter(friend => friend.relationStatus === 'accepted')
-		.map(friend => ({ hiveUsername: friend.hiveUsername }));
+		.map(friend => ({ hiveUsername: friend.hiveUsername.toLowerCase().replace(/^@/, '') }))
+		.filter(friend => isValidAvailabilityHiveUsername(friend.hiveUsername));
 }
 
-export function readFriendPresenceStatuses(payload: unknown): Record<string, FriendPresence> {
-	if (!isRecord(payload) || !isRecord(payload.statuses)) return {};
+export function readFriendPresenceStatuses(payload: unknown): Record<string, FriendPresenceSnapshot> {
+	return readPresenceHeartbeatResponse(payload).statuses;
+}
 
-	const statuses: Record<string, FriendPresence> = {};
-	for (const [username, presence] of Object.entries(payload.statuses)) {
-		if (!isFriendPresence(presence)) continue;
-		statuses[username.toLowerCase()] = presence;
-	}
+export function readFriendPresenceChallenges(payload: unknown): readonly ServerSignedChallenge[] {
+	return readPresenceHeartbeatResponse(payload).challenges;
+}
 
-	return statuses;
+export function canSendPresenceHeartbeat(username: string, now = Date.now()): boolean {
+	return now >= (presenceHeartbeatNextAllowedAt.get(username.toLowerCase()) ?? 0);
+}
+
+export function markPresenceHeartbeatSent(username: string, now = Date.now()): void {
+	presenceHeartbeatNextAllowedAt.set(username.toLowerCase(), now + PRESENCE_HEARTBEAT_MIN_GAP_MS);
+}
+
+function markPresenceHeartbeatCooldown(username: string, retryAfterMs: number, now = Date.now()): void {
+	presenceHeartbeatNextAllowedAt.set(username.toLowerCase(), now + Math.max(retryAfterMs, PRESENCE_HEARTBEAT_MIN_GAP_MS));
 }
 
 export default function SocialPresenceHeartbeat() {
 	const hiveUsername = useNFTUsername();
 	const friends = useFriendStore(state => state.friends);
 	const updatePresence = useFriendStore(state => state.updatePresence);
+	const addChallenges = useFriendStore(state => state.addChallenges);
+	const setPresenceCooldown = useFriendStore(state => state.setPresenceCooldown);
+	const pruneExpiredChallenges = useFriendStore(state => state.pruneExpiredChallenges);
 	const peerId = usePeerStore(state => state.myPeerId);
+	const connectionState = usePeerStore(state => state.connectionState);
+	const matchmakingStatus = useMatchmakingStore(state => state.status);
+	const availabilityRef = useRef<P2PAvailabilityState>('available');
+
+	useEffect(() => {
+		availabilityRef.current = availabilityFromConnectionState(connectionState, matchmakingStatus);
+	}, [connectionState, matchmakingStatus]);
 
 	const sendHeartbeat = useCallback(async (signal?: AbortSignal) => {
 		if (!hiveUsername) return;
+		const normalizedUsername = hiveUsername.toLowerCase();
+		if (!canSendPresenceHeartbeat(normalizedUsername)) return;
+		markPresenceHeartbeatSent(normalizedUsername);
 
 		try {
 			const response = await fetch('/api/friends/heartbeat', {
@@ -77,18 +102,29 @@ export default function SocialPresenceHeartbeat() {
 					username: hiveUsername,
 					friends: getPresenceEligibleFriends(friends),
 					peerId,
+					availability: availabilityRef.current,
 				})),
 				signal,
 			});
 
-			if (!response.ok) return;
-
 			const payload: unknown = await response.json();
-			updatePresence(readFriendPresenceStatuses(payload));
+			if (!response.ok) {
+				const parsed = readChallengeSendResponse(payload);
+				if (!parsed.ok && parsed.reason === 'rate_limited' && typeof parsed.retryAfterMs === 'number') {
+					markPresenceHeartbeatCooldown(normalizedUsername, parsed.retryAfterMs);
+					setPresenceCooldown(parsed.retryAfterMs);
+				}
+				return;
+			}
+
+			const parsed = readPresenceHeartbeatResponse(payload);
+			updatePresence(parsed.statuses);
+			addChallenges(parsed.challenges);
+			pruneExpiredChallenges();
 		} catch (error) {
 			if (error instanceof Error && error.name === 'AbortError') return;
 		}
-	}, [hiveUsername, friends, peerId, updatePresence]);
+	}, [hiveUsername, friends, peerId, updatePresence, addChallenges, setPresenceCooldown, pruneExpiredChallenges]);
 
 	useEffect(() => {
 		if (!hiveUsername) return undefined;

@@ -19,6 +19,14 @@ import {
 	type AdminSessionLoginPayload,
 	type NftLoxAdminAction,
 } from '@shared/protocol-core';
+import {
+	RAGNAROK_CLOSED_BETA_CUTOVER_CHECK_IDS,
+	RAGNAROK_RUNTIME_PHASES,
+	type RagnarokClosedBetaCutoverGate,
+	type RagnarokClosedBetaCutoverCheck,
+	type RagnarokClosedBetaCutoverCheckId,
+	type RagnarokRuntimePhase,
+} from '@shared/runtimeConfig';
 
 type NftLoxSeedInput = {
 	readonly artId: string;
@@ -52,7 +60,16 @@ type AdminMultisigPrepareResponse = {
 export type AdminServerConfig = {
 	readonly stage: string;
 	readonly protocolId: string;
-	readonly resetEpoch?: string;
+	readonly collectionId: string;
+	readonly nftLoxProtocolId: string;
+	readonly resetEpoch: string;
+	readonly resettable: boolean;
+	readonly economic: boolean;
+	readonly runtimePhase: RagnarokRuntimePhase;
+	readonly seasonStart: string;
+	readonly storageNamespace: string;
+	readonly qaFullCatalogEnabled: boolean;
+	readonly closedBetaCutover: RagnarokClosedBetaCutoverGate;
 	readonly adminAccount: string;
 	readonly adminOperatorAccount: string;
 	readonly multisigConfigured: boolean;
@@ -69,6 +86,49 @@ export type AdminSessionStatus = {
 	readonly lastSeenAt?: number;
 	readonly loginSignature?: boolean;
 	readonly reason?: string;
+};
+
+export type AdminP2PStatus = {
+	readonly success: true;
+	readonly updatedAt: number;
+	readonly relay: {
+		readonly activeRooms: number;
+		readonly activeConnections: number;
+		readonly activeFullRooms: number;
+		readonly activePlayersInMatches: number;
+		readonly totalConnections: number;
+		readonly totalMessagesRelayed: number;
+		readonly totalFramesDropped: number;
+		readonly totalErrors: number;
+		readonly errorsByReason: Readonly<Record<string, number>>;
+		readonly lastErrorAt: number | null;
+		readonly lastErrorReason: string | null;
+	};
+	readonly matchmaking: {
+		readonly queueLength: number;
+		readonly activeMatches: number;
+		readonly queuedPlayersWithUsername: number;
+		readonly oldestQueuedMs: number | null;
+	};
+	readonly social: {
+		readonly onlineUsers: number;
+		readonly availableUsers: number;
+		readonly matchmakingUsers: number;
+		readonly inMatchUsers: number;
+		readonly reconnectingUsers: number;
+		readonly busyUsers: number;
+		readonly pendingChallenges: number;
+	};
+	readonly summary: {
+		readonly playersInRelayMatches: number;
+		readonly activeRelayRooms: number;
+		readonly activeMatchmakingPairs: number;
+		readonly onlinePresenceUsers: number;
+		readonly pendingChallenges: number;
+		readonly totalErrors: number;
+		readonly lastErrorAt: number | null;
+		readonly lastErrorReason: string | null;
+	};
 };
 
 export type AdminSessionRequestResult =
@@ -88,6 +148,28 @@ type AdminSession =
 
 let lastAdminNonce = 0;
 let adminConfigPromise: Promise<AdminServerConfig> | null = null;
+let adminConfigAllowMissingOperatorPromise: Promise<AdminServerConfig> | null = null;
+
+type AdminServerConfigOptions = {
+	readonly requireMultisig?: boolean;
+};
+
+const ADMIN_CONFIG_REQUIRED_STRING_FIELDS = [
+	'stage',
+	'protocolId',
+	'collectionId',
+	'nftLoxProtocolId',
+	'resetEpoch',
+	'seasonStart',
+	'storageNamespace',
+	'adminAccount',
+] as const;
+const ADMIN_CONFIG_REQUIRED_BOOLEAN_FIELDS = [
+	'resettable',
+	'economic',
+	'qaFullCatalogEnabled',
+	'multisigConfigured',
+] as const;
 
 function nextAdminNonce(): number {
 	const now = Date.now();
@@ -95,18 +177,73 @@ function nextAdminNonce(): number {
 	return lastAdminNonce;
 }
 
+function isNonEmptyString(value: unknown): value is string {
+	return typeof value === 'string' && value.trim().length > 0;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function hasNonEmptyStringFields(
+	body: Record<string, unknown>,
+	fields: readonly string[],
+): boolean {
+	return fields.every((field) => isNonEmptyString(body[field]));
+}
+
+function hasBooleanFields(
+	body: Record<string, unknown>,
+	fields: readonly string[],
+): boolean {
+	return fields.every((field) => typeof body[field] === 'boolean');
+}
+
 function isAdminServerConfig(value: unknown): value is AdminServerConfig {
 	if (typeof value !== 'object' || value === null) return false;
 	const body = value as Record<string, unknown>;
 	return body.success === true
-		&& typeof body.stage === 'string'
-		&& body.stage.trim().length > 0
-		&& typeof body.protocolId === 'string'
-		&& body.protocolId.trim().length > 0
-		&& typeof body.adminAccount === 'string'
-		&& body.adminAccount.trim().length > 0
-		&& typeof body.adminOperatorAccount === 'string'
-		&& typeof body.multisigConfigured === 'boolean';
+		&& hasNonEmptyStringFields(body, ADMIN_CONFIG_REQUIRED_STRING_FIELDS)
+		&& hasBooleanFields(body, ADMIN_CONFIG_REQUIRED_BOOLEAN_FIELDS)
+		&& isRagnarokRuntimePhase(body.runtimePhase)
+		&& isRagnarokClosedBetaCutoverGate(body.closedBetaCutover)
+		&& typeof body.adminOperatorAccount === 'string';
+}
+
+function isRagnarokRuntimePhase(value: unknown): value is RagnarokRuntimePhase {
+	return typeof value === 'string' && RAGNAROK_RUNTIME_PHASES.includes(value as RagnarokRuntimePhase);
+}
+
+function isClosedBetaCutoverCheckId(value: unknown): value is RagnarokClosedBetaCutoverCheckId {
+	return (
+		typeof value === 'string'
+		&& RAGNAROK_CLOSED_BETA_CUTOVER_CHECK_IDS.includes(value as RagnarokClosedBetaCutoverCheckId)
+	);
+}
+
+function isRagnarokClosedBetaCutoverCheck(value: unknown): value is RagnarokClosedBetaCutoverCheck {
+	if (typeof value !== 'object' || value === null) return false;
+	const body = value as Record<string, unknown>;
+	return isClosedBetaCutoverCheckId(body.id)
+		&& (body.status === 'pass' || body.status === 'fail')
+		&& typeof body.detail === 'string';
+}
+
+function isRagnarokClosedBetaCutoverGate(value: unknown): value is RagnarokClosedBetaCutoverGate {
+	if (typeof value !== 'object' || value === null) return false;
+	const body = value as Record<string, unknown>;
+	return body.targetPhase === 'closed-beta'
+		&& isRagnarokRuntimePhase(body.activePhase)
+		&& typeof body.resetEpoch === 'string'
+		&& body.resetEpoch.trim().length > 0
+		&& typeof body.storageNamespace === 'string'
+		&& body.storageNamespace.trim().length > 0
+		&& typeof body.operatorSignoffRequired === 'boolean'
+		&& typeof body.inviteBlocked === 'boolean'
+		&& Array.isArray(body.blockerIds)
+		&& body.blockerIds.every(isClosedBetaCutoverCheckId)
+		&& Array.isArray(body.checks)
+		&& body.checks.every(isRagnarokClosedBetaCutoverCheck);
 }
 
 function isAdminSessionStatus(value: unknown): value is AdminSessionStatus {
@@ -129,6 +266,17 @@ function isAdminSessionVerifyResponse(value: unknown): value is {
 	if (typeof session !== 'object' || session === null) return false;
 	return body.success === true
 		&& isAdminSessionStatus({ ...(session as Record<string, unknown>), success: true });
+}
+
+function isAdminP2PStatus(value: unknown): value is AdminP2PStatus {
+	if (typeof value !== 'object' || value === null) return false;
+	const body = value as Record<string, unknown>;
+	return body.success === true
+		&& typeof body.updatedAt === 'number'
+		&& isRecord(body.relay)
+		&& isRecord(body.matchmaking)
+		&& isRecord(body.social)
+		&& isRecord(body.summary);
 }
 
 function isHiveTransactionObject(value: unknown): value is HiveTransactionObject {
@@ -161,8 +309,12 @@ function readAdminApiErrorBody(body: unknown, fallback: string): string {
 	return fallback;
 }
 
-export async function getAdminServerConfig(): Promise<AdminServerConfig> {
-	adminConfigPromise ??= fetch('/api/admin/config')
+export async function getAdminServerConfig(options: AdminServerConfigOptions = {}): Promise<AdminServerConfig> {
+	const requireMultisig = options.requireMultisig ?? true;
+	const cachedPromise = requireMultisig ? adminConfigPromise : adminConfigAllowMissingOperatorPromise;
+	if (cachedPromise) return cachedPromise;
+
+	const request = fetch('/api/admin/config')
 		.then(async response => {
 			const body: unknown = await response.json().catch(() => null);
 			if (!response.ok) {
@@ -176,22 +328,61 @@ export async function getAdminServerConfig(): Promise<AdminServerConfig> {
 			if (!isAdminServerConfig(body)) {
 				throw new Error('Admin config response is invalid');
 			}
-			if (!body.multisigConfigured) {
+			if (requireMultisig && !body.multisigConfigured) {
 				throw new Error('Admin operator account is not configured');
 			}
 			return {
 				stage: body.stage.trim(),
 				protocolId: body.protocolId.trim(),
+				collectionId: body.collectionId.trim(),
+				nftLoxProtocolId: body.nftLoxProtocolId.trim(),
+				resetEpoch: body.resetEpoch.trim(),
+				resettable: body.resettable,
+				economic: body.economic,
+				runtimePhase: body.runtimePhase,
+				seasonStart: body.seasonStart.trim(),
+				storageNamespace: body.storageNamespace.trim(),
+				qaFullCatalogEnabled: body.qaFullCatalogEnabled,
+				closedBetaCutover: body.closedBetaCutover,
 				adminAccount: body.adminAccount.trim(),
 				adminOperatorAccount: body.adminOperatorAccount.trim(),
 				multisigConfigured: body.multisigConfigured,
 			};
 		})
 		.catch(err => {
-			adminConfigPromise = null;
+			if (requireMultisig) {
+				adminConfigPromise = null;
+			} else {
+				adminConfigAllowMissingOperatorPromise = null;
+			}
 			throw err;
 		});
-	return adminConfigPromise;
+	if (requireMultisig) {
+		adminConfigPromise = request;
+	} else {
+		adminConfigAllowMissingOperatorPromise = request;
+	}
+	return request;
+}
+
+export async function getAdminP2PStatus(): Promise<AdminP2PStatus> {
+	const response = await fetch('/api/admin/p2p/status', {
+		credentials: 'same-origin',
+	});
+	const contentType = response.headers.get('content-type') ?? '';
+	const body: unknown = contentType.includes('application/json')
+		? await response.json().catch(() => null)
+		: null;
+	if (!response.ok) {
+		throw new Error(readAdminApiErrorBody(body, `Admin P2P status failed with HTTP ${response.status}`));
+	}
+	if (!contentType.includes('application/json')) {
+		throw new Error('Admin P2P status endpoint is unavailable. Restart the dev server so /api/admin/p2p/status is mounted.');
+	}
+	if (!isAdminP2PStatus(body)) {
+		throw new Error('Admin P2P status response is invalid');
+	}
+	return body;
 }
 
 export async function getAdminSessionStatus(): Promise<AdminSessionStatus> {

@@ -4,6 +4,8 @@ import { usePeerStore } from '../stores/peerStore';
 import { getNFTBridge } from '../nft';
 import { useNFTUsername } from '../nft/hooks';
 import { debug } from '../config/debugConfig';
+import { isHiveWalletAvailable } from '../../data/HiveAuth';
+import { isSharedNetworkEnvironment } from '../config/featureFlags';
 import {
 	broadcastQueueJoin,
 	broadcastQueueLeave,
@@ -51,11 +53,12 @@ export function useMatchmaking() {
 			setError(null);
 
 			const nftBridge = getNFTBridge();
-			if (nftBridge.isHiveMode() && !hiveUsername) {
+			const sharedNetwork = isSharedNetworkEnvironment();
+			if (sharedNetwork && (!hiveUsername || !isHiveWalletAvailable())) {
 				return failJoin('Connect Hive Keychain before entering testnet matchmaking.');
 			}
 
-			if (nftBridge.isHiveMode() && hiveUsername) {
+			if ((nftBridge.isHiveMode() || sharedNetwork) && hiveUsername) {
 				const elo = nftBridge.getElo();
 
 				const leaveFn = await broadcastQueueJoin({

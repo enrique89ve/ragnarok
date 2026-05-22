@@ -217,6 +217,16 @@ export type HbdPackSaleScenarioTotals = Readonly<{
 	grossHbd: number;
 }>;
 
+export type HbdPackSaleScenarioAllocation = Readonly<{
+	packKey: RuneRedeemablePackKey;
+	packCap: number;
+	cardCount: number;
+	cardInstanceCap: number;
+	unitPriceThousandths: number;
+	grossThousandths: number;
+	grossHbd: number;
+}>;
+
 export type HbdPackPurchaseQuoteInput = Readonly<{
 	packType: string;
 	quantity: number;
@@ -505,20 +515,38 @@ export function getRunePackPoolTotals(pool: RunePackPoolConfig = TESTNET_RUNE_PA
 export function getHbdPackSaleScenarioTotals(
 	scenario: HbdPackSaleScenario = getActiveHbdPackSaleScenario(),
 ): HbdPackSaleScenarioTotals {
-	const totals = RUNE_REDEEMABLE_PACK_KEYS.reduce(
-		(totals, packKey) => {
-			const pack = PACK_DEFINITIONS[packKey];
-			const packCap = scenario.packCaps[packKey];
-			const priceThousandths = scenario.priceThousandths[packKey];
+	const totals = getHbdPackSaleScenarioAllocations(scenario).reduce(
+		(totals, allocation) => {
 			return {
 				key: scenario.key,
-				packCap: totals.packCap + packCap,
-				cardInstanceCap: totals.cardInstanceCap + (pack.cardCount * packCap),
-				grossThousandths: totals.grossThousandths + (packCap * priceThousandths),
+				packCap: totals.packCap + allocation.packCap,
+				cardInstanceCap: totals.cardInstanceCap + allocation.cardInstanceCap,
+				grossThousandths: totals.grossThousandths + allocation.grossThousandths,
 				grossHbd: 0,
 			};
 		},
 		{ key: scenario.key, packCap: 0, cardInstanceCap: 0, grossThousandths: 0, grossHbd: 0 },
 	);
 	return { ...totals, grossHbd: totals.grossThousandths / 1_000 };
+}
+
+export function getHbdPackSaleScenarioAllocations(
+	scenario: HbdPackSaleScenario = getActiveHbdPackSaleScenario(),
+): HbdPackSaleScenarioAllocation[] {
+	return RUNE_REDEEMABLE_PACK_KEYS.map((packKey) => {
+		const pack = PACK_DEFINITIONS[packKey];
+		const packCap = scenario.packCaps[packKey];
+		const unitPriceThousandths = scenario.priceThousandths[packKey];
+		const grossThousandths = packCap * unitPriceThousandths;
+
+		return {
+			packKey,
+			packCap,
+			cardCount: pack.cardCount,
+			cardInstanceCap: pack.cardCount * packCap,
+			unitPriceThousandths,
+			grossThousandths,
+			grossHbd: grossThousandths / 1_000,
+		};
+	});
 }

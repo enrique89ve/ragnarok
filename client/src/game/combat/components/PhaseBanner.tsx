@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { CombatPhase } from '../../types/PokerCombatTypes';
 import { ARENA_VFX_LAYERS, getArenaVfxLayer } from '../arenaVfxTargets';
+import '../styles/poker-drama.css';
 
 interface PhaseBannerProps {
 	phase: CombatPhase;

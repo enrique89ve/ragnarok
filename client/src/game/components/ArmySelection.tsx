@@ -1,15 +1,13 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, CheckCircle2, Search, Settings, Shield, User } from 'lucide-react';
-import { ChessPieceType, ArmySelection as ArmySelectionType, ChessPieceHero } from '../types/ChessTypes';
+import { ArrowLeft, CheckCircle2, HeartPulse, Layers3, Search, Settings, Shield, Sparkles, User } from 'lucide-react';
+import { ChessPieceType, ArmySelection as ArmySelectionType, ChessPieceHero, PIECE_BASE_STATS } from '../types/ChessTypes';
 import { CHESS_PIECE_HEROES, getDefaultArmySelection, pieceHasSpells } from '../data/ChessPieceConfig';
 import { useAudio } from '../../lib/stores/useAudio';
 import useGame from '../../lib/stores/useGame';
 import { DeckInfo } from '../types';
-import { getAllCards } from '../data/cardManagement/cardRegistry';
-import { initializeCardDatabase } from '../data/cardManagement/initializeCards';
 import { HeroDeckBuilder } from './HeroDeckBuilder';
 import { useHeroDeckStore, PieceType } from '../stores/heroDeckStore';
 import { HeroDetailPopup } from './HeroDetailPopup';
@@ -17,8 +15,8 @@ import { ALL_NORSE_HEROES } from '../data/norseHeroes';
 import { preloadImages } from '../utils/assetPreloader';
 import { resolveHeroPortrait } from '../utils/art/artMapping';
 import { HeroArtImage } from './ui/HeroArtImage';
+import { parseNorseElement, type NorseElement } from '../types/NorseTypes';
 import { getHeroEditionTier, HERO_TIER_UI } from '../utils/heroRarity';
-import { useHoloTracking, getHoloTier } from '../hooks/useHoloTracking';
 import { getNFTBridge } from '../nft';
 import { useNFTCollection, useNFTUsername } from '../nft/hooks';
 import { getHeroDeckStatus, type HeroDeckStatus } from '../deck/heroDeckRules';
@@ -29,7 +27,6 @@ import { useMatchmaking } from '../hooks/useMatchmaking';
 import { usePeerStore } from '../stores/peerStore';
 import { toast } from 'sonner';
 import './styles/ArmySelectionNorse.css';
-import './styles/holoEffect.css';
 
 interface ArmySelectionProps {
   onComplete: (army: ArmySelectionType) => void;
@@ -51,6 +48,20 @@ const PIECE_DISPLAY_INFO: Record<ChessPieceType, { name: string; icon: string; c
 };
 
 const MAJOR_PIECES: PieceType[] = ['queen', 'rook', 'bishop', 'knight'];
+const CARD_BY_ID = new Map<number, (typeof cardRegistry)[number]>(
+  cardRegistry.map(card => [Number(card.id), card]),
+);
+
+const NORSE_ELEMENT_DISPLAY: Record<NorseElement, { readonly label: string; readonly sigil: string }> = {
+  fire: { label: 'Fire', sigil: 'FIR' },
+  water: { label: 'Water', sigil: 'WTR' },
+  grass: { label: 'Wild', sigil: 'WLD' },
+  electric: { label: 'Storm', sigil: 'STM' },
+  light: { label: 'Light', sigil: 'LGT' },
+  dark: { label: 'Dark', sigil: 'DRK' },
+  ice: { label: 'Frost', sigil: 'ICE' },
+  neutral: { label: 'Neutral', sigil: 'NEU' },
+};
 
 type DeckDisplayStatus = {
   readonly cardCount: number;
@@ -96,15 +107,14 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
   const myPeerId = usePeerStore(state => state.myPeerId);
   const host = usePeerStore(state => state.host);
   const { status: matchmakingStatus, queuePosition, joinQueue, leaveQueue, error: matchmakingError } = useMatchmaking();
+  const [loadedHeroArtIds, setLoadedHeroArtIds] = useState<ReadonlySet<string>>(() => new Set());
 
   useEffect(() => {
     loadFromStorage();
   }, [loadFromStorage]);
 
   useEffect(() => {
-    initializeCardDatabase();
-    const allCards = getAllCards();
-    debug.log(`[ArmySelection] Card registry has ${allCards.length} cards`);
+    debug.log(`[ArmySelection] Card registry has ${cardRegistry.length} cards`);
 
     // Preload hero portraits so grid images appear instantly
     const heroArtPaths: string[] = [];
@@ -115,7 +125,14 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
     preloadImages(heroArtPaths);
   }, []);
 
-  const holo = useHoloTracking();
+  const markHeroArtReady = useCallback((heroId: string) => {
+    setLoadedHeroArtIds(prev => {
+      if (prev.has(heroId)) return prev;
+      const next = new Set(prev);
+      next.add(heroId);
+      return next;
+    });
+  }, []);
 
   const validDecks = useMemo(() => {
     return Array.isArray(savedDecks) ? savedDecks.filter(d => d && typeof d === 'object') : [];
@@ -220,7 +237,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
   const deckValidationContext = useMemo(() => {
     const nftBridge = getNFTBridge();
     return {
-      getCardById: (cardId: number) => cardRegistry.find(card => Number(card.id) === cardId),
+      getCardById: (cardId: number) => CARD_BY_ID.get(cardId),
       getOwnedCopies: (cardId: number) => nftBridge.getOwnedCopies(cardId),
       enforceOwnership: nftBridge.isHiveMode(),
     };
@@ -452,6 +469,10 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
             const isCurrentSelection = currentSelection?.id === hero.id;
             const editionTier = getHeroEditionTier(hero.id);
             const visualRarity = editionTier === 'starter' ? 'common' : editionTier;
+            const isHeroArtReady = loadedHeroArtIds.has(hero.id);
+            const pieceStats = PIECE_BASE_STATS[selectedPieceType];
+            const element = parseNorseElement(hero.element);
+            const elementDisplay = element ? NORSE_ELEMENT_DISPLAY[element] : undefined;
 
             return (
               <motion.div
@@ -461,9 +482,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
                   setPopupHero(hero);
                   playSoundEffect('button_click');
                 }}
-                className={`norse-hero-card rarity-${visualRarity} ${getHoloTier(visualRarity) || ''} ${isCurrentSelection ? 'selected' : ''}`}
-                onMouseMove={holo.onMouseMove}
-                onMouseLeave={holo.onMouseLeave}
+                className={`norse-hero-card rarity-${visualRarity} ${isHeroArtReady ? 'art-ready' : 'art-loading'} ${isCurrentSelection ? 'selected' : ''}`}
               >
                 <div className="norse-hero-media">
                   <HeroArtImage
@@ -471,6 +490,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
                     heroName={hero.name}
                     portrait={hero.portrait}
                     className="norse-hero-image"
+                    onReady={() => markHeroArtReady(hero.id)}
                     fallbackIcon={
                       <div className="norse-hero-placeholder">
                         <span className="norse-hero-placeholder-icon" style={{ color: PIECE_DISPLAY_INFO[selectedPieceType].color }}>
@@ -479,70 +499,77 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
                       </div>
                     }
                   />
-                  {editionTier !== 'common' && editionTier !== 'starter' && (
+                  {isHeroArtReady && (
                     <>
-                      <div className="holo-foil" />
-                      <div className="holo-glitter" />
-                      <div className="holo-glare" />
+                      <div className="norse-hero-gradient-overlay" />
+                      {editionTier !== 'common' && editionTier !== 'starter' && (
+                        <span className={`norse-rarity-badge rarity-${editionTier}`}>
+                          {HERO_TIER_UI[editionTier].label}
+                        </span>
+                      )}
+                      <div className="norse-hero-name-overlay">
+                        <div className="norse-hero-name">{hero.name}</div>
+                        {hero.heroClass.toLowerCase() !== 'neutral' && (
+                          <span className={`norse-hero-class-badge ${getClassBadgeClass(hero.heroClass)}`}>
+                            {hero.heroClass}
+                          </span>
+                        )}
+                        {['hero-erik-flameheart', 'hero-ragnar-ironside', 'hero-brynhild', 'hero-sigurd', 'king-leif'].includes(hero.id) && (
+                          <span className="inline-block ml-1 px-1.5 py-0.5 bg-green-600/80 text-[9px] text-white font-bold rounded uppercase tracking-wider">
+                            Starter
+                          </span>
+                        )}
+                        {hero.mythology && (
+                          <span className={`inline-block ml-1 px-1.5 py-0.5 bg-blue-600/80 text-[9px] text-white font-bold rounded uppercase tracking-wider faction-${hero.mythology}`}>
+                            {hero.mythology}
+                          </span>
+                        )}
+                      </div>
                     </>
                   )}
-                  <div className="norse-hero-gradient-overlay" />
-                  {editionTier !== 'common' && editionTier !== 'starter' && (
-                    <span className={`norse-rarity-badge rarity-${editionTier}`}>
-                      {HERO_TIER_UI[editionTier].label}
-                    </span>
-                  )}
-                  <div className="norse-hero-name-overlay">
-                    <div className="norse-hero-name">{hero.name}</div>
-                    {hero.heroClass.toLowerCase() !== 'neutral' && (
-                      <span className={`norse-hero-class-badge ${getClassBadgeClass(hero.heroClass)}`}>
-                        {hero.heroClass}
-                      </span>
-                    )}
-                    {['hero-erik-flameheart', 'hero-ragnar-ironside', 'hero-brynhild', 'hero-sigurd', 'king-leif'].includes(hero.id) && (
-                      <span className="inline-block ml-1 px-1.5 py-0.5 bg-green-600/80 text-[9px] text-white font-bold rounded uppercase tracking-wider">
-                        Starter
-                      </span>
-                    )}
-                    {hero.mythology && (
-                      <span className={`inline-block ml-1 px-1.5 py-0.5 bg-blue-600/80 text-[9px] text-white font-bold rounded uppercase tracking-wider faction-${hero.mythology}`}>
-                        {hero.mythology}
-                      </span>
-                    )}
-                  </div>
                 </div>
 
-                <div className="norse-hero-rune">
-                  {PIECE_DISPLAY_INFO[selectedPieceType].rune}
-                </div>
+                {isHeroArtReady && (
+                  <>
+                    <div className="norse-hero-rune">
+                      {PIECE_DISPLAY_INFO[selectedPieceType].rune}
+                    </div>
 
-                <div className="norse-hero-info-panel">
-                  <div className="norse-hero-stats">
-                    {selectedPieceType !== 'king' && (
-                      <>
-                        <span className="norse-stat-hp">100 HP</span>
-                        <span className="norse-stat-sta">10 STA</span>
-                      </>
-                    )}
-                    {hero.element && hero.element.toLowerCase() !== 'neutral' && (
-                      <span className={`norse-element-badge element-${hero.element.toLowerCase()}`}>
-                        {hero.element}
-                      </span>
-                    )}
-                  </div>
-                  {hero.description && (
-                    <div className="norse-hero-desc-preview">{hero.description}</div>
-                  )}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleHeroSelect(hero);
-                    }}
-                    className={`norse-select-btn ${isCurrentSelection ? 'selected' : ''}`}
-                  >
-                    {isCurrentSelection ? 'Locked In' : 'Choose Hero'}
-                  </button>
-                </div>
+                    <div className="norse-hero-info-panel">
+                      <div className="norse-hero-stats">
+                        <span className="norse-stat-chip norse-stat-health" aria-label={`${pieceStats.baseHealth} health`}>
+                          <HeartPulse size={12} strokeWidth={2.2} />
+                          <span className="norse-stat-value">{pieceStats.baseHealth}</span>
+                          <span className="norse-stat-label">HP</span>
+                        </span>
+                        <span className="norse-stat-chip norse-stat-loadout" aria-label={pieceStats.hasSpells ? `${pieceStats.spellSlots} card spell deck` : 'command seat'}>
+                          <Layers3 size={12} strokeWidth={2.2} />
+                          <span className="norse-stat-value">{pieceStats.hasSpells ? pieceStats.spellSlots : 'CMD'}</span>
+                          <span className="norse-stat-label">{pieceStats.hasSpells ? 'Deck' : 'Seat'}</span>
+                        </span>
+                        {element && element !== 'neutral' && elementDisplay && (
+                          <span className={`norse-stat-chip norse-stat-element element-${element}`} aria-label={`${elementDisplay.label} element`}>
+                            <Sparkles size={12} strokeWidth={2.2} />
+                            <span className="norse-stat-value">{elementDisplay.sigil}</span>
+                            <span className="norse-stat-label">{elementDisplay.label}</span>
+                          </span>
+                        )}
+                      </div>
+                      {hero.description && (
+                        <div className="norse-hero-desc-preview">{hero.description}</div>
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleHeroSelect(hero);
+                        }}
+                        className={`norse-select-btn ${isCurrentSelection ? 'selected' : ''}`}
+                      >
+                        {isCurrentSelection ? 'Locked In' : 'Choose Hero'}
+                      </button>
+                    </div>
+                  </>
+                )}
               </motion.div>
             );
           })}

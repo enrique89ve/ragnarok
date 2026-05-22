@@ -20,7 +20,7 @@
  *   - .github/workflows/ci.yml (PR gate)
  */
 
-import { readFileSync, readdirSync, statSync } from 'fs';
+import { lstatSync, readFileSync, readdirSync } from 'fs';
 import { resolve, relative, sep } from 'path';
 
 const ROOT = resolve(import.meta.dirname, '..');
@@ -66,7 +66,13 @@ const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build']);
 function walk(dir, out = []) {
 	for (const entry of readdirSync(dir)) {
 		const full = resolve(dir, entry);
-		const st = statSync(full);
+		let st;
+		try {
+			st = lstatSync(full);
+		} catch {
+			continue;
+		}
+		if (st.isSymbolicLink()) continue;
 		if (st.isDirectory()) {
 			if (SKIP_DIRS.has(entry)) continue;
 			walk(full, out);

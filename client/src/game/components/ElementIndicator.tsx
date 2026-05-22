@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ElementType, ELEMENT_COLORS, ELEMENT_ICONS } from '../types/ChessTypes';
-import { NorseElement, NORSE_TO_GAME_ELEMENT } from '../types/NorseTypes';
+import { isNorseElement, type NorseElement, NORSE_TO_GAME_ELEMENT } from '../types/NorseTypes';
 import './ElementIndicator.css';
 
 interface ElementIndicatorProps {
@@ -36,7 +36,7 @@ const getGameElement = (element: ElementType | NorseElement): ElementType => {
   if (['fire', 'water', 'wind', 'earth', 'holy', 'shadow', 'neutral'].includes(element)) {
     return element as ElementType;
   }
-  return NORSE_TO_GAME_ELEMENT[element as NorseElement] || 'neutral';
+  return isNorseElement(element) ? NORSE_TO_GAME_ELEMENT[element] : 'neutral';
 };
 
 const ElementIndicator: React.FC<ElementIndicatorProps> = ({

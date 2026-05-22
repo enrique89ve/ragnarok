@@ -4,6 +4,39 @@ export type RagnarokNetworkStage = typeof RAGNAROK_NETWORK_STAGES[number];
 export const RAGNAROK_RUNTIME_EXECUTION_MODES = ['local-dev', 'testnet', 'mainnet'] as const;
 export type RagnarokRuntimeExecutionMode = typeof RAGNAROK_RUNTIME_EXECUTION_MODES[number];
 
+export const RAGNAROK_RUNTIME_PHASES = ['local', 'qa-season-0', 'closed-beta', 'generic-testnet', 'mainnet'] as const;
+export type RagnarokRuntimePhase = typeof RAGNAROK_RUNTIME_PHASES[number];
+
+export const RAGNAROK_CLOSED_BETA_CUTOVER_CHECK_IDS = [
+	'testnet_profile',
+	'closed_beta_reset_epoch',
+	'qa_full_catalog_disabled',
+	'isolated_storage_namespace',
+	'collection_id_configured',
+	'nftlox_protocol_configured',
+	'resettable_non_economic',
+	'ownership_authority_scope',
+] as const;
+export type RagnarokClosedBetaCutoverCheckId = typeof RAGNAROK_CLOSED_BETA_CUTOVER_CHECK_IDS[number];
+export type RagnarokClosedBetaCutoverCheckStatus = 'pass' | 'fail';
+
+export type RagnarokClosedBetaCutoverCheck = {
+	readonly id: RagnarokClosedBetaCutoverCheckId;
+	readonly status: RagnarokClosedBetaCutoverCheckStatus;
+	readonly detail: string;
+};
+
+export type RagnarokClosedBetaCutoverGate = {
+	readonly targetPhase: 'closed-beta';
+	readonly activePhase: RagnarokRuntimePhase;
+	readonly resetEpoch: string;
+	readonly storageNamespace: string;
+	readonly operatorSignoffRequired: boolean;
+	readonly inviteBlocked: boolean;
+	readonly blockerIds: readonly RagnarokClosedBetaCutoverCheckId[];
+	readonly checks: readonly RagnarokClosedBetaCutoverCheck[];
+};
+
 export type RagnarokRuntimeConfig = {
 	readonly stage: RagnarokNetworkStage;
 	readonly executionMode: RagnarokRuntimeExecutionMode;
@@ -24,6 +57,21 @@ export type RagnarokRuntimeConfig = {
 	readonly economic: boolean;
 	readonly acceptsLegacyProtocolIds: boolean;
 	readonly seasonStart: string;
+};
+
+export type RagnarokRuntimeEvidence = {
+	readonly stage: RagnarokRuntimeConfig['stage'];
+	readonly executionMode: RagnarokRuntimeConfig['executionMode'];
+	readonly protocolId: string;
+	readonly collectionId: string;
+	readonly nftLoxProtocolId: string;
+	readonly resetEpoch: string;
+	readonly resettable: boolean;
+	readonly economic: boolean;
+	readonly runtimePhase: RagnarokRuntimePhase;
+	readonly seasonStart: string;
+	readonly storageNamespace: string;
+	readonly qaFullCatalogEnabled: boolean;
 };
 
 export type RagnarokRuntimeEnv = Partial<Record<
@@ -204,6 +252,11 @@ export function isQaFullCatalogResetEpoch(resetEpoch: string): boolean {
 	);
 }
 
+export function isClosedTestnetBetaResetEpoch(resetEpoch: string): boolean {
+	const normalized = normalizeRuntimeNamespaceSegment(resetEpoch);
+	return normalized === 'closed-beta' || normalized.startsWith('closed-beta-');
+}
+
 export function isQaFullCatalogEntitlementEnabled(config: RagnarokRuntimeConfig): boolean {
 	return (
 		config.stage === 'testnet'
@@ -211,6 +264,14 @@ export function isQaFullCatalogEntitlementEnabled(config: RagnarokRuntimeConfig)
 		&& !config.economic
 		&& isQaFullCatalogResetEpoch(config.resetEpoch)
 	);
+}
+
+export function getRagnarokRuntimePhase(config: RagnarokRuntimeConfig): RagnarokRuntimePhase {
+	if (config.stage === 'local') return 'local';
+	if (config.stage === 'mainnet') return 'mainnet';
+	if (isQaFullCatalogResetEpoch(config.resetEpoch)) return 'qa-season-0';
+	if (isClosedTestnetBetaResetEpoch(config.resetEpoch)) return 'closed-beta';
+	return 'generic-testnet';
 }
 
 export function getRagnarokStorageNamespace(config: RagnarokRuntimeConfig): string {
@@ -228,4 +289,97 @@ export function createRagnarokStorageKey(config: RagnarokRuntimeConfig, key: str
 
 export function createRagnarokDatabaseName(config: RagnarokRuntimeConfig, name: string): string {
 	return `${getRagnarokStorageNamespace(config)}-${normalizeRuntimeNamespaceSegment(name)}`;
+}
+
+export function buildRagnarokRuntimeEvidence(config: RagnarokRuntimeConfig): RagnarokRuntimeEvidence {
+	return {
+		stage: config.stage,
+		executionMode: config.executionMode,
+		protocolId: config.protocolId,
+		collectionId: config.collectionId,
+		nftLoxProtocolId: config.nftLoxProtocolId,
+		resetEpoch: config.resetEpoch,
+		resettable: config.resettable,
+		economic: config.economic,
+		runtimePhase: getRagnarokRuntimePhase(config),
+		seasonStart: config.seasonStart,
+		storageNamespace: getRagnarokStorageNamespace(config),
+		qaFullCatalogEnabled: isQaFullCatalogEntitlementEnabled(config),
+	};
+}
+
+function createClosedBetaCutoverCheck(
+	id: RagnarokClosedBetaCutoverCheckId,
+	passes: boolean,
+	detail: string,
+): RagnarokClosedBetaCutoverCheck {
+	return {
+		id,
+		status: passes ? 'pass' : 'fail',
+		detail,
+	};
+}
+
+export function buildClosedBetaCutoverGate(config: RagnarokRuntimeConfig): RagnarokClosedBetaCutoverGate {
+	const runtimePhase = getRagnarokRuntimePhase(config);
+	const storageNamespace = getRagnarokStorageNamespace(config);
+	const qaFullCatalogEnabled = isQaFullCatalogEntitlementEnabled(config);
+	const closedBetaEpoch = isClosedTestnetBetaResetEpoch(config.resetEpoch);
+	const testnetProfile = config.stage === 'testnet';
+	const checks: readonly RagnarokClosedBetaCutoverCheck[] = [
+		createClosedBetaCutoverCheck(
+			'testnet_profile',
+			testnetProfile,
+			`stage=${config.stage}`,
+		),
+		createClosedBetaCutoverCheck(
+			'closed_beta_reset_epoch',
+			testnetProfile && closedBetaEpoch,
+			`resetEpoch=${config.resetEpoch}`,
+		),
+		createClosedBetaCutoverCheck(
+			'qa_full_catalog_disabled',
+			testnetProfile && !qaFullCatalogEnabled,
+			`qaFullCatalogEnabled=${String(qaFullCatalogEnabled)}`,
+		),
+		createClosedBetaCutoverCheck(
+			'isolated_storage_namespace',
+			testnetProfile && closedBetaEpoch && !isQaFullCatalogResetEpoch(config.resetEpoch),
+			`storageNamespace=${storageNamespace}`,
+		),
+		createClosedBetaCutoverCheck(
+			'collection_id_configured',
+			config.collectionId.trim().length > 0,
+			`collectionId=${config.collectionId || 'missing'}`,
+		),
+		createClosedBetaCutoverCheck(
+			'nftlox_protocol_configured',
+			config.nftLoxProtocolId.trim().length > 0,
+			`nftLoxProtocolId=${config.nftLoxProtocolId || 'missing'}`,
+		),
+		createClosedBetaCutoverCheck(
+			'resettable_non_economic',
+			testnetProfile && config.resettable && !config.economic,
+			`resettable=${String(config.resettable)}, economic=${String(config.economic)}`,
+		),
+		createClosedBetaCutoverCheck(
+			'ownership_authority_scope',
+			testnetProfile && runtimePhase === 'closed-beta' && !qaFullCatalogEnabled,
+			'starter entitlement remains universal; genesis cards require nft-custody or replay-derived pack acquisition',
+		),
+	];
+	const blockerIds = checks
+		.filter((check) => check.status === 'fail')
+		.map((check) => check.id);
+
+	return {
+		targetPhase: 'closed-beta',
+		activePhase: runtimePhase,
+		resetEpoch: config.resetEpoch,
+		storageNamespace,
+		operatorSignoffRequired: true,
+		inviteBlocked: blockerIds.length > 0,
+		blockerIds,
+		checks,
+	};
 }

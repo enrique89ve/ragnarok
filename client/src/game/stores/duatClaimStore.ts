@@ -191,6 +191,35 @@ export const useDuatClaimStore = create<DuatClaimState>()(
 				set({ eligibilityLoading: true, error: null });
 				try {
 					const eligibility = await findDuatEligibility(normalized, !isDuatClaimRuntimeEnabled());
+					const pendingClaimTrxId = get().pendingClaimTrxId;
+					if (
+						!isDuatClaimRuntimeEnabled()
+						&& eligibility?.eligible
+						&& eligibility.claimReady
+						&& !eligibility.claimed
+						&& pendingClaimTrxId
+					) {
+						mintLocalDemoDuatPacks(normalized, eligibility.packsEarned, pendingClaimTrxId);
+						const confirmedEligibility: DuatEligibility = {
+							...eligibility,
+							claimed: true,
+							claimTrxId: pendingClaimTrxId,
+							claimBlockNum: 0,
+						};
+						set({
+							eligibilityLoaded: true,
+							eligibilityLoading: false,
+							currentUserEntry: confirmedEligibility,
+							pendingClaimTrxId: null,
+							error: null,
+						});
+						recordSessionEvent('duat_local_pending_confirmed', {
+							account: normalized,
+							claimTrxId: pendingClaimTrxId,
+							packsEarned: eligibility.packsEarned,
+						});
+						return;
+					}
 					set(state => ({
 						eligibilityLoaded: true,
 						eligibilityLoading: false,

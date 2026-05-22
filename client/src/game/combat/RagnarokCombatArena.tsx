@@ -20,6 +20,7 @@ import { TargetingOverlay } from '../components/TargetingOverlay';
 import { CardBurnOverlay } from '../components/CardBurnOverlay';
 import { ActionAnnouncement } from '../components/ActionAnnouncement';
 import './RagnarokCombatArena.css';
+import './styles/poker-vfx.css';
 import AIAttackAnimationProcessor from '../components/AIAttackAnimationProcessor';
 import { PixiParticleCanvas } from '../animations/PixiParticleCanvas';
 
@@ -49,7 +50,6 @@ import { GameLog } from '../components/GameLog';
 import { useGameLogIntegration } from '../hooks/useGameLogIntegration';
 import { usePokerDrama } from './hooks/usePokerDrama';
 import { HandStrengthIndicator } from './components/HandStrengthIndicator';
-import './styles/poker-drama.css';
 import { useEventAnimationBridge } from '../hooks/useEventAnimationBridge';
 import { useKingPassiveEventStore } from '../stores/kingPassiveEventStore';
 import { useDamageAnimations } from './hooks/useDamageAnimations';

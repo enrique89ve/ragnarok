@@ -1,50 +1,7 @@
-/* ═══════════════════════════════════════════════════
-   COMBAT ARENA STYLE MANIFEST
-   Central entry point for all combat-specific styling.
-   Order of imports determines the cascade priority.
-   ═══════════════════════════════════════════════════ */
+/* Backward-compatible aggregate. New code should import the narrow manifest:
+   poker-core.css, poker-vfx.css, poker-showdown.css, or poker-campaign.css. */
 
-/* 1. Base Framework & Resets */
-@import "./reset.css";
-@import "./zones.css";
-@import "./canvas-layout.css";
-
-/* 2. Visual Layer - Backgrounds & Atmosphere */
-@import "./norse-atmosphere.css";
-@import "./realm-boards.css";
-
-/* 3. Core Combat HUD & UI Panels */
-@import "./game-hud.css";
-@import "./pot-display.css";
-@import "./betting-controls.css";
-@import "./timer.css";
-@import "./hand-strength.css";
-
-/* 4. Card Presentation & Visual Identity */
-@import "./card-frame.css";
-@import "./face-down.css";
-@import "./hole-cards.css";
-@import "./community-cards.css";
-@import "./battlefield.css";
-@import "./hero-card.css";
-
-/* 5. Combat Effects & Feedback */
-@import "./glow-effects.css";
-@import "./elemental-glows.css";
-@import "./card-highlight.css";
-@import "./targeting-prompts.css";
-@import "./spell-screen-effects.css";
-
-/* 6. Dramatic Overlays & Announcements */
-@import "./poker-drama.css";
-@import "./turn-banner.css";
-@import "./element-matchup-banner.css";
-@import "./hero-reactions.css";
-@import "./hero-death.css";
-@import "./game-over.css";
-
-/* 7. Utility & Animation Engine */
-@import "./combat-animations.css";
-@import "./cursors.css";
-@import "./ragnarok-art-ui.css";
-@import "./responsive.css";
+@import "./poker-core.css";
+@import "./poker-vfx.css";
+@import "./poker-showdown.css";
+@import "./poker-campaign.css";

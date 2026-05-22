@@ -12,6 +12,7 @@ import { CardInstanceWithCardData } from '../types/interfaceExtensions';
 import { getCardDataSafely } from '../utils/cards/cardInstanceAdapter';
 import {
   normalizeSimpleCardRarity,
+  normalizeSimpleCardElement,
   normalizeSimpleCardType,
   SimpleCard,
 } from './SimpleCard';
@@ -121,7 +122,7 @@ export const CardRenderer: React.FC<CardRendererProps> = React.memo(({
     cardClass: processedCard.class || processedCard.heroClass,
     keywords: readStringArrayProperty(processedCard, 'keywords') || [],
     evolutionLevel: readEvolutionLevel(processedCard),
-    element: readStringProperty(processedCard, 'element'),
+    element: normalizeSimpleCardElement(readStringProperty(processedCard, 'element')),
     petStage: readStringProperty(processedCard, 'petStage'),
     petFamily: readStringProperty(processedCard, 'petFamily'),
     evolvesFrom: readNumberProperty(processedCard, 'evolvesFrom'),
