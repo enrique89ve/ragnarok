@@ -139,10 +139,11 @@ in phases 0-2 before any gameplay action is sent.
 
 ### Phase 0 — Matchmaking
 
-1. Each player POSTs `/api/matchmaking/queue` with `{ peerId, username }`.
-   The body is signed via Hive Keychain when `username` is present
-   (`matchmakingRoutes.ts:138`, middleware
-   `requireHiveBodyAuthIfUsernamePresent`).
+1. Each player POSTs `/api/matchmaking/queue`. Closed-beta full NFT clients
+   send `{ peerId }` only so searching for a battle does not open a Hive
+   Posting prompt. Future ranked/on-chain matchmaking may include `username`;
+   when `username` is present the body is signed via Hive Keychain
+   (`matchmakingRoutes.ts`, middleware `requireHiveBodyAuthIfUsernamePresent`).
 2. The server runs `findBestEloMatch` (`matchmakingRoutes.ts:93`):
    - First pass: closest ELO within ±200 (expands to ±500 after 30s,
      anyone after 60s — see `matchmakingRoutes.ts:99-102`).

@@ -53,8 +53,10 @@ The current TypeScript seam is:
 - The transaction queue needs a visible wallet outbox UI for manual Hive
   submission and retry.
 - `slash_evidence` needs a durable evidence queue and a Submit evidence action.
-- Matchmaking `queue_join` / `queue_leave`, Collection custody/crafting actions,
-  Marketplace actions, Admin, and Treasury still use direct button handlers and
-  should be migrated through the same invocation wrapper for consistency.
+- Future ranked/on-chain matchmaking `queue_join` / `queue_leave`, Collection
+  custody/crafting actions, Marketplace actions, Admin, and Treasury still use
+  direct button handlers and should be migrated through the same invocation
+  wrapper for consistency. Closed-beta full NFT Quick Match uses unsigned server
+  matchmaking so battle search does not request a Posting signature.
 - Campaign result publishing should be reviewed against the same rule before
   public beta.

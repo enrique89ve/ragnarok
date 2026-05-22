@@ -6,13 +6,20 @@ import { useNFTUsername } from '../nft/hooks';
 import { debug } from '../config/debugConfig';
 import { isHiveWalletAvailable } from '../../data/HiveAuth';
 import { isSharedNetworkEnvironment } from '../config/featureFlags';
+import { getRagnarokNetworkConfig } from '../config/networkConfig';
 import {
 	broadcastQueueJoin,
 	broadcastQueueLeave,
 	startQueuePoller,
 } from '../../data/blockchain/matchmakingOnChain';
+import { buildRagnarokRuntimeEvidence } from '@shared/runtimeConfig';
 
 const API_BASE = import.meta.env.VITE_API_URL || (window.location.origin);
+
+function shouldUseUnsignedServerMatchmaking(): boolean {
+	const runtime = buildRagnarokRuntimeEvidence(getRagnarokNetworkConfig());
+	return runtime.runtimePhase === 'closed-beta';
+}
 
 export function useMatchmaking() {
 	const hiveUsername = useNFTUsername();
@@ -34,6 +41,7 @@ export function useMatchmaking() {
 	const pollIntervalRef = useRef<number | null>(null);
 	const chainPollerCancelRef = useRef<(() => void) | null>(null);
 	const chainLeaveFnRef = useRef<(() => Promise<void>) | null>(null);
+	const serverQueueActiveRef = useRef(false);
 
 	const joinQueue = useCallback(async () => {
 		const failJoin = (message: string) => {
@@ -54,11 +62,12 @@ export function useMatchmaking() {
 
 			const nftBridge = getNFTBridge();
 			const sharedNetwork = isSharedNetworkEnvironment();
-			if (sharedNetwork && (!hiveUsername || !isHiveWalletAvailable())) {
+			const unsignedServerMatchmaking = shouldUseUnsignedServerMatchmaking();
+			if (sharedNetwork && !unsignedServerMatchmaking && (!hiveUsername || !isHiveWalletAvailable())) {
 				return failJoin('Connect Hive Keychain before entering testnet matchmaking.');
 			}
 
-			if ((nftBridge.isHiveMode() || sharedNetwork) && hiveUsername) {
+			if (!unsignedServerMatchmaking && (nftBridge.isHiveMode() || sharedNetwork) && hiveUsername) {
 				const elo = nftBridge.getElo();
 
 				const leaveFn = await broadcastQueueJoin({
@@ -91,8 +100,14 @@ export function useMatchmaking() {
 				return true;
 			}
 
-			// Build the request body. Only include `username` (and request a signed
-			// auth body) when we're actually in Hive mode AND have a username.
+			// Build the request body. Closed-beta full NFT uses unsigned server
+			// matchmaking by design: searching for a battle must not open a Posting
+			// Keychain prompt. NFT custody is still verified during the P2P deck
+			// handshake before gameplay.
+			//
+			// Only include `username` (and request a signed auth body) when we're
+			// actually in Hive mode, have a username, and are not in that closed-beta
+			// no-prompt matchmaking path.
 			//
 			// In LOCAL mode, `LocalNFTBridge.buildAuthBody` returns `{...fields,
 			// username, timestamp}` WITHOUT a signature — sending that unsigned
@@ -105,7 +120,7 @@ export function useMatchmaking() {
 			// isn't actually installed/active, the Hive-mode try/catch still
 			// falls back gracefully.
 			let queueBody: Record<string, unknown> = { peerId };
-			if (hiveUsername && nftBridge.isHiveMode()) {
+			if (!unsignedServerMatchmaking && hiveUsername && nftBridge.isHiveMode()) {
 				try {
 					queueBody = await nftBridge.buildAuthBody(hiveUsername, 'queue', { peerId, username: hiveUsername });
 				} catch (err) {
@@ -195,6 +210,7 @@ export function useMatchmaking() {
 			}, 2000);
 
 			pollIntervalRef.current = interval;
+			serverQueueActiveRef.current = true;
 			return true;
 		} catch (err: unknown) {
 			return failJoin(err instanceof Error ? err.message : 'Failed to join matchmaking queue');
@@ -228,7 +244,7 @@ export function useMatchmaking() {
 			pollIntervalRef.current = null;
 		}
 
-		if (!getNFTBridge().isHiveMode()) {
+		if (serverQueueActiveRef.current || !getNFTBridge().isHiveMode()) {
 			try {
 				await fetch(`${API_BASE}/api/matchmaking/leave`, {
 					method: 'POST',
@@ -240,6 +256,7 @@ export function useMatchmaking() {
 			}
 		}
 
+		serverQueueActiveRef.current = false;
 		reset();
 	}, [reset]);
 
@@ -251,6 +268,7 @@ export function useMatchmaking() {
 			if (chainPollerCancelRef.current) {
 				chainPollerCancelRef.current();
 			}
+			serverQueueActiveRef.current = false;
 		};
 	}, []);
 
