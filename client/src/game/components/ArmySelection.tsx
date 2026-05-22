@@ -514,11 +514,6 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
                             {hero.heroClass}
                           </span>
                         )}
-                        {['hero-erik-flameheart', 'hero-ragnar-ironside', 'hero-brynhild', 'hero-sigurd', 'king-leif'].includes(hero.id) && (
-                          <span className="inline-block ml-1 px-1.5 py-0.5 bg-green-600/80 text-[9px] text-white font-bold rounded uppercase tracking-wider">
-                            Starter
-                          </span>
-                        )}
                         {hero.mythology && (
                           <span className={`inline-block ml-1 px-1.5 py-0.5 bg-blue-600/80 text-[9px] text-white font-bold rounded uppercase tracking-wider faction-${hero.mythology}`}>
                             {hero.mythology}
