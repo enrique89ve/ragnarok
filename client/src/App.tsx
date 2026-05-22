@@ -26,6 +26,7 @@ import {
 import { MatchSetupCampaign, MatchSetupSingle } from "./game/match";
 import { getSeasonInfo, formatTimeRemaining } from './game/utils/seasonUtils';
 import SocialPresenceHeartbeat from './game/components/social/SocialPresenceHeartbeat';
+import { isChunkLoadError, recoverFromChunkLoadError } from './lib/chunkLoadRecovery';
 
 const HiveKeychainLogin = lazy(() => import("./game/components/HiveKeychainLogin").then(m => ({ default: m.HiveKeychainLogin })));
 const DailyQuestPanel = lazy(() => import("./game/components/quests/DailyQuestPanel"));
@@ -795,8 +796,25 @@ function ViewTransitionBridge() {
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
 	state = { error: null as Error | null };
 	static getDerivedStateFromError(error: Error) { return { error }; }
+	componentDidCatch(error: Error) {
+		if (isChunkLoadError(error)) {
+			void recoverFromChunkLoadError();
+		}
+	}
 	render() {
 		if (this.state.error) {
+			if (isChunkLoadError(this.state.error)) {
+				return (
+					<div style={{ padding: 40, color: 'var(--error-text)', background: 'var(--error-bg)', minHeight: '100vh', fontFamily: 'monospace' }}>
+						<h1>Updating Ragnarok</h1>
+						<p style={{ marginTop: 16, maxWidth: 560, lineHeight: 1.6 }}>
+							A new build is available. Reloading with the latest files.
+						</p>
+						<button onClick={() => window.location.reload()} style={{ marginTop: 20, padding: '10px 20px', background: 'var(--error-accent)', border: 'none', borderRadius: 6, cursor: 'pointer', color: 'var(--error-bg)', fontWeight: 'bold' }}>Reload now</button>
+					</div>
+				);
+			}
+
 			return (
 				<div style={{ padding: 40, color: 'var(--error-text)', background: 'var(--error-bg)', minHeight: '100vh', fontFamily: 'monospace' }}>
 					<h1>Runtime Error</h1>

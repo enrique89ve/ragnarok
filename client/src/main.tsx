@@ -5,9 +5,13 @@ import {
   RAGNAROK_NETWORK_CONFIG,
   createRuntimeStorageKey,
 } from "./game/config/networkConfig";
+import {
+  clearChunkReloadFlag,
+  isChunkLoadError,
+  recoverFromChunkLoadError,
+} from "./lib/chunkLoadRecovery";
 
 const DEV_SW_RESET_KEY = createRuntimeStorageKey('dev-sw-reset');
-const CHUNK_RELOAD_KEY = createRuntimeStorageKey('chunk-reload');
 
 function hasServiceWorkerSupport(): boolean {
   return 'serviceWorker' in navigator;
@@ -37,42 +41,6 @@ function clearDevSwResetFlag(): void {
   }
 }
 
-function readChunkReloadFlag(): boolean {
-  try {
-    return window.sessionStorage.getItem(CHUNK_RELOAD_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
-
-function writeChunkReloadFlag(): void {
-  try {
-    window.sessionStorage.setItem(CHUNK_RELOAD_KEY, '1');
-  } catch {
-    // Session storage can be unavailable in hardened browser contexts.
-  }
-}
-
-function clearChunkReloadFlag(): void {
-  try {
-    window.sessionStorage.removeItem(CHUNK_RELOAD_KEY);
-  } catch {
-    // Session storage can be unavailable in hardened browser contexts.
-  }
-}
-
-function isChunkLoadError(reason: unknown): boolean {
-  const message = reason instanceof Error
-    ? reason.message
-    : typeof reason === 'string'
-      ? reason
-      : String(reason ?? '');
-
-  return message.includes('Failed to fetch dynamically imported module')
-    || message.includes('Importing a module script failed')
-    || message.includes('error loading dynamically imported module');
-}
-
 async function deleteRagnarokCaches(): Promise<void> {
   if (!('caches' in window)) return;
 
@@ -82,24 +50,6 @@ async function deleteRagnarokCaches(): Promise<void> {
       .filter((cacheName) => cacheName.startsWith('ragnarok-'))
       .map((cacheName) => window.caches.delete(cacheName)),
   );
-}
-
-async function recoverFromChunkLoadError(): Promise<void> {
-  if (readChunkReloadFlag()) return;
-
-  writeChunkReloadFlag();
-
-  try {
-    await deleteRagnarokCaches();
-    if (hasServiceWorkerSupport()) {
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(registrations.map((registration) => registration.update().catch(() => {})));
-    }
-  } catch {
-    // Reload is still the correct recovery path if cleanup fails.
-  }
-
-  window.location.reload();
 }
 
 async function resetDevelopmentServiceWorker(): Promise<boolean> {
@@ -182,6 +132,11 @@ async function bootstrap(): Promise<void> {
 }
 
 void bootstrap();
+
+window.addEventListener('vite:preloadError', (event: Event) => {
+  event.preventDefault();
+  void recoverFromChunkLoadError();
+});
 
 // Global error handlers — catch crashes outside React error boundaries
 window.addEventListener('unhandledrejection', (e) => {

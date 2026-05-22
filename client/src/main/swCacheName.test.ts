@@ -30,6 +30,20 @@ function readServiceWorkerCacheName(serviceWorkerUrl: string): string {
 	return context.self.__cacheName;
 }
 
+function isServiceWorkerImmutableChunk(chunkUrl: string): boolean {
+	const source = readFileSync(resolve(process.cwd(), 'client/public/sw.js'), 'utf8');
+	const context: ServiceWorkerContext & { __isImmutableChunk?: boolean } = {
+		URL,
+		self: {
+			location: { href: 'https://example.test/sw.js?resetEpoch=alfa-testnet' },
+			addEventListener: () => undefined,
+		},
+	};
+
+	vm.runInNewContext(`${source}\n__isImmutableChunk = isImmutableChunk(${JSON.stringify(chunkUrl)});`, context);
+	return context.__isImmutableChunk === true;
+}
+
 describe('service worker reset epoch cache name', () => {
 	it('isolates asset caches by reset epoch', () => {
 		expect(readServiceWorkerCacheName('https://example.test/sw.js?resetEpoch=QA%20Season%200%20%2F%202026-05')).toBe(
@@ -38,5 +52,12 @@ describe('service worker reset epoch cache name', () => {
 		expect(readServiceWorkerCacheName('https://example.test/sw.js?resetEpoch=Closed%20Beta%20%2F%202026-06')).toBe(
 			'ragnarok-assets-v3-closed-beta-2026-06',
 		);
+	});
+
+	it('recognizes Vite base64url-style chunk hashes as immutable chunks', () => {
+		expect(isServiceWorkerImmutableChunk('https://example.test/assets/SettingsPage-DXkvZYh2.js')).toBe(true);
+		expect(isServiceWorkerImmutableChunk('https://example.test/assets/index-j87ec-cY.js')).toBe(true);
+		expect(isServiceWorkerImmutableChunk('https://example.test/assets/index-CLoi5iuK.css')).toBe(true);
+		expect(isServiceWorkerImmutableChunk('https://example.test/assets/not-a-chunk.js')).toBe(false);
 	});
 });

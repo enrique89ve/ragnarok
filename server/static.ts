@@ -26,15 +26,46 @@ export function serveStatic(app: Express) {
     );
   }
 
+  app.get("/sw.js", (_req, res) => {
+    res
+      .type("application/javascript")
+      .set({
+        "Cache-Control": "no-store, no-cache, max-age=0, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0",
+        "Service-Worker-Allowed": "/",
+      })
+      .sendFile(path.resolve(distPath, "sw.js"));
+  });
+
+  app.get("/manifest.json", (_req, res) => {
+    res
+      .type("application/json")
+      .set({
+        "Cache-Control": "no-store, no-cache, max-age=0, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0",
+      })
+      .sendFile(path.resolve(distPath, "manifest.json"));
+  });
+
+  app.get("/service-worker.js", (_req, res) => {
+    res
+      .status(404)
+      .type("text/plain")
+      .set("Cache-Control", "no-store, no-cache, max-age=0, must-revalidate")
+      .send("Service worker is served at /sw.js");
+  });
+
   app.use(express.static(distPath, {
     setHeaders: (res, filePath) => {
       if (filePath.endsWith("index.html")) {
-        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Cache-Control", "no-store, no-cache, max-age=0, must-revalidate");
         return;
       }
 
       if (filePath.endsWith("sw.js") || filePath.endsWith("manifest.json")) {
-        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Cache-Control", "no-store, no-cache, max-age=0, must-revalidate");
         return;
       }
 
@@ -55,7 +86,7 @@ export function serveStatic(app: Express) {
   // Fall through to index.html if the file doesn't exist.
   app.use("*", (_req, res) => {
     res
-      .set("Cache-Control", "no-cache")
+      .set("Cache-Control", "no-store, no-cache, max-age=0, must-revalidate")
       .sendFile(path.resolve(distPath, "index.html"));
   });
 }

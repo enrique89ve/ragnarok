@@ -29,8 +29,9 @@ var ASSET_EXTS = [
 	'.mp3', '.ogg', '.wav',
 ];
 
-// Hashed JS/CSS chunks are immutable — cache forever
-var IMMUTABLE_RE = /\/assets\/[^/]+\.[a-f0-9]{8,}\.(js|css)$/;
+// Vite hashed JS/CSS chunks are immutable. Keep old visited chunks in the
+// reset-epoch cache so tabs opened before a deploy can still lazy-load routes.
+var IMMUTABLE_RE = /\/assets\/[^/]+[-.][A-Za-z0-9_-]{8,}\.(js|css)$/;
 
 function getBase() {
 	var swUrl = new URL(self.location);
@@ -97,7 +98,9 @@ self.addEventListener('install', function(event) {
 	);
 });
 
-// Activate: clean old caches + purge stale JS/CSS chunks, claim clients
+// Activate: clean other reset-epoch caches, but keep visited JS/CSS chunks for
+// this epoch. Deleting them during a deploy can break still-open tabs whose old
+// app bundle requests an old lazy chunk after the new server build is live.
 self.addEventListener('activate', function(event) {
 	event.waitUntil(
 		caches.keys().then(function(names) {
@@ -106,18 +109,6 @@ self.addEventListener('activate', function(event) {
 					.filter(function(name) { return name !== CACHE_NAME; })
 					.map(function(name) { return caches.delete(name); })
 			);
-		}).then(function() {
-			// Purge stale immutable JS/CSS chunks from current cache
-			// New build generates new hashes — old chunks cause 404s
-			return caches.open(CACHE_NAME).then(function(cache) {
-				return cache.keys().then(function(requests) {
-					return Promise.all(
-						requests
-							.filter(function(req) { return IMMUTABLE_RE.test(req.url); })
-							.map(function(req) { return cache.delete(req); })
-					);
-				});
-			});
 		}).then(function() {
 			return self.clients.claim();
 		})

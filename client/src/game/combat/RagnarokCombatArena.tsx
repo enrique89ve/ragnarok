@@ -1091,7 +1091,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
       maxScale={POKER_VIEWPORT_SAFE_AREA.maxScale}
     >
       <div
-        className={`ragnarok-combat-arena bg-transparent ${isPlayerTurn ? 'player-turn' : 'opponent-turn'}`}
+        className={`ragnarok-combat-arena viewport-mode bg-transparent ${isPlayerTurn ? 'player-turn' : 'opponent-turn'}`}
         style={POKER_VIEWPORT_LAYOUT_STYLE}
       >
         {/* ═════════════════════════════════════════════════════════════

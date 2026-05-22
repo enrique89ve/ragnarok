@@ -88,6 +88,25 @@ Alfa stores chain projections, RUNE projections, ceremony/session evidence, and
 JSON-backed ownership/provenance under this JSON state path. This is a testnet
 adapter, not mainnet custody.
 
+## Release Cache Rules
+
+The origin intentionally serves the release shell and service-worker entrypoints
+with `Cache-Control: no-store, no-cache, max-age=0, must-revalidate`. Keep any
+Cloudflare or reverse-proxy cache rule aligned with that behavior:
+
+```text
+Bypass cache: /
+Bypass cache: /index.html
+Bypass cache: /sw.js
+Bypass cache: /manifest.json
+Bypass cache: /service-worker.js
+Cache immutable: /assets/*
+```
+
+`/service-worker.js` should return a 404. Ragnarok registers `/sw.js` with the
+Alfa reset epoch in its query string, and the hashed `/assets/*` files may stay
+cached as immutable build artifacts.
+
 ## Smoke Checks
 
 After deploy:
