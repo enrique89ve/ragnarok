@@ -162,6 +162,13 @@ export function useWireSync() {
 	const opponentUsernameRef = useRef<string | null>(null);
 	const pendingSyncRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+	const isCurrentConnectedMatch = useCallback((matchId: string): boolean => {
+		const peerState = usePeerStore.getState();
+		return peerState.connectionState === 'connected'
+			&& peerState.connection !== null
+			&& matchIdRef.current === matchId;
+	}, []);
+
 	// Commit-reveal seed exchange state
 	const mySaltRef = useRef<string | null>(null);
 	const theirCommitmentRef = useRef<string | null>(null);
@@ -698,9 +705,17 @@ export function useWireSync() {
 									});
 									return;
 								}
+								if (!isCurrentConnectedMatch(localMatchId)) {
+									debug.warn('[wireSync] session_authorize skipped — match no longer connected');
+									return;
+								}
 								const hiveSig = await signSessionAuthorize(localMatchId, sessionKey.pubkey, {
 									username: localUsername,
 								});
+								if (!isCurrentConnectedMatch(localMatchId)) {
+									debug.warn('[wireSync] session_authorize signature ignored — match disconnected before approval');
+									return;
+								}
 								send({
 									type: 'session_authorize',
 									matchId: localMatchId,
@@ -731,6 +746,10 @@ export function useWireSync() {
 									debug.warn('[wireSync] Action log unavailable — running without reload safety', logErr);
 								}
 							} catch (err) {
+								if (!isCurrentConnectedMatch(localMatchId)) {
+									debug.warn('[wireSync] session_authorize cancelled after disconnect');
+									return;
+								}
 								debug.error('[wireSync] session_authorize failed:', err);
 								usePeerStore.getState().setP2pSessionAuthorization({
 									localAuthorized: false,
@@ -1918,7 +1937,7 @@ export function useWireSync() {
 				pendingSyncRef.current = null;
 			}
 		};
-	}, [connection, connectionState, isCardsAuthority, isWsHost, send, playCard, attackWithCard, endTurn, performHeroPower, applyOpponentCommandToStore]);
+	}, [connection, connectionState, isCardsAuthority, isWsHost, send, playCard, attackWithCard, endTurn, performHeroPower, applyOpponentCommandToStore, isCurrentConnectedMatch]);
 
 	const syncGameState = useCallback(() => {
 		if (connectionState !== 'connected' || !isCardsAuthority) return;

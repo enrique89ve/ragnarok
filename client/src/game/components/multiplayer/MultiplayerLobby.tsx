@@ -108,27 +108,6 @@ export function getConnectedMatchProgress(input: ConnectedMatchProgressInput): C
 			detail: 'Syncing the initial match state.',
 		};
 	}
-	if (input.p2pSessionAuthError) {
-		return {
-			ready: false,
-			title: 'Hive session authorization failed',
-			detail: input.p2pSessionAuthError,
-		};
-	}
-	if (!input.p2pSessionLocalAuthorized) {
-		return {
-			ready: false,
-			title: 'Authorizing this browser',
-			detail: 'Approve the Hive Keychain prompt to bind this session.',
-		};
-	}
-	if (!input.p2pSessionRemoteAuthorized) {
-		return {
-			ready: false,
-			title: 'Waiting for opponent authorization',
-			detail: 'The other browser still needs to approve its Hive session.',
-		};
-	}
 	return {
 		ready: true,
 		title: 'Opponent connected',

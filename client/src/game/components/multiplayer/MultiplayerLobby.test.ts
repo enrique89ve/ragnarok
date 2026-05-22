@@ -112,14 +112,14 @@ describe('MultiplayerLobby direct challenge helpers', () => {
 		});
 	});
 
-	it('starts only after loadout, init, and both Hive session authorizations are ready', () => {
+	it('starts after loadout and init without waiting for Hive session authorization', () => {
 		expect(helpers.getConnectedMatchProgress({
 			connectionState: 'connected',
 			opponentArmy: { king: { id: 'odin' } } as never,
 			p2pInitApplied: true,
-			p2pSessionLocalAuthorized: true,
-			p2pSessionRemoteAuthorized: true,
-			p2pSessionAuthError: null,
+			p2pSessionLocalAuthorized: false,
+			p2pSessionRemoteAuthorized: false,
+			p2pSessionAuthError: 'Hive Keychain sign rejected: Keychain timeout (60s)',
 			reconnectCountdown: 0,
 			reconnectAttemptCount: 0,
 		})).toEqual({

@@ -316,7 +316,7 @@ export const MultiplayerGame: React.FC = () => {
 			);
 		}
 
-		// Multiplayer game UI. Three gates wrap the coordinator:
+		// Multiplayer game UI. The hard gates wrap the coordinator:
 		//   1. computeP2PRenderGuard — user-facing wait spinner. Two checks:
 		//      a. opponentArmyFromPeer: the opponent's army announcement arrived.
 		//         Without it, hero portraits fall back to defaults.
@@ -330,6 +330,9 @@ export const MultiplayerGame: React.FC = () => {
 		//      MatchContext into useMatchStore BEFORE the coordinator mounts.
 		//      The coordinator's mode-aware code (Fase 3-4) reads ctx as
 		//      non-null from its first render.
+		// Hive session authorization is intentionally not a hard gameplay gate
+		// in closed beta. It feeds audit/settlement transcript evidence, but P2P
+		// gameplay must not fail just because a wallet prompt is pending.
 		// The P2PProvider wrapping all of renderInner keeps useWireSync mounted
 		// behind the spinner so the init envelope is still received.
 		const guard = computeP2PRenderGuard({

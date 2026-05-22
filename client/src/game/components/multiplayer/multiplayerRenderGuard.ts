@@ -17,10 +17,9 @@ import type { P2PConnectionState } from '../../stores/peerStore';
  *    authoritative state arrives, allowing user input to reference
  *    cardIds the host does not recognize (TD-15).
  *
- * 3. Both Hive session authorization messages are present. The signed
- *    transcript is not a post-board side channel in ranked P2P; if either
- *    Keychain prompt times out, the board stays gated instead of letting the
- *    match fail mid-game.
+ * Hive session authorization is intentionally not a board gate in closed beta:
+ * the signed transcript is an audit/settlement layer, while connectivity,
+ * loadout exchange, and init sync decide whether gameplay can start.
  *
  * Lives outside the component so it can be unit-tested without a JSX
  * runtime — the project's vitest config is `environment: "node"`.
@@ -60,15 +59,6 @@ export function computeP2PRenderGuard(input: P2PRenderGuardInput): P2PRenderGuar
 	}
 	if (!input.p2pInitApplied) {
 		return { kind: 'wait', reason: 'Connected. Syncing match state…' };
-	}
-	if (input.p2pSessionAuthError) {
-		return { kind: 'wait', reason: `Hive session authorization failed: ${input.p2pSessionAuthError}` };
-	}
-	if (!input.p2pSessionLocalAuthorized) {
-		return { kind: 'wait', reason: 'Authorizing local Hive session…' };
-	}
-	if (!input.p2pSessionRemoteAuthorized) {
-		return { kind: 'wait', reason: 'Waiting for opponent Hive authorization…' };
 	}
 	return { kind: 'render' };
 }
