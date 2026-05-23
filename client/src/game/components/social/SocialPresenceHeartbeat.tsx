@@ -15,7 +15,34 @@ import {
 
 const PRESENCE_HEARTBEAT_INTERVAL_MS = 120_000;
 const PRESENCE_HEARTBEAT_MIN_GAP_MS = 120_000;
-const presenceHeartbeatNextAllowedAt = new Map<string, number>();
+const STORAGE_KEY = 'ragnarok-presence-next-allowed';
+
+function getStoredNextAllowed(): Map<string, number> {
+	try {
+		const raw = localStorage.getItem(STORAGE_KEY);
+		if (!raw) return new Map();
+		const parsed = JSON.parse(raw);
+		const map = new Map<string, number>();
+		if (typeof parsed === 'object' && parsed !== null) {
+			for (const [k, v] of Object.entries(parsed)) {
+				if (typeof v === 'number') map.set(k, v);
+			}
+		}
+		return map;
+	} catch {
+		return new Map();
+	}
+}
+
+function setStoredNextAllowed(username: string, timestamp: number): void {
+	const current = getStoredNextAllowed();
+	current.set(username.toLowerCase(), timestamp);
+	try {
+		localStorage.setItem(STORAGE_KEY, JSON.stringify(Object.fromEntries(current.entries())));
+	} catch {
+		// Ignore storage errors
+	}
+}
 
 type PresenceHeartbeatBody = {
 	readonly username: string;
@@ -61,15 +88,15 @@ export function readFriendPresenceChallenges(payload: unknown): readonly ServerS
 }
 
 export function canSendPresenceHeartbeat(username: string, now = Date.now()): boolean {
-	return now >= (presenceHeartbeatNextAllowedAt.get(username.toLowerCase()) ?? 0);
+	return now >= (getStoredNextAllowed().get(username.toLowerCase()) ?? 0);
 }
 
 export function markPresenceHeartbeatSent(username: string, now = Date.now()): void {
-	presenceHeartbeatNextAllowedAt.set(username.toLowerCase(), now + PRESENCE_HEARTBEAT_MIN_GAP_MS);
+	setStoredNextAllowed(username, now + PRESENCE_HEARTBEAT_MIN_GAP_MS);
 }
 
 function markPresenceHeartbeatCooldown(username: string, retryAfterMs: number, now = Date.now()): void {
-	presenceHeartbeatNextAllowedAt.set(username.toLowerCase(), now + Math.max(retryAfterMs, PRESENCE_HEARTBEAT_MIN_GAP_MS));
+	setStoredNextAllowed(username, now + Math.max(retryAfterMs, PRESENCE_HEARTBEAT_MIN_GAP_MS));
 }
 
 export default function SocialPresenceHeartbeat() {
