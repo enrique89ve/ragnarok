@@ -46,7 +46,7 @@ ENV VITE_EXTERNAL_URL_BASE=$VITE_EXTERNAL_URL_BASE
 ENV VITE_SEASON_START=$VITE_SEASON_START
 
 COPY . .
-RUN npm run build
+RUN npm run verify:runtime-env -- --mode=alfa-testnet && npm run build:alfa-testnet
 
 FROM deps AS prod-deps
 WORKDIR /app
@@ -71,4 +71,4 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 5000) + '/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 
-CMD ["sh", "-c", "node dist/index.js --mode ${RAGNAROK_RUNTIME_MODE:-testnet}"]
+CMD ["sh", "-c", "node dist/index.js --mode ${RAGNAROK_RUNTIME_MODE:-alfa-testnet}"]
