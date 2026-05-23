@@ -22,7 +22,10 @@ origin as the web app.
 ## Environment Variables
 
 Configure variables in Dokploy's Environment tab. Dokploy writes them to `.env`;
-the compose file injects them into the container with `env_file: .env`.
+the compose file injects them into the image build and into the running
+container. Do not put these public profile values only in Build-time Secrets:
+the Express process must also see them at runtime for `/api/health` and
+`/api/admin/config`.
 
 Public build-time variables are passed as Docker build args because Vite embeds
 `VITE_*` values into the browser bundle:
