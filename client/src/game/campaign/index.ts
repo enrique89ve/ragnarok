@@ -21,6 +21,7 @@ export { NINE_REALMS, REALM_MAP, MISSION_REALM_MAP, getMissionsForRealm, getReal
 export type { Realm } from './nineRealms';
 export { GREEK_REALMS, GREEK_REALM_MAP, GREEK_MISSION_REALM_MAP, getGreekMissionsForRealm, getGreekRealmProgress } from './greekRealms';
 export type { GreekRealm } from './greekRealms';
+export { ALL_CHAPTERS, getMission } from './campaignLookup';
 
 import { norseChapter } from './chapters/norseChapter';
 import { twilightChapter } from './chapters/twilightChapter';
@@ -29,15 +30,6 @@ import { egyptianChapter } from './chapters/egyptianChapter';
 import { celticChapter } from './chapters/celticChapter';
 import { easternChapter } from './chapters/easternChapter';
 import type { CampaignChapter } from './campaignTypes';
-
-export const ALL_CHAPTERS: CampaignChapter[] = [
-	norseChapter,
-	twilightChapter,
-	greekChapter,
-	egyptianChapter,
-	celticChapter,
-	easternChapter,
-];
 
 export const EASTERN_CHAPTER: CampaignChapter = easternChapter;
 
@@ -49,12 +41,3 @@ export const BASE_CHAPTER_MISSION_IDS: Record<string, string[]> = {
 	celtic: celticChapter.missions.map(m => m.id),
 	eastern: easternChapter.missions.map(m => m.id),
 };
-
-export function getMission(missionId: string) {
-	const allChapters = ALL_CHAPTERS;
-	for (const chapter of allChapters) {
-		const mission = chapter.missions.find(m => m.id === missionId);
-		if (mission) return { mission, chapter };
-	}
-	return null;
-}

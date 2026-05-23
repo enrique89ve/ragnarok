@@ -22,11 +22,23 @@ import {
 	loginWithHiveWallet,
 	setActiveHiveSession,
 } from '../../data/HiveAuth';
-import { getNFTBridge } from '../nft';
-import { ensureBridgeRuntime } from '../runtime/bridgeRuntime';
 import { Button } from '../../components/ui-norse';
 
 type ConnectStatus = 'idle' | 'connecting' | 'error';
+
+async function loadHiveBridgeRuntime() {
+	const [{ ensureBridgeRuntime }, { getNFTBridge }] = await Promise.all([
+		import('../runtime/bridgeRuntime'),
+		import('../nft'),
+	]);
+	await ensureBridgeRuntime();
+	return getNFTBridge();
+}
+
+async function stopHiveBridgeSync(): Promise<void> {
+	const { getNFTBridge } = await import('../nft');
+	getNFTBridge().stopSync();
+}
 
 export function HiveKeychainLogin() {
 	const user = useHiveDataStore((s) => s.user);
@@ -46,16 +58,16 @@ export function HiveKeychainLogin() {
 
 		if (user) {
 			setActiveHiveSession(user.hiveUsername, getDefaultHiveWalletProviderId());
-			void ensureBridgeRuntime().then(() => {
+			void loadHiveBridgeRuntime().then((bridge) => {
 				if (!cancelled) {
-					getNFTBridge().startSync(user.hiveUsername);
+					bridge.startSync(user.hiveUsername);
 				}
 			});
 		}
 
 		return () => {
 			cancelled = true;
-			getNFTBridge().stopSync();
+			void stopHiveBridgeSync();
 		};
 	}, [user]);
 
@@ -93,7 +105,7 @@ export function HiveKeychainLogin() {
 	};
 
 	const handleLogout = () => {
-		getNFTBridge().stopSync();
+		void stopHiveBridgeSync();
 		clearActiveHiveSession();
 		logout();
 	};

@@ -29,7 +29,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFactionStore } from './factionStore';
-import { useCampaignStore } from '../campaign';
+import { useCampaignStore } from '../campaign/campaignStore';
 import { FACTIONS, type FactionId } from './pvpData';
 import { norseChapter } from '../campaign/chapters/norseChapter';
 import './FactionPledgePopup.css';
