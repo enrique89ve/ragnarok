@@ -12,7 +12,7 @@
  * - Callback system for state changes
  */
 
-import { HoverCoordinates } from '../../context/CardTransformContext';
+import type { HoverCoordinates } from '../../context/CardTransformContext';
 
 // Define all possible card states
 export interface CardTransformState {

@@ -3,20 +3,16 @@ import { HashRouter, Routes, Route, Link, Navigate, Outlet, useLocation } from '
 import { routes } from './lib/routes';
 import { Button, Panel, ToastProvider } from './components/ui-norse';
 import { ChevronRight, Compass, LayoutGrid, Play, Settings as SettingsIcon, Swords, X } from 'lucide-react';
-import UnifiedCardSystem from "./game/components/UnifiedCardSystem";
 import "./index.css";
-import { CardTransformProvider } from "./game/context/CardTransformContext";
-import CardTransformBridgeInitializer from "./game/components/CardTransformBridgeInitializer";
 import ragnarokLogo from "./assets/images/ragnarok-logo.jpg";
 import LoadingScreen from "./game/components/ui/LoadingScreen";
-import GoldenCardFilter from "./game/animations/GoldenCardFilter";
 import { EitrMigrationBanner } from "./game/components/migrations/EitrMigrationBanner";
 import { ALL_CHAPTERS, getMission } from "./game/campaign/campaignLookup";
 import { useCampaignStore } from "./game/campaign/campaignStore";
 import { useStarterStore } from "./game/stores/starterStore";
-import { useIsHiveMode, useNFTUsername } from "./game/nft/hooks";
+import { useHiveDataStore } from "./data/HiveDataLayer";
 import { createRuntimeStorageKey, getRagnarokNetworkConfig } from "./game/config/networkConfig";
-import { isSharedNetworkEnvironment, isTestnetStage } from "./game/config/featureFlags";
+import { getDataLayerMode, isSharedNetworkEnvironment, isTestnetStage } from "./game/config/featureFlags";
 import { getRagnarokRuntimePhase } from '@shared/runtimeConfig';
 import { resolveProtectedFlowAccess, type ProtectedFlowSurface } from "./game/auth/protectedFlowAccess";
 import {
@@ -24,16 +20,13 @@ import {
 	CardDataRuntimeBoundary,
 	GameplayRuntimeBoundary,
 } from "./game/runtime/RuntimeBoundary";
-import { MatchSetupCampaign, MatchSetupSingle } from "./game/match";
 import { getSeasonInfo, formatTimeRemaining } from './game/utils/seasonUtils';
-import SocialPresenceHeartbeat from './game/components/social/SocialPresenceHeartbeat';
 import { isChunkLoadError, recoverFromChunkLoadError } from './lib/chunkLoadRecovery';
 
 const HiveKeychainLogin = lazy(() => import("./game/components/HiveKeychainLogin").then(m => ({ default: m.HiveKeychainLogin })));
 const DailyQuestPanel = lazy(() => import("./game/components/quests/DailyQuestPanel"));
 const FriendsPanel = lazy(() => import("./game/components/social/FriendsPanel"));
 
-const RagnarokGameCoordinator = lazy(() => import('./game/coordinator/RagnarokGameCoordinator'));
 const WarbandPage = lazy(() => import('./game/components/warband/WarbandPage'));
 const MultiplayerGame = lazy(() => import('./game/components/multiplayer/MultiplayerGame').then(m => ({ default: m.MultiplayerGame })));
 const PacksPage = lazy(() => import('./game/components/packs/PacksPage'));
@@ -58,8 +51,9 @@ const WalletPage = lazy(() => import('./game/components/wallet/WalletPage'));
 const StarterPackCeremony = lazy(() => import('./game/components/StarterPackCeremony'));
 const DuatClaimPopup = lazy(() => import('./game/components/DuatClaimPopup'));
 const FactionPledgePopup = lazy(() =>
-	import('./game/pvp').then(m => ({ default: m.FactionPledgePopup }))
+	import('./game/pvp/FactionPledgePopup').then(m => ({ default: m.FactionPledgePopup }))
 );
+const SocialPresenceHeartbeat = lazy(() => import('./game/components/social/SocialPresenceHeartbeat'));
 
 const prototypeModules = import.meta.glob('./game/combat/prototypes/PokerViewportSafeAreaPrototype.tsx');
 const PokerViewportSafeAreaPrototype = lazy(async () => {
@@ -69,6 +63,78 @@ const PokerViewportSafeAreaPrototype = lazy(async () => {
 	}
 
 	return loadPrototype() as Promise<{ default: React.ComponentType }>;
+});
+
+const CardVisualRuntimeLayout = lazy(async () => {
+	const [
+		{ CardTransformProvider },
+		bridgeInitializerModule,
+		unifiedCardSystemModule,
+		goldenCardFilterModule,
+	] = await Promise.all([
+		import('./game/context/CardTransformContext'),
+		import('./game/components/CardTransformBridgeInitializer'),
+		import('./game/components/UnifiedCardSystem'),
+		import('./game/animations/GoldenCardFilter'),
+	]);
+	const CardTransformBridgeInitializer = bridgeInitializerModule.default;
+	const UnifiedCardSystem = unifiedCardSystemModule.default;
+	const GoldenCardFilter = goldenCardFilterModule.default;
+
+	return {
+		default: function CardVisualRuntimeLayout() {
+			return (
+				<CardTransformProvider>
+					<CardTransformBridgeInitializer />
+					<UnifiedCardSystem />
+					<GoldenCardFilter />
+					<Outlet />
+				</CardTransformProvider>
+			);
+		},
+	};
+});
+
+const SingleGameRoute = lazy(async () => {
+	const [{ MatchSetupSingle }, coordinatorModule] = await Promise.all([
+		import('./game/match'),
+		import('./game/coordinator/RagnarokGameCoordinator'),
+	]);
+	const RagnarokGameCoordinator = coordinatorModule.default;
+
+	return {
+		default: function SingleGameRoute() {
+			return (
+				<StarterEntitlementGate surface="quick_match">
+					<MatchSetupSingle difficulty="normal" deckSource="warband">
+						<RagnarokGameCoordinator />
+					</MatchSetupSingle>
+				</StarterEntitlementGate>
+			);
+		},
+	};
+});
+
+const CampaignGameRoute = lazy(async () => {
+	const [{ MatchSetupCampaign }, coordinatorModule] = await Promise.all([
+		import('./game/match'),
+		import('./game/coordinator/RagnarokGameCoordinator'),
+	]);
+	const RagnarokGameCoordinator = coordinatorModule.default;
+
+	return {
+		default: function CampaignGameRoute() {
+			return (
+				<ProtectedAccountGate surface="campaign_battle">
+					<StarterEntitlementGate surface="campaign_battle">
+						<MatchSetupCampaign fallback={<Navigate to={routes.campaign} replace />}>
+							<RagnarokGameCoordinator />
+						</MatchSetupCampaign>
+					</StarterEntitlementGate>
+				</ProtectedAccountGate>
+			);
+		},
+	};
 });
 
 type DeferredInstallPromptEvent = Event & {
@@ -82,6 +148,19 @@ if (typeof window !== 'undefined') {
 		e.preventDefault();
 		deferredInstallPrompt = e as DeferredInstallPromptEvent;
 	});
+}
+
+function normalizeHiveUsername(username: string | null | undefined): string | null {
+	const normalized = username?.trim().toLowerCase().replace(/^@/, '') ?? '';
+	return normalized.length > 0 ? normalized : null;
+}
+
+function useStoredHiveUsername(): string | null {
+	return useHiveDataStore(state => normalizeHiveUsername(state.user?.hiveUsername));
+}
+
+function useIsHiveMode(): boolean {
+	return getDataLayerMode() === 'hive';
 }
 
 // Offline wrapper for routes that need a server
@@ -115,7 +194,7 @@ function ProtectedAccountGate({
 	children: React.ReactNode;
 	surface: ProtectedFlowSurface;
 }) {
-	const hiveUsername = useNFTUsername();
+	const hiveUsername = useStoredHiveUsername();
 	const access = resolveProtectedFlowAccess({
 		accountId: hiveUsername,
 		sharedNetwork: isSharedNetworkEnvironment(),
@@ -156,7 +235,7 @@ function StarterEntitlementGate({
 	children: React.ReactNode;
 	surface: ProtectedFlowSurface;
 }) {
-	const hiveUsername = useNFTUsername();
+	const hiveUsername = useStoredHiveUsername();
 	const sharedNetwork = isSharedNetworkEnvironment();
 	const starterClaimed = useStarterStore(state => (
 		sharedNetwork
@@ -386,7 +465,7 @@ function SideRailPanel({ title, action, children }: {
 function HomePage() {
 	const completedMissions = useCampaignStore(s => s.completedMissions);
 	const currentMissionId = useCampaignStore(s => s.currentMission);
-	const hiveUsername = useNFTUsername();
+	const hiveUsername = useStoredHiveUsername();
 	const isHiveMode = useIsHiveMode();
 	const sharedNetwork = isSharedNetworkEnvironment();
 	const starterClaimed = useStarterStore(s => (
@@ -830,13 +909,24 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { err
 }
 
 function GlobalOverlaysLayout() {
+	const hiveUsername = useStoredHiveUsername();
+	const completedMissions = useCampaignStore(state => state.completedMissions);
+	const shouldCheckFactionPledge = useMemo(() => {
+		const norseChapter = ALL_CHAPTERS.find(chapter => chapter.id === 'norse');
+		return Boolean(norseChapter?.missions.every(mission => completedMissions[mission.id]));
+	}, [completedMissions]);
+
 	return (
 		<>
 			<EnvironmentBanner />
-			<SocialPresenceHeartbeat />
+			{hiveUsername && (
+				<Suspense fallback={null}>
+					<SocialPresenceHeartbeat />
+				</Suspense>
+			)}
 			<Outlet />
-			<Suspense fallback={null}><DuatClaimPopup /></Suspense>
-			<Suspense fallback={null}><FactionPledgePopup /></Suspense>
+			{hiveUsername && <Suspense fallback={null}><DuatClaimPopup /></Suspense>}
+			{shouldCheckFactionPledge && <Suspense fallback={null}><FactionPledgePopup /></Suspense>}
 		</>
 	);
 }
@@ -886,41 +976,40 @@ function EnvironmentBanner() {
 function App() {
 	return (
 		<ErrorBoundary>
-			<CardTransformProvider>
-				<CardTransformBridgeInitializer />
-				<UnifiedCardSystem />
-				<GoldenCardFilter />
-				<EitrMigrationBanner />
+			<EitrMigrationBanner />
 
-				<ToastProvider position="top-right" richColors />
-				<HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-					<ViewTransitionBridge />
-					<Suspense fallback={<LoadingScreen />}>
-						<Routes>
+			<ToastProvider position="top-right" richColors />
+			<HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+				<ViewTransitionBridge />
+				<Suspense fallback={<LoadingScreen />}>
+					<Routes>
 							<Route path={routes.map} element={<MapPage />} />
 							<Route
 								path={routes.pokerViewportPrototype}
 								element={import.meta.env.DEV ? <PokerViewportSafeAreaPrototype /> : <Navigate to={routes.home} replace />}
 							/>
 
-							<Route element={<BridgeRuntimeBoundary />}>
-								<Route element={<GlobalOverlaysLayout />}>
-									<Route path={routes.home} element={<HomePage />} />
-									<Route path={routes.warband} element={<StarterEntitlementGate surface="warband"><WarbandPage /></StarterEntitlementGate>} />
-									<Route path={routes.campaign} element={<ProtectedAccountGate surface="campaign"><CampaignPage /></ProtectedAccountGate>} />
-									<Route path={routes.collection} element={<CollectionPage />} />
-									<Route path={routes.ladder} element={<RankedLadderPage />} />
-									<Route path={routes.trading} element={<Navigate to={`${routes.marketplace}?tab=swaps`} replace />} />
-									<Route path={routes.marketplace} element={<OnlineOnly label="Marketplace"><MarketplacePage /></OnlineOnly>} />
-									<Route path={routes.treasury} element={<OnlineOnly label="Treasury"><TreasuryPage /></OnlineOnly>} />
-									<Route path={routes.explorer} element={<ExplorerPage />} />
-									<Route path={routes.admin} element={<AdminPanel />} />
-									<Route path={routes.adminNfts} element={<AdminPanel />} />
-									<Route path={routes.wallet} element={<WalletPage />} />
-									<Route path={routes.legacyRuneTestnet} element={<Navigate to={routes.wallet} replace />} />
-									<Route path={routes.tournaments} element={<OnlineOnly label="Tournaments"><TournamentListPage /></OnlineOnly>} />
-									<Route path={routes.history} element={<MatchHistoryPage />} />
-									<Route path={routes.settings} element={<SettingsPage />} />
+							<Route element={<GlobalOverlaysLayout />}>
+								<Route path={routes.home} element={<HomePage />} />
+								<Route path={routes.campaign} element={<ProtectedAccountGate surface="campaign"><CampaignPage /></ProtectedAccountGate>} />
+								<Route path={routes.ladder} element={<RankedLadderPage />} />
+								<Route path={routes.explorer} element={<ExplorerPage />} />
+								<Route path={routes.admin} element={<AdminPanel />} />
+								<Route path={routes.adminNfts} element={<AdminPanel />} />
+								<Route path={routes.tournaments} element={<OnlineOnly label="Tournaments"><TournamentListPage /></OnlineOnly>} />
+								<Route path={routes.history} element={<MatchHistoryPage />} />
+								<Route path={routes.settings} element={<SettingsPage />} />
+								<Route path={routes.legacyRuneTestnet} element={<Navigate to={routes.wallet} replace />} />
+
+								<Route element={<CardVisualRuntimeLayout />}>
+									<Route element={<BridgeRuntimeBoundary />}>
+										<Route path={routes.warband} element={<StarterEntitlementGate surface="warband"><WarbandPage /></StarterEntitlementGate>} />
+										<Route path={routes.collection} element={<CollectionPage />} />
+										<Route path={routes.trading} element={<Navigate to={`${routes.marketplace}?tab=swaps`} replace />} />
+										<Route path={routes.marketplace} element={<OnlineOnly label="Marketplace"><MarketplacePage /></OnlineOnly>} />
+										<Route path={routes.treasury} element={<OnlineOnly label="Treasury"><TreasuryPage /></OnlineOnly>} />
+										<Route path={routes.wallet} element={<WalletPage />} />
+									</Route>
 
 									<Route element={<CardDataRuntimeBoundary />}>
 										<Route path={routes.packs} element={<PacksPage />} />
@@ -928,22 +1017,8 @@ function App() {
 
 									<Route element={<GameplayRuntimeBoundary />}>
 										<Route path={routes.game} element={<Navigate to={routes.singleGame} replace />} />
-										<Route path={routes.singleGame} element={
-											<StarterEntitlementGate surface="quick_match">
-												<MatchSetupSingle difficulty="normal" deckSource="warband">
-													<RagnarokGameCoordinator />
-												</MatchSetupSingle>
-											</StarterEntitlementGate>
-										} />
-										<Route path={routes.campaignGame} element={
-											<ProtectedAccountGate surface="campaign_battle">
-												<StarterEntitlementGate surface="campaign_battle">
-													<MatchSetupCampaign fallback={<Navigate to={routes.campaign} replace />}>
-														<RagnarokGameCoordinator />
-													</MatchSetupCampaign>
-												</StarterEntitlementGate>
-											</ProtectedAccountGate>
-										} />
+										<Route path={routes.singleGame} element={<SingleGameRoute />} />
+										<Route path={routes.campaignGame} element={<CampaignGameRoute />} />
 										<Route path={routes.multiplayer} element={
 											<ProtectedAccountGate surface="multiplayer">
 												<StarterEntitlementGate surface="multiplayer"><MultiplayerGame /></StarterEntitlementGate>
@@ -962,10 +1037,9 @@ function App() {
 									</Link>
 								</div>
 							} />
-						</Routes>
-					</Suspense>
-				</HashRouter>
-			</CardTransformProvider>
+					</Routes>
+				</Suspense>
+			</HashRouter>
 		</ErrorBoundary>
 	);
 }

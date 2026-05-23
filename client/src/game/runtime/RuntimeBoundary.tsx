@@ -22,7 +22,6 @@ function RuntimeBoundary({ mode }: { mode: RuntimeMode }) {
       if (mode === 'bridge') {
         await ensureBridgeRuntime();
       } else if (mode === 'card-data') {
-        await ensureBridgeRuntime();
         await ensureCardDataRuntime();
       } else {
         release = await acquireGameplayRuntime();

@@ -8,7 +8,7 @@
 
 import { debug } from '../config/debugConfig';
 import React, { createContext, useReducer, useContext, useCallback, useEffect, useRef } from 'react';
-import { CardTransformState } from '../utils/cards/CardTransformationManager';
+import type { CardTransformState } from '../utils/cards/CardTransformationManager';
 
 // Define our own default state since it's not exported from the manager
 const DEFAULT_CARD_STATE: Omit<CardTransformState, 'cardId'> = {

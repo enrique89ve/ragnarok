@@ -7,9 +7,8 @@
  * existing functionality.
  */
 
-import { CardTransformState } from './CardTransformationManager';
+import type { CardTransformState } from './CardTransformationManager';
 import { cardTransformManager } from './CardTransformationManager';
-import CardTransformContext from '../../context/CardTransformContext';
 
 /**
  * Singleton bridge class to synchronize state between the old and new card transform systems
