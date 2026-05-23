@@ -7,9 +7,6 @@ services:
         VITE_NETWORK_STAGE: ${VITE_NETWORK_STAGE:-testnet}
         VITE_RAGNAROK_PROTOCOL_ID: ${VITE_RAGNAROK_PROTOCOL_ID:-rk_game_testnet}
         VITE_RAGNAROK_COLLECTION_ID: ${VITE_RAGNAROK_COLLECTION_ID:-ragnarok-testnet}
-        # Alfa Testnet should use an alfa-testnet-* epoch. NFT-full beta should
-        # use a closed-beta-* epoch. qa-s0-* enables QA full-catalog access and
-        # is not NFT custody evidence.
         VITE_RAGNAROK_RESET_EPOCH: ${VITE_RAGNAROK_RESET_EPOCH:?Set VITE_RAGNAROK_RESET_EPOCH in Dokploy}
         VITE_RAGNAROK_ADMIN_ACCOUNT: ${VITE_RAGNAROK_ADMIN_ACCOUNT:-ragnarok-test}
         VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT: ${VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT:-ragnarok-test-operator}
@@ -55,10 +52,16 @@ services:
       ENABLE_INDEX_CHECKPOINT_PUBLISHER: ${ENABLE_INDEX_CHECKPOINT_PUBLISHER:-false}
       RAGNAROK_INDEX_CHECKPOINT_DRY_RUN: ${RAGNAROK_INDEX_CHECKPOINT_DRY_RUN:-true}
       RAGNAROK_INDEX_ACCOUNT: ${VITE_RAGNAROK_INDEX_ACCOUNT:-ragp2p}
-    ports:
+    expose:
       - "5000"
+    networks:
+      - dokploy-network
     volumes:
       - ragnarok-data:/app/data
 
 volumes:
   ragnarok-data:
+
+networks:
+  dokploy-network:
+    external: true
