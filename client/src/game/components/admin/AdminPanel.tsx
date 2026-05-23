@@ -1440,6 +1440,8 @@ function P2PStatusCard({
 	const refreshedLabel = state.updatedAt
 		? new Date(state.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 		: 'Pending';
+	const challengeSignerConfigured = data?.challengeSigning.source === 'env';
+	const challengeSignerLabel = data ? (challengeSignerConfigured ? 'Configured' : 'Runtime fallback') : 'Pending';
 	const topErrorRows = Object.entries(data?.relay.errorsByReason ?? {})
 		.sort(([, a], [, b]) => b - a)
 		.slice(0, 4);
@@ -1489,6 +1491,7 @@ function P2PStatusCard({
 				<AdminConsumerRow label="Pending challenges" value={(data?.social.pendingChallenges ?? 0).toLocaleString()} ok />
 				<AdminConsumerRow label="Messages relayed" value={(data?.relay.totalMessagesRelayed ?? 0).toLocaleString()} ok />
 				<AdminConsumerRow label="Dropped frames" value={(data?.relay.totalFramesDropped ?? 0).toLocaleString()} ok={(data?.relay.totalFramesDropped ?? 0) === 0} />
+				<AdminConsumerRow label="Challenge signer" value={challengeSignerLabel} ok={challengeSignerConfigured} />
 				<AdminConsumerRow label="Last error" value={lastErrorLabel} ok={!data?.summary.lastErrorAt} />
 				<AdminConsumerRow label="Checked" value={refreshedLabel} ok={state.status !== 'loading'} />
 				<AdminConsumerRow label="Oldest queue" value={formatDurationMs(data?.matchmaking.oldestQueuedMs ?? null)} ok={(data?.matchmaking.oldestQueuedMs ?? 0) < 60_000} />

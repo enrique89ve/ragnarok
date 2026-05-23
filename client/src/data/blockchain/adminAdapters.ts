@@ -129,12 +129,19 @@ export type AdminP2PStatus = {
 		readonly busyUsers: number;
 		readonly pendingChallenges: number;
 	};
+	readonly challengeSigning: {
+		readonly configured: boolean;
+		readonly validLength: boolean;
+		readonly source: 'env' | 'process-fallback';
+		readonly minimumLength: number;
+	};
 	readonly summary: {
 		readonly playersInRelayMatches: number;
 		readonly activeRelayRooms: number;
 		readonly activeMatchmakingPairs: number;
 		readonly onlinePresenceUsers: number;
 		readonly pendingChallenges: number;
+		readonly challengeSigningSecretConfigured: boolean;
 		readonly totalErrors: number;
 		readonly lastErrorAt: number | null;
 		readonly lastErrorReason: string | null;

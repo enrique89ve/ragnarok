@@ -1,6 +1,9 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:20-alpine AS deps
+ARG NODE_VERSION=20.20.2
+ARG NODE_ALPINE_VERSION=3.22
+
+FROM node:${NODE_VERSION}-alpine${NODE_ALPINE_VERSION} AS deps
 WORKDIR /app
 
 ENV NPM_CONFIG_FETCH_RETRIES=5
@@ -52,7 +55,7 @@ FROM deps AS prod-deps
 WORKDIR /app
 RUN npm prune --omit=dev --no-audit --fund=false && npm cache clean --force
 
-FROM node:20-alpine AS runner
+FROM node:${NODE_VERSION}-alpine${NODE_ALPINE_VERSION} AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=5000

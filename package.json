@@ -4,6 +4,10 @@
 	"description": "Ragnarok: Norse Mythos Card Game — 2,400+ cards, 80 heroes, poker combat, Hive NFT blockchain",
 	"type": "module",
 	"license": "MIT",
+	"engines": {
+		"node": ">=20.20.2 <23",
+		"npm": ">=10 <12"
+	},
 	"scripts": {
 		"dev": "CHOKIDAR_USEPOLLING=1 tsx server/index.ts",
 		"dev:local": "npm run dev",

@@ -46,6 +46,7 @@ These values are sensitive and must never use the `VITE_` prefix:
 - `HIVE_ACTIVE_KEY`
 - `RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY`
 - `RAGNAROK_INDEX_POSTING_KEY`
+- `P2P_CHALLENGE_SIGNING_SECRET`
 - any Hive WIF private key
 - any Hive `PVT_*` private key
 - `ANTHROPIC_API_KEY`
@@ -93,6 +94,11 @@ posting key such as `RAGNAROK_INDEX_POSTING_KEY`; it must never be exposed as
 cursor for fresh server indexer state files; set it to the first Hive block
 where the selected Ragnarok protocol id can appear, so the server does not
 replay all historical Hive blocks during a testnet or mainnet bootstrap.
+
+`P2P_CHALLENGE_SIGNING_SECRET` is a server-only HMAC secret for direct P2P
+challenge envelopes. Local/dev may use the process fallback, but Dokploy or any
+shared environment must set a stable value of at least 32 characters. Never add
+`VITE_` to this name.
 
 `ENABLE_INDEX_CHECKPOINT_PUBLISHER=true` turns on server-side Hive checkpoint
 broadcasts. The publisher uses `hive-tx` with `RAGNAROK_INDEX_ACCOUNT` and

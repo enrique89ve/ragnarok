@@ -119,6 +119,7 @@ VITE_RAGNAROK_RESET_EPOCH=alfa-testnet-full-nft-2026-05-22
 ENABLE_CHAIN_INDEXER=true
 RAGNAROK_CHAIN_STATE_FILE=data/chain-state.alfa-testnet.json
 RAGNAROK_NFT_OWNERSHIP_SOURCE=json
+P2P_CHALLENGE_SIGNING_SECRET=<64-hex-chars>
 ```
 
 Expected Alfa signals:
@@ -129,6 +130,9 @@ Expected Alfa signals:
   `runtimePhase: "alfa-testnet"`, an `alfa-testnet-*` reset epoch,
   `qaFullCatalogEnabled: false`, `resettable: true`, `economic: false`, and
   JSON state evidence.
+- `GET /api/admin/p2p/status` reports `challengeSigning.source: "env"` in
+  Dokploy/shared environments; `process-fallback` is acceptable only for
+  private local/dev runs.
 - Alfa is not mainnet acceptance and does not open Beta Testnet invites by
   itself.
 

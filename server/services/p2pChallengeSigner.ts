@@ -16,11 +16,35 @@ type ChallengeSignPayload = {
 	readonly sigAlg: typeof CHALLENGE_SIGNATURE_ALGORITHM;
 };
 
+export type P2PChallengeSigningSecretStatus = {
+	readonly configured: boolean;
+	readonly validLength: boolean;
+	readonly source: 'env' | 'process-fallback';
+	readonly minimumLength: number;
+};
+
+const P2P_CHALLENGE_SIGNING_SECRET_MIN_LENGTH = 32;
 let fallbackSigningSecret: string | null = null;
 
+function getConfiguredSigningSecret(): string | undefined {
+	const configured = process.env.P2P_CHALLENGE_SIGNING_SECRET?.trim();
+	return configured && configured.length > 0 ? configured : undefined;
+}
+
+export function getP2PChallengeSigningSecretStatus(): P2PChallengeSigningSecretStatus {
+	const configured = getConfiguredSigningSecret();
+	const validLength = configured !== undefined && configured.length >= P2P_CHALLENGE_SIGNING_SECRET_MIN_LENGTH;
+	return {
+		configured: configured !== undefined,
+		validLength,
+		source: validLength ? 'env' : 'process-fallback',
+		minimumLength: P2P_CHALLENGE_SIGNING_SECRET_MIN_LENGTH,
+	};
+}
+
 function getSigningSecret(): string {
-	const configured = process.env.P2P_CHALLENGE_SIGNING_SECRET;
-	if (configured && configured.length >= 32) return configured;
+	const configured = getConfiguredSigningSecret();
+	if (configured && configured.length >= P2P_CHALLENGE_SIGNING_SECRET_MIN_LENGTH) return configured;
 	fallbackSigningSecret ??= randomBytes(32).toString('hex');
 	return fallbackSigningSecret;
 }

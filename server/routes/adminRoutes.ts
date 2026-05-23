@@ -32,6 +32,7 @@ import {
 import { getP2PRelayStats } from './p2pRelay';
 import { getP2PMatchmakingStats } from './matchmakingRoutes';
 import { getP2PSocialStats } from './socialRoutes';
+import { getP2PChallengeSigningSecretStatus } from '../services/p2pChallengeSigner';
 
 const router = Router();
 
@@ -102,18 +103,21 @@ router.get('/p2p/status', (_req: Request, res: Response) => {
 	const relay = getP2PRelayStats();
 	const matchmaking = getP2PMatchmakingStats();
 	const social = getP2PSocialStats();
+	const challengeSigning = getP2PChallengeSigningSecretStatus();
 	res.json({
 		success: true,
 		updatedAt: Date.now(),
 		relay,
 		matchmaking,
 		social,
+		challengeSigning,
 		summary: {
 			playersInRelayMatches: relay.activePlayersInMatches,
 			activeRelayRooms: relay.activeFullRooms,
 			activeMatchmakingPairs: matchmaking.activeMatches,
 			onlinePresenceUsers: social.onlineUsers,
 			pendingChallenges: social.pendingChallenges,
+			challengeSigningSecretConfigured: challengeSigning.source === 'env',
 			totalErrors: relay.totalErrors,
 			lastErrorAt: relay.lastErrorAt,
 			lastErrorReason: relay.lastErrorReason,

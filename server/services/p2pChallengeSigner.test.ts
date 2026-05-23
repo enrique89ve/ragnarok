@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
 	buildServerSignedChallenge,
+	getP2PChallengeSigningSecretStatus,
 	resetP2PChallengeSigningSecretForTests,
 	verifyServerSignedChallengeForTarget,
 } from './p2pChallengeSigner';
@@ -44,5 +45,23 @@ describe('p2pChallengeSigner', () => {
 
 		expect(verifyServerSignedChallengeForTarget({ ...challenge, peerId: 'peer-2' }, 'bob')).toBe(false);
 		expect(verifyServerSignedChallengeForTarget({ ...challenge, expiresAt: 92_000 }, 'bob')).toBe(false);
+	});
+
+	it('reports whether Dokploy provided a stable shared signing secret', () => {
+		delete process.env.P2P_CHALLENGE_SIGNING_SECRET;
+		expect(getP2PChallengeSigningSecretStatus()).toEqual({
+			configured: false,
+			validLength: false,
+			source: 'process-fallback',
+			minimumLength: 32,
+		});
+
+		process.env.P2P_CHALLENGE_SIGNING_SECRET = 'x'.repeat(32);
+		expect(getP2PChallengeSigningSecretStatus()).toEqual({
+			configured: true,
+			validLength: true,
+			source: 'env',
+			minimumLength: 32,
+		});
 	});
 });

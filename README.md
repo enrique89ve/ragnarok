@@ -432,6 +432,8 @@ npm run dev
 ```
 
 Opens at `http://localhost:5000`. No database required for single-player — PostgreSQL is optional for server features.
+The Dokploy container is pinned to Node `20.20.2`/Alpine `3.22`; local tooling
+supports Node 20 or 22. Use `.nvmrc` when you want to match the container.
 
 Runtime profile is explicit:
 
