@@ -302,7 +302,7 @@ function StarterEntitlementGate({
  *   header (sticky)
  *   ├── banner             grid 1fr / 360px : copy + cta | stats panel
  *   ├── page grid          1fr / 380px (lg+) : main column | side rail
- *   │     ├── routes (3 horizontal mode cards)
+ *   │     ├── routes (primary mode cards)
  *   │     └── campaign feature card
  *   │     side rail:
  *   │     ├── Daily Quests panel
@@ -365,6 +365,19 @@ const ACCENT: Record<AccentKey, { text: string; strip: string; border: string; a
 };
 
 const MODE_CARDS: ReadonlyArray<ModeCard> = [
+	{
+		title: 'Single',
+		kicker: 'Practice',
+		description: 'Enter a quick AI match, test decks, and learn the combat loop without ranked pressure.',
+		to: routes.singleGame,
+		icon: Play,
+		accent: 'bifrost',
+		atmosphere:
+			'radial-gradient(ellipse 70% 55% at 85% 18%, rgba(74, 111, 224, 0.24), transparent 68%), ' +
+			'radial-gradient(ellipse 45% 42% at 20% 90%, rgba(192, 138, 36, 0.14), transparent 70%)',
+		cta: 'Play',
+		intent: 'combat',
+	},
 	{
 		title: 'Ranked PvP',
 		kicker: 'Competitive',
@@ -682,7 +695,7 @@ function HomePage() {
 							<div className="font-mono text-[11px] tracking-[0.32em] uppercase text-ink-300">Primary Routes</div>
 							<h2 className="font-display text-xl tracking-[0.08em] uppercase text-ink-0 mt-1">Choose your front</h2>
 						</header>
-						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
 							{MODE_CARDS.map(mode => {
 								const Icon = mode.icon;
 								const a = ACCENT[mode.accent];
