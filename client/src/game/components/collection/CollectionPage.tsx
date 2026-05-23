@@ -567,19 +567,35 @@ export default function CollectionPage() {
 	}, [cards, currentAccount, filterSource, filteredAndSorted]);
 
 	const parentRef = useRef<HTMLDivElement>(null);
-	const COLUMNS = 6;
+	const [viewportWidth, setViewportWidth] = useState(() => typeof window === 'undefined' ? 1280 : window.innerWidth);
+	useEffect(() => {
+		if (typeof window === 'undefined') return undefined;
+		const updateViewportWidth = () => setViewportWidth(window.innerWidth);
+		updateViewportWidth();
+		window.addEventListener('resize', updateViewportWidth);
+		window.addEventListener('orientationchange', updateViewportWidth);
+		return () => {
+			window.removeEventListener('resize', updateViewportWidth);
+			window.removeEventListener('orientationchange', updateViewportWidth);
+		};
+	}, []);
+
+	const COLUMNS = viewportWidth < 560 ? 2 : viewportWidth < 900 ? 4 : viewportWidth < 1180 ? 5 : 6;
+	const estimatedCollectionWidth = Math.min(Math.max(viewportWidth - 32, 320), 1152);
+	const estimatedCardWidth = (estimatedCollectionWidth - ((COLUMNS - 1) * 16)) / COLUMNS;
+	const estimatedRowHeight = Math.max(220, Math.ceil((estimatedCardWidth * 4) / 3) + 20);
 	const rows = useMemo(() => {
 		const result: CollectionOwnedCard[][] = [];
 		for (let i = 0; i < filteredAndSorted.length; i += COLUMNS) {
 			result.push(filteredAndSorted.slice(i, i + COLUMNS));
 		}
-		return result;
-	}, [filteredAndSorted]);
+	return result;
+	}, [COLUMNS, filteredAndSorted]);
 
 	const rowVirtualizer = useVirtualizer({
 		count: rows.length,
 		getScrollElement: () => parentRef.current,
-		estimateSize: () => 280,
+		estimateSize: () => estimatedRowHeight,
 		overscan: 3,
 	});
 
@@ -604,7 +620,7 @@ export default function CollectionPage() {
 	}
 
 	return (
-		<div className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-vault-nav) text-ink-0">
+		<div className="collection-landscape-shell h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-vault-nav) text-ink-0">
 			<MetaPageHeader
 				title="Collection"
 				kicker="Vault · Cards"
@@ -635,7 +651,7 @@ export default function CollectionPage() {
 				}
 			/>
 
-			<div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+			<div className="collection-landscape-content mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
 				{!starterGateActive && showDuatCollectionNotice && duatEntry && (
 					<div className={`${VAULT_PANEL_CLASS} mb-6 p-4 flex flex-wrap items-center gap-4`}>
 						<div className="grid h-10 w-10 place-items-center rounded-md border border-bifrost-300/45 bg-bifrost-500/15 text-bifrost-100">
@@ -738,9 +754,9 @@ export default function CollectionPage() {
 
 				{/* Filter Bar */}
 				{!starterGateActive && (
-				<div className={`${VAULT_PANEL_CLASS} p-4 mb-6`}>
+					<div className={`${VAULT_PANEL_CLASS} collection-landscape-filters p-4 mb-6`}>
 					{/* Search + Sort Row */}
-					<div className="flex gap-3 mb-3">
+					<div className="collection-landscape-search-row flex gap-3 mb-3">
 						<div className="flex-1 relative">
 							<span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">🔍</span>
 							<input
@@ -867,8 +883,8 @@ export default function CollectionPage() {
 					</motion.div>
 				) : (
 					<>
-						<div ref={parentRef} style={{ height: '70vh', overflow: 'auto' }}>
-							<div style={{ height: `${rowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+							<div ref={parentRef} className="collection-landscape-viewport">
+								<div style={{ height: `${rowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
 								{rowVirtualizer.getVirtualItems().map((virtualRow) => (
 									<div
 										key={virtualRow.key}
@@ -881,7 +897,10 @@ export default function CollectionPage() {
 											transform: `translateY(${virtualRow.start}px)`,
 										}}
 									>
-										<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+											<div
+												className="collection-landscape-card-grid grid gap-4"
+												style={{ gridTemplateColumns: `repeat(${COLUMNS}, minmax(0, 1fr))` }}
+											>
 											{rows[virtualRow.index].map((card, colIndex) => {
 												const hiveAsset = hiveCardMap.get(card.id);
 												const masteryTier = hiveAsset?.ownershipSource === 'nft'
@@ -1067,14 +1086,14 @@ export default function CollectionPage() {
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
 						onClick={() => { setSelectedCard(null); setCraftConfirm(null); }}
-						className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm"
-					>
+							className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/85 p-3 backdrop-blur-sm"
+						>
 						<motion.div
 							initial={{ scale: 0.8, opacity: 0 }}
 							animate={{ scale: 1, opacity: 1 }}
 							exit={{ scale: 0.8, opacity: 0 }}
 							onClick={(e) => e.stopPropagation()}
-							className={`w-[380px] rounded-2xl overflow-hidden ${getFrameClass(selectedCard.rarity)}`}
+								className={`modal-landscape-safe w-[380px] max-w-[calc(100vw-1.5rem)] rounded-2xl overflow-hidden ${getFrameClass(selectedCard.rarity)}`}
 							style={{ background: 'linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%)' }}
 						>
 							{/* Foil Shimmer */}

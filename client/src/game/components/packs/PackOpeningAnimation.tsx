@@ -193,7 +193,7 @@ export default function PackOpeningAnimation({
 			initial={{ opacity: 0 }}
 			animate={{ opacity: 1 }}
 			exit={{ opacity: 0 }}
-			className="fixed inset-0 z-50 overflow-y-auto overflow-x-hidden bg-obsidian-950"
+				className="pack-opening-landscape-shell fixed inset-0 z-50 overflow-y-auto overflow-x-hidden bg-obsidian-950"
 			style={{
 				backgroundImage:
 					'radial-gradient(ellipse 80% 50% at 50% 0%, color-mix(in srgb, var(--gold-300) 6%, transparent) 0%, transparent 60%), radial-gradient(ellipse 120% 80% at 50% 100%, color-mix(in srgb, var(--obsidian-700) 40%, transparent) 0%, transparent 60%)',
@@ -211,7 +211,7 @@ export default function PackOpeningAnimation({
 				type="button"
 				onClick={onClose}
 				aria-label="Close pack opening"
-				className="fixed top-14 right-5 z-[10050] inline-flex h-12 min-w-12 items-center justify-center gap-2 rounded-md border border-ink-200/35 bg-obsidian-950/95 px-3 text-ink-0 shadow-[0_0_24px_rgba(0,0,0,0.75)] hover:border-gold-300 hover:text-gold-200 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
+				className="pack-opening-close fixed top-14 right-5 z-[10050] inline-flex h-12 min-w-12 items-center justify-center gap-2 rounded-md border border-ink-200/35 bg-obsidian-950/95 px-3 text-ink-0 shadow-[0_0_24px_rgba(0,0,0,0.75)] hover:border-gold-300 hover:text-gold-200 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
 			>
 				<X size={24} strokeWidth={2.5} aria-hidden="true" />
 				<span className="hidden sm:inline font-mono text-[10px] uppercase tracking-[0.18em]">Close</span>
@@ -224,7 +224,7 @@ export default function PackOpeningAnimation({
 						initial={{ scale: 0.5, opacity: 0 }}
 						animate={{ scale: 1, opacity: 1 }}
 						exit={{ scale: 1.2, opacity: 0 }}
-						className="min-h-screen flex flex-col items-center justify-center text-center"
+							className="pack-opening-intro min-h-screen flex flex-col items-center justify-center text-center"
 					>
 						<motion.div
 							animate={{ y: [0, -12, 0] }}
@@ -240,7 +240,7 @@ export default function PackOpeningAnimation({
 				{phase === 'opening' && (
 					<motion.div
 						key="opening"
-						className="min-h-screen flex items-center justify-center"
+							className="pack-opening-intro min-h-screen flex items-center justify-center"
 					>
 						<div className="relative flex items-center justify-center">
 							<motion.div
@@ -285,11 +285,11 @@ export default function PackOpeningAnimation({
 						key="reveal"
 						initial={{ opacity: 0 }}
 						animate={{ opacity: 1 }}
-						className="min-h-screen flex flex-col relative z-10"
+							className="pack-opening-reveal min-h-screen flex flex-col relative z-10"
 					>
 						{/* ── Header — full in ceremonial mode, single-line in compact ─ */}
 						{compactLayout ? (
-							<header className="relative bg-obsidian-950/60 border-b border-gold-300/15 px-6 py-3 flex items-center justify-center gap-3">
+								<header className="pack-opening-compact-header relative bg-obsidian-950/60 border-b border-gold-300/15 px-6 py-3 flex items-center justify-center gap-3">
 								<span className="font-mono text-[10px] sm:text-[11px] tracking-[0.32em] uppercase text-gold-300/80">
 									{packName}
 								</span>
@@ -299,7 +299,7 @@ export default function PackOpeningAnimation({
 								</span>
 							</header>
 						) : (
-							<header className="relative bg-obsidian-950/40 ornate-corners-host">
+								<header className="pack-opening-full-header relative bg-obsidian-950/40 ornate-corners-host">
 								<OrnateCorners />
 								<div className="max-w-6xl mx-auto px-6 py-8 sm:py-12 flex items-center justify-between gap-6 relative z-10">
 									<div className="sigil-host shrink-0 hidden sm:block">
@@ -335,10 +335,10 @@ export default function PackOpeningAnimation({
 
 						{/* ── Class nav strip sticky at top (batch reveal only) ─ */}
 						{!compactLayout && useBatchReveal && phase === 'complete' && grouped && (
-							<nav
-								aria-label="Jump to class section"
-								className="sticky top-0 z-30 bg-obsidian-950/95 backdrop-blur-xl border-b border-gold-300/15"
-							>
+								<nav
+									aria-label="Jump to class section"
+									className="pack-opening-class-nav sticky top-0 z-30 bg-obsidian-950/95 backdrop-blur-xl border-b border-gold-300/15"
+								>
 								<div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3 overflow-x-auto snap-x snap-mandatory sm:justify-center">
 									{REVEAL_SECTIONS.map(section => {
 										const count = grouped[section.key]?.length ?? 0;
@@ -363,7 +363,7 @@ export default function PackOpeningAnimation({
 						)}
 
 						{/* ── Body ───────────────────────────────────────────── */}
-						<div className="flex-1">
+							<div className="pack-opening-body flex-1">
 							{phase === 'reveal' && !showAllCards && (
 								<div className="flex justify-center pt-6">
 									<button
@@ -393,9 +393,9 @@ export default function PackOpeningAnimation({
 										return (
 											<section
 												key={section.key}
-												className="min-h-[70vh] flex items-center justify-center px-6 py-8"
+												className="pack-opening-compact-section min-h-[70vh] flex items-center justify-center px-6 py-8"
 											>
-												<div className="grid w-full max-w-6xl grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5 justify-items-center">
+												<div className="pack-opening-card-grid grid w-full max-w-6xl grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5 justify-items-center">
 													{sectionCards.map((card, cardIdx) => (
 														<CardTile
 															key={`${card.id}-${cardIdx}`}
@@ -414,7 +414,7 @@ export default function PackOpeningAnimation({
 										<section
 											key={section.key}
 											id={`reveal-${section.key}`}
-											className="scroll-mt-[80px] max-w-6xl mx-auto px-6 my-12"
+											className="pack-opening-section scroll-mt-[80px] max-w-6xl mx-auto px-6 my-12"
 										>
 											<motion.div
 												initial={{ opacity: 0, y: 20 }}
@@ -460,7 +460,7 @@ export default function PackOpeningAnimation({
 												</div>
 											</motion.div>
 
-											<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5 justify-items-center">
+											<div className="pack-opening-card-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5 justify-items-center">
 												{sectionCards.map((card, cardIdx) => (
 													<CardTile
 														key={`${card.id}-${cardIdx}`}
@@ -476,8 +476,8 @@ export default function PackOpeningAnimation({
 								})
 							) : (
 								// Sequential reveal — small packs (≤10 cards), centered grid
-								<div className="min-h-[60vh] flex items-center justify-center px-6 py-10">
-									<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5 justify-items-center max-w-6xl">
+								<div className="pack-opening-sequential min-h-[60vh] flex items-center justify-center px-6 py-10">
+									<div className="pack-opening-card-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5 justify-items-center max-w-6xl">
 										{cards.map((card, index) => (
 											<CardTile
 												key={`${card.id}-${index}`}
@@ -498,7 +498,7 @@ export default function PackOpeningAnimation({
 								initial={{ y: 50, opacity: 0 }}
 								animate={{ y: 0, opacity: 1 }}
 								transition={{ delay: reducedMotion ? 0 : 0.5 }}
-								className="sticky bottom-0 z-30 bg-obsidian-950/95 backdrop-blur-xl border-t border-gold-300/15 px-6 py-4"
+								className="pack-opening-footer sticky bottom-0 z-30 bg-obsidian-950/95 backdrop-blur-xl border-t border-gold-300/15 px-6 py-4"
 							>
 								<div className="max-w-6xl mx-auto flex items-center justify-center gap-3 flex-wrap">
 									<button

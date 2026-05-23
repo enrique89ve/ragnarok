@@ -711,7 +711,7 @@ export default function DuatPackCeremony({
 	if (awaitingChain) {
 		const exhausted = pollAttempts >= CHAIN_POLL_MAX_ATTEMPTS;
 		return (
-			<div className="fixed inset-0 z-[10000] flex items-center justify-center bg-obsidian-950/95 backdrop-blur-sm p-6">
+			<div className="duat-ceremony-landscape-shell fixed inset-0 z-[10000] flex items-center justify-center bg-obsidian-950/95 p-6 backdrop-blur-sm">
 				<motion.div
 					initial={{ opacity: 0, y: 10 }}
 					animate={{ opacity: 1, y: 0 }}
@@ -763,13 +763,13 @@ export default function DuatPackCeremony({
 	}
 
 	return (
-		<div className="fixed inset-0 z-[10000] overflow-hidden overscroll-contain">
+		<div className="duat-ceremony-landscape-shell fixed inset-0 z-[10000] overflow-hidden overscroll-contain">
 			{/* Progress + skip overlay */}
 			{!revealed && !batchResults && (
 				<motion.div
 					initial={{ opacity: 0, y: -10 }}
 					animate={{ opacity: 1, y: 0 }}
-					className="absolute top-4 left-1/2 -translate-x-1/2 z-[10001] flex items-center gap-4 px-5 py-2 rounded-full border border-bifrost-300/40 bg-obsidian-950/85 backdrop-blur-sm"
+					className="duat-ceremony-progress absolute top-4 left-1/2 -translate-x-1/2 z-[10001] flex items-center gap-4 px-5 py-2 rounded-full border border-bifrost-300/40 bg-obsidian-950/85 backdrop-blur-sm"
 				>
 					<span className="font-mono text-[10px] tracking-[0.22em] uppercase text-bifrost-200">
 						{ceremonyCopy.progressLabel} · {currentIndex} / {totalPacks}
@@ -790,7 +790,7 @@ export default function DuatPackCeremony({
 				<motion.div
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
-					className="absolute top-20 left-1/2 -translate-x-1/2 z-[10002] flex items-center gap-4 px-5 py-3 rounded-md border border-ember-300/50 bg-ember-500/95 text-ink-0"
+					className="duat-ceremony-error absolute top-20 left-1/2 -translate-x-1/2 z-[10002] flex items-center gap-4 px-5 py-3 rounded-md border border-ember-300/50 bg-ember-500/95 text-ink-0"
 				>
 					<span className="text-sm">{error}</span>
 					<button
@@ -851,7 +851,7 @@ export default function DuatPackCeremony({
 
 			{!opening && !revealed && !error && queue.length > 0 && (
 				<div className="absolute inset-0 flex items-center justify-center overflow-hidden bg-obsidian-950/95 px-6">
-					<div className="max-w-xl text-center">
+					<div className="duat-ceremony-ready max-w-xl text-center">
 						<DuatPackReadyVisual currentIndex={currentIndex} totalPacks={totalPacks} />
 						<h2 className="font-display text-xl font-bold tracking-[0.10em] uppercase text-bifrost-100 mb-3">
 							{ceremonyCopy.readyTitle}
@@ -859,7 +859,7 @@ export default function DuatPackCeremony({
 						<p className="text-ink-200 text-sm leading-relaxed mb-6">
 							Pack {currentIndex} of {totalPacks} is ready. {ceremonyCopy.readyBody}
 						</p>
-						<div className="flex justify-center gap-3">
+						<div className="duat-ceremony-actions flex justify-center gap-3">
 							<button
 								type="button"
 								onClick={handleOpenCurrentPack}

@@ -249,7 +249,7 @@ export default function PacksPage() {
 	const showSubtleEmpty = starterClaimed && !showDuatRow && !showSealedGrid;
 
 	return (
-		<main className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-home-nav) text-ink-0">
+		<main className="packs-landscape-shell h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-home-nav) text-ink-0">
 			<MetaPageHeader
 				title="Your Packs"
 				kicker="Vault"
@@ -266,7 +266,7 @@ export default function PacksPage() {
 				}
 			/>
 
-			<div className="max-w-5xl mx-auto px-4 py-8">
+			<div className="packs-landscape-content max-w-5xl mx-auto px-4 py-8">
 				{/* Starter claim card — only when not yet claimed */}
 				{showStarterRow && (
 					<StarterClaimCard
@@ -315,7 +315,7 @@ export default function PacksPage() {
 								</div>
 							</header>
 						)}
-						<div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+						<div className="packs-landscape-grid grid grid-cols-2 md:grid-cols-4 gap-5">
 							{[...openableByType.values()].map(({ packType, packSource, packs: typePacks }) => (
 								<SealedPackTile
 									key={`open-${packSource}-${packType}`}
@@ -406,7 +406,7 @@ function SealedPackTile({
 			aria-label={pending
 				? `${packType} pack — ${count} confirming on chain`
 				: `${packType} sealed pack — ${count} owned`}
-			className={`runic-panel ornate-corners-host ornate-corners-host--${tier} mystic-tile ${glowClass} relative rounded-xl p-4 overflow-hidden ${pending ? 'opacity-70' : ''}`}
+				className={`packs-landscape-tile runic-panel ornate-corners-host ornate-corners-host--${tier} mystic-tile ${glowClass} relative rounded-xl p-4 overflow-hidden ${pending ? 'opacity-70' : ''}`}
 			style={{ background: surface }}
 		>
 			{!pending && <SplashBackdrop packKey={packType} count={2} intervalMs={9000} />}
@@ -629,7 +629,7 @@ function BuyMorePacksFooter() {
 	return (
 		<footer
 			aria-labelledby="buy-more-packs-heading"
-			className="mt-16 pt-8 flex flex-col items-center text-center gap-4"
+			className="packs-landscape-footer mt-16 pt-8 flex flex-col items-center text-center gap-4"
 		>
 			<div className="ornament-divider max-w-[200px]" role="separator" aria-hidden="true">
 				<span className="ornament-divider-mark-trio">
@@ -669,7 +669,7 @@ function EmptyCave() {
 			animate={{ opacity: 1 }}
 			transition={{ duration: 1.2 }}
 			aria-labelledby="empty-cave-heading"
-			className="runic-panel ornate-corners-host ornate-corners-host--standard relative mt-12 rounded-xl overflow-hidden"
+				className="packs-landscape-empty runic-panel ornate-corners-host ornate-corners-host--standard relative mt-12 rounded-xl overflow-hidden"
 			style={{
 				background:
 					'radial-gradient(ellipse at center, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 70%), var(--surface-mystic-obsidian)',
