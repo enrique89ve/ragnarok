@@ -43,7 +43,7 @@ interface MapDragState {
 	height: number;
 }
 
-const MAP_BACKGROUND_URL = '/art/maps/map-extended-safe.png';
+const MAP_BACKGROUND_URL = '/art/maps/map-extended-safe.webp';
 const MAP_TRANSFORM_ORIGIN: MapPoint = { x: 50, y: 57 };
 const MAP_ZOOM_MIN = 1;
 const MAP_ZOOM_MIN_EDITOR = 0.55;
