@@ -26,6 +26,11 @@ import { Button } from '../../components/ui-norse';
 
 type ConnectStatus = 'idle' | 'connecting' | 'error';
 
+interface HiveKeychainLoginProps {
+	initiallyExpanded?: boolean;
+	onConnected?: () => void;
+}
+
 async function loadHiveBridgeRuntime() {
 	const [{ ensureBridgeRuntime }, { getNFTBridge }] = await Promise.all([
 		import('../runtime/bridgeRuntime'),
@@ -40,12 +45,12 @@ async function stopHiveBridgeSync(): Promise<void> {
 	getNFTBridge().stopSync();
 }
 
-export function HiveKeychainLogin() {
+export function HiveKeychainLogin({ initiallyExpanded = false, onConnected }: HiveKeychainLoginProps = {}) {
 	const user = useHiveDataStore((s) => s.user);
 	const setUser = useHiveDataStore((s) => s.setUser);
 	const logout = useHiveDataStore((s) => s.logout);
 
-	const [isExpanded, setIsExpanded] = useState(false);
+	const [isExpanded, setIsExpanded] = useState(initiallyExpanded);
 	const [username, setUsername] = useState('');
 	const [status, setStatus] = useState<ConnectStatus>('idle');
 	const [errorMsg, setErrorMsg] = useState('');
@@ -102,6 +107,7 @@ export function HiveKeychainLogin() {
 		setStatus('idle');
 		setIsExpanded(false);
 		setUsername('');
+		onConnected?.();
 	};
 
 	const handleLogout = () => {

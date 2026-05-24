@@ -475,6 +475,42 @@ function SideRailPanel({ title, action, children }: {
 	);
 }
 
+function HiveLoginDialog({ onClose }: { onClose: () => void }) {
+	return (
+		<div className="fixed inset-0 z-[120] flex items-center justify-center bg-obsidian-950/82 px-4 backdrop-blur-sm">
+			<div
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="home-hive-login-title"
+				className="relative w-full max-w-md rounded-xl border border-gold-300/35 bg-obsidian-900/95 p-5 text-ink-0 shadow-2xl shadow-black/50"
+			>
+				<button
+					type="button"
+					onClick={onClose}
+					aria-label="Close Hive login"
+					className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md border border-obsidian-700 bg-obsidian-950/70 text-ink-300 transition-colors hover:border-gold-300/50 hover:text-gold-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
+				>
+					<X size={15} strokeWidth={2} />
+				</button>
+				<p className="font-mono text-[10px] font-semibold uppercase tracking-[0.28em] text-gold-300">
+					Hive login
+				</p>
+				<h2
+					id="home-hive-login-title"
+					className="mt-2 font-display text-xl font-black uppercase tracking-[0.12em] text-ink-0"
+				>
+					Connect Hive
+				</h2>
+				<div className="mt-4">
+					<Suspense fallback={<div className="h-28 animate-pulse rounded-lg bg-obsidian-800" />}>
+						<HiveKeychainLogin initiallyExpanded onConnected={onClose} />
+					</Suspense>
+				</div>
+			</div>
+		</div>
+	);
+}
+
 function HomePage() {
 	const completedMissions = useCampaignStore(s => s.completedMissions);
 	const currentMissionId = useCampaignStore(s => s.currentMission);
@@ -488,6 +524,7 @@ function HomePage() {
 	));
 	const syncLegacyStarterClaim = useStarterStore(s => s.syncLegacyClaimToAccount);
 	const [showCeremony, setShowCeremony] = useState(false);
+	const [showHiveLogin, setShowHiveLogin] = useState(false);
 	const [canInstall, setCanInstall] = useState(!!deferredInstallPrompt);
 	const starterClaimAccess = resolveProtectedFlowAccess({
 		accountId: hiveUsername,
@@ -566,6 +603,10 @@ function HomePage() {
 		syncLegacyStarterClaim(hiveUsername);
 	}, [hiveUsername, isHiveMode, sharedNetwork, syncLegacyStarterClaim]);
 
+	useEffect(() => {
+		if (hiveUsername) setShowHiveLogin(false);
+	}, [hiveUsername]);
+
 	const triggerInstall = () => {
 		if (deferredInstallPrompt) {
 			deferredInstallPrompt.prompt();
@@ -633,11 +674,13 @@ function HomePage() {
 							<div className="flex flex-wrap items-center gap-3">
 								{!starterClaimed ? (
 									starterClaimAccess.kind === 'blocked' ? (
-										<Link to={routes.settings}>
-											<Button variant="primary" size="lg">
-												{primaryLabel}
-											</Button>
-										</Link>
+										<Button
+											variant="primary"
+											size="lg"
+											onClick={() => setShowHiveLogin(true)}
+										>
+											{primaryLabel}
+										</Button>
 									) : (
 										<Button
 											variant="primary"
@@ -861,6 +904,7 @@ function HomePage() {
 					/>
 				</Suspense>
 			)}
+			{showHiveLogin && <HiveLoginDialog onClose={() => setShowHiveLogin(false)} />}
 		</div>
 	);
 }
