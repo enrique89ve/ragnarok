@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'rea
 import { HashRouter, Routes, Route, Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { routes } from './lib/routes';
 import { Button, Panel, ToastProvider } from './components/ui-norse';
-import { ChevronRight, Compass, LayoutGrid, Play, Settings as SettingsIcon, Swords, X } from 'lucide-react';
+import { ChevronRight, Compass, LayoutGrid, Play, RotateCw, Settings as SettingsIcon, Smartphone, Swords, X } from 'lucide-react';
 import "./index.css";
 import ragnarokLogo from "./assets/images/ragnarok-logo.jpg";
 import LoadingScreen from "./game/components/ui/LoadingScreen";
@@ -615,10 +615,10 @@ function HomePage() {
 	};
 
 	return (
-		<div className="home-landscape-shell h-screen w-screen overflow-y-auto overflow-x-hidden text-ink-0 bg-(image:--bg-home-nav)">
+		<div className="home-landscape-shell min-h-screen w-full overflow-y-auto overflow-x-hidden text-ink-0 bg-(image:--bg-home-nav)">
 			{/* ── HEADER ─────────────────────────────────────────────────────── */}
 			<header className="home-landscape-header sticky top-0 z-50 backdrop-blur-md bg-obsidian-950/80 border-b border-obsidian-700">
-				<div className="home-landscape-header-inner mx-auto max-w-[1600px] h-14 px-6 flex items-center justify-between gap-4">
+				<div className="home-landscape-header-inner mx-auto h-14 max-w-[1440px] px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
 					<div className="flex items-center gap-3">
 						<img src={ragnarokLogo} alt="" className="home-landscape-logo w-8 h-8 rounded-md border border-obsidian-600 object-cover" />
 						<div className="leading-none">
@@ -651,17 +651,17 @@ function HomePage() {
 			</header>
 
 			{/* ── PAGE GRID: full-height main column + persistent right rail ──── */}
-			<div className="home-landscape-main-grid mx-auto max-w-[1600px] px-6 mt-7 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-7 items-start">
+			<div className="home-landscape-main-grid mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 mt-6 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start">
 				{/* MAIN COLUMN: banner + routes + daily quests.
 				    pb-24 mirrors the right aside so neither column slides under
 				    the anchored utility bar at the bottom. */}
-				<main className="home-landscape-main-column grid gap-7 content-start min-w-0 pb-24">
+				<main className="home-landscape-main-column grid gap-6 content-start min-w-0 pb-24">
 					{/* Banner */}
-					<section className="home-landscape-hero relative grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-9 items-center px-10 py-10 rounded-2xl border border-obsidian-700 bg-linear-to-b from-obsidian-850 to-obsidian-900 overflow-hidden">
+					<section className="home-landscape-hero relative grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-6 items-stretch px-6 py-7 sm:px-8 sm:py-8 rounded-xl border border-obsidian-700 bg-linear-to-b from-obsidian-850 to-obsidian-900 overflow-hidden">
 						<div>
-							<div className="inline-flex items-center gap-2.5 mb-4">
-
-
+							<div className="mb-4 inline-flex items-center gap-2 rounded-full border border-gold-300/25 bg-obsidian-950/55 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-gold-200">
+								<span className="h-1.5 w-1.5 rounded-full bg-gold-300" aria-hidden="true" />
+								Battle lobby
 							</div>
 							<h1 className="font-display font-black uppercase leading-[0.95] tracking-[0.10em] text-[clamp(2.4rem,5vw,3rem)] m-0">
 								<span className="bg-linear-to-b from-gold-100 via-gold-300 to-gold-500 bg-clip-text text-transparent">
@@ -704,7 +704,7 @@ function HomePage() {
 						</div>
 
 						{/* Stats panel */}
-						<aside className="rounded-xl border border-gold-300/40 bg-obsidian-900/80 backdrop-blur-md p-6 grid gap-3.5 self-stretch">
+						<aside className="rounded-xl border border-gold-300/40 bg-obsidian-900/80 backdrop-blur-md p-5 grid gap-3 self-stretch content-center">
 							<StatRow label="Saga" value={`${completedMissionCount} / ${totalMissionCount}`} highlight />
 							<StatRow label="Active" value={activeFocusTitle} />
 							<StatRow label="Chapter" value={activeFocusChapter} />
@@ -738,7 +738,7 @@ function HomePage() {
 							<div className="font-mono text-[11px] tracking-[0.32em] uppercase text-ink-300">Primary Routes</div>
 							<h2 className="font-display text-xl tracking-[0.08em] uppercase text-ink-0 mt-1">Choose your front</h2>
 						</header>
-						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+						<div className="home-mode-grid grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
 							{MODE_CARDS.map(mode => {
 								const Icon = mode.icon;
 								const a = ACCENT[mode.accent];
@@ -747,7 +747,7 @@ function HomePage() {
 									<Link
 										key={mode.title}
 										to={mode.to}
-										className={`home-landscape-route-card relative group flex flex-col min-h-[160px] p-4 rounded-xl border bg-linear-to-b overflow-hidden transition-all duration-300 ${a.border} ${isCombat
+										className={`home-landscape-route-card relative group flex flex-col min-h-[172px] p-4 rounded-xl border bg-linear-to-b overflow-hidden transition-all duration-300 ${a.border} ${isCombat
 											? 'border-obsidian-700 from-obsidian-850 to-obsidian-950'
 											: 'border-obsidian-700/60 from-obsidian-900 to-obsidian-950'
 											}`}
@@ -841,7 +841,7 @@ function HomePage() {
 				{/* RIGHT RAIL — pure identity stack: Account → Warband (post-login).
 				    Warband has internal scroll so contacts can grow without breaking layout.
 				    Settings lives here on Home; meta pages keep account chrome focused. */}
-				<aside className="home-landscape-right-rail grid gap-5 content-start pb-24">
+				<aside className="home-landscape-right-rail grid gap-5 content-start pb-24 lg:sticky lg:top-[4.75rem]">
 					<SideRailPanel
 						title="Account"
 						action={
@@ -875,7 +875,7 @@ function HomePage() {
 			    sticky header above to bracket the page. Horizontal scroll on
 			    overflow keeps it single-line on narrow viewports. */}
 			<nav className="home-landscape-utility-bar sticky bottom-0 z-40 backdrop-blur-md bg-obsidian-950/85 border-t border-obsidian-700">
-				<div className="home-landscape-utility-inner mx-auto max-w-[1600px] px-6 h-12 flex items-center justify-center gap-2 overflow-x-auto [scrollbar-width:none]">
+				<div className="home-landscape-utility-inner mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 h-12 flex items-center justify-center gap-2 overflow-x-auto [scrollbar-width:none]">
 					{UTILITY_LINKS.map(link => (
 						<Link
 							key={link.label}
@@ -1030,6 +1030,32 @@ function EnvironmentBanner() {
 	);
 }
 
+function GameOrientationGate({ children }: { children: React.ReactNode }) {
+	return (
+		<div className="game-orientation-gate">
+			<div className="game-orientation-content">
+				{children}
+			</div>
+			<aside
+				aria-label="Rotate phone to play"
+				className="game-orientation-lock"
+			>
+				<div className="game-orientation-card">
+					<div className="game-orientation-icon-row" aria-hidden="true">
+						<Smartphone className="game-orientation-phone" strokeWidth={1.8} />
+						<RotateCw className="game-orientation-rotate" strokeWidth={2.2} />
+					</div>
+					<p className="game-orientation-kicker">Battle mode</p>
+					<h1 className="game-orientation-title">Turn your phone</h1>
+					<p className="game-orientation-copy">
+						Combat uses the full battlefield in landscape. Rotate the device to continue.
+					</p>
+				</div>
+			</aside>
+		</div>
+	);
+}
+
 function App() {
 	return (
 		<ErrorBoundary>
@@ -1072,7 +1098,7 @@ function App() {
 										<Route path={routes.packs} element={<PacksPage />} />
 									</Route>
 
-									<Route element={<GameplayRuntimeBoundary />}>
+									<Route element={<GameOrientationGate><GameplayRuntimeBoundary /></GameOrientationGate>}>
 										<Route path={routes.game} element={<Navigate to={routes.singleGame} replace />} />
 										<Route path={routes.singleGame} element={<SingleGameRoute />} />
 										<Route path={routes.campaignGame} element={<CampaignGameRoute />} />

@@ -266,7 +266,7 @@ export default function PacksPage() {
 				}
 			/>
 
-			<div className="packs-landscape-content max-w-5xl mx-auto px-4 py-8">
+			<div className="packs-landscape-content max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
 				{/* Starter claim card — only when not yet claimed */}
 				{showStarterRow && (
 					<StarterClaimCard
@@ -406,14 +406,14 @@ function SealedPackTile({
 			aria-label={pending
 				? `${packType} pack — ${count} confirming on chain`
 				: `${packType} sealed pack — ${count} owned`}
-				className={`packs-landscape-tile runic-panel ornate-corners-host ornate-corners-host--${tier} mystic-tile ${glowClass} relative rounded-xl p-4 overflow-hidden ${pending ? 'opacity-70' : ''}`}
+			className={`packs-landscape-tile runic-panel ornate-corners-host ornate-corners-host--${tier} mystic-tile ${glowClass} relative flex min-h-[17rem] flex-col rounded-xl p-4 overflow-hidden ${pending ? 'opacity-70' : ''}`}
 			style={{ background: surface }}
 		>
 			{!pending && <SplashBackdrop packKey={packType} count={2} intervalMs={9000} />}
 			<OrnateCorners />
 			{isMythic && !pending && <span className="aura-mystic" aria-hidden="true" />}
 
-			<div className="relative z-10 flex flex-col items-center mb-4">
+			<div className="relative z-10 flex flex-1 flex-col items-center justify-center mb-4">
 				<div className="sigil-host mb-3">
 					<SigilBackplate tier={tier} />
 					<div className={`hex-frame ${hexVariant} hex-frame--md`} aria-hidden="true">
@@ -432,7 +432,7 @@ function SealedPackTile({
 				</NumericRitual>
 			</div>
 
-			<div className="relative z-10">
+			<div className="relative z-10 mt-auto">
 				<button
 					type="button"
 					onClick={onOpen}
@@ -473,7 +473,7 @@ function StarterClaimCard({ account, onClaim }: { account: string | null; onClai
 			initial={{ opacity: 0, y: 8 }}
 			animate={{ opacity: 1, y: 0 }}
 			aria-labelledby="starter-claim-heading"
-			className="runic-panel ornate-corners-host ornate-corners-host--premium mystic-tile mystic-tile--gold texture-etched relative mb-8 flex items-center gap-6 p-6 rounded-xl flex-wrap sm:flex-nowrap overflow-hidden"
+			className="pack-claim-card runic-panel ornate-corners-host ornate-corners-host--premium mystic-tile mystic-tile--gold texture-etched relative mb-8 grid items-center gap-6 p-6 rounded-xl overflow-hidden md:grid-cols-[auto_minmax(0,1fr)_auto]"
 			style={{ background: 'var(--surface-mystic-obsidian)' }}
 		>
 			<SplashBackdrop packKey="starter" count={2} intervalMs={10000} />
@@ -500,7 +500,7 @@ function StarterClaimCard({ account, onClaim }: { account: string | null; onClai
 				</p>
 			</div>
 
-			<div className="relative z-10 flex shrink-0 flex-col gap-2">
+			<div className="relative z-10 flex w-full shrink-0 flex-col gap-2 md:w-auto">
 				<button
 					type="button"
 					onClick={onClaim}
@@ -561,7 +561,7 @@ function DuatClaimCard({
 			initial={{ opacity: 0, y: 8 }}
 			animate={{ opacity: 1, y: 0 }}
 			aria-labelledby="duat-claim-heading"
-			className="runic-panel ornate-corners-host ornate-corners-host--premium mystic-tile mystic-tile--bifrost texture-etched relative mb-8 flex items-center gap-6 p-6 rounded-xl flex-wrap sm:flex-nowrap overflow-hidden"
+			className="pack-claim-card runic-panel ornate-corners-host ornate-corners-host--premium mystic-tile mystic-tile--bifrost texture-etched relative mb-8 grid items-center gap-6 p-6 rounded-xl overflow-hidden md:grid-cols-[auto_minmax(0,1fr)_auto]"
 			style={{ background: 'var(--surface-mystic-obsidian)' }}
 		>
 			<SplashBackdrop packKey="standard" count={2} intervalMs={10000} />
@@ -590,7 +590,7 @@ function DuatClaimCard({
 				</p>
 			</div>
 
-			<div className="relative z-10 flex shrink-0 flex-col gap-2">
+			<div className="relative z-10 flex w-full shrink-0 flex-col gap-2 md:w-auto">
 				<button
 					type="button"
 					onClick={onClaim}
@@ -669,7 +669,7 @@ function EmptyCave() {
 			animate={{ opacity: 1 }}
 			transition={{ duration: 1.2 }}
 			aria-labelledby="empty-cave-heading"
-				className="packs-landscape-empty runic-panel ornate-corners-host ornate-corners-host--standard relative mt-12 rounded-xl overflow-hidden"
+			className="packs-landscape-empty runic-panel ornate-corners-host ornate-corners-host--standard relative mt-12 rounded-xl overflow-hidden"
 			style={{
 				background:
 					'radial-gradient(ellipse at center, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 70%), var(--surface-mystic-obsidian)',

@@ -589,7 +589,7 @@ export default function CollectionPage() {
 		for (let i = 0; i < filteredAndSorted.length; i += COLUMNS) {
 			result.push(filteredAndSorted.slice(i, i + COLUMNS));
 		}
-	return result;
+		return result;
 	}, [COLUMNS, filteredAndSorted]);
 
 	const rowVirtualizer = useVirtualizer({
@@ -677,11 +677,11 @@ export default function CollectionPage() {
 
 				{/* Stats Dashboard */}
 				{!starterGateActive && stats && (
-					<div className="mb-6">
+					<div className="collection-balance-stack mb-6">
 						{/* Completion Bar */}
-						<div className="mb-4">
+						<div className={`${VAULT_PANEL_CLASS} collection-progress-panel mb-4 p-4`}>
 							<div className="flex justify-between items-baseline mb-2">
-								<span className="text-gray-400 text-sm">Collection Progress</span>
+								<span className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink-300">Collection Progress</span>
 								<span className="text-white font-bold text-lg">
 									{stats.uniqueCards}
 									<span className="text-gray-500 font-normal text-sm"> / {stats.totalInGame || '???'}</span>
@@ -697,13 +697,13 @@ export default function CollectionPage() {
 						</div>
 
 						{/* Source + Rarity + Type Breakdown */}
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+						<div className="collection-stat-grid grid grid-cols-1 md:grid-cols-3 gap-4">
 							{/* Source Breakdown */}
-							<div className={`${VAULT_PANEL_CLASS} p-4`}>
-								<div className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-3">By Source</div>
-								<div className="flex flex-wrap gap-2">
+							<div className={`${VAULT_PANEL_CLASS} collection-stat-panel p-4`}>
+								<div className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink-400 mb-3">By Source</div>
+								<div className="collection-stat-chip-grid">
 									{stats.bySource.map(sourceStat => (
-										<div key={sourceStat.source} className="px-3 py-2 rounded-lg text-center border border-ink-0/10 backdrop-blur-sm bg-white/3">
+										<div key={sourceStat.source} className="collection-stat-chip px-3 py-2 rounded-lg text-center border border-ink-0/10 backdrop-blur-sm bg-white/3">
 											<div className="text-lg font-bold text-white">
 												{sourceStat.uniqueCards}
 											</div>
@@ -714,13 +714,13 @@ export default function CollectionPage() {
 							</div>
 
 							{/* Rarity Breakdown */}
-							<div className={`${VAULT_PANEL_CLASS} p-4`}>
-								<div className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-3">By Rarity</div>
-								<div className="flex flex-wrap gap-2">
+							<div className={`${VAULT_PANEL_CLASS} collection-stat-panel p-4`}>
+								<div className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink-400 mb-3">By Rarity</div>
+								<div className="collection-stat-chip-grid">
 									{DISPLAY_RARITIES.map(rarity => {
 										const rs = stats.byRarity.find(r => r.rarity === rarity);
 										return (
-											<div key={rarity} className="px-3 py-2 rounded-lg text-center border border-ink-0/10 backdrop-blur-sm bg-white/3">
+											<div key={rarity} className="collection-stat-chip px-3 py-2 rounded-lg text-center border border-ink-0/10 backdrop-blur-sm bg-white/3">
 												<div className={`text-lg font-bold ${getRarityColor(rarity)}`}>
 													{rs?.uniqueCards ?? 0}
 												</div>
@@ -732,13 +732,13 @@ export default function CollectionPage() {
 							</div>
 
 							{/* Type Breakdown */}
-							<div className={`${VAULT_PANEL_CLASS} p-4`}>
-								<div className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-3">By Type</div>
-								<div className="flex flex-wrap gap-2">
+							<div className={`${VAULT_PANEL_CLASS} collection-stat-panel p-4`}>
+								<div className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink-400 mb-3">By Type</div>
+								<div className="collection-stat-chip-grid">
 									{(['hero', 'minion', 'spell', 'weapon'] as const).map(type => {
 										const ts = stats.byType.find(t => t.type === type);
 										return (
-											<div key={type} className="px-3 py-2 rounded-lg text-center border border-ink-0/10 backdrop-blur-sm bg-white/3">
+											<div key={type} className="collection-stat-chip px-3 py-2 rounded-lg text-center border border-ink-0/10 backdrop-blur-sm bg-white/3">
 												<div className="text-lg font-bold text-white">
 													{getTypeIcon(type)} {ts?.uniqueCards ?? 0}
 												</div>
@@ -755,74 +755,74 @@ export default function CollectionPage() {
 				{/* Filter Bar */}
 				{!starterGateActive && (
 					<div className={`${VAULT_PANEL_CLASS} collection-landscape-filters p-4 mb-6`}>
-					{/* Search + Sort Row */}
-					<div className="collection-landscape-search-row flex gap-3 mb-3">
-						<div className="flex-1 relative">
-							<span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">🔍</span>
-							<input
-								type="text"
-								placeholder="Search cards..."
-								value={searchQuery}
-								onChange={(e) => setSearchQuery(e.target.value)}
-								className={`${VAULT_INPUT_CLASS} w-full pl-9 pr-4 py-2 text-sm`}
-							/>
+						{/* Search + Sort Row */}
+						<div className="collection-landscape-search-row flex gap-3 mb-3">
+							<div className="flex-1 relative">
+								<span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">🔍</span>
+								<input
+									type="text"
+									placeholder="Search cards..."
+									value={searchQuery}
+									onChange={(e) => setSearchQuery(e.target.value)}
+									className={`${VAULT_INPUT_CLASS} w-full pl-9 pr-4 py-2 text-sm`}
+								/>
+							</div>
+							<select
+								value={sortBy}
+								onChange={(e) => setSortBy(e.target.value as SortBy)}
+								title="Sort cards by"
+								className={`${VAULT_INPUT_CLASS} px-3 py-2 text-sm`}
+							>
+								<option value="rarity">Sort: Rarity</option>
+								<option value="name">Sort: Name A-Z</option>
+								<option value="mint">Sort: Mint # (Low)</option>
+								<option value="recent">Sort: Recent</option>
+							</select>
 						</div>
-						<select
-							value={sortBy}
-							onChange={(e) => setSortBy(e.target.value as SortBy)}
-							title="Sort cards by"
-							className={`${VAULT_INPUT_CLASS} px-3 py-2 text-sm`}
-						>
-							<option value="rarity">Sort: Rarity</option>
-							<option value="name">Sort: Name A-Z</option>
-							<option value="mint">Sort: Mint # (Low)</option>
-							<option value="recent">Sort: Recent</option>
-						</select>
-					</div>
 
-					{/* Source Pills */}
-					<div className="flex flex-wrap gap-2 mb-2">
-						{SOURCE_PILLS.map(pill => (
-							<button
-								key={pill.value}
-								onClick={() => setFilterSource(pill.value)}
-								className={`filter-pill ${filterSource === pill.value ? 'filter-pill-active' : 'filter-pill-inactive'}`}
-								style={filterSource === pill.value ? { background: 'rgba(74,111,224,0.42)', borderColor: 'rgba(143,181,255,0.55)' } : {}}
-							>
-								{pill.label}
-							</button>
-						))}
-					</div>
+						{/* Source Pills */}
+						<div className="collection-filter-row flex flex-wrap gap-2 mb-2">
+							{SOURCE_PILLS.map(pill => (
+								<button
+									key={pill.value}
+									onClick={() => setFilterSource(pill.value)}
+									className={`filter-pill ${filterSource === pill.value ? 'filter-pill-active' : 'filter-pill-inactive'}`}
+									style={filterSource === pill.value ? { background: 'rgba(74,111,224,0.42)', borderColor: 'rgba(143,181,255,0.55)' } : {}}
+								>
+									{pill.label}
+								</button>
+							))}
+						</div>
 
-					{/* Rarity Pills */}
-					<div className="flex flex-wrap gap-2 mb-2">
-						{RARITY_PILLS.map(pill => (
-							<button
-								key={pill.value}
-								onClick={() => setFilterRarity(pill.value)}
-								className={`filter-pill ${filterRarity === pill.value ? 'filter-pill-active' : 'filter-pill-inactive'}`}
-								style={filterRarity === pill.value ? { background: pill.activeColor, borderColor: pill.activeColor } : {}}
-							>
-								{pill.label}
-							</button>
-						))}
-					</div>
+						{/* Rarity Pills */}
+						<div className="collection-filter-row flex flex-wrap gap-2 mb-2">
+							{RARITY_PILLS.map(pill => (
+								<button
+									key={pill.value}
+									onClick={() => setFilterRarity(pill.value)}
+									className={`filter-pill ${filterRarity === pill.value ? 'filter-pill-active' : 'filter-pill-inactive'}`}
+									style={filterRarity === pill.value ? { background: pill.activeColor, borderColor: pill.activeColor } : {}}
+								>
+									{pill.label}
+								</button>
+							))}
+						</div>
 
-					{/* Type Pills */}
-					<div className="flex flex-wrap gap-2">
-						{TYPE_PILLS.map(pill => (
-							<button
-								key={pill.value}
-								onClick={() => setFilterType(pill.value)}
-								className={`filter-pill ${filterType === pill.value ? 'filter-pill-active' : 'filter-pill-inactive'}`}
-								style={filterType === pill.value ? { background: 'rgba(217,168,68,0.55)', borderColor: 'rgba(217,168,68,0.55)' } : {}}
-							>
-								{pill.icon && <span className="mr-1">{pill.icon}</span>}
-								{pill.label}
-							</button>
-						))}
+						{/* Type Pills */}
+						<div className="collection-filter-row flex flex-wrap gap-2">
+							{TYPE_PILLS.map(pill => (
+								<button
+									key={pill.value}
+									onClick={() => setFilterType(pill.value)}
+									className={`filter-pill ${filterType === pill.value ? 'filter-pill-active' : 'filter-pill-inactive'}`}
+									style={filterType === pill.value ? { background: 'rgba(217,168,68,0.55)', borderColor: 'rgba(217,168,68,0.55)' } : {}}
+								>
+									{pill.icon && <span className="mr-1">{pill.icon}</span>}
+									{pill.label}
+								</button>
+							))}
+						</div>
 					</div>
-				</div>
 				)}
 
 				{/* Error State */}
@@ -897,10 +897,10 @@ export default function CollectionPage() {
 											transform: `translateY(${virtualRow.start}px)`,
 										}}
 									>
-											<div
-												className="collection-landscape-card-grid grid gap-4"
-												style={{ gridTemplateColumns: `repeat(${COLUMNS}, minmax(0, 1fr))` }}
-											>
+										<div
+											className="collection-landscape-card-grid grid gap-4"
+											style={{ gridTemplateColumns: `repeat(${COLUMNS}, minmax(0, 1fr))` }}
+										>
 											{rows[virtualRow.index].map((card, colIndex) => {
 												const hiveAsset = hiveCardMap.get(card.id);
 												const masteryTier = hiveAsset?.ownershipSource === 'nft'
