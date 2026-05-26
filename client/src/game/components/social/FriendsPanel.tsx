@@ -40,6 +40,7 @@ const CHALLENGE_REJECT_LABELS: Record<ChallengeRejectReason, string> = {
 	rate_limited: 'Challenge cooldown active.',
 	stale_peer: 'Refresh presence before challenging.',
 	self_challenge: 'You cannot challenge yourself.',
+	server_unconfigured: 'P2P challenge signing is not configured.',
 	invalid_input: 'Challenge request was invalid.',
 };
 

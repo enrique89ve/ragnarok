@@ -31,6 +31,11 @@ Normal local/testnet/mainnet runs should not set `VITE_DATA_LAYER_MODE` or
 
 Network constants live in `shared/runtimeConfig.ts` and are consumed by both server and client wrappers. They define protocol namespace, collection id, admin/index accounts, indexer endpoints, art endpoints, NFTLox protocol id, reset epoch, and reset/economic policy per stage.
 
+NFTLoX is phase-gated. Alfa and QA Season 0 run with JSON ownership unless an
+operator intentionally sets `VITE_NFTLOX_PROTOCOL_ID` for a focused test.
+Closed Beta must not open until the NFTLoX protocol id and collection proof are
+both present.
+
 The active frontend config is resolved once as `RAGNAROK_NETWORK_CONFIG`, so runtime consumers should import constants/helpers instead of rebuilding env-derived strings.
 
 `VITE_RAGNAROK_RESET_EPOCH` is mandatory for shared resettable phases. It
@@ -100,9 +105,11 @@ Complete the QA Season 0 week-one readiness gate:
    [`TESTNET_RUNBOOK.md`](./TESTNET_RUNBOOK.md#smoke-test--p2p-qa-season-0).
 5. Keep Closed Testnet Beta invites blocked until issue 08 proves a non-QA
    `closed-beta-*` epoch, `qaFullCatalogEnabled: false`,
-   `closedBetaCutover.inviteBlocked: false`, and the NFTLoX/starter/DUAT/RUNE
-   ownership gates. The final NFTLoX schema, tester cohort, and invite timing
-   still require owner/operator sign-off.
+   the NFTLoX/starter/DUAT/RUNE ownership gates, and the explicit evidence env
+   flags consumed by `closedBetaCutover`: `RAGNAROK_NFTLOX_COLLECTION_PROOF`,
+   `RAGNAROK_HIVE_KEYCHAIN_SMOKE`, `RAGNAROK_P2P_TWO_BROWSER_SMOKE`, and
+   `RAGNAROK_CLOSED_BETA_OPERATOR_SIGNOFF`. The final NFTLoX schema, tester
+   cohort, and invite timing still require owner/operator sign-off.
 
 ## Beta Modes
 

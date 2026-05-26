@@ -20,6 +20,12 @@ export type AdminOperatorSigner = {
 	readonly privateKey: import('hive-tx').PrivateKey;
 };
 
+export type AdminOperatorRuntimeStatus = {
+	readonly operatorAccountConfigured: boolean;
+	readonly activeKeyConfigured: boolean;
+	readonly privateBroadcastsEnabled: boolean;
+};
+
 const ADMIN_OPERATOR_ACTIVE_KEY_ENV = 'RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY';
 
 let cachedActiveSigner: AdminOperatorSigner | null = null;
@@ -40,6 +46,18 @@ function getResultTxId(result: unknown): string | undefined {
 
 function getConfiguredOperatorAccount(runtime: RagnarokRuntimeConfig): string {
 	return runtime.adminOperatorAccount.trim();
+}
+
+export function getAdminOperatorRuntimeStatus(runtime: RagnarokRuntimeConfig): AdminOperatorRuntimeStatus {
+	const operatorAccount = getConfiguredOperatorAccount(runtime);
+	const activeKeyConfigured = Boolean(process.env[ADMIN_OPERATOR_ACTIVE_KEY_ENV]?.trim());
+	return {
+		operatorAccountConfigured: Boolean(operatorAccount) && operatorAccount !== runtime.adminAccount,
+		activeKeyConfigured,
+		privateBroadcastsEnabled: Boolean(operatorAccount)
+			&& operatorAccount !== runtime.adminAccount
+			&& activeKeyConfigured,
+	};
 }
 
 function getAdminCustomJsonId(

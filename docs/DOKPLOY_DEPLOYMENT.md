@@ -68,7 +68,6 @@ VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT=ragnarok-test-operator
 VITE_RAGNAROK_GENESIS_ACCOUNT=ragnarok-test
 VITE_RAGNAROK_TREASURY_ACCOUNT=ragp2p
 VITE_RAGNAROK_INDEX_ACCOUNT=ragp2p
-VITE_NFTLOX_PROTOCOL_ID=nftlox_testnet
 VITE_NFT_ART_BASE_URL=https://your-domain.example
 VITE_EXTERNAL_URL_BASE=https://your-domain.example
 ```
@@ -79,6 +78,11 @@ Keep `VITE_NETWORK_STAGE=testnet`. Do not set `VITE_NETWORK_STAGE=practice` or
 `closed-beta-*` reset epoch. Do not use `qa-s0-*` or `qa-season-0-*` here;
 those epochs deliberately enable QA full-catalog entitlement and are not NFT
 custody evidence.
+
+NFTLoX is not an Alfa requirement. Leave `VITE_NFTLOX_PROTOCOL_ID` unset during
+Alfa unless you are explicitly testing the finalized NFTLoX collection flow.
+Closed Beta must set `VITE_NFTLOX_PROTOCOL_ID=nftlox_testnet` only after the
+collection proof exists.
 
 Server-only variables must stay unprefixed. Do not add `VITE_` to private keys:
 
@@ -110,7 +114,25 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 `P2P_CHALLENGE_SIGNING_SECRET` must be stable in Dokploy. If it is missing or
 shorter than 32 characters, the server falls back to a process-local secret,
 which is acceptable for local/dev but wrong for shared Alfa/P2P because
-redeploys or future replicas can invalidate challenge envelopes.
+redeploys or future replicas can invalidate challenge envelopes. In production
+Alfa the server now fails closed instead of signing challenges with a
+process-local fallback.
+
+`RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY` is required for shared Alfa if the Admin
+Panel must perform private admin broadcasts. Keep it server-only in Dokploy. It
+must belong to `VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT` /
+`RAGNAROK_ADMIN_OPERATOR_ACCOUNT`.
+
+The runtime container runs the strict Alfa verifier before boot:
+
+```bash
+npm run verify:alfa-runtime-env
+```
+
+That verifier expects `VITE_NETWORK_STAGE=testnet`, an `alfa-testnet-*` reset
+epoch, JSON ownership source, JSON state file, a stable P2P challenge secret,
+and the admin operator active key. Build-time verification still checks only
+public/build-safe values so secrets do not enter the Docker image layer.
 
 For mainnet, switch `RAGNAROK_RUNTIME_MODE` and `VITE_NETWORK_STAGE` to
 `mainnet`, then replace the protocol, collection, account, reset epoch, start
@@ -214,7 +236,10 @@ The P2P status response should include:
 {
   "challengeSigning": {
     "source": "env",
-    "validLength": true
+    "validLength": true,
+    "required": true,
+    "ready": true,
+    "error": null
   },
   "summary": {
     "challengeSigningSecretConfigured": true

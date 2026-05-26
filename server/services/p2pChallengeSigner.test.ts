@@ -8,12 +8,18 @@ import {
 
 describe('p2pChallengeSigner', () => {
 	const originalSecret = process.env.P2P_CHALLENGE_SIGNING_SECRET;
+	const originalNodeEnv = process.env.NODE_ENV;
 
 	afterEach(() => {
 		if (originalSecret === undefined) {
 			delete process.env.P2P_CHALLENGE_SIGNING_SECRET;
 		} else {
 			process.env.P2P_CHALLENGE_SIGNING_SECRET = originalSecret;
+		}
+		if (originalNodeEnv === undefined) {
+			delete process.env.NODE_ENV;
+		} else {
+			process.env.NODE_ENV = originalNodeEnv;
 		}
 		resetP2PChallengeSigningSecretForTests();
 	});
@@ -48,12 +54,16 @@ describe('p2pChallengeSigner', () => {
 	});
 
 	it('reports whether Dokploy provided a stable shared signing secret', () => {
+		process.env.NODE_ENV = 'development';
 		delete process.env.P2P_CHALLENGE_SIGNING_SECRET;
 		expect(getP2PChallengeSigningSecretStatus()).toEqual({
 			configured: false,
 			validLength: false,
 			source: 'process-fallback',
 			minimumLength: 32,
+			required: false,
+			ready: true,
+			error: null,
 		});
 
 		process.env.P2P_CHALLENGE_SIGNING_SECRET = 'x'.repeat(32);
@@ -62,6 +72,29 @@ describe('p2pChallengeSigner', () => {
 			validLength: true,
 			source: 'env',
 			minimumLength: 32,
+			required: false,
+			ready: true,
+			error: null,
 		});
+	});
+
+	it('fails closed in production when the shared signing secret is missing', () => {
+		process.env.NODE_ENV = 'production';
+		delete process.env.P2P_CHALLENGE_SIGNING_SECRET;
+
+		expect(getP2PChallengeSigningSecretStatus()).toMatchObject({
+			configured: false,
+			validLength: false,
+			source: 'process-fallback',
+			required: true,
+			ready: false,
+		});
+		expect(() => buildServerSignedChallenge({
+			from: 'alice',
+			to: 'bob',
+			peerId: 'peer-1',
+			timestamp: 1_000,
+			expiresAt: 91_000,
+		})).toThrow('P2P challenge signing unavailable');
 	});
 });

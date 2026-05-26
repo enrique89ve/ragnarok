@@ -21,6 +21,9 @@ export type P2PChallengeSigningSecretStatus = {
 	readonly validLength: boolean;
 	readonly source: 'env' | 'process-fallback';
 	readonly minimumLength: number;
+	readonly required: boolean;
+	readonly ready: boolean;
+	readonly error: string | null;
 };
 
 const P2P_CHALLENGE_SIGNING_SECRET_MIN_LENGTH = 32;
@@ -31,20 +34,36 @@ function getConfiguredSigningSecret(): string | undefined {
 	return configured && configured.length > 0 ? configured : undefined;
 }
 
+function isProductionRuntime(): boolean {
+	return process.env.NODE_ENV === 'production';
+}
+
 export function getP2PChallengeSigningSecretStatus(): P2PChallengeSigningSecretStatus {
 	const configured = getConfiguredSigningSecret();
 	const validLength = configured !== undefined && configured.length >= P2P_CHALLENGE_SIGNING_SECRET_MIN_LENGTH;
+	const required = isProductionRuntime();
+	const ready = validLength || !required;
 	return {
 		configured: configured !== undefined,
 		validLength,
 		source: validLength ? 'env' : 'process-fallback',
 		minimumLength: P2P_CHALLENGE_SIGNING_SECRET_MIN_LENGTH,
+		required,
+		ready,
+		error: ready
+			? null
+			: `P2P_CHALLENGE_SIGNING_SECRET must be at least ${P2P_CHALLENGE_SIGNING_SECRET_MIN_LENGTH} characters in production.`,
 	};
 }
 
 function getSigningSecret(): string {
 	const configured = getConfiguredSigningSecret();
 	if (configured && configured.length >= P2P_CHALLENGE_SIGNING_SECRET_MIN_LENGTH) return configured;
+	if (isProductionRuntime()) {
+		throw new Error(
+			`P2P challenge signing unavailable: P2P_CHALLENGE_SIGNING_SECRET must be at least ${P2P_CHALLENGE_SIGNING_SECRET_MIN_LENGTH} characters in production`,
+		);
+	}
 	fallbackSigningSecret ??= randomBytes(32).toString('hex');
 	return fallbackSigningSecret;
 }

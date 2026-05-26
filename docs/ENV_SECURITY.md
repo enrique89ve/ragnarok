@@ -24,6 +24,10 @@ Allowed public values:
 - `VITE_EXTERNAL_URL_BASE`
 - `VITE_API_URL`, only when it is a public URL without credentials
 
+`VITE_NFTLOX_PROTOCOL_ID` is public but phase-gated. Do not set it for Alfa
+unless the NFTLoX collection flow is being tested intentionally; Closed Beta
+requires it only after collection proof exists.
+
 `VITE_DATA_LAYER_MODE` and `VITE_BLOCKCHAIN_PACKAGING` are advanced test/debug
 overrides. Normal `local`, `testnet`, and `mainnet` runs derive those values
 from `VITE_NETWORK_STAGE`.
@@ -97,8 +101,9 @@ replay all historical Hive blocks during a testnet or mainnet bootstrap.
 
 `P2P_CHALLENGE_SIGNING_SECRET` is a server-only HMAC secret for direct P2P
 challenge envelopes. Local/dev may use the process fallback, but Dokploy or any
-shared environment must set a stable value of at least 32 characters. Never add
-`VITE_` to this name.
+shared environment must set a stable value of at least 32 characters. Production
+Alfa fails closed when this value is missing or too short. Never add `VITE_` to
+this name.
 
 `ENABLE_INDEX_CHECKPOINT_PUBLISHER=true` turns on server-side Hive checkpoint
 broadcasts. The publisher uses `hive-tx` with `RAGNAROK_INDEX_ACCOUNT` and

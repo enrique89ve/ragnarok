@@ -447,9 +447,9 @@ const UTILITY_LINKS: ReadonlyArray<{ label: string; to: string }> = [
 
 function StatRow({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
 	return (
-		<div className="flex items-center justify-between gap-4">
-			<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300">{label}</span>
-			<span className={`font-display text-base tracking-[0.08em] ${highlight ? 'text-gold-300' : 'text-ink-0'}`}>
+		<div className="flex min-w-0 items-center justify-between gap-3">
+			<span className="shrink-0 font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300">{label}</span>
+			<span className={`min-w-0 max-w-[62%] truncate text-right font-display text-[13px] tracking-[0.04em] sm:text-base sm:tracking-[0.08em] ${highlight ? 'text-gold-300' : 'text-ink-0'}`}>
 				{value}
 			</span>
 		</div>
@@ -615,10 +615,10 @@ function HomePage() {
 	};
 
 	return (
-		<div className="home-landscape-shell min-h-screen w-full overflow-y-auto overflow-x-hidden text-ink-0 bg-(image:--bg-home-nav)">
+		<div className="home-landscape-shell min-h-screen w-full overflow-x-hidden text-ink-0 bg-(image:--bg-home-nav)">
 			{/* ── HEADER ─────────────────────────────────────────────────────── */}
 			<header className="home-landscape-header sticky top-0 z-50 backdrop-blur-md bg-obsidian-950/80 border-b border-obsidian-700">
-				<div className="home-landscape-header-inner mx-auto h-14 max-w-[1440px] px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
+				<div className="home-landscape-header-inner mx-auto h-[3.25rem] max-w-[1440px] px-3 sm:h-14 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
 					<div className="flex items-center gap-3">
 						<img src={ragnarokLogo} alt="" className="home-landscape-logo w-8 h-8 rounded-md border border-obsidian-600 object-cover" />
 						<div className="leading-none">
@@ -651,24 +651,24 @@ function HomePage() {
 			</header>
 
 			{/* ── PAGE GRID: full-height main column + persistent right rail ──── */}
-			<div className="home-landscape-main-grid mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 mt-6 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-6 items-start">
+			<div className="home-landscape-main-grid mx-auto mt-4 grid max-w-[1440px] grid-cols-1 items-start gap-4 px-3 sm:mt-6 sm:gap-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-8">
 				{/* MAIN COLUMN: banner + routes + daily quests.
 				    pb-24 mirrors the right aside so neither column slides under
 				    the anchored utility bar at the bottom. */}
-				<main className="home-landscape-main-column grid gap-6 content-start min-w-0 pb-24">
+				<main className="home-landscape-main-column grid min-w-0 grid-cols-1 content-start gap-4 pb-4 sm:gap-6 sm:pb-24">
 					{/* Banner */}
-					<section className="home-landscape-hero relative grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-6 items-stretch px-6 py-7 sm:px-8 sm:py-8 rounded-xl border border-obsidian-700 bg-linear-to-b from-obsidian-850 to-obsidian-900 overflow-hidden">
-						<div>
+					<section className="home-landscape-hero relative grid min-w-0 grid-cols-1 items-stretch gap-4 overflow-hidden rounded-xl border border-obsidian-700 bg-linear-to-b from-obsidian-850 to-obsidian-900 px-4 py-4 sm:gap-6 sm:px-8 sm:py-8 xl:grid-cols-[minmax(0,1fr)_320px]">
+						<div className="min-w-0">
 							<div className="mb-4 inline-flex items-center gap-2 rounded-full border border-gold-300/25 bg-obsidian-950/55 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-gold-200">
 								<span className="h-1.5 w-1.5 rounded-full bg-gold-300" aria-hidden="true" />
 								Battle lobby
 							</div>
-							<h1 className="font-display font-black uppercase leading-[0.95] tracking-[0.10em] text-[clamp(2.4rem,5vw,3rem)] m-0">
+							<h1 className="m-0 max-w-full font-display text-[clamp(1.32rem,7vw,1.75rem)] font-black uppercase leading-[1.06] tracking-[0.025em] sm:text-[clamp(2.25rem,5vw,3rem)] sm:leading-[0.95] sm:tracking-[0.10em] xl:text-[clamp(2.05rem,3vw,2.45rem)] xl:tracking-[0.065em] 2xl:text-[clamp(2.4rem,4vw,3rem)] 2xl:tracking-[0.10em]">
 								<span className="bg-linear-to-b from-gold-100 via-gold-300 to-gold-500 bg-clip-text text-transparent">
 									Reveal the line.<br />March into battle.
 								</span>
 							</h1>
-							<p className="mt-5 mb-7 max-w-[540px] text-ink-200 text-[15px] leading-[1.65]">
+							<p className="mb-4 mt-4 max-w-[540px] text-sm leading-[1.45] text-ink-200 sm:mb-7 sm:mt-5 sm:text-[15px] sm:leading-[1.65]">
 								Campaign is the clean front door — reveal the starter line, stage a mission briefing, and break straight into live combat.
 							</p>
 							<div className="flex flex-wrap items-center gap-3">
@@ -704,7 +704,7 @@ function HomePage() {
 						</div>
 
 						{/* Stats panel */}
-						<aside className="rounded-xl border border-gold-300/40 bg-obsidian-900/80 backdrop-blur-md p-5 grid gap-3 self-stretch content-center">
+						<aside className="grid min-w-0 content-center gap-3 self-stretch overflow-hidden rounded-xl border border-gold-300/40 bg-obsidian-900/80 p-4 backdrop-blur-md sm:p-5">
 							<StatRow label="Saga" value={`${completedMissionCount} / ${totalMissionCount}`} highlight />
 							<StatRow label="Active" value={activeFocusTitle} />
 							<StatRow label="Chapter" value={activeFocusChapter} />
@@ -733,12 +733,12 @@ function HomePage() {
 					</section>
 
 					{/* Routes */}
-					<section>
+					<section className="min-w-0">
 						<header className="mb-4">
 							<div className="font-mono text-[11px] tracking-[0.32em] uppercase text-ink-300">Primary Routes</div>
 							<h2 className="font-display text-xl tracking-[0.08em] uppercase text-ink-0 mt-1">Choose your front</h2>
 						</header>
-						<div className="home-mode-grid grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+						<div className="home-mode-grid grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-5">
 							{MODE_CARDS.map(mode => {
 								const Icon = mode.icon;
 								const a = ACCENT[mode.accent];
@@ -747,7 +747,7 @@ function HomePage() {
 									<Link
 										key={mode.title}
 										to={mode.to}
-										className={`home-landscape-route-card relative group flex flex-col min-h-[172px] p-4 rounded-xl border bg-linear-to-b overflow-hidden transition-all duration-300 ${a.border} ${isCombat
+										className={`home-landscape-route-card relative group flex min-h-[132px] min-w-0 flex-col overflow-hidden rounded-xl border bg-linear-to-b p-3 transition-all duration-300 sm:min-h-[172px] sm:p-4 ${a.border} ${isCombat
 											? 'border-obsidian-700 from-obsidian-850 to-obsidian-950'
 											: 'border-obsidian-700/60 from-obsidian-900 to-obsidian-950'
 											}`}
@@ -784,7 +784,7 @@ function HomePage() {
 											<h3 className="font-display text-lg font-black tracking-[0.08em] uppercase text-ink-0 mb-1 leading-none">
 												{mode.title}
 											</h3>
-											<p className="text-ink-200 text-[12px] leading-[1.5] mb-3 max-w-[95%]">
+											<p className="mb-3 hidden max-w-[95%] text-[12px] leading-[1.5] text-ink-200 sm:block">
 												{mode.description}
 											</p>
 
@@ -826,7 +826,7 @@ function HomePage() {
 
 					{/* Daily Quests — actionable tasks live in main column, not sidebar.
 					    DailyQuestPanel renders its own card grid (parallel to route cards). */}
-					<section>
+					<section className="min-w-0">
 						<header className="mb-4">
 							<div className="font-mono text-[11px] tracking-[0.32em] uppercase text-ink-300">Today's Saga</div>
 							<h2 className="font-display text-xl tracking-[0.08em] uppercase text-ink-0 mt-1">Daily quests</h2>
@@ -841,7 +841,7 @@ function HomePage() {
 				{/* RIGHT RAIL — pure identity stack: Account → Warband (post-login).
 				    Warband has internal scroll so contacts can grow without breaking layout.
 				    Settings lives here on Home; meta pages keep account chrome focused. */}
-				<aside className="home-landscape-right-rail grid gap-5 content-start pb-24 lg:sticky lg:top-[4.75rem]">
+				<aside className="home-landscape-right-rail grid min-w-0 grid-cols-1 content-start gap-4 pb-4 sm:gap-5 sm:pb-24 lg:sticky lg:top-[4.75rem]">
 					<SideRailPanel
 						title="Account"
 						action={
@@ -874,8 +874,8 @@ function HomePage() {
 			    Sticky bottom — always visible across home scroll. Mirrors the
 			    sticky header above to bracket the page. Horizontal scroll on
 			    overflow keeps it single-line on narrow viewports. */}
-			<nav className="home-landscape-utility-bar sticky bottom-0 z-40 backdrop-blur-md bg-obsidian-950/85 border-t border-obsidian-700">
-				<div className="home-landscape-utility-inner mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 h-12 flex items-center justify-center gap-2 overflow-x-auto [scrollbar-width:none]">
+			<nav className="home-landscape-utility-bar static bottom-0 z-40 border-t border-obsidian-700 bg-obsidian-950/85 backdrop-blur-md sm:sticky">
+				<div className="home-landscape-utility-inner mx-auto flex h-auto max-w-[1440px] items-center justify-start gap-2 overflow-x-auto px-3 py-3 [scrollbar-width:none] sm:h-12 sm:justify-center sm:px-6 sm:py-0 lg:px-8">
 					{UTILITY_LINKS.map(link => (
 						<Link
 							key={link.label}

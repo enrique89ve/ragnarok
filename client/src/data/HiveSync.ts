@@ -618,6 +618,9 @@ export class HiveSync {
     if (!username) return { success: false, error: "No username set" };
     if (!this.isKeychainAvailable())
       return { success: false, error: "Hive Keychain not available" };
+    if (!NFTLOX_PROTOCOL_ID.trim()) {
+      return { success: false, error: "NFTLox protocol is not configured for this runtime" };
+    }
 
     const payload = {
       protocol: NFTLOX_PROTOCOL_ID,

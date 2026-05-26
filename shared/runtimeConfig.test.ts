@@ -126,6 +126,7 @@ describe('runtimeConfig', () => {
 		expect(alfa.executionMode).toBe('testnet');
 		expect(alfa.protocolId).toBe('rk_game_testnet');
 		expect(alfa.collectionId).toBe('ragnarok-testnet');
+		expect(alfa.nftLoxProtocolId).toBe('');
 		expect(isAlfaTestnetResetEpoch(alfa.resetEpoch)).toBe(true);
 		expect(getRagnarokRuntimePhase(alfa)).toBe('alfa-testnet');
 		expect(isQaFullCatalogEntitlementEnabled(alfa)).toBe(false);
@@ -174,7 +175,7 @@ describe('runtimeConfig', () => {
 			executionMode: 'testnet',
 			protocolId: 'rk_game_testnet',
 			collectionId: 'ragnarok-testnet',
-			nftLoxProtocolId: 'nftlox_testnet',
+			nftLoxProtocolId: '',
 			resetEpoch: 'qa-s0-export-evidence',
 			resettable: true,
 			economic: false,
@@ -189,7 +190,12 @@ describe('runtimeConfig', () => {
 		const config = resolveRagnarokRuntimeConfig({
 			VITE_NETWORK_STAGE: 'testnet',
 			VITE_RAGNAROK_RESET_EPOCH: 'closed-beta-2026-06',
+			VITE_NFTLOX_PROTOCOL_ID: 'nftlox_testnet',
 			RAGNAROK_PROTOCOL_ID: 'rk_game_testnet',
+			RAGNAROK_NFTLOX_COLLECTION_PROOF: 'verified',
+			RAGNAROK_HIVE_KEYCHAIN_SMOKE: 'passed',
+			RAGNAROK_P2P_TWO_BROWSER_SMOKE: 'passed',
+			RAGNAROK_CLOSED_BETA_OPERATOR_SIGNOFF: 'approved',
 		});
 		const gate = buildClosedBetaCutoverGate(config);
 
@@ -197,7 +203,7 @@ describe('runtimeConfig', () => {
 			targetPhase: 'closed-beta',
 			activePhase: 'closed-beta',
 			resetEpoch: 'closed-beta-2026-06',
-			operatorSignoffRequired: true,
+			operatorSignoffRequired: false,
 			inviteBlocked: false,
 			blockerIds: [],
 		});
@@ -210,6 +216,10 @@ describe('runtimeConfig', () => {
 			VITE_NETWORK_STAGE: 'testnet',
 			VITE_RAGNAROK_RESET_EPOCH: 'qa-s0-2026-05',
 			RAGNAROK_PROTOCOL_ID: 'rk_game_testnet',
+			RAGNAROK_NFTLOX_COLLECTION_PROOF: 'verified',
+			RAGNAROK_HIVE_KEYCHAIN_SMOKE: 'passed',
+			RAGNAROK_P2P_TWO_BROWSER_SMOKE: 'passed',
+			RAGNAROK_CLOSED_BETA_OPERATOR_SIGNOFF: 'approved',
 		});
 		const gate = buildClosedBetaCutoverGate(config);
 
@@ -226,11 +236,35 @@ describe('runtimeConfig', () => {
 			resetEpoch: 'closed-beta-2026-06',
 			collectionId: '',
 			nftLoxProtocolId: '',
+			closedBetaNftLoxCollectionProof: true,
+			closedBetaHiveKeychainSmoke: true,
+			closedBetaTwoBrowserP2PSmoke: true,
+			closedBetaOperatorSignoff: true,
 		};
 		const gate = buildClosedBetaCutoverGate(config);
 
 		expect(gate.activePhase).toBe('closed-beta');
 		expect(gate.inviteBlocked).toBe(true);
 		expect(gate.blockerIds).toEqual(['collection_id_configured', 'nftlox_protocol_configured']);
+	});
+
+	it('blocks closed beta invites until human evidence gates are explicitly set', () => {
+		const config = resolveRagnarokRuntimeConfig({
+			VITE_NETWORK_STAGE: 'testnet',
+			VITE_RAGNAROK_RESET_EPOCH: 'closed-beta-2026-06',
+			VITE_NFTLOX_PROTOCOL_ID: 'nftlox_testnet',
+			RAGNAROK_PROTOCOL_ID: 'rk_game_testnet',
+		});
+		const gate = buildClosedBetaCutoverGate(config);
+
+		expect(gate.activePhase).toBe('closed-beta');
+		expect(gate.operatorSignoffRequired).toBe(true);
+		expect(gate.inviteBlocked).toBe(true);
+		expect(gate.blockerIds).toEqual([
+			'nftlox_collection_proof',
+			'hive_keychain_smoke',
+			'two_browser_p2p_smoke',
+			'operator_signoff',
+		]);
 	});
 });

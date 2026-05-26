@@ -74,6 +74,8 @@ export type AdminServerConfig = {
 	readonly adminAccount: string;
 	readonly adminOperatorAccount: string;
 	readonly multisigConfigured: boolean;
+	readonly adminOperatorActiveKeyConfigured: boolean;
+	readonly privateAdminBroadcastsEnabled: boolean;
 };
 
 export type AdminServerStateEvidence = {
@@ -134,6 +136,9 @@ export type AdminP2PStatus = {
 		readonly validLength: boolean;
 		readonly source: 'env' | 'process-fallback';
 		readonly minimumLength: number;
+		readonly required: boolean;
+		readonly ready: boolean;
+		readonly error: string | null;
 	};
 	readonly summary: {
 		readonly playersInRelayMatches: number;
@@ -186,6 +191,8 @@ const ADMIN_CONFIG_REQUIRED_BOOLEAN_FIELDS = [
 	'economic',
 	'qaFullCatalogEnabled',
 	'multisigConfigured',
+	'adminOperatorActiveKeyConfigured',
+	'privateAdminBroadcastsEnabled',
 ] as const;
 
 function nextAdminNonce(): number {
@@ -308,7 +315,19 @@ function isAdminP2PStatus(value: unknown): value is AdminP2PStatus {
 		&& isRecord(body.relay)
 		&& isRecord(body.matchmaking)
 		&& isRecord(body.social)
+		&& isAdminP2PChallengeSigning(body.challengeSigning)
 		&& isRecord(body.summary);
+}
+
+function isAdminP2PChallengeSigning(value: unknown): value is AdminP2PStatus['challengeSigning'] {
+	if (!isRecord(value)) return false;
+	return typeof value.configured === 'boolean'
+		&& typeof value.validLength === 'boolean'
+		&& (value.source === 'env' || value.source === 'process-fallback')
+		&& typeof value.minimumLength === 'number'
+		&& typeof value.required === 'boolean'
+		&& typeof value.ready === 'boolean'
+		&& (value.error === null || typeof value.error === 'string');
 }
 
 function isHiveTransactionObject(value: unknown): value is HiveTransactionObject {
@@ -383,12 +402,14 @@ export async function getAdminServerConfig(options: AdminServerConfigOptions = {
 					ownershipSource: body.state.ownershipSource.trim(),
 					ownershipSourceConfigured: body.state.ownershipSourceConfigured,
 				},
-				closedBetaCutover: body.closedBetaCutover,
-				adminAccount: body.adminAccount.trim(),
-				adminOperatorAccount: body.adminOperatorAccount.trim(),
-				multisigConfigured: body.multisigConfigured,
-			};
-		})
+					closedBetaCutover: body.closedBetaCutover,
+					adminAccount: body.adminAccount.trim(),
+					adminOperatorAccount: body.adminOperatorAccount.trim(),
+					multisigConfigured: body.multisigConfigured,
+					adminOperatorActiveKeyConfigured: body.adminOperatorActiveKeyConfigured,
+					privateAdminBroadcastsEnabled: body.privateAdminBroadcastsEnabled,
+				};
+			})
 		.catch(err => {
 			if (requireMultisig) {
 				adminConfigPromise = null;

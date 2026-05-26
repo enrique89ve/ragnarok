@@ -16,6 +16,10 @@ export const RAGNAROK_CLOSED_BETA_CUTOVER_CHECK_IDS = [
 	'nftlox_protocol_configured',
 	'resettable_non_economic',
 	'ownership_authority_scope',
+	'nftlox_collection_proof',
+	'hive_keychain_smoke',
+	'two_browser_p2p_smoke',
+	'operator_signoff',
 ] as const;
 export type RagnarokClosedBetaCutoverCheckId = typeof RAGNAROK_CLOSED_BETA_CUTOVER_CHECK_IDS[number];
 export type RagnarokClosedBetaCutoverCheckStatus = 'pass' | 'fail';
@@ -57,6 +61,10 @@ export type RagnarokRuntimeConfig = {
 	readonly economic: boolean;
 	readonly acceptsLegacyProtocolIds: boolean;
 	readonly seasonStart: string;
+	readonly closedBetaNftLoxCollectionProof: boolean;
+	readonly closedBetaHiveKeychainSmoke: boolean;
+	readonly closedBetaTwoBrowserP2PSmoke: boolean;
+	readonly closedBetaOperatorSignoff: boolean;
 };
 
 export type RagnarokRuntimeEvidence = {
@@ -93,7 +101,11 @@ export type RagnarokRuntimeEnv = Partial<Record<
 	| 'RAGNAROK_PROTOCOL_ID'
 	| 'RAGNAROK_RESET_EPOCH'
 	| 'RAGNAROK_ADMIN_OPERATOR_ACCOUNT'
-	| 'RAGNAROK_SEASON_START',
+	| 'RAGNAROK_SEASON_START'
+	| 'RAGNAROK_NFTLOX_COLLECTION_PROOF'
+	| 'RAGNAROK_HIVE_KEYCHAIN_SMOKE'
+	| 'RAGNAROK_P2P_TWO_BROWSER_SMOKE'
+	| 'RAGNAROK_CLOSED_BETA_OPERATOR_SIGNOFF',
 	string | undefined
 >>;
 
@@ -120,6 +132,10 @@ export const RAGNAROK_RUNTIME_CONFIGS = {
 		economic: false,
 		acceptsLegacyProtocolIds: true,
 		seasonStart: '2026-05-19T00:00:00Z',
+		closedBetaNftLoxCollectionProof: false,
+		closedBetaHiveKeychainSmoke: false,
+		closedBetaTwoBrowserP2PSmoke: false,
+		closedBetaOperatorSignoff: false,
 	},
 	testnet: {
 		stage: 'testnet',
@@ -133,7 +149,7 @@ export const RAGNAROK_RUNTIME_CONFIGS = {
 		indexAccount: 'ragnarok-test-index',
 		indexerUrl: '',
 		artIndexerUrl: '',
-		nftLoxProtocolId: 'nftlox_testnet',
+		nftLoxProtocolId: '',
 		nftArtBaseUrl: GITHUB_PAGES_BASE_URL,
 		externalUrlBase: GITHUB_PAGES_BASE_URL,
 		resetEpoch: 'testnet-s01-2026-05-19',
@@ -141,6 +157,10 @@ export const RAGNAROK_RUNTIME_CONFIGS = {
 		economic: false,
 		acceptsLegacyProtocolIds: false,
 		seasonStart: '2026-05-19T00:00:00Z',
+		closedBetaNftLoxCollectionProof: false,
+		closedBetaHiveKeychainSmoke: false,
+		closedBetaTwoBrowserP2PSmoke: false,
+		closedBetaOperatorSignoff: false,
 	},
 	mainnet: {
 		stage: 'mainnet',
@@ -162,6 +182,10 @@ export const RAGNAROK_RUNTIME_CONFIGS = {
 		economic: true,
 		acceptsLegacyProtocolIds: true,
 		seasonStart: '2026-05-19T00:00:00Z',
+		closedBetaNftLoxCollectionProof: false,
+		closedBetaHiveKeychainSmoke: false,
+		closedBetaTwoBrowserP2PSmoke: false,
+		closedBetaOperatorSignoff: false,
 	},
 } as const satisfies Record<RagnarokNetworkStage, RagnarokRuntimeConfig>;
 
@@ -189,6 +213,17 @@ function overrideString(value: string | undefined, fallback: string): string {
 function optionalString(value: string | undefined): string | undefined {
 	const trimmed = value?.trim();
 	return trimmed && trimmed.length > 0 ? trimmed : undefined;
+}
+
+function evidenceFlag(value: string | undefined): boolean {
+	const normalized = value?.trim().toLowerCase();
+	return normalized === '1'
+		|| normalized === 'true'
+		|| normalized === 'yes'
+		|| normalized === 'pass'
+		|| normalized === 'passed'
+		|| normalized === 'verified'
+		|| normalized === 'approved';
 }
 
 function resolveResetEpoch(env: RagnarokRuntimeEnv, base: RagnarokRuntimeConfig): string {
@@ -224,6 +259,10 @@ export function resolveRagnarokRuntimeConfig(env: RagnarokRuntimeEnv): RagnarokR
 		externalUrlBase: overrideString(env.VITE_EXTERNAL_URL_BASE, base.externalUrlBase),
 		resetEpoch: resolveResetEpoch(env, base),
 		seasonStart: overrideString(env.RAGNAROK_SEASON_START, overrideString(env.VITE_SEASON_START, base.seasonStart)),
+		closedBetaNftLoxCollectionProof: evidenceFlag(env.RAGNAROK_NFTLOX_COLLECTION_PROOF),
+		closedBetaHiveKeychainSmoke: evidenceFlag(env.RAGNAROK_HIVE_KEYCHAIN_SMOKE),
+		closedBetaTwoBrowserP2PSmoke: evidenceFlag(env.RAGNAROK_P2P_TWO_BROWSER_SMOKE),
+		closedBetaOperatorSignoff: evidenceFlag(env.RAGNAROK_CLOSED_BETA_OPERATOR_SIGNOFF),
 	};
 }
 
@@ -377,6 +416,26 @@ export function buildClosedBetaCutoverGate(config: RagnarokRuntimeConfig): Ragna
 			testnetProfile && runtimePhase === 'closed-beta' && !qaFullCatalogEnabled,
 			'starter entitlement remains universal; genesis cards require nft-custody or replay-derived pack acquisition',
 		),
+		createClosedBetaCutoverCheck(
+			'nftlox_collection_proof',
+			testnetProfile && runtimePhase === 'closed-beta' && config.closedBetaNftLoxCollectionProof,
+			`RAGNAROK_NFTLOX_COLLECTION_PROOF=${String(config.closedBetaNftLoxCollectionProof)}`,
+		),
+		createClosedBetaCutoverCheck(
+			'hive_keychain_smoke',
+			testnetProfile && runtimePhase === 'closed-beta' && config.closedBetaHiveKeychainSmoke,
+			`RAGNAROK_HIVE_KEYCHAIN_SMOKE=${String(config.closedBetaHiveKeychainSmoke)}`,
+		),
+		createClosedBetaCutoverCheck(
+			'two_browser_p2p_smoke',
+			testnetProfile && runtimePhase === 'closed-beta' && config.closedBetaTwoBrowserP2PSmoke,
+			`RAGNAROK_P2P_TWO_BROWSER_SMOKE=${String(config.closedBetaTwoBrowserP2PSmoke)}`,
+		),
+		createClosedBetaCutoverCheck(
+			'operator_signoff',
+			testnetProfile && runtimePhase === 'closed-beta' && config.closedBetaOperatorSignoff,
+			`RAGNAROK_CLOSED_BETA_OPERATOR_SIGNOFF=${String(config.closedBetaOperatorSignoff)}`,
+		),
 	];
 	const blockerIds = checks
 		.filter((check) => check.status === 'fail')
@@ -387,7 +446,7 @@ export function buildClosedBetaCutoverGate(config: RagnarokRuntimeConfig): Ragna
 		activePhase: runtimePhase,
 		resetEpoch: config.resetEpoch,
 		storageNamespace,
-		operatorSignoffRequired: true,
+		operatorSignoffRequired: !config.closedBetaOperatorSignoff,
 		inviteBlocked: blockerIds.length > 0,
 		blockerIds,
 		checks,

@@ -25,8 +25,10 @@ VITE_RAGNAROK_COLLECTION_ID=ragnarok-testnet
 VITE_RAGNAROK_RESET_EPOCH=testnet-s01-2026-05-19
 VITE_RAGNAROK_ADMIN_ACCOUNT=ragnarok-test
 VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT=ragnarok-test-operator
-VITE_NFTLOX_PROTOCOL_ID=nftlox_testnet
 ```
+
+NFTLoX is not required for Alfa or QA Season 0. Keep
+`VITE_NFTLOX_PROTOCOL_ID` unset until the Closed Beta collection proof exists.
 
 For QA Testnet Season 0, rotate the reset epoch to a `qa-s0-*` value before
 testers start, for example:
@@ -349,6 +351,10 @@ VITE_RAGNAROK_PROTOCOL_ID=rk_game_testnet \
 VITE_RAGNAROK_COLLECTION_ID=ragnarok-testnet \
 VITE_RAGNAROK_RESET_EPOCH=closed-beta-2026-06 \
 VITE_NFTLOX_PROTOCOL_ID=nftlox_testnet \
+RAGNAROK_NFTLOX_COLLECTION_PROOF=verified \
+RAGNAROK_HIVE_KEYCHAIN_SMOKE=passed \
+RAGNAROK_P2P_TWO_BROWSER_SMOKE=passed \
+RAGNAROK_CLOSED_BETA_OPERATOR_SIGNOFF=approved \
 ENABLE_CHAIN_INDEXER=false \
 ENABLE_INDEX_CHECKPOINT_PUBLISHER=false \
 ./node_modules/.bin/tsx server/index.ts --mode testnet-safe
@@ -366,11 +372,12 @@ Expected automated result:
 - `qa` is `false`.
 - `blocked` is `false`.
 - `blockers` is `[]`.
-- `signoff` is `true`.
+- `signoff` is `false`.
 
 If any blocker appears, do not invite testers. Common blockers are a QA reset
-epoch, missing collection id, missing NFTLoX protocol id, or a non-testnet /
-economic profile.
+epoch, missing collection id, missing NFTLoX protocol id, a non-testnet /
+economic profile, missing NFTLoX collection proof, missing Hive/Keychain smoke,
+missing two-browser P2P smoke, or missing operator sign-off.
 
 Operator UI check:
 

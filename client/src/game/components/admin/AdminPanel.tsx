@@ -117,6 +117,10 @@ const CUTOVER_CHECK_LABELS: Record<CutoverCheckId, string> = {
 	nftlox_protocol_configured: 'NFTLox protocol',
 	resettable_non_economic: 'Resettable testnet',
 	ownership_authority_scope: 'Ownership authority',
+	nftlox_collection_proof: 'NFTLox proof',
+	hive_keychain_smoke: 'Hive smoke',
+	two_browser_p2p_smoke: 'P2P smoke',
+	operator_signoff: 'Operator sign-off',
 };
 
 // ── Component ──
@@ -712,6 +716,8 @@ export default function AdminPanel() {
 	const phaseOk = isLocalReadOnlyRuntime || fullNftPhase;
 	const inviteGateValue = cutoverBlocked ? 'Blocked' : 'Runtime pass';
 	const inviteGateOk = isLocalReadOnlyRuntime || !cutoverBlocked;
+	const adminBroadcastValue = adminConfig?.privateAdminBroadcastsEnabled ? 'Enabled' : 'Env missing';
+	const adminBroadcastOk = isLocalReadOnlyRuntime || adminConfig?.privateAdminBroadcastsEnabled === true;
 	const collectibleByRarity = collectibleCards.reduce<Record<string, number>>((totals, card) => {
 		const rarity = String(card.rarity).toLowerCase();
 		return { ...totals, [rarity]: (totals[rarity] ?? 0) + 1 };
@@ -823,8 +829,9 @@ export default function AdminPanel() {
 									</>
 								) : (
 									<>
-										<AdminConsumerRow label="Operator" value={`@${adminConfig?.adminOperatorAccount ?? 'missing'}`} ok={Boolean(adminConfig?.adminOperatorAccount)} />
-										<AdminConsumerRow label="Session" value={adminSession?.authenticated ? 'Authorized' : 'Required'} ok={Boolean(adminSession?.authenticated)} />
+											<AdminConsumerRow label="Operator" value={`@${adminConfig?.adminOperatorAccount ?? 'missing'}`} ok={Boolean(adminConfig?.adminOperatorAccount)} />
+											<AdminConsumerRow label="Operator key" value={adminBroadcastValue} ok={adminBroadcastOk} />
+											<AdminConsumerRow label="Session" value={adminSession?.authenticated ? 'Authorized' : 'Required'} ok={Boolean(adminSession?.authenticated)} />
 										<AdminConsumerRow label="Phase" value={runtimePhaseLabel} ok={phaseOk} />
 										<AdminConsumerRow label="QA catalog" value={adminConfig?.qaFullCatalogEnabled ? 'Enabled' : 'Disabled'} ok={adminConfig?.qaFullCatalogEnabled === false} />
 										<AdminConsumerRow label="Invite gate" value={inviteGateValue} ok={inviteGateOk} />
@@ -1440,8 +1447,13 @@ function P2PStatusCard({
 	const refreshedLabel = state.updatedAt
 		? new Date(state.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 		: 'Pending';
+	const challengeSignerReady = data?.challengeSigning.ready === true;
 	const challengeSignerConfigured = data?.challengeSigning.source === 'env';
-	const challengeSignerLabel = data ? (challengeSignerConfigured ? 'Configured' : 'Runtime fallback') : 'Pending';
+	const challengeSignerLabel = data
+		? challengeSignerReady
+			? (challengeSignerConfigured ? 'Configured' : 'Runtime fallback')
+			: 'Missing env'
+		: 'Pending';
 	const topErrorRows = Object.entries(data?.relay.errorsByReason ?? {})
 		.sort(([, a], [, b]) => b - a)
 		.slice(0, 4);
@@ -1491,7 +1503,7 @@ function P2PStatusCard({
 				<AdminConsumerRow label="Pending challenges" value={(data?.social.pendingChallenges ?? 0).toLocaleString()} ok />
 				<AdminConsumerRow label="Messages relayed" value={(data?.relay.totalMessagesRelayed ?? 0).toLocaleString()} ok />
 				<AdminConsumerRow label="Dropped frames" value={(data?.relay.totalFramesDropped ?? 0).toLocaleString()} ok={(data?.relay.totalFramesDropped ?? 0) === 0} />
-				<AdminConsumerRow label="Challenge signer" value={challengeSignerLabel} ok={challengeSignerConfigured} />
+					<AdminConsumerRow label="Challenge signer" value={challengeSignerLabel} ok={challengeSignerReady && challengeSignerConfigured} />
 				<AdminConsumerRow label="Last error" value={lastErrorLabel} ok={!data?.summary.lastErrorAt} />
 				<AdminConsumerRow label="Checked" value={refreshedLabel} ok={state.status !== 'loading'} />
 				<AdminConsumerRow label="Oldest queue" value={formatDurationMs(data?.matchmaking.oldestQueuedMs ?? null)} ok={(data?.matchmaking.oldestQueuedMs ?? 0) < 60_000} />
@@ -1532,6 +1544,13 @@ function deriveP2PHealth(state: AdminP2PStatusState): {
 		return {
 			ok: false,
 			label: 'Unavailable',
+			className: 'border-red-700/50 bg-red-950/40 text-red-200',
+		};
+	}
+	if (state.data?.challengeSigning.ready === false) {
+		return {
+			ok: false,
+			label: 'Config missing',
 			className: 'border-red-700/50 bg-red-950/40 text-red-200',
 		};
 	}

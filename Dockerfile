@@ -17,14 +17,14 @@ FROM deps AS build
 WORKDIR /app
 
 ARG VITE_NETWORK_STAGE=testnet
-ARG VITE_RAGNAROK_PROTOCOL_ID
-ARG VITE_RAGNAROK_COLLECTION_ID
+ARG VITE_RAGNAROK_PROTOCOL_ID=rk_game_testnet
+ARG VITE_RAGNAROK_COLLECTION_ID=ragnarok-testnet
 ARG VITE_RAGNAROK_RESET_EPOCH=alfa-testnet-full-nft-2026-05-22
-ARG VITE_RAGNAROK_ADMIN_ACCOUNT
-ARG VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT
-ARG VITE_RAGNAROK_GENESIS_ACCOUNT
-ARG VITE_RAGNAROK_TREASURY_ACCOUNT
-ARG VITE_RAGNAROK_INDEX_ACCOUNT
+ARG VITE_RAGNAROK_ADMIN_ACCOUNT=ragnarok-test
+ARG VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT=ragnarok-test-operator
+ARG VITE_RAGNAROK_GENESIS_ACCOUNT=ragnarok-test
+ARG VITE_RAGNAROK_TREASURY_ACCOUNT=ragp2p
+ARG VITE_RAGNAROK_INDEX_ACCOUNT=ragp2p
 ARG VITE_RAGNAROK_INDEXER_URL
 ARG VITE_RAGNAROK_ART_INDEXER_URL
 ARG VITE_NFTLOX_PROTOCOL_ID
@@ -63,15 +63,25 @@ ENV VITE_NETWORK_STAGE=testnet
 ENV VITE_RAGNAROK_PROTOCOL_ID=rk_game_testnet
 ENV VITE_RAGNAROK_COLLECTION_ID=ragnarok-testnet
 ENV VITE_RAGNAROK_RESET_EPOCH=alfa-testnet-full-nft-2026-05-22
+ENV VITE_RAGNAROK_ADMIN_ACCOUNT=ragnarok-test
+ENV VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT=ragnarok-test-operator
+ENV VITE_RAGNAROK_GENESIS_ACCOUNT=ragnarok-test
+ENV VITE_RAGNAROK_TREASURY_ACCOUNT=ragp2p
+ENV VITE_RAGNAROK_INDEX_ACCOUNT=ragp2p
+ENV RAGNAROK_PROTOCOL_ID=rk_game_testnet
 ENV RAGNAROK_RESET_EPOCH=alfa-testnet-full-nft-2026-05-22
+ENV RAGNAROK_ADMIN_OPERATOR_ACCOUNT=ragnarok-test-operator
+ENV RAGNAROK_CHAIN_STATE_FILE=data/chain-state.alfa-testnet.json
+ENV RAGNAROK_NFT_OWNERSHIP_SOURCE=json
 
 COPY package.json package-lock.json ./
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/scripts/verifyRuntimeEnv.mjs ./scripts/verifyRuntimeEnv.mjs
 
 EXPOSE 5000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 5000) + '/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 
-CMD ["sh", "-c", "node dist/index.js --mode ${RAGNAROK_RUNTIME_MODE:-alfa-testnet}"]
+CMD ["sh", "-c", "node scripts/verifyRuntimeEnv.mjs --mode ${RAGNAROK_RUNTIME_MODE:-alfa-testnet} --scope runtime --require-admin-key && node dist/index.js --mode ${RAGNAROK_RUNTIME_MODE:-alfa-testnet}"]

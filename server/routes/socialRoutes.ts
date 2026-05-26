@@ -67,6 +67,7 @@ function challengeRejectStatus(reason: ChallengeRejectReason): number {
 	if (reason === 'not_warband') return 403;
 	if (reason === 'invalid_input') return 400;
 	if (reason === 'offline' || reason === 'stale_peer') return 404;
+	if (reason === 'server_unconfigured') return 503;
 	return 409;
 }
 
@@ -269,13 +270,20 @@ router.post('/challenge', (req: Request, res: Response) => {
 
 	const target = normalizedTo;
 	const existing = challenges.get(target) || [];
-	const challenge = buildServerSignedChallenge({
-		from: normalizedFrom,
-		to: normalizedTo,
-		peerId,
-		timestamp: now,
-		expiresAt: now + CHALLENGE_STALE_THRESHOLD_MS,
-	});
+	let challenge: ServerSignedChallenge;
+	try {
+		challenge = buildServerSignedChallenge({
+			from: normalizedFrom,
+			to: normalizedTo,
+			peerId,
+			timestamp: now,
+			expiresAt: now + CHALLENGE_STALE_THRESHOLD_MS,
+		});
+	} catch (err) {
+		console.warn('[Social] Challenge signing unavailable:', err);
+		sendReject(res, 503, 'server_unconfigured');
+		return;
+	}
 	existing.push(challenge);
 	challenges.set(target, existing.slice(-10));
 

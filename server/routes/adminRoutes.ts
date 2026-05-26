@@ -14,7 +14,10 @@ import {
 import { getRagnarokServerRuntimeConfig } from '../services/runtimeConfig';
 import { buildServerStateEvidence } from '../services/runtimeStateEvidence';
 import { serverSignatureVerifier } from '../services/hiveSignatureVerifier';
-import { broadcastAdminCustomJson } from '../services/adminOperatorBroadcaster';
+import {
+	broadcastAdminCustomJson,
+	getAdminOperatorRuntimeStatus,
+} from '../services/adminOperatorBroadcaster';
 import {
 	reserveAdminApproval,
 	validateAdminApprovalNonceFreshness,
@@ -85,15 +88,15 @@ function readLoginBody(body: unknown): {
 router.get('/config', (_req: Request, res: Response) => {
 	const runtime = getRagnarokServerRuntimeConfig();
 	const runtimeEvidence = buildRagnarokRuntimeEvidence(runtime);
+	const adminOperator = getAdminOperatorRuntimeStatus(runtime);
 	res.json({
 		success: true,
 		...runtimeEvidence,
 		adminAccount: runtime.adminAccount,
 		adminOperatorAccount: runtime.adminOperatorAccount,
-		multisigConfigured: Boolean(
-			runtime.adminOperatorAccount
-			&& runtime.adminOperatorAccount !== runtime.adminAccount,
-		),
+		multisigConfigured: adminOperator.operatorAccountConfigured,
+		adminOperatorActiveKeyConfigured: adminOperator.activeKeyConfigured,
+		privateAdminBroadcastsEnabled: adminOperator.privateBroadcastsEnabled,
 		state: buildServerStateEvidence(runtime),
 		closedBetaCutover: buildClosedBetaCutoverGate(runtime),
 	});

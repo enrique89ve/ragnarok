@@ -44,6 +44,7 @@ export type ChallengeRejectReason =
 	| 'rate_limited'
 	| 'stale_peer'
 	| 'self_challenge'
+	| 'server_unconfigured'
 	| 'invalid_input';
 
 export type PresenceHeartbeatBody = {
@@ -310,6 +311,7 @@ const CHALLENGE_REJECT_REASONS: ReadonlySet<string> = new Set([
 	'rate_limited',
 	'stale_peer',
 	'self_challenge',
+	'server_unconfigured',
 	'invalid_input',
 ]);
 

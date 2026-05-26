@@ -9,6 +9,7 @@
 </p>
 
 <p align="center">
+  <a href="#current-stage">Current Stage</a>&ensp;&bull;&ensp;
   <a href="#the-game">The Game</a>&ensp;&bull;&ensp;
   <a href="#features">Features</a>&ensp;&bull;&ensp;
   <a href="#norse-mechanics">Norse Mechanics</a>&ensp;&bull;&ensp;
@@ -29,6 +30,37 @@
   <img src="https://img.shields.io/badge/typescript-5-3178C6?style=flat-square&logo=typescript&logoColor=white" />
   <img src="https://img.shields.io/badge/blockchain-hive-E31337?style=flat-square" />
 </p>
+
+---
+
+## Current Stage
+
+Current operational stage: **Alfa Testnet**.
+
+This is not Closed Testnet Beta, Public Testnet, Genesis, or Mainnet. Alfa is a
+production-hosted testnet profile used to prove Dokploy, SSL/Cloudflare,
+WebSocket/P2P, runtime JSON state, admin diagnostics, and full-NFT gameplay
+mechanics before inviting a wider tester cohort.
+
+Hard rule: `VITE_NETWORK_STAGE` has only three valid values:
+`local`, `testnet`, and `mainnet`. QA Season 0, Alfa Testnet, and Closed
+Testnet Beta are runtime phases selected by `VITE_RAGNAROK_RESET_EPOCH`, not
+new network stages.
+
+| Order | Stage / phase | Runtime truth | What it proves | Not allowed | Exit gate |
+|---|---|---|---|---|---|
+| 0 | Local development | `VITE_NETWORK_STAGE=local`, `runtimePhase=local` | Private iteration, mocks, fast gameplay checks. | Tester claims, real Hive value, public readiness claims. | Focused checks for the touched area. |
+| 1 | QA Testnet Season 0 | `stage=testnet`, `runtimePhase=qa-season-0`, reset epoch `qa-s0-*` | Resettable full-catalog rehearsal, evidence exports, RUNE/pack/campaign/P2P smoke paths. | NFT ownership claims, CardXP, ELO, Season Score, mainnet value. | Week-one evidence matrix complete, including P2P pass or captured blocker. |
+| 2 | Alfa Testnet (current) | `stage=testnet`, `runtimePhase=alfa-testnet`, reset epoch `alfa-testnet-*`, JSON state | Hosted runtime, deploy, SSL, Cloudflare, admin config, WebSocket/P2P, full-NFT mechanics with JSON-backed provenance. | Closed Beta invites, mainnet acceptance, permanent value, NFTLoX custody claims. | `/api/health` and `/api/admin/config` prove Alfa runtime; P2P/admin/runtime blockers are isolated; NFTLoX cutover is ready. |
+| 3 | Closed Testnet Beta | `stage=testnet`, `runtimePhase=closed-beta`, reset epoch `closed-beta-*`, `qaFullCatalogEnabled=false` | Limited testers with Hive/Keychain, resettable testnet ownership, starter/DUAT/RUNE pack gates, campaign/daily RUNE. | P2P ranked RUNE, official ELO/Season Score, public season, permanent value. | `closedBetaCutover.inviteBlocked=false`, NFTLoX collection proof, two-browser P2P smoke, operator sign-off. |
+| 4 | Genesis / mainnet rehearsal | `stage=mainnet` in a controlled rehearsal | Multisig ceremony, irreversible replay, pack minting, seal lifecycle, production indexer behavior. | Treating rehearsal balances as final user value. | Tabletop rehearsal, hash bundle, post-seal replay validation. |
+| 5 | Mainnet | `VITE_NETWORK_STAGE=mainnet`, `runtimePhase=mainnet`, `economic=true` | Permanent ownership and economy. | Resettable shortcuts, QA catalog, testnet protocol ids. | Only after Genesis gates are closed. |
+
+Closed Beta remains blocked while any P0 item in
+[`docs/BETA_TESTNET_ROADMAP.md`](docs/BETA_TESTNET_ROADMAP.md) is still open.
+The compact scope model lives in
+[`docs/BETA_TESTNET_SCOPE.md`](docs/BETA_TESTNET_SCOPE.md), and the operator
+smoke commands live in [`docs/TESTNET_RUNBOOK.md`](docs/TESTNET_RUNBOOK.md).
 
 ---
 
@@ -62,7 +94,7 @@ Five mythological pantheons clash for supremacy. Norse frost giants wage war aga
 
 ### Multiplayer & Social
 - **P2P multiplayer** via WebRTC (PeerJS) — no server bottleneck
-- **Ranked matchmaking** with ELO-based ladder
+- **Ranked matchmaking architecture** with ELO ladder support; official ranked settlement stays gated until the winner-arbiter path ships
 - **Tournament system** — Swiss + single elimination brackets
 - **Spectator mode** — watch live matches (read-only P2P)
 - **Match replay viewer** — action timeline with playback controls
@@ -74,7 +106,7 @@ Five mythological pantheons clash for supremacy. Norse frost giants wage war aga
 - **Card evolution** — 3 tiers: Mortal (60-70%) → Ascended (80-90%) → Divine (100%)
 - **Daily quest system** — 19 quest templates, 3 active per day
 - **Pack opening** — commit-reveal with delayed irreversible Hive block entropy (anti-grind, anti-selective-reveal)
-- **RUNE rewards** — testnet S01 emission capped at 2.2M RUNE: 2M P2P, 200K campaign; ranked P2P currently pays +2 per win, +0 per loss (non-transferable in v1)
+- **RUNE rewards** — testnet S01 caps are declared in protocol; campaign and daily quest RUNE are active in closed-beta scope, while P2P ranked RUNE remains disabled until the winner arbiter can prove a dual-signed result
 - **Eitr crafting** — dissolve cards to see Eitr value (display only in v1 — forging and Eitr trading disabled until replay-derived)
 
 ### Blockchain (Hive Layer 1 — Protocol v1.2)
@@ -446,10 +478,11 @@ npm run build:mainnet   # production browser bundle from .env.mainnet
 npm run start:mainnet   # built server with .env.mainnet
 ```
 
-Copy `.env.testnet.example` to `.env.testnet` for beta testing,
-`.env.alfa-testnet.example` to `.env.alfa-testnet` for the one-week
-Dokploy-hosted Alfa Testnet profile, and `.env.mainnet.example` to
-`.env.mainnet` for mainnet release rehearsals.
+Copy `.env.testnet.example` to `.env.testnet` for generic testnet, QA Season 0,
+or Closed Testnet Beta work; set the reset epoch deliberately for the phase you
+are testing. Copy `.env.alfa-testnet.example` to `.env.alfa-testnet` for the
+Dokploy-hosted Alfa Testnet profile, and `.env.mainnet.example` to `.env.mainnet`
+for mainnet release rehearsals.
 `VITE_NETWORK_STAGE` is the source of truth; `VITE_DATA_LAYER_MODE` and
 `VITE_BLOCKCHAIN_PACKAGING` are debug overrides, not normal profile switches.
 Alfa Testnet still uses `VITE_NETWORK_STAGE=testnet`; `alfa-testnet` is only the
@@ -553,7 +586,7 @@ server/
 - [x] 6 Greek mythic minion cards (Cerberus, Typhon, Porphyrion, Atlas, Campe, Medusa)
 - [x] 3 new heroes: Prometheus (druid), Heracles (warrior), Rhea (priest)
 - [x] P2P multiplayer via WebRTC
-- [x] Ranked matchmaking with ELO ladder
+- [x] Ranked matchmaking/ELO code path (official ranked settlement remains gated below)
 - [x] Tournament system (Swiss + elimination)
 - [x] Eitr crafting system (dissolve display; forge and Eitr trading disabled in v1 until replay-derived)
 - [x] Spectator mode + match replay viewer
@@ -580,7 +613,7 @@ server/
 - [x] 192 tests (37 conformance vectors + 38 replay traces + 117 existing)
 
 - [x] Protocol v1.1 — atomic transfers, pack NFTs, DNA lineage (6 new ops)
-- [x] Protocol v1.2 — on-chain marketplace (6 ops), broadcast hardening, NFTLox integration
+- [x] Protocol v1.2 — on-chain marketplace (6 ops), broadcast hardening, NFTLox boundary scaffolding
 - [x] DUAT airdrop system — 30% supply (164,460 packs) to 3,511 token holders, 90-day claim window
 - [x] Card visual overhaul — 50+ SVG keyword icons, SVG stat emblems, rarity gems
 - [x] Campaign story mode — per-mission narrative intro, AAA cinematic crawl with letterbox
@@ -590,10 +623,18 @@ server/
 - [x] RUNE chain read API — `/api/chain/player/:username/rune` plus `/api/chain/rune/{state,ledger,balances}`, with no parallel `/api/testnet/rune/*`
 - [x] Chain API rate limits — tighter caps for sync-on-demand reads and RUNE ledger/state views
 
-### Next: Genesis Launch
+### Current Gate: Alfa Testnet -> Closed Testnet Beta
 
-- [ ] RUNE live smoke with Hive/Keychain: claim/open pack, visible balance, local replay parity
-- [ ] Season Score snapshot: final ELO + capped RUNE bonus at season-end block
+- [ ] Prove the deployed Alfa runtime through `/api/health` and `/api/admin/config`: `stage=testnet`, `runtimePhase=alfa-testnet`, `resetEpoch=alfa-testnet-*`, `qaFullCatalogEnabled=false`, JSON state evidence.
+- [ ] Complete Hive/Keychain smoke with an internal testnet account.
+- [ ] Complete the two-browser P2P smoke: quiet chess move, instant capture, poker capture, reconnect, reload guard, explicit result, export JSON.
+- [ ] Create and prove the Ragnarok NFTLoX testnet collection/schema before Closed Beta invites.
+- [ ] Rotate to a `closed-beta-*` reset epoch and prove `closedBetaCutover.inviteBlocked=false` only after NFTLoX proof, Hive/Keychain smoke, two-browser P2P smoke, and operator sign-off env evidence are set.
+- [ ] Keep P2P ranked RUNE, official ELO, and Season Score dark until the winner-arbiter can verify and broadcast ranked `match_result`.
+
+### Later: Genesis Launch
+
+- [ ] Season Score snapshot: final ELO + capped RUNE bonus at season-end block after ranked P2P settlement exists
 - [ ] Create @ragnarok Hive account (2-of-3 multisig, no standalone keys)
 - [ ] Create @ragnarok-genesis Hive account (2-of-3 multisig, same signers)
 - [ ] Create @ragnarok-treasury Hive account (2-of-3 initial, expandable via WoT)
@@ -610,6 +651,10 @@ server/
 | Document | Description |
 |----------|-------------|
 | [RAGNAROK_PROTOCOL_V1.md](docs/RAGNAROK_PROTOCOL_V1.md) | **Frozen protocol spec** — base ops, authority matrix, finality rules, launch gates |
+| [BETA_TESTNET_SCOPE.md](docs/BETA_TESTNET_SCOPE.md) | Testnet environment model, current gates, RUNE limits, and closed-beta boundaries |
+| [BETA_TESTNET_ROADMAP.md](docs/BETA_TESTNET_ROADMAP.md) | Live blocker list for Alfa -> Closed Testnet Beta readiness |
+| [TESTNET_RUNBOOK.md](docs/TESTNET_RUNBOOK.md) | Testnet commands, runtime checks, and manual smoke procedures |
+| [TESTNET_WEEK_ONE_SPEC.md](docs/TESTNET_WEEK_ONE_SPEC.md) | QA Season 0 week-one operating checklist and exit criteria |
 | [ATOMIC_NFT_PACKS_DESIGN.md](docs/ATOMIC_NFT_PACKS_DESIGN.md) | Pack system — atomic transfers, pack NFTs, DNA lineage |
 | [DUAT_AIRDROP_DESIGN.md](docs/DUAT_AIRDROP_DESIGN.md) | **DUAT airdrop** — 30% supply to 3,511 holders, claim window, treasury absorption |
 | [DECENTRALIZED_INDEXER_DESIGN.md](docs/DECENTRALIZED_INDEXER_DESIGN.md) | **Light HAF** — 6-tier IPFS index, WoT operators, HafSQL fallback |

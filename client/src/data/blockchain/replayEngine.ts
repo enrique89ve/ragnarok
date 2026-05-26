@@ -177,9 +177,10 @@ async function _doSync(username: string): Promise<void> {
 			// We only care about our app's custom_json ops
 			if (entry.op[0] !== 'custom_json') continue;
 			const opData = entry.op[1] as CustomJsonOpData;
+			const nftLoxProtocolConfigured = NFTLOX_PROTOCOL_ID.trim().length > 0;
 			if (
 				!shouldAcceptCustomJsonId(runtime, opData.id)
-				&& opData.id !== NFTLOX_PROTOCOL_ID
+				&& (!nftLoxProtocolConfigured || opData.id !== NFTLOX_PROTOCOL_ID)
 			) continue;
 
 			const broadcaster =

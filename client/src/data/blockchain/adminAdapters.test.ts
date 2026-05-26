@@ -38,6 +38,8 @@ function adminConfigResponse(overrides: Record<string, unknown> = {}): Record<st
 		adminAccount: 'ragnarok-test',
 		adminOperatorAccount: 'ragnarok-test-operator',
 		multisigConfigured: true,
+		adminOperatorActiveKeyConfigured: true,
+		privateAdminBroadcastsEnabled: true,
 		closedBetaCutover: {
 			targetPhase: 'closed-beta',
 			activePhase: 'closed-beta',
@@ -68,6 +70,8 @@ describe('admin blockchain adapters', () => {
 		const fetchMock = vi.fn(async () => jsonResponse(adminConfigResponse({
 			adminOperatorAccount: '',
 			multisigConfigured: false,
+			adminOperatorActiveKeyConfigured: false,
+			privateAdminBroadcastsEnabled: false,
 		})));
 		vi.stubGlobal('fetch', fetchMock);
 
@@ -81,6 +85,8 @@ describe('admin blockchain adapters', () => {
 		const fetchMock = vi.fn(async () => jsonResponse(adminConfigResponse({
 			adminOperatorAccount: '',
 			multisigConfigured: false,
+			adminOperatorActiveKeyConfigured: false,
+			privateAdminBroadcastsEnabled: false,
 		})));
 		vi.stubGlobal('fetch', fetchMock);
 
@@ -89,6 +95,7 @@ describe('admin blockchain adapters', () => {
 
 		expect(config.adminOperatorAccount).toBe('');
 		expect(config.multisigConfigured).toBe(false);
+		expect(config.privateAdminBroadcastsEnabled).toBe(false);
 		expect(config.closedBetaCutover.activePhase).toBe('closed-beta');
 		expect(fetchMock).toHaveBeenCalledWith('/api/admin/config');
 	});
@@ -111,6 +118,8 @@ describe('admin blockchain adapters', () => {
 				ownershipSource: 'nftlox',
 			},
 			multisigConfigured: true,
+			adminOperatorActiveKeyConfigured: true,
+			privateAdminBroadcastsEnabled: true,
 		});
 		expect(config.closedBetaCutover.inviteBlocked).toBe(false);
 		expect(config.closedBetaCutover.operatorSignoffRequired).toBe(true);

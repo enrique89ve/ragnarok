@@ -137,6 +137,14 @@ describe('p2pAvailability', () => {
 
 		expect(readChallengeSendResponse({
 			ok: false,
+			reason: 'server_unconfigured',
+		})).toEqual({
+			ok: false,
+			reason: 'server_unconfigured',
+		});
+
+		expect(readChallengeSendResponse({
+			ok: false,
 			reason: 'rate_limited',
 			html: '<script>',
 		})).toEqual({ ok: false, reason: 'invalid_input' });
