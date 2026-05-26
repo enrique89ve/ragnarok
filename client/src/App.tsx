@@ -615,17 +615,17 @@ function HomePage() {
 	};
 
 	return (
-		<div className="home-landscape-shell min-h-screen w-full overflow-x-hidden text-ink-0 bg-(image:--bg-home-nav)">
+		<div className="home-landscape-shell min-h-dvh w-full overflow-x-hidden text-ink-0 bg-(image:--bg-home-nav)">
 			{/* ── HEADER ─────────────────────────────────────────────────────── */}
 			<header className="home-landscape-header sticky top-0 z-50 backdrop-blur-md bg-obsidian-950/80 border-b border-obsidian-700">
-				<div className="home-landscape-header-inner mx-auto h-[3.25rem] max-w-[1440px] px-3 sm:h-14 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
-					<div className="flex items-center gap-3">
-						<img src={ragnarokLogo} alt="" className="home-landscape-logo w-8 h-8 rounded-md border border-obsidian-600 object-cover" />
-						<div className="leading-none">
-							<div className="flex items-center gap-2">
-								<div className="font-display text-sm font-bold tracking-[0.18em] text-gold-300">RAGNAROK</div>
+				<div className="home-landscape-header-inner mx-auto h-[3.25rem] max-w-[1440px] px-3 sm:h-14 sm:px-6 lg:px-8 flex items-center justify-between gap-2 sm:gap-4">
+					<div className="home-landscape-brand flex min-w-0 items-center gap-2 sm:gap-3">
+						<img src={ragnarokLogo} alt="" className="home-landscape-logo h-8 w-8 shrink-0 rounded-md border border-obsidian-600 object-cover" />
+						<div className="min-w-0 leading-none">
+							<div className="flex min-w-0 items-center gap-2">
+								<div className="home-landscape-title min-w-0 truncate font-display text-sm font-bold tracking-[0.18em] text-gold-300">RAGNAROK</div>
 								{isTestnetStage() && (
-									<span className="rounded border border-gold-300/40 bg-gold-300/10 px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-gold-100">
+									<span className="home-landscape-stage-badge shrink-0 rounded border border-gold-300/40 bg-gold-300/10 px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-gold-100">
 										{runtimeProductLabel}
 									</span>
 								)}
@@ -663,7 +663,7 @@ function HomePage() {
 								<span className="h-1.5 w-1.5 rounded-full bg-gold-300" aria-hidden="true" />
 								Battle lobby
 							</div>
-							<h1 className="m-0 max-w-full font-display text-[clamp(1.32rem,7vw,1.75rem)] font-black uppercase leading-[1.06] tracking-[0.025em] sm:text-[clamp(2.25rem,5vw,3rem)] sm:leading-[0.95] sm:tracking-[0.10em] xl:text-[clamp(2.05rem,3vw,2.45rem)] xl:tracking-[0.065em] 2xl:text-[clamp(2.4rem,4vw,3rem)] 2xl:tracking-[0.10em]">
+							<h1 className="home-landscape-hero-title m-0 max-w-full font-display text-[1.55rem] font-black uppercase leading-[1.06] tracking-[0.025em] min-[360px]:text-[1.75rem] sm:text-[2.625rem] sm:leading-[0.95] sm:tracking-[0.10em] xl:text-[2.25rem] xl:tracking-[0.065em] 2xl:text-[2.75rem] 2xl:tracking-[0.10em]">
 								<span className="bg-linear-to-b from-gold-100 via-gold-300 to-gold-500 bg-clip-text text-transparent">
 									Reveal the line.<br />March into battle.
 								</span>
@@ -677,6 +677,7 @@ function HomePage() {
 										<Button
 											variant="primary"
 											size="lg"
+											className="home-landscape-primary-cta"
 											onClick={() => setShowHiveLogin(true)}
 										>
 											{primaryLabel}
@@ -685,6 +686,7 @@ function HomePage() {
 										<Button
 											variant="primary"
 											size="lg"
+											className="home-landscape-primary-cta"
 											onClick={() => setShowCeremony(true)}
 										>
 											{primaryLabel}
@@ -692,7 +694,7 @@ function HomePage() {
 									)
 								) : (
 									<Link to={routes.campaign}>
-										<Button variant="primary" size="lg">{primaryLabel}</Button>
+										<Button variant="primary" size="lg" className="home-landscape-primary-cta">{primaryLabel}</Button>
 									</Link>
 								)}
 								{canInstall && (
@@ -1009,7 +1011,7 @@ function EnvironmentBanner() {
 	return (
 		<aside
 			aria-label={`${productLabel} environment`}
-			className="fixed bottom-4 left-4 z-50 max-w-[calc(100vw-2rem)] rounded-md border border-gold-300/40 bg-obsidian-950/95 px-3 py-2 pr-9 text-xs text-gold-100 shadow-lg shadow-black/40 backdrop-blur"
+			className="environment-banner fixed bottom-4 left-4 z-50 max-w-[calc(100vw-2rem)] rounded-md border border-gold-300/40 bg-obsidian-950/95 px-3 py-2 pr-9 text-xs text-gold-100 shadow-lg shadow-black/40 backdrop-blur"
 		>
 			<div className="flex flex-wrap items-center gap-x-2 gap-y-1">
 				<span className="font-display font-semibold uppercase tracking-[0.18em] text-gold-300">{productLabel}</span>

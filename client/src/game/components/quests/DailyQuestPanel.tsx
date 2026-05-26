@@ -50,23 +50,23 @@ function QuestRow({ quest, onReroll, onClaim, canReroll, claiming }: {
 			: 'bg-linear-to-r from-gold-600 to-gold-400';
 
 	return (
-		<div className="relative group flex items-center gap-4 pl-5 pr-4 py-3.5 rounded-lg border border-obsidian-700 bg-linear-to-r from-obsidian-850 to-obsidian-900/80 transition-all hover:border-gold-600/40 hover:bg-obsidian-850">
+		<div className="daily-quest-row relative group flex items-center gap-4 pl-5 pr-4 py-3.5 rounded-lg border border-obsidian-700 bg-linear-to-r from-obsidian-850 to-obsidian-900/80 transition-all hover:border-gold-600/40 hover:bg-obsidian-850">
 			<span className={`absolute left-0 top-2 bottom-2 w-[2px] rounded-full ${stripClass}`} />
 
-			<div className="shrink-0 w-9 h-9 rounded-md border border-gold-300/25 bg-obsidian-900/60 flex items-center justify-center">
+			<div className="daily-quest-icon shrink-0 w-9 h-9 rounded-md border border-gold-300/25 bg-obsidian-900/60 flex items-center justify-center">
 				<span aria-hidden className="w-[7px] h-[7px] rotate-45 bg-gold-300/70" />
 			</div>
 
-			<div className="min-w-0 flex-1">
-				<div className="flex items-baseline justify-between gap-3 mb-0.5">
-					<h3 className="font-display text-sm font-bold tracking-[0.06em] uppercase text-ink-0 truncate">
+			<div className="daily-quest-copy min-w-0 flex-1">
+				<div className="daily-quest-topline flex items-baseline justify-between gap-3 mb-0.5">
+					<h3 className="daily-quest-title font-display text-sm font-bold tracking-[0.06em] uppercase text-ink-0 truncate">
 						{quest.title}
 					</h3>
-					<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300 shrink-0">
+					<span className="daily-quest-progress-count font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300 shrink-0">
 						{quest.progress} / {quest.goal}
 					</span>
 				</div>
-				<p className="text-ink-300 text-[12px] leading-tight truncate">
+				<p className="daily-quest-description text-ink-300 text-[12px] leading-tight truncate">
 					{quest.description}
 				</p>
 				<div className="h-[2px] rounded-full bg-obsidian-700 overflow-hidden mt-2">
@@ -77,44 +77,46 @@ function QuestRow({ quest, onReroll, onClaim, canReroll, claiming }: {
 				</div>
 			</div>
 
-			<span className="shrink-0 inline-flex items-center gap-1.5 rounded-md border border-gold-300/45 bg-obsidian-900/70 px-2.5 py-1 font-display text-[10px] font-bold uppercase tracking-[0.18em] text-gold-300 whitespace-nowrap">
-				<span aria-hidden className="w-[5px] h-[5px] rotate-45 bg-gold-300" />
-				+{quest.reward.rune}
-			</span>
+			<div className="daily-quest-meta shrink-0 flex items-center justify-end gap-4">
+				<span className="daily-quest-reward shrink-0 inline-flex items-center gap-1.5 rounded-md border border-gold-300/45 bg-obsidian-900/70 px-2.5 py-1 font-display text-[10px] font-bold uppercase tracking-[0.18em] text-gold-300 whitespace-nowrap">
+					<span aria-hidden className="w-[5px] h-[5px] rotate-45 bg-gold-300" />
+					+{quest.reward.rune}
+				</span>
 
-			<div className="shrink-0 w-[88px] flex justify-end">
-				{!quest.completed && canReroll && (
-					<button
-						onClick={onReroll}
-						className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.22em] uppercase text-ink-300 hover:text-gold-300 transition-colors"
-					>
-						<RotateCcw size={11} strokeWidth={2} />
-						Recast
-					</button>
-				)}
-				{!quest.completed && !canReroll && (
-					<span className="font-mono text-[10px] tracking-[0.22em] uppercase text-ink-400">
-						Active
-					</span>
-				)}
-				{isAwaitingClaim && (
-					<button
-						type="button"
-						onClick={onClaim}
-						disabled={claiming}
-						className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.18em] uppercase text-amber-300 transition-colors hover:text-gold-200 disabled:cursor-not-allowed disabled:opacity-50"
-						title="Sign the next custom_json in Hive Keychain to credit the reward."
-					>
-						<Wallet size={11} strokeWidth={2} />
-						{claiming ? 'Wait' : 'Claim'}
-					</button>
-				)}
-				{isClaimed && (
-					<span className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.22em] uppercase text-emerald-300">
-						<CheckCircle2 size={11} strokeWidth={2} />
-						Claimed
-					</span>
-				)}
+				<div className="daily-quest-action shrink-0 w-[88px] flex justify-end">
+					{!quest.completed && canReroll && (
+						<button
+							onClick={onReroll}
+							className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.22em] uppercase text-ink-300 hover:text-gold-300 transition-colors"
+						>
+							<RotateCcw size={11} strokeWidth={2} />
+							Recast
+						</button>
+					)}
+					{!quest.completed && !canReroll && (
+						<span className="font-mono text-[10px] tracking-[0.22em] uppercase text-ink-400">
+							Active
+						</span>
+					)}
+					{isAwaitingClaim && (
+						<button
+							type="button"
+							onClick={onClaim}
+							disabled={claiming}
+							className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.18em] uppercase text-amber-300 transition-colors hover:text-gold-200 disabled:cursor-not-allowed disabled:opacity-50"
+							title="Sign the next custom_json in Hive Keychain to credit the reward."
+						>
+							<Wallet size={11} strokeWidth={2} />
+							{claiming ? 'Wait' : 'Claim'}
+						</button>
+					)}
+					{isClaimed && (
+						<span className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.22em] uppercase text-emerald-300">
+							<CheckCircle2 size={11} strokeWidth={2} />
+							Claimed
+						</span>
+					)}
+				</div>
 			</div>
 		</div>
 	);

@@ -130,10 +130,13 @@
    box overflow the card silhouette. */
 
 @layer base {
-  /* Reserve the scrollbar gutter at the html level so vertical scroll
-     appearing/disappearing never shifts horizontal layout. */
-  html {
-    scrollbar-gutter: stable;
+  /* Reserve the scrollbar gutter only on pointer-driven layouts. On phone
+     viewports the reserved desktop gutter steals horizontal space from the
+     game shell and makes narrow cards wrap earlier than the physical screen. */
+  @media (min-width: 768px) {
+    html {
+      scrollbar-gutter: stable;
+    }
   }
 
   body {

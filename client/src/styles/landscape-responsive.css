@@ -78,6 +78,57 @@
 	display: none;
 }
 
+@media (max-width: 420px) {
+	.home-landscape-brand {
+		gap: 0.5rem;
+	}
+
+	.home-landscape-logo {
+		width: 1.75rem;
+		height: 1.75rem;
+	}
+
+	.home-landscape-title {
+		font-size: 0.8125rem;
+		letter-spacing: 0.13em;
+	}
+
+	.home-landscape-stage-badge {
+		padding-right: 0.25rem;
+		padding-left: 0.25rem;
+		font-size: 0.5rem;
+		letter-spacing: 0.1em;
+	}
+
+	.home-landscape-season {
+		font-size: 0.5625rem;
+		letter-spacing: 0.12em;
+	}
+
+	.home-landscape-hero-title {
+		letter-spacing: 0.015em;
+	}
+
+	.home-landscape-primary-cta {
+		width: 100%;
+		max-width: 100%;
+		padding-right: 0.875rem;
+		padding-left: 0.875rem;
+		font-size: 0.75rem;
+		letter-spacing: 0.12em;
+		white-space: normal;
+	}
+
+	.environment-banner {
+		position: static;
+		max-width: none;
+		border-top: 0;
+		border-right: 0;
+		border-left: 0;
+		border-radius: 0;
+	}
+}
+
 @media (orientation: portrait) and (max-width: 820px) {
 	.game-orientation-gate {
 		position: relative;
@@ -181,6 +232,78 @@
 .collection-landscape-viewport {
 	height: 70vh;
 	overflow: auto;
+}
+
+@media (max-width: 420px) {
+	.daily-quest-landscape-list {
+		gap: 0.75rem;
+		margin-right: 0;
+		padding-right: 0;
+	}
+
+	.daily-quest-row {
+		display: grid;
+		grid-template-columns: 2.25rem minmax(0, 1fr);
+		grid-template-areas:
+			"icon copy"
+			"icon meta";
+		column-gap: 0.75rem;
+		row-gap: 0.625rem;
+		align-items: center;
+		padding: 0.875rem 0.75rem 0.875rem 1rem;
+	}
+
+	.daily-quest-icon {
+		grid-area: icon;
+		width: 2.25rem;
+		height: 2.25rem;
+	}
+
+	.daily-quest-copy {
+		grid-area: copy;
+	}
+
+	.daily-quest-topline {
+		gap: 0.5rem;
+	}
+
+	.daily-quest-title {
+		overflow: visible;
+		white-space: normal;
+		text-overflow: clip;
+		line-height: 1.12;
+	}
+
+	.daily-quest-description {
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		overflow: hidden;
+		white-space: normal;
+		text-overflow: clip;
+		line-height: 1.25;
+	}
+
+	.daily-quest-progress-count {
+		letter-spacing: 0.12em;
+	}
+
+	.daily-quest-meta {
+		grid-area: meta;
+		justify-content: space-between;
+		width: 100%;
+		min-width: 0;
+		gap: 0.5rem;
+	}
+
+	.daily-quest-action {
+		width: auto;
+	}
+
+	.daily-quest-action button,
+	.daily-quest-action span {
+		letter-spacing: 0.14em;
+	}
 }
 
 /**
