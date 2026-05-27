@@ -23,6 +23,17 @@
 	height: 100%;
 }
 
+.home-landscape-shell {
+	overflow-x: clip;
+	touch-action: pan-y;
+}
+
+.home-landscape-hero,
+.home-landscape-stats-panel,
+.home-landscape-route-card {
+	overflow: clip;
+}
+
 .collection-balance-stack {
 	display: grid;
 	gap: 1rem;

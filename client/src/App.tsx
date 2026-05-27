@@ -615,7 +615,7 @@ function HomePage() {
 	};
 
 	return (
-		<div className="home-landscape-shell min-h-dvh w-full overflow-x-hidden text-ink-0 bg-(image:--bg-home-nav)">
+		<div className="home-landscape-shell min-h-dvh w-full text-ink-0 bg-(image:--bg-home-nav)">
 			{/* ── HEADER ─────────────────────────────────────────────────────── */}
 			<header className="home-landscape-header sticky top-0 z-50 backdrop-blur-md bg-obsidian-950/80 border-b border-obsidian-700">
 				<div className="home-landscape-header-inner mx-auto h-[3.25rem] max-w-[1440px] px-3 sm:h-14 sm:px-6 lg:px-8 flex items-center justify-between gap-2 sm:gap-4">
@@ -657,7 +657,7 @@ function HomePage() {
 				    the anchored utility bar at the bottom. */}
 				<main className="home-landscape-main-column grid min-w-0 grid-cols-1 content-start gap-4 pb-4 sm:gap-6 sm:pb-24">
 					{/* Banner */}
-					<section className="home-landscape-hero relative grid min-w-0 grid-cols-1 items-stretch gap-4 overflow-hidden rounded-xl border border-obsidian-700 bg-linear-to-b from-obsidian-850 to-obsidian-900 px-4 py-4 sm:gap-6 sm:px-8 sm:py-8 xl:grid-cols-[minmax(0,1fr)_320px]">
+					<section className="home-landscape-hero relative grid min-w-0 grid-cols-1 items-stretch gap-4 rounded-xl border border-obsidian-700 bg-linear-to-b from-obsidian-850 to-obsidian-900 px-4 py-4 sm:gap-6 sm:px-8 sm:py-8 xl:grid-cols-[minmax(0,1fr)_320px]">
 						<div className="min-w-0">
 							<div className="mb-4 inline-flex items-center gap-2 rounded-full border border-gold-300/25 bg-obsidian-950/55 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-gold-200">
 								<span className="h-1.5 w-1.5 rounded-full bg-gold-300" aria-hidden="true" />
@@ -706,7 +706,7 @@ function HomePage() {
 						</div>
 
 						{/* Stats panel */}
-						<aside className="grid min-w-0 content-center gap-3 self-stretch overflow-hidden rounded-xl border border-gold-300/40 bg-obsidian-900/80 p-4 backdrop-blur-md sm:p-5">
+						<aside className="home-landscape-stats-panel grid min-w-0 content-center gap-3 self-stretch rounded-xl border border-gold-300/40 bg-obsidian-900/80 p-4 backdrop-blur-md sm:p-5">
 							<StatRow label="Saga" value={`${completedMissionCount} / ${totalMissionCount}`} highlight />
 							<StatRow label="Active" value={activeFocusTitle} />
 							<StatRow label="Chapter" value={activeFocusChapter} />
@@ -749,7 +749,7 @@ function HomePage() {
 									<Link
 										key={mode.title}
 										to={mode.to}
-										className={`home-landscape-route-card relative group flex min-h-[132px] min-w-0 flex-col overflow-hidden rounded-xl border bg-linear-to-b p-3 transition-all duration-300 sm:min-h-[172px] sm:p-4 ${a.border} ${isCombat
+										className={`home-landscape-route-card relative group flex min-h-[132px] min-w-0 flex-col rounded-xl border bg-linear-to-b p-3 transition-all duration-300 sm:min-h-[172px] sm:p-4 ${a.border} ${isCombat
 											? 'border-obsidian-700 from-obsidian-850 to-obsidian-950'
 											: 'border-obsidian-700/60 from-obsidian-900 to-obsidian-950'
 											}`}
