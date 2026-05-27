@@ -447,9 +447,9 @@ const UTILITY_LINKS: ReadonlyArray<{ label: string; to: string }> = [
 
 function StatRow({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
 	return (
-		<div className="flex min-w-0 items-center justify-between gap-3">
-			<span className="shrink-0 font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300">{label}</span>
-			<span className={`min-w-0 max-w-[62%] truncate text-right font-display text-[13px] tracking-[0.04em] sm:text-base sm:tracking-[0.08em] ${highlight ? 'text-gold-300' : 'text-ink-0'}`}>
+		<div className="home-landscape-stat-row flex min-w-0 items-center justify-between gap-3">
+			<span className="home-landscape-stat-label shrink-0 font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300">{label}</span>
+			<span className={`home-landscape-stat-value min-w-0 max-w-[62%] truncate text-right font-display text-[13px] tracking-[0.04em] sm:text-base sm:tracking-[0.08em] ${highlight ? 'text-gold-300' : 'text-ink-0'}`}>
 				{value}
 			</span>
 		</div>
@@ -668,7 +668,7 @@ function HomePage() {
 									Reveal the line.<br />March into battle.
 								</span>
 							</h1>
-							<p className="mb-4 mt-4 max-w-[540px] text-sm leading-[1.45] text-ink-200 sm:mb-7 sm:mt-5 sm:text-[15px] sm:leading-[1.65]">
+							<p className="home-landscape-hero-copy mb-4 mt-4 max-w-[540px] text-sm leading-[1.45] text-ink-200 sm:mb-7 sm:mt-5 sm:text-[15px] sm:leading-[1.65]">
 								Campaign is the clean front door — reveal the starter line, stage a mission briefing, and break straight into live combat.
 							</p>
 							<div className="flex flex-wrap items-center gap-3">

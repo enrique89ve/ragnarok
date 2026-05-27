@@ -28,10 +28,68 @@
 	touch-action: pan-y;
 }
 
-.home-landscape-hero,
-.home-landscape-stats-panel,
+.home-landscape-hero {
+	min-width: 0;
+	max-width: 100%;
+	overflow: clip;
+	container-type: inline-size;
+}
+
+.home-landscape-stats-panel {
+	min-width: 0;
+	max-width: 100%;
+	overflow: clip;
+}
+
 .home-landscape-route-card {
 	overflow: clip;
+}
+
+.home-landscape-main-grid,
+.home-landscape-main-column,
+.home-landscape-hero > * {
+	min-width: 0;
+	max-width: 100%;
+}
+
+.home-landscape-hero-title,
+.home-landscape-hero-copy,
+.home-landscape-stat-value {
+	overflow-wrap: anywhere;
+}
+
+@container (max-width: 42rem) {
+	.home-landscape-hero {
+		padding-inline: clamp(0.875rem, 4cqi, 1.5rem);
+	}
+
+	.home-landscape-hero-title {
+		font-size: clamp(1.45rem, 5.25cqi, 1.9rem);
+		letter-spacing: clamp(0.015em, 0.55cqi, 0.055em);
+		line-height: 1.04;
+	}
+
+	.home-landscape-hero-copy {
+		max-width: 100%;
+	}
+
+	.home-landscape-stats-panel {
+		padding: clamp(0.875rem, 3.5cqi, 1.25rem);
+	}
+
+	.home-landscape-stat-row {
+		display: grid;
+		grid-template-columns: minmax(4.5rem, max-content) minmax(0, 1fr);
+		gap: 0.625rem;
+		align-items: start;
+	}
+
+	.home-landscape-stat-value {
+		max-width: none;
+		white-space: normal;
+		line-height: 1.15;
+		text-overflow: clip;
+	}
 }
 
 .collection-balance-stack {
