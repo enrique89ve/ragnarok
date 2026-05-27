@@ -156,7 +156,7 @@ export function HiveKeychainLogin({ initiallyExpanded = false, onConnected }: Hi
 			</p>
 			<Button
 				variant="outline"
-				size="default"
+				size="lg"
 				onClick={() => { setIsExpanded(!isExpanded); setStatus('idle'); setErrorMsg(''); }}
 				className="w-full"
 			>

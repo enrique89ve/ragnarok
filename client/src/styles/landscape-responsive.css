@@ -6,6 +6,11 @@
  *   - 1024×600 (small tablet landscape)
  *
  * Strategy: opt-in utility classes + semantic shell contracts.
+ * Ownership rule:
+ *   - Prefer Tailwind utilities for local spacing, type, sizing, and states.
+ *   - Keep semantic CSS here for cross-route viewport, orientation, safe-area,
+ *     and height-gated behavior that Tailwind width breakpoints cannot express
+ *     safely on their own.
  * Combat boards (chess + poker) are intentionally NOT touched — their canvas
  * is virtual-scaled and lives inside `.virtual-canvas-scaler` /
  * `.game-grid-container`, both excluded below.
@@ -56,6 +61,20 @@
 .home-landscape-hero-copy,
 .home-landscape-stat-value {
 	overflow-wrap: anywhere;
+}
+
+.home-landscape-utility-bar {
+	position: static;
+}
+
+.home-landscape-utility-inner::-webkit-scrollbar {
+	display: none;
+}
+
+@media (min-width: 48rem) and (min-height: 51.25rem) {
+	.home-landscape-utility-bar {
+		position: sticky;
+	}
 }
 
 @container (max-width: 42rem) {

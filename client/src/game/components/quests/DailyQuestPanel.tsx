@@ -87,7 +87,7 @@ function QuestRow({ quest, onReroll, onClaim, canReroll, claiming }: {
 					{!quest.completed && canReroll && (
 						<button
 							onClick={onReroll}
-							className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.22em] uppercase text-ink-300 hover:text-gold-300 transition-colors"
+							className="inline-flex min-h-11 items-center gap-1.5 px-2 font-mono text-[10px] tracking-[0.22em] uppercase text-ink-300 hover:text-gold-300 transition-colors"
 						>
 							<RotateCcw size={11} strokeWidth={2} />
 							Recast
@@ -103,7 +103,7 @@ function QuestRow({ quest, onReroll, onClaim, canReroll, claiming }: {
 							type="button"
 							onClick={onClaim}
 							disabled={claiming}
-							className="inline-flex items-center gap-1.5 font-mono text-[10px] tracking-[0.18em] uppercase text-amber-300 transition-colors hover:text-gold-200 disabled:cursor-not-allowed disabled:opacity-50"
+							className="inline-flex min-h-11 items-center gap-1.5 px-2 font-mono text-[10px] tracking-[0.18em] uppercase text-amber-300 transition-colors hover:text-gold-200 disabled:cursor-not-allowed disabled:opacity-50"
 							title="Sign the next custom_json in Hive Keychain to credit the reward."
 						>
 							<Wallet size={11} strokeWidth={2} />
@@ -221,7 +221,7 @@ function DailyQuestClaimSummary({
 						lastFeedbackStatus: claimFeedback?.status ?? null,
 						lastFeedbackErrors: claimFeedback?.errors ?? [],
 					}}
-					className="shrink-0 inline-flex items-center gap-1.5 rounded-md border border-obsidian-700 bg-obsidian-900/70 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-300 transition-colors hover:border-gold-500/60 hover:text-gold-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
+					className="shrink-0 inline-flex min-h-11 items-center gap-1.5 rounded-md border border-obsidian-700 bg-obsidian-900/70 px-3 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-300 transition-colors hover:border-gold-500/60 hover:text-gold-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
 				/>
 			</div>
 		</section>
@@ -274,28 +274,30 @@ function ResetCountdownChip({ onOpenInfo }: { onOpenInfo: () => void }) {
 			<div className="flex items-center gap-2 font-mono text-[10px] tracking-[0.22em] uppercase text-ink-300">
 				<Clock size={11} strokeWidth={2} aria-hidden />
 				Next rotation
+			</div>
+			<div className="flex items-center gap-2">
+				<div className="flex items-baseline gap-2">
+					<span className="font-mono text-sm font-bold tracking-wide text-ink-0 tabular-nums">
+						{formatCountdown(remainingMs)}
+					</span>
+					<span
+						className={`font-mono text-[9px] tracking-[0.22em] uppercase ${sourceTint}`}
+						title={sourceIsHive
+							? 'Synced to Hive head-block timestamp.'
+							: 'Hive RPC unreachable — countdown uses your device clock.'}
+					>
+						{sourceLabel}
+					</span>
+				</div>
 				<button
 					type="button"
 					onClick={onOpenInfo}
 					aria-label="How daily quests work"
 					title="How daily quests work"
-					className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-obsidian-700 bg-obsidian-900/70 text-ink-300 transition-colors hover:border-gold-500/60 hover:text-gold-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
+					className="inline-flex h-12 w-12 items-center justify-center rounded-md border border-obsidian-700 bg-obsidian-900/70 text-ink-300 transition-colors hover:border-gold-500/60 hover:text-gold-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
 				>
 					<Info size={12} strokeWidth={2.2} aria-hidden />
 				</button>
-			</div>
-			<div className="flex items-baseline gap-2">
-				<span className="font-mono text-sm font-bold tracking-wide text-ink-0 tabular-nums">
-					{formatCountdown(remainingMs)}
-				</span>
-				<span
-					className={`font-mono text-[9px] tracking-[0.22em] uppercase ${sourceTint}`}
-					title={sourceIsHive
-						? 'Synced to Hive head-block timestamp.'
-						: 'Hive RPC unreachable — countdown uses your device clock.'}
-				>
-					{sourceLabel}
-				</span>
 			</div>
 		</div>
 	);

@@ -850,7 +850,7 @@ function HomePage() {
 							<Link
 								to={routes.settings}
 								title="Settings"
-								className="inline-flex items-center justify-center w-7 h-7 rounded-md border border-obsidian-700 bg-obsidian-900/60 text-ink-300 hover:text-gold-300 hover:border-gold-600/60 transition-colors"
+								className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-obsidian-700 bg-obsidian-900/60 text-ink-300 hover:text-gold-300 hover:border-gold-600/60 transition-colors"
 							>
 								<SettingsIcon size={14} strokeWidth={1.8} />
 							</Link>
@@ -872,17 +872,16 @@ function HomePage() {
 				</aside>
 			</div>
 
-			{/* ── ANCHORED UTILITY BAR ───────────────────────────────────────────
-			    Sticky bottom — always visible across home scroll. Mirrors the
-			    sticky header above to bracket the page. Horizontal scroll on
-			    overflow keeps it single-line on narrow viewports. */}
-			<nav className="home-landscape-utility-bar static bottom-0 z-40 border-t border-obsidian-700 bg-obsidian-950/85 backdrop-blur-md sm:sticky">
-				<div className="home-landscape-utility-inner mx-auto flex h-auto max-w-[1440px] items-center justify-start gap-2 overflow-x-auto px-3 py-3 [scrollbar-width:none] sm:h-12 sm:justify-center sm:px-6 sm:py-0 lg:px-8">
+			{/* ── UTILITY BAR ────────────────────────────────────────────────────
+			    CSS promotes this to sticky only when the viewport is tall enough
+			    to avoid covering the primary route cards. */}
+			<nav className="home-landscape-utility-bar static bottom-0 z-40 border-t border-obsidian-700 bg-obsidian-950/85 backdrop-blur-md">
+				<div className="home-landscape-utility-inner mx-auto flex h-auto max-w-[1440px] items-center justify-start gap-2 overflow-x-auto px-3 py-2.5 [scrollbar-width:none] sm:justify-center sm:px-6 lg:px-8">
 					{UTILITY_LINKS.map(link => (
 						<Link
 							key={link.label}
 							to={link.to}
-							className="shrink-0 inline-flex items-center h-8 px-3.5 rounded-full border border-obsidian-700 bg-obsidian-850 text-ink-200 hover:text-gold-300 hover:border-gold-600 font-display text-xs tracking-[0.18em] uppercase font-bold transition-colors"
+							className="shrink-0 inline-flex min-h-11 items-center px-3.5 rounded-full border border-obsidian-700 bg-obsidian-850 text-ink-200 hover:text-gold-300 hover:border-gold-600 font-display text-xs tracking-[0.18em] uppercase font-bold transition-colors"
 						>
 							{link.label}
 						</Link>
@@ -890,7 +889,7 @@ function HomePage() {
 					{import.meta.env.DEV && (
 						<Link
 							to={routes.warband}
-							className="shrink-0 inline-flex items-center h-8 px-3.5 rounded-full border border-dashed border-obsidian-600 text-ink-300 hover:text-ink-0 font-display text-xs tracking-[0.18em] uppercase opacity-70 hover:opacity-100 transition-opacity"
+							className="shrink-0 inline-flex min-h-11 items-center px-3.5 rounded-full border border-dashed border-obsidian-600 text-ink-300 hover:text-ink-0 font-display text-xs tracking-[0.18em] uppercase opacity-70 hover:opacity-100 transition-opacity"
 						>
 							Casual Battle (dev)
 						</Link>
