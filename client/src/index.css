@@ -10,6 +10,9 @@
 /* Landscape responsiveness overrides — must come AFTER tailwind to win specificity wars */
 @import './styles/landscape-responsive.css';
 
+/* Pages experience — premium non-game UI */
+@import './styles/pages-experience.css';
+
 /* Preserve v3 default behavior: borders without explicit color use obsidian-700.
    Without this, Tailwind v4 defaults to currentColor which would break dark UI. */
 @layer base {

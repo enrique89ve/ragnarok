@@ -48,7 +48,7 @@ interface MetaPageHeaderLinkProps extends LinkProps, HeaderIconProps {
 
 interface MetaPageHeaderButtonProps
 	extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-		HeaderIconProps {
+	HeaderIconProps {
 	tone?: MetaPageHeaderTone;
 }
 
@@ -112,10 +112,10 @@ export function MetaPageHeader({
 	containerClassName,
 }: MetaPageHeaderProps) {
 	return (
-		<header className={cn('meta-page-header sticky top-0 z-40 border-b border-obsidian-700 bg-obsidian-950/85 backdrop-blur-md', className)}>
+		<header className={cn('sticky top-0 z-40 border-b border-obsidian-700 bg-obsidian-950/75 backdrop-blur-xl', className)}>
 			<div
 				className={cn(
-					'meta-page-header-inner mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8',
+					'n-grid-container flex w-full items-center justify-between gap-3 py-3',
 					containerClassName,
 				)}
 			>
@@ -127,16 +127,16 @@ export function MetaPageHeader({
 						<p className="meta-page-header-kicker truncate font-mono text-[10px] uppercase tracking-[0.32em] text-ink-300">
 							{kicker}
 						</p>
-						<h1 className="meta-page-header-title truncate font-display text-xl font-black uppercase tracking-[0.10em] text-gold-300">
+						<h1 className="truncate font-display text-xl font-black uppercase tracking-[0.10em] text-gold-300">
 							{title}
 						</h1>
 					</div>
 				</div>
 
-				<div className="meta-page-header-actions flex shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
+				<div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
 					{actions}
 					{showAccount && (
-						<div className="meta-page-header-account shrink-0">
+						<div className="shrink-0">
 							<AccountSlot
 								username={username}
 								tier={accountTier}

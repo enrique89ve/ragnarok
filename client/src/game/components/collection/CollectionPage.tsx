@@ -129,8 +129,8 @@ const SOURCE_PILLS: { value: FilterSource; label: string }[] = [
 
 // Vault surface treatments — used multiple times across the page.
 // Padding/margin se concatena en cada call site según contexto.
-const VAULT_PANEL_CLASS = 'bg-obsidian-800/70 border border-obsidian-700/80 rounded-xl backdrop-blur-sm';
-const VAULT_INPUT_CLASS = 'bg-obsidian-900/70 border border-obsidian-700 text-ink-0 rounded-lg transition-colors placeholder:text-ink-300 focus:outline-hidden focus:border-gold-500 focus:ring-1 focus:ring-gold-500/40';
+const VAULT_PANEL_CLASS = 'n-glass-panel';
+const VAULT_INPUT_CLASS = 'n-search-input';
 
 function getCollectionSource(card: CollectionOwnedCard): CollectionSource {
 	return card.collectionSource;
@@ -620,7 +620,7 @@ export default function CollectionPage() {
 	}
 
 	return (
-		<div className="collection-landscape-shell h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-vault-nav) text-ink-0">
+		<div className="n-page-shell h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-vault-nav)">
 			<MetaPageHeader
 				title="Collection"
 				kicker="Vault · Cards"
@@ -651,7 +651,7 @@ export default function CollectionPage() {
 				}
 			/>
 
-			<div className="collection-landscape-content mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+			<div className="n-grid-container py-6">
 				{!starterGateActive && showDuatCollectionNotice && duatEntry && (
 					<div className={`${VAULT_PANEL_CLASS} mb-6 p-4 flex flex-wrap items-center gap-4`}>
 						<div className="grid h-10 w-10 place-items-center rounded-md border border-bifrost-300/45 bg-bifrost-500/15 text-bifrost-100">
@@ -667,10 +667,8 @@ export default function CollectionPage() {
 									: duatEntry.claimBlockedReason ?? 'This account has no DUAT airdrop packs assigned.'}
 							</p>
 						</div>
-						<Link to={routes.packs} className="btn-runic btn-runic--bifrost btn-runic--sm">
-							<span className="btn-runic-stud" aria-hidden />
+						<Link to={routes.packs} className="n-btn-primary px-4 py-1.5 rounded text-xs no-underline">
 							View Packs
-							<span className="btn-runic-stud" aria-hidden />
 						</Link>
 					</div>
 				)}
@@ -690,20 +688,19 @@ export default function CollectionPage() {
 							</div>
 							<div className="h-2.5 rounded-md bg-obsidian-750 overflow-hidden">
 								<div
-									className="completion-bar-fill"
-									style={{ width: `${Math.min(stats.completionPercentage, 100)}%` }}
+									style={{ width: `${Math.min(stats.completionPercentage, 100)}%`, background: 'var(--gold-500)' }}
 								/>
 							</div>
 						</div>
 
 						{/* Source + Rarity + Type Breakdown */}
-						<div className="collection-stat-grid grid grid-cols-1 md:grid-cols-3 gap-4">
+						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 							{/* Source Breakdown */}
-							<div className={`${VAULT_PANEL_CLASS} collection-stat-panel p-4`}>
+							<div className="n-glass-panel p-4">
 								<div className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink-400 mb-3">By Source</div>
-								<div className="collection-stat-chip-grid">
+								<div className="grid grid-cols-2 gap-2">
 									{stats.bySource.map(sourceStat => (
-										<div key={sourceStat.source} className="collection-stat-chip px-3 py-2 rounded-lg text-center border border-ink-0/10 backdrop-blur-sm bg-white/3">
+										<div key={sourceStat.source} className="n-glass-panel p-2 text-center bg-white/5 border-white/5">
 											<div className="text-lg font-bold text-white">
 												{sourceStat.uniqueCards}
 											</div>
@@ -714,13 +711,13 @@ export default function CollectionPage() {
 							</div>
 
 							{/* Rarity Breakdown */}
-							<div className={`${VAULT_PANEL_CLASS} collection-stat-panel p-4`}>
+							<div className="n-glass-panel p-4">
 								<div className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink-400 mb-3">By Rarity</div>
-								<div className="collection-stat-chip-grid">
+								<div className="grid grid-cols-2 gap-2">
 									{DISPLAY_RARITIES.map(rarity => {
 										const rs = stats.byRarity.find(r => r.rarity === rarity);
 										return (
-											<div key={rarity} className="collection-stat-chip px-3 py-2 rounded-lg text-center border border-ink-0/10 backdrop-blur-sm bg-white/3">
+											<div key={rarity} className="n-glass-panel p-2 text-center bg-white/5 border-white/5">
 												<div className={`text-lg font-bold ${getRarityColor(rarity)}`}>
 													{rs?.uniqueCards ?? 0}
 												</div>
@@ -732,13 +729,13 @@ export default function CollectionPage() {
 							</div>
 
 							{/* Type Breakdown */}
-							<div className={`${VAULT_PANEL_CLASS} collection-stat-panel p-4`}>
+							<div className="n-glass-panel p-4">
 								<div className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink-400 mb-3">By Type</div>
-								<div className="collection-stat-chip-grid">
+								<div className="grid grid-cols-2 gap-2">
 									{(['hero', 'minion', 'spell', 'weapon'] as const).map(type => {
 										const ts = stats.byType.find(t => t.type === type);
 										return (
-											<div key={type} className="collection-stat-chip px-3 py-2 rounded-lg text-center border border-ink-0/10 backdrop-blur-sm bg-white/3">
+											<div key={type} className="n-glass-panel p-2 text-center bg-white/5 border-white/5">
 												<div className="text-lg font-bold text-white">
 													{getTypeIcon(type)} {ts?.uniqueCards ?? 0}
 												</div>
@@ -829,13 +826,13 @@ export default function CollectionPage() {
 				{error && (
 					<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-8 mb-8">
 						<p className="text-red-400 text-lg mb-4">{error}</p>
-							<motion.button
-								whileHover={{ scale: 1.05 }}
-								whileTap={{ scale: 0.95 }}
-								onClick={() => setRefreshNonce(n => n + 1)}
-								className="px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-lg transition-colors"
-							>
-								Retry
+						<motion.button
+							whileHover={{ scale: 1.05 }}
+							whileTap={{ scale: 0.95 }}
+							onClick={() => setRefreshNonce(n => n + 1)}
+							className="px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-lg transition-colors"
+						>
+							Retry
 						</motion.button>
 					</motion.div>
 				)}
@@ -883,8 +880,8 @@ export default function CollectionPage() {
 					</motion.div>
 				) : (
 					<>
-							<div ref={parentRef} className="collection-landscape-viewport">
-								<div style={{ height: `${rowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+						<div ref={parentRef} className="collection-landscape-viewport">
+							<div style={{ height: `${rowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
 								{rowVirtualizer.getVirtualItems().map((virtualRow) => (
 									<div
 										key={virtualRow.key}
@@ -1031,16 +1028,15 @@ export default function CollectionPage() {
 								animate={{ opacity: 1, y: 0 }}
 								className="flex justify-center items-center gap-4 mt-8"
 							>
-									<motion.button
-										whileHover={{ scale: page === 1 ? 1 : 1.05 }}
-										whileTap={{ scale: page === 1 ? 1 : 0.95 }}
-										onClick={() => page > 1 && setPage(page - 1)}
-										disabled={page === 1 || isLoadingMore}
-									className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-all ${
-										page === 1
-											? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
-											: 'bg-gray-700 hover:bg-gray-600 text-white'
-									}`}
+								<motion.button
+									whileHover={{ scale: page === 1 ? 1 : 1.05 }}
+									whileTap={{ scale: page === 1 ? 1 : 0.95 }}
+									onClick={() => page > 1 && setPage(page - 1)}
+									disabled={page === 1 || isLoadingMore}
+									className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-all ${page === 1
+										? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
+										: 'bg-gray-700 hover:bg-gray-600 text-white'
+										}`}
 								>
 									← Previous
 								</motion.button>
@@ -1059,16 +1055,15 @@ export default function CollectionPage() {
 									)}
 								</div>
 
-									<motion.button
-										whileHover={{ scale: page === totalPages ? 1 : 1.05 }}
-										whileTap={{ scale: page === totalPages ? 1 : 0.95 }}
-										onClick={() => page < totalPages && setPage(page + 1)}
-										disabled={page === totalPages || isLoadingMore}
-									className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-all ${
-										page === totalPages
-											? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
-											: 'bg-gray-700 hover:bg-gray-600 text-white'
-									}`}
+								<motion.button
+									whileHover={{ scale: page === totalPages ? 1 : 1.05 }}
+									whileTap={{ scale: page === totalPages ? 1 : 0.95 }}
+									onClick={() => page < totalPages && setPage(page + 1)}
+									disabled={page === totalPages || isLoadingMore}
+									className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-all ${page === totalPages
+										? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
+										: 'bg-gray-700 hover:bg-gray-600 text-white'
+										}`}
 								>
 									Next →
 								</motion.button>
@@ -1086,14 +1081,14 @@ export default function CollectionPage() {
 						animate={{ opacity: 1 }}
 						exit={{ opacity: 0 }}
 						onClick={() => { setSelectedCard(null); setCraftConfirm(null); }}
-							className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/85 p-3 backdrop-blur-sm"
-						>
+						className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/85 p-3 backdrop-blur-sm"
+					>
 						<motion.div
 							initial={{ scale: 0.8, opacity: 0 }}
 							animate={{ scale: 1, opacity: 1 }}
 							exit={{ scale: 0.8, opacity: 0 }}
 							onClick={(e) => e.stopPropagation()}
-								className={`modal-landscape-safe w-[380px] max-w-[calc(100vw-1.5rem)] rounded-2xl overflow-hidden ${getFrameClass(selectedCard.rarity)}`}
+							className={`modal-landscape-safe w-[380px] max-w-[calc(100vw-1.5rem)] rounded-2xl overflow-hidden ${getFrameClass(selectedCard.rarity)}`}
 							style={{ background: 'linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%)' }}
 						>
 							{/* Foil Shimmer */}
@@ -1239,7 +1234,7 @@ export default function CollectionPage() {
 											<div className="text-[10px] text-gray-500 mt-1">NFT Mastery</div>
 										</div>
 									);
-								})()} 
+								})()}
 
 								{/* Owned Count */}
 								<div className="text-center text-gray-400 text-sm mb-4">
@@ -1319,105 +1314,105 @@ export default function CollectionPage() {
 								})()}
 
 								{/* NFT Actions */}
-							{(() => {
-								const nftAsset = hiveCardMap.get(selectedCard.id);
-								if (!nftAsset) return null;
-								return (
-									<div className="flex gap-2 mb-3">
-										<button
-											onClick={() => setProvenanceNft(nftAsset)}
-											className="flex-1 px-3 py-2 bg-gray-800/60 hover:bg-gray-700/60 text-gray-300 rounded-lg text-xs font-medium border border-gray-600/40 transition-colors"
-										>
-											View on Chain
-										</button>
-										{getNFTBridge().isHiveMode() && (
-											<button
-												onClick={() => setSendNft(nftAsset)}
-												className="flex-1 px-3 py-2 bg-emerald-900/50 hover:bg-emerald-800/60 text-emerald-300 rounded-lg text-xs font-medium border border-emerald-700/40 transition-colors"
-											>
-												Send to Friend
-											</button>
-										)}
-									</div>
-								);
-							})()}
-
-							{/* v1.1: DNA Heritage + Replicate/Merge */}
-							{(() => {
-								const nft = hiveCardMap.get(selectedCard.id);
-								if (!nft) return null;
-								const hiveCard = nft as unknown as Record<string, unknown>;
-								const originDna = hiveCard.originDna as string | undefined;
-								const instanceDna = hiveCard.instanceDna as string | undefined;
-								const generation = (hiveCard.generation as number) ?? 0;
-								const replicaCount = (hiveCard.replicaCount as number) ?? 0;
-								const parentDna = hiveCard.parentInstanceDna as string | undefined;
-								const hasDna = !!(originDna || instanceDna);
-								const canMerge = (selectedCard.quantity ?? 0) >= 2;
-
-								return (
-									<>
-										{hasDna && (
-											<div className="mb-3 p-3 bg-indigo-900/20 rounded-lg border border-indigo-600/30">
-												<div className="text-indigo-300 text-xs font-bold uppercase tracking-wider mb-2">Genetic Heritage</div>
-												<div className="grid grid-cols-2 gap-2 text-xs">
-													<div>
-														<span className="text-gray-500">Generation:</span>
-														<span className="text-indigo-200 ml-1">{generation}</span>
-													</div>
-													<div>
-														<span className="text-gray-500">Replicas:</span>
-														<span className="text-indigo-200 ml-1">{replicaCount}/3</span>
-													</div>
-													{originDna && (
-														<div className="col-span-2">
-															<span className="text-gray-500">Origin DNA:</span>
-															<span className="text-indigo-300 ml-1 font-mono">{originDna.slice(0, 16)}...</span>
-														</div>
-													)}
-													{parentDna && (
-														<div className="col-span-2">
-															<span className="text-gray-500">Parent:</span>
-															<span className="text-purple-300 ml-1 font-mono">{parentDna.slice(0, 16)}...</span>
-														</div>
-													)}
-												</div>
-											</div>
-										)}
+								{(() => {
+									const nftAsset = hiveCardMap.get(selectedCard.id);
+									if (!nftAsset) return null;
+									return (
 										<div className="flex gap-2 mb-3">
 											<button
-												type="button"
-												onClick={async () => {
-													const result = await getNFTBridge().replicateCard(nft.uid);
-													if (result.success) showStatus(`Replicated ${selectedCard.name}!`, 'success');
-													else showStatus(result.error || 'Replicate failed', 'error');
-												}}
-												disabled={replicaCount >= 3 || generation >= 3}
-												className="flex-1 px-3 py-2 bg-indigo-900/50 hover:bg-indigo-800/60 disabled:opacity-30 text-indigo-300 rounded-lg text-xs font-medium border border-indigo-700/40 transition-colors"
+												onClick={() => setProvenanceNft(nftAsset)}
+												className="flex-1 px-3 py-2 bg-gray-800/60 hover:bg-gray-700/60 text-gray-300 rounded-lg text-xs font-medium border border-gray-600/40 transition-colors"
 											>
-												Replicate
+												View on Chain
 											</button>
-											{canMerge && (
+											{getNFTBridge().isHiveMode() && (
 												<button
-													type="button"
-													onClick={async () => {
-														const sameCards = getNFTBridge().getCardCollection().filter(c => c.cardId === selectedCard.id);
-														if (sameCards.length < 2) { showStatus('Need 2 copies to merge', 'error'); return; }
-														const result = await getNFTBridge().mergeCards([sameCards[0].uid, sameCards[1].uid]);
-														if (result.success) showStatus(`Merged into Ascended ${selectedCard.name}!`, 'success');
-														else showStatus(result.error || 'Merge failed', 'error');
-													}}
-													className="flex-1 px-3 py-2 bg-purple-900/50 hover:bg-purple-800/60 text-purple-300 rounded-lg text-xs font-medium border border-purple-700/40 transition-colors"
+													onClick={() => setSendNft(nftAsset)}
+													className="flex-1 px-3 py-2 bg-emerald-900/50 hover:bg-emerald-800/60 text-emerald-300 rounded-lg text-xs font-medium border border-emerald-700/40 transition-colors"
 												>
-													Merge (2 → 1)
+													Send to Friend
 												</button>
 											)}
 										</div>
-									</>
-								);
-							})()}
+									);
+								})()}
 
-							{/* Close Button */}
+								{/* v1.1: DNA Heritage + Replicate/Merge */}
+								{(() => {
+									const nft = hiveCardMap.get(selectedCard.id);
+									if (!nft) return null;
+									const hiveCard = nft as unknown as Record<string, unknown>;
+									const originDna = hiveCard.originDna as string | undefined;
+									const instanceDna = hiveCard.instanceDna as string | undefined;
+									const generation = (hiveCard.generation as number) ?? 0;
+									const replicaCount = (hiveCard.replicaCount as number) ?? 0;
+									const parentDna = hiveCard.parentInstanceDna as string | undefined;
+									const hasDna = !!(originDna || instanceDna);
+									const canMerge = (selectedCard.quantity ?? 0) >= 2;
+
+									return (
+										<>
+											{hasDna && (
+												<div className="mb-3 p-3 bg-indigo-900/20 rounded-lg border border-indigo-600/30">
+													<div className="text-indigo-300 text-xs font-bold uppercase tracking-wider mb-2">Genetic Heritage</div>
+													<div className="grid grid-cols-2 gap-2 text-xs">
+														<div>
+															<span className="text-gray-500">Generation:</span>
+															<span className="text-indigo-200 ml-1">{generation}</span>
+														</div>
+														<div>
+															<span className="text-gray-500">Replicas:</span>
+															<span className="text-indigo-200 ml-1">{replicaCount}/3</span>
+														</div>
+														{originDna && (
+															<div className="col-span-2">
+																<span className="text-gray-500">Origin DNA:</span>
+																<span className="text-indigo-300 ml-1 font-mono">{originDna.slice(0, 16)}...</span>
+															</div>
+														)}
+														{parentDna && (
+															<div className="col-span-2">
+																<span className="text-gray-500">Parent:</span>
+																<span className="text-purple-300 ml-1 font-mono">{parentDna.slice(0, 16)}...</span>
+															</div>
+														)}
+													</div>
+												</div>
+											)}
+											<div className="flex gap-2 mb-3">
+												<button
+													type="button"
+													onClick={async () => {
+														const result = await getNFTBridge().replicateCard(nft.uid);
+														if (result.success) showStatus(`Replicated ${selectedCard.name}!`, 'success');
+														else showStatus(result.error || 'Replicate failed', 'error');
+													}}
+													disabled={replicaCount >= 3 || generation >= 3}
+													className="flex-1 px-3 py-2 bg-indigo-900/50 hover:bg-indigo-800/60 disabled:opacity-30 text-indigo-300 rounded-lg text-xs font-medium border border-indigo-700/40 transition-colors"
+												>
+													Replicate
+												</button>
+												{canMerge && (
+													<button
+														type="button"
+														onClick={async () => {
+															const sameCards = getNFTBridge().getCardCollection().filter(c => c.cardId === selectedCard.id);
+															if (sameCards.length < 2) { showStatus('Need 2 copies to merge', 'error'); return; }
+															const result = await getNFTBridge().mergeCards([sameCards[0].uid, sameCards[1].uid]);
+															if (result.success) showStatus(`Merged into Ascended ${selectedCard.name}!`, 'success');
+															else showStatus(result.error || 'Merge failed', 'error');
+														}}
+														className="flex-1 px-3 py-2 bg-purple-900/50 hover:bg-purple-800/60 text-purple-300 rounded-lg text-xs font-medium border border-purple-700/40 transition-colors"
+													>
+														Merge (2 → 1)
+													</button>
+												)}
+											</div>
+										</>
+									);
+								})()}
+
+								{/* Close Button */}
 								<motion.button
 									whileHover={{ scale: 1.02 }}
 									whileTap={{ scale: 0.98 }}

@@ -2,7 +2,24 @@ import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'rea
 import { HashRouter, Routes, Route, Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { routes } from './lib/routes';
 import { Button, Panel, ToastProvider } from './components/ui-norse';
-import { ChevronRight, Compass, LayoutGrid, Play, RotateCw, Settings as SettingsIcon, Smartphone, Swords, X } from 'lucide-react';
+import {
+	ChevronRight,
+	Compass,
+	History as HistoryIcon,
+	Landmark,
+	LayoutGrid,
+	Package as PackageIcon,
+	Play,
+	RotateCw,
+	Search as SearchIcon,
+	Settings as SettingsIcon,
+	ShoppingBag,
+	Smartphone,
+	Swords,
+	Trophy,
+	WalletCards,
+	X,
+} from 'lucide-react';
 import "./index.css";
 import ragnarokLogo from "./assets/images/ragnarok-logo.jpg";
 import LoadingScreen from "./game/components/ui/LoadingScreen";
@@ -434,22 +451,22 @@ const MODE_CARDS: ReadonlyArray<ModeCard> = [
 
 // Settings lives next to the Account panel (gear icon) — universal access
 // without competing with the route-shortcut chips below.
-const UTILITY_LINKS: ReadonlyArray<{ label: string; to: string }> = [
-	{ label: 'Wallet', to: routes.wallet },
-	{ label: 'Atlas', to: routes.map },
-	{ label: 'Marketplace', to: routes.marketplace },
-	{ label: 'Packs', to: routes.packs },
-	{ label: 'Tournaments', to: routes.tournaments },
-	{ label: 'History', to: routes.history },
-	{ label: 'Treasury', to: routes.treasury },
-	{ label: 'Explorer', to: routes.explorer },
+const UTILITY_LINKS: ReadonlyArray<{ label: string; shortLabel?: string; to: string; icon: typeof Swords }> = [
+	{ label: 'Wallet', to: routes.wallet, icon: WalletCards },
+	{ label: 'Atlas', to: routes.map, icon: Compass },
+	{ label: 'Marketplace', shortLabel: 'Market', to: routes.marketplace, icon: ShoppingBag },
+	{ label: 'Packs', to: routes.packs, icon: PackageIcon },
+	{ label: 'Tournaments', shortLabel: 'Tourney', to: routes.tournaments, icon: Trophy },
+	{ label: 'History', to: routes.history, icon: HistoryIcon },
+	{ label: 'Treasury', to: routes.treasury, icon: Landmark },
+	{ label: 'Explorer', shortLabel: 'Explore', to: routes.explorer, icon: SearchIcon },
 ] as const;
 
 function StatRow({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
 	return (
-		<div className="home-landscape-stat-row flex min-w-0 items-center justify-between gap-3">
-			<span className="home-landscape-stat-label shrink-0 font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300">{label}</span>
-			<span className={`home-landscape-stat-value min-w-0 max-w-[62%] truncate text-right font-display text-[13px] tracking-[0.04em] sm:text-base sm:tracking-[0.08em] ${highlight ? 'text-gold-300' : 'text-ink-0'}`}>
+		<div className="n-stat-row">
+			<span className="n-stat-label">{label}</span>
+			<span className={`n-stat-value ${highlight ? 'n-stat-value--highlight' : ''}`}>
 				{value}
 			</span>
 		</div>
@@ -462,7 +479,7 @@ function SideRailPanel({ title, action, children }: {
 	children: React.ReactNode;
 }) {
 	return (
-		<Panel className="p-5">
+		<div className="n-glass-panel p-5">
 			<div className="flex items-center justify-between pb-3 mb-4 border-b border-obsidian-700">
 				<div className="font-display text-xs tracking-[0.22em] uppercase text-ink-0 inline-flex items-center gap-2">
 					<span className="w-1 h-3 rounded-sm bg-gold-300" />
@@ -471,7 +488,7 @@ function SideRailPanel({ title, action, children }: {
 				{action}
 			</div>
 			{children}
-		</Panel>
+		</div>
 	);
 }
 
@@ -615,22 +632,22 @@ function HomePage() {
 	};
 
 	return (
-		<div className="home-landscape-shell min-h-dvh w-full text-ink-0 bg-(image:--bg-home-nav)">
+		<div className="n-page-shell bg-(image:--bg-home-nav)">
 			{/* ── HEADER ─────────────────────────────────────────────────────── */}
-			<header className="home-landscape-header sticky top-0 z-50 backdrop-blur-md bg-obsidian-950/80 border-b border-obsidian-700">
-				<div className="home-landscape-header-inner mx-auto h-[3.25rem] max-w-[1440px] px-3 sm:h-14 sm:px-6 lg:px-8 flex items-center justify-between gap-2 sm:gap-4">
-					<div className="home-landscape-brand flex min-w-0 items-center gap-2 sm:gap-3">
-						<img src={ragnarokLogo} alt="" className="home-landscape-logo h-8 w-8 shrink-0 rounded-md border border-obsidian-600 object-cover" />
+			<header className="sticky top-0 z-50 backdrop-blur-md bg-obsidian-950/80 border-b border-obsidian-700">
+				<div className="mx-auto h-[3.25rem] max-w-[1440px] px-3 sm:h-14 sm:px-6 lg:px-8 flex items-center justify-between gap-2 sm:gap-4">
+					<div className="flex min-w-0 items-center gap-2 sm:gap-3">
+						<img src={ragnarokLogo} alt="" className="h-8 w-8 shrink-0 rounded-md border border-obsidian-600 object-cover" />
 						<div className="min-w-0 leading-none">
 							<div className="flex min-w-0 items-center gap-2">
-								<div className="home-landscape-title min-w-0 truncate font-display text-sm font-bold tracking-[0.18em] text-gold-300">RAGNAROK</div>
+								<div className="min-w-0 truncate font-display text-sm font-bold tracking-[0.18em] text-gold-300">RAGNAROK</div>
 								{isTestnetStage() && (
-									<span className="home-landscape-stage-badge shrink-0 rounded border border-gold-300/40 bg-gold-300/10 px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-gold-100">
+									<span className="shrink-0 rounded border border-gold-300/40 bg-gold-300/10 px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-gold-100">
 										{runtimeProductLabel}
 									</span>
 								)}
 							</div>
-							<div className="home-landscape-season font-mono text-[10px] tracking-[0.16em] text-ink-300 mt-1">
+							<div className="font-mono text-[10px] tracking-[0.16em] text-ink-300 mt-1">
 								FORGE &amp; EMBER · {season.seasonNumber.toString().padStart(2, '0')}
 							</div>
 						</div>
@@ -650,63 +667,54 @@ function HomePage() {
 				</div>
 			</header>
 
-			{/* ── PAGE GRID: full-height main column + persistent right rail ──── */}
-			<div className="home-landscape-main-grid mx-auto mt-4 grid max-w-[1440px] grid-cols-1 items-start gap-4 px-3 sm:mt-6 sm:gap-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-8">
-				{/* MAIN COLUMN: banner + routes + daily quests.
-				    pb-24 mirrors the right aside so neither column slides under
-				    the anchored utility bar at the bottom. */}
-				<main className="home-landscape-main-column grid min-w-0 grid-cols-1 content-start gap-4 pb-4 sm:gap-6 sm:pb-24">
+			{/* ── PAGE GRID ── */}
+			<div className="mx-auto mt-4 grid max-w-[1440px] grid-cols-1 items-start gap-4 px-3 sm:mt-6 sm:gap-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-8">
+				<main className="grid min-w-0 grid-cols-1 content-start gap-4 pb-4 sm:gap-6 sm:pb-24">
 					{/* Banner */}
-					<section className="home-landscape-hero relative grid min-w-0 grid-cols-1 items-stretch gap-4 rounded-xl border border-obsidian-700 bg-linear-to-b from-obsidian-850 to-obsidian-900 px-4 py-4 sm:gap-6 sm:px-8 sm:py-8 xl:grid-cols-[minmax(0,1fr)_320px]">
+					<section className="n-glass-panel-gold n-hero-banner flex flex-col xl:flex-row gap-6 p-6 sm:p-8">
 						<div className="min-w-0">
 							<div className="mb-4 inline-flex items-center gap-2 rounded-full border border-gold-300/25 bg-obsidian-950/55 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-gold-200">
 								<span className="h-1.5 w-1.5 rounded-full bg-gold-300" aria-hidden="true" />
 								Battle lobby
 							</div>
-							<h1 className="home-landscape-hero-title m-0 max-w-full font-display text-[1.55rem] font-black uppercase leading-[1.06] tracking-[0.025em] min-[360px]:text-[1.75rem] sm:text-[2.625rem] sm:leading-[0.95] sm:tracking-[0.10em] xl:text-[2.25rem] xl:tracking-[0.065em] 2xl:text-[2.75rem] 2xl:tracking-[0.10em]">
-								<span className="bg-linear-to-b from-gold-100 via-gold-300 to-gold-500 bg-clip-text text-transparent">
-									Reveal the line.<br />March into battle.
-								</span>
+							<h1 className="n-hero-title">
+								Reveal the line.<br />March into battle.
 							</h1>
-							<p className="home-landscape-hero-copy mb-4 mt-4 max-w-[540px] text-sm leading-[1.45] text-ink-200 sm:mb-7 sm:mt-5 sm:text-[15px] sm:leading-[1.65]">
+							<p className="n-hero-copy">
 								Campaign is the clean front door — reveal the starter line, stage a mission briefing, and break straight into live combat.
 							</p>
 							<div className="flex flex-wrap items-center gap-3">
 								{!starterClaimed ? (
 									starterClaimAccess.kind === 'blocked' ? (
-										<Button
-											variant="primary"
-											size="lg"
-											className="home-landscape-primary-cta"
+										<button
+											className="n-btn-primary px-6 py-2.5 rounded-md"
 											onClick={() => setShowHiveLogin(true)}
 										>
 											{primaryLabel}
-										</Button>
+										</button>
 									) : (
-										<Button
-											variant="primary"
-											size="lg"
-											className="home-landscape-primary-cta"
+										<button
+											className="n-btn-primary px-6 py-2.5 rounded-md"
 											onClick={() => setShowCeremony(true)}
 										>
 											{primaryLabel}
-										</Button>
+										</button>
 									)
 								) : (
-									<Link to={routes.campaign}>
-										<Button variant="primary" size="lg" className="home-landscape-primary-cta">{primaryLabel}</Button>
+									<Link to={routes.campaign} className="no-underline">
+										<button className="n-btn-primary px-6 py-2.5 rounded-md">{primaryLabel}</button>
 									</Link>
 								)}
 								{canInstall && (
-									<Button variant="outline" size="lg" ornate onClick={triggerInstall}>
+									<button className="n-btn-outline px-6 py-2.5 rounded-md" onClick={triggerInstall}>
 										Install App
-									</Button>
+									</button>
 								)}
 							</div>
 						</div>
 
 						{/* Stats panel */}
-						<aside className="home-landscape-stats-panel grid min-w-0 content-center gap-3 self-stretch rounded-xl border border-gold-300/40 bg-obsidian-900/80 p-4 backdrop-blur-md sm:p-5">
+						<aside className="n-glass-panel p-4 sm:p-5 flex flex-col justify-center gap-1">
 							<StatRow label="Saga" value={`${completedMissionCount} / ${totalMissionCount}`} highlight />
 							<StatRow label="Active" value={activeFocusTitle} />
 							<StatRow label="Chapter" value={activeFocusChapter} />
@@ -719,10 +727,10 @@ function HomePage() {
 								value={formatTimeRemaining(season.timeRemainingMs)}
 								highlight
 							/>
-							<div className="mt-1 pt-3 border-t border-obsidian-700">
+							<div className="mt-2 pt-3 border-t border-obsidian-700">
 								<div className="flex items-center justify-between mb-1.5">
-									<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300">Saga progress</span>
-									<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-gold-300">{sagaPercent}%</span>
+									<span className="n-stat-label">Saga progress</span>
+									<span className="n-stat-label text-gold-300">{sagaPercent}%</span>
 								</div>
 								<div className="h-1 rounded-full bg-obsidian-700 overflow-hidden">
 									<div
@@ -740,7 +748,7 @@ function HomePage() {
 							<div className="font-mono text-[11px] tracking-[0.32em] uppercase text-ink-300">Primary Routes</div>
 							<h2 className="font-display text-xl tracking-[0.08em] uppercase text-ink-0 mt-1">Choose your front</h2>
 						</header>
-						<div className="home-mode-grid grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-5">
+						<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-5">
 							{MODE_CARDS.map(mode => {
 								const Icon = mode.icon;
 								const a = ACCENT[mode.accent];
@@ -749,85 +757,47 @@ function HomePage() {
 									<Link
 										key={mode.title}
 										to={mode.to}
-										className={`home-landscape-route-card relative group flex min-h-[132px] min-w-0 flex-col rounded-xl border bg-linear-to-b p-3 transition-all duration-300 sm:min-h-[172px] sm:p-4 ${a.border} ${isCombat
-											? 'border-obsidian-700 from-obsidian-850 to-obsidian-950'
-											: 'border-obsidian-700/60 from-obsidian-900 to-obsidian-950'
-											}`}
+										className="n-mode-card n-glass-interactive p-4 h-full flex flex-col gap-3 min-h-[160px]"
 									>
-										{/* Atmospheric color layer (mode-specific). Sits below content. */}
 										<div
-											className="absolute inset-0 opacity-70 group-hover:opacity-90 transition-opacity duration-500 pointer-events-none"
+											className="n-mode-card__atmosphere"
 											style={{ background: mode.atmosphere }}
 										/>
 
-										{/* Oversized decorative icon — anchors the bottom-right as "art" */}
-										<Icon
-											className={`absolute -right-2 -bottom-2 w-20 h-20 ${a.text} opacity-[0.08] pointer-events-none`}
-											strokeWidth={1}
-										/>
+										<Icon className={`n-mode-card__large-icon ${a.text}`} strokeWidth={1} />
 
-										{/* Bottom vignette for text legibility on top of the gradient */}
-										<div
-											className="absolute inset-0 bg-linear-to-t from-obsidian-950/85 via-obsidian-950/30 to-transparent pointer-events-none"
-										/>
+										<div className="n-mode-card__content">
+											<div className="flex items-start justify-between">
+												<div>
+													<div className={`n-mode-card__kicker ${a.text}`}>{mode.kicker}</div>
+													<h3 className="n-mode-card__title">{mode.title}</h3>
+												</div>
+												<div className={`n-mode-card__icon-wrapper ${a.text}`}>
+													<Icon size={14} strokeWidth={2} />
+												</div>
+											</div>
 
-										{/* Header row */}
-										<div className="relative z-10 flex items-start justify-between mb-auto">
-											<span className={`font-mono text-[10px] tracking-[0.32em] uppercase font-semibold ${a.text}`}>
-												{mode.kicker}
-											</span>
-											<span className={`inline-flex items-center justify-center w-7 h-7 rounded-md bg-obsidian-900/70 backdrop-blur-sm border border-obsidian-700 ${a.text}`}>
-												<Icon size={13} strokeWidth={1.8} />
-											</span>
-										</div>
-
-										{/* Body */}
-										<div className="relative z-10 mt-auto">
-											<h3 className="font-display text-lg font-black tracking-[0.08em] uppercase text-ink-0 mb-1 leading-none">
-												{mode.title}
-											</h3>
-											<p className="mb-3 hidden max-w-[95%] text-[12px] leading-[1.5] text-ink-200 sm:block">
-												{mode.description}
-											</p>
-
-											{/* CTA differentiated by intent — combat is a dramatic ceremonial
-											    Play button (gold gradient, diamond ornaments, glow); meta is a
-											    sober curatorial link. Both right-aligned to feel like an "action
-											    corner" of the card. */}
-											<div className="flex justify-end">
+											<div className="mt-4 flex justify-end">
 												{isCombat ? (
-													<div
-														className="inline-flex items-center gap-2.5 bg-linear-to-b from-gold-300 to-gold-500 border border-gold-200 px-4 py-2 font-display text-[12px] font-bold tracking-[0.24em] uppercase text-obsidian-950 shadow-[0_0_22px_-6px_rgba(217,168,68,0.65)] transition-all duration-300 group-hover:from-gold-200 group-hover:to-gold-400 group-hover:shadow-[0_0_32px_-4px_rgba(217,168,68,0.95)] group-hover:scale-[1.03]"
-														style={{
-															clipPath:
-																'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)',
-														}}
-													>
-														<span aria-hidden className="w-[5px] h-[5px] rotate-45 bg-current opacity-80 shrink-0" />
-														<Play size={13} strokeWidth={2.4} fill="currentColor" className="shrink-0" />
+													<div className="n-btn-primary py-1.5 px-3 text-[10px] flex gap-2 items-center rounded-md">
+														<Play size={10} fill="currentColor" />
 														{mode.cta}
-														<span aria-hidden className="w-[5px] h-[5px] rotate-45 bg-current opacity-80 shrink-0" />
 													</div>
 												) : (
-													<div className="inline-flex items-center gap-1.5 font-mono text-[11px] tracking-[0.22em] uppercase text-ink-300 transition-colors group-hover:text-bifrost-300">
+													<div className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-ink-300 group-hover:text-gold-300 transition-colors">
 														{mode.cta}
-														<ChevronRight size={13} strokeWidth={2} className="shrink-0 transition-transform duration-300 group-hover:translate-x-1" />
+														<ChevronRight size={12} />
 													</div>
 												)}
 											</div>
 										</div>
-
-										{/* Bottom accent strip — runic underline that fades to the
-									    obsidian backdrop on both ends, no longer butts the gold button. */}
-										<span className={`absolute bottom-0 left-0 right-0 h-[2px] ${a.strip}`} />
 									</Link>
 								);
 							})}
 						</div>
 					</section>
 
-					{/* Daily Quests — actionable tasks live in main column, not sidebar.
-					    DailyQuestPanel renders its own card grid (parallel to route cards). */}
+					{/* Daily Quests */}
 					<section className="min-w-0">
 						<header className="mb-4">
 							<div className="font-mono text-[11px] tracking-[0.32em] uppercase text-ink-300">Today's Saga</div>
@@ -837,20 +807,16 @@ function HomePage() {
 							<DailyQuestPanel />
 						</Suspense>
 					</section>
-
 				</main>
 
-				{/* RIGHT RAIL — pure identity stack: Account → Warband (post-login).
-				    Warband has internal scroll so contacts can grow without breaking layout.
-				    Settings lives here on Home; meta pages keep account chrome focused. */}
-				<aside className="home-landscape-right-rail grid min-w-0 grid-cols-1 content-start gap-4 pb-4 sm:gap-5 sm:pb-24 lg:sticky lg:top-[4.75rem]">
+				{/* RIGHT RAIL */}
+				<aside className="grid min-w-0 grid-cols-1 content-start gap-4 pb-4 sm:gap-5 sm:pb-24 lg:sticky lg:top-[4.75rem]">
 					<SideRailPanel
 						title="Account"
 						action={
 							<Link
 								to={routes.settings}
-								title="Settings"
-								className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-obsidian-700 bg-obsidian-900/60 text-ink-300 hover:text-gold-300 hover:border-gold-600/60 transition-colors"
+								className="n-glass-panel h-10 w-10 flex items-center justify-center text-ink-300 hover:text-gold-300 transition-colors"
 							>
 								<SettingsIcon size={14} strokeWidth={1.8} />
 							</Link>
@@ -862,7 +828,7 @@ function HomePage() {
 					</SideRailPanel>
 					{hiveUsername && (
 						<SideRailPanel title="Warband">
-							<div className="home-warband-scroll max-h-[420px] overflow-y-auto pr-1 -mr-1 [scrollbar-width:thin]">
+							<div className="max-h-[420px] overflow-y-auto pr-1 -mr-1 [scrollbar-width:thin]">
 								<Suspense fallback={<div className="animate-pulse h-32 rounded-xl bg-obsidian-800" />}>
 									<FriendsPanel />
 								</Suspense>
@@ -872,28 +838,22 @@ function HomePage() {
 				</aside>
 			</div>
 
-			{/* ── UTILITY BAR ────────────────────────────────────────────────────
-			    CSS promotes this to sticky only when the viewport is tall enough
-			    to avoid covering the primary route cards. */}
-			<nav className="home-landscape-utility-bar static bottom-0 z-40 border-t border-obsidian-700 bg-obsidian-950/85 backdrop-blur-md">
-				<div className="home-landscape-utility-inner mx-auto flex h-auto max-w-[1440px] items-center justify-start gap-2 overflow-x-auto px-3 py-2.5 [scrollbar-width:none] sm:justify-center sm:px-6 lg:px-8">
-					{UTILITY_LINKS.map(link => (
-						<Link
-							key={link.label}
-							to={link.to}
-							className="shrink-0 inline-flex min-h-11 items-center px-3.5 rounded-full border border-obsidian-700 bg-obsidian-850 text-ink-200 hover:text-gold-300 hover:border-gold-600 font-display text-xs tracking-[0.18em] uppercase font-bold transition-colors"
-						>
-							{link.label}
-						</Link>
-					))}
-					{import.meta.env.DEV && (
-						<Link
-							to={routes.warband}
-							className="shrink-0 inline-flex min-h-11 items-center px-3.5 rounded-full border border-dashed border-obsidian-600 text-ink-300 hover:text-ink-0 font-display text-xs tracking-[0.18em] uppercase opacity-70 hover:opacity-100 transition-opacity"
-						>
-							Casual Battle (dev)
-						</Link>
-					)}
+			{/* ── UTILITY BAR ── */}
+			<nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-obsidian-700 bg-obsidian-950/80 px-4 py-3 backdrop-blur-lg lg:static lg:bg-transparent lg:border-none">
+				<div className="mx-auto flex justify-center gap-2 max-w-5xl overflow-x-auto [scrollbar-width:none]">
+					{UTILITY_LINKS.map(link => {
+						const Icon = link.icon;
+						return (
+							<Link
+								key={link.label}
+								to={link.to}
+								className="n-glass-interactive flex flex-col items-center gap-1 p-2 min-w-[70px] sm:min-w-[100px] text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-ink-200 no-underline"
+							>
+								<Icon size={14} className="text-gold-300" />
+								<span>{link.shortLabel ?? link.label}</span>
+							</Link>
+						);
+					})}
 				</div>
 			</nav>
 
@@ -1067,60 +1027,60 @@ function App() {
 				<ViewTransitionBridge />
 				<Suspense fallback={<LoadingScreen />}>
 					<Routes>
-							<Route path={routes.map} element={<MapPage />} />
-							<Route
-								path={routes.pokerViewportPrototype}
-								element={import.meta.env.DEV ? <PokerViewportSafeAreaPrototype /> : <Navigate to={routes.home} replace />}
-							/>
+						<Route path={routes.map} element={<MapPage />} />
+						<Route
+							path={routes.pokerViewportPrototype}
+							element={import.meta.env.DEV ? <PokerViewportSafeAreaPrototype /> : <Navigate to={routes.home} replace />}
+						/>
 
-							<Route element={<GlobalOverlaysLayout />}>
-								<Route path={routes.home} element={<HomePage />} />
-								<Route path={routes.campaign} element={<ProtectedAccountGate surface="campaign"><CampaignPage /></ProtectedAccountGate>} />
-								<Route path={routes.ladder} element={<RankedLadderPage />} />
-								<Route path={routes.explorer} element={<ExplorerPage />} />
-								<Route path={routes.admin} element={<AdminPanel />} />
-								<Route path={routes.adminNfts} element={<AdminPanel />} />
-								<Route path={routes.tournaments} element={<OnlineOnly label="Tournaments"><TournamentListPage /></OnlineOnly>} />
-								<Route path={routes.history} element={<MatchHistoryPage />} />
-								<Route path={routes.settings} element={<SettingsPage />} />
-								<Route path={routes.legacyRuneTestnet} element={<Navigate to={routes.wallet} replace />} />
+						<Route element={<GlobalOverlaysLayout />}>
+							<Route path={routes.home} element={<HomePage />} />
+							<Route path={routes.campaign} element={<ProtectedAccountGate surface="campaign"><CampaignPage /></ProtectedAccountGate>} />
+							<Route path={routes.ladder} element={<RankedLadderPage />} />
+							<Route path={routes.explorer} element={<ExplorerPage />} />
+							<Route path={routes.admin} element={<AdminPanel />} />
+							<Route path={routes.adminNfts} element={<AdminPanel />} />
+							<Route path={routes.tournaments} element={<OnlineOnly label="Tournaments"><TournamentListPage /></OnlineOnly>} />
+							<Route path={routes.history} element={<MatchHistoryPage />} />
+							<Route path={routes.settings} element={<SettingsPage />} />
+							<Route path={routes.legacyRuneTestnet} element={<Navigate to={routes.wallet} replace />} />
 
-								<Route element={<CardVisualRuntimeLayout />}>
-									<Route element={<BridgeRuntimeBoundary />}>
-										<Route path={routes.warband} element={<StarterEntitlementGate surface="warband"><WarbandPage /></StarterEntitlementGate>} />
-										<Route path={routes.collection} element={<CollectionPage />} />
-										<Route path={routes.trading} element={<Navigate to={`${routes.marketplace}?tab=swaps`} replace />} />
-										<Route path={routes.marketplace} element={<OnlineOnly label="Marketplace"><MarketplacePage /></OnlineOnly>} />
-										<Route path={routes.treasury} element={<OnlineOnly label="Treasury"><TreasuryPage /></OnlineOnly>} />
-										<Route path={routes.wallet} element={<WalletPage />} />
-									</Route>
+							<Route element={<CardVisualRuntimeLayout />}>
+								<Route element={<BridgeRuntimeBoundary />}>
+									<Route path={routes.warband} element={<StarterEntitlementGate surface="warband"><WarbandPage /></StarterEntitlementGate>} />
+									<Route path={routes.collection} element={<CollectionPage />} />
+									<Route path={routes.trading} element={<Navigate to={`${routes.marketplace}?tab=swaps`} replace />} />
+									<Route path={routes.marketplace} element={<OnlineOnly label="Marketplace"><MarketplacePage /></OnlineOnly>} />
+									<Route path={routes.treasury} element={<OnlineOnly label="Treasury"><TreasuryPage /></OnlineOnly>} />
+									<Route path={routes.wallet} element={<WalletPage />} />
+								</Route>
 
-									<Route element={<CardDataRuntimeBoundary />}>
-										<Route path={routes.packs} element={<PacksPage />} />
-									</Route>
+								<Route element={<CardDataRuntimeBoundary />}>
+									<Route path={routes.packs} element={<PacksPage />} />
+								</Route>
 
-									<Route element={<GameOrientationGate><GameplayRuntimeBoundary /></GameOrientationGate>}>
-										<Route path={routes.game} element={<Navigate to={routes.singleGame} replace />} />
-										<Route path={routes.singleGame} element={<SingleGameRoute />} />
-										<Route path={routes.campaignGame} element={<CampaignGameRoute />} />
-										<Route path={routes.multiplayer} element={
-											<ProtectedAccountGate surface="multiplayer">
-												<StarterEntitlementGate surface="multiplayer"><MultiplayerGame /></StarterEntitlementGate>
-											</ProtectedAccountGate>
-										} />
-									</Route>
+								<Route element={<GameOrientationGate><GameplayRuntimeBoundary /></GameOrientationGate>}>
+									<Route path={routes.game} element={<Navigate to={routes.singleGame} replace />} />
+									<Route path={routes.singleGame} element={<SingleGameRoute />} />
+									<Route path={routes.campaignGame} element={<CampaignGameRoute />} />
+									<Route path={routes.multiplayer} element={
+										<ProtectedAccountGate surface="multiplayer">
+											<StarterEntitlementGate surface="multiplayer"><MultiplayerGame /></StarterEntitlementGate>
+										</ProtectedAccountGate>
+									} />
 								</Route>
 							</Route>
+						</Route>
 
-							<Route path="*" element={
-								<div className="min-h-screen bg-obsidian-950 flex flex-col items-center justify-center text-ink-0 px-6">
-									<h1 className="font-display text-6xl font-black tracking-[0.18em] text-gold-300 mb-4">404</h1>
-									<p className="font-mono text-[11px] tracking-[0.32em] uppercase text-ink-300 mb-8">Page not found</p>
-									<Link to={routes.home} className="px-6 py-3 bg-linear-to-b from-gold-300 to-gold-500 border border-gold-200 text-obsidian-950 font-display font-bold tracking-[0.18em] uppercase rounded-md transition-all hover:from-gold-200 hover:to-gold-400 hover:scale-[1.02]">
-										Back to Home
-									</Link>
-								</div>
-							} />
+						<Route path="*" element={
+							<div className="min-h-screen bg-obsidian-950 flex flex-col items-center justify-center text-ink-0 px-6">
+								<h1 className="font-display text-6xl font-black tracking-[0.18em] text-gold-300 mb-4">404</h1>
+								<p className="font-mono text-[11px] tracking-[0.32em] uppercase text-ink-300 mb-8">Page not found</p>
+								<Link to={routes.home} className="px-6 py-3 bg-linear-to-b from-gold-300 to-gold-500 border border-gold-200 text-obsidian-950 font-display font-bold tracking-[0.18em] uppercase rounded-md transition-all hover:from-gold-200 hover:to-gold-400 hover:scale-[1.02]">
+									Back to Home
+								</Link>
+							</div>
+						} />
 					</Routes>
 				</Suspense>
 			</HashRouter>
