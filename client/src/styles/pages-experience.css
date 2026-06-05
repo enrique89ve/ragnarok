@@ -4,6 +4,8 @@
    This file defines high-level visual "themes" for non-game pages.
    It uses Tailwind v4 `@utility` to integrate with the utility engine,
    ensuring consistent specificity and maintainability.
+   
+   Soul: Norse Mythos / Ragnarok (Premium, Ornate, Mythic)
 */
 
 @utility n-page-shell {
@@ -21,39 +23,36 @@
   max-width: var(--container-2xl);
   padding-left: var(--space-lg);
   padding-right: var(--space-lg);
-  @media (min-width: 640px) {
-    padding-left: var(--space-xl);
-    padding-right: var(--space-xl);
-  }
 }
 
 /* ── PREMIUM PANELS ── */
 
 @utility n-glass-panel {
-  background: rgba(10, 14, 28, 0.75);
+  background: rgba(10, 14, 28, 0.85); /* Darker, as in Image 0 */
   backdrop-filter: blur(12px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-xl);
   box-shadow: 
-    0 8px 32px 0 rgba(0, 0, 0, 0.37),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-  transition: all var(--transition-normal);
+    0 8px 32px 0 rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  position: relative;
+  overflow: hidden;
 }
 
 @utility n-glass-panel-gold {
   @apply n-glass-panel;
-  border-color: rgba(221, 184, 74, 0.2);
-  box-shadow: 
-    0 8px 32px 0 rgba(0, 0, 0, 0.5),
-    0 0 15px rgba(221, 184, 74, 0.05);
+  border-color: rgba(221, 184, 74, 0.25);
+  box-shadow: 0 0 30px rgba(221, 184, 74, 0.05);
 }
 
 @utility n-glass-interactive {
   @apply n-glass-panel;
+  transition: all var(--transition-normal);
   &:hover {
     border-color: rgba(255, 255, 255, 0.15);
-    background: rgba(15, 20, 40, 0.85);
+    background: rgba(15, 20, 40, 0.95);
     transform: translateY(-2px);
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
   }
 }
 
@@ -65,103 +64,56 @@
   text-transform: uppercase;
   line-height: 0.95;
   letter-spacing: 0.05em;
-  font-size: clamp(1.75rem, 5vw, 3rem);
+  font-size: clamp(2.25rem, 6vw, 4rem); /* Match Image 0 scale */
   background: linear-gradient(to bottom, var(--gold-100), var(--gold-300), var(--gold-500));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
 }
 
 @utility n-hero-copy {
   color: var(--ink-200);
   font-size: var(--text-lg);
   line-height: 1.6;
+  max-width: 32rem; /* Keep it focused */
 }
 
-/* ── MODE CARDS ── */
+/* ── MODE CARDS (Restoring Image 0 Soul) ── */
 
 @utility n-mode-card {
   position: relative;
   overflow: hidden;
   border-radius: var(--radius-xl);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(10, 14, 28, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(10, 14, 28, 0.8);
   transition: all var(--transition-normal);
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   
   &:hover {
-    transform: translateY(-4px) scale(1.02);
-    border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    transform: translateY(-8px) scale(1.02);
+    border-color: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
   }
 }
 
 @utility n-mode-card-atmosphere {
   position: absolute;
   inset: 0;
-  opacity: 0.4;
+  opacity: 0.25;
   transition: opacity var(--transition-slow);
   pointer-events: none;
   z-index: 0;
 }
 
-/* ── STATS & INDICATORS ── */
-
-@utility n-stat-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-sm) 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  &:last-child { border-bottom: none; }
-}
-
-@utility n-stat-label {
-  font-family: var(--type-mono);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  color: var(--ink-300);
-}
-
-@utility n-stat-value {
-  font-family: var(--type-display);
-  font-size: var(--text-sm);
-  color: var(--ink-0);
-}
-
-/* ── BUTTONS ── */
-
-@utility n-btn-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--type-display);
-  text-transform: uppercase;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  transition: all var(--transition-fast);
-  cursor: pointer;
-  background: linear-gradient(to bottom, var(--gold-300), var(--gold-500));
-  color: var(--obsidian-950);
-  border: 1px solid var(--gold-200);
-  box-shadow: 0 4px 15px rgba(221, 184, 74, 0.2);
-  
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(221, 184, 74, 0.3);
-    background: linear-gradient(to bottom, var(--gold-200), var(--gold-400));
-  }
-}
-
-@utility n-btn-outline {
-  @apply n-btn-primary;
-  background: transparent;
-  color: var(--gold-300);
-  border: 1px solid rgba(221, 184, 74, 0.5);
-  box-shadow: none;
-  &:hover {
-    border-color: var(--gold-300);
-    background: rgba(221, 184, 74, 0.05);
-  }
+@utility n-mode-card-large-icon {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  opacity: 0.15;
+  transition: all var(--transition-normal);
+  z-index: 1;
 }

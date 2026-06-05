@@ -667,7 +667,7 @@ export default function CollectionPage() {
 									: duatEntry.claimBlockedReason ?? 'This account has no DUAT airdrop packs assigned.'}
 							</p>
 						</div>
-						<Link to={routes.packs} className="n-btn-primary px-4 py-1.5 rounded text-xs no-underline">
+						<Link to={routes.packs} className="btn-runic btn-runic--gold btn-runic--sm no-underline">
 							View Packs
 						</Link>
 					</div>
@@ -676,19 +676,23 @@ export default function CollectionPage() {
 				{/* Stats Dashboard */}
 				{!starterGateActive && stats && (
 					<div className="collection-balance-stack mb-6">
-						{/* Completion Bar */}
-						<div className={`${VAULT_PANEL_CLASS} collection-progress-panel mb-4 p-4`}>
-							<div className="flex justify-between items-baseline mb-2">
-								<span className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink-300">Collection Progress</span>
+						{/* Progress Section */}
+						<div className="n-glass-panel p-6 mb-6">
+							<header className="section-heading">
+								<div className="section-heading-kicker">Vault · Stats</div>
+								<h2 className="section-heading-title">Your progression</h2>
+							</header>
+							<div className="flex justify-between items-baseline mb-4">
 								<span className="text-white font-bold text-lg">
 									{stats.uniqueCards}
 									<span className="text-gray-500 font-normal text-sm"> / {stats.totalInGame || '???'}</span>
-									<span className="ml-2 text-sm font-semibold text-(--gold-300)">({stats.completionPercentage}%)</span>
+									<span className="ml-2 text-sm font-semibold text-gold-300">({stats.completionPercentage}%)</span>
 								</span>
 							</div>
 							<div className="h-2.5 rounded-md bg-obsidian-750 overflow-hidden">
 								<div
 									style={{ width: `${Math.min(stats.completionPercentage, 100)}%`, background: 'var(--gold-500)' }}
+									className="h-full"
 								/>
 							</div>
 						</div>

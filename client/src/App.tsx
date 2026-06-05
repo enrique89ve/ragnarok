@@ -464,30 +464,11 @@ const UTILITY_LINKS: ReadonlyArray<{ label: string; shortLabel?: string; to: str
 
 function StatRow({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
 	return (
-		<div className="n-stat-row">
-			<span className="n-stat-label">{label}</span>
-			<span className={`n-stat-value ${highlight ? 'n-stat-value--highlight' : ''}`}>
+		<div className="flex items-center justify-between border-b border-white/5 py-1.5 last:border-b-0">
+			<span className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink-400">{label}</span>
+			<span className={`font-mono text-sm ${highlight ? 'text-gold-300' : 'text-ink-100'}`}>
 				{value}
 			</span>
-		</div>
-	);
-}
-
-function SideRailPanel({ title, action, children }: {
-	title: string;
-	action?: React.ReactNode;
-	children: React.ReactNode;
-}) {
-	return (
-		<div className="n-glass-panel p-5">
-			<div className="flex items-center justify-between pb-3 mb-4 border-b border-obsidian-700">
-				<div className="font-display text-xs tracking-[0.22em] uppercase text-ink-0 inline-flex items-center gap-2">
-					<span className="w-1 h-3 rounded-sm bg-gold-300" />
-					{title}
-				</div>
-				{action}
-			</div>
-			{children}
 		</div>
 	);
 }
@@ -671,7 +652,7 @@ function HomePage() {
 			<div className="mx-auto mt-4 grid max-w-[1440px] grid-cols-1 items-start gap-4 px-3 sm:mt-6 sm:gap-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:px-8">
 				<main className="grid min-w-0 grid-cols-1 content-start gap-4 pb-4 sm:gap-6 sm:pb-24">
 					{/* Banner */}
-					<section className="n-glass-panel-gold n-hero-banner flex flex-col xl:flex-row gap-6 p-6 sm:p-8">
+					<section className="n-glass-panel-gold flex flex-col gap-10 p-6 sm:p-10 xl:flex-row xl:items-center xl:justify-between">
 						<div className="min-w-0">
 							<div className="mb-4 inline-flex items-center gap-2 rounded-full border border-gold-300/25 bg-obsidian-950/55 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-gold-200">
 								<span className="h-1.5 w-1.5 rounded-full bg-gold-300" aria-hidden="true" />
@@ -683,31 +664,41 @@ function HomePage() {
 							<p className="n-hero-copy">
 								Campaign is the clean front door — reveal the starter line, stage a mission briefing, and break straight into live combat.
 							</p>
-							<div className="flex flex-wrap items-center gap-3">
+							<div className="flex flex-wrap items-center gap-4">
 								{!starterClaimed ? (
 									starterClaimAccess.kind === 'blocked' ? (
 										<button
-											className="n-btn-primary px-6 py-2.5 rounded-md"
+											className="btn-runic btn-runic--gold"
 											onClick={() => setShowHiveLogin(true)}
 										>
+											<span className="btn-runic-stud" aria-hidden />
 											{primaryLabel}
+											<span className="btn-runic-stud" aria-hidden />
 										</button>
 									) : (
 										<button
-											className="n-btn-primary px-6 py-2.5 rounded-md"
+											className="btn-runic btn-runic--gold"
 											onClick={() => setShowCeremony(true)}
 										>
+											<span className="btn-runic-stud" aria-hidden />
 											{primaryLabel}
+											<span className="btn-runic-stud" aria-hidden />
 										</button>
 									)
 								) : (
 									<Link to={routes.campaign} className="no-underline">
-										<button className="n-btn-primary px-6 py-2.5 rounded-md">{primaryLabel}</button>
+										<button className="btn-runic btn-runic--gold">
+											<span className="btn-runic-stud" aria-hidden />
+											{primaryLabel}
+											<span className="btn-runic-stud" aria-hidden />
+										</button>
 									</Link>
 								)}
 								{canInstall && (
-									<button className="n-btn-outline px-6 py-2.5 rounded-md" onClick={triggerInstall}>
+									<button className="btn-runic btn-runic--obsidian px-6 py-2.5" onClick={triggerInstall}>
+										<span className="btn-runic-stud" aria-hidden />
 										Install App
+										<span className="btn-runic-stud" aria-hidden />
 									</button>
 								)}
 							</div>
@@ -729,8 +720,8 @@ function HomePage() {
 							/>
 							<div className="mt-2 pt-3 border-t border-obsidian-700">
 								<div className="flex items-center justify-between mb-1.5">
-									<span className="n-stat-label">Saga progress</span>
-									<span className="n-stat-label text-gold-300">{sagaPercent}%</span>
+									<span className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink-400">Saga progress</span>
+									<span className="font-mono text-[10px] uppercase tracking-[0.24em] text-gold-300">{sagaPercent}%</span>
 								</div>
 								<div className="h-1 rounded-full bg-obsidian-700 overflow-hidden">
 									<div
@@ -744,9 +735,9 @@ function HomePage() {
 
 					{/* Routes */}
 					<section className="min-w-0">
-						<header className="mb-4">
-							<div className="font-mono text-[11px] tracking-[0.32em] uppercase text-ink-300">Primary Routes</div>
-							<h2 className="font-display text-xl tracking-[0.08em] uppercase text-ink-0 mt-1">Choose your front</h2>
+						<header className="section-heading">
+							<div className="section-heading-kicker">Primary Routes</div>
+							<h2 className="section-heading-title">Choose your front</h2>
 						</header>
 						<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-5">
 							{MODE_CARDS.map(mode => {
@@ -757,31 +748,31 @@ function HomePage() {
 									<Link
 										key={mode.title}
 										to={mode.to}
-										className="n-mode-card n-glass-interactive p-4 h-full flex flex-col gap-3 min-h-[160px]"
+										className="n-mode-card n-glass-interactive px-5 py-6 min-h-[180px] group no-underline"
 									>
 										<div
-											className="n-mode-card__atmosphere"
+											className="n-mode-card-atmosphere"
 											style={{ background: mode.atmosphere }}
 										/>
 
-										<Icon className={`n-mode-card__large-icon ${a.text}`} strokeWidth={1} />
+										<Icon className={`n-mode-card-large-icon h-16 w-16 ${a.text} group-hover:scale-110 group-hover:opacity-30`} strokeWidth={1} />
 
-										<div className="n-mode-card__content">
-											<div className="flex items-start justify-between">
-												<div>
-													<div className={`n-mode-card__kicker ${a.text}`}>{mode.kicker}</div>
-													<h3 className="n-mode-card__title">{mode.title}</h3>
-												</div>
-												<div className={`n-mode-card__icon-wrapper ${a.text}`}>
-													<Icon size={14} strokeWidth={2} />
-												</div>
+										<div className="relative z-10 flex flex-col h-full justify-between">
+											<div>
+												<div className={`font-mono text-[10px] uppercase tracking-[0.24em] mb-1 group-hover:text-gold-300 transition-colors ${a.text}`}>{mode.kicker}</div>
+												<h3 className="font-display text-lg font-black uppercase tracking-wider text-ink-0 group-hover:text-gold-100 transition-colors">{mode.title}</h3>
+												<p className="mt-2 text-xs text-ink-300 line-clamp-2 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity">
+													{mode.description}
+												</p>
 											</div>
 
-											<div className="mt-4 flex justify-end">
+											<div className="mt-6 flex justify-end">
 												{isCombat ? (
-													<div className="n-btn-primary py-1.5 px-3 text-[10px] flex gap-2 items-center rounded-md">
+													<div className="btn-runic btn-runic--gold btn-runic--sm transition-transform group-hover:scale-105">
+														<span className="btn-runic-stud" aria-hidden />
 														<Play size={10} fill="currentColor" />
 														{mode.cta}
+														<span className="btn-runic-stud" aria-hidden />
 													</div>
 												) : (
 													<div className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-ink-300 group-hover:text-gold-300 transition-colors">
@@ -799,9 +790,9 @@ function HomePage() {
 
 					{/* Daily Quests */}
 					<section className="min-w-0">
-						<header className="mb-4">
-							<div className="font-mono text-[11px] tracking-[0.32em] uppercase text-ink-300">Today's Saga</div>
-							<h2 className="font-display text-xl tracking-[0.08em] uppercase text-ink-0 mt-1">Daily quests</h2>
+						<header className="section-heading">
+							<div className="section-heading-kicker">Today's Saga</div>
+							<h2 className="section-heading-title">Daily quests</h2>
 						</header>
 						<Suspense fallback={<div className="animate-pulse h-48 rounded-xl bg-obsidian-800" />}>
 							<DailyQuestPanel />
@@ -811,29 +802,36 @@ function HomePage() {
 
 				{/* RIGHT RAIL */}
 				<aside className="grid min-w-0 grid-cols-1 content-start gap-4 pb-4 sm:gap-5 sm:pb-24 lg:sticky lg:top-[4.75rem]">
-					<SideRailPanel
-						title="Account"
-						action={
-							<Link
-								to={routes.settings}
-								className="n-glass-panel h-10 w-10 flex items-center justify-center text-ink-300 hover:text-gold-300 transition-colors"
-							>
-								<SettingsIcon size={14} strokeWidth={1.8} />
-							</Link>
-						}
-					>
-						<Suspense fallback={<div className="animate-pulse h-20 rounded-xl bg-obsidian-800" />}>
-							<HiveKeychainLogin />
-						</Suspense>
-					</SideRailPanel>
-					{hiveUsername && (
-						<SideRailPanel title="Warband">
-							<div className="max-h-[420px] overflow-y-auto pr-1 -mr-1 [scrollbar-width:thin]">
-								<Suspense fallback={<div className="animate-pulse h-32 rounded-xl bg-obsidian-800" />}>
-									<FriendsPanel />
-								</Suspense>
+					<div className="n-glass-panel-gold">
+						<div className="h-1 bg-gradient-to-r from-gold-500 to-gold-300" />
+						<div className="p-4">
+							<div className="flex items-center justify-between mb-4">
+								<h2 className="font-display font-bold uppercase tracking-wider text-gold-300">Account</h2>
+								<Link
+									to={routes.settings}
+									className="n-glass-interactive h-8 w-8 flex items-center justify-center text-ink-400 hover:text-gold-300 transition-colors"
+								>
+									<SettingsIcon size={12} strokeWidth={2} />
+								</Link>
 							</div>
-						</SideRailPanel>
+							<Suspense fallback={<div className="animate-pulse h-20 rounded-xl bg-obsidian-800" />}>
+								<HiveKeychainLogin />
+							</Suspense>
+						</div>
+					</div>
+
+					{hiveUsername && (
+						<div className="n-glass-panel">
+							<div className="h-1 bg-gradient-to-r from-obsidian-600 to-obsidian-700" />
+							<div className="p-4">
+								<h2 className="font-display font-bold uppercase tracking-wider text-ink-200 mb-4">Warband</h2>
+								<div className="max-h-[420px] overflow-y-auto pr-1 -mr-1 [scrollbar-width:thin]">
+									<Suspense fallback={<div className="animate-pulse h-32 rounded-xl bg-obsidian-800" />}>
+										<FriendsPanel />
+									</Suspense>
+								</div>
+							</div>
+						</div>
 					)}
 				</aside>
 			</div>
