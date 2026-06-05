@@ -100,6 +100,7 @@ __tests__/
 !server/services/indexCheckpointPublisher.test.ts
 !client/src/data/HiveKeychain.test.ts
 !client/src/data/HiveSync.test.ts
+!client/src/lib/warbandRoutes.test.ts
 !client/src/game/nft/LocalNFTBridge.test.ts
 !client/src/game/stores/saveStateManager.test.ts
 !client/src/game/stores/starterStore.test.ts

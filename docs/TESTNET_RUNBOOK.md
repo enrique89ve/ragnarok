@@ -264,8 +264,8 @@ ownership, CardXP, or ranked economy proof.
 
 1. Confirm `GET /api/health` reports `runtime.stage: "testnet"`,
    `runtime.protocolId: "rk_game_testnet"`, and the active QA reset epoch.
-2. In `/#/warband`, build at least one 30-card campaign hero deck using
-   non-starter QA Access cards. The deck may verify through
+2. In `/#/warband?mode=single`, build at least one 30-card hero loadout for
+   campaign testing using non-starter QA Access cards. The deck may verify through
    `qa_full_catalog`, but verified cards must remain non-transferable and
    `earnsCardXp: false`.
 3. Start a campaign mission from `/#/campaign`. Record the local run id from
@@ -300,7 +300,8 @@ campaign/local AI behavior as proof for P2P.
    screen should block matchmaking/manual peer links until a Hive session is
    present in shared-network runtime.
 3. In each profile, build complete 30-card loadouts for queen, rook, bishop,
-   and knight using at least one non-starter QA Access card. Start P2P from
+   and knight using at least one non-starter QA Access card from
+   `/#/warband?mode=multiplayer`. Confirming the Warband continues into
    `/#/multiplayer`; the wire `deck_verify` message must use
    `protocolVersion: 2` and `claims[]` only.
 4. Start one manual or quick match. Confirm both peers pass the Hive session
@@ -423,19 +424,19 @@ stay on `npm run dev:testnet` so broadcasts use `rk_game_testnet`.
 
 ## Smoke Test — Local Single (Gate 2)
 
-Validates that a single-player practice match runs end-to-end on the local stack: `/warband` -> `/#/game/single` -> chess phase -> combat (cards) phase -> game over. Exercises the AI turn driver (`useChessAITurn`) responsible for the "doble movimiento" defense in `cc99e71`.
+Validates that a single-player practice match runs end-to-end on the local stack: `/#/warband?mode=single` -> `/#/game/single` -> chess phase -> combat (cards) phase -> game over. Exercises the AI turn driver (`useChessAITurn`) responsible for the "doble movimiento" defense in `cc99e71`.
 
 **Prerequisites**
 
 - Dev server running: `npm run dev` (local config). Testnet/mainnet flags are not required for Gate 2.
 - Browser at `http://localhost:5000/`.
 - A complete warband. Two ways to obtain one:
-  - **Real path** (preferred for Gate 6 tester readiness): build all four piece decks via the deck builder UI on `/#/warband`.
+  - **Real path** (preferred for Gate 6 tester readiness): build all four piece decks via the deck builder UI on `/#/warband?mode=single`.
   - **Programmatic seed** (fast for regression smoke): the `useWarbandStore` is exposed on `globalThis.__ragnarokWarbandStore` for test affordance. Call `getState().setWarband(army, deckCardIds)` from the DevTools console with the army payload below.
 
 **Procedure**
 
-1. Open `/#/warband`. Confirm the page renders without "Maximum update depth exceeded".
+1. Open `/#/warband?mode=single`. Confirm the page renders without "Maximum update depth exceeded".
 2. Either complete the warband via UI or seed it via console (see Prerequisites).
 3. Visit `/#/game`. Confirm the URL replaces to `/#/game/single` (Navigate redirect, no back-history pollution).
 4. Confirm the coordinator mounts: chess board visible with 5 player pieces (king + queen + rook + bishop + knight), 5 player pawns, mirrored opponent pieces (10 total per side).

@@ -245,37 +245,51 @@ export default function PackOpeningAnimation({
 						<div className="relative flex items-center justify-center">
 							<motion.div
 								initial={{ scale: 1 }}
-								animate={{
-									scale: [1, 1.05, 1.1, 1.15, 0],
+								animate={reducedMotion ? {
+									opacity: 0.9,
+									scale: 1,
+								} : {
+									opacity: [1, 1, 0.88, 0],
+									scale: [1, 1.035, 1.018, 0.96],
 								}}
-								transition={{ duration: 1.5 }}
-								className="relative"
+								transition={reducedMotion ? {
+									duration: 0,
+								} : {
+									duration: 1.45,
+									ease: 'easeInOut',
+									times: [0, 0.36, 0.72, 1],
+								}}
+								className="relative will-change-transform"
 							>
 								<TreasureChestSVG state="open" size={280} />
 							</motion.div>
 
-							<motion.div
-								initial={{ scale: 0, opacity: 0 }}
-								animate={{ scale: [0, 3], opacity: [1, 0] }}
-								transition={{ delay: 1.2, duration: 0.5 }}
-								className="absolute inset-0 bg-gold-300/30 rounded-full"
-							/>
+							{!reducedMotion && (
+								<>
+									<motion.div
+										initial={{ scale: 0.35, opacity: 0 }}
+										animate={{ scale: [0.35, 2.7], opacity: [0.62, 0] }}
+										transition={{ delay: 1, duration: 0.75, ease: 'easeOut' }}
+										className="absolute inset-0 rounded-full bg-gold-300/20 blur-md"
+									/>
 
-							{[...Array(20)].map((_, i) => (
-								<motion.div
-									key={i}
-									initial={{ x: 0, y: 0, opacity: 1 }}
-									animate={{
-										x: Math.cos(i * 18 * Math.PI / 180) * 200,
-										y: Math.sin(i * 18 * Math.PI / 180) * 200,
-										opacity: 0,
-										scale: 0,
-									}}
-									transition={{ delay: 1.3, duration: 0.6 }}
-									className="absolute left-1/2 top-1/2 w-4 h-4 bg-gold-300 rounded-full"
-									style={{ boxShadow: '0 0 20px color-mix(in srgb, var(--gold-300) 80%, transparent)' }}
-								/>
-							))}
+									{[...Array(14)].map((_, i) => (
+										<motion.div
+											key={i}
+											initial={{ x: 0, y: 0, opacity: 0.75, scale: 0.8 }}
+											animate={{
+												x: Math.cos(i * (360 / 14) * Math.PI / 180) * 160,
+												y: Math.sin(i * (360 / 14) * Math.PI / 180) * 160,
+												opacity: 0,
+												scale: 0,
+											}}
+											transition={{ delay: 1.05, duration: 0.75, ease: 'easeOut' }}
+											className="absolute left-1/2 top-1/2 h-2 w-2 rounded-full bg-gold-200/75"
+											style={{ boxShadow: '0 0 16px color-mix(in srgb, var(--gold-300) 72%, transparent)' }}
+										/>
+									))}
+								</>
+							)}
 						</div>
 					</motion.div>
 				)}

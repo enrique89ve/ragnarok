@@ -8,7 +8,7 @@
  *   - This page only shows what you can claim or already OWN.
  */
 
-import React, { lazy, Suspense, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useState, useSyncExternalStore } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -22,6 +22,7 @@ import { NumericRitual, OrnateCorners, SigilBackplate, type Tier } from '../../.
 import { SplashBackdrop } from '../../../components/ornaments/SplashBackdrop';
 import { MetaPageHeader, MetaPageHeaderLink } from '../../../components/navigation/MetaPageHeader';
 import { invokeClientWalletAction } from '../../../data/wallet/clientWalletInvocation';
+import { getAuthenticatedHiveUsername, subscribeHiveSessionIdentity } from '../../../data/HiveSessionIdentity';
 import CeremonyEvidenceButton from '../CeremonyEvidenceButton';
 import {
 	recordCeremonyFeedbackEvent,
@@ -29,11 +30,25 @@ import {
 } from '../../protocol/ceremonyFeedback';
 import { isDuatAcquisitionProvenance } from '@shared/protocol-core/acquisitionProvenance';
 import type { PackAsset } from '@shared/protocol-core/types';
+import { isSharedNetworkEnvironment } from '../../config/featureFlags';
+import { resolveProtectedFlowAccess } from '../../auth/protectedFlowAccess';
 
 // Lazy — the ceremony modal is a one-time-per-account event.
 const StarterPackCeremony = lazy(() => import('../StarterPackCeremony'));
 // Lazy — pack reveal ceremony only mounts on demand.
 const DuatPackCeremony = lazy(() => import('../DuatPackCeremony'));
+
+type StarterCeremonySession = {
+	readonly accountId: string | null;
+};
+
+function useAuthenticatedHiveUsername(): string | null {
+	return useSyncExternalStore(
+		subscribeHiveSessionIdentity,
+		getAuthenticatedHiveUsername,
+		getAuthenticatedHiveUsername,
+	);
+}
 
 const PACK_ICON: Record<string, string> = {
 	mythic: '龍',
@@ -131,8 +146,23 @@ export default function PacksPage() {
 	const sealedPacks = bridge.getPackCollection().filter(p => p.sealed);
 
 	const hiveUsername = useNFTUsername();
+	const authenticatedHiveUsername = useAuthenticatedHiveUsername();
+	const sharedNetwork = isSharedNetworkEnvironment();
+	const starterClaimAccountId = sharedNetwork ? authenticatedHiveUsername : hiveUsername;
 	const normalizedHiveUsername = hiveUsername?.toLowerCase() ?? null;
-	const starterClaimed = useStarterStore(s => s.hasClaimed(hiveUsername));
+	const starterClaimed = useStarterStore(s => (
+		sharedNetwork
+			? Boolean(starterClaimAccountId && s.hasClaimed(starterClaimAccountId))
+			: s.hasClaimed(hiveUsername)
+	));
+	const starterClaimAccess = resolveProtectedFlowAccess({
+		accountId: hiveUsername ?? authenticatedHiveUsername,
+		authenticatedAccountId: authenticatedHiveUsername,
+		sharedNetwork,
+		surface: 'starter_claim',
+	});
+	const starterAccessAllowed = starterClaimAccess.kind === 'allowed';
+	const starterAccessAccountId = starterAccessAllowed ? starterClaimAccess.accountId : null;
 
 	// DUAT airdrop awareness — vault is the primary surface for the claim CTA.
 	// The claim has one authority: Hive broadcast + replay. While a broadcast
@@ -156,7 +186,7 @@ export default function PacksPage() {
 	const duatConfirming = duatClaimReady && Boolean(duatPendingClaimTrxId && !duatClaimed && !duatInventoryMaterialized);
 	const showDuatRow = Boolean(duatEntry) && !duatClaimed && !duatInventoryMaterialized;
 
-	const [showCeremony, setShowCeremony] = useState(false);
+	const [starterCeremony, setStarterCeremony] = useState<StarterCeremonySession | null>(null);
 	const [showPackCeremony, setShowPackCeremony] = useState(false);
 	const [packCeremonyFilter, setPackCeremonyFilter] = useState<{
 		packType: string;
@@ -165,6 +195,18 @@ export default function PacksPage() {
 	const [, forceRerender] = useState(0);
 
 	const refresh = () => forceRerender(n => n + 1);
+	const openStarterCeremony = () => {
+		if (starterClaimAccess.kind === 'allowed') {
+			setStarterCeremony({ accountId: starterClaimAccess.accountId });
+		}
+	};
+
+	useEffect(() => {
+		if (!starterCeremony) return;
+		if (!starterAccessAllowed || starterAccessAccountId !== starterCeremony.accountId) {
+			setStarterCeremony(null);
+		}
+	}, [starterAccessAccountId, starterAccessAllowed, starterCeremony]);
 
 	const handleDuatClaim = async () => {
 		if (!duatEntry || !hiveUsername) return;
@@ -243,13 +285,13 @@ export default function PacksPage() {
 		openableByType.set(key, entry);
 	}
 
-	const showStarterRow = !starterClaimed;
+	const showStarterRow = !starterClaimed && starterAccessAllowed;
 	const hasOpenable = openableByType.size > 0;
 	const showSealedGrid = hasOpenable;
 	const showSubtleEmpty = starterClaimed && !showDuatRow && !showSealedGrid;
 
 	return (
-		<main className="packs-landscape-shell h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-home-nav) text-ink-0">
+		<main className="packs-landscape-shell min-h-dvh w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-home-nav) text-ink-0">
 			<MetaPageHeader
 				title="Your Packs"
 				kicker="Vault"
@@ -266,14 +308,14 @@ export default function PacksPage() {
 				}
 			/>
 
-			<div className="packs-landscape-content max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+			<div className="packs-landscape-content n-page-gutter mx-auto max-w-6xl py-8">
 				{/* Starter claim card — only when not yet claimed */}
-				{showStarterRow && (
-					<StarterClaimCard
-						account={hiveUsername}
-						onClaim={() => setShowCeremony(true)}
-					/>
-				)}
+					{showStarterRow && (
+						<StarterClaimCard
+							account={hiveUsername}
+							onClaim={openStarterCeremony}
+						/>
+					)}
 
 				{/* DUAT airdrop state — eligible claim or explicit ineligible snapshot state */}
 				{showDuatRow && duatEntry && (
@@ -338,11 +380,12 @@ export default function PacksPage() {
 			</div>
 
 			{/* Starter ceremony modal */}
-			{showCeremony && (
+			{starterCeremony && starterClaimAccess.kind === 'allowed' && starterClaimAccess.accountId === starterCeremony.accountId && (
 				<Suspense fallback={null}>
 					<StarterPackCeremony
-						accountId={hiveUsername}
-						onComplete={() => { setShowCeremony(false); refresh(); }}
+						accountId={starterClaimAccess.accountId}
+						onComplete={() => { setStarterCeremony(null); refresh(); }}
+						onCancel={() => setStarterCeremony(null)}
 					/>
 				</Suspense>
 			)}
@@ -467,7 +510,13 @@ function SealedPackTile({
  * The birthright artifact: ornate corners, etched texture, gold sigil
  * backplate behind the seal icon, ritual heading.
  */
-function StarterClaimCard({ account, onClaim }: { account: string | null; onClaim: () => void }) {
+function StarterClaimCard({
+	account,
+	onClaim,
+}: {
+	account: string | null;
+	onClaim: () => void;
+}) {
 	return (
 		<motion.section
 			initial={{ opacity: 0, y: 8 }}
@@ -496,7 +545,7 @@ function StarterClaimCard({ account, onClaim }: { account: string | null; onClai
 					Your starter line awaits
 				</h2>
 				<p className="text-ink-200 text-sm leading-snug max-w-[44ch]">
-					A 45-card starter line, one-time per profile. No cost.
+					A 45-card starter line, one-time per signed Hive account. No cost.
 				</p>
 			</div>
 

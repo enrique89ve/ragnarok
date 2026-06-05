@@ -73,7 +73,7 @@ export default function MatchHistoryPage() {
 	}
 
 	return (
-		<div className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-cosmos-nav) text-ink-0">
+		<div className="min-h-dvh w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-cosmos-nav) text-ink-0">
 			<MetaPageHeader
 				title="Match History"
 				kicker="Records"
@@ -106,7 +106,7 @@ export default function MatchHistoryPage() {
 				)}
 			/>
 
-			<div className="max-w-4xl mx-auto px-4 py-8">
+			<main className="n-page-gutter mx-auto w-full max-w-4xl py-8">
 
 				{matchHistory.length === 0 ? (
 					<div className="text-center py-20">
@@ -124,7 +124,7 @@ export default function MatchHistoryPage() {
 						))}
 					</div>
 				)}
-			</div>
+			</main>
 		</div>
 	);
 }

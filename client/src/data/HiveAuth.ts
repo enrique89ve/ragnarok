@@ -16,10 +16,12 @@ import type {
 export type HiveAuthResult = WalletAuthResult;
 export type HiveSignedMessageResult = SignedMessageResult;
 export type HiveWalletProviderId = Extract<WalletProviderId, "hive_keychain">;
+export type HiveSessionAuthentication = "keychain_signature" | "stored_identity";
 export type HiveWalletSession = WalletSession<HiveWalletProviderId> & {
   namespace: "hive";
   accountId: string;
   username: string;
+  authentication: HiveSessionAuthentication;
 };
 
 export interface HiveSignMessageOptions extends SignMessageOptions {
@@ -35,6 +37,16 @@ const KEYCHAIN_TIMEOUT_MS = 60_000;
 const DEFAULT_HIVE_WALLET_PROVIDER_ID: HiveWalletProviderId = "hive_keychain";
 
 let activeHiveSession: HiveWalletSession | null = null;
+const activeHiveSessionListeners = new Set<() => void>();
+
+function normalizeHiveUsername(username: string | null | undefined): string | null {
+  const normalized = username?.trim().toLowerCase().replace(/^@/, "") ?? "";
+  return normalized.length > 0 ? normalized : null;
+}
+
+function notifyActiveHiveSessionListeners(): void {
+  for (const listener of activeHiveSessionListeners) listener();
+}
 
 function withTimeout<T>(promise: Promise<T>, fallback: () => T): Promise<T> {
   const timeout = new Promise<T>((resolve) =>
@@ -73,7 +85,7 @@ const hiveKeychainProvider: HiveWalletProvider = {
         "Posting",
         (response) => {
           if (response.success) {
-            setActiveHiveSession(username, "hive_keychain");
+            setActiveHiveSession(username, "hive_keychain", "keychain_signature");
             resolve({ success: true });
             return;
           }
@@ -177,42 +189,54 @@ export async function signHiveMessage(
     providerId?: HiveWalletProviderId;
   },
 ): Promise<HiveSignedMessageResult> {
-  const username = options?.username ?? activeHiveSession?.username;
+  const username = normalizeHiveUsername(options?.username ?? activeHiveSession?.username);
   if (!username) {
     return { success: false, error: "No username set" };
   }
 
-  const providerId = options?.providerId ?? activeHiveSession?.providerId;
+  const providerId = options?.providerId ?? activeHiveSession?.providerId ?? DEFAULT_HIVE_WALLET_PROVIDER_ID;
   if (!providerId) {
     return { success: false, error: "No Hive wallet provider selected" };
   }
 
-  return getHiveWalletProvider(providerId).signMessage(
+  const result = await getHiveWalletProvider(providerId).signMessage(
     username,
     message,
     options,
   );
+  if (result.success && result.signature) {
+    setActiveHiveSession(username, providerId, "keychain_signature");
+  }
+  return result;
 }
 
 export function setActiveHiveSession(
   username: string,
   providerId: HiveWalletProviderId = DEFAULT_HIVE_WALLET_PROVIDER_ID,
+  authentication: HiveSessionAuthentication = "keychain_signature",
 ): HiveWalletSession {
+  const normalizedUsername = normalizeHiveUsername(username);
+  if (!normalizedUsername) {
+    throw new Error("Hive session requires a non-empty username");
+  }
+
   const now = Date.now();
   const connectedAt =
-    activeHiveSession?.username === username &&
+    activeHiveSession?.username === normalizedUsername &&
     activeHiveSession.providerId === providerId
       ? activeHiveSession.connectedAt
       : now;
 
   activeHiveSession = {
     namespace: "hive",
-    accountId: username,
-    username,
+    accountId: normalizedUsername,
+    username: normalizedUsername,
     providerId,
     connectedAt,
     lastAuthenticatedAt: now,
+    authentication,
   };
+  notifyActiveHiveSessionListeners();
 
   return activeHiveSession;
 }
@@ -225,8 +249,27 @@ export function getActiveHiveUsername(): string | null {
   return activeHiveSession?.username ?? null;
 }
 
+export function getAuthenticatedHiveUsername(): string | null {
+  if (activeHiveSession?.authentication !== "keychain_signature") return null;
+  return normalizeHiveUsername(activeHiveSession.username);
+}
+
+export function hasAuthenticatedHiveSessionFor(username: string | null | undefined): boolean {
+  const normalizedUsername = normalizeHiveUsername(username);
+  const authenticatedUsername = getAuthenticatedHiveUsername();
+  return normalizedUsername !== null && normalizedUsername === authenticatedUsername;
+}
+
 export function clearActiveHiveSession(): void {
   activeHiveSession = null;
+  notifyActiveHiveSessionListeners();
+}
+
+export function subscribeActiveHiveSession(listener: () => void): () => void {
+  activeHiveSessionListeners.add(listener);
+  return () => {
+    activeHiveSessionListeners.delete(listener);
+  };
 }
 
 export async function buildHiveAuthBody(

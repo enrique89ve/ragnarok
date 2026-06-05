@@ -34,6 +34,7 @@ interface ArmySelectionProps {
   onBack?: () => void;
   isMultiplayer?: boolean;
   onMatchmakingStart?: (army: ArmySelectionType) => void | Promise<void>;
+  modeSwitch?: React.ReactNode;
 }
 
 const PIECE_ORDER: ChessPieceType[] = ['king', 'queen', 'rook', 'bishop', 'knight'];
@@ -89,7 +90,7 @@ function getDeckStatusLabel(status: HeroDeckStatus): string {
   }
 }
 
-const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart, onBack, isMultiplayer = false, onMatchmakingStart }) => {
+const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart, onBack, isMultiplayer = false, onMatchmakingStart, modeSwitch }) => {
   const { playSoundEffect } = useAudio();
   const setSelectedHero = useGame(state => state.setSelectedHero);
   const savedDecks = useGame(state => state.savedDecks);
@@ -366,6 +367,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
         </div>
 
         <div className="norse-top-bar-actions">
+          {modeSwitch}
           <div
             className={`norse-user-pill ${hiveUsername ? 'is-authed' : 'is-guest'}`}
             title={hiveUsername ? `Logged in as @${hiveUsername}` : 'No Hive account connected'}

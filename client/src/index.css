@@ -66,6 +66,11 @@
   --battlefield-height: 75%;
   --player-area-height: 10%;
 
+  /* View transition recipes are opt-in only; never animate root globally. */
+  --vt-duration-exit: 150ms;
+  --vt-duration-enter: 210ms;
+  --vt-duration-move: 400ms;
+
   /* Legacy z-index aliases - prefer design-tokens vars */
   --z-background: 0;
   --z-board: var(--z-battlefield, 10);
@@ -1104,26 +1109,129 @@ select {
 }
 
 /* ==========================================================================
-   VIEW TRANSITIONS — GPU-accelerated page transitions (native API)
-   Progressive enhancement: browsers without support just get instant switches
+   VIEW TRANSITION RECIPES — opt-in classes for future React ViewTransition use.
+   No root pseudo-elements here: route motion must be intentional per surface.
    ========================================================================== */
 
-::view-transition-old(root) {
-  animation: fade-out 0.2s ease-out forwards;
+::view-transition-old(.vt-fade-out) {
+  animation: var(--vt-duration-exit) ease-in vt-fade reverse;
 }
 
-::view-transition-new(root) {
-  animation: fade-in 0.25s ease-in forwards;
+::view-transition-new(.vt-fade-in) {
+  animation: var(--vt-duration-enter) ease-out var(--vt-duration-exit) both vt-fade;
 }
 
-@keyframes fade-out {
-  from { opacity: 1; transform: scale(1); }
-  to { opacity: 0; transform: scale(0.98); }
+::view-transition-old(.vt-slide-down) {
+  animation:
+    var(--vt-duration-exit) ease-out both vt-fade reverse,
+    var(--vt-duration-exit) ease-out both vt-slide-y reverse;
 }
 
-@keyframes fade-in {
-  from { opacity: 0; transform: scale(1.02); }
-  to { opacity: 1; transform: scale(1); }
+::view-transition-new(.vt-slide-up) {
+  animation:
+    var(--vt-duration-enter) ease-in var(--vt-duration-exit) both vt-fade,
+    var(--vt-duration-move) ease-in both vt-slide-y;
+}
+
+::view-transition-old(.vt-nav-forward) {
+  --vt-slide-offset: -60px;
+
+  animation:
+    var(--vt-duration-exit) ease-in both vt-fade reverse,
+    var(--vt-duration-move) ease-in-out both vt-slide reverse;
+}
+
+::view-transition-new(.vt-nav-forward) {
+  --vt-slide-offset: 60px;
+
+  animation:
+    var(--vt-duration-enter) ease-out var(--vt-duration-exit) both vt-fade,
+    var(--vt-duration-move) ease-in-out both vt-slide;
+}
+
+::view-transition-old(.vt-nav-back) {
+  --vt-slide-offset: 60px;
+
+  animation:
+    var(--vt-duration-exit) ease-in both vt-fade reverse,
+    var(--vt-duration-move) ease-in-out both vt-slide reverse;
+}
+
+::view-transition-new(.vt-nav-back) {
+  --vt-slide-offset: -60px;
+
+  animation:
+    var(--vt-duration-enter) ease-out var(--vt-duration-exit) both vt-fade,
+    var(--vt-duration-move) ease-in-out both vt-slide;
+}
+
+::view-transition-group(.vt-morph) {
+  animation-duration: var(--vt-duration-move);
+}
+
+::view-transition-image-pair(.vt-morph) {
+  animation-name: vt-via-blur;
+}
+
+::view-transition-group(.vt-text-morph) {
+  animation-duration: var(--vt-duration-move);
+}
+
+::view-transition-old(.vt-text-morph) {
+  display: none;
+}
+
+::view-transition-new(.vt-text-morph) {
+  animation: none;
+  object-fit: none;
+  object-position: left top;
+}
+
+::view-transition-group(.vt-persistent) {
+  animation: none;
+  z-index: var(--z-hud-controls, 100);
+}
+
+::view-transition-old(.vt-backdrop-stable) {
+  display: none;
+}
+
+@keyframes vt-fade {
+  from {
+    filter: blur(3px);
+    opacity: 0;
+  }
+
+  to {
+    filter: blur(0);
+    opacity: 1;
+  }
+}
+
+@keyframes vt-slide {
+  from {
+    translate: var(--vt-slide-offset);
+  }
+
+  to {
+    translate: 0;
+  }
+}
+
+@keyframes vt-slide-y {
+  from {
+    transform: translateY(var(--vt-slide-y-offset, 10px));
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes vt-via-blur {
+  30% {
+    filter: blur(3px);
+  }
 }
 
 /* ==========================================================================
@@ -1156,8 +1264,18 @@ select {
    ========================================================================== */
 
 @media (prefers-reduced-motion: reduce) {
-  ::view-transition-old(root),
-  ::view-transition-new(root) {
+  ::view-transition-old(.vt-fade-out),
+  ::view-transition-new(.vt-fade-in),
+  ::view-transition-old(.vt-slide-down),
+  ::view-transition-new(.vt-slide-up),
+  ::view-transition-old(.vt-nav-forward),
+  ::view-transition-new(.vt-nav-forward),
+  ::view-transition-old(.vt-nav-back),
+  ::view-transition-new(.vt-nav-back),
+  ::view-transition-group(.vt-morph),
+  ::view-transition-image-pair(.vt-morph),
+  ::view-transition-group(.vt-text-morph),
+  ::view-transition-new(.vt-text-morph) {
     animation: none !important;
   }
 

@@ -1,6 +1,6 @@
 import { debug } from '../../config/debugConfig';
 import { showStatus } from '../ui/GameStatusBanner';
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -38,6 +38,8 @@ import './collection.css';
 import '../styles/holoEffect.css';
 import { useEitrBalance } from '../../hooks/useEitrBalance';
 import { hiveSync } from '../../../data/HiveSync';
+import { getAuthenticatedHiveUsername, subscribeHiveSessionIdentity } from '../../../data/HiveSessionIdentity';
+import { isSharedNetworkEnvironment } from '../../config/featureFlags';
 import { sha256Hash } from '../../../../../shared/protocol-core/hash';
 import { PACK_ENTROPY_DELAY_BLOCKS } from '../../../../../shared/protocol-core/types';
 import { emitNotification } from '../../actions/gameActions';
@@ -63,6 +65,14 @@ type CollectionOwnedCard = OwnedCard & {
 	collectionSource: CollectionSource;
 	acquisition?: HiveCardAsset['acquisition'];
 };
+
+function useAuthenticatedHiveUsername(): string | null {
+	return useSyncExternalStore(
+		subscribeHiveSessionIdentity,
+		getAuthenticatedHiveUsername,
+		getAuthenticatedHiveUsername,
+	);
+}
 
 interface CollectionStats {
 	uniqueCards: number;
@@ -130,7 +140,10 @@ const SOURCE_PILLS: { value: FilterSource; label: string }[] = [
 // Vault surface treatments — used multiple times across the page.
 // Padding/margin se concatena en cada call site según contexto.
 const VAULT_PANEL_CLASS = 'n-glass-panel';
-const VAULT_INPUT_CLASS = 'n-search-input';
+const VAULT_INPUT_CLASS =
+	'rounded-lg border border-obsidian-700 bg-obsidian-950/75 text-ink-0 placeholder:text-ink-500 ' +
+	'transition-colors focus:border-gold-500/60 focus-visible:outline focus-visible:outline-2 ' +
+	'focus-visible:outline-offset-2 focus-visible:outline-gold-300';
 
 function getCollectionSource(card: CollectionOwnedCard): CollectionSource {
 	return card.collectionSource;
@@ -394,7 +407,12 @@ export default function CollectionPage() {
 	const hiveUsername = useNFTUsername();
 	const bridge = getNFTBridge();
 	const bridgeHiveMode = bridge.isHiveMode();
-	const currentAccount = hiveUsername ?? bridge.getUsername() ?? hiveSync.getUsername();
+	const authenticatedHiveUsername = useAuthenticatedHiveUsername();
+	const sharedNetwork = isSharedNetworkEnvironment();
+	const currentAccount = sharedNetwork
+		? authenticatedHiveUsername
+		: hiveUsername ?? bridge.getUsername() ?? hiveSync.getUsername();
+	const normalizedCurrentAccount = currentAccount?.toLowerCase() ?? null;
 	const starterClaimed = useStarterStore(state => (
 		bridgeHiveMode
 			? Boolean(currentAccount && state.hasClaimed(currentAccount))
@@ -409,6 +427,11 @@ export default function CollectionPage() {
 	// auto-finalizes if reveal misses the deadline, so worst case the user
 	// closes the tab and the chain still resolves.
 	async function runForge(rarity: string, _craftCostVal: number): Promise<void> {
+		if (sharedNetwork && !authenticatedHiveUsername) {
+			showStatus('Sign Hive again before forging cards.', 'error');
+			return;
+		}
+
 		const userSalt = `forge-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 		const saltCommit = await sha256Hash(userSalt);
 
@@ -461,6 +484,14 @@ export default function CollectionPage() {
 	const duatCollectionConfirming = Boolean(duatPendingClaimTrxId && duatEntry?.claimReady);
 
 	useEffect(() => {
+		if (!sharedNetwork || authenticatedHiveUsername) return;
+		setSelectedCard(null);
+		setCraftConfirm(null);
+		setProvenanceNft(null);
+		setSendNft(null);
+	}, [authenticatedHiveUsername, sharedNetwork]);
+
+	useEffect(() => {
 		const controller = new AbortController();
 
 		const applyCollection = (nextCards: CollectionOwnedCard[]) => {
@@ -474,17 +505,20 @@ export default function CollectionPage() {
 		const loadCollection = async () => {
 			setLoading(true);
 			setIsLoadingMore(false);
-			if (starterGateActive) {
+			if (starterGateActive || (sharedNetwork && !currentAccount)) {
 				applyCollection([]);
 				return;
 			}
 			const bridge = getNFTBridge();
 			const hiveMode = bridge.isHiveMode();
-			const visibleHiveCards = hiveCards.filter(isVisibleCollectionAsset);
+			const visibleHiveCards = hiveCards.filter(card => (
+				isVisibleCollectionAsset(card)
+				&& (!sharedNetwork || card.ownerId.toLowerCase() === normalizedCurrentAccount)
+			));
 
-			if (hiveMode && hiveUsername) {
+			if (hiveMode && currentAccount) {
 				try {
-					const res = await fetch(`/api/chain/player/${hiveUsername}/cards`, { signal: controller.signal });
+					const res = await fetch(`/api/chain/player/${currentAccount}/cards`, { signal: controller.signal });
 					if (res.ok) {
 						const data: ChainCardsResponse = await res.json();
 						if (data.success) {
@@ -510,7 +544,7 @@ export default function CollectionPage() {
 		});
 
 		return () => { controller.abort(); };
-	}, [hiveUsername, hiveCards, refreshNonce, starterGateActive]);
+	}, [currentAccount, hiveCards, normalizedCurrentAccount, refreshNonce, sharedNetwork, starterGateActive]);
 
 	useEffect(() => {
 		setPage(1);
@@ -529,8 +563,11 @@ export default function CollectionPage() {
 	}, [cards, checkMilestones]);
 
 	const hiveCardMap = useMemo(
-		() => new Map(hiveCards.filter(c => c.ownershipSource === 'nft').map(c => [c.cardId, c])),
-		[hiveCards],
+		() => new Map(hiveCards.filter(card => (
+			card.ownershipSource === 'nft'
+			&& (!sharedNetwork || card.ownerId.toLowerCase() === normalizedCurrentAccount)
+		)).map(card => [card.cardId, card])),
+		[hiveCards, normalizedCurrentAccount, sharedNetwork],
 	);
 
 	const filteredAndSorted = useMemo(() => {
@@ -601,14 +638,14 @@ export default function CollectionPage() {
 
 	if (loading) {
 		return (
-			<div className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-vault-nav) text-ink-0">
+			<div className="min-h-dvh w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-vault-nav) text-ink-0">
 				<MetaPageHeader
 					title="Collection"
 					kicker="Vault · Cards"
 					username={hiveUsername}
 					accountSecondary="Collection"
 				/>
-				<div className="flex min-h-[calc(100vh-64px)] items-center justify-center">
+				<div className="flex min-h-[calc(100dvh-64px)] items-center justify-center">
 					<motion.div
 						animate={{ rotate: 360 }}
 						transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
@@ -620,7 +657,7 @@ export default function CollectionPage() {
 	}
 
 	return (
-		<div className="n-page-shell h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-vault-nav)">
+		<div className="n-page-shell min-h-dvh w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-vault-nav)">
 			<MetaPageHeader
 				title="Collection"
 				kicker="Vault · Cards"
@@ -631,7 +668,7 @@ export default function CollectionPage() {
 						<div
 							role="status"
 							aria-label={`${eitr.toLocaleString()} Eitr balance`}
-							className="inline-flex h-8 shrink-0 items-center gap-2 rounded-full border border-bifrost-500/35 bg-obsidian-850 px-3 text-ink-200"
+							className="meta-page-header-optional inline-flex h-8 shrink-0 items-center gap-2 rounded-full border border-bifrost-500/35 bg-obsidian-850 px-3 text-ink-200"
 						>
 							<Zap className="h-3.5 w-3.5 text-bifrost-300" strokeWidth={2.4} aria-hidden="true" />
 							<span className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-bifrost-200">
@@ -675,9 +712,9 @@ export default function CollectionPage() {
 
 				{/* Stats Dashboard */}
 				{!starterGateActive && stats && (
-					<div className="collection-balance-stack mb-6">
+					<div className="mb-6 grid gap-4">
 						{/* Progress Section */}
-						<div className="n-glass-panel p-6 mb-6">
+						<div className="n-glass-panel p-6">
 							<header className="section-heading">
 								<div className="section-heading-kicker">Vault · Stats</div>
 								<h2 className="section-heading-title">Your progression</h2>

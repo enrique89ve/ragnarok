@@ -248,6 +248,47 @@
   color: rgba(203, 213, 225, 0.7);
 }
 
+.norse-army-selection .norse-warband-mode-switch {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 232px;
+  height: 36px;
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(9, 14, 28, 0.76);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.norse-army-selection .norse-warband-mode-switch button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 30px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(203, 213, 225, 0.68);
+  font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.norse-army-selection .norse-warband-mode-switch button:hover {
+  color: var(--gold-200);
+}
+
+.norse-army-selection .norse-warband-mode-switch button.active {
+  color: var(--obsidian-950);
+  background: linear-gradient(180deg, var(--gold-200), var(--gold-400));
+  box-shadow: 0 6px 18px -10px var(--gold-300);
+}
+
 .norse-army-selection .norse-quick-decks {
   display: flex;
   gap: 12px;
@@ -1055,6 +1096,16 @@
     width: auto;
   }
 
+  .norse-army-selection .norse-warband-mode-switch {
+    width: min(232px, calc(100vw - 132px));
+    min-width: 168px;
+  }
+
+  .norse-army-selection .norse-warband-mode-switch button {
+    font-size: 9px;
+    letter-spacing: 0.08em;
+  }
+
   /* Mobile pill: anchored fixed top-right since the army-selection grid
      overflows the viewport horizontally on narrow widths. Without this
      the pill renders inside the bar at x=417 (off-screen at vw=390). */
@@ -1755,6 +1806,7 @@
 }
 
 .norse-army-selection .norse-select-btn:focus-visible,
+.norse-army-selection .norse-warband-mode-switch button:focus-visible,
 .norse-army-selection .norse-quick-deck-btn:focus-visible,
 .norse-army-selection .norse-back-btn:focus-visible,
 .norse-army-selection .norse-confirm-btn:focus-visible,

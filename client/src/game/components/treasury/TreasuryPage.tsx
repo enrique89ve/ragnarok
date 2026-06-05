@@ -936,7 +936,7 @@ export default function TreasuryPage() {
 	}, [username, showAction, fetchAll]);
 
 	return (
-		<div className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-vault-nav) text-ink-0">
+		<div className="min-h-dvh w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-vault-nav) text-ink-0">
 			<MetaPageHeader
 				title="Treasury"
 				kicker="Eitr · Reserve"
@@ -944,7 +944,7 @@ export default function TreasuryPage() {
 				accountSecondary="Treasury"
 			/>
 
-			<div className="max-w-6xl mx-auto px-4 py-8">
+			<main className="n-page-gutter mx-auto w-full max-w-6xl py-8">
 				<AnimatePresence>
 					{actionMsg && (
 						<motion.div
@@ -1031,7 +1031,7 @@ export default function TreasuryPage() {
 						onUnfreezeVote={handleUnfreezeVote}
 					/>
 				</div>
-			</div>
+			</main>
 		</div>
 	);
 }

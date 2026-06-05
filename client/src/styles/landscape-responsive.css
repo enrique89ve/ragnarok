@@ -20,128 +20,6 @@
    1. OPT-IN UTILITIES (use these on components)
    ============================================= */
 
-.home-mode-grid {
-	align-items: stretch;
-}
-
-.home-mode-grid > a {
-	height: 100%;
-}
-
-.home-landscape-shell {
-	overflow-x: clip;
-	touch-action: pan-y;
-}
-
-.home-landscape-hero {
-	min-width: 0;
-	max-width: 100%;
-	overflow: clip;
-	container-type: inline-size;
-}
-
-.home-landscape-stats-panel {
-	min-width: 0;
-	max-width: 100%;
-	overflow: clip;
-}
-
-.home-landscape-route-card {
-	overflow: clip;
-}
-
-.home-landscape-main-grid,
-.home-landscape-main-column,
-.home-landscape-hero > * {
-	min-width: 0;
-	max-width: 100%;
-}
-
-.home-landscape-hero-title,
-.home-landscape-hero-copy,
-.home-landscape-stat-value {
-	overflow-wrap: anywhere;
-}
-
-.home-landscape-utility-bar {
-	position: static;
-}
-
-.home-landscape-utility-inner::-webkit-scrollbar {
-	display: none;
-}
-
-@media (min-width: 48rem) and (min-height: 51.25rem) {
-	.home-landscape-utility-bar {
-		position: sticky;
-	}
-}
-
-@container (max-width: 42rem) {
-	.home-landscape-hero {
-		padding-inline: clamp(0.875rem, 4cqi, 1.5rem);
-	}
-
-	.home-landscape-hero-title {
-		font-size: clamp(1.45rem, 5.25cqi, 1.9rem);
-		letter-spacing: clamp(0.015em, 0.55cqi, 0.055em);
-		line-height: 1.04;
-	}
-
-	.home-landscape-hero-copy {
-		max-width: 100%;
-	}
-
-	.home-landscape-stats-panel {
-		padding: clamp(0.875rem, 3.5cqi, 1.25rem);
-	}
-
-	.home-landscape-stat-row {
-		display: grid;
-		grid-template-columns: minmax(4.5rem, max-content) minmax(0, 1fr);
-		gap: 0.625rem;
-		align-items: start;
-	}
-
-	.home-landscape-stat-value {
-		max-width: none;
-		white-space: normal;
-		line-height: 1.15;
-		text-overflow: clip;
-	}
-}
-
-.collection-balance-stack {
-	display: grid;
-	gap: 1rem;
-}
-
-.collection-stat-panel {
-	display: flex;
-	flex-direction: column;
-	min-height: 7.5rem;
-}
-
-.collection-progress-panel {
-	min-height: 7.5rem;
-}
-
-.collection-stat-chip-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
-	gap: 0.5rem;
-}
-
-.collection-stat-chip {
-	display: grid;
-	min-height: 4.125rem;
-	place-items: center;
-}
-
-.collection-filter-row .filter-pill {
-	min-height: 2.25rem;
-}
-
 .packs-landscape-grid {
 	align-items: stretch;
 }
@@ -167,46 +45,6 @@
 }
 
 @media (max-width: 420px) {
-	.home-landscape-brand {
-		gap: 0.5rem;
-	}
-
-	.home-landscape-logo {
-		width: 1.75rem;
-		height: 1.75rem;
-	}
-
-	.home-landscape-title {
-		font-size: 0.8125rem;
-		letter-spacing: 0.13em;
-	}
-
-	.home-landscape-stage-badge {
-		padding-right: 0.25rem;
-		padding-left: 0.25rem;
-		font-size: 0.5rem;
-		letter-spacing: 0.1em;
-	}
-
-	.home-landscape-season {
-		font-size: 0.5625rem;
-		letter-spacing: 0.12em;
-	}
-
-	.home-landscape-hero-title {
-		letter-spacing: 0.015em;
-	}
-
-	.home-landscape-primary-cta {
-		width: 100%;
-		max-width: 100%;
-		padding-right: 0.875rem;
-		padding-left: 0.875rem;
-		font-size: 0.75rem;
-		letter-spacing: 0.12em;
-		white-space: normal;
-	}
-
 	.environment-banner {
 		position: static;
 		max-width: none;
@@ -415,8 +253,8 @@
 @media (max-width: 640px) {
 	.meta-page-header-inner {
 		flex-wrap: nowrap;
-		padding-left: 0.75rem;
-		padding-right: 0.75rem;
+		padding-left: max(0.75rem, calc(env(safe-area-inset-left) + 0.5rem));
+		padding-right: max(0.75rem, calc(env(safe-area-inset-right) + 0.5rem));
 	}
 
 	.meta-page-header-title,
@@ -439,6 +277,49 @@
 	.meta-page-header-account span.font-mono {
 		display: none;
 	}
+}
+
+@media (max-width: 420px) {
+	.meta-page-header-inner {
+		gap: 0.5rem;
+	}
+
+	.meta-page-header-home {
+		width: 2.25rem;
+		padding-left: 0;
+		padding-right: 0;
+	}
+
+	.meta-page-header-home .meta-page-header-control-label {
+		display: none;
+	}
+
+	.meta-page-header-optional {
+		display: none;
+	}
+
+	.meta-page-header-title {
+		max-width: 38vw;
+		font-size: 1rem;
+		letter-spacing: 0.04em;
+	}
+
+	.meta-page-header-kicker {
+		max-width: 38vw;
+	}
+
+	.meta-page-header-actions {
+		max-width: 56vw;
+		gap: 0.375rem;
+	}
+
+	.meta-page-header-control {
+		padding-left: 0.5rem;
+		padding-right: 0.5rem;
+		font-size: 0.625rem;
+		letter-spacing: 0.12em;
+	}
+
 }
 
 @media (orientation: landscape) and (max-height: 500px) {
@@ -615,7 +496,6 @@
    ============================================= */
 
 @media (orientation: landscape) and (max-height: 500px) {
-	.collection-landscape-shell,
 	.packs-landscape-shell,
 	div.h-screen.bg-\(image\:--bg-vault-nav\),
 	div.h-screen.bg-\(image\:--bg-cosmos-nav\) {
@@ -629,10 +509,12 @@
    ============================================= */
 
 @media (orientation: landscape) and (max-height: 500px) and (max-width: 1024px) {
-	.collection-landscape-content,
 	.packs-landscape-content {
 		max-width: none;
-		padding: 0.75rem;
+		padding-top: 0.75rem;
+		padding-right: max(0.75rem, calc(env(safe-area-inset-right) + 0.5rem));
+		padding-bottom: 0.75rem;
+		padding-left: max(0.75rem, calc(env(safe-area-inset-left) + 0.5rem));
 	}
 
 	.collection-landscape-filters {

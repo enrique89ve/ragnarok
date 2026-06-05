@@ -17,10 +17,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useHiveDataStore } from '../../data/HiveDataLayer';
 import {
 	clearActiveHiveSession,
-	getDefaultHiveWalletProviderId,
+	getAuthenticatedHiveUsername,
 	isHiveWalletAvailable,
 	loginWithHiveWallet,
-	setActiveHiveSession,
 } from '../../data/HiveAuth';
 import { Button } from '../../components/ui-norse';
 
@@ -29,6 +28,11 @@ type ConnectStatus = 'idle' | 'connecting' | 'error';
 interface HiveKeychainLoginProps {
 	initiallyExpanded?: boolean;
 	onConnected?: () => void;
+}
+
+function normalizeHiveUsername(username: string | null | undefined): string | null {
+	const normalized = username?.trim().toLowerCase().replace(/^@/, '') ?? '';
+	return normalized.length > 0 ? normalized : null;
 }
 
 async function loadHiveBridgeRuntime() {
@@ -56,13 +60,16 @@ export function HiveKeychainLogin({ initiallyExpanded = false, onConnected }: Hi
 	const [errorMsg, setErrorMsg] = useState('');
 
 	const keychainAvailable = isHiveWalletAvailable();
+	const authenticatedUsername = getAuthenticatedHiveUsername();
+	const userAccountId = normalizeHiveUsername(user?.hiveUsername);
+	const userAuthenticated = Boolean(userAccountId && authenticatedUsername === userAccountId);
 
-	// Re-connect on mount if user was previously logged in
+	// Keep read-only chain sync warm for a persisted account, but do not treat
+	// persisted localStorage as an authenticated Keychain session.
 	useEffect(() => {
 		let cancelled = false;
 
 		if (user) {
-			setActiveHiveSession(user.hiveUsername, getDefaultHiveWalletProviderId());
 			void loadHiveBridgeRuntime().then((bridge) => {
 				if (!cancelled) {
 					bridge.startSync(user.hiveUsername);
@@ -110,6 +117,34 @@ export function HiveKeychainLogin({ initiallyExpanded = false, onConnected }: Hi
 		onConnected?.();
 	};
 
+	const handleReconnectStoredUser = async () => {
+		if (!user) return;
+
+		setStatus('connecting');
+		setErrorMsg('');
+
+		if (!keychainAvailable) {
+			setStatus('error');
+			setErrorMsg('Hive Keychain not found. Please install the extension.');
+			return;
+		}
+
+		const result = await loginWithHiveWallet(user.hiveUsername);
+
+		if (!result.success) {
+			setStatus('error');
+			setErrorMsg(result.error ?? 'Login cancelled or failed.');
+			return;
+		}
+
+		setUser({
+			...user,
+			lastLogin: Date.now(),
+		});
+		setStatus('idle');
+		onConnected?.();
+	};
+	
 	const handleLogout = () => {
 		void stopHiveBridgeSync();
 		clearActiveHiveSession();
@@ -131,12 +166,35 @@ export function HiveKeychainLogin({ initiallyExpanded = false, onConnected }: Hi
 					</div>
 					<div className="min-w-0 flex-1">
 						<div className="flex items-center gap-1.5">
-							<div className="w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.6)] shrink-0" />
-							<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300">Online</span>
+							<div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+								userAuthenticated
+									? 'bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.6)]'
+									: 'bg-gold-300 shadow-[0_0_6px_rgba(250,204,21,0.45)]'
+							}`} />
+							<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300">
+								{userAuthenticated ? 'Online' : 'Signature required'}
+							</span>
 						</div>
 						<div className="text-ink-0 font-semibold text-sm truncate">@{user.hiveUsername}</div>
 					</div>
 				</div>
+				{!userAuthenticated && (
+					<>
+						<Button
+							variant="primary"
+							size="sm"
+							onClick={handleReconnectStoredUser}
+							disabled={status === 'connecting'}
+						>
+							{status === 'connecting' ? 'Signing...' : 'Sign'}
+						</Button>
+						{errorMsg && (
+							<p className="text-blood-300 text-xs leading-relaxed">
+								{errorMsg}
+							</p>
+						)}
+					</>
+				)}
 				<button
 					onClick={handleLogout}
 					className="self-start font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300 hover:text-blood-300 transition-colors"

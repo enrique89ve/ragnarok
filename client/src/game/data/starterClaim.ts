@@ -3,6 +3,7 @@ import { getStarterCards, seedStarterHeroDecks } from './starterSet';
 import { useStarterStore } from '../stores/starterStore';
 import { isSharedNetworkEnvironment } from '../config/featureFlags';
 import { resolveProtectedFlowAccess } from '../auth/protectedFlowAccess';
+import { getAuthenticatedHiveUsername } from '../../data/HiveSessionIdentity';
 
 export type StarterClaimResult =
 	| { success: true; cards: CardData[] }
@@ -20,8 +21,10 @@ function normalizeAccountId(accountId: string | null | undefined): string | null
 export async function claimStarterEntitlement({
 	accountId,
 }: ClaimStarterEntitlementParams): Promise<StarterClaimResult> {
+	const authenticatedAccountId = getAuthenticatedHiveUsername();
 	const access = resolveProtectedFlowAccess({
-		accountId,
+		accountId: accountId ?? authenticatedAccountId,
+		authenticatedAccountId,
 		sharedNetwork: isSharedNetworkEnvironment(),
 		surface: 'starter_claim',
 	});

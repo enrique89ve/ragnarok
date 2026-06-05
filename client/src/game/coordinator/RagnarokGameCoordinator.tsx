@@ -8,6 +8,7 @@ import { useCampaignStore } from '../campaign';
 import { deriveIntro, deriveIWonForPhase, deriveOpponentArmyForMode, markDailyQuestClaimsPendingAfterMatch, selectOnWinHandler, useMatchStore } from '../match';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { routes } from '../../lib/routes';
+import { getWarbandEntryRoute } from '../../lib/warbandRoutes';
 import { usePokerCombatAdapter } from '../hooks/usePokerCombatAdapter';
 import { useAudio } from '../../lib/stores/useAudio';
 import { useKingChessAbility } from '../hooks/useKingChessAbility';
@@ -661,7 +662,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       // /warband redirect guard catches us. The FSM bootstrap effect will
       // re-fire if a new mission is started later.
     } else {
-      navigate(routes.warband);
+      navigate(getWarbandEntryRoute('single'));
     }
   }, [resetBoard, isCampaign, clearCurrent, navigate, resetPlayerTurnCount, clearFlow, setSharedDeck]);
 
@@ -728,7 +729,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
 
   // Guard: arriving at a gameplay route with no warband and not in campaign -> redirect to picker
   if (!effectiveInitialArmy && !isCampaign && !playerArmy) {
-    return <Navigate to={routes.warband} replace />;
+    return <Navigate to={getWarbandEntryRoute('single')} replace />;
   }
 
   return (

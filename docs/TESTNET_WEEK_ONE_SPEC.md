@@ -42,8 +42,9 @@ npm run check
 npx vitest run shared/runtimeConfig.test.ts client/src/game/protocol/ceremonyFeedback.test.ts client/src/data/blockchain/transcriptBuilder.test.ts
 ```
 
-4. Confirm tester instructions point to `/#/multiplayer`, not
-   `/#/game/multiplayer`.
+4. Confirm tester instructions point to `/#/warband?mode=multiplayer`
+   for PvP loadout prep and `/#/multiplayer` for lobby/direct-challenge
+   compatibility, never `/#/game/multiplayer`.
 5. Prepare two browser profiles with Hive Keychain and two testnet identities.
 
 ## Day 1 - Access And Reset Isolation

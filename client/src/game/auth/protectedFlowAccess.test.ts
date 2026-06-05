@@ -2,7 +2,19 @@ import { describe, expect, it } from 'vitest';
 import {
 	normalizeProtectedFlowAccountId,
 	resolveProtectedFlowAccess,
+	type ProtectedFlowSurface,
 } from './protectedFlowAccess';
+
+const ACCOUNT_BOUND_SURFACES: readonly ProtectedFlowSurface[] = [
+	'starter_claim',
+	'campaign',
+	'campaign_battle',
+	'collection',
+	'multiplayer',
+	'packs',
+	'warband',
+	'quick_match',
+];
 
 describe('protectedFlowAccess', () => {
 	it('normalizes Hive account ids before flow checks', () => {
@@ -26,6 +38,7 @@ describe('protectedFlowAccess', () => {
 	it('blocks protected shared-network flows without a Hive account', () => {
 		const access = resolveProtectedFlowAccess({
 			accountId: null,
+			authenticatedAccountId: null,
 			sharedNetwork: true,
 			surface: 'multiplayer',
 		});
@@ -37,9 +50,41 @@ describe('protectedFlowAccess', () => {
 		}
 	});
 
+	it('blocks protected shared-network flows when the account is only persisted', () => {
+		const access = resolveProtectedFlowAccess({
+			accountId: 'alice',
+			authenticatedAccountId: null,
+			sharedNetwork: true,
+			surface: 'starter_claim',
+		});
+
+		expect(access.kind).toBe('blocked');
+		if (access.kind === 'blocked') {
+			expect(access.reason).toBe('hive_session_required');
+			expect(access.message).toContain('current Hive Keychain signature for @alice');
+		}
+	});
+
+	it('blocks protected shared-network flows when the signed account does not match', () => {
+		const access = resolveProtectedFlowAccess({
+			accountId: 'alice',
+			authenticatedAccountId: 'bob',
+			sharedNetwork: true,
+			surface: 'campaign',
+		});
+
+		expect(access.kind).toBe('blocked');
+		if (access.kind === 'blocked') {
+			expect(access.reason).toBe('hive_session_mismatch');
+			expect(access.message).toContain('opened for @alice');
+			expect(access.message).toContain('belongs to @bob');
+		}
+	});
+
 	it('allows protected shared-network flows for a Hive account', () => {
 		expect(resolveProtectedFlowAccess({
 			accountId: 'Alice',
+			authenticatedAccountId: '  alice ',
 			sharedNetwork: true,
 			surface: 'campaign',
 		})).toEqual({
@@ -47,5 +92,31 @@ describe('protectedFlowAccess', () => {
 			accountId: 'alice',
 			localDev: false,
 		});
+	});
+
+	it('requires the same signed Hive account for every account-bound surface', () => {
+		for (const surface of ACCOUNT_BOUND_SURFACES) {
+			expect(resolveProtectedFlowAccess({
+				accountId: 'Alice',
+				authenticatedAccountId: 'alice',
+				sharedNetwork: true,
+				surface,
+			})).toEqual({
+				kind: 'allowed',
+				accountId: 'alice',
+				localDev: false,
+			});
+
+			const blocked = resolveProtectedFlowAccess({
+				accountId: 'Alice',
+				authenticatedAccountId: null,
+				sharedNetwork: true,
+				surface,
+			});
+			expect(blocked.kind).toBe('blocked');
+			if (blocked.kind === 'blocked') {
+				expect(blocked.reason).toBe('hive_session_required');
+			}
+		}
 	});
 });

@@ -184,7 +184,7 @@ export default function TournamentListPage() {
 	};
 
 	return (
-		<div className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-cosmos-nav) text-ink-0">
+		<div className="min-h-dvh w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-cosmos-nav) text-ink-0">
 			<MetaPageHeader
 				title="Tournaments"
 				kicker="Compete"
@@ -192,7 +192,7 @@ export default function TournamentListPage() {
 				accountSecondary="Competitor"
 			/>
 
-			<div className="max-w-4xl mx-auto px-4 py-8">
+			<main className="n-page-gutter mx-auto w-full max-w-4xl py-8">
 
 				{error && (
 					<div className="mb-4 p-3 bg-ember-600/25 border border-ember-400/40 rounded-lg text-ember-300 text-sm">
@@ -255,7 +255,7 @@ export default function TournamentListPage() {
 						)}
 					</div>
 				)}
-			</div>
+			</main>
 		</div>
 	);
 }

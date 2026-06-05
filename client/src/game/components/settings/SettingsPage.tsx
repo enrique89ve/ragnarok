@@ -28,7 +28,7 @@ export default function SettingsPage() {
 	};
 
 	return (
-		<div className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-home-nav) text-ink-0">
+		<div className="min-h-dvh w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-home-nav) text-ink-0">
 			<MetaPageHeader
 				title="Settings"
 				kicker="Profile · Preferences"
@@ -36,7 +36,7 @@ export default function SettingsPage() {
 				accountSecondary="Profile"
 			/>
 
-			<div className="max-w-2xl mx-auto px-4 py-8">
+			<main className="n-page-gutter mx-auto w-full max-w-2xl py-8">
 				{/* ── Portable Save Section ── */}
 				<div className="bg-gray-900/60 border border-gray-800/60 rounded-xl p-6 mb-6">
 					<h2 className="text-lg font-bold text-amber-300 mb-1">Portable Save</h2>
@@ -78,7 +78,7 @@ export default function SettingsPage() {
 				<div className="bg-gray-900/60 border border-gray-800/60 rounded-xl p-6">
 					<SettingsPanel />
 				</div>
-			</div>
+			</main>
 		</div>
 	);
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Compass, Play } from 'lucide-react';
@@ -6,6 +6,7 @@ import { routes } from '../../../lib/routes';
 import { Button } from '../../../components/ui-norse';
 import { AccountSlot } from '../../../components/account/AccountSlot';
 import { useNFTUsername } from '../../nft/hooks';
+import { getAuthenticatedHiveUsername, subscribeHiveSessionIdentity } from '../../../data/HiveSessionIdentity';
 import { isSharedNetworkEnvironment } from '../../config/featureFlags';
 import { resolveProtectedFlowAccess } from '../../auth/protectedFlowAccess';
 import { HiveKeychainLogin } from '../HiveKeychainLogin';
@@ -64,6 +65,14 @@ const FACTION_BORDER: Record<string, string> = {
 const RUNE_CORNERS = ['ᚠᚷᛁ', 'ᛞᛗᛒ', 'ᛇᚺᚠ', 'ᛒᛁᛞ'];
 
 type View = 'norse' | 'greek' | 'beyond';
+
+function useAuthenticatedHiveUsername(): string | null {
+	return useSyncExternalStore(
+		subscribeHiveSessionIdentity,
+		getAuthenticatedHiveUsername,
+		getAuthenticatedHiveUsername,
+	);
+}
 
 type MapRealmShape = {
 	id: string;
@@ -493,8 +502,10 @@ export default function CampaignPage() {
 	const seenCinematics = useCampaignStore(state => state.seenCinematics);
 	const isAllComplete = useCampaignStore(state => state.isAllBaseChaptersComplete(BASE_CHAPTER_MISSION_IDS));
 	const hiveUsername = useNFTUsername();
+	const authenticatedHiveUsername = useAuthenticatedHiveUsername();
 	const campaignAccess = resolveProtectedFlowAccess({
-		accountId: hiveUsername,
+		accountId: hiveUsername ?? authenticatedHiveUsername,
+		authenticatedAccountId: authenticatedHiveUsername,
 		sharedNetwork: isSharedNetworkEnvironment(),
 		surface: 'campaign',
 	});
@@ -550,6 +561,14 @@ export default function CampaignPage() {
 		if (seenCinematics.includes(chapterToAutoplay.id)) return;
 		setCinematicChapter(chapterToAutoplay);
 	}, [currentDisplayChapter, selectedMission, cinematicChapter, seenCinematics]);
+
+	useEffect(() => {
+		if (campaignAccess.kind !== 'blocked') return;
+		setSelectedRealm(null);
+		setSelectedMission(null);
+		setSelectedChapter(null);
+		setCinematicChapter(null);
+	}, [campaignAccess.kind]);
 
 	const norseRealmsWithUnlocked = useMemo(() => {
 		const result = new Set<string>();
@@ -663,9 +682,9 @@ export default function CampaignPage() {
 
 	if (campaignAccess.kind === 'blocked') {
 		return (
-			<div className="relative h-screen w-full overflow-y-auto overflow-x-hidden text-ink-0 bg-(image:--bg-cosmos-nav)">
+			<div className="relative min-h-dvh w-full overflow-y-auto overflow-x-hidden text-ink-0 bg-(image:--bg-cosmos-nav)">
 				<CampaignHeader title="Campaign" subtitle="Hive account required" />
-				<div className="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-md items-center px-4">
+				<div className="n-page-gutter mx-auto flex min-h-[calc(100dvh-3.5rem)] max-w-md items-center">
 					<div className={`${SURFACE_STRONG_CLASS} w-full p-6 text-center`}>
 						<div className="font-mono text-[10px] uppercase tracking-[0.28em] text-gold-300 mb-3">
 							Account required
@@ -686,7 +705,7 @@ export default function CampaignPage() {
 	if (selectedMission) {
 		const chapter = selectedChapter ?? norseChapter;
 		return (
-			<div className="relative h-screen w-full overflow-y-auto overflow-x-hidden text-ink-0 bg-(image:--bg-cosmos-nav)">
+			<div className="relative min-h-dvh w-full overflow-y-auto overflow-x-hidden text-ink-0 bg-(image:--bg-cosmos-nav)">
 				<div className="rune-border-decoration rune-border-top-left">{RUNE_CORNERS[0]}</div>
 				<div className="rune-border-decoration rune-border-top-right">{RUNE_CORNERS[1]}</div>
 				<div className="rune-border-decoration rune-border-bottom-left">{RUNE_CORNERS[2]}</div>
@@ -694,7 +713,7 @@ export default function CampaignPage() {
 
 				<CampaignHeader title="Mission Briefing" subtitle={`${chapter.name} · #${selectedMission.missionNumber}`} />
 
-				<div className="mx-auto max-w-5xl px-4 pb-12 sm:px-6">
+				<div className="n-page-gutter mx-auto max-w-5xl pb-12">
 					<MissionBriefing
 						mission={selectedMission}
 						chapter={chapter}
@@ -719,7 +738,7 @@ export default function CampaignPage() {
 	}
 
 	return (
-		<div className="relative h-screen w-full overflow-y-auto overflow-x-hidden text-ink-0 bg-(image:--bg-cosmos-nav)">
+		<div className="relative min-h-dvh w-full overflow-y-auto overflow-x-hidden text-ink-0 bg-(image:--bg-cosmos-nav)">
 			<div className="rune-border-decoration rune-border-top-left">{RUNE_CORNERS[0]}</div>
 			<div className="rune-border-decoration rune-border-top-right">{RUNE_CORNERS[1]}</div>
 			<div className="rune-border-decoration rune-border-bottom-left">{RUNE_CORNERS[2]}</div>
@@ -728,7 +747,7 @@ export default function CampaignPage() {
 			<CampaignHeader title="Campaign" subtitle="Saga Theater · S01" />
 
 			{/* ── Lead band: framed by max-w container, two-col layout (text | stats) ───── */}
-			<section className="relative mx-auto max-w-[1600px] px-4 sm:px-6 mt-6">
+			<section className="n-page-gutter relative mx-auto mt-6 max-w-[1600px]">
 				<div className={`${SURFACE_STRONG_CLASS} relative overflow-hidden`}>
 					{/* Atmospheric layer */}
 					<div
@@ -825,7 +844,7 @@ export default function CampaignPage() {
 			{/* ── Tabs: pill chip family aligned with home utility bar ───────────────────── */}
 			<nav
 				aria-label="Campaign sections"
-				className="mx-auto max-w-[1600px] px-4 sm:px-6 mt-6 flex gap-2 overflow-x-auto [scrollbar-width:none]"
+				className="n-page-gutter mx-auto mt-6 flex max-w-[1600px] gap-2 overflow-x-auto [scrollbar-width:none]"
 			>
 				{(['norse', 'greek', 'beyond'] as const).map(tab => {
 					const labels: Record<View, string> = { norse: 'Nine Realms', greek: 'Olympus', beyond: 'Beyond' };
@@ -1038,7 +1057,7 @@ function CampaignHeader({ title, subtitle }: { title: string; subtitle: string }
 	const username = useNFTUsername();
 	return (
 		<header className="sticky top-0 z-40 backdrop-blur-md bg-obsidian-950/80 border-b border-obsidian-700">
-			<div className="mx-auto max-w-[1600px] h-14 px-4 sm:px-6 flex items-center justify-between gap-3">
+			<div className="n-page-gutter mx-auto flex h-14 max-w-[1600px] items-center justify-between gap-3">
 				<div className="flex items-center gap-3 min-w-0">
 					<Link
 						to={routes.home}
@@ -1205,7 +1224,7 @@ function ChapterDetail({
 	const progress = chapterProgressById.get(chapter.id) ?? 0;
 
 	return (
-		<div className="mx-auto max-w-5xl px-4 sm:px-6 pb-12">
+		<div className="n-page-gutter mx-auto max-w-5xl pb-12">
 			<motion.div
 				initial={{ opacity: 0, y: 18 }}
 				animate={{ opacity: 1, y: 0 }}

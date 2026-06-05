@@ -68,11 +68,11 @@ export default function ReplayViewer({ match, onClose }: { match: MatchRecord; o
 	const progress = match.moves.length > 0 ? (playbackIndex / match.moves.length) * 100 : 0;
 
 	return (
-		<div className="min-h-screen bg-gray-950 text-white">
-			<div className="max-w-5xl mx-auto px-4 py-8">
+		<div className="min-h-dvh bg-gray-950 text-white">
+			<div className="n-page-gutter mx-auto w-full max-w-5xl py-8">
 				{/* Header */}
-				<div className="flex items-center justify-between mb-6">
-					<div>
+				<div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+					<div className="min-w-0">
 						<h2 className="text-xl font-bold text-gray-200">
 							{match.player1} vs {match.player2}
 						</h2>
@@ -83,15 +83,15 @@ export default function ReplayViewer({ match, onClose }: { match: MatchRecord; o
 					</div>
 					<button
 						onClick={onClose}
-						className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm border border-gray-700 transition-colors"
+						className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-gray-700 sm:w-auto"
 					>
 						Close Replay
 					</button>
 				</div>
 
-				<div className="grid grid-cols-3 gap-6">
+				<div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
 					{/* Move Timeline (left 2/3) */}
-					<div className="col-span-2 bg-gray-900/60 border border-gray-700/50 rounded-xl p-4">
+					<div className="rounded-xl border border-gray-700/50 bg-gray-900/60 p-4 lg:col-span-2">
 						<h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">
 							Timeline — Move {playbackIndex} of {match.moves.length}
 						</h3>

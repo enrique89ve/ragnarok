@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useSyncExternalStore } from 'react';
 import { debug } from '../../config/debugConfig';
 import { usePeerStore } from '../../stores/peerStore';
 import { MultiplayerLobby } from './MultiplayerLobby';
 import RagnarokGameCoordinator from '../../coordinator/RagnarokGameCoordinator';
 import { MatchSetupP2P } from '../../match/modes/p2p';
-import ArmySelectionComponent from '../ArmySelection';
 import { ArmySelection as ArmySelectionType } from '../../types/ChessTypes';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { routes } from '../../../lib/routes';
 import { isHiveWalletAvailable } from '../../../data/HiveAuth';
+import { getAuthenticatedHiveUsername, subscribeHiveSessionIdentity } from '../../../data/HiveSessionIdentity';
 import {
 	Button,
 	Panel,
@@ -29,8 +29,16 @@ import { useNFTUsername } from '../../nft/hooks';
 import { resolveProtectedFlowAccess } from '../../auth/protectedFlowAccess';
 import { useGameStore } from '../../stores/gameStore';
 import { recordSessionEvent } from '../../../data/blockchain/transcriptBuilder';
-import { buildReadyWarbandLoadout } from '../../deck/readyWarbandLoadout';
+import { getWarbandEntryRoute } from '../../../lib/warbandRoutes';
 import './MultiplayerGame.css';
+
+function useAuthenticatedHiveUsername(): string | null {
+	return useSyncExternalStore(
+		subscribeHiveSessionIdentity,
+		getAuthenticatedHiveUsername,
+		getAuthenticatedHiveUsername,
+	);
+}
 
 /*
   PvPVSScreen — 3-second dramatic splash showing "Player vs Opponent"
@@ -122,9 +130,6 @@ export const MultiplayerGame: React.FC = () => {
 	const [gameStarted, setGameStarted] = useState(false);
 	const [showVS, setShowVS] = useState(false);
 	const persistedArmy = useWarbandStore(selectArmy);
-	const setWarband = useWarbandStore(s => s.setWarband);
-	const [armySelected, setArmySelected] = useState(false);
-	const [playerArmy, setPlayerArmy] = useState<ArmySelectionType | null>(persistedArmy);
 	const navigate = useNavigate();
 	const { status: matchmakingStatus, roomId, joinQueue, leaveQueue } = useMatchmaking();
 	const opponentArmyFromPeer = usePeerStore(s => s.opponentArmy);
@@ -137,10 +142,12 @@ export const MultiplayerGame: React.FC = () => {
 	const reconnectAttemptCount = usePeerStore(s => s.reconnectAttemptCount);
 	const forfeitSide = usePeerStore(s => s.forfeitSide);
 	const hiveUsername = useNFTUsername();
+	const authenticatedHiveUsername = useAuthenticatedHiveUsername();
 	const reloadGuardPromptedRef = useRef(false);
 	const requiresHiveSession = isSharedNetworkEnvironment();
 	const p2pAccess = resolveProtectedFlowAccess({
-		accountId: hiveUsername,
+		accountId: hiveUsername ?? authenticatedHiveUsername,
+		authenticatedAccountId: authenticatedHiveUsername,
 		sharedNetwork: requiresHiveSession,
 		surface: 'multiplayer',
 	});
@@ -162,39 +169,12 @@ export const MultiplayerGame: React.FC = () => {
 	// host vs client by order of arrival in the room, so we no longer branch on
 	// the matchmaking-emitted isHost (which was advisory under WebRTC anyway).
 	useEffect(() => {
-		if (matchmakingStatus === 'matched' && roomId && armySelected && !gameStarted) {
+		if (matchmakingStatus === 'matched' && roomId && persistedArmy && !gameStarted) {
 			usePeerStore.getState().connectToRoom(roomId).catch(err => {
 				debug.error('[MultiplayerGame] connectToRoom failed:', err);
 			});
 		}
-	}, [matchmakingStatus, roomId, armySelected, gameStarted]);
-
-	const handleArmyComplete = (army: ArmySelectionType) => {
-		const loadout = buildReadyWarbandLoadout(army);
-		if (loadout.kind !== 'ready') {
-			debug.warn('[MultiplayerGame] Refused P2P start with invalid warband loadout', loadout.statuses);
-			return;
-		}
-		setWarband(army, loadout.deckCardIds, loadout.deckCardIdsByPiece);
-		setPlayerArmy(army);
-		setArmySelected(true);
-	};
-
-	// ArmySelection now just commits the army; the lobby owns the matchmaking
-	// choice. Previously this function pre-allocated a peer and pushed the user
-	// into the queue from ArmySelection, which made the lobby render with
-	// `matchmakingStatus === 'queued'` — hiding the Host Game / Join Game options
-	// the user expected to see.
-	const handleMatchmakingStart = async (army: ArmySelectionType) => {
-		const loadout = buildReadyWarbandLoadout(army);
-		if (loadout.kind !== 'ready') {
-			debug.warn('[MultiplayerGame] Refused P2P matchmaking with invalid warband loadout', loadout.statuses);
-			return;
-		}
-		setWarband(army, loadout.deckCardIds, loadout.deckCardIdsByPiece);
-		setPlayerArmy(army);
-		setArmySelected(true);
-	};
+	}, [matchmakingStatus, roomId, persistedArmy, gameStarted]);
 
 	const handleBack = () => {
 		navigate(routes.home);
@@ -202,6 +182,8 @@ export const MultiplayerGame: React.FC = () => {
 
 	useEffect(() => {
 		if (hasHiveSession) return;
+		setShowVS(false);
+		setGameStarted(false);
 		usePeerStore.getState().disconnect();
 		leaveQueue().catch(() => { /* best effort while rendering auth gate */ });
 	}, [hasHiveSession, leaveQueue]);
@@ -277,28 +259,22 @@ export const MultiplayerGame: React.FC = () => {
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
+	if (!persistedArmy) {
+		return <Navigate to={getWarbandEntryRoute('multiplayer')} replace />;
+	}
+	const readyArmy = persistedArmy;
+
 	// P2PProvider wraps every render of this component so `useWireSync` is mounted
 	// from the moment MultiplayerGame appears, regardless of whether we're in
-	// army selection, the lobby, the VS screen, or in-game. This is critical:
+	// the lobby, the VS screen, or in-game. This is critical:
 	// without it, the data listener on the peer connection never attaches,
 	// heartbeats from the remote peer are silently dropped, and peerStore declares
 	// the connection dead after `HEARTBEAT_TIMEOUT_MS` (12s).
-	const renderInner = () => {
-		if (!armySelected) {
-			return (
-				<ArmySelectionComponent
-					onComplete={handleArmyComplete}
-					onBack={handleBack}
-					isMultiplayer={true}
-					onMatchmakingStart={handleMatchmakingStart}
-				/>
-			);
-		}
-
-		if (showVS && !gameStarted && playerArmy) {
+		const renderInner = () => {
+		if (showVS && !gameStarted) {
 			return (
 				<PvPVSScreen
-					playerArmy={playerArmy}
+					playerArmy={readyArmy}
 					opponentArmy={opponentArmyFromPeer}
 					opponentPeerId={usePeerStore.getState().remotePeerId}
 					onComplete={() => { setShowVS(false); setGameStarted(true); }}
@@ -355,14 +331,14 @@ export const MultiplayerGame: React.FC = () => {
 		);
 		if (guard.kind === 'wait') return spinner;
 		return (
-			<>
-				<P2PStatusBadge />
-				<MatchSetupP2P fallback={spinner}>
-					<RagnarokGameCoordinator initialArmy={playerArmy} opponentArmy={opponentArmyFromPeer} />
-				</MatchSetupP2P>
-			</>
-		);
-	};
+				<>
+					<P2PStatusBadge />
+					<MatchSetupP2P fallback={spinner}>
+						<RagnarokGameCoordinator initialArmy={readyArmy} opponentArmy={opponentArmyFromPeer} />
+					</MatchSetupP2P>
+				</>
+			);
+		};
 
 	if (!hasHiveSession) {
 		return <P2PHiveSessionRequired onBack={handleBack} />;

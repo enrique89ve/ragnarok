@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { clearActiveHiveSession, signHiveMessage } from './HiveAuth';
+import {
+	clearActiveHiveSession,
+	getAuthenticatedHiveUsername,
+	setActiveHiveSession,
+	signHiveMessage,
+} from './HiveAuth';
 import type { HiveKeychainApi, HiveKeychainResponse } from './HiveKeychain';
 
 function stubKeychainResponse(response: HiveKeychainResponse): {
@@ -76,5 +81,26 @@ describe('HiveAuth signHiveMessage', () => {
 			success: false,
 			error: 'Hive Keychain returned no signature',
 		});
+	});
+
+	it('does not treat a stored identity session as authenticated', () => {
+		setActiveHiveSession('alice', 'hive_keychain', 'stored_identity');
+
+		expect(getAuthenticatedHiveUsername()).toBeNull();
+	});
+
+	it('promotes the active session after a successful Keychain signature', async () => {
+		stubKeychainResponse({
+			success: true,
+			result: 'SIG_HEX',
+		});
+		setActiveHiveSession('alice', 'hive_keychain', 'stored_identity');
+
+		await expect(signHiveMessage('message')).resolves.toEqual({
+			success: true,
+			signature: 'SIG_HEX',
+		});
+
+		expect(getAuthenticatedHiveUsername()).toBe('alice');
 	});
 });

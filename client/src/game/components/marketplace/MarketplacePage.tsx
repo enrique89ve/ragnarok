@@ -259,7 +259,7 @@ export default function MarketplacePage() {
 	];
 
 	return (
-		<div className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-vault-nav) text-ink-0">
+		<div className="min-h-dvh w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-vault-nav) text-ink-0">
 			<MetaPageHeader
 				title="Marketplace"
 				kicker="Forge · Bazaar"
@@ -268,7 +268,7 @@ export default function MarketplacePage() {
 			/>
 
 			{/* Tabs */}
-			<div className="max-w-6xl mx-auto px-4 pt-4">
+			<main className="n-page-gutter mx-auto w-full max-w-6xl pt-4 pb-16">
 				<div className="flex gap-1 border-b border-obsidian-700 mb-6 overflow-x-auto [scrollbar-width:none]">
 					{tabs.map(t => (
 						<button
@@ -411,7 +411,7 @@ export default function MarketplacePage() {
 
 				{/* Swaps — peer-to-peer card-for-card exchange (formerly /trading) */}
 				{tab === 'swaps' && <SwapsTab />}
-			</div>
+			</main>
 
 			{/* List Card Modal */}
 			<AnimatePresence>

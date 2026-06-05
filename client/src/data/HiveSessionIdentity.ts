@@ -1,7 +1,7 @@
 import {
+  getAuthenticatedHiveUsername as getActiveAuthenticatedHiveUsername,
   getActiveHiveUsername,
-  getDefaultHiveWalletProviderId,
-  setActiveHiveSession,
+  subscribeActiveHiveSession,
 } from "./HiveAuth";
 import { useHiveDataStore } from "./HiveDataLayer";
 
@@ -22,13 +22,25 @@ export function hasCurrentHiveUser(): boolean {
   return getCurrentHiveUsername() !== null;
 }
 
+export function getAuthenticatedHiveUsername(): string | null {
+  const storedUsername = getStoredHiveUsername();
+  const authenticatedUsername = normalizeHiveUsername(getActiveAuthenticatedHiveUsername());
+  if (!authenticatedUsername) return null;
+  if (storedUsername && storedUsername !== authenticatedUsername) return null;
+  return authenticatedUsername;
+}
+
+export function hasAuthenticatedHiveUser(): boolean {
+  return getAuthenticatedHiveUsername() !== null;
+}
+
+export function subscribeHiveSessionIdentity(listener: () => void): () => void {
+  return subscribeActiveHiveSession(listener);
+}
+
 export function ensureActiveHiveSessionForCurrentUser(): string | null {
   const activeUsername = normalizeHiveUsername(getActiveHiveUsername());
   if (activeUsername) return activeUsername;
 
-  const storedUsername = getStoredHiveUsername();
-  if (!storedUsername) return null;
-
-  setActiveHiveSession(storedUsername, getDefaultHiveWalletProviderId());
-  return storedUsername;
+  return getStoredHiveUsername();
 }

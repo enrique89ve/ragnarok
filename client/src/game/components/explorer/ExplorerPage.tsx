@@ -773,7 +773,7 @@ export default function ExplorerPage() {
 
 	return (
 		<div
-			className="h-screen w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-vault-nav) text-ink-0"
+			className="min-h-dvh w-full overflow-y-auto overflow-x-hidden bg-(image:--bg-vault-nav) text-ink-0"
 			style={{ fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif" }}
 		>
 			<MetaPageHeader
@@ -783,8 +783,8 @@ export default function ExplorerPage() {
 				accountSecondary="Explorer"
 			/>
 
-			{/* Tab bar */}
-			<div className="mx-auto w-full max-w-6xl px-4 pt-4 sm:px-6 lg:px-8">
+			<main className="n-page-gutter mx-auto w-full max-w-6xl pt-4 pb-16">
+				{/* Tab bar */}
 				<div className="flex gap-1 overflow-x-auto border-b border-obsidian-700 [scrollbar-width:none]">
 					{TABS.map(t => (
 						<button
@@ -800,17 +800,17 @@ export default function ExplorerPage() {
 						</button>
 					))}
 				</div>
-			</div>
 
-			{/* Content */}
-			<div className="mx-auto w-full max-w-6xl p-4 sm:p-6 lg:p-8">
-				{tab === 'overview' && <OverviewTab />}
-				{tab === 'nfts' && <NftsTab />}
-				{tab === 'users' && <UsersTab />}
-				{tab === 'marketplace' && <MarketplaceTab />}
-				{tab === 'leaderboard' && <LeaderboardTab />}
-				{tab === 'supply' && <SupplyTab />}
-			</div>
+				{/* Content */}
+				<div className="py-4 sm:py-6 lg:py-8">
+					{tab === 'overview' && <OverviewTab />}
+					{tab === 'nfts' && <NftsTab />}
+					{tab === 'users' && <UsersTab />}
+					{tab === 'marketplace' && <MarketplaceTab />}
+					{tab === 'leaderboard' && <LeaderboardTab />}
+					{tab === 'supply' && <SupplyTab />}
+				</div>
+			</main>
 
 			{/* Footer */}
 			<div style={{

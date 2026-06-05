@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { routes } from '../../lib/routes';
+import { getWarbandEntryRoute } from '../../lib/warbandRoutes';
 import { getStarterCards, STARTER_PACK_NAME } from '../data/starterSet';
 import { claimStarterEntitlement } from '../data/starterClaim';
 import PackOpeningAnimation from './packs/PackOpeningAnimation';
@@ -193,7 +194,7 @@ export default function StarterPackCeremony({
 							transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
 							className="mb-6 flex justify-center"
 						>
-							<TreasureChestSVG state="closed" size={200} />
+							<TreasureChestSVG state="closed" size={260} />
 						</motion.div>
 
 						<h1
@@ -307,8 +308,8 @@ const GAME_MODES: readonly GameMode[] = [
 		key: 'single',
 		title: 'Quick Match',
 		kicker: 'Practice · vs AI',
-		description: 'A single battle against an AI opponent. Test your deck fast.',
-		route: routes.singleGame,
+		description: 'Muster a warband, then test it against an AI opponent.',
+		route: getWarbandEntryRoute('single'),
 		glyph: '剣',
 		tier: 'standard',
 	},
@@ -316,8 +317,8 @@ const GAME_MODES: readonly GameMode[] = [
 		key: 'multiplayer',
 		title: 'Multiplayer',
 		kicker: 'PvP · Live opponents',
-		description: 'Match against another warrior and climb the leaderboard.',
-		route: routes.multiplayer,
+		description: 'Muster a warband, then match against another warrior.',
+		route: getWarbandEntryRoute('multiplayer'),
 		glyph: '龍',
 		tier: 'mythic',
 	},

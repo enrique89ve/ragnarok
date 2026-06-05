@@ -10,7 +10,7 @@ type MetaPageHeaderTone = 'default' | 'danger' | 'gold';
 type IconPosition = 'start' | 'end';
 
 const CONTROL_BASE =
-	'meta-page-header-control inline-flex h-8 shrink-0 items-center justify-center gap-2 rounded-full px-3 ' +
+	'meta-page-header-control inline-flex h-8 shrink-0 items-center justify-center gap-2 rounded-md px-3 ' +
 	'font-display text-[11px] font-bold uppercase tracking-[0.18em] transition-colors ' +
 	'focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300 focus-visible:outline-offset-2 ' +
 	'disabled:pointer-events-none disabled:opacity-50';
@@ -112,31 +112,36 @@ export function MetaPageHeader({
 	containerClassName,
 }: MetaPageHeaderProps) {
 	return (
-		<header className={cn('sticky top-0 z-40 border-b border-obsidian-700 bg-obsidian-950/75 backdrop-blur-xl', className)}>
+		<header className={cn('meta-page-header sticky top-0 z-40 border-b border-obsidian-700 bg-obsidian-950/75 backdrop-blur-xl', className)}>
 			<div
 				className={cn(
-					'n-grid-container flex w-full items-center justify-between gap-3 py-3',
+					'meta-page-header-inner n-grid-container flex w-full items-center justify-between gap-3 py-3',
 					containerClassName,
 				)}
 			>
 				<div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
-					<MetaPageHeaderLink to={routes.home} icon={Home} aria-label="Return to home">
+					<MetaPageHeaderLink
+						to={routes.home}
+						icon={Home}
+						aria-label="Return to home"
+						className="meta-page-header-home"
+					>
 						Home
 					</MetaPageHeaderLink>
 					<div className="min-w-0">
 						<p className="meta-page-header-kicker truncate font-mono text-[10px] uppercase tracking-[0.32em] text-ink-300">
 							{kicker}
 						</p>
-						<h1 className="truncate font-display text-xl font-black uppercase tracking-[0.10em] text-gold-300">
+						<h1 className="meta-page-header-title truncate font-display text-xl font-black uppercase tracking-[0.10em] text-gold-300">
 							{title}
 						</h1>
 					</div>
 				</div>
 
-				<div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
+				<div className="meta-page-header-actions flex shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
 					{actions}
 					{showAccount && (
-						<div className="shrink-0">
+						<div className="meta-page-header-account shrink-0">
 							<AccountSlot
 								username={username}
 								tier={accountTier}
