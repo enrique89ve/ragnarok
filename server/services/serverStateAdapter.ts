@@ -40,6 +40,10 @@ import {
 	getPackSupplyRecord as csGetPackSupplyRecord, setPackSupplyRecord as csSetPackSupplyRecord,
 	getQueueEntry as csGetQueueEntry, setQueueEntry as csSetQueueEntry,
 	deleteQueueEntryFn as csDeleteQueueEntry,
+	getMarketListing as csGetMarketListing, putMarketListing as csPutMarketListing,
+	deleteMarketListing as csDeleteMarketListing, getListingsByNft as csGetListingsByNft,
+	getMarketOffer as csGetMarketOffer, putMarketOffer as csPutMarketOffer,
+	getOffersByNft as csGetOffersByNft,
 	type CardRecord,
 	type GenesisStateRecord,
 	type SupplyCounterRecord,
@@ -139,12 +143,10 @@ function recordToCommit(r: PackCommitStateRecord): PackCommitRecord {
 }
 
 // ============================================================
-// v1.1: In-memory stores for ephemeral companion transfers
+// v1.1: In-memory store for ephemeral companion transfers
 // ============================================================
 
 const _trxSiblings = new Map<string, unknown[]>();
-const _listingStore = new Map<string, import('../../shared/protocol-core/types').MarketListing>();
-const _offerStore = new Map<string, import('../../shared/protocol-core/types').MarketOffer>();
 
 // ============================================================
 // StateAdapter — all delegates to chainState (durable)
@@ -272,23 +274,16 @@ export const serverStateAdapter: StateAdapter = {
 	async getDuatClaim(account) { return csGetDuatClaim(account) ?? null; },
 	async putDuatClaim(claim) { csSetDuatClaim(claim); },
 
-	// v1.2: Marketplace (in-memory, same pattern as packs)
-	async getListing(listingId) { return _listingStore.get(listingId) ?? null; },
+	// v1.2: Marketplace
+	async getListing(listingId) { return csGetMarketListing(listingId) ?? null; },
 	async getListingByNft(nftUid) {
-		for (const l of _listingStore.values()) {
-			if (l.nftUid === nftUid && l.active) return l;
-		}
-		return null;
+		return csGetListingsByNft(nftUid)[0] ?? null;
 	},
-	async putListing(listing) { _listingStore.set(listing.listingId, listing); },
-	async deleteListing(listingId) { _listingStore.delete(listingId); },
-	async getOffer(offerId) { return _offerStore.get(offerId) ?? null; },
+	async putListing(listing) { csPutMarketListing(listing); },
+	async deleteListing(listingId) { csDeleteMarketListing(listingId); },
+	async getOffer(offerId) { return csGetMarketOffer(offerId) ?? null; },
 	async getOffersByNft(nftUid) {
-		const result: import('../../shared/protocol-core/types').MarketOffer[] = [];
-		for (const o of _offerStore.values()) {
-			if (o.nftUid === nftUid) result.push(o);
-		}
-		return result;
+		return csGetOffersByNft(nftUid);
 	},
-	async putOffer(offer) { _offerStore.set(offer.offerId, offer); },
+	async putOffer(offer) { csPutMarketOffer(offer); },
 };

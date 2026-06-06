@@ -37,6 +37,119 @@
   animation: chess-root-ember-drift 20s linear infinite;
 }
 
+.match-exit-control {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 140;
+  pointer-events: auto;
+}
+
+.match-exit-button {
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 6px;
+  border: 1px solid rgba(248, 113, 113, 0.55);
+  background: rgba(38, 12, 12, 0.82);
+  color: #fecaca;
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.match-exit-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(252, 165, 165, 0.82);
+  background: rgba(69, 16, 16, 0.9);
+}
+
+.match-exit-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.match-exit-dialog {
+  width: min(440px, 100%);
+  border-radius: 8px;
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  background:
+    linear-gradient(180deg, rgba(31, 19, 17, 0.96), rgba(12, 10, 18, 0.98));
+  padding: 24px;
+  color: #f8fafc;
+  text-align: center;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.58);
+}
+
+.match-exit-kicker {
+  margin-bottom: 8px;
+  color: #fca5a5;
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.match-exit-dialog h2 {
+  margin: 0;
+  color: #fff7ed;
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 24px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.match-exit-dialog p {
+  margin: 14px 0 0;
+  color: rgba(226, 232, 240, 0.78);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.match-exit-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 22px;
+  flex-wrap: wrap;
+}
+
+.match-exit-secondary,
+.match-exit-danger {
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: 6px;
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.match-exit-secondary {
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: rgba(15, 23, 42, 0.75);
+  color: #cbd5e1;
+}
+
+.match-exit-danger {
+  border: 1px solid rgba(248, 113, 113, 0.72);
+  background: linear-gradient(180deg, #7f1d1d, #4c0d0d);
+  color: #fee2e2;
+}
+
 @keyframes chess-root-ember-drift {
   0% { transform: translateY(0); }
   100% { transform: translateY(-400px); }
@@ -86,7 +199,28 @@
   position: relative;
 }
 
-.chess-cell-light {
+[data-chess-piece-motion="true"] {
+  transform: translateZ(0);
+}
+
+[data-chess-piece-motion="true"][data-move-animation="position"] {
+  animation: chess-piece-motion-emphasis 240ms cubic-bezier(0.12, 0.9, 0.2, 1) both;
+  will-change: transform;
+  z-index: 70;
+}
+
+@keyframes chess-piece-motion-emphasis {
+  0%,
+  65% {
+    filter: drop-shadow(0 0 16px rgba(251, 191, 36, 0.72));
+  }
+
+  100% {
+    filter: none;
+  }
+}
+
+.chess-cell[data-cell-tone="light"] {
   background: linear-gradient(
     135deg,
     var(--color-chess-tile-light) 0%,
@@ -101,7 +235,7 @@
     inset 0 0 0 0.5px rgba(0, 0, 0, 0.3);
 }
 
-.chess-cell-dark {
+.chess-cell[data-cell-tone="dark"] {
   background: linear-gradient(
     135deg,
     var(--color-chess-tile-dark) 0%,
@@ -251,42 +385,42 @@
   100% { transform: scale(1); opacity: 1; }
 }
 
-.chess-turn-player {
+.chess-turn-banner[data-turn-state="self"] {
   border-color: transparent;
 }
 
-.chess-turn-player span,
-.chess-turn-player .chess-turn-text {
+.chess-turn-banner[data-turn-state="self"] span,
+.chess-turn-banner[data-turn-state="self"] .chess-turn-text {
   color: #60a5fa;
   text-shadow: 0 0 20px rgba(96, 165, 250, 0.6), 0 0 40px rgba(59, 130, 246, 0.3);
 }
 
-.chess-turn-player::before {
+.chess-turn-banner[data-turn-state="self"]::before {
   background: linear-gradient(90deg, transparent, #3b82f6, transparent);
   opacity: 0.5;
 }
 
-.chess-turn-player::after {
+.chess-turn-banner[data-turn-state="self"]::after {
   background: linear-gradient(90deg, transparent, #3b82f6, transparent);
   opacity: 0.3;
 }
 
-.chess-turn-opponent {
+.chess-turn-banner[data-turn-state="opponent"] {
   border-color: transparent;
 }
 
-.chess-turn-opponent span,
-.chess-turn-opponent .chess-turn-text {
+.chess-turn-banner[data-turn-state="opponent"] span,
+.chess-turn-banner[data-turn-state="opponent"] .chess-turn-text {
   color: #f87171;
   text-shadow: 0 0 20px rgba(248, 113, 113, 0.6), 0 0 40px rgba(239, 68, 68, 0.3);
 }
 
-.chess-turn-opponent::before {
+.chess-turn-banner[data-turn-state="opponent"]::before {
   background: linear-gradient(90deg, transparent, #ef4444, transparent);
   opacity: 0.5;
 }
 
-.chess-turn-opponent::after {
+.chess-turn-banner[data-turn-state="opponent"]::after {
   background: linear-gradient(90deg, transparent, #ef4444, transparent);
   opacity: 0.3;
 }

@@ -47,6 +47,12 @@ export function nextState(
 		}
 
 		case 'vs_screen': {
+			if (event.type === 'GAME_ENDED') {
+				return {
+					tag: 'game_over',
+					sub: event.initialSub,
+				};
+			}
 			if (event.type !== 'VS_COMPLETE') return state;
 			return { tag: 'poker_combat', handoff: event.handoff };
 		}

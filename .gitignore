@@ -93,6 +93,7 @@ __tests__/
 !client/src/game/match/modes/p2p/winnerArbiter.test.ts
 !client/src/data/HiveAuth.test.ts
 !client/src/data/HiveDataLayer.test.ts
+!server/services/serverStateAdapter.test.ts
 !client/src/main/swCacheName.test.ts
 !shared/runtimeConfig.test.ts
 !server/services/adminApprovalReplayGuard.test.ts
@@ -108,6 +109,7 @@ __tests__/
 !client/src/game/stores/combat/chessAnimationSlice.test.ts
 !client/src/game/deck/heroDeckRules.test.ts
 !client/src/game/utils/cards/cardLevelScaling.test.ts
+!client/src/game/components/chess/chessBoardPresentation.test.ts
 !client/src/game/components/chess/chessBoardInteractionRules.test.ts
 !client/src/game/components/collection/collectionStarterGate.test.ts
 !client/src/game/components/collection/collectionAcquisition.test.ts

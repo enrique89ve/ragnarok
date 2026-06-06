@@ -1,10 +1,10 @@
 /**
  * AccountSlot — nav-bar identity slot.
  *
- * Renders the player's UserChip when signed in, or a "Login" pill that
+ * Renders the player's account menu when signed in, or a "Login" pill that
  * routes to `/settings` (where the HiveKeychainLogin widget lives) when
- * the slot is empty. The signed-in chip defaults to Wallet so shared
- * headers do not double as Settings entry points. Replaces the bare
+ * the slot is empty. The signed-in chip shows only Hive avatar + username
+ * and exposes Wallet, Collection, and Disconnect actions. Replaces the bare
  * `{username && <UserChip />}`
  * pattern that previously left a hole in every page header for guests.
  *

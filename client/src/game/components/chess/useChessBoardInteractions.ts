@@ -10,6 +10,7 @@ import type { ChessBoardPosition } from '../../types/ChessTypes';
 import { computeMatchupGlows } from '../../utils/chess/elementMatchupUtils';
 import {
   containsPosition,
+  didMoveApply,
   getBlockedPieceMessage,
   getBoardHighlightKind,
   getCellClickAction,
@@ -313,8 +314,7 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
       // chain that produced the post-strike freeze before the
       // pendingAttackAnimation guard above.
       const movedPiece = movingPiece ? getPieceAt(position) : null;
-      const moveApplied = movedPiece !== null && movingPiece !== null && movedPiece.id === movingPiece.id;
-      if (!moveApplied) {
+      if (!didMoveApply({ movingPiece, pieceAtDestination: movedPiece })) {
         return;
       }
 

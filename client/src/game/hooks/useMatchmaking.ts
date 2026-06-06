@@ -7,6 +7,7 @@ import { debug } from '../config/debugConfig';
 import { isHiveWalletAvailable } from '../../data/HiveAuth';
 import { isSharedNetworkEnvironment } from '../config/featureFlags';
 import { getRagnarokNetworkConfig } from '../config/networkConfig';
+import { readServerSignedChallenge } from '@shared/p2pAvailability';
 import {
 	broadcastQueueJoin,
 	broadcastQueueLeave,
@@ -50,6 +51,8 @@ export function useMatchmaking() {
 			setQueuePosition(null);
 			return false;
 		};
+
+		usePeerStore.getState().clearMatchChallenges();
 
 		const peerId = usePeerStore.getState().myPeerId;
 		if (!peerId) {
@@ -163,6 +166,16 @@ export function useMatchmaking() {
 				setStatus('matched');
 				setOpponent(data.opponentPeerId, data.isHost);
 				if (typeof data.matchId === 'string') setRoomId(data.matchId);
+				const localMatchChallenge = data.matchChallenge === undefined
+					? null
+					: readServerSignedChallenge(data.matchChallenge);
+				const opponentMatchChallenge = data.opponentMatchChallenge === undefined
+					? null
+					: readServerSignedChallenge(data.opponentMatchChallenge);
+				usePeerStore.getState().setMatchChallenges(
+					localMatchChallenge ?? null,
+					opponentMatchChallenge ?? null,
+				);
 				setQueuePosition(null);
 				return true;
 			}
@@ -184,16 +197,27 @@ export function useMatchmaking() {
 
 					const statusResponse = await fetch(`${API_BASE}/api/matchmaking/status/${currentPeerId}`);
 					if (!statusResponse.ok) return;
-					const statusData = await statusResponse.json();
+								const statusData = await statusResponse.json();
 
-					if (statusData.success && statusData.status === 'matched') {
-						setStatus('matched');
-						setOpponent(statusData.opponentPeerId, statusData.isHost);
-						if (typeof statusData.matchId === 'string') setRoomId(statusData.matchId);
-						setQueuePosition(null);
-						if (pollIntervalRef.current) {
-							clearInterval(pollIntervalRef.current);
-							pollIntervalRef.current = null;
+								if (statusData.success && statusData.status === 'matched') {
+									setStatus('matched');
+									setOpponent(statusData.opponentPeerId, statusData.isHost);
+									if (typeof statusData.matchId === 'string') setRoomId(statusData.matchId);
+									const localMatchChallenge = statusData.matchChallenge === undefined
+										? null
+										: readServerSignedChallenge(statusData.matchChallenge);
+									const opponentMatchChallenge = statusData.opponentMatchChallenge === undefined
+										? null
+										: readServerSignedChallenge(statusData.opponentMatchChallenge);
+									usePeerStore.getState().setMatchChallenges(
+										localMatchChallenge ?? null,
+										opponentMatchChallenge ?? null,
+									);
+									setQueuePosition(null);
+									serverQueueActiveRef.current = false;
+									if (pollIntervalRef.current) {
+										clearInterval(pollIntervalRef.current);
+										pollIntervalRef.current = null;
 						}
 					} else if (statusData.success && statusData.status === 'queued') {
 						setQueuePosition(statusData.position || null);
@@ -219,6 +243,7 @@ export function useMatchmaking() {
 
 	const leaveQueue = useCallback(async () => {
 		const peerId = usePeerStore.getState().myPeerId;
+		usePeerStore.getState().clearMatchChallenges();
 
 		if (chainPollerCancelRef.current) {
 			chainPollerCancelRef.current();

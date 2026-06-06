@@ -75,6 +75,74 @@ type RagnarokGameCoordinatorProps = {
   opponentArmy?: ArmySelectionType | null;
 };
 
+const MATCH_EXIT_AUTO_HOME_SECONDS = 25;
+
+type MatchExitControlsProps = {
+  readonly visible: boolean;
+  readonly promptOpen: boolean;
+  readonly onRequestExit: () => void;
+  readonly onCancelExit: () => void;
+  readonly onConfirmExit: () => void;
+};
+
+function MatchExitControls({
+  visible,
+  promptOpen,
+  onRequestExit,
+  onCancelExit,
+  onConfirmExit,
+}: MatchExitControlsProps) {
+  if (!visible && !promptOpen) return null;
+
+  return (
+    <>
+      {visible && (
+        <div className="match-exit-control">
+          <button
+            type="button"
+            className="match-exit-button"
+            onClick={onRequestExit}
+          >
+            Leave Match
+          </button>
+        </div>
+      )}
+      {promptOpen && (
+        <div className="match-exit-backdrop" role="presentation">
+          <div
+            className="match-exit-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="match-exit-title"
+          >
+            <div className="match-exit-kicker">Match in progress</div>
+            <h2 id="match-exit-title">Leave this battle?</h2>
+            <p>
+              Leaving now records this run locally as abandoned and ends the current battle flow.
+            </p>
+            <div className="match-exit-actions">
+              <button
+                type="button"
+                className="match-exit-secondary"
+                onClick={onCancelExit}
+              >
+                Stay
+              </button>
+              <button
+                type="button"
+                className="match-exit-danger"
+                onClick={onConfirmExit}
+              >
+                Leave Battle
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initialArmy = null, opponentArmy: opponentArmyProp = null }) => {
   // Route-level MatchSetup wrappers populate this before mounting the
   // coordinator. The coordinator renders phases; it no longer decides which
@@ -127,6 +195,8 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   const clearFlow = useGameFlowStore(s => s.clear);
 
   const [playerArmy, setPlayerArmy] = useState<ArmySelectionType | null>(effectiveInitialArmy);
+  const [exitPromptOpen, setExitPromptOpen] = useState(false);
+  const [matchAbandoned, setMatchAbandoned] = useState(false);
   /*
     Shared deck IDs flow directly into useUnifiedCombatStore.setSharedDeck
     when warband bootstrap fires. There is no need for a local mirror —
@@ -653,6 +723,8 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     setPlayerArmy(null);
     setSharedDeck([]);
     resetPlayerTurnCount();
+    setExitPromptOpen(false);
+    setMatchAbandoned(false);
     gameEndProcessedRef.current = false;
     bootstrappedFromWarbandRef.current = false;
     clearFlow();
@@ -665,6 +737,40 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       navigate(getWarbandEntryRoute('single'));
     }
   }, [resetBoard, isCampaign, clearCurrent, navigate, resetPlayerTurnCount, clearFlow, setSharedDeck]);
+
+  const handleReturnHome = useCallback(() => {
+    if (gameOverTimerRef.current) {
+      clearTimeout(gameOverTimerRef.current);
+      gameOverTimerRef.current = null;
+    }
+    resetBoard();
+    setPlayerArmy(null);
+    setSharedDeck([]);
+    resetPlayerTurnCount();
+    resetBossRulesApplied();
+    setExitPromptOpen(false);
+    setMatchAbandoned(false);
+    gameEndProcessedRef.current = false;
+    bootstrappedFromWarbandRef.current = false;
+    clearFlow();
+    if (isCampaign) clearCurrent();
+    navigate(routes.home);
+  }, [resetBoard, setSharedDeck, resetPlayerTurnCount, resetBossRulesApplied, clearFlow, isCampaign, clearCurrent, navigate]);
+
+  const handleConfirmExit = useCallback(() => {
+    if (gameOverTimerRef.current) {
+      clearTimeout(gameOverTimerRef.current);
+      gameOverTimerRef.current = null;
+    }
+    setExitPromptOpen(false);
+    setMatchAbandoned(true);
+    gameEndProcessedRef.current = true;
+    clearPendingCombat();
+    setPokerSlotsSwapped(false);
+    endCombat();
+    playSoundEffect('defeat');
+    dispatchFlow({ type: 'GAME_ENDED', initialSub: 'result' });
+  }, [clearPendingCombat, setPokerSlotsSwapped, endCombat, playSoundEffect, dispatchFlow]);
 
   /*
     "Back to Campaign" — if the player won AND the mission has an authored
@@ -694,6 +800,8 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     resetPlayerTurnCount();
     resetBossRulesApplied();
     gameEndProcessedRef.current = false;
+    setExitPromptOpen(false);
+    setMatchAbandoned(false);
     const defaultArmy = getDefaultArmySelection();
     setPlayerArmy(defaultArmy);
     initializeBoard(defaultArmy, opponentArmy, cryptoIdGen);
@@ -726,6 +834,9 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   // music. CSS for finale lives in chess-realm-skins.css.
   const chessRealmClass = getChessRealmClass({ isCampaign, missionRealm, visualRealm });
   const finaleClass = getFinaleClass({ isCampaign, campaignData });
+  const canLeaveActiveMatch = flowState?.tag === 'chess'
+    || flowState?.tag === 'vs_screen'
+    || flowState?.tag === 'poker_combat';
 
   // Guard: arriving at a gameplay route with no warband and not in campaign -> redirect to picker
   if (!effectiveInitialArmy && !isCampaign && !playerArmy) {
@@ -734,6 +845,13 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
 
   return (
     <div className={`ragnarok-chess-game w-full h-full overflow-hidden ${chessRealmClass} ${finaleClass}`.trim()}>
+      <MatchExitControls
+        visible={canLeaveActiveMatch}
+        promptOpen={exitPromptOpen}
+        onRequestExit={() => setExitPromptOpen(true)}
+        onCancelExit={() => setExitPromptOpen(false)}
+        onConfirmExit={handleConfirmExit}
+      />
       <Suspense fallback={null}>
         {flowState !== null && flowState.tag === 'cinematic' && (
           <CinematicPhase
@@ -791,8 +909,10 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
               } : null}
               onCinematicEnd={() => dispatchFlow({ type: 'GAME_OVER_ADVANCE', nextSub: 'result' })}
               onBridgeEnd={() => { clearCurrent(); navigate(routes.campaign); }}
-              onPrimaryAction={isCampaign ? handleBackToCampaign : handleRestart}
+              onPrimaryAction={matchAbandoned ? handleReturnHome : isCampaign ? handleBackToCampaign : handleRestart}
+              onHome={handleReturnHome}
               onRetry={handleRetryMission}
+              abandonment={matchAbandoned ? { autoHomeSeconds: MATCH_EXIT_AUTO_HOME_SECONDS } : null}
             />
           )}
         </AnimatePresence>

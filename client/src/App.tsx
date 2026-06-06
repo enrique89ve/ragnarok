@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route, Link, Navigate, Outlet } from 'react-router-
 import { routes } from './lib/routes';
 import { getWarbandEntryRoute } from './lib/warbandRoutes';
 import { Button, ToastProvider } from './components/ui-norse';
+import { AccountSlot } from './components/account/AccountSlot';
 import {
 	ChevronRight,
 	Compass,
@@ -414,7 +415,7 @@ const ACCENT: Record<AccentKey, { text: string; strip: string; border: string; a
 	},
 };
 
-const MODE_CARDS: ReadonlyArray<ModeCard> = [
+const PLAY_MODE_CARDS: ReadonlyArray<ModeCard> = [
 	{
 		title: 'Single',
 		kicker: 'Practice',
@@ -454,33 +455,21 @@ const MODE_CARDS: ReadonlyArray<ModeCard> = [
 		cta: 'March',
 		intent: 'combat',
 	},
-	{
-		title: 'Yggdrasil Atlas',
-		kicker: 'Lore',
-		description: 'Review realm origins, Gate effects, and pledged houses before campaign or PvP.',
-		to: routes.map,
-		icon: Compass,
-		accent: 'rune',
-		atmosphere:
-			'radial-gradient(ellipse 70% 55% at 85% 18%, rgba(143, 181, 115, 0.28), transparent 68%), ' +
-			'radial-gradient(ellipse 45% 42% at 20% 90%, rgba(74, 111, 224, 0.14), transparent 70%)',
-		cta: 'Study',
-		intent: 'meta',
-	},
-	{
-		title: 'Collection',
-		kicker: 'Deckbuilding',
-		description: 'Review starter and NFT cards, inspect rarity treatments, and tune the pieces behind your army.',
-		to: routes.collection,
-		icon: LayoutGrid,
-		accent: 'bifrost',
-		// Sober treatment: barely-there bifrost wash. Reads as "tool" not "battle".
-		atmosphere:
-			'radial-gradient(ellipse 60% 50% at 90% 10%, rgba(74, 111, 224, 0.10), transparent 70%)',
-		cta: 'Browse',
-		intent: 'meta',
-	},
 ] as const;
+
+const COLLECTION_CARD: ModeCard = {
+	title: 'Collection',
+	kicker: 'Deckbuilding',
+	description: 'Review starter and NFT cards, inspect rarity treatments, and tune the pieces behind your army.',
+	to: routes.collection,
+	icon: LayoutGrid,
+	accent: 'bifrost',
+	// Sober treatment: barely-there bifrost wash. Reads as "tool" not "battle".
+	atmosphere:
+		'radial-gradient(ellipse 60% 50% at 90% 10%, rgba(74, 111, 224, 0.10), transparent 70%)',
+	cta: 'Browse',
+	intent: 'meta',
+};
 
 const UTILITY_LINKS: ReadonlyArray<{ label: string; shortLabel?: string; to: string; icon: typeof Swords }> = [
 	{ label: 'Wallet', to: routes.wallet, icon: WalletCards },
@@ -506,31 +495,14 @@ function StatRow({ label, value, highlight = false }: { label: string; value: st
 
 function HomeAccountControl({
 	hiveUsername,
-	accountInitials,
-	authenticated,
 	onLogin,
 }: {
 	hiveUsername: string | null;
-	accountInitials?: string;
-	authenticated: boolean;
 	onLogin: () => void;
 }) {
-	if (hiveUsername && authenticated) {
+	if (hiveUsername) {
 		return (
-			<Link
-				to={routes.wallet}
-				title={`@${hiveUsername}`}
-				aria-label={`Open wallet for @${hiveUsername}`}
-				className="n-home-account-control inline-flex min-h-10 shrink-0 items-center gap-2 py-1 pl-1.5 pr-3 no-underline"
-			>
-				<span className="n-home-account-sigil inline-flex h-8 w-8 min-w-8 items-center justify-center rounded-full font-display text-[0.7rem] font-black uppercase tracking-[0.02em]">
-					{accountInitials}
-				</span>
-				<span className="hidden min-w-0 max-w-[min(14rem,28vw)] items-center gap-1.5 overflow-hidden font-mono text-[0.64rem] font-bold uppercase tracking-[0.08em] text-ink-100 sm:flex">
-					<span className="n-home-account-status" aria-hidden="true" />
-					<span className="truncate">@{hiveUsername}</span>
-				</span>
-			</Link>
+			<AccountSlot username={hiveUsername} tier="premium" to={routes.wallet} />
 		);
 	}
 
@@ -661,7 +633,6 @@ function HomePage() {
 	const sagaPercent = totalMissionCount > 0
 		? Math.round((completedMissionCount / totalMissionCount) * 100)
 		: 0;
-	const accountInitials = hiveUsername?.slice(0, 2).toUpperCase();
 	const socialHiveUsername = sharedNetwork ? authenticatedHiveUsername : hiveUsername;
 	const [now, setNow] = useState(Date.now());
 
@@ -719,6 +690,87 @@ function HomePage() {
 		}
 	};
 
+	const renderModeCard = (mode: ModeCard) => {
+		const Icon = mode.icon;
+		const a = ACCENT[mode.accent];
+		const isCombat = mode.intent === 'combat';
+		const requiresAccountBoundCards = isCombat || mode.to === routes.collection;
+		const blockedBySession = sharedNetwork && requiresAccountBoundCards && !authenticatedHiveUsername;
+		const blockedByStarter = requiresAccountBoundCards && !starterClaimed && !blockedBySession;
+		const locked = blockedBySession || blockedByStarter;
+		const visibleCta = blockedBySession
+			? hiveUsername ? 'Sign' : 'Connect'
+			: blockedByStarter
+				? 'Starter'
+				: mode.cta;
+		const cardContent = (
+			<>
+				<div
+					className="n-mode-card-atmosphere"
+					style={{ background: mode.atmosphere }}
+				/>
+
+				<Icon className={`n-mode-card-large-icon h-16 w-16 ${a.text} group-hover:scale-110 group-hover:opacity-30`} strokeWidth={1} />
+
+				<div className="relative z-10 flex flex-col h-full justify-between">
+					<div>
+						<div className={`font-mono text-[10px] uppercase tracking-[0.24em] mb-1 group-hover:text-gold-300 transition-colors ${a.text}`}>{mode.kicker}</div>
+						<h3 className="font-display text-lg font-black uppercase tracking-wider text-ink-0 group-hover:text-gold-100 transition-colors">{mode.title}</h3>
+						<p className="n-mode-card-description mt-2 text-xs text-ink-300 line-clamp-2 leading-relaxed">
+							{mode.description}
+						</p>
+					</div>
+
+					<div className="mt-6 flex justify-end">
+						{isCombat ? (
+							<div className="btn-runic btn-runic--gold btn-runic--sm transition-transform group-hover:scale-105">
+								<span className="btn-runic-stud" aria-hidden />
+								<Play size={10} fill="currentColor" />
+								{visibleCta}
+								<span className="btn-runic-stud" aria-hidden />
+							</div>
+						) : (
+							<div className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-ink-300 group-hover:text-gold-300 transition-colors">
+								{visibleCta}
+								<ChevronRight size={12} />
+							</div>
+						)}
+					</div>
+				</div>
+			</>
+		);
+		const cardClassName = `n-mode-card n-glass-interactive px-5 py-6 min-h-[180px] group no-underline ${locked ? 'opacity-70' : ''}`;
+
+		if (locked) {
+			return (
+				<button
+					key={mode.title}
+					type="button"
+					className={`${cardClassName} text-left`}
+					onClick={() => {
+						if (blockedBySession) {
+							setShowHiveLogin(true);
+							return;
+						}
+						openStarterCeremony();
+					}}
+				>
+					{cardContent}
+				</button>
+			);
+		}
+
+		return (
+			<Link
+				key={mode.title}
+				to={mode.to}
+				className={cardClassName}
+			>
+				{cardContent}
+			</Link>
+		);
+	};
+
 		return (
 			<div className="n-page-shell n-home-shell bg-(image:--bg-home-nav)">
 			{/* ── HEADER ─────────────────────────────────────────────────────── */}
@@ -742,8 +794,6 @@ function HomePage() {
 					</div>
 						<HomeAccountControl
 							hiveUsername={hiveUsername}
-							accountInitials={accountInitials}
-							authenticated={Boolean(authenticatedHiveUsername)}
 							onLogin={() => setShowHiveLogin(true)}
 						/>
 				</div>
@@ -751,7 +801,7 @@ function HomePage() {
 
 			{/* ── PAGE GRID ── */}
 			<div className="n-home-layout n-page-gutter mx-auto mt-4 grid w-full max-w-[1440px] grid-cols-1 items-start gap-4 sm:mt-6 sm:gap-6">
-					<main className="grid min-w-0 grid-cols-1 content-start gap-4 pb-4 sm:gap-6 sm:pb-24">
+					<main className="grid min-w-0 grid-cols-1 content-start gap-4 pb-28 sm:gap-6 sm:pb-32">
 						{/* Banner */}
 						<section
 							className="n-home-hero flex flex-col gap-8 p-5 sm:p-8 xl:flex-row xl:items-end xl:justify-between"
@@ -848,87 +898,11 @@ function HomePage() {
 							<div className="section-heading-kicker">Primary Routes</div>
 							<h2 className="section-heading-title">Choose your front</h2>
 						</header>
-						<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-5">
-							{MODE_CARDS.map(mode => {
-								const Icon = mode.icon;
-								const a = ACCENT[mode.accent];
-								const isCombat = mode.intent === 'combat';
-								const requiresAccountBoundCards = isCombat || mode.to === routes.collection;
-								const blockedBySession = sharedNetwork && requiresAccountBoundCards && !authenticatedHiveUsername;
-								const blockedByStarter = requiresAccountBoundCards && !starterClaimed && !blockedBySession;
-								const locked = blockedBySession || blockedByStarter;
-								const visibleCta = blockedBySession
-									? hiveUsername ? 'Sign' : 'Connect'
-									: blockedByStarter
-										? 'Starter'
-										: mode.cta;
-								const cardContent = (
-									<>
-										<div
-											className="n-mode-card-atmosphere"
-											style={{ background: mode.atmosphere }}
-										/>
-
-										<Icon className={`n-mode-card-large-icon h-16 w-16 ${a.text} group-hover:scale-110 group-hover:opacity-30`} strokeWidth={1} />
-
-										<div className="relative z-10 flex flex-col h-full justify-between">
-											<div>
-												<div className={`font-mono text-[10px] uppercase tracking-[0.24em] mb-1 group-hover:text-gold-300 transition-colors ${a.text}`}>{mode.kicker}</div>
-												<h3 className="font-display text-lg font-black uppercase tracking-wider text-ink-0 group-hover:text-gold-100 transition-colors">{mode.title}</h3>
-													<p className="n-mode-card-description mt-2 text-xs text-ink-300 line-clamp-2 leading-relaxed">
-													{mode.description}
-												</p>
-											</div>
-
-											<div className="mt-6 flex justify-end">
-												{isCombat ? (
-													<div className="btn-runic btn-runic--gold btn-runic--sm transition-transform group-hover:scale-105">
-														<span className="btn-runic-stud" aria-hidden />
-														<Play size={10} fill="currentColor" />
-														{visibleCta}
-														<span className="btn-runic-stud" aria-hidden />
-													</div>
-												) : (
-													<div className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-ink-300 group-hover:text-gold-300 transition-colors">
-														{visibleCta}
-														<ChevronRight size={12} />
-													</div>
-												)}
-											</div>
-										</div>
-									</>
-								);
-								const cardClassName = `n-mode-card n-glass-interactive px-5 py-6 min-h-[180px] group no-underline ${locked ? 'opacity-70' : ''}`;
-
-								if (locked) {
-									return (
-										<button
-											key={mode.title}
-											type="button"
-											className={`${cardClassName} text-left`}
-											onClick={() => {
-												if (blockedBySession) {
-													setShowHiveLogin(true);
-													return;
-												}
-												openStarterCeremony();
-											}}
-										>
-											{cardContent}
-										</button>
-									);
-								}
-
-								return (
-									<Link
-										key={mode.title}
-										to={mode.to}
-										className={cardClassName}
-									>
-										{cardContent}
-									</Link>
-								);
-							})}
+						<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-[repeat(3,minmax(0,1fr))_minmax(0,0.92fr)]">
+							{PLAY_MODE_CARDS.map(renderModeCard)}
+							<div className="xl:border-l xl:border-gold-300/10 xl:pl-6">
+								{renderModeCard(COLLECTION_CARD)}
+							</div>
 						</div>
 					</section>
 
@@ -946,7 +920,7 @@ function HomePage() {
 			</div>
 
 			{/* ── UTILITY BAR ── */}
-			<nav className="n-home-utility-bar fixed bottom-0 left-0 right-0 z-40 border-t border-obsidian-700 bg-obsidian-950/80 px-4 py-3 backdrop-blur-lg lg:static lg:bg-transparent lg:border-none">
+			<nav className="n-home-utility-bar fixed bottom-0 left-0 right-0 z-40 border-t border-obsidian-700 bg-obsidian-950/88 px-4 py-3 backdrop-blur-lg">
 				<div className="n-home-utility-inner mx-auto flex max-w-5xl justify-start gap-2 overflow-x-auto [scrollbar-width:none]">
 					{UTILITY_LINKS.map(link => {
 						const Icon = link.icon;

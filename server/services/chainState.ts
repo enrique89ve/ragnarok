@@ -25,6 +25,8 @@ import type {
 	EitrLedgerEntryQuery,
 	EitrLedgerTotalQuery,
 	ForgeCommitRecord,
+	MarketListing,
+	MarketOffer,
 } from '../../shared/protocol-core/types';
 import type { AcquisitionProvenance } from '../../shared/protocol-core/acquisitionProvenance';
 
@@ -201,6 +203,8 @@ interface SerializedState {
 	packs?: [string, PackAsset][];
 	packSupply?: [string, PackSupplyRecord][];
 	slashedAccounts?: string[];
+	marketListings?: [string, ListingRecord][];
+	marketOffers?: [string, OfferRecord][];
 	// Sync status
 	inSync?: boolean;
 	headBlock?: number;
@@ -247,26 +251,8 @@ let _irreversibleBlock = 0;
 let _syncTargetBlock = 0;
 
 // Marketplace state (v1.2)
-export interface ListingRecord {
-	listingId: string;
-	nftUid: string;
-	nftType: 'card' | 'pack';
-	seller: string;
-	price: number;
-	currency: 'HIVE' | 'HBD';
-	listedBlock: number;
-	active: boolean;
-}
-
-export interface OfferRecord {
-	offerId: string;
-	nftUid: string;
-	buyer: string;
-	price: number;
-	currency: 'HIVE' | 'HBD';
-	offeredBlock: number;
-	status: 'pending' | 'accepted' | 'rejected' | 'cancelled';
-}
+export type ListingRecord = MarketListing;
+export type OfferRecord = MarketOffer;
 
 const marketListings = new Map<string, ListingRecord>();
 const marketOffers = new Map<string, OfferRecord>();
@@ -407,6 +393,12 @@ export function loadState(): void {
 		slashedAccounts.clear();
 		for (const a of data.slashedAccounts ?? []) slashedAccounts.add(a);
 
+		marketListings.clear();
+		for (const [k, v] of data.marketListings ?? []) marketListings.set(k, v);
+
+		marketOffers.clear();
+		for (const [k, v] of data.marketOffers ?? []) marketOffers.set(k, v);
+
 		console.log(`[chainState] Loaded: ${players.size} players, ${cards.size} cards, ${matches.length} matches, blockCursor=${lastIrreversibleBlockProcessed}`);
 	} catch (err) {
 		console.warn('[chainState] Failed to load state:', err);
@@ -455,6 +447,8 @@ export function exportState(): SerializedState {
 		packs: [...packs.entries()],
 		packSupply: [...packSupply.entries()],
 		slashedAccounts: [...slashedAccounts],
+		marketListings: [...marketListings.entries()],
+		marketOffers: [...marketOffers.entries()],
 		inSync: _inSync,
 		headBlock: _headBlock,
 		irreversibleBlock: _irreversibleBlock,
@@ -528,6 +522,12 @@ export function importState(data: SerializedState): void {
 
 	slashedAccounts.clear();
 	for (const a of data.slashedAccounts ?? []) slashedAccounts.add(a);
+
+	marketListings.clear();
+	for (const [k, v] of data.marketListings ?? []) marketListings.set(k, v);
+
+	marketOffers.clear();
+	for (const [k, v] of data.marketOffers ?? []) marketOffers.set(k, v);
 
 	_inSync = data.inSync ?? false;
 	_headBlock = data.headBlock ?? 0;

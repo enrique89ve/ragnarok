@@ -18,6 +18,8 @@ export type OutgoingFriendChallenge = {
 	readonly peerId: string;
 	readonly sentAt: number;
 	readonly expiresAt: number;
+	readonly matchChallenge?: ServerSignedChallenge;
+	readonly opponentMatchChallenge?: ServerSignedChallenge;
 };
 
 export type ChallengeCooldown = {

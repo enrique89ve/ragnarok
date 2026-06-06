@@ -15,6 +15,17 @@ vi.mock('./HiveAuth', () => ({
 const signHiveMessageMock = vi.mocked(signHiveMessage);
 
 describe('HiveDataLayer battle authority signatures', () => {
+	const matchChallenge = {
+		from: 'alice',
+		to: 'bob',
+		peerId: 'peer-123',
+		timestamp: 1_700_000_000_000,
+		expiresAt: 1_700_000_000_090,
+		nonce: 'abcdef_0123456789abcd',
+		sigAlg: 'hmac-sha256:canonical-json:v1',
+		serverSig: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+	};
+
 	beforeEach(() => {
 		signHiveMessageMock.mockReset();
 		signHiveMessageMock.mockResolvedValue({ success: true, signature: 'SIG_POSTING' });
@@ -60,6 +71,23 @@ describe('HiveDataLayer battle authority signatures', () => {
 			{
 				keyType: 'Posting',
 				title: 'Authorize session key',
+			},
+		);
+	});
+
+	it('includes server challenge context when provided', async () => {
+		await expect(signSessionAuthorize('match-1', 'pubkey-1', {
+			username: 'alice',
+			matchChallenge,
+		})).resolves.toBe('SIG_POSTING');
+
+		expect(signHiveMessageMock).toHaveBeenCalledWith(
+			buildSessionAuthorizeMessage('match-1', 'pubkey-1', matchChallenge),
+			{
+				keyType: 'Posting',
+				title: 'Authorize session key',
+				username: 'alice',
+				providerId: 'hive_keychain',
 			},
 		);
 	});

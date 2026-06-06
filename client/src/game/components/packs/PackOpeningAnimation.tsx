@@ -41,6 +41,9 @@ interface PackOpeningAnimationProps {
 	 * dominant element instead of competing with stacked chrome.
 	 */
 	compactLayout?: boolean;
+	primaryActionLabel?: string;
+	primaryActionAriaLabel?: string;
+	collectionActionLabel?: string;
 	evidence?: {
 		readonly ceremony: CeremonyKind;
 		readonly account: string | null;
@@ -123,6 +126,9 @@ export default function PackOpeningAnimation({
 	oneShot = false,
 	hideCollectionLink = false,
 	compactLayout = false,
+	primaryActionLabel,
+	primaryActionAriaLabel,
+	collectionActionLabel = 'Collection',
 	evidence,
 }: PackOpeningAnimationProps) {
 	const [phase, setPhase] = useState<'intro' | 'opening' | 'reveal' | 'complete'>(compactLayout ? 'complete' : 'intro');
@@ -187,14 +193,29 @@ export default function PackOpeningAnimation({
 	};
 
 	const grouped = useBatchReveal ? groupCardsByClass(cards) : null;
+	const defaultPrimaryActionLabel = compactLayout && !oneShot ? 'Open Another' : 'Continue';
+	const resolvedPrimaryActionLabel = primaryActionLabel ?? defaultPrimaryActionLabel;
+	const handlePrimaryAction = compactLayout && !oneShot ? onOpenAnother : onClose;
+
+	useEffect(() => {
+		const previousOverflow = document.body.style.overflow;
+		document.body.style.overflow = 'hidden';
+		return () => {
+			document.body.style.overflow = previousOverflow;
+		};
+	}, []);
 
 	return (
 		<motion.div
 			initial={{ opacity: 0 }}
 			animate={{ opacity: 1 }}
 			exit={{ opacity: 0 }}
-				className="pack-opening-landscape-shell fixed inset-0 z-50 overflow-y-auto overflow-x-hidden bg-obsidian-950"
+			role="dialog"
+			aria-modal="true"
+			aria-label={`${packName} opening ceremony`}
+			className="pack-opening-landscape-shell fixed inset-0 z-[10000] overflow-y-auto overflow-x-hidden bg-obsidian-950"
 			style={{
+				backgroundColor: 'var(--obsidian-950)',
 				backgroundImage:
 					'radial-gradient(ellipse 80% 50% at 50% 0%, color-mix(in srgb, var(--gold-300) 6%, transparent) 0%, transparent 60%), radial-gradient(ellipse 120% 80% at 50% 100%, color-mix(in srgb, var(--obsidian-700) 40%, transparent) 0%, transparent 60%)',
 			}}
@@ -377,7 +398,7 @@ export default function PackOpeningAnimation({
 						)}
 
 						{/* ── Body ───────────────────────────────────────────── */}
-							<div className="pack-opening-body flex-1">
+							<div className="pack-opening-body flex-1 pb-8">
 							{phase === 'reveal' && !showAllCards && (
 								<div className="flex justify-center pt-6">
 									<button
@@ -512,23 +533,24 @@ export default function PackOpeningAnimation({
 								initial={{ y: 50, opacity: 0 }}
 								animate={{ y: 0, opacity: 1 }}
 								transition={{ delay: reducedMotion ? 0 : 0.5 }}
-								className="pack-opening-footer sticky bottom-0 z-30 bg-obsidian-950/95 backdrop-blur-xl border-t border-gold-300/15 px-6 py-4"
+								className="pack-opening-footer relative z-30 bg-obsidian-950/95 backdrop-blur-xl border-t border-gold-300/15 px-6 py-4"
 							>
 								<div className="max-w-6xl mx-auto flex items-center justify-center gap-3 flex-wrap">
 									<button
 										type="button"
-										onClick={compactLayout && !oneShot ? onOpenAnother : onClose}
+										onClick={handlePrimaryAction}
+										aria-label={primaryActionAriaLabel ?? resolvedPrimaryActionLabel}
 										className="btn-runic btn-runic--gold btn-runic--lg"
 									>
 										<span className="btn-runic-stud" aria-hidden />
-										{compactLayout && !oneShot ? 'Open Another' : 'Continue'}
+										{resolvedPrimaryActionLabel}
 										<span className="btn-runic-stud" aria-hidden />
 									</button>
 
 									{!hideCollectionLink && (
 										<Link to={routes.collection} className="btn-runic btn-runic--bifrost">
 											<span className="btn-runic-stud" aria-hidden />
-											Collection
+											{collectionActionLabel}
 											<span className="btn-runic-stud" aria-hidden />
 										</Link>
 									)}

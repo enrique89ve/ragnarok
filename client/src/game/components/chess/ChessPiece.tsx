@@ -5,7 +5,10 @@ import type { MatchupGlow } from '../../utils/chess/elementMatchupUtils';
 import { assetPath } from '../../utils/assetPath';
 import { useGameStore } from '../../stores/gameStore';
 import { useChessHoverStore } from '../../stores/chessHoverStore';
+import { getPieceHealthState } from './chessBoardPresentation';
 import { PIECE_TYPE_NAMES } from './chessPieceLabels';
+import { PIECE_COLOR_BY_TYPE } from './pieceVisuals';
+import { PieceGlyph } from './PieceGlyph';
 import './ChessPiece.css';
 
 const ELEMENT_IMAGES: Record<ElementType, string | null> = {
@@ -16,24 +19,6 @@ const ELEMENT_IMAGES: Record<ElementType, string | null> = {
   holy: assetPath('/textures/elements/holy.webp'),
   shadow: assetPath('/textures/elements/shadow.webp'),
   neutral: null
-};
-
-const PIECE_ICONS: Record<PieceType, string> = {
-  king: '♔',
-  queen: '♕',
-  rook: '♖',
-  bishop: '♗',
-  knight: '♘',
-  pawn: '♙'
-};
-
-const PIECE_COLORS: Record<PieceType, string> = {
-  king: '#FFD700',
-  queen: '#69CCF0',
-  rook: '#C79C6E',
-  bishop: '#FFFFFF',
-  knight: '#FFF569',
-  pawn: '#999999'
 };
 
 const ELEMENT_GLOW: Record<ElementType, { color: string; shadow: string; brightShadow: string }> = {
@@ -90,8 +75,8 @@ const OWNER_CLASSES = {
 
 const VISUAL_STATE_CLASSES = {
   idle: '',
-  selected: 'ring-4 ring-yellow-400 z-20',
-  attackable: 'ring-4 ring-red-500 ring-opacity-80 chess-piece-attackable z-20',
+  selected: 'ring-3 ring-amber-300/85 z-20',
+  attackable: 'ring-3 ring-red-300/80 z-20',
   locked: '',
 } satisfies Record<ChessPieceVisualState['tag'], string>;
 
@@ -111,16 +96,13 @@ const getMatchupGlowClassName = (matchupGlow: MatchupGlow | undefined): string =
 const getChessPieceClassName = (input: {
   readonly isPlayer: boolean;
   readonly canSelect: boolean;
-  readonly hasElement: boolean;
-  readonly element: ElementType;
   readonly visualState: ChessPieceVisualState;
   readonly matchupGlow?: MatchupGlow;
 }): string => cx(
   'chess-piece w-full h-full flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all relative',
   input.isPlayer ? OWNER_CLASSES.player : OWNER_CLASSES.opponent,
   VISUAL_STATE_CLASSES[input.visualState.tag],
-  input.canSelect && input.visualState.tag !== 'locked' && 'hover:brightness-110',
-  input.hasElement && `element-piece element-piece-${input.element}`,
+  input.canSelect && input.visualState.tag !== 'locked' && 'hover:brightness-106',
   getMatchupGlowClassName(input.matchupGlow),
 );
 
@@ -147,8 +129,9 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
   const hasElement = pieceElement !== 'neutral';
   const elementImage = ELEMENT_IMAGES[pieceElement];
   const animateScale = visualState.tag === 'selected'
-    ? (isKing ? 1.08 : 1.03)
-    : (isKing ? 1.05 : 1);
+    ? (isKing ? 1.04 : 1.02)
+    : (isKing ? 1.02 : 1);
+  const healthState = getPieceHealthState(healthPercent);
 
   const handleMouseEnter = () => {
     if (!isPawn) setHoveredPiece(piece.id);
@@ -163,21 +146,26 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
       data-piece-id={piece.id}
       data-piece-type={piece.type}
       data-owner={piece.owner}
+      data-local-owner={isPlayer ? 'self' : 'opponent'}
       data-position={`${piece.position.row},${piece.position.col}`}
+      data-row={piece.position.row}
+      data-col={piece.position.col}
+      data-element={pieceElement}
+      data-has-element={hasElement ? 'true' : 'false'}
       data-visual-state={visualState.tag}
       data-can-select={canSelect ? 'true' : 'false'}
+      data-health-state={healthState}
+      data-health-percent={Math.round(healthPercent)}
       className={getChessPieceClassName({
         isPlayer,
         canSelect,
-        hasElement,
-        element: pieceElement,
         visualState,
         matchupGlow,
       })}
       aria-label={`${piece.heroName} ${PIECE_TYPE_NAMES[piece.type]} at ${piece.position.row},${piece.position.col}`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      whileHover={canSelect ? { scale: 1.08 } : undefined}
+      whileHover={canSelect ? { scale: 1.04 } : undefined}
       whileTap={canSelect ? { scale: 0.95 } : undefined}
       initial={false}
       animate={{ scale: animateScale }}
@@ -201,7 +189,7 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
       {(!isPawn && !isKing) && (
         <div className="chess-piece-hp-container">
           <div
-            className={`chess-piece-hp-fill ${healthPercent <= 25 ? 'hp-danger' : healthPercent <= 50 ? 'hp-warning' : ''}`}
+            className="chess-piece-hp-fill"
             style={{ width: `${healthPercent}%` }}
           />
         </div>
@@ -214,17 +202,15 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
         />
       )}
 
-      <span
-        className={`${isPawn ? 'text-[clamp(14px,36cqw,30px)]' : 'text-[clamp(16px,42cqw,36px)]'} relative z-20 drop-shadow-lg ${isPlayer ? '' : 'transform rotate-180'}`}
-        style={{
-          color: PIECE_COLORS[piece.type],
-          textShadow: hasElement
-            ? `0 0 12px ${elementGlow.color}, 0 0 24px ${elementGlow.color}`
-            : '2px 2px 4px rgba(0,0,0,0.5)'
-        }}
-      >
-        {PIECE_ICONS[piece.type]}
-      </span>
+			<PieceGlyph
+				pieceType={piece.type}
+				fallbackColor={PIECE_COLOR_BY_TYPE[piece.type]}
+				className={`${isPawn ? 'text-[clamp(18px,47cqw,39px)]' : 'text-[clamp(20px,55cqw,47px)]'} relative z-20 drop-shadow-lg ${isPlayer ? '' : 'transform rotate-180'}`}
+				size={isPawn ? 'clamp(18px,47cqw,39px)' : 'clamp(20px,55cqw,47px)'}
+				fallbackTextShadow={hasElement
+					? `0 0 12px ${elementGlow.color}, 0 0 24px ${elementGlow.color}`
+					: '2px 2px 4px rgba(0,0,0,0.5)'}
+			/>
 
       {/* Stamina (power resource) — visible on cell. HP shown as bar (top).
          Name + element shown in tooltip on info-icon hover. */}

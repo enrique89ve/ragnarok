@@ -1,5 +1,31 @@
 .chess-piece {
   overflow: hidden !important;
+  isolation: isolate;
+  --chess-color-neutral: #f2f7fb;
+  --chess-overlay-strength: 0.2;
+  --chess-attack-border: rgba(248, 113, 113, 0.45);
+  --chess-advantage: rgba(34, 197, 94, 0.38);
+  --chess-disadvantage: rgba(248, 113, 113, 0.45);
+  --chess-mutual: rgba(129, 140, 248, 0.38);
+}
+
+.piece-glyph {
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.45));
+  transition: transform 0.14s ease, filter 0.14s ease;
+  will-change: transform, filter;
+}
+
+.piece-glyph-fallback {
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--chess-color-neutral);
+}
+
+.piece-glyph-image {
+  border-radius: 12%;
+  object-position: center;
+  filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.45)) saturate(1.02) contrast(1.04);
 }
 
 .element-image-bg {
@@ -8,10 +34,10 @@
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  opacity: 0.5;
+  opacity: var(--chess-overlay-strength);
   pointer-events: none;
   z-index: 1;
-  mix-blend-mode: screen;
+  mix-blend-mode: soft-light;
   transform: translateZ(0);
 }
 
@@ -24,27 +50,27 @@
 }
 
 .element-overlay-fire {
-  background: radial-gradient(ellipse at 50% 100%, rgba(255, 69, 0, 0.5) 0%, transparent 70%);
+  background: radial-gradient(ellipse at 50% 100%, rgba(255, 136, 87, 0.2) 0%, transparent 72%);
 }
 
 .element-overlay-water {
-  background: radial-gradient(ellipse at 50% 30%, rgba(0, 191, 255, 0.4) 0%, transparent 70%);
+  background: radial-gradient(ellipse at 50% 30%, rgba(123, 198, 255, 0.2) 0%, transparent 72%);
 }
 
 .element-overlay-wind {
-  background: radial-gradient(ellipse at 50% 50%, rgba(50, 205, 50, 0.3) 0%, transparent 80%);
+  background: radial-gradient(ellipse at 50% 50%, rgba(128, 214, 153, 0.18) 0%, transparent 82%);
 }
 
 .element-overlay-earth {
-  background: radial-gradient(ellipse at 50% 80%, rgba(139, 69, 19, 0.4) 0%, transparent 70%);
+  background: radial-gradient(ellipse at 50% 80%, rgba(180, 126, 78, 0.2) 0%, transparent 72%);
 }
 
 .element-overlay-holy {
-  background: radial-gradient(circle at 50% 50%, rgba(255, 215, 0, 0.5) 0%, transparent 60%);
+  background: radial-gradient(circle at 50% 50%, rgba(255, 214, 102, 0.2) 0%, transparent 64%);
 }
 
 .element-overlay-shadow {
-  background: radial-gradient(circle at 50% 50%, rgba(75, 0, 130, 0.5) 0%, transparent 70%);
+  background: radial-gradient(circle at 50% 50%, rgba(139, 116, 204, 0.2) 0%, transparent 72%);
 }
 
 .element-effect-layer {
@@ -58,49 +84,49 @@
 }
 
 .element-effect-fire {
-  background: 
-    radial-gradient(ellipse at 50% 100%, rgba(255, 100, 0, 0.6) 0%, transparent 60%),
-    radial-gradient(ellipse at 50% 80%, rgba(255, 200, 0, 0.3) 0%, transparent 50%);
-  animation: fire-dance 0.8s ease-in-out infinite alternate;
+  background:
+    radial-gradient(ellipse at 50% 100%, rgba(255, 136, 87, 0.2) 0%, transparent 66%),
+    radial-gradient(ellipse at 50% 80%, rgba(255, 194, 120, 0.13) 0%, transparent 58%);
+  animation: fire-dance 1.2s ease-in-out infinite alternate;
 }
 
 .element-effect-water {
-  background: 
-    radial-gradient(ellipse at 50% 0%, rgba(0, 150, 255, 0.5) 0%, transparent 70%),
-    linear-gradient(180deg, rgba(0, 191, 255, 0.3) 0%, transparent 60%);
-  animation: water-shimmer 2s ease-in-out infinite;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(130, 199, 255, 0.2) 0%, transparent 70%),
+    linear-gradient(180deg, rgba(130, 199, 255, 0.14) 0%, transparent 60%);
+  animation: water-shimmer 2.4s ease-in-out infinite;
 }
 
 .element-effect-wind {
-  background: 
-    radial-gradient(ellipse at 50% 50%, rgba(50, 205, 50, 0.4) 0%, transparent 60%);
-  animation: wind-pulse 2s ease-in-out infinite;
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(128, 214, 153, 0.2) 0%, transparent 64%);
+  animation: wind-pulse 2.4s ease-in-out infinite;
 }
 
 .element-effect-wind::before {
   content: '';
   position: absolute;
   inset: 10%;
-  border: 2px solid rgba(50, 205, 50, 0.5);
+  border: 1px solid rgba(128, 214, 153, 0.34);
   border-radius: 50%;
   animation: wind-ring 2s linear infinite;
 }
 
 .element-effect-earth {
-  background: 
-    radial-gradient(ellipse at 50% 100%, rgba(139, 69, 19, 0.5) 0%, transparent 60%),
-    radial-gradient(circle at 50% 50%, rgba(205, 133, 63, 0.3) 0%, transparent 50%);
-  animation: chess-piece-earth-pulse 2s ease-in-out infinite;
+  background:
+    radial-gradient(ellipse at 50% 100%, rgba(184, 130, 82, 0.2) 0%, transparent 62%),
+    radial-gradient(circle at 50% 50%, rgba(205, 161, 115, 0.12) 0%, transparent 52%);
+  animation: chess-piece-earth-pulse 2.4s ease-in-out infinite;
 }
 
 .element-effect-holy {
-  background: radial-gradient(circle at 50% 50%, rgba(255, 215, 0, 0.5) 0%, transparent 70%);
-  animation: chess-piece-holy-glow 1s ease-in-out infinite alternate;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 214, 102, 0.18) 0%, transparent 72%);
+  animation: chess-piece-holy-glow 1.4s ease-in-out infinite alternate;
 }
 
 .element-effect-shadow {
-  background: radial-gradient(circle at 50% 50%, rgba(75, 0, 130, 0.5) 0%, transparent 70%);
-  animation: shadow-throb 1.5s ease-in-out infinite;
+  background: radial-gradient(circle at 50% 50%, rgba(139, 116, 204, 0.2) 0%, transparent 72%);
+  animation: shadow-throb 1.7s ease-in-out infinite;
 }
 
 .element-badge-large {
@@ -120,7 +146,7 @@
 .element-icon-large {
   font-size: 14px;
   line-height: 1;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.7));
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
 }
 
 .element-border-glow {
@@ -132,67 +158,67 @@
 }
 
 .element-border-fire {
-  border: 2px solid rgba(255, 100, 0, 0.8);
+  border: 1px solid rgba(255, 136, 87, 0.45);
 }
 
 .element-border-water {
-  border: 2px solid rgba(0, 191, 255, 0.8);
+  border: 1px solid rgba(123, 198, 255, 0.45);
 }
 
 .element-border-wind {
-  border: 2px solid rgba(50, 205, 50, 0.8);
+  border: 1px solid rgba(128, 214, 153, 0.42);
 }
 
 .element-border-earth {
-  border: 2px solid rgba(170, 100, 40, 0.8);
+  border: 1px solid rgba(184, 130, 82, 0.45);
 }
 
 .element-border-holy {
-  border: 2px solid rgba(255, 235, 50, 0.9);
+  border: 1px solid rgba(255, 214, 102, 0.45);
 }
 
 .element-border-shadow {
-  border: 2px solid rgba(170, 70, 220, 0.8);
+  border: 1px solid rgba(139, 116, 204, 0.45);
 }
 
 @keyframes fire-dance {
-  0% { opacity: 0.8; transform: scaleY(1); }
-  100% { opacity: 1; transform: scaleY(1.1); }
+  0% { opacity: 0.28; transform: scaleY(0.985); }
+  100% { opacity: 0.5; transform: scaleY(1.015); }
 }
 
 @keyframes water-shimmer {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.45; }
 }
 
 @keyframes wind-pulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 0.8; }
+  0%, 100% { opacity: 0.24; }
+  50% { opacity: 0.38; }
 }
 
 @keyframes wind-ring {
-  0% { transform: scale(0.8); opacity: 0.8; }
-  100% { transform: scale(1.2); opacity: 0; }
+  0% { transform: scale(0.88); opacity: 0.3; }
+  100% { transform: scale(1.06); opacity: 0; }
 }
 
 @keyframes chess-piece-earth-pulse {
-  0%, 100% { opacity: 0.5; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.02); }
+  0%, 100% { opacity: 0.24; transform: scale(0.985); }
+  50% { opacity: 0.42; transform: scale(1.01); }
 }
 
 @keyframes chess-piece-holy-glow {
-  0% { opacity: 0.6; }
-  100% { opacity: 1; }
+  0% { opacity: 0.22; }
+  100% { opacity: 0.42; }
 }
 
 @keyframes shadow-throb {
-  0%, 100% { opacity: 0.7; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.05); }
+  0%, 100% { opacity: 0.24; transform: scale(0.985); }
+  50% { opacity: 0.4; transform: scale(1.01); }
 }
 
 .god-piece-aura {
   position: absolute;
-  inset: -8px;
+  inset: -1px;
   border-radius: 50%;
   pointer-events: none;
   z-index: 0;
@@ -200,11 +226,11 @@
 }
 
 @keyframes god-aura-breathe {
-  0%, 100% { transform: scale(0.95); opacity: 0.5; }
-  50% { transform: scale(1.1); opacity: 0.8; }
+  0%, 100% { transform: scale(0.99); opacity: 0.3; }
+  50% { transform: scale(1.02); opacity: 0.45; }
 }
 
-.element-piece {
+.chess-piece[data-has-element="true"] {
   transition: box-shadow 0.3s ease;
 }
 
@@ -213,63 +239,56 @@
 .chess-piece[data-piece-type="rook"],
 .chess-piece[data-piece-type="bishop"],
 .chess-piece[data-piece-type="knight"] {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }
 
 .chess-piece[data-piece-type="pawn"] {
-  opacity: 0.88;
+  opacity: 0.92;
 }
 
 .matchup-pulse-advantage {
-  outline: 3px solid rgba(34, 197, 94, 0.9);
+  outline: 2px solid var(--chess-advantage);
   outline-offset: 2px;
-  box-shadow: 0 0 20px rgba(34, 197, 94, 0.8), 0 0 40px rgba(34, 197, 94, 0.5), 0 0 60px rgba(34, 197, 94, 0.3), inset 0 0 15px rgba(34, 197, 94, 0.3);
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.32), 0 0 16px rgba(34, 197, 94, 0.18);
   z-index: 50;
   animation: chess-matchup-pulse 1.2s ease-in-out infinite !important;
 }
 
 .matchup-pulse-disadvantage {
-  outline: 3px solid rgba(239, 68, 68, 0.9);
+  outline: 2px solid var(--chess-disadvantage);
   outline-offset: 2px;
-  box-shadow: 0 0 20px rgba(239, 68, 68, 0.8), 0 0 40px rgba(239, 68, 68, 0.5), 0 0 60px rgba(239, 68, 68, 0.3), inset 0 0 15px rgba(239, 68, 68, 0.3);
+  box-shadow: 0 0 8px rgba(248, 113, 113, 0.32), 0 0 16px rgba(248, 113, 113, 0.18);
   z-index: 50;
   animation: chess-matchup-pulse 1.2s ease-in-out infinite !important;
 }
 
 .matchup-pulse-mutual {
-  outline: 3px solid rgba(192, 132, 252, 0.9);
+  outline: 2px solid var(--chess-mutual);
   outline-offset: 2px;
-  box-shadow: 0 0 20px rgba(192, 132, 252, 0.8), 0 0 40px rgba(192, 132, 252, 0.5), 0 0 60px rgba(192, 132, 252, 0.3), inset 0 0 15px rgba(192, 132, 252, 0.3);
+  box-shadow: 0 0 8px rgba(129, 140, 248, 0.3), 0 0 16px rgba(129, 140, 248, 0.16);
   z-index: 50;
   animation: chess-matchup-pulse 1.2s ease-in-out infinite !important;
 }
 
-/*
- * Capture-target indicator (lichess/chess.com style). Activates when
- * the slice's `attackMoves` includes this piece's cell — meaning the
- * currently-selected own piece can legally capture this enemy. Pure
- * read of the slice's source of truth (no rule recomputation here).
- */
-.chess-piece-attackable {
-  box-shadow: 0 0 18px rgba(239, 68, 68, 0.85), 0 0 36px rgba(239, 68, 68, 0.5), inset 0 0 14px rgba(239, 68, 68, 0.35);
-  animation: chess-piece-attackable-pulse 1.4s ease-in-out infinite;
+.chess-piece[data-visual-state="attackable"] {
+  box-shadow: 0 0 8px var(--chess-attack-border), 0 0 16px rgba(248, 113, 113, 0.24), inset 0 0 6px rgba(248, 113, 113, 0.14);
+  animation: chess-attack-target-pulse 1.4s ease-in-out infinite;
 }
 
-@keyframes chess-piece-attackable-pulse {
+@keyframes chess-attack-target-pulse {
   0%, 100% {
-    box-shadow: 0 0 18px rgba(239, 68, 68, 0.85), 0 0 36px rgba(239, 68, 68, 0.5), inset 0 0 14px rgba(239, 68, 68, 0.35);
+    box-shadow: 0 0 8px var(--chess-attack-border), 0 0 16px rgba(248, 113, 113, 0.24), inset 0 0 6px rgba(248, 113, 113, 0.14);
   }
   50% {
-    box-shadow: 0 0 28px rgba(239, 68, 68, 1), 0 0 56px rgba(239, 68, 68, 0.7), inset 0 0 22px rgba(239, 68, 68, 0.55);
+    box-shadow: 0 0 12px var(--chess-attack-border), 0 0 22px rgba(248, 113, 113, 0.32), inset 0 0 10px rgba(248, 113, 113, 0.2);
   }
 }
 
 @keyframes chess-matchup-pulse {
-  0%, 100% { opacity: 0.6; }
+  0%, 100% { opacity: 0.75; }
   50% { opacity: 1; }
 }
 
-/* Status Bars */
 .chess-piece-hp-container {
   position: absolute;
   top: 0;
@@ -287,11 +306,11 @@
   transition: width 0.3s ease-out;
 }
 
-.chess-piece-hp-fill.hp-warning {
+.chess-piece[data-health-state="warning"] .chess-piece-hp-fill {
   background: linear-gradient(90deg, var(--warning-400), var(--warning-600));
 }
 
-.chess-piece-hp-fill.hp-danger {
+.chess-piece[data-health-state="danger"] .chess-piece-hp-fill {
   background: linear-gradient(90deg, var(--danger-400), var(--danger-600));
 }
 
@@ -299,7 +318,7 @@
   .element-effect-layer,
   .element-effect-wind::before,
   .god-piece-aura,
-  .chess-piece-attackable,
+  .chess-piece[data-visual-state="attackable"],
   .matchup-pulse-advantage,
   .matchup-pulse-disadvantage,
   .matchup-pulse-mutual {

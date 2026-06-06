@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ChessPiece } from '../../types/ChessTypes';
 import {
   containsPosition,
+  didMoveApply,
   getBlockedPieceMessage,
   getBoardHighlightKind,
   getCellClickAction,
@@ -30,6 +31,30 @@ describe('chessBoardInteractionRules', () => {
   it('checks positions by board coordinates', () => {
     expect(containsPosition([{ row: 1, col: 2 }], 1, 2)).toBe(true);
     expect(containsPosition([{ row: 1, col: 2 }], 2, 1)).toBe(false);
+  });
+
+  it('confirms a quiet move only when the same piece reaches the destination', () => {
+    const movingPiece = makePiece({
+      id: 'player-queen',
+      type: 'queen',
+      owner: 'player',
+      position: { row: 0, col: 0 },
+    });
+    const movedPiece = makePiece({
+      ...movingPiece,
+      position: { row: 1, col: 1 },
+    });
+    const otherPiece = makePiece({
+      id: 'player-rook',
+      type: 'rook',
+      owner: 'player',
+      position: { row: 1, col: 1 },
+    });
+
+    expect(didMoveApply({ movingPiece, pieceAtDestination: movedPiece })).toBe(true);
+    expect(didMoveApply({ movingPiece, pieceAtDestination: otherPiece })).toBe(false);
+    expect(didMoveApply({ movingPiece, pieceAtDestination: null })).toBe(false);
+    expect(didMoveApply({ movingPiece: null, pieceAtDestination: movedPiece })).toBe(false);
   });
 
   it('detects blocked pieces from move and attack lists', () => {

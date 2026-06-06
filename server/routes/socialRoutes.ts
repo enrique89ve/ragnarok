@@ -4,6 +4,10 @@ import { hasAcceptedWarbandRelation } from '../services/warbandRelations';
 import { buildServerSignedChallenge } from '../services/p2pChallengeSigner';
 import { consumeWindowRateLimit, type RateLimitBucket } from '../services/p2pRateLimit';
 import {
+	requireHiveHeaderAuth,
+	type HiveAuthenticatedRequest,
+} from '../middleware/hiveAuth';
+import {
 	CHALLENGE_RATE_LIMIT_MAX_ACCEPTED,
 	CHALLENGE_RATE_LIMIT_WINDOW_MS,
 	CHALLENGE_STALE_THRESHOLD_MS,
@@ -28,6 +32,16 @@ const challengeRateLimit: RateLimitBucket = new Map();
 const PRESENCE_STALE_THRESHOLD_MS = 180_000;
 const MAX_FRIENDS_LIST = 200;
 const CHALLENGE_BODY_KEYS = new Set(['from', 'to', 'peerId']);
+const SOCIAL_HEARTBEAT_ACTION = 'friend-heartbeat';
+const SOCIAL_CHALLENGES_ACTION = 'friend-challenges';
+
+const requireFriendHeartbeatAuth = requireHiveHeaderAuth({
+	buildMessage: (_req, username, timestamp) => `ragnarok-${SOCIAL_HEARTBEAT_ACTION}:${username}:${timestamp}`,
+});
+
+const requireFriendChallengesAuth = requireHiveHeaderAuth({
+	buildMessage: (_req, username, timestamp) => `ragnarok-${SOCIAL_CHALLENGES_ACTION}:${username}:${timestamp}`,
+});
 
 type P2PSocialStats = Readonly<{
 	onlineUsers: number;
@@ -131,10 +145,14 @@ export function getP2PSocialStats(): P2PSocialStats {
 	};
 }
 
-router.post('/heartbeat', (req: Request, res: Response) => {
+router.post('/heartbeat', requireFriendHeartbeatAuth, (req: HiveAuthenticatedRequest, res: Response) => {
 	const parsed = parsePresenceHeartbeatBody(req.body);
 	if (!parsed.ok) {
 		sendReject(res, 400, parsed.reason);
+		return;
+	}
+	if (parsed.value.username !== req.hiveUsername) {
+		res.status(403).json({ error: 'forbidden', reason: 'username_mismatch' });
 		return;
 	}
 
@@ -271,11 +289,20 @@ router.post('/challenge', (req: Request, res: Response) => {
 	const target = normalizedTo;
 	const existing = challenges.get(target) || [];
 	let challenge: ServerSignedChallenge;
+	let opponentMatchChallenge: ServerSignedChallenge;
 	try {
 		challenge = buildServerSignedChallenge({
 			from: normalizedFrom,
 			to: normalizedTo,
 			peerId,
+			timestamp: now,
+			expiresAt: now + CHALLENGE_STALE_THRESHOLD_MS,
+		});
+
+		opponentMatchChallenge = buildServerSignedChallenge({
+			from: normalizedTo,
+			to: normalizedFrom,
+			peerId: targetPresence.peerId,
 			timestamp: now,
 			expiresAt: now + CHALLENGE_STALE_THRESHOLD_MS,
 		});
@@ -287,13 +314,21 @@ router.post('/challenge', (req: Request, res: Response) => {
 	existing.push(challenge);
 	challenges.set(target, existing.slice(-10));
 
-	res.json({ ok: true, challenge });
+	res.json({
+		ok: true,
+		challenge,
+		opponentMatchChallenge,
+	});
 });
 
-router.get('/challenges/:username', (req: Request, res: Response) => {
+router.get('/challenges/:username', requireFriendChallengesAuth, (req: HiveAuthenticatedRequest, res: Response) => {
 	const username = normalizeHiveUsername(req.params.username);
 	if (!isValidHiveUsername(username)) {
 		sendReject(res, 400, 'invalid_input');
+		return;
+	}
+	if (req.hiveUsername !== username) {
+		res.status(403).json({ error: 'forbidden', reason: 'username_mismatch' });
 		return;
 	}
 	pruneStale();

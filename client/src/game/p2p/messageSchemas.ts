@@ -25,6 +25,7 @@ import { z } from 'zod';
 import { ChessCommandEnvelopeSchema } from '@shared/p2p-wire/chess';
 import { CompactPokerActionSchema, isPokerActionCompactConsistent } from '@shared/p2p-wire/combat';
 import { DeckCardClaimsSchema } from '@shared/protocol-core/deckVerification';
+import { CHALLENGE_SIGNATURE_ALGORITHM } from '@shared/p2pAvailability';
 
 import type { P2PMessage } from './messages';
 
@@ -256,6 +257,16 @@ const SessionAuthorizeSchema = z.object({
 	matchId: NonEmptyString(64),
 	ephemeralPubkey: PubkeyString,
 	hiveSig: HiveSigString,
+	matchChallenge: z.object({
+		from: NonEmptyString(32),
+		to: NonEmptyString(32),
+		peerId: NonEmptyString(64),
+		timestamp: z.number().int().nonnegative(),
+		expiresAt: z.number().int().nonnegative(),
+		nonce: z.string().min(16).max(80),
+		sigAlg: z.literal(CHALLENGE_SIGNATURE_ALGORITHM),
+		serverSig: z.string().regex(/^[a-f0-9]{64}$/),
+	}).strict().optional(),
 }).strict();
 
 const SessionRenewalSchema = z.object({

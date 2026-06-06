@@ -33,6 +33,7 @@ import { parseWireMessage } from '../../../../p2p/messageSchemas';
 import { CombatAction, CombatPhase, type PokerCombatState } from '../../../../types/PokerCombatTypes';
 import { encodePokerAction, isPokerActionCompactConsistent, type CompactPokerActionName } from '../../../../../../../shared/p2p-wire/combat';
 import { generateSessionKey, type SessionKey } from '../../../../protocol/sessionKey';
+import { CHALLENGE_STALE_THRESHOLD_MS, type ServerSignedChallenge } from '@shared/p2pAvailability';
 import {
 	emptyTranscript,
 	appendSelfAction,
@@ -93,6 +94,52 @@ const RESULT_SIGN_TIMEOUT_MS = 30_000;
 function shouldRequestP2PSessionAuthorizePrompt(): boolean {
 	const runtime = buildRagnarokRuntimeEvidence(getRagnarokNetworkConfig());
 	return !isNftFullTestnetRuntimePhase(runtime.runtimePhase);
+}
+
+function isFreshMatchChallenge(challenge: ServerSignedChallenge): boolean {
+	const now = Date.now();
+	const maxAge = CHALLENGE_STALE_THRESHOLD_MS * 2;
+
+	if (challenge.timestamp > challenge.expiresAt) {
+		return false;
+	}
+	if (challenge.expiresAt <= now) {
+		return false;
+	}
+	if ((challenge.expiresAt - challenge.timestamp) > maxAge) {
+		return false;
+	}
+	return true;
+}
+
+function challengesMatch(a: ServerSignedChallenge, b: ServerSignedChallenge): boolean {
+	return a.from === b.from
+		&& a.to === b.to
+		&& a.peerId === b.peerId
+		&& a.timestamp === b.timestamp
+		&& a.expiresAt === b.expiresAt
+		&& a.nonce === b.nonce
+		&& a.sigAlg === b.sigAlg
+		&& a.serverSig === b.serverSig;
+}
+
+function getSessionAuthChallenges(): readonly ServerSignedChallenge[] {
+	const { opponentMatchChallenge, matchChallenge } = usePeerStore.getState();
+	const candidates: ServerSignedChallenge[] = [];
+	if (matchChallenge) {
+		candidates.push(matchChallenge);
+	}
+	if (opponentMatchChallenge && !candidates.some((candidate) => challengesMatch(candidate, opponentMatchChallenge))) {
+		candidates.push(opponentMatchChallenge);
+	}
+	return candidates;
+}
+
+function findMatchingSessionAuthChallenge(
+	challenge: ServerSignedChallenge,
+): ServerSignedChallenge | null {
+	const expected = getSessionAuthChallenges().find((candidate) => challengesMatch(candidate, challenge));
+	return expected ?? null;
 }
 
 export function useWireSync() {
@@ -704,6 +751,10 @@ export function useWireSync() {
 								try {
 									const sessionKey = await generateSessionKey(localMatchId);
 									sessionKeyRef.current = sessionKey;
+									const localMatchChallenge = usePeerStore.getState().matchChallenge;
+									if (localMatchChallenge && !isFreshMatchChallenge(localMatchChallenge)) {
+										throw new Error('Match challenge is invalid or expired');
+									}
 									const localUsername = getNFTBridge().getUsername();
 									if (!localUsername) {
 										debug.warn('[wireSync] session_authorize skipped — no local Hive username');
@@ -719,6 +770,7 @@ export function useWireSync() {
 									}
 									const hiveSig = await signSessionAuthorize(localMatchId, sessionKey.pubkey, {
 										username: localUsername,
+										...(localMatchChallenge ? { matchChallenge: localMatchChallenge } : {}),
 									});
 									if (!isCurrentConnectedMatch(localMatchId)) {
 										debug.warn('[wireSync] session_authorize signature ignored — match disconnected before approval');
@@ -729,6 +781,7 @@ export function useWireSync() {
 										matchId: localMatchId,
 										ephemeralPubkey: sessionKey.pubkey,
 										hiveSig,
+										...(localMatchChallenge ? { matchChallenge: localMatchChallenge } : {}),
 									});
 									debug.log('[wireSync] Sent session_authorize', {
 										matchId: localMatchId,
@@ -1659,58 +1712,99 @@ export function useWireSync() {
 					break;
 				}
 
-				case 'session_authorize': {
-					// ADR 0004 §Decision.3 — cache opponent's ephemeral pubkey +
-					// the Hive sig that binds it to their on-chain identity.
-					if (data.matchId !== matchIdRef.current) {
-						debug.warn('[wireSync] session_authorize matchId mismatch — ignoring', {
-							received: data.matchId,
-							expected: matchIdRef.current,
-						});
-						break;
-					}
-					const opponentUsername = opponentUsernameRef.current;
-					if (!opponentUsername) {
-						debug.warn('[wireSync] session_authorize dropped — no opponent Hive username');
+					case 'session_authorize': {
+						// ADR 0004 §Decision.3 — cache opponent's ephemeral pubkey +
+						// the Hive sig that binds it to their on-chain identity.
+						if (data.matchId !== matchIdRef.current) {
+							debug.warn('[wireSync] session_authorize matchId mismatch — ignoring', {
+								received: data.matchId,
+								expected: matchIdRef.current,
+							});
+							break;
+						}
+						const opponentUsername = opponentUsernameRef.current;
+						if (!opponentUsername) {
+							debug.warn('[wireSync] session_authorize dropped — no opponent Hive username');
+							usePeerStore.getState().setP2pSessionAuthorization({
+								remoteAuthorized: false,
+								error: 'Missing opponent Hive username',
+							});
+							break;
+						}
+
+						const expectedChallenges = getSessionAuthChallenges();
+						if (expectedChallenges.length > 0) {
+							if (!data.matchChallenge) {
+								debug.warn('[wireSync] session_authorize dropped — expected match challenge missing', {
+									opponentUsername,
+									matchId: data.matchId,
+								});
+								usePeerStore.getState().setP2pSessionAuthorization({
+									remoteAuthorized: false,
+									error: 'Missing opponent match challenge',
+								});
+								break;
+							}
+							const matchedChallenge = findMatchingSessionAuthChallenge(data.matchChallenge);
+							if (!matchedChallenge) {
+								debug.warn('[wireSync] session_authorize dropped — match challenge mismatch', {
+									opponentUsername,
+									matchId: data.matchId,
+								});
+								usePeerStore.getState().setP2pSessionAuthorization({
+									remoteAuthorized: false,
+									error: 'Opponent match challenge mismatch',
+								});
+								break;
+							}
+							if (!isFreshMatchChallenge(matchedChallenge)) {
+								debug.warn('[wireSync] session_authorize dropped — opponent match challenge expired', {
+									opponentUsername,
+									matchId: data.matchId,
+								});
+								usePeerStore.getState().setP2pSessionAuthorization({
+									remoteAuthorized: false,
+									error: 'Opponent match challenge expired',
+								});
+								break;
+							}
+						}
+
+						const authorizeMessage = buildSessionAuthorizeMessage(
+							data.matchId,
+							data.ephemeralPubkey,
+							data.matchChallenge,
+						);
+						const sigValid = await verifyHiveSignature(opponentUsername, authorizeMessage, data.hiveSig);
+						if (!sigValid) {
+							debug.warn('[wireSync] session_authorize dropped — Hive signature verification failed', {
+								opponentUsername,
+								matchId: data.matchId,
+								pubkeyPrefix: data.ephemeralPubkey.slice(0, 8),
+							});
+							usePeerStore.getState().setP2pSessionAuthorization({
+								remoteAuthorized: false,
+								error: 'Opponent Hive signature verification failed',
+							});
+							break;
+						}
+						if (opponentSessionPubkeyRef.current && opponentSessionPubkeyRef.current !== data.ephemeralPubkey) {
+							debug.warn('[wireSync] session_authorize replaced opponent pubkey mid-match — possible re-key', {
+								before: opponentSessionPubkeyRef.current.slice(0, 8),
+								after: data.ephemeralPubkey.slice(0, 8),
+							});
+						}
+						opponentSessionPubkeyRef.current = data.ephemeralPubkey;
+						opponentSessionHiveSigRef.current = data.hiveSig;
 						usePeerStore.getState().setP2pSessionAuthorization({
-							remoteAuthorized: false,
-							error: 'Missing opponent Hive username',
+							remoteAuthorized: true,
 						});
-						break;
-					}
-					const authorizeMessage = buildSessionAuthorizeMessage(data.matchId, data.ephemeralPubkey);
-					const sigValid = await verifyHiveSignature(opponentUsername, authorizeMessage, data.hiveSig);
-					if (!sigValid) {
-						debug.warn('[wireSync] session_authorize dropped — Hive signature verification failed', {
-							opponentUsername,
+						debug.log('[wireSync] Cached opponent session_authorize', {
 							matchId: data.matchId,
 							pubkeyPrefix: data.ephemeralPubkey.slice(0, 8),
 						});
-						usePeerStore.getState().setP2pSessionAuthorization({
-							remoteAuthorized: false,
-							error: 'Opponent Hive signature verification failed',
-						});
 						break;
 					}
-					if (opponentSessionPubkeyRef.current
-						&& opponentSessionPubkeyRef.current !== data.ephemeralPubkey
-					) {
-						debug.warn('[wireSync] session_authorize replaced opponent pubkey mid-match — possible re-key', {
-							before: opponentSessionPubkeyRef.current.slice(0, 8),
-							after: data.ephemeralPubkey.slice(0, 8),
-						});
-					}
-					opponentSessionPubkeyRef.current = data.ephemeralPubkey;
-					opponentSessionHiveSigRef.current = data.hiveSig;
-					usePeerStore.getState().setP2pSessionAuthorization({
-						remoteAuthorized: true,
-					});
-					debug.log('[wireSync] Cached opponent session_authorize', {
-						matchId: data.matchId,
-						pubkeyPrefix: data.ephemeralPubkey.slice(0, 8),
-					});
-					break;
-				}
 
 				case 'session_renewal': {
 					// ADR 0004 §Decision.6 B–E (issue 06). Opponent reloaded;

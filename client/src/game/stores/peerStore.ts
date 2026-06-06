@@ -31,7 +31,7 @@ import { debug } from '../config/debugConfig';
 import { LocalWebSocketTransport, deriveRelayUrl } from './wsTransport';
 import type { ArmySelection } from '../types/ChessTypes';
 import type { P2PMessage, WireMessage } from '../p2p/messages';
-import type { P2PConnectionAvailabilityState } from '@shared/p2pAvailability';
+import type { P2PConnectionAvailabilityState, ServerSignedChallenge } from '@shared/p2pAvailability';
 export { isP2PConnectionStateBusy } from '@shared/p2pAvailability';
 
 // ── Timing Constants ──
@@ -94,6 +94,8 @@ export type P2PConnectionState = P2PConnectionAvailabilityState;
 export interface PeerStore {
 	myPeerId: string | null;
 	remotePeerId: string | null;
+	matchChallenge: ServerSignedChallenge | null;
+	opponentMatchChallenge: ServerSignedChallenge | null;
 	connection: P2PConnection | null;
 	connectionState: P2PConnectionState;
 	isHost: boolean;
@@ -137,6 +139,8 @@ export interface PeerStore {
 		readonly remoteAuthorized?: boolean;
 		readonly error?: string | null;
 	}) => void;
+	setMatchChallenges: (matchChallenge: ServerSignedChallenge | null, opponentMatchChallenge: ServerSignedChallenge | null) => void;
+	clearMatchChallenges: () => void;
 	setP2pInitApplied: (applied: boolean) => void;
 
 	/** Generate a peerId for matchmaking without opening a transport yet.
@@ -469,6 +473,8 @@ function openTransport(
 export const usePeerStore = create<PeerStore>((set, get) => ({
 	myPeerId: null,
 	remotePeerId: null,
+	matchChallenge: null,
+	opponentMatchChallenge: null,
 	connection: null,
 	connectionState: 'disconnected',
 	isHost: false,
@@ -491,6 +497,14 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 	setIsHost: (isHost) => set({ isHost }),
 	setError: (error) => set({ error }),
 	setOpponentArmy: (army) => set({ opponentArmy: army }),
+	setMatchChallenges: (matchChallenge, opponentMatchChallenge) => set({
+		matchChallenge,
+		opponentMatchChallenge,
+	}),
+	clearMatchChallenges: () => set({
+		matchChallenge: null,
+		opponentMatchChallenge: null,
+	}),
 	setP2pSessionAuthorization: (state) => set({
 		...(state.localAuthorized !== undefined ? { p2pSessionLocalAuthorized: state.localAuthorized } : {}),
 		...(state.remoteAuthorized !== undefined ? { p2pSessionRemoteAuthorized: state.remoteAuthorized } : {}),
@@ -523,7 +537,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 		debug.log(`[PeerStore] prepared peerId=${newId.slice(0, 8)}… (no transport yet)`);
 	},
 
-	host: async () => {
+		host: async () => {
 		const { connection } = get();
 		if (connection) get().disconnect();
 
@@ -534,6 +548,8 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 		set({
 			myPeerId: peerId,
 			remotePeerId: null,
+			matchChallenge: null,
+			opponentMatchChallenge: null,
 			connectionState: 'waiting',
 			isHost: true,
 			error: null,
@@ -564,6 +580,8 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 		set({
 			myPeerId: peerId,
 			remotePeerId: remoteId,
+			matchChallenge: isReconnect ? get().matchChallenge : null,
+			opponentMatchChallenge: isReconnect ? get().opponentMatchChallenge : null,
 			connectionState: isReconnect ? 'reconnecting' : 'connecting',
 			isHost: false,
 			error: null,
@@ -592,6 +610,8 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 		set({
 			myPeerId: peerId,
 			connectionState: isReconnect ? 'reconnecting' : 'connecting',
+			matchChallenge: isReconnect ? get().matchChallenge : null,
+			opponentMatchChallenge: isReconnect ? get().opponentMatchChallenge : null,
 			error: null,
 			reconnectAttemptCount: isReconnect ? reconnectAttempt : 0,
 			disconnectSide: isReconnect ? get().disconnectSide : null,
@@ -621,6 +641,8 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			reconnectCountdown: 0, reconnectAttemptCount: 0,
 			disconnectSide: null, forfeitSide: null,
 			bufferedMessageCount: 0,
+			matchChallenge: null,
+			opponentMatchChallenge: null,
 			opponentArmy: null,
 			p2pSessionLocalAuthorized: false,
 			p2pSessionRemoteAuthorized: false,

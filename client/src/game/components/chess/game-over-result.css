@@ -418,6 +418,21 @@
 	justify-content: center;
 }
 
+.cgo-abandon-actions {
+	flex-direction: column;
+	align-items: center;
+}
+
+.cgo-auto-home {
+	margin: 0;
+	color: rgba(231, 222, 199, 0.72);
+	font-family: 'Cinzel', Georgia, serif;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+}
+
 .cgo-btn-primary {
 	padding: 14px 36px;
 	font-family: 'Cinzel', Georgia, serif;

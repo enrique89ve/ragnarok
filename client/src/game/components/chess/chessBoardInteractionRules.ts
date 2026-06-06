@@ -27,6 +27,13 @@ export function containsPosition(
   return positions.some(position => position.row === row && position.col === col);
 }
 
+export function didMoveApply(input: {
+  readonly movingPiece: ChessPiece | null;
+  readonly pieceAtDestination: ChessPiece | null;
+}): boolean {
+  return input.movingPiece !== null && input.pieceAtDestination?.id === input.movingPiece.id;
+}
+
 export function getBoardHighlightKind(input: {
   readonly row: number;
   readonly col: number;

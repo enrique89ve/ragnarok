@@ -3,6 +3,12 @@ import fs from 'fs';
 import fsPromises from 'fs/promises';
 import path from 'path';
 import { requireHiveBodyAuthIfUsernamePresent } from '../middleware/hiveAuth';
+import { buildServerSignedChallenge } from '../services/p2pChallengeSigner';
+import {
+	CHALLENGE_STALE_THRESHOLD_MS,
+	normalizeHiveUsername,
+	type ServerSignedChallenge,
+} from '../../shared/p2pAvailability';
 
 const router = Router();
 
@@ -14,8 +20,16 @@ interface QueuedPlayer {
 	socket?: any;
 }
 
+type ActiveMatch = {
+	player1: string;
+	player2: string;
+	createdAt: number;
+	player1MatchChallenge: ServerSignedChallenge | null;
+	player2MatchChallenge: ServerSignedChallenge | null;
+};
+
 const matchmakingQueue: QueuedPlayer[] = [];
-const activeMatches = new Map<string, { player1: string; player2: string; createdAt: number }>();
+const activeMatches = new Map<string, ActiveMatch>();
 
 const QUEUE_STALE_MS = 5 * 60 * 1000; // 5 minutes
 const ACTIVE_MATCH_TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -86,6 +100,31 @@ function removeStaleQueueEntries() {
 			activeMatches.delete(matchId);
 		}
 	}
+}
+
+function buildMatchChallenges(
+	playerA: QueuedPlayer,
+	playerB: QueuedPlayer,
+	options: { now: number; expiresAt: number },
+): { playerAChallenge: ServerSignedChallenge; playerBChallenge: ServerSignedChallenge } | null {
+	if (!playerA.username || !playerB.username) return null;
+
+	return {
+		playerAChallenge: buildServerSignedChallenge({
+			from: normalizeHiveUsername(playerA.username),
+			to: normalizeHiveUsername(playerB.username),
+			peerId: playerA.peerId,
+			timestamp: options.now,
+			expiresAt: options.expiresAt,
+		}),
+		playerBChallenge: buildServerSignedChallenge({
+			from: normalizeHiveUsername(playerB.username),
+			to: normalizeHiveUsername(playerA.username),
+			peerId: playerB.peerId,
+			timestamp: options.now,
+			expiresAt: options.expiresAt,
+		}),
+	};
 }
 
 // Clean stale entries every 60 seconds
@@ -174,15 +213,16 @@ router.post('/queue', queueAuth, async (req: Request, res: Response) => {
 	if (username && typeof username === 'string') {
 		try {
 			const { getPlayer, registerAccount } = require('../services/chainState');
-			registerAccount(username);
-			const player = getPlayer(username);
+			const normalized = normalizeHiveUsername(username);
+			registerAccount(normalized);
+			const player = getPlayer(normalized);
 			if (player) elo = player.elo;
 		} catch { /* chain state not available, use default */ }
 	}
 
 	const newPlayer: QueuedPlayer = {
 		peerId,
-		username: typeof username === 'string' ? username : undefined,
+		username: typeof username === 'string' ? normalizeHiveUsername(username) : undefined,
 		elo,
 		timestamp: Date.now(),
 	};
@@ -193,6 +233,20 @@ router.post('/queue', queueAuth, async (req: Request, res: Response) => {
 	if (matchmakingQueue.length >= 2) {
 		const opponent = findBestEloMatch(newPlayer);
 		if (opponent) {
+			const now = Date.now();
+			let matchChallenges: { playerAChallenge: ServerSignedChallenge; playerBChallenge: ServerSignedChallenge } | null = null;
+			try {
+				matchChallenges = buildMatchChallenges(opponent, newPlayer, {
+					now,
+					expiresAt: now + CHALLENGE_STALE_THRESHOLD_MS,
+				});
+			} catch (err) {
+				console.warn('[Matchmaking] Challenge signing unavailable for matched pair:', err);
+				return res.status(503).json({
+					success: false,
+					error: 'P2P challenge signing unavailable',
+				});
+			}
 			// Remove the new player from the queue too
 			const newIdx = matchmakingQueue.findIndex(p => p.peerId === peerId);
 			if (newIdx !== -1) matchmakingQueue.splice(newIdx, 1);
@@ -203,11 +257,19 @@ router.post('/queue', queueAuth, async (req: Request, res: Response) => {
 				player1: opponent.peerId,
 				player2: newPlayer.peerId,
 				createdAt: Date.now(),
+				player1MatchChallenge: matchChallenges?.playerAChallenge ?? null,
+				player2MatchChallenge: matchChallenges?.playerBChallenge ?? null,
 			});
 
 			setTimeout(() => {
 				activeMatches.delete(matchId);
 			}, ACTIVE_MATCH_TTL_MS);
+
+			const isHost = opponent.peerId === peerId;
+			const matchChallenge = isHost ? matchChallenges?.playerAChallenge : matchChallenges?.playerBChallenge;
+			const opponentMatchChallenge = isHost
+				? matchChallenges?.playerBChallenge
+				: matchChallenges?.playerAChallenge;
 
 			return res.json({
 				success: true,
@@ -216,7 +278,9 @@ router.post('/queue', queueAuth, async (req: Request, res: Response) => {
 				opponentPeerId: opponent.peerId,
 				opponentElo: opponent.elo,
 				opponentUsername: opponent.username,
-				isHost: false,
+				isHost,
+				...(matchChallenge ? { matchChallenge } : {}),
+				...(opponentMatchChallenge ? { opponentMatchChallenge } : {}),
 			});
 		}
 	}
@@ -256,12 +320,17 @@ router.get('/status/:peerId', (req: Request, res: Response) => {
 
 	for (const [matchId, match] of activeMatches.entries()) {
 		if (match.player1 === peerId || match.player2 === peerId) {
+			const isHost = match.player1 === peerId;
+			const matchChallenge = isHost ? match.player1MatchChallenge : match.player2MatchChallenge;
+			const opponentMatchChallenge = isHost ? match.player2MatchChallenge : match.player1MatchChallenge;
 			return res.json({
 				success: true,
 				status: 'matched',
 				matchId,
 				opponentPeerId: match.player1 === peerId ? match.player2 : match.player1,
 				isHost: match.player1 === peerId,
+				...(matchChallenge ? { matchChallenge } : {}),
+				...(opponentMatchChallenge ? { opponentMatchChallenge } : {}),
 			});
 		}
 	}

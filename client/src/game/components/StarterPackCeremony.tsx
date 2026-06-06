@@ -136,6 +136,9 @@ export default function StarterPackCeremony({
 					onClose={handlePackClose}
 					onOpenAnother={handlePlayFirstGame}
 					oneShot
+					primaryActionLabel="Choose First Battle"
+					primaryActionAriaLabel="Choose your first battle after revealing starter cards"
+					collectionActionLabel="View Collection"
 					evidence={{
 						ceremony: 'starter_claim',
 						account: accountId ?? null,
@@ -363,44 +366,44 @@ function ModeSelect({ onChoose, onClose }: { onChoose: (target: string) => void;
 				initial={{ scale: 0.92, opacity: 0, y: 16 }}
 				animate={{ scale: 1, opacity: 1, y: 0 }}
 				transition={{ type: 'spring', stiffness: 200, damping: 22 }}
-				className="text-center max-w-4xl w-full px-6 py-10 modal-landscape-safe"
+				className="max-h-[88dvh] w-full max-w-4xl overflow-y-auto overscroll-contain px-6 py-10 text-center [@media(orientation:landscape)_and_(max-height:500px)]:max-h-[90dvh] [@media(orientation:landscape)_and_(max-height:500px)]:max-w-[min(86vw,40rem)] [@media(orientation:landscape)_and_(max-height:500px)]:py-4"
 			>
-				<div className="font-mono text-[10px] tracking-[0.32em] uppercase text-ink-400 mb-3">
+				<div className="mb-3 font-mono text-[10px] uppercase tracking-[0.32em] text-ink-400 [@media(orientation:landscape)_and_(max-height:500px)]:mb-1.5 [@media(orientation:landscape)_and_(max-height:500px)]:text-[0.5625rem] [@media(orientation:landscape)_and_(max-height:500px)]:tracking-[0.24em]">
 					Cards equipped · Choose your first battle
 				</div>
 				<h1
 					id="mode-select-title"
-					className="font-display text-3xl sm:text-4xl font-black tracking-[0.12em] uppercase mb-3 text-transparent bg-clip-text bg-linear-to-b from-gold-100 via-gold-300 to-gold-500"
+					className="mb-3 bg-linear-to-b from-gold-100 via-gold-300 to-gold-500 bg-clip-text font-display text-3xl font-black uppercase tracking-[0.12em] text-transparent sm:text-4xl [@media(orientation:landscape)_and_(max-height:500px)]:mb-2 [@media(orientation:landscape)_and_(max-height:500px)]:text-[clamp(1.75rem,7vh,2.25rem)]"
 				>
 					Start Playing
 				</h1>
-				<p className="text-ink-200 text-base mb-10 leading-relaxed max-w-xl mx-auto">
+				<p className="mx-auto mb-10 max-w-xl text-base leading-relaxed text-ink-200 [@media(orientation:landscape)_and_(max-height:500px)]:mb-4 [@media(orientation:landscape)_and_(max-height:500px)]:max-w-md [@media(orientation:landscape)_and_(max-height:500px)]:text-sm [@media(orientation:landscape)_and_(max-height:500px)]:leading-[1.35]">
 					Pick the mode that fits how you want to start. You can switch later from the menu.
 				</p>
 
-				<div className="grid gap-5 md:grid-cols-3">
+				<div className="grid gap-5 md:grid-cols-3 [@media(orientation:landscape)_and_(max-height:500px)]:gap-3">
 					{GAME_MODES.map(mode => (
 						<button
 							key={mode.key}
 							type="button"
 							onClick={() => onChoose(mode.route)}
 							aria-label={`Start ${mode.title}`}
-							className={`runic-panel ornate-corners-host ornate-corners-host--${mode.tier} mystic-tile mystic-tile--${mode.tier === 'mythic' ? 'ember' : mode.tier === 'premium' ? 'gold' : 'bifrost'} relative rounded-xl p-6 text-left overflow-hidden hover:-translate-y-1 transition-transform focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300`}
+							className={`runic-panel ornate-corners-host ornate-corners-host--${mode.tier} mystic-tile mystic-tile--${mode.tier === 'mythic' ? 'ember' : mode.tier === 'premium' ? 'gold' : 'bifrost'} relative overflow-hidden rounded-xl p-6 text-left transition-transform hover:-translate-y-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300 [@media(orientation:landscape)_and_(max-height:500px)]:min-h-[8.25rem] [@media(orientation:landscape)_and_(max-height:500px)]:p-4`}
 							style={{ background: 'var(--surface-mystic-obsidian)' }}
 						>
-							<div className="relative z-10 flex flex-col items-center text-center gap-3">
-								<div className={`hex-frame hex-frame--${mode.tier === 'mythic' ? 'ember' : mode.tier === 'premium' ? 'gold' : 'bifrost'} hex-frame--md`} aria-hidden="true">
+							<div className="relative z-10 flex flex-col items-center gap-3 text-center [@media(orientation:landscape)_and_(max-height:500px)]:gap-2">
+								<div className={`hex-frame hex-frame--${mode.tier === 'mythic' ? 'ember' : mode.tier === 'premium' ? 'gold' : 'bifrost'} hex-frame--md [@media(orientation:landscape)_and_(max-height:500px)]:scale-[0.84]`} aria-hidden="true">
 									<div className="hex-frame-inner">
 										<span className="text-3xl text-ink-0/95 select-none">{mode.glyph}</span>
 									</div>
 								</div>
-								<div className={`tier-inscription tier-inscription--${mode.tier}`}>
+								<div className={`tier-inscription tier-inscription--${mode.tier} [@media(orientation:landscape)_and_(max-height:500px)]:text-[0.5625rem] [@media(orientation:landscape)_and_(max-height:500px)]:tracking-[0.16em]`}>
 									{mode.kicker}
 								</div>
-								<h2 className="font-display text-xl font-bold text-ink-0 tracking-[0.10em] uppercase">
+								<h2 className="font-display text-xl font-bold uppercase tracking-[0.10em] text-ink-0 [@media(orientation:landscape)_and_(max-height:500px)]:text-base [@media(orientation:landscape)_and_(max-height:500px)]:leading-[1.1]">
 									{mode.title}
 								</h2>
-								<p className="text-ink-200 text-sm leading-snug">
+								<p className="text-sm leading-snug text-ink-200 [@media(orientation:landscape)_and_(max-height:500px)]:text-xs [@media(orientation:landscape)_and_(max-height:500px)]:leading-[1.25]">
 									{mode.description}
 								</p>
 							</div>
@@ -413,7 +416,7 @@ function ModeSelect({ onChoose, onClose }: { onChoose: (target: string) => void;
 				<button
 					type="button"
 					onClick={onClose}
-					className="mt-8 inline-flex items-center gap-1.5 font-mono text-[11px] tracking-[0.22em] uppercase text-ink-400 hover:text-ink-0 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300 focus-visible:outline-offset-2 rounded-sm"
+					className="mt-8 inline-flex items-center gap-1.5 rounded-sm font-mono text-[11px] uppercase tracking-[0.22em] text-ink-400 transition-colors hover:text-ink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-300 [@media(orientation:landscape)_and_(max-height:500px)]:mt-4"
 				>
 					Choose later
 				</button>

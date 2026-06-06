@@ -14,6 +14,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link2 } from 'lucide-react';
 import { useHiveDataStore } from '../../data/HiveDataLayer';
 import {
 	clearActiveHiveSession,
@@ -218,7 +219,8 @@ export function HiveKeychainLogin({ initiallyExpanded = false, onConnected }: Hi
 				onClick={() => { setIsExpanded(!isExpanded); setStatus('idle'); setErrorMsg(''); }}
 				className="w-full"
 			>
-				⛓ Connect Hive
+				<Link2 aria-hidden="true" />
+				Connect Hive
 			</Button>
 
 			<AnimatePresence>

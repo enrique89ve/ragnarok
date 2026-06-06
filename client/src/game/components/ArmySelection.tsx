@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
-import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, CheckCircle2, HeartPulse, Layers3, Search, Settings, Shield, Sparkles, User } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, HeartPulse, Layers3, Search, Shield, Sparkles } from 'lucide-react';
 import { ChessPieceType, ArmySelection as ArmySelectionType, ChessPieceHero, PIECE_BASE_STATS } from '../types/ChessTypes';
 import { CHESS_PIECE_HEROES, getDefaultArmySelection, pieceHasSpells } from '../data/ChessPieceConfig';
 import { useAudio } from '../../lib/stores/useAudio';
@@ -21,11 +20,13 @@ import { getNFTBridge } from '../nft';
 import { useNFTCollection, useNFTUsername } from '../nft/hooks';
 import { getHeroDeckStatus, type HeroDeckStatus } from '../deck/heroDeckRules';
 import { cardRegistry } from '../data/cardRegistry';
-import { routes } from '../../lib/routes';
+import { AccountSlot } from '../../components/account/AccountSlot';
 import { debug } from '../config/debugConfig';
 import { useMatchmaking } from '../hooks/useMatchmaking';
 import { usePeerStore } from '../stores/peerStore';
 import { toast } from 'sonner';
+import { PIECE_COLOR_BY_TYPE } from './chess/pieceVisuals';
+import { PieceGlyph } from './chess/PieceGlyph';
 import './styles/ArmySelectionNorse.css';
 
 interface ArmySelectionProps {
@@ -39,13 +40,13 @@ interface ArmySelectionProps {
 
 const PIECE_ORDER: ChessPieceType[] = ['king', 'queen', 'rook', 'bishop', 'knight'];
 
-const PIECE_DISPLAY_INFO: Record<ChessPieceType, { name: string; icon: string; color: string; domain: string; rune: string }> = {
-  king: { name: 'Protogenoi', icon: '♔', color: '#FFD700', domain: "Odin's Domain", rune: 'ᚲ' },
-  queen: { name: 'Sovereign', icon: '♕', color: '#69CCF0', domain: "Freya's Domain", rune: 'ᛗ' },
-  rook: { name: 'Shaper', icon: '♖', color: '#C79C6E', domain: "Thor's Domain", rune: 'ᚦ' },
-  bishop: { name: 'Luminary', icon: '♗', color: '#FFFFFF', domain: "Frigg's Domain", rune: 'ᛒ' },
-  knight: { name: 'Ethereal', icon: '♘', color: '#FFF569', domain: "Loki's Domain", rune: 'ᛚ' },
-  pawn: { name: 'Demigod', icon: '♙', color: '#999999', domain: 'Common Folk', rune: 'ᛈ' }
+const PIECE_DISPLAY_INFO: Record<ChessPieceType, { name: string; domain: string; rune: string }> = {
+  king: { name: 'Protogenoi', domain: "Odin's Domain", rune: 'ᚲ' },
+  queen: { name: 'Sovereign', domain: "Freya's Domain", rune: 'ᛗ' },
+  rook: { name: 'Shaper', domain: "Thor's Domain", rune: 'ᚦ' },
+  bishop: { name: 'Luminary', domain: "Frigg's Domain", rune: 'ᛒ' },
+  knight: { name: 'Ethereal', domain: "Loki's Domain", rune: 'ᛚ' },
+  pawn: { name: 'Demigod', domain: 'Common Folk', rune: 'ᛈ' }
 };
 
 const MAJOR_PIECES: PieceType[] = ['queen', 'rook', 'bishop', 'knight'];
@@ -368,30 +369,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
 
         <div className="norse-top-bar-actions">
           {modeSwitch}
-          <div
-            className={`norse-user-pill ${hiveUsername ? 'is-authed' : 'is-guest'}`}
-            title={hiveUsername ? `Logged in as @${hiveUsername}` : 'No Hive account connected'}
-          >
-            <span className="norse-user-pill-avatar" aria-hidden>
-              <User size={13} strokeWidth={2.2} />
-            </span>
-            <span className="norse-user-pill-text">
-              <span className="norse-user-pill-label">
-                {hiveUsername ? 'Hive' : 'Guest'}
-              </span>
-              <span className="norse-user-pill-handle">
-                {hiveUsername ? `@${hiveUsername}` : 'No login'}
-              </span>
-            </span>
-          </div>
-          <Link
-            to={routes.settings}
-            className="norse-settings-btn"
-            title="Settings"
-            aria-label="Open settings"
-          >
-            <Settings size={14} strokeWidth={1.9} />
-          </Link>
+          <AccountSlot username={hiveUsername} tier="premium" />
 
           {validDecks.length > 0 && onQuickStart && !isMultiplayer && (
             <div className="norse-quick-decks">
@@ -428,9 +406,12 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
               onClick={() => handlePieceTypeClick(pieceType)}
               className={`norse-piece-btn ${isSelected ? 'selected' : ''}`}
             >
-              <span className="norse-piece-icon" style={{ color: info.color }}>
-                {info.icon}
-              </span>
+              <PieceGlyph
+                pieceType={pieceType}
+                fallbackColor={PIECE_COLOR_BY_TYPE[pieceType]}
+                size="clamp(29px, 7.2cqh, 42px)"
+                className="norse-piece-glyph"
+              />
               <div className="norse-piece-info">
                 <div className="norse-piece-name">{info.name}</div>
                 <div className="norse-piece-hero">
@@ -449,17 +430,20 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
 
       {/* CENTER PANEL - HERO GRID */}
       <div className="norse-hero-panel norse-stone-panel norse-rune-border">
-        <div className="norse-panel-header">
-          <div>
-            <div className="norse-panel-title">
-              <span style={{ color: PIECE_DISPLAY_INFO[selectedPieceType].color }}>
-                {PIECE_DISPLAY_INFO[selectedPieceType].icon}
-              </span>
-              {PIECE_DISPLAY_INFO[selectedPieceType].name} Heroes
-            </div>
-            <div className="norse-panel-subtitle">
-              {PIECE_DISPLAY_INFO[selectedPieceType].domain}
-            </div>
+            <div className="norse-panel-header">
+              <div>
+                <div className="norse-panel-title">
+                  <PieceGlyph
+                    pieceType={selectedPieceType}
+                    fallbackColor={PIECE_COLOR_BY_TYPE[selectedPieceType]}
+                    size="clamp(26px, 6.5cqh, 34px)"
+                    className="norse-panel-piece-glyph"
+                  />
+                  {PIECE_DISPLAY_INFO[selectedPieceType].name} Heroes
+                </div>
+                <div className="norse-panel-subtitle">
+                  {PIECE_DISPLAY_INFO[selectedPieceType].domain}
+                </div>
           </div>
           <span className={`norse-spell-badge ${pieceHasSpells(selectedPieceType) ? 'has-spells' : 'no-spells'}`}>
             {pieceHasSpells(selectedPieceType) ? '10-card spell loadout' : 'Command slot · no spell deck'}
@@ -495,9 +479,12 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
                     onReady={() => markHeroArtReady(hero.id)}
                     fallbackIcon={
                       <div className="norse-hero-placeholder">
-                        <span className="norse-hero-placeholder-icon" style={{ color: PIECE_DISPLAY_INFO[selectedPieceType].color }}>
-                          {PIECE_DISPLAY_INFO[selectedPieceType].icon}
-                        </span>
+                        <PieceGlyph
+                          pieceType={selectedPieceType}
+                          fallbackColor={PIECE_COLOR_BY_TYPE[selectedPieceType]}
+                          size="clamp(42px, 20.8cqw, 68px)"
+                          className="norse-hero-placeholder-glyph"
+                        />
                       </div>
                     }
                   />
@@ -595,10 +582,22 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
                         heroId={hero.id}
                         heroName={hero.name}
                         portrait={hero.portrait}
-                        fallbackIcon={<span style={{ color: info.color }}>{info.icon}</span>}
+                        fallbackIcon={
+                          <PieceGlyph
+                            pieceType={pieceType}
+                            fallbackColor={PIECE_COLOR_BY_TYPE[pieceType]}
+                            size="clamp(23px, 6.5cqw, 36px)"
+                            className="norse-army-item-glyph"
+                          />
+                        }
                       />
                     ) : (
-                      <span style={{ color: info.color }}>{info.icon}</span>
+                      <PieceGlyph
+                        pieceType={pieceType}
+                        fallbackColor={PIECE_COLOR_BY_TYPE[pieceType]}
+                        size="clamp(23px, 6.5cqw, 36px)"
+                        className="norse-army-item-glyph"
+                      />
                     )}
                   </div>
                   <div className="norse-army-item-info">

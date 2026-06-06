@@ -9,6 +9,8 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChessPiece, ChessBoardPosition, ELEMENT_COLORS, BOARD_COLS, BOARD_ROWS } from '../../types/ChessTypes';
 import { useGameStore } from '../../stores/gameStore';
+import { PIECE_COLOR_BY_TYPE } from './pieceVisuals';
+import { PieceGlyph } from './PieceGlyph';
 
 interface AttackAnimationData {
   attacker: ChessPiece;
@@ -24,24 +26,6 @@ interface ChessAttackAnimationProps {
   cellSize: number;
   boardOffset: { x: number; y: number };
 }
-
-const PIECE_ICONS: Record<string, string> = {
-  king: '♔',
-  queen: '♕',
-  rook: '♖',
-  bishop: '♗',
-  knight: '♘',
-  pawn: '♙'
-};
-
-const PIECE_COLORS: Record<string, string> = {
-  king: '#FFD700',
-  queen: '#69CCF0',
-  rook: '#C79C6E',
-  bishop: '#FFFFFF',
-  knight: '#FFF569',
-  pawn: '#999999'
-};
 
 export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
   animation,
@@ -165,7 +149,7 @@ export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
             y: phase === 'moving' || phase === 'impact'
               ? defenderPos.y - cellSize / 2
               : attackerStart.y - cellSize / 2,
-            scale: phase === 'impact' ? 1.3 : 1,
+            scale: phase === 'impact' ? 1.12 : 1,
             opacity: 1
           }}
           transition={{
@@ -182,17 +166,18 @@ export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
             justifyContent: 'center',
             borderRadius: '8px',
             backgroundColor: isPlayer ? 'rgb(30, 58, 138)' : 'rgb(127, 29, 29)',
-            boxShadow: `0 0 20px ${elementColor}, 0 0 40px ${elementColor}50`,
-            border: `2px solid ${elementColor}`,
+            boxShadow: `0 0 12px ${elementColor}aa, 0 0 20px ${elementColor}66`,
+            border: `1px solid ${elementColor}`,
             zIndex: 1001
           }}
         >
-          <span
-            className={`text-3xl ${!isPlayer ? 'transform rotate-180' : ''}`}
-            style={{ color: PIECE_COLORS[animation.attacker.type] }}
-          >
-            {PIECE_ICONS[animation.attacker.type]}
-          </span>
+          <PieceGlyph
+            pieceType={animation.attacker.type}
+            fallbackColor={PIECE_COLOR_BY_TYPE[animation.attacker.type]}
+            size="clamp(39px, 8vw, 73px)"
+            className={`relative ${!isPlayer ? 'transform rotate-180' : ''}`}
+            fallbackTextShadow={`0 0 12px ${elementColor}, 0 0 20px ${elementColor}`}
+          />
         </motion.div>
 
         {/* Attack trail effect */}
@@ -200,7 +185,7 @@ export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
           initial={{
             x: attackerStart.x,
             y: attackerStart.y,
-            opacity: 0.8,
+            opacity: 0.75,
             scale: 0.5
           }}
           animate={{
@@ -220,7 +205,7 @@ export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
             borderRadius: '50%',
             backgroundColor: elementColor,
             transform: 'translate(-50%, -50%)',
-            boxShadow: `0 0 10px ${elementColor}`,
+            boxShadow: `0 0 8px ${elementColor}`,
             zIndex: 999
           }}
         />
@@ -229,7 +214,7 @@ export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
         {phase === 'impact' && (
           <motion.div
             initial={{ scale: 0, opacity: 1 }}
-            animate={{ scale: 3, opacity: 0 }}
+            animate={{ scale: 2.1, opacity: 0 }}
             transition={{ duration: 0.4, ease: 'easeOut' }}
             style={{
               position: 'absolute',
@@ -240,8 +225,8 @@ export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
               transform: 'translate(-50%, -50%)',
               borderRadius: '50%',
               background: animation.isInstantKill
-                ? 'radial-gradient(circle, #facc15 0%, #f97316 40%, transparent 70%)'
-                : 'radial-gradient(circle, #ef4444 0%, #dc2626 40%, transparent 70%)',
+                ? 'radial-gradient(circle, rgba(250, 204, 21, 0.62) 0%, rgba(249, 115, 22, 0.32) 40%, transparent 70%)'
+                : 'radial-gradient(circle, rgba(239, 68, 68, 0.58) 0%, rgba(220, 38, 38, 0.28) 40%, transparent 72%)',
               zIndex: 998
             }}
           />
@@ -267,11 +252,11 @@ export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
               style={{
                 background: 'linear-gradient(135deg, rgba(0,0,0,0.9), rgba(30,0,50,0.9))',
                 border: animation.isInstantKill
-                  ? '2px solid #facc15'
-                  : '2px solid #ef4444',
+                  ? '1px solid rgba(250, 204, 21, 0.85)'
+                  : '1px solid rgba(239, 68, 68, 0.85)',
                 color: animation.isInstantKill ? '#facc15' : '#ef4444',
-                textShadow: `0 0 10px ${animation.isInstantKill ? '#facc15' : '#ef4444'}`,
-                boxShadow: `0 0 20px ${animation.isInstantKill ? '#facc15' : '#ef4444'}50`
+                textShadow: `0 0 7px ${animation.isInstantKill ? '#facc15' : '#ef4444'}`,
+                boxShadow: `0 0 12px ${animation.isInstantKill ? '#facc15' : '#ef4444'}60`
               }}
             >
               {animation.isInstantKill ? '⚔ STRIKE!' : '⚔ COMBAT!'}

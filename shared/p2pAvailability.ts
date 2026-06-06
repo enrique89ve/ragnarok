@@ -65,6 +65,7 @@ export type FriendPresenceSnapshot = {
 
 export type ServerSignedChallenge = {
 	readonly from: string;
+	readonly to: string;
 	readonly peerId: string;
 	readonly timestamp: number;
 	readonly expiresAt: number;
@@ -82,6 +83,7 @@ export type ChallengeSendResponse =
 	| {
 		readonly ok: true;
 		readonly challenge?: ServerSignedChallenge;
+		readonly opponentMatchChallenge?: ServerSignedChallenge;
 	}
 	| {
 		readonly ok: false;
@@ -248,13 +250,16 @@ function readFriendPresenceSnapshot(input: unknown): FriendPresenceSnapshot | nu
 	};
 }
 
-const CHALLENGE_KEYS = new Set(['from', 'peerId', 'timestamp', 'expiresAt', 'nonce', 'sigAlg', 'serverSig']);
+const CHALLENGE_KEYS = new Set(['from', 'to', 'peerId', 'timestamp', 'expiresAt', 'nonce', 'sigAlg', 'serverSig']);
 
-function readServerSignedChallenge(input: unknown): ServerSignedChallenge | null {
+export function readServerSignedChallenge(input: unknown): ServerSignedChallenge | null {
 	if (!isRecord(input) || !hasOnlyKeys(input, CHALLENGE_KEYS)) return null;
 	if (typeof input.from !== 'string') return null;
 	const from = normalizeHiveUsername(input.from);
 	if (!isValidAvailabilityHiveUsername(from)) return null;
+	if (typeof input.to !== 'string') return null;
+	const to = normalizeHiveUsername(input.to);
+	if (!isValidAvailabilityHiveUsername(to)) return null;
 	if (typeof input.peerId !== 'string' || !isSafePeerId(input.peerId)) return null;
 	if (!isNonNegativeInteger(input.timestamp)) return null;
 	if (!isNonNegativeInteger(input.expiresAt)) return null;
@@ -265,6 +270,7 @@ function readServerSignedChallenge(input: unknown): ServerSignedChallenge | null
 
 	return {
 		from,
+		to,
 		peerId: input.peerId,
 		timestamp: input.timestamp,
 		expiresAt: input.expiresAt,
@@ -299,7 +305,7 @@ export function readPresenceHeartbeatResponse(input: unknown): PresenceHeartbeat
 	return { statuses, challenges };
 }
 
-const CHALLENGE_SEND_SUCCESS_KEYS = new Set(['ok', 'challenge']);
+const CHALLENGE_SEND_SUCCESS_KEYS = new Set(['ok', 'challenge', 'opponentMatchChallenge']);
 const CHALLENGE_SEND_FAILURE_KEYS = new Set(['ok', 'reason', 'retryAfterMs']);
 const CHALLENGE_REJECT_REASONS: ReadonlySet<string> = new Set([
 	'offline',
@@ -325,10 +331,23 @@ export function readChallengeSendResponse(input: unknown): ChallengeSendResponse
 			return { ok: false, reason: 'invalid_input' };
 		}
 		const challenge = input.challenge === undefined ? null : readServerSignedChallenge(input.challenge);
-		if (input.challenge !== undefined && !challenge) {
+		const opponentMatchChallenge = input.opponentMatchChallenge === undefined
+			? null
+			: readServerSignedChallenge(input.opponentMatchChallenge);
+		if (
+			(input.challenge !== undefined && !challenge)
+			|| (input.opponentMatchChallenge !== undefined && !opponentMatchChallenge)
+		) {
 			return { ok: false, reason: 'invalid_input' };
 		}
-		return challenge ? { ok: true, challenge } : { ok: true };
+		if (!challenge && !opponentMatchChallenge) {
+			return { ok: true };
+		}
+		return {
+			ok: true,
+			...(challenge ? { challenge } : {}),
+			...(opponentMatchChallenge ? { opponentMatchChallenge } : {}),
+		};
 	}
 
 	if (input.ok !== false || !hasOnlyKeys(input, CHALLENGE_SEND_FAILURE_KEYS)) {

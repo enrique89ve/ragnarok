@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { usePeerStore } from '../../stores/peerStore';
 import { useMatchmaking } from '../../hooks/useMatchmaking';
 import { useNFTUsername } from '../../nft/hooks';
+import { getNFTBridge } from '../../nft';
 import { useFriendStore, type OutgoingFriendChallenge } from '../../stores/friendStore';
 import type { MatchmakingStatus } from '../../stores/matchmakingStore';
 import type { P2PConnectionState } from '../../stores/peerStore';
@@ -26,6 +27,28 @@ interface MultiplayerLobbyProps {
 }
 
 const DIRECT_CHALLENGE_POLL_MS = 15_000;
+const SOCIAL_CHALLENGES_ACTION = 'friend-challenges';
+
+type AuthHeaders = {
+	readonly 'x-hive-username': string;
+	readonly 'x-hive-signature': string;
+	readonly 'x-hive-timestamp': string;
+};
+
+async function buildChallengesAuthHeaders(username: string): Promise<AuthHeaders | null> {
+	const authBody = await getNFTBridge().buildAuthBody(username, SOCIAL_CHALLENGES_ACTION, {
+		username,
+	});
+	if (typeof authBody.signature !== 'string') {
+		return null;
+	}
+
+	return {
+		'x-hive-username': username.toLowerCase(),
+		'x-hive-signature': authBody.signature,
+		'x-hive-timestamp': `${authBody.timestamp}`,
+	};
+}
 
 export function getActiveIncomingChallenges(
 	challenges: readonly ServerSignedChallenge[],
@@ -133,6 +156,8 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 		join,
 		connectToRoom,
 		disconnect,
+		setMatchChallenges,
+		clearMatchChallenges,
 		setRemotePeerId,
 	} = usePeerStore();
 
@@ -172,7 +197,12 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 	const fetchIncomingChallenges = useCallback(async (signal?: AbortSignal) => {
 		if (!hiveUsername) return;
 		try {
-			const response = await fetch(`/api/friends/challenges/${encodeURIComponent(hiveUsername)}`, { signal });
+			const headers = await buildChallengesAuthHeaders(hiveUsername);
+			if (!headers) return;
+			const response = await fetch(`/api/friends/challenges/${encodeURIComponent(hiveUsername)}`, {
+				headers,
+				signal,
+			});
 			if (!response.ok) return;
 			const payload: unknown = await response.json();
 			const parsed = readPresenceHeartbeatResponse(payload);
@@ -256,6 +286,7 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 
 	const handleDisconnect = () => {
 		disconnect();
+		clearMatchChallenges();
 		leaveQueue();
 		setJoinId('');
 		setRemotePeerId(null);
@@ -283,6 +314,7 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 		setAcceptingFrom(challenge.from);
 		try {
 			dismissChallenge(challenge.from);
+			setMatchChallenges(challenge, null);
 			await join(resolveDirectChallengeRoomId(challenge));
 			toast.success(`Joining @${challenge.from}.`);
 		} catch {
@@ -305,12 +337,16 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 		}
 		setOpeningOutgoing(true);
 		try {
+			setMatchChallenges(
+				activeOutgoingChallenge.matchChallenge ?? null,
+				activeOutgoingChallenge.opponentMatchChallenge ?? null,
+			);
 			await connectToRoom(activeOutgoingChallenge.peerId);
 			toast.success(`Challenge room opened for @${activeOutgoingChallenge.to}.`);
 		} catch {
 			toast.error('Could not open the challenge room.');
 		} finally {
-			setOpeningOutgoing(false);
+		setOpeningOutgoing(false);
 		}
 	};
 

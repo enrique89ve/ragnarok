@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChessPiece, ChessPieceType, PIECE_DISPLAY_NAMES } from '../../types/ChessTypes';
 import { useGameStore } from '../../stores/gameStore';
+import { PIECE_COLOR_BY_TYPE } from './pieceVisuals';
+import { PieceGlyph } from './PieceGlyph';
 import './VSScreen.css';
 
 interface VSScreenProps {
@@ -32,18 +34,6 @@ const VSScreen: React.FC<VSScreenProps> = ({
       clearTimeout(completeTimer);
     };
   }, [duration, onComplete]);
-
-  const getPieceTypeEmoji = (type: string): string => {
-    const emojiMap: Record<string, string> = {
-      'king': '👑',
-      'queen': '♛',
-      'rook': '♜',
-      'bishop': '♝',
-      'knight': '♞',
-      'pawn': '♟'
-    };
-    return emojiMap[type] || '⚔️';
-  };
 
   const getClassColor = (heroClass: string): string => {
     const colorMap: Record<string, string> = {
@@ -92,7 +82,13 @@ const VSScreen: React.FC<VSScreenProps> = ({
               className="vs-portrait-container"
               style={{ backgroundColor: getClassColor(attacker.heroClass) }}
             >
-              <span className="vs-portrait-emoji">{getPieceTypeEmoji(attacker.type)}</span>
+              <PieceGlyph
+                pieceType={attacker.type}
+                fallbackColor={PIECE_COLOR_BY_TYPE[attacker.type]}
+                size="clamp(114px, 23cqw, 218px)"
+                className="vs-portrait-glyph"
+                fallbackTextShadow="0 4px 14px rgba(0,0,0,0.7)"
+              />
             </div>
             <div className="vs-fighter-info">
               <span className="vs-fighter-owner">
@@ -144,7 +140,13 @@ const VSScreen: React.FC<VSScreenProps> = ({
               className="vs-portrait-container"
               style={{ backgroundColor: getClassColor(defender.heroClass) }}
             >
-              <span className="vs-portrait-emoji">{getPieceTypeEmoji(defender.type)}</span>
+              <PieceGlyph
+                pieceType={defender.type}
+                fallbackColor={PIECE_COLOR_BY_TYPE[defender.type]}
+                size="clamp(114px, 23cqw, 218px)"
+                className="vs-portrait-glyph"
+                fallbackTextShadow="0 4px 14px rgba(0,0,0,0.7)"
+              />
             </div>
             <div className="vs-fighter-info">
               <span className="vs-fighter-owner">

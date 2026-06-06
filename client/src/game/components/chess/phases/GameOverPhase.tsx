@@ -18,7 +18,7 @@
   the campaign-only narrative branches.
 */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import type { CampaignMission, CampaignChapter, CinematicIntro, Difficulty, MusicCueId } from '../../../campaign/campaignTypes';
 import CinematicCrawl from '../../campaign/CinematicCrawl';
@@ -42,7 +42,11 @@ export type GameOverPhaseProps = {
 	readonly onCinematicEnd: () => void;
 	readonly onBridgeEnd: () => void;
 	readonly onPrimaryAction: () => void;
+	readonly onHome: () => void;
 	readonly onRetry: () => void;
+	readonly abandonment?: {
+		readonly autoHomeSeconds: number;
+	} | null;
 };
 
 type CampaignContext = NonNullable<GameOverPhaseProps['campaign']>;
@@ -59,6 +63,7 @@ type CinematicState =
 const GameOverPhase: React.FC<GameOverPhaseProps> = props => {
 	const { campaign, onCinematicEnd, result, sub } = props;
 	const cinematicState = getCinematicState(sub, campaign, result);
+	const abandonmentState = useAbandonmentCountdown(props.abandonment ?? null, props.onHome);
 	// Defensive: mission flagged cinematic sub but no scenes — drop straight
 	// into result. The advance-to-result dispatch must happen during commit
 	// (not render) to keep the parent FSM transition out of React's render
@@ -83,8 +88,40 @@ const GameOverPhase: React.FC<GameOverPhaseProps> = props => {
 		return null;
 	}
 
-	return <GameOverBridgeOrResult {...props} />;
+	return <GameOverBridgeOrResult {...props} abandonmentState={abandonmentState} />;
 };
+
+type AbandonmentState = {
+	readonly secondsRemaining: number;
+	readonly onHome: () => void;
+};
+
+function useAbandonmentCountdown(
+	abandonment: GameOverPhaseProps['abandonment'],
+	onHome: () => void,
+): AbandonmentState | null {
+	const autoHomeSeconds = abandonment?.autoHomeSeconds ?? null;
+	const [secondsRemaining, setSecondsRemaining] = useState(autoHomeSeconds ?? 0);
+
+	useEffect(() => {
+		if (autoHomeSeconds === null) return undefined;
+		setSecondsRemaining(autoHomeSeconds);
+		const interval = window.setInterval(() => {
+			setSecondsRemaining(current => Math.max(0, current - 1));
+		}, 1000);
+		const timeout = window.setTimeout(onHome, autoHomeSeconds * 1000);
+		return () => {
+			window.clearInterval(interval);
+			window.clearTimeout(timeout);
+		};
+	}, [autoHomeSeconds, onHome]);
+
+	if (autoHomeSeconds === null) return null;
+	return {
+		secondsRemaining,
+		onHome,
+	};
+}
 
 function getCinematicState(
 	sub: GameOverSubPhase,
@@ -107,7 +144,7 @@ function getCinematicState(
 	};
 }
 
-function GameOverBridgeOrResult(props: GameOverPhaseProps) {
+function GameOverBridgeOrResult(props: GameOverPhaseProps & { readonly abandonmentState: AbandonmentState | null }) {
 	const bridgeIntro = getBridgeIntro(props.sub, props.campaign);
 	if (bridgeIntro) {
 		return (
@@ -141,7 +178,8 @@ function GameOverResultCard({
 	campaign,
 	onPrimaryAction,
 	onRetry,
-}: GameOverPhaseProps) {
+	abandonmentState,
+}: GameOverPhaseProps & { readonly abandonmentState: AbandonmentState | null }) {
 	return (
 		<motion.div
 			key="gameover-result"
@@ -166,11 +204,13 @@ function GameOverResultCard({
 					onRetry={onRetry}
 					playerTurnCount={playerTurnCount}
 					result={result}
+					abandonment={abandonmentState}
 				/>
 			) : (
 				<CasualResultPanel
 					onPrimaryAction={onPrimaryAction}
 					result={result}
+					abandonment={abandonmentState}
 				/>
 			)}
 		</motion.div>

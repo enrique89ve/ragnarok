@@ -17,6 +17,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { ServerSignedChallenge } from '@shared/p2pAvailability';
 import {
   HiveUserRecord,
   HivePlayerStats,
@@ -233,8 +234,14 @@ const SESSION_AUTHORIZE_PREFIX = 'ragnarok session_authorize';
 export function buildSessionAuthorizeMessage(
   matchId: string,
   ephemeralPubkey: string,
+  matchChallenge?: ServerSignedChallenge,
 ): string {
-  return `${SESSION_AUTHORIZE_PREFIX} | ${matchId} | ${ephemeralPubkey}`;
+  const baseMessage = `${SESSION_AUTHORIZE_PREFIX} | ${matchId} | ${ephemeralPubkey}`;
+  if (!matchChallenge) {
+    return baseMessage;
+  }
+
+  return `${baseMessage} | ${matchChallenge.from}|${matchChallenge.to}|${matchChallenge.peerId}|${matchChallenge.timestamp}|${matchChallenge.expiresAt}|${matchChallenge.nonce}|${matchChallenge.sigAlg}|${matchChallenge.serverSig}`;
 }
 
 /**
@@ -251,12 +258,12 @@ export function buildSessionAuthorizeMessage(
 export async function signSessionAuthorize(
   matchId: string,
   ephemeralPubkey: string,
-  options: BattleHiveSignatureOptions = {},
+  options: BattleHiveSignatureOptions & { matchChallenge?: ServerSignedChallenge } = {},
 ): Promise<string> {
   if (!matchId || !ephemeralPubkey) {
     throw new Error('signSessionAuthorize: matchId and ephemeralPubkey required');
   }
-  const message = buildSessionAuthorizeMessage(matchId, ephemeralPubkey);
+  const message = buildSessionAuthorizeMessage(matchId, ephemeralPubkey, options.matchChallenge);
   const result = await signHiveMessage(message, buildBattleHiveSignatureOptions(
     'Authorize session key',
     options,

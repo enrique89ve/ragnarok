@@ -15,6 +15,11 @@ import {
 
 type GameOverResult = 'victory' | 'defeat' | 'draw';
 
+type AbandonmentState = {
+	readonly secondsRemaining: number;
+	readonly onHome: () => void;
+};
+
 export type GameOverCampaignContext = {
 	readonly mission: CampaignMission;
 	readonly chapter: CampaignChapter;
@@ -28,12 +33,14 @@ export function CampaignResultPanel({
 	campaign,
 	onPrimaryAction,
 	onRetry,
+	abandonment = null,
 }: {
 	readonly result: GameOverResult;
 	readonly playerTurnCount: number;
 	readonly campaign: GameOverCampaignContext;
 	readonly onPrimaryAction: () => void;
 	readonly onRetry: () => void;
+	readonly abandonment?: AbandonmentState | null;
 }) {
 	const account = useNFTUsername();
 	const lastRewardFeedback = useCampaignStore(state => state.lastRewardFeedback);
@@ -43,6 +50,7 @@ export function CampaignResultPanel({
 	const rewardCopy = getCampaignResultRewardCopy(activeRewardFeedback);
 	const isVictory = result === 'victory';
 	const isDraw = result === 'draw';
+	const isAbandoned = abandonment !== null && abandonment !== undefined;
 
 	return (
 		<>
@@ -61,12 +69,16 @@ export function CampaignResultPanel({
 					rewardCopy={rewardCopy}
 				/>
 			)}
-			<CampaignResultActions
-				campaign={campaign}
-				isVictory={isVictory}
-				onPrimaryAction={onPrimaryAction}
-				onRetry={onRetry}
-			/>
+			{isAbandoned ? (
+				<AbandonedMatchActions abandonment={abandonment} />
+			) : (
+				<CampaignResultActions
+					campaign={campaign}
+					isVictory={isVictory}
+					onPrimaryAction={onPrimaryAction}
+					onRetry={onRetry}
+				/>
+			)}
 		</>
 	);
 }
@@ -287,9 +299,11 @@ function CampaignResultActions({
 export function CasualResultPanel({
 	result,
 	onPrimaryAction,
+	abandonment = null,
 }: {
 	readonly result: GameOverResult;
 	readonly onPrimaryAction: () => void;
+	readonly abandonment?: AbandonmentState | null;
 }) {
 	const account = useNFTUsername();
 	const activeMatch = useMatchStore(state => state.activeMatch);
@@ -300,6 +314,17 @@ export function CasualResultPanel({
 		runtime: getRagnarokNetworkConfig(),
 		account,
 	});
+
+	if (abandonment) {
+		return (
+			<>
+				<p className="cgo-subtitle">
+					You left the battle. This run is closed locally as an abandoned defeat.
+				</p>
+				<AbandonedMatchActions abandonment={abandonment} />
+			</>
+		);
+	}
 
 	return (
 		<>
@@ -319,6 +344,32 @@ export function CasualResultPanel({
 				Play Again
 			</button>
 		</>
+	);
+}
+
+function AbandonedMatchActions({
+	abandonment,
+}: {
+	readonly abandonment: AbandonmentState;
+}) {
+	return (
+		<motion.div
+			className="cgo-buttons cgo-abandon-actions"
+			initial={{ opacity: 0 }}
+			animate={{ opacity: 1 }}
+			transition={{ delay: 0.8, duration: 0.45 }}
+		>
+			<button
+				type="button"
+				onClick={abandonment.onHome}
+				className="cgo-btn-primary"
+			>
+				Return Home
+			</button>
+			<p className="cgo-auto-home" aria-live="polite">
+				Returning home in {abandonment.secondsRemaining}s
+			</p>
+		</motion.div>
 	);
 }
 

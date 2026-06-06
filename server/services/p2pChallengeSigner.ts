@@ -105,6 +105,7 @@ export function buildServerSignedChallenge(input: {
 	const payload = toSignPayload({ ...input, nonce });
 	return {
 		from: input.from,
+		to: input.to,
 		peerId: input.peerId,
 		timestamp: input.timestamp,
 		expiresAt: input.expiresAt,

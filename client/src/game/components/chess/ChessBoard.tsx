@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChessBoardPosition, BOARD_ROWS, BOARD_COLS } from '../../types/ChessTypes';
+import { ChessBoardPosition, BOARD_ROWS, BOARD_COLS, type ChessPiece } from '../../types/ChessTypes';
 import { useGameStore } from '../../stores/gameStore';
 import ChessPieceComponent, { type ChessPieceVisualState } from './ChessPiece';
 import MovePlate from './MovePlate';
@@ -18,6 +18,14 @@ import {
   MINE_RUNE_SYMBOL
 } from '../../utils/chess/mineVisualUtils';
 import { useChessBoardInteractions } from './useChessBoardInteractions';
+import {
+  getCellAriaLabel,
+  getCellHighlight,
+  getCellTone,
+  getMoveAnimationOffset,
+  getMineState,
+  getPlacementPreview,
+} from './chessBoardPresentation';
 
 interface ChessBoardProps {
   onCombatTriggered?: (attackerId: string, defenderId: string) => void;
@@ -45,6 +53,7 @@ const getPieceVisualState = (input: {
 
 const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = false }) => {
   const boardRef = useRef<HTMLDivElement>(null);
+  const previousPiecePositionsRef = useRef<Map<string, ChessBoardPosition>>(new Map());
   const [boardRect, setBoardRect] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const {
     boardState,
@@ -100,13 +109,47 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
   const isMyTurn = currentTurn === myCanonicalSide;
   const myWinStatus: 'player_wins' | 'opponent_wins' = myCanonicalSide === 'player' ? 'player_wins' : 'opponent_wins';
   const oppWinStatus: 'player_wins' | 'opponent_wins' = myCanonicalSide === 'player' ? 'opponent_wins' : 'player_wins';
-  
+  const isFlipped = myCanonicalSide === 'opponent';
+  const boardOrientation = isFlipped ? 'flipped' : 'standard';
+  const cellSize = boardRect.width / BOARD_COLS;
+
+  useEffect(() => {
+    previousPiecePositionsRef.current = new Map(
+      boardState.pieces.map(piece => [
+        piece.id,
+        { row: piece.position.row, col: piece.position.col },
+      ]),
+    );
+  }, [boardState.pieces]);
+
+  const getPieceMoveOffset = (piece: ChessPiece) => {
+    if (pendingAttackAnimation) return null;
+    if (!Number.isFinite(cellSize) || cellSize <= 0) return null;
+
+    const previousPosition = previousPiecePositionsRef.current.get(piece.id);
+    if (!previousPosition) return null;
+    if (
+      previousPosition.row === piece.position.row &&
+      previousPosition.col === piece.position.col
+    ) {
+      return null;
+    }
+
+    return getMoveAnimationOffset({
+      from: previousPosition,
+      to: piece.position,
+      orientation: boardOrientation,
+      cellSize,
+    });
+  };
+
   const renderCell = (row: number, col: number) => {
     const position: ChessBoardPosition = { row, col };
     const piece = getPieceAt(position);
-    const isLight = (row + col) % 2 === 0;
+    const cellTone = getCellTone(row, col);
     const isValid = isValidMovePosition(row, col);
     const isAttack = isAttackPosition(row, col);
+    const highlight = getCellHighlight({ isValidMove: isValid, isAttackMove: isAttack });
     const isFlashCell = isInstantKillFlashPosition(row, col);
     const isMinePreview = isPlacementMode && isMinePreviewTile(row, col);
     const isActiveMine = isActiveMinePosition(row, col);
@@ -114,13 +157,35 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
     const isPlacementBurst = isPlacementBurstPosition(row, col);
     const isMineTriggerExplosion = isMineTriggerExplosionPosition(row, col);
     const isPieceLocked = gameStatus !== 'playing' || pendingAttackAnimation !== null;
-    
+    const mineState = getMineState({
+      isActiveMine,
+      isPlacementBurst,
+      isTriggerExplosion: isMineTriggerExplosion,
+    });
+    const placementPreview = getPlacementPreview({ isMinePreview, canPlaceHere });
+    const cellLabel = getCellAriaLabel({ row, col, piece });
+    const moveOffset = piece ? getPieceMoveOffset(piece) : null;
+
     return (
       <div
         key={`${row}-${col}`}
+        role="gridcell"
+        aria-label={cellLabel}
+        aria-selected={piece?.id === effectiveSelectedPieceId ? true : undefined}
+        data-chess-cell="true"
+        data-row={row}
+        data-col={col}
+        data-cell-tone={cellTone}
+        data-highlight={highlight}
+        data-mine-state={mineState}
+        data-placement-preview={placementPreview}
+        data-has-piece={piece ? 'true' : 'false'}
+        data-piece-id={piece?.id}
+        data-piece-owner={piece?.owner}
+        data-piece-type={piece?.type}
+        data-game-status={gameStatus}
         className={`
           chess-cell relative aspect-square overflow-visible [container-type:inline-size]
-          ${isLight ? 'chess-cell-light' : 'chess-cell-dark'}
           ${gameStatus === 'playing' ? '' : 'opacity-75'}
           ${isPlacementMode ? 'cursor-crosshair' : ''}
         `}
@@ -277,14 +342,21 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
             <motion.div
               key={piece.id}
               className="absolute inset-1"
-              layoutId={piece.id}
+              data-chess-piece-motion="true"
+              data-move-animation={moveOffset ? 'position' : 'none'}
+              initial={moveOffset
+                ? { x: moveOffset.x, y: moveOffset.y, opacity: 1, scale: 1.06 }
+                : false
+              }
               animate={piece.id === fallingKingId
-                ? { rotate: 90, opacity: 0.45, y: 10 }
-                : undefined
+                ? { x: 0, y: 10, rotate: 90, opacity: 0.45, scale: 1 }
+                : { x: 0, y: 0, rotate: 0, opacity: 1, scale: 1 }
               }
               transition={piece.id === fallingKingId
                 ? { duration: 1.0, ease: 'easeIn' }
-                : undefined
+                : moveOffset
+                  ? { duration: 0.24, ease: [0.12, 0.9, 0.2, 1] }
+                  : { type: 'spring', stiffness: 300, damping: 25 }
               }
             >
               <ChessPieceComponent
@@ -346,7 +418,6 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
   // col 0→4 left-to-right. Their back rank (row 0) appears at bottom.
   // Second-mover (canonical 'opponent'): flipped 180° — row 0→6,
   // col 4→0. Their back rank (row 6) appears at bottom.
-  const isFlipped = myCanonicalSide === 'opponent';
   const cells = [];
   if (isFlipped) {
     for (let row = 0; row < BOARD_ROWS; row++) {
@@ -370,7 +441,14 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
   const isP2P = !!matchId;
 
   return (
-    <div className="chess-board-container flex flex-col items-center">
+    <div
+      className="chess-board-container flex flex-col items-center"
+      data-chess-board-container="true"
+      data-current-turn={currentTurn}
+      data-local-side={myCanonicalSide}
+      data-my-turn={isMyTurn ? 'true' : 'false'}
+      data-game-status={gameStatus}
+    >
       {isP2P && (
         <div className="mb-2 px-3 py-1 rounded bg-slate-900/70 border border-slate-600 text-xs font-mono text-slate-200 flex gap-3 items-center">
           <span>P2P</span>
@@ -381,7 +459,11 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
           </span>
         </div>
       )}
-      <div className={`chess-turn-banner chess-banner-enter ${isMyTurn ? 'chess-turn-player' : 'chess-turn-opponent'}`}>
+      <div
+        className="chess-turn-banner chess-banner-enter"
+        data-turn-state={isMyTurn ? 'self' : 'opponent'}
+        data-game-status={gameStatus}
+      >
         <span className="chess-turn-text">
           {isMyTurn ? 'ᚱ YOUR COMMAND ᚱ' : 'ᚱ FOE STIRS ᚱ'}
         </span>
@@ -413,6 +495,16 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
       <div className="relative [perspective:1200px]">
         <motion.div
           ref={boardRef}
+          role="grid"
+          aria-label="Ragnarok chess board"
+          aria-rowcount={BOARD_ROWS}
+          aria-colcount={BOARD_COLS}
+          data-chess-board="true"
+          data-current-turn={currentTurn}
+          data-local-side={myCanonicalSide}
+          data-my-turn={isMyTurn ? 'true' : 'false'}
+          data-game-status={gameStatus}
+          data-orientation={isFlipped ? 'flipped' : 'standard'}
           className="chess-board rounded-lg overflow-hidden grid aspect-[5/7] origin-bottom [transform:rotateX(2deg)] w-[min(500px,85vw,calc(70vh*5/7))]"
           style={{
             gridTemplateRows: `repeat(${BOARD_ROWS}, 1fr)`,

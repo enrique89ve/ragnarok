@@ -274,7 +274,12 @@
 		display: none;
 	}
 
-	.meta-page-header-account span.font-mono {
+	.meta-page-header-account .account-menu-trigger {
+		max-width: 2.75rem;
+		padding-right: 0.25rem;
+	}
+
+	.meta-page-header-account .account-menu-username {
 		display: none;
 	}
 }
@@ -365,14 +370,14 @@
 		display: none;
 	}
 
-	.meta-page-header-account > a,
-	.meta-page-header-account > div {
+	.meta-page-header-account .account-menu-trigger {
 		padding-top: 0.125rem;
+		padding-right: 0.25rem;
 		padding-bottom: 0.125rem;
+		max-width: 2.5rem;
 	}
 
-	.meta-page-header-account span.font-mono,
-	.meta-page-header-account svg {
+	.meta-page-header-account .account-menu-username {
 		display: none;
 	}
 }

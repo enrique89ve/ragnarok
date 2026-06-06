@@ -1,6 +1,7 @@
 import type { ChessCommandEnvelope } from '../../../../shared/p2p-wire/chess';
 import type { CompactPokerAction } from '../../../../shared/p2p-wire/combat';
 import type { DeckCardClaim } from '../../../../shared/protocol-core/deckVerification';
+import type { ServerSignedChallenge } from '@shared/p2pAvailability';
 import type { PackagedMatchResult } from '../../data/blockchain/types';
 import type { GameCommandEnvelope } from '../hooks/p2pEnvelope';
 import type { GameState } from '../types';
@@ -44,7 +45,13 @@ export type WireMessage =
 	// Inner `action: unknown` on `action_envelope` is intentional: the per-
 	// action schema is owned by issue 03 (signed-transcript builder) and
 	// must not be narrowed here.
-	| { type: 'session_authorize'; matchId: string; ephemeralPubkey: string; hiveSig: string }
+	| {
+		type: 'session_authorize';
+		matchId: string;
+		ephemeralPubkey: string;
+		hiveSig: string;
+		matchChallenge?: ServerSignedChallenge;
+	}
 	| { type: 'session_renewal'; matchId: string; newPubkey: string; hiveSig: string }
 	| { type: 'session_resumed'; matchId: string; lastSeenStateHash: string }
 	| { type: 'state_sync_request'; matchId: string; fromTurn: number }

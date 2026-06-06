@@ -284,6 +284,8 @@ export default function FriendsPanel() {
 				peerId,
 				sentAt,
 				expiresAt: parsed.challenge?.expiresAt ?? sentAt + CHALLENGE_STALE_THRESHOLD_MS,
+				matchChallenge: parsed.opponentMatchChallenge ?? parsed.challenge,
+				opponentMatchChallenge: parsed.challenge,
 			});
 			clearChallengeCooldown(target);
 			pruneExpiredChallenges(sentAt);
