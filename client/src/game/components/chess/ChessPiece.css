@@ -3,14 +3,26 @@
   isolation: isolate;
   --chess-color-neutral: #f2f7fb;
   --side-border-color: rgba(255, 255, 255, 0.14);
+  --piece-container-background: rgba(15, 23, 42, 0.45);
+  --piece-container-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
   
-  background: rgba(15, 23, 42, 0.45) !important;
+  background: var(--piece-container-background) !important;
   backdrop-filter: blur(1.5px);
   border: 1px solid var(--side-border-color) !important;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--piece-container-shadow);
   transition-property: transform, opacity;
   transition-duration: 160ms;
   transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.chess-piece[data-cell-tone='light'] {
+  --piece-container-background: rgba(15, 23, 42, 0.58);
+  --piece-container-shadow: 0 4px 18px rgba(0, 0, 0, 0.88);
+}
+
+.chess-piece[data-cell-tone='dark'] {
+  --piece-container-background: rgba(15, 23, 42, 0.34);
+  --piece-container-shadow: 0 4px 16px rgba(0, 0, 0, 0.48), 0 0 12px rgba(255, 255, 255, 0.2);
 }
 
 .chess-piece[data-motion='off'] {

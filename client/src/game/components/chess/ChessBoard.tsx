@@ -152,6 +152,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
     const isValid = isValidMovePosition(row, col);
     const isAttack = isAttackPosition(row, col);
     const isMinePreview = isMinePreviewTile(row, col);
+    const cellTone = getCellTone(row, col);
     const canPlaceHere = canPlaceAtHoveredPosition && isMinePreview;
     const isPieceLocked = piece ? disabled || piece.owner !== myCanonicalSide || isPlacementMode : false;
     const pieceMoveOffset = piece ? getPieceMoveOffset(piece) : null;
@@ -170,7 +171,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
       <div
         key={`${row}-${col}`}
         className="chess-cell relative flex items-center justify-center"
-        data-cell-tone={getCellTone(row, col)}
+        data-cell-tone={cellTone}
         data-cell-highlight={getCellHighlight({ isValidMove: isValid, isAttackMove: isAttack })}
         data-mine-preview={isMinePreview ? (canPlaceHere ? 'valid' : 'blocked') : 'none'}
         onClick={() => handleCellClick(row, col)}
@@ -211,6 +212,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
                 isPlayerTurn={isMyTurn}
                 isMotionEnabled={shouldAnimateBoard}
                 useEnhancedFx={shouldRenderEffectFilters}
+                cellTone={cellTone}
               />
             </motion.div>
           ) : (
@@ -230,6 +232,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
                 isPlayerTurn={isMyTurn}
                 isMotionEnabled={shouldAnimateBoard}
                 useEnhancedFx={shouldRenderEffectFilters}
+                cellTone={cellTone}
               />
             </div>
           )
