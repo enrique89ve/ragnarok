@@ -12,6 +12,7 @@ import { LayoutGrid, LogOut, WalletCards } from 'lucide-react';
 import { clearActiveHiveSession } from '@/data/HiveAuth';
 import { useHiveDataStore } from '@/data/HiveDataLayer';
 import { routes } from '@/lib/routes';
+import { getNFTBridge } from '@/game/nft';
 import type { Tier } from '../ornaments/RunicSigils';
 
 interface UserChipProps {
@@ -62,7 +63,6 @@ function getMenuPosition(anchor: HTMLElement): React.CSSProperties {
 }
 
 async function stopHiveBridgeSync(): Promise<void> {
-	const { getNFTBridge } = await import('@/game/nft');
 	getNFTBridge().stopSync();
 }
 

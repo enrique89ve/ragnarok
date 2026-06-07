@@ -11,6 +11,8 @@
 
 import { debug } from '../config/debugConfig';
 import { createRuntimeStorageKey } from '../config/networkConfig';
+import { getNFTBridge } from '../nft';
+import { useStarterStore } from './starterStore';
 
 const LEGACY_STARTER_DECKS_STORAGE_KEY = createRuntimeStorageKey('ragnarok-decks');
 
@@ -77,7 +79,6 @@ export async function collectSaveState(): Promise<PortableSaveState> {
 	// Lazy-import stores to avoid circular deps
 	const { useCampaignStore } = await import('../campaign/campaignStore');
 	const { useTutorialStore } = await import('../tutorial/tutorialStore');
-	const { useStarterStore } = await import('./starterStore');
 	const { useSettingsStore } = await import('./settingsStore');
 
 	const campaign = useCampaignStore.getState() as unknown as Record<string, unknown>;
@@ -154,8 +155,6 @@ export async function restoreSaveState(state: PortableSaveState): Promise<{ succ
 
 		const { useCampaignStore } = await import('../campaign/campaignStore');
 		const { useTutorialStore } = await import('../tutorial/tutorialStore');
-		const { useStarterStore } = await import('./starterStore');
-		const { getNFTBridge } = await import('../nft');
 
 		// Restore campaign (set state directly via Zustand).
 		// `rewardsClaimed` from v3 saves is intentionally ignored — the per-mission

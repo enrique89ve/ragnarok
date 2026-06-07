@@ -22,7 +22,9 @@ import {
 	isHiveWalletAvailable,
 	loginWithHiveWallet,
 } from '../../data/HiveAuth';
+import { getNFTBridge } from '../nft';
 import { Button } from '../../components/ui-norse';
+import { ensureBridgeRuntime } from '../runtime/bridgeRuntime';
 
 type ConnectStatus = 'idle' | 'connecting' | 'error';
 
@@ -37,16 +39,11 @@ function normalizeHiveUsername(username: string | null | undefined): string | nu
 }
 
 async function loadHiveBridgeRuntime() {
-	const [{ ensureBridgeRuntime }, { getNFTBridge }] = await Promise.all([
-		import('../runtime/bridgeRuntime'),
-		import('../nft'),
-	]);
 	await ensureBridgeRuntime();
 	return getNFTBridge();
 }
 
 async function stopHiveBridgeSync(): Promise<void> {
-	const { getNFTBridge } = await import('../nft');
 	getNFTBridge().stopSync();
 }
 
