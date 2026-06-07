@@ -1,5 +1,9 @@
 import React from 'react';
 
+interface EmberFieldProps {
+  disableMotion?: boolean;
+}
+
 /*
   EmberField — reusable two-layer Norse atmosphere particle backdrop.
 
@@ -46,27 +50,52 @@ const PARTICLE_BASE: React.CSSProperties = {
 	willChange: 'transform',
 };
 
-export const EmberField: React.FC = () => (
-	<>
-		<div
-			aria-hidden="true"
-			className="absolute inset-0 pointer-events-none z-0 motion-reduce:animate-none motion-reduce:opacity-30"
-			style={{
-				...PARTICLE_BASE,
-				backgroundImage: GOLDEN_BG,
-				animation: 'ember-drift-up 16s linear infinite',
-			}}
-		/>
-		<div
-			aria-hidden="true"
-			className="absolute inset-0 pointer-events-none z-0 motion-reduce:animate-none motion-reduce:opacity-30"
-			style={{
-				...PARTICLE_BASE,
-				backgroundImage: SPARK_BG,
-				animation: 'ember-drift-diagonal 24s linear infinite',
-			}}
-		/>
-	</>
-);
+export const EmberField: React.FC<EmberFieldProps> = ({ disableMotion }) => {
+	if (disableMotion) {
+		return (
+			<>
+				<div
+					aria-hidden="true"
+					className="absolute inset-0 pointer-events-none z-0 opacity-25"
+					style={{
+						...PARTICLE_BASE,
+						backgroundImage: GOLDEN_BG,
+					}}
+				/>
+				<div
+					aria-hidden="true"
+					className="absolute inset-0 pointer-events-none z-0 opacity-15"
+					style={{
+						...PARTICLE_BASE,
+						backgroundImage: SPARK_BG,
+					}}
+				/>
+			</>
+		);
+	}
+
+	return (
+		<>
+			<div
+				aria-hidden="true"
+				className="absolute inset-0 pointer-events-none z-0 motion-reduce:animate-none motion-reduce:opacity-30"
+				style={{
+					...PARTICLE_BASE,
+					backgroundImage: GOLDEN_BG,
+					animation: 'ember-drift-up 16s linear infinite',
+				}}
+			/>
+			<div
+				aria-hidden="true"
+				className="absolute inset-0 pointer-events-none z-0 motion-reduce:animate-none motion-reduce:opacity-30"
+				style={{
+					...PARTICLE_BASE,
+					backgroundImage: SPARK_BG,
+					animation: 'ember-drift-diagonal 24s linear infinite',
+				}}
+			/>
+		</>
+	);
+};
 
 export default EmberField;

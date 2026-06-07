@@ -13,36 +13,43 @@ interface VSScreenProps {
   duration?: number;
 }
 
+const VS_DEFAULT_DURATION_MS = 4200;
+const VS_ENTER_DELAY_MS = 540;
+const VS_EXIT_LEAD_MS = 780;
+const VS_MIN_DURATION_MS = 4000;
+
 const VSScreen: React.FC<VSScreenProps> = ({ 
   attacker, 
   defender, 
   onComplete,
-  duration = 2000 
+  duration = VS_DEFAULT_DURATION_MS 
 }) => {
   const [phase, setPhase] = useState<'enter' | 'vs' | 'exit'>('enter');
   // Viewer-relative labeling: "PLAYER" = me locally regardless of canonical side.
   const myCanonicalSide = useGameStore(s => s.myCanonicalSide) ?? 'player';
+  const safeDuration = Math.max(VS_MIN_DURATION_MS, duration);
+  const exitAt = Math.max(VS_EXIT_LEAD_MS + VS_ENTER_DELAY_MS, safeDuration - VS_EXIT_LEAD_MS);
 
   useEffect(() => {
-    const enterTimer = setTimeout(() => setPhase('vs'), 400);
-    const exitTimer = setTimeout(() => setPhase('exit'), duration - 400);
-    const completeTimer = setTimeout(onComplete, duration);
+    const enterTimer = setTimeout(() => setPhase('vs'), VS_ENTER_DELAY_MS);
+    const exitTimer = setTimeout(() => setPhase('exit'), exitAt);
+    const completeTimer = setTimeout(onComplete, safeDuration);
 
     return () => {
       clearTimeout(enterTimer);
       clearTimeout(exitTimer);
       clearTimeout(completeTimer);
     };
-  }, [duration, onComplete]);
+  }, [safeDuration, exitAt, onComplete]);
 
   const getClassColor = (heroClass: string): string => {
     const colorMap: Record<string, string> = {
-      'mage': '#3498db',
-      'warrior': '#c0392b',
-      'priest': '#f1c40f',
-      'rogue': '#9b59b6',
-      'paladin': '#f39c12',
-      'neutral': '#7f8c8d'
+      mage: '#7ba7f8',
+      warrior: '#a37a3f',
+      priest: '#d7c08a',
+      rogue: '#a086ff',
+      paladin: '#ca9f43',
+      neutral: '#70808f',
     };
     return colorMap[heroClass] || colorMap['neutral'];
   };
@@ -58,23 +65,21 @@ const VSScreen: React.FC<VSScreenProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.3 }}
+        transition={{ duration: 0.55, ease: 'easeOut' }}
       >
         <div className="vs-screen-backdrop" />
         
         <div className="vs-screen-content">
           <motion.div 
             className="vs-fighter vs-fighter-left"
-            initial={{ x: '-100vw', rotate: -15 }}
+            initial={{ x: '-100vw' }}
             animate={{ 
-              x: phase === 'exit' ? '-100vw' : 0, 
-              rotate: phase === 'vs' ? 0 : -15 
+              x: phase === 'exit' ? '-100vw' : 0
             }}
             transition={{ 
-              type: 'spring', 
-              stiffness: 100, 
-              damping: 15,
-              duration: 0.5
+              type: 'tween',
+              duration: 0.78,
+              ease: 'easeOut'
             }}
           >
             <div className="vs-fighter-glow vs-fighter-glow-blue" />
@@ -104,35 +109,35 @@ const VSScreen: React.FC<VSScreenProps> = ({
 
           <motion.div 
             className="vs-center"
-            initial={{ scale: 0, rotate: 180 }}
+            initial={{ scale: 0.85, opacity: 0 }}
             animate={{ 
-              scale: phase === 'vs' ? [0, 1.5, 1] : (phase === 'exit' ? 0 : 0),
-              rotate: phase === 'vs' ? 0 : 180
+              scale: phase === 'vs' ? 1 : (phase === 'exit' ? 0 : 0.85),
+              opacity: phase === 'exit' ? 0 : 1
             }}
             transition={{ 
-              duration: 0.5,
-              times: [0, 0.6, 1]
+              duration: 0.85,
+              ease: 'easeOut'
             }}
           >
-            <div className="vs-text">
-              <span className="vs-letter">V</span>
-              <span className="vs-letter">S</span>
+            <div className="vs-center-frame">
+              <div className="vs-text">
+                <span className="vs-letter">V</span>
+                <span className="vs-letter">S</span>
+              </div>
+              <div className="vs-sparks" />
             </div>
-            <div className="vs-sparks" />
           </motion.div>
 
           <motion.div 
             className="vs-fighter vs-fighter-right"
-            initial={{ x: '100vw', rotate: 15 }}
+            initial={{ x: '100vw' }}
             animate={{ 
-              x: phase === 'exit' ? '100vw' : 0, 
-              rotate: phase === 'vs' ? 0 : 15 
+              x: phase === 'exit' ? '100vw' : 0
             }}
             transition={{ 
-              type: 'spring', 
-              stiffness: 100, 
-              damping: 15,
-              duration: 0.5
+              type: 'tween',
+              duration: 0.78,
+              ease: 'easeOut'
             }}
           >
             <div className="vs-fighter-glow vs-fighter-glow-red" />
@@ -165,7 +170,7 @@ const VSScreen: React.FC<VSScreenProps> = ({
           className="vs-bottom-bar"
           initial={{ y: 100 }}
           animate={{ y: 0 }}
-          transition={{ delay: 0.3 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
         >
           <span className="vs-battle-text">PREPARE FOR BATTLE</span>
         </motion.div>

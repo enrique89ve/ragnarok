@@ -60,6 +60,28 @@
   padding-bottom: 28px;
 }
 
+/* Lightweight card mode: remove heavy visual effects and extra repaints during
+   mulligan transitions.
+   This leaves art, stats, and text readable while skipping shimmer/foil and
+   transform-heavy hover transforms. */
+.mulligan-card-no-fx .simple-card {
+  transition: none !important;
+  filter: none !important;
+  animation: none !important;
+}
+
+.mulligan-card-no-fx .simple-card .card-hover-glow,
+.mulligan-card-no-fx .simple-card .holo-foil,
+.mulligan-card-no-fx .simple-card .holo-glitter,
+.mulligan-card-no-fx .simple-card .holo-glare,
+.mulligan-card-no-fx .simple-card .card-art-image {
+  transition: none !important;
+  animation: none !important;
+  transform: none !important;
+  filter: none !important;
+  opacity: 1 !important;
+}
+
 /* Card placeholder while data loads */
 .mulligan-card-placeholder {
   width: 100%;

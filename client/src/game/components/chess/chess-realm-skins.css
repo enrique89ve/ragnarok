@@ -20,6 +20,7 @@
 
 .ragnarok-chess-game[class*="realm-"] {
 	position: relative;
+	min-height: 100dvh;
 	background-color: #050810;
 	background-size: cover;
 	background-position: center center;

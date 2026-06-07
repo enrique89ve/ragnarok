@@ -871,7 +871,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   }
 
   return (
-    <div className={`ragnarok-chess-game w-full h-full overflow-hidden ${chessRealmClass} ${finaleClass} ${chessRootMotionClass}`.trim()}>
+    <div className={`ragnarok-chess-game w-full min-h-dvh h-dvh overflow-hidden ${chessRealmClass} ${finaleClass} ${chessRootMotionClass}`.trim()}>
       <MatchExitControls
         visible={canLeaveActiveMatch}
         promptOpen={exitPromptOpen}

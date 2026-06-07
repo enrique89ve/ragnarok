@@ -1,4 +1,4 @@
-import { GameState, CardInstance } from '../types';
+import { GameState, CardInstance, CardData } from '../types';
 import { drawCards } from './cards/cardUtils';
 import { getManaCost } from './cards/typeGuards';
 import { shuffleInPlace, cryptoIdGen } from './seededRng';
@@ -85,81 +85,92 @@ export function completeMulligan(state: GameState): GameState {
     card => getManaCost(card.card) > 4
   );
 
-  // Create a deep copy of the state to safely modify it
-  const newState = JSON.parse(JSON.stringify(state)) as GameState;
+  const playerDeck = [...state.players.player.deck];
+  const opponentDeck = [...state.players.opponent.deck];
+
+  const nextPlayers = {
+    player: { ...state.players.player },
+    opponent: { ...state.players.opponent },
+  };
+
+  const nextMulligan = {
+    ...state.mulligan,
+    playerSelections: { ...state.mulligan.playerSelections },
+  };
   
   // Replace player's selected cards
   if (playerSelectedCards.length > 0) {
-    // Remove selected cards from hand
-    newState.players.player.hand = newState.players.player.hand.filter(
-      card => !newState.mulligan?.playerSelections[card.instanceId]
+    const playerHand = nextPlayers.player.hand.filter(
+      card => !nextMulligan.playerSelections[card.instanceId]
     );
-    
-    // Put selected cards back into deck
-    newState.players.player.deck = [
-      ...newState.players.player.deck,
-      ...playerSelectedCards.map(card => card.card)
-    ];
-    
-    shuffleInPlace(newState.players.player.deck);
-    
+    const playerReturnCards = playerSelectedCards.map(card => card.card as CardData);
+
+    const updatedDeck = [...playerDeck, ...playerReturnCards];
+    shuffleInPlace(updatedDeck);
+
     // Draw new cards equal to the number of replaced cards. Mulligan is
     // mid-match (post-init) — the host is authoritative, so cryptoIdGen
     // is fine here. Plan B replay-symmetric will plumb an EffectContext
     // SeededIdGen through this path.
     const { drawnCards, remainingDeck } = drawCards(
-      newState.players.player.deck,
+      updatedDeck,
       playerSelectedCards.length,
       cryptoIdGen,
     );
 
     // Update hand and deck — cap at 7
-    const combined = [...newState.players.player.hand, ...drawnCards];
-    newState.players.player.hand = combined.slice(0, 7);
-    newState.players.player.deck = remainingDeck;
+    const combined = [...playerHand, ...drawnCards];
+    nextPlayers.player = {
+      ...nextPlayers.player,
+      hand: combined.slice(0, 7),
+      deck: remainingDeck,
+    };
   }
 
   // Do the same for AI opponent
   if (opponentSelectedCards.length > 0) {
-    // Remove selected cards from hand
-    newState.players.opponent.hand = newState.players.opponent.hand.filter(
+    const opponentHand = nextPlayers.opponent.hand.filter(
       card => getManaCost(card.card) <= 4 // Simple AI mulligan logic
     );
-    
-    // Put selected cards back into deck
-    newState.players.opponent.deck = [
-      ...newState.players.opponent.deck,
-      ...opponentSelectedCards.map(card => card.card)
-    ];
-    
-    shuffleInPlace(newState.players.opponent.deck);
-    
+    const opponentReturnCards = opponentSelectedCards.map(card => card.card as CardData);
+
+    const updatedDeck = [...opponentDeck, ...opponentReturnCards];
+    shuffleInPlace(updatedDeck);
+
     // Draw new cards equal to the number of replaced cards
     const { drawnCards, remainingDeck } = drawCards(
-      newState.players.opponent.deck,
+      updatedDeck,
       opponentSelectedCards.length,
       cryptoIdGen,
     );
-    
+
     // Update hand and deck — cap at 7
-    const combined = [...newState.players.opponent.hand, ...drawnCards];
-    newState.players.opponent.hand = combined.slice(0, 7);
-    newState.players.opponent.deck = remainingDeck;
+    const combined = [...opponentHand, ...drawnCards];
+    nextPlayers.opponent = {
+      ...nextPlayers.opponent,
+      hand: combined.slice(0, 7),
+      deck: remainingDeck,
+    };
   }
   
   // End mulligan phase and transition to play phase
   // Set mulliganCompleted = true so poker battles skip mulligan phase
   return {
-    ...newState,
-    gamePhase: 'playing', // Update game phase to 'playing' to transition from mulligan
-    mulliganCompleted: true, // Mulligan only happens ONCE per game
-    mulligan: {
-      active: false,
-      playerSelections: newState.mulligan?.playerSelections ?? {},
-      playerReady: newState.mulligan?.playerReady ?? false,
-      opponentReady: newState.mulligan?.opponentReady ?? false
-    }
-  };
+      ...state,
+      players: {
+        ...state.players,
+        player: nextPlayers.player,
+        opponent: nextPlayers.opponent,
+      },
+      gamePhase: 'playing', // Update game phase to 'playing' to transition from mulligan
+      mulliganCompleted: true, // Mulligan only happens ONCE per game
+      mulligan: {
+        active: false,
+        playerSelections: nextMulligan.playerSelections,
+        playerReady: nextMulligan.playerReady,
+        opponentReady: nextMulligan.opponentReady
+      }
+    };
 }
 
 /**

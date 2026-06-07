@@ -1,12 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { CardInstance, MulliganState } from '../types';
 import { MulliganCard } from './MulliganCard';
 import { EmberField } from './transitions/EmberField';
 import { MulliganDetailPanel } from './mulligan/MulliganDetailPanel';
 import { MulliganActionBar } from './mulligan/MulliganActionBar';
 import { useGameStore } from '../stores/gameStore';
+import { useSettingsStore } from '../stores/settingsStore';
 import './mulligan.css';
 
 interface MulliganScreenProps {
@@ -44,9 +45,19 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
   const toggleMulliganCard = useGameStore(state => state.toggleMulliganCard);
   const confirmMulliganChoice = useGameStore(state => state.confirmMulligan);
   const skipMulliganChoice = useGameStore(state => state.skipMulligan);
+  const animationsEnabled = useSettingsStore(state => state.animationsEnabled);
+  const enhancedVFX = useSettingsStore(state => state.enhancedVFX);
+  const reduceMotionSetting = useSettingsStore(state => state.reduceMotion);
   const containerRef = useRef<HTMLDivElement>(null);
   const firstButtonRef = useRef<HTMLButtonElement>(null);
   const [hoveredCard, setHoveredCard] = useState<CardInstance | null>(null);
+  const disableMotion = useMemo(() => {
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    return !animationsEnabled || reduceMotionSetting || prefersReducedMotion;
+  }, [animationsEnabled, reduceMotionSetting]);
+  const disableCardFx = disableMotion || !enhancedVFX;
 
   // Focus the keep-all button on mount so keyboard users land on a real control.
   useEffect(() => {
@@ -87,16 +98,202 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
 
   if (!mulligan || !mulligan.active) return null;
 
-  const selectedCount = Object.values(mulligan.playerSelections).filter(Boolean).length;
-  const validPlayerHand = playerHand.filter(card => card && card.card);
+  const selectedCount = useMemo(
+    () => Object.values(mulligan.playerSelections).filter(Boolean).length,
+    [mulligan.playerSelections]
+  );
+  const validPlayerHand = useMemo(
+    () => playerHand.filter(card => card && card.card),
+    [playerHand]
+  );
   const isWaiting = mulligan.playerReady;
+  const cardRow = validPlayerHand.map((card, i) => {
+    const cardNode = (
+      <MulliganCard
+        card={card}
+        isSelected={!!mulligan.playerSelections[card.instanceId]}
+        onClick={() => toggleMulliganCard(card.instanceId)}
+        onHoverChange={setHoveredCard}
+        disableMotion={disableMotion}
+        disableCardFx={disableCardFx}
+      />
+    );
+
+    if (disableMotion) {
+      return (
+        <div key={card.instanceId}>
+          {cardNode}
+        </div>
+      );
+    }
+
+    return (
+      <motion.div
+        key={card.instanceId}
+        initial={{ y: 80, opacity: 0, rotateY: -15 }}
+        animate={{ y: 0, opacity: 1, rotateY: 0 }}
+        transition={{ delay: 0.3 + i * 0.1, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      >
+        {cardNode}
+      </motion.div>
+    );
+  });
+
+  const header = disableMotion ? (
+    <div className="text-center mb-8">
+      <h2 id="mulligan-title" className={TITLE_CLASS}>
+        Mulligan
+      </h2>
+      <p id="mulligan-subtitle" className={SUBTITLE_CLASS}>
+        Choose cards to replace with new ones from your deck
+      </p>
+    </div>
+  ) : (
+    <div className="text-center mb-8">
+      <motion.h2
+        id="mulligan-title"
+        className={TITLE_CLASS}
+        initial={{ scale: 1.3, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.25, type: 'spring', stiffness: 260, damping: 20 }}
+      >
+        Mulligan
+      </motion.h2>
+      <motion.p
+        id="mulligan-subtitle"
+        className={SUBTITLE_CLASS}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.4, duration: 0.4 }}
+      >
+        Choose cards to replace with new ones from your deck
+      </motion.p>
+    </div>
+  );
+
+  const rings = disableMotion ? (
+    <>
+      <div className="mulligan-ring mulligan-ring-large" />
+      <div className="mulligan-ring mulligan-ring-small" />
+    </>
+  ) : (
+    <>
+      <motion.div
+        className="mulligan-ring mulligan-ring-large"
+        animate={{ rotate: 360 }}
+        transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
+      />
+      <motion.div
+        className="mulligan-ring mulligan-ring-small"
+        animate={{ rotate: -360 }}
+        transition={{ duration: 40, repeat: Infinity, ease: 'linear' }}
+      />
+    </>
+  );
+
+  const waitingIndicator = isWaiting ? (
+    disableMotion ? (
+      <div className="flex items-center justify-center gap-3 mt-7">
+        <span className="text-[11px] font-bold tracking-[2px] uppercase text-amber-400/65">
+          Waiting for opponent…
+        </span>
+      </div>
+    ) : (
+      <AnimatePresence>
+        <motion.div
+          key={`waiting-indicator`}
+          className="flex items-center justify-center gap-3 mt-7"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <div className="flex gap-1.5">
+            {[0, 1, 2].map(i => (
+              <motion.div
+                key={i}
+                className="w-2 h-2 rounded-full bg-amber-400/70"
+                animate={{ y: [0, -6, 0], opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 1, delay: i * 0.18, repeat: Infinity }}
+              />
+            ))}
+          </div>
+          <span className="text-[11px] font-bold tracking-[2px] uppercase text-amber-400/65">
+            Waiting for opponent…
+          </span>
+        </motion.div>
+      </AnimatePresence>
+    )
+  ) : null;
+
+  const panel = disableMotion ? (
+    <div className="relative z-2 w-full max-w-255 px-4">
+      {header}
+      <div className="flex justify-center items-center gap-8 mb-10 py-4 overflow-visible">
+        {cardRow}
+      </div>
+      <MulliganDetailPanel hoveredCard={hoveredCard} disableMotion />
+      <MulliganActionBar
+        ref={firstButtonRef}
+        selectedCount={selectedCount}
+        onKeepAll={skipMulliganChoice}
+        onConfirm={confirmMulliganChoice}
+        disableMotion
+      />
+      {waitingIndicator}
+    </div>
+  ) : (
+    <motion.div
+      className="relative z-2 w-full max-w-255 px-4"
+      initial={{ y: 60, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ delay: 0.1, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {header}
+      <div className="flex justify-center items-center gap-8 mb-10 py-4 overflow-visible">
+        {cardRow}
+      </div>
+      <MulliganDetailPanel hoveredCard={hoveredCard} disableMotion={disableMotion} />
+      <MulliganActionBar
+        ref={firstButtonRef}
+        selectedCount={selectedCount}
+        onKeepAll={skipMulliganChoice}
+        onConfirm={confirmMulliganChoice}
+        disableMotion={disableMotion}
+      />
+      {waitingIndicator}
+    </motion.div>
+  );
+
+  const atmosphere = (
+    <>
+      <EmberField disableMotion={disableMotion} />
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {rings}
+      </div>
+    </>
+  );
 
   // Portaled to document.body so the fixed overlay isn't trapped by the arena
   // canvas's transform: scale() ancestor (which would otherwise anchor `fixed`
   // to that scaled box, leaving the wrapper/volcano edges bare).
   const overlay = (
-    <AnimatePresence>
+    disableMotion ? (
+      <div
+        ref={containerRef}
+        className={OVERLAY_CLASS}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="mulligan-title"
+        aria-describedby="mulligan-subtitle"
+      >
+        {atmosphere}
+        {panel}
+      </div>
+    ) : (
+      <AnimatePresence>
       <motion.div
+        key="mulligan-overlay"
         ref={containerRef}
         className={OVERLAY_CLASS}
         role="dialog"
@@ -108,111 +305,11 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
         exit={{ opacity: 0 }}
         transition={{ duration: 0.4 }}
       >
-        {/* Atmospheric ember particles — reusable transition layer */}
-        <EmberField />
-
-        {/* Decorative rune rings (CSS-driven, retains existing keyframes) */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <motion.div
-            className="mulligan-ring mulligan-ring-large"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
-          />
-          <motion.div
-            className="mulligan-ring mulligan-ring-small"
-            animate={{ rotate: -360 }}
-            transition={{ duration: 40, repeat: Infinity, ease: 'linear' }}
-          />
-        </div>
-
-        <motion.div
-          className="relative z-2 w-full max-w-255 px-4"
-          initial={{ y: 60, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.1, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        >
-          {/* Header */}
-          <div className="text-center mb-8">
-            <motion.h2
-              id="mulligan-title"
-              className={TITLE_CLASS}
-              initial={{ scale: 1.3, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.25, type: 'spring', stiffness: 260, damping: 20 }}
-            >
-              Mulligan
-            </motion.h2>
-            <motion.p
-              id="mulligan-subtitle"
-              className={SUBTITLE_CLASS}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4, duration: 0.4 }}
-            >
-              Choose cards to replace with new ones from your deck
-            </motion.p>
-          </div>
-
-          {/* Cards row */}
-          <div className="flex justify-center items-center gap-8 mb-10 py-4 overflow-visible">
-            {validPlayerHand.map((card, i) => (
-              <motion.div
-                key={card.instanceId}
-                initial={{ y: 80, opacity: 0, rotateY: -15 }}
-                animate={{ y: 0, opacity: 1, rotateY: 0 }}
-                transition={{ delay: 0.3 + i * 0.1, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              >
-                <MulliganCard
-                  card={card}
-                  isSelected={!!mulligan.playerSelections[card.instanceId]}
-                  onClick={() => toggleMulliganCard(card.instanceId)}
-                  onHoverChange={setHoveredCard}
-                />
-              </motion.div>
-            ))}
-          </div>
-
-          {/* LoL-style detail inspector */}
-          <MulliganDetailPanel hoveredCard={hoveredCard} />
-
-          {/* Actions */}
-          <MulliganActionBar
-            ref={firstButtonRef}
-            selectedCount={selectedCount}
-            onKeepAll={skipMulliganChoice}
-            onConfirm={confirmMulliganChoice}
-          />
-
-          {/* Waiting indicator */}
-          <AnimatePresence>
-            {isWaiting && (
-              <motion.div
-                className="flex items-center justify-center gap-3 mt-7"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <div className="flex gap-1.5">
-                  {[0, 1, 2].map(i => (
-                    <motion.div
-                      key={i}
-                      className="w-2 h-2 rounded-full bg-amber-400/70"
-                      animate={{ y: [0, -6, 0], opacity: [0.5, 1, 0.5] }}
-                      transition={{ duration: 1, delay: i * 0.18, repeat: Infinity }}
-                    />
-                  ))}
-                </div>
-                <span className="text-[11px] font-bold tracking-[2px] uppercase text-amber-400/65">
-                  Waiting for opponent…
-                </span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-
+        {atmosphere}
+        {panel}
       </motion.div>
-    </AnimatePresence>
+      </AnimatePresence>
+    )
   );
 
   return createPortal(overlay, document.body);

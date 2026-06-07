@@ -182,7 +182,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
             <motion.div
               key={piece.id}
               className={`absolute inset-1 z-20 ${targetAttackFrame}`}
-              style={targetAttackFrameStyle}
+              style={{ ...targetAttackFrameStyle, willChange: 'transform' }}
               initial={isPieceMoving ? pieceMoveOffset : false}
               data-move-animation={isPieceMoving ? 'position' : undefined}
               animate={
@@ -199,7 +199,6 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
                     : { x: 0, y: 0, rotate: 0, opacity: 1, scale: 1 }
               }
               transition={isPieceMoving ? PIECE_SLIDE_TRANSITION : PIECE_REST_TRANSITION}
-              style={{ willChange: 'transform' }}
             >
               <ChessPieceComponent
                 piece={piece}
@@ -309,7 +308,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
       <div className="relative [perspective:1200px]">
         <motion.div
           ref={boardRef}
-          className="chess-board rounded-lg overflow-hidden grid aspect-[5/7] origin-bottom [transform:rotateX(2deg)] w-[min(500px,85vw,calc(70vh*5/7))]"
+          className="chess-board rounded-lg overflow-hidden grid aspect-[5/7] origin-bottom [transform:rotateX(2deg)] w-[min(500px,85vw,calc(70dvh*5/7))]"
           style={{
             gridTemplateRows: `repeat(${BOARD_ROWS}, 1fr)`,
             gridTemplateColumns: `repeat(${BOARD_COLS}, 1fr)`,

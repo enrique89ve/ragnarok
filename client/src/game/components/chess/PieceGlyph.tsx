@@ -5,6 +5,8 @@ import { PIECE_ICON_BY_TYPE } from './pieceVisuals';
 type PieceGlyphStyle = CSSProperties & {
 	readonly '--piece-glyph-color'?: string;
 	readonly '--piece-glyph-text-shadow'?: string;
+	readonly '--piece-glyph-stroke-color'?: string;
+	readonly '--piece-glyph-stroke-width'?: string;
 };
 
 interface PieceGlyphProps {
@@ -37,6 +39,8 @@ export const PieceGlyph: React.FC<PieceGlyphProps> = ({
 				justifyContent: 'center',
 				color: glyphStyle?.['--piece-glyph-color'] ?? fallbackColor,
 				textShadow: glyphStyle?.['--piece-glyph-text-shadow'] ?? fallbackTextShadow,
+				'--piece-glyph-stroke-color': glyphStyle?.['--piece-glyph-stroke-color'] ?? 'transparent',
+				'--piece-glyph-stroke-width': glyphStyle?.['--piece-glyph-stroke-width'] ?? '0px',
 				pointerEvents: 'none',
 				...glyphStyle,
 			}}

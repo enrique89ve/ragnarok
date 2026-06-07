@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { ChessPiece as ChessPieceType, ELEMENT_COLORS, ELEMENT_ICONS, type ElementType } from '../../types/ChessTypes';
 import { useGameStore } from '../../stores/gameStore';
 import { useChessHoverStore } from '../../stores/chessHoverStore';
-import { PIECE_COLOR_BY_TYPE } from './pieceVisuals';
+import { PIECE_PIECE_TONE_BY_OWNER } from './pieceVisuals';
 import { PieceGlyph } from './PieceGlyph';
 import clsx from 'clsx';
 import './ChessPiece.css';
@@ -53,16 +53,20 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
   isMotionEnabled = true,
   useEnhancedFx = true,
 }) => {
-  const setHoveredPiece = useChessHoverStore(s => s.setHoveredPiece);
+	const setHoveredPiece = useChessHoverStore(s => s.setHoveredPiece);
 
-  const myCanonicalSide = useGameStore(s => s.myCanonicalSide) ?? 'player';
-  const isPlayer = piece.owner === myCanonicalSide;
-  const isPawn = piece.type === 'pawn';
-  const isKing = piece.type === 'king';
+	const myCanonicalSide = useGameStore(s => s.myCanonicalSide) ?? 'player';
+	const isLocalPlayerPiece = piece.owner === myCanonicalSide;
+	const ownerClass = piece.owner === 'player'
+		? OWNER_CLASSES.player
+		: OWNER_CLASSES.opponent;
+	const isPawn = piece.type === 'pawn';
+	const isKing = piece.type === 'king';
   const isAttackTarget = visualState.tag === 'attackable';
   const isQueen = piece.type === 'queen';
   const isRook = piece.type === 'rook';
   const isGod = !isPawn;
+  const pieceTone = PIECE_PIECE_TONE_BY_OWNER[piece.owner];
   const healthPercent = (isPawn || isKing) ? 100 : (piece.health / piece.maxHealth) * 100;
   const pieceElement = piece.element ?? 'neutral';
   const elementGlow = ELEMENT_GLOW[pieceElement];
@@ -87,12 +91,12 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
       data-chess-piece-motion="true"
       data-motion={isMotionEnabled ? 'on' : 'off'}
       data-fx={useEnhancedFx ? 'on' : 'off'}
-      className={cx(
-        'chess-piece w-full h-full flex flex-col items-center justify-center rounded-lg cursor-pointer relative',
-        isPlayer ? OWNER_CLASSES.player : OWNER_CLASSES.opponent,
-        VISUAL_STATE_CLASSES[visualState.tag],
-        visualState.tag !== 'locked' && 'hover:brightness-103',
-      )}
+	      className={cx(
+	        'chess-piece w-full h-full flex flex-col items-center justify-center rounded-lg cursor-pointer relative',
+	        ownerClass,
+	        VISUAL_STATE_CLASSES[visualState.tag],
+	        visualState.tag !== 'locked' && 'hover:brightness-103',
+	      )}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       whileHover={isMotionEnabled && visualState.tag !== 'locked' ? { scale: 1.04 } : undefined}
@@ -109,11 +113,12 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
         }),
       }}
     >
-      {/* HUD SYSTEM */}
-      <div className="piece-hud-container">
-        <div className="owner-surface-tint" />
-        <div className="owner-outer-glow" />
-      </div>
+	      {/* HUD SYSTEM */}
+	      <div className="piece-hud-container">
+	        <div className="owner-side-subtle-rim" />
+	        <div className="owner-surface-tint" />
+	        <div className="owner-outer-glow" />
+	      </div>
 
       {/* ELEMENTAL EFFECTS: ROYAL & ELITE ENERGY (SVG-Turbo Charged) */}
         {isGod && hasElement && useEnhancedFx && (
@@ -136,15 +141,19 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
       {/* THE PIECE GLYPH */}
 			<PieceGlyph
 				pieceType={piece.type}
-				fallbackColor={isKing ? '#fffdf0' : PIECE_COLOR_BY_TYPE[piece.type]}
+				fallbackColor={pieceTone.fill}
 				className={cx(
-          "relative z-20",
-          isKing && "king-glyph-enhancement",
-          isPawn ? 'text-[clamp(18px,47cqw,39px)]' : 'text-[clamp(20px,55cqw,47px)]',
-          !isPlayer && "transform rotate-180"
-        )}
+	          "relative z-20",
+	          isKing && "king-glyph-enhancement",
+	          isPawn ? 'text-[clamp(18px,47cqw,39px)]' : 'text-[clamp(20px,55cqw,47px)]',
+	          !isLocalPlayerPiece && "transform rotate-180"
+	        )}
 				size={isPawn ? 'clamp(18px,47cqw,39px)' : 'clamp(20px,55cqw,47px)'}
-        fallbackTextShadow={isGod ? `0 0 12px ${elementGlow.color}cc` : "none"}
+				fallbackTextShadow={isGod ? `0 0 12px ${elementGlow.color}cc` : "none"}
+				style={{
+					'--piece-glyph-stroke-color': pieceTone.outline,
+					'--piece-glyph-stroke-width': '1.2px',
+				}}
         />
 
       {isAttackTarget && (

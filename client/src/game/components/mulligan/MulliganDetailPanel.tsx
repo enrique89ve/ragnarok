@@ -12,6 +12,7 @@ import type { CardInstance } from '../../types';
 
 interface MulliganDetailPanelProps {
 	readonly hoveredCard: CardInstance | null;
+	readonly disableMotion: boolean;
 }
 
 const PANEL_CLASS =
@@ -25,46 +26,64 @@ const PANEL_CLASS =
 	'border border-amber-500/[0.22] ' +
 	'shadow-[inset_0_1px_0_rgba(251,191,36,0.08),0_8px_24px_rgba(0,0,0,0.65)]';
 
-export const MulliganDetailPanel: React.FC<MulliganDetailPanelProps> = ({ hoveredCard }) => (
-	<div className={PANEL_CLASS} aria-live="polite">
-		<AnimatePresence mode="wait">
-			{hoveredCard?.card ? (
-				<motion.div
-					key={hoveredCard.instanceId}
-					className="w-full flex flex-col gap-1.5"
-					initial={{ opacity: 0, y: -6 }}
-					animate={{ opacity: 1, y: 0 }}
-					exit={{ opacity: 0, y: -4 }}
-					transition={{ duration: 0.18 }}
-				>
-					<div className="flex items-baseline justify-between gap-3 pb-1.5 border-b border-amber-500/[0.12]">
-						<span className="font-display text-sm font-bold uppercase tracking-[1.5px] text-[#fbf4dc]">
-							{hoveredCard.card.name}
-						</span>
-						<span className="text-[10px] font-bold uppercase tracking-[2px] text-amber-400/75 whitespace-nowrap">
-							{hoveredCard.card.manaCost} mana
-						</span>
-					</div>
-					{hoveredCard.card.description && (
-						<p className="m-0 text-xs leading-[1.5] text-gray-200/85">
-							{hoveredCard.card.description}
-						</p>
-					)}
-				</motion.div>
-			) : (
-				<motion.span
-					key="empty"
-					className="text-[10px] font-bold uppercase tracking-[3px] text-amber-400/45"
-					initial={{ opacity: 0 }}
-					animate={{ opacity: 0.5 }}
-					exit={{ opacity: 0 }}
-					transition={{ duration: 0.18 }}
-				>
-					Hover a card to inspect
-				</motion.span>
+export const MulliganDetailPanel: React.FC<MulliganDetailPanelProps> = ({ hoveredCard, disableMotion }) => {
+	const hoveredContent = hoveredCard?.card ? (
+		<div className="w-full flex flex-col gap-1.5">
+			<div className="flex items-baseline justify-between gap-3 pb-1.5 border-b border-amber-500/[0.12]">
+				<span className="font-display text-sm font-bold uppercase tracking-[1.5px] text-[#fbf4dc]">
+					{hoveredCard.card.name}
+				</span>
+				<span className="text-[10px] font-bold uppercase tracking-[2px] text-amber-400/75 whitespace-nowrap">
+					{hoveredCard.card.manaCost} mana
+				</span>
+			</div>
+			{hoveredCard.card.description && (
+				<p className="m-0 text-xs leading-[1.5] text-gray-200/85">
+					{hoveredCard.card.description}
+				</p>
 			)}
-		</AnimatePresence>
-	</div>
-);
+		</div>
+	) : (
+		<span className="text-[10px] font-bold uppercase tracking-[3px] text-amber-400/45">Hover a card to inspect</span>
+	);
+
+	if (disableMotion) {
+		return (
+			<div className={PANEL_CLASS} aria-live="polite">
+				{hoveredContent}
+			</div>
+		);
+	}
+
+	return (
+		<div className={PANEL_CLASS} aria-live="polite">
+			<AnimatePresence mode="wait">
+				{hoveredCard?.card ? (
+					<motion.div
+						key={hoveredCard.instanceId}
+						className="w-full flex flex-col gap-1.5"
+						initial={{ opacity: 0, y: -6 }}
+						animate={{ opacity: 1, y: 0 }}
+						exit={{ opacity: 0, y: -4 }}
+						transition={{ duration: 0.18 }}
+					>
+						{hoveredContent}
+					</motion.div>
+				) : (
+					<motion.span
+						key="empty"
+						className="text-[10px] font-bold uppercase tracking-[3px] text-amber-400/45"
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 0.5 }}
+						exit={{ opacity: 0 }}
+						transition={{ duration: 0.18 }}
+					>
+						Hover a card to inspect
+					</motion.span>
+				)}
+			</AnimatePresence>
+		</div>
+	);
+};
 
 export default MulliganDetailPanel;

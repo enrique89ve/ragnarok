@@ -15,6 +15,7 @@ interface MulliganActionBarProps {
 	readonly selectedCount: number;
 	readonly onKeepAll: () => void;
 	readonly onConfirm: () => void;
+	readonly disableMotion: boolean;
 }
 
 const BTN_BASE =
@@ -38,38 +39,50 @@ const BTN_REPLACE_SELECTED =
 	'shadow-[0_4px_20px_rgba(34,197,94,0.35)] border-green-500/60';
 
 export const MulliganActionBar = forwardRef<HTMLButtonElement, MulliganActionBarProps>(
-	({ selectedCount, onKeepAll, onConfirm }, firstButtonRef) => (
-		<motion.div
-			className="relative z-[3] flex items-center justify-center gap-6 isolate"
-			initial={{ opacity: 0, y: 20 }}
-			animate={{ opacity: 1, y: 0 }}
-			transition={{ delay: 0.65, duration: 0.35 }}
-		>
-			<button
-				ref={firstButtonRef}
-				type="button"
-				className={`${BTN_BASE} ${BTN_KEEP}`}
-				onClick={onKeepAll}
-				aria-label="Keep all cards and start the match"
+	({ selectedCount, onKeepAll, onConfirm, disableMotion }, firstButtonRef) => {
+		const content = (
+			<>
+				<button
+					ref={firstButtonRef}
+					type="button"
+					className={`${BTN_BASE} ${BTN_KEEP}`}
+					onClick={onKeepAll}
+					aria-label="Keep all cards and start the match"
+				>
+					Keep All
+				</button>
+				<button
+					type="button"
+					className={`${BTN_BASE} ${BTN_REPLACE_BASE} ${selectedCount > 0 ? BTN_REPLACE_SELECTED : ''}`}
+					onClick={onConfirm}
+					aria-label={
+						selectedCount === 0
+							? 'Lock current hand and start the match'
+							: `Replace ${selectedCount} selected card${selectedCount > 1 ? 's' : ''}`
+						}
+				>
+					{selectedCount === 0
+						? 'Lock Hand'
+						: `Replace ${selectedCount} Card${selectedCount > 1 ? 's' : ''}`}
+				</button>
+			</>
+		);
+
+		return disableMotion ? (
+			<div className="relative z-[3] flex items-center justify-center gap-6 isolate">
+				{content}
+			</div>
+		) : (
+			<motion.div
+				className="relative z-[3] flex items-center justify-center gap-6 isolate"
+				initial={{ opacity: 0, y: 20 }}
+				animate={{ opacity: 1, y: 0 }}
+				transition={{ delay: 0.65, duration: 0.35 }}
 			>
-				Keep All
-			</button>
-			<button
-				type="button"
-				className={`${BTN_BASE} ${BTN_REPLACE_BASE} ${selectedCount > 0 ? BTN_REPLACE_SELECTED : ''}`}
-				onClick={onConfirm}
-				aria-label={
-					selectedCount === 0
-						? 'Lock current hand and start the match'
-						: `Replace ${selectedCount} selected card${selectedCount > 1 ? 's' : ''}`
-				}
-			>
-				{selectedCount === 0
-					? 'Lock Hand'
-					: `Replace ${selectedCount} Card${selectedCount > 1 ? 's' : ''}`}
-			</button>
-		</motion.div>
-	)
+				{content}
+			</motion.div>
+		);
+	}
 );
 
 MulliganActionBar.displayName = 'MulliganActionBar';

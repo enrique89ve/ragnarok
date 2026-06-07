@@ -32,12 +32,16 @@
 	min-height: 10.5rem;
 }
 
+/* Gameplay shell: min-height alone does not satisfy child height: 100%.
+   Explicit height lets ragnarok-chess-game fill the viewport in landscape. */
 .game-orientation-gate {
 	min-height: 100dvh;
+	height: 100dvh;
 }
 
 .game-orientation-content {
 	min-height: inherit;
+	height: 100%;
 }
 
 .game-orientation-lock {

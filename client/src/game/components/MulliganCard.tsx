@@ -20,9 +20,11 @@ interface MulliganCardProps {
   isSelected: boolean;
   onClick: () => void;
   onHoverChange?: (card: CardInstance | null) => void;
+  disableMotion: boolean;
+  disableCardFx: boolean;
 }
 
-export const MulliganCard: React.FC<MulliganCardProps> = React.memo(({ card, isSelected, onClick, onHoverChange }) => {
+export const MulliganCard: React.FC<MulliganCardProps> = React.memo(({ card, isSelected, onClick, onHoverChange, disableMotion, disableCardFx }) => {
   const cardData = card?.card;
 
   const simpleCardData: SimpleCardData | null = useMemo(() => {
@@ -60,16 +62,36 @@ export const MulliganCard: React.FC<MulliganCardProps> = React.memo(({ card, isS
     );
   }
 
-  return (
-    <motion.div
-      className="mulligan-card-wrapper"
-      animate={isSelected ? ANIMATE_SELECTED : ANIMATE_DEFAULT}
-      whileHover={isSelected ? HOVER_SELECTED : HOVER_DEFAULT}
-      transition={SPRING_TRANSITION}
-      onClick={onClick}
-      onMouseEnter={() => onHoverChange?.(card)}
-      onMouseLeave={() => onHoverChange?.(null)}
-    >
+  const wrapperClassName = `mulligan-card-wrapper ${disableCardFx ? 'mulligan-card-no-fx' : ''}`.trim();
+
+  const motionProps = {
+    animate: isSelected ? ANIMATE_SELECTED : ANIMATE_DEFAULT,
+    whileHover: isSelected ? HOVER_SELECTED : HOVER_DEFAULT,
+    transition: SPRING_TRANSITION,
+  };
+
+  const overlay = isSelected ? (
+    disableMotion ? (
+      <div className="mulligan-card-selected-overlay">
+        <div className="mulligan-card-x-badge">✕</div>
+        <span className="mulligan-card-replace-label">Replace</span>
+      </div>
+    ) : (
+      <motion.div
+        className="mulligan-card-selected-overlay"
+        initial={OVERLAY_INITIAL}
+        animate={OVERLAY_ANIMATE}
+        exit={OVERLAY_EXIT}
+        transition={OVERLAY_TRANSITION}
+      >
+        <div className="mulligan-card-x-badge">✕</div>
+        <span className="mulligan-card-replace-label">Replace</span>
+      </motion.div>
+    )
+  ) : null;
+
+  const root = (
+    <>
       <SimpleCard
         card={simpleCardData}
         size="large"
@@ -77,18 +99,28 @@ export const MulliganCard: React.FC<MulliganCardProps> = React.memo(({ card, isS
         disableTooltips
       />
 
-      {isSelected && (
-        <motion.div
-          className="mulligan-card-selected-overlay"
-          initial={OVERLAY_INITIAL}
-          animate={OVERLAY_ANIMATE}
-          exit={OVERLAY_EXIT}
-          transition={OVERLAY_TRANSITION}
-        >
-          <div className="mulligan-card-x-badge">✕</div>
-          <span className="mulligan-card-replace-label">Replace</span>
-        </motion.div>
-      )}
+      {overlay}
+    </>
+  );
+
+  return disableMotion ? (
+    <div
+      className={wrapperClassName}
+      onClick={onClick}
+      onMouseEnter={() => onHoverChange?.(card)}
+      onMouseLeave={() => onHoverChange?.(null)}
+    >
+      {root}
+    </div>
+  ) : (
+    <motion.div
+      className={wrapperClassName}
+      {...motionProps}
+      onClick={onClick}
+      onMouseEnter={() => onHoverChange?.(card)}
+      onMouseLeave={() => onHoverChange?.(null)}
+    >
+      {root}
     </motion.div>
   );
 });
