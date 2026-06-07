@@ -1,0 +1,195 @@
+.chess-attack-animation-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1000;
+
+  --attack-accent: var(--ink-0);
+  --attack-side-start: var(--bifrost-500);
+  --attack-side-end: var(--bifrost-300);
+  --attack-side-frame: var(--bifrost-200);
+  --attack-piece-bg: linear-gradient(135deg, var(--attack-side-start), var(--attack-side-end));
+  --attack-label-color: var(--attack-accent);
+  --attack-ring-glow: 0px;
+}
+
+.chess-attack-animation-overlay[data-side='player'] {
+  --attack-side-start: var(--bifrost-500);
+  --attack-side-end: var(--bifrost-300);
+  --attack-side-frame: var(--bifrost-200);
+}
+
+.chess-attack-animation-overlay[data-side='opponent'] {
+  --attack-side-start: var(--blood-500);
+  --attack-side-end: var(--blood-300);
+  --attack-side-frame: var(--blood-200);
+}
+
+.chess-attack-animation-overlay[data-intent='critical'] {
+  --attack-piece-bg: linear-gradient(135deg, var(--warning-500), var(--warning-300));
+}
+
+.chess-attack-anticipation-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--attack-accent) 24%, transparent);
+  box-shadow:
+    0 0 0 calc(var(--attack-ring-glow, 0px)) color-mix(in srgb, var(--attack-accent) 7%, transparent),
+    0 0 14px color-mix(in srgb, var(--attack-accent) 15%, transparent);
+  z-index: 996;
+  transform: translate(-50%, -50%);
+}
+
+.chess-attack-attacker-piece {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid var(--attack-side-frame);
+  background: var(--attack-piece-bg);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--attack-accent) 30%, transparent),
+    0 0 16px color-mix(in srgb, var(--attack-accent) 16%, transparent);
+  z-index: 1001;
+}
+
+.chess-attack-attacker-piece--king {
+  border-radius: 9999px;
+}
+
+.chess-attack-attacker-piece__frame {
+  position: absolute;
+  inset: 8%;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--attack-accent) 30%, transparent);
+  opacity: 0.32;
+  box-shadow: inset 0 0 10px color-mix(in srgb, var(--attack-accent) 16%, transparent);
+  pointer-events: none;
+}
+
+.chess-attack-attacker-piece--king .chess-attack-attacker-piece__frame {
+  inset: 10%;
+  border-radius: 9999px;
+}
+
+.chess-attack-trail {
+  position: absolute;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, transparent, var(--attack-accent), transparent);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--attack-accent) 24%, transparent);
+  z-index: 999;
+}
+
+.chess-attack-combat-rail {
+  position: absolute;
+  border-radius: 9999px;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--attack-accent) 68%, transparent) 42%, transparent);
+  box-shadow:
+    inset 0 0 9px color-mix(in srgb, var(--attack-accent) 26%, transparent),
+    0 0 10px color-mix(in srgb, var(--attack-accent) 18%, transparent);
+  z-index: 999;
+  pointer-events: none;
+}
+
+.chess-attack-combat-flash {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 9999px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--attack-accent) 28%, transparent) 0%,
+    color-mix(in srgb, var(--attack-accent) 6%, transparent) 42%,
+    transparent 76%);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--attack-accent) 20%, transparent);
+  pointer-events: none;
+  z-index: 1004;
+}
+
+.chess-attack-combat-slash {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 9999px;
+  background: linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--attack-accent) 36%, transparent) 44%, transparent 100%);
+  transform-origin: left center;
+  box-shadow: 0 0 5px color-mix(in srgb, var(--attack-accent) 24%, transparent);
+  pointer-events: none;
+  z-index: 1005;
+}
+
+.chess-attack-defender-shell {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 1002;
+}
+
+.chess-attack-defender-shell--king {
+  border-radius: 9999px;
+}
+
+.chess-attack-burst {
+  position: absolute;
+  border-radius: 9999px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--attack-accent) 28%, transparent) 0%,
+    color-mix(in srgb, var(--attack-accent) 6%, transparent) 65%, transparent);
+  z-index: 998;
+  pointer-events: none;
+}
+
+.chess-attack-connector {
+  position: absolute;
+  border-radius: 9999px;
+  transform: translate(-50%, -50%);
+  transform-origin: left center;
+  background: linear-gradient(90deg, transparent, var(--attack-accent), transparent);
+  box-shadow: 0 0 4px color-mix(in srgb, var(--attack-accent) 18%, transparent);
+  z-index: 997;
+}
+
+.chess-attack-impact-wave {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    color-mix(in srgb, var(--attack-accent) 22%, transparent) 0%,
+    color-mix(in srgb, var(--attack-accent) 10%, transparent) 42%,
+    transparent 72%
+  );
+  z-index: 998;
+}
+
+.chess-attack-impact-rings {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--attack-accent) 20%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--attack-accent) 18%, transparent);
+  z-index: 997;
+}
+
+.chess-attack-impact-label {
+  position: absolute;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 700;
+  font-size: 1.125rem;
+  line-height: 1.2;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(30, 0, 50, 0.9));
+  border: 1px solid color-mix(in srgb, var(--attack-label-color) 30%, transparent);
+  color: var(--attack-label-color);
+  text-shadow: 0 0 2px var(--attack-label-color);
+  box-shadow: 0 0 4px color-mix(in srgb, var(--attack-label-color) 12%, transparent);
+  white-space: nowrap;
+  transform: translateX(-50%);
+  z-index: 1002;
+}

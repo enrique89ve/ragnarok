@@ -7,6 +7,10 @@
  * - All protocol semantics live in shared/protocol-core
  * - Block-header lookup for entropy block IDs (pack auto-finalize)
  * - Crash-safe: partial block failure = cursor stays, next restart retries
+ *
+ * Fast-path (volume catch-up): when backlog is high, fetch Hive custom_json
+ * operations by block range through HafAH (when available), keeping block-order
+ * application and cursor monotonicity identical to per-block mode.
  */
 
 import {
@@ -28,7 +32,9 @@ import { campaignRegistryProvider } from '../../shared/campaign/registry';
 import { getDuatEntitlement } from '../../shared/protocol-core/duatSnapshot';
 import {
 	registerAccount,
-	getBlockCursor, setBlockCursor, setSyncStatus,
+	getBlockCursor,
+	setBlockCursor,
+	setSyncStatus,
 	loadState,
 	startPersistence,
 	stopPersistence,
@@ -47,13 +53,154 @@ const HIVE_NODES = [
 	'https://api.openhive.network',
 ];
 
-const NODE_TIMEOUT_MS = 8000;
+const NODE_TIMEOUT_MS = 8_000;
 const POLL_INTERVAL_MS = 10_000;
 const BLOCKS_PER_BATCH = 100; // Increased for faster catch-up
+const MASSIVE_THRESHOLD = 100;
+const MASSIVE_RANGE_SIZE = 2_000; // HafAH hard server-side cap
+const HAF_PAGE_SIZE_LIVE = 100;
+const HAF_PAGE_SIZE_NORMAL = 1000;
+const HAF_PAGE_SIZE_MASSIVE = 1000;
+const HAF_MASSIVE_SYNC_THRESHOLD = 100;
+const HAF_LIVE_SYNC_THRESHOLD = 20;
+const HAF_MAX_PAGES = 100;
 const SYNC_TOLERANCE_BLOCKS = 5;
 
+const OPEN_AFTER_FAILURES = 8;
+const COOLDOWN_BASE_MS = 10_000;
+const COOLDOWN_MAX_MS = 120_000;
+const COOLDOWN_MULTIPLIER = 2;
+const RATE_LIMIT_DEFAULT_MS = 30_000;
+const LATENCY_WINDOW = 20;
+
 // ---------------------------------------------------------------------------
-// Hive RPC
+// Endpoint health / failover
+// ---------------------------------------------------------------------------
+
+type CircuitState = 'closed' | 'open' | 'half_open';
+type ErrorCategory = 'transient' | 'rate_limited' | 'client_error' | 'unknown';
+
+interface EndpointState {
+	endpoint: string;
+	state: CircuitState;
+	consecutiveFailures: number;
+	cooldownMs: number;
+	openUntil: number;
+	rateLimitedUntil: number;
+	latencies: number[];
+}
+
+const endpointStates: EndpointState[] = HIVE_NODES.map((endpoint) => ({
+	endpoint,
+	state: 'closed',
+	consecutiveFailures: 0,
+	cooldownMs: COOLDOWN_BASE_MS,
+	openUntil: 0,
+	rateLimitedUntil: 0,
+	latencies: [],
+}));
+let endpointRoundRobin = 0;
+
+function pickRoundRobin(pool: readonly EndpointState[]): string {
+	const idx = endpointRoundRobin % pool.length;
+	endpointRoundRobin += 1;
+	return pool[idx]!.endpoint;
+}
+
+function getBackoffMs(attempt: number, category: ErrorCategory): number {
+	const base = 250 * (attempt + 1);
+	if (category === 'rate_limited') return RATE_LIMIT_DEFAULT_MS;
+	if (category === 'client_error') return Math.min(base * 2, 2000);
+	return Math.min(base * 2, 3000);
+}
+
+function classifyError(err: unknown): ErrorCategory {
+	if (typeof err === 'object' && err !== null) {
+		const anyErr = err as { status?: unknown; name?: string };
+		if (typeof anyErr.status === 'number') {
+			if (anyErr.status === 429) return 'rate_limited';
+			if (anyErr.status >= 500) return 'transient';
+			if (anyErr.status >= 400) return 'client_error';
+		}
+		if (anyErr.name === 'AbortError' || anyErr.name === 'TimeoutError') return 'transient';
+	}
+	return 'unknown';
+}
+
+function selectEndpoint(): string {
+	if (endpointStates.length === 0) {
+		throw new Error('No Hive endpoints configured');
+	}
+
+	const now = Date.now();
+	for (const state of endpointStates) {
+		if (state.state === 'open' && now >= state.openUntil) {
+			state.state = 'half_open';
+		}
+	}
+
+	if (endpointStates.length === 1) {
+		const only = endpointStates[0]!;
+		if (only.state === 'open') {
+			only.state = 'half_open';
+		}
+		return only.endpoint;
+	}
+
+	const notRateLimited = endpointStates.filter((state) => state.rateLimitedUntil <= now);
+	const candidates = notRateLimited.length > 0 ? notRateLimited : endpointStates;
+
+	const closed = candidates.filter((state) => state.state === 'closed');
+	if (closed.length > 0) {
+		return pickRoundRobin(closed);
+	}
+
+	const halfOpen = candidates.filter((state) => state.state === 'half_open');
+	if (halfOpen.length > 0) return halfOpen[0]!.endpoint;
+
+	const sorted = [...candidates].sort((a, b) => a.openUntil - b.openUntil);
+	const selected = sorted[0]!;
+	selected.state = 'half_open';
+	return selected.endpoint;
+}
+
+function recordSuccess(endpoint: string, latencyMs: number): void {
+	const state = endpointStates.find((s) => s.endpoint === endpoint);
+	if (!state) return;
+	state.consecutiveFailures = 0;
+	state.latencies.push(latencyMs);
+	if (state.latencies.length > LATENCY_WINDOW) state.latencies.shift();
+	if (state.state === 'half_open') {
+		state.state = 'closed';
+		state.cooldownMs = COOLDOWN_BASE_MS;
+	}
+}
+
+function recordFailure(endpoint: string, category: ErrorCategory, retryAfterMs?: number): void {
+	const state = endpointStates.find((s) => s.endpoint === endpoint);
+	if (!state) return;
+
+	if (category === 'rate_limited') {
+		state.rateLimitedUntil = Date.now() + (retryAfterMs ?? RATE_LIMIT_DEFAULT_MS);
+		return;
+	}
+
+	state.consecutiveFailures += 1;
+	if (state.state === 'half_open') {
+		state.cooldownMs = Math.min(state.cooldownMs * COOLDOWN_MULTIPLIER, COOLDOWN_MAX_MS);
+		state.state = 'open';
+		state.openUntil = Date.now() + state.cooldownMs;
+		return;
+	}
+
+	if (state.consecutiveFailures >= OPEN_AFTER_FAILURES && state.state === 'closed') {
+		state.state = 'open';
+		state.openUntil = Date.now() + state.cooldownMs;
+	}
+}
+
+// ---------------------------------------------------------------------------
+// RPC
 // ---------------------------------------------------------------------------
 
 interface HiveRpcResponse<T> {
@@ -61,39 +208,161 @@ interface HiveRpcResponse<T> {
 	error?: { message: string };
 }
 
-async function callHive<T>(method: string, params: unknown[]): Promise<T> {
-	let lastError: Error = new Error('No Hive nodes configured');
+interface RpcErrorOptions {
+	status?: number;
+	endpoint: string;
+}
 
-	for (const node of HIVE_NODES) {
-		const controller = new AbortController();
-		const timer = setTimeout(() => controller.abort(), NODE_TIMEOUT_MS);
+class RpcError extends Error {
+	readonly status?: number;
+	readonly endpoint: string;
+	constructor(message: string, options: RpcErrorOptions) {
+		super(message);
+		this.name = 'RpcError';
+		this.status = options.status;
+		this.endpoint = options.endpoint;
+	}
+}
 
-		try {
-			const res = await fetch(node, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ jsonrpc: '2.0', method, params, id: 1 }),
-				signal: controller.signal,
+async function rpcCall<T>(endpoint: string, method: string, params: unknown[], timeoutMs = NODE_TIMEOUT_MS): Promise<T> {
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), timeoutMs);
+	try {
+		const res = await fetch(endpoint, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ jsonrpc: '2.0', method, params, id: 1 }),
+			signal: controller.signal,
+		});
+
+		if (!res.ok) {
+			const retryAfterHeader = res.headers.get('Retry-After');
+			const retryAfterMs = retryAfterHeader ? Number(retryAfterHeader) * 1_000 : undefined;
+			const normalizedRetryAfterMs = typeof retryAfterMs === 'number' && retryAfterMs > 0 ? retryAfterMs : undefined;
+			await res.text().catch(() => {});
+			if (normalizedRetryAfterMs !== undefined) {
+				(res as Response & { __retryAfterMs?: number }).__retryAfterMs = normalizedRetryAfterMs;
+			}
+			const error = new RpcError(`RPC error: ${res.statusText} (${res.status})`, {
+				endpoint,
+				status: res.status,
 			});
+			const anyErr = error as { __retryAfterMs?: number };
+			if (normalizedRetryAfterMs !== undefined) {
+				anyErr.__retryAfterMs = normalizedRetryAfterMs;
+			}
+			throw error;
+		}
 
-			const data = (await res.json()) as HiveRpcResponse<T>;
-			if (data.result !== undefined) return data.result;
-			if (data.error) throw new Error(data.error.message);
+		const data = (await res.json()) as HiveRpcResponse<T>;
+		if (data.result !== undefined) {
+			return data.result as T;
+		}
+		if (data.error) {
+			throw new Error(data.error.message);
+		}
+		throw new Error('RPC returned empty result');
+	} finally {
+		clearTimeout(timer);
+	}
+}
+
+function extractRetryAfter(err: unknown): number | undefined {
+	if (typeof err === 'object' && err !== null) {
+		const candidate = err as { __retryAfterMs?: unknown };
+		if (typeof candidate.__retryAfterMs === 'number' && candidate.__retryAfterMs > 0) {
+			return candidate.__retryAfterMs;
+		}
+	}
+	return undefined;
+}
+
+async function callWithFailover<T>(method: string, params: unknown[]): Promise<T> {
+	const maxAttempts = endpointStates.length * 2;
+	for (let attempt = 0; attempt < maxAttempts; attempt++) {
+		const endpoint = selectEndpoint();
+		const start = Date.now();
+		try {
+			const result = await rpcCall<T>(endpoint, method, params);
+			recordSuccess(endpoint, Date.now() - start);
+			return result;
 		} catch (err) {
-			lastError = err instanceof Error ? err : new Error(String(err));
-		} finally {
-			clearTimeout(timer);
+			const category = classifyError(err);
+			const retryAfterMs = extractRetryAfter(err);
+			recordFailure(endpoint, category, retryAfterMs);
+			if (attempt === maxAttempts - 1) throw err;
+			await sleep(getBackoffMs(attempt, category));
 		}
 	}
 
-	throw lastError;
+	throw new Error(`Failed to call ${method} after failover attempts`);
 }
 
-// ---------------------------------------------------------------------------
-// Block-level APIs
-// ---------------------------------------------------------------------------
+interface BlockchainStatus {
+	head_block_number: number;
+	last_irreversible_block_num: number;
+}
 
-interface BlockOp {
+function parseBlockchainStatus(value: unknown): BlockchainStatus {
+	if (!value || typeof value !== 'object') {
+		throw new Error('Invalid blockchain status payload');
+	}
+	const data = value as Record<string, unknown>;
+	const head = Number(data.head_block_number);
+	const irreversible = Number(data.last_irreversible_block_num);
+	if (!Number.isFinite(head) || !Number.isFinite(irreversible)) {
+		throw new Error('Invalid blockchain status values');
+	}
+	return { head_block_number: head, last_irreversible_block_num: irreversible };
+}
+
+async function getBlockchainStatus(): Promise<BlockchainStatus> {
+	const samples = await Promise.allSettled(
+		endpointStates.map((state) => {
+			const start = Date.now();
+			return rpcCall<unknown>(state.endpoint, 'condenser_api.get_dynamic_global_properties', [])
+				.then((raw) => {
+					recordSuccess(state.endpoint, Date.now() - start);
+					return parseBlockchainStatus(raw);
+				});
+		}),
+	);
+
+	const statuses = samples.flatMap((result, idx) => {
+		if (result.status === 'fulfilled') return [result.value];
+		const endpoint = endpointStates[idx]?.endpoint;
+		if (endpoint) {
+			recordFailure(endpoint, classifyError(result.reason));
+		}
+		return [];
+	});
+
+	if (statuses.length === 0) {
+		// fallback to full failover path
+		const props = await rpcCall<unknown>(selectEndpoint(), 'condenser_api.get_dynamic_global_properties', []);
+		return parseBlockchainStatus(props);
+	}
+
+	const sorted = [...statuses].sort((a, b) => a.last_irreversible_block_num - b.last_irreversible_block_num);
+	if (sorted.length >= 2) {
+		const spread = sorted[sorted.length - 1]!.last_irreversible_block_num - sorted[0]!.last_irreversible_block_num;
+		if (spread > 1) {
+			console.warn('[chainIndexer] Head consensus spread detected', {
+				minLib: sorted[0]!.last_irreversible_block_num,
+				maxLib: sorted[sorted.length - 1]!.last_irreversible_block_num,
+				spread,
+				nodes: statuses.length,
+			});
+		}
+	}
+
+	// Conservative consensus: with 2 samples select the older safe chain, with 3+ median.
+	const selected =
+		sorted[Math.max(0, Math.floor((sorted.length - 1) / 2) - (sorted.length === 2 ? 1 : 0))] ?? sorted[0]!;
+	return selected;
+}
+
+interface BlockchainOp {
 	trx_id: string;
 	block: number;
 	trx_in_block: number;
@@ -102,52 +371,268 @@ interface BlockOp {
 	op: [string, Record<string, unknown>];
 }
 
-function groupOpsByTransaction(ops: readonly BlockOp[]): Map<string, unknown[]> {
-	const grouped = new Map<string, unknown[]>();
-	for (const op of ops) {
-		const existing = grouped.get(op.trx_id) ?? [];
-		existing.push(op.op);
-		grouped.set(op.trx_id, existing);
+function asNumber(value: unknown): number {
+	if (typeof value === 'number' && Number.isInteger(value)) return value;
+	if (typeof value === 'string' && value.trim() !== '') {
+		const n = Number(value);
+		if (Number.isInteger(n)) return n;
 	}
-	return grouped;
+	return Number.NaN;
 }
 
-async function getOpsInBlock(blockNum: number): Promise<BlockOp[]> {
-	return callHive<BlockOp[]>('condenser_api.get_ops_in_block', [blockNum, false]);
+async function getOpsInBlock(blockNum: number): Promise<BlockchainOp[]> {
+	return callWithFailover<BlockchainOp[]>('condenser_api.get_ops_in_block', [blockNum, false]);
 }
 
-async function getBlockchainStatus(): Promise<{ head_block_number: number, last_irreversible_block_num: number }> {
-	const props = await callHive<{ head_block_number: number, last_irreversible_block_num: number }>(
-		'condenser_api.get_dynamic_global_properties', [],
-	);
-	return props;
-}
-
-// Block ID lookup for pack entropy (uses get_block, not get_block_header,
-// because get_block returns block_id while get_block_header does not in all Hive APIs)
 const blockIdCache = new Map<number, string>();
 
 async function getBlockId(blockNum: number): Promise<string | null> {
 	const cached = blockIdCache.get(blockNum);
-	if (cached) return cached;
+	if (cached) {
+		return cached;
+	}
 
 	try {
-		const block = await callHive<{ block_id: string } | null>(
-			'condenser_api.get_block', [blockNum],
-		);
-		const id = block?.block_id ?? null;
-		if (id) {
-			blockIdCache.set(blockNum, id);
-			// Keep cache bounded
+		const block = await callWithFailover<{ block_id: string } | null>('condenser_api.get_block', [blockNum]);
+		const blockId = block?.block_id ?? null;
+		if (blockId) {
+			blockIdCache.set(blockNum, blockId);
 			if (blockIdCache.size > 1000) {
 				const oldest = blockIdCache.keys().next().value;
-				if (oldest !== undefined) blockIdCache.delete(oldest);
+				if (oldest !== undefined) {
+					blockIdCache.delete(oldest);
+				}
 			}
 		}
-		return id;
+		return blockId;
 	} catch {
 		return null;
 	}
+}
+
+// ---------------------------------------------------------------------------
+// HafAH range fetch (massive catch-up)
+// ---------------------------------------------------------------------------
+
+interface HafAHOperation {
+	op: {
+		type: string;
+		value: {
+			id: string;
+			json: string;
+			required_auths: string[];
+			required_posting_auths: string[];
+		};
+	};
+	block: number;
+	trx_id: string;
+	timestamp: string;
+	operation_id: string | number;
+	virtual_op: boolean;
+}
+
+interface HafAHResponse {
+	ops: HafAHOperation[];
+	next_block_range_begin: number | null;
+	next_operation_begin: string | null;
+}
+
+function parseRetryAfterHeader(response: Response): number | undefined {
+	const header = response.headers.get('Retry-After');
+	if (!header) return undefined;
+	const parsed = Number(header);
+	if (!Number.isNaN(parsed) && parsed > 0) return parsed * 1_000;
+	return undefined;
+}
+
+function getPageSize(behind: number): number {
+	if (behind > HAF_MASSIVE_SYNC_THRESHOLD) return HAF_PAGE_SIZE_MASSIVE;
+	if (behind > HAF_LIVE_SYNC_THRESHOLD) return HAF_PAGE_SIZE_NORMAL;
+	return HAF_PAGE_SIZE_LIVE;
+}
+
+async function hafahFetch(
+	endpoint: string,
+	fromBlock: number,
+	toBlock: number,
+	operationBegin: string,
+	pageSize: number,
+): Promise<HafAHResponse> {
+	const timeoutMs = pageSize > HAF_PAGE_SIZE_NORMAL ? 15_000 : 10_000;
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), timeoutMs);
+	const response = await fetch(
+		`${endpoint}/hafah-api/operations?from-block=${fromBlock}&to-block=${toBlock}&operation-types=18&page-size=${pageSize}&operation-begin=${operationBegin}`,
+		{ signal: controller.signal },
+	);
+	clearTimeout(timer);
+	if (!response.ok) {
+		const retryAfterMs = parseRetryAfterHeader(response);
+		await response.text().catch(() => {});
+		const err = new Error(`HafAH error: ${response.statusText} (${response.status})`);
+		(err as Error & { __status?: number; __retryAfterMs?: number }).__status = response.status;
+		(err as Error & { __status?: number; __retryAfterMs?: number }).__retryAfterMs = retryAfterMs;
+		throw err;
+	}
+	const payload = (await response.json()) as Record<string, unknown>;
+	const ops = Array.isArray(payload.ops) ? payload.ops : undefined;
+	if (!Array.isArray(ops)) {
+		throw new Error('Invalid HafAH response: missing ops array');
+	}
+	const nextBlockRangeBegin =
+		payload.next_block_range_begin === null || payload.next_block_range_begin === undefined
+			? null
+			: Number(payload.next_block_range_begin);
+	const nextOperationBegin =
+		payload.next_operation_begin === undefined || payload.next_operation_begin === null
+			? null
+			: String(payload.next_operation_begin);
+
+	return {
+		ops: ops
+			.filter((raw): raw is HafAHOperation => {
+				if (!raw || typeof raw !== 'object') return false;
+				return true;
+			})
+			.map((raw, idx) => {
+				const rawRecord = raw as unknown as Record<string, unknown>;
+				const opData = rawRecord.op as Record<string, unknown> | undefined;
+				const value = opData?.value as Record<string, unknown> | undefined;
+				const type = typeof opData?.type === 'string' ? opData.type : '';
+				const requiredAuths = Array.isArray(value?.required_auths) && value.required_auths.every((x) => typeof x === 'string')
+					? value.required_auths as string[]
+					: [];
+				const requiredPostingAuths =
+					Array.isArray(value?.required_posting_auths) && value.required_posting_auths.every((x) => typeof x === 'string')
+						? value.required_posting_auths as string[]
+						: [];
+				const block = asNumber(rawRecord.block);
+				if (!Number.isFinite(block)) {
+					throw new Error(`Invalid HafAH op.block at index ${idx}`);
+				}
+				const rawTimestamp = typeof rawRecord.timestamp === 'string'
+					? rawRecord.timestamp
+					: '';
+				const trxId = typeof rawRecord.trx_id === 'string'
+					? rawRecord.trx_id
+					: '';
+				const opId = typeof rawRecord.operation_id === 'string' || typeof rawRecord.operation_id === 'number'
+						? String(rawRecord.operation_id)
+						: `${idx}`;
+				return {
+					op: {
+						type,
+						value: {
+							id: typeof value?.id === 'string' ? value.id : '',
+							json: typeof value?.json === 'string' ? value.json : '{}',
+							required_auths: requiredAuths,
+							required_posting_auths: requiredPostingAuths,
+						},
+					},
+					block,
+					trx_id: trxId,
+					timestamp: rawTimestamp,
+					operation_id: opId,
+					virtual_op: Boolean(rawRecord.virtual_op),
+				};
+			}),
+		next_block_range_begin: Number.isFinite(nextBlockRangeBegin) ? nextBlockRangeBegin : null,
+		next_operation_begin: nextOperationBegin,
+	};
+}
+
+function getHafAHFailureCategory(err: unknown): ErrorCategory {
+	if (typeof err === 'object' && err !== null) {
+		const envelope = err as { __status?: unknown; name?: string };
+		if (typeof envelope.__status === 'number') {
+			if (envelope.__status === 429) return 'rate_limited';
+			if (envelope.__status >= 500) return 'transient';
+			if (envelope.__status >= 400) return 'client_error';
+		}
+		if (envelope.name === 'AbortError' || envelope.name === 'TimeoutError') return 'transient';
+	}
+	return 'unknown';
+}
+
+async function hafahWithFailover(
+	fromBlock: number,
+	toBlock: number,
+	operationBegin: string,
+	pageSize: number,
+): Promise<HafAHResponse> {
+	const maxAttempts = endpointStates.length * 2;
+	for (let attempt = 0; attempt < maxAttempts; attempt++) {
+		const endpoint = selectEndpoint();
+		const start = Date.now();
+		try {
+			const result = await hafahFetch(endpoint, fromBlock, toBlock, operationBegin, pageSize);
+			recordSuccess(endpoint, Date.now() - start);
+			return result;
+		} catch (err) {
+			const category = getHafAHFailureCategory(err);
+			const retryAfterMs = ((): number | undefined => {
+				if (typeof err === 'object' && err !== null) {
+					const e = err as { __retryAfterMs?: unknown };
+					if (typeof e.__retryAfterMs === 'number' && e.__retryAfterMs > 0) return e.__retryAfterMs;
+				}
+				return undefined;
+			})();
+			recordFailure(endpoint, category, retryAfterMs);
+			if (attempt === maxAttempts - 1) throw err;
+			await sleep(getBackoffMs(attempt, category));
+		}
+	}
+	throw new Error(`Failed HafAH range fetch ${fromBlock}..${toBlock}`);
+}
+
+async function getCustomJsonInRange(
+	fromBlock: number,
+	toBlock: number,
+	protocolId: string,
+	behind: number,
+): Promise<BlockchainOp[]> {
+	const pageSize = getPageSize(behind);
+	let operationBegin = '-1';
+	let pages = 0;
+	const allOps: BlockchainOp[] = [];
+
+	while (pages < HAF_MAX_PAGES) {
+		const result = await hafahWithFailover(fromBlock, toBlock, operationBegin, pageSize);
+		const filtered = result.ops
+			.filter((op) => {
+				if (op.op.type !== 'custom_json') return false;
+				if (!op.op.value || typeof op.op.value.id !== 'string') return false;
+				if (shouldAcceptCustomJsonId(getRagnarokServerRuntimeConfig(), op.op.value.id)) {
+					return true;
+				}
+				// Keep legacy/extra IDs in debug path if caller expects explicit protocol filtering later.
+				if (protocolId && op.op.value.id === protocolId) return true;
+				return false;
+			})
+			.map((op) => ({
+				trx_id: op.trx_id,
+				block: op.block,
+				trx_in_block: asNumber(op.operation_id) || 0,
+				op_in_trx: asNumber(op.operation_id) || 0,
+				timestamp: op.timestamp,
+				op: ['custom_json', {
+					id: op.op.value.id,
+					json: op.op.value.json,
+					required_auths: op.op.value.required_auths,
+					required_posting_auths: op.op.value.required_posting_auths,
+				}] as [string, Record<string, unknown>],
+			}));
+
+		allOps.push(...filtered);
+
+		if (result.next_operation_begin === null || result.next_operation_begin === '0') {
+			break;
+		}
+		operationBegin = result.next_operation_begin;
+		pages += 1;
+	}
+
+	return allOps;
 }
 
 // ---------------------------------------------------------------------------
@@ -196,12 +681,161 @@ let _isSyncing = false;
 let _scanPromise: Promise<number> | null = null;
 
 // ---------------------------------------------------------------------------
+// Utils
+// ---------------------------------------------------------------------------
+
+function groupOpsByTransaction(ops: readonly BlockchainOp[]): Map<string, unknown[]> {
+	const grouped = new Map<string, unknown[]>();
+	for (const op of ops) {
+		const existing = grouped.get(op.trx_id) ?? [];
+		existing.push(op.op);
+		grouped.set(op.trx_id, existing);
+	}
+	return grouped;
+}
+
+function parseBlockTimestamp(timestamp: string): number {
+	if (!timestamp) return Date.now();
+	const value = timestamp.endsWith('Z') ? timestamp : `${timestamp}Z`;
+	const t = Date.parse(value);
+	return Number.isFinite(t) ? t : Date.now();
+}
+
+function sortOpsForBlock(ops: readonly BlockchainOp[]): BlockchainOp[] {
+	return [...ops].sort((a, b) => {
+		if (a.trx_in_block !== b.trx_in_block) return a.trx_in_block - b.trx_in_block;
+		if (a.op_in_trx !== b.op_in_trx) return a.op_in_trx - b.op_in_trx;
+		return a.trx_id.localeCompare(b.trx_id);
+	});
+}
+
+async function processBlockOps(
+	blockNum: number,
+	ops: readonly BlockchainOp[],
+	runtime: ReturnType<typeof getRagnarokServerRuntimeConfig>,
+	deps: ProtocolCoreDeps,
+	ctx: ReplayContext,
+): Promise<number> {
+	const ordered = sortOpsForBlock(ops);
+	const siblingsByTrx = groupOpsByTransaction(ordered);
+	let blockApplied = 0;
+
+	for (const op of ordered) {
+		if (op.op[0] !== 'custom_json') continue;
+
+		const opData = op.op[1] as {
+			required_auths?: string[];
+			required_posting_auths?: string[];
+			id?: string;
+			json?: string;
+		};
+
+		const opId = opData.id ?? '';
+		if (!shouldAcceptCustomJsonId(runtime, opId)) continue;
+
+		const broadcaster = opData.required_posting_auths?.[0] ?? opData.required_auths?.[0] ?? '';
+		if (!broadcaster) continue;
+
+		const rawOp: RawHiveOp = {
+			customJsonId: opId,
+			json: opData.json ?? '{}',
+			broadcaster,
+			trxId: op.trx_id,
+			opInTrx: op.op_in_trx,
+			blockNum: op.block,
+			timestamp: parseBlockTimestamp(op.timestamp),
+			requiredPostingAuths: opData.required_posting_auths ?? [],
+			requiredAuths: opData.required_auths ?? [],
+		};
+
+		const normalized = normalizeRawOp(rawOp, {
+			protocolIds: [runtime.protocolId],
+			acceptLegacyProtocolIds: runtime.acceptsLegacyProtocolIds,
+		});
+		if (normalized.status === 'ignore') continue;
+
+		serverStateAdapter.setTrxSiblings(op.trx_id, siblingsByTrx.get(op.trx_id) ?? []);
+
+		const result = await applyOp(normalized.op, ctx, deps);
+		if (result.status === 'applied') {
+			blockApplied++;
+			registerAccount(broadcaster);
+		} else if (result.status === 'rejected') {
+			console.warn(`[chainIndexer] REJECTED ${normalized.op.action} from ${broadcaster} block=${blockNum}: ${result.reason}`);
+		}
+	}
+
+	setBlockCursor(blockNum);
+	return blockApplied;
+}
+
+async function scanWindowByBlocks(
+	startBlock: number,
+	endBlock: number,
+	deps: ProtocolCoreDeps,
+	runtime: ReturnType<typeof getRagnarokServerRuntimeConfig>,
+	lib: number,
+): Promise<{ blocks: number; applied: number }> {
+	let applied = 0;
+	let advanced = 0;
+	const ctx: ReplayContext = { lastIrreversibleBlock: lib, getBlockId };
+
+	for (let blockNum = startBlock; blockNum <= endBlock; blockNum++) {
+		let ops: BlockchainOp[];
+		try {
+			ops = await getOpsInBlock(blockNum);
+		} catch (err) {
+			console.warn(`[chainIndexer] Failed to fetch block ${blockNum}:`, err instanceof Error ? err.message : err);
+			break;
+		}
+		const blockOps = sortOpsForBlock(ops);
+		applied += await processBlockOps(blockNum, blockOps, runtime, deps, ctx);
+		advanced += 1;
+	}
+
+	return { blocks: advanced, applied };
+}
+
+async function scanWindowByRange(
+	startBlock: number,
+	endBlock: number,
+	behind: number,
+	deps: ProtocolCoreDeps,
+	runtime: ReturnType<typeof getRagnarokServerRuntimeConfig>,	lib: number,
+): Promise<{ blocks: number; applied: number }> {
+	const protocolId = runtime.protocolId;
+	const rawOps = await getCustomJsonInRange(startBlock, endBlock, protocolId, behind);
+	const byBlock = new Map<number, BlockchainOp[]>();
+	for (const op of rawOps) {
+		const list = byBlock.get(op.block);
+		if (!list) byBlock.set(op.block, [op]);
+		else list.push(op);
+	}
+
+	let applied = 0;
+	let advanced = 0;
+	const ctx: ReplayContext = { lastIrreversibleBlock: lib, getBlockId };
+	for (let blockNum = startBlock; blockNum <= endBlock; blockNum++) {
+		const blockOps = byBlock.get(blockNum) ?? [];
+		applied += await processBlockOps(blockNum, blockOps, runtime, deps, ctx);
+		advanced++;
+	}
+
+	return { blocks: advanced, applied };
+}
+
+// ---------------------------------------------------------------------------
 // Block scanner
 // ---------------------------------------------------------------------------
 
+function getRangeScanEnabled(): boolean {
+	const stage = getRagnarokServerRuntimeConfig().stage;
+	return stage !== 'local';
+}
+
 async function scanBlocks(): Promise<number> {
 	const cursor = getBlockCursor();
-	let status: { head_block_number: number, last_irreversible_block_num: number };
+	let status: BlockchainStatus;
 
 	try {
 		status = await getBlockchainStatus();
@@ -214,95 +848,134 @@ async function scanBlocks(): Promise<number> {
 	const head = status.head_block_number;
 	const effectiveLib = Math.max(0, lib - PACK_ENTROPY_DELAY_BLOCKS);
 
-	// Sync status update
 	const behind = Math.max(0, effectiveLib - cursor);
 	setSyncStatus(cursor, lib, head, behind <= SYNC_TOLERANCE_BLOCKS, effectiveLib);
 
 	if (cursor >= effectiveLib) return 0;
 
 	const startBlock = cursor + 1;
-	const endBlock = Math.min(startBlock + BLOCKS_PER_BATCH - 1, effectiveLib);
-
-	const ctx: ReplayContext = { lastIrreversibleBlock: lib, getBlockId };
+	const isMassive = behind > MASSIVE_THRESHOLD;
 	const deps = buildDeps();
 	const runtime = getRagnarokServerRuntimeConfig();
+
+	let current = startBlock;
 	let totalApplied = 0;
+	let totalBlocks = 0;
+	let hasProgress = false;
 
-	for (let blockNum = startBlock; blockNum <= endBlock; blockNum++) {
-		let ops: BlockOp[];
-		try {
-			ops = await getOpsInBlock(blockNum);
-		} catch (err) {
-			// RPC failure mid-batch: stop here, cursor stays at last completed block
-			console.warn(`[chainIndexer] Failed to fetch block ${blockNum}:`, err instanceof Error ? err.message : err);
-			break;
-		}
-
-		let blockApplied = 0;
-		const siblingsByTrx = groupOpsByTransaction(ops);
-
-		// Process all protocol ops in this block, in order
-		for (const op of ops) {
-			if (op.op[0] !== 'custom_json') continue;
-
-			const opData = op.op[1] as {
-				required_auths?: string[];
-				required_posting_auths?: string[];
-				id?: string;
-				json?: string;
-			};
-
-			// Quick pre-filter. Testnet only accepts its configured namespace;
-			// mainnet keeps legacy rp_* migration support.
-			const opId = opData.id ?? '';
-			if (!shouldAcceptCustomJsonId(runtime, opId)) continue;
-
-			const broadcaster = opData.required_posting_auths?.[0] ?? opData.required_auths?.[0] ?? '';
-			if (!broadcaster) continue;
-
-			const rawOp: RawHiveOp = {
-				customJsonId: opId,
-				json: opData.json ?? '{}',
-				broadcaster,
-				trxId: op.trx_id,
-				opInTrx: op.op_in_trx,
-				blockNum: op.block,
-				timestamp: new Date(op.timestamp + 'Z').getTime(),
-				requiredPostingAuths: opData.required_posting_auths ?? [],
-				requiredAuths: opData.required_auths ?? [],
-			};
-
-			// Normalize through protocol-core
-			const normalized = normalizeRawOp(rawOp, {
-				protocolIds: [runtime.protocolId],
-				acceptLegacyProtocolIds: runtime.acceptsLegacyProtocolIds,
-			});
-			if (normalized.status === 'ignore') continue;
-
-			serverStateAdapter.setTrxSiblings(op.trx_id, siblingsByTrx.get(op.trx_id) ?? []);
-
-			// Apply through protocol-core (all validation lives here)
-			const result = await applyOp(normalized.op, ctx, deps);
-
-			if (result.status === 'applied') {
-				blockApplied++;
-				registerAccount(broadcaster);
-			} else if (result.status === 'rejected') {
-				console.warn(`[chainIndexer] REJECTED ${normalized.op.action} from ${broadcaster} block=${blockNum}: ${result.reason}`);
+	while (current <= effectiveLib) {
+		if (!isMassive || !getRangeScanEnabled()) {
+			const endBlock = Math.min(current + BLOCKS_PER_BATCH - 1, effectiveLib);
+			const result = await scanWindowByBlocks(current, endBlock, deps, runtime, lib);
+			current += result.blocks;
+			totalApplied += result.applied;
+			totalBlocks += result.blocks;
+			hasProgress = hasProgress || result.blocks > 0;
+			if (result.blocks === 0) break;
+			if (result.blocks > 0) {
+				saveState();
 			}
+			continue;
 		}
 
-		// Block fully processed — advance cursor atomically
-		setBlockCursor(blockNum);
-		totalApplied += blockApplied;
+		const range1End = Math.min(current + MASSIVE_RANGE_SIZE - 1, effectiveLib);
+		const range2Start = range1End + 1;
+		const hasRange2 = range2Start <= effectiveLib;
+		const range2End = hasRange2
+			? Math.min(range2Start + MASSIVE_RANGE_SIZE - 1, effectiveLib)
+			: 0;
+
+		let first: { from: number; to: number; ops: BlockchainOp[] } | null = null;
+		let second: { from: number; to: number; ops: BlockchainOp[] } | null = null;
+
+		const results = await Promise.allSettled([
+			scanRangeFetch(current, range1End, behind, runtime.protocolId),
+			hasRange2
+				? scanRangeFetch(range2Start, range2End, behind, runtime.protocolId)
+				: Promise.resolve({ from: range2Start, to: range2End, ops: [] }),
+		]);
+
+		if (results[0]?.status === 'fulfilled') {
+			first = results[0]!.value;
+		} else {
+			console.warn('[chainIndexer] HafAH range 1 failed, falling back to block scan', {
+				from: current,
+				to: range1End,
+				error: results[0] instanceof Object && 'reason' in results[0]
+					? String(results[0].reason)
+					: 'unknown',
+			});
+		}
+
+		if (results[1]?.status === 'fulfilled') {
+			const r2 = results[1]!.value;
+			if (r2.ops.length > 0) {
+				second = r2;
+			}
+		} else if (hasRange2) {
+			console.warn('[chainIndexer] HafAH range 2 failed, continuing with first range only', {
+				from: range2Start,
+				to: range2End,
+				error: results[1] instanceof Object && 'reason' in results[1]
+					? String(results[1].reason)
+					: 'unknown',
+			});
+		}
+
+		if (!first) {
+			const fallback = await scanWindowByBlocks(current, range1End, deps, runtime, lib);
+			if (fallback.blocks === 0) break;
+			totalApplied += fallback.applied;
+			totalBlocks += fallback.blocks;
+			hasProgress = hasProgress || fallback.blocks > 0;
+			current += fallback.blocks;
+			saveState();
+			continue;
+		}
+
+		const ranges = [first];
+		if (second) ranges.push(second);
+		for (const segment of ranges) {
+			const segmentResult = await scanWindowByRange(segment.from, segment.to, behind, deps, runtime, lib);
+			totalApplied += segmentResult.applied;
+			totalBlocks += segmentResult.blocks;
+			current = Math.max(current, segment.to + 1);
+			hasProgress = hasProgress || segmentResult.blocks > 0;
+		}
+
+		if (hasProgress) saveState();
 	}
 
-	if (totalApplied > 0) {
-		// Flush state to disk after each batch to ensure crash safety
+	if (totalApplied > 0 || totalBlocks > 0) {
 		saveState();
 	}
 
+	if (totalBlocks > 0) {
+		console.log(`[chainIndexer] Processed ${totalApplied} ops across ${totalBlocks} blocks, cursor=${getBlockCursor()}`);
+	}
+
+	if (totalBlocks > 0 && getBlockCursor() >= effectiveLib && totalApplied >= 0) {
+		// Mark explicit progress while synchronized.
+		const refreshedStatus = getBlockCursor();
+		setSyncStatus(refreshedStatus, lib, head, true, effectiveLib);
+	}
+
 	return totalApplied;
+}
+
+async function scanRangeFetch(
+	fromBlock: number,
+	toBlock: number,
+	behind: number,
+	protocolId: string,
+): Promise<{ from: number; to: number; ops: BlockchainOp[] }> {
+	if (toBlock < fromBlock) return { from: fromBlock, to: toBlock, ops: [] };
+	const ops = await getCustomJsonInRange(fromBlock, toBlock, protocolId, behind);
+	return { from: fromBlock, to: toBlock, ops };
+}
+
+function sleep(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // ---------------------------------------------------------------------------
@@ -361,7 +1034,6 @@ export function startIndexer(): void {
 	loadState();
 	startPersistence();
 
-	// Immediate first scan
 	pollNext();
 
 	_pollTimer = setInterval(pollNext, POLL_INTERVAL_MS);
@@ -380,6 +1052,5 @@ export function stopIndexer(): void {
 export async function syncAccountNow(username: string): Promise<number> {
 	if (!isIndexerEnabled()) return 0;
 	registerAccount(username);
-	// In block-scanning mode, account-specific sync triggers a full batch scan
 	return scanOnce();
 }

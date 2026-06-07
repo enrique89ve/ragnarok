@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { HashRouter, Routes, Route, Link, Navigate, Outlet } from 'react-router-dom';
+import { HashRouter, Routes, Route, Link, Navigate, Outlet, useSearchParams } from 'react-router-dom';
 import { routes } from './lib/routes';
 import { getWarbandEntryRoute } from './lib/warbandRoutes';
 import { Button, ToastProvider } from './components/ui-norse';
@@ -27,8 +27,10 @@ import ragnarokLogo from "./assets/images/ragnarok-logo.jpg";
 import LoadingScreen from "./game/components/ui/LoadingScreen";
 import { EitrMigrationBanner } from "./game/components/migrations/EitrMigrationBanner";
 import { ALL_CHAPTERS, getMission } from "./game/campaign/campaignLookup";
+import type { Difficulty } from "./game/campaign/campaignTypes";
 import { useCampaignStore } from "./game/campaign/campaignStore";
 import { useStarterStore } from "./game/stores/starterStore";
+import type { AiStyle } from "./game/match/types";
 import { useHiveDataStore } from "./data/HiveDataLayer";
 import { getAuthenticatedHiveUsername, subscribeHiveSessionIdentity } from "./data/HiveSessionIdentity";
 import { createRuntimeStorageKey, getRagnarokNetworkConfig } from "./game/config/networkConfig";
@@ -116,6 +118,36 @@ const CardVisualRuntimeLayout = lazy(async () => {
 	};
 });
 
+const parseSingleDifficulty = (value: string | null): Difficulty => {
+	switch (value?.toLowerCase()) {
+		case 'heroic':
+			return 'heroic';
+		case 'mythic':
+			return 'mythic';
+		case 'normal':
+		default:
+			return 'normal';
+	}
+};
+
+const parseSingleStyle = (value: string | null): AiStyle => {
+	switch (value?.toLowerCase()) {
+		case 'aggressive':
+			return 'aggressive';
+		case 'defensive':
+			return 'defensive';
+		case 'human':
+			return 'human';
+		case 'balanced':
+		default:
+			return 'balanced';
+	}
+};
+
+const parseSingleDeckSource = (value: string | null): 'warband' | 'default' => {
+	return value === 'default' ? 'default' : 'warband';
+};
+
 const SingleGameRoute = lazy(async () => {
 	const [{ MatchSetupSingle }, coordinatorModule] = await Promise.all([
 		import('./game/match'),
@@ -125,9 +157,14 @@ const SingleGameRoute = lazy(async () => {
 
 	return {
 		default: function SingleGameRoute() {
+			const [searchParams] = useSearchParams();
+			const difficulty = parseSingleDifficulty(searchParams.get('difficulty'));
+			const style = parseSingleStyle(searchParams.get('style'));
+			const deckSource = parseSingleDeckSource(searchParams.get('deck') ?? searchParams.get('deckSource'));
+
 			return (
 				<StarterEntitlementGate surface="quick_match">
-					<MatchSetupSingle difficulty="normal" deckSource="warband">
+					<MatchSetupSingle difficulty={difficulty} deckSource={deckSource} style={style}>
 						<RagnarokGameCoordinator />
 					</MatchSetupSingle>
 				</StarterEntitlementGate>
@@ -771,8 +808,8 @@ function HomePage() {
 		);
 	};
 
-		return (
-			<div className="n-page-shell n-home-shell bg-(image:--bg-home-nav)">
+	return (
+		<div className="n-page-shell n-home-shell bg-(image:--bg-home-nav)">
 			{/* ── HEADER ─────────────────────────────────────────────────────── */}
 			<header className="sticky top-0 z-50 backdrop-blur-md bg-obsidian-950/80 border-b border-obsidian-700">
 				<div className="n-page-gutter mx-auto flex h-[3.25rem] max-w-[1440px] items-center justify-between gap-2 sm:h-14 sm:gap-4">
@@ -792,38 +829,38 @@ function HomePage() {
 							</div>
 						</div>
 					</div>
-						<HomeAccountControl
-							hiveUsername={hiveUsername}
-							onLogin={() => setShowHiveLogin(true)}
-						/>
+					<HomeAccountControl
+						hiveUsername={hiveUsername}
+						onLogin={() => setShowHiveLogin(true)}
+					/>
 				</div>
 			</header>
 
 			{/* ── PAGE GRID ── */}
 			<div className="n-home-layout n-page-gutter mx-auto mt-4 grid w-full max-w-[1440px] grid-cols-1 items-start gap-4 sm:mt-6 sm:gap-6">
-					<main className="grid min-w-0 grid-cols-1 content-start gap-4 pb-28 sm:gap-6 sm:pb-32">
-						{/* Banner */}
-						<section
-							className="n-home-hero flex flex-col gap-8 p-5 sm:p-8 xl:flex-row xl:items-end xl:justify-between"
-							style={{ '--n-home-hero-image': `url(${HOME_HERO_ART})` } as React.CSSProperties}
-						>
-							<div className="n-home-hero-content min-w-0">
-								<div className="n-home-hero-eyebrow mb-4 inline-flex items-center gap-2 border border-gold-300/25 bg-obsidian-950/55 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-gold-200">
-									<span className="h-1.5 w-1.5 bg-gold-300" aria-hidden="true" />
-									Playable Testnet
-								</div>
-								<h1 className="n-hero-title">
-									Enter Ragnarok.<br />Choose your front.
-								</h1>
-								<p className="n-hero-copy">
-									Reveal your starter line, push into campaign, then take the same warband into live PvP.
-								</p>
-								<div className="n-home-hero-path" aria-label="Primary play path">
-									<span>Starter</span>
-									<span>Campaign</span>
-									<span>PvP</span>
-								</div>
-								<div className="flex flex-wrap items-center gap-4">
+				<main className="grid min-w-0 grid-cols-1 content-start gap-4 pb-28 sm:gap-6 sm:pb-32">
+					{/* Banner */}
+					<section
+						className="n-home-hero flex flex-col gap-8 p-5 sm:p-8 xl:flex-row xl:items-end xl:justify-between"
+						style={{ '--n-home-hero-image': `url(${HOME_HERO_ART})` } as React.CSSProperties}
+					>
+						<div className="n-home-hero-content min-w-0">
+							<div className="n-home-hero-eyebrow mb-4 inline-flex items-center gap-2 border border-gold-300/25 bg-obsidian-950/55 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-gold-200">
+								<span className="h-1.5 w-1.5 bg-gold-300" aria-hidden="true" />
+								Playable Testnet
+							</div>
+							<h1 className="n-hero-title">
+								Enter Ragnarok.<br />Choose your front.
+							</h1>
+							<p className="n-hero-copy">
+								Reveal your starter line, push into campaign, then take the same warband into live PvP.
+							</p>
+							<div className="n-home-hero-path" aria-label="Primary play path">
+								<span>Starter</span>
+								<span>Campaign</span>
+								<span>PvP</span>
+							</div>
+							<div className="flex flex-wrap items-center gap-4">
 								{!starterClaimed ? (
 									starterClaimAccess.kind === 'blocked' ? (
 										<button
@@ -864,7 +901,7 @@ function HomePage() {
 						</div>
 
 						{/* Stats panel */}
-							<aside className="n-home-hero-briefing p-4 sm:p-5 flex flex-col justify-center gap-1">
+						<aside className="n-home-hero-briefing p-4 sm:p-5 flex flex-col justify-center gap-1">
 							<StatRow label="Saga" value={`${completedMissionCount} / ${totalMissionCount}`} highlight />
 							<StatRow label="Active" value={activeFocusTitle} />
 							<StatRow label="Chapter" value={activeFocusChapter} />
@@ -882,9 +919,9 @@ function HomePage() {
 									<span className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink-400">Saga progress</span>
 									<span className="font-mono text-[10px] uppercase tracking-[0.24em] text-gold-300">{sagaPercent}%</span>
 								</div>
-									<div className="h-1 overflow-hidden bg-obsidian-700">
+								<div className="h-1 overflow-hidden bg-obsidian-700">
 									<div
-											className="h-full bg-linear-to-r from-gold-500 to-gold-200"
+										className="h-full bg-linear-to-r from-gold-500 to-gold-200"
 										style={{ width: `${sagaPercent}%` }}
 									/>
 								</div>

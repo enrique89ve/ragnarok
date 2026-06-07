@@ -15,6 +15,7 @@ import { useKingChessAbility } from '../hooks/useKingChessAbility';
 import { useChessAITurn } from './hooks/useChessAITurn';
 import { useUnifiedCombatStore } from '../stores/unifiedCombatStore';
 import { useGameFlowStore } from '../stores/gameFlowStore';
+import { usePeerStore } from '../stores/peerStore';
 import { debug } from '../config/debugConfig';
 import {
   selectArmy,
@@ -23,6 +24,7 @@ import {
   useWarbandStore,
 } from '../../lib/stores/useWarbandStore';
 import { useGameStore } from '../stores/gameStore';
+import { useSettingsStore } from '../stores/settingsStore';
 import {
   createP2PViewerPerspective,
   mapViewerValuesToCanonical,
@@ -719,6 +721,17 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   }, [flowState, boardState.currentTurn, boardState.gameStatus, boardState.pieces, setGameStatus]);
 
   const handleRestart = useCallback(() => {
+    if (isP2PConnected) {
+      const confirmed = window.confirm(
+        'This will abandon the current PvP match and close the current peer session. Search for another opponent?',
+      );
+      if (!confirmed) return;
+
+      usePeerStore.getState().disconnect();
+      useMatchStore.getState().clearMatch();
+      useGameStore.getState().resetGameState();
+    }
+
     resetBoard();
     setPlayerArmy(null);
     setSharedDeck([]);
@@ -734,9 +747,20 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       // /warband redirect guard catches us. The FSM bootstrap effect will
       // re-fire if a new mission is started later.
     } else {
-      navigate(getWarbandEntryRoute('single'));
+      navigate(
+        isP2PConnected ? getWarbandEntryRoute('multiplayer') : getWarbandEntryRoute('single'),
+      );
     }
-  }, [resetBoard, isCampaign, clearCurrent, navigate, resetPlayerTurnCount, clearFlow, setSharedDeck]);
+  }, [
+    resetBoard,
+    isCampaign,
+    clearCurrent,
+    navigate,
+    resetPlayerTurnCount,
+    clearFlow,
+    setSharedDeck,
+    isP2PConnected,
+  ]);
 
   const handleReturnHome = useCallback(() => {
     if (gameOverTimerRef.current) {
@@ -832,6 +856,9 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   // chess-realm-skins.css. Chapter finale missions also get the
   // .mission-finale class which adds a pulsing crimson border + slower
   // music. CSS for finale lives in chess-realm-skins.css.
+  const animationsEnabled = useSettingsStore(s => s.animationsEnabled);
+  const reduceMotion = useSettingsStore(s => s.reduceMotion);
+  const chessRootMotionClass = (animationsEnabled && !reduceMotion) ? 'chess-motion-on' : 'chess-motion-off';
   const chessRealmClass = getChessRealmClass({ isCampaign, missionRealm, visualRealm });
   const finaleClass = getFinaleClass({ isCampaign, campaignData });
   const canLeaveActiveMatch = flowState?.tag === 'chess'
@@ -844,7 +871,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   }
 
   return (
-    <div className={`ragnarok-chess-game w-full h-full overflow-hidden ${chessRealmClass} ${finaleClass}`.trim()}>
+    <div className={`ragnarok-chess-game w-full h-full overflow-hidden ${chessRealmClass} ${finaleClass} ${chessRootMotionClass}`.trim()}>
       <MatchExitControls
         visible={canLeaveActiveMatch}
         promptOpen={exitPromptOpen}

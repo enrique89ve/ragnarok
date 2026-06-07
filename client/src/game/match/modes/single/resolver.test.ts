@@ -16,6 +16,12 @@ describe('resolveSingle', () => {
 		});
 	});
 
+	it('passes through ai style when provided', () => {
+		const ctx = resolveSingle({ identity: TEST_IDENTITY, difficulty: 'normal', style: 'human', deckSource: 'warband' });
+		if (ctx.opponent.kind !== 'ai') throw new Error('expected ai opponent');
+		expect(ctx.opponent.style).toBe('human');
+	});
+
 	it('passes through every difficulty tier', () => {
 		const tiers = ['normal', 'heroic', 'mythic'] as const;
 		for (const difficulty of tiers) {

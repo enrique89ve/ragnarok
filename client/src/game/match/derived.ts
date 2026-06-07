@@ -65,8 +65,8 @@ export function deriveOpponentArmyForMode(ctx: MatchContext): ArmySelection | nu
 	switch (ctx.opponent.kind) {
 		case 'ai':
 			// Single today: AI uses the default piece roster regardless of
-			// difficulty. Difficulty / deckSource affect AI scoring + deck
-			// composition, not piece composition. Branch here when that changes.
+			// difficulty/style. Difficulty/style can alter decision profile,
+			// while deckSource affects deck composition, not piece composition.
 			return getDefaultArmySelection();
 		case 'scripted':
 			if (ctx.opponent.script.kind !== 'campaign-mission') return null;

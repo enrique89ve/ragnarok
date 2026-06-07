@@ -1,31 +1,25 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChessBoardPosition, BOARD_ROWS, BOARD_COLS, type ChessPiece } from '../../types/ChessTypes';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
+import { BOARD_ROWS, BOARD_COLS, type ChessPiece } from '../../types/ChessTypes';
 import { useGameStore } from '../../stores/gameStore';
+import { useSettingsStore } from '../../stores/settingsStore';
 import ChessPieceComponent, { type ChessPieceVisualState } from './ChessPiece';
 import MovePlate from './MovePlate';
 import ChessAttackAnimation from './ChessAttackAnimation';
 import './ChessBoardEnhanced.css';
-import {
-  getActiveMineStyle,
-  getActiveMineGlowAnimation,
-  getActiveMineIconStyle,
-  getActiveMineIconAnimation,
-  getMineOuterGlowStyle,
-  getMinePlacementBurstStyle,
-  getMineTriggerExplosionStyle,
-  getMineStateClasses,
-  MINE_RUNE_SYMBOL
-} from '../../utils/chess/mineVisualUtils';
 import { useChessBoardInteractions } from './useChessBoardInteractions';
 import {
-  getCellAriaLabel,
   getCellHighlight,
   getCellTone,
   getMoveAnimationOffset,
-  getMineState,
-  getPlacementPreview,
 } from './chessBoardPresentation';
+
+const PIECE_SLIDE_TRANSITION = {
+  duration: 0.5,
+  ease: [0.215, 0.61, 0.355, 1],
+  times: [0, 0.58, 0.86, 1],
+};
+const PIECE_REST_TRANSITION = { type: 'spring' as const, stiffness: 300, damping: 30 };
 
 interface ChessBoardProps {
   onCombatTriggered?: (attackerId: string, defenderId: string) => void;
@@ -38,6 +32,17 @@ const PIECE_VISUAL_STATES = {
   attackable: { tag: 'attackable' },
   locked: { tag: 'locked' },
 } satisfies Record<ChessPieceVisualState['tag'], ChessPieceVisualState>;
+
+const buildAttackAnimationKey = (
+  animation: {
+    readonly attacker: { readonly id: string };
+    readonly defender: { readonly id: string };
+    readonly timestamp?: number;
+  } | null,
+) =>
+  animation
+    ? `${animation.attacker.id}-${animation.defender.id}-${animation.timestamp ?? 0}`
+    : 'chess-attack-idle';
 
 const getPieceVisualState = (input: {
   readonly pieceId: string;
@@ -53,17 +58,22 @@ const getPieceVisualState = (input: {
 
 const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = false }) => {
   const boardRef = useRef<HTMLDivElement>(null);
-  const previousPiecePositionsRef = useRef<Map<string, ChessBoardPosition>>(new Map());
+  const previousPiecePositions = useRef<Map<string, { row: number; col: number }>>(new Map());
   const [boardRect, setBoardRect] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const animationsEnabled = useSettingsStore(s => s.animationsEnabled);
+  const enhancedVFX = useSettingsStore(s => s.enhancedVFX);
+  const reduceMotion = useSettingsStore(s => s.reduceMotion);
+  const shouldAnimateBoard = animationsEnabled && !reduceMotion;
+  const shouldRenderEffectFilters = shouldAnimateBoard && enhancedVFX;
+  const shouldAnimateTurnBanner = shouldAnimateBoard;
+  
   const {
     boardState,
     getPieceAt,
     isPlacementMode,
-    noMovesMessage,
     screenShake,
     fallingKingId,
     pendingAttackAnimation,
-    matchupGlowMap,
     canPlaceAtHoveredPosition,
     effectiveSelectedPieceId,
     handleCellClick,
@@ -73,27 +83,13 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
     isValidMovePosition,
     isAttackPosition,
     isMinePreviewTile,
-    isActiveMinePosition,
-    isPlacementBurstPosition,
-    isMineTriggerExplosionPosition,
-    isInstantKillFlashPosition,
   } = useChessBoardInteractions({ disabled, onCombatTriggered });
   
   useEffect(() => {
     const updateBoardRect = () => {
       if (boardRef.current) {
         const rect = boardRef.current.getBoundingClientRect();
-        setBoardRect(previousRect => {
-          if (
-            previousRect.x === rect.left &&
-            previousRect.y === rect.top &&
-            previousRect.width === rect.width &&
-            previousRect.height === rect.height
-          ) {
-            return previousRect;
-          }
-          return { x: rect.left, y: rect.top, width: rect.width, height: rect.height };
-        });
+        setBoardRect({ x: rect.left, y: rect.top, width: rect.width, height: rect.height });
       }
     };
     updateBoardRect();
@@ -101,37 +97,45 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
     return () => window.removeEventListener('resize', updateBoardRect);
   }, []);
   
-  const { currentTurn, gameStatus } = boardState;
-  // Local viewer's canonical side. SP defaults to 'player' (human is first-mover);
-  // P2P sets via deriveCanonicalSide at handshake. Drives all viewer-relative
-  // presentation: "your turn" banner, victory/defeat text, board orientation.
+  const { currentTurn } = boardState;
   const myCanonicalSide = useGameStore(s => s.myCanonicalSide) ?? 'player';
   const isMyTurn = currentTurn === myCanonicalSide;
-  const myWinStatus: 'player_wins' | 'opponent_wins' = myCanonicalSide === 'player' ? 'player_wins' : 'opponent_wins';
-  const oppWinStatus: 'player_wins' | 'opponent_wins' = myCanonicalSide === 'player' ? 'opponent_wins' : 'player_wins';
   const isFlipped = myCanonicalSide === 'opponent';
+  const attackAnimationKey = buildAttackAnimationKey(pendingAttackAnimation);
+  const orderedCellCoords = useMemo(() => {
+    const cells: Array<{ row: number; col: number }> = [];
+    if (isFlipped) {
+      for (let row = 0; row < BOARD_ROWS; row++) {
+        for (let col = BOARD_COLS - 1; col >= 0; col--) {
+          cells.push({ row, col });
+        }
+      }
+    } else {
+      for (let row = BOARD_ROWS - 1; row >= 0; row--) {
+        for (let col = 0; col < BOARD_COLS; col++) {
+          cells.push({ row, col });
+        }
+      }
+    }
+    return cells;
+  }, [isFlipped]);
+  const boardCellSize = boardRect.width / BOARD_COLS;
   const boardOrientation = isFlipped ? 'flipped' : 'standard';
-  const cellSize = boardRect.width / BOARD_COLS;
 
   useEffect(() => {
-    previousPiecePositionsRef.current = new Map(
-      boardState.pieces.map(piece => [
-        piece.id,
-        { row: piece.position.row, col: piece.position.col },
-      ]),
+    previousPiecePositions.current = new Map(
+      boardState.pieces.map((piece) => [piece.id, { row: piece.position.row, col: piece.position.col }]),
     );
   }, [boardState.pieces]);
 
-  const getPieceMoveOffset = (piece: ChessPiece) => {
-    if (pendingAttackAnimation) return null;
-    if (!Number.isFinite(cellSize) || cellSize <= 0) return null;
+  const getPieceMoveOffset = useCallback((piece: ChessPiece) => {
+    if (!shouldAnimateBoard || !Number.isFinite(boardCellSize) || boardCellSize <= 0 || pendingAttackAnimation) {
+      return null;
+    }
 
-    const previousPosition = previousPiecePositionsRef.current.get(piece.id);
+    const previousPosition = previousPiecePositions.current.get(piece.id);
     if (!previousPosition) return null;
-    if (
-      previousPosition.row === piece.position.row &&
-      previousPosition.col === piece.position.col
-    ) {
+    if (previousPosition.row === piece.position.row && previousPosition.col === piece.position.col) {
       return null;
     }
 
@@ -139,225 +143,63 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
       from: previousPosition,
       to: piece.position,
       orientation: boardOrientation,
-      cellSize,
+      cellSize: boardCellSize,
     });
-  };
+  }, [boardCellSize, boardOrientation, pendingAttackAnimation, shouldAnimateBoard]);
 
-  const renderCell = (row: number, col: number) => {
-    const position: ChessBoardPosition = { row, col };
-    const piece = getPieceAt(position);
-    const cellTone = getCellTone(row, col);
+  const renderCell = useCallback((row: number, col: number) => {
+    const piece = getPieceAt({ row, col });
     const isValid = isValidMovePosition(row, col);
     const isAttack = isAttackPosition(row, col);
-    const highlight = getCellHighlight({ isValidMove: isValid, isAttackMove: isAttack });
-    const isFlashCell = isInstantKillFlashPosition(row, col);
-    const isMinePreview = isPlacementMode && isMinePreviewTile(row, col);
-    const isActiveMine = isActiveMinePosition(row, col);
-    const canPlaceHere = canPlaceAtHoveredPosition;
-    const isPlacementBurst = isPlacementBurstPosition(row, col);
-    const isMineTriggerExplosion = isMineTriggerExplosionPosition(row, col);
-    const isPieceLocked = gameStatus !== 'playing' || pendingAttackAnimation !== null;
-    const mineState = getMineState({
-      isActiveMine,
-      isPlacementBurst,
-      isTriggerExplosion: isMineTriggerExplosion,
-    });
-    const placementPreview = getPlacementPreview({ isMinePreview, canPlaceHere });
-    const cellLabel = getCellAriaLabel({ row, col, piece });
-    const moveOffset = piece ? getPieceMoveOffset(piece) : null;
+    const isMinePreview = isMinePreviewTile(row, col);
+    const canPlaceHere = canPlaceAtHoveredPosition && isMinePreview;
+    const isPieceLocked = piece ? disabled || piece.owner !== myCanonicalSide || isPlacementMode : false;
+    const pieceMoveOffset = piece ? getPieceMoveOffset(piece) : null;
+    const isPieceMoving = pieceMoveOffset !== null;
+    const targetAttackFrame = isAttack
+      ? 'border-4 border-red-500/100 rounded-lg shadow-[0_0_24px_rgba(248,113,113,1)]'
+      : '';
+    const targetAttackFrameStyle: React.CSSProperties = isAttack
+      ? {
+          border: '4px solid rgba(254, 226, 226, 0.95)',
+          boxShadow: '0 0 26px rgba(248, 113, 113, 0.75), 0 0 12px rgba(185, 28, 28, 0.55) inset',
+        }
+      : {};
 
     return (
       <div
         key={`${row}-${col}`}
-        role="gridcell"
-        aria-label={cellLabel}
-        aria-selected={piece?.id === effectiveSelectedPieceId ? true : undefined}
-        data-chess-cell="true"
-        data-row={row}
-        data-col={col}
-        data-cell-tone={cellTone}
-        data-highlight={highlight}
-        data-mine-state={mineState}
-        data-placement-preview={placementPreview}
-        data-has-piece={piece ? 'true' : 'false'}
-        data-piece-id={piece?.id}
-        data-piece-owner={piece?.owner}
-        data-piece-type={piece?.type}
-        data-game-status={gameStatus}
-        className={`
-          chess-cell relative aspect-square overflow-visible [container-type:inline-size]
-          ${gameStatus === 'playing' ? '' : 'opacity-75'}
-          ${isPlacementMode ? 'cursor-crosshair' : ''}
-        `}
+        className="chess-cell relative flex items-center justify-center"
+        data-cell-tone={getCellTone(row, col)}
+        data-cell-highlight={getCellHighlight({ isValidMove: isValid, isAttackMove: isAttack })}
+        data-mine-preview={isMinePreview ? (canPlaceHere ? 'valid' : 'blocked') : 'none'}
         onClick={() => handleCellClick(row, col)}
         onMouseEnter={() => handleCellHover(row, col)}
         onMouseLeave={handleCellLeave}
       >
-        {isActiveMine && (() => {
-          const mineStyle = getActiveMineStyle();
-          const glowAnim = getActiveMineGlowAnimation();
-          const iconStyle = getActiveMineIconStyle();
-          const iconAnim = getActiveMineIconAnimation();
-          const outerGlow = getMineOuterGlowStyle();
-          return (
-            <>
-              <motion.div 
-                className={getMineStateClasses('active')}
-                animate={{
-                  boxShadow: glowAnim.boxShadowKeyframes,
-                  scale: glowAnim.scaleKeyframes
-                }}
-                transition={{ duration: glowAnim.duration, repeat: Infinity, ease: 'easeInOut' }}
-                style={{
-                  background: mineStyle.background,
-                  border: mineStyle.borderStyle,
-                  borderRadius: '4px'
-                }}
-              >
-                <motion.div 
-                  className="absolute inset-0 flex items-center justify-center"
-                  animate={{ 
-                    opacity: iconAnim.opacityKeyframes,
-                    scale: iconAnim.scaleKeyframes
-                  }}
-                  transition={{ duration: iconAnim.duration, repeat: Infinity, ease: 'easeInOut' }}
-                >
-                  <span 
-                    className="font-runic"
-                    style={{
-                      color: iconStyle.color,
-                      fontSize: iconStyle.fontSize,
-                      textShadow: iconStyle.textShadow,
-                      opacity: iconStyle.opacity
-                    }}
-                  >
-                    {MINE_RUNE_SYMBOL}
-                  </span>
-                </motion.div>
-              </motion.div>
-              <motion.div 
-                className="absolute inset-[-4px] pointer-events-none z-5 rounded"
-                animate={{ 
-                  opacity: [0.4, 0.8, 0.4],
-                  scale: [1, 1.05, 1]
-                }}
-                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                style={{
-                  boxShadow: outerGlow.boxShadow
-                }}
-              />
-            </>
-          );
-        })()}
-        
-        <AnimatePresence>
-          {isPlacementBurst && (() => {
-            const burstStyle = getMinePlacementBurstStyle();
-            return (
-              <motion.div
-                initial={{ scale: 0, opacity: 1 }}
-                animate={{ scale: 2.5, opacity: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 1, ease: 'easeOut' }}
-                className={getMineStateClasses('placed')}
-              >
-                <div 
-                  className="absolute inset-0 rounded-full"
-                  style={{
-                    background: burstStyle.background,
-                    boxShadow: burstStyle.boxShadow
-                  }}
-                />
-                <motion.div 
-                  className="absolute inset-0 flex items-center justify-center"
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, ease: 'linear' }}
-                >
-                  <span className="text-3xl text-amber-200 drop-shadow-lg font-runic">{MINE_RUNE_SYMBOL}</span>
-                </motion.div>
-              </motion.div>
-            );
-          })()}
-        </AnimatePresence>
-        
-        <AnimatePresence>
-          {isMineTriggerExplosion && (() => {
-            const explosionStyle = getMineTriggerExplosionStyle();
-            return (
-              <motion.div
-                initial={{ scale: 0, opacity: 1 }}
-                animate={{ scale: 3, opacity: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 1.2, ease: 'easeOut' }}
-                className={getMineStateClasses('triggered')}
-              >
-                <div 
-                  className="absolute inset-0 rounded-full"
-                  style={{
-                    background: explosionStyle.background,
-                    boxShadow: explosionStyle.boxShadow
-                  }}
-                />
-                <motion.div 
-                  className="absolute inset-0 flex items-center justify-center"
-                  initial={{ rotate: 0, scale: 1 }}
-                  animate={{ rotate: 180, scale: 1.5 }}
-                  transition={{ duration: 0.8 }}
-                >
-                  <span className="text-4xl text-white drop-shadow-lg">💥</span>
-                </motion.div>
-              </motion.div>
-            );
-          })()}
-        </AnimatePresence>
-        
-        {isMinePreview && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="absolute inset-0 pointer-events-none z-10"
-            style={{
-              background: canPlaceHere 
-                ? 'radial-gradient(circle, rgba(234, 179, 8, 0.6) 0%, rgba(251, 191, 36, 0.3) 60%, transparent 80%)'
-                : 'radial-gradient(circle, rgba(239, 68, 68, 0.5) 0%, rgba(220, 38, 38, 0.2) 60%, transparent 80%)',
-              boxShadow: canPlaceHere 
-                ? 'inset 0 0 15px rgba(234, 179, 8, 0.8)' 
-                : 'inset 0 0 10px rgba(239, 68, 68, 0.5)'
-            }}
-          >
-            <div className="absolute inset-0 flex items-center justify-center">
-              <motion.span 
-                className="text-lg"
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 1, repeat: Infinity }}
-              >
-                {canPlaceHere ? '⚡' : '✕'}
-              </motion.span>
-            </div>
-          </motion.div>
-        )}
-        
-        <AnimatePresence mode="wait">
-          {piece && (
+        {piece && (
+          shouldAnimateBoard ? (
             <motion.div
               key={piece.id}
-              className="absolute inset-1"
-              data-chess-piece-motion="true"
-              data-move-animation={moveOffset ? 'position' : 'none'}
-              initial={moveOffset
-                ? { x: moveOffset.x, y: moveOffset.y, opacity: 1, scale: 1.06 }
-                : false
+              className={`absolute inset-1 z-20 ${targetAttackFrame}`}
+              style={targetAttackFrameStyle}
+              initial={isPieceMoving ? pieceMoveOffset : false}
+              data-move-animation={isPieceMoving ? 'position' : undefined}
+              animate={
+                piece.id === fallingKingId
+                  ? { x: 0, y: 10, rotate: 90, opacity: 0.45, scale: 1 }
+                  : isPieceMoving && pieceMoveOffset
+                    ? {
+                        x: [pieceMoveOffset.x, pieceMoveOffset.x * 0.65, pieceMoveOffset.x * 0.22, 0],
+                        y: [pieceMoveOffset.y, pieceMoveOffset.y * 0.65, pieceMoveOffset.y * 0.22, 0],
+                        rotate: [0, 0, 0, 0],
+                        scale: [0.985, 0.995, 1, 1],
+                        opacity: 1,
+                      }
+                    : { x: 0, y: 0, rotate: 0, opacity: 1, scale: 1 }
               }
-              animate={piece.id === fallingKingId
-                ? { x: 0, y: 10, rotate: 90, opacity: 0.45, scale: 1 }
-                : { x: 0, y: 0, rotate: 0, opacity: 1, scale: 1 }
-              }
-              transition={piece.id === fallingKingId
-                ? { duration: 1.0, ease: 'easeIn' }
-                : moveOffset
-                  ? { duration: 0.24, ease: [0.12, 0.9, 0.2, 1] }
-                  : { type: 'spring', stiffness: 300, damping: 25 }
-              }
+              transition={isPieceMoving ? PIECE_SLIDE_TRANSITION : PIECE_REST_TRANSITION}
+              style={{ willChange: 'transform' }}
             >
               <ChessPieceComponent
                 piece={piece}
@@ -368,162 +210,118 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
                   isLocked: isPieceLocked,
                 })}
                 isPlayerTurn={isMyTurn}
-                matchupGlow={matchupGlowMap[piece.id] || null}
+                isMotionEnabled={shouldAnimateBoard}
+                useEnhancedFx={shouldRenderEffectFilters}
               />
             </motion.div>
-          )}
-          
-          {!piece && (isValid || isAttack) && !isPlacementMode && (
-            <div className="absolute inset-1">
-              <MovePlate
-                isAttack={isAttack}
-                onClick={() => handleCellClick(row, col)}
+          ) : (
+            <div
+              key={piece.id}
+              className={`absolute inset-1 z-20 ${targetAttackFrame}`}
+              style={targetAttackFrameStyle}
+            >
+              <ChessPieceComponent
+                piece={piece}
+                visualState={getPieceVisualState({
+                  pieceId: piece.id,
+                  selectedPieceId: effectiveSelectedPieceId,
+                  isAttackTarget: isAttack,
+                  isLocked: isPieceLocked,
+                })}
+                isPlayerTurn={isMyTurn}
+                isMotionEnabled={shouldAnimateBoard}
+                useEnhancedFx={shouldRenderEffectFilters}
               />
             </div>
-          )}
-        </AnimatePresence>
-        
-        <AnimatePresence>
-          {isFlashCell && (
-            <motion.div
-              initial={{ opacity: 1, scale: 0.5 }}
-              animate={{ opacity: 0, scale: 2 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.5, ease: 'easeOut' }}
-              className="absolute inset-0 pointer-events-none z-50"
-            >
-              <div 
-                className="absolute inset-0 rounded-full" 
-                style={{ 
-                  background: 'radial-gradient(circle, #facc15 0%, #f97316 40%, transparent 70%)' 
-                }} 
-              />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-2xl font-bold text-white drop-shadow-lg">⚔</span>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+          )
+        )}
+        {!piece && (isValid || isAttack) && (
+          <div className={shouldAnimateBoard ? 'absolute inset-2 z-10 transition-transform hover:scale-110' : 'absolute inset-2 z-10'}>
+            <MovePlate
+              isAttack={isAttack}
+              onClick={() => handleCellClick(row, col)}
+              isMotionEnabled={shouldAnimateBoard}
+            />
+          </div>
+        )}
       </div>
     );
-  };
+  }, [
+    getPieceAt,
+    isAttackPosition,
+    isValidMovePosition,
+    isMinePreviewTile,
+    canPlaceAtHoveredPosition,
+    isPlacementMode,
+    effectiveSelectedPieceId,
+    shouldAnimateBoard,
+    shouldRenderEffectFilters,
+    myCanonicalSide,
+    disabled,
+    fallingKingId,
+    handleCellClick,
+    handleCellHover,
+    handleCellLeave,
+    isMyTurn,
+    getPieceMoveOffset,
+  ]);
 
-  // Board orientation: standard chess UX (lichess, chess.com) puts the
-  // local viewer's pieces at the bottom of the screen. Canonical state
-  // is unchanged — only the iteration order flips. Click handlers
-  // receive canonical (row, col) directly, so no coordinate translation
-  // is needed elsewhere.
-  //
-  // First-mover (canonical 'player'): default order — row 6→0 top-to-bottom,
-  // col 0→4 left-to-right. Their back rank (row 0) appears at bottom.
-  // Second-mover (canonical 'opponent'): flipped 180° — row 0→6,
-  // col 4→0. Their back rank (row 6) appears at bottom.
-  const cells = [];
-  if (isFlipped) {
-    for (let row = 0; row < BOARD_ROWS; row++) {
-      for (let col = BOARD_COLS - 1; col >= 0; col--) {
-        cells.push(renderCell(row, col));
-      }
-    }
-  } else {
-    for (let row = BOARD_ROWS - 1; row >= 0; row--) {
-      for (let col = 0; col < BOARD_COLS; col++) {
-        cells.push(renderCell(row, col));
-      }
-    }
-  }
-
-  // P2P diagnostic strip — only when canonical handshake has resolved.
-  // Shows mySide / current turn / connection so the user can see exactly
-  // why a move is or isn't allowed. Strictly debug; remove once Plan B
-  // smoke is stable.
-  const matchId = useGameStore(s => s.matchId);
-  const isP2P = !!matchId;
+  const orderedCells = useMemo(
+    () => orderedCellCoords.map(({ row, col }) => renderCell(row, col)),
+    [orderedCellCoords, renderCell],
+  );
 
   return (
     <div
       className="chess-board-container flex flex-col items-center"
-      data-chess-board-container="true"
-      data-current-turn={currentTurn}
-      data-local-side={myCanonicalSide}
-      data-my-turn={isMyTurn ? 'true' : 'false'}
-      data-game-status={gameStatus}
+      data-motion={shouldAnimateBoard ? 'on' : 'off'}
     >
-      {isP2P && (
-        <div className="mb-2 px-3 py-1 rounded bg-slate-900/70 border border-slate-600 text-xs font-mono text-slate-200 flex gap-3 items-center">
-          <span>P2P</span>
-          <span>mySide=<b className="text-yellow-300">{myCanonicalSide}</b></span>
-          <span>turn=<b className={isMyTurn ? 'text-green-400' : 'text-red-400'}>{currentTurn}</b></span>
-          <span className={isMyTurn ? 'text-green-400 font-bold' : 'text-slate-400'}>
-            {isMyTurn ? 'TU TURNO — mueve una pieza' : 'ESPERANDO AL OPONENTE…'}
-          </span>
-        </div>
+      {shouldRenderEffectFilters && (
+        <svg className="absolute w-0 h-0 invisible">
+          <defs>
+            <filter id="royal-flame-filter" x="-20%" y="-20%" width="140%" height="140%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" seed="1">
+                <animate attributeName="seed" values="1;100;1" dur="10s" repeatCount="indefinite" />
+              </feTurbulence>
+              <feDisplacementMap in="SourceGraphic" scale="15">
+                <animate attributeName="scale" values="10;20;10" dur="3s" repeatCount="indefinite" />
+              </feDisplacementMap>
+            </filter>
+            <filter id="elite-aura-filter" x="-10%" y="-10%" width="120%" height="120%">
+              <feTurbulence type="turbulence" baseFrequency="0.03" numOctaves="2">
+                <animate attributeName="baseFrequency" values="0.03;0.05;0.03" dur="5s" repeatCount="indefinite" />
+              </feTurbulence>
+              <feDisplacementMap in="SourceGraphic" scale="6" />
+            </filter>
+          </defs>
+        </svg>
       )}
+
       <div
-        className="chess-turn-banner chess-banner-enter"
-        data-turn-state={isMyTurn ? 'self' : 'opponent'}
-        data-game-status={gameStatus}
+        className="chess-turn-banner mb-4 py-2 px-6 bg-slate-900/60 border border-slate-700 rounded-full"
+        data-motion={shouldAnimateTurnBanner ? 'on' : 'off'}
       >
-        <span className="chess-turn-text">
+        <span className="text-sm font-runic text-slate-200 tracking-widest">
           {isMyTurn ? 'ᚱ YOUR COMMAND ᚱ' : 'ᚱ FOE STIRS ᚱ'}
         </span>
-        {gameStatus === 'combat' && (
-          <span className="ml-2 text-yellow-400 animate-pulse">⚔ Combat!</span>
-        )}
-        {gameStatus === myWinStatus && (
-          <span className="ml-2 text-green-400 font-bold">Victory!</span>
-        )}
-        {gameStatus === oppWinStatus && (
-          <span className="ml-2 text-red-400 font-bold">Defeat</span>
-        )}
-        {gameStatus === 'draw' && (
-          <span className="ml-2 text-slate-200 font-bold">Draw</span>
-        )}
       </div>
-      
-      {noMovesMessage && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0 }}
-          className="mb-2 px-4 py-2 bg-red-900/80 border border-red-500 rounded-lg text-red-200 text-sm"
-        >
-          {noMovesMessage}
-        </motion.div>
-      )}
       
       <div className="relative [perspective:1200px]">
         <motion.div
           ref={boardRef}
-          role="grid"
-          aria-label="Ragnarok chess board"
-          aria-rowcount={BOARD_ROWS}
-          aria-colcount={BOARD_COLS}
-          data-chess-board="true"
-          data-current-turn={currentTurn}
-          data-local-side={myCanonicalSide}
-          data-my-turn={isMyTurn ? 'true' : 'false'}
-          data-game-status={gameStatus}
-          data-orientation={isFlipped ? 'flipped' : 'standard'}
           className="chess-board rounded-lg overflow-hidden grid aspect-[5/7] origin-bottom [transform:rotateX(2deg)] w-[min(500px,85vw,calc(70vh*5/7))]"
           style={{
             gridTemplateRows: `repeat(${BOARD_ROWS}, 1fr)`,
             gridTemplateColumns: `repeat(${BOARD_COLS}, 1fr)`,
           }}
-          animate={screenShake ? {
-            x: [0, -5, 5, -5, 5, 0],
-            y: [0, 2, -2, 2, -2, 0]
-          } : {}}
-          transition={{ duration: 0.4, ease: 'easeInOut' }}
+          animate={shouldAnimateBoard && screenShake ? { x: [0, -5, 5, -5, 5, 0], y: [0, 2, -2, 2, -2, 0] } : {}}
         >
-          {cells}
+          {orderedCells}
         </motion.div>
-        <div className="chess-board-vignette" />
-        <div className="chess-board-particles" />
       </div>
       
-      {/* Attack Animation Overlay */}
       <ChessAttackAnimation
+        key={attackAnimationKey}
         animation={pendingAttackAnimation}
         onAnimationComplete={handleAttackAnimationComplete}
         cellSize={boardRect.width / BOARD_COLS}

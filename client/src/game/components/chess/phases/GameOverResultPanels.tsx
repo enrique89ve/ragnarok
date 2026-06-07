@@ -326,6 +326,8 @@ export function CasualResultPanel({
 		);
 	}
 
+	const primaryLabel = isPeerMatch ? 'New Opponent' : 'Play Again';
+
 	return (
 		<>
 			<p className="cgo-subtitle">{getCasualResultSubtitle(result)}</p>
@@ -341,7 +343,7 @@ export function CasualResultPanel({
 				onClick={onPrimaryAction}
 				className="cgo-btn-primary"
 			>
-				Play Again
+				{primaryLabel}
 			</button>
 		</>
 	);

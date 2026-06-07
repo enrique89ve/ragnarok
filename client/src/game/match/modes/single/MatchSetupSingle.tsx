@@ -24,6 +24,7 @@ export function MatchSetupSingle({
 	identityFactory = cryptoMatchIdentityFactory,
 	difficulty,
 	deckSource,
+	style,
 }: MatchSetupSingleProps) {
 	const [ready, setReady] = useState(false);
 
@@ -31,6 +32,7 @@ export function MatchSetupSingle({
 		const ctx = resolveSingle({
 			identity: identityFactory.create(),
 			difficulty,
+			style,
 			deckSource,
 		});
 		useMatchStore.getState().setMatch(ctx);
@@ -39,7 +41,7 @@ export function MatchSetupSingle({
 		return () => {
 			useMatchStore.getState().clearMatch();
 		};
-	}, [difficulty, deckSource, identityFactory]);
+	}, [difficulty, deckSource, identityFactory, style]);
 
 	if (!ready) return <>{fallback}</>;
 

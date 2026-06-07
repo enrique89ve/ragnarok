@@ -12,6 +12,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { z } from 'zod';
 import type {
 	CampaignProgressRecord,
 	CampaignSubmissionRecord,
@@ -28,7 +29,10 @@ import type {
 	MarketListing,
 	MarketOffer,
 } from '../../shared/protocol-core/types';
-import type { AcquisitionProvenance } from '../../shared/protocol-core/acquisitionProvenance';
+import {
+	isDuatAcquisitionProvenance,
+	type AcquisitionProvenance,
+} from '../../shared/protocol-core/acquisitionProvenance';
 
 const DEFAULT_ELO_RATING = 1000;
 
@@ -213,6 +217,339 @@ interface SerializedState {
 }
 
 // ---------------------------------------------------------------------------
+// Chain-state persistence contract (input boundary only)
+// ---------------------------------------------------------------------------
+
+const NonNegativeInt = z.number().int().nonnegative().finite();
+const IntNumber = z.number().finite();
+const SafeString = z.string();
+const Timestamp = z.number().finite().nonnegative();
+const Pair = <T>(value: z.ZodType<T>) => z.tuple([SafeString, value]);
+const AcquisitionProvenanceSchema = z.custom<AcquisitionProvenance>(
+	value => value === undefined || isDuatAcquisitionProvenance(value),
+	'invalid acquisition provenance',
+);
+
+const PlayerRecordSchema = z.object({
+	username: z.string(),
+	elo: NonNegativeInt,
+	wins: NonNegativeInt,
+	losses: NonNegativeInt,
+	lastMatchAt: Timestamp,
+}).passthrough();
+
+const CardRecordSchema = z.object({
+	uid: z.string(),
+	cardId: NonNegativeInt,
+	owner: z.string(),
+	rarity: z.string(),
+	level: NonNegativeInt,
+	xp: NonNegativeInt,
+	edition: z.string().optional(),
+	foil: z.string().optional(),
+	mintSource: z.enum(['genesis', 'pack', 'reward', 'replica', 'merge', 'forge']).optional(),
+	mintTrxId: z.string().optional(),
+	mintBlockNum: IntNumber.optional(),
+	lastTransferBlock: IntNumber.optional(),
+	originDna: z.string().optional(),
+	instanceDna: z.string().optional(),
+	parentInstanceDna: z.string().optional(),
+	generation: NonNegativeInt.optional(),
+	replicaCount: NonNegativeInt.optional(),
+	mergedFrom: z.array(z.string()).optional(),
+	acquisition: AcquisitionProvenanceSchema.optional(),
+}).passthrough();
+
+const MatchRecordSchema = z.object({
+	matchId: z.string(),
+	winner: z.string(),
+	loser: z.string(),
+	winnerEloBefore: NonNegativeInt,
+	winnerEloAfter: NonNegativeInt,
+	loserEloBefore: NonNegativeInt,
+	loserEloAfter: NonNegativeInt,
+	cardFingerprint: z.string(),
+	timestamp: Timestamp,
+	blockNum: NonNegativeInt,
+}).passthrough();
+
+const GenesisStateSchema = z.object({
+	version: z.string(),
+	sealed: z.boolean(),
+	sealBlock: NonNegativeInt,
+	packSupply: z.record(NonNegativeInt),
+	rewardSupply: z.record(NonNegativeInt),
+}).passthrough();
+
+const SupplyCounterRecordSchema = z.object({
+	key: z.string(),
+	pool: z.enum(['pack', 'reward']),
+	cap: NonNegativeInt,
+	minted: NonNegativeInt,
+}).passthrough();
+
+const TokenBalanceRecordSchema = z.object({
+	account: z.string(),
+	RUNE: IntNumber,
+}).passthrough();
+
+const MatchAnchorStateRecordSchema = z.object({
+	matchId: z.string(),
+	playerA: z.string(),
+	playerB: z.string(),
+	pubkeyA: z.string().optional(),
+	pubkeyB: z.string().optional(),
+	deckHashA: z.string().optional(),
+	deckHashB: z.string().optional(),
+	engineHash: z.string().optional(),
+	cardRegistryHash: z.string().optional(),
+	dualAnchored: z.boolean(),
+	timestamp: Timestamp,
+}).passthrough();
+
+const PackCommitStateRecordSchema = z.object({
+	trxId: z.string(),
+	account: z.string(),
+	packType: z.string(),
+	quantity: NonNegativeInt,
+	saltCommit: z.string(),
+	commitBlock: NonNegativeInt,
+	revealed: z.boolean(),
+}).passthrough();
+
+const ForgeCommitStateRecordSchema = z.object({
+	trxId: z.string(),
+	account: z.string(),
+	rarity: z.string(),
+	saltCommit: z.string(),
+	commitBlock: NonNegativeInt,
+	debitAmount: NonNegativeInt,
+	revealed: z.boolean(),
+}).passthrough();
+
+const DuatClaimRecordSchema = z.object({
+	account: z.string(),
+	duatRaw: IntNumber,
+	packsEarned: NonNegativeInt,
+	blockNum: NonNegativeInt,
+	trxId: z.string(),
+}).passthrough();
+
+const CampaignSubmissionRecordSchema = z.object({
+	submissionKey: z.string(),
+	account: z.string(),
+	campaignId: z.string(),
+	missionId: z.string(),
+	difficulty: z.enum(['normal', 'heroic', 'mythic']),
+	nonce: NonNegativeInt,
+	localRunId: z.string(),
+	localStartedAt: Timestamp,
+	rulesetHash: z.string(),
+	seed: z.string(),
+	turnCount: NonNegativeInt,
+	stars: NonNegativeInt,
+	transcriptRoot: z.string(),
+	transcriptCid: z.string().optional(),
+	finalStateHash: z.string(),
+	status: z.enum(['queued', 'consumed', 'rejected']),
+	rejectionReason: z.string().optional(),
+	trxId: z.string(),
+	blockNum: NonNegativeInt,
+	timestamp: Timestamp,
+}).passthrough();
+
+const CampaignProgressRecordSchema = z.object({
+	account: z.string(),
+	campaignId: z.string(),
+	missionId: z.string(),
+	bestDifficulty: z.enum(['normal', 'heroic', 'mythic']),
+	bestTurns: NonNegativeInt,
+	bestStars: NonNegativeInt,
+	completedAtBlock: NonNegativeInt,
+	completedTrxId: z.string(),
+	status: z.literal('verified'),
+}).passthrough();
+
+const RuneLedgerEntrySchema = z.object({
+	entryId: z.string(),
+	seasonId: z.string(),
+	account: z.string(),
+	direction: z.enum(['credit', 'debit']),
+	sourceType: z.enum(['p2p_ranked', 'campaign_first_clear', 'rune_exchange', 'reward_claim', 'daily_quest_claim']),
+	sourceKey: z.string(),
+	amount: IntNumber,
+	balanceBefore: IntNumber,
+	balanceAfter: IntNumber,
+	trxId: z.string(),
+	blockNum: NonNegativeInt,
+	timestamp: Timestamp,
+}).passthrough();
+
+const EitrLedgerEntrySchema = z.object({
+	entryId: z.string(),
+	seasonId: z.string(),
+	account: z.string(),
+	direction: z.enum(['credit', 'debit']),
+	sourceType: z.enum(['burn', 'forge_commit', 'forge_refund']),
+	sourceKey: z.string(),
+	amount: IntNumber,
+	balanceBefore: IntNumber,
+	balanceAfter: IntNumber,
+	trxId: z.string(),
+	blockNum: NonNegativeInt,
+	timestamp: Timestamp,
+}).passthrough();
+
+const PackAssetSchema = z.object({
+	uid: z.string(),
+	packType: z.string(),
+	dna: z.string(),
+	owner: z.string(),
+	sealed: z.boolean(),
+	mintTrxId: z.string(),
+	mintBlockNum: NonNegativeInt,
+	lastTransferBlock: NonNegativeInt,
+	cardCount: NonNegativeInt,
+	edition: z.string(),
+	acquisition: AcquisitionProvenanceSchema.optional(),
+}).passthrough();
+
+const PackSupplyRecordSchema = z.object({
+	packType: z.string(),
+	minted: NonNegativeInt,
+	burned: NonNegativeInt,
+	cap: NonNegativeInt,
+}).passthrough();
+
+const MarketListingSchema = z.object({
+	listingId: z.string(),
+	nftUid: z.string(),
+	nftType: z.enum(['card', 'pack']),
+	seller: z.string(),
+	price: z.number().finite(),
+	currency: z.enum(['HIVE', 'HBD']),
+	listedBlock: NonNegativeInt,
+	listedTrxId: z.string(),
+	active: z.boolean(),
+}).passthrough();
+
+const MarketOfferSchema = z.object({
+	offerId: z.string(),
+	nftUid: z.string(),
+	buyer: z.string(),
+	price: z.number().finite(),
+	currency: z.enum(['HIVE', 'HBD']),
+	offeredBlock: NonNegativeInt,
+	offeredTrxId: z.string(),
+	status: z.enum(['pending', 'accepted', 'rejected', 'expired']),
+	paymentTrxId: z.string().optional(),
+}).passthrough();
+
+const ChainStateContractSchema = z.object({
+	players: z.array(Pair(PlayerRecordSchema)).catch([]).default([]),
+	cards: z.array(Pair(CardRecordSchema)).catch([]).default([]),
+	matches: z.array(MatchRecordSchema).catch([]).default([]),
+	knownAccounts: z.array(z.string()).catch([]).default([]),
+	syncCursors: z.array(Pair(NonNegativeInt)).catch([]).default([]),
+	lastSyncedAt: Timestamp.default(0).catch(0),
+	playerNonces: z.array(Pair(NonNegativeInt)).catch([]).default([]),
+	lastIrreversibleBlockProcessed: NonNegativeInt.default(0).catch(0),
+	genesis: GenesisStateSchema.nullable().catch(null).default(null),
+	supplyCounters: z.array(Pair(SupplyCounterRecordSchema)).catch([]).default([]),
+	tokenBalances: z.array(Pair(TokenBalanceRecordSchema)).catch([]).default([]),
+	matchAnchors: z.array(Pair(MatchAnchorStateRecordSchema)).catch([]).default([]),
+	packCommits: z.array(Pair(PackCommitStateRecordSchema)).catch([]).default([]),
+	rewardClaims: z.array(z.string()).catch([]).default([]),
+	duatClaims: z.array(Pair(DuatClaimRecordSchema)).catch([]).default([]),
+	campaignNonces: z.array(Pair(NonNegativeInt)).catch([]).default([]),
+	campaignSubmissions: z.array(Pair(CampaignSubmissionRecordSchema)).catch([]).default([]),
+	campaignProgress: z.array(Pair(CampaignProgressRecordSchema)).catch([]).default([]),
+	runeLedger: z.array(Pair(RuneLedgerEntrySchema)).catch([]).default([]),
+	eitrLedger: z.array(Pair(EitrLedgerEntrySchema)).catch([]).default([]),
+	forgeCommits: z.array(Pair(ForgeCommitStateRecordSchema)).catch([]).default([]),
+	packs: z.array(Pair(PackAssetSchema)).catch([]).default([]),
+	packSupply: z.array(Pair(PackSupplyRecordSchema)).catch([]).default([]),
+	slashedAccounts: z.array(z.string()).catch([]).default([]),
+	marketListings: z.array(Pair(MarketListingSchema)).catch([]).default([]),
+	marketOffers: z.array(Pair(MarketOfferSchema)).catch([]).default([]),
+	inSync: z.boolean().default(false).catch(false),
+	headBlock: NonNegativeInt.default(0).catch(0),
+	irreversibleBlock: NonNegativeInt.default(0).catch(0),
+	syncTargetBlock: NonNegativeInt.default(0).catch(0),
+});
+
+type ChainStateContract = z.infer<typeof ChainStateContractSchema>;
+
+function parseChainStatePayload(raw: string, initialBlockCursor: number): ChainStateContract {
+	let payload: unknown;
+	try {
+		payload = JSON.parse(raw);
+	} catch (err) {
+		console.warn('[chainState] Invalid JSON in state file, using defaults:', err);
+		return normalizeChainStatePayload(undefined, initialBlockCursor, true);
+	}
+
+	return normalizeChainStatePayload(payload, initialBlockCursor, false);
+}
+
+function normalizeChainStatePayload(
+	payload: unknown,
+	initialBlockCursor: number,
+	fromJson = false,
+): ChainStateContract {
+	const result = ChainStateContractSchema.safeParse(payload);
+	if (!result.success) {
+		if (fromJson) {
+			console.warn('[chainState] Invalid persisted state contract, using defaults:', result.error.flatten().formErrors);
+		} else {
+			console.warn('[chainState] Invalid import state contract, using defaults:', result.error.flatten().formErrors);
+		}
+		return emptyChainState(initialBlockCursor);
+	}
+	const data = result.data;
+	return {
+		...data,
+		lastIrreversibleBlockProcessed: Math.max(data.lastIrreversibleBlockProcessed ?? initialBlockCursor, initialBlockCursor),
+		syncTargetBlock: data.syncTargetBlock ?? data.irreversibleBlock ?? data.lastIrreversibleBlockProcessed,
+	};
+}
+
+function emptyChainState(initialBlockCursor: number): ChainStateContract {
+	return {
+		players: [],
+		cards: [],
+		matches: [],
+		knownAccounts: [],
+		syncCursors: [],
+		lastSyncedAt: 0,
+		playerNonces: [],
+		lastIrreversibleBlockProcessed: initialBlockCursor,
+		genesis: null,
+		supplyCounters: [],
+		tokenBalances: [],
+		matchAnchors: [],
+		packCommits: [],
+		rewardClaims: [],
+		duatClaims: [],
+		campaignNonces: [],
+		campaignSubmissions: [],
+		campaignProgress: [],
+		runeLedger: [],
+		eitrLedger: [],
+		forgeCommits: [],
+		packs: [],
+		packSupply: [],
+		slashedAccounts: [],
+		marketListings: [],
+		marketOffers: [],
+		inSync: false,
+		headBlock: 0,
+		irreversibleBlock: 0,
+		syncTargetBlock: initialBlockCursor,
+	};
+}
+
+// ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
 
@@ -273,7 +610,15 @@ let _dirty = false;
 // ---------------------------------------------------------------------------
 
 export function getStateFilePath(): string {
-	return process.env[STATE_FILE_ENV] ?? path.join(process.cwd(), 'data', 'chain-state.json');
+	const configuredPath = process.env[STATE_FILE_ENV]?.trim();
+	if (!configuredPath) {
+		return path.join(process.cwd(), 'data', 'chain-state.json');
+	}
+	if (configuredPath.includes('\0')) {
+		console.warn('[chainState] Invalid state file path, ignoring null-byte configuration');
+		return path.join(process.cwd(), 'data', 'chain-state.json');
+	}
+	return path.resolve(process.cwd(), configuredPath);
 }
 
 function ensureDataDir(): void {
@@ -321,7 +666,7 @@ export function loadState(): void {
 			return;
 		}
 		const raw = fs.readFileSync(stateFile, 'utf8');
-		const data: SerializedState = JSON.parse(raw);
+		const data = parseChainStatePayload(raw, initialBlockCursor);
 
 		players.clear();
 		for (const [k, v] of data.players ?? []) players.set(k, v);
@@ -457,82 +802,84 @@ export function exportState(): SerializedState {
 }
 
 export function importState(data: SerializedState): void {
+	const normalized = normalizeChainStatePayload(data, lastIrreversibleBlockProcessed, false);
+
 	players.clear();
-	for (const [k, v] of data.players ?? []) players.set(k, v);
+	for (const [k, v] of normalized.players ?? []) players.set(k, v);
 
 	cards.clear();
-	for (const [k, v] of data.cards ?? []) cards.set(k, v);
+	for (const [k, v] of normalized.cards ?? []) cards.set(k, v);
 
 	matches.length = 0;
-	matches.push(...(data.matches ?? []));
+	matches.push(...(normalized.matches ?? []));
 
 	knownAccounts.clear();
-	for (const a of data.knownAccounts ?? []) knownAccounts.add(a);
+	for (const a of normalized.knownAccounts ?? []) knownAccounts.add(a);
 
 	syncCursors.clear();
-	for (const [k, v] of data.syncCursors ?? []) syncCursors.set(k, v);
+	for (const [k, v] of normalized.syncCursors ?? []) syncCursors.set(k, v);
 
 	playerNonces.clear();
-	for (const [k, v] of data.playerNonces ?? []) playerNonces.set(k, v);
+	for (const [k, v] of normalized.playerNonces ?? []) playerNonces.set(k, v);
 
-	lastSyncedAt = data.lastSyncedAt ?? 0;
+	lastSyncedAt = normalized.lastSyncedAt ?? 0;
 
-	lastIrreversibleBlockProcessed = data.lastIrreversibleBlockProcessed ?? 0;
-	genesisState = data.genesis ?? null;
+	lastIrreversibleBlockProcessed = normalized.lastIrreversibleBlockProcessed;
+	genesisState = normalized.genesis ?? null;
 
 	supplyCounters.clear();
-	for (const [k, v] of data.supplyCounters ?? []) supplyCounters.set(k, v);
+	for (const [k, v] of normalized.supplyCounters ?? []) supplyCounters.set(k, v);
 
 	tokenBalances.clear();
-	for (const [k, v] of data.tokenBalances ?? []) tokenBalances.set(k, v);
+	for (const [k, v] of normalized.tokenBalances ?? []) tokenBalances.set(k, v);
 
 	matchAnchors.clear();
-	for (const [k, v] of data.matchAnchors ?? []) matchAnchors.set(k, v);
+	for (const [k, v] of normalized.matchAnchors ?? []) matchAnchors.set(k, v);
 
 	packCommits.clear();
-	for (const [k, v] of data.packCommits ?? []) packCommits.set(k, v);
+	for (const [k, v] of normalized.packCommits ?? []) packCommits.set(k, v);
 
 	rewardClaims.clear();
-	for (const c of data.rewardClaims ?? []) rewardClaims.add(c);
+	for (const c of normalized.rewardClaims ?? []) rewardClaims.add(c);
 
 	duatClaims.clear();
-	for (const [k, v] of data.duatClaims ?? []) duatClaims.set(k, v);
+	for (const [k, v] of normalized.duatClaims ?? []) duatClaims.set(k, v);
 
 	campaignNonces.clear();
-	for (const [k, v] of data.campaignNonces ?? []) campaignNonces.set(k, v);
+	for (const [k, v] of normalized.campaignNonces ?? []) campaignNonces.set(k, v);
 
 	campaignSubmissions.clear();
-	for (const [k, v] of data.campaignSubmissions ?? []) campaignSubmissions.set(k, v);
+	for (const [k, v] of normalized.campaignSubmissions ?? []) campaignSubmissions.set(k, v);
 
 	campaignProgress.clear();
-	for (const [k, v] of data.campaignProgress ?? []) campaignProgress.set(k, v);
+	for (const [k, v] of normalized.campaignProgress ?? []) campaignProgress.set(k, v);
 
 	runeLedger.clear();
-	for (const [k, v] of data.runeLedger ?? []) runeLedger.set(k, v);
+	for (const [k, v] of normalized.runeLedger ?? []) runeLedger.set(k, v);
 	eitrLedger.clear();
-	for (const [k, v] of data.eitrLedger ?? []) eitrLedger.set(k, v);
+	for (const [k, v] of normalized.eitrLedger ?? []) eitrLedger.set(k, v);
 	forgeCommits.clear();
-	for (const [k, v] of data.forgeCommits ?? []) forgeCommits.set(k, v);
+	for (const [k, v] of normalized.forgeCommits ?? []) forgeCommits.set(k, v);
 
 	packs.clear();
-	for (const [k, v] of data.packs ?? []) packs.set(k, v);
+	for (const [k, v] of normalized.packs ?? []) packs.set(k, v);
 
 	packSupply.clear();
-	for (const [k, v] of data.packSupply ?? []) packSupply.set(k, v);
+	for (const [k, v] of normalized.packSupply ?? []) packSupply.set(k, v);
 
 	slashedAccounts.clear();
-	for (const a of data.slashedAccounts ?? []) slashedAccounts.add(a);
+	for (const a of normalized.slashedAccounts ?? []) slashedAccounts.add(a);
 
 	marketListings.clear();
-	for (const [k, v] of data.marketListings ?? []) marketListings.set(k, v);
+	for (const [k, v] of normalized.marketListings ?? []) marketListings.set(k, v);
 
 	marketOffers.clear();
-	for (const [k, v] of data.marketOffers ?? []) marketOffers.set(k, v);
+	for (const [k, v] of normalized.marketOffers ?? []) marketOffers.set(k, v);
 
-	_inSync = data.inSync ?? false;
-	_headBlock = data.headBlock ?? 0;
-	_irreversibleBlock = data.irreversibleBlock ?? 0;
-	_syncTargetBlock = data.syncTargetBlock ?? _irreversibleBlock;
+	_inSync = normalized.inSync ?? false;
+	_headBlock = normalized.headBlock ?? 0;
+	_irreversibleBlock = normalized.irreversibleBlock ?? 0;
+	_syncTargetBlock = normalized.syncTargetBlock ?? normalized.irreversibleBlock ?? normalized.lastIrreversibleBlockProcessed;
 
 	_dirty = false;
 	console.log(`[chainState] Imported: ${players.size} players, ${cards.size} cards, blockCursor=${lastIrreversibleBlockProcessed}, inSync=${_inSync}`);

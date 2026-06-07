@@ -13,7 +13,7 @@
  * structural slice and a fake scheduler.
  */
 
-import { pickChessMove } from '../../ai/chessAI';
+import { pickChessMove, type ChessAIStyle, type ChessAIDifficulty } from '../../ai/chessAI';
 import {
 	getNoLegalMovesStatus,
 	type ChessBoardPosition,
@@ -26,9 +26,64 @@ import type {
 } from '../../types/ChessTypes';
 import type { PendingAttackAnimation } from '../../stores/combat/types';
 
-export const CHESS_AI_FIRST_ATTEMPT_DELAY_MS = 1000;
+export const CHESS_AI_FIRST_ATTEMPT_DELAY_MS = 2000;
 export const CHESS_AI_ANIMATION_RETRY_DELAY_MS = 200;
-export const CHESS_AI_POST_SELECT_DELAY_MS = 500;
+export const CHESS_AI_POST_SELECT_DELAY_MS = 700;
+export const CHESS_AI_POST_SELECT_DELAY_MS_JITTER = 0;
+const CHESS_AI_STYLE_DELAY_MULTIPLIER_BY_DIFFICULTY: Record<
+	ChessAIDifficulty,
+	Record<ChessAIStyle, number>
+> = {
+	normal: { balanced: 1, aggressive: 0.85, defensive: 1.05, human: 1.35 },
+	heroic: { balanced: 1, aggressive: 0.8, defensive: 1.0, human: 1.22 },
+	mythic: { balanced: 1.0, aggressive: 0.72, defensive: 0.95, human: 1.12 },
+};
+
+export const CHESS_AI_FIRST_ATTEMPT_DELAY_MS_BY_DIFFICULTY: Record<
+	ChessAIDifficulty,
+	{ base: number; jitter: number }
+> = {
+	normal: { base: 2200, jitter: 900 },
+	heroic: { base: 1700, jitter: 700 },
+	mythic: { base: 1300, jitter: 500 },
+};
+
+export const CHESS_AI_POST_SELECT_DELAY_MS_BY_DIFFICULTY: Record<
+	ChessAIDifficulty,
+	{ base: number; jitter: number }
+> = {
+	normal: { base: CHESS_AI_POST_SELECT_DELAY_MS, jitter: CHESS_AI_POST_SELECT_DELAY_MS_JITTER },
+	heroic: { base: 650, jitter: 250 },
+	mythic: { base: 450, jitter: 200 },
+};
+
+export type ChessAIBehaviorProfile = 'single' | 'campaign';
+
+export const getAIFirstAttemptDelayMs = (
+	difficulty: ChessAIDifficulty,
+	rng: () => number,
+	style: ChessAIStyle = 'balanced',
+): number => {
+	const profile = CHESS_AI_FIRST_ATTEMPT_DELAY_MS_BY_DIFFICULTY[difficulty];
+	const multiplier = CHESS_AI_STYLE_DELAY_MULTIPLIER_BY_DIFFICULTY[difficulty][style];
+	return Math.max(
+		CHESS_AI_FIRST_ATTEMPT_DELAY_MS,
+		Math.round((profile.base + rng() * profile.jitter) * multiplier)
+	);
+};
+
+const getPostDelayMsProfile = (
+	difficulty: ChessAIDifficulty,
+	rng: () => number,
+	style: ChessAIStyle = 'balanced',
+): number => {
+	const profile = CHESS_AI_POST_SELECT_DELAY_MS_BY_DIFFICULTY[difficulty];
+	const multiplier = CHESS_AI_STYLE_DELAY_MULTIPLIER_BY_DIFFICULTY[difficulty][style];
+	return Math.max(
+		CHESS_AI_POST_SELECT_DELAY_MS,
+		Math.round((profile.base + rng() * profile.jitter) * multiplier)
+	);
+};
 
 interface MovePlan {
 	readonly piece: ChessPiece;
@@ -66,6 +121,9 @@ export interface ChessAIDriverDeps {
 	/** Schedule a delayed callback. The hook plumbs `setTimeout` here and
 	 * registers the id for batch cleanup; the test plumbs a fake clock. */
 	readonly schedule: (fn: () => void, ms: number) => void;
+	readonly difficulty?: ChessAIDifficulty;
+	readonly style?: ChessAIStyle;
+	readonly behaviorProfile?: ChessAIBehaviorProfile;
 	/** Optional debug log; defaults to no-op. */
 	readonly log?: (msg: string) => void;
 }
@@ -79,6 +137,10 @@ export interface ChessAITurnDriver {
 
 export function createChessAITurnDriver(deps: ChessAIDriverDeps): ChessAITurnDriver {
 	const log = deps.log ?? (() => {});
+	const difficulty: ChessAIDifficulty = deps.difficulty ?? 'normal';
+	const style: ChessAIStyle = deps.style ?? 'balanced';
+	const behaviorProfile: ChessAIBehaviorProfile = deps.behaviorProfile ?? 'campaign';
+	const styleForDecision = behaviorProfile === 'single' ? style : 'balanced';
 
 	const attemptMove = (plan: MovePlan): void => {
 		const slice = deps.getSlice();
@@ -131,7 +193,7 @@ export function createChessAITurnDriver(deps: ChessAIDriverDeps): ChessAITurnDri
 			getValidMoves: (piece) => slice.getValidMoves(piece as ChessPiece),
 			getPieceAt: (position) => slice.getPieceAt(position),
 			rng,
-		});
+		}, difficulty, styleForDecision);
 
 		if (!move) {
 			const terminalStatus = getNoLegalMovesStatus('opponent', slice.boardState.pieces);
@@ -147,8 +209,9 @@ export function createChessAITurnDriver(deps: ChessAIDriverDeps): ChessAITurnDri
 			score: move.score,
 		};
 
+		const postDelayMs = getPostDelayMsProfile(difficulty, rng, style);
 		slice.selectPiece(plan.piece);
-		deps.schedule(() => attemptMove(plan), CHESS_AI_POST_SELECT_DELAY_MS);
+		deps.schedule(() => attemptMove(plan), Math.round(postDelayMs));
 	};
 
 	return { runAITurn };

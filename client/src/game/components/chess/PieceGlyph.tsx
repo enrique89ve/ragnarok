@@ -2,12 +2,17 @@ import React, { type CSSProperties } from 'react';
 import type { ChessPieceType } from '../../types/ChessTypes';
 import { PIECE_ICON_BY_TYPE } from './pieceVisuals';
 
+type PieceGlyphStyle = CSSProperties & {
+	readonly '--piece-glyph-color'?: string;
+	readonly '--piece-glyph-text-shadow'?: string;
+};
+
 interface PieceGlyphProps {
 	readonly pieceType: ChessPieceType;
 	readonly fallbackColor: string;
 	readonly size?: string;
 	readonly className?: string;
-	readonly style?: CSSProperties;
+	readonly style?: PieceGlyphStyle;
 	readonly fallbackTextShadow?: string;
 }
 
@@ -19,6 +24,7 @@ export const PieceGlyph: React.FC<PieceGlyphProps> = ({
 	style,
 	fallbackTextShadow = '2px 2px 4px rgba(0,0,0,0.5)',
 }) => {
+	const glyphStyle = style as PieceGlyphStyle;
 	return (
 		<span
 			className={`piece-glyph piece-glyph-fallback ${className || ''}`}
@@ -29,10 +35,10 @@ export const PieceGlyph: React.FC<PieceGlyphProps> = ({
 				display: 'inline-flex',
 				alignItems: 'center',
 				justifyContent: 'center',
-				color: fallbackColor,
-				textShadow: fallbackTextShadow,
+				color: glyphStyle?.['--piece-glyph-color'] ?? fallbackColor,
+				textShadow: glyphStyle?.['--piece-glyph-text-shadow'] ?? fallbackTextShadow,
 				pointerEvents: 'none',
-				...style,
+				...glyphStyle,
 			}}
 			aria-hidden="true"
 		>

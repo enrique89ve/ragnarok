@@ -6,17 +6,13 @@ import { useKingChessAbility } from '../../hooks/useKingChessAbility';
 import { useGameStore } from '../../stores/gameStore';
 import { useUnifiedCombatStore } from '../../stores/unifiedCombatStore';
 import { captureChessPrevHashes, sendChessAttack, sendChessCombatInitiated, sendChessMove } from '../../p2p/chessWireSender';
-import type { ChessBoardPosition } from '../../types/ChessTypes';
-import { computeMatchupGlows } from '../../utils/chess/elementMatchupUtils';
+import type { ChessBoardPosition, ChessPiece } from '../../types/ChessTypes';
 import {
-  containsPosition,
   didMoveApply,
   getBlockedPieceMessage,
-  getBoardHighlightKind,
   getCellClickAction,
   getLosingKingId,
   hasNoLegalMoves,
-  shouldShowEnemyHoverPreview,
 } from './chessBoardInteractionRules';
 
 type UseChessBoardInteractionsInput = {
@@ -51,6 +47,18 @@ const clearTimer = (timerRef: { current: TimeoutId | null }): void => {
   if (!timerRef.current) return;
   clearTimeout(timerRef.current);
   timerRef.current = null;
+};
+
+const positionKey = (row: number, col: number): string => `${row}:${col}`;
+
+const createPositionSet = (positions: readonly ChessBoardPosition[]): ReadonlySet<string> => {
+  if (positions.length === 0) return new Set<string>();
+
+  const set = new Set<string>();
+  for (const position of positions) {
+    set.add(positionKey(position.row, position.col));
+  }
+  return set;
 };
 
 export function useChessBoardInteractions(input: UseChessBoardInteractionsInput) {
@@ -96,6 +104,17 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
   } = useKingChessAbility(myCanonicalSide);
 
   const { pieces, currentTurn, selectedPiece, validMoves, attackMoves, gameStatus } = boardState;
+  const pieceByPosition = useMemo(() => {
+    const map = new Map<string, ChessPiece>();
+    for (const piece of pieces) {
+      map.set(positionKey(piece.position.row, piece.position.col), piece);
+    }
+    return map;
+  }, [pieces]);
+  const getPieceAtFromMap = useCallback((position: ChessBoardPosition): ChessPiece | null => {
+    return pieceByPosition.get(positionKey(position.row, position.col)) ?? null;
+  }, [pieceByPosition]);
+  const getPieceAtFromStore = getPieceAt;
   const matchId = useGameStore(s => s.matchId);
   const isSingleMode = !matchId;
 
@@ -182,25 +201,31 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
     return () => clearTimer(instantKillFlashTimeoutRef);
   }, [lastInstantKill]);
 
-  const matchupGlowMap = useMemo(() => {
-    if (!selectedPiece || selectedPiece.owner !== myCanonicalSide || currentTurn !== myCanonicalSide) {
-      return {};
-    }
-    return computeMatchupGlows(selectedPiece.element, pieces, selectedPiece.owner);
-  }, [selectedPiece, currentTurn, pieces, myCanonicalSide]);
-
   const previewTiles = useMemo(
     () => (hoverPosition ? getPreviewForPosition(hoverPosition) : []),
     [hoverPosition, getPreviewForPosition],
+  );
+
+  const validMoveSet = useMemo(() => createPositionSet(validMoves), [validMoves]);
+  const attackMoveSet = useMemo(() => createPositionSet(attackMoves), [attackMoves]);
+  const previewTileSet = useMemo(() => createPositionSet(previewTiles), [previewTiles]);
+  const visibleMineSet = useMemo(() => createPositionSet(visibleMines), [visibleMines]);
+  const minePlacementSet = useMemo(
+    () => createPositionSet(minePlacementEffect?.tiles ?? []),
+    [minePlacementEffect?.tiles],
+  );
+  const mineTriggerSet = useMemo(
+    () => createPositionSet(mineTriggerEffect?.tiles ?? []),
+    [mineTriggerEffect?.tiles],
   );
 
   const handleCellClick = useCallback((row: number, col: number) => {
     const position: ChessBoardPosition = { row, col };
     setNoMovesMessage(null);
 
-    const isValidMove = containsPosition(validMoves, row, col);
-    const isAttackMove = containsPosition(attackMoves, row, col);
-    const pieceAtPosition = getPieceAt(position);
+    const isValidMove = validMoveSet.has(positionKey(row, col));
+    const isAttackMove = attackMoveSet.has(positionKey(row, col));
+    const pieceAtPosition = getPieceAtFromMap(position);
     const action = getCellClickAction({
       disabled,
       isPlacementMode,
@@ -277,7 +302,7 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
       // defender for instant-kill emit (movePiece removes it).
       const movingPiece = selectedPiece;
       const fromPos = movingPiece?.position;
-      const defender = isAttackMove ? getPieceAt(position) : null;
+      const defender = isAttackMove ? getPieceAtFromStore(position) : null;
 
       // TD-27c-chess: capture prev-state hashes BEFORE movePiece mutates
       // the local store. The receiver hashes its own state pre-apply, so
@@ -313,7 +338,7 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
       // for a move the local store never executed — exactly the bug
       // chain that produced the post-strike freeze before the
       // pendingAttackAnimation guard above.
-      const movedPiece = movingPiece ? getPieceAt(position) : null;
+      const movedPiece = movingPiece ? getPieceAtFromStore(position) : null;
       if (!didMoveApply({ movingPiece, pieceAtDestination: movedPiece })) {
         return;
       }
@@ -359,7 +384,8 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
     validMoves,
     attackMoves,
     movePiece,
-    getPieceAt,
+    getPieceAtFromMap,
+    getPieceAtFromStore,
     selectPiece,
     currentTurn,
     selectedPiece,
@@ -369,8 +395,8 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
 
   // MovePlates leak intent when the AI selects its piece during its turn:
   // the slice populates validMoves/attackMoves regardless of ownership, so
-  // we gate by `selectedPiece.owner === myCanonicalSide` (matches the same
-  // gate already used for matchupGlowMap above). Hover-preview adds a
+  // we gate by `selectedPiece.owner === myCanonicalSide` (matches ownership
+  // rules for local turn preview). Hover-preview adds a
   // separate, exclusive source for enemy pieces, except when the hovered
   // enemy is the selected piece's active capture target.
   const showsSelectionMoves = !!selectedPiece && selectedPiece.owner === myCanonicalSide;
@@ -379,6 +405,24 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
     return { moves: validMoves, attacks: attackMoves };
   }, [showsSelectionMoves, validMoves, attackMoves]);
 
+  const selectedMoveSet = useMemo(
+    () => createPositionSet(selectedHighlightSource?.moves ?? []),
+    [selectedHighlightSource],
+  );
+  const selectedAttackSet = useMemo(
+    () => createPositionSet(selectedHighlightSource?.attacks ?? []),
+    [selectedHighlightSource],
+  );
+
+  const enemyMoveSet = useMemo(
+    () => createPositionSet(enemyHoverPreview?.moves ?? []),
+    [enemyHoverPreview],
+  );
+  const enemyAttackSet = useMemo(
+    () => createPositionSet(enemyHoverPreview?.attacks ?? []),
+    [enemyHoverPreview],
+  );
+
   // Single-mode-only enemy preview: hovering an opponent piece reveals
   // its valid moves so the player can study the AI before/after its turn.
   // P2P stays opaque (fair play) — the matchId gate below disables it.
@@ -386,7 +430,10 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
   // skip the preview entirely while placing.
   const handleCellHover = useCallback((row: number, col: number) => {
     if (isPlacementMode) {
-      setHoverPosition({ row, col });
+      setHoverPosition(previous => {
+        if (previous && previous.row === row && previous.col === col) return previous;
+        return { row, col };
+      });
       return;
     }
     if (pendingAttackAnimation) {
@@ -397,12 +444,14 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
       setEnemyHoverTarget(null);
       return;
     }
-    const piece = getPieceAt({ row, col });
+    const piece = getPieceAtFromMap({ row, col });
     if (!piece || piece.owner === myCanonicalSide) {
       setEnemyHoverTarget(null);
       return;
     }
-    if (!shouldShowEnemyHoverPreview({ row, col, selectedSource: selectedHighlightSource })) {
+
+    const tileKey = positionKey(row, col);
+    if (selectedAttackSet.has(tileKey)) {
       setEnemyHoverTarget(null);
       return;
     }
@@ -416,7 +465,14 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
       }
       return { pieceId: piece.id, position: piece.position };
     });
-  }, [isPlacementMode, pendingAttackAnimation, isSingleMode, getPieceAt, myCanonicalSide, selectedHighlightSource]);
+  }, [
+    isPlacementMode,
+    pendingAttackAnimation,
+    isSingleMode,
+    getPieceAtFromMap,
+    myCanonicalSide,
+    selectedAttackSet,
+  ]);
 
   const handleCellLeave = useCallback(() => {
     setHoverPosition(null);
@@ -424,43 +480,47 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
   }, []);
 
   const isValidMovePosition = useCallback(
-    (row: number, col: number) => getBoardHighlightKind({
-      row,
-      col,
-      selectedSource: selectedHighlightSource,
-      hoverPreviewSource: enemyHoverPreview,
-    }) === 'move',
-    [selectedHighlightSource, enemyHoverPreview],
+    (row: number, col: number): boolean => {
+      const lookup = positionKey(row, col);
+      if (enemyHoverPreview) {
+        return enemyMoveSet.has(lookup);
+      }
+
+      return selectedMoveSet.has(lookup);
+    },
+    [enemyHoverPreview, enemyMoveSet, selectedMoveSet],
   );
 
   const isAttackPosition = useCallback(
-    (row: number, col: number) => getBoardHighlightKind({
-      row,
-      col,
-      selectedSource: selectedHighlightSource,
-      hoverPreviewSource: enemyHoverPreview,
-    }) === 'attack',
-    [selectedHighlightSource, enemyHoverPreview],
+    (row: number, col: number): boolean => {
+      const lookup = positionKey(row, col);
+      if (enemyHoverPreview) {
+        return enemyAttackSet.has(lookup);
+      }
+
+      return selectedAttackSet.has(lookup);
+    },
+    [enemyHoverPreview, enemyAttackSet, selectedAttackSet],
   );
 
   const isMinePreviewTile = useCallback(
-    (row: number, col: number) => containsPosition(previewTiles, row, col),
-    [previewTiles],
+    (row: number, col: number) => previewTileSet.has(positionKey(row, col)),
+    [previewTileSet],
   );
 
   const isActiveMinePosition = useCallback(
-    (row: number, col: number) => containsPosition(visibleMines, row, col),
-    [visibleMines],
+    (row: number, col: number) => visibleMineSet.has(positionKey(row, col)),
+    [visibleMineSet],
   );
 
   const isPlacementBurstPosition = useCallback(
-    (row: number, col: number) => containsPosition(minePlacementEffect?.tiles ?? [], row, col),
-    [minePlacementEffect],
+    (row: number, col: number) => minePlacementSet.has(positionKey(row, col)),
+    [minePlacementSet],
   );
 
   const isMineTriggerExplosionPosition = useCallback(
-    (row: number, col: number) => containsPosition(mineTriggerEffect?.tiles ?? [], row, col),
-    [mineTriggerEffect],
+    (row: number, col: number) => mineTriggerSet.has(positionKey(row, col)),
+    [mineTriggerSet],
   );
 
   const isInstantKillFlashPosition = useCallback(
@@ -481,13 +541,12 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
 
   return {
     boardState,
-    getPieceAt,
+    getPieceAt: getPieceAtFromMap,
     isPlacementMode,
     noMovesMessage,
     screenShake,
     fallingKingId,
     pendingAttackAnimation,
-    matchupGlowMap,
     canPlaceAtHoveredPosition,
     effectiveSelectedPieceId,
     handleCellClick,

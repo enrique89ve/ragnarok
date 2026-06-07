@@ -11,11 +11,12 @@
 
 import type { Difficulty } from '../../../campaign/campaignTypes';
 import { MATCH_ECONOMY, modeEconomyToReward } from '../../economy';
-import type { MatchContext, MatchIdentity } from '../../types';
+import type { AiStyle, MatchContext, MatchIdentity } from '../../types';
 
 export interface SingleResolveArgs {
 	identity: MatchIdentity;
 	difficulty: Difficulty;
+	style?: AiStyle;
 	deckSource: 'warband' | 'default';
 }
 
@@ -24,6 +25,7 @@ export function resolveSingle(args: SingleResolveArgs): MatchContext {
 		...args.identity,
 		opponent: {
 			kind: 'ai',
+			style: args.style,
 			difficulty: args.difficulty,
 			deckSource: args.deckSource,
 		},

@@ -19,7 +19,8 @@ import { cryptoRng } from '../../utils/seededRng';
 import { debug } from '../../config/debugConfig';
 import {
 	createChessAITurnDriver,
-	CHESS_AI_FIRST_ATTEMPT_DELAY_MS,
+	getAIFirstAttemptDelayMs,
+	type ChessAIBehaviorProfile,
 	type ChessAIDriverSlice,
 } from './chessAITurnDriver';
 import { deriveChessTurnPolicy } from './chessTurnPolicy';
@@ -35,6 +36,15 @@ export function useChessAITurn({ enabled }: ChessAITurnOptions): void {
 	const gameStatus = useUnifiedCombatStore((s) => s.boardState.gameStatus);
 	const activeMatch = useMatchStore((s) => s.activeMatch);
 	const isP2PMatch = activeMatch?.opponent.kind === 'peer';
+	const behaviorProfile: ChessAIBehaviorProfile = activeMatch?.opponent.kind === 'ai' ? 'single' : 'campaign';
+	const aiDifficulty = activeMatch?.opponent.kind === 'ai'
+		? activeMatch.opponent.difficulty
+		: activeMatch?.opponent.kind === 'scripted' && activeMatch.opponent.script.kind === 'campaign-mission'
+			? activeMatch.opponent.script.difficulty
+			: 'normal';
+	const aiStyle = activeMatch?.opponent.kind === 'ai'
+		? (activeMatch.opponent.style ?? 'balanced')
+		: 'balanced';
 
 	const timeoutsRef = useRef<TimeoutId[]>([]);
 
@@ -69,9 +79,15 @@ export function useChessAITurn({ enabled }: ChessAITurnOptions): void {
 			rngFallback: cryptoRng,
 			schedule,
 			log: debug.ai,
+			difficulty: aiDifficulty,
+			style: aiStyle,
+			behaviorProfile,
 		});
 
-		schedule(() => driver.runAITurn(), CHESS_AI_FIRST_ATTEMPT_DELAY_MS);
+		const state = useUnifiedCombatStore.getState() as unknown as ChessAIDriverSlice;
+		const rng = state._chessRng ?? cryptoRng;
+		const firstAttemptDelayMs = getAIFirstAttemptDelayMs(aiDifficulty, rng, aiStyle);
+		schedule(() => driver.runAITurn(), firstAttemptDelayMs);
 		return clearAllTimeouts;
-	}, [enabled, currentTurn, gameStatus, isP2PMatch]);
+	}, [enabled, currentTurn, gameStatus, isP2PMatch, aiDifficulty, aiStyle]);
 }

@@ -49,13 +49,9 @@ import {
 	getGenesisState,
 	getBlockCursor,
 	isAccountKnown,
-	registerAccount,
-	getKnownAccountCount,
 } from '../services/chainState';
 import { isValidHiveUsername } from '../services/hiveAuth';
 import { getRagnarokServerRuntimeConfig } from '../services/runtimeConfig';
-
-const MAX_KNOWN_ACCOUNTS = 10_000;
 
 const router = Router();
 
@@ -63,10 +59,6 @@ function clampInt(val: string | undefined, def: number, min: number, max: number
 	const n = parseInt(val as string, 10);
 	if (!Number.isFinite(n)) return def;
 	return Math.min(Math.max(n, min), max);
-}
-
-function hasAccountRegistryCapacity(username: string): boolean {
-	return isAccountKnown(username) || getKnownAccountCount() < MAX_KNOWN_ACCOUNTS;
 }
 
 // ---------------------------------------------------------------------------
@@ -94,6 +86,7 @@ router.get('/health', (_req: Request, res: Response) => {
 router.get('/status', (_req: Request, res: Response) => {
 	const genesis = getGenesisState();
 	const runtime = getRagnarokServerRuntimeConfig();
+	const stats = getStats();
 	res.json({
 		protocolVersion: '1.2.0',
 		protocolId: runtime.protocolId,
@@ -104,7 +97,10 @@ router.get('/status', (_req: Request, res: Response) => {
 		genesisBlock: genesis?.sealBlock ?? null,
 		sealed: genesis?.sealed ?? false,
 		lastBlock: getBlockCursor(),
-		inSync: true,
+		inSync: stats.inSync,
+		blocksBehind: stats.blocksBehind,
+		headBlock: stats.headBlock,
+		irreversibleBlock: stats.irreversibleBlock,
 	});
 });
 
@@ -150,13 +146,6 @@ router.get('/users/:username', (req: Request, res: Response) => {
 		res.status(400).json({ error: 'Invalid username' });
 		return;
 	}
-
-	if (!hasAccountRegistryCapacity(username)) {
-		res.status(503).json({ error: 'Account registry full' });
-		return;
-	}
-
-	if (!isAccountKnown(username)) registerAccount(username);
 
 	const player = getPlayer(username) ?? { username, elo: 1000, wins: 0, losses: 0, lastMatchAt: 0 };
 	const nftCounts = getUserNftCounts(username);

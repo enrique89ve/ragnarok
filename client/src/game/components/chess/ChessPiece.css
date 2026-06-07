@@ -1,133 +1,245 @@
 .chess-piece {
-  overflow: hidden !important;
+  overflow: visible !important;
   isolation: isolate;
   --chess-color-neutral: #f2f7fb;
-  --chess-overlay-strength: 0.2;
-  --chess-attack-border: rgba(248, 113, 113, 0.45);
-  --chess-advantage: rgba(34, 197, 94, 0.38);
-  --chess-disadvantage: rgba(248, 113, 113, 0.45);
-  --chess-mutual: rgba(129, 140, 248, 0.38);
+  
+  background: rgba(15, 23, 42, 0.45) !important;
+  backdrop-filter: blur(1.5px);
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+  transition-property: transform, opacity;
+  transition-duration: 160ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
 }
 
-.piece-glyph {
-  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.45));
-  transition: transform 0.14s ease, filter 0.14s ease;
-  will-change: transform, filter;
+.chess-piece[data-motion='off'] {
+  backdrop-filter: none;
+  transition-duration: 80ms;
 }
 
-.piece-glyph-fallback {
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
-  font-weight: 700;
-  line-height: 1;
-  color: var(--chess-color-neutral);
-}
-
-.piece-glyph-image {
-  border-radius: 12%;
-  object-position: center;
-  filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.45)) saturate(1.02) contrast(1.04);
-}
-
-.element-image-bg {
+/* 1. HUD LAYERS */
+.piece-hud-container {
   position: absolute;
   inset: 0;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  opacity: var(--chess-overlay-strength);
+  border-radius: inherit;
   pointer-events: none;
   z-index: 1;
-  mix-blend-mode: soft-light;
-  transform: translateZ(0);
 }
 
-.element-overlay {
+.owner-surface-tint {
   position: absolute;
   inset: 0;
-  pointer-events: none;
-  z-index: 2;
-  border-radius: inherit;
+  background: currentColor;
+  opacity: 0.04;
 }
 
-.element-overlay-fire {
-  background: radial-gradient(ellipse at 50% 100%, rgba(255, 136, 87, 0.2) 0%, transparent 72%);
-}
-
-.element-overlay-water {
-  background: radial-gradient(ellipse at 50% 30%, rgba(123, 198, 255, 0.2) 0%, transparent 72%);
-}
-
-.element-overlay-wind {
-  background: radial-gradient(ellipse at 50% 50%, rgba(128, 214, 153, 0.18) 0%, transparent 82%);
-}
-
-.element-overlay-earth {
-  background: radial-gradient(ellipse at 50% 80%, rgba(180, 126, 78, 0.2) 0%, transparent 72%);
-}
-
-.element-overlay-holy {
-  background: radial-gradient(circle at 50% 50%, rgba(255, 214, 102, 0.2) 0%, transparent 64%);
-}
-
-.element-overlay-shadow {
-  background: radial-gradient(circle at 50% 50%, rgba(139, 116, 204, 0.2) 0%, transparent 72%);
-}
-
-.element-effect-layer {
+.owner-outer-glow {
   position: absolute;
   inset: 0;
+  box-shadow: inset 0 0 16px currentColor;
+  opacity: 0.12;
+}
+
+/* 2. MAGICAL SVG-FLAME SYSTEM (High Performance, No WebGL) */
+.god-visual-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
-  z-index: 5;
-  border-radius: inherit;
-  overflow: hidden;
-  transform: translateZ(0);
+  z-index: 10;
 }
 
-.element-effect-fire {
+.flame-core, .flame-outer {
+  position: absolute;
+  width: 60%;
+  height: 60%;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+}
+
+.flame-core {
+  background: radial-gradient(circle, currentColor 20%, transparent 85%);
+  filter: blur(4px) url(#elite-aura-filter); /* Mapped to SVG filter */
+  opacity: 0.52;
+  animation: pulse-energy 2s ease-in-out infinite alternate;
+}
+
+.chess-piece[data-fx='off'] .flame-core,
+.chess-piece[data-fx='off'] .flame-outer,
+.chess-piece[data-fx='off'] .flame-rays {
+  display: none;
+}
+
+.flame-outer {
+  width: 80%;
+  height: 80%;
+  border: 4px solid currentColor;
+  opacity: 0.22;
+  filter: blur(12px) url(#elite-aura-filter);
+  animation: rotate-flame 8s linear infinite;
+}
+
+/* ROYALTY: High-Turbulence Displacement */
+.king-celestial-flame, .queen-royal-flame {
+  filter: url(#royal-flame-filter); /* Liquid flow */
+}
+
+.king-celestial-flame { color: #00f2ff !important; }
+.king-celestial-flame .flame-core { 
+  width: 75%; height: 75%; opacity: 0.75;
+  filter: blur(3px) url(#royal-flame-filter);
+  animation-duration: 5s;
+}
+
+.king-celestial-flame .flame-outer {
+  animation-duration: 30s;
+}
+
+.king-celestial-flame .flame-rays {
+  animation-duration: 42s;
+}
+
+@keyframes rook-whirlpool-core {
+  0% { transform: rotate(0deg) scale(1.15, 0.78); }
+  25% { transform: rotate(90deg) scale(0.9, 1.02); }
+  50% { transform: rotate(180deg) scale(1.08, 0.84); }
+  75% { transform: rotate(270deg) scale(0.94, 0.98); }
+  100% { transform: rotate(360deg) scale(1.15, 0.78); }
+}
+
+@keyframes rook-whirlpool-vortex {
+  0% { transform: rotate(0deg) scale(1.08); }
+  50% { transform: rotate(-180deg) scale(1.02); }
+  100% { transform: rotate(-360deg) scale(1.08); }
+}
+
+@keyframes rook-whirlpool-breath {
+  0%, 100% { opacity: 0.36; }
+  50% { opacity: 0.58; }
+}
+
+.rook-whirlpool-flame .flame-core {
+  width: calc(84% * 0.4);
+  height: calc(58% * 0.4);
+  border: 1px dashed currentColor;
   background:
-    radial-gradient(ellipse at 50% 100%, rgba(255, 136, 87, 0.2) 0%, transparent 66%),
-    radial-gradient(ellipse at 50% 80%, rgba(255, 194, 120, 0.13) 0%, transparent 58%);
-  animation: fire-dance 1.2s ease-in-out infinite alternate;
+    repeating-conic-gradient(
+      from 0deg,
+      transparent 0deg 12deg,
+      color-mix(in srgb, currentColor 60%, transparent) 12deg 18deg,
+      transparent 18deg 26deg,
+      color-mix(in srgb, currentColor 60%, transparent) 26deg 34deg,
+      transparent 34deg 48deg
+    ),
+    radial-gradient(ellipse at 48% 50%, currentColor 0% 20%, transparent 22% 80%);
+  opacity: 0.45;
+  filter: blur(1.2px);
+  mix-blend-mode: screen;
+  border-radius: 58% 42% 42% 58%;
+  animation: rook-whirlpool-core 3.8s linear infinite, rook-whirlpool-breath 2.4s ease-in-out infinite;
 }
 
-.element-effect-water {
+.rook-whirlpool-flame .flame-outer {
+  width: calc(130% * 0.4);
+  height: calc(90% * 0.4);
+  border: 1px solid currentColor;
+  opacity: 0.24;
+  filter: blur(10px);
+  animation: rook-whirlpool-vortex 4.2s linear infinite;
+}
+
+.rook-whirlpool-flame .flame-rays {
+  width: calc(185% * 0.4);
+  height: calc(125% * 0.4);
   background:
-    radial-gradient(ellipse at 50% 0%, rgba(130, 199, 255, 0.2) 0%, transparent 70%),
-    linear-gradient(180deg, rgba(130, 199, 255, 0.14) 0%, transparent 60%);
-  animation: water-shimmer 2.4s ease-in-out infinite;
+    repeating-conic-gradient(
+      from 0deg,
+      transparent 0deg 28deg,
+      color-mix(in srgb, currentColor 20%, transparent) 28deg 34deg,
+      transparent 34deg 70deg
+  ),
+  repeating-radial-gradient(circle at center, transparent 0 45%, rgba(255, 255, 255, 0.08) 45% 50%, transparent 50% 70%);
+  opacity: 0.11;
+  filter: blur(1.6px);
+  mix-blend-mode: screen;
+  animation: rook-whirlpool-vortex 2.8s linear infinite;
 }
 
-.element-effect-wind {
-  background:
-    radial-gradient(ellipse at 50% 50%, rgba(128, 214, 153, 0.2) 0%, transparent 64%);
-  animation: wind-pulse 2.4s ease-in-out infinite;
+@keyframes pulse-energy {
+  from { transform: scale(0.9); opacity: 0.4; }
+  to { transform: scale(1.05); opacity: 0.65; }
 }
 
-.element-effect-wind::before {
+@keyframes rotate-flame { to { transform: rotate(360deg); } }
+
+.flame-rays {
+  position: absolute;
+  width: 130%;
+  height: 130%;
+  background: repeating-conic-gradient(from 0deg, currentColor 0deg 1px, transparent 1px 45deg);
+  opacity: 0.2;
+  filter: blur(1px);
+  animation: rotate-flame 12s linear infinite reverse;
+}
+
+/* 3. THE PIECE GLYPH STYLES */
+.piece-glyph {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.85));
+  z-index: 20;
+}
+
+.chess-piece[data-motion='off'] .piece-glyph {
+  filter: none;
+}
+
+.king-glyph-enhancement {
+  filter: drop-shadow(0 0 10px currentColor) brightness(1.25);
+  color: #fffdf0 !important;
+}
+
+/* 4. OVERLAY HUD */
+.owner-inner-frame {
+  position: absolute;
+  inset: 2px;
+  border: 1px solid currentColor;
+  opacity: 0.22;
+  border-radius: 6px;
+  z-index: 25;
+  pointer-events: none;
+}
+
+/* 5. CORNER BRACKETS */
+.chess-piece::after {
   content: '';
   position: absolute;
-  inset: 10%;
-  border: 1px solid rgba(128, 214, 153, 0.34);
-  border-radius: 50%;
-  animation: wind-ring 2s linear infinite;
+  inset: -2px;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 30;
+  background: 
+    linear-gradient(to right, currentColor 2px, transparent 2px) 0 0,
+    linear-gradient(to bottom, currentColor 2px, transparent 2px) 0 0,
+    linear-gradient(to left, currentColor 2px, transparent 2px) 100% 0,
+    linear-gradient(to bottom, currentColor 2px, transparent 2px) 100% 0,
+    linear-gradient(to right, currentColor 2px, transparent 2px) 0 100%,
+    linear-gradient(to top, currentColor 2px, transparent 2px) 0 100%,
+    linear-gradient(to left, currentColor 2px, transparent 2px) 100% 100%,
+    linear-gradient(to top, currentColor 2px, transparent 2px) 100% 100%;
+  background-repeat: no-repeat;
+  background-size: 11px 11px;
+  filter: drop-shadow(0 0 4px currentColor);
+  transition: opacity 140ms cubic-bezier(0.2, 0, 0, 1);
+  opacity: 0.8;
 }
 
-.element-effect-earth {
-  background:
-    radial-gradient(ellipse at 50% 100%, rgba(184, 130, 82, 0.2) 0%, transparent 62%),
-    radial-gradient(circle at 50% 50%, rgba(205, 161, 115, 0.12) 0%, transparent 52%);
-  animation: chess-piece-earth-pulse 2.4s ease-in-out infinite;
+.chess-piece[data-motion='off']::after {
+  opacity: 0.45;
 }
 
-.element-effect-holy {
-  background: radial-gradient(circle at 50% 50%, rgba(255, 214, 102, 0.18) 0%, transparent 72%);
-  animation: chess-piece-holy-glow 1.4s ease-in-out infinite alternate;
-}
-
-.element-effect-shadow {
-  background: radial-gradient(circle at 50% 50%, rgba(139, 116, 204, 0.2) 0%, transparent 72%);
-  animation: shadow-throb 1.7s ease-in-out infinite;
-}
+.owner-frame-player { color: #00f2ff; }
+.owner-frame-opponent { color: #ff3c3c; }
 
 .element-badge-large {
   position: absolute;
@@ -139,154 +251,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: clamp(1.5px, 3cqw, 3px) solid rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   z-index: 40;
 }
 
 .element-icon-large {
   font-size: 14px;
   line-height: 1;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
-}
-
-.element-border-glow {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.element-border-fire {
-  border: 1px solid rgba(255, 136, 87, 0.45);
-}
-
-.element-border-water {
-  border: 1px solid rgba(123, 198, 255, 0.45);
-}
-
-.element-border-wind {
-  border: 1px solid rgba(128, 214, 153, 0.42);
-}
-
-.element-border-earth {
-  border: 1px solid rgba(184, 130, 82, 0.45);
-}
-
-.element-border-holy {
-  border: 1px solid rgba(255, 214, 102, 0.45);
-}
-
-.element-border-shadow {
-  border: 1px solid rgba(139, 116, 204, 0.45);
-}
-
-@keyframes fire-dance {
-  0% { opacity: 0.28; transform: scaleY(0.985); }
-  100% { opacity: 0.5; transform: scaleY(1.015); }
-}
-
-@keyframes water-shimmer {
-  0%, 100% { opacity: 0.25; }
-  50% { opacity: 0.45; }
-}
-
-@keyframes wind-pulse {
-  0%, 100% { opacity: 0.24; }
-  50% { opacity: 0.38; }
-}
-
-@keyframes wind-ring {
-  0% { transform: scale(0.88); opacity: 0.3; }
-  100% { transform: scale(1.06); opacity: 0; }
-}
-
-@keyframes chess-piece-earth-pulse {
-  0%, 100% { opacity: 0.24; transform: scale(0.985); }
-  50% { opacity: 0.42; transform: scale(1.01); }
-}
-
-@keyframes chess-piece-holy-glow {
-  0% { opacity: 0.22; }
-  100% { opacity: 0.42; }
-}
-
-@keyframes shadow-throb {
-  0%, 100% { opacity: 0.24; transform: scale(0.985); }
-  50% { opacity: 0.4; transform: scale(1.01); }
-}
-
-.god-piece-aura {
-  position: absolute;
-  inset: -1px;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 0;
-  animation: god-aura-breathe 3s ease-in-out infinite;
-}
-
-@keyframes god-aura-breathe {
-  0%, 100% { transform: scale(0.99); opacity: 0.3; }
-  50% { transform: scale(1.02); opacity: 0.45; }
-}
-
-.chess-piece[data-has-element="true"] {
-  transition: box-shadow 0.3s ease;
-}
-
-.chess-piece[data-piece-type="king"],
-.chess-piece[data-piece-type="queen"],
-.chess-piece[data-piece-type="rook"],
-.chess-piece[data-piece-type="bishop"],
-.chess-piece[data-piece-type="knight"] {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
-}
-
-.chess-piece[data-piece-type="pawn"] {
-  opacity: 0.92;
-}
-
-.matchup-pulse-advantage {
-  outline: 2px solid var(--chess-advantage);
-  outline-offset: 2px;
-  box-shadow: 0 0 8px rgba(34, 197, 94, 0.32), 0 0 16px rgba(34, 197, 94, 0.18);
-  z-index: 50;
-  animation: chess-matchup-pulse 1.2s ease-in-out infinite !important;
-}
-
-.matchup-pulse-disadvantage {
-  outline: 2px solid var(--chess-disadvantage);
-  outline-offset: 2px;
-  box-shadow: 0 0 8px rgba(248, 113, 113, 0.32), 0 0 16px rgba(248, 113, 113, 0.18);
-  z-index: 50;
-  animation: chess-matchup-pulse 1.2s ease-in-out infinite !important;
-}
-
-.matchup-pulse-mutual {
-  outline: 2px solid var(--chess-mutual);
-  outline-offset: 2px;
-  box-shadow: 0 0 8px rgba(129, 140, 248, 0.3), 0 0 16px rgba(129, 140, 248, 0.16);
-  z-index: 50;
-  animation: chess-matchup-pulse 1.2s ease-in-out infinite !important;
-}
-
-.chess-piece[data-visual-state="attackable"] {
-  box-shadow: 0 0 8px var(--chess-attack-border), 0 0 16px rgba(248, 113, 113, 0.24), inset 0 0 6px rgba(248, 113, 113, 0.14);
-  animation: chess-attack-target-pulse 1.4s ease-in-out infinite;
-}
-
-@keyframes chess-attack-target-pulse {
-  0%, 100% {
-    box-shadow: 0 0 8px var(--chess-attack-border), 0 0 16px rgba(248, 113, 113, 0.24), inset 0 0 6px rgba(248, 113, 113, 0.14);
-  }
-  50% {
-    box-shadow: 0 0 12px var(--chess-attack-border), 0 0 22px rgba(248, 113, 113, 0.32), inset 0 0 10px rgba(248, 113, 113, 0.2);
-  }
-}
-
-@keyframes chess-matchup-pulse {
-  0%, 100% { opacity: 0.75; }
-  50% { opacity: 1; }
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
 }
 
 .chess-piece-hp-container {
@@ -296,32 +268,16 @@
   right: 0;
   height: 2px;
   background: rgba(0, 0, 0, 0.4);
-  z-index: 30;
+  z-index: 45;
   overflow: hidden;
 }
 
 .chess-piece-hp-fill {
   height: 100%;
   background: var(--gradient-chess-hp);
-  transition: width 0.3s ease-out;
+  transition: width 0.2s ease-out;
 }
 
-.chess-piece[data-health-state="warning"] .chess-piece-hp-fill {
-  background: linear-gradient(90deg, var(--warning-400), var(--warning-600));
-}
-
-.chess-piece[data-health-state="danger"] .chess-piece-hp-fill {
-  background: linear-gradient(90deg, var(--danger-400), var(--danger-600));
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .element-effect-layer,
-  .element-effect-wind::before,
-  .god-piece-aura,
-  .chess-piece[data-visual-state="attackable"],
-  .matchup-pulse-advantage,
-  .matchup-pulse-disadvantage,
-  .matchup-pulse-mutual {
-    animation: none !important;
-  }
+.chess-piece[data-fx='off'] .chess-piece-hp-fill {
+  transition: none;
 }

@@ -49,8 +49,12 @@ export interface MatchIdentity {
 
 // ── Opponent ──────────────────────────────────────────────────────────────
 
+export type AiStyle = 'balanced' | 'aggressive' | 'defensive' | 'human';
+
 export interface AiOpponent {
 	kind: 'ai';
+	/** Optional behavior profile used only by local/AI chess games. */
+	style?: AiStyle;
 	difficulty: Difficulty;
 	deckSource: 'warband' | 'default';
 }

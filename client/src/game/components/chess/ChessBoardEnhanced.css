@@ -37,6 +37,11 @@
   animation: chess-root-ember-drift 20s linear infinite;
 }
 
+.ragnarok-chess-game.chess-motion-off:not([class*="realm-"])::after {
+  animation: none !important;
+  opacity: 0 !important;
+}
+
 .match-exit-control {
   position: fixed;
   top: 18px;
@@ -155,25 +160,19 @@
   100% { transform: translateY(-400px); }
 }
 
-/* 1. BOARD FRAME - Stone slab with rune texture */
+/* 1. BOARD FRAME - Premium Stone Slab with Gold Frame */
 .chess-board {
   position: relative;
-  background-image: url('/textures/board/norse-rune-stone.webp');
-  background-size: cover;
+  background-image: url('/textures/board/texture.png');
+  background-size: 100% 100%;
   background-position: center;
-  border: 6px solid var(--color-chess-stone) !important;
-  border-radius: 10px;
+  border: none !important;
+  border-radius: 4px;
+  /* Increased padding to let the golden frame breathe and be fully appreciated */
+  padding: 24px 20px;
   box-shadow:
-    inset 0 0 20px rgba(0, 0, 0, 0.8),
-    inset 0 0 4px rgba(251, 191, 36, 0.2),
-    0 0 0 3px var(--color-chess-stone-dark),
-    0 0 0 6px #8b6914,
-    0 0 0 8px #3d2a0a,
-    0 0 0 11px var(--color-chess-stone),
-    0 0 0 13px var(--color-chess-stone-dark),
-    0 8px 40px rgba(0, 0, 0, 0.9),
-    0 0 60px rgba(139, 105, 20, 0.2),
-    0 0 100px rgba(139, 105, 20, 0.08);
+    0 25px 60px rgba(0, 0, 0, 0.95),
+    0 0 100px rgba(0, 0, 0, 0.5);
 }
 
 /* Top-lit gradient for 3D feel */
@@ -204,14 +203,14 @@
 }
 
 [data-chess-piece-motion="true"][data-move-animation="position"] {
-  animation: chess-piece-motion-emphasis 240ms cubic-bezier(0.12, 0.9, 0.2, 1) both;
+  animation: chess-piece-motion-emphasis 150ms cubic-bezier(0.12, 0.9, 0.2, 1) both;
   will-change: transform;
   z-index: 70;
 }
 
 @keyframes chess-piece-motion-emphasis {
   0%,
-  65% {
+  60% {
     filter: drop-shadow(0 0 16px rgba(251, 191, 36, 0.72));
   }
 
@@ -223,31 +222,54 @@
 .chess-cell[data-cell-tone="light"] {
   background: linear-gradient(
     135deg,
-    var(--color-chess-tile-light) 0%,
-    rgba(212, 184, 122, 0.5) 25%,
-    var(--color-chess-tile-light) 50%,
-    rgba(184, 151, 90, 0.4) 75%,
-    var(--color-chess-tile-light) 100%
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0.22) 100%
   ) !important;
   box-shadow:
-    inset 1px 1px 2px rgba(255, 255, 255, 0.1),
-    inset -1px -1px 2px rgba(0, 0, 0, 0.08),
-    inset 0 0 0 0.5px rgba(0, 0, 0, 0.3);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 .chess-cell[data-cell-tone="dark"] {
   background: linear-gradient(
     135deg,
-    var(--color-chess-tile-dark) 0%,
-    rgba(55, 28, 16, 0.65) 25%,
-    var(--color-chess-tile-dark) 50%,
-    rgba(32, 14, 8, 0.55) 75%,
-    var(--color-chess-tile-dark) 100%
+    rgba(0, 0, 0, 0.25) 0%,
+    rgba(0, 0, 0, 0.1) 50%,
+    rgba(0, 0, 0, 0.25) 100%
   ) !important;
   box-shadow:
-    inset 1px 1px 3px rgba(0, 0, 0, 0.3),
-    inset -1px -1px 2px rgba(255, 255, 255, 0.03),
-    inset 0 0 0 0.5px rgba(0, 0, 0, 0.4);
+    inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+}
+
+.chess-cell[data-cell-highlight="move"]::before {
+  content: '';
+  position: absolute;
+  inset: 12%;
+  border-radius: 6px;
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.35) 0%, rgba(34, 211, 238, 0.05) 65%, transparent 100%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.chess-cell[data-cell-highlight="attack"]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(248, 113, 113, 0.24) 0%, rgba(248, 113, 113, 0.05) 65%, transparent 100%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.chess-cell[data-mine-preview="valid"] {
+  box-shadow:
+    inset 0 0 0 2px rgba(16, 185, 129, 0.7),
+    0 0 12px rgba(16, 185, 129, 0.32);
+}
+
+.chess-cell[data-mine-preview="blocked"] {
+  box-shadow:
+    inset 0 0 0 2px rgba(248, 113, 113, 0.7),
+    0 0 12px rgba(248, 113, 113, 0.24);
 }
 
 /* 3. AMBIENT BOARD PARTICLES */
@@ -313,19 +335,20 @@
   100% { transform: translateY(-95%) translateX(12px); opacity: 0; }
 }
 
-/* 4. BOARD VIGNETTE - Deeper */
+/* 4. BOARD VIGNETTE - Minimal/Disabled to avoid double border */
 .chess-board-vignette {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 35;
   border-radius: inherit;
+  /* Using a very subtle central light instead of a dark frame */
   background: radial-gradient(
     ellipse at 50% 50%,
-    transparent 25%,
-    rgba(0, 0, 0, 0.25) 55%,
-    rgba(0, 0, 0, 0.6) 100%
+    rgba(255, 255, 255, 0.05) 0%,
+    transparent 70%
   );
+  mix-blend-mode: overlay;
 }
 
 /* 5. TURN INDICATOR - Mythic Runic Glow */
@@ -346,6 +369,10 @@
   box-shadow: none;
   overflow: visible;
   animation: chess-banner-enter 0.4s ease-out;
+}
+
+.chess-turn-banner[data-motion='off'] {
+  animation: none !important;
 }
 
 .chess-turn-banner::before {
@@ -513,6 +540,10 @@
   z-index: 45;
 }
 
+.chess-board-container[data-motion='off']::after {
+  filter: none;
+}
+
 /* ============================================
    REDUCED MOTION SUPPORT
    ============================================ */
@@ -528,6 +559,11 @@
   }
 
   .ragnarok-chess-game:not([class*="realm-"])::after {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+
+  .ragnarok-chess-game.chess-motion-off:not([class*="realm-"])::after {
     animation: none !important;
     opacity: 0 !important;
   }
