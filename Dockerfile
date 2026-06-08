@@ -53,8 +53,7 @@ RUN npm run verify:runtime-env -- --mode=alfa-testnet && npm run build:alfa-test
 
 FROM deps AS prod-deps
 WORKDIR /app
-RUN npm prune --omit=dev --no-audit --fund=false && npm cache clean --force
-COPY --from=build /app/node_modules/esbuild ./node_modules/esbuild
+RUN npm ci --omit=dev --no-audit --fund=false && npm cache clean --force
 
 FROM node:${NODE_VERSION}-alpine${NODE_ALPINE_VERSION} AS runner
 WORKDIR /app
@@ -78,6 +77,8 @@ ENV RAGNAROK_NFT_OWNERSHIP_SOURCE=json
 COPY package.json package-lock.json ./
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/node_modules/esbuild ./node_modules/esbuild
+COPY --from=build /app/node_modules/@esbuild ./node_modules/@esbuild
 COPY --from=build /app/scripts/verifyRuntimeEnv.mjs ./scripts/verifyRuntimeEnv.mjs
 
 EXPOSE 5000
