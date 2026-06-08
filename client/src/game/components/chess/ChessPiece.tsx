@@ -139,19 +139,19 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
       whileTap={isMotionEnabled && visualState.tag !== 'locked' ? { scale: 0.96 } : undefined}
       initial={false}
       animate={isMotionEnabled ? { scale: animateScale } : { scale: 1 }}
-      transition={isMotionEnabled ? { type: 'spring', stiffness: 300, damping: 25 } : { duration: 0.05 }}
-      style={{
-        color: elementGlow.color,
-        '--piece-container-shadow': cellTone === 'light'
-          ? '0 4px 18px rgba(0, 0, 0, 0.88)'
-          : '0 4px 16px rgba(0, 0, 0, 0.48), 0 0 12px rgba(255, 255, 255, 0.2)',
-        ...(isAttackTarget && {
-          outline: '3px solid rgba(254, 226, 226, 0.55)',
-          boxShadow: '0 0 10px rgba(248, 113, 113, 0.65), 0 0 18px rgba(248, 113, 113, 0.18)',
-          borderColor: 'rgba(254, 226, 226, 0.75)',
-        }),
-      }}
-    >
+		  transition={isMotionEnabled ? { type: 'spring', stiffness: 300, damping: 25 } : { duration: 0.05 }}
+		  style={{
+		    color: elementGlow.color,
+		    '--piece-container-shadow': cellTone === 'light'
+		      ? '0 4px 18px rgba(0, 0, 0, 0.88)'
+		      : '0 4px 16px rgba(0, 0, 0, 0.48), 0 0 12px rgba(255, 255, 255, 0.2)',
+		    ...(isAttackTarget && {
+		      outline: '3px solid rgba(254, 226, 226, 0.55)',
+		      boxShadow: '0 0 10px rgba(248, 113, 113, 0.65), 0 0 18px rgba(248, 113, 113, 0.18)',
+		      borderColor: 'rgba(254, 226, 226, 0.75)',
+		    }),
+		  } as any}
+	    >
 	      <div className="piece-ground-base" />
 
 	      {/* HUD SYSTEM */}
