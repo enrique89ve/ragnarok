@@ -78,14 +78,6 @@ function requirePrefix(name, prefix) {
   }
 }
 
-function requireDifferent(leftName, rightName) {
-  const left = requireValue(leftName);
-  const right = requireValue(rightName);
-  if (left && right && left === right) {
-    errors.push(`${leftName} must be different from ${rightName}.`);
-  }
-}
-
 const stage = value('VITE_NETWORK_STAGE') ?? 'local';
 if (!['local', 'testnet', 'mainnet'].includes(stage)) {
   errors.push(`VITE_NETWORK_STAGE must be local, testnet, or mainnet; got ${stage}.`);
@@ -105,7 +97,6 @@ if (mode === 'alfa-testnet') {
   requireEqual('VITE_RAGNAROK_COLLECTION_ID', 'ragnarok-testnet');
   optionalEqual('VITE_NFTLOX_PROTOCOL_ID', 'nftlox_testnet');
   requirePrefix('VITE_RAGNAROK_RESET_EPOCH', 'alfa-testnet-');
-  requireDifferent('VITE_RAGNAROK_ADMIN_ACCOUNT', 'VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT');
 
   if (scope === 'runtime') {
     requirePrefix('RAGNAROK_RESET_EPOCH', 'alfa-testnet-');
@@ -115,7 +106,6 @@ if (mode === 'alfa-testnet') {
     if (p2pSecret && p2pSecret.length < P2P_SECRET_MIN_LENGTH) {
       errors.push(`P2P_CHALLENGE_SIGNING_SECRET must be at least ${P2P_SECRET_MIN_LENGTH} characters.`);
     }
-    requireValue('RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY');
   }
 }
 

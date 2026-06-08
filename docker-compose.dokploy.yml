@@ -61,9 +61,6 @@ services:
       dockerfile: Dockerfile
       args: *norse-build-vars
     restart: unless-stopped
-    env_file:
-      - path: .env
-        required: false
     environment: *norse-runtime-vars
     expose:
       - "5000"
