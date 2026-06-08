@@ -21,7 +21,7 @@
 		"build:mainnet": "vite build --mode mainnet && npm run build:server",
 		"build:static": "vite build",
 		"verify:runtime-env": "node scripts/verifyRuntimeEnv.mjs",
-		"verify:alfa-runtime-env": "node scripts/verifyRuntimeEnv.mjs --mode alfa-testnet --scope runtime --require-admin-key",
+		"verify:alfa-runtime-env": "node scripts/verifyRuntimeEnv.mjs --mode alfa-testnet --scope runtime",
 		"start": "NODE_ENV=production node dist/index.js",
 		"start:testnet": "NODE_ENV=production node dist/index.js --mode testnet",
 		"start:alfa-testnet": "NODE_ENV=production VITE_NETWORK_STAGE=${VITE_NETWORK_STAGE:-testnet} VITE_RAGNAROK_PROTOCOL_ID=${VITE_RAGNAROK_PROTOCOL_ID:-rk_game_testnet} VITE_RAGNAROK_COLLECTION_ID=${VITE_RAGNAROK_COLLECTION_ID:-ragnarok-testnet} VITE_RAGNAROK_RESET_EPOCH=${VITE_RAGNAROK_RESET_EPOCH:-alfa-testnet-full-nft-2026-05-22} ENABLE_CHAIN_INDEXER=${ENABLE_CHAIN_INDEXER:-true} RAGNAROK_CHAIN_STATE_FILE=${RAGNAROK_CHAIN_STATE_FILE:-data/chain-state.alfa-testnet.json} RAGNAROK_NFT_OWNERSHIP_SOURCE=${RAGNAROK_NFT_OWNERSHIP_SOURCE:-json} node dist/index.js --mode alfa-testnet",

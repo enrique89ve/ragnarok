@@ -73,7 +73,6 @@ ENV RAGNAROK_RESET_EPOCH=alfa-testnet-full-nft-2026-05-22
 ENV RAGNAROK_ADMIN_OPERATOR_ACCOUNT=ragnarok-test-operator
 ENV RAGNAROK_CHAIN_STATE_FILE=data/chain-state.alfa-testnet.json
 ENV RAGNAROK_NFT_OWNERSHIP_SOURCE=json
-ENV RAGNAROK_REQUIRE_ADMIN_KEY=true
 
 COPY package.json package-lock.json ./
 COPY --from=prod-deps /app/node_modules ./node_modules
@@ -85,4 +84,4 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 5000) + '/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 
-CMD ["sh", "-c", "node scripts/verifyRuntimeEnv.mjs --mode ${RAGNAROK_RUNTIME_MODE:-alfa-testnet} --scope runtime --require-admin-key && node dist/index.js --mode ${RAGNAROK_RUNTIME_MODE:-alfa-testnet}"]
+CMD ["sh", "-c", "node scripts/verifyRuntimeEnv.mjs --mode ${RAGNAROK_RUNTIME_MODE:-alfa-testnet} --scope runtime && node dist/index.js --mode ${RAGNAROK_RUNTIME_MODE:-alfa-testnet}"]

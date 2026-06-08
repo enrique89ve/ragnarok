@@ -28,18 +28,6 @@ for (let i = 0; i < rawArgs.length; i += 1) {
 
 const mode = args.get('mode') ?? process.env.MODE ?? process.env.RAGNAROK_RUNTIME_MODE ?? process.env.NODE_ENV ?? '';
 const scope = args.get('scope') ?? 'build';
-const requireAdminKey = args.has('require-admin-key') || (() => {
-  const raw = value('RAGNAROK_REQUIRE_ADMIN_KEY');
-  if (!raw) return false;
-  const normalized = raw.toLowerCase();
-  return ['1', 'true', 'yes', 'on'].includes(normalized);
-})();
-const debugRuntimeEnv = (() => {
-  const raw = value('RAGNAROK_VERIFY_RUNTIME_DEBUG');
-  if (!raw) return false;
-  const normalized = raw.toLowerCase();
-  return ['1', 'true', 'yes', 'on'].includes(normalized);
-})();
 const root = process.cwd();
 
 function loadEnvFile(file, { override = false } = {}) {
@@ -81,13 +69,6 @@ function optionalEqual(name, expected) {
   if (resolved && resolved !== expected) {
     errors.push(`${name} must be ${expected}; got ${resolved}.`);
   }
-}
-
-function debugEnv(name) {
-  const raw = value(name);
-  if (name.includes('KEY')) return raw ? '<SET>' : '<UNSET>';
-  if (raw === null) return '<UNSET>';
-  return raw;
 }
 
 function requirePrefix(name, prefix) {
@@ -134,32 +115,13 @@ if (mode === 'alfa-testnet') {
     if (p2pSecret && p2pSecret.length < P2P_SECRET_MIN_LENGTH) {
       errors.push(`P2P_CHALLENGE_SIGNING_SECRET must be at least ${P2P_SECRET_MIN_LENGTH} characters.`);
     }
-    if (requireAdminKey) {
-      requireValue('RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY');
-    }
+    requireValue('RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY');
   }
 }
 
 if (errors.length > 0) {
   console.error('[verifyRuntimeEnv] Invalid runtime environment:');
   for (const error of errors) console.error(`- ${error}`);
-  if (debugRuntimeEnv) {
-    const toDebug = [
-      'VITE_NETWORK_STAGE',
-      'VITE_RAGNAROK_ADMIN_ACCOUNT',
-      'VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT',
-      'RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY',
-      'RAGNAROK_RUNTIME_MODE',
-      'P2P_CHALLENGE_SIGNING_SECRET',
-      'RAGNAROK_CHAIN_STATE_FILE',
-      'RAGNAROK_NFT_OWNERSHIP_SOURCE',
-      'RAGNAROK_REQUIRE_ADMIN_KEY',
-    ];
-    console.error('[verifyRuntimeEnv] Runtime env (masked):');
-    for (const name of toDebug) {
-      console.error(`- ${name}=${debugEnv(name)}`);
-    }
-  }
   process.exit(1);
 }
 
