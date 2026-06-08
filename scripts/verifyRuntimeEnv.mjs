@@ -28,7 +28,12 @@ for (let i = 0; i < rawArgs.length; i += 1) {
 
 const mode = args.get('mode') ?? process.env.MODE ?? process.env.RAGNAROK_RUNTIME_MODE ?? process.env.NODE_ENV ?? '';
 const scope = args.get('scope') ?? 'build';
-const requireAdminKey = args.has('require-admin-key');
+const requireAdminKey = args.has('require-admin-key') || (() => {
+  const raw = value('RAGNAROK_REQUIRE_ADMIN_KEY');
+  if (!raw) return false;
+  const normalized = raw.toLowerCase();
+  return ['1', 'true', 'yes', 'on'].includes(normalized);
+})();
 const root = process.cwd();
 
 function loadEnvFile(file, { override = false } = {}) {

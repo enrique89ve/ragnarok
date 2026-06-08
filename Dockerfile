@@ -73,6 +73,7 @@ ENV RAGNAROK_RESET_EPOCH=alfa-testnet-full-nft-2026-05-22
 ENV RAGNAROK_ADMIN_OPERATOR_ACCOUNT=ragnarok-test-operator
 ENV RAGNAROK_CHAIN_STATE_FILE=data/chain-state.alfa-testnet.json
 ENV RAGNAROK_NFT_OWNERSHIP_SOURCE=json
+ENV RAGNAROK_REQUIRE_ADMIN_KEY=true
 
 COPY package.json package-lock.json ./
 COPY --from=prod-deps /app/node_modules ./node_modules
