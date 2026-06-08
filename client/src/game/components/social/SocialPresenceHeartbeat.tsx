@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useNFTUsername } from '../../nft/hooks';
-import { getNFTBridge } from '../../nft';
 import { useFriendStore, type Friend } from '../../stores/friendStore';
 import { usePeerStore } from '../../stores/peerStore';
 import { useMatchmakingStore } from '../../stores/matchmakingStore';
+import { ensureFriendSession, invalidateFriendSession } from './friendSession';
 import {
 	availabilityFromConnectionState,
 	isValidAvailabilityHiveUsername,
@@ -17,28 +17,6 @@ import {
 const PRESENCE_HEARTBEAT_INTERVAL_MS = 120_000;
 const PRESENCE_HEARTBEAT_MIN_GAP_MS = 120_000;
 const STORAGE_KEY = 'ragnarok-presence-next-allowed';
-const SOCIAL_HEARTBEAT_ACTION = 'friend-heartbeat';
-
-type AuthHeaders = {
-	readonly 'x-hive-username': string;
-	readonly 'x-hive-signature': string;
-	readonly 'x-hive-timestamp': string;
-};
-
-async function buildPresenceAuthHeaders(username: string): Promise<AuthHeaders | null> {
-	const authBody = await getNFTBridge().buildAuthBody(username, SOCIAL_HEARTBEAT_ACTION, {
-		username,
-	});
-	if (typeof authBody.signature !== 'string') {
-		return null;
-	}
-
-	return {
-		'x-hive-username': username.toLowerCase(),
-		'x-hive-signature': authBody.signature,
-		'x-hive-timestamp': `${authBody.timestamp}`,
-	};
-}
 
 function getStoredNextAllowed(): Map<string, number> {
 	try {
@@ -145,14 +123,12 @@ export default function SocialPresenceHeartbeat() {
 		markPresenceHeartbeatSent(normalizedUsername);
 
 		try {
-			const headers = await buildPresenceAuthHeaders(normalizedUsername);
-			if (!headers) return;
+			if (!await ensureFriendSession(normalizedUsername)) return;
 
-			const response = await fetch('/api/friends/heartbeat', {
+			let response = await fetch('/api/friends/heartbeat', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
-					...headers,
 				},
 				body: JSON.stringify(buildPresenceHeartbeatBody({
 					username: hiveUsername,
@@ -162,6 +138,24 @@ export default function SocialPresenceHeartbeat() {
 				})),
 				signal,
 			});
+
+			if (response.status === 401) {
+				invalidateFriendSession();
+				if (!await ensureFriendSession(normalizedUsername)) return;
+				response = await fetch('/api/friends/heartbeat', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify(buildPresenceHeartbeatBody({
+						username: hiveUsername,
+						friends: getPresenceEligibleFriends(friends),
+						peerId,
+						availability: availabilityRef.current,
+					})),
+					signal,
+				});
+			}
 
 			const payload: unknown = await response.json();
 			if (!response.ok) {

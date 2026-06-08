@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { usePeerStore } from '../../stores/peerStore';
 import { useMatchmaking } from '../../hooks/useMatchmaking';
 import { useNFTUsername } from '../../nft/hooks';
-import { getNFTBridge } from '../../nft';
 import { useFriendStore, type OutgoingFriendChallenge } from '../../stores/friendStore';
 import type { MatchmakingStatus } from '../../stores/matchmakingStore';
 import type { P2PConnectionState } from '../../stores/peerStore';
@@ -18,6 +17,7 @@ import {
 import { Copy, Check, X, Users, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { readPresenceHeartbeatResponse, type ServerSignedChallenge } from '@shared/p2pAvailability';
+import { ensureFriendSession, invalidateFriendSession } from '../social/friendSession';
 import type { ArmySelection } from '../../types/ChessTypes';
 
 interface MultiplayerLobbyProps {
@@ -27,28 +27,6 @@ interface MultiplayerLobbyProps {
 }
 
 const DIRECT_CHALLENGE_POLL_MS = 15_000;
-const SOCIAL_CHALLENGES_ACTION = 'friend-challenges';
-
-type AuthHeaders = {
-	readonly 'x-hive-username': string;
-	readonly 'x-hive-signature': string;
-	readonly 'x-hive-timestamp': string;
-};
-
-async function buildChallengesAuthHeaders(username: string): Promise<AuthHeaders | null> {
-	const authBody = await getNFTBridge().buildAuthBody(username, SOCIAL_CHALLENGES_ACTION, {
-		username,
-	});
-	if (typeof authBody.signature !== 'string') {
-		return null;
-	}
-
-	return {
-		'x-hive-username': username.toLowerCase(),
-		'x-hive-signature': authBody.signature,
-		'x-hive-timestamp': `${authBody.timestamp}`,
-	};
-}
 
 export function getActiveIncomingChallenges(
 	challenges: readonly ServerSignedChallenge[],
@@ -197,12 +175,23 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 	const fetchIncomingChallenges = useCallback(async (signal?: AbortSignal) => {
 		if (!hiveUsername) return;
 		try {
-			const headers = await buildChallengesAuthHeaders(hiveUsername);
-			if (!headers) return;
-			const response = await fetch(`/api/friends/challenges/${encodeURIComponent(hiveUsername)}`, {
-				headers,
+			const normalizedUsername = hiveUsername.toLowerCase();
+			if (!await ensureFriendSession(normalizedUsername)) return;
+
+			let response = await fetch(`/api/friends/challenges/${encodeURIComponent(normalizedUsername)}`, {
+				method: 'GET',
 				signal,
 			});
+
+			if (response.status === 401) {
+				invalidateFriendSession();
+				if (!await ensureFriendSession(normalizedUsername)) return;
+				response = await fetch(`/api/friends/challenges/${encodeURIComponent(normalizedUsername)}`, {
+					method: 'GET',
+					signal,
+				});
+			}
+
 			if (!response.ok) return;
 			const payload: unknown = await response.json();
 			const parsed = readPresenceHeartbeatResponse(payload);

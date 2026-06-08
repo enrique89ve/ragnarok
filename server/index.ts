@@ -265,7 +265,7 @@ app.use('/api/testnet/rune', (_req, res) => {
         log(`admin operator signer ready: ${signer.account} (${signer.publicKey.slice(0, 12)}…)`);
       } catch (err) {
         console.error('[boot] admin operator config invalid:', err instanceof Error ? err.message : err);
-        throw err;
+        log('admin operator signer not configured — /api/admin/broadcast and /api/admin/multisig routes will return 503');
       }
     } else {
       log('admin operator signer not configured — admin broadcast/multisig routes will return 503');

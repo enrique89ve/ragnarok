@@ -1,5 +1,10 @@
 import { Router, type Request, type Response } from 'express';
-import { isValidHiveUsername } from '../services/hiveAuth';
+import { randomBytes } from 'crypto';
+import {
+	isTimestampFresh,
+	isValidHiveUsername,
+	verifyHiveAuth,
+} from '../services/hiveAuth';
 import { hasAcceptedWarbandRelation } from '../services/warbandRelations';
 import { buildServerSignedChallenge } from '../services/p2pChallengeSigner';
 import { consumeWindowRateLimit, type RateLimitBucket } from '../services/p2pRateLimit';
@@ -34,14 +39,117 @@ const MAX_FRIENDS_LIST = 200;
 const CHALLENGE_BODY_KEYS = new Set(['from', 'to', 'peerId']);
 const SOCIAL_HEARTBEAT_ACTION = 'friend-heartbeat';
 const SOCIAL_CHALLENGES_ACTION = 'friend-challenges';
+const SOCIAL_SESSION_ACTION = 'friend-session';
+const SOCIAL_SESSION_COOKIE_NAME = 'ragnarok-friend-session';
+const SOCIAL_SESSION_TTL_MS = 2 * 60 * 60 * 1000;
+const socialSessions = new Map<string, { username: string; expiresAt: number; lastSeenAt: number }>();
 
-const requireFriendHeartbeatAuth = requireHiveHeaderAuth({
-	buildMessage: (_req, username, timestamp) => `ragnarok-${SOCIAL_HEARTBEAT_ACTION}:${username}:${timestamp}`,
-});
+type SocialSessionMessageBody = {
+	readonly username: string;
+	readonly timestamp: number;
+	readonly signature: string;
+};
 
-const requireFriendChallengesAuth = requireHiveHeaderAuth({
-	buildMessage: (_req, username, timestamp) => `ragnarok-${SOCIAL_CHALLENGES_ACTION}:${username}:${timestamp}`,
-});
+function createFriendSessionToken(): string {
+	return randomBytes(32).toString('base64url');
+}
+
+function pruneExpiredSessions(now: number): void {
+	for (const [token, session] of socialSessions.entries()) {
+		if (session.expiresAt <= now) {
+			socialSessions.delete(token);
+		}
+	}
+}
+
+function getCookieValue(cookieHeader: string | undefined, name: string): string | null {
+	if (!cookieHeader) return null;
+	for (const rawPart of cookieHeader.split(';')) {
+		const part = rawPart.trim();
+		const separator = part.indexOf('=');
+		if (separator <= 0) continue;
+		if (part.slice(0, separator) !== name) continue;
+		return part.slice(separator + 1);
+	}
+	return null;
+}
+
+function readFriendSessionRequest(req: Request): FriendSessionRequest | null {
+	const cookieToken = getCookieValue(req.headers.cookie, SOCIAL_SESSION_COOKIE_NAME);
+	if (!cookieToken) return null;
+	const now = Date.now();
+	pruneExpiredSessions(now);
+	const record = socialSessions.get(cookieToken);
+	if (!record) return null;
+	if (record.expiresAt <= now) {
+		socialSessions.delete(cookieToken);
+		return null;
+	}
+	record.lastSeenAt = now;
+	record.expiresAt = Math.max(record.expiresAt, now + SOCIAL_SESSION_TTL_MS);
+	return { username: record.username };
+}
+
+function writeFriendSessionCookie() {
+	return {
+		httpOnly: true,
+		secure: process.env.NODE_ENV === 'production',
+		sameSite: 'lax' as const,
+		path: '/api/friends',
+		maxAge: SOCIAL_SESSION_TTL_MS,
+	};
+}
+
+function readSessionLoginBody(value: unknown): SocialSessionMessageBody | null {
+	if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
+	const body = value as Record<string, unknown>;
+	if (typeof body.username !== 'string') return null;
+	if (typeof body.signature !== 'string') return null;
+	const timestamp = body.timestamp;
+	if (typeof timestamp !== 'number' || !Number.isSafeInteger(timestamp) || timestamp <= 0) return null;
+	return {
+		username: body.username,
+		timestamp,
+		signature: body.signature,
+	};
+}
+
+type FriendSessionRequest = {
+	readonly username: string;
+};
+
+function buildMessageFromSessionBody(body: SocialSessionMessageBody): string {
+	const normalized = body.username.trim().toLowerCase();
+	return `ragnarok-${SOCIAL_SESSION_ACTION}:${normalized}:${body.timestamp}`;
+}
+
+function createRequireFriendAuth(
+	buildMessage: (req: Request, username: string, timestamp: number) => string,
+) {
+	const headerAuth = requireHiveHeaderAuth({
+		buildMessage,
+	});
+
+	return async (req: Request, res: Response, next: () => void): Promise<void> => {
+		const requestSession = readFriendSessionRequest(req);
+		if (requestSession) {
+			const authenticatedReq = req as HiveAuthenticatedRequest;
+			authenticatedReq.hiveUsername = requestSession.username;
+			next();
+			return;
+		}
+
+		await Promise.resolve(headerAuth(req, res, next));
+	};
+}
+
+const requireFriendHeartbeatAuth = createRequireFriendAuth(
+	(_req, username, timestamp) => `ragnarok-${SOCIAL_HEARTBEAT_ACTION}:${username}:${timestamp}`,
+);
+
+const requireFriendChallengesAuth = createRequireFriendAuth(
+	(_req, username, timestamp) => `ragnarok-${SOCIAL_CHALLENGES_ACTION}:${username}:${timestamp}`,
+);
 
 type P2PSocialStats = Readonly<{
 	onlineUsers: number;
@@ -144,6 +252,47 @@ export function getP2PSocialStats(): P2PSocialStats {
 		pendingChallenges,
 	};
 }
+
+router.post('/session/login', async (req: Request, res: Response) => {
+	const body = readSessionLoginBody(req.body);
+	if (!body) {
+		res.status(400).json({ error: 'Invalid social session login body' });
+		return;
+	}
+
+	const normalizedUsername = body.username.trim().toLowerCase();
+	if (!isValidHiveUsername(normalizedUsername)) {
+		res.status(400).json({ error: 'invalid username' });
+		return;
+	}
+
+	if (!isTimestampFresh(body.timestamp)) {
+		res.status(401).json({ error: 'Timestamp is expired' });
+		return;
+	}
+
+	const message = buildMessageFromSessionBody({
+		username: normalizedUsername,
+		timestamp: body.timestamp,
+		signature: body.signature,
+	});
+	const authResult = await verifyHiveAuth(normalizedUsername, message, body.signature);
+	if (!authResult.valid) {
+		res.status(401).json({ error: 'Invalid social session signature' });
+		return;
+	}
+
+	const token = createFriendSessionToken();
+	const now = Date.now();
+	const expiresAt = now + SOCIAL_SESSION_TTL_MS;
+	socialSessions.set(token, {
+		username: normalizedUsername,
+		expiresAt,
+		lastSeenAt: now,
+	});
+	res.cookie(SOCIAL_SESSION_COOKIE_NAME, token, writeFriendSessionCookie());
+	res.json({ success: true, expiresAt });
+});
 
 router.post('/heartbeat', requireFriendHeartbeatAuth, (req: HiveAuthenticatedRequest, res: Response) => {
 	const parsed = parsePresenceHeartbeatBody(req.body);
