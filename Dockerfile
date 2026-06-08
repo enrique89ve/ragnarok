@@ -54,6 +54,7 @@ RUN npm run verify:runtime-env -- --mode=alfa-testnet && npm run build:alfa-test
 FROM deps AS prod-deps
 WORKDIR /app
 RUN npm prune --omit=dev --no-audit --fund=false && npm cache clean --force
+COPY --from=build /app/node_modules/esbuild ./node_modules/esbuild
 
 FROM node:${NODE_VERSION}-alpine${NODE_ALPINE_VERSION} AS runner
 WORKDIR /app
