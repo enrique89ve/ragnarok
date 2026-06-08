@@ -606,8 +606,7 @@
 
 .card-name-banner {
   position: absolute;
-  top: var(--card-banner-y);
-  top: var(--card-banner-y-large);
+  top: 70%;
   left: 3%;
   right: 3%;
   min-height: 12%;
@@ -637,7 +636,7 @@
 .card-name-banner::before {
   content: "";
   position: absolute;
-  top: 50%;
+  top: 70%;
   width: 6px;
   height: 14px;
   background: linear-gradient(
@@ -982,10 +981,10 @@
    .simple-card.{size} set these). Size-specific padding stays inline below. */
 .card-description {
   position: absolute;
-  top: var(--card-desc-y);
+  top: 90%;
   left: 5%;
   right: 5%;
-  bottom: var(--card-desc-bottom);
+  bottom: 10%;
   min-height: 14%;
   display: flex;
   align-items: flex-start;
