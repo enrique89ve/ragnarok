@@ -2,6 +2,7 @@ import { signHiveMessage } from '@/data/HiveAuth';
 
 const SOCIAL_SESSION_ACTION = 'friend-session';
 const SOCIAL_SESSION_ENDPOINT = '/api/friends/session/login';
+const SOCIAL_SESSION_STATUS_ENDPOINT = '/api/friends/session/status';
 
 let ensureSessionPromise: Promise<boolean> | null = null;
 let sessionReady = false;
@@ -23,6 +24,20 @@ export async function ensureFriendSession(username: string): Promise<boolean> {
 
 	ensureSessionPromise = (async () => {
 		try {
+			const statusResponse = await fetch(SOCIAL_SESSION_STATUS_ENDPOINT, {
+				method: 'GET',
+			});
+			if (statusResponse.ok) {
+				const payload = await statusResponse.json().catch(() => null);
+				const sessionUser = typeof payload?.username === 'string' ? normalizeUsername(payload.username) : null;
+				if (sessionUser === normalizedUsername) {
+					sessionReady = true;
+					sessionOwner = normalizedUsername;
+					return true;
+				}
+				invalidateFriendSession();
+			}
+
 			const timestamp = Date.now();
 			const message = buildMessageForFriendSession(normalizedUsername, timestamp);
 			const result = await signHiveMessage(message, {

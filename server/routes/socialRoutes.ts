@@ -294,6 +294,19 @@ router.post('/session/login', async (req: Request, res: Response) => {
 	res.json({ success: true, expiresAt });
 });
 
+router.get('/session/status', (req: Request, res: Response) => {
+	const requestSession = readFriendSessionRequest(req);
+	if (!requestSession) {
+		res.status(401).json({ authenticated: false, reason: 'Session required' });
+		return;
+	}
+
+	res.json({
+		authenticated: true,
+		username: requestSession.username,
+	});
+});
+
 router.post('/heartbeat', requireFriendHeartbeatAuth, (req: HiveAuthenticatedRequest, res: Response) => {
 	const parsed = parsePresenceHeartbeatBody(req.body);
 	if (!parsed.ok) {
