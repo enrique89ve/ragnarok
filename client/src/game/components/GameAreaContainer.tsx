@@ -22,10 +22,14 @@ const GameAreaContainerBase: ForwardRefRenderFunction<HTMLDivElement, GameAreaCo
     'var(--player-area-height)';
   
   // Determine base class names based on area type
-  const baseClassName = 
-    areaType === 'opponent' ? 'opponent-area-container' :
-    areaType === 'battlefield' ? 'battlefield-area-container' :
-    'player-area-container';
+  const areaTypeClass = 
+    areaType === 'opponent' ? 'opponent-area' :
+    areaType === 'battlefield' ? 'battlefield-area' :
+    'player-area';
+
+  // Keep previous class names for backward compatibility while restoring the active
+  // selectors used by the global CSS.
+  const baseClassName = `game-area-container ${areaTypeClass} ${areaTypeClass}-container`;
   
   // Base styles that apply to all container types
   const baseStyles: React.CSSProperties = {

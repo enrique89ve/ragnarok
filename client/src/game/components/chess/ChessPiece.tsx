@@ -88,6 +88,7 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
 		: OWNER_CLASSES.opponent;
 	const isPawn = piece.type === 'pawn';
 	const isKing = piece.type === 'king';
+	const isOpponentKing = isKing && piece.owner !== myCanonicalSide;
   const isAttackTarget = visualState.tag === 'attackable';
   const isQueen = piece.type === 'queen';
   const isRook = piece.type === 'rook';
@@ -151,6 +152,8 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
         }),
       }}
     >
+	      <div className="piece-ground-base" />
+
 	      {/* HUD SYSTEM */}
 	      <div className="piece-hud-container">
 	        <div className="owner-side-subtle-rim" />
@@ -176,6 +179,16 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
         </div>
       )}
 
+      {isKing && hasElement && false && useEnhancedFx && (
+        <span
+          className={cx(
+            "king-contrast-shadow",
+            isOpponentKing && "king-contrast-shadow-opponent"
+        )}
+          aria-hidden="true"
+        />
+      )}
+
       {/* THE PIECE GLYPH */}
 				<PieceGlyph
 					pieceType={piece.type}
@@ -187,11 +200,15 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
 	          !isLocalPlayerPiece && "transform rotate-180"
 	        )}
 				size={isPawn ? 'clamp(18px,47cqw,39px)' : 'clamp(20px,55cqw,47px)'}
-				fallbackTextShadow={isGod
-					? `0 0 12px ${elementGlow.color}cc, ${cellTone === 'light'
-						? '0 2px 6px rgba(0, 0, 0, 0.85)'
-						: '0 2px 6px rgba(0, 0, 0, 0.6), 0 0 8px rgba(255, 255, 255, 0.28)'}`
-					: cellTone === 'light'
+				fallbackTextShadow={isKing
+					? `0 0 4px ${elementGlow.color}66, ${cellTone === 'light'
+						? '0 1px 4px rgba(0, 0, 0, 0.52)'
+						: '0 1px 3px rgba(0, 0, 0, 0.42)'}`
+					: isGod
+						? `0 0 12px ${elementGlow.color}cc, ${cellTone === 'light'
+							? '0 2px 6px rgba(0, 0, 0, 0.85)'
+							: '0 2px 6px rgba(0, 0, 0, 0.6), 0 0 8px rgba(255, 255, 255, 0.28)'}`
+						: cellTone === 'light'
 						? '0 2px 6px rgba(0, 0, 0, 0.85), 0 0 10px rgba(0, 0, 0, 0.45)'
 						: '0 2px 6px rgba(0, 0, 0, 0.6), 0 0 8px rgba(255, 255, 255, 0.26)'}
 				style={{

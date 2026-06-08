@@ -351,13 +351,7 @@ const PieceInfoPanel: React.FC<PieceInfoPanelProps> = ({ boardState }) => {
 	const piece = hoveredId ? boardState.pieces.find(p => p.id === hoveredId) : undefined;
 
 	if (!piece) {
-		return (
-			<div className="w-full max-w-50 rounded-md border border-amber-500/20 bg-black/40 backdrop-blur-sm px-3 py-2 text-center">
-				<div className="text-[10px] uppercase tracking-wider text-amber-400/40">
-					Hover a piece
-				</div>
-			</div>
-		);
+		return <div className="mt-4 h-[74px]" />;
 	}
 
 	const isPlayer = piece.owner === myCanonicalSide;
@@ -374,13 +368,12 @@ const PieceInfoPanel: React.FC<PieceInfoPanelProps> = ({ boardState }) => {
 			initial={{ opacity: 0, y: 4 }}
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ duration: 0.15 }}
-			className="mt-4 w-full max-w-50 rounded-md backdrop-blur-sm px-3 py-2"
+			className="mt-4 w-full max-w-50 px-3 py-2"
 			style={{
-				background: 'rgba(0,0,0,0.55)',
-				borderWidth: '1px',
-				borderStyle: 'solid',
-				borderColor: elementColor + (hasElement ? '99' : '55'),
-				boxShadow: hasElement ? `0 0 18px ${elementColor}33` : '0 4px 12px rgba(0,0,0,0.4)',
+				background: 'rgba(4, 10, 22, 0.98)',
+				border: 'none',
+				color: elementColor,
+				boxShadow: '0 4px 12px rgba(0,0,0,0.45)',
 			}}
 		>
 			<div className="font-bold text-sm leading-tight truncate" style={{ color: elementColor }}>

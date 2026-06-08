@@ -66,7 +66,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
   const shouldAnimateBoard = animationsEnabled && !reduceMotion;
   const shouldRenderEffectFilters = shouldAnimateBoard && enhancedVFX;
   const shouldAnimateTurnBanner = shouldAnimateBoard;
-  
+
   const {
     boardState,
     getPieceAt,
@@ -84,7 +84,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
     isAttackPosition,
     isMinePreviewTile,
   } = useChessBoardInteractions({ disabled, onCombatTriggered });
-  
+
   useEffect(() => {
     const updateBoardRect = () => {
       if (boardRef.current) {
@@ -96,7 +96,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
     window.addEventListener('resize', updateBoardRect);
     return () => window.removeEventListener('resize', updateBoardRect);
   }, []);
-  
+
   const { currentTurn } = boardState;
   const myCanonicalSide = useGameStore(s => s.myCanonicalSide) ?? 'player';
   const isMyTurn = currentTurn === myCanonicalSide;
@@ -162,9 +162,9 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
       : '';
     const targetAttackFrameStyle: React.CSSProperties = isAttack
       ? {
-          border: '4px solid rgba(254, 226, 226, 0.95)',
-          boxShadow: '0 0 26px rgba(248, 113, 113, 0.75), 0 0 12px rgba(185, 28, 28, 0.55) inset',
-        }
+        border: '4px solid rgba(254, 226, 226, 0.95)',
+        boxShadow: '0 0 26px rgba(248, 113, 113, 0.75), 0 0 12px rgba(185, 28, 28, 0.55) inset',
+      }
       : {};
 
     return (
@@ -191,12 +191,12 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
                   ? { x: 0, y: 10, rotate: 90, opacity: 0.45, scale: 1 }
                   : isPieceMoving && pieceMoveOffset
                     ? {
-                        x: [pieceMoveOffset.x, pieceMoveOffset.x * 0.65, pieceMoveOffset.x * 0.22, 0],
-                        y: [pieceMoveOffset.y, pieceMoveOffset.y * 0.65, pieceMoveOffset.y * 0.22, 0],
-                        rotate: [0, 0, 0, 0],
-                        scale: [0.985, 0.995, 1, 1],
-                        opacity: 1,
-                      }
+                      x: [pieceMoveOffset.x, pieceMoveOffset.x * 0.65, pieceMoveOffset.x * 0.22, 0],
+                      y: [pieceMoveOffset.y, pieceMoveOffset.y * 0.65, pieceMoveOffset.y * 0.22, 0],
+                      rotate: [0, 0, 0, 0],
+                      scale: [0.985, 0.995, 1, 1],
+                      opacity: 1,
+                    }
                     : { x: 0, y: 0, rotate: 0, opacity: 1, scale: 1 }
               }
               transition={isPieceMoving ? PIECE_SLIDE_TRANSITION : PIECE_REST_TRANSITION}
@@ -278,26 +278,8 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
       className="chess-board-container flex flex-col items-center"
       data-motion={shouldAnimateBoard ? 'on' : 'off'}
     >
-      {shouldRenderEffectFilters && (
-        <svg className="absolute w-0 h-0 invisible">
-          <defs>
-            <filter id="royal-flame-filter" x="-20%" y="-20%" width="140%" height="140%">
-              <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" seed="1">
-                <animate attributeName="seed" values="1;100;1" dur="10s" repeatCount="indefinite" />
-              </feTurbulence>
-              <feDisplacementMap in="SourceGraphic" scale="15">
-                <animate attributeName="scale" values="10;20;10" dur="3s" repeatCount="indefinite" />
-              </feDisplacementMap>
-            </filter>
-            <filter id="elite-aura-filter" x="-10%" y="-10%" width="120%" height="120%">
-              <feTurbulence type="turbulence" baseFrequency="0.03" numOctaves="2">
-                <animate attributeName="baseFrequency" values="0.03;0.05;0.03" dur="5s" repeatCount="indefinite" />
-              </feTurbulence>
-              <feDisplacementMap in="SourceGraphic" scale="6" />
-            </filter>
-          </defs>
-        </svg>
-      )}
+      {/* SVG displacement filters removed: feTurbulence+feDisplacementMap caused visual pixelation.
+           Effects are now handled purely via CSS blur/glow in ChessPiece.css */}
 
       <div
         className="chess-turn-banner mb-4 py-2 px-6 bg-slate-900/60 border border-slate-700 rounded-full"
@@ -307,7 +289,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
           {isMyTurn ? 'ᚱ YOUR COMMAND ᚱ' : 'ᚱ FOE STIRS ᚱ'}
         </span>
       </div>
-      
+
       <div className="relative [perspective:1200px]">
         <motion.div
           ref={boardRef}
@@ -321,7 +303,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
           {orderedCells}
         </motion.div>
       </div>
-      
+
       <ChessAttackAnimation
         key={attackAnimationKey}
         animation={pendingAttackAnimation}

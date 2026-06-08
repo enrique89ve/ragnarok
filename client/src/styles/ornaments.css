@@ -28,58 +28,58 @@
    ============================================ */
 
 .ornament-divider {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 0.75rem;
-	width: 100%;
-	margin: 0;
-	padding: 0;
-	border: none;
-	overflow: visible;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  overflow: visible;
 }
 
 .ornament-divider::before,
 .ornament-divider::after {
-	content: '';
-	flex: 1;
-	height: 1px;
-	background: linear-gradient(
-		90deg,
-		transparent,
-		color-mix(in srgb, var(--gold-300) 45%, transparent) 40%,
-		color-mix(in srgb, var(--gold-300) 60%, transparent) 50%,
-		color-mix(in srgb, var(--gold-300) 45%, transparent) 60%,
-		transparent
-	);
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--gold-300) 45%, transparent) 40%,
+    color-mix(in srgb, var(--gold-300) 60%, transparent) 50%,
+    color-mix(in srgb, var(--gold-300) 45%, transparent) 60%,
+    transparent
+  );
 }
 
 /* The rhombus ornament — uses the rhombus metrics generated for golden ratio */
 .ornament-divider-mark {
-	width: 12px;
-	height: 12px;
-	background: linear-gradient(135deg, var(--gold-200), var(--gold-500));
-	clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-	box-shadow: 0 0 8px color-mix(in srgb, var(--gold-300) 50%, transparent);
-	flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  background: linear-gradient(135deg, var(--gold-200), var(--gold-500));
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--gold-300) 50%, transparent);
+  flex-shrink: 0;
 }
 
 .ornament-divider-mark--small {
-	width: 8px;
-	height: 8px;
+  width: 8px;
+  height: 8px;
 }
 
 .ornament-divider-mark--large {
-	width: 16px;
-	height: 16px;
+  width: 16px;
+  height: 16px;
 }
 
 /* Triple ornament variant — 3 diamonds in a row */
 .ornament-divider-mark-trio {
-	display: inline-flex;
-	gap: 6px;
-	align-items: center;
-	flex-shrink: 0;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 /* ============================================
@@ -91,98 +91,98 @@
    ============================================ */
 
 .runic-panel {
-	position: relative;
-	/* Caller supplies bg/border. This class only enables corner positioning. */
+  position: relative;
+  /* Caller supplies bg/border. This class only enables corner positioning. */
 }
 
 .runic-corners {
-	position: absolute;
-	inset: 0;
-	pointer-events: none;
-	z-index: 1;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* Top-left corner */
 .runic-corners::before {
-	content: '';
-	position: absolute;
-	top: -1px;
-	left: -1px;
-	width: 18px;
-	height: 18px;
-	border-top: 1px solid color-mix(in srgb, var(--gold-300) 70%, transparent);
-	border-left: 1px solid color-mix(in srgb, var(--gold-300) 70%, transparent);
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 18px;
+  height: 18px;
+  border-top: 1px solid color-mix(in srgb, var(--gold-300) 70%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--gold-300) 70%, transparent);
 }
 
 /* Bottom-right corner */
 .runic-corners::after {
-	content: '';
-	position: absolute;
-	bottom: -1px;
-	right: -1px;
-	width: 18px;
-	height: 18px;
-	border-bottom: 1px solid color-mix(in srgb, var(--gold-300) 70%, transparent);
-	border-right: 1px solid color-mix(in srgb, var(--gold-300) 70%, transparent);
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 18px;
+  height: 18px;
+  border-bottom: 1px solid color-mix(in srgb, var(--gold-300) 70%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--gold-300) 70%, transparent);
 }
 
 /* Top-right + bottom-left via a wrapper extension */
 .runic-corners-extra {
-	position: absolute;
-	inset: 0;
-	pointer-events: none;
-	z-index: 1;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* Top-right corner */
 .runic-corners-extra::before {
-	content: '';
-	position: absolute;
-	top: -1px;
-	right: -1px;
-	width: 18px;
-	height: 18px;
-	border-top: 1px solid color-mix(in srgb, var(--gold-300) 70%, transparent);
-	border-right: 1px solid color-mix(in srgb, var(--gold-300) 70%, transparent);
+  content: "";
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 18px;
+  height: 18px;
+  border-top: 1px solid color-mix(in srgb, var(--gold-300) 70%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--gold-300) 70%, transparent);
 }
 
 /* Bottom-left corner */
 .runic-corners-extra::after {
-	content: '';
-	position: absolute;
-	bottom: -1px;
-	left: -1px;
-	width: 18px;
-	height: 18px;
-	border-bottom: 1px solid color-mix(in srgb, var(--gold-300) 70%, transparent);
-	border-left: 1px solid color-mix(in srgb, var(--gold-300) 70%, transparent);
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: -1px;
+  width: 18px;
+  height: 18px;
+  border-bottom: 1px solid color-mix(in srgb, var(--gold-300) 70%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--gold-300) 70%, transparent);
 }
 
 /* Variants */
 .runic-corners--gold {
-	--ornament-corner-color: var(--gold-300);
+  --ornament-corner-color: var(--gold-300);
 }
 
 .runic-corners--bifrost::before,
 .runic-corners--bifrost::after,
 .runic-corners--bifrost ~ .runic-corners-extra::before,
 .runic-corners--bifrost ~ .runic-corners-extra::after {
-	border-color: color-mix(in srgb, var(--bifrost-300) 70%, transparent);
+  border-color: color-mix(in srgb, var(--bifrost-300) 70%, transparent);
 }
 
 .runic-corners--ember::before,
 .runic-corners--ember::after,
 .runic-corners--ember ~ .runic-corners-extra::before,
 .runic-corners--ember ~ .runic-corners-extra::after {
-	border-color: color-mix(in srgb, var(--ember-300) 70%, transparent);
+  border-color: color-mix(in srgb, var(--ember-300) 70%, transparent);
 }
 
 .runic-corners--lg::before,
 .runic-corners--lg::after,
 .runic-corners--lg ~ .runic-corners-extra::before,
 .runic-corners--lg ~ .runic-corners-extra::after {
-	width: 26px;
-	height: 26px;
+  width: 26px;
+  height: 26px;
 }
 
 /* ============================================
@@ -193,72 +193,78 @@
    ============================================ */
 
 .hex-frame {
-	position: relative;
-	display: inline-block;
-	padding: 2px;
-	background: linear-gradient(135deg, var(--gold-200), var(--gold-500));
-	clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-	transition: filter 0.25s ease;
+  position: relative;
+  display: inline-block;
+  padding: 2px;
+  background: linear-gradient(135deg, var(--gold-200), var(--gold-500));
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  transition: filter 0.25s ease;
 }
 
 .hex-frame:hover {
-	filter: drop-shadow(0 0 12px color-mix(in srgb, var(--gold-300) 60%, transparent));
+  filter: drop-shadow(
+    0 0 12px color-mix(in srgb, var(--gold-300) 60%, transparent)
+  );
 }
 
 .hex-frame-inner {
-	clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-	background: var(--obsidian-900);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 100%;
-	height: 100%;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  background: var(--obsidian-900);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
 }
 
 .hex-frame--bifrost {
-	background: linear-gradient(135deg, var(--bifrost-300), var(--bifrost-500));
+  background: linear-gradient(135deg, var(--bifrost-300), var(--bifrost-500));
 }
 
 .hex-frame--bifrost:hover {
-	filter: drop-shadow(0 0 12px color-mix(in srgb, var(--bifrost-300) 60%, transparent));
+  filter: drop-shadow(
+    0 0 12px color-mix(in srgb, var(--bifrost-300) 60%, transparent)
+  );
 }
 
 .hex-frame--ember {
-	background: linear-gradient(135deg, var(--ember-300), var(--ember-500));
+  background: linear-gradient(135deg, var(--ember-300), var(--ember-500));
 }
 
 .hex-frame--ember:hover {
-	filter: drop-shadow(0 0 12px color-mix(in srgb, var(--ember-300) 60%, transparent));
+  filter: drop-shadow(
+    0 0 12px color-mix(in srgb, var(--ember-300) 60%, transparent)
+  );
 }
 
 .hex-frame--obsidian {
-	background: linear-gradient(135deg, var(--obsidian-600), var(--obsidian-700));
+  background: linear-gradient(135deg, var(--obsidian-600), var(--obsidian-700));
 }
 
 /* Sizes */
 .hex-frame--xs {
-	width: 38px;
-	height: 44px;
+  width: 38px;
+  height: 44px;
 }
 
 .hex-frame--sm {
-	width: 48px;
-	height: 56px;
+  width: 48px;
+  height: 56px;
 }
 
 .hex-frame--md {
-	width: 72px;
-	height: 84px;
+  width: 72px;
+  height: 84px;
 }
 
 .hex-frame--lg {
-	width: 110px;
-	height: 128px;
+  width: 110px;
+  height: 128px;
 }
 
 .hex-frame--xl {
-	width: 160px;
-	height: 184px;
+  width: 160px;
+  height: 184px;
 }
 
 /* ============================================
@@ -271,138 +277,157 @@
    ============================================ */
 
 .btn-runic {
-	position: relative;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	gap: 0.625rem;
-	padding: 0.875rem 1.5rem;
-	font-family: var(--type-display);
-	font-size: 0.8125rem;
-	font-weight: 700;
-	letter-spacing: 0.18em;
-	text-transform: uppercase;
-	border: none;
-	cursor: pointer;
-	clip-path: polygon(
-		8px 0,
-		calc(100% - 8px) 0,
-		100% 8px,
-		100% calc(100% - 8px),
-		calc(100% - 8px) 100%,
-		8px 100%,
-		0 calc(100% - 8px),
-		0 8px
-	);
-	transition: transform 0.2s ease, box-shadow 0.25s ease, filter 0.2s ease;
-	overflow: hidden;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  padding: 0.875rem 1.5rem;
+  font-family: var(--type-display);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  clip-path: polygon(
+    8px 0,
+    calc(100% - 8px) 0,
+    100% 8px,
+    100% calc(100% - 8px),
+    calc(100% - 8px) 100%,
+    8px 100%,
+    0 calc(100% - 8px),
+    0 8px
+  );
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.25s ease,
+    filter 0.2s ease;
+  overflow: hidden;
 }
 
 .btn-runic:disabled {
-	cursor: not-allowed;
-	filter: grayscale(0.7) opacity(0.5);
+  cursor: not-allowed;
+  filter: grayscale(0.7) opacity(0.5);
 }
 
 .btn-runic:not(:disabled):hover {
-	transform: translateY(-1px) scale(1.015);
+  transform: translateY(-1px) scale(1.015);
 }
 
 .btn-runic:not(:disabled):active {
-	transform: translateY(0) scale(0.98);
+  transform: translateY(0) scale(0.98);
 }
 
 /* Gold sweep effect on hover */
 .btn-runic::after {
-	content: '';
-	position: absolute;
-	top: 0;
-	left: -120%;
-	width: 60%;
-	height: 100%;
-	background: linear-gradient(
-		90deg,
-		transparent,
-		color-mix(in srgb, var(--ink-0) 25%, transparent),
-		transparent
-	);
-	transform: skewX(-20deg);
-	transition: left 0.6s ease;
-	pointer-events: none;
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--ink-0) 25%, transparent),
+    transparent
+  );
+  transform: skewX(-20deg);
+  transition: left 0.6s ease;
+  pointer-events: none;
 }
 
 .btn-runic:not(:disabled):hover::after {
-	left: 120%;
+  left: 120%;
 }
 
 /* Corner studs — small diamonds at each corner */
 .btn-runic-stud {
-	width: 5px;
-	height: 5px;
-	clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-	background: currentColor;
-	opacity: 0.85;
-	flex-shrink: 0;
+  width: 5px;
+  height: 5px;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  background: currentColor;
+  opacity: 0.85;
+  flex-shrink: 0;
 }
 
 /* GOLD variant — primary CTA */
 .btn-runic--gold {
-	background: linear-gradient(180deg, var(--gold-300) 0%, var(--gold-500) 100%);
-	color: var(--obsidian-950);
-	box-shadow:
-		0 0 0 1px color-mix(in srgb, var(--gold-200) 60%, transparent),
-		0 0 22px -6px color-mix(in srgb, var(--gold-300) 65%, transparent);
+  background: linear-gradient(180deg, var(--gold-300) 0%, var(--gold-500) 100%);
+  color: var(--obsidian-950);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--gold-200) 60%, transparent),
+    0 0 22px -6px color-mix(in srgb, var(--gold-300) 65%, transparent);
 }
 
 .btn-runic--gold:not(:disabled):hover {
-	background: linear-gradient(180deg, var(--gold-200) 0%, var(--gold-400) 100%);
-	box-shadow:
-		0 0 0 1px var(--gold-200),
-		0 0 32px -4px color-mix(in srgb, var(--gold-300) 95%, transparent);
+  background: linear-gradient(180deg, var(--gold-200) 0%, var(--gold-400) 100%);
+  box-shadow:
+    0 0 0 1px var(--gold-200),
+    0 0 32px -4px color-mix(in srgb, var(--gold-300) 95%, transparent);
 }
 
 /* OBSIDIAN variant — secondary action */
 .btn-runic--obsidian {
-	background: linear-gradient(180deg, var(--obsidian-700) 0%, var(--obsidian-800) 100%);
-	color: var(--ink-0);
-	box-shadow:
-		0 0 0 1px color-mix(in srgb, var(--obsidian-500) 60%, transparent),
-		0 0 16px -8px color-mix(in srgb, var(--gold-300) 25%, transparent);
+  background: linear-gradient(
+    180deg,
+    var(--obsidian-700) 0%,
+    var(--obsidian-800) 100%
+  );
+  color: var(--ink-0);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--obsidian-500) 60%, transparent),
+    0 0 16px -8px color-mix(in srgb, var(--gold-300) 25%, transparent);
 }
 
 .btn-runic--obsidian:not(:disabled):hover {
-	background: linear-gradient(180deg, var(--obsidian-600) 0%, var(--obsidian-700) 100%);
-	box-shadow:
-		0 0 0 1px color-mix(in srgb, var(--gold-300) 50%, transparent),
-		0 0 22px -6px color-mix(in srgb, var(--gold-300) 45%, transparent);
+  background: linear-gradient(
+    180deg,
+    var(--obsidian-600) 0%,
+    var(--obsidian-700) 100%
+  );
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--gold-300) 50%, transparent),
+    0 0 22px -6px color-mix(in srgb, var(--gold-300) 45%, transparent);
 }
 
 /* BIFROST variant — informational/mystic */
 .btn-runic--bifrost {
-	background: linear-gradient(180deg, var(--bifrost-500) 0%, color-mix(in srgb, var(--bifrost-500) 70%, var(--obsidian-900)) 100%);
-	color: var(--ink-0);
-	box-shadow:
-		0 0 0 1px color-mix(in srgb, var(--bifrost-300) 60%, transparent),
-		0 0 18px -6px color-mix(in srgb, var(--bifrost-500) 50%, transparent);
+  background: linear-gradient(
+    180deg,
+    var(--bifrost-500) 0%,
+    color-mix(in srgb, var(--bifrost-500) 70%, var(--obsidian-900)) 100%
+  );
+  color: var(--ink-0);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--bifrost-300) 60%, transparent),
+    0 0 18px -6px color-mix(in srgb, var(--bifrost-500) 50%, transparent);
 }
 
 .btn-runic--bifrost:not(:disabled):hover {
-	background: linear-gradient(180deg, var(--bifrost-300) 0%, var(--bifrost-500) 100%);
-	box-shadow:
-		0 0 0 1px var(--bifrost-300),
-		0 0 28px -4px color-mix(in srgb, var(--bifrost-300) 75%, transparent);
+  background: linear-gradient(
+    180deg,
+    var(--bifrost-300) 0%,
+    var(--bifrost-500) 100%
+  );
+  box-shadow:
+    0 0 0 1px var(--bifrost-300),
+    0 0 28px -4px color-mix(in srgb, var(--bifrost-300) 75%, transparent);
 }
 
 /* Sizes */
 .btn-runic--sm {
-	padding: 0.5rem 1rem;
-	font-size: 0.6875rem;
-	letter-spacing: 0.16em;
+  padding: 0.5rem 1rem;
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
 }
 
 .btn-runic--lg {
-	padding: 1.125rem 2rem;
-	font-size: 0.9375rem;
-	letter-spacing: 0.22em;
+  padding: 1.125rem 2rem;
+  font-size: 0.9375rem;
+  letter-spacing: 0.22em;
 }
 
 /* ============================================
@@ -416,66 +441,71 @@
    ============================================ */
 
 .section-heading {
-	display: flex;
-	flex-direction: column;
-	gap: 0.5rem;
-	margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .section-heading-kicker {
-	font-family: var(--type-ui);
-	font-family: 'JetBrains Mono', ui-monospace, monospace;
-	font-size: 0.6875rem;
-	font-weight: 600;
-	letter-spacing: 0.32em;
-	text-transform: uppercase;
-	color: var(--gold-300);
-	display: inline-flex;
-	align-items: center;
-	gap: 0.5rem;
+  font-family: var(--type-ui);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--gold-300);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .section-heading-kicker::before {
-	content: '';
-	width: 4px;
-	height: 12px;
-	border-radius: 1px;
-	background: var(--gold-300);
+  content: "";
+  width: 4px;
+  height: 12px;
+  border-radius: 1px;
+  background: var(--gold-300);
 }
 
 .section-heading-title {
-	font-family: var(--type-display);
-	font-size: clamp(1.75rem, 3.5vw, 2.5rem);
-	font-weight: 900;
-	letter-spacing: 0.10em;
-	text-transform: uppercase;
-	line-height: 1.0;
-	margin: 0;
-	color: var(--ink-0);
-	background: linear-gradient(180deg, var(--gold-100), var(--gold-300), var(--gold-500));
-	-webkit-background-clip: text;
-	background-clip: text;
-	-webkit-text-fill-color: transparent;
+  font-family: var(--type-display);
+  font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1;
+  margin: 0;
+  color: var(--ink-0);
+  background: linear-gradient(
+    180deg,
+    var(--gold-100),
+    var(--gold-300),
+    var(--gold-500)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .section-heading-title--ink {
-	background: none;
-	-webkit-text-fill-color: var(--ink-0);
-	color: var(--ink-0);
+  background: none;
+  -webkit-text-fill-color: var(--ink-0);
+  color: var(--ink-0);
 }
 
 .section-heading-subtitle {
-	font-family: var(--type-ui);
-	font-size: 0.9375rem;
-	color: var(--ink-200);
-	max-width: 38rem;
-	line-height: 1.55;
-	margin: 0;
+  font-family: var(--type-ui);
+  font-size: 0.9375rem;
+  color: var(--ink-200);
+  max-width: 38rem;
+  line-height: 1.55;
+  margin: 0;
 }
 
 .section-heading-rule {
-	margin-top: 0.625rem;
-	max-width: 12rem;
+  margin-top: 0.625rem;
+  max-width: 12rem;
 }
 
 /* ============================================
@@ -484,18 +514,18 @@
    ============================================ */
 
 .texture-grain {
-	position: relative;
+  position: relative;
 }
 
 .texture-grain::after {
-	content: '';
-	position: absolute;
-	inset: 0;
-	pointer-events: none;
-	mix-blend-mode: overlay;
-	opacity: 0.08;
-	background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-	border-radius: inherit;
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  opacity: 0.08;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  border-radius: inherit;
 }
 
 /* ============================================
@@ -504,26 +534,26 @@
    ============================================ */
 
 .numeric-display {
-	font-family: var(--type-numeric);
-	font-weight: 700;
-	font-style: normal;
-	letter-spacing: 0.04em;
-	font-variant-numeric: tabular-nums;
+  font-family: var(--type-numeric);
+  font-weight: 700;
+  font-style: normal;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
 }
 
 .numeric-display--xl {
-	font-size: 2.25rem;
-	line-height: 1.0;
+  font-size: 2.25rem;
+  line-height: 1;
 }
 
 .numeric-display--lg {
-	font-size: 1.5rem;
-	line-height: 1.1;
+  font-size: 1.5rem;
+  line-height: 1.1;
 }
 
 .numeric-display--md {
-	font-size: 1.125rem;
-	line-height: 1.2;
+  font-size: 1.125rem;
+  line-height: 1.2;
 }
 
 /* ============================================
@@ -539,42 +569,54 @@
    The host establishes a positioning context; the SVG sits behind via z-index. */
 
 .sigil-host {
-	position: relative;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .sigil-backplate {
-	position: absolute;
-	width: 160%;
-	height: 160%;
-	pointer-events: none;
-	opacity: 0.18;
-	z-index: 0;
-	animation: sigil-rotate 60s linear infinite;
+  position: absolute;
+  width: 160%;
+  height: 160%;
+  pointer-events: none;
+  opacity: 0.18;
+  z-index: 0;
+  animation: sigil-rotate 60s linear infinite;
 }
 
 .sigil-host:hover .sigil-backplate,
 .runic-panel:hover .sigil-backplate {
-	opacity: 0.32;
-	transition: opacity 0.4s ease;
+  opacity: 0.32;
+  transition: opacity 0.4s ease;
 }
 
-.sigil-backplate--standard { color: var(--bifrost-300); }
-.sigil-backplate--premium  { color: var(--gold-300); }
-.sigil-backplate--mythic   { color: var(--ember-300); }
-.sigil-backplate--obsidian { color: var(--gold-300); }
+.sigil-backplate--standard {
+  color: var(--bifrost-300);
+}
+.sigil-backplate--premium {
+  color: var(--gold-300);
+}
+.sigil-backplate--mythic {
+  color: var(--ember-300);
+}
+.sigil-backplate--obsidian {
+  color: var(--gold-300);
+}
 
 /* Ensure the icon sits above the ring */
 .sigil-host .hex-frame {
-	position: relative;
-	z-index: 1;
+  position: relative;
+  z-index: 1;
 }
 
 @keyframes sigil-rotate {
-	from { transform: rotate(0deg); }
-	to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* 8.2 ORNATE CORNERS — replaces .runic-corners on hero panels.
@@ -591,27 +633,48 @@
 */
 
 .ornate-corners-host {
-	position: relative;
+  position: relative;
 }
 
 .ornate-corner {
-	position: absolute;
-	width: 28px;
-	height: 28px;
-	color: color-mix(in oklch, var(--gold-300) 70%, transparent);
-	pointer-events: none;
-	z-index: 2;
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  color: color-mix(in oklch, var(--gold-300) 70%, transparent);
+  pointer-events: none;
+  z-index: 2;
 }
 
-.ornate-corner--tl { top: -1px; left: -1px; }
-.ornate-corner--tr { top: -1px; right: -1px; transform: rotate(90deg); }
-.ornate-corner--br { bottom: -1px; right: -1px; transform: rotate(180deg); }
-.ornate-corner--bl { bottom: -1px; left: -1px; transform: rotate(270deg); }
+.ornate-corner--tl {
+  top: -1px;
+  left: -1px;
+}
+.ornate-corner--tr {
+  top: -1px;
+  right: -1px;
+  transform: rotate(90deg);
+}
+.ornate-corner--br {
+  bottom: -1px;
+  right: -1px;
+  transform: rotate(180deg);
+}
+.ornate-corner--bl {
+  bottom: -1px;
+  left: -1px;
+  transform: rotate(270deg);
+}
 
 /* Tier color overrides — applied at host level via descendant selector */
-.ornate-corners-host--standard .ornate-corner { color: color-mix(in oklch, var(--bifrost-300) 65%, transparent); }
-.ornate-corners-host--premium  .ornate-corner { color: color-mix(in oklch, var(--gold-300) 75%, transparent); }
-.ornate-corners-host--mythic   .ornate-corner { color: color-mix(in oklch, var(--ember-300) 75%, transparent); }
+.ornate-corners-host--standard .ornate-corner {
+  color: color-mix(in oklch, var(--bifrost-300) 65%, transparent);
+}
+.ornate-corners-host--premium .ornate-corner {
+  color: color-mix(in oklch, var(--gold-300) 75%, transparent);
+}
+.ornate-corners-host--mythic .ornate-corner {
+  color: color-mix(in oklch, var(--ember-300) 75%, transparent);
+}
 
 /* 8.3 NUMERIC RITUAL — wraps prices/counts so they read as sigils, not bare numbers.
    Structure:
@@ -623,54 +686,78 @@
 */
 
 .numeric-ritual {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.625rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
 }
 
 .numeric-ritual-rule {
-	width: 14px;
-	height: 1px;
-	background: linear-gradient(90deg, transparent, color-mix(in oklch, var(--gold-300) 75%, transparent));
-	transition: width 0.25s ease;
+  width: 14px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--gold-300) 75%, transparent)
+  );
+  transition: width 0.25s ease;
 }
 
 .numeric-ritual-rule:last-child {
-	background: linear-gradient(270deg, transparent, color-mix(in oklch, var(--gold-300) 75%, transparent));
+  background: linear-gradient(
+    270deg,
+    transparent,
+    color-mix(in oklch, var(--gold-300) 75%, transparent)
+  );
 }
 
 .runic-panel:hover .numeric-ritual-rule,
 .numeric-ritual:hover .numeric-ritual-rule {
-	width: 20px;
+  width: 20px;
 }
 
 .numeric-ritual--gold .numeric-display {
-	color: var(--gold-300);
-	text-shadow: 0 0 12px color-mix(in oklch, var(--gold-300) 35%, transparent);
+  color: var(--gold-300);
+  text-shadow: 0 0 12px color-mix(in oklch, var(--gold-300) 35%, transparent);
 }
 
 .numeric-ritual--bifrost .numeric-display {
-	color: var(--bifrost-300);
-	text-shadow: 0 0 12px color-mix(in oklch, var(--bifrost-300) 35%, transparent);
+  color: var(--bifrost-300);
+  text-shadow: 0 0 12px color-mix(in oklch, var(--bifrost-300) 35%, transparent);
 }
 
 .numeric-ritual--bifrost .numeric-ritual-rule {
-	background: linear-gradient(90deg, transparent, color-mix(in oklch, var(--bifrost-300) 75%, transparent));
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--bifrost-300) 75%, transparent)
+  );
 }
 .numeric-ritual--bifrost .numeric-ritual-rule:last-child {
-	background: linear-gradient(270deg, transparent, color-mix(in oklch, var(--bifrost-300) 75%, transparent));
+  background: linear-gradient(
+    270deg,
+    transparent,
+    color-mix(in oklch, var(--bifrost-300) 75%, transparent)
+  );
 }
 
 .numeric-ritual--ember .numeric-display {
-	color: var(--ember-300);
-	text-shadow: 0 0 12px color-mix(in oklch, var(--ember-300) 40%, transparent);
+  color: var(--ember-300);
+  text-shadow: 0 0 12px color-mix(in oklch, var(--ember-300) 40%, transparent);
 }
 
 .numeric-ritual--ember .numeric-ritual-rule {
-	background: linear-gradient(90deg, transparent, color-mix(in oklch, var(--ember-300) 75%, transparent));
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--ember-300) 75%, transparent)
+  );
 }
 .numeric-ritual--ember .numeric-ritual-rule:last-child {
-	background: linear-gradient(270deg, transparent, color-mix(in oklch, var(--ember-300) 75%, transparent));
+  background: linear-gradient(
+    270deg,
+    transparent,
+    color-mix(in oklch, var(--ember-300) 75%, transparent)
+  );
 }
 
 /* 8.4 TIER INSCRIPTION — small uppercase prefix above pack name.
@@ -678,70 +765,82 @@
    Tighter tracking than .section-heading-kicker — feels engraved, not stamped. */
 
 .tier-inscription {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.5rem;
-	font-family: 'JetBrains Mono', ui-monospace, monospace;
-	font-size: 0.75rem;             /* 12px — floor, was 10px */
-	font-weight: 600;
-	letter-spacing: 0.32em;
-	text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.75rem; /* 12px — floor, was 10px */
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
 }
 
 .tier-inscription::before,
 .tier-inscription::after {
-	content: '';
-	width: 8px;
-	height: 1px;
-	background: currentColor;
-	opacity: 0.5;
+  content: "";
+  width: 8px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.5;
 }
 
-.tier-inscription--standard { color: var(--bifrost-300); }
-.tier-inscription--premium  { color: var(--gold-300); }
-.tier-inscription--mythic   { color: var(--ember-300); }
-.tier-inscription--neutral  { color: var(--gold-300); }
+.tier-inscription--standard {
+  color: var(--bifrost-300);
+}
+.tier-inscription--premium {
+  color: var(--gold-300);
+}
+.tier-inscription--mythic {
+  color: var(--ember-300);
+}
+.tier-inscription--neutral {
+  color: var(--gold-300);
+}
 
 /* 8.5 RUNIC STAMP — hex-shaped seal, replaces .guarantee-tag on premium surfaces.
    Reads as forge mark / wax seal. Carries a small diamond glyph as prefix. */
 
 .runic-stamp {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.375rem;
-	padding: 0.3rem 0.7rem;
-	font-family: var(--type-display);
-	font-size: 0.625rem;
-	font-weight: 700;
-	letter-spacing: 0.18em;
-	text-transform: uppercase;
-	color: var(--gold-200);
-	background: color-mix(in oklch, var(--gold-300) 10%, var(--obsidian-900));
-	border: 1px solid color-mix(in oklch, var(--gold-300) 35%, transparent);
-	clip-path: polygon(8% 0%, 92% 0%, 100% 50%, 92% 100%, 8% 100%, 0% 50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.3rem 0.7rem;
+  font-family: var(--type-display);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold-200);
+  background: color-mix(in oklch, var(--gold-300) 10%, var(--obsidian-900));
+  border: 1px solid color-mix(in oklch, var(--gold-300) 35%, transparent);
+  clip-path: polygon(8% 0%, 92% 0%, 100% 50%, 92% 100%, 8% 100%, 0% 50%);
 }
 
 .runic-stamp::before {
-	content: '';
-	width: 4px;
-	height: 4px;
-	background: var(--gold-300);
-	clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  content: "";
+  width: 4px;
+  height: 4px;
+  background: var(--gold-300);
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
 }
 
 .runic-stamp--standard {
-	color: var(--bifrost-100);
-	background: color-mix(in oklch, var(--bifrost-300) 12%, var(--obsidian-900));
-	border-color: color-mix(in oklch, var(--bifrost-300) 35%, transparent);
+  color: var(--bifrost-100);
+  background: color-mix(in oklch, var(--bifrost-300) 12%, var(--obsidian-900));
+  border-color: color-mix(in oklch, var(--bifrost-300) 35%, transparent);
 }
-.runic-stamp--standard::before { background: var(--bifrost-300); }
+.runic-stamp--standard::before {
+  background: var(--bifrost-300);
+}
 
 .runic-stamp--ember {
-	color: var(--ember-200);
-	background: color-mix(in oklch, var(--ember-300) 14%, var(--obsidian-900));
-	border-color: color-mix(in oklch, var(--ember-300) 40%, transparent);
+  color: var(--ember-200);
+  background: color-mix(in oklch, var(--ember-300) 14%, var(--obsidian-900));
+  border-color: color-mix(in oklch, var(--ember-300) 40%, transparent);
 }
-.runic-stamp--ember::before { background: var(--ember-300); }
+.runic-stamp--ember::before {
+  background: var(--ember-300);
+}
 
 /* 8.55 MYSTIC TILE GLOW — pairs with surface-mystic-* tokens.
    Carries the bevel + idle ring; tier suffixes swap to a tier glow on hover.
@@ -750,138 +849,152 @@
 */
 
 .mystic-tile {
-	box-shadow: var(--bevel-inset), var(--glow-mystic-rest);
-	transition: box-shadow 0.28s ease;
+  box-shadow: var(--bevel-inset), var(--glow-mystic-rest);
+  transition: box-shadow 0.28s ease;
 }
 
-.mystic-tile--bifrost:hover { box-shadow: var(--bevel-inset), var(--glow-mystic-bifrost); }
-.mystic-tile--gold:hover    { box-shadow: var(--bevel-inset), var(--glow-mystic-gold);    }
-.mystic-tile--ember:hover   { box-shadow: var(--bevel-inset), var(--glow-mystic-ember);   }
+.mystic-tile--bifrost:hover {
+  box-shadow: var(--bevel-inset), var(--glow-mystic-bifrost);
+}
+.mystic-tile--gold:hover {
+  box-shadow: var(--bevel-inset), var(--glow-mystic-gold);
+}
+.mystic-tile--ember:hover {
+  box-shadow: var(--bevel-inset), var(--glow-mystic-ember);
+}
 
 /* 8.6 AURA MYSTIC — gradient breath at the top of mythic surfaces.
    Optional layer; only mythic tiles + StarterClaimCard use it. */
 
 .aura-mystic {
-	position: absolute;
-	inset: 0 0 auto 0;
-	height: 60%;
-	pointer-events: none;
-	background: radial-gradient(
-		ellipse 70% 100% at 50% 0%,
-		color-mix(in oklch, var(--ember-300) 22%, transparent) 0%,
-		transparent 70%
-	);
-	opacity: 0.55;
-	z-index: 0;
-	animation: aura-breath 4.5s ease-in-out infinite;
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 60%;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 70% 100% at 50% 0%,
+    color-mix(in oklch, var(--ember-300) 22%, transparent) 0%,
+    transparent 70%
+  );
+  opacity: 0.55;
+  z-index: 0;
+  animation: aura-breath 4.5s ease-in-out infinite;
 }
 
 .aura-mystic--gold {
-	background: radial-gradient(
-		ellipse 70% 100% at 50% 0%,
-		color-mix(in oklch, var(--gold-300) 18%, transparent) 0%,
-		transparent 70%
-	);
+  background: radial-gradient(
+    ellipse 70% 100% at 50% 0%,
+    color-mix(in oklch, var(--gold-300) 18%, transparent) 0%,
+    transparent 70%
+  );
 }
 
 .aura-mystic--bifrost {
-	background: radial-gradient(
-		ellipse 70% 100% at 50% 0%,
-		color-mix(in oklch, var(--bifrost-300) 20%, transparent) 0%,
-		transparent 70%
-	);
+  background: radial-gradient(
+    ellipse 70% 100% at 50% 0%,
+    color-mix(in oklch, var(--bifrost-300) 20%, transparent) 0%,
+    transparent 70%
+  );
 }
 
 @keyframes aura-breath {
-	0%, 100% { opacity: 0.45; transform: translateY(-2px); }
-	50% { opacity: 0.65; transform: translateY(2px); }
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: translateY(-2px);
+  }
+  50% {
+    opacity: 0.65;
+    transform: translateY(2px);
+  }
 }
 
-/* 8.65 INFO TOOLTIP — CSS-only hover/focus-within reveal.
-   Structure:
-     <span class="info-tooltip">
-       <button type="button" aria-describedby="tip-id" class="info-tooltip-trigger">
-         <Info icon />
-       </button>
-       <span id="tip-id" role="tooltip" class="info-tooltip-content">…description…</span>
-     </span>
-   The trigger button is keyboard-focusable; tooltip reveals on hover OR focus. */
-
 .info-tooltip {
-	position: relative;
-	display: inline-flex;
+  position: relative;
+  display: inline-flex;
 }
 
 .info-tooltip-trigger {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 22px;
-	height: 22px;
-	border-radius: 50%;
-	border: 1px solid color-mix(in oklch, var(--gold-300) 30%, transparent);
-	background: color-mix(in oklch, var(--obsidian-900) 90%, transparent);
-	color: color-mix(in oklch, var(--gold-300) 80%, transparent);
-	cursor: help;
-	transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in oklch, var(--gold-300) 30%, transparent);
+  background: color-mix(in oklch, var(--obsidian-900) 90%, transparent);
+  color: color-mix(in oklch, var(--gold-300) 80%, transparent);
+  cursor: help;
+  transition:
+    color 0.18s ease,
+    border-color 0.18s ease,
+    background 0.12s ease;
 }
 
 .info-tooltip-trigger:hover,
 .info-tooltip-trigger:focus-visible {
-	color: var(--gold-200);
-	border-color: color-mix(in oklch, var(--gold-300) 60%, transparent);
-	background: color-mix(in oklch, var(--gold-300) 10%, var(--obsidian-900));
-	outline: none;
+  color: var(--gold-200);
+  border-color: color-mix(in oklch, var(--gold-300) 60%, transparent);
+  background: color-mix(in oklch, var(--gold-300) 10%, var(--obsidian-900));
+  outline: none;
 }
 
 .info-tooltip-content {
-	position: absolute;
-	bottom: calc(100% + 10px);
-	left: 50%;
-	transform: translateX(-50%) translateY(4px);
-	width: max-content;
-	max-width: 280px;
-	padding: 0.75rem 1rem;
-	background: var(--obsidian-900);
-	border: 1px solid color-mix(in oklch, var(--gold-300) 35%, transparent);
-	color: var(--ink-200);
-	font-family: var(--type-ui);
-	font-size: 0.8125rem;            /* 13px — floor for tooltip body */
-	line-height: 1.5;
-	border-radius: 6px;
-	pointer-events: none;
-	opacity: 0;
-	visibility: hidden;
-	transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
-	z-index: 50;
-	box-shadow:
-		0 6px 18px rgba(0, 0, 0, 0.55),
-		0 0 0 1px color-mix(in oklch, var(--gold-300) 18%, transparent);
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  width: max-content;
+  max-width: 280px;
+  padding: 0.75rem 1rem;
+  background: var(--obsidian-900);
+  border: 1px solid color-mix(in oklch, var(--gold-300) 35%, transparent);
+  color: var(--ink-200);
+  font-family: var(--type-ui);
+  font-size: 0.8125rem; /* 13px — floor for tooltip body */
+  line-height: 1.5;
+  border-radius: 6px;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    visibility 0.18s ease;
+  z-index: 50;
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.55),
+    0 0 0 1px color-mix(in oklch, var(--gold-300) 18%, transparent);
 }
 
 /* Wider variant for structured popovers (description + odds + guarantees) */
 .info-tooltip-content--wide {
-	max-width: 320px;
-	padding: 0.875rem 1rem 1rem;
+  max-width: 320px;
+  padding: 0.875rem 1rem 1rem;
 }
 
 /* Sub-headings inside a wide tooltip */
 .info-tooltip-section-label {
-	display: block;
-	font-family: 'JetBrains Mono', ui-monospace, monospace;
-	font-size: 0.6875rem;            /* 11px — only for inside-tooltip sublabels */
-	font-weight: 600;
-	letter-spacing: 0.28em;
-	text-transform: uppercase;
-	color: var(--ink-400);
-	margin-top: 0.625rem;
-	margin-bottom: 0.375rem;
+  display: block;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.6875rem; /* 11px — only for inside-tooltip sublabels */
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--ink-400);
+  margin-top: 0.625rem;
+  margin-bottom: 0.375rem;
 }
 
 .info-tooltip-divider {
-	height: 1px;
-	margin: 0.625rem 0;
-	background: linear-gradient(90deg, transparent, color-mix(in oklch, var(--gold-300) 25%, transparent), transparent);
+  height: 1px;
+  margin: 0.625rem 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--gold-300) 25%, transparent),
+    transparent
+  );
 }
 
 /* Rich tooltip — portal-rendered, escapes overflow:hidden ancestors.
@@ -889,246 +1002,267 @@
    Variants `--top` and `--bottom` set the arrow direction. */
 
 .rich-tooltip {
-	position: fixed;
-	z-index: 9999;
-	padding: 1rem 1.125rem;
-	background: var(--obsidian-900);
-	border: 1px solid color-mix(in oklch, var(--gold-300) 35%, transparent);
-	color: var(--ink-200);
-	font-family: var(--type-ui);
-	font-size: 0.8125rem;             /* 13px floor */
-	line-height: 1.5;
-	border-radius: 8px;
-	box-shadow:
-		0 12px 32px rgba(0, 0, 0, 0.65),
-		0 0 0 1px color-mix(in oklch, var(--gold-300) 18%, transparent);
-	pointer-events: none;
-	animation: rich-tooltip-in 0.18s ease forwards;
+  position: fixed;
+  z-index: 9999;
+  padding: 1rem 1.125rem;
+  background: var(--obsidian-900);
+  border: 1px solid color-mix(in oklch, var(--gold-300) 35%, transparent);
+  color: var(--ink-200);
+  font-family: var(--type-ui);
+  font-size: 0.8125rem; /* 13px floor */
+  line-height: 1.5;
+  border-radius: 8px;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.65),
+    0 0 0 1px color-mix(in oklch, var(--gold-300) 18%, transparent);
+  pointer-events: none;
+  animation: rich-tooltip-in 0.18s ease forwards;
 }
 
 @keyframes rich-tooltip-in {
-	from { opacity: 0; transform: translateY(4px); }
-	to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .rich-tooltip--top::after {
-	content: '';
-	position: absolute;
-	left: 50%;
-	bottom: -6px;
-	width: 10px;
-	height: 10px;
-	background: var(--obsidian-900);
-	border-right: 1px solid color-mix(in oklch, var(--gold-300) 35%, transparent);
-	border-bottom: 1px solid color-mix(in oklch, var(--gold-300) 35%, transparent);
-	transform: translateX(-50%) rotate(45deg);
-	clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  width: 10px;
+  height: 10px;
+  background: var(--obsidian-900);
+  border-right: 1px solid color-mix(in oklch, var(--gold-300) 35%, transparent);
+  border-bottom: 1px solid color-mix(in oklch, var(--gold-300) 35%, transparent);
+  transform: translateX(-50%) rotate(45deg);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
 }
 
 .rich-tooltip--bottom::after {
-	content: '';
-	position: absolute;
-	left: 50%;
-	top: -6px;
-	width: 10px;
-	height: 10px;
-	background: var(--obsidian-900);
-	border-top: 1px solid color-mix(in oklch, var(--gold-300) 35%, transparent);
-	border-left: 1px solid color-mix(in oklch, var(--gold-300) 35%, transparent);
-	transform: translateX(-50%) rotate(45deg);
-	clip-path: polygon(0 0, 100% 0, 0 100%);
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -6px;
+  width: 10px;
+  height: 10px;
+  background: var(--obsidian-900);
+  border-top: 1px solid color-mix(in oklch, var(--gold-300) 35%, transparent);
+  border-left: 1px solid color-mix(in oklch, var(--gold-300) 35%, transparent);
+  transform: translateX(-50%) rotate(45deg);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
 }
 
 /* Rich tooltip internal layout */
 
 .rich-tooltip-section {
-	margin-top: 0.875rem;
+  margin-top: 0.875rem;
 }
 
 .rich-tooltip-section:first-child {
-	margin-top: 0;
+  margin-top: 0;
 }
 
 .rich-tooltip-section-label {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	font-family: 'JetBrains Mono', ui-monospace, monospace;
-	font-size: 0.75rem;
-	font-weight: 600;
-	letter-spacing: 0.28em;
-	text-transform: uppercase;
-	color: var(--gold-300);
-	margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--gold-300);
+  margin-bottom: 0.5rem;
 }
 
 .rich-tooltip-section-label::before {
-	content: '';
-	width: 4px;
-	height: 10px;
-	border-radius: 1px;
-	background: var(--gold-300);
+  content: "";
+  width: 4px;
+  height: 10px;
+  border-radius: 1px;
+  background: var(--gold-300);
 }
 
 .rich-tooltip-row {
-	display: flex;
-	align-items: center;
-	gap: 0.625rem;
-	font-family: var(--type-ui);
-	font-size: 0.8125rem;
-	color: var(--ink-200);
-	margin-top: 0.375rem;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-family: var(--type-ui);
+  font-size: 0.8125rem;
+  color: var(--ink-200);
+  margin-top: 0.375rem;
 }
 
 .rich-tooltip-row:first-child {
-	margin-top: 0;
+  margin-top: 0;
 }
 
 .rich-tooltip-row-label {
-	flex: 0 0 4.5rem;
-	text-transform: capitalize;
-	font-weight: 600;
+  flex: 0 0 4.5rem;
+  text-transform: capitalize;
+  font-weight: 600;
 }
 
 .rich-tooltip-row-bar {
-	display: block;
-	flex: 1;
-	height: 8px;
-	border-radius: 4px;
-	background: color-mix(in oklch, var(--obsidian-700) 80%, transparent);
-	overflow: hidden;
-	min-width: 0;
+  display: block;
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: color-mix(in oklch, var(--obsidian-700) 80%, transparent);
+  overflow: hidden;
+  min-width: 0;
 }
 
 .rich-tooltip-row-fill {
-	display: block;
-	height: 100%;
-	min-height: 8px;
-	border-radius: 4px;
+  display: block;
+  height: 100%;
+  min-height: 8px;
+  border-radius: 4px;
 }
 
 .rich-tooltip-row-value {
-	flex: 0 0 2.5rem;
-	text-align: right;
-	font-family: var(--type-numeric);
-	font-feature-settings: 'tnum';
-	color: var(--ink-0);
+  flex: 0 0 2.5rem;
+  text-align: right;
+  font-family: var(--type-numeric);
+  font-feature-settings: "tnum";
+  color: var(--ink-0);
 }
 
 .rich-tooltip-stamp-row {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 /* Arrow pointing down to the trigger */
 .info-tooltip-content::after {
-	content: '';
-	position: absolute;
-	top: 100%;
-	left: 50%;
-	transform: translateX(-50%);
-	width: 8px;
-	height: 8px;
-	background: var(--obsidian-900);
-	border-right: 1px solid color-mix(in oklch, var(--gold-300) 35%, transparent);
-	border-bottom: 1px solid color-mix(in oklch, var(--gold-300) 35%, transparent);
-	clip-path: polygon(100% 0, 100% 100%, 0 100%);
-	margin-top: -4px;
-	rotate: 45deg;
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 8px;
+  background: var(--obsidian-900);
+  border-right: 1px solid color-mix(in oklch, var(--gold-300) 35%, transparent);
+  border-bottom: 1px solid color-mix(in oklch, var(--gold-300) 35%, transparent);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  margin-top: -4px;
+  rotate: 45deg;
 }
 
 .info-tooltip:hover .info-tooltip-content,
 .info-tooltip:focus-within .info-tooltip-content {
-	opacity: 1;
-	visibility: visible;
-	transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
 }
 
 /* Right-aligned variant — when trigger is near the right edge of viewport */
 .info-tooltip-content--right {
-	left: auto;
-	right: 0;
-	transform: translateY(4px);
+  left: auto;
+  right: 0;
+  transform: translateY(4px);
 }
 
 .info-tooltip-content--right::after {
-	left: auto;
-	right: 7px;
-	transform: none;
+  left: auto;
+  right: 7px;
+  transform: none;
 }
 
 .info-tooltip:hover .info-tooltip-content--right,
 .info-tooltip:focus-within .info-tooltip-content--right {
-	transform: translateY(0);
+  transform: translateY(0);
 }
 
 /* 8.68 SPLASH BACKDROP — ambient card art layer behind tile content.
    Multiple background-image divs crossfade via [data-active] attribute. */
 
 .splash-backdrop {
-	position: absolute;
-	inset: 0;
-	z-index: 0;
-	pointer-events: none;
-	overflow: hidden;
-	border-radius: inherit;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: inherit;
 }
 
 .splash-backdrop-layer {
-	position: absolute;
-	inset: 0;
-	background-size: cover;
-	background-position: center 25%;
-	background-repeat: no-repeat;
-	opacity: 0;
-	filter: saturate(0.75) contrast(1.05);
-	mix-blend-mode: screen;
-	transition: opacity 1.8s ease-in-out;
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center 25%;
+  background-repeat: no-repeat;
+  opacity: 0;
+  filter: saturate(0.75) contrast(1.05);
+  mix-blend-mode: screen;
+  transition: opacity 1.8s ease-in-out;
 }
 
 /* Tier-tuned visibility — mythic dramatic, common still atmospheric.
    Higher than the previous pass; the reinforced vignette keeps text readable. */
-.splash-backdrop--mythic .splash-backdrop-layer[data-active="true"]   { opacity: 0.55; }
-.splash-backdrop--premium .splash-backdrop-layer[data-active="true"]  { opacity: 0.45; }
-.splash-backdrop--standard .splash-backdrop-layer[data-active="true"] { opacity: 0.40; }
-.splash-backdrop--starter .splash-backdrop-layer[data-active="true"]  { opacity: 0.35; }
-.splash-backdrop--obsidian .splash-backdrop-layer[data-active="true"] { opacity: 0.35; }
+.splash-backdrop--mythic .splash-backdrop-layer[data-active="true"] {
+  opacity: 0.55;
+}
+.splash-backdrop--premium .splash-backdrop-layer[data-active="true"] {
+  opacity: 0.45;
+}
+.splash-backdrop--standard .splash-backdrop-layer[data-active="true"] {
+  opacity: 0.4;
+}
+.splash-backdrop--starter .splash-backdrop-layer[data-active="true"] {
+  opacity: 0.35;
+}
+.splash-backdrop--obsidian .splash-backdrop-layer[data-active="true"] {
+  opacity: 0.35;
+}
 
 /* Vignette — now multi-layered so the splash is visible at top/sides but
    content zones (center vertical band + bottom CTAs) are deeply darkened. */
 .splash-backdrop-vignette {
-	position: absolute;
-	inset: 0;
-	pointer-events: none;
-	background:
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
 		/* Bottom CTA zone — heaviest, near-opaque obsidian */
-		linear-gradient(180deg,
-			transparent 0%,
-			transparent 45%,
-			color-mix(in oklch, var(--obsidian-950) 70%, transparent) 70%,
-			color-mix(in oklch, var(--obsidian-950) 92%, transparent) 100%
-		),
-		/* Edge fade so the splash doesn't crash into the ornate corners */
-		radial-gradient(ellipse 90% 80% at 50% 50%, transparent 35%, color-mix(in oklch, var(--obsidian-950) 60%, transparent) 100%);
+    linear-gradient(
+      180deg,
+      transparent 0%,
+      transparent 45%,
+      color-mix(in oklch, var(--obsidian-950) 70%, transparent) 70%,
+      color-mix(in oklch, var(--obsidian-950) 92%, transparent) 100%
+    ),
+    /* Edge fade so the splash doesn't crash into the ornate corners */
+    radial-gradient(
+        ellipse 90% 80% at 50% 50%,
+        transparent 35%,
+        color-mix(in oklch, var(--obsidian-950) 60%, transparent) 100%
+      );
 }
 
 /* 8.7 ETCHED TEXTURE — warm-tinted parchment grain for ritual surfaces */
 
 .texture-etched {
-	position: relative;
+  position: relative;
 }
 
 .texture-etched::after {
-	content: '';
-	position: absolute;
-	inset: 0;
-	pointer-events: none;
-	mix-blend-mode: soft-light;
-	opacity: 0.18;
-	background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='e'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' seed='7'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.92  0 0 0 0 0.78  0 0 0 0 0.45  0 0 0 0.18 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23e)'/%3E%3C/svg%3E");
-	border-radius: inherit;
-	z-index: 0;
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: soft-light;
+  opacity: 0.18;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='e'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' seed='7'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.92  0 0 0 0 0.78  0 0 0 0 0.45  0 0 0 0.18 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23e)'/%3E%3C/svg%3E");
+  border-radius: inherit;
+  z-index: 0;
 }
 
 /* ============================================
@@ -1136,29 +1270,29 @@
    ============================================ */
 
 @media (prefers-reduced-motion: reduce) {
-	.btn-runic::after {
-		display: none;
-	}
+  .btn-runic::after {
+    display: none;
+  }
 
-	.btn-runic,
-	.hex-frame {
-		transition: none;
-	}
+  .btn-runic,
+  .hex-frame {
+    transition: none;
+  }
 
-	.sigil-backplate {
-		animation: none;
-	}
+  .sigil-backplate {
+    animation: none;
+  }
 
-	.aura-mystic {
-		animation: none;
-		opacity: 0.5;
-	}
+  .aura-mystic {
+    animation: none;
+    opacity: 0.5;
+  }
 
-	.numeric-ritual-rule {
-		transition: none;
-	}
+  .numeric-ritual-rule {
+    transition: none;
+  }
 
-	.splash-backdrop-layer {
-		transition: none;
-	}
+  .splash-backdrop-layer {
+    transition: none;
+  }
 }
