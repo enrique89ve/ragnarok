@@ -77,6 +77,19 @@ function optionalEqual(name, expected) {
   }
 }
 
+function maskSecret(input) {
+  if (!input) return '<UNSET>';
+  if (input.length <= 6) return '******';
+  return `${input.slice(0, 3)}...${input.slice(-3)}`;
+}
+
+function debugEnv(name) {
+  const raw = value(name);
+  if (name.includes('KEY')) return maskSecret(raw);
+  if (raw === null) return '<UNSET>';
+  return raw;
+}
+
 function requirePrefix(name, prefix) {
   const resolved = requireValue(name);
   if (resolved && !resolved.startsWith(prefix)) {
@@ -130,6 +143,21 @@ if (mode === 'alfa-testnet') {
 if (errors.length > 0) {
   console.error('[verifyRuntimeEnv] Invalid runtime environment:');
   for (const error of errors) console.error(`- ${error}`);
+  const toDebug = [
+    'VITE_NETWORK_STAGE',
+    'VITE_RAGNAROK_ADMIN_ACCOUNT',
+    'VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT',
+    'RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY',
+    'RAGNAROK_RUNTIME_MODE',
+    'P2P_CHALLENGE_SIGNING_SECRET',
+    'RAGNAROK_CHAIN_STATE_FILE',
+    'RAGNAROK_NFT_OWNERSHIP_SOURCE',
+    'RAGNAROK_REQUIRE_ADMIN_KEY',
+  ];
+  console.error('[verifyRuntimeEnv] Runtime env (masked):');
+  for (const name of toDebug) {
+    console.error(`- ${name}=${debugEnv(name)}`);
+  }
   process.exit(1);
 }
 
