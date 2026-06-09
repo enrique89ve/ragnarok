@@ -8,7 +8,7 @@
  *   - This page only shows what you can claim or already OWN.
  */
 
-import React, { lazy, Suspense, useEffect, useState, useSyncExternalStore } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -22,7 +22,6 @@ import { NumericRitual, OrnateCorners, SigilBackplate, type Tier } from '../../.
 import { SplashBackdrop } from '../../../components/ornaments/SplashBackdrop';
 import { MetaPageHeader, MetaPageHeaderLink } from '../../../components/navigation/MetaPageHeader';
 import { invokeClientWalletAction } from '../../../data/wallet/clientWalletInvocation';
-import { getAuthenticatedHiveUsername, subscribeHiveSessionIdentity } from '../../../data/HiveSessionIdentity';
 import CeremonyEvidenceButton from '../CeremonyEvidenceButton';
 import {
 	recordCeremonyFeedbackEvent,
@@ -41,14 +40,6 @@ const DuatPackCeremony = lazy(() => import('../DuatPackCeremony'));
 type StarterCeremonySession = {
 	readonly accountId: string | null;
 };
-
-function useAuthenticatedHiveUsername(): string | null {
-	return useSyncExternalStore(
-		subscribeHiveSessionIdentity,
-		getAuthenticatedHiveUsername,
-		getAuthenticatedHiveUsername,
-	);
-}
 
 const PACK_ICON: Record<string, string> = {
 	mythic: '龍',
@@ -146,9 +137,8 @@ export default function PacksPage() {
 	const sealedPacks = bridge.getPackCollection().filter(p => p.sealed);
 
 	const hiveUsername = useNFTUsername();
-	const authenticatedHiveUsername = useAuthenticatedHiveUsername();
 	const sharedNetwork = isSharedNetworkEnvironment();
-	const starterClaimAccountId = sharedNetwork ? authenticatedHiveUsername : hiveUsername;
+	const starterClaimAccountId = hiveUsername;
 	const normalizedHiveUsername = hiveUsername?.toLowerCase() ?? null;
 	const starterClaimed = useStarterStore(s => (
 		sharedNetwork
@@ -156,10 +146,11 @@ export default function PacksPage() {
 			: s.hasClaimed(hiveUsername)
 	));
 	const starterClaimAccess = resolveProtectedFlowAccess({
-		accountId: hiveUsername ?? authenticatedHiveUsername,
-		authenticatedAccountId: authenticatedHiveUsername,
+		accountId: hiveUsername,
+		authenticatedAccountId: hiveUsername,
 		sharedNetwork,
 		surface: 'starter_claim',
+		requiresAuthenticatedSession: false,
 	});
 	const starterAccessAllowed = starterClaimAccess.kind === 'allowed';
 	const starterAccessAccountId = starterAccessAllowed ? starterClaimAccess.accountId : null;

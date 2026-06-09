@@ -31,7 +31,7 @@ import type { Difficulty } from "./game/campaign/campaignTypes";
 import { useCampaignStore } from "./game/campaign/campaignStore";
 import { useStarterStore } from "./game/stores/starterStore";
 import type { AiStyle } from "./game/match/types";
-import { useHiveDataStore } from "./data/HiveDataLayer";
+import { useNFTUsername } from './game/nft/hooks';
 import { getAuthenticatedHiveUsername, subscribeHiveSessionIdentity } from "./data/HiveSessionIdentity";
 import { createRuntimeStorageKey, getRagnarokNetworkConfig } from "./game/config/networkConfig";
 import { getDataLayerMode, isSharedNetworkEnvironment, isTestnetStage } from "./game/config/featureFlags";
@@ -183,7 +183,7 @@ const CampaignGameRoute = lazy(async () => {
 	return {
 		default: function CampaignGameRoute() {
 			return (
-				<ProtectedAccountGate surface="campaign_battle">
+				<ProtectedAccountGate surface="campaign_battle" requiresSignedSession>
 					<StarterEntitlementGate surface="campaign_battle">
 						<MatchSetupCampaign fallback={<Navigate to={routes.campaign} replace />}>
 							<RagnarokGameCoordinator />
@@ -212,25 +212,16 @@ if (typeof window !== 'undefined') {
 	});
 }
 
-function normalizeHiveUsername(username: string | null | undefined): string | null {
-	const normalized = username?.trim().toLowerCase().replace(/^@/, '') ?? '';
-	return normalized.length > 0 ? normalized : null;
-}
-
 function useStoredHiveUsername(): string | null {
-	return useHiveDataStore(state => normalizeHiveUsername(state.user?.hiveUsername));
+	return useNFTUsername();
 }
 
 function useAuthenticatedHiveUsername(): string | null {
-	const storedHiveUsername = useStoredHiveUsername();
-	const authenticatedHiveUsername = useSyncExternalStore(
+	return useSyncExternalStore(
 		subscribeHiveSessionIdentity,
 		getAuthenticatedHiveUsername,
 		getAuthenticatedHiveUsername,
 	);
-	if (!authenticatedHiveUsername) return null;
-	if (storedHiveUsername && storedHiveUsername !== authenticatedHiveUsername) return null;
-	return authenticatedHiveUsername;
 }
 
 function useIsHiveMode(): boolean {
@@ -253,7 +244,7 @@ function OnlineOnly({ children, label }: { children: React.ReactNode; label: str
 				<div>
 					<p className="font-display text-gold-300 text-xl font-bold tracking-[0.18em] uppercase mb-2">Offline Mode</p>
 					<p className="text-ink-200 text-sm">{label} requires an internet connection.</p>
-					<p className="text-ink-400 text-xs mt-4">Account-bound play and collection surfaces require a signed Hive session in shared network builds.</p>
+					<p className="text-ink-400 text-xs mt-4">Account-bound surfaces require an active connected Hive account in shared network builds.</p>
 				</div>
 			</div>
 		);
@@ -264,17 +255,20 @@ function OnlineOnly({ children, label }: { children: React.ReactNode; label: str
 function ProtectedAccountGate({
 	children,
 	surface,
+	requiresSignedSession = false,
 }: {
 	children: React.ReactNode;
 	surface: ProtectedFlowSurface;
+	requiresSignedSession?: boolean;
 }) {
 	const hiveUsername = useStoredHiveUsername();
 	const authenticatedHiveUsername = useAuthenticatedHiveUsername();
 	const access = resolveProtectedFlowAccess({
-		accountId: hiveUsername ?? authenticatedHiveUsername,
+		accountId: hiveUsername,
 		authenticatedAccountId: authenticatedHiveUsername,
 		sharedNetwork: isSharedNetworkEnvironment(),
 		surface,
+		requiresAuthenticatedSession: requiresSignedSession,
 	});
 
 	if (access.kind === 'allowed') return <>{children}</>;
@@ -307,14 +301,16 @@ function ProtectedAccountGate({
 function StarterEntitlementGate({
 	children,
 	surface,
+	requiresSignedSession = false,
 }: {
 	children: React.ReactNode;
 	surface: ProtectedFlowSurface;
+	requiresSignedSession?: boolean;
 }) {
 	const hiveUsername = useStoredHiveUsername();
 	const authenticatedHiveUsername = useAuthenticatedHiveUsername();
 	const sharedNetwork = isSharedNetworkEnvironment();
-	const starterClaimAccountId = sharedNetwork ? authenticatedHiveUsername : hiveUsername;
+	const starterClaimAccountId = hiveUsername;
 	const starterClaimed = useStarterStore(state => (
 		sharedNetwork
 			? Boolean(starterClaimAccountId && state.hasClaimed(starterClaimAccountId))
@@ -322,10 +318,11 @@ function StarterEntitlementGate({
 	));
 	const [starterCeremony, setStarterCeremony] = useState<StarterCeremonySession | null>(null);
 	const access = resolveProtectedFlowAccess({
-		accountId: hiveUsername ?? authenticatedHiveUsername,
+		accountId: hiveUsername,
 		authenticatedAccountId: authenticatedHiveUsername,
 		sharedNetwork,
 		surface,
+		requiresAuthenticatedSession: requiresSignedSession,
 	});
 	const openStarterCeremony = () => {
 		if (access.kind === 'allowed') setStarterCeremony({ accountId: access.accountId });
@@ -596,10 +593,9 @@ function HomePage() {
 	const completedMissions = useCampaignStore(s => s.completedMissions);
 	const currentMissionId = useCampaignStore(s => s.currentMission);
 	const hiveUsername = useStoredHiveUsername();
-	const authenticatedHiveUsername = useAuthenticatedHiveUsername();
 	const isHiveMode = useIsHiveMode();
 	const sharedNetwork = isSharedNetworkEnvironment();
-	const starterClaimAccountId = sharedNetwork ? authenticatedHiveUsername : hiveUsername;
+	const starterClaimAccountId = hiveUsername;
 	const starterClaimed = useStarterStore(s => (
 		sharedNetwork
 			? Boolean(starterClaimAccountId && s.hasClaimed(starterClaimAccountId))
@@ -611,10 +607,11 @@ function HomePage() {
 	const [showWarbandPanel, setShowWarbandPanel] = useState(false);
 	const [canInstall, setCanInstall] = useState(!!deferredInstallPrompt);
 	const starterClaimAccess = resolveProtectedFlowAccess({
-		accountId: hiveUsername ?? authenticatedHiveUsername,
-		authenticatedAccountId: authenticatedHiveUsername,
+		accountId: hiveUsername,
+		authenticatedAccountId: hiveUsername,
 		sharedNetwork,
 		surface: 'starter_claim',
+		requiresAuthenticatedSession: false,
 	});
 	const openStarterCeremony = () => {
 		if (starterClaimAccess.kind === 'allowed') {
@@ -670,7 +667,7 @@ function HomePage() {
 	const sagaPercent = totalMissionCount > 0
 		? Math.round((completedMissionCount / totalMissionCount) * 100)
 		: 0;
-	const socialHiveUsername = sharedNetwork ? authenticatedHiveUsername : hiveUsername;
+	const socialHiveUsername = hiveUsername;
 	const [now, setNow] = useState(Date.now());
 
 	useEffect(() => {
@@ -688,13 +685,13 @@ function HomePage() {
 	}, []);
 
 	useEffect(() => {
-		const syncAccountId = sharedNetwork ? authenticatedHiveUsername : hiveUsername;
+		const syncAccountId = hiveUsername;
 		if ((isHiveMode || sharedNetwork) && !syncAccountId) return;
 		// Re-seed of hero decks on account load is handled by ensureBridgeRuntime
 		// (bridgeRuntime.ts). Here we only need the legacy claim sync so the
 		// starter store reflects the active account.
 		syncLegacyStarterClaim(syncAccountId);
-	}, [authenticatedHiveUsername, hiveUsername, isHiveMode, sharedNetwork, syncLegacyStarterClaim]);
+	}, [hiveUsername, isHiveMode, sharedNetwork, syncLegacyStarterClaim]);
 
 	useEffect(() => {
 		if (hiveUsername) {
@@ -732,7 +729,7 @@ function HomePage() {
 		const a = ACCENT[mode.accent];
 		const isCombat = mode.intent === 'combat';
 		const requiresAccountBoundCards = isCombat || mode.to === routes.collection;
-		const blockedBySession = sharedNetwork && requiresAccountBoundCards && !authenticatedHiveUsername;
+		const blockedBySession = sharedNetwork && requiresAccountBoundCards && !hiveUsername;
 		const blockedByStarter = requiresAccountBoundCards && !starterClaimed && !blockedBySession;
 		const locked = blockedBySession || blockedByStarter;
 		const visibleCta = blockedBySession
@@ -1019,6 +1016,11 @@ function HomePage() {
 						<div className="n-warband-drawer-body">
 							<Suspense fallback={<div className="animate-pulse h-32 bg-obsidian-800" />}>
 								<FriendsPanel />
+								{socialHiveUsername && (
+									<Suspense fallback={<div className="animate-pulse h-32 bg-obsidian-800" />}>
+										<SocialPresenceHeartbeat />
+									</Suspense>
+								)}
 							</Suspense>
 						</div>
 					</aside>
@@ -1076,9 +1078,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { err
 
 function GlobalOverlaysLayout() {
 	const hiveUsername = useStoredHiveUsername();
-	const authenticatedHiveUsername = useAuthenticatedHiveUsername();
-	const sharedNetwork = isSharedNetworkEnvironment();
-	const sessionHiveUsername = sharedNetwork ? authenticatedHiveUsername : hiveUsername;
+	const sessionHiveUsername = hiveUsername;
 	const completedMissions = useCampaignStore(state => state.completedMissions);
 	const shouldCheckFactionPledge = useMemo(() => {
 		const norseChapter = ALL_CHAPTERS.find(chapter => chapter.id === 'norse');
@@ -1088,11 +1088,6 @@ function GlobalOverlaysLayout() {
 	return (
 		<>
 			<EnvironmentBanner />
-			{sessionHiveUsername && (
-				<Suspense fallback={null}>
-					<SocialPresenceHeartbeat />
-				</Suspense>
-			)}
 			<Outlet />
 			{sessionHiveUsername && <Suspense fallback={null}><DuatClaimPopup /></Suspense>}
 			{shouldCheckFactionPledge && <Suspense fallback={null}><FactionPledgePopup /></Suspense>}
@@ -1184,7 +1179,7 @@ function App() {
 						/>
 
 						<Route element={<GlobalOverlaysLayout />}>
-							<Route path={routes.home} element={<HomePage />} />
+						<Route path={routes.home} element={<HomePage />} />
 							<Route path={routes.campaign} element={<ProtectedAccountGate surface="campaign"><CampaignPage /></ProtectedAccountGate>} />
 							<Route path={routes.ladder} element={<RankedLadderPage />} />
 							<Route path={routes.explorer} element={<ExplorerPage />} />
@@ -1215,7 +1210,7 @@ function App() {
 									<Route path={routes.campaignGame} element={<CampaignGameRoute />} />
 									<Route path="/game/multiplayer" element={<Navigate to={routes.multiplayer} replace />} />
 									<Route path={routes.multiplayer} element={
-										<ProtectedAccountGate surface="multiplayer">
+										<ProtectedAccountGate surface="multiplayer" requiresSignedSession>
 											<StarterEntitlementGate surface="multiplayer"><MultiplayerGame /></StarterEntitlementGate>
 										</ProtectedAccountGate>
 									} />

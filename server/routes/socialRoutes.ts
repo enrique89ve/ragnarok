@@ -41,7 +41,7 @@ const SOCIAL_HEARTBEAT_ACTION = 'friend-heartbeat';
 const SOCIAL_CHALLENGES_ACTION = 'friend-challenges';
 const SOCIAL_SESSION_ACTION = 'friend-session';
 const SOCIAL_SESSION_COOKIE_NAME = 'ragnarok-friend-session';
-const SOCIAL_SESSION_TTL_MS = 2 * 60 * 60 * 1000;
+const SOCIAL_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const socialSessions = new Map<string, { username: string; expiresAt: number; lastSeenAt: number }>();
 
 type SocialSessionMessageBody = {

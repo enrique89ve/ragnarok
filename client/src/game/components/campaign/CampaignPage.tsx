@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Compass, Play } from 'lucide-react';
@@ -6,7 +6,6 @@ import { routes } from '../../../lib/routes';
 import { Button } from '../../../components/ui-norse';
 import { AccountSlot } from '../../../components/account/AccountSlot';
 import { useNFTUsername } from '../../nft/hooks';
-import { getAuthenticatedHiveUsername, subscribeHiveSessionIdentity } from '../../../data/HiveSessionIdentity';
 import { isSharedNetworkEnvironment } from '../../config/featureFlags';
 import { resolveProtectedFlowAccess } from '../../auth/protectedFlowAccess';
 import { HiveKeychainLogin } from '../HiveKeychainLogin';
@@ -65,14 +64,6 @@ const FACTION_BORDER: Record<string, string> = {
 const RUNE_CORNERS = ['ᚠᚷᛁ', 'ᛞᛗᛒ', 'ᛇᚺᚠ', 'ᛒᛁᛞ'];
 
 type View = 'norse' | 'greek' | 'beyond';
-
-function useAuthenticatedHiveUsername(): string | null {
-	return useSyncExternalStore(
-		subscribeHiveSessionIdentity,
-		getAuthenticatedHiveUsername,
-		getAuthenticatedHiveUsername,
-	);
-}
 
 type MapRealmShape = {
 	id: string;
@@ -502,12 +493,12 @@ export default function CampaignPage() {
 	const seenCinematics = useCampaignStore(state => state.seenCinematics);
 	const isAllComplete = useCampaignStore(state => state.isAllBaseChaptersComplete(BASE_CHAPTER_MISSION_IDS));
 	const hiveUsername = useNFTUsername();
-	const authenticatedHiveUsername = useAuthenticatedHiveUsername();
 	const campaignAccess = resolveProtectedFlowAccess({
-		accountId: hiveUsername ?? authenticatedHiveUsername,
-		authenticatedAccountId: authenticatedHiveUsername,
+		accountId: hiveUsername,
+		authenticatedAccountId: hiveUsername,
 		sharedNetwork: isSharedNetworkEnvironment(),
 		surface: 'campaign',
+		requiresAuthenticatedSession: false,
 	});
 
 	const norseChapter = ALL_CHAPTERS.find(chapter => chapter.faction === 'norse')!;

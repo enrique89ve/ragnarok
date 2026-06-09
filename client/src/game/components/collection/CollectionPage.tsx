@@ -423,9 +423,7 @@ export default function CollectionPage() {
 	const bridgeHiveMode = bridge.isHiveMode();
 	const authenticatedHiveUsername = useAuthenticatedHiveUsername();
 	const sharedNetwork = isSharedNetworkEnvironment();
-	const currentAccount = sharedNetwork
-		? authenticatedHiveUsername
-		: hiveUsername ?? bridge.getUsername() ?? hiveSync.getUsername();
+	const currentAccount = hiveUsername ?? bridge.getUsername() ?? hiveSync.getUsername();
 	const normalizedCurrentAccount = currentAccount?.toLowerCase() ?? null;
 	const starterClaimed = useStarterStore(state => (
 		bridgeHiveMode
@@ -498,12 +496,12 @@ export default function CollectionPage() {
 	const duatCollectionConfirming = Boolean(duatPendingClaimTrxId && duatEntry?.claimReady);
 
 	useEffect(() => {
-		if (!sharedNetwork || authenticatedHiveUsername) return;
+		if (!sharedNetwork || currentAccount) return;
 		setSelectedCard(null);
 		setCraftConfirm(null);
 		setProvenanceNft(null);
 		setSendNft(null);
-	}, [authenticatedHiveUsername, sharedNetwork]);
+	}, [currentAccount, sharedNetwork]);
 
 	useEffect(() => {
 		const controller = new AbortController();

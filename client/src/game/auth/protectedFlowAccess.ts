@@ -42,11 +42,13 @@ export function resolveProtectedFlowAccess({
 	authenticatedAccountId,
 	sharedNetwork,
 	surface,
+	requiresAuthenticatedSession = true,
 }: {
 	readonly accountId?: string | null;
 	readonly authenticatedAccountId?: string | null;
 	readonly sharedNetwork: boolean;
 	readonly surface: ProtectedFlowSurface;
+	readonly requiresAuthenticatedSession?: boolean;
 }): ProtectedFlowAccess {
 	const normalizedAccountId = normalizeProtectedFlowAccountId(accountId);
 	const normalizedAuthenticatedAccountId = normalizeProtectedFlowAccountId(authenticatedAccountId);
@@ -66,6 +68,14 @@ export function resolveProtectedFlowAccess({
 			reason: 'hive_account_required',
 			title: 'Hive account required',
 			message: `${label} requires a connected Hive account in testnet/mainnet. Local dev remains open for free-play testing.`,
+		};
+	}
+
+	if (!requiresAuthenticatedSession) {
+		return {
+			kind: 'allowed',
+			accountId: normalizedAccountId,
+			localDev: false,
 		};
 	}
 

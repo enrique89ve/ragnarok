@@ -146,10 +146,11 @@ export const MultiplayerGame: React.FC = () => {
 	const reloadGuardPromptedRef = useRef(false);
 	const requiresHiveSession = isSharedNetworkEnvironment();
 	const p2pAccess = resolveProtectedFlowAccess({
-		accountId: hiveUsername ?? authenticatedHiveUsername,
+		accountId: hiveUsername,
 		authenticatedAccountId: authenticatedHiveUsername,
 		sharedNetwork: requiresHiveSession,
 		surface: 'multiplayer',
+		requiresAuthenticatedSession: true,
 	});
 	const hasHiveSession = p2pAccess.kind === 'allowed' && (!requiresHiveSession || isHiveWalletAvailable());
 	const shouldWarnBeforeUnload = gameStarted
