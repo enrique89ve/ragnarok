@@ -145,6 +145,20 @@ const VAULT_INPUT_CLASS =
 	'transition-colors focus:border-gold-500/60 focus-visible:outline focus-visible:outline-2 ' +
 	'focus-visible:outline-offset-2 focus-visible:outline-gold-300';
 
+function getCollectionColumns(width: number): number {
+	if (width < 420) return 2;
+	if (width < 640) return 3;
+	if (width < 900) return 4;
+	if (width < 1180) return 5;
+	return 6;
+}
+
+function getCollectionGridGap(width: number): number {
+	if (width < 420) return 8;
+	if (width < 768) return 10;
+	return 16;
+}
+
 function getCollectionSource(card: CollectionOwnedCard): CollectionSource {
 	return card.collectionSource;
 }
@@ -604,23 +618,47 @@ export default function CollectionPage() {
 	}, [cards, currentAccount, filterSource, filteredAndSorted]);
 
 	const parentRef = useRef<HTMLDivElement>(null);
-	const [viewportWidth, setViewportWidth] = useState(() => typeof window === 'undefined' ? 1280 : window.innerWidth);
+	const gridShellRef = useRef<HTMLDivElement>(null);
+	const [gridWidth, setGridWidth] = useState(() => (
+		typeof window === 'undefined'
+			? 1152
+			: Math.max(280, Math.min(window.innerWidth - 32, 1152))
+	));
+
 	useEffect(() => {
-		if (typeof window === 'undefined') return undefined;
-		const updateViewportWidth = () => setViewportWidth(window.innerWidth);
-		updateViewportWidth();
-		window.addEventListener('resize', updateViewportWidth);
-		window.addEventListener('orientationchange', updateViewportWidth);
+		if (typeof window === 'undefined' || !gridShellRef.current) return undefined;
+
+		const updateGridWidth = () => {
+			const nextWidth = Math.floor(gridShellRef.current?.getBoundingClientRect().width ?? 0);
+			if (nextWidth > 0) setGridWidth(nextWidth);
+		};
+
+		updateGridWidth();
+
+		const resizeObserver = new ResizeObserver(updateGridWidth);
+		resizeObserver.observe(gridShellRef.current);
+		window.addEventListener('orientationchange', updateGridWidth);
+
 		return () => {
-			window.removeEventListener('resize', updateViewportWidth);
-			window.removeEventListener('orientationchange', updateViewportWidth);
+			resizeObserver.disconnect();
+			window.removeEventListener('orientationchange', updateGridWidth);
 		};
 	}, []);
 
-	const COLUMNS = viewportWidth < 560 ? 2 : viewportWidth < 900 ? 4 : viewportWidth < 1180 ? 5 : 6;
-	const estimatedCollectionWidth = Math.min(Math.max(viewportWidth - 32, 320), 1152);
-	const estimatedCardWidth = (estimatedCollectionWidth - ((COLUMNS - 1) * 16)) / COLUMNS;
-	const estimatedRowHeight = Math.max(220, Math.ceil((estimatedCardWidth * 4) / 3) + 20);
+	const COLUMNS = getCollectionColumns(gridWidth);
+	const collectionGridGap = getCollectionGridGap(gridWidth);
+	const compactCards = gridWidth < 420;
+	const cardPaddingClass = compactCards ? 'p-1.5' : 'p-2.5';
+	const cardIconClass = compactCards ? 'text-3xl' : 'text-4xl';
+	const cardTitleClass = compactCards ? 'text-[10px]' : 'text-xs';
+	const cardMetaClass = compactCards ? 'text-[8px]' : 'text-[10px]';
+	const cardSourceClass = compactCards ? 'text-[8px]' : 'text-[9px]';
+	const cardBadgeClass = compactCards ? 'w-5 h-5 text-[10px]' : 'w-6 h-6 text-[11px]';
+	const cardQuantityClass = compactCards ? 'w-5 h-5 text-[9px]' : 'w-6 h-6 text-[10px]';
+	const cardMintClass = compactCards ? 'text-[8px]' : 'text-[9px]';
+	const estimatedCollectionWidth = gridWidth;
+	const estimatedCardWidth = Math.max(0, (estimatedCollectionWidth - ((COLUMNS - 1) * collectionGridGap)) / COLUMNS);
+	const estimatedRowHeight = Math.max(220, Math.ceil((estimatedCardWidth * 4) / 3) + collectionGridGap);
 	const rows = useMemo(() => {
 		const result: CollectionOwnedCard[][] = [];
 		for (let i = 0; i < filteredAndSorted.length; i += COLUMNS) {
@@ -688,9 +726,9 @@ export default function CollectionPage() {
 				}
 			/>
 
-			<div className="n-grid-container py-6">
+			<div className="collection-content-shell n-grid-container max-w-[1152px] py-4 sm:py-6">
 				{!starterGateActive && showDuatCollectionNotice && duatEntry && (
-					<div className={`${VAULT_PANEL_CLASS} mb-6 p-4 flex flex-wrap items-center gap-4`}>
+					<div className={`${VAULT_PANEL_CLASS} mb-4 p-3 flex flex-wrap items-center gap-3 sm:mb-6 sm:p-4 sm:gap-4`}>
 						<div className="grid h-10 w-10 place-items-center rounded-md border border-bifrost-300/45 bg-bifrost-500/15 text-bifrost-100">
 							<Package className="h-5 w-5" strokeWidth={2.4} aria-hidden="true" />
 						</div>
@@ -712,9 +750,9 @@ export default function CollectionPage() {
 
 				{/* Stats Dashboard */}
 				{!starterGateActive && stats && (
-					<div className="mb-6 grid gap-4">
+					<div className="mb-4 grid gap-3 sm:mb-6 sm:gap-4">
 						{/* Progress Section */}
-						<div className="n-glass-panel p-6">
+						<div className="n-glass-panel p-4 sm:p-6">
 							<header className="section-heading">
 								<div className="section-heading-kicker">Vault · Stats</div>
 								<h2 className="section-heading-title">Your progression</h2>
@@ -735,9 +773,9 @@ export default function CollectionPage() {
 						</div>
 
 						{/* Source + Rarity + Type Breakdown */}
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+						<div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:gap-4">
 							{/* Source Breakdown */}
-							<div className="n-glass-panel p-4">
+							<div className="n-glass-panel p-3 sm:p-4">
 								<div className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink-400 mb-3">By Source</div>
 								<div className="grid grid-cols-2 gap-2">
 									{stats.bySource.map(sourceStat => (
@@ -752,7 +790,7 @@ export default function CollectionPage() {
 							</div>
 
 							{/* Rarity Breakdown */}
-							<div className="n-glass-panel p-4">
+							<div className="n-glass-panel p-3 sm:p-4">
 								<div className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink-400 mb-3">By Rarity</div>
 								<div className="grid grid-cols-2 gap-2">
 									{DISPLAY_RARITIES.map(rarity => {
@@ -770,7 +808,7 @@ export default function CollectionPage() {
 							</div>
 
 							{/* Type Breakdown */}
-							<div className="n-glass-panel p-4">
+							<div className="n-glass-panel p-3 sm:p-4">
 								<div className="font-mono text-[10px] uppercase tracking-[0.24em] text-ink-400 mb-3">By Type</div>
 								<div className="grid grid-cols-2 gap-2">
 									{(['hero', 'minion', 'spell', 'weapon'] as const).map(type => {
@@ -792,9 +830,9 @@ export default function CollectionPage() {
 
 				{/* Filter Bar */}
 				{!starterGateActive && (
-					<div className={`${VAULT_PANEL_CLASS} collection-landscape-filters p-4 mb-6`}>
+					<div className={`${VAULT_PANEL_CLASS} collection-landscape-filters p-3 mb-4 sm:p-4 sm:mb-6`}>
 						{/* Search + Sort Row */}
-						<div className="collection-landscape-search-row flex gap-3 mb-3">
+						<div className="collection-landscape-search-row flex gap-2 mb-2 sm:gap-3 sm:mb-3">
 							<div className="flex-1 relative">
 								<span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">🔍</span>
 								<input
@@ -865,7 +903,7 @@ export default function CollectionPage() {
 
 				{/* Error State */}
 				{error && (
-					<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-8 mb-8">
+					<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-8 sm:py-12 mb-8">
 						<p className="text-red-400 text-lg mb-4">{error}</p>
 						<motion.button
 							whileHover={{ scale: 1.05 }}
@@ -880,7 +918,7 @@ export default function CollectionPage() {
 
 				{/* Empty Collection */}
 				{starterGateActive ? (
-					<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20">
+					<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12 sm:py-16">
 						<p className="text-gray-400 text-xl mb-4">{STARTER_COLLECTION_GATE_COPY.title}</p>
 						<p className="text-gray-500 mb-8">{STARTER_COLLECTION_GATE_COPY.body}</p>
 						<Link to={routes.packs}>
@@ -894,7 +932,7 @@ export default function CollectionPage() {
 						</Link>
 					</motion.div>
 				) : cards.length === 0 && !error ? (
-					<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20">
+					<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12 sm:py-16">
 						<p className="text-gray-400 text-xl mb-4">No persistent cards loaded</p>
 						<p className="text-gray-500 mb-8">Starter cards are universal, and NFT cards appear after pack opens.</p>
 						<Link to={routes.packs}>
@@ -908,7 +946,7 @@ export default function CollectionPage() {
 						</Link>
 					</motion.div>
 				) : filteredAndSorted.length === 0 ? (
-					<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20">
+					<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12 sm:py-16">
 						<p className="text-gray-400 text-xl mb-4">No cards match your filters</p>
 						<motion.button
 							whileHover={{ scale: 1.05 }}
@@ -936,8 +974,12 @@ export default function CollectionPage() {
 										}}
 									>
 										<div
-											className="collection-landscape-card-grid grid gap-4"
-											style={{ gridTemplateColumns: `repeat(${COLUMNS}, minmax(0, 1fr))` }}
+											ref={gridShellRef}
+											className="collection-landscape-card-grid collection-card-grid"
+											style={{
+												gridTemplateColumns: `repeat(${COLUMNS}, minmax(0, 1fr))`,
+												gap: `${collectionGridGap}px`,
+											}}
 										>
 											{rows[virtualRow.index].map((card, colIndex) => {
 												const hiveAsset = hiveCardMap.get(card.id);
@@ -950,7 +992,7 @@ export default function CollectionPage() {
 														initial={{ opacity: 0, scale: 0.9 }}
 														animate={{ opacity: 1, scale: 1 }}
 														onClick={() => setSelectedCard(card)}
-														className={`relative cursor-pointer rounded-xl overflow-hidden ${getFrameClass(card.rarity)}`}
+														className={`relative cursor-pointer overflow-hidden rounded-lg sm:rounded-xl ${getFrameClass(card.rarity)}`}
 														style={{ background: 'linear-gradient(180deg, #1a1a2e 0%, #16162a 100%)', aspectRatio: '3 / 4' }}
 													>
 														{card.rarity !== 'common' && (
@@ -974,7 +1016,7 @@ export default function CollectionPage() {
 																	onMouseLeave={holoTier ? (e) => { resetHoloVars(e.currentTarget as HTMLElement); } : undefined}
 																>
 																	{/* Art image */}
-																	<div className="relative w-full h-full overflow-hidden rounded-xl">
+																	<div className="relative w-full h-full overflow-hidden rounded-lg sm:rounded-xl">
 																		{artPath ? (
 																			<img
 																				src={artPath}
@@ -988,7 +1030,7 @@ export default function CollectionPage() {
 																				className="w-full h-full flex items-center justify-center"
 																				style={{ background: getClassGradient(card.heroClass) }}
 																			>
-																				<span className="text-4xl opacity-80">{getTypeIcon(card.type)}</span>
+																				<span className={`${cardIconClass} opacity-80`}>{getTypeIcon(card.type)}</span>
 																			</div>
 																		)}
 
@@ -1006,18 +1048,18 @@ export default function CollectionPage() {
 																	</div>
 
 																	{/* Overlaid card info */}
-																	<div className="absolute inset-0 p-2.5 flex flex-col pointer-events-none">
+																	<div className={`absolute inset-0 flex flex-col pointer-events-none ${cardPaddingClass}`}>
 																		{/* Top row: mana cost + quantity */}
 																		<div className="flex justify-between items-start">
 																			{card.manaCost != null ? (
-																				<div className="w-6 h-6 rounded-full bg-blue-600/90 border border-blue-300/60 flex items-center justify-center text-white font-bold text-[11px] shadow-lg">
+																				<div className={`${cardBadgeClass} rounded-full bg-blue-600/90 border border-blue-300/60 flex items-center justify-center text-white font-bold shadow-lg`}>
 																					{card.manaCost}
 																				</div>
 																			) : (
 																				<span className="text-base drop-shadow-lg" title={card.type}>{getTypeIcon(card.type)}</span>
 																			)}
 																			{card.quantity > 1 && (
-																				<div className="w-6 h-6 bg-amber-600 rounded-full flex items-center justify-center text-white font-bold text-[10px] border border-amber-400 shadow-lg">
+																				<div className={`${cardQuantityClass} bg-amber-600 rounded-full flex items-center justify-center text-white font-bold border border-amber-400 shadow-lg`}>
 																					x{card.quantity}
 																				</div>
 																			)}
@@ -1025,23 +1067,23 @@ export default function CollectionPage() {
 
 																		{/* Bottom: name + rarity + stats */}
 																		<div className="mt-auto">
-																			<h3 className="text-xs font-bold text-white truncate drop-shadow-lg mb-0.5">{card.name}</h3>
+																			<h3 className={`${cardTitleClass} font-bold text-white truncate drop-shadow-lg mb-0.5`}>{card.name}</h3>
 																			<div className="flex items-center justify-between">
-																				<span className={`text-[10px] font-semibold uppercase ${getRarityColor(card.rarity)}`} style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+																				<span className={`${cardMetaClass} font-semibold uppercase ${getRarityColor(card.rarity)}`} style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
 																					{card.rarity}
 																				</span>
-																				<span className="text-[9px] font-semibold uppercase tracking-wider text-ink-300" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+																				<span className={`${cardSourceClass} font-semibold uppercase tracking-wider text-ink-300`} style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
 																					{getCollectionSourceLabel(card)}
 																				</span>
 																				{card.attack != null && card.health != null && (
-																					<span className="text-[10px] font-bold text-gray-200" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+																					<span className={`${cardMetaClass} font-bold text-gray-200`} style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
 																						{card.attack}/{card.health}
 																					</span>
 																				)}
 																			</div>
 																			{card.mintNumber != null && (
 																				<div className="text-center mt-1">
-																					<span className="mint-badge text-[9px]">
+																					<span className={`mint-badge ${cardMintClass}`}>
 																						#{card.mintNumber}
 																						<span className="text-gray-500 mx-0.5">/</span>
 																						{card.maxSupply?.toLocaleString() ?? '???'}

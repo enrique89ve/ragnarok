@@ -260,6 +260,51 @@
 	color: white;
 }
 
+/* ========== Collection Grid Responsiveness ========== */
+.collection-content-shell {
+	width: 100%;
+}
+
+.collection-landscape-viewport {
+	height: min(70vh, calc(100dvh - 18rem));
+	min-height: 20rem;
+	max-width: 1152px;
+	margin-inline: auto;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	scrollbar-gutter: stable;
+}
+
+.collection-card-grid {
+	display: grid;
+	align-items: stretch;
+	--collection-grid-gap: 1rem;
+	gap: var(--collection-grid-gap);
+}
+
+@media (max-width: 640px) {
+	.collection-landscape-viewport {
+		height: min(68vh, calc(100dvh - 16rem));
+		min-height: 18rem;
+	}
+
+	.collection-card-grid {
+		--collection-grid-gap: 0.5rem;
+	}
+}
+
+@media (min-width: 640px) and (max-width: 767px) {
+	.collection-card-grid {
+		--collection-grid-gap: 0.625rem;
+	}
+}
+
+@media (min-width: 768px) {
+	.collection-card-grid {
+		--collection-grid-gap: 1rem;
+	}
+}
+
 /* ========== Completion Bar Fill (gradient + glow) ========== */
 .completion-bar-fill {
 	height: 100%;
