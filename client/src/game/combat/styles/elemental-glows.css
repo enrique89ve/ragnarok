@@ -147,7 +147,7 @@
 .hero-particles.element-ice .particle {
   background: radial-gradient(circle, var(--frost-200) 0%, var(--frost-400) 100%);
   box-shadow: 0 0 8px var(--frost-300);
-  border-radius: 2px;
+  border-radius: var(--radius-2);
   animation: iceFloat 4s ease-in-out infinite;
 }
 

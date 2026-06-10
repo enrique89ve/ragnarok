@@ -93,7 +93,7 @@
     color-mix(in srgb, var(--rarity-rare-color) 50%, transparent) 80%,
     transparent 100%
   );
-  border-radius: 2px;
+  border-radius: var(--radius-2);
   filter: blur(2px);
   animation: runeGlow 4s ease-in-out infinite;
 }
@@ -362,7 +362,7 @@
   right: 10%;
   bottom: 10%;
   border: 2px solid rgba(251, 191, 36, 0.3);
-  border-radius: 4px;
+  border-radius: var(--radius-4);
 }
 
 /* Card Count Badge */
@@ -373,7 +373,7 @@
   transform: translateX(-50%);
   background: var(--surface-overlay-deep);
   border: 1px solid var(--border-gold-mid);
-  border-radius: 4px;
+  border-radius: var(--radius-4);
   padding: 1px 6px;
   font-size: 0.75rem;
   font-weight: 700;

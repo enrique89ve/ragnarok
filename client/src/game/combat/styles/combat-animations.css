@@ -431,7 +431,7 @@
 	position: absolute;
 	width: 8px;
 	height: 8px;
-	border-radius: 2px;
+	border-radius: var(--radius-2);
 	animation: fragment-scatter 0.5s ease-out forwards;
 	pointer-events: none;
 }
