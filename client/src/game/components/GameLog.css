@@ -252,7 +252,7 @@
   margin-left: auto;
   padding: 0;
   place-items: center;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   color: var(--gold-300);
   background:
     radial-gradient(
@@ -334,7 +334,7 @@
   height: 17px;
   padding: 0 5px;
   border: 1px solid rgba(0, 0, 0, 0.42);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--danger-500);
   color: var(--text-white-full);
   font-size: 0.55rem;
@@ -377,7 +377,7 @@
 }
 
 .game-log-dock-list::-webkit-scrollbar-thumb {
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: color-mix(in srgb, var(--gold-300) 34%, transparent);
 }
 
@@ -393,7 +393,7 @@
 }
 
 .game-log-entries::-webkit-scrollbar-thumb {
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: color-mix(in srgb, var(--gold-300) 34%, transparent);
 }
 
@@ -487,7 +487,7 @@
   overflow: hidden;
   padding: 3px 7px;
   border: 1px solid color-mix(in srgb, var(--border-chip) 88%, transparent);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: color-mix(in srgb, var(--surface-chip) 58%, transparent);
   color: color-mix(in srgb, var(--text-e2) 58%, transparent);
   font-size: 0.66rem;

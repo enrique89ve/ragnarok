@@ -105,7 +105,7 @@
   min-width: 0;
   padding: 4px 7px;
   border: 1px solid color-mix(in srgb, var(--p2p-status-accent) 22%, transparent);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: color-mix(in srgb, var(--surface-chip) 62%, transparent);
   color: color-mix(in srgb, var(--text-bright) 82%, transparent);
   font-size: 0.64rem;

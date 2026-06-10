@@ -114,7 +114,7 @@
 .realm-glow {
 	width: 58px;
 	height: 58px;
-	border-radius: 999px;
+	border-radius: var(--radius-full);
 	border: 1px solid color-mix(in srgb, var(--realm-color, var(--ink-300)) 72%, var(--ink-0) 28%);
 	background:
 		radial-gradient(circle, color-mix(in srgb, var(--realm-glow, rgba(136, 136, 136, 0.3)) 60%, transparent 40%) 0%, transparent 68%),
@@ -171,7 +171,7 @@
 	top: -18px;
 	left: 50%;
 	transform: translateX(-50%);
-	border-radius: 999px;
+	border-radius: var(--radius-full);
 	background: color-mix(in srgb, var(--obsidian-950) 65%, transparent);
 	padding: 2px 7px;
 	font-family: var(--type-numeric);
@@ -195,7 +195,7 @@
 	top: -31px;
 	left: 50%;
 	transform: translateX(-50%);
-	border-radius: 999px;
+	border-radius: var(--radius-full);
 	border: 1px solid color-mix(in srgb, var(--gold-300) 32%, transparent);
 	background: color-mix(in srgb, var(--gold-300) 14%, transparent);
 	padding: 2px 9px;

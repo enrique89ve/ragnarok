@@ -343,7 +343,7 @@
   background-position: center;
   background-size: cover;
   border: 1px solid color-mix(in oklch, var(--gold-100) 34%, transparent);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   box-shadow:
     inset 0 1px 0 color-mix(in oklch, white 18%, transparent),
     0 0 0 2px color-mix(in oklch, var(--obsidian-950) 82%, transparent);
