@@ -161,7 +161,7 @@ export default function SocialPresenceHeartbeat() {
 					signal,
 				});
 				if (response.status === 401) {
-					console.warn('[presence-heartbeat] reauth failed: 2nd 401', { username: normalizedUsername });
+					console.warn('[presence-heartbeat] reauth failed: 2nd 401', { username: normalizedUsername, status: response.status });
 					toast.error('Friends session rejected. Reconnect to refresh presence.');
 					return;
 				}
@@ -183,6 +183,8 @@ export default function SocialPresenceHeartbeat() {
 			pruneExpiredChallenges();
 		} catch (error) {
 			if (error instanceof Error && error.name === 'AbortError') return;
+			console.warn('[presence-heartbeat] sync failed', { username: normalizedUsername, error: error instanceof Error ? error.message : String(error) });
+			toast.error('Presence sync paused. Will retry automatically.');
 		}
 	}, [hiveUsername, friends, peerId, updatePresence, addChallenges, setPresenceCooldown, pruneExpiredChallenges]);
 
