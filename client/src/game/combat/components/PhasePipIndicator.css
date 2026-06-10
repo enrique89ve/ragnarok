@@ -33,7 +33,7 @@
 
 .phase-pip-label {
 	font-family: 'Cinzel', Georgia, serif;
-	font-size: 9px;
+	font-size: var(--text-9);
 	letter-spacing: 0.28em;
 	text-transform: uppercase;
 	color: rgba(201, 164, 76, 0.7);
@@ -47,7 +47,7 @@
 }
 
 .phase-pip {
-	font-size: 18px;
+	font-size: var(--text-lg);
 	line-height: 1;
 	color: rgba(201, 164, 76, 0.35);
 	transition: color 0.4s ease, text-shadow 0.4s ease;

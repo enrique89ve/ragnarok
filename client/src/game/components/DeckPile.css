@@ -33,7 +33,7 @@
 }
 
 .deck-rune {
-	font-size: 18px;
+	font-size: var(--text-lg);
 	color: rgba(218, 165, 32, 0.4);
 	text-shadow: 0 0 6px rgba(218, 165, 32, 0.2);
 }
@@ -50,7 +50,7 @@
 }
 
 .fatigue-icon {
-	font-size: 20px;
+	font-size: var(--text-xl);
 	animation: fatigue-pulse 1.5s ease-in-out infinite;
 }
 

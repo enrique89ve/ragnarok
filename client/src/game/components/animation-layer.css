@@ -29,7 +29,7 @@
 }
 
 .anim-burn-label {
-	font-size: 14px;
+	font-size: var(--text-sm);
 	font-weight: 600;
 	color: #f60;
 	text-transform: uppercase;
@@ -37,7 +37,7 @@
 }
 
 .anim-burn-name {
-	font-size: 18px;
+	font-size: var(--text-lg);
 	font-weight: 700;
 	color: #fff;
 	margin-top: 8px;
@@ -45,7 +45,7 @@
 }
 
 .anim-burn-status {
-	font-size: 14px;
+	font-size: var(--text-sm);
 	font-weight: 600;
 	color: #fbbf24;
 	text-transform: uppercase;

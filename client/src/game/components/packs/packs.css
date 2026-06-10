@@ -53,7 +53,7 @@
 }
 
 .supply-number-medium {
-	font-size: 20px;
+	font-size: var(--text-xl);
 	line-height: 1;
 }
 
@@ -344,7 +344,7 @@
 	border-radius: 12px;
 	font-family: var(--type-display);
 	font-weight: 700;
-	font-size: 14px;
+	font-size: var(--text-sm);
 	letter-spacing: 0.18em;
 	text-transform: uppercase;
 	color: var(--ink-0);
@@ -411,7 +411,7 @@
 	padding: var(--space-2) 8px;
 	border-radius: 10px;
 	font-family: var(--type-display);
-	font-size: 11px;
+	font-size: var(--text-11);
 	font-weight: 700;
 	text-transform: uppercase;
 	letter-spacing: 0.18em;
@@ -458,7 +458,7 @@
 	background: color-mix(in srgb, var(--frost-400) 10%, transparent);
 	border: 1px solid color-mix(in srgb, var(--frost-400) 25%, transparent);
 	color: color-mix(in srgb, var(--frost-200) 88%, transparent);
-	font-size: 13px;
+	font-size: var(--text-13);
 	cursor: help;
 	transition: border-color 0.15s ease, background 0.15s ease;
 }
@@ -483,7 +483,7 @@
 .pack-price {
 	font-family: var(--type-numeric);
 	font-weight: 800;
-	font-size: 18px;
+	font-size: var(--text-lg);
 	letter-spacing: 0.5px;
 }
 
@@ -540,7 +540,7 @@
 	padding: var(--space-3) 10px;
 	border-radius: 12px;
 	font-family: var(--type-display);
-	font-size: 10px;
+	font-size: var(--text-10);
 	font-weight: 600;
 	letter-spacing: 0.14em;
 	text-transform: uppercase;

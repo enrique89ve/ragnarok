@@ -56,7 +56,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 48px;
+  font-size: var(--text-48);
   font-weight: bold;
   color: #fca5a5;
   text-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
@@ -64,7 +64,7 @@
 }
 
 .hero-death-name {
-  font-size: 20px;
+  font-size: var(--text-xl);
   font-weight: bold;
   color: #fca5a5;
   text-transform: uppercase;
@@ -73,7 +73,7 @@
 }
 
 .hero-death-text {
-  font-size: 28px;
+  font-size: var(--text-28);
   font-weight: bold;
   color: #dc2626;
   text-transform: uppercase;

@@ -123,7 +123,7 @@
 
 .faction-card-tagline {
 	font-family: 'Cinzel', Georgia, serif;
-	font-size: 11px;
+	font-size: var(--text-11);
 	letter-spacing: 0.22em;
 	text-transform: uppercase;
 	color: var(--faction-color, #c9a44c);
@@ -133,7 +133,7 @@
 
 .faction-card-name {
 	font-family: 'Cinzel', Georgia, serif;
-	font-size: 20px;
+	font-size: var(--text-xl);
 	font-weight: 900;
 	letter-spacing: 0.04em;
 	color: #ffe6a0;
@@ -144,7 +144,7 @@
 .faction-card-description {
 	font-family: Georgia, serif;
 	font-style: italic;
-	font-size: 14px;
+	font-size: var(--text-sm);
 	line-height: 1.55;
 	color: rgba(245, 232, 198, 0.78);
 	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
@@ -162,7 +162,7 @@
 	border: none;
 	color: rgba(245, 232, 198, 0.5);
 	font-family: var(--font-ui, 'Inter', system-ui, sans-serif);
-	font-size: 13px;
+	font-size: var(--text-13);
 	cursor: pointer;
 	text-decoration: underline;
 	padding: 12px 14px;
@@ -176,7 +176,7 @@
 .faction-pledge-confirm {
 	padding: var(--space-14) 36px;
 	font-family: 'Cinzel', Georgia, serif;
-	font-size: 15px;
+	font-size: var(--text-15);
 	font-weight: 700;
 	letter-spacing: 0.18em;
 	text-transform: uppercase;

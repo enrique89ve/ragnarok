@@ -23,7 +23,7 @@
 }
 
 .targeting-prompt-title {
-  font-size: 24px;
+  font-size: var(--text-2xl);
   font-weight: bold;
   color: var(--rarity-mythic-color);
   text-shadow: 0 0 10px var(--rarity-mythic-glow);
@@ -36,7 +36,7 @@
 }
 
 .targeting-prompt-message {
-  font-size: 16px;
+  font-size: var(--text-base);
   color: var(--warning-300);
   opacity: 0.9;
 }
@@ -46,7 +46,7 @@
 }
 
 .targeting-prompt-hint {
-  font-size: 14px;
+  font-size: var(--text-sm);
   color: var(--text-muted);
   margin-top: 12px;
 }
@@ -58,7 +58,7 @@
   border: none;
   border-radius: var(--radius-sm, 6px);
   color: white;
-  font-size: 14px;
+  font-size: var(--text-sm);
   cursor: pointer;
   font-weight: bold;
   transition: background 0.2s;

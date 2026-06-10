@@ -17,7 +17,7 @@
 }
 
 .hand-strength-label {
-  font-size: 13px;
+  font-size: var(--text-13);
   font-weight: 600;
   color: #e2e8f0;
   text-align: center;

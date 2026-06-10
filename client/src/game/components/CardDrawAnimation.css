@@ -44,7 +44,7 @@
 }
 
 .card-back-symbol {
-	font-size: 28px;
+	font-size: var(--text-28);
 	color: rgba(218, 165, 32, 0.6);
 	text-shadow: 0 0 10px rgba(218, 165, 32, 0.4);
 	z-index: 1;

@@ -166,7 +166,7 @@
   position: relative;
   z-index: 10;
   color: #ffd700;
-  font-size: 14px;
+  font-size: var(--text-sm);
   font-weight: bold;
   text-align: center;
   padding: 0 10px;
@@ -197,7 +197,7 @@
   border: 2px solid #ff4500;
   border-radius: 8px;
   color: #ffd700;
-  font-size: 18px;
+  font-size: var(--text-lg);
   font-weight: bold;
   text-transform: uppercase;
   letter-spacing: 1px;

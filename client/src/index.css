@@ -387,7 +387,7 @@ canvas {
   margin-left: -60px;
   opacity: 0;
   transition: opacity 0.3s;
-  font-size: 12px;
+  font-size: var(--text-xs);
   pointer-events: none;
 }
 

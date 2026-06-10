@@ -15,7 +15,7 @@
 }
 
 .fatigue-warning-icon {
-	font-size: 48px;
+	font-size: var(--text-48);
 	margin-bottom: 8px;
 	animation: fatigue-shake 0.4s ease-in-out;
 }

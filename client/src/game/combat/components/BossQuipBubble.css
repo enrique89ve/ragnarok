@@ -58,7 +58,7 @@
 
 .boss-quip-speaker {
 	font-family: var(--font-display, 'Cinzel', Georgia, serif);
-	font-size: 11px;
+	font-size: var(--text-11);
 	font-weight: 700;
 	letter-spacing: 0.14em;
 	text-transform: uppercase;
@@ -68,7 +68,7 @@
 }
 
 .boss-quip-text {
-	font-size: 14px;
+	font-size: var(--text-sm);
 	line-height: 1.45;
 	font-style: italic;
 	color: #f7eccb;

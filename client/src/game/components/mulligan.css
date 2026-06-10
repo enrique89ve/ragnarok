@@ -96,7 +96,7 @@
 
 .mulligan-card-placeholder-text {
   color: rgba(100, 116, 139, 0.6);
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 
 /* Selected card overlay (X badge + Replace label) — kept in CSS because the
@@ -122,7 +122,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: var(--text-2xl);
   color: white;
   font-weight: 900;
   box-shadow: 0 0 20px rgba(220, 38, 38, 0.6);
@@ -130,7 +130,7 @@
 
 .mulligan-card-replace-label {
   margin-top: 8px;
-  font-size: 10px;
+  font-size: var(--text-10);
   font-weight: 800;
   letter-spacing: 2px;
   text-transform: uppercase;

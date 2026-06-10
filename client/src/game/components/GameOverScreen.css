@@ -187,7 +187,7 @@
 
 .game-over-subtitle {
 	font-family: 'Cinzel', 'Georgia', serif;
-	font-size: 16px;
+	font-size: var(--text-base);
 	font-weight: 600;
 	letter-spacing: 3px;
 	text-transform: uppercase;
@@ -239,13 +239,13 @@
 }
 
 .stat-icon {
-	font-size: 20px;
+	font-size: var(--text-xl);
 	line-height: 1;
 	margin-bottom: 2px;
 }
 
 .stat-value {
-	font-size: 28px;
+	font-size: var(--text-28);
 	font-weight: 800;
 	color: #f0f0f0;
 	line-height: 1;
@@ -257,7 +257,7 @@
 .game-over-draw .stat-value { color: #cbd5e1; }
 
 .stat-label {
-	font-size: 10px;
+	font-size: var(--text-10);
 	color: rgba(148, 163, 184, 0.7);
 	text-transform: uppercase;
 	letter-spacing: 1px;
@@ -274,7 +274,7 @@
 .game-over-btn {
 	padding: var(--space-14) 40px;
 	border-radius: 12px;
-	font-size: 14px;
+	font-size: var(--text-sm);
 	font-weight: 800;
 	text-transform: uppercase;
 	letter-spacing: 2px;
@@ -323,12 +323,12 @@
 
 @media (max-width: 640px) {
 	.game-over-title {
-		font-size: 48px;
+		font-size: var(--text-48);
 		letter-spacing: 6px;
 	}
 
 	.game-over-subtitle {
-		font-size: 13px;
+		font-size: var(--text-13);
 		letter-spacing: 2px;
 	}
 
@@ -339,7 +339,7 @@
 	}
 
 	.stat-value {
-		font-size: 22px;
+		font-size: var(--text-22);
 	}
 
 	.game-over-actions {

@@ -412,7 +412,7 @@
 
 .mana-value {
   color: #ffffff;
-  font-size: 16px;
+  font-size: var(--text-base);
   font-weight: 800;
   text-shadow:
     0 1px 0 rgba(0, 0, 0, 1),
@@ -447,7 +447,7 @@
 
 .blood-price-value {
   color: #fecaca;
-  font-size: 11px;
+  font-size: var(--text-11);
   font-weight: 800;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
@@ -473,16 +473,16 @@
 }
 
 .simple-card.small .blood-price-value {
-  font-size: 9px;
+  font-size: var(--text-9);
 }
 
 .simple-card.small .mana-value {
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 
 .simple-card.large .mana-value,
 .simple-card.preview .mana-value {
-  font-size: 22px;
+  font-size: var(--text-22);
 }
 
 /* ==========================================================================
@@ -548,7 +548,7 @@
 }
 
 .simple-card.small .card-art-icon {
-  font-size: 24px;
+  font-size: var(--text-2xl);
 }
 
 .simple-card.large .card-art-icon,
@@ -575,13 +575,13 @@
 }
 
 .card-art-locked .lock-icon {
-  font-size: 28px;
+  font-size: var(--text-28);
   opacity: 0.5;
   filter: grayscale(1);
 }
 
 .card-art-locked .lock-text {
-  font-size: 9px;
+  font-size: var(--text-9);
   text-transform: uppercase;
   letter-spacing: 1px;
   color: rgba(255, 255, 255, 0.3);
@@ -589,7 +589,7 @@
 }
 
 .simple-card.small .card-art-locked .lock-icon {
-  font-size: 18px;
+  font-size: var(--text-lg);
 }
 .simple-card.large .card-art-locked .lock-icon,
 .simple-card.preview .card-art-locked .lock-icon {
@@ -597,7 +597,7 @@
 }
 .simple-card.large .card-art-locked .lock-text,
 .simple-card.preview .card-art-locked .lock-text {
-  font-size: 11px;
+  font-size: var(--text-11);
 }
 
 /* ==========================================================================
@@ -689,7 +689,7 @@
 /* Card name text - High contrast, slightly larger */
 .card-name {
   color: #ffffff;
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 800;
   text-align: center;
   text-transform: uppercase;
@@ -704,7 +704,7 @@
 }
 
 .simple-card.small .card-name {
-  font-size: 10px;
+  font-size: var(--text-10);
   line-height: 1.1;
 }
 
@@ -713,19 +713,19 @@
 }
 
 .simple-card.large .card-name {
-  font-size: 15px;
+  font-size: var(--text-15);
   letter-spacing: 0.8px;
 }
 
 /* Long names auto-shrink via container query units where supported,
    falling back to stepped classes for older browsers */
 .simple-card.medium .card-name.name-long {
-  font-size: 10px;
+  font-size: var(--text-10);
   letter-spacing: 0.3px;
 }
 
 .simple-card.medium .card-name.name-very-long {
-  font-size: 9px;
+  font-size: var(--text-9);
   letter-spacing: 0.1px;
   text-overflow: ellipsis;
   overflow: hidden;
@@ -735,7 +735,7 @@
 }
 
 .simple-card.medium .card-name.name-extreme {
-  font-size: 9px;
+  font-size: var(--text-9);
   letter-spacing: 0;
   text-overflow: ellipsis;
   overflow: hidden;
@@ -746,7 +746,7 @@
 
 .simple-card.small .card-name.name-long,
 .simple-card.small .card-name.name-very-long {
-  font-size: 8px;
+  font-size: var(--text-8);
   letter-spacing: 0.1px;
 }
 
@@ -756,17 +756,17 @@
 }
 
 .simple-card.large .card-name.name-long {
-  font-size: 12px;
+  font-size: var(--text-xs);
   letter-spacing: 0.5px;
 }
 
 .simple-card.large .card-name.name-very-long {
-  font-size: 10px;
+  font-size: var(--text-10);
   letter-spacing: 0.3px;
 }
 
 .simple-card.large .card-name.name-extreme {
-  font-size: 9px;
+  font-size: var(--text-9);
   letter-spacing: 0.1px;
 }
 
@@ -950,7 +950,7 @@
 
 .tribe-text {
   color: rgba(255, 255, 255, 0.75);
-  font-size: 9px;
+  font-size: var(--text-9);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1.2px;
@@ -967,7 +967,7 @@
 
 .simple-card.large .tribe-text,
 .simple-card.preview .tribe-text {
-  font-size: 11px;
+  font-size: var(--text-11);
   letter-spacing: 1.5px;
   color: rgba(255, 255, 255, 0.8);
 }
@@ -1005,7 +1005,7 @@
 
 .card-description span {
   color: #f7fafc;
-  font-size: 9px;
+  font-size: var(--text-9);
   font-weight: 600;
   line-height: 1.3;
   word-wrap: break-word;
@@ -1017,7 +1017,7 @@
 }
 
 .simple-card.small .card-description span {
-  font-size: 8px;
+  font-size: var(--text-8);
 }
 
 .simple-card.large .card-description span {
@@ -1026,7 +1026,7 @@
 }
 
 .simple-card.preview .card-description span {
-  font-size: 13px;
+  font-size: var(--text-13);
   line-height: 1.4;
 }
 
@@ -1060,7 +1060,7 @@
   box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.6),
     0 0 6px color-mix(in srgb, var(--badge-color, transparent) 53%, transparent);
-  font-size: 14px;
+  font-size: var(--text-sm);
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
   cursor: help;
   pointer-events: auto;
@@ -1138,7 +1138,7 @@
 .evolve-requirements > div:last-child:not(:first-child) {
   color: #80deea;
   font-style: italic;
-  font-size: 10px;
+  font-size: var(--text-10);
 }
 
 /* Small card: tight icon size */
@@ -1151,7 +1151,7 @@
 .simple-card.small .keyword-icon-badge {
   width: 14px;
   height: 14px;
-  font-size: 9px;
+  font-size: var(--text-9);
 }
 
 /* Medium card: reduced icons to clear the 32px stat gems at bottom:-10px
@@ -1170,19 +1170,19 @@
 .simple-card.medium .keyword-icon-badge {
   width: 18px;
   height: 18px;
-  font-size: 11px;
+  font-size: var(--text-11);
 }
 
 .simple-card.large .keyword-icon-badge,
 .simple-card.preview .keyword-icon-badge {
   width: 32px;
   height: 32px;
-  font-size: 18px;
+  font-size: var(--text-lg);
 }
 
 /* Truncated description fallback */
 .truncated-desc {
-  font-size: 10px;
+  font-size: var(--text-10);
   font-weight: 600;
   color: #e2e8f0;
   text-align: center;
@@ -1244,7 +1244,7 @@
 
 .stat-value {
   color: #ffffff;
-  font-size: 16px;
+  font-size: var(--text-base);
   font-weight: 800;
   text-shadow:
     0 1px 0 rgba(0, 0, 0, 1),
@@ -1254,12 +1254,12 @@
 }
 
 .simple-card.small .stat-value {
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 
 .simple-card.large .stat-value,
 .simple-card.preview .stat-value {
-  font-size: 22px;
+  font-size: var(--text-22);
 }
 
 /* Elemental buff indicator - green numbers like standard "above base" convention */
@@ -1339,7 +1339,7 @@
 }
 
 .simple-card[data-stats-mode="battlefield"] .stat-value {
-  font-size: 15px;
+  font-size: var(--text-15);
 }
 
 .simple-card[data-stats-mode="battlefield"]
@@ -1660,7 +1660,7 @@
   top: 4px;
   right: 4px;
   z-index: 25;
-  font-size: 10px;
+  font-size: var(--text-10);
   line-height: 1;
   letter-spacing: 1px;
   text-shadow:
@@ -1670,14 +1670,14 @@
 }
 
 .simple-card.small .evolution-stars {
-  font-size: 8px;
+  font-size: var(--text-8);
   top: 2px;
   right: 2px;
 }
 
 .simple-card.large .evolution-stars,
 .simple-card.preview .evolution-stars {
-  font-size: 14px;
+  font-size: var(--text-sm);
   top: 6px;
   right: 6px;
 }
@@ -1883,13 +1883,13 @@
 }
 
 .kbt-icon {
-  font-size: 14px;
+  font-size: var(--text-sm);
   flex-shrink: 0;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
 }
 
 .kbt-name {
-  font-size: 11px;
+  font-size: var(--text-11);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -1898,7 +1898,7 @@
 
 .kbt-effect {
   margin-top: 4px;
-  font-size: 11px;
+  font-size: var(--text-11);
   line-height: 1.45;
   color: #d1d5db;
   font-family: "Segoe UI", system-ui, sans-serif;
@@ -1912,10 +1912,10 @@
   }
 
   .kbt-name {
-    font-size: 10px;
+    font-size: var(--text-10);
   }
   .kbt-effect {
-    font-size: 10px;
+    font-size: var(--text-10);
   }
 }
 

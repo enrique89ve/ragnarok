@@ -25,7 +25,7 @@
   background: rgba(8, 12, 22, 0.84);
   color: #f8d483;
   font-family: var(--type-display);
-  font-size: 11px;
+  font-size: var(--text-11);
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -85,7 +85,7 @@
 
 .battle-intel-section-title {
   font-family: var(--type-display);
-  font-size: 11px;
+  font-size: var(--text-11);
   font-weight: 800;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -94,13 +94,13 @@
 
 .battle-intel-emphasis {
   font-family: var(--type-display);
-  font-size: 16px;
+  font-size: var(--text-base);
   font-weight: 700;
   color: #f8fafc;
 }
 
 .battle-intel-copy {
-  font-size: 12px;
+  font-size: var(--text-xs);
   line-height: 1.5;
   color: rgba(226, 232, 240, 0.7);
 }
@@ -114,7 +114,7 @@
   border-radius: 12px;
   background: rgba(15, 23, 42, 0.55);
   color: rgba(226, 232, 240, 0.86);
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 
 .battle-intel-row.with-icon {
@@ -130,7 +130,7 @@
   padding: 0 8px;
   border-radius: var(--radius-full);
   text-align: center;
-  font-size: 9px;
+  font-size: var(--text-9);
   font-weight: 900;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -172,7 +172,7 @@
 
 .battle-intel-timer,
 .battle-intel-source {
-  font-size: 10px;
+  font-size: var(--text-10);
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;

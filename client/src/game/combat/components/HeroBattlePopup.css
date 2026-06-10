@@ -36,7 +36,7 @@
 }
 
 .hbp-text {
-	font-size: 14px;
+	font-size: var(--text-sm);
 	font-weight: 700;
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
@@ -50,7 +50,7 @@
 }
 
 .hbp-subtitle {
-	font-size: 11px;
+	font-size: var(--text-11);
 	font-weight: 600;
 	color: rgba(255, 255, 255, 0.65);
 	text-align: center;

@@ -116,7 +116,7 @@
 }
 
 .game-over-subtitle {
-	font-size: 14px;
+	font-size: var(--text-sm);
 	font-weight: 600;
 	letter-spacing: 0.06em;
 	line-height: 1.55;
@@ -170,7 +170,7 @@
 	align-items: center;
 	justify-content: center;
 	font-family: var(--type-display);
-	font-size: 28px;
+	font-size: var(--text-28);
 	font-weight: 900;
 	color: var(--text-white-full);
 	text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
@@ -185,7 +185,7 @@
 }
 
 .game-over-hero-name {
-	font-size: 13px;
+	font-size: var(--text-13);
 	font-weight: 700;
 	color: var(--text-dimmed);
 	letter-spacing: 0.5px;
@@ -196,7 +196,7 @@
 }
 
 .game-over-crown {
-	font-size: 11px;
+	font-size: var(--text-11);
 	font-weight: 800;
 	color: var(--gold-300);
 	letter-spacing: 1px;
@@ -211,7 +211,7 @@
 }
 
 .game-over-vs {
-	font-size: 20px;
+	font-size: var(--text-xl);
 	font-weight: 900;
 	color: var(--ink-400);
 	letter-spacing: 3px;
@@ -279,7 +279,7 @@
 }
 
 .game-over-stat-value.result-badge {
-	font-size: 18px;
+	font-size: var(--text-lg);
 	font-weight: 900;
 	letter-spacing: 2px;
 	padding: 4px 10px;
@@ -305,7 +305,7 @@
 }
 
 .game-over-stat-label {
-	font-size: 12px;
+	font-size: var(--text-xs);
 	color: var(--text-slate);
 	text-transform: uppercase;
 	letter-spacing: 1px;
@@ -319,7 +319,7 @@
 
 .elo-delta-value {
 	font-family: var(--type-numeric);
-	font-size: 22px;
+	font-size: var(--text-22);
 	font-weight: 900;
 	letter-spacing: 0.12em;
 }
@@ -344,7 +344,7 @@
 .game-over-btn {
 	padding: 12px 32px;
 	border-radius: 10px;
-	font-size: 13px;
+	font-size: var(--text-13);
 	font-weight: 800;
 	text-transform: uppercase;
 	letter-spacing: 1.5px;

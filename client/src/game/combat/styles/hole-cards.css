@@ -93,7 +93,7 @@
 
 .arena-poker-card .corner-rune {
   position: absolute;
-  font-size: 9px;
+  font-size: var(--text-9);
   color: rgba(75, 85, 70, 0.35);
   font-family: serif;
 }
@@ -148,7 +148,7 @@
 }
 
 .arena-poker-card .valknut {
-  font-size: 28px;
+  font-size: var(--text-28);
   color: #7b9b7b;
   text-shadow: 0 0 12px rgba(107, 139, 107, 0.6);
 }

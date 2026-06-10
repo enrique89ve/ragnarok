@@ -440,7 +440,7 @@
 
 /* Element icons */
 .matchup-el-icon {
-  font-size: 12px;
+  font-size: var(--text-xs);
   line-height: 1;
   flex-shrink: 0;
 }
@@ -479,7 +479,7 @@
 }
 
 .matchup-tooltip-label {
-  font-size: 10px;
+  font-size: var(--text-10);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4px;
@@ -504,7 +504,7 @@
 }
 
 .matchup-tooltip-el {
-  font-size: 11px;
+  font-size: var(--text-11);
   font-weight: 600;
   color: var(--el-color, #e2e8f0);
   display: flex;

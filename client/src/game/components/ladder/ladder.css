@@ -63,7 +63,7 @@
 	justify-content: center;
 	border-radius: 50%;
 	font-weight: 700;
-	font-size: 14px;
+	font-size: var(--text-sm);
 }
 
 .ladder-rank-1 {
@@ -109,7 +109,7 @@
 }
 
 .ladder-stat-label {
-	font-size: 11px;
+	font-size: var(--text-11);
 	text-transform: uppercase;
 	letter-spacing: 0.5px;
 	color: #6b7280;
@@ -129,7 +129,7 @@
 .ladder-tab {
 	padding: 8px 20px;
 	border-radius: 6px;
-	font-size: 14px;
+	font-size: var(--text-sm);
 	font-weight: 500;
 	cursor: pointer;
 	transition: background 0.2s, color 0.2s;
@@ -180,7 +180,7 @@
 }
 
 .ladder-season-name {
-	font-size: 15px;
+	font-size: var(--text-15);
 	font-weight: 700;
 	background: linear-gradient(135deg, #fbbf24, #d97706);
 	-webkit-background-clip: text;
@@ -189,7 +189,7 @@
 }
 
 .ladder-season-number {
-	font-size: 11px;
+	font-size: var(--text-11);
 	text-transform: uppercase;
 	letter-spacing: 1px;
 	color: #92702a;
@@ -207,27 +207,27 @@
 }
 
 .ladder-season-stat-label {
-	font-size: 10px;
+	font-size: var(--text-10);
 	text-transform: uppercase;
 	letter-spacing: 0.5px;
 	color: rgba(217, 119, 6, 0.6);
 }
 
 .ladder-season-stat-value {
-	font-size: 15px;
+	font-size: var(--text-15);
 	font-weight: 600;
 	font-variant-numeric: tabular-nums;
 	color: #fbbf24;
 }
 
 .ladder-season-timer {
-	font-size: 12px;
+	font-size: var(--text-xs);
 	color: #92702a;
 	font-variant-numeric: tabular-nums;
 }
 
 .ladder-season-preseason {
-	font-size: 12px;
+	font-size: var(--text-xs);
 	color: #6b7280;
 	font-style: italic;
 }

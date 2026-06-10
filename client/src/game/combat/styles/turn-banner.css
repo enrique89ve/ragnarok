@@ -109,14 +109,14 @@
 .persistent-turn-kicker {
 	display: block;
 	letter-spacing: 1.2px;
-	font-size: 10px;
+	font-size: var(--text-10);
 	color: color-mix(in srgb, var(--turn-badge-text) 72%, transparent);
 }
 
 .persistent-turn-main {
 	display: block;
 	letter-spacing: 1.2px;
-	font-size: 15px;
+	font-size: var(--text-15);
 	color: var(--turn-badge-text);
 }
 

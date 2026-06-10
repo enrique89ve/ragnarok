@@ -539,7 +539,7 @@
 .betting-phase-kicker,
 .phase-command-kicker {
   font-family: var(--type-display);
-  font-size: 10px;
+  font-size: var(--text-10);
   font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -548,14 +548,14 @@
 
 .betting-phase-text,
 .phase-command-text {
-  font-size: 13px;
+  font-size: var(--text-13);
   line-height: 1.5;
   color: rgba(226, 232, 240, 0.78);
 }
 
 .phase-command-title {
   font-family: var(--type-display);
-  font-size: 18px;
+  font-size: var(--text-lg);
   font-weight: 700;
   color: #f8fafc;
   letter-spacing: 0.02em;
@@ -579,7 +579,7 @@
   min-height: 28px;
   padding: 0 10px;
   border-radius: var(--radius-full);
-  font-size: 10px;
+  font-size: var(--text-10);
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;

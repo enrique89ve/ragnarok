@@ -200,7 +200,7 @@
 	position: fixed;
 	top: 12vh;
 	right: 40px;
-	font-size: 12px;
+	font-size: var(--text-xs);
 	color: rgba(255, 255, 255, 0.2);
 	letter-spacing: 0.1em;
 	z-index: 10003;
@@ -216,7 +216,7 @@
 	border: 1px solid rgba(255, 255, 255, 0.12);
 	border-radius: var(--radius-4);
 	color: rgba(255, 255, 255, 0.35);
-	font-size: 13px;
+	font-size: var(--text-13);
 	letter-spacing: 0.1em;
 	text-transform: uppercase;
 	cursor: pointer;
@@ -292,13 +292,13 @@
 }
 
 .mission-intro-realm-icon {
-	font-size: 48px;
+	font-size: var(--text-48);
 	margin-bottom: 24px;
 	filter: drop-shadow(0 0 20px var(--realm-color, rgba(201, 164, 76, 0.5)));
 }
 
 .mission-intro-chapter {
-	font-size: 11px;
+	font-size: var(--text-11);
 	color: rgba(255, 255, 255, 0.35);
 	text-transform: uppercase;
 	letter-spacing: 0.3em;
@@ -315,7 +315,7 @@
 	margin: 0 auto 14px;
 	padding: var(--space-6) 18px;
 	font-family: 'Cinzel', Georgia, serif;
-	font-size: 14px;
+	font-size: var(--text-sm);
 	font-weight: 900;
 	letter-spacing: 0.32em;
 	text-transform: uppercase;
@@ -352,7 +352,7 @@
 }
 
 .mission-intro-number {
-	font-size: 12px;
+	font-size: var(--text-xs);
 	color: rgba(255, 255, 255, 0.25);
 	text-transform: uppercase;
 	letter-spacing: 0.2em;
@@ -375,7 +375,7 @@
 }
 
 .mission-intro-boss-label {
-	font-size: 10px;
+	font-size: var(--text-10);
 	text-transform: uppercase;
 	letter-spacing: 0.2em;
 	color: rgba(220, 38, 38, 0.6);
@@ -383,14 +383,14 @@
 }
 
 .mission-intro-boss-rule {
-	font-size: 13px;
+	font-size: var(--text-13);
 	color: rgba(220, 38, 38, 0.7);
 	margin-bottom: 4px;
 }
 
 .mission-intro-prompt {
 	margin-top: 40px;
-	font-size: 12px;
+	font-size: var(--text-xs);
 	color: rgba(255, 255, 255, 0.2);
 	letter-spacing: 0.15em;
 	animation: prompt-pulse 2s ease-in-out infinite;

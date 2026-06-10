@@ -12,19 +12,19 @@
 .element-indicator-small {
   width: 24px;
   height: 24px;
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 
 .element-indicator-medium {
   width: 36px;
   height: 36px;
-  font-size: 18px;
+  font-size: var(--text-lg);
 }
 
 .element-indicator-large {
   width: 48px;
   height: 48px;
-  font-size: 24px;
+  font-size: var(--text-2xl);
 }
 
 .element-icon {
@@ -38,7 +38,7 @@
   bottom: -18px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 10px;
+  font-size: var(--text-10);
   font-weight: 600;
   white-space: nowrap;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
@@ -151,7 +151,7 @@
   gap: 4px;
   padding: var(--space-3) 8px;
   border-radius: 12px;
-  font-size: 11px;
+  font-size: var(--text-11);
   font-weight: 600;
   color: white;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
@@ -159,7 +159,7 @@
 }
 
 .element-badge-icon {
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 
 .element-badge-label {
