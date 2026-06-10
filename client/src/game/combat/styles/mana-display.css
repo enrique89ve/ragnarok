@@ -1,0 +1,14 @@
+/* Mana gem + display — small chip on hero portrait. */
+
+.mana-gem {
+  width: 20px;
+  height: 20px;
+  filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.5));
+}
+
+.mana-display {
+  gap: 4px;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 20px;
+}

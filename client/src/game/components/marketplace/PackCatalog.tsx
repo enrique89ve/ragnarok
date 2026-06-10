@@ -391,37 +391,8 @@ export default function PackCatalog() {
 					/>
 				)}
 
-			{/* Wallet chips row */}
-			{hiveUsername && (
-				<div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
-					<div className="flex items-center gap-2 flex-wrap">
-						{/* RUNE balance — dim when zero, full gold when funded */}
-						<div
-							role="status"
-							aria-label={`${runeBalance.toLocaleString()} RUNE balance`}
-							className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-md border transition-colors ${
-								runeBalance > 0
-									? 'bg-gold-700/40 border-gold-500/40'
-									: 'bg-obsidian-800/60 border-obsidian-700'
-							}`}
-						>
-							<Zap
-								size={14}
-								strokeWidth={2.4}
-								aria-hidden="true"
-								className={runeBalance > 0 ? 'text-gold-300' : 'text-ink-400'}
-							/>
-							<span className={`numeric-display numeric-display--md ${runeBalance > 0 ? 'text-gold-200' : 'text-ink-300'}`}>
-								{runeBalance.toLocaleString()}
-							</span>
-							<span className={`font-mono text-[10px] tracking-[0.22em] uppercase ${runeBalance > 0 ? 'text-gold-400' : 'text-ink-400'}`}>
-								RUNE
-							</span>
-						</div>
-
-					</div>
-				</div>
-			)}
+			{/* Wallet chips row moved into the catalog heading for visual rhythm
+			    (RUNE pairs with purchase intent, not with the supply banner). */}
 
 			{/* Supply Banner — Runic Forge */}
 			{supplyStats && (
@@ -447,11 +418,8 @@ export default function PackCatalog() {
 									of {supplyStats.totalPackSupply.toLocaleString()} sealed packs · forged
 								</div>
 							</div>
-							<div className="text-right">
-								<div className={`scarcity-badge ${scarcity.class} mb-2`}>{scarcity.label}</div>
-								<div className="font-mono text-[11px] tracking-[0.18em] uppercase text-ink-300">
-									{packPercentRemaining.toFixed(1)}% remaining
-								</div>
+							<div className="self-start">
+								<div className={`scarcity-badge ${scarcity.class}`}>{scarcity.label}</div>
 							</div>
 						</div>
 
@@ -459,7 +427,7 @@ export default function PackCatalog() {
 							<div className="supply-bar-fill" style={{ width: `${packPercentRemaining}%` }} />
 						</div>
 
-						<div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+						<div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
 							{supplyStats.byRarity.map(rs => {
 								const color = getRarityCssColor(rs.rarity);
 								const percentRemaining = rs.packSupply > 0 ? (rs.packRemaining / rs.packSupply) * 100 : 0;
@@ -490,13 +458,26 @@ export default function PackCatalog() {
 							})}
 						</div>
 
-						<div className="reward-reserve-badge">
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-								<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-							</svg>
-							<span>{supplyStats.totalRewardReserve.toLocaleString()} cards reserved for in-game rewards</span>
-							<span className="text-frost-400/60 text-xs ml-1">(not available in packs)</span>
-						</div>
+						{supplyStats.totalRewardReserve > 0 && (
+							<RichTooltip
+								label="What does this mean?"
+								width={280}
+							>
+								<div
+									className="reward-reserve-badge"
+									tabIndex={0}
+									aria-label={`${supplyStats.totalRewardReserve.toLocaleString()} cards locked for in-game rewards`}
+								>
+									<span className="reward-reserve-dot" aria-hidden="true" />
+									<span className="numeric-display numeric-display--sm text-frost-200">
+										{supplyStats.totalRewardReserve.toLocaleString()}
+									</span>
+									<span className="font-mono text-[10px] tracking-[0.22em] uppercase text-frost-300/90">
+										locked · in-game rewards
+									</span>
+								</div>
+							</RichTooltip>
+						)}
 					</div>
 				</motion.section>
 			)}
@@ -521,8 +502,32 @@ export default function PackCatalog() {
 				</motion.div>
 			) : (
 				<section aria-labelledby="catalog-heading">
-					<header className="section-heading mb-6 text-center items-center">
-						<div id="catalog-heading" className="section-heading-kicker mx-auto">Catalog · Sealed Packs</div>
+					<header className="section-heading mb-6 flex items-center justify-between flex-wrap gap-3">
+						<div id="catalog-heading" className="section-heading-kicker">Catalog · Sealed Packs</div>
+						{hiveUsername && (
+							<div
+								role="status"
+								aria-label={`${runeBalance.toLocaleString()} RUNE balance`}
+								className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-md border transition-colors ${
+									runeBalance > 0
+										? 'bg-gold-700/40 border-gold-500/40'
+										: 'bg-obsidian-800/60 border-obsidian-700'
+								}`}
+							>
+								<Zap
+									size={14}
+									strokeWidth={2.4}
+									aria-hidden="true"
+									className={runeBalance > 0 ? 'text-gold-300' : 'text-ink-400'}
+								/>
+								<span className={`numeric-display numeric-display--md ${runeBalance > 0 ? 'text-gold-200' : 'text-ink-300'}`}>
+									{runeBalance.toLocaleString()}
+								</span>
+								<span className={`font-mono text-[10px] tracking-[0.22em] uppercase ${runeBalance > 0 ? 'text-gold-400' : 'text-ink-400'}`}>
+									RUNE
+								</span>
+							</div>
+						)}
 					</header>
 					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-12 max-w-5xl mx-auto">
 						{visiblePackTypes.map((pack, index) => (

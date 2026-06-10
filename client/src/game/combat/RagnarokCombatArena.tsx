@@ -19,8 +19,11 @@ import { Position } from '../types/Position';
 import { TargetingOverlay } from '../components/TargetingOverlay';
 import { CardBurnOverlay } from '../components/CardBurnOverlay';
 import { ActionAnnouncement } from '../components/ActionAnnouncement';
-import './RagnarokCombatArena.css';
+import './layout/board.css';
+import './styles/poker-core.css';
 import './styles/poker-vfx.css';
+import './styles/poker-showdown.css';
+import './styles/poker-campaign.css';
 import AIAttackAnimationProcessor from '../components/AIAttackAnimationProcessor';
 import { PixiParticleCanvas } from '../animations/PixiParticleCanvas';
 

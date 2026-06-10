@@ -1,0 +1,107 @@
+/* Attack mode banner — floats above the player field when a minion is
+   selected as attacker. Position comes from the poker layout contract
+   (see combat/layout/board.css for --poker-zone-attackModeBanner-* tokens). */
+
+.attack-mode-banner {
+  position: absolute;
+  display: flex;
+  top: var(--poker-zone-attackModeBanner-y, 8%);
+  left: var(--poker-zone-attackModeBanner-x, 50%);
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 16px;
+  box-sizing: border-box;
+  width: var(--poker-zone-attackModeBanner-w, fit-content);
+  min-height: var(--poker-zone-attackModeBanner-h, auto);
+  max-width: var(--poker-zone-attackModeBanner-w, 480px);
+  background: linear-gradient(
+    135deg,
+    rgba(30, 20, 5, 0.92) 0%,
+    rgba(60, 35, 5, 0.92) 100%
+  );
+  border: 1.5px solid var(--gold-300);
+  border-radius: 8px;
+  box-shadow:
+    0 0 18px var(--gold-glow),
+    0 4px 12px rgba(0, 0, 0, 0.55);
+  transform: rotate(var(--poker-zone-attackModeBanner-rot, 0deg));
+  transform-origin: top left;
+  animation: attackBannerIn 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+  z-index: 220;
+  pointer-events: auto;
+}
+
+@keyframes attackBannerIn {
+  from {
+    opacity: 0;
+    transform: rotate(var(--poker-zone-attackModeBanner-rot, 0deg)) translateY(6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(var(--poker-zone-attackModeBanner-rot, 0deg)) translateY(0) scale(1);
+  }
+}
+
+.attack-mode-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.8));
+  animation: swordPulse 1.2s ease-in-out infinite;
+}
+
+.attack-mode-icon .btn-icon {
+  width: 18px;
+  height: 18px;
+}
+
+@keyframes swordPulse {
+  0%,
+  100% {
+    transform: rotate(-5deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}
+
+.attack-mode-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--rarity-mythic-pale);
+  letter-spacing: 0.3px;
+}
+
+.attack-mode-text strong {
+  color: var(--rarity-mythic-bright);
+  font-weight: 700;
+}
+
+.attack-mode-cancel {
+  margin-left: 6px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(253, 230, 138, 0.8);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 5px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.attack-mode-cancel:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.5);
+}

@@ -130,7 +130,7 @@
   }
 }
 
-/* Arena layout lives in combat/styles/canvas-layout.css.
+/* Arena layout lives in combat/layout/board.css.
    This file keeps only viewport wrapper / scaling concerns.
    Remaining zone tokens consumed by sibling files: see styles/zones.css. */
 
@@ -172,7 +172,7 @@
 
 /* ========================================
    TOUCH + REDUCED MOTION (viewport hero card only;
-   poker hover/transition tweaks live in canvas-layout.css)
+   poker hover/transition tweaks live in layout/board.css)
    ======================================== */
 
 @media (hover: none) {

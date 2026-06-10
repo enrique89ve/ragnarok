@@ -1,0 +1,96 @@
+/* Poker stat badges + stat boxes — used by hero status widgets. */
+
+.poker-stats-badges {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.stat-badge {
+  background: linear-gradient(
+    180deg,
+    rgba(15, 23, 42, 0.95) 0%,
+    rgba(30, 41, 59, 0.9) 100%
+  );
+  border: 1px solid rgba(71, 85, 105, 0.5);
+  border-radius: 8px;
+  padding: 6px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-width: 80px;
+  box-sizing: border-box;
+}
+
+.stat-badge .stat-label {
+  font-size: 0.6rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-badge .stat-value {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.stat-badge.hp-bet {
+  border-color: #f59e0b;
+}
+
+.stat-badge.hp-bet .stat-value {
+  color: #f59e0b;
+}
+
+.stat-badge.hp-remaining {
+  border-color: #22c55e;
+}
+
+.stat-badge.hp-remaining .stat-value {
+  color: #22c55e;
+}
+
+.stat-box {
+  background: linear-gradient(
+    180deg,
+    rgba(15, 23, 42, 0.95) 0%,
+    rgba(30, 41, 59, 0.9) 100%
+  );
+  border: 1px solid rgba(71, 85, 105, 0.5);
+  border-radius: 8px;
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 50px;
+}
+
+.stat-box .stat-label {
+  font-size: 0.6rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-box .stat-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.stat-box.hp-bet {
+  border-color: #f59e0b;
+}
+
+.stat-box.hp-bet .stat-value {
+  color: #f59e0b;
+}

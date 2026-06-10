@@ -1,0 +1,207 @@
+/* Damage/heal number popup + target shake/flash effects.
+   Position set inline as position:fixed so viewport coords work. */
+
+.damage-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+  animation: damageFloat 2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  font-family: "Cinzel", "Georgia", serif;
+}
+
+.damage-number-text {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #ef4444;
+  text-shadow:
+    0 0 12px rgba(239, 68, 68, 0.9),
+    0 0 24px rgba(239, 68, 68, 0.5),
+    0 2px 6px rgba(0, 0, 0, 0.9),
+    -1px -1px 0 #1a0000,
+    1px -1px 0 #1a0000,
+    -1px 1px 0 #1a0000,
+    1px 1px 0 #1a0000;
+  letter-spacing: -1px;
+}
+
+.damage-indicator.damage-heal .damage-number-text {
+  color: #4ade80;
+  text-shadow:
+    0 0 12px rgba(74, 222, 128, 0.9),
+    0 0 24px rgba(74, 222, 128, 0.5),
+    0 2px 6px rgba(0, 0, 0, 0.9),
+    -1px -1px 0 #001a00,
+    1px -1px 0 #001a00,
+    -1px 1px 0 #001a00,
+    1px 1px 0 #001a00;
+}
+
+.damage-indicator.damage-big .damage-number-text {
+  font-size: 2.8rem;
+}
+
+.damage-indicator.damage-critical .damage-number-text {
+  font-size: 3.4rem;
+  color: #fbbf24;
+  text-shadow:
+    0 0 20px rgba(251, 191, 36, 1),
+    0 0 40px rgba(251, 191, 36, 0.7),
+    0 0 60px rgba(251, 191, 36, 0.3),
+    0 2px 6px rgba(0, 0, 0, 0.95),
+    -1px -1px 0 #1a1000,
+    1px -1px 0 #1a1000,
+    -1px 1px 0 #1a1000,
+    1px 1px 0 #1a1000;
+  animation: damageFloatCrit 2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.damage-crit-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #fbbf24;
+  text-shadow: 0 0 8px rgba(251, 191, 36, 0.8);
+  margin-top: 2px;
+  animation: critLabelFade 2s ease-out forwards;
+}
+
+@keyframes damageFloat {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px) scale(2);
+  }
+  6% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1.1);
+  }
+  18% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-15px) scale(1);
+  }
+  55% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-35px) scale(0.97);
+  }
+  80% {
+    opacity: 0.8;
+    transform: translateX(-50%) translateY(-50px) scale(0.9);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-65px) scale(0.8);
+  }
+}
+
+@keyframes damageFloatCrit {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(14px) scale(2.4);
+  }
+  6% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1.15);
+  }
+  15% {
+    transform: translateX(-50%) translateY(-5px) scale(1.05);
+  }
+  30% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-20px) scale(1);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-40px) scale(0.95);
+  }
+  85% {
+    opacity: 0.7;
+    transform: translateX(-50%) translateY(-55px) scale(0.85);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-70px) scale(0.75);
+  }
+}
+
+@keyframes critLabelFade {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.5);
+  }
+  15% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  70% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Target shake effect */
+.damage-shake {
+  animation: damageShake 0.3s ease-out;
+}
+
+@keyframes damageShake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10% {
+    transform: translateX(-4px) rotate(-1deg);
+  }
+  20% {
+    transform: translateX(4px) rotate(1deg);
+  }
+  30% {
+    transform: translateX(-4px) rotate(-0.5deg);
+  }
+  40% {
+    transform: translateX(4px) rotate(0.5deg);
+  }
+  50% {
+    transform: translateX(-2px);
+  }
+  60% {
+    transform: translateX(2px);
+  }
+  70% {
+    transform: translateX(-1px);
+  }
+  80% {
+    transform: translateX(1px);
+  }
+}
+
+/* Target flash/hit effect */
+.damage-flash {
+  animation: damageFlash 0.3s ease-out;
+}
+
+@keyframes damageFlash {
+  0% {
+    filter: brightness(1) drop-shadow(0 0 0 transparent);
+  }
+  15% {
+    filter: brightness(1.8) drop-shadow(0 0 15px rgba(239, 68, 68, 0.9));
+  }
+  30% {
+    filter: brightness(1.2) drop-shadow(0 0 8px rgba(239, 68, 68, 0.6));
+  }
+  100% {
+    filter: brightness(1) drop-shadow(0 0 0 transparent);
+  }
+}
+
+.unified-damage-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: var(--z-overlays);
+}

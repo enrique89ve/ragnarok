@@ -452,13 +452,31 @@
 .reward-reserve-badge {
 	display: inline-flex;
 	align-items: center;
-	gap: 6px;
+	gap: 8px;
 	padding: 6px 14px;
 	border-radius: 8px;
 	background: color-mix(in srgb, var(--frost-400) 10%, transparent);
 	border: 1px solid color-mix(in srgb, var(--frost-400) 25%, transparent);
 	color: color-mix(in srgb, var(--frost-200) 88%, transparent);
 	font-size: 13px;
+	cursor: help;
+	transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.reward-reserve-badge:hover,
+.reward-reserve-badge:focus-visible {
+	border-color: color-mix(in srgb, var(--frost-400) 50%, transparent);
+	background: color-mix(in srgb, var(--frost-400) 15%, transparent);
+	outline: none;
+}
+
+.reward-reserve-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--frost-300);
+	box-shadow: 0 0 8px color-mix(in srgb, var(--frost-300) 60%, transparent);
+	flex-shrink: 0;
 }
 
 /* ========== Pack Price Badge ========== */

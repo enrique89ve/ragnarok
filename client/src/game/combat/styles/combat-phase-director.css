@@ -1,0 +1,351 @@
+/* Combat phase director — wager-mode panel showing phase rail, title, copy, pills.
+   CSS-vars per accent (player/opponent) for color tone switching. */
+
+.combat-phase-director {
+  --director-accent: #f8d483;
+  --director-accent-soft: rgba(248, 212, 131, 0.14);
+  --director-panel: rgba(8, 12, 22, 0.96);
+  --director-panel-deep: rgba(5, 8, 16, 0.98);
+  --director-line: rgba(248, 212, 131, 0.18);
+  --director-text: rgba(241, 245, 249, 0.9);
+  --director-muted: rgba(203, 213, 225, 0.72);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  width: 100%;
+  min-width: 0;
+  padding: 14px 16px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background:
+    radial-gradient(circle at 16% 0%, rgba(248, 212, 131, 0.12), transparent 28%),
+    linear-gradient(135deg, rgba(20, 30, 50, 0.96) 0%, var(--director-panel) 42%, var(--director-panel-deep) 100%);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -18px 38px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+
+.combat-phase-director::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(180deg, transparent, var(--director-accent), transparent);
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.combat-phase-director::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06), transparent 22%),
+    repeating-linear-gradient(135deg, transparent 0 20px, rgba(255, 255, 255, 0.025) 20px 21px);
+  pointer-events: none;
+  opacity: 0.65;
+}
+
+.combat-phase-director.player-window {
+  --director-accent: #7dd3fc;
+  --director-accent-soft: rgba(125, 211, 252, 0.14);
+  --director-line: rgba(125, 211, 252, 0.2);
+  border-color: rgba(125, 211, 252, 0.28);
+}
+
+.combat-phase-director.opponent-window {
+  --director-accent: #fca5a5;
+  --director-accent-soft: rgba(248, 113, 113, 0.12);
+  --director-line: rgba(248, 113, 113, 0.2);
+  border-color: rgba(248, 113, 113, 0.24);
+}
+
+.combat-phase-director.mode-wager {
+  border-color: color-mix(in srgb, var(--director-accent) 34%, transparent);
+  box-shadow:
+    0 22px 46px rgba(0, 0, 0, 0.36),
+    0 0 0 1px color-mix(in srgb, var(--director-accent) 10%, transparent),
+    0 0 34px color-mix(in srgb, var(--director-accent) 8%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.combat-phase-director.is-waiting {
+  filter: saturate(0.88);
+}
+
+.combat-phase-director > * {
+  position: relative;
+  z-index: 1;
+}
+
+.combat-phase-director-topline,
+.combat-phase-director-order {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.combat-phase-director-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+:is(
+  .combat-phase-director-kicker,
+  .combat-phase-director-mode,
+  .combat-phase-director-window,
+  .combat-phase-director-cue,
+  .combat-phase-director-phase,
+  .combat-phase-director-pill-label
+) {
+  font-family: var(--type-display);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.combat-phase-director-kicker {
+  color: var(--director-accent);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+}
+
+.combat-phase-director-mode {
+  color: rgba(203, 213, 225, 0.64);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+}
+
+.combat-phase-director-window {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--director-line);
+  background: rgba(15, 23, 42, 0.7);
+  color: var(--director-text);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+.combat-phase-director-window-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--director-accent);
+  box-shadow: 0 0 10px var(--director-accent);
+}
+
+.combat-phase-rail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.combat-phase-step {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 0 0 28px;
+  min-width: 0;
+  min-height: 28px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(10, 14, 28, 0.72);
+  color: rgba(148, 163, 184, 0.78);
+  overflow: hidden;
+}
+
+.combat-phase-step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: calc(100% - 1px);
+  width: 8px;
+  height: 1px;
+  background: rgba(148, 163, 184, 0.18);
+}
+
+.combat-phase-step.complete {
+  border-color: rgba(74, 222, 128, 0.3);
+  background: rgba(21, 128, 61, 0.18);
+  color: #bbf7d0;
+}
+
+.combat-phase-step.current {
+  flex: 1 1 136px;
+  justify-content: flex-start;
+  padding: 0 10px;
+  border-color: color-mix(in srgb, var(--director-accent) 48%, transparent);
+  background:
+    linear-gradient(90deg, var(--director-accent-soft), rgba(15, 23, 42, 0.72));
+  color: var(--director-accent);
+  box-shadow: inset 0 0 18px var(--director-accent-soft);
+}
+
+.combat-phase-step-marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.14);
+  color: inherit;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.combat-phase-step.current .combat-phase-step-marker {
+  background: color-mix(in srgb, var(--director-accent) 18%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--director-accent) 34%, transparent);
+}
+
+.combat-phase-step-label {
+  display: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.combat-phase-step.current .combat-phase-step-label {
+  display: inline;
+}
+
+.combat-phase-director-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-top: 2px;
+}
+
+.combat-phase-director-phase {
+  color: var(--director-accent);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+}
+
+.combat-phase-director-cue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
+  max-width: 170px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid var(--director-line);
+  background: rgba(15, 23, 42, 0.74);
+  color: rgba(226, 232, 240, 0.82);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combat-phase-director-title {
+  font-family: var(--type-display);
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.12;
+  color: #f8fafc;
+  letter-spacing: 0.01em;
+}
+
+.combat-phase-director-text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.42;
+  color: var(--director-muted);
+}
+
+.combat-phase-director-pills {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.combat-phase-director-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 9px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.76);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  color: rgba(241, 245, 249, 0.86);
+  white-space: nowrap;
+}
+
+.combat-phase-director-pill.tone-risk,
+.combat-phase-director-pill.tone-call {
+  border-color: rgba(248, 212, 131, 0.24);
+  background: linear-gradient(90deg, rgba(120, 53, 15, 0.18), rgba(15, 23, 42, 0.78));
+}
+
+.combat-phase-director-pill.tone-board {
+  border-color: rgba(74, 222, 128, 0.18);
+}
+
+.combat-phase-director-pill.tone-mana {
+  border-color: rgba(96, 165, 250, 0.2);
+}
+
+.combat-phase-director-pill-label {
+  color: rgba(203, 213, 225, 0.64);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+}
+
+.combat-phase-director-pill-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--director-text);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+/* Phase rail compacts on narrow browsers */
+@media (max-width: 1180px) {
+  .combat-phase-rail {
+    gap: 4px;
+  }
+
+  .combat-phase-step.current {
+    flex-basis: 112px;
+  }
+}
+
+@media (max-width: 820px) {
+  .combat-phase-director-pills {
+    grid-template-columns: 1fr;
+  }
+}

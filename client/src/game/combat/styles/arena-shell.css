@@ -1,0 +1,17 @@
+/* Arena shell — scrollbar removal + arena root reset.
+   Loaded via poker-core.css manifest. Keeps the .ragnarok-combat-arena
+   root identity without owning gameplay layout (that lives in
+   combat/layout/board.css). */
+
+/* Global scrollbar removal for all combat arena elements */
+.ragnarok-combat-arena,
+.ragnarok-combat-arena * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.ragnarok-combat-arena::-webkit-scrollbar,
+.ragnarok-combat-arena *::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}

@@ -7,7 +7,7 @@
  *
  * `.zone-opp-field` and `.zone-player-field` get a `z-index: 600` lift
  * when a card inside is being hovered — that rule lives in
- * `styles/canvas-layout.css` and is keyed off the class names below.
+ * `layout/board.css` and is keyed off the class names below.
  */
 
 import React from 'react';

@@ -1,0 +1,114 @@
+/* Activity logs — top-right dock + last action log fade-in overlay. */
+
+.activity-logs-dock {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 210px;
+  max-height: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  max-width: 100%;
+  overflow: hidden;
+  z-index: 90;
+  pointer-events: auto;
+}
+
+.activity-logs-dock .activity-log {
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(100, 116, 139, 0.3);
+  border-radius: 4px;
+  padding: 4px;
+  max-height: 120px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.activity-logs-dock .activity-log-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 0;
+  border-bottom: 1px solid rgba(100, 116, 139, 0.2);
+  margin-bottom: 4px;
+}
+
+.activity-logs-dock .activity-log-icon {
+  font-size: 1.1rem;
+  filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.4));
+}
+
+.activity-logs-dock .activity-log-title {
+  display: none;
+}
+
+.activity-logs-dock .log-entry {
+  font-size: 0.65rem;
+  padding: 1px 4px;
+  border: none;
+  background: transparent;
+}
+
+.unified-activity-logs {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: var(--z-hud);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 200px;
+}
+
+.unified-activity-logs:empty,
+.activity-log:empty {
+  display: none;
+}
+
+.activity-log-placeholder {
+  color: rgba(148, 163, 184, 0.5);
+  font-size: 0.75rem;
+  font-style: italic;
+  text-align: center;
+  padding: 8px;
+}
+
+.last-action-log {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 6px 16px;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 0.85),
+    rgba(20, 20, 30, 0.9)
+  );
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 6px;
+  font-size: 13px;
+  color: #fbbf24;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 50;
+  animation: actionLogFade 2s ease-out forwards;
+}
+
+@keyframes actionLogFade {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+  10% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}

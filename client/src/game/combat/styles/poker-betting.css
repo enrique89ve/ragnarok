@@ -1,0 +1,597 @@
+/* Poker betting — action panels, presets, slider, raise/call/check/fold buttons,
+   quick-bet chips, and the wood+gold bet HP slider. Owns all in-panel controls. */
+
+/* In-panel action container + waiting state */
+.poker-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--poker-panel-gap);
+  padding: calc(8px * var(--poker-panel-scale));
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
+}
+
+.poker-actions .waiting-for-opponent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(100, 100, 100, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+.poker-actions .waiting-for-opponent .waiting-icon {
+  animation: waiting-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes waiting-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.bet-controls {
+  display: flex;
+  flex-direction: column;
+  gap: calc(6px * var(--poker-panel-scale));
+  padding: calc(6px * var(--poker-panel-scale))
+    calc(8px * var(--poker-panel-scale));
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.bet-presets {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+  align-items: stretch;
+}
+
+.preset-btn {
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: linear-gradient(
+    180deg,
+    rgba(51, 65, 85, 0.9) 0%,
+    rgba(30, 41, 59, 0.95) 100%
+  );
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  border-radius: 6px;
+  color: #e2e8f0;
+  cursor: pointer;
+  font-family: "Cinzel", "Times New Roman", serif;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease,
+    box-shadow 0.2s ease;
+  min-width: 48px;
+  text-align: center;
+}
+
+.preset-btn:hover:not(:disabled) {
+  background: linear-gradient(
+    180deg,
+    rgba(71, 85, 105, 0.9) 0%,
+    rgba(51, 66, 85, 0.95) 100%
+  );
+  border-color: rgba(139, 92, 246, 0.6);
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.3);
+}
+
+.preset-btn.active {
+  background: linear-gradient(
+    180deg,
+    rgba(139, 92, 246, 0.8) 0%,
+    rgba(109, 40, 217, 0.9) 100%
+  );
+  border-color: rgba(167, 139, 250, 0.6);
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.5);
+}
+
+.preset-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.bet-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  padding: 0;
+}
+
+.bet-label {
+  font-size: 0.85rem;
+  color: #a0aec0;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.poker-slider {
+  width: 280px;
+  height: 8px;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  outline: none;
+}
+
+.poker-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #22c55e;
+  cursor: pointer;
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.8);
+  border: 2px solid white;
+}
+
+.slider-label {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.slider-value {
+  color: #22c55e;
+  font-weight: 800;
+  font-family: "Cinzel", serif;
+  font-size: 1.2rem;
+  min-width: 70px;
+  text-align: right;
+  text-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+}
+
+/* Action buttons group wrapper */
+.action-buttons-group {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+/* ─── Poker action buttons container ─── */
+.poker-action-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ─── Base poker button — tactile, premium, readable at a glance ─── */
+.poker-btn {
+  position: relative;
+  min-width: 92px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 7px;
+  font-family: var(--type-display);
+  font-size: 0.92rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease,
+    box-shadow 0.15s ease,
+    filter 0.15s ease;
+  overflow: hidden;
+}
+
+.poker-btn .btn-text {
+  position: relative;
+  z-index: 2;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+  font-family: var(--type-display);
+  font-weight: 800;
+}
+
+.poker-btn .btn-label {
+  display: block;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  opacity: 0.7;
+  line-height: 1;
+  margin-bottom: 1px;
+  position: relative;
+  z-index: 2;
+}
+
+/* RAISE button - Red/Orange gradient like reference */
+.poker-btn.raise-btn {
+  background: linear-gradient(
+    180deg,
+    #e85a4f 0%,
+    #c94a40 25%,
+    #b03a30 50%,
+    #a02820 75%,
+    #8a1810 100%
+  );
+  border: 2px solid #ff6b5b;
+  border-bottom: 3px solid #6a1810;
+  color: #ffffff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 200, 180, 0.4),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.3),
+    0 4px 8px rgba(180, 60, 40, 0.4);
+}
+
+.poker-btn.raise-btn:hover:not(:disabled) {
+  background: linear-gradient(
+    180deg,
+    #f06a5f 0%,
+    #d95a50 25%,
+    #c04a40 50%,
+    #b03830 75%,
+    #9a2820 100%
+  );
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 200, 180, 0.5),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.3),
+    0 6px 12px rgba(180, 60, 40, 0.5);
+}
+
+/* CALL button - Gold/Yellow gradient like reference */
+.poker-btn.call-btn {
+  background: linear-gradient(
+    180deg,
+    #e8c547 0%,
+    #d4a82a 25%,
+    #c49520 50%,
+    #b08518 75%,
+    #9a7510 100%
+  );
+  border: 2px solid #f5d560;
+  border-bottom: 3px solid #6a5010;
+  color: #3a2800;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 240, 180, 0.5),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.2),
+    0 4px 8px rgba(180, 140, 40, 0.4);
+}
+
+.poker-btn.call-btn:hover:not(:disabled) {
+  background: linear-gradient(
+    180deg,
+    #f0d057 0%,
+    #e4b83a 25%,
+    #d4a530 50%,
+    #c09528 75%,
+    #aa8520 100%
+  );
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 240, 180, 0.6),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.2),
+    0 6px 12px rgba(180, 140, 40, 0.5);
+}
+
+/* FOLD button - Gray/Dark gradient like reference */
+.poker-btn.fold-btn {
+  background: linear-gradient(
+    180deg,
+    #5a6070 0%,
+    #4a5060 25%,
+    #3a4050 50%,
+    #303845 75%,
+    #252a35 100%
+  );
+  border: 2px solid #6a7080;
+  border-bottom: 3px solid #1a1e28;
+  color: #c0c8d8;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.3),
+    0 4px 8px rgba(40, 50, 70, 0.4);
+}
+
+.poker-btn.fold-btn:hover:not(:disabled) {
+  background: linear-gradient(
+    180deg,
+    #6a7080 0%,
+    #5a6070 25%,
+    #4a5060 50%,
+    #404855 75%,
+    #353a45 100%
+  );
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.3),
+    0 6px 12px rgba(40, 50, 70, 0.5);
+}
+
+/* Disabled state for all poker buttons */
+.poker-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Poker slider row - full width under buttons */
+.poker-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: auto;
+  min-width: 300px;
+  padding: 4px 0;
+}
+
+.poker-slider-row .slider-label {
+  font-size: 0.75rem;
+  color: rgba(180, 200, 220, 0.8);
+  font-weight: 500;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.poker-slider-row .poker-slider {
+  flex: 1;
+  height: 8px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: linear-gradient(90deg, #1a5a30 0%, #2a8a50 50%, #3ab060 100%);
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.3),
+    0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.poker-slider-row .poker-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(180deg, #50d080 0%, #30a050 50%, #208040 100%);
+  border: 2px solid #70f0a0;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.poker-slider-row .poker-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(180deg, #50d080 0%, #30a050 50%, #208040 100%);
+  border: 2px solid #70f0a0;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.poker-slider-row .slider-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #50d080;
+  min-width: 36px;
+  text-align: right;
+  text-shadow: 0 0 8px rgba(80, 208, 128, 0.5);
+}
+
+/* ─── Bet HP Slider — distinct poker control (NOT a health bar) ─── */
+.poker-hp-slider-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  background: linear-gradient(
+    180deg,
+    rgba(48, 32, 14, 0.95) 0%,
+    rgba(28, 18, 6, 0.98) 50%,
+    rgba(48, 32, 14, 0.95) 100%
+  );
+  border: 2px solid rgba(212, 165, 23, 0.7);
+  border-radius: 18px;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 215, 100, 0.15),
+    0 0 10px rgba(212, 165, 23, 0.25);
+  min-width: 220px;
+}
+
+.poker-hp-slider-container::before {
+  content: "BET";
+  font-family: "Cinzel", "Georgia", serif;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: rgba(251, 191, 36, 0.85);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  flex-shrink: 0;
+}
+
+.poker-hp-slider {
+  flex: 1;
+  height: 8px;
+  appearance: none;
+  background: linear-gradient(
+    180deg,
+    rgba(20, 14, 4, 0.95) 0%,
+    rgba(36, 24, 8, 0.95) 50%,
+    rgba(20, 14, 4, 0.95) 100%
+  );
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid rgba(212, 165, 23, 0.5);
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.7);
+}
+
+.poker-hp-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(135deg, #ff3333 0%, #cc0000 50%, #990000 100%);
+  border-radius: 3px;
+  cursor: pointer;
+  box-shadow:
+    0 2px 6px rgba(200, 0, 0, 0.7),
+    0 0 8px rgba(255, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 150, 150, 0.3);
+  border: 2px solid;
+  border-image: linear-gradient(135deg, #d4a517 0%, #8b6914 100%) 1;
+}
+
+.poker-hp-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(135deg, #ff3333 0%, #cc0000 50%, #990000 100%);
+  border-radius: 3px;
+  cursor: pointer;
+  box-shadow:
+    0 2px 6px rgba(200, 0, 0, 0.7),
+    0 0 8px rgba(255, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 150, 150, 0.3);
+  border: 2px solid #d4a517;
+}
+
+.poker-hp-slider-container .slider-value {
+  font-family: "Cinzel", "Georgia", serif;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #fbbf24;
+  min-width: 52px;
+  text-align: center;
+  text-shadow:
+    0 0 6px rgba(251, 191, 36, 0.6),
+    0 1px 2px rgba(0, 0, 0, 0.9);
+  letter-spacing: 0.5px;
+}
+
+/* ─── Quick-bet preset buttons ─── */
+.poker-quick-bets {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.quick-bet-btn {
+  padding: 2px 12px;
+  border-radius: 4px;
+  font-family: var(--type-display);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.7);
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.quick-bet-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.quick-bet-btn.all-in {
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #f87171;
+}
+
+.quick-bet-btn.all-in:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
+.quick-bet-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* Betting phase brief + phase command typography (kicker/title/copy/pills) */
+.betting-phase-brief {
+  max-width: 420px;
+}
+
+.betting-phase-kicker,
+.phase-command-kicker {
+  font-family: var(--type-display);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #f8d483;
+}
+
+.betting-phase-text,
+.phase-command-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(226, 232, 240, 0.78);
+}
+
+.phase-command-title {
+  font-family: var(--type-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: 0.02em;
+}
+
+.phase-command-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.phase-command-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.phase-command-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(241, 245, 249, 0.84);
+  background: rgba(30, 41, 59, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.phase-command-card.player {
+  border-color: rgba(96, 165, 250, 0.22);
+}
+
+.phase-command-card.opponent {
+  border-color: rgba(248, 113, 113, 0.22);
+}

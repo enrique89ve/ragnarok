@@ -3,5 +3,5 @@
    .opponent-hand-zone, field labels — replaced by .unified-* classes.
    Only .opponent-hand-display kept (still used in JSX). */
 
-/* .opponent-hand-display macro layout lives in canvas-layout.css.
+/* .opponent-hand-display macro layout lives in ../layout/board.css.
    Hover variants still live in styles/face-down.css. */

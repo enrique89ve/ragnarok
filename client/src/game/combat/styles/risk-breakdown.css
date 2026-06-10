@@ -1,0 +1,21 @@
+/* Risk breakdown — small inline you/them + sep + dealer coin. */
+
+.risk-breakdown {
+  display: inline-flex;
+  gap: 4px;
+  font-size: 11px;
+  margin-left: 8px;
+  opacity: 0.7;
+}
+
+.risk-you {
+  color: #22c55e;
+}
+
+.risk-them {
+  color: #ef4444;
+}
+
+.risk-sep {
+  color: rgba(255, 255, 255, 0.3);
+}

@@ -1,0 +1,106 @@
+/* Unified container wrappers — poker-hero / opponent-hero / unified-hand / info-row.
+   These glue together the small widgets (hero square, hole cards, resource dock). */
+
+.poker-hero-container {
+  position: relative;
+  overflow: visible;
+  margin-bottom: 1.5rem;
+}
+
+.poker-hero-container .battlefield-hero-square,
+.opponent-hero-container .battlefield-hero-square {
+  width: 220px;
+  aspect-ratio: 3 / 4;
+  max-width: none;
+  max-height: none;
+  position: relative;
+  z-index: 10;
+}
+
+/* Ensure hero portrait is above the hole cards */
+.poker-hero-container .battlefield-hero {
+  position: relative;
+  z-index: 10;
+}
+
+.poker-hand-container {
+  overflow: visible;
+}
+
+.poker-hand-container .hand-container {
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.player-poker-area {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 8px;
+}
+
+.opponent-hero-container {
+  position: relative;
+  overflow: visible;
+}
+
+.unified-hand-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.info-row-item {
+  display: flex;
+  align-items: baseline;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.info-row-item .stat-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgba(148, 163, 184, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-right: 8px;
+  text-shadow: 0 0 5px rgba(148, 163, 184, 0.3);
+}
+
+.info-row-item .stat-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #ffffff;
+  text-shadow:
+    0 0 10px rgba(255, 255, 255, 0.8),
+    0 0 20px rgba(255, 255, 255, 0.4);
+}
+
+.info-row-item.foe .stat-value {
+  color: #f87171;
+  text-shadow:
+    0 0 10px rgba(248, 113, 113, 0.8),
+    0 0 20px rgba(248, 113, 113, 0.4);
+}
+
+.info-row-item.you .stat-value {
+  color: #60a5fa;
+  text-shadow:
+    0 0 10px rgba(96, 165, 250, 0.8),
+    0 0 20px rgba(96, 165, 250, 0.4);
+}
+
+/* Pointer-events pass-through for hand cards in containers */
+.hand-container .card-with-drag,
+.player-hand .card-with-drag {
+  pointer-events: auto;
+  cursor: pointer;
+}
