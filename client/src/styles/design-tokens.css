@@ -265,6 +265,26 @@
   --space-2xl: 2rem; /* 32px */
   --space-3xl: 3rem; /* 48px */
 
+  /* Numeric spacing scale — non-canonical values from real usage.
+     Add to this block when a new px value stabilises across 2+ files.
+     Kept separate from the semantic scale above (xs/sm/md/lg/xl/2xl/3xl)
+     so future renames of the semantic names don't ripple. */
+  --space-2: 2px;
+  --space-3: 3px;
+  --space-5: 5px;
+  --space-6: 6px;
+  --space-7: 7px;
+  --space-9: 9px;
+  --space-10: 10px;
+  --space-11: 11px;
+  --space-13: 13px;
+  --space-14: 14px;
+  --space-15: 15px;
+  --space-18: 18px;
+  --space-20: 20px;
+  --space-22: 22px;
+  --space-28: 28px;
+
   /* =============================================
      3. TYPOGRAPHY
      ============================================= */
@@ -275,6 +295,19 @@
   --text-xl: 1.25rem; /* 20px */
   --text-2xl: 1.5rem; /* 24px */
   --text-3xl: 1.875rem; /* 30px */
+
+  /* Numeric type scale — non-canonical px values from real usage.
+     Most of these are sub-12px (should arguably be redesigned) but kept
+     for mechanical TIER-0 compliance. Pair with the semantic scale above. */
+  --text-8: 8px;
+  --text-9: 9px;
+  --text-10: 10px;
+  --text-11: 11px;
+  --text-13: 13px;
+  --text-15: 15px;
+  --text-22: 22px;
+  --text-28: 28px;
+  --text-48: 48px;
 
   --font-normal: 400;
   --font-medium: 500;
@@ -289,6 +322,12 @@
   --radius-lg: 0.75rem; /* 12px */
   --radius-xl: 1rem; /* 16px */
   --radius-full: 9999px;
+
+  /* Numeric radius scale — sub-6px corners that don't fit the semantic scale. */
+  --radius-2: 2px;
+  --radius-3: 3px;
+  --radius-4: 4px;
+  --radius-5: 5px;
 
   /* =============================================
      5. SHADOWS
