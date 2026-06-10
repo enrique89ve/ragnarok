@@ -17,6 +17,7 @@ export interface GameIconProps {
 	size?: number;
 	strokeWidth?: number;
 	className?: string;
+	color?: string;
 	'aria-label'?: string;
 }
 
@@ -25,6 +26,7 @@ export const GameIcon: React.FC<GameIconProps> = ({
 	size = 20,
 	strokeWidth = 2,
 	className,
+	color,
 	'aria-label': ariaLabel,
 }) => {
 	const IconComponent = ICON_MAP[name] ?? HelpCircle;
@@ -33,6 +35,7 @@ export const GameIcon: React.FC<GameIconProps> = ({
 			size={size}
 			strokeWidth={strokeWidth}
 			className={className}
+			color={color}
 			aria-label={ariaLabel ?? name}
 			role={ariaLabel ? 'img' : undefined}
 		/>

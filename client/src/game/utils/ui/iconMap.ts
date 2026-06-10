@@ -86,6 +86,7 @@ export const ICON_MAP = {
 	search: Search, // discover
 	heart: Heart, // heal/lifesteal
 	mute: VolumeX, // silence
+	volume: VolumeX, // echo/audio
 	knife: Bone, // overkill (closest: bone)
 	magnet: Magnet, // magnetic
 	hammer: Wand, // weapon (wand as closest)
@@ -103,6 +104,7 @@ export const ICON_MAP = {
 	plus: Plus, // add
 	warning: AlertTriangle, // warning
 	arrowDown: ArrowDown, // weakened
+	circle: Bug, // neutral element placeholder
 	x: X, // / invalid/no
 	ban: Ban, // blocked
 	check: Check, // ok
@@ -111,6 +113,7 @@ export const ICON_MAP = {
 	help: HelpCircle, // help
 	day: Sun, // day/turn_start
 	night: Moon, // night/turn_end
+	moon: Moon, // dormant/asleep
 	shine: Sparkles, // dawn
 } as const satisfies Record<string, LucideIcon>;
 

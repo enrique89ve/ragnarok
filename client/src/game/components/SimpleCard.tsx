@@ -12,6 +12,8 @@ import { createPortal } from 'react-dom';
 import { useInView } from 'react-intersection-observer';
 import { KEYWORD_DEFINITIONS } from './ui/UnifiedCardTooltip';
 import { KEYWORD_ICON_MAP } from './ui/CardIconsSVG';
+import { GameIcon } from '../utils/ui/GameIcon';
+import type { IconName } from '../utils/ui/iconMap';
 import { getCardArtPath } from '../utils/art/artMapping';
 import { useHoloTracking, getHoloTier } from '../hooks/useHoloTracking';
 import type { Rarity } from '@shared/schemas/rarity';
@@ -184,29 +186,29 @@ const getCardTypeClass = (type: SimpleCardType): string => {
   return `card-type-${getCardVisualFamily(type)} card-kind-${type}`;
 };
 
-const getCardTypeIcon = (type: SimpleCardType): string => {
+const getCardTypeIcon = (type: SimpleCardType): IconName => {
   switch (type) {
-    case 'spell': return '✨';
-    case 'secret': return '🔮';
-    case 'location': return '🧭';
-    case 'poker_spell': return '🃏';
-    case 'weapon': return '⚔️';
-    case 'artifact': return '🔱';
-    case 'armor': return '🛡️';
-    case 'hero': return '👑';
-    default: return '👤';
+    case 'spell': return 'sparkles';
+    case 'secret': return 'crystal';
+    case 'location': return 'mountain';
+    case 'poker_spell': return 'wand';
+    case 'weapon': return 'swords';
+    case 'artifact': return 'crown';
+    case 'armor': return 'shield';
+    case 'hero': return 'crown';
+    default: return 'user';
   }
 };
 
-const ELEMENT_BADGE: Record<NorseElement, { icon: string; color: string }> = {
-  fire: { icon: '\u{1F525}', color: 'var(--element-fire)' },
-  water: { icon: '\u{1F4A7}', color: 'var(--element-water)' },
-  grass: { icon: '\u{1F33F}', color: 'var(--element-grass)' },
-  electric: { icon: '\u{26A1}', color: 'var(--element-electric)' },
-  light: { icon: '\u{2728}', color: 'var(--element-light)' },
-  dark: { icon: '\u{1F311}', color: 'var(--element-dark)' },
-  ice: { icon: '\u{2744}\u{FE0F}', color: 'var(--element-ice)' },
-  neutral: { icon: '\u{26AA}', color: 'var(--element-neutral)' }
+const ELEMENT_BADGE: Record<NorseElement, { iconName: IconName; color: string }> = {
+  fire: { iconName: 'flame', color: 'var(--element-fire)' },
+  water: { iconName: 'droplet', color: 'var(--element-water)' },
+  grass: { iconName: 'leaf', color: 'var(--element-grass)' },
+  electric: { iconName: 'zap', color: 'var(--element-electric)' },
+  light: { iconName: 'sparkles', color: 'var(--element-light)' },
+  dark: { iconName: 'moon', color: 'var(--element-dark)' },
+  ice: { iconName: 'snowflake', color: 'var(--element-ice)' },
+  neutral: { iconName: 'circle', color: 'var(--element-neutral)' }
 };
 
 const getClassColor = (cardClass?: string): string => {
@@ -230,8 +232,8 @@ const getClassColor = (cardClass?: string): string => {
  * Extract keyword icons from card - uses centralized KEYWORD_DEFINITIONS
  * Checks both explicit keywords array and description text
  */
-const getCardKeywordIcons = (description?: string, keywords?: string[]): { icon: string; color: string; keyword: string; SvgIcon?: React.FC<React.SVGProps<SVGSVGElement>> }[] => {
-  const icons: { icon: string; color: string; keyword: string; SvgIcon?: React.FC<React.SVGProps<SVGSVGElement>> }[] = [];
+const getCardKeywordIcons = (description?: string, keywords?: string[]): { iconName: IconName; color: string; keyword: string; SvgIcon?: React.FC<React.SVGProps<SVGSVGElement>> }[] => {
+  const icons: { iconName: IconName; color: string; keyword: string; SvgIcon?: React.FC<React.SVGProps<SVGSVGElement>> }[] = [];
   const addedKeywords = new Set<string>();
 
   if (keywords && keywords.length > 0) {
@@ -239,7 +241,7 @@ const getCardKeywordIcons = (description?: string, keywords?: string[]): { icon:
       const key = keyword.toLowerCase();
       const def = KEYWORD_DEFINITIONS[key];
       if (def && !addedKeywords.has(key)) {
-        icons.push({ icon: def.icon, color: def.color, keyword: key, SvgIcon: KEYWORD_ICON_MAP[key] || def.SvgIcon });
+        icons.push({ iconName: def.iconName, color: def.color, keyword: key, SvgIcon: KEYWORD_ICON_MAP[key] || def.SvgIcon });
         addedKeywords.add(key);
       }
     }
@@ -249,7 +251,7 @@ const getCardKeywordIcons = (description?: string, keywords?: string[]): { icon:
     const desc = description.toLowerCase();
     for (const [keyword, def] of Object.entries(KEYWORD_DEFINITIONS)) {
       if (desc.includes(keyword) && !addedKeywords.has(keyword)) {
-        icons.push({ icon: def.icon, color: def.color, keyword, SvgIcon: KEYWORD_ICON_MAP[keyword] || def.SvgIcon });
+        icons.push({ iconName: def.iconName, color: def.color, keyword, SvgIcon: KEYWORD_ICON_MAP[keyword] || def.SvgIcon });
         addedKeywords.add(keyword);
       }
     }
@@ -280,7 +282,7 @@ const extractKeywordEffect = (keyword: string, description: string): string | nu
 
 interface BadgeTooltipState {
   keyword: string;
-  icon: string;
+  iconName: IconName;
   color: string;
   x: number;
   y: number;
@@ -359,11 +361,11 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
     }
   }, []);
 
-  const handleBadgeEnter = useCallback((e: React.MouseEvent, effect: { icon: string; color: string; keyword: string }) => {
+  const handleBadgeEnter = useCallback((e: React.MouseEvent, effect: { iconName: IconName; color: string; keyword: string }) => {
     const rect = e.currentTarget.getBoundingClientRect();
     setBadgeTooltip({
       keyword: effect.keyword,
-      icon: effect.icon,
+      iconName: effect.iconName,
       color: effect.color,
       x: rect.left + rect.width / 2,
       y: rect.top
@@ -423,7 +425,7 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
     const rect = e.currentTarget.getBoundingClientRect();
     setBadgeTooltip({
       keyword: card.petStage === 'master' ? 'Master Evolution' : 'Evolution',
-      icon: '\u{1F504}',
+      iconName: 'refresh',
       color: 'var(--element-water)',
       x: rect.left + rect.width / 2,
       y: rect.top,
@@ -462,7 +464,7 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
                   onMouseEnter={(e) => handleBadgeEnter(e, effect)}
                   onMouseLeave={handleBadgeLeave}
                 >
-                  {effect.SvgIcon ? <effect.SvgIcon style={{ color: effect.color }} /> : effect.icon}
+                  {effect.SvgIcon ? <effect.SvgIcon style={{ color: effect.color }} /> : <GameIcon name={effect.iconName} size={14} color={effect.color} />}
                 </div>
               ))}
             </div>
@@ -546,7 +548,7 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
 
       {card.element && ELEMENT_BADGE[card.element] && (
         <div className="element-badge">
-          {ELEMENT_BADGE[card.element].icon}
+          <GameIcon name={ELEMENT_BADGE[card.element].iconName} size={16} />
         </div>
       )}
 
@@ -578,12 +580,12 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
           />
         ) : !owned ? (
           <div className="card-art-locked">
-            <span className="lock-icon">🔒</span>
+            <span className="lock-icon"><GameIcon name="lock" size={20} /></span>
             <span className="lock-text">Not Owned</span>
           </div>
         ) : (!artPath || loadError) ? (
           <div className="card-art-icon">
-            <span>{getCardTypeIcon(card.type)}</span>
+            <GameIcon name={getCardTypeIcon(card.type)} size={28} />
           </div>
         ) : null}
       </div>
@@ -651,7 +653,7 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
       {!disableTooltips && badgeTooltip && createPortal(
         <div className={`keyword-badge-tooltip ${badgeTooltip.isEvolveInfo ? 'evolve-tooltip' : ''}`} style={tooltipStyle}>
           <div className="kbt-header">
-            <span className="kbt-icon">{KEYWORD_ICON_MAP[badgeTooltip.keyword] ? React.createElement(KEYWORD_ICON_MAP[badgeTooltip.keyword], { style: { color: badgeTooltip.color, width: '1.2em', height: '1.2em' } }) : badgeTooltip.icon}</span>
+            <span className="kbt-icon">{KEYWORD_ICON_MAP[badgeTooltip.keyword] ? React.createElement(KEYWORD_ICON_MAP[badgeTooltip.keyword], { style: { color: badgeTooltip.color, width: '1.2em', height: '1.2em' } }) : <GameIcon name={badgeTooltip.iconName} size={16} color={badgeTooltip.color} />}</span>
             <span className="kbt-name" style={{ color: badgeTooltip.color }}>
               {badgeTooltip.keyword.charAt(0).toUpperCase() + badgeTooltip.keyword.slice(1)}
             </span>
