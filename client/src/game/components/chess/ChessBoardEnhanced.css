@@ -59,7 +59,7 @@
   background: rgba(38, 12, 12, 0.82);
   color: #fecaca;
   font-family: 'Cinzel', Georgia, serif;
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -80,7 +80,7 @@
   z-index: 220;
   display: grid;
   place-items: center;
-  padding: 20px;
+  padding: var(--space-20);
   background: rgba(2, 6, 23, 0.72);
   backdrop-filter: blur(8px);
 }
@@ -101,7 +101,7 @@
   margin-bottom: 8px;
   color: #fca5a5;
   font-family: 'Cinzel', Georgia, serif;
-  font-size: 11px;
+  font-size: var(--text-11);
   font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -111,15 +111,15 @@
   margin: 0;
   color: #fff7ed;
   font-family: 'Cinzel', Georgia, serif;
-  font-size: 24px;
+  font-size: var(--text-2xl);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .match-exit-dialog p {
-  margin: 14px 0 0;
+  margin: var(--space-14) 0 0;
   color: rgba(226, 232, 240, 0.78);
-  font-size: 14px;
+  font-size: var(--text-sm);
   line-height: 1.6;
 }
 
@@ -137,7 +137,7 @@
   padding: 0 18px;
   border-radius: 6px;
   font-family: 'Cinzel', Georgia, serif;
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -221,7 +221,7 @@
   position: absolute;
   inset: 8%;
   pointer-events: none;
-  border-radius: 5px;
+  border-radius: var(--radius-5);
   z-index: 1;
   background: radial-gradient(
     circle at 50% 50%,
@@ -497,7 +497,7 @@
   align-items: center;
   width: 100%;
   max-width: 28rem;
-  padding: 6px 16px;
+  padding: var(--space-6) 16px;
 }
 
 .chess-piece-count-shield {

@@ -57,7 +57,7 @@
 }
 
 .chess-attack-attacker-piece--king {
-  border-radius: 9999px;
+  border-radius: var(--radius-full);
 }
 
 .chess-attack-attacker-piece__frame {
@@ -72,12 +72,12 @@
 
 .chess-attack-attacker-piece--king .chess-attack-attacker-piece__frame {
   inset: 10%;
-  border-radius: 9999px;
+  border-radius: var(--radius-full);
 }
 
 .chess-attack-trail {
   position: absolute;
-  border-radius: 9999px;
+  border-radius: var(--radius-full);
   background: linear-gradient(90deg, transparent, var(--attack-accent), transparent);
   transform: translate(-50%, -50%);
   box-shadow: 0 0 6px color-mix(in srgb, var(--attack-accent) 24%, transparent);
@@ -86,7 +86,7 @@
 
 .chess-attack-combat-rail {
   position: absolute;
-  border-radius: 9999px;
+  border-radius: var(--radius-full);
   transform: translate(-50%, -50%);
   background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--attack-accent) 68%, transparent) 42%, transparent);
   box-shadow:
@@ -101,7 +101,7 @@
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  border-radius: 9999px;
+  border-radius: var(--radius-full);
   background: radial-gradient(circle, color-mix(in srgb, var(--attack-accent) 28%, transparent) 0%,
     color-mix(in srgb, var(--attack-accent) 6%, transparent) 42%,
     transparent 76%);
@@ -115,7 +115,7 @@
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  border-radius: 9999px;
+  border-radius: var(--radius-full);
   background: linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--attack-accent) 36%, transparent) 44%, transparent 100%);
   transform-origin: left center;
   box-shadow: 0 0 5px color-mix(in srgb, var(--attack-accent) 24%, transparent);
@@ -133,12 +133,12 @@
 }
 
 .chess-attack-defender-shell--king {
-  border-radius: 9999px;
+  border-radius: var(--radius-full);
 }
 
 .chess-attack-burst {
   position: absolute;
-  border-radius: 9999px;
+  border-radius: var(--radius-full);
   transform: translate(-50%, -50%);
   background: radial-gradient(circle, color-mix(in srgb, var(--attack-accent) 28%, transparent) 0%,
     color-mix(in srgb, var(--attack-accent) 6%, transparent) 65%, transparent);
@@ -148,7 +148,7 @@
 
 .chess-attack-connector {
   position: absolute;
-  border-radius: 9999px;
+  border-radius: var(--radius-full);
   transform: translate(-50%, -50%);
   transform-origin: left center;
   background: linear-gradient(90deg, transparent, var(--attack-accent), transparent);
@@ -171,7 +171,7 @@
 .chess-attack-impact-rings {
   position: absolute;
   transform: translate(-50%, -50%);
-  border-radius: 9999px;
+  border-radius: var(--radius-full);
   border: 1px solid color-mix(in srgb, var(--attack-accent) 20%, transparent);
   box-shadow: 0 0 10px color-mix(in srgb, var(--attack-accent) 18%, transparent);
   z-index: 997;
