@@ -100,7 +100,7 @@
 .quest-card__condition {
   font-size: var(--text-11);
   color: #b8a080;
-  margin-bottom: 10px;
+  margin-bottom: var(--space-10);
   line-height: 1.4;
 }
 

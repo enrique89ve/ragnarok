@@ -49,7 +49,7 @@
   font-weight: bold;
   color: #3b82f6;
   font-size: var(--text-sm);
-  margin-bottom: 6px;
+  margin-bottom: var(--space-6);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -65,7 +65,7 @@
 
 .portal-tooltip-description {
   color: #e5e7eb;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-6);
 }
 
 .portal-tooltip-meta {
@@ -76,7 +76,7 @@
 .portal-tooltip-divider {
   border-top: 1px solid #374151;
   margin: var(--space-10) 0;
-  padding-top: 10px;
+  padding-top: var(--space-10);
 }
 
 .portal-tooltip-upgrade-header {
@@ -111,7 +111,7 @@
 .portal-tooltip-upgrade-effect {
   font-size: var(--text-xs);
   color: #e5e7eb;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-6);
   line-height: 1.4;
 }
 

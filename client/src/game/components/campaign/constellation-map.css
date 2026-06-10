@@ -215,7 +215,7 @@
 }
 
 .realm-locked-label {
-	margin-top: 2px;
+	margin-top: var(--space-2);
 	font-family: var(--type-mono, monospace);
 	font-size: var(--text-9);
 	letter-spacing: 0.14em;

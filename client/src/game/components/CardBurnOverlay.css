@@ -191,7 +191,7 @@
 }
 
 .card-burn-message {
-  margin-top: 20px;
+  margin-top: var(--space-20);
   padding: 12px 24px;
   background: linear-gradient(135deg, rgba(139, 0, 0, 0.95), rgba(80, 0, 0, 0.95));
   border: 2px solid #ff4500;

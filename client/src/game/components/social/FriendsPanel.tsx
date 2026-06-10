@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronUp, Crosshair, UserPlus, Users, Wifi, WifiOff } from 'lucide-react';
 import { toast } from 'sonner';
@@ -237,7 +237,15 @@ export default function FriendsPanel() {
 	const [showAdd, setShowAdd] = useState(false);
 	const [expanded, setExpanded] = useState(true);
 	const [sendingTo, setSendingTo] = useState<string | null>(null);
-	const now = Date.now();
+	// Reactive `now`: cooldown + outgoing-challenge expiry are time-relative.
+	// Stale `now` (captured at render) froze the countdown + button state until
+	// the next render trigger. Tick every 1s — granularity matches minute-scale
+	// cooldowns (3-5m) and 2m stale threshold. Component-test gap: no RTL in stack.
+	const [now, setNow] = useState(() => Date.now());
+	useEffect(() => {
+		const id = window.setInterval(() => setNow(Date.now()), 1000);
+		return () => window.clearInterval(id);
+	}, []);
 
 	const handleChallenge = useCallback(async (username: string) => {
 		if (!hiveUsername) {

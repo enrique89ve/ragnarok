@@ -285,8 +285,8 @@
 
 .tooltip-section--upgrade {
   border-top: 1px solid #374151;
-  margin-top: 10px;
-  padding-top: 10px;
+  margin-top: var(--space-10);
+  padding-top: var(--space-10);
 }
 
 .tooltip-header {
@@ -357,7 +357,7 @@
 .tooltip-upgrade-effect {
   font-size: var(--text-xs);
   color: #e5e7eb;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-6);
   line-height: 1.4;
 }
 

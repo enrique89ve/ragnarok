@@ -171,7 +171,7 @@
 
 .portrait-power-badge .upgraded-icon {
   font-size: 0.75rem;
-  margin-left: 2px;
+  margin-left: var(--space-2);
 }
 
 /* Artifact Badge - shown below hero portrait when artifact equipped */
@@ -237,7 +237,7 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
-  padding-bottom: 6px;
+  padding-bottom: var(--space-6);
   border-bottom: 1px solid rgba(59, 130, 246, 0.3);
 }
 
@@ -271,8 +271,8 @@
 }
 
 .tooltip-upgrade-section {
-  margin-top: 10px;
-  padding-top: 10px;
+  margin-top: var(--space-10);
+  padding-top: var(--space-10);
   border-top: 1px solid rgba(234, 179, 8, 0.3);
 }
 
@@ -299,14 +299,14 @@
   font-weight: 700;
   color: #fcd34d;
   font-size: 0.85rem;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-6);
 }
 
 .tooltip-upgrade-section .upgrade-effect {
   color: rgba(253, 224, 71, 0.9);
   font-size: 0.8rem;
   line-height: 1.3;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-6);
 }
 
 .tooltip-upgrade-section .upgrade-hint {
@@ -431,7 +431,7 @@
     0 1px 2px rgba(0,0,0,0.8),
     0 0 4px rgba(0,0,0,0.4);
   line-height: 1;
-  margin-top: 2px;
+  margin-top: var(--space-2);
 }
 
 @keyframes armor-appear {

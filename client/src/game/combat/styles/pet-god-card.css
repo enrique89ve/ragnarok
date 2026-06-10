@@ -91,7 +91,7 @@
 .pet-god-name {
   font-size: 0.6rem;
   color: #4b5563;
-  margin-top: 2px;
+  margin-top: var(--space-2);
 }
 
 .pet-god-footer {
@@ -151,5 +151,5 @@
   color: #22c55e;
   text-align: center;
   display: block;
-  margin-top: 2px;
+  margin-top: var(--space-2);
 }

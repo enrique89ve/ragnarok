@@ -65,7 +65,7 @@
   text-transform: uppercase;
   color: #fbbf24;
   text-shadow: 0 0 8px rgba(251, 191, 36, 0.8);
-  margin-top: 2px;
+  margin-top: var(--space-2);
   animation: critLabelFade 2s ease-out forwards;
 }
 

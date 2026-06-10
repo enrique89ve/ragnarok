@@ -211,7 +211,7 @@
 	align-items: center;
 	justify-content: space-between;
 	gap: 12px;
-	margin-bottom: 10px;
+	margin-bottom: var(--space-10);
 	font-family: 'Cinzel', Georgia, serif;
 	font-size: var(--text-xs);
 	font-weight: 800;
@@ -312,7 +312,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	margin-bottom: 18px;
+	margin-bottom: var(--space-18);
 	color: rgba(212, 175, 55, 0.7);
 	font-size: var(--text-22);
 	text-shadow: 0 0 12px rgba(212, 175, 55, 0.4);

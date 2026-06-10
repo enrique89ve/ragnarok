@@ -466,7 +466,7 @@
 .norse-army-selection .norse-piece-hero {
   font-size: var(--text-13);
   color: #94a3b8;
-  margin-top: 2px;
+  margin-top: var(--space-2);
 }
 
 .norse-army-selection .norse-piece-check {
@@ -1439,7 +1439,7 @@
    ============================================ */
 .norse-army-selection .norse-army-header {
   margin-bottom: 12px;
-  padding-bottom: 10px;
+  padding-bottom: var(--space-10);
   border-bottom: 1px solid rgba(139, 115, 85, 0.4);
 }
 

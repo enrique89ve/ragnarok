@@ -369,7 +369,7 @@
 }
 
 .mission-intro-boss-rules {
-	margin-top: 28px;
+	margin-top: var(--space-28);
 	padding-top: 16px;
 	border-top: 1px solid rgba(220, 38, 38, 0.2);
 }

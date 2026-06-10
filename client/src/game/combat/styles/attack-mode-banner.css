@@ -82,7 +82,7 @@
 }
 
 .attack-mode-cancel {
-  margin-left: 6px;
+  margin-left: var(--space-6);
   padding: var(--space-3) 10px;
   font-size: var(--text-11);
   font-weight: 600;

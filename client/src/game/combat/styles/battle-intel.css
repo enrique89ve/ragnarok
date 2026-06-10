@@ -78,8 +78,8 @@
 }
 
 .battle-intel-section + .battle-intel-section {
-  margin-top: 14px;
-  padding-top: 14px;
+  margin-top: var(--space-14);
+  padding-top: var(--space-14);
   border-top: 1px solid rgba(148, 163, 184, 0.1);
 }
 

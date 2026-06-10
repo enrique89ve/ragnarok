@@ -57,7 +57,7 @@
   position: relative;
   cursor: pointer;
   width: 200px;
-  padding-bottom: 28px;
+  padding-bottom: var(--space-28);
 }
 
 /* Lightweight card mode: remove heavy visual effects and extra repaints during

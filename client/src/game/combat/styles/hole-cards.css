@@ -192,7 +192,7 @@
 .arena-poker-card .card-rune {
   font-size: 0.9rem;
   opacity: 0.9;
-  margin-top: 2px;
+  margin-top: var(--space-2);
 }
 
 /* ========================================
