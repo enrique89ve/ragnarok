@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { toast } from 'sonner';
 import { useNFTUsername } from '../../nft/hooks';
 import { useFriendStore, type Friend } from '../../stores/friendStore';
 import { usePeerStore } from '../../stores/peerStore';
@@ -141,7 +142,11 @@ export default function SocialPresenceHeartbeat() {
 
 			if (response.status === 401) {
 				invalidateFriendSession();
-				if (!await ensureFriendSession(normalizedUsername)) return;
+				if (!await ensureFriendSession(normalizedUsername)) {
+					console.warn('[presence-heartbeat] reauth failed: session not established', { username: normalizedUsername });
+					toast.error('Friends session expired. Reconnect to refresh presence.');
+					return;
+				}
 				response = await fetch('/api/friends/heartbeat', {
 					method: 'POST',
 					headers: {
@@ -155,6 +160,11 @@ export default function SocialPresenceHeartbeat() {
 					})),
 					signal,
 				});
+				if (response.status === 401) {
+					console.warn('[presence-heartbeat] reauth failed: 2nd 401', { username: normalizedUsername });
+					toast.error('Friends session rejected. Reconnect to refresh presence.');
+					return;
+				}
 			}
 
 			const payload: unknown = await response.json();
