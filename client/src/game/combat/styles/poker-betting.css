@@ -18,7 +18,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 16px;
+  padding: var(--space-10) 16px;
   background: rgba(100, 100, 100, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 6px;
@@ -60,7 +60,7 @@
 }
 
 .preset-btn {
-  padding: 6px 12px;
+  padding: var(--space-6) 12px;
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -167,7 +167,7 @@
   flex-direction: row;
   align-items: center;
   justify-content: flex-start;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 /* ─── Poker action buttons container ─── */
@@ -401,8 +401,8 @@
 .poker-hp-slider-container {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 14px;
+  gap: var(--space-10);
+  padding: var(--space-6) 14px;
   background: linear-gradient(
     180deg,
     rgba(48, 32, 14, 0.95) 0%,
@@ -495,7 +495,7 @@
 }
 
 .quick-bet-btn {
-  padding: 2px 12px;
+  padding: var(--space-2) 12px;
   border-radius: var(--radius-4);
   font-family: var(--type-display);
   font-size: 0.7rem;

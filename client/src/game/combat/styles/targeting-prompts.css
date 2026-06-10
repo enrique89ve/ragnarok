@@ -7,7 +7,7 @@
   background: var(--targeting-bg, linear-gradient(135deg, rgba(0,0,0,0.9) 0%, rgba(40,0,60,0.9) 100%));
   border: 3px solid var(--rarity-mythic-color);
   border-radius: var(--radius-lg, 12px);
-  padding: 20px 40px;
+  padding: var(--space-20) 40px;
   max-width: calc(100% - 32px);
   box-shadow: 0 0 60px var(--rarity-mythic-glow), inset 0 0 30px var(--rarity-mythic-glow);
   text-align: center;

@@ -77,8 +77,8 @@
 .matchup-element-badge {
 	display: flex;
 	align-items: center;
-	gap: 6px;
-	padding: 6px 14px;
+	gap: var(--space-6);
+	padding: var(--space-6) 14px;
 	border-radius: 8px;
 	background: rgba(0,0,0,0.4);
 	border: 1px solid var(--element-color, rgba(255,255,255,0.2));

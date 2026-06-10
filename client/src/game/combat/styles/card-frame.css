@@ -133,7 +133,7 @@
     rgba(0, 0, 0, 0.92) 15%,
     rgba(0, 0, 0, 0.92) 85%,
     transparent 100%);
-  padding: 6px 10px 5px;
+  padding: var(--space-6) 10px 5px;
   text-align: center;
   border-top: 1px solid var(--ui-gold-shadow);
   border-bottom: 1px solid var(--ui-gold-glow-soft);

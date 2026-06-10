@@ -406,8 +406,8 @@
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 2px 7px;
+  gap: var(--space-2);
+  padding: var(--space-2) 7px;
   background: rgba(6, 6, 14, 0.94);
   border: 1px solid rgba(100, 100, 150, 0.4);
   border-radius: 20px;
@@ -467,7 +467,7 @@
   padding: 8px 12px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--space-5);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.5);
   min-width: 160px;
 }
@@ -475,7 +475,7 @@
 .matchup-tooltip-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 .matchup-tooltip-label {
@@ -499,7 +499,7 @@
 .matchup-tooltip-elements {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6);
   flex-wrap: wrap;
 }
 
@@ -509,6 +509,6 @@
   color: var(--el-color, #e2e8f0);
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-2);
   white-space: nowrap;
 }

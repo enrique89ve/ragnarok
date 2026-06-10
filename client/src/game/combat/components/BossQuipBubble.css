@@ -12,7 +12,7 @@
 	right: calc(100% + 16px);
 	min-width: 220px;
 	max-width: 320px;
-	padding: 14px 18px 16px;
+	padding: var(--space-14) 18px 16px;
 	z-index: 700;
 	pointer-events: none;
 	background: linear-gradient(180deg, rgba(20, 16, 8, 0.96) 0%, rgba(28, 22, 10, 0.97) 100%);

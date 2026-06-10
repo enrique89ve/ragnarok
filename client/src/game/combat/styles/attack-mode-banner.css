@@ -9,7 +9,7 @@
   left: var(--poker-zone-attackModeBanner-x, 50%);
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: var(--space-10);
   padding: 8px 16px;
   box-sizing: border-box;
   width: var(--poker-zone-attackModeBanner-w, fit-content);
@@ -83,7 +83,7 @@
 
 .attack-mode-cancel {
   margin-left: 6px;
-  padding: 3px 10px;
+  padding: var(--space-3) 10px;
   font-size: 11px;
   font-weight: 600;
   color: rgba(253, 230, 138, 0.8);
@@ -97,7 +97,7 @@
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 .attack-mode-cancel:hover {

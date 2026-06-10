@@ -280,7 +280,7 @@
 /* --- Rare: blue shimmer sweep across border --- */
 .simple-card.rarity-rare::before {
   inset: -2px;
-  padding: 2px;
+  padding: var(--space-2);
   border-radius: 12px;
   border: none;
   background: linear-gradient(
@@ -308,7 +308,7 @@
 /* --- Epic: slow rotating purple crystalline (Optimized CPU-friendly) --- */
 .simple-card.rarity-epic::before {
   inset: -2px;
-  padding: 2px;
+  padding: var(--space-2);
   border-radius: 12px;
   border: none;
   background: linear-gradient(
@@ -334,7 +334,7 @@
 /* --- Mythic: iridescent rainbow aurora (Optimized CPU-friendly) --- */
 .simple-card.rarity-mythic::before {
   inset: -3px;
-  padding: 3px;
+  padding: var(--space-3);
   border-radius: 13px;
   border: none;
   background: linear-gradient(
@@ -673,17 +673,17 @@
 }
 
 .simple-card.medium .card-name-banner {
-  padding: 2px 6px;
+  padding: var(--space-2) 6px;
 }
 
 /* Top position now driven by --card-banner-y (set per size variant on
    the .simple-card.{size} rules). Variants only override padding here. */
 .simple-card.large .card-name-banner {
-  padding: 5px 10px;
+  padding: var(--space-5) 10px;
 }
 
 .simple-card.preview .card-name-banner {
-  padding: 6px 12px;
+  padding: var(--space-6) 12px;
 }
 
 /* Card name text - High contrast, slightly larger */
@@ -1038,7 +1038,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6);
   flex-wrap: wrap;
   padding: 4px 8px;
   width: 100%;
@@ -1127,7 +1127,7 @@
 .evolve-requirements {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--space-3);
 }
 
 .evolve-requirements > div:first-child {
@@ -1143,7 +1143,7 @@
 
 /* Small card: tight icon size */
 .simple-card.small .keyword-icons-container {
-  gap: 3px;
+  gap: var(--space-3);
   padding: 0;
   flex-wrap: nowrap;
 }
@@ -1413,7 +1413,7 @@
   background: rgba(255, 255, 255, 0.7) !important;
   border: none !important;
   inset: -2px !important;
-  padding: 2px !important;
+  padding: var(--space-2) !important;
   border-radius: 12px !important;
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box,
@@ -1848,7 +1848,7 @@
   z-index: var(--z-tooltip);
   pointer-events: none;
   max-width: 220px;
-  padding: 10px 14px;
+  padding: var(--space-10) 14px;
   background: linear-gradient(
     180deg,
     rgba(18, 18, 30, 0.98) 0%,
@@ -1879,7 +1879,7 @@
 .kbt-header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 .kbt-icon {
@@ -1908,7 +1908,7 @@
 @media (max-width: 768px) {
   .keyword-badge-tooltip {
     max-width: 180px;
-    padding: 6px 10px;
+    padding: var(--space-6) 10px;
   }
 
   .kbt-name {

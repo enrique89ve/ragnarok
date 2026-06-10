@@ -83,7 +83,7 @@
   letter-spacing: 1px;
   color: #22d3ee;
   background: rgba(15, 23, 42, 0.9);
-  padding: 2px 5px;
+  padding: var(--space-2) 5px;
   border-radius: var(--radius-3);
   border: 1px solid rgba(34, 211, 238, 0.6);
   text-shadow: 0 0 6px rgba(34, 211, 238, 0.8);

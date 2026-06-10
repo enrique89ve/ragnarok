@@ -379,7 +379,7 @@ canvas {
   color: #fff;
   text-align: center;
   border-radius: 6px;
-  padding: 5px;
+  padding: var(--space-5);
   position: absolute;
   z-index: 100;
   bottom: 125%;
@@ -615,7 +615,7 @@ canvas {
 /* Adaptive battlefield scaling based on number of minions */
 /* Base styling for all battlefield card configurations */
 :is(.opponent-cards, .player-cards) {
-  --base-gap: 10px;
+  --base-gap: var(--space-10);
   --card-scale: 0.8;
   display: flex;
   flex-wrap: nowrap; /* Prevent cards from wrapping to new lines */
@@ -652,7 +652,7 @@ canvas {
 
 .card-container[data-card-count="5"] {
   --card-scale: 0.7;
-  --base-gap: 6px;
+  --base-gap: var(--space-6);
 }
 
 .card-container[data-card-count="6"] {
@@ -662,7 +662,7 @@ canvas {
 
 .card-container[data-card-count="7"] {
   --card-scale: 0.58;
-  --base-gap: 2px;
+  --base-gap: var(--space-2);
 }
 
 /* Apply consistent spacing regardless of card count */

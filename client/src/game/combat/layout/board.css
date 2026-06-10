@@ -46,7 +46,7 @@
   max-width: var(--hero-resource-dock-width) !important;
   min-height: 32px;
   margin: 0 !important;
-  padding: 3px 8px !important;
+  padding: var(--space-3) 8px !important;
   overflow: visible;
   background: linear-gradient(
     180deg,
@@ -96,7 +96,7 @@
   --hero-resource-dock-width: 248px;
   --hero-resource-dock-y: -4px;
   --hero-resource-dock-scale: 1;
-  --hero-resource-dock-gap: 7px;
+  --hero-resource-dock-gap: var(--space-7);
   --player-hand-strength-gap: 8px;
   --player-hand-card-width: 132px;
   --player-hand-card-height: 185px;
@@ -250,7 +250,7 @@
 
 .unified-combat-arena > .zone-board .community-cards-section {
   align-items: center;
-  gap: 9px;
+  gap: var(--space-9);
   height: 100%;
   margin: 0;
   padding: 0;
@@ -294,7 +294,7 @@
   --bf-card-width: 126px;
   --bf-card-height: 176px;
   --bf-row-height: 192px;
-  --bf-slot-gap: 7px;
+  --bf-slot-gap: var(--space-7);
   box-sizing: border-box;
   width: 100%;
   height: 100%;
@@ -346,7 +346,7 @@
   width: var(--poker-zone-playerHand-w, 640px);
   height: var(--poker-zone-playerHand-h, 192px);
   pointer-events: auto;
-  padding: 10px 12px 0;
+  padding: var(--space-10) 12px 0;
   border-radius: 18px 18px 0 0;
   background:
     linear-gradient(

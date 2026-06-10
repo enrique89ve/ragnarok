@@ -305,7 +305,7 @@
 
 .tooltip-cost {
   background: linear-gradient(135deg, #3b82f6, #2563eb);
-  padding: 2px 8px;
+  padding: var(--space-2) 8px;
   border-radius: 10px;
   font-size: 11px;
   color: white;
@@ -343,7 +343,7 @@
 
 .tooltip-upgrade-cost {
   background: linear-gradient(135deg, #f59e0b, #d97706);
-  padding: 2px 8px;
+  padding: var(--space-2) 8px;
   border-radius: 10px;
   font-size: 11px;
   color: white;

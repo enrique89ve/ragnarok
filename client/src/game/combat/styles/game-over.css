@@ -141,7 +141,7 @@
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 6px;
+	gap: var(--space-6);
 }
 
 .game-over-hero-portrait {
@@ -223,7 +223,7 @@
 	grid-template-columns: repeat(3, 1fr);
 	gap: 12px;
 	margin-bottom: 28px;
-	padding: 18px;
+	padding: var(--space-18);
 	background: color-mix(in srgb, var(--obsidian-950) 60%, transparent);
 	border: 1px solid color-mix(in srgb, var(--ink-400) 20%, transparent);
 	border-radius: 12px;

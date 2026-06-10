@@ -57,7 +57,7 @@
 
 .portal-tooltip-cost {
   background: linear-gradient(135deg, #3b82f6, #2563eb);
-  padding: 2px 8px;
+  padding: var(--space-2) 8px;
   border-radius: 10px;
   font-size: 11px;
   color: white;
@@ -75,7 +75,7 @@
 
 .portal-tooltip-divider {
   border-top: 1px solid #374151;
-  margin: 10px 0;
+  margin: var(--space-10) 0;
   padding-top: 10px;
 }
 
@@ -98,7 +98,7 @@
 
 .portal-tooltip-upgrade-cost {
   background: linear-gradient(135deg, #f59e0b, #d97706);
-  padding: 2px 8px;
+  padding: var(--space-2) 8px;
   border-radius: 10px;
   font-size: 11px;
   color: white;

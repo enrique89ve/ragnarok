@@ -167,7 +167,7 @@
 /* Season Banner */
 .ladder-season-banner {
 	margin: 0 24px 4px;
-	padding: 14px 20px;
+	padding: var(--space-14) 20px;
 	background: linear-gradient(135deg, rgba(217, 119, 6, 0.12) 0%, rgba(180, 83, 9, 0.08) 100%);
 	border: 1px solid rgba(217, 119, 6, 0.25);
 	border-top: 2px solid rgba(251, 191, 36, 0.5);
@@ -199,7 +199,7 @@
 .ladder-season-stats {
 	display: flex;
 	align-items: center;
-	gap: 20px;
+	gap: var(--space-20);
 }
 
 .ladder-season-stat {

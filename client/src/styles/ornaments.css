@@ -77,7 +77,7 @@
 /* Triple ornament variant — 3 diamonds in a row */
 .ornament-divider-mark-trio {
   display: inline-flex;
-  gap: 6px;
+  gap: var(--space-6);
   align-items: center;
   flex-shrink: 0;
 }
@@ -195,7 +195,7 @@
 .hex-frame {
   position: relative;
   display: inline-block;
-  padding: 2px;
+  padding: var(--space-2);
   background: linear-gradient(135deg, var(--gold-200), var(--gold-500));
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   transition: filter 0.25s ease;

@@ -40,8 +40,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
-  padding: 10px 0;
+  gap: var(--space-5);
+  padding: var(--space-10) 0;
 }
 
 .end-turn-btn {

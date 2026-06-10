@@ -272,7 +272,7 @@
 }
 
 .game-over-btn {
-	padding: 14px 40px;
+	padding: var(--space-14) 40px;
 	border-radius: 12px;
 	font-size: 14px;
 	font-weight: 800;

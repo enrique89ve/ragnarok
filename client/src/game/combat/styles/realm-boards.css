@@ -457,8 +457,8 @@
 .realm-effect-row {
 	display: flex;
 	align-items: center;
-	gap: 6px;
-	padding: 2px 0;
+	gap: var(--space-6);
+	padding: var(--space-2) 0;
 	font-size: 0.65rem;
 	color: rgba(255, 255, 255, 0.8);
 }
@@ -503,7 +503,7 @@
 	align-items: center;
 	justify-content: space-between;
 	gap: 8px;
-	padding: 3px 0;
+	padding: var(--space-3) 0;
 	border-bottom: 1px solid rgba(168, 85, 247, 0.15);
 }
 

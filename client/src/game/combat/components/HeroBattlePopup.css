@@ -5,7 +5,7 @@
 	flex-direction: column;
 	align-items: center;
 	gap: 4px;
-	padding: 10px 16px;
+	padding: var(--space-10) 16px;
 	border-radius: 10px;
 	background: radial-gradient(ellipse at center, rgba(20, 16, 28, 0.92) 0%, rgba(10, 8, 18, 0.88) 100%);
 	border: 2px solid var(--hbp-color, #9E9E9E);

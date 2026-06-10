@@ -25,7 +25,7 @@
 
 .community-cards-row {
   display: flex;
-  gap: 3px;
+  gap: var(--space-3);
 }
 
 /* SCOPED: Poker panel card placeholder sizing - prevents leakage to battlefield */

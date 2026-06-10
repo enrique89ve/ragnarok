@@ -161,7 +161,7 @@
   border-top: 1px solid rgba(139, 115, 85, 0.3);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 .quest-card__reward-label {
@@ -227,9 +227,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: var(--space-6);
   margin-top: 8px;
-  padding: 6px 12px;
+  padding: var(--space-6) 12px;
   background: linear-gradient(135deg, #ffd700, #b8860b);
   border-radius: var(--radius-4);
   font-size: 11px;

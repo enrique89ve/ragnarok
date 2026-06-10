@@ -203,7 +203,7 @@
   background: linear-gradient(135deg, var(--danger-500) 0%, var(--danger-600, #991b1b) 100%);
   border: 2px solid var(--danger-200);
   border-radius: 12px;
-  padding: 2px 12px;
+  padding: var(--space-2) 12px;
   box-shadow: 
     0 0 10px var(--danger-glow),
     0 4px 8px rgba(0, 0, 0, 0.3);
@@ -438,7 +438,7 @@
 /* Hand Area Enhancement */
 .norse-hand-area {
   position: relative;
-  padding: 10px 20px;
+  padding: var(--space-10) 20px;
   background: linear-gradient(180deg, 
     rgba(30, 41, 59, 0.6) 0%, 
     rgba(15, 23, 42, 0.8) 100%

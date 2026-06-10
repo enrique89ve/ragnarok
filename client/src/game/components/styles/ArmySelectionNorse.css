@@ -113,7 +113,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 24px 16px;
+  padding: var(--space-14) 24px 16px;
   position: relative;
   z-index: 100;
   border-bottom: 1px solid rgba(139, 115, 85, 0.3);
@@ -184,7 +184,7 @@
 .norse-army-selection .norse-launch-step {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-10);
   min-height: 34px;
   padding: 0 12px 0 10px;
   border-radius: var(--radius-full);
@@ -253,7 +253,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   width: 232px;
   height: 36px;
-  padding: 3px;
+  padding: var(--space-3);
   border-radius: var(--radius-full);
   border: 1px solid rgba(148, 163, 184, 0.22);
   background: rgba(9, 14, 28, 0.76);
@@ -362,7 +362,7 @@
   grid-area: sidebar;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-6);
   padding: 16px;
   margin: 0;
   background: linear-gradient(145deg, 
@@ -521,7 +521,7 @@
   letter-spacing: 1px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-10);
 }
 
 .norse-army-selection .norse-panel-subtitle {
@@ -538,8 +538,8 @@
   grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
   grid-auto-rows: min-content;
   align-content: start; /* Align cards to top */
-  gap: 14px;
-  padding: 14px;
+  gap: var(--space-14);
+  padding: var(--space-14);
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(139, 115, 85, 0.5) transparent;
@@ -652,7 +652,7 @@
 
 .norse-army-selection .norse-hero-card.rarity-mythic::before {
   inset: 0;
-  padding: 2px;
+  padding: var(--space-2);
   border-radius: var(--radius-5) 3px 6px 3px;
   border: none;
   background: linear-gradient(
@@ -691,7 +691,7 @@
 
 .norse-army-selection .norse-hero-card.rarity-epic::before {
   inset: 0;
-  padding: 2px;
+  padding: var(--space-2);
   border-radius: var(--radius-5) 3px 6px 3px;
   border: none;
   background: linear-gradient(
@@ -730,7 +730,7 @@
 
 .norse-army-selection .norse-hero-card.rarity-rare::before {
   inset: 0;
-  padding: 2px;
+  padding: var(--space-2);
   border-radius: var(--radius-5) 3px 6px 3px;
   border: none;
   background:
@@ -774,7 +774,7 @@
   top: 8px;
   left: 8px;
   z-index: 10;
-  padding: 3px 8px;
+  padding: var(--space-3) 8px;
   border: 1px solid rgba(245, 237, 224, 0.24);
   border-radius: var(--radius-3) 2px 4px 2px;
   font-size: 8px;
@@ -876,15 +876,15 @@
 .norse-army-selection .norse-army-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-10);
   flex: 1;
 }
 
 .norse-army-selection .norse-army-slot {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: var(--space-10);
+  padding: var(--space-10) 12px;
   background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
   border: 2px solid #6B5B45;
   border-radius: 8px;
@@ -930,13 +930,13 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6);
   margin-bottom: 8px;
 }
 
 .norse-army-selection .norse-deck-count {
   font-size: 11px;
-  padding: 2px 8px;
+  padding: var(--space-2) 8px;
   border-radius: 12px;
   font-weight: 600;
 }
@@ -954,7 +954,7 @@
 }
 
 .norse-army-selection .norse-edit-deck-btn {
-  padding: 6px 10px;
+  padding: var(--space-6) 10px;
   font-size: 11px;
   font-weight: 600;
   background: #00ffcc;
@@ -985,7 +985,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  gap: var(--space-20);
   padding: 0 24px;
   position: relative;
   z-index: 100;
@@ -996,7 +996,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 13px 20px;
+  padding: var(--space-13) 20px;
   font-size: 14px;
   font-weight: 600;
   background: transparent;
@@ -1149,7 +1149,7 @@
 
   .norse-army-selection .norse-bottom-bar {
     height: 90px;
-    padding: 10px 14px;
+    padding: var(--space-10) 14px;
   }
 
   .norse-army-selection .norse-battle-status-text {
@@ -1299,7 +1299,7 @@
 }
 
 .norse-army-selection .norse-hero-class-badge {
-  padding: 2px 7px;
+  padding: var(--space-2) 7px;
   background: rgba(5, 8, 14, 0.62);
   border: 1px solid rgba(221, 184, 74, 0.22);
   border-radius: var(--radius-3) 2px 4px 2px;
@@ -1334,7 +1334,7 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  gap: 7px;
+  gap: var(--space-7);
   min-height: 132px;
   background: linear-gradient(180deg, transparent 0%, rgba(5, 8, 14, 0.74) 42%, rgba(5, 8, 14, 0.94) 100%);
 }
@@ -1353,7 +1353,7 @@
   gap: 4px;
   min-width: 0;
   min-height: 26px;
-  padding: 2px 5px;
+  padding: var(--space-2) 5px;
   border: 1px solid rgba(245, 237, 224, 0.14);
   border-radius: var(--radius-3) 2px 4px 2px;
   background:
@@ -1453,8 +1453,8 @@
 .norse-army-selection .norse-army-item {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 10px;
+  gap: var(--space-6);
+  padding: var(--space-10);
   background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
   border: 1px solid #6B5B45;
   border-radius: 8px;
@@ -1464,7 +1464,7 @@
 .norse-army-selection .norse-army-item-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-10);
 }
 
 .norse-army-selection .norse-army-portrait {
@@ -1950,7 +1950,7 @@
 .norse-army-selection .norse-battle-status-copy {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-2);
   min-width: 0;
 }
 
@@ -1987,8 +1987,8 @@
 @media (max-width: 900px) {
   .norse-army-selection .norse-hero-grid {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 10px;
-    padding: 10px;
+    gap: var(--space-10);
+    padding: var(--space-10);
   }
 
   .norse-army-selection .norse-hero-card {

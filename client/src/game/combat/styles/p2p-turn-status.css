@@ -6,10 +6,10 @@
   --p2p-status-bg: color-mix(in srgb, var(--gold-300) 9%, transparent);
   display: grid;
   grid-template-columns: 38px minmax(0, 1fr);
-  gap: 10px 12px;
+  gap: var(--space-10) 12px;
   align-items: center;
   min-height: 86px;
-  padding: 10px 12px;
+  padding: var(--space-10) 12px;
   border: 1px solid color-mix(in srgb, var(--p2p-status-accent) 42%, transparent);
   border-radius: 8px;
   background:
@@ -58,7 +58,7 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-2);
 }
 
 .p2p-poker-turn-status-label {
@@ -97,7 +97,7 @@
   grid-column: 1 / -1;
   min-width: 0;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 .p2p-poker-turn-status-meta span {

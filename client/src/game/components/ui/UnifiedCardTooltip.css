@@ -66,7 +66,7 @@
 .tooltip-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-10);
   margin-bottom: 8px;
   padding-bottom: 8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -114,7 +114,7 @@
 
 .tooltip-tribe {
   background: rgba(255, 255, 255, 0.1);
-  padding: 2px 6px;
+  padding: var(--space-2) 6px;
   border-radius: var(--radius-4);
   font-weight: 500;
 }
@@ -158,14 +158,14 @@
 .tooltip-keywords {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 .tooltip-keyword-item {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  padding: 6px 8px;
+  padding: var(--space-6) 8px;
   background: rgba(0, 0, 0, 0.25);
   border-radius: var(--radius-4);
   border-left: 3px solid currentColor;
@@ -180,7 +180,7 @@
 .keyword-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-2);
   min-width: 0;
 }
 
@@ -201,7 +201,7 @@
 @media (max-width: 768px) {
   :root {
     --tooltip-icon-size: 18px;
-    --tooltip-padding: 10px;
+    --tooltip-padding: var(--space-10);
   }
 
   .unified-card-tooltip {
