@@ -17,6 +17,7 @@ import { getPokerCombatAdapterState } from '../hooks/usePokerCombatAdapter';
 import { useUnifiedUIStore } from '../stores/unifiedUIStore';
 import { scheduleDamageEffect } from '../animations/UnifiedAnimationOrchestrator';
 import { debug } from '../config/debugConfig';
+import type { IconName } from '../utils/ui/iconMap';
 import {
   getArenaVfxCombatantTarget,
   getArenaVfxHeroTarget,
@@ -150,23 +151,23 @@ function subscribeBlockedAttackNotifications(): () => void {
     const animationStore = useUnifiedUIStore.getState();
     
     // Map block reasons to user-friendly messages and icons
-    const reasonMessages: Record<string, { title: string; icon: string }> = {
-      'taunt': { title: 'Blocked by Taunt!', icon: '🛡️' },
-      'summoning_sickness': { title: 'Must wait a turn!', icon: '💤' },
-      'stealth': { title: 'Target is Stealthed!', icon: '👁️' },
-      'immune': { title: 'Target is Immune!', icon: '✨' },
-      'invalid_target': { title: 'Invalid Target!', icon: '❌' },
-      'no_attack': { title: 'Cannot Attack!', icon: '⚠️' },
-      'already_attacked': { title: 'Already Attacked!', icon: '🔄' }
+    const reasonMessages: Record<string, { title: string; iconName: IconName }> = {
+      'taunt': { title: 'Blocked by Taunt!', iconName: 'shield' },
+      'summoning_sickness': { title: 'Must wait a turn!', iconName: 'sparkles' },
+      'stealth': { title: 'Target is Stealthed!', iconName: 'eye' },
+      'immune': { title: 'Target is Immune!', iconName: 'sparkles' },
+      'invalid_target': { title: 'Invalid Target!', iconName: 'x' },
+      'no_attack': { title: 'Cannot Attack!', iconName: 'warning' },
+      'already_attacked': { title: 'Already Attacked!', iconName: 'refresh' }
     };
     
-    const messageInfo = reasonMessages[event.reason] || { title: 'Attack Blocked!', icon: '🚫' };
+    const messageInfo = reasonMessages[event.reason] || { title: 'Attack Blocked!', iconName: 'ban' as IconName };
     
     animationStore.addAnnouncement({
       type: 'blocked',
       title: messageInfo.title,
       subtitle: event.message,
-      icon: messageInfo.icon,
+      iconName: messageInfo.iconName,
       duration: 1500
     });
   }, 50);

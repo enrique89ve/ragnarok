@@ -699,7 +699,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
         type: 'action' as any,
         title: player.heroPower.name,
         subtitle: player.heroPower.description,
-        icon: '✨',
+        iconName: 'sparkles',
         duration: 2000,
       });
     }

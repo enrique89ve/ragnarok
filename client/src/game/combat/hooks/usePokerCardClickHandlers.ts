@@ -204,7 +204,7 @@ export function usePokerCardClickHandlers({
 					type: 'warning',
 					title: 'No Valid Targets',
 					subtitle: `${card.card.name} requires a minion to target`,
-					icon: '⚔',
+					iconName: 'swords',
 					duration: 2000
 				});
 				return;

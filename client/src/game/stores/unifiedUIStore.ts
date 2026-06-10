@@ -1,11 +1,12 @@
 /**
  * UnifiedUIStore - Consolidated UI State
- * 
+ *
  * Combines animations, targeting, activity log, announcements, and visual effects
  * into a single coherent store for all UI operations.
  */
 
 import { create } from 'zustand';
+import type { IconName } from '../utils/ui/iconMap';
 
 export type AnimationType = 
   | 'attack'
@@ -66,51 +67,51 @@ export interface ActionAnnouncement {
   type: AnnouncementType;
   title: string;
   subtitle?: string;
-  icon?: string;
+  iconName?: IconName;
   rarity?: 'common' | 'rare' | 'epic' | 'mythic';
   cardClass?: string;
   duration?: number;
 }
 
-export function getAnnouncementConfig(type: AnnouncementType): { icon: string; color: string } {
-  const configs: Record<AnnouncementType, { icon: string; color: string }> = {
-    battlecry: { icon: '⚔️', color: '#FFD700' },
-    deathrattle: { icon: '💀', color: '#9B59B6' },
-    spell: { icon: '✨', color: '#3498DB' },
-    attack: { icon: '🗡️', color: '#E74C3C' },
-    damage: { icon: '💥', color: '#E74C3C' },
-    heal: { icon: '💚', color: '#2ECC71' },
-    buff: { icon: '💪', color: '#F39C12' },
-    summon: { icon: '🧩', color: '#1ABC9C' },
-    draw: { icon: '📜', color: '#3498DB' },
-    discover: { icon: '🔮', color: '#9B59B6' },
-    secret: { icon: '❓', color: '#E91E63' },
-    mythic: { icon: '👑', color: '#FF8C00' },
-    combo: { icon: '🎯', color: '#F1C40F' },
-    taunt: { icon: '🛡️', color: '#7F8C8D' },
-    divine_shield: { icon: '✨', color: '#F1C40F' },
-    freeze: { icon: '❄️', color: '#00BCD4' },
-    silence: { icon: '🔇', color: '#95A5A6' },
-    transform: { icon: '🔄', color: '#9B59B6' },
-    destroy: { icon: '💀', color: '#2C3E50' },
-    phase_change: { icon: '⚡', color: '#E67E22' },
-    turn_start: { icon: '🌅', color: '#3498DB' },
-    turn_end: { icon: '🌙', color: '#34495E' },
-    victory: { icon: '🏆', color: '#FFD700' },
-    defeat: { icon: '💔', color: '#7F8C8D' },
-    poker_check: { icon: '🛡️', color: '#4CAF50' },
-    poker_bet: { icon: '⚔️', color: '#FF9800' },
-    poker_call: { icon: '⚔️', color: '#2196F3' },
-    poker_fold: { icon: '🛡️', color: '#9E9E9E' },
-    blocked: { icon: '🚫', color: '#E74C3C' },
-    effect_failed: { icon: '❌', color: '#95A5A6' },
-    condition_not_met: { icon: '⚠️', color: '#F39C12' },
-    warning: { icon: '⚠️', color: '#FF9800' },
-    info: { icon: 'ℹ️', color: '#2196F3' },
-    status_effect: { icon: '🔮', color: '#A855F7' }
+export function getAnnouncementConfig(type: AnnouncementType): { iconName: IconName; color: string } {
+  const configs: Record<AnnouncementType, { iconName: IconName; color: string }> = {
+    battlecry: { iconName: 'swords', color: '#FFD700' },
+    deathrattle: { iconName: 'skull', color: '#9B59B6' },
+    spell: { iconName: 'sparkles', color: '#3498DB' },
+    attack: { iconName: 'swords', color: '#E74C3C' },
+    damage: { iconName: 'swords', color: '#E74C3C' },
+    heal: { iconName: 'heart', color: '#2ECC71' },
+    buff: { iconName: 'hand', color: '#F39C12' },
+    summon: { iconName: 'puzzle', color: '#1ABC9C' },
+    draw: { iconName: 'book', color: '#3498DB' },
+    discover: { iconName: 'search', color: '#9B59B6' },
+    secret: { iconName: 'question', color: '#E91E63' },
+    mythic: { iconName: 'crown', color: '#FF8C00' },
+    combo: { iconName: 'target', color: '#F1C40F' },
+    taunt: { iconName: 'shield', color: '#7F8C8D' },
+    divine_shield: { iconName: 'sparkles', color: '#F1C40F' },
+    freeze: { iconName: 'snowflake', color: '#00BCD4' },
+    silence: { iconName: 'mute', color: '#95A5A6' },
+    transform: { iconName: 'refresh', color: '#9B59B6' },
+    destroy: { iconName: 'skull', color: '#2C3E50' },
+    phase_change: { iconName: 'zap', color: '#E67E22' },
+    turn_start: { iconName: 'day', color: '#3498DB' },
+    turn_end: { iconName: 'night', color: '#34495E' },
+    victory: { iconName: 'crown', color: '#FFD700' },
+    defeat: { iconName: 'skull', color: '#7F8C8D' },
+    poker_check: { iconName: 'shield', color: '#4CAF50' },
+    poker_bet: { iconName: 'swords', color: '#FF9800' },
+    poker_call: { iconName: 'swords', color: '#2196F3' },
+    poker_fold: { iconName: 'shield', color: '#9E9E9E' },
+    blocked: { iconName: 'ban', color: '#E74C3C' },
+    effect_failed: { iconName: 'x', color: '#95A5A6' },
+    condition_not_met: { iconName: 'warning', color: '#F39C12' },
+    warning: { iconName: 'warning', color: '#FF9800' },
+    info: { iconName: 'info', color: '#2196F3' },
+    status_effect: { iconName: 'crystal', color: '#A855F7' }
   };
-  
-  return configs[type] || { icon: '✨', color: '#FFFFFF' };
+
+  return configs[type] || { iconName: 'sparkles', color: '#FFFFFF' };
 }
 
 export const ANNOUNCEMENT_DURATIONS: Record<string, number> = {
@@ -530,7 +531,7 @@ export function fireAnnouncement(
     type,
     title,
     subtitle: options?.subtitle,
-    icon: config.icon,
+    iconName: config.iconName,
     rarity: options?.rarity,
     cardClass: options?.cardClass,
     duration: options?.duration
