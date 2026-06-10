@@ -315,7 +315,7 @@ export const GameBoard: React.FC<{}> = () => {
 
       // Show a notification for the discovery selection
       showNotification({
-        title: '✨ Foreseen',
+        title: 'Foreseen',
         description: `You foresaw ${selectedCard.name}!`,
         type: 'success',
         duration: 3000
@@ -336,7 +336,7 @@ export const GameBoard: React.FC<{}> = () => {
     if (!card || !card.card) {
       debug.error(`[CARD-ERROR] Invalid card object:`, card);
       showNotification({
-        title: `❌ Card Error`,
+        title: `Card Error`,
         description: `Unable to play this card. It appears to be invalid.`,
         type: 'error',
         duration: 2000
@@ -353,7 +353,7 @@ export const GameBoard: React.FC<{}> = () => {
 
       // Show notification to the player
       showNotification({
-        title: `❌ Not Enough Mana`,
+        title: `Not Enough Mana`,
         description: `${card.card.name} costs ${card.card.manaCost} mana, but you only have ${playerMana}.`,
         type: 'error',
         duration: 2000
@@ -396,7 +396,7 @@ export const GameBoard: React.FC<{}> = () => {
 
       // Show a notification that user needs to select a target
       showNotification({
-        title: `🎯 Select Battlecry Target`,
+        title: `Select Battlecry Target`,
         description: `${card.card.name} requires a target for its battlecry. Click on a minion on the battlefield.`,
         type: 'info',
         duration: 5000
@@ -423,7 +423,7 @@ export const GameBoard: React.FC<{}> = () => {
 
           // Show notification about discovery
           showNotification({
-            title: '🔮 Völva\'s Vision',
+            title: 'Völva\'s Vision',
             description: `Foreseeing options from ${isSpell(card.card) ? (card.card.spellEffect?.discoveryType || 'all') : 'all'} cards`,
             type: 'info',
             duration: 2000
@@ -437,7 +437,7 @@ export const GameBoard: React.FC<{}> = () => {
 
         // Show notification about discovery
         showNotification({
-          title: '🔮 Discover',
+          title: 'Discover',
           description: `Discovering options from ${isSpell(card.card) ? (card.card.spellEffect?.discoveryType || 'all') : 'all'} cards`,
           type: 'info',
           duration: 2000
@@ -493,7 +493,7 @@ export const GameBoard: React.FC<{}> = () => {
 
         // Show a notification that user needs to select a target
         showNotification({
-          title: `🎯 Select Target`,
+          title: `Select Target`,
           description: `${card.card.name} requires a target`,
           type: 'info',
           duration: 2000
@@ -507,20 +507,20 @@ export const GameBoard: React.FC<{}> = () => {
       if (spellEffect?.type === 'damage' || spellEffect?.type === 'aoe_damage') {
         playHit();
         showNotification({
-          title: `🔥 ${card.card.name}`,
+          title: `${card.card.name}`,
           description: `Deal ${spellEffect.value || 0} damage`,
           type: 'warning'
         });
       } else if (spellEffect?.type === 'heal') {
         playSuccess();
         showNotification({
-          title: `✨ ${card.card.name}`,
+          title: `${card.card.name}`,
           description: `Restore ${spellEffect?.value || 0} health`,
           type: 'success'
         });
       } else if (spellEffect?.type === 'draw') {
         showNotification({
-          title: `📚 ${card.card.name}`,
+          title: `${card.card.name}`,
           description: `Draw ${spellEffect?.value || 1} card${spellEffect?.value !== 1 ? 's' : ''}`,
           type: 'info'
         });
@@ -528,35 +528,35 @@ export const GameBoard: React.FC<{}> = () => {
         playSuccess();
         const buffText = `+${spellEffect?.buffAttack || 0}/+${spellEffect?.buffHealth || 0}`;
         showNotification({
-          title: `💪 ${card.card.name}`,
+          title: `${card.card.name}`,
           description: `Give a minion ${buffText}`,
           type: 'success'
         });
       } else if (spellEffect?.type === 'transform') {
         playSuccess();
         showNotification({
-          title: `🧙‍♂️ ${card.card.name}`,
+          title: ` ${card.card.name}`,
           description: `Transform a minion`,
           type: 'info'
         });
       } else if (spellEffect?.type === 'freeze') {
         playHit();
         showNotification({
-          title: `❄️ ${card.card.name}`,
+          title: `${card.card.name}`,
           description: `Freeze${spellEffect?.targetType?.includes('all') ? ' all' : ''} ${spellEffect?.targetType?.includes('enemy') ? 'enemy' : ''} minions`,
           type: 'info'
         });
       } else if (spellEffect?.type === 'summon') {
         playSuccess();
         showNotification({
-          title: `🧪 ${card.card.name}`,
+          title: `${card.card.name}`,
           description: `Summon a minion`,
           type: 'success'
         });
       } else if (spellEffect?.type === 'mana_crystal') {
         playSuccess();
         showNotification({
-          title: `✨ ${card.card.name}`,
+          title: `${card.card.name}`,
           description: `Gain ${spellEffect?.value} mana crystal${spellEffect?.value !== 1 ? 's' : ''}${spellEffect?.isTemporaryMana ? ' this turn only' : ''}`,
           type: 'success'
         });
@@ -688,7 +688,7 @@ export const GameBoard: React.FC<{}> = () => {
 
               // Show notification for overload
               showNotification({
-                title: '🔒 Overload',
+                title: 'Overload',
                 description: `${overloadAmount} mana crystal${overloadAmount > 1 ? 's' : ''} will be locked next turn`,
                 type: 'warning',
                 duration: 3000
@@ -723,7 +723,7 @@ export const GameBoard: React.FC<{}> = () => {
       } else {
         // Not a valid target
         showNotification({
-          title: `❌ Invalid Target`,
+          title: `Invalid Target`,
           description: `${card.card.name} is not a valid target for ${selectedCard.card.name}'s battlecry`,
           type: 'error',
           duration: 2000
@@ -758,7 +758,7 @@ export const GameBoard: React.FC<{}> = () => {
 
               // Show notification for overload
               showNotification({
-                title: '🔒 Overload',
+                title: 'Overload',
                 description: `${overloadAmount} mana crystal${overloadAmount > 1 ? 's' : ''} will be locked next turn`,
                 type: 'warning',
                 duration: 3000
@@ -803,7 +803,7 @@ export const GameBoard: React.FC<{}> = () => {
       } else {
         // Not a valid target
         showNotification({
-          title: `❌ Invalid Target`,
+          title: `Invalid Target`,
           description: `${card.card.name} is not a valid target for ${selectedCard.card.name}`,
           type: 'error',
           duration: 2000
@@ -866,7 +866,7 @@ export const GameBoard: React.FC<{}> = () => {
 
           // Show notification that card is selected for attack
           showNotification({
-            title: `⚔️ Attacker Selected`,
+            title: `Attacker Selected`,
             description: `${card.card.name} is ready to attack. Select a target.`,
             type: 'info',
             duration: 2000
@@ -1341,7 +1341,7 @@ export const GameBoard: React.FC<{}> = () => {
 
               // Show notification for overload
               showNotification({
-                title: '🔒 Overload',
+                title: 'Overload',
                 description: `${overloadAmount} mana crystal${overloadAmount > 1 ? 's' : ''} will be locked next turn`,
                 type: 'warning',
                 duration: 3000
@@ -1367,7 +1367,7 @@ export const GameBoard: React.FC<{}> = () => {
       } else {
         // Not a valid target
         showNotification({
-          title: `❌ Invalid Target`,
+          title: `Invalid Target`,
           description: `Opponent's hero is not a valid target for ${selectedCard.card.name}`,
           type: 'error',
           duration: 2000
@@ -1454,7 +1454,7 @@ export const GameBoard: React.FC<{}> = () => {
       } else {
         // Not a valid target
         showNotification({
-          title: `❌ Invalid Target`,
+          title: `Invalid Target`,
           description: `Opponent's hero is not a valid target for ${selectedCard.card.name}'s battlecry`,
           type: 'error',
           duration: 2000
@@ -1715,7 +1715,7 @@ export const GameBoard: React.FC<{}> = () => {
 
               // Show notification for overload
               showNotification({
-                title: '🔒 Overload',
+                title: 'Overload',
                 description: `${overloadAmount} mana crystal${overloadAmount > 1 ? 's' : ''} will be locked next turn`,
                 type: 'warning',
                 duration: 3000
@@ -1745,7 +1745,7 @@ export const GameBoard: React.FC<{}> = () => {
       } else {
         // Not a valid target
         showNotification({
-          title: `❌ Invalid Target`,
+          title: `Invalid Target`,
           description: `Your hero is not a valid target for ${selectedCard.card.name}`,
           type: 'error',
           duration: 2000
@@ -1825,7 +1825,7 @@ export const GameBoard: React.FC<{}> = () => {
       } else {
         // Not a valid target
         showNotification({
-          title: `❌ Invalid Target`,
+          title: `Invalid Target`,
           description: `Your hero is not a valid target for ${selectedCard.card.name}'s battlecry`,
           type: 'error',
           duration: 2000
@@ -2002,7 +2002,7 @@ export const GameBoard: React.FC<{}> = () => {
           <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 pointer-events-none">
             <div className="bg-gray-900/80 p-4 rounded-xl shadow-xl border border-yellow-600 max-w-md">
               <div className="text-center">
-                <h3 className="text-xl font-bold text-yellow-400 mb-2">💭 Opponent's Turn</h3>
+                <h3 className="text-xl font-bold text-yellow-400 mb-2">Opponent's Turn</h3>
                 <p className="text-white text-sm">The opponent is thinking about their next move...</p>
               </div>
             </div>

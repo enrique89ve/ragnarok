@@ -40,9 +40,7 @@ export function useGameNotifications() {
     duration = 2800
   }: GameNotification) => {
     const text = description ? `${title} — ${description}` : title;
-    // Strip emoji prefixes for cleaner banner text
-    const clean = text.replace(/^[^\w\s]*\s*/, '');
-    showStatus(clean, type, Math.min(duration, 3500));
+    showStatus(text, type, Math.min(duration, 3500));
   };
 
   /**
@@ -50,7 +48,7 @@ export function useGameNotifications() {
    */
   const showAoEDamageEffect = (damageAmount: number, targetCount: number) => {
     showNotification({
-      title: '💥 Area Effect Damage',
+      title: 'Area Effect Damage',
       description: `Dealt ${damageAmount} damage to ${targetCount} enemy minion${targetCount !== 1 ? 's' : ''}`,
       type: 'warning',
       duration: 3000
@@ -72,42 +70,42 @@ export function useGameNotifications() {
     
     switch (effectType) {
       case 'aoe_damage':
-        title = `💥 ${cardName}'s Battlecry`;
+        title = `${cardName}'s Battlecry`;
         description = `Dealt ${value || 0} damage to ${targets || 'all enemy minions'}`;
         notificationType = 'warning';
         break;
       case 'damage':
-        title = `🔥 ${cardName}'s Battlecry`;
+        title = `${cardName}'s Battlecry`;
         description = `Dealt ${value || 0} damage to the target`;
         notificationType = 'warning';
         break;
       case 'heal':
-        title = `✨ ${cardName}'s Battlecry`;
+        title = `${cardName}'s Battlecry`;
         description = `Restored ${value || 0} health to the target`;
         notificationType = 'success';
         break;
       case 'buff':
-        title = `💪 ${cardName}'s Battlecry`;
+        title = `${cardName}'s Battlecry`;
         description = `Buffed ${targets || 'the target'}`;
         notificationType = 'success';
         break;
       case 'summon':
-        title = `🧩 ${cardName}'s Battlecry`;
+        title = `${cardName}'s Battlecry`;
         description = `Summoned ${targets || 'a minion'}`;
         notificationType = 'info';
         break;
       case 'draw':
-        title = `📚 ${cardName}'s Battlecry`;
+        title = `${cardName}'s Battlecry`;
         description = `Drew ${value || 1} card${(value || 1) > 1 ? 's' : ''}`;
         notificationType = 'info';
         break;
       case 'draw_both':
-        title = `📚 ${cardName}'s Battlecry`;
+        title = `${cardName}'s Battlecry`;
         description = `Drew ${value || 2} ${targets || 'cards for both players'}`;
         notificationType = 'info';
         break;
       default:
-        title = `✨ ${cardName}'s Battlecry`;
+        title = `${cardName}'s Battlecry`;
         description = 'Activated a special effect';
         notificationType = 'info';
     }
@@ -129,7 +127,7 @@ export function useGameNotifications() {
     value?: number,
     targets?: string
   ) => {
-    let title = `💀 ${cardName}'s Deathrattle`;
+    let title = `${cardName}'s Deathrattle`;
     let description = '';
     let notificationType: NotificationType = 'info';
     
@@ -172,14 +170,14 @@ export function useGameNotifications() {
     value?: number,
     targets?: string
   ) => {
-    let title = `✨ ${cardName}`;
+    let title = `${cardName}`;
     let description = '';
     let notificationType: NotificationType = 'info';
     
     switch (effectType) {
       case 'damage':
       case 'aoe_damage':
-        title = `🔥 ${cardName}`;
+        title = `${cardName}`;
         description = value 
           ? `Dealt ${value} damage${targets ? ` to ${targets}` : ''}`
           : `Spell cast!`;
@@ -187,7 +185,7 @@ export function useGameNotifications() {
         break;
       case 'heal':
       case 'restore_health':
-        title = `💚 ${cardName}`;
+        title = `${cardName}`;
         description = value 
           ? `Restored ${value} health${targets ? ` to ${targets}` : ''}`
           : `Healing spell cast!`;
@@ -195,57 +193,57 @@ export function useGameNotifications() {
         break;
       case 'buff':
       case 'give_stats':
-        title = `💪 ${cardName}`;
+        title = `${cardName}`;
         description = `Buffed ${targets || 'the target'}`;
         notificationType = 'success';
         break;
       case 'draw':
       case 'draw_cards':
-        title = `📚 ${cardName}`;
+        title = `${cardName}`;
         description = value 
           ? `Drew ${value} card${value > 1 ? 's' : ''}`
           : `Card draw effect!`;
         notificationType = 'info';
         break;
       case 'summon':
-        title = `🧩 ${cardName}`;
+        title = `${cardName}`;
         description = `Summoned ${targets || 'a minion'}`;
         notificationType = 'info';
         break;
       case 'destroy':
-        title = `💀 ${cardName}`;
+        title = `${cardName}`;
         description = `Destroyed ${targets || 'the target'}`;
         notificationType = 'warning';
         break;
       case 'freeze':
-        title = `❄️ ${cardName}`;
+        title = `${cardName}`;
         description = `Froze ${targets || 'the target'}`;
         notificationType = 'info';
         break;
       case 'silence':
-        title = `🔇 ${cardName}`;
+        title = `${cardName}`;
         description = `Silenced ${targets || 'the target'}`;
         notificationType = 'info';
         break;
       case 'transform':
-        title = `🔮 ${cardName}`;
+        title = `${cardName}`;
         description = `Transformed ${targets || 'the target'}`;
         notificationType = 'info';
         break;
       case 'discover':
-        title = `🔍 ${cardName}`;
+        title = `${cardName}`;
         description = `Discover a card!`;
         notificationType = 'info';
         break;
       case 'armor':
-        title = `🛡️ ${cardName}`;
+        title = `${cardName}`;
         description = value 
           ? `Gained ${value} armor`
           : `Armor gained!`;
         notificationType = 'success';
         break;
       default:
-        title = `✨ ${cardName}`;
+        title = `${cardName}`;
         description = 'Spell cast!';
         notificationType = 'info';
     }
@@ -263,7 +261,7 @@ export function useGameNotifications() {
    */
   const showMinionPlayed = (cardName: string, attack?: number, health?: number) => {
     showNotification({
-      title: `⚔️ ${cardName}`,
+      title: `${cardName}`,
       description: attack !== undefined && health !== undefined 
         ? `${attack}/${health} minion summoned`
         : 'Minion summoned to the battlefield',
