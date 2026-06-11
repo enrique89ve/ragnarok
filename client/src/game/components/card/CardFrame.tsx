@@ -35,8 +35,8 @@ import CardHolo from './slots/CardHolo';
 
 const CardFrame: React.FC<CardFrameProps> = ({
 	shape = 'tile',
-	rarity,
-	element,
+	rarity = 'common',
+	element = 'neutral',
 	size = 'medium',
 	render = 'png',
 	disablePng = false,
@@ -153,35 +153,47 @@ const CardFrame: React.FC<CardFrameProps> = ({
 };
 
 /**
- * Walks children, extracts the single <CardArt> child (if any) and
+ * Walks children, extracts the single "art-layer" child (if any) and
  * renders it inside the art-layer at z:0. Renders null otherwise so
  * the layer collapses to zero height in the DOM.
  *
- * Why extract: art must sit BEHIND legibility/band/PNG, but other
- * slots (mana gem, name plate) must sit IN FRONT. Children-as-render
- * tree doesn't give us ordering control, so the frame owns the
- * art-layer slot and the rest pass through.
+ * Art-layer slots are <CardArt>, <CardRankSuit>, <CardCardBack>. Only
+ * one of these should be present per card; the walker picks the first
+ * match by displayName. A future guard can enforce that.
+ *
+ * Why extract: art-layer content must sit BEHIND legibility/band/PNG,
+ * but other slots (mana gem, name plate) must sit IN FRONT. Children
+ * as render tree doesn't give us ordering control, so the frame owns
+ * the art-layer slot and the rest pass through.
  */
 function CardArtFromChildren({ children }: { children: React.ReactNode }) {
 	let art: React.ReactNode = null;
 	Children.forEach(children, (c) => {
-		if (isValidElement(c) && (c.type as { displayName?: string }).displayName === 'CardArt') {
-			art = c;
+		if (!isValidElement(c)) return;
+		const t = c.type as { displayName?: string };
+		if (t.displayName === 'CardArt' ||
+			t.displayName === 'CardRankSuit' ||
+			t.displayName === 'CardCardBack') {
+			if (art === null) art = c;
 		}
 	});
 	return <>{art}</>;
 }
 
 /**
- * Renders every child EXCEPT the extracted <CardArt> and the marker
- * <CardHolo>. These render in tree order on top of the chrome layers.
+ * Renders every child EXCEPT the extracted art-layer slot and the
+ * marker <CardHolo>. These render in tree order on top of the chrome
+ * layers.
  */
 function NonArtChildren({ children }: { children: React.ReactNode }) {
 	const rest: React.ReactNode[] = [];
 	Children.forEach(children, (c) => {
 		if (!isValidElement(c)) return;
 		const t = c.type as { displayName?: string };
-		if (t.displayName === 'CardArt' || c.type === CardHolo) return;
+		if (t.displayName === 'CardArt' ||
+			t.displayName === 'CardRankSuit' ||
+			t.displayName === 'CardCardBack' ||
+			c.type === CardHolo) return;
 		rest.push(c);
 	});
 	return <>{rest}</>;

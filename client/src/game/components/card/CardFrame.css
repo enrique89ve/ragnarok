@@ -342,3 +342,185 @@
 	.card-frame__mana-gem { width: 22px; height: 22px; font-size: 0.7rem; top: 5px; left: 5px; }
 	.card-frame__count-badge { min-width: 22px; height: 18px; font-size: 0.6rem; }
 }
+
+/* ============================================================
+   Poker shape — rank+suit + card-back chrome
+   Replaces the old <PlayingCard> visual.
+   ============================================================ */
+
+.card-frame--poker {
+	background: linear-gradient(180deg, #1c1410 0%, #0f0a07 100%);
+	border: 1px solid #5a4a2a;
+	border-radius: 6px;
+}
+
+.card-frame--poker[data-interactive='true']:hover {
+	transform: translateY(-3px) scale(1.04);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.card-rank-suit {
+	position: relative;
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: stretch;
+	justify-content: stretch;
+}
+
+.card-rank-suit .norse-border {
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	pointer-events: none;
+}
+
+.card-rank-suit .corner-rune {
+	position: absolute;
+	color: #c4a04a;
+	font-size: 0.9rem;
+	font-family: 'Cinzel', serif;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.card-rank-suit .corner-rune.top-left    { top: 4px; left: 6px; }
+.card-rank-suit .corner-rune.top-right   { top: 4px; right: 6px; transform: rotate(90deg); }
+.card-rank-suit .corner-rune.bottom-left { bottom: 4px; left: 6px; transform: rotate(-90deg); }
+.card-rank-suit .corner-rune.bottom-right{ bottom: 4px; right: 6px; transform: rotate(180deg); }
+
+.card-rank-suit .card-inner {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	padding: 8px 6px;
+	font-family: 'Cinzel', serif;
+}
+
+.card-rank-suit .card-corner {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1px;
+	line-height: 1;
+	width: 26px;
+}
+.card-rank-suit .card-corner.top-left    { align-self: flex-start; }
+.card-rank-suit .card-corner.bottom-right{ align-self: flex-end; transform: rotate(180deg); }
+
+.card-rank-suit .card-value {
+	font-size: 1.1rem;
+	font-weight: 700;
+	color: inherit;
+}
+
+.card-rank-suit .card-rune {
+	font-size: 0.7rem;
+	color: inherit;
+}
+
+.card-rank-suit .card-center {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.card-rank-suit .norse-symbol-large {
+	width: 36px;
+	height: 36px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 1.8rem;
+	color: inherit;
+}
+
+.card-rank-suit .face-card-symbol {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+}
+
+.card-rank-suit .face-rune {
+	font-size: 0.8rem;
+	color: inherit;
+}
+
+.card-rank-suit[data-size='large'] .card-value,
+.card-rank-suit[data-size='preview'] .card-value { font-size: 1.4rem; }
+.card-rank-suit[data-size='large'] .card-rune,
+.card-rank-suit[data-size='preview'] .card-rune   { font-size: 0.85rem; }
+.card-rank-suit[data-size='large'] .norse-symbol-large,
+.card-rank-suit[data-size='preview'] .norse-symbol-large { width: 44px; height: 44px; font-size: 2.1rem; }
+.card-rank-suit[data-size='large'] .face-rune,
+.card-rank-suit[data-size='preview'] .face-rune { font-size: 1rem; }
+
+.card-card-back {
+	position: relative;
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(135deg, #0c1a2a 0%, #050a14 100%);
+	border-radius: inherit;
+	border: 2px solid #c4a04a;
+	box-shadow: inset 0 0 8px rgba(196, 160, 74, 0.4);
+}
+
+.card-card-back .card-back-border {
+	position: relative;
+	width: 100%;
+	height: 100%;
+	background:
+		repeating-linear-gradient(45deg, transparent 0 6px, rgba(196, 160, 74, 0.08) 6px 8px),
+		repeating-linear-gradient(-45deg, transparent 0 6px, rgba(196, 160, 74, 0.08) 6px 8px);
+}
+
+.card-card-back .corner-rune {
+	position: absolute;
+	color: #c4a04a;
+	font-size: 0.7rem;
+	font-family: 'Cinzel', serif;
+	text-shadow: 0 0 4px rgba(196, 160, 74, 0.5);
+}
+.card-card-back .corner-rune.tl { top: 6px; left: 6px; }
+.card-card-back .corner-rune.tr { top: 6px; right: 6px; }
+.card-card-back .corner-rune.bl { bottom: 6px; left: 6px; }
+.card-card-back .corner-rune.br { bottom: 6px; right: 6px; }
+
+.card-card-back .card-back-center {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.card-card-back .yggdrasil-symbol {
+	font-size: 2rem;
+	color: #c4a04a;
+	text-shadow:
+		0 0 6px rgba(196, 160, 74, 0.7),
+		0 0 12px rgba(196, 160, 74, 0.4);
+}
+
+@keyframes card-back-shimmer {
+	0%   { transform: translateX(-120%) skewX(-15deg); }
+	100% { transform: translateX(220%)  skewX(-15deg); }
+}
+
+.card-card-back .card-back-shimmer {
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(90deg,
+		transparent 0%,
+		rgba(196, 160, 74, 0.15) 50%,
+		transparent 100%);
+	animation: card-back-shimmer 3s ease-in-out infinite;
+	pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.card-card-back .card-back-shimmer { animation: none; }
+}

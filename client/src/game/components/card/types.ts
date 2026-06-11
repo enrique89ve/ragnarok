@@ -61,11 +61,14 @@ export interface CardFrameProps
 	/** Visual archetype. Default: 'tile'. */
 	shape?: CardShape;
 
-	/** Rarity — drives stroke, animated ::before border, holo tier. */
-	rarity: Rarity;
+	/** Rarity — drives stroke, animated ::before border, holo tier.
+	 *  Optional so poker-shape cards (rank+suit) can use a default
+	 *  of 'common' and skip the rarity chrome. */
+	rarity?: Rarity;
 
-	/** Element — drives the bottom tinted band. */
-	element: NorseElement;
+	/** Element — drives the bottom tinted band. Optional; poker-shape
+	 *  cards default to 'neutral'. */
+	element?: NorseElement;
 
 	/** Size bucket — picks the resolved dimension from the sizing table. */
 	size?: CardSize;

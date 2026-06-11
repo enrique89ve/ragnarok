@@ -24,6 +24,18 @@ const SIZE_SPECS: Record<CardSize, SizeSpec> = {
 	preview: { w: 280, h: 400 },
 };
 
+/** Poker-shape size override. Poker cards were originally designed for
+ *  100×140 (default PlayingCard) and 144×202 (PlayingCard.large) which
+ *  differ from the SimpleCard sizing table. Lock those here so the
+ *  poker shape stays visually consistent with the pre-existing PlayingCard
+ *  chrome (corner rune weights, value font, etc.). */
+const POKER_SIZE_SPECS: Record<CardSize, SizeSpec> = {
+	small:   { w:  90, h: 130 },
+	medium:  { w: 100, h: 140 },
+	large:   { w: 144, h: 202 },
+	preview: { w: 200, h: 280 },
+};
+
 /** Shape → aspect ratio (canonical CSS aspect-ratio value).
  *  `tile` and `portrait` are 3:4, everything else is 5:7. */
 const SHAPE_ASPECT: Record<CardShape, string> = {
@@ -59,9 +71,9 @@ export function resolveCardDims(input: {
 		};
 	}
 
-	const base = SIZE_SPECS[size];
+	const base = shape === 'poker' ? POKER_SIZE_SPECS[size] : SIZE_SPECS[size];
 	const aspect = SHAPE_ASPECT[shape];
-	const spec = aspect === '3 / 4' ? to3by4(base) : base;
+	const spec = aspect === '3 / 4' && shape !== 'poker' ? to3by4(base) : base;
 
 	return {
 		width: spec.w,
