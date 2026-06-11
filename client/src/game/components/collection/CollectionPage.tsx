@@ -1,7 +1,7 @@
 import { debug } from '../../config/debugConfig';
 import { showStatus } from '../ui/GameStatusBanner';
 import React, { useState, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Package, Zap } from 'lucide-react';
@@ -16,6 +16,16 @@ import { getHoloTier, applyHoloVars, resetHoloVars } from '../../hooks/useHoloTr
 import type { OwnedCard } from '../packs/types';
 import { getMasteryTier } from '../../../data/blockchain/cardXPRewards';
 import { cardRegistry } from '../../data/cardRegistry';
+import { getCardById } from '../../data/allCards';
+import type { NorseElement } from '../../types/NorseTypes';
+import {
+	CardFrame,
+	CardArt,
+	CardHolo,
+	CardManaGem,
+	CardNamePlate,
+	CardCountBadge,
+} from '../card';
 import { getNFTBridge } from '../../nft';
 import { useNFTCollection, useNFTUsername } from '../../nft/hooks';
 import NFTProvenanceViewer from './NFTProvenanceViewer';
@@ -418,7 +428,107 @@ function getShimmerClass(rarity: string): string {
 	}
 }
 
+/**
+ * Smoke-test flag for the unified <CardFrame> chrome.
+ * Opt-in via `?modernFrame=1` on the URL. Defaults to false so the
+ * legacy hand-rolled tile is the visible production path until the
+ * migration flips it (commit (d)).
+ */
+function useModernFrame(): boolean {
+	const [searchParams] = useSearchParams();
+	return searchParams.get('modernFrame') === '1';
+}
+
+interface ModernTileClasses {
+	padding: string;
+	meta: string;
+	source: string;
+	mint: string;
+}
+
+interface ModernCollectionTileProps {
+	card: CollectionOwnedCard;
+	masteryTier: number;
+	classes: ModernTileClasses;
+	onClick: () => void;
+}
+
+function ModernCollectionTile({ card, masteryTier, classes, onClick }: ModernCollectionTileProps) {
+	const cardDef = getCardById(card.id);
+	const element: NorseElement = (
+		cardDef && 'element' in cardDef && cardDef.element
+			? (cardDef.element as NorseElement)
+			: 'neutral'
+	);
+
+	return (
+		<motion.div
+			initial={{ opacity: 0, scale: 0.9 }}
+			animate={{ opacity: 1, scale: 1 }}
+			onClick={onClick}
+			className="relative w-full"
+			style={{ width: '100%' }}
+		>
+			<CardFrame
+				shape="tile"
+				rarity={card.rarity as Rarity}
+				element={element}
+				size="medium"
+				interactive
+				className="w-full"
+				style={{ width: '100%', height: 'auto' }}
+			>
+				<CardArt src={getCardArtPath(card.id) ?? undefined} alt={card.name} />
+				<CardHolo />
+				{masteryTier >= 2 && (
+					<div className={`mastery-badge mastery-tier-${masteryTier}`}>
+						{Array.from({ length: masteryTier }).map((_, i) => (
+							<GameIcon key={i} name="sparkles" size={12} className="mastery-star" />
+						))}
+					</div>
+				)}
+				{card.manaCost != null ? (
+					<CardManaGem cost={card.manaCost} />
+				) : (
+					<div className="card-frame__type-icon" title={card.type}>
+						<GameIcon name={getTypeIcon(card.type)} size={16} />
+					</div>
+				)}
+				<CardCountBadge count={card.quantity} />
+				<div className={`card-frame__info-overlay ${classes.padding}`}>
+					<div className="mt-auto">
+						<CardNamePlate name={card.name} />
+						<div className="flex items-center justify-between">
+							<span className={`${classes.meta} font-semibold uppercase ${getRarityColor(card.rarity)}`} style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+								{card.rarity}
+							</span>
+							<span className={`${classes.source} font-semibold uppercase tracking-wider text-ink-300`} style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+								{getCollectionSourceLabel(card)}
+							</span>
+							{card.attack != null && card.health != null && (
+								<span className={`${classes.meta} font-bold text-gray-200`} style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+									{card.attack}/{card.health}
+								</span>
+							)}
+						</div>
+						{card.mintNumber != null && (
+							<div className="text-center mt-1">
+								<span className={`mint-badge ${classes.mint}`}>
+									#{card.mintNumber}
+									<span className="text-gray-500 mx-0.5">/</span>
+									{card.maxSupply?.toLocaleString() ?? '???'}
+								</span>
+							</div>
+						)}
+					</div>
+				</div>
+			</CardFrame>
+		</motion.div>
+	);
+}
+
 export default function CollectionPage() {
+	const modernFrame = useModernFrame();
 	const hiveCards = useNFTCollection();
 	const hiveUsername = useNFTUsername();
 	const bridge = getNFTBridge();
@@ -986,6 +1096,22 @@ export default function CollectionPage() {
 												const masteryTier = hiveAsset?.ownershipSource === 'nft'
 													? getMasteryTier(hiveAsset.xp, card.rarity)
 													: 0;
+												if (modernFrame) {
+													return (
+														<ModernCollectionTile
+															key={`${card.id}-${colIndex}`}
+															card={card}
+															masteryTier={masteryTier}
+															classes={{
+																padding: cardPaddingClass,
+																meta: cardMetaClass,
+																source: cardSourceClass,
+																mint: cardMintClass,
+															}}
+															onClick={() => setSelectedCard(card)}
+														/>
+													);
+												}
 												return (
 													<motion.div
 														key={`${card.id}-${colIndex}`}

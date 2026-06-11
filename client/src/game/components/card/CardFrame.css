@@ -213,3 +213,132 @@
 	        mask-size: 100% 100%;
 	        mask-position: 0 0;
 }
+
+/* ============================================================
+   Slot positioning
+   ============================================================ */
+
+.card-frame__mana-gem {
+	position: absolute;
+	top: 8px;
+	left: 8px;
+	z-index: 10;
+	width: 28px;
+	height: 28px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 999px;
+	background: linear-gradient(135deg, var(--cf-mana-from) 0%, var(--cf-mana-to) 100%);
+	color: #fff;
+	font-weight: 700;
+	font-size: 0.85rem;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+	border: 1px solid rgba(255, 255, 255, 0.4);
+	font-variant-numeric: tabular-nums;
+}
+
+.card-frame__mana-gem[data-size='small']  { width: 22px; height: 22px; font-size: 0.7rem; top: 5px; left: 5px; }
+.card-frame__mana-gem[data-size='large']  { width: 36px; height: 36px; font-size: 1.05rem; top: 10px; left: 10px; }
+.card-frame__mana-gem[data-size='preview'] { width: 44px; height: 44px; font-size: 1.25rem; top: 14px; left: 14px; }
+
+.card-frame__type-icon {
+	position: absolute;
+	top: 8px;
+	left: 8px;
+	z-index: 10;
+	color: #fff;
+	filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.9));
+}
+
+.card-frame__stat-gems {
+	position: absolute;
+	bottom: 8px;
+	left: 8px;
+	z-index: 10;
+	display: flex;
+	gap: 4px;
+}
+
+.card-frame__stat-gem {
+	width: 22px;
+	height: 22px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 6px;
+	color: #fff;
+	font-weight: 700;
+	font-size: 0.7rem;
+	font-variant-numeric: tabular-nums;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.card-frame__stat-gem--atk {
+	background: linear-gradient(180deg, #f59e0b 0%, #b45309 100%);
+	border: 1px solid #fcd34d;
+}
+
+.card-frame__stat-gem--hp {
+	background: linear-gradient(180deg, #ef4444 0%, #991b1b 100%);
+	border: 1px solid #fca5a5;
+}
+
+.card-frame__stat-gems[data-size='small'] .card-frame__stat-gem { width: 18px; height: 18px; font-size: 0.6rem; }
+.card-frame__stat-gems[data-size='large'] .card-frame__stat-gem { width: 28px; height: 28px; font-size: 0.85rem; }
+.card-frame__stat-gems[data-size='preview'] .card-frame__stat-gem { width: 34px; height: 34px; font-size: 1rem; }
+
+.card-frame__name-plate {
+	font-weight: 700;
+	color: #fff;
+	text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+	font-size: 0.85rem;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 100%;
+}
+
+.card-frame__name-plate[data-size='small']   { font-size: 0.65rem; }
+.card-frame__name-plate[data-size='large']   { font-size: 1rem; }
+.card-frame__name-plate[data-size='preview'] { font-size: 1.25rem; }
+
+.card-frame__info-overlay {
+	position: absolute;
+	inset: 0;
+	z-index: 9;
+	display: flex;
+	flex-direction: column;
+	pointer-events: none;
+	padding: 32px 8px 8px 8px;
+}
+
+.card-frame__count-badge {
+	position: absolute;
+	top: 6px;
+	right: 6px;
+	z-index: 11;
+	min-width: 26px;
+	height: 22px;
+	padding: 0 6px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 999px;
+	background: linear-gradient(180deg, #d97706 0%, #92400e 100%);
+	color: #fff;
+	font-weight: 700;
+	font-size: 0.7rem;
+	font-variant-numeric: tabular-nums;
+	border: 1px solid #fcd34d;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* ============================================================
+   Responsive — small viewports keep gem + badges in place
+   ============================================================ */
+
+@media (max-width: 640px) {
+	.card-frame__mana-gem { width: 22px; height: 22px; font-size: 0.7rem; top: 5px; left: 5px; }
+	.card-frame__count-badge { min-width: 22px; height: 18px; font-size: 0.6rem; }
+}
