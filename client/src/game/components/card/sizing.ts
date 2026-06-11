@@ -55,6 +55,7 @@ export function resolveCardDims(input: {
 			width: overrideWidth,
 			height: overrideHeight,
 			aspectRatio: `${overrideWidth} / ${overrideHeight}`,
+			borderRadius: 12,
 		};
 	}
 
@@ -66,5 +67,6 @@ export function resolveCardDims(input: {
 		width: spec.w,
 		height: spec.h,
 		aspectRatio: aspect,
+		borderRadius: spec.w <= 100 ? 8 : spec.w <= 140 ? 12 : 16,
 	};
 }

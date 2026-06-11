@@ -1,0 +1,215 @@
+/**
+ * <CardFrame> — chrome canon.
+ *
+ * Single source of truth for rarity-animated borders, the element
+ * tint band, PNG/SVG cooperation, and slot anchor positions. Retires
+ * three pre-existing conic-gradient duplications:
+ *   - collection.css: .mythic-card-frame::before
+ *   - deckbuilder.css: .db-card.rarity-epic::before
+ *   - deckbuilder.css: .db-card.rarity-mythic::before
+ *
+ * The 5:7 / 3:4 aspect work is handled inline by the component (via
+ * sizing.ts) — this stylesheet only colors the chrome. Layout rules
+ * for slot children live next to each slot component.
+ */
+
+/* ============================================================
+   Animated-border angle property (one canonical name)
+   ============================================================ */
+
+@property --cf-border-angle {
+	syntax: '<angle>';
+	initial-value: 0deg;
+	inherits: false;
+}
+
+@keyframes cf-border-rotate {
+	to { --cf-border-angle: 360deg; }
+}
+
+@keyframes cf-rare-shimmer {
+	0%, 100% { background-position: 0% 0%; }
+	50%      { background-position: 100% 100%; }
+}
+
+/* ============================================================
+   Root
+   ============================================================ */
+
+.card-frame {
+	position: relative;
+	isolation: isolate;
+	overflow: hidden;
+	border-radius: var(--cf-radius, 12px);
+	background: linear-gradient(180deg, var(--obsidian-900) 0%, var(--obsidian-950) 100%);
+	color: var(--text-near-white);
+	transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.card-frame[data-interactive='true'] { cursor: pointer; }
+.card-frame[data-interactive='true']:hover {
+	transform: translateY(-4px) scale(1.02);
+	z-index: 5;
+}
+
+/* Hide PNG layer when consumer requests svg/css */
+.card-frame--render-svg .card-frame__png,
+.card-frame--render-css .card-frame__png { display: none; }
+
+/* ============================================================
+   Static art + element band + PNG layers (z-stack)
+   ============================================================ */
+
+.card-frame__art-layer {
+	position: absolute;
+	inset: 0;
+	z-index: 0;
+	overflow: hidden;
+	border-radius: inherit;
+}
+
+.card-frame__art {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.card-frame__art-fallback {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: linear-gradient(135deg, var(--obsidian-800), var(--obsidian-950));
+	color: var(--ink-300);
+}
+
+.card-frame__band {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	height: 38%;
+	z-index: 2;
+	pointer-events: none;
+	background: linear-gradient(
+		180deg,
+		color-mix(in srgb, var(--cf-band-from, transparent) 0%, transparent) 0%,
+		color-mix(in srgb, var(--cf-band-from, transparent) 40%, transparent) 60%,
+		color-mix(in srgb, var(--cf-band-to,   transparent) 80%, transparent) 100%
+	);
+}
+
+.card-frame__png {
+	position: absolute;
+	inset: 0;
+	z-index: 3;
+	width: 100%;
+	height: 100%;
+	object-fit: fill;
+	pointer-events: none;
+	user-select: none;
+}
+
+/* Dark gradient overlay for text legibility on top of the art */
+.card-frame__legibility {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	pointer-events: none;
+	background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.3) 50%, transparent 100%);
+}
+
+/* ============================================================
+   Animated rarity border (consolidates 3 prior dupes)
+   ::before sits above PNG (z:4) so the border is always visible
+   ============================================================ */
+
+.card-frame--rarity-rare::before,
+.card-frame--rarity-epic::before,
+.card-frame--rarity-mythic::before {
+	content: '';
+	position: absolute;
+	inset: -2px;
+	z-index: 4;
+	border-radius: inherit;
+	padding: 2px;
+	pointer-events: none;
+	-webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+	-webkit-mask-composite: xor;
+	        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+	        mask-composite: exclude;
+}
+
+.card-frame--rarity-common {
+	border: 1px solid var(--obsidian-600);
+}
+
+.card-frame--rarity-rare {
+	border: 1px solid transparent;
+	box-shadow:
+		0 0 10px var(--rarity-rare-glow),
+		0 0 20px color-mix(in srgb, var(--rarity-rare-color) 12%, transparent);
+}
+.card-frame--rarity-rare::before {
+	background: linear-gradient(135deg,
+		var(--rarity-rare-deep) 0%,
+		var(--rarity-rare-mid) 20%,
+		var(--rarity-rare-bright) 45%,
+		var(--rarity-rare-pale) 50%,
+		var(--rarity-rare-bright) 55%,
+		var(--rarity-rare-mid) 80%,
+		var(--rarity-rare-deep) 100%);
+	background-size: 300% 300%;
+	animation: cf-rare-shimmer 4s ease-in-out infinite;
+}
+
+.card-frame--rarity-epic {
+	border: 1px solid transparent;
+	box-shadow:
+		0 0 14px var(--rarity-epic-glow),
+		0 0 28px color-mix(in srgb, var(--rarity-epic-color) 15%, transparent);
+}
+.card-frame--rarity-epic::before {
+	background: conic-gradient(from var(--cf-border-angle),
+		var(--rarity-epic-deep), var(--rarity-epic-mid), var(--rarity-epic-bright),
+		var(--rarity-epic-pale), var(--rarity-epic-bright), var(--rarity-epic-mid),
+		var(--rarity-epic-deep));
+	animation: cf-border-rotate 6s linear infinite;
+}
+
+.card-frame--rarity-mythic {
+	border: 1px solid transparent;
+	box-shadow:
+		0 0 18px var(--rarity-mythic-glow),
+		0 0 36px color-mix(in srgb, var(--gold-300) 20%, transparent),
+		0 0 54px color-mix(in srgb, var(--rarity-epic-color) 15%, transparent);
+}
+.card-frame--rarity-mythic::before {
+	background: conic-gradient(from var(--cf-border-angle),
+		var(--danger-500), var(--ember-400), var(--gold-300), var(--success-400),
+		var(--info-400), var(--rarity-rare-color), var(--rarity-epic-color),
+		var(--rarity-epic-mid), var(--ember-glow), var(--danger-500));
+	animation: cf-border-rotate 3s linear infinite;
+}
+
+.card-frame--rarity-mythic[data-interactive='true']:hover {
+	box-shadow:
+		0 0 24px var(--rarity-mythic-glow),
+		0 0 48px color-mix(in srgb, var(--gold-glow) 35%, transparent),
+		0 0 72px var(--rarity-epic-glow),
+		0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* ============================================================
+   Holo mask override — `full` covers the whole card
+   (matches deckbuilder.css:1001-1009 historical behavior)
+   ============================================================ */
+
+.card-frame[data-holo-mask='full'] :is(.holo-foil, .holo-glitter) {
+	-webkit-mask-size: 100% 100%;
+	-webkit-mask-position: 0 0;
+	        mask-size: 100% 100%;
+	        mask-position: 0 0;
+}

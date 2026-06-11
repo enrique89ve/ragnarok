@@ -53,6 +53,7 @@ export interface ResolvedCardDims {
 	width: number;
 	height: number;
 	aspectRatio: string;
+	borderRadius: number;
 }
 
 export interface CardFrameProps
@@ -78,6 +79,10 @@ export interface CardFrameProps
 
 	/** Click handler. Passed to root <div>. */
 	onClick?: (e: MouseEvent<HTMLDivElement>) => void;
+
+	/** Force the hover/scale interaction on, regardless of onClick.
+	 *  Useful for hoverable cards (Collection grid) that don't click. */
+	interactive?: boolean;
 
 	/** Force dimensions in px, bypassing the sizing table.
 	 *  Both must be set together. */

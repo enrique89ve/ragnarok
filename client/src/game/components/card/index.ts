@@ -12,3 +12,5 @@ export * from './types';
 export { resolveCardDims } from './sizing';
 export { useCardFramePngStatus } from './useCardFramePngStatus';
 export type { CardFramePngStatus } from './useCardFramePngStatus';
+export { useCardFrame } from './CardFrameContext';
+export * from './slots';
