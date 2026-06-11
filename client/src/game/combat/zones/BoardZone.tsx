@@ -13,9 +13,14 @@
  */
 
 import React from 'react';
-import { PlayingCard } from '../components/PlayingCard';
 import { PokerCard } from '../../types/PokerCombatTypes';
-import { isCardInWinningHand, FACEDOWN_PLACEHOLDER_CARD } from '../utils/combatArenaUtils';
+import {
+	CardFrame,
+	CardRankSuit,
+	CardCardBack,
+} from '../../components/card';
+import type { NorseSuit } from '../../utils/cards/norsePokerCard';
+import { isCardInWinningHand } from '../utils/combatArenaUtils';
 import { arenaVfxCommunitySlotProps } from '../arenaVfxTargets';
 
 export interface BoardZoneProps {
@@ -54,14 +59,18 @@ export const BoardZone: React.FC<BoardZoneProps> = ({
 					communityCards.faith.map((card, idx) => (
 						<div key={`faith-${idx}`} className={`community-slot ${highlightClass(card, showdownWinningCards)}`} {...arenaVfxCommunitySlotProps(idx)}>
 							<div className={glowClass(card, showdownWinningCards)}>
-								<PlayingCard card={card} />
+								<CardFrame shape="poker" size="medium">
+									<CardRankSuit suit={card.suit as NorseSuit} value={card.value} />
+								</CardFrame>
 							</div>
 						</div>
 					))
 				) : (
 					[0, 1, 2].map(idx => (
 						<div key={`faith-placeholder-${idx}`} className="community-slot" {...arenaVfxCommunitySlotProps(idx)}>
-							<PlayingCard card={FACEDOWN_PLACEHOLDER_CARD} faceDown />
+							<CardFrame shape="poker" size="medium">
+								<CardCardBack />
+							</CardFrame>
 						</div>
 					))
 				)}
@@ -69,7 +78,9 @@ export const BoardZone: React.FC<BoardZoneProps> = ({
 				<div className={`community-slot ${showForesight ? highlightClass(communityCards.foresight, showdownWinningCards) : ''}`} {...arenaVfxCommunitySlotProps(3)}>
 					{showForesight && communityCards.foresight ? (
 						<div className={glowClass(communityCards.foresight, showdownWinningCards)}>
-							<PlayingCard card={communityCards.foresight} />
+							<CardFrame shape="poker" size="medium">
+								<CardRankSuit suit={communityCards.foresight.suit as NorseSuit} value={communityCards.foresight.value} />
+							</CardFrame>
 						</div>
 					) : (
 						<div className="card-placeholder" />
@@ -79,7 +90,9 @@ export const BoardZone: React.FC<BoardZoneProps> = ({
 				<div className={`community-slot ${showDestiny ? highlightClass(communityCards.destiny, showdownWinningCards) : ''}`} {...arenaVfxCommunitySlotProps(4)}>
 					{showDestiny && communityCards.destiny ? (
 						<div className={glowClass(communityCards.destiny, showdownWinningCards)}>
-							<PlayingCard card={communityCards.destiny} />
+							<CardFrame shape="poker" size="medium">
+								<CardRankSuit suit={communityCards.destiny.suit as NorseSuit} value={communityCards.destiny.value} />
+							</CardFrame>
 						</div>
 					) : (
 						<div className="card-placeholder" />
