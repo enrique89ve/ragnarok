@@ -11,6 +11,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
 	AlertTriangle,
+	Apple,
 	ArrowDown,
 	Axe,
 	Ban,
@@ -21,38 +22,52 @@ import {
 	Check,
 	CheckCircle2,
 	CircleHelp,
+	CloudFog,
+	Compass,
 	Crown,
 	Droplet,
+	Dumbbell,
 	Eye,
+	Feather,
+	FileMusic,
 	Flame,
+	Footprints,
 	Gem,
 	Ghost,
+	Grape,
 	Hand,
 	HandMetal,
 	HardHat,
 	Heart,
+	HeartHandshake,
 	HelpCircle,
 	Info,
 	Leaf,
 	Lock,
 	Magnet,
+	Megaphone,
 	Moon,
 	Mountain,
 	PawPrint,
 	Plus,
 	RotateCw,
+	Scale,
+	Scroll,
 	Search,
 	Settings,
 	Shield,
 	Skull,
 	Snowflake,
 	Sparkles,
+	Star,
 	Sun,
+	Sunrise,
 	Target,
 	TreePine,
 	User,
 	VolumeX,
 	Wand,
+	Waves,
 	Wind,
 	X,
 	Zap,
@@ -95,6 +110,7 @@ export const ICON_MAP = {
 	dagger: HandMetal, // weapon placeholder
 	paw: PawPrint, // beast
 	snake: Bug, // naga (no snake icon, use Bug)
+	bug: Bug, // beetle/insect
 	user: User, // user/hero
 	hand: Hand, // hand
 	brain: Brain, // mind/control
@@ -107,7 +123,6 @@ export const ICON_MAP = {
 	circle: Bug, // neutral element placeholder
 	link: Settings, // chain link (closest semantic)
 	dice: Wand, // wager (dice for randomness; closest wand)
-	feather: Bug, // flying (closest: bug as floating)
 	x: X, // / invalid/no
 	ban: Ban, // blocked
 	check: Check, // ok
@@ -116,8 +131,35 @@ export const ICON_MAP = {
 	help: HelpCircle, // help
 	day: Sun, // day/turn_start
 	night: Moon, // night/turn_end
+	hourglass: Moon, // turn counter (closest: moon/cyclical)
 	moon: Moon, // dormant/asleep
 	shine: Sparkles, // dawn
+	star: Star, // five-pointed star
+	gem: Gem, // gem (alias)
+	music: FileMusic, // bard/verse
+	scale: Scale, // justice/balance
+	apple: Apple, // golden apple/life
+	waves: Waves, // sea/tide
+	sun: Sun, // day/solar
+	scroll: Scroll, // prophecy/lore
+	dumbbell: Dumbbell, // titan/strength
+	megaphone: Megaphone, // horn/broadcast
+	sprout: TreePine, // growth/new life
+	cloudFog: CloudFog, // mist
+	trident: Compass, // trident (closest: directional)
+	footprints: Footprints, // speed/wolf pack
+	grape: Grape, // vine/feast
+	bowArrow: Compass, // ranged (closest: directional aim)
+	heartArrow: HeartHandshake, // charm/oath
+	flower: Feather, // wilt/loss (closest: falling)
+	crystalBall: Gem, // foresight/divination
+	torii: Compass, // gate (closest: portal)
+	crocodile: Bug, // beast (closest: low-creature)
+	scorpion: Bug, // venom (closest: small critter)
+	wolf: PawPrint, // pack predator
+	compass: Compass, // navigate
+	feather: Feather, // flight/lightness
+	diary: BookOpen, // journal/lore
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICON_MAP;
