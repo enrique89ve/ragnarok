@@ -1,6 +1,8 @@
 import React from 'react';
 import type { CardInstance, ArmorPiece } from '../../types';
 import { getTotalGearArmor, getActiveSetBonuses } from '../../utils/armorGearUtils';
+import { GameIcon } from '../../utils/ui/GameIcon';
+import type { IconName } from '../../utils/ui/iconMap';
 import './HeroGearPanel.css';
 
 interface HeroGearPanelProps {
@@ -18,10 +20,10 @@ interface HeroGearPanelProps {
 	onClose: () => void;
 }
 
-const SLOT_ICONS: Record<string, string> = {
-	helm: '🪖',
-	chest: '🛡️',
-	greaves: '🥾'
+const SLOT_ICONS: Record<string, IconName> = {
+	helm: 'helmet',
+	chest: 'shield',
+	greaves: 'shield'
 };
 
 const SLOT_LABELS: Record<string, string> = {
@@ -46,11 +48,11 @@ const HeroGearPanel: React.FC<HeroGearPanelProps> = ({
 			<div className="hero-gear-panel" onClick={e => e.stopPropagation()}>
 				<div className="gear-panel-header">
 					<span className="gear-panel-title">Hero Equipment</span>
-					<button className="gear-panel-close" onClick={onClose}>✕</button>
+					<button className="gear-panel-close" onClick={onClose}><GameIcon name="x" size={14} /></button>
 				</div>
 
 				<div className="gear-section artifact-section">
-					<div className="section-label">⚔️ Artifact</div>
+					<div className="section-label"><GameIcon name="swords" size={14} /> Artifact</div>
 					{artifact ? (
 						<div className="gear-slot artifact-slot filled">
 							<div className="slot-name">{artifact.card.name}</div>
@@ -71,13 +73,13 @@ const HeroGearPanel: React.FC<HeroGearPanelProps> = ({
 				</div>
 
 				<div className="gear-section armor-section">
-					<div className="section-label">🛡️ Armor Gear</div>
+					<div className="section-label"><GameIcon name="shield" size={14} /> Armor Gear</div>
 					{(['helm', 'chest', 'greaves'] as const).map(slot => {
 						const piece = armorGear?.[slot];
 						return (
 							<div key={slot} className={`gear-slot armor-slot ${piece ? 'filled' : 'empty'}`}>
 								<div className="slot-header">
-									<span className="slot-icon">{SLOT_ICONS[slot]}</span>
+									<span className="slot-icon"><GameIcon name={SLOT_ICONS[slot]} size={16} /></span>
 									<span className="slot-label">{SLOT_LABELS[slot]}</span>
 								</div>
 								{piece ? (

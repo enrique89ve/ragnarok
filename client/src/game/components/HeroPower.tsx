@@ -1,5 +1,7 @@
 import React from 'react';
 import { HeroPower as HeroPowerType, HeroClass } from '../types';
+import { GameIcon } from '../utils/ui/GameIcon';
+import type { IconName } from '../utils/ui/iconMap';
 
 interface HeroPowerProps {
   heroPower: HeroPowerType;
@@ -44,18 +46,13 @@ export const HeroPower: React.FC<HeroPowerProps> = ({
   const heroPowerColor = getHeroPowerColor(heroPower.class || 'neutral');
   
   // Get hero power icon based on class
-  const getHeroPowerIcon = (heroClass: HeroClass): string => {
+  const getHeroPowerIcon = (heroClass: HeroClass): IconName => {
     switch (heroClass) {
-      case 'mage':
-        return '🔥'; // Fire for Fireblast
-      case 'warrior':
-        return '🛡️'; // Shield for Armor Up
-      case 'paladin':
-        return '👑'; // Crown for Reinforce
-      case 'hunter':
-        return '🏹'; // Bow for Steady Shot
-      default:
-        return '⚡';
+      case 'mage': return 'flame';
+      case 'warrior': return 'shield';
+      case 'paladin': return 'crown';
+      case 'hunter': return 'target';
+      default: return 'zap';
     }
   };
 
@@ -72,7 +69,7 @@ export const HeroPower: React.FC<HeroPowerProps> = ({
         onClick={() => canUseHeroPower && onUse()}
       >
         {/* Hero power icon */}
-        <span className="text-white text-sm">{icon}</span>
+        <span className="text-white text-sm"><GameIcon name={icon} size={16} /></span>
         
         {/* Cost indicator */}
         <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center border border-blue-500">

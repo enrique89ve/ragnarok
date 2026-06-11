@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { ALL_NORSE_HEROES, getHeroClass } from '../../data/norseHeroes';
 import { getClassAttackIcon } from '../../assets/classAttackIcons';
+import { GameIcon } from '../../utils/ui/GameIcon';
 import './HeroPowerButton.css';
 
 interface HeroPowerButtonProps {
@@ -168,12 +169,12 @@ export const HeroPowerButton: React.FC<HeroPowerButtonProps> = ({
               loading="lazy"
             />
           ) : (
-            <span className="icon-symbol">{isWeaponUpgraded ? '⚔' : '⚡'}</span>
+            <span className="icon-symbol"><GameIcon name={isWeaponUpgraded ? 'swords' : 'zap'} size={18} /></span>
           )}
         </div>
 
         {isWeaponUpgraded && (
-          <div className="hero-power-btn-badge">✓</div>
+          <div className="hero-power-btn-badge"><GameIcon name="check" size={12} /></div>
         )}
       </div>
 
@@ -185,7 +186,7 @@ export const HeroPowerButton: React.FC<HeroPowerButtonProps> = ({
           title={`Upgrade Hero Power (5 Mana)`}
           style={{ pointerEvents: 'auto', zIndex: 10001 }}
         >
-          <div className="upgrade-icon">⚔</div>
+          <div className="upgrade-icon"><GameIcon name="swords" size={12} /></div>
           <div className="upgrade-cost">5</div>
         </button>
       )}

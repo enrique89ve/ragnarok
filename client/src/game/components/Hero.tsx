@@ -5,6 +5,8 @@ import SecretIcon from './SecretIcon';
 const HealthDisplay = lazy(() => import('./HealthDisplay'));
 const ArmorDisplay = lazy(() => import('./ArmorDisplay'));
 import { debug } from '../config/debugConfig';
+import { GameIcon } from '../utils/ui/GameIcon';
+import type { IconName } from '../utils/ui/iconMap';
 
 const HERO_IMAGE_IDS = {
   jaina: 'jaina',
@@ -151,42 +153,27 @@ export const Hero: React.FC<HeroProps> = ({
     }
   }, [heroType, registerPosition]);
   
-  // Get fallback hero emoji if image fails to load
-  const getHeroEmoji = (heroClass: HeroClass | undefined): string => {
-    // Handle null or undefined heroClass
-    if (!heroClass) return '👤';
-    
+  // Get fallback hero icon if image fails to load
+  const getHeroIcon = (heroClass: HeroClass | undefined): IconName => {
+    if (!heroClass) return 'user';
     switch (heroClass) {
-      case 'mage':
-        return '🧙‍';
-      case 'warrior':
-        return '⚔️';
-      case 'paladin':
-        return '✝️';
-      case 'hunter':
-        return '🏹';
-      case 'priest':
-        return '🙏';
-      case 'warlock':
-        return '😈';
-      case 'shaman':
-        return '🌩️';
-      case 'rogue':
-        return '🗡️';
-      case 'druid':
-        return '🐻';
-      case 'berserker':
-        return '👿';
-      case 'deathknight':
-        return '💀';
-      case 'necromancer':
-        return '🧙‍♀️';
-      default:
-        return '👤';
+      case 'mage': return 'wand';
+      case 'warrior': return 'swords';
+      case 'paladin': return 'shield';
+      case 'hunter': return 'target';
+      case 'priest': return 'sparkles';
+      case 'warlock': return 'skull';
+      case 'shaman': return 'zap';
+      case 'rogue': return 'dagger';
+      case 'druid': return 'paw';
+      case 'berserker': return 'flame';
+      case 'deathknight': return 'skullCrossed';
+      case 'necromancer': return 'ghost';
+      default: return 'user';
     }
   };
 
-  const heroEmoji = getHeroEmoji(player.heroClass);
+  const heroIcon = getHeroIcon(player.heroClass);
 
   return (
     <div className="flex flex-col items-center">
@@ -212,7 +199,7 @@ export const Hero: React.FC<HeroProps> = ({
           />
         ) : (
           <div className="flex flex-col items-center justify-center w-full h-full bg-linear-to-b from-gray-800/90 to-gray-900/90">
-            <span className="text-3xl mb-1">{heroEmoji}</span>
+            <span className="text-3xl mb-1"><GameIcon name={heroIcon} size={28} /></span>
             <div className="text-xs font-bold text-center px-1 leading-tight">
               {heroName.split(' ').map((word, i) => (
                 <div key={i}>{word}</div>
