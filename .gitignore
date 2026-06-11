@@ -165,6 +165,7 @@ __tests__/
 !client/src/game/p2p/p2pPerspective.test.ts
 !client/src/game/components/social/SocialPresenceHeartbeat.test.ts
 !client/src/game/components/social/FriendsPanel.test.ts
+!client/src/game/components/social/friendSession.test.ts
 !client/src/game/components/multiplayer/MultiplayerLobby.test.ts
 !client/src/game/match/modes/p2p/qaLocalRewardPreview.test.ts
 !server/services/p2pChallengeSigner.test.ts
