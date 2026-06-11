@@ -523,15 +523,16 @@ export function fireAnnouncement(
     rarity?: 'common' | 'rare' | 'epic' | 'mythic';
     cardClass?: string;
     duration?: number;
+    iconName?: IconName;
   }
 ) {
   const config = getAnnouncementConfig(type);
-  
+
   useUnifiedUIStore.getState().addAnnouncement({
     type,
     title,
     subtitle: options?.subtitle,
-    iconName: config.iconName,
+    iconName: options?.iconName ?? config.iconName,
     rarity: options?.rarity,
     cardClass: options?.cardClass,
     duration: options?.duration

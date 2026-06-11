@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { routes } from '../../../lib/routes';
 import { getRarityColor, getRarityBorder, getRarityGlow, getRarityBackground, getTypeIcon } from '../../utils/rarityUtils';
+import { GameIcon } from '../../utils/ui/GameIcon';
 import { getCardArtPath } from '../../utils/art/artMapping';
 import TreasureChestSVG from './TreasureChestSVG';
 import { OrnateCorners, SigilBackplate, NumericRitual, type Tier } from '../../../components/ornaments/RunicSigils';
@@ -641,7 +642,7 @@ function CardTile({ card, revealed, delay, reducedMotion }: CardTileProps) {
 						/>
 					) : (
 						<div className="w-full h-full flex items-center justify-center bg-obsidian-900">
-							<span className="text-5xl text-ink-300" aria-hidden="true">{getTypeIcon(card.type)}</span>
+							<span className="text-5xl text-ink-300" aria-hidden="true"><GameIcon name={getTypeIcon(card.type)} size={40} /></span>
 						</div>
 					);
 				})()}
@@ -656,7 +657,7 @@ function CardTile({ card, revealed, delay, reducedMotion }: CardTileProps) {
 					className="text-lg leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)]"
 					aria-hidden="true"
 				>
-					{getTypeIcon(card.type)}
+					<GameIcon name={getTypeIcon(card.type)} size={18} />
 				</span>
 				<span className={`text-[9px] font-bold tracking-[0.18em] uppercase ${getRarityColor(card.rarity)} drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]`}>
 					{card.rarity}

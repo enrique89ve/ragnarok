@@ -5,33 +5,34 @@
 
 import { CardInstance } from '../../types/CardTypes';
 import { cryptoRng } from '../seededRng';
+import type { IconName } from '../ui/iconMap';
 
 // Status effect types
-export type StatusEffectType = 
-  | 'poison_dot'    // 3 damage at turn start
-  | 'bleed'         // +3 damage when taking damage
-  | 'paralysis'     // 50% action fail chance
-  | 'weakness'      // -3 Attack
-  | 'vulnerable'    // +3 damage taken
-  | 'freeze'        // Cannot act (frozen)
-  | 'marked'        // Ignores stealth/protection
-  | 'burn';         // 3 damage on attack, +3 damage dealt
+export type StatusEffectType =
+  | 'poison_dot'
+  | 'bleed'
+  | 'paralysis'
+  | 'weakness'
+  | 'vulnerable'
+  | 'freeze'
+  | 'marked'
+  | 'burn';
 
 // Status effect metadata
 export const STATUS_EFFECTS: Record<StatusEffectType, {
   name: string;
-  icon: string;
+  iconName: IconName;
   description: string;
   element: string;
 }> = {
-  poison_dot: { name: 'Poison', icon: '☠️', description: 'Takes 3 damage at the start of its turn', element: 'water' },
-  bleed: { name: 'Bleed', icon: '🩸', description: 'Takes +3 damage whenever it takes damage', element: 'earth' },
-  paralysis: { name: 'Paralysis', icon: '⚡', description: '50% chance to fail actions', element: 'lightning' },
-  weakness: { name: 'Weakened', icon: '⬇️', description: 'Has -3 Attack', element: 'earth' },
-  vulnerable: { name: 'Vulnerable', icon: '🎯', description: 'Takes +3 damage from all sources', element: 'fire' },
-  freeze: { name: 'Frozen', icon: '❄️', description: 'Cannot act', element: 'ice' },
-  marked: { name: 'Marked', icon: '👁️', description: 'Can always be targeted, ignores stealth', element: 'light' },
-  burn: { name: 'Burn', icon: '🔥', description: 'Takes 3 damage when attacking, deals +3 damage', element: 'fire' }
+  poison_dot: { name: 'Poison', iconName: 'skullCrossed', description: 'Takes 3 damage at the start of its turn', element: 'water' },
+  bleed: { name: 'Bleed', iconName: 'droplet', description: 'Takes +3 damage whenever it takes damage', element: 'earth' },
+  paralysis: { name: 'Paralysis', iconName: 'zap', description: '50% chance to fail actions', element: 'lightning' },
+  weakness: { name: 'Weakened', iconName: 'arrowDown', description: 'Has -3 Attack', element: 'earth' },
+  vulnerable: { name: 'Vulnerable', iconName: 'target', description: 'Takes +3 damage from all sources', element: 'fire' },
+  freeze: { name: 'Frozen', iconName: 'snowflake', description: 'Cannot act', element: 'ice' },
+  marked: { name: 'Marked', iconName: 'eye', description: 'Can always be targeted, ignores stealth', element: 'light' },
+  burn: { name: 'Burn', iconName: 'flame', description: 'Takes 3 damage when attacking, deals +3 damage', element: 'fire' }
 };
 
 // Apply a status effect to a minion
@@ -158,7 +159,7 @@ export function processTurnStartEffects(minion: CardInstance): { damage: number;
   
   if (minion.isPoisonedDoT) {
     damage += 3;
-    effects.push('☠️ Poison deals 3 damage');
+    effects.push('Poison deals 3 damage');
   }
   
   return { damage, effects };
@@ -171,7 +172,7 @@ export function processOnAttackEffects(minion: CardInstance): { selfDamage: numb
   
   if (minion.isBurning) {
     selfDamage += 3;
-    effects.push('🔥 Burn deals 3 damage to self');
+    effects.push('Burn deals 3 damage to self');
   }
   
   return { selfDamage, effects };

@@ -22,9 +22,10 @@ export function processOnAttackStatusEffect(
 
   const meta = STATUS_EFFECTS[statusEffect];
   if (meta) {
-    fireAnnouncement('status_effect', `${meta.icon} ${meta.name}`, {
+    fireAnnouncement('status_effect', meta.name, {
       subtitle: `${target.card?.name ?? 'Target'} — ${meta.description}`,
-      duration: 1500
+      duration: 1500,
+      iconName: meta.iconName
     });
   }
 

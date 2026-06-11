@@ -8,6 +8,7 @@
  */
 import type { Rarity } from '@shared/schemas/rarity';
 import { RARITY_ORDER, tryAdaptRarity } from '@shared/schemas/rarity';
+import type { IconName } from './ui/iconMap';
 
 export interface RarityUi {
 	key: Rarity;
@@ -100,12 +101,12 @@ export const getRaritySortRank   = (r: string): number => {
 	return -RARITY_ORDER[canon];
 };
 
-export function getTypeIcon(type: string): string {
+export function getTypeIcon(type: string): IconName {
 	switch (type) {
-		case 'minion': return '⚔️';
-		case 'spell':  return '✨';
-		case 'weapon': return '🗡️';
-		case 'hero':   return '👑';
-		default:       return '📜';
+		case 'minion': return 'swords';
+		case 'spell':  return 'sparkles';
+		case 'weapon': return 'dagger';
+		case 'hero':   return 'crown';
+		default:       return 'book';
 	}
 }

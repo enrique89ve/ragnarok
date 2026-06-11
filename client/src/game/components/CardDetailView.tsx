@@ -1,6 +1,8 @@
 import React from 'react';
 import { CardData, CardInstance } from '../types';
 import { isMinion } from '../utils/cards/typeGuards';
+import { GameIcon } from '../utils/ui/GameIcon';
+import type { IconName } from '../utils/ui/iconMap';
 
 interface CardDetailViewProps {
   card: CardInstance | CardData;
@@ -43,22 +45,22 @@ export const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose })
     if (!keywords || keywords.length === 0) return null;
     
     // Map of keywords to their icon and description
-    const keywordInfo: {[key: string]: {icon: string, desc: string}} = {
-      'battlecry': { icon: '⚡', desc: 'Effect triggers when played from hand' },
-      'deathrattle': { icon: '💀', desc: 'Effect triggers when this minion dies' },
-      'taunt': { icon: '🛡️', desc: 'Enemies must attack this minion first' },
-      'divine_shield': { icon: '✨', desc: 'The first time this minion takes damage, ignore it' },
-      'rush': { icon: '💨', desc: 'Can attack minions the turn it\'s played' },
-      'charge': { icon: '⚡', desc: 'Can attack immediately' },
-      'windfury': { icon: '🌪️', desc: 'Can attack twice per turn' },
-      'discover': { icon: '🔍', desc: 'Choose one of three random cards' },
-      'lifesteal': { icon: '💚', desc: 'Damage dealt by this card heals your hero' },
-      'poisonous': { icon: '☠️', desc: 'Destroys any minion damaged by this' },
-      'stealth': { icon: '👁️', desc: 'Can\'t be targeted until it attacks' },
-      'magnetic': { icon: '🧲', desc: 'Runic Bond — attaches to a friendly Automaton to combine stats' },
-      'echo': { icon: '🔄', desc: 'Can be played multiple times on the same turn' },
-      'overkill': { icon: '🔪', desc: 'Triggers an effect when this deals excess damage' },
-      'reborn': { icon: '🔄', desc: 'Returns to life with 1 health the first time it dies' }
+    const keywordInfo: {[key: string]: {iconName: IconName, desc: string}} = {
+      'battlecry': { iconName: 'zap', desc: 'Effect triggers when played from hand' },
+      'deathrattle': { iconName: 'skull', desc: 'Effect triggers when this minion dies' },
+      'taunt': { iconName: 'shield', desc: 'Enemies must attack this minion first' },
+      'divine_shield': { iconName: 'sparkles', desc: 'The first time this minion takes damage, ignore it' },
+      'rush': { iconName: 'wind', desc: 'Can attack minions the turn it\'s played' },
+      'charge': { iconName: 'zap', desc: 'Can attack immediately' },
+      'windfury': { iconName: 'wind', desc: 'Can attack twice per turn' },
+      'discover': { iconName: 'search', desc: 'Choose one of three random cards' },
+      'lifesteal': { iconName: 'heart', desc: 'Damage dealt by this card heals your hero' },
+      'poisonous': { iconName: 'skullCrossed', desc: 'Destroys any minion damaged by this' },
+      'stealth': { iconName: 'eye', desc: 'Can\'t be targeted until it attacks' },
+      'magnetic': { iconName: 'magnet', desc: 'Runic Bond — attaches to a friendly Automaton to combine stats' },
+      'echo': { iconName: 'refresh', desc: 'Can be played multiple times on the same turn' },
+      'overkill': { iconName: 'flame', desc: 'Triggers an effect when this deals excess damage' },
+      'reborn': { iconName: 'refresh', desc: 'Returns to life with 1 health the first time it dies' }
     };
     
     return (
@@ -66,13 +68,14 @@ export const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose })
         <h4 className="text-white text-sm font-bold mb-2">Keywords:</h4>
         <div className="space-y-2">
           {keywords.map((keyword, index) => {
-            const info = keywordInfo[keyword.toLowerCase()] || { icon: '•', desc: keyword };
+            const info = keywordInfo[keyword.toLowerCase()];
+            const iconName: IconName = info?.iconName ?? 'sparkles';
             return (
               <div key={index} className="flex items-center bg-black/30 rounded p-2">
-                <span className="mr-2 text-xl">{info.icon}</span>
+                <span className="mr-2 text-xl"><GameIcon name={iconName} size={20} /></span>
                 <div>
                   <div className="text-yellow-300 font-bold">{keyword}</div>
-                  <div className="text-xs text-gray-300">{info.desc}</div>
+                  <div className="text-xs text-gray-300">{info?.desc ?? keyword}</div>
                 </div>
               </div>
             );

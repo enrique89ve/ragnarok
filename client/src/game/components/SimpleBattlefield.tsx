@@ -17,6 +17,8 @@ import { MAX_BATTLEFIELD_SIZE } from '../constants/gameConstants';
 import { hasKeyword } from '../utils/cards/keywordUtils';
 import type { SimpleCardStatTone, SimpleCardStatView } from './SimpleCard';
 import './SimpleBattlefield.css';
+import { GameIcon } from '../utils/ui/GameIcon';
+import type { IconName } from '../utils/ui/iconMap';
 
 interface SimpleBattlefieldProps {
   playerCards: CardInstanceWithCardData[];
@@ -219,57 +221,57 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
                 />
                 {hasAnyStatus && (
                   <div className="bf-status-badges">
-                    {statusPoisoned && <span className="status-badge badge-poison" title="Poison: 3 damage per turn">☠️</span>}
-                    {statusBleeding && <span className="status-badge badge-bleed" title="Bleed: +3 damage taken">🩸</span>}
-                    {statusBurning && <span className="status-badge badge-burn" title="Burn: +3 Attack, 3 self-damage">🔥</span>}
-                    {statusFrozen && <span className="status-badge badge-frozen" title="Frozen: Cannot act">❄️</span>}
-                    {statusParalyzed && <span className="status-badge badge-paralysis" title="Paralysis: 50% chance to fail">⚡</span>}
-                    {statusWeakened && <span className="status-badge badge-weakness" title="Weakness: -3 Attack">⬇️</span>}
-                    {statusVulnerable && <span className="status-badge badge-vulnerable" title="Vulnerable: +3 damage taken">🎯</span>}
-                    {statusMarked && <span className="status-badge badge-marked" title="Marked: Ignores Stealth">👁️</span>}
+                    {statusPoisoned && <span className="status-badge badge-poison" title="Poison: 3 damage per turn"><GameIcon name="skullCrossed" size={12} /></span>}
+                    {statusBleeding && <span className="status-badge badge-bleed" title="Bleed: +3 damage taken"><GameIcon name="droplet" size={12} /></span>}
+                    {statusBurning && <span className="status-badge badge-burn" title="Burn: +3 Attack, 3 self-damage"><GameIcon name="flame" size={12} /></span>}
+                    {statusFrozen && <span className="status-badge badge-frozen" title="Frozen: Cannot act"><GameIcon name="snowflake" size={12} /></span>}
+                    {statusParalyzed && <span className="status-badge badge-paralysis" title="Paralysis: 50% chance to fail"><GameIcon name="zap" size={12} /></span>}
+                    {statusWeakened && <span className="status-badge badge-weakness" title="Weakness: -3 Attack"><GameIcon name="arrowDown" size={12} /></span>}
+                    {statusVulnerable && <span className="status-badge badge-vulnerable" title="Vulnerable: +3 damage taken"><GameIcon name="target" size={12} /></span>}
+                    {statusMarked && <span className="status-badge badge-marked" title="Marked: Ignores Stealth"><GameIcon name="eye" size={12} /></span>}
                   </div>
                 )}
                 {einherjarReturns !== undefined && einherjarReturns > 0 && (
                   <div className="bf-einherjar-badge" title={`Einherjar: ${einherjarReturns} return${einherjarReturns > 1 ? 's' : ''} remaining`}>
-                    <span className="einherjar-icon">⚔️</span>
+                    <span className="einherjar-icon"><GameIcon name="swords" size={12} /></span>
                     <span className="einherjar-count">×{einherjarReturns}</span>
                   </div>
                 )}
                 {chainPartnerOnBoard && (
                   <div className="bf-chain-badge" title="Ragnarok Chain: Partner is in play — bonuses active!">
-                    <span className="chain-icon">🔗</span>
+                    <span className="chain-icon"><GameIcon name="link" size={12} /></span>
                   </div>
                 )}
                 {hasChainPartner && !chainPartnerOnBoard && (
                   <div className="bf-chain-badge chain-inactive" title="Ragnarok Chain: Partner not in play">
-                    <span className="chain-icon">🔗</span>
+                    <span className="chain-icon"><GameIcon name="link" size={12} /></span>
                   </div>
                 )}
                 {isDormantCard && (
                   <div className="bf-dormant-overlay" title={`Dormant: Awakens in ${dormantTurnsLeft ?? '?'} turn${dormantTurnsLeft === 1 ? '' : 's'}`}>
-                    <span className="dormant-icon">💤</span>
+                    <span className="dormant-icon"><GameIcon name="moon" size={12} /></span>
                     <span className="dormant-turns">{dormantTurnsLeft ?? '?'}</span>
                   </div>
                 )}
                 {isSubmerged && (
                   <div className="bf-submerge-overlay" title={`Submerged: Surfaces in ${submergeTurnsLeft ?? '?'} turn${submergeTurnsLeft === 1 ? '' : 's'}`}>
-                    <span className="submerge-icon">🌊</span>
+                    <span className="submerge-icon"><GameIcon name="droplet" size={12} /></span>
                     <span className="submerge-turns">{submergeTurnsLeft ?? '?'}</span>
                   </div>
                 )}
                 {isCoiled && (
                   <div className="bf-coil-badge" title="Coiled: Attack locked to 0">
-                    <span className="coil-icon">🐍</span>
+                    <span className="coil-icon"><GameIcon name="snake" size={12} /></span>
                   </div>
                 )}
                 {hasWager && (
                   <div className="bf-wager-badge" title="Wager: Active during poker combat">
-                    <span className="wager-icon">🎲</span>
+                    <span className="wager-icon"><GameIcon name="dice" size={12} /></span>
                   </div>
                 )}
                 {hasFlying && (
                   <div className="bf-flying-badge" title="Flying: Bypasses Taunt">
-                    <span className="flying-icon">🪶</span>
+                    <span className="flying-icon"><GameIcon name="feather" size={12} /></span>
                   </div>
                 )}
               </motion.div>

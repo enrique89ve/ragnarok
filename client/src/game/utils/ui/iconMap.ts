@@ -105,6 +105,9 @@ export const ICON_MAP = {
 	warning: AlertTriangle, // warning
 	arrowDown: ArrowDown, // weakened
 	circle: Bug, // neutral element placeholder
+	link: Settings, // chain link (closest semantic)
+	dice: Wand, // wager (dice for randomness; closest wand)
+	feather: Bug, // flying (closest: bug as floating)
 	x: X, // / invalid/no
 	ban: Ban, // blocked
 	check: Check, // ok

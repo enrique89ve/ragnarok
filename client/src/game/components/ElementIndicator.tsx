@@ -1,6 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ElementType, ELEMENT_COLORS, ELEMENT_ICONS } from '../types/ChessTypes';
+import { ElementType, ELEMENT_COLORS } from '../types/ChessTypes';
+import { ELEMENT_ICON_NAMES } from '../utils/elements/elementAdvantage';
+import { GameIcon } from '../utils/ui/GameIcon';
 import { isNorseElement, type NorseElement, NORSE_TO_GAME_ELEMENT } from '../types/NorseTypes';
 import './ElementIndicator.css';
 
@@ -62,7 +64,7 @@ const ElementIndicator: React.FC<ElementIndicatorProps> = ({
       transition={{ type: 'spring', stiffness: 400, damping: 20 }}
       title={`${ELEMENT_LABELS[gameElement]} Element`}
     >
-      <span className="element-icon">{ELEMENT_ICONS[gameElement]}</span>
+      <span className="element-icon"><GameIcon name={ELEMENT_ICON_NAMES[gameElement]} size={16} /></span>
       <div className={`element-effect element-effect-${gameElement}`} />
       {showLabel && (
         <span className="element-label">{ELEMENT_LABELS[gameElement]}</span>
@@ -83,7 +85,7 @@ export const ElementBadge: React.FC<{ element: ElementType | NorseElement; class
       }}
       title={`${ELEMENT_LABELS[gameElement]} Element`}
     >
-      <span className="element-badge-icon">{ELEMENT_ICONS[gameElement]}</span>
+      <span className="element-badge-icon"><GameIcon name={ELEMENT_ICON_NAMES[gameElement]} size={12} /></span>
       <span className="element-badge-label">{ELEMENT_LABELS[gameElement]}</span>
     </div>
   );

@@ -1,5 +1,7 @@
 export type ElementType = 'fire' | 'water' | 'wind' | 'earth' | 'holy' | 'shadow' | 'neutral';
 
+import type { IconName } from '../ui/iconMap';
+
 export const ELEMENT_STRENGTHS: Record<ElementType, ElementType[]> = {
   fire: ['earth', 'wind'],
   water: ['fire', 'shadow'],
@@ -38,6 +40,16 @@ export const ELEMENT_ICONS: Record<ElementType, string> = {
   holy: '✨',
   shadow: '🌑',
   neutral: '⚪'
+};
+
+export const ELEMENT_ICON_NAMES: Record<ElementType, IconName> = {
+  fire: 'flame',
+  water: 'droplet',
+  wind: 'wind',
+  earth: 'mountain',
+  holy: 'sparkles',
+  shadow: 'moon',
+  neutral: 'circle'
 };
 
 export const ELEMENT_LABELS: Record<ElementType, string> = {
@@ -92,4 +104,8 @@ export const getElementColor = (element: ElementType): string => {
 
 export const getElementIcon = (element: ElementType): string => {
   return ELEMENT_ICONS[element] || ELEMENT_ICONS.neutral;
+};
+
+export const getElementIconName = (element: ElementType): IconName => {
+  return ELEMENT_ICON_NAMES[element] || ELEMENT_ICON_NAMES.neutral;
 };

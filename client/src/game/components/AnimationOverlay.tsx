@@ -18,6 +18,8 @@ import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAnimationOrchestrator, AnimationEffect, AnimationCategory } from '../animations/UnifiedAnimationOrchestrator';
 import type { Rarity } from '@shared/schemas/rarity';
+import { GameIcon } from '../utils/ui/GameIcon';
+import type { IconName } from '../utils/ui/iconMap';
 import { getRarityUi, normalizeRarityKey } from '../utils/rarityUtils';
 
 interface ParticleConfig {
@@ -266,7 +268,7 @@ const AttackEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo((
           justifyContent: 'center',
         }}
       >
-        <span style={{ color: 'white', fontSize: '14px' }}>⚔</span>
+        <span style={{ color: 'white', fontSize: '14px' }}><GameIcon name="swords" size={12} /></span>
       </div>
     </motion.div>
   );
@@ -280,17 +282,17 @@ const SpellEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo(({
   const description = data.description || '';
   const spellType = data.spellType || 'damage';
 
-  const spellColors: Record<string, { bg: string; border: string; glow: string; icon: string }> = {
-    damage: { bg: 'rgba(255, 68, 68, 0.95)', border: '#ff6b6b', glow: 'rgba(255, 0, 0, 0.6)', icon: '🔥' },
-    heal: { bg: 'rgba(68, 255, 68, 0.95)', border: '#6bff6b', glow: 'rgba(0, 255, 0, 0.6)', icon: '💚' },
-    buff: { bg: 'rgba(255, 215, 0, 0.95)', border: '#ffd700', glow: 'rgba(255, 215, 0, 0.6)', icon: '⬆️' },
-    debuff: { bg: 'rgba(128, 0, 128, 0.95)', border: '#9932cc', glow: 'rgba(128, 0, 128, 0.6)', icon: '⬇️' },
-    summon: { bg: 'rgba(0, 191, 255, 0.95)', border: '#00bfff', glow: 'rgba(0, 191, 255, 0.6)', icon: '✨' },
-    aoe: { bg: 'rgba(255, 140, 0, 0.95)', border: '#ff8c00', glow: 'rgba(255, 140, 0, 0.6)', icon: '💥' },
-    draw: { bg: 'rgba(100, 149, 237, 0.95)', border: '#6495ed', glow: 'rgba(100, 149, 237, 0.6)', icon: '📜' },
-    quest: { bg: 'rgba(218, 165, 32, 0.95)', border: '#daa520', glow: 'rgba(218, 165, 32, 0.6)', icon: '🏆' },
-    transform: { bg: 'rgba(147, 112, 219, 0.95)', border: '#9370db', glow: 'rgba(147, 112, 219, 0.6)', icon: '🔄' },
-    default: { bg: 'rgba(70, 130, 180, 0.95)', border: '#4682b4', glow: 'rgba(70, 130, 180, 0.6)', icon: '✨' },
+  const spellColors: Record<string, { bg: string; border: string; glow: string; iconName: IconName }> = {
+    damage: { bg: 'rgba(255, 68, 68, 0.95)', border: '#ff6b6b', glow: 'rgba(255, 0, 0, 0.6)', iconName: 'flame' },
+    heal: { bg: 'rgba(68, 255, 68, 0.95)', border: '#6bff6b', glow: 'rgba(0, 255, 0, 0.6)', iconName: 'heart' },
+    buff: { bg: 'rgba(255, 215, 0, 0.95)', border: '#ffd700', glow: 'rgba(255, 215, 0, 0.6)', iconName: 'arrowDown' },
+    debuff: { bg: 'rgba(128, 0, 128, 0.95)', border: '#9932cc', glow: 'rgba(128, 0, 128, 0.6)', iconName: 'arrowDown' },
+    summon: { bg: 'rgba(0, 191, 255, 0.95)', border: '#00bfff', glow: 'rgba(0, 191, 255, 0.6)', iconName: 'sparkles' },
+    aoe: { bg: 'rgba(255, 140, 0, 0.95)', border: '#ff8c00', glow: 'rgba(255, 140, 0, 0.6)', iconName: 'flame' },
+    draw: { bg: 'rgba(100, 149, 237, 0.95)', border: '#6495ed', glow: 'rgba(100, 149, 237, 0.6)', iconName: 'book' },
+    quest: { bg: 'rgba(218, 165, 32, 0.95)', border: '#daa520', glow: 'rgba(218, 165, 32, 0.6)', iconName: 'crown' },
+    transform: { bg: 'rgba(147, 112, 219, 0.95)', border: '#9370db', glow: 'rgba(147, 112, 219, 0.6)', iconName: 'refresh' },
+    default: { bg: 'rgba(70, 130, 180, 0.95)', border: '#4682b4', glow: 'rgba(70, 130, 180, 0.6)', iconName: 'sparkles' },
   };
 
   const colors = spellColors[spellType] || spellColors.default;
@@ -343,7 +345,7 @@ const SpellEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo(({
             marginBottom: '8px',
           }}
         >
-          {colors.icon}
+          {<GameIcon name={colors.iconName} size={40} />}
         </motion.div>
 
         <motion.h2

@@ -32,6 +32,7 @@ import CeremonyEvidenceButton from './CeremonyEvidenceButton';
 import { NumericRitual, OrnateCorners, SigilBackplate } from '../../components/ornaments/RunicSigils';
 import { getCardArtPath } from '../utils/art/artMapping';
 import { getTypeIcon } from '../utils/rarityUtils';
+import { GameIcon } from '../utils/ui/GameIcon';
 import {
 	createDuatCardAcquisition,
 	isDuatAcquisitionProvenance,
@@ -348,7 +349,7 @@ function OpenedPackResults({
 												<img src={artPath} alt={card.name} className="h-full w-full object-cover" loading="lazy" />
 											) : (
 												<div className="grid h-full w-full place-items-center text-4xl text-ink-300">
-													{getTypeIcon(card.type)}
+													<GameIcon name={getTypeIcon(card.type)} size={36} />
 												</div>
 											)}
 											<div className="absolute inset-x-0 bottom-0 h-1/2 bg-linear-to-t from-obsidian-950 via-obsidian-950/80 to-transparent" />

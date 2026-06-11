@@ -9,6 +9,7 @@ import { MetaPageHeader, MetaPageHeaderLink } from '../../../components/navigati
 import { routes } from '../../../lib/routes';
 import { recordSessionEvent } from '../../../data/blockchain/transcriptBuilder';
 import { getRarityColor, getRaritySortRank, getTypeIcon } from '../../utils/rarityUtils';
+import { GameIcon } from '../../utils/ui/GameIcon';
 import { getCardArtPath } from '../../utils/art/artMapping';
 import { getHoloTier, applyHoloVars, resetHoloVars } from '../../hooks/useHoloTracking';
 import type { OwnedCard } from '../packs/types';
@@ -814,7 +815,7 @@ export default function CollectionPage() {
 										return (
 											<div key={type} className="n-glass-panel p-2 text-center bg-white/5 border-white/5">
 												<div className="text-lg font-bold text-white">
-													{getTypeIcon(type)} {ts?.uniqueCards ?? 0}
+													<GameIcon name={getTypeIcon(type)} size={18} /> {ts?.uniqueCards ?? 0}
 												</div>
 												<div className="text-gray-500 text-[10px] uppercase">{type}s</div>
 											</div>
@@ -1028,7 +1029,7 @@ export default function CollectionPage() {
 																				className="w-full h-full flex items-center justify-center"
 																				style={{ background: getClassGradient(card.heroClass) }}
 																			>
-																				<span className={`${cardIconClass} opacity-80`}>{getTypeIcon(card.type)}</span>
+																				<span className={`${cardIconClass} opacity-80`}><GameIcon name={getTypeIcon(card.type)} size={24} /></span>
 																			</div>
 																		)}
 
@@ -1054,7 +1055,7 @@ export default function CollectionPage() {
 																					{card.manaCost}
 																				</div>
 																			) : (
-																				<span className="text-base drop-shadow-lg" title={card.type}>{getTypeIcon(card.type)}</span>
+																				<span className="text-base drop-shadow-lg" title={card.type}><GameIcon name={getTypeIcon(card.type)} size={16} /></span>
 																			)}
 																			{card.quantity > 1 && (
 																				<div className={`${cardQuantityClass} bg-amber-600 rounded-full flex items-center justify-center text-white font-bold border border-amber-400 shadow-lg`}>
@@ -1180,7 +1181,7 @@ export default function CollectionPage() {
 							<div className="relative p-6">
 								{/* Rarity + Type Header */}
 								<div className="flex justify-between items-center mb-4">
-									<span className="text-3xl">{getTypeIcon(selectedCard.type)}</span>
+									<span className="text-3xl"><GameIcon name={getTypeIcon(selectedCard.type)} size={30} /></span>
 									<span className={`text-sm font-bold uppercase tracking-wider ${getRarityColor(selectedCard.rarity)}`}>
 										{selectedCard.rarity} {selectedCard.type}
 									</span>
@@ -1203,7 +1204,7 @@ export default function CollectionPage() {
 													className="w-full h-full flex items-center justify-center"
 													style={{ background: getClassGradient(selectedCard.heroClass) }}
 												>
-													<span className="text-7xl opacity-80">{getTypeIcon(selectedCard.type)}</span>
+													<span className="text-7xl opacity-80"><GameIcon name={getTypeIcon(selectedCard.type)} size={56} /></span>
 												</div>
 											)}
 											{/* Subtle vignette overlay */}
