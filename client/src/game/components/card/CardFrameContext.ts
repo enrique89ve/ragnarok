@@ -12,7 +12,15 @@
  */
 
 import { createContext, useContext, type RefObject } from 'react';
-import type { CardShape, CardSize, ResolvedCardDims } from './types';
+import type {
+	CardShape,
+	CardSize,
+	ResolvedCardDims,
+	CardStatsMode,
+	CardType,
+	CardKind,
+	EvolutionLevel,
+} from './types';
 import type { Rarity } from '@shared/schemas/rarity';
 import type { NorseElement } from '../../types/NorseTypes';
 
@@ -24,6 +32,13 @@ export interface CardFrameContextValue {
 	element: NorseElement;
 	dims: ResolvedCardDims;
 	pngFailed: boolean;
+	isPlayable: boolean;
+	isHighlighted: boolean;
+	statsMode: CardStatsMode;
+	cardType: CardType;
+	cardKind: CardKind;
+	evolutionLevel: EvolutionLevel;
+	disableTooltips: boolean;
 }
 
 export const CardFrameContext = createContext<CardFrameContextValue | null>(null);

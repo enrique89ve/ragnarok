@@ -47,6 +47,13 @@ const CardFrame: React.FC<CardFrameProps> = ({
 	className,
 	style,
 	interactive,
+	isPlayable = true,
+	isHighlighted = false,
+	statsMode = 'frame',
+	cardType = null,
+	cardKind = null,
+	evolutionLevel = null,
+	disableTooltips = false,
 	...rest
 }) => {
 	const dims = resolveCardDims({ shape, size, overrideWidth, overrideHeight });
@@ -87,6 +94,13 @@ const CardFrame: React.FC<CardFrameProps> = ({
 		element,
 		dims,
 		pngFailed,
+		isPlayable,
+		isHighlighted,
+		statsMode,
+		cardType,
+		cardKind,
+		evolutionLevel,
+		disableTooltips,
 	};
 
 	const classes = buildFrameClasses({
@@ -94,6 +108,11 @@ const CardFrame: React.FC<CardFrameProps> = ({
 		rarity,
 		render: effectiveRender,
 		holoTier,
+		cardType,
+		cardKind,
+		evolutionLevel,
+		isPlayable,
+		isHighlighted,
 		className,
 	});
 
@@ -108,6 +127,12 @@ const CardFrame: React.FC<CardFrameProps> = ({
 				data-rarity={rarity}
 				data-element={element}
 				data-render={effectiveRender}
+				data-stats-mode={statsMode}
+				data-card-type={cardType ?? undefined}
+				data-card-kind={cardKind ?? undefined}
+				data-evolution={evolutionLevel ?? undefined}
+				data-playable={isPlayable ? 'true' : 'false'}
+				data-highlighted={isHighlighted ? 'true' : 'false'}
 				data-interactive={isInteractive ? 'true' : 'false'}
 				data-holo-mask={holoTier ? 'art-window' : null}
 				style={{
@@ -207,6 +232,11 @@ function buildFrameClasses(args: {
 	rarity: string;
 	render: string;
 	holoTier: string | null;
+	cardType: string | null;
+	cardKind: string | null;
+	evolutionLevel: number | null;
+	isPlayable: boolean;
+	isHighlighted: boolean;
 	className: string | undefined;
 }): string {
 	return [
@@ -214,7 +244,12 @@ function buildFrameClasses(args: {
 		`card-frame--${args.shape}`,
 		`card-frame--rarity-${args.rarity}`,
 		`card-frame--render-${args.render}`,
+		args.cardType ? `card-frame--type-${args.cardType}` : '',
+		args.cardKind ? `card-frame--kind-${args.cardKind}` : '',
+		args.evolutionLevel ? `card-frame--evolution-${args.evolutionLevel}` : '',
 		args.holoTier ? `holo-${args.holoTier}` : '',
+		args.isPlayable ? '' : 'card-frame--unplayable',
+		args.isHighlighted ? 'card-frame--highlighted' : '',
 		args.className ?? '',
 	].filter(Boolean).join(' ');
 }

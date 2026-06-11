@@ -47,6 +47,36 @@ export type HoloMask = 'art-window' | 'full';
  *  `css` — CSS-only border + band, no SVG, no PNG. Used by `row`. */
 export type CardFrameRender = 'png' | 'svg' | 'css';
 
+/** Stat-gem presentation:
+ *  `frame`       — bottom-left of the frame (default).
+ *  `battlefield` — compact square variant pinned to the card edge.
+ *  `hidden`      — stat row omitted (e.g. spells, secrets). */
+export type CardStatsMode = 'frame' | 'battlefield' | 'hidden';
+
+/** Themed background + name-banner variant.
+ *  Drives the `--cf-type-bg-from` / `--cf-type-bg-to` CSS vars and
+ *  the banner border tint. `null` keeps the default dark+rarity. */
+export type CardType = 'minion' | 'spell' | 'weapon' | 'artifact' | 'armor' | 'hero' | null;
+
+/** Banner border tint. Independent of `cardType`. */
+export type CardKind = 'secret' | 'location' | 'poker_spell' | null;
+
+/** Pet-evolution level. Drives desaturation + silver/gold tint. */
+export type EvolutionLevel = 1 | 2 | 3 | null;
+
+/** Stat-gem value with semantic tone. `?` renders the unknown glyph. */
+export type StatGemTone = 'base' | 'buffed' | 'damaged' | 'unknown';
+
+export interface StatGemValue {
+	value: number | '?';
+	tone: StatGemTone;
+}
+
+export interface StatView {
+	attack?: StatGemValue;
+	health?: StatGemValue;
+}
+
 /** Resolved pixel dimensions used by sizing logic and consumers
  *  that need to size siblings (e.g. mastery badge offsets). */
 export interface ResolvedCardDims {
@@ -91,6 +121,29 @@ export interface CardFrameProps
 	 *  Both must be set together. */
 	overrideWidth?: number;
 	overrideHeight?: number;
+
+	/** Card is currently in the player's hand and may be played.
+	 *  Drives green-ring when true, desaturation + no-grab when false. */
+	isPlayable?: boolean;
+
+	/** Card is being highlighted (e.g. valid target). Lifts + glows. */
+	isHighlighted?: boolean;
+
+	/** Stat-gem presentation. Default: 'frame'. */
+	statsMode?: CardStatsMode;
+
+	/** Themed background + name-banner variant. */
+	cardType?: CardType;
+
+	/** Banner border tint. */
+	cardKind?: CardKind;
+
+	/** Pet-evolution level. Drives desaturation + silver/gold tint. */
+	evolutionLevel?: EvolutionLevel;
+
+	/** Disable `<CardKeywordTooltip>` portals. Used by the discovery
+	 *  modal so its own portal escapes. */
+	disableTooltips?: boolean;
 
 	/** Slot children. Detected by element type, not name string.
 	 *  Unknown children are placed at the top of the z-stack so future
