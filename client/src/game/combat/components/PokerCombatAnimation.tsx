@@ -4,6 +4,8 @@ import { getHeroAnimationProfile, ELEMENT_COLORS } from '../data/heroAnimationPr
 import type { AnimationArchetype } from '../data/heroAnimationProfiles';
 import { proceduralAudio } from '../../audio/proceduralAudio';
 import { ARENA_VFX_LAYERS, getArenaVfxLayer } from '../arenaVfxTargets';
+import { GameIcon } from '../../utils/ui/GameIcon';
+import type { IconName } from '../../utils/ui/iconMap';
 import '../styles/combat-animations.css';
 
 interface PokerCombatAnimationProps {
@@ -16,6 +18,18 @@ interface PokerCombatAnimationProps {
 }
 
 type AnimationPhase = 'idle' | 'windup' | 'attack' | 'impact' | 'particles' | 'complete';
+
+interface ParticleData {
+	id: number;
+	iconName: IconName;
+	left: string;
+	top: string;
+	color: string;
+	duration: number;
+	delay: number;
+	tx: number;
+	ty: number;
+}
 
 function getDamageTier(damage: number): { tier: 'none' | 'light' | 'medium' | 'heavy'; duration: number; particleCount: number; shakeClass: string } {
 	if (damage <= 0) return { tier: 'none', duration: 1500, particleCount: 0, shakeClass: '' };
@@ -44,7 +58,7 @@ export const PokerCombatAnimation: React.FC<PokerCombatAnimationProps> = ({
 	onComplete,
 }) => {
 	const [phase, setPhase] = useState<AnimationPhase>('idle');
-	const containerRef = useRef<HTMLDivElement>(null);
+	const [particles, setParticles] = useState<ParticleData[]>([]);
 	const onCompleteRef = useRef(onComplete);
 	const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -74,26 +88,27 @@ export const PokerCombatAnimation: React.FC<PokerCombatAnimationProps> = ({
 
 	const attackDuration = getAttackDuration(attackerProfile.archetype);
 
-	const spawnParticles = useCallback((count: number, emoji: string, colors: { primary: string; secondary: string }) => {
-		const container = containerRef.current;
-		if (!container || reducedMotion.current) return;
+	const spawnParticles = useCallback((count: number, iconName: IconName, colors: { primary: string; secondary: string }) => {
+		if (reducedMotion.current) return;
+		const next: ParticleData[] = [];
 		for (let i = 0; i < count; i++) {
-			const particle = document.createElement('div');
-			particle.className = 'combat-particle';
-			particle.textContent = emoji;
 			const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
 			const distance = 60 + Math.random() * 120;
 			const tx = Math.cos(angle) * distance;
 			const ty = Math.sin(angle) * distance;
-			particle.style.left = '50%';
-			particle.style.top = winner === 'player' ? '30%' : '70%';
-			particle.style.color = Math.random() > 0.5 ? colors.primary : colors.secondary;
-			particle.style.animation = `particle-burst ${0.5 + Math.random() * 1}s ease-out forwards`;
-			particle.style.animationDelay = `${Math.random() * 0.2}s`;
-			particle.style.setProperty('--tx', `${tx}px`);
-			particle.style.setProperty('--ty', `${ty}px`);
-			container.appendChild(particle);
+			next.push({
+				id: i,
+				iconName,
+				left: '50%',
+				top: winner === 'player' ? '30%' : '70%',
+				color: Math.random() > 0.5 ? colors.primary : colors.secondary,
+				duration: 0.5 + Math.random() * 1,
+				delay: Math.random() * 0.2,
+				tx,
+				ty,
+			});
 		}
+		setParticles(next);
 	}, [winner]);
 
 	useEffect(() => {
@@ -142,7 +157,7 @@ export const PokerCombatAnimation: React.FC<PokerCombatAnimationProps> = ({
 			setPhase('particles');
 			spawnParticles(
 				tier.particleCount,
-				attackerProfile.particleEmoji,
+				attackerProfile.particleIconName,
 				attackerColors
 			);
 		}, impactEnd);
@@ -152,6 +167,7 @@ export const PokerCombatAnimation: React.FC<PokerCombatAnimationProps> = ({
 		const particlesEnd = elapsed + particleDuration;
 		addTimer(() => {
 			setPhase('complete');
+			setParticles([]);
 			onCompleteRef.current();
 		}, particlesEnd);
 
@@ -164,22 +180,13 @@ export const PokerCombatAnimation: React.FC<PokerCombatAnimationProps> = ({
 		attackerColors,
 		attackerProfile.archetype,
 		attackerProfile.element,
-		attackerProfile.particleEmoji,
+		attackerProfile.particleIconName,
 		damage,
 		isFold,
 		spawnParticles,
 		tier.particleCount,
 		tier.tier,
 	]);
-
-	useEffect(() => {
-		const container = containerRef.current;
-		return () => {
-			if (!container) return;
-			const particles = container.querySelectorAll('.combat-particle');
-			particles.forEach(p => p.remove());
-		};
-	}, []);
 
 	if (phase === 'complete') return null;
 
@@ -213,7 +220,7 @@ export const PokerCombatAnimation: React.FC<PokerCombatAnimationProps> = ({
 							['--end-y' as string]: winner === 'opponent' ? '650px' : '-650px',
 						}}
 					>
-						{attackerProfile.particleEmoji}
+						<GameIcon name={attackerProfile.particleIconName} size={20} color="#fff" />
 					</div>
 				);
 			case 'magic_blast':
@@ -270,7 +277,6 @@ export const PokerCombatAnimation: React.FC<PokerCombatAnimationProps> = ({
 
 	const content = (
 		<div
-			ref={containerRef}
 			className={`poker-combat-animation ${phase === 'impact' ? tier.shakeClass : ''}`}
 			style={{ ['--element-color' as string]: elementColor }}
 		>
@@ -310,17 +316,36 @@ export const PokerCombatAnimation: React.FC<PokerCombatAnimationProps> = ({
 			)}
 
 			{phase === 'particles' && damage > 0 && (
-				<div
-					className="combat-damage-number"
-					style={{
-						left: '50%',
-						top: winner === 'player' ? '25%' : '60%',
-						transform: 'translateX(-50%)',
-						opacity: 0.6,
-					}}
-				>
-					-{damage}
-				</div>
+				<>
+					<div
+						className="combat-damage-number"
+						style={{
+							left: '50%',
+							top: winner === 'player' ? '25%' : '60%',
+							transform: 'translateX(-50%)',
+							opacity: 0.6,
+						}}
+					>
+						-{damage}
+					</div>
+					{particles.map(p => (
+						<div
+							key={p.id}
+							className="combat-particle"
+							style={{
+								left: p.left,
+								top: p.top,
+								color: p.color,
+								animation: `particle-burst ${p.duration}s ease-out forwards`,
+								animationDelay: `${p.delay}s`,
+								['--tx' as string]: `${p.tx}px`,
+								['--ty' as string]: `${p.ty}px`,
+							}}
+						>
+							<GameIcon name={p.iconName} size={14} />
+						</div>
+					))}
+				</>
 			)}
 		</div>
 	);

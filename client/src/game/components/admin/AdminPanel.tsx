@@ -25,6 +25,7 @@ import {
 	RefreshCw,
 	ServerCog,
 	ShieldAlert,
+	TriangleAlert,
 	ShieldCheck,
 	XCircle,
 	type LucideIcon,
@@ -1198,7 +1199,7 @@ export default function AdminPanel() {
 				{tab === 'seal' && (
 					<div className="space-y-4">
 						<div className="bg-gray-900/60 rounded-lg p-6 border border-red-900/30">
-							<h3 className="text-red-400 font-bold text-lg mb-2">⚠ Seal Protocol (IRREVERSIBLE)</h3>
+							<h3 className="text-red-400 font-bold text-lg mb-2 inline-flex items-center gap-2"><TriangleAlert size={20} aria-hidden={true} /> Seal Protocol (IRREVERSIBLE)</h3>
 							<p className="text-gray-400 text-sm mb-4">
 								Permanently locks direct minting. After sealing, no more mint_batch operations will be accepted.
 								Pack opening (v1.1 pack_burn) still works — sealed packs derive cards from DNA.

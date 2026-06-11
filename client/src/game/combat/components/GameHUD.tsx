@@ -1,5 +1,6 @@
 import React from 'react';
-import { getElementColor, getElementIcon, ELEMENT_LABELS, type ElementType } from '../../utils/elements/elementAdvantage';
+import { getElementColor, getElementIconName, ELEMENT_LABELS, type ElementType } from '../../utils/elements/elementAdvantage';
+import { GameIcon } from '../../utils/ui/GameIcon';
 import '../styles/game-hud.css';
 
 const glyphStrokeProps = {
@@ -97,13 +98,13 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 					}
 				>
 					<span className="hud-matchup-icon" style={{ color: getElementColor(playerElement!) }}>
-						{getElementIcon(playerElement!)}
+						<GameIcon name={getElementIconName(playerElement!)} size={14} />
 					</span>
 					<span className="hud-matchup-arrow">
 						{playerHasAdvantage ? '\u25B2' : opponentHasAdvantage ? '\u25BC' : '\u2014'}
 					</span>
 					<span className="hud-matchup-icon" style={{ color: getElementColor(opponentElement!) }}>
-						{getElementIcon(opponentElement!)}
+						<GameIcon name={getElementIconName(opponentElement!)} size={14} />
 					</span>
 				</div>
 			)}

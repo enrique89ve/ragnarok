@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getElementColor, getElementIcon, ELEMENT_LABELS, type ElementType } from '../../utils/elements/elementAdvantage';
+import { getElementColor, getElementIconName, ELEMENT_LABELS, type ElementType } from '../../utils/elements/elementAdvantage';
+import { GameIcon } from '../../utils/ui/GameIcon';
 import '../styles/element-matchup-banner.css';
 
 interface ElementMatchupBannerProps {
@@ -34,8 +35,8 @@ export const ElementMatchupBanner: React.FC<ElementMatchupBannerProps> = ({
 
 	const playerColor = getElementColor(playerElement);
 	const opponentColor = getElementColor(opponentElement);
-	const playerIcon = getElementIcon(playerElement);
-	const opponentIcon = getElementIcon(opponentElement);
+	const playerIconName = getElementIconName(playerElement);
+	const opponentIconName = getElementIconName(opponentElement);
 	const playerLabel = ELEMENT_LABELS[playerElement] || 'Unknown';
 	const opponentLabel = ELEMENT_LABELS[opponentElement] || 'Unknown';
 
@@ -72,7 +73,7 @@ export const ElementMatchupBanner: React.FC<ElementMatchupBannerProps> = ({
 								className="matchup-element-badge"
 								style={{ '--element-color': playerColor, '--element-glow': playerColor + '60' } as React.CSSProperties}
 							>
-								<span className="matchup-element-icon">{playerIcon}</span>
+								<span className="matchup-element-icon"><GameIcon name={playerIconName} size={18} /></span>
 								<span className="matchup-element-name" style={{ color: playerColor }}>{playerLabel}</span>
 							</div>
 
@@ -82,7 +83,7 @@ export const ElementMatchupBanner: React.FC<ElementMatchupBannerProps> = ({
 								className="matchup-element-badge"
 								style={{ '--element-color': opponentColor, '--element-glow': opponentColor + '60' } as React.CSSProperties}
 							>
-								<span className="matchup-element-icon">{opponentIcon}</span>
+								<span className="matchup-element-icon"><GameIcon name={opponentIconName} size={18} /></span>
 								<span className="matchup-element-name" style={{ color: opponentColor }}>{opponentLabel}</span>
 							</div>
 						</motion.div>

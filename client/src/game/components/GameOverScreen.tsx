@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { GameIcon } from '../utils/ui/GameIcon';
+import type { IconName } from '../utils/ui/iconMap';
 import './GameOverScreen.css';
 
 interface GameOverScreenProps {
@@ -82,12 +84,12 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({
 						transition={{ duration: 0.5 }}
 					>
 						<div className="game-over-stat-grid">
-							<StatItem label="Turns" value={stats.turnsPlayed} icon="⏳" delay={0} />
-							<StatItem label="Cards Played" value={stats.cardsPlayed} icon="🃏" delay={0.1} />
-							<StatItem label="Damage Dealt" value={stats.damageDealt} icon="⚔" delay={0.2} />
-							<StatItem label="Minions Slain" value={stats.minionsKilled} icon="💀" delay={0.3} />
-							<StatItem label="Spells Cast" value={stats.spellsCast} icon="✨" delay={0.4} />
-							<StatItem label="Hero Powers" value={stats.heroPowerUsed} icon="⚡" delay={0.5} />
+							<StatItem label="Turns" value={stats.turnsPlayed} iconName="hourglass" delay={0} />
+							<StatItem label="Cards Played" value={stats.cardsPlayed} iconName="wand" delay={0.1} />
+							<StatItem label="Damage Dealt" value={stats.damageDealt} iconName="swords" delay={0.2} />
+							<StatItem label="Minions Slain" value={stats.minionsKilled} iconName="skull" delay={0.3} />
+							<StatItem label="Spells Cast" value={stats.spellsCast} iconName="sparkles" delay={0.4} />
+							<StatItem label="Hero Powers" value={stats.heroPowerUsed} iconName="zap" delay={0.5} />
 						</div>
 					</motion.div>
 				)}
@@ -120,7 +122,7 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({
 	return createPortal(content, document.body);
 };
 
-const StatItem: React.FC<{ label: string; value: number; icon: string; delay: number }> = ({ label, value, icon, delay }) => {
+const StatItem: React.FC<{ label: string; value: number; iconName: IconName; delay: number }> = ({ label, value, iconName, delay }) => {
 	const [displayValue, setDisplayValue] = useState(0);
 
 	useEffect(() => {
@@ -143,7 +145,7 @@ const StatItem: React.FC<{ label: string; value: number; icon: string; delay: nu
 			animate={{ opacity: 1, x: 0 }}
 			transition={{ delay, duration: 0.3 }}
 		>
-			<span className="stat-icon">{icon}</span>
+			<span className="stat-icon"><GameIcon name={iconName} size={18} /></span>
 			<span className="stat-value">{displayValue}</span>
 			<span className="stat-label">{label}</span>
 		</motion.div>

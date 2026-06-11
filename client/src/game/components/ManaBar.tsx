@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useId } from 'react';
 import { motion } from 'framer-motion';
 import { playSound } from '../utils/soundUtils';
 import './ManaBar.css';
+import { GameIcon } from '../utils/ui/GameIcon';
 
 const MAX_MANA_SLOTS = 10;
 const CRYSTAL_SIZE = 20; // Larger crystals for better visibility
@@ -86,7 +87,7 @@ const ManaBar: React.FC<ManaBarProps> = ({
 
       {pendingOverload > 0 && (
         <div className="mana-overload-badge">
-          ⚡{pendingOverload}
+          <GameIcon name="zap" size={12} />{pendingOverload}
         </div>
       )}
     </div>

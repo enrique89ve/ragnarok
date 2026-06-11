@@ -1,12 +1,14 @@
 export type AnimationArchetype = 'melee_strike' | 'ranged_shot' | 'magic_blast' | 'divine_radiance' | 'nature_surge' | 'shadow_strike';
 export type AnimationElement = 'fire' | 'water' | 'grass' | 'electric' | 'light' | 'dark' | 'ice';
 
+import type { IconName } from '../../utils/ui/iconMap';
+
 export interface HeroAnimationProfile {
 	heroId: string;
 	attackName: string;
 	archetype: AnimationArchetype;
 	element: AnimationElement;
-	particleEmoji: string;
+	particleIconName: IconName;
 	screenShakeIntensity: number;
 }
 
@@ -26,7 +28,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: "Gungnir's Judgment",
 		archetype: 'divine_radiance',
 		element: 'light',
-		particleEmoji: '✦',
+		particleIconName: 'sparkles',
 		screenShakeIntensity: 0.8,
 	},
 	'hero-thor': {
@@ -34,7 +36,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Mjolnir Strike',
 		archetype: 'melee_strike',
 		element: 'electric',
-		particleEmoji: '⚡',
+		particleIconName: 'zap',
 		screenShakeIntensity: 0.9,
 	},
 	'hero-loki': {
@@ -42,7 +44,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Shadow Deception',
 		archetype: 'shadow_strike',
 		element: 'dark',
-		particleEmoji: '🌀',
+		particleIconName: 'wind',
 		screenShakeIntensity: 0.6,
 	},
 	'hero-freya': {
@@ -50,7 +52,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: "Brisingamen's Fury",
 		archetype: 'nature_surge',
 		element: 'grass',
-		particleEmoji: '🌸',
+		particleIconName: 'sparkles',
 		screenShakeIntensity: 0.5,
 	},
 	'hero-bragi': {
@@ -58,7 +60,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Verse of Ruin',
 		archetype: 'divine_radiance',
 		element: 'light',
-		particleEmoji: '🎵',
+		particleIconName: 'music',
 		screenShakeIntensity: 0.4,
 	},
 	'hero-eir': {
@@ -66,7 +68,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: "Life's Retribution",
 		archetype: 'nature_surge',
 		element: 'grass',
-		particleEmoji: '🌿',
+		particleIconName: 'leaf',
 		screenShakeIntensity: 0.4,
 	},
 	'hero-forseti': {
@@ -74,7 +76,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Verdict of Justice',
 		archetype: 'divine_radiance',
 		element: 'light',
-		particleEmoji: '⚖',
+		particleIconName: 'scale',
 		screenShakeIntensity: 0.7,
 	},
 	'hero-freyr': {
@@ -82,7 +84,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Harvest Blade',
 		archetype: 'nature_surge',
 		element: 'grass',
-		particleEmoji: '🌾',
+		particleIconName: 'leaf',
 		screenShakeIntensity: 0.5,
 	},
 	'hero-idunn': {
@@ -90,7 +92,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: "Golden Apple's Wrath",
 		archetype: 'nature_surge',
 		element: 'grass',
-		particleEmoji: '🍎',
+		particleIconName: 'apple',
 		screenShakeIntensity: 0.4,
 	},
 	'hero-ran': {
@@ -98,7 +100,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Tidal Grasp',
 		archetype: 'nature_surge',
 		element: 'water',
-		particleEmoji: '🌊',
+		particleIconName: 'waves',
 		screenShakeIntensity: 0.7,
 	},
 	'hero-sol': {
@@ -106,7 +108,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Solar Flare',
 		archetype: 'magic_blast',
 		element: 'fire',
-		particleEmoji: '☀',
+		particleIconName: 'sun',
 		screenShakeIntensity: 0.8,
 	},
 	'hero-mani': {
@@ -114,7 +116,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Lunar Eclipse',
 		archetype: 'shadow_strike',
 		element: 'dark',
-		particleEmoji: '🌙',
+		particleIconName: 'moon',
 		screenShakeIntensity: 0.6,
 	},
 	'hero-hoder': {
@@ -122,7 +124,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: "Blind Winter's Touch",
 		archetype: 'shadow_strike',
 		element: 'dark',
-		particleEmoji: '❄',
+		particleIconName: 'snowflake',
 		screenShakeIntensity: 0.5,
 	},
 	'hero-kvasir': {
@@ -130,7 +132,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Mead of Poetry',
 		archetype: 'divine_radiance',
 		element: 'light',
-		particleEmoji: '📜',
+		particleIconName: 'scroll',
 		screenShakeIntensity: 0.4,
 	},
 	'hero-magni': {
@@ -138,7 +140,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: "Titan's Fist",
 		archetype: 'melee_strike',
 		element: 'fire',
-		particleEmoji: '💪',
+		particleIconName: 'dumbbell',
 		screenShakeIntensity: 1.0,
 	},
 	'hero-sinmara': {
@@ -146,7 +148,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Inferno Wave',
 		archetype: 'magic_blast',
 		element: 'fire',
-		particleEmoji: '🔥',
+		particleIconName: 'flame',
 		screenShakeIntensity: 0.9,
 	},
 	'hero-skadi': {
@@ -154,7 +156,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Frost Arrow',
 		archetype: 'ranged_shot',
 		element: 'ice',
-		particleEmoji: '❄',
+		particleIconName: 'snowflake',
 		screenShakeIntensity: 0.5,
 	},
 	'hero-heimdall': {
@@ -162,7 +164,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Gjallarhorn Blast',
 		archetype: 'divine_radiance',
 		element: 'light',
-		particleEmoji: '📯',
+		particleIconName: 'megaphone',
 		screenShakeIntensity: 0.8,
 	},
 	'hero-vili': {
@@ -170,7 +172,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: "Will's Decree",
 		archetype: 'divine_radiance',
 		element: 'light',
-		particleEmoji: '⚡',
+		particleIconName: 'zap',
 		screenShakeIntensity: 0.6,
 	},
 	'hero-ve': {
@@ -178,7 +180,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Sacred Fury',
 		archetype: 'melee_strike',
 		element: 'light',
-		particleEmoji: '🔥',
+		particleIconName: 'flame',
 		screenShakeIntensity: 0.8,
 	},
 	'hero-gerd': {
@@ -186,7 +188,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: "Earth's Embrace",
 		archetype: 'nature_surge',
 		element: 'grass',
-		particleEmoji: '🌱',
+		particleIconName: 'sprout',
 		screenShakeIntensity: 0.5,
 	},
 	'hero-aegir': {
@@ -194,7 +196,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Abyssal Wave',
 		archetype: 'nature_surge',
 		element: 'water',
-		particleEmoji: '🌊',
+		particleIconName: 'waves',
 		screenShakeIntensity: 0.8,
 	},
 	'hero-thorgrim': {
@@ -202,7 +204,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Lightning Hammer',
 		archetype: 'melee_strike',
 		element: 'electric',
-		particleEmoji: '⚡',
+		particleIconName: 'zap',
 		screenShakeIntensity: 0.8,
 	},
 	'hero-gefjon': {
@@ -210,7 +212,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Plow of Ages',
 		archetype: 'nature_surge',
 		element: 'grass',
-		particleEmoji: '🌾',
+		particleIconName: 'leaf',
 		screenShakeIntensity: 0.5,
 	},
 	'hero-logi': {
@@ -218,7 +220,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Consuming Flame',
 		archetype: 'magic_blast',
 		element: 'fire',
-		particleEmoji: '🔥',
+		particleIconName: 'flame',
 		screenShakeIntensity: 0.9,
 	},
 	'hero-fjorgyn': {
@@ -226,7 +228,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: "Earthmother's Wrath",
 		archetype: 'nature_surge',
 		element: 'grass',
-		particleEmoji: '🌿',
+		particleIconName: 'leaf',
 		screenShakeIntensity: 0.6,
 	},
 	'hero-valthrud': {
@@ -234,7 +236,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Storm Bolt',
 		archetype: 'magic_blast',
 		element: 'electric',
-		particleEmoji: '⚡',
+		particleIconName: 'zap',
 		screenShakeIntensity: 0.7,
 	},
 	'hero-ylva': {
@@ -242,7 +244,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Wolf Pack Assault',
 		archetype: 'melee_strike',
 		element: 'grass',
-		particleEmoji: '🐺',
+		particleIconName: 'wolf',
 		screenShakeIntensity: 0.7,
 	},
 	'hero-brakki': {
@@ -250,7 +252,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Forge Hammer',
 		archetype: 'melee_strike',
 		element: 'fire',
-		particleEmoji: '🔨',
+		particleIconName: 'hammer',
 		screenShakeIntensity: 0.8,
 	},
 	'hero-lirien': {
@@ -258,7 +260,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Tidal Blessing',
 		archetype: 'nature_surge',
 		element: 'water',
-		particleEmoji: '🌊',
+		particleIconName: 'waves',
 		screenShakeIntensity: 0.5,
 	},
 	'hero-solvi': {
@@ -266,7 +268,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Dawn Blade',
 		archetype: 'melee_strike',
 		element: 'light',
-		particleEmoji: '☀',
+		particleIconName: 'sun',
 		screenShakeIntensity: 0.7,
 	},
 	'hero-gormr': {
@@ -274,7 +276,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Venom Fang',
 		archetype: 'shadow_strike',
 		element: 'dark',
-		particleEmoji: '🐍',
+		particleIconName: 'snake',
 		screenShakeIntensity: 0.6,
 	},
 	'hero-thryma': {
@@ -282,7 +284,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Thunder Crash',
 		archetype: 'magic_blast',
 		element: 'electric',
-		particleEmoji: '⚡',
+		particleIconName: 'zap',
 		screenShakeIntensity: 0.8,
 	},
 	'hero-eldrin': {
@@ -290,7 +292,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Ember Cascade',
 		archetype: 'magic_blast',
 		element: 'fire',
-		particleEmoji: '🔥',
+		particleIconName: 'flame',
 		screenShakeIntensity: 0.7,
 	},
 	'hero-myrka': {
@@ -298,7 +300,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Bog Curse',
 		archetype: 'shadow_strike',
 		element: 'water',
-		particleEmoji: '🌫',
+		particleIconName: 'cloudFog',
 		screenShakeIntensity: 0.5,
 	},
 	'hero-fjora': {
@@ -306,7 +308,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: "Nature's Judgment",
 		archetype: 'nature_surge',
 		element: 'grass',
-		particleEmoji: '🌿',
+		particleIconName: 'leaf',
 		screenShakeIntensity: 0.5,
 	},
 	'hero-zeus': {
@@ -314,7 +316,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Thunderbolt',
 		archetype: 'magic_blast',
 		element: 'light',
-		particleEmoji: '⚡',
+		particleIconName: 'zap',
 		screenShakeIntensity: 1.0,
 	},
 	'hero-poseidon': {
@@ -322,7 +324,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: "Trident's Fury",
 		archetype: 'melee_strike',
 		element: 'water',
-		particleEmoji: '🔱',
+		particleIconName: 'trident',
 		screenShakeIntensity: 0.9,
 	},
 	'hero-hades': {
@@ -330,7 +332,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Soul Reap',
 		archetype: 'shadow_strike',
 		element: 'dark',
-		particleEmoji: '💀',
+		particleIconName: 'skull',
 		screenShakeIntensity: 0.8,
 	},
 	'hero-apollo': {
@@ -338,7 +340,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Solar Arrow',
 		archetype: 'ranged_shot',
 		element: 'light',
-		particleEmoji: '☀',
+		particleIconName: 'sun',
 		screenShakeIntensity: 0.6,
 	},
 	'hero-ares': {
@@ -346,7 +348,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: "War God's Rampage",
 		archetype: 'melee_strike',
 		element: 'fire',
-		particleEmoji: '⚔',
+		particleIconName: 'swords',
 		screenShakeIntensity: 1.0,
 	},
 	'hero-hermes': {
@@ -354,7 +356,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Swift Strike',
 		archetype: 'melee_strike',
 		element: 'light',
-		particleEmoji: '👟',
+		particleIconName: 'footprints',
 		screenShakeIntensity: 0.5,
 	},
 	'hero-athena': {
@@ -362,7 +364,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Aegis Shield Bash',
 		archetype: 'melee_strike',
 		element: 'light',
-		particleEmoji: '🛡',
+		particleIconName: 'shield',
 		screenShakeIntensity: 0.7,
 	},
 	'hero-aphrodite': {
@@ -370,7 +372,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: "Heart's Thorn",
 		archetype: 'nature_surge',
 		element: 'grass',
-		particleEmoji: '💕',
+		particleIconName: 'heart',
 		screenShakeIntensity: 0.3,
 	},
 	'hero-hephaestus': {
@@ -378,7 +380,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Volcanic Forge',
 		archetype: 'melee_strike',
 		element: 'fire',
-		particleEmoji: '🔨',
+		particleIconName: 'hammer',
 		screenShakeIntensity: 0.9,
 	},
 	'hero-dionysus': {
@@ -386,7 +388,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Maddening Revel',
 		archetype: 'shadow_strike',
 		element: 'dark',
-		particleEmoji: '🍇',
+		particleIconName: 'grape',
 		screenShakeIntensity: 0.5,
 	},
 	'hero-artemis': {
@@ -394,7 +396,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Moonlit Arrow',
 		archetype: 'ranged_shot',
 		element: 'light',
-		particleEmoji: '🏹',
+		particleIconName: 'bowArrow',
 		screenShakeIntensity: 0.6,
 	},
 	'hero-demeter': {
@@ -402,7 +404,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Harvest Storm',
 		archetype: 'nature_surge',
 		element: 'grass',
-		particleEmoji: '🌾',
+		particleIconName: 'leaf',
 		screenShakeIntensity: 0.6,
 	},
 	'hero-hyperion': {
@@ -410,7 +412,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: "Titan's Radiance",
 		archetype: 'divine_radiance',
 		element: 'light',
-		particleEmoji: '☀',
+		particleIconName: 'sun',
 		screenShakeIntensity: 0.9,
 	},
 	'hero-hera': {
@@ -418,7 +420,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: "Queen's Command",
 		archetype: 'divine_radiance',
 		element: 'grass',
-		particleEmoji: '👑',
+		particleIconName: 'crown',
 		screenShakeIntensity: 0.7,
 	},
 	'hero-blainn': {
@@ -426,7 +428,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Wind Dance',
 		archetype: 'nature_surge',
 		element: 'grass',
-		particleEmoji: '🍃',
+		particleIconName: 'leaf',
 		screenShakeIntensity: 0.4,
 	},
 	'hero-eros': {
@@ -434,7 +436,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Arrow of Desire',
 		archetype: 'ranged_shot',
 		element: 'light',
-		particleEmoji: '💘',
+		particleIconName: 'heartArrow',
 		screenShakeIntensity: 0.4,
 	},
 	'hero-nyx': {
@@ -442,7 +444,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Void Embrace',
 		archetype: 'shadow_strike',
 		element: 'dark',
-		particleEmoji: '🌑',
+		particleIconName: 'moon',
 		screenShakeIntensity: 0.8,
 	},
 	'hero-chronos': {
@@ -450,7 +452,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: "Time's Decay",
 		archetype: 'magic_blast',
 		element: 'light',
-		particleEmoji: '⏳',
+		particleIconName: 'sparkles',
 		screenShakeIntensity: 0.7,
 	},
 	'hero-persephone': {
@@ -458,7 +460,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Underworld Bloom',
 		archetype: 'shadow_strike',
 		element: 'dark',
-		particleEmoji: '🥀',
+		particleIconName: 'flower',
 		screenShakeIntensity: 0.6,
 	},
 	'hero-hestia': {
@@ -466,7 +468,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Hearthfire',
 		archetype: 'magic_blast',
 		element: 'grass',
-		particleEmoji: '🔥',
+		particleIconName: 'flame',
 		screenShakeIntensity: 0.5,
 	},
 	'hero-selene': {
@@ -474,7 +476,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Moonbeam',
 		archetype: 'magic_blast',
 		element: 'dark',
-		particleEmoji: '🌙',
+		particleIconName: 'moon',
 		screenShakeIntensity: 0.5,
 	},
 	'hero-hecate': {
@@ -482,7 +484,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Hex Bolt',
 		archetype: 'magic_blast',
 		element: 'dark',
-		particleEmoji: '🔮',
+		particleIconName: 'crystalBall',
 		screenShakeIntensity: 0.7,
 	},
 	'hero-helios': {
@@ -490,7 +492,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: "Sun Chariot's Blaze",
 		archetype: 'divine_radiance',
 		element: 'light',
-		particleEmoji: '☀',
+		particleIconName: 'sun',
 		screenShakeIntensity: 0.8,
 	},
 	'hero-izanami': {
@@ -498,7 +500,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: "Death's Invitation",
 		archetype: 'shadow_strike',
 		element: 'dark',
-		particleEmoji: '💀',
+		particleIconName: 'skull',
 		screenShakeIntensity: 0.7,
 	},
 	'hero-tsukuyomi': {
@@ -506,7 +508,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Moon Severance',
 		archetype: 'shadow_strike',
 		element: 'dark',
-		particleEmoji: '🌙',
+		particleIconName: 'moon',
 		screenShakeIntensity: 0.7,
 	},
 	'hero-fujin': {
@@ -514,7 +516,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Divine Gale',
 		archetype: 'magic_blast',
 		element: 'electric',
-		particleEmoji: '🌬',
+		particleIconName: 'wind',
 		screenShakeIntensity: 0.7,
 	},
 	'hero-sarutahiko': {
@@ -522,7 +524,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Path Cleaver',
 		archetype: 'melee_strike',
 		element: 'light',
-		particleEmoji: '⛩',
+		particleIconName: 'torii',
 		screenShakeIntensity: 0.8,
 	},
 	'hero-kamimusubi': {
@@ -530,7 +532,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Creation Wave',
 		archetype: 'nature_surge',
 		element: 'water',
-		particleEmoji: '🌊',
+		particleIconName: 'waves',
 		screenShakeIntensity: 0.6,
 	},
 	'hero-ammit': {
@@ -538,7 +540,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Devouring Jaws',
 		archetype: 'melee_strike',
 		element: 'dark',
-		particleEmoji: '🐊',
+		particleIconName: 'crocodile',
 		screenShakeIntensity: 0.9,
 	},
 	'hero-maat': {
@@ -546,7 +548,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: "Feather's Judgment",
 		archetype: 'divine_radiance',
 		element: 'light',
-		particleEmoji: '🪶',
+		particleIconName: 'feather',
 		screenShakeIntensity: 0.6,
 	},
 	'hero-serqet': {
@@ -554,7 +556,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: 'Scorpion Sting',
 		archetype: 'shadow_strike',
 		element: 'dark',
-		particleEmoji: '🦂',
+		particleIconName: 'scorpion',
 		screenShakeIntensity: 0.7,
 	},
 	'hero-khepri': {
@@ -562,7 +564,7 @@ export const HERO_ANIMATION_PROFILES: Record<string, HeroAnimationProfile> = {
 		attackName: "Scarab's Dawn",
 		archetype: 'divine_radiance',
 		element: 'light',
-		particleEmoji: '🪲',
+		particleIconName: 'bug',
 		screenShakeIntensity: 0.6,
 	},
 };
@@ -572,7 +574,7 @@ const DEFAULT_PROFILE: HeroAnimationProfile = {
 	attackName: 'Strike',
 	archetype: 'melee_strike',
 	element: 'light',
-	particleEmoji: '⚔',
+	particleIconName: 'swords',
 	screenShakeIntensity: 0.5,
 };
 

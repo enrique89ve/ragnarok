@@ -4,6 +4,7 @@ import { CardData } from '../types';
 // Import from canonical cardRegistry (migrated from data/cards.ts)
 import { fullCardDatabase } from '../data/cardRegistry';
 import { isMinion, getAttack, getHealth } from '../utils/cards/typeGuards';
+import { GameIcon } from '../utils/ui/GameIcon';
 
 interface DeckListProps {
   cards: { [cardId: number]: number };
@@ -115,12 +116,12 @@ const DeckList: React.FC<DeckListProps> = ({
                     <div className="card-stats flex gap-1 ml-2">
                       {getAttack(card) > 0 && (
                         <span className="stat-value text-red-600 font-bold text-sm">
-                          ⚔️{getAttack(card)}
+                          <GameIcon name="swords" size={12} />{getAttack(card)}
                         </span>
                       )}
                       {getHealth(card) > 0 && (
                         <span className="stat-value text-green-600 font-bold text-sm">
-                          ❤️{getHealth(card)}
+                          <GameIcon name="heart" size={12} />{getHealth(card)}
                         </span>
                       )}
                     </div>

@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Compass, Play } from 'lucide-react';
+import { ChevronLeft, Compass, Play, Check } from 'lucide-react';
 import { routes } from '../../../lib/routes';
 import { Button } from '../../../components/ui-norse';
 import { AccountSlot } from '../../../components/account/AccountSlot';
@@ -62,6 +62,7 @@ const FACTION_BORDER: Record<string, string> = {
 };
 
 const RUNE_CORNERS = ['ᚠᚷᛁ', 'ᛞᛗᛒ', 'ᛇᚺᚠ', 'ᛒᛁᛞ'];
+const REALM_SIGIL_FRAME_SRC = '/art/campaign/realm-sigil-frame-v1.webp';
 
 type View = 'norse' | 'greek' | 'beyond';
 
@@ -81,6 +82,32 @@ type ConnectionData = {
 	color2: string;
 	active: boolean;
 };
+
+const MAP_STAGE_BOUNDS = {
+	minX: 6,
+	maxX: 94,
+	minY: 18,
+	maxY: 88,
+};
+
+function fitStagePosition(position: { x: number; y: number }): { x: number; y: number } {
+	return {
+		x: MAP_STAGE_BOUNDS.minX + (position.x / 100) * (MAP_STAGE_BOUNDS.maxX - MAP_STAGE_BOUNDS.minX),
+		y: MAP_STAGE_BOUNDS.minY + (position.y / 100) * (MAP_STAGE_BOUNDS.maxY - MAP_STAGE_BOUNDS.minY),
+	};
+}
+
+function fitStageRealms<T extends MapRealmShape>(realms: T[]): T[] {
+	return realms.map(realm => ({
+		...realm,
+		position: fitStagePosition(realm.position),
+	}));
+}
+
+const STAGE_NINE_REALMS = fitStageRealms(NINE_REALMS);
+const STAGE_REALM_MAP = new Map(STAGE_NINE_REALMS.map(realm => [realm.id, realm]));
+const STAGE_GREEK_REALMS = fitStageRealms(GREEK_REALMS);
+const STAGE_GREEK_REALM_MAP = new Map(STAGE_GREEK_REALMS.map(realm => [realm.id, realm]));
 
 function getNextUnlockedMission(
 	chapter: CampaignChapter,
@@ -184,12 +211,12 @@ function StarField() {
 function NorseConstellationLines({ completedMissions }: { completedMissions: Record<string, unknown> }) {
 	const lines = useMemo(() => {
 		const activeRealms = new Set(
-			NINE_REALMS
+			STAGE_NINE_REALMS
 				.filter(realm => getRealmProgress(realm.id, ALL_CHAPTERS.find(chapter => chapter.faction === 'norse')!.missions, completedMissions).completed > 0)
 				.map(realm => realm.id),
 		);
 
-		return buildConnectionData(NINE_REALMS, REALM_MAP, activeRealms);
+		return buildConnectionData(STAGE_NINE_REALMS, STAGE_REALM_MAP, activeRealms);
 	}, [completedMissions]);
 
 	return (
@@ -211,12 +238,12 @@ function NorseConstellationLines({ completedMissions }: { completedMissions: Rec
 function GreekConstellationLines({ completedMissions }: { completedMissions: Record<string, unknown> }) {
 	const lines = useMemo(() => {
 		const activeRealms = new Set(
-			GREEK_REALMS
+			STAGE_GREEK_REALMS
 				.filter(realm => getGreekRealmProgress(realm.id, ALL_CHAPTERS.find(chapter => chapter.faction === 'greek')!.missions, completedMissions).completed > 0)
 				.map(realm => realm.id),
 		);
 
-		return buildConnectionData(GREEK_REALMS, GREEK_REALM_MAP, activeRealms);
+		return buildConnectionData(STAGE_GREEK_REALMS, STAGE_GREEK_REALM_MAP, activeRealms);
 	}, [completedMissions]);
 
 	return (
@@ -266,7 +293,7 @@ function MissionNode({
 							? 'bg-obsidian-800 border border-obsidian-600 text-ink-100 group-hover:border-gold-300/60 group-hover:text-gold-200'
 							: 'bg-obsidian-900 border border-obsidian-700 text-ink-400'
 				}`}>
-					{completed ? '✓' : mission.missionNumber}
+					{completed ? <Check size={18} aria-hidden={true} /> : mission.missionNumber}
 				</div>
 				<div className="min-w-0 flex-1">
 					<div className="flex flex-wrap items-center gap-2">
@@ -313,10 +340,14 @@ function NorseRealmNode({
 	const allDone = progress.completed === progress.total && progress.total > 0;
 
 	return (
-		<div
+		<button
+			type="button"
+			aria-label={`${realm.name}: ${progress.completed} of ${progress.total} missions cleared`}
+			aria-pressed={selected}
+			disabled={!hasMissions}
 			className={`realm-node ${!hasMissions ? 'realm-node-locked' : ''} ${selected ? 'realm-node-selected' : ''} ${hasUnlockedMission && !allDone ? 'realm-node-available' : ''}`}
 			style={{ left: `${realm.position.x}%`, top: `${realm.position.y}%` }}
-			onClick={() => hasMissions && onClick()}
+			onClick={onClick}
 		>
 			{hasMissions && progress.total > 0 && (
 				<div className="realm-progress">{progress.completed}/{progress.total}</div>
@@ -331,11 +362,14 @@ function NorseRealmNode({
 					'--realm-glow': realm.glowColor,
 				} as React.CSSProperties}
 			>
-				<span className="realm-rune">{realm.runeSymbol}</span>
+				<span className="realm-aura" aria-hidden="true" />
+				<img className="realm-sigil-frame" src={REALM_SIGIL_FRAME_SRC} alt="" loading="lazy" />
+				<span className="realm-sigil-core" aria-hidden="true" />
+				<span className="realm-rune" aria-hidden="true">{realm.runeSymbol}</span>
 			</div>
 			<span className="realm-name" style={{ color: realm.color }}>{realm.name}</span>
 			{!hasMissions && <span className="realm-locked-label">Locked</span>}
-		</div>
+		</button>
 	);
 }
 
@@ -357,10 +391,14 @@ function GreekRealmNode({
 	const allDone = progress.completed === progress.total && progress.total > 0;
 
 	return (
-		<div
+		<button
+			type="button"
+			aria-label={`${realm.name}: ${progress.completed} of ${progress.total} missions cleared`}
+			aria-pressed={selected}
+			disabled={!hasMissions}
 			className={`realm-node ${!hasMissions ? 'realm-node-locked' : ''} ${selected ? 'realm-node-selected' : ''} ${hasUnlockedMission && !allDone ? 'realm-node-available' : ''}`}
 			style={{ left: `${realm.position.x}%`, top: `${realm.position.y}%` }}
-			onClick={() => hasMissions && onClick()}
+			onClick={onClick}
 		>
 			{hasMissions && progress.total > 0 && (
 				<div className="realm-progress">{progress.completed}/{progress.total}</div>
@@ -375,11 +413,14 @@ function GreekRealmNode({
 					'--realm-glow': realm.glowColor,
 				} as React.CSSProperties}
 			>
-				<span className="realm-rune">{realm.symbol}</span>
+				<span className="realm-aura" aria-hidden="true" />
+				<img className="realm-sigil-frame" src={REALM_SIGIL_FRAME_SRC} alt="" loading="lazy" />
+				<span className="realm-sigil-core" aria-hidden="true" />
+				<span className="realm-rune" aria-hidden="true">{realm.symbol}</span>
 			</div>
 			<span className="realm-name" style={{ color: realm.color }}>{realm.name}</span>
 			{!hasMissions && <span className="realm-locked-label">Locked</span>}
-		</div>
+		</button>
 	);
 }
 
@@ -485,6 +526,7 @@ export default function CampaignPage() {
 	const [selectedMission, setSelectedMission] = useState<CampaignMission | null>(null);
 	const [selectedChapter, setSelectedChapter] = useState<CampaignChapter | null>(null);
 	const [cinematicChapter, setCinematicChapter] = useState<CampaignChapter | null>(null);
+	const pageRef = useRef<HTMLDivElement>(null);
 	const navigate = useNavigate();
 	const startMission = useCampaignStore(state => state.startMission);
 	const markCinematicSeen = useCampaignStore(state => state.markCinematicSeen);
@@ -561,6 +603,130 @@ export default function CampaignPage() {
 		setCinematicChapter(null);
 	}, [campaignAccess.kind]);
 
+	useEffect(() => {
+		if (selectedMission || campaignAccess.kind === 'blocked') return;
+		const root = pageRef.current;
+		if (!root) return;
+		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+		let alive = true;
+		let context: { revert: () => void } | null = null;
+		const cleanupFns: Array<() => void> = [];
+
+		void import('gsap').then(({ gsap }) => {
+			if (!alive) return;
+			context = gsap.context(() => {
+				gsap.set('.realm-rune', {
+					transformOrigin: '50% 50%',
+					force3D: true,
+				});
+
+				if (root.querySelector('.realm-node-available .realm-sigil-frame')) {
+					gsap.to('.realm-node-available .realm-sigil-frame', {
+						rotation: 360,
+						duration: 24,
+						ease: 'none',
+						repeat: -1,
+						transformOrigin: '50% 50%',
+					});
+					gsap.to('.realm-node-available .realm-aura', {
+						opacity: 0.78,
+						scale: 1.12,
+						duration: 1.45,
+						ease: 'sine.inOut',
+						repeat: -1,
+						yoyo: true,
+						transformOrigin: '50% 50%',
+					});
+				}
+				if (root.querySelector('.realm-node-available:not(.realm-node-selected) .realm-rune')) {
+					gsap.to('.realm-node-available:not(.realm-node-selected) .realm-rune', {
+						y: -1,
+						scale: 1.08,
+						filter: 'drop-shadow(0 0 12px var(--realm-glow)) brightness(1.18)',
+						duration: 1.35,
+						ease: 'sine.inOut',
+						repeat: -1,
+						yoyo: true,
+						stagger: { each: 0.12, from: 'random' },
+					});
+				}
+				if (root.querySelector('.realm-node-selected .realm-sigil-core')) {
+					gsap.to('.realm-node-selected .realm-sigil-core', {
+						scale: 1.08,
+						duration: 1.1,
+						ease: 'sine.inOut',
+						repeat: -1,
+						yoyo: true,
+						transformOrigin: '50% 50%',
+					});
+				}
+				if (root.querySelector('.realm-node-selected .realm-rune')) {
+					gsap.to('.realm-node-selected .realm-rune', {
+						y: -2,
+						scale: 1.14,
+						filter: 'drop-shadow(0 0 16px var(--realm-glow)) brightness(1.25)',
+						duration: 1,
+						ease: 'sine.inOut',
+						repeat: -1,
+						yoyo: true,
+					});
+				}
+
+				const interactiveNodes = Array.from(root.querySelectorAll<HTMLButtonElement>('.realm-node:not(.realm-node-locked)'));
+				for (const node of interactiveNodes) {
+					const rune = node.querySelector<HTMLElement>('.realm-rune');
+					const core = node.querySelector<HTMLElement>('.realm-sigil-core');
+					const aura = node.querySelector<HTMLElement>('.realm-aura');
+					if (!rune || !core || !aura) continue;
+
+					const hoverTimeline = gsap.timeline({
+						paused: true,
+						defaults: {
+							duration: 0.26,
+							ease: 'power2.out',
+							overwrite: 'auto',
+						},
+					});
+					hoverTimeline
+						.to(rune, {
+							y: -3,
+							scale: 1.22,
+							rotation: 2.5,
+							filter: 'drop-shadow(0 0 18px var(--realm-glow)) brightness(1.32)',
+						}, 0)
+						.to(core, {
+							scale: 1.1,
+							filter: 'brightness(1.18)',
+						}, 0)
+						.to(aura, {
+							opacity: 0.88,
+							scale: 1.2,
+						}, 0);
+
+					const play = () => hoverTimeline.play();
+					const reverse = () => hoverTimeline.reverse();
+					node.addEventListener('pointerenter', play);
+					node.addEventListener('pointerleave', reverse);
+					node.addEventListener('focusin', play);
+					node.addEventListener('focusout', reverse);
+					cleanupFns.push(() => {
+						node.removeEventListener('pointerenter', play);
+						node.removeEventListener('pointerleave', reverse);
+						node.removeEventListener('focusin', play);
+						node.removeEventListener('focusout', reverse);
+					});
+				}
+			}, root);
+		});
+
+		return () => {
+			alive = false;
+			for (const cleanup of cleanupFns) cleanup();
+			context?.revert();
+		};
+	}, [campaignAccess.kind, selectedMission, selectedRealm, totalClearedMissions, view]);
+
 	const norseRealmsWithUnlocked = useMemo(() => {
 		const result = new Set<string>();
 		for (const mission of norseChapter.missions) {
@@ -587,20 +753,20 @@ export default function CampaignPage() {
 
 	const norseConnections = useMemo(() => {
 		const activeRealms = new Set(
-			NINE_REALMS
+			STAGE_NINE_REALMS
 				.filter(realm => getRealmProgress(realm.id, norseChapter.missions, completedMissions).completed > 0)
 				.map(realm => realm.id),
 		);
-		return buildConnectionData(NINE_REALMS, REALM_MAP, activeRealms);
+		return buildConnectionData(STAGE_NINE_REALMS, STAGE_REALM_MAP, activeRealms);
 	}, [norseChapter.missions, completedMissions]);
 
 	const greekConnections = useMemo(() => {
 		const activeRealms = new Set(
-			GREEK_REALMS
+			STAGE_GREEK_REALMS
 				.filter(realm => getGreekRealmProgress(realm.id, greekChapter.missions, completedMissions).completed > 0)
 				.map(realm => realm.id),
 		);
-		return buildConnectionData(GREEK_REALMS, GREEK_REALM_MAP, activeRealms);
+		return buildConnectionData(STAGE_GREEK_REALMS, STAGE_GREEK_REALM_MAP, activeRealms);
 	}, [greekChapter.missions, completedMissions]);
 
 	const campaignLead = useMemo<{
@@ -669,7 +835,6 @@ export default function CampaignPage() {
 
 	const hasCurrentPrologue = currentDisplayChapter?.cinematicIntro != null;
 	const hasSeenCurrentPrologue = currentDisplayChapter ? seenCinematics.includes(currentDisplayChapter.id) : false;
-	const currentDisplayNextMission = currentDisplayChapter ? nextMissionByChapter.get(currentDisplayChapter.id) ?? null : null;
 
 	if (campaignAccess.kind === 'blocked') {
 		return (
@@ -729,63 +894,68 @@ export default function CampaignPage() {
 	}
 
 	return (
-		<div className="relative min-h-dvh w-full overflow-y-auto overflow-x-hidden text-ink-0 bg-(image:--bg-cosmos-nav)">
+		<div
+			ref={pageRef}
+			className="campaign-route-shell relative flex h-dvh w-full flex-col overflow-hidden text-ink-0 bg-(image:--bg-cosmos-nav)"
+		>
 			<div className="rune-border-decoration rune-border-top-left">{RUNE_CORNERS[0]}</div>
 			<div className="rune-border-decoration rune-border-top-right">{RUNE_CORNERS[1]}</div>
 			<div className="rune-border-decoration rune-border-bottom-left">{RUNE_CORNERS[2]}</div>
 			<div className="rune-border-decoration rune-border-bottom-right">{RUNE_CORNERS[3]}</div>
 
 			<CampaignHeader title="Campaign" subtitle="Saga Theater · S01" />
+			<main className="campaign-route-main flex min-h-0 flex-1 flex-col">
 
-			{/* ── Lead band: framed by max-w container, two-col layout (text | stats) ───── */}
-			<section className="n-page-gutter relative mx-auto mt-6 max-w-[1600px]">
-				<div className={`${SURFACE_STRONG_CLASS} relative overflow-hidden`}>
-					{/* Atmospheric layer */}
-					<div
-						aria-hidden
-						className="absolute inset-0 pointer-events-none opacity-70"
-						style={{
-							background:
-								'radial-gradient(ellipse 60% 45% at 88% 8%, rgba(221,184,74,0.18), transparent 65%),' +
-								'radial-gradient(ellipse 45% 35% at 12% 92%, rgba(122,169,255,0.12), transparent 70%)',
-						}}
-					/>
+			{/* ── Map / Beyond bodies ─────────────────────────────────────────────────────── */}
+			<div className="campaign-stage-shell min-h-0 flex-1 overflow-hidden">
+				<div className="campaign-stage-hud">
+					<section className={`${SURFACE_STRONG_CLASS} campaign-command-bar relative overflow-hidden`} aria-label="Campaign command">
+						<div
+							aria-hidden
+							className="absolute inset-0 pointer-events-none opacity-65"
+							style={{
+								background:
+									'radial-gradient(ellipse 60% 45% at 88% 8%, rgba(221,184,74,0.18), transparent 65%),' +
+									'radial-gradient(ellipse 45% 35% at 12% 92%, rgba(122,169,255,0.12), transparent 70%)',
+							}}
+						/>
 
-					<div className="relative grid gap-6 px-5 py-6 sm:px-7 sm:py-8 lg:grid-cols-[1fr_320px] lg:items-center">
-						<div className="min-w-0">
-							<div className="inline-flex items-center gap-2.5">
-								<Compass size={14} className="text-gold-300" strokeWidth={1.8} />
-								<span className={KICKER_CLASS}>
-									{campaignLead?.title ?? 'Campaign Theater'}
-								</span>
-							</div>
-							<h2 className={`${DISPLAY_TITLE_CLASS} mt-3`}>
-								<span className="bg-linear-to-b from-gold-100 via-gold-300 to-gold-500 bg-clip-text text-transparent">
+						<div className="campaign-command-grid relative">
+							<div className="min-w-0">
+								<div className="inline-flex items-center gap-2.5">
+									<Compass size={14} className="text-gold-300" strokeWidth={1.8} />
+									<span className={KICKER_CLASS}>
+										{campaignLead?.title ?? 'Campaign Theater'}
+									</span>
+								</div>
+								<h2 className="campaign-hud-title mt-2 font-display font-black uppercase leading-none tracking-[0.06em] text-ink-0">
+									<span className="bg-linear-to-b from-gold-100 via-gold-300 to-gold-500 bg-clip-text text-transparent">
+										{campaignLead
+											? campaignLead.mission.name
+											: currentDisplayChapter
+												? currentDisplayChapter.name
+												: 'Choose your saga line'}
+									</span>
+								</h2>
+								<p className="campaign-hud-copy mt-2 max-w-3xl text-[13px] leading-[1.5] text-ink-200">
 									{campaignLead
-										? campaignLead.mission.name
+										? `${campaignLead.chapter.name} · Mission ${campaignLead.mission.missionNumber}`
 										: currentDisplayChapter
-											? currentDisplayChapter.name
-											: 'Choose your saga line'}
-								</span>
-							</h2>
-							<p className="mt-3 max-w-2xl text-[14px] leading-[1.65] text-ink-200 sm:text-[15px]">
-								{campaignLead
-									? `${campaignLead.chapter.name} · Mission ${campaignLead.mission.missionNumber}. ${campaignLead.copy}`
-									: currentDisplayChapter
-										? currentDisplayChapter.description
-										: 'Beyond opens into later mythologies and the secret gate. Clear the base arcs, then push into the deeper campaign line.'}
-							</p>
+											? currentDisplayChapter.description
+											: 'Beyond opens into later mythologies and the secret gate. Clear the base arcs, then push into the deeper campaign line.'}
+								</p>
+							</div>
 
-							<div className="mt-5 flex flex-wrap items-center gap-2.5">
+							<div className="campaign-command-actions">
 								{hasCurrentPrologue && (
-									<Button variant="default" size="default" onClick={() => openChapterCinematic(currentDisplayChapter)}>
+									<Button variant="default" size="sm" onClick={() => openChapterCinematic(currentDisplayChapter)}>
 										{hasSeenCurrentPrologue ? 'Replay Prologue' : 'Play Prologue'}
 									</Button>
 								)}
 								{campaignLead && (
 									<Button
 										variant="primary"
-										size="default"
+										size="sm"
 										onClick={() => stageMission(campaignLead.mission, campaignLead.chapter, campaignLead.view)}
 									>
 										<Play size={13} strokeWidth={2.4} fill="currentColor" />
@@ -794,237 +964,232 @@ export default function CampaignPage() {
 								)}
 							</div>
 
-							{currentDisplayNextMission && !campaignLead && (
-								<p className="mt-3 font-mono text-[11px] tracking-[0.18em] uppercase text-ink-300">
-									Next route: <span className="text-ink-100">{currentDisplayNextMission.name}</span>
-								</p>
-							)}
+							<aside className="campaign-command-progress">
+								<div className="flex items-center justify-between gap-4">
+									<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300">Saga</span>
+									<span className="font-display text-[13px] tracking-[0.06em] text-gold-300">{totalClearedMissions} / {totalCampaignMissions}</span>
+								</div>
+								{chapterProgressLabel && (
+									<div className="flex items-center justify-between gap-4">
+										<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300">Chapter</span>
+										<span className="font-display text-[13px] tracking-[0.06em] text-ink-0">{chapterProgressLabel}</span>
+									</div>
+								)}
+								<div>
+									<div className="mb-1.5 flex items-center justify-between">
+										<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300">Progress</span>
+										<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-gold-300">{sagaPercent}%</span>
+									</div>
+									<div className="h-1 rounded-full bg-obsidian-800 overflow-hidden">
+										<div
+											className="h-full bg-linear-to-r from-gold-500 to-gold-200"
+											style={{ width: `${sagaPercent}%` }}
+										/>
+									</div>
+								</div>
+							</aside>
 						</div>
+					</section>
 
-						{/* Stats column — mirrors the home banner stat panel */}
-						<aside className="rounded-xl border border-gold-300/30 bg-obsidian-900/80 backdrop-blur-md p-5 grid gap-3.5 self-stretch">
-							<StatRow label="Saga" value={`${totalClearedMissions} / ${totalCampaignMissions}`} highlight />
-							{chapterProgressLabel && (
-								<StatRow label="Chapter" value={chapterProgressLabel} />
-							)}
-							<StatRow
-								label="Active"
-								value={
-									campaignLead
-										? `M${campaignLead.mission.missionNumber} · ${campaignLead.mission.name}`
-										: 'No mission staged'
-								}
-							/>
-							<div className="mt-1 pt-3 border-t border-obsidian-700">
-								<div className="flex items-center justify-between mb-1.5">
-									<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300">Saga progress</span>
-									<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-gold-300">{sagaPercent}%</span>
-								</div>
-								<div className="h-1 rounded-full bg-obsidian-800 overflow-hidden">
-									<div
-										className="h-full bg-linear-to-r from-gold-500 to-gold-200"
-										style={{ width: `${sagaPercent}%` }}
-									/>
-								</div>
-							</div>
-						</aside>
-					</div>
-				</div>
-			</section>
-
-			{/* ── Tabs: pill chip family aligned with home utility bar ───────────────────── */}
-			<nav
-				aria-label="Campaign sections"
-				className="n-page-gutter mx-auto mt-6 flex max-w-[1600px] gap-2 overflow-x-auto [scrollbar-width:none]"
-			>
-				{(['norse', 'greek', 'beyond'] as const).map(tab => {
-					const labels: Record<View, string> = { norse: 'Nine Realms', greek: 'Olympus', beyond: 'Beyond' };
-					const active = view === tab;
-					return (
-						<button
-							key={tab}
-							type="button"
-							onClick={() => {
-								setView(tab);
-								setSelectedRealm(null);
-								if (tab !== 'beyond') setSelectedChapter(null);
-							}}
-							className={`shrink-0 inline-flex items-center h-9 px-4 rounded-full font-display text-[12px] tracking-[0.18em] uppercase font-bold transition-colors ${
-								active
-									? 'bg-gold-300/12 border border-gold-300/40 text-gold-300 shadow-[inset_0_0_18px_-6px_rgba(221,184,74,0.4)]'
-									: 'bg-obsidian-850 border border-obsidian-700 text-ink-200 hover:text-gold-300 hover:border-gold-600'
-							}`}
-						>
-							{labels[tab]}
-						</button>
-					);
-				})}
-			</nav>
-
-			{/* ── Map / Beyond bodies ─────────────────────────────────────────────────────── */}
-			<div className="mt-5">
-				{view === 'norse' ? (
-					<div className="constellation-map-area">
-						<CosmicCanvas realms={NINE_REALMS} connections={norseConnections} className="constellation-cosmic-canvas" />
-						<div className="constellation-map-shroud" />
-						<StarField />
-						<NorseConstellationLines completedMissions={completedMissions} />
-
-						{!selectedNorseRealm && (
-							<div className="constellation-intro absolute inset-0 flex items-center justify-center px-6">
-								<MapIntroCard
-									chapter={norseChapter}
-									nextMission={nextMissionByChapter.get(norseChapter.id) ?? null}
-									onPlayPrologue={() => openChapterCinematic(norseChapter)}
-									onStageNextBattle={() => {
-										const nextMission = nextMissionByChapter.get(norseChapter.id);
-										if (nextMission) stageMission(nextMission, norseChapter, 'norse');
+					<nav
+						aria-label="Campaign sections"
+						className="campaign-hud-tabs flex gap-2 overflow-x-auto [scrollbar-width:none]"
+					>
+						{(['norse', 'greek', 'beyond'] as const).map(tab => {
+							const labels: Record<View, string> = { norse: 'Nine Realms', greek: 'Olympus', beyond: 'Beyond' };
+							const active = view === tab;
+							return (
+								<button
+									key={tab}
+									type="button"
+									onClick={() => {
+										setView(tab);
+										setSelectedRealm(null);
+										if (tab !== 'beyond') setSelectedChapter(null);
 									}}
-									prologueSeen={seenCinematics.includes(norseChapter.id)}
-									accentClass={FACTION_ACCENT[norseChapter.faction]}
-								/>
-							</div>
-						)}
-
-						{NINE_REALMS.map(realm => (
-							<NorseRealmNode
-								key={realm.id}
-								realm={realm}
-								selected={selectedRealm === realm.id}
-								onClick={() => setSelectedRealm(selectedRealm === realm.id ? null : realm.id)}
-								hasUnlockedMission={norseRealmsWithUnlocked.has(realm.id)}
-							/>
-						))}
-
-						<AnimatePresence>
-							{selectedNorseRealm && (
-								<motion.div
-									initial={{ opacity: 0, x: 30 }}
-									animate={{ opacity: 1, x: 0 }}
-									exit={{ opacity: 0, x: 30 }}
-									transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+									className={`shrink-0 inline-flex items-center h-9 px-4 rounded-full font-display text-[12px] tracking-[0.18em] uppercase font-bold transition-colors ${
+										active
+											? 'bg-gold-300/12 border border-gold-300/40 text-gold-300 shadow-[inset_0_0_18px_-6px_rgba(221,184,74,0.4)]'
+											: 'bg-obsidian-850/90 border border-obsidian-700 text-ink-200 hover:text-gold-300 hover:border-gold-600'
+									}`}
 								>
-									<RealmMissionPanel
-										realm={selectedNorseRealm}
-										missions={getMissionsForRealm(selectedNorseRealm.id, norseChapter.missions)}
-										onSelectMission={mission => {
-											setSelectedMission(mission);
-											setSelectedChapter(norseChapter);
+									{labels[tab]}
+								</button>
+							);
+						})}
+					</nav>
+				</div>
+				{view === 'norse' ? (
+					<div className="campaign-board-scroll">
+						<div className="constellation-map-area">
+							<CosmicCanvas realms={STAGE_NINE_REALMS} connections={norseConnections} className="constellation-cosmic-canvas" />
+							<div className="constellation-map-shroud" />
+							<StarField />
+							<NorseConstellationLines completedMissions={completedMissions} />
+
+							{!selectedNorseRealm && (
+								<div className="constellation-intro absolute inset-0 flex items-center justify-center px-6">
+									<MapIntroCard
+										chapter={norseChapter}
+										nextMission={nextMissionByChapter.get(norseChapter.id) ?? null}
+										onPlayPrologue={() => openChapterCinematic(norseChapter)}
+										onStageNextBattle={() => {
+											const nextMission = nextMissionByChapter.get(norseChapter.id);
+											if (nextMission) stageMission(nextMission, norseChapter, 'norse');
 										}}
-										onClose={() => setSelectedRealm(null)}
+										prologueSeen={seenCinematics.includes(norseChapter.id)}
+										accentClass={FACTION_ACCENT[norseChapter.faction]}
 									/>
-								</motion.div>
+								</div>
 							)}
-						</AnimatePresence>
+
+							{STAGE_NINE_REALMS.map(realm => (
+								<NorseRealmNode
+									key={realm.id}
+									realm={realm}
+									selected={selectedRealm === realm.id}
+									onClick={() => setSelectedRealm(selectedRealm === realm.id ? null : realm.id)}
+									hasUnlockedMission={norseRealmsWithUnlocked.has(realm.id)}
+								/>
+							))}
+
+							<AnimatePresence>
+								{selectedNorseRealm && (
+									<motion.div
+										initial={{ opacity: 0, x: 30 }}
+										animate={{ opacity: 1, x: 0 }}
+										exit={{ opacity: 0, x: 30 }}
+										transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+									>
+										<RealmMissionPanel
+											realm={selectedNorseRealm}
+											missions={getMissionsForRealm(selectedNorseRealm.id, norseChapter.missions)}
+											onSelectMission={mission => {
+												setSelectedMission(mission);
+												setSelectedChapter(norseChapter);
+											}}
+											onClose={() => setSelectedRealm(null)}
+										/>
+									</motion.div>
+								)}
+							</AnimatePresence>
+						</div>
 					</div>
 				) : view === 'greek' ? (
-					<div className="constellation-map-area">
-						<CosmicCanvas realms={GREEK_REALMS} connections={greekConnections} className="constellation-cosmic-canvas" />
-						<div className="constellation-map-shroud constellation-map-shroud-greek" />
-						<StarField />
-						<GreekConstellationLines completedMissions={completedMissions} />
+					<div className="campaign-board-scroll">
+						<div className="constellation-map-area">
+							<CosmicCanvas realms={STAGE_GREEK_REALMS} connections={greekConnections} className="constellation-cosmic-canvas" />
+							<div className="constellation-map-shroud constellation-map-shroud-greek" />
+							<StarField />
+							<GreekConstellationLines completedMissions={completedMissions} />
 
-						{!selectedGreekRealm && (
-							<div className="constellation-intro absolute inset-0 flex items-center justify-center px-6">
-								<MapIntroCard
-									chapter={greekChapter}
-									nextMission={nextMissionByChapter.get(greekChapter.id) ?? null}
-									onPlayPrologue={() => openChapterCinematic(greekChapter)}
-									onStageNextBattle={() => {
-										const nextMission = nextMissionByChapter.get(greekChapter.id);
-										if (nextMission) stageMission(nextMission, greekChapter, 'greek');
-									}}
-									prologueSeen={seenCinematics.includes(greekChapter.id)}
-									accentClass={FACTION_ACCENT[greekChapter.faction]}
-								/>
-							</div>
-						)}
-
-						{GREEK_REALMS.map(realm => (
-							<GreekRealmNode
-								key={realm.id}
-								realm={realm}
-								selected={selectedRealm === realm.id}
-								onClick={() => setSelectedRealm(selectedRealm === realm.id ? null : realm.id)}
-								hasUnlockedMission={greekRealmsWithUnlocked.has(realm.id)}
-							/>
-						))}
-
-						<AnimatePresence>
-							{selectedGreekRealm && (
-								<motion.div
-									initial={{ opacity: 0, x: 30 }}
-									animate={{ opacity: 1, x: 0 }}
-									exit={{ opacity: 0, x: 30 }}
-									transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-								>
-									<RealmMissionPanel
-										realm={selectedGreekRealm}
-										missions={getGreekMissionsForRealm(selectedGreekRealm.id, greekChapter.missions)}
-										onSelectMission={mission => {
-											setSelectedMission(mission);
-											setSelectedChapter(greekChapter);
+							{!selectedGreekRealm && (
+								<div className="constellation-intro absolute inset-0 flex items-center justify-center px-6">
+									<MapIntroCard
+										chapter={greekChapter}
+										nextMission={nextMissionByChapter.get(greekChapter.id) ?? null}
+										onPlayPrologue={() => openChapterCinematic(greekChapter)}
+										onStageNextBattle={() => {
+											const nextMission = nextMissionByChapter.get(greekChapter.id);
+											if (nextMission) stageMission(nextMission, greekChapter, 'greek');
 										}}
-										onClose={() => setSelectedRealm(null)}
+										prologueSeen={seenCinematics.includes(greekChapter.id)}
+										accentClass={FACTION_ACCENT[greekChapter.faction]}
 									/>
-								</motion.div>
+								</div>
 							)}
-						</AnimatePresence>
+
+							{STAGE_GREEK_REALMS.map(realm => (
+								<GreekRealmNode
+									key={realm.id}
+									realm={realm}
+									selected={selectedRealm === realm.id}
+									onClick={() => setSelectedRealm(selectedRealm === realm.id ? null : realm.id)}
+									hasUnlockedMission={greekRealmsWithUnlocked.has(realm.id)}
+								/>
+							))}
+
+							<AnimatePresence>
+								{selectedGreekRealm && (
+									<motion.div
+										initial={{ opacity: 0, x: 30 }}
+										animate={{ opacity: 1, x: 0 }}
+										exit={{ opacity: 0, x: 30 }}
+										transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+									>
+										<RealmMissionPanel
+											realm={selectedGreekRealm}
+											missions={getGreekMissionsForRealm(selectedGreekRealm.id, greekChapter.missions)}
+											onSelectMission={mission => {
+												setSelectedMission(mission);
+												setSelectedChapter(greekChapter);
+											}}
+											onClose={() => setSelectedRealm(null)}
+										/>
+									</motion.div>
+								)}
+							</AnimatePresence>
+						</div>
 					</div>
 				) : selectedChapter ? (
-					<ChapterDetail
-						chapter={selectedChapter}
-						chapterProgressById={chapterProgressById}
-						nextMissionByChapter={nextMissionByChapter}
-						seenCinematics={seenCinematics}
-						onBack={() => setSelectedChapter(null)}
-						onPlayPrologue={openChapterCinematic}
-						onSelectMission={mission => setSelectedMission(mission)}
-						onStageNextBattle={() => {
-							const nextMission = nextMissionByChapter.get(selectedChapter.id);
-							if (nextMission) stageMission(nextMission, selectedChapter, 'beyond');
-						}}
-					/>
+					<div className="campaign-beyond-scroll">
+						<ChapterDetail
+							chapter={selectedChapter}
+							chapterProgressById={chapterProgressById}
+							nextMissionByChapter={nextMissionByChapter}
+							seenCinematics={seenCinematics}
+							onBack={() => setSelectedChapter(null)}
+							onPlayPrologue={openChapterCinematic}
+							onSelectMission={mission => setSelectedMission(mission)}
+							onStageNextBattle={() => {
+								const nextMission = nextMissionByChapter.get(selectedChapter.id);
+								if (nextMission) stageMission(nextMission, selectedChapter, 'beyond');
+							}}
+						/>
+					</div>
 				) : (
-					<div className="beyond-grid">
-						{beyondChapters.map(chapter => (
-							<BeyondCard
-								key={chapter.id}
-								chapter={chapter}
-								progress={chapterProgressById.get(chapter.id) ?? 0}
-								nextMission={nextMissionByChapter.get(chapter.id) ?? null}
-								prologueSeen={seenCinematics.includes(chapter.id)}
-								onPlayPrologue={() => openChapterCinematic(chapter)}
-								onOpen={() => setSelectedChapter(chapter)}
-							/>
-						))}
+					<div className="campaign-beyond-scroll">
+						<div className="beyond-grid">
+							{beyondChapters.map(chapter => (
+								<BeyondCard
+									key={chapter.id}
+									chapter={chapter}
+									progress={chapterProgressById.get(chapter.id) ?? 0}
+									nextMission={nextMissionByChapter.get(chapter.id) ?? null}
+									prologueSeen={seenCinematics.includes(chapter.id)}
+									onPlayPrologue={() => openChapterCinematic(chapter)}
+									onOpen={() => setSelectedChapter(chapter)}
+								/>
+							))}
 
-						{isAllComplete && (
-							<BeyondCard
-								secret
-								chapter={EASTERN_CHAPTER}
-								progress={chapterProgressById.get(EASTERN_CHAPTER.id) ?? 0}
-								nextMission={nextMissionByChapter.get(EASTERN_CHAPTER.id) ?? null}
-								prologueSeen={seenCinematics.includes(EASTERN_CHAPTER.id)}
-								onPlayPrologue={() => openChapterCinematic(EASTERN_CHAPTER)}
-								onOpen={() => setSelectedChapter(EASTERN_CHAPTER)}
-							/>
-						)}
+							{isAllComplete && (
+								<BeyondCard
+									secret
+									chapter={EASTERN_CHAPTER}
+									progress={chapterProgressById.get(EASTERN_CHAPTER.id) ?? 0}
+									nextMission={nextMissionByChapter.get(EASTERN_CHAPTER.id) ?? null}
+									prologueSeen={seenCinematics.includes(EASTERN_CHAPTER.id)}
+									onPlayPrologue={() => openChapterCinematic(EASTERN_CHAPTER)}
+									onOpen={() => setSelectedChapter(EASTERN_CHAPTER)}
+								/>
+							)}
 
-						{!isAllComplete && (
-							<article className={`${SURFACE_STRONG_CLASS} border-dashed p-6 sm:p-7 opacity-70`}>
-								<p className={KICKER_CLASS}>Locked Arc</p>
-								<h3 className="mt-2 font-display text-2xl font-bold tracking-[0.04em] text-ink-200">
-									The Celestial Gate
-								</h3>
-								<p className="mt-3 text-[13px] leading-relaxed text-ink-300">
-									Clear every visible chapter to open the hidden mythology line.
-								</p>
-							</article>
-						)}
+							{!isAllComplete && (
+								<article className={`${SURFACE_STRONG_CLASS} border-dashed p-6 sm:p-7 opacity-70`}>
+									<p className={KICKER_CLASS}>Locked Arc</p>
+									<h3 className="mt-2 font-display text-2xl font-bold tracking-[0.04em] text-ink-200">
+										The Celestial Gate
+									</h3>
+									<p className="mt-3 text-[13px] leading-relaxed text-ink-300">
+										Clear every visible chapter to open the hidden mythology line.
+									</p>
+								</article>
+							)}
+						</div>
 					</div>
 				)}
 			</div>
+			</main>
 
 			{cinematicChapter?.cinematicIntro && (
 				<CinematicCrawl
@@ -1074,22 +1239,6 @@ function CampaignHeader({ title, subtitle }: { title: string; subtitle: string }
 				/>
 			</div>
 		</header>
-	);
-}
-
-function StatRow({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
-	return (
-		<div className="flex items-center justify-between gap-4">
-			<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300 shrink-0">{label}</span>
-			<span
-				className={`font-display text-[13px] tracking-[0.06em] truncate ${
-					highlight ? 'text-gold-300' : 'text-ink-0'
-				}`}
-				title={value}
-			>
-				{value}
-			</span>
-		</div>
 	);
 }
 

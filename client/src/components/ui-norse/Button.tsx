@@ -47,7 +47,7 @@ const BASE_CLASSES =
 	'focus-visible:outline-gold-300 focus-visible:outline-offset-2';
 
 /**
- * Decorative diamond bullet (♦ rotated square) inheriting button text color.
+ * Decorative diamond bullet (rotated square) inheriting button text color.
  * Used by `ornate` prop to flank the label on ceremonial outline buttons.
  */
 function Diamond() {

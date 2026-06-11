@@ -4,6 +4,7 @@ import { CardInstance } from '../types';
 import { SimpleCard, SimpleCardData } from './SimpleCard';
 import { getCardById } from '../data/allCards';
 import './mulligan.css';
+import { GameIcon } from '../utils/ui/GameIcon';
 
 const ANIMATE_SELECTED = { scale: 0.93, y: 6 };
 const ANIMATE_DEFAULT = { scale: 1, y: 0 };
@@ -73,7 +74,7 @@ export const MulliganCard: React.FC<MulliganCardProps> = React.memo(({ card, isS
   const overlay = isSelected ? (
     disableMotion ? (
       <div className="mulligan-card-selected-overlay">
-        <div className="mulligan-card-x-badge">✕</div>
+        <div className="mulligan-card-x-badge"><GameIcon name="x" size={12} /></div>
         <span className="mulligan-card-replace-label">Replace</span>
       </div>
     ) : (
@@ -84,7 +85,7 @@ export const MulliganCard: React.FC<MulliganCardProps> = React.memo(({ card, isS
         exit={OVERLAY_EXIT}
         transition={OVERLAY_TRANSITION}
       >
-        <div className="mulligan-card-x-badge">✕</div>
+        <div className="mulligan-card-x-badge"><GameIcon name="x" size={12} /></div>
         <span className="mulligan-card-replace-label">Replace</span>
       </motion.div>
     )

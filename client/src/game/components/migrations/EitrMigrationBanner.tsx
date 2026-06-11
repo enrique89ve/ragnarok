@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 
 // One-time banner that runs on first v1 boot for any tester who had a
 // localStorage Eitr balance from the pre-canonical preview. Per ADR 0001
@@ -56,7 +57,7 @@ export function EitrMigrationBanner(): React.ReactElement | null {
 					className="text-ink-300 hover:text-ink-0 text-sm shrink-0 transition-colors"
 					aria-label="Dismiss"
 				>
-					✕
+					<X size={16} aria-hidden="true" />
 				</button>
 			</div>
 		</div>

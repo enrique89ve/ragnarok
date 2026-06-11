@@ -24,13 +24,14 @@ export {
   type ElementAdvantageResult,
   ELEMENT_STRENGTHS,
   ELEMENT_COLORS,
-  ELEMENT_ICONS,
   ELEMENT_LABELS,
   getElementAdvantage,
   hasElementAdvantage,
-  getElementColor,
-  getElementIcon
+  getElementColor
 } from '../utils/elements';
+// Chess-only legacy emoji string map; import directly to keep it out of the
+// public barrel (audit policy G4: emoji as icon system).
+export { ELEMENT_ICONS, getElementIcon } from '../utils/elements/elementIconsLegacy';
 
 type ElementType = ElementTypeImport;
 

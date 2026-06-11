@@ -9,7 +9,7 @@ import { debug } from '../../config/debugConfig';
 import React, { useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { toast } from 'sonner';
-import { Zap } from 'lucide-react';
+import { Zap, X } from 'lucide-react';
 import { getRarityColor, getRarityCssColor } from '../../utils/rarityUtils';
 import { NumericRitual, OrnateCorners, SigilBackplate, type Tier } from '../../../components/ornaments/RunicSigils';
 import { RichTooltip } from '../../../components/ornaments/RichTooltip';
@@ -353,7 +353,7 @@ export default function PackCatalog() {
 						onClick={() => setPackError(null)}
 						className="ml-4 text-ink-0/80 hover:text-ink-0"
 					>
-						✕
+						<X size={16} aria-hidden={true} />
 					</button>
 				</motion.div>
 			)}

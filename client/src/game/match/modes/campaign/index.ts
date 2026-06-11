@@ -3,7 +3,7 @@
  * partial economic reward (xpRunes percentage, default 0.1), no ranking.
  *
  * Public surface (filled in later phases):
- *   - resolver:    resolveCampaign(args)                  ✅ Fase 2
+ *   - resolver:    resolveCampaign(args)                  [x] Fase 2
  *   - lifecycle:   onWin(ctx, finalState)                  — Fase 4
  *                  → dispatch CampaignReward + markMissionComplete
  *   - bossRules:   moves useBossRuleEffects + boss data here — Fase 4

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CardInstance } from '../types';
 import SimpleCard, { SimpleCardData } from './SimpleCard';
+import { GameIcon } from '../utils/ui/GameIcon';
 
 interface GraveyardProps {
   cards: CardInstance[];
@@ -31,7 +32,7 @@ export const Graveyard: React.FC<GraveyardProps> = ({ cards, playerName }) => {
         onClick={() => setIsExpanded(!isExpanded)}
         className="flex items-center space-x-2 px-2 py-1 bg-gray-800/70 rounded text-white text-sm hover:bg-gray-700/90 transition-colors"
       >
-        <span className="text-red-400">☠</span>
+        <span className="text-red-400"><GameIcon name="skullCrossed" size={14} /></span>
         <span>{playerName}'s Graveyard ({cards.length})</span>
         <span>{isExpanded ? '▲' : '▼'}</span>
       </button>

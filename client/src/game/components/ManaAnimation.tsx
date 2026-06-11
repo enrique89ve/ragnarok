@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Position } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
+import { GameIcon } from '../utils/ui/GameIcon';
 
 interface ManaAnimationProps {
   position: Position;
@@ -42,9 +43,9 @@ export const ManaAnimation: React.FC<ManaAnimationProps> = ({
   // Get crystal icon based on gain/loss
   const getCrystalIcon = () => {
     if (amount > 0) {
-      return temporary ? '🔮' : '💎';
+      return temporary ? 'crystal' : 'gem';
     } else {
-      return '💔';
+      return 'heart-broken';
     }
   };
   
@@ -149,7 +150,7 @@ export const OverloadedManaAnimation: React.FC<{
         transition: { duration: 0.5, delay: 1 }
       }}
     >
-      <span className="text-yellow-300 mr-1 text-lg">⚡</span>
+      <span className="text-yellow-300 mr-1 text-lg"><GameIcon name="zap" size={16} /></span>
       <div className="flex flex-col">
         <span className="text-lg">OVERLOAD</span>
         <span className="text-xs text-yellow-300">{amount} mana locked next turn</span>

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { GameIcon } from '../utils/ui/GameIcon';
+import type { IconName } from '../utils/ui/iconMap';
 import { Position } from '../types';
 
 interface AttackAnimationProps {
@@ -114,7 +116,7 @@ export const AttackAnimation: React.FC<AttackAnimationProps> = ({
                 }}
               ></div>
               <div className="bg-yellow-400/30 rounded-full w-12 h-12 flex items-center justify-center">
-                <div className="text-4xl transform rotate-12 drop-shadow-lg">⚔️</div>
+                <div className="text-4xl transform rotate-12 drop-shadow-lg"><GameIcon name="swords" size={36} color="#000" /></div>
               </div>
             </div>
           </motion.div>
@@ -178,7 +180,7 @@ export const AttackAnimation: React.FC<AttackAnimationProps> = ({
                   
                   {/* Central impact symbol */}
                   <div className="w-24 h-24 text-center flex items-center justify-center">
-                    <div className="text-6xl transform rotate-12 drop-shadow-md">💥</div>
+                    <div className="text-6xl transform rotate-12 drop-shadow-md"><GameIcon name="skull" size={56} color="#000" /></div>
                   </div>
                 </div>
               </div>
@@ -710,9 +712,9 @@ export const HealEffect: React.FC<DamageEffectProps> = ({
                 
                 // Star or cross shapes - Uses specific shapes
                 const particles = [
-                  "✦", "✧", "✴", "✹", "✺", "✻", "✽", "❋", "❊", "✚", "✙"
-                ];
-                const particle = particles[Math.floor(Math.random() * particles.length)];
+                  'sparkles', 'shine', 'star', 'gem', 'crystal', 'plus'
+                ] as const;
+                const particleIcon: IconName = particles[Math.floor(Math.random() * particles.length)];
                 
                 // Color variations - Uses yellow-green to bright green
                 const colors = [
@@ -763,7 +765,7 @@ export const HealEffect: React.FC<DamageEffectProps> = ({
                       ease: "easeOut"
                     }}
                   >
-                    {particle}
+                    <GameIcon name={particleIcon} size={size} />
                   </motion.div>
                 );
               })}
@@ -1011,8 +1013,9 @@ export const BuffEffect: React.FC<{
                 const orbitY = Math.sin(angle) * distance;
                 
                 // Uses different particle styles
-                const particleType = isAttackParticle ? '✦' : '✧';
+                const particleType: IconName = isAttackParticle ? 'sparkles' : 'shine';
                 const particleColor = isAttackParticle ? attackColor : healthColor;
+                const buffSize = 12 + Math.random() * 8;
                 
                 return (
                   <motion.div
@@ -1043,7 +1046,7 @@ export const BuffEffect: React.FC<{
                       ease: "easeOut"
                     }}
                   >
-                    {particleType}
+                    <GameIcon name={particleType} size={buffSize} />
                   </motion.div>
                 );
               })}
@@ -1125,53 +1128,53 @@ export const HeroPowerEffect: React.FC<{
     switch (heroClass) {
       case 'mage':
         return {
-          icon: '🔥',
+          iconName: 'flame' as IconName,
           mainColor: 'text-red-500',
           glowColor: '#ff3300',
           bgStart: 'rgba(255, 120, 50, 0.7)',
           bgEnd: 'rgba(255, 50, 0, 0)',
           particleColors: ['text-red-400', 'text-orange-300', 'text-yellow-500'],
-          particleSymbols: ['✦', '✧', '✴', '⚡'],
+          particleSymbols: ['sparkles', 'shine', 'zap', 'flame'] as IconName[],
         };
       case 'warrior':
         return {
-          icon: '🛡️',
+          iconName: 'shield' as IconName,
           mainColor: 'text-yellow-500',
           glowColor: '#ffc107',
           bgStart: 'rgba(255, 193, 7, 0.5)',
           bgEnd: 'rgba(255, 193, 7, 0)',
           particleColors: ['text-yellow-400', 'text-amber-500', 'text-yellow-600'],
-          particleSymbols: ['✦', '⚔️', '◆', '🔶'],
+          particleSymbols: ['swords', 'shield', 'hammer', 'gem'] as IconName[],
         };
       case 'paladin':
         return {
-          icon: '💫',
+          iconName: 'shine' as IconName,
           mainColor: 'text-blue-300',
           glowColor: '#93c5fd',
           bgStart: 'rgba(147, 197, 253, 0.5)',
           bgEnd: 'rgba(147, 197, 253, 0)',
           particleColors: ['text-blue-300', 'text-blue-200', 'text-yellow-300'],
-          particleSymbols: ['✦', '✧', '★', '✢'],
+          particleSymbols: ['sparkles', 'shine', 'crystal', 'star'] as IconName[],
         };
       case 'hunter':
         return {
-          icon: '🏹',
+          iconName: 'compass' as IconName,
           mainColor: 'text-green-600',
           glowColor: '#16a34a',
           bgStart: 'rgba(22, 163, 74, 0.5)',
           bgEnd: 'rgba(22, 163, 74, 0)',
           particleColors: ['text-green-500', 'text-lime-500', 'text-green-700'],
-          particleSymbols: ['↟', '✧', '▲', '◢'],
+          particleSymbols: ['compass', 'paw', 'tree', 'leaf'] as IconName[],
         };
       default:
         return {
-          icon: '✨',
+          iconName: 'sparkles' as IconName,
           mainColor: 'text-purple-500',
           glowColor: '#8b5cf6',
           bgStart: 'rgba(139, 92, 246, 0.5)',
           bgEnd: 'rgba(139, 92, 246, 0)',
           particleColors: ['text-purple-400', 'text-fuchsia-300', 'text-pink-400'],
-          particleSymbols: ['✦', '✧', '✴', '✷'],
+          particleSymbols: ['sparkles', 'shine', 'gem', 'crystal'] as IconName[],
         };
     }
   };
@@ -1228,14 +1231,13 @@ export const HeroPowerEffect: React.FC<{
             }}
           >
             {/* Hero power with glowing effect */}
-            <div 
-              className={`text-5xl font-bold ${heroPowerInfo.mainColor}`}
+            <div
+              className={`text-5xl font-bold ${heroPowerInfo.mainColor} flex items-center justify-center`}
               style={{
                 filter: `drop-shadow(0 0 5px ${heroPowerInfo.glowColor})`,
-                textShadow: `0 0 10px ${heroPowerInfo.glowColor}, 0 0 20px ${heroPowerInfo.glowColor}, 0 1px 1px rgba(0,0,0,0.5)`,
               }}
             >
-              {heroPowerInfo.icon}
+              <GameIcon name={heroPowerInfo.iconName} size={48} />
             </div>
             
             {/* Circular glow ring - Uses this */}
@@ -1343,7 +1345,7 @@ export const HeroPowerEffect: React.FC<{
                       ease: "easeOut",
                     }}
                   >
-                    {symbol}
+                    <GameIcon name={symbol} size={size} />
                   </motion.div>
                 );
               })}
@@ -1470,7 +1472,7 @@ export const ShieldBreakEffect: React.FC<{
                   }}
                   style={{ filter: "drop-shadow(0 0 5px rgba(255, 255, 255, 0.8))" }}
                 >
-                  ✦
+                  <GameIcon name="sparkles" size={36} color="#dbeafe" />
                 </motion.div>
               </div>
             </motion.div>

@@ -12,6 +12,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import { Search, Check, X } from 'lucide-react';
 import { countActiveWebGLContexts, isWebGLSupported } from '../utils/webglContextFix';
 
 interface DebugRenderCheckProps {
@@ -108,7 +109,7 @@ const DebugRenderCheck: React.FC<DebugRenderCheckProps> = ({ onClose }) => {
         }}
         title="Debug Rendering"
       >
-        🔍
+        <Search size={20} aria-hidden={true} />
       </button>
     );
   }
@@ -149,8 +150,10 @@ const DebugRenderCheck: React.FC<DebugRenderCheckProps> = ({ onClose }) => {
       <div style={{ marginBottom: '15px' }}>
         <h3 style={{ margin: '0 0 5px 0', fontSize: '14px' }}>WebGL Support</h3>
         <div>
-          <span style={{ color: webglSupported ? '#4ade80' : '#f87171' }}>
-            {webglSupported ? '✓ Supported' : '✗ Not Supported'}
+          <span style={{ color: webglSupported ? '#4ade80' : '#f87171' }} className="inline-flex items-center gap-1">
+            {webglSupported
+              ? <><Check size={12} aria-hidden={true} /> Supported</>
+              : <><X size={12} aria-hidden={true} /> Not Supported</>}
           </span>
         </div>
         <div>Active Contexts: {activeContexts}</div>

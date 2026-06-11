@@ -74,7 +74,7 @@
 
 /* Corner decorations */
 .hero-card-frame .hero-portrait::before {
-  content: '⚜';
+  content: '';
   position: absolute;
   top: 4px;
   left: 4px;

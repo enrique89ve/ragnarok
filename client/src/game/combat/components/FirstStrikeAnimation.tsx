@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUnifiedCombatStore } from '../../stores/unifiedCombatStore';
 import { debug } from '../../config/debugConfig';
+import { GameIcon } from '../../utils/ui/GameIcon';
 
 interface FirstStrikeAnimationProps {
   onComplete: () => void;
@@ -93,7 +94,7 @@ export const FirstStrikeAnimation: React.FC<FirstStrikeAnimationProps> = ({ onCo
                 letterSpacing: '4px'
               }}
             >
-              ⚔ First Strike!
+              <GameIcon name="swords" size={18} /> First Strike!
             </motion.div>
             <div style={{
               fontSize: '1.2rem',
@@ -117,7 +118,7 @@ export const FirstStrikeAnimation: React.FC<FirstStrikeAnimationProps> = ({ onCo
               filter: 'drop-shadow(0 0 20px rgba(255, 100, 100, 0.8))'
             }}
           >
-            ⚔
+            <GameIcon name="swords" size={14} />
           </motion.div>
         )}
 

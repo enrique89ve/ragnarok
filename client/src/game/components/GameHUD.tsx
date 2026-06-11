@@ -2,6 +2,7 @@ import React from 'react';
 import { Player, Position, PlayerState } from '../types';
 import { Hero } from './Hero';
 import ManaBar from './ManaBar';
+import { GameIcon } from '../utils/ui/GameIcon';
 
 // Adapter function to convert Player to PlayerState for Hero component
 function toPlayerState(player: Player): PlayerState {
@@ -85,7 +86,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                   
                   {player.mana.overloaded && player.mana.overloaded > 0 && (
                     <span className="ml-2 text-sm font-semibold bg-red-800 text-white px-2 py-0.5 rounded-md">
-                      <span className="text-yellow-300 mr-1">⚡</span>
+                      <span className="text-yellow-300 mr-1"><GameIcon name="zap" size={14} /></span>
                       {player.mana.overloaded} locked
                     </span>
                   )}
@@ -135,7 +136,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
                   
                   {opponent.mana.overloaded && opponent.mana.overloaded > 0 && (
                     <span className="ml-2 text-sm font-semibold bg-red-800 text-white px-2 py-0.5 rounded-md">
-                      <span className="text-yellow-300 mr-1">⚡</span>
+                      <span className="text-yellow-300 mr-1"><GameIcon name="zap" size={14} /></span>
                       {opponent.mana.overloaded} locked
                     </span>
                   )}

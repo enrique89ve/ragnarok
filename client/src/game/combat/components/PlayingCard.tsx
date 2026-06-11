@@ -18,10 +18,10 @@ export const getNorseRune = (suit: CardSuit): string => {
 
 export const getNorseSymbol = (suit: CardSuit): string => {
 	switch (suit) {
-		case 'spades': return '⚔';
-		case 'hearts': return '❂';
+		case 'spades': return 'swords';
+		case 'hearts': return 'heart';
 		case 'diamonds': return '◆';
-		case 'clubs': return '⚒';
+		case 'clubs': return 'hammer';
 	}
 };
 

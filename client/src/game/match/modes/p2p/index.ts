@@ -4,7 +4,7 @@
  * apply commands independently and reconcile via state hash.
  *
  * Public surface (filled in later phases):
- *   - resolver:        resolveP2P(handshake)        ✅ Fase 2
+ *   - resolver:        resolveP2P(handshake)        [x] Fase 2
  *   - setupComponent:  <MatchSetupP2P/>             — Fase 5
  *                      Owns async handshake wait, calls resolveP2P,
  *                      pushes ctx into useMatchStore, then mounts the

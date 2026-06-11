@@ -10,6 +10,7 @@ import { routes } from '../../../lib/routes';
 import { recordSessionEvent } from '../../../data/blockchain/transcriptBuilder';
 import { getRarityColor, getRaritySortRank, getTypeIcon } from '../../utils/rarityUtils';
 import { GameIcon } from '../../utils/ui/GameIcon';
+import type { IconName } from '../../utils/ui/iconMap';
 import { getCardArtPath } from '../../utils/art/artMapping';
 import { getHoloTier, applyHoloVars, resetHoloVars } from '../../hooks/useHoloTracking';
 import type { OwnedCard } from '../packs/types';
@@ -122,12 +123,12 @@ const RARITY_PILLS: { value: FilterRarity; label: string; color: string; activeC
 	})),
 ];
 
-const TYPE_PILLS: { value: FilterType; label: string; icon: string }[] = [
-	{ value: 'all', label: 'All', icon: '' },
-	{ value: 'hero', label: 'Heroes', icon: '👑' },
-	{ value: 'minion', label: 'Minions', icon: '⚔️' },
-	{ value: 'spell', label: 'Spells', icon: '✨' },
-	{ value: 'weapon', label: 'Weapons', icon: '🗡️' },
+const TYPE_PILLS: { value: FilterType; label: string; iconName: IconName }[] = [
+	{ value: 'all', label: 'All', iconName: 'sparkles' },
+	{ value: 'hero', label: 'Heroes', iconName: 'crown' },
+	{ value: 'minion', label: 'Minions', iconName: 'swords' },
+	{ value: 'spell', label: 'Spells', iconName: 'sparkles' },
+	{ value: 'weapon', label: 'Weapons', iconName: 'dagger' },
 ];
 
 const SOURCE_PILLS: { value: FilterSource; label: string }[] = [
@@ -833,7 +834,7 @@ export default function CollectionPage() {
 						{/* Search + Sort Row */}
 						<div className="collection-landscape-search-row flex gap-2 mb-2 sm:gap-3 sm:mb-3">
 							<div className="flex-1 relative">
-								<span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">🔍</span>
+								<span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"><GameIcon name="search" size={14} /></span>
 								<input
 									type="text"
 									placeholder="Search cards..."
@@ -892,7 +893,7 @@ export default function CollectionPage() {
 									className={`filter-pill ${filterType === pill.value ? 'filter-pill-active' : 'filter-pill-inactive'}`}
 									style={filterType === pill.value ? { background: 'rgba(217,168,68,0.55)', borderColor: 'rgba(217,168,68,0.55)' } : {}}
 								>
-									{pill.icon && <span className="mr-1">{pill.icon}</span>}
+									{pill.iconName && <span className="mr-1"><GameIcon name={pill.iconName} size={14} /></span>}
 									{pill.label}
 								</button>
 							))}
@@ -1000,7 +1001,9 @@ export default function CollectionPage() {
 
 														{masteryTier >= 2 && (
 															<div className={`mastery-badge mastery-tier-${masteryTier}`}>
-																{'★'.repeat(masteryTier)}
+																{Array.from({ length: masteryTier }).map((_, i) => (
+																	<GameIcon key={i} name="sparkles" size={12} className="mastery-star" />
+																))}
 															</div>
 														)}
 
@@ -1311,7 +1314,9 @@ export default function CollectionPage() {
 									return (
 										<div className="text-center mb-3">
 											<span className={`mastery-badge-modal mastery-tier-${mt}`}>
-												{'★'.repeat(mt)} {mt === 3 ? 'Divine' : 'Ascended'}
+												{Array.from({ length: mt }).map((_, i) => (
+																		<GameIcon key={i} name="sparkles" size={12} className="mastery-star" />
+																	))} {mt === 3 ? 'Divine' : 'Ascended'}
 											</span>
 											<div className="text-[10px] text-gray-500 mt-1">NFT Mastery</div>
 										</div>

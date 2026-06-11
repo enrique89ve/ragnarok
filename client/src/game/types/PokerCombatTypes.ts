@@ -148,9 +148,9 @@ export interface CombatActionDetails {
 /**
  * Elemental types for pets - imported from utils/elements for single source of truth
  */
-import { type ElementType, ELEMENT_STRENGTHS, getElementAdvantage, ELEMENT_COLORS, ELEMENT_ICONS } from '../utils/elements';
+import { type ElementType, ELEMENT_STRENGTHS, getElementAdvantage, ELEMENT_COLORS } from '../utils/elements';
 export type { ElementType };
-export { ELEMENT_STRENGTHS, getElementAdvantage, ELEMENT_COLORS, ELEMENT_ICONS };
+export { ELEMENT_STRENGTHS, getElementAdvantage, ELEMENT_COLORS };
 
 /**
  * Elemental interaction results

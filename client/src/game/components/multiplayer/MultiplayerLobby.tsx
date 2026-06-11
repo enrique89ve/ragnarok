@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import { readPresenceHeartbeatResponse, type ServerSignedChallenge } from '@shared/p2pAvailability';
 import { ensureFriendSession, invalidateFriendSession } from '../social/friendSession';
 import type { ArmySelection } from '../../types/ChessTypes';
+import { isSharedNetworkEnvironment } from '../../config/featureFlags';
 
 interface MultiplayerLobbyProps {
 	onGameStart: () => void;
@@ -134,7 +135,9 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 		join,
 		connectToRoom,
 		disconnect,
+		setMyPeerId,
 		setMatchChallenges,
+		setMatchTicket,
 		clearMatchChallenges,
 		setRemotePeerId,
 	} = usePeerStore();
@@ -243,6 +246,10 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 	}, [connectionState, matchProgress.ready, myPeerId, remotePeerId, onGameStart]);
 
 	const handleHost = async () => {
+		if (isSharedNetworkEnvironment()) {
+			toast.error('Manual rooms are disabled on the secured relay. Use Quick Match or Warband Challenge.');
+			return;
+		}
 		try {
 			await host();
 			toast.success('Game created! Share your ID with your opponent.');
@@ -252,6 +259,10 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 	};
 
 	const handleJoin = async () => {
+		if (isSharedNetworkEnvironment()) {
+			toast.error('Manual rooms are disabled on the secured relay. Use Quick Match or Warband Challenge.');
+			return;
+		}
 		if (!joinId.trim()) {
 			toast.error('Please enter a game ID');
 			return;
@@ -302,8 +313,14 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 		}
 		setAcceptingFrom(challenge.from);
 		try {
+			if (isSharedNetworkEnvironment() && !challenge.matchTicket) {
+				toast.error('This challenge is missing a relay ticket. Ask your opponent to send a new challenge.');
+				return;
+			}
 			dismissChallenge(challenge.from);
 			setMatchChallenges(challenge, null);
+			setMatchTicket(challenge.matchTicket ?? null);
+			if (challenge.matchTicket) setMyPeerId(challenge.matchTicket.peerId);
 			await join(resolveDirectChallengeRoomId(challenge));
 			toast.success(`Joining @${challenge.from}.`);
 		} catch {
@@ -326,10 +343,17 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 		}
 		setOpeningOutgoing(true);
 		try {
+			if (isSharedNetworkEnvironment() && !activeOutgoingChallenge.matchTicket) {
+				toast.error('This challenge is missing a relay ticket. Send a new challenge.');
+				clearOutgoingChallenge();
+				return;
+			}
 			setMatchChallenges(
 				activeOutgoingChallenge.matchChallenge ?? null,
 				activeOutgoingChallenge.opponentMatchChallenge ?? null,
 			);
+			setMatchTicket(activeOutgoingChallenge.matchTicket ?? null);
+			setMyPeerId(activeOutgoingChallenge.matchTicket?.peerId ?? activeOutgoingChallenge.peerId);
 			await connectToRoom(activeOutgoingChallenge.peerId);
 			toast.success(`Challenge room opened for @${activeOutgoingChallenge.to}.`);
 		} catch {
@@ -578,7 +602,7 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 							{remotePeerId && (
 								<div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg space-y-2">
 									<p className="text-sm font-medium text-green-600 dark:text-green-400">
-										✓ Connected to {isHost ? 'opponent' : 'host'}
+										<Check size={14} className="inline -mt-0.5 mr-1" aria-hidden={true} /> Connected to {isHost ? 'opponent' : 'host'}
 									</p>
 									<div>
 										<span className="text-xs text-(--ink-300) uppercase tracking-wide">

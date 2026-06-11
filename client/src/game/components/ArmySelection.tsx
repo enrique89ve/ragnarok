@@ -107,7 +107,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
   const nftCollection = useNFTCollection();
 
   const myPeerId = usePeerStore(state => state.myPeerId);
-  const host = usePeerStore(state => state.host);
+  const prepareForMatchmaking = usePeerStore(state => state.prepareForMatchmaking);
   const { status: matchmakingStatus, queuePosition, joinQueue, leaveQueue, error: matchmakingError } = useMatchmaking();
   const [loadedHeroArtIds, setLoadedHeroArtIds] = useState<ReadonlySet<string>>(() => new Set());
 
@@ -217,7 +217,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
 
       const currentPeerId = usePeerStore.getState().myPeerId;
       if (!currentPeerId) {
-        await host();
+        prepareForMatchmaking();
       }
 
       const queued = await joinQueue();

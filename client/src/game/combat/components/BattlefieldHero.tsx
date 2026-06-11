@@ -15,7 +15,8 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { ALL_NORSE_HEROES } from '../../data/norseHeroes';
-import { getElementColor, getElementIcon, ELEMENT_LABELS, ELEMENT_WEAKNESSES, ELEMENT_STRENGTHS, type ElementType } from '../../utils/elements';
+import { getElementColor, getElementIconName, ELEMENT_LABELS, ELEMENT_WEAKNESSES, ELEMENT_STRENGTHS, type ElementType } from '../../utils/elements';
+import { GameIcon } from '../../utils/ui/GameIcon';
 import { NORSE_TO_GAME_ELEMENT, type NorseElement } from '../../types/NorseTypes';
 import { resolveHeroPortrait, DEFAULT_PORTRAIT } from '../../utils/art/artMapping';
 import '../styles/hero-reactions.css';
@@ -321,7 +322,7 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
             {!isOpponent && heroPower && (
               <div className={`portrait-power-badge ${canAffordPower ? 'affordable' : 'expensive'} ${isWeaponUpgraded ? 'upgraded' : ''}`}>
                 <span className="power-cost">{heroPower.cost}</span>
-                {isWeaponUpgraded && <span className="upgraded-icon">⚔</span>}
+                {isWeaponUpgraded && <span className="upgraded-icon"><GameIcon name="swords" size={12} /></span>}
               </div>
             )}
             {artifact && (
@@ -408,14 +409,14 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
               <span className="matchup-arrow matchup-arrow-weak">▼</span>
               {elementMatchups.weakTo.map(el => (
                 <span key={el} className="matchup-el-icon matchup-el-weak">
-                  {getElementIcon(el)}
+                  <GameIcon name={getElementIconName(el)} size={12} />
                 </span>
               ))}
               <span className="matchup-sep" />
               <span className="matchup-arrow matchup-arrow-strong">▲</span>
               {elementMatchups.strongVs.map(el => (
                 <span key={el} className="matchup-el-icon matchup-el-strong">
-                  {getElementIcon(el)}
+                  <GameIcon name={getElementIconName(el)} size={12} />
                 </span>
               ))}
             </div>
@@ -440,7 +441,7 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
                   <span className="matchup-tooltip-elements">
                     {elementMatchups.weakTo.map(el => (
                       <span key={el} className="matchup-tooltip-el" style={{ '--el-color': getElementColor(el) } as React.CSSProperties}>
-                        {getElementIcon(el)} {ELEMENT_LABELS[el]}
+                        <GameIcon name={getElementIconName(el)} size={10} /> {ELEMENT_LABELS[el]}
                       </span>
                     ))}
                   </span>
@@ -450,7 +451,7 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
                   <span className="matchup-tooltip-elements">
                     {elementMatchups.strongVs.map(el => (
                       <span key={el} className="matchup-tooltip-el" style={{ '--el-color': getElementColor(el) } as React.CSSProperties}>
-                        {getElementIcon(el)} {ELEMENT_LABELS[el]}
+                        <GameIcon name={getElementIconName(el)} size={10} /> {ELEMENT_LABELS[el]}
                       </span>
                     ))}
                   </span>

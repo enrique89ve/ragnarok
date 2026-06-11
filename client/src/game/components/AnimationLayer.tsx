@@ -24,6 +24,7 @@ import EnhancedDeathAnimation from '../animations/EnhancedDeathAnimation';
 import ElementalAttackTrail from '../animations/ElementalAttackTrail';
 import { spawnParticleBurst, spawnImpactRing, spawnEmbers, ELEMENT_PALETTES } from '../animations/PixiParticleCanvas';
 import { playBattlecryVFX, playDeathrattleVFX, playBuffVFX, playSummonVFX, killAllVFX } from '../animations/BattlecryVFX';
+import { GameIcon } from '../utils/ui/GameIcon';
 
 // Animation components for different animation types
 const AttackAnimation: React.FC<{ animation: Animation }> = ({ animation }) => {
@@ -608,7 +609,7 @@ const CardBurnPopup: React.FC<{ animation: Animation }> = ({ animation }) => {
       }}
     >
       <div className="anim-burn-card">
-        <div className="anim-burn-icon">♨</div>
+        <div className="anim-burn-icon"><GameIcon name="flame" size={14} /></div>
         <div className="anim-burn-label">HAND FULL</div>
         <div className="anim-burn-name">{cardName}</div>
         <div className="anim-burn-status">BURNED!</div>

@@ -502,7 +502,7 @@ const ShuffleEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo(
             justifyContent: 'center',
             fontSize: '1.2rem',
           }}>
-            ⚔️
+            <GameIcon name="swords" size={20} color="#fff" />
           </div>
         </motion.div>
       ))}

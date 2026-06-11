@@ -42,7 +42,7 @@
     radial-gradient(ellipse 55% 40% at 50% 0%, var(--obsidian-800) 0%, transparent 65%),
     linear-gradient(180deg, var(--obsidian-950) 0%, var(--obsidian-900) 100%);
 
-  /* 🌑 Obsidian — Norse midnight (black dominant, cool undertone) */
+  /*  Obsidian — Norse midnight (black dominant, cool undertone) */
   --obsidian-950: #060810; /* Root / fondo más profundo */
   --obsidian-900: #0a0e1c; /* Panel */
   --obsidian-850: #0f141f; /* Elevado */
@@ -52,7 +52,7 @@
   --obsidian-600: #2c3240; /* Divider */
   --obsidian-500: #38404e; /* Muted edge */
 
-  /* 📜 Ink — jerarquía tipográfica (parchment cálido) */
+  /*  Ink — jerarquía tipográfica (parchment cálido) */
   --ink-0: #f5ede0; /* Texto primario */
   --ink-100: #e6dcc8; /* Levemente atenuado */
   --ink-200: #b8ad97; /* Secundario */
@@ -60,7 +60,7 @@
   --ink-400: #5d564a; /* Deshabilitado */
   --ink-500: #3a342c; /* Muy tenue */
 
-  /* 🜚 Gold — Odin / acento primario (autoridad) */
+  /*  Gold — Odin / acento primario (autoridad) */
   --gold-50: #fbf4dc;
   --gold-100: #f5e3a8;
   --gold-200: #e9c877;
@@ -71,7 +71,7 @@
   --gold-700: #4d340a;
   --gold-glow: oklch(80% 0.16 82);
 
-  /* 🔥 Ember — Muspelheim / peligro y energía */
+  /*  Ember — Muspelheim / peligro y energía */
   --ember-100: #ffd6b0;
   --ember-200: #ff9a5a;
   --ember-300: #ff6a28; /* hot ember */
@@ -80,7 +80,7 @@
   --ember-600: #6e1f05;
   --ember-glow: oklch(70% 0.2 40);
 
-  /* 🌈 Bifrost — raro / místico (unicamente en lo mítico) */
+  /*  Bifrost — raro / místico (unicamente en lo mítico) */
   --bifrost-100: #c9e0ff;
   --bifrost-300: #7aa9ff;
   --bifrost-500: #4a6fe0;

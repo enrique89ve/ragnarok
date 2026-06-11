@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getElementColor, getElementIcon, type ElementType } from '../../utils/elements';
+import { getElementColor, getElementIconName, type ElementType } from '../../utils/elements';
+import { GameIcon } from '../../utils/ui/GameIcon';
 
 interface ElementBuffPopupProps {
   show: boolean;
@@ -21,7 +22,7 @@ export const ElementBuffPopup: React.FC<ElementBuffPopupProps> = ({
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const color = getElementColor(element);
-  const icon = getElementIcon(element);
+  const iconName = getElementIconName(element);
 
   useEffect(() => {
     if (show) {
@@ -75,7 +76,7 @@ export const ElementBuffPopup: React.FC<ElementBuffPopupProps> = ({
               filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))'
             }}
           >
-            {icon}
+            <GameIcon name={iconName} size={24} />
           </motion.div>
 
           <motion.div

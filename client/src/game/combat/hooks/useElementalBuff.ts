@@ -1,6 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { useUnifiedCombatStore } from '../../stores/unifiedCombatStore';
-import { getElementColor, getElementIcon, type ElementType } from '../../utils/elements';
+import { getElementColor, getElementIconName, type ElementType } from '../../utils/elements';
+import type { IconName } from '../../utils/ui/iconMap';
 import type { ElementalBuffNotification } from '../../stores/combat/types';
 
 export interface ElementalBuffState {
@@ -12,7 +13,7 @@ export interface ElementalBuffState {
     armorBonus: number;
     element: ElementType;
     color: string;
-    icon: string;
+    icon: IconName;
   } | null;
   opponentBuff: {
     attackBonus: number;
@@ -20,7 +21,7 @@ export interface ElementalBuffState {
     armorBonus: number;
     element: ElementType;
     color: string;
-    icon: string;
+    icon: IconName;
   } | null;
   pendingMinionBuff: ElementalBuffNotification | null;
   clearMinionBuffNotification: () => void;
@@ -40,7 +41,7 @@ export const useElementalBuff = (): ElementalBuffState => {
   const buffState = useMemo(() => {
     const playerElement = (player?.pet?.stats?.element || 'neutral') as ElementType;
     const opponentElement = (opponent?.pet?.stats?.element || 'neutral') as ElementType;
-    
+
     const playerHasAdvantage = player?.elementBuff?.hasAdvantage ?? false;
     const opponentHasAdvantage = opponent?.elementBuff?.hasAdvantage ?? false;
 
@@ -53,7 +54,7 @@ export const useElementalBuff = (): ElementalBuffState => {
         armorBonus: player?.elementBuff?.armorBonus ?? 0,
         element: playerElement,
         color: getElementColor(playerElement),
-        icon: getElementIcon(playerElement)
+        icon: getElementIconName(playerElement)
       } : null,
       opponentBuff: opponentHasAdvantage ? {
         attackBonus: opponent?.elementBuff?.attackBonus ?? 0,
@@ -61,7 +62,7 @@ export const useElementalBuff = (): ElementalBuffState => {
         armorBonus: opponent?.elementBuff?.armorBonus ?? 0,
         element: opponentElement,
         color: getElementColor(opponentElement),
-        icon: getElementIcon(opponentElement)
+        icon: getElementIconName(opponentElement)
       } : null
     };
   }, [player, opponent]);

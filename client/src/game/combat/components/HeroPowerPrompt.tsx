@@ -1,5 +1,6 @@
 import React from 'react';
 import '../styles/targeting-prompts.css';
+import { GameIcon } from '../../utils/ui/GameIcon';
 
 export interface HeroPowerPromptProps {
   targeting: {
@@ -38,7 +39,7 @@ export const HeroPowerPrompt: React.FC<HeroPowerPromptProps> = ({ targeting, onC
   return (
     <div className="targeting-prompt hero-power-targeting">
       <div className="targeting-prompt-title">
-        ⚡ {targeting.powerName} ⚡
+        <GameIcon name="zap" size={14} /> {targeting.powerName} <GameIcon name="zap" size={14} />
       </div>
       <div className="targeting-prompt-message">
         {getTargetingMessage()}

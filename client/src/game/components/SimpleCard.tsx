@@ -326,8 +326,6 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
     : card.evolutionLevel === 2 ? 'evolution-ascended'
       : card.evolutionLevel === 3 ? 'evolution-divine' : '';
 
-  const evolutionStars = card.evolutionLevel ? '★'.repeat(card.evolutionLevel) : '';
-
   const { ref: artRef, inView: artInView } = useInView({ triggerOnce: true, rootMargin: '200px' });
 
   const holoTier = useMemo(() => getHoloTier(card.rarity), [card.rarity]);
@@ -542,8 +540,12 @@ export const SimpleCard: React.FC<SimpleCardProps> = React.memo(({
         </div>
       )}
 
-      {evolutionStars && (
-        <div className="evolution-stars">{evolutionStars}</div>
+      {card.evolutionLevel && (
+        <div className="evolution-stars" aria-label={`Evolution level ${card.evolutionLevel}`}>
+          {Array.from({ length: card.evolutionLevel }).map((_, i) => (
+            <GameIcon key={i} name="sparkles" size={10} className="evolution-star" />
+          ))}
+        </div>
       )}
 
       {card.element && ELEMENT_BADGE[card.element] && (

@@ -94,7 +94,7 @@ export const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose })
             onClick={onClose}
             className="text-gray-400 hover:text-white"
           >
-            ✕
+            <GameIcon name="x" size={14} />
           </button>
         </div>
         

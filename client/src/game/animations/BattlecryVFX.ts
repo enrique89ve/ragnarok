@@ -493,7 +493,10 @@ export function playDeathrattleVFX(x: number, y: number) {
 		textShadow: '0 0 20px rgba(120,0,255,0.8), 0 0 40px rgba(80,0,160,0.6)',
 		zIndex: '9515'
 	});
-	skull.textContent = '\u2620';
+	skull.textContent = '';
+	skull.style.color = '#a78bfa';
+	skull.style.lineHeight = '0';
+	skull.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12.5 17 .5-1 .5 1 1 .5-1 .5-.5 1-.5-1-1-.5 1-.5z"/><path d="M15 22a1 1 0 0 0 1-1v-1a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20v1a1 1 0 0 0 1 1z"/></svg>';
 	container.appendChild(skull);
 
 	gsap.timeline()
