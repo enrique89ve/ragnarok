@@ -88,6 +88,16 @@ const PokerViewportSafeAreaPrototype = lazy(async () => {
 	return loadPrototype() as Promise<{ default: React.ComponentType }>;
 });
 
+const cardLabModules = import.meta.glob('./game/components/dev/CardLabPage.tsx');
+const CardLabPage = lazy(async () => {
+	const loadLab = cardLabModules['./game/components/dev/CardLabPage.tsx'];
+	if (!import.meta.env.DEV || loadLab === undefined) {
+		return { default: () => <Navigate to={routes.home} replace /> };
+	}
+
+	return loadLab() as Promise<{ default: React.ComponentType }>;
+});
+
 const CardVisualRuntimeLayout = lazy(async () => {
 	const [
 		{ CardTransformProvider },
@@ -1176,6 +1186,10 @@ function App() {
 						<Route
 							path={routes.pokerViewportPrototype}
 							element={import.meta.env.DEV ? <PokerViewportSafeAreaPrototype /> : <Navigate to={routes.home} replace />}
+						/>
+						<Route
+							path={routes.cardLab}
+							element={import.meta.env.DEV ? <CardLabPage /> : <Navigate to={routes.home} replace />}
 						/>
 
 						<Route element={<GlobalOverlaysLayout />}>

@@ -22,4 +22,5 @@ export const routes = {
   adminNfts: '/admin/nfts',
   legacyRuneTestnet: '/testnet/rune',
   pokerViewportPrototype: '/prototype/poker-viewport',
+  cardLab: '/dev/card-lab',
 };

@@ -7,3 +7,5 @@
  * naming convention and `npm run audit:art` for cross-layer validation.
  */
 export * from './artMapping';
+export * from './elementBand';
+export * from './frameArt';
