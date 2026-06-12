@@ -44,6 +44,13 @@
 	background: linear-gradient(180deg, var(--obsidian-900) 0%, var(--obsidian-950) 100%);
 	color: var(--text-near-white);
 	transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+	/* CSS-class fallback for `aspectRatio` — the inline style is the
+	   source of truth (per shape/size), but this guarantees the frame
+	   never collapses to a zero-height box if the inline value is
+	   ever stripped (e.g. by a third-party stylesheet that targets
+	   `[style]`). Matches the default 3:4 of `tile`/`portrait`; the
+	   inline style overrides per shape. */
+	aspect-ratio: 3 / 4;
 }
 
 .card-frame[data-interactive='true'] { cursor: pointer; }
@@ -66,13 +73,24 @@
 	z-index: 0;
 	overflow: hidden;
 	border-radius: inherit;
+	/* Defense-in-depth: the art-layer is the only containment boundary
+	   for the art. Inline style in CardFrame.tsx already sets the same,
+	   but if a third-party sheet ever promotes `position` or `overflow`
+	   on `.card-frame__art-layer`, the art would escape. Pinning the
+	   containment properties here keeps the contract honest. */
+	contain: layout paint;
 }
 
 .card-frame__art {
 	width: 100%;
 	height: 100%;
+	max-width: 100%;
+	max-height: 100%;
 	object-fit: cover;
 	display: block;
+	/* Block the art from escaping its layer even if width/height are
+	   ever stripped. With `display: block` + max-width/height 100%,
+	   a stray intrinsic-size image can never paint outside the box. */
 }
 
 .card-frame__art-fallback {

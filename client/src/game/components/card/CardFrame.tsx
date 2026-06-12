@@ -32,6 +32,9 @@ import type { CardFrameProps } from './types';
 import { resolveCardDims } from './sizing';
 import { CardFrameContext, type CardFrameContextValue } from './CardFrameContext';
 import CardHolo from './slots/CardHolo';
+import CardArt from './slots/CardArt';
+import CardRankSuit from './slots/CardRankSuit';
+import CardCardBack from './slots/CardCardBack';
 
 const CardFrame: React.FC<CardFrameProps> = ({
 	shape = 'tile',
@@ -147,15 +150,38 @@ const CardFrame: React.FC<CardFrameProps> = ({
 					// (MulliganCard, MythicEntrance) that have no parent width.
 					width: '100%',
 					maxWidth: dims.width,
-					aspectRatio: dims.aspectRatio,
 					...style,
+					// `aspectRatio` is reapplied AFTER `...style` so a caller
+					// passing arbitrary width/height (e.g. EnhancedCard's
+					// `style={{ width: '100%', height: '100%' }}`) cannot
+					// accidentally strip it — the frame's aspect is part of
+					// the chrome contract.
+					aspectRatio: dims.aspectRatio,
+					// Final containment guards. CSS class already sets these,
+					// but inline is defense-in-depth against any third-party
+					// stylesheet that might override `.card-frame` to
+					// `overflow: visible` (the historical bug — see commit).
+					position: 'relative',
+					overflow: 'hidden',
 				} as React.CSSProperties}
 				onClick={onClick}
 				onMouseMove={onMouseMove}
 				onMouseLeave={onMouseLeave}
 				{...rest}
 			>
-				<div className="card-frame__art-layer">
+				<div
+					className="card-frame__art-layer"
+					// Inline containment is the chrome contract. The CSS class
+					// already declares the same, but inline guarantees that no
+					// descendant slot (CardArt img, CardRankSuit fill, etc.)
+					// can ever escape the art rectangle — even if a future
+					// stylesheet accidentally promotes `overflow: visible`.
+					style={{
+						position: 'absolute',
+						inset: 0,
+						overflow: 'hidden',
+					}}
+				>
 					<CardArtFromChildren>{children}</CardArtFromChildren>
 				</div>
 				<div className="card-frame__legibility" />
@@ -190,7 +216,10 @@ const CardFrame: React.FC<CardFrameProps> = ({
  *
  * Art-layer slots are <CardArt>, <CardRankSuit>, <CardCardBack>. Only
  * one of these should be present per card; the walker picks the first
- * match by displayName. A future guard can enforce that.
+ * match. The walker matches by identity (`c.type === CardArt`) FIRST
+ * (the cheap, unambiguous check) and falls back to the displayName
+ * string for the imported-as-named-export case, which some bundlers
+ * preserve and some rewrite. Belt + suspenders.
  *
  * Why extract: art-layer content must sit BEHIND legibility/band/PNG,
  * but other slots (mana gem, name plate) must sit IN FRONT. Children
@@ -201,10 +230,7 @@ function CardArtFromChildren({ children }: { children: React.ReactNode }) {
 	let art: React.ReactNode = null;
 	Children.forEach(children, (c) => {
 		if (!isValidElement(c)) return;
-		const t = c.type as { displayName?: string };
-		if (t.displayName === 'CardArt' ||
-			t.displayName === 'CardRankSuit' ||
-			t.displayName === 'CardCardBack') {
+		if (isArtLayerSlot(c)) {
 			if (art === null) art = c;
 		}
 	});
@@ -220,14 +246,37 @@ function NonArtChildren({ children }: { children: React.ReactNode }) {
 	const rest: React.ReactNode[] = [];
 	Children.forEach(children, (c) => {
 		if (!isValidElement(c)) return;
-		const t = c.type as { displayName?: string };
-		if (t.displayName === 'CardArt' ||
-			t.displayName === 'CardRankSuit' ||
-			t.displayName === 'CardCardBack' ||
-			c.type === CardHolo) return;
+		if (isArtLayerSlot(c) || c.type === CardHolo) return;
 		rest.push(c);
 	});
 	return <>{rest}</>;
+}
+
+/**
+ * `true` when `child` is one of the art-layer slots: <CardArt>,
+ * <CardRankSuit>, or <CardCardBack>. Identity check wins so the
+ * walker is robust to bundler displayName rewrites; displayName
+ * fallback handles the rare wrapped/forwardRef case.
+ */
+function isArtLayerSlot(child: React.ReactElement): boolean {
+	if (child.type === CardArt ||
+		child.type === CardRankSuit ||
+		child.type === CardCardBack) {
+		return true;
+	}
+	const t = child.type as { displayName?: string; name?: string };
+	// `displayName` covers wrapped/forwardRef; `name` (function name)
+	// is a final fallback for the rare case where a bundler strips
+	// displayName but preserves the source function name. This keeps
+	// the walker robust to HMR/dev-mode HOC wrapping.
+	if (t.displayName === 'CardArt' ||
+		t.displayName === 'CardRankSuit' ||
+		t.displayName === 'CardCardBack') {
+		return true;
+	}
+	return t.name === 'CardArt' ||
+		t.name === 'CardRankSuit' ||
+		t.name === 'CardCardBack';
 }
 
 export default CardFrame;
