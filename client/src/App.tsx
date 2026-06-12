@@ -98,6 +98,16 @@ const CardLabPage = lazy(async () => {
 	return loadLab() as Promise<{ default: React.ComponentType }>;
 });
 
+const frameTestModules = import.meta.glob('./game/components/dev/FrameTestPage.tsx');
+const FrameTestPage = lazy(async () => {
+	const loadTest = frameTestModules['./game/components/dev/FrameTestPage.tsx'];
+	if (!import.meta.env.DEV || loadTest === undefined) {
+		return { default: () => <Navigate to={routes.home} replace /> };
+	}
+
+	return loadTest() as Promise<{ default: React.ComponentType }>;
+});
+
 const CardVisualRuntimeLayout = lazy(async () => {
 	const [
 		{ CardTransformProvider },
@@ -1190,6 +1200,10 @@ function App() {
 						<Route
 							path={routes.cardLab}
 							element={import.meta.env.DEV ? <CardLabPage /> : <Navigate to={routes.home} replace />}
+						/>
+						<Route
+							path="/dev/frame-test"
+							element={import.meta.env.DEV ? <FrameTestPage /> : <Navigate to={routes.home} replace />}
 						/>
 
 						<Route element={<GlobalOverlaysLayout />}>
