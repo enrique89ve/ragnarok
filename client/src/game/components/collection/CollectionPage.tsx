@@ -1,7 +1,7 @@
 import { debug } from '../../config/debugConfig';
 import { showStatus } from '../ui/GameStatusBanner';
 import React, { useState, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Package, Zap } from 'lucide-react';
@@ -12,7 +12,6 @@ import { getRarityColor, getRaritySortRank, getTypeIcon } from '../../utils/rari
 import { GameIcon } from '../../utils/ui/GameIcon';
 import type { IconName } from '../../utils/ui/iconMap';
 import { getCardArtPath } from '../../utils/art/artMapping';
-import { getHoloTier, applyHoloVars, resetHoloVars } from '../../hooks/useHoloTracking';
 import type { OwnedCard } from '../packs/types';
 import { getMasteryTier } from '../../../data/blockchain/cardXPRewards';
 import { cardRegistry } from '../../data/cardRegistry';
@@ -429,15 +428,10 @@ function getShimmerClass(rarity: string): string {
 }
 
 /**
- * Smoke-test flag for the unified <CardFrame> chrome.
- * Opt-in via `?modernFrame=1` on the URL. Defaults to false so the
- * legacy hand-rolled tile is the visible production path until the
- * migration flips it (commit (d)).
+ * <ModernCollectionTile> is the single production path for collection
+ * grid cards. The legacy hand-rolled inline tile was removed in
+ * commit (d7) once the unified <CardFrame> chrome was proven.
  */
-function useModernFrame(): boolean {
-	const [searchParams] = useSearchParams();
-	return searchParams.get('modernFrame') === '1';
-}
 
 interface ModernTileClasses {
 	padding: string;
@@ -528,7 +522,6 @@ function ModernCollectionTile({ card, masteryTier, classes, onClick }: ModernCol
 }
 
 export default function CollectionPage() {
-	const modernFrame = useModernFrame();
 	const hiveCards = useNFTCollection();
 	const hiveUsername = useNFTUsername();
 	const bridge = getNFTBridge();
@@ -759,12 +752,8 @@ export default function CollectionPage() {
 	const collectionGridGap = getCollectionGridGap(gridWidth);
 	const compactCards = gridWidth < 420;
 	const cardPaddingClass = compactCards ? 'p-1.5' : 'p-2.5';
-	const cardIconClass = compactCards ? 'text-3xl' : 'text-4xl';
-	const cardTitleClass = compactCards ? 'text-[10px]' : 'text-xs';
 	const cardMetaClass = compactCards ? 'text-[8px]' : 'text-[10px]';
 	const cardSourceClass = compactCards ? 'text-[8px]' : 'text-[9px]';
-	const cardBadgeClass = compactCards ? 'w-5 h-5 text-[10px]' : 'w-6 h-6 text-[11px]';
-	const cardQuantityClass = compactCards ? 'w-5 h-5 text-[9px]' : 'w-6 h-6 text-[10px]';
 	const cardMintClass = compactCards ? 'text-[8px]' : 'text-[9px]';
 	const estimatedCollectionWidth = gridWidth;
 	const estimatedCardWidth = Math.max(0, (estimatedCollectionWidth - ((COLUMNS - 1) * collectionGridGap)) / COLUMNS);
@@ -1096,134 +1085,19 @@ export default function CollectionPage() {
 												const masteryTier = hiveAsset?.ownershipSource === 'nft'
 													? getMasteryTier(hiveAsset.xp, card.rarity)
 													: 0;
-												if (modernFrame) {
-													return (
-														<ModernCollectionTile
-															key={`${card.id}-${colIndex}`}
-															card={card}
-															masteryTier={masteryTier}
-															classes={{
-																padding: cardPaddingClass,
-																meta: cardMetaClass,
-																source: cardSourceClass,
-																mint: cardMintClass,
-															}}
-															onClick={() => setSelectedCard(card)}
-														/>
-													);
-												}
 												return (
-													<motion.div
+													<ModernCollectionTile
 														key={`${card.id}-${colIndex}`}
-														initial={{ opacity: 0, scale: 0.9 }}
-														animate={{ opacity: 1, scale: 1 }}
+														card={card}
+														masteryTier={masteryTier}
+														classes={{
+															padding: cardPaddingClass,
+															meta: cardMetaClass,
+															source: cardSourceClass,
+															mint: cardMintClass,
+														}}
 														onClick={() => setSelectedCard(card)}
-														className={`relative cursor-pointer overflow-hidden rounded-lg sm:rounded-xl ${getFrameClass(card.rarity)}`}
-														style={{ background: 'linear-gradient(180deg, #1a1a2e 0%, #16162a 100%)', aspectRatio: '3 / 4' }}
-													>
-														{card.rarity !== 'common' && (
-															<div className={getShimmerClass(card.rarity)} />
-														)}
-
-														{masteryTier >= 2 && (
-															<div className={`mastery-badge mastery-tier-${masteryTier}`}>
-																{Array.from({ length: masteryTier }).map((_, i) => (
-																	<GameIcon key={i} name="sparkles" size={12} className="mastery-star" />
-																))}
-															</div>
-														)}
-
-														{/* Card art area with holo */}
-														{(() => {
-															const artPath = getCardArtPath(card.id);
-															const holoTier = getHoloTier(card.rarity);
-															return (
-																<div
-																	className={`relative h-full ${holoTier ?? ''}`}
-																	onMouseMove={holoTier ? (e) => { applyHoloVars(e.currentTarget as HTMLElement, e); } : undefined}
-																	onMouseLeave={holoTier ? (e) => { resetHoloVars(e.currentTarget as HTMLElement); } : undefined}
-																>
-																	{/* Art image */}
-																	<div className="relative w-full h-full overflow-hidden rounded-lg sm:rounded-xl">
-																		{artPath ? (
-																			<img
-																				src={artPath}
-																				alt={card.name}
-																				className="w-full h-full object-cover"
-																				loading="lazy"
-																				draggable={false}
-																			/>
-																		) : (
-																			<div
-																				className="w-full h-full flex items-center justify-center"
-																				style={{ background: getClassGradient(card.heroClass) }}
-																			>
-																				<span className={`${cardIconClass} opacity-80`}><GameIcon name={getTypeIcon(card.type)} size={24} /></span>
-																			</div>
-																		)}
-
-																		{/* Dark gradient overlay for text readability */}
-																		<div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/30 to-transparent" />
-
-																		{/* Holo layers */}
-																		{holoTier && (
-																			<>
-																				<div className="holo-foil" />
-																				<div className="holo-glitter" />
-																				<div className="holo-glare" />
-																			</>
-																		)}
-																	</div>
-
-																	{/* Overlaid card info */}
-																	<div className={`absolute inset-0 flex flex-col pointer-events-none ${cardPaddingClass}`}>
-																		{/* Top row: mana cost + quantity */}
-																		<div className="flex justify-between items-start">
-																			{card.manaCost != null ? (
-																				<div className={`${cardBadgeClass} rounded-full bg-blue-600/90 border border-blue-300/60 flex items-center justify-center text-white font-bold shadow-lg`}>
-																					{card.manaCost}
-																				</div>
-																			) : (
-																				<span className="text-base drop-shadow-lg" title={card.type}><GameIcon name={getTypeIcon(card.type)} size={16} /></span>
-																			)}
-																			{card.quantity > 1 && (
-																				<div className={`${cardQuantityClass} bg-amber-600 rounded-full flex items-center justify-center text-white font-bold border border-amber-400 shadow-lg`}>
-																					x{card.quantity}
-																				</div>
-																			)}
-																		</div>
-
-																		{/* Bottom: name + rarity + stats */}
-																		<div className="mt-auto">
-																			<h3 className={`${cardTitleClass} font-bold text-white truncate drop-shadow-lg mb-0.5`}>{card.name}</h3>
-																			<div className="flex items-center justify-between">
-																				<span className={`${cardMetaClass} font-semibold uppercase ${getRarityColor(card.rarity)}`} style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
-																					{card.rarity}
-																				</span>
-																				<span className={`${cardSourceClass} font-semibold uppercase tracking-wider text-ink-300`} style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
-																					{getCollectionSourceLabel(card)}
-																				</span>
-																				{card.attack != null && card.health != null && (
-																					<span className={`${cardMetaClass} font-bold text-gray-200`} style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
-																						{card.attack}/{card.health}
-																					</span>
-																				)}
-																			</div>
-																			{card.mintNumber != null && (
-																				<div className="text-center mt-1">
-																					<span className={`mint-badge ${cardMintClass}`}>
-																						#{card.mintNumber}
-																						<span className="text-gray-500 mx-0.5">/</span>
-																						{card.maxSupply?.toLocaleString() ?? '???'}
-																					</span>
-																				</div>
-																			)}
-																		</div>
-																	</div>
-																</div>
-															);
-														})()}
-													</motion.div>
+													/>
 												);
 											})}
 										</div>
