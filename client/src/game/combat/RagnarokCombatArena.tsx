@@ -1352,14 +1352,14 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
                     <section className="battle-intel-section">
                       <div className="battle-intel-section-title">Wagers</div>
                       {wagerIntel.player.map((effect) => (
-                        <div key={`player-${effect.cardName}-${effect.description}`} className="battle-intel-row with-icon player">
+                        <div key={`player-${effect.cardName}-${effect.description}`} className="battle-intel-row with-icon player" data-card-family="nft">
                           <span className="battle-intel-row-icon">WGR</span>
                           <span className="battle-intel-row-text">{effect.description}</span>
                           <span className="battle-intel-source">{effect.cardName}</span>
                         </div>
                       ))}
                       {wagerIntel.opponent.map((effect) => (
-                        <div key={`opponent-${effect.cardName}-${effect.description}`} className="battle-intel-row with-icon opponent">
+                        <div key={`opponent-${effect.cardName}-${effect.description}`} className="battle-intel-row with-icon opponent" data-card-family="nft">
                           <span className="battle-intel-row-icon">WGR</span>
                           <span className="battle-intel-row-text">{effect.description}</span>
                           <span className="battle-intel-source">{effect.cardName}</span>

@@ -160,6 +160,7 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
               <motion.div
                 key={card.instanceId}
                 data-instance-id={card.instanceId}
+                data-card-family="nft"
                 className={`bf-card-wrapper
                   ${isShaking ? 'shake' : ''}
                   ${isAttacking ? 'attacking' : ''}
