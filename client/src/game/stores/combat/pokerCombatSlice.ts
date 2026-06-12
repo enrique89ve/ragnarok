@@ -42,6 +42,7 @@ import { compareHands } from '../../combat/modules/HandEvaluator';
 import { debug } from '../../config/debugConfig';
 import { applyStaminaShield, getExtraFoldPenalty } from '../../utils/poker/pokerSpellUtils';
 import { cryptoRng, seededRngFromString } from '../../utils/seededRng';
+import { playWagerActivate } from '../../combat/animations/PokerDramaVFX';
 import {
   createPokerTurnClock,
   createReceivedPokerTurnClock,
@@ -916,11 +917,17 @@ export const createPokerCombatSlice: StateCreator<
         if (gs) {
           for (const m of (gs.players?.player?.battlefield || [])) {
             const w = (m.card as any)?.wagerEffect;
-            if (w?.type === 'betting_round_damage') newOpponent.pet.stats.currentHealth = Math.max(0, newOpponent.pet.stats.currentHealth - (w.value || 0));
+            if (w?.type === 'betting_round_damage') {
+              newOpponent.pet.stats.currentHealth = Math.max(0, newOpponent.pet.stats.currentHealth - (w.value || 0));
+              playWagerActivate('betting_round_damage', 'player');
+            }
           }
           for (const m of (gs.players?.opponent?.battlefield || [])) {
             const w = (m.card as any)?.wagerEffect;
-            if (w?.type === 'betting_round_damage') newPlayer.pet.stats.currentHealth = Math.max(0, newPlayer.pet.stats.currentHealth - (w.value || 0));
+            if (w?.type === 'betting_round_damage') {
+              newPlayer.pet.stats.currentHealth = Math.max(0, newPlayer.pet.stats.currentHealth - (w.value || 0));
+              playWagerActivate('betting_round_damage', 'opponent');
+            }
           }
         }
       } catch { /* safe to skip */ }
@@ -1056,6 +1063,7 @@ export const createPokerCombatSlice: StateCreator<
             if (w?.type === 'on_opponent_fold_heal') {
               if (winner === 'player') playerFinalHealth = Math.min(playerFinalHealth + (w.value || 0), playerMaxHP);
               else opponentFinalHealth = Math.min(opponentFinalHealth + (w.value || 0), opponentMaxHP);
+              playWagerActivate('on_opponent_fold_heal', winner);
             }
           }
           // fold_penalty_to_healing: loser's minion converts fold HP loss into healing
@@ -1065,6 +1073,7 @@ export const createPokerCombatSlice: StateCreator<
               const loserCommittedHP = winner === 'player' ? opponentCommitted : playerCommitted;
               if (winner === 'player') opponentFinalHealth = Math.min(opponentCurrentHP + loserCommittedHP, opponentMaxHP);
               else playerFinalHealth = Math.min(playerCurrentHP + loserCommittedHP, playerMaxHP);
+              playWagerActivate('fold_penalty_to_healing', loserSide);
             }
           }
         }
@@ -1266,6 +1275,11 @@ export const createPokerCombatSlice: StateCreator<
             case 'hand_rank_upgrade':
               break;
           }
+
+          // 3-family separation: trigger the gold activation animation
+          // on Family 3 (nft) wager-bearing frames. Fires for every
+          // wager type that flows through this resolver.
+          playWagerActivate(wager.type, side);
         };
 
         for (const m of playerBf) {

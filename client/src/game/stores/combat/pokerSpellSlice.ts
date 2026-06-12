@@ -6,10 +6,10 @@
  */
 
 import { StateCreator } from 'zustand';
-import { 
+import {
   PokerSpellSlice,
   PokerSpellSliceState,
-  UnifiedCombatStore 
+  UnifiedCombatStore
 } from './types';
 import { PokerSpellCard } from '../../types/CardTypes';
 import {
@@ -23,6 +23,7 @@ import {
   getExtraFoldPenalty as utilGetExtraFoldPenalty,
   clearCombatSpellEffects
 } from '../../utils/poker/pokerSpellUtils';
+import { playPokerSpellCast } from '../../combat/animations/PokerDramaVFX';
 
 const initialState: PokerSpellSliceState = {
   pokerSpellState: null,
@@ -98,7 +99,11 @@ export const createPokerSpellSlice: StateCreator<
         message: `${caster === 'player' ? 'Player' : 'Opponent'} cast ${spell.name}: ${result.message}`,
         details: { spellId: spell.id, effectType: spell.pokerSpellEffect.effectType }
       });
-      
+
+      // 3-family separation: trigger the indigo cast animation on
+      // Family 2 (poker-spell) frames. Caster side determines target zone.
+      playPokerSpellCast(spell.pokerSpellEffect.effectType, caster);
+
       if (result.immediateEffects) {
         for (const effect of result.immediateEffects) {
           if (effect.type === 'skip_to_showdown') {

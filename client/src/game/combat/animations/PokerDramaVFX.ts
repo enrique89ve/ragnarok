@@ -1012,3 +1012,131 @@ export function playClashSound() {
 	osc.start(ctx.currentTime);
 	osc.stop(ctx.currentTime + 0.15);
 }
+
+// ============================================================
+// 3-Family VFX separation
+// ============================================================
+// Two new functions, one per non-default family. They are the
+// activation animations for the family axis (commit feat(card-frame)
+// family CSS). Both:
+//   - Particle burst at the caster zone.
+//   - Impact ring.
+//   - One-shot vignette overlay (family palette).
+//   - Stamp .is-casting / .is-activating on the right frame so the
+//     per-family keyframe (added in CardFrame.css) plays.
+// Wire-up lives in the slices (pokerSpellSlice / pokerCombatSlice).
+// ============================================================
+
+import type { PokerSpellEffectType } from '../../types/CardTypes';
+
+const POKER_SPELL_PALETTES: Record<PokerSpellEffectType, ParticleColor> = {
+	bluff_rune:       { primary: '#7c3aed', secondary: '#a78bfa', glow: 'rgba(124,58,237,0.6)' },
+	fate_peek:        { primary: '#6366f1', secondary: '#a5b4fc', glow: 'rgba(99,102,241,0.6)' },
+	stamina_shield:   { primary: '#0ea5e9', secondary: '#7dd3fc', glow: 'rgba(14,165,233,0.6)' },
+	hole_swap:        { primary: '#8b5cf6', secondary: '#c4b5fd', glow: 'rgba(139,92,246,0.6)' },
+	echo_bet:         { primary: '#3b82f6', secondary: '#93c5fd', glow: 'rgba(59,130,246,0.6)' },
+	shadow_fold:      { primary: '#1e293b', secondary: '#64748b', glow: 'rgba(100,116,139,0.6)' },
+	run_twice:        { primary: '#a78bfa', secondary: '#ddd6fe', glow: 'rgba(167,139,250,0.6)' },
+	river_rewrite:    { primary: '#06b6d4', secondary: '#67e8f9', glow: 'rgba(6,182,212,0.6)' },
+	norns_glimpse:    { primary: '#d946ef', secondary: '#f0abfc', glow: 'rgba(217,70,239,0.6)' },
+	fold_curse:       { primary: '#be123c', secondary: '#fda4af', glow: 'rgba(190,18,60,0.6)' },
+	blood_bet:        { primary: '#dc2626', secondary: '#fca5a5', glow: 'rgba(220,38,38,0.6)' },
+	void_stare:       { primary: '#312e81', secondary: '#6366f1', glow: 'rgba(49,46,129,0.6)' },
+	all_in_aura:      { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
+	ragnarok_gambit:  { primary: '#ef4444', secondary: '#fca5a5', glow: 'rgba(239,68,68,0.6)' },
+	destiny_override: { primary: '#fbbf24', secondary: '#fef3c7', glow: 'rgba(251,191,36,0.6)' },
+};
+
+const WAGER_PALETTES: Record<string, ParticleColor> = {
+	showdown_win_armor:             { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
+	showdown_coin_flip:             { primary: '#facc15', secondary: '#fef9c3', glow: 'rgba(250,204,21,0.6)' },
+	showdown_win_rank_damage:       { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
+	showdown_aoe_damage:            { primary: '#f59e0b', secondary: '#fcd34d', glow: 'rgba(245,158,11,0.6)' },
+	showdown_hand_rank_draw:        { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
+	showdown_win_draw_and_damage:   { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
+	double_showdown_multiplier:     { primary: '#fde047', secondary: '#fef08a', glow: 'rgba(253,224,71,0.6)' },
+	all_in_bonus_with_cost:         { primary: '#dc2626', secondary: '#fca5a5', glow: 'rgba(220,38,38,0.6)' },
+	on_opponent_fold_heal:          { primary: '#84cc16', secondary: '#bef264', glow: 'rgba(132,204,22,0.6)' },
+	fold_penalty_to_healing:        { primary: '#84cc16', secondary: '#bef264', glow: 'rgba(132,204,22,0.6)' },
+	all_in_buff_minions:            { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
+	reveal_opponent_hole_cards:     { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
+	peek_next_community_card:       { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
+	hide_bet_actions:               { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
+	increase_min_bet:               { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
+	reduce_fold_penalty:            { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
+	double_blinds_bonus_multiplier: { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
+	betting_round_damage:           { primary: '#fbbf24', secondary: '#fde68a', glow: 'rgba(251,191,36,0.6)' },
+	hand_rank_upgrade:              { primary: '#facc15', secondary: '#fef9c3', glow: 'rgba(250,204,21,0.6)' },
+};
+
+/**
+ * Cast a poker spell. Indigo palette per effect type, scale-punch
+ * keyframe on the spell tray frames, indigo vignette fade.
+ */
+export function playPokerSpellCast(
+	effectType: PokerSpellEffectType,
+	caster: 'player' | 'opponent'
+): void {
+	const container = getOrCreateContainer();
+	if (!container) return;
+	const palette = POKER_SPELL_PALETTES[effectType] || POKER_SPELL_PALETTES.bluff_rune;
+	const cx = window.innerWidth / 2;
+	const cy = caster === 'player' ? window.innerHeight * 0.75 : window.innerHeight * 0.25;
+
+	spawnParticleBurst(cx, cy, 22, palette);
+	spawnImpactRing(cx, cy, palette);
+
+	const vignette = createDiv({
+		inset: '0',
+		background: `radial-gradient(ellipse at center, ${palette.primary}22 0%, transparent 50%)`,
+		zIndex: '1',
+	});
+	container.appendChild(vignette);
+	gsap.to(vignette, { opacity: 0, duration: 0.9, onComplete: () => cleanup(vignette) });
+
+	document
+		.querySelectorAll('.poker-spell-tray .card-frame--family-poker-spell')
+		.forEach((el) => {
+			el.classList.remove('is-casting');
+			// Force reflow so the animation re-fires for repeat casts.
+			void (el as HTMLElement).offsetWidth;
+			el.classList.add('is-casting');
+			setTimeout(() => el.classList.remove('is-casting'), 1500);
+		});
+}
+
+/**
+ * Activate a wager effect. Gold/amber palette, rotate-pulse keyframe
+ * on the wager-bearing minion frame, gold vignette fade.
+ */
+export function playWagerActivate(
+	wagerType: string,
+	side: 'player' | 'opponent'
+): void {
+	const container = getOrCreateContainer();
+	if (!container) return;
+	const palette = WAGER_PALETTES[wagerType] || WAGER_PALETTES.showdown_win_armor;
+	const cx = window.innerWidth / 2;
+	const cy = side === 'player' ? window.innerHeight * 0.7 : window.innerHeight * 0.3;
+
+	spawnParticleBurst(cx, cy, 14, palette);
+	spawnImpactRing(cx, cy, palette);
+
+	const vignette = createDiv({
+		inset: '0',
+		background: `radial-gradient(ellipse at center, ${palette.primary}22 0%, transparent 55%)`,
+		zIndex: '1',
+	});
+	container.appendChild(vignette);
+	gsap.to(vignette, { opacity: 0, duration: 0.8, onComplete: () => cleanup(vignette) });
+
+	const sel = side === 'player'
+		? '.player-battlefield-cards .has-wager .card-frame--family-nft, .player-battlefield-cards .card-frame--family-nft.has-wager'
+		: '.opponent-battlefield-cards .has-wager .card-frame--family-nft, .opponent-battlefield-cards .card-frame--family-nft.has-wager';
+	document.querySelectorAll(sel).forEach((el) => {
+		el.classList.remove('is-activating');
+		void (el as HTMLElement).offsetWidth;
+		el.classList.add('is-activating');
+		setTimeout(() => el.classList.remove('is-activating'), 1100);
+	});
+}
