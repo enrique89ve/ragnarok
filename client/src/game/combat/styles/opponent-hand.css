@@ -4,6 +4,8 @@
 .opponent-revealed-card {
   position: relative;
   z-index: 2;
+  height: 100%;
+  overflow: hidden;
   transition: transform 0.3s ease;
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
 }

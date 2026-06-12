@@ -139,8 +139,14 @@ const CardFrame: React.FC<CardFrameProps> = ({
 					'--cf-band-from': band.from,
 					'--cf-band-to': band.to,
 					'--cf-radius': `${dims.borderRadius}px`,
-					width: dims.width,
-					height: dims.height,
+					// Fill the parent slot width (up to the resolved max) and let
+					// `aspectRatio` derive the height. This way the card respects
+					// the parent container's width — flex parents, grid cells,
+					// hand slots — instead of forcing its own px dimensions and
+					// overflowing them. `maxWidth` still caps standalone callers
+					// (MulliganCard, MythicEntrance) that have no parent width.
+					width: '100%',
+					maxWidth: dims.width,
 					aspectRatio: dims.aspectRatio,
 					...style,
 				} as React.CSSProperties}

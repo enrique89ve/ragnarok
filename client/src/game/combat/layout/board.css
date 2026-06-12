@@ -213,7 +213,7 @@
   left: var(--poker-zone-opponentHand-x, 256px);
   top: var(--poker-zone-opponentHand-y, 160px);
   width: var(--poker-zone-opponentHand-w, 320px);
-  height: var(--poker-zone-opponentHand-h, 96px) !important;
+  height: var(--poker-zone-opponentHand-h, 112px) !important;
   display: flex;
   flex-direction: row;
   align-items: center;
