@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { CardData, DiscoveryState, CardType, CardRarity, HeroClass } from '../types';
-import SimpleCard, { SimpleCardData } from './SimpleCard';
+import SimpleCard, { SimpleCardData } from './card/SimpleCardCompat';
 import { createCardInstance } from '../utils/cards/cardUtils';
 import { filterCards } from '../utils/discoveryUtils';
 import { useAudio } from '../../lib/stores/useAudio';

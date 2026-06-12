@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CardInstance } from '../types';
-import SimpleCard, { SimpleCardData } from './SimpleCard';
+import SimpleCard, { SimpleCardData } from './card/SimpleCardCompat';
 import { GameIcon } from '../utils/ui/GameIcon';
 
 interface GraveyardProps {

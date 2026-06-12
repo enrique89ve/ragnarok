@@ -13,7 +13,7 @@ import React, { useMemo } from 'react';
 import { getRarityColor } from '../../../utils/rarityUtils';
 import type { Rarity } from '@shared/schemas/rarity';
 import type { NorseElement } from '../../../types/NorseTypes';
-import type { SimpleCardType } from '../../SimpleCard';
+import type { SimpleCardType } from '../../card/SimpleCardCompat';
 import { ELEMENT_BAND } from '../../../utils/art/elementBand';
 
 interface Props {

@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { CardInstance } from '../types';
-import { SimpleCard, SimpleCardData } from './SimpleCard';
+import { SimpleCard, SimpleCardData } from './card/SimpleCardCompat';
 import { getCardById } from '../data/allCards';
 import './mulligan.css';
 import { GameIcon } from '../utils/ui/GameIcon';

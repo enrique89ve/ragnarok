@@ -8,7 +8,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { CardInstance } from '../types';
 import { Position } from '../types/Position';
-import SimpleCard, { SimpleCardData } from './SimpleCard';
+import SimpleCard, { SimpleCardData } from './card/SimpleCardCompat';
 
 interface CardDragLayerProps {
   card: CardInstance | null;

@@ -8,7 +8,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { CardData, Position } from '../types';
 import { useAudio } from '../../lib/stores/useAudio';
-import { SimpleCard, SimpleCardData } from '../components/SimpleCard';
+import { SimpleCard, SimpleCardData } from '../components/card/SimpleCardCompat';
 import gsap from 'gsap';
 import { spawnParticleBurst, spawnImpactRing, spawnEmbers } from './PixiParticleCanvas';
 
