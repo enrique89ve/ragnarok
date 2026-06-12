@@ -15,8 +15,8 @@ import {
   normalizeSimpleCardElement,
   normalizeSimpleCardType,
   SimpleCard,
-} from './SimpleCard';
-import type { SimpleCardData, SimpleCardStatsMode, SimpleCardStatView } from './SimpleCard';
+} from './card/SimpleCardCompat';
+import type { SimpleCardData, SimpleCardStatsMode, SimpleCardStatView } from './card/SimpleCardCompat';
 
 type SimpleCardSize = 'small' | 'medium' | 'large' | 'preview';
 

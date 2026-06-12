@@ -13,8 +13,8 @@ import {
   normalizeSimpleCardElement,
   normalizeSimpleCardType,
   SimpleCard,
-} from '../SimpleCard';
-import type { SimpleCardData, SimpleCardStatsMode, SimpleCardStatView } from '../SimpleCard';
+} from '../card/SimpleCardCompat';
+import type { SimpleCardData, SimpleCardStatsMode, SimpleCardStatView } from '../card/SimpleCardCompat';
 import { getCardDataSafely } from '../../utils/cards/cardInstanceAdapter';
 import { getCardById } from '../../data/allCards';
 
