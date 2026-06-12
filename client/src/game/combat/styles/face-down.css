@@ -19,9 +19,15 @@
 .opponent-card-back {
   width: var(--opponent-hand-card-width, 78px);
   height: 110px;
-  background: #1a1d24;
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(255, 255, 255, 0.03) 0%, rgba(0, 0, 0, 0.14) 75%),
+    #1a1d24;
   border: none;
   border-radius: 7px;
+  box-shadow:
+    inset 0 0 0 1.5px #c9a84c,
+    inset 0 0 0 3px rgba(26, 29, 36, 0.95),
+    inset 0 1px 3px rgba(0, 0, 0, 0.45);
   flex: 0 0 var(--opponent-hand-card-width, 78px);
   position: relative;
   margin-left: var(--opponent-hand-card-overlap, -39px);
@@ -37,16 +43,22 @@
   content: '';
 }
 
-/* Eihwaz rune — identity, kept but flat (no glow/text-shadow) */
+/* Eihwaz rune — identity, beveled (light top-left + dark bottom-right)
+   to read as raised gold. Same recipe as .poker-card-frame--face-down
+   and .card-placeholder, scaled down for the 78×110 hand card. */
 .opponent-card-back::after {
   content: 'ᛇ';
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 1.4rem;
-  color: rgba(201, 168, 76, 0.7);
   font-family: 'Cinzel', serif;
+  font-size: 1.4rem;
+  line-height: 1;
+  color: rgba(201, 168, 76, 0.68);
+  text-shadow:
+    -0.6px -0.6px 0 rgba(255, 235, 180, 0.5),
+    0.6px 0.6px 0 rgba(0, 0, 0, 0.8);
 }
 
 /* Fan effect on hover */
