@@ -21,6 +21,9 @@ export const POKER_VIEWPORT_ZONE_IDS = [
 	'deckCounters',
 	'battleLog',
 	'vfxFocus',
+	'opponentPokerSpellTray',
+	'playerPokerSpellTray',
+	'wagerActivation',
 ] as const;
 
 export type PokerViewportZoneId = typeof POKER_VIEWPORT_ZONE_IDS[number];
@@ -31,6 +34,8 @@ export type PokerViewportCssVarName = `--poker-zone-${PokerViewportZoneId}-${'x'
 	| '--poker-layout-grid'
 	| '--poker-bottom-rail-y'
 	| '--poker-bottom-rail-gap'
+	| '--poker-player-hand-card-rise'
+	| '--poker-betting-controls-drop'
 	| '--poker-hud-badge-height';
 
 export interface PokerViewportZone {
@@ -83,11 +88,17 @@ const POKER_BOTTOM_RAIL_Y = 1024;
 const TURN_BADGE_HEIGHT = 48;
 const PLAYER_HERO_HEIGHT = 288;
 const BETTING_CONTROLS_HEIGHT = 96;
+const BETTING_CONTROLS_DROP_RATIO = 0.2;
+const BETTING_CONTROLS_DROP = Math.round(BETTING_CONTROLS_HEIGHT * BETTING_CONTROLS_DROP_RATIO);
 const BATTLE_LOG_HEIGHT = 232;
 const BOTTOM_RAIL_GAP = 52;
 const HUD_BADGE_HEIGHT = 36;
 const DECK_COUNTERS_RIGHT_EDGE_X = 1864;
 const DECK_COUNTERS_WIDTH = 174;
+const PLAYER_HAND_BASE_Y = 728;
+const PLAYER_HAND_HEIGHT = 192;
+const PLAYER_HAND_CARD_RISE_RATIO = 0.2;
+const PLAYER_HAND_CARD_RISE = Math.round(PLAYER_HAND_HEIGHT * PLAYER_HAND_CARD_RISE_RATIO);
 
 export const POKER_VIEWPORT_LAYOUT = {
 	schema: 'norse-poker-layout-draft/v1',
@@ -122,6 +133,7 @@ export const POKER_VIEWPORT_LAYOUT = {
 				'opponentHero',
 				'opponentHeroCards',
 				'opponentHand',
+				'opponentPokerSpellTray',
 				'communityCards',
 				'battlefield',
 				'opponentBattlefieldCards',
@@ -129,6 +141,7 @@ export const POKER_VIEWPORT_LAYOUT = {
 				'playerHero',
 				'playerHeroCards',
 				'playerHand',
+				'playerPokerSpellTray',
 			],
 			hud: [
 				'turnBadge',
@@ -141,7 +154,7 @@ export const POKER_VIEWPORT_LAYOUT = {
 				'deckCounters',
 				'battleLog',
 			],
-			vfx: ['vfxFocus'],
+			vfx: ['vfxFocus', 'wagerActivation'],
 		},
 	},
 	zones: {
@@ -275,9 +288,9 @@ export const POKER_VIEWPORT_LAYOUT = {
 			layer: 'game',
 			label: 'Player card hand fan',
 			x: 304,
-			y: 728,
+			y: PLAYER_HAND_BASE_Y,
 			width: 700,
-			height: 192,
+			height: PLAYER_HAND_HEIGHT,
 			rotation: 0,
 		},
 		bettingControls: {
@@ -325,6 +338,33 @@ export const POKER_VIEWPORT_LAYOUT = {
 			height: 416,
 			rotation: 0,
 		},
+		opponentPokerSpellTray: {
+			layer: 'game',
+			label: 'Opponent poker spell tray (Family 2)',
+			x: 600,
+			y: 160,
+			width: 320,
+			height: 88,
+			rotation: 0,
+		},
+		playerPokerSpellTray: {
+			layer: 'game',
+			label: 'Player poker spell tray (Family 2)',
+			x: 600,
+			y: 820,
+			width: 320,
+			height: 88,
+			rotation: 0,
+		},
+		wagerActivation: {
+			layer: 'vfx',
+			label: 'Wager activation surface (Family 3)',
+			x: 552,
+			y: 244,
+			width: 888,
+			height: 496,
+			rotation: 0,
+		},
 	},
 } as const satisfies PokerViewportLayout;
 
@@ -340,6 +380,8 @@ export function buildPokerViewportLayoutStyle(layout: PokerViewportLayout = POKE
 		'--poker-layout-grid': toPixels(layout.grid.size),
 		'--poker-bottom-rail-y': toPixels(layout.zones.bettingControls.y + layout.zones.bettingControls.height),
 		'--poker-bottom-rail-gap': toPixels(BOTTOM_RAIL_GAP),
+		'--poker-player-hand-card-rise': toPixels(PLAYER_HAND_CARD_RISE),
+		'--poker-betting-controls-drop': toPixels(BETTING_CONTROLS_DROP),
 		'--poker-hud-badge-height': toPixels(HUD_BADGE_HEIGHT),
 	};
 

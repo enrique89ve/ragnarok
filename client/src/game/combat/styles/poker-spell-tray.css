@@ -1,0 +1,36 @@
+/* ============================================================
+   <PokerSpellTray> — Family 2 (poker-spell) in-arena surface.
+   Per-family axis: indigo accent + glow, distinct from Family 1
+   (parchment) and Family 3 (gold/amber).
+   ============================================================ */
+
+.poker-spell-tray {
+	display: flex;
+	gap: var(--poker-layout-grid, 8px);
+	padding: var(--poker-layout-grid, 8px);
+	justify-content: center;
+	align-items: center;
+	width: 100%;
+	height: 100%;
+	pointer-events: auto;
+	box-sizing: border-box;
+}
+
+.poker-spell-tray__slot {
+	width: 72px;
+	height: 96px;
+	flex: 0 0 auto;
+}
+
+.poker-spell-tray__empty {
+	color: rgba(167, 139, 250, 0.4);
+	font-family: 'Cinzel', serif;
+	font-size: 0.7rem;
+	letter-spacing: 2px;
+	text-transform: uppercase;
+	pointer-events: none;
+}
+
+.poker-spell-tray--opponent .poker-spell-tray__empty {
+	color: rgba(239, 68, 68, 0.4);
+}
