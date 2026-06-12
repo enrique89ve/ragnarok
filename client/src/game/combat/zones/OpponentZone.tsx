@@ -19,11 +19,19 @@ import { PhasePipIndicator } from '../components/PhasePipIndicator';
 import { BattlefieldHero } from '../components/BattlefieldHero';
 import { HoleCardsOverlay } from '../components/HoleCardsOverlay';
 import { HeroResourceDock } from '../components/HeroResourceDock';
-import CardRenderer from '../../components/CardRendering/CardRenderer';
+import SimpleCardCompat from '../../components/card/SimpleCardCompat';
+import { toSimpleCardData } from '../../components/card/cardDataAdapter';
 import type { PokerCard } from '../../types/PokerCombatTypes';
 import type { CardInstance } from '../../types';
 import type { ShowdownCelebration } from '../hooks/useCombatEvents';
 import { ARENA_VFX_TARGETS, arenaVfxTargetProps } from '../arenaVfxTargets';
+
+const OPPONENT_HAND_VISIBLE_LIMIT = 10;
+// Mirrors the opponent-card-back geometry; the badge follows the right edge
+// of the last visible card while the stack grows.
+const OPPONENT_HAND_CARD_WIDTH_PX = 78;
+const OPPONENT_HAND_CARD_OVERLAP_PX = -39;
+const OPPONENT_HAND_CARD_STEP_PX = OPPONENT_HAND_CARD_WIDTH_PX + OPPONENT_HAND_CARD_OVERLAP_PX;
 
 export interface OpponentZoneProps {
 	readonly opponentPet: object | null | undefined;
@@ -77,6 +85,13 @@ export const OpponentZone: React.FC<OpponentZoneProps> = ({
 	const isShowdown = showdownCelebration?.resolution.resolutionType === 'showdown';
 	const revealedHoleCards = isAllInShowdown || isShowdown;
 	const handCount = opponentHand.length;
+	const visibleOpponentHand = opponentHand.slice(0, OPPONENT_HAND_VISIBLE_LIMIT);
+	const visibleHandCount = visibleOpponentHand.length;
+	const handCountAnchorX = OPPONENT_HAND_CARD_WIDTH_PX + Math.max(0, visibleHandCount - 1) * OPPONENT_HAND_CARD_STEP_PX;
+	const opponentHandStyle = {
+		'--opponent-visible-hand-count': String(visibleHandCount),
+		'--opponent-hand-count-anchor-x': `${handCountAnchorX}px`,
+	} as React.CSSProperties & Record<'--opponent-visible-hand-count' | '--opponent-hand-count-anchor-x', string>;
 
 	return (
 		<header
@@ -121,11 +136,15 @@ export const OpponentZone: React.FC<OpponentZoneProps> = ({
 					<HeroResourceDock owner="opponent" currentMana={opponentMana} maxMana={opponentMaxMana} />
 				</div>
 			)}
-			<div className="opponent-hand-display">
-				{opponentHand.slice(0, 10).map((card, index) => (
+			<div className="opponent-hand-display" style={opponentHandStyle}>
+				{visibleOpponentHand.map((card, index) => (
 					card.isRevealed ? (
 						<div key={card.instanceId || `opp-revealed-${index}`} className="opponent-revealed-card scale-[0.4] -mx-8">
-							<CardRenderer card={card} isInHand={true} size="small" />
+							{(() => {
+								const simpleData = toSimpleCardData(card);
+								if (!simpleData) return null;
+								return <SimpleCardCompat card={simpleData} size="small" />;
+							})()}
 						</div>
 					) : (
 						<div key={`opp-card-${index}`} className="opponent-card-back" />

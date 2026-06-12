@@ -8,7 +8,7 @@
 
 import type { Rarity } from '@shared/schemas/rarity';
 import type { NorseElement } from '../../../types/NorseTypes';
-import type { SimpleCardType } from '../../SimpleCard';
+import type { SimpleCardType } from '../../card/SimpleCardCompat';
 
 export type FrameDirection = 'svg-only' | 'svg-css' | 'svg-pixi' | 'static-png';
 

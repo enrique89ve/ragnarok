@@ -12,10 +12,11 @@ import { debug } from '../config/debugConfig';
 import React, { useMemo, useState, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CardInstanceWithCardData } from '../types/interfaceExtensions';
-import CardRenderer from './CardRendering/CardRenderer';
+import SimpleCardCompat from './card/SimpleCardCompat';
+import { toSimpleCardData } from './card/cardDataAdapter';
 import { MAX_BATTLEFIELD_SIZE } from '../constants/gameConstants';
 import { hasKeyword } from '../utils/cards/keywordUtils';
-import type { SimpleCardStatTone, SimpleCardStatView } from './SimpleCard';
+import type { SimpleCardStatTone, SimpleCardStatView } from './card/SimpleCardCompat';
 import './SimpleBattlefield.css';
 import { GameIcon } from '../utils/ui/GameIcon';
 import type { IconName } from '../utils/ui/iconMap';
@@ -211,14 +212,20 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
                   !isInteractionDisabled && onClick?.(card);
                 }}
               >
-                <CardRenderer
-                  card={card}
-                  isPlayable={true}
-                  isHighlighted={isAttacking || canAttack || isTarget}
-                  size="medium"
-                  statView={buildBattlefieldStatView(card)}
-                  statsMode="battlefield"
-                />
+                {(() => {
+                  const simpleData = toSimpleCardData(card);
+                  if (!simpleData) return null;
+                  return (
+                    <SimpleCardCompat
+                      card={simpleData}
+                      isPlayable
+                      isHighlighted={isAttacking || canAttack || isTarget}
+                      size="medium"
+                      statView={buildBattlefieldStatView(card)}
+                      statsMode="battlefield"
+                    />
+                  );
+                })()}
                 {hasAnyStatus && (
                   <div className="bf-status-badges">
                     {statusPoisoned && <span className="status-badge badge-poison" title="Poison: 3 damage per turn"><GameIcon name="skullCrossed" size={12} /></span>}

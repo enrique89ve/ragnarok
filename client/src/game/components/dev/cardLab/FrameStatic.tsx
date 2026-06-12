@@ -20,7 +20,7 @@ import { getCardArtPath, DEFAULT_PORTRAIT } from '../../../utils/art/artMapping'
 import { framePathFor } from '../../../utils/art/frameArt';
 import type { Rarity } from '@shared/schemas/rarity';
 import type { NorseElement } from '../../../types/NorseTypes';
-import type { SimpleCardType } from '../../SimpleCard';
+import type { SimpleCardType } from '../../card/SimpleCardCompat';
 import { ELEMENT_BAND } from '../../../utils/art/elementBand';
 import { FrameSvgOnly } from './FrameSvgOnly';
 

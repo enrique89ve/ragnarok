@@ -3,7 +3,8 @@ import { CardInstanceWithCardData } from '../types/interfaceExtensions';
 import { Position } from '../types/Position';
 import { useGameStore } from '../stores/gameStore';
 import { canPlayCard } from '../utils/cards/cardUtils';
-import CardRenderer from './CardRenderer';
+import SimpleCardCompat from './card/SimpleCardCompat';
+import { toSimpleCardData } from './card/cardDataAdapter';
 import { debug } from '../config/debugConfig';
 
 interface DirectCardDragProps {
@@ -191,12 +192,18 @@ export const DirectCardDrag: React.FC<DirectCardDragProps> = ({
       data-card-id={cardInstance.card.id}
       data-playable={isPlayable}
     >
-      <CardRenderer
-        card={cardInstance as any}
-        isInHand={isInHand}
-        isPlayable={isPlayable}
-        isHighlighted={false}
-      />
+      {(() => {
+        const simpleData = toSimpleCardData(cardInstance);
+        if (!simpleData) return null;
+        return (
+          <SimpleCardCompat
+            card={simpleData}
+            isPlayable={isPlayable ?? false}
+            isHighlighted={false}
+            size="small"
+          />
+        );
+      })()}
     </div>
   );
 };

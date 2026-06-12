@@ -17,7 +17,8 @@ import './NorseFrame/NorseFrame.css';
 import { formatCardText } from '../utils/textFormatUtils';
 import { fixCardRenderingIssues } from '../utils/cardRenderingSystemFix';
 import { ACTIVE_CARD_RENDERER } from '../utils/cards/cardRenderingRegistry';
-import CardRenderer from './CardRendering/CardRenderer';
+import SimpleCardCompat from './card/SimpleCardCompat';
+import { toSimpleCardData } from './card/cardDataAdapter';
 
 interface EnhancedCardProps {
   card: CardData | CardInstance;
@@ -135,21 +136,22 @@ export const EnhancedCard = React.forwardRef<HTMLDivElement, EnhancedCardProps>(
         zIndex: isHighlighted ? 10 : 1,
       }}
     >
-      {/* Use CardRenderer for pure card rendering */}
+      {/* Use SimpleCardCompat for pure card rendering */}
       <div className="absolute inset-0 z-50">
-        <CardRenderer 
-          card={card}
-          isInHand={isInHand}
-          isPlayable={isPlayable}
-          isHighlighted={isHighlighted}
-          scale={scale}
-          onClick={onClick}
-          use3D={true}
-          className="premium-card"
-          renderQuality="high"
-          enableHolographic={true}
-          forceHolographic={cardData.rarity === 'mythic' || cardData.rarity === 'epic'}
-        />
+        {(() => {
+          const simpleData = toSimpleCardData(card);
+          if (!simpleData) return null;
+          return (
+            <SimpleCardCompat
+              card={simpleData}
+              isPlayable={isPlayable}
+              isHighlighted={isHighlighted}
+              size={isInHand ? 'small' : 'medium'}
+              className="premium-card"
+              style={{ width: '100%', height: '100%' }}
+            />
+          );
+        })()}
       </div>
             
       {/* Apply Norse themed frame around the card */}

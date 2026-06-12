@@ -15,7 +15,7 @@ import { RARITY, type Rarity } from '@shared/schemas/rarity';
 import { sampleForRarity, resolveSample } from './sampleCards';
 import { ELEMENT_BAND } from '../../../utils/art/elementBand';
 import { getCardArtPath, DEFAULT_PORTRAIT } from '../../../utils/art/artMapping';
-import type { SimpleCardType } from '../../SimpleCard';
+import type { SimpleCardType } from '../../card/SimpleCardCompat';
 
 interface Props {
 	cardType: SimpleCardType;

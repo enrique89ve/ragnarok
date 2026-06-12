@@ -12,7 +12,8 @@ import { playSound } from '../utils/soundUtils';
 import { ACTIVE_CARD_RENDERER } from '../utils/cards/cardRenderingRegistry';
 import { fixCardRenderingIssues } from '../utils/cardRenderingSystemFix';
 import { getCardDataSafely } from '../utils/cards/cardInstanceAdapter';
-import CardRenderer from './CardRendering/CardRenderer';
+import SimpleCardCompat from './card/SimpleCardCompat';
+import { toSimpleCardData } from './card/cardDataAdapter';
 import './CardHoverEffects.css';
 
 interface CardWithDragProps {
@@ -87,6 +88,7 @@ export const CardWithDrag: React.FC<CardWithDragProps> = React.memo(({
 	};
 	const cardId = getStableCardId();
 	const processedCard = getCardDataSafely(card);
+	const simpleData = toSimpleCardData(processedCard);
 
 	return (
 		<div
@@ -102,21 +104,18 @@ export const CardWithDrag: React.FC<CardWithDragProps> = React.memo(({
 			data-is-in-hand={isInHand ? 'true' : 'false'}
 			data-is-playable={isPlayable ? 'true' : 'false'}
 		>
-			<CardRenderer
-				card={processedCard}
-				isInHand={isInHand}
-				isPlayable={isPlayable}
-				isHighlighted={isHovering}
-				scale={1.0}
-				onClick={handleClick}
-				onHover={NOOP_HOVER}
-				use3D={false}
-				className="flat-card-container"
-				renderQuality="high"
-				cardId={cardId}
-				attackBuff={attackBuff}
-				healthBuff={healthBuff}
-			/>
+			{simpleData && (
+				<SimpleCardCompat
+					card={simpleData}
+					isPlayable={isPlayable}
+					isHighlighted={isHovering}
+					size="small"
+					onClick={handleClick}
+					className="flat-card-container"
+					attackBuff={attackBuff}
+					healthBuff={healthBuff}
+				/>
+			)}
 		</div>
 	);
 });

@@ -34,7 +34,7 @@ import {
 	FRAME_DIRECTION_NOTE,
 	type FrameDirection,
 } from './cardLab/types';
-import type { SimpleCardType } from '../SimpleCard';
+import type { SimpleCardType } from '../card/SimpleCardCompat';
 import './cardLab/CardLabPage.css';
 
 const TYPE_OPTIONS: readonly SimpleCardType[] = CARD_TYPES as readonly SimpleCardType[];

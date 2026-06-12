@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CardData } from '../../types';
-import { CardRenderer } from '../CardRenderer';
+import SimpleCardCompat from '../card/SimpleCardCompat';
+import { toSimpleCardData } from '../card/cardDataAdapter';
 import { UnifiedCard, extractCardData } from '../../utils/cards/cardTypeAdapter';
 
 const GLOW_COLORS = {
@@ -86,14 +87,17 @@ const CollectionCard: React.FC<CollectionCardProps> = React.memo(({
     >
       <div className="relative h-full w-full flex items-center justify-center p-3">
         <div className="w-full h-full">
-          <CardRenderer
-            card={cardData}
-            enableHolographic={true}
-            forceHolographic={cardData.rarity === 'mythic' || cardData.rarity === 'epic'}
-            renderQuality="medium"
-            isPlayable={canAdd && count < maxCount}
-            size="large"
-          />
+          {(() => {
+            const simpleData = toSimpleCardData(cardData);
+            if (!simpleData) return null;
+            return (
+              <SimpleCardCompat
+                card={simpleData}
+                isPlayable={canAdd && count < maxCount}
+                size="large"
+              />
+            );
+          })()}
         </div>
 
         {/* Card glow effect (CCG style) */}
