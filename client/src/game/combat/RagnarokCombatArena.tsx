@@ -64,6 +64,7 @@ import { useHeroHealthEffects } from './hooks/useHeroHealthEffects';
 import { useAudio } from '../../lib/stores/useAudio';
 import { BossPhaseFlash } from './components/BossPhaseFlash';
 import { BettingPanel } from './components/BettingPanel';
+import { PokerSpellTray } from './components/PokerSpellTray';
 import { WagerInfoPanel } from './components/WagerInfoPanel';
 import { PokerP2PTurnStatus } from './components/PokerP2PTurnStatus';
 import type { BossPhaseFlash as BossPhaseFlashKind } from '../campaign/campaignTypes';
@@ -728,7 +729,54 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
           showFrontlineButton={isPlayerTurn && playerBattlefield.length > 0}
         />
       )}
-      
+
+      {/* Family 2 — poker-spell trays (one per caster, both render the
+          shared pendingPokerSpells queue so the player can preview
+          what is about to resolve during SPELL_PET). Mounted via the
+          playerPokerSpellTray / opponentPokerSpellTray zones defined
+          in pokerViewportLayout. */}
+      <div
+        className="poker-spell-tray-mount poker-spell-tray-mount--opponent"
+        style={{
+          position: 'absolute',
+          left: 'var(--poker-zone-opponentPokerSpellTray-x)',
+          top: 'var(--poker-zone-opponentPokerSpellTray-y)',
+          width: 'var(--poker-zone-opponentPokerSpellTray-w)',
+          height: 'var(--poker-zone-opponentPokerSpellTray-h)',
+          zIndex: 130,
+        }}
+      >
+        <PokerSpellTray caster="opponent" />
+      </div>
+      <div
+        className="poker-spell-tray-mount poker-spell-tray-mount--player"
+        style={{
+          position: 'absolute',
+          left: 'var(--poker-zone-playerPokerSpellTray-x)',
+          top: 'var(--poker-zone-playerPokerSpellTray-y)',
+          width: 'var(--poker-zone-playerPokerSpellTray-w)',
+          height: 'var(--poker-zone-playerPokerSpellTray-h)',
+          zIndex: 130,
+        }}
+      >
+        <PokerSpellTray caster="player" />
+      </div>
+
+      {/* Family 3 — wager activation vfx surface. Pointer-events none
+          so it never blocks the betting panel or hero clicks below. */}
+      <div
+        className="wager-activation-mount"
+        style={{
+          position: 'absolute',
+          left: 'var(--poker-zone-wagerActivation-x)',
+          top: 'var(--poker-zone-wagerActivation-y)',
+          width: 'var(--poker-zone-wagerActivation-w)',
+          height: 'var(--poker-zone-wagerActivation-h)',
+          zIndex: 320,
+          pointerEvents: 'none',
+        }}
+      />
+
       {/* Damage Animations — gated by showDamageNumbers setting */}
       {useSettingsStore.getState().showDamageNumbers && damageAnimations.map(anim => (
         <DamageIndicator
