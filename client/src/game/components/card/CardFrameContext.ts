@@ -23,6 +23,7 @@ import type {
 } from './types';
 import type { Rarity } from '@shared/schemas/rarity';
 import type { NorseElement } from '../../types/NorseTypes';
+import type { CardFamily } from '../../utils/poker/cardFamily';
 
 export interface CardFrameContextValue {
 	rootRef: RefObject<HTMLDivElement | null>;
@@ -37,6 +38,7 @@ export interface CardFrameContextValue {
 	statsMode: CardStatsMode;
 	cardType: CardType;
 	cardKind: CardKind;
+	cardFamily: CardFamily | null;
 	evolutionLevel: EvolutionLevel;
 	disableTooltips: boolean;
 }

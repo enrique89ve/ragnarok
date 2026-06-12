@@ -3,8 +3,9 @@
  *
  * Visual unification surface for every card-shaped render in the game:
  * Collection grid, DeckBuilder pool, HandFan, SimpleBattlefield,
- * HeroDetailPopup. Poker (`PlayingCard`) is intentionally excluded —
- * it has no rarity field and lives on the PvP wire protocol.
+ * HeroDetailPopup, and the poker board/hole-card chrome. Poker cards
+ * still carry rank/suit payloads from the PvP wire protocol, but their
+ * visual frame is shared here.
  *
  * The component itself is in `./CardFrame.tsx`. Slot children land in
  * `./slots/` during commit (b). This file is the single source of
@@ -13,6 +14,7 @@
 
 import type { Rarity } from '@shared/schemas/rarity';
 import type { NorseElement } from '../../types/NorseTypes';
+import type { CardFamily } from '../../utils/poker/cardFamily';
 import type { HTMLAttributes, MouseEvent, ReactNode } from 'react';
 
 /**
@@ -24,7 +26,7 @@ import type { HTMLAttributes, MouseEvent, ReactNode } from 'react';
  * `hand`     — HandFan card (5:7).
  * `board`    — SimpleBattlefield card (5:7).
  * `hero`     — HeroDetailPopup flip card (5:7).
- * `poker`    — DEFERRED. Listed for forward-doc only.
+ * `poker`    — Poker rank/suit and face-down cards using shared chrome.
  */
 export type CardShape =
 	| 'portrait'
@@ -137,6 +139,11 @@ export interface CardFrameProps
 
 	/** Banner border tint. */
 	cardKind?: CardKind;
+
+	/** Poker-combat family discriminator. Drives `--card-family-accent`
+	 *  / `--card-family-glow` CSS vars + `.card-frame--family-*` class
+	 *  + `data-card-family` attribute. Default `null` = no family axis. */
+	cardFamily?: CardFamily | null;
 
 	/** Pet-evolution level. Drives desaturation + silver/gold tint. */
 	evolutionLevel?: EvolutionLevel;

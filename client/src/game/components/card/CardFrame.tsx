@@ -35,6 +35,7 @@ import CardHolo from './slots/CardHolo';
 import CardArt from './slots/CardArt';
 import CardRankSuit from './slots/CardRankSuit';
 import CardCardBack from './slots/CardCardBack';
+import './CardFrame.css';
 
 const CardFrame: React.FC<CardFrameProps> = ({
 	shape = 'tile',
@@ -55,6 +56,7 @@ const CardFrame: React.FC<CardFrameProps> = ({
 	statsMode = 'frame',
 	cardType = null,
 	cardKind = null,
+	cardFamily = null,
 	evolutionLevel = null,
 	disableTooltips = false,
 	...rest
@@ -102,6 +104,7 @@ const CardFrame: React.FC<CardFrameProps> = ({
 		statsMode,
 		cardType,
 		cardKind,
+		cardFamily,
 		evolutionLevel,
 		disableTooltips,
 	};
@@ -113,6 +116,7 @@ const CardFrame: React.FC<CardFrameProps> = ({
 		holoTier,
 		cardType,
 		cardKind,
+		cardFamily,
 		evolutionLevel,
 		isPlayable,
 		isHighlighted,
@@ -133,6 +137,7 @@ const CardFrame: React.FC<CardFrameProps> = ({
 				data-stats-mode={statsMode}
 				data-card-type={cardType ?? undefined}
 				data-card-kind={cardKind ?? undefined}
+				data-card-family={cardFamily ?? undefined}
 				data-evolution={evolutionLevel ?? undefined}
 				data-playable={isPlayable ? 'true' : 'false'}
 				data-highlighted={isHighlighted ? 'true' : 'false'}
@@ -292,6 +297,7 @@ function buildFrameClasses(args: {
 	holoTier: string | null;
 	cardType: string | null;
 	cardKind: string | null;
+	cardFamily: string | null;
 	evolutionLevel: number | null;
 	isPlayable: boolean;
 	isHighlighted: boolean;
@@ -304,6 +310,7 @@ function buildFrameClasses(args: {
 		`card-frame--render-${args.render}`,
 		args.cardType ? `card-frame--type-${args.cardType}` : '',
 		args.cardKind ? `card-frame--kind-${args.cardKind}` : '',
+		args.cardFamily ? `card-frame--family-${args.cardFamily}` : '',
 		args.evolutionLevel ? `card-frame--evolution-${args.evolutionLevel}` : '',
 		args.holoTier ? `holo-${args.holoTier}` : '',
 		args.isPlayable ? '' : 'card-frame--unplayable',
