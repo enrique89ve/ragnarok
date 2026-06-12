@@ -163,6 +163,7 @@ const CardFrame: React.FC<CardFrameProps> = ({
 					// `overflow: visible` (the historical bug — see commit).
 					position: 'relative',
 					overflow: 'hidden',
+					maxHeight: '100%',
 				} as React.CSSProperties}
 				onClick={onClick}
 				onMouseMove={onMouseMove}
@@ -179,6 +180,8 @@ const CardFrame: React.FC<CardFrameProps> = ({
 					style={{
 						position: 'absolute',
 						inset: 0,
+						width: '100%',
+						height: '100%',
 						overflow: 'hidden',
 					}}
 				>
