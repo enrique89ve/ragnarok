@@ -8,6 +8,8 @@
  */
 
 export { CardFrame, default as CardFrameDefault } from './CardFrame';
+export { default as PokerCardFrame } from './PokerCardFrame';
+export type { PokerCardFrameProps } from './PokerCardFrame';
 export * from './types';
 export { resolveCardDims } from './sizing';
 export { useCardFramePngStatus } from './useCardFramePngStatus';

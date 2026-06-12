@@ -10,28 +10,26 @@
 }
 
 /* Empty community slot — quiet, intentional, not blank.
-   Norse rune outline so the slot reads as "waiting" not "broken". */
+   Palette matches the minimalist card-back chrome (see CardFrame.css
+   `.card-card-back` + face-down.css `.opponent-card-back`):
+   solid #1a1d24, no border, Eihwaz rune `ᛇ`, no bevel/glow. */
 .card-placeholder {
   width: 112px;
   height: 158px;
-  background: linear-gradient(180deg,
-    rgba(10, 12, 18, 0.55) 0%,
-    rgba(6, 8, 12, 0.7) 100%);
-  border: 1px dashed var(--ui-gold-glow-soft);
+  background: #1a1d24;
+  border: none;
   border-radius: 7px;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.5);
 }
 
 .card-placeholder::after {
-  content: 'ᛟ';
-  font-family: var(--font-display);
+  content: 'ᛇ';
+  font-family: 'Cinzel', serif;
   font-size: 48px;
-  color: rgba(212, 175, 55, 0.18);
-  text-shadow: 0 0 12px rgba(212, 175, 55, 0.10);
+  color: rgba(201, 168, 76, 0.45);
 }
 
 .community-slot {
@@ -42,21 +40,26 @@
   flex-shrink: 0;
 }
 
-.community-slot .arena-poker-card.norse {
-  width: 112px;
-  height: 158px;
+.community-slot .arena-poker-card.norse,
+.community-slot .poker-card-frame {
+  width: 112px !important;
+  max-width: 112px !important;
+  height: 158px !important;
+  aspect-ratio: 112 / 158 !important;
 }
 
 .community-slot .arena-poker-card .card-value {
-  font-size: 1.8rem;
+  font-size: 1.3rem;
 }
 
 .community-slot .arena-poker-card .norse-symbol-large {
-  font-size: 3rem;
+  width: 44px;
+  height: 44px;
+  font-size: 2.1rem;
 }
 
 .community-slot .arena-poker-card .card-rune {
-  font-size: 0.95rem;
+  font-size: 0.8rem;
 }
 
 .slot-label {
@@ -79,13 +82,10 @@
   justify-content: center;
   gap: 16px;
   padding: 12px 8px;
-  background: linear-gradient(180deg,
-    rgba(0, 0, 0, 0.4) 0%,
-    rgba(15, 23, 42, 0.3) 100%
-  );
-  border-radius: 10px;
+  background: transparent;
+  border-radius: 0;
   margin: 8px 0;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: none;
 }
 
 .community-group {

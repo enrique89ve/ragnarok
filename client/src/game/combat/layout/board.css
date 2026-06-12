@@ -121,48 +121,57 @@
   height: var(--poker-zone-battlefield-h, 496px);
   z-index: 92;
   pointer-events: none;
-  border: 1px solid color-mix(in srgb, var(--gold-300) 22%, transparent);
-  border-radius: 18px;
+  border: 0;
+  border-radius: 0;
   background:
     radial-gradient(
-      ellipse at 50% 50%,
-      color-mix(in srgb, var(--gold-300) 12%, transparent) 0%,
-      transparent 47%
+      ellipse at 50% 48%,
+      rgba(8, 12, 22, 0.5) 0%,
+      rgba(8, 12, 22, 0.28) 42%,
+      transparent 72%
     ),
-    linear-gradient(
-      90deg,
-      transparent 0%,
-      color-mix(in srgb, var(--bifrost-300) 7%, transparent) 50%,
-      transparent 100%
-    ),
-    linear-gradient(180deg, rgba(8, 12, 22, 0.48) 0%, rgba(5, 8, 16, 0.66) 100%);
-  box-shadow:
-    0 34px 80px rgba(0, 0, 0, 0.36),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    inset 0 -1px 0 color-mix(in srgb, var(--gold-300) 12%, transparent);
+    radial-gradient(
+      ellipse at 50% 48%,
+      color-mix(in srgb, var(--gold-300) 9%, transparent) 0%,
+      transparent 58%
+    );
+  box-shadow: none;
 }
 
 .unified-combat-arena::after {
   content: "";
   position: absolute;
-  left: calc(var(--poker-zone-battlefield-x, 552px) + 48px);
-  top: calc(var(--poker-zone-battlefield-y, 244px) + 247px);
-  width: calc(var(--poker-zone-battlefield-w, 888px) - 96px);
-  height: 2px;
+  left: calc(var(--poker-zone-battlefield-x, 552px) + 120px);
+  top: calc(
+    var(--poker-zone-opponentBattlefieldCards-y, 296px) +
+      var(--poker-zone-opponentBattlefieldCards-h, 192px) - 8px
+  );
+  width: calc(var(--poker-zone-battlefield-w, 888px) - 240px);
+  height: calc(
+    var(--poker-zone-playerBattlefieldCards-y, 532px) -
+      var(--poker-zone-opponentBattlefieldCards-y, 296px) -
+      var(--poker-zone-opponentBattlefieldCards-h, 192px) + 16px
+  );
   z-index: 93;
   pointer-events: none;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    color-mix(in srgb, var(--gold-300) 22%, transparent) 18%,
-    color-mix(in srgb, var(--gold-100) 42%, transparent) 50%,
-    color-mix(in srgb, var(--gold-300) 22%, transparent) 82%,
-    transparent 100%
+  background:
+    radial-gradient(
+      ellipse at 50% 50%,
+      color-mix(in srgb, var(--gold-300) 18%, transparent) 0%,
+      color-mix(in srgb, var(--bifrost-300) 8%, transparent) 34%,
+      transparent 68%
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(1, 3, 8, 0.58) 18%,
+      rgba(1, 3, 8, 0.78) 50%,
+      rgba(1, 3, 8, 0.58) 82%,
+      transparent 100%
   );
-  box-shadow:
-    0 0 12px color-mix(in srgb, var(--gold-300) 18%, transparent),
-    0 0 28px color-mix(in srgb, var(--bifrost-300) 10%, transparent);
-  opacity: 0.78;
+  filter: blur(8px);
+  opacity: 0.82;
+  mask-image: radial-gradient(ellipse at center, #000 0%, #000 54%, transparent 82%);
 }
 
 .unified-combat-arena
@@ -236,14 +245,10 @@
   align-items: center;
   justify-content: center;
   padding: 8px 12px !important;
-  border: 1px solid color-mix(in srgb, var(--gold-300) 18%, transparent);
-  border-radius: 16px;
-  background:
-    radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, 0.2) 0%, transparent 72%),
-    color-mix(in srgb, var(--surface-overlay-deep) 62%, transparent);
-  box-shadow:
-    0 18px 36px rgba(0, 0, 0, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   transform: rotate(var(--poker-zone-communityCards-rot, 0deg));
   transform-origin: center center;
 }
@@ -259,9 +264,12 @@
 }
 
 .unified-combat-arena > .zone-board .community-slot .arena-poker-card.norse,
+.unified-combat-arena > .zone-board .community-slot .poker-card-frame,
 .unified-combat-arena > .zone-board .card-placeholder {
-  width: 84px;
-  height: 118px;
+  width: 84px !important;
+  max-width: 84px !important;
+  height: 118px !important;
+  aspect-ratio: 84 / 118 !important;
 }
 
 .unified-combat-arena > .zone-opp-field {
@@ -309,25 +317,10 @@
   padding: 8px 10px;
   gap: var(--bf-slot-gap);
   overflow: visible;
-  border: 1px solid color-mix(in srgb, var(--gold-300) 10%, transparent);
-  border-radius: 14px;
-  background:
-    linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.025) 50%,
-      transparent 100%
-    ),
-    color-mix(in srgb, var(--obsidian-950) 26%, transparent);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
-}
-
-.unified-combat-arena > .zone-opp-field .bf-row {
-  border-color: color-mix(in srgb, var(--danger-400) 15%, transparent);
-}
-
-.unified-combat-arena > .zone-player-field .bf-row {
-  border-color: color-mix(in srgb, var(--gold-300) 16%, transparent);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .unified-combat-arena .unified-hero-section {
@@ -369,7 +362,9 @@
   width: 100%;
   padding: 0;
   justify-content: flex-start !important;
-  transform: rotate(var(--poker-zone-playerHand-rot, 0deg));
+  transform:
+    translateY(calc(-1 * var(--poker-player-hand-card-rise, 0px)))
+    rotate(var(--poker-zone-playerHand-rot, 0deg));
   transform-origin: center center;
 }
 
@@ -428,7 +423,9 @@
   width: var(--poker-zone-bettingControls-w, var(--betting-panel-width));
   height: var(--poker-zone-bettingControls-h, auto);
   min-height: var(--poker-zone-bettingControls-h, auto);
-  transform: rotate(var(--poker-zone-bettingControls-rot, 0deg));
+  transform:
+    translateY(var(--poker-betting-controls-drop, 0px))
+    rotate(var(--poker-zone-bettingControls-rot, 0deg));
   transform-origin: top left;
   z-index: var(--arena-z-betting-panel);
 }

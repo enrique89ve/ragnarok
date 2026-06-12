@@ -368,34 +368,14 @@
 	background:
 		radial-gradient(circle at 50% 22%, rgba(255, 255, 255, 0.28), transparent 28%),
 		linear-gradient(145deg, #eadfca 0%, #d1bd98 52%, #aa8f63 100%);
-	border: 1px solid rgba(91, 68, 38, 0.78);
+	border: none;
 	border-radius: 8px;
-	box-shadow:
-		0 4px 12px rgba(0, 0, 0, 0.5),
-		inset 0 0 18px rgba(76, 49, 25, 0.18);
+	box-shadow: none;
 }
 
 .card-frame--poker[data-interactive='true']:hover {
 	transform: translateY(-3px) scale(1.04);
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-}
-
-.card-frame--poker .card-frame__legibility,
-.card-frame--poker .card-frame__band {
-	display: none;
-}
-
-.card-frame--poker .card-frame__art-layer {
-	inset: 6px;
-	border-radius: calc(var(--cf-radius, 8px) - 2px);
-	background:
-		radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.28), transparent 58%),
-		repeating-linear-gradient(45deg, transparent 0 8px, rgba(74, 48, 25, 0.05) 8px 10px),
-		linear-gradient(145deg, #efe5d1 0%, #d9c39c 58%, #b79b6d 100%);
-}
-
-.card-frame--poker .card-frame__png {
-	opacity: 0.92;
 }
 
 /* ============================================================
@@ -567,34 +547,16 @@
 	position: relative;
 	width: 100%;
 	height: 100%;
-	background:
-		radial-gradient(circle at 50% 50%, rgba(196, 160, 74, 0.2), transparent 58%),
-		linear-gradient(135deg, #142237 0%, #07101f 100%);
+	background: #1a1d24;
 	border-radius: inherit;
-	border: 1px solid rgba(196, 160, 74, 0.72);
-	box-shadow: inset 0 0 8px rgba(196, 160, 74, 0.4);
+	border: none;
 }
 
 .card-card-back .card-back-border {
 	position: relative;
 	width: 100%;
 	height: 100%;
-	background:
-		repeating-linear-gradient(45deg, transparent 0 6px, rgba(196, 160, 74, 0.08) 6px 8px),
-		repeating-linear-gradient(-45deg, transparent 0 6px, rgba(196, 160, 74, 0.08) 6px 8px);
 }
-
-.card-card-back .corner-rune {
-	position: absolute;
-	color: #c4a04a;
-	font-size: 0.7rem;
-	font-family: 'Cinzel', serif;
-	text-shadow: 0 0 4px rgba(196, 160, 74, 0.5);
-}
-.card-card-back .corner-rune.tl { top: 6px; left: 6px; }
-.card-card-back .corner-rune.tr { top: 6px; right: 6px; }
-.card-card-back .corner-rune.bl { bottom: 6px; left: 6px; }
-.card-card-back .corner-rune.br { bottom: 6px; right: 6px; }
 
 .card-card-back .card-back-center {
 	position: absolute;
@@ -605,11 +567,13 @@
 }
 
 .card-card-back .yggdrasil-symbol {
-	font-size: 2rem;
-	color: #c4a04a;
-	text-shadow:
-		0 0 6px rgba(196, 160, 74, 0.7),
-		0 0 12px rgba(196, 160, 74, 0.4);
+	font-size: 1.6rem;
+	color: rgba(201, 168, 76, 0.7);
+	font-family: 'Cinzel', serif;
+}
+
+.card-card-back .corner-rune {
+	display: none;
 }
 
 @keyframes card-back-shimmer {
@@ -622,10 +586,11 @@
 	inset: 0;
 	background: linear-gradient(90deg,
 		transparent 0%,
-		rgba(196, 160, 74, 0.15) 50%,
+		rgba(255, 255, 255, 0.08) 50%,
 		transparent 100%);
-	animation: card-back-shimmer 3s ease-in-out infinite;
+	animation: card-back-shimmer 4s ease-in-out infinite;
 	pointer-events: none;
+	border-radius: inherit;
 }
 
 @media (prefers-reduced-motion: reduce) {

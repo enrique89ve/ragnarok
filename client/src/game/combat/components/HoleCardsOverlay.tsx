@@ -1,7 +1,7 @@
 import React from 'react';
 import { PokerCard } from '../../types/PokerCombatTypes';
 import {
-	CardFrame,
+	PokerCardFrame,
 	CardRankSuit,
 	CardCardBack,
 } from '../../components/card';
@@ -59,11 +59,14 @@ export const HoleCardsOverlay: React.FC<HoleCardsOverlayProps> = ({
 				].filter(Boolean).join(' ')}
 				style={{ background: 'transparent', border: 'none' }}
 			>
-				<CardFrame shape="poker" size="medium">
+				<PokerCardFrame
+					size="medium"
+					variant={isFaceDown ? 'face-down' : 'face-up'}
+				>
 					{isFaceDown
 						? <CardCardBack />
 						: <CardRankSuit suit={card.suit as NorseSuit} value={card.value} />}
-				</CardFrame>
+				</PokerCardFrame>
 			</div>
 		);
 	});
@@ -88,6 +91,7 @@ export const HoleCardsOverlay: React.FC<HoleCardsOverlayProps> = ({
 			<div
 				className={[
 					'flex flex-row items-center justify-center pointer-events-none z-10 gap-1',
+					`hole-cards--${variant}`,
 					activeTurn ? 'hole-cards-active-turn' : '',
 				].filter(Boolean).join(' ')}
 				style={{ transform: 'scale(var(--zone-poker-card-scale, 1))' }}
@@ -101,6 +105,7 @@ export const HoleCardsOverlay: React.FC<HoleCardsOverlayProps> = ({
 		<div
 			className={[
 				'absolute left-1/2 -translate-x-1/2 flex flex-row items-center justify-center pointer-events-none z-0 gap-1',
+				`hole-cards--${variant}`,
 				positionClass,
 				activeTurn ? 'hole-cards-active-turn' : '',
 			].filter(Boolean).join(' ')}

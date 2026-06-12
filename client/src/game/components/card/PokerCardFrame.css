@@ -1,0 +1,53 @@
+/* ═══════════════════════════════════════════════════
+   POKER CARD FRAME — minimalist 52-card deck chrome
+   ─────────────────────────────────────────────────
+   Lives outside the unified CardFrame pipeline because poker
+   cards share no visual vocabulary with NFT minion cards:
+   no PNG chrome, no rarity classes, no animated conic border,
+   no element band, no legibility gradient. Two variants:
+
+   `face-up`   — parchment + suit accent (Q, 5, A revealed)
+   `face-down` — solid #1a1d24 + Eihwaz rune, no border
+   ═══════════════════════════════════════════════════ */
+
+.poker-card-frame {
+	box-sizing: border-box;
+	display: flex;
+	align-items: stretch;
+	justify-content: stretch;
+	position: relative;
+	overflow: hidden;
+	border-radius: 7px;
+}
+
+.poker-card-frame--face-up {
+	background:
+		radial-gradient(
+			ellipse at 50% 35%,
+			rgba(255, 251, 232, 0.97) 0%,
+			rgba(244, 232, 200, 0.96) 55%,
+			rgba(228, 210, 170, 0.95) 100%
+		),
+		linear-gradient(180deg, #f5ebd0 0%, #e8d8b0 100%);
+	border: 1px solid rgba(91, 68, 38, 0.78);
+	box-shadow:
+		0 1px 2px rgba(0, 0, 0, 0.35),
+		inset 0 0 0 1px rgba(255, 250, 230, 0.4);
+}
+
+.poker-card-frame--face-down {
+	background: #1a1d24;
+	border: none;
+	box-shadow: none;
+}
+
+/* Make the slot fill the frame — slots (CardRankSuit, CardCardBack)
+   used to render inside .card-frame__art-layer at z:0. Inside the
+   poker frame the slot IS the layer, so we lift it to fill. */
+.poker-card-frame > .card-rank-suit,
+.poker-card-frame > .card-card-back {
+	position: relative;
+	flex: 1 1 auto;
+	width: 100%;
+	height: 100%;
+}
