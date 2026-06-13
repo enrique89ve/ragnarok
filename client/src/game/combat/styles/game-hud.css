@@ -25,7 +25,7 @@
   flex-wrap: nowrap;
   justify-content: center;
   gap: 8px;
-  max-width: var(--poker-zone-topHud-w, min(920px, calc(100% - 320px)));
+  max-width: var(--poker-zone-topHud-w, min(1100px, calc(100% - 320px)));
   padding: 8px 16px;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--gold-300) 28%, transparent);
@@ -98,11 +98,12 @@
 }
 
 /* Recessed chip — engraved tile look (inverted bevel vs ribbon).
-   Top edge = dark (recessed), bottom edge = light (carved) */
+   Top edge = dark (recessed), bottom edge = light (carved).
+   flex: 0 0 auto — never shrink, dynamic text (HP values) sizes to content. */
 :is(.hud-status-chip, .hud-status-breakdown) {
   display: inline-flex;
   align-items: center;
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   gap: 6px;
   min-width: 0;
   min-height: 28px;
@@ -153,10 +154,10 @@
 }
 
 .hud-status-breakdown {
-  max-width: 190px;
-  overflow: hidden;
   color: var(--text-bright);
-  text-overflow: ellipsis;
+  /* No max-width: dynamic text "COMMITTED YOU X · THEM Y" must size to content.
+     Worst case: "COMMITTED YOU 10 · THEM 10" ≈ 24 chars × 7.5px = 180px + 24px padding. */
+  max-width: none;
 }
 
 /* Deck count badges — premium obsidian + gold material */
