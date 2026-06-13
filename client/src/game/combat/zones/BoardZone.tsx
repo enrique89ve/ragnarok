@@ -3,13 +3,18 @@
  *
  * Renders the 5-card poker board (3 faith + 1 foresight + 1 destiny).
  * Each slot shows either the revealed card or a face-down placeholder.
- * Cards that belong to the winning hand at showdown get a `.winning-card`
- * highlight; the glow halo (`.winning-card-glow.celebration`) only
- * activates while a showdownCelebration is active.
+ * The 5 slots share ONE face-down chrome — all hidden cards render
+ * through `<PokerCardFrame variant="face-down"><CardCardBack /></PokerCardFrame>`
+ * so the rim, interlace, vignette, and Eihwaz rune size are identical
+ * across faith / foresight / destiny placeholders. Cards that belong
+ * to the winning hand at showdown get a `.winning-card` highlight;
+ * the glow halo (`.winning-card-glow.celebration`) only activates
+ * while a showdownCelebration is active.
  *
  * Lives in `combat/zones/` so the parent arena stays an orchestration
- * shell. CSS classes (`.community-slot`, `.card-placeholder`, etc.)
- * still live in the centralised `RagnarokCombatArena.css`.
+ * shell. The shared face-down chrome lives in
+ * `client/src/game/components/card/pokerFaceDown.css` (loaded via
+ * `poker-core.css`).
  */
 
 import React from 'react';
@@ -83,7 +88,9 @@ export const BoardZone: React.FC<BoardZoneProps> = ({
 							</PokerCardFrame>
 						</div>
 					) : (
-						<div className="card-placeholder" />
+						<PokerCardFrame size="medium" variant="face-down">
+							<CardCardBack />
+						</PokerCardFrame>
 					)}
 				</div>
 
@@ -95,7 +102,9 @@ export const BoardZone: React.FC<BoardZoneProps> = ({
 							</PokerCardFrame>
 						</div>
 					) : (
-						<div className="card-placeholder" />
+						<PokerCardFrame size="medium" variant="face-down">
+							<CardCardBack />
+						</PokerCardFrame>
 					)}
 				</div>
 			</div>
