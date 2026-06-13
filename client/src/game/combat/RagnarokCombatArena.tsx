@@ -1216,8 +1216,12 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
                   </filter>
                 </defs>
 
-                {/* Ambient glow behind hourglass — subtle, tight to body */}
-                <ellipse cx="30" cy="42" rx="22" ry="32" fill="url(#hg-glow)" className="hg-ambient-glow" />
+                {/* Ambient glow behind hourglass — painterly atmospheric halo */}
+                <ellipse cx="30" cy="42" rx="26" ry="38" fill="url(#hg-glow)" className="hg-ambient-glow" />
+                {/* Warm gold dust haze around body — extra painterly bloom */}
+                <ellipse cx="30" cy="42" rx="18" ry="28" fill="url(#hg-glow)" opacity="0.55" />
+                {/* Soft cold rim from above — atmospheric depth */}
+                <ellipse cx="30" cy="20" rx="14" ry="4" fill="rgba(180, 210, 255, 0.08)" />
 
                 {/* Top cap — layered bevel + side spires */}
                 <rect x="8" y="3" width="44" height="7" rx="1" fill="url(#hg-gold-cap)" stroke="#5c4008" strokeWidth="0.8" />
@@ -1245,10 +1249,16 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
                 <path d="M8 77.5 L4 75 L4 80 Z" fill="url(#hg-gold-cap)" stroke="#5c4008" strokeWidth="0.5" />
                 <path d="M52 77.5 L56 75 L56 80 Z" fill="url(#hg-gold-cap)" stroke="#5c4008" strokeWidth="0.5" />
 
-                {/* Glass frame — thicker gold, fantasy weight */}
+                {/* Glass frame — thicker gold, fantasy weight, painterly soft outer edge */}
                 <path
                   d="M14 12 C14 12 14 32 30 42 C14 52 14 72 14 72 M46 12 C46 12 46 32 30 42 C46 52 46 72 46 72"
                   stroke="url(#hg-gold)" strokeWidth="2.6" strokeLinecap="round" fill="none"
+                />
+                {/* Outer soft glow stroke (atmospheric bloom) */}
+                <path
+                  d="M14 12 C14 12 14 32 30 42 C14 52 14 72 14 72 M46 12 C46 12 46 32 30 42 C46 52 46 72 46 72"
+                  stroke="rgba(255,200,80,0.4)" strokeWidth="5" strokeLinecap="round" fill="none"
+                  filter="url(#hg-outer-glow)"
                 />
                 {/* Inner gold accent line (parallel) for fantasy depth */}
                 <path
