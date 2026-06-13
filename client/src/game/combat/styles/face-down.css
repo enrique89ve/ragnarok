@@ -19,23 +19,10 @@
 .opponent-card-back {
   width: var(--opponent-hand-card-width, 78px);
   height: 110px;
-  background-color: #1a1d24;
-  background-image:
-    /* center vignette — solid dark under the Eihwaz rune for contrast */
-    radial-gradient(ellipse 50% 45% at 50% 50%, rgba(26, 29, 36, 0.95) 0%, transparent 78%),
-    /* thin low-opacity Norse interlace tile (24px) */
-    url("data:image/svg+xml;utf8,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2224%22%20height=%2224%22%20viewBox=%220%200%2024%2024%22%3E%3Cg%20fill=%22none%22%20stroke=%22rgba(201,168,76,0.3)%22%20stroke-width=%220.6%22%20stroke-linejoin=%22miter%22%20stroke-linecap=%22square%22%3E%3Cpath%20d=%22M-2%204%20L10%2016%20L24%204%20M-2%2020%20L10%208%20L24%2020%20M-2%2010%20L10%20-2%20M14%2026%20L26%2010%22/%3E%3Cpath%20d=%22M0%200%20L6%200%20L6%203%20L3%203%20L3%206%20L0%206%20Z%20M18%200%20L24%200%20L24%206%20L21%206%20L21%203%20L18%203%20Z%20M0%2018%20L3%2018%20L3%2021%20L6%2021%20L6%2024%20L0%2024%20Z%20M18%2021%20L21%2021%20L21%2018%20L24%2018%20L24%2024%20L18%2024%20Z%22/%3E%3C/g%3E%3C/svg%3E"),
-    radial-gradient(ellipse at 50% 40%, rgba(255, 255, 255, 0.03) 0%, rgba(0, 0, 0, 0.14) 75%);
-  background-repeat: no-repeat, repeat, no-repeat;
-  background-size: 100% 100%, 24px 24px, 100% 100%;
-  border: none;
+  /* Background stack + beveled rim live in
+     `client/src/game/components/card/pokerFaceDown.css` (loaded via
+     poker-core.css). Only the hand-display geometry stays here. */
   border-radius: 7px;
-  /* Beveled frame illusion (scaled for small 78x110 hand card): 0.5px gold + 1px dark + 0.5px gold = 2px rim */
-  box-shadow:
-    inset 0 0 0 0.5px #c9a84c,
-    inset 0 0 0 1.5px #1a1d24,
-    inset 0 0 0 2px #c9a84c,
-    inset 0 1px 2px rgba(0, 0, 0, 0.4);
   flex: 0 0 var(--opponent-hand-card-width, 78px);
   position: relative;
   margin-left: var(--opponent-hand-card-overlap, -39px);

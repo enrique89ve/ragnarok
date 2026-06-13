@@ -1,0 +1,63 @@
+/* ═══════════════════════════════════════════════════
+   POKER FACE-DOWN SHARED CHROME
+   ─────────────────────────────────────────────────
+   Single source of truth for the 3-layer face-down card
+   surface (background stack + beveled inner border).
+
+   All 4 face-down surfaces share these rules so a tweak to
+   the texture, vignette, or rim happens in exactly one
+   place. Per-surface rules keep only their own geometry
+   (width, height, border-radius, flex, etc.).
+
+   Surfaces covered:
+     .card-card-back               (slot inside CardCardBack, CardFrame.css)
+     .poker-card-frame--face-down  (PokerCardFrame.css)
+     .card-placeholder             (community-cards.css)
+     .opponent-card-back           (face-down.css, hand display)
+
+   Scaling notes:
+     - base recipe: 32px interlace tile, 3px beveled rim
+       (1px gold | 1px dark gap | 1px gold)
+     - small variant (78x110 .opponent-card-back): 24px
+       interlace tile, 2px beveled rim
+       (0.5px gold | 1px dark gap | 0.5px gold)
+   ═══════════════════════════════════════════════════ */
+
+/* ---- Base recipe (32px tile + 3px rim) ---- */
+.card-card-back,
+.poker-card-frame--face-down,
+.card-placeholder {
+	background-color: #1a1d24;
+	background-image:
+		/* center vignette — solid dark under the Eihwaz rune for contrast */
+		radial-gradient(ellipse 38% 42% at 50% 50%, rgba(26, 29, 36, 0.95) 0%, transparent 75%),
+		/* thin low-opacity Norse interlace tile */
+		url("data:image/svg+xml;utf8,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2232%22%20height=%2232%22%20viewBox=%220%200%2032%2032%22%3E%3Cg%20fill=%22none%22%20stroke=%22rgba(201,168,76,0.32)%22%20stroke-width=%220.7%22%20stroke-linejoin=%22miter%22%20stroke-linecap=%22square%22%3E%3Cpath%20d=%22M-2%206%20L14%2022%20L30%206%20M-2%2026%20L14%2010%20L30%2026%20M-2%2014%20L14%20-2%20M18%2034%20L34%2014%22/%3E%3Cpath%20d=%22M0%200%20L8%200%20L8%204%20L4%204%20L4%208%20L0%208%20Z%20M24%200%20L32%200%20L32%208%20L28%208%20L28%204%20L24%204%20Z%20M0%2024%20L4%2024%20L4%2028%20L8%2028%20L8%2032%20L0%2032%20Z%20M24%2028%20L28%2028%20L28%2024%20L32%2024%20L32%2032%20L24%2032%20Z%22/%3E%3C/g%3E%3C/svg%3E"),
+		radial-gradient(ellipse at 50% 40%, rgba(255, 255, 255, 0.04) 0%, rgba(0, 0, 0, 0.18) 75%);
+	background-repeat: no-repeat, repeat, no-repeat;
+	background-size: 100% 100%, 32px 32px, 100% 100%;
+	border: none;
+	/* Beveled frame illusion: 1px gold + 1px dark + 1px gold = 3px rim */
+	box-shadow:
+		inset 0 0 0 1px #c9a84c,
+		inset 0 0 0 2px #1a1d24,
+		inset 0 0 0 3px #c9a84c,
+		inset 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+
+/* ---- Small variant: 24px tile + 2px rim (78x110 hand card) ---- */
+.opponent-card-back {
+	background-color: #1a1d24;
+	background-image:
+		radial-gradient(ellipse 50% 45% at 50% 50%, rgba(26, 29, 36, 0.95) 0%, transparent 78%),
+		url("data:image/svg+xml;utf8,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2224%22%20height=%2224%22%20viewBox=%220%200%2024%2024%22%3E%3Cg%20fill=%22none%22%20stroke=%22rgba(201,168,76,0.3)%22%20stroke-width=%220.6%22%20stroke-linejoin=%22miter%22%20stroke-linecap=%22square%22%3E%3Cpath%20d=%22M-2%204%20L10%2016%20L24%204%20M-2%2020%20L10%208%20L24%2020%20M-2%2010%20L10%20-2%20M14%2026%20L26%2010%22/%3E%3Cpath%20d=%22M0%200%20L6%200%20L6%203%20L3%203%20L3%206%20L0%206%20Z%20M18%200%20L24%200%20L24%206%20L21%206%20L21%203%20L18%203%20Z%20M0%2018%20L3%2018%20L3%2021%20L6%2021%20L6%2024%20L0%2024%20Z%20M18%2021%20L21%2021%20L21%2018%20L24%2018%20L24%2024%20L18%2024%20Z%22/%3E%3C/g%3E%3C/svg%3E"),
+		radial-gradient(ellipse at 50% 40%, rgba(255, 255, 255, 0.03) 0%, rgba(0, 0, 0, 0.14) 75%);
+	background-repeat: no-repeat, repeat, no-repeat;
+	background-size: 100% 100%, 24px 24px, 100% 100%;
+	border: none;
+	box-shadow:
+		inset 0 0 0 0.5px #c9a84c,
+		inset 0 0 0 1.5px #1a1d24,
+		inset 0 0 0 2px #c9a84c,
+		inset 0 1px 2px rgba(0, 0, 0, 0.4);
+}

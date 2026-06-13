@@ -20,6 +20,13 @@
 @import "./hero-card.css";
 @import "./hp-bar.css";
 
+/* Shared face-down card chrome — single source of truth for the
+   3-layer background stack + beveled rim used by `.card-card-back`,
+   `.poker-card-frame--face-down`, `.card-placeholder`, and
+   `.opponent-card-back`. Lives in card/ so both card-component CSS
+   and combat CSS can target it without circular imports. */
+@import "../../components/card/pokerFaceDown.css";
+
 @import "./turn-banner.css";
 @import "./targeting-prompts.css";
 @import "./cursors.css";
