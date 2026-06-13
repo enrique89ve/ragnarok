@@ -224,9 +224,9 @@ export const POKER_VIEWPORT_LAYOUT = {
 		opponentHand: {
 			layer: 'game',
 			label: 'Opponent poker hand / hidden cards',
-			x: 120,
+			x: 280,
 			y: 160,
-			width: 296,
+			width: 400,
 			height: 88,
 			rotation: 0,
 		},

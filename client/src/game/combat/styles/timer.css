@@ -25,10 +25,10 @@
   transform: translateX(-50%) rotate(var(--poker-zone-hourglass-rot, 0deg));
   transform-origin: center top;
   z-index: var(--z-hud);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0;
+  /* Block layout (no flex) so children always centre on the same x
+     axis via `margin: 0 auto`. The countdown chip's intrinsic width
+     no longer shifts the column. */
+  display: block;
   /* Painterly multi-layer glow:
      - wide warm bloom (atmospheric)
      - mid gold haze
@@ -44,8 +44,10 @@
 }
 
 .hourglass-svg {
+  display: block;
   width: var(--poker-zone-hourglass-w, 65px);
   height: 91px; /* SVG viewBox 60×84; rendered at 65×91 to scale uniformly (+35%) */
+  margin: 0 auto; /* centre in the 65px column regardless of intrinsic size */
 }
 
 /* Ambient glow behind the glass */
@@ -104,15 +106,19 @@
 /* Countdown — pulled up under the bottom cap (negative margin)
    so hourglass + number read as one composition, not two stacked
    widgets. Painterly treatment: airbrushed gold gradient inside
-   the plate, soft outer glow, multi-stop gold rim. */
+   the plate, soft outer glow, multi-stop gold rim.
+
+   Block-level (not inline-flex) + `margin: 0 auto` so the chip always
+   centres under the SVG regardless of intrinsic width (1 digit, 2
+   digits, or critical-state). No flex cross-axis math means the chip
+   can't drift relative to the hourglass. */
 .hg-countdown {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
+  width: max-content;
   min-width: 36px;
   height: 22px;
+  margin: -6px auto 0; /* centre on column, overlap the bottom cap */
   padding: 0 9px;
-  margin-top: -6px; /* overlap the bottom cap area → reads as one object */
   font-family: var(--type-numeric);
   font-size: 0.92rem;
   font-weight: 900;

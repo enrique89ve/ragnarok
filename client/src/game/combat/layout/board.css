@@ -217,11 +217,15 @@
 .unified-combat-arena .opponent-hand-display {
   --opponent-hand-card-width: 78px;
   --opponent-hand-card-overlap: calc(var(--opponent-hand-card-width) / -2);
+  /* Max footprint: 8 cards × 78px - 7 × 39px overlap = 351px fan width.
+     Container sized to 400px so the fan never overflows or shifts the
+     anchor when the hand has fewer / more cards. */
+  --opponent-hand-max-cards: 8;
 
   position: absolute;
-  left: var(--poker-zone-opponentHand-x, 120px);
+  left: var(--poker-zone-opponentHand-x, 280px);
   top: var(--poker-zone-opponentHand-y, 160px);
-  width: var(--poker-zone-opponentHand-w, 320px);
+  width: var(--poker-zone-opponentHand-w, 400px);
   height: var(--poker-zone-opponentHand-h, 96px) !important;
   display: flex;
   flex-direction: row;
@@ -230,9 +234,6 @@
   margin-top: 0;
   overflow: visible;
   pointer-events: auto;
-  /* Sit on top of opponent-hero-container (z-index 180) so the
-     hand fan visibly overlaps the avatar when zone x is < hero-w. */
-  z-index: calc(var(--arena-z-opponent) + 1);
 }
 
 .unified-combat-arena .opponent-hand-display > * {
