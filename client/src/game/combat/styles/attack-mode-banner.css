@@ -21,7 +21,7 @@
     rgba(60, 35, 5, 0.92) 100%
   );
   border: 1.5px solid var(--gold-300);
-  border-radius: 8px;
+  border-radius: var(--radius-norse);
   box-shadow:
     0 0 18px var(--gold-glow),
     0 4px 12px rgba(0, 0, 0, 0.55);
@@ -89,7 +89,7 @@
   color: rgba(253, 230, 138, 0.8);
   background: rgba(255, 255, 255, 0.07);
   border: 1px solid rgba(251, 191, 36, 0.4);
-  border-radius: var(--radius-5);
+  border-radius: var(--radius-norse);
   cursor: pointer;
   transition:
     background 0.15s,

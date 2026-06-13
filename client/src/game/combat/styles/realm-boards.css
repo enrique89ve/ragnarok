@@ -392,7 +392,7 @@
 	padding: 4px 14px;
 	background: rgba(0, 0, 0, 0.6);
 	border: 1px solid var(--realm-divider-color, rgba(212, 175, 55, 0.4));
-	border-radius: 16px;
+	border-radius: 0;
 	/* backdrop-filter removed for perf */
 	pointer-events: none;
 	animation: realm-indicator-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
@@ -427,7 +427,7 @@
 	z-index: 500;
 	background: rgba(0, 0, 0, 0.75);
 	border: 1px solid var(--realm-divider-color, rgba(212, 175, 55, 0.4));
-	border-radius: 8px;
+	border-radius: var(--radius-norse);
 	padding: 8px 12px;
 	pointer-events: none;
 	/* backdrop-filter removed for perf */
@@ -479,7 +479,7 @@
 	z-index: 500;
 	background: rgba(0, 0, 0, 0.75);
 	border: 1px solid rgba(168, 85, 247, 0.4);
-	border-radius: 8px;
+	border-radius: var(--radius-norse);
 	padding: 8px 12px;
 	pointer-events: none;
 	/* backdrop-filter removed for perf */

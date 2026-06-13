@@ -110,7 +110,7 @@
   padding: var(--space-7) 10px;
   background: var(--ui-panel-bg);
   border: 1px solid var(--ui-gold-shadow);
-  border-radius: 10px;
+  border-radius: var(--radius-norse);
   font-family: var(--type-display);
   font-size: var(--text-sm);
   font-weight: 800;
@@ -218,7 +218,7 @@
   padding: var(--space-3) 10px;
   background: rgba(15, 23, 42, 0.85);
   border: 1px solid rgba(100, 116, 139, 0.3);
-  border-radius: 14px;
+  border-radius: 0;
   /* backdrop-filter removed for perf */
   pointer-events: auto;
   cursor: help;

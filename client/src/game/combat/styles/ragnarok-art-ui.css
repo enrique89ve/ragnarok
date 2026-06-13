@@ -7,7 +7,7 @@
 .simple-card::before {
 	background: url('/ui/card-frame-v2.jpg') center center / cover no-repeat !important;
 	inset: -2px !important;
-	border-radius: 12px !important;
+	border-radius: var(--radius-norse-tight) !important;
 	opacity: 0.35 !important;
 	mix-blend-mode: overlay;
 }
@@ -21,7 +21,7 @@
 	content: '';
 	position: absolute;
 	inset: -3px;
-	border-radius: 14px;
+	border-radius: 0;
 	background: url('/ui/hero-frame-v2.jpg') center center / cover no-repeat;
 	opacity: 0.4;
 	z-index: 0;
@@ -47,7 +47,7 @@
 .mana-tray {
 	background: url('/ui/resource-runes-v2.jpg') center center / cover no-repeat !important;
 	border: 1px solid rgba(59, 130, 246, 0.5) !important;
-	border-radius: 12px !important;
+	border-radius: var(--radius-norse-tight) !important;
 	box-shadow:
 		0 2px 8px rgba(0, 0, 0, 0.5),
 		inset 0 0 12px rgba(0, 0, 0, 0.4) !important;

@@ -12,7 +12,7 @@
     rgba(20, 20, 30, 0.95)
   );
   border: 1px solid rgba(100, 100, 120, 0.4);
-  border-radius: 8px;
+  border-radius: var(--radius-norse);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
@@ -27,13 +27,13 @@
 .hand-strength-bar {
   height: 6px;
   background: rgba(30, 30, 40, 0.8);
-  border-radius: var(--radius-3);
+  border-radius: var(--radius-norse-tight);
   overflow: hidden;
 }
 
 .hand-strength-fill {
   height: 100%;
-  border-radius: var(--radius-3);
+  border-radius: var(--radius-norse-tight);
   transition:
     transform 0.4s ease,
     background 0.4s ease;

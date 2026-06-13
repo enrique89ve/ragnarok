@@ -323,6 +323,13 @@
   --radius-xl: 1rem; /* 16px */
   --radius-full: 9999px;
 
+  /* Norse chamfer — the "semicuadrado" feel of the home pages.
+     Sharp enough to read as carved/stone, soft enough to avoid
+     the corner-chip look at 1px borders. Pair with clip-path
+     chamfer cuts on decorative chips for the full Norse feel. */
+  --radius-norse: 4px;
+  --radius-norse-tight: 2px;
+
   /* Numeric radius scale — sub-6px corners that don't fit the semantic scale. */
   --radius-2: 2px;
   --radius-3: 3px;

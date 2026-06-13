@@ -86,7 +86,7 @@
 .persistent-turn-dot {
 	width: 9px;
 	height: 9px;
-	border-radius: var(--radius-2);
+	border-radius: var(--radius-norse-tight);
 	background: var(--turn-badge-dot);
 	box-shadow:
 		0 0 9px color-mix(in srgb, var(--turn-badge-dot) 88%, transparent),

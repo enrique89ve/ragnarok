@@ -4,13 +4,13 @@
 .hand-strength-bar {
   height: 6px;
   background: rgba(30, 30, 40, 0.8);
-  border-radius: var(--radius-3);
+  border-radius: var(--radius-norse-tight);
   overflow: hidden;
 }
 
 .hand-strength-fill {
   height: 100%;
-  border-radius: var(--radius-3);
+  border-radius: var(--radius-norse-tight);
   transition: transform 0.4s ease, background 0.4s ease;
   transform-origin: left;
 }
@@ -50,7 +50,7 @@
   gap: 8px;
   padding: 4px 8px;
   background: rgba(0, 0, 0, 0.3);
-  border-radius: var(--radius-4);
+  border-radius: var(--radius-norse);
 }
 
 .hand-strength-compact .strength-icon {

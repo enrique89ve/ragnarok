@@ -79,7 +79,7 @@
 	align-items: center;
 	gap: var(--space-6);
 	padding: var(--space-6) 14px;
-	border-radius: 8px;
+	border-radius: var(--radius-norse);
 	background: rgba(0,0,0,0.4);
 	border: 1px solid var(--element-color, rgba(255,255,255,0.2));
 	box-shadow: 0 0 12px var(--element-glow, transparent);

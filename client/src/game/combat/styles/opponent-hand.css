@@ -16,14 +16,21 @@
 }
 
 .opponent-hand-count {
+  --opponent-hand-count-size: 24px;
+
   position: absolute;
-  right: -8px;
-  top: -8px;
-  width: 24px;
-  height: 24px;
+  left: var(
+    --opponent-hand-count-anchor-x,
+    var(--opponent-hand-card-width, 78px)
+  );
+  top: 0;
+  box-sizing: border-box;
+  min-width: var(--opponent-hand-count-size);
+  height: var(--opponent-hand-count-size);
+  padding: 0 6px;
   background: linear-gradient(135deg, #dc2626, #991b1b);
   border: 2px solid #fbbf24;
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -32,5 +39,6 @@
   color: #fff;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  transform: translate(-50%, -50%);
   z-index: 10;
 }

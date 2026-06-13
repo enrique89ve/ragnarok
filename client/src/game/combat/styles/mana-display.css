@@ -10,5 +10,5 @@
   gap: 4px;
   padding: var(--space-6) 12px;
   background: rgba(0, 0, 0, 0.4);
-  border-radius: 20px;
+  border-radius: 0;
 }

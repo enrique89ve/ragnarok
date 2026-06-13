@@ -9,7 +9,7 @@
 .hero-card-frame.premium-glow {
   position: relative;
   border: 2px solid color-mix(in srgb, var(--frost-400) 55%, transparent);
-  border-radius: 16px;
+  border-radius: 0;
   box-shadow:
     0 0 8px color-mix(in srgb, var(--frost-400) 30%, transparent),
     0 0 16px color-mix(in srgb, var(--frost-400) 15%, transparent),
@@ -21,7 +21,7 @@
   content: '';
   position: absolute;
   inset: -3px;
-  border-radius: 18px;
+  border-radius: 0;
   background: linear-gradient(90deg,
     color-mix(in srgb, var(--frost-400) 15%, transparent) 0%,
     color-mix(in srgb, var(--success-400) 10%, transparent) 50%,
@@ -36,7 +36,7 @@
 .hero-elemental-aura.premium-glow {
   position: absolute;
   inset: -15px -20px -12px -20px;
-  border-radius: 20px;
+  border-radius: 0;
   pointer-events: none;
   z-index: 0;
   opacity: 0.5;

@@ -8,7 +8,7 @@
   gap: var(--poker-panel-gap);
   padding: calc(8px * var(--poker-panel-scale));
   background: rgba(0, 0, 0, 0.15);
-  border-radius: 8px;
+  border-radius: var(--radius-norse);
   border: 1px solid rgba(255, 255, 255, 0.05);
   flex-shrink: 0;
 }
@@ -21,7 +21,7 @@
   padding: var(--space-10) 16px;
   background: rgba(100, 100, 100, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
+  border-radius: var(--radius-norse);
   color: #94a3b8;
   font-size: 0.85rem;
   font-style: italic;
@@ -48,7 +48,7 @@
   padding: calc(6px * var(--poker-panel-scale))
     calc(8px * var(--poker-panel-scale));
   background: rgba(0, 0, 0, 0.5);
-  border-radius: 6px;
+  border-radius: var(--radius-norse);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -71,7 +71,7 @@
     rgba(30, 41, 59, 0.95) 100%
   );
   border: 1px solid rgba(139, 92, 246, 0.4);
-  border-radius: 6px;
+  border-radius: var(--radius-norse);
   color: #e2e8f0;
   cursor: pointer;
   font-family: "Cinzel", "Times New Roman", serif;
@@ -129,7 +129,7 @@
   height: 8px;
   appearance: none;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-4);
+  border-radius: var(--radius-norse);
   outline: none;
 }
 
@@ -167,7 +167,10 @@
   flex-direction: row;
   align-items: center;
   justify-content: flex-start;
-  gap: var(--space-6);
+  gap: clamp(6px, 0.85vw, 10px);
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 /* ─── Poker action buttons container ─── */
@@ -178,156 +181,265 @@
   align-items: center;
 }
 
-/* ─── Base poker button — tactile, premium, readable at a glance ─── */
+/* ─── Base poker button — MOBA-style icon slot, no visible text ─── */
 .poker-btn {
+  --poker-button-top: #6d7684;
+  --poker-button-mid: #28313f;
+  --poker-button-bottom: #0b1019;
+  --poker-button-rim: rgba(203, 213, 225, 0.18);
+  --poker-button-accent: #cbd5e1;
+  --poker-button-copy: #f8fafc;
+  --poker-button-cut: 3px;
+  --poker-button-inner-cut: 2px;
   position: relative;
-  min-width: 92px;
-  height: 38px;
-  padding: 0 16px;
-  border-radius: 7px;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 clamp(53px, 6.4vw, 63px);
+  inline-size: clamp(53px, 6.4vw, 63px);
+  min-inline-size: 0;
+  block-size: clamp(46px, 6vw, 58px);
+  padding: 5px;
+  border: 1px solid var(--poker-button-rim);
+  border-radius: 0;
   font-family: var(--type-display);
-  font-size: 0.92rem;
+  font-size: 0.76rem;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 1.2px;
+  letter-spacing: 0;
   cursor: pointer;
+  color: var(--poker-button-copy);
+  clip-path: polygon(
+    var(--poker-button-cut) 0,
+    calc(100% - var(--poker-button-cut)) 0,
+    100% var(--poker-button-cut),
+    100% calc(100% - var(--poker-button-cut)),
+    calc(100% - var(--poker-button-cut)) 100%,
+    var(--poker-button-cut) 100%,
+    0 calc(100% - var(--poker-button-cut)),
+    0 var(--poker-button-cut)
+  );
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent 22%, rgba(0, 0, 0, 0.16) 74%),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.2) 0%,
+      rgba(255, 255, 255, 0.04) 17%,
+      rgba(0, 0, 0, 0.1) 48%,
+      rgba(0, 0, 0, 0.46) 100%
+    ),
+    radial-gradient(
+      ellipse at 50% 0%,
+      color-mix(in srgb, var(--poker-button-accent) 22%, transparent) 0%,
+      transparent 62%
+    ),
+    radial-gradient(
+      circle at 50% 54%,
+      color-mix(in srgb, var(--poker-button-accent) 14%, transparent) 0%,
+      transparent 50%
+    ),
+    linear-gradient(
+      180deg,
+      var(--poker-button-top),
+      var(--poker-button-mid) 50%,
+      var(--poker-button-bottom)
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -2px 2px rgba(0, 0, 0, 0.58),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.22),
+    0 5px 10px rgba(0, 0, 0, 0.56),
+    0 0 8px color-mix(in srgb, var(--poker-button-accent) 10%, transparent);
+  filter: saturate(1.02);
   transition:
     transform 0.15s ease,
     opacity 0.15s ease,
     box-shadow 0.15s ease,
     filter 0.15s ease;
   overflow: hidden;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+  box-sizing: border-box;
 }
 
-.poker-btn .btn-text {
-  position: relative;
-  z-index: 2;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
-  font-family: var(--type-display);
-  font-weight: 800;
-}
-
-.poker-btn .btn-label {
-  display: block;
-  font-size: 0.6rem;
-  letter-spacing: 0.15em;
-  opacity: 0.7;
-  line-height: 1;
-  margin-bottom: 1px;
-  position: relative;
-  z-index: 2;
-}
-
-/* RAISE button - Red/Orange gradient like reference */
-.poker-btn.raise-btn {
-  background: linear-gradient(
-    180deg,
-    #e85a4f 0%,
-    #c94a40 25%,
-    #b03a30 50%,
-    #a02820 75%,
-    #8a1810 100%
+.poker-btn::before {
+  content: "";
+  position: absolute;
+  inset: 3px 5px auto;
+  height: 30%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent);
+  clip-path: polygon(
+    3px 0,
+    calc(100% - 3px) 0,
+    100% 3px,
+    100% 100%,
+    0 100%,
+    0 3px
   );
-  border: 2px solid #ff6b5b;
-  border-bottom: 3px solid #6a1810;
-  color: #ffffff;
+  opacity: 0.34;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.poker-btn::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 0;
+  border: 1px solid color-mix(in srgb, var(--poker-button-accent) 8%, transparent);
+  clip-path: polygon(
+    var(--poker-button-inner-cut) 0,
+    calc(100% - var(--poker-button-inner-cut)) 0,
+    100% var(--poker-button-inner-cut),
+    100% calc(100% - var(--poker-button-inner-cut)),
+    calc(100% - var(--poker-button-inner-cut)) 100%,
+    var(--poker-button-inner-cut) 100%,
+    0 calc(100% - var(--poker-button-inner-cut)),
+    0 var(--poker-button-inner-cut)
+  );
   box-shadow:
-    inset 0 1px 0 rgba(255, 200, 180, 0.4),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.3),
-    0 4px 8px rgba(180, 60, 40, 0.4);
+    inset 0 0 5px rgba(0, 0, 0, 0.54),
+    inset 0 0 7px color-mix(in srgb, var(--poker-button-accent) 8%, transparent),
+    0 0 4px color-mix(in srgb, var(--poker-button-accent) 8%, transparent);
+  opacity: 0.36;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.poker-btn .btn-icon-frame {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 100%;
+  inline-size: 100%;
+  block-size: 100%;
+  box-sizing: border-box;
+  border-radius: 0;
+  color: #fffdf5;
+  clip-path: polygon(
+    var(--poker-button-inner-cut) 0,
+    calc(100% - var(--poker-button-inner-cut)) 0,
+    100% var(--poker-button-inner-cut),
+    100% calc(100% - var(--poker-button-inner-cut)),
+    calc(100% - var(--poker-button-inner-cut)) 100%,
+    var(--poker-button-inner-cut) 100%,
+    0 calc(100% - var(--poker-button-inner-cut)),
+    0 var(--poker-button-inner-cut)
+  );
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent 26%),
+    radial-gradient(circle at 50% 48%, color-mix(in srgb, var(--poker-button-accent) 34%, transparent) 0%, transparent 33%),
+    radial-gradient(circle at 50% 60%, color-mix(in srgb, var(--poker-button-accent) 26%, #05070b), #07090f 72%);
+  border: 1px solid color-mix(in srgb, var(--poker-button-accent) 18%, rgba(0, 0, 0, 0.9));
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.14),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.56),
+    0 1px 3px rgba(0, 0, 0, 0.46);
+}
+
+.poker-btn .btn-icon-frame::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  clip-path: polygon(
+    var(--poker-button-inner-cut) 0,
+    calc(100% - var(--poker-button-inner-cut)) 0,
+    100% var(--poker-button-inner-cut),
+    100% calc(100% - var(--poker-button-inner-cut)),
+    calc(100% - var(--poker-button-inner-cut)) 100%,
+    var(--poker-button-inner-cut) 100%,
+    0 calc(100% - var(--poker-button-inner-cut)),
+    0 var(--poker-button-inner-cut)
+  );
+  background:
+    linear-gradient(135deg, transparent 0 35%, color-mix(in srgb, var(--poker-button-accent) 14%, transparent) 36% 39%, transparent 40%),
+    linear-gradient(45deg, transparent 0 62%, rgba(255, 255, 255, 0.08) 63% 66%, transparent 67%);
+  opacity: 0.42;
+  pointer-events: none;
+}
+
+.poker-btn .btn-icon {
+  inline-size: 76%;
+  block-size: 76%;
+  display: block;
+  position: relative;
+  z-index: 1;
+  filter:
+    drop-shadow(0 1px 1px rgba(0, 0, 0, 0.88))
+    drop-shadow(0 0 8px color-mix(in srgb, var(--poker-button-accent) 42%, transparent));
+}
+
+/* RAISE/BET button - crimson metal */
+.poker-btn.raise-btn {
+  --poker-button-top: #bc5148;
+  --poker-button-mid: #6d1618;
+  --poker-button-bottom: #25090c;
+  --poker-button-rim: rgba(255, 172, 116, 0.26);
+  --poker-button-accent: #ff5c4d;
+  --poker-button-copy: #fff7ed;
 }
 
 .poker-btn.raise-btn:hover:not(:disabled) {
-  background: linear-gradient(
-    180deg,
-    #f06a5f 0%,
-    #d95a50 25%,
-    #c04a40 50%,
-    #b03830 75%,
-    #9a2820 100%
-  );
   transform: translateY(-1px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 200, 180, 0.5),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.3),
-    0 6px 12px rgba(180, 60, 40, 0.5);
+    0 7px 14px rgba(0, 0, 0, 0.5),
+    0 0 10px color-mix(in srgb, var(--poker-button-accent) 22%, transparent);
 }
 
-/* CALL button - Gold/Yellow gradient like reference */
+/* CALL/CHECK button - gold metal */
 .poker-btn.call-btn {
-  background: linear-gradient(
-    180deg,
-    #e8c547 0%,
-    #d4a82a 25%,
-    #c49520 50%,
-    #b08518 75%,
-    #9a7510 100%
-  );
-  border: 2px solid #f5d560;
-  border-bottom: 3px solid #6a5010;
-  color: #3a2800;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 240, 180, 0.5),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.2),
-    0 4px 8px rgba(180, 140, 40, 0.4);
+  --poker-button-top: #d2ad37;
+  --poker-button-mid: #87640d;
+  --poker-button-bottom: #2e2106;
+  --poker-button-rim: rgba(255, 234, 137, 0.28);
+  --poker-button-accent: #ffd05a;
+  --poker-button-copy: #fff7d6;
 }
 
 .poker-btn.call-btn:hover:not(:disabled) {
-  background: linear-gradient(
-    180deg,
-    #f0d057 0%,
-    #e4b83a 25%,
-    #d4a530 50%,
-    #c09528 75%,
-    #aa8520 100%
-  );
   transform: translateY(-1px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 240, 180, 0.6),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.2),
-    0 6px 12px rgba(180, 140, 40, 0.5);
+    0 7px 14px rgba(0, 0, 0, 0.5),
+    0 0 10px color-mix(in srgb, var(--poker-button-accent) 22%, transparent);
 }
 
-/* FOLD button - Gray/Dark gradient like reference */
+/* FOLD button - steel metal */
 .poker-btn.fold-btn {
-  background: linear-gradient(
-    180deg,
-    #5a6070 0%,
-    #4a5060 25%,
-    #3a4050 50%,
-    #303845 75%,
-    #252a35 100%
-  );
-  border: 2px solid #6a7080;
-  border-bottom: 3px solid #1a1e28;
-  color: #c0c8d8;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.15),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.3),
-    0 4px 8px rgba(40, 50, 70, 0.4);
+  --poker-button-top: #6c7e93;
+  --poker-button-mid: #26394f;
+  --poker-button-bottom: #0a1320;
+  --poker-button-rim: rgba(156, 199, 237, 0.24);
+  --poker-button-accent: #8ec5ff;
+  --poker-button-copy: #dbeafe;
 }
 
 .poker-btn.fold-btn:hover:not(:disabled) {
-  background: linear-gradient(
-    180deg,
-    #6a7080 0%,
-    #5a6070 25%,
-    #4a5060 50%,
-    #404855 75%,
-    #353a45 100%
-  );
   transform: translateY(-1px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.3),
-    0 6px 12px rgba(40, 50, 70, 0.5);
+    0 7px 14px rgba(0, 0, 0, 0.5),
+    0 0 9px color-mix(in srgb, var(--poker-button-accent) 18%, transparent);
+}
+
+.poker-btn.auto-attack-btn {
+  --poker-button-top: #778091;
+  --poker-button-mid: #333d4c;
+  --poker-button-bottom: #0d121b;
+  --poker-button-rim: rgba(214, 223, 235, 0.22);
+  --poker-button-accent: #dbe7f5;
+  --poker-button-copy: #f8fafc;
 }
 
 /* Disabled state for all poker buttons */
 .poker-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.46;
   cursor: not-allowed;
   transform: none;
+  filter: grayscale(0.35) brightness(0.72) saturate(0.75);
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.42),
+    0 0 8px rgba(15, 23, 42, 0.45);
 }
 
 /* Poker slider row - full width under buttons */
@@ -355,7 +467,7 @@
   -webkit-appearance: none;
   appearance: none;
   background: linear-gradient(90deg, #1a5a30 0%, #2a8a50 50%, #3ab060 100%);
-  border-radius: var(--radius-4);
+  border-radius: var(--radius-norse);
   cursor: pointer;
   box-shadow:
     inset 0 1px 2px rgba(0, 0, 0, 0.3),
@@ -401,84 +513,98 @@
 .poker-hp-slider-container {
   display: flex;
   align-items: center;
-  gap: var(--space-10);
-  padding: var(--space-6) 14px;
+  align-self: flex-start;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  inline-size: min(78%, 370px);
+  gap: clamp(6px, 0.8vw, 10px);
+  block-size: clamp(44px, 4.5vw, 50px);
+  padding: 4px clamp(7px, 0.9vw, 12px);
   background: linear-gradient(
     180deg,
-    rgba(48, 32, 14, 0.95) 0%,
-    rgba(28, 18, 6, 0.98) 50%,
-    rgba(48, 32, 14, 0.95) 100%
+    rgba(20, 21, 23, 0.96) 0%,
+    rgba(5, 7, 10, 0.98) 52%,
+    rgba(17, 13, 7, 0.96) 100%
   );
-  border: 2px solid rgba(212, 165, 23, 0.7);
-  border-radius: 18px;
+  border: 1px solid rgba(246, 194, 74, 0.66);
+  border-radius: 999px;
   box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.7),
-    inset 0 1px 0 rgba(255, 215, 100, 0.15),
-    0 0 10px rgba(212, 165, 23, 0.25);
-  min-width: 220px;
+    0 7px 18px rgba(0, 0, 0, 0.48),
+    inset 0 1px 0 rgba(255, 229, 157, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.72),
+    0 0 15px rgba(212, 165, 23, 0.22);
+  min-inline-size: min(225px, 100%);
 }
 
 .poker-hp-slider-container::before {
   content: "BET";
   font-family: "Cinzel", "Georgia", serif;
-  font-size: 0.6rem;
+  font-size: 0.85rem;
   font-weight: 800;
-  letter-spacing: 1.5px;
-  color: rgba(251, 191, 36, 0.85);
+  letter-spacing: 1.4px;
+  color: rgba(251, 191, 36, 0.95);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
   flex-shrink: 0;
 }
 
 .poker-hp-slider {
-  flex: 1;
+  flex: 1 1 42px;
+  min-inline-size: 0;
   height: 8px;
   appearance: none;
   background: linear-gradient(
     180deg,
-    rgba(20, 14, 4, 0.95) 0%,
-    rgba(36, 24, 8, 0.95) 50%,
-    rgba(20, 14, 4, 0.95) 100%
+    rgba(5, 6, 8, 0.98) 0%,
+    rgba(20, 15, 7, 0.98) 52%,
+    rgba(4, 4, 5, 0.98) 100%
   );
-  border-radius: var(--radius-4);
+  border-radius: var(--radius-norse);
   cursor: pointer;
-  border: 1px solid rgba(212, 165, 23, 0.5);
-  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(212, 165, 23, 0.58);
+  box-shadow:
+    inset 0 1px 4px rgba(0, 0, 0, 0.82),
+    0 0 5px rgba(246, 194, 74, 0.18);
 }
 
 .poker-hp-slider::-webkit-slider-thumb {
   appearance: none;
-  width: 18px;
-  height: 18px;
-  background: linear-gradient(135deg, #ff3333 0%, #cc0000 50%, #990000 100%);
-  border-radius: var(--radius-3);
+  width: 16px;
+  height: 16px;
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255, 191, 191, 0.55), transparent 28%),
+    linear-gradient(135deg, #ff2f24 0%, #d10b07 52%, #790a0a 100%);
+  border-radius: var(--radius-norse);
   cursor: pointer;
   box-shadow:
     0 2px 6px rgba(200, 0, 0, 0.7),
     0 0 8px rgba(255, 0, 0, 0.4),
     inset 0 1px 0 rgba(255, 150, 150, 0.3);
-  border: 2px solid;
-  border-image: linear-gradient(135deg, #d4a517 0%, #8b6914 100%) 1;
+  border: 1px solid #f4c45a;
+  transform: rotate(45deg);
 }
 
 .poker-hp-slider::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
-  background: linear-gradient(135deg, #ff3333 0%, #cc0000 50%, #990000 100%);
-  border-radius: var(--radius-3);
+  width: 16px;
+  height: 16px;
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255, 191, 191, 0.55), transparent 28%),
+    linear-gradient(135deg, #ff2f24 0%, #d10b07 52%, #790a0a 100%);
+  border-radius: var(--radius-norse);
   cursor: pointer;
   box-shadow:
     0 2px 6px rgba(200, 0, 0, 0.7),
     0 0 8px rgba(255, 0, 0, 0.4),
     inset 0 1px 0 rgba(255, 150, 150, 0.3);
-  border: 2px solid #d4a517;
+  border: 1px solid #f4c45a;
 }
 
 .poker-hp-slider-container .slider-value {
   font-family: "Cinzel", "Georgia", serif;
-  font-size: 0.85rem;
+  font-size: 1.15rem;
   font-weight: 800;
   color: #fbbf24;
-  min-width: 52px;
+  flex: 0 0 auto;
+  min-width: 56px;
   text-align: center;
   text-shadow:
     0 0 6px rgba(251, 191, 36, 0.6),
@@ -489,41 +615,56 @@
 /* ─── Quick-bet preset buttons ─── */
 .poker-quick-bets {
   display: flex;
-  gap: 4px;
+  flex: 0 0 auto;
+  gap: 2px;
   justify-content: center;
-  margin-bottom: 4px;
+  margin-bottom: 0;
 }
 
 .quick-bet-btn {
-  padding: var(--space-2) 12px;
-  border-radius: var(--radius-4);
+  min-width: 42px;
+  min-height: 22px;
+  padding: 0 6px;
+  border-radius: var(--radius-norse);
   font-family: var(--type-display);
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   text-transform: uppercase;
   cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(229, 189, 99, 0.38);
+  background:
+    linear-gradient(180deg, rgba(116, 123, 132, 0.44) 0%, rgba(30, 33, 39, 0.92) 50%, rgba(7, 8, 11, 0.98) 100%);
+  color: rgba(246, 218, 151, 0.86);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.72),
+    0 1px 3px rgba(0, 0, 0, 0.42);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
   transition:
     background 0.15s ease,
-    color 0.15s ease;
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
 }
 
 .quick-bet-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
+  background:
+    linear-gradient(180deg, rgba(151, 160, 170, 0.5) 0%, rgba(42, 46, 54, 0.96) 50%, rgba(10, 11, 15, 1) 100%);
+  border-color: rgba(246, 194, 74, 0.72);
+  color: #fff3c4;
+  transform: translateY(-1px);
 }
 
 .quick-bet-btn.all-in {
-  border-color: rgba(239, 68, 68, 0.5);
-  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #ffb0a9;
 }
 
 .quick-bet-btn.all-in:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.2);
-  color: #fca5a5;
+  background:
+    linear-gradient(180deg, rgba(184, 69, 58, 0.65) 0%, rgba(79, 18, 16, 0.96) 54%, rgba(13, 8, 8, 1) 100%);
+  color: #ffe2de;
 }
 
 .quick-bet-btn:disabled {

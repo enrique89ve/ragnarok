@@ -17,7 +17,7 @@
     linear-gradient(180deg, #0a0505 0%, #1a0a0a 50%, #0a0505 100%);
   border: 2px solid;
   border-image: linear-gradient(135deg, #d4a517 0%, #8b6914 50%, #d4a517 100%) 1;
-  border-radius: var(--radius-2);
+  border-radius: var(--radius-norse-tight);
   overflow: hidden;
   box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.8),
@@ -157,7 +157,7 @@
   margin-top: 4px;
   background: linear-gradient(180deg, #1a1508 0%, #2d2510 50%, #1a1508 100%);
   border: 2px solid #4a3a1a;
-  border-radius: var(--radius-5);
+  border-radius: var(--radius-norse);
   overflow: hidden;
   box-shadow:
     0 3px 8px rgba(0, 0, 0, 0.6),
@@ -177,7 +177,7 @@
     #b45309 70%,
     #92400e 100%
   );
-  border-radius: var(--radius-2);
+  border-radius: var(--radius-norse-tight);
   transition: width 0.3s ease-out;
   box-shadow:
     0 0 8px rgba(245, 158, 11, 0.5),

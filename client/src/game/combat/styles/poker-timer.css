@@ -15,7 +15,7 @@
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
   padding: 4px 12px;
   background: rgba(0, 0, 0, 0.5);
-  border-radius: var(--radius-4);
+  border-radius: var(--radius-norse);
   min-width: 40px;
   text-align: center;
 }
@@ -47,7 +47,7 @@
 .end-turn-btn {
   background: linear-gradient(180deg, #f59e0b 0%, #d97706 50%, #b45309 100%);
   border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
+  border-radius: var(--radius-norse);
   color: #fff;
   padding: 12px 24px;
   font-weight: bold;

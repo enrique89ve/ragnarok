@@ -15,7 +15,7 @@
 
 .wager-section {
   background: rgba(15, 12, 30, 0.85);
-  border-radius: 8px;
+  border-radius: var(--radius-norse);
   padding: var(--space-6) 10px;
   border: 1px solid rgba(245, 158, 11, 0.4);
   box-shadow:

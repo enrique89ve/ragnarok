@@ -274,7 +274,7 @@
 	padding: 4px 14px;
 	background: color-mix(in srgb, var(--obsidian-950) 85%, transparent);
 	border: 1px solid color-mix(in srgb, var(--ink-400) 30%, transparent);
-	border-radius: 20px;
+	border-radius: 0;
 	pointer-events: none;
 	transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
