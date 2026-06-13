@@ -7,20 +7,20 @@
   top: var(--poker-zone-hourglass-y, 4px);
   left: var(--poker-zone-hourglass-x, 50%);
   width: var(--poker-zone-hourglass-w, 48px);
-  min-height: var(--poker-zone-hourglass-h, 96px);
+  min-height: var(--poker-zone-hourglass-h, 84px);
   transform: rotate(var(--poker-zone-hourglass-rot, 0deg));
   transform-origin: top left;
   z-index: var(--z-hud);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0;
+  gap: 2px;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.8));
 }
 
 .hourglass-svg {
   width: var(--poker-zone-hourglass-w, 48px);
-  height: calc(var(--poker-zone-hourglass-h, 96px) - 16px);
+  height: 64px; /* SVG is 60×84 viewBox; rendered at 48×~67 to keep slim profile */
 }
 
 /* Ambient glow behind the glass */
@@ -76,28 +76,53 @@
   50% { opacity: 0.5; }
 }
 
-/* Countdown number */
+/* Countdown number — Norse-carved plate for high contrast.
+   Obsidian pill + gold rim + gold-gradient numeral sits under the
+   hourglass, giving the timer a clear visual anchor. */
 .hg-countdown {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 18px;
+  padding: 0 6px;
   font-family: var(--type-numeric);
-  font-size: 1rem;
-  font-weight: 800;
-  color: var(--gold-400);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: var(--gold-100);
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--obsidian-900) 96%, transparent) 0%,
+      color-mix(in srgb, var(--obsidian-950) 98%, transparent) 100%);
+  border: 1px solid color-mix(in srgb, var(--gold-300) 46%, transparent);
+  border-radius: var(--radius-norse-tight);
+  /* engraved: dark top, light bottom */
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--obsidian-950) 70%, transparent),
+    inset 0 -1px 0 color-mix(in srgb, var(--ink-0) 6%, transparent),
+    0 0 6px color-mix(in srgb, var(--gold-300) 22%, transparent);
   text-shadow:
-    0 0 6px color-mix(in srgb, var(--gold-400) 60%, transparent),
-    0 1px 3px rgba(0, 0, 0, 0.8);
+    0 0 5px color-mix(in srgb, var(--gold-300) 65%, transparent),
+    0 1px 2px rgba(0, 0, 0, 0.9);
   line-height: 1;
-  margin-top: -2px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ============================================================
    LOW TIME — Urgency state (<=10 seconds)
    ============================================================ */
 .hourglass-timer.low-time .hg-countdown {
-  color: var(--danger-400);
+  color: var(--danger-300);
+  border-color: color-mix(in srgb, var(--danger-400) 56%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--obsidian-950) 70%, transparent),
+    inset 0 -1px 0 color-mix(in srgb, var(--ink-0) 6%, transparent),
+    0 0 8px color-mix(in srgb, var(--danger-400) 32%, transparent);
   animation: hg-timer-blink 0.6s ease-in-out infinite;
   text-shadow:
-    0 0 8px var(--danger-glow),
-    0 1px 3px rgba(0, 0, 0, 0.8);
+    0 0 6px color-mix(in srgb, var(--danger-400) 70%, transparent),
+    0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
 .hourglass-timer.low-time .hg-sand-top,

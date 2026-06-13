@@ -1168,7 +1168,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
           const botH = (1 - pct) * 30;
           return (
             <div className={`hourglass-timer ${outerDecisionView.timerTone === 'low' ? 'low-time' : ''} ${outerDecisionView.timerTone === 'critical' || outerDecisionView.timerTone === 'expired' ? 'critical' : ''}`}>
-              <svg className="hourglass-svg" viewBox="0 0 60 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg className="hourglass-svg" viewBox="0 0 60 84" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <defs>
                   <linearGradient id="hg-gold" x1="0" y1="0" x2="1" y2="1">
                     <stop offset="0%" stopColor="#f5d060" />
@@ -1195,10 +1195,10 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
                     <stop offset="100%" stopColor="rgba(245,208,96,0)" />
                   </radialGradient>
                   <clipPath id="hg-top-clip">
-                    <path d="M12 12 C12 12 12 38 30 50 C48 38 48 12 48 12 Z" />
+                    <path d="M14 12 C14 12 14 32 30 42 C46 32 46 12 46 12 Z" />
                   </clipPath>
                   <clipPath id="hg-bottom-clip">
-                    <path d="M12 88 C12 88 12 62 30 50 C48 62 48 88 48 88 Z" />
+                    <path d="M14 72 C14 72 14 52 30 42 C46 52 46 72 46 72 Z" />
                   </clipPath>
                   <filter id="hg-inner-shadow">
                     <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#000" floodOpacity="0.4" />
@@ -1206,78 +1206,74 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
                 </defs>
 
                 {/* Ambient glow behind hourglass */}
-                <ellipse cx="30" cy="50" rx="28" ry="44" fill="url(#hg-glow)" className="hg-ambient-glow" />
+                <ellipse cx="30" cy="42" rx="26" ry="36" fill="url(#hg-glow)" className="hg-ambient-glow" />
 
-                {/* Ornate top cap — layered for depth */}
-                <rect x="6" y="2" width="48" height="10" rx="3" fill="url(#hg-gold-cap)" stroke="#8b6508" strokeWidth="1" />
-                <rect x="10" y="0" width="40" height="4" rx="2" fill="url(#hg-gold-cap)" stroke="#a07818" strokeWidth="0.5" />
-                <line x1="12" y1="7" x2="48" y2="7" stroke="rgba(255,230,128,0.5)" strokeWidth="0.5" />
-                {/* Top cap ornamental dots */}
-                <circle cx="16" cy="6" r="1.2" fill="#ffe680" opacity="0.8" />
-                <circle cx="30" cy="6" r="1.5" fill="#ffe680" opacity="0.9" />
-                <circle cx="44" cy="6" r="1.2" fill="#ffe680" opacity="0.8" />
+                {/* Top cap — single slim gold bar with bevel */}
+                <rect x="8" y="3" width="44" height="7" rx="1" fill="url(#hg-gold-cap)" stroke="#8b6508" strokeWidth="0.8" />
+                <rect x="11" y="1.5" width="38" height="2" rx="0.5" fill="#ffe680" opacity="0.7" />
+                <line x1="12" y1="6.5" x2="48" y2="6.5" stroke="rgba(255,230,128,0.45)" strokeWidth="0.4" />
+                {/* Top cap Norse rune mark — small diamond */}
+                <path d="M30 4.5 L31.5 6.5 L30 8.5 L28.5 6.5 Z" fill="#fff4dc" opacity="0.9" />
 
-                {/* Ornate bottom cap */}
-                <rect x="6" y="88" width="48" height="10" rx="3" fill="url(#hg-gold-cap)" stroke="#8b6508" strokeWidth="1" />
-                <rect x="10" y="96" width="40" height="4" rx="2" fill="url(#hg-gold-cap)" stroke="#a07818" strokeWidth="0.5" />
-                <line x1="12" y1="93" x2="48" y2="93" stroke="rgba(255,230,128,0.5)" strokeWidth="0.5" />
-                <circle cx="16" cy="93" r="1.2" fill="#ffe680" opacity="0.8" />
-                <circle cx="30" cy="93" r="1.5" fill="#ffe680" opacity="0.9" />
-                <circle cx="44" cy="93" r="1.2" fill="#ffe680" opacity="0.8" />
+                {/* Bottom cap — mirror */}
+                <rect x="8" y="74" width="44" height="7" rx="1" fill="url(#hg-gold-cap)" stroke="#8b6508" strokeWidth="0.8" />
+                <rect x="11" y="80.5" width="38" height="2" rx="0.5" fill="#ffe680" opacity="0.7" />
+                <line x1="12" y1="77.5" x2="48" y2="77.5" stroke="rgba(255,230,128,0.45)" strokeWidth="0.4" />
+                <path d="M30 75.5 L31.5 77.5 L30 79.5 L28.5 77.5 Z" fill="#fff4dc" opacity="0.9" />
 
-                {/* Glass frame — two curved bulbs */}
+                {/* Glass frame — two elegant curved bulbs, slimmer + shorter */}
                 <path
-                  d="M12 12 C12 12 12 38 30 50 C12 62 12 88 12 88 M48 12 C48 12 48 38 30 50 C48 62 48 88 48 88"
-                  stroke="url(#hg-gold)" strokeWidth="2.5" strokeLinecap="round" fill="none"
+                  d="M14 12 C14 12 14 32 30 42 C14 52 14 72 14 72 M46 12 C46 12 46 32 30 42 C46 52 46 72 46 72"
+                  stroke="url(#hg-gold)" strokeWidth="2" strokeLinecap="round" fill="none"
                 />
 
                 {/* Sand in top bulb — drains down */}
                 <rect
                   className="hg-sand-top"
                   clipPath="url(#hg-top-clip)"
-                  x="11" width="38"
+                  x="13" width="34"
                   fill="url(#hg-sand-grad)"
                   filter="url(#hg-inner-shadow)"
-                  style={{ y: 12 + (30 - topH), height: topH, transition: 'height 1s linear, y 1s linear' }}
+                  style={{ y: 12 + (24 - topH * 0.8), height: topH * 0.8, transition: 'height 1s linear, y 1s linear' }}
                 />
 
                 {/* Sand in bottom bulb — fills up */}
                 <rect
                   className="hg-sand-bottom"
                   clipPath="url(#hg-bottom-clip)"
-                  x="11" width="38"
+                  x="13" width="34"
                   fill="url(#hg-sand-grad)"
-                  style={{ y: 88 - botH, height: botH, transition: 'height 1s linear, y 1s linear' }}
+                  style={{ y: 72 - botH * 0.8, height: botH * 0.8, transition: 'height 1s linear, y 1s linear' }}
                 />
 
                 {/* Falling sand stream — thin line through the neck */}
                 {t > 0 && t < maxT && (
                   <g className="hg-stream-group">
-                    <line x1="30" y1="42" x2="30" y2="58" stroke="#e8b830" strokeWidth="1.2" className="hg-stream" />
+                    <line x1="30" y1="36" x2="30" y2="48" stroke="#e8b830" strokeWidth="1" className="hg-stream" />
                     {/* Sand particles falling */}
-                    <circle cx="30" cy="46" r="0.8" fill="#f5d060" className="hg-particle hg-p1" />
-                    <circle cx="29" cy="52" r="0.6" fill="#d4a017" className="hg-particle hg-p2" />
-                    <circle cx="31" cy="49" r="0.7" fill="#f5c842" className="hg-particle hg-p3" />
+                    <circle cx="30" cy="38" r="0.7" fill="#f5d060" className="hg-particle hg-p1" />
+                    <circle cx="29.4" cy="44" r="0.5" fill="#d4a017" className="hg-particle hg-p2" />
+                    <circle cx="30.6" cy="41" r="0.6" fill="#f5c842" className="hg-particle hg-p3" />
                   </g>
                 )}
 
-                {/* Glass shine highlight — curved reflections */}
+                {/* Glass shine highlight — curved reflections (shorter, slimmer) */}
                 <path
-                  d="M18 16 C18 16 20 32 28 42"
-                  stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" strokeLinecap="round" fill="none"
+                  d="M19 15 C19 15 21 28 28 37"
+                  stroke="rgba(255,255,255,0.3)" strokeWidth="1.2" strokeLinecap="round" fill="none"
                   className="hg-shine-top"
                 />
                 <path
-                  d="M18 84 C18 84 20 68 28 58"
-                  stroke="rgba(255,255,255,0.15)" strokeWidth="1.2" strokeLinecap="round" fill="none"
+                  d="M19 69 C19 69 21 56 28 47"
+                  stroke="rgba(255,255,255,0.15)" strokeWidth="1" strokeLinecap="round" fill="none"
                   className="hg-shine-bottom"
                 />
 
-                {/* Center neck ring ornament */}
-                <ellipse cx="30" cy="50" rx="5" ry="2.5" fill="none" stroke="url(#hg-gold)" strokeWidth="1.5" />
-                <ellipse cx="30" cy="50" rx="3" ry="1.5" fill="#b8860b" opacity="0.6" />
+                {/* Center neck ring ornament — slim, elegant */}
+                <ellipse cx="30" cy="42" rx="4" ry="2" fill="none" stroke="url(#hg-gold)" strokeWidth="1.2" />
+                <ellipse cx="30" cy="42" rx="2.4" ry="1.2" fill="#b8860b" opacity="0.6" />
               </svg>
-              <span className="hg-countdown">{t}</span>
+              <span className="hg-countdown" aria-label={`${t} seconds remaining`}>{t}</span>
             </div>
           );
         })()}
