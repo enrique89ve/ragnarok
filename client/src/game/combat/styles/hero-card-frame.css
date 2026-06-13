@@ -5,7 +5,7 @@
 .hero-elemental-aura {
   position: absolute;
   inset: -8px;
-  border-radius: 0;
+  border-radius: 16px;
   pointer-events: none;
   z-index: 0;
   opacity: 1;
@@ -34,7 +34,7 @@
 .hero-card-frame.premium-glow {
   position: relative;
   border: 2px solid rgba(0, 255, 204, 0.6);
-  border-radius: 0;
+  border-radius: 16px;
   animation: premiumGlowPulse 3s ease-in-out infinite;
   box-shadow:
     0 0 8px rgba(0, 255, 204, 0.3),
@@ -47,7 +47,7 @@
   content: "";
   position: absolute;
   inset: -4px;
-  border-radius: 0;
+  border-radius: 20px;
   background: linear-gradient(
     90deg,
     rgba(0, 255, 204, 0.15) 0%,
@@ -63,7 +63,7 @@
 .hero-elemental-aura.premium-glow {
   position: absolute;
   inset: -15px -20px -12px -20px;
-  border-radius: 0;
+  border-radius: 20px;
   pointer-events: none;
   z-index: 0;
   opacity: 0.5;

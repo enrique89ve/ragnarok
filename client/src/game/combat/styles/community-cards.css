@@ -20,7 +20,7 @@
      `poker-core.css` → `community-cards.css` chain OR directly via
      `PokerCardFrame.css` import). Only the community-slot geometry
      stays here. */
-  border-radius: var(--radius-norse);
+  border-radius: 7px;
   position: relative;
   display: flex;
   align-items: center;

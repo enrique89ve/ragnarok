@@ -22,7 +22,7 @@
   /* Background stack + beveled rim live in
      `client/src/game/components/card/pokerFaceDown.css` (loaded via
      poker-core.css). Only the hand-display geometry stays here. */
-  border-radius: var(--radius-norse);
+  border-radius: 7px;
   flex: 0 0 var(--opponent-hand-card-width, 78px);
   position: relative;
   margin-left: var(--opponent-hand-card-overlap, -39px);

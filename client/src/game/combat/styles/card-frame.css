@@ -28,7 +28,7 @@
     var(--ui-iron-dark) 38%,
     var(--ui-iron-darkest) 100%);
   border: 3px solid transparent;
-  border-radius: var(--radius-norse-tight);
+  border-radius: 12px;
   overflow: hidden;
   position: relative;
   transition: transform 0.3s ease, opacity 0.3s ease, box-shadow 0.3s ease;
@@ -43,7 +43,7 @@
   content: '';
   position: absolute;
   inset: -3px;
-  border-radius: 0;
+  border-radius: 14px;
   background: linear-gradient(145deg,
     var(--ui-gold-warm) 0%,
     var(--ui-gold-deep) 22%,
@@ -63,7 +63,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: var(--radius-norse);
+  border-radius: 9px;
   box-shadow:
     inset 0 0 32px rgba(0, 0, 0, 0.78),
     inset 0 2px 0 color-mix(in srgb, var(--gold-200) 10%, transparent),
