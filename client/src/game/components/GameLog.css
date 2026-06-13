@@ -469,6 +469,13 @@
   border: 1px solid color-mix(in srgb, var(--gold-300) 24%, transparent);
   background: color-mix(in srgb, var(--obsidian-950) 70%, transparent);
   color: color-mix(in srgb, var(--gold-300) 84%, transparent);
+  border-radius: var(--radius-norse-tight);
+  padding: var(--space-3) 7px;
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .log-actor {
@@ -487,7 +494,7 @@
   overflow: hidden;
   padding: var(--space-3) 7px;
   border: 1px solid color-mix(in srgb, var(--border-chip) 88%, transparent);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-norse-tight);
   background: color-mix(in srgb, var(--surface-chip) 58%, transparent);
   color: color-mix(in srgb, var(--text-e2) 58%, transparent);
   font-size: 0.66rem;
