@@ -549,10 +549,13 @@
 	height: 100%;
 	background-color: #1a1d24;
 	background-image:
-		url("data:image/svg+xml;utf8,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2232%22%20height=%2232%22%20viewBox=%220%200%2032%2032%22%3E%3Cg%20fill=%22none%22%20stroke=%22rgba(201,168,76,0.6)%22%20stroke-width=%221.2%22%20stroke-linejoin=%22miter%22%20stroke-linecap=%22square%22%3E%3Cpath%20d=%22M-2%206%20L14%2022%20L30%206%20M-2%2026%20L14%2010%20L30%2026%20M-2%2014%20L14%20-2%20M18%2034%20L34%2014%22/%3E%3Cpath%20d=%22M0%200%20L8%200%20L8%204%20L4%204%20L4%208%20L0%208%20Z%20M24%200%20L32%200%20L32%208%20L28%208%20L28%204%20L24%204%20Z%20M0%2024%20L4%2024%20L4%2028%20L8%2028%20L8%2032%20L0%2032%20Z%20M24%2028%20L28%2028%20L28%2024%20L32%2024%20L32%2032%20L24%2032%20Z%22/%3E%3C/g%3E%3C/svg%3E"),
+		/* center vignette — solid dark under the Eihwaz rune for contrast */
+		radial-gradient(ellipse 38% 42% at 50% 50%, rgba(26, 29, 36, 0.95) 0%, transparent 75%),
+		/* thin low-opacity Norse interlace tile */
+		url("data:image/svg+xml;utf8,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2232%22%20height=%2232%22%20viewBox=%220%200%2032%2032%22%3E%3Cg%20fill=%22none%22%20stroke=%22rgba(201,168,76,0.32)%22%20stroke-width=%220.7%22%20stroke-linejoin=%22miter%22%20stroke-linecap=%22square%22%3E%3Cpath%20d=%22M-2%206%20L14%2022%20L30%206%20M-2%2026%20L14%2010%20L30%2026%20M-2%2014%20L14%20-2%20M18%2034%20L34%2014%22/%3E%3Cpath%20d=%22M0%200%20L8%200%20L8%204%20L4%204%20L4%208%20L0%208%20Z%20M24%200%20L32%200%20L32%208%20L28%208%20L28%204%20L24%204%20Z%20M0%2024%20L4%2024%20L4%2028%20L8%2028%20L8%2032%20L0%2032%20Z%20M24%2028%20L28%2028%20L28%2024%20L32%2024%20L32%2032%20L24%2032%20Z%22/%3E%3C/g%3E%3C/svg%3E"),
 		radial-gradient(ellipse at 50% 40%, rgba(255, 255, 255, 0.04) 0%, rgba(0, 0, 0, 0.18) 75%);
-	background-repeat: repeat, no-repeat;
-	background-size: 32px 32px, 100% 100%;
+	background-repeat: no-repeat, repeat, no-repeat;
+	background-size: 100% 100%, 32px 32px, 100% 100%;
 	border-radius: inherit;
 	border: none;
 	box-shadow:
