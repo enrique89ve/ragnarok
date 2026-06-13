@@ -6,8 +6,8 @@
   position: absolute;
   top: var(--poker-zone-hourglass-y, 4px);
   left: var(--poker-zone-hourglass-x, 50%);
-  width: var(--poker-zone-hourglass-w, 48px);
-  min-height: var(--poker-zone-hourglass-h, 84px);
+  width: var(--poker-zone-hourglass-w, 65px);
+  min-height: 0;
   transform: rotate(var(--poker-zone-hourglass-rot, 0deg));
   transform-origin: top left;
   z-index: var(--z-hud);
@@ -15,12 +15,16 @@
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.8));
+  /* Fantasy multi-layer glow: warm gold bloom + deep obsidian drop + edge halo */
+  filter:
+    drop-shadow(0 0 5px rgba(245, 208, 96, 0.28))
+    drop-shadow(0 5px 12px rgba(0, 0, 0, 0.78))
+    drop-shadow(0 1px 0 rgba(255, 230, 128, 0.18));
 }
 
 .hourglass-svg {
-  width: var(--poker-zone-hourglass-w, 48px);
-  height: 64px; /* SVG is 60×84 viewBox; rendered at 48×~67 to keep slim profile */
+  width: var(--poker-zone-hourglass-w, 65px);
+  height: 91px; /* SVG viewBox 60×84; rendered at 65×91 to scale uniformly (+35%) */
 }
 
 /* Ambient glow behind the glass */
@@ -83,11 +87,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 26px;
-  height: 18px;
-  padding: 0 6px;
+  min-width: 32px;
+  height: 22px;
+  padding: 0 8px;
   font-family: var(--type-numeric);
-  font-size: 0.78rem;
+  font-size: 0.95rem;
   font-weight: 900;
   letter-spacing: 0.06em;
   color: var(--gold-100);
@@ -95,15 +99,16 @@
     linear-gradient(180deg,
       color-mix(in srgb, var(--obsidian-900) 96%, transparent) 0%,
       color-mix(in srgb, var(--obsidian-950) 98%, transparent) 100%);
-  border: 1px solid color-mix(in srgb, var(--gold-300) 46%, transparent);
+  border: 1px solid color-mix(in srgb, var(--gold-300) 56%, transparent);
   border-radius: var(--radius-norse-tight);
-  /* engraved: dark top, light bottom */
+  /* engraved: dark top, light bottom + gold halo */
   box-shadow:
     inset 0 1px 0 color-mix(in srgb, var(--obsidian-950) 70%, transparent),
     inset 0 -1px 0 color-mix(in srgb, var(--ink-0) 6%, transparent),
-    0 0 6px color-mix(in srgb, var(--gold-300) 22%, transparent);
+    0 0 8px color-mix(in srgb, var(--gold-300) 32%, transparent),
+    0 2px 6px rgba(0, 0, 0, 0.7);
   text-shadow:
-    0 0 5px color-mix(in srgb, var(--gold-300) 65%, transparent),
+    0 0 6px color-mix(in srgb, var(--gold-300) 70%, transparent),
     0 1px 2px rgba(0, 0, 0, 0.9);
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -114,14 +119,15 @@
    ============================================================ */
 .hourglass-timer.low-time .hg-countdown {
   color: var(--danger-300);
-  border-color: color-mix(in srgb, var(--danger-400) 56%, transparent);
+  border-color: color-mix(in srgb, var(--danger-400) 64%, transparent);
   box-shadow:
     inset 0 1px 0 color-mix(in srgb, var(--obsidian-950) 70%, transparent),
     inset 0 -1px 0 color-mix(in srgb, var(--ink-0) 6%, transparent),
-    0 0 8px color-mix(in srgb, var(--danger-400) 32%, transparent);
+    0 0 10px color-mix(in srgb, var(--danger-400) 38%, transparent),
+    0 2px 6px rgba(0, 0, 0, 0.7);
   animation: hg-timer-blink 0.6s ease-in-out infinite;
   text-shadow:
-    0 0 6px color-mix(in srgb, var(--danger-400) 70%, transparent),
+    0 0 7px color-mix(in srgb, var(--danger-400) 70%, transparent),
     0 1px 2px rgba(0, 0, 0, 0.9);
 }
 

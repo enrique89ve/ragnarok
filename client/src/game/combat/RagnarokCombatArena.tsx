@@ -1171,28 +1171,36 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
               <svg className="hourglass-svg" viewBox="0 0 60 84" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <defs>
                   <linearGradient id="hg-gold" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="#f5d060" />
-                    <stop offset="30%" stopColor="#d4a017" />
-                    <stop offset="60%" stopColor="#b8860b" />
-                    <stop offset="100%" stopColor="#8b6508" />
+                    <stop offset="0%" stopColor="#fff4dc" />
+                    <stop offset="22%" stopColor="#f5d060" />
+                    <stop offset="50%" stopColor="#d4a017" />
+                    <stop offset="78%" stopColor="#a07818" />
+                    <stop offset="100%" stopColor="#5c4008" />
                   </linearGradient>
                   <linearGradient id="hg-gold-cap" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#ffe680" />
-                    <stop offset="40%" stopColor="#d4a017" />
-                    <stop offset="100%" stopColor="#8b6508" />
+                    <stop offset="0%" stopColor="#fff4dc" />
+                    <stop offset="22%" stopColor="#ffe680" />
+                    <stop offset="55%" stopColor="#d4a017" />
+                    <stop offset="100%" stopColor="#5c4008" />
                   </linearGradient>
                   <linearGradient id="hg-sand-grad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#f5c842" />
-                    <stop offset="100%" stopColor="#c89520" />
+                    <stop offset="0%" stopColor="#fff4a8" />
+                    <stop offset="35%" stopColor="#f5c842" />
+                    <stop offset="100%" stopColor="#a07010" />
                   </linearGradient>
                   <linearGradient id="hg-glass-shine" x1="0.2" y1="0" x2="0.8" y2="1">
-                    <stop offset="0%" stopColor="rgba(255,255,255,0.25)" />
+                    <stop offset="0%" stopColor="rgba(255,255,255,0.32)" />
                     <stop offset="50%" stopColor="rgba(255,255,255,0)" />
-                    <stop offset="100%" stopColor="rgba(255,255,255,0.08)" />
+                    <stop offset="100%" stopColor="rgba(255,255,255,0.1)" />
                   </linearGradient>
                   <radialGradient id="hg-glow">
-                    <stop offset="0%" stopColor="rgba(245,208,96,0.6)" />
+                    <stop offset="0%" stopColor="rgba(245,208,96,0.78)" />
+                    <stop offset="55%" stopColor="rgba(245,208,96,0.22)" />
                     <stop offset="100%" stopColor="rgba(245,208,96,0)" />
+                  </radialGradient>
+                  <radialGradient id="hg-rune-glow" cx="0.5" cy="0.5" r="0.5">
+                    <stop offset="0%" stopColor="rgba(255,244,220,0.55)" />
+                    <stop offset="100%" stopColor="rgba(255,244,220,0)" />
                   </radialGradient>
                   <clipPath id="hg-top-clip">
                     <path d="M14 12 C14 12 14 32 30 42 C46 32 46 12 46 12 Z" />
@@ -1201,30 +1209,51 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
                     <path d="M14 72 C14 72 14 52 30 42 C46 52 46 72 46 72 Z" />
                   </clipPath>
                   <filter id="hg-inner-shadow">
-                    <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#000" floodOpacity="0.4" />
+                    <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#000" floodOpacity="0.5" />
+                  </filter>
+                  <filter id="hg-outer-glow" x="-30%" y="-30%" width="160%" height="160%">
+                    <feGaussianBlur stdDeviation="1.2" />
                   </filter>
                 </defs>
 
-                {/* Ambient glow behind hourglass */}
-                <ellipse cx="30" cy="42" rx="26" ry="36" fill="url(#hg-glow)" className="hg-ambient-glow" />
+                {/* Ambient glow behind hourglass — subtle, tight to body */}
+                <ellipse cx="30" cy="42" rx="22" ry="32" fill="url(#hg-glow)" className="hg-ambient-glow" />
 
-                {/* Top cap — single slim gold bar with bevel */}
-                <rect x="8" y="3" width="44" height="7" rx="1" fill="url(#hg-gold-cap)" stroke="#8b6508" strokeWidth="0.8" />
-                <rect x="11" y="1.5" width="38" height="2" rx="0.5" fill="#ffe680" opacity="0.7" />
-                <line x1="12" y1="6.5" x2="48" y2="6.5" stroke="rgba(255,230,128,0.45)" strokeWidth="0.4" />
-                {/* Top cap Norse rune mark — small diamond */}
-                <path d="M30 4.5 L31.5 6.5 L30 8.5 L28.5 6.5 Z" fill="#fff4dc" opacity="0.9" />
+                {/* Top cap — layered bevel + side spires */}
+                <rect x="8" y="3" width="44" height="7" rx="1" fill="url(#hg-gold-cap)" stroke="#5c4008" strokeWidth="0.8" />
+                <rect x="10" y="1.4" width="40" height="2.2" rx="0.6" fill="#fff4dc" opacity="0.85" />
+                <line x1="12" y1="6.5" x2="48" y2="6.5" stroke="rgba(120,80,16,0.55)" strokeWidth="0.4" />
+                {/* Top cap Norse diamond + interlace dots */}
+                <path d="M30 4.4 L31.6 6.5 L30 8.6 L28.4 6.5 Z" fill="#fff4dc" opacity="0.95" />
+                <circle cx="14" cy="6.5" r="0.6" fill="#fff4dc" opacity="0.7" />
+                <circle cx="46" cy="6.5" r="0.6" fill="#fff4dc" opacity="0.7" />
+                <circle cx="22" cy="6.5" r="0.4" fill="#8b6508" opacity="0.6" />
+                <circle cx="38" cy="6.5" r="0.4" fill="#8b6508" opacity="0.6" />
+                {/* Top cap side spires */}
+                <path d="M8 6.5 L4 4 L4 9 Z" fill="url(#hg-gold-cap)" stroke="#5c4008" strokeWidth="0.5" />
+                <path d="M52 6.5 L56 4 L56 9 Z" fill="url(#hg-gold-cap)" stroke="#5c4008" strokeWidth="0.5" />
 
                 {/* Bottom cap — mirror */}
-                <rect x="8" y="74" width="44" height="7" rx="1" fill="url(#hg-gold-cap)" stroke="#8b6508" strokeWidth="0.8" />
-                <rect x="11" y="80.5" width="38" height="2" rx="0.5" fill="#ffe680" opacity="0.7" />
-                <line x1="12" y1="77.5" x2="48" y2="77.5" stroke="rgba(255,230,128,0.45)" strokeWidth="0.4" />
-                <path d="M30 75.5 L31.5 77.5 L30 79.5 L28.5 77.5 Z" fill="#fff4dc" opacity="0.9" />
+                <rect x="8" y="74" width="44" height="7" rx="1" fill="url(#hg-gold-cap)" stroke="#5c4008" strokeWidth="0.8" />
+                <rect x="10" y="80.4" width="40" height="2.2" rx="0.6" fill="#fff4dc" opacity="0.85" />
+                <line x1="12" y1="77.5" x2="48" y2="77.5" stroke="rgba(120,80,16,0.55)" strokeWidth="0.4" />
+                <path d="M30 75.4 L31.6 77.5 L30 79.6 L28.4 77.5 Z" fill="#fff4dc" opacity="0.95" />
+                <circle cx="14" cy="77.5" r="0.6" fill="#fff4dc" opacity="0.7" />
+                <circle cx="46" cy="77.5" r="0.6" fill="#fff4dc" opacity="0.7" />
+                <circle cx="22" cy="77.5" r="0.4" fill="#8b6508" opacity="0.6" />
+                <circle cx="38" cy="77.5" r="0.4" fill="#8b6508" opacity="0.6" />
+                <path d="M8 77.5 L4 75 L4 80 Z" fill="url(#hg-gold-cap)" stroke="#5c4008" strokeWidth="0.5" />
+                <path d="M52 77.5 L56 75 L56 80 Z" fill="url(#hg-gold-cap)" stroke="#5c4008" strokeWidth="0.5" />
 
-                {/* Glass frame — two elegant curved bulbs, slimmer + shorter */}
+                {/* Glass frame — thicker gold, fantasy weight */}
                 <path
                   d="M14 12 C14 12 14 32 30 42 C14 52 14 72 14 72 M46 12 C46 12 46 32 30 42 C46 52 46 72 46 72"
-                  stroke="url(#hg-gold)" strokeWidth="2" strokeLinecap="round" fill="none"
+                  stroke="url(#hg-gold)" strokeWidth="2.6" strokeLinecap="round" fill="none"
+                />
+                {/* Inner gold accent line (parallel) for fantasy depth */}
+                <path
+                  d="M16 13 C16 13 16 32 30 42 C16 52 16 71 16 71 M44 13 C44 13 44 32 30 42 C44 52 44 71 44 71"
+                  stroke="rgba(255,230,128,0.5)" strokeWidth="0.6" strokeLinecap="round" fill="none"
                 />
 
                 {/* Sand in top bulb — drains down */}
@@ -1249,29 +1278,30 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
                 {/* Falling sand stream — thin line through the neck */}
                 {t > 0 && t < maxT && (
                   <g className="hg-stream-group">
-                    <line x1="30" y1="36" x2="30" y2="48" stroke="#e8b830" strokeWidth="1" className="hg-stream" />
+                    <line x1="30" y1="36" x2="30" y2="48" stroke="#f5d060" strokeWidth="1.2" className="hg-stream" />
                     {/* Sand particles falling */}
-                    <circle cx="30" cy="38" r="0.7" fill="#f5d060" className="hg-particle hg-p1" />
-                    <circle cx="29.4" cy="44" r="0.5" fill="#d4a017" className="hg-particle hg-p2" />
-                    <circle cx="30.6" cy="41" r="0.6" fill="#f5c842" className="hg-particle hg-p3" />
+                    <circle cx="30" cy="38" r="0.8" fill="#fff4a8" className="hg-particle hg-p1" />
+                    <circle cx="29.4" cy="44" r="0.6" fill="#f5c842" className="hg-particle hg-p2" />
+                    <circle cx="30.6" cy="41" r="0.7" fill="#fff4a8" className="hg-particle hg-p3" />
                   </g>
                 )}
 
-                {/* Glass shine highlight — curved reflections (shorter, slimmer) */}
+                {/* Glass shine highlight — curved reflections */}
                 <path
                   d="M19 15 C19 15 21 28 28 37"
-                  stroke="rgba(255,255,255,0.3)" strokeWidth="1.2" strokeLinecap="round" fill="none"
+                  stroke="rgba(255,255,255,0.36)" strokeWidth="1.4" strokeLinecap="round" fill="none"
                   className="hg-shine-top"
                 />
                 <path
                   d="M19 69 C19 69 21 56 28 47"
-                  stroke="rgba(255,255,255,0.15)" strokeWidth="1" strokeLinecap="round" fill="none"
+                  stroke="rgba(255,255,255,0.2)" strokeWidth="1.1" strokeLinecap="round" fill="none"
                   className="hg-shine-bottom"
                 />
 
-                {/* Center neck ring ornament — slim, elegant */}
-                <ellipse cx="30" cy="42" rx="4" ry="2" fill="none" stroke="url(#hg-gold)" strokeWidth="1.2" />
-                <ellipse cx="30" cy="42" rx="2.4" ry="1.2" fill="#b8860b" opacity="0.6" />
+                {/* Center neck ring ornament — fantasy: double ring + jewel */}
+                <ellipse cx="30" cy="42" rx="5" ry="2.4" fill="none" stroke="url(#hg-gold)" strokeWidth="1.4" />
+                <ellipse cx="30" cy="42" rx="3" ry="1.4" fill="#b8860b" opacity="0.7" />
+                <circle cx="30" cy="42" r="0.8" fill="#fff4dc" />
               </svg>
               <span className="hg-countdown" aria-label={`${t} seconds remaining`}>{t}</span>
             </div>
