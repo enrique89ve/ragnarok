@@ -179,10 +179,10 @@ export const POKER_VIEWPORT_LAYOUT = {
 		hourglass: {
 			layer: 'hud',
 			label: 'Hourglass timer',
-			x: 936,
+			x: 1040,
 			y: 144,
-			width: 48,
-			height: 96,
+			width: 65,
+			height: 107,
 			rotation: 0,
 		},
 		attackModeBanner: {
@@ -224,7 +224,7 @@ export const POKER_VIEWPORT_LAYOUT = {
 		opponentHand: {
 			layer: 'game',
 			label: 'Opponent poker hand / hidden cards',
-			x: 256,
+			x: 120,
 			y: 160,
 			width: 296,
 			height: 88,

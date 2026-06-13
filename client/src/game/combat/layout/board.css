@@ -219,10 +219,10 @@
   --opponent-hand-card-overlap: calc(var(--opponent-hand-card-width) / -2);
 
   position: absolute;
-  left: var(--poker-zone-opponentHand-x, 256px);
+  left: var(--poker-zone-opponentHand-x, 120px);
   top: var(--poker-zone-opponentHand-y, 160px);
   width: var(--poker-zone-opponentHand-w, 320px);
-  height: var(--poker-zone-opponentHand-h, 112px) !important;
+  height: var(--poker-zone-opponentHand-h, 96px) !important;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -230,6 +230,9 @@
   margin-top: 0;
   overflow: visible;
   pointer-events: auto;
+  /* Sit on top of opponent-hero-container (z-index 180) so the
+     hand fan visibly overlaps the avatar when zone x is < hero-w. */
+  z-index: calc(var(--arena-z-opponent) + 1);
 }
 
 .unified-combat-arena .opponent-hand-display > * {

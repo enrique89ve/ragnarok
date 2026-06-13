@@ -4,16 +4,26 @@
    - Soft airbrushed gold bloom (large blur, low alpha)
    - Multi-layer depth shadows (warm underlight + cold overlight)
    - Countdown overlaps bottom cap to read as one composition
+
+   POSITION: anchored to layout coord (--poker-zone-hourglass-x) and
+   then centred on it via translateX(-50%). The translate is composed
+   with the rotate so the whole thing stays put regardless of what
+   other elements on the page do.
    ============================================================ */
 
 .hourglass-timer {
   position: absolute;
-  top: var(--poker-zone-hourglass-y, 4px);
-  left: var(--poker-zone-hourglass-x, 50%);
+  top: var(--poker-zone-hourglass-y, 144px);
+  /* Anchor: layout's hourglass x (defaults to arena center 960). */
+  left: var(--poker-zone-hourglass-x, 960px);
   width: var(--poker-zone-hourglass-w, 65px);
   min-height: 0;
-  transform: rotate(var(--poker-zone-hourglass-rot, 0deg));
-  transform-origin: top left;
+  /* translateX(-50%) centres the element on the layout anchor; rotate
+     follows the translate so origin = centre. Stays put as the arena
+     scales or as siblings resize — the anchor is a fixed pixel in
+     layout space, not a flex-derived 50%. */
+  transform: translateX(-50%) rotate(var(--poker-zone-hourglass-rot, 0deg));
+  transform-origin: center top;
   z-index: var(--z-hud);
   display: flex;
   flex-direction: column;
