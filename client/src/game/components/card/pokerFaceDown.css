@@ -27,18 +27,18 @@
        (0.5px gold | 1px dark gap | 0.5px gold)
    ═══════════════════════════════════════════════════ */
 
-/* ---- Base recipe (48px knotwork tile + 3px rim) ---- */
+/* ---- Base recipe (80px 4-fold endless knot + 3px rim) ---- */
 .card-card-back,
 .card-placeholder {
 	background-color: #0a1422;
 	background-image:
 		/* center vignette — solid dark under the Eihwaz rune for contrast */
 		radial-gradient(ellipse 38% 42% at 50% 50%, rgba(10, 20, 34, 0.92) 0%, transparent 75%),
-		/* Norse knotwork / diamond interlace tile (gold on dark navy) */
-		url("data:image/svg+xml;utf8,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2248%22%20height=%2248%22%20viewBox=%220%200%2048%2048%22%3E%3Cg%20fill=%22none%22%20stroke=%22rgba(201,168,76,0.55)%22%20stroke-width=%221%22%20stroke-linejoin=%22miter%22%20stroke-linecap=%22square%22%3E%3Cpath%20d=%22M0%2012%20L12%200%20L24%2012%20L12%2024%20Z%22/%3E%3Cpath%20d=%22M24%2012%20L36%200%20L48%2012%20L36%2024%20Z%22/%3E%3Cpath%20d=%22M0%2036%20L12%2024%20L24%2036%20L12%2048%20Z%22/%3E%3Cpath%20d=%22M24%2036%20L36%2024%20L48%2036%20L36%2048%20Z%22/%3E%3Cpath%20d=%22M-6%2030%20L6%2018%20L18%2030%20L6%2042%20Z%22%20stroke=%22rgba(201,168,76,0.28)%22/%3E%3Cpath%20d=%22M30%2018%20L42%206%20L54%2018%20L42%2030%20Z%22%20stroke=%22rgba(201,168,76,0.28)%22/%3E%3Cpath%20d=%22M12%2024%20L12%2024%22%20stroke-width=%221.4%22/%3E%3Cpath%20d=%22M24%200%20L24%2048%20M0%2024%20L48%2024%22%20stroke=%22rgba(201,168,76,0.18)%22%20stroke-width=%220.6%22/%3E%3C/g%3E%3C/svg%3E"),
+		/* 4-fold Norse endless knot: 4 curved bands woven at center square */
+		url("data:image/svg+xml;utf8,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2280%22%20height=%2280%22%20viewBox=%220%200%2080%2080%22%3E%3Cg%20fill=%22none%22%20stroke=%22rgba(201,168,76,0.65)%22%20stroke-width=%221.8%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Cpath%20d=%22M-4%2020%20Q20%20-4%2040%2020%20Q60%20-4%2084%2020%22/%3E%3Cpath%20d=%22M60%20-4%20Q84%2020%2060%2040%20Q84%2060%2060%2084%22/%3E%3Cpath%20d=%22M84%2060%20Q60%2084%2040%2060%20Q20%2084%20-4%2060%22%20stroke=%22rgba(10,20,34,1)%22%20stroke-width=%223.2%22/%3E%3Cpath%20d=%22M84%2060%20Q60%2084%2040%2060%20Q20%2084%20-4%2060%22/%3E%3Cpath%20d=%22M20%2084%20Q-4%2060%2020%2040%20Q-4%2020%2020%20-4%22%20stroke=%22rgba(10,20,34,1)%22%20stroke-width=%223.2%22/%3E%3Cpath%20d=%22M20%2084%20Q-4%2060%2020%2040%20Q-4%2020%2020%20-4%22/%3E%3Ccircle%20cx=%2240%22%20cy=%2240%22%20r=%222.5%22%20fill=%22rgba(201,168,76,0.7)%22%20stroke=%22none%22/%3E%3C/g%3E%3C/svg%3E"),
 		radial-gradient(ellipse at 50% 40%, rgba(255, 255, 255, 0.04) 0%, rgba(0, 0, 0, 0.18) 75%);
 	background-repeat: no-repeat, repeat, no-repeat;
-	background-size: 100% 100%, 48px 48px, 100% 100%;
+	background-size: 100% 100%, 80px 80px, 100% 100%;
 	border: none;
 	/* Beveled frame illusion: 1px gold + 1px dark + 1px gold = 3px rim */
 	box-shadow:
@@ -48,13 +48,13 @@
 		inset 0 1px 4px rgba(0, 0, 0, 0.45);
 }
 
-/* ---- Small variant: 36px tile, 2px rim (78x110 hand card) ---- */
+/* ---- Small variant: 56px 4-fold knot, 2px rim (78x110 hand card) ---- */
 .opponent-card-back {
 	background-color: #0a1422;
 	background-image:
-		url("data:image/svg+xml;utf8,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2236%22%20height=%2236%22%20viewBox=%220%200%2036%2036%22%3E%3Cg%20fill=%22none%22%20stroke=%22rgba(201,168,76,0.55)%22%20stroke-width=%220.9%22%20stroke-linejoin=%22miter%22%20stroke-linecap=%22square%22%3E%3Cpath%20d=%22M0%209%20L9%200%20L18%209%20L9%2018%20Z%22/%3E%3Cpath%20d=%22M18%209%20L27%200%20L36%209%20L27%2018%20Z%22/%3E%3Cpath%20d=%22M0%2027%20L9%2018%20L18%2027%20L9%2036%20Z%22/%3E%3Cpath%20d=%22M18%2027%20L27%2018%20L36%2027%20L27%2036%20Z%22/%3E%3Cpath%20d=%22M-4%2022%20L4%2014%20L12%2022%20L4%2030%20Z%22%20stroke=%22rgba(201,168,76,0.28)%22/%3E%3Cpath%20d=%22M22%2014%20L30%206%20L38%2014%20L30%2022%20Z%22%20stroke=%22rgba(201,168,76,0.28)%22/%3E%3Cpath%20d=%22M18%200%20L18%2036%20M0%2018%20L36%2018%22%20stroke=%22rgba(201,168,76,0.18)%22%20stroke-width=%220.5%22/%3E%3C/g%3E%3C/svg%3E");
+		url("data:image/svg+xml;utf8,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2256%22%20height=%2256%22%20viewBox=%220%200%2056%2056%22%3E%3Cg%20fill=%22none%22%20stroke=%22rgba(201,168,76,0.65)%22%20stroke-width=%221.4%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Cpath%20d=%22M-3%2014%20Q14%20-3%2028%2014%20Q42%20-3%2059%2014%22/%3E%3Cpath%20d=%22M42%20-3%20Q59%2014%2042%2028%20Q59%2042%2042%2059%22/%3E%3Cpath%20d=%22M59%2042%20Q42%2059%2028%2042%20Q14%2059%20-3%2042%22%20stroke=%22rgba(10,20,34,1)%22%20stroke-width=%222.6%22/%3E%3Cpath%20d=%22M59%2042%20Q42%2059%2028%2042%20Q14%2059%20-3%2042%22/%3E%3Cpath%20d=%22M14%2059%20Q-3%2042%2014%2028%20Q-3%2014%2014%20-3%22%20stroke=%22rgba(10,20,34,1)%22%20stroke-width=%222.6%22/%3E%3Cpath%20d=%22M14%2059%20Q-3%2042%2014%2028%20Q-3%2014%2014%20-3%22/%3E%3Ccircle%20cx=%2228%22%20cy=%2228%22%20r=%221.8%22%20fill=%22rgba(201,168,76,0.7)%22%20stroke=%22none%22/%3E%3C/g%3E%3C/svg%3E");
 	background-repeat: repeat;
-	background-size: 36px 36px;
+	background-size: 56px 56px;
 	border: none;
 	box-shadow:
 		inset 0 0 0 0.5px #c9a84c,
