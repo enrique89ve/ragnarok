@@ -27,15 +27,15 @@
        (0.5px gold | 1px dark gap | 0.5px gold)
    ═══════════════════════════════════════════════════ */
 
-/* ---- Base recipe (80px 4-fold endless knot + 3px rim) ---- */
+/* ---- Base recipe (80px Celtic square knot + 3px rim) ---- */
 .card-card-back,
 .card-placeholder {
 	background-color: #0a1422;
 	background-image:
 		/* center vignette — solid dark under the Eihwaz rune for contrast */
 		radial-gradient(ellipse 38% 42% at 50% 50%, rgba(10, 20, 34, 0.92) 0%, transparent 75%),
-		/* 4-fold Norse endless knot: 4 curved bands woven at center square */
-		url("data:image/svg+xml;utf8,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2280%22%20height=%2280%22%20viewBox=%220%200%2080%2080%22%3E%3Cg%20fill=%22none%22%20stroke=%22rgba(201,168,76,0.65)%22%20stroke-width=%221.8%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Cpath%20d=%22M-4%2020%20Q20%20-4%2040%2020%20Q60%20-4%2084%2020%22/%3E%3Cpath%20d=%22M60%20-4%20Q84%2020%2060%2040%20Q84%2060%2060%2084%22/%3E%3Cpath%20d=%22M84%2060%20Q60%2084%2040%2060%20Q20%2084%20-4%2060%22%20stroke=%22rgba(10,20,34,1)%22%20stroke-width=%223.2%22/%3E%3Cpath%20d=%22M84%2060%20Q60%2084%2040%2060%20Q20%2084%20-4%2060%22/%3E%3Cpath%20d=%22M20%2084%20Q-4%2060%2020%2040%20Q-4%2020%2020%20-4%22%20stroke=%22rgba(10,20,34,1)%22%20stroke-width=%223.2%22/%3E%3Cpath%20d=%22M20%2084%20Q-4%2060%2020%2040%20Q-4%2020%2020%20-4%22/%3E%3Ccircle%20cx=%2240%22%20cy=%2240%22%20r=%222.5%22%20fill=%22rgba(201,168,76,0.7)%22%20stroke=%22none%22/%3E%3C/g%3E%3C/svg%3E"),
+		/* Celtic square knot: 4 corner trefoils + 4 S-curve bands woven at center */
+		url("data:image/svg+xml;utf8,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2280%22%20height=%2280%22%20viewBox=%220%200%2080%2080%22%3E%3Cg%20fill=%22none%22%20stroke=%22rgba(201,168,76,0.7)%22%20stroke-width=%221.6%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Cpath%20d=%22M0%2016%20C0,4%208,0%2014,4%20C18,8%2014,14%2010,12%20C6,10%208,6%2012,8%22/%3E%3Cpath%20d=%22M80%2016%20C80,4%2072,0%2066,4%20C62,8%2066,14%2070,12%20C74,10%2072,6%2068,8%22/%3E%3Cpath%20d=%22M0%2064%20C0,76%208,80%2014,76%20C18,72%2014,66%2010,68%20C6,70%208,74%2012,72%22/%3E%3Cpath%20d=%22M80%2064%20C80,76%2072,80%2066,76%20C62,72%2066,66%2070,68%20C74,70%2072,74%2068,72%22/%3E%3Cpath%20d=%22M16%2012%20Q40%2044%2064%2012%22/%3E%3Cpath%20d=%22M68%2016%20Q44%2040%2068%2064%22%20stroke=%22rgba(10,20,34,1)%22%20stroke-width=%222.8%22/%3E%3Cpath%20d=%22M68%2016%20Q44%2040%2068%2064%22/%3E%3Cpath%20d=%22M64%2068%20Q40%2036%2016%2068%22%20stroke=%22rgba(10,20,34,1)%22%20stroke-width=%222.8%22/%3E%3Cpath%20d=%22M64%2068%20Q40%2036%2016%2068%22/%3E%3Cpath%20d=%22M12%2064%20Q36%2040%2012%2016%22/%3E%3Ccircle%20cx=%2240%22%20cy=%2240%22%20r=%222%22%20fill=%22rgba(201,168,76,0.7)%22%20stroke=%22none%22/%3E%3C/g%3E%3C/svg%3E"),
 		radial-gradient(ellipse at 50% 40%, rgba(255, 255, 255, 0.04) 0%, rgba(0, 0, 0, 0.18) 75%);
 	background-repeat: no-repeat, repeat, no-repeat;
 	background-size: 100% 100%, 80px 80px, 100% 100%;
@@ -48,11 +48,11 @@
 		inset 0 1px 4px rgba(0, 0, 0, 0.45);
 }
 
-/* ---- Small variant: 56px 4-fold knot, 2px rim (78x110 hand card) ---- */
+/* ---- Small variant: 56px Celtic square knot, 2px rim (78x110 hand card) ---- */
 .opponent-card-back {
 	background-color: #0a1422;
 	background-image:
-		url("data:image/svg+xml;utf8,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2256%22%20height=%2256%22%20viewBox=%220%200%2056%2056%22%3E%3Cg%20fill=%22none%22%20stroke=%22rgba(201,168,76,0.65)%22%20stroke-width=%221.4%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Cpath%20d=%22M-3%2014%20Q14%20-3%2028%2014%20Q42%20-3%2059%2014%22/%3E%3Cpath%20d=%22M42%20-3%20Q59%2014%2042%2028%20Q59%2042%2042%2059%22/%3E%3Cpath%20d=%22M59%2042%20Q42%2059%2028%2042%20Q14%2059%20-3%2042%22%20stroke=%22rgba(10,20,34,1)%22%20stroke-width=%222.6%22/%3E%3Cpath%20d=%22M59%2042%20Q42%2059%2028%2042%20Q14%2059%20-3%2042%22/%3E%3Cpath%20d=%22M14%2059%20Q-3%2042%2014%2028%20Q-3%2014%2014%20-3%22%20stroke=%22rgba(10,20,34,1)%22%20stroke-width=%222.6%22/%3E%3Cpath%20d=%22M14%2059%20Q-3%2042%2014%2028%20Q-3%2014%2014%20-3%22/%3E%3Ccircle%20cx=%2228%22%20cy=%2228%22%20r=%221.8%22%20fill=%22rgba(201,168,76,0.7)%22%20stroke=%22none%22/%3E%3C/g%3E%3C/svg%3E");
+		url("data:image/svg+xml;utf8,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2256%22%20height=%2256%22%20viewBox=%220%200%2056%2056%22%3E%3Cg%20fill=%22none%22%20stroke=%22rgba(201,168,76,0.7)%22%20stroke-width=%221.3%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Cpath%20d=%22M0%2011%20C0,3%206,0%2010,3%20C13,6%2010,10%207,8%20C4,7%206,4%208,5%22/%3E%3Cpath%20d=%22M56%2011%20C56,3%2050,0%2046,3%20C43,6%2046,10%2049,8%20C52,7%2050,4%2048,5%22/%3E%3Cpath%20d=%22M0%2045%20C0,53%206,56%2010,53%20C13,50%2010,46%207,48%20C4,49%206,52%208,51%22/%3E%3Cpath%20d=%22M56%2045%20C56,53%2050,56%2046,53%20C43,50%2046,46%2049,48%20C52,49%2050,52%2048,51%22/%3E%3Cpath%20d=%22M11%208%20Q28%2031%2045%208%22/%3E%3Cpath%20d=%22M48%2011%20Q31%2028%2048%2045%22%20stroke=%22rgba(10,20,34,1)%22%20stroke-width=%222.4%22/%3E%3Cpath%20d=%22M48%2011%20Q31%2028%2048%2045%22/%3E%3Cpath%20d=%22M45%2048%20Q28%2025%2011%2048%22%20stroke=%22rgba(10,20,34,1)%22%20stroke-width=%222.4%22/%3E%3Cpath%20d=%22M45%2048%20Q28%2025%2011%2048%22/%3E%3Cpath%20d=%22M8%2045%20Q25%2028%208%2011%22/%3E%3Ccircle%20cx=%2228%22%20cy=%2228%22%20r=%221.5%22%20fill=%22rgba(201,168,76,0.7)%22%20stroke=%22none%22/%3E%3C/g%3E%3C/svg%3E");
 	background-repeat: repeat;
 	background-size: 56px 56px;
 	border: none;
