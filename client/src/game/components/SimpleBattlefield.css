@@ -1,10 +1,10 @@
 /* SimpleBattlefield.css - Clean, minimal battlefield styling */
 
 .simple-battlefield {
-  --bf-card-width: 120px;
-  --bf-card-height: 168px;
-  --bf-slot-gap: 8px;
-  --bf-row-height: 180px;
+  --bf-card-width: 144px;
+  --bf-card-height: 192px;
+  --bf-slot-gap: 10px;
+  --bf-row-height: 206px;
   
   box-sizing: border-box;
   display: flex;

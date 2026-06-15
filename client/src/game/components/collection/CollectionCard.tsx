@@ -74,7 +74,7 @@ const CollectionCard: React.FC<CollectionCardProps> = React.memo(({
   return (
     <motion.div
       className="collection-card collection-grid-item relative min-h-[240px] min-w-[180px] h-full block bg-linear-to-b from-gray-800 to-gray-900 rounded-lg shadow-lg"
-      style={{ aspectRatio: '3 / 4' }}
+      style={{ aspectRatio: '7 / 10' }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleClick}
@@ -95,6 +95,7 @@ const CollectionCard: React.FC<CollectionCardProps> = React.memo(({
                 card={simpleData}
                 isPlayable={canAdd && count < maxCount}
                 size="large"
+                surface="collection"
               />
             );
           })()}

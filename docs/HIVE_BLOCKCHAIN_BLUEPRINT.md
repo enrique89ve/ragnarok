@@ -1,5 +1,12 @@
 # Ragnarok — Hive Blockchain Integration Blueprint
 
+> Legacy architecture blueprint. The current normative documents are
+> [`RAGNAROK_PROTOCOL_V1.md`](./RAGNAROK_PROTOCOL_V1.md) for protocol shape,
+> [`HIVE_INDEXER_CONTRACT.md`](./HIVE_INDEXER_CONTRACT.md) for the live
+> indexer/read model, and [`NFTLOX_INTEGRATION_SPEC.md`](./NFTLOX_INTEGRATION_SPEC.md)
+> for NFT custody. Do not use this blueprint as the current indexer or NFT
+> ownership authority.
+
 **Status**: Phase 2 complete — all chain ops wired end-to-end. NFT provenance viewer, direct card gifting, ownership enforcement, post-match IDB→Zustand refresh, HiveEvents toast notifications, reward claiming on chain. Genesis launch (broadcast genesis + seal on Hive mainnet) is next.
 **Layer**: Hive Layer 1 (no Hive-Engine dependency)
 **Model**: Fixed-supply NFT cards, decentralized P2P gameplay, cryptographic anti-cheat
@@ -1084,7 +1091,7 @@ Players trade cards freely using Hive Keychain-signed `transfer` ops. The game c
 - [x] Implement `match_start` anchor broadcast (dual-sig, with PoW)
 - [x] Implement commit-reveal seed exchange (`useWireSync.ts`: SHA256 commitments, joint seed derivation, seeded PRNG deck shuffle via `seededRng.ts`)
 - [x] Implement dual-signature `match_result` (`BlockchainSubscriber.ts`: host signs → proposes via P2P → opponent verifies + counter-signs → ranked matches require dual-sig or are NOT broadcast; `apply.ts` rejects ranked results without both sigs)
-- [x] Implement NFT XP derivation from valid `match_result` ops (replay derives winner-owned NFT XP from match data + ownership state; browser `xpRewards[]` is local UX packaging, not the canonical trust boundary)
+- [x] Implement NFT XP derivation from valid `match_result` ops (replay derives winner-owned NFT XP from match data plus NFTLox custody or the active JSON compatibility projection; browser `xpRewards[]` is local UX packaging, not the canonical trust boundary)
 - [x] Implement `level_up` on-chain convenience record (auto-broadcast when card crosses level threshold; `replayRules.ts` validates ownership + XP warrants claimed level)
 - [x] Implement card evolution scaling (`cardLevelScaling.ts`: NFT XP level → evolution tier (Mortal/Ascended/Divine) → stat/effect/keyword scaling at deck creation; `enrichDeckWithNFTLevels` wires collection into gameplay)
 - [x] Implement move recording with hash-chained transcript (`signedMove.ts`: `GameMove` + `MoveRecord` types; `transcriptBuilder.ts`: accumulates moves during gameplay, builds SHA-256 Merkle tree at game end)
@@ -1246,7 +1253,16 @@ server/
 └── routes.ts                          # Mount points + indexer startup
 ```
 
-**Architecture note:** The server-side chain indexer is a **convenience layer**, not a trust dependency. It polls the same public Hive RPC data that every browser replays independently. Express mounts its public read-only surface at `/api/chain`, and the scanner starts by default unless `ENABLE_CHAIN_INDEXER=false`. If the server is down, clients still function via their local IndexedDB replay — they just lose global queries (leaderboard, opponent ELO lookup, cross-account deck verification, and global RUNE summaries).
+**Architecture note:** The server-side chain indexer is a **convenience layer**,
+not a trust dependency. It polls the same public Hive RPC data that every
+browser can replay independently, selects Ragnarok `custom_json` operations,
+normalizes them, and applies them through `shared/protocol-core`. Express
+mounts its public read-only surface at `/api/chain`, and the scanner starts by
+default unless `ENABLE_CHAIN_INDEXER=false`. If the server is down, clients
+still function via their local IndexedDB replay — they just lose global queries
+(leaderboard, opponent ELO lookup, cross-account deck verification, and global
+RUNE summaries). The deterministic selection and validation contract lives in
+[`HIVE_INDEXER_CONTRACT.md`](./HIVE_INDEXER_CONTRACT.md).
 
 **API namespace invariant:** chain-derived public reads live under `/api/chain`.
 RUNE does not get a parallel testnet namespace. Account balance reads use
@@ -1299,6 +1315,9 @@ These rules must never be violated, regardless of future development:
 ## 14. Design Philosophy: Ordinals-Style Reader Model
 
 Ragnarok's NFT system follows the same philosophical model as Bitcoin Ordinals: **the data layer is dumb text; the reader gives it meaning.**
+Historical note: for the current NFTLox-enabled architecture, read this section
+as rationale for Ragnarok replay projections. NFT custody and ownership are
+not sourced from this blueprint.
 
 ### How it works
 
@@ -1306,8 +1325,8 @@ Hive's `custom_json` operation stores arbitrary text on an immutable blockchain.
 
 This means:
 - **Anything can be an NFT** if the reader says it is. The chain stores data; the reader assigns semantics.
-- **The reader IS the protocol.** Two readers running the same rules will always agree on ownership state. A reader running different rules will disagree — and that's fine, because the genesis broadcast pins the canonical reader version by hash.
-- **No smart contracts needed.** The "contract" is the reader code itself, version-locked at genesis. It can't be upgraded, paused, or rugged — it's just a function: `(chain_history) → ownership_state`.
+- **The reader IS the protocol for Ragnarok projections.** Two readers running the same rules will always agree on gameplay/economy projection state. A reader running different rules will disagree — and that's fine, because the genesis broadcast pins the canonical reader version by hash.
+- **No smart contracts needed.** The "contract" is the reader code itself, version-locked at genesis. It can't be upgraded, paused, or rugged — it's just a function: `(chain_history) → ragnarok_projection_state`.
 - **Composability is open.** Any third party can write their own reader for `ragnarok-cards` ops. A marketplace, a stats tracker, a tournament organizer — all possible by reading the same public chain data with the same deterministic rules.
 
 ### Why this is stronger than smart contracts for fixed-supply collections
@@ -1367,7 +1386,7 @@ match_result (on-chain)
                     └── optional level_up records acknowledge threshold crossings
 ```
 
-XP is **derived from valid `match_result` ops during replay**. There is no `xp_update` op. The browser may compute `xpRewards[]` at match packaging time for local UX, local IndexedDB refresh, and queued `level_up` convenience records, but canonical readers do not trust arbitrary XP reward payloads. Canonical replay derives winner XP from the valid match result plus the winner's NFT ownership state.
+XP is **derived from valid `match_result` ops during replay**. There is no `xp_update` op. The browser may compute `xpRewards[]` at match packaging time for local UX, local IndexedDB refresh, and queued `level_up` convenience records, but canonical readers do not trust arbitrary XP reward payloads. Canonical replay derives winner XP from the valid match result plus NFTLox custody or the active JSON compatibility projection.
 
 Only economic NFT cards can appear in this XP path. Starter cards are off-chain account entitlements: they do not earn `CardXP`, do not broadcast `level_up`, do not receive NFT evolution scaling, and track usage separately as local/account-bound starter reputation.
 

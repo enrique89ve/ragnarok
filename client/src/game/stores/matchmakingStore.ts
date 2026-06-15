@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 export type MatchmakingStatus = 'idle' | 'queued' | 'matched' | 'error';
 
-interface MatchmakingStore {
+type MatchmakingStore = {
 	status: MatchmakingStatus;
 	queuePosition: number | null;
 	opponentPeerId: string | null;
@@ -14,15 +14,21 @@ interface MatchmakingStore {
 	 * host vs client by order of arrival in the room.
 	 */
 	roomId: string | null;
+	/**
+	 * Process-local bearer token returned by the matchmaking server for the
+	 * current queued peerId. Memory-only; never persist this value.
+	 */
+	queueToken: string | null;
 	error: string | null;
 
 	setStatus: (status: MatchmakingStatus) => void;
 	setQueuePosition: (position: number | null) => void;
-	setOpponent: (peerId: string | null, isHost: boolean) => void;
+	setOpponent: (peerId: string | null, isHost: boolean | null) => void;
 	setRoomId: (roomId: string | null) => void;
+	setQueueToken: (queueToken: string | null) => void;
 	setError: (error: string | null) => void;
 	reset: () => void;
-}
+};
 
 export const useMatchmakingStore = create<MatchmakingStore>((set) => ({
 	status: 'idle',
@@ -30,12 +36,14 @@ export const useMatchmakingStore = create<MatchmakingStore>((set) => ({
 	opponentPeerId: null,
 	isHost: null,
 	roomId: null,
+	queueToken: null,
 	error: null,
 
 	setStatus: (status) => set({ status }),
 	setQueuePosition: (position) => set({ queuePosition: position }),
 	setOpponent: (peerId, isHost) => set({ opponentPeerId: peerId, isHost }),
 	setRoomId: (roomId) => set({ roomId }),
+	setQueueToken: (queueToken) => set({ queueToken }),
 	setError: (error) => set({ error }),
 	reset: () =>
 		set({
@@ -44,6 +52,7 @@ export const useMatchmakingStore = create<MatchmakingStore>((set) => ({
 			opponentPeerId: null,
 			isHost: null,
 			roomId: null,
+			queueToken: null,
 			error: null,
 		}),
 }));

@@ -31,10 +31,74 @@ const DIFFICULTY_META: Record<Difficulty, { label: string; blurb: string }> = {
 	},
 };
 
+const BRIEFING_SYMBOLS = {
+	tone: 'T',
+	record: 'R',
+	beat: 'O',
+	rhythm: 'C',
+	aftermath: 'A',
+	launch: 'L',
+	boss: '!',
+	reward: '+',
+};
+
+const DIFFICULTY_SYMBOLS: Record<Difficulty, string> = {
+	normal: 'I',
+	heroic: 'II',
+	mythic: 'III',
+};
+
 function getEncounterTone(mission: CampaignMission): string {
 	if (mission.isChapterFinale) return 'Final confrontation';
 	if (mission.bossRules.length > 0) return 'Boss encounter';
 	return 'Campaign advance';
+}
+
+function BriefingSigil({
+	children,
+	tone = 'gold',
+}: {
+	children: React.ReactNode;
+	tone?: 'gold' | 'ember' | 'bifrost' | 'rune';
+}) {
+	return (
+		<span className={`campaign-card-sigil campaign-card-sigil-${tone}`} aria-hidden="true">
+			{children}
+		</span>
+	);
+}
+
+function BriefingCard({
+	label,
+	title,
+	children,
+	symbol,
+	tone = 'gold',
+	className = '',
+}: {
+	label: string;
+	title: string;
+	children: React.ReactNode;
+	symbol: React.ReactNode;
+	tone?: 'gold' | 'ember' | 'bifrost' | 'rune';
+	className?: string;
+}) {
+	return (
+		<div className={`${SURFACE_CLASS} campaign-brief-card runic-panel ${className}`}>
+			<span className="runic-corners" aria-hidden="true" />
+			<span className="runic-corners-extra" aria-hidden="true" />
+			<div className="campaign-card-heading">
+				<BriefingSigil tone={tone}>{symbol}</BriefingSigil>
+				<div className="min-w-0">
+					<p className={`${KICKER_CLASS} text-left`}>{label}</p>
+					<p className="mt-2 font-display text-base font-bold tracking-wide text-ink-0">{title}</p>
+				</div>
+			</div>
+			<div className="campaign-card-body">
+				{children}
+			</div>
+		</div>
+	);
 }
 
 interface MapIntroCardProps {
@@ -59,41 +123,41 @@ export function MapIntroCard({
 			initial={{ opacity: 0, y: 18 }}
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-			className={`${SURFACE_STRONG_CLASS} pointer-events-auto w-full max-w-[640px] p-6 sm:p-7 text-center`}
+			className={`${SURFACE_STRONG_CLASS} pointer-events-auto w-full max-w-[640px] p-4 text-center sm:p-7`}
 		>
 			<p className={KICKER_CLASS}>Chapter Theater</p>
-			<h2 className={`mt-2 font-display text-2xl sm:text-3xl font-bold tracking-[0.04em] uppercase ${accentClass}`}>
+			<h2 className={`mt-2 font-display text-xl font-bold tracking-[0.04em] uppercase sm:text-3xl ${accentClass}`}>
 				{chapter.name}
 			</h2>
-			<p className="mt-3 text-[14px] leading-relaxed text-ink-200">
+			<p className="mt-3 hidden text-[14px] leading-relaxed text-ink-200 sm:block">
 				{chapter.description}
 			</p>
 
-			<div className={`${SURFACE_CLASS} mt-5 text-left`}>
+			<div className={`${SURFACE_CLASS} mt-4 text-left sm:mt-5`}>
 				<p className={`${KICKER_CLASS} text-left`}>Next Scene</p>
 				<p className="mt-2 font-display text-base font-bold tracking-wide text-ink-0">
 					{nextMission ? nextMission.name : 'This chapter is currently cleared.'}
 				</p>
-				<p className="mt-2 text-[13px] leading-relaxed text-ink-300">
+				<p className="mt-2 hidden text-[13px] leading-relaxed text-ink-300 sm:block">
 					{nextMission
 						? `${nextMission.description} Select a realm to inspect the route, or move straight into the authored briefing from here.`
 						: 'Replay the prologue, revisit completed fights, or move through the realm map to review pacing and rewards.'}
 				</p>
 			</div>
 
-			<div className="mt-6 flex flex-wrap justify-center gap-2.5">
-				<Button variant="default" size="default" onClick={onPlayPrologue}>
+			<div className="mt-4 flex flex-col justify-center gap-2.5 sm:mt-6 sm:flex-row sm:flex-wrap">
+				<Button variant="default" size="default" className="w-full sm:w-auto" onClick={onPlayPrologue}>
 					{prologueSeen ? 'Replay Prologue' : 'Play Prologue'}
 				</Button>
 				{nextMission && (
-					<Button variant="primary" size="default" onClick={onStageNextBattle}>
+					<Button variant="primary" size="default" className="w-full sm:w-auto" onClick={onStageNextBattle}>
 						<Play size={13} strokeWidth={2.4} fill="currentColor" />
 						Stage Next Battle
 					</Button>
 				)}
 			</div>
 
-			<p className="mt-4 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-300">
+			<p className="mt-4 hidden font-mono text-[10px] uppercase tracking-[0.18em] text-ink-300 sm:block">
 				Select a realm to inspect missions, route order, and rewards.
 			</p>
 		</motion.div>
@@ -183,95 +247,108 @@ export function MissionBriefing({
 					</div>
 
 					<div className="grid gap-3 sm:grid-cols-2 lg:w-[20rem] lg:grid-cols-1">
-						<div className={SURFACE_CLASS}>
-							<p className={`${KICKER_CLASS} text-left`}>Encounter Tone</p>
-							<p className="mt-2 font-display text-base font-bold tracking-wide text-ink-0">{encounterTone}</p>
-							<p className="mt-1 text-[12.5px] leading-relaxed text-ink-300">
+						<BriefingCard
+							label="Encounter Tone"
+							title={encounterTone}
+							symbol={BRIEFING_SYMBOLS.tone}
+							tone={mission.isChapterFinale ? 'ember' : mission.bossRules.length > 0 ? 'bifrost' : 'gold'}
+						>
+							<p className="text-[12.5px] leading-relaxed text-ink-300">
 								{mission.bossRules.length > 0
 									? `${mission.bossRules.length} authored boss rule${mission.bossRules.length === 1 ? '' : 's'} shape this fight.`
 									: 'No special boss rules. Emphasis is route clarity and combat rhythm.'}
 							</p>
-						</div>
-						<div className={SURFACE_CLASS}>
-							<p className={`${KICKER_CLASS} text-left`}>Campaign Record</p>
+						</BriefingCard>
+						<BriefingCard
+							label="Campaign Record"
+							title={completed ? `${completed.bestTurns} turns` : 'First clear pending'}
+							symbol={completed ? '✓' : BRIEFING_SYMBOLS.record}
+							tone={completed ? 'rune' : 'gold'}
+						>
 							{completed ? (
-								<>
-									<p className="mt-2 font-display text-base font-bold tracking-wide text-ink-0">
-										{completed.bestTurns} turns
-									</p>
-									<p className="mt-1 text-[12.5px] text-ink-300">
-										Best clear on {completed.bestDifficulty}
-									</p>
-								</>
+								<p className="text-[12.5px] text-ink-300">
+									Best clear on {completed.bestDifficulty}
+								</p>
 							) : (
-								<>
-									<p className="mt-2 font-display text-base font-bold tracking-wide text-ink-0">First clear pending</p>
-									<p className="mt-1 text-[12.5px] text-ink-300">
-										Normal is the cleanest first route through this fight.
-									</p>
-								</>
+								<p className="text-[12.5px] text-ink-300">
+									Normal is the cleanest first route through this fight.
+								</p>
 							)}
-						</div>
+						</BriefingCard>
 					</div>
 				</div>
 			</div>
 
 			{/* Opening beat — quote */}
-			<div className={`${SURFACE_CLASS} mt-5 border-l-2 border-l-gold-300/50`}>
-				<p className={`${KICKER_CLASS} text-left`}>Opening Beat</p>
-				<p className="mt-3 font-display text-base sm:text-[17px] italic leading-[1.7] text-ink-100">
+			<BriefingCard
+				label="Opening Beat"
+				title="Before the board opens"
+				symbol={BRIEFING_SYMBOLS.beat}
+				className="campaign-brief-card-wide mt-5 border-l-2 border-l-gold-300/50"
+			>
+				<p className="font-display text-base italic leading-[1.7] text-ink-100 sm:text-[17px]">
 					"{mission.narrativeBefore}"
 				</p>
-			</div>
+			</BriefingCard>
 
 			{/* Briefing 3-up */}
 			<div className="mt-5 grid gap-3 lg:grid-cols-3">
-				<div className={SURFACE_CLASS}>
-					<p className={`${KICKER_CLASS} text-left`}>Combat Rhythm</p>
-					<p className="mt-2 font-display text-base font-bold tracking-wide text-ink-0">
-						{phaseCount > 0 ? `${phaseCount} escalation beat${phaseCount === 1 ? '' : 's'}` : 'Single-beat combat pass'}
-					</p>
-					<p className="mt-2 text-[12.5px] leading-relaxed text-ink-300">
+				<BriefingCard
+					label="Combat Rhythm"
+					title={phaseCount > 0 ? `${phaseCount} escalation beat${phaseCount === 1 ? '' : 's'}` : 'Single-beat combat pass'}
+					symbol={BRIEFING_SYMBOLS.rhythm}
+					tone={phaseCount > 0 ? 'ember' : 'bifrost'}
+				>
+					<p className="text-[12.5px] leading-relaxed text-ink-300">
 						{phaseCount > 0
 							? 'Expect the opponent to shift tempo mid-fight. Learn the thresholds once, then push harder on later clears.'
 							: 'This mission leans on clean board pressure rather than multi-stage boss theatrics.'}
 					</p>
-				</div>
+				</BriefingCard>
 
-				<div className={SURFACE_CLASS}>
-					<p className={`${KICKER_CLASS} text-left`}>Aftermath</p>
-					<p className="mt-2 font-display text-base font-bold tracking-wide text-ink-0">
-						{bridgeCount > 0 ? `${bridgeCount} bridge scene${bridgeCount === 1 ? '' : 's'}` : 'Direct return to campaign'}
-					</p>
-					<p className="mt-2 text-[12.5px] leading-relaxed text-ink-300">
+				<BriefingCard
+					label="Aftermath"
+					title={bridgeCount > 0 ? `${bridgeCount} bridge scene${bridgeCount === 1 ? '' : 's'}` : 'Direct return to campaign'}
+					symbol={BRIEFING_SYMBOLS.aftermath}
+					tone={bridgeCount > 0 ? 'bifrost' : 'gold'}
+				>
+					<p className="text-[12.5px] leading-relaxed text-ink-300">
 						{bridgeCount > 0
 							? 'A short connective cinematic carries the win forward into the next chapter beat before you return to the map.'
 							: 'Results flow straight back to the campaign shell with no additional bridge scene.'}
 					</p>
-				</div>
+				</BriefingCard>
 
-				<div className={SURFACE_CLASS}>
-					<p className={`${KICKER_CLASS} text-left`}>Launch Sequence</p>
-					<ol className="mt-3 space-y-2 text-[13px] text-ink-200">
+				<BriefingCard
+					label="Launch Sequence"
+					title="Three-step handoff"
+					symbol={BRIEFING_SYMBOLS.launch}
+				>
+					<ol className="space-y-2 text-[13px] text-ink-200">
 						<li className="flex gap-2"><span className="font-mono text-ink-400">01</span> Chapter prologue establishes the arc.</li>
 						<li className="flex gap-2"><span className="font-mono text-ink-400">02</span> This briefing locks tone & difficulty.</li>
 						<li className="flex gap-2"><span className="font-mono text-ink-400">03</span> Battle launches into chess + poker flow.</li>
 					</ol>
-				</div>
+				</BriefingCard>
 			</div>
 
 			{/* Boss rules — danger surface */}
 			{mission.bossRules.length > 0 && (
-				<div className={`${SURFACE_CLASS} mt-5 border-ember-300/30 bg-ember-300/[0.05]`}>
-					<p className={`${KICKER_CLASS} text-left text-ember-200`}>Boss Rules</p>
-					<div className="mt-3 space-y-2">
+				<BriefingCard
+					label="Boss Rules"
+					title="Encounter modifiers"
+					symbol={BRIEFING_SYMBOLS.boss}
+					tone="ember"
+					className="mt-5 border-ember-300/30 bg-ember-300/[0.05]"
+				>
+					<div className="space-y-2">
 						{mission.bossRules.map((rule, index) => (
 							<p key={index} className="text-[13px] leading-relaxed text-ember-100/95">
 								{rule.description}
 							</p>
 						))}
 					</div>
-				</div>
+				</BriefingCard>
 			)}
 
 			{/* Difficulty picker */}
@@ -285,20 +362,25 @@ export function MissionBriefing({
 								key={option}
 								type="button"
 								onClick={() => setDifficulty(option)}
-								className={`text-left rounded-xl border p-4 transition-all duration-200 ${
+								className={`campaign-difficulty-card text-left rounded-xl border p-4 transition-all duration-200 ${
 									active
 										? 'border-gold-300/50 bg-linear-to-b from-gold-300/[0.10] to-gold-300/[0.04] shadow-[inset_0_1px_0_rgba(245,237,224,0.06)]'
 										: 'border-obsidian-700 bg-obsidian-900/60 hover:border-gold-600/50 hover:bg-obsidian-800/70'
 								}`}
 							>
 								<div className="flex items-center justify-between gap-3">
-									<div className="text-left min-w-0">
-										<p className={`font-display text-sm font-bold tracking-wide uppercase ${active ? 'text-gold-200' : 'text-ink-0'}`}>
-											{option}
-										</p>
-										<p className="mt-1 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-300">
-											{DIFFICULTY_META[option].label}
-										</p>
+									<div className="flex min-w-0 items-center gap-3 text-left">
+										<BriefingSigil tone={option === 'mythic' ? 'ember' : option === 'heroic' ? 'bifrost' : 'gold'}>
+											{DIFFICULTY_SYMBOLS[option]}
+										</BriefingSigil>
+										<div className="min-w-0">
+											<p className={`font-display text-sm font-bold tracking-wide uppercase ${active ? 'text-gold-200' : 'text-ink-0'}`}>
+												{option}
+											</p>
+											<p className="mt-1 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-300">
+												{DIFFICULTY_META[option].label}
+											</p>
+										</div>
 									</div>
 									<div
 										className={`h-3 w-3 rounded-full shrink-0 ${
@@ -316,15 +398,20 @@ export function MissionBriefing({
 			</div>
 
 			{/* Rewards + Enter Battle */}
-			<div className={`${SURFACE_CLASS} mt-5`}>
+			<div className={`${SURFACE_CLASS} campaign-brief-card campaign-reward-card runic-panel mt-5`}>
+				<span className="runic-corners" aria-hidden="true" />
+				<span className="runic-corners-extra" aria-hidden="true" />
 				<div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-					<div className="min-w-0">
-						<p className={`${KICKER_CLASS} text-left`}>Rewards on Clear</p>
-						<div className="mt-3 flex flex-wrap gap-2">
-							<span className={PILL_CLASS}>{rewardCopy.label}</span>
+					<div className="campaign-card-heading min-w-0">
+						<BriefingSigil tone="rune">{BRIEFING_SYMBOLS.reward}</BriefingSigil>
+						<div className="min-w-0">
+							<p className={`${KICKER_CLASS} text-left`}>Rewards on Clear</p>
+							<div className="mt-3 flex flex-wrap gap-2">
+								<span className={PILL_CLASS}>{rewardCopy.label}</span>
+							</div>
+							<p className="mt-2 max-w-[58ch] text-xs leading-relaxed opacity-70">{rewardCopy.detail}</p>
+							<p className="mt-1 text-xs opacity-70">Season cap: {TESTNET_RUNE_ECONOMY.maxCampaignRunePerAccount} RUNE per account from campaign first-clears.</p>
 						</div>
-						<p className="mt-2 max-w-[58ch] text-xs leading-relaxed opacity-70">{rewardCopy.detail}</p>
-						<p className="mt-1 text-xs opacity-70">Season cap: {TESTNET_RUNE_ECONOMY.maxCampaignRunePerAccount} RUNE per account from campaign first-clears.</p>
 					</div>
 
 					<div className="flex flex-col gap-2 sm:flex-row lg:flex-col">

@@ -10,7 +10,16 @@ export type P2PRelayErrorReason =
 	| 'unknown_type'
 	| 'send_failed'
 	| 'socket_error'
-	| 'keepalive_timeout';
+	| 'keepalive_timeout'
+	| 'origin_forbidden'
+	| 'missing_ticket'
+	| 'missing_protocol'
+	| 'malformed_ticket'
+	| 'expired_ticket'
+	| 'ticket_mismatch'
+	| 'bad_ticket_signature'
+	| 'ticket_server_unconfigured'
+	| 'starter_claim_required';
 
 export type P2PRelayTelemetrySnapshot = Readonly<{
 	activeRooms: number;

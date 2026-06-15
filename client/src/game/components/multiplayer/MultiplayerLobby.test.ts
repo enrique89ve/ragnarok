@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { CHALLENGE_SIGNATURE_ALGORITHM, type ServerSignedChallenge } from '@shared/p2pAvailability';
+import { CHALLENGE_SIGNATURE_ALGORITHM, type P2PMatchTicket, type ServerSignedChallenge } from '@shared/p2pAvailability';
 
 let helpers: typeof import('./MultiplayerLobby');
 
@@ -11,6 +11,7 @@ beforeAll(async () => {
 function challenge(overrides: Partial<ServerSignedChallenge> = {}): ServerSignedChallenge {
 	return {
 		from: 'alice',
+		to: 'bob',
 		peerId: 'peer-room-1',
 		timestamp: 1_000,
 		expiresAt: 91_000,
@@ -18,6 +19,15 @@ function challenge(overrides: Partial<ServerSignedChallenge> = {}): ServerSigned
 		sigAlg: CHALLENGE_SIGNATURE_ALGORITHM,
 		serverSig: 'a'.repeat(64),
 		...overrides,
+	};
+}
+
+function matchTicket(peerId = 'peer-room-1'): P2PMatchTicket {
+	return {
+		token: 'ticket-token',
+		roomId: peerId,
+		peerId,
+		expiresAt: 91_000,
 	};
 }
 
@@ -57,6 +67,89 @@ describe('MultiplayerLobby direct challenge helpers', () => {
 			matchmakingStatus: 'queued',
 			now: 10_000,
 		})).toBe(false);
+	});
+
+	it('requires relay tickets before opening shared-network direct challenge rooms', () => {
+		const incoming = challenge({ expiresAt: 91_000 });
+		const base = {
+			connectionState: 'disconnected' as const,
+			matchmakingStatus: 'idle' as const,
+			now: 10_000,
+		};
+
+		expect(helpers.getDirectChallengeRoomAccess({
+			...base,
+			challenge: incoming,
+			sharedNetwork: false,
+		})).toEqual({ ok: true });
+
+		expect(helpers.getDirectChallengeRoomAccess({
+			...base,
+			challenge: incoming,
+			sharedNetwork: true,
+		})).toEqual({ ok: false, reason: 'missing_relay_ticket' });
+
+		expect(helpers.getDirectChallengeRoomAccess({
+			...base,
+			challenge: challenge({ matchTicket: matchTicket() }),
+			sharedNetwork: true,
+		})).toEqual({ ok: true });
+	});
+
+	it('clears local direct challenge state when polling is blocked by starter gate', () => {
+		expect(helpers.shouldClearDirectChallengeStateAfterPoll(403, {
+			ok: false,
+			reason: 'starter_claim_required',
+		})).toBe(true);
+
+		expect(helpers.shouldClearDirectChallengeStateAfterPoll(403, {
+			ok: false,
+			reason: 'not_warband',
+		})).toBe(false);
+
+		expect(helpers.shouldClearDirectChallengeStateAfterPoll(401, {
+			ok: false,
+			reason: 'starter_claim_required',
+		})).toBe(false);
+	});
+
+	it('blocks direct challenge rooms without a current shared-network Hive session and starter claim', () => {
+		expect(helpers.getDirectChallengeProtectedBlockMessage({
+			hiveUsername: 'alice',
+			authenticatedHiveUsername: null,
+			sharedNetwork: true,
+			starterClaimed: true,
+		})).toContain('current Hive Keychain signature');
+
+		expect(helpers.getDirectChallengeProtectedBlockMessage({
+			hiveUsername: 'alice',
+			authenticatedHiveUsername: 'alice',
+			sharedNetwork: true,
+			starterClaimed: false,
+		})).toContain('claim the starter deck');
+
+		expect(helpers.getDirectChallengeProtectedBlockMessage({
+			hiveUsername: 'alice',
+			authenticatedHiveUsername: 'alice',
+			sharedNetwork: true,
+			starterClaimed: true,
+		})).toBeNull();
+	});
+
+	it('reports expired and busy direct challenge rooms before ticket validation', () => {
+		const base = {
+			challenge: challenge({ expiresAt: 5_000 }),
+			connectionState: 'connected' as const,
+			matchmakingStatus: 'queued' as const,
+			now: 10_000,
+			sharedNetwork: true,
+		};
+
+		expect(helpers.getDirectChallengeRoomAccess(base)).toEqual({ ok: false, reason: 'expired' });
+		expect(helpers.getDirectChallengeRoomAccess({
+			...base,
+			challenge: challenge({ expiresAt: 91_000 }),
+		})).toEqual({ ok: false, reason: 'busy' });
 	});
 
 	it('expires outgoing challenge UI state without touching matchmaking', () => {

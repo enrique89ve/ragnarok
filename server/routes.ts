@@ -39,9 +39,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       indexer: {
         inSync: stats.inSync,
         lastIrreversibleBlockProcessed: stats.lastIrreversibleBlockProcessed,
+        indexStartBlock: stats.indexStartBlock,
+        headBlock: stats.headBlock,
         irreversibleBlock: stats.irreversibleBlock,
         syncTargetBlock: stats.syncTargetBlock,
         blocksBehind: stats.blocksBehind,
+        progressPercent: stats.progressPercent,
+        stateFile: stats.stateFile,
+        stateFileConfigured: stats.stateFileConfigured,
       },
       runtime: {
         ...buildRagnarokRuntimeEvidence(runtime),
@@ -52,6 +57,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Matchmaking routes (always available, no DB required)
+  const starterClaimRoutes = (await import("./routes/starterClaimRoutes")).default;
+  app.use('/api/starter', starterClaimRoutes);
+
   const matchmakingRoutes = (await import("./routes/matchmakingRoutes")).default;
   app.use('/api/matchmaking', matchmakingRoutes);
 

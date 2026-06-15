@@ -1,53 +1,53 @@
-/* ═══════════════════════════════════════════════════
-   POKER CARD FRAME — minimalist 52-card deck chrome
-   ─────────────────────────────────────────────────
-   Lives outside the unified CardFrame pipeline because poker
-   cards share no visual vocabulary with NFT minion cards:
-   no PNG chrome, no rarity classes, no animated conic border,
-   no element band, no legibility gradient. Two variants:
-
-   `face-up`   — parchment + suit accent (Q, 5, A revealed)
-   `face-down` — solid #1a1d24 + Eihwaz rune, no border
-   ═══════════════════════════════════════════════════ */
+/* Poker card compatibility layer.
+   Frame chrome comes from NorseCardFrame.css via CardFrame. This file keeps
+   poker-specific slot sizing and face variant details only. */
 
 .poker-card-frame {
 	box-sizing: border-box;
-	display: flex;
-	align-items: stretch;
-	justify-content: stretch;
-	position: relative;
-	overflow: hidden;
-	border-radius: 7px;
 }
 
 .poker-card-frame--face-up {
-	background:
-		radial-gradient(
-			ellipse at 50% 35%,
-			rgba(255, 251, 232, 0.97) 0%,
-			rgba(244, 232, 200, 0.96) 55%,
-			rgba(228, 210, 170, 0.95) 100%
-		),
-		linear-gradient(180deg, #f5ebd0 0%, #e8d8b0 100%);
-	border: 1px solid rgba(91, 68, 38, 0.78);
-	box-shadow:
-		0 1px 2px rgba(0, 0, 0, 0.35),
-		inset 0 0 0 1px rgba(255, 250, 230, 0.4);
+	--collection-frame-color: #d9a844;
+	--collection-frame-glow: rgba(217, 168, 68, 0.28);
 }
 
 .poker-card-frame--face-down {
-	/* Background stack + beveled rim live in `./pokerFaceDown.css` so all
-	   4 face-down surfaces share one source of truth. This block keeps
-	   only the .poker-card-frame-level chrome (border-radius, sizing). */
+	--collection-frame-color: #c9a84c;
+	--collection-frame-glow: rgba(201, 168, 76, 0.18);
+	--collection-frame-line-inset: 5px;
 }
 
-/* Make the slot fill the frame — slots (CardRankSuit, CardCardBack)
-   used to render inside .card-frame__art-layer at z:0. Inside the
-   poker frame the slot IS the layer, so we lift it to fill. */
-.poker-card-frame > .card-rank-suit,
-.poker-card-frame > .card-card-back {
+.poker-card-frame--face-down .card-frame__art-layer {
+	background: #11151d;
+}
+
+.poker-card-frame--face-down .card-card-back {
+	background-color: #11151d;
+	background-image: none;
+	box-shadow:
+		inset 0 0 0 1px #c9a84c,
+		inset 0 0 0 2px #11151d,
+		inset 0 0 0 3px rgba(201, 168, 76, 0.72);
+}
+
+.poker-card-frame--face-down .card-back-border {
+	background: #11151d;
+}
+
+.poker-card-frame--face-down .yggdrasil-symbol {
+	color: #d8b85d;
+	text-shadow:
+		0 1px 0 #05070b,
+		0 0 5px rgba(216, 184, 93, 0.35);
+}
+
+.poker-card-frame--face-down .card-back-shimmer {
+	display: none;
+}
+
+.poker-card-frame .card-frame__art-layer > .card-rank-suit,
+.poker-card-frame .card-frame__art-layer > .card-card-back {
 	position: relative;
-	flex: 1 1 auto;
 	width: 100%;
 	height: 100%;
 }

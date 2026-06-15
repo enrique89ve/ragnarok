@@ -67,6 +67,7 @@ export type AdminServerConfig = {
 	readonly economic: boolean;
 	readonly runtimePhase: RagnarokRuntimePhase;
 	readonly seasonStart: string;
+	readonly indexStartBlock: number;
 	readonly storageNamespace: string;
 	readonly qaFullCatalogEnabled: boolean;
 	readonly state: AdminServerStateEvidence;
@@ -230,6 +231,9 @@ function isAdminServerConfig(value: unknown): value is AdminServerConfig {
 		&& hasNonEmptyStringFields(body, ADMIN_CONFIG_REQUIRED_STRING_FIELDS)
 		&& hasBooleanFields(body, ADMIN_CONFIG_REQUIRED_BOOLEAN_FIELDS)
 		&& isRagnarokRuntimePhase(body.runtimePhase)
+		&& typeof body.indexStartBlock === 'number'
+		&& Number.isSafeInteger(body.indexStartBlock)
+		&& body.indexStartBlock >= 1
 		&& isAdminServerStateEvidence(body.state)
 		&& isRagnarokClosedBetaCutoverGate(body.closedBetaCutover)
 		&& typeof body.adminOperatorAccount === 'string';
@@ -392,6 +396,7 @@ export async function getAdminServerConfig(options: AdminServerConfigOptions = {
 				economic: body.economic,
 				runtimePhase: body.runtimePhase,
 				seasonStart: body.seasonStart.trim(),
+				indexStartBlock: body.indexStartBlock,
 				storageNamespace: body.storageNamespace.trim(),
 				qaFullCatalogEnabled: body.qaFullCatalogEnabled,
 				state: {

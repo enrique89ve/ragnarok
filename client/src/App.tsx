@@ -78,14 +78,14 @@ const FactionPledgePopup = lazy(() =>
 );
 const SocialPresenceHeartbeat = lazy(() => import('./game/components/social/SocialPresenceHeartbeat'));
 
-const prototypeModules = import.meta.glob('./game/combat/prototypes/PokerViewportSafeAreaPrototype.tsx');
-const PokerViewportSafeAreaPrototype = lazy(async () => {
-	const loadPrototype = prototypeModules['./game/combat/prototypes/PokerViewportSafeAreaPrototype.tsx'];
-	if (!import.meta.env.DEV || loadPrototype === undefined) {
+const cardLayoutCanvasModules = import.meta.glob('./game/components/dev/CardLayoutCanvasPage.tsx');
+const CardLayoutCanvasPage = lazy(async () => {
+	const loadCanvas = cardLayoutCanvasModules['./game/components/dev/CardLayoutCanvasPage.tsx'];
+	if (!import.meta.env.DEV || loadCanvas === undefined) {
 		return { default: () => <Navigate to={routes.home} replace /> };
 	}
 
-	return loadPrototype() as Promise<{ default: React.ComponentType }>;
+	return loadCanvas() as Promise<{ default: React.ComponentType }>;
 });
 
 const cardLabModules = import.meta.glob('./game/components/dev/CardLabPage.tsx');
@@ -1194,15 +1194,15 @@ function App() {
 					<Routes>
 						<Route path={routes.map} element={<MapPage />} />
 						<Route
-							path={routes.pokerViewportPrototype}
-							element={import.meta.env.DEV ? <PokerViewportSafeAreaPrototype /> : <Navigate to={routes.home} replace />}
+							path={routes.cardLayoutCanvas}
+							element={import.meta.env.DEV ? <CardLayoutCanvasPage /> : <Navigate to={routes.home} replace />}
 						/>
 						<Route
 							path={routes.cardLab}
 							element={import.meta.env.DEV ? <CardLabPage /> : <Navigate to={routes.home} replace />}
 						/>
 						<Route
-							path="/dev/frame-test"
+							path={routes.frameTest}
 							element={import.meta.env.DEV ? <FrameTestPage /> : <Navigate to={routes.home} replace />}
 						/>
 

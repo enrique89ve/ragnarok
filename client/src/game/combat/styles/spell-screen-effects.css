@@ -1,11 +1,11 @@
 /**
  * Spell Screen Effects — Full-screen tints applied during spell compositions.
- * Applied to .game-viewport-wrapper via GSAP addClass/removeClass so the
- * element-colored edge tint covers the full browser viewport, including the
- * letterbox and board frame.
+ * Applied to the viewport-wrapper VFX layer via GSAP addClass/removeClass so
+ * the element-colored edge tint covers the full browser viewport, including
+ * the letterbox and board frame.
  */
 
-.game-viewport-wrapper:is(.screen-freeze, .screen-burn, .screen-holy, .screen-shadow, .screen-nature, .screen-lightning, .screen-blood)::before {
+[data-vfx-layer="game-viewport-wrapper"]:is(.screen-freeze, .screen-burn, .screen-holy, .screen-shadow, .screen-nature, .screen-lightning, .screen-blood)::before {
 	content: '';
 	position: absolute;
 	inset: 0;
@@ -14,43 +14,43 @@
 	opacity: 1;
 }
 
-.game-viewport-wrapper.screen-freeze::before {
+[data-vfx-layer="game-viewport-wrapper"].screen-freeze::before {
 	background: radial-gradient(ellipse at center, transparent 30%, rgba(0, 120, 255, 0.15) 100%);
 	transition: opacity 0.3s ease;
 }
 
-.game-viewport-wrapper.screen-burn::before {
+[data-vfx-layer="game-viewport-wrapper"].screen-burn::before {
 	background: radial-gradient(ellipse at center, rgba(255, 80, 0, 0.12) 0%, rgba(255, 40, 0, 0.2) 100%);
 	transition: opacity 0.3s ease;
 }
 
-.game-viewport-wrapper.screen-holy::before {
+[data-vfx-layer="game-viewport-wrapper"].screen-holy::before {
 	background: radial-gradient(ellipse at center, rgba(255, 215, 0, 0.1) 0%, rgba(255, 255, 255, 0.08) 100%);
 	transition: opacity 0.3s ease;
 }
 
-.game-viewport-wrapper.screen-shadow::before {
+[data-vfx-layer="game-viewport-wrapper"].screen-shadow::before {
 	background: radial-gradient(ellipse at center, transparent 20%, rgba(60, 0, 80, 0.25) 100%);
 	transition: opacity 0.3s ease;
 }
 
-.game-viewport-wrapper.screen-nature::before {
+[data-vfx-layer="game-viewport-wrapper"].screen-nature::before {
 	background: radial-gradient(ellipse at center, rgba(76, 175, 80, 0.06) 0%, rgba(30, 100, 30, 0.12) 100%);
 	transition: opacity 0.3s ease;
 }
 
-.game-viewport-wrapper.screen-lightning::before {
+[data-vfx-layer="game-viewport-wrapper"].screen-lightning::before {
 	background: rgba(255, 255, 255, 0.25);
 	transition: opacity 0.15s ease;
 }
 
-.game-viewport-wrapper.screen-blood::before {
+[data-vfx-layer="game-viewport-wrapper"].screen-blood::before {
 	background: radial-gradient(ellipse at center, rgba(180, 0, 0, 0.1) 0%, rgba(100, 0, 0, 0.2) 100%);
 	transition: opacity 0.3s ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.game-viewport-wrapper:is(.screen-freeze, .screen-burn, .screen-holy, .screen-shadow, .screen-nature, .screen-lightning, .screen-blood)::before {
+	[data-vfx-layer="game-viewport-wrapper"]:is(.screen-freeze, .screen-burn, .screen-holy, .screen-shadow, .screen-nature, .screen-lightning, .screen-blood)::before {
 		display: none;
 	}
 }

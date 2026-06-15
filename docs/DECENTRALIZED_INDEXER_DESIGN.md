@@ -1,5 +1,11 @@
 # Decentralized Indexer Design — "Light HAF"
 
+> Historical/future design note. The live server indexer contract is
+> [`HIVE_INDEXER_CONTRACT.md`](./HIVE_INDEXER_CONTRACT.md). This document
+> explores decentralized index distribution and must not be used as the current
+> runtime validation, cursor, or NFT custody spec. NFT custody belongs to
+> NFTLox in NFTLox-enabled phases.
+
 > Every game client reads from a shared off-chain index. No servers. No scanning millions of blocks. One lightweight DB on IPFS that anyone can verify.
 
 ## The Problem

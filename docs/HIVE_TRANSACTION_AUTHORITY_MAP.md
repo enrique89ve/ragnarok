@@ -15,6 +15,8 @@ Primary sources:
 - Canonical action and auth sets: `shared/protocol-core/types.ts`
 - Op normalization: `shared/protocol-core/normalize.ts`
 - Replay handlers: `shared/protocol-core/apply.ts`
+- Server indexer contract: `docs/HIVE_INDEXER_CONTRACT.md`
+- External NFT custody layer: `docs/NFTLOX_INTEGRATION_SPEC.md`
 - Wire specs: `docs/RAGNAROK_PROTOCOL_V1.md`, `docs/RUNE.md`, `docs/PVP_WIRE_PROTOCOL.md`
 
 ## Surfaces
@@ -88,8 +90,14 @@ or treasury coordinator, not a gameplay signer.
 
 Starter is a universal entitlement, not a purchased or claimed pack asset.
 The starter ceremony may write account-scoped local state such as "revealed"
-or seed the default hero decks, but it MUST NOT request Keychain and MUST NOT
-broadcast a Hive operation.
+or seed the default hero decks. It MUST NOT request Keychain as proof of card
+ownership and MUST NOT broadcast a Hive operation.
+
+For shared-network P2P gating, the server may additionally store a signed
+starter ceremony receipt via `/api/starter/claim`. That receipt is not card
+ownership and is not a Hive broadcast; it is an operational gate proving the
+Hive account explicitly passed the onboarding ceremony before entering public
+matchmaking.
 
 ## Client Wallet Invocation Seam
 
@@ -156,7 +164,7 @@ destroy an NFT, or mutate admin supply.
 
 | Responsibility | Server signs? | Broadcasts to Hive? | Authority boundary |
 |---|---:|---:|---|
-| Chain indexer | No | No | Reads irreversible Hive ops and applies shared protocol core into cache/read APIs. |
+| Chain indexer | No | No | Reads irreversible Ragnarok ops and applies shared protocol core into cache/read APIs for gameplay, economy, packs, and ranking. It does not own NFTLox custody. |
 | `/api/chain/*` reads | No | No | Convenience projections only. Reads are not authority. |
 | Matchmaking REST auth | No | No | Verifies a client Posting message signature when a username is supplied. |
 | Tournament/treasury REST auth | No | No | Verifies signed headers, then mutates server-side coordination state. |

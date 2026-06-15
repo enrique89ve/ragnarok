@@ -16,7 +16,7 @@
  *
  * Overlay slots (render in tree order on top of chrome):
  *   - CardManaGem, CardStatGems, CardNamePlate, CardCountBadge,
- *     CardMasteryBadge
+ *     CardMasteryBadge, CardRarityMark
  */
 
 export { default as CardArt } from './CardArt';
@@ -26,6 +26,7 @@ export { default as CardStatGems } from './CardStatGems';
 export { default as CardNamePlate } from './CardNamePlate';
 export { default as CardCountBadge } from './CardCountBadge';
 export { default as CardMasteryBadge } from './CardMasteryBadge';
+export { default as CardRarityMark } from './CardRarityMark';
 export { default as CardRankSuit } from './CardRankSuit';
 export { default as CardCardBack } from './CardCardBack';
 export { default as CardTribeLine } from './CardTribeLine';
@@ -43,6 +44,7 @@ export type { CardStatGemsProps } from './CardStatGems';
 export type { CardNamePlateProps } from './CardNamePlate';
 export type { CardCountBadgeProps } from './CardCountBadge';
 export type { CardMasteryBadgeProps } from './CardMasteryBadge';
+export type { CardRarityMarkProps } from './CardRarityMark';
 export type { CardRankSuitProps } from './CardRankSuit';
 export type { CardTribeLineProps } from './CardTribeLine';
 export type { CardDescriptionProps } from './CardDescription';

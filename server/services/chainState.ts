@@ -5,7 +5,7 @@
  * Stores player ELO, card ownership, match history, and sync cursors
  * derived from replaying Hive custom_json ops.
  *
- * On server startup: loads from data/chain-state.json
+ * On server startup: loads from the configured/runtime chain-state file
  * During operation: writes debounced every 30s
  * On shutdown: final flush
  */
@@ -33,6 +33,8 @@ import {
 	isDuatAcquisitionProvenance,
 	type AcquisitionProvenance,
 } from '../../shared/protocol-core/acquisitionProvenance';
+import { getRagnarokRuntimePhase } from '../../shared/runtimeConfig';
+import { getRagnarokServerRuntimeConfig } from './runtimeConfig';
 
 const DEFAULT_ELO_RATING = 1000;
 
@@ -612,13 +614,27 @@ let _dirty = false;
 export function getStateFilePath(): string {
 	const configuredPath = process.env[STATE_FILE_ENV]?.trim();
 	if (!configuredPath) {
-		return path.join(process.cwd(), 'data', 'chain-state.json');
+		return getDefaultStateFilePath();
 	}
 	if (configuredPath.includes('\0')) {
 		console.warn('[chainState] Invalid state file path, ignoring null-byte configuration');
-		return path.join(process.cwd(), 'data', 'chain-state.json');
+		return getDefaultStateFilePath();
 	}
 	return path.resolve(process.cwd(), configuredPath);
+}
+
+function getDefaultStateFilePath(): string {
+	const runtime = getRagnarokServerRuntimeConfig();
+	const phase = getRagnarokRuntimePhase(runtime);
+	const filenameByPhase: Record<ReturnType<typeof getRagnarokRuntimePhase>, string> = {
+		local: 'chain-state.local.json',
+		'qa-season-0': 'chain-state.qa-season-0.json',
+		'alfa-testnet': 'chain-state.alfa-testnet.json',
+		'closed-beta': 'chain-state.closed-beta.json',
+		'generic-testnet': 'chain-state.testnet.json',
+		mainnet: 'chain-state.mainnet.json',
+	};
+	return path.join(process.cwd(), 'data', filenameByPhase[phase]);
 }
 
 function ensureDataDir(): void {
@@ -645,16 +661,34 @@ function assertStateFileWritable(): void {
 }
 
 function getConfiguredInitialBlockCursor(): number {
-	const raw = process.env[INDEX_START_BLOCK_ENV];
-	if (!raw) return 0;
+	const startBlock = getConfiguredIndexStartBlock();
 
-	const startBlock = Number(raw);
+	if (startBlock < 1) return 0;
+	return startBlock - 1;
+}
+
+function getConfiguredIndexStartBlock(): number {
+	const raw = process.env[INDEX_START_BLOCK_ENV];
+	const startBlock = raw
+		? Number(raw)
+		: getRagnarokServerRuntimeConfig().indexStartBlock;
+
 	if (!Number.isInteger(startBlock) || startBlock < 1) {
-		console.warn(`[chainState] Ignoring invalid ${INDEX_START_BLOCK_ENV}=${raw}`);
-		return 0;
+		console.warn(`[chainState] Ignoring invalid ${INDEX_START_BLOCK_ENV}=${String(raw ?? startBlock)}`);
+		return 1;
 	}
 
-	return startBlock - 1;
+	return startBlock;
+}
+
+function getStateFileDisplayPath(stateFile = getStateFilePath()): string {
+	const relative = path.relative(process.cwd(), stateFile);
+	if (!relative || relative.startsWith('..')) return stateFile;
+	return relative;
+}
+
+function getCurrentBlocksBehind(): number {
+	return Math.max(0, _syncTargetBlock - lastIrreversibleBlockProcessed);
 }
 
 export function loadState(): void {
@@ -663,6 +697,8 @@ export function loadState(): void {
 		const stateFile = getStateFilePath();
 		if (!fs.existsSync(stateFile)) {
 			lastIrreversibleBlockProcessed = initialBlockCursor;
+			_syncTargetBlock = initialBlockCursor;
+			console.log(`[chainState] Initialized: file=${getStateFileDisplayPath(stateFile)}, blockCursor=${lastIrreversibleBlockProcessed}, indexStartBlock=${getConfiguredIndexStartBlock()}`);
 			return;
 		}
 		const raw = fs.readFileSync(stateFile, 'utf8');
@@ -744,7 +780,12 @@ export function loadState(): void {
 		marketOffers.clear();
 		for (const [k, v] of data.marketOffers ?? []) marketOffers.set(k, v);
 
-		console.log(`[chainState] Loaded: ${players.size} players, ${cards.size} cards, ${matches.length} matches, blockCursor=${lastIrreversibleBlockProcessed}`);
+		_inSync = data.inSync ?? false;
+		_headBlock = data.headBlock ?? 0;
+		_irreversibleBlock = data.irreversibleBlock ?? 0;
+		_syncTargetBlock = data.syncTargetBlock ?? data.irreversibleBlock ?? data.lastIrreversibleBlockProcessed;
+
+		console.log(`[chainState] Loaded: file=${getStateFileDisplayPath(stateFile)}, ${players.size} players, ${cards.size} cards, ${matches.length} matches, blockCursor=${lastIrreversibleBlockProcessed}, target=${_syncTargetBlock}, blocksBehind=${getCurrentBlocksBehind()}, inSync=${_inSync}`);
 	} catch (err) {
 		console.warn('[chainState] Failed to load state:', err);
 	}
@@ -882,7 +923,7 @@ export function importState(data: SerializedState): void {
 	_syncTargetBlock = normalized.syncTargetBlock ?? normalized.irreversibleBlock ?? normalized.lastIrreversibleBlockProcessed;
 
 	_dirty = false;
-	console.log(`[chainState] Imported: ${players.size} players, ${cards.size} cards, blockCursor=${lastIrreversibleBlockProcessed}, inSync=${_inSync}`);
+	console.log(`[chainState] Imported: ${players.size} players, ${cards.size} cards, blockCursor=${lastIrreversibleBlockProcessed}, target=${_syncTargetBlock}, blocksBehind=${getCurrentBlocksBehind()}, inSync=${_inSync}`);
 }
 
 function markDirty(): void {
@@ -1085,13 +1126,27 @@ export function getStats(): {
 	knownAccounts: number;
 	lastSyncedAt: number;
 	lastIrreversibleBlockProcessed: number;
+	indexStartBlock: number;
 	inSync: boolean;
 	headBlock: number;
 	irreversibleBlock: number;
 	syncTargetBlock: number;
 	blocksBehind: number;
+	stateFile: string;
+	stateFileConfigured: boolean;
+	progressBlocks: number;
+	progressTargetBlocks: number;
+	progressPercent: number;
 } {
-	const blocksBehind = Math.max(0, _syncTargetBlock - lastIrreversibleBlockProcessed);
+	const indexStartBlock = getConfiguredIndexStartBlock();
+	const blocksBehind = getCurrentBlocksBehind();
+	const progressTargetBlocks = Math.max(0, _syncTargetBlock - indexStartBlock + 1);
+	const progressBlocks = progressTargetBlocks === 0
+		? 0
+		: Math.min(progressTargetBlocks, Math.max(0, lastIrreversibleBlockProcessed - indexStartBlock + 1));
+	const progressPercent = progressTargetBlocks === 0
+		? 0
+		: Number(((progressBlocks / progressTargetBlocks) * 100).toFixed(2));
 	return {
 		totalPlayers: players.size,
 		totalCards: cards.size,
@@ -1099,11 +1154,17 @@ export function getStats(): {
 		knownAccounts: knownAccounts.size,
 		lastSyncedAt,
 		lastIrreversibleBlockProcessed,
+		indexStartBlock,
 		inSync: _inSync,
 		headBlock: _headBlock,
 		irreversibleBlock: _irreversibleBlock,
 		syncTargetBlock: _syncTargetBlock,
 		blocksBehind,
+		stateFile: getStateFilePath(),
+		stateFileConfigured: Boolean(process.env[STATE_FILE_ENV]?.trim()),
+		progressBlocks,
+		progressTargetBlocks,
+		progressPercent,
 	};
 }
 

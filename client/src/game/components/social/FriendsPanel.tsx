@@ -1,11 +1,16 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useSyncExternalStore } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronUp, Crosshair, UserPlus, Users, Wifi, WifiOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNFTUsername } from '../../nft/hooks';
 import { useFriendStore, type Friend, type FriendPresence, type OutgoingFriendChallenge } from '../../stores/friendStore';
 import { usePeerStore } from '../../stores/peerStore';
+import { useStarterStore } from '../../stores/starterStore';
 import { routes } from '../../../lib/routes';
+import { ensureFriendSession } from './friendSession';
+import { getAuthenticatedHiveUsername, subscribeHiveSessionIdentity } from '../../../data/HiveSessionIdentity';
+import { isSharedNetworkEnvironment } from '../../config/featureFlags';
+import { resolveProtectedFlowAccess } from '../../auth/protectedFlowAccess';
 import {
 	CHALLENGE_STALE_THRESHOLD_MS,
 	readChallengeSendResponse,
@@ -41,6 +46,7 @@ const CHALLENGE_REJECT_LABELS: Record<ChallengeRejectReason, string> = {
 	stale_peer: 'Refresh presence before challenging.',
 	self_challenge: 'You cannot challenge yourself.',
 	server_unconfigured: 'P2P challenge signing is not configured.',
+	starter_claim_required: 'Claim starter before challenging.',
 	invalid_input: 'Challenge request was invalid.',
 };
 
@@ -62,6 +68,17 @@ export function challengeRejectReasonLabel(reason: ChallengeRejectReason, retryA
 	return CHALLENGE_REJECT_LABELS[reason];
 }
 
+function getLocalChallengeBlock(params: {
+	readonly friendName: string;
+	readonly hiveUsername: string | null;
+	readonly p2pBlockedDetail?: string | null;
+}): ChallengeButtonState | null {
+	if (!params.hiveUsername) return { disabled: true, label: 'Challenge', detail: 'Connect Hive' };
+	if (params.hiveUsername === params.friendName) return { disabled: true, label: 'Challenge', detail: 'Self challenge' };
+	if (params.p2pBlockedDetail) return { disabled: true, label: 'Challenge', detail: params.p2pBlockedDetail };
+	return null;
+}
+
 export function buildFriendChallengeRequest(params: {
 	readonly from: string;
 	readonly to: string;
@@ -80,6 +97,7 @@ export function getFriendChallengeButtonState(params: {
 	readonly hiveUsername?: string | null;
 	readonly cooldownUntil?: number;
 	readonly outgoingChallenge?: OutgoingFriendChallenge | null;
+	readonly p2pBlockedDetail?: string | null;
 	readonly now: number;
 }): ChallengeButtonState {
 	const friendName = normalizeFriendUsername(params.friend.hiveUsername);
@@ -87,12 +105,8 @@ export function getFriendChallengeButtonState(params: {
 	if (params.friend.relationStatus !== 'accepted') {
 		return { disabled: true, label: 'Challenge', detail: 'Invite required' };
 	}
-	if (!hiveUsername) {
-		return { disabled: true, label: 'Challenge', detail: 'Connect Hive' };
-	}
-	if (hiveUsername === friendName) {
-		return { disabled: true, label: 'Challenge', detail: 'Self challenge' };
-	}
+	const localBlock = getLocalChallengeBlock({ friendName, hiveUsername, p2pBlockedDetail: params.p2pBlockedDetail });
+	if (localBlock) return localBlock;
 	if (params.cooldownUntil && params.cooldownUntil > params.now) {
 		return {
 			disabled: true,
@@ -121,6 +135,14 @@ export function getFriendChallengeButtonState(params: {
 	}
 
 	return { disabled: false, label: 'Challenge', detail: 'Available' };
+}
+
+function getP2PChallengeBlockDetail(reason: ReturnType<typeof resolveProtectedFlowAccess>): string | null {
+	if (reason.kind === 'allowed') return null;
+	if (reason.reason === 'starter_claim_required') return 'Claim starter';
+	if (reason.reason === 'hive_session_required') return 'Sign Keychain';
+	if (reason.reason === 'hive_session_mismatch') return 'Account mismatch';
+	return 'Connect Hive';
 }
 
 function AddFriendDialog({ onAdd, onClose }: { onAdd: (name: string) => void; onClose: () => void }) {
@@ -223,6 +245,27 @@ function FriendCard({
 
 export default function FriendsPanel() {
 	const hiveUsername = useNFTUsername();
+	const authenticatedHiveUsername = useSyncExternalStore(
+		subscribeHiveSessionIdentity,
+		getAuthenticatedHiveUsername,
+		getAuthenticatedHiveUsername,
+	);
+	const sharedNetwork = isSharedNetworkEnvironment();
+	const starterClaimed = useStarterStore(state => (
+		sharedNetwork
+			? Boolean(hiveUsername && state.hasClaimed(hiveUsername))
+			: state.hasClaimed(hiveUsername)
+	));
+	const p2pChallengeAccess = resolveProtectedFlowAccess({
+		accountId: hiveUsername,
+		authenticatedAccountId: authenticatedHiveUsername,
+		sharedNetwork,
+		surface: 'multiplayer',
+		requiresAuthenticatedSession: true,
+		requiresStarterClaim: true,
+		starterClaimed,
+	});
+	const p2pBlockedDetail = getP2PChallengeBlockDetail(p2pChallengeAccess);
 	const friends = useFriendStore(s => s.friends);
 	const onlineStatus = useFriendStore(s => s.onlineStatus);
 	const outgoingChallenge = useFriendStore(s => s.outgoingChallenge);
@@ -252,6 +295,22 @@ export default function FriendsPanel() {
 			toast.error('Connect Hive before sending a challenge.');
 			return;
 		}
+		const currentAuthenticatedHiveUsername = getAuthenticatedHiveUsername();
+		const currentSharedNetwork = isSharedNetworkEnvironment();
+		const currentStarterClaimed = useStarterStore.getState().hasClaimed(hiveUsername);
+		const currentAccess = resolveProtectedFlowAccess({
+			accountId: hiveUsername,
+			authenticatedAccountId: currentAuthenticatedHiveUsername,
+			sharedNetwork: currentSharedNetwork,
+			surface: 'multiplayer',
+			requiresAuthenticatedSession: true,
+			requiresStarterClaim: true,
+			starterClaimed: currentStarterClaimed,
+		});
+		if (currentAccess.kind === 'blocked') {
+			toast.error(currentAccess.message);
+			return;
+		}
 		const target = normalizeFriendUsername(username);
 		setSendingTo(target);
 		try {
@@ -262,6 +321,10 @@ export default function FriendsPanel() {
 			}
 			if (!peerId) {
 				toast.error('Could not create a peer reservation.');
+				return;
+			}
+			if (!await ensureFriendSession(hiveUsername)) {
+				toast.error('Connect Hive before sending a challenge.');
 				return;
 			}
 
@@ -294,6 +357,7 @@ export default function FriendsPanel() {
 				expiresAt: parsed.challenge?.expiresAt ?? sentAt + CHALLENGE_STALE_THRESHOLD_MS,
 				matchChallenge: parsed.opponentMatchChallenge ?? parsed.challenge,
 				opponentMatchChallenge: parsed.challenge,
+				matchTicket: parsed.opponentMatchChallenge?.matchTicket ?? null,
 			});
 			clearChallengeCooldown(target);
 			pruneExpiredChallenges(sentAt);
@@ -349,6 +413,7 @@ export default function FriendsPanel() {
 										hiveUsername,
 										cooldownUntil: challengeCooldowns[f.hiveUsername]?.until,
 										outgoingChallenge,
+										p2pBlockedDetail,
 										now,
 									})}
 									isSending={sendingTo === f.hiveUsername}
@@ -371,6 +436,7 @@ export default function FriendsPanel() {
 										hiveUsername,
 										cooldownUntil: challengeCooldowns[f.hiveUsername]?.until,
 										outgoingChallenge,
+										p2pBlockedDetail,
 										now,
 									})}
 									isSending={sendingTo === f.hiveUsername}
@@ -393,6 +459,7 @@ export default function FriendsPanel() {
 										hiveUsername,
 										cooldownUntil: challengeCooldowns[f.hiveUsername]?.until,
 										outgoingChallenge,
+										p2pBlockedDetail,
 										now,
 									})}
 									isSending={sendingTo === f.hiveUsername}

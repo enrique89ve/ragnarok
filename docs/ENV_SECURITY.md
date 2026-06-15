@@ -94,16 +94,50 @@ public account name. The future publisher must use a server/operator-only
 posting key such as `RAGNAROK_INDEX_POSTING_KEY`; it must never be exposed as
 `VITE_*`.
 
-`RAGNAROK_INDEX_START_BLOCK` is not secret. It is an operational bootstrap
-cursor for fresh server indexer state files; set it to the first Hive block
-where the selected Ragnarok protocol id can appear, so the server does not
-replay all historical Hive blocks during a testnet or mainnet bootstrap.
+`VITE_SEASON_START` and `VITE_RAGNAROK_INDEX_START_BLOCK` are public phase
+boundary evidence. Every runtime profile, including mainnet, must declare both:
+the season start date used by UI/economy displays and the first Hive block where
+that phase's Ragnarok protocol id can appear.
+
+`RAGNAROK_SEASON_START` is not secret. It is the server-side mirror of
+`VITE_SEASON_START` for split deployments and operator runtimes. Keep the two
+equal unless a deployment explicitly documents why browser diagnostics and
+server replay use different phase boundaries.
+
+`RAGNAROK_INDEX_START_BLOCK` is not secret. It is the server-side mirror of
+`VITE_RAGNAROK_INDEX_START_BLOCK` and acts as the operational bootstrap cursor
+for fresh server indexer state files. Set it to the first Hive block where the
+selected Ragnarok protocol id can appear, so the server does not replay all
+historical Hive blocks during a testnet or mainnet bootstrap.
+
+`RAGNAROK_CHAIN_STATE_FILE` is not secret, but it is authority-sensitive because
+it selects the JSON projection the API serves. Prefer one file per runtime phase
+(`data/chain-state.alfa-testnet.json`, `data/chain-state.mainnet.json`, etc.).
+When omitted, the server now derives a runtime-specific default instead of using
+one shared `data/chain-state.json` for every profile.
+
+`RAGNAROK_RANGE_SCAN` and `RAGNAROK_HAF_ENDPOINTS` are not secret. Range scan is
+enabled by default and uses HafAH for fast catch-up over large block gaps. Keep
+`RAGNAROK_HAF_ENDPOINTS=https://api.hive.blog` unless another endpoint exposes
+the same `/hafah-api/operations` surface; regular Hive RPC nodes may not.
+The deterministic Hive operation selection and validation contract is
+documented in [`HIVE_INDEXER_CONTRACT.md`](./HIVE_INDEXER_CONTRACT.md).
 
 `P2P_CHALLENGE_SIGNING_SECRET` is a server-only HMAC secret for direct P2P
-challenge envelopes. Local/dev may use the process fallback, but Dokploy or any
-shared environment must set a stable value of at least 32 characters. Production
-Alfa fails closed when this value is missing or too short. Never add `VITE_` to
-this name.
+challenge envelopes and relay match tickets. Local/dev may use the process
+fallback, but Dokploy or any shared environment must set a stable value of at
+least 32 characters. Production Alfa fails closed when this value is missing or
+too short. Never add `VITE_` to this name.
+
+`P2P_RELAY_ALLOWED_ORIGINS` is a server-only comma-separated allowlist for
+browser Origins that may open `/ws/p2p` when the frontend and API hosts differ.
+Do not use `*`. Prefer exact `https://host[:port]` origins. Same-host requests
+are allowed by comparing `Origin` to `Host`.
+
+`P2P_RELAY_TRUST_FORWARDED_HOST=true` should be used only behind a trusted
+reverse proxy that overwrites `X-Forwarded-Host`. Leave it false for direct
+Node/Dokploy exposure; otherwise a client could spoof the forwarded host and
+weaken the Origin check.
 
 `ENABLE_INDEX_CHECKPOINT_PUBLISHER=true` turns on server-side Hive checkpoint
 broadcasts. The publisher uses `hive-tx` with `RAGNAROK_INDEX_ACCOUNT` and

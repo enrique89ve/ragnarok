@@ -2,12 +2,12 @@
  * CosmicCanvas — GPU-accelerated cosmic background for the campaign map.
  *
  * Layers (bottom → top):
- *   1. Deep star field   (2000 sprites, slow parallax)
- *   2. Nebula clouds     (30 large additive sprites, realm-colored, orbiting)
- *   3. Mid star field    (500 sprites, medium parallax)
- *   4. Cosmic dust       (200 tiny sprites drifting)
- *   5. Bifrost beams     (particles traveling along realm connections)
- *   6. Near star field   (80 bright sprites, fast parallax)
+ *   1. Deep star field   (subtle parallax)
+ *   2. Realm nebula      (low-opacity realm tint)
+ *   3. Route tunnels     (Pixi-drawn curved corridor pattern)
+ *   4. Realm gates       (subtle orbital rings around each route node)
+ *   5. Cosmic dust       (fine atmospheric drift)
+ *   6. Bifrost flow      (small particles traveling along connections)
  *
  * All rendering uses Pixi v8 with additive blending for glow.
  * Mouse movement shifts layers at different rates for parallax depth.
@@ -26,10 +26,20 @@ interface StarLayer {
 }
 
 const STAR_LAYERS: StarLayer[] = [
-	{ count: 1500, sizeRange: [0.5, 1.5], alphaRange: [0.15, 0.45], speed: 0.015, twinkleSpeed: 0.3 },
-	{ count: 400,  sizeRange: [1, 2.5],   alphaRange: [0.3, 0.6],  speed: 0.04,  twinkleSpeed: 0.5 },
-	{ count: 60,   sizeRange: [2, 4],     alphaRange: [0.5, 0.9],  speed: 0.08,  twinkleSpeed: 0.7 },
+	{ count: 780, sizeRange: [0.4, 1.1], alphaRange: [0.05, 0.22], speed: 0.01, twinkleSpeed: 0.22 },
+	{ count: 180, sizeRange: [0.8, 1.8], alphaRange: [0.08, 0.3],  speed: 0.025, twinkleSpeed: 0.36 },
+	{ count: 24,  sizeRange: [1.4, 2.6], alphaRange: [0.16, 0.42], speed: 0.045, twinkleSpeed: 0.48 },
 ];
+
+function getStarLayers(width: number): StarLayer[] {
+	if (width < 520) {
+		return STAR_LAYERS.map(layer => ({ ...layer, count: Math.max(24, Math.round(layer.count * 0.22)) }));
+	}
+	if (width < 900) {
+		return STAR_LAYERS.map(layer => ({ ...layer, count: Math.max(36, Math.round(layer.count * 0.38)) }));
+	}
+	return STAR_LAYERS;
+}
 
 /* ── Nebula config ── */
 
@@ -52,6 +62,32 @@ interface FlowParticle {
 	x2: number; y2: number;
 	cx: number; cy: number;
 	color: number;
+}
+
+/* ── Route tunnel ribs ── */
+
+interface TunnelRib {
+	gfx: Graphics;
+	t: number;
+	speed: number;
+	x1: number; y1: number;
+	x2: number; y2: number;
+	cx: number; cy: number;
+	color: number;
+	active: boolean;
+	phase: number;
+}
+
+/* ── Realm orbital gates ── */
+
+interface OrbitGate {
+	gfx: Graphics;
+	x: number;
+	y: number;
+	color: number;
+	radius: number;
+	phase: number;
+	speed: number;
 }
 
 /* ── Component ── */
@@ -85,6 +121,107 @@ function quadBezier(t: number, p0: number, cp: number, p1: number): number {
 	return mt * mt * p0 + 2 * mt * t * cp + t * t * p1;
 }
 
+function tunnelPoint(t: number, x1: number, y1: number, cx: number, cy: number, x2: number, y2: number): { x: number; y: number } {
+	return {
+		x: quadBezier(t, x1, cx, x2),
+		y: quadBezier(t, y1, cy, y2),
+	};
+}
+
+function tunnelTangent(t: number, x1: number, y1: number, cx: number, cy: number, x2: number, y2: number): { x: number; y: number } {
+	const mt = 1 - t;
+	const dx = 2 * mt * (cx - x1) + 2 * t * (x2 - cx);
+	const dy = 2 * mt * (cy - y1) + 2 * t * (y2 - cy);
+	const len = Math.sqrt(dx * dx + dy * dy) || 1;
+	return { x: dx / len, y: dy / len };
+}
+
+function drawTunnelCurve(
+	g: Graphics,
+	x1: number,
+	y1: number,
+	cx: number,
+	cy: number,
+	x2: number,
+	y2: number,
+	options: { width: number; color: number; alpha: number; offset?: number },
+): void {
+	g.clear();
+	const samples = 28;
+	for (let i = 0; i <= samples; i++) {
+		const t = i / samples;
+		const p = tunnelPoint(t, x1, y1, cx, cy, x2, y2);
+		const tangent = tunnelTangent(t, x1, y1, cx, cy, x2, y2);
+		const offset = options.offset ?? 0;
+		const px = -tangent.y * offset;
+		const py = tangent.x * offset;
+		if (i === 0) {
+			g.moveTo(p.x + px, p.y + py);
+		} else {
+			g.lineTo(p.x + px, p.y + py);
+		}
+	}
+	g.stroke({ width: options.width, color: options.color, alpha: options.alpha });
+}
+
+function drawTunnelRib(rib: TunnelRib, time: number): void {
+	const t = (rib.t + time * rib.speed) % 1;
+	const p = tunnelPoint(t, rib.x1, rib.y1, rib.cx, rib.cy, rib.x2, rib.y2);
+	const tangent = tunnelTangent(t, rib.x1, rib.y1, rib.cx, rib.cy, rib.x2, rib.y2);
+	const px = -tangent.y;
+	const py = tangent.x;
+	const wave = 0.5 + 0.5 * Math.sin(time * 2.2 + rib.phase);
+	const halfWidth = (rib.active ? 13 : 9) * (0.78 + wave * 0.2);
+	const alpha = (rib.active ? 0.26 : 0.12) * (0.55 + wave * 0.45);
+
+	rib.gfx.clear();
+	rib.gfx.moveTo(p.x - px * halfWidth, p.y - py * halfWidth);
+	rib.gfx.lineTo(p.x + px * halfWidth, p.y + py * halfWidth);
+	rib.gfx.stroke({ width: rib.active ? 1.2 : 0.8, color: rib.color, alpha });
+}
+
+function drawArcSegment(
+	g: Graphics,
+	cx: number,
+	cy: number,
+	radius: number,
+	start: number,
+	end: number,
+): void {
+	const steps = 18;
+	for (let i = 0; i <= steps; i++) {
+		const t = i / steps;
+		const angle = start + (end - start) * t;
+		const x = cx + Math.cos(angle) * radius;
+		const y = cy + Math.sin(angle) * radius;
+		if (i === 0) {
+			g.moveTo(x, y);
+		} else {
+			g.lineTo(x, y);
+		}
+	}
+}
+
+function drawOrbitGate(gate: OrbitGate, time: number): void {
+	const angle = gate.phase + time * gate.speed;
+	const pulse = 0.5 + 0.5 * Math.sin(time * 1.45 + gate.phase);
+	const innerRadius = gate.radius * (0.82 + pulse * 0.025);
+	const outerRadius = gate.radius * (1.08 + pulse * 0.018);
+	const dotAngle = angle * 1.35;
+	const dotX = gate.x + Math.cos(dotAngle) * outerRadius;
+	const dotY = gate.y + Math.sin(dotAngle) * outerRadius;
+
+	gate.gfx.clear();
+	drawArcSegment(gate.gfx, gate.x, gate.y, innerRadius, angle, angle + Math.PI * 0.88);
+	drawArcSegment(gate.gfx, gate.x, gate.y, innerRadius, angle + Math.PI * 1.18, angle + Math.PI * 1.78);
+	gate.gfx.stroke({ width: 1, color: gate.color, alpha: 0.12 + pulse * 0.05 });
+	drawArcSegment(gate.gfx, gate.x, gate.y, outerRadius, -angle * 0.72, -angle * 0.72 + Math.PI * 0.36);
+	drawArcSegment(gate.gfx, gate.x, gate.y, outerRadius, -angle * 0.72 + Math.PI * 1.2, -angle * 0.72 + Math.PI * 1.64);
+	gate.gfx.stroke({ width: 0.75, color: gate.color, alpha: 0.1 + pulse * 0.04 });
+	gate.gfx.circle(dotX, dotY, 1.4 + pulse * 0.7);
+	gate.gfx.fill({ color: gate.color, alpha: 0.18 + pulse * 0.12 });
+}
+
 export default function CosmicCanvas({ realms, connections, className }: CosmicCanvasProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const appRef = useRef<Application | null>(null);
@@ -93,6 +230,8 @@ export default function CosmicCanvas({ realms, connections, className }: CosmicC
 	const nebulaRef = useRef<NebulaCloud[]>([]);
 	const dustRef = useRef<{ gfx: Graphics[]; baseX: number[]; baseY: number[] }>();
 	const flowRef = useRef<FlowParticle[]>([]);
+	const tunnelRibsRef = useRef<TunnelRib[]>([]);
+	const orbitGatesRef = useRef<OrbitGate[]>([]);
 	const animFrameRef = useRef<number>(0);
 
 	const initApp = useCallback(async () => {
@@ -101,6 +240,8 @@ export default function CosmicCanvas({ realms, connections, className }: CosmicC
 		const w = el.clientWidth;
 		const h = el.clientHeight;
 		if (w === 0 || h === 0) return;
+		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+		const starLayers = getStarLayers(w);
 
 		const app = new Application();
 		await app.init({
@@ -115,7 +256,7 @@ export default function CosmicCanvas({ realms, connections, className }: CosmicC
 		appRef.current = app;
 
 		// ── Star layers (Graphics circles) ──
-		for (const layer of STAR_LAYERS) {
+		for (const layer of starLayers) {
 			const container = new Container();
 			const gfxArr: Graphics[] = [];
 			const baseX: number[] = [];
@@ -147,7 +288,7 @@ export default function CosmicCanvas({ realms, connections, className }: CosmicC
 
 		// ── Nebula clouds (large soft-edged circles with additive blend) ──
 		const nebulaContainer = new Container();
-		nebulaContainer.alpha = 0.18;
+		nebulaContainer.alpha = 0.11;
 		const nebulaClouds: NebulaCloud[] = [];
 
 		const nebulaPositions: { x: number; y: number; color: number }[] = [];
@@ -162,14 +303,14 @@ export default function CosmicCanvas({ realms, connections, className }: CosmicC
 		for (const pos of nebulaPositions) {
 			const count = 1;
 			for (let j = 0; j < count; j++) {
-				const radius = 50 + Math.random() * 80;
+				const radius = 44 + Math.random() * 64;
 				const g = new Graphics();
 				const steps = 5;
 				for (let s = steps; s >= 0; s--) {
 					const frac = s / steps;
 					const a = frac < 0.3 ? frac / 0.3 : 1 - (frac - 0.3) / 0.7;
 					g.circle(0, 0, radius * frac + 1);
-					g.fill({ color: pos.color, alpha: a * 0.08 });
+					g.fill({ color: pos.color, alpha: a * 0.055 });
 				}
 				g.blendMode = 'add';
 				const angle = Math.random() * Math.PI * 2;
@@ -190,16 +331,113 @@ export default function CosmicCanvas({ realms, connections, className }: CosmicC
 		app.stage.addChildAt(nebulaContainer, 1);
 		nebulaRef.current = nebulaClouds;
 
+		// ── Route tunnel pattern (2D Pixi corridors) ──
+		const tunnelContainer = new Container();
+		tunnelContainer.alpha = 0.92;
+		const tunnelRibs: TunnelRib[] = [];
+
+		for (const conn of connections) {
+			const x1 = (conn.x1 / 100) * w;
+			const y1 = (conn.y1 / 100) * h;
+			const x2 = (conn.x2 / 100) * w;
+			const y2 = (conn.y2 / 100) * h;
+			const mx = (x1 + x2) / 2;
+			const my = (y1 + y2) / 2;
+			const dx = x2 - x1;
+			const dy = y2 - y1;
+			const len = Math.sqrt(dx * dx + dy * dy) || 1;
+			const perpX = -dy / len;
+			const perpY = dx / len;
+			const curveOffset = Math.min(72, len * 0.12) * (conn.active ? 0.72 : 0.5);
+			const direction = (x1 + y1 > x2 + y2 ? -1 : 1);
+			const cx = mx + perpX * curveOffset * direction;
+			const cy = my + perpY * curveOffset * direction;
+			const c1 = hexToNum(conn.color1);
+			const c2 = hexToNum(conn.color2);
+			const routeColor = lerpColor(c1, c2, 0.5);
+
+			const softBand = new Graphics();
+			drawTunnelCurve(softBand, x1, y1, cx, cy, x2, y2, {
+				width: conn.active ? 22 : 15,
+				color: routeColor,
+				alpha: conn.active ? 0.15 : 0.075,
+			});
+			softBand.blendMode = 'add';
+			tunnelContainer.addChild(softBand);
+
+			for (const offset of [-9, 9]) {
+				const wall = new Graphics();
+				drawTunnelCurve(wall, x1, y1, cx, cy, x2, y2, {
+					width: conn.active ? 1.35 : 0.9,
+					color: routeColor,
+					alpha: conn.active ? 0.28 : 0.12,
+					offset,
+				});
+				wall.blendMode = 'add';
+				tunnelContainer.addChild(wall);
+			}
+
+			const core = new Graphics();
+			drawTunnelCurve(core, x1, y1, cx, cy, x2, y2, {
+				width: conn.active ? 1.35 : 0.8,
+				color: conn.active ? lerpColor(routeColor, 0xffffff, 0.22) : routeColor,
+				alpha: conn.active ? 0.42 : 0.18,
+			});
+			core.blendMode = 'add';
+			tunnelContainer.addChild(core);
+
+			const ribCount = conn.active ? 5 : 3;
+			for (let i = 0; i < ribCount; i++) {
+				const rib = new Graphics();
+				rib.blendMode = 'add';
+				tunnelContainer.addChild(rib);
+				tunnelRibs.push({
+					gfx: rib,
+					t: (i / ribCount) + Math.random() * 0.08,
+					speed: (conn.active ? 0.035 : 0.018) + Math.random() * 0.012,
+					x1, y1, x2, y2, cx, cy,
+					color: routeColor,
+					active: conn.active,
+					phase: Math.random() * Math.PI * 2,
+				});
+			}
+		}
+		app.stage.addChild(tunnelContainer);
+		tunnelRibsRef.current = tunnelRibs;
+
+		// ── Realm orbital gates ──
+		const gateContainer = new Container();
+		gateContainer.alpha = 0.9;
+		const orbitGates: OrbitGate[] = [];
+		const gateRadius = w < 520 ? 34 : w < 900 ? 38 : 44;
+
+		for (const realm of realms) {
+			const gate = new Graphics();
+			gate.blendMode = 'add';
+			gateContainer.addChild(gate);
+			orbitGates.push({
+				gfx: gate,
+				x: (realm.position.x / 100) * w,
+				y: (realm.position.y / 100) * h,
+				color: hexToNum(realm.color),
+				radius: gateRadius,
+				phase: Math.random() * Math.PI * 2,
+				speed: 0.18 + Math.random() * 0.08,
+			});
+		}
+		app.stage.addChild(gateContainer);
+		orbitGatesRef.current = orbitGates;
+
 		// ── Cosmic dust ──
 		const dustContainer = new Container();
 		const dustGfx: Graphics[] = [];
 		const dustBaseX: number[] = [];
 		const dustBaseY: number[] = [];
-		for (let i = 0; i < 150; i++) {
+		for (let i = 0; i < 80; i++) {
 			const g = new Graphics();
-			g.circle(0, 0, 0.8);
+			g.circle(0, 0, 0.65);
 			g.fill(0xaabbcc);
-			g.alpha = 0.06 + Math.random() * 0.1;
+			g.alpha = 0.025 + Math.random() * 0.055;
 			g.blendMode = 'add';
 			const bx = Math.random() * w;
 			const by = Math.random() * h;
@@ -217,7 +455,7 @@ export default function CosmicCanvas({ realms, connections, className }: CosmicC
 		const flowParticles: FlowParticle[] = [];
 
 		for (const conn of connections) {
-			const particleCount = conn.active ? 10 : 3;
+			const particleCount = conn.active ? 8 : 2;
 			const x1 = (conn.x1 / 100) * w;
 			const y1 = (conn.y1 / 100) * h;
 			const x2 = (conn.x2 / 100) * w;
@@ -239,7 +477,7 @@ export default function CosmicCanvas({ realms, connections, className }: CosmicC
 			for (let i = 0; i < particleCount; i++) {
 				const t = Math.random();
 				const color = lerpColor(c1, c2, t);
-				const sz = conn.active ? 2 + Math.random() * 2 : 1 + Math.random();
+				const sz = conn.active ? 1.4 + Math.random() * 1.6 : 0.7 + Math.random() * 0.6;
 				const g = new Graphics();
 				g.circle(0, 0, sz);
 				g.fill(color);
@@ -318,6 +556,16 @@ export default function CosmicCanvas({ realms, connections, className }: CosmicC
 					);
 				}
 
+				// Tunnel ribs
+				for (const rib of tunnelRibsRef.current) {
+					drawTunnelRib(rib, time);
+				}
+
+				// Realm orbital gates
+				for (const gate of orbitGatesRef.current) {
+					drawOrbitGate(gate, time);
+				}
+
 				// Cosmic dust drift
 				if (dustRef.current) {
 					const d = dustRef.current;
@@ -337,7 +585,7 @@ export default function CosmicCanvas({ realms, connections, className }: CosmicC
 					const px = quadBezier(p.t, p.x1, p.cx, p.x2);
 					const py = quadBezier(p.t, p.y1, p.cy, p.y2);
 					p.gfx.position.set(px, py);
-					p.gfx.alpha = 0.15 + 0.55 * Math.sin(p.t * Math.PI);
+					p.gfx.alpha = 0.04 + 0.34 * Math.sin(p.t * Math.PI);
 				}
 
 				animFrameRef.current = requestAnimationFrame(tick);
@@ -357,6 +605,8 @@ export default function CosmicCanvas({ realms, connections, className }: CosmicC
 			nebulaRef.current = [];
 			dustRef.current = undefined;
 			flowRef.current = [];
+			tunnelRibsRef.current = [];
+			orbitGatesRef.current = [];
 		};
 	}, [initApp]);
 

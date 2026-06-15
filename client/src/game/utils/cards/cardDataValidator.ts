@@ -83,7 +83,7 @@ export function isValidCard(obj: any): obj is CardData {
   
   if (!hasRequiredProps) {
     if (obj.collectible) {
-      debug.warn('❌ Card validation: Invalid card object without required properties:', obj);
+      debug.warn('[Card validation: Invalid card object without required properties:', obj);
     }
     return false;
   }
@@ -91,7 +91,7 @@ export function isValidCard(obj: any): obj is CardData {
   // First check if this is a transform or effect object (not a card)
   if (isCardTransformObject(obj) || isCardEffectObject(obj)) {
     if (obj.collectible) {
-      debug.warn('❌ Card validation: Filtered out transform/effect object wrongly marked as collectible:', obj);
+      debug.warn('[Card validation: Filtered out transform/effect object wrongly marked as collectible:', obj);
     }
     return false;
   }
@@ -99,7 +99,7 @@ export function isValidCard(obj: any): obj is CardData {
   // Check for valid card types 
   const validTypes: CardType[] = ['minion', 'spell', 'weapon', 'hero', 'secret', 'location'];
   if (!validTypes.includes(obj.type)) {
-    debug.warn(`❌ Card validation: Filtered out card with invalid type (${obj.type}):`, obj);
+    debug.warn(`[Card validation: Filtered out card with invalid type (${obj.type}):`, obj);
     return false;
   }
   
@@ -108,7 +108,7 @@ export function isValidCard(obj: any): obj is CardData {
     case 'minion':
       // Minions should have attack and health properties (even if they're 0)
       if (obj.attack === undefined && obj.health === undefined) {
-        debug.warn('❌ Card validation: Invalid minion card missing attack/health:', obj);
+        debug.warn('[Card validation: Invalid minion card missing attack/health:', obj);
         return false;
       }
       break;
@@ -116,7 +116,7 @@ export function isValidCard(obj: any): obj is CardData {
     case 'weapon':
       // Weapons should have attack and durability
       if (obj.attack === undefined && obj.durability === undefined) {
-        debug.warn('❌ Card validation: Invalid weapon card missing attack/durability:', obj);
+        debug.warn('[Card validation: Invalid weapon card missing attack/durability:', obj);
         return false;
       }
       break;
@@ -124,7 +124,7 @@ export function isValidCard(obj: any): obj is CardData {
     case 'spell':
       // Spells should have manaCost and description
       if (obj.manaCost === undefined) {
-        debug.warn('❌ Card validation: Invalid spell card missing manaCost:', obj);
+        debug.warn('[Card validation: Invalid spell card missing manaCost:', obj);
         return false;
       }
       break;
@@ -169,7 +169,7 @@ export function isEffectObject(obj: any): boolean {
  */
 export function sanitizeCardArray(cards: any[], normalizeCards: boolean = true): CardData[] {
   if (!Array.isArray(cards)) {
-    debug.warn('❌ Card validation: Expected an array but received:', cards);
+    debug.warn('[Card validation: Expected an array but received:', cards);
     return [];
   }
   
@@ -218,13 +218,13 @@ export function sanitizeCardArray(cards: any[], normalizeCards: boolean = true):
 export function safeCardArray(cards: any, normalizeCards: boolean = true): CardData[] {
   // Handle null or undefined
   if (!cards) {
-    debug.warn('❌ Card validation: Received null or undefined instead of card array');
+    debug.warn('[Card validation: Received null or undefined instead of card array');
     return [];
   }
   
   // Handle non-arrays
   if (!Array.isArray(cards)) {
-    debug.warn('❌ Card validation: Expected card array but received:', typeof cards);
+    debug.warn('[Card validation: Expected card array but received:', typeof cards);
     return [];
   }
   

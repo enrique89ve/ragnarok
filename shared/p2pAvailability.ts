@@ -9,11 +9,16 @@ export const MAX_MATCH_ID_LENGTH = 256;
 export const MAX_ROOM_ID_LENGTH = 256;
 export const CHALLENGE_STALE_THRESHOLD_MS = 90_000;
 export const CHALLENGE_SIGNATURE_ALGORITHM = 'hmac-sha256:canonical-json:v1';
+export const P2P_MATCH_TICKET_SIGNATURE_ALGORITHM = 'hmac-sha256:p2p-match-ticket:v1';
+export const P2P_MATCH_TICKET_WS_PROTOCOL = 'ragnarok-p2p-v1';
+export const P2P_MATCH_TICKET_WS_PROTOCOL_PREFIX = 'ragnarok-p2p-ticket.';
+export const MAX_P2P_MATCH_TICKET_TOKEN_LENGTH = 2048;
 
 const HIVE_USERNAME_RE = /^[a-z][a-z0-9.-]{2,15}$/;
 const SAFE_ID_RE = /^[A-Za-z0-9._:-]+$/;
 const SERVER_SIGNATURE_RE = /^[a-f0-9]{64}$/;
 const NONCE_RE = /^[A-Za-z0-9_-]{16,80}$/;
+const MATCH_TICKET_TOKEN_RE = /^[A-Za-z0-9_-]+\.[a-f0-9]{64}$/;
 
 export type P2PConnectionAvailabilityState =
 	| 'disconnected'
@@ -45,6 +50,7 @@ export type ChallengeRejectReason =
 	| 'stale_peer'
 	| 'self_challenge'
 	| 'server_unconfigured'
+	| 'starter_claim_required'
 	| 'invalid_input';
 
 export type PresenceHeartbeatBody = {
@@ -72,6 +78,14 @@ export type ServerSignedChallenge = {
 	readonly nonce: string;
 	readonly sigAlg: typeof CHALLENGE_SIGNATURE_ALGORITHM;
 	readonly serverSig: string;
+	readonly matchTicket?: P2PMatchTicket;
+};
+
+export type P2PMatchTicket = {
+	readonly token: string;
+	readonly roomId: string;
+	readonly peerId: string;
+	readonly expiresAt: number;
 };
 
 export type PresenceHeartbeatResponse = {
@@ -193,24 +207,24 @@ export function parsePresenceHeartbeatBody(input: unknown): ParseResult<Presence
 			return { ok: false, reason: 'invalid_input', detail: 'invalid peerId' };
 		}
 		if (input.availability !== undefined) {
-			if (typeof input.availability !== 'string' || !AVAILABILITY_STATES.has(input.availability)) {
+			if (!isP2PAvailabilityState(input.availability)) {
 				return { ok: false, reason: 'invalid_input', detail: 'invalid availability' };
 			}
 			return {
 				ok: true,
-				value: { username: normalized, friends: normalizedFriends, peerId, availability: input.availability as P2PAvailabilityState },
+				value: { username: normalized, friends: normalizedFriends, peerId, availability: input.availability },
 			};
 		}
 		return { ok: true, value: { username: normalized, friends: normalizedFriends, peerId } };
 	}
 
 	if (input.availability !== undefined) {
-		if (typeof input.availability !== 'string' || !AVAILABILITY_STATES.has(input.availability)) {
+		if (!isP2PAvailabilityState(input.availability)) {
 			return { ok: false, reason: 'invalid_input', detail: 'invalid availability' };
 		}
 		return {
 			ok: true,
-			value: { username: normalized, friends: normalizedFriends, availability: input.availability as P2PAvailabilityState },
+			value: { username: normalized, friends: normalizedFriends, availability: input.availability },
 		};
 	}
 
@@ -229,6 +243,10 @@ const AVAILABILITY_STATES: ReadonlySet<string> = new Set([
 	'offline',
 ]);
 
+function isP2PAvailabilityState(value: unknown): value is P2PAvailabilityState {
+	return typeof value === 'string' && AVAILABILITY_STATES.has(value);
+}
+
 function readFriendPresenceSnapshot(input: unknown): FriendPresenceSnapshot | null {
 	if (!isRecord(input) || !hasOnlyKeys(input, PRESENCE_KEYS)) return null;
 	if (typeof input.online !== 'boolean') return null;
@@ -236,7 +254,7 @@ function readFriendPresenceSnapshot(input: unknown): FriendPresenceSnapshot | nu
 
 	if (input.peerId !== undefined && (typeof input.peerId !== 'string' || !isSafePeerId(input.peerId))) return null;
 	if (input.lastSeen !== undefined && !isNonNegativeInteger(input.lastSeen)) return null;
-	if (input.availability !== undefined && (typeof input.availability !== 'string' || !AVAILABILITY_STATES.has(input.availability))) return null;
+	if (input.availability !== undefined && !isP2PAvailabilityState(input.availability)) return null;
 	if (input.canReceiveChallenge !== undefined && typeof input.canReceiveChallenge !== 'boolean') return null;
 	if (input.retryAfterMs !== undefined && !isNonNegativeInteger(input.retryAfterMs)) return null;
 
@@ -244,16 +262,18 @@ function readFriendPresenceSnapshot(input: unknown): FriendPresenceSnapshot | nu
 		...snapshot,
 		...(typeof input.peerId === 'string' ? { peerId: input.peerId } : {}),
 		...(typeof input.lastSeen === 'number' ? { lastSeen: input.lastSeen } : {}),
-		...(typeof input.availability === 'string' ? { availability: input.availability as P2PAvailabilityState } : {}),
+		...(isP2PAvailabilityState(input.availability) ? { availability: input.availability } : {}),
 		...(typeof input.canReceiveChallenge === 'boolean' ? { canReceiveChallenge: input.canReceiveChallenge } : {}),
 		...(typeof input.retryAfterMs === 'number' ? { retryAfterMs: input.retryAfterMs } : {}),
 	};
 }
 
-const CHALLENGE_KEYS = new Set(['from', 'to', 'peerId', 'timestamp', 'expiresAt', 'nonce', 'sigAlg', 'serverSig']);
+const CHALLENGE_KEYS = new Set(['from', 'to', 'peerId', 'timestamp', 'expiresAt', 'nonce', 'sigAlg', 'serverSig', 'matchTicket']);
 
 export function readServerSignedChallenge(input: unknown): ServerSignedChallenge | null {
 	if (!isRecord(input) || !hasOnlyKeys(input, CHALLENGE_KEYS)) return null;
+	const matchTicket = input.matchTicket === undefined ? undefined : readP2PMatchTicket(input.matchTicket);
+	if (input.matchTicket !== undefined && !matchTicket) return null;
 	if (typeof input.from !== 'string') return null;
 	const from = normalizeHiveUsername(input.from);
 	if (!isValidAvailabilityHiveUsername(from)) return null;
@@ -277,6 +297,28 @@ export function readServerSignedChallenge(input: unknown): ServerSignedChallenge
 		nonce: input.nonce,
 		sigAlg: CHALLENGE_SIGNATURE_ALGORITHM,
 		serverSig: input.serverSig,
+		...(matchTicket ? { matchTicket } : {}),
+	};
+}
+
+const MATCH_TICKET_KEYS = new Set(['token', 'roomId', 'peerId', 'expiresAt']);
+
+export function readP2PMatchTicket(input: unknown): P2PMatchTicket | null {
+	if (!isRecord(input) || !hasOnlyKeys(input, MATCH_TICKET_KEYS)) return null;
+	if (
+		typeof input.token !== 'string'
+		|| input.token.length > MAX_P2P_MATCH_TICKET_TOKEN_LENGTH
+		|| !MATCH_TICKET_TOKEN_RE.test(input.token)
+	) return null;
+	if (typeof input.roomId !== 'string' || !isSafeRoomOrMatchId(input.roomId)) return null;
+	if (typeof input.peerId !== 'string' || !isSafePeerId(input.peerId)) return null;
+	if (!isNonNegativeInteger(input.expiresAt)) return null;
+
+	return {
+		token: input.token,
+		roomId: input.roomId,
+		peerId: input.peerId,
+		expiresAt: input.expiresAt,
 	};
 }
 
@@ -318,8 +360,13 @@ const CHALLENGE_REJECT_REASONS: ReadonlySet<string> = new Set([
 	'stale_peer',
 	'self_challenge',
 	'server_unconfigured',
+	'starter_claim_required',
 	'invalid_input',
 ]);
+
+function isChallengeRejectReason(value: unknown): value is ChallengeRejectReason {
+	return typeof value === 'string' && CHALLENGE_REJECT_REASONS.has(value);
+}
 
 export function readChallengeSendResponse(input: unknown): ChallengeSendResponse {
 	if (!isRecord(input)) {
@@ -353,7 +400,7 @@ export function readChallengeSendResponse(input: unknown): ChallengeSendResponse
 	if (input.ok !== false || !hasOnlyKeys(input, CHALLENGE_SEND_FAILURE_KEYS)) {
 		return { ok: false, reason: 'invalid_input' };
 	}
-	if (typeof input.reason !== 'string' || !CHALLENGE_REJECT_REASONS.has(input.reason)) {
+	if (!isChallengeRejectReason(input.reason)) {
 		return { ok: false, reason: 'invalid_input' };
 	}
 	if (input.retryAfterMs !== undefined && !isNonNegativeInteger(input.retryAfterMs)) {
@@ -362,7 +409,7 @@ export function readChallengeSendResponse(input: unknown): ChallengeSendResponse
 
 	return {
 		ok: false,
-		reason: input.reason as ChallengeRejectReason,
+		reason: input.reason,
 		...(typeof input.retryAfterMs === 'number' ? { retryAfterMs: input.retryAfterMs } : {}),
 	};
 }

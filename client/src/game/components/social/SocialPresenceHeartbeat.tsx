@@ -1,10 +1,15 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import { toast } from 'sonner';
 import { useNFTUsername } from '../../nft/hooks';
 import { useFriendStore, type Friend } from '../../stores/friendStore';
 import { usePeerStore } from '../../stores/peerStore';
 import { useMatchmakingStore } from '../../stores/matchmakingStore';
+import { useStarterStore } from '../../stores/starterStore';
 import { ensureFriendSession, invalidateFriendSession } from './friendSession';
+import { getAuthenticatedHiveUsername, subscribeHiveSessionIdentity } from '../../../data/HiveSessionIdentity';
+import { isSharedNetworkEnvironment } from '../../config/featureFlags';
+import { debug } from '../../config/debugConfig';
+import { resolveProtectedFlowAccess } from '../../auth/protectedFlowAccess';
 import {
 	availabilityFromConnectionState,
 	isValidAvailabilityHiveUsername,
@@ -18,8 +23,10 @@ import {
 const PRESENCE_HEARTBEAT_INTERVAL_MS = 120_000;
 const PRESENCE_HEARTBEAT_MIN_GAP_MS = 120_000;
 const STORAGE_KEY = 'ragnarok-presence-next-allowed';
+const fallbackNextAllowed = new Map<string, number>();
 
 function getStoredNextAllowed(): Map<string, number> {
+	if (typeof localStorage === 'undefined') return new Map(fallbackNextAllowed);
 	try {
 		const raw = localStorage.getItem(STORAGE_KEY);
 		if (!raw) return new Map();
@@ -39,6 +46,11 @@ function getStoredNextAllowed(): Map<string, number> {
 function setStoredNextAllowed(username: string, timestamp: number): void {
 	const current = getStoredNextAllowed();
 	current.set(username.toLowerCase(), timestamp);
+	if (typeof localStorage === 'undefined') {
+		fallbackNextAllowed.clear();
+		for (const [key, value] of current.entries()) fallbackNextAllowed.set(key, value);
+		return;
+	}
 	try {
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(Object.fromEntries(current.entries())));
 	} catch {
@@ -52,6 +64,21 @@ type PresenceHeartbeatBody = {
 	readonly peerId?: string;
 	readonly availability?: P2PAvailabilityState;
 };
+
+export function buildP2PPresenceFields(params: {
+	readonly peerId?: string | null;
+	readonly availability: P2PAvailabilityState;
+	readonly p2pAllowed: boolean;
+}): Pick<PresenceHeartbeatBody, 'peerId' | 'availability'> {
+	if (!params.p2pAllowed) return { availability: 'offline' };
+	if (typeof params.peerId === 'string' && params.peerId.length > 0) {
+		return {
+			peerId: params.peerId,
+			availability: params.availability,
+		};
+	}
+	return { availability: 'offline' };
+}
 
 export function buildPresenceHeartbeatBody(params: {
 	readonly username: string;
@@ -109,9 +136,30 @@ export default function SocialPresenceHeartbeat() {
 	const setPresenceCooldown = useFriendStore(state => state.setPresenceCooldown);
 	const pruneExpiredChallenges = useFriendStore(state => state.pruneExpiredChallenges);
 	const peerId = usePeerStore(state => state.myPeerId);
+	const authenticatedHiveUsername = useSyncExternalStore(
+		subscribeHiveSessionIdentity,
+		getAuthenticatedHiveUsername,
+		getAuthenticatedHiveUsername,
+	);
+	const sharedNetwork = isSharedNetworkEnvironment();
+	const starterClaimed = useStarterStore(state => (
+		sharedNetwork
+			? Boolean(hiveUsername && state.hasClaimed(hiveUsername))
+			: state.hasClaimed(hiveUsername)
+	));
 	const connectionState = usePeerStore(state => state.connectionState);
 	const matchmakingStatus = useMatchmakingStore(state => state.status);
 	const availabilityRef = useRef<P2PAvailabilityState>('available');
+	const p2pAccess = resolveProtectedFlowAccess({
+		accountId: hiveUsername,
+		authenticatedAccountId: authenticatedHiveUsername,
+		sharedNetwork,
+		surface: 'multiplayer',
+		requiresAuthenticatedSession: true,
+		requiresStarterClaim: true,
+		starterClaimed,
+	});
+	const p2pPresenceAllowed = p2pAccess.kind === 'allowed';
 
 	useEffect(() => {
 		availabilityRef.current = availabilityFromConnectionState(connectionState, matchmakingStatus);
@@ -134,19 +182,22 @@ export default function SocialPresenceHeartbeat() {
 				body: JSON.stringify(buildPresenceHeartbeatBody({
 					username: hiveUsername,
 					friends: getPresenceEligibleFriends(friends),
-					peerId,
-					availability: availabilityRef.current,
+					...buildP2PPresenceFields({
+						peerId,
+						availability: availabilityRef.current,
+						p2pAllowed: p2pPresenceAllowed,
+					}),
 				})),
 				signal,
 			});
 
-			if (response.status === 401) {
-				invalidateFriendSession();
-				if (!await ensureFriendSession(normalizedUsername)) {
-					console.warn('[presence-heartbeat] reauth failed: session not established', { username: normalizedUsername });
-					toast.error('Friends session expired. Reconnect to refresh presence.');
-					return;
-				}
+				if (response.status === 401) {
+					invalidateFriendSession();
+					if (!await ensureFriendSession(normalizedUsername)) {
+						debug.warn('[presence-heartbeat] reauth failed: session not established', { username: normalizedUsername });
+						toast.error('Friends session expired. Reconnect to refresh presence.');
+						return;
+					}
 				response = await fetch('/api/friends/heartbeat', {
 					method: 'POST',
 					headers: {
@@ -155,16 +206,19 @@ export default function SocialPresenceHeartbeat() {
 					body: JSON.stringify(buildPresenceHeartbeatBody({
 						username: hiveUsername,
 						friends: getPresenceEligibleFriends(friends),
-						peerId,
-						availability: availabilityRef.current,
+						...buildP2PPresenceFields({
+							peerId,
+							availability: availabilityRef.current,
+							p2pAllowed: p2pPresenceAllowed,
+						}),
 					})),
 					signal,
-				});
-				if (response.status === 401) {
-					console.warn('[presence-heartbeat] reauth failed: 2nd 401', { username: normalizedUsername, status: response.status });
-					toast.error('Friends session rejected. Reconnect to refresh presence.');
-					return;
-				}
+					});
+					if (response.status === 401) {
+						debug.warn('[presence-heartbeat] reauth failed: 2nd 401', { username: normalizedUsername, status: response.status });
+						toast.error('Friends session rejected. Reconnect to refresh presence.');
+						return;
+					}
 			}
 
 			const payload: unknown = await response.json();
@@ -181,12 +235,12 @@ export default function SocialPresenceHeartbeat() {
 			updatePresence(parsed.statuses);
 			addChallenges(parsed.challenges);
 			pruneExpiredChallenges();
-		} catch (error) {
-			if (error instanceof Error && error.name === 'AbortError') return;
-			console.warn('[presence-heartbeat] sync failed', { username: normalizedUsername, error: error instanceof Error ? error.message : String(error) });
-			toast.error('Presence sync paused. Will retry automatically.');
-		}
-	}, [hiveUsername, friends, peerId, updatePresence, addChallenges, setPresenceCooldown, pruneExpiredChallenges]);
+			} catch (error) {
+				if (error instanceof Error && error.name === 'AbortError') return;
+				debug.warn('[presence-heartbeat] sync failed', { username: normalizedUsername, error: error instanceof Error ? error.message : String(error) });
+				toast.error('Presence sync paused. Will retry automatically.');
+			}
+	}, [hiveUsername, friends, peerId, p2pPresenceAllowed, updatePresence, addChallenges, setPresenceCooldown, pruneExpiredChallenges]);
 
 	useEffect(() => {
 		if (!hiveUsername) return undefined;

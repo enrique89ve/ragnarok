@@ -13,6 +13,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useCardFrame } from '../CardFrameContext';
+import { getCardKeywordTooltipText } from '../cardKeywordDisplay';
 
 export interface CardKeywordTooltipProps {
 	keywords?: readonly string[];
@@ -21,7 +22,7 @@ export interface CardKeywordTooltipProps {
 interface TooltipState {
 	x: number;
 	y: number;
-	keyword: string;
+	text: string;
 }
 
 const TOOLTIP_OFFSET = 12;
@@ -41,9 +42,14 @@ const CardKeywordTooltip: React.FC<CardKeywordTooltipProps> = ({ keywords }) => 
 		if (!target) return;
 		const chip = target.closest('.card-frame__keyword-chip') as HTMLElement | null;
 		if (!chip) return;
-		const keyword = chip.textContent ?? '';
+		const summary = chip.dataset.keywordSummary;
+		if (summary !== undefined && summary.length > 0) {
+			setTip({ x: e.clientX, y: e.clientY, text: summary });
+			return;
+		}
+		const keyword = chip.dataset.keyword ?? '';
 		if (!keywordSet.current.has(keyword)) return;
-		setTip({ x: e.clientX, y: e.clientY, keyword });
+		setTip({ x: e.clientX, y: e.clientY, text: getCardKeywordTooltipText(keyword) });
 	}, [disableTooltips]);
 
 	const onPointerOut = useCallback((e: Event) => {
@@ -79,7 +85,7 @@ const CardKeywordTooltip: React.FC<CardKeywordTooltipProps> = ({ keywords }) => 
 				pointerEvents: 'none',
 			}}
 		>
-			{tip.keyword}
+			{tip.text}
 		</div>
 	);
 

@@ -9,6 +9,7 @@ import { useNFTUsername } from '../../nft/hooks';
 import { isSharedNetworkEnvironment } from '../../config/featureFlags';
 import { resolveProtectedFlowAccess } from '../../auth/protectedFlowAccess';
 import { HiveKeychainLogin } from '../HiveKeychainLogin';
+import { OrnateCorners, SigilBackplate, type Tier } from '../../../components/ornaments/RunicSigils';
 import {
 	ALL_CHAPTERS, EASTERN_CHAPTER, BASE_CHAPTER_MISSION_IDS, useCampaignStore,
 	NINE_REALMS, REALM_MAP, MISSION_REALM_MAP, getMissionsForRealm, getRealmProgress,
@@ -63,6 +64,26 @@ const FACTION_BORDER: Record<string, string> = {
 
 const RUNE_CORNERS = ['ᚠᚷᛁ', 'ᛞᛗᛒ', 'ᛇᚺᚠ', 'ᛒᛁᛞ'];
 const REALM_SIGIL_FRAME_SRC = '/art/campaign/realm-sigil-frame-v1.webp';
+const BEYOND_SCENE_SRC: Record<string, string> = {
+	egyptian: '/art/campaign/beyond-duat-chest-v1.png',
+	celtic: '/art/campaign/beyond-celtic-chest-v1.png',
+	eastern: '/art/campaign/beyond-celestial-chest-v1.png',
+	twilight: '/art/campaign/beyond-sealed-chest-v1.png',
+};
+
+const BEYOND_SIGIL_TIER: Record<string, Tier> = {
+	egyptian: 'mythic',
+	celtic: 'standard',
+	eastern: 'premium',
+	twilight: 'obsidian',
+};
+
+const BEYOND_SIGIL_MARK: Record<string, string> = {
+	egyptian: 'DU',
+	celtic: 'TN',
+	eastern: 'CG',
+	twilight: 'SG',
+};
 
 type View = 'norse' | 'greek' | 'beyond';
 
@@ -176,14 +197,14 @@ export const PILL_CLASS =
 
 function StarField() {
 	const stars = useMemo(() =>
-		Array.from({ length: 70 }, (_, i) => ({
+		Array.from({ length: 42 }, (_, i) => ({
 			id: i,
 			x: Math.random() * 100,
 			y: Math.random() * 100,
-			duration: 2 + Math.random() * 4,
+			duration: 3.5 + Math.random() * 5,
 			delay: Math.random() * 3,
-			opacity: 0.2 + Math.random() * 0.45,
-			size: Math.random() > 0.9 ? 3 : Math.random() > 0.72 ? 2 : 1,
+			opacity: 0.08 + Math.random() * 0.24,
+			size: Math.random() > 0.92 ? 2 : 1,
 		})),
 	[]);
 
@@ -277,16 +298,16 @@ function MissionNode({
 			type="button"
 			onClick={() => unlocked && onSelect(mission)}
 			disabled={!unlocked}
-			className={`group w-full rounded-xl border p-4 text-left transition-all duration-200 ${
+			className={`mission-node-card group w-full rounded-xl border p-4 text-left transition-all duration-200 ${
 				completed
-					? 'border-rune-500/40 bg-rune-500/[0.08] hover:bg-rune-500/[0.14] hover:border-rune-300/60'
+					? 'mission-node-card-completed border-rune-500/40 bg-rune-500/[0.08] hover:bg-rune-500/[0.14] hover:border-rune-300/60'
 					: unlocked
-						? 'border-obsidian-700 bg-obsidian-900/60 hover:border-gold-300/50 hover:bg-obsidian-800/70'
-						: 'cursor-not-allowed border-obsidian-700/60 bg-obsidian-950/40 opacity-50'
+						? 'mission-node-card-unlocked border-obsidian-700 bg-obsidian-900/60 hover:border-gold-300/50 hover:bg-obsidian-800/70'
+						: 'mission-node-card-locked cursor-not-allowed border-obsidian-700/60 bg-obsidian-950/40 opacity-50'
 			}`}
 		>
 			<div className="flex items-start gap-3">
-				<div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md font-display text-sm font-bold tracking-wider ${
+				<div className={`mission-node-sigil flex h-10 w-10 shrink-0 items-center justify-center rounded-md font-display text-sm font-bold tracking-wider ${
 					completed
 						? 'bg-rune-500 text-obsidian-950 shadow-[0_0_12px_-2px_rgba(143,181,115,0.55)]'
 						: unlocked
@@ -907,8 +928,8 @@ export default function CampaignPage() {
 			<main className="campaign-route-main flex min-h-0 flex-1 flex-col">
 
 			{/* ── Map / Beyond bodies ─────────────────────────────────────────────────────── */}
-			<div className="campaign-stage-shell min-h-0 flex-1 overflow-hidden">
-				<div className="campaign-stage-hud">
+			<div className={`campaign-stage-shell min-h-0 flex-1 overflow-hidden ${view === 'beyond' ? 'campaign-stage-shell-beyond' : ''}`}>
+				<div className={`campaign-stage-hud ${view === 'beyond' ? 'campaign-stage-hud-beyond' : ''}`}>
 					<section className={`${SURFACE_STRONG_CLASS} campaign-command-bar relative overflow-hidden`} aria-label="Campaign command">
 						<div
 							aria-hidden
@@ -921,22 +942,31 @@ export default function CampaignPage() {
 						/>
 
 						<div className="campaign-command-grid relative">
-							<div className="min-w-0">
-								<div className="inline-flex items-center gap-2.5">
-									<Compass size={14} className="text-gold-300" strokeWidth={1.8} />
-									<span className={KICKER_CLASS}>
-										{campaignLead?.title ?? 'Campaign Theater'}
-									</span>
+							<div className="campaign-command-heading">
+								<div className="min-w-0">
+									<div className="inline-flex items-center gap-2.5">
+										<Compass size={14} className="text-gold-300" strokeWidth={1.8} />
+										<span className={KICKER_CLASS}>
+											{campaignLead?.title ?? 'Campaign Theater'}
+										</span>
+									</div>
+									<h2 className="campaign-hud-title mt-2 font-display font-black uppercase leading-none tracking-[0.06em] text-ink-0">
+										<span className="bg-linear-to-b from-gold-100 via-gold-300 to-gold-500 bg-clip-text text-transparent">
+											{campaignLead
+												? campaignLead.mission.name
+												: currentDisplayChapter
+													? currentDisplayChapter.name
+													: 'Choose your saga line'}
+										</span>
+									</h2>
 								</div>
-								<h2 className="campaign-hud-title mt-2 font-display font-black uppercase leading-none tracking-[0.06em] text-ink-0">
-									<span className="bg-linear-to-b from-gold-100 via-gold-300 to-gold-500 bg-clip-text text-transparent">
-										{campaignLead
-											? campaignLead.mission.name
-											: currentDisplayChapter
-												? currentDisplayChapter.name
-												: 'Choose your saga line'}
-									</span>
-								</h2>
+								<div className="campaign-command-emblem" aria-hidden="true">
+									<img src={REALM_SIGIL_FRAME_SRC} alt="" loading="lazy" />
+									<span>{campaignLead ? campaignLead.mission.missionNumber : 'I'}</span>
+								</div>
+							</div>
+
+							<div className="min-w-0">
 								<p className="campaign-hud-copy mt-2 max-w-3xl text-[13px] leading-[1.5] text-ink-200">
 									{campaignLead
 										? `${campaignLead.chapter.name} · Mission ${campaignLead.mission.missionNumber}`
@@ -944,50 +974,37 @@ export default function CampaignPage() {
 											? currentDisplayChapter.description
 											: 'Beyond opens into later mythologies and the secret gate. Clear the base arcs, then push into the deeper campaign line.'}
 								</p>
+								<div className="campaign-command-meta">
+									<span>Saga {totalClearedMissions}/{totalCampaignMissions}</span>
+									{chapterProgressLabel && <span>{chapterProgressLabel}</span>}
+									<span>{sagaPercent}% complete</span>
+								</div>
 							</div>
 
 							<div className="campaign-command-actions">
-								{hasCurrentPrologue && (
-									<Button variant="default" size="sm" onClick={() => openChapterCinematic(currentDisplayChapter)}>
-										{hasSeenCurrentPrologue ? 'Replay Prologue' : 'Play Prologue'}
-									</Button>
-								)}
 								{campaignLead && (
 									<Button
 										variant="primary"
 										size="sm"
+										className="campaign-primary-action"
 										onClick={() => stageMission(campaignLead.mission, campaignLead.chapter, campaignLead.view)}
 									>
 										<Play size={13} strokeWidth={2.4} fill="currentColor" />
 										{campaignLead.cta}
 									</Button>
 								)}
+								{hasCurrentPrologue && (
+									<Button
+										variant="default"
+										size="sm"
+										className="campaign-secondary-action"
+										onClick={() => openChapterCinematic(currentDisplayChapter)}
+									>
+										{hasSeenCurrentPrologue ? 'Replay Prologue' : 'Play Prologue'}
+									</Button>
+								)}
 							</div>
 
-							<aside className="campaign-command-progress">
-								<div className="flex items-center justify-between gap-4">
-									<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300">Saga</span>
-									<span className="font-display text-[13px] tracking-[0.06em] text-gold-300">{totalClearedMissions} / {totalCampaignMissions}</span>
-								</div>
-								{chapterProgressLabel && (
-									<div className="flex items-center justify-between gap-4">
-										<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300">Chapter</span>
-										<span className="font-display text-[13px] tracking-[0.06em] text-ink-0">{chapterProgressLabel}</span>
-									</div>
-								)}
-								<div>
-									<div className="mb-1.5 flex items-center justify-between">
-										<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300">Progress</span>
-										<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-gold-300">{sagaPercent}%</span>
-									</div>
-									<div className="h-1 rounded-full bg-obsidian-800 overflow-hidden">
-										<div
-											className="h-full bg-linear-to-r from-gold-500 to-gold-200"
-											style={{ width: `${sagaPercent}%` }}
-										/>
-									</div>
-								</div>
-							</aside>
 						</div>
 					</section>
 
@@ -1149,7 +1166,7 @@ export default function CampaignPage() {
 					</div>
 				) : (
 					<div className="campaign-beyond-scroll">
-						<div className="beyond-grid">
+						<div className="beyond-grid" aria-label="Beyond chapters">
 							{beyondChapters.map(chapter => (
 								<BeyondCard
 									key={chapter.id}
@@ -1175,14 +1192,41 @@ export default function CampaignPage() {
 							)}
 
 							{!isAllComplete && (
-								<article className={`${SURFACE_STRONG_CLASS} border-dashed p-6 sm:p-7 opacity-70`}>
-									<p className={KICKER_CLASS}>Locked Arc</p>
-									<h3 className="mt-2 font-display text-2xl font-bold tracking-[0.04em] text-ink-200">
-										The Celestial Gate
-									</h3>
-									<p className="mt-3 text-[13px] leading-relaxed text-ink-300">
-										Clear every visible chapter to open the hidden mythology line.
-									</p>
+								<article
+									className="beyond-card beyond-card-locked runic-panel ornate-corners-host ornate-corners-host--obsidian"
+									style={{ '--beyond-scene': `url("${BEYOND_SCENE_SRC.twilight}")` } as React.CSSProperties}
+								>
+									<OrnateCorners />
+									<div className="beyond-card-frame">
+										<div className="beyond-card-scene" aria-hidden="true">
+											<img src={BEYOND_SCENE_SRC.twilight} alt="" loading="lazy" />
+											<div className="beyond-card-sigil">
+												<SigilBackplate tier="obsidian" />
+												<span>{BEYOND_SIGIL_MARK.twilight}</span>
+											</div>
+										</div>
+										<div className="beyond-card-copy">
+											<p className={KICKER_CLASS}>Locked Arc</p>
+											<h3 className="mt-2 font-display text-2xl font-bold tracking-[0.04em] text-ink-200">
+												The Celestial Gate
+											</h3>
+											<p className="mt-3 text-[13px] leading-relaxed text-ink-300">
+												Clear every visible chapter to open the hidden mythology line.
+											</p>
+										</div>
+										<div className={`${SURFACE_CLASS} beyond-card-route`}>
+											<p className={`${KICKER_CLASS} text-left`}>Gate Requirement</p>
+											<p className="mt-2 font-display text-[15px] font-bold tracking-wide text-ink-0">
+												Base arcs first
+											</p>
+											<p className="mt-2 text-[12.5px] leading-relaxed text-ink-300">
+												Finish the visible saga routes before this mythology branch unlocks.
+											</p>
+										</div>
+										<div className="beyond-locked-status">
+											Sealed
+										</div>
+									</div>
 								</article>
 							)}
 						</div>
@@ -1262,32 +1306,36 @@ function BeyondCard({
 	const accent = FACTION_ACCENT[chapter.faction] ?? 'text-ink-100';
 	const borderHover = FACTION_BORDER[chapter.faction] ?? 'hover:border-gold-300/45';
 	const atmosphere = FACTION_ATMOSPHERE[chapter.faction] ?? FACTION_ATMOSPHERE.twilight;
+	const sceneSrc = BEYOND_SCENE_SRC[chapter.faction] ?? BEYOND_SCENE_SRC.twilight;
+	const sigilTier = BEYOND_SIGIL_TIER[chapter.faction] ?? 'obsidian';
+	const sigilMark = BEYOND_SIGIL_MARK[chapter.faction] ?? 'SG';
 	const progressPct = chapter.missions.length > 0
 		? Math.round((progress / chapter.missions.length) * 100)
 		: 0;
 
 	return (
 		<article
-			className={`relative overflow-hidden rounded-2xl border transition-colors duration-300 ${borderHover} ${
+			className={`beyond-card beyond-card-${chapter.faction} runic-panel ornate-corners-host ornate-corners-host--${sigilTier} relative overflow-hidden border transition-colors duration-300 ${borderHover} ${
 				secret
 					? 'border-blood-300/40 bg-linear-to-b from-obsidian-850 to-obsidian-950'
 					: 'border-obsidian-700 bg-linear-to-b from-obsidian-850 to-obsidian-950'
-			} shadow-[0_22px_60px_-30px_rgba(0,0,0,0.85)]`}
+			}`}
+			style={{
+				'--beyond-atmosphere': atmosphere,
+				'--beyond-scene': `url("${sceneSrc}")`,
+			} as React.CSSProperties}
 		>
-			{/* Atmospheric color layer — sits below content */}
-			<div
-				aria-hidden
-				className="absolute inset-0 pointer-events-none opacity-80"
-				style={{ background: atmosphere }}
-			/>
-			{/* Bottom vignette for legibility */}
-			<div
-				aria-hidden
-				className="absolute inset-0 pointer-events-none bg-linear-to-t from-obsidian-950/85 via-obsidian-950/30 to-transparent"
-			/>
+			<OrnateCorners />
 
-			<div className="relative z-10 p-5 sm:p-6 flex flex-col gap-5">
-				<div>
+			<div className="beyond-card-frame relative z-10">
+				<div className="beyond-card-scene" aria-hidden="true">
+					<img src={sceneSrc} alt="" loading="lazy" />
+					<div className="beyond-card-sigil">
+						<SigilBackplate tier={sigilTier} />
+						<span>{sigilMark}</span>
+					</div>
+				</div>
+				<div className="beyond-card-copy">
 					<p className={KICKER_CLASS}>
 						{secret ? 'Secret Gate' : 'Chapter Theater'}
 					</p>
@@ -1301,7 +1349,7 @@ function BeyondCard({
 					</p>
 				</div>
 
-				<div className={SURFACE_CLASS}>
+				<div className={`${SURFACE_CLASS} beyond-card-route`}>
 					<p className={`${KICKER_CLASS} text-left`}>{secret ? 'Gate Status' : 'Next Route'}</p>
 					<p className="mt-2 font-display text-[15px] font-bold tracking-wide text-ink-0">
 						{secret
@@ -1315,7 +1363,7 @@ function BeyondCard({
 					</p>
 				</div>
 
-				<div className="flex items-center gap-3">
+				<div className="beyond-card-progress">
 					<div className="h-1.5 flex-1 overflow-hidden rounded-full bg-obsidian-800">
 						<div
 							className="h-full rounded-full bg-linear-to-r from-gold-500 to-gold-200 transition-all duration-500"
@@ -1327,7 +1375,7 @@ function BeyondCard({
 					</span>
 				</div>
 
-				<div className="flex flex-wrap gap-2">
+				<div className="beyond-card-actions">
 					<Button variant="default" size="sm" onClick={onPlayPrologue}>
 						{prologueSeen ? 'Replay Prologue' : 'Play Prologue'}
 					</Button>

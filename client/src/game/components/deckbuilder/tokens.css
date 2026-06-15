@@ -45,6 +45,22 @@
   --surface-elevated:       var(--surface-elevated, var(--obsidian-800));
   --border-subtle:          var(--border-subtle, var(--obsidian-700));
   --border-default:         var(--border-default, var(--obsidian-600));
+  --db-modal-bg:
+    radial-gradient(ellipse 64% 42% at 50% 0%, color-mix(in srgb, var(--gold-300) 11%, transparent) 0%, transparent 68%),
+    radial-gradient(ellipse 42% 34% at 86% 10%, color-mix(in srgb, var(--bifrost-300) 9%, transparent) 0%, transparent 72%),
+    linear-gradient(180deg, color-mix(in srgb, var(--obsidian-950) 94%, transparent), color-mix(in srgb, var(--obsidian-900) 92%, transparent));
+  --db-panel-bg:
+    linear-gradient(145deg, color-mix(in srgb, var(--obsidian-850) 88%, transparent) 0%, color-mix(in srgb, var(--obsidian-950) 98%, transparent) 100%);
+  --db-panel-bg-raised:
+    linear-gradient(145deg, color-mix(in srgb, var(--obsidian-800) 82%, transparent) 0%, color-mix(in srgb, var(--obsidian-900) 96%, transparent) 100%);
+  --db-panel-border:        color-mix(in srgb, var(--gold-300) 28%, var(--obsidian-700));
+  --db-panel-border-strong: color-mix(in srgb, var(--gold-200) 42%, var(--obsidian-600));
+  --db-panel-frost:         color-mix(in srgb, var(--bifrost-300) 34%, var(--obsidian-700));
+  --db-panel-inset:         inset 0 0 24px color-mix(in srgb, var(--obsidian-950) 72%, transparent);
+  --db-glow-gold:           color-mix(in srgb, var(--gold-300) 18%, transparent);
+  --db-card-min:            146px;
+  --db-card-gap:            10px;
+  --db-sidebar-width:       260px;
 
   /* ===== Action Colors ===== */
   --action-primary:         var(--action-primary, var(--gold-300));
@@ -60,11 +76,6 @@
   --space-xl: var(--space-xl);
 
   /* ===== Size Tokens ===== */
-  --card-tile-min-height: var(--card-tile-min-height);
-  --stat-badge-size:      var(--stat-badge-size);
-  --stat-badge-size-lg:   var(--stat-badge-size-lg);
-  --sidebar-width:        var(--sidebar-md);       /* uses global sidebar token */
-
   /* ===== Typography ===== */
   --text-xs:   var(--text-xs);
   --text-sm:   var(--text-sm);
@@ -78,6 +89,9 @@
   --radius-md:   var(--radius-md);
   --radius-lg:   var(--radius-lg);
   --radius-full: var(--radius-full);
+  --db-radius:    8px 2px 9px 2px;
+  --db-radius-sm: 6px 2px 7px 2px;
+  --db-radius-xs: 4px 1px 5px 1px;
 
   /* ===== Z-Index ===== */
   --z-card-badge: var(--z-cards);         /* maps to global --z-cards: 20 */

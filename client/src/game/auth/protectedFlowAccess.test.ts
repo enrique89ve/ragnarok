@@ -94,6 +94,66 @@ describe('protectedFlowAccess', () => {
 		});
 	});
 
+	it('blocks multiplayer until the signed account has claimed starter', () => {
+		const access = resolveProtectedFlowAccess({
+			accountId: 'Alice',
+			authenticatedAccountId: 'alice',
+			sharedNetwork: true,
+			surface: 'multiplayer',
+			requiresStarterClaim: true,
+			starterClaimed: false,
+		});
+
+		expect(access.kind).toBe('blocked');
+		if (access.kind === 'blocked') {
+			expect(access.reason).toBe('starter_claim_required');
+			expect(access.accountId).toBe('alice');
+			expect(access.message).toContain('@alice');
+			expect(access.message).toContain('starter');
+		}
+	});
+
+	it('allows multiplayer when session and starter claim are both present', () => {
+		expect(resolveProtectedFlowAccess({
+			accountId: 'Alice',
+			authenticatedAccountId: 'alice',
+			sharedNetwork: true,
+			surface: 'multiplayer',
+			requiresStarterClaim: true,
+			starterClaimed: true,
+		})).toEqual({
+			kind: 'allowed',
+			accountId: 'alice',
+			localDev: false,
+		});
+	});
+
+	it('keeps local battle surfaces behind local starter claim without requiring Hive', () => {
+		const blocked = resolveProtectedFlowAccess({
+			accountId: null,
+			sharedNetwork: false,
+			surface: 'quick_match',
+			requiresStarterClaim: true,
+			starterClaimed: false,
+		});
+		expect(blocked.kind).toBe('blocked');
+		if (blocked.kind === 'blocked') {
+			expect(blocked.reason).toBe('starter_claim_required');
+		}
+
+		expect(resolveProtectedFlowAccess({
+			accountId: null,
+			sharedNetwork: false,
+			surface: 'quick_match',
+			requiresStarterClaim: true,
+			starterClaimed: true,
+		})).toEqual({
+			kind: 'allowed',
+			accountId: null,
+			localDev: true,
+		});
+	});
+
 	it('requires the same signed Hive account for every account-bound surface', () => {
 		for (const surface of ACCOUNT_BOUND_SURFACES) {
 			expect(resolveProtectedFlowAccess({

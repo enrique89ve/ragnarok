@@ -47,6 +47,20 @@ describe('FriendsPanel challenge helpers', () => {
 		});
 	});
 
+	it('disables direct challenges when the local P2P gate is blocked', () => {
+		expect(getFriendChallengeButtonState({
+			friend: { hiveUsername: 'bob', relationStatus: 'accepted' },
+			presence: { online: true, availability: 'available', canReceiveChallenge: true },
+			hiveUsername: 'alice',
+			p2pBlockedDetail: 'Claim starter',
+			now,
+		})).toEqual({
+			disabled: true,
+			label: 'Challenge',
+			detail: 'Claim starter',
+		});
+	});
+
 	it('disables repeated sends during challenge cooldown and outgoing pending state', () => {
 		expect(getFriendChallengeButtonState({
 			friend: { hiveUsername: 'bob', relationStatus: 'accepted' },
@@ -81,5 +95,6 @@ describe('FriendsPanel challenge helpers', () => {
 	it('formats rate-limit copy from retry metadata', () => {
 		expect(formatRetryAfterMs(61_000)).toBe('2m');
 		expect(challengeRejectReasonLabel('rate_limited', 180_000)).toBe('Wait 3m before challenging again.');
+		expect(challengeRejectReasonLabel('starter_claim_required')).toBe('Claim starter before challenging.');
 	});
 });

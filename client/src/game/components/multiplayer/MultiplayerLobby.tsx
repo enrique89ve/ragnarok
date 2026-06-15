@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { usePeerStore } from '../../stores/peerStore';
 import { useMatchmaking } from '../../hooks/useMatchmaking';
 import { useNFTUsername } from '../../nft/hooks';
 import { useFriendStore, type OutgoingFriendChallenge } from '../../stores/friendStore';
+import { useStarterStore } from '../../stores/starterStore';
 import type { MatchmakingStatus } from '../../stores/matchmakingStore';
 import type { P2PConnectionState } from '../../stores/peerStore';
 import {
@@ -16,10 +17,12 @@ import {
 } from '../../../components/ui-norse';
 import { Copy, Check, X, Users, Zap } from 'lucide-react';
 import { toast } from 'sonner';
-import { readPresenceHeartbeatResponse, type ServerSignedChallenge } from '@shared/p2pAvailability';
+import { readChallengeSendResponse, readPresenceHeartbeatResponse, type P2PMatchTicket, type ServerSignedChallenge } from '@shared/p2pAvailability';
 import { ensureFriendSession, invalidateFriendSession } from '../social/friendSession';
 import type { ArmySelection } from '../../types/ChessTypes';
 import { isSharedNetworkEnvironment } from '../../config/featureFlags';
+import { getAuthenticatedHiveUsername, subscribeHiveSessionIdentity } from '../../../data/HiveSessionIdentity';
+import { resolveProtectedFlowAccess } from '../../auth/protectedFlowAccess';
 
 interface MultiplayerLobbyProps {
 	onGameStart: () => void;
@@ -49,6 +52,90 @@ export function canAcceptDirectChallenge(params: {
 	return params.challenge.expiresAt > params.now
 		&& params.connectionState === 'disconnected'
 		&& params.matchmakingStatus === 'idle';
+}
+
+type DirectChallengeRoomCandidate = {
+	readonly expiresAt: number;
+	readonly matchTicket?: P2PMatchTicket | null;
+};
+
+export type DirectChallengeRoomAccess =
+	| { readonly ok: true }
+	| { readonly ok: false; readonly reason: 'busy' | 'expired' | 'missing_relay_ticket' | 'protected_flow'; readonly message?: string };
+
+type DirectChallengeAccessContext = {
+	readonly connectionState: P2PConnectionState;
+	readonly matchmakingStatus: MatchmakingStatus;
+	readonly now: number;
+	readonly sharedNetwork: boolean;
+	readonly protectedBlockMessage: string | null;
+};
+
+export function getDirectChallengeRoomAccess(params: {
+	readonly challenge: DirectChallengeRoomCandidate;
+	readonly connectionState: P2PConnectionState;
+	readonly matchmakingStatus: MatchmakingStatus;
+	readonly now: number;
+	readonly sharedNetwork: boolean;
+}): DirectChallengeRoomAccess {
+	if (params.challenge.expiresAt <= params.now) return { ok: false, reason: 'expired' };
+	if (params.connectionState !== 'disconnected' || params.matchmakingStatus !== 'idle') {
+		return { ok: false, reason: 'busy' };
+	}
+	if (params.sharedNetwork && !params.challenge.matchTicket) {
+		return { ok: false, reason: 'missing_relay_ticket' };
+	}
+	return { ok: true };
+}
+
+export function shouldClearDirectChallengeStateAfterPoll(status: number, payload: unknown): boolean {
+	if (status !== 403) return false;
+	const parsed = readChallengeSendResponse(payload);
+	return !parsed.ok && parsed.reason === 'starter_claim_required';
+}
+
+export function getDirectChallengeProtectedBlockMessage(input: {
+	readonly hiveUsername: string | null | undefined;
+	readonly authenticatedHiveUsername: string | null | undefined;
+	readonly sharedNetwork: boolean;
+	readonly starterClaimed: boolean;
+}): string | null {
+	const access = resolveProtectedFlowAccess({
+		accountId: input.hiveUsername,
+		authenticatedAccountId: input.authenticatedHiveUsername,
+		sharedNetwork: input.sharedNetwork,
+		surface: 'multiplayer',
+		requiresAuthenticatedSession: true,
+		requiresStarterClaim: true,
+		starterClaimed: input.starterClaimed,
+	});
+	return access.kind === 'allowed' ? null : access.message;
+}
+
+function getDirectChallengeRoomAccessFor(
+	challenge: DirectChallengeRoomCandidate,
+	context: DirectChallengeAccessContext,
+): DirectChallengeRoomAccess {
+	if (context.protectedBlockMessage) {
+		return { ok: false, reason: 'protected_flow', message: context.protectedBlockMessage };
+	}
+	return getDirectChallengeRoomAccess({
+		challenge,
+		connectionState: context.connectionState,
+		matchmakingStatus: context.matchmakingStatus,
+		now: context.now,
+		sharedNetwork: context.sharedNetwork,
+	});
+}
+
+function getDirectChallengeBlockCopy(access: DirectChallengeRoomAccess): string | null {
+	if (access.ok) return null;
+	if (access.reason === 'protected_flow') return access.message ?? 'Complete account setup before opening P2P.';
+	if (access.reason === 'expired') return 'This challenge has expired.';
+	if (access.reason === 'missing_relay_ticket') {
+		return 'This challenge is missing a relay ticket. Ask your opponent to send a new challenge.';
+	}
+	return 'Available only while idle and disconnected.';
 }
 
 export function isOutgoingChallengeActive(
@@ -117,6 +204,422 @@ export function getConnectedMatchProgress(input: ConnectedMatchProgressInput): C
 	};
 }
 
+type AsyncVoidHandler = () => void | Promise<void>;
+
+function IncomingChallengesPanel({
+	challenges,
+	accessContext,
+	acceptingFrom,
+	onAcceptChallenge,
+	onDeclineChallenge,
+}: {
+	readonly challenges: readonly ServerSignedChallenge[];
+	readonly accessContext: DirectChallengeAccessContext;
+	readonly acceptingFrom: string | null;
+	readonly onAcceptChallenge: (challenge: ServerSignedChallenge) => void | Promise<void>;
+	readonly onDeclineChallenge: (challenge: ServerSignedChallenge) => void;
+}) {
+	if (challenges.length === 0) return null;
+
+	return (
+		<div className="space-y-2 rounded-lg border border-(--gold-500)/25 bg-(--gold-500)/10 p-3">
+			<p className="text-xs font-semibold uppercase tracking-wide text-(--gold-300)">Incoming Challenges</p>
+			{challenges.map(challenge => {
+				const access = getDirectChallengeRoomAccessFor(challenge, accessContext);
+				const acceptDisabled = !access.ok;
+				return (
+					<div key={`${challenge.from}:${challenge.nonce}`} className="space-y-2 rounded-md border border-(--gold-500)/15 bg-(--obsidian-900)/45 p-2">
+						<div className="flex items-center justify-between gap-2">
+							<div className="min-w-0">
+								<p className="truncate text-sm font-medium text-(--ink-100)">@{challenge.from}</p>
+								<p className="truncate text-xs text-(--ink-300)">
+									Room {resolveDirectChallengeRoomId(challenge).slice(0, 12)}... expires in {formatChallengeTimeRemaining(challenge.expiresAt, accessContext.now)}
+								</p>
+							</div>
+							<div className="flex shrink-0 gap-2">
+								<Button
+									type="button"
+									size="sm"
+									onClick={() => { void onAcceptChallenge(challenge); }}
+									disabled={acceptDisabled || acceptingFrom === challenge.from}
+								>
+									<Check className="mr-1 h-3.5 w-3.5" />
+									Accept
+								</Button>
+								<Button
+									type="button"
+									size="sm"
+									variant="outline"
+									onClick={() => onDeclineChallenge(challenge)}
+									disabled={acceptingFrom === challenge.from}
+								>
+									<X className="mr-1 h-3.5 w-3.5" />
+									Decline
+								</Button>
+							</div>
+						</div>
+						{acceptDisabled && <p className="text-xs text-(--ink-300)">{getDirectChallengeBlockCopy(access)}</p>}
+					</div>
+				);
+			})}
+		</div>
+	);
+}
+
+function OutgoingChallengePanel({
+	challenge,
+	accessContext,
+	openingOutgoing,
+	onOpenRoom,
+	onCancelChallenge,
+}: {
+	readonly challenge: OutgoingFriendChallenge | null;
+	readonly accessContext: DirectChallengeAccessContext;
+	readonly openingOutgoing: boolean;
+	readonly onOpenRoom: AsyncVoidHandler;
+	readonly onCancelChallenge: () => void;
+}) {
+	if (!challenge) return null;
+
+	const access = getDirectChallengeRoomAccessFor(challenge, accessContext);
+
+	return (
+		<div className="space-y-2 rounded-lg border border-(--gold-500)/20 bg-(--obsidian-800) p-3">
+			<div className="flex items-center justify-between gap-2">
+				<div className="min-w-0">
+					<p className="truncate text-sm font-medium text-(--ink-100)">Challenge sent to @{challenge.to}</p>
+					<p className="truncate text-xs text-(--ink-300)">
+						Room {challenge.peerId.slice(0, 12)}... expires in {formatChallengeTimeRemaining(challenge.expiresAt, accessContext.now)}
+					</p>
+				</div>
+				<Button
+					type="button"
+					size="sm"
+					onClick={() => { void onOpenRoom(); }}
+					disabled={openingOutgoing || !access.ok}
+				>
+					<Users className="mr-1 h-3.5 w-3.5" />
+					Open Room
+				</Button>
+			</div>
+			<Button type="button" variant="ghost" size="sm" onClick={onCancelChallenge} className="w-full">
+				Cancel Challenge
+			</Button>
+		</div>
+	);
+}
+
+function IdleMatchControls({
+	visible,
+	joinId,
+	onJoinIdChange,
+	onQuickMatch,
+	onHost,
+	onJoin,
+}: {
+	readonly visible: boolean;
+	readonly joinId: string;
+	readonly onJoinIdChange: (value: string) => void;
+	readonly onQuickMatch: AsyncVoidHandler;
+	readonly onHost: AsyncVoidHandler;
+	readonly onJoin: AsyncVoidHandler;
+}) {
+	if (!visible) return null;
+
+	return (
+		<div className="space-y-4">
+			<Button onClick={() => { void onQuickMatch(); }} className="w-full" size="lg">
+				<Zap className="w-4 h-4 mr-2" />
+				Quick Match
+			</Button>
+			<div className="relative">
+				<div className="absolute inset-0 flex items-center">
+					<span className="w-full border-t" />
+				</div>
+				<div className="relative flex justify-center text-xs uppercase">
+					<span className="bg-(--obsidian-900) px-2 text-(--ink-300)">Or</span>
+				</div>
+			</div>
+			<Button onClick={() => { void onHost(); }} className="w-full" variant="outline">
+				Host Game
+			</Button>
+			<div className="space-y-2">
+				<Input
+					placeholder="Enter Game ID"
+					value={joinId}
+					onChange={(event) => onJoinIdChange(event.target.value)}
+					onKeyDown={(event) => {
+						if (event.key === 'Enter') void onJoin();
+					}}
+				/>
+				<Button onClick={() => { void onJoin(); }} className="w-full" variant="outline">
+					Join Game
+				</Button>
+			</div>
+		</div>
+	);
+}
+
+function QueuePanel({
+	status,
+	queuePosition,
+	onLeaveQueue,
+}: {
+	readonly status: MatchmakingStatus;
+	readonly queuePosition: number | null;
+	readonly onLeaveQueue: AsyncVoidHandler;
+}) {
+	if (status !== 'queued') return null;
+
+	return (
+		<div className="text-center space-y-4">
+			<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-(--gold-400) mx-auto" />
+			<p className="text-sm text-(--ink-300)">Searching for opponent...</p>
+			{queuePosition !== null && (
+				<p className="text-xs text-(--ink-300)">Position in queue: {queuePosition}</p>
+			)}
+			<Button onClick={() => { void onLeaveQueue(); }} variant="outline" className="w-full">
+				Cancel Search
+			</Button>
+		</div>
+	);
+}
+
+function MatchedProgressPanel({
+	status,
+	connectionState,
+	matchProgress,
+}: {
+	readonly status: MatchmakingStatus;
+	readonly connectionState: P2PConnectionState;
+	readonly matchProgress: ConnectedMatchProgress;
+}) {
+	if (status !== 'matched' || connectionState === 'connected') return null;
+
+	return (
+		<div className="text-center space-y-2">
+			<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-(--gold-400) mx-auto" />
+			<p className="text-sm font-medium text-(--ink-100)">{matchProgress.title}...</p>
+			<p className="text-xs text-(--ink-300)">{matchProgress.detail}</p>
+		</div>
+	);
+}
+
+function MatchmakingErrorPanel({
+	error,
+	onTryAgain,
+	onUseManualMatch,
+}: {
+	readonly error: string | null;
+	readonly onTryAgain: AsyncVoidHandler;
+	readonly onUseManualMatch: () => void;
+}) {
+	if (!error) return null;
+
+	return (
+		<div className="p-4 bg-(--blood-500)/10 border border-(--blood-500)/20 rounded-lg">
+			<p className="text-sm text-(--blood-300)">{error}</p>
+			<div className="flex gap-2 mt-2">
+				<Button onClick={() => { void onTryAgain(); }} variant="outline" className="flex-1">
+					Try Again
+				</Button>
+				<Button onClick={onUseManualMatch} variant="outline" className="flex-1">
+					Use Manual Match
+				</Button>
+			</div>
+		</div>
+	);
+}
+
+function ConnectingPanel({
+	connectionState,
+	isHost,
+}: {
+	readonly connectionState: P2PConnectionState;
+	readonly isHost: boolean;
+}) {
+	if (connectionState !== 'connecting') return null;
+
+	return (
+		<div className="text-center space-y-2">
+			<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-(--gold-400) mx-auto" />
+			<p className="text-sm text-(--ink-300)">
+				{isHost ? 'Creating game...' : 'Connecting...'}
+			</p>
+		</div>
+	);
+}
+
+function CopyIdButton({
+	copied,
+	onCopyId,
+}: {
+	readonly copied: boolean;
+	readonly onCopyId: AsyncVoidHandler;
+}) {
+	return (
+		<Button
+			variant="ghost"
+			size="sm"
+			onClick={() => { void onCopyId(); }}
+			className="h-8 w-8 p-0"
+		>
+			{copied ? (
+				<Check className="w-4 h-4 text-green-500" />
+			) : (
+				<Copy className="w-4 h-4" />
+			)}
+		</Button>
+	);
+}
+
+function PeerIdCard({
+	peerId,
+	copied,
+	onCopyId,
+	helperText,
+}: {
+	readonly peerId: string;
+	readonly copied: boolean;
+	readonly onCopyId: AsyncVoidHandler;
+	readonly helperText?: string;
+}) {
+	return (
+		<div className="p-4 bg-(--obsidian-800) rounded-lg">
+			<div className="flex items-center justify-between mb-2">
+				<span className="text-sm font-medium">Your Game ID:</span>
+				<CopyIdButton copied={copied} onCopyId={onCopyId} />
+			</div>
+			<code className="text-xs font-mono break-all">{peerId}</code>
+			{helperText && (
+				<p className="text-xs text-(--ink-300) mt-2">{helperText}</p>
+			)}
+		</div>
+	);
+}
+
+function WaitingPanel({
+	connectionState,
+	myPeerId,
+	copied,
+	onCopyId,
+	onDisconnect,
+}: {
+	readonly connectionState: P2PConnectionState;
+	readonly myPeerId: string | null;
+	readonly copied: boolean;
+	readonly onCopyId: AsyncVoidHandler;
+	readonly onDisconnect: () => void;
+}) {
+	if (connectionState !== 'waiting' || !myPeerId) return null;
+
+	return (
+		<div className="space-y-4">
+			<PeerIdCard
+				peerId={myPeerId}
+				copied={copied}
+				onCopyId={onCopyId}
+				helperText="Share this ID with your opponent"
+			/>
+			<div className="text-center space-y-2">
+				<div className="flex justify-center gap-1">
+					<div className="animate-bounce h-2 w-2 rounded-full bg-(--gold-400)" style={{ animationDelay: '0ms' }} />
+					<div className="animate-bounce h-2 w-2 rounded-full bg-(--gold-400)" style={{ animationDelay: '150ms' }} />
+					<div className="animate-bounce h-2 w-2 rounded-full bg-(--gold-400)" style={{ animationDelay: '300ms' }} />
+				</div>
+				<p className="text-sm text-(--ink-300)">Waiting for opponent to join...</p>
+			</div>
+			<Button onClick={onDisconnect} variant="destructive" className="w-full">
+				<X className="w-4 h-4 mr-2" />
+				Cancel
+			</Button>
+		</div>
+	);
+}
+
+function ConnectedPanel({
+	connectionState,
+	myPeerId,
+	remotePeerId,
+	isHost,
+	copied,
+	matchStarting,
+	matchProgress,
+	onCopyId,
+	onDisconnect,
+}: {
+	readonly connectionState: P2PConnectionState;
+	readonly myPeerId: string | null;
+	readonly remotePeerId: string | null;
+	readonly isHost: boolean;
+	readonly copied: boolean;
+	readonly matchStarting: boolean;
+	readonly matchProgress: ConnectedMatchProgress;
+	readonly onCopyId: AsyncVoidHandler;
+	readonly onDisconnect: () => void;
+}) {
+	if (connectionState !== 'connected' || !myPeerId) return null;
+
+	const helperText = isHost && !remotePeerId ? 'Share this ID with your opponent to let them join' : undefined;
+
+	return (
+		<div className="space-y-4">
+			<PeerIdCard peerId={myPeerId} copied={copied} onCopyId={onCopyId} helperText={helperText} />
+			{isHost && !remotePeerId && (
+				<p className="text-sm text-(--ink-300) text-center">Waiting for opponent to join...</p>
+			)}
+			{remotePeerId && (
+				<div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg space-y-2">
+					<p className="text-sm font-medium text-green-600 dark:text-green-400">
+						<Check size={14} className="inline -mt-0.5 mr-1" aria-hidden={true} /> Connected to {isHost ? 'opponent' : 'host'}
+					</p>
+					<div>
+						<span className="text-xs text-(--ink-300) uppercase tracking-wide">
+							{isHost ? 'Opponent ID' : 'Host ID'}
+						</span>
+						<code className="block text-xs font-mono break-all text-(--ink-100) mt-1">
+							{remotePeerId}
+						</code>
+					</div>
+					<div className="pt-2 border-t border-green-500/20">
+						<p className="text-xs font-semibold uppercase tracking-wide text-(--gold-300)">
+							{matchStarting ? 'Starting match' : matchProgress.title}
+						</p>
+						<p className="mt-1 text-xs text-(--ink-300)">{matchProgress.detail}</p>
+					</div>
+				</div>
+			)}
+			{!matchStarting && (
+				<Button onClick={onDisconnect} variant="destructive" className="w-full">
+					<X className="w-4 h-4 mr-2" />
+					Disconnect
+				</Button>
+			)}
+		</div>
+	);
+}
+
+function ConnectionErrorPanel({
+	connectionState,
+	error,
+	onDisconnect,
+}: {
+	readonly connectionState: P2PConnectionState;
+	readonly error: string | null;
+	readonly onDisconnect: () => void;
+}) {
+	if (connectionState !== 'error' || !error) return null;
+
+	return (
+		<div className="p-4 bg-(--blood-500)/10 border border-(--blood-500)/20 rounded-lg">
+			<p className="text-sm text-(--blood-300)">{error}</p>
+			<Button onClick={onDisconnect} variant="outline" className="w-full mt-2">
+				Try Again
+			</Button>
+		</div>
+	);
+}
+
 export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart, joinQueue, leaveQueue }) => {
 	const {
 		myPeerId,
@@ -148,11 +651,17 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 		error: matchmakingError,
 	} = useMatchmaking();
 	const hiveUsername = useNFTUsername();
+	const authenticatedHiveUsername = useSyncExternalStore(
+		subscribeHiveSessionIdentity,
+		getAuthenticatedHiveUsername,
+		getAuthenticatedHiveUsername,
+	);
 	const pendingChallenges = useFriendStore(s => s.pendingChallenges);
 	const outgoingChallenge = useFriendStore(s => s.outgoingChallenge);
 	const addChallenges = useFriendStore(s => s.addChallenges);
 	const dismissChallenge = useFriendStore(s => s.dismissChallenge);
 	const clearOutgoingChallenge = useFriendStore(s => s.clearOutgoingChallenge);
+	const clearChallenges = useFriendStore(s => s.clearChallenges);
 	const pruneExpiredChallenges = useFriendStore(s => s.pruneExpiredChallenges);
 
 	const [joinId, setJoinId] = useState('');
@@ -164,6 +673,22 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 	const [openingOutgoing, setOpeningOutgoing] = useState(false);
 	const activeIncomingChallenges = getActiveIncomingChallenges(pendingChallenges, now);
 	const activeOutgoingChallenge = isOutgoingChallengeActive(outgoingChallenge, now) ? outgoingChallenge : null;
+	const sharedNetwork = isSharedNetworkEnvironment();
+	const starterClaimed = useStarterStore(state => Boolean(hiveUsername && state.hasClaimed(hiveUsername)));
+	const protectedBlockMessage = getDirectChallengeProtectedBlockMessage({
+		hiveUsername,
+		authenticatedHiveUsername,
+		sharedNetwork,
+		starterClaimed,
+	});
+	const challengeAccessContext = {
+		connectionState,
+		matchmakingStatus,
+		now,
+		sharedNetwork,
+		protectedBlockMessage,
+	} satisfies DirectChallengeAccessContext;
+	const idleControlsVisible = connectionState === 'disconnected' && matchmakingStatus === 'idle';
 	const matchProgress = getConnectedMatchProgress({
 		connectionState,
 		opponentArmy,
@@ -195,7 +720,14 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 				});
 			}
 
-			if (!response.ok) return;
+			if (!response.ok) {
+				const payload: unknown = await response.json().catch(() => null);
+				if (shouldClearDirectChallengeStateAfterPoll(response.status, payload)) {
+					clearChallenges();
+					clearOutgoingChallenge();
+				}
+				return;
+			}
 			const payload: unknown = await response.json();
 			const parsed = readPresenceHeartbeatResponse(payload);
 			addChallenges(parsed.challenges);
@@ -203,7 +735,7 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 		} catch (error) {
 			if (error instanceof Error && error.name === 'AbortError') return;
 		}
-	}, [hiveUsername, addChallenges, pruneExpiredChallenges]);
+	}, [hiveUsername, addChallenges, clearChallenges, clearOutgoingChallenge, pruneExpiredChallenges]);
 
 	useEffect(() => {
 		if (!hiveUsername) return undefined;
@@ -287,11 +819,16 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 	const handleDisconnect = () => {
 		disconnect();
 		clearMatchChallenges();
-		leaveQueue();
+		void leaveQueue();
 		setJoinId('');
 		setRemotePeerId(null);
 		setMode('manual');
 		toast.info('Disconnected from game');
+	};
+
+	const handleUseManualMatch = () => {
+		void leaveQueue();
+		setMode('manual');
 	};
 
 	const handleQuickMatch = async () => {
@@ -307,16 +844,13 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 	};
 
 	const handleAcceptChallenge = async (challenge: ServerSignedChallenge) => {
-		if (!canAcceptDirectChallenge({ challenge, connectionState, matchmakingStatus, now })) {
-			toast.error('Finish the current P2P state before accepting this challenge.');
+		const access = getDirectChallengeRoomAccessFor(challenge, challengeAccessContext);
+		if (!access.ok) {
+			toast.error(getDirectChallengeBlockCopy(access) ?? 'Could not accept this challenge.');
 			return;
 		}
 		setAcceptingFrom(challenge.from);
 		try {
-			if (isSharedNetworkEnvironment() && !challenge.matchTicket) {
-				toast.error('This challenge is missing a relay ticket. Ask your opponent to send a new challenge.');
-				return;
-			}
 			dismissChallenge(challenge.from);
 			setMatchChallenges(challenge, null);
 			setMatchTicket(challenge.matchTicket ?? null);
@@ -337,17 +871,17 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 
 	const handleOpenOutgoingRoom = async () => {
 		if (!activeOutgoingChallenge) return;
-		if (connectionState !== 'disconnected' || matchmakingStatus !== 'idle') {
-			toast.error('Finish the current P2P state before opening this challenge room.');
+		const access = getDirectChallengeRoomAccessFor(activeOutgoingChallenge, challengeAccessContext);
+		if (!access.ok) {
+			const message = access.reason === 'missing_relay_ticket'
+				? 'This challenge is missing a relay ticket. Send a new challenge.'
+				: (getDirectChallengeBlockCopy(access) ?? 'Could not open this challenge room.');
+			toast.error(message);
+			if (access.reason === 'missing_relay_ticket') clearOutgoingChallenge();
 			return;
 		}
 		setOpeningOutgoing(true);
 		try {
-			if (isSharedNetworkEnvironment() && !activeOutgoingChallenge.matchTicket) {
-				toast.error('This challenge is missing a relay ticket. Send a new challenge.');
-				clearOutgoingChallenge();
-				return;
-			}
 			setMatchChallenges(
 				activeOutgoingChallenge.matchChallenge ?? null,
 				activeOutgoingChallenge.opponentMatchChallenge ?? null,
@@ -359,7 +893,7 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 		} catch {
 			toast.error('Could not open the challenge room.');
 		} finally {
-		setOpeningOutgoing(false);
+			setOpeningOutgoing(false);
 		}
 	};
 
@@ -376,269 +910,67 @@ export const MultiplayerLobby: React.FC<MultiplayerLobbyProps> = ({ onGameStart,
 					</PanelDescription>
 				</PanelHeader>
 				<PanelContent className="space-y-4">
-					{activeIncomingChallenges.length > 0 && (
-						<div className="space-y-2 rounded-lg border border-(--gold-500)/25 bg-(--gold-500)/10 p-3">
-							<p className="text-xs font-semibold uppercase tracking-wide text-(--gold-300)">Incoming Challenges</p>
-							{activeIncomingChallenges.map(challenge => {
-								const acceptDisabled = !canAcceptDirectChallenge({ challenge, connectionState, matchmakingStatus, now });
-								return (
-									<div key={`${challenge.from}:${challenge.nonce}`} className="space-y-2 rounded-md border border-(--gold-500)/15 bg-(--obsidian-900)/45 p-2">
-										<div className="flex items-center justify-between gap-2">
-											<div className="min-w-0">
-												<p className="truncate text-sm font-medium text-(--ink-100)">@{challenge.from}</p>
-												<p className="truncate text-xs text-(--ink-300)">
-													Room {resolveDirectChallengeRoomId(challenge).slice(0, 12)}... expires in {formatChallengeTimeRemaining(challenge.expiresAt, now)}
-												</p>
-											</div>
-											<div className="flex shrink-0 gap-2">
-												<Button
-													type="button"
-													size="sm"
-													onClick={() => handleAcceptChallenge(challenge)}
-													disabled={acceptDisabled || acceptingFrom === challenge.from}
-												>
-													<Check className="mr-1 h-3.5 w-3.5" />
-													Accept
-												</Button>
-												<Button
-													type="button"
-													size="sm"
-													variant="outline"
-													onClick={() => handleDeclineChallenge(challenge)}
-													disabled={acceptingFrom === challenge.from}
-												>
-													<X className="mr-1 h-3.5 w-3.5" />
-													Decline
-												</Button>
-											</div>
-										</div>
-										{acceptDisabled && (
-											<p className="text-xs text-(--ink-300)">Available only while idle and disconnected.</p>
-										)}
-									</div>
-								);
-							})}
-						</div>
-					)}
-
-					{activeOutgoingChallenge && (
-						<div className="space-y-2 rounded-lg border border-(--gold-500)/20 bg-(--obsidian-800) p-3">
-							<div className="flex items-center justify-between gap-2">
-								<div className="min-w-0">
-									<p className="truncate text-sm font-medium text-(--ink-100)">Challenge sent to @{activeOutgoingChallenge.to}</p>
-									<p className="truncate text-xs text-(--ink-300)">
-										Room {activeOutgoingChallenge.peerId.slice(0, 12)}... expires in {formatChallengeTimeRemaining(activeOutgoingChallenge.expiresAt, now)}
-									</p>
-								</div>
-								<Button
-									type="button"
-									size="sm"
-									onClick={handleOpenOutgoingRoom}
-									disabled={openingOutgoing || connectionState !== 'disconnected' || matchmakingStatus !== 'idle'}
-								>
-									<Users className="mr-1 h-3.5 w-3.5" />
-									Open Room
-								</Button>
-							</div>
-							<Button type="button" variant="ghost" size="sm" onClick={clearOutgoingChallenge} className="w-full">
-								Cancel Challenge
-							</Button>
-						</div>
-					)}
-
-					{connectionState === 'disconnected' && matchmakingStatus === 'idle' && (
-						<div className="space-y-4">
-							<Button onClick={handleQuickMatch} className="w-full" size="lg">
-								<Zap className="w-4 h-4 mr-2" />
-								Quick Match
-							</Button>
-							<div className="relative">
-								<div className="absolute inset-0 flex items-center">
-									<span className="w-full border-t" />
-								</div>
-								<div className="relative flex justify-center text-xs uppercase">
-									<span className="bg-(--obsidian-900) px-2 text-(--ink-300)">Or</span>
-								</div>
-							</div>
-							<Button onClick={handleHost} className="w-full" variant="outline">
-								Host Game
-							</Button>
-							<div className="space-y-2">
-								<Input
-									placeholder="Enter Game ID"
-									value={joinId}
-									onChange={(e) => setJoinId(e.target.value)}
-									onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
-								/>
-								<Button onClick={handleJoin} className="w-full" variant="outline">
-									Join Game
-								</Button>
-							</div>
-						</div>
-					)}
-
-					{matchmakingStatus === 'queued' && (
-						<div className="text-center space-y-4">
-							<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-(--gold-400) mx-auto" />
-							<p className="text-sm text-(--ink-300)">Searching for opponent...</p>
-							{queuePosition !== null && (
-								<p className="text-xs text-(--ink-300)">
-									Position in queue: {queuePosition}
-								</p>
-							)}
-							<Button onClick={leaveQueue} variant="outline" className="w-full">
-								Cancel Search
-							</Button>
-						</div>
-					)}
-
-					{matchmakingStatus === 'matched' && connectionState !== 'connected' && (
-						<div className="text-center space-y-2">
-							<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-(--gold-400) mx-auto" />
-							<p className="text-sm font-medium text-(--ink-100)">{matchProgress.title}...</p>
-							<p className="text-xs text-(--ink-300)">{matchProgress.detail}</p>
-						</div>
-					)}
-
-					{matchmakingError && (
-						<div className="p-4 bg-(--blood-500)/10 border border-(--blood-500)/20 rounded-lg">
-							<p className="text-sm text-(--blood-300)">{matchmakingError}</p>
-							<div className="flex gap-2 mt-2">
-								<Button onClick={leaveQueue} variant="outline" className="flex-1">
-									Try Again
-								</Button>
-								<Button
-									onClick={() => {
-										leaveQueue();
-										setMode('manual');
-									}}
-									variant="outline"
-									className="flex-1"
-								>
-									Use Manual Match
-								</Button>
-							</div>
-						</div>
-					)}
-
-					{connectionState === 'connecting' && (
-						<div className="text-center space-y-2">
-							<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-(--gold-400) mx-auto" />
-							<p className="text-sm text-(--ink-300)">
-								{isHost ? 'Creating game...' : 'Connecting...'}
-							</p>
-						</div>
-					)}
-
-
-					{connectionState === 'waiting' && myPeerId && (
-						<div className="space-y-4">
-							<div className="p-4 bg-(--obsidian-800) rounded-lg">
-								<div className="flex items-center justify-between mb-2">
-									<span className="text-sm font-medium">Your Game ID:</span>
-									<Button
-										variant="ghost"
-										size="sm"
-										onClick={handleCopyId}
-										className="h-8 w-8 p-0"
-									>
-										{copied ? (
-											<Check className="w-4 h-4 text-green-500" />
-										) : (
-											<Copy className="w-4 h-4" />
-										)}
-									</Button>
-								</div>
-								<code className="text-xs font-mono break-all">{myPeerId}</code>
-								<p className="text-xs text-(--ink-300) mt-2">
-									Share this ID with your opponent
-								</p>
-							</div>
-							<div className="text-center space-y-2">
-								<div className="flex justify-center gap-1">
-									<div className="animate-bounce h-2 w-2 rounded-full bg-(--gold-400)" style={{ animationDelay: '0ms' }} />
-									<div className="animate-bounce h-2 w-2 rounded-full bg-(--gold-400)" style={{ animationDelay: '150ms' }} />
-									<div className="animate-bounce h-2 w-2 rounded-full bg-(--gold-400)" style={{ animationDelay: '300ms' }} />
-								</div>
-								<p className="text-sm text-(--ink-300)">Waiting for opponent to join...</p>
-							</div>
-							<Button onClick={handleDisconnect} variant="destructive" className="w-full">
-								<X className="w-4 h-4 mr-2" />
-								Cancel
-							</Button>
-						</div>
-					)}
-
-					{connectionState === 'connected' && myPeerId && (
-						<div className="space-y-4">
-							<div className="p-4 bg-(--obsidian-800) rounded-lg">
-								<div className="flex items-center justify-between mb-2">
-									<span className="text-sm font-medium">Your Game ID:</span>
-									<Button
-										variant="ghost"
-										size="sm"
-										onClick={handleCopyId}
-										className="h-8 w-8 p-0"
-									>
-										{copied ? (
-											<Check className="w-4 h-4 text-green-500" />
-										) : (
-											<Copy className="w-4 h-4" />
-										)}
-									</Button>
-								</div>
-								<code className="text-xs font-mono break-all">{myPeerId}</code>
-								{isHost && !remotePeerId && (
-									<p className="text-xs text-(--ink-300) mt-2">
-										Share this ID with your opponent to let them join
-									</p>
-								)}
-							</div>
-							{isHost && !remotePeerId && (
-								<p className="text-sm text-(--ink-300) text-center">
-									Waiting for opponent to join...
-								</p>
-							)}
-							{remotePeerId && (
-								<div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg space-y-2">
-									<p className="text-sm font-medium text-green-600 dark:text-green-400">
-										<Check size={14} className="inline -mt-0.5 mr-1" aria-hidden={true} /> Connected to {isHost ? 'opponent' : 'host'}
-									</p>
-									<div>
-										<span className="text-xs text-(--ink-300) uppercase tracking-wide">
-											{isHost ? 'Opponent ID' : 'Host ID'}
-										</span>
-										<code className="block text-xs font-mono break-all text-(--ink-100) mt-1">
-											{remotePeerId}
-										</code>
-									</div>
-									<div className="pt-2 border-t border-green-500/20">
-										<p className="text-xs font-semibold uppercase tracking-wide text-(--gold-300)">
-											{matchStarting ? 'Starting match' : matchProgress.title}
-										</p>
-										<p className="mt-1 text-xs text-(--ink-300)">
-											{matchProgress.detail}
-										</p>
-									</div>
-								</div>
-							)}
-							{!matchStarting && (
-								<Button onClick={handleDisconnect} variant="destructive" className="w-full">
-									<X className="w-4 h-4 mr-2" />
-									Disconnect
-								</Button>
-							)}
-						</div>
-					)}
-
-					{connectionState === 'error' && error && (
-						<div className="p-4 bg-(--blood-500)/10 border border-(--blood-500)/20 rounded-lg">
-							<p className="text-sm text-(--blood-300)">{error}</p>
-							<Button onClick={handleDisconnect} variant="outline" className="w-full mt-2">
-								Try Again
-							</Button>
-						</div>
-					)}
+					<IncomingChallengesPanel
+						challenges={activeIncomingChallenges}
+						accessContext={challengeAccessContext}
+						acceptingFrom={acceptingFrom}
+						onAcceptChallenge={handleAcceptChallenge}
+						onDeclineChallenge={handleDeclineChallenge}
+					/>
+					<OutgoingChallengePanel
+						challenge={activeOutgoingChallenge}
+						accessContext={challengeAccessContext}
+						openingOutgoing={openingOutgoing}
+						onOpenRoom={handleOpenOutgoingRoom}
+						onCancelChallenge={clearOutgoingChallenge}
+					/>
+					<IdleMatchControls
+						visible={idleControlsVisible}
+						joinId={joinId}
+						onJoinIdChange={setJoinId}
+						onQuickMatch={handleQuickMatch}
+						onHost={handleHost}
+						onJoin={handleJoin}
+					/>
+					<QueuePanel
+						status={matchmakingStatus}
+						queuePosition={queuePosition}
+						onLeaveQueue={leaveQueue}
+					/>
+					<MatchedProgressPanel
+						status={matchmakingStatus}
+						connectionState={connectionState}
+						matchProgress={matchProgress}
+					/>
+					<MatchmakingErrorPanel
+						error={matchmakingError}
+						onTryAgain={leaveQueue}
+						onUseManualMatch={handleUseManualMatch}
+					/>
+					<ConnectingPanel connectionState={connectionState} isHost={isHost} />
+					<WaitingPanel
+						connectionState={connectionState}
+						myPeerId={myPeerId}
+						copied={copied}
+						onCopyId={handleCopyId}
+						onDisconnect={handleDisconnect}
+					/>
+					<ConnectedPanel
+						connectionState={connectionState}
+						myPeerId={myPeerId}
+						remotePeerId={remotePeerId}
+						isHost={isHost}
+						copied={copied}
+						matchStarting={matchStarting}
+						matchProgress={matchProgress}
+						onCopyId={handleCopyId}
+						onDisconnect={handleDisconnect}
+					/>
+					<ConnectionErrorPanel
+						connectionState={connectionState}
+						error={error}
+						onDisconnect={handleDisconnect}
+					/>
 				</PanelContent>
 			</Panel>
 		</div>

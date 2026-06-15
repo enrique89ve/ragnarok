@@ -28,6 +28,10 @@ import { DeckCardClaimsSchema } from '@shared/protocol-core/deckVerification';
 import { CHALLENGE_SIGNATURE_ALGORITHM } from '@shared/p2pAvailability';
 
 import type { P2PMessage } from './messages';
+import {
+	GAME_STATE_WIRE_CODEC,
+	MAX_COMPRESSED_GAME_STATE_BASE64URL_CHARS,
+} from './stateFrameCodec';
 
 // ── Primitives ─────────────────────────────────────────────────────────────
 
@@ -42,6 +46,10 @@ const PokerTurnDurationMs = z.number().int().min(1).max(300_000);
 // keeps handlers from crashing on `payload.x.y` access; the deeper shape
 // is the handler's responsibility.
 const OpaqueObject = z.record(z.unknown());
+const Base64UrlPayload = z.string()
+	.min(1)
+	.max(MAX_COMPRESSED_GAME_STATE_BASE64URL_CHARS)
+	.regex(/^[A-Za-z0-9_-]+$/);
 
 // ── Cards game command (host-auth, see PVP_WIRE_PROTOCOL §5) ───────────────
 
@@ -88,17 +96,33 @@ const GameCommandEnvelopeSchema = z.object({
 
 // ── Lifecycle / handshake ──────────────────────────────────────────────────
 
-const InitSchema = z.object({
-	type: z.literal('init'),
-	gameState: OpaqueObject,
-	isHost: z.boolean(),
-	matchId: z.string().max(64).optional(),
-}).strict();
+const InitSchema = z.union([
+	z.object({
+		type: z.literal('init'),
+		gameState: OpaqueObject,
+		isHost: z.boolean(),
+		matchId: z.string().max(64).optional(),
+	}).strict(),
+	z.object({
+		type: z.literal('init'),
+		stateCodec: z.literal(GAME_STATE_WIRE_CODEC),
+		compressedGameState: Base64UrlPayload,
+		isHost: z.boolean(),
+		matchId: z.string().max(64).optional(),
+	}).strict(),
+]);
 
-const GameStateSchema = z.object({
-	type: z.literal('gameState'),
-	gameState: OpaqueObject,
-}).strict();
+const GameStateSchema = z.union([
+	z.object({
+		type: z.literal('gameState'),
+		gameState: OpaqueObject,
+	}).strict(),
+	z.object({
+		type: z.literal('gameState'),
+		stateCodec: z.literal(GAME_STATE_WIRE_CODEC),
+		compressedGameState: Base64UrlPayload,
+	}).strict(),
+]);
 
 const OpponentDisconnectedSchema = z.object({
 	type: z.literal('opponentDisconnected'),

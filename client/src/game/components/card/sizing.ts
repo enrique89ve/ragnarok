@@ -1,9 +1,10 @@
 /**
  * <CardFrame> — sizing table.
  *
- * Maps (shape, size) → resolved pixel dimensions and aspect ratio.
- * Centralizes the 280×400 hardcode from the lab `FrameStatic.tsx` and
- * the 130×185 / 180×280 sizes from `SimpleCard.css`.
+ * Maps (shape, size) -> resolved pixel dimensions and aspect ratio.
+ * NFT cards are rendered in three live combat contexts:
+ * hand/opponent previews (`small`), battlefield minions (`medium`), and
+ * large inspection/mulligan views (`large`/`preview`).
  *
  * The four `CardSize` buckets match what `SimpleCard` already ships,
  * so HandFan and SimpleBattlefield migrations don't need new sizes.
@@ -16,11 +17,11 @@ interface SizeSpec {
 	h: number;
 }
 
-/** Base spec per CardSize. Mirrors SimpleCard.css fixed widths/heights. */
+/** Base NFT spec per CardSize. All NFT callers resolve to 7:10. */
 const SIZE_SPECS: Record<CardSize, SizeSpec> = {
-	small:   { w:  90, h: 130 },
-	medium:  { w: 130, h: 185 },
-	large:   { w: 200, h: 280 },
+	small:   { w: 132, h: 189 },
+	medium:  { w: 156, h: 223 },
+	large:   { w: 220, h: 314 },
 	preview: { w: 280, h: 400 },
 };
 
@@ -36,22 +37,18 @@ const POKER_SIZE_SPECS: Record<CardSize, SizeSpec> = {
 	preview: { w: 200, h: 280 },
 };
 
-/** Shape → aspect ratio (canonical CSS aspect-ratio value).
- *  `tile` and `portrait` are 3:4, everything else is 5:7. */
+/** Shape -> aspect ratio (canonical CSS aspect-ratio value).
+ *  NFT frames use 7:10 to match exported 280x400/420x600 geometry.
+ *  Poker remains 5:7 because it is a distinct playing-card surface. */
 const SHAPE_ASPECT: Record<CardShape, string> = {
-	portrait: '3 / 4',
-	tile:     '3 / 4',
-	row:      '5 / 7',
-	hand:     '5 / 7',
-	board:    '5 / 7',
-	hero:     '5 / 7',
+	portrait: '7 / 10',
+	tile:     '7 / 10',
+	row:      '7 / 10',
+	hand:     '7 / 10',
+	board:    '7 / 10',
+	hero:     '7 / 10',
 	poker:    '5 / 7',
 };
-
-/** Force a 3:4 box from a 5:7 base spec. Width stays, height grows. */
-function to3by4(spec: SizeSpec): SizeSpec {
-	return { w: spec.w, h: Math.round((spec.w * 4) / 3) };
-}
 
 /** Resolve final dimensions for the root <div>. */
 export function resolveCardDims(input: {
@@ -73,12 +70,11 @@ export function resolveCardDims(input: {
 
 	const base = shape === 'poker' ? POKER_SIZE_SPECS[size] : SIZE_SPECS[size];
 	const aspect = SHAPE_ASPECT[shape];
-	const spec = aspect === '3 / 4' && shape !== 'poker' ? to3by4(base) : base;
 
 	return {
-		width: spec.w,
-		height: spec.h,
+		width: base.w,
+		height: base.h,
 		aspectRatio: aspect,
-		borderRadius: spec.w <= 100 ? 8 : spec.w <= 140 ? 12 : 16,
+		borderRadius: base.w <= 100 ? 8 : base.w <= 140 ? 12 : 16,
 	};
 }

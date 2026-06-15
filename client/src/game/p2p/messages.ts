@@ -4,8 +4,18 @@ import type { DeckCardClaim } from '../../../../shared/protocol-core/deckVerific
 import type { ServerSignedChallenge } from '@shared/p2pAvailability';
 import type { PackagedMatchResult } from '../../data/blockchain/types';
 import type { GameCommandEnvelope } from '../hooks/p2pEnvelope';
-import type { GameState } from '../types';
 import type { ArmySelection } from '../types/ChessTypes';
+import type { GameStateWirePayload } from './stateFrameCodec';
+
+/**
+ * Challenge shape allowed inside `session_authorize`.
+ *
+ * `P2PMatchTicket` is a relay-handshake credential, not a game-wire credential.
+ * Always build this via `stripRelayMatchTicketFromSessionChallenge()` before
+ * signing/sending; TypeScript is structurally typed, so this alias documents
+ * the intended shape while the runtime schema remains the hard boundary.
+ */
+export type SessionAuthorizeChallenge = Omit<ServerSignedChallenge, 'matchTicket'>;
 
 /**
  * Application-level P2P payloads accepted by `peerStore.send`.
@@ -15,9 +25,9 @@ import type { ArmySelection } from '../types/ChessTypes';
  * they reach the transport buffer.
  */
 export type WireMessage =
-	| { type: 'init'; gameState: GameState; isHost: boolean; matchId?: string }
+	| ({ type: 'init'; isHost: boolean; matchId?: string } & GameStateWirePayload)
 	| GameCommandEnvelope
-	| { type: 'gameState'; gameState: GameState }
+	| ({ type: 'gameState' } & GameStateWirePayload)
 	| { type: 'opponentDisconnected' }
 	| { type: 'ping' }
 	| { type: 'pong' }
@@ -50,7 +60,7 @@ export type WireMessage =
 		matchId: string;
 		ephemeralPubkey: string;
 		hiveSig: string;
-		matchChallenge?: ServerSignedChallenge;
+		matchChallenge?: SessionAuthorizeChallenge;
 	}
 	| { type: 'session_renewal'; matchId: string; newPubkey: string; hiveSig: string }
 	| { type: 'session_resumed'; matchId: string; lastSeenStateHash: string }

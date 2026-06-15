@@ -248,8 +248,8 @@ export const MultiplayerGame: React.FC = () => {
 	}, [gameStarted, forfeitSide]);
 
 	// Clean up peer + matchmaking queue when leaving the multiplayer screen.
-	// Without this, a peer created by host() in the lobby's Quick Match path
-	// (or a stale connection from a prior attempt) lingers in peerStore. Next
+	// Without this, a peerId reserved for Quick Match (or a stale connection
+	// from a prior attempt) lingers in peerStore. Next
 	// time the user enters MultiplayerGame, `existingPeerId` is non-null and
 	// the flow inherits zombie state instead of starting fresh.
 	useEffect(() => {

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { accountScopedStorage, registerAccountScopedStore } from '../../lib/storage/accountScopedStorage';
 import type { WarbandRelationStatus } from '@shared/warbandRelations';
-import type { FriendPresenceSnapshot, ServerSignedChallenge } from '@shared/p2pAvailability';
+import type { FriendPresenceSnapshot, P2PMatchTicket, ServerSignedChallenge } from '@shared/p2pAvailability';
 
 export interface Friend {
 	hiveUsername: string;
@@ -20,6 +20,7 @@ export type OutgoingFriendChallenge = {
 	readonly expiresAt: number;
 	readonly matchChallenge?: ServerSignedChallenge;
 	readonly opponentMatchChallenge?: ServerSignedChallenge;
+	readonly matchTicket?: P2PMatchTicket | null;
 };
 
 export type ChallengeCooldown = {

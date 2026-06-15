@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+	buildP2PPresenceFields,
 	buildPresenceHeartbeatBody,
 	canSendPresenceHeartbeat,
 	markPresenceHeartbeatSent,
@@ -35,6 +36,25 @@ describe('SocialPresenceHeartbeat', () => {
 		});
 	});
 
+	it('strips peer id from heartbeat when local P2P access is blocked', () => {
+		expect(buildP2PPresenceFields({
+			peerId: 'peer-1',
+			availability: 'available',
+			p2pAllowed: false,
+		})).toEqual({
+			availability: 'offline',
+		});
+
+		expect(buildP2PPresenceFields({
+			peerId: 'peer-1',
+			availability: 'available',
+			p2pAllowed: true,
+		})).toEqual({
+			peerId: 'peer-1',
+			availability: 'available',
+		});
+	});
+
 	it('does not ask presence for local-only contacts', () => {
 		expect(getPresenceEligibleFriends([
 			{ hiveUsername: 'local-only', relationStatus: 'local' },
@@ -62,6 +82,7 @@ describe('SocialPresenceHeartbeat', () => {
 			challenges: [
 				{
 					from: 'Bob',
+					to: 'Alice',
 					peerId: 'peer-room-1',
 					timestamp: 1000,
 					expiresAt: 2000,
@@ -71,6 +92,7 @@ describe('SocialPresenceHeartbeat', () => {
 				},
 				{
 					from: 'Mallory',
+					to: 'Alice',
 					peerId: '<script>',
 					timestamp: 1000,
 					expiresAt: 2000,
@@ -82,6 +104,7 @@ describe('SocialPresenceHeartbeat', () => {
 		})).toEqual([
 			{
 				from: 'bob',
+				to: 'alice',
 				peerId: 'peer-room-1',
 				timestamp: 1000,
 				expiresAt: 2000,

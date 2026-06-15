@@ -96,6 +96,7 @@ export const MulliganCard: React.FC<MulliganCardProps> = React.memo(({ card, isS
       <SimpleCard
         card={simpleCardData}
         size="large"
+        surface="collection"
         showDescription={false}
         disableTooltips
       />

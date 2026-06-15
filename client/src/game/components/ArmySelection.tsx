@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, CheckCircle2, HeartPulse, Layers3, Search, Shield, Sparkles } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, HeartPulse, Layers3, RotateCw, Search, Shield, Sparkles } from 'lucide-react';
 import { ChessPieceType, ArmySelection as ArmySelectionType, ChessPieceHero, PIECE_BASE_STATS } from '../types/ChessTypes';
 import { CHESS_PIECE_HEROES, getDefaultArmySelection, pieceHasSpells } from '../data/ChessPieceConfig';
 import { useAudio } from '../../lib/stores/useAudio';
@@ -344,6 +344,13 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
     <div className="norse-army-selection">
       <div className="norse-army-bg" />
       <div className="norse-lightning-overlay" />
+      <div className="norse-rotate-device" role="status" aria-live="polite">
+        <div className="norse-rotate-device-panel">
+          <RotateCw className="norse-rotate-device-icon" size={30} strokeWidth={2.1} />
+          <div className="norse-rotate-device-title">Turn Phone Sideways</div>
+          <div className="norse-rotate-device-copy">Warband setup opens in landscape.</div>
+        </div>
+      </div>
 
       {/* TOP BAR */}
       <div className="norse-top-bar">
@@ -419,7 +426,7 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
                 </div>
               </div>
               {hero && (
-                <div className="norse-piece-check">
+                <div className="norse-piece-check" aria-hidden="true">
                   <CheckCircle2 size={16} strokeWidth={2.2} />
                 </div>
               )}
@@ -582,6 +589,8 @@ const ArmySelection: React.FC<ArmySelectionProps> = ({ onComplete, onQuickStart,
                         heroId={hero.id}
                         heroName={hero.name}
                         portrait={hero.portrait}
+                        className="norse-army-portrait-image"
+                        objectFit="cover"
                         fallbackIcon={
                           <PieceGlyph
                             pieceType={pieceType}

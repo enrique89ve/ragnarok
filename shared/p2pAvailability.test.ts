@@ -5,6 +5,7 @@ import {
 	isP2PConnectionStateBusy,
 	parsePresenceHeartbeatBody,
 	readChallengeSendResponse,
+	readP2PMatchTicket,
 	readPresenceHeartbeatResponse,
 } from './p2pAvailability';
 
@@ -65,6 +66,7 @@ describe('p2pAvailability', () => {
 			challenges: [
 				{
 					from: 'Bob',
+					to: 'Alice',
 					peerId: 'peer-2',
 					timestamp: 1000,
 					expiresAt: 2000,
@@ -74,6 +76,7 @@ describe('p2pAvailability', () => {
 				},
 				{
 					from: 'Mallory',
+					to: 'Alice',
 					peerId: 'peer-3',
 					timestamp: 1000,
 					expiresAt: 2000,
@@ -90,6 +93,7 @@ describe('p2pAvailability', () => {
 		expect(response.challenges).toEqual([
 			{
 				from: 'bob',
+				to: 'alice',
 				peerId: 'peer-2',
 				timestamp: 1000,
 				expiresAt: 2000,
@@ -105,6 +109,7 @@ describe('p2pAvailability', () => {
 			ok: true,
 			challenge: {
 				from: 'Bob',
+				to: 'Alice',
 				peerId: 'peer-2',
 				timestamp: 1000,
 				expiresAt: 2000,
@@ -116,6 +121,7 @@ describe('p2pAvailability', () => {
 			ok: true,
 			challenge: {
 				from: 'bob',
+				to: 'alice',
 				peerId: 'peer-2',
 				timestamp: 1000,
 				expiresAt: 2000,
@@ -147,6 +153,48 @@ describe('p2pAvailability', () => {
 			ok: false,
 			reason: 'rate_limited',
 			html: '<script>',
+		})).toEqual({ ok: false, reason: 'invalid_input' });
+	});
+
+	it('parses P2P match tickets and allows them only inside challenge payloads', () => {
+		const matchTicket = {
+			token: `${'a'.repeat(24)}.${'b'.repeat(64)}`,
+			roomId: 'room-1',
+			peerId: 'peer-2',
+			expiresAt: 2_000,
+		};
+
+		expect(readP2PMatchTicket(matchTicket)).toEqual(matchTicket);
+		expect(readChallengeSendResponse({
+			ok: true,
+			challenge: {
+				from: 'Bob',
+				to: 'Alice',
+				peerId: 'peer-2',
+				timestamp: 1000,
+				expiresAt: 2000,
+				nonce: 'nonce_1234567890ab',
+				sigAlg: CHALLENGE_SIGNATURE_ALGORITHM,
+				serverSig: 'a'.repeat(64),
+				matchTicket,
+			},
+		})).toEqual({
+			ok: true,
+			challenge: {
+				from: 'bob',
+				to: 'alice',
+				peerId: 'peer-2',
+				timestamp: 1000,
+				expiresAt: 2000,
+				nonce: 'nonce_1234567890ab',
+				sigAlg: CHALLENGE_SIGNATURE_ALGORITHM,
+				serverSig: 'a'.repeat(64),
+				matchTicket,
+			},
+		});
+		expect(readChallengeSendResponse({
+			ok: true,
+			matchTicket,
 		})).toEqual({ ok: false, reason: 'invalid_input' });
 	});
 });

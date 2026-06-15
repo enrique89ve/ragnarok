@@ -11,6 +11,7 @@
 
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { RotateCw, X } from 'lucide-react';
 import { PieceType } from '../stores/heroDeckStore';
 import { useDeckBuilder, DECK_SIZE, isClassCard, getMaxCopies } from './deckbuilder';
 import type { CardGroup } from './deckbuilder';
@@ -160,19 +161,32 @@ export const HeroDeckBuilder: React.FC<HeroDeckBuilderProps> = ({
 			initial={{ opacity: 0 }}
 			animate={{ opacity: 1 }}
 			exit={{ opacity: 0 }}
-			className="deck-builder fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+			className="deck-builder"
 			onClick={onClose}
 		>
+			<div className="db-rotate-device" role="status" aria-live="polite" onClick={e => e.stopPropagation()}>
+				<div className="db-rotate-device-panel">
+					<button type="button" className="db-rotate-close" onClick={onClose} aria-label="Close deck builder">
+						<X size={18} strokeWidth={2.1} aria-hidden="true" />
+					</button>
+					<RotateCw className="db-rotate-device-icon" size={30} strokeWidth={2.1} aria-hidden="true" />
+					<div className="db-rotate-device-title">Turn Phone Sideways</div>
+					<div className="db-rotate-device-copy">Deck building is tuned for landscape.</div>
+				</div>
+			</div>
 			<motion.div
 				initial={{ scale: 0.95, opacity: 0 }}
 				animate={{ scale: 1, opacity: 1 }}
 				exit={{ scale: 0.95, opacity: 0 }}
 				transition={{ duration: 0.2 }}
-				className="db-main-container db-landscape-safe w-[96vw] max-w-[1400px] h-[92vh] rounded-xl shadow-2xl flex flex-col overflow-hidden"
+				className="db-main-container"
 				onClick={e => e.stopPropagation()}
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="deck-builder-title"
 			>
 				{/* Header */}
-				<div className="db-header shrink-0">
+				<header className="db-header">
 					<div className="db-header-portrait">
 						{heroPortrait ? (
 							<>
@@ -187,17 +201,19 @@ export const HeroDeckBuilder: React.FC<HeroDeckBuilderProps> = ({
 					</div>
 					<div className="db-header-info">
 						<div>
-							<div className="db-header-title">Build Deck: {heroName}</div>
+							<div id="deck-builder-title" className="db-header-title">Build Deck: {heroName}</div>
 							<div className="db-header-subtitle">{pieceType} &bull; {heroClass} Class</div>
 						</div>
 						<div className="db-header-actions">
 							<div className={`db-header-counter ${db.isDeckComplete ? 'complete' : 'incomplete'}`}>
 								{db.deckCardIds.length}/{DECK_SIZE} Cards
 							</div>
-							<button type="button" onClick={onClose} className="db-close-btn">&times;</button>
+							<button type="button" onClick={onClose} className="db-close-btn" aria-label="Close deck builder">
+								<X size={20} strokeWidth={2.1} aria-hidden="true" />
+							</button>
 						</div>
 					</div>
-				</div>
+				</header>
 
 				<AnimatePresence>
 					{showTutorial && (
@@ -281,9 +297,9 @@ export const HeroDeckBuilder: React.FC<HeroDeckBuilderProps> = ({
 				</AnimatePresence>
 
 				{/* Main Content */}
-				<div className="db-main-split">
+				<main className="db-main-split">
 					{/* Card Collection / Art Gallery */}
-					<div className="db-collection-pane">
+					<section className="db-collection-pane" aria-label="Card catalog">
 						<>
 							{/* Filters */}
 							<div className="db-filter-bar">
@@ -294,12 +310,14 @@ export const HeroDeckBuilder: React.FC<HeroDeckBuilderProps> = ({
 										value={db.searchTerm}
 										onChange={e => db.setSearchTerm(e.target.value)}
 										className="db-search-input"
+										aria-label="Search cards"
 									/>
 									<select
 										value={db.filterType}
 										onChange={e => db.setFilterType(e.target.value as any)}
 										className="db-filter-select"
 										title="Filter by card type"
+										aria-label="Filter by card type"
 									>
 										<option value="all">All Types</option>
 										<option value="minion">Minions</option>
@@ -313,6 +331,7 @@ export const HeroDeckBuilder: React.FC<HeroDeckBuilderProps> = ({
 										onChange={e => setRarityFilter(e.target.value as RarityFilter)}
 										className="db-filter-select"
 										title="Filter by rarity"
+										aria-label="Filter by rarity"
 									>
 										<option value="all">All Rarities</option>
 										<option value="common">Common</option>
@@ -325,6 +344,7 @@ export const HeroDeckBuilder: React.FC<HeroDeckBuilderProps> = ({
 										onChange={e => db.setSortBy(e.target.value as any)}
 										className="db-filter-select"
 										title="Sort cards"
+										aria-label="Sort cards"
 									>
 										<option value="cost">Sort by Cost</option>
 										<option value="name">Sort by Name</option>
@@ -339,6 +359,8 @@ export const HeroDeckBuilder: React.FC<HeroDeckBuilderProps> = ({
 												key={cost}
 												onClick={() => db.handleManaFilter(cost)}
 												className={`db-mana-btn ${(db.minCost === cost || (cost === 7 && db.minCost === 7)) ? 'active' : ''}`}
+												aria-pressed={db.minCost === cost || (cost === 7 && db.minCost === 7)}
+												aria-label={`Filter by ${cost === 7 ? '7 or more' : cost} mana`}
 											>
 												{cost === 7 ? '7+' : cost}
 											</button>
@@ -349,7 +371,7 @@ export const HeroDeckBuilder: React.FC<HeroDeckBuilderProps> = ({
 											Clear
 										</button>
 									)}
-									<span className="db-showing-count" style={{ marginLeft: 'auto' }}>
+									<span className="db-showing-count">
 										{db.totalFilteredCards} of {db.totalValidCards} cards
 									</span>
 								</div>
@@ -389,11 +411,21 @@ export const HeroDeckBuilder: React.FC<HeroDeckBuilderProps> = ({
 															e.preventDefault();
 															db.setSelectedCard(card);
 														}}
+														onKeyDown={e => {
+															if ((e.key === 'Enter' || e.key === ' ') && canAdd) {
+																e.preventDefault();
+																db.handleAddCard(card);
+															}
+														}}
 														onMouseEnter={e => handleCardMouseEnter(card, e)}
 														onMouseMove={holo.onMouseMove}
 														onMouseLeave={e => { holo.onMouseLeave(e); handleCardMouseLeave(); }}
 														className={`db-card rarity-${rarityKey} ${getHoloTier(rarityKey) || ''} ${isMaxed ? 'not-playable' : ''} ${isLinkedSuper ? 'super-minion-linked' : ''}`}
 														title={canAdd ? 'Click to add \u2022 Right-click for details' : 'Right-click for details'}
+														role="button"
+														tabIndex={0}
+														aria-disabled={!canAdd}
+														aria-label={`${canAdd ? 'Add' : 'Inspect'} ${card.name}`}
 													>
 														{/* Art Section */}
 														<div className="db-card-art">
@@ -495,10 +527,10 @@ export const HeroDeckBuilder: React.FC<HeroDeckBuilderProps> = ({
 								))}
 							</div>
 						</>
-					</div>
+					</section>
 
 					{/* Deck Sidebar */}
-					<div className="db-sidebar">
+					<aside className="db-sidebar" aria-label="Current deck">
 						<div className="db-sidebar-header">
 							<div className="db-sidebar-title">Your Deck</div>
 							<div className="db-sidebar-actions">
@@ -548,7 +580,16 @@ export const HeroDeckBuilder: React.FC<HeroDeckBuilderProps> = ({
 										<div
 											key={card.id}
 											onClick={() => db.handleRemoveCard(card)}
+											onKeyDown={e => {
+												if (e.key === 'Enter' || e.key === ' ') {
+													e.preventDefault();
+													db.handleRemoveCard(card);
+												}
+											}}
 											className={`db-deck-card rarity-${rarityKey}`}
+											role="button"
+											tabIndex={0}
+											aria-label={`Remove ${card.name} from deck`}
 										>
 											<div className="db-deck-mana">{card.manaCost ?? 0}</div>
 											<span className="db-deck-name">{card.name}</span>
@@ -573,8 +614,8 @@ export const HeroDeckBuilder: React.FC<HeroDeckBuilderProps> = ({
 								{db.isDeckComplete ? 'Save Complete Deck' : `Save Deck (${db.deckCardIds.length}/30)`}
 							</button>
 						</div>
-					</div>
-				</div>
+					</aside>
+				</main>
 			</motion.div>
 
 			{/* Hover Tooltip */}
@@ -668,7 +709,7 @@ const CardDetailFlip: React.FC<{
 			initial={{ opacity: 0 }}
 			animate={{ opacity: 1 }}
 			exit={{ opacity: 0 }}
-			className="fixed inset-0 z-[210] db-detail-backdrop"
+			className="db-detail-backdrop"
 			onClick={onClose}
 		>
 			<div className="cd-scene">

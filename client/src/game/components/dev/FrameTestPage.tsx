@@ -1,10 +1,10 @@
 /**
  * Frame Test — dev-only route.
  *
- * Mirrors the actual opponent-hand layout (`<div class="opponent-revealed-card
- * scale-[0.4] -mx-8"><SimpleCardCompat/></div>`) so we can verify the
- * CardFrame art containment visually WITHOUT sitting through a real
- * match (which requires auth + game state).
+ * Mirrors the actual opponent-hand layout (`<div class="opponent-revealed-card">
+ * <SimpleCardCompat/></div>`) so we can verify CardFrame art containment
+ * visually WITHOUT sitting through a real match (which requires auth + game
+ * state).
  *
  * The art asset and a synthetic card dataset are picked from the same
  * `cardLab/sampleCards` source so paths and dims match production.
@@ -14,8 +14,13 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { routes } from '../../../lib/routes';
 import { sampleForRarity, resolveSample } from './cardLab/sampleCards';
-import { getCardArtPath } from '../../utils/art/artMapping';
 import { SimpleCardCompat } from '../card/SimpleCardCompat';
+import {
+	CardCardBack,
+	CardRankSuit,
+	PokerCardFrame,
+} from '../card';
+import type { NorseSuit } from '../../utils/cards/norsePokerCard';
 import type { Rarity } from '@shared/schemas/rarity';
 import '../../combat/styles/opponent-hand.css';
 import '../../combat/styles/community-cards.css';
@@ -23,6 +28,11 @@ import '../card/CardFrame.css';
 import './FrameTestPage.css';
 
 const RARITIES: Rarity[] = ['common', 'rare', 'epic', 'mythic'];
+const POKER_SAMPLES: ReadonlyArray<{ suit: NorseSuit; value: string }> = [
+	{ suit: 'spades', value: 'A' },
+	{ suit: 'hearts', value: 'K' },
+	{ suit: 'diamonds', value: '9' },
+];
 
 function makeCard(rarity: Rarity, id: number, withArt: boolean) {
 	const sample = sampleForRarity(rarity);
@@ -86,7 +96,7 @@ export default function FrameTestPage() {
 					{cards.map((c, i) => (
 						<div
 							key={c.id}
-							className="opponent-revealed-card scale-[0.4] -mx-8"
+							className="opponent-revealed-card"
 							data-card-index={i}
 						>
 							{renderCard(c)}
@@ -103,6 +113,20 @@ export default function FrameTestPage() {
 							{renderCard(c)}
 						</div>
 					))}
+				</div>
+			</section>
+
+			<section className="frame-test-page__row">
+				<h2>Poker frame (production slots)</h2>
+				<div className="frame-test-page__poker">
+					{POKER_SAMPLES.map((card) => (
+						<PokerCardFrame key={`${card.suit}-${card.value}`} size="medium">
+							<CardRankSuit suit={card.suit} value={card.value} />
+						</PokerCardFrame>
+					))}
+					<PokerCardFrame size="medium" variant="face-down">
+						<CardCardBack />
+					</PokerCardFrame>
 				</div>
 			</section>
 		</div>

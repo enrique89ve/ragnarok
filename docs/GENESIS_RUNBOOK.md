@@ -577,13 +577,19 @@ On a fresh browser (no IndexedDB):
 If server indexer is enabled (`ENABLE_CHAIN_INDEXER=true`):
 
 1. Start server, wait for indexer to catch up to LIB
-2. Query `/api/chain/leaderboard` — should return empty (no matches yet)
-3. Query `/api/chain/player/:account/cards` — should return minted cards for `@ragnarok`
+2. Query `/api/chain/status` and confirm `blocksBehind=0`, the expected
+   `stateFile`, and a cursor at or past the seal block
+3. Query `/api/chain/leaderboard` — should return empty (no matches yet)
 4. Query `/api/chain/player/:account/rune?seasonId=S01` — should return the
    replay-derived RUNE balance summary for the account
 5. Query `/api/chain/rune/state?seasonId=S01` — should return global RUNE caps
    and drift summary
-6. Verify indexer cursor is at or past seal block
+6. Verify NFT custody through NFTLox, not through `/api/chain/player/:account/cards`.
+   During transitional JSON ownership mode, that route is only a compatibility
+   projection and must not be used as mainnet custody evidence.
+
+The live server indexer contract and NFTLox boundary are documented in
+[`HIVE_INDEXER_CONTRACT.md`](HIVE_INDEXER_CONTRACT.md).
 
 ### 8.3 Pack Opening Validation
 

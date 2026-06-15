@@ -1,9 +1,11 @@
 # Campaign Protocol V1
 
 Campaign progress is derived from Hive `custom_json` operations, not from
-client-local `completedMissions`. The server indexer is a convenience reader:
-any compatible indexer should be able to derive the same state from chain ops,
-the campaign registry hash, and deterministic replay.
+client-local `completedMissions`. The public server read model is a convenience
+surface: any compatible indexer should be able to derive the same state from
+chain ops, the campaign registry hash, and deterministic replay.
+The current server indexer selection and validation contract lives in
+[`HIVE_INDEXER_CONTRACT.md`](./HIVE_INDEXER_CONTRACT.md).
 
 ## Operation
 
@@ -71,8 +73,9 @@ result to a specific local run draft.
 
 ## V1 State
 
-The testnet server persists derived campaign state in `data/chain-state.json`
-through the existing `StateAdapter` path:
+The testnet server persists derived campaign state in the runtime-specific
+chain-state file, for example `data/chain-state.alfa-testnet.json`, through the
+existing `StateAdapter` path:
 
 - `campaignNonces`
 - `campaignSubmissions`

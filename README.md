@@ -56,9 +56,9 @@ new network stages.
 | 4 | Genesis / mainnet rehearsal | `stage=mainnet` in a controlled rehearsal | Multisig ceremony, irreversible replay, pack minting, seal lifecycle, production indexer behavior. | Treating rehearsal balances as final user value. | Tabletop rehearsal, hash bundle, post-seal replay validation. |
 | 5 | Mainnet | `VITE_NETWORK_STAGE=mainnet`, `runtimePhase=mainnet`, `economic=true` | Permanent ownership and economy. | Resettable shortcuts, QA catalog, testnet protocol ids. | Only after Genesis gates are closed. |
 
-Closed Beta remains blocked while any P0 item in
-[`docs/BETA_TESTNET_ROADMAP.md`](docs/BETA_TESTNET_ROADMAP.md) is still open.
-The compact scope model lives in
+The active readiness plan lives in
+[`docs/TESTNET_READINESS_FAST_TRACK.md`](docs/TESTNET_READINESS_FAST_TRACK.md).
+The compact historical scope model lives in
 [`docs/BETA_TESTNET_SCOPE.md`](docs/BETA_TESTNET_SCOPE.md), and the operator
 smoke commands live in [`docs/TESTNET_RUNBOOK.md`](docs/TESTNET_RUNBOOK.md).
 
@@ -122,7 +122,7 @@ Five mythological pantheons clash for supremacy. Norse frost giants wage war aga
 - **Dual-signature match results** with Merkle transcript anchoring and PoW
 - **Supply caps** — per-card limits canonized in [`docs/RULEBOOK.md`](docs/RULEBOOK.md) (Card Rarity table)
 - **Anti-cheat** — Mandatory WASM engine, PoW, slash evidence, nonce anti-replay, STUN/TURN NAT traversal
-- **6-tier decentralized indexer** — on-chain CID → IPFS → Hive fallback → HafSQL → bundled snapshot → P2P relay
+- **Deterministic Ragnarok indexer** — irreversible Hive replay for gameplay, economy, packs, and ranking; decentralized indexer designs are historical/future references
 - **Cold multisig governance** — genesis → seal lifecycle permanently closes admin minting
 
 ### Multiplayer (P2P WebRTC)
@@ -423,23 +423,26 @@ Attacking with elemental advantage grants **+2 Attack, +2 Health, +20 Armor**.
 
 ## Blockchain: Hive NFT System
 
-All card ownership, match results, and rewards live on Hive Layer 1 as `custom_json` operations. Canonical state is derived from irreversible block replay — the server is a cache, the chain is truth.
+NFT custody and ownership belong to NFTLox once the collection integration is
+active. Ragnarok's Hive `custom_json` replay derives gameplay and economy
+state: match results, ELO/ranking, RUNE/Eitr, pack purchase/exchange triggers,
+pack RNG resolution, campaign/daily rewards, and XP/level projection. The
+server is a cache/read model; NFTLox custody plus irreversible Ragnarok replay
+are the authority boundary.
 
 ```
-Genesis → Mint Batches → Seal → Admin minting permanently closed
-                                  ↓
-    Canonical writes use `ragnarok-cards` app ID
-    Legacy `rp_*` ops accepted as aliases indefinitely
-    Pack opening via commit-reveal (not txid-seeded)
-    ELO, RUNE, XP all chain-derived by replay engine
+NFTLox collection      -> NFT custody, distribution, ownership, transfer authority
+Ragnarok custom_json   -> match_result, campaign_result, rune_exchange, pack_purchase
+Shared replay core     -> ELO, RUNE, Eitr, XP/level projection, Season Score inputs
+/api/chain             -> read-only evidence over replay, not custody authority
 ```
 
 - **Protocol spec**: [`docs/RAGNAROK_PROTOCOL_V1.md`](docs/RAGNAROK_PROTOCOL_V1.md) — frozen normative specification
 - **Conformance suite**: 170 tests (37 golden vectors + 38 replay traces + 95 existing)
-- **Server indexer**: Sequential irreversible block scan via `get_ops_in_block` + LIB cursor; starts by default unless `ENABLE_CHAIN_INDEXER=false`
+- **Indexer contract**: Irreversible Hive replay with block RPC fallback and HafAH `custom_json` range catch-up; deterministic selection, validation, and NFTLox boundary in [`docs/HIVE_INDEXER_CONTRACT.md`](docs/HIVE_INDEXER_CONTRACT.md)
 - **Index checkpoints**: Optional server-side `hive-tx` publisher writes compact projection hashes with `RAGNAROK_INDEX_ACCOUNT` Posting authority when `ENABLE_INDEX_CHECKPOINT_PUBLISHER=true`
 - **Client replay**: Shared `protocol-core` module with LIB-gated application
-- **Chain read API**: Public read-only chain-derived reads live under `/api/chain`; RUNE uses `/api/chain/player/:username/rune` plus `/api/chain/rune/{state,ledger,balances}`
+- **Chain read API**: Public read-only chain-derived reads live under `/api/chain`; RUNE uses `/api/chain/player/:username/rune` plus `/api/chain/rune/{state,ledger,balances}`. NFT custody checks must use NFTLox in NFTLox-enabled phases.
 
 ### Hive Keys And Environment Security
 
@@ -613,7 +616,7 @@ server/
 
 - [x] Protocol v1.0 frozen — 14 canonical ops, 5 launch gates closed
 - [x] Shared `protocol-core` module — one replay engine for browser + server
-- [x] Block-complete server indexer (`get_ops_in_block` + LIB cursor)
+- [x] Block-complete Ragnarok read-model indexer (`get_ops_in_block` + LIB cursor)
 - [x] Commit-reveal pack opening with auto-finalize (anti-grind, anti-selective-reveal)
 - [x] Pinned-pubkey match anchoring (post-seal verification uses payload keys only)
 - [x] Real Hive signature verification (hive-tx ECDSA recovery)
@@ -625,7 +628,7 @@ server/
 - [x] Card visual overhaul — 50+ SVG keyword icons, SVG stat emblems, rarity gems
 - [x] Campaign story mode — per-mission narrative intro, AAA cinematic crawl with letterbox
 - [x] P2P resilience — STUN/TURN, 15s grace period, heartbeat, message buffer, exponential reconnect
-- [x] 6-tier decentralized indexer — IPFS + HafSQL fallback, zero server required
+- [x] Deterministic indexer contract documented — runtime server replay is canonical; decentralized indexer designs remain historical/future references
 - [x] Marketplace UI — `/marketplace` with browse, list, buy, offer
 - [x] RUNE chain read API — `/api/chain/player/:username/rune` plus `/api/chain/rune/{state,ledger,balances}`, with no parallel `/api/testnet/rune/*`
 - [x] Chain API rate limits — tighter caps for sync-on-demand reads and RUNE ledger/state views
@@ -658,13 +661,16 @@ server/
 | Document | Description |
 |----------|-------------|
 | [RAGNAROK_PROTOCOL_V1.md](docs/RAGNAROK_PROTOCOL_V1.md) | **Frozen protocol spec** — base ops, authority matrix, finality rules, launch gates |
-| [BETA_TESTNET_SCOPE.md](docs/BETA_TESTNET_SCOPE.md) | Testnet environment model, current gates, RUNE limits, and closed-beta boundaries |
-| [BETA_TESTNET_ROADMAP.md](docs/BETA_TESTNET_ROADMAP.md) | Live blocker list for Alfa -> Closed Testnet Beta readiness |
+| [HIVE_INDEXER_CONTRACT.md](docs/HIVE_INDEXER_CONTRACT.md) | **Current indexer contract** — Hive inputs, replay selection, validation guarantees, NFTLox boundary |
+| [TESTNET_READINESS_FAST_TRACK.md](docs/TESTNET_READINESS_FAST_TRACK.md) | **Active plan** — what remains for Alfa Testnet player-readiness and Closed Beta cutover |
+| [DESIGN.md](DESIGN.md) | Visual system, poker board readability rules, motion, typography, and color direction |
+| [BETA_TESTNET_SCOPE.md](docs/BETA_TESTNET_SCOPE.md) | Historical testnet scope and economy constraints; not the active sprint plan |
 | [TESTNET_RUNBOOK.md](docs/TESTNET_RUNBOOK.md) | Testnet commands, runtime checks, and manual smoke procedures |
 | [TESTNET_WEEK_ONE_SPEC.md](docs/TESTNET_WEEK_ONE_SPEC.md) | QA Season 0 week-one operating checklist and exit criteria |
+| [POKER_ARENA_UI.md](docs/POKER_ARENA_UI.md) | Poker arena technical canon: layers, board contract, state flow, migration plan |
 | [ATOMIC_NFT_PACKS_DESIGN.md](docs/ATOMIC_NFT_PACKS_DESIGN.md) | Pack system — atomic transfers, pack NFTs, DNA lineage |
 | [DUAT_AIRDROP_DESIGN.md](docs/DUAT_AIRDROP_DESIGN.md) | **DUAT airdrop** — 30% supply to 3,511 holders, claim window, treasury absorption |
-| [DECENTRALIZED_INDEXER_DESIGN.md](docs/DECENTRALIZED_INDEXER_DESIGN.md) | **Light HAF** — 6-tier IPFS index, WoT operators, HafSQL fallback |
+| [DECENTRALIZED_INDEXER_DESIGN.md](docs/DECENTRALIZED_INDEXER_DESIGN.md) | Historical/future Light HAF design; not the live server indexer contract |
 | [RULEBOOK.md](docs/RULEBOOK.md) | Complete game rules with examples |
 | [GAME_FLOW.md](docs/GAME_FLOW.md) | Game flow diagrams and state management |
 | [GENESIS_RUNBOOK.md](docs/GENESIS_RUNBOOK.md) | **Operational ceremony guide** — multisig signing, checkpoints, emergency procedures |

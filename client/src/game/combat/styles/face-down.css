@@ -2,10 +2,9 @@
    The legacy `.arena-poker-card.norse.face-down` and its slot rules
    (`.card-back`, `.corner-rune`, `.card-back-shimmer`, etc.) were
    deleted along with the old <PlayingCard> class — no JSX in the
-   repo still carries `.arena-poker-card`. The new poker back
-   chrome lives in PokerCardFrame.css (`.poker-card-frame--face-down`)
-   and the empty-slot chrome lives in community-cards.css
-   (`.card-placeholder`). */
+   repo still carries `.arena-poker-card`. The poker back surface lives
+   in the `.card-card-back` slot, and the empty-slot chrome lives in
+   community-cards.css (`.card-placeholder`). */
 
 /* ========================================
    OPPONENT FACE-DOWN HAND DISPLAY
@@ -18,7 +17,7 @@
 
 .opponent-card-back {
   width: var(--opponent-hand-card-width, 78px);
-  height: 110px;
+  height: calc(var(--opponent-hand-card-width, 78px) * 110 / 78);
   /* Background stack + beveled rim live in
      `client/src/game/components/card/pokerFaceDown.css` (loaded via
      poker-core.css). Only the hand-display geometry stays here. */
@@ -38,9 +37,7 @@
   content: '';
 }
 
-/* Eihwaz rune — identity, beveled (light top-left + dark bottom-right)
-   to read as raised gold. Same recipe as .poker-card-frame--face-down
-   and .card-placeholder, scaled down for the 78×110 hand card. */
+/* Eihwaz rune — flat identity mark, scaled down for the 78×110 hand card. */
 .opponent-card-back::after {
   content: 'ᛇ';
   position: absolute;
@@ -50,10 +47,8 @@
   font-family: 'Cinzel', serif;
   font-size: 1.4rem;
   line-height: 1;
-  color: rgba(201, 168, 76, 0.68);
-  text-shadow:
-    -0.6px -0.6px 0 rgba(255, 235, 180, 0.5),
-    0.6px 0.6px 0 rgba(0, 0, 0, 0.8);
+  color: rgba(201, 168, 76, 0.72);
+  text-shadow: none;
 }
 
 /* Fan effect on hover */

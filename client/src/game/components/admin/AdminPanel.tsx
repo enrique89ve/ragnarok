@@ -566,6 +566,7 @@ export default function AdminPanel() {
 						<AdminConsumerRow label="Stage" value={adminConfig.stage} ok={adminConfig.stage === 'testnet'} />
 						<AdminConsumerRow label="Phase" value={adminConfig.runtimePhase} ok={isNftFullTestnetRuntimePhase(adminConfig.runtimePhase)} />
 						<AdminConsumerRow label="Reset epoch" value={adminConfig.resetEpoch} ok={adminConfig.resetEpoch.length > 0} />
+						<AdminConsumerRow label="Index start" value={adminConfig.indexStartBlock.toLocaleString()} ok={adminConfig.indexStartBlock > 0} />
 						<AdminConsumerRow label="Admin" value={`@${adminConfig.adminAccount}`} ok={adminConfig.adminAccount.length > 0} />
 						<AdminConsumerRow label="Operator" value="Missing" ok={false} />
 					</div>
@@ -915,7 +916,7 @@ export default function AdminPanel() {
 										<StatCard label="Stage" value={adminConfig?.stage ?? 'unknown'} color="blue" />
 										<StatCard label="Phase" value={runtimePhaseLabel} color="green" />
 										<StatCard label="Reset Epoch" value={adminConfig?.resetEpoch ?? 'unknown'} color="blue" />
-										<StatCard label="Protocol ID" value={adminConfig?.protocolId ?? 'unknown'} color="blue" />
+										<StatCard label="Index Start" value={(adminConfig?.indexStartBlock ?? 0).toLocaleString()} color={adminConfig?.indexStartBlock ? 'green' : 'red'} />
 									</div>
 									<section className="rounded-lg border border-gray-700/50 bg-gray-900/60 p-4">
 											<h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-amber-300">Local Runtime</h3>
@@ -956,6 +957,7 @@ export default function AdminPanel() {
 										<div className="grid gap-3 md:grid-cols-4">
 											<StatCard label="Phase" value={runtimePhaseLabel} color={fullNftPhase ? 'green' : 'amber'} />
 											<StatCard label="Reset Epoch" value={adminConfig?.resetEpoch ?? 'missing'} color={adminConfig?.resetEpoch ? 'blue' : 'red'} />
+											<StatCard label="Index Start" value={(adminConfig?.indexStartBlock ?? 0).toLocaleString()} color={adminConfig?.indexStartBlock ? 'green' : 'red'} />
 											<StatCard label="QA Catalog" value={adminConfig?.qaFullCatalogEnabled ? 'Enabled' : 'Disabled'} color={adminConfig?.qaFullCatalogEnabled ? 'red' : 'green'} />
 											<StatCard label="NFTLox" value={adminConfig?.nftLoxProtocolId ?? 'missing'} color={adminConfig?.nftLoxProtocolId ? 'blue' : 'red'} />
 											<StatCard label="State" value={adminConfig?.state.persistence ?? 'unknown'} color={adminConfig?.state.persistence === 'json-file' ? 'green' : 'amber'} />
@@ -1013,6 +1015,7 @@ export default function AdminPanel() {
 						<IndexerStatusCard
 							state={indexerStatus}
 							onRefresh={refreshIndexerStatus}
+							indexStartBlock={adminConfig?.indexStartBlock ?? 0}
 						/>
 
 						<P2PStatusCard
@@ -1340,9 +1343,11 @@ function formatCutoverCheckId(id: CutoverCheckId): string {
 function IndexerStatusCard({
 	state,
 	onRefresh,
+	indexStartBlock,
 }: {
 	state: IndexerStatusState;
 	onRefresh: () => void;
+	indexStartBlock: number;
 }) {
 	const data = state.data;
 	const health = deriveIndexerHealth(state);
@@ -1384,20 +1389,31 @@ function IndexerStatusCard({
 				</div>
 			)}
 
-			<div className="grid gap-3 md:grid-cols-4">
+			<div className="grid gap-3 md:grid-cols-5">
 				<StatCard label="Processed LIB" value={(data?.lastIrreversibleBlockProcessed ?? 0).toLocaleString()} color={health.ok ? 'green' : 'amber'} />
 				<StatCard label="Target Block" value={(data?.syncTargetBlock ?? 0).toLocaleString()} color="blue" />
 				<StatCard label="Blocks Behind" value={(data?.blocksBehind ?? 0).toLocaleString()} color={(data?.blocksBehind ?? 0) === 0 ? 'green' : 'amber'} />
+				<StatCard label="Progress" value={`${(data?.progressPercent ?? 0).toLocaleString()}%`} color={(data?.progressPercent ?? 0) >= 99 ? 'green' : 'amber'} />
 				<StatCard label="Known Accounts" value={(data?.knownAccounts ?? 0).toLocaleString()} color="purple" />
 			</div>
 
 			<div className="mt-3 grid gap-2 md:grid-cols-3 text-sm">
 				<AdminConsumerRow label="Last sync" value={lastSyncedLabel} ok={Boolean(data?.lastSyncedAt)} />
 				<AdminConsumerRow label="Head block" value={(data?.headBlock ?? 0).toLocaleString()} ok={Boolean(data?.headBlock)} />
+				<AdminConsumerRow label="Index start" value={indexStartBlock.toLocaleString()} ok={indexStartBlock > 0} />
+				<AdminConsumerRow label="State file" value={formatStateFilePath(data?.stateFile)} ok={Boolean(data?.stateFile)} />
+				<AdminConsumerRow label="State env" value={data?.stateFileConfigured ? 'Configured' : 'Runtime default'} ok={true} />
 				<AdminConsumerRow label="Checked" value={refreshedLabel} ok={state.status !== 'loading'} />
 			</div>
 		</section>
 	);
+}
+
+function formatStateFilePath(value: string | undefined): string {
+	if (!value) return 'unknown';
+	const normalized = value.replace(/\\/g, '/');
+	const parts = normalized.split('/').filter(Boolean);
+	return parts.slice(-2).join('/') || value;
 }
 
 function deriveIndexerHealth(state: IndexerStatusState): {

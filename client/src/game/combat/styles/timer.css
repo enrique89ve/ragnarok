@@ -35,12 +35,9 @@
      - sharp dark drop
      - cool blue rim from above (overlight)
      - warm gold rim from below (underlight) */
-  filter:
-    drop-shadow(0 0 14px rgba(245, 208, 96, 0.32))
-    drop-shadow(0 0 6px rgba(255, 220, 130, 0.42))
-    drop-shadow(0 8px 16px rgba(0, 0, 0, 0.75))
-    drop-shadow(0 -1px 0 rgba(180, 210, 255, 0.12))
-    drop-shadow(0 2px 0 rgba(255, 200, 100, 0.18));
+  filter: drop-shadow(0 0 8px rgba(245, 208, 96, 0.22))
+    drop-shadow(0 5px 12px rgba(0, 0, 0, 0.78))
+    drop-shadow(0 -1px 0 rgba(180, 210, 255, 0.1));
 }
 
 .hourglass-svg {
@@ -48,30 +45,44 @@
   width: var(--poker-zone-hourglass-w, 65px);
   height: 91px; /* SVG viewBox 60×84; rendered at 65×91 to scale uniformly (+35%) */
   margin: 0 auto; /* centre in the 65px column regardless of intrinsic size */
+  overflow: visible;
 }
 
 /* Ambient glow behind the glass */
 .hg-ambient-glow {
-  opacity: 0.4;
-  animation: hg-glow-breathe 3s ease-in-out infinite;
+  opacity: 0.2;
 }
 
-@keyframes hg-glow-breathe {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 0.5; }
+.hg-glass-fill {
+  opacity: 0.56;
+}
+
+.hg-frame-glow {
+  opacity: 0.34;
+}
+
+.hg-cap-highlight {
+  opacity: 0.58;
+}
+
+.hg-neck-ring {
+  opacity: 0.76;
 }
 
 /* Sand stream shimmer */
 .hg-stream {
-  opacity: 0.8;
-  animation: hg-stream-flow 0.4s linear infinite;
+  opacity: 0.9;
+  animation: hg-stream-flow 0.7s linear infinite;
   stroke-dasharray: 2 2;
 }
 
 @keyframes hg-stream-flow {
-  0% { opacity: 0.5; stroke-dashoffset: 0; }
-  50% { opacity: 1; }
-  100% { opacity: 0.5; stroke-dashoffset: 4; }
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: 4;
+  }
 }
 
 /* Falling sand particles */
@@ -79,14 +90,28 @@
   animation: hg-sand-fall 0.8s ease-in infinite;
 }
 
-.hg-p1 { animation-delay: 0s; }
-.hg-p2 { animation-delay: 0.25s; }
-.hg-p3 { animation-delay: 0.5s; }
+.hg-p1 {
+  animation-delay: 0s;
+}
+.hg-p2 {
+  animation-delay: 0.25s;
+}
+.hg-p3 {
+  animation-delay: 0.5s;
+}
 
 @keyframes hg-sand-fall {
-  0% { opacity: 1; transform: translateY(0); }
-  80% { opacity: 0.8; }
-  100% { opacity: 0; transform: translateY(6px); }
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  80% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
 }
 
 /* Glass shine shimmer — subtle moving highlight */
@@ -99,72 +124,60 @@
 }
 
 @keyframes hg-shine-pulse {
-  0%, 100% { opacity: 0.2; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
-/* Countdown — pulled up under the bottom cap (negative margin)
-   so hourglass + number read as one composition, not two stacked
-   widgets. Painterly treatment: airbrushed gold gradient inside
-   the plate, soft outer glow, multi-stop gold rim.
+.hg-countdown-svg {
+  transform-box: fill-box;
+  transform-origin: center;
+}
 
-   Block-level (not inline-flex) + `margin: 0 auto` so the chip always
-   centres under the SVG regardless of intrinsic width (1 digit, 2
-   digits, or critical-state). No flex cross-axis math means the chip
-   can't drift relative to the hourglass. */
-.hg-countdown {
-  display: block;
-  width: max-content;
-  min-width: 36px;
-  height: 22px;
-  margin: -6px auto 0; /* centre on column, overlap the bottom cap */
-  padding: 0 9px;
+.hg-countdown-plate {
+  fill: color-mix(in srgb, var(--obsidian-950) 96%, var(--gold-300));
+  stroke: color-mix(in srgb, var(--gold-200) 72%, transparent);
+  stroke-width: 0.9;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.82));
+}
+
+.hg-countdown-text {
   font-family: var(--type-numeric);
-  font-size: 0.92rem;
+  font-size: 14px;
   font-weight: 900;
-  letter-spacing: 0.06em;
-  color: var(--gold-50);
-  /* Painterly inner gradient: warm gold at top fade → deep gold-amber center → bronze bottom */
-  background:
-    linear-gradient(180deg,
-      color-mix(in srgb, var(--gold-300) 22%, var(--obsidian-900)) 0%,
-      color-mix(in srgb, var(--gold-500) 18%, var(--obsidian-950)) 50%,
-      color-mix(in srgb, var(--obsidian-950) 96%, transparent) 100%);
-  border: 1px solid color-mix(in srgb, var(--gold-300) 68%, transparent);
-  border-radius: var(--radius-norse-tight);
-  /* Engraved bevel + soft airbrushed gold halo + deep drop */
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--gold-200) 38%, transparent),
-    inset 0 -1px 0 color-mix(in srgb, var(--obsidian-950) 75%, transparent),
-    0 0 10px color-mix(in srgb, var(--gold-300) 42%, transparent),
-    0 3px 8px rgba(0, 0, 0, 0.78);
-  text-shadow:
-    0 0 7px color-mix(in srgb, var(--gold-200) 80%, transparent),
-    0 1px 2px rgba(40, 24, 0, 0.85);
-  line-height: 1;
+  letter-spacing: 0;
+  text-anchor: middle;
+  dominant-baseline: alphabetic;
+  fill: #fff4dc;
+  paint-order: stroke;
+  stroke: rgba(8, 4, 0, 0.92);
+  stroke-width: 0.7px;
   font-variant-numeric: tabular-nums;
 }
 
 /* ============================================================
    LOW TIME — Urgency state (<=10 seconds)
    ============================================================ */
-.hourglass-timer.low-time .hg-countdown {
-  color: var(--danger-300);
-  border-color: color-mix(in srgb, var(--danger-400) 64%, transparent);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--obsidian-950) 70%, transparent),
-    inset 0 -1px 0 color-mix(in srgb, var(--ink-0) 6%, transparent),
-    0 0 10px color-mix(in srgb, var(--danger-400) 38%, transparent),
-    0 2px 6px rgba(0, 0, 0, 0.7);
-  animation: hg-timer-blink 0.6s ease-in-out infinite;
-  text-shadow:
-    0 0 7px color-mix(in srgb, var(--danger-400) 70%, transparent),
-    0 1px 2px rgba(0, 0, 0, 0.9);
+.hourglass-timer.low-time .hg-countdown-svg {
+  animation: hg-urgency-pulse 1.2s ease-in-out infinite;
+}
+
+.hourglass-timer.low-time .hg-countdown-plate {
+  fill: color-mix(in srgb, var(--obsidian-950) 90%, var(--danger-500));
+  stroke: color-mix(in srgb, var(--danger-400) 48%, var(--gold-300));
+}
+
+.hourglass-timer.low-time .hg-countdown-text {
+  fill: color-mix(in srgb, var(--danger-300) 65%, var(--gold-100));
 }
 
 .hourglass-timer.low-time .hg-sand-top,
 .hourglass-timer.low-time .hg-sand-bottom {
-  fill: var(--danger-600);
+  fill: color-mix(in srgb, var(--danger-500) 55%, var(--gold-400));
 }
 
 .hourglass-timer.low-time .hg-stream {
@@ -176,30 +189,45 @@
 }
 
 .hourglass-timer.low-time .hg-ambient-glow {
-  opacity: 0.5;
+  opacity: 0.28;
 }
 
 /* ============================================================
    CRITICAL TIME — Panic state (<=5 seconds)
    ============================================================ */
 .hourglass-timer.critical {
-  animation: hg-shake 0.3s ease-in-out infinite;
+  animation: hg-shake 0.72s ease-in-out infinite;
 }
 
 .hourglass-timer.critical .hg-ambient-glow {
-  opacity: 0.7;
-  fill: color-mix(in srgb, var(--danger-400) 40%, transparent);
+  opacity: 0.24;
+  fill: url("#hg-glow");
 }
 
-@keyframes hg-timer-blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+@keyframes hg-urgency-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
 }
 
 @keyframes hg-shake {
-  0%, 100% { transform: translateX(-50%) rotate(0deg); }
-  25% { transform: translateX(-50%) rotate(1.5deg); }
-  75% { transform: translateX(-50%) rotate(-1.5deg); }
+  0%,
+  100% {
+    transform: translateX(-50%)
+      rotate(calc(var(--poker-zone-hourglass-rot, 0deg) + 0deg));
+  }
+  25% {
+    transform: translateX(-50%)
+      rotate(calc(var(--poker-zone-hourglass-rot, 0deg) + 0.8deg));
+  }
+  75% {
+    transform: translateX(-50%)
+      rotate(calc(var(--poker-zone-hourglass-rot, 0deg) - 0.8deg));
+  }
 }
 
 /* Legacy compat */

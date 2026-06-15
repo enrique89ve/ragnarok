@@ -6,6 +6,7 @@
 >
 > - **Rarity & supply caps** → [`docs/RULEBOOK.md`](RULEBOOK.md) (Card Rarity table)
 > - **On-chain protocol** → [`docs/RAGNAROK_PROTOCOL_V1.md`](RAGNAROK_PROTOCOL_V1.md)
+> - **Current indexer/read model** → [`docs/HIVE_INDEXER_CONTRACT.md`](HIVE_INDEXER_CONTRACT.md)
 > - **Genesis ceremony** → [`docs/GENESIS_RUNBOOK.md`](GENESIS_RUNBOOK.md)
 > - **External NFT layer (target)** → [`docs/NFTLOX_INTEGRATION_SPEC.md`](NFTLOX_INTEGRATION_SPEC.md) — note that NFTLox v0.4.0 has **no `replicate` / `merge` ops**; those primitives stay in our protocol.
 >

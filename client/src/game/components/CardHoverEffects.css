@@ -90,8 +90,8 @@
    ======================================== */
 
 .card-with-drag {
-  width: var(--card-width, 140px);
-  height: var(--card-height, 200px);
+  width: var(--card-width, 132px);
+  height: var(--card-height, 176px);
   transform-style: flat;
   position: relative;
   transition: transform 0.2s ease-out, filter 0.2s ease;

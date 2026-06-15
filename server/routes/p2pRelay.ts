@@ -18,30 +18,46 @@
  */
 
 import type { Server as HttpServer, IncomingMessage } from 'http';
-import { WebSocketServer, WebSocket } from 'ws';
+import type { Duplex } from 'stream';
+import { WebSocketServer, WebSocket, type RawData } from 'ws';
 import { z } from 'zod';
-import { isSafePeerId, isSafeRoomOrMatchId } from '../../shared/p2pAvailability';
+import {
+	P2P_MATCH_TICKET_WS_PROTOCOL,
+	isSafePeerId,
+	isSafeRoomOrMatchId,
+} from '../../shared/p2pAvailability';
 import {
 	getP2PRelayTelemetrySnapshot,
 	recordP2PRelayConnection,
 	recordP2PRelayDrop,
 	recordP2PRelayError,
 	recordP2PRelayMessage,
+	type P2PRelayErrorReason,
 	type P2PRelayTelemetrySnapshot,
 } from '../services/p2pTelemetry';
+import { verifyP2PMatchTicketForRoom } from '../services/p2pMatchTicketSigner';
+import {
+	isP2PRelayOriginAllowed,
+} from '../services/p2pRelayOrigin';
+import {
+	hasP2PRelayProtocol,
+	readP2PRelayTicketToken,
+} from '../services/p2pRelayProtocol';
+import { hasStarterCeremonyClaim } from '../services/starterClaimRegistry';
+import { log } from '../static';
 
-interface RoomMember {
+type RoomMember = {
 	readonly peerId: string;
 	readonly ws: WebSocket;
-}
+};
 
 const rooms = new Map<string, RoomMember[]>();
+const relayAliveSockets = new WeakSet<WebSocket>();
 
 const ROOM_MAX_PEERS = 2;
 const KEEPALIVE_INTERVAL_MS = 15_000;
-const MAX_PAYLOAD_BYTES = 16 * 1024; // 16 KB per frame. Full GameState snapshots
-                                     // are the largest legit payload at ~10 KB;
-                                     // reject oversized tunnel frames before fan-out.
+// Initial GameState sync is gzip-framed before relay fan-out; keep frames tight.
+export const P2P_RELAY_MAX_PAYLOAD_BYTES = 16 * 1024;
 
 /**
  * Whitelist of message `type` values the relay will fan out. Everything else
@@ -94,12 +110,99 @@ const relayEnvelopeSchema = z.object({
 	type: z.string().min(1).max(64),
 }).passthrough();
 
-interface ValidationOk { readonly ok: true; readonly type: string; }
-interface ValidationFail { readonly ok: false; readonly reason: string; }
+type ValidationOk = { readonly ok: true; readonly type: string };
+type ValidationFail = { readonly ok: false; readonly reason: string };
 type ValidationResult = ValidationOk | ValidationFail;
+type RelayUpgradeAccess =
+	| { readonly ok: true }
+	| { readonly ok: false; readonly status: number; readonly telemetryReason: P2PRelayErrorReason; readonly reason: string };
+
+export function shouldRequireP2PRelayTicket(input: {
+	readonly nodeEnv?: string;
+	readonly networkStage?: string;
+}): boolean {
+	return input.nodeEnv === 'production' || input.networkStage === 'testnet' || input.networkStage === 'mainnet';
+}
+
+function isProductionRuntime(): boolean {
+	return process.env.NODE_ENV === 'production';
+}
+
+function isRelayTicketRequired(): boolean {
+	return shouldRequireP2PRelayTicket({
+		nodeEnv: process.env.NODE_ENV,
+		networkStage: process.env.VITE_NETWORK_STAGE,
+	});
+}
+
+export async function isP2PRelayTicketStarterClaimAllowed(input: {
+	readonly ticketRequired: boolean;
+	readonly account?: string;
+}): Promise<boolean> {
+	if (!input.ticketRequired) return true;
+	return hasStarterCeremonyClaim(input.account);
+}
+
+function isAllowedOrigin(req: IncomingMessage): boolean {
+	return isP2PRelayOriginAllowed({
+		origin: typeof req.headers.origin === 'string' ? req.headers.origin : undefined,
+		host: req.headers.host,
+		forwardedHost: req.headers['x-forwarded-host'],
+		allowedOrigins: process.env.P2P_RELAY_ALLOWED_ORIGINS,
+		trustForwardedHost: process.env.P2P_RELAY_TRUST_FORWARDED_HOST === 'true',
+		production: isProductionRuntime(),
+	});
+}
+
+function relayErrorForTicketReason(reason: string): P2PRelayErrorReason {
+	if (reason === 'missing') return 'missing_ticket';
+	if (reason === 'malformed') return 'malformed_ticket';
+	if (reason === 'expired') return 'expired_ticket';
+	if (reason === 'mismatch') return 'ticket_mismatch';
+	if (reason === 'bad_signature') return 'bad_ticket_signature';
+	if (reason === 'server_unconfigured') return 'ticket_server_unconfigured';
+	return 'malformed_ticket';
+}
+
+async function validateRelayTicketUpgrade(input: {
+	readonly protocolHeader: string | string[] | undefined;
+	readonly roomId: string;
+	readonly peerId: string;
+}): Promise<RelayUpgradeAccess> {
+	if (!hasP2PRelayProtocol(input.protocolHeader)) {
+		return { ok: false, status: 426, telemetryReason: 'missing_protocol', reason: 'Upgrade Required' };
+	}
+	const ticket = verifyP2PMatchTicketForRoom({
+		token: readP2PRelayTicketToken(input.protocolHeader),
+		roomId: input.roomId,
+		peerId: input.peerId,
+	});
+	if (!ticket.ok && (isRelayTicketRequired() || ticket.reason !== 'missing')) {
+		return {
+			ok: false,
+			status: ticket.reason === 'server_unconfigured' ? 503 : 403,
+			telemetryReason: relayErrorForTicketReason(ticket.reason),
+			reason: 'Forbidden',
+		};
+	}
+	if (ticket.ok && !await isP2PRelayTicketStarterClaimAllowed({
+		ticketRequired: isRelayTicketRequired(),
+		account: ticket.payload.account,
+	})) {
+		return { ok: false, status: 403, telemetryReason: 'starter_claim_required', reason: 'Forbidden' };
+	}
+	return { ok: true };
+}
+
+function rejectUpgrade(socket: { write: (chunk: string) => unknown; destroy: () => unknown }, status: number, reason: string): void {
+	try {
+		socket.write(`HTTP/1.1 ${status} ${reason}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`);
+	} catch { /* socket may already be gone */ }
+	try { socket.destroy(); } catch { /* already closed */ }
+}
 
 function validateRelayFrame(text: string): ValidationResult {
-	if (text.length > MAX_PAYLOAD_BYTES) {
+	if (Buffer.byteLength(text, 'utf8') > P2P_RELAY_MAX_PAYLOAD_BYTES) {
 		return { ok: false, reason: 'oversize' };
 	}
 
@@ -137,13 +240,20 @@ function notifyRoomFull(room: readonly RoomMember[]): void {
 	sendSys(second.ws, { event: 'open', isHost: false, remotePeerId: first.peerId });
 }
 
+function relayRawFrameToText(raw: RawData): string {
+	if (typeof raw === 'string') return raw;
+	if (Buffer.isBuffer(raw)) return raw.toString('utf8');
+	if (Array.isArray(raw)) return Buffer.concat(raw).toString('utf8');
+	return Buffer.from(raw).toString('utf8');
+}
+
 export function getP2PRelayStats(): P2PRelayTelemetrySnapshot {
 	let activeConnections = 0;
 	let activeFullRooms = 0;
-	for (const room of rooms.values()) {
+	rooms.forEach((room) => {
 		activeConnections += room.length;
 		if (room.length === ROOM_MAX_PEERS) activeFullRooms += 1;
-	}
+	});
 	return getP2PRelayTelemetrySnapshot({
 		activeRooms: rooms.size,
 		activeConnections,
@@ -152,16 +262,50 @@ export function getP2PRelayStats(): P2PRelayTelemetrySnapshot {
 }
 
 export function attachP2PRelay(server: HttpServer): void {
-	const wss = new WebSocketServer({ noServer: true, maxPayload: MAX_PAYLOAD_BYTES });
+	const wss = new WebSocketServer({
+		noServer: true,
+		maxPayload: P2P_RELAY_MAX_PAYLOAD_BYTES,
+		handleProtocols: (protocols) => protocols.has(P2P_MATCH_TICKET_WS_PROTOCOL) ? P2P_MATCH_TICKET_WS_PROTOCOL : false,
+	});
 
-	server.on('upgrade', (req: IncomingMessage, socket, head) => {
+	async function handleUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): Promise<void> {
 		const rawUrl = req.url ?? '/';
 		if (!rawUrl.startsWith('/ws/p2p')) return; // not ours
 		const url = new URL(rawUrl, `http://${req.headers.host ?? 'localhost'}`);
 		if (url.pathname !== '/ws/p2p') return;
+		if (!isAllowedOrigin(req)) {
+			recordP2PRelayError('origin_forbidden');
+			rejectUpgrade(socket, 403, 'Forbidden');
+			return;
+		}
+		const roomId = url.searchParams.get('room');
+		const peerId = url.searchParams.get('peer');
+		if (!roomId || !peerId || !isSafeRoomOrMatchId(roomId) || !isSafePeerId(peerId)) {
+			recordP2PRelayError('invalid_room_or_peer');
+			rejectUpgrade(socket, 400, 'Bad Request');
+			return;
+		}
+		const ticketAccess = await validateRelayTicketUpgrade({
+			protocolHeader: req.headers['sec-websocket-protocol'],
+			roomId,
+			peerId,
+		});
+		if (!ticketAccess.ok) {
+			recordP2PRelayError(ticketAccess.telemetryReason);
+			rejectUpgrade(socket, ticketAccess.status, ticketAccess.reason);
+			return;
+		}
 
 		wss.handleUpgrade(req, socket, head, (ws) => {
 			wss.emit('connection', ws, req);
+		});
+	}
+
+	server.on('upgrade', (req: IncomingMessage, socket, head) => {
+		void handleUpgrade(req, socket, head).catch((error: unknown) => {
+			recordP2PRelayError('socket_error');
+			log(`upgrade failed: ${error instanceof Error ? error.message : String(error)}`, 'Relay');
+			rejectUpgrade(socket, 500, 'Internal Server Error');
 		});
 	});
 
@@ -204,14 +348,14 @@ export function attachP2PRelay(server: HttpServer): void {
 
 		room.push({ peerId, ws });
 		recordP2PRelayConnection();
-		console.log(`[Relay] room=${roomId.slice(0, 16)}… peer=${peerId.slice(0, 8)}… joined (${room.length}/${ROOM_MAX_PEERS})`);
+		log(`room=${roomId.slice(0, 16)}… peer=${peerId.slice(0, 8)}… joined (${room.length}/${ROOM_MAX_PEERS})`, 'Relay');
 
-		(ws as WebSocket & { isAlive?: boolean }).isAlive = true;
-		ws.on('pong', () => { (ws as WebSocket & { isAlive?: boolean }).isAlive = true; });
+		relayAliveSockets.add(ws);
+		ws.on('pong', () => { relayAliveSockets.add(ws); });
 
 		if (room.length === ROOM_MAX_PEERS) notifyRoomFull(room);
 
-		ws.on('message', (raw: Buffer | ArrayBuffer | Buffer[]) => {
+		ws.on('message', (raw: RawData) => {
 			const currentRoom = rooms.get(roomId);
 			if (!currentRoom) return;
 			const other = currentRoom.find(m => m.peerId !== peerId);
@@ -220,11 +364,7 @@ export function attachP2PRelay(server: HttpServer): void {
 			// Coerce to string so the recipient sees the same shape regardless of
 			// how the sender's WebSocket lib emitted the frame. App payloads are
 			// JSON; binary would be a protocol violation we'd rather surface.
-			const text = typeof raw === 'string'
-				? raw
-				: Buffer.isBuffer(raw)
-					? raw.toString('utf8')
-					: Buffer.concat(Array.isArray(raw) ? raw : [Buffer.from(raw as ArrayBuffer)]).toString('utf8');
+			const text = relayRawFrameToText(raw);
 
 			// Validate envelope BEFORE fan-out. The recipient's `useWireSync` does
 			// deep payload validation per type, so we only enforce the structural
@@ -234,7 +374,7 @@ export function attachP2PRelay(server: HttpServer): void {
 			const validation = validateRelayFrame(text);
 			if (!validation.ok) {
 				recordP2PRelayDrop(validation.reason);
-				console.warn(`[Relay] dropping frame room=${roomId.slice(0, 16)}… peer=${peerId.slice(0, 8)}… reason=${validation.reason}`);
+				log(`dropping frame room=${roomId.slice(0, 16)}… peer=${peerId.slice(0, 8)}… reason=${validation.reason}`, 'Relay');
 				return;
 			}
 
@@ -252,7 +392,7 @@ export function attachP2PRelay(server: HttpServer): void {
 			const idx = currentRoom.findIndex(m => m.peerId === peerId);
 			if (idx === -1) return;
 			currentRoom.splice(idx, 1);
-			console.log(`[Relay] room=${roomId.slice(0, 16)}… peer=${peerId.slice(0, 8)}… left (${currentRoom.length}/${ROOM_MAX_PEERS})`);
+			log(`room=${roomId.slice(0, 16)}… peer=${peerId.slice(0, 8)}… left (${currentRoom.length}/${ROOM_MAX_PEERS})`, 'Relay');
 
 			const survivor = currentRoom[0];
 			if (survivor && survivor.ws.readyState === WebSocket.OPEN) {
@@ -264,7 +404,7 @@ export function attachP2PRelay(server: HttpServer): void {
 		ws.on('close', handleDeparture);
 		ws.on('error', (err) => {
 			recordP2PRelayError('socket_error');
-			console.warn(`[Relay] room=${roomId.slice(0, 16)}… peer=${peerId.slice(0, 8)}… error:`, err.message);
+			log(`room=${roomId.slice(0, 16)}… peer=${peerId.slice(0, 8)}… error: ${err.message}`, 'Relay');
 		});
 	});
 
@@ -274,13 +414,12 @@ export function attachP2PRelay(server: HttpServer): void {
 	// dropped, kernel hasn't sent FIN yet).
 	const keepaliveTimer = setInterval(() => {
 		wss.clients.forEach((ws) => {
-			const w = ws as WebSocket & { isAlive?: boolean };
-			if (w.isAlive === false) {
+			if (!relayAliveSockets.has(ws)) {
 				recordP2PRelayError('keepalive_timeout');
 				ws.terminate();
 				return;
 			}
-			w.isAlive = false;
+			relayAliveSockets.delete(ws);
 			try { ws.ping(); } catch { /* socket closed */ }
 		});
 	}, KEEPALIVE_INTERVAL_MS);

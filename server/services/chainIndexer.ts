@@ -53,6 +53,7 @@ const HIVE_NODES = [
 	'https://api.openhive.network',
 ];
 
+const DEFAULT_HAF_ENDPOINTS = ['https://api.hive.blog'];
 const NODE_TIMEOUT_MS = 8_000;
 const POLL_INTERVAL_MS = 10_000;
 const BLOCKS_PER_BATCH = 100; // Increased for faster catch-up
@@ -72,6 +73,17 @@ const COOLDOWN_MAX_MS = 120_000;
 const COOLDOWN_MULTIPLIER = 2;
 const RATE_LIMIT_DEFAULT_MS = 30_000;
 const LATENCY_WINDOW = 20;
+
+function parseEndpointList(value: string | undefined): string[] {
+	const endpoints = value
+		?.split(',')
+		.map((entry) => entry.trim())
+		.filter((entry) => entry.length > 0) ?? [];
+	return endpoints.length > 0 ? endpoints : DEFAULT_HAF_ENDPOINTS;
+}
+
+const HAF_ENDPOINTS = parseEndpointList(process.env.RAGNAROK_HAF_ENDPOINTS);
+let hafEndpointRoundRobin = 0;
 
 // ---------------------------------------------------------------------------
 // Endpoint health / failover
@@ -426,6 +438,8 @@ interface HafAHOperation {
 	};
 	block: number;
 	trx_id: string;
+	trx_in_block?: number;
+	op_pos?: number;
 	timestamp: string;
 	operation_id: string | number;
 	virtual_op: boolean;
@@ -519,6 +533,8 @@ async function hafahFetch(
 				const opId = typeof rawRecord.operation_id === 'string' || typeof rawRecord.operation_id === 'number'
 						? String(rawRecord.operation_id)
 						: `${idx}`;
+				const trxInBlock = asNumber(rawRecord.trx_in_block);
+				const opPos = asNumber(rawRecord.op_pos);
 				return {
 					op: {
 						type,
@@ -531,6 +547,8 @@ async function hafahFetch(
 					},
 					block,
 					trx_id: trxId,
+					trx_in_block: Number.isFinite(trxInBlock) ? trxInBlock : undefined,
+					op_pos: Number.isFinite(opPos) ? opPos : undefined,
 					timestamp: rawTimestamp,
 					operation_id: opId,
 					virtual_op: Boolean(rawRecord.virtual_op),
@@ -560,13 +578,12 @@ async function hafahWithFailover(
 	operationBegin: string,
 	pageSize: number,
 ): Promise<HafAHResponse> {
-	const maxAttempts = endpointStates.length * 2;
+	const maxAttempts = HAF_ENDPOINTS.length * 2;
 	for (let attempt = 0; attempt < maxAttempts; attempt++) {
-		const endpoint = selectEndpoint();
-		const start = Date.now();
+		const endpoint = HAF_ENDPOINTS[hafEndpointRoundRobin % HAF_ENDPOINTS.length]!;
+		hafEndpointRoundRobin += 1;
 		try {
 			const result = await hafahFetch(endpoint, fromBlock, toBlock, operationBegin, pageSize);
-			recordSuccess(endpoint, Date.now() - start);
 			return result;
 		} catch (err) {
 			const category = getHafAHFailureCategory(err);
@@ -577,12 +594,15 @@ async function hafahWithFailover(
 				}
 				return undefined;
 			})();
-			recordFailure(endpoint, category, retryAfterMs);
 			if (attempt === maxAttempts - 1) throw err;
-			await sleep(getBackoffMs(attempt, category));
+			await sleep(retryAfterMs ?? getBackoffMs(attempt, category));
 		}
 	}
 	throw new Error(`Failed HafAH range fetch ${fromBlock}..${toBlock}`);
+}
+
+function isHafCustomJsonType(type: string): boolean {
+	return type === 'custom_json' || type === 'custom_json_operation';
 }
 
 async function getCustomJsonInRange(
@@ -600,7 +620,7 @@ async function getCustomJsonInRange(
 		const result = await hafahWithFailover(fromBlock, toBlock, operationBegin, pageSize);
 		const filtered = result.ops
 			.filter((op) => {
-				if (op.op.type !== 'custom_json') return false;
+				if (!isHafCustomJsonType(op.op.type)) return false;
 				if (!op.op.value || typeof op.op.value.id !== 'string') return false;
 				if (shouldAcceptCustomJsonId(getRagnarokServerRuntimeConfig(), op.op.value.id)) {
 					return true;
@@ -612,8 +632,8 @@ async function getCustomJsonInRange(
 			.map((op) => ({
 				trx_id: op.trx_id,
 				block: op.block,
-				trx_in_block: asNumber(op.operation_id) || 0,
-				op_in_trx: asNumber(op.operation_id) || 0,
+				trx_in_block: op.trx_in_block ?? (asNumber(op.operation_id) || 0),
+				op_in_trx: op.op_pos ?? (asNumber(op.operation_id) || 0),
 				timestamp: op.timestamp,
 				op: ['custom_json', {
 					id: op.op.value.id,
@@ -829,11 +849,12 @@ async function scanWindowByRange(
 // ---------------------------------------------------------------------------
 
 function getRangeScanEnabled(): boolean {
-	const stage = getRagnarokServerRuntimeConfig().stage;
-	return stage !== 'local';
+	const raw = process.env.RAGNAROK_RANGE_SCAN?.trim().toLowerCase();
+	return raw !== 'false' && raw !== '0' && raw !== 'off';
 }
 
 async function scanBlocks(): Promise<number> {
+	const startedAt = Date.now();
 	const cursor = getBlockCursor();
 	let status: BlockchainStatus;
 
@@ -855,6 +876,9 @@ async function scanBlocks(): Promise<number> {
 
 	const startBlock = cursor + 1;
 	const isMassive = behind > MASSIVE_THRESHOLD;
+	const rangeScanEnabled = getRangeScanEnabled();
+	const scanMode = isMassive && rangeScanEnabled ? 'haf-range' : 'block-rpc';
+	console.log(`[chainIndexer] Sync status cursor=${cursor}, target=${effectiveLib}, lib=${lib}, head=${head}, blocksBehind=${behind}, mode=${scanMode}`);
 	const deps = buildDeps();
 	const runtime = getRagnarokServerRuntimeConfig();
 
@@ -864,7 +888,7 @@ async function scanBlocks(): Promise<number> {
 	let hasProgress = false;
 
 	while (current <= effectiveLib) {
-		if (!isMassive || !getRangeScanEnabled()) {
+		if (!isMassive || !rangeScanEnabled) {
 			const endBlock = Math.min(current + BLOCKS_PER_BATCH - 1, effectiveLib);
 			const result = await scanWindowByBlocks(current, endBlock, deps, runtime, lib);
 			current += result.blocks;
@@ -951,7 +975,10 @@ async function scanBlocks(): Promise<number> {
 	}
 
 	if (totalBlocks > 0) {
-		console.log(`[chainIndexer] Processed ${totalApplied} ops across ${totalBlocks} blocks, cursor=${getBlockCursor()}`);
+		const remaining = Math.max(0, effectiveLib - getBlockCursor());
+		const elapsedSeconds = Math.max(0.001, (Date.now() - startedAt) / 1000);
+		const blocksPerSecond = totalBlocks / elapsedSeconds;
+		console.log(`[chainIndexer] Processed ${totalApplied} ops across ${totalBlocks} blocks, cursor=${getBlockCursor()}, target=${effectiveLib}, blocksBehind=${remaining}, rate=${blocksPerSecond.toFixed(1)} blocks/s`);
 	}
 
 	if (totalBlocks > 0 && getBlockCursor() >= effectiveLib && totalApplied >= 0) {

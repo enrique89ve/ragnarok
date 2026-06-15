@@ -48,9 +48,9 @@
 	   source of truth (per shape/size), but this guarantees the frame
 	   never collapses to a zero-height box if the inline value is
 	   ever stripped (e.g. by a third-party stylesheet that targets
-	   `[style]`). Matches the default 3:4 of `tile`/`portrait`; the
+	   `[style]`). Matches the default NFT 7:10 surface; the
 	   inline style overrides per shape. */
-	aspect-ratio: 3 / 4;
+	aspect-ratio: 7 / 10;
 }
 
 .card-frame[data-interactive='true'] { cursor: pointer; }

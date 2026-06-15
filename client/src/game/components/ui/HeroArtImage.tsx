@@ -12,6 +12,7 @@ interface HeroArtImageProps {
   heroName: string;
   portrait?: string;
   className?: string;
+  objectFit?: React.CSSProperties['objectFit'];
   fallbackIcon?: React.ReactNode;
   onReady?: () => void;
 }
@@ -21,6 +22,7 @@ export function HeroArtImage({
   heroName,
   portrait,
   className = '',
+  objectFit = 'contain',
   fallbackIcon,
   onReady,
 }: HeroArtImageProps) {
@@ -42,7 +44,7 @@ export function HeroArtImage({
       src={artPath || ''}
       alt={heroName}
       className={className}
-      style={{ objectFit: 'contain' }}
+      style={{ objectFit }}
       onLoad={onReady}
       onError={(e) => {
         console.error(`[HeroArtImage] Failed to load art for ${heroId}: ${artPath}`);

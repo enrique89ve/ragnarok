@@ -5,6 +5,7 @@
 > - **In-game card contract** → `client/src/game/data/schemas/` (canonical types, rarity, set, element, ids).
 > - **Card definitions** → `client/src/game/data/cardRegistry/`.
 > - **Game state on Hive** (matches, ELO, decks, rewards) → `docs/RAGNAROK_PROTOCOL_V1.md`.
+> - **Ragnarok read model/indexer** (RUNE, packs, matches, ranking, validation) → `docs/HIVE_INDEXER_CONTRACT.md`.
 >
 > This file describes only the **external NFT birth & ownership layer** (minting, supply, distribution, transfer, burn) that will run on the third-party NFTLox protocol on Hive L1. **Not yet integrated** — it is target spec, not active game logic. Active mint/pack/replicate/merge logic currently lives in `shared/protocol-core/apply.ts` (v1.1). If this doc and the schemas package disagree, **the schemas win**.
 

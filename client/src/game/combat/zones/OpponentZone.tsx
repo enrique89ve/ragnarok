@@ -27,10 +27,10 @@ import type { ShowdownCelebration } from '../hooks/useCombatEvents';
 import { ARENA_VFX_TARGETS, arenaVfxTargetProps } from '../arenaVfxTargets';
 
 const OPPONENT_HAND_VISIBLE_LIMIT = 10;
-// Mirrors the opponent-card-back geometry; the badge follows the right edge
-// of the last visible card while the stack grows.
-const OPPONENT_HAND_CARD_WIDTH_PX = 78;
-const OPPONENT_HAND_CARD_OVERLAP_PX = -39;
+// Mirrors the opponent hand geometry; the badge follows the right edge of the
+// last visible card while the stack grows.
+const OPPONENT_HAND_CARD_WIDTH_PX = 96;
+const OPPONENT_HAND_CARD_OVERLAP_PX = -48;
 const OPPONENT_HAND_CARD_STEP_PX = OPPONENT_HAND_CARD_WIDTH_PX + OPPONENT_HAND_CARD_OVERLAP_PX;
 
 export interface OpponentZoneProps {
@@ -139,7 +139,7 @@ export const OpponentZone: React.FC<OpponentZoneProps> = ({
 			<div className="opponent-hand-display" style={opponentHandStyle}>
 				{visibleOpponentHand.map((card, index) => (
 					card.isRevealed ? (
-						<div key={card.instanceId || `opp-revealed-${index}`} className="opponent-revealed-card scale-[0.4] -mx-8">
+						<div key={card.instanceId || `opp-revealed-${index}`} className="opponent-revealed-card">
 							{(() => {
 								const simpleData = toSimpleCardData(card);
 								if (!simpleData) return null;

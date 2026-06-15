@@ -61,6 +61,7 @@ export type RagnarokRuntimeConfig = {
 	readonly economic: boolean;
 	readonly acceptsLegacyProtocolIds: boolean;
 	readonly seasonStart: string;
+	readonly indexStartBlock: number;
 	readonly closedBetaNftLoxCollectionProof: boolean;
 	readonly closedBetaHiveKeychainSmoke: boolean;
 	readonly closedBetaTwoBrowserP2PSmoke: boolean;
@@ -78,6 +79,7 @@ export type RagnarokRuntimeEvidence = {
 	readonly economic: boolean;
 	readonly runtimePhase: RagnarokRuntimePhase;
 	readonly seasonStart: string;
+	readonly indexStartBlock: number;
 	readonly storageNamespace: string;
 	readonly qaFullCatalogEnabled: boolean;
 };
@@ -98,10 +100,12 @@ export type RagnarokRuntimeEnv = Partial<Record<
 	| 'VITE_EXTERNAL_URL_BASE'
 	| 'VITE_RAGNAROK_RESET_EPOCH'
 	| 'VITE_SEASON_START'
+	| 'VITE_RAGNAROK_INDEX_START_BLOCK'
 	| 'RAGNAROK_PROTOCOL_ID'
 	| 'RAGNAROK_RESET_EPOCH'
 	| 'RAGNAROK_ADMIN_OPERATOR_ACCOUNT'
 	| 'RAGNAROK_SEASON_START'
+	| 'RAGNAROK_INDEX_START_BLOCK'
 	| 'RAGNAROK_NFTLOX_COLLECTION_PROOF'
 	| 'RAGNAROK_HIVE_KEYCHAIN_SMOKE'
 	| 'RAGNAROK_P2P_TWO_BROWSER_SMOKE'
@@ -131,7 +135,8 @@ export const RAGNAROK_RUNTIME_CONFIGS = {
 		resettable: true,
 		economic: false,
 		acceptsLegacyProtocolIds: true,
-		seasonStart: '2026-05-19T00:00:00Z',
+		seasonStart: '2026-06-14T23:28:54Z',
+		indexStartBlock: 107278144,
 		closedBetaNftLoxCollectionProof: false,
 		closedBetaHiveKeychainSmoke: false,
 		closedBetaTwoBrowserP2PSmoke: false,
@@ -156,7 +161,8 @@ export const RAGNAROK_RUNTIME_CONFIGS = {
 		resettable: true,
 		economic: false,
 		acceptsLegacyProtocolIds: false,
-		seasonStart: '2026-05-19T00:00:00Z',
+		seasonStart: '2026-06-14T23:28:54Z',
+		indexStartBlock: 107278144,
 		closedBetaNftLoxCollectionProof: false,
 		closedBetaHiveKeychainSmoke: false,
 		closedBetaTwoBrowserP2PSmoke: false,
@@ -181,7 +187,8 @@ export const RAGNAROK_RUNTIME_CONFIGS = {
 		resettable: false,
 		economic: true,
 		acceptsLegacyProtocolIds: true,
-		seasonStart: '2026-05-19T00:00:00Z',
+		seasonStart: '2026-06-14T23:28:54Z',
+		indexStartBlock: 107278144,
 		closedBetaNftLoxCollectionProof: false,
 		closedBetaHiveKeychainSmoke: false,
 		closedBetaTwoBrowserP2PSmoke: false,
@@ -226,6 +233,16 @@ function evidenceFlag(value: string | undefined): boolean {
 		|| normalized === 'approved';
 }
 
+function optionalPositiveInteger(value: string | undefined, fieldName: string): number | undefined {
+	const trimmed = value?.trim();
+	if (!trimmed) return undefined;
+	const parsed = Number(trimmed);
+	if (!Number.isInteger(parsed) || parsed < 1) {
+		throw new Error(`${fieldName} must be a positive integer`);
+	}
+	return parsed;
+}
+
 function resolveResetEpoch(env: RagnarokRuntimeEnv, base: RagnarokRuntimeConfig): string {
 	const explicitEpoch = optionalString(env.RAGNAROK_RESET_EPOCH) ?? optionalString(env.VITE_RAGNAROK_RESET_EPOCH);
 	if (explicitEpoch) return explicitEpoch;
@@ -259,6 +276,9 @@ export function resolveRagnarokRuntimeConfig(env: RagnarokRuntimeEnv): RagnarokR
 		externalUrlBase: overrideString(env.VITE_EXTERNAL_URL_BASE, base.externalUrlBase),
 		resetEpoch: resolveResetEpoch(env, base),
 		seasonStart: overrideString(env.RAGNAROK_SEASON_START, overrideString(env.VITE_SEASON_START, base.seasonStart)),
+		indexStartBlock: optionalPositiveInteger(env.RAGNAROK_INDEX_START_BLOCK, 'RAGNAROK_INDEX_START_BLOCK')
+			?? optionalPositiveInteger(env.VITE_RAGNAROK_INDEX_START_BLOCK, 'VITE_RAGNAROK_INDEX_START_BLOCK')
+			?? base.indexStartBlock,
 		closedBetaNftLoxCollectionProof: evidenceFlag(env.RAGNAROK_NFTLOX_COLLECTION_PROOF),
 		closedBetaHiveKeychainSmoke: evidenceFlag(env.RAGNAROK_HIVE_KEYCHAIN_SMOKE),
 		closedBetaTwoBrowserP2PSmoke: evidenceFlag(env.RAGNAROK_P2P_TWO_BROWSER_SMOKE),
@@ -352,6 +372,7 @@ export function buildRagnarokRuntimeEvidence(config: RagnarokRuntimeConfig): Rag
 		economic: config.economic,
 		runtimePhase: getRagnarokRuntimePhase(config),
 		seasonStart: config.seasonStart,
+		indexStartBlock: config.indexStartBlock,
 		storageNamespace: getRagnarokStorageNamespace(config),
 		qaFullCatalogEnabled: isQaFullCatalogEntitlementEnabled(config),
 	};

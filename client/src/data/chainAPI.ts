@@ -76,11 +76,17 @@ export interface ChainStatusResponse {
 	knownAccounts: number;
 	lastSyncedAt: number;
 	lastIrreversibleBlockProcessed: number;
+	indexStartBlock: number;
 	inSync: boolean;
 	headBlock: number;
 	irreversibleBlock: number;
 	syncTargetBlock: number;
 	blocksBehind: number;
+	stateFile: string;
+	stateFileConfigured: boolean;
+	progressBlocks: number;
+	progressTargetBlocks: number;
+	progressPercent: number;
 }
 
 const FETCH_TIMEOUT_MS = 10_000;

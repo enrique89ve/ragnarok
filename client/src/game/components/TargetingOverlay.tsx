@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useTargetingStore } from '../stores/targetingStore';
 import { useTargetingAdapter } from '../hooks';
 import './TargetingOverlay.css';
+import { GameIcon } from '../utils/ui/GameIcon';
 
 interface ArrowPath {
   startX: number;
@@ -184,12 +185,12 @@ function DamagePreviewBadge({ preview, position }: DamagePreviewBadgeProps) {
       }}
     >
       <div className="damage-amount">
-        <span className="damage-icon">⚔️</span>
+        <span className="damage-icon"><GameIcon name="swords" size={14} /></span>
         <span className="damage-value">-{preview.damageToTarget}</span>
       </div>
       <div className={`health-result ${preview.isLethalToTarget ? 'dead' : ''}`}>
         {preview.isLethalToTarget ? (
-          <span className="skull-icon">💀</span>
+          <span className="skull-icon"><GameIcon name="skull" size={14} /></span>
         ) : (
           <span className="health-remaining">{resultingHealth} HP</span>
         )}

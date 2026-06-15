@@ -13,15 +13,26 @@ export interface CardNamePlateProps {
 	name: string;
 }
 
+type CardNameDensity = 'standard' | 'long' | 'dense';
+
+const resolveNameDensity = (name: string): CardNameDensity => {
+	const length = name.trim().length;
+	if (length >= 28) return 'dense';
+	if (length >= 18) return 'long';
+	return 'standard';
+};
+
 const CardNamePlate: React.FC<CardNamePlateProps> = ({ name }) => {
 	const { rarity, size } = useCardFrame();
 	const isPreview = size === 'preview';
 	const rarityColor = getRarityCssColor(rarity);
+	const nameDensity = resolveNameDensity(name);
 
 	return (
 		<div
 			className="card-frame__name-plate"
 			data-size={size}
+			data-name-density={nameDensity}
 			style={{
 				color: rarityColor,
 				fontSize: isPreview ? '1.25rem' : undefined,

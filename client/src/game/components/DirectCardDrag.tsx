@@ -178,8 +178,8 @@ export const DirectCardDrag: React.FC<DirectCardDragProps> = ({
       ref={cardRef}
       className="relative select-none"
       style={{
-        width: '120px',
-        height: '168px',
+        width: '132px',
+        height: '176px',
         transform: `scale(${scale})`,
         transformOrigin: 'center',
         cursor: isPlayable && !disableDrag ? 'grab' : 'default'

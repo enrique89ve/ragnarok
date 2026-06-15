@@ -4,14 +4,21 @@
 .opponent-revealed-card {
   position: relative;
   z-index: 2;
-  height: 100%;
+  flex: 0 0 var(--opponent-hand-card-width, 96px);
+  width: var(--opponent-hand-card-width, 96px);
+  height: calc(var(--opponent-hand-card-width, 96px) * 4 / 3);
   overflow: hidden;
+  margin-left: var(--opponent-hand-card-overlap, -48px);
   transition: transform 0.3s ease;
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
 }
 
+.opponent-revealed-card:first-child {
+  margin-left: 0;
+}
+
 .opponent-revealed-card:hover {
-  transform: scale(0.8) translateY(20px);
+  transform: translateY(10px) scale(1.04);
   z-index: 100;
 }
 
@@ -21,7 +28,7 @@
   position: absolute;
   left: var(
     --opponent-hand-count-anchor-x,
-    var(--opponent-hand-card-width, 78px)
+    var(--opponent-hand-card-width, 96px)
   );
   top: 0;
   box-sizing: border-box;

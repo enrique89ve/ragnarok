@@ -3,16 +3,7 @@
    Maps /ui/ art assets to game elements
    ======================================== */
 
-/* 1. CARD FRAME — ornate border overlay using existing ::before pseudo */
-.simple-card::before {
-	background: url('/ui/card-frame-v2.jpg') center center / cover no-repeat !important;
-	inset: -2px !important;
-	border-radius: var(--radius-norse-tight) !important;
-	opacity: 0.35 !important;
-	mix-blend-mode: overlay;
-}
-
-/* 2. HERO FRAME — ornate portrait border on battlefield heroes */
+/* 1. HERO FRAME — ornate portrait border on battlefield heroes */
 .pet-god-card {
 	position: relative;
 }

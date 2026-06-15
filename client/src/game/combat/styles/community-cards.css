@@ -10,16 +10,14 @@
 }
 
 /* Empty community slot — gold rim + dark fill + raised Eihwaz rune.
-   Same relief recipe as .poker-card-frame--face-down and
+   Same relief recipe as .card-card-back and
    .opponent-card-back so all 3 face-down surfaces read as one family. */
 .card-placeholder {
   width: 112px;
   height: 158px;
   /* Background stack + beveled rim live in
      `client/src/game/components/card/pokerFaceDown.css` (loaded via
-     `poker-core.css` → `community-cards.css` chain OR directly via
-     `PokerCardFrame.css` import). Only the community-slot geometry
-     stays here. */
+     `poker-core.css`). Only the community-slot geometry stays here. */
   border-radius: 7px;
   position: relative;
   display: flex;

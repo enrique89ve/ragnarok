@@ -1,5 +1,11 @@
 # Beta-Testnet Scope
 
+> Historical/reference document. The active readiness plan for the current
+> Alfa Testnet to Closed Testnet Beta path is
+> [`TESTNET_READINESS_FAST_TRACK.md`](./TESTNET_READINESS_FAST_TRACK.md).
+> Keep this file for environment model, RUNE constraints, and older QA Season 0
+> decisions, but do not use it as the current sprint plan.
+
 ## Objective
 
 Validate Ragnarok's full shared architecture before mainnet: gameplay, P2P, match results, rewards, NFT ownership, packs, replay, indexing, and economy flows.

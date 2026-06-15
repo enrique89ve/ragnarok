@@ -250,7 +250,7 @@ export function validateCard(card: any): boolean {
   
   // Check if card is null or undefined
   if (!card) {
-    debug.warn('❌ Card validation: Received null or undefined card');
+    debug.warn('[Card validation: Received null or undefined card');
     return false;
   }
   
@@ -262,19 +262,19 @@ export function validateCard(card: any): boolean {
   // Check required properties
   for (const prop of requiredProperties) {
     if (!(prop in card)) {
-      debug.warn(`❌ Card validation: Missing required property "${prop}"`, card);
+      debug.warn(`[Card validation: Missing required property "${prop}"`, card);
       return false;
     }
   }
   
   // Type-specific validations
   if (card.type === 'minion' && !('attack' in card || 'health' in card)) {
-    debug.warn('❌ Card validation: Minion card missing attack or health', card);
+    debug.warn('[Card validation: Minion card missing attack or health', card);
     return false;
   }
   
   if (card.type === 'spell' && !('manaCost' in card || 'cost' in card)) {
-    debug.warn('❌ Card validation: Spell card missing manaCost', card);
+    debug.warn('[Card validation: Spell card missing manaCost', card);
     return false;
   }
   
@@ -298,7 +298,7 @@ export function getRendererForCard(
 ): CardRendererType {
   // Validate the card first
   if (!validateCard(card)) {
-    debug.warn('⚠️ Using fallback renderer for invalid card:', card);
+    debug.warn('[!] Using fallback renderer for invalid card:', card);
     // Return the active renderer even for invalid cards - we'll let the renderer handle fallbacks
   }
   

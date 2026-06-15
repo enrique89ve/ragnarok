@@ -21,7 +21,11 @@ npm run lint:css  # Stylelint (runs in pre-commit)
 - **Card registry** (actual card definitions) → `client/src/game/data/cardRegistry/`
 - **Game rules** → `docs/RULEBOOK.md`
 - **On-chain protocol** → `docs/RAGNAROK_PROTOCOL_V1.md`
+- **Hive indexer contract** → `docs/HIVE_INDEXER_CONTRACT.md`
 - **PvP wire protocol** → `docs/PVP_WIRE_PROTOCOL.md` (transport, lifecycle, envelopes, authority model, transcript)
+- **Current Alfa → Closed Beta readiness** → `docs/TESTNET_READINESS_FAST_TRACK.md`
+- **Visual/design system** → `DESIGN.md`
+- **Poker arena UI canon** → `docs/POKER_ARENA_UI.md`
 - **Genesis ceremony** → `docs/GENESIS_RUNBOOK.md`
 - **Element interactions** → `docs/ElementWeaknessSystem.md`
 
@@ -50,3 +54,14 @@ For protocol-boundary TypeScript contracts, authority models, discriminated unio
 - **Rarity is one enum** — `common | rare | epic | mythic` (4 tiers, per `docs/RULEBOOK.md` Card Rarity table). Canon lives in `shared/schemas/rarity.ts`; `adaptRarity` translates external vocabularies (e.g. legacy `basic` → `common`, PascalCase `Mythic` → `mythic`) at the trust boundary. Never branch on non-canonical strings.
 - **Asset paths** resolve via `assetPathFor(assetId)` from the schemas package. No hardcoded `/art/nfts/...` outside `client/src/game/utils/art/`.
 - **Indentation**: tabs. **Emojis**: never in committed code.
+
+## Design System
+
+Always read `DESIGN.md` before visual or UI work. Poker/combat visual changes
+must also read `docs/POKER_ARENA_UI.md` and the current testnet readiness plan in
+`docs/TESTNET_READINESS_FAST_TRACK.md`.
+
+Do not deviate from the documented type, color, spacing, board geometry, motion,
+or poker-readability rules without explicit user approval. In QA/review mode,
+flag visual code that fights `DESIGN.md` or splits the poker board into a
+parallel layout path.

@@ -254,8 +254,8 @@
    REALM-AWARE DIVIDER LINE
    Uses CSS variables set by realm classes above
    ============================================================ */
-.game-viewport[class*="realm-"] + .ragnarok-combat-arena.viewport-mode::after,
-.ragnarok-combat-arena.viewport-mode::after {
+.game-viewport[class*="realm-"] + .ragnarok-combat-arena.arena-scaled::after,
+.ragnarok-combat-arena.arena-scaled::after {
 	background: linear-gradient(90deg,
 		transparent 0%,
 		var(--realm-divider-color, rgba(212, 175, 55, 0.15)) 10%,

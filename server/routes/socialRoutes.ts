@@ -7,7 +7,10 @@ import {
 } from '../services/hiveAuth';
 import { hasAcceptedWarbandRelation } from '../services/warbandRelations';
 import { buildServerSignedChallenge } from '../services/p2pChallengeSigner';
+import { buildP2PMatchTicket } from '../services/p2pMatchTicketSigner';
 import { consumeWindowRateLimit, type RateLimitBucket } from '../services/p2pRateLimit';
+import { hasStarterCeremonyClaim } from '../services/starterClaimRegistry';
+import { log } from '../static';
 import {
 	requireHiveHeaderAuth,
 	type HiveAuthenticatedRequest,
@@ -29,7 +32,25 @@ import {
 
 const router = Router();
 
-const presenceMap = new Map<string, { peerId?: string; lastSeen: number; availability: P2PAvailabilityState }>();
+type PresenceRecord = { peerId?: string; lastSeen: number; availability: P2PAvailabilityState };
+type PresenceStatus = { online: boolean; peerId?: string; lastSeen?: number; availability?: P2PAvailabilityState; canReceiveChallenge?: boolean };
+type ChallengeRequestBody = {
+	readonly from: string;
+	readonly to: string;
+	readonly peerId: string;
+};
+type ChallengeAvailability =
+	| { readonly ok: true; readonly targetPresence: PresenceRecord }
+	| { readonly ok: false; readonly status: number; readonly reason: ChallengeRejectReason; readonly retryAfterMs?: number };
+type DirectChallengePair =
+	| {
+		readonly ok: true;
+		readonly challenge: ServerSignedChallenge;
+		readonly opponentMatchChallenge: ServerSignedChallenge;
+	}
+	| { readonly ok: false };
+
+const presenceMap = new Map<string, PresenceRecord>();
 const challenges = new Map<string, ServerSignedChallenge[]>();
 const presenceRateLimit: RateLimitBucket = new Map();
 const challengeRateLimit: RateLimitBucket = new Map();
@@ -38,6 +59,7 @@ const PRESENCE_STALE_THRESHOLD_MS = 180_000;
 const MAX_FRIENDS_LIST = 200;
 const CHALLENGE_BODY_KEYS = new Set(['from', 'to', 'peerId']);
 const SOCIAL_HEARTBEAT_ACTION = 'friend-heartbeat';
+const SOCIAL_CHALLENGE_ACTION = 'friend-challenge';
 const SOCIAL_CHALLENGES_ACTION = 'friend-challenges';
 const SOCIAL_SESSION_ACTION = 'friend-session';
 const SOCIAL_SESSION_COOKIE_NAME = 'ragnarok-friend-session';
@@ -101,16 +123,15 @@ function writeFriendSessionCookie() {
 }
 
 function readSessionLoginBody(value: unknown): SocialSessionMessageBody | null {
-	if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
-	const body = value as Record<string, unknown>;
-	if (typeof body.username !== 'string') return null;
-	if (typeof body.signature !== 'string') return null;
-	const timestamp = body.timestamp;
+	if (!isRecord(value)) return null;
+	if (typeof value.username !== 'string') return null;
+	if (typeof value.signature !== 'string') return null;
+	const timestamp = value.timestamp;
 	if (typeof timestamp !== 'number' || !Number.isSafeInteger(timestamp) || timestamp <= 0) return null;
 	return {
-		username: body.username,
+		username: value.username,
 		timestamp,
-		signature: body.signature,
+		signature: value.signature,
 	};
 }
 
@@ -133,7 +154,7 @@ function createRequireFriendAuth(
 	return async (req: Request, res: Response, next: () => void): Promise<void> => {
 		const requestSession = readFriendSessionRequest(req);
 		if (requestSession) {
-			const authenticatedReq = req as HiveAuthenticatedRequest;
+			const authenticatedReq: HiveAuthenticatedRequest = req;
 			authenticatedReq.hiveUsername = requestSession.username;
 			next();
 			return;
@@ -145,6 +166,10 @@ function createRequireFriendAuth(
 
 const requireFriendHeartbeatAuth = createRequireFriendAuth(
 	(_req, username, timestamp) => `ragnarok-${SOCIAL_HEARTBEAT_ACTION}:${username}:${timestamp}`,
+);
+
+const requireFriendChallengeAuth = createRequireFriendAuth(
+	(_req, username, timestamp) => `ragnarok-${SOCIAL_CHALLENGE_ACTION}:${username}:${timestamp}`,
 );
 
 const requireFriendChallengesAuth = createRequireFriendAuth(
@@ -186,7 +211,7 @@ function sendReject(res: Response, status: number, reason: ChallengeRejectReason
 
 function challengeRejectStatus(reason: ChallengeRejectReason): number {
 	if (reason === 'rate_limited') return 429;
-	if (reason === 'not_warband') return 403;
+	if (reason === 'not_warband' || reason === 'starter_claim_required') return 403;
 	if (reason === 'invalid_input') return 400;
 	if (reason === 'offline' || reason === 'stale_peer') return 404;
 	if (reason === 'server_unconfigured') return 503;
@@ -204,6 +229,163 @@ function challengeReasonForAvailability(availability: P2PAvailabilityState): Cha
 
 function isChallengeable(presence: { peerId?: string; availability: P2PAvailabilityState } | undefined): boolean {
 	return !!presence?.peerId && presence.availability === 'available';
+}
+
+function isSharedServerNetworkEnvironment(): boolean {
+	return process.env.VITE_NETWORK_STAGE === 'testnet' || process.env.VITE_NETWORK_STAGE === 'mainnet';
+}
+
+async function canUseSharedSocialP2P(username: string): Promise<boolean> {
+	if (!isSharedServerNetworkEnvironment()) return true;
+	return hasStarterCeremonyClaim(username);
+}
+
+function blockedPresence(): { peerId?: string; availability: P2PAvailabilityState } {
+	return { availability: 'offline' };
+}
+
+function presenceForSharedP2P(presence: PresenceRecord, p2pAllowed: boolean): { peerId?: string; availability: P2PAvailabilityState } {
+	return p2pAllowed ? presence : blockedPresence();
+}
+
+function presenceStatusFromRecord(presence: PresenceRecord | undefined, p2pAllowed: boolean): PresenceStatus {
+	if (!presence) return { online: false, availability: 'offline', canReceiveChallenge: false };
+	const visible = presenceForSharedP2P(presence, p2pAllowed);
+	return {
+		online: true,
+		peerId: visible.peerId,
+		lastSeen: presence.lastSeen,
+		availability: visible.availability,
+		canReceiveChallenge: isChallengeable(visible),
+	};
+}
+
+function writeHeartbeatPresence(input: {
+	readonly username: string;
+	readonly peerId: string | undefined;
+	readonly availability: P2PAvailabilityState | undefined;
+	readonly p2pAllowed: boolean;
+	readonly now?: number;
+}): void {
+	presenceMap.set(input.username, {
+		peerId: input.p2pAllowed && typeof input.peerId === 'string' ? input.peerId.slice(0, MAX_PEER_ID_LENGTH) : undefined,
+		lastSeen: input.now ?? Date.now(),
+		availability: input.p2pAllowed ? input.availability ?? (input.peerId ? 'available' : 'offline') : 'offline',
+	});
+}
+
+function readChallengeRequestBody(value: unknown): ChallengeRequestBody | null {
+	if (!isRecord(value) || !hasOnlyKeys(value, CHALLENGE_BODY_KEYS)) return null;
+	const { from, to, peerId } = value;
+	if (!from || typeof from !== 'string' || !to || typeof to !== 'string' || !peerId || typeof peerId !== 'string') return null;
+	const normalizedFrom = normalizeHiveUsername(from);
+	const normalizedTo = normalizeHiveUsername(to);
+	if (!isValidHiveUsername(normalizedFrom) || !isValidHiveUsername(normalizedTo)) return null;
+	if (!isSafePeerId(peerId)) return null;
+	return { from: normalizedFrom, to: normalizedTo, peerId };
+}
+
+async function canBothPlayersUseSharedSocialP2P(from: string, to: string): Promise<boolean> {
+	return await canUseSharedSocialP2P(from) && await canUseSharedSocialP2P(to);
+}
+
+function readChallengeAvailability(input: {
+	readonly from: string;
+	readonly to: string;
+	readonly peerId: string;
+	readonly now: number;
+}): ChallengeAvailability {
+	const senderPresence = presenceMap.get(input.from);
+	if (senderPresence) {
+		const senderReason = challengeReasonForAvailability(senderPresence.availability);
+		if (senderReason) return { ok: false, status: challengeRejectStatus(senderReason), reason: senderReason };
+	}
+	presenceMap.set(input.from, {
+		peerId: input.peerId,
+		lastSeen: input.now,
+		availability: 'available',
+	});
+
+	const targetPresence = presenceMap.get(input.to);
+	if (!targetPresence) return { ok: false, status: 404, reason: 'offline' };
+	const targetReason = challengeReasonForAvailability(targetPresence.availability);
+	if (targetReason) return { ok: false, status: challengeRejectStatus(targetReason), reason: targetReason };
+	if (!targetPresence.peerId) return { ok: false, status: 404, reason: 'stale_peer' };
+
+	const limit = consumeWindowRateLimit({
+		bucket: challengeRateLimit,
+		key: `${input.from}:${input.to}`,
+		limit: CHALLENGE_RATE_LIMIT_MAX_ACCEPTED,
+		windowMs: CHALLENGE_RATE_LIMIT_WINDOW_MS,
+		now: input.now,
+	});
+	if (!limit.allowed) {
+		return { ok: false, status: 429, reason: 'rate_limited', retryAfterMs: limit.retryAfterMs };
+	}
+
+	return { ok: true, targetPresence };
+}
+
+function buildDirectChallengePair(input: {
+	readonly from: string;
+	readonly to: string;
+	readonly peerId: string;
+	readonly targetPresence: PresenceRecord;
+	readonly now: number;
+}): DirectChallengePair {
+	if (!input.targetPresence.peerId) return { ok: false };
+	try {
+		const senderMatchTicket = buildP2PMatchTicket({
+			roomId: input.peerId,
+			peerId: input.peerId,
+			account: input.from,
+			now: input.now,
+		});
+		const targetMatchTicket = buildP2PMatchTicket({
+			roomId: input.peerId,
+			peerId: input.targetPresence.peerId,
+			account: input.to,
+			now: input.now,
+		});
+
+		const challenge = {
+			...buildServerSignedChallenge({
+				from: input.from,
+				to: input.to,
+				peerId: input.peerId,
+				timestamp: input.now,
+				expiresAt: input.now + CHALLENGE_STALE_THRESHOLD_MS,
+			}),
+			matchTicket: targetMatchTicket,
+		};
+		const opponentMatchChallenge = {
+			...buildServerSignedChallenge({
+				from: input.to,
+				to: input.from,
+				peerId: input.targetPresence.peerId,
+				timestamp: input.now,
+				expiresAt: input.now + CHALLENGE_STALE_THRESHOLD_MS,
+			}),
+			matchTicket: senderMatchTicket,
+		};
+		return { ok: true, challenge, opponentMatchChallenge };
+	} catch (err) {
+		log(`Challenge signing unavailable: ${err instanceof Error ? err.message : String(err)}`, 'Social');
+		return { ok: false };
+	}
+}
+
+function senderVisibleChallenge(challenge: ServerSignedChallenge): ServerSignedChallenge {
+	return {
+		from: challenge.from,
+		to: challenge.to,
+		peerId: challenge.peerId,
+		timestamp: challenge.timestamp,
+		expiresAt: challenge.expiresAt,
+		nonce: challenge.nonce,
+		sigAlg: challenge.sigAlg,
+		serverSig: challenge.serverSig,
+	};
 }
 
 function pruneStale() {
@@ -251,6 +433,14 @@ export function getP2PSocialStats(): P2PSocialStats {
 		busyUsers,
 		pendingChallenges,
 	};
+}
+
+export function clearP2PSocialStateForTests(): void {
+	presenceMap.clear();
+	challenges.clear();
+	presenceRateLimit.clear();
+	challengeRateLimit.clear();
+	socialSessions.clear();
 }
 
 router.post('/session/login', async (req: Request, res: Response) => {
@@ -307,7 +497,7 @@ router.get('/session/status', (req: Request, res: Response) => {
 	});
 });
 
-router.post('/heartbeat', requireFriendHeartbeatAuth, (req: HiveAuthenticatedRequest, res: Response) => {
+router.post('/heartbeat', requireFriendHeartbeatAuth, async (req: HiveAuthenticatedRequest, res: Response) => {
 	const parsed = parsePresenceHeartbeatBody(req.body);
 	if (!parsed.ok) {
 		sendReject(res, 400, parsed.reason);
@@ -319,6 +509,7 @@ router.post('/heartbeat', requireFriendHeartbeatAuth, (req: HiveAuthenticatedReq
 	}
 
 	const { username, peerId, friends, availability } = parsed.value;
+	const p2pAllowed = await canUseSharedSocialP2P(username);
 	const limit = consumeWindowRateLimit({
 		bucket: presenceRateLimit,
 		key: `${username}:${getRequestIp(req)}`,
@@ -342,13 +533,14 @@ router.post('/heartbeat', requireFriendHeartbeatAuth, (req: HiveAuthenticatedReq
 
 	pruneStale();
 
-	presenceMap.set(username, {
-		peerId: typeof peerId === 'string' ? peerId.slice(0, MAX_PEER_ID_LENGTH) : undefined,
-		lastSeen: Date.now(),
-		availability: availability ?? (peerId ? 'available' : 'offline'),
+	writeHeartbeatPresence({
+		username,
+		peerId,
+		availability,
+		p2pAllowed,
 	});
 
-	const statuses: Record<string, { online: boolean; peerId?: string; lastSeen?: number; availability?: P2PAvailabilityState; canReceiveChallenge?: boolean }> = {};
+	const statuses: Record<string, PresenceStatus> = {};
 
 	for (const friend of friendList) {
 		const normalized = friend.toLowerCase();
@@ -358,132 +550,68 @@ router.post('/heartbeat', requireFriendHeartbeatAuth, (req: HiveAuthenticatedReq
 		}
 
 		const presence = presenceMap.get(normalized);
-		statuses[normalized] = presence
-			? {
-				online: true,
-				peerId: presence.peerId,
-				lastSeen: presence.lastSeen,
-				availability: presence.availability,
-				canReceiveChallenge: isChallengeable(presence),
-			}
-			: { online: false, availability: 'offline', canReceiveChallenge: false };
+		const friendP2PAllowed = await canUseSharedSocialP2P(normalized);
+		statuses[normalized] = presenceStatusFromRecord(presence, friendP2PAllowed);
 	}
 
-	const pending = challenges.get(username) || [];
+	const pending = p2pAllowed ? challenges.get(username) || [] : [];
 	challenges.delete(username);
 
 	res.json({ statuses, challenges: pending });
 });
 
-router.post('/challenge', (req: Request, res: Response) => {
-	if (!isRecord(req.body) || !hasOnlyKeys(req.body, CHALLENGE_BODY_KEYS)) {
+router.post('/challenge', requireFriendChallengeAuth, async (req: HiveAuthenticatedRequest, res: Response) => {
+	const body = readChallengeRequestBody(req.body);
+	if (!body) {
 		sendReject(res, 400, 'invalid_input');
 		return;
 	}
-	const { from, to, peerId } = req.body;
-	if (!from || typeof from !== 'string' || !to || typeof to !== 'string' || !peerId || typeof peerId !== 'string') {
-		sendReject(res, 400, 'invalid_input');
+	if (req.hiveUsername !== body.from) {
+		res.status(403).json({ error: 'forbidden', reason: 'username_mismatch' });
 		return;
 	}
-	const normalizedFrom = normalizeHiveUsername(from);
-	const normalizedTo = normalizeHiveUsername(to);
-	if (!isValidHiveUsername(normalizedFrom) || !isValidHiveUsername(normalizedTo)) {
-		sendReject(res, 400, 'invalid_input');
-		return;
-	}
-	if (!isSafePeerId(peerId)) {
-		sendReject(res, 400, 'invalid_input');
-		return;
-	}
-	if (normalizedFrom === normalizedTo) {
+	if (body.from === body.to) {
 		sendReject(res, 400, 'self_challenge');
 		return;
 	}
-	if (!hasAcceptedWarbandRelation(normalizedFrom, normalizedTo)) {
+	if (!hasAcceptedWarbandRelation(body.from, body.to)) {
 		sendReject(res, 403, 'not_warband');
+		return;
+	}
+	if (!await canBothPlayersUseSharedSocialP2P(body.from, body.to)) {
+		sendReject(res, 403, 'starter_claim_required');
 		return;
 	}
 
 	pruneStale();
 	const now = Date.now();
-
-	const senderPresence = presenceMap.get(normalizedFrom);
-	if (senderPresence) {
-		const senderReason = challengeReasonForAvailability(senderPresence.availability);
-		if (senderReason) {
-			sendReject(res, challengeRejectStatus(senderReason), senderReason);
-			return;
-		}
-	}
-	presenceMap.set(normalizedFrom, {
-		peerId,
-		lastSeen: now,
-		availability: 'available',
-	});
-
-	const targetPresence = presenceMap.get(normalizedTo);
-	if (!targetPresence) {
-		sendReject(res, 404, 'offline');
-		return;
-	}
-	const targetReason = challengeReasonForAvailability(targetPresence.availability);
-	if (targetReason) {
-		sendReject(res, challengeRejectStatus(targetReason), targetReason);
-		return;
-	}
-	if (!targetPresence.peerId) {
-		sendReject(res, 404, 'stale_peer');
+	const availability = readChallengeAvailability({ ...body, now });
+	if (!availability.ok) {
+		sendReject(res, availability.status, availability.reason, availability.retryAfterMs);
 		return;
 	}
 
-	const limit = consumeWindowRateLimit({
-		bucket: challengeRateLimit,
-		key: `${normalizedFrom}:${normalizedTo}`,
-		limit: CHALLENGE_RATE_LIMIT_MAX_ACCEPTED,
-		windowMs: CHALLENGE_RATE_LIMIT_WINDOW_MS,
+	const pair = buildDirectChallengePair({
+		...body,
+		targetPresence: availability.targetPresence,
 		now,
 	});
-	if (!limit.allowed) {
-		sendReject(res, 429, 'rate_limited', limit.retryAfterMs);
-		return;
-	}
-
-	const target = normalizedTo;
-	const existing = challenges.get(target) || [];
-	let challenge: ServerSignedChallenge;
-	let opponentMatchChallenge: ServerSignedChallenge;
-	try {
-		challenge = buildServerSignedChallenge({
-			from: normalizedFrom,
-			to: normalizedTo,
-			peerId,
-			timestamp: now,
-			expiresAt: now + CHALLENGE_STALE_THRESHOLD_MS,
-		});
-
-		opponentMatchChallenge = buildServerSignedChallenge({
-			from: normalizedTo,
-			to: normalizedFrom,
-			peerId: targetPresence.peerId,
-			timestamp: now,
-			expiresAt: now + CHALLENGE_STALE_THRESHOLD_MS,
-		});
-	} catch (err) {
-		console.warn('[Social] Challenge signing unavailable:', err);
+	if (!pair.ok) {
 		sendReject(res, 503, 'server_unconfigured');
 		return;
 	}
-	existing.push(challenge);
-	challenges.set(target, existing.slice(-10));
+	const existing = challenges.get(body.to) || [];
+	existing.push(pair.challenge);
+	challenges.set(body.to, existing.slice(-10));
 
 	res.json({
 		ok: true,
-		challenge,
-		opponentMatchChallenge,
+		challenge: senderVisibleChallenge(pair.challenge),
+		opponentMatchChallenge: pair.opponentMatchChallenge,
 	});
 });
 
-router.get('/challenges/:username', requireFriendChallengesAuth, (req: HiveAuthenticatedRequest, res: Response) => {
+router.get('/challenges/:username', requireFriendChallengesAuth, async (req: HiveAuthenticatedRequest, res: Response) => {
 	const username = normalizeHiveUsername(req.params.username);
 	if (!isValidHiveUsername(username)) {
 		sendReject(res, 400, 'invalid_input');
@@ -491,6 +619,11 @@ router.get('/challenges/:username', requireFriendChallengesAuth, (req: HiveAuthe
 	}
 	if (req.hiveUsername !== username) {
 		res.status(403).json({ error: 'forbidden', reason: 'username_mismatch' });
+		return;
+	}
+	if (!await canUseSharedSocialP2P(username)) {
+		challenges.delete(username);
+		sendReject(res, 403, 'starter_claim_required');
 		return;
 	}
 	pruneStale();

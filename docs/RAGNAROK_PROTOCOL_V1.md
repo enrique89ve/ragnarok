@@ -35,6 +35,13 @@ Where:
   MUST NOT broadcast `save_state` or any full client-store snapshot under the
   Ragnarok protocol id.
 
+NFT custody boundary: in NFTLox-enabled phases, genesis NFT custody,
+distribution, ownership, and transfers are NFTLox authority. This protocol
+defines Ragnarok replay state: match settlement, RUNE/Eitr, pack triggers and
+RNG resolution, ranking, and XP/level progression. See
+[`HIVE_INDEXER_CONTRACT.md`](./HIVE_INDEXER_CONTRACT.md) and
+[`NFTLOX_INTEGRATION_SPEC.md`](./NFTLOX_INTEGRATION_SPEC.md).
+
 ## 3. Canonical Ordering
 
 Readers MUST apply operations in this order:
@@ -296,6 +303,11 @@ cookie. This login payload is not broadcast to Hive. `/api/admin/multisig/*`
 requires that session; new panel actions use the native multisig endpoints.
 
 ## 8. Asset Model
+
+Runtime note: this asset model describes the Ragnarok replay projection and the
+legacy/JSON compatibility shape. It is not the final custody source for
+NFTLox-enabled phases; NFTLox owns custody and ownership, while Ragnarok replay
+owns gameplay-derived state and may mirror XP/level to NFTLox.
 
 Each canonical NFT asset is:
 
@@ -591,7 +603,8 @@ Destroys an NFT.
 
 - **Active auth** by `owner`
 - `owner` MUST currently own `uid`
-- Asset is removed from canonical ownership state
+- Asset is removed from the Ragnarok replay projection. In NFTLox-enabled
+  phases, custody burn/destruction must also be proven through NFTLox.
 - `burn` deterministically credits Eitr in replay state per `EITR_VALUES[rarity]` and refills `pack_supply[rarity] += 1`. The uid is permanently destroyed; per-card_id circulation decreases by 1. See [ADR 0001](adr/0001-eitr-v1-canonical.md) for the full Eitr ledger model.
 
 ## 10.9 `level_up`
@@ -783,30 +796,37 @@ Second half of the two-phase forge. Verifies the salt preimage against the commi
 
 ## 11.1 Runtime Parity Requirement
 
-The client replay engine (`replayRules.ts`) and the server indexer (`chainIndexer.ts`) MUST use the **same canonical validation logic**. Currently they do not: the client enforces PoW verification, dual-signature verification, transfer cooldown, and supply cap checks, while the server indexer has none of these.
+The client replay engine and the server indexer MUST use the **same canonical
+validation logic** for protocol operations.
 
-The correct implementation is:
+Current runtime shape:
 
-- **Extract one shared replay/validation core** that implements every canonical op handler with full validation (PoW, signatures, nonces, cooldowns, supply caps, ownership checks).
-- The **server** imports this core and feeds it ops from irreversible block scanning.
-- The **client** imports this core and feeds it ops from server snapshots (fast mode) or block replay (verify mode).
-- Op normalization (legacy `rp_*` → canonical `ragnarok-cards` action names) MUST happen **before** validation, PoW hashing, signature verification, and state transition — not after.
+- The shared protocol core lives in `shared/protocol-core`.
+- The server imports that core from `server/services/chainIndexer.ts`.
+- Op normalization in `shared/protocol-core/normalize.ts` happens before proof
+  of work, signature verification, nonce checks, ownership checks, supply cap
+  checks, and state transitions.
+- The server storage adapter is different from browser storage, but selected
+  Hive operations pass through the same protocol handler.
 
-Without this, a block-scanning indexer that uses the current server handlers would be block-complete but validation-incomplete — still wrong.
+The canonical indexer contract, including current limitations, lives in
+[`HIVE_INDEXER_CONTRACT.md`](./HIVE_INDEXER_CONTRACT.md).
 
 ## 11.2 Server Indexer Spec
 
 The v1 canonical server indexer MUST:
 
-1. Load persisted `last_irreversible_block_processed`
-2. Poll `get_dynamic_global_properties`
-3. Read `LIB = last_irreversible_block_num`
-4. For each block `b` from `cursor + 1` to `LIB`:
-   - Call `condenser_api.get_ops_in_block(b, false)`
-   - Filter `custom_json` ops by protocol id `ragnarok-cards` (and legacy `rp_*`, `ragnarok_level_up`)
-   - Normalize op names to canonical action names
-   - Apply ops through the **shared replay core** in returned block order
-5. Persist state and new cursor `last_irreversible_block_processed = LIB`
+1. Load the runtime-specific JSON state file and persisted block cursor.
+2. Poll `get_dynamic_global_properties`.
+3. Compute the replay target from irreversible Hive state, currently
+   `last_irreversible_block_num - PACK_ENTROPY_DELAY_BLOCKS`.
+4. Read operations either through block RPC (`get_ops_in_block`) or HafAH range
+   scan for `custom_json` catch-up.
+5. Filter selected `custom_json` operations by runtime protocol id and accepted
+   legacy ids.
+6. Normalize op names to canonical action names.
+7. Apply selected ops through `shared/protocol-core`.
+8. Persist state, sync health, and the new block cursor after inspected blocks.
 
 The indexer MUST NOT:
 
@@ -814,6 +834,12 @@ The indexer MUST NOT:
 - Advance cursor on reversible head blocks
 - Treat REST output as authoritative over chain replay
 - Use simplified validation handlers that skip PoW, signatures, cooldowns, or supply caps
+
+The HafAH fast path currently fetches `operation-types=18` (`custom_json`).
+Operations whose validation depends on sibling `transfer` ops are fully
+validated only when those transfer siblings are available to the replay adapter.
+See [`HIVE_INDEXER_CONTRACT.md`](./HIVE_INDEXER_CONTRACT.md) §Companion
+Transfer Limitation.
 
 ### Index checkpoints
 
@@ -911,9 +937,9 @@ Do not call mainnet launch-ready until ALL FOUR are true:
 
 ## 15.1 Implementation Order
 
-1. Extract shared replay/validation core from `replayRules.ts` (isomorphic: runs in browser + Node)
-2. Rewrite server indexer: `get_ops_in_block` + LIB cursor, using shared core
-3. Rewrite client replay: block-based cursor, LIB-gated, using shared core
+1. Maintain shared replay/validation core in `shared/protocol-core` (isomorphic: runs in browser + Node)
+2. Keep server indexer on `get_ops_in_block`/HafAH range sync + LIB cursor, using shared core
+3. Keep client replay block-based and LIB-gated, using shared core
 4. Implement `pack_commit` / `pack_reveal` with delayed entropy + anti-abort deadline
 5. Implement `match_anchor` with pinned pubkeys; update signature verifier
 6. Tighten Zod schemas (PoW required, undefined card guard)
@@ -932,7 +958,7 @@ The `starter` pack key in `packCatalog.ts` is intentionally **not** a chain-broa
 | `acquisition` | `['free_starter_claim']` (no `direct_purchase`, no `rune_exchange`) |
 | Source of card IDs | [`shared/schemas/starterEntitlement.ts`](../shared/schemas/starterEntitlement.ts) — `STARTER_ENTITLEMENT_CARD_IDS_BY_CLASS` (10 Mage + 10 Warrior + 10 Priest + 10 Rogue + 5 Neutral) |
 | Materialization | `materializeStarterEntitlement()` in `client/src/game/data/starterSet.ts` — writes 45 starter-category cards directly into the local collection. No Hive broadcast for the cards themselves. |
-| `claimStarterEntitlement` | Client-local ceremony state only. No Hive broadcast and no Keychain signature; cards are entitled regardless. |
+| `claimStarterEntitlement` | Client ceremony state plus shared-network server receipt. No Hive broadcast; cards are entitled regardless. In `testnet`/`mainnet`, `/api/starter/claim` records a signed operational receipt so public P2P can reject accounts that skipped the ceremony. |
 
 Protocol-level rejection rules:
 

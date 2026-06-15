@@ -11,28 +11,23 @@
  */
 
 import React from 'react';
-import {
-	CardFrame,
-	CardArt,
-	CardHolo,
-	CardManaGem,
-	CardStatGems,
-	CardNamePlate,
-	CardTribeLine,
-	CardDescription,
-	CardBloodPrice,
-	CardEvolutionStars,
-	CardElementBadge,
-	CardPetStageBadge,
-	CardKeywordTooltip,
-} from './index';
 import type {
-	CardType as CardFrameType,
-	CardKind as CardFrameKind,
-	EvolutionLevel,
-	StatView,
 	StatGemTone,
+	CardSize,
+	CardShape,
+	CardStatsMode,
 } from './types';
+import {
+	resolveSimpleCardFrameLayoutAdapter,
+	type CardFrameLayoutSurface,
+} from './cardFrameLayoutAdapter';
+import {
+	CollectionCardTile,
+	type CollectionTileCard,
+	type CollectionTileRenderedFields,
+	type CollectionTileStats,
+	type CollectionTileStatTone,
+} from '../collection/CollectionCardTile';
 import type { Rarity } from '@shared/schemas/rarity';
 import { parseNorseElement, type NorseElement } from '../../types/NorseTypes';
 import { normalizeRarityKey } from '../../utils/rarityUtils';
@@ -88,7 +83,7 @@ export interface SimpleCardStatView {
 	health?: SimpleCardStatValue;
 }
 
-export type SimpleCardStatsMode = 'frame' | 'battlefield' | 'hidden';
+export type SimpleCardStatsMode = CardStatsMode;
 
 export const normalizeSimpleCardRarity = normalizeRarityKey;
 export const normalizeSimpleCardElement = parseNorseElement;
@@ -116,7 +111,7 @@ interface SimpleCardCompatProps {
 	onClick?: () => void;
 	onMouseEnter?: (e: React.MouseEvent) => void;
 	onMouseLeave?: (e: React.MouseEvent) => void;
-	size?: 'small' | 'medium' | 'large' | 'preview';
+	size?: CardSize;
 	showDescription?: boolean;
 	className?: string;
 	style?: React.CSSProperties;
@@ -124,35 +119,13 @@ interface SimpleCardCompatProps {
 	healthBuff?: number;
 	statView?: SimpleCardStatView;
 	statsMode?: SimpleCardStatsMode;
+	shape?: CardShape;
+	surface?: CardFrameLayoutSurface;
 	owned?: boolean;
 	disableTooltips?: boolean;
 }
 
-const TYPE_TO_FRAME: Record<SimpleCardType, CardFrameType> = {
-	minion: 'minion',
-	spell: 'spell',
-	weapon: 'weapon',
-	artifact: 'artifact',
-	armor: 'armor',
-	hero: 'hero',
-	secret: 'spell',
-	location: 'spell',
-	poker_spell: 'spell',
-};
-
-const TYPE_TO_KIND: Record<SimpleCardType, CardFrameKind> = {
-	minion: null,
-	spell: null,
-	weapon: null,
-	artifact: null,
-	armor: null,
-	hero: null,
-	secret: 'secret',
-	location: 'location',
-	poker_spell: 'poker_spell',
-};
-
-const toneToFrame = (tone: SimpleCardStatTone | undefined): StatGemTone => {
+const toneToTile = (tone: SimpleCardStatTone | undefined): CollectionTileStatTone => {
 	switch (tone) {
 		case 'buffed': return 'buffed';
 		case 'damaged': return 'damaged';
@@ -160,6 +133,26 @@ const toneToFrame = (tone: SimpleCardStatTone | undefined): StatGemTone => {
 		default: return 'base';
 	}
 };
+
+const toNumberId = (id: number | string): number => {
+	const numericId = Number(id);
+	return Number.isFinite(numericId) ? numericId : 0;
+};
+
+const toCollectionTileCard = (card: SimpleCardData): CollectionTileCard => ({
+	id: toNumberId(card.id),
+	name: card.name,
+	manaCost: card.manaCost,
+	rarity: card.rarity ?? 'common',
+	type: card.type,
+	heroClass: card.cardClass ?? 'neutral',
+	quantity: 1,
+	collectionSource: 'qa_full_catalog',
+	...(card.description !== undefined ? { description: card.description } : {}),
+	...(card.element !== undefined ? { element: card.element } : {}),
+	...(card.attack !== undefined ? { attack: card.attack } : {}),
+	...(card.health !== undefined ? { health: card.health } : {}),
+});
 
 export const SimpleCardCompat: React.FC<SimpleCardCompatProps> = ({
 	card,
@@ -176,6 +169,8 @@ export const SimpleCardCompat: React.FC<SimpleCardCompatProps> = ({
 	healthBuff = 0,
 	statView,
 	statsMode = 'frame',
+	shape,
+	surface,
 	owned = true,
 	disableTooltips = false,
 }) => {
@@ -194,58 +189,66 @@ export const SimpleCardCompat: React.FC<SimpleCardCompatProps> = ({
 		tone: defaultStatsAreUnknown ? 'unknown' : healthBuff > 0 ? 'buffed' : 'base',
 	};
 
-	const cardType = TYPE_TO_FRAME[card.type];
-	const cardKind = TYPE_TO_KIND[card.type];
-	const evolutionLevel: EvolutionLevel = card.evolutionLevel ?? null;
 	const rarity: Rarity = card.rarity ?? 'common';
-	const element: NorseElement = card.element ?? 'neutral';
 	const artPath = getCardArtPath(card.id) ?? undefined;
 	const showArt = Boolean(artPath) && owned;
+	const layoutAdapter = resolveSimpleCardFrameLayoutAdapter({
+		size,
+		statsMode,
+		showDescription,
+		...(surface !== undefined ? { surface } : {}),
+	});
 
-	const statViewForGems: StatView | undefined = showCombatStats
+	const tileStats: CollectionTileStats | undefined = showCombatStats
 		? {
-			attack: { value: typeof attackStat.value === 'string' ? '?' : attackStat.value, tone: toneToFrame(attackStat.tone) },
-			health: { value: typeof healthStat.value === 'string' ? '?' : healthStat.value, tone: toneToFrame(healthStat.tone) },
+			attack: { value: attackStat.value, tone: toneToTile(attackStat.tone) },
+			health: { value: healthStat.value, tone: toneToTile(healthStat.tone) },
 		}
 		: undefined;
 
+	const fields: CollectionTileRenderedFields = {
+		showArt,
+		showCount: false,
+		showStats: showCombatStats,
+		...(layoutAdapter.showTribeLine && card.tribe ? { tribe: card.tribe } : {}),
+		...(layoutAdapter.showDescriptionText && card.description ? { description: card.description } : {}),
+		...(layoutAdapter.showKeywords && card.keywords !== undefined ? { keywords: card.keywords } : {}),
+		keywordLimit: layoutAdapter.keywordLimit,
+		keywordLabelMode: layoutAdapter.keywordLabelMode,
+	};
+
+	const frameClassName = [
+		'simple-card',
+		size,
+		shape !== undefined ? `simple-card--shape-${shape}` : '',
+		className,
+	].filter(Boolean).join(' ');
+
 	return (
-		<CardFrame
-			shape={size === 'preview' ? 'portrait' : 'tile'}
-			rarity={rarity}
-			element={element}
-			size={size}
-			cardType={cardType}
-			cardKind={cardKind}
-			evolutionLevel={evolutionLevel}
-			statsMode={statsMode}
+		<CollectionCardTile
+			card={{
+				...toCollectionTileCard(card),
+				rarity,
+			}}
+			dataCardSurface={layoutAdapter.surface}
+			disableTooltips={disableTooltips}
+			fields={fields}
+			frameClassName={frameClassName}
+			frameSize={size}
+			frameStyle={{
+				maxWidth: 'none',
+				...style,
+			}}
 			isPlayable={isPlayable}
 			isHighlighted={isHighlighted}
-			disableTooltips={disableTooltips}
 			onClick={onClick}
-			className={className}
-			style={style}
-		>
-			{showArt && <CardArt src={artPath} alt={card.name} />}
-			<CardHolo />
-			<CardManaGem cost={card.manaCost} />
-			{card.evolutionLevel && <CardEvolutionStars level={card.evolutionLevel} />}
-			{card.element && <CardElementBadge element={element} />}
-			{card.petStage && (
-				<CardPetStageBadge
-					stage={card.petStage === 'adept' ? 2 : card.petStage === 'master' ? 3 : 1}
-				/>
-			)}
-			{card.bloodPrice && card.bloodPrice > 0 && <CardBloodPrice value={card.bloodPrice} />}
-			<CardNamePlate name={card.name} />
-			{card.tribe && <CardTribeLine tribe={card.tribe} />}
-			<CardDescription
-				description={showDescription ? card.description : undefined}
-				keywords={card.keywords}
-			/>
-			{statViewForGems && <CardStatGems statView={statViewForGems} />}
-			<CardKeywordTooltip keywords={card.keywords} />
-		</CardFrame>
+			onMouseEnter={onMouseEnter}
+			onMouseLeave={onMouseLeave}
+			shellClassName={`simple-card-shell simple-card-shell--${size}`}
+			shellStyle={{ maxWidth: 'none' }}
+			stats={tileStats}
+			statsMode={statsMode}
+		/>
 	);
 };
 

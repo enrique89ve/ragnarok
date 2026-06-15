@@ -15,6 +15,7 @@ import { useQuestStore } from '../../stores/questStore';
 import { ActiveQuest } from '../../utils/quests/types';
 import { getQuestProgressPercent } from '../../utils/quests/questUtils';
 import './QuestTracker.css';
+import { GameIcon } from '../../utils/ui/GameIcon';
 
 interface QuestTrackerProps {
   owner?: 'player' | 'opponent';
@@ -98,7 +99,7 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest, hasRecentUpdate }) => {
     <div className={cardClasses}>
       <div className="quest-card__header">
         <div className={`quest-card__icon ${quest.completed ? 'quest-card__icon--completed' : ''}`}>
-          {quest.completed ? '✓' : '!'}
+          {quest.completed ? 'check' : '!'}
         </div>
         <div className="quest-card__name">{quest.name}</div>
       </div>
@@ -119,7 +120,7 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest, hasRecentUpdate }) => {
         </div>
       ) : (
         <div className="quest-card__completed-badge">
-          <span className="quest-card__completed-badge-icon">⚔</span>
+          <span className="quest-card__completed-badge-icon"><GameIcon name="swords" size={12} /></span>
           Quest Complete!
         </div>
       )}

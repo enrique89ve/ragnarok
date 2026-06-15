@@ -1,5 +1,11 @@
 # HivePoA Integration Spec — Ragnarok Game Indexer
 
+> Historical/future integration note. The live server indexer contract is
+> [`HIVE_INDEXER_CONTRACT.md`](./HIVE_INDEXER_CONTRACT.md). This document is
+> for a possible HivePoA/operator integration and must not be used as the
+> current runtime validation, cursor, or NFT custody spec. NFT custody belongs
+> to NFTLox in NFTLox-enabled phases.
+
 **Status**: Design complete, ready for HivePoA team implementation
 **Date**: 2026-03-19
 **Authors**: theycallmedan, Claude Opus 4.6

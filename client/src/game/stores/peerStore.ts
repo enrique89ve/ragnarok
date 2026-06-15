@@ -29,9 +29,11 @@
 import { create } from 'zustand';
 import { debug } from '../config/debugConfig';
 import { LocalWebSocketTransport, deriveRelayUrl } from './wsTransport';
+import { getAuthenticatedHiveUsername, subscribeHiveSessionIdentity } from '../../data/HiveSessionIdentity';
 import type { ArmySelection } from '../types/ChessTypes';
-import type { P2PMessage, WireMessage } from '../p2p/messages';
-import type { P2PConnectionAvailabilityState, ServerSignedChallenge } from '@shared/p2pAvailability';
+import type { WireMessage } from '../p2p/messages';
+import type { P2PConnectionAvailabilityState, P2PMatchTicket, ServerSignedChallenge } from '@shared/p2pAvailability';
+import { useMatchmakingStore, type MatchmakingStatus } from './matchmakingStore';
 export { isP2PConnectionStateBusy } from '@shared/p2pAvailability';
 
 // ── Timing Constants ──
@@ -79,23 +81,18 @@ let lastRoomId: string | null = null;
  * type is owned by us instead of by an external package whose runtime we
  * no longer depend on.
  */
-export interface P2PConnection {
-	send(data: P2PMessage): void;
-	on(event: 'data', listener: (data: unknown) => void): void;
-	on(event: 'close', listener: (side?: P2PDisconnectSide) => void): void;
-	off(event: 'data', listener: (data: unknown) => void): void;
-	off(event: 'close', listener: (side?: P2PDisconnectSide) => void): void;
-}
+export type P2PConnection = Pick<LocalWebSocketTransport, 'send' | 'on' | 'off' | 'close'>;
 
 export type P2PDisconnectSide = 'local' | 'opponent' | 'unknown';
 
 export type P2PConnectionState = P2PConnectionAvailabilityState;
 
-export interface PeerStore {
+export type PeerStore = {
 	myPeerId: string | null;
 	remotePeerId: string | null;
 	matchChallenge: ServerSignedChallenge | null;
 	opponentMatchChallenge: ServerSignedChallenge | null;
+	matchTicket: P2PMatchTicket | null;
 	connection: P2PConnection | null;
 	connectionState: P2PConnectionState;
 	isHost: boolean;
@@ -140,6 +137,7 @@ export interface PeerStore {
 		readonly error?: string | null;
 	}) => void;
 	setMatchChallenges: (matchChallenge: ServerSignedChallenge | null, opponentMatchChallenge: ServerSignedChallenge | null) => void;
+	setMatchTicket: (ticket: P2PMatchTicket | null) => void;
 	clearMatchChallenges: () => void;
 	setP2pInitApplied: (applied: boolean) => void;
 
@@ -155,6 +153,67 @@ export interface PeerStore {
 	disconnect: () => void;
 	send: (data: WireMessage) => void;
 	handleHeartbeat: () => void;
+};
+
+type PeerRuntimeState = Pick<
+	PeerStore,
+	| 'myPeerId'
+	| 'remotePeerId'
+	| 'matchChallenge'
+	| 'opponentMatchChallenge'
+	| 'matchTicket'
+	| 'connection'
+	| 'connectionState'
+	| 'bufferedMessageCount'
+	| 'opponentArmy'
+	| 'p2pSessionLocalAuthorized'
+	| 'p2pSessionRemoteAuthorized'
+	| 'p2pSessionAuthError'
+	| 'p2pInitApplied'
+>;
+
+type MatchmakingRuntimeState = {
+	readonly status: MatchmakingStatus;
+	readonly queueToken: string | null;
+	readonly roomId: string | null;
+	readonly opponentPeerId: string | null;
+};
+
+type HiveSessionChangeRuntimeState = {
+	readonly peer: PeerRuntimeState;
+	readonly matchmaking: MatchmakingRuntimeState;
+};
+
+export function hasVolatileP2PRuntimeState(state: HiveSessionChangeRuntimeState): boolean {
+	return [
+		state.peer.myPeerId,
+		state.peer.remotePeerId,
+		state.peer.matchChallenge,
+		state.peer.opponentMatchChallenge,
+		state.peer.matchTicket,
+		state.peer.connection,
+		state.peer.connectionState !== 'disconnected',
+		state.peer.bufferedMessageCount > 0,
+		state.peer.opponentArmy,
+		state.peer.p2pSessionLocalAuthorized,
+		state.peer.p2pSessionRemoteAuthorized,
+		state.peer.p2pSessionAuthError,
+		state.peer.p2pInitApplied,
+		state.matchmaking.status !== 'idle',
+		state.matchmaking.queueToken,
+		state.matchmaking.roomId,
+		state.matchmaking.opponentPeerId,
+	].some(Boolean);
+}
+
+export function shouldClearP2PRuntimeForHiveSessionChange(input: {
+	readonly previousAuthenticatedHiveUsername: string | null;
+	readonly nextAuthenticatedHiveUsername: string | null;
+	readonly runtimeState: HiveSessionChangeRuntimeState;
+}): boolean {
+	if (input.previousAuthenticatedHiveUsername === null) return false;
+	if (input.previousAuthenticatedHiveUsername === input.nextAuthenticatedHiveUsername) return false;
+	return hasVolatileP2PRuntimeState(input.runtimeState);
 }
 
 // ── Helpers ──
@@ -185,6 +244,18 @@ function clearReconnectWindow(): void {
 
 function parseDisconnectSide(value: unknown): P2PDisconnectSide {
 	return value === 'local' || value === 'opponent' ? value : 'unknown';
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function readOpenPayload(value: unknown): { readonly isHost: boolean; readonly remotePeerId: string | null } {
+	if (!isRecord(value)) return { isHost: false, remotePeerId: null };
+	return {
+		isHost: value.isHost === true,
+		remotePeerId: typeof value.remotePeerId === 'string' ? value.remotePeerId : null,
+	};
 }
 
 function mergeDisconnectSide(current: P2PDisconnectSide | null, next: P2PDisconnectSide): P2PDisconnectSide {
@@ -222,18 +293,24 @@ function resolveReconnectForfeit(get: () => PeerStore, set: (state: Partial<Peer
 	});
 }
 
-function flushBuffer(transport: LocalWebSocketTransport): void {
-	let flushed = 0;
-	while (messageBuffer.length > 0) {
-		const msg = messageBuffer.shift();
-		if (msg === undefined) break;
-		try {
-			transport.send(msg);
-			flushed++;
-		} catch {
-			break;
-		}
+function trySendBufferedMessage(transport: LocalWebSocketTransport, msg: WireMessage): boolean {
+	try {
+		transport.send(msg);
+		return true;
+	} catch {
+		return false;
 	}
+}
+
+function flushBuffer(transport: LocalWebSocketTransport): void {
+	const pendingMessages = messageBuffer.splice(0, messageBuffer.length);
+	let flushed = 0;
+	const failedIndex = pendingMessages.findIndex((msg) => {
+		if (!trySendBufferedMessage(transport, msg)) return true;
+		flushed++;
+		return false;
+	});
+	if (failedIndex !== -1) messageBuffer.unshift(...pendingMessages.slice(failedIndex));
 	if (flushed > 0) debug.log(`[PeerStore] Flushed ${flushed} buffered messages`);
 }
 
@@ -384,6 +461,7 @@ function openTransport(
 		url: deriveRelayUrl(),
 		roomId,
 		peerId,
+		matchTicket: get().matchTicket,
 	});
 	activeTransport = transport;
 
@@ -406,13 +484,13 @@ function openTransport(
 
 		transport.on('open', (...args: unknown[]) => {
 			clearTimeout(timeoutId);
-			const payload = (args[0] ?? {}) as { isHost?: boolean; remotePeerId?: string };
+			const payload = readOpenPayload(args[0]);
 			clearReconnectWindow();
 			set({
-				connection: transport as unknown as P2PConnection,
+				connection: transport,
 				connectionState: 'connected',
-				isHost: !!payload.isHost,
-				remotePeerId: payload.remotePeerId ?? null,
+				isHost: payload.isHost,
+				remotePeerId: payload.remotePeerId,
 				reconnectCountdown: 0,
 				reconnectAttemptCount: 0,
 				disconnectSide: null,
@@ -422,7 +500,7 @@ function openTransport(
 			flushBuffer(transport);
 			set({ bufferedMessageCount: messageBuffer.length });
 			startHeartbeat(get, set);
-			debug.log(`[PeerStore] connected via WS relay — isHost=${!!payload.isHost} remotePeerId=${(payload.remotePeerId ?? '').slice(0, 8)}…`);
+			debug.log(`[PeerStore] connected via WS relay — isHost=${payload.isHost} remotePeerId=${(payload.remotePeerId ?? '').slice(0, 8)}…`);
 			resolve();
 		});
 
@@ -468,6 +546,41 @@ function openTransport(
 	});
 }
 
+function getMatchmakingApiBase(): string | null {
+	if (typeof window === 'undefined') return null;
+	return import.meta.env.VITE_API_URL || window.location.origin;
+}
+
+function leaveMatchmakingBestEffort(peerId: string | null, queueToken: string | null): void {
+	const apiBase = getMatchmakingApiBase();
+	if (!apiBase || !peerId) return;
+
+	void fetch(`${apiBase}/api/matchmaking/leave`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			...(queueToken ? { 'x-p2p-queue-token': queueToken } : {}),
+		},
+		body: JSON.stringify({ peerId }),
+	}).catch((error: unknown) => {
+		debug.warn('[PeerStore] Failed to leave matchmaking during Hive session reset:', error);
+	});
+}
+
+function getHiveSessionChangeRuntimeState(): HiveSessionChangeRuntimeState {
+	const peer = usePeerStore.getState();
+	const matchmaking = useMatchmakingStore.getState();
+	return {
+		peer,
+		matchmaking: {
+			status: matchmaking.status,
+			queueToken: matchmaking.queueToken,
+			roomId: matchmaking.roomId,
+			opponentPeerId: matchmaking.opponentPeerId,
+		},
+	};
+}
+
 // ── Store ──
 
 export const usePeerStore = create<PeerStore>((set, get) => ({
@@ -475,6 +588,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 	remotePeerId: null,
 	matchChallenge: null,
 	opponentMatchChallenge: null,
+	matchTicket: null,
 	connection: null,
 	connectionState: 'disconnected',
 	isHost: false,
@@ -501,9 +615,11 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 		matchChallenge,
 		opponentMatchChallenge,
 	}),
+	setMatchTicket: (ticket) => set({ matchTicket: ticket }),
 	clearMatchChallenges: () => set({
 		matchChallenge: null,
 		opponentMatchChallenge: null,
+		matchTicket: null,
 	}),
 	setP2pSessionAuthorization: (state) => set({
 		...(state.localAuthorized !== undefined ? { p2pSessionLocalAuthorized: state.localAuthorized } : {}),
@@ -537,7 +653,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 		debug.log(`[PeerStore] prepared peerId=${newId.slice(0, 8)}… (no transport yet)`);
 	},
 
-		host: async () => {
+	host: async () => {
 		const { connection } = get();
 		if (connection) get().disconnect();
 
@@ -545,11 +661,15 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 		messageBuffer.length = 0;
 
 		const peerId = generatePeerId();
+		const matchChallenge = get().matchChallenge;
+		const opponentMatchChallenge = get().opponentMatchChallenge;
+		const matchTicket = get().matchTicket;
 		set({
 			myPeerId: peerId,
 			remotePeerId: null,
-			matchChallenge: null,
-			opponentMatchChallenge: null,
+			matchChallenge,
+			opponentMatchChallenge,
+			matchTicket,
 			connectionState: 'waiting',
 			isHost: true,
 			error: null,
@@ -577,11 +697,15 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 		if (!isReconnect) messageBuffer.length = 0;
 
 		const peerId = get().myPeerId ?? generatePeerId();
+		const matchChallenge = get().matchChallenge;
+		const opponentMatchChallenge = get().opponentMatchChallenge;
+		const matchTicket = get().matchTicket;
 		set({
 			myPeerId: peerId,
 			remotePeerId: remoteId,
-			matchChallenge: isReconnect ? get().matchChallenge : null,
-			opponentMatchChallenge: isReconnect ? get().opponentMatchChallenge : null,
+			matchChallenge,
+			opponentMatchChallenge,
+			matchTicket,
 			connectionState: isReconnect ? 'reconnecting' : 'connecting',
 			isHost: false,
 			error: null,
@@ -601,17 +725,21 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 	connectToRoom: async (roomId: string, isReconnect = false) => {
 		const { connection } = get();
 		if (connection) {
-			try { (connection as unknown as { close: () => void }).close(); } catch { /* ignored */ }
+			try { connection.close(); } catch { /* ignored */ }
 		}
 
 		if (!isReconnect) messageBuffer.length = 0;
 
 		const peerId = get().myPeerId ?? generatePeerId();
+		const matchChallenge = get().matchChallenge;
+		const opponentMatchChallenge = get().opponentMatchChallenge;
+		const matchTicket = get().matchTicket;
 		set({
 			myPeerId: peerId,
 			connectionState: isReconnect ? 'reconnecting' : 'connecting',
-			matchChallenge: isReconnect ? get().matchChallenge : null,
-			opponentMatchChallenge: isReconnect ? get().opponentMatchChallenge : null,
+			matchChallenge,
+			opponentMatchChallenge,
+			matchTicket,
 			error: null,
 			reconnectAttemptCount: isReconnect ? reconnectAttempt : 0,
 			disconnectSide: isReconnect ? get().disconnectSide : null,
@@ -636,13 +764,20 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 		}
 		lastRoomId = null;
 		set({
-			myPeerId: null, remotePeerId: null, connection: null,
-			connectionState: 'disconnected', isHost: false, error: null,
-			reconnectCountdown: 0, reconnectAttemptCount: 0,
-			disconnectSide: null, forfeitSide: null,
+			myPeerId: null,
+			remotePeerId: null,
+			connection: null,
+			connectionState: 'disconnected',
+			isHost: false,
+			error: null,
+			reconnectCountdown: 0,
+			reconnectAttemptCount: 0,
+			disconnectSide: null,
+			forfeitSide: null,
 			bufferedMessageCount: 0,
 			matchChallenge: null,
 			opponentMatchChallenge: null,
+			matchTicket: null,
 			opponentArmy: null,
 			p2pSessionLocalAuthorized: false,
 			p2pSessionRemoteAuthorized: false,
@@ -684,5 +819,23 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 	},
 }));
 
-// Expose on globalThis so combat controller can access P2P state without circular imports
-(globalThis as Record<string, unknown>).__ragnarokPeerStore = usePeerStore;
+let lastAuthenticatedHiveUsername = getAuthenticatedHiveUsername();
+
+subscribeHiveSessionIdentity(() => {
+	const previousAuthenticatedHiveUsername = lastAuthenticatedHiveUsername;
+	const nextAuthenticatedHiveUsername = getAuthenticatedHiveUsername();
+	lastAuthenticatedHiveUsername = nextAuthenticatedHiveUsername;
+
+	const runtimeState = getHiveSessionChangeRuntimeState();
+	if (!shouldClearP2PRuntimeForHiveSessionChange({
+		previousAuthenticatedHiveUsername,
+		nextAuthenticatedHiveUsername,
+		runtimeState,
+	})) {
+		return;
+	}
+
+	leaveMatchmakingBestEffort(runtimeState.peer.myPeerId, runtimeState.matchmaking.queueToken);
+	usePeerStore.getState().disconnect();
+	useMatchmakingStore.getState().reset();
+});

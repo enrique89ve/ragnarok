@@ -15,6 +15,13 @@ import {
 } from './runtimeConfig';
 
 describe('runtimeConfig', () => {
+	it('keeps every runtime profile on the same season boundary contract', () => {
+		for (const [profile, config] of Object.entries(RAGNAROK_RUNTIME_CONFIGS)) {
+			expect(config.seasonStart, `${profile} seasonStart`).toBe('2026-06-14T23:28:54Z');
+			expect(config.indexStartBlock, `${profile} indexStartBlock`).toBe(107278144);
+		}
+	});
+
 	it('resolves testnet as a mainnet-like resettable profile', () => {
 		const config = resolveRagnarokRuntimeConfig({
 			VITE_NETWORK_STAGE: 'testnet',
@@ -31,6 +38,8 @@ describe('runtimeConfig', () => {
 			economic: false,
 			acceptsLegacyProtocolIds: false,
 			resetEpoch: 'qa-s0-2026-05',
+			seasonStart: '2026-06-14T23:28:54Z',
+			indexStartBlock: 107278144,
 		});
 	});
 
@@ -48,6 +57,37 @@ describe('runtimeConfig', () => {
 		});
 
 		expect(config.resetEpoch).toBe('qa-s0-server');
+	});
+
+	it('resolves explicit season and index start boundaries for a reset epoch', () => {
+		const config = resolveRagnarokRuntimeConfig({
+			VITE_NETWORK_STAGE: 'testnet',
+			VITE_RAGNAROK_RESET_EPOCH: 'qa-s0-browser',
+			VITE_SEASON_START: '2026-06-01T00:00:00Z',
+			VITE_RAGNAROK_INDEX_START_BLOCK: '107000000',
+		});
+
+		expect(config.seasonStart).toBe('2026-06-01T00:00:00Z');
+		expect(config.indexStartBlock).toBe(107000000);
+	});
+
+	it('lets the server-only index start block override the browser-visible value', () => {
+		const config = resolveRagnarokRuntimeConfig({
+			VITE_NETWORK_STAGE: 'testnet',
+			VITE_RAGNAROK_RESET_EPOCH: 'qa-s0-browser',
+			VITE_RAGNAROK_INDEX_START_BLOCK: '107000000',
+			RAGNAROK_INDEX_START_BLOCK: '107123456',
+		});
+
+		expect(config.indexStartBlock).toBe(107123456);
+	});
+
+	it('rejects invalid index start blocks', () => {
+		expect(() => resolveRagnarokRuntimeConfig({
+			VITE_NETWORK_STAGE: 'testnet',
+			VITE_RAGNAROK_RESET_EPOCH: 'qa-s0-browser',
+			RAGNAROK_INDEX_START_BLOCK: '0',
+		})).toThrow(/RAGNAROK_INDEX_START_BLOCK/);
 	});
 
 	it('keeps mainnet permanent and legacy-aware for migration replay', () => {
@@ -180,7 +220,8 @@ describe('runtimeConfig', () => {
 			resettable: true,
 			economic: false,
 			runtimePhase: 'qa-season-0',
-			seasonStart: '2026-05-19T00:00:00Z',
+			seasonStart: '2026-06-14T23:28:54Z',
+			indexStartBlock: 107278144,
 			storageNamespace: 'ragnarok-testnet-qa-s0-export-evidence-rk-game-testnet',
 			qaFullCatalogEnabled: true,
 		});

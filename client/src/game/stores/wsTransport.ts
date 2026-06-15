@@ -21,6 +21,11 @@
  */
 
 import { debug } from '../config/debugConfig';
+import {
+	P2P_MATCH_TICKET_WS_PROTOCOL,
+	P2P_MATCH_TICKET_WS_PROTOCOL_PREFIX,
+	type P2PMatchTicket,
+} from '@shared/p2pAvailability';
 
 type TransportEvent = 'data' | 'open' | 'close' | 'error';
 type TransportCloseReason = 'local' | 'opponent';
@@ -31,10 +36,39 @@ interface OpenPayload {
 	readonly remotePeerId: string;
 }
 
+function parseIncomingJsonObject(raw: string): Record<string, unknown> | null {
+	let parsed: unknown;
+	try { parsed = JSON.parse(raw); }
+	catch (err) {
+		debug.warn('[WSTransport] failed to parse incoming JSON:', err);
+		return null;
+	}
+	if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+	return parsed as Record<string, unknown>;
+}
+
 export interface LocalWebSocketTransportOptions {
 	readonly url: string;       // e.g. 'ws://localhost:5000/ws/p2p'
 	readonly roomId: string;
 	readonly peerId: string;
+	readonly matchTicket?: P2PMatchTicket | null;
+}
+
+export function buildP2PWebSocketUrl(options: {
+	readonly url: string;
+	readonly roomId: string;
+	readonly peerId: string;
+}): string {
+	return `${options.url}?room=${encodeURIComponent(options.roomId)}&peer=${encodeURIComponent(options.peerId)}`;
+}
+
+export function buildP2PWebSocketProtocols(matchTicket?: P2PMatchTicket | null): string[] {
+	return matchTicket
+		? [
+			P2P_MATCH_TICKET_WS_PROTOCOL,
+			`${P2P_MATCH_TICKET_WS_PROTOCOL_PREFIX}${matchTicket.token}`,
+		]
+		: [P2P_MATCH_TICKET_WS_PROTOCOL];
 }
 
 export class LocalWebSocketTransport {
@@ -49,10 +83,11 @@ export class LocalWebSocketTransport {
 
 	/** Open the WS connection and wait for the server's `__sys event=open`. */
 	connect(): void {
-		const wsUrl = `${this.options.url}?room=${encodeURIComponent(this.options.roomId)}&peer=${encodeURIComponent(this.options.peerId)}`;
+		const wsUrl = buildP2PWebSocketUrl(this.options);
 		debug.log(`[WSTransport] connecting to ${wsUrl.replace(/peer=[^&]+/, 'peer=…')}`);
 
-		const ws = new WebSocket(wsUrl);
+		const protocols = buildP2PWebSocketProtocols(this.options.matchTicket);
+		const ws = new WebSocket(wsUrl, protocols);
 		this.ws = ws;
 
 		ws.onmessage = (ev: MessageEvent) => this.handleMessage(ev);
@@ -104,14 +139,8 @@ export class LocalWebSocketTransport {
 			return;
 		}
 
-		let parsed: unknown;
-		try { parsed = JSON.parse(raw); }
-		catch (err) {
-			debug.warn('[WSTransport] failed to parse incoming JSON:', err);
-			return;
-		}
-
-		if (!parsed || typeof parsed !== 'object') return;
+		const parsed = parseIncomingJsonObject(raw);
+		if (!parsed) return;
 		const msg = parsed as { type?: unknown };
 
 		if (msg.type === '__sys') {

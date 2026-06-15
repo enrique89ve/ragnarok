@@ -4,9 +4,14 @@
 
 Run Ragnarok in a mainnet-like beta environment with a separate Hive namespace, collection id, accounts, and service endpoints. Testnet validates the full architecture but remains resettable.
 
+For the current Alfa Testnet readiness order and the shortest path to Closed
+Testnet Beta, use
+[`TESTNET_READINESS_FAST_TRACK.md`](./TESTNET_READINESS_FAST_TRACK.md). This
+runbook remains the command and smoke reference.
+
 For the one-week QA Testnet Season 0 operating script, use
 [`TESTNET_WEEK_ONE_SPEC.md`](./TESTNET_WEEK_ONE_SPEC.md). That spec is the
-day-by-day checklist; this runbook remains the command and smoke reference.
+day-by-day historical QA checklist.
 
 ## First Setup
 
@@ -49,6 +54,26 @@ resettable phase. Change it when opening QA Testnet Season 0, Closed Testnet
 Beta, or any wipe so old IndexedDB, localStorage, service-worker caches, RUNE
 ledger projections, DUAT claims, decks, and QA local reward previews cannot
 bleed into the new phase.
+Each reset epoch must also carry explicit phase boundaries:
+
+```env
+VITE_SEASON_START=2026-06-14T23:28:54Z
+RAGNAROK_SEASON_START=2026-06-14T23:28:54Z
+VITE_RAGNAROK_INDEX_START_BLOCK=107278144
+RAGNAROK_INDEX_START_BLOCK=107278144
+```
+
+The `VITE_*` values expose the intended phase contract to browser/admin
+diagnostics. The server-side `RAGNAROK_SEASON_START` and
+`RAGNAROK_INDEX_START_BLOCK` are mirrors for operator/runtime processes. Keep
+each mirror equal to its `VITE_*` value unless a split deployment has a
+documented reason to expose one boundary and operate another.
+
+The indexer reads irreversible Hive operations, filters Ragnarok
+`custom_json`, and applies the deterministic validation contract documented in
+[`HIVE_INDEXER_CONTRACT.md`](./HIVE_INDEXER_CONTRACT.md). Use
+`GET /api/chain/status` to inspect `stateFile`, `indexStartBlock`,
+`syncTargetBlock`, `blocksBehind`, and `progressPercent`.
 Use a `qa-s0-*` or `QA Season 0 / ...` reset epoch only for the QA full-catalog
 rehearsal. Closed Testnet Beta must rotate to a different epoch such as
 `closed-beta-*`, which disables the `qa_full_catalog` deck entitlement and
@@ -58,7 +83,8 @@ production-hosted testnet alias for finding Dokploy, SSL, Cloudflare, WebSocket,
 and JSON-state failures with full NFT mechanics. It still keeps
 `VITE_NETWORK_STAGE=testnet`, uses `rk_game_testnet`, disables QA full-catalog
 access, keeps RUNE/P2P active, and differs from later Beta Testnet only in the
-NFT ownership source: JSON-backed provenance now, NFTLoX/Hive custody later.
+NFT ownership source: JSON-backed provenance projection now, NFTLox custody
+after the collection proof exists.
 QA reward preview caches must include at least stage, protocol id, reset epoch,
 account, and match id in their key; on stage/epoch/account mismatch they must be
 ignored or purged before UI render.
@@ -91,6 +117,17 @@ npm run dev:testnet
 `dev:testnet` loads `.env` first and then `.env.testnet` with testnet taking
 priority. If both files set `VITE_NETWORK_STAGE`, the explicit `--mode testnet`
 profile wins.
+
+For local Alfa diagnostics, use the explicit Alfa script instead:
+
+```bash
+npm run dev:alfa-testnet
+```
+
+`dev:alfa-testnet` sets the same season boundary defaults as Dokploy and uses
+`data/chain-state.alfa-testnet.json` unless `RAGNAROK_CHAIN_STATE_FILE` is
+overridden. `npm run dev` remains local-only and should not be used to inspect
+Alfa sync state.
 
 Expected UI signals:
 

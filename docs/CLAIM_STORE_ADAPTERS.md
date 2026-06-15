@@ -3,10 +3,14 @@
 Claims are replay-derived state. The canonical source remains the Hive op log and
 the protocol replay rules; the store is a fast read model that can be rebuilt.
 
+This file documents storage adapters only. It is not a second indexer spec. The
+live operation selection, replay validation, sync cursor, and NFTLox custody
+boundary live in [`HIVE_INDEXER_CONTRACT.md`](./HIVE_INDEXER_CONTRACT.md).
+
 ## Storage Roles
 
-- Server JSON: temporary beta storage at `data/chain-state.json`, owned by
-  `server/services/chainState.ts` and reached through `StateAdapter`.
+- Server JSON: temporary beta storage at `data/chain-state.<runtime>.json`,
+  owned by `server/services/chainState.ts` and reached through `StateAdapter`.
 - External DB: hot mutable read model for production latency. It should replace
   the JSON implementation behind the same adapter contract, not change protocol
   rules.
@@ -16,16 +20,20 @@ the protocol replay rules; the store is a fast read model that can be rebuilt.
 
 ## Current JSON Scope
 
-The JSON state persists:
+The JSON state persists Ragnarok-derived projections:
 
 - reward claims
 - DUAT airdrop claims
 - campaign submissions and campaign progress
-- RUNE ledger entries and token balances
-- packs and pack supply
+- RUNE and Eitr ledger entries and balances
+- sealed packs, pack triggers, pack supply, and pack fulfillment evidence
+- compatibility card/pack ownership projections only when the runtime uses a
+  JSON ownership source
 
 This is acceptable for beta because replay can rebuild the state and the JSON
 file is only a local adapter. It is not the final scaling boundary.
+In NFTLox-enabled phases, NFT custody and ownership must be read from NFTLox;
+JSON ownership-like rows are migration/testnet projections.
 
 ## Restart And File Permissions
 
@@ -37,13 +45,22 @@ server stops the indexer and forces a final flush before exiting.
 Default file path:
 
 ```text
-data/chain-state.json
+data/chain-state.<runtime>.json
+```
+
+Common runtime paths:
+
+```text
+data/chain-state.local.json
+data/chain-state.alfa-testnet.json
+data/chain-state.testnet.json
+data/chain-state.mainnet.json
 ```
 
 Override with:
 
 ```bash
-RAGNAROK_CHAIN_STATE_FILE=/secure/path/chain-state.json npm run dev:testnet
+RAGNAROK_CHAIN_STATE_FILE=/secure/path/chain-state.alfa-testnet.json npm run dev:alfa-testnet
 ```
 
 The JSON adapter checks read/write/execute access to the target directory during
@@ -88,7 +105,8 @@ queries and indexes on:
 
 - `(account, rewardId)` for reward claims
 - `entryId` and `(seasonId, account, sourceType)` for RUNE ledger
-- `owner` for cards and packs
+- `owner` for derived cards and packs when the adapter caches compatibility
+  projections; NFTLox custody remains external authority
 - `claimKey`/source key for idempotency
 
 ## Benchmark And Regression

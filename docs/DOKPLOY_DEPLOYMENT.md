@@ -3,9 +3,9 @@
 This deployment path runs the full Ragnarok app as one persistent Node process:
 the Vite static build, Express `/api/*` routes, the chain indexer, and the
 `/ws/p2p` WebSocket relay. The current intended Dokploy profile is **Alfa
-Testnet**: a one-week, NFT-full testnet alias with JSON-backed
-ownership/provenance evidence, RUNE/P2P active, and QA full-catalog access
-disabled.
+Testnet**: a one-week, NFT-full testnet alias with temporary JSON-backed
+collection/provenance projection, RUNE/P2P active, and QA full-catalog access
+disabled. This JSON projection is not NFTLox custody evidence.
 
 ## Dokploy Project
 
@@ -68,6 +68,8 @@ VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT=ragnarok-test-operator
 VITE_RAGNAROK_GENESIS_ACCOUNT=ragnarok-test
 VITE_RAGNAROK_TREASURY_ACCOUNT=ragp2p
 VITE_RAGNAROK_INDEX_ACCOUNT=ragp2p
+VITE_SEASON_START=2026-06-14T23:28:54Z
+VITE_RAGNAROK_INDEX_START_BLOCK=107278144
 VITE_NFT_ART_BASE_URL=https://your-domain.example
 VITE_EXTERNAL_URL_BASE=https://your-domain.example
 ```
@@ -90,8 +92,15 @@ Server-only variables must stay unprefixed. Do not add `VITE_` to private keys:
 ENABLE_CHAIN_INDEXER=true
 RAGNAROK_CHAIN_STATE_FILE=data/chain-state.alfa-testnet.json
 RAGNAROK_NFT_OWNERSHIP_SOURCE=json
-RAGNAROK_INDEX_START_BLOCK=106536940
+# Server-side mirror of VITE_SEASON_START for runtime/operator code.
+RAGNAROK_SEASON_START=2026-06-14T23:28:54Z
+# Server-side mirror of VITE_RAGNAROK_INDEX_START_BLOCK for fresh JSON state.
+RAGNAROK_INDEX_START_BLOCK=107278144
+RAGNAROK_RANGE_SCAN=true
+RAGNAROK_HAF_ENDPOINTS=https://api.hive.blog
 P2P_CHALLENGE_SIGNING_SECRET=<64-hex-chars>
+P2P_RELAY_ALLOWED_ORIGINS=https://<your-public-game-host>
+P2P_RELAY_TRUST_FORWARDED_HOST=false
 
 ENABLE_INDEX_CHECKPOINT_PUBLISHER=false
 RAGNAROK_INDEX_CHECKPOINT_DRY_RUN=true
@@ -118,6 +127,18 @@ redeploys or future replicas can invalidate challenge envelopes. In production
 Alfa the server now fails closed instead of signing challenges with a
 process-local fallback.
 
+`P2P_RELAY_ALLOWED_ORIGINS` should list the browser origins allowed to open the
+`/ws/p2p` relay when the public frontend host differs from the API/relay host.
+If frontend and API share the same host, the same-host Origin check is enough.
+Keep `P2P_RELAY_TRUST_FORWARDED_HOST=false` unless Dokploy is behind a trusted
+reverse proxy that overwrites `X-Forwarded-Host`; otherwise that header is
+spoofable by direct clients.
+
+The chain indexer operation filter, fast-sync mode, and replay validation
+surface are documented in [`HIVE_INDEXER_CONTRACT.md`](./HIVE_INDEXER_CONTRACT.md).
+Use `/api/chain/status` after deploy to confirm `stateFile`,
+`syncTargetBlock`, `blocksBehind`, and `progressPercent`.
+
 `RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY` is required for shared Alfa if the Admin
 Panel must perform private admin broadcasts. Keep it server-only in Dokploy. It
 must belong to `VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT` /
@@ -133,6 +154,8 @@ That verifier expects `VITE_NETWORK_STAGE=testnet`, an `alfa-testnet-*` reset
 epoch, JSON ownership source, JSON state file, a stable P2P challenge secret,
 and the admin operator active key. Build-time verification still checks only
 public/build-safe values so secrets do not enter the Docker image layer.
+The JSON ownership source is an Alfa adapter only; Closed Beta/mainnet NFT
+custody must move to NFTLox once the collection proof exists.
 
 For mainnet, switch `RAGNAROK_RUNTIME_MODE` and `VITE_NETWORK_STAGE` to
 `mainnet`, then replace the protocol, collection, account, reset epoch, start
@@ -149,8 +172,8 @@ Alfa's chain-state file should live under that volume:
 
 Use Dokploy volume backups for this volume if the server-side indexer is enabled.
 Alfa stores chain projections, RUNE projections, ceremony/session evidence, and
-JSON-backed ownership/provenance under this JSON state path. This is a testnet
-adapter, not mainnet custody.
+JSON-backed ownership/provenance projections under this JSON state path. This
+is a testnet adapter, not mainnet custody.
 
 Keep this as a Docker named volume. Do not bind-mount files from the repository
 for persistent state; Dokploy can re-clone the repo on deploy, while named

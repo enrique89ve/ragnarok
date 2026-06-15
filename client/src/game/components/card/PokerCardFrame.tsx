@@ -1,39 +1,17 @@
 /**
- * <PokerCardFrame> — poker-only card chrome.
+ * <PokerCardFrame> — compatibility wrapper for 52-card poker renders.
  *
- * Lives outside the unified <CardFrame> pipeline on purpose. CardFrame
- * is built for NFT minion cards (pre-rendered PNG layer, rarity classes,
- * animated conic borders, holo handlers) and that chrome has no place
- * on a 52-card deck. Routing poker through it leaks bevel, gold facets,
- * and rarity animations onto cards that should look minimalist.
- *
- * What this component provides:
- *   - a single aspect-ratio box sized to poker proportions
- *   - a CardFrameContext stub so <CardRankSuit> can read `size` (it
- *     sets `data-size` on the art layer and uses that to scale
- *     corner runes + center symbol)
- *   - two clean visual variants: `face-up` (parchment) and
- *     `face-down` (solid #1a1d24 + Eihwaz rune, no border, no glow)
- *
- * What this component DOES NOT do (vs CardFrame):
- *   - no PNG chrome layer
- *   - no rarity classes / animated borders / element band
- *   - no holo tracking / parallax
- *   - no legibility dark gradient over the art
- *   - no `disablePng` render path — there is no PNG to disable
- *
- * Sizing: pass `size` (small/medium/large/preview) or override via
- * `width` / `height` for special zones (community board, hole cards).
- * The card stays 5:7 unless both overrides are set.
+ * The poker board keeps importing this focused component, but the visual
+ * chrome is now owned by <CardFrame> + NorseCardFrame.css. That keeps
+ * collection and poker frame changes on one shared skin while preserving
+ * the rank/suit and face-down slot payloads.
  */
 
-import React, { useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
-import {
-	CardFrameContext,
-	type CardFrameContextValue,
-} from './CardFrameContext';
+import React, { type CSSProperties, type ReactNode } from 'react';
+import CardFrame from './CardFrame';
 import { resolveCardDims } from './sizing';
 import type { CardSize } from './types';
+import './pokerFaceDown.css';
 import './PokerCardFrame.css';
 
 export interface PokerCardFrameProps {
@@ -72,8 +50,6 @@ const PokerCardFrame: React.FC<PokerCardFrameProps> = ({
 	style,
 	children,
 }) => {
-	const rootRef = useRef<HTMLDivElement>(null);
-
 	const dims = resolveCardDims({
 		shape: 'poker',
 		size,
@@ -81,52 +57,37 @@ const PokerCardFrame: React.FC<PokerCardFrameProps> = ({
 		overrideHeight: height,
 	});
 
-	const contextValue = useMemo<CardFrameContextValue>(
-		() => ({
-			rootRef,
-			shape: 'poker',
-			size,
-			// rarity/element are part of the context contract but
-			// unused inside the slot tree of a poker card. Defaults
-			// keep useCardFrame() callers happy without affecting paint.
-			rarity: 'common',
-			element: 'neutral',
-			dims,
-			pngFailed: false,
-			isPlayable: true,
-			isHighlighted: false,
-			statsMode: 'hidden',
-			cardType: null,
-			cardKind: null,
-			cardFamily: 'poker',
-			evolutionLevel: null,
-			disableTooltips: false,
-		}),
-		[size, dims],
-	);
-
 	const rootClasses = [
+		'norse-card-frame',
+		'norse-card-frame--poker',
 		'poker-card-frame',
 		`poker-card-frame--${variant}`,
 		className,
 	].filter(Boolean).join(' ');
 
 	return (
-		<CardFrameContext.Provider value={contextValue}>
-			<div
-				ref={rootRef}
-				className={rootClasses}
-				data-poker-size={size}
-				data-poker-variant={variant}
-				style={{
-					width: dims.width,
-					height: dims.height,
-					...style,
-				}}
-			>
-				{children}
-			</div>
-		</CardFrameContext.Provider>
+		<CardFrame
+			shape="poker"
+			size={size}
+			rarity="common"
+			element="neutral"
+			render="css"
+			statsMode="hidden"
+			cardFamily="poker"
+			interactive={false}
+			overrideWidth={dims.width}
+			overrideHeight={dims.height}
+			className={rootClasses}
+			data-poker-size={size}
+			data-poker-variant={variant}
+			style={{
+				width: dims.width,
+				height: dims.height,
+				...style,
+			}}
+		>
+			{children}
+		</CardFrame>
 	);
 };
 

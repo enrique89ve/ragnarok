@@ -20,12 +20,12 @@ import type { HTMLAttributes, MouseEvent, ReactNode } from 'react';
 /**
  * Visual archetype. Drives aspect ratio + slot anchor positions.
  *
- * `portrait` — Collection modal, ~380 wide preview (3:4).
- * `tile`     — Collection grid + DeckBuilder pool (3:4, fluid width).
+ * `portrait` — Collection modal, ~380 wide preview (NFT 7:10).
+ * `tile`     — Collection grid + DeckBuilder pool (NFT 7:10, fluid width).
  * `row`      — Cheap CSS-only variant for sidebars (skip PNG layer).
- * `hand`     — HandFan card (5:7).
- * `board`    — SimpleBattlefield card (5:7).
- * `hero`     — HeroDetailPopup flip card (5:7).
+ * `hand`     — HandFan card (NFT 7:10).
+ * `board`    — SimpleBattlefield card (NFT 7:10).
+ * `hero`     — HeroDetailPopup flip card (NFT 7:10).
  * `poker`    — Poker rank/suit and face-down cards using shared chrome.
  */
 export type CardShape =

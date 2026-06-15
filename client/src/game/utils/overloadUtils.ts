@@ -109,7 +109,7 @@ export function formatManaWithOverload(
   overloadedMana: number
 ): string {
   if (overloadedMana > 0) {
-    return `${currentMana}/${maxMana} (⚡ ${overloadedMana} locked)`;
+    return `${currentMana}/${maxMana} (zap) ${overloadedMana} locked)`;
   }
   return `${currentMana}/${maxMana}`;
 }
@@ -124,7 +124,7 @@ export function getPendingOverloadDescription(state: GameState, playerType: 'pla
   const pendingOverload = state.players[playerType].mana.pendingOverload || 0;
   
   if (pendingOverload > 0) {
-    return `⚡ WARNING: ${pendingOverload} mana crystal${pendingOverload > 1 ? 's' : ''} will be locked next turn!`;
+    return `[zap] WARNING: ${pendingOverload} mana crystal${pendingOverload > 1 ? 's' : ''} will be locked next turn!`;
   }
   return '';
 }

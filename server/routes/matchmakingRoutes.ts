@@ -1,112 +1,172 @@
-import { Router, Request, Response } from 'express';
-import fs from 'fs';
-import fsPromises from 'fs/promises';
-import path from 'path';
-import { requireHiveBodyAuthIfUsernamePresent } from '../middleware/hiveAuth';
+import { Router, Request, Response, type NextFunction } from 'express';
+import {
+	requireHiveBodyAuth,
+	requireHiveBodyAuthIfUsernamePresent,
+} from '../middleware/hiveAuth';
+import { getPlayer, registerAccount } from '../services/chainState';
 import { buildServerSignedChallenge } from '../services/p2pChallengeSigner';
+import { buildP2PMatchTicket } from '../services/p2pMatchTicketSigner';
+import { getP2PMatchPeerView, type P2PActiveMatch } from '../services/p2pMatchmakingView';
+import {
+	createP2PQueueToken,
+	hashP2PQueueToken,
+	p2pQueueTokenMatches,
+} from '../services/p2pQueueToken';
+import { hasStarterCeremonyClaim } from '../services/starterClaimRegistry';
 import {
 	CHALLENGE_STALE_THRESHOLD_MS,
+	isSafePeerId,
 	normalizeHiveUsername,
+	type P2PMatchTicket,
 	type ServerSignedChallenge,
 } from '../../shared/p2pAvailability';
+import { buildP2PQueueAuthMessage } from '../../shared/p2pMatchmakingAuth';
+import { log } from '../static';
 
 const router = Router();
 
-interface QueuedPlayer {
-	peerId: string;
-	username?: string;
-	elo: number;
-	timestamp: number;
-	socket?: any;
-}
-
-type ActiveMatch = {
-	player1: string;
-	player2: string;
-	createdAt: number;
-	player1MatchChallenge: ServerSignedChallenge | null;
-	player2MatchChallenge: ServerSignedChallenge | null;
+type QueuedPlayer = {
+	readonly peerId: string;
+	readonly username?: string;
+	readonly elo: number;
+	readonly timestamp: number;
+	readonly queueTokenHash: string;
 };
 
+type MatchChallenges = {
+	readonly playerAChallenge: ServerSignedChallenge;
+	readonly playerBChallenge: ServerSignedChallenge;
+};
+
+type ExistingQueueResponse = {
+	readonly statusCode: number;
+	readonly body: Record<string, unknown>;
+};
+
+type QueuePlayerCreation = {
+	readonly player: QueuedPlayer;
+	readonly queueToken: string;
+};
+
+type MatchCreationResult =
+	| {
+		readonly ok: true;
+		readonly matchId: string;
+		readonly opponent: QueuedPlayer;
+		readonly peerView: NonNullable<ReturnType<typeof getP2PMatchPeerView>>;
+	}
+	| {
+		readonly ok: false;
+		readonly statusCode: number;
+		readonly error: string;
+	};
+
+type QueueJoinResult =
+	| { readonly status: 'queued'; readonly position: number; readonly elo: number; readonly queueToken: string }
+	| { readonly status: 'matched'; readonly match: Extract<MatchCreationResult, { readonly ok: true }>; readonly queueToken: string }
+	| { readonly status: 'failed'; readonly statusCode: number; readonly error: string };
+
+type SharedQueueStarterClaimAccess =
+	| { readonly ok: true }
+	| { readonly ok: false; readonly statusCode: 403; readonly error: 'starter claim required' };
+
 const matchmakingQueue: QueuedPlayer[] = [];
-const activeMatches = new Map<string, ActiveMatch>();
+const activeMatches = new Map<string, P2PActiveMatch>();
+const activeMatchIdsByPeerId = new Map<string, string>();
 
 const QUEUE_STALE_MS = 5 * 60 * 1000; // 5 minutes
 const ACTIVE_MATCH_TTL_MS = 5 * 60 * 1000; // 5 minutes
-const QUEUE_FILE = path.join(process.cwd(), 'data', 'matchmaking-queue.json');
 
-let dataDirEnsured = false;
-async function ensureDataDir() {
-	if (dataDirEnsured) return;
-	const dir = path.dirname(QUEUE_FILE);
-	try {
-		await fsPromises.mkdir(dir, { recursive: true });
-		dataDirEnsured = true;
-	} catch { /* already exists */ }
+function readQueueToken(req: Request): string | null {
+	const value = req.headers['x-p2p-queue-token'];
+	if (Array.isArray(value)) return typeof value[0] === 'string' && value[0].length > 0 ? value[0] : null;
+	return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
-let saveQueued = false;
-function saveQueue() {
-	if (saveQueued) return;
-	saveQueued = true;
-	queueMicrotask(async () => {
-		saveQueued = false;
-		try {
-			await ensureDataDir();
-			const serializable = matchmakingQueue.map(({ peerId, username, elo, timestamp }) => ({ peerId, username, elo, timestamp }));
-			await fsPromises.writeFile(QUEUE_FILE, JSON.stringify(serializable), 'utf8');
-		} catch (err) {
-			console.warn('[Matchmaking] Failed to save queue:', err);
-		}
+function hasValidQueueToken(req: Request, expectedHash: string): boolean {
+	const token = readQueueToken(req);
+	return p2pQueueTokenMatches(expectedHash, token);
+}
+
+function removeQueuedPeer(peerId: string): void {
+	const index = matchmakingQueue.findIndex(player => player.peerId === peerId);
+	if (index !== -1) matchmakingQueue.splice(index, 1);
+}
+
+function restoreQueuedPeer(player: QueuedPlayer): void {
+	if (matchmakingQueue.some(candidate => candidate.peerId === player.peerId)) return;
+	matchmakingQueue.push(player);
+}
+
+function rollbackFailedMatchmakingPair(opponent: QueuedPlayer, newPlayer: QueuedPlayer): void {
+	removeQueuedPeer(newPlayer.peerId);
+	restoreQueuedPeer(opponent);
+	saveQueue();
+}
+
+function removeActiveMatch(matchId: string): void {
+	const match = activeMatches.get(matchId);
+	if (match) {
+		activeMatchIdsByPeerId.delete(match.player1);
+		activeMatchIdsByPeerId.delete(match.player2);
+	}
+	activeMatches.delete(matchId);
+}
+
+function describeUnknownError(error: unknown): string {
+	return error instanceof Error ? error.message : String(error);
+}
+
+function readQueueStarterClaimed(value: unknown): boolean {
+	return value === true;
+}
+
+function buildQueueAuthMessage(req: Request, username: string, timestamp: number): string {
+	const peerId = typeof req.body?.peerId === 'string' ? req.body.peerId : '';
+	return buildP2PQueueAuthMessage({
+		username,
+		peerId,
+		starterClaimed: readQueueStarterClaimed(req.body?.starterClaimed),
+		timestamp,
 	});
 }
 
-function loadQueue() {
-	try {
-		if (!fs.existsSync(QUEUE_FILE)) return;
-		const raw = fs.readFileSync(QUEUE_FILE, 'utf8');
-		const entries: { peerId: string; username?: string; elo?: number; timestamp: number }[] = JSON.parse(raw);
-		const now = Date.now();
-		for (const entry of entries) {
-			if (now - entry.timestamp < QUEUE_STALE_MS) {
-				matchmakingQueue.push({ ...entry, elo: entry.elo ?? 1000 });
-			}
-		}
-		if (matchmakingQueue.length > 0) {
-			console.log(`[Matchmaking] Restored ${matchmakingQueue.length} queue entries from disk`);
-		}
-	} catch (err) {
-		console.warn('[Matchmaking] Failed to load queue:', err);
+function validateQueuePeerId(req: Request, res: Response, next: NextFunction): void {
+	const { peerId } = req.body;
+	if (!peerId || typeof peerId !== 'string' || !isSafePeerId(peerId)) {
+		res.status(400).json({ success: false, error: 'peerId required' });
+		return;
 	}
+	next();
 }
 
-// Restore queue on startup
-loadQueue();
+function saveQueue(): void {
+	// Secured matchmaking queue tokens are process-local bearer secrets. Do not
+	// persist or restore queue state across restarts; stale disk entries would
+	// either be unrecoverable by clients or weaken the token ownership model.
+}
 
 function removeStaleQueueEntries() {
 	const now = Date.now();
 	const before = matchmakingQueue.length;
-	for (let i = matchmakingQueue.length - 1; i >= 0; i--) {
-		if (now - matchmakingQueue[i].timestamp > QUEUE_STALE_MS) {
-			matchmakingQueue.splice(i, 1);
-		}
-	}
+	const freshQueue = matchmakingQueue.filter(player => now - player.timestamp <= QUEUE_STALE_MS);
+	matchmakingQueue.splice(0, matchmakingQueue.length, ...freshQueue);
 	if (matchmakingQueue.length < before) {
-		console.log(`[Matchmaking] Removed ${before - matchmakingQueue.length} stale queue entries`);
+		log(`Removed ${before - matchmakingQueue.length} stale queue entries`, 'Matchmaking');
 		saveQueue();
 	}
-	for (const [matchId, match] of activeMatches.entries()) {
+	activeMatches.forEach((match, matchId) => {
 		if (now - match.createdAt > ACTIVE_MATCH_TTL_MS) {
-			activeMatches.delete(matchId);
+			removeActiveMatch(matchId);
 		}
-	}
+	});
 }
 
 function buildMatchChallenges(
 	playerA: QueuedPlayer,
 	playerB: QueuedPlayer,
 	options: { now: number; expiresAt: number },
-): { playerAChallenge: ServerSignedChallenge; playerBChallenge: ServerSignedChallenge } | null {
+): MatchChallenges | null {
 	if (!playerA.username || !playerB.username) return null;
 
 	return {
@@ -127,8 +187,9 @@ function buildMatchChallenges(
 	};
 }
 
-// Clean stale entries every 60 seconds
-setInterval(removeStaleQueueEntries, 60_000);
+// Clean stale entries every 60 seconds.
+const staleQueueCleanupTimer = setInterval(removeStaleQueueEntries, 60_000);
+staleQueueCleanupTimer.unref?.();
 
 export function getP2PMatchmakingStats(): {
 	readonly queueLength: number;
@@ -150,6 +211,12 @@ export function getP2PMatchmakingStats(): {
 	};
 }
 
+export function clearP2PMatchmakingStateForTests(): void {
+	matchmakingQueue.splice(0, matchmakingQueue.length);
+	activeMatches.clear();
+	activeMatchIdsByPeerId.clear();
+}
+
 function findBestEloMatch(newPlayer: QueuedPlayer): QueuedPlayer | null {
 	if (matchmakingQueue.length === 0) return null;
 
@@ -161,155 +228,411 @@ function findBestEloMatch(newPlayer: QueuedPlayer): QueuedPlayer | null {
 	if (waitMs > 60_000) maxEloDiff = Infinity;
 	else if (waitMs > 30_000) maxEloDiff = 500;
 
-	let bestIdx = -1;
-	let bestDiff = Infinity;
-
-	for (let i = 0; i < matchmakingQueue.length; i++) {
-		const candidate = matchmakingQueue[i];
-		if (candidate.peerId === newPlayer.peerId) continue;
-
-		const diff = Math.abs(candidate.elo - newPlayer.elo);
-		if (diff <= maxEloDiff && diff < bestDiff) {
-			bestDiff = diff;
-			bestIdx = i;
-		}
-	}
+	const best = matchmakingQueue.reduce(
+		(current, candidate, index) => {
+			if (candidate.peerId === newPlayer.peerId) return current;
+			const diff = Math.abs(candidate.elo - newPlayer.elo);
+			if (diff > maxEloDiff || diff >= current.diff) return current;
+			return { index, diff };
+		},
+		{ index: -1, diff: Infinity },
+	);
 
 	// If no ELO match found, check if anyone in the queue has waited 60s+ (match anyone)
-	if (bestIdx === -1) {
-		for (let i = 0; i < matchmakingQueue.length; i++) {
-			const candidate = matchmakingQueue[i];
-			if (candidate.peerId === newPlayer.peerId) continue;
-			if (now - candidate.timestamp > 60_000) {
-				return matchmakingQueue.splice(i, 1)[0];
-			}
-		}
+	if (best.index === -1) {
+		const fallbackIndex = matchmakingQueue.findIndex(candidate => (
+			candidate.peerId !== newPlayer.peerId && now - candidate.timestamp > 60_000
+		));
+		if (fallbackIndex !== -1) return matchmakingQueue.splice(fallbackIndex, 1)[0];
 		return null;
 	}
 
-	return matchmakingQueue.splice(bestIdx, 1)[0];
+	return matchmakingQueue.splice(best.index, 1)[0];
 }
 
 const queueAuth = requireHiveBodyAuthIfUsernamePresent({
 	usernameField: 'username',
-	buildMessage: (req, username, timestamp) => `ragnarok-queue:${username}:${timestamp}`,
+	buildMessage: buildQueueAuthMessage,
 });
 
-router.post('/queue', queueAuth, async (req: Request, res: Response) => {
-	const { peerId, username } = req.body;
+const sharedNetworkQueueAuth = requireHiveBodyAuth({
+	usernameField: 'username',
+	buildMessage: buildQueueAuthMessage,
+	missingUsernameMessage: 'Hive username required for shared-network matchmaking',
+	usernameErrorStatus: 401,
+});
 
-	if (!peerId || typeof peerId !== 'string') {
-		return res.status(400).json({ success: false, error: 'peerId required' });
+function isSharedServerNetworkEnvironment(): boolean {
+	return process.env.VITE_NETWORK_STAGE === 'testnet' || process.env.VITE_NETWORK_STAGE === 'mainnet';
+}
+
+function requireQueueAuthForRuntime(req: Request, res: Response, next: NextFunction): void {
+	if (isSharedServerNetworkEnvironment()) {
+		void sharedNetworkQueueAuth(req, res, next);
+		return;
 	}
+	void queueAuth(req, res, next);
+}
+
+export function resolveQueueUsername(input: {
+	readonly authenticatedUsername: unknown;
+	readonly providedUsername: unknown;
+}): string | undefined {
+	if (typeof input.authenticatedUsername === 'string') {
+		return normalizeHiveUsername(input.authenticatedUsername);
+	}
+	if (typeof input.providedUsername === 'string') {
+		return normalizeHiveUsername(input.providedUsername);
+	}
+	return undefined;
+}
+
+export async function resolveSharedQueueStarterClaim(input: {
+	readonly sharedNetwork: boolean;
+	readonly account: string | undefined;
+}): Promise<SharedQueueStarterClaimAccess> {
+	if (!input.sharedNetwork || await hasStarterCeremonyClaim(input.account)) return { ok: true };
+	return { ok: false, statusCode: 403, error: 'starter claim required' };
+}
+
+function resolveQueueElo(queueUsername: string | undefined): number {
+	if (!queueUsername) return 1000;
+	try {
+		registerAccount(queueUsername);
+		return getPlayer(queueUsername)?.elo ?? 1000;
+	} catch {
+		return 1000;
+	}
+}
+
+function createQueuedPlayer(input: {
+	readonly peerId: string;
+	readonly username: string | undefined;
+}): QueuePlayerCreation {
+	const queueToken = createP2PQueueToken();
+	return {
+		queueToken,
+		player: {
+			peerId: input.peerId,
+			username: input.username,
+			elo: resolveQueueElo(input.username),
+			timestamp: Date.now(),
+			queueTokenHash: hashP2PQueueToken(queueToken),
+		},
+	};
+}
+
+async function canQueuedPlayerUseSharedP2P(player: Pick<QueuedPlayer, 'username'>): Promise<boolean> {
+	if (!isSharedServerNetworkEnvironment()) return true;
+	return hasStarterCeremonyClaim(player.username);
+}
+
+async function getExistingQueueResponse(req: Request, peerId: string): Promise<ExistingQueueResponse | null> {
+	const existingIndex = matchmakingQueue.findIndex(p => p.peerId === peerId);
+	if (existingIndex === -1) return null;
+	if (!hasValidQueueToken(req, matchmakingQueue[existingIndex].queueTokenHash)) {
+		return {
+			statusCode: 403,
+			body: { success: false, error: 'queue token required' },
+		};
+	}
+	if (!await canQueuedPlayerUseSharedP2P(matchmakingQueue[existingIndex])) {
+		matchmakingQueue.splice(existingIndex, 1);
+		saveQueue();
+		return {
+			statusCode: 403,
+			body: { success: false, error: 'starter claim required' },
+		};
+	}
+	return {
+		statusCode: 200,
+		body: { success: true, status: 'queued', position: existingIndex + 1 },
+	};
+}
+
+async function getActiveMatchStatusResponse(req: Request, peerId: string): Promise<ExistingQueueResponse | null> {
+	const matchId = activeMatchIdsByPeerId.get(peerId);
+	if (!matchId) return null;
+	const match = activeMatches.get(matchId);
+	if (!match) {
+		activeMatchIdsByPeerId.delete(peerId);
+		return null;
+	}
+	const peerView = getP2PMatchPeerView(match, peerId);
+	if (!peerView) {
+		activeMatchIdsByPeerId.delete(peerId);
+		return null;
+	}
+	if (!hasValidQueueToken(req, peerView.queueTokenHash)) {
+		return {
+			statusCode: 403,
+			body: { success: false, error: 'queue token required' },
+		};
+	}
+	if (!await canQueuedPlayerUseSharedP2P({ username: peerView.username })) {
+		removeActiveMatch(matchId);
+		return {
+			statusCode: 403,
+			body: { success: false, error: 'starter claim required' },
+		};
+	}
+	return {
+		statusCode: 200,
+		body: {
+			success: true,
+			status: 'matched',
+			matchId,
+			opponentPeerId: peerView.opponentPeerId,
+			isHost: peerView.isHost,
+			matchTicket: peerView.matchTicket,
+			...(peerView.matchChallenge ? { matchChallenge: peerView.matchChallenge } : {}),
+			...(peerView.opponentMatchChallenge ? { opponentMatchChallenge: peerView.opponentMatchChallenge } : {}),
+		},
+	};
+}
+
+function getActiveMatchLeaveResponse(req: Request, peerId: string): ExistingQueueResponse | null {
+	const matchId = activeMatchIdsByPeerId.get(peerId);
+	if (!matchId) return null;
+	const match = activeMatches.get(matchId);
+	if (!match) {
+		activeMatchIdsByPeerId.delete(peerId);
+		return null;
+	}
+	const peerView = getP2PMatchPeerView(match, peerId);
+	if (!peerView) {
+		activeMatchIdsByPeerId.delete(peerId);
+		return null;
+	}
+	if (!hasValidQueueToken(req, peerView.queueTokenHash)) {
+		return {
+			statusCode: 403,
+			body: { success: false, error: 'queue token required' },
+		};
+	}
+	removeActiveMatch(matchId);
+	return {
+		statusCode: 200,
+		body: { success: true },
+	};
+}
+
+function tryBuildMatchChallenges(
+	opponent: QueuedPlayer,
+	newPlayer: QueuedPlayer,
+	now: number,
+): { readonly ok: true; readonly value: MatchChallenges | null } | { readonly ok: false; readonly error: string } {
+	try {
+		return {
+			ok: true,
+			value: buildMatchChallenges(opponent, newPlayer, {
+				now,
+				expiresAt: now + CHALLENGE_STALE_THRESHOLD_MS,
+			}),
+		};
+	} catch (error) {
+		log(`Challenge signing unavailable for matched pair: ${describeUnknownError(error)}`, 'Matchmaking');
+		return { ok: false, error: 'P2P challenge signing unavailable' };
+	}
+}
+
+function tryBuildMatchTickets(
+	opponent: QueuedPlayer,
+	newPlayer: QueuedPlayer,
+	matchId: string,
+	now: number,
+): { readonly ok: true; readonly player1MatchTicket: P2PMatchTicket; readonly player2MatchTicket: P2PMatchTicket } | { readonly ok: false; readonly error: string } {
+	try {
+		return {
+			ok: true,
+			player1MatchTicket: buildP2PMatchTicket({
+				roomId: matchId,
+				peerId: opponent.peerId,
+				account: opponent.username,
+				now,
+			}),
+			player2MatchTicket: buildP2PMatchTicket({
+				roomId: matchId,
+				peerId: newPlayer.peerId,
+				account: newPlayer.username,
+				now,
+			}),
+		};
+	} catch (error) {
+		log(`Match ticket signing unavailable for matched pair: ${describeUnknownError(error)}`, 'Matchmaking');
+		return { ok: false, error: 'P2P match ticket signing unavailable' };
+	}
+}
+
+function registerActiveMatch(matchId: string, activeMatch: P2PActiveMatch): void {
+	activeMatches.set(matchId, activeMatch);
+	activeMatchIdsByPeerId.set(activeMatch.player1, matchId);
+	activeMatchIdsByPeerId.set(activeMatch.player2, matchId);
+	const activeMatchExpiryTimer = setTimeout(() => {
+		removeActiveMatch(matchId);
+	}, ACTIVE_MATCH_TTL_MS);
+	activeMatchExpiryTimer.unref?.();
+}
+
+function createActiveMatch(
+	opponent: QueuedPlayer,
+	newPlayer: QueuedPlayer,
+): MatchCreationResult {
+	const now = Date.now();
+	const matchChallenges = tryBuildMatchChallenges(opponent, newPlayer, now);
+	if (!matchChallenges.ok) {
+		rollbackFailedMatchmakingPair(opponent, newPlayer);
+		return { ok: false, statusCode: 503, error: matchChallenges.error };
+	}
+
+	removeQueuedPeer(newPlayer.peerId);
+	saveQueue();
+
+	const matchId = `${opponent.peerId}-${newPlayer.peerId}`;
+	const matchTickets = tryBuildMatchTickets(opponent, newPlayer, matchId, now);
+	if (!matchTickets.ok) {
+		rollbackFailedMatchmakingPair(opponent, newPlayer);
+		return { ok: false, statusCode: 503, error: matchTickets.error };
+	}
+
+	const activeMatch: P2PActiveMatch = {
+		player1: opponent.peerId,
+		player2: newPlayer.peerId,
+		...(opponent.username ? { player1Username: opponent.username } : {}),
+		...(newPlayer.username ? { player2Username: newPlayer.username } : {}),
+		createdAt: Date.now(),
+		player1MatchChallenge: matchChallenges.value?.playerAChallenge ?? null,
+		player2MatchChallenge: matchChallenges.value?.playerBChallenge ?? null,
+		player1MatchTicket: matchTickets.player1MatchTicket,
+		player2MatchTicket: matchTickets.player2MatchTicket,
+		player1QueueTokenHash: opponent.queueTokenHash,
+		player2QueueTokenHash: newPlayer.queueTokenHash,
+	};
+	registerActiveMatch(matchId, activeMatch);
+
+	const peerView = getP2PMatchPeerView(activeMatch, newPlayer.peerId);
+	if (!peerView) {
+		return { ok: false, statusCode: 500, error: 'P2P match peer view unavailable' };
+	}
+	return { ok: true, matchId, opponent, peerView };
+}
+
+async function findStarterEligibleEloMatch(newPlayer: QueuedPlayer): Promise<QueuedPlayer | null> {
+	const opponent = findBestEloMatch(newPlayer);
+	if (!opponent) return null;
+	if (await canQueuedPlayerUseSharedP2P(opponent)) return opponent;
+	saveQueue();
+	return findStarterEligibleEloMatch(newPlayer);
+}
+
+async function queueNewPlayer(newPlayer: QueuedPlayer, queueToken: string): Promise<QueueJoinResult> {
+	matchmakingQueue.push(newPlayer);
+	if (matchmakingQueue.length >= 2) {
+		const opponent = await findStarterEligibleEloMatch(newPlayer);
+		if (opponent) {
+			const match = createActiveMatch(opponent, newPlayer);
+			if (!match.ok) return { status: 'failed', statusCode: match.statusCode, error: match.error };
+			return { status: 'matched', match, queueToken };
+		}
+	}
+	saveQueue();
+	return { status: 'queued', position: matchmakingQueue.length, elo: newPlayer.elo, queueToken };
+}
+
+router.post('/queue', validateQueuePeerId, requireQueueAuthForRuntime, async (req: Request, res: Response) => {
+	const { peerId, username } = req.body;
 
 	removeStaleQueueEntries();
 
-	const existingIndex = matchmakingQueue.findIndex(p => p.peerId === peerId);
-	if (existingIndex !== -1) {
-		return res.json({ success: true, status: 'queued', position: existingIndex + 1 });
+	const queueUsername = resolveQueueUsername({
+		authenticatedUsername: Reflect.get(req, 'hiveUsername'),
+		providedUsername: username,
+	});
+	const starterClaimAccess = await resolveSharedQueueStarterClaim({
+		sharedNetwork: isSharedServerNetworkEnvironment(),
+		account: queueUsername,
+	});
+	if (!starterClaimAccess.ok) {
+		return res.status(starterClaimAccess.statusCode).json({ success: false, error: starterClaimAccess.error });
 	}
 
-	let elo = 1000;
-	if (username && typeof username === 'string') {
-		try {
-			const { getPlayer, registerAccount } = require('../services/chainState');
-			const normalized = normalizeHiveUsername(username);
-			registerAccount(normalized);
-			const player = getPlayer(normalized);
-			if (player) elo = player.elo;
-		} catch { /* chain state not available, use default */ }
+	const existingResponse = await getExistingQueueResponse(req, peerId);
+	if (existingResponse) {
+		return res.status(existingResponse.statusCode).json(existingResponse.body);
 	}
 
-	const newPlayer: QueuedPlayer = {
+	const { player: newPlayer, queueToken } = createQueuedPlayer({
 		peerId,
-		username: typeof username === 'string' ? normalizeHiveUsername(username) : undefined,
-		elo,
-		timestamp: Date.now(),
-	};
-
-	// Try ELO-based matching against existing queue
-	matchmakingQueue.push(newPlayer);
-
-	if (matchmakingQueue.length >= 2) {
-		const opponent = findBestEloMatch(newPlayer);
-		if (opponent) {
-			const now = Date.now();
-			let matchChallenges: { playerAChallenge: ServerSignedChallenge; playerBChallenge: ServerSignedChallenge } | null = null;
-			try {
-				matchChallenges = buildMatchChallenges(opponent, newPlayer, {
-					now,
-					expiresAt: now + CHALLENGE_STALE_THRESHOLD_MS,
-				});
-			} catch (err) {
-				console.warn('[Matchmaking] Challenge signing unavailable for matched pair:', err);
-				return res.status(503).json({
-					success: false,
-					error: 'P2P challenge signing unavailable',
-				});
-			}
-			// Remove the new player from the queue too
-			const newIdx = matchmakingQueue.findIndex(p => p.peerId === peerId);
-			if (newIdx !== -1) matchmakingQueue.splice(newIdx, 1);
-			saveQueue();
-
-			const matchId = `${opponent.peerId}-${newPlayer.peerId}`;
-			activeMatches.set(matchId, {
-				player1: opponent.peerId,
-				player2: newPlayer.peerId,
-				createdAt: Date.now(),
-				player1MatchChallenge: matchChallenges?.playerAChallenge ?? null,
-				player2MatchChallenge: matchChallenges?.playerBChallenge ?? null,
-			});
-
-			setTimeout(() => {
-				activeMatches.delete(matchId);
-			}, ACTIVE_MATCH_TTL_MS);
-
-			const isHost = opponent.peerId === peerId;
-			const matchChallenge = isHost ? matchChallenges?.playerAChallenge : matchChallenges?.playerBChallenge;
-			const opponentMatchChallenge = isHost
-				? matchChallenges?.playerBChallenge
-				: matchChallenges?.playerAChallenge;
-
-			return res.json({
-				success: true,
-				status: 'matched',
-				matchId,
-				opponentPeerId: opponent.peerId,
-				opponentElo: opponent.elo,
-				opponentUsername: opponent.username,
-				isHost,
-				...(matchChallenge ? { matchChallenge } : {}),
-				...(opponentMatchChallenge ? { opponentMatchChallenge } : {}),
-			});
-		}
+		username: queueUsername,
+	});
+	const result = await queueNewPlayer(newPlayer, queueToken);
+	if (result.status === 'failed') {
+		return res.status(result.statusCode).json({ success: false, error: result.error });
 	}
-
-	saveQueue();
-	return res.json({ success: true, status: 'queued', position: matchmakingQueue.length, elo });
+	if (result.status === 'queued') {
+		return res.json({
+			success: true,
+			status: 'queued',
+			position: result.position,
+			elo: result.elo,
+			queueToken: result.queueToken,
+		});
+	}
+	return res.json({
+		success: true,
+		status: 'matched',
+		matchId: result.match.matchId,
+		opponentPeerId: result.match.peerView.opponentPeerId,
+		opponentElo: result.match.opponent.elo,
+		opponentUsername: result.match.opponent.username,
+		isHost: result.match.peerView.isHost,
+		matchTicket: result.match.peerView.matchTicket,
+		queueToken: result.queueToken,
+		...(result.match.peerView.matchChallenge ? { matchChallenge: result.match.peerView.matchChallenge } : {}),
+		...(result.match.peerView.opponentMatchChallenge ? { opponentMatchChallenge: result.match.peerView.opponentMatchChallenge } : {}),
+	});
 });
 
 router.post('/leave', (req: Request, res: Response) => {
 	const { peerId } = req.body;
 
-	if (!peerId) {
+	if (!peerId || typeof peerId !== 'string' || !isSafePeerId(peerId)) {
 		return res.status(400).json({ success: false, error: 'peerId required' });
 	}
 
 	const index = matchmakingQueue.findIndex(p => p.peerId === peerId);
 	if (index !== -1) {
+		if (!hasValidQueueToken(req, matchmakingQueue[index].queueTokenHash)) {
+			return res.status(403).json({ success: false, error: 'queue token required' });
+		}
 		matchmakingQueue.splice(index, 1);
 		saveQueue();
+	}
+
+	const activeMatchLeaveResponse = getActiveMatchLeaveResponse(req, peerId);
+	if (activeMatchLeaveResponse) {
+		return res.status(activeMatchLeaveResponse.statusCode).json(activeMatchLeaveResponse.body);
 	}
 
 	return res.json({ success: true });
 });
 
-router.get('/status/:peerId', (req: Request, res: Response) => {
+router.get('/status/:peerId', async (req: Request, res: Response) => {
 	const { peerId } = req.params;
+	if (!isSafePeerId(peerId)) {
+		return res.status(400).json({ success: false, error: 'invalid peerId' });
+	}
 
 	const queuePosition = matchmakingQueue.findIndex(p => p.peerId === peerId);
 	if (queuePosition !== -1) {
+		if (!hasValidQueueToken(req, matchmakingQueue[queuePosition].queueTokenHash)) {
+			return res.status(403).json({ success: false, error: 'queue token required' });
+		}
+		if (!await canQueuedPlayerUseSharedP2P(matchmakingQueue[queuePosition])) {
+			matchmakingQueue.splice(queuePosition, 1);
+			saveQueue();
+			return res.status(403).json({ success: false, error: 'starter claim required' });
+		}
 		return res.json({
 			success: true,
 			status: 'queued',
@@ -318,21 +641,9 @@ router.get('/status/:peerId', (req: Request, res: Response) => {
 		});
 	}
 
-	for (const [matchId, match] of activeMatches.entries()) {
-		if (match.player1 === peerId || match.player2 === peerId) {
-			const isHost = match.player1 === peerId;
-			const matchChallenge = isHost ? match.player1MatchChallenge : match.player2MatchChallenge;
-			const opponentMatchChallenge = isHost ? match.player2MatchChallenge : match.player1MatchChallenge;
-			return res.json({
-				success: true,
-				status: 'matched',
-				matchId,
-				opponentPeerId: match.player1 === peerId ? match.player2 : match.player1,
-				isHost: match.player1 === peerId,
-				...(matchChallenge ? { matchChallenge } : {}),
-				...(opponentMatchChallenge ? { opponentMatchChallenge } : {}),
-			});
-		}
+	const matchedResponse = await getActiveMatchStatusResponse(req, peerId);
+	if (matchedResponse) {
+		return res.status(matchedResponse.statusCode).json(matchedResponse.body);
 	}
 
 	return res.json({ success: true, status: 'not_queued' });

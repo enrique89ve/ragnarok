@@ -11,8 +11,11 @@ match-result flow, the transcript pipeline, or the matchmaking surface.
   the winner submits at match end).
 - `P2P_SECURITY_HARDENING.md` — five security invariants enforced over this
   wire (still valid; folded into §6 below for context).
-- `BETA_TESTNET_ROADMAP.md` — work plan, technical debt, decisions per
-  session (NOT a spec — read this for *why* the code is the way it is).
+- `P2P_TICKET_SECURITY_VALIDATION.md` — focused validation matrix for relay
+  tickets, Origin checks, subprotocol handling, logging boundaries, and the
+  poker P2P adapter seam.
+- `TESTNET_READINESS_FAST_TRACK.md` — active work plan, technical debt, and
+  release gates for Alfa Testnet to Closed Testnet Beta.
 - `shared/p2p-wire/chess.ts` — chess wire schema (canon for chess envelopes).
 
 **Conventions**:
@@ -45,8 +48,9 @@ match-result flow, the transcript pipeline, or the matchmaking surface.
 A PvP match runs entirely between two browser clients ("peers"). The server
 owns three responsibilities and nothing more:
 
-1. **Matchmaking**: a stateless first-come-first-served queue with ELO-aware
-   pairing (`server/routes/matchmakingRoutes.ts`).
+1. **Matchmaking**: an in-memory, ELO-aware queue that issues per-peer
+   `queueToken` bearer secrets and per-peer `P2PMatchTicket` relay
+   credentials (`server/routes/matchmakingRoutes.ts`).
 2. **Relay**: a WebSocket fan-out that forwards opaque JSON frames between
    the two peers in a room (`server/routes/p2pRelay.ts`). The relay does
    NOT inspect game logic; it only validates frame envelope shape and
@@ -58,6 +62,15 @@ owns three responsibilities and nothing more:
 
 The relay does not have a database of game state. It cannot adjudicate moves.
 The server holds **no source of truth about gameplay**.
+
+**Client bridge dependency rule**: P2P wire handlers must not reach gameplay
+stores through `globalThis`. Poker P2P behavior goes through the explicit
+`pokerP2PCombatAdapter`; chess/combat snapshots must use explicit imports or a
+typed adapter seam. P2P stores that hold relay tickets, match challenges, queue
+tokens, peer ids, or live wire state must not be published on `globalThis`.
+Legacy non-P2P `globalThis` exports may remain for diagnostics or chunk-boundary
+compatibility, but they are not an application trust boundary and must not be
+used by new P2P wire code.
 
 **Two universes share this protocol** (see `SET_AXIS.md`):
 - `set: 'starter'` — off-chain, infinite supply. Match results MAY skip
@@ -72,7 +85,16 @@ broadcast policy differs.
 ## §2 Transport: WebSocket Relay
 
 **Endpoint**: `ws://<host>/ws/p2p?room=<roomId>&peer=<peerId>`
-(`server/routes/p2pRelay.ts:128-137`)
+(`server/routes/p2pRelay.ts`)
+
+The relay ticket is not carried in the URL. Browser clients send:
+
+- `Sec-WebSocket-Protocol: ragnarok-p2p-v1`
+- `Sec-WebSocket-Protocol: ragnarok-p2p-ticket.<token>`
+
+The server validates browser `Origin` against same-host or
+`P2P_RELAY_ALLOWED_ORIGINS`, and rejects `X-Forwarded-Host` unless
+`P2P_RELAY_TRUST_FORWARDED_HOST=true`.
 
 **Why WebSocket, not WebRTC**: the legacy WebRTC + PeerJS broker (commits
 prior to `1bf9dcb refactor(transport): remove peerjs dependency`) failed
@@ -83,6 +105,8 @@ hop. For a turn-based card game this latency is negligible.
 **Room lifecycle**:
 - A room is created on first peer arrival, indexed by `roomId` (the
   `matchId` returned by matchmaking).
+- In production/shared relay mode, each peer must present a server-signed
+  `P2PMatchTicket` bound to exactly that `roomId` and its own `peerId`.
 - Maximum 2 peers per room (`ROOM_MAX_PEERS`, `p2pRelay.ts:31`).
 - When the room reaches 2 peers, the relay sends `__sys.event=open` to
   each, with `isHost=true` to the first arrival and `isHost=false` to the
@@ -92,8 +116,11 @@ hop. For a turn-based card game this latency is negligible.
 - A peer departure (close or error) sends `__sys.event=close` to the
   survivor. The room is garbage-collected when empty.
 
-**Frame validation** (`p2pRelay.ts:86-107`):
-- Maximum payload: 64 KB (`MAX_PAYLOAD_BYTES`).
+**Frame validation** (`p2pRelay.ts`):
+- Maximum payload: 16 KB (`P2P_RELAY_MAX_PAYLOAD_BYTES`).
+- Initial and recovery `gameState` frames use `json+gzip+base64url@1`
+  (`compressedGameState`) so the relay stays below the 16 KB cap while the
+  receiver restores the same `GameState` before applying `flipGameState`.
 - Must be valid JSON with a `type` string field.
 - `type` must be in the whitelist (see §4 for the canonical list). Reserved
   prefix `__` is blocked from the client side (only the relay emits `__sys`
@@ -139,18 +166,41 @@ in phases 0-2 before any gameplay action is sent.
 
 ### Phase 0 — Matchmaking
 
-1. Each player POSTs `/api/matchmaking/queue`. Closed-beta full NFT clients
-   send `{ peerId }` only so searching for a battle does not open a Hive
-   Posting prompt. Future ranked/on-chain matchmaking may include `username`;
-   when `username` is present the body is signed via Hive Keychain
-   (`matchmakingRoutes.ts`, middleware `requireHiveBodyAuthIfUsernamePresent`).
+1. Each player POSTs `/api/matchmaking/queue`. In local/dev runtime, anonymous
+   `{ peerId }` free-play remains available. In shared-network runtime
+   (`testnet`/`mainnet`), the request must include a Hive `username`,
+   `starterClaimed: true`, and a Posting signature over the canonical queue
+   message from `shared/p2pMatchmakingAuth.ts`:
+   `ragnarok-queue:<username>:<peerId>:starter-claimed:<timestamp>`.
+   Binding `peerId` and starter claim state into the signed bytes prevents a
+   queue signature from being reused for a different relay peer. The server
+   does not trust the body boolean as proof that onboarding happened: it also
+   requires a server-side starter ceremony receipt recorded through
+   `/api/starter/claim` before shared-network matchmaking can enqueue the
+   account. The server returns a process-local `queueToken`; clients send it
+   back as `x-p2p-queue-token` for queue rechecks, status polling, and leave
+   requests. Queue/status handling re-checks that receipt before returning
+   queued/matched state: a peer that loses starter access is removed from the
+   queue, skipped as an opponent, and cannot receive a match ticket from
+   `/api/matchmaking/status/:peerId`.
+
+   Direct friend challenges use the same shared-network starter receipt gate.
+   `/api/friends/heartbeat` may still serve read-only friend presence, but if
+   the authenticated account lacks a starter ceremony receipt it strips `peerId`
+   and publishes the account as non-challengeable. `/api/friends/challenge`
+   rejects with `starter_claim_required` unless both sender and target have
+   server-recorded starter receipts. `/api/friends/challenges/:username` also
+   re-checks the receiver receipt before delivering pending challenges; if the
+   receiver loses starter access, pending tickets are discarded and the endpoint
+   returns `starter_claim_required`.
 2. The server runs `findBestEloMatch` (`matchmakingRoutes.ts:93`):
    - First pass: closest ELO within ±200 (expands to ±500 after 30s,
      anyone after 60s — see `matchmakingRoutes.ts:99-102`).
    - Second pass: if no ELO match, pair with anyone waiting >60s.
-3. On match, the server returns `{ matchId, opponentPeerId, isHost: false }`
+3. On match, the server returns `{ matchId, opponentPeerId, isHost, matchTicket }`
    to the joining player. The other player learns of the match by polling
-   `/api/matchmaking/status/:peerId`.
+   `/api/matchmaking/status/:peerId` with its `x-p2p-queue-token`; the status
+   response includes only that peer's own `matchTicket`.
 4. The first arrival becomes "host" by matchmaking convention. NOTE: the
    relay also emits `isHost` based on WS arrival order. These two
    `isHost` values are NOT guaranteed to agree — the WS-relay value is the
@@ -168,8 +218,11 @@ in phases 0-2 before any gameplay action is sent.
 ### Phase 1 — Connection
 
 Both peers open WebSockets to `/ws/p2p?room=<matchId>&peer=<peerId>`. The
-relay sends `__sys.open` once both arrive. Each peer transitions
-`peerStore.connectionState` to `'connected'`.
+relay verifies the peer-specific `P2PMatchTicket` from the WebSocket
+subprotocol, including the ticket account's current starter receipt whenever
+tickets are required (`production`, `testnet`, or `mainnet`). The relay sends
+`__sys.open` once both arrive. Each peer transitions `peerStore.connectionState`
+to `'connected'`.
 
 ### Phase 2 — Seed Exchange (commit-reveal)
 
@@ -277,9 +330,9 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `wasm_hash_check` | both | both | Phase 2: engine-hash check (disconnect on mismatch) |
 | `army_announcement` | both | both | Phase 2: announce selected chess army |
 | `deck_verify` | both | both | Phase 2: announce source-aware `protocolVersion: 2` deck claims for cross-verification |
-| `init` | host → client | host only | Phase 2: send authoritative initial gameState |
+| `init` | host → client | host only | Phase 2: send authoritative initial gameState, compressed as `json+gzip+base64url@1` |
 | `game_command` (envelope) | client → host | client | Phase 3 cards: requests an action from host |
-| `gameState` | host → client | host | Phase 3 cards: sync authoritative state (debounced) |
+| `gameState` | host → client | host | Phase 3 cards: sync authoritative state (debounced), compressed as `json+gzip+base64url@1` |
 | `chess_command` (envelope) | both | both (symmetric) | Phase 3 chess: discriminated union of `chess_move` (quiet), `chess_attack` (instant-kill capture), and `chess_combat_initiated` (non-instant capture into poker) — see §5 |
 | `poker_action` | both | both (symmetric) | Phase 3 poker: deterministic local apply + relay to peer; includes optional compact tuple for transcript/DataChannel migration |
 | `hash_check` | host → client | host | Periodic state-hash sanity check |
@@ -332,8 +385,8 @@ exceptions, both tracked as open work:
 
 While these transitions persist, the bridge layer (today
 `client/src/game/hooks/useWireSync.ts`, scheduled to move under
-`client/src/game/match/modes/p2p/wireSync/` — see
-`BETA_TESTNET_ROADMAP.md`) carries the host/client distinction internally
+`client/src/game/match/modes/p2p/wireSync/` - see
+`TESTNET_READINESS_FAST_TRACK.md`) carries the host/client distinction internally
 by reading `authority.myRole === 'first-mover'`. The wire envelope schemas
 themselves are agnostic to authority; each receiver resolves authority
 locally via `deriveAuthority`.
@@ -742,7 +795,8 @@ authoritative? Or is it OK to derive client-side from local context?
 
 ### OPEN-8 — Audit gameState wire and migrate to recovery-on-mismatch
 
-**Where**: today the host sends full `gameState` snapshots (~10KB)
+**Where**: today the host sends full `gameState` snapshots (~31KB raw,
+gzip-framed below the 16 KB relay cap)
 debounced post-command (host→client) regardless of whether the client
 needs it. `hash_check` currently records deferred slash evidence, not state
 recovery.

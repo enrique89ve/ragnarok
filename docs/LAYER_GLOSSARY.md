@@ -5,10 +5,10 @@ state, and presentation. When this document and the code disagree, the
 code wins — but disagreements should resolve by editing one or the other,
 not by inventing new terms.
 
-The roadmap (`BETA_TESTNET_ROADMAP.md`) uses words like "bridge",
-"adapter", "wrapper" interchangeably. This file fixes them. A new
-contributor should read this once and know where any new piece of code
-belongs.
+Older roadmap notes used words like "bridge", "adapter", "wrapper"
+interchangeably. This file fixes them. The current active readiness plan is
+`TESTNET_READINESS_FAST_TRACK.md`; a new contributor should read that plan and
+this glossary before moving P2P, combat, or presentation boundaries.
 
 ---
 

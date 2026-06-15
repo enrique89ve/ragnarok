@@ -15,7 +15,7 @@
 .mulligan-card-wrapper .simple-card.large {
   width: 100% !important;
   height: auto !important;
-  aspect-ratio: 9 / 14;
+  aspect-ratio: 7 / 10;
 }
 
 /* Decorative rune rings — concentric circles rotating in opposite directions.
@@ -85,7 +85,7 @@
 /* Card placeholder while data loads */
 .mulligan-card-placeholder {
   width: 100%;
-  aspect-ratio: 9 / 13;
+  aspect-ratio: 7 / 10;
   background: rgba(30, 41, 59, 0.8);
   border-radius: 12px;
   border: 1px solid rgba(100, 116, 139, 0.3);

@@ -25,7 +25,7 @@ export const RARITY_SAMPLES: SampleCard[] = [
 	{ id: 1900, fallbackName: 'Niflheim Hatchling', fallbackRarity: 'common', fallbackType: 'minion', fallbackElement: 'water' },
 	{ id: 6000, fallbackName: 'Spirit Echo', fallbackRarity: 'rare', fallbackType: 'spell', fallbackElement: 'light' },
 	{ id: 4392, fallbackName: 'Echo of the Light God', fallbackRarity: 'epic', fallbackType: 'minion', fallbackElement: 'light' },
-	{ id: 20011, fallbackName: "Al'Akir the Windlord", fallbackRarity: 'mythic', fallbackType: 'minion', fallbackElement: 'electric' },
+	{ id: 4303, fallbackName: 'Root-Gnawer of Yggdrasil', fallbackRarity: 'mythic', fallbackType: 'minion', fallbackElement: 'grass' },
 ];
 
 const RARITY_INDEX = new Map<SampleCard['fallbackRarity'], SampleCard>(

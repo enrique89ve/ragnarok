@@ -36,6 +36,29 @@ function getErrorMessage(error: unknown): string {
   return 'Internal Server Error';
 }
 
+function redactLogValue(value: unknown, depth = 0): unknown {
+  if (depth > 6) return '[redacted-depth]';
+  if (Array.isArray(value)) return value.map(item => redactLogValue(item, depth + 1));
+  if (!isRecord(value)) return value;
+
+  const redacted: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value)) {
+    const normalizedKey = key.toLowerCase();
+    if (
+      normalizedKey.includes('token')
+      || normalizedKey === 'signature'
+      || normalizedKey === 'serversig'
+      || normalizedKey === 'hivesig'
+      || normalizedKey.endsWith('key')
+    ) {
+      redacted[key] = '[redacted]';
+      continue;
+    }
+    redacted[key] = redactLogValue(child, depth + 1);
+  }
+  return redacted;
+}
+
 type ListenError = Error & {
   readonly code?: string;
 };
@@ -213,7 +236,7 @@ app.use((req, res, next) => {
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        logLine += ` :: ${JSON.stringify(redactLogValue(capturedJsonResponse))}`;
       }
 
       if (logLine.length > 80) {

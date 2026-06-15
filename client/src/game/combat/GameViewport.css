@@ -14,15 +14,18 @@
 
 /*
   Wrapper fills the physical browser viewport behind the scaled 1920x1080
-  canvas. Keep it pure black so letterboxed space never reads as a separate
-  colored layer around the game surface.
+  canvas. Use the shared forest plate as a dark fill so letterboxed space
+  feels connected to the poker surface instead of becoming a hard black rim.
 */
 .game-viewport-wrapper {
   position: fixed;
   inset: 0;
   overflow: hidden;
   z-index: 1;
-  background: #000;
+  background:
+    linear-gradient(180deg, rgba(0, 2, 5, 0.76) 0%, rgba(0, 2, 5, 0.58) 46%, rgba(0, 2, 5, 0.82) 100%),
+    url("/art/campaign/campaign-moba-forest-background-v1.png") center / cover no-repeat,
+    #000;
 }
 
 /*
