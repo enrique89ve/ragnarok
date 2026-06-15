@@ -1,7 +1,7 @@
 /* Showdown and terminal-result poker presentation. */
 
-@import "./game-over.css";
-@import "./hero-death.css";
+@import "../../combat/styles/game-over.css";
+@import "../../combat/styles/hero-death.css";
 
 /* Winning card highlight shared by board and celebration surfaces. */
 .winning-card-glow {

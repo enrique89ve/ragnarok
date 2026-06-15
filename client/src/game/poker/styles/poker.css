@@ -1,0 +1,27 @@
+/* ════════════════════════════════════════════════════════════════════
+   POKER ARENA — single CSS entry.
+
+   This is the only CSS file the arena root imports. Cascade order is
+   fixed here and must not be reordered without a visual regression check.
+
+     1. tokens         — local --poker-* alias block
+     2. canvas         — fixed 1920×1080 geometry (must precede all visuals)
+     3. poker-core     — reset, zones, cards, HUD, controls
+     4. poker-vfx      — atmosphere, glows, drama, particles
+     5. poker-showdown — terminal poker presentation
+     6. poker-campaign — campaign-only overlays (element matchup banners)
+
+   The 4 manifests (poker-core, poker-vfx, poker-showdown, poker-campaign)
+   re-import their own leaves from client/src/game/combat/styles/. This
+   file is the single public entry; do not bypass it from TSX.
+
+   Adding a new poker CSS concern = add a leaf, then @import it from the
+   matching manifest. Do not create a new top-level entry.
+   ════════════════════════════════════════════════════════════════════ */
+
+@import "./tokens.css";
+@import "./canvas.css";
+@import "./poker-core.css";
+@import "./poker-vfx.css";
+@import "./poker-showdown.css";
+@import "./poker-campaign.css";

@@ -1,0 +1,12 @@
+/* Optional poker VFX: atmosphere, glows, particles, impact, and drama layers. */
+
+@import "../../combat/styles/norse-atmosphere.css";
+@import "../../combat/styles/realm-boards.css";
+@import "../../combat/styles/glow-effects.css";
+@import "../../combat/styles/elemental-glows.css";
+@import "../../combat/styles/card-highlight.css";
+@import "../../combat/styles/spell-screen-effects.css";
+@import "../../combat/styles/poker-drama.css";
+@import "../../combat/styles/hero-reactions.css";
+@import "../../combat/styles/combat-animations.css";
+@import "../../combat/styles/ragnarok-art-ui.css";

@@ -46,7 +46,7 @@
   max-width: var(--hero-resource-dock-width) !important;
   min-height: 32px;
   margin: 0 !important;
-  padding: var(--space-3) 8px !important;
+  padding: var(--poker-space-3) 8px !important;
   overflow: visible;
   background: linear-gradient(
     180deg,
@@ -54,7 +54,7 @@
     rgba(3, 5, 10, 0.94) 100%
   ) !important;
   border: 1px solid rgba(96, 165, 250, 0.28) !important;
-  border-radius: var(--radius-full) !important;
+  border-radius: var(--poker-radius-full) !important;
   box-shadow:
     0 2px 10px rgba(0, 0, 0, 0.55),
     inset 0 1px 0 rgba(147, 197, 253, 0.08) !important;
@@ -96,10 +96,10 @@
   --hero-resource-dock-width: 248px;
   --hero-resource-dock-y: -4px;
   --hero-resource-dock-scale: 1;
-  --hero-resource-dock-gap: var(--space-7);
+  --hero-resource-dock-gap: var(--poker-space-7);
   --player-hand-strength-gap: 8px;
   --player-hand-card-width: 132px;
-  --player-hand-card-height: 185px;
+  --player-hand-card-height: 176px;
   --betting-panel-x: 520px;
   --betting-panel-width: 330px;
   --wager-panel-top: 118px;
@@ -132,7 +132,7 @@
     ),
     radial-gradient(
       ellipse at 50% 48%,
-      color-mix(in srgb, var(--gold-300) 9%, transparent) 0%,
+      color-mix(in srgb, var(--poker-gold-300) 9%, transparent) 0%,
       transparent 58%
     );
   box-shadow: none;
@@ -157,8 +157,8 @@
   background:
     radial-gradient(
       ellipse at 50% 50%,
-      color-mix(in srgb, var(--gold-300) 18%, transparent) 0%,
-      color-mix(in srgb, var(--bifrost-300) 8%, transparent) 34%,
+      color-mix(in srgb, var(--poker-gold-300) 18%, transparent) 0%,
+      color-mix(in srgb, var(--poker-bifrost-300) 8%, transparent) 34%,
       transparent 68%
     ),
     linear-gradient(
@@ -215,9 +215,9 @@
 }
 
 .unified-combat-arena .opponent-hand-display {
-  --opponent-hand-card-width: 78px;
+  --opponent-hand-card-width: 96px;
   --opponent-hand-card-overlap: calc(var(--opponent-hand-card-width) / -2);
-  /* Max footprint: 8 cards × 78px - 7 × 39px overlap = 351px fan width.
+  /* Max footprint: 8 cards x 96px - 7 x 48px overlap = 432px fan width.
      Container sized to 400px so the fan never overflows or shifts the
      anchor when the hand has fewer / more cards. */
   --opponent-hand-max-cards: 8;
@@ -225,8 +225,8 @@
   position: absolute;
   left: var(--poker-zone-opponentHand-x, 280px);
   top: var(--poker-zone-opponentHand-y, 160px);
-  width: var(--poker-zone-opponentHand-w, 400px);
-  height: var(--poker-zone-opponentHand-h, 96px) !important;
+  width: var(--poker-zone-opponentHand-w, 432px);
+  height: var(--poker-zone-opponentHand-h, 136px) !important;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -259,7 +259,7 @@
 
 .unified-combat-arena > .zone-board .community-cards-section {
   align-items: center;
-  gap: var(--space-9);
+  gap: var(--poker-space-9);
   height: 100%;
   margin: 0;
   padding: 0;
@@ -303,10 +303,10 @@
 }
 
 .unified-combat-arena .minion-field .simple-battlefield {
-  --bf-card-width: 126px;
-  --bf-card-height: 176px;
-  --bf-row-height: 192px;
-  --bf-slot-gap: var(--space-7);
+  --bf-card-width: 144px;
+  --bf-card-height: 192px;
+  --bf-row-height: 208px;
+  --bf-slot-gap: var(--poker-space-7);
   box-sizing: border-box;
   width: 100%;
   height: 100%;
@@ -343,15 +343,15 @@
   width: var(--poker-zone-playerHand-w, 640px);
   height: var(--poker-zone-playerHand-h, 192px);
   pointer-events: auto;
-  padding: var(--space-10) 12px 0;
+  padding: var(--poker-space-10) 12px 0;
   border-radius: 18px 18px 0 0;
   background:
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--gold-300) 8%, transparent) 0%,
+      color-mix(in srgb, var(--poker-gold-300) 8%, transparent) 0%,
       transparent 42%
     ),
-    color-mix(in srgb, var(--surface-overlay-deep) 48%, transparent);
+    color-mix(in srgb, var(--poker-surface-overlay-deep) 48%, transparent);
   box-shadow:
     0 -14px 40px rgba(0, 0, 0, 0.24),
     inset 0 1px 0 rgba(255, 255, 255, 0.045);
@@ -507,13 +507,13 @@
 
 .poker-hand-container .hand-card-wrapper:hover {
   transform: translateY(-12px) scale(1.05);
-  z-index: var(--z-hover, 500);
+  z-index: var(--poker-z-hover, 500);
 }
 
 .poker-hand-container .hand-card-wrapper:focus-visible {
-  outline: 2px solid var(--color-gold, #ffd700);
+  outline: 2px solid var(--poker-color-gold, #ffd700);
   outline-offset: 2px;
-  z-index: var(--z-hover, 500);
+  z-index: var(--poker-z-hover, 500);
 }
 
 /* Touch and motion-reduce polish — disable hovers that don't

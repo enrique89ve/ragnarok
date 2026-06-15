@@ -36,7 +36,19 @@ export type PokerViewportCssVarName = `--poker-zone-${PokerViewportZoneId}-${'x'
 	| '--poker-bottom-rail-gap'
 	| '--poker-player-hand-card-rise'
 	| '--poker-betting-controls-drop'
-	| '--poker-hud-badge-height';
+	| '--poker-hud-badge-height'
+	| '--poker-gold-300'
+	| '--poker-gold-500'
+	| '--poker-bifrost-300'
+	| '--poker-surface-overlay-deep'
+	| '--poker-space-3'
+	| '--poker-space-7'
+	| '--poker-space-9'
+	| '--poker-space-10'
+	| '--poker-radius-full'
+	| '--poker-z-hover'
+	| '--poker-color-gold'
+	| '--poker-hero-card-width';
 
 export interface PokerViewportZone {
 	readonly layer: PokerViewportLayer;
@@ -100,6 +112,13 @@ const PLAYER_HAND_HEIGHT = 192;
 const PLAYER_HAND_CARD_RISE_RATIO = 0.2;
 const PLAYER_HAND_CARD_RISE = Math.round(PLAYER_HAND_HEIGHT * PLAYER_HAND_CARD_RISE_RATIO);
 
+/**
+ * Canonical 1920x1080 poker arena layout.
+ *
+ * Production consumes this through POKER_VIEWPORT_LAYOUT_STYLE. The dev-only
+ * safe-area prototype also reads it as its baseline draft, but production must
+ * never load prototype localStorage drafts at runtime.
+ */
 export const POKER_VIEWPORT_LAYOUT = {
 	schema: 'norse-poker-layout-draft/v1',
 	reference: {
@@ -179,8 +198,8 @@ export const POKER_VIEWPORT_LAYOUT = {
 		hourglass: {
 			layer: 'hud',
 			label: 'Hourglass timer',
-			x: 1040,
-			y: 144,
+			x: 960,
+			y: 122,
 			width: 65,
 			height: 107,
 			rotation: 0,

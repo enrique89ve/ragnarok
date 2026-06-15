@@ -1,0 +1,29 @@
+/* ════════════════════════════════════════════════════════════════════
+   POKER TOKEN BRIDGE
+
+   App design tokens live in client/src/styles/design-tokens.css under
+   `:root`. Poker CSS does not consume them directly — it reads local
+   `--poker-*` aliases defined here. This file is the only place that
+   references the app tokens for poker styling.
+
+   When the app renames a token, update the alias below and the rest of
+   the poker CSS keeps working.
+
+   Scope selector: `.unified-combat-arena` — same selector where the other
+   poker-local vars (--arena-z-*, --hero-card-width, etc.) already live.
+   ════════════════════════════════════════════════════════════════════ */
+
+.unified-combat-arena {
+	--poker-gold-300: var(--gold-300);
+	--poker-gold-500: var(--gold-500);
+	--poker-bifrost-300: var(--bifrost-300);
+	--poker-surface-overlay-deep: var(--surface-overlay-deep);
+	--poker-space-3: var(--space-3);
+	--poker-space-7: var(--space-7);
+	--poker-space-9: var(--space-9);
+	--poker-space-10: var(--space-10);
+	--poker-radius-full: var(--radius-full);
+	--poker-z-hover: var(--z-hover);
+	--poker-color-gold: var(--color-gold);
+	--poker-hero-card-width: var(--hero-card-width);
+}

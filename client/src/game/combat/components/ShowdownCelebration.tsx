@@ -4,7 +4,7 @@ import { PokerCard } from '../../types/PokerCombatTypes';
 import { getCombinedHandName } from '../../types/PokerCombatTypes';
 import { PokerCombatAnimation } from './PokerCombatAnimation';
 import { proceduralAudio } from '../../audio/proceduralAudio';
-import '../styles/poker-showdown.css';
+import '../../poker/styles/poker-showdown.css';
 
 interface ShowdownCelebrationProps {
 	resolution: {
