@@ -359,7 +359,7 @@ are not deterministic and cannot live in protocol-core.
 ## Cross-cutting layer contract
 
 The following ESLint rules in `eslint.config.js` enforce the layer
-boundaries. A `npm run lint` failure on `no-restricted-imports` is
+boundaries. A `pnpm run lint` failure on `no-restricted-imports` is
 always a layer violation.
 
 | Rule | Enforces |

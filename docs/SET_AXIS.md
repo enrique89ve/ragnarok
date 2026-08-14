@@ -137,7 +137,7 @@ This guarantees every collectible card in `cardRegistry` has a canonical `set` v
 1. Pick a `set` (`starter` for everyone-gets, `genesis` for NFT-mintable).
 2. Pick a `rarity` from canon — see `docs/RULEBOOK.md` Card Rarity table.
 3. Make sure `id` falls in a valid range (see `docs/RULEBOOK.md` Card ID Ranges).
-4. If `genesis`: drop a `.webp` in `client/public/art/nfts/` (filename pattern `[0-9a-f]{4}-[0-9a-z]{8}.webp`) and add a line to `ART_REGISTRY` in `client/src/game/utils/art/artMapping.ts`. Run `npm test` — the snapshot in `client/src/game/utils/art/artMapping.test.ts` will diff. Run `npm run audit:art -- --strict` to confirm cross-layer integrity.
+4. If `genesis`: drop a `.webp` in `client/public/art/nfts/` (filename pattern `[0-9a-f]{4}-[0-9a-z]{8}.webp`) and add a line to `ART_REGISTRY` in `client/src/game/utils/art/artMapping.ts`. Run `pnpm test` — the snapshot in `client/src/game/utils/art/artMapping.test.ts` will diff. Run `pnpm run audit:art -- --strict` to confirm cross-layer integrity.
 5. If `starter`: art is optional (no NFT identity), but recommended for UX.
 
 ## See also

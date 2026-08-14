@@ -39,7 +39,7 @@ Alfa esta lista para mas manos internas cuando todo esto sea verdad:
 4. El P2P de dos browsers cubre movimiento de chess, captura instantanea,
    captura a poker, resolucion, retorno a chess, reconnect corto, reload guard
    y export JSON.
-5. `npm run check`, `npm run lint:css`, el runner de seguridad P2P y el build
+5. `pnpm run check`, `pnpm run lint:css`, el runner de seguridad P2P y el build
    Alfa pasan en el arbol que se va a desplegar.
 
 ### Closed Testnet Beta
@@ -139,8 +139,8 @@ boton tocar?
 ### Build/start Alfa
 
 ```bash
-npm run build:alfa-testnet
-npm run start:alfa-testnet
+pnpm run build:alfa-testnet
+pnpm run start:alfa-testnet
 ```
 
 ### Runtime evidence
@@ -232,10 +232,10 @@ Historicos o de referencia:
 
 Antes de decir "listo para testers", adjuntar o registrar:
 
-- salida de `npm run check`;
-- salida de `npm run lint:css`;
+- salida de `pnpm run check`;
+- salida de `pnpm run lint:css`;
 - salida de `bash scripts/p2p-ticket-security-check.sh`;
-- salida de `npm run build:alfa-testnet`;
+- salida de `pnpm run build:alfa-testnet`;
 - `/api/health`, `/api/admin/config`, `/api/admin/p2p/status`;
 - session log JSON del smoke humano P2P;
 - capturas o reporte visual del tablero poker en los viewports objetivo.

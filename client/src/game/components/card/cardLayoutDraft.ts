@@ -125,6 +125,10 @@ export type CardLayoutSlotPatch = Partial<
 	Pick<CardLayoutSlot, 'x' | 'y' | 'w' | 'h' | 'fontScale' | 'visible' | 'textPolicy' | 'aspectLocked'>
 >;
 
+export type CardLayoutRenderFieldPatch = Partial<
+	Pick<CardLayoutRenderFieldRule, 'enabled' | 'priority' | 'cardTypes' | 'rarities'>
+>;
+
 const NFT_ASPECT: CardLayoutAspectRatio = { width: 7, height: 10 };
 const ALL_CARD_TYPES = CARD_LAYOUT_CARD_TYPES;
 const ALL_RARITIES = RARITY;
@@ -157,10 +161,10 @@ const collectionSlots = (): readonly CardLayoutSlot[] => [
 	defineSlot({ id: 'art', label: 'Art', x: 3, y: 3, w: 94, h: 88, fontScale: 1, visible: true, textPolicy: 'hidden' }),
 	defineSlot({ id: 'mana', label: 'Mana', x: 1.8, y: 1.3, w: 11, h: 7.7, fontScale: 1, visible: true, textPolicy: 'fit' }),
 	defineSlot({ id: 'badge', label: 'Badge', x: 86, y: 3.2, w: 10.8, h: 7.6, fontScale: 1, visible: false, textPolicy: 'fit' }),
-	defineSlot({ id: 'tribe', label: 'Tribe', x: 18, y: 70, w: 64, h: 5.2, fontScale: 0.72, visible: false, textPolicy: 'fit' }),
-	defineSlot({ id: 'name', label: 'Name', x: 17, y: 76.8, w: 66, h: 10.8, fontScale: 0.74, visible: true, textPolicy: 'wrap' }),
-	defineSlot({ id: 'keywords', label: 'Keywords', x: 8, y: 70.8, w: 84, h: 6, fontScale: 0.75, visible: false, textPolicy: 'fit' }),
-	defineSlot({ id: 'description', label: 'Description', x: 8, y: 58, w: 84, h: 17, fontScale: 0.75, visible: false, textPolicy: 'wrap' }),
+	defineSlot({ id: 'description', label: 'Description', x: 8, y: 57.2, w: 84, h: 16.7, fontScale: 0.92, visible: false, textPolicy: 'wrap' }),
+	defineSlot({ id: 'keywords', label: 'Keywords', x: 8, y: 57.2, w: 84, h: 5.6, fontScale: 1, visible: false, textPolicy: 'fit' }),
+	defineSlot({ id: 'tribe', label: 'Tribe', x: 24, y: 75.2, w: 52, h: 4.3, fontScale: 0.66, visible: false, textPolicy: 'fit' }),
+	defineSlot({ id: 'name', label: 'Name', x: 13.5, y: 81.3, w: 73, h: 7.5, fontScale: 0.76, visible: true, textPolicy: 'wrap' }),
 	defineSlot({ id: 'attack', label: 'Attack', x: 0, y: 94.1, w: 16, h: 5.9, fontScale: 0.92, visible: true, textPolicy: 'fit' }),
 	defineSlot({ id: 'health', label: 'Health', x: 84, y: 94.1, w: 16, h: 5.9, fontScale: 0.92, visible: true, textPolicy: 'fit' }),
 	defineSlot({ id: 'rarity', label: 'Rarity', x: 39, y: 94.4, w: 22, h: 4.8, fontScale: 1, visible: true, textPolicy: 'hidden' }),
@@ -212,7 +216,7 @@ const pregameRenderFields = (): readonly CardLayoutRenderFieldRule[] => [
 	defineRenderFieldRule({ id: 'rarity', label: 'Rarity', enabled: true, priority: 'secondary' }),
 	defineRenderFieldRule({ id: 'attack', label: 'Attack', enabled: true, priority: 'primary', cardTypes: COMBAT_STAT_CARD_TYPES }),
 	defineRenderFieldRule({ id: 'health', label: 'Health', enabled: true, priority: 'primary', cardTypes: ['minion', 'artifact', 'hero'] }),
-	defineRenderFieldRule({ id: 'keywords', label: 'Keywords', enabled: false, priority: 'hidden' }),
+	defineRenderFieldRule({ id: 'keywords', label: 'Keywords', enabled: true, priority: 'secondary' }),
 	defineRenderFieldRule({ id: 'description', label: 'Description', enabled: false, priority: 'hidden' }),
 	defineRenderFieldRule({ id: 'tribe', label: 'Tribe', enabled: false, priority: 'hidden' }),
 	defineRenderFieldRule({ id: 'badge', label: 'Element badge', enabled: false, priority: 'hidden' }),
@@ -226,7 +230,7 @@ const gameplayRenderFields = (): readonly CardLayoutRenderFieldRule[] => [
 	defineRenderFieldRule({ id: 'attack', label: 'Attack', enabled: true, priority: 'primary', cardTypes: COMBAT_STAT_CARD_TYPES }),
 	defineRenderFieldRule({ id: 'health', label: 'Health', enabled: true, priority: 'primary', cardTypes: ['minion', 'artifact', 'hero'] }),
 	defineRenderFieldRule({ id: 'rarity', label: 'Rarity', enabled: true, priority: 'tertiary', rarities: ['epic', 'mythic'] }),
-	defineRenderFieldRule({ id: 'keywords', label: 'Keywords', enabled: false, priority: 'hidden' }),
+	defineRenderFieldRule({ id: 'keywords', label: 'Keywords', enabled: true, priority: 'secondary' }),
 	defineRenderFieldRule({ id: 'description', label: 'Description', enabled: false, priority: 'hidden' }),
 	defineRenderFieldRule({ id: 'tribe', label: 'Tribe', enabled: false, priority: 'hidden' }),
 	defineRenderFieldRule({ id: 'badge', label: 'Element badge', enabled: false, priority: 'hidden' }),
@@ -265,7 +269,7 @@ export const DEFAULT_CARD_LAYOUT_DRAFT = {
 			aspectRatio: NFT_ASPECT,
 			renderer: { surface: 'collection', shape: 'tile', size: 'large', statsMode: 'frame', showDescription: false },
 			renderFields: pregameRenderFields(),
-			slots: collectionSlots(),
+			slots: collectionSlotsWithVisibility({ keywords: true }),
 		},
 		{
 			surface: 'gameplay',
@@ -276,7 +280,7 @@ export const DEFAULT_CARD_LAYOUT_DRAFT = {
 			aspectRatio: NFT_ASPECT,
 			renderer: { surface: 'collection', shape: 'tile', size: 'medium', statsMode: 'frame', showDescription: false },
 			renderFields: gameplayRenderFields(),
-			slots: collectionSlots(),
+			slots: collectionSlotsWithVisibility({ keywords: true }),
 		},
 	],
 } satisfies CardLayoutDraft;
@@ -326,6 +330,32 @@ export const updateCardLayoutSlot = (
 			...surface,
 			slots: surface.slots.map((slot) => (
 				slot.id === slotId ? { ...slot, ...patch } : slot
+			)),
+		};
+	}),
+});
+
+export const updateCardLayoutRenderField = (
+	draft: CardLayoutDraft,
+	surfaceId: CardLayoutSurface,
+	slotId: CardLayoutSlotId,
+	patch: CardLayoutRenderFieldPatch,
+): CardLayoutDraft => ({
+	schema: draft.schema,
+	updatedAt: new Date().toISOString(),
+	surfaces: draft.surfaces.map((surface) => {
+		if (surface.surface !== surfaceId) return surface;
+		return {
+			...surface,
+			renderFields: surface.renderFields.map((field) => (
+				field.id === slotId
+					? {
+						...field,
+						...patch,
+						cardTypes: patch.cardTypes ?? field.cardTypes,
+						rarities: patch.rarities ?? field.rarities,
+					}
+					: field
 			)),
 		};
 	}),

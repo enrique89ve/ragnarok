@@ -162,7 +162,7 @@ function formatLimit(limit: number | null): string {
 }
 
 function printHelp(): void {
-	process.stdout.write(`Usage: npm run bench:claim-store -- [options]
+	process.stdout.write(`Usage: pnpm run bench:claim-store -- [options]
 
 Options:
   --adapter json|memory       Storage adapter to measure (default: json)

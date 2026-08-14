@@ -1,0 +1,6 @@
+allowBuilds:
+  bufferutil: true
+  esbuild: true
+  sharp: true
+overrides:
+  prismjs: ^1.30.0

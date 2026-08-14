@@ -197,7 +197,7 @@ export default function CardLabPage() {
 					chrome vs. effects; <strong>medium</strong> on the PixiJS v8 API
 					(this page is the first local PixiJS application outside the
 					existing particle canvas). The static PNG frames are baked by{' '}
-					<code>npm run build:card-frames</code> (resvg-js, 32 frames,
+					<code>pnpm run build:card-frames</code> (resvg-js, 32 frames,
 					~1.2 MB total at 2× DPR). Routes are dev-only and gated by{' '}
 					<code>import.meta.env.DEV</code>; the lazy chunk is excluded from
 					prod via <code>import.meta.glob</code>.

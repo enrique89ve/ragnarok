@@ -5,15 +5,17 @@ Norse Mythos Card Game — Hive-anchored card battler.
 ## Commands
 
 ```bash
-npm run dev       # Vite + Express dev server → http://localhost:5000
-npm run dev:testnet # Same server with .env.testnet / rk_game_testnet
-npm run build:alfa-testnet # Production Alfa Testnet bundle; stage stays testnet
-npm run start:alfa-testnet # Built server with alfa-testnet reset epoch / JSON state
-npm run build:mainnet # Production browser bundle with .env.mainnet
-npm run check     # TypeScript type check
-npm run lint      # ESLint (use --fix to autofix)
-npm run lint:css  # Stylelint (runs in pre-commit)
+pnpm run dev       # Vite + Express dev server → http://localhost:5000
+pnpm run dev:testnet # Same server with .env.testnet / rk_game_testnet
+pnpm run build:alfa-testnet # Production Alfa Testnet bundle; stage stays testnet
+pnpm run start:alfa-testnet # Built server with alfa-testnet reset epoch / JSON state
+pnpm run build:mainnet # Production browser bundle with .env.mainnet
+pnpm run check     # TypeScript type check
+pnpm run lint      # ESLint (use --fix to autofix)
+pnpm run lint:css  # Stylelint (runs in pre-commit)
 ```
+
+Package manager is **pnpm** (see `pnpm-workspace.yaml`). Install with `pnpm install --frozen-lockfile`; never commit a `package-lock.json`.
 
 ## Source of truth
 

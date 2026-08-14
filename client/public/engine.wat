@@ -6,8 +6,8 @@
  (type $4 (func (param i32 i32 i32 i32) (result i32)))
  (type $5 (func (param i32 i32)))
  (type $6 (func (param i32 i32 i32 i32)))
- (type $7 (func))
- (type $8 (func (param i32 i32 i32) (result i32)))
+ (type $7 (func (param i32 i32 i32) (result i32)))
+ (type $8 (func))
  (type $9 (func (param i32)))
  (type $10 (func (param i32 i32 i32 i32 i32 i32 i32)))
  (type $11 (func (param i32 i32 i32 i32 i32 i32)))
@@ -520,7 +520,7 @@
  (export "getResult" (func $assembly/index/getResult))
  (export "getResultLength" (func $assembly/index/getResultLength))
  (export "hashStateJson" (func $assembly/index/hashStateJson))
- (export "computeCanonicalHash" (func $assembly/index/computeCanonicalHash))
+ (export "computeCanonicalHash" (func $assembly/index/getStateHash))
  (export "getEngineVersion" (func $assembly/index/getEngineVersion))
  (export "_start" (func $assembly/index/_start))
  (export "createGameState" (func $assembly/index/createGameState))
@@ -530,7 +530,7 @@
  (export "createCardInstance" (func $assembly/index/createCardInstance))
  (export "createEngineAction" (func $assembly/index/createEngineAction))
  (export "applyGameAction" (func $assembly/index/applyGameAction))
- (export "getStateHash" (func $assembly/index/computeCanonicalHash))
+ (export "getStateHash" (func $assembly/index/getStateHash))
  (export "beginCard" (func $assembly/util/cardLookup/beginCard))
  (export "setCardStats" (func $assembly/util/cardLookup/setCardStats))
  (export "setCardMeta" (func $assembly/util/cardLookup/setCardMeta))
@@ -566,81 +566,249 @@
  (export "__rtti_base" (global $~lib/rt/__rtti_base))
  (export "memory" (memory $0))
  (start $~start)
- (func $~lib/rt/stub/__alloc (param $0 i32) (result i32)
-  (local $1 i32)
+ (func $~lib/string/String.__concat (param $0 i32) (param $1 i32) (result i32)
   (local $2 i32)
   (local $3 i32)
   (local $4 i32)
   (local $5 i32)
+  i32.const 2752
+  local.set $2
   local.get $0
-  i32.const 1073741820
-  i32.gt_u
+  i32.const 20
+  i32.sub
+  i32.load offset=16
+  i32.const -2
+  i32.and
+  local.tee $3
+  local.get $1
+  i32.const 20
+  i32.sub
+  i32.load offset=16
+  i32.const -2
+  i32.and
+  local.tee $4
+  i32.add
+  local.tee $5
   if
-   i32.const 1056
-   i32.const 1120
-   i32.const 33
-   i32.const 29
+   local.get $5
+   i32.const 2
+   call $~lib/rt/stub/__new
+   local.tee $2
+   local.get $0
+   local.get $3
+   memory.copy
+   local.get $2
+   local.get $3
+   i32.add
+   local.get $1
+   local.get $4
+   memory.copy
+  end
+  local.get $2
+ )
+ (func $~lib/array/Array<assembly/types/GameState/CardInstance>#__get (param $0 i32) (param $1 i32) (result i32)
+  local.get $1
+  local.get $0
+  i32.load offset=12
+  i32.ge_u
+  if
+   i32.const 2864
+   i32.const 2816
+   i32.const 114
+   i32.const 42
    call $~lib/builtins/abort
    unreachable
   end
-  global.get $~lib/rt/stub/offset
-  global.get $~lib/rt/stub/offset
-  i32.const 4
-  i32.add
-  local.tee $2
   local.get $0
-  i32.const 19
-  i32.add
-  i32.const -16
-  i32.and
-  i32.const 4
-  i32.sub
-  local.tee $0
-  i32.add
-  local.tee $3
-  memory.size
-  local.tee $4
-  i32.const 16
+  i32.load offset=4
+  local.get $1
+  i32.const 2
   i32.shl
-  i32.const 15
   i32.add
-  i32.const -16
-  i32.and
-  local.tee $5
-  i32.gt_u
+  i32.load
+  local.tee $0
+  i32.eqz
   if
-   local.get $4
-   local.get $3
-   local.get $5
-   i32.sub
-   i32.const 65535
-   i32.add
-   i32.const -65536
-   i32.and
-   i32.const 16
-   i32.shr_u
-   local.tee $5
-   local.get $4
-   local.get $5
-   i32.gt_s
-   select
-   memory.grow
+   i32.const 5280
+   i32.const 2816
+   i32.const 118
+   i32.const 40
+   call $~lib/builtins/abort
+   unreachable
+  end
+  local.get $0
+ )
+ (func $~lib/string/String.__eq (param $0 i32) (param $1 i32) (result i32)
+  (local $2 i32)
+  (local $3 i32)
+  (local $4 i32)
+  local.get $0
+  local.get $1
+  i32.eq
+  if
+   i32.const 1
+   return
+  end
+  local.get $1
+  i32.eqz
+  local.get $0
+  i32.eqz
+  i32.or
+  if
    i32.const 0
-   i32.lt_s
+   return
+  end
+  local.get $0
+  i32.const 20
+  i32.sub
+  i32.load offset=16
+  i32.const 1
+  i32.shr_u
+  local.tee $2
+  local.get $1
+  i32.const 20
+  i32.sub
+  i32.load offset=16
+  i32.const 1
+  i32.shr_u
+  i32.ne
+  if
+   i32.const 0
+   return
+  end
+  block $__inlined_func$~lib/util/string/compareImpl (result i32)
+   local.get $0
+   local.set $3
+   local.get $2
+   local.tee $0
+   i32.const 4
+   i32.ge_u
+   if (result i32)
+    local.get $3
+    i32.const 7
+    i32.and
+    local.get $1
+    i32.const 7
+    i32.and
+    i32.or
+   else
+    i32.const 1
+   end
+   i32.eqz
    if
-    local.get $5
-    memory.grow
-    i32.const 0
-    i32.lt_s
-    if
-     unreachable
+    loop $do-loop|0
+     local.get $3
+     i64.load
+     local.get $1
+     i64.load
+     i64.eq
+     if
+      local.get $3
+      i32.const 8
+      i32.add
+      local.set $3
+      local.get $1
+      i32.const 8
+      i32.add
+      local.set $1
+      local.get $0
+      i32.const 4
+      i32.sub
+      local.tee $0
+      i32.const 4
+      i32.ge_u
+      br_if $do-loop|0
+     end
     end
    end
+   loop $while-continue|1
+    local.get $0
+    local.tee $2
+    i32.const 1
+    i32.sub
+    local.set $0
+    local.get $2
+    if
+     local.get $3
+     i32.load16_u
+     local.tee $2
+     local.get $1
+     i32.load16_u
+     local.tee $4
+     i32.ne
+     if
+      local.get $2
+      local.get $4
+      i32.sub
+      br $__inlined_func$~lib/util/string/compareImpl
+     end
+     local.get $3
+     i32.const 2
+     i32.add
+     local.set $3
+     local.get $1
+     i32.const 2
+     i32.add
+     local.set $1
+     br $while-continue|1
+    end
+   end
+   i32.const 0
   end
-  local.get $3
-  global.set $~lib/rt/stub/offset
+  i32.eqz
+ )
+ (func $~lib/array/Array<i32>#__get (param $0 i32) (param $1 i32) (result i32)
+  local.get $1
   local.get $0
+  i32.load offset=12
+  i32.ge_u
+  if
+   i32.const 2864
+   i32.const 2816
+   i32.const 114
+   i32.const 42
+   call $~lib/builtins/abort
+   unreachable
+  end
+  local.get $0
+  i32.load offset=4
+  local.get $1
+  i32.const 2
+  i32.shl
+  i32.add
+  i32.load
+ )
+ (func $~lib/rt/__newArray (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (result i32)
+  (local $4 i32)
+  local.get $0
+  local.get $1
+  i32.shl
+  local.tee $4
+  i32.const 1
+  call $~lib/rt/stub/__new
+  local.set $1
+  local.get $3
+  if
+   local.get $1
+   local.get $3
+   local.get $4
+   memory.copy
+  end
+  i32.const 16
+  local.get $2
+  call $~lib/rt/stub/__new
+  local.tee $2
+  local.get $1
   i32.store
+  local.get $2
+  local.get $1
+  i32.store offset=4
+  local.get $2
+  local.get $4
+  i32.store offset=8
+  local.get $2
+  local.get $0
+  i32.store offset=12
   local.get $2
  )
  (func $~lib/rt/stub/__new (param $0 i32) (param $1 i32) (result i32)
@@ -680,6 +848,709 @@
   i32.const 16
   i32.add
  )
+ (func $~lib/array/Array<assembly/types/GameState/CardInstance>#push (param $0 i32) (param $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  local.get $0
+  local.get $0
+  i32.load offset=12
+  local.tee $2
+  i32.const 1
+  i32.add
+  local.tee $3
+  i32.const 2
+  i32.const 1
+  call $~lib/array/ensureCapacity
+  local.get $0
+  i32.load offset=4
+  local.get $2
+  i32.const 2
+  i32.shl
+  i32.add
+  local.get $1
+  i32.store
+  local.get $0
+  local.get $3
+  i32.store offset=12
+ )
+ (func $~lib/util/number/itoa32 (param $0 i32) (param $1 i32) (result i32)
+  (local $2 i64)
+  (local $3 i32)
+  (local $4 i64)
+  (local $5 i32)
+  (local $6 i32)
+  (local $7 i32)
+  (local $8 i64)
+  local.get $1
+  i32.const 2
+  i32.lt_s
+  local.get $1
+  i32.const 36
+  i32.gt_s
+  i32.or
+  if
+   i32.const 3136
+   i32.const 3264
+   i32.const 373
+   i32.const 5
+   call $~lib/builtins/abort
+   unreachable
+  end
+  local.get $0
+  i32.eqz
+  if
+   i32.const 3328
+   return
+  end
+  i32.const 0
+  local.get $0
+  i32.sub
+  local.get $0
+  local.get $0
+  i32.const 31
+  i32.shr_u
+  i32.const 1
+  i32.shl
+  local.tee $7
+  select
+  local.set $3
+  local.get $1
+  i32.const 10
+  i32.eq
+  if
+   local.get $3
+   i32.const 100000
+   i32.lt_u
+   if (result i32)
+    local.get $3
+    i32.const 100
+    i32.lt_u
+    if (result i32)
+     local.get $3
+     i32.const 10
+     i32.ge_u
+     i32.const 1
+     i32.add
+    else
+     local.get $3
+     i32.const 10000
+     i32.ge_u
+     i32.const 3
+     i32.add
+     local.get $3
+     i32.const 1000
+     i32.ge_u
+     i32.add
+    end
+   else
+    local.get $3
+    i32.const 10000000
+    i32.lt_u
+    if (result i32)
+     local.get $3
+     i32.const 1000000
+     i32.ge_u
+     i32.const 6
+     i32.add
+    else
+     local.get $3
+     i32.const 1000000000
+     i32.ge_u
+     i32.const 8
+     i32.add
+     local.get $3
+     i32.const 100000000
+     i32.ge_u
+     i32.add
+    end
+   end
+   local.tee $0
+   i32.const 1
+   i32.shl
+   local.get $7
+   i32.add
+   i32.const 2
+   call $~lib/rt/stub/__new
+   local.tee $6
+   local.get $7
+   i32.add
+   local.get $3
+   local.get $0
+   call $~lib/util/number/utoa32_dec_lut
+  else
+   local.get $1
+   i32.const 16
+   i32.eq
+   if
+    i32.const 31
+    local.get $3
+    i32.clz
+    i32.sub
+    i32.const 2
+    i32.shr_s
+    i32.const 1
+    i32.add
+    local.tee $0
+    i32.const 1
+    i32.shl
+    local.get $7
+    i32.add
+    i32.const 2
+    call $~lib/rt/stub/__new
+    local.tee $6
+    local.get $7
+    i32.add
+    local.set $1
+    local.get $3
+    i64.extend_i32_u
+    local.set $2
+    loop $while-continue|0
+     local.get $0
+     i32.const 2
+     i32.ge_u
+     if
+      local.get $1
+      local.get $0
+      i32.const 2
+      i32.sub
+      local.tee $0
+      i32.const 1
+      i32.shl
+      i32.add
+      local.get $2
+      i32.wrap_i64
+      i32.const 255
+      i32.and
+      i32.const 2
+      i32.shl
+      i32.const 3760
+      i32.add
+      i32.load
+      i32.store
+      local.get $2
+      i64.const 8
+      i64.shr_u
+      local.set $2
+      br $while-continue|0
+     end
+    end
+    local.get $0
+    i32.const 1
+    i32.and
+    if
+     local.get $1
+     local.get $2
+     i32.wrap_i64
+     i32.const 6
+     i32.shl
+     i32.const 3760
+     i32.add
+     i32.load16_u
+     i32.store16
+    end
+   else
+    local.get $3
+    i64.extend_i32_u
+    local.set $4
+    block $__inlined_func$~lib/util/number/ulog_base$67 (result i32)
+     local.get $1
+     i32.popcnt
+     i32.const 1
+     i32.eq
+     if
+      i32.const 63
+      local.get $4
+      i64.clz
+      i32.wrap_i64
+      i32.sub
+      i32.const 31
+      local.get $1
+      i32.clz
+      i32.sub
+      i32.div_u
+      i32.const 1
+      i32.add
+      br $__inlined_func$~lib/util/number/ulog_base$67
+     end
+     local.get $1
+     i64.extend_i32_s
+     local.tee $8
+     local.set $2
+     i32.const 1
+     local.set $0
+     loop $while-continue|01
+      local.get $2
+      local.get $4
+      i64.le_u
+      if
+       local.get $4
+       local.get $2
+       i64.div_u
+       local.set $4
+       local.get $2
+       local.get $2
+       i64.mul
+       local.set $2
+       local.get $0
+       i32.const 1
+       i32.shl
+       local.set $0
+       br $while-continue|01
+      end
+     end
+     loop $while-continue|1
+      local.get $4
+      i64.const 0
+      i64.ne
+      if
+       local.get $4
+       local.get $8
+       i64.div_u
+       local.set $4
+       local.get $0
+       i32.const 1
+       i32.add
+       local.set $0
+       br $while-continue|1
+      end
+     end
+     local.get $0
+     i32.const 1
+     i32.sub
+    end
+    local.tee $0
+    i32.const 1
+    i32.shl
+    local.get $7
+    i32.add
+    i32.const 2
+    call $~lib/rt/stub/__new
+    local.tee $6
+    local.get $7
+    i32.add
+    local.set $5
+    local.get $3
+    i64.extend_i32_u
+    local.set $2
+    local.get $1
+    i64.extend_i32_s
+    local.set $4
+    local.get $1
+    local.get $1
+    i32.const 1
+    i32.sub
+    i32.and
+    if
+     loop $do-loop|1
+      local.get $5
+      local.get $0
+      i32.const 1
+      i32.sub
+      local.tee $0
+      i32.const 1
+      i32.shl
+      i32.add
+      local.get $2
+      local.get $2
+      local.get $4
+      i64.div_u
+      local.tee $2
+      local.get $4
+      i64.mul
+      i64.sub
+      i32.wrap_i64
+      i32.const 1
+      i32.shl
+      i32.const 4816
+      i32.add
+      i32.load16_u
+      i32.store16
+      local.get $2
+      i64.const 0
+      i64.ne
+      br_if $do-loop|1
+     end
+    else
+     local.get $1
+     i32.ctz
+     i32.const 7
+     i32.and
+     i64.extend_i32_s
+     local.set $8
+     local.get $4
+     i64.const 1
+     i64.sub
+     local.set $4
+     loop $do-loop|0
+      local.get $5
+      local.get $0
+      i32.const 1
+      i32.sub
+      local.tee $0
+      i32.const 1
+      i32.shl
+      i32.add
+      local.get $2
+      local.get $4
+      i64.and
+      i32.wrap_i64
+      i32.const 1
+      i32.shl
+      i32.const 4816
+      i32.add
+      i32.load16_u
+      i32.store16
+      local.get $2
+      local.get $8
+      i64.shr_u
+      local.tee $2
+      i64.const 0
+      i64.ne
+      br_if $do-loop|0
+     end
+    end
+   end
+  end
+  local.get $7
+  if
+   local.get $6
+   i32.const 45
+   i32.store16
+  end
+  local.get $6
+ )
+ (func $assembly/chess/canonical/Cursor#expect (param $0 i32) (param $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  (local $4 i32)
+  loop $for-loop|0
+   local.get $2
+   local.get $1
+   i32.const 20
+   i32.sub
+   i32.load offset=16
+   i32.const 1
+   i32.shr_u
+   i32.lt_s
+   if
+    local.get $0
+    i32.load offset=4
+    local.get $2
+    i32.add
+    local.tee $3
+    local.get $0
+    i32.load
+    local.tee $4
+    i32.const 20
+    i32.sub
+    i32.load offset=16
+    i32.const 1
+    i32.shr_u
+    i32.ge_u
+    if (result i32)
+     i32.const -1
+    else
+     local.get $4
+     local.get $3
+     i32.const 1
+     i32.shl
+     i32.add
+     i32.load16_u
+    end
+    local.set $3
+    local.get $2
+    local.get $1
+    i32.const 20
+    i32.sub
+    i32.load offset=16
+    i32.const 1
+    i32.shr_u
+    i32.ge_u
+    if (result i32)
+     i32.const -1
+    else
+     local.get $1
+     local.get $2
+     i32.const 1
+     i32.shl
+     i32.add
+     i32.load16_u
+    end
+    local.get $3
+    i32.ne
+    if
+     return
+    end
+    local.get $2
+    i32.const 1
+    i32.add
+    local.set $2
+    br $for-loop|0
+   end
+  end
+  local.get $0
+  local.get $0
+  i32.load offset=4
+  local.get $1
+  i32.const 20
+  i32.sub
+  i32.load offset=16
+  i32.const 1
+  i32.shr_u
+  i32.add
+  i32.store offset=4
+ )
+ (func $~lib/array/Array<assembly/types/GameState/Player>#__set (param $0 i32) (param $1 i32) (param $2 i32)
+  (local $3 i32)
+  local.get $1
+  local.get $0
+  i32.load offset=12
+  i32.ge_u
+  if
+   local.get $1
+   i32.const 0
+   i32.lt_s
+   if
+    i32.const 2864
+    i32.const 2816
+    i32.const 130
+    i32.const 22
+    call $~lib/builtins/abort
+    unreachable
+   end
+   local.get $0
+   local.get $1
+   i32.const 1
+   i32.add
+   local.tee $3
+   i32.const 2
+   i32.const 1
+   call $~lib/array/ensureCapacity
+   local.get $0
+   local.get $3
+   i32.store offset=12
+  end
+  local.get $0
+  i32.load offset=4
+  local.get $1
+  i32.const 2
+  i32.shl
+  i32.add
+  local.get $2
+  i32.store
+ )
+ (func $assembly/chess/canonical/escapeJsonString (param $0 i32) (result i32)
+  (local $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  i32.const 6368
+  local.set $1
+  loop $for-loop|0
+   local.get $2
+   local.get $0
+   i32.const 20
+   i32.sub
+   i32.load offset=16
+   i32.const 1
+   i32.shr_u
+   local.tee $3
+   i32.lt_s
+   if
+    local.get $2
+    local.get $3
+    i32.ge_u
+    if (result i32)
+     i32.const -1
+    else
+     local.get $0
+     local.get $2
+     i32.const 1
+     i32.shl
+     i32.add
+     i32.load16_u
+    end
+    local.tee $3
+    i32.const 34
+    i32.eq
+    if (result i32)
+     local.get $1
+     i32.const 6400
+     call $~lib/string/String.__concat
+    else
+     local.get $3
+     i32.const 92
+     i32.eq
+     if (result i32)
+      local.get $1
+      i32.const 6432
+      call $~lib/string/String.__concat
+     else
+      local.get $3
+      i32.const 8
+      i32.eq
+      if (result i32)
+       local.get $1
+       i32.const 13280
+       call $~lib/string/String.__concat
+      else
+       local.get $3
+       i32.const 12
+       i32.eq
+       if (result i32)
+        local.get $1
+        i32.const 13312
+        call $~lib/string/String.__concat
+       else
+        local.get $3
+        i32.const 10
+        i32.eq
+        if (result i32)
+         local.get $1
+         i32.const 6464
+         call $~lib/string/String.__concat
+        else
+         local.get $3
+         i32.const 13
+         i32.eq
+         if (result i32)
+          local.get $1
+          i32.const 6496
+          call $~lib/string/String.__concat
+         else
+          local.get $3
+          i32.const 9
+          i32.eq
+          if (result i32)
+           local.get $1
+           i32.const 6528
+           call $~lib/string/String.__concat
+          else
+           local.get $3
+           i32.const 32
+           i32.lt_s
+           if (result i32)
+            local.get $1
+            i32.const 6560
+            local.get $3
+            i32.const 16
+            call $~lib/util/number/itoa32
+            call $~lib/string/String#padStart
+            call $~lib/string/String.__concat
+            call $~lib/string/String.__concat
+           else
+            i32.const 1
+            global.set $~argumentsLength
+            local.get $1
+            local.get $3
+            call $~lib/string/String.fromCharCode@varargs
+            call $~lib/string/String.__concat
+           end
+          end
+         end
+        end
+       end
+      end
+     end
+    end
+    local.set $1
+    local.get $2
+    i32.const 1
+    i32.add
+    local.set $2
+    br $for-loop|0
+   end
+  end
+  local.get $1
+  i32.const 6368
+  call $~lib/string/String.__concat
+ )
+ (func $~lib/typedarray/Uint8Array#__set (param $0 i32) (param $1 i32) (param $2 i32)
+  local.get $1
+  local.get $0
+  i32.load offset=8
+  i32.ge_u
+  if
+   i32.const 2864
+   i32.const 2928
+   i32.const 178
+   i32.const 45
+   call $~lib/builtins/abort
+   unreachable
+  end
+  local.get $0
+  i32.load offset=4
+  local.get $1
+  i32.add
+  local.get $2
+  i32.store8
+ )
+ (func $assembly/chess/canonical/Cursor#readString (param $0 i32) (result i32)
+  (local $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  local.get $0
+  i32.load offset=4
+  local.set $1
+  loop $while-continue|0
+   local.get $0
+   i32.load offset=4
+   local.tee $2
+   local.get $0
+   i32.load
+   local.tee $3
+   i32.const 20
+   i32.sub
+   i32.load offset=16
+   i32.const 1
+   i32.shr_u
+   i32.lt_s
+   if (result i32)
+    local.get $2
+    local.get $3
+    i32.const 20
+    i32.sub
+    i32.load offset=16
+    i32.const 1
+    i32.shr_u
+    i32.ge_u
+    if (result i32)
+     i32.const -1
+    else
+     local.get $3
+     local.get $2
+     i32.const 1
+     i32.shl
+     i32.add
+     i32.load16_u
+    end
+    i32.const 34
+    i32.ne
+   else
+    i32.const 0
+   end
+   if
+    local.get $0
+    local.get $0
+    i32.load offset=4
+    i32.const 1
+    i32.add
+    i32.store offset=4
+    br $while-continue|0
+   end
+  end
+  local.get $0
+  i32.load
+  local.get $1
+  local.get $0
+  i32.load offset=4
+  call $~lib/string/String#substring
+  local.get $0
+  local.get $0
+  i32.load offset=4
+  i32.const 1
+  i32.add
+  i32.store offset=4
+ )
  (func $~lib/arraybuffer/ArrayBuffer#constructor (param $0 i32) (result i32)
   (local $1 i32)
   local.get $0
@@ -702,46 +1573,59 @@
   memory.fill
   local.get $1
  )
- (func $assembly/index/getResult (result i32)
-  i32.const 2752
- )
- (func $assembly/index/getResultLength (result i32)
-  i32.const 2748
-  i32.load
-  i32.const 1
-  i32.shr_u
- )
- (func $~lib/rt/__newArray (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (result i32)
-  (local $4 i32)
+ (func $assembly/util/sha256/writeU32BE (param $0 i32) (param $1 i32) (param $2 i32)
   local.get $0
   local.get $1
-  i32.shl
-  local.tee $4
-  i32.const 1
-  call $~lib/rt/stub/__new
-  local.set $1
-  local.get $3
-  if
-   local.get $1
-   local.get $3
-   local.get $4
-   memory.copy
-  end
-  i32.const 16
   local.get $2
+  i32.const 24
+  i32.shr_u
+  call $~lib/typedarray/Uint8Array#__set
+  local.get $0
+  local.get $1
+  i32.const 1
+  i32.add
+  local.get $2
+  i32.const 16
+  i32.shr_u
+  i32.const 255
+  i32.and
+  call $~lib/typedarray/Uint8Array#__set
+  local.get $0
+  local.get $1
+  i32.const 2
+  i32.add
+  local.get $2
+  i32.const 8
+  i32.shr_u
+  i32.const 255
+  i32.and
+  call $~lib/typedarray/Uint8Array#__set
+  local.get $0
+  local.get $1
+  i32.const 3
+  i32.add
+  local.get $2
+  i32.const 255
+  i32.and
+  call $~lib/typedarray/Uint8Array#__set
+ )
+ (func $assembly/chess/types/Position#constructor (param $0 i32) (param $1 i32) (result i32)
+  (local $2 i32)
+  i32.const 8
+  i32.const 36
   call $~lib/rt/stub/__new
   local.tee $2
-  local.get $1
+  i32.const 0
+  i32.store
+  local.get $2
+  i32.const 0
+  i32.store offset=4
+  local.get $2
+  local.get $0
   i32.store
   local.get $2
   local.get $1
   i32.store offset=4
-  local.get $2
-  local.get $4
-  i32.store offset=8
-  local.get $2
-  local.get $0
-  i32.store offset=12
   local.get $2
  )
  (func $~lib/array/ensureCapacity (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32)
@@ -967,100 +1851,100 @@
    i32.store offset=8
   end
  )
- (func $~lib/array/Array<u8>#push (param $0 i32) (param $1 i32)
+ (func $assembly/chess/canonical/Cursor#readInt (param $0 i32) (result i32)
+  (local $1 i32)
   (local $2 i32)
   (local $3 i32)
   local.get $0
-  local.get $0
-  i32.load offset=12
-  local.tee $2
-  i32.const 1
-  i32.add
-  local.tee $3
-  i32.const 0
-  i32.const 1
-  call $~lib/array/ensureCapacity
-  local.get $0
   i32.load offset=4
-  local.get $2
-  i32.add
-  local.get $1
-  i32.store8
-  local.get $0
-  local.get $3
-  i32.store offset=12
- )
- (func $~lib/typedarray/Uint8Array#constructor (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  i32.const 12
-  i32.const 10
-  call $~lib/rt/stub/__new
   local.tee $1
-  i32.eqz
-  if
-   i32.const 12
-   i32.const 3
-   call $~lib/rt/stub/__new
-   local.set $1
-  end
-  local.get $1
-  i32.const 0
-  i32.store
-  local.get $1
-  i32.const 0
-  i32.store offset=4
-  local.get $1
-  i32.const 0
-  i32.store offset=8
   local.get $0
-  i32.const 1073741820
-  i32.gt_u
-  if
-   i32.const 1184
-   i32.const 1232
-   i32.const 19
-   i32.const 57
-   call $~lib/builtins/abort
-   unreachable
-  end
-  local.get $0
-  i32.const 1
-  call $~lib/rt/stub/__new
+  i32.load
   local.tee $2
-  i32.const 0
-  local.get $0
-  memory.fill
-  local.get $1
-  local.get $2
-  i32.store
-  local.get $1
-  local.get $2
-  i32.store offset=4
-  local.get $1
-  local.get $0
-  i32.store offset=8
-  local.get $1
- )
- (func $~lib/typedarray/Uint8Array#__set (param $0 i32) (param $1 i32) (param $2 i32)
-  local.get $1
-  local.get $0
-  i32.load offset=8
+  i32.const 20
+  i32.sub
+  i32.load offset=16
+  i32.const 1
+  i32.shr_u
   i32.ge_u
-  if
-   i32.const 2864
-   i32.const 2928
-   i32.const 178
-   i32.const 45
-   call $~lib/builtins/abort
-   unreachable
+  if (result i32)
+   i32.const -1
+  else
+   local.get $2
+   local.get $1
+   i32.const 1
+   i32.shl
+   i32.add
+   i32.load16_u
   end
+  i32.const 45
+  i32.eq
+  if
+   local.get $0
+   local.get $0
+   i32.load offset=4
+   i32.const 1
+   i32.add
+   i32.store offset=4
+  end
+  loop $while-continue|0
+   local.get $0
+   i32.load offset=4
+   local.tee $3
+   local.get $0
+   i32.load
+   local.tee $2
+   i32.const 20
+   i32.sub
+   i32.load offset=16
+   i32.const 1
+   i32.shr_u
+   i32.lt_s
+   if
+    local.get $3
+    local.get $2
+    i32.const 20
+    i32.sub
+    i32.load offset=16
+    i32.const 1
+    i32.shr_u
+    i32.ge_u
+    if (result i32)
+     i32.const -1
+    else
+     local.get $2
+     local.get $3
+     i32.const 1
+     i32.shl
+     i32.add
+     i32.load16_u
+    end
+    local.tee $2
+    i32.const 48
+    i32.lt_s
+    local.get $2
+    i32.const 57
+    i32.gt_s
+    i32.or
+    i32.eqz
+    if
+     local.get $0
+     local.get $0
+     i32.load offset=4
+     i32.const 1
+     i32.add
+     i32.store offset=4
+     br $while-continue|0
+    end
+   end
+  end
+  local.get $0
+  i32.load
+  local.get $1
   local.get $0
   i32.load offset=4
-  local.get $1
-  i32.add
-  local.get $2
-  i32.store8
+  call $~lib/string/String#substring
+  call $~lib/util/string/strtol<i32>
  )
  (func $~lib/typedarray/Uint8Array#__get (param $0 i32) (param $1 i32) (result i32)
   local.get $1
@@ -1080,45 +1964,6 @@
   local.get $1
   i32.add
   i32.load8_u
- )
- (func $~lib/array/Array<u32>#__set (param $0 i32) (param $1 i32) (param $2 i32)
-  (local $3 i32)
-  local.get $1
-  local.get $0
-  i32.load offset=12
-  i32.ge_u
-  if
-   local.get $1
-   i32.const 0
-   i32.lt_s
-   if
-    i32.const 2864
-    i32.const 2816
-    i32.const 130
-    i32.const 22
-    call $~lib/builtins/abort
-    unreachable
-   end
-   local.get $0
-   local.get $1
-   i32.const 1
-   i32.add
-   local.tee $3
-   i32.const 2
-   i32.const 1
-   call $~lib/array/ensureCapacity
-   local.get $0
-   local.get $3
-   i32.store offset=12
-  end
-  local.get $0
-  i32.load offset=4
-  local.get $1
-  i32.const 2
-  i32.shl
-  i32.add
-  local.get $2
-  i32.store
  )
  (func $~lib/array/Array<u32>#__get (param $0 i32) (param $1 i32) (result i32)
   local.get $1
@@ -1141,2453 +1986,252 @@
   i32.add
   i32.load
  )
- (func $assembly/util/sha256/writeU32BE (param $0 i32) (param $1 i32) (param $2 i32)
-  local.get $0
-  local.get $1
-  local.get $2
-  i32.const 24
-  i32.shr_u
-  call $~lib/typedarray/Uint8Array#__set
-  local.get $0
-  local.get $1
-  i32.const 1
-  i32.add
-  local.get $2
-  i32.const 16
-  i32.shr_u
-  i32.const 255
-  i32.and
-  call $~lib/typedarray/Uint8Array#__set
-  local.get $0
-  local.get $1
-  i32.const 2
-  i32.add
-  local.get $2
-  i32.const 8
-  i32.shr_u
-  i32.const 255
-  i32.and
-  call $~lib/typedarray/Uint8Array#__set
-  local.get $0
-  local.get $1
-  i32.const 3
-  i32.add
-  local.get $2
-  i32.const 255
-  i32.and
-  call $~lib/typedarray/Uint8Array#__set
- )
- (func $assembly/util/sha256/sha256Bytes (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  (local $3 i32)
+ (func $assembly/chess/rules/inspectCell (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (result i32)
   (local $4 i32)
   (local $5 i32)
-  (local $6 i32)
-  (local $7 i32)
-  (local $8 i32)
-  (local $9 i32)
-  (local $10 i32)
-  (local $11 i32)
-  (local $12 i32)
-  (local $13 i32)
-  (local $14 i32)
-  (local $15 i32)
-  (local $16 i32)
-  (local $17 i32)
-  (local $18 i32)
-  (local $19 i64)
-  (local $20 i32)
-  (local $21 i32)
-  (local $22 i32)
-  (local $23 i32)
   local.get $0
-  i32.load offset=8
-  local.tee $3
-  i64.extend_i32_s
-  i64.const 3
-  i64.shl
-  local.set $19
-  i32.const 64
-  local.get $3
-  i32.const 9
-  i32.add
-  i32.const 64
-  i32.rem_s
-  i32.sub
-  local.tee $1
   i32.const 0
-  local.get $1
-  i32.const 64
-  i32.ne
-  select
-  local.get $3
-  i32.add
-  i32.const 9
-  i32.add
-  local.tee $18
-  call $~lib/typedarray/Uint8Array#constructor
-  local.set $16
-  loop $for-loop|0
-   local.get $2
-   local.get $3
-   i32.lt_s
-   if
-    local.get $16
-    local.get $2
-    local.get $0
-    local.get $2
-    call $~lib/typedarray/Uint8Array#__get
-    call $~lib/typedarray/Uint8Array#__set
-    local.get $2
-    i32.const 1
-    i32.add
-    local.set $2
-    br $for-loop|0
-   end
-  end
-  local.get $16
-  local.get $3
-  i32.const 128
-  call $~lib/typedarray/Uint8Array#__set
-  local.get $16
-  local.get $18
-  i32.const 8
-  i32.sub
-  local.get $19
-  i64.const 56
-  i64.shr_u
-  i32.wrap_i64
-  call $~lib/typedarray/Uint8Array#__set
-  local.get $16
-  local.get $18
-  i32.const 7
-  i32.sub
-  local.get $19
-  i64.const 48
-  i64.shr_u
-  i32.wrap_i64
-  i32.const 255
-  i32.and
-  call $~lib/typedarray/Uint8Array#__set
-  local.get $16
-  local.get $18
-  i32.const 6
-  i32.sub
-  local.get $19
-  i64.const 40
-  i64.shr_u
-  i32.wrap_i64
-  i32.const 255
-  i32.and
-  call $~lib/typedarray/Uint8Array#__set
-  local.get $16
-  local.get $18
-  i32.const 5
-  i32.sub
-  local.get $19
-  i64.const 32
-  i64.shr_u
-  i32.wrap_i64
-  i32.const 255
-  i32.and
-  call $~lib/typedarray/Uint8Array#__set
-  local.get $16
-  local.get $18
-  i32.const 4
-  i32.sub
-  local.get $19
-  i64.const 24
-  i64.shr_u
-  i32.wrap_i64
-  i32.const 255
-  i32.and
-  call $~lib/typedarray/Uint8Array#__set
-  local.get $16
-  local.get $18
-  i32.const 3
-  i32.sub
-  local.get $19
-  i64.const 16
-  i64.shr_u
-  i32.wrap_i64
-  i32.const 255
-  i32.and
-  call $~lib/typedarray/Uint8Array#__set
-  local.get $16
-  local.get $18
-  i32.const 2
-  i32.sub
-  local.get $19
-  i64.const 8
-  i64.shr_u
-  i32.wrap_i64
-  i32.const 255
-  i32.and
-  call $~lib/typedarray/Uint8Array#__set
-  local.get $16
-  local.get $18
-  i32.const 1
-  i32.sub
-  local.get $19
-  i32.wrap_i64
-  i32.const 255
-  i32.and
-  call $~lib/typedarray/Uint8Array#__set
-  i32.const 1779033703
-  local.set $8
-  i32.const -1150833019
-  local.set $9
-  i32.const 1013904242
-  local.set $10
-  i32.const -1521486534
-  local.set $11
-  i32.const 1359893119
-  local.set $12
-  i32.const -1694144372
-  local.set $13
-  i32.const 528734635
-  local.set $14
-  i32.const 1541459225
-  local.set $15
-  i32.const 16
-  i32.const 9
-  call $~lib/rt/stub/__new
-  local.tee $17
-  i32.const 0
-  i32.store
-  local.get $17
-  i32.const 0
-  i32.store offset=4
-  local.get $17
-  i32.const 0
-  i32.store offset=8
-  local.get $17
-  i32.const 0
-  i32.store offset=12
-  i32.const 256
-  i32.const 1
-  call $~lib/rt/stub/__new
-  local.tee $0
-  i32.const 0
-  i32.const 256
-  memory.fill
-  local.get $17
-  local.get $0
-  i32.store
-  local.get $17
-  local.get $0
-  i32.store offset=4
-  local.get $17
-  i32.const 256
-  i32.store offset=8
-  local.get $17
-  i32.const 64
-  i32.store offset=12
-  loop $for-loop|1
-   local.get $18
-   local.get $21
-   i32.gt_s
-   if
-    i32.const 0
-    local.set $2
-    loop $for-loop|2
-     local.get $2
-     i32.const 16
-     i32.lt_s
-     if
-      local.get $17
-      local.get $2
-      local.get $16
-      local.get $21
-      local.get $2
-      i32.const 2
-      i32.shl
-      i32.add
-      local.tee $0
-      call $~lib/typedarray/Uint8Array#__get
-      i32.const 24
-      i32.shl
-      local.get $16
-      local.get $0
-      i32.const 1
-      i32.add
-      call $~lib/typedarray/Uint8Array#__get
-      i32.const 16
-      i32.shl
-      i32.or
-      local.get $16
-      local.get $0
-      i32.const 2
-      i32.add
-      call $~lib/typedarray/Uint8Array#__get
-      i32.const 8
-      i32.shl
-      i32.or
-      local.get $16
-      local.get $0
-      i32.const 3
-      i32.add
-      call $~lib/typedarray/Uint8Array#__get
-      i32.or
-      call $~lib/array/Array<u32>#__set
-      local.get $2
-      i32.const 1
-      i32.add
-      local.set $2
-      br $for-loop|2
-     end
-    end
-    i32.const 16
-    local.set $1
-    loop $for-loop|3
-     local.get $1
-     i32.const 64
-     i32.lt_s
-     if
-      local.get $17
-      local.get $1
-      i32.const 2
-      i32.sub
-      call $~lib/array/Array<u32>#__get
-      local.set $0
-      local.get $17
-      local.get $1
-      i32.const 7
-      i32.sub
-      call $~lib/array/Array<u32>#__get
-      local.get $0
-      i32.const 15
-      i32.shl
-      local.get $0
-      i32.const 17
-      i32.shr_u
-      i32.or
-      local.get $0
-      i32.const 13
-      i32.shl
-      local.get $0
-      i32.const 19
-      i32.shr_u
-      i32.or
-      i32.xor
-      local.get $0
-      i32.const 10
-      i32.shr_u
-      i32.xor
-      i32.add
-      local.set $2
-      local.get $17
-      local.get $1
-      i32.const 15
-      i32.sub
-      call $~lib/array/Array<u32>#__get
-      local.set $0
-      local.get $17
-      local.get $1
-      local.get $17
-      local.get $1
-      i32.const 16
-      i32.sub
-      call $~lib/array/Array<u32>#__get
-      local.get $2
-      local.get $0
-      i32.const 25
-      i32.shl
-      local.get $0
-      i32.const 7
-      i32.shr_u
-      i32.or
-      local.get $0
-      i32.const 14
-      i32.shl
-      local.get $0
-      i32.const 18
-      i32.shr_u
-      i32.or
-      i32.xor
-      local.get $0
-      i32.const 3
-      i32.shr_u
-      i32.xor
-      i32.add
-      i32.add
-      call $~lib/array/Array<u32>#__set
-      local.get $1
-      i32.const 1
-      i32.add
-      local.set $1
-      br $for-loop|3
-     end
-    end
-    local.get $8
-    local.set $4
-    local.get $9
-    local.set $3
-    local.get $10
-    local.set $1
-    local.get $11
-    local.set $6
-    local.get $12
-    local.set $5
-    local.get $13
-    local.set $2
-    local.get $14
-    local.set $0
-    local.get $15
-    local.set $7
-    i32.const 0
-    local.set $20
-    loop $for-loop|4
-     local.get $20
-     i32.const 64
-     i32.lt_s
-     if
-      i32.const 2400
-      local.get $20
-      call $~lib/array/Array<u32>#__get
-      local.get $7
-      local.get $5
-      i32.const 7
-      i32.shl
-      local.get $5
-      i32.const 25
-      i32.shr_u
-      i32.or
-      local.get $5
-      i32.const 26
-      i32.shl
-      local.get $5
-      i32.const 6
-      i32.shr_u
-      i32.or
-      local.get $5
-      i32.const 21
-      i32.shl
-      local.get $5
-      i32.const 11
-      i32.shr_u
-      i32.or
-      i32.xor
-      i32.xor
-      i32.add
-      local.get $2
-      local.get $5
-      i32.and
-      local.get $5
-      i32.const -1
-      i32.xor
-      local.get $0
-      i32.and
-      i32.xor
-      i32.add
-      i32.add
-      local.get $17
-      local.get $20
-      call $~lib/array/Array<u32>#__get
-      i32.add
-      local.set $22
-      local.get $4
-      i32.const 10
-      i32.shl
-      local.get $4
-      i32.const 22
-      i32.shr_u
-      i32.or
-      local.get $4
-      i32.const 30
-      i32.shl
-      local.get $4
-      i32.const 2
-      i32.shr_u
-      i32.or
-      local.get $4
-      i32.const 19
-      i32.shl
-      local.get $4
-      i32.const 13
-      i32.shr_u
-      i32.or
-      i32.xor
-      i32.xor
-      local.get $1
-      local.get $3
-      i32.and
-      local.get $3
-      local.get $4
-      i32.and
-      local.get $1
-      local.get $4
-      i32.and
-      i32.xor
-      i32.xor
-      i32.add
-      local.set $23
-      local.get $0
-      local.set $7
-      local.get $2
-      local.set $0
-      local.get $5
-      local.set $2
-      local.get $6
-      local.get $22
-      i32.add
-      local.set $5
-      local.get $1
-      local.set $6
-      local.get $3
-      local.set $1
-      local.get $4
-      local.set $3
-      local.get $22
-      local.get $23
-      i32.add
-      local.set $4
-      local.get $20
-      i32.const 1
-      i32.add
-      local.set $20
-      br $for-loop|4
-     end
-    end
-    local.get $4
-    local.get $8
-    i32.add
-    local.set $8
-    local.get $3
-    local.get $9
-    i32.add
-    local.set $9
-    local.get $1
-    local.get $10
-    i32.add
-    local.set $10
-    local.get $6
-    local.get $11
-    i32.add
-    local.set $11
-    local.get $5
-    local.get $12
-    i32.add
-    local.set $12
-    local.get $2
-    local.get $13
-    i32.add
-    local.set $13
-    local.get $0
-    local.get $14
-    i32.add
-    local.set $14
-    local.get $7
-    local.get $15
-    i32.add
-    local.set $15
-    local.get $21
-    i32.const -64
-    i32.sub
-    local.set $21
-    br $for-loop|1
-   end
-  end
-  i32.const 32
-  call $~lib/typedarray/Uint8Array#constructor
-  local.tee $0
-  i32.const 0
-  local.get $8
-  call $assembly/util/sha256/writeU32BE
-  local.get $0
-  i32.const 4
-  local.get $9
-  call $assembly/util/sha256/writeU32BE
-  local.get $0
-  i32.const 8
-  local.get $10
-  call $assembly/util/sha256/writeU32BE
-  local.get $0
-  i32.const 12
-  local.get $11
-  call $assembly/util/sha256/writeU32BE
-  local.get $0
-  i32.const 16
-  local.get $12
-  call $assembly/util/sha256/writeU32BE
-  local.get $0
-  i32.const 20
-  local.get $13
-  call $assembly/util/sha256/writeU32BE
-  local.get $0
-  i32.const 24
-  local.get $14
-  call $assembly/util/sha256/writeU32BE
-  local.get $0
-  i32.const 28
-  local.get $15
-  call $assembly/util/sha256/writeU32BE
-  local.get $0
- )
- (func $~lib/string/String#charAt (param $0 i32) (result i32)
-  (local $1 i32)
-  local.get $0
-  i32.const 2988
-  i32.load
-  i32.const 1
-  i32.shr_u
-  i32.ge_u
-  if
-   i32.const 2752
-   return
-  end
-  i32.const 2
-  i32.const 2
-  call $~lib/rt/stub/__new
-  local.tee $1
-  local.get $0
-  i32.const 1
-  i32.shl
-  i32.const 2992
-  i32.add
-  i32.load16_u
-  i32.store16
-  local.get $1
- )
- (func $~lib/string/String.__concat (param $0 i32) (param $1 i32) (result i32)
-  (local $2 i32)
-  (local $3 i32)
-  (local $4 i32)
-  (local $5 i32)
-  i32.const 2752
-  local.set $2
-  local.get $0
-  i32.const 20
-  i32.sub
-  i32.load offset=16
-  i32.const -2
-  i32.and
-  local.tee $3
-  local.get $1
-  i32.const 20
-  i32.sub
-  i32.load offset=16
-  i32.const -2
-  i32.and
-  local.tee $4
-  i32.add
-  local.tee $5
-  if
-   local.get $5
-   i32.const 2
-   call $~lib/rt/stub/__new
-   local.tee $2
-   local.get $0
-   local.get $3
-   memory.copy
-   local.get $2
-   local.get $3
-   i32.add
-   local.get $1
-   local.get $4
-   memory.copy
-  end
-  local.get $2
- )
- (func $assembly/util/sha256/sha256 (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  (local $4 i32)
-  (local $5 i32)
-  i32.const 0
-  i32.const 0
-  i32.const 11
-  i32.const 2784
-  call $~lib/rt/__newArray
-  local.set $4
-  loop $for-loop|0
-   local.get $2
-   local.get $0
-   i32.const 20
-   i32.sub
-   i32.load offset=16
-   i32.const 1
-   i32.shr_u
-   local.tee $5
-   i32.lt_s
-   if
-    local.get $2
-    local.get $5
-    i32.ge_u
-    if (result i32)
-     i32.const -1
-    else
-     local.get $0
-     local.get $2
-     i32.const 1
-     i32.shl
-     i32.add
-     i32.load16_u
-    end
-    local.tee $5
-    i32.const 128
-    i32.lt_s
-    if
-     local.get $4
-     local.get $5
-     call $~lib/array/Array<u8>#push
-    else
-     local.get $5
-     i32.const 2048
-     i32.lt_s
-     if
-      local.get $4
-      local.get $5
-      i32.const 6
-      i32.shr_s
-      i32.const 192
-      i32.or
-      call $~lib/array/Array<u8>#push
-     else
-      local.get $4
-      local.get $5
-      i32.const 12
-      i32.shr_s
-      i32.const 224
-      i32.or
-      call $~lib/array/Array<u8>#push
-      local.get $4
-      local.get $5
-      i32.const 6
-      i32.shr_s
-      i32.const 63
-      i32.and
-      i32.const 128
-      i32.or
-      call $~lib/array/Array<u8>#push
-     end
-     local.get $4
-     local.get $5
-     i32.const 63
-     i32.and
-     i32.const 128
-     i32.or
-     call $~lib/array/Array<u8>#push
-    end
-    local.get $2
-    i32.const 1
-    i32.add
-    local.set $2
-    br $for-loop|0
-   end
-  end
-  local.get $4
-  i32.load offset=12
-  call $~lib/typedarray/Uint8Array#constructor
-  local.set $0
-  loop $for-loop|1
-   local.get $1
-   local.get $4
-   i32.load offset=12
-   local.tee $2
-   i32.lt_s
-   if
-    local.get $1
-    local.get $2
-    i32.ge_u
-    if
-     i32.const 2864
-     i32.const 2816
-     i32.const 114
-     i32.const 42
-     call $~lib/builtins/abort
-     unreachable
-    end
-    local.get $0
-    local.get $1
-    local.get $4
-    i32.load offset=4
-    local.get $1
-    i32.add
-    i32.load8_u
-    call $~lib/typedarray/Uint8Array#__set
-    local.get $1
-    i32.const 1
-    i32.add
-    local.set $1
-    br $for-loop|1
-   end
-  end
-  local.get $0
-  call $assembly/util/sha256/sha256Bytes
-  local.set $1
-  i32.const 2752
-  local.set $0
-  loop $for-loop|00
-   local.get $3
-   local.get $1
-   i32.load offset=8
-   i32.lt_s
-   if
-    local.get $0
-    local.get $1
-    local.get $3
-    call $~lib/typedarray/Uint8Array#__get
-    local.tee $0
-    i32.const 4
-    i32.shr_u
-    call $~lib/string/String#charAt
-    call $~lib/string/String.__concat
-    local.get $0
-    i32.const 15
-    i32.and
-    call $~lib/string/String#charAt
-    call $~lib/string/String.__concat
-    local.set $0
-    local.get $3
-    i32.const 1
-    i32.add
-    local.set $3
-    br $for-loop|00
-   end
-  end
-  local.get $0
- )
- (func $assembly/index/hashStateJson (param $0 i32) (result i32)
-  local.get $0
-  call $assembly/util/sha256/sha256
- )
- (func $~lib/util/number/utoa32_dec_lut (param $0 i32) (param $1 i32) (param $2 i32)
-  (local $3 i32)
-  loop $while-continue|0
-   local.get $1
-   i32.const 10000
-   i32.ge_u
-   if
-    local.get $1
-    i32.const 10000
-    i32.rem_u
-    local.set $3
-    local.get $1
-    i32.const 10000
-    i32.div_u
-    local.set $1
-    local.get $0
-    local.get $2
-    i32.const 4
-    i32.sub
-    local.tee $2
-    i32.const 1
-    i32.shl
-    i32.add
-    local.get $3
-    i32.const 100
-    i32.div_u
-    i32.const 2
-    i32.shl
-    i32.const 3340
-    i32.add
-    i64.load32_u
-    local.get $3
-    i32.const 100
-    i32.rem_u
-    i32.const 2
-    i32.shl
-    i32.const 3340
-    i32.add
-    i64.load32_u
-    i64.const 32
-    i64.shl
-    i64.or
-    i64.store
-    br $while-continue|0
-   end
-  end
-  local.get $1
-  i32.const 100
-  i32.ge_u
-  if
-   local.get $0
-   local.get $2
-   i32.const 2
-   i32.sub
-   local.tee $2
-   i32.const 1
-   i32.shl
-   i32.add
-   local.get $1
-   i32.const 100
-   i32.rem_u
-   i32.const 2
-   i32.shl
-   i32.const 3340
-   i32.add
-   i32.load
-   i32.store
-   local.get $1
-   i32.const 100
-   i32.div_u
-   local.set $1
-  end
-  local.get $1
-  i32.const 10
-  i32.ge_u
-  if
-   local.get $0
-   local.get $2
-   i32.const 2
-   i32.sub
-   i32.const 1
-   i32.shl
-   i32.add
-   local.get $1
-   i32.const 2
-   i32.shl
-   i32.const 3340
-   i32.add
-   i32.load
-   i32.store
-  else
-   local.get $0
-   local.get $2
-   i32.const 1
-   i32.sub
-   i32.const 1
-   i32.shl
-   i32.add
-   local.get $1
-   i32.const 48
-   i32.add
-   i32.store16
-  end
- )
- (func $~lib/util/number/itoa32 (param $0 i32) (param $1 i32) (result i32)
-  (local $2 i64)
-  (local $3 i32)
-  (local $4 i64)
-  (local $5 i32)
-  (local $6 i32)
-  (local $7 i32)
-  (local $8 i64)
-  local.get $1
-  i32.const 2
   i32.lt_s
-  local.get $1
-  i32.const 36
-  i32.gt_s
+  local.get $0
+  i32.const 7
+  i32.ge_s
   i32.or
-  if
-   i32.const 3136
-   i32.const 3264
-   i32.const 373
-   i32.const 5
-   call $~lib/builtins/abort
-   unreachable
-  end
-  local.get $0
-  i32.eqz
-  if
-   i32.const 3328
-   return
-  end
-  i32.const 0
-  local.get $0
-  i32.sub
-  local.get $0
-  local.get $0
-  i32.const 31
-  i32.shr_u
-  i32.const 1
-  i32.shl
-  local.tee $7
-  select
-  local.set $3
-  local.get $1
-  i32.const 10
-  i32.eq
-  if
-   local.get $3
-   i32.const 100000
-   i32.lt_u
-   if (result i32)
-    local.get $3
-    i32.const 100
-    i32.lt_u
-    if (result i32)
-     local.get $3
-     i32.const 10
-     i32.ge_u
-     i32.const 1
-     i32.add
-    else
-     local.get $3
-     i32.const 10000
-     i32.ge_u
-     i32.const 3
-     i32.add
-     local.get $3
-     i32.const 1000
-     i32.ge_u
-     i32.add
-    end
-   else
-    local.get $3
-    i32.const 10000000
-    i32.lt_u
-    if (result i32)
-     local.get $3
-     i32.const 1000000
-     i32.ge_u
-     i32.const 6
-     i32.add
-    else
-     local.get $3
-     i32.const 1000000000
-     i32.ge_u
-     i32.const 8
-     i32.add
-     local.get $3
-     i32.const 100000000
-     i32.ge_u
-     i32.add
-    end
-   end
-   local.tee $0
-   i32.const 1
-   i32.shl
-   local.get $7
-   i32.add
-   i32.const 2
-   call $~lib/rt/stub/__new
-   local.tee $6
-   local.get $7
-   i32.add
-   local.get $3
-   local.get $0
-   call $~lib/util/number/utoa32_dec_lut
-  else
-   local.get $1
-   i32.const 16
-   i32.eq
-   if
-    i32.const 31
-    local.get $3
-    i32.clz
-    i32.sub
-    i32.const 2
-    i32.shr_s
-    i32.const 1
-    i32.add
-    local.tee $0
-    i32.const 1
-    i32.shl
-    local.get $7
-    i32.add
-    i32.const 2
-    call $~lib/rt/stub/__new
-    local.tee $6
-    local.get $7
-    i32.add
-    local.set $1
-    local.get $3
-    i64.extend_i32_u
-    local.set $2
-    loop $while-continue|0
-     local.get $0
-     i32.const 2
-     i32.ge_u
-     if
-      local.get $1
-      local.get $0
-      i32.const 2
-      i32.sub
-      local.tee $0
-      i32.const 1
-      i32.shl
-      i32.add
-      local.get $2
-      i32.wrap_i64
-      i32.const 255
-      i32.and
-      i32.const 2
-      i32.shl
-      i32.const 3760
-      i32.add
-      i32.load
-      i32.store
-      local.get $2
-      i64.const 8
-      i64.shr_u
-      local.set $2
-      br $while-continue|0
-     end
-    end
-    local.get $0
-    i32.const 1
-    i32.and
-    if
-     local.get $1
-     local.get $2
-     i32.wrap_i64
-     i32.const 6
-     i32.shl
-     i32.const 3760
-     i32.add
-     i32.load16_u
-     i32.store16
-    end
-   else
-    block $__inlined_func$~lib/util/number/ulog_base$67 (result i32)
-     local.get $3
-     i64.extend_i32_u
-     local.set $4
-     local.get $1
-     i32.popcnt
-     i32.const 1
-     i32.eq
-     if
-      i32.const 63
-      local.get $4
-      i64.clz
-      i32.wrap_i64
-      i32.sub
-      i32.const 31
-      local.get $1
-      i32.clz
-      i32.sub
-      i32.div_u
-      i32.const 1
-      i32.add
-      br $__inlined_func$~lib/util/number/ulog_base$67
-     end
-     local.get $1
-     i64.extend_i32_s
-     local.tee $8
-     local.set $2
-     i32.const 1
-     local.set $0
-     loop $while-continue|01
-      local.get $2
-      local.get $4
-      i64.le_u
-      if
-       local.get $4
-       local.get $2
-       i64.div_u
-       local.set $4
-       local.get $2
-       local.get $2
-       i64.mul
-       local.set $2
-       local.get $0
-       i32.const 1
-       i32.shl
-       local.set $0
-       br $while-continue|01
-      end
-     end
-     loop $while-continue|1
-      local.get $4
-      i64.const 0
-      i64.ne
-      if
-       local.get $4
-       local.get $8
-       i64.div_u
-       local.set $4
-       local.get $0
-       i32.const 1
-       i32.add
-       local.set $0
-       br $while-continue|1
-      end
-     end
-     local.get $0
-     i32.const 1
-     i32.sub
-    end
-    local.tee $0
-    i32.const 1
-    i32.shl
-    local.get $7
-    i32.add
-    i32.const 2
-    call $~lib/rt/stub/__new
-    local.tee $6
-    local.get $7
-    i32.add
-    local.set $5
-    local.get $3
-    i64.extend_i32_u
-    local.set $2
-    local.get $1
-    i64.extend_i32_s
-    local.set $4
-    local.get $1
-    local.get $1
-    i32.const 1
-    i32.sub
-    i32.and
-    if
-     loop $do-loop|1
-      local.get $5
-      local.get $0
-      i32.const 1
-      i32.sub
-      local.tee $0
-      i32.const 1
-      i32.shl
-      i32.add
-      local.get $2
-      local.get $2
-      local.get $4
-      i64.div_u
-      local.tee $2
-      local.get $4
-      i64.mul
-      i64.sub
-      i32.wrap_i64
-      i32.const 1
-      i32.shl
-      i32.const 4816
-      i32.add
-      i32.load16_u
-      i32.store16
-      local.get $2
-      i64.const 0
-      i64.ne
-      br_if $do-loop|1
-     end
-    else
-     local.get $1
-     i32.ctz
-     i32.const 7
-     i32.and
-     i64.extend_i32_s
-     local.set $8
-     local.get $4
-     i64.const 1
-     i64.sub
-     local.set $4
-     loop $do-loop|0
-      local.get $5
-      local.get $0
-      i32.const 1
-      i32.sub
-      local.tee $0
-      i32.const 1
-      i32.shl
-      i32.add
-      local.get $2
-      local.get $4
-      i64.and
-      i32.wrap_i64
-      i32.const 1
-      i32.shl
-      i32.const 4816
-      i32.add
-      i32.load16_u
-      i32.store16
-      local.get $2
-      local.get $8
-      i64.shr_u
-      local.tee $2
-      i64.const 0
-      i64.ne
-      br_if $do-loop|0
-     end
-    end
-   end
-  end
-  local.get $7
-  if
-   local.get $6
-   i32.const 45
-   i32.store16
-  end
-  local.get $6
- )
- (func $~lib/array/Array<assembly/types/GameState/CardInstance>#__get (param $0 i32) (param $1 i32) (result i32)
-  local.get $1
-  local.get $0
-  i32.load offset=12
-  i32.ge_u
-  if
-   i32.const 2864
-   i32.const 2816
-   i32.const 114
-   i32.const 42
-   call $~lib/builtins/abort
-   unreachable
-  end
-  local.get $0
-  i32.load offset=4
-  local.get $1
-  i32.const 2
-  i32.shl
-  i32.add
-  i32.load
-  local.tee $0
-  i32.eqz
-  if
-   i32.const 5280
-   i32.const 2816
-   i32.const 118
-   i32.const 40
-   call $~lib/builtins/abort
-   unreachable
-  end
-  local.get $0
- )
- (func $~lib/string/String#padStart (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  (local $4 i32)
-  (local $5 i32)
-  (local $6 i32)
-  (local $7 i32)
-  i32.const 3324
-  i32.load
-  i32.const -2
-  i32.and
-  local.tee $1
-  i32.eqz
-  local.get $0
-  i32.const 20
-  i32.sub
-  i32.load offset=16
-  i32.const -2
-  i32.and
-  local.tee $5
-  i32.const 8
-  i32.gt_u
-  i32.or
-  if
-   local.get $0
-   return
-  end
-  i32.const 8
-  i32.const 2
-  call $~lib/rt/stub/__new
-  local.set $2
-  i32.const 8
-  local.get $5
-  i32.sub
-  local.tee $3
-  local.get $1
-  i32.gt_u
-  if
-   local.get $3
-   local.get $3
-   i32.const 2
-   i32.sub
-   local.get $1
-   i32.div_u
-   local.get $1
-   i32.mul
-   local.tee $6
-   i32.sub
-   local.set $7
-   loop $while-continue|0
-    local.get $4
-    local.get $6
-    i32.lt_u
-    if
-     local.get $2
-     local.get $4
-     i32.add
-     i32.const 3328
-     local.get $1
-     memory.copy
-     local.get $1
-     local.get $4
-     i32.add
-     local.set $4
-     br $while-continue|0
-    end
-   end
-   local.get $2
-   local.get $6
-   i32.add
-   i32.const 3328
-   local.get $7
-   memory.copy
-  else
-   local.get $2
-   i32.const 3328
-   local.get $3
-   memory.copy
-  end
-  local.get $2
-  local.get $3
-  i32.add
-  local.get $0
-  local.get $5
-  memory.copy
-  local.get $2
- )
- (func $~lib/string/String.fromCharCode@varargs (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  block $1of1
-   block $0of1
-    block $outOfRange
-     global.get $~argumentsLength
-     i32.const 1
-     i32.sub
-     br_table $0of1 $1of1 $outOfRange
-    end
-    unreachable
-   end
-   i32.const -1
-   local.set $1
-  end
-  i32.const 2
   local.get $1
   i32.const 0
-  i32.gt_s
-  local.tee $3
-  i32.shl
-  i32.const 2
-  call $~lib/rt/stub/__new
-  local.tee $2
-  local.get $0
-  i32.store16
-  local.get $3
+  i32.lt_s
+  i32.or
+  local.get $1
+  i32.const 5
+  i32.ge_s
+  i32.or
   if
-   local.get $2
-   local.get $1
-   i32.store16 offset=2
+   i32.const 3
+   return
   end
-  local.get $2
- )
- (func $assembly/util/stableStringify/escapeJsonString (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  i32.const 6368
-  local.set $1
   loop $for-loop|0
-   local.get $2
-   local.get $0
-   i32.const 20
-   i32.sub
-   i32.load offset=16
-   i32.const 1
-   i32.shr_u
-   local.tee $3
+   local.get $4
+   local.get $3
+   i32.load offset=12
    i32.lt_s
    if
-    local.get $2
+    local.get $0
     local.get $3
-    i32.ge_u
-    if (result i32)
-     i32.const -1
-    else
-     local.get $0
-     local.get $2
-     i32.const 1
-     i32.shl
-     i32.add
-     i32.load16_u
-    end
-    local.tee $3
-    i32.const 34
+    local.get $4
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    local.tee $5
+    i32.load offset=12
     i32.eq
     if (result i32)
      local.get $1
-     i32.const 6400
-     call $~lib/string/String.__concat
-    else
-     local.get $3
-     i32.const 92
+     local.get $5
+     i32.load offset=16
      i32.eq
-     if (result i32)
-      local.get $1
-      i32.const 6432
-      call $~lib/string/String.__concat
-     else
-      local.get $3
-      i32.const 10
-      i32.eq
-      if (result i32)
-       local.get $1
-       i32.const 6464
-       call $~lib/string/String.__concat
-      else
-       local.get $3
-       i32.const 13
-       i32.eq
-       if (result i32)
-        local.get $1
-        i32.const 6496
-        call $~lib/string/String.__concat
-       else
-        local.get $3
-        i32.const 9
-        i32.eq
-        if (result i32)
-         local.get $1
-         i32.const 6528
-         call $~lib/string/String.__concat
-        else
-         local.get $3
-         i32.const 32
-         i32.lt_s
-         if (result i32)
-          local.get $1
-          i32.const 6560
-          local.get $3
-          i32.const 16
-          call $~lib/util/number/itoa32
-          call $~lib/string/String#padStart
-          call $~lib/string/String.__concat
-          call $~lib/string/String.__concat
-         else
-          i32.const 1
-          global.set $~argumentsLength
-          local.get $1
-          local.get $3
-          call $~lib/string/String.fromCharCode@varargs
-          call $~lib/string/String.__concat
-         end
-        end
-       end
-      end
-     end
+    else
+     i32.const 0
     end
-    local.set $1
-    local.get $2
+    if
+     i32.const 1
+     i32.const 2
+     local.get $2
+     local.get $5
+     i32.load offset=8
+     i32.eq
+     select
+     return
+    end
+    local.get $4
     i32.const 1
     i32.add
-    local.set $2
+    local.set $4
     br $for-loop|0
    end
   end
-  local.get $1
-  i32.const 6368
-  call $~lib/string/String.__concat
+  i32.const 0
  )
- (func $assembly/engine/stateSerializer/serializeCard (param $0 i32) (result i32)
-  i32.const 3056
-  i32.const 5408
-  local.get $0
-  i32.load offset=40
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 5472
-  i32.const 5520
-  i32.const 5552
-  local.get $0
-  i32.load8_u offset=24
-  select
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 5584
-  local.get $0
-  i32.load offset=4
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 5632
-  local.get $0
-  i32.load offset=8
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 5696
-  local.get $0
-  i32.load offset=20
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 5760
-  local.get $0
-  i32.load offset=12
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 5824
-  local.get $0
-  i32.load offset=48
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 5888
-  i32.const 5520
-  i32.const 5552
-  local.get $0
-  i32.load8_u offset=26
-  select
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 5952
-  i32.const 5520
-  i32.const 5552
-  local.get $0
-  i32.load8_u offset=32
-  select
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 6000
-  i32.const 5520
-  i32.const 5552
-  local.get $0
-  i32.load8_u offset=27
-  select
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 6064
-  i32.const 5520
-  i32.const 5552
-  local.get $0
-  i32.load8_u offset=35
-  select
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 6128
-  i32.const 5520
-  i32.const 5552
-  local.get $0
-  i32.load8_u offset=34
-  select
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 6192
-  i32.const 5520
-  i32.const 5552
-  local.get $0
-  i32.load8_u offset=36
-  select
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 6256
-  i32.const 5520
-  i32.const 5552
-  local.get $0
-  i32.load8_u offset=33
-  select
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 6320
+ (func $"~lib/map/Map<i32,i32>#get" (param $0 i32) (param $1 i32) (result i32)
+  (local $2 i32)
   local.get $0
   i32.load
-  call $assembly/util/stableStringify/escapeJsonString
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 6592
-  i32.const 5520
-  i32.const 5552
   local.get $0
-  i32.load8_u offset=53
-  select
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 6640
-  i32.const 5520
-  i32.const 5552
+  i32.load offset=4
+  local.get $1
+  i32.const -1028477379
+  i32.mul
+  i32.const 374761397
+  i32.add
+  i32.const 17
+  i32.rotl
+  i32.const 668265263
+  i32.mul
+  local.tee $0
+  i32.const 15
+  i32.shr_u
   local.get $0
-  i32.load8_u offset=28
-  select
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 6688
-  i32.const 5520
-  i32.const 5552
+  i32.xor
+  i32.const -2048144777
+  i32.mul
+  local.tee $0
+  i32.const 13
+  i32.shr_u
   local.get $0
-  i32.load8_u offset=57
-  select
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 6736
-  i32.const 5520
-  i32.const 5552
+  i32.xor
+  i32.const -1028477379
+  i32.mul
+  local.tee $0
+  i32.const 16
+  i32.shr_u
   local.get $0
-  i32.load8_u offset=54
-  select
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 6800
-  i32.const 5520
-  i32.const 5552
-  local.get $0
-  i32.load8_u offset=44
-  select
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 6864
-  i32.const 5520
-  i32.const 5552
-  local.get $0
-  i32.load8_u offset=52
-  select
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 6928
-  i32.const 5520
-  i32.const 5552
-  local.get $0
-  i32.load8_u offset=31
-  select
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 6976
-  i32.const 5520
-  i32.const 5552
-  local.get $0
-  i32.load8_u offset=29
-  select
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 7024
-  i32.const 5520
-  i32.const 5552
-  local.get $0
-  i32.load8_u offset=25
-  select
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 7088
-  i32.const 5520
-  i32.const 5552
-  local.get $0
-  i32.load8_u offset=30
-  select
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 7136
-  i32.const 5520
-  i32.const 5552
-  local.get $0
-  i32.load8_u offset=56
-  select
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 7200
-  i32.const 5520
-  i32.const 5552
-  local.get $0
-  i32.load8_u offset=55
-  select
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 7248
-  local.get $0
-  i32.load offset=16
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 7296
-  i32.const 5520
-  i32.const 5552
-  local.get $0
-  i32.load8_u offset=37
-  select
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 7344
-  call $~lib/string/String.__concat
- )
- (func $assembly/engine/stateSerializer/serializeCardArray (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  i32.const 5216
-  local.set $1
-  loop $for-loop|0
-   local.get $2
-   local.get $0
-   i32.load offset=12
-   i32.lt_s
-   if
-    local.get $2
-    i32.const 0
-    i32.gt_s
-    if (result i32)
-     local.get $1
-     i32.const 5248
-     call $~lib/string/String.__concat
-    else
-     local.get $1
-    end
+  i32.xor
+  i32.and
+  i32.const 2
+  i32.shl
+  i32.add
+  i32.load
+  local.set $0
+  block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1854"
+   loop $while-continue|0
     local.get $0
-    local.get $2
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    call $assembly/engine/stateSerializer/serializeCard
-    call $~lib/string/String.__concat
-    local.set $1
-    local.get $2
-    i32.const 1
-    i32.add
-    local.set $2
-    br $for-loop|0
+    if
+     local.get $0
+     i32.load offset=8
+     local.tee $2
+     i32.const 1
+     i32.and
+     if (result i32)
+      i32.const 0
+     else
+      local.get $0
+      i32.load
+      local.get $1
+      i32.eq
+     end
+     br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1854"
+     local.get $2
+     i32.const -2
+     i32.and
+     local.set $0
+     br $while-continue|0
+    end
    end
+   i32.const 0
+   local.set $0
   end
-  local.get $1
-  i32.const 7376
-  call $~lib/string/String.__concat
- )
- (func $~lib/array/Array<i32>#__get (param $0 i32) (param $1 i32) (result i32)
-  local.get $1
   local.get $0
-  i32.load offset=12
-  i32.ge_u
+  i32.eqz
   if
-   i32.const 2864
-   i32.const 2816
-   i32.const 114
-   i32.const 42
+   i32.const 8976
+   i32.const 9040
+   i32.const 105
+   i32.const 17
    call $~lib/builtins/abort
    unreachable
   end
   local.get $0
   i32.load offset=4
+ )
+ (func $"~lib/map/Map<i32,assembly/types/GameState/CardDef>#get" (param $0 i32) (param $1 i32) (result i32)
+  (local $2 i32)
+  local.get $0
+  i32.load
+  local.get $0
+  i32.load offset=4
   local.get $1
+  i32.const -1028477379
+  i32.mul
+  i32.const 374761397
+  i32.add
+  i32.const 17
+  i32.rotl
+  i32.const 668265263
+  i32.mul
+  local.tee $0
+  i32.const 15
+  i32.shr_u
+  local.get $0
+  i32.xor
+  i32.const -2048144777
+  i32.mul
+  local.tee $0
+  i32.const 13
+  i32.shr_u
+  local.get $0
+  i32.xor
+  i32.const -1028477379
+  i32.mul
+  local.tee $0
+  i32.const 16
+  i32.shr_u
+  local.get $0
+  i32.xor
+  i32.and
   i32.const 2
   i32.shl
   i32.add
   i32.load
- )
- (func $assembly/engine/stateSerializer/serializePlayer (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  (local $4 i32)
-  i32.const 3056
-  i32.const 5072
-  local.get $0
-  i32.load offset=68
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 5152
-  local.get $0
-  i32.load offset=12
-  call $assembly/engine/stateSerializer/serializeCardArray
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 7408
-  local.get $0
-  i32.load offset=64
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  local.get $0
-  i32.load offset=16
-  local.set $3
-  i32.const 5216
-  local.set $1
-  loop $for-loop|0
-   local.get $2
-   local.get $3
-   i32.load offset=12
-   i32.lt_s
-   if
-    local.get $2
-    i32.const 0
-    i32.gt_s
-    if (result i32)
-     local.get $1
-     i32.const 5248
-     call $~lib/string/String.__concat
-    else
-     local.get $1
-    end
-    local.get $3
-    local.get $2
-    call $~lib/array/Array<i32>#__get
-    i32.const 10
-    call $~lib/util/number/itoa32
-    call $~lib/string/String.__concat
-    local.set $1
-    local.get $2
-    i32.const 1
-    i32.add
-    local.set $2
-    br $for-loop|0
-   end
-  end
-  i32.const 7488
-  local.get $1
-  i32.const 7376
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 7536
-  local.get $0
-  i32.load offset=72
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 7600
-  local.get $0
-  i32.load offset=20
-  call $assembly/engine/stateSerializer/serializeCardArray
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 7648
-  local.get $0
-  i32.load offset=8
-  call $assembly/engine/stateSerializer/serializeCardArray
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 7696
-  local.get $0
-  i32.load offset=40
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 7744
-  local.get $0
-  i32.load offset=52
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 7792
-  local.get $0
-  i32.load offset=56
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 7840
-  local.get $0
-  i32.load offset=44
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 7888
-  local.get $0
-  i32.load offset=76
-  call $assembly/util/stableStringify/escapeJsonString
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 7936
-  i32.const 3056
-  i32.const 7984
-  local.get $0
-  i32.load offset=60
-  local.tee $1
-  i32.load offset=4
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 8032
-  local.get $1
-  i32.load
-  call $assembly/util/stableStringify/escapeJsonString
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 8080
-  i32.const 5520
-  i32.const 5552
-  local.get $1
-  i32.load8_u offset=8
-  select
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 7344
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 8128
-  local.get $0
-  i32.load
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 8160
-  i32.const 3056
-  i32.const 8208
-  local.get $0
-  i32.load offset=36
-  local.tee $1
-  i32.load
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 8256
-  local.get $1
-  i32.load offset=4
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 8304
-  local.get $1
-  i32.load offset=8
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 8352
-  local.get $1
-  i32.load offset=12
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 7344
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 7248
-  local.get $0
-  i32.load offset=48
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 8032
-  local.get $0
-  i32.load offset=4
-  call $assembly/util/stableStringify/escapeJsonString
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 8416
-  local.get $0
-  i32.load offset=24
-  call $assembly/engine/stateSerializer/serializeCardArray
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 8464
-  local.get $0
-  i32.load offset=28
-  local.tee $0
-  if (result i32)
-   local.get $0
-   call $assembly/engine/stateSerializer/serializeCard
-  else
-   i32.const 8512
-  end
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 7344
-  call $~lib/string/String.__concat
- )
- (func $assembly/engine/stateSerializer/serializeGameState (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  i32.const 3056
-  i32.const 3088
-  local.get $0
-  i32.load offset=8
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 4912
-  local.get $0
-  i32.load offset=16
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 4960
-  local.get $0
-  i32.load offset=28
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 5024
-  local.get $0
-  i32.load offset=4
-  call $assembly/engine/stateSerializer/serializePlayer
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 8544
-  local.get $0
-  i32.load
-  call $assembly/engine/stateSerializer/serializePlayer
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 8592
-  local.get $0
-  i32.load offset=24
-  local.tee $1
-  if (result i32)
-   local.get $1
-   i32.const 100000
-   i32.lt_u
-   if (result i32)
-    local.get $1
-    i32.const 100
-    i32.lt_u
-    if (result i32)
-     local.get $1
-     i32.const 10
-     i32.ge_u
+  local.set $0
+  block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1703"
+   loop $while-continue|0
+    local.get $0
+    if
+     local.get $0
+     i32.load offset=8
+     local.tee $2
      i32.const 1
-     i32.add
-    else
-     local.get $1
-     i32.const 10000
-     i32.ge_u
-     i32.const 3
-     i32.add
-     local.get $1
-     i32.const 1000
-     i32.ge_u
-     i32.add
-    end
-   else
-    local.get $1
-    i32.const 10000000
-    i32.lt_u
-    if (result i32)
-     local.get $1
-     i32.const 1000000
-     i32.ge_u
-     i32.const 6
-     i32.add
-    else
-     local.get $1
-     i32.const 1000000000
-     i32.ge_u
-     i32.const 8
-     i32.add
-     local.get $1
-     i32.const 100000000
-     i32.ge_u
-     i32.add
+     i32.and
+     if (result i32)
+      i32.const 0
+     else
+      local.get $0
+      i32.load
+      local.get $1
+      i32.eq
+     end
+     br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1703"
+     local.get $2
+     i32.const -2
+     i32.and
+     local.set $0
+     br $while-continue|0
     end
    end
-   local.tee $2
-   i32.const 1
-   i32.shl
-   i32.const 2
-   call $~lib/rt/stub/__new
-   local.tee $3
-   local.get $1
-   local.get $2
-   call $~lib/util/number/utoa32_dec_lut
-   local.get $3
-  else
-   i32.const 3328
+   i32.const 0
+   local.set $0
   end
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 8640
+  local.get $0
+  i32.eqz
+  if
+   i32.const 8976
+   i32.const 9040
+   i32.const 105
+   i32.const 17
+   call $~lib/builtins/abort
+   unreachable
+  end
+  local.get $0
+  i32.load offset=4
+ )
+ (func $~lib/array/Array<u8>#push (param $0 i32) (param $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  local.get $0
   local.get $0
   i32.load offset=12
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 8688
-  local.get $0
-  i32.load offset=20
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 7344
-  call $~lib/string/String.__concat
- )
- (func $assembly/index/computeCanonicalHash (param $0 i32) (result i32)
-  local.get $0
-  call $assembly/engine/stateSerializer/serializeGameState
-  call $assembly/util/sha256/sha256
- )
- (func $assembly/index/getEngineVersion (result i32)
-  i32.const 8736
- )
- (func $assembly/index/_start
- )
- (func $assembly/types/GameState/ManaPool#constructor (param $0 i32) (param $1 i32) (result i32)
-  (local $2 i32)
-  i32.const 16
-  i32.const 16
-  call $~lib/rt/stub/__new
   local.tee $2
-  i32.const 0
-  i32.store
-  local.get $2
-  i32.const 0
-  i32.store offset=4
-  local.get $2
-  i32.const 0
-  i32.store offset=8
-  local.get $2
-  i32.const 0
-  i32.store offset=12
-  local.get $2
-  local.get $0
-  i32.store
-  local.get $2
-  local.get $1
-  i32.store offset=4
-  local.get $2
-  i32.const 0
-  i32.store offset=8
-  local.get $2
-  i32.const 0
-  i32.store offset=12
-  local.get $2
- )
- (func $assembly/types/GameState/HeroPower#constructor (param $0 i32) (param $1 i32) (result i32)
-  (local $2 i32)
-  i32.const 9
-  i32.const 17
-  call $~lib/rt/stub/__new
-  local.tee $2
-  i32.const 0
-  i32.store
-  local.get $2
-  i32.const 0
-  i32.store offset=4
-  local.get $2
-  i32.const 0
-  i32.store8 offset=8
-  local.get $2
-  local.get $0
-  i32.store
-  local.get $2
-  local.get $1
-  i32.store offset=4
-  local.get $2
-  i32.const 0
-  i32.store8 offset=8
-  local.get $2
- )
- (func $assembly/types/GameState/Player#constructor (param $0 i32) (result i32)
-  (local $1 i32)
-  i32.const 80
-  i32.const 13
-  call $~lib/rt/stub/__new
-  local.tee $1
-  i32.const 0
-  i32.store
-  local.get $1
-  i32.const 0
-  i32.store offset=4
-  local.get $1
-  i32.const 0
-  i32.store offset=8
-  local.get $1
-  i32.const 0
-  i32.store offset=12
-  local.get $1
-  i32.const 0
-  i32.store offset=16
-  local.get $1
-  i32.const 0
-  i32.store offset=20
-  local.get $1
-  i32.const 0
-  i32.store offset=24
-  local.get $1
-  i32.const 0
-  i32.store offset=28
-  local.get $1
-  i32.const 0
-  i32.store offset=32
-  local.get $1
-  i32.const 0
-  i32.store offset=36
-  local.get $1
-  i32.const 0
-  i32.store offset=40
-  local.get $1
-  i32.const 0
-  i32.store offset=44
-  local.get $1
-  i32.const 0
-  i32.store offset=48
-  local.get $1
-  i32.const 0
-  i32.store offset=52
-  local.get $1
-  i32.const 0
-  i32.store offset=56
-  local.get $1
-  i32.const 0
-  i32.store offset=60
-  local.get $1
-  i32.const 0
-  i32.store offset=64
-  local.get $1
-  i32.const 0
-  i32.store offset=68
-  local.get $1
-  i32.const 0
-  i32.store offset=72
-  local.get $1
-  i32.const 0
-  i32.store offset=76
-  local.get $1
-  local.get $0
-  i32.store
-  local.get $1
-  i32.const 2752
-  i32.store offset=4
-  local.get $1
-  i32.const 0
-  i32.const 2
-  i32.const 15
-  i32.const 8768
-  call $~lib/rt/__newArray
-  i32.store offset=8
-  local.get $1
-  i32.const 0
-  i32.const 2
-  i32.const 15
-  i32.const 8800
-  call $~lib/rt/__newArray
-  i32.store offset=12
-  local.get $1
-  i32.const 0
-  i32.const 2
-  i32.const 8
-  i32.const 8832
-  call $~lib/rt/__newArray
-  i32.store offset=16
-  local.get $1
-  i32.const 0
-  i32.const 2
-  i32.const 15
-  i32.const 8864
-  call $~lib/rt/__newArray
-  i32.store offset=20
-  local.get $1
-  i32.const 0
-  i32.const 2
-  i32.const 15
-  i32.const 8896
-  call $~lib/rt/__newArray
-  i32.store offset=24
-  local.get $1
-  i32.const 0
-  i32.store offset=28
-  local.get $1
-  i32.const 0
-  i32.store offset=32
-  local.get $1
   i32.const 1
+  i32.add
+  local.tee $3
+  i32.const 0
   i32.const 1
-  call $assembly/types/GameState/ManaPool#constructor
-  i32.store offset=36
-  local.get $1
-  i32.const 30
-  i32.store offset=40
-  local.get $1
-  i32.const 30
-  i32.store offset=44
-  local.get $1
-  i32.const 30
-  i32.store offset=48
-  local.get $1
-  i32.const 0
-  i32.store offset=52
-  local.get $1
-  i32.const 11
-  i32.store offset=56
-  local.get $1
-  i32.const 2752
-  i32.const 2
-  call $assembly/types/GameState/HeroPower#constructor
-  i32.store offset=60
-  local.get $1
-  i32.const 0
-  i32.store offset=64
-  local.get $1
-  i32.const 0
-  i32.store offset=68
-  local.get $1
-  i32.const 0
-  i32.store offset=72
-  local.get $1
-  i32.const 2752
-  i32.store offset=76
-  local.get $1
- )
- (func $assembly/index/createGameState (result i32)
-  (local $0 i32)
-  i32.const 32
-  i32.const 12
-  call $~lib/rt/stub/__new
-  local.tee $0
-  i32.const 0
-  i32.store
+  call $~lib/array/ensureCapacity
   local.get $0
-  i32.const 0
-  i32.store offset=4
+  i32.load offset=4
+  local.get $2
+  i32.add
+  local.get $1
+  i32.store8
   local.get $0
-  i32.const 0
-  i32.store offset=8
-  local.get $0
-  i32.const 0
+  local.get $3
   i32.store offset=12
-  local.get $0
-  i32.const 0
-  i32.store offset=16
-  local.get $0
-  i32.const 0
-  i32.store offset=20
-  local.get $0
-  i32.const 0
-  i32.store offset=24
-  local.get $0
-  i32.const 0
-  i32.store offset=28
-  local.get $0
-  i32.const 0
-  call $assembly/types/GameState/Player#constructor
-  i32.store
-  local.get $0
-  i32.const 1
-  call $assembly/types/GameState/Player#constructor
-  i32.store offset=4
-  local.get $0
-  i32.const 0
-  i32.store offset=8
-  local.get $0
-  i32.const 1
-  i32.store offset=12
-  local.get $0
-  i32.const 0
-  i32.store offset=16
-  local.get $0
-  i32.const -1
-  i32.store offset=20
-  local.get $0
-  i32.const 0
-  i32.store offset=24
-  local.get $0
-  i32.const 0
-  i32.store offset=28
-  local.get $0
- )
- (func $assembly/index/createPlayer (param $0 i32) (result i32)
-  local.get $0
-  call $assembly/types/GameState/Player#constructor
- )
- (func $assembly/index/createManaPool (param $0 i32) (param $1 i32) (result i32)
-  local.get $0
-  local.get $1
-  call $assembly/types/GameState/ManaPool#constructor
- )
- (func $assembly/index/createHeroPower (param $0 i32) (param $1 i32) (result i32)
-  local.get $0
-  local.get $1
-  call $assembly/types/GameState/HeroPower#constructor
  )
  (func $assembly/types/GameState/CardInstance#constructor (param $0 i32) (param $1 i32) (result i32)
   (local $2 i32)
@@ -3770,247 +2414,122 @@
   i32.store8 offset=57
   local.get $2
  )
- (func $assembly/index/createCardInstance (param $0 i32) (param $1 i32) (result i32)
-  local.get $0
-  local.get $1
-  call $assembly/types/GameState/CardInstance#constructor
- )
- (func $assembly/index/createEngineAction (param $0 i32) (result i32)
-  (local $1 i32)
+ (func $assembly/chess/state/Snapshot#constructor (result i32)
+  (local $0 i32)
   i32.const 20
-  i32.const 18
+  i32.const 30
   call $~lib/rt/stub/__new
-  local.tee $1
+  local.tee $0
   i32.const 0
   i32.store
-  local.get $1
-  i32.const 0
-  i32.store offset=4
-  local.get $1
-  i32.const 0
-  i32.store offset=8
-  local.get $1
-  i32.const 0
-  i32.store offset=12
-  local.get $1
-  i32.const 0
-  i32.store offset=16
-  local.get $1
   local.get $0
-  i32.store
-  local.get $1
-  i32.const 2752
+  i32.const 0
   i32.store offset=4
-  local.get $1
-  i32.const 2752
+  local.get $0
+  i32.const 0
   i32.store offset=8
-  local.get $1
-  i32.const 2752
+  local.get $0
+  i32.const 0
   i32.store offset=12
-  local.get $1
-  i32.const 2752
+  local.get $0
+  i32.const 0
   i32.store offset=16
-  local.get $1
+  local.get $0
+  i32.const 0
+  i32.const 2
+  i32.const 32
+  i32.const 11680
+  call $~lib/rt/__newArray
+  i32.store
+  local.get $0
+  i32.const 0
+  i32.store offset=4
+  local.get $0
+  i32.const 1
+  i32.store offset=8
+  local.get $0
+  i32.const 0
+  i32.store offset=12
+  local.get $0
+  i32.const -1
+  i32.store offset=16
+  local.get $0
  )
- (func $~lib/string/String.__eq (param $0 i32) (param $1 i32) (result i32)
+ (func $~lib/rt/stub/__alloc (param $0 i32) (result i32)
+  (local $1 i32)
   (local $2 i32)
   (local $3 i32)
   (local $4 i32)
   local.get $0
-  local.get $1
-  i32.eq
+  i32.const 1073741820
+  i32.gt_u
   if
-   i32.const 1
-   return
-  end
-  local.get $1
-  i32.eqz
-  local.get $0
-  i32.eqz
-  i32.or
-  if
-   i32.const 0
-   return
-  end
-  local.get $0
-  i32.const 20
-  i32.sub
-  i32.load offset=16
-  i32.const 1
-  i32.shr_u
-  local.tee $2
-  local.get $1
-  i32.const 20
-  i32.sub
-  i32.load offset=16
-  i32.const 1
-  i32.shr_u
-  i32.ne
-  if
-   i32.const 0
-   return
-  end
-  block $__inlined_func$~lib/util/string/compareImpl (result i32)
-   local.get $0
-   local.set $3
-   local.get $2
-   local.tee $0
-   i32.const 4
-   i32.ge_u
-   if (result i32)
-    local.get $3
-    i32.const 7
-    i32.and
-    local.get $1
-    i32.const 7
-    i32.and
-    i32.or
-   else
-    i32.const 1
-   end
-   i32.eqz
-   if
-    loop $do-loop|0
-     local.get $3
-     i64.load
-     local.get $1
-     i64.load
-     i64.eq
-     if
-      local.get $3
-      i32.const 8
-      i32.add
-      local.set $3
-      local.get $1
-      i32.const 8
-      i32.add
-      local.set $1
-      local.get $0
-      i32.const 4
-      i32.sub
-      local.tee $0
-      i32.const 4
-      i32.ge_u
-      br_if $do-loop|0
-     end
-    end
-   end
-   loop $while-continue|1
-    local.get $0
-    local.tee $2
-    i32.const 1
-    i32.sub
-    local.set $0
-    local.get $2
-    if
-     local.get $3
-     i32.load16_u
-     local.tee $2
-     local.get $1
-     i32.load16_u
-     local.tee $4
-     i32.ne
-     if
-      local.get $2
-      local.get $4
-      i32.sub
-      br $__inlined_func$~lib/util/string/compareImpl
-     end
-     local.get $3
-     i32.const 2
-     i32.add
-     local.set $3
-     local.get $1
-     i32.const 2
-     i32.add
-     local.set $1
-     br $while-continue|1
-    end
-   end
-   i32.const 0
-  end
-  i32.eqz
- )
- (func $"~lib/map/Map<i32,assembly/types/GameState/CardDef>#get" (param $0 i32) (param $1 i32) (result i32)
-  (local $2 i32)
-  local.get $0
-  i32.load
-  local.get $0
-  i32.load offset=4
-  local.get $1
-  i32.const -1028477379
-  i32.mul
-  i32.const 374761397
-  i32.add
-  i32.const 17
-  i32.rotl
-  i32.const 668265263
-  i32.mul
-  local.tee $0
-  i32.const 15
-  i32.shr_u
-  local.get $0
-  i32.xor
-  i32.const -2048144777
-  i32.mul
-  local.tee $0
-  i32.const 13
-  i32.shr_u
-  local.get $0
-  i32.xor
-  i32.const -1028477379
-  i32.mul
-  local.tee $0
-  i32.const 16
-  i32.shr_u
-  local.get $0
-  i32.xor
-  i32.and
-  i32.const 2
-  i32.shl
-  i32.add
-  i32.load
-  local.set $0
-  block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1703"
-   loop $while-continue|0
-    local.get $0
-    if
-     local.get $0
-     i32.load offset=8
-     local.tee $2
-     i32.const 1
-     i32.and
-     if (result i32)
-      i32.const 0
-     else
-      local.get $0
-      i32.load
-      local.get $1
-      i32.eq
-     end
-     br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1703"
-     local.get $2
-     i32.const -2
-     i32.and
-     local.set $0
-     br $while-continue|0
-    end
-   end
-   i32.const 0
-   local.set $0
-  end
-  local.get $0
-  i32.eqz
-  if
-   i32.const 8976
-   i32.const 9040
-   i32.const 105
-   i32.const 17
+   i32.const 1056
+   i32.const 1120
+   i32.const 33
+   i32.const 29
    call $~lib/builtins/abort
    unreachable
   end
+  global.get $~lib/rt/stub/offset
+  i32.const 4
+  i32.add
+  local.tee $1
   local.get $0
-  i32.load offset=4
+  i32.const 19
+  i32.add
+  i32.const -16
+  i32.and
+  i32.const 4
+  i32.sub
+  local.tee $0
+  i32.add
+  local.tee $2
+  memory.size
+  local.tee $3
+  i32.const 16
+  i32.shl
+  i32.const 15
+  i32.add
+  i32.const -16
+  i32.and
+  local.tee $4
+  i32.gt_u
+  if
+   local.get $3
+   local.get $2
+   local.get $4
+   i32.sub
+   i32.const 65535
+   i32.add
+   i32.const -65536
+   i32.and
+   i32.const 16
+   i32.shr_u
+   local.tee $4
+   local.get $3
+   local.get $4
+   i32.gt_s
+   select
+   memory.grow
+   i32.const 0
+   i32.lt_s
+   if
+    local.get $4
+    memory.grow
+    i32.const 0
+    i32.lt_s
+    if
+     unreachable
+    end
+   end
+  end
+  global.get $~lib/rt/stub/offset
+  local.get $2
+  global.set $~lib/rt/stub/offset
+  local.get $0
+  i32.store
+  local.get $1
  )
  (func $~lib/array/Array<assembly/types/GameState/CardInstance>#splice (param $0 i32) (param $1 i32) (result i32)
   (local $2 i32)
@@ -4102,30 +2621,272 @@
   i32.store offset=12
   local.get $6
  )
- (func $~lib/array/Array<assembly/types/GameState/CardInstance>#push (param $0 i32) (param $1 i32)
+ (func $assembly/util/stableStringify/escapeJsonString (param $0 i32) (result i32)
+  (local $1 i32)
   (local $2 i32)
   (local $3 i32)
-  local.get $0
-  local.get $0
-  i32.load offset=12
-  local.tee $2
-  i32.const 1
-  i32.add
-  local.tee $3
-  i32.const 2
-  i32.const 1
-  call $~lib/array/ensureCapacity
-  local.get $0
-  i32.load offset=4
-  local.get $2
-  i32.const 2
-  i32.shl
-  i32.add
+  i32.const 6368
+  local.set $1
+  loop $for-loop|0
+   local.get $2
+   local.get $0
+   i32.const 20
+   i32.sub
+   i32.load offset=16
+   i32.const 1
+   i32.shr_u
+   local.tee $3
+   i32.lt_s
+   if
+    local.get $2
+    local.get $3
+    i32.ge_u
+    if (result i32)
+     i32.const -1
+    else
+     local.get $0
+     local.get $2
+     i32.const 1
+     i32.shl
+     i32.add
+     i32.load16_u
+    end
+    local.tee $3
+    i32.const 34
+    i32.eq
+    if (result i32)
+     local.get $1
+     i32.const 6400
+     call $~lib/string/String.__concat
+    else
+     local.get $3
+     i32.const 92
+     i32.eq
+     if (result i32)
+      local.get $1
+      i32.const 6432
+      call $~lib/string/String.__concat
+     else
+      local.get $3
+      i32.const 10
+      i32.eq
+      if (result i32)
+       local.get $1
+       i32.const 6464
+       call $~lib/string/String.__concat
+      else
+       local.get $3
+       i32.const 13
+       i32.eq
+       if (result i32)
+        local.get $1
+        i32.const 6496
+        call $~lib/string/String.__concat
+       else
+        local.get $3
+        i32.const 9
+        i32.eq
+        if (result i32)
+         local.get $1
+         i32.const 6528
+         call $~lib/string/String.__concat
+        else
+         local.get $3
+         i32.const 32
+         i32.lt_s
+         if (result i32)
+          local.get $1
+          i32.const 6560
+          local.get $3
+          i32.const 16
+          call $~lib/util/number/itoa32
+          call $~lib/string/String#padStart
+          call $~lib/string/String.__concat
+          call $~lib/string/String.__concat
+         else
+          i32.const 1
+          global.set $~argumentsLength
+          local.get $1
+          local.get $3
+          call $~lib/string/String.fromCharCode@varargs
+          call $~lib/string/String.__concat
+         end
+        end
+       end
+      end
+     end
+    end
+    local.set $1
+    local.get $2
+    i32.const 1
+    i32.add
+    local.set $2
+    br $for-loop|0
+   end
+  end
   local.get $1
-  i32.store
+  i32.const 6368
+  call $~lib/string/String.__concat
+ )
+ (func $assembly/util/sha256/sha256 (param $0 i32) (result i32)
+  (local $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  (local $4 i32)
+  (local $5 i32)
+  i32.const 0
+  i32.const 0
+  i32.const 11
+  i32.const 2784
+  call $~lib/rt/__newArray
+  local.set $4
+  loop $for-loop|0
+   local.get $2
+   local.get $0
+   i32.const 20
+   i32.sub
+   i32.load offset=16
+   i32.const 1
+   i32.shr_u
+   local.tee $5
+   i32.lt_s
+   if
+    local.get $2
+    local.get $5
+    i32.ge_u
+    if (result i32)
+     i32.const -1
+    else
+     local.get $0
+     local.get $2
+     i32.const 1
+     i32.shl
+     i32.add
+     i32.load16_u
+    end
+    local.tee $5
+    i32.const 128
+    i32.lt_s
+    if
+     local.get $4
+     local.get $5
+     call $~lib/array/Array<u8>#push
+    else
+     local.get $5
+     i32.const 2048
+     i32.lt_s
+     if
+      local.get $4
+      local.get $5
+      i32.const 6
+      i32.shr_s
+      i32.const 192
+      i32.or
+      call $~lib/array/Array<u8>#push
+     else
+      local.get $4
+      local.get $5
+      i32.const 12
+      i32.shr_s
+      i32.const 224
+      i32.or
+      call $~lib/array/Array<u8>#push
+      local.get $4
+      local.get $5
+      i32.const 6
+      i32.shr_s
+      i32.const 63
+      i32.and
+      i32.const 128
+      i32.or
+      call $~lib/array/Array<u8>#push
+     end
+     local.get $4
+     local.get $5
+     i32.const 63
+     i32.and
+     i32.const 128
+     i32.or
+     call $~lib/array/Array<u8>#push
+    end
+    local.get $2
+    i32.const 1
+    i32.add
+    local.set $2
+    br $for-loop|0
+   end
+  end
+  local.get $4
+  i32.load offset=12
+  call $~lib/typedarray/Uint8Array#constructor
+  local.set $0
+  loop $for-loop|1
+   local.get $1
+   local.get $4
+   i32.load offset=12
+   local.tee $2
+   i32.lt_s
+   if
+    local.get $1
+    local.get $2
+    i32.ge_u
+    if
+     i32.const 2864
+     i32.const 2816
+     i32.const 114
+     i32.const 42
+     call $~lib/builtins/abort
+     unreachable
+    end
+    local.get $0
+    local.get $1
+    local.get $4
+    i32.load offset=4
+    local.get $1
+    i32.add
+    i32.load8_u
+    call $~lib/typedarray/Uint8Array#__set
+    local.get $1
+    i32.const 1
+    i32.add
+    local.set $1
+    br $for-loop|1
+   end
+  end
   local.get $0
-  local.get $3
-  i32.store offset=12
+  call $assembly/util/sha256/sha256Bytes
+  local.set $1
+  i32.const 2752
+  local.set $0
+  loop $for-loop|00
+   local.get $3
+   local.get $1
+   i32.load offset=8
+   i32.lt_s
+   if
+    local.get $0
+    local.get $1
+    local.get $3
+    call $~lib/typedarray/Uint8Array#__get
+    local.tee $0
+    i32.const 4
+    i32.shr_u
+    call $~lib/string/String#charAt
+    call $~lib/string/String.__concat
+    local.get $0
+    i32.const 15
+    i32.and
+    call $~lib/string/String#charAt
+    call $~lib/string/String.__concat
+    local.set $0
+    local.get $3
+    i32.const 1
+    i32.add
+    local.set $3
+    br $for-loop|00
+   end
+  end
+  local.get $0
  )
  (func $assembly/types/GameState/GameState#nextInstanceId (param $0 i32) (result i32)
   local.get $0
@@ -4140,503 +2901,6 @@
   i32.const 10
   call $~lib/util/number/itoa32
   call $~lib/string/String.__concat
- )
- (func $assembly/engine/drawEngine/drawCardForPlayer (param $0 i32) (param $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  (local $4 i32)
-  (local $5 i32)
-  (local $6 i32)
-  (local $7 i32)
-  local.get $1
-  i32.load offset=16
-  i32.load offset=12
-  i32.eqz
-  if
-   return
-  end
-  local.get $1
-  i32.load offset=8
-  i32.load offset=12
-  i32.const 7
-  i32.ge_s
-  if
-   return
-  end
-  local.get $1
-  i32.load offset=16
-  local.tee $5
-  i32.load offset=12
-  local.tee $2
-  i32.const 0
-  i32.le_s
-  if
-   i32.const 9440
-   i32.const 2816
-   i32.const 330
-   i32.const 18
-   call $~lib/builtins/abort
-   unreachable
-  end
-  local.get $5
-  i32.load offset=4
-  local.tee $6
-  i32.load
-  local.set $4
-  local.get $6
-  local.get $6
-  i32.const 4
-  i32.add
-  local.get $2
-  i32.const 1
-  i32.sub
-  local.tee $7
-  i32.const 2
-  i32.shl
-  local.tee $2
-  memory.copy
-  local.get $2
-  local.get $6
-  i32.add
-  i32.const 0
-  i32.store
-  local.get $5
-  local.get $7
-  i32.store offset=12
-  global.get $assembly/util/cardLookup/cardRegistry
-  local.tee $2
-  i32.load
-  local.get $2
-  i32.load offset=4
-  local.get $4
-  i32.const -1028477379
-  i32.mul
-  i32.const 374761397
-  i32.add
-  i32.const 17
-  i32.rotl
-  i32.const 668265263
-  i32.mul
-  local.tee $2
-  local.get $2
-  i32.const 15
-  i32.shr_u
-  i32.xor
-  i32.const -2048144777
-  i32.mul
-  local.tee $2
-  local.get $2
-  i32.const 13
-  i32.shr_u
-  i32.xor
-  i32.const -1028477379
-  i32.mul
-  local.tee $2
-  local.get $2
-  i32.const 16
-  i32.shr_u
-  i32.xor
-  i32.and
-  i32.const 2
-  i32.shl
-  i32.add
-  i32.load
-  local.set $2
-  block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1702"
-   loop $while-continue|0
-    local.get $2
-    if
-     local.get $2
-     i32.load offset=8
-     local.tee $5
-     i32.const 1
-     i32.and
-     if (result i32)
-      i32.const 0
-     else
-      local.get $2
-      i32.load
-      local.get $4
-      i32.eq
-     end
-     br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1702"
-     local.get $5
-     i32.const -2
-     i32.and
-     local.set $2
-     br $while-continue|0
-    end
-   end
-   i32.const 0
-   local.set $2
-  end
-  local.get $2
-  if (result i32)
-   global.get $assembly/util/cardLookup/cardRegistry
-   local.get $4
-   call $"~lib/map/Map<i32,assembly/types/GameState/CardDef>#get"
-  else
-   i32.const 0
-  end
-  local.set $2
-  local.get $0
-  call $assembly/types/GameState/GameState#nextInstanceId
-  local.get $4
-  call $assembly/types/GameState/CardInstance#constructor
-  local.set $0
-  local.get $2
-  if
-   local.get $0
-   local.get $2
-   i32.load offset=16
-   i32.store offset=8
-   local.get $0
-   local.get $2
-   i32.load offset=20
-   i32.store offset=12
-   local.get $0
-   local.get $2
-   i32.load offset=20
-   i32.store offset=16
-   local.get $0
-   local.get $2
-   i32.load offset=20
-   i32.store offset=20
-   local.get $0
-   local.get $1
-   i32.load
-   i32.eqz
-   i32.store8 offset=44
-   local.get $2
-   i32.load offset=36
-   local.set $2
-   loop $for-loop|0
-    local.get $3
-    local.get $2
-    i32.load offset=12
-    i32.lt_s
-    if
-     local.get $2
-     local.get $3
-     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-     local.tee $4
-     i32.const 9520
-     call $~lib/string/String.__eq
-     if
-      local.get $0
-      i32.const 1
-      i32.store8 offset=30
-     else
-      local.get $4
-      i32.const 9552
-      call $~lib/string/String.__eq
-      if
-       local.get $0
-       i32.const 1
-       i32.store8 offset=32
-       local.get $0
-       i32.const 0
-       i32.store8 offset=25
-       local.get $0
-       i32.const 1
-       i32.store8 offset=24
-      else
-       local.get $4
-       i32.const 9584
-       call $~lib/string/String.__eq
-       if
-        local.get $0
-        i32.const 1
-        i32.store8 offset=31
-        local.get $0
-        i32.const 0
-        i32.store8 offset=25
-        local.get $0
-        i32.const 1
-        i32.store8 offset=24
-       else
-        local.get $4
-        i32.const 9616
-        call $~lib/string/String.__eq
-        if
-         local.get $0
-         i32.const 1
-         i32.store8 offset=27
-        else
-         local.get $4
-         i32.const 9664
-         call $~lib/string/String.__eq
-         if
-          local.get $0
-          i32.const 1
-          i32.store8 offset=29
-         else
-          local.get $4
-          i32.const 9712
-          call $~lib/string/String.__eq
-          if
-           local.get $0
-           i32.const 1
-           i32.store8 offset=33
-          else
-           local.get $4
-           i32.const 9760
-           call $~lib/string/String.__eq
-           if
-            local.get $0
-            i32.const 1
-            i32.store8 offset=34
-           else
-            local.get $4
-            i32.const 9808
-            call $~lib/string/String.__eq
-            if
-             local.get $0
-             i32.const 1
-             i32.store8 offset=35
-            else
-             local.get $4
-             i32.const 9856
-             call $~lib/string/String.__eq
-             if
-              local.get $0
-              i32.const 1
-              i32.store8 offset=36
-             end
-            end
-           end
-          end
-         end
-        end
-       end
-      end
-     end
-     local.get $3
-     i32.const 1
-     i32.add
-     local.set $3
-     br $for-loop|0
-    end
-   end
-  end
-  local.get $1
-  i32.load offset=8
-  local.get $0
-  call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
- )
- (func $assembly/effects/effectInterpreter/applyDamageAll (param $0 i32) (param $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  (local $4 i32)
-  (local $5 i32)
-  local.get $1
-  i32.load offset=4
-  local.set $1
-  loop $for-loop|0
-   local.get $2
-   local.get $0
-   i32.load
-   i32.load offset=12
-   local.tee $4
-   i32.load offset=12
-   i32.lt_s
-   if
-    local.get $4
-    local.get $2
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    local.set $4
-    block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1744
-     local.get $1
-     i32.const 0
-     i32.le_s
-     br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1744
-     local.get $1
-     i32.const 3
-     i32.add
-     local.get $1
-     local.get $4
-     i32.load8_u offset=56
-     select
-     local.tee $5
-     i32.const 3
-     i32.add
-     local.get $5
-     local.get $4
-     i32.load8_u offset=53
-     select
-     local.set $5
-     local.get $4
-     i32.load8_u offset=27
-     if
-      local.get $4
-      i32.const 0
-      i32.store8 offset=27
-      br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1744
-     end
-     local.get $4
-     local.get $4
-     i32.load offset=12
-     local.get $5
-     i32.sub
-     i32.store offset=12
-    end
-    local.get $2
-    i32.const 1
-    i32.add
-    local.set $2
-    br $for-loop|0
-   end
-  end
-  loop $for-loop|1
-   local.get $3
-   local.get $0
-   i32.load offset=4
-   i32.load offset=12
-   local.tee $2
-   i32.load offset=12
-   i32.lt_s
-   if
-    local.get $2
-    local.get $3
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    local.set $2
-    block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1746
-     local.get $1
-     i32.const 0
-     i32.le_s
-     br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1746
-     local.get $1
-     i32.const 3
-     i32.add
-     local.get $1
-     local.get $2
-     i32.load8_u offset=56
-     select
-     local.tee $4
-     i32.const 3
-     i32.add
-     local.get $4
-     local.get $2
-     i32.load8_u offset=53
-     select
-     local.set $4
-     local.get $2
-     i32.load8_u offset=27
-     if
-      local.get $2
-      i32.const 0
-      i32.store8 offset=27
-      br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1746
-     end
-     local.get $2
-     local.get $2
-     i32.load offset=12
-     local.get $4
-     i32.sub
-     i32.store offset=12
-    end
-    local.get $3
-    i32.const 1
-    i32.add
-    local.set $3
-    br $for-loop|1
-   end
-  end
-  local.get $0
-  i32.load
-  local.set $3
-  block $__inlined_func$assembly/engine/combatProcessor/dealDamageToHero$6
-   local.get $1
-   local.tee $2
-   i32.const 0
-   i32.le_s
-   br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToHero$6
-   local.get $3
-   i32.load offset=52
-   local.tee $4
-   i32.const 0
-   i32.gt_s
-   if
-    local.get $1
-    local.get $4
-    i32.le_s
-    if
-     local.get $3
-     local.get $4
-     local.get $1
-     i32.sub
-     i32.store offset=52
-     br $__inlined_func$assembly/engine/combatProcessor/dealDamageToHero$6
-    end
-    local.get $2
-    local.get $3
-    i32.load offset=52
-    i32.sub
-    local.set $2
-    local.get $3
-    i32.const 0
-    i32.store offset=52
-   end
-   local.get $3
-   local.get $3
-   i32.load offset=44
-   local.get $2
-   i32.sub
-   i32.store offset=44
-   local.get $3
-   local.get $3
-   i32.load offset=40
-   local.get $2
-   i32.sub
-   i32.store offset=40
-  end
-  local.get $0
-  i32.load offset=4
-  local.set $0
-  block $__inlined_func$assembly/engine/combatProcessor/dealDamageToHero$7
-   local.get $1
-   i32.const 0
-   i32.le_s
-   br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToHero$7
-   local.get $0
-   i32.load offset=52
-   local.tee $2
-   i32.const 0
-   i32.gt_s
-   if
-    local.get $1
-    local.get $2
-    i32.le_s
-    if
-     local.get $0
-     local.get $2
-     local.get $1
-     i32.sub
-     i32.store offset=52
-     br $__inlined_func$assembly/engine/combatProcessor/dealDamageToHero$7
-    end
-    local.get $1
-    local.get $0
-    i32.load offset=52
-    i32.sub
-    local.set $1
-    local.get $0
-    i32.const 0
-    i32.store offset=52
-   end
-   local.get $0
-   local.get $0
-   i32.load offset=44
-   local.get $1
-   i32.sub
-   i32.store offset=44
-   local.get $0
-   local.get $0
-   i32.load offset=40
-   local.get $1
-   i32.sub
-   i32.store offset=40
-  end
  )
  (func $assembly/types/GameState/EffectDef#constructor (result i32)
   (local $0 i32)
@@ -4696,6 +2960,147 @@
   i32.const 1
   i32.store offset=28
   local.get $0
+ )
+ (func $assembly/engine/stateSerializer/serializeCardArray (param $0 i32) (result i32)
+  (local $1 i32)
+  (local $2 i32)
+  i32.const 5216
+  local.set $1
+  loop $for-loop|0
+   local.get $2
+   local.get $0
+   i32.load offset=12
+   i32.lt_s
+   if
+    local.get $2
+    i32.const 0
+    i32.gt_s
+    if (result i32)
+     local.get $1
+     i32.const 5248
+     call $~lib/string/String.__concat
+    else
+     local.get $1
+    end
+    local.get $0
+    local.get $2
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    call $assembly/engine/stateSerializer/serializeCard
+    call $~lib/string/String.__concat
+    local.set $1
+    local.get $2
+    i32.const 1
+    i32.add
+    local.set $2
+    br $for-loop|0
+   end
+  end
+  local.get $1
+  i32.const 7376
+  call $~lib/string/String.__concat
+ )
+ (func $assembly/engine/combatProcessor/removeDeadMinions (param $0 i32)
+  (local $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  i32.const 0
+  i32.const 2
+  i32.const 15
+  i32.const 10992
+  call $~lib/rt/__newArray
+  local.set $2
+  local.get $0
+  i32.load
+  i32.load offset=12
+  i32.load offset=12
+  i32.const 1
+  i32.sub
+  local.set $1
+  loop $while-continue|0
+   local.get $1
+   i32.const 0
+   i32.ge_s
+   if
+    local.get $0
+    i32.load
+    i32.load offset=12
+    local.get $1
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    i32.load offset=12
+    i32.const 0
+    i32.le_s
+    if
+     local.get $2
+     local.get $0
+     i32.load
+     i32.load offset=12
+     local.get $1
+     call $~lib/array/Array<assembly/types/GameState/CardInstance>#splice
+     local.tee $3
+     i32.const 0
+     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+     call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+     local.get $0
+     i32.load
+     i32.load offset=20
+     local.get $3
+     i32.const 0
+     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+     call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+    end
+    local.get $1
+    i32.const 1
+    i32.sub
+    local.set $1
+    br $while-continue|0
+   end
+  end
+  local.get $0
+  i32.load offset=4
+  i32.load offset=12
+  i32.load offset=12
+  i32.const 1
+  i32.sub
+  local.set $1
+  loop $while-continue|1
+   local.get $1
+   i32.const 0
+   i32.ge_s
+   if
+    local.get $0
+    i32.load offset=4
+    i32.load offset=12
+    local.get $1
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    i32.load offset=12
+    i32.const 0
+    i32.le_s
+    if
+     local.get $2
+     local.get $0
+     i32.load offset=4
+     i32.load offset=12
+     local.get $1
+     call $~lib/array/Array<assembly/types/GameState/CardInstance>#splice
+     local.tee $3
+     i32.const 0
+     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+     call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+     local.get $0
+     i32.load offset=4
+     i32.load offset=20
+     local.get $3
+     i32.const 0
+     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+     call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+    end
+    local.get $1
+    i32.const 1
+    i32.sub
+    local.set $1
+    br $while-continue|1
+   end
+  end
  )
  (func $assembly/effects/effectInterpreter/executeEffect (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (param $4 i32) (param $5 i32)
   (local $6 i32)
@@ -5878,11 +4283,11 @@
             local.tee $7
             i32.const 0
             local.get $1
-            call $~lib/array/Array<u32>#__set
+            call $~lib/array/Array<assembly/types/GameState/Player>#__set
             local.get $7
             i32.const 1
             local.get $2
-            call $~lib/array/Array<u32>#__set
+            call $~lib/array/Array<assembly/types/GameState/Player>#__set
             loop $for-loop|019
              local.get $6
              local.get $7
@@ -5937,7 +4342,7 @@
                  local.get $2
                  local.get $1
                  local.get $0
-                 call $~lib/array/Array<u32>#__set
+                 call $~lib/array/Array<assembly/types/GameState/Player>#__set
                  br $__inlined_func$assembly/effects/effectInterpreter/applyTransform$1991
                 end
                 local.get $1
@@ -6286,11 +4691,11 @@
                  local.tee $0
                  i32.const 0
                  local.get $1
-                 call $~lib/array/Array<u32>#__set
+                 call $~lib/array/Array<assembly/types/GameState/Player>#__set
                  local.get $0
                  i32.const 1
                  local.get $2
-                 call $~lib/array/Array<u32>#__set
+                 call $~lib/array/Array<assembly/types/GameState/Player>#__set
                  loop $for-loop|013
                   local.get $3
                   local.get $0
@@ -6484,11 +4889,11 @@
                    local.tee $0
                    i32.const 0
                    local.get $1
-                   call $~lib/array/Array<u32>#__set
+                   call $~lib/array/Array<assembly/types/GameState/Player>#__set
                    local.get $0
                    i32.const 1
                    local.get $2
-                   call $~lib/array/Array<u32>#__set
+                   call $~lib/array/Array<assembly/types/GameState/Player>#__set
                    loop $for-loop|01315
                     local.get $6
                     local.get $0
@@ -6574,11 +4979,11 @@
                     local.tee $3
                     i32.const 0
                     local.get $1
-                    call $~lib/array/Array<u32>#__set
+                    call $~lib/array/Array<assembly/types/GameState/Player>#__set
                     local.get $3
                     i32.const 1
                     local.get $2
-                    call $~lib/array/Array<u32>#__set
+                    call $~lib/array/Array<assembly/types/GameState/Player>#__set
                     loop $for-loop|016
                      local.get $4
                      local.get $3
@@ -6972,157 +5377,1506 @@
    end
   end
  )
- (func $assembly/engine/combatProcessor/removeDeadMinions (param $0 i32)
+ (func $assembly/chess/types/Piece#constructor (result i32)
+  (local $0 i32)
+  i32.const 21
+  i32.const 31
+  call $~lib/rt/stub/__new
+  local.tee $0
+  i32.const 0
+  i32.store
+  local.get $0
+  i32.const 0
+  i32.store offset=4
+  local.get $0
+  i32.const 0
+  i32.store offset=8
+  local.get $0
+  i32.const 0
+  i32.store offset=12
+  local.get $0
+  i32.const 0
+  i32.store offset=16
+  local.get $0
+  i32.const 0
+  i32.store8 offset=20
+  local.get $0
+  i32.const 2752
+  i32.store
+  local.get $0
+  i32.const 5
+  i32.store offset=4
+  local.get $0
+  i32.const 0
+  i32.store offset=8
+  local.get $0
+  i32.const 0
+  i32.store offset=12
+  local.get $0
+  i32.const 0
+  i32.store offset=16
+  local.get $0
+  i32.const 0
+  i32.store8 offset=20
+  local.get $0
+ )
+ (func $assembly/chess/reducer/findPieceIdx (param $0 i32) (param $1 i32) (result i32)
+  (local $2 i32)
+  loop $for-loop|0
+   local.get $2
+   local.get $0
+   i32.load offset=12
+   i32.lt_s
+   if
+    local.get $0
+    local.get $2
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    i32.load
+    local.get $1
+    call $~lib/string/String.__eq
+    if
+     local.get $2
+     return
+    end
+    local.get $2
+    i32.const 1
+    i32.add
+    local.set $2
+    br $for-loop|0
+   end
+  end
+  i32.const -1
+ )
+ (func $assembly/chess/canonical/emitSnapshot (param $0 i32) (result i32)
   (local $1 i32)
   (local $2 i32)
-  (local $3 i32)
-  i32.const 0
-  i32.const 2
-  i32.const 15
-  i32.const 10992
-  call $~lib/rt/__newArray
-  local.set $2
-  local.get $0
-  i32.load
-  i32.load offset=12
-  i32.load offset=12
-  i32.const 1
-  i32.sub
-  local.set $1
-  loop $while-continue|0
-   local.get $1
-   i32.const 0
-   i32.ge_s
-   if
-    local.get $0
-    i32.load
-    i32.load offset=12
-    local.get $1
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    i32.load offset=12
-    i32.const 0
-    i32.le_s
-    if
-     local.get $2
-     local.get $0
-     i32.load
-     i32.load offset=12
-     local.get $1
-     call $~lib/array/Array<assembly/types/GameState/CardInstance>#splice
-     local.tee $3
-     i32.const 0
-     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-     call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-     local.get $0
-     i32.load
-     i32.load offset=20
-     local.get $3
-     i32.const 0
-     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-     call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-    end
-    local.get $1
-    i32.const 1
-    i32.sub
-    local.set $1
-    br $while-continue|0
-   end
-  end
-  local.get $0
-  i32.load offset=4
-  i32.load offset=12
-  i32.load offset=12
-  i32.const 1
-  i32.sub
-  local.set $1
-  loop $while-continue|1
-   local.get $1
-   i32.const 0
-   i32.ge_s
-   if
-    local.get $0
-    i32.load offset=4
-    i32.load offset=12
-    local.get $1
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    i32.load offset=12
-    i32.const 0
-    i32.le_s
-    if
-     local.get $2
-     local.get $0
-     i32.load offset=4
-     i32.load offset=12
-     local.get $1
-     call $~lib/array/Array<assembly/types/GameState/CardInstance>#splice
-     local.tee $3
-     i32.const 0
-     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-     call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-     local.get $0
-     i32.load offset=4
-     i32.load offset=20
-     local.get $3
-     i32.const 0
-     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-     call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-    end
-    local.get $1
-    i32.const 1
-    i32.sub
-    local.set $1
-    br $while-continue|1
-   end
-  end
- )
- (func $assembly/engine/cardPlayer/playCard (param $0 i32) (param $1 i32) (param $2 i32) (result i32)
   (local $3 i32)
   (local $4 i32)
   (local $5 i32)
   (local $6 i32)
   (local $7 i32)
   (local $8 i32)
+  (local $9 i32)
   local.get $0
-  i32.load offset=8
-  if (result i32)
-   local.get $0
-   i32.load offset=4
-  else
-   local.get $0
-   i32.load
-  end
-  local.set $8
-  local.get $0
-  i32.load offset=8
-  if (result i32)
-   local.get $0
-   i32.load
-  else
-   local.get $0
-   i32.load offset=4
-  end
-  local.set $7
-  i32.const -1
+  i32.load
+  local.set $1
+  i32.const 1
+  global.set $~argumentsLength
+  local.get $1
+  i32.load offset=12
+  local.tee $2
+  i32.const 0
+  local.get $2
+  i32.const 0
+  i32.le_s
+  select
   local.set $3
+  local.get $2
+  local.get $3
+  i32.sub
+  local.tee $2
+  i32.const 0
+  local.get $2
+  i32.const 0
+  i32.gt_s
+  select
+  local.tee $2
+  i32.const 2
+  i32.const 32
+  i32.const 0
+  call $~lib/rt/__newArray
+  local.tee $7
+  i32.load offset=4
+  local.set $4
+  local.get $1
+  i32.load offset=4
+  local.get $3
+  i32.const 2
+  i32.shl
+  i32.add
+  local.set $1
+  local.get $2
+  i32.const 2
+  i32.shl
+  local.set $2
+  loop $while-continue|0
+   local.get $2
+   local.get $5
+   i32.gt_u
+   if
+    local.get $4
+    local.get $5
+    i32.add
+    local.get $1
+    local.get $5
+    i32.add
+    i32.load
+    i32.store
+    local.get $5
+    i32.const 4
+    i32.add
+    local.set $5
+    br $while-continue|0
+   end
+  end
+  i32.const 0
+  local.set $5
   loop $for-loop|0
-   local.get $4
-   local.get $8
+   local.get $5
+   local.get $7
+   i32.load offset=12
+   i32.lt_s
+   if
+    local.get $5
+    i32.const 1
+    i32.add
+    local.set $6
+    loop $for-loop|1
+     local.get $6
+     local.get $7
+     i32.load offset=12
+     i32.lt_s
+     if
+      block $__inlined_func$~lib/string/String.__lt$1490 (result i32)
+       i32.const 0
+       local.get $7
+       local.get $6
+       call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+       i32.load
+       local.tee $2
+       local.get $7
+       local.get $5
+       call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+       i32.load
+       local.tee $1
+       i32.eq
+       br_if $__inlined_func$~lib/string/String.__lt$1490
+       drop
+       i32.const 0
+       local.get $1
+       i32.const 20
+       i32.sub
+       i32.load offset=16
+       i32.const 1
+       i32.shr_u
+       local.tee $3
+       i32.eqz
+       br_if $__inlined_func$~lib/string/String.__lt$1490
+       drop
+       i32.const 1
+       local.get $2
+       i32.const 20
+       i32.sub
+       i32.load offset=16
+       i32.const 1
+       i32.shr_u
+       local.tee $4
+       i32.eqz
+       br_if $__inlined_func$~lib/string/String.__lt$1490
+       drop
+       block $__inlined_func$~lib/util/string/compareImpl$1 (result i32)
+        local.get $4
+        local.get $3
+        local.get $3
+        local.get $4
+        i32.gt_s
+        local.tee $8
+        select
+        local.tee $3
+        i32.const 4
+        i32.ge_u
+        if (result i32)
+         local.get $2
+         i32.const 7
+         i32.and
+         local.get $1
+         i32.const 7
+         i32.and
+         i32.or
+        else
+         i32.const 1
+        end
+        i32.eqz
+        if
+         loop $do-loop|0
+          local.get $2
+          i64.load
+          local.get $1
+          i64.load
+          i64.eq
+          if
+           local.get $2
+           i32.const 8
+           i32.add
+           local.set $2
+           local.get $1
+           i32.const 8
+           i32.add
+           local.set $1
+           local.get $3
+           i32.const 4
+           i32.sub
+           local.tee $3
+           i32.const 4
+           i32.ge_u
+           br_if $do-loop|0
+          end
+         end
+        end
+        loop $while-continue|1
+         local.get $3
+         local.tee $4
+         i32.const 1
+         i32.sub
+         local.set $3
+         local.get $4
+         if
+          local.get $2
+          i32.load16_u
+          local.tee $4
+          local.get $1
+          i32.load16_u
+          local.tee $9
+          i32.ne
+          if
+           local.get $4
+           local.get $9
+           i32.sub
+           br $__inlined_func$~lib/util/string/compareImpl$1
+          end
+          local.get $2
+          i32.const 2
+          i32.add
+          local.set $2
+          local.get $1
+          i32.const 2
+          i32.add
+          local.set $1
+          br $while-continue|1
+         end
+        end
+        i32.const 0
+       end
+       local.tee $1
+       i32.const 0
+       i32.lt_s
+       local.get $8
+       local.get $1
+       select
+      end
+      if
+       local.get $7
+       local.get $5
+       call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+       local.set $1
+       local.get $7
+       local.get $5
+       local.get $7
+       local.get $6
+       call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+       call $~lib/array/Array<assembly/types/GameState/Player>#__set
+       local.get $7
+       local.get $6
+       local.get $1
+       call $~lib/array/Array<assembly/types/GameState/Player>#__set
+      end
+      local.get $6
+      i32.const 1
+      i32.add
+      local.set $6
+      br $for-loop|1
+     end
+    end
+    local.get $5
+    i32.const 1
+    i32.add
+    local.set $5
+    br $for-loop|0
+   end
+  end
+  i32.const 13728
+  i32.const 13792
+  i32.const 11776
+  local.get $0
+  i32.load offset=4
+  select
+  call $assembly/chess/canonical/escapeJsonString
+  call $~lib/string/String.__concat
+  i32.const 13840
+  block $__inlined_func$assembly/chess/canonical/statusToString$1505 (result i32)
+   i32.const 11872
+   local.get $0
    i32.load offset=8
-   local.tee $5
+   local.tee $1
+   i32.eqz
+   br_if $__inlined_func$assembly/chess/canonical/statusToString$1505
+   drop
+   i32.const 11904
+   local.get $1
+   i32.const 1
+   i32.eq
+   br_if $__inlined_func$assembly/chess/canonical/statusToString$1505
+   drop
+   i32.const 11952
+   local.get $1
+   i32.const 2
+   i32.eq
+   br_if $__inlined_func$assembly/chess/canonical/statusToString$1505
+   drop
+   i32.const 11984
+   local.get $1
+   i32.const 3
+   i32.eq
+   br_if $__inlined_func$assembly/chess/canonical/statusToString$1505
+   drop
+   i32.const 9408
+   local.get $1
+   i32.const 5
+   i32.eq
+   br_if $__inlined_func$assembly/chess/canonical/statusToString$1505
+   drop
+   i32.const 13888
+  end
+  call $assembly/chess/canonical/escapeJsonString
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 12032
+  call $~lib/string/String.__concat
+  local.set $1
+  local.get $0
+  i32.load offset=16
+  i32.const -1
+  i32.eq
+  if (result i32)
+   local.get $1
+   i32.const 8512
+   call $~lib/string/String.__concat
+  else
+   local.get $1
+   i32.const 13792
+   i32.const 11776
+   local.get $0
+   i32.load offset=16
+   select
+   call $assembly/chess/canonical/escapeJsonString
+   call $~lib/string/String.__concat
+  end
+  i32.const 12080
+  local.get $0
+  i32.load offset=12
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 12128
+  call $~lib/string/String.__concat
+  local.set $5
+  i32.const 0
+  local.set $0
+  loop $for-loop|00
+   local.get $0
+   local.get $7
+   i32.load offset=12
+   i32.lt_s
+   if
+    local.get $0
+    i32.const 0
+    i32.gt_s
+    if (result i32)
+     local.get $5
+     i32.const 5248
+     call $~lib/string/String.__concat
+    else
+     local.get $5
+    end
+    i32.const 12176
+    i32.const 5520
+    i32.const 5552
+    local.get $7
+    local.get $0
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    local.tee $1
+    i32.load8_u offset=20
+    select
+    call $~lib/string/String.__concat
+    i32.const 8128
+    local.get $1
+    i32.load
+    call $assembly/chess/canonical/escapeJsonString
+    call $~lib/string/String.__concat
+    call $~lib/string/String.__concat
+    i32.const 13936
+    i32.const 13792
+    i32.const 11776
+    local.get $1
+    i32.load offset=8
+    select
+    call $assembly/chess/canonical/escapeJsonString
+    call $~lib/string/String.__concat
+    call $~lib/string/String.__concat
+    i32.const 12320
+    local.get $1
+    i32.load offset=16
+    i32.const 10
+    call $~lib/util/number/itoa32
+    call $~lib/string/String.__concat
+    i32.const 12384
+    call $~lib/string/String.__concat
+    local.get $1
+    i32.load offset=12
+    i32.const 10
+    call $~lib/util/number/itoa32
+    call $~lib/string/String.__concat
+    i32.const 7344
+    call $~lib/string/String.__concat
+    call $~lib/string/String.__concat
+    i32.const 13984
+    block $__inlined_func$assembly/chess/canonical/pieceTypeToString$1500 (result i32)
+     i32.const 12480
+     local.get $1
+     i32.load offset=4
+     local.tee $1
+     i32.eqz
+     br_if $__inlined_func$assembly/chess/canonical/pieceTypeToString$1500
+     drop
+     i32.const 12512
+     local.get $1
+     i32.const 1
+     i32.eq
+     br_if $__inlined_func$assembly/chess/canonical/pieceTypeToString$1500
+     drop
+     i32.const 12544
+     local.get $1
+     i32.const 2
+     i32.eq
+     br_if $__inlined_func$assembly/chess/canonical/pieceTypeToString$1500
+     drop
+     i32.const 12576
+     local.get $1
+     i32.const 3
+     i32.eq
+     br_if $__inlined_func$assembly/chess/canonical/pieceTypeToString$1500
+     drop
+     i32.const 12608
+     local.get $1
+     i32.const 4
+     i32.eq
+     br_if $__inlined_func$assembly/chess/canonical/pieceTypeToString$1500
+     drop
+     i32.const 14032
+    end
+    call $assembly/chess/canonical/escapeJsonString
+    call $~lib/string/String.__concat
+    call $~lib/string/String.__concat
+    i32.const 7344
+    call $~lib/string/String.__concat
+    call $~lib/string/String.__concat
+    local.set $5
+    local.get $0
+    i32.const 1
+    i32.add
+    local.set $0
+    br $for-loop|00
+   end
+  end
+  local.get $5
+  i32.const 12640
+  call $~lib/string/String.__concat
+ )
+ (func $~lib/util/sort/insertionSort<i32> (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (param $4 i32)
+  (local $5 i32)
+  (local $6 i32)
+  (local $7 i32)
+  (local $8 i32)
+  (local $9 i32)
+  local.get $1
+  local.get $3
+  local.get $2
+  local.get $1
+  i32.sub
+  i32.const 1
+  i32.add
+  local.tee $5
+  local.get $3
+  i32.sub
+  i32.const 1
+  i32.and
+  i32.sub
+  local.get $5
+  i32.const 1
+  i32.and
+  local.get $3
+  select
+  i32.add
+  local.set $7
+  loop $for-loop|0
+   local.get $2
+   local.get $7
+   i32.ge_s
+   if
+    local.get $0
+    local.get $7
+    i32.const 2
+    i32.shl
+    i32.add
+    local.tee $3
+    i32.load offset=4
+    local.tee $6
+    local.set $5
+    local.get $3
+    i32.load
+    local.set $3
+    i32.const 2
+    global.set $~argumentsLength
+    local.get $3
+    local.get $6
+    local.get $4
+    i32.load
+    call_indirect (type $1)
+    i32.const 0
+    i32.le_s
+    if
+     local.get $3
+     local.set $5
+     local.get $6
+     local.set $3
+    end
+    local.get $7
+    i32.const 1
+    i32.sub
+    local.set $6
+    loop $while-continue|1
+     local.get $1
+     local.get $6
+     i32.le_s
+     if
+      block $while-break|1
+       local.get $0
+       local.get $6
+       i32.const 2
+       i32.shl
+       i32.add
+       local.tee $8
+       i32.load
+       local.set $9
+       i32.const 2
+       global.set $~argumentsLength
+       local.get $9
+       local.get $3
+       local.get $4
+       i32.load
+       call_indirect (type $1)
+       i32.const 0
+       i32.le_s
+       br_if $while-break|1
+       local.get $8
+       local.get $9
+       i32.store offset=8
+       local.get $6
+       i32.const 1
+       i32.sub
+       local.set $6
+       br $while-continue|1
+      end
+     end
+    end
+    local.get $0
+    local.get $6
+    i32.const 2
+    i32.shl
+    i32.add
+    local.get $3
+    i32.store offset=8
+    loop $while-continue|2
+     local.get $1
+     local.get $6
+     i32.le_s
+     if
+      block $while-break|2
+       local.get $0
+       local.get $6
+       i32.const 2
+       i32.shl
+       i32.add
+       local.tee $3
+       i32.load
+       local.set $8
+       i32.const 2
+       global.set $~argumentsLength
+       local.get $8
+       local.get $5
+       local.get $4
+       i32.load
+       call_indirect (type $1)
+       i32.const 0
+       i32.le_s
+       br_if $while-break|2
+       local.get $3
+       local.get $8
+       i32.store offset=4
+       local.get $6
+       i32.const 1
+       i32.sub
+       local.set $6
+       br $while-continue|2
+      end
+     end
+    end
+    local.get $0
+    local.get $6
+    i32.const 2
+    i32.shl
+    i32.add
+    local.get $5
+    i32.store offset=4
+    local.get $7
+    i32.const 2
+    i32.add
+    local.set $7
+    br $for-loop|0
+   end
+  end
+ )
+ (func $~lib/typedarray/Uint8Array#constructor (param $0 i32) (result i32)
+  (local $1 i32)
+  (local $2 i32)
+  i32.const 12
+  i32.const 10
+  call $~lib/rt/stub/__new
+  local.tee $1
+  i32.eqz
+  if
+   i32.const 12
+   i32.const 3
+   call $~lib/rt/stub/__new
+   local.set $1
+  end
+  local.get $1
+  i32.const 0
+  i32.store
+  local.get $1
+  i32.const 0
+  i32.store offset=4
+  local.get $1
+  i32.const 0
+  i32.store offset=8
+  local.get $0
+  i32.const 1073741820
+  i32.gt_u
+  if
+   i32.const 1184
+   i32.const 1232
+   i32.const 19
+   i32.const 57
+   call $~lib/builtins/abort
+   unreachable
+  end
+  local.get $0
+  i32.const 1
+  call $~lib/rt/stub/__new
+  local.tee $2
+  i32.const 0
+  local.get $0
+  memory.fill
+  local.get $1
+  local.get $2
+  i32.store
+  local.get $1
+  local.get $2
+  i32.store offset=4
+  local.get $1
+  local.get $0
+  i32.store offset=8
+  local.get $1
+ )
+ (func $assembly/types/PokerTypes/BettingState#constructor (result i32)
+  (local $0 i32)
+  i32.const 23
+  i32.const 28
+  call $~lib/rt/stub/__new
+  local.tee $0
+  i32.const 0
+  i32.store
+  local.get $0
+  i32.const 0
+  i32.store offset=4
+  local.get $0
+  i32.const 0
+  i32.store offset=8
+  local.get $0
+  i32.const 0
+  i32.store offset=12
+  local.get $0
+  i32.const 0
+  i32.store offset=16
+  local.get $0
+  i32.const 0
+  i32.store8 offset=20
+  local.get $0
+  i32.const 0
+  i32.store8 offset=21
+  local.get $0
+  i32.const 0
+  i32.store8 offset=22
+  local.get $0
+  i32.const 0
+  i32.store
+  local.get $0
+  i32.const 0
+  i32.store offset=4
+  local.get $0
+  i32.const 0
+  i32.store offset=8
+  local.get $0
+  i32.const 5
+  i32.store offset=12
+  local.get $0
+  i32.const -1
+  i32.store offset=16
+  local.get $0
+  i32.const 0
+  i32.store8 offset=20
+  local.get $0
+  i32.const 0
+  i32.store8 offset=21
+  local.get $0
+  i32.const 0
+  i32.store8 offset=22
+  local.get $0
+ )
+ (func $assembly/types/GameState/Player#constructor (param $0 i32) (result i32)
+  (local $1 i32)
+  i32.const 80
+  i32.const 13
+  call $~lib/rt/stub/__new
+  local.tee $1
+  i32.const 0
+  i32.store
+  local.get $1
+  i32.const 0
+  i32.store offset=4
+  local.get $1
+  i32.const 0
+  i32.store offset=8
+  local.get $1
+  i32.const 0
+  i32.store offset=12
+  local.get $1
+  i32.const 0
+  i32.store offset=16
+  local.get $1
+  i32.const 0
+  i32.store offset=20
+  local.get $1
+  i32.const 0
+  i32.store offset=24
+  local.get $1
+  i32.const 0
+  i32.store offset=28
+  local.get $1
+  i32.const 0
+  i32.store offset=32
+  local.get $1
+  i32.const 0
+  i32.store offset=36
+  local.get $1
+  i32.const 0
+  i32.store offset=40
+  local.get $1
+  i32.const 0
+  i32.store offset=44
+  local.get $1
+  i32.const 0
+  i32.store offset=48
+  local.get $1
+  i32.const 0
+  i32.store offset=52
+  local.get $1
+  i32.const 0
+  i32.store offset=56
+  local.get $1
+  i32.const 0
+  i32.store offset=60
+  local.get $1
+  i32.const 0
+  i32.store offset=64
+  local.get $1
+  i32.const 0
+  i32.store offset=68
+  local.get $1
+  i32.const 0
+  i32.store offset=72
+  local.get $1
+  i32.const 0
+  i32.store offset=76
+  local.get $1
+  local.get $0
+  i32.store
+  local.get $1
+  i32.const 2752
+  i32.store offset=4
+  local.get $1
+  i32.const 0
+  i32.const 2
+  i32.const 15
+  i32.const 8768
+  call $~lib/rt/__newArray
+  i32.store offset=8
+  local.get $1
+  i32.const 0
+  i32.const 2
+  i32.const 15
+  i32.const 8800
+  call $~lib/rt/__newArray
+  i32.store offset=12
+  local.get $1
+  i32.const 0
+  i32.const 2
+  i32.const 8
+  i32.const 8832
+  call $~lib/rt/__newArray
+  i32.store offset=16
+  local.get $1
+  i32.const 0
+  i32.const 2
+  i32.const 15
+  i32.const 8864
+  call $~lib/rt/__newArray
+  i32.store offset=20
+  local.get $1
+  i32.const 0
+  i32.const 2
+  i32.const 15
+  i32.const 8896
+  call $~lib/rt/__newArray
+  i32.store offset=24
+  local.get $1
+  i32.const 0
+  i32.store offset=28
+  local.get $1
+  i32.const 0
+  i32.store offset=32
+  local.get $1
+  i32.const 1
+  i32.const 1
+  call $assembly/types/GameState/ManaPool#constructor
+  i32.store offset=36
+  local.get $1
+  i32.const 30
+  i32.store offset=40
+  local.get $1
+  i32.const 30
+  i32.store offset=44
+  local.get $1
+  i32.const 30
+  i32.store offset=48
+  local.get $1
+  i32.const 0
+  i32.store offset=52
+  local.get $1
+  i32.const 11
+  i32.store offset=56
+  local.get $1
+  i32.const 2752
+  i32.const 2
+  call $assembly/types/GameState/HeroPower#constructor
+  i32.store offset=60
+  local.get $1
+  i32.const 0
+  i32.store offset=64
+  local.get $1
+  i32.const 0
+  i32.store offset=68
+  local.get $1
+  i32.const 0
+  i32.store offset=72
+  local.get $1
+  i32.const 2752
+  i32.store offset=76
+  local.get $1
+ )
+ (func $assembly/engine/stateSerializer/serializeGameState (param $0 i32) (result i32)
+  (local $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  i32.const 3056
+  i32.const 3088
+  local.get $0
+  i32.load offset=8
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 4912
+  local.get $0
+  i32.load offset=16
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 4960
+  local.get $0
+  i32.load offset=28
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 5024
+  local.get $0
+  i32.load offset=4
+  call $assembly/engine/stateSerializer/serializePlayer
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 8544
+  local.get $0
+  i32.load
+  call $assembly/engine/stateSerializer/serializePlayer
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 8592
+  local.get $0
+  i32.load offset=24
+  local.tee $1
+  if (result i32)
+   local.get $1
+   i32.const 100000
+   i32.lt_u
+   if (result i32)
+    local.get $1
+    i32.const 100
+    i32.lt_u
+    if (result i32)
+     local.get $1
+     i32.const 10
+     i32.ge_u
+     i32.const 1
+     i32.add
+    else
+     local.get $1
+     i32.const 10000
+     i32.ge_u
+     i32.const 3
+     i32.add
+     local.get $1
+     i32.const 1000
+     i32.ge_u
+     i32.add
+    end
+   else
+    local.get $1
+    i32.const 10000000
+    i32.lt_u
+    if (result i32)
+     local.get $1
+     i32.const 1000000
+     i32.ge_u
+     i32.const 6
+     i32.add
+    else
+     local.get $1
+     i32.const 1000000000
+     i32.ge_u
+     i32.const 8
+     i32.add
+     local.get $1
+     i32.const 100000000
+     i32.ge_u
+     i32.add
+    end
+   end
+   local.tee $2
+   i32.const 1
+   i32.shl
+   i32.const 2
+   call $~lib/rt/stub/__new
+   local.tee $3
+   local.get $1
+   local.get $2
+   call $~lib/util/number/utoa32_dec_lut
+   local.get $3
+  else
+   i32.const 3328
+  end
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 8640
+  local.get $0
+  i32.load offset=12
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 8688
+  local.get $0
+  i32.load offset=20
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 7344
+  call $~lib/string/String.__concat
+ )
+ (func $assembly/engine/drawEngine/drawCardForPlayer (param $0 i32) (param $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  (local $4 i32)
+  (local $5 i32)
+  (local $6 i32)
+  (local $7 i32)
+  local.get $1
+  i32.load offset=16
+  i32.load offset=12
+  i32.eqz
+  if
+   return
+  end
+  local.get $1
+  i32.load offset=8
+  i32.load offset=12
+  i32.const 7
+  i32.ge_s
+  if
+   return
+  end
+  local.get $1
+  i32.load offset=16
+  local.tee $5
+  i32.load offset=12
+  local.tee $2
+  i32.const 0
+  i32.le_s
+  if
+   i32.const 9440
+   i32.const 2816
+   i32.const 330
+   i32.const 18
+   call $~lib/builtins/abort
+   unreachable
+  end
+  local.get $5
+  i32.load offset=4
+  local.tee $6
+  i32.load
+  local.set $4
+  local.get $6
+  local.get $6
+  i32.const 4
+  i32.add
+  local.get $2
+  i32.const 1
+  i32.sub
+  local.tee $7
+  i32.const 2
+  i32.shl
+  local.tee $2
+  memory.copy
+  local.get $2
+  local.get $6
+  i32.add
+  i32.const 0
+  i32.store
+  local.get $5
+  local.get $7
+  i32.store offset=12
+  global.get $assembly/util/cardLookup/cardRegistry
+  local.tee $2
+  i32.load
+  local.get $2
+  i32.load offset=4
+  local.get $4
+  i32.const -1028477379
+  i32.mul
+  i32.const 374761397
+  i32.add
+  i32.const 17
+  i32.rotl
+  i32.const 668265263
+  i32.mul
+  local.tee $2
+  local.get $2
+  i32.const 15
+  i32.shr_u
+  i32.xor
+  i32.const -2048144777
+  i32.mul
+  local.tee $2
+  local.get $2
+  i32.const 13
+  i32.shr_u
+  i32.xor
+  i32.const -1028477379
+  i32.mul
+  local.tee $2
+  local.get $2
+  i32.const 16
+  i32.shr_u
+  i32.xor
+  i32.and
+  i32.const 2
+  i32.shl
+  i32.add
+  i32.load
+  local.set $2
+  block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1702"
+   loop $while-continue|0
+    local.get $2
+    if
+     local.get $2
+     i32.load offset=8
+     local.tee $5
+     i32.const 1
+     i32.and
+     if (result i32)
+      i32.const 0
+     else
+      local.get $2
+      i32.load
+      local.get $4
+      i32.eq
+     end
+     br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1702"
+     local.get $5
+     i32.const -2
+     i32.and
+     local.set $2
+     br $while-continue|0
+    end
+   end
+   i32.const 0
+   local.set $2
+  end
+  local.get $2
+  if (result i32)
+   global.get $assembly/util/cardLookup/cardRegistry
+   local.get $4
+   call $"~lib/map/Map<i32,assembly/types/GameState/CardDef>#get"
+  else
+   i32.const 0
+  end
+  local.set $2
+  local.get $0
+  call $assembly/types/GameState/GameState#nextInstanceId
+  local.get $4
+  call $assembly/types/GameState/CardInstance#constructor
+  local.set $0
+  local.get $2
+  if
+   local.get $0
+   local.get $2
+   i32.load offset=16
+   i32.store offset=8
+   local.get $0
+   local.get $2
+   i32.load offset=20
+   i32.store offset=12
+   local.get $0
+   local.get $2
+   i32.load offset=20
+   i32.store offset=16
+   local.get $0
+   local.get $2
+   i32.load offset=20
+   i32.store offset=20
+   local.get $0
+   local.get $1
+   i32.load
+   i32.eqz
+   i32.store8 offset=44
+   local.get $2
+   i32.load offset=36
+   local.set $2
+   loop $for-loop|0
+    local.get $3
+    local.get $2
+    i32.load offset=12
+    i32.lt_s
+    if
+     local.get $2
+     local.get $3
+     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+     local.tee $4
+     i32.const 9520
+     call $~lib/string/String.__eq
+     if
+      local.get $0
+      i32.const 1
+      i32.store8 offset=30
+     else
+      local.get $4
+      i32.const 9552
+      call $~lib/string/String.__eq
+      if
+       local.get $0
+       i32.const 1
+       i32.store8 offset=32
+       local.get $0
+       i32.const 0
+       i32.store8 offset=25
+       local.get $0
+       i32.const 1
+       i32.store8 offset=24
+      else
+       local.get $4
+       i32.const 9584
+       call $~lib/string/String.__eq
+       if
+        local.get $0
+        i32.const 1
+        i32.store8 offset=31
+        local.get $0
+        i32.const 0
+        i32.store8 offset=25
+        local.get $0
+        i32.const 1
+        i32.store8 offset=24
+       else
+        local.get $4
+        i32.const 9616
+        call $~lib/string/String.__eq
+        if
+         local.get $0
+         i32.const 1
+         i32.store8 offset=27
+        else
+         local.get $4
+         i32.const 9664
+         call $~lib/string/String.__eq
+         if
+          local.get $0
+          i32.const 1
+          i32.store8 offset=29
+         else
+          local.get $4
+          i32.const 9712
+          call $~lib/string/String.__eq
+          if
+           local.get $0
+           i32.const 1
+           i32.store8 offset=33
+          else
+           local.get $4
+           i32.const 9760
+           call $~lib/string/String.__eq
+           if
+            local.get $0
+            i32.const 1
+            i32.store8 offset=34
+           else
+            local.get $4
+            i32.const 9808
+            call $~lib/string/String.__eq
+            if
+             local.get $0
+             i32.const 1
+             i32.store8 offset=35
+            else
+             local.get $4
+             i32.const 9856
+             call $~lib/string/String.__eq
+             if
+              local.get $0
+              i32.const 1
+              i32.store8 offset=36
+             end
+            end
+           end
+          end
+         end
+        end
+       end
+      end
+     end
+     local.get $3
+     i32.const 1
+     i32.add
+     local.set $3
+     br $for-loop|0
+    end
+   end
+  end
+  local.get $1
+  i32.load offset=8
+  local.get $0
+  call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+ )
+ (func $assembly/chess/rules/isKingInCheck (param $0 i32) (param $1 i32) (result i32)
+  (local $2 i32)
+  (local $3 i32)
+  (local $4 i32)
+  (local $5 i32)
+  i32.const -1
+  local.set $2
+  i32.const -1
+  local.set $5
+  loop $for-loop|0
+   local.get $3
+   local.get $1
    i32.load offset=12
    i32.lt_s
    if
     block $for-break0
-     local.get $5
-     local.get $4
-     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-     i32.load
      local.get $1
-     call $~lib/string/String.__eq
+     local.get $3
+     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+     local.tee $4
+     i32.load offset=4
+     if (result i32)
+      i32.const 0
+     else
+      local.get $0
+      local.get $4
+      i32.load offset=8
+      i32.eq
+     end
      if
       local.get $4
-      local.set $3
+      i32.load offset=12
+      local.set $2
+      local.get $4
+      i32.load offset=16
+      local.set $5
       br $for-break0
+     end
+     local.get $3
+     i32.const 1
+     i32.add
+     local.set $3
+     br $for-loop|0
+    end
+   end
+  end
+  local.get $2
+  i32.const 0
+  i32.lt_s
+  if
+   i32.const 0
+   return
+  end
+  local.get $2
+  local.get $5
+  local.get $0
+  i32.eqz
+  local.get $1
+  call $assembly/chess/rules/getThreateningPieces
+  i32.load offset=12
+  i32.const 0
+  i32.gt_s
+ )
+ (func $assembly/chess/reducer/refreshDerived (param $0 i32) (param $1 i32) (result i32)
+  (local $2 i32)
+  (local $3 i32)
+  (local $4 i32)
+  (local $5 i32)
+  (local $6 i32)
+  (local $7 i32)
+  (local $8 i32)
+  (local $9 i32)
+  (local $10 i32)
+  (local $11 i32)
+  i32.const 0
+  local.get $1
+  call $assembly/chess/rules/isKingInCheck
+  local.set $9
+  i32.const 0
+  i32.const 1
+  i32.const -1
+  i32.const 1
+  local.get $1
+  call $assembly/chess/rules/isKingInCheck
+  select
+  local.get $9
+  select
+  local.set $10
+  block $__inlined_func$assembly/chess/rules/checkWinCondition$34 (result i32)
+   loop $for-loop|0
+    local.get $4
+    local.get $1
+    i32.load offset=12
+    i32.lt_s
+    if
+     local.get $1
+     local.get $4
+     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+     local.tee $9
+     i32.load offset=8
+     local.tee $11
+     if
+      local.get $11
+      i32.const 1
+      i32.eq
+      if
+       local.get $9
+       i32.load offset=4
+       local.tee $11
+       if
+        local.get $2
+        i32.const 1
+        i32.add
+        local.set $2
+        i32.const 1
+        local.get $5
+        local.get $11
+        i32.const 1
+        i32.eq
+        if (result i32)
+         i32.const 1
+        else
+         local.get $9
+         i32.load offset=4
+         i32.const 2
+         i32.eq
+        end
+        if (result i32)
+         i32.const 1
+        else
+         local.get $9
+         i32.load offset=4
+         i32.const 5
+         i32.eq
+        end
+        select
+        local.set $5
+       else
+        i32.const 1
+        local.set $7
+       end
+      end
+     else
+      local.get $9
+      i32.load offset=4
+      local.tee $11
+      if
+       local.get $3
+       i32.const 1
+       i32.add
+       local.set $3
+       i32.const 1
+       local.get $6
+       local.get $11
+       i32.const 1
+       i32.eq
+       if (result i32)
+        i32.const 1
+       else
+        local.get $9
+        i32.load offset=4
+        i32.const 2
+        i32.eq
+       end
+       if (result i32)
+        i32.const 1
+       else
+        local.get $9
+        i32.load offset=4
+        i32.const 5
+        i32.eq
+       end
+       select
+       local.set $6
+      else
+       i32.const 1
+       local.set $8
+      end
      end
      local.get $4
      i32.const 1
@@ -7131,27 +6885,1079 @@
      br $for-loop|0
     end
    end
+   i32.const 3
+   local.get $7
+   i32.eqz
+   br_if $__inlined_func$assembly/chess/rules/checkWinCondition$34
+   drop
+   i32.const 4
+   local.get $8
+   i32.eqz
+   br_if $__inlined_func$assembly/chess/rules/checkWinCondition$34
+   drop
+   i32.const 5
+   local.get $2
+   local.get $3
+   i32.or
+   i32.eqz
+   br_if $__inlined_func$assembly/chess/rules/checkWinCondition$34
+   drop
+   i32.const 3
+   local.get $6
+   local.get $2
+   i32.eqz
+   local.tee $4
+   i32.and
+   br_if $__inlined_func$assembly/chess/rules/checkWinCondition$34
+   drop
+   i32.const 4
+   local.get $5
+   local.get $3
+   i32.eqz
+   local.tee $5
+   i32.and
+   br_if $__inlined_func$assembly/chess/rules/checkWinCondition$34
+   drop
+   i32.const 5
+   local.get $4
+   local.get $3
+   i32.const 1
+   i32.eq
+   i32.and
+   local.get $5
+   local.get $2
+   i32.const 1
+   i32.eq
+   i32.and
+   i32.or
+   br_if $__inlined_func$assembly/chess/rules/checkWinCondition$34
+   drop
+   i32.const 1
   end
+  local.set $2
+  call $assembly/chess/state/Snapshot#constructor
+  local.tee $3
+  local.get $1
+  i32.store
   local.get $3
-  i32.const -1
+  local.get $0
+  i32.load offset=4
+  i32.store offset=4
+  local.get $3
+  local.get $0
+  i32.load offset=12
+  i32.store offset=12
+  local.get $3
+  local.get $10
+  i32.store offset=16
+  local.get $3
+  local.get $2
+  i32.const 1
+  i32.eq
+  if (result i32)
+   local.get $0
+   i32.load offset=8
+  else
+   local.get $2
+  end
+  i32.store offset=8
+  local.get $3
+ )
+ (func $~lib/util/sort/mergeRuns<i32> (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (param $4 i32) (param $5 i32)
+  (local $6 i32)
+  (local $7 i32)
+  (local $8 i32)
+  local.get $2
+  i32.const 1
+  i32.sub
+  local.tee $6
+  local.get $3
+  i32.add
+  local.set $7
+  local.get $6
+  i32.const 1
+  i32.add
+  local.set $2
+  loop $for-loop|0
+   local.get $1
+   local.get $2
+   i32.lt_s
+   if
+    local.get $2
+    i32.const 1
+    i32.sub
+    local.tee $2
+    i32.const 2
+    i32.shl
+    local.tee $8
+    local.get $4
+    i32.add
+    local.get $0
+    local.get $8
+    i32.add
+    i32.load
+    i32.store
+    br $for-loop|0
+   end
+  end
+  loop $for-loop|1
+   local.get $3
+   local.get $6
+   i32.gt_s
+   if
+    local.get $4
+    local.get $7
+    local.get $6
+    i32.sub
+    i32.const 2
+    i32.shl
+    i32.add
+    local.get $0
+    local.get $6
+    i32.const 2
+    i32.shl
+    i32.add
+    i32.load offset=4
+    i32.store
+    local.get $6
+    i32.const 1
+    i32.add
+    local.set $6
+    br $for-loop|1
+   end
+  end
+  loop $for-loop|2
+   local.get $1
+   local.get $3
+   i32.le_s
+   if
+    local.get $4
+    local.get $6
+    i32.const 2
+    i32.shl
+    i32.add
+    i32.load
+    local.set $7
+    local.get $4
+    local.get $2
+    i32.const 2
+    i32.shl
+    i32.add
+    i32.load
+    local.set $8
+    i32.const 2
+    global.set $~argumentsLength
+    local.get $7
+    local.get $8
+    local.get $5
+    i32.load
+    call_indirect (type $1)
+    i32.const 0
+    i32.lt_s
+    if
+     local.get $0
+     local.get $1
+     i32.const 2
+     i32.shl
+     i32.add
+     local.get $7
+     i32.store
+     local.get $6
+     i32.const 1
+     i32.sub
+     local.set $6
+    else
+     local.get $0
+     local.get $1
+     i32.const 2
+     i32.shl
+     i32.add
+     local.get $8
+     i32.store
+     local.get $2
+     i32.const 1
+     i32.add
+     local.set $2
+    end
+    local.get $1
+    i32.const 1
+    i32.add
+    local.set $1
+    br $for-loop|2
+   end
+  end
+ )
+ (func $~lib/util/sort/extendRunRight<i32> (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (result i32)
+  (local $4 i32)
+  (local $5 i32)
+  (local $6 i32)
+  local.get $1
+  local.get $2
   i32.eq
   if
-   i32.const 0
+   local.get $1
    return
   end
-  local.get $8
-  i32.load offset=8
+  local.get $0
+  local.get $1
+  i32.const 2
+  i32.shl
+  i32.add
+  i32.load
+  local.get $0
+  local.get $1
+  i32.const 1
+  i32.add
+  local.tee $4
+  i32.const 2
+  i32.shl
+  i32.add
+  i32.load
+  i32.const 2
+  global.set $~argumentsLength
   local.get $3
-  call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+  i32.load
+  call_indirect (type $1)
+  i32.const 0
+  i32.gt_s
+  if
+   loop $while-continue|0
+    local.get $2
+    local.get $4
+    i32.gt_s
+    if (result i32)
+     local.get $0
+     local.get $4
+     i32.const 2
+     i32.shl
+     i32.add
+     local.tee $5
+     i32.load offset=4
+     local.get $5
+     i32.load
+     i32.const 2
+     global.set $~argumentsLength
+     local.get $3
+     i32.load
+     call_indirect (type $1)
+     i32.const 31
+     i32.shr_u
+    else
+     i32.const 0
+    end
+    if
+     local.get $4
+     i32.const 1
+     i32.add
+     local.set $4
+     br $while-continue|0
+    end
+   end
+   local.get $4
+   local.set $2
+   loop $while-continue|1
+    local.get $1
+    local.get $2
+    i32.lt_s
+    if
+     local.get $0
+     local.get $1
+     i32.const 2
+     i32.shl
+     i32.add
+     local.tee $3
+     i32.load
+     local.set $5
+     local.get $3
+     local.get $0
+     local.get $2
+     i32.const 2
+     i32.shl
+     i32.add
+     local.tee $3
+     i32.load
+     i32.store
+     local.get $1
+     i32.const 1
+     i32.add
+     local.set $1
+     local.get $3
+     local.get $5
+     i32.store
+     local.get $2
+     i32.const 1
+     i32.sub
+     local.set $2
+     br $while-continue|1
+    end
+   end
+  else
+   loop $while-continue|2
+    local.get $2
+    local.get $4
+    i32.gt_s
+    if (result i32)
+     local.get $0
+     local.get $4
+     i32.const 2
+     i32.shl
+     i32.add
+     local.tee $1
+     i32.load offset=4
+     local.get $1
+     i32.load
+     i32.const 2
+     global.set $~argumentsLength
+     local.get $3
+     i32.load
+     call_indirect (type $1)
+     i32.const 0
+     i32.ge_s
+    else
+     i32.const 0
+    end
+    if
+     local.get $4
+     i32.const 1
+     i32.add
+     local.set $4
+     br $while-continue|2
+    end
+   end
+  end
+  local.get $4
+ )
+ (func $~lib/util/sort/SORT<i32> (param $0 i32) (param $1 i32) (param $2 i32)
+  (local $3 i32)
+  (local $4 i32)
+  (local $5 i32)
+  (local $6 i32)
+  (local $7 i32)
+  (local $8 i32)
+  (local $9 i32)
+  (local $10 i32)
+  (local $11 i32)
+  (local $12 i32)
+  (local $13 i64)
+  (local $14 i32)
+  (local $15 i32)
+  local.get $1
+  i32.const 48
+  i32.le_s
+  if
+   local.get $1
+   i32.const 1
+   i32.le_s
+   if
+    return
+   end
+   block $break|0
+    block $case1|0
+     local.get $1
+     i32.const 3
+     i32.ne
+     if
+      local.get $1
+      i32.const 2
+      i32.eq
+      br_if $case1|0
+      br $break|0
+     end
+     local.get $0
+     i32.load
+     local.set $1
+     local.get $0
+     i32.load offset=4
+     local.set $3
+     i32.const 2
+     global.set $~argumentsLength
+     local.get $0
+     local.get $3
+     local.get $1
+     local.get $1
+     local.get $3
+     local.get $2
+     i32.load
+     call_indirect (type $1)
+     i32.const 0
+     i32.gt_s
+     local.tee $4
+     select
+     i32.store
+     local.get $0
+     i32.load offset=8
+     local.set $5
+     i32.const 2
+     global.set $~argumentsLength
+     local.get $1
+     local.get $3
+     local.get $4
+     select
+     local.tee $1
+     local.get $5
+     local.get $2
+     i32.load
+     call_indirect (type $1)
+     i32.const 0
+     i32.gt_s
+     local.set $3
+     local.get $0
+     local.get $5
+     local.get $1
+     local.get $3
+     select
+     i32.store offset=4
+     local.get $0
+     local.get $1
+     local.get $5
+     local.get $3
+     select
+     i32.store offset=8
+    end
+    local.get $0
+    i32.load
+    local.set $1
+    local.get $0
+    i32.load offset=4
+    local.set $3
+    i32.const 2
+    global.set $~argumentsLength
+    local.get $0
+    local.get $3
+    local.get $1
+    local.get $1
+    local.get $3
+    local.get $2
+    i32.load
+    call_indirect (type $1)
+    i32.const 0
+    i32.gt_s
+    local.tee $2
+    select
+    i32.store
+    local.get $0
+    local.get $1
+    local.get $3
+    local.get $2
+    select
+    i32.store offset=4
+    return
+   end
+   local.get $0
+   i32.const 0
+   local.get $1
+   i32.const 1
+   i32.sub
+   i32.const 0
+   local.get $2
+   call $~lib/util/sort/insertionSort<i32>
+   return
+  end
+  i32.const 33
+  local.get $1
+  i32.clz
+  i32.sub
+  local.tee $6
+  i32.const 2
+  i32.shl
+  local.tee $7
+  i32.const 1
+  i32.shl
+  call $~lib/rt/stub/__alloc
+  local.tee $10
+  local.get $7
+  i32.add
+  local.set $12
+  loop $for-loop|1
+   local.get $5
+   local.get $6
+   i32.lt_u
+   if
+    local.get $10
+    local.get $5
+    i32.const 2
+    i32.shl
+    i32.add
+    i32.const -1
+    i32.store
+    local.get $5
+    i32.const 1
+    i32.add
+    local.set $5
+    br $for-loop|1
+   end
+  end
+  local.get $1
+  i32.const 2
+  i32.shl
+  call $~lib/rt/stub/__alloc
+  local.set $11
+  local.get $0
+  i32.const 0
+  local.get $1
+  i32.const 1
+  i32.sub
+  local.tee $9
+  local.get $2
+  call $~lib/util/sort/extendRunRight<i32>
   local.tee $5
-  i32.load offset=4
-  local.set $6
-  global.get $assembly/util/cardLookup/cardRegistry
+  i32.const 1
+  i32.add
   local.tee $1
+  i32.const 32
+  i32.lt_s
+  if
+   local.get $0
+   i32.const 0
+   i32.const 31
+   local.get $9
+   local.get $9
+   i32.const 31
+   i32.ge_s
+   select
+   local.tee $5
+   local.get $1
+   local.get $2
+   call $~lib/util/sort/insertionSort<i32>
+  end
+  loop $while-continue|2
+   local.get $5
+   local.get $9
+   i32.lt_s
+   if
+    local.get $0
+    local.get $5
+    i32.const 1
+    i32.add
+    local.tee $6
+    local.get $9
+    local.get $2
+    call $~lib/util/sort/extendRunRight<i32>
+    local.tee $1
+    local.get $6
+    i32.sub
+    i32.const 1
+    i32.add
+    local.tee $7
+    i32.const 32
+    i32.lt_s
+    if
+     local.get $0
+     local.get $6
+     local.get $9
+     local.get $6
+     i32.const 31
+     i32.add
+     local.tee $1
+     local.get $1
+     local.get $9
+     i32.gt_s
+     select
+     local.tee $1
+     local.get $7
+     local.get $2
+     call $~lib/util/sort/insertionSort<i32>
+    end
+    local.get $3
+    local.get $6
+    i32.add
+    i64.extend_i32_u
+    i64.const 30
+    i64.shl
+    local.get $9
+    i32.const 1
+    i32.add
+    i64.extend_i32_u
+    local.tee $13
+    i64.div_u
+    local.get $1
+    local.get $6
+    i32.add
+    i32.const 1
+    i32.add
+    i64.extend_i32_u
+    i64.const 30
+    i64.shl
+    local.get $13
+    i64.div_u
+    i64.xor
+    i32.wrap_i64
+    i32.clz
+    local.set $7
+    loop $for-loop|3
+     local.get $4
+     local.get $7
+     i32.gt_u
+     if
+      local.get $4
+      i32.const 2
+      i32.shl
+      local.tee $14
+      local.get $10
+      i32.add
+      local.tee $15
+      i32.load
+      local.tee $8
+      i32.const -1
+      i32.ne
+      if
+       local.get $0
+       local.get $8
+       local.get $12
+       local.get $14
+       i32.add
+       i32.load
+       i32.const 1
+       i32.add
+       local.get $5
+       local.get $11
+       local.get $2
+       call $~lib/util/sort/mergeRuns<i32>
+       local.get $15
+       i32.const -1
+       i32.store
+       local.get $8
+       local.set $3
+      end
+      local.get $4
+      i32.const 1
+      i32.sub
+      local.set $4
+      br $for-loop|3
+     end
+    end
+    local.get $7
+    i32.const 2
+    i32.shl
+    local.tee $4
+    local.get $10
+    i32.add
+    local.get $3
+    i32.store
+    local.get $4
+    local.get $12
+    i32.add
+    local.get $5
+    i32.store
+    local.get $6
+    local.set $3
+    local.get $1
+    local.set $5
+    local.get $7
+    local.set $4
+    br $while-continue|2
+   end
+  end
+  loop $for-loop|4
+   local.get $4
+   if
+    local.get $4
+    i32.const 2
+    i32.shl
+    local.tee $1
+    local.get $10
+    i32.add
+    i32.load
+    local.tee $3
+    i32.const -1
+    i32.ne
+    if
+     local.get $0
+     local.get $3
+     local.get $1
+     local.get $12
+     i32.add
+     i32.load
+     i32.const 1
+     i32.add
+     local.get $9
+     local.get $11
+     local.get $2
+     call $~lib/util/sort/mergeRuns<i32>
+    end
+    local.get $4
+    i32.const 1
+    i32.sub
+    local.set $4
+    br $for-loop|4
+   end
+  end
+  global.get $~lib/rt/stub/offset
+  local.get $11
+  local.get $11
+  i32.const 4
+  i32.sub
+  local.tee $0
+  i32.load
+  i32.add
+  i32.eq
+  if
+   local.get $0
+   global.set $~lib/rt/stub/offset
+  end
+  global.get $~lib/rt/stub/offset
+  local.get $10
+  local.get $10
+  i32.const 4
+  i32.sub
+  local.tee $0
+  i32.load
+  i32.add
+  i32.eq
+  if
+   local.get $0
+   global.set $~lib/rt/stub/offset
+  end
+ )
+ (func $~lib/util/number/utoa32_dec_lut (param $0 i32) (param $1 i32) (param $2 i32)
+  (local $3 i32)
+  loop $while-continue|0
+   local.get $1
+   i32.const 10000
+   i32.ge_u
+   if
+    local.get $1
+    i32.const 10000
+    i32.rem_u
+    local.set $3
+    local.get $1
+    i32.const 10000
+    i32.div_u
+    local.set $1
+    local.get $0
+    local.get $2
+    i32.const 4
+    i32.sub
+    local.tee $2
+    i32.const 1
+    i32.shl
+    i32.add
+    local.get $3
+    i32.const 100
+    i32.div_u
+    i32.const 2
+    i32.shl
+    i32.const 3340
+    i32.add
+    i64.load32_u
+    local.get $3
+    i32.const 100
+    i32.rem_u
+    i32.const 2
+    i32.shl
+    i32.const 3340
+    i32.add
+    i64.load32_u
+    i64.const 32
+    i64.shl
+    i64.or
+    i64.store
+    br $while-continue|0
+   end
+  end
+  local.get $1
+  i32.const 100
+  i32.ge_u
+  if
+   local.get $0
+   local.get $2
+   i32.const 2
+   i32.sub
+   local.tee $2
+   i32.const 1
+   i32.shl
+   i32.add
+   local.get $1
+   i32.const 100
+   i32.rem_u
+   i32.const 2
+   i32.shl
+   i32.const 3340
+   i32.add
+   i32.load
+   i32.store
+   local.get $1
+   i32.const 100
+   i32.div_u
+   local.set $1
+  end
+  local.get $1
+  i32.const 10
+  i32.ge_u
+  if
+   local.get $0
+   local.get $2
+   i32.const 2
+   i32.sub
+   i32.const 1
+   i32.shl
+   i32.add
+   local.get $1
+   i32.const 2
+   i32.shl
+   i32.const 3340
+   i32.add
+   i32.load
+   i32.store
+  else
+   local.get $0
+   local.get $2
+   i32.const 1
+   i32.sub
+   i32.const 1
+   i32.shl
+   i32.add
+   local.get $1
+   i32.const 48
+   i32.add
+   i32.store16
+  end
+ )
+ (func $~lib/string/String.fromCharCode@varargs (param $0 i32) (result i32)
+  (local $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  block $1of1
+   block $0of1
+    block $outOfRange
+     global.get $~argumentsLength
+     i32.const 1
+     i32.sub
+     br_table $0of1 $1of1 $outOfRange
+    end
+    unreachable
+   end
+   i32.const -1
+   local.set $1
+  end
+  i32.const 2
+  local.get $1
+  i32.const 0
+  i32.gt_s
+  local.tee $3
+  i32.shl
+  i32.const 2
+  call $~lib/rt/stub/__new
+  local.tee $2
+  local.get $0
+  i32.store16
+  local.get $3
+  if
+   local.get $2
+   local.get $1
+   i32.store16 offset=2
+  end
+  local.get $2
+ )
+ (func $~lib/string/String#substring (param $0 i32) (param $1 i32) (param $2 i32) (result i32)
+  (local $3 i32)
+  (local $4 i32)
+  local.get $1
+  i32.const 0
+  local.get $1
+  i32.const 0
+  i32.gt_s
+  select
+  local.tee $3
+  local.get $0
+  i32.const 20
+  i32.sub
+  i32.load offset=16
+  i32.const 1
+  i32.shr_u
+  local.tee $1
+  local.get $1
+  local.get $3
+  i32.gt_s
+  select
+  local.tee $3
+  local.get $2
+  i32.const 0
+  local.get $2
+  i32.const 0
+  i32.gt_s
+  select
+  local.tee $2
+  local.get $1
+  local.get $1
+  local.get $2
+  i32.gt_s
+  select
+  local.tee $2
+  local.get $2
+  local.get $3
+  i32.gt_s
+  select
+  i32.const 1
+  i32.shl
+  local.set $4
+  local.get $3
+  local.get $2
+  local.get $2
+  local.get $3
+  i32.lt_s
+  select
+  i32.const 1
+  i32.shl
+  local.tee $2
+  local.get $4
+  i32.sub
+  local.tee $3
+  i32.eqz
+  if
+   i32.const 2752
+   return
+  end
+  local.get $4
+  i32.eqz
+  local.get $2
+  local.get $1
+  i32.const 1
+  i32.shl
+  i32.eq
+  i32.and
+  if
+   local.get $0
+   return
+  end
+  local.get $3
+  i32.const 2
+  call $~lib/rt/stub/__new
+  local.tee $1
+  local.get $0
+  local.get $4
+  i32.add
+  local.get $3
+  memory.copy
+  local.get $1
+ )
+ (func $~lib/string/String#padStart (param $0 i32) (result i32)
+  (local $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  (local $4 i32)
+  (local $5 i32)
+  (local $6 i32)
+  (local $7 i32)
+  i32.const 3324
+  i32.load
+  i32.const -2
+  i32.and
+  local.tee $1
+  i32.eqz
+  local.get $0
+  i32.const 20
+  i32.sub
+  i32.load offset=16
+  i32.const -2
+  i32.and
+  local.tee $5
+  i32.const 8
+  i32.gt_u
+  i32.or
+  if
+   local.get $0
+   return
+  end
+  i32.const 8
+  i32.const 2
+  call $~lib/rt/stub/__new
+  local.set $2
+  i32.const 8
+  local.get $5
+  i32.sub
+  local.tee $3
+  local.get $1
+  i32.gt_u
+  if
+   local.get $3
+   local.get $3
+   i32.const 2
+   i32.sub
+   local.get $1
+   i32.div_u
+   local.get $1
+   i32.mul
+   local.tee $6
+   i32.sub
+   local.set $7
+   loop $while-continue|0
+    local.get $4
+    local.get $6
+    i32.lt_u
+    if
+     local.get $2
+     local.get $4
+     i32.add
+     i32.const 3328
+     local.get $1
+     memory.copy
+     local.get $1
+     local.get $4
+     i32.add
+     local.set $4
+     br $while-continue|0
+    end
+   end
+   local.get $2
+   local.get $6
+   i32.add
+   i32.const 3328
+   local.get $7
+   memory.copy
+  else
+   local.get $2
+   i32.const 3328
+   local.get $3
+   memory.copy
+  end
+  local.get $2
+  local.get $3
+  i32.add
+  local.get $0
+  local.get $5
+  memory.copy
+  local.get $2
+ )
+ (func $~lib/string/String#charAt (param $0 i32) (result i32)
+  (local $1 i32)
+  local.get $0
+  i32.const 2988
+  i32.load
+  i32.const 1
+  i32.shr_u
+  i32.ge_u
+  if
+   i32.const 2752
+   return
+  end
+  i32.const 2
+  i32.const 2
+  call $~lib/rt/stub/__new
+  local.tee $1
+  local.get $0
+  i32.const 1
+  i32.shl
+  i32.const 2992
+  i32.add
+  i32.load16_u
+  i32.store16
+  local.get $1
+ )
+ (func $"~lib/map/Map<i32,i32>#set" (param $0 i32) (param $1 i32) (param $2 i32)
+  (local $3 i32)
+  (local $4 i32)
+  (local $5 i32)
+  (local $6 i32)
+  (local $7 i32)
+  (local $8 i32)
+  (local $9 i32)
+  (local $10 i32)
+  (local $11 i32)
+  local.get $0
   i32.load
   local.get $1
-  i32.load offset=4
-  local.get $6
+  local.tee $3
   i32.const -1028477379
   i32.mul
   i32.const 374761397
@@ -7179,13 +7985,16 @@
   i32.const 16
   i32.shr_u
   i32.xor
+  local.tee $8
+  local.get $0
+  i32.load offset=4
   i32.and
   i32.const 2
   i32.shl
   i32.add
   i32.load
   local.set $1
-  block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1702"
+  block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1857"
    loop $while-continue|0
     local.get $1
     if
@@ -7199,10 +8008,10 @@
      else
       local.get $1
       i32.load
-      local.get $6
+      local.get $3
       i32.eq
      end
-     br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1702"
+     br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1857"
      local.get $4
      i32.const -2
      i32.and
@@ -7214,211 +8023,5874 @@
    local.set $1
   end
   local.get $1
-  if (result i32)
-   global.get $assembly/util/cardLookup/cardRegistry
+  if
+   local.get $1
+   local.get $2
+   i32.store offset=4
+  else
+   local.get $0
+   i32.load offset=12
+   local.tee $1
+   local.get $0
+   i32.load offset=16
+   i32.eq
+   if
+    local.get $0
+    i32.load offset=20
+    local.get $1
+    i32.const 3
+    i32.mul
+    i32.const 4
+    i32.div_s
+    i32.lt_s
+    if (result i32)
+     local.get $0
+     i32.load offset=4
+    else
+     local.get $0
+     i32.load offset=4
+     i32.const 1
+     i32.shl
+     i32.const 1
+     i32.or
+    end
+    local.tee $6
+    i32.const 1
+    i32.add
+    local.tee $1
+    i32.const 2
+    i32.shl
+    call $~lib/arraybuffer/ArrayBuffer#constructor
+    local.set $7
+    local.get $1
+    i32.const 3
+    i32.shl
+    i32.const 3
+    i32.div_s
+    local.tee $9
+    i32.const 12
+    i32.mul
+    call $~lib/arraybuffer/ArrayBuffer#constructor
+    local.set $4
+    local.get $0
+    i32.load offset=8
+    local.tee $5
+    local.get $0
+    i32.load offset=16
+    i32.const 12
+    i32.mul
+    i32.add
+    local.set $10
+    local.get $4
+    local.set $1
+    loop $while-continue|00
+     local.get $5
+     local.get $10
+     i32.ne
+     if
+      local.get $5
+      i32.load offset=8
+      i32.const 1
+      i32.and
+      i32.eqz
+      if
+       local.get $1
+       local.get $5
+       i32.load
+       local.tee $11
+       i32.store
+       local.get $1
+       local.get $5
+       i32.load offset=4
+       i32.store offset=4
+       local.get $1
+       local.get $7
+       local.get $11
+       i32.const -1028477379
+       i32.mul
+       i32.const 374761397
+       i32.add
+       i32.const 17
+       i32.rotl
+       i32.const 668265263
+       i32.mul
+       local.tee $11
+       i32.const 15
+       i32.shr_u
+       local.get $11
+       i32.xor
+       i32.const -2048144777
+       i32.mul
+       local.tee $11
+       i32.const 13
+       i32.shr_u
+       local.get $11
+       i32.xor
+       i32.const -1028477379
+       i32.mul
+       local.tee $11
+       i32.const 16
+       i32.shr_u
+       local.get $11
+       i32.xor
+       local.get $6
+       i32.and
+       i32.const 2
+       i32.shl
+       i32.add
+       local.tee $11
+       i32.load
+       i32.store offset=8
+       local.get $11
+       local.get $1
+       i32.store
+       local.get $1
+       i32.const 12
+       i32.add
+       local.set $1
+      end
+      local.get $5
+      i32.const 12
+      i32.add
+      local.set $5
+      br $while-continue|00
+     end
+    end
+    local.get $0
+    local.get $7
+    i32.store
+    local.get $0
+    local.get $6
+    i32.store offset=4
+    local.get $0
+    local.get $4
+    i32.store offset=8
+    local.get $0
+    local.get $9
+    i32.store offset=12
+    local.get $0
+    local.get $0
+    i32.load offset=20
+    i32.store offset=16
+   end
+   local.get $0
+   i32.load offset=8
+   local.get $0
+   local.get $0
+   i32.load offset=16
+   local.tee $4
+   i32.const 1
+   i32.add
+   i32.store offset=16
+   local.get $4
+   i32.const 12
+   i32.mul
+   i32.add
+   local.tee $1
+   local.get $3
+   i32.store
+   local.get $1
+   local.get $2
+   i32.store offset=4
+   local.get $0
+   local.get $0
+   i32.load offset=20
+   i32.const 1
+   i32.add
+   i32.store offset=20
+   local.get $1
+   local.get $0
+   i32.load
+   local.get $8
+   local.get $0
+   i32.load offset=4
+   i32.and
+   i32.const 2
+   i32.shl
+   i32.add
+   local.tee $0
+   i32.load
+   i32.store offset=8
+   local.get $0
+   local.get $1
+   i32.store
+  end
+ )
+ (func $"~lib/map/Map<i32,i32>#constructor" (result i32)
+  (local $0 i32)
+  i32.const 24
+  i32.const 25
+  call $~lib/rt/stub/__new
+  local.tee $0
+  i32.const 16
+  call $~lib/arraybuffer/ArrayBuffer#constructor
+  i32.store
+  local.get $0
+  i32.const 3
+  i32.store offset=4
+  local.get $0
+  i32.const 48
+  call $~lib/arraybuffer/ArrayBuffer#constructor
+  i32.store offset=8
+  local.get $0
+  i32.const 4
+  i32.store offset=12
+  local.get $0
+  i32.const 0
+  i32.store offset=16
+  local.get $0
+  i32.const 0
+  i32.store offset=20
+  local.get $0
+ )
+ (func $~lib/array/Array<i32>#slice@varargs (param $0 i32) (result i32)
+  (local $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  block $2of2
+   block $1of2
+    block $outOfRange
+     global.get $~argumentsLength
+     br_table $1of2 $1of2 $2of2 $outOfRange
+    end
+    unreachable
+   end
+   i32.const 2147483647
+   local.set $1
+  end
+  local.get $0
+  i32.load offset=12
+  local.tee $3
+  i32.const 0
+  local.get $3
+  i32.const 0
+  i32.le_s
+  select
+  local.set $2
+  local.get $1
+  local.get $3
+  local.get $1
+  local.get $3
+  i32.lt_s
+  select
+  local.get $2
+  i32.sub
+  local.tee $1
+  i32.const 0
+  local.get $1
+  i32.const 0
+  i32.gt_s
+  select
+  local.tee $1
+  i32.const 2
+  i32.const 8
+  i32.const 0
+  call $~lib/rt/__newArray
+  local.tee $3
+  i32.load offset=4
+  local.get $0
+  i32.load offset=4
+  local.get $2
+  i32.const 2
+  i32.shl
+  i32.add
+  local.get $1
+  i32.const 2
+  i32.shl
+  memory.copy
+  local.get $3
+ )
+ (func $~lib/array/Array<i32>#constructor (param $0 i32) (result i32)
+  (local $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  i32.const 16
+  i32.const 8
+  call $~lib/rt/stub/__new
+  local.tee $1
+  i32.const 0
+  i32.store
+  local.get $1
+  i32.const 0
+  i32.store offset=4
+  local.get $1
+  i32.const 0
+  i32.store offset=8
+  local.get $1
+  i32.const 0
+  i32.store offset=12
+  local.get $0
+  i32.const 268435455
+  i32.gt_u
+  if
+   i32.const 1184
+   i32.const 2816
+   i32.const 70
+   i32.const 60
+   call $~lib/builtins/abort
+   unreachable
+  end
+  i32.const 8
+  local.get $0
+  local.get $0
+  i32.const 8
+  i32.le_u
+  select
+  i32.const 2
+  i32.shl
+  local.tee $2
+  i32.const 1
+  call $~lib/rt/stub/__new
+  local.tee $3
+  i32.const 0
+  local.get $2
+  memory.fill
+  local.get $1
+  local.get $3
+  i32.store
+  local.get $1
+  local.get $3
+  i32.store offset=4
+  local.get $1
+  local.get $2
+  i32.store offset=8
+  local.get $1
+  local.get $0
+  i32.store offset=12
+  local.get $1
+ )
+ (func $~lib/array/Array<assembly/types/PokerTypes/PokerCard>#slice@varargs (param $0 i32) (result i32)
+  (local $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  (local $4 i32)
+  block $2of2
+   block $1of2
+    block $outOfRange
+     global.get $~argumentsLength
+     br_table $1of2 $1of2 $2of2 $outOfRange
+    end
+    unreachable
+   end
+   i32.const 2147483647
+   local.set $1
+  end
+  local.get $0
+  i32.load offset=12
+  local.tee $2
+  i32.const 0
+  local.get $2
+  i32.const 0
+  i32.le_s
+  select
+  local.set $3
+  local.get $1
+  local.get $2
+  local.get $1
+  local.get $2
+  i32.lt_s
+  select
+  local.get $3
+  i32.sub
+  local.tee $1
+  i32.const 0
+  local.get $1
+  i32.const 0
+  i32.gt_s
+  select
+  local.tee $2
+  i32.const 2
+  i32.const 23
+  i32.const 0
+  call $~lib/rt/__newArray
+  local.tee $1
+  i32.load offset=4
+  local.set $4
+  local.get $0
+  i32.load offset=4
+  local.get $3
+  i32.const 2
+  i32.shl
+  i32.add
+  local.set $3
+  i32.const 0
+  local.set $0
+  local.get $2
+  i32.const 2
+  i32.shl
+  local.set $2
+  loop $while-continue|0
+   local.get $0
+   local.get $2
+   i32.lt_u
+   if
+    local.get $0
+    local.get $4
+    i32.add
+    local.get $0
+    local.get $3
+    i32.add
+    i32.load
+    i32.store
+    local.get $0
+    i32.const 4
+    i32.add
+    local.set $0
+    br $while-continue|0
+   end
+  end
+  local.get $1
+ )
+ (func $assembly/types/PokerTypes/EvaluatedHand#constructor (result i32)
+  (local $0 i32)
+  i32.const 20
+  i32.const 24
+  call $~lib/rt/stub/__new
+  local.tee $0
+  i32.const 0
+  i32.store
+  local.get $0
+  i32.const 0
+  i32.store offset=4
+  local.get $0
+  i32.const 0
+  i32.store offset=8
+  local.get $0
+  i32.const 0
+  i32.store offset=12
+  local.get $0
+  i32.const 0
+  i32.store offset=16
+  local.get $0
+  i32.const 1
+  i32.store
+  local.get $0
+  i32.const 0
+  i32.const 2
+  i32.const 23
+  i32.const 11456
+  call $~lib/rt/__newArray
+  i32.store offset=4
+  local.get $0
+  i32.const 0
+  i32.store offset=8
+  local.get $0
+  i32.const 100
+  i32.store offset=12
+  local.get $0
+  i32.const 0
+  i32.const 2
+  i32.const 8
+  i32.const 11488
+  call $~lib/rt/__newArray
+  i32.store offset=16
+  local.get $0
+ )
+ (func $assembly/types/GameState/ManaPool#constructor (param $0 i32) (param $1 i32) (result i32)
+  (local $2 i32)
+  i32.const 16
+  i32.const 16
+  call $~lib/rt/stub/__new
+  local.tee $2
+  i32.const 0
+  i32.store
+  local.get $2
+  i32.const 0
+  i32.store offset=4
+  local.get $2
+  i32.const 0
+  i32.store offset=8
+  local.get $2
+  i32.const 0
+  i32.store offset=12
+  local.get $2
+  local.get $0
+  i32.store
+  local.get $2
+  local.get $1
+  i32.store offset=4
+  local.get $2
+  i32.const 0
+  i32.store offset=8
+  local.get $2
+  i32.const 0
+  i32.store offset=12
+  local.get $2
+ )
+ (func $assembly/types/GameState/HeroPower#constructor (param $0 i32) (param $1 i32) (result i32)
+  (local $2 i32)
+  i32.const 9
+  i32.const 17
+  call $~lib/rt/stub/__new
+  local.tee $2
+  i32.const 0
+  i32.store
+  local.get $2
+  i32.const 0
+  i32.store offset=4
+  local.get $2
+  i32.const 0
+  i32.store8 offset=8
+  local.get $2
+  local.get $0
+  i32.store
+  local.get $2
+  local.get $1
+  i32.store offset=4
+  local.get $2
+  i32.const 0
+  i32.store8 offset=8
+  local.get $2
+ )
+ (func $assembly/poker/handEvaluator/sortByValueDesc (param $0 i32) (result i32)
+  (local $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  i32.const 1
+  global.set $~argumentsLength
+  local.get $0
+  call $~lib/array/Array<assembly/types/PokerTypes/PokerCard>#slice@varargs
+  local.set $3
+  loop $for-loop|0
+   local.get $1
+   local.get $3
+   i32.load offset=12
+   i32.lt_s
+   if
+    local.get $1
+    i32.const 1
+    i32.add
+    local.set $0
+    loop $for-loop|1
+     local.get $0
+     local.get $3
+     i32.load offset=12
+     i32.lt_s
+     if
+      local.get $3
+      local.get $0
+      call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+      i32.load offset=4
+      local.get $3
+      local.get $1
+      call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+      i32.load offset=4
+      i32.gt_s
+      if
+       local.get $3
+       local.get $1
+       call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+       local.set $2
+       local.get $3
+       local.get $1
+       local.get $3
+       local.get $0
+       call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+       call $~lib/array/Array<assembly/types/GameState/Player>#__set
+       local.get $3
+       local.get $0
+       local.get $2
+       call $~lib/array/Array<assembly/types/GameState/Player>#__set
+      end
+      local.get $0
+      i32.const 1
+      i32.add
+      local.set $0
+      br $for-loop|1
+     end
+    end
+    local.get $1
+    i32.const 1
+    i32.add
+    local.set $1
+    br $for-loop|0
+   end
+  end
+  local.get $3
+ )
+ (func $assembly/poker/handEvaluator/findBestHand (param $0 i32) (param $1 i32) (result i32)
+  (local $2 i32)
+  (local $3 i32)
+  (local $4 i32)
+  (local $5 i32)
+  (local $6 i32)
+  (local $7 i32)
+  (local $8 i32)
+  (local $9 i32)
+  i32.const 0
+  i32.const 2
+  i32.const 23
+  i32.const 11520
+  call $~lib/rt/__newArray
+  local.set $8
+  loop $for-loop|0
+   local.get $3
+   local.get $0
+   i32.load offset=12
+   i32.lt_s
+   if
+    local.get $8
+    local.get $0
+    local.get $3
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+    local.get $3
+    i32.const 1
+    i32.add
+    local.set $3
+    br $for-loop|0
+   end
+  end
+  i32.const 0
+  local.set $0
+  loop $for-loop|1
+   local.get $0
+   local.get $1
+   i32.load offset=12
+   i32.lt_s
+   if
+    local.get $8
+    local.get $1
+    local.get $0
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+    local.get $0
+    i32.const 1
+    i32.add
+    local.set $0
+    br $for-loop|1
+   end
+  end
+  local.get $8
+  i32.load offset=12
+  i32.const 5
+  i32.lt_s
+  if
+   local.get $8
+   call $assembly/poker/handEvaluator/sortByValueDesc
+   local.set $0
+   call $assembly/types/PokerTypes/EvaluatedHand#constructor
+   local.tee $1
+   i32.const 1
+   i32.store
+   local.get $1
+   local.get $0
+   i32.store offset=4
+   local.get $1
+   local.get $0
+   i32.load offset=12
+   i32.const 0
+   i32.gt_s
+   if (result i32)
+    local.get $0
+    i32.const 0
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    i32.load offset=4
+   else
+    i32.const 0
+   end
+   i32.store offset=8
+   local.get $1
+   i32.const 100
+   i32.store offset=12
+   i32.const 0
+   i32.const 2
+   i32.const 8
+   i32.const 11552
+   call $~lib/rt/__newArray
+   local.set $3
+   loop $for-loop|2
+    local.get $2
+    local.get $0
+    i32.load offset=12
+    i32.lt_s
+    if
+     local.get $3
+     local.get $0
+     local.get $2
+     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+     i32.load offset=4
+     call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+     local.get $2
+     i32.const 1
+     i32.add
+     local.set $2
+     br $for-loop|2
+    end
+   end
+   local.get $1
+   local.get $3
+   i32.store offset=16
+   local.get $1
+   return
+  end
+  i32.const 0
+  local.set $0
+  loop $for-loop|3
    local.get $6
-   call $"~lib/map/Map<i32,assembly/types/GameState/CardDef>#get"
+   local.get $8
+   i32.load offset=12
+   i32.const 4
+   i32.sub
+   i32.lt_s
+   if
+    local.get $6
+    i32.const 1
+    i32.add
+    local.set $2
+    loop $for-loop|4
+     local.get $2
+     local.get $8
+     i32.load offset=12
+     i32.const 3
+     i32.sub
+     i32.lt_s
+     if
+      local.get $2
+      i32.const 1
+      i32.add
+      local.set $4
+      loop $for-loop|5
+       local.get $4
+       local.get $8
+       i32.load offset=12
+       i32.const 2
+       i32.sub
+       i32.lt_s
+       if
+        local.get $4
+        i32.const 1
+        i32.add
+        local.set $5
+        loop $for-loop|6
+         local.get $5
+         local.get $8
+         i32.load offset=12
+         i32.const 1
+         i32.sub
+         i32.lt_s
+         if
+          local.get $5
+          i32.const 1
+          i32.add
+          local.set $7
+          loop $for-loop|7
+           local.get $7
+           local.get $8
+           i32.load offset=12
+           i32.lt_s
+           if
+            i32.const 5
+            i32.const 2
+            i32.const 23
+            i32.const 0
+            call $~lib/rt/__newArray
+            local.tee $1
+            i32.const 0
+            local.get $8
+            local.get $6
+            call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+            call $~lib/array/Array<assembly/types/GameState/Player>#__set
+            local.get $1
+            i32.const 1
+            local.get $8
+            local.get $2
+            call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+            call $~lib/array/Array<assembly/types/GameState/Player>#__set
+            local.get $1
+            i32.const 2
+            local.get $8
+            local.get $4
+            call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+            call $~lib/array/Array<assembly/types/GameState/Player>#__set
+            local.get $1
+            i32.const 3
+            local.get $8
+            local.get $5
+            call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+            call $~lib/array/Array<assembly/types/GameState/Player>#__set
+            local.get $1
+            i32.const 4
+            local.get $8
+            local.get $7
+            call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+            call $~lib/array/Array<assembly/types/GameState/Player>#__set
+            local.get $1
+            call $assembly/poker/handEvaluator/evaluateFiveCardHand
+            local.set $1
+            local.get $0
+            if (result i32)
+             local.get $1
+             local.get $0
+             block $__inlined_func$assembly/poker/handEvaluator/compareHandsInternal$2004 (result i32)
+              local.get $1
+              i32.load
+              local.tee $3
+              local.get $0
+              i32.load
+              local.tee $9
+              i32.ne
+              if
+               local.get $3
+               local.get $9
+               i32.sub
+               br $__inlined_func$assembly/poker/handEvaluator/compareHandsInternal$2004
+              end
+              local.get $1
+              i32.load
+              i32.const 5
+              i32.eq
+              if (result i32)
+               i32.const 1
+              else
+               local.get $1
+               i32.load
+               i32.const 9
+               i32.eq
+              end
+              if
+               local.get $1
+               i32.load offset=8
+               local.get $0
+               i32.load offset=8
+               i32.sub
+               br $__inlined_func$assembly/poker/handEvaluator/compareHandsInternal$2004
+              end
+              local.get $1
+              i32.load offset=4
+              local.tee $1
+              local.get $0
+              i32.load offset=4
+              local.tee $0
+              local.get $1
+              i32.load offset=12
+              local.get $0
+              i32.load offset=12
+              i32.lt_s
+              select
+              i32.load offset=12
+              local.set $9
+              i32.const 0
+              local.set $3
+              loop $for-loop|013
+               local.get $3
+               local.get $9
+               i32.lt_s
+               if
+                local.get $1
+                local.get $3
+                call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+                i32.load offset=4
+                local.get $0
+                local.get $3
+                call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+                i32.load offset=4
+                i32.ne
+                if
+                 local.get $1
+                 local.get $3
+                 call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+                 i32.load offset=4
+                 local.get $0
+                 local.get $3
+                 call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+                 i32.load offset=4
+                 i32.sub
+                 br $__inlined_func$assembly/poker/handEvaluator/compareHandsInternal$2004
+                end
+                local.get $3
+                i32.const 1
+                i32.add
+                local.set $3
+                br $for-loop|013
+               end
+              end
+              i32.const 0
+             end
+             i32.const 0
+             i32.gt_s
+             select
+            else
+             local.get $1
+            end
+            local.set $0
+            local.get $7
+            i32.const 1
+            i32.add
+            local.set $7
+            br $for-loop|7
+           end
+          end
+          local.get $5
+          i32.const 1
+          i32.add
+          local.set $5
+          br $for-loop|6
+         end
+        end
+        local.get $4
+        i32.const 1
+        i32.add
+        local.set $4
+        br $for-loop|5
+       end
+      end
+      local.get $2
+      i32.const 1
+      i32.add
+      local.set $2
+      br $for-loop|4
+     end
+    end
+    local.get $6
+    i32.const 1
+    i32.add
+    local.set $6
+    br $for-loop|3
+   end
+  end
+  local.get $0
+ )
+ (func $assembly/poker/handEvaluator/evaluateFiveCardHand~anonymous|0 (param $0 i32) (param $1 i32) (result i32)
+  local.get $1
+  local.get $0
+  i32.sub
+ )
+ (func $assembly/poker/handEvaluator/evaluateFiveCardHand (param $0 i32) (result i32)
+  (local $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  (local $4 i32)
+  (local $5 i32)
+  (local $6 i32)
+  (local $7 i32)
+  (local $8 i32)
+  (local $9 i32)
+  (local $10 i32)
+  (local $11 i32)
+  (local $12 i32)
+  (local $13 i32)
+  local.get $0
+  i32.load offset=12
+  drop
+  local.get $0
+  call $assembly/poker/handEvaluator/sortByValueDesc
+  local.set $7
+  i32.const 0
+  i32.const 2
+  i32.const 8
+  i32.const 11232
+  call $~lib/rt/__newArray
+  local.set $10
+  loop $for-loop|0
+   local.get $2
+   local.get $7
+   i32.load offset=12
+   i32.lt_s
+   if
+    local.get $10
+    local.get $7
+    local.get $2
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    i32.load offset=4
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+    local.get $2
+    i32.const 1
+    i32.add
+    local.set $2
+    br $for-loop|0
+   end
+  end
+  i32.const 1
+  local.set $12
+  local.get $0
+  i32.const 0
+  call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+  i32.load
+  local.set $1
+  i32.const 1
+  local.set $2
+  loop $for-loop|1
+   local.get $2
+   local.get $0
+   i32.load offset=12
+   i32.lt_s
+   if
+    block $for-break1
+     local.get $1
+     local.get $0
+     local.get $2
+     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+     i32.load
+     i32.ne
+     if
+      i32.const 0
+      local.set $12
+      br $for-break1
+     end
+     local.get $2
+     i32.const 1
+     i32.add
+     local.set $2
+     br $for-loop|1
+    end
+   end
+  end
+  i32.const 1
+  local.set $1
+  i32.const 1
+  local.set $2
+  loop $for-loop|2
+   local.get $2
+   local.get $10
+   i32.load offset=12
+   i32.lt_s
+   if
+    block $for-break2
+     local.get $10
+     local.get $2
+     i32.const 1
+     i32.sub
+     call $~lib/array/Array<i32>#__get
+     local.get $10
+     local.get $2
+     call $~lib/array/Array<i32>#__get
+     i32.sub
+     i32.const 1
+     i32.ne
+     if
+      i32.const 0
+      local.set $1
+      br $for-break2
+     end
+     local.get $2
+     i32.const 1
+     i32.add
+     local.set $2
+     br $for-loop|2
+    end
+   end
+  end
+  local.get $10
+  i32.const 0
+  call $~lib/array/Array<i32>#__get
+  i32.const 14
+  i32.eq
+  local.tee $2
+  if
+   local.get $10
+   i32.const 1
+   call $~lib/array/Array<i32>#__get
+   i32.const 5
+   i32.eq
+   local.set $2
+  end
+  local.get $2
+  if
+   local.get $10
+   i32.const 2
+   call $~lib/array/Array<i32>#__get
+   i32.const 4
+   i32.eq
+   local.set $2
+  end
+  local.get $2
+  if
+   local.get $10
+   i32.const 3
+   call $~lib/array/Array<i32>#__get
+   i32.const 3
+   i32.eq
+   local.set $2
+  end
+  local.get $1
+  local.get $2
+  if (result i32)
+   local.get $10
+   i32.const 4
+   call $~lib/array/Array<i32>#__get
+   i32.const 2
+   i32.eq
+  else
+   local.get $2
+  end
+  local.tee $3
+  local.get $1
+  select
+  local.set $6
+  call $"~lib/map/Map<i32,i32>#constructor"
+  local.set $11
+  i32.const 0
+  local.set $1
+  loop $for-loop|3
+   local.get $1
+   local.get $0
+   i32.load offset=12
+   i32.lt_s
+   if
+    local.get $0
+    local.get $1
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    i32.load offset=4
+    local.set $4
+    local.get $11
+    i32.load
+    local.get $11
+    i32.load offset=4
+    local.get $4
+    i32.const -1028477379
+    i32.mul
+    i32.const 374761397
+    i32.add
+    i32.const 17
+    i32.rotl
+    i32.const 668265263
+    i32.mul
+    local.tee $2
+    local.get $2
+    i32.const 15
+    i32.shr_u
+    i32.xor
+    i32.const -2048144777
+    i32.mul
+    local.tee $2
+    local.get $2
+    i32.const 13
+    i32.shr_u
+    i32.xor
+    i32.const -1028477379
+    i32.mul
+    local.tee $2
+    local.get $2
+    i32.const 16
+    i32.shr_u
+    i32.xor
+    i32.and
+    i32.const 2
+    i32.shl
+    i32.add
+    i32.load
+    local.set $5
+    block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1702"
+     loop $while-continue|0
+      local.get $5
+      if
+       local.get $5
+       i32.load offset=8
+       local.tee $2
+       i32.const 1
+       i32.and
+       if (result i32)
+        i32.const 0
+       else
+        local.get $5
+        i32.load
+        local.get $4
+        i32.eq
+       end
+       br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1702"
+       local.get $2
+       i32.const -2
+       i32.and
+       local.set $5
+       br $while-continue|0
+      end
+     end
+     i32.const 0
+     local.set $5
+    end
+    local.get $11
+    local.get $4
+    local.get $5
+    if (result i32)
+     local.get $11
+     local.get $4
+     call $"~lib/map/Map<i32,i32>#get"
+    else
+     i32.const 0
+    end
+    i32.const 1
+    i32.add
+    call $"~lib/map/Map<i32,i32>#set"
+    local.get $1
+    i32.const 1
+    i32.add
+    local.set $1
+    br $for-loop|3
+   end
+  end
+  local.get $11
+  i32.load offset=8
+  local.set $5
+  local.get $11
+  i32.load offset=16
+  local.tee $4
+  call $~lib/array/Array<i32>#constructor
+  local.set $2
+  i32.const 0
+  local.set $1
+  loop $for-loop|04
+   local.get $4
+   local.get $9
+   i32.gt_s
+   if
+    local.get $5
+    local.get $9
+    i32.const 12
+    i32.mul
+    i32.add
+    local.tee $8
+    i32.load offset=8
+    i32.const 1
+    i32.and
+    i32.eqz
+    if
+     local.get $2
+     local.get $1
+     local.get $8
+     i32.load offset=4
+     call $~lib/array/Array<assembly/types/GameState/Player>#__set
+     local.get $1
+     i32.const 1
+     i32.add
+     local.set $1
+    end
+    local.get $9
+    i32.const 1
+    i32.add
+    local.set $9
+    br $for-loop|04
+   end
+  end
+  local.get $2
+  local.get $1
+  i32.const 2
+  i32.const 0
+  call $~lib/array/ensureCapacity
+  local.get $2
+  local.get $1
+  i32.store offset=12
+  i32.const 0
+  i32.const 2
+  i32.const 8
+  i32.const 11264
+  call $~lib/rt/__newArray
+  local.set $1
+  loop $for-loop|4
+   local.get $13
+   local.get $2
+   i32.load offset=12
+   i32.lt_s
+   if
+    local.get $1
+    local.get $2
+    local.get $13
+    call $~lib/array/Array<i32>#__get
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+    local.get $13
+    i32.const 1
+    i32.add
+    local.set $13
+    br $for-loop|4
+   end
+  end
+  local.get $1
+  i32.load offset=4
+  local.get $1
+  i32.load offset=12
+  i32.const 11296
+  call $~lib/util/sort/SORT<i32>
+  local.get $6
+  i32.const 0
+  local.get $12
+  select
+  if (result i32)
+   local.get $10
+   i32.const 0
+   call $~lib/array/Array<i32>#__get
+   i32.const 14
+   i32.eq
   else
    i32.const 0
   end
+  if (result i32)
+   local.get $10
+   i32.const 4
+   call $~lib/array/Array<i32>#__get
+   i32.const 10
+   i32.eq
+  else
+   i32.const 0
+  end
+  if (result i32)
+   i32.const 10
+  else
+   local.get $6
+   i32.const 0
+   local.get $12
+   select
+   if (result i32)
+    i32.const 9
+   else
+    local.get $1
+    i32.const 0
+    call $~lib/array/Array<i32>#__get
+    i32.const 4
+    i32.eq
+    if (result i32)
+     i32.const 8
+    else
+     local.get $1
+     i32.const 0
+     call $~lib/array/Array<i32>#__get
+     i32.const 3
+     i32.eq
+     if (result i32)
+      local.get $1
+      i32.const 1
+      call $~lib/array/Array<i32>#__get
+      i32.const 2
+      i32.eq
+     else
+      i32.const 0
+     end
+     if (result i32)
+      i32.const 7
+     else
+      local.get $12
+      if (result i32)
+       i32.const 6
+      else
+       local.get $6
+       if (result i32)
+        i32.const 5
+       else
+        local.get $1
+        i32.const 0
+        call $~lib/array/Array<i32>#__get
+        i32.const 3
+        i32.eq
+        if (result i32)
+         i32.const 4
+        else
+         local.get $1
+         i32.const 0
+         call $~lib/array/Array<i32>#__get
+         i32.const 2
+         i32.eq
+         if (result i32)
+          local.get $1
+          i32.load offset=12
+          i32.const 2
+          i32.ge_s
+         else
+          i32.const 0
+         end
+         if (result i32)
+          local.get $1
+          i32.const 1
+          call $~lib/array/Array<i32>#__get
+          i32.const 2
+          i32.eq
+         else
+          i32.const 0
+         end
+         if (result i32)
+          i32.const 3
+         else
+          i32.const 2
+          i32.const 1
+          local.get $1
+          i32.const 0
+          call $~lib/array/Array<i32>#__get
+          i32.const 2
+          i32.eq
+          select
+         end
+        end
+       end
+      end
+     end
+    end
+   end
+  end
+  local.set $9
+  i32.const 5
+  local.get $7
+  i32.const 0
+  call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+  i32.load offset=4
+  local.get $3
+  select
+  local.set $8
+  i32.const 0
+  i32.const 2
+  i32.const 27
+  i32.const 11328
+  call $~lib/rt/__newArray
+  local.set $7
+  local.get $11
+  i32.load offset=8
+  local.set $6
+  local.get $11
+  i32.load offset=16
   local.tee $4
+  call $~lib/array/Array<i32>#constructor
+  local.set $5
+  i32.const 0
+  local.set $1
+  i32.const 0
+  local.set $12
+  loop $for-loop|07
+   local.get $4
+   local.get $12
+   i32.gt_s
+   if
+    local.get $6
+    local.get $12
+    i32.const 12
+    i32.mul
+    i32.add
+    local.tee $2
+    i32.load offset=8
+    i32.const 1
+    i32.and
+    i32.eqz
+    if
+     local.get $5
+     local.get $1
+     local.get $2
+     i32.load
+     call $~lib/array/Array<assembly/types/GameState/Player>#__set
+     local.get $1
+     i32.const 1
+     i32.add
+     local.set $1
+    end
+    local.get $12
+    i32.const 1
+    i32.add
+    local.set $12
+    br $for-loop|07
+   end
+  end
+  local.get $5
+  local.get $1
+  i32.const 2
+  i32.const 0
+  call $~lib/array/ensureCapacity
+  local.get $5
+  local.get $1
+  i32.store offset=12
+  i32.const 0
+  local.set $1
+  loop $for-loop|5
+   local.get $1
+   local.get $5
+   i32.load offset=12
+   i32.lt_s
+   if
+    local.get $5
+    local.get $1
+    call $~lib/array/Array<i32>#__get
+    local.set $4
+    i32.const 2
+    i32.const 2
+    i32.const 8
+    i32.const 0
+    call $~lib/rt/__newArray
+    local.tee $2
+    i32.const 0
+    local.get $4
+    call $~lib/array/Array<assembly/types/GameState/Player>#__set
+    local.get $2
+    i32.const 1
+    local.get $11
+    local.get $4
+    call $"~lib/map/Map<i32,i32>#get"
+    call $~lib/array/Array<assembly/types/GameState/Player>#__set
+    local.get $7
+    local.get $2
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+    local.get $1
+    i32.const 1
+    i32.add
+    local.set $1
+    br $for-loop|5
+   end
+  end
+  i32.const 0
+  local.set $1
+  loop $for-loop|6
+   local.get $1
+   local.get $7
+   i32.load offset=12
+   i32.lt_s
+   if
+    local.get $1
+    i32.const 1
+    i32.add
+    local.set $13
+    loop $for-loop|7
+     local.get $13
+     local.get $7
+     i32.load offset=12
+     i32.lt_s
+     if
+      local.get $7
+      local.get $13
+      call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+      i32.const 1
+      call $~lib/array/Array<i32>#__get
+      local.get $7
+      local.get $1
+      call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+      i32.const 1
+      call $~lib/array/Array<i32>#__get
+      i32.gt_s
+      if (result i32)
+       i32.const 1
+      else
+       local.get $7
+       local.get $13
+       call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+       i32.const 1
+       call $~lib/array/Array<i32>#__get
+       local.get $7
+       local.get $1
+       call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+       i32.const 1
+       call $~lib/array/Array<i32>#__get
+       i32.eq
+       if (result i32)
+        local.get $7
+        local.get $13
+        call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+        i32.const 0
+        call $~lib/array/Array<i32>#__get
+        local.get $7
+        local.get $1
+        call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+        i32.const 0
+        call $~lib/array/Array<i32>#__get
+        i32.gt_s
+       else
+        i32.const 0
+       end
+      end
+      if
+       local.get $7
+       local.get $1
+       call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+       local.set $2
+       local.get $7
+       local.get $1
+       local.get $7
+       local.get $13
+       call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+       call $~lib/array/Array<assembly/types/GameState/Player>#__set
+       local.get $7
+       local.get $13
+       local.get $2
+       call $~lib/array/Array<assembly/types/GameState/Player>#__set
+      end
+      local.get $13
+      i32.const 1
+      i32.add
+      local.set $13
+      br $for-loop|7
+     end
+    end
+    local.get $1
+    i32.const 1
+    i32.add
+    local.set $1
+    br $for-loop|6
+   end
+  end
+  i32.const 0
+  i32.const 2
+  i32.const 8
+  i32.const 11360
+  call $~lib/rt/__newArray
+  drop
+  local.get $9
+  i32.const 9
+  i32.eq
+  local.get $9
+  i32.const 10
+  i32.eq
+  i32.or
+  if
+   i32.const 1
+   i32.const 2
+   i32.const 8
+   i32.const 0
+   call $~lib/rt/__newArray
+   local.tee $2
+   i32.const 0
+   local.get $3
+   if (result i32)
+    i32.const 5
+   else
+    local.get $10
+    i32.const 0
+    call $~lib/array/Array<i32>#__get
+   end
+   call $~lib/array/Array<assembly/types/GameState/Player>#__set
+  else
+   local.get $9
+   i32.const 8
+   i32.eq
+   if
+    i32.const 2
+    i32.const 2
+    i32.const 8
+    i32.const 0
+    call $~lib/rt/__newArray
+    local.tee $2
+    i32.const 0
+    local.get $7
+    i32.const 0
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    i32.const 0
+    call $~lib/array/Array<i32>#__get
+    call $~lib/array/Array<assembly/types/GameState/Player>#__set
+    local.get $2
+    i32.const 1
+    local.get $7
+    i32.const 1
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    i32.const 0
+    call $~lib/array/Array<i32>#__get
+    call $~lib/array/Array<assembly/types/GameState/Player>#__set
+   else
+    local.get $9
+    i32.const 7
+    i32.eq
+    if
+     i32.const 2
+     i32.const 2
+     i32.const 8
+     i32.const 0
+     call $~lib/rt/__newArray
+     local.tee $2
+     i32.const 0
+     local.get $7
+     i32.const 0
+     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+     i32.const 0
+     call $~lib/array/Array<i32>#__get
+     call $~lib/array/Array<assembly/types/GameState/Player>#__set
+     local.get $2
+     i32.const 1
+     local.get $7
+     i32.const 1
+     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+     i32.const 0
+     call $~lib/array/Array<i32>#__get
+     call $~lib/array/Array<assembly/types/GameState/Player>#__set
+    else
+     local.get $9
+     i32.const 6
+     i32.eq
+     if
+      i32.const 1
+      global.set $~argumentsLength
+      local.get $10
+      call $~lib/array/Array<i32>#slice@varargs
+      local.set $2
+     else
+      local.get $9
+      i32.const 5
+      i32.eq
+      if
+       i32.const 1
+       i32.const 2
+       i32.const 8
+       i32.const 0
+       call $~lib/rt/__newArray
+       local.tee $2
+       i32.const 0
+       local.get $3
+       if (result i32)
+        i32.const 5
+       else
+        local.get $10
+        i32.const 0
+        call $~lib/array/Array<i32>#__get
+       end
+       call $~lib/array/Array<assembly/types/GameState/Player>#__set
+      else
+       local.get $9
+       i32.const 4
+       i32.eq
+       if
+        i32.const 1
+        i32.const 2
+        i32.const 8
+        i32.const 0
+        call $~lib/rt/__newArray
+        local.tee $2
+        i32.const 0
+        local.get $7
+        i32.const 0
+        call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+        i32.const 0
+        call $~lib/array/Array<i32>#__get
+        call $~lib/array/Array<assembly/types/GameState/Player>#__set
+        i32.const 1
+        local.set $1
+        loop $for-loop|8
+         local.get $1
+         local.get $7
+         i32.load offset=12
+         i32.lt_s
+         if
+          local.get $2
+          local.get $7
+          local.get $1
+          call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+          i32.const 0
+          call $~lib/array/Array<i32>#__get
+          call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+          local.get $1
+          i32.const 1
+          i32.add
+          local.set $1
+          br $for-loop|8
+         end
+        end
+       else
+        local.get $9
+        i32.const 3
+        i32.eq
+        if
+         i32.const 0
+         i32.const 2
+         i32.const 8
+         i32.const 11392
+         call $~lib/rt/__newArray
+         local.set $1
+         i32.const 0
+         local.set $13
+         i32.const 0
+         local.set $2
+         loop $for-loop|9
+          local.get $2
+          local.get $7
+          i32.load offset=12
+          i32.lt_s
+          if
+           local.get $7
+           local.get $2
+           call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+           i32.const 1
+           call $~lib/array/Array<i32>#__get
+           i32.const 2
+           i32.eq
+           if
+            local.get $1
+            local.get $7
+            local.get $2
+            call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+            i32.const 0
+            call $~lib/array/Array<i32>#__get
+            call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+           else
+            local.get $7
+            local.get $2
+            call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+            i32.const 0
+            call $~lib/array/Array<i32>#__get
+            local.set $13
+           end
+           local.get $2
+           i32.const 1
+           i32.add
+           local.set $2
+           br $for-loop|9
+          end
+         end
+         local.get $1
+         i32.load offset=4
+         local.get $1
+         i32.load offset=12
+         i32.const 11424
+         call $~lib/util/sort/SORT<i32>
+         i32.const 3
+         i32.const 2
+         i32.const 8
+         i32.const 0
+         call $~lib/rt/__newArray
+         local.tee $2
+         i32.const 0
+         local.get $1
+         i32.const 0
+         call $~lib/array/Array<i32>#__get
+         call $~lib/array/Array<assembly/types/GameState/Player>#__set
+         local.get $2
+         i32.const 1
+         local.get $1
+         i32.const 1
+         call $~lib/array/Array<i32>#__get
+         call $~lib/array/Array<assembly/types/GameState/Player>#__set
+         local.get $2
+         i32.const 2
+         local.get $13
+         call $~lib/array/Array<assembly/types/GameState/Player>#__set
+        else
+         local.get $9
+         i32.const 2
+         i32.eq
+         if
+          i32.const 1
+          i32.const 2
+          i32.const 8
+          i32.const 0
+          call $~lib/rt/__newArray
+          local.tee $2
+          i32.const 0
+          local.get $7
+          i32.const 0
+          call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+          i32.const 0
+          call $~lib/array/Array<i32>#__get
+          call $~lib/array/Array<assembly/types/GameState/Player>#__set
+          i32.const 1
+          local.set $1
+          loop $for-loop|10
+           local.get $1
+           local.get $7
+           i32.load offset=12
+           i32.lt_s
+           if
+            local.get $2
+            local.get $7
+            local.get $1
+            call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+            i32.const 0
+            call $~lib/array/Array<i32>#__get
+            call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+            local.get $1
+            i32.const 1
+            i32.add
+            local.set $1
+            br $for-loop|10
+           end
+          end
+         else
+          i32.const 1
+          global.set $~argumentsLength
+          local.get $10
+          call $~lib/array/Array<i32>#slice@varargs
+          local.set $2
+         end
+        end
+       end
+      end
+     end
+    end
+   end
+  end
+  call $"~lib/map/Map<i32,i32>#constructor"
+  local.set $5
+  i32.const 0
+  local.set $1
+  loop $for-loop|00
+   local.get $1
+   local.get $0
+   i32.load offset=12
+   i32.lt_s
+   if
+    local.get $0
+    local.get $1
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    i32.load offset=4
+    local.set $4
+    local.get $5
+    i32.load
+    local.get $5
+    i32.load offset=4
+    local.get $4
+    i32.const -1028477379
+    i32.mul
+    i32.const 374761397
+    i32.add
+    i32.const 17
+    i32.rotl
+    i32.const 668265263
+    i32.mul
+    local.tee $3
+    local.get $3
+    i32.const 15
+    i32.shr_u
+    i32.xor
+    i32.const -2048144777
+    i32.mul
+    local.tee $3
+    local.get $3
+    i32.const 13
+    i32.shr_u
+    i32.xor
+    i32.const -1028477379
+    i32.mul
+    local.tee $3
+    local.get $3
+    i32.const 16
+    i32.shr_u
+    i32.xor
+    i32.and
+    i32.const 2
+    i32.shl
+    i32.add
+    i32.load
+    local.set $13
+    block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$17020"
+     loop $while-continue|01
+      local.get $13
+      if
+       local.get $13
+       i32.load offset=8
+       local.tee $3
+       i32.const 1
+       i32.and
+       if (result i32)
+        i32.const 0
+       else
+        local.get $13
+        i32.load
+        local.get $4
+        i32.eq
+       end
+       br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$17020"
+       local.get $3
+       i32.const -2
+       i32.and
+       local.set $13
+       br $while-continue|01
+      end
+     end
+     i32.const 0
+     local.set $13
+    end
+    local.get $5
+    local.get $4
+    local.get $13
+    if (result i32)
+     local.get $5
+     local.get $4
+     call $"~lib/map/Map<i32,i32>#get"
+    else
+     i32.const 0
+    end
+    i32.const 1
+    i32.add
+    call $"~lib/map/Map<i32,i32>#set"
+    local.get $1
+    i32.const 1
+    i32.add
+    local.set $1
+    br $for-loop|00
+   end
+  end
+  i32.const 1
+  global.set $~argumentsLength
+  local.get $0
+  call $~lib/array/Array<assembly/types/PokerTypes/PokerCard>#slice@varargs
+  local.set $4
+  i32.const 0
+  local.set $1
+  loop $for-loop|15
+   local.get $1
+   local.get $4
+   i32.load offset=12
+   i32.lt_s
+   if
+    local.get $1
+    i32.const 1
+    i32.add
+    local.set $13
+    loop $for-loop|27
+     local.get $13
+     local.get $4
+     i32.load offset=12
+     i32.lt_s
+     if
+      local.get $5
+      local.get $4
+      local.get $1
+      call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+      i32.load offset=4
+      call $"~lib/map/Map<i32,i32>#get"
+      local.tee $3
+      local.get $5
+      local.get $4
+      local.get $13
+      call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+      i32.load offset=4
+      call $"~lib/map/Map<i32,i32>#get"
+      local.tee $0
+      i32.lt_s
+      if (result i32)
+       i32.const 1
+      else
+       local.get $0
+       local.get $3
+       i32.eq
+       if (result i32)
+        local.get $4
+        local.get $13
+        call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+        i32.load offset=4
+        local.get $4
+        local.get $1
+        call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+        i32.load offset=4
+        i32.gt_s
+       else
+        i32.const 0
+       end
+      end
+      if
+       local.get $4
+       local.get $1
+       call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+       local.set $0
+       local.get $4
+       local.get $1
+       local.get $4
+       local.get $13
+       call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+       call $~lib/array/Array<assembly/types/GameState/Player>#__set
+       local.get $4
+       local.get $13
+       local.get $0
+       call $~lib/array/Array<assembly/types/GameState/Player>#__set
+      end
+      local.get $13
+      i32.const 1
+      i32.add
+      local.set $13
+      br $for-loop|27
+     end
+    end
+    local.get $1
+    i32.const 1
+    i32.add
+    local.set $1
+    br $for-loop|15
+   end
+  end
+  call $assembly/types/PokerTypes/EvaluatedHand#constructor
+  local.tee $0
+  local.get $9
+  i32.store
+  local.get $0
+  local.get $4
+  i32.store offset=4
+  local.get $0
+  local.get $8
+  i32.store offset=8
+  local.get $0
+  local.get $9
+  i32.const 0
+  i32.ne
+  local.get $9
+  i32.const 10
+  i32.le_u
+  i32.and
+  if (result i32)
+   i32.const 1360
+   local.get $9
+   call $~lib/array/Array<i32>#__get
+  else
+   i32.const 100
+  end
+  i32.store offset=12
+  local.get $0
+  local.get $2
+  i32.store offset=16
+  local.get $0
+ )
+ (func $assembly/poker/bettingEngine/processBettingAction (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (param $4 i32) (result i32)
+  (local $5 i32)
+  (local $6 i32)
+  (local $7 i32)
+  call $assembly/types/PokerTypes/BettingState#constructor
+  local.tee $5
+  local.get $0
+  i32.load
+  i32.store
+  local.get $5
+  local.get $0
+  i32.load offset=4
+  i32.store offset=4
+  local.get $5
+  local.get $0
+  i32.load offset=8
+  i32.store offset=8
+  local.get $5
+  local.get $0
+  i32.load offset=12
+  i32.store offset=12
+  local.get $5
+  local.get $0
+  i32.load offset=16
+  i32.store offset=16
+  local.get $5
+  local.get $0
+  i32.load8_u offset=20
+  i32.store8 offset=20
+  local.get $5
+  local.get $0
+  i32.load8_u offset=21
+  i32.store8 offset=21
+  local.get $5
+  local.get $0
+  i32.load8_u offset=22
+  i32.store8 offset=22
+  i32.const 12
+  i32.const 29
+  call $~lib/rt/stub/__new
+  local.tee $6
+  i32.const 0
+  i32.store
+  local.get $6
+  i32.const 0
+  i32.store8 offset=4
+  local.get $6
+  i32.const 0
+  i32.store offset=8
+  local.get $6
+  local.get $5
+  i32.store
+  local.get $6
+  i32.const 0
+  i32.store8 offset=4
+  local.get $6
+  i32.const -1
+  i32.store offset=8
+  local.get $1
+  i32.eqz
+  local.set $7
+  local.get $2
+  i32.const 3
+  i32.eq
+  if
+   local.get $6
+   local.get $7
+   i32.store offset=8
+   local.get $5
+   i32.const 1
+   i32.store8 offset=20
+   local.get $6
+   i32.const 1
+   i32.store8 offset=4
+   local.get $6
+   return
+  end
+  local.get $2
+  i32.const 4
+  i32.eq
+  if
+   local.get $7
+   if (result i32)
+    local.get $0
+    i32.load offset=8
+    local.tee $2
+    local.get $0
+    i32.load offset=4
+    local.tee $3
+    i32.sub
+    i32.const 0
+    local.get $2
+    local.get $3
+    i32.gt_s
+    select
+   else
+    local.get $0
+    i32.load offset=4
+    local.tee $2
+    local.get $0
+    i32.load offset=8
+    local.tee $3
+    i32.sub
+    i32.const 0
+    local.get $2
+    local.get $3
+    i32.gt_s
+    select
+   end
+   i32.const 0
+   i32.gt_s
+   if
+    local.get $0
+    local.get $1
+    i32.const 2
+    i32.const 0
+    local.get $4
+    call $assembly/poker/bettingEngine/processBettingAction
+    return
+   end
+   local.get $7
+   if
+    local.get $5
+    i32.const 1
+    i32.store8 offset=21
+   else
+    local.get $5
+    i32.const 1
+    i32.store8 offset=22
+   end
+   local.get $5
+   i32.load8_u offset=21
+   if (result i32)
+    local.get $5
+    i32.load8_u offset=22
+   else
+    i32.const 0
+   end
+   if (result i32)
+    local.get $5
+    i32.load offset=4
+    local.get $5
+    i32.load offset=8
+    i32.eq
+   else
+    i32.const 0
+   end
+   if
+    local.get $5
+    i32.const 1
+    i32.store8 offset=20
+    local.get $6
+    i32.const 1
+    i32.store8 offset=4
+   end
+   local.get $6
+   return
+  end
+  local.get $2
+  i32.const 2
+  i32.eq
+  if
+   local.get $7
+   if (result i32)
+    local.get $0
+    i32.load offset=8
+    local.tee $1
+    local.get $0
+    i32.load offset=4
+    local.tee $0
+    i32.sub
+    i32.const 0
+    local.get $0
+    local.get $1
+    i32.lt_s
+    select
+   else
+    local.get $0
+    i32.load offset=4
+    local.tee $1
+    local.get $0
+    i32.load offset=8
+    local.tee $0
+    i32.sub
+    i32.const 0
+    local.get $0
+    local.get $1
+    i32.lt_s
+    select
+   end
+   local.set $0
+   local.get $7
+   if
+    local.get $5
+    local.get $0
+    local.get $5
+    i32.load offset=4
+    i32.add
+    i32.store offset=4
+   else
+    local.get $5
+    local.get $0
+    local.get $5
+    i32.load offset=8
+    i32.add
+    i32.store offset=8
+   end
+   local.get $5
+   local.get $0
+   local.get $5
+   i32.load
+   i32.add
+   i32.store
+   local.get $7
+   if
+    local.get $5
+    i32.const 1
+    i32.store8 offset=21
+   else
+    local.get $5
+    i32.const 1
+    i32.store8 offset=22
+   end
+   local.get $5
+   i32.load offset=4
+   local.get $5
+   i32.load offset=8
+   i32.eq
+   if (result i32)
+    local.get $5
+    i32.load8_u offset=21
+   else
+    i32.const 0
+   end
+   if (result i32)
+    local.get $5
+    i32.load8_u offset=22
+   else
+    i32.const 0
+   end
+   if
+    local.get $5
+    i32.const 1
+    i32.store8 offset=20
+    local.get $6
+    i32.const 1
+    i32.store8 offset=4
+   end
+   local.get $6
+   return
+  end
+  local.get $2
+  i32.eqz
+  local.get $2
+  i32.const 1
+  i32.eq
+  i32.or
+  if
+   local.get $7
+   if (result i32)
+    local.get $0
+    i32.load offset=4
+   else
+    local.get $0
+    i32.load offset=8
+   end
+   local.tee $2
+   local.get $3
+   i32.ge_s
+   if
+    local.get $2
+    local.get $0
+    i32.load offset=12
+    i32.add
+    local.set $3
+   end
+   local.get $3
+   local.get $2
+   i32.sub
+   local.tee $0
+   local.get $4
+   i32.le_s
+   if
+    local.get $7
+    if
+     local.get $5
+     local.get $3
+     i32.store offset=4
+    else
+     local.get $5
+     local.get $3
+     i32.store offset=8
+    end
+    local.get $5
+    local.get $0
+    local.get $5
+    i32.load
+    i32.add
+    i32.store
+   else
+    local.get $7
+    if
+     local.get $5
+     local.get $4
+     local.get $5
+     i32.load offset=4
+     i32.add
+     i32.store offset=4
+    else
+     local.get $5
+     local.get $4
+     local.get $5
+     i32.load offset=8
+     i32.add
+     i32.store offset=8
+    end
+    local.get $5
+    local.get $4
+    local.get $5
+    i32.load
+    i32.add
+    i32.store
+   end
+   local.get $5
+   local.get $1
+   i32.store offset=16
+   local.get $7
+   if
+    local.get $5
+    i32.const 1
+    i32.store8 offset=21
+    local.get $5
+    i32.const 0
+    i32.store8 offset=22
+   else
+    local.get $5
+    i32.const 1
+    i32.store8 offset=22
+    local.get $5
+    i32.const 0
+    i32.store8 offset=21
+   end
+   local.get $6
+   return
+  end
+  local.get $6
+ )
+ (func $assembly/index/_start
+ )
+ (func $assembly/engine/stateSerializer/serializePlayer (param $0 i32) (result i32)
+  (local $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  (local $4 i32)
+  i32.const 3056
+  i32.const 5072
+  local.get $0
+  i32.load offset=68
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 5152
+  local.get $0
+  i32.load offset=12
+  call $assembly/engine/stateSerializer/serializeCardArray
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 7408
+  local.get $0
+  i32.load offset=64
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  local.get $0
+  i32.load offset=16
+  local.set $3
+  i32.const 5216
+  local.set $1
+  loop $for-loop|0
+   local.get $2
+   local.get $3
+   i32.load offset=12
+   i32.lt_s
+   if
+    local.get $2
+    i32.const 0
+    i32.gt_s
+    if (result i32)
+     local.get $1
+     i32.const 5248
+     call $~lib/string/String.__concat
+    else
+     local.get $1
+    end
+    local.get $3
+    local.get $2
+    call $~lib/array/Array<i32>#__get
+    i32.const 10
+    call $~lib/util/number/itoa32
+    call $~lib/string/String.__concat
+    local.set $1
+    local.get $2
+    i32.const 1
+    i32.add
+    local.set $2
+    br $for-loop|0
+   end
+  end
+  i32.const 7488
+  local.get $1
+  i32.const 7376
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 7536
+  local.get $0
+  i32.load offset=72
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 7600
+  local.get $0
+  i32.load offset=20
+  call $assembly/engine/stateSerializer/serializeCardArray
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 7648
+  local.get $0
+  i32.load offset=8
+  call $assembly/engine/stateSerializer/serializeCardArray
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 7696
+  local.get $0
+  i32.load offset=40
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 7744
+  local.get $0
+  i32.load offset=52
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 7792
+  local.get $0
+  i32.load offset=56
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 7840
+  local.get $0
+  i32.load offset=44
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 7888
+  local.get $0
+  i32.load offset=76
+  call $assembly/util/stableStringify/escapeJsonString
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 7936
+  i32.const 3056
+  i32.const 7984
+  local.get $0
+  i32.load offset=60
+  local.tee $1
+  i32.load offset=4
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 8032
+  local.get $1
+  i32.load
+  call $assembly/util/stableStringify/escapeJsonString
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 8080
+  i32.const 5520
+  i32.const 5552
+  local.get $1
+  i32.load8_u offset=8
+  select
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 7344
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 8128
+  local.get $0
+  i32.load
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 8160
+  i32.const 3056
+  i32.const 8208
+  local.get $0
+  i32.load offset=36
+  local.tee $1
+  i32.load
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 8256
+  local.get $1
+  i32.load offset=4
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 8304
+  local.get $1
+  i32.load offset=8
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 8352
+  local.get $1
+  i32.load offset=12
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 7344
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 7248
+  local.get $0
+  i32.load offset=48
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 8032
+  local.get $0
+  i32.load offset=4
+  call $assembly/util/stableStringify/escapeJsonString
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 8416
+  local.get $0
+  i32.load offset=24
+  call $assembly/engine/stateSerializer/serializeCardArray
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 8464
+  local.get $0
+  i32.load offset=28
+  local.tee $0
+  if (result i32)
+   local.get $0
+   call $assembly/engine/stateSerializer/serializeCard
+  else
+   i32.const 8512
+  end
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 7344
+  call $~lib/string/String.__concat
+ )
+ (func $assembly/engine/stateSerializer/serializeCard (param $0 i32) (result i32)
+  i32.const 3056
+  i32.const 5408
+  local.get $0
+  i32.load offset=40
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 5472
+  i32.const 5520
+  i32.const 5552
+  local.get $0
+  i32.load8_u offset=24
+  select
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 5584
+  local.get $0
+  i32.load offset=4
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 5632
+  local.get $0
+  i32.load offset=8
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 5696
+  local.get $0
+  i32.load offset=20
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 5760
+  local.get $0
+  i32.load offset=12
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 5824
+  local.get $0
+  i32.load offset=48
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 5888
+  i32.const 5520
+  i32.const 5552
+  local.get $0
+  i32.load8_u offset=26
+  select
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 5952
+  i32.const 5520
+  i32.const 5552
+  local.get $0
+  i32.load8_u offset=32
+  select
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 6000
+  i32.const 5520
+  i32.const 5552
+  local.get $0
+  i32.load8_u offset=27
+  select
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 6064
+  i32.const 5520
+  i32.const 5552
+  local.get $0
+  i32.load8_u offset=35
+  select
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 6128
+  i32.const 5520
+  i32.const 5552
+  local.get $0
+  i32.load8_u offset=34
+  select
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 6192
+  i32.const 5520
+  i32.const 5552
+  local.get $0
+  i32.load8_u offset=36
+  select
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 6256
+  i32.const 5520
+  i32.const 5552
+  local.get $0
+  i32.load8_u offset=33
+  select
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 6320
+  local.get $0
+  i32.load
+  call $assembly/util/stableStringify/escapeJsonString
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 6592
+  i32.const 5520
+  i32.const 5552
+  local.get $0
+  i32.load8_u offset=53
+  select
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 6640
+  i32.const 5520
+  i32.const 5552
+  local.get $0
+  i32.load8_u offset=28
+  select
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 6688
+  i32.const 5520
+  i32.const 5552
+  local.get $0
+  i32.load8_u offset=57
+  select
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 6736
+  i32.const 5520
+  i32.const 5552
+  local.get $0
+  i32.load8_u offset=54
+  select
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 6800
+  i32.const 5520
+  i32.const 5552
+  local.get $0
+  i32.load8_u offset=44
+  select
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 6864
+  i32.const 5520
+  i32.const 5552
+  local.get $0
+  i32.load8_u offset=52
+  select
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 6928
+  i32.const 5520
+  i32.const 5552
+  local.get $0
+  i32.load8_u offset=31
+  select
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 6976
+  i32.const 5520
+  i32.const 5552
+  local.get $0
+  i32.load8_u offset=29
+  select
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 7024
+  i32.const 5520
+  i32.const 5552
+  local.get $0
+  i32.load8_u offset=25
+  select
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 7088
+  i32.const 5520
+  i32.const 5552
+  local.get $0
+  i32.load8_u offset=30
+  select
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 7136
+  i32.const 5520
+  i32.const 5552
+  local.get $0
+  i32.load8_u offset=56
+  select
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 7200
+  i32.const 5520
+  i32.const 5552
+  local.get $0
+  i32.load8_u offset=55
+  select
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 7248
+  local.get $0
+  i32.load offset=16
+  i32.const 10
+  call $~lib/util/number/itoa32
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 7296
+  i32.const 5520
+  i32.const 5552
+  local.get $0
+  i32.load8_u offset=37
+  select
+  call $~lib/string/String.__concat
+  call $~lib/string/String.__concat
+  i32.const 7344
+  call $~lib/string/String.__concat
+ )
+ (func $assembly/chess/rules/wouldExposeKing (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (param $4 i32) (result i32)
+  (local $5 i32)
+  (local $6 i32)
+  (local $7 i32)
+  (local $8 i32)
+  (local $9 i32)
+  i32.const 0
+  i32.const 2
+  i32.const 32
+  i32.const 13520
+  call $~lib/rt/__newArray
+  local.set $5
+  local.get $0
+  local.get $1
+  call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+  i32.load
+  local.set $9
+  loop $for-loop|0
+   local.get $8
+   local.get $0
+   i32.load offset=12
+   i32.lt_s
+   if
+    local.get $0
+    local.get $8
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    local.set $6
+    local.get $4
+    if (result i32)
+     local.get $6
+     i32.load offset=12
+     local.get $2
+     i32.eq
+    else
+     i32.const 0
+    end
+    if (result i32)
+     local.get $6
+     i32.load offset=16
+     local.get $3
+     i32.eq
+    else
+     i32.const 0
+    end
+    if (result i32)
+     local.get $6
+     i32.load
+     local.get $9
+     call $~lib/string/String.__eq
+    else
+     i32.const 1
+    end
+    if
+     call $assembly/chess/types/Piece#constructor
+     local.tee $7
+     local.get $6
+     i32.load
+     i32.store
+     local.get $7
+     local.get $6
+     i32.load offset=4
+     i32.store offset=4
+     local.get $7
+     local.get $6
+     i32.load offset=8
+     i32.store offset=8
+     local.get $7
+     local.get $6
+     i32.load offset=12
+     i32.store offset=12
+     local.get $7
+     local.get $6
+     i32.load offset=16
+     i32.store offset=16
+     local.get $7
+     local.get $6
+     i32.load8_u offset=20
+     i32.store8 offset=20
+     local.get $6
+     i32.load
+     local.get $9
+     call $~lib/string/String.__eq
+     if
+      local.get $7
+      local.get $2
+      i32.store offset=12
+      local.get $7
+      local.get $3
+      i32.store offset=16
+     end
+     local.get $5
+     local.get $7
+     call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+    end
+    local.get $8
+    i32.const 1
+    i32.add
+    local.set $8
+    br $for-loop|0
+   end
+  end
+  local.get $0
+  local.get $1
+  call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+  i32.load offset=8
+  local.get $5
+  call $assembly/chess/rules/isKingInCheck
+ )
+ (func $assembly/chess/rules/findPieceAt (param $0 i32) (param $1 i32) (param $2 i32) (result i32)
+  (local $3 i32)
+  loop $for-loop|0
+   local.get $3
+   local.get $2
+   i32.load offset=12
+   i32.lt_s
+   if
+    local.get $2
+    local.get $3
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    i32.load offset=12
+    local.get $0
+    i32.eq
+    if (result i32)
+     local.get $2
+     local.get $3
+     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+     i32.load offset=16
+     local.get $1
+     i32.eq
+    else
+     i32.const 0
+    end
+    if
+     local.get $3
+     return
+    end
+    local.get $3
+    i32.const 1
+    i32.add
+    local.set $3
+    br $for-loop|0
+   end
+  end
+  i32.const -1
+ )
+ (func $assembly/chess/reducer/clonePieces (param $0 i32) (result i32)
+  (local $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  (local $4 i32)
+  i32.const 0
+  i32.const 2
+  i32.const 32
+  i32.const 13632
+  call $~lib/rt/__newArray
+  local.set $4
+  loop $for-loop|0
+   local.get $3
+   local.get $0
+   i32.load offset=12
+   i32.lt_s
+   if
+    local.get $0
+    local.get $3
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    local.set $1
+    call $assembly/chess/types/Piece#constructor
+    local.tee $2
+    local.get $1
+    i32.load
+    i32.store
+    local.get $2
+    local.get $1
+    i32.load offset=4
+    i32.store offset=4
+    local.get $2
+    local.get $1
+    i32.load offset=8
+    i32.store offset=8
+    local.get $2
+    local.get $1
+    i32.load offset=12
+    i32.store offset=12
+    local.get $2
+    local.get $1
+    i32.load offset=16
+    i32.store offset=16
+    local.get $2
+    local.get $1
+    i32.load8_u offset=20
+    i32.store8 offset=20
+    local.get $4
+    local.get $2
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+    local.get $3
+    i32.const 1
+    i32.add
+    local.set $3
+    br $for-loop|0
+   end
+  end
+  local.get $4
+ )
+ (func $assembly/chess/canonical/pieceTypeFromString (param $0 i32) (result i32)
+  local.get $0
+  i32.const 12480
+  call $~lib/string/String.__eq
+  if
+   i32.const 0
+   return
+  end
+  local.get $0
+  i32.const 12512
+  call $~lib/string/String.__eq
+  if
+   i32.const 1
+   return
+  end
+  local.get $0
+  i32.const 12544
+  call $~lib/string/String.__eq
+  if
+   i32.const 2
+   return
+  end
+  local.get $0
+  i32.const 12576
+  call $~lib/string/String.__eq
+  if
+   i32.const 3
+   return
+  end
+  local.get $0
+  i32.const 12608
+  call $~lib/string/String.__eq
+  if
+   i32.const 4
+   return
+  end
+  i32.const 5
+ )
+ (func $assembly/chess/canonical/Cursor#constructor (param $0 i32) (result i32)
+  (local $1 i32)
+  i32.const 8
+  i32.const 33
+  call $~lib/rt/stub/__new
+  local.tee $1
+  i32.const 0
+  i32.store
+  local.get $1
+  i32.const 0
+  i32.store offset=4
+  local.get $1
+  local.get $0
+  i32.store
+  local.get $1
+  i32.const 0
+  i32.store offset=4
+  local.get $1
+ )
+ (func $~start
+  (local $0 i32)
+  i32.const 14364
+  global.set $~lib/rt/stub/offset
+  i32.const 24
+  i32.const 7
+  call $~lib/rt/stub/__new
+  local.tee $0
+  i32.const 16
+  call $~lib/arraybuffer/ArrayBuffer#constructor
+  i32.store
+  local.get $0
+  i32.const 3
+  i32.store offset=4
+  local.get $0
+  i32.const 48
+  call $~lib/arraybuffer/ArrayBuffer#constructor
+  i32.store offset=8
+  local.get $0
+  i32.const 4
+  i32.store offset=12
+  local.get $0
+  i32.const 0
+  i32.store offset=16
+  local.get $0
+  i32.const 0
+  i32.store offset=20
+  local.get $0
+  global.set $assembly/util/cardLookup/cardRegistry
+ )
+ (func $~lib/util/string/strtol<i32> (param $0 i32) (result i32)
+  (local $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  (local $4 i32)
+  (local $5 i32)
+  (local $6 i32)
+  (local $7 i32)
+  local.get $0
+  i32.const 20
+  i32.sub
+  i32.load offset=16
+  i32.const 1
+  i32.shr_u
+  local.tee $1
   i32.eqz
   if
    i32.const 0
    return
   end
-  local.get $8
-  i32.load offset=36
-  i32.load
+  local.get $0
+  local.tee $2
+  i32.load16_u
+  local.set $0
+  loop $while-continue|0
+   block $__inlined_func$~lib/util/string/isSpace$1303 (result i32)
+    local.get $0
+    i32.const 128
+    i32.or
+    i32.const 160
+    i32.eq
+    local.get $0
+    i32.const 9
+    i32.sub
+    i32.const 4
+    i32.le_u
+    i32.or
+    local.get $0
+    i32.const 5760
+    i32.lt_u
+    br_if $__inlined_func$~lib/util/string/isSpace$1303
+    drop
+    i32.const 1
+    local.get $0
+    i32.const -8192
+    i32.add
+    i32.const 10
+    i32.le_u
+    br_if $__inlined_func$~lib/util/string/isSpace$1303
+    drop
+    block $break|0
+     block $case6|0
+      local.get $0
+      i32.const 5760
+      i32.eq
+      br_if $case6|0
+      local.get $0
+      i32.const 8232
+      i32.eq
+      br_if $case6|0
+      local.get $0
+      i32.const 8233
+      i32.eq
+      br_if $case6|0
+      local.get $0
+      i32.const 8239
+      i32.eq
+      br_if $case6|0
+      local.get $0
+      i32.const 8287
+      i32.eq
+      br_if $case6|0
+      local.get $0
+      i32.const 12288
+      i32.eq
+      br_if $case6|0
+      local.get $0
+      i32.const 65279
+      i32.eq
+      br_if $case6|0
+      br $break|0
+     end
+     i32.const 1
+     br $__inlined_func$~lib/util/string/isSpace$1303
+    end
+    i32.const 0
+   end
+   if
+    local.get $2
+    i32.const 2
+    i32.add
+    local.tee $2
+    i32.load16_u
+    local.set $0
+    local.get $1
+    i32.const 1
+    i32.sub
+    local.set $1
+    br $while-continue|0
+   end
+  end
+  i32.const 1
+  local.set $4
+  local.get $0
+  i32.const 43
+  i32.eq
+  local.get $0
+  i32.const 45
+  i32.eq
+  i32.or
+  if (result i32)
+   local.get $1
+   i32.const 1
+   i32.sub
+   local.tee $1
+   i32.eqz
+   if
+    i32.const 0
+    return
+   end
+   i32.const -1
+   i32.const 1
+   local.get $0
+   i32.const 45
+   i32.eq
+   select
+   local.set $4
+   local.get $2
+   i32.const 2
+   i32.add
+   local.tee $2
+   i32.load16_u
+  else
+   local.get $0
+  end
+  i32.const 48
+  i32.eq
+  local.get $1
+  i32.const 2
+  i32.gt_s
+  i32.and
+  if
+   block $break|1
+    block $case2|1
+     block $case1|1
+      local.get $2
+      i32.load16_u offset=2
+      i32.const 32
+      i32.or
+      local.tee $0
+      i32.const 98
+      i32.ne
+      if
+       local.get $0
+       i32.const 111
+       i32.eq
+       br_if $case1|1
+       local.get $0
+       i32.const 120
+       i32.eq
+       br_if $case2|1
+       br $break|1
+      end
+      local.get $2
+      i32.const 4
+      i32.add
+      local.set $2
+      local.get $1
+      i32.const 2
+      i32.sub
+      local.set $1
+      i32.const 2
+      local.set $3
+      br $break|1
+     end
+     local.get $2
+     i32.const 4
+     i32.add
+     local.set $2
+     local.get $1
+     i32.const 2
+     i32.sub
+     local.set $1
+     i32.const 8
+     local.set $3
+     br $break|1
+    end
+    local.get $2
+    i32.const 4
+    i32.add
+    local.set $2
+    local.get $1
+    i32.const 2
+    i32.sub
+    local.set $1
+    i32.const 16
+    local.set $3
+   end
+  end
+  local.get $3
+  i32.const 10
+  local.get $3
+  select
+  local.set $3
+  local.get $1
+  i32.const 1
+  i32.sub
+  local.set $7
+  loop $while-continue|2
+   local.get $1
+   local.tee $0
+   i32.const 1
+   i32.sub
+   local.set $1
+   local.get $0
+   if
+    block $while-break|2
+     local.get $2
+     i32.load16_u
+     local.tee $6
+     i32.const 48
+     i32.sub
+     local.tee $0
+     i32.const 10
+     i32.ge_u
+     if
+      local.get $6
+      i32.const 65
+      i32.sub
+      i32.const 25
+      i32.le_u
+      if (result i32)
+       local.get $6
+       i32.const 55
+       i32.sub
+      else
+       local.get $6
+       i32.const 87
+       i32.sub
+       local.get $6
+       local.get $6
+       i32.const 97
+       i32.sub
+       i32.const 25
+       i32.le_u
+       select
+      end
+      local.set $0
+     end
+     local.get $0
+     local.get $3
+     i32.ge_u
+     if
+      local.get $1
+      local.get $7
+      i32.eq
+      if
+       i32.const 0
+       return
+      end
+      br $while-break|2
+     end
+     local.get $3
+     local.get $5
+     i32.mul
+     local.get $0
+     i32.add
+     local.set $5
+     local.get $2
+     i32.const 2
+     i32.add
+     local.set $2
+     br $while-continue|2
+    end
+   end
+  end
   local.get $4
+  local.get $5
+  i32.mul
+ )
+ (func $~lib/rt/stub/__unpin (param $0 i32)
+ )
+ (func $~lib/rt/stub/__pin (param $0 i32) (result i32)
+  local.get $0
+ )
+ (func $"~lib/map/Map<i32,assembly/types/GameState/CardDef>#set" (param $0 i32) (param $1 i32) (param $2 i32)
+  (local $3 i32)
+  (local $4 i32)
+  (local $5 i32)
+  (local $6 i32)
+  (local $7 i32)
+  (local $8 i32)
+  (local $9 i32)
+  (local $10 i32)
+  (local $11 i32)
+  local.get $0
+  i32.load
+  local.get $1
+  local.tee $3
+  i32.const -1028477379
+  i32.mul
+  i32.const 374761397
+  i32.add
+  i32.const 17
+  i32.rotl
+  i32.const 668265263
+  i32.mul
+  local.tee $1
+  local.get $1
+  i32.const 15
+  i32.shr_u
+  i32.xor
+  i32.const -2048144777
+  i32.mul
+  local.tee $1
+  local.get $1
+  i32.const 13
+  i32.shr_u
+  i32.xor
+  i32.const -1028477379
+  i32.mul
+  local.tee $1
+  local.get $1
+  i32.const 16
+  i32.shr_u
+  i32.xor
+  local.tee $8
+  local.get $0
+  i32.load offset=4
+  i32.and
+  i32.const 2
+  i32.shl
+  i32.add
+  i32.load
+  local.set $1
+  block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1844"
+   loop $while-continue|0
+    local.get $1
+    if
+     local.get $1
+     i32.load offset=8
+     local.tee $4
+     i32.const 1
+     i32.and
+     if (result i32)
+      i32.const 0
+     else
+      local.get $1
+      i32.load
+      local.get $3
+      i32.eq
+     end
+     br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1844"
+     local.get $4
+     i32.const -2
+     i32.and
+     local.set $1
+     br $while-continue|0
+    end
+   end
+   i32.const 0
+   local.set $1
+  end
+  local.get $1
+  if
+   local.get $1
+   local.get $2
+   i32.store offset=4
+  else
+   local.get $0
+   i32.load offset=12
+   local.tee $1
+   local.get $0
+   i32.load offset=16
+   i32.eq
+   if
+    local.get $0
+    i32.load offset=20
+    local.get $1
+    i32.const 3
+    i32.mul
+    i32.const 4
+    i32.div_s
+    i32.lt_s
+    if (result i32)
+     local.get $0
+     i32.load offset=4
+    else
+     local.get $0
+     i32.load offset=4
+     i32.const 1
+     i32.shl
+     i32.const 1
+     i32.or
+    end
+    local.tee $6
+    i32.const 1
+    i32.add
+    local.tee $1
+    i32.const 2
+    i32.shl
+    call $~lib/arraybuffer/ArrayBuffer#constructor
+    local.set $7
+    local.get $1
+    i32.const 3
+    i32.shl
+    i32.const 3
+    i32.div_s
+    local.tee $9
+    i32.const 12
+    i32.mul
+    call $~lib/arraybuffer/ArrayBuffer#constructor
+    local.set $4
+    local.get $0
+    i32.load offset=8
+    local.tee $5
+    local.get $0
+    i32.load offset=16
+    i32.const 12
+    i32.mul
+    i32.add
+    local.set $10
+    local.get $4
+    local.set $1
+    loop $while-continue|00
+     local.get $5
+     local.get $10
+     i32.ne
+     if
+      local.get $5
+      i32.load offset=8
+      i32.const 1
+      i32.and
+      i32.eqz
+      if
+       local.get $1
+       local.get $5
+       i32.load
+       local.tee $11
+       i32.store
+       local.get $1
+       local.get $5
+       i32.load offset=4
+       i32.store offset=4
+       local.get $1
+       local.get $7
+       local.get $11
+       i32.const -1028477379
+       i32.mul
+       i32.const 374761397
+       i32.add
+       i32.const 17
+       i32.rotl
+       i32.const 668265263
+       i32.mul
+       local.tee $11
+       i32.const 15
+       i32.shr_u
+       local.get $11
+       i32.xor
+       i32.const -2048144777
+       i32.mul
+       local.tee $11
+       i32.const 13
+       i32.shr_u
+       local.get $11
+       i32.xor
+       i32.const -1028477379
+       i32.mul
+       local.tee $11
+       i32.const 16
+       i32.shr_u
+       local.get $11
+       i32.xor
+       local.get $6
+       i32.and
+       i32.const 2
+       i32.shl
+       i32.add
+       local.tee $11
+       i32.load
+       i32.store offset=8
+       local.get $11
+       local.get $1
+       i32.store
+       local.get $1
+       i32.const 12
+       i32.add
+       local.set $1
+      end
+      local.get $5
+      i32.const 12
+      i32.add
+      local.set $5
+      br $while-continue|00
+     end
+    end
+    local.get $0
+    local.get $7
+    i32.store
+    local.get $0
+    local.get $6
+    i32.store offset=4
+    local.get $0
+    local.get $4
+    i32.store offset=8
+    local.get $0
+    local.get $9
+    i32.store offset=12
+    local.get $0
+    local.get $0
+    i32.load offset=20
+    i32.store offset=16
+   end
+   local.get $0
+   i32.load offset=8
+   local.get $0
+   local.get $0
+   i32.load offset=16
+   local.tee $4
+   i32.const 1
+   i32.add
+   i32.store offset=16
+   local.get $4
+   i32.const 12
+   i32.mul
+   i32.add
+   local.tee $1
+   local.get $3
+   i32.store
+   local.get $1
+   local.get $2
+   i32.store offset=4
+   local.get $0
+   local.get $0
+   i32.load offset=20
+   i32.const 1
+   i32.add
+   i32.store offset=20
+   local.get $1
+   local.get $0
+   i32.load
+   local.get $8
+   local.get $0
+   i32.load offset=4
+   i32.and
+   i32.const 2
+   i32.shl
+   i32.add
+   local.tee $0
+   i32.load
+   i32.store offset=8
+   local.get $0
+   local.get $1
+   i32.store
+  end
+ )
+ (func $assembly/util/sha256/sha256Bytes (param $0 i32) (result i32)
+  (local $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  (local $4 i32)
+  (local $5 i32)
+  (local $6 i32)
+  (local $7 i32)
+  (local $8 i32)
+  (local $9 i32)
+  (local $10 i32)
+  (local $11 i32)
+  (local $12 i32)
+  (local $13 i32)
+  (local $14 i32)
+  (local $15 i32)
+  (local $16 i32)
+  (local $17 i32)
+  (local $18 i32)
+  (local $19 i64)
+  (local $20 i32)
+  (local $21 i32)
+  (local $22 i32)
+  (local $23 i32)
+  local.get $0
+  i32.load offset=8
+  local.tee $3
+  i64.extend_i32_s
+  i64.const 3
+  i64.shl
+  local.set $19
+  i32.const 64
+  local.get $3
+  i32.const 9
+  i32.add
+  i32.const 64
+  i32.rem_s
+  i32.sub
+  local.tee $1
+  i32.const 0
+  local.get $1
+  i32.const 64
+  i32.ne
+  select
+  local.get $3
+  i32.add
+  i32.const 9
+  i32.add
+  local.tee $18
+  call $~lib/typedarray/Uint8Array#constructor
+  local.set $16
+  loop $for-loop|0
+   local.get $2
+   local.get $3
+   i32.lt_s
+   if
+    local.get $16
+    local.get $2
+    local.get $0
+    local.get $2
+    call $~lib/typedarray/Uint8Array#__get
+    call $~lib/typedarray/Uint8Array#__set
+    local.get $2
+    i32.const 1
+    i32.add
+    local.set $2
+    br $for-loop|0
+   end
+  end
+  local.get $16
+  local.get $3
+  i32.const 128
+  call $~lib/typedarray/Uint8Array#__set
+  local.get $16
+  local.get $18
+  i32.const 8
+  i32.sub
+  local.get $19
+  i64.const 56
+  i64.shr_u
+  i32.wrap_i64
+  call $~lib/typedarray/Uint8Array#__set
+  local.get $16
+  local.get $18
+  i32.const 7
+  i32.sub
+  local.get $19
+  i64.const 48
+  i64.shr_u
+  i32.wrap_i64
+  i32.const 255
+  i32.and
+  call $~lib/typedarray/Uint8Array#__set
+  local.get $16
+  local.get $18
+  i32.const 6
+  i32.sub
+  local.get $19
+  i64.const 40
+  i64.shr_u
+  i32.wrap_i64
+  i32.const 255
+  i32.and
+  call $~lib/typedarray/Uint8Array#__set
+  local.get $16
+  local.get $18
+  i32.const 5
+  i32.sub
+  local.get $19
+  i64.const 32
+  i64.shr_u
+  i32.wrap_i64
+  i32.const 255
+  i32.and
+  call $~lib/typedarray/Uint8Array#__set
+  local.get $16
+  local.get $18
+  i32.const 4
+  i32.sub
+  local.get $19
+  i64.const 24
+  i64.shr_u
+  i32.wrap_i64
+  i32.const 255
+  i32.and
+  call $~lib/typedarray/Uint8Array#__set
+  local.get $16
+  local.get $18
+  i32.const 3
+  i32.sub
+  local.get $19
+  i64.const 16
+  i64.shr_u
+  i32.wrap_i64
+  i32.const 255
+  i32.and
+  call $~lib/typedarray/Uint8Array#__set
+  local.get $16
+  local.get $18
+  i32.const 2
+  i32.sub
+  local.get $19
+  i64.const 8
+  i64.shr_u
+  i32.wrap_i64
+  i32.const 255
+  i32.and
+  call $~lib/typedarray/Uint8Array#__set
+  local.get $16
+  local.get $18
+  i32.const 1
+  i32.sub
+  local.get $19
+  i32.wrap_i64
+  i32.const 255
+  i32.and
+  call $~lib/typedarray/Uint8Array#__set
+  i32.const 1779033703
+  local.set $8
+  i32.const -1150833019
+  local.set $9
+  i32.const 1013904242
+  local.set $10
+  i32.const -1521486534
+  local.set $11
+  i32.const 1359893119
+  local.set $12
+  i32.const -1694144372
+  local.set $13
+  i32.const 528734635
+  local.set $14
+  i32.const 1541459225
+  local.set $15
+  i32.const 16
+  i32.const 9
+  call $~lib/rt/stub/__new
+  local.tee $17
+  i32.const 0
+  i32.store
+  local.get $17
+  i32.const 0
+  i32.store offset=4
+  local.get $17
+  i32.const 0
+  i32.store offset=8
+  local.get $17
+  i32.const 0
+  i32.store offset=12
+  i32.const 256
+  i32.const 1
+  call $~lib/rt/stub/__new
+  local.tee $0
+  i32.const 0
+  i32.const 256
+  memory.fill
+  local.get $17
+  local.get $0
+  i32.store
+  local.get $17
+  local.get $0
+  i32.store offset=4
+  local.get $17
+  i32.const 256
+  i32.store offset=8
+  local.get $17
+  i32.const 64
+  i32.store offset=12
+  loop $for-loop|1
+   local.get $18
+   local.get $21
+   i32.gt_s
+   if
+    i32.const 0
+    local.set $2
+    loop $for-loop|2
+     local.get $2
+     i32.const 16
+     i32.lt_s
+     if
+      local.get $17
+      local.get $2
+      local.get $16
+      local.get $21
+      local.get $2
+      i32.const 2
+      i32.shl
+      i32.add
+      local.tee $0
+      call $~lib/typedarray/Uint8Array#__get
+      i32.const 24
+      i32.shl
+      local.get $16
+      local.get $0
+      i32.const 1
+      i32.add
+      call $~lib/typedarray/Uint8Array#__get
+      i32.const 16
+      i32.shl
+      i32.or
+      local.get $16
+      local.get $0
+      i32.const 2
+      i32.add
+      call $~lib/typedarray/Uint8Array#__get
+      i32.const 8
+      i32.shl
+      i32.or
+      local.get $16
+      local.get $0
+      i32.const 3
+      i32.add
+      call $~lib/typedarray/Uint8Array#__get
+      i32.or
+      call $~lib/array/Array<assembly/types/GameState/Player>#__set
+      local.get $2
+      i32.const 1
+      i32.add
+      local.set $2
+      br $for-loop|2
+     end
+    end
+    i32.const 16
+    local.set $1
+    loop $for-loop|3
+     local.get $1
+     i32.const 64
+     i32.lt_s
+     if
+      local.get $17
+      local.get $1
+      i32.const 2
+      i32.sub
+      call $~lib/array/Array<u32>#__get
+      local.set $0
+      local.get $17
+      local.get $1
+      i32.const 7
+      i32.sub
+      call $~lib/array/Array<u32>#__get
+      local.get $0
+      i32.const 15
+      i32.shl
+      local.get $0
+      i32.const 17
+      i32.shr_u
+      i32.or
+      local.get $0
+      i32.const 13
+      i32.shl
+      local.get $0
+      i32.const 19
+      i32.shr_u
+      i32.or
+      i32.xor
+      local.get $0
+      i32.const 10
+      i32.shr_u
+      i32.xor
+      i32.add
+      local.set $2
+      local.get $17
+      local.get $1
+      i32.const 15
+      i32.sub
+      call $~lib/array/Array<u32>#__get
+      local.set $0
+      local.get $17
+      local.get $1
+      local.get $17
+      local.get $1
+      i32.const 16
+      i32.sub
+      call $~lib/array/Array<u32>#__get
+      local.get $2
+      local.get $0
+      i32.const 25
+      i32.shl
+      local.get $0
+      i32.const 7
+      i32.shr_u
+      i32.or
+      local.get $0
+      i32.const 14
+      i32.shl
+      local.get $0
+      i32.const 18
+      i32.shr_u
+      i32.or
+      i32.xor
+      local.get $0
+      i32.const 3
+      i32.shr_u
+      i32.xor
+      i32.add
+      i32.add
+      call $~lib/array/Array<assembly/types/GameState/Player>#__set
+      local.get $1
+      i32.const 1
+      i32.add
+      local.set $1
+      br $for-loop|3
+     end
+    end
+    local.get $8
+    local.set $4
+    local.get $9
+    local.set $3
+    local.get $10
+    local.set $1
+    local.get $11
+    local.set $6
+    local.get $12
+    local.set $5
+    local.get $13
+    local.set $2
+    local.get $14
+    local.set $0
+    local.get $15
+    local.set $7
+    i32.const 0
+    local.set $20
+    loop $for-loop|4
+     local.get $20
+     i32.const 64
+     i32.lt_s
+     if
+      i32.const 2400
+      local.get $20
+      call $~lib/array/Array<u32>#__get
+      local.get $7
+      local.get $5
+      i32.const 7
+      i32.shl
+      local.get $5
+      i32.const 25
+      i32.shr_u
+      i32.or
+      local.get $5
+      i32.const 26
+      i32.shl
+      local.get $5
+      i32.const 6
+      i32.shr_u
+      i32.or
+      local.get $5
+      i32.const 21
+      i32.shl
+      local.get $5
+      i32.const 11
+      i32.shr_u
+      i32.or
+      i32.xor
+      i32.xor
+      i32.add
+      local.get $2
+      local.get $5
+      i32.and
+      local.get $5
+      i32.const -1
+      i32.xor
+      local.get $0
+      i32.and
+      i32.xor
+      i32.add
+      i32.add
+      local.get $17
+      local.get $20
+      call $~lib/array/Array<u32>#__get
+      i32.add
+      local.set $22
+      local.get $4
+      i32.const 10
+      i32.shl
+      local.get $4
+      i32.const 22
+      i32.shr_u
+      i32.or
+      local.get $4
+      i32.const 30
+      i32.shl
+      local.get $4
+      i32.const 2
+      i32.shr_u
+      i32.or
+      local.get $4
+      i32.const 19
+      i32.shl
+      local.get $4
+      i32.const 13
+      i32.shr_u
+      i32.or
+      i32.xor
+      i32.xor
+      local.get $1
+      local.get $3
+      i32.and
+      local.get $3
+      local.get $4
+      i32.and
+      local.get $1
+      local.get $4
+      i32.and
+      i32.xor
+      i32.xor
+      i32.add
+      local.set $23
+      local.get $0
+      local.set $7
+      local.get $2
+      local.set $0
+      local.get $5
+      local.set $2
+      local.get $6
+      local.get $22
+      i32.add
+      local.set $5
+      local.get $1
+      local.set $6
+      local.get $3
+      local.set $1
+      local.get $4
+      local.set $3
+      local.get $22
+      local.get $23
+      i32.add
+      local.set $4
+      local.get $20
+      i32.const 1
+      i32.add
+      local.set $20
+      br $for-loop|4
+     end
+    end
+    local.get $4
+    local.get $8
+    i32.add
+    local.set $8
+    local.get $3
+    local.get $9
+    i32.add
+    local.set $9
+    local.get $1
+    local.get $10
+    i32.add
+    local.set $10
+    local.get $6
+    local.get $11
+    i32.add
+    local.set $11
+    local.get $5
+    local.get $12
+    i32.add
+    local.set $12
+    local.get $2
+    local.get $13
+    i32.add
+    local.set $13
+    local.get $0
+    local.get $14
+    i32.add
+    local.set $14
+    local.get $7
+    local.get $15
+    i32.add
+    local.set $15
+    local.get $21
+    i32.const -64
+    i32.sub
+    local.set $21
+    br $for-loop|1
+   end
+  end
+  i32.const 32
+  call $~lib/typedarray/Uint8Array#constructor
+  local.tee $0
+  i32.const 0
+  local.get $8
+  call $assembly/util/sha256/writeU32BE
+  local.get $0
+  i32.const 4
+  local.get $9
+  call $assembly/util/sha256/writeU32BE
+  local.get $0
+  i32.const 8
+  local.get $10
+  call $assembly/util/sha256/writeU32BE
+  local.get $0
+  i32.const 12
+  local.get $11
+  call $assembly/util/sha256/writeU32BE
+  local.get $0
+  i32.const 16
+  local.get $12
+  call $assembly/util/sha256/writeU32BE
+  local.get $0
+  i32.const 20
+  local.get $13
+  call $assembly/util/sha256/writeU32BE
+  local.get $0
+  i32.const 24
+  local.get $14
+  call $assembly/util/sha256/writeU32BE
+  local.get $0
+  i32.const 28
+  local.get $15
+  call $assembly/util/sha256/writeU32BE
+  local.get $0
+ )
+ (func $assembly/util/cardLookup/setCardStats (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (param $4 i32)
+  global.get $assembly/util/cardLookup/pendingCard
+  if
+   global.get $assembly/util/cardLookup/pendingCard
+   local.get $0
+   i32.store offset=16
+   global.get $assembly/util/cardLookup/pendingCard
+   local.get $1
+   i32.store offset=20
+   global.get $assembly/util/cardLookup/pendingCard
+   local.get $2
+   i32.store offset=24
+   global.get $assembly/util/cardLookup/pendingCard
+   local.get $3
+   i32.store offset=56
+   global.get $assembly/util/cardLookup/pendingCard
+   local.get $4
+   i32.store offset=60
+  end
+ )
+ (func $assembly/util/cardLookup/setCardSpellEffect (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (param $4 i32) (param $5 i32) (param $6 i32)
+  (local $7 i32)
+  global.get $assembly/util/cardLookup/pendingCard
+  if
+   call $assembly/types/GameState/EffectDef#constructor
+   local.tee $7
+   local.get $0
+   i32.store
+   local.get $7
+   local.get $1
+   i32.store offset=4
+   local.get $7
+   local.get $2
+   i32.store offset=8
+   local.get $7
+   local.get $3
+   i32.store offset=12
+   local.get $7
+   local.get $4
+   i32.store offset=16
+   local.get $7
+   local.get $5
+   i32.store offset=24
+   local.get $7
+   local.get $6
+   i32.store offset=28
+   global.get $assembly/util/cardLookup/pendingCard
+   local.get $7
+   i32.store offset=48
+  end
+ )
+ (func $assembly/util/cardLookup/setCardMeta (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32)
+  global.get $assembly/util/cardLookup/pendingCard
+  if
+   global.get $assembly/util/cardLookup/pendingCard
+   local.get $0
+   i32.store offset=28
+   global.get $assembly/util/cardLookup/pendingCard
+   local.get $1
+   i32.store offset=32
+   global.get $assembly/util/cardLookup/pendingCard
+   local.get $2
+   i32.store offset=64
+   global.get $assembly/util/cardLookup/pendingCard
+   local.get $3
+   i32.store offset=68
+  end
+ )
+ (func $assembly/util/cardLookup/setCardDeathrattle (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (param $4 i32) (param $5 i32) (param $6 i32)
+  (local $7 i32)
+  global.get $assembly/util/cardLookup/pendingCard
+  if
+   call $assembly/types/GameState/EffectDef#constructor
+   local.tee $7
+   local.get $0
+   i32.store
+   local.get $7
+   local.get $1
+   i32.store offset=4
+   local.get $7
+   local.get $2
+   i32.store offset=8
+   local.get $7
+   local.get $3
+   i32.store offset=12
+   local.get $7
+   local.get $4
+   i32.store offset=16
+   local.get $7
+   local.get $5
+   i32.store offset=24
+   local.get $7
+   local.get $6
+   i32.store offset=28
+   global.get $assembly/util/cardLookup/pendingCard
+   local.get $7
+   i32.store offset=44
+  end
+ )
+ (func $assembly/util/cardLookup/setCardBattlecry (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (param $4 i32) (param $5 i32) (param $6 i32)
+  (local $7 i32)
+  global.get $assembly/util/cardLookup/pendingCard
+  if
+   call $assembly/types/GameState/EffectDef#constructor
+   local.tee $7
+   local.get $0
+   i32.store
+   local.get $7
+   local.get $1
+   i32.store offset=4
+   local.get $7
+   local.get $2
+   i32.store offset=8
+   local.get $7
+   local.get $3
+   i32.store offset=12
+   local.get $7
+   local.get $4
+   i32.store offset=16
+   local.get $7
+   local.get $5
+   i32.store offset=24
+   local.get $7
+   local.get $6
+   i32.store offset=28
+   global.get $assembly/util/cardLookup/pendingCard
+   local.get $7
+   i32.store offset=40
+  end
+ )
+ (func $assembly/util/cardLookup/getCardCount (result i32)
+  global.get $assembly/util/cardLookup/cardRegistry
+  i32.load offset=20
+ )
+ (func $assembly/util/cardLookup/commitCard
+  (local $0 i32)
+  global.get $assembly/util/cardLookup/pendingCard
+  if
+   global.get $assembly/util/cardLookup/cardRegistry
+   global.get $assembly/util/cardLookup/pendingCard
+   local.tee $0
+   i32.load
+   local.get $0
+   call $"~lib/map/Map<i32,assembly/types/GameState/CardDef>#set"
+   i32.const 0
+   global.set $assembly/util/cardLookup/pendingCard
+  end
+ )
+ (func $assembly/util/cardLookup/clearCardData
+  (local $0 i32)
+  global.get $assembly/util/cardLookup/cardRegistry
+  local.tee $0
+  i32.const 16
+  call $~lib/arraybuffer/ArrayBuffer#constructor
+  i32.store
+  local.get $0
+  i32.const 3
+  i32.store offset=4
+  local.get $0
+  i32.const 48
+  call $~lib/arraybuffer/ArrayBuffer#constructor
+  i32.store offset=8
+  local.get $0
+  i32.const 4
+  i32.store offset=12
+  local.get $0
+  i32.const 0
+  i32.store offset=16
+  local.get $0
+  i32.const 0
+  i32.store offset=20
+ )
+ (func $assembly/util/cardLookup/beginCard (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32)
+  (local $4 i32)
+  i32.const 72
+  i32.const 4
+  call $~lib/rt/stub/__new
+  local.tee $4
+  i32.const 0
+  i32.store
+  local.get $4
+  i32.const 0
+  i32.store offset=4
+  local.get $4
+  i32.const 0
+  i32.store offset=8
+  local.get $4
+  i32.const 0
+  i32.store offset=12
+  local.get $4
+  i32.const 0
+  i32.store offset=16
+  local.get $4
+  i32.const 0
+  i32.store offset=20
+  local.get $4
+  i32.const 0
+  i32.store offset=24
+  local.get $4
+  i32.const 0
+  i32.store offset=28
+  local.get $4
+  i32.const 0
+  i32.store offset=32
+  local.get $4
+  i32.const 0
+  i32.store offset=36
+  local.get $4
+  i32.const 0
+  i32.store offset=40
+  local.get $4
+  i32.const 0
+  i32.store offset=44
+  local.get $4
+  i32.const 0
+  i32.store offset=48
+  local.get $4
+  i32.const 0
+  i32.store offset=52
+  local.get $4
+  i32.const 0
+  i32.store offset=56
+  local.get $4
+  i32.const 0
+  i32.store offset=60
+  local.get $4
+  i32.const 0
+  i32.store offset=64
+  local.get $4
+  i32.const 0
+  i32.store offset=68
+  local.get $4
+  i32.const 0
+  i32.store
+  local.get $4
+  i32.const 2752
+  i32.store offset=4
+  local.get $4
+  i32.const 0
+  i32.store offset=8
+  local.get $4
+  i32.const 0
+  i32.store offset=12
+  local.get $4
+  i32.const 0
+  i32.store offset=16
+  local.get $4
+  i32.const 0
+  i32.store offset=20
+  local.get $4
+  i32.const 11
+  i32.store offset=24
+  local.get $4
+  i32.const 11168
+  i32.store offset=28
+  local.get $4
+  i32.const 2752
+  i32.store offset=32
+  local.get $4
+  i32.const 0
+  i32.const 2
+  i32.const 5
+  i32.const 11200
+  call $~lib/rt/__newArray
+  i32.store offset=36
+  local.get $4
+  i32.const 0
+  i32.store offset=40
+  local.get $4
+  i32.const 0
+  i32.store offset=44
+  local.get $4
+  i32.const 0
+  i32.store offset=48
+  local.get $4
+  i32.const 0
+  i32.store offset=52
+  local.get $4
+  i32.const 0
+  i32.store offset=56
+  local.get $4
+  i32.const 0
+  i32.store offset=60
+  local.get $4
+  i32.const 2752
+  i32.store offset=64
+  local.get $4
+  i32.const 2752
+  i32.store offset=68
+  local.get $4
+  local.get $0
+  i32.store
+  local.get $4
+  local.get $1
+  i32.store offset=4
+  local.get $4
+  local.get $2
+  i32.store offset=8
+  local.get $4
+  local.get $3
+  i32.store offset=12
+  local.get $4
+  global.set $assembly/util/cardLookup/pendingCard
+ )
+ (func $assembly/util/cardLookup/addCardKeyword (param $0 i32)
+  global.get $assembly/util/cardLookup/pendingCard
+  if
+   global.get $assembly/util/cardLookup/pendingCard
+   i32.load offset=36
+   local.get $0
+   call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+  end
+ )
+ (func $assembly/types/PokerTypes/createPokerDeck (result i32)
+  (local $0 i32)
+  (local $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  i32.const 0
+  i32.const 2
+  i32.const 23
+  i32.const 14192
+  call $~lib/rt/__newArray
+  local.set $3
+  loop $for-loop|0
+   local.get $2
+   i32.const 4
+   i32.lt_s
+   if
+    i32.const 2
+    local.set $0
+    loop $for-loop|1
+     local.get $0
+     i32.const 14
+     i32.le_s
+     if
+      i32.const 8
+      i32.const 22
+      call $~lib/rt/stub/__new
+      local.tee $1
+      i32.const 0
+      i32.store
+      local.get $1
+      i32.const 0
+      i32.store offset=4
+      local.get $1
+      local.get $2
+      i32.store
+      local.get $1
+      local.get $0
+      i32.store offset=4
+      local.get $3
+      local.get $1
+      call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+      local.get $0
+      i32.const 1
+      i32.add
+      local.set $0
+      br $for-loop|1
+     end
+    end
+    local.get $2
+    i32.const 1
+    i32.add
+    local.set $2
+    br $for-loop|0
+   end
+  end
+  local.get $3
+ )
+ (func $assembly/types/PokerTypes/calculateFinalDamage (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (result i32)
+  local.get $2
+  i32.const 10
+  i32.le_s
+  local.get $2
+  i32.const 0
+  i32.gt_s
+  i32.and
+  if (result i32)
+   i32.const 1360
+   local.get $2
+   call $~lib/array/Array<i32>#__get
+  else
+   i32.const 100
+  end
+  local.get $0
+  local.get $1
+  i32.add
+  i32.mul
+  i32.const 100
+  i32.div_s
+  local.get $3
+  i32.add
+ )
+ (func $assembly/poker/phaseManager/isRevealPhase (param $0 i32) (result i32)
+  local.get $0
+  i32.const 5
+  i32.eq
+  local.get $0
+  i32.const 4
+  i32.eq
+  i32.or
+  local.get $0
+  i32.const 6
+  i32.eq
+  i32.or
+ )
+ (func $assembly/poker/phaseManager/isBettingPhase (param $0 i32) (result i32)
+  local.get $0
+  i32.const 4
+  i32.eq
+  local.get $0
+  i32.const 3
+  i32.eq
+  i32.or
+  local.get $0
+  i32.const 5
+  i32.eq
+  i32.or
+  local.get $0
+  i32.const 6
+  i32.eq
+  i32.or
+ )
+ (func $assembly/poker/phaseManager/getTotalCommunityCards (param $0 i32) (result i32)
+  local.get $0
+  i32.const 2
+  i32.le_s
+  if
+   i32.const 0
+   return
+  end
+  local.get $0
+  i32.const 3
+  i32.eq
+  if
+   i32.const 0
+   return
+  end
+  local.get $0
+  i32.const 4
+  i32.eq
+  if
+   i32.const 3
+   return
+  end
+  local.get $0
+  i32.const 5
+  i32.eq
+  if
+   i32.const 4
+   return
+  end
+  i32.const 5
+ )
+ (func $assembly/poker/phaseManager/getNextPhase (param $0 i32) (result i32)
+  (local $1 i32)
+  loop $for-loop|0
+   local.get $1
+   i32.const 1484
+   i32.load
+   i32.const 1
+   i32.sub
+   i32.lt_s
+   if
+    i32.const 1472
+    local.get $1
+    call $~lib/array/Array<i32>#__get
+    local.get $0
+    i32.eq
+    if
+     i32.const 1472
+     local.get $1
+     i32.const 1
+     i32.add
+     call $~lib/array/Array<i32>#__get
+     return
+    end
+    local.get $1
+    i32.const 1
+    i32.add
+    local.set $1
+    br $for-loop|0
+   end
+  end
+  i32.const 7
+ )
+ (func $assembly/poker/phaseManager/getCommunityCardsToReveal (param $0 i32) (result i32)
+  local.get $0
+  i32.const 4
+  i32.eq
+  if
+   i32.const 3
+   return
+  end
+  local.get $0
+  i32.const 5
+  i32.eq
+  if
+   i32.const 1
+   return
+  end
+  local.get $0
+  i32.const 6
+  i32.eq
+  if
+   i32.const 1
+   return
+  end
+  i32.const 0
+ )
+ (func $assembly/poker/phaseManager/getBettingRound (param $0 i32) (result i32)
+  local.get $0
+  i32.const 3
+  i32.eq
+  if
+   i32.const 0
+   return
+  end
+  local.get $0
+  i32.const 4
+  i32.eq
+  if
+   i32.const 1
+   return
+  end
+  local.get $0
+  i32.const 5
+  i32.eq
+  if
+   i32.const 2
+   return
+  end
+  local.get $0
+  i32.const 6
+  i32.eq
+  if
+   i32.const 3
+   return
+  end
+  i32.const -1
+ )
+ (func $assembly/poker/handEvaluator/compareHands (param $0 i32) (param $1 i32) (result i32)
+  (local $2 i32)
+  (local $3 i32)
+  local.get $0
+  i32.load
+  local.get $1
+  i32.load
+  i32.gt_s
+  if
+   i32.const 1
+   return
+  end
+  local.get $0
+  i32.load
+  local.get $1
+  i32.load
+  i32.lt_s
+  if
+   i32.const -1
+   return
+  end
+  local.get $0
+  i32.load
+  i32.const 5
+  i32.eq
+  if (result i32)
+   i32.const 1
+  else
+   local.get $0
+   i32.load
+   i32.const 9
+   i32.eq
+  end
+  if
+   local.get $0
+   i32.load offset=8
+   local.get $1
+   i32.load offset=8
+   i32.gt_s
+   if
+    i32.const 1
+    return
+   end
+   local.get $0
+   i32.load offset=8
+   local.get $1
+   i32.load offset=8
+   i32.lt_s
+   if
+    i32.const -1
+    return
+   end
+   i32.const 0
+   return
+  end
+  local.get $0
+  i32.load offset=4
+  local.tee $2
+  local.get $1
+  i32.load offset=4
+  local.tee $1
+  local.get $2
   i32.load offset=12
+  local.get $1
+  i32.load offset=12
+  i32.lt_s
+  select
+  i32.load offset=12
+  local.set $3
+  i32.const 0
+  local.set $0
+  loop $for-loop|0
+   local.get $0
+   local.get $3
+   i32.lt_s
+   if
+    local.get $2
+    local.get $0
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    i32.load offset=4
+    local.get $1
+    local.get $0
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    i32.load offset=4
+    i32.gt_s
+    if
+     i32.const 1
+     return
+    end
+    local.get $2
+    local.get $0
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    i32.load offset=4
+    local.get $1
+    local.get $0
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    i32.load offset=4
+    i32.lt_s
+    if
+     i32.const -1
+     return
+    end
+    local.get $0
+    i32.const 1
+    i32.add
+    local.set $0
+    br $for-loop|0
+   end
+  end
+  i32.const 0
+ )
+ (func $assembly/poker/handEvaluator/calculateHandStrength (param $0 i32) (param $1 i32) (result i32)
+  (local $2 i32)
+  (local $3 i32)
+  (local $4 i32)
+  local.get $0
+  i32.load offset=12
+  i32.const 2
   i32.lt_s
   if
    i32.const 0
    return
   end
-  local.get $4
-  i32.load offset=8
-  i32.eqz
-  if
-   local.get $8
+  i32.const 0
+  i32.const 2
+  i32.const 23
+  i32.const 11584
+  call $~lib/rt/__newArray
+  local.set $4
+  loop $for-loop|0
+   local.get $2
+   local.get $0
    i32.load offset=12
-   i32.load offset=12
-   i32.const 5
-   i32.ge_s
+   i32.lt_s
    if
-    i32.const 0
-    return
+    local.get $4
+    local.get $0
+    local.get $2
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+    local.get $2
+    i32.const 1
+    i32.add
+    local.set $2
+    br $for-loop|0
    end
   end
-  local.get $8
-  i32.load offset=36
-  local.tee $1
-  local.get $1
-  i32.load
-  local.get $4
-  i32.load offset=12
-  i32.sub
-  i32.store
-  local.get $8
-  i32.load offset=8
-  local.get $3
-  call $~lib/array/Array<assembly/types/GameState/CardInstance>#splice
-  drop
-  local.get $4
-  i32.load offset=56
-  local.tee $1
-  i32.const 0
-  i32.gt_s
-  if
-   local.get $8
-   i32.load offset=36
-   local.get $8
-   i32.load offset=36
+  loop $for-loop|1
+   local.get $3
+   local.get $1
    i32.load offset=12
-   local.get $1
-   i32.add
-   i32.store offset=12
-  end
-  local.get $4
-  i32.load offset=8
-  local.tee $1
-  if
-   local.get $1
-   i32.const 1
-   i32.eq
+   i32.lt_s
    if
     local.get $4
-    i32.load offset=48
-    local.tee $1
-    if
-     local.get $0
-     local.get $8
-     local.get $7
-     local.get $1
-     local.get $5
-     local.get $2
-     call $assembly/effects/effectInterpreter/executeEffect
-    end
-    local.get $8
-    i32.load offset=20
-    local.get $5
+    local.get $1
+    local.get $3
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
     call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+    local.get $3
+    i32.const 1
+    i32.add
+    local.set $3
+    br $for-loop|1
+   end
+  end
+  local.get $4
+  i32.load offset=12
+  i32.const 5
+  i32.ge_s
+  if
+   local.get $0
+   local.get $1
+   call $assembly/poker/handEvaluator/findBestHand
+   local.set $0
+   i32.const 11
+   i32.const 2
+   i32.const 8
+   i32.const 11616
+   call $~lib/rt/__newArray
+   local.set $1
+   i32.const 100
+   local.get $0
+   i32.load
+   local.tee $2
+   i32.const 0
+   i32.gt_s
+   if (result i32)
+    local.get $2
+    i32.const 10
+    i32.le_s
    else
+    i32.const 0
+   end
+   if (result i32)
+    local.get $1
+    local.get $0
+    i32.load
+    call $~lib/array/Array<i32>#__get
+   else
+    i32.const 10
+   end
+   local.get $0
+   i32.load offset=8
+   i32.const 2
+   i32.sub
+   i32.const 5
+   i32.mul
+   i32.const 12
+   i32.div_s
+   i32.add
+   local.tee $0
+   local.get $0
+   i32.const 100
+   i32.gt_s
+   select
+   return
+  end
+  local.get $0
+  i32.const 0
+  call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+  i32.load offset=4
+  local.tee $2
+  local.get $0
+  i32.const 1
+  call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+  i32.load offset=4
+  local.tee $3
+  local.get $2
+  local.get $3
+  i32.gt_s
+  select
+  i32.const 2
+  i32.sub
+  i32.const 30
+  i32.mul
+  i32.const 12
+  i32.div_s
+  local.set $1
+  local.get $2
+  local.get $3
+  i32.eq
+  if
+   local.get $1
+   local.get $2
+   i32.const 20
+   i32.mul
+   i32.const 14
+   i32.div_s
+   i32.const 40
+   i32.add
+   i32.add
+   local.set $1
+  end
+  local.get $1
+  i32.const 12
+  i32.add
+  local.get $1
+  local.get $0
+  i32.const 0
+  call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+  i32.load
+  local.get $0
+  i32.const 1
+  call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+  i32.load
+  i32.eq
+  select
+  local.set $1
+  local.get $2
+  local.get $3
+  i32.sub
+  local.tee $0
+  i32.const 0
+  i32.lt_s
+  if
+   i32.const 0
+   local.get $0
+   i32.sub
+   local.set $0
+  end
+  i32.const 100
+  local.get $0
+  i32.const 1
+  i32.eq
+  if (result i32)
+   local.get $1
+   i32.const 10
+   i32.add
+  else
+   local.get $0
+   i32.const 2
+   i32.eq
+   if (result i32)
+    local.get $1
+    i32.const 6
+    i32.add
+   else
+    local.get $1
+    i32.const 3
+    i32.add
+    local.get $1
+    local.get $0
+    i32.const 3
+    i32.eq
+    select
+   end
+  end
+  local.tee $0
+  local.get $0
+  i32.const 100
+  i32.gt_s
+  select
+ )
+ (func $assembly/poker/bettingEngine/resetForNewRound (param $0 i32) (result i32)
+  (local $1 i32)
+  call $assembly/types/PokerTypes/BettingState#constructor
+  local.tee $1
+  local.get $0
+  i32.load
+  i32.store
+  local.get $1
+  i32.const 0
+  i32.store offset=4
+  local.get $1
+  i32.const 0
+  i32.store offset=8
+  local.get $1
+  i32.const 10
+  i32.store offset=12
+  local.get $1
+  i32.const -1
+  i32.store offset=16
+  local.get $1
+  i32.const 0
+  i32.store8 offset=20
+  local.get $1
+  i32.const 0
+  i32.store8 offset=21
+  local.get $1
+  i32.const 0
+  i32.store8 offset=22
+  local.get $1
+ )
+ (func $assembly/poker/bettingEngine/initializeBettingState (result i32)
+  (local $0 i32)
+  call $assembly/types/PokerTypes/BettingState#constructor
+  local.tee $0
+  i32.const 16
+  i32.store
+  local.get $0
+  i32.const 5
+  i32.store offset=4
+  local.get $0
+  i32.const 10
+  i32.store offset=8
+  local.get $0
+  i32.const 10
+  i32.store offset=12
+  local.get $0
+  i32.const -1
+  i32.store offset=16
+  local.get $0
+  i32.const 0
+  i32.store8 offset=20
+  local.get $0
+  i32.const 0
+  i32.store8 offset=21
+  local.get $0
+  i32.const 0
+  i32.store8 offset=22
+  local.get $0
+ )
+ (func $assembly/poker/bettingEngine/calculateMinRaise (param $0 i32) (result i32)
+  (local $1 i32)
+  local.get $0
+  i32.load offset=4
+  local.tee $1
+  local.get $0
+  i32.load offset=8
+  i32.gt_s
+  if (result i32)
+   local.get $1
+  else
+   local.get $0
+   i32.load offset=8
+  end
+  local.get $0
+  i32.load offset=12
+  i32.add
+ )
+ (func $assembly/poker/bettingEngine/calculateCallAmount (param $0 i32) (param $1 i32) (result i32)
+  local.get $1
+  if (result i32)
+   local.get $0
+   i32.load offset=8
+   local.tee $1
+   local.get $0
+   i32.load offset=4
+   local.tee $0
+   i32.gt_s
+   if (result i32)
+    local.get $1
+    local.get $0
+    i32.sub
+   else
+    i32.const 0
+   end
+  else
+   local.get $0
+   i32.load offset=4
+   local.tee $1
+   local.get $0
+   i32.load offset=8
+   local.tee $0
+   i32.gt_s
+   if (result i32)
+    local.get $1
+    local.get $0
+    i32.sub
+   else
+    i32.const 0
+   end
+  end
+ )
+ (func $assembly/index/hashStateJson (param $0 i32) (result i32)
+  local.get $0
+  call $assembly/util/sha256/sha256
+ )
+ (func $assembly/index/getStateHash (param $0 i32) (result i32)
+  local.get $0
+  call $assembly/engine/stateSerializer/serializeGameState
+  call $assembly/util/sha256/sha256
+ )
+ (func $assembly/index/getResultLength (result i32)
+  i32.const 2748
+  i32.load
+  i32.const 1
+  i32.shr_u
+ )
+ (func $assembly/index/getResult (result i32)
+  i32.const 2752
+ )
+ (func $assembly/index/getEngineVersion (result i32)
+  i32.const 8736
+ )
+ (func $assembly/index/createPlayer (param $0 i32) (result i32)
+  local.get $0
+  call $assembly/types/GameState/Player#constructor
+ )
+ (func $assembly/index/createManaPool (param $0 i32) (param $1 i32) (result i32)
+  local.get $0
+  local.get $1
+  call $assembly/types/GameState/ManaPool#constructor
+ )
+ (func $assembly/index/createHeroPower (param $0 i32) (param $1 i32) (result i32)
+  local.get $0
+  local.get $1
+  call $assembly/types/GameState/HeroPower#constructor
+ )
+ (func $assembly/index/createGameState (result i32)
+  (local $0 i32)
+  i32.const 32
+  i32.const 12
+  call $~lib/rt/stub/__new
+  local.tee $0
+  i32.const 0
+  i32.store
+  local.get $0
+  i32.const 0
+  i32.store offset=4
+  local.get $0
+  i32.const 0
+  i32.store offset=8
+  local.get $0
+  i32.const 0
+  i32.store offset=12
+  local.get $0
+  i32.const 0
+  i32.store offset=16
+  local.get $0
+  i32.const 0
+  i32.store offset=20
+  local.get $0
+  i32.const 0
+  i32.store offset=24
+  local.get $0
+  i32.const 0
+  i32.store offset=28
+  local.get $0
+  i32.const 0
+  call $assembly/types/GameState/Player#constructor
+  i32.store
+  local.get $0
+  i32.const 1
+  call $assembly/types/GameState/Player#constructor
+  i32.store offset=4
+  local.get $0
+  i32.const 0
+  i32.store offset=8
+  local.get $0
+  i32.const 1
+  i32.store offset=12
+  local.get $0
+  i32.const 0
+  i32.store offset=16
+  local.get $0
+  i32.const -1
+  i32.store offset=20
+  local.get $0
+  i32.const 0
+  i32.store offset=24
+  local.get $0
+  i32.const 0
+  i32.store offset=28
+  local.get $0
+ )
+ (func $assembly/index/createEngineAction (param $0 i32) (result i32)
+  (local $1 i32)
+  i32.const 20
+  i32.const 18
+  call $~lib/rt/stub/__new
+  local.tee $1
+  i32.const 0
+  i32.store
+  local.get $1
+  i32.const 0
+  i32.store offset=4
+  local.get $1
+  i32.const 0
+  i32.store offset=8
+  local.get $1
+  i32.const 0
+  i32.store offset=12
+  local.get $1
+  i32.const 0
+  i32.store offset=16
+  local.get $1
+  local.get $0
+  i32.store
+  local.get $1
+  i32.const 2752
+  i32.store offset=4
+  local.get $1
+  i32.const 2752
+  i32.store offset=8
+  local.get $1
+  i32.const 2752
+  i32.store offset=12
+  local.get $1
+  i32.const 2752
+  i32.store offset=16
+  local.get $1
+ )
+ (func $assembly/index/createCardInstance (param $0 i32) (param $1 i32) (result i32)
+  local.get $0
+  local.get $1
+  call $assembly/types/GameState/CardInstance#constructor
+ )
+ (func $assembly/index/applyGameAction (param $0 i32) (param $1 i32) (result i32)
+  (local $2 i32)
+  (local $3 i32)
+  (local $4 i32)
+  (local $5 i32)
+  i32.const 16
+  i32.const 19
+  call $~lib/rt/stub/__new
+  local.tee $3
+  i32.const 0
+  i32.store
+  local.get $3
+  i32.const 0
+  i32.store offset=4
+  local.get $3
+  i32.const 0
+  i32.store8 offset=8
+  local.get $3
+  i32.const 0
+  i32.store offset=12
+  local.get $3
+  local.get $0
+  i32.store
+  local.get $3
+  i32.const 2752
+  i32.store offset=4
+  local.get $3
+  i32.const 1
+  i32.store8 offset=8
+  local.get $3
+  i32.const 2752
+  i32.store offset=12
+  block $__inlined_func$assembly/engine/actionProcessor/applyAction$23
+   local.get $0
+   i32.load offset=16
+   i32.const 3
+   i32.eq
+   if
+    local.get $3
+    i32.const 0
+    i32.store8 offset=8
+    local.get $3
+    i32.const 8928
+    i32.store offset=12
+    br $__inlined_func$assembly/engine/actionProcessor/applyAction$23
+   end
+   local.get $1
+   i32.load
+   local.tee $4
+   if
     local.get $4
-    i32.load offset=8
-    i32.const 2
+    i32.const 1
     i32.eq
     if
-     local.get $8
-     i32.load offset=28
-     local.tee $1
-     if
-      local.get $8
-      i32.load offset=20
-      local.get $1
-      call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-     end
-     local.get $5
-     local.get $4
-     i32.load offset=20
-     i32.store offset=20
-     local.get $5
-     local.get $4
+     local.get $0
+     local.get $1
+     i32.load offset=12
+     local.get $1
      i32.load offset=16
-     i32.store offset=8
-     local.get $8
-     local.get $5
-     i32.store offset=28
+     call $assembly/engine/combatProcessor/processAttack
+     local.set $2
     else
-     local.get $4
-     i32.load offset=8
-     i32.const 4
+     local.get $1
+     i32.load
+     i32.const 2
      i32.eq
      if
-      local.get $8
-      i32.load offset=24
-      local.get $5
-      call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+      local.get $0
+      call $assembly/engine/turnManager/endTurn
+      local.set $2
      else
-      local.get $4
-      i32.load offset=8
-      i32.const 7
+      local.get $1
+      i32.load
+      i32.const 3
       i32.eq
       if
-       local.get $8
-       local.get $5
-       i32.store offset=32
-      else
-       local.get $4
+       local.get $1
        i32.load offset=8
        drop
+       local.get $0
+       i32.load offset=8
+       if (result i32)
+        local.get $0
+        i32.load offset=4
+       else
+        local.get $0
+        i32.load
+       end
+       local.set $2
+       local.get $0
+       i32.load offset=8
+       if (result i32)
+        local.get $0
+        i32.load
+       else
+        local.get $0
+        i32.load offset=4
+       end
+       drop
+       block $__inlined_func$assembly/engine/actionProcessor/useHeroPower$2001 (result i32)
+        i32.const 0
+        local.get $2
+        i32.load offset=60
+        local.tee $4
+        i32.load8_u offset=8
+        br_if $__inlined_func$assembly/engine/actionProcessor/useHeroPower$2001
+        drop
+        i32.const 0
+        local.get $2
+        i32.load offset=36
+        local.tee $1
+        i32.load
+        local.tee $5
+        local.get $4
+        i32.load offset=4
+        local.tee $4
+        i32.lt_s
+        br_if $__inlined_func$assembly/engine/actionProcessor/useHeroPower$2001
+        drop
+        local.get $1
+        local.get $5
+        local.get $4
+        i32.sub
+        i32.store
+        local.get $2
+        i32.load offset=60
+        i32.const 1
+        i32.store8 offset=8
+        i32.const 1
+       end
+       local.set $2
+      else
+       local.get $1
+       i32.load
+       i32.const 4
+       i32.eq
+       if
+        local.get $0
+        local.get $0
+        i32.load offset=8
+        if (result i32)
+         local.get $0
+         i32.load offset=4
+        else
+         local.get $0
+         i32.load
+        end
+        call $assembly/engine/drawEngine/drawCardForPlayer
+        i32.const 1
+        local.set $2
+       else
+        local.get $3
+        i32.const 11024
+        i32.store offset=12
+       end
       end
      end
     end
-   end
-  else
-   local.get $5
-   i32.load8_u offset=32
-   if
-    local.get $5
-    i32.const 0
-    i32.store8 offset=25
-    local.get $5
-    i32.const 1
-    i32.store8 offset=24
    else
-    local.get $5
-    i32.const 1
-    i32.store8 offset=25
-    local.get $5
-    local.get $5
-    i32.load8_u offset=31
-    i32.store8 offset=24
-   end
-   local.get $8
-   i32.load offset=12
-   local.get $5
-   call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-   local.get $4
-   i32.load offset=40
-   local.tee $1
-   if
     local.get $0
-    local.get $8
-    local.get $7
     local.get $1
-    local.get $5
-    local.get $2
-    call $assembly/effects/effectInterpreter/executeEffect
+    i32.load offset=4
+    local.get $1
+    i32.load offset=8
+    call $assembly/engine/cardPlayer/playCard
+    local.set $2
+   end
+   local.get $3
+   local.get $2
+   i32.store8 offset=8
+   local.get $2
+   if (result i32)
+    i32.const 0
+   else
+    local.get $3
+    i32.load offset=12
+    i32.const 2752
+    call $~lib/string/String.__eq
+   end
+   if
+    local.get $3
+    i32.const 11088
+    i32.store offset=12
    end
   end
-  local.get $8
-  local.get $8
-  i32.load offset=64
-  i32.const 1
-  i32.add
-  i32.store offset=64
-  local.get $8
-  i32.load offset=64
-  i32.const 2
-  i32.ge_s
+  local.get $3
+  local.get $0
+  call $assembly/engine/stateSerializer/serializeGameState
+  call $assembly/util/sha256/sha256
+  i32.store offset=4
+  local.get $3
+ )
+ (func $assembly/engine/turnManager/endTurn (param $0 i32) (result i32)
+  (local $1 i32)
+  (local $2 i32)
+  (local $3 i32)
+  (local $4 i32)
+  (local $5 i32)
+  (local $6 i32)
+  (local $7 i32)
+  local.get $0
+  i32.load offset=16
+  i32.const 3
+  i32.eq
+  if
+   i32.const 0
+   return
+  end
+  local.get $0
+  i32.load offset=8
   if (result i32)
-   local.get $4
-   i32.load offset=52
+   local.get $0
+   i32.load offset=4
+  else
+   local.get $0
+   i32.load
+  end
+  local.set $5
+  local.get $0
+  i32.load offset=8
+  if (result i32)
+   local.get $0
+   i32.load
+  else
+   local.get $0
+   i32.load offset=4
+  end
+  local.set $2
+  loop $for-loop|0
+   local.get $3
+   local.get $5
+   i32.load offset=12
+   local.tee $6
+   i32.load offset=12
+   i32.lt_s
+   if
+    local.get $6
+    local.get $3
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    local.tee $6
+    i32.load8_u offset=28
+    if (result i32)
+     local.get $6
+     i32.load8_u offset=26
+    else
+     i32.const 1
+    end
+    i32.eqz
+    if
+     local.get $6
+     i32.const 0
+     i32.store8 offset=28
+    end
+    local.get $6
+    i32.load8_u offset=52
+    if
+     block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1790
+      i32.const 6
+      i32.const 3
+      local.get $6
+      i32.load8_u offset=56
+      select
+      local.tee $7
+      i32.const 3
+      i32.add
+      local.get $7
+      local.get $6
+      i32.load8_u offset=53
+      select
+      local.set $7
+      local.get $6
+      i32.load8_u offset=27
+      if
+       local.get $6
+       i32.const 0
+       i32.store8 offset=27
+       br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1790
+      end
+      local.get $6
+      local.get $6
+      i32.load offset=12
+      local.get $7
+      i32.sub
+      i32.store offset=12
+     end
+    end
+    local.get $3
+    i32.const 1
+    i32.add
+    local.set $3
+    br $for-loop|0
+   end
+  end
+  local.get $5
+  i32.load offset=28
+  if (result i32)
+   local.get $5
+   i32.load offset=68
+   i32.const 0
+   i32.gt_s
   else
    i32.const 0
   end
   if
-   local.get $0
-   local.get $8
-   local.get $7
-   local.get $4
-   i32.load offset=52
    local.get $5
-   local.get $2
-   call $assembly/effects/effectInterpreter/executeEffect
+   i32.load offset=28
+   local.tee $3
+   local.get $3
+   i32.load offset=20
+   local.get $5
+   i32.load offset=68
+   i32.sub
+   i32.store offset=20
+   local.get $5
+   i32.load offset=28
+   i32.load offset=20
+   i32.const 0
+   i32.le_s
+   if
+    local.get $5
+    i32.load offset=20
+    local.get $5
+    i32.load offset=28
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+    local.get $5
+    i32.const 0
+    i32.store offset=28
+   end
   end
+  local.get $0
+  call $assembly/engine/combatProcessor/removeDeadMinions
+  local.get $5
+  i32.load offset=36
+  local.tee $3
+  i32.load offset=12
+  local.tee $6
+  i32.const 0
+  i32.gt_s
+  if
+   local.get $3
+   local.get $6
+   i32.store offset=8
+   local.get $5
+   i32.load offset=36
+   i32.const 0
+   i32.store offset=12
+  end
+  local.get $0
+  local.get $0
+  i32.load offset=8
+  i32.eqz
+  i32.store offset=8
+  local.get $0
+  i32.load offset=8
+  i32.eqz
+  if
+   local.get $0
+   local.get $0
+   i32.load offset=12
+   i32.const 1
+   i32.add
+   i32.store offset=12
+  end
+  local.get $2
+  i32.load offset=36
+  local.tee $3
+  i32.load offset=4
+  local.tee $5
+  i32.const 10
+  i32.lt_s
+  if
+   local.get $3
+   local.get $5
+   i32.const 1
+   i32.add
+   i32.store offset=4
+  end
+  local.get $2
+  i32.load offset=36
+  local.tee $3
+  local.get $3
+  i32.load offset=4
+  local.get $3
+  i32.load offset=8
+  i32.sub
+  i32.store
+  local.get $2
+  i32.load offset=36
+  i32.load
+  i32.const 0
+  i32.lt_s
+  if
+   local.get $2
+   i32.load offset=36
+   i32.const 0
+   i32.store
+  end
+  local.get $2
+  i32.load offset=36
+  i32.const 0
+  i32.store offset=8
+  local.get $2
+  i32.const 0
+  i32.store offset=64
+  local.get $2
+  i32.const 0
+  i32.store offset=68
+  local.get $2
+  i32.load offset=60
+  i32.const 0
+  i32.store8 offset=8
+  loop $for-loop|00
+   local.get $4
+   local.get $2
+   i32.load offset=12
+   local.tee $3
+   i32.load offset=12
+   i32.lt_s
+   if
+    local.get $3
+    local.get $4
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    local.tee $3
+    i32.const 0
+    i32.store offset=40
+    local.get $3
+    i32.const 0
+    i32.store8 offset=26
+    local.get $3
+    i32.const 1
+    i32.store8 offset=24
+    local.get $3
+    i32.load8_u offset=25
+    if (result i32)
+     local.get $3
+     i32.load8_u offset=32
+    else
+     i32.const 1
+    end
+    if (result i32)
+     i32.const 1
+    else
+     local.get $3
+     i32.load8_u offset=31
+    end
+    i32.eqz
+    if
+     local.get $3
+     i32.const 0
+     i32.store8 offset=25
+    end
+    local.get $4
+    i32.const 1
+    i32.add
+    local.set $4
+    br $for-loop|00
+   end
+  end
+  loop $for-loop|001
+   local.get $1
+   local.get $2
+   i32.load offset=12
+   local.tee $3
+   i32.load offset=12
+   i32.lt_s
+   if
+    local.get $3
+    local.get $1
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    drop
+    local.get $1
+    i32.const 1
+    i32.add
+    local.set $1
+    br $for-loop|001
+   end
+  end
+  local.get $0
+  local.get $2
+  call $assembly/engine/drawEngine/drawCardForPlayer
   local.get $0
   call $assembly/engine/combatProcessor/removeDeadMinions
   local.get $0
@@ -8018,294 +14490,350 @@
   end
   i32.const 1
  )
- (func $assembly/engine/turnManager/endTurn (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
+ (func $assembly/engine/cardPlayer/playCard (param $0 i32) (param $1 i32) (param $2 i32) (result i32)
   (local $3 i32)
   (local $4 i32)
   (local $5 i32)
   (local $6 i32)
   (local $7 i32)
+  (local $8 i32)
   local.get $0
-  i32.load offset=16
-  i32.const 3
+  i32.load offset=8
+  if (result i32)
+   local.get $0
+   i32.load offset=4
+  else
+   local.get $0
+   i32.load
+  end
+  local.set $8
+  local.get $0
+  i32.load offset=8
+  if (result i32)
+   local.get $0
+   i32.load
+  else
+   local.get $0
+   i32.load offset=4
+  end
+  local.set $7
+  i32.const -1
+  local.set $3
+  loop $for-loop|0
+   local.get $4
+   local.get $8
+   i32.load offset=8
+   local.tee $5
+   i32.load offset=12
+   i32.lt_s
+   if
+    block $for-break0
+     local.get $5
+     local.get $4
+     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+     i32.load
+     local.get $1
+     call $~lib/string/String.__eq
+     if
+      local.get $4
+      local.set $3
+      br $for-break0
+     end
+     local.get $4
+     i32.const 1
+     i32.add
+     local.set $4
+     br $for-loop|0
+    end
+   end
+  end
+  local.get $3
+  i32.const -1
   i32.eq
   if
    i32.const 0
    return
   end
-  local.get $0
+  local.get $8
   i32.load offset=8
-  if (result i32)
-   local.get $0
-   i32.load offset=4
-  else
-   local.get $0
-   i32.load
-  end
-  local.set $5
-  local.get $0
-  i32.load offset=8
-  if (result i32)
-   local.get $0
-   i32.load
-  else
-   local.get $0
-   i32.load offset=4
-  end
-  local.set $2
-  loop $for-loop|0
-   local.get $3
-   local.get $5
-   i32.load offset=12
-   local.tee $6
-   i32.load offset=12
-   i32.lt_s
-   if
-    local.get $6
-    local.get $3
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    local.tee $6
-    i32.load8_u offset=28
-    if (result i32)
-     local.get $6
-     i32.load8_u offset=26
-    else
+  local.get $3
+  call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+  local.tee $5
+  i32.load offset=4
+  local.set $6
+  global.get $assembly/util/cardLookup/cardRegistry
+  local.tee $1
+  i32.load
+  local.get $1
+  i32.load offset=4
+  local.get $6
+  i32.const -1028477379
+  i32.mul
+  i32.const 374761397
+  i32.add
+  i32.const 17
+  i32.rotl
+  i32.const 668265263
+  i32.mul
+  local.tee $1
+  local.get $1
+  i32.const 15
+  i32.shr_u
+  i32.xor
+  i32.const -2048144777
+  i32.mul
+  local.tee $1
+  local.get $1
+  i32.const 13
+  i32.shr_u
+  i32.xor
+  i32.const -1028477379
+  i32.mul
+  local.tee $1
+  local.get $1
+  i32.const 16
+  i32.shr_u
+  i32.xor
+  i32.and
+  i32.const 2
+  i32.shl
+  i32.add
+  i32.load
+  local.set $1
+  block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1702"
+   loop $while-continue|0
+    local.get $1
+    if
+     local.get $1
+     i32.load offset=8
+     local.tee $4
      i32.const 1
-    end
-    i32.eqz
-    if
-     local.get $6
-     i32.const 0
-     i32.store8 offset=28
-    end
-    local.get $6
-    i32.load8_u offset=52
-    if
-     block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1790
-      i32.const 6
-      i32.const 3
+     i32.and
+     if (result i32)
+      i32.const 0
+     else
+      local.get $1
+      i32.load
       local.get $6
-      i32.load8_u offset=56
-      select
-      local.tee $7
-      i32.const 3
-      i32.add
-      local.get $7
-      local.get $6
-      i32.load8_u offset=53
-      select
-      local.set $7
-      local.get $6
-      i32.load8_u offset=27
-      if
-       local.get $6
-       i32.const 0
-       i32.store8 offset=27
-       br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1790
-      end
-      local.get $6
-      local.get $6
-      i32.load offset=12
-      local.get $7
-      i32.sub
-      i32.store offset=12
+      i32.eq
      end
+     br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1702"
+     local.get $4
+     i32.const -2
+     i32.and
+     local.set $1
+     br $while-continue|0
     end
-    local.get $3
-    i32.const 1
-    i32.add
-    local.set $3
-    br $for-loop|0
    end
-  end
-  local.get $5
-  i32.load offset=28
-  if (result i32)
-   local.get $5
-   i32.load offset=68
    i32.const 0
-   i32.gt_s
+   local.set $1
+  end
+  local.get $1
+  if (result i32)
+   global.get $assembly/util/cardLookup/cardRegistry
+   local.get $6
+   call $"~lib/map/Map<i32,assembly/types/GameState/CardDef>#get"
   else
    i32.const 0
   end
+  local.tee $4
+  i32.eqz
   if
-   local.get $5
-   i32.load offset=28
-   local.tee $3
-   local.get $3
-   i32.load offset=20
-   local.get $5
-   i32.load offset=68
-   i32.sub
-   i32.store offset=20
-   local.get $5
-   i32.load offset=28
-   i32.load offset=20
    i32.const 0
-   i32.le_s
+   return
+  end
+  local.get $8
+  i32.load offset=36
+  i32.load
+  local.get $4
+  i32.load offset=12
+  i32.lt_s
+  if
+   i32.const 0
+   return
+  end
+  local.get $4
+  i32.load offset=8
+  i32.eqz
+  if
+   local.get $8
+   i32.load offset=12
+   i32.load offset=12
+   i32.const 5
+   i32.ge_s
    if
-    local.get $5
-    i32.load offset=20
-    local.get $5
-    i32.load offset=28
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-    local.get $5
     i32.const 0
-    i32.store offset=28
+    return
    end
   end
-  local.get $0
-  call $assembly/engine/combatProcessor/removeDeadMinions
-  local.get $5
+  local.get $8
   i32.load offset=36
-  local.tee $3
+  local.tee $1
+  local.get $1
+  i32.load
+  local.get $4
   i32.load offset=12
-  local.tee $6
+  i32.sub
+  i32.store
+  local.get $8
+  i32.load offset=8
+  local.get $3
+  call $~lib/array/Array<assembly/types/GameState/CardInstance>#splice
+  drop
+  local.get $4
+  i32.load offset=56
+  local.tee $1
   i32.const 0
   i32.gt_s
   if
-   local.get $3
-   local.get $6
-   i32.store offset=8
-   local.get $5
+   local.get $8
    i32.load offset=36
-   i32.const 0
-   i32.store offset=12
-  end
-  local.get $0
-  local.get $0
-  i32.load offset=8
-  i32.eqz
-  i32.store offset=8
-  local.get $0
-  i32.load offset=8
-  i32.eqz
-  if
-   local.get $0
-   local.get $0
+   local.get $8
+   i32.load offset=36
    i32.load offset=12
-   i32.const 1
+   local.get $1
    i32.add
    i32.store offset=12
   end
-  local.get $2
-  i32.load offset=36
-  local.tee $3
-  i32.load offset=4
-  local.tee $5
-  i32.const 10
-  i32.lt_s
-  if
-   local.get $3
-   local.get $5
-   i32.const 1
-   i32.add
-   i32.store offset=4
-  end
-  local.get $2
-  i32.load offset=36
-  local.tee $3
-  local.get $3
-  i32.load offset=4
-  local.get $3
+  local.get $4
   i32.load offset=8
-  i32.sub
-  i32.store
-  local.get $2
-  i32.load offset=36
-  i32.load
-  i32.const 0
-  i32.lt_s
+  local.tee $1
   if
-   local.get $2
-   i32.load offset=36
-   i32.const 0
-   i32.store
-  end
-  local.get $2
-  i32.load offset=36
-  i32.const 0
-  i32.store offset=8
-  local.get $2
-  i32.const 0
-  i32.store offset=64
-  local.get $2
-  i32.const 0
-  i32.store offset=68
-  local.get $2
-  i32.load offset=60
-  i32.const 0
-  i32.store8 offset=8
-  loop $for-loop|00
-   local.get $4
-   local.get $2
-   i32.load offset=12
-   local.tee $3
-   i32.load offset=12
-   i32.lt_s
+   local.get $1
+   i32.const 1
+   i32.eq
    if
-    local.get $3
     local.get $4
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    local.tee $3
+    i32.load offset=48
+    local.tee $1
+    if
+     local.get $0
+     local.get $8
+     local.get $7
+     local.get $1
+     local.get $5
+     local.get $2
+     call $assembly/effects/effectInterpreter/executeEffect
+    end
+    local.get $8
+    i32.load offset=20
+    local.get $5
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+   else
+    local.get $4
+    i32.load offset=8
+    i32.const 2
+    i32.eq
+    if
+     local.get $8
+     i32.load offset=28
+     local.tee $1
+     if
+      local.get $8
+      i32.load offset=20
+      local.get $1
+      call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+     end
+     local.get $5
+     local.get $4
+     i32.load offset=20
+     i32.store offset=20
+     local.get $5
+     local.get $4
+     i32.load offset=16
+     i32.store offset=8
+     local.get $8
+     local.get $5
+     i32.store offset=28
+    else
+     local.get $4
+     i32.load offset=8
+     i32.const 4
+     i32.eq
+     if
+      local.get $8
+      i32.load offset=24
+      local.get $5
+      call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+     else
+      local.get $4
+      i32.load offset=8
+      i32.const 7
+      i32.eq
+      if
+       local.get $8
+       local.get $5
+       i32.store offset=32
+      else
+       local.get $4
+       i32.load offset=8
+       drop
+      end
+     end
+    end
+   end
+  else
+   local.get $5
+   i32.load8_u offset=32
+   if
+    local.get $5
     i32.const 0
-    i32.store offset=40
-    local.get $3
-    i32.const 0
-    i32.store8 offset=26
-    local.get $3
+    i32.store8 offset=25
+    local.get $5
     i32.const 1
     i32.store8 offset=24
-    local.get $3
-    i32.load8_u offset=25
-    if (result i32)
-     local.get $3
-     i32.load8_u offset=32
-    else
-     i32.const 1
-    end
-    if (result i32)
-     i32.const 1
-    else
-     local.get $3
-     i32.load8_u offset=31
-    end
-    i32.eqz
-    if
-     local.get $3
-     i32.const 0
-     i32.store8 offset=25
-    end
-    local.get $4
+   else
+    local.get $5
     i32.const 1
-    i32.add
-    local.set $4
-    br $for-loop|00
+    i32.store8 offset=25
+    local.get $5
+    local.get $5
+    i32.load8_u offset=31
+    i32.store8 offset=24
    end
-  end
-  loop $for-loop|001
-   local.get $1
-   local.get $2
+   local.get $8
    i32.load offset=12
-   local.tee $3
-   i32.load offset=12
-   i32.lt_s
+   local.get $5
+   call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+   local.get $4
+   i32.load offset=40
+   local.tee $1
    if
-    local.get $3
+    local.get $0
+    local.get $8
+    local.get $7
     local.get $1
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    drop
-    local.get $1
-    i32.const 1
-    i32.add
-    local.set $1
-    br $for-loop|001
+    local.get $5
+    local.get $2
+    call $assembly/effects/effectInterpreter/executeEffect
    end
   end
-  local.get $0
-  local.get $2
-  call $assembly/engine/drawEngine/drawCardForPlayer
+  local.get $8
+  local.get $8
+  i32.load offset=64
+  i32.const 1
+  i32.add
+  i32.store offset=64
+  local.get $8
+  i32.load offset=64
+  i32.const 2
+  i32.ge_s
+  if (result i32)
+   local.get $4
+   i32.load offset=52
+  else
+   i32.const 0
+  end
+  if
+   local.get $0
+   local.get $8
+   local.get $7
+   local.get $4
+   i32.load offset=52
+   local.get $5
+   local.get $2
+   call $assembly/effects/effectInterpreter/executeEffect
+  end
   local.get $0
   call $assembly/engine/combatProcessor/removeDeadMinions
   local.get $0
@@ -8360,6516 +14888,219 @@
   end
   i32.const 1
  )
- (func $assembly/index/applyGameAction (param $0 i32) (param $1 i32) (result i32)
+ (func $assembly/effects/effectInterpreter/applyDamageAll (param $0 i32) (param $1 i32)
   (local $2 i32)
   (local $3 i32)
   (local $4 i32)
   (local $5 i32)
-  i32.const 16
-  i32.const 19
-  call $~lib/rt/stub/__new
-  local.tee $3
-  i32.const 0
-  i32.store
-  local.get $3
-  i32.const 0
-  i32.store offset=4
-  local.get $3
-  i32.const 0
-  i32.store8 offset=8
-  local.get $3
-  i32.const 0
-  i32.store offset=12
-  local.get $3
-  local.get $0
-  i32.store
-  local.get $3
-  i32.const 2752
-  i32.store offset=4
-  local.get $3
-  i32.const 1
-  i32.store8 offset=8
-  local.get $3
-  i32.const 2752
-  i32.store offset=12
-  block $__inlined_func$assembly/engine/actionProcessor/applyAction$23
+  local.get $1
+  i32.load offset=4
+  local.set $1
+  loop $for-loop|0
+   local.get $2
    local.get $0
-   i32.load offset=16
-   i32.const 3
-   i32.eq
-   if
-    local.get $3
-    i32.const 0
-    i32.store8 offset=8
-    local.get $3
-    i32.const 8928
-    i32.store offset=12
-    br $__inlined_func$assembly/engine/actionProcessor/applyAction$23
-   end
-   local.get $1
    i32.load
+   i32.load offset=12
    local.tee $4
+   i32.load offset=12
+   i32.lt_s
    if
     local.get $4
-    i32.const 1
-    i32.eq
-    if
-     local.get $0
+    local.get $2
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    local.set $4
+    block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1744
      local.get $1
-     i32.load offset=12
+     i32.const 0
+     i32.le_s
+     br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1744
      local.get $1
-     i32.load offset=16
-     call $assembly/engine/combatProcessor/processAttack
-     local.set $2
-    else
+     i32.const 3
+     i32.add
      local.get $1
-     i32.load
-     i32.const 2
-     i32.eq
+     local.get $4
+     i32.load8_u offset=56
+     select
+     local.tee $5
+     i32.const 3
+     i32.add
+     local.get $5
+     local.get $4
+     i32.load8_u offset=53
+     select
+     local.set $5
+     local.get $4
+     i32.load8_u offset=27
      if
-      local.get $0
-      call $assembly/engine/turnManager/endTurn
-      local.set $2
-     else
-      local.get $1
-      i32.load
-      i32.const 3
-      i32.eq
-      if
-       block $__inlined_func$assembly/engine/actionProcessor/useHeroPower$2001 (result i32)
-        local.get $1
-        i32.load offset=8
-        drop
-        local.get $0
-        i32.load offset=8
-        if (result i32)
-         local.get $0
-         i32.load offset=4
-        else
-         local.get $0
-         i32.load
-        end
-        local.set $2
-        local.get $0
-        i32.load offset=8
-        if (result i32)
-         local.get $0
-         i32.load
-        else
-         local.get $0
-         i32.load offset=4
-        end
-        drop
-        i32.const 0
-        local.get $2
-        i32.load offset=60
-        local.tee $4
-        i32.load8_u offset=8
-        br_if $__inlined_func$assembly/engine/actionProcessor/useHeroPower$2001
-        drop
-        i32.const 0
-        local.get $2
-        i32.load offset=36
-        local.tee $1
-        i32.load
-        local.tee $5
-        local.get $4
-        i32.load offset=4
-        local.tee $4
-        i32.lt_s
-        br_if $__inlined_func$assembly/engine/actionProcessor/useHeroPower$2001
-        drop
-        local.get $1
-        local.get $5
-        local.get $4
-        i32.sub
-        i32.store
-        local.get $2
-        i32.load offset=60
-        i32.const 1
-        i32.store8 offset=8
-        i32.const 1
-       end
-       local.set $2
-      else
-       local.get $1
-       i32.load
-       i32.const 4
-       i32.eq
-       if
-        local.get $0
-        local.get $0
-        i32.load offset=8
-        if (result i32)
-         local.get $0
-         i32.load offset=4
-        else
-         local.get $0
-         i32.load
-        end
-        call $assembly/engine/drawEngine/drawCardForPlayer
-        i32.const 1
-        local.set $2
-       else
-        local.get $3
-        i32.const 11024
-        i32.store offset=12
-       end
-      end
+      local.get $4
+      i32.const 0
+      i32.store8 offset=27
+      br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1744
      end
+     local.get $4
+     local.get $4
+     i32.load offset=12
+     local.get $5
+     i32.sub
+     i32.store offset=12
     end
-   else
-    local.get $0
-    local.get $1
-    i32.load offset=4
-    local.get $1
-    i32.load offset=8
-    call $assembly/engine/cardPlayer/playCard
+    local.get $2
+    i32.const 1
+    i32.add
     local.set $2
+    br $for-loop|0
    end
+  end
+  loop $for-loop|1
    local.get $3
-   local.get $2
-   i32.store8 offset=8
-   local.get $2
-   if (result i32)
-    i32.const 0
-   else
-    local.get $3
-    i32.load offset=12
-    i32.const 2752
-    call $~lib/string/String.__eq
-   end
+   local.get $0
+   i32.load offset=4
+   i32.load offset=12
+   local.tee $2
+   i32.load offset=12
+   i32.lt_s
    if
+    local.get $2
     local.get $3
-    i32.const 11088
-    i32.store offset=12
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+    local.set $2
+    block $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1746
+     local.get $1
+     i32.const 0
+     i32.le_s
+     br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1746
+     local.get $1
+     i32.const 3
+     i32.add
+     local.get $1
+     local.get $2
+     i32.load8_u offset=56
+     select
+     local.tee $4
+     i32.const 3
+     i32.add
+     local.get $4
+     local.get $2
+     i32.load8_u offset=53
+     select
+     local.set $4
+     local.get $2
+     i32.load8_u offset=27
+     if
+      local.get $2
+      i32.const 0
+      i32.store8 offset=27
+      br $__inlined_func$assembly/engine/combatProcessor/dealDamageToMinion$1746
+     end
+     local.get $2
+     local.get $2
+     i32.load offset=12
+     local.get $4
+     i32.sub
+     i32.store offset=12
+    end
+    local.get $3
+    i32.const 1
+    i32.add
+    local.set $3
+    br $for-loop|1
    end
   end
-  local.get $3
   local.get $0
-  call $assembly/engine/stateSerializer/serializeGameState
-  call $assembly/util/sha256/sha256
-  i32.store offset=4
-  local.get $3
- )
- (func $assembly/util/cardLookup/beginCard (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32)
-  (local $4 i32)
-  i32.const 72
-  i32.const 4
-  call $~lib/rt/stub/__new
-  local.tee $4
-  i32.const 0
-  i32.store
-  local.get $4
-  i32.const 0
-  i32.store offset=4
-  local.get $4
-  i32.const 0
-  i32.store offset=8
-  local.get $4
-  i32.const 0
-  i32.store offset=12
-  local.get $4
-  i32.const 0
-  i32.store offset=16
-  local.get $4
-  i32.const 0
-  i32.store offset=20
-  local.get $4
-  i32.const 0
-  i32.store offset=24
-  local.get $4
-  i32.const 0
-  i32.store offset=28
-  local.get $4
-  i32.const 0
-  i32.store offset=32
-  local.get $4
-  i32.const 0
-  i32.store offset=36
-  local.get $4
-  i32.const 0
-  i32.store offset=40
-  local.get $4
-  i32.const 0
-  i32.store offset=44
-  local.get $4
-  i32.const 0
-  i32.store offset=48
-  local.get $4
-  i32.const 0
-  i32.store offset=52
-  local.get $4
-  i32.const 0
-  i32.store offset=56
-  local.get $4
-  i32.const 0
-  i32.store offset=60
-  local.get $4
-  i32.const 0
-  i32.store offset=64
-  local.get $4
-  i32.const 0
-  i32.store offset=68
-  local.get $4
-  i32.const 0
-  i32.store
-  local.get $4
-  i32.const 2752
-  i32.store offset=4
-  local.get $4
-  i32.const 0
-  i32.store offset=8
-  local.get $4
-  i32.const 0
-  i32.store offset=12
-  local.get $4
-  i32.const 0
-  i32.store offset=16
-  local.get $4
-  i32.const 0
-  i32.store offset=20
-  local.get $4
-  i32.const 11
-  i32.store offset=24
-  local.get $4
-  i32.const 11168
-  i32.store offset=28
-  local.get $4
-  i32.const 2752
-  i32.store offset=32
-  local.get $4
-  i32.const 0
-  i32.const 2
-  i32.const 5
-  i32.const 11200
-  call $~lib/rt/__newArray
-  i32.store offset=36
-  local.get $4
-  i32.const 0
-  i32.store offset=40
-  local.get $4
-  i32.const 0
-  i32.store offset=44
-  local.get $4
-  i32.const 0
-  i32.store offset=48
-  local.get $4
-  i32.const 0
-  i32.store offset=52
-  local.get $4
-  i32.const 0
-  i32.store offset=56
-  local.get $4
-  i32.const 0
-  i32.store offset=60
-  local.get $4
-  i32.const 2752
-  i32.store offset=64
-  local.get $4
-  i32.const 2752
-  i32.store offset=68
-  local.get $4
-  local.get $0
-  i32.store
-  local.get $4
-  local.get $1
-  i32.store offset=4
-  local.get $4
-  local.get $2
-  i32.store offset=8
-  local.get $4
-  local.get $3
-  i32.store offset=12
-  local.get $4
-  global.set $assembly/util/cardLookup/pendingCard
- )
- (func $assembly/util/cardLookup/setCardStats (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (param $4 i32)
-  global.get $assembly/util/cardLookup/pendingCard
-  if
-   global.get $assembly/util/cardLookup/pendingCard
-   local.get $0
-   i32.store offset=16
-   global.get $assembly/util/cardLookup/pendingCard
+  i32.load
+  local.set $3
+  block $__inlined_func$assembly/engine/combatProcessor/dealDamageToHero$6
    local.get $1
-   i32.store offset=20
-   global.get $assembly/util/cardLookup/pendingCard
-   local.get $2
-   i32.store offset=24
-   global.get $assembly/util/cardLookup/pendingCard
+   local.tee $2
+   i32.const 0
+   i32.le_s
+   br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToHero$6
    local.get $3
-   i32.store offset=56
-   global.get $assembly/util/cardLookup/pendingCard
-   local.get $4
-   i32.store offset=60
-  end
- )
- (func $assembly/util/cardLookup/setCardMeta (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32)
-  global.get $assembly/util/cardLookup/pendingCard
-  if
-   global.get $assembly/util/cardLookup/pendingCard
-   local.get $0
-   i32.store offset=28
-   global.get $assembly/util/cardLookup/pendingCard
-   local.get $1
-   i32.store offset=32
-   global.get $assembly/util/cardLookup/pendingCard
-   local.get $2
-   i32.store offset=64
-   global.get $assembly/util/cardLookup/pendingCard
+   i32.load offset=52
+   local.tee $4
+   i32.const 0
+   i32.gt_s
+   if
+    local.get $1
+    local.get $4
+    i32.le_s
+    if
+     local.get $3
+     local.get $4
+     local.get $1
+     i32.sub
+     i32.store offset=52
+     br $__inlined_func$assembly/engine/combatProcessor/dealDamageToHero$6
+    end
+    local.get $2
+    local.get $3
+    i32.load offset=52
+    i32.sub
+    local.set $2
+    local.get $3
+    i32.const 0
+    i32.store offset=52
+   end
    local.get $3
-   i32.store offset=68
-  end
- )
- (func $assembly/util/cardLookup/addCardKeyword (param $0 i32)
-  global.get $assembly/util/cardLookup/pendingCard
-  if
-   global.get $assembly/util/cardLookup/pendingCard
-   i32.load offset=36
-   local.get $0
-   call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-  end
- )
- (func $assembly/util/cardLookup/setCardBattlecry (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (param $4 i32) (param $5 i32) (param $6 i32)
-  (local $7 i32)
-  global.get $assembly/util/cardLookup/pendingCard
-  if
-   call $assembly/types/GameState/EffectDef#constructor
-   local.tee $7
-   local.get $0
-   i32.store
-   local.get $7
-   local.get $1
-   i32.store offset=4
-   local.get $7
-   local.get $2
-   i32.store offset=8
-   local.get $7
    local.get $3
-   i32.store offset=12
-   local.get $7
-   local.get $4
-   i32.store offset=16
-   local.get $7
-   local.get $5
-   i32.store offset=24
-   local.get $7
-   local.get $6
-   i32.store offset=28
-   global.get $assembly/util/cardLookup/pendingCard
-   local.get $7
+   i32.load offset=44
+   local.get $2
+   i32.sub
+   i32.store offset=44
+   local.get $3
+   local.get $3
+   i32.load offset=40
+   local.get $2
+   i32.sub
    i32.store offset=40
   end
- )
- (func $assembly/util/cardLookup/setCardDeathrattle (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (param $4 i32) (param $5 i32) (param $6 i32)
-  (local $7 i32)
-  global.get $assembly/util/cardLookup/pendingCard
-  if
-   call $assembly/types/GameState/EffectDef#constructor
-   local.tee $7
-   local.get $0
-   i32.store
-   local.get $7
+  local.get $0
+  i32.load offset=4
+  local.set $0
+  block $__inlined_func$assembly/engine/combatProcessor/dealDamageToHero$7
    local.get $1
-   i32.store offset=4
-   local.get $7
-   local.get $2
-   i32.store offset=8
-   local.get $7
-   local.get $3
-   i32.store offset=12
-   local.get $7
-   local.get $4
-   i32.store offset=16
-   local.get $7
-   local.get $5
-   i32.store offset=24
-   local.get $7
-   local.get $6
-   i32.store offset=28
-   global.get $assembly/util/cardLookup/pendingCard
-   local.get $7
+   i32.const 0
+   i32.le_s
+   br_if $__inlined_func$assembly/engine/combatProcessor/dealDamageToHero$7
+   local.get $0
+   i32.load offset=52
+   local.tee $2
+   i32.const 0
+   i32.gt_s
+   if
+    local.get $1
+    local.get $2
+    i32.le_s
+    if
+     local.get $0
+     local.get $2
+     local.get $1
+     i32.sub
+     i32.store offset=52
+     br $__inlined_func$assembly/engine/combatProcessor/dealDamageToHero$7
+    end
+    local.get $1
+    local.get $0
+    i32.load offset=52
+    i32.sub
+    local.set $1
+    local.get $0
+    i32.const 0
+    i32.store offset=52
+   end
+   local.get $0
+   local.get $0
+   i32.load offset=44
+   local.get $1
+   i32.sub
    i32.store offset=44
-  end
- )
- (func $assembly/util/cardLookup/setCardSpellEffect (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (param $4 i32) (param $5 i32) (param $6 i32)
-  (local $7 i32)
-  global.get $assembly/util/cardLookup/pendingCard
-  if
-   call $assembly/types/GameState/EffectDef#constructor
-   local.tee $7
    local.get $0
-   i32.store
-   local.get $7
+   local.get $0
+   i32.load offset=40
    local.get $1
-   i32.store offset=4
-   local.get $7
-   local.get $2
-   i32.store offset=8
-   local.get $7
-   local.get $3
-   i32.store offset=12
-   local.get $7
-   local.get $4
-   i32.store offset=16
-   local.get $7
-   local.get $5
-   i32.store offset=24
-   local.get $7
-   local.get $6
-   i32.store offset=28
-   global.get $assembly/util/cardLookup/pendingCard
-   local.get $7
-   i32.store offset=48
-  end
- )
- (func $"~lib/map/Map<i32,assembly/types/GameState/CardDef>#set" (param $0 i32) (param $1 i32) (param $2 i32)
-  (local $3 i32)
-  (local $4 i32)
-  (local $5 i32)
-  (local $6 i32)
-  (local $7 i32)
-  (local $8 i32)
-  (local $9 i32)
-  (local $10 i32)
-  (local $11 i32)
-  local.get $0
-  i32.load
-  local.get $1
-  local.tee $3
-  i32.const -1028477379
-  i32.mul
-  i32.const 374761397
-  i32.add
-  i32.const 17
-  i32.rotl
-  i32.const 668265263
-  i32.mul
-  local.tee $1
-  local.get $1
-  i32.const 15
-  i32.shr_u
-  i32.xor
-  i32.const -2048144777
-  i32.mul
-  local.tee $1
-  local.get $1
-  i32.const 13
-  i32.shr_u
-  i32.xor
-  i32.const -1028477379
-  i32.mul
-  local.tee $1
-  local.get $1
-  i32.const 16
-  i32.shr_u
-  i32.xor
-  local.tee $8
-  local.get $0
-  i32.load offset=4
-  i32.and
-  i32.const 2
-  i32.shl
-  i32.add
-  i32.load
-  local.set $1
-  block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1844"
-   loop $while-continue|0
-    local.get $1
-    if
-     local.get $1
-     i32.load offset=8
-     local.tee $4
-     i32.const 1
-     i32.and
-     if (result i32)
-      i32.const 0
-     else
-      local.get $1
-      i32.load
-      local.get $3
-      i32.eq
-     end
-     br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1844"
-     local.get $4
-     i32.const -2
-     i32.and
-     local.set $1
-     br $while-continue|0
-    end
-   end
-   i32.const 0
-   local.set $1
-  end
-  local.get $1
-  if
-   local.get $1
-   local.get $2
-   i32.store offset=4
-  else
-   local.get $0
-   i32.load offset=12
-   local.tee $1
-   local.get $0
-   i32.load offset=16
-   i32.eq
-   if
-    local.get $0
-    i32.load offset=20
-    local.get $1
-    i32.const 3
-    i32.mul
-    i32.const 4
-    i32.div_s
-    i32.lt_s
-    if (result i32)
-     local.get $0
-     i32.load offset=4
-    else
-     local.get $0
-     i32.load offset=4
-     i32.const 1
-     i32.shl
-     i32.const 1
-     i32.or
-    end
-    local.tee $6
-    i32.const 1
-    i32.add
-    local.tee $1
-    i32.const 2
-    i32.shl
-    call $~lib/arraybuffer/ArrayBuffer#constructor
-    local.set $7
-    local.get $1
-    i32.const 3
-    i32.shl
-    i32.const 3
-    i32.div_s
-    local.tee $9
-    i32.const 12
-    i32.mul
-    call $~lib/arraybuffer/ArrayBuffer#constructor
-    local.set $4
-    local.get $0
-    i32.load offset=8
-    local.tee $5
-    local.get $0
-    i32.load offset=16
-    i32.const 12
-    i32.mul
-    i32.add
-    local.set $10
-    local.get $4
-    local.set $1
-    loop $while-continue|00
-     local.get $5
-     local.get $10
-     i32.ne
-     if
-      local.get $5
-      i32.load offset=8
-      i32.const 1
-      i32.and
-      i32.eqz
-      if
-       local.get $1
-       local.get $5
-       i32.load
-       local.tee $11
-       i32.store
-       local.get $1
-       local.get $5
-       i32.load offset=4
-       i32.store offset=4
-       local.get $1
-       local.get $7
-       local.get $11
-       i32.const -1028477379
-       i32.mul
-       i32.const 374761397
-       i32.add
-       i32.const 17
-       i32.rotl
-       i32.const 668265263
-       i32.mul
-       local.tee $11
-       i32.const 15
-       i32.shr_u
-       local.get $11
-       i32.xor
-       i32.const -2048144777
-       i32.mul
-       local.tee $11
-       i32.const 13
-       i32.shr_u
-       local.get $11
-       i32.xor
-       i32.const -1028477379
-       i32.mul
-       local.tee $11
-       i32.const 16
-       i32.shr_u
-       local.get $11
-       i32.xor
-       local.get $6
-       i32.and
-       i32.const 2
-       i32.shl
-       i32.add
-       local.tee $11
-       i32.load
-       i32.store offset=8
-       local.get $11
-       local.get $1
-       i32.store
-       local.get $1
-       i32.const 12
-       i32.add
-       local.set $1
-      end
-      local.get $5
-      i32.const 12
-      i32.add
-      local.set $5
-      br $while-continue|00
-     end
-    end
-    local.get $0
-    local.get $7
-    i32.store
-    local.get $0
-    local.get $6
-    i32.store offset=4
-    local.get $0
-    local.get $4
-    i32.store offset=8
-    local.get $0
-    local.get $9
-    i32.store offset=12
-    local.get $0
-    local.get $0
-    i32.load offset=20
-    i32.store offset=16
-   end
-   local.get $0
-   i32.load offset=8
-   local.get $0
-   local.get $0
-   i32.load offset=16
-   local.tee $4
-   i32.const 1
-   i32.add
-   i32.store offset=16
-   local.get $4
-   i32.const 12
-   i32.mul
-   i32.add
-   local.tee $1
-   local.get $3
-   i32.store
-   local.get $1
-   local.get $2
-   i32.store offset=4
-   local.get $0
-   local.get $0
-   i32.load offset=20
-   i32.const 1
-   i32.add
-   i32.store offset=20
-   local.get $1
-   local.get $0
-   i32.load
-   local.get $8
-   local.get $0
-   i32.load offset=4
-   i32.and
-   i32.const 2
-   i32.shl
-   i32.add
-   local.tee $0
-   i32.load
-   i32.store offset=8
-   local.get $0
-   local.get $1
-   i32.store
-  end
- )
- (func $assembly/util/cardLookup/commitCard
-  (local $0 i32)
-  global.get $assembly/util/cardLookup/pendingCard
-  if
-   global.get $assembly/util/cardLookup/cardRegistry
-   global.get $assembly/util/cardLookup/pendingCard
-   local.tee $0
-   i32.load
-   local.get $0
-   call $"~lib/map/Map<i32,assembly/types/GameState/CardDef>#set"
-   i32.const 0
-   global.set $assembly/util/cardLookup/pendingCard
-  end
- )
- (func $assembly/util/cardLookup/getCardCount (result i32)
-  global.get $assembly/util/cardLookup/cardRegistry
-  i32.load offset=20
- )
- (func $assembly/util/cardLookup/clearCardData
-  (local $0 i32)
-  global.get $assembly/util/cardLookup/cardRegistry
-  local.tee $0
-  i32.const 16
-  call $~lib/arraybuffer/ArrayBuffer#constructor
-  i32.store
-  local.get $0
-  i32.const 3
-  i32.store offset=4
-  local.get $0
-  i32.const 48
-  call $~lib/arraybuffer/ArrayBuffer#constructor
-  i32.store offset=8
-  local.get $0
-  i32.const 4
-  i32.store offset=12
-  local.get $0
-  i32.const 0
-  i32.store offset=16
-  local.get $0
-  i32.const 0
-  i32.store offset=20
- )
- (func $~lib/array/Array<assembly/types/PokerTypes/PokerCard>#slice@varargs (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  (local $4 i32)
-  block $2of2
-   block $1of2
-    block $outOfRange
-     global.get $~argumentsLength
-     br_table $1of2 $1of2 $2of2 $outOfRange
-    end
-    unreachable
-   end
-   i32.const 2147483647
-   local.set $1
-  end
-  local.get $0
-  i32.load offset=12
-  local.tee $2
-  i32.const 0
-  local.get $2
-  i32.const 0
-  i32.le_s
-  select
-  local.set $3
-  local.get $1
-  local.get $2
-  local.get $1
-  local.get $2
-  i32.lt_s
-  select
-  local.get $3
-  i32.sub
-  local.tee $1
-  i32.const 0
-  local.get $1
-  i32.const 0
-  i32.gt_s
-  select
-  local.tee $2
-  i32.const 2
-  i32.const 23
-  i32.const 0
-  call $~lib/rt/__newArray
-  local.tee $1
-  i32.load offset=4
-  local.set $4
-  local.get $0
-  i32.load offset=4
-  local.get $3
-  i32.const 2
-  i32.shl
-  i32.add
-  local.set $3
-  i32.const 0
-  local.set $0
-  local.get $2
-  i32.const 2
-  i32.shl
-  local.set $2
-  loop $while-continue|0
-   local.get $0
-   local.get $2
-   i32.lt_u
-   if
-    local.get $0
-    local.get $4
-    i32.add
-    local.get $0
-    local.get $3
-    i32.add
-    i32.load
-    i32.store
-    local.get $0
-    i32.const 4
-    i32.add
-    local.set $0
-    br $while-continue|0
-   end
-  end
-  local.get $1
- )
- (func $assembly/poker/handEvaluator/sortByValueDesc (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  i32.const 1
-  global.set $~argumentsLength
-  local.get $0
-  call $~lib/array/Array<assembly/types/PokerTypes/PokerCard>#slice@varargs
-  local.set $3
-  loop $for-loop|0
-   local.get $1
-   local.get $3
-   i32.load offset=12
-   i32.lt_s
-   if
-    local.get $1
-    i32.const 1
-    i32.add
-    local.set $0
-    loop $for-loop|1
-     local.get $0
-     local.get $3
-     i32.load offset=12
-     i32.lt_s
-     if
-      local.get $3
-      local.get $0
-      call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-      i32.load offset=4
-      local.get $3
-      local.get $1
-      call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-      i32.load offset=4
-      i32.gt_s
-      if
-       local.get $3
-       local.get $1
-       call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-       local.set $2
-       local.get $3
-       local.get $1
-       local.get $3
-       local.get $0
-       call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-       call $~lib/array/Array<u32>#__set
-       local.get $3
-       local.get $0
-       local.get $2
-       call $~lib/array/Array<u32>#__set
-      end
-      local.get $0
-      i32.const 1
-      i32.add
-      local.set $0
-      br $for-loop|1
-     end
-    end
-    local.get $1
-    i32.const 1
-    i32.add
-    local.set $1
-    br $for-loop|0
-   end
-  end
-  local.get $3
- )
- (func $"~lib/map/Map<i32,i32>#constructor" (result i32)
-  (local $0 i32)
-  i32.const 24
-  i32.const 25
-  call $~lib/rt/stub/__new
-  local.tee $0
-  i32.const 16
-  call $~lib/arraybuffer/ArrayBuffer#constructor
-  i32.store
-  local.get $0
-  i32.const 3
-  i32.store offset=4
-  local.get $0
-  i32.const 48
-  call $~lib/arraybuffer/ArrayBuffer#constructor
-  i32.store offset=8
-  local.get $0
-  i32.const 4
-  i32.store offset=12
-  local.get $0
-  i32.const 0
-  i32.store offset=16
-  local.get $0
-  i32.const 0
-  i32.store offset=20
-  local.get $0
- )
- (func $"~lib/map/Map<i32,i32>#get" (param $0 i32) (param $1 i32) (result i32)
-  (local $2 i32)
-  local.get $0
-  i32.load
-  local.get $0
-  i32.load offset=4
-  local.get $1
-  i32.const -1028477379
-  i32.mul
-  i32.const 374761397
-  i32.add
-  i32.const 17
-  i32.rotl
-  i32.const 668265263
-  i32.mul
-  local.tee $0
-  i32.const 15
-  i32.shr_u
-  local.get $0
-  i32.xor
-  i32.const -2048144777
-  i32.mul
-  local.tee $0
-  i32.const 13
-  i32.shr_u
-  local.get $0
-  i32.xor
-  i32.const -1028477379
-  i32.mul
-  local.tee $0
-  i32.const 16
-  i32.shr_u
-  local.get $0
-  i32.xor
-  i32.and
-  i32.const 2
-  i32.shl
-  i32.add
-  i32.load
-  local.set $0
-  block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1854"
-   loop $while-continue|0
-    local.get $0
-    if
-     local.get $0
-     i32.load offset=8
-     local.tee $2
-     i32.const 1
-     i32.and
-     if (result i32)
-      i32.const 0
-     else
-      local.get $0
-      i32.load
-      local.get $1
-      i32.eq
-     end
-     br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1854"
-     local.get $2
-     i32.const -2
-     i32.and
-     local.set $0
-     br $while-continue|0
-    end
-   end
-   i32.const 0
-   local.set $0
-  end
-  local.get $0
-  i32.eqz
-  if
-   i32.const 8976
-   i32.const 9040
-   i32.const 105
-   i32.const 17
-   call $~lib/builtins/abort
-   unreachable
-  end
-  local.get $0
-  i32.load offset=4
- )
- (func $"~lib/map/Map<i32,i32>#set" (param $0 i32) (param $1 i32) (param $2 i32)
-  (local $3 i32)
-  (local $4 i32)
-  (local $5 i32)
-  (local $6 i32)
-  (local $7 i32)
-  (local $8 i32)
-  (local $9 i32)
-  (local $10 i32)
-  (local $11 i32)
-  local.get $0
-  i32.load
-  local.get $1
-  local.tee $3
-  i32.const -1028477379
-  i32.mul
-  i32.const 374761397
-  i32.add
-  i32.const 17
-  i32.rotl
-  i32.const 668265263
-  i32.mul
-  local.tee $1
-  local.get $1
-  i32.const 15
-  i32.shr_u
-  i32.xor
-  i32.const -2048144777
-  i32.mul
-  local.tee $1
-  local.get $1
-  i32.const 13
-  i32.shr_u
-  i32.xor
-  i32.const -1028477379
-  i32.mul
-  local.tee $1
-  local.get $1
-  i32.const 16
-  i32.shr_u
-  i32.xor
-  local.tee $8
-  local.get $0
-  i32.load offset=4
-  i32.and
-  i32.const 2
-  i32.shl
-  i32.add
-  i32.load
-  local.set $1
-  block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1857"
-   loop $while-continue|0
-    local.get $1
-    if
-     local.get $1
-     i32.load offset=8
-     local.tee $4
-     i32.const 1
-     i32.and
-     if (result i32)
-      i32.const 0
-     else
-      local.get $1
-      i32.load
-      local.get $3
-      i32.eq
-     end
-     br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1857"
-     local.get $4
-     i32.const -2
-     i32.and
-     local.set $1
-     br $while-continue|0
-    end
-   end
-   i32.const 0
-   local.set $1
-  end
-  local.get $1
-  if
-   local.get $1
-   local.get $2
-   i32.store offset=4
-  else
-   local.get $0
-   i32.load offset=12
-   local.tee $1
-   local.get $0
-   i32.load offset=16
-   i32.eq
-   if
-    local.get $0
-    i32.load offset=20
-    local.get $1
-    i32.const 3
-    i32.mul
-    i32.const 4
-    i32.div_s
-    i32.lt_s
-    if (result i32)
-     local.get $0
-     i32.load offset=4
-    else
-     local.get $0
-     i32.load offset=4
-     i32.const 1
-     i32.shl
-     i32.const 1
-     i32.or
-    end
-    local.tee $6
-    i32.const 1
-    i32.add
-    local.tee $1
-    i32.const 2
-    i32.shl
-    call $~lib/arraybuffer/ArrayBuffer#constructor
-    local.set $7
-    local.get $1
-    i32.const 3
-    i32.shl
-    i32.const 3
-    i32.div_s
-    local.tee $9
-    i32.const 12
-    i32.mul
-    call $~lib/arraybuffer/ArrayBuffer#constructor
-    local.set $4
-    local.get $0
-    i32.load offset=8
-    local.tee $5
-    local.get $0
-    i32.load offset=16
-    i32.const 12
-    i32.mul
-    i32.add
-    local.set $10
-    local.get $4
-    local.set $1
-    loop $while-continue|00
-     local.get $5
-     local.get $10
-     i32.ne
-     if
-      local.get $5
-      i32.load offset=8
-      i32.const 1
-      i32.and
-      i32.eqz
-      if
-       local.get $1
-       local.get $5
-       i32.load
-       local.tee $11
-       i32.store
-       local.get $1
-       local.get $5
-       i32.load offset=4
-       i32.store offset=4
-       local.get $1
-       local.get $7
-       local.get $11
-       i32.const -1028477379
-       i32.mul
-       i32.const 374761397
-       i32.add
-       i32.const 17
-       i32.rotl
-       i32.const 668265263
-       i32.mul
-       local.tee $11
-       i32.const 15
-       i32.shr_u
-       local.get $11
-       i32.xor
-       i32.const -2048144777
-       i32.mul
-       local.tee $11
-       i32.const 13
-       i32.shr_u
-       local.get $11
-       i32.xor
-       i32.const -1028477379
-       i32.mul
-       local.tee $11
-       i32.const 16
-       i32.shr_u
-       local.get $11
-       i32.xor
-       local.get $6
-       i32.and
-       i32.const 2
-       i32.shl
-       i32.add
-       local.tee $11
-       i32.load
-       i32.store offset=8
-       local.get $11
-       local.get $1
-       i32.store
-       local.get $1
-       i32.const 12
-       i32.add
-       local.set $1
-      end
-      local.get $5
-      i32.const 12
-      i32.add
-      local.set $5
-      br $while-continue|00
-     end
-    end
-    local.get $0
-    local.get $7
-    i32.store
-    local.get $0
-    local.get $6
-    i32.store offset=4
-    local.get $0
-    local.get $4
-    i32.store offset=8
-    local.get $0
-    local.get $9
-    i32.store offset=12
-    local.get $0
-    local.get $0
-    i32.load offset=20
-    i32.store offset=16
-   end
-   local.get $0
-   i32.load offset=8
-   local.get $0
-   local.get $0
-   i32.load offset=16
-   local.tee $4
-   i32.const 1
-   i32.add
-   i32.store offset=16
-   local.get $4
-   i32.const 12
-   i32.mul
-   i32.add
-   local.tee $1
-   local.get $3
-   i32.store
-   local.get $1
-   local.get $2
-   i32.store offset=4
-   local.get $0
-   local.get $0
-   i32.load offset=20
-   i32.const 1
-   i32.add
-   i32.store offset=20
-   local.get $1
-   local.get $0
-   i32.load
-   local.get $8
-   local.get $0
-   i32.load offset=4
-   i32.and
-   i32.const 2
-   i32.shl
-   i32.add
-   local.tee $0
-   i32.load
-   i32.store offset=8
-   local.get $0
-   local.get $1
-   i32.store
-  end
- )
- (func $~lib/array/Array<i32>#constructor (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  i32.const 16
-  i32.const 8
-  call $~lib/rt/stub/__new
-  local.tee $1
-  i32.const 0
-  i32.store
-  local.get $1
-  i32.const 0
-  i32.store offset=4
-  local.get $1
-  i32.const 0
-  i32.store offset=8
-  local.get $1
-  i32.const 0
-  i32.store offset=12
-  local.get $0
-  i32.const 268435455
-  i32.gt_u
-  if
-   i32.const 1184
-   i32.const 2816
-   i32.const 70
-   i32.const 60
-   call $~lib/builtins/abort
-   unreachable
-  end
-  i32.const 8
-  local.get $0
-  local.get $0
-  i32.const 8
-  i32.le_u
-  select
-  i32.const 2
-  i32.shl
-  local.tee $2
-  i32.const 1
-  call $~lib/rt/stub/__new
-  local.tee $3
-  i32.const 0
-  local.get $2
-  memory.fill
-  local.get $1
-  local.get $3
-  i32.store
-  local.get $1
-  local.get $3
-  i32.store offset=4
-  local.get $1
-  local.get $2
-  i32.store offset=8
-  local.get $1
-  local.get $0
-  i32.store offset=12
-  local.get $1
- )
- (func $assembly/poker/handEvaluator/evaluateFiveCardHand~anonymous|0 (param $0 i32) (param $1 i32) (result i32)
-  local.get $1
-  local.get $0
-  i32.sub
- )
- (func $~lib/util/sort/insertionSort<i32> (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (param $4 i32)
-  (local $5 i32)
-  (local $6 i32)
-  (local $7 i32)
-  (local $8 i32)
-  (local $9 i32)
-  local.get $1
-  local.get $3
-  local.get $2
-  local.get $1
-  i32.sub
-  i32.const 1
-  i32.add
-  local.tee $5
-  local.get $3
-  i32.sub
-  i32.const 1
-  i32.and
-  i32.sub
-  local.get $5
-  i32.const 1
-  i32.and
-  local.get $3
-  select
-  i32.add
-  local.set $7
-  loop $for-loop|0
-   local.get $2
-   local.get $7
-   i32.ge_s
-   if
-    local.get $0
-    local.get $7
-    i32.const 2
-    i32.shl
-    i32.add
-    local.tee $3
-    i32.load offset=4
-    local.tee $6
-    local.set $5
-    local.get $3
-    i32.load
-    local.set $3
-    i32.const 2
-    global.set $~argumentsLength
-    local.get $3
-    local.get $6
-    local.get $4
-    i32.load
-    call_indirect (type $1)
-    i32.const 0
-    i32.le_s
-    if
-     local.get $3
-     local.set $5
-     local.get $6
-     local.set $3
-    end
-    local.get $7
-    i32.const 1
-    i32.sub
-    local.set $6
-    loop $while-continue|1
-     local.get $1
-     local.get $6
-     i32.le_s
-     if
-      block $while-break|1
-       local.get $0
-       local.get $6
-       i32.const 2
-       i32.shl
-       i32.add
-       local.tee $8
-       i32.load
-       local.set $9
-       i32.const 2
-       global.set $~argumentsLength
-       local.get $9
-       local.get $3
-       local.get $4
-       i32.load
-       call_indirect (type $1)
-       i32.const 0
-       i32.le_s
-       br_if $while-break|1
-       local.get $8
-       local.get $9
-       i32.store offset=8
-       local.get $6
-       i32.const 1
-       i32.sub
-       local.set $6
-       br $while-continue|1
-      end
-     end
-    end
-    local.get $0
-    local.get $6
-    i32.const 2
-    i32.shl
-    i32.add
-    local.get $3
-    i32.store offset=8
-    loop $while-continue|2
-     local.get $1
-     local.get $6
-     i32.le_s
-     if
-      block $while-break|2
-       local.get $0
-       local.get $6
-       i32.const 2
-       i32.shl
-       i32.add
-       local.tee $3
-       i32.load
-       local.set $8
-       i32.const 2
-       global.set $~argumentsLength
-       local.get $8
-       local.get $5
-       local.get $4
-       i32.load
-       call_indirect (type $1)
-       i32.const 0
-       i32.le_s
-       br_if $while-break|2
-       local.get $3
-       local.get $8
-       i32.store offset=4
-       local.get $6
-       i32.const 1
-       i32.sub
-       local.set $6
-       br $while-continue|2
-      end
-     end
-    end
-    local.get $0
-    local.get $6
-    i32.const 2
-    i32.shl
-    i32.add
-    local.get $5
-    i32.store offset=4
-    local.get $7
-    i32.const 2
-    i32.add
-    local.set $7
-    br $for-loop|0
-   end
-  end
- )
- (func $~lib/util/sort/extendRunRight<i32> (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (result i32)
-  (local $4 i32)
-  (local $5 i32)
-  (local $6 i32)
-  local.get $1
-  local.get $2
-  i32.eq
-  if
-   local.get $1
-   return
-  end
-  local.get $0
-  local.get $1
-  i32.const 2
-  i32.shl
-  i32.add
-  i32.load
-  local.get $0
-  local.get $1
-  i32.const 1
-  i32.add
-  local.tee $4
-  i32.const 2
-  i32.shl
-  i32.add
-  i32.load
-  i32.const 2
-  global.set $~argumentsLength
-  local.get $3
-  i32.load
-  call_indirect (type $1)
-  i32.const 0
-  i32.gt_s
-  if
-   loop $while-continue|0
-    local.get $2
-    local.get $4
-    i32.gt_s
-    if (result i32)
-     local.get $0
-     local.get $4
-     i32.const 2
-     i32.shl
-     i32.add
-     local.tee $5
-     i32.load offset=4
-     local.get $5
-     i32.load
-     i32.const 2
-     global.set $~argumentsLength
-     local.get $3
-     i32.load
-     call_indirect (type $1)
-     i32.const 31
-     i32.shr_u
-    else
-     i32.const 0
-    end
-    if
-     local.get $4
-     i32.const 1
-     i32.add
-     local.set $4
-     br $while-continue|0
-    end
-   end
-   local.get $4
-   local.set $2
-   loop $while-continue|1
-    local.get $1
-    local.get $2
-    i32.lt_s
-    if
-     local.get $0
-     local.get $1
-     i32.const 2
-     i32.shl
-     i32.add
-     local.tee $3
-     i32.load
-     local.set $5
-     local.get $3
-     local.get $0
-     local.get $2
-     i32.const 2
-     i32.shl
-     i32.add
-     local.tee $3
-     i32.load
-     i32.store
-     local.get $1
-     i32.const 1
-     i32.add
-     local.set $1
-     local.get $3
-     local.get $5
-     i32.store
-     local.get $2
-     i32.const 1
-     i32.sub
-     local.set $2
-     br $while-continue|1
-    end
-   end
-  else
-   loop $while-continue|2
-    local.get $2
-    local.get $4
-    i32.gt_s
-    if (result i32)
-     local.get $0
-     local.get $4
-     i32.const 2
-     i32.shl
-     i32.add
-     local.tee $1
-     i32.load offset=4
-     local.get $1
-     i32.load
-     i32.const 2
-     global.set $~argumentsLength
-     local.get $3
-     i32.load
-     call_indirect (type $1)
-     i32.const 0
-     i32.ge_s
-    else
-     i32.const 0
-    end
-    if
-     local.get $4
-     i32.const 1
-     i32.add
-     local.set $4
-     br $while-continue|2
-    end
-   end
-  end
-  local.get $4
- )
- (func $~lib/util/sort/mergeRuns<i32> (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (param $4 i32) (param $5 i32)
-  (local $6 i32)
-  (local $7 i32)
-  (local $8 i32)
-  local.get $2
-  i32.const 1
-  i32.sub
-  local.tee $6
-  local.get $3
-  i32.add
-  local.set $7
-  local.get $6
-  i32.const 1
-  i32.add
-  local.set $2
-  loop $for-loop|0
-   local.get $1
-   local.get $2
-   i32.lt_s
-   if
-    local.get $2
-    i32.const 1
-    i32.sub
-    local.tee $2
-    i32.const 2
-    i32.shl
-    local.tee $8
-    local.get $4
-    i32.add
-    local.get $0
-    local.get $8
-    i32.add
-    i32.load
-    i32.store
-    br $for-loop|0
-   end
-  end
-  loop $for-loop|1
-   local.get $3
-   local.get $6
-   i32.gt_s
-   if
-    local.get $4
-    local.get $7
-    local.get $6
-    i32.sub
-    i32.const 2
-    i32.shl
-    i32.add
-    local.get $0
-    local.get $6
-    i32.const 2
-    i32.shl
-    i32.add
-    i32.load offset=4
-    i32.store
-    local.get $6
-    i32.const 1
-    i32.add
-    local.set $6
-    br $for-loop|1
-   end
-  end
-  loop $for-loop|2
-   local.get $1
-   local.get $3
-   i32.le_s
-   if
-    local.get $4
-    local.get $6
-    i32.const 2
-    i32.shl
-    i32.add
-    i32.load
-    local.set $7
-    local.get $4
-    local.get $2
-    i32.const 2
-    i32.shl
-    i32.add
-    i32.load
-    local.set $8
-    i32.const 2
-    global.set $~argumentsLength
-    local.get $7
-    local.get $8
-    local.get $5
-    i32.load
-    call_indirect (type $1)
-    i32.const 0
-    i32.lt_s
-    if
-     local.get $0
-     local.get $1
-     i32.const 2
-     i32.shl
-     i32.add
-     local.get $7
-     i32.store
-     local.get $6
-     i32.const 1
-     i32.sub
-     local.set $6
-    else
-     local.get $0
-     local.get $1
-     i32.const 2
-     i32.shl
-     i32.add
-     local.get $8
-     i32.store
-     local.get $2
-     i32.const 1
-     i32.add
-     local.set $2
-    end
-    local.get $1
-    i32.const 1
-    i32.add
-    local.set $1
-    br $for-loop|2
-   end
-  end
- )
- (func $~lib/util/sort/SORT<i32> (param $0 i32) (param $1 i32) (param $2 i32)
-  (local $3 i32)
-  (local $4 i32)
-  (local $5 i32)
-  (local $6 i32)
-  (local $7 i32)
-  (local $8 i32)
-  (local $9 i32)
-  (local $10 i32)
-  (local $11 i32)
-  (local $12 i32)
-  (local $13 i64)
-  (local $14 i32)
-  (local $15 i32)
-  local.get $1
-  i32.const 48
-  i32.le_s
-  if
-   local.get $1
-   i32.const 1
-   i32.le_s
-   if
-    return
-   end
-   block $break|0
-    block $case1|0
-     local.get $1
-     i32.const 3
-     i32.ne
-     if
-      local.get $1
-      i32.const 2
-      i32.eq
-      br_if $case1|0
-      br $break|0
-     end
-     local.get $0
-     i32.load
-     local.set $1
-     local.get $0
-     i32.load offset=4
-     local.set $3
-     i32.const 2
-     global.set $~argumentsLength
-     local.get $0
-     local.get $3
-     local.get $1
-     local.get $1
-     local.get $3
-     local.get $2
-     i32.load
-     call_indirect (type $1)
-     i32.const 0
-     i32.gt_s
-     local.tee $4
-     select
-     i32.store
-     local.get $0
-     i32.load offset=8
-     local.set $5
-     i32.const 2
-     global.set $~argumentsLength
-     local.get $1
-     local.get $3
-     local.get $4
-     select
-     local.tee $1
-     local.get $5
-     local.get $2
-     i32.load
-     call_indirect (type $1)
-     i32.const 0
-     i32.gt_s
-     local.set $3
-     local.get $0
-     local.get $5
-     local.get $1
-     local.get $3
-     select
-     i32.store offset=4
-     local.get $0
-     local.get $1
-     local.get $5
-     local.get $3
-     select
-     i32.store offset=8
-    end
-    local.get $0
-    i32.load
-    local.set $1
-    local.get $0
-    i32.load offset=4
-    local.set $3
-    i32.const 2
-    global.set $~argumentsLength
-    local.get $0
-    local.get $3
-    local.get $1
-    local.get $1
-    local.get $3
-    local.get $2
-    i32.load
-    call_indirect (type $1)
-    i32.const 0
-    i32.gt_s
-    local.tee $2
-    select
-    i32.store
-    local.get $0
-    local.get $1
-    local.get $3
-    local.get $2
-    select
-    i32.store offset=4
-    return
-   end
-   local.get $0
-   i32.const 0
-   local.get $1
-   i32.const 1
    i32.sub
-   i32.const 0
-   local.get $2
-   call $~lib/util/sort/insertionSort<i32>
-   return
+   i32.store offset=40
   end
-  i32.const 33
-  local.get $1
-  i32.clz
-  i32.sub
-  local.tee $6
-  i32.const 2
-  i32.shl
-  local.tee $7
-  i32.const 1
-  i32.shl
-  call $~lib/rt/stub/__alloc
-  local.tee $10
-  local.get $7
-  i32.add
-  local.set $12
-  loop $for-loop|1
-   local.get $5
-   local.get $6
-   i32.lt_u
-   if
-    local.get $10
-    local.get $5
-    i32.const 2
-    i32.shl
-    i32.add
-    i32.const -1
-    i32.store
-    local.get $5
-    i32.const 1
-    i32.add
-    local.set $5
-    br $for-loop|1
-   end
-  end
-  local.get $1
-  i32.const 2
-  i32.shl
-  call $~lib/rt/stub/__alloc
-  local.set $11
-  local.get $0
-  i32.const 0
-  local.get $1
-  i32.const 1
-  i32.sub
-  local.tee $9
-  local.get $2
-  call $~lib/util/sort/extendRunRight<i32>
-  local.tee $5
-  i32.const 1
-  i32.add
-  local.tee $1
-  i32.const 32
-  i32.lt_s
-  if
-   local.get $0
-   i32.const 0
-   i32.const 31
-   local.get $9
-   local.get $9
-   i32.const 31
-   i32.ge_s
-   select
-   local.tee $5
-   local.get $1
-   local.get $2
-   call $~lib/util/sort/insertionSort<i32>
-  end
-  loop $while-continue|2
-   local.get $5
-   local.get $9
-   i32.lt_s
-   if
-    local.get $0
-    local.get $5
-    i32.const 1
-    i32.add
-    local.tee $6
-    local.get $9
-    local.get $2
-    call $~lib/util/sort/extendRunRight<i32>
-    local.tee $1
-    local.get $6
-    i32.sub
-    i32.const 1
-    i32.add
-    local.tee $7
-    i32.const 32
-    i32.lt_s
-    if
-     local.get $0
-     local.get $6
-     local.get $9
-     local.get $6
-     i32.const 31
-     i32.add
-     local.tee $1
-     local.get $1
-     local.get $9
-     i32.gt_s
-     select
-     local.tee $1
-     local.get $7
-     local.get $2
-     call $~lib/util/sort/insertionSort<i32>
-    end
-    local.get $3
-    local.get $6
-    i32.add
-    i64.extend_i32_u
-    i64.const 30
-    i64.shl
-    local.get $9
-    i32.const 1
-    i32.add
-    i64.extend_i32_u
-    local.tee $13
-    i64.div_u
-    local.get $1
-    local.get $6
-    i32.add
-    i32.const 1
-    i32.add
-    i64.extend_i32_u
-    i64.const 30
-    i64.shl
-    local.get $13
-    i64.div_u
-    i64.xor
-    i32.wrap_i64
-    i32.clz
-    local.set $7
-    loop $for-loop|3
-     local.get $4
-     local.get $7
-     i32.gt_u
-     if
-      local.get $4
-      i32.const 2
-      i32.shl
-      local.tee $14
-      local.get $10
-      i32.add
-      local.tee $15
-      i32.load
-      local.tee $8
-      i32.const -1
-      i32.ne
-      if
-       local.get $0
-       local.get $8
-       local.get $12
-       local.get $14
-       i32.add
-       i32.load
-       i32.const 1
-       i32.add
-       local.get $5
-       local.get $11
-       local.get $2
-       call $~lib/util/sort/mergeRuns<i32>
-       local.get $15
-       i32.const -1
-       i32.store
-       local.get $8
-       local.set $3
-      end
-      local.get $4
-      i32.const 1
-      i32.sub
-      local.set $4
-      br $for-loop|3
-     end
-    end
-    local.get $7
-    i32.const 2
-    i32.shl
-    local.tee $4
-    local.get $10
-    i32.add
-    local.get $3
-    i32.store
-    local.get $4
-    local.get $12
-    i32.add
-    local.get $5
-    i32.store
-    local.get $6
-    local.set $3
-    local.get $1
-    local.set $5
-    local.get $7
-    local.set $4
-    br $while-continue|2
-   end
-  end
-  loop $for-loop|4
-   local.get $4
-   if
-    local.get $4
-    i32.const 2
-    i32.shl
-    local.tee $1
-    local.get $10
-    i32.add
-    i32.load
-    local.tee $3
-    i32.const -1
-    i32.ne
-    if
-     local.get $0
-     local.get $3
-     local.get $1
-     local.get $12
-     i32.add
-     i32.load
-     i32.const 1
-     i32.add
-     local.get $9
-     local.get $11
-     local.get $2
-     call $~lib/util/sort/mergeRuns<i32>
-    end
-    local.get $4
-    i32.const 1
-    i32.sub
-    local.set $4
-    br $for-loop|4
-   end
-  end
-  global.get $~lib/rt/stub/offset
-  local.get $11
-  local.get $11
-  i32.const 4
-  i32.sub
-  local.tee $0
-  i32.load
-  i32.add
-  i32.eq
-  if
-   local.get $0
-   global.set $~lib/rt/stub/offset
-  end
-  global.get $~lib/rt/stub/offset
-  local.get $10
-  local.get $10
-  i32.const 4
-  i32.sub
-  local.tee $0
-  i32.load
-  i32.add
-  i32.eq
-  if
-   local.get $0
-   global.set $~lib/rt/stub/offset
-  end
- )
- (func $~lib/array/Array<i32>#slice@varargs (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  block $2of2
-   block $1of2
-    block $outOfRange
-     global.get $~argumentsLength
-     br_table $1of2 $1of2 $2of2 $outOfRange
-    end
-    unreachable
-   end
-   i32.const 2147483647
-   local.set $1
-  end
-  local.get $0
-  i32.load offset=12
-  local.tee $3
-  i32.const 0
-  local.get $3
-  i32.const 0
-  i32.le_s
-  select
-  local.set $2
-  local.get $1
-  local.get $3
-  local.get $1
-  local.get $3
-  i32.lt_s
-  select
-  local.get $2
-  i32.sub
-  local.tee $1
-  i32.const 0
-  local.get $1
-  i32.const 0
-  i32.gt_s
-  select
-  local.tee $1
-  i32.const 2
-  i32.const 8
-  i32.const 0
-  call $~lib/rt/__newArray
-  local.tee $3
-  i32.load offset=4
-  local.get $0
-  i32.load offset=4
-  local.get $2
-  i32.const 2
-  i32.shl
-  i32.add
-  local.get $1
-  i32.const 2
-  i32.shl
-  memory.copy
-  local.get $3
- )
- (func $assembly/types/PokerTypes/EvaluatedHand#constructor (result i32)
-  (local $0 i32)
-  i32.const 20
-  i32.const 24
-  call $~lib/rt/stub/__new
-  local.tee $0
-  i32.const 0
-  i32.store
-  local.get $0
-  i32.const 0
-  i32.store offset=4
-  local.get $0
-  i32.const 0
-  i32.store offset=8
-  local.get $0
-  i32.const 0
-  i32.store offset=12
-  local.get $0
-  i32.const 0
-  i32.store offset=16
-  local.get $0
-  i32.const 1
-  i32.store
-  local.get $0
-  i32.const 0
-  i32.const 2
-  i32.const 23
-  i32.const 11456
-  call $~lib/rt/__newArray
-  i32.store offset=4
-  local.get $0
-  i32.const 0
-  i32.store offset=8
-  local.get $0
-  i32.const 100
-  i32.store offset=12
-  local.get $0
-  i32.const 0
-  i32.const 2
-  i32.const 8
-  i32.const 11488
-  call $~lib/rt/__newArray
-  i32.store offset=16
-  local.get $0
- )
- (func $assembly/poker/handEvaluator/evaluateFiveCardHand (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  (local $4 i32)
-  (local $5 i32)
-  (local $6 i32)
-  (local $7 i32)
-  (local $8 i32)
-  (local $9 i32)
-  (local $10 i32)
-  (local $11 i32)
-  (local $12 i32)
-  (local $13 i32)
-  local.get $0
-  i32.load offset=12
-  drop
-  local.get $0
-  call $assembly/poker/handEvaluator/sortByValueDesc
-  local.set $7
-  i32.const 0
-  i32.const 2
-  i32.const 8
-  i32.const 11232
-  call $~lib/rt/__newArray
-  local.set $10
-  loop $for-loop|0
-   local.get $2
-   local.get $7
-   i32.load offset=12
-   i32.lt_s
-   if
-    local.get $10
-    local.get $7
-    local.get $2
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    i32.load offset=4
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-    local.get $2
-    i32.const 1
-    i32.add
-    local.set $2
-    br $for-loop|0
-   end
-  end
-  i32.const 1
-  local.set $12
-  local.get $0
-  i32.const 0
-  call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-  i32.load
-  local.set $1
-  i32.const 1
-  local.set $2
-  loop $for-loop|1
-   local.get $2
-   local.get $0
-   i32.load offset=12
-   i32.lt_s
-   if
-    block $for-break1
-     local.get $1
-     local.get $0
-     local.get $2
-     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-     i32.load
-     i32.ne
-     if
-      i32.const 0
-      local.set $12
-      br $for-break1
-     end
-     local.get $2
-     i32.const 1
-     i32.add
-     local.set $2
-     br $for-loop|1
-    end
-   end
-  end
-  i32.const 1
-  local.set $1
-  i32.const 1
-  local.set $2
-  loop $for-loop|2
-   local.get $2
-   local.get $10
-   i32.load offset=12
-   i32.lt_s
-   if
-    block $for-break2
-     local.get $10
-     local.get $2
-     i32.const 1
-     i32.sub
-     call $~lib/array/Array<i32>#__get
-     local.get $10
-     local.get $2
-     call $~lib/array/Array<i32>#__get
-     i32.sub
-     i32.const 1
-     i32.ne
-     if
-      i32.const 0
-      local.set $1
-      br $for-break2
-     end
-     local.get $2
-     i32.const 1
-     i32.add
-     local.set $2
-     br $for-loop|2
-    end
-   end
-  end
-  local.get $10
-  i32.const 0
-  call $~lib/array/Array<i32>#__get
-  i32.const 14
-  i32.eq
-  local.tee $2
-  if
-   local.get $10
-   i32.const 1
-   call $~lib/array/Array<i32>#__get
-   i32.const 5
-   i32.eq
-   local.set $2
-  end
-  local.get $2
-  if
-   local.get $10
-   i32.const 2
-   call $~lib/array/Array<i32>#__get
-   i32.const 4
-   i32.eq
-   local.set $2
-  end
-  local.get $2
-  if
-   local.get $10
-   i32.const 3
-   call $~lib/array/Array<i32>#__get
-   i32.const 3
-   i32.eq
-   local.set $2
-  end
-  local.get $1
-  local.get $2
-  if (result i32)
-   local.get $10
-   i32.const 4
-   call $~lib/array/Array<i32>#__get
-   i32.const 2
-   i32.eq
-  else
-   local.get $2
-  end
-  local.tee $3
-  local.get $1
-  select
-  local.set $6
-  call $"~lib/map/Map<i32,i32>#constructor"
-  local.set $11
-  i32.const 0
-  local.set $1
-  loop $for-loop|3
-   local.get $1
-   local.get $0
-   i32.load offset=12
-   i32.lt_s
-   if
-    local.get $0
-    local.get $1
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    i32.load offset=4
-    local.set $4
-    local.get $11
-    i32.load
-    local.get $11
-    i32.load offset=4
-    local.get $4
-    i32.const -1028477379
-    i32.mul
-    i32.const 374761397
-    i32.add
-    i32.const 17
-    i32.rotl
-    i32.const 668265263
-    i32.mul
-    local.tee $2
-    local.get $2
-    i32.const 15
-    i32.shr_u
-    i32.xor
-    i32.const -2048144777
-    i32.mul
-    local.tee $2
-    local.get $2
-    i32.const 13
-    i32.shr_u
-    i32.xor
-    i32.const -1028477379
-    i32.mul
-    local.tee $2
-    local.get $2
-    i32.const 16
-    i32.shr_u
-    i32.xor
-    i32.and
-    i32.const 2
-    i32.shl
-    i32.add
-    i32.load
-    local.set $5
-    block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1702"
-     loop $while-continue|0
-      local.get $5
-      if
-       local.get $5
-       i32.load offset=8
-       local.tee $2
-       i32.const 1
-       i32.and
-       if (result i32)
-        i32.const 0
-       else
-        local.get $5
-        i32.load
-        local.get $4
-        i32.eq
-       end
-       br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$1702"
-       local.get $2
-       i32.const -2
-       i32.and
-       local.set $5
-       br $while-continue|0
-      end
-     end
-     i32.const 0
-     local.set $5
-    end
-    local.get $11
-    local.get $4
-    local.get $5
-    if (result i32)
-     local.get $11
-     local.get $4
-     call $"~lib/map/Map<i32,i32>#get"
-    else
-     i32.const 0
-    end
-    i32.const 1
-    i32.add
-    call $"~lib/map/Map<i32,i32>#set"
-    local.get $1
-    i32.const 1
-    i32.add
-    local.set $1
-    br $for-loop|3
-   end
-  end
-  local.get $11
-  i32.load offset=8
-  local.set $5
-  local.get $11
-  i32.load offset=16
-  local.tee $4
-  call $~lib/array/Array<i32>#constructor
-  local.set $2
-  i32.const 0
-  local.set $1
-  loop $for-loop|04
-   local.get $4
-   local.get $9
-   i32.gt_s
-   if
-    local.get $5
-    local.get $9
-    i32.const 12
-    i32.mul
-    i32.add
-    local.tee $8
-    i32.load offset=8
-    i32.const 1
-    i32.and
-    i32.eqz
-    if
-     local.get $2
-     local.get $1
-     local.get $8
-     i32.load offset=4
-     call $~lib/array/Array<u32>#__set
-     local.get $1
-     i32.const 1
-     i32.add
-     local.set $1
-    end
-    local.get $9
-    i32.const 1
-    i32.add
-    local.set $9
-    br $for-loop|04
-   end
-  end
-  local.get $2
-  local.get $1
-  i32.const 2
-  i32.const 0
-  call $~lib/array/ensureCapacity
-  local.get $2
-  local.get $1
-  i32.store offset=12
-  i32.const 0
-  i32.const 2
-  i32.const 8
-  i32.const 11264
-  call $~lib/rt/__newArray
-  local.set $1
-  loop $for-loop|4
-   local.get $13
-   local.get $2
-   i32.load offset=12
-   i32.lt_s
-   if
-    local.get $1
-    local.get $2
-    local.get $13
-    call $~lib/array/Array<i32>#__get
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-    local.get $13
-    i32.const 1
-    i32.add
-    local.set $13
-    br $for-loop|4
-   end
-  end
-  local.get $1
-  i32.load offset=4
-  local.get $1
-  i32.load offset=12
-  i32.const 11296
-  call $~lib/util/sort/SORT<i32>
-  local.get $6
-  i32.const 0
-  local.get $12
-  select
-  if (result i32)
-   local.get $10
-   i32.const 0
-   call $~lib/array/Array<i32>#__get
-   i32.const 14
-   i32.eq
-  else
-   i32.const 0
-  end
-  if (result i32)
-   local.get $10
-   i32.const 4
-   call $~lib/array/Array<i32>#__get
-   i32.const 10
-   i32.eq
-  else
-   i32.const 0
-  end
-  if (result i32)
-   i32.const 10
-  else
-   local.get $6
-   i32.const 0
-   local.get $12
-   select
-   if (result i32)
-    i32.const 9
-   else
-    local.get $1
-    i32.const 0
-    call $~lib/array/Array<i32>#__get
-    i32.const 4
-    i32.eq
-    if (result i32)
-     i32.const 8
-    else
-     local.get $1
-     i32.const 0
-     call $~lib/array/Array<i32>#__get
-     i32.const 3
-     i32.eq
-     if (result i32)
-      local.get $1
-      i32.const 1
-      call $~lib/array/Array<i32>#__get
-      i32.const 2
-      i32.eq
-     else
-      i32.const 0
-     end
-     if (result i32)
-      i32.const 7
-     else
-      local.get $12
-      if (result i32)
-       i32.const 6
-      else
-       local.get $6
-       if (result i32)
-        i32.const 5
-       else
-        local.get $1
-        i32.const 0
-        call $~lib/array/Array<i32>#__get
-        i32.const 3
-        i32.eq
-        if (result i32)
-         i32.const 4
-        else
-         local.get $1
-         i32.const 0
-         call $~lib/array/Array<i32>#__get
-         i32.const 2
-         i32.eq
-         if (result i32)
-          local.get $1
-          i32.load offset=12
-          i32.const 2
-          i32.ge_s
-         else
-          i32.const 0
-         end
-         if (result i32)
-          local.get $1
-          i32.const 1
-          call $~lib/array/Array<i32>#__get
-          i32.const 2
-          i32.eq
-         else
-          i32.const 0
-         end
-         if (result i32)
-          i32.const 3
-         else
-          i32.const 2
-          i32.const 1
-          local.get $1
-          i32.const 0
-          call $~lib/array/Array<i32>#__get
-          i32.const 2
-          i32.eq
-          select
-         end
-        end
-       end
-      end
-     end
-    end
-   end
-  end
-  local.set $9
-  i32.const 5
-  local.get $7
-  i32.const 0
-  call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-  i32.load offset=4
-  local.get $3
-  select
-  local.set $8
-  i32.const 0
-  i32.const 2
-  i32.const 27
-  i32.const 11328
-  call $~lib/rt/__newArray
-  local.set $7
-  local.get $11
-  i32.load offset=8
-  local.set $6
-  local.get $11
-  i32.load offset=16
-  local.tee $4
-  call $~lib/array/Array<i32>#constructor
-  local.set $5
-  i32.const 0
-  local.set $1
-  i32.const 0
-  local.set $12
-  loop $for-loop|07
-   local.get $4
-   local.get $12
-   i32.gt_s
-   if
-    local.get $6
-    local.get $12
-    i32.const 12
-    i32.mul
-    i32.add
-    local.tee $2
-    i32.load offset=8
-    i32.const 1
-    i32.and
-    i32.eqz
-    if
-     local.get $5
-     local.get $1
-     local.get $2
-     i32.load
-     call $~lib/array/Array<u32>#__set
-     local.get $1
-     i32.const 1
-     i32.add
-     local.set $1
-    end
-    local.get $12
-    i32.const 1
-    i32.add
-    local.set $12
-    br $for-loop|07
-   end
-  end
-  local.get $5
-  local.get $1
-  i32.const 2
-  i32.const 0
-  call $~lib/array/ensureCapacity
-  local.get $5
-  local.get $1
-  i32.store offset=12
-  i32.const 0
-  local.set $1
-  loop $for-loop|5
-   local.get $1
-   local.get $5
-   i32.load offset=12
-   i32.lt_s
-   if
-    local.get $5
-    local.get $1
-    call $~lib/array/Array<i32>#__get
-    local.set $4
-    i32.const 2
-    i32.const 2
-    i32.const 8
-    i32.const 0
-    call $~lib/rt/__newArray
-    local.tee $2
-    i32.const 0
-    local.get $4
-    call $~lib/array/Array<u32>#__set
-    local.get $2
-    i32.const 1
-    local.get $11
-    local.get $4
-    call $"~lib/map/Map<i32,i32>#get"
-    call $~lib/array/Array<u32>#__set
-    local.get $7
-    local.get $2
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-    local.get $1
-    i32.const 1
-    i32.add
-    local.set $1
-    br $for-loop|5
-   end
-  end
-  i32.const 0
-  local.set $1
-  loop $for-loop|6
-   local.get $1
-   local.get $7
-   i32.load offset=12
-   i32.lt_s
-   if
-    local.get $1
-    i32.const 1
-    i32.add
-    local.set $13
-    loop $for-loop|7
-     local.get $13
-     local.get $7
-     i32.load offset=12
-     i32.lt_s
-     if
-      local.get $7
-      local.get $13
-      call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-      i32.const 1
-      call $~lib/array/Array<i32>#__get
-      local.get $7
-      local.get $1
-      call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-      i32.const 1
-      call $~lib/array/Array<i32>#__get
-      i32.gt_s
-      if (result i32)
-       i32.const 1
-      else
-       local.get $7
-       local.get $13
-       call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-       i32.const 1
-       call $~lib/array/Array<i32>#__get
-       local.get $7
-       local.get $1
-       call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-       i32.const 1
-       call $~lib/array/Array<i32>#__get
-       i32.eq
-       if (result i32)
-        local.get $7
-        local.get $13
-        call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-        i32.const 0
-        call $~lib/array/Array<i32>#__get
-        local.get $7
-        local.get $1
-        call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-        i32.const 0
-        call $~lib/array/Array<i32>#__get
-        i32.gt_s
-       else
-        i32.const 0
-       end
-      end
-      if
-       local.get $7
-       local.get $1
-       call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-       local.set $2
-       local.get $7
-       local.get $1
-       local.get $7
-       local.get $13
-       call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-       call $~lib/array/Array<u32>#__set
-       local.get $7
-       local.get $13
-       local.get $2
-       call $~lib/array/Array<u32>#__set
-      end
-      local.get $13
-      i32.const 1
-      i32.add
-      local.set $13
-      br $for-loop|7
-     end
-    end
-    local.get $1
-    i32.const 1
-    i32.add
-    local.set $1
-    br $for-loop|6
-   end
-  end
-  i32.const 0
-  i32.const 2
-  i32.const 8
-  i32.const 11360
-  call $~lib/rt/__newArray
-  drop
-  local.get $9
-  i32.const 9
-  i32.eq
-  local.get $9
-  i32.const 10
-  i32.eq
-  i32.or
-  if
-   i32.const 1
-   i32.const 2
-   i32.const 8
-   i32.const 0
-   call $~lib/rt/__newArray
-   local.tee $2
-   i32.const 0
-   local.get $3
-   if (result i32)
-    i32.const 5
-   else
-    local.get $10
-    i32.const 0
-    call $~lib/array/Array<i32>#__get
-   end
-   call $~lib/array/Array<u32>#__set
-  else
-   local.get $9
-   i32.const 8
-   i32.eq
-   if
-    i32.const 2
-    i32.const 2
-    i32.const 8
-    i32.const 0
-    call $~lib/rt/__newArray
-    local.tee $2
-    i32.const 0
-    local.get $7
-    i32.const 0
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    i32.const 0
-    call $~lib/array/Array<i32>#__get
-    call $~lib/array/Array<u32>#__set
-    local.get $2
-    i32.const 1
-    local.get $7
-    i32.const 1
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    i32.const 0
-    call $~lib/array/Array<i32>#__get
-    call $~lib/array/Array<u32>#__set
-   else
-    local.get $9
-    i32.const 7
-    i32.eq
-    if
-     i32.const 2
-     i32.const 2
-     i32.const 8
-     i32.const 0
-     call $~lib/rt/__newArray
-     local.tee $2
-     i32.const 0
-     local.get $7
-     i32.const 0
-     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-     i32.const 0
-     call $~lib/array/Array<i32>#__get
-     call $~lib/array/Array<u32>#__set
-     local.get $2
-     i32.const 1
-     local.get $7
-     i32.const 1
-     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-     i32.const 0
-     call $~lib/array/Array<i32>#__get
-     call $~lib/array/Array<u32>#__set
-    else
-     local.get $9
-     i32.const 6
-     i32.eq
-     if
-      i32.const 1
-      global.set $~argumentsLength
-      local.get $10
-      call $~lib/array/Array<i32>#slice@varargs
-      local.set $2
-     else
-      local.get $9
-      i32.const 5
-      i32.eq
-      if
-       i32.const 1
-       i32.const 2
-       i32.const 8
-       i32.const 0
-       call $~lib/rt/__newArray
-       local.tee $2
-       i32.const 0
-       local.get $3
-       if (result i32)
-        i32.const 5
-       else
-        local.get $10
-        i32.const 0
-        call $~lib/array/Array<i32>#__get
-       end
-       call $~lib/array/Array<u32>#__set
-      else
-       local.get $9
-       i32.const 4
-       i32.eq
-       if
-        i32.const 1
-        i32.const 2
-        i32.const 8
-        i32.const 0
-        call $~lib/rt/__newArray
-        local.tee $2
-        i32.const 0
-        local.get $7
-        i32.const 0
-        call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-        i32.const 0
-        call $~lib/array/Array<i32>#__get
-        call $~lib/array/Array<u32>#__set
-        i32.const 1
-        local.set $1
-        loop $for-loop|8
-         local.get $1
-         local.get $7
-         i32.load offset=12
-         i32.lt_s
-         if
-          local.get $2
-          local.get $7
-          local.get $1
-          call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-          i32.const 0
-          call $~lib/array/Array<i32>#__get
-          call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-          local.get $1
-          i32.const 1
-          i32.add
-          local.set $1
-          br $for-loop|8
-         end
-        end
-       else
-        local.get $9
-        i32.const 3
-        i32.eq
-        if
-         i32.const 0
-         i32.const 2
-         i32.const 8
-         i32.const 11392
-         call $~lib/rt/__newArray
-         local.set $1
-         i32.const 0
-         local.set $13
-         i32.const 0
-         local.set $2
-         loop $for-loop|9
-          local.get $2
-          local.get $7
-          i32.load offset=12
-          i32.lt_s
-          if
-           local.get $7
-           local.get $2
-           call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-           i32.const 1
-           call $~lib/array/Array<i32>#__get
-           i32.const 2
-           i32.eq
-           if
-            local.get $1
-            local.get $7
-            local.get $2
-            call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-            i32.const 0
-            call $~lib/array/Array<i32>#__get
-            call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-           else
-            local.get $7
-            local.get $2
-            call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-            i32.const 0
-            call $~lib/array/Array<i32>#__get
-            local.set $13
-           end
-           local.get $2
-           i32.const 1
-           i32.add
-           local.set $2
-           br $for-loop|9
-          end
-         end
-         local.get $1
-         i32.load offset=4
-         local.get $1
-         i32.load offset=12
-         i32.const 11424
-         call $~lib/util/sort/SORT<i32>
-         i32.const 3
-         i32.const 2
-         i32.const 8
-         i32.const 0
-         call $~lib/rt/__newArray
-         local.tee $2
-         i32.const 0
-         local.get $1
-         i32.const 0
-         call $~lib/array/Array<i32>#__get
-         call $~lib/array/Array<u32>#__set
-         local.get $2
-         i32.const 1
-         local.get $1
-         i32.const 1
-         call $~lib/array/Array<i32>#__get
-         call $~lib/array/Array<u32>#__set
-         local.get $2
-         i32.const 2
-         local.get $13
-         call $~lib/array/Array<u32>#__set
-        else
-         local.get $9
-         i32.const 2
-         i32.eq
-         if
-          i32.const 1
-          i32.const 2
-          i32.const 8
-          i32.const 0
-          call $~lib/rt/__newArray
-          local.tee $2
-          i32.const 0
-          local.get $7
-          i32.const 0
-          call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-          i32.const 0
-          call $~lib/array/Array<i32>#__get
-          call $~lib/array/Array<u32>#__set
-          i32.const 1
-          local.set $1
-          loop $for-loop|10
-           local.get $1
-           local.get $7
-           i32.load offset=12
-           i32.lt_s
-           if
-            local.get $2
-            local.get $7
-            local.get $1
-            call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-            i32.const 0
-            call $~lib/array/Array<i32>#__get
-            call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-            local.get $1
-            i32.const 1
-            i32.add
-            local.set $1
-            br $for-loop|10
-           end
-          end
-         else
-          i32.const 1
-          global.set $~argumentsLength
-          local.get $10
-          call $~lib/array/Array<i32>#slice@varargs
-          local.set $2
-         end
-        end
-       end
-      end
-     end
-    end
-   end
-  end
-  call $"~lib/map/Map<i32,i32>#constructor"
-  local.set $5
-  i32.const 0
-  local.set $1
-  loop $for-loop|00
-   local.get $1
-   local.get $0
-   i32.load offset=12
-   i32.lt_s
-   if
-    local.get $0
-    local.get $1
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    i32.load offset=4
-    local.set $4
-    local.get $5
-    i32.load
-    local.get $5
-    i32.load offset=4
-    local.get $4
-    i32.const -1028477379
-    i32.mul
-    i32.const 374761397
-    i32.add
-    i32.const 17
-    i32.rotl
-    i32.const 668265263
-    i32.mul
-    local.tee $3
-    local.get $3
-    i32.const 15
-    i32.shr_u
-    i32.xor
-    i32.const -2048144777
-    i32.mul
-    local.tee $3
-    local.get $3
-    i32.const 13
-    i32.shr_u
-    i32.xor
-    i32.const -1028477379
-    i32.mul
-    local.tee $3
-    local.get $3
-    i32.const 16
-    i32.shr_u
-    i32.xor
-    i32.and
-    i32.const 2
-    i32.shl
-    i32.add
-    i32.load
-    local.set $13
-    block $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$17020"
-     loop $while-continue|01
-      local.get $13
-      if
-       local.get $13
-       i32.load offset=8
-       local.tee $3
-       i32.const 1
-       i32.and
-       if (result i32)
-        i32.const 0
-       else
-        local.get $13
-        i32.load
-        local.get $4
-        i32.eq
-       end
-       br_if $"__inlined_func$~lib/map/Map<i32,assembly/types/GameState/CardDef>#find$17020"
-       local.get $3
-       i32.const -2
-       i32.and
-       local.set $13
-       br $while-continue|01
-      end
-     end
-     i32.const 0
-     local.set $13
-    end
-    local.get $5
-    local.get $4
-    local.get $13
-    if (result i32)
-     local.get $5
-     local.get $4
-     call $"~lib/map/Map<i32,i32>#get"
-    else
-     i32.const 0
-    end
-    i32.const 1
-    i32.add
-    call $"~lib/map/Map<i32,i32>#set"
-    local.get $1
-    i32.const 1
-    i32.add
-    local.set $1
-    br $for-loop|00
-   end
-  end
-  i32.const 1
-  global.set $~argumentsLength
-  local.get $0
-  call $~lib/array/Array<assembly/types/PokerTypes/PokerCard>#slice@varargs
-  local.set $4
-  i32.const 0
-  local.set $1
-  loop $for-loop|15
-   local.get $1
-   local.get $4
-   i32.load offset=12
-   i32.lt_s
-   if
-    local.get $1
-    i32.const 1
-    i32.add
-    local.set $13
-    loop $for-loop|27
-     local.get $13
-     local.get $4
-     i32.load offset=12
-     i32.lt_s
-     if
-      local.get $5
-      local.get $4
-      local.get $1
-      call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-      i32.load offset=4
-      call $"~lib/map/Map<i32,i32>#get"
-      local.tee $3
-      local.get $5
-      local.get $4
-      local.get $13
-      call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-      i32.load offset=4
-      call $"~lib/map/Map<i32,i32>#get"
-      local.tee $0
-      i32.lt_s
-      if (result i32)
-       i32.const 1
-      else
-       local.get $0
-       local.get $3
-       i32.eq
-       if (result i32)
-        local.get $4
-        local.get $13
-        call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-        i32.load offset=4
-        local.get $4
-        local.get $1
-        call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-        i32.load offset=4
-        i32.gt_s
-       else
-        i32.const 0
-       end
-      end
-      if
-       local.get $4
-       local.get $1
-       call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-       local.set $0
-       local.get $4
-       local.get $1
-       local.get $4
-       local.get $13
-       call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-       call $~lib/array/Array<u32>#__set
-       local.get $4
-       local.get $13
-       local.get $0
-       call $~lib/array/Array<u32>#__set
-      end
-      local.get $13
-      i32.const 1
-      i32.add
-      local.set $13
-      br $for-loop|27
-     end
-    end
-    local.get $1
-    i32.const 1
-    i32.add
-    local.set $1
-    br $for-loop|15
-   end
-  end
-  call $assembly/types/PokerTypes/EvaluatedHand#constructor
-  local.tee $0
-  local.get $9
-  i32.store
-  local.get $0
-  local.get $4
-  i32.store offset=4
-  local.get $0
-  local.get $8
-  i32.store offset=8
-  local.get $0
-  local.get $9
-  i32.const 0
-  i32.ne
-  local.get $9
-  i32.const 10
-  i32.le_u
-  i32.and
-  if (result i32)
-   i32.const 1360
-   local.get $9
-   call $~lib/array/Array<i32>#__get
-  else
-   i32.const 100
-  end
-  i32.store offset=12
-  local.get $0
-  local.get $2
-  i32.store offset=16
-  local.get $0
- )
- (func $assembly/poker/handEvaluator/findBestHand (param $0 i32) (param $1 i32) (result i32)
-  (local $2 i32)
-  (local $3 i32)
-  (local $4 i32)
-  (local $5 i32)
-  (local $6 i32)
-  (local $7 i32)
-  (local $8 i32)
-  (local $9 i32)
-  i32.const 0
-  i32.const 2
-  i32.const 23
-  i32.const 11520
-  call $~lib/rt/__newArray
-  local.set $8
-  loop $for-loop|0
-   local.get $3
-   local.get $0
-   i32.load offset=12
-   i32.lt_s
-   if
-    local.get $8
-    local.get $0
-    local.get $3
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-    local.get $3
-    i32.const 1
-    i32.add
-    local.set $3
-    br $for-loop|0
-   end
-  end
-  i32.const 0
-  local.set $0
-  loop $for-loop|1
-   local.get $0
-   local.get $1
-   i32.load offset=12
-   i32.lt_s
-   if
-    local.get $8
-    local.get $1
-    local.get $0
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-    local.get $0
-    i32.const 1
-    i32.add
-    local.set $0
-    br $for-loop|1
-   end
-  end
-  local.get $8
-  i32.load offset=12
-  i32.const 5
-  i32.lt_s
-  if
-   local.get $8
-   call $assembly/poker/handEvaluator/sortByValueDesc
-   local.set $0
-   call $assembly/types/PokerTypes/EvaluatedHand#constructor
-   local.tee $1
-   i32.const 1
-   i32.store
-   local.get $1
-   local.get $0
-   i32.store offset=4
-   local.get $1
-   local.get $0
-   i32.load offset=12
-   i32.const 0
-   i32.gt_s
-   if (result i32)
-    local.get $0
-    i32.const 0
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    i32.load offset=4
-   else
-    i32.const 0
-   end
-   i32.store offset=8
-   local.get $1
-   i32.const 100
-   i32.store offset=12
-   i32.const 0
-   i32.const 2
-   i32.const 8
-   i32.const 11552
-   call $~lib/rt/__newArray
-   local.set $3
-   loop $for-loop|2
-    local.get $2
-    local.get $0
-    i32.load offset=12
-    i32.lt_s
-    if
-     local.get $3
-     local.get $0
-     local.get $2
-     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-     i32.load offset=4
-     call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-     local.get $2
-     i32.const 1
-     i32.add
-     local.set $2
-     br $for-loop|2
-    end
-   end
-   local.get $1
-   local.get $3
-   i32.store offset=16
-   local.get $1
-   return
-  end
-  i32.const 0
-  local.set $0
-  loop $for-loop|3
-   local.get $6
-   local.get $8
-   i32.load offset=12
-   i32.const 4
-   i32.sub
-   i32.lt_s
-   if
-    local.get $6
-    i32.const 1
-    i32.add
-    local.set $2
-    loop $for-loop|4
-     local.get $2
-     local.get $8
-     i32.load offset=12
-     i32.const 3
-     i32.sub
-     i32.lt_s
-     if
-      local.get $2
-      i32.const 1
-      i32.add
-      local.set $4
-      loop $for-loop|5
-       local.get $4
-       local.get $8
-       i32.load offset=12
-       i32.const 2
-       i32.sub
-       i32.lt_s
-       if
-        local.get $4
-        i32.const 1
-        i32.add
-        local.set $5
-        loop $for-loop|6
-         local.get $5
-         local.get $8
-         i32.load offset=12
-         i32.const 1
-         i32.sub
-         i32.lt_s
-         if
-          local.get $5
-          i32.const 1
-          i32.add
-          local.set $7
-          loop $for-loop|7
-           local.get $7
-           local.get $8
-           i32.load offset=12
-           i32.lt_s
-           if
-            i32.const 5
-            i32.const 2
-            i32.const 23
-            i32.const 0
-            call $~lib/rt/__newArray
-            local.tee $1
-            i32.const 0
-            local.get $8
-            local.get $6
-            call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-            call $~lib/array/Array<u32>#__set
-            local.get $1
-            i32.const 1
-            local.get $8
-            local.get $2
-            call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-            call $~lib/array/Array<u32>#__set
-            local.get $1
-            i32.const 2
-            local.get $8
-            local.get $4
-            call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-            call $~lib/array/Array<u32>#__set
-            local.get $1
-            i32.const 3
-            local.get $8
-            local.get $5
-            call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-            call $~lib/array/Array<u32>#__set
-            local.get $1
-            i32.const 4
-            local.get $8
-            local.get $7
-            call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-            call $~lib/array/Array<u32>#__set
-            local.get $1
-            call $assembly/poker/handEvaluator/evaluateFiveCardHand
-            local.set $1
-            local.get $0
-            if (result i32)
-             local.get $1
-             local.get $0
-             block $__inlined_func$assembly/poker/handEvaluator/compareHandsInternal$2004 (result i32)
-              local.get $1
-              i32.load
-              local.tee $3
-              local.get $0
-              i32.load
-              local.tee $9
-              i32.ne
-              if
-               local.get $3
-               local.get $9
-               i32.sub
-               br $__inlined_func$assembly/poker/handEvaluator/compareHandsInternal$2004
-              end
-              local.get $1
-              i32.load
-              i32.const 5
-              i32.eq
-              if (result i32)
-               i32.const 1
-              else
-               local.get $1
-               i32.load
-               i32.const 9
-               i32.eq
-              end
-              if
-               local.get $1
-               i32.load offset=8
-               local.get $0
-               i32.load offset=8
-               i32.sub
-               br $__inlined_func$assembly/poker/handEvaluator/compareHandsInternal$2004
-              end
-              local.get $1
-              i32.load offset=4
-              local.tee $1
-              local.get $0
-              i32.load offset=4
-              local.tee $0
-              local.get $1
-              i32.load offset=12
-              local.get $0
-              i32.load offset=12
-              i32.lt_s
-              select
-              i32.load offset=12
-              local.set $9
-              i32.const 0
-              local.set $3
-              loop $for-loop|013
-               local.get $3
-               local.get $9
-               i32.lt_s
-               if
-                local.get $1
-                local.get $3
-                call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-                i32.load offset=4
-                local.get $0
-                local.get $3
-                call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-                i32.load offset=4
-                i32.ne
-                if
-                 local.get $1
-                 local.get $3
-                 call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-                 i32.load offset=4
-                 local.get $0
-                 local.get $3
-                 call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-                 i32.load offset=4
-                 i32.sub
-                 br $__inlined_func$assembly/poker/handEvaluator/compareHandsInternal$2004
-                end
-                local.get $3
-                i32.const 1
-                i32.add
-                local.set $3
-                br $for-loop|013
-               end
-              end
-              i32.const 0
-             end
-             i32.const 0
-             i32.gt_s
-             select
-            else
-             local.get $1
-            end
-            local.set $0
-            local.get $7
-            i32.const 1
-            i32.add
-            local.set $7
-            br $for-loop|7
-           end
-          end
-          local.get $5
-          i32.const 1
-          i32.add
-          local.set $5
-          br $for-loop|6
-         end
-        end
-        local.get $4
-        i32.const 1
-        i32.add
-        local.set $4
-        br $for-loop|5
-       end
-      end
-      local.get $2
-      i32.const 1
-      i32.add
-      local.set $2
-      br $for-loop|4
-     end
-    end
-    local.get $6
-    i32.const 1
-    i32.add
-    local.set $6
-    br $for-loop|3
-   end
-  end
-  local.get $0
- )
- (func $assembly/poker/handEvaluator/compareHands (param $0 i32) (param $1 i32) (result i32)
-  (local $2 i32)
-  (local $3 i32)
-  local.get $0
-  i32.load
-  local.get $1
-  i32.load
-  i32.gt_s
-  if
-   i32.const 1
-   return
-  end
-  local.get $0
-  i32.load
-  local.get $1
-  i32.load
-  i32.lt_s
-  if
-   i32.const -1
-   return
-  end
-  local.get $0
-  i32.load
-  i32.const 5
-  i32.eq
-  if (result i32)
-   i32.const 1
-  else
-   local.get $0
-   i32.load
-   i32.const 9
-   i32.eq
-  end
-  if
-   local.get $0
-   i32.load offset=8
-   local.get $1
-   i32.load offset=8
-   i32.gt_s
-   if
-    i32.const 1
-    return
-   end
-   local.get $0
-   i32.load offset=8
-   local.get $1
-   i32.load offset=8
-   i32.lt_s
-   if
-    i32.const -1
-    return
-   end
-   i32.const 0
-   return
-  end
-  local.get $0
-  i32.load offset=4
-  local.tee $2
-  local.get $1
-  i32.load offset=4
-  local.tee $1
-  local.get $2
-  i32.load offset=12
-  local.get $1
-  i32.load offset=12
-  i32.lt_s
-  select
-  i32.load offset=12
-  local.set $3
-  i32.const 0
-  local.set $0
-  loop $for-loop|0
-   local.get $0
-   local.get $3
-   i32.lt_s
-   if
-    local.get $2
-    local.get $0
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    i32.load offset=4
-    local.get $1
-    local.get $0
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    i32.load offset=4
-    i32.gt_s
-    if
-     i32.const 1
-     return
-    end
-    local.get $2
-    local.get $0
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    i32.load offset=4
-    local.get $1
-    local.get $0
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    i32.load offset=4
-    i32.lt_s
-    if
-     i32.const -1
-     return
-    end
-    local.get $0
-    i32.const 1
-    i32.add
-    local.set $0
-    br $for-loop|0
-   end
-  end
-  i32.const 0
- )
- (func $assembly/poker/handEvaluator/calculateHandStrength (param $0 i32) (param $1 i32) (result i32)
-  (local $2 i32)
-  (local $3 i32)
-  (local $4 i32)
-  local.get $0
-  i32.load offset=12
-  i32.const 2
-  i32.lt_s
-  if
-   i32.const 0
-   return
-  end
-  i32.const 0
-  i32.const 2
-  i32.const 23
-  i32.const 11584
-  call $~lib/rt/__newArray
-  local.set $4
-  loop $for-loop|0
-   local.get $2
-   local.get $0
-   i32.load offset=12
-   i32.lt_s
-   if
-    local.get $4
-    local.get $0
-    local.get $2
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-    local.get $2
-    i32.const 1
-    i32.add
-    local.set $2
-    br $for-loop|0
-   end
-  end
-  loop $for-loop|1
-   local.get $3
-   local.get $1
-   i32.load offset=12
-   i32.lt_s
-   if
-    local.get $4
-    local.get $1
-    local.get $3
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-    local.get $3
-    i32.const 1
-    i32.add
-    local.set $3
-    br $for-loop|1
-   end
-  end
-  local.get $4
-  i32.load offset=12
-  i32.const 5
-  i32.ge_s
-  if
-   local.get $0
-   local.get $1
-   call $assembly/poker/handEvaluator/findBestHand
-   local.set $0
-   i32.const 11
-   i32.const 2
-   i32.const 8
-   i32.const 11616
-   call $~lib/rt/__newArray
-   local.set $1
-   i32.const 100
-   local.get $0
-   i32.load
-   local.tee $2
-   i32.const 0
-   i32.gt_s
-   if (result i32)
-    local.get $2
-    i32.const 10
-    i32.le_s
-   else
-    i32.const 0
-   end
-   if (result i32)
-    local.get $1
-    local.get $0
-    i32.load
-    call $~lib/array/Array<i32>#__get
-   else
-    i32.const 10
-   end
-   local.get $0
-   i32.load offset=8
-   i32.const 2
-   i32.sub
-   i32.const 5
-   i32.mul
-   i32.const 12
-   i32.div_s
-   i32.add
-   local.tee $0
-   local.get $0
-   i32.const 100
-   i32.gt_s
-   select
-   return
-  end
-  local.get $0
-  i32.const 0
-  call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-  i32.load offset=4
-  local.tee $2
-  local.get $0
-  i32.const 1
-  call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-  i32.load offset=4
-  local.tee $3
-  local.get $2
-  local.get $3
-  i32.gt_s
-  select
-  i32.const 2
-  i32.sub
-  i32.const 30
-  i32.mul
-  i32.const 12
-  i32.div_s
-  local.set $1
-  local.get $2
-  local.get $3
-  i32.eq
-  if
-   local.get $1
-   local.get $2
-   i32.const 20
-   i32.mul
-   i32.const 14
-   i32.div_s
-   i32.const 40
-   i32.add
-   i32.add
-   local.set $1
-  end
-  local.get $1
-  i32.const 12
-  i32.add
-  local.get $1
-  local.get $0
-  i32.const 0
-  call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-  i32.load
-  local.get $0
-  i32.const 1
-  call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-  i32.load
-  i32.eq
-  select
-  local.set $1
-  local.get $2
-  local.get $3
-  i32.sub
-  local.tee $0
-  i32.const 0
-  i32.lt_s
-  if
-   i32.const 0
-   local.get $0
-   i32.sub
-   local.set $0
-  end
-  i32.const 100
-  local.get $0
-  i32.const 1
-  i32.eq
-  if (result i32)
-   local.get $1
-   i32.const 10
-   i32.add
-  else
-   local.get $0
-   i32.const 2
-   i32.eq
-   if (result i32)
-    local.get $1
-    i32.const 6
-    i32.add
-   else
-    local.get $1
-    i32.const 3
-    i32.add
-    local.get $1
-    local.get $0
-    i32.const 3
-    i32.eq
-    select
-   end
-  end
-  local.tee $0
-  local.get $0
-  i32.const 100
-  i32.gt_s
-  select
- )
- (func $assembly/types/PokerTypes/BettingState#constructor (result i32)
-  (local $0 i32)
-  i32.const 23
-  i32.const 28
-  call $~lib/rt/stub/__new
-  local.tee $0
-  i32.const 0
-  i32.store
-  local.get $0
-  i32.const 0
-  i32.store offset=4
-  local.get $0
-  i32.const 0
-  i32.store offset=8
-  local.get $0
-  i32.const 0
-  i32.store offset=12
-  local.get $0
-  i32.const 0
-  i32.store offset=16
-  local.get $0
-  i32.const 0
-  i32.store8 offset=20
-  local.get $0
-  i32.const 0
-  i32.store8 offset=21
-  local.get $0
-  i32.const 0
-  i32.store8 offset=22
-  local.get $0
-  i32.const 0
-  i32.store
-  local.get $0
-  i32.const 0
-  i32.store offset=4
-  local.get $0
-  i32.const 0
-  i32.store offset=8
-  local.get $0
-  i32.const 5
-  i32.store offset=12
-  local.get $0
-  i32.const -1
-  i32.store offset=16
-  local.get $0
-  i32.const 0
-  i32.store8 offset=20
-  local.get $0
-  i32.const 0
-  i32.store8 offset=21
-  local.get $0
-  i32.const 0
-  i32.store8 offset=22
-  local.get $0
- )
- (func $assembly/poker/bettingEngine/calculateCallAmount (param $0 i32) (param $1 i32) (result i32)
-  local.get $1
-  if (result i32)
-   local.get $0
-   i32.load offset=8
-   local.tee $1
-   local.get $0
-   i32.load offset=4
-   local.tee $0
-   i32.gt_s
-   if (result i32)
-    local.get $1
-    local.get $0
-    i32.sub
-   else
-    i32.const 0
-   end
-  else
-   local.get $0
-   i32.load offset=4
-   local.tee $1
-   local.get $0
-   i32.load offset=8
-   local.tee $0
-   i32.gt_s
-   if (result i32)
-    local.get $1
-    local.get $0
-    i32.sub
-   else
-    i32.const 0
-   end
-  end
- )
- (func $assembly/poker/bettingEngine/processBettingAction (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (param $4 i32) (result i32)
-  (local $5 i32)
-  (local $6 i32)
-  (local $7 i32)
-  call $assembly/types/PokerTypes/BettingState#constructor
-  local.tee $5
-  local.get $0
-  i32.load
-  i32.store
-  local.get $5
-  local.get $0
-  i32.load offset=4
-  i32.store offset=4
-  local.get $5
-  local.get $0
-  i32.load offset=8
-  i32.store offset=8
-  local.get $5
-  local.get $0
-  i32.load offset=12
-  i32.store offset=12
-  local.get $5
-  local.get $0
-  i32.load offset=16
-  i32.store offset=16
-  local.get $5
-  local.get $0
-  i32.load8_u offset=20
-  i32.store8 offset=20
-  local.get $5
-  local.get $0
-  i32.load8_u offset=21
-  i32.store8 offset=21
-  local.get $5
-  local.get $0
-  i32.load8_u offset=22
-  i32.store8 offset=22
-  i32.const 12
-  i32.const 29
-  call $~lib/rt/stub/__new
-  local.tee $6
-  i32.const 0
-  i32.store
-  local.get $6
-  i32.const 0
-  i32.store8 offset=4
-  local.get $6
-  i32.const 0
-  i32.store offset=8
-  local.get $6
-  local.get $5
-  i32.store
-  local.get $6
-  i32.const 0
-  i32.store8 offset=4
-  local.get $6
-  i32.const -1
-  i32.store offset=8
-  local.get $1
-  i32.eqz
-  local.set $7
-  local.get $2
-  i32.const 3
-  i32.eq
-  if
-   local.get $6
-   local.get $7
-   i32.store offset=8
-   local.get $5
-   i32.const 1
-   i32.store8 offset=20
-   local.get $6
-   i32.const 1
-   i32.store8 offset=4
-   local.get $6
-   return
-  end
-  local.get $2
-  i32.const 4
-  i32.eq
-  if
-   local.get $7
-   if (result i32)
-    local.get $0
-    i32.load offset=8
-    local.tee $2
-    local.get $0
-    i32.load offset=4
-    local.tee $3
-    i32.sub
-    i32.const 0
-    local.get $2
-    local.get $3
-    i32.gt_s
-    select
-   else
-    local.get $0
-    i32.load offset=4
-    local.tee $2
-    local.get $0
-    i32.load offset=8
-    local.tee $3
-    i32.sub
-    i32.const 0
-    local.get $2
-    local.get $3
-    i32.gt_s
-    select
-   end
-   i32.const 0
-   i32.gt_s
-   if
-    local.get $0
-    local.get $1
-    i32.const 2
-    i32.const 0
-    local.get $4
-    call $assembly/poker/bettingEngine/processBettingAction
-    return
-   end
-   local.get $7
-   if
-    local.get $5
-    i32.const 1
-    i32.store8 offset=21
-   else
-    local.get $5
-    i32.const 1
-    i32.store8 offset=22
-   end
-   local.get $5
-   i32.load8_u offset=21
-   if (result i32)
-    local.get $5
-    i32.load8_u offset=22
-   else
-    i32.const 0
-   end
-   if (result i32)
-    local.get $5
-    i32.load offset=4
-    local.get $5
-    i32.load offset=8
-    i32.eq
-   else
-    i32.const 0
-   end
-   if
-    local.get $5
-    i32.const 1
-    i32.store8 offset=20
-    local.get $6
-    i32.const 1
-    i32.store8 offset=4
-   end
-   local.get $6
-   return
-  end
-  local.get $2
-  i32.const 2
-  i32.eq
-  if
-   local.get $7
-   if (result i32)
-    local.get $0
-    i32.load offset=8
-    local.tee $1
-    local.get $0
-    i32.load offset=4
-    local.tee $0
-    i32.sub
-    i32.const 0
-    local.get $0
-    local.get $1
-    i32.lt_s
-    select
-   else
-    local.get $0
-    i32.load offset=4
-    local.tee $1
-    local.get $0
-    i32.load offset=8
-    local.tee $0
-    i32.sub
-    i32.const 0
-    local.get $0
-    local.get $1
-    i32.lt_s
-    select
-   end
-   local.set $0
-   local.get $7
-   if
-    local.get $5
-    local.get $0
-    local.get $5
-    i32.load offset=4
-    i32.add
-    i32.store offset=4
-   else
-    local.get $5
-    local.get $0
-    local.get $5
-    i32.load offset=8
-    i32.add
-    i32.store offset=8
-   end
-   local.get $5
-   local.get $0
-   local.get $5
-   i32.load
-   i32.add
-   i32.store
-   local.get $7
-   if
-    local.get $5
-    i32.const 1
-    i32.store8 offset=21
-   else
-    local.get $5
-    i32.const 1
-    i32.store8 offset=22
-   end
-   local.get $5
-   i32.load offset=4
-   local.get $5
-   i32.load offset=8
-   i32.eq
-   if (result i32)
-    local.get $5
-    i32.load8_u offset=21
-   else
-    i32.const 0
-   end
-   if (result i32)
-    local.get $5
-    i32.load8_u offset=22
-   else
-    i32.const 0
-   end
-   if
-    local.get $5
-    i32.const 1
-    i32.store8 offset=20
-    local.get $6
-    i32.const 1
-    i32.store8 offset=4
-   end
-   local.get $6
-   return
-  end
-  local.get $2
-  i32.eqz
-  local.get $2
-  i32.const 1
-  i32.eq
-  i32.or
-  if
-   local.get $7
-   if (result i32)
-    local.get $0
-    i32.load offset=4
-   else
-    local.get $0
-    i32.load offset=8
-   end
-   local.tee $2
-   local.get $3
-   i32.ge_s
-   if
-    local.get $2
-    local.get $0
-    i32.load offset=12
-    i32.add
-    local.set $3
-   end
-   local.get $3
-   local.get $2
-   i32.sub
-   local.tee $0
-   local.get $4
-   i32.le_s
-   if
-    local.get $7
-    if
-     local.get $5
-     local.get $3
-     i32.store offset=4
-    else
-     local.get $5
-     local.get $3
-     i32.store offset=8
-    end
-    local.get $5
-    local.get $0
-    local.get $5
-    i32.load
-    i32.add
-    i32.store
-   else
-    local.get $7
-    if
-     local.get $5
-     local.get $4
-     local.get $5
-     i32.load offset=4
-     i32.add
-     i32.store offset=4
-    else
-     local.get $5
-     local.get $4
-     local.get $5
-     i32.load offset=8
-     i32.add
-     i32.store offset=8
-    end
-    local.get $5
-    local.get $4
-    local.get $5
-    i32.load
-    i32.add
-    i32.store
-   end
-   local.get $5
-   local.get $1
-   i32.store offset=16
-   local.get $7
-   if
-    local.get $5
-    i32.const 1
-    i32.store8 offset=21
-    local.get $5
-    i32.const 0
-    i32.store8 offset=22
-   else
-    local.get $5
-    i32.const 1
-    i32.store8 offset=22
-    local.get $5
-    i32.const 0
-    i32.store8 offset=21
-   end
-   local.get $6
-   return
-  end
-  local.get $6
- )
- (func $assembly/poker/bettingEngine/initializeBettingState (result i32)
-  (local $0 i32)
-  call $assembly/types/PokerTypes/BettingState#constructor
-  local.tee $0
-  i32.const 16
-  i32.store
-  local.get $0
-  i32.const 5
-  i32.store offset=4
-  local.get $0
-  i32.const 10
-  i32.store offset=8
-  local.get $0
-  i32.const 10
-  i32.store offset=12
-  local.get $0
-  i32.const -1
-  i32.store offset=16
-  local.get $0
-  i32.const 0
-  i32.store8 offset=20
-  local.get $0
-  i32.const 0
-  i32.store8 offset=21
-  local.get $0
-  i32.const 0
-  i32.store8 offset=22
-  local.get $0
- )
- (func $assembly/poker/bettingEngine/resetForNewRound (param $0 i32) (result i32)
-  (local $1 i32)
-  call $assembly/types/PokerTypes/BettingState#constructor
-  local.tee $1
-  local.get $0
-  i32.load
-  i32.store
-  local.get $1
-  i32.const 0
-  i32.store offset=4
-  local.get $1
-  i32.const 0
-  i32.store offset=8
-  local.get $1
-  i32.const 10
-  i32.store offset=12
-  local.get $1
-  i32.const -1
-  i32.store offset=16
-  local.get $1
-  i32.const 0
-  i32.store8 offset=20
-  local.get $1
-  i32.const 0
-  i32.store8 offset=21
-  local.get $1
-  i32.const 0
-  i32.store8 offset=22
-  local.get $1
- )
- (func $assembly/poker/bettingEngine/calculateMinRaise (param $0 i32) (result i32)
-  (local $1 i32)
-  local.get $0
-  i32.load offset=4
-  local.tee $1
-  local.get $0
-  i32.load offset=8
-  i32.gt_s
-  if (result i32)
-   local.get $1
-  else
-   local.get $0
-   i32.load offset=8
-  end
-  local.get $0
-  i32.load offset=12
-  i32.add
- )
- (func $assembly/poker/phaseManager/getNextPhase (param $0 i32) (result i32)
-  (local $1 i32)
-  loop $for-loop|0
-   local.get $1
-   i32.const 1484
-   i32.load
-   i32.const 1
-   i32.sub
-   i32.lt_s
-   if
-    i32.const 1472
-    local.get $1
-    call $~lib/array/Array<i32>#__get
-    local.get $0
-    i32.eq
-    if
-     i32.const 1472
-     local.get $1
-     i32.const 1
-     i32.add
-     call $~lib/array/Array<i32>#__get
-     return
-    end
-    local.get $1
-    i32.const 1
-    i32.add
-    local.set $1
-    br $for-loop|0
-   end
-  end
-  i32.const 7
- )
- (func $assembly/poker/phaseManager/getBettingRound (param $0 i32) (result i32)
-  local.get $0
-  i32.const 3
-  i32.eq
-  if
-   i32.const 0
-   return
-  end
-  local.get $0
-  i32.const 4
-  i32.eq
-  if
-   i32.const 1
-   return
-  end
-  local.get $0
-  i32.const 5
-  i32.eq
-  if
-   i32.const 2
-   return
-  end
-  local.get $0
-  i32.const 6
-  i32.eq
-  if
-   i32.const 3
-   return
-  end
-  i32.const -1
- )
- (func $assembly/poker/phaseManager/isBettingPhase (param $0 i32) (result i32)
-  local.get $0
-  i32.const 4
-  i32.eq
-  local.get $0
-  i32.const 3
-  i32.eq
-  i32.or
-  local.get $0
-  i32.const 5
-  i32.eq
-  i32.or
-  local.get $0
-  i32.const 6
-  i32.eq
-  i32.or
- )
- (func $assembly/poker/phaseManager/isRevealPhase (param $0 i32) (result i32)
-  local.get $0
-  i32.const 5
-  i32.eq
-  local.get $0
-  i32.const 4
-  i32.eq
-  i32.or
-  local.get $0
-  i32.const 6
-  i32.eq
-  i32.or
- )
- (func $assembly/poker/phaseManager/getCommunityCardsToReveal (param $0 i32) (result i32)
-  local.get $0
-  i32.const 4
-  i32.eq
-  if
-   i32.const 3
-   return
-  end
-  local.get $0
-  i32.const 5
-  i32.eq
-  if
-   i32.const 1
-   return
-  end
-  local.get $0
-  i32.const 6
-  i32.eq
-  if
-   i32.const 1
-   return
-  end
-  i32.const 0
- )
- (func $assembly/poker/phaseManager/getTotalCommunityCards (param $0 i32) (result i32)
-  local.get $0
-  i32.const 2
-  i32.le_s
-  if
-   i32.const 0
-   return
-  end
-  local.get $0
-  i32.const 3
-  i32.eq
-  if
-   i32.const 0
-   return
-  end
-  local.get $0
-  i32.const 4
-  i32.eq
-  if
-   i32.const 3
-   return
-  end
-  local.get $0
-  i32.const 5
-  i32.eq
-  if
-   i32.const 4
-   return
-  end
-  i32.const 5
- )
- (func $assembly/chess/canonical/Cursor#constructor (param $0 i32) (result i32)
-  (local $1 i32)
-  i32.const 8
-  i32.const 33
-  call $~lib/rt/stub/__new
-  local.tee $1
-  i32.const 0
-  i32.store
-  local.get $1
-  i32.const 0
-  i32.store offset=4
-  local.get $1
-  local.get $0
-  i32.store
-  local.get $1
-  i32.const 0
-  i32.store offset=4
-  local.get $1
- )
- (func $assembly/chess/state/Snapshot#constructor (result i32)
-  (local $0 i32)
-  i32.const 20
-  i32.const 30
-  call $~lib/rt/stub/__new
-  local.tee $0
-  i32.const 0
-  i32.store
-  local.get $0
-  i32.const 0
-  i32.store offset=4
-  local.get $0
-  i32.const 0
-  i32.store offset=8
-  local.get $0
-  i32.const 0
-  i32.store offset=12
-  local.get $0
-  i32.const 0
-  i32.store offset=16
-  local.get $0
-  i32.const 0
-  i32.const 2
-  i32.const 32
-  i32.const 11680
-  call $~lib/rt/__newArray
-  i32.store
-  local.get $0
-  i32.const 0
-  i32.store offset=4
-  local.get $0
-  i32.const 1
-  i32.store offset=8
-  local.get $0
-  i32.const 0
-  i32.store offset=12
-  local.get $0
-  i32.const -1
-  i32.store offset=16
-  local.get $0
- )
- (func $assembly/chess/canonical/Cursor#expect (param $0 i32) (param $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  (local $4 i32)
-  loop $for-loop|0
-   local.get $2
-   local.get $1
-   i32.const 20
-   i32.sub
-   i32.load offset=16
-   i32.const 1
-   i32.shr_u
-   i32.lt_s
-   if
-    local.get $0
-    i32.load offset=4
-    local.get $2
-    i32.add
-    local.tee $3
-    local.get $0
-    i32.load
-    local.tee $4
-    i32.const 20
-    i32.sub
-    i32.load offset=16
-    i32.const 1
-    i32.shr_u
-    i32.ge_u
-    if (result i32)
-     i32.const -1
-    else
-     local.get $4
-     local.get $3
-     i32.const 1
-     i32.shl
-     i32.add
-     i32.load16_u
-    end
-    local.set $3
-    local.get $2
-    local.get $1
-    i32.const 20
-    i32.sub
-    i32.load offset=16
-    i32.const 1
-    i32.shr_u
-    i32.ge_u
-    if (result i32)
-     i32.const -1
-    else
-     local.get $1
-     local.get $2
-     i32.const 1
-     i32.shl
-     i32.add
-     i32.load16_u
-    end
-    local.get $3
-    i32.ne
-    if
-     return
-    end
-    local.get $2
-    i32.const 1
-    i32.add
-    local.set $2
-    br $for-loop|0
-   end
-  end
-  local.get $0
-  local.get $0
-  i32.load offset=4
-  local.get $1
-  i32.const 20
-  i32.sub
-  i32.load offset=16
-  i32.const 1
-  i32.shr_u
-  i32.add
-  i32.store offset=4
- )
- (func $~lib/string/String#substring (param $0 i32) (param $1 i32) (param $2 i32) (result i32)
-  (local $3 i32)
-  (local $4 i32)
-  local.get $1
-  i32.const 0
-  local.get $1
-  i32.const 0
-  i32.gt_s
-  select
-  local.tee $3
-  local.get $0
-  i32.const 20
-  i32.sub
-  i32.load offset=16
-  i32.const 1
-  i32.shr_u
-  local.tee $1
-  local.get $1
-  local.get $3
-  i32.gt_s
-  select
-  local.tee $3
-  local.get $2
-  i32.const 0
-  local.get $2
-  i32.const 0
-  i32.gt_s
-  select
-  local.tee $2
-  local.get $1
-  local.get $1
-  local.get $2
-  i32.gt_s
-  select
-  local.tee $2
-  local.get $2
-  local.get $3
-  i32.gt_s
-  select
-  i32.const 1
-  i32.shl
-  local.set $4
-  local.get $3
-  local.get $2
-  local.get $2
-  local.get $3
-  i32.lt_s
-  select
-  i32.const 1
-  i32.shl
-  local.tee $2
-  local.get $4
-  i32.sub
-  local.tee $3
-  i32.eqz
-  if
-   i32.const 2752
-   return
-  end
-  local.get $4
-  i32.eqz
-  local.get $2
-  local.get $1
-  i32.const 1
-  i32.shl
-  i32.eq
-  i32.and
-  if
-   local.get $0
-   return
-  end
-  local.get $3
-  i32.const 2
-  call $~lib/rt/stub/__new
-  local.tee $1
-  local.get $0
-  local.get $4
-  i32.add
-  local.get $3
-  memory.copy
-  local.get $1
- )
- (func $assembly/chess/canonical/Cursor#readString (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  local.get $0
-  i32.load offset=4
-  local.set $1
-  loop $while-continue|0
-   local.get $0
-   i32.load offset=4
-   local.tee $2
-   local.get $0
-   i32.load
-   local.tee $3
-   i32.const 20
-   i32.sub
-   i32.load offset=16
-   i32.const 1
-   i32.shr_u
-   i32.lt_s
-   if (result i32)
-    local.get $2
-    local.get $3
-    i32.const 20
-    i32.sub
-    i32.load offset=16
-    i32.const 1
-    i32.shr_u
-    i32.ge_u
-    if (result i32)
-     i32.const -1
-    else
-     local.get $3
-     local.get $2
-     i32.const 1
-     i32.shl
-     i32.add
-     i32.load16_u
-    end
-    i32.const 34
-    i32.ne
-   else
-    i32.const 0
-   end
-   if
-    local.get $0
-    local.get $0
-    i32.load offset=4
-    i32.const 1
-    i32.add
-    i32.store offset=4
-    br $while-continue|0
-   end
-  end
-  local.get $0
-  i32.load
-  local.get $1
-  local.get $0
-  i32.load offset=4
-  call $~lib/string/String#substring
-  local.get $0
-  local.get $0
-  i32.load offset=4
-  i32.const 1
-  i32.add
-  i32.store offset=4
- )
- (func $~lib/util/string/strtol<i32> (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  (local $4 i32)
-  (local $5 i32)
-  (local $6 i32)
-  (local $7 i32)
-  local.get $0
-  i32.const 20
-  i32.sub
-  i32.load offset=16
-  i32.const 1
-  i32.shr_u
-  local.tee $1
-  i32.eqz
-  if
-   i32.const 0
-   return
-  end
-  local.get $0
-  local.tee $2
-  i32.load16_u
-  local.set $0
-  loop $while-continue|0
-   block $__inlined_func$~lib/util/string/isSpace$1303 (result i32)
-    local.get $0
-    i32.const 128
-    i32.or
-    i32.const 160
-    i32.eq
-    local.get $0
-    i32.const 9
-    i32.sub
-    i32.const 4
-    i32.le_u
-    i32.or
-    local.get $0
-    i32.const 5760
-    i32.lt_u
-    br_if $__inlined_func$~lib/util/string/isSpace$1303
-    drop
-    i32.const 1
-    local.get $0
-    i32.const -8192
-    i32.add
-    i32.const 10
-    i32.le_u
-    br_if $__inlined_func$~lib/util/string/isSpace$1303
-    drop
-    block $break|0
-     block $case6|0
-      local.get $0
-      i32.const 5760
-      i32.eq
-      br_if $case6|0
-      local.get $0
-      i32.const 8232
-      i32.eq
-      br_if $case6|0
-      local.get $0
-      i32.const 8233
-      i32.eq
-      br_if $case6|0
-      local.get $0
-      i32.const 8239
-      i32.eq
-      br_if $case6|0
-      local.get $0
-      i32.const 8287
-      i32.eq
-      br_if $case6|0
-      local.get $0
-      i32.const 12288
-      i32.eq
-      br_if $case6|0
-      local.get $0
-      i32.const 65279
-      i32.eq
-      br_if $case6|0
-      br $break|0
-     end
-     i32.const 1
-     br $__inlined_func$~lib/util/string/isSpace$1303
-    end
-    i32.const 0
-   end
-   if
-    local.get $2
-    i32.const 2
-    i32.add
-    local.tee $2
-    i32.load16_u
-    local.set $0
-    local.get $1
-    i32.const 1
-    i32.sub
-    local.set $1
-    br $while-continue|0
-   end
-  end
-  i32.const 1
-  local.set $4
-  local.get $0
-  i32.const 43
-  i32.eq
-  local.get $0
-  i32.const 45
-  i32.eq
-  i32.or
-  if (result i32)
-   local.get $1
-   i32.const 1
-   i32.sub
-   local.tee $1
-   i32.eqz
-   if
-    i32.const 0
-    return
-   end
-   i32.const -1
-   i32.const 1
-   local.get $0
-   i32.const 45
-   i32.eq
-   select
-   local.set $4
-   local.get $2
-   i32.const 2
-   i32.add
-   local.tee $2
-   i32.load16_u
-  else
-   local.get $0
-  end
-  i32.const 48
-  i32.eq
-  local.get $1
-  i32.const 2
-  i32.gt_s
-  i32.and
-  if
-   block $break|1
-    block $case2|1
-     block $case1|1
-      local.get $2
-      i32.load16_u offset=2
-      i32.const 32
-      i32.or
-      local.tee $0
-      i32.const 98
-      i32.ne
-      if
-       local.get $0
-       i32.const 111
-       i32.eq
-       br_if $case1|1
-       local.get $0
-       i32.const 120
-       i32.eq
-       br_if $case2|1
-       br $break|1
-      end
-      local.get $2
-      i32.const 4
-      i32.add
-      local.set $2
-      local.get $1
-      i32.const 2
-      i32.sub
-      local.set $1
-      i32.const 2
-      local.set $3
-      br $break|1
-     end
-     local.get $2
-     i32.const 4
-     i32.add
-     local.set $2
-     local.get $1
-     i32.const 2
-     i32.sub
-     local.set $1
-     i32.const 8
-     local.set $3
-     br $break|1
-    end
-    local.get $2
-    i32.const 4
-    i32.add
-    local.set $2
-    local.get $1
-    i32.const 2
-    i32.sub
-    local.set $1
-    i32.const 16
-    local.set $3
-   end
-  end
-  local.get $3
-  i32.const 10
-  local.get $3
-  select
-  local.set $3
-  local.get $1
-  i32.const 1
-  i32.sub
-  local.set $7
-  loop $while-continue|2
-   local.get $1
-   local.tee $0
-   i32.const 1
-   i32.sub
-   local.set $1
-   local.get $0
-   if
-    block $while-break|2
-     local.get $2
-     i32.load16_u
-     local.tee $6
-     i32.const 48
-     i32.sub
-     local.tee $0
-     i32.const 10
-     i32.ge_u
-     if
-      local.get $6
-      i32.const 65
-      i32.sub
-      i32.const 25
-      i32.le_u
-      if (result i32)
-       local.get $6
-       i32.const 55
-       i32.sub
-      else
-       local.get $6
-       i32.const 87
-       i32.sub
-       local.get $6
-       local.get $6
-       i32.const 97
-       i32.sub
-       i32.const 25
-       i32.le_u
-       select
-      end
-      local.set $0
-     end
-     local.get $0
-     local.get $3
-     i32.ge_u
-     if
-      local.get $1
-      local.get $7
-      i32.eq
-      if
-       i32.const 0
-       return
-      end
-      br $while-break|2
-     end
-     local.get $3
-     local.get $5
-     i32.mul
-     local.get $0
-     i32.add
-     local.set $5
-     local.get $2
-     i32.const 2
-     i32.add
-     local.set $2
-     br $while-continue|2
-    end
-   end
-  end
-  local.get $4
-  local.get $5
-  i32.mul
- )
- (func $assembly/chess/canonical/Cursor#readInt (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  local.get $0
-  i32.load offset=4
-  local.tee $1
-  local.get $0
-  i32.load
-  local.tee $2
-  i32.const 20
-  i32.sub
-  i32.load offset=16
-  i32.const 1
-  i32.shr_u
-  i32.ge_u
-  if (result i32)
-   i32.const -1
-  else
-   local.get $2
-   local.get $1
-   i32.const 1
-   i32.shl
-   i32.add
-   i32.load16_u
-  end
-  i32.const 45
-  i32.eq
-  if
-   local.get $0
-   local.get $0
-   i32.load offset=4
-   i32.const 1
-   i32.add
-   i32.store offset=4
-  end
-  loop $while-continue|0
-   local.get $0
-   i32.load offset=4
-   local.tee $3
-   local.get $0
-   i32.load
-   local.tee $2
-   i32.const 20
-   i32.sub
-   i32.load offset=16
-   i32.const 1
-   i32.shr_u
-   i32.lt_s
-   if
-    local.get $3
-    local.get $2
-    i32.const 20
-    i32.sub
-    i32.load offset=16
-    i32.const 1
-    i32.shr_u
-    i32.ge_u
-    if (result i32)
-     i32.const -1
-    else
-     local.get $2
-     local.get $3
-     i32.const 1
-     i32.shl
-     i32.add
-     i32.load16_u
-    end
-    local.tee $2
-    i32.const 48
-    i32.lt_s
-    local.get $2
-    i32.const 57
-    i32.gt_s
-    i32.or
-    i32.eqz
-    if
-     local.get $0
-     local.get $0
-     i32.load offset=4
-     i32.const 1
-     i32.add
-     i32.store offset=4
-     br $while-continue|0
-    end
-   end
-  end
-  local.get $0
-  i32.load
-  local.get $1
-  local.get $0
-  i32.load offset=4
-  call $~lib/string/String#substring
-  call $~lib/util/string/strtol<i32>
- )
- (func $assembly/chess/types/Piece#constructor (result i32)
-  (local $0 i32)
-  i32.const 21
-  i32.const 31
-  call $~lib/rt/stub/__new
-  local.tee $0
-  i32.const 0
-  i32.store
-  local.get $0
-  i32.const 0
-  i32.store offset=4
-  local.get $0
-  i32.const 0
-  i32.store offset=8
-  local.get $0
-  i32.const 0
-  i32.store offset=12
-  local.get $0
-  i32.const 0
-  i32.store offset=16
-  local.get $0
-  i32.const 0
-  i32.store8 offset=20
-  local.get $0
-  i32.const 2752
-  i32.store
-  local.get $0
-  i32.const 5
-  i32.store offset=4
-  local.get $0
-  i32.const 0
-  i32.store offset=8
-  local.get $0
-  i32.const 0
-  i32.store offset=12
-  local.get $0
-  i32.const 0
-  i32.store offset=16
-  local.get $0
-  i32.const 0
-  i32.store8 offset=20
-  local.get $0
- )
- (func $assembly/chess/canonical/pieceTypeFromString (param $0 i32) (result i32)
-  local.get $0
-  i32.const 12480
-  call $~lib/string/String.__eq
-  if
-   i32.const 0
-   return
-  end
-  local.get $0
-  i32.const 12512
-  call $~lib/string/String.__eq
-  if
-   i32.const 1
-   return
-  end
-  local.get $0
-  i32.const 12544
-  call $~lib/string/String.__eq
-  if
-   i32.const 2
-   return
-  end
-  local.get $0
-  i32.const 12576
-  call $~lib/string/String.__eq
-  if
-   i32.const 3
-   return
-  end
-  local.get $0
-  i32.const 12608
-  call $~lib/string/String.__eq
-  if
-   i32.const 4
-   return
-  end
-  i32.const 5
- )
- (func $assembly/chess/canonical/parseSnapshot (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  (local $4 i32)
-  local.get $0
-  call $assembly/chess/canonical/Cursor#constructor
-  local.set $0
-  call $assembly/chess/state/Snapshot#constructor
-  local.set $2
-  local.get $0
-  i32.const 11712
-  call $assembly/chess/canonical/Cursor#expect
-  local.get $2
-  local.get $0
-  call $assembly/chess/canonical/Cursor#readString
-  i32.const 11776
-  call $~lib/string/String.__eq
-  i32.eqz
-  i32.store offset=4
-  local.get $0
-  i32.const 11808
-  call $assembly/chess/canonical/Cursor#expect
-  local.get $2
-  block $__inlined_func$assembly/chess/canonical/statusFromString$1341 (result i32)
-   i32.const 0
-   local.get $0
-   call $assembly/chess/canonical/Cursor#readString
-   local.tee $1
-   i32.const 11872
-   call $~lib/string/String.__eq
-   br_if $__inlined_func$assembly/chess/canonical/statusFromString$1341
-   drop
-   i32.const 1
-   local.get $1
-   i32.const 11904
-   call $~lib/string/String.__eq
-   br_if $__inlined_func$assembly/chess/canonical/statusFromString$1341
-   drop
-   i32.const 2
-   local.get $1
-   i32.const 11952
-   call $~lib/string/String.__eq
-   br_if $__inlined_func$assembly/chess/canonical/statusFromString$1341
-   drop
-   i32.const 3
-   local.get $1
-   i32.const 11984
-   call $~lib/string/String.__eq
-   br_if $__inlined_func$assembly/chess/canonical/statusFromString$1341
-   drop
-   i32.const 5
-   local.get $1
-   i32.const 9408
-   call $~lib/string/String.__eq
-   br_if $__inlined_func$assembly/chess/canonical/statusFromString$1341
-   drop
-   i32.const 4
-  end
-  i32.store offset=8
-  local.get $0
-  i32.const 12032
-  call $assembly/chess/canonical/Cursor#expect
-  local.get $0
-  i32.load offset=4
-  local.tee $1
-  local.get $0
-  i32.load
-  local.tee $3
-  i32.const 20
-  i32.sub
-  i32.load offset=16
-  i32.const 1
-  i32.shr_u
-  i32.ge_u
-  if (result i32)
-   i32.const -1
-  else
-   local.get $3
-   local.get $1
-   i32.const 1
-   i32.shl
-   i32.add
-   i32.load16_u
-  end
-  i32.const 110
-  i32.eq
-  if
-   local.get $0
-   i32.const 8512
-   call $assembly/chess/canonical/Cursor#expect
-   local.get $2
-   i32.const -1
-   i32.store offset=16
-  else
-   local.get $0
-   i32.const 6368
-   call $assembly/chess/canonical/Cursor#expect
-   local.get $2
-   local.get $0
-   call $assembly/chess/canonical/Cursor#readString
-   i32.const 11776
-   call $~lib/string/String.__eq
-   i32.eqz
-   i32.store offset=16
-  end
-  local.get $0
-  i32.const 12080
-  call $assembly/chess/canonical/Cursor#expect
-  local.get $2
-  local.get $0
-  call $assembly/chess/canonical/Cursor#readInt
-  i32.store offset=12
-  local.get $0
-  i32.const 12128
-  call $assembly/chess/canonical/Cursor#expect
-  loop $while-continue|0
-   local.get $0
-   i32.load offset=4
-   local.tee $1
-   local.get $0
-   i32.load
-   local.tee $3
-   i32.const 20
-   i32.sub
-   i32.load offset=16
-   i32.const 1
-   i32.shr_u
-   i32.ge_u
-   if (result i32)
-    i32.const -1
-   else
-    local.get $3
-    local.get $1
-    i32.const 1
-    i32.shl
-    i32.add
-    i32.load16_u
-   end
-   i32.const 93
-   i32.ne
-   if
-    call $assembly/chess/types/Piece#constructor
-    local.set $3
-    local.get $0
-    i32.const 12176
-    call $assembly/chess/canonical/Cursor#expect
-    local.get $3
-    block $__inlined_func$assembly/chess/canonical/Cursor#readBool$1928 (result i32)
-     local.get $0
-     i32.load offset=4
-     local.tee $1
-     local.get $0
-     i32.load
-     local.tee $4
-     i32.const 20
-     i32.sub
-     i32.load offset=16
-     i32.const 1
-     i32.shr_u
-     i32.ge_u
-     if (result i32)
-      i32.const -1
-     else
-      local.get $4
-      local.get $1
-      i32.const 1
-      i32.shl
-      i32.add
-      i32.load16_u
-     end
-     i32.const 116
-     i32.eq
-     if
-      local.get $0
-      local.get $0
-      i32.load offset=4
-      i32.const 4
-      i32.add
-      i32.store offset=4
-      i32.const 1
-      br $__inlined_func$assembly/chess/canonical/Cursor#readBool$1928
-     end
-     local.get $0
-     local.get $0
-     i32.load offset=4
-     i32.const 5
-     i32.add
-     i32.store offset=4
-     i32.const 0
-    end
-    i32.store8 offset=20
-    local.get $0
-    i32.const 12224
-    call $assembly/chess/canonical/Cursor#expect
-    local.get $3
-    local.get $0
-    call $assembly/chess/canonical/Cursor#readString
-    i32.store
-    local.get $0
-    i32.const 12272
-    call $assembly/chess/canonical/Cursor#expect
-    local.get $3
-    local.get $0
-    call $assembly/chess/canonical/Cursor#readString
-    i32.const 11776
-    call $~lib/string/String.__eq
-    i32.eqz
-    i32.store offset=8
-    local.get $0
-    i32.const 12320
-    call $assembly/chess/canonical/Cursor#expect
-    local.get $3
-    local.get $0
-    call $assembly/chess/canonical/Cursor#readInt
-    i32.store offset=16
-    local.get $0
-    i32.const 12384
-    call $assembly/chess/canonical/Cursor#expect
-    local.get $3
-    local.get $0
-    call $assembly/chess/canonical/Cursor#readInt
-    i32.store offset=12
-    local.get $0
-    i32.const 12432
-    call $assembly/chess/canonical/Cursor#expect
-    local.get $3
-    local.get $0
-    call $assembly/chess/canonical/Cursor#readString
-    call $assembly/chess/canonical/pieceTypeFromString
-    i32.store offset=4
-    local.get $0
-    i32.const 7344
-    call $assembly/chess/canonical/Cursor#expect
-    local.get $2
-    i32.load
-    local.get $3
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-    local.get $0
-    i32.load offset=4
-    local.tee $1
-    local.get $0
-    i32.load
-    local.tee $3
-    i32.const 20
-    i32.sub
-    i32.load offset=16
-    i32.const 1
-    i32.shr_u
-    i32.ge_u
-    if (result i32)
-     i32.const -1
-    else
-     local.get $3
-     local.get $1
-     i32.const 1
-     i32.shl
-     i32.add
-     i32.load16_u
-    end
-    i32.const 44
-    i32.eq
-    if
-     local.get $0
-     local.get $0
-     i32.load offset=4
-     i32.const 1
-     i32.add
-     i32.store offset=4
-    end
-    br $while-continue|0
-   end
-  end
-  local.get $0
-  i32.const 12640
-  call $assembly/chess/canonical/Cursor#expect
-  local.get $2
- )
- (func $assembly/chess/reducer/findPieceIdx (param $0 i32) (param $1 i32) (result i32)
-  (local $2 i32)
-  loop $for-loop|0
-   local.get $2
-   local.get $0
-   i32.load offset=12
-   i32.lt_s
-   if
-    local.get $0
-    local.get $2
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    i32.load
-    local.get $1
-    call $~lib/string/String.__eq
-    if
-     local.get $2
-     return
-    end
-    local.get $2
-    i32.const 1
-    i32.add
-    local.set $2
-    br $for-loop|0
-   end
-  end
-  i32.const -1
- )
- (func $assembly/chess/canonical/escapeJsonString (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  i32.const 6368
-  local.set $1
-  loop $for-loop|0
-   local.get $2
-   local.get $0
-   i32.const 20
-   i32.sub
-   i32.load offset=16
-   i32.const 1
-   i32.shr_u
-   local.tee $3
-   i32.lt_s
-   if
-    local.get $2
-    local.get $3
-    i32.ge_u
-    if (result i32)
-     i32.const -1
-    else
-     local.get $0
-     local.get $2
-     i32.const 1
-     i32.shl
-     i32.add
-     i32.load16_u
-    end
-    local.tee $3
-    i32.const 34
-    i32.eq
-    if (result i32)
-     local.get $1
-     i32.const 6400
-     call $~lib/string/String.__concat
-    else
-     local.get $3
-     i32.const 92
-     i32.eq
-     if (result i32)
-      local.get $1
-      i32.const 6432
-      call $~lib/string/String.__concat
-     else
-      local.get $3
-      i32.const 8
-      i32.eq
-      if (result i32)
-       local.get $1
-       i32.const 13280
-       call $~lib/string/String.__concat
-      else
-       local.get $3
-       i32.const 12
-       i32.eq
-       if (result i32)
-        local.get $1
-        i32.const 13312
-        call $~lib/string/String.__concat
-       else
-        local.get $3
-        i32.const 10
-        i32.eq
-        if (result i32)
-         local.get $1
-         i32.const 6464
-         call $~lib/string/String.__concat
-        else
-         local.get $3
-         i32.const 13
-         i32.eq
-         if (result i32)
-          local.get $1
-          i32.const 6496
-          call $~lib/string/String.__concat
-         else
-          local.get $3
-          i32.const 9
-          i32.eq
-          if (result i32)
-           local.get $1
-           i32.const 6528
-           call $~lib/string/String.__concat
-          else
-           local.get $3
-           i32.const 32
-           i32.lt_s
-           if (result i32)
-            local.get $1
-            i32.const 6560
-            local.get $3
-            i32.const 16
-            call $~lib/util/number/itoa32
-            call $~lib/string/String#padStart
-            call $~lib/string/String.__concat
-            call $~lib/string/String.__concat
-           else
-            i32.const 1
-            global.set $~argumentsLength
-            local.get $1
-            local.get $3
-            call $~lib/string/String.fromCharCode@varargs
-            call $~lib/string/String.__concat
-           end
-          end
-         end
-        end
-       end
-      end
-     end
-    end
-    local.set $1
-    local.get $2
-    i32.const 1
-    i32.add
-    local.set $2
-    br $for-loop|0
-   end
-  end
-  local.get $1
-  i32.const 6368
-  call $~lib/string/String.__concat
- )
- (func $assembly/chess/rules/inspectCell (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (result i32)
-  (local $4 i32)
-  (local $5 i32)
-  local.get $0
-  i32.const 0
-  i32.lt_s
-  local.get $0
-  i32.const 7
-  i32.ge_s
-  i32.or
-  local.get $1
-  i32.const 0
-  i32.lt_s
-  i32.or
-  local.get $1
-  i32.const 5
-  i32.ge_s
-  i32.or
-  if
-   i32.const 3
-   return
-  end
-  loop $for-loop|0
-   local.get $4
-   local.get $3
-   i32.load offset=12
-   i32.lt_s
-   if
-    local.get $0
-    local.get $3
-    local.get $4
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    local.tee $5
-    i32.load offset=12
-    i32.eq
-    if (result i32)
-     local.get $1
-     local.get $5
-     i32.load offset=16
-     i32.eq
-    else
-     i32.const 0
-    end
-    if
-     i32.const 1
-     i32.const 2
-     local.get $2
-     local.get $5
-     i32.load offset=8
-     i32.eq
-     select
-     return
-    end
-    local.get $4
-    i32.const 1
-    i32.add
-    local.set $4
-    br $for-loop|0
-   end
-  end
-  i32.const 0
- )
- (func $assembly/chess/types/Position#constructor (param $0 i32) (param $1 i32) (result i32)
-  (local $2 i32)
-  i32.const 8
-  i32.const 36
-  call $~lib/rt/stub/__new
-  local.tee $2
-  i32.const 0
-  i32.store
-  local.get $2
-  i32.const 0
-  i32.store offset=4
-  local.get $2
-  local.get $0
-  i32.store
-  local.get $2
-  local.get $1
-  i32.store offset=4
-  local.get $2
- )
- (func $assembly/chess/rules/findPieceAt (param $0 i32) (param $1 i32) (param $2 i32) (result i32)
-  (local $3 i32)
-  loop $for-loop|0
-   local.get $3
-   local.get $2
-   i32.load offset=12
-   i32.lt_s
-   if
-    local.get $2
-    local.get $3
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    i32.load offset=12
-    local.get $0
-    i32.eq
-    if (result i32)
-     local.get $2
-     local.get $3
-     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-     i32.load offset=16
-     local.get $1
-     i32.eq
-    else
-     i32.const 0
-    end
-    if
-     local.get $3
-     return
-    end
-    local.get $3
-    i32.const 1
-    i32.add
-    local.set $3
-    br $for-loop|0
-   end
-  end
-  i32.const -1
- )
- (func $assembly/chess/rules/getThreateningPieces (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (result i32)
-  (local $4 i32)
-  (local $5 i32)
-  (local $6 i32)
-  (local $7 i32)
-  (local $8 i32)
-  (local $9 i32)
-  (local $10 i32)
-  (local $11 i32)
-  (local $12 i32)
-  (local $13 i32)
-  (local $14 i32)
-  i32.const 0
-  i32.const 2
-  i32.const 32
-  i32.const 13552
-  call $~lib/rt/__newArray
-  local.set $8
-  loop $for-loop|0
-   local.get $10
-   local.get $3
-   i32.load offset=12
-   i32.lt_s
-   if
-    block $for-continue|0
-     local.get $2
-     local.get $3
-     local.get $10
-     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-     local.tee $4
-     i32.load offset=8
-     local.tee $5
-     i32.ne
-     br_if $for-continue|0
-     local.get $4
-     i32.load offset=4
-     i32.const 5
-     i32.eq
-     if
-      local.get $4
-      i32.load offset=12
-      i32.const -1
-      i32.const 1
-      local.get $5
-      select
-      i32.add
-      local.get $0
-      i32.eq
-      local.tee $5
-      local.get $4
-      i32.load offset=16
-      local.tee $6
-      i32.const 1
-      i32.add
-      local.get $1
-      i32.eq
-      i32.and
-      local.get $5
-      local.get $6
-      i32.const 1
-      i32.sub
-      local.get $1
-      i32.eq
-      i32.and
-      i32.or
-      if
-       local.get $8
-       local.get $4
-       call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-      end
-      br $for-continue|0
-     end
-     block $__inlined_func$assembly/chess/types/getPatternType$1427 (result i32)
-      i32.const 0
-      local.get $4
-      i32.load offset=4
-      local.tee $5
-      i32.const 1
-      i32.eq
-      br_if $__inlined_func$assembly/chess/types/getPatternType$1427
-      drop
-      i32.const 0
-      local.get $5
-      i32.const 2
-      i32.eq
-      br_if $__inlined_func$assembly/chess/types/getPatternType$1427
-      drop
-      i32.const 0
-      local.get $5
-      i32.const 3
-      i32.eq
-      br_if $__inlined_func$assembly/chess/types/getPatternType$1427
-      drop
-      i32.const 2
-      local.get $5
-      i32.const 4
-      i32.eq
-      br_if $__inlined_func$assembly/chess/types/getPatternType$1427
-      drop
-      i32.const 1
-      local.get $5
-      i32.const 5
-      i32.eq
-      br_if $__inlined_func$assembly/chess/types/getPatternType$1427
-      drop
-      i32.const 3
-     end
-     block $__inlined_func$assembly/chess/types/getPatternDirections$1429 (result i32)
-      i32.const 1616
-      local.get $4
-      i32.load offset=4
-      local.tee $6
-      i32.const 1
-      i32.eq
-      br_if $__inlined_func$assembly/chess/types/getPatternDirections$1429
-      drop
-      i32.const 1728
-      local.get $6
-      i32.const 2
-      i32.eq
-      br_if $__inlined_func$assembly/chess/types/getPatternDirections$1429
-      drop
-      i32.const 1840
-      local.get $6
-      i32.const 3
-      i32.eq
-      br_if $__inlined_func$assembly/chess/types/getPatternDirections$1429
-      drop
-      i32.const 1616
-      local.get $6
-      i32.eqz
-      br_if $__inlined_func$assembly/chess/types/getPatternDirections$1429
-      drop
-      i32.const 1984
-      local.get $6
-      i32.const 4
-      i32.eq
-      br_if $__inlined_func$assembly/chess/types/getPatternDirections$1429
-      drop
-      i32.const 2064
-     end
-     local.tee $13
-     i32.load offset=12
-     i32.const 2
-     i32.div_s
-     local.set $11
-     i32.eqz
-     if
-      i32.const 0
-      local.set $9
-      loop $for-loop|1
-       local.get $9
-       local.get $11
-       i32.lt_s
-       if
-        block $for-break1
-         local.get $13
-         local.get $9
-         i32.const 1
-         i32.shl
-         local.tee $5
-         call $~lib/array/Array<i32>#__get
-         local.set $12
-         local.get $13
-         local.get $5
-         i32.const 1
-         i32.add
-         call $~lib/array/Array<i32>#__get
-         local.set $14
-         local.get $12
-         local.get $4
-         i32.load offset=12
-         i32.add
-         local.set $6
-         local.get $14
-         local.get $4
-         i32.load offset=16
-         i32.add
-         local.set $7
-         i32.const 0
-         local.set $5
-         loop $while-continue|2
-          local.get $6
-          i32.const 7
-          i32.lt_s
-          local.get $6
-          i32.const 0
-          i32.ge_s
-          i32.and
-          local.get $7
-          i32.const 0
-          i32.ge_s
-          i32.and
-          local.get $7
-          i32.const 5
-          i32.lt_s
-          i32.and
-          if
-           block $while-break|2
-            local.get $1
-            local.get $7
-            i32.eq
-            local.get $0
-            local.get $6
-            i32.eq
-            i32.and
-            if
-             local.get $8
-             local.get $4
-             call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-             i32.const 1
-             local.set $5
-             br $while-break|2
-            end
-            local.get $6
-            local.get $7
-            local.get $3
-            call $assembly/chess/rules/findPieceAt
-            i32.const 0
-            i32.ge_s
-            br_if $while-break|2
-            local.get $6
-            local.get $12
-            i32.add
-            local.set $6
-            local.get $7
-            local.get $14
-            i32.add
-            local.set $7
-            br $while-continue|2
-           end
-          end
-         end
-         local.get $5
-         br_if $for-break1
-         local.get $9
-         i32.const 1
-         i32.add
-         local.set $9
-         br $for-loop|1
-        end
-       end
-      end
-      br $for-continue|0
-     end
-     i32.const 0
-     local.set $6
-     loop $for-loop|3
-      local.get $6
-      local.get $11
-      i32.lt_s
-      if
-       block $for-break3
-        local.get $4
-        i32.load offset=12
-        local.get $13
-        local.get $6
-        i32.const 1
-        i32.shl
-        local.tee $5
-        call $~lib/array/Array<i32>#__get
-        i32.add
-        local.set $7
-        local.get $4
-        i32.load offset=16
-        local.get $13
-        local.get $5
-        i32.const 1
-        i32.add
-        call $~lib/array/Array<i32>#__get
-        i32.add
-        local.get $1
-        i32.eq
-        local.get $0
-        local.get $7
-        i32.eq
-        i32.and
-        if
-         local.get $8
-         local.get $4
-         call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-         br $for-break3
-        end
-        local.get $6
-        i32.const 1
-        i32.add
-        local.set $6
-        br $for-loop|3
-       end
-      end
-     end
-    end
-    local.get $10
-    i32.const 1
-    i32.add
-    local.set $10
-    br $for-loop|0
-   end
-  end
-  local.get $8
- )
- (func $assembly/chess/rules/isKingInCheck (param $0 i32) (param $1 i32) (result i32)
-  (local $2 i32)
-  (local $3 i32)
-  (local $4 i32)
-  (local $5 i32)
-  i32.const -1
-  local.set $2
-  i32.const -1
-  local.set $5
-  loop $for-loop|0
-   local.get $3
-   local.get $1
-   i32.load offset=12
-   i32.lt_s
-   if
-    block $for-break0
-     local.get $1
-     local.get $3
-     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-     local.tee $4
-     i32.load offset=4
-     if (result i32)
-      i32.const 0
-     else
-      local.get $0
-      local.get $4
-      i32.load offset=8
-      i32.eq
-     end
-     if
-      local.get $4
-      i32.load offset=12
-      local.set $2
-      local.get $4
-      i32.load offset=16
-      local.set $5
-      br $for-break0
-     end
-     local.get $3
-     i32.const 1
-     i32.add
-     local.set $3
-     br $for-loop|0
-    end
-   end
-  end
-  local.get $2
-  i32.const 0
-  i32.lt_s
-  if
-   i32.const 0
-   return
-  end
-  local.get $2
-  local.get $5
-  local.get $0
-  i32.eqz
-  local.get $1
-  call $assembly/chess/rules/getThreateningPieces
-  i32.load offset=12
-  i32.const 0
-  i32.gt_s
- )
- (func $assembly/chess/rules/wouldExposeKing (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (param $4 i32) (result i32)
-  (local $5 i32)
-  (local $6 i32)
-  (local $7 i32)
-  (local $8 i32)
-  (local $9 i32)
-  i32.const 0
-  i32.const 2
-  i32.const 32
-  i32.const 13520
-  call $~lib/rt/__newArray
-  local.set $5
-  local.get $0
-  local.get $1
-  call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-  i32.load
-  local.set $9
-  loop $for-loop|0
-   local.get $8
-   local.get $0
-   i32.load offset=12
-   i32.lt_s
-   if
-    local.get $0
-    local.get $8
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    local.set $6
-    local.get $4
-    if (result i32)
-     local.get $6
-     i32.load offset=12
-     local.get $2
-     i32.eq
-    else
-     i32.const 0
-    end
-    if (result i32)
-     local.get $6
-     i32.load offset=16
-     local.get $3
-     i32.eq
-    else
-     i32.const 0
-    end
-    if (result i32)
-     local.get $6
-     i32.load
-     local.get $9
-     call $~lib/string/String.__eq
-    else
-     i32.const 1
-    end
-    if
-     call $assembly/chess/types/Piece#constructor
-     local.tee $7
-     local.get $6
-     i32.load
-     i32.store
-     local.get $7
-     local.get $6
-     i32.load offset=4
-     i32.store offset=4
-     local.get $7
-     local.get $6
-     i32.load offset=8
-     i32.store offset=8
-     local.get $7
-     local.get $6
-     i32.load offset=12
-     i32.store offset=12
-     local.get $7
-     local.get $6
-     i32.load offset=16
-     i32.store offset=16
-     local.get $7
-     local.get $6
-     i32.load8_u offset=20
-     i32.store8 offset=20
-     local.get $6
-     i32.load
-     local.get $9
-     call $~lib/string/String.__eq
-     if
-      local.get $7
-      local.get $2
-      i32.store offset=12
-      local.get $7
-      local.get $3
-      i32.store offset=16
-     end
-     local.get $5
-     local.get $7
-     call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-    end
-    local.get $8
-    i32.const 1
-    i32.add
-    local.set $8
-    br $for-loop|0
-   end
-  end
-  local.get $0
-  local.get $1
-  call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-  i32.load offset=8
-  local.get $5
-  call $assembly/chess/rules/isKingInCheck
  )
  (func $assembly/chess/rules/getValidMoves (param $0 i32) (param $1 i32) (result i32)
   (local $2 i32)
@@ -15363,67 +15594,7 @@
   end
   local.get $3
  )
- (func $assembly/chess/reducer/clonePieces (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  (local $4 i32)
-  i32.const 0
-  i32.const 2
-  i32.const 32
-  i32.const 13632
-  call $~lib/rt/__newArray
-  local.set $4
-  loop $for-loop|0
-   local.get $3
-   local.get $0
-   i32.load offset=12
-   i32.lt_s
-   if
-    local.get $0
-    local.get $3
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    local.set $1
-    call $assembly/chess/types/Piece#constructor
-    local.tee $2
-    local.get $1
-    i32.load
-    i32.store
-    local.get $2
-    local.get $1
-    i32.load offset=4
-    i32.store offset=4
-    local.get $2
-    local.get $1
-    i32.load offset=8
-    i32.store offset=8
-    local.get $2
-    local.get $1
-    i32.load offset=12
-    i32.store offset=12
-    local.get $2
-    local.get $1
-    i32.load offset=16
-    i32.store offset=16
-    local.get $2
-    local.get $1
-    i32.load8_u offset=20
-    i32.store8 offset=20
-    local.get $4
-    local.get $2
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-    local.get $3
-    i32.const 1
-    i32.add
-    local.set $3
-    br $for-loop|0
-   end
-  end
-  local.get $4
- )
- (func $assembly/chess/reducer/refreshDerived (param $0 i32) (param $1 i32) (result i32)
-  (local $2 i32)
-  (local $3 i32)
+ (func $assembly/chess/rules/getThreateningPieces (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (result i32)
   (local $4 i32)
   (local $5 i32)
   (local $6 i32)
@@ -15432,631 +15603,297 @@
   (local $9 i32)
   (local $10 i32)
   (local $11 i32)
+  (local $12 i32)
+  (local $13 i32)
+  (local $14 i32)
   i32.const 0
-  local.get $1
-  call $assembly/chess/rules/isKingInCheck
-  local.set $9
-  i32.const 0
-  i32.const 1
-  i32.const -1
-  i32.const 1
-  local.get $1
-  call $assembly/chess/rules/isKingInCheck
-  select
-  local.get $9
-  select
-  local.set $10
-  block $__inlined_func$assembly/chess/rules/checkWinCondition$34 (result i32)
-   loop $for-loop|0
-    local.get $4
-    local.get $1
-    i32.load offset=12
-    i32.lt_s
-    if
-     local.get $1
-     local.get $4
-     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-     local.tee $9
-     i32.load offset=8
-     local.tee $11
-     if
-      local.get $11
-      i32.const 1
-      i32.eq
-      if
-       local.get $9
-       i32.load offset=4
-       local.tee $11
-       if
-        local.get $2
-        i32.const 1
-        i32.add
-        local.set $2
-        i32.const 1
-        local.get $5
-        local.get $11
-        i32.const 1
-        i32.eq
-        if (result i32)
-         i32.const 1
-        else
-         local.get $9
-         i32.load offset=4
-         i32.const 2
-         i32.eq
-        end
-        if (result i32)
-         i32.const 1
-        else
-         local.get $9
-         i32.load offset=4
-         i32.const 5
-         i32.eq
-        end
-        select
-        local.set $5
-       else
-        i32.const 1
-        local.set $7
-       end
-      end
-     else
-      local.get $9
-      i32.load offset=4
-      local.tee $11
-      if
-       local.get $3
-       i32.const 1
-       i32.add
-       local.set $3
-       i32.const 1
-       local.get $6
-       local.get $11
-       i32.const 1
-       i32.eq
-       if (result i32)
-        i32.const 1
-       else
-        local.get $9
-        i32.load offset=4
-        i32.const 2
-        i32.eq
-       end
-       if (result i32)
-        i32.const 1
-       else
-        local.get $9
-        i32.load offset=4
-        i32.const 5
-        i32.eq
-       end
-       select
-       local.set $6
-      else
-       i32.const 1
-       local.set $8
-      end
-     end
-     local.get $4
-     i32.const 1
-     i32.add
-     local.set $4
-     br $for-loop|0
-    end
-   end
-   i32.const 3
-   local.get $7
-   i32.eqz
-   br_if $__inlined_func$assembly/chess/rules/checkWinCondition$34
-   drop
-   i32.const 4
-   local.get $8
-   i32.eqz
-   br_if $__inlined_func$assembly/chess/rules/checkWinCondition$34
-   drop
-   i32.const 5
-   local.get $2
-   local.get $3
-   i32.or
-   i32.eqz
-   br_if $__inlined_func$assembly/chess/rules/checkWinCondition$34
-   drop
-   i32.const 3
-   local.get $6
-   local.get $2
-   i32.eqz
-   local.tee $4
-   i32.and
-   br_if $__inlined_func$assembly/chess/rules/checkWinCondition$34
-   drop
-   i32.const 4
-   local.get $5
-   local.get $3
-   i32.eqz
-   local.tee $5
-   i32.and
-   br_if $__inlined_func$assembly/chess/rules/checkWinCondition$34
-   drop
-   i32.const 5
-   local.get $4
-   local.get $3
-   i32.const 1
-   i32.eq
-   i32.and
-   local.get $5
-   local.get $2
-   i32.const 1
-   i32.eq
-   i32.and
-   i32.or
-   br_if $__inlined_func$assembly/chess/rules/checkWinCondition$34
-   drop
-   i32.const 1
-  end
-  local.set $2
-  call $assembly/chess/state/Snapshot#constructor
-  local.tee $3
-  local.get $1
-  i32.store
-  local.get $3
-  local.get $0
-  i32.load offset=4
-  i32.store offset=4
-  local.get $3
-  local.get $0
-  i32.load offset=12
-  i32.store offset=12
-  local.get $3
-  local.get $10
-  i32.store offset=16
-  local.get $3
-  local.get $2
-  i32.const 1
-  i32.eq
-  if (result i32)
-   local.get $0
-   i32.load offset=8
-  else
-   local.get $2
-  end
-  i32.store offset=8
-  local.get $3
- )
- (func $assembly/chess/canonical/emitSnapshot (param $0 i32) (result i32)
-  (local $1 i32)
-  (local $2 i32)
-  (local $3 i32)
-  (local $4 i32)
-  (local $5 i32)
-  (local $6 i32)
-  (local $7 i32)
-  (local $8 i32)
-  (local $9 i32)
-  local.get $0
-  i32.load
-  local.set $1
-  i32.const 1
-  global.set $~argumentsLength
-  local.get $1
-  i32.load offset=12
-  local.tee $2
-  i32.const 0
-  local.get $2
-  i32.const 0
-  i32.le_s
-  select
-  local.set $3
-  local.get $2
-  local.get $3
-  i32.sub
-  local.tee $2
-  i32.const 0
-  local.get $2
-  i32.const 0
-  i32.gt_s
-  select
-  local.tee $2
   i32.const 2
   i32.const 32
-  i32.const 0
+  i32.const 13552
   call $~lib/rt/__newArray
-  local.tee $7
-  i32.load offset=4
-  local.set $4
-  local.get $1
-  i32.load offset=4
-  local.get $3
-  i32.const 2
-  i32.shl
-  i32.add
-  local.set $1
-  local.get $2
-  i32.const 2
-  i32.shl
-  local.set $2
-  loop $while-continue|0
-   local.get $2
-   local.get $5
-   i32.gt_u
-   if
-    local.get $4
-    local.get $5
-    i32.add
-    local.get $1
-    local.get $5
-    i32.add
-    i32.load
-    i32.store
-    local.get $5
-    i32.const 4
-    i32.add
-    local.set $5
-    br $while-continue|0
-   end
-  end
-  i32.const 0
-  local.set $5
+  local.set $8
   loop $for-loop|0
-   local.get $5
-   local.get $7
+   local.get $10
+   local.get $3
    i32.load offset=12
    i32.lt_s
    if
-    local.get $5
-    i32.const 1
-    i32.add
-    local.set $6
-    loop $for-loop|1
-     local.get $6
-     local.get $7
-     i32.load offset=12
-     i32.lt_s
+    block $for-continue|0
+     local.get $2
+     local.get $3
+     local.get $10
+     call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
+     local.tee $4
+     i32.load offset=8
+     local.tee $5
+     i32.ne
+     br_if $for-continue|0
+     local.get $4
+     i32.load offset=4
+     i32.const 5
+     i32.eq
      if
-      block $__inlined_func$~lib/string/String.__lt$1490 (result i32)
-       i32.const 0
-       local.get $7
-       local.get $6
-       call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-       i32.load
-       local.tee $2
-       local.get $7
-       local.get $5
-       call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-       i32.load
-       local.tee $1
-       i32.eq
-       br_if $__inlined_func$~lib/string/String.__lt$1490
-       drop
-       i32.const 0
-       local.get $1
-       i32.const 20
-       i32.sub
-       i32.load offset=16
-       i32.const 1
-       i32.shr_u
-       local.tee $3
-       i32.eqz
-       br_if $__inlined_func$~lib/string/String.__lt$1490
-       drop
-       i32.const 1
-       local.get $2
-       i32.const 20
-       i32.sub
-       i32.load offset=16
-       i32.const 1
-       i32.shr_u
-       local.tee $4
-       i32.eqz
-       br_if $__inlined_func$~lib/string/String.__lt$1490
-       drop
-       block $__inlined_func$~lib/util/string/compareImpl$1 (result i32)
-        local.get $4
-        local.get $3
-        local.get $3
-        local.get $4
-        i32.gt_s
-        local.tee $8
-        select
-        local.tee $3
-        i32.const 4
-        i32.ge_u
-        if (result i32)
-         local.get $2
-         i32.const 7
-         i32.and
-         local.get $1
-         i32.const 7
-         i32.and
-         i32.or
-        else
-         i32.const 1
-        end
-        i32.eqz
-        if
-         loop $do-loop|0
-          local.get $2
-          i64.load
-          local.get $1
-          i64.load
-          i64.eq
-          if
-           local.get $2
-           i32.const 8
-           i32.add
-           local.set $2
-           local.get $1
-           i32.const 8
-           i32.add
-           local.set $1
-           local.get $3
-           i32.const 4
-           i32.sub
-           local.tee $3
-           i32.const 4
-           i32.ge_u
-           br_if $do-loop|0
-          end
-         end
-        end
-        loop $while-continue|1
-         local.get $3
-         local.tee $4
-         i32.const 1
-         i32.sub
-         local.set $3
-         local.get $4
-         if
-          local.get $2
-          i32.load16_u
-          local.tee $4
-          local.get $1
-          i32.load16_u
-          local.tee $9
-          i32.ne
-          if
-           local.get $4
-           local.get $9
-           i32.sub
-           br $__inlined_func$~lib/util/string/compareImpl$1
-          end
-          local.get $2
-          i32.const 2
-          i32.add
-          local.set $2
-          local.get $1
-          i32.const 2
-          i32.add
-          local.set $1
-          br $while-continue|1
-         end
-        end
-        i32.const 0
-       end
-       local.tee $1
-       i32.const 0
-       i32.lt_s
-       local.get $8
-       local.get $1
-       select
-      end
-      if
-       local.get $7
-       local.get $5
-       call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-       local.set $1
-       local.get $7
-       local.get $5
-       local.get $7
-       local.get $6
-       call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-       call $~lib/array/Array<u32>#__set
-       local.get $7
-       local.get $6
-       local.get $1
-       call $~lib/array/Array<u32>#__set
-      end
-      local.get $6
+      local.get $4
+      i32.load offset=12
+      i32.const -1
+      i32.const 1
+      local.get $5
+      select
+      i32.add
+      local.get $0
+      i32.eq
+      local.tee $5
+      local.get $4
+      i32.load offset=16
+      local.tee $6
       i32.const 1
       i32.add
-      local.set $6
-      br $for-loop|1
+      local.get $1
+      i32.eq
+      i32.and
+      local.get $6
+      i32.const 1
+      i32.sub
+      local.get $1
+      i32.eq
+      local.get $5
+      i32.and
+      i32.or
+      if
+       local.get $8
+       local.get $4
+       call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+      end
+      br $for-continue|0
+     end
+     block $__inlined_func$assembly/chess/types/getPatternType$1427 (result i32)
+      i32.const 0
+      local.get $4
+      i32.load offset=4
+      local.tee $5
+      i32.const 1
+      i32.eq
+      br_if $__inlined_func$assembly/chess/types/getPatternType$1427
+      drop
+      i32.const 0
+      local.get $5
+      i32.const 2
+      i32.eq
+      br_if $__inlined_func$assembly/chess/types/getPatternType$1427
+      drop
+      i32.const 0
+      local.get $5
+      i32.const 3
+      i32.eq
+      br_if $__inlined_func$assembly/chess/types/getPatternType$1427
+      drop
+      i32.const 2
+      local.get $5
+      i32.const 4
+      i32.eq
+      br_if $__inlined_func$assembly/chess/types/getPatternType$1427
+      drop
+      i32.const 1
+      local.get $5
+      i32.const 5
+      i32.eq
+      br_if $__inlined_func$assembly/chess/types/getPatternType$1427
+      drop
+      i32.const 3
+     end
+     block $__inlined_func$assembly/chess/types/getPatternDirections$1429 (result i32)
+      i32.const 1616
+      local.get $4
+      i32.load offset=4
+      local.tee $6
+      i32.const 1
+      i32.eq
+      br_if $__inlined_func$assembly/chess/types/getPatternDirections$1429
+      drop
+      i32.const 1728
+      local.get $6
+      i32.const 2
+      i32.eq
+      br_if $__inlined_func$assembly/chess/types/getPatternDirections$1429
+      drop
+      i32.const 1840
+      local.get $6
+      i32.const 3
+      i32.eq
+      br_if $__inlined_func$assembly/chess/types/getPatternDirections$1429
+      drop
+      i32.const 1616
+      local.get $6
+      i32.eqz
+      br_if $__inlined_func$assembly/chess/types/getPatternDirections$1429
+      drop
+      i32.const 1984
+      local.get $6
+      i32.const 4
+      i32.eq
+      br_if $__inlined_func$assembly/chess/types/getPatternDirections$1429
+      drop
+      i32.const 2064
+     end
+     local.tee $13
+     i32.load offset=12
+     i32.const 2
+     i32.div_s
+     local.set $11
+     i32.eqz
+     if
+      i32.const 0
+      local.set $9
+      loop $for-loop|1
+       local.get $9
+       local.get $11
+       i32.lt_s
+       if
+        block $for-break1
+         local.get $13
+         local.get $9
+         i32.const 1
+         i32.shl
+         local.tee $5
+         call $~lib/array/Array<i32>#__get
+         local.set $12
+         local.get $13
+         local.get $5
+         i32.const 1
+         i32.add
+         call $~lib/array/Array<i32>#__get
+         local.set $14
+         local.get $12
+         local.get $4
+         i32.load offset=12
+         i32.add
+         local.set $6
+         local.get $14
+         local.get $4
+         i32.load offset=16
+         i32.add
+         local.set $7
+         i32.const 0
+         local.set $5
+         loop $while-continue|2
+          local.get $6
+          i32.const 7
+          i32.lt_s
+          local.get $6
+          i32.const 0
+          i32.ge_s
+          i32.and
+          local.get $7
+          i32.const 0
+          i32.ge_s
+          i32.and
+          local.get $7
+          i32.const 5
+          i32.lt_s
+          i32.and
+          if
+           block $while-break|2
+            local.get $1
+            local.get $7
+            i32.eq
+            local.get $0
+            local.get $6
+            i32.eq
+            i32.and
+            if
+             local.get $8
+             local.get $4
+             call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+             i32.const 1
+             local.set $5
+             br $while-break|2
+            end
+            local.get $6
+            local.get $7
+            local.get $3
+            call $assembly/chess/rules/findPieceAt
+            i32.const 0
+            i32.ge_s
+            br_if $while-break|2
+            local.get $6
+            local.get $12
+            i32.add
+            local.set $6
+            local.get $7
+            local.get $14
+            i32.add
+            local.set $7
+            br $while-continue|2
+           end
+          end
+         end
+         local.get $5
+         br_if $for-break1
+         local.get $9
+         i32.const 1
+         i32.add
+         local.set $9
+         br $for-loop|1
+        end
+       end
+      end
+      br $for-continue|0
+     end
+     i32.const 0
+     local.set $6
+     loop $for-loop|3
+      local.get $6
+      local.get $11
+      i32.lt_s
+      if
+       block $for-break3
+        local.get $4
+        i32.load offset=12
+        local.get $13
+        local.get $6
+        i32.const 1
+        i32.shl
+        local.tee $5
+        call $~lib/array/Array<i32>#__get
+        i32.add
+        local.set $7
+        local.get $4
+        i32.load offset=16
+        local.get $13
+        local.get $5
+        i32.const 1
+        i32.add
+        call $~lib/array/Array<i32>#__get
+        i32.add
+        local.get $1
+        i32.eq
+        local.get $0
+        local.get $7
+        i32.eq
+        i32.and
+        if
+         local.get $8
+         local.get $4
+         call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+         br $for-break3
+        end
+        local.get $6
+        i32.const 1
+        i32.add
+        local.set $6
+        br $for-loop|3
+       end
+      end
      end
     end
-    local.get $5
+    local.get $10
     i32.const 1
     i32.add
-    local.set $5
+    local.set $10
     br $for-loop|0
    end
   end
-  i32.const 13728
-  i32.const 13792
-  i32.const 11776
-  local.get $0
-  i32.load offset=4
-  select
-  call $assembly/chess/canonical/escapeJsonString
-  call $~lib/string/String.__concat
-  i32.const 13840
-  block $__inlined_func$assembly/chess/canonical/statusToString$1505 (result i32)
-   i32.const 11872
-   local.get $0
-   i32.load offset=8
-   local.tee $1
-   i32.eqz
-   br_if $__inlined_func$assembly/chess/canonical/statusToString$1505
-   drop
-   i32.const 11904
-   local.get $1
-   i32.const 1
-   i32.eq
-   br_if $__inlined_func$assembly/chess/canonical/statusToString$1505
-   drop
-   i32.const 11952
-   local.get $1
-   i32.const 2
-   i32.eq
-   br_if $__inlined_func$assembly/chess/canonical/statusToString$1505
-   drop
-   i32.const 11984
-   local.get $1
-   i32.const 3
-   i32.eq
-   br_if $__inlined_func$assembly/chess/canonical/statusToString$1505
-   drop
-   i32.const 9408
-   local.get $1
-   i32.const 5
-   i32.eq
-   br_if $__inlined_func$assembly/chess/canonical/statusToString$1505
-   drop
-   i32.const 13888
-  end
-  call $assembly/chess/canonical/escapeJsonString
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 12032
-  call $~lib/string/String.__concat
-  local.set $1
-  local.get $0
-  i32.load offset=16
-  i32.const -1
-  i32.eq
-  if (result i32)
-   local.get $1
-   i32.const 8512
-   call $~lib/string/String.__concat
-  else
-   local.get $1
-   i32.const 13792
-   i32.const 11776
-   local.get $0
-   i32.load offset=16
-   select
-   call $assembly/chess/canonical/escapeJsonString
-   call $~lib/string/String.__concat
-  end
-  i32.const 12080
-  local.get $0
-  i32.load offset=12
-  i32.const 10
-  call $~lib/util/number/itoa32
-  call $~lib/string/String.__concat
-  call $~lib/string/String.__concat
-  i32.const 12128
-  call $~lib/string/String.__concat
-  local.set $5
-  i32.const 0
-  local.set $0
-  loop $for-loop|00
-   local.get $0
-   local.get $7
-   i32.load offset=12
-   i32.lt_s
-   if
-    local.get $0
-    i32.const 0
-    i32.gt_s
-    if (result i32)
-     local.get $5
-     i32.const 5248
-     call $~lib/string/String.__concat
-    else
-     local.get $5
-    end
-    i32.const 12176
-    i32.const 5520
-    i32.const 5552
-    local.get $7
-    local.get $0
-    call $~lib/array/Array<assembly/types/GameState/CardInstance>#__get
-    local.tee $1
-    i32.load8_u offset=20
-    select
-    call $~lib/string/String.__concat
-    i32.const 8128
-    local.get $1
-    i32.load
-    call $assembly/chess/canonical/escapeJsonString
-    call $~lib/string/String.__concat
-    call $~lib/string/String.__concat
-    i32.const 13936
-    i32.const 13792
-    i32.const 11776
-    local.get $1
-    i32.load offset=8
-    select
-    call $assembly/chess/canonical/escapeJsonString
-    call $~lib/string/String.__concat
-    call $~lib/string/String.__concat
-    i32.const 12320
-    local.get $1
-    i32.load offset=16
-    i32.const 10
-    call $~lib/util/number/itoa32
-    call $~lib/string/String.__concat
-    i32.const 12384
-    call $~lib/string/String.__concat
-    local.get $1
-    i32.load offset=12
-    i32.const 10
-    call $~lib/util/number/itoa32
-    call $~lib/string/String.__concat
-    i32.const 7344
-    call $~lib/string/String.__concat
-    call $~lib/string/String.__concat
-    i32.const 13984
-    block $__inlined_func$assembly/chess/canonical/pieceTypeToString$1500 (result i32)
-     i32.const 12480
-     local.get $1
-     i32.load offset=4
-     local.tee $1
-     i32.eqz
-     br_if $__inlined_func$assembly/chess/canonical/pieceTypeToString$1500
-     drop
-     i32.const 12512
-     local.get $1
-     i32.const 1
-     i32.eq
-     br_if $__inlined_func$assembly/chess/canonical/pieceTypeToString$1500
-     drop
-     i32.const 12544
-     local.get $1
-     i32.const 2
-     i32.eq
-     br_if $__inlined_func$assembly/chess/canonical/pieceTypeToString$1500
-     drop
-     i32.const 12576
-     local.get $1
-     i32.const 3
-     i32.eq
-     br_if $__inlined_func$assembly/chess/canonical/pieceTypeToString$1500
-     drop
-     i32.const 12608
-     local.get $1
-     i32.const 4
-     i32.eq
-     br_if $__inlined_func$assembly/chess/canonical/pieceTypeToString$1500
-     drop
-     i32.const 14032
-    end
-    call $assembly/chess/canonical/escapeJsonString
-    call $~lib/string/String.__concat
-    call $~lib/string/String.__concat
-    i32.const 7344
-    call $~lib/string/String.__concat
-    call $~lib/string/String.__concat
-    local.set $5
-    local.get $0
-    i32.const 1
-    i32.add
-    local.set $0
-    br $for-loop|00
-   end
-  end
-  local.get $5
-  i32.const 12640
-  call $~lib/string/String.__concat
+  local.get $8
  )
  (func $assembly/chess/reducer/applyChessAction (param $0 i32) (param $1 i32) (result i32)
   (local $2 i32)
@@ -16777,120 +16614,282 @@
    call $~lib/string/String.__concat
   end
  )
- (func $assembly/types/PokerTypes/calculateFinalDamage (param $0 i32) (param $1 i32) (param $2 i32) (param $3 i32) (result i32)
-  local.get $2
-  i32.const 10
-  i32.le_s
-  local.get $2
-  i32.const 0
-  i32.gt_s
-  i32.and
-  if (result i32)
-   i32.const 1360
-   local.get $2
-   call $~lib/array/Array<i32>#__get
-  else
-   i32.const 100
-  end
-  local.get $0
-  local.get $1
-  i32.add
-  i32.mul
-  i32.const 100
-  i32.div_s
-  local.get $3
-  i32.add
- )
- (func $assembly/types/PokerTypes/createPokerDeck (result i32)
-  (local $0 i32)
+ (func $assembly/chess/canonical/parseSnapshot (param $0 i32) (result i32)
   (local $1 i32)
   (local $2 i32)
   (local $3 i32)
-  i32.const 0
-  i32.const 2
-  i32.const 23
-  i32.const 14192
-  call $~lib/rt/__newArray
-  local.set $3
-  loop $for-loop|0
-   local.get $2
-   i32.const 4
-   i32.lt_s
-   if
-    i32.const 2
-    local.set $0
-    loop $for-loop|1
-     local.get $0
-     i32.const 14
-     i32.le_s
-     if
-      i32.const 8
-      i32.const 22
-      call $~lib/rt/stub/__new
-      local.tee $1
-      i32.const 0
-      i32.store
-      local.get $1
-      i32.const 0
-      i32.store offset=4
-      local.get $1
-      local.get $2
-      i32.store
-      local.get $1
-      local.get $0
-      i32.store offset=4
-      local.get $3
-      local.get $1
-      call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
-      local.get $0
-      i32.const 1
-      i32.add
-      local.set $0
-      br $for-loop|1
-     end
-    end
-    local.get $2
-    i32.const 1
-    i32.add
-    local.set $2
-    br $for-loop|0
-   end
-  end
-  local.get $3
- )
- (func $~lib/rt/stub/__pin (param $0 i32) (result i32)
+  (local $4 i32)
   local.get $0
- )
- (func $~lib/rt/stub/__unpin (param $0 i32)
- )
- (func $~start
-  (local $0 i32)
-  i32.const 14364
-  global.set $~lib/rt/stub/offset
-  i32.const 24
-  i32.const 7
-  call $~lib/rt/stub/__new
-  local.tee $0
-  i32.const 16
-  call $~lib/arraybuffer/ArrayBuffer#constructor
-  i32.store
+  call $assembly/chess/canonical/Cursor#constructor
+  local.set $0
+  call $assembly/chess/state/Snapshot#constructor
+  local.set $2
   local.get $0
-  i32.const 3
+  i32.const 11712
+  call $assembly/chess/canonical/Cursor#expect
+  local.get $2
+  local.get $0
+  call $assembly/chess/canonical/Cursor#readString
+  i32.const 11776
+  call $~lib/string/String.__eq
+  i32.eqz
   i32.store offset=4
   local.get $0
-  i32.const 48
-  call $~lib/arraybuffer/ArrayBuffer#constructor
+  i32.const 11808
+  call $assembly/chess/canonical/Cursor#expect
+  local.get $2
+  block $__inlined_func$assembly/chess/canonical/statusFromString$1341 (result i32)
+   i32.const 0
+   local.get $0
+   call $assembly/chess/canonical/Cursor#readString
+   local.tee $1
+   i32.const 11872
+   call $~lib/string/String.__eq
+   br_if $__inlined_func$assembly/chess/canonical/statusFromString$1341
+   drop
+   i32.const 1
+   local.get $1
+   i32.const 11904
+   call $~lib/string/String.__eq
+   br_if $__inlined_func$assembly/chess/canonical/statusFromString$1341
+   drop
+   i32.const 2
+   local.get $1
+   i32.const 11952
+   call $~lib/string/String.__eq
+   br_if $__inlined_func$assembly/chess/canonical/statusFromString$1341
+   drop
+   i32.const 3
+   local.get $1
+   i32.const 11984
+   call $~lib/string/String.__eq
+   br_if $__inlined_func$assembly/chess/canonical/statusFromString$1341
+   drop
+   i32.const 5
+   local.get $1
+   i32.const 9408
+   call $~lib/string/String.__eq
+   br_if $__inlined_func$assembly/chess/canonical/statusFromString$1341
+   drop
+   i32.const 4
+  end
   i32.store offset=8
   local.get $0
-  i32.const 4
+  i32.const 12032
+  call $assembly/chess/canonical/Cursor#expect
+  local.get $0
+  i32.load offset=4
+  local.tee $1
+  local.get $0
+  i32.load
+  local.tee $3
+  i32.const 20
+  i32.sub
+  i32.load offset=16
+  i32.const 1
+  i32.shr_u
+  i32.ge_u
+  if (result i32)
+   i32.const -1
+  else
+   local.get $3
+   local.get $1
+   i32.const 1
+   i32.shl
+   i32.add
+   i32.load16_u
+  end
+  i32.const 110
+  i32.eq
+  if
+   local.get $0
+   i32.const 8512
+   call $assembly/chess/canonical/Cursor#expect
+   local.get $2
+   i32.const -1
+   i32.store offset=16
+  else
+   local.get $0
+   i32.const 6368
+   call $assembly/chess/canonical/Cursor#expect
+   local.get $2
+   local.get $0
+   call $assembly/chess/canonical/Cursor#readString
+   i32.const 11776
+   call $~lib/string/String.__eq
+   i32.eqz
+   i32.store offset=16
+  end
+  local.get $0
+  i32.const 12080
+  call $assembly/chess/canonical/Cursor#expect
+  local.get $2
+  local.get $0
+  call $assembly/chess/canonical/Cursor#readInt
   i32.store offset=12
   local.get $0
-  i32.const 0
-  i32.store offset=16
+  i32.const 12128
+  call $assembly/chess/canonical/Cursor#expect
+  loop $while-continue|0
+   local.get $0
+   i32.load offset=4
+   local.tee $1
+   local.get $0
+   i32.load
+   local.tee $3
+   i32.const 20
+   i32.sub
+   i32.load offset=16
+   i32.const 1
+   i32.shr_u
+   i32.ge_u
+   if (result i32)
+    i32.const -1
+   else
+    local.get $3
+    local.get $1
+    i32.const 1
+    i32.shl
+    i32.add
+    i32.load16_u
+   end
+   i32.const 93
+   i32.ne
+   if
+    call $assembly/chess/types/Piece#constructor
+    local.set $3
+    local.get $0
+    i32.const 12176
+    call $assembly/chess/canonical/Cursor#expect
+    local.get $3
+    block $__inlined_func$assembly/chess/canonical/Cursor#readBool$1928 (result i32)
+     local.get $0
+     i32.load offset=4
+     local.tee $1
+     local.get $0
+     i32.load
+     local.tee $4
+     i32.const 20
+     i32.sub
+     i32.load offset=16
+     i32.const 1
+     i32.shr_u
+     i32.ge_u
+     if (result i32)
+      i32.const -1
+     else
+      local.get $4
+      local.get $1
+      i32.const 1
+      i32.shl
+      i32.add
+      i32.load16_u
+     end
+     i32.const 116
+     i32.eq
+     if
+      local.get $0
+      local.get $0
+      i32.load offset=4
+      i32.const 4
+      i32.add
+      i32.store offset=4
+      i32.const 1
+      br $__inlined_func$assembly/chess/canonical/Cursor#readBool$1928
+     end
+     local.get $0
+     local.get $0
+     i32.load offset=4
+     i32.const 5
+     i32.add
+     i32.store offset=4
+     i32.const 0
+    end
+    i32.store8 offset=20
+    local.get $0
+    i32.const 12224
+    call $assembly/chess/canonical/Cursor#expect
+    local.get $3
+    local.get $0
+    call $assembly/chess/canonical/Cursor#readString
+    i32.store
+    local.get $0
+    i32.const 12272
+    call $assembly/chess/canonical/Cursor#expect
+    local.get $3
+    local.get $0
+    call $assembly/chess/canonical/Cursor#readString
+    i32.const 11776
+    call $~lib/string/String.__eq
+    i32.eqz
+    i32.store offset=8
+    local.get $0
+    i32.const 12320
+    call $assembly/chess/canonical/Cursor#expect
+    local.get $3
+    local.get $0
+    call $assembly/chess/canonical/Cursor#readInt
+    i32.store offset=16
+    local.get $0
+    i32.const 12384
+    call $assembly/chess/canonical/Cursor#expect
+    local.get $3
+    local.get $0
+    call $assembly/chess/canonical/Cursor#readInt
+    i32.store offset=12
+    local.get $0
+    i32.const 12432
+    call $assembly/chess/canonical/Cursor#expect
+    local.get $3
+    local.get $0
+    call $assembly/chess/canonical/Cursor#readString
+    call $assembly/chess/canonical/pieceTypeFromString
+    i32.store offset=4
+    local.get $0
+    i32.const 7344
+    call $assembly/chess/canonical/Cursor#expect
+    local.get $2
+    i32.load
+    local.get $3
+    call $~lib/array/Array<assembly/types/GameState/CardInstance>#push
+    local.get $0
+    i32.load offset=4
+    local.tee $1
+    local.get $0
+    i32.load
+    local.tee $3
+    i32.const 20
+    i32.sub
+    i32.load offset=16
+    i32.const 1
+    i32.shr_u
+    i32.ge_u
+    if (result i32)
+     i32.const -1
+    else
+     local.get $3
+     local.get $1
+     i32.const 1
+     i32.shl
+     i32.add
+     i32.load16_u
+    end
+    i32.const 44
+    i32.eq
+    if
+     local.get $0
+     local.get $0
+     i32.load offset=4
+     i32.const 1
+     i32.add
+     i32.store offset=4
+    end
+    br $while-continue|0
+   end
+  end
   local.get $0
-  i32.const 0
-  i32.store offset=20
-  local.get $0
-  global.set $assembly/util/cardLookup/cardRegistry
+  i32.const 12640
+  call $assembly/chess/canonical/Cursor#expect
+  local.get $2
  )
 )

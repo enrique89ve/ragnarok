@@ -1,6 +1,6 @@
 /*
  * PROTOTYPE - interactive terminal shell for rankedSettlement/settlementModel.ts.
- * Run with: npm run prototype:p2p-settlement
+ * Run with: pnpm run prototype:p2p-settlement
  */
 /* eslint-disable no-console */
 
@@ -152,7 +152,7 @@ if (process.argv.includes('--demo')) {
 
 if (!process.stdin.isTTY) {
 	console.log(render(state));
-	console.log('\nRun in a TTY for keyboard controls: npm run prototype:p2p-settlement');
+	console.log('\nRun in a TTY for keyboard controls: pnpm run prototype:p2p-settlement');
 	process.exit(0);
 }
 

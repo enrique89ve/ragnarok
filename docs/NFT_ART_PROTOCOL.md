@@ -1,6 +1,6 @@
 # Ragnarok NFT Art Protocol
 
-How art assets are organized and mapped to gameplay entities. Authoritative as of the most recent commit; verify against `npm run audit:art` rather than this document if they diverge.
+How art assets are organized and mapped to gameplay entities. Authoritative as of the most recent commit; verify against `pnpm run audit:art` rather than this document if they diverge.
 
 ## Source of truth — split by entity kind
 
@@ -50,7 +50,7 @@ First 4 chars: hex (0-9 a-f). Next 8 chars: alnum lowercase (0-9 a-z). The audit
 7. No two cards share a name (collisions, case-sensitive).
 8. No two `ART_REGISTRY` values + entity portraits map to the same `.webp` (1:1 invariant across sources).
 
-Run `npm run audit:art -- --strict` in CI to enforce these.
+Run `pnpm run audit:art -- --strict` in CI to enforce these.
 
 ## Single source of truth — no parallel directories
 
@@ -82,7 +82,7 @@ Current charter (sealed, derived from `shared/schemas/genesisCharter.ts`):
 | mythic |   164 |     13 |     3 |         250 |       45,000 |
 | **Total** | **2,127** | **97** | **14** | — | **2,835,500** |
 
-The audit (`npm run audit:art`) reports a "Genesis Charter Compliance" block on every run. When `status: CLEAN` the registry matches the charter exactly; any drift surfaces as a delta the user can resolve before sealing.
+The audit (`pnpm run audit:art`) reports a "Genesis Charter Compliance" block on every run. When `status: CLEAN` the registry matches the charter exactly; any drift surfaces as a delta the user can resolve before sealing.
 
 > Source-of-truth rule: this table mirrors `GENESIS_CHARTER` in `shared/schemas/genesisCharter.ts`. If the two diverge, the code wins — open the charter file and update this doc, never the other way around.
 
@@ -90,7 +90,7 @@ The audit (`npm run audit:art`) reports a "Genesis Charter Compliance" block on 
 
 ## Adding new art
 
-See `docs/ART_GEN_PENDING.md` for the authoring workflow. Short version: drop a uniquely-named `.webp` into `client/public/art/nfts/`, add the matching key in `ART_REGISTRY` in numerical / alphabetical order, run `npm run gen:collections` and `npm run audit:art -- --strict`.
+See `docs/ART_GEN_PENDING.md` for the authoring workflow. Short version: drop a uniquely-named `.webp` into `client/public/art/nfts/`, add the matching key in `ART_REGISTRY` in numerical / alphabetical order, run `pnpm run gen:collections` and `pnpm run audit:art -- --strict`.
 
 ## Retiring art
 
@@ -98,14 +98,14 @@ Art that is no longer referenced should be moved to `client/public/art/orphaned/
 
 ## Sophisticated search
 
-`npm run audit:art -- --search "<query>"` runs fuzzy matching against:
+`pnpm run audit:art -- --search "<query>"` runs fuzzy matching against:
 - entries in external batch exports under `/mnt/c/Users/Admin/Documents/ragartdev/all_arts/`
 
 Useful when you want to know whether a piece of art for a given character already exists outside the project before commissioning a new one.
 
 ## Pending-art triage
 
-`npm run triage:art` cross-references every cardId in `scripts/pending-art.json` against the external batch exports and the orphaned pool, then prints a per-card recommendation:
+`pnpm run triage:art` cross-references every cardId in `scripts/pending-art.json` against the external batch exports and the orphaned pool, then prints a per-card recommendation:
 
 - ✅ **Direct cardId match**: the external dataset declares an asset for this exact cardId and the file is present in `art/orphaned/`. Highest confidence — apply.
 - ⚡ **High-confidence fuzzy (≥50%)**: name token overlap exceeds half. Worth applying after a quick visual sanity-check.
@@ -136,7 +136,7 @@ When applying a fix, **prefer pending over wrong art**. Showing `DEFAULT_PORTRAI
 | `client/src/game/utils/art/artMapping.ts` | The registry itself |
 | `client/src/game/utils/art/index.ts` | Public re-export barrel |
 | `scripts/auditArt.ts` | Cross-layer audit (run on every PR) |
-| `scripts/triagePendingArt.ts` | On-demand `npm run triage:art` |
+| `scripts/triagePendingArt.ts` | On-demand `pnpm run triage:art` |
 | `scripts/genCollections.ts` | Manifest generator (consumes ART_REGISTRY) |
 | `scripts/pending-art.json` | Whitelist for cards awaiting art |
 | `docs/ART_GEN_PENDING.md` | Authoring workflow |

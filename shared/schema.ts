@@ -147,55 +147,6 @@ export const packHistory = pgTable("pack_history", {
 });
 
 // Insert Schemas for Pack System
-export const insertCardSupplySchema = createInsertSchema(cardSupply).pick({
-  cardId: true,
-  cardName: true,
-  nftRarity: true,
-  maxSupply: true,
-  remainingSupply: true,
-  rewardReserve: true,
-  cardType: true,
-  heroClass: true,
-});
-
-export const insertUserInventorySchema = createInsertSchema(userInventory).pick({
-  userId: true,
-  cardId: true,
-  quantity: true,
-});
-
-export const insertPackTypeSchema = createInsertSchema(packTypes).pick({
-  name: true,
-  description: true,
-  cardCount: true,
-  price: true,
-  commonSlots: true,
-  rareSlots: true,
-  epicSlots: true,
-  wildcardSlots: true,
-  epicChance: true,
-  mythicChance: true,
-  isActive: true,
-});
-
-export const insertPackHistorySchema = createInsertSchema(packHistory).pick({
-  userId: true,
-  packTypeId: true,
-  cardsReceived: true,
-});
-
-// Types for Pack System
-export type CardSupply = typeof cardSupply.$inferSelect;
-export type InsertCardSupply = z.infer<typeof insertCardSupplySchema>;
-
-export type UserInventory = typeof userInventory.$inferSelect;
-export type InsertUserInventory = z.infer<typeof insertUserInventorySchema>;
-
-export type PackType = typeof packTypes.$inferSelect;
-export type InsertPackType = z.infer<typeof insertPackTypeSchema>;
-
-export type PackHistory = typeof packHistory.$inferSelect;
-export type InsertPackHistory = z.infer<typeof insertPackHistorySchema>;
 
 // ============================================
 // Treasury Multisig Tables

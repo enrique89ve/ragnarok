@@ -32,6 +32,10 @@ import type { Rarity } from '@shared/schemas/rarity';
 import { parseNorseElement, type NorseElement } from '../../types/NorseTypes';
 import { normalizeRarityKey } from '../../utils/rarityUtils';
 import { getCardArtPath } from '../../utils/art/artMapping';
+import {
+	cardFrameSurfaceToPresentationSurface,
+	getCardKeywordsForSurface,
+} from './cardPresentationContract';
 
 export type SimpleCardType =
 	| 'minion'
@@ -198,6 +202,8 @@ export const SimpleCardCompat: React.FC<SimpleCardCompatProps> = ({
 		showDescription,
 		...(surface !== undefined ? { surface } : {}),
 	});
+	const presentationSurface = cardFrameSurfaceToPresentationSurface(layoutAdapter.surface);
+	const renderedKeywords = getCardKeywordsForSurface(card.keywords, presentationSurface);
 
 	const tileStats: CollectionTileStats | undefined = showCombatStats
 		? {
@@ -212,7 +218,7 @@ export const SimpleCardCompat: React.FC<SimpleCardCompatProps> = ({
 		showStats: showCombatStats,
 		...(layoutAdapter.showTribeLine && card.tribe ? { tribe: card.tribe } : {}),
 		...(layoutAdapter.showDescriptionText && card.description ? { description: card.description } : {}),
-		...(layoutAdapter.showKeywords && card.keywords !== undefined ? { keywords: card.keywords } : {}),
+		...(layoutAdapter.showKeywords && renderedKeywords.length > 0 ? { keywords: renderedKeywords } : {}),
 		keywordLimit: layoutAdapter.keywordLimit,
 		keywordLabelMode: layoutAdapter.keywordLabelMode,
 	};

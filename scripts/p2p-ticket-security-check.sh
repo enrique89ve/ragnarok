@@ -46,7 +46,7 @@ if [[ -f yarn.lock ]]; then
 fi
 
 if [[ -f package-lock.json ]]; then
-  exec npm test -- "${TEST_FILES[@]}"
+  exec pnpm test -- "${TEST_FILES[@]}"
 fi
 
 cat >&2 <<'EOF'

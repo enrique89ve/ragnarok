@@ -6,7 +6,7 @@ keeping economic ranked settlement blocked until dual-signed evidence exists?
 Run:
 
 ```bash
-npm run prototype:p2p-settlement
+pnpm run prototype:p2p-settlement
 ```
 
 Useful presets:

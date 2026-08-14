@@ -125,7 +125,7 @@ if (improvements.length > 0) {
     console.log(`  ✓ ${file}: ${b} → ${current}  (${b - current} fixed)`);
   }
   console.log(
-    `\n  Run \`npm run lint:css:dupes:infile:baseline\` to lock these in.\n`
+    `\n  Run \`pnpm run lint:css:dupes:infile:baseline\` to lock these in.\n`
   );
 }
 

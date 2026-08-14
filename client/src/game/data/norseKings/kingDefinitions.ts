@@ -8,7 +8,7 @@
  * Kings provide passive army-wide buffs and do not participate in combat
  * directly. The `portrait` field is the single source of truth for which
  * `.webp` file under `client/public/art/nfts/` represents this king;
- * `resolveHeroPortrait()` reads it and `npm run audit:art` validates it.
+ * `resolveHeroPortrait()` reads it and `pnpm run audit:art` validates it.
  */
 
 import { NorseKing } from '../../types/NorseTypes';

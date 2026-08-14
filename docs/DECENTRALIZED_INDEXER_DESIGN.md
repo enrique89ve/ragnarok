@@ -699,7 +699,7 @@ Extract `chainIndexer.ts` logic into standalone process:
 - Publish to IPFS (pluggable: Pinata, local IPFS, or file output)
 - Post CID to @ragnarok-index (when designated publisher)
 
-**Deliverable**: Open-source `operator/` directory that anyone can `npm start`.
+**Deliverable**: Open-source `operator/` directory that anyone can `pnpm start`.
 
 ### Phase 2: Client Index Consumer
 

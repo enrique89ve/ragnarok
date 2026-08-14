@@ -20,7 +20,7 @@ bash scripts/p2p-ticket-security-check.sh
 If this checkout uses `package-lock.json`, the expanded command is:
 
 ```bash
-npm test -- \
+pnpm test -- \
   shared/p2pAvailability.securityBoundary.test.ts \
   server/services/p2pMatchTicketSigner.securityBoundary.test.ts \
   server/services/p2pRelayOrigin.securityBoundary.test.ts \

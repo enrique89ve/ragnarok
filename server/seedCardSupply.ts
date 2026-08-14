@@ -11,8 +11,8 @@
  * gets exactly the same hard cap. This mirrors what the genesis ceremony
  * will broadcast on-chain (see `docs/GENESIS_RUNBOOK.md:381`).
  *
- * Run with: npx tsx server/seedCardSupply.ts
- *   or via: npm run db:seed
+ * Run with: pnpm exec tsx server/seedCardSupply.ts
+ *   or via: pnpm run db:seed
  */
 
 import 'dotenv/config';

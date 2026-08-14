@@ -17,7 +17,7 @@
  *
  * How to add a new frame variant:
  *   1. Add a row to RARITY_TOKENS or ELEMENT_TOKENS below.
- *   2. Run `npm run build:card-frames`.
+ *   2. Run `pnpm run build:card-frames`.
  *   3. The lab's `static-png` direction picks it up automatically
  *      via `framePathFor(rarity, element)` in
  *      `client/src/game/utils/art/frameArt.ts`.

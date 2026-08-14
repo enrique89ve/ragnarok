@@ -7,8 +7,8 @@
  * 3. Seeds pack types (4 configurations)
  * 4. Seeds card supply (~1,400+ cards + heroes targeting 3.3M total)
  *
- * Run with: npx tsx server/setupDatabase.ts
- *   or via: npm run db:setup
+ * Run with: pnpm exec tsx server/setupDatabase.ts
+ *   or via: pnpm run db:setup
  */
 
 import 'dotenv/config';
@@ -29,7 +29,7 @@ async function setup() {
 	// Step 1: Push schema
 	console.log('Step 1/4: Pushing schema to database...');
 	try {
-		execSync('npx drizzle-kit push', { stdio: 'inherit' });
+		execSync('pnpm exec drizzle-kit push', { stdio: 'inherit' });
 	} catch {
 		console.error('Schema push failed. Is PostgreSQL running?');
 		console.error('Try: docker compose up -d');
@@ -54,7 +54,7 @@ async function setup() {
 	// Step 3: Seed pack types
 	console.log('\nStep 3/4: Seeding pack types...');
 	try {
-		execSync('npx tsx server/seedPackTypes.ts', { stdio: 'inherit' });
+		execSync('pnpm exec tsx server/seedPackTypes.ts', { stdio: 'inherit' });
 	} catch {
 		console.error('Pack type seeding failed.');
 		process.exit(1);
@@ -63,7 +63,7 @@ async function setup() {
 	// Step 4: Seed card supply
 	console.log('\nStep 4/4: Seeding card supply (this may take a moment)...');
 	try {
-		execSync('npx tsx server/seedCardSupply.ts', { stdio: 'inherit' });
+		execSync('pnpm exec tsx server/seedCardSupply.ts', { stdio: 'inherit' });
 	} catch {
 		console.error('Card supply seeding failed.');
 		process.exit(1);
@@ -72,7 +72,7 @@ async function setup() {
 	console.log('\n╔══════════════════════════════════════╗');
 	console.log('║   Setup Complete!                    ║');
 	console.log('╠══════════════════════════════════════╣');
-	console.log('║   npm run dev    → Start server      ║');
+	console.log('║   pnpm run dev    → Start server      ║');
 	console.log('║   localhost:5000/packs → Open packs   ║');
 	console.log('╚══════════════════════════════════════╝');
 }

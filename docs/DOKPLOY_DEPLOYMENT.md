@@ -147,7 +147,7 @@ must belong to `VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT` /
 The runtime container runs the strict Alfa verifier before boot:
 
 ```bash
-npm run verify:alfa-runtime-env
+pnpm run verify:alfa-runtime-env
 ```
 
 That verifier expects `VITE_NETWORK_STAGE=testnet`, an `alfa-testnet-*` reset

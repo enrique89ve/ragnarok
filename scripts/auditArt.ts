@@ -9,9 +9,9 @@
  *   4. /art/nfts/*.webp          — physical files
  *
  * Run:
- *   npm run audit:art                        # full audit, human report
- *   npm run audit:art -- --json              # machine-readable issues
- *   npm run audit:art -- --strict            # exit 1 on any error
+ *   pnpm run audit:art                        # full audit, human report
+ *   pnpm run audit:art -- --json              # machine-readable issues
+ *   pnpm run audit:art -- --strict            # exit 1 on any error
  */
 
 import * as fs from 'node:fs';

@@ -259,6 +259,15 @@ export const IconBloodPrice: React.FC<IconProps> = (p) => (
 	</svg>
 );
 
+export const IconBloodEcho: React.FC<IconProps> = (p) => (
+	<svg {...svgBase} {...p}>
+		<path d="M12 3C9 7 7 10 7 14a5 5 0 0010 0c0-4-2-7-5-11z" fill="currentColor" opacity={0.32} strokeWidth={1.5} />
+		<path d="M12 7c-1.5 2.2-2.4 4-2.4 6a2.4 2.4 0 004.8 0c0-2-.9-3.8-2.4-6z" fill="currentColor" opacity={0.72} stroke="none" />
+		<path d="M4 9c-1.5 1.7-1.5 4.3 0 6M20 9c1.5 1.7 1.5 4.3 0 6" strokeWidth={1.7} opacity={0.72} />
+		<path d="M2 6c-2 3.5-2 8.5 0 12M22 6c2 3.5 2 8.5 0 12" strokeWidth={1.2} opacity={0.42} />
+	</svg>
+);
+
 export const IconProphecy: React.FC<IconProps> = (p) => (
 	<svg {...svgBase} {...p}>
 		<circle cx="12" cy="12" r="9" strokeWidth={1.5} />
@@ -413,6 +422,78 @@ export const IconElusive: React.FC<IconProps> = (p) => (
 	</svg>
 );
 
+export const IconAdaptOption: React.FC<IconProps> = (p) => (
+	<svg {...svgBase} {...p}>
+		<path d="M12 3l4 4-4 4-4-4z" fill="currentColor" opacity={0.32} strokeWidth={1.5} />
+		<path d="M5 13l3.2 3.2L5 19.4l-3.2-3.2zM19 13l3.2 3.2L19 19.4l-3.2-3.2z" fill="currentColor" opacity={0.18} strokeWidth={1.5} />
+		<path d="M12 11v8M8.2 16.2h7.6" strokeWidth={1.6} opacity={0.82} />
+	</svg>
+);
+
+export const IconArtifact: React.FC<IconProps> = (p) => (
+	<svg {...svgBase} {...p}>
+		<path d="M12 2l6 5-2 13H8L6 7z" fill="currentColor" opacity={0.2} strokeWidth={1.5} />
+		<path d="M12 2v18M7 7h10M8.5 20h7" strokeWidth={1.6} opacity={0.72} />
+		<path d="M9 11h6M10 15h4" strokeWidth={1.3} opacity={0.52} />
+	</svg>
+);
+
+export const IconCantAttack: React.FC<IconProps> = (p) => (
+	<svg {...svgBase} {...p}>
+		<path d="M6 18l9-13 3 3-9 13z" fill="currentColor" opacity={0.22} strokeWidth={1.5} />
+		<path d="M4 4l16 16" strokeWidth={2.7} />
+		<circle cx="12" cy="12" r="9" strokeWidth={1.5} opacity={0.72} />
+	</svg>
+);
+
+export const IconDualClass: React.FC<IconProps> = (p) => (
+	<svg {...svgBase} {...p}>
+		<path d="M8 4l5 2.5V11c0 3.2-2 5.4-5 6.5-3-1.1-5-3.3-5-6.5V6.5z" fill="currentColor" opacity={0.18} strokeWidth={1.4} />
+		<path d="M16 4l5 2.5V11c0 3.2-2 5.4-5 6.5-3-1.1-5-3.3-5-6.5V6.5z" fill="currentColor" opacity={0.26} strokeWidth={1.4} />
+		<path d="M12 7v10" strokeWidth={1.5} opacity={0.65} />
+	</svg>
+);
+
+export const IconFateweave: React.FC<IconProps> = (p) => (
+	<svg {...svgBase} {...p}>
+		<path d="M4 7c5 0 5 10 10 10 3 0 4.5-2.2 6-5M20 7c-5 0-5 10-10 10-3 0-4.5-2.2-6-5" strokeWidth={1.8} />
+		<circle cx="4" cy="7" r="1.6" fill="currentColor" />
+		<circle cx="20" cy="7" r="1.6" fill="currentColor" />
+		<circle cx="12" cy="12" r="2" fill="currentColor" opacity={0.35} stroke="none" />
+	</svg>
+);
+
+export const IconFreezeOnDamage: React.FC<IconProps> = (p) => (
+	<svg {...svgBase} {...p}>
+		<path d="M5 19l9-14 3 3-9 14z" fill="currentColor" opacity={0.18} strokeWidth={1.5} />
+		<path d="M16 3v8M12.5 5l7 4M19.5 5l-7 4" strokeWidth={1.4} opacity={0.9} />
+		<path d="M4 18h8" strokeWidth={2.2} />
+	</svg>
+);
+
+export const IconFrozenState: React.FC<IconProps> = (p) => (
+	<svg {...svgBase} {...p}>
+		<rect x="5" y="4" width="14" height="16" rx="2" fill="currentColor" opacity={0.18} strokeWidth={1.5} />
+		<path d="M12 7v10M7 12h10M8.5 8.5l7 7M15.5 8.5l-7 7" strokeWidth={1.3} opacity={0.78} />
+	</svg>
+);
+
+export const IconPokerSpell: React.FC<IconProps> = (p) => (
+	<svg {...svgBase} {...p}>
+		<rect x="4" y="5" width="8" height="12" rx="1.2" fill="currentColor" opacity={0.16} strokeWidth={1.4} transform="rotate(-8 8 11)" />
+		<rect x="12" y="7" width="8" height="12" rx="1.2" fill="currentColor" opacity={0.22} strokeWidth={1.4} transform="rotate(8 16 13)" />
+		<path d="M16 10l1.2 2.2 2.3.4-1.7 1.7.4 2.4-2.2-1.1-2.1 1.1.4-2.4-1.7-1.7 2.3-.4z" fill="currentColor" stroke="none" />
+	</svg>
+);
+
+export const IconSpellTrigger: React.FC<IconProps> = (p) => (
+	<svg {...svgBase} {...p}>
+		<path d="M4 20l7-7M9 15l2 2" strokeWidth={2.3} />
+		<path d="M13 3l1.4 4.2L19 8.5l-3.6 2.7.3 4.6L12 13.2l-3.7 2.6.3-4.6L5 8.5l4.6-1.3z" fill="currentColor" opacity={0.3} strokeWidth={1.4} />
+		<circle cx="14" cy="9" r="6.5" strokeWidth={1.1} opacity={0.38} />
+	</svg>
+);
+
 /* ─── STAT SHAPE ICONS (for mana/attack/health) ──────────── */
 
 /** Runic crystal — mana cost emblem */
@@ -468,6 +549,8 @@ export const KEYWORD_ICON_MAP: Record<string, React.FC<IconProps>> = {
 	taunt: IconTaunt,
 	'divine shield': IconDivineShield,
 	divine_shield: IconDivineShield,
+	adapt_option: IconAdaptOption,
+	artifact: IconArtifact,
 	charge: IconCharge,
 	rush: IconRush,
 	lifesteal: IconLifesteal,
@@ -485,6 +568,7 @@ export const KEYWORD_ICON_MAP: Record<string, React.FC<IconProps>> = {
 	inspire: IconInspire,
 	adapt: IconAdapt,
 	echo: IconEcho,
+	blood_echo: IconBloodEcho,
 	magnetic: IconMagnetic,
 	overkill: IconOverkill,
 	frenzy: IconFrenzy,
@@ -515,4 +599,12 @@ export const KEYWORD_ICON_MAP: Record<string, React.FC<IconProps>> = {
 	submerge: IconSubmerge,
 	coil: IconCoil,
 	elusive: IconElusive,
+	cant_attack: IconCantAttack,
+	dual_class: IconDualClass,
+	fateweave: IconFateweave,
+	freeze_on_damage: IconFreezeOnDamage,
+	frozen: IconFrozenState,
+	poker_spell: IconPokerSpell,
+	spell_trigger: IconSpellTrigger,
+	spellDamage: IconSpellDamage,
 };

@@ -344,7 +344,7 @@ app.use('/api/testnet/rune', (_req, res) => {
   const port = parseInt(process.env.PORT || '5000', 10);
   server.on('error', (error: ListenError) => {
     if (error.code === 'EADDRINUSE') {
-      log(`port ${port} is already in use; stop the existing server or run with PORT=<free-port> npm run dev:testnet`);
+      log(`port ${port} is already in use; stop the existing server or run with PORT=<free-port> pnpm run dev:testnet`);
       process.exit(1);
     }
     throw error;

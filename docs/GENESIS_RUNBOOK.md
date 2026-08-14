@@ -29,9 +29,9 @@ Complete every item before scheduling the ceremony window.
 
 ### Code & Data
 
-- [ ] `npm run check` — 0 TypeScript errors
-- [ ] `npm run build` — production build succeeds, no TDZ errors
-- [ ] `npm run build:packs` — asset packs generated
+- [ ] `pnpm run check` — 0 TypeScript errors
+- [ ] `pnpm run build` — production build succeeds, no TDZ errors
+- [ ] `pnpm run build:packs` — asset packs generated
 - [ ] All 2,242 cards resolve via `getCardById()` (0 lookup failures)
 - [ ] 2,082 collectible cards have `collectible: true`
 - [ ] 160 tokens have `collectible: false`

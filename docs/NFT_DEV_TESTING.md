@@ -17,8 +17,8 @@ with a `VITE_` prefix. See [`ENV_SECURITY.md`](ENV_SECURITY.md).
 ```bash
 git clone https://github.com/Dhenz14/norse-mythos-card-game.git
 cd norse-mythos-card-game
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
 Open **http://localhost:5000** in your browser.

@@ -111,7 +111,7 @@ VITE_RAGNAROK_ART_INDEXER_URL=
 ## Start Testnet
 
 ```bash
-npm run dev:testnet
+pnpm run dev:testnet
 ```
 
 `dev:testnet` loads `.env` first and then `.env.testnet` with testnet taking
@@ -121,12 +121,12 @@ profile wins.
 For local Alfa diagnostics, use the explicit Alfa script instead:
 
 ```bash
-npm run dev:alfa-testnet
+pnpm run dev:alfa-testnet
 ```
 
 `dev:alfa-testnet` sets the same season boundary defaults as Dokploy and uses
 `data/chain-state.alfa-testnet.json` unless `RAGNAROK_CHAIN_STATE_FILE` is
-overridden. `npm run dev` remains local-only and should not be used to inspect
+overridden. `pnpm run dev` remains local-only and should not be used to inspect
 Alfa sync state.
 
 Expected UI signals:
@@ -144,8 +144,8 @@ For the one-week Dokploy-hosted Alfa Testnet profile:
 
 ```bash
 cp .env.alfa-testnet.example .env.alfa-testnet
-npm run build:alfa-testnet
-npm run start:alfa-testnet
+pnpm run build:alfa-testnet
+pnpm run start:alfa-testnet
 ```
 
 The Alfa env must keep:
@@ -427,7 +427,7 @@ Operator UI check:
 
 Ownership smoke for the same epoch:
 
-1. Run `npx vitest run shared/runtimeConfig.test.ts client/src/data/blockchain/deckVerification.test.ts`.
+1. Run `pnpm exec vitest run shared/runtimeConfig.test.ts client/src/data/blockchain/deckVerification.test.ts`.
 2. Confirm starter cards still verify for every account.
 3. Confirm a non-starter genesis card without `nft_id` is rejected.
 4. Confirm QA full-catalog cards from a previous `qa-s0-*` epoch are not
@@ -444,20 +444,20 @@ opening access.
 Local private development uses the default local profile:
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 Mainnet smoke/deployment uses the explicit mainnet profile:
 
 ```bash
 cp .env.mainnet.example .env.mainnet
-npm run dev:mainnet      # local smoke with mainnet runtime constants
-npm run build:mainnet    # production browser bundle with mainnet constants
-npm run start:mainnet    # run the built server with .env.mainnet
+pnpm run dev:mainnet      # local smoke with mainnet runtime constants
+pnpm run build:mainnet    # production browser bundle with mainnet constants
+pnpm run start:mainnet    # run the built server with .env.mainnet
 ```
 
-Do not use `npm run dev:mainnet` as a shortcut for beta testing; testnet must
-stay on `npm run dev:testnet` so broadcasts use `rk_game_testnet`.
+Do not use `pnpm run dev:mainnet` as a shortcut for beta testing; testnet must
+stay on `pnpm run dev:testnet` so broadcasts use `rk_game_testnet`.
 
 ## Smoke Test — Local Single (Gate 2)
 
@@ -465,7 +465,7 @@ Validates that a single-player practice match runs end-to-end on the local stack
 
 **Prerequisites**
 
-- Dev server running: `npm run dev` (local config). Testnet/mainnet flags are not required for Gate 2.
+- Dev server running: `pnpm run dev` (local config). Testnet/mainnet flags are not required for Gate 2.
 - Browser at `http://localhost:5000/`.
 - A complete warband. Two ways to obtain one:
   - **Real path** (preferred for Gate 6 tester readiness): build all four piece decks via the deck builder UI on `/#/warband?mode=single`.
@@ -488,7 +488,7 @@ Validates that a single-player practice match runs end-to-end on the local stack
 
 **Last verified**
 
-- 2026-05-10 via `agent-browser 0.27.0` against `npm run dev` at `http://localhost:5000/#/game/single`.
+- 2026-05-10 via `agent-browser 0.27.0` against `pnpm run dev` at `http://localhost:5000/#/game/single`.
 - Warband used the programmatic seed below. The chess board mounted 10v10 with `currentTurn === 'player'` and `gameStatus === 'playing'`.
 - AI turn check: 12 consecutive AI responses advanced `boardState.moveCount` from 0 to 24, exactly +2 per player/AI round. No freeze, no timeout, no double movement.
 - Combat check: bishop-vs-queen attack transitioned into cards combat with `gameStatus === 'combat'` and `pokerIsActive === true`; poker hands resolved and returned to chess with `pendingCombat === false`.
@@ -515,12 +515,12 @@ Passing Gate 2 unblocks the testnet onboarding sequence (Gates 3-6).
 
 ### Failure checks
 
-- "Maximum update depth exceeded" on `/#/game/single` -> regression of `f829952` (`selectDeckCardIds` lost referential stability). Run `npx vitest run client/src/lib/stores/useWarbandStore.test.ts` first; if the regression tests fail, the bug is back. Audit any other zustand selector that branches on status and returns an array or object.
-- AI plays two pieces in one turn ("doble movimiento") -> regression of `cc99e71`. Run `npx vitest run client/src/game/coordinator/hooks/chessAITurnDriver.test.ts` to confirm the early-return contract.
+- "Maximum update depth exceeded" on `/#/game/single` -> regression of `f829952` (`selectDeckCardIds` lost referential stability). Run `pnpm exec vitest run client/src/lib/stores/useWarbandStore.test.ts` first; if the regression tests fail, the bug is back. Audit any other zustand selector that branches on status and returns an array or object.
+- AI plays two pieces in one turn ("doble movimiento") -> regression of `cc99e71`. Run `pnpm exec vitest run client/src/game/coordinator/hooks/chessAITurnDriver.test.ts` to confirm the early-return contract.
 - Chess phase freezes mid-AI-turn -> check the dev console for orphaned `setTimeout` warnings; the timeout batch in `useChessAITurn.ts` is what protects against turn-flip mid-think.
 
 ## Failure Checks
 
-- If the badge does not appear, verify the server was started with `npm run dev:testnet`.
+- If the badge does not appear, verify the server was started with `pnpm run dev:testnet`.
 - If the client writes ops but replay does not see them, check protocol id filters first.
 - If server status reports `ragnarok-cards`, check env loading and optional `RAGNAROK_PROTOCOL_ID` override.

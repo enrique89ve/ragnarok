@@ -700,7 +700,7 @@ git clone https://github.com/Dhenz14/norse-mythos-card-game
 cd norse-mythos-card-game
 
 # 2. Run the operator binary locally
-npx tsx operator/indexer.ts --output ./index-output --start-block 0
+pnpm exec tsx operator/indexer.ts --output ./index-output --start-block 0
 
 # 3. See what it produces
 ls index-output/

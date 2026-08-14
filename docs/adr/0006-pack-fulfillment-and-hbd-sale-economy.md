@@ -102,8 +102,8 @@ The single source of truth is `shared/protocol-core/packCatalog.ts`.
    `ACTIVE_HBD_PACK_SALE_SCENARIO_KEY`.
 3. Recalculate tranche caps with the same pack mix if the target gross changes.
 4. Update `shared/protocol-core/packCatalog.test.ts` expected totals.
-5. Run `npm test -- shared/protocol-core/packCatalog.test.ts` and
-   `npm run check`.
+5. Run `pnpm test -- shared/protocol-core/packCatalog.test.ts` and
+   `pnpm run check`.
 
 Frontend code must read prices through `getHbdPackPriceThousandths`,
 `formatHbdThousandths`, or `formatHbdPrice`. Do not hardcode pack prices or

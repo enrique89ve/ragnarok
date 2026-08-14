@@ -5,7 +5,7 @@
  * protocol-core, and outputs NDJSON chunks + manifest for IPFS publication.
  *
  * Usage:
- *   npx tsx operator/indexer.ts [--output ./index-output] [--start-block 0]
+ *   pnpm exec tsx operator/indexer.ts [--output ./index-output] [--start-block 0]
  *
  * This is the same logic as server/services/chainIndexer.ts, repackaged
  * as a standalone process that writes files instead of holding state in memory.

@@ -10,8 +10,10 @@ ENV NPM_CONFIG_FETCH_RETRIES=5
 ENV NPM_CONFIG_FETCH_RETRY_MINTIMEOUT=20000
 ENV NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT=120000
 
-COPY package.json package-lock.json ./
-RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --fund=false
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm install -g pnpm@11 --no-audit --fund=false \
+    && pnpm install --frozen-lockfile --no-audit
 
 FROM deps AS build
 WORKDIR /app
@@ -49,11 +51,11 @@ ENV VITE_EXTERNAL_URL_BASE=$VITE_EXTERNAL_URL_BASE
 ENV VITE_SEASON_START=$VITE_SEASON_START
 
 COPY . .
-RUN npm run verify:runtime-env -- --mode=alfa-testnet && npm run build:alfa-testnet
+RUN pnpm run verify:runtime-env -- --mode=alfa-testnet && pnpm run build:alfa-testnet
 
 FROM deps AS prod-deps
 WORKDIR /app
-RUN npm ci --omit=dev --no-audit --fund=false && npm cache clean --force
+RUN pnpm install --prod --frozen-lockfile && pnpm store prune
 
 FROM node:${NODE_VERSION}-alpine${NODE_ALPINE_VERSION} AS runner
 WORKDIR /app
@@ -74,7 +76,7 @@ ENV RAGNAROK_ADMIN_OPERATOR_ACCOUNT=ragnarok-test-operator
 ENV RAGNAROK_CHAIN_STATE_FILE=data/chain-state.alfa-testnet.json
 ENV RAGNAROK_NFT_OWNERSHIP_SOURCE=json
 
-COPY package.json package-lock.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/node_modules/esbuild ./node_modules/esbuild

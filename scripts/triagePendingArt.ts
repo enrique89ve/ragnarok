@@ -17,8 +17,8 @@
  * §"Mismatch detection".
  *
  * Usage:
- *   npm run triage:art            # human report to stdout
- *   npm run triage:art -- --json  # machine-readable
+ *   pnpm run triage:art            # human report to stdout
+ *   pnpm run triage:art -- --json  # machine-readable
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';

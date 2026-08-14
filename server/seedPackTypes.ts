@@ -4,8 +4,8 @@
  * Populates the pack_types table with 4 pack configurations.
  * Uses ON CONFLICT for idempotent re-runs.
  *
- * Run with: npx tsx server/seedPackTypes.ts
- *   or via: npm run db:seed-packs
+ * Run with: pnpm exec tsx server/seedPackTypes.ts
+ *   or via: pnpm run db:seed-packs
  */
 
 import 'dotenv/config';

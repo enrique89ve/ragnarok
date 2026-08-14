@@ -60,7 +60,7 @@ data/chain-state.mainnet.json
 Override with:
 
 ```bash
-RAGNAROK_CHAIN_STATE_FILE=/secure/path/chain-state.alfa-testnet.json npm run dev:alfa-testnet
+RAGNAROK_CHAIN_STATE_FILE=/secure/path/chain-state.alfa-testnet.json pnpm run dev:alfa-testnet
 ```
 
 The JSON adapter checks read/write/execute access to the target directory during
@@ -114,7 +114,7 @@ queries and indexes on:
 Use the claim store benchmark before choosing or tuning an adapter:
 
 ```bash
-npm run bench:claim-store -- --adapter json --claims 2000 --reads 2000
+pnpm run bench:claim-store -- --adapter json --claims 2000 --reads 2000
 ```
 
 The report is written to `.scratch/benchmarks/claim-store-*.json`.

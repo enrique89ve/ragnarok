@@ -11,6 +11,8 @@ import {
 	formatCardKeywordCompactLabel,
 	formatCardKeywordLabel,
 } from '../cardKeywordDisplay';
+import { getCardKeywordSemantics } from '../cardPresentationContract';
+import { KEYWORD_ICON_MAP } from '../../ui/CardIconsSVG';
 
 export interface CardDescriptionProps {
 	description?: string;
@@ -18,6 +20,10 @@ export interface CardDescriptionProps {
 	keywordLimit?: number | null;
 	keywordLabelMode?: 'full' | 'compact';
 }
+
+type KeywordIconComponent = React.FC<React.SVGProps<SVGSVGElement>>;
+
+const keywordIconLookup: Readonly<Partial<Record<string, KeywordIconComponent>>> = KEYWORD_ICON_MAP;
 
 const CardDescription: React.FC<CardDescriptionProps> = ({
 	description,
@@ -36,18 +42,33 @@ const CardDescription: React.FC<CardDescriptionProps> = ({
 	const formatKeyword = keywordLabelMode === 'compact'
 		? formatCardKeywordCompactLabel
 		: formatCardKeywordLabel;
+	const visibleKeywordEntries = visibleKeywords.map((keyword) => ({
+		keyword,
+		Icon: keywordIconLookup[keyword],
+		label: formatCardKeywordLabel(keyword),
+		semantics: getCardKeywordSemantics(keyword),
+	}));
 
 	return (
 		<div className="card-frame__description">
 			{hasKeywords && (
-				<div className="card-frame__keywords">
-					{visibleKeywords.map((keyword) => (
+				<div className="card-frame__keywords" data-keyword-label-mode={keywordLabelMode}>
+					{visibleKeywordEntries.map(({ keyword, Icon, label, semantics }) => (
 						<span
 							key={keyword}
-							className="card-frame__keyword-chip"
+							className={`card-frame__keyword-chip${Icon ? ' card-frame__keyword-chip--icon' : ''}`}
 							data-keyword={keyword}
+							data-keyword-functions={semantics.functions.join(' ')}
+							data-keyword-gameplay={semantics.gameplay}
+							data-keyword-pregame={semantics.pregame}
+							aria-label={label}
+							title={label}
 						>
-							{formatKeyword(keyword)}
+							{Icon ? (
+								<Icon className="card-frame__keyword-icon" focusable="false" aria-hidden="true" />
+							) : (
+								formatKeyword(keyword)
+							)}
 						</span>
 					))}
 					{hiddenKeywords.length > 0 && (
@@ -60,7 +81,15 @@ const CardDescription: React.FC<CardDescriptionProps> = ({
 					)}
 				</div>
 			)}
-			{description && <p className="card-frame__description-text">{description}</p>}
+			{description && (
+				<p
+					className="card-frame__description-text"
+					data-layout-allow-truncate="card-description-preview"
+					title={description}
+				>
+					{description}
+				</p>
+			)}
 		</div>
 	);
 };

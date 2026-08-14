@@ -38,8 +38,8 @@ Required before testers start:
 3. Run:
 
 ```bash
-npm run check
-npx vitest run shared/runtimeConfig.test.ts client/src/game/protocol/ceremonyFeedback.test.ts client/src/data/blockchain/transcriptBuilder.test.ts
+pnpm run check
+pnpm exec vitest run shared/runtimeConfig.test.ts client/src/game/protocol/ceremonyFeedback.test.ts client/src/data/blockchain/transcriptBuilder.test.ts
 ```
 
 4. Confirm tester instructions point to `/#/warband?mode=multiplayer`
@@ -125,8 +125,8 @@ reload status, and winner/result state.
 Run the focused matrix before accepting fixes:
 
 ```bash
-npm run check
-npx vitest run \
+pnpm run check
+pnpm exec vitest run \
   shared/runtimeConfig.test.ts \
   client/src/data/blockchain/transcriptBuilder.test.ts \
   client/src/game/protocol/ceremonyFeedback.test.ts \
@@ -138,7 +138,7 @@ npx vitest run \
   shared/protocol-core/runeEconomy.test.ts \
   shared/protocol-core/campaignResult.test.ts \
   shared/protocol-core/replayTraces.test.ts
-npm run prototype:p2p-settlement -- --demo
+pnpm run prototype:p2p-settlement -- --demo
 ```
 
 Every accepted logic fix needs either a focused test or a runbook evidence
@@ -149,7 +149,7 @@ exporting evidence.
 
 QA Season 0 can close when:
 
-- `npm run check` is green;
+- `pnpm run check` is green;
 - focused Season 0/P2P/RUNE tests are green;
 - every must-test path above has at least one evidence JSON artifact;
 - P2P has a real two-browser Hive Keychain pass or a captured blocker with

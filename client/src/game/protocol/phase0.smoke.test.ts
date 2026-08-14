@@ -15,7 +15,7 @@
  * is to make the harness deterministic so any divergence the harness
  * catches is a protocol bug, not an engine bug.
  *
- * Phase 0 → Phase 1 promotion gate: `npm run smoke:phase0` (or this
+ * Phase 0 → Phase 1 promotion gate: `pnpm run smoke:phase0` (or this
  * file under vitest) must exit 0.
  */
 

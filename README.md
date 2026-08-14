@@ -462,8 +462,9 @@ Shared replay core     -> ELO, RUNE, Eitr, XP/level projection, Season Score inp
 ```bash
 git clone https://github.com/Dhenz14/norse-mythos-card-game.git
 cd norse-mythos-card-game
-npm install
-npm run dev
+corepack enable pnpm
+pnpm install
+pnpm run dev
 ```
 
 Opens at `http://localhost:5000`. No database required for single-player — PostgreSQL is optional for server features.
@@ -480,12 +481,12 @@ Playable entry routes:
 Runtime profile is explicit:
 
 ```bash
-npm run dev             # local private development
-npm run dev:testnet     # shared resettable beta profile from .env.testnet
-npm run build:alfa-testnet # production Alfa Testnet bundle, stage=testnet
-npm run start:alfa-testnet # built server with Alfa Testnet JSON state
-npm run build:mainnet   # production browser bundle from .env.mainnet
-npm run start:mainnet   # built server with .env.mainnet
+pnpm run dev             # local private development
+pnpm run dev:testnet     # shared resettable beta profile from .env.testnet
+pnpm run build:alfa-testnet # production Alfa Testnet bundle, stage=testnet
+pnpm run start:alfa-testnet # built server with Alfa Testnet JSON state
+pnpm run build:mainnet   # production browser bundle from .env.mainnet
+pnpm run start:mainnet   # built server with .env.mainnet
 ```
 
 Copy `.env.testnet.example` to `.env.testnet` for generic testnet, QA Season 0,
@@ -506,16 +507,16 @@ previous QA or beta wipe.
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Local development server (Vite + Express) |
-| `npm run dev:testnet` | Testnet development server using `.env.testnet` |
-| `npm run dev:mainnet` | Mainnet-profile local smoke using `.env.mainnet` |
-| `npm run build` | Production build |
-| `npm run build:alfa-testnet` | Alfa Testnet production build with `stage=testnet` and an `alfa-testnet-*` reset epoch |
-| `npm run start:alfa-testnet` | Run the built server with Alfa Testnet JSON state defaults |
-| `npm run build:mainnet` | Mainnet-profile production build using `.env.mainnet` |
-| `npm run check` | TypeScript type checking |
-| `npm run lint` | ESLint |
-| `npm run build:wasm` | Build WASM anti-cheat engine |
+| `pnpm run dev` | Local development server (Vite + Express) |
+| `pnpm run dev:testnet` | Testnet development server using `.env.testnet` |
+| `pnpm run dev:mainnet` | Mainnet-profile local smoke using `.env.mainnet` |
+| `pnpm run build` | Production build |
+| `pnpm run build:alfa-testnet` | Alfa Testnet production build with `stage=testnet` and an `alfa-testnet-*` reset epoch |
+| `pnpm run start:alfa-testnet` | Run the built server with Alfa Testnet JSON state defaults |
+| `pnpm run build:mainnet` | Mainnet-profile production build using `.env.mainnet` |
+| `pnpm run check` | TypeScript type checking |
+| `pnpm run lint` | ESLint |
+| `pnpm run build:wasm` | Build WASM anti-cheat engine |
 
 ---
 
@@ -687,10 +688,10 @@ server/
 git checkout -b feature/your-feature
 
 # Develop
-npm run dev       # Local hot reload at localhost:5000
-npm run dev:testnet # Beta profile when testing Hive/testnet flows
-npm run check     # TypeScript validation
-npm run build     # Production build test
+pnpm run dev       # Local hot reload at localhost:5000
+pnpm run dev:testnet # Beta profile when testing Hive/testnet flows
+pnpm run check     # TypeScript validation
+pnpm run build     # Production build test
 
 # Submit
 git push origin feature/your-feature

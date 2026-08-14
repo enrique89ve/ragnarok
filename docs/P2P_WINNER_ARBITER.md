@@ -100,9 +100,9 @@ The arbiter must fail closed unless every gate passes:
 
 ## Acceptance
 
-- `npm run check` passes.
+- `pnpm run check` passes.
 - Focused arbiter tests cover every gate above.
-- `npm run prototype:p2p-settlement -- --demo` still shows QA local rewards as
+- `pnpm run prototype:p2p-settlement -- --demo` still shows QA local rewards as
   local/no-chain and result-only as blocked, or the prototype is deleted after
   equivalent production tests replace it.
 - Two-browser P2P smoke exports evidence for `match_anchor`, transcript root,

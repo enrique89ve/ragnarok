@@ -104,11 +104,11 @@ State is one file per runtime phase. Examples:
 For Alfa, use:
 
 ```bash
-npm run dev:alfa-testnet
+pnpm run dev:alfa-testnet
 ```
 
 That script points the server at `data/chain-state.alfa-testnet.json`. Plain
-`npm run dev` is local and should not be used to inspect Alfa sync.
+`pnpm run dev` is local and should not be used to inspect Alfa sync.
 
 ## Operation Selection
 
@@ -348,9 +348,9 @@ file is active and how many blocks remain.
 Use these checks before claiming the indexer contract is ready:
 
 ```bash
-npm exec vitest run server/services/chainState.contract.test.ts shared/runtimeConfig.test.ts
-npm run verify:alfa-runtime-env
-npm run check
+pnpm exec vitest run server/services/chainState.contract.test.ts shared/runtimeConfig.test.ts
+pnpm run verify:alfa-runtime-env
+pnpm run check
 ```
 
 Runtime logs should show:

@@ -16,7 +16,7 @@
  * Exit 1  → violations found, printed file:line — rule — fix-hint.
  *
  * Wired into:
- *   - npm run audit:determinism
+ *   - pnpm run audit:determinism
  *   - .github/workflows/ci.yml (PR gate)
  */
 

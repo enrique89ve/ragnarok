@@ -135,7 +135,7 @@ Alternatives explicitly rejected (see §Rejected alternatives below):
 
 **Duration estimate**: 8–11 weeks total with explicit test gates between phases. Phase 0 alone (3–4 weeks) is sufficient for closed beta if false-positive slash is acceptable in low-stakes ranked.
 
-**Phase 0 → Phase 1 promotion gate**: `npm run smoke:phase0` must exit 0. The harness (`client/src/game/protocol/phase0.smoke.test.ts`) drives a 60-turn mock match through session_authorize + signed transcript + encrypted action log + session_renewal + server pending queue, with a stub engine. It asserts envelope integrity, prevHash chaining, Merkle root convergence, renewal idempotency, queue TTL, and the Keychain prompt budget (1 at start per peer, 0 mid-match). Green light = the protocol design holds end-to-end without an engine; Phase 1 (chess → WASM) is unlocked.
+**Phase 0 → Phase 1 promotion gate**: `pnpm run smoke:phase0` must exit 0. The harness (`client/src/game/protocol/phase0.smoke.test.ts`) drives a 60-turn mock match through session_authorize + signed transcript + encrypted action log + session_renewal + server pending queue, with a stub engine. It asserts envelope integrity, prevHash chaining, Merkle root convergence, renewal idempotency, queue TTL, and the Keychain prompt budget (1 at start per peer, 0 mid-match). Green light = the protocol design holds end-to-end without an engine; Phase 1 (chess → WASM) is unlocked.
 
 **Phase 1-lite → Phase 1.5 promotion gate** (per [.scratch/game-protocol-v2-phase1/DECISIONS.md D12](../../.scratch/game-protocol-v2-phase1/DECISIONS.md#d12--phase-1-lite-defer-runtime-flip-until-post-closed-beta)): `smoke:phase1` (TS reducer 2-peer determinism), `audit:determinism`, and `parity.test.ts` (TS↔AS canonical equality on ≥50 fixtures) all green on `main` for ≥3 consecutive commits with chess actions exercised in real closed-beta matches, plus the threat-model evolution captured in D12. When met, Phase 1.5 (runtime flip — original Phase 1 scope) is unlocked.
 
@@ -360,7 +360,7 @@ Every PR to `assembly/` must pass:
 - [ ] No `Math.random`, `Math.sqrt`, `Math.pow`, `Math.sin/cos/tan` introduced
 - [ ] No `Date.now()` / `performance.now()` introduced
 - [ ] Any new `Map<>` / `Set<>` declarations justify iteration-order intent in PR description
-- [ ] `npm run audit:wasm-determinism` passes (lint script to be added)
+- [ ] `pnpm run audit:wasm-determinism` passes (lint script to be added)
 
 ### Server-side WASM runtime (Phase E)
 

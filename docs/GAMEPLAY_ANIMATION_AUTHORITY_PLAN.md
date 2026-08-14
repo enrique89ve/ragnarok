@@ -64,8 +64,8 @@ Acceptance criteria:
 Verification:
 
 ```bash
-npm run check
-npx vitest run client/src/game/combat/aiAttackResolution.test.ts
+pnpm run check
+pnpm exec vitest run client/src/game/combat/aiAttackResolution.test.ts
 rg -n "applyDamageToState|setGameState" client/src/game/components/AIAttackAnimationProcessor.tsx
 ```
 
@@ -98,9 +98,9 @@ Acceptance criteria:
 Verification:
 
 ```bash
-npm run check
-npx vitest run client/src/game/stores/combat/chessAnimationSlice.test.ts
-npx vitest run client/src/game/coordinator/hooks/chessAITurnDriver.test.ts
+pnpm run check
+pnpm exec vitest run client/src/game/stores/combat/chessAnimationSlice.test.ts
+pnpm exec vitest run client/src/game/coordinator/hooks/chessAITurnDriver.test.ts
 rg -n "onAnimationComplete|completeAttackAnimation" client/src/game/components/chess client/src/game/stores/combat
 ```
 
@@ -144,7 +144,7 @@ Acceptance criteria:
 Verification:
 
 ```bash
-npm run check
+pnpm run check
 rg -n "querySelector\\(['\\\"]\\.|\\[class\\*=" client/src/game/combat/animations/PokerDramaVFX.ts client/src/game/services/CombatEventSubscribers.ts
 ```
 
@@ -174,7 +174,7 @@ Acceptance criteria:
 Verification:
 
 ```bash
-npm run check
+pnpm run check
 rg -n "CardDragAnimation|\\.bf-slot|\\.player-row|\\.simple-battlefield" client/src/game
 ```
 
@@ -222,8 +222,8 @@ rg -n "Animation completes|State updates|arenaVfxTargets|subscriber" docs/GAME_F
 Run after all phases:
 
 ```bash
-npm run check
-npm test -- --runInBand
+pnpm run check
+pnpm test -- --runInBand
 rg -n "applyDamageToState|setGameState" client/src/game/components client/src/game/combat/animations
 rg -n "querySelector\\(['\\\"]\\.|\\[class\\*=" client/src/game/combat/animations client/src/game/services
 ```

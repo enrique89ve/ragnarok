@@ -643,6 +643,9 @@
 }
 
 .card-frame__keyword-chip {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 	padding: 1px 5px;
 	background: var(--obsidian-700);
 	border: 1px solid var(--rarity-rare-mid, #c4a04a);
@@ -653,6 +656,20 @@
 	color: var(--rarity-rare-pale, #f5d97a);
 	pointer-events: auto;
 	cursor: help;
+}
+
+.card-frame__keyword-chip--icon {
+	width: 18px;
+	height: 18px;
+	padding: 2px;
+}
+
+.card-frame__keyword-icon {
+	display: block;
+	width: 1em;
+	height: 1em;
+	flex: 0 0 auto;
+	pointer-events: none;
 }
 
 .card-frame__description-text {

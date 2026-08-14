@@ -414,7 +414,7 @@ The JSX names the semantic zone and small local alignment. The CSS grid decides 
 ### Phase A — Cleanup uncommitted state
 1. Commit current PR1 fixes
 2. Audit uncommitted files (`git status`): keep, fold, or revert per file
-3. Verify `npm run check` + `lint:css` clean
+3. Verify `pnpm run check` + `lint:css` clean
 
 ### Phase B — Stabilize the board grammar
 1. Keep `GameViewport` as the only responsive scaler.

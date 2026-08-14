@@ -4,6 +4,13 @@ import type {
 	CardLayoutSurfaceDraft,
 } from './cardLayoutDraft';
 import type { SimpleCardData } from './SimpleCardCompat';
+import {
+	getCardElementSurfaceContract,
+	getCardKeywordsForSurface,
+	getCardKeywordSemantics,
+	type CardElementSurfaceContract,
+	type CardKeywordSemantics,
+} from './cardPresentationContract';
 
 export const CARD_LAYOUT_RENDER_SCHEMA = 'norse-card-layout-render/v1';
 
@@ -24,7 +31,13 @@ export type CardLayoutSlotCss = {
 export type CardLayoutRenderedSlot = CardLayoutSlot & {
 	readonly css: CardLayoutSlotCss;
 	readonly value: CardLayoutSlotValue;
+	readonly semantics: CardElementSurfaceContract;
 };
+
+export type CardLayoutRenderedKeyword = Pick<
+	CardKeywordSemantics,
+	'keyword' | 'label' | 'compactLabel' | 'functions' | 'filterable' | 'collection' | 'pregame' | 'gameplay'
+>;
 
 export type CardLayoutRenderedCardData = {
 	readonly id: string;
@@ -37,6 +50,7 @@ export type CardLayoutRenderedCardData = {
 	readonly rarity: string;
 	readonly tribe: string | null;
 	readonly keywords: readonly string[];
+	readonly keywordSemantics: readonly CardLayoutRenderedKeyword[];
 	readonly element: string | null;
 	readonly artPath: string;
 };
@@ -51,6 +65,7 @@ export type CardLayoutRenderData = {
 type SlotValueInput = {
 	readonly card: SimpleCardData;
 	readonly artPath: string;
+	readonly surface: CardLayoutSurfaceDraft;
 };
 
 const numberValue = (value: number | undefined): CardLayoutSlotValue => (
@@ -67,7 +82,7 @@ const slotValueResolvers: Record<CardLayoutSlotId, (input: SlotValueInput) => Ca
 	art: ({ artPath }) => ({ kind: 'image', value: artPath }),
 	mana: ({ card }) => ({ kind: 'text', value: String(card.manaCost) }),
 	name: ({ card }) => ({ kind: 'text', value: card.name }),
-	keywords: ({ card }) => ({ kind: 'list', value: card.keywords ?? [] }),
+	keywords: ({ card, surface }) => ({ kind: 'list', value: getCardKeywordsForSurface(card.keywords, surface.surface) }),
 	description: ({ card }) => textValue(card.description),
 	tribe: ({ card }) => textValue(card.tribe),
 	attack: ({ card }) => numberValue(card.attack),
@@ -84,6 +99,24 @@ const slotCss = (slot: CardLayoutSlot): CardLayoutSlotCss => ({
 	height: `${slot.h}%`,
 	'--slot-font-scale': String(slot.fontScale),
 });
+
+const keywordSemanticsForCard = (
+	keywords: readonly string[] | undefined,
+): readonly CardLayoutRenderedKeyword[] => (
+	Array.from(new Set(keywords ?? [])).map((keyword) => {
+		const semantics = getCardKeywordSemantics(keyword);
+		return {
+			keyword: semantics.keyword,
+			label: semantics.label,
+			compactLabel: semantics.compactLabel,
+			functions: semantics.functions,
+			filterable: semantics.filterable,
+			collection: semantics.collection,
+			pregame: semantics.pregame,
+			gameplay: semantics.gameplay,
+		};
+	})
+);
 
 export const buildCardLayoutRenderData = (input: {
 	readonly surface: CardLayoutSurfaceDraft;
@@ -114,13 +147,15 @@ export const buildCardLayoutRenderData = (input: {
 			rarity: card.rarity ?? 'common',
 			tribe: card.tribe ?? null,
 			keywords: card.keywords ?? [],
+			keywordSemantics: keywordSemanticsForCard(card.keywords),
 			element: card.element ?? null,
 			artPath,
 		},
 		slots: surface.slots.map((slot) => ({
 			...slot,
 			css: slotCss(slot),
-			value: slotValueResolvers[slot.id]({ card, artPath }),
+			value: slotValueResolvers[slot.id]({ card, artPath, surface }),
+			semantics: getCardElementSurfaceContract(slot.id, surface.surface),
 		})),
 	};
 };

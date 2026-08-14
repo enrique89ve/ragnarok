@@ -52,7 +52,7 @@ Beta, and later wipes. Do not reuse an epoch after a reset.
 Operational startup lives in `docs/TESTNET_RUNBOOK.md`. The canonical testnet dev command is:
 
 ```bash
-npm run dev:testnet
+pnpm run dev:testnet
 ```
 
 The expected testnet shape is mainnet-like:
@@ -73,7 +73,7 @@ The expected testnet shape is mainnet-like:
   a QA/beta wipe. QA Testnet Season 0 must use a `qa-s0-*` or
   `QA Season 0 / ...` epoch; Closed Testnet Beta must rotate to a non-QA
   epoch such as `closed-beta-*`.
-- `npm run dev:testnet` starts the app with `.env.testnet`.
+- `pnpm run dev:testnet` starts the app with `.env.testnet`.
 - The UI shows a persistent `TESTNET` header badge.
 - The resettable testnet banner is dismissible.
 - Client broadcasters and replay filters consume `RAGNAROK_APP_ID` / protocol constants instead of hardcoded testnet strings.

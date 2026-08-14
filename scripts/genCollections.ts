@@ -13,7 +13,7 @@
  * pure function, no classes, no shared mutable state. The only side effect
  * is the final write at the end of `main`.
  *
- * Run:  npm run gen:collections
+ * Run:  pnpm run gen:collections
  */
 
 import * as fs from 'node:fs';

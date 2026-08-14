@@ -31,13 +31,18 @@ import {
 import { routes } from '../../../lib/routes';
 import {
 	CARD_LAYOUT_SCHEMA,
+	CARD_LAYOUT_CARD_TYPES,
+	CARD_LAYOUT_FIELD_PRIORITIES,
 	DEFAULT_CARD_LAYOUT_DRAFT,
 	cloneCardLayoutDraft,
 	createDefaultCardLayoutDraft,
 	parseCardLayoutDraft,
 	serializeCardLayoutDraft,
+	updateCardLayoutRenderField,
 	updateCardLayoutSlot,
 	type CardLayoutDraft,
+	type CardLayoutCardType,
+	type CardLayoutFieldPriority,
 	type CardLayoutRenderFieldRule,
 	type CardLayoutSlot,
 	type CardLayoutSlotId,
@@ -52,8 +57,21 @@ import {
 	type CardLayoutRenderedSlot,
 	type CardLayoutSlotValue,
 } from '../card/cardLayoutRenderData';
+import {
+	CARD_KEYWORD_SEMANTICS,
+	getCardKeywordsForSurface,
+	getCardKeywordRenderImportance,
+	getCardKeywordSemantics,
+	CARD_PRESENTATION_SURFACES,
+	shouldRenderCardKeywordOnSurface,
+	type CardKeywordFunction,
+	type CardKeywordSemantics,
+	type CardPresentationSurface,
+	type CardRenderImportance,
+} from '../card/cardPresentationContract';
 import { toSimpleCardData } from '../card/cardDataAdapter';
 import type { SimpleCardData } from '../card/SimpleCardCompat';
+import { KEYWORD_ICON_MAP } from '../ui/CardIconsSVG';
 import {
 	CollectionCardTile,
 	type CollectionTileCard,
@@ -66,12 +84,52 @@ import { DEFAULT_PORTRAIT, getCardArtPath } from '../../utils/art/artMapping';
 import { ELEMENT_BAND } from '../../utils/art/elementBand';
 import './CardLayoutCanvasPage.css';
 
-const STORAGE_KEY = 'norse:card-layout-canvas-draft:v1';
+const STORAGE_KEY = 'norse:card-layout-canvas-draft:v3';
 const STAGE_MAX_WIDTH = 520;
 
 type MoveScope = 'single' | 'same' | 'all';
+type CanvasSegment = 'layout' | 'keywords';
+type KeywordIconTone = 'choice' | 'combat' | 'filter' | 'poker' | 'progression' | 'resource' | 'state' | 'summon' | 'theme' | 'trigger';
 
 const cloneDraft = cloneCardLayoutDraft;
+
+const KEYWORD_PREVIEW_LIMITS = {
+	collection: 4,
+	pregame: 3,
+	gameplay: 2,
+} satisfies Record<CardPresentationSurface, number>;
+
+const KEYWORD_FUNCTION_TONES = {
+	filter: 'filter',
+	trigger: 'trigger',
+	'static-combat-rule': 'combat',
+	'targeting-rule': 'combat',
+	'state-rule': 'state',
+	'resource-rule': 'resource',
+	'choice-rule': 'choice',
+	'progression-rule': 'progression',
+	'summon-rule': 'summon',
+	'card-generation': 'choice',
+	'deck-construction': 'filter',
+	'poker-rule': 'poker',
+	'theme-marker': 'theme',
+} satisfies Record<CardKeywordFunction, KeywordIconTone>;
+
+const KEYWORD_ICON_LOOKUP: Readonly<Record<string, React.FC<React.SVGProps<SVGSVGElement>> | undefined>> = KEYWORD_ICON_MAP;
+
+const KEYWORD_CATALOG = Object.values(CARD_KEYWORD_SEMANTICS).sort((a, b) => a.label.localeCompare(b.label));
+
+const keywordToneFor = (semantics: CardKeywordSemantics): KeywordIconTone => {
+	const primaryFunction = semantics.functions[0];
+	return primaryFunction === undefined ? 'filter' : KEYWORD_FUNCTION_TONES[primaryFunction];
+};
+
+const formatKeywordFunction = (value: CardKeywordFunction): string => value.replace(/-/g, ' ');
+
+const formatSurfaceLabel = (surface: CardPresentationSurface): string => {
+	if (surface === 'pregame') return 'Pre-game';
+	return surface.charAt(0).toUpperCase() + surface.slice(1);
+};
 
 const loadStoredDraft = (): CardLayoutDraft | null => {
 	if (typeof window === 'undefined') return null;
@@ -224,6 +282,7 @@ const fieldsForRenderData = (
 	renderData: CardLayoutRenderData,
 	card: SimpleCardData,
 ): CollectionTileRenderedFields => {
+	const renderedKeywords = getCardKeywordsForSurface(card.keywords, renderData.surface.surface);
 	return {
 		showArt: isFieldRendered(renderData, card, 'art'),
 		showCount: isFieldRendered(renderData, card, 'count'),
@@ -233,7 +292,7 @@ const fieldsForRenderData = (
 		showStats: isFieldRendered(renderData, card, 'attack') || isFieldRendered(renderData, card, 'health'),
 		...(isFieldRendered(renderData, card, 'tribe') && card.tribe ? { tribe: card.tribe } : {}),
 		...(isFieldRendered(renderData, card, 'description') && card.description ? { description: card.description } : {}),
-		...(isFieldRendered(renderData, card, 'keywords') && card.keywords !== undefined ? { keywords: card.keywords } : {}),
+		...(isFieldRendered(renderData, card, 'keywords') && renderedKeywords.length > 0 ? { keywords: renderedKeywords } : {}),
 		keywordLimit: null,
 		keywordLabelMode: renderData.surface.surface === 'gameplay' ? 'compact' : 'full',
 	};
@@ -276,6 +335,8 @@ const RenderFieldAudit: React.FC<{
 				const slotVisible = isSlotVisible(renderData.slots, rule.id);
 				const applies = renderFieldAppliesToCard(rule, card);
 				const rendered = slotVisible && applies;
+				const slot = renderData.slots.find((candidate) => candidate.id === rule.id);
+				const semantics = slot?.semantics;
 				const rowClassName = [
 					'card-layout-render-field',
 					`card-layout-render-field--${rule.priority}`,
@@ -290,6 +351,8 @@ const RenderFieldAudit: React.FC<{
 						<div className="card-layout-render-field__meta">
 							<span>{rule.priority}</span>
 							<span>{rendered ? 'rendered' : applies ? 'slot hidden' : 'filtered'}</span>
+							<span>{semantics?.render ?? 'unknown'}</span>
+							<span>{semantics?.purpose.join(', ') ?? 'unknown'}</span>
 							<span>{compactList(rule.cardTypes, 9)}</span>
 							<span>{compactList(rule.rarities, 4)}</span>
 						</div>
@@ -299,6 +362,314 @@ const RenderFieldAudit: React.FC<{
 		</div>
 	</div>
 );
+
+const toggleListValue = <T extends string>(
+	items: readonly T[],
+	value: T,
+): readonly T[] => (
+	items.includes(value)
+		? items.filter((item) => item !== value)
+		: [...items, value]
+);
+
+const rarityShortLabel = (rarity: Rarity): string => {
+	if (rarity === 'common') return 'Com';
+	if (rarity === 'rare') return 'Rare';
+	if (rarity === 'epic') return 'Epic';
+	return 'Myth';
+};
+
+const RenderFieldEditor: React.FC<{
+	readonly rules: readonly CardLayoutRenderFieldRule[];
+	readonly slots: readonly CardLayoutSlot[];
+	readonly selectedSlotId: CardLayoutSlotId;
+	readonly onPatch: (slotId: CardLayoutSlotId, patch: Partial<Pick<CardLayoutRenderFieldRule, 'enabled' | 'priority' | 'cardTypes' | 'rarities'>>) => void;
+	readonly onSelectSlot: (slotId: CardLayoutSlotId) => void;
+	readonly onSlotVisibleChange: (slotId: CardLayoutSlotId, visible: boolean) => void;
+}> = ({
+	rules,
+	slots,
+	selectedSlotId,
+	onPatch,
+	onSelectSlot,
+	onSlotVisibleChange,
+}) => {
+	const slotVisibleById = useMemo(() => new Map(slots.map((slot) => [slot.id, slot.visible])), [slots]);
+
+	return (
+		<div className="card-layout-field-editor" aria-label="Render field editor">
+			{rules.map((rule) => {
+				const slotVisible = slotVisibleById.get(rule.id) ?? false;
+				const selected = selectedSlotId === rule.id;
+				return (
+					<article
+						key={rule.id}
+						className={[
+							'card-layout-field-editor__rule',
+							rule.enabled ? 'card-layout-field-editor__rule--enabled' : 'card-layout-field-editor__rule--disabled',
+							selected ? 'card-layout-field-editor__rule--selected' : '',
+						].filter(Boolean).join(' ')}
+					>
+						<header className="card-layout-field-editor__rule-head">
+							<label className="card-layout-field-editor__enabled">
+								<input
+									type="checkbox"
+									checked={rule.enabled}
+									onChange={(event) => onPatch(rule.id, { enabled: event.target.checked })}
+								/>
+								<span>{rule.label}</span>
+							</label>
+							<div className="card-layout-field-editor__actions">
+								<button
+									type="button"
+									className={[
+										'card-layout-field-editor__small-button',
+										slotVisible ? 'card-layout-field-editor__small-button--active' : '',
+									].filter(Boolean).join(' ')}
+									onClick={() => onSlotVisibleChange(rule.id, !slotVisible)}
+								>
+									Slot {slotVisible ? 'on' : 'off'}
+								</button>
+								<button
+									type="button"
+									className={[
+										'card-layout-field-editor__small-button',
+										selected ? 'card-layout-field-editor__small-button--active' : '',
+									].filter(Boolean).join(' ')}
+									onClick={() => onSelectSlot(rule.id)}
+								>
+									Focus
+								</button>
+							</div>
+						</header>
+						<label className="card-layout-field-editor__priority">
+							<span>Priority</span>
+							<select
+								value={rule.priority}
+								onChange={(event) => onPatch(rule.id, { priority: event.target.value as CardLayoutFieldPriority })}
+							>
+								{CARD_LAYOUT_FIELD_PRIORITIES.map((priority) => (
+									<option key={priority} value={priority}>{priority}</option>
+								))}
+							</select>
+						</label>
+						<div className="card-layout-field-editor__chips" aria-label={`${rule.label} card types`}>
+							{CARD_LAYOUT_CARD_TYPES.map((cardType) => {
+								const active = rule.cardTypes.includes(cardType);
+								return (
+									<button
+										key={cardType}
+										type="button"
+										className={[
+											'card-layout-field-editor__chip',
+											active ? 'card-layout-field-editor__chip--active' : '',
+										].filter(Boolean).join(' ')}
+										onClick={() => onPatch(rule.id, { cardTypes: toggleListValue<CardLayoutCardType>(rule.cardTypes, cardType) })}
+									>
+										{cardType}
+									</button>
+								);
+							})}
+						</div>
+						<div className="card-layout-field-editor__chips card-layout-field-editor__chips--rarity" aria-label={`${rule.label} rarities`}>
+							{RARITY.map((candidate) => {
+								const active = rule.rarities.includes(candidate);
+								return (
+									<button
+										key={candidate}
+										type="button"
+										className={[
+											'card-layout-field-editor__chip',
+											'card-layout-field-editor__chip--rarity',
+											active ? 'card-layout-field-editor__chip--active' : '',
+										].filter(Boolean).join(' ')}
+										data-rarity={candidate}
+										onClick={() => onPatch(rule.id, { rarities: toggleListValue<Rarity>(rule.rarities, candidate) })}
+									>
+										{rarityShortLabel(candidate)}
+									</button>
+								);
+							})}
+						</div>
+					</article>
+				);
+			})}
+		</div>
+	);
+};
+
+const KeywordContractAudit: React.FC<{
+	readonly keywords: readonly string[];
+	readonly surface: CardPresentationSurface;
+}> = ({ keywords, surface }) => {
+	const uniqueKeywords = Array.from(new Set(keywords));
+	if (uniqueKeywords.length === 0) return null;
+	return (
+		<div className="card-layout-keyword-contract" aria-label="Keyword contract">
+			{uniqueKeywords.map((keyword) => {
+				const semantics = getCardKeywordSemantics(keyword);
+				const importance = getCardKeywordRenderImportance(keyword, surface);
+				const rendered = shouldRenderCardKeywordOnSurface(keyword, surface);
+				return (
+					<div
+						key={keyword}
+						className={[
+							'card-layout-keyword-contract__row',
+							rendered ? 'card-layout-keyword-contract__row--rendered' : 'card-layout-keyword-contract__row--hidden',
+						].join(' ')}
+					>
+						<strong>{semantics.label}</strong>
+						<span>{semantics.functions.join(', ')}</span>
+						<span>{semantics.filterable ? 'filter' : 'no filter'}</span>
+						<span>{surface}: {importance}</span>
+						<span>{rendered ? 'rendered' : 'not rendered'}</span>
+					</div>
+				);
+			})}
+		</div>
+	);
+};
+
+const KeywordIconMark: React.FC<{
+	readonly semantics: CardKeywordSemantics;
+	readonly size?: 'compact' | 'large';
+}> = ({ semantics, size = 'large' }) => {
+	const Icon = KEYWORD_ICON_LOOKUP[semantics.keyword];
+	if (Icon === undefined) {
+		return (
+			<span className={`card-layout-keyword-icon card-layout-keyword-icon--${size}`}>
+				<span className="card-layout-keyword-icon__fallback">{semantics.compactLabel}</span>
+			</span>
+		);
+	}
+	return (
+		<span className={`card-layout-keyword-icon card-layout-keyword-icon--${size}`}>
+			<Icon aria-hidden="true" focusable="false" />
+		</span>
+	);
+};
+
+const KeywordSurfaceBadge: React.FC<{
+	readonly surface: CardPresentationSurface;
+	readonly importance: CardRenderImportance;
+	readonly rendered: boolean;
+}> = ({ surface, importance, rendered }) => (
+	<span
+		className={[
+			'card-layout-keyword-surface',
+			`card-layout-keyword-surface--${importance}`,
+			rendered ? 'card-layout-keyword-surface--rendered' : 'card-layout-keyword-surface--hidden',
+		].join(' ')}
+	>
+		<span>{formatSurfaceLabel(surface)}</span>
+		<strong>{importance}</strong>
+	</span>
+);
+
+const KeywordIconCatalog: React.FC<{
+	readonly surface: CardPresentationSurface;
+	readonly onSurfaceChange: (surface: CardPresentationSurface) => void;
+}> = ({ surface, onSurfaceChange }) => {
+	const visibleKeywordsForSurface = getCardKeywordsForSurface(Object.keys(CARD_KEYWORD_SEMANTICS), surface);
+	const previewLimit = KEYWORD_PREVIEW_LIMITS[surface];
+	const previewKeywords = visibleKeywordsForSurface.slice(0, previewLimit);
+	const overflowCount = Math.max(0, visibleKeywordsForSurface.length - previewKeywords.length);
+	const mappedIconCount = KEYWORD_CATALOG.filter((semantics) => KEYWORD_ICON_LOOKUP[semantics.keyword] !== undefined).length;
+
+	return (
+		<section className="card-layout-keyword-catalog" aria-label="Keyword icon catalog">
+			<header className="card-layout-keyword-catalog__header">
+				<div>
+					<h2 className="card-layout-keyword-catalog__title">Keywords</h2>
+					<p className="card-layout-keyword-catalog__subtitle">
+						{mappedIconCount}/{KEYWORD_CATALOG.length} icons · preview cap {previewLimit} · {formatSurfaceLabel(surface)}
+					</p>
+				</div>
+				<label className="card-layout-canvas-field card-layout-keyword-catalog__surface-select">
+					<span>Surface</span>
+					<select
+						value={surface}
+						onChange={(event) => onSurfaceChange(event.target.value as CardPresentationSurface)}
+					>
+						{CARD_PRESENTATION_SURFACES.map((candidate) => (
+							<option key={candidate} value={candidate}>{formatSurfaceLabel(candidate)}</option>
+						))}
+					</select>
+				</label>
+			</header>
+
+			<div className="card-layout-keyword-preview" aria-label={`${formatSurfaceLabel(surface)} keyword preview`}>
+				<div className="card-layout-keyword-preview__rail">
+					{previewKeywords.map((keyword) => {
+						const semantics = getCardKeywordSemantics(keyword);
+						return (
+							<span
+								key={keyword}
+								className="card-layout-keyword-preview__item"
+								data-tone={keywordToneFor(semantics)}
+								title={`${semantics.label}: ${semantics.description}`}
+							>
+								<KeywordIconMark semantics={semantics} size="compact" />
+								<span>{semantics.compactLabel}</span>
+							</span>
+						);
+					})}
+					{overflowCount > 0 && (
+						<span className="card-layout-keyword-preview__overflow">+{overflowCount}</span>
+					)}
+				</div>
+				<div className="card-layout-keyword-preview__caps">
+					{CARD_PRESENTATION_SURFACES.map((candidate) => (
+						<span key={candidate}>{formatSurfaceLabel(candidate)} {KEYWORD_PREVIEW_LIMITS[candidate]}</span>
+					))}
+				</div>
+			</div>
+
+			<div className="card-layout-keyword-grid">
+				{KEYWORD_CATALOG.map((semantics) => {
+					const tone = keywordToneFor(semantics);
+					const currentImportance = getCardKeywordRenderImportance(semantics.keyword, surface);
+					const renderedOnSurface = shouldRenderCardKeywordOnSurface(semantics.keyword, surface);
+					return (
+						<article
+							key={semantics.keyword}
+							className={[
+								'card-layout-keyword-card',
+								renderedOnSurface ? 'card-layout-keyword-card--surface-visible' : 'card-layout-keyword-card--surface-hidden',
+							].join(' ')}
+							data-tone={tone}
+							data-importance={currentImportance}
+						>
+							<header className="card-layout-keyword-card__header">
+								<KeywordIconMark semantics={semantics} />
+								<div className="card-layout-keyword-card__identity">
+									<h3>{semantics.label}</h3>
+									<span>{semantics.compactLabel}</span>
+								</div>
+							</header>
+							<p className="card-layout-keyword-card__description">{semantics.description}</p>
+							<div className="card-layout-keyword-card__functions" aria-label={`${semantics.label} functions`}>
+								{semantics.functions.map((fn) => (
+									<span key={fn}>{formatKeywordFunction(fn)}</span>
+								))}
+							</div>
+							<div className="card-layout-keyword-card__surfaces" aria-label={`${semantics.label} surface contract`}>
+								{CARD_PRESENTATION_SURFACES.map((candidate) => (
+									<KeywordSurfaceBadge
+										key={candidate}
+										surface={candidate}
+										importance={semantics[candidate]}
+										rendered={shouldRenderCardKeywordOnSurface(semantics.keyword, candidate)}
+									/>
+								))}
+							</div>
+						</article>
+					);
+				})}
+			</div>
+		</section>
+	);
+};
 
 const RealCardRenderer: React.FC<{
 	readonly renderData: CardLayoutRenderData;
@@ -376,6 +747,7 @@ const CardLayoutCanvasPage: React.FC = () => {
 	const [jsonError, setJsonError] = useState<string | null>(null);
 	const [moveScope, setMoveScope] = useState<MoveScope>('single');
 	const [snap, setSnap] = useState(true);
+	const [activeSegment, setActiveSegment] = useState<CanvasSegment>('layout');
 
 	const stageRef = useRef<HTMLDivElement>(null);
 	const dragRef = useRef<{ id: CardLayoutSlotId; startX: number; startY: number; startSlotX: number; startSlotY: number } | null>(null);
@@ -469,6 +841,17 @@ const CardLayoutCanvasPage: React.FC = () => {
 		setDraft(prev => updateCardLayoutSlot(prev, surfaceId, selectedSlotId, patch));
 	}, [surfaceId, selectedSlotId]);
 
+	const updateRenderField = useCallback((
+		slotId: CardLayoutSlotId,
+		patch: Partial<Pick<CardLayoutRenderFieldRule, 'enabled' | 'priority' | 'cardTypes' | 'rarities'>>,
+	) => {
+		setDraft(prev => updateCardLayoutRenderField(prev, surfaceId, slotId, patch));
+	}, [surfaceId]);
+
+	const updateSlotVisibility = useCallback((slotId: CardLayoutSlotId, visible: boolean) => {
+		setDraft(prev => updateCardLayoutSlot(prev, surfaceId, slotId, { visible }));
+	}, [surfaceId]);
+
 	const handleReset = useCallback(() => {
 		setDraft(createDefaultCardLayoutDraft());
 		setJsonError(null);
@@ -552,7 +935,25 @@ const CardLayoutCanvasPage: React.FC = () => {
 					{surface.mode} · {surface.label} · {surface.scene} · {surface.aspectRatio.width}:{surface.aspectRatio.height} · {surface.renderer.size}
 				</p>
 			</header>
+			<div className="card-layout-canvas-page__segments" role="tablist" aria-label="Card layout canvas sections">
+				{(['layout', 'keywords'] as const).map((segment) => (
+					<button
+						key={segment}
+						type="button"
+						role="tab"
+						aria-selected={activeSegment === segment}
+						className={[
+							'card-layout-canvas-page__segment',
+							activeSegment === segment ? 'card-layout-canvas-page__segment--active' : '',
+						].filter(Boolean).join(' ')}
+						onClick={() => setActiveSegment(segment)}
+					>
+						{segment === 'layout' ? 'Layout' : 'Keywords'}
+					</button>
+				))}
+			</div>
 
+			{activeSegment === 'layout' ? (
 			<main className="card-layout-canvas-page__grid">
 				<section className="card-layout-canvas-page__col card-layout-canvas-page__col--left" aria-label="Stage">
 					<div className="card-layout-canvas-fieldrow">
@@ -732,7 +1133,21 @@ const CardLayoutCanvasPage: React.FC = () => {
 							<p className="card-layout-canvas-panel__subtitle">phase · type · rarity</p>
 						</header>
 						{renderData !== null && simpleCard !== null && (
-							<RenderFieldAudit renderData={renderData} card={simpleCard} />
+							<>
+								<RenderFieldAudit renderData={renderData} card={simpleCard} />
+								<RenderFieldEditor
+									rules={surface.renderFields}
+									slots={surface.slots}
+									selectedSlotId={selectedSlotId}
+									onPatch={updateRenderField}
+									onSelectSlot={setSelectedSlotId}
+									onSlotVisibleChange={updateSlotVisibility}
+								/>
+								<KeywordContractAudit
+									keywords={simpleCard.keywords ?? []}
+									surface={renderData.surface.surface}
+								/>
+							</>
 						)}
 					</div>
 				</section>
@@ -786,6 +1201,20 @@ const CardLayoutCanvasPage: React.FC = () => {
 					</div>
 				</section>
 			</main>
+			) : (
+			<main className="card-layout-canvas-page__keywords-main">
+				<KeywordIconCatalog
+					surface={surfaceId}
+					onSurfaceChange={(nextSurface) => {
+						setSurfaceId(nextSurface);
+						const nextSurfaceDraft = draft.surfaces.find((candidate) => candidate.surface === nextSurface);
+						if (nextSurfaceDraft !== undefined && nextSurfaceDraft.slots[0] !== undefined) {
+							setSelectedSlotId(nextSurfaceDraft.slots[0].id);
+						}
+					}}
+				/>
+			</main>
+			)}
 
 			<footer className="card-layout-canvas-page__footer">
 				<button
