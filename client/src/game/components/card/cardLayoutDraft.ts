@@ -159,7 +159,9 @@ const defineSlot = (slot: CardLayoutSlotDefinition): CardLayoutSlot => ({
 
 const collectionSlots = (): readonly CardLayoutSlot[] => [
 	defineSlot({ id: 'art', label: 'Art', x: 3, y: 3, w: 94, h: 88, fontScale: 1, visible: true, textPolicy: 'hidden' }),
-	defineSlot({ id: 'mana', label: 'Mana', x: 1.8, y: 1.3, w: 11, h: 7.7, fontScale: 1, visible: true, textPolicy: 'fit' }),
+	// Reduce the top gem by 30% around its original center so it matches the
+	// visual weight of the lower stat badges.
+	defineSlot({ id: 'mana', label: 'Mana', x: 3.5, y: 2.5, w: 7.7, h: 5.4, fontScale: 1, visible: true, textPolicy: 'fit' }),
 	defineSlot({ id: 'badge', label: 'Badge', x: 86, y: 3.2, w: 10.8, h: 7.6, fontScale: 1, visible: false, textPolicy: 'fit' }),
 	defineSlot({ id: 'description', label: 'Description', x: 8, y: 57.2, w: 84, h: 16.7, fontScale: 0.92, visible: false, textPolicy: 'wrap' }),
 	// Keywords are rendered inside the description slot. Keep their editor
@@ -168,8 +170,10 @@ const collectionSlots = (): readonly CardLayoutSlot[] => [
 	defineSlot({ id: 'keywords', label: 'Keywords', x: 27, y: 57.2, w: 46, h: 5.6, fontScale: 1, visible: false, textPolicy: 'fit' }),
 	defineSlot({ id: 'tribe', label: 'Tribe', x: 24, y: 75.2, w: 52, h: 4.3, fontScale: 0.66, visible: false, textPolicy: 'fit' }),
 	defineSlot({ id: 'name', label: 'Name', x: 13.5, y: 81.3, w: 73, h: 7.5, fontScale: 0.76, visible: true, textPolicy: 'wrap' }),
-	defineSlot({ id: 'attack', label: 'Attack', x: 0, y: 94.1, w: 16, h: 5.9, fontScale: 0.92, visible: true, textPolicy: 'fit' }),
-	defineSlot({ id: 'health', label: 'Health', x: 84, y: 94.1, w: 16, h: 5.9, fontScale: 0.92, visible: true, textPolicy: 'fit' }),
+	// Give the lower stat badges matching side margins while keeping the
+	// centered rarity rail balanced between them.
+	defineSlot({ id: 'attack', label: 'Attack', x: 3, y: 94.1, w: 14, h: 5.9, fontScale: 0.92, visible: true, textPolicy: 'fit' }),
+	defineSlot({ id: 'health', label: 'Health', x: 83, y: 94.1, w: 14, h: 5.9, fontScale: 0.92, visible: true, textPolicy: 'fit' }),
 	// Keep the marker centered on the lower band while giving it 50% more room.
 	defineSlot({ id: 'rarity', label: 'Rarity', x: 33.5, y: 96.7, w: 33, h: 5.4, fontScale: 1, visible: true, textPolicy: 'hidden' }),
 	defineSlot({ id: 'count', label: 'Count', x: 79, y: 13.8, w: 16, h: 9, fontScale: 1, visible: false, textPolicy: 'fit' }),

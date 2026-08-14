@@ -84,9 +84,9 @@ import { DEFAULT_PORTRAIT, getCardArtPath } from '../../utils/art/artMapping';
 import { ELEMENT_BAND } from '../../utils/art/elementBand';
 import './CardLayoutCanvasPage.css';
 
-// v4 resets the editor's saved baseline after the composite description/
-// keyword slots were given an explicit centered relationship.
-const STORAGE_KEY = 'norse:card-layout-canvas-draft:v4';
+// v5 resets the editor's saved baseline after the mana and lower-band
+// geometry were given their final proportions and margins.
+const STORAGE_KEY = 'norse:card-layout-canvas-draft:v5';
 const STAGE_MAX_WIDTH = 520;
 const STAGE_ZOOM = 2.1;
 

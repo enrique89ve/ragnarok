@@ -39,10 +39,10 @@ args or Build-time Secrets. They are runtime-only server values. Do keep
 `VITE_RAGNAROK_RESET_EPOCH` and other public `VITE_*` values available at build
 time, because the browser bundle needs them.
 
-The Docker image is pinned by default to Node `20.20.2` on Alpine `3.22`.
+The Docker image is pinned by default to Node `22.17.0` on Alpine `3.22`.
 `Dockerfile`, `docker-compose.dokploy.yml`, `.nvmrc`, and `package.json`
 document this runtime. Override `NODE_VERSION` or `NODE_ALPINE_VERSION` only
-after a local build and smoke pass.
+after a local build and smoke pass. pnpm 11 requires Node >= 22.13.
 
 ## Environment Variables
 
@@ -57,7 +57,7 @@ Public build-time variables are passed as Docker build args because Vite embeds
 
 ```dotenv
 RAGNAROK_RUNTIME_MODE=alfa-testnet
-NODE_VERSION=20.20.2
+NODE_VERSION=22.17.0
 NODE_ALPINE_VERSION=3.22
 VITE_NETWORK_STAGE=testnet
 VITE_RAGNAROK_PROTOCOL_ID=rk_game_testnet
