@@ -84,11 +84,14 @@ import { DEFAULT_PORTRAIT, getCardArtPath } from '../../utils/art/artMapping';
 import { ELEMENT_BAND } from '../../utils/art/elementBand';
 import './CardLayoutCanvasPage.css';
 
-const STORAGE_KEY = 'norse:card-layout-canvas-draft:v3';
+// v4 resets the editor's saved baseline after the composite description/
+// keyword slots were given an explicit centered relationship.
+const STORAGE_KEY = 'norse:card-layout-canvas-draft:v4';
 const STAGE_MAX_WIDTH = 520;
+const STAGE_ZOOM = 2.1;
 
 type MoveScope = 'single' | 'same' | 'all';
-type CanvasSegment = 'layout' | 'keywords';
+type CanvasSegment = 'layout' | 'keywords' | 'frame';
 type KeywordIconTone = 'choice' | 'combat' | 'filter' | 'poker' | 'progression' | 'resource' | 'state' | 'summon' | 'theme' | 'trigger';
 
 const cloneDraft = cloneCardLayoutDraft;
@@ -704,6 +707,76 @@ const RealCardRenderer: React.FC<{
 	);
 };
 
+const FrameStudy: React.FC<{
+	readonly card: SimpleCardData;
+	readonly draft: CardLayoutDraft;
+	readonly rarity: Rarity;
+	readonly renderData: CardLayoutRenderData;
+	readonly surfaceId: CardLayoutSurface;
+	readonly onRarityChange: (rarity: Rarity) => void;
+	readonly onSurfaceChange: (surface: CardLayoutSurface) => void;
+}> = ({ card, draft, rarity, renderData, surfaceId, onRarityChange, onSurfaceChange }) => (
+	<main className="card-layout-frame-study">
+		<header className="card-layout-frame-study__intro">
+			<div>
+				<p className="card-layout-frame-study__eyebrow">Isolated preview</p>
+				<h2>Minimal frame study</h2>
+				<p>
+					A thicker silhouette built from three quiet material planes. The PNG owns only the frame;
+					card art, values, labels and rarity remain independent layers.
+				</p>
+			</div>
+			<div className="card-layout-frame-study__controls">
+				<label className="card-layout-canvas-field">
+					<span>Surface</span>
+					<select value={surfaceId} onChange={(event) => onSurfaceChange(event.target.value as CardLayoutSurface)}>
+						{draft.surfaces.map((surface) => (
+							<option key={surface.surface} value={surface.surface}>{surface.label}</option>
+						))}
+					</select>
+				</label>
+				<label className="card-layout-canvas-field">
+					<span>Sample</span>
+					<select value={rarity} onChange={(event) => onRarityChange(event.target.value as Rarity)}>
+						{RARITY.map((candidate) => <option key={candidate} value={candidate}>{candidate}</option>)}
+					</select>
+				</label>
+			</div>
+		</header>
+
+		<div className="card-layout-frame-study__comparison">
+			<article className="card-layout-frame-study__option">
+				<header>
+					<p className="card-layout-frame-study__eyebrow">Baseline</p>
+					<h3>Current CSS frame</h3>
+					<p>Thin inner line, restrained shadow and the existing independent rarity marker.</p>
+				</header>
+				<div className="card-layout-frame-study__card">
+					<RealCardRenderer renderData={renderData} card={card} variant="preview" />
+				</div>
+			</article>
+
+			<article className="card-layout-frame-study__option card-layout-frame-study__option--candidate">
+				<header>
+					<p className="card-layout-frame-study__eyebrow">PNG concept · v4</p>
+					<h3>Minimal war-table frame</h3>
+					<p>Half-weight inner rail, compact stat sockets, a tighter upper corner and no rarity shape baked into the asset.</p>
+				</header>
+				<div className="card-layout-frame-study__card card-layout-frame-study__card--concept">
+					<RealCardRenderer renderData={renderData} card={card} variant="preview" />
+				</div>
+			</article>
+		</div>
+
+		<dl className="card-layout-frame-study__facts">
+			<div><dt>Frame weight</dt><dd>3.5–3.8% side rails</dd></div>
+			<div><dt>Art contract</dt><dd>7:10 · cover · centered</dd></div>
+			<div><dt>Rarity</dt><dd>Dynamic SVG · upper layer</dd></div>
+			<div><dt>Status</dt><dd>Preview only · not applied</dd></div>
+		</dl>
+	</main>
+);
+
 const StageSlot: React.FC<{
 	slot: CardLayoutRenderedSlot;
 	selected: boolean;
@@ -780,8 +853,7 @@ const CardLayoutCanvasPage: React.FC = () => {
 		setJsonText(serializeCardLayoutDraft(draft));
 	}, [draft]);
 
-	const stageWidth = useMemo(() => Math.min(STAGE_MAX_WIDTH, Math.round(surface.baseWidth * 1.55)), [surface.baseWidth]);
-	const stageHeight = useMemo(() => stageWidth * (surface.aspectRatio.height / surface.aspectRatio.width), [stageWidth, surface.aspectRatio]);
+	const stageWidth = useMemo(() => Math.min(STAGE_MAX_WIDTH, Math.round(surface.baseWidth * STAGE_ZOOM)), [surface.baseWidth]);
 
 	const onPointerDownSlot = useCallback((event: React.PointerEvent<HTMLDivElement>, id: CardLayoutSlotId) => {
 		const stage = stageRef.current;
@@ -881,8 +953,10 @@ const CardLayoutCanvasPage: React.FC = () => {
 
 	const stageStyle = useMemo<React.CSSProperties>(() => ({
 		width: `${stageWidth}px`,
-		height: `${stageHeight}px`,
-	}), [stageWidth, stageHeight]);
+		height: 'auto',
+		maxWidth: '100%',
+		aspectRatio: `${surface.aspectRatio.width} / ${surface.aspectRatio.height}`,
+	}), [stageWidth, surface.aspectRatio]);
 
 	const aspectRatio = useMemo(() => {
 		if (selectedSlot.w <= 0 || selectedSlot.h <= 0) return '—';
@@ -936,7 +1010,7 @@ const CardLayoutCanvasPage: React.FC = () => {
 				</p>
 			</header>
 			<div className="card-layout-canvas-page__segments" role="tablist" aria-label="Card layout canvas sections">
-				{(['layout', 'keywords'] as const).map((segment) => (
+				{(['layout', 'keywords', 'frame'] as const).map((segment) => (
 					<button
 						key={segment}
 						type="button"
@@ -948,7 +1022,7 @@ const CardLayoutCanvasPage: React.FC = () => {
 						].filter(Boolean).join(' ')}
 						onClick={() => setActiveSegment(segment)}
 					>
-						{segment === 'layout' ? 'Layout' : 'Keywords'}
+						{segment === 'layout' ? 'Layout' : segment === 'keywords' ? 'Keywords' : 'Frame study'}
 					</button>
 				))}
 			</div>
@@ -1201,7 +1275,7 @@ const CardLayoutCanvasPage: React.FC = () => {
 					</div>
 				</section>
 			</main>
-			) : (
+			) : activeSegment === 'keywords' ? (
 			<main className="card-layout-canvas-page__keywords-main">
 				<KeywordIconCatalog
 					surface={surfaceId}
@@ -1214,7 +1288,23 @@ const CardLayoutCanvasPage: React.FC = () => {
 					}}
 				/>
 			</main>
-			)}
+			) : renderData !== null && simpleCard !== null ? (
+				<FrameStudy
+					card={simpleCard}
+					draft={draft}
+					rarity={rarity}
+					renderData={renderData}
+					surfaceId={surfaceId}
+					onRarityChange={setRarity}
+					onSurfaceChange={(nextSurface) => {
+						setSurfaceId(nextSurface);
+						const nextSurfaceDraft = draft.surfaces.find((candidate) => candidate.surface === nextSurface);
+						if (nextSurfaceDraft !== undefined && nextSurfaceDraft.slots[0] !== undefined) {
+							setSelectedSlotId(nextSurfaceDraft.slots[0].id);
+						}
+					}}
+				/>
+			) : null}
 
 			<footer className="card-layout-canvas-page__footer">
 				<button

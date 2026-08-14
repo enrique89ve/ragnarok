@@ -156,6 +156,7 @@ type PackBurnResolution =
 const IGNORE_RESULT: OpResult = { status: 'ignored' };
 const GAME_ACTIONS_REQUIRING_SLASH_CHECK = new Set<ProtocolAction>([
 	'match_anchor', 'match_result', 'campaign_result', 'queue_join',
+	'daily_quest_claim', 'rune_exchange',
 ]);
 const RARITY_CARD_CAPS: Record<string, number> = {
 	common: 2000,

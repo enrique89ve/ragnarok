@@ -162,12 +162,16 @@ const collectionSlots = (): readonly CardLayoutSlot[] => [
 	defineSlot({ id: 'mana', label: 'Mana', x: 1.8, y: 1.3, w: 11, h: 7.7, fontScale: 1, visible: true, textPolicy: 'fit' }),
 	defineSlot({ id: 'badge', label: 'Badge', x: 86, y: 3.2, w: 10.8, h: 7.6, fontScale: 1, visible: false, textPolicy: 'fit' }),
 	defineSlot({ id: 'description', label: 'Description', x: 8, y: 57.2, w: 84, h: 16.7, fontScale: 0.92, visible: false, textPolicy: 'wrap' }),
-	defineSlot({ id: 'keywords', label: 'Keywords', x: 8, y: 57.2, w: 84, h: 5.6, fontScale: 1, visible: false, textPolicy: 'fit' }),
+	// Keywords are rendered inside the description slot. Keep their editor
+	// rectangle as a centered inner rail instead of duplicating the full text
+	// region, so the default canvas explains the composite layout at a glance.
+	defineSlot({ id: 'keywords', label: 'Keywords', x: 27, y: 57.2, w: 46, h: 5.6, fontScale: 1, visible: false, textPolicy: 'fit' }),
 	defineSlot({ id: 'tribe', label: 'Tribe', x: 24, y: 75.2, w: 52, h: 4.3, fontScale: 0.66, visible: false, textPolicy: 'fit' }),
 	defineSlot({ id: 'name', label: 'Name', x: 13.5, y: 81.3, w: 73, h: 7.5, fontScale: 0.76, visible: true, textPolicy: 'wrap' }),
 	defineSlot({ id: 'attack', label: 'Attack', x: 0, y: 94.1, w: 16, h: 5.9, fontScale: 0.92, visible: true, textPolicy: 'fit' }),
 	defineSlot({ id: 'health', label: 'Health', x: 84, y: 94.1, w: 16, h: 5.9, fontScale: 0.92, visible: true, textPolicy: 'fit' }),
-	defineSlot({ id: 'rarity', label: 'Rarity', x: 39, y: 94.4, w: 22, h: 4.8, fontScale: 1, visible: true, textPolicy: 'hidden' }),
+	// Keep the marker centered on the lower band while giving it 50% more room.
+	defineSlot({ id: 'rarity', label: 'Rarity', x: 33.5, y: 96.7, w: 33, h: 5.4, fontScale: 1, visible: true, textPolicy: 'hidden' }),
 	defineSlot({ id: 'count', label: 'Count', x: 79, y: 13.8, w: 16, h: 9, fontScale: 1, visible: false, textPolicy: 'fit' }),
 ];
 

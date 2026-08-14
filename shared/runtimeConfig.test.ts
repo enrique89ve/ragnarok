@@ -18,7 +18,7 @@ describe('runtimeConfig', () => {
 	it('keeps every runtime profile on the same season boundary contract', () => {
 		for (const [profile, config] of Object.entries(RAGNAROK_RUNTIME_CONFIGS)) {
 			expect(config.seasonStart, `${profile} seasonStart`).toBe('2026-06-14T23:28:54Z');
-			expect(config.indexStartBlock, `${profile} indexStartBlock`).toBe(107278144);
+			expect(config.indexStartBlock, `${profile} indexStartBlock`).toBe(109016418);
 		}
 	});
 
@@ -39,7 +39,7 @@ describe('runtimeConfig', () => {
 			acceptsLegacyProtocolIds: false,
 			resetEpoch: 'qa-s0-2026-05',
 			seasonStart: '2026-06-14T23:28:54Z',
-			indexStartBlock: 107278144,
+			indexStartBlock: 109016418,
 		});
 	});
 
@@ -221,7 +221,7 @@ describe('runtimeConfig', () => {
 			economic: false,
 			runtimePhase: 'qa-season-0',
 			seasonStart: '2026-06-14T23:28:54Z',
-			indexStartBlock: 107278144,
+			indexStartBlock: 109016418,
 			storageNamespace: 'ragnarok-testnet-qa-s0-export-evidence-rk-game-testnet',
 			qaFullCatalogEnabled: true,
 		});

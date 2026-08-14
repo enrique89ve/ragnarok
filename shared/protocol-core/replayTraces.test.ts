@@ -1291,6 +1291,22 @@ describe('Protocol Core: Replay Traces', () => {
 		expect((result as { reason: string }).reason).toContain('slashed');
 	});
 
+	it('slashed account cannot rune_exchange without spending RUNE or minting a pack', async () => {
+		state.slashed.add('mallory');
+		await deps.state.putTokenBalance({ account: 'mallory', RUNE: 10 });
+
+		const result = await applyOp(makeOp('rune_exchange', {
+			pack_type: 'standard',
+			quantity: 1,
+		}, { broadcaster: 'mallory', trxId: 'rune-x-slashed', blockNum: 2000 }), defaultCtx, deps);
+
+		expect(result.status).toBe('rejected');
+		expect((result as { reason: string }).reason).toContain('slashed');
+		expect((await deps.state.getTokenBalance('mallory')).RUNE).toBe(10);
+		expect(state.runeLedger.size).toBe(0);
+		expect(state.packs.size).toBe(0);
+	});
+
 	// --- RUNE Ledger ---
 
 	it('ranked match_result credits P2P RUNE through one consumed source', async () => {

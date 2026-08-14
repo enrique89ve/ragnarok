@@ -121,14 +121,14 @@ if (mode === 'alfa-testnet') {
   optionalEqual('VITE_NFTLOX_PROTOCOL_ID', 'nftlox_testnet');
   requirePrefix('VITE_RAGNAROK_RESET_EPOCH', 'alfa-testnet-');
   requireEqual('VITE_SEASON_START', '2026-06-14T23:28:54Z');
-  requireEqual('VITE_RAGNAROK_INDEX_START_BLOCK', '107278144');
+  requireEqual('VITE_RAGNAROK_INDEX_START_BLOCK', '109016418');
 
   if (scope === 'runtime') {
     requirePrefix('RAGNAROK_RESET_EPOCH', 'alfa-testnet-');
     requireEqual('RAGNAROK_SEASON_START', value('VITE_SEASON_START') ?? '2026-06-14T23:28:54Z');
     requireValue('RAGNAROK_CHAIN_STATE_FILE');
     requireEqual('RAGNAROK_NFT_OWNERSHIP_SOURCE', 'json');
-    requireEqual('RAGNAROK_INDEX_START_BLOCK', value('VITE_RAGNAROK_INDEX_START_BLOCK') ?? '107278144');
+    requireEqual('RAGNAROK_INDEX_START_BLOCK', value('VITE_RAGNAROK_INDEX_START_BLOCK') ?? '109016418');
     const p2pSecret = requireValue('P2P_CHALLENGE_SIGNING_SECRET');
     if (p2pSecret && p2pSecret.length < P2P_SECRET_MIN_LENGTH) {
       errors.push(`P2P_CHALLENGE_SIGNING_SECRET must be at least ${P2P_SECRET_MIN_LENGTH} characters.`);

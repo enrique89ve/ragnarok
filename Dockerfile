@@ -12,7 +12,7 @@ ENV NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT=120000
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
-    pnpm install -g pnpm@11 --no-audit --fund=false \
+    corepack enable \
     && pnpm install --frozen-lockfile --no-audit
 
 FROM deps AS build
@@ -32,7 +32,8 @@ ARG VITE_RAGNAROK_ART_INDEXER_URL
 ARG VITE_NFTLOX_PROTOCOL_ID
 ARG VITE_NFT_ART_BASE_URL
 ARG VITE_EXTERNAL_URL_BASE
-ARG VITE_SEASON_START
+ARG VITE_SEASON_START=2026-06-14T23:28:54Z
+ARG VITE_RAGNAROK_INDEX_START_BLOCK=109016418
 
 ENV VITE_NETWORK_STAGE=$VITE_NETWORK_STAGE
 ENV VITE_RAGNAROK_PROTOCOL_ID=$VITE_RAGNAROK_PROTOCOL_ID
@@ -49,6 +50,7 @@ ENV VITE_NFTLOX_PROTOCOL_ID=$VITE_NFTLOX_PROTOCOL_ID
 ENV VITE_NFT_ART_BASE_URL=$VITE_NFT_ART_BASE_URL
 ENV VITE_EXTERNAL_URL_BASE=$VITE_EXTERNAL_URL_BASE
 ENV VITE_SEASON_START=$VITE_SEASON_START
+ENV VITE_RAGNAROK_INDEX_START_BLOCK=$VITE_RAGNAROK_INDEX_START_BLOCK
 
 COPY . .
 RUN pnpm run verify:runtime-env -- --mode=alfa-testnet && pnpm run build:alfa-testnet
@@ -75,6 +77,8 @@ ENV RAGNAROK_RESET_EPOCH=alfa-testnet-full-nft-2026-05-22
 ENV RAGNAROK_ADMIN_OPERATOR_ACCOUNT=ragnarok-test-operator
 ENV RAGNAROK_CHAIN_STATE_FILE=data/chain-state.alfa-testnet.json
 ENV RAGNAROK_NFT_OWNERSHIP_SOURCE=json
+ENV RAGNAROK_SEASON_START=2026-06-14T23:28:54Z
+ENV RAGNAROK_INDEX_START_BLOCK=109016418
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY --from=prod-deps /app/node_modules ./node_modules

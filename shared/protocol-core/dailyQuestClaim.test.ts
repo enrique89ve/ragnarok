@@ -39,6 +39,7 @@ const TEST_YMD_MS = Date.UTC(2026, 4, 14);
 function createStateAdapter(): StateAdapter & {
 	readonly runeLedger: Map<string, RuneLedgerEntry>;
 	readonly tokens: Map<string, TokenBalance>;
+	readonly slashed: Set<string>;
 } {
 	const campaignNonces = new Map<string, number>();
 	const campaignSubmissions = new Map<string, CampaignSubmissionRecord>();
@@ -46,6 +47,7 @@ function createStateAdapter(): StateAdapter & {
 	const rewardClaims = new Set<string>();
 	const runeLedger = new Map<string, RuneLedgerEntry>();
 	const tokens = new Map<string, TokenBalance>();
+	const slashed = new Set<string>();
 	let genesis: GenesisRecord | null = {
 		version: '1',
 		sealed: false,
@@ -57,6 +59,7 @@ function createStateAdapter(): StateAdapter & {
 	return {
 		runeLedger,
 		tokens,
+		slashed,
 
 		async getGenesis(): Promise<GenesisRecord | null> { return genesis; },
 		async putGenesis(nextGenesis: GenesisRecord): Promise<void> { genesis = nextGenesis; },
@@ -147,7 +150,7 @@ function createStateAdapter(): StateAdapter & {
 		async putCampaignProgress(progress: CampaignProgressRecord): Promise<void> {
 			campaignProgress.set(`${progress.account}:${progress.campaignId}:${progress.missionId}`, progress);
 		},
-		async isSlashed(): Promise<boolean> { return false; },
+		async isSlashed(account: string): Promise<boolean> { return slashed.has(account); },
 		async slash(): Promise<void> { /* noop */ },
 		async getQueueEntry(): Promise<{ timestamp: number } | null> { return null; },
 		async putQueueEntry(): Promise<void> { /* noop */ },
@@ -316,6 +319,19 @@ describe('daily_quest_claim protocol op', () => {
 		expect(duplicate.status).toBe('ignored');
 		expect((await state.getTokenBalance('alice')).RUNE).toBe(2);
 		expect(state.runeLedger.size).toBe(1);
+	});
+
+	it('rejects daily quest claims from slashed accounts without mutation', async () => {
+		const state = createStateAdapter();
+		const deps = createDeps(state);
+		state.slashed.add('alice');
+
+		const result = await applyDailyQuestClaim(deps);
+
+		expect(result.status).toBe('rejected');
+		expect((result as { reason: string }).reason).toContain('slashed');
+		expect((await state.getTokenBalance('alice')).RUNE).toBe(0);
+		expect(state.runeLedger.size).toBe(0);
 	});
 
 	it('accumulates across days (2 days × 3 slots = 12 RUNE)', async () => {

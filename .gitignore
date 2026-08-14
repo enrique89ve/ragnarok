@@ -315,6 +315,8 @@ data/chain-state.*.json
 # (per-developer design artefacts, not pushed)
 docs/superpowers/
 docs/BETA_TESTNET_ROADMAP.md
+# Local RUNE economy attack-vector study (per-developer design artefact)
+docs/RUNE_ATTACK_VECTORS.md
 a.out
 .playwright-mcp/
 
