@@ -13,7 +13,7 @@ ENV NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT=120000
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     corepack enable \
-    && pnpm install --frozen-lockfile --no-audit
+    && pnpm install --frozen-lockfile
 
 FROM deps AS build
 WORKDIR /app
