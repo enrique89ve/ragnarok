@@ -9,6 +9,11 @@ import {
 	type P2PMatchTicket,
 } from '../../shared/p2pAvailability';
 import { buildP2PQueueAuthMessage } from '../../shared/p2pMatchmakingAuth';
+import {
+	PHASE_CHECKPOINT_PROTOCOL_VERSION,
+	PHASE_CHECKPOINT_SCOPE,
+	ZERO_PHASE_CHECKPOINT_ID,
+} from '../../shared/p2p-wire/phaseCheckpoint';
 import { attachP2PRelay } from './p2pRelay';
 import { verifyHiveAuth } from '../services/hiveAuth';
 import {
@@ -271,6 +276,33 @@ function waitForApplicationMessage(socket: WebSocket): Promise<Record<string, un
 	});
 }
 
+function waitForPhaseCheckpoint(socket: WebSocket): Promise<Record<string, unknown>> {
+	return new Promise((resolve, reject) => {
+		const timeout = setTimeout(() => {
+			cleanup();
+			reject(new Error('Timed out waiting for phase checkpoint'));
+		}, 5_000);
+		const cleanup = () => {
+			clearTimeout(timeout);
+			socket.off('message', onMessage);
+			socket.off('error', onError);
+		};
+		const onError = (error: Error) => {
+			cleanup();
+			reject(error);
+		};
+		const onMessage = (raw: RawData) => {
+			const envelope = parseJsonRecord(raw);
+			if (!envelope || envelope.type !== '__sys' || envelope.event !== 'phase_checkpoint') return;
+			if (!isRecord(envelope.message)) return;
+			cleanup();
+			resolve(envelope.message);
+		};
+		socket.on('message', onMessage);
+		socket.once('error', onError);
+	});
+}
+
 describe('matchmaking and relay integration', () => {
 	beforeEach(() => {
 		process.env.NODE_ENV = 'test';
@@ -376,6 +408,34 @@ describe('matchmaking and relay integration', () => {
 			const receivedByPeerTwo = waitForApplicationMessage(peerTwoSocket);
 			peerOneSocket.send(JSON.stringify({ type: 'ping', t: 1 }));
 			await expect(receivedByPeerTwo).resolves.toMatchObject({ type: 'ping', t: 1 });
+
+			const proposal = {
+				type: 'phase_checkpoint_propose_v1',
+				protocolVersion: PHASE_CHECKPOINT_PROTOCOL_VERSION,
+				scope: PHASE_CHECKPOINT_SCOPE,
+				matchId: peerOneMatch.matchId,
+				epoch: 1,
+				fromPhase: 'chess',
+				toPhase: 'poker_combat',
+				previousCheckpointId: ZERO_PHASE_CHECKPOINT_ID,
+				stateRoot: '1'.repeat(64),
+			};
+			const peerOneCheckpoint = waitForPhaseCheckpoint(peerOneSocket);
+			const peerTwoCheckpoint = waitForPhaseCheckpoint(peerTwoSocket);
+			peerOneSocket.send(JSON.stringify(proposal));
+			peerTwoSocket.send(JSON.stringify(proposal));
+			const [firstCommit, secondCommit] = await Promise.all([
+				peerOneCheckpoint,
+				peerTwoCheckpoint,
+			]);
+			expect(firstCommit).toEqual(secondCommit);
+			expect(firstCommit).toMatchObject({
+				type: 'phase_checkpoint_commit_v1',
+				roomId: peerOneMatch.matchId,
+				matchId: peerOneMatch.matchId,
+				epoch: 1,
+				stateRoot: '1'.repeat(64),
+			});
 		} finally {
 			for (const socket of sockets) {
 				if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {

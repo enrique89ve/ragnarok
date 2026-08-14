@@ -24,7 +24,8 @@ import { CHESS_PIECE_HEROES, pieceHasSpells } from '../../data/ChessPieceConfig'
 import {
   initialBoardState,
   ChessCombatSlice,
-  UnifiedCombatStore
+  UnifiedCombatStore,
+  type ChessMutationResult
 } from './types';
 import { debug } from '../../config/debugConfig';
 import { createSeededRng, createSeededIdGen } from '../../utils/seededRng';
@@ -52,14 +53,13 @@ export function resolveChessAttackIntent(
   getState: () => UnifiedCombatStore,
   setState: (partial: Partial<UnifiedCombatStore>) => void,
   attack: ChessAttackResolutionInput
-): void {
+): ChessMutationResult {
   const state = getState();
 
   debug.chess(`[Chess] Resolving attack intent: ${attack.attacker.heroName} -> ${attack.defender.heroName}`);
 
   if (attack.isInstantKill) {
-    state.executeInstantKill(attack.attacker, attack.defender, attack.defenderPosition);
-    return;
+    return state.executeInstantKill(attack.attacker, attack.defender, attack.defenderPosition);
   }
 
   const mineResult = state.checkAndTriggerMine(
@@ -92,6 +92,7 @@ export function resolveChessAttackIntent(
       gameStatus: 'combat'
     }
   });
+  return { status: 'applied' };
 }
 
 export const createChessCombatSlice: StateCreator<
@@ -283,7 +284,7 @@ export const createChessCombatSlice: StateCreator<
       p => p.position.row === from.row && p.position.col === from.col
     );
 
-    if (!piece) return;
+    if (!piece) return { status: 'rejected', reason: 'no-such-piece' };
 
     const result: ChessReduceResult<ChessPiece> = applyChessAction(
       state.boardState,
@@ -291,7 +292,7 @@ export const createChessCombatSlice: StateCreator<
     );
     if (!result.ok) {
       debug.chess(`[Chess] executeMove rejected by reducer: ${result.reason}`);
-      return;
+      return { status: 'rejected', reason: result.reason };
     }
 
     set({
@@ -330,6 +331,7 @@ export const createChessCombatSlice: StateCreator<
     if (get().boardState.gameStatus === 'playing') {
       state.nextTurn();
     }
+    return { status: 'applied' };
   },
 
   executeInstantKill: (attacker: ChessPiece, defender: ChessPiece, targetPosition: ChessBoardPosition) => {
@@ -345,7 +347,7 @@ export const createChessCombatSlice: StateCreator<
     });
     if (!result.ok) {
       debug.chess(`[Chess] executeInstantKill rejected by reducer: ${result.reason}`);
-      return;
+      return { status: 'rejected', reason: result.reason };
     }
 
     state.recordInstantKill(targetPosition, attacker.type);
@@ -390,6 +392,7 @@ export const createChessCombatSlice: StateCreator<
       type: 'attack',
       message: `${attacker.heroName} instantly killed ${defender.heroName}`
     });
+    return { status: 'applied' };
   },
 
   // Thin wrapper. Rule logic lives in shared/protocol-core/chess (portable,
@@ -404,6 +407,16 @@ export const createChessCombatSlice: StateCreator<
   },
 
   beginChessAttack: (attacker: ChessPiece, defender: ChessPiece, isInstantKill: boolean) => {
+    const validation = applyChessAction(get().boardState, {
+      kind: 'capture',
+      attackerId: attacker.id,
+      victimId: defender.id,
+      to: defender.position
+    });
+    if (!validation.ok) {
+      debug.chess(`[Chess] beginChessAttack rejected by reducer: ${validation.reason}`);
+      return { status: 'rejected', reason: validation.reason };
+    }
     const attack: ChessAttackResolutionInput = {
       attacker,
       defender,
@@ -413,7 +426,7 @@ export const createChessCombatSlice: StateCreator<
     };
 
     get().startAttackAnimation(attacker, defender, isInstantKill);
-    resolveChessAttackIntent(get, set, attack);
+    return resolveChessAttackIntent(get, set, attack);
   },
 
   getThreateningPieces: (kingPosition: ChessBoardPosition, attackerSide: ChessPlayerSide, pieces?: ChessPiece[]): ChessPiece[] =>

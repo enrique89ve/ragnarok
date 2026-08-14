@@ -42,6 +42,13 @@ production-hosted testnet profile used to prove Dokploy, SSL/Cloudflare,
 WebSocket/P2P, runtime JSON state, admin diagnostics, and full-NFT gameplay
 mechanics before inviting a wider tester cohort.
 
+Current P2P scope is gameplay-only: two browsers run chess and poker while the
+WebSocket relay compares deterministic roots only at phase boundaries. Matches
+do not sign or broadcast Hive `match_anchor`/`match_result`, do not trigger
+Keychain after matchmaking, and do not settle P2P RUNE, ELO, Season Score or
+CardXP. See
+[`ADR 0007`](docs/adr/0007-p2p-gameplay-only-testnet.md).
+
 Hard rule: `VITE_NETWORK_STAGE` has only three valid values:
 `local`, `testnet`, and `mainnet`. QA Season 0, Alfa Testnet, and Closed
 Testnet Beta are runtime phases selected by `VITE_RAGNAROK_RESET_EPOCH`, not
@@ -638,10 +645,15 @@ server/
 
 - [ ] Prove the deployed Alfa runtime through `/api/health` and `/api/admin/config`: `stage=testnet`, `runtimePhase=alfa-testnet`, `resetEpoch=alfa-testnet-*`, `qaFullCatalogEnabled=false`, JSON state evidence.
 - [ ] Complete Hive/Keychain smoke with an internal testnet account.
-- [ ] Complete the two-browser P2P smoke: quiet chess move, instant capture, poker capture, reconnect, reload guard, explicit result, export JSON.
+- [ ] Complete the gameplay-only two-browser P2P smoke: quiet chess move,
+  instant capture, poker capture, deterministic phase checkpoints, reconnect,
+  reload guard, local result, zero match-driven Keychain prompts, zero Hive
+  result operation, and export JSON.
 - [ ] Create and prove the Ragnarok NFTLoX testnet collection/schema before Closed Beta invites.
 - [ ] Rotate to a `closed-beta-*` reset epoch and prove `closedBetaCutover.inviteBlocked=false` only after NFTLoX proof, Hive/Keychain smoke, two-browser P2P smoke, and operator sign-off env evidence are set.
-- [ ] Keep P2P ranked RUNE, official ELO, and Season Score dark until the winner-arbiter can verify and broadcast ranked `match_result`.
+- [ ] Keep P2P `match_anchor`/`match_result`, ranked RUNE, official ELO, Season
+  Score and CardXP dark; winner arbitration and Hive settlement are a later
+  release track, not a blocker for the gameplay-only smoke.
 
 ### Later: Genesis Launch
 

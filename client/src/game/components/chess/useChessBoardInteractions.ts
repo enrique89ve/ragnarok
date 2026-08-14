@@ -6,6 +6,7 @@ import { useKingChessAbility } from '../../hooks/useKingChessAbility';
 import { useGameStore } from '../../stores/gameStore';
 import { useUnifiedCombatStore } from '../../stores/unifiedCombatStore';
 import { captureChessPrevHashes, sendChessAttack, sendChessCombatInitiated, sendChessMove } from '../../p2p/chessWireSender';
+import { chessIntegrityMonitor } from '../../p2p/chessIntegrityMonitor';
 import type { ChessBoardPosition, ChessPiece } from '../../types/ChessTypes';
 import {
   didMoveApply,
@@ -296,6 +297,10 @@ export function useChessBoardInteractions(input: UseChessBoardInteractionsInput)
       }
 
       const matchId = useGameStore.getState().matchId;
+      if (matchId && !chessIntegrityMonitor.canStartTransition()) {
+        debug.warn('[Chess] Move blocked while transition integrity is awaiting confirmation or quarantined');
+        return;
+      }
 
       // Capture the moving piece BEFORE movePiece — it clears selectedPiece
       // as part of the move, so we can't read it post-call. Same with the

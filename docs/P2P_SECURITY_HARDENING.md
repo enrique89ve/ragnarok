@@ -1,5 +1,14 @@
 # P2P Security Hardening — Design & Implementation
 
+> **Status**: Historical — absorbed.
+>
+> Los cinco invariantes de este documento (match session binding, gameState
+> authentication, identity binding, result proposal correlation, dual-sig sin
+> fallback) ya son canon en
+> [`PVP_WIRE_PROTOCOL.md`](./PVP_WIRE_PROTOCOL.md) (hardening invariants).
+> Este archivo se conserva como registro de decisiones; no editar para reflejar
+> el estado actual.
+
 **Status**: Implementing
 **Date**: 2026-03-19
 **Affects**: `useWireSync.ts`, `peerStore.ts`, `BlockchainSubscriber.ts`

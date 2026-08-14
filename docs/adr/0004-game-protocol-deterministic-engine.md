@@ -5,6 +5,14 @@
 **Deciders**: enrique
 **Supersedes**: RAGNAROK_PROTOCOL_V1.md §14 entry "Protocol-id split into multiple namespaces" (as a non-goal)
 
+> **Current testnet qualification (2026-08-13):**
+> [ADR 0007](./0007-p2p-gameplay-only-testnet.md) defers this ADR's
+> Hive-authorized session keys, `match_anchor`, signed action envelopes,
+> `session_renewal`, result signing and settlement. Current P2P testnet matches
+> use server-notarized phase checkpoints, produce a local result and open no
+> match-driven Keychain prompt. The design below remains the future ranked
+> settlement target.
+
 ---
 
 ## Context
@@ -23,7 +31,12 @@ The two have completely different update cadences, validation complexity, and au
 | Trust model | Chain = source of truth per op | Chain = finality only; engine off-chain |
 | Audit consumers | Wallets, explorer, marketplace | Game client, dispute resolver |
 
-The owner philosophy is explicit: **the server is not a mediator that synchronizes mid-match between peers — it is an arbiter that validates the final envelope and resolves disputes**. Peers run the game state machine locally and exchange moves via the WS relay (`/ws/p2p`). On match end, the winner broadcasts `match_result`. On contradiction, opponents have a slash window to submit `slash_evidence`.
+The future ranked-settlement model assumed here is explicit: **the server is not
+a mediator that synchronizes mid-match between peers — it is an arbiter that
+validates the final envelope and resolves disputes**. Peers run the game state
+machine locally and exchange moves via the WS relay (`/ws/p2p`). In that future
+model the winner broadcasts `match_result` and contradictions open a slash
+window. ADR 0007 does not activate either behavior in the current testnet.
 
 For this model to be honest, two architectural invariants must hold:
 
@@ -33,7 +46,7 @@ For this model to be honest, two architectural invariants must hold:
 Today neither holds cleanly. The game engine lives in TypeScript `gameStore.ts` + `unifiedCombatStore.ts`, mixed with React effects (`RagnarokGameCoordinator.tsx` owns the `useEffect` that detects game_over). Per the deterministic-engine audit:
 
 - TS engine has React lifecycle coupling — win-detection in a `useEffect`, phase guards scattered across components.
-- `applyAction` in `assembly/engine/actionProcessor.ts` exists in AssemblyScript source but is partially wired (per [memoria `wasm-engine-stub`](../../.claude/projects/-root-projects-norse-mythos-card-game/memory/wasm-engine-stub.md)).
+- `applyAction` in `assembly/engine/actionProcessor.ts` exists in AssemblyScript source but was partially wired in the historical `wasm-engine-stub` audit.
 - Chess engine is **0% in WASM**: all chess mutations live in `unifiedCombatStore.boardState` TypeScript.
 - Per-turn `hash_check` already runs between peers via WASM (`computeStateHash`), but if engines diverge, this triggers false-positive slash because the verifier is deterministic and the mutator is not.
 
@@ -116,7 +129,11 @@ Alternatives explicitly rejected (see §Rejected alternatives below):
 
 ### 5. Phasing
 
-**Critical revision**: phasing puts the **transport + crypto + protocol infrastructure first** (Phase 0, sin WASM) and migrates the engine to WASM second (Phases 1–2). This separates two distinct risks — protocol design vs engine determinism — so each can be validated in isolation. The full WASM migration is **not required** to start testing the new P2P trust model.
+**Historical ranked-settlement phasing**: this sequence puts the **transport +
+crypto + protocol infrastructure first** (Phase 0, sin WASM) and migrates the
+engine to WASM second (Phases 1–2). ADR 0007 now defers Phase 0 settlement
+activation until after the gameplay-only testnet track. The full WASM migration
+is **not required** to test the current P2P gameplay model.
 
 | Phase | Scope | Engine | Test gate before next |
 |---|---|---|---|
@@ -207,14 +224,17 @@ Server pending queue TTL:              100 blocks (~5 min)
 Slash window total:                    100 blocks post-match_result broadcast
 ```
 
-**Keychain prompts in recovery**:
+**Future ranked-settlement Keychain prompts in recovery** (not active in the
+ADR 0007 gameplay-only testnet):
 
 - Match start: 1 Posting prompt (`session_authorize`; reused for action-log encryption)
 - Mid-match: 0 prompts
 - Per reload: 1 Posting prompt (session_renewal)
 - Match end: 1 Posting prompt (final result envelope)
 
-Worst case: user reloads 3 times during a match = 5 prompts total. Tolerable.
+This historical budget is not acceptable for the current gameplay-only track.
+ADR 0007 requires zero match-driven prompts; reload recovery must either use the
+supported unsigned P2P path or surface a local blocker.
 
 **Edge cases**:
 
@@ -319,7 +339,7 @@ A new lint script `scripts/audit-wasm-determinism.mjs` (Python or Node) will enf
 
 **Why considered**: zero migration cost.
 
-**Why rejected**: produces false-positive slash. Engine in TS + React drifts subtly between peers (effect timing, Number precision, Map iteration); WASM hash check catches the drift and triggers slash, blaming the honest peer. Per [memoria `wasm-engine-stub`](../../.claude/projects/-root-projects-norse-mythos-card-game/memory/wasm-engine-stub.md): "P2P determinism plans must account for this." This ADR is that accounting.
+**Why rejected**: produces false-positive slash. Engine in TS + React drifts subtly between peers (effect timing, Number precision, Map iteration); WASM hash check catches the drift and triggers slash, blaming the honest peer. The historical `wasm-engine-stub` audit required P2P determinism plans to account for this; this ADR is that accounting.
 
 ### Alt 5: Per-turn chain anchoring (optimistic vs not)
 

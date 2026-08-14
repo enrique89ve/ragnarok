@@ -31,7 +31,11 @@ import {
 } from '../p2p/p2pPerspective';
 import { createSeededIdGen, cryptoIdGen, cryptoRng } from '../utils/seededRng';
 import { getNoLegalMovesStatus } from '@shared/protocol-core/chess';
+import type { PhaseCheckpointPhase } from '@shared/p2p-wire/phaseCheckpoint';
 import { resolveHeroPortrait } from '../utils/art/artMapping';
+import { useP2PActions } from '../context/useP2PActions';
+import { capturePhaseBoundaryStateRoot } from '../p2p/phaseBoundaryRoot';
+import { GameEventBus } from '../../core/events/GameEventBus';
 import { useCampaignGameBootstrap } from './hooks/useCampaignGameBootstrap';
 import { useBossRuleEffects } from './hooks/useBossRuleEffects';
 import {
@@ -152,6 +156,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   const ctx = useMatchStore((s) => s.activeMatch);
 
   const { playSoundEffect } = useAudio();
+  const p2pActions = useP2PActions();
   const navigate = useNavigate();
 
   const campaignDifficultyFromStore = useCampaignStore(s => s.currentDifficulty);
@@ -195,6 +200,56 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   const startFlow = useGameFlowStore(s => s.start);
   const dispatchFlow = useGameFlowStore(s => s.dispatch);
   const clearFlow = useGameFlowStore(s => s.clear);
+  const phaseTransitionGateRef = useRef<Promise<void> | null>(null);
+
+  const runPhaseTransition = useCallback((input: {
+    readonly fromPhase: PhaseCheckpointPhase;
+    readonly toPhase: PhaseCheckpointPhase;
+    readonly apply: () => void;
+  }): void => {
+    if (!isP2PConnected) {
+      input.apply();
+      return;
+    }
+    if (phaseTransitionGateRef.current) return;
+
+    const stateRoot = capturePhaseBoundaryStateRoot({
+      fromPhase: input.fromPhase,
+      toPhase: input.toPhase,
+      isCardsAuthority: p2pActions.isHost,
+    });
+    if (!stateRoot) {
+      GameEventBus.emitNotification({
+        level: 'error',
+        message: 'Phase verification unavailable. The match is paused safely.',
+        duration: 12_000,
+      });
+      return;
+    }
+
+    const gate = p2pActions.requestPhaseCheckpoint({
+      fromPhase: input.fromPhase,
+      toPhase: input.toPhase,
+      stateRoot,
+    }).then((result) => {
+      if (result.status === 'committed') {
+        input.apply();
+        return;
+      }
+      GameEventBus.emitNotification({
+        level: 'error',
+        message: result.status === 'disputed'
+          ? 'Phase mismatch detected. The match is frozen for review.'
+          : 'Phase verification timed out. The match remains paused.',
+        duration: 15_000,
+      });
+    }).finally(() => {
+      if (phaseTransitionGateRef.current === gate) {
+        phaseTransitionGateRef.current = null;
+      }
+    });
+    phaseTransitionGateRef.current = gate;
+  }, [isP2PConnected, p2pActions]);
 
   const [playerArmy, setPlayerArmy] = useState<ArmySelectionType | null>(effectiveInitialArmy);
   const [exitPromptOpen, setExitPromptOpen] = useState(false);
@@ -476,9 +531,15 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     setPokerSlotsSwapped(handoff.slotsSwapped);
     initializeCombatFromPayload(adapterInit);
 
-    dispatchFlow({ type: 'VS_COMPLETE', handoff });
-    playSoundEffect('game_start');
-  }, [flowState, playerArmy, opponentArmy, boardState.pieces, boardState.moveCount, initializeCombatFromPayload, playSoundEffect, setPokerSlotsSwapped, dispatchFlow, matchSeed, p2pPerspective]);
+    runPhaseTransition({
+      fromPhase: 'chess',
+      toPhase: 'poker_combat',
+      apply: () => {
+        dispatchFlow({ type: 'VS_COMPLETE', handoff });
+        playSoundEffect('game_start');
+      },
+    });
+  }, [flowState, playerArmy, opponentArmy, boardState.pieces, boardState.moveCount, initializeCombatFromPayload, playSoundEffect, setPokerSlotsSwapped, dispatchFlow, matchSeed, p2pPerspective, runPhaseTransition]);
 
   const handleCombatEnd = useCallback((winner: 'player' | 'opponent' | 'draw') => {
     try {
@@ -501,8 +562,14 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
         clearPendingCombat();
         setPokerSlotsSwapped(false);
         endCombat();
-        dispatchFlow({ type: 'COMBAT_RESOLVED' });
-        playSoundEffect('turn_start');
+        runPhaseTransition({
+          fromPhase: 'poker_combat',
+          toPhase: 'chess',
+          apply: () => {
+            dispatchFlow({ type: 'COMBAT_RESOLVED' });
+            playSoundEffect('turn_start');
+          },
+        });
         return;
       }
 
@@ -564,15 +631,29 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       setPokerSlotsSwapped(false);
       endCombat();
 
-      dispatchFlow({ type: 'COMBAT_RESOLVED' });
-      playSoundEffect('turn_start');
+      runPhaseTransition({
+        fromPhase: 'poker_combat',
+        toPhase: 'chess',
+        apply: () => {
+          dispatchFlow({ type: 'COMBAT_RESOLVED' });
+          playSoundEffect('turn_start');
+        },
+      });
     } catch (error) {
       debug.error('[handleCombatEnd] Error during combat resolution:', error);
       setPokerSlotsSwapped(false);
       endCombat();
-      dispatchFlow({ type: 'COMBAT_RESOLVED' });
+      if (!isP2PConnected) {
+        dispatchFlow({ type: 'COMBAT_RESOLVED' });
+      } else {
+        GameEventBus.emitNotification({
+          level: 'error',
+          message: 'Combat resolution failed locally. The PvP match is frozen safely.',
+          duration: 15_000,
+        });
+      }
     }
-  }, [pokerSlotsSwapped, resolveCombat, clearPendingCombat, endCombat, playSoundEffect, updatePieceStamina, updatePieceHealth, incrementAllStamina, nextTurn, setPokerSlotsSwapped, dispatchFlow, flowState?.tag]);
+  }, [pokerSlotsSwapped, resolveCombat, clearPendingCombat, endCombat, playSoundEffect, updatePieceStamina, updatePieceHealth, incrementAllStamina, nextTurn, setPokerSlotsSwapped, dispatchFlow, flowState?.tag, runPhaseTransition, isP2PConnected]);
 
   // Chess terminal game-end pipeline. Fires when chess reaches checkmate,
   // explicit draw, or king/material terminal status (boardState.gameStatus). The cards-victory
@@ -596,26 +677,32 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
         })
       : false;
     const isDraw = terminalResult === 'draw';
+    const terminalFromPhase: PhaseCheckpointPhase = flowState?.tag === 'poker_combat'
+      ? 'poker_combat'
+      : 'chess';
     playSoundEffect(isDraw ? 'defeat' : iWon ? 'victory' : 'defeat');
     gameOverTimerRef.current = setTimeout(() => {
       gameOverTimerRef.current = null;
-      // Fase 4 C10 — mode-specific reward dispatch lives in match/modes/X/lifecycle.ts.
-      // selectOnWinHandler picks campaign / single / p2p based on opponent.kind;
-      // each handler is responsible for its own gating (iWon check, idempotency,
-      // store dispatch). Pre-Fase-4 inline campaign logic moved verbatim into
-      // match/modes/campaign/lifecycle.ts.
-      if (ctx && !isDraw) {
-        selectOnWinHandler(ctx)({ iWon, turnCount });
-      }
-      markDailyQuestClaimsPendingAfterMatch();
-      const initialSub = isDraw
-        ? 'result'
-        : getInitialGameOverSubPhase({
-            iWon,
-            isCampaign,
-            campaignData,
-          });
-      dispatchFlow({ type: 'GAME_ENDED', initialSub });
+      runPhaseTransition({
+        fromPhase: terminalFromPhase,
+        toPhase: 'game_over',
+        apply: () => {
+          // Rewards and settlement-facing state are downstream of the terminal
+          // checkpoint, never merely downstream of a local victory signal.
+          if (ctx && !isDraw) {
+            selectOnWinHandler(ctx)({ iWon, turnCount });
+          }
+          markDailyQuestClaimsPendingAfterMatch();
+          const initialSub = isDraw
+            ? 'result'
+            : getInitialGameOverSubPhase({
+                iWon,
+                isCampaign,
+                campaignData,
+              });
+          dispatchFlow({ type: 'GAME_ENDED', initialSub });
+        },
+      });
     }, 1500);
 
     return () => {
@@ -652,20 +739,29 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       kind: 'cards',
       viewerWinner: cardsWinner,
     });
+    const terminalFromPhase: PhaseCheckpointPhase = flowState?.tag === 'chess'
+      ? 'chess'
+      : 'poker_combat';
     playSoundEffect(iWon ? 'victory' : 'defeat');
 
     gameOverTimerRef.current = setTimeout(() => {
       gameOverTimerRef.current = null;
-      if (ctx) {
-        selectOnWinHandler(ctx)({ iWon, turnCount });
-      }
-      markDailyQuestClaimsPendingAfterMatch();
-      const initialSub = getInitialGameOverSubPhase({
-        iWon,
-        isCampaign,
-        campaignData,
+      runPhaseTransition({
+        fromPhase: terminalFromPhase,
+        toPhase: 'game_over',
+        apply: () => {
+          if (ctx) {
+            selectOnWinHandler(ctx)({ iWon, turnCount });
+          }
+          markDailyQuestClaimsPendingAfterMatch();
+          const initialSub = getInitialGameOverSubPhase({
+            iWon,
+            isCampaign,
+            campaignData,
+          });
+          dispatchFlow({ type: 'GAME_ENDED', initialSub });
+        },
       });
-      dispatchFlow({ type: 'GAME_ENDED', initialSub });
     }, 1500);
 
     return () => {

@@ -6,8 +6,10 @@ Agent-ready technical plan for the one-week QA Testnet Season 0 rehearsal.
 Owner/operator approval is still required for tester accounts, exact dates, and
 the Closed Testnet Beta invite decision.
 
-This spec closes the operating plan. It does not enable ranked P2P RUNE,
-official ELO, Season Score, or NFTLox `mutableData` writes.
+This historical rehearsal now follows
+[`ADR 0007`](./adr/0007-p2p-gameplay-only-testnet.md). It does not enable P2P
+`match_anchor`/`match_result`, match-driven Keychain prompts, ranked P2P RUNE,
+official ELO, Season Score, CardXP or NFTLox `mutableData` writes.
 
 ## Boundary
 
@@ -19,12 +21,12 @@ QA Testnet Season 0 is a resettable gameplay and evidence rehearsal:
 - QA full-catalog cards are a deck-building entitlement only;
 - QA cards are not NFT custody, marketplace inventory, CardXP, ELO, Season
   Score, or mainnet value;
-- P2P may show QA-local reward feedback, but no `p2p_ranked` RUNE is credited
-  without the Closed Beta winner-arbiter path.
+- P2P may show QA-local reward feedback, but no canonical economic mutation is
+  created; winner arbitration and Hive settlement are future work.
 
-The server remains minimal: matchmaking, relay, config/read APIs, and replay
-projection. Gameplay truth and the Season 0 arbiter candidate are client-local
-and replay-verifiable; the server is not a live referee.
+The server remains minimal: matchmaking, relay, deterministic phase checkpoint
+comparison, config/read APIs, and replay projection. It is a referee only at
+fixed phase boundaries; it does not run gameplay or select a winner.
 
 ## Day 0 - Operator Setup
 
@@ -113,6 +115,9 @@ Must test with two browser profiles and two Hive testnet identities:
 - reconnect/grace behavior;
 - reload warning with `p2p_reload_guard_prompted` in the downloaded session log;
 - explicit win/loss/draw result on both peers;
+- matching commits at `chess → poker_combat`, `poker_combat → chess` and the
+  terminal boundary;
+- zero Keychain prompts or Hive operations from matchmaking through result;
 - QA-local reward preview stays outside wallet, CardXP, NFTLox, ELO, and
   Season Score.
 
@@ -152,8 +157,8 @@ QA Season 0 can close when:
 - `pnpm run check` is green;
 - focused Season 0/P2P/RUNE tests are green;
 - every must-test path above has at least one evidence JSON artifact;
-- P2P has a real two-browser Hive Keychain pass or a captured blocker with
-  session logs;
+- P2P has a real two-browser gameplay pass, with any Hive login completed before
+  matchmaking, or a captured blocker with session logs;
 - result-only P2P evidence still creates no `p2p_ranked` RUNE;
 - QA-local P2P reward preview is absent from wallet, chain reads, CardXP,
   NFTLox, ELO, and Season Score;
@@ -169,6 +174,8 @@ gate, and no bleed from Season 0 data.
 - No mainnet ownership.
 - No official ranking.
 - No ranked P2P RUNE settlement.
+- No P2P `match_anchor`/`match_result` signature or broadcast.
+- No match-driven Keychain prompt during, on reconnect, or after a match.
 - No automatic settlement for disconnects, reloads, or result-only evidence.
 - Hard reload recovery is not complete; the reload guard and evidence export
   are the Season 0 acceptance path.

@@ -1,6 +1,19 @@
-import type { NineRealm } from '../../types/NorseTypes';
+/**
+ * The Nine Realms of Yggdrasil — the module's own canonical realm union.
+ * Deliberately mirrors the host game's `NineRealm` type so adapters can
+ * pass values through without conversion; the module no longer imports it.
+ */
+export type MapRealmId =
+	| 'asgard'
+	| 'midgard'
+	| 'jotunheim'
+	| 'niflheim'
+	| 'muspelheim'
+	| 'helheim'
+	| 'alfheim'
+	| 'svartalfheim'
+	| 'vanaheim';
 
-export type MapRealmId = NineRealm;
 export type MapCardSectionId = 'characters' | 'spells' | 'arms' | 'pets';
 
 export interface MapPoint {

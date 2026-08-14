@@ -9,6 +9,12 @@ Testnet Beta, use
 [`TESTNET_READINESS_FAST_TRACK.md`](./TESTNET_READINESS_FAST_TRACK.md). This
 runbook remains the command and smoke reference.
 
+Current P2P testnet follows
+[`ADR 0007`](./adr/0007-p2p-gameplay-only-testnet.md): Keychain may be used for
+an explicit login before matchmaking, but a match must not request signatures
+or broadcast `match_anchor`/`match_result`. Phase checkpoints use the existing
+WebSocket relay and the terminal result is local evidence only.
+
 For the one-week QA Testnet Season 0 operating script, use
 [`TESTNET_WEEK_ONE_SPEC.md`](./TESTNET_WEEK_ONE_SPEC.md). That spec is the
 day-by-day historical QA checklist.
@@ -222,11 +228,13 @@ and 120 requests/minute per IP for the global `/api` limiter.
 1. Open the app at the dev server URL.
 2. Confirm the testnet badge is visible.
 3. Connect Hive Keychain.
-4. Broadcast a low-risk operation first, such as queue join/leave or match anchor.
+4. If validating Hive write configuration separately from gameplay, explicitly
+   broadcast a low-risk pre-match operation such as queue join/leave.
 5. Confirm the Hive `custom_json` id is `rk_game_testnet`.
 6. Confirm the JSON body has a canonical protocol `action` such as
-   `queue_join`, `queue_leave`, or `match_anchor`. If Keychain shows
-   `save_state`, cancel the prompt; portable saves must not be broadcast under
+   `queue_join` or `queue_leave`. If Keychain shows `match_anchor` or
+   `match_result` during the gameplay-only track, cancel it and record a blocker.
+   If Keychain shows `save_state`, cancel the prompt; portable saves must not be broadcast under
    `rk_game_testnet`.
 7. Confirm client replay reads the same namespace.
 
@@ -283,9 +291,9 @@ wallet balance, seed a parallel API, or use `/api/testnet/rune/*`.
    transaction.
 7. Attempt a RUNE pack exchange from an account with insufficient balance.
    Confirm the failure is reportable and no pack or debit ledger entry appears.
-8. Submit or replay ranked result-only evidence without a prior dual-anchored
-   `match_anchor`. Confirm it is rejected and no `p2p_ranked` RUNE ledger entry
-   appears.
+8. As an offline replay/fixture validation only, feed ranked result-only evidence
+   without a prior dual-anchored `match_anchor`. Do not sign or broadcast it.
+   Confirm replay rejects it and no `p2p_ranked` RUNE ledger entry appears.
 9. Compare `/api/chain/player/<account>/rune?seasonId=S01` with
    `/api/chain/rune/ledger?seasonId=S01&account=<account>`: credits minus debits
    must equal `runeBalance`, and `drift` must be `0`.
@@ -341,32 +349,36 @@ campaign/local AI behavior as proof for P2P.
    `/#/warband?mode=multiplayer`. Confirming the Warband continues into
    `/#/multiplayer`; the wire `deck_verify` message must use
    `protocolVersion: 2` and `claims[]` only.
-4. Start one manual or quick match. Confirm both peers pass the Hive session
-   authorization gate and the board renders with the announced armies.
+4. Start one manual or quick match. Confirm the existing pre-match login/session
+   gate passes without a new `session_authorize` prompt and the board renders
+   with the announced armies.
 5. Make at least one quiet chess move from each side. Record any
    `chess_command_rejected` event, reject code, command id, or state-hash
    prefix from the P2P session log instead of guessing.
 6. Force an instant capture and then a non-instant capture into poker/combat.
-   Confirm host and guest both enter poker, apply the same poker decision
-   sequence, and return to the shared chess board without divergent pieces.
+   Confirm both peers receive the `chess → poker_combat` checkpoint commit,
+   apply the same poker decision sequence, and receive the
+   `poker_combat → chess` commit before returning to the shared chess board.
 7. Disconnect one tab briefly without reloading it. Confirm the visible P2P
    badge enters grace/reconnect state, queued actions stay visible when
    applicable, and the same match resumes inside the current reconnect policy.
 8. Attempt a hard reload during an active match and cancel the browser prompt.
    Use the P2P badge download button to export the session log; confirm it
    includes `p2p_reload_guard_prompted`.
-9. Finish or technically resolve the match. Confirm both peers see an explicit
-   win/loss/draw result. In QA full-catalog mode the result may calculate and
+9. Finish or technically resolve the match. Confirm both peers receive the
+   terminal checkpoint commit and see an explicit local win/loss/draw result.
+   In QA full-catalog mode the result may calculate and
    show local reward feedback (projected winner RUNE and match/profile XP), but
    it must be labeled local/resettable and must not say it was credited on
    chain.
 10. Confirm QA cards do not earn CardXP: no `level_up`, no NFTLox
     `mutableData` write, no marketplace ownership change, and no Season Score
     input is created from the QA result.
-11. Submit or replay result-only ranked evidence without a prior dual-anchored
-    `match_anchor`. Confirm it is rejected and no `p2p_ranked` RUNE ledger
-    entry appears for either account. The required Closed Beta arbiter gates are
-    tracked in [`P2P_WINNER_ARBITER.md`](./P2P_WINNER_ARBITER.md).
+11. Confirm the match caused no Keychain prompt, `match_anchor`, `match_result`,
+    `session_renewal` or Hive broadcast. Confirm no `p2p_ranked` RUNE ledger,
+    ELO, Season Score or CardXP mutation appears for either account. Ranked
+    settlement remains deferred in
+    [`P2P_WINNER_ARBITER.md`](./P2P_WINNER_ARBITER.md).
 12. Open wallet/RUNE reads and collection/NFT details for both accounts. Confirm
     the QA preview amount is absent from `/api/chain/player/:account/rune`,
     `/api/chain/rune/ledger`, NFT CardXP, and NFTLox ownership/progress views.

@@ -2,6 +2,10 @@
 
 Status: launch hardening rule, 2026-05-19.
 
+For the current gameplay-only P2P testnet, ADR 0007 is stricter: after
+matchmaking starts, the match flow must create **zero** wallet invocations,
+including reconnect/reload and `game_over`.
+
 Hive Keychain prompts are browser-client actions. Server adapters, replay
 indexers, polling loops, mounted panels, match-end effects, and background
 queues MUST NOT open Keychain directly.
@@ -47,9 +51,9 @@ The current TypeScript seam is:
 
 ## Remaining Migration Targets
 
-- P2P ranked settlement `session_authorize` and `result_countersign` need
-  visible authorize/sign surfaces before P2P RUNE/ELO is enabled. Closed-beta
-  full NFT gameplay currently skips the `session_authorize` Posting prompt.
+- Future P2P ranked settlement `session_authorize` and `result_countersign` need
+  visible authorize/sign surfaces before P2P RUNE/ELO can be considered. They
+  are disabled, not merely hidden, in the current gameplay-only testnet.
 - The transaction queue needs a visible wallet outbox UI for manual Hive
   submission and retry.
 - `slash_evidence` needs a durable evidence queue and a Submit evidence action.

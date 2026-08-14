@@ -5,10 +5,18 @@
 > [`TESTNET_READINESS_FAST_TRACK.md`](./TESTNET_READINESS_FAST_TRACK.md).
 > Keep this file for environment model, RUNE constraints, and older QA Season 0
 > decisions, but do not use it as the current sprint plan.
+>
+> **Current P2P override:** [ADR 0007](./adr/0007-p2p-gameplay-only-testnet.md)
+> defines the active gameplay-only testnet. P2P phase checkpoints are automatic;
+> `match_anchor`, `match_result`, economic settlement and match-driven Keychain
+> prompts are disabled. Future ranked-economy statements below are not gates for
+> this gameplay validation phase.
 
 ## Objective
 
-Validate Ragnarok's full shared architecture before mainnet: gameplay, P2P, match results, rewards, NFT ownership, packs, replay, indexing, and economy flows.
+Long-term testnet validates Ragnarok's full shared architecture before mainnet.
+The current slice validates gameplay and P2P first; match settlement, ranked
+rewards and related Hive operations remain later slices.
 
 Beta-testnet state is temporary. Progress, rankings, rewards, packs, and NFTs created during testnet are reset before mainnet.
 
@@ -85,8 +93,9 @@ The expected testnet shape is mainnet-like:
 - QA Season 0 slices 01-06 are closed: reset epoch, QA full-catalog
   entitlement, DUAT provenance/filter, ceremony feedback, RUNE/pack smoke, and
   campaign QA pass.
-- P2P Season 0 is code-hardened and waiting on the real two-browser Hive
-  Keychain smoke.
+- P2P Season 0 is code-hardened and waiting on a real two-browser gameplay
+  smoke. Hive login may happen before matchmaking, but the match itself must
+  trigger no Keychain prompt.
 - P2P session-log exports now carry shared runtime evidence, including reset
   epoch and QA full-catalog state.
 - `/api/health` and `/api/admin/config` expose `runtimePhase`,
@@ -107,7 +116,7 @@ Complete the QA Season 0 week-one readiness gate:
    `true`.
 3. Run the focused Season 0/P2P/RUNE verification matrix from
    [`TESTNET_WEEK_ONE_SPEC.md`](./TESTNET_WEEK_ONE_SPEC.md).
-4. Complete the two-browser P2P Hive Keychain smoke from
+4. Complete the two-browser P2P gameplay-only smoke from
    [`TESTNET_RUNBOOK.md`](./TESTNET_RUNBOOK.md#smoke-test--p2p-qa-season-0).
 5. Keep Closed Testnet Beta invites blocked until issue 08 proves a non-QA
    `closed-beta-*` epoch, `qaFullCatalogEnabled: false`,
@@ -122,7 +131,9 @@ Complete the QA Season 0 week-one readiness gate:
 - Single (PvE practice) — no reward.
 - Campaign (PvE) — up to `10` first-clear RUNE per account/S01.
 - Daily quests — up to `20` RUNE per account/S01 (`3` slots × `2` RUNE/slot per UTC day; auto-claimed on completion).
-- Multiplayer P2P manual host/join — playable but **does not credit RUNE in closed beta**. The chain handler is live; client broadcast waits on the [winner-arbiter](./P2P_WINNER_ARBITER.md) (see [RUNE.md § Beta status](./RUNE.md#beta-status)).
+- Multiplayer P2P manual host/join — gameplay-only. It does not sign or
+  broadcast `match_result` and does not credit RUNE, ELO, Season Score or
+  CardXP. The [winner-arbiter](./P2P_WINNER_ARBITER.md) is future work.
 - QA full-catalog P2P result preview — may calculate and show projected winner RUNE plus local match/profile XP for UX rehearsal. If stored after display, it must use reset-epoch-scoped local state. It is not RUNE, CardXP, NFTLox progress, Season Score, or ownership.
 - Quick Match P2P as experimental matchmaking, not official ranked.
 
@@ -130,9 +141,10 @@ Active closed-beta earn surface: **campaign (max 10) + daily quest (max 20) = 30
 
 ## Season Ranking
 
-**Closed-beta gate:** ELO and the Season Score leaderboard go live once the
-[winner-arbiter](./P2P_WINNER_ARBITER.md) is shipped and P2P `match_result`
-broadcasts begin. Until then,
+**Future ranked-economy gate (not a gate for gameplay-only testnet):** ELO and
+the Season Score leaderboard may go live only after the
+[winner-arbiter](./P2P_WINNER_ARBITER.md) ships and P2P `match_result`
+broadcast is explicitly activated. Until then,
 campaign + daily quest RUNE accrue normally but the public leaderboard stays
 dark (no ranked match history to rank against). See
 [RUNE.md § Beta status](./RUNE.md#beta-status).

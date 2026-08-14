@@ -6,6 +6,11 @@
 > indexer/read model, and [`NFTLOX_INTEGRATION_SPEC.md`](./NFTLOX_INTEGRATION_SPEC.md)
 > for NFT custody. Do not use this blueprint as the current indexer or NFT
 > ownership authority.
+>
+> Its match anchoring, result signing and settlement sections describe the
+> future ranked economy. [ADR 0007](./adr/0007-p2p-gameplay-only-testnet.md)
+> disables those operations and all match-driven Keychain prompts in the
+> current gameplay-only P2P testnet.
 
 **Status**: Phase 2 complete — all chain ops wired end-to-end. NFT provenance viewer, direct card gifting, ownership enforcement, post-match IDB→Zustand refresh, HiveEvents toast notifications, reward claiming on chain. Genesis launch (broadcast genesis + seal on Hive mainnet) is next.
 **Layer**: Hive Layer 1 (no Hive-Engine dependency)

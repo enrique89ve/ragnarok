@@ -23,6 +23,13 @@ detalle por dominio, pero este archivo decide el orden actual.
 La meta inmediata no es reabrir todo el protocolo. La meta es que el juego sea
 comprensible, jugable y verificable en testnet real.
 
+La decision normativa es
+[`ADR 0007`](./adr/0007-p2p-gameplay-only-testnet.md): esta fase prueba partidas
+P2P completas y fluidas. El relay arbitra solamente checkpoints deterministas
+de cambio de fase. No hay firma ni broadcast de `match_result`, settlement P2P
+de RUNE/ELO/Season Score/CardXP, ni prompts de Keychain causados por la partida.
+El resultado terminal es evidencia local.
+
 ## Definicion de listo
 
 ### Alfa Testnet player-ready
@@ -34,11 +41,13 @@ Alfa esta lista para mas manos internas cuando todo esto sea verdad:
    `qaFullCatalogEnabled=false`, estado JSON y secreto P2P estable.
 2. El tablero de poker se entiende sin explicacion externa: fase, turno,
    cartas, apuesta/riesgo, accion disponible, conexion P2P y resultado.
-3. Un smoke humano con Hive Keychain valida login, session reuse y dos perfiles
-   reales sin prompts repetidos fuera de acciones que si requieren firma.
+3. Un smoke humano con Hive Keychain valida login previo, session reuse y dos
+   perfiles reales. Desde matchmaking hasta el resultado no aparece ningun
+   prompt de wallet.
 4. El P2P de dos browsers cubre movimiento de chess, captura instantanea,
-   captura a poker, resolucion, retorno a chess, reconnect corto, reload guard
-   y export JSON.
+   captura a poker, checkpoints `chess ↔ poker_combat`, resolucion, retorno a
+   chess, checkpoint terminal, reconnect corto, reload guard, resultado local
+   y export JSON sin operacion Hive.
 5. `pnpm run check`, `pnpm run lint:css`, el runner de seguridad P2P y el build
    Alfa pasan en el arbol que se va a desplegar.
 
@@ -54,18 +63,19 @@ Closed Beta no se abre hasta que, ademas de lo anterior:
    `RAGNAROK_HIVE_KEYCHAIN_SMOKE`,
    `RAGNAROK_P2P_TWO_BROWSER_SMOKE`,
    `RAGNAROK_CLOSED_BETA_OPERATOR_SIGNOFF`.
-5. P2P ranked RUNE, ELO oficial y Season Score siguen apagados hasta que el
-   winner-arbiter pruebe `match_result` ranked end-to-end.
+5. P2P ranked RUNE, ELO oficial, Season Score y CardXP siguen apagados. El
+   winner-arbiter y `match_result` pertenecen a una fase futura y no bloquean
+   la validacion de jugabilidad actual.
 
 ## Orden mas corto
 
 | Orden | Gate | Estado actual | Cierre minimo |
 |---|---|---|---|
-| 1 | Documentacion activa | Cerrado en este pass | Usar este archivo como entrada y sacar `BETA_TESTNET_ROADMAP.md` del contexto activo. |
+| 1 | Documentacion activa | Cerrado en este pass | Usar este archivo como entrada unica del plan vivo. |
 | 2 | Poker board entendible | Abierto P0 | Un pass visual/UX sobre `RagnarokCombatArena`, `board.css`, `BettingPanel`, `WagerInfoPanel`, HUD y showdown. |
 | 3 | Runtime Alfa desplegable | Abierto P0 | Probar build/start Alfa, health, admin config, p2p status, headers y cache rules en el target real. |
-| 4 | Hive session | Abierto P0 humano | Login real con Keychain y navegacion sin firmas repetidas por cambio de ruta. |
-| 5 | P2P smoke dos browsers | Abierto P0 humano | Smoke con dos identidades, session logs exportados y reject codes capturados si falla. |
+| 4 | Hive session | Abierto P0 humano | Login real con Keychain antes de matchmaking; cero prompts causados por la partida. |
+| 5 | P2P smoke dos browsers | Abierto P0 humano | Partida completa con checkpoints de fase, resultado local, session logs exportados y cero `match_result`. |
 | 6 | Seguridad P2P enfocada | Necesita re-run | `bash scripts/p2p-ticket-security-check.sh` en el arbol final. |
 | 7 | Closed Beta cutover | Bloqueado | NFTLoX proof, epoch `closed-beta-*`, env evidence y operator sign-off. |
 
@@ -178,17 +188,21 @@ No marcar como pasado sin dos perfiles reales con Hive Keychain.
 Flujo minimo:
 
 1. Browser A y Browser B tienen identidades Hive testnet distintas.
-2. Ambos llegan al lobby sin pedir firma repetida por solo cambiar de ruta.
+2. Ambos completan cualquier login requerido antes de matchmaking y llegan al
+   lobby sin pedir firma repetida por solo cambiar de ruta.
 3. Matchmaking crea sala y ambos reciben solo su propio `P2PMatchTicket`.
 4. Chess quiet move de cada lado.
 5. Captura instantanea.
 6. Captura no instantanea entra a poker.
-7. Poker resuelve y vuelve a chess en ambos peers.
+7. Ambos peers obtienen commit del checkpoint `chess → poker_combat`; poker
+   resuelve y solo vuelve a chess tras el commit `poker_combat → chess`.
 8. Reconnect corto conserva estado o exporta blocker con reject code.
 9. Reload duro muestra warning y queda documentado como riesgo si no hay full
    recovery.
-10. Export JSON incluye match/session id, roles, reset epoch, reject code si
-    existe, hashes y resultado.
+10. `game_over` ocurre solo tras el checkpoint terminal; se muestra el resultado
+    local y no aparece Keychain ni una operacion Hive.
+11. Export JSON incluye match/session id, roles, reset epoch, reject code si
+    existe, hashes, checkpoints y resultado local.
 
 ## P1 despues de Alfa player-ready
 
@@ -204,6 +218,8 @@ Flujo minimo:
 - No llamar Alfa "beta lista".
 - No abrir Public Testnet.
 - No activar P2P ranked RUNE, ELO oficial o Season Score.
+- No firmar/broadcast `match_anchor` o `match_result` ni pedir Keychain durante,
+  al reconectar o al terminar una partida P2P.
 - No convertir NFTLoX en requisito de Alfa.
 - No usar Vercel/static para una prueba con `/api/*` y `/ws/p2p`.
 - No resolver visuales creando un segundo tablero paralelo.
@@ -217,6 +233,7 @@ Activos:
 - `docs/DOKPLOY_DEPLOYMENT.md` - deploy Alfa/Dokploy.
 - `docs/TESTNET_RUNBOOK.md` - comandos y smokes manuales.
 - `docs/PVP_WIRE_PROTOCOL.md` - contrato P2P.
+- `docs/adr/0007-p2p-gameplay-only-testnet.md` - alcance normativo de esta fase.
 - `docs/P2P_TICKET_SECURITY_VALIDATION.md` - validacion enfocada de ticket.
 - `docs/POKER_ARENA_UI.md` - canon tecnico del poker arena.
 - `docs/POKER_ARENA_DOM_TREE.md` - mapa DOM/posicion.
@@ -225,8 +242,6 @@ Historicos o de referencia:
 
 - `docs/BETA_TESTNET_SCOPE.md` - scope historico y economia, no plan activo.
 - `docs/TESTNET_WEEK_ONE_SPEC.md` - QA Season 0, no Alfa actual.
-- `docs/BETA_TESTNET_ROADMAP.md` - archivo local ignorado, no fuente
-  versionada. No debe ser el contexto principal.
 
 ## Evidencia minima para cerrar este documento
 

@@ -11,6 +11,9 @@ import { createContext } from 'react';
 import type { GameCommand } from '../core/commands';
 import type { CombatAction } from '../types/PokerCombatTypes';
 import type { GameState } from '../types';
+import type { Hash256 } from '@shared/p2p-wire/integrity';
+import type { PhaseCheckpointPhase } from '@shared/p2p-wire/phaseCheckpoint';
+import type { PhaseCheckpointRequestResult } from '../p2p/phaseCheckpointClient';
 
 export interface P2PActions {
 	playCard: (cardId: string, targetId?: string, targetType?: 'minion' | 'hero', insertionIndex?: number) => void;
@@ -33,6 +36,11 @@ export interface P2PActions {
 		durationMs: number;
 		remainingMs?: number;
 	}) => void;
+	requestPhaseCheckpoint: (input: {
+		readonly fromPhase: PhaseCheckpointPhase;
+		readonly toPhase: PhaseCheckpointPhase;
+		readonly stateRoot: Hash256;
+	}) => Promise<PhaseCheckpointRequestResult>;
 	downloadSessionLog: () => void;
 	gameState: GameState | null;
 	isConnected: boolean;

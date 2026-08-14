@@ -3,12 +3,17 @@
 **Status**: Authoritative spec for the live PvP system. Replaces the obsolete
 `MULTIPLAYER_P2P.md` (deleted 2026-05-03).
 
+> **Active testnet contract:** [ADR 0007](adr/0007-p2p-gameplay-only-testnet.md)
+> enables deterministic WebSocket phase checkpoints but disables P2P
+> `match_anchor`, `match_result`, economic settlement and every match-driven
+> Keychain prompt. A completed match shows and exports a local result only.
+
 **Audience**: contributors writing or auditing P2P wire code, the dual-sig
 match-result flow, the transcript pipeline, or the matchmaking surface.
 
 **Companion specs**:
-- `RAGNAROK_PROTOCOL_V1.md` — on-chain custom_json operations (the surface
-  the winner submits at match end).
+- `RAGNAROK_PROTOCOL_V1.md` — future on-chain custom_json settlement surface;
+  it is not submitted by the current testnet match flow.
 - `P2P_SECURITY_HARDENING.md` — five security invariants enforced over this
   wire (still valid; folded into §6 below for context).
 - `P2P_TICKET_SECURITY_VALIDATION.md` — focused validation matrix for relay
@@ -45,8 +50,8 @@ match-result flow, the transcript pipeline, or the matchmaking surface.
 
 ## §1 Architecture Overview
 
-A PvP match runs entirely between two browser clients ("peers"). The server
-owns three responsibilities and nothing more:
+A PvP match runs primarily between two browser clients ("peers"). The server
+owns four bounded responsibilities:
 
 1. **Matchmaking**: an in-memory, ELO-aware queue that issues per-peer
    `queueToken` bearer secrets and per-peer `P2PMatchTicket` relay
@@ -55,13 +60,17 @@ owns three responsibilities and nothing more:
    the two peers in a room (`server/routes/p2pRelay.ts`). The relay does
    NOT inspect game logic; it only validates frame envelope shape and
    enforces a whitelist of `type` values.
-3. **Arbitration** (post-match, off-wire): the server is *not* part of any
-   real-time validation. Once both peers sign a `match_result`, the winner
-   broadcasts a `custom_json` to Hive L1; the indexer / arbitrator processes
-   it asynchronously. Disputes are submitted out-of-band as slash evidence.
+3. **Phase notarization**: at `chess ↔ poker_combat` and `* → game_over`, the
+   relay compares two opaque deterministic roots. It never receives or runs
+   gameplay state. See [ADR 0005](adr/0005-server-notarized-phase-checkpoints.md).
+4. **Future arbitration** (post-match, off-wire): outside those fixed
+   checkpoints the server is *not* part of real-time validation. Dual-signed
+   `match_result`, Hive broadcast and slash processing remain deferred ranked
+   settlement work and are not executed in the current testnet.
 
-The relay does not have a database of game state. It cannot adjudicate moves.
-The server holds **no source of truth about gameplay**.
+The relay does not have a database of game state and cannot adjudicate moves.
+It holds only constant-sized phase agreement metadata and is **not a source of
+truth about gameplay**.
 
 **Client bridge dependency rule**: P2P wire handlers must not reach gameplay
 stores through `globalThis`. Poker P2P behavior goes through the explicit
@@ -72,13 +81,10 @@ Legacy non-P2P `globalThis` exports may remain for diagnostics or chunk-boundary
 compatibility, but they are not an application trust boundary and must not be
 used by new P2P wire code.
 
-**Two universes share this protocol** (see `SET_AXIS.md`):
-- `set: 'starter'` — off-chain, infinite supply. Match results MAY skip
-  on-chain broadcast (casual matches).
-- `set: 'genesis'` — on-chain NFT pool. Ranked match results MUST broadcast.
-
-The wire protocol is identical across both universes; only the post-match
-broadcast policy differs.
+**Two universes share this protocol** (see `SET_AXIS.md`). Starter cards are
+off-chain entitlements and genesis cards belong to the future on-chain ranked
+economy. ADR 0007 overrides broadcast policy for the current gameplay-only
+testnet: neither universe signs or broadcasts a P2P result.
 
 ---
 
@@ -109,12 +115,13 @@ hop. For a turn-based card game this latency is negligible.
   `P2PMatchTicket` bound to exactly that `roomId` and its own `peerId`.
 - Maximum 2 peers per room (`ROOM_MAX_PEERS`, `p2pRelay.ts:31`).
 - When the room reaches 2 peers, the relay sends `__sys.event=open` to
-  each, with `isHost=true` to the first arrival and `isHost=false` to the
-  second (`p2pRelay.ts:116-123`). This `isHost` is a **transport-level
+  each. `isHost=true` belongs to the lexicographically smaller `peerId`, so
+  reconnect order cannot flip cards authority. This `isHost` is a **transport-level
   hint**, used to break ties during seed exchange. It does NOT confer
   authority by itself.
 - A peer departure (close or error) sends `__sys.event=close` to the
-  survivor. The room is garbage-collected when empty.
+  survivor. Socket membership is garbage-collected when empty; its constant-size
+  checkpoint tombstone remains for 120s and is removed by a global sweep.
 
 **Frame validation** (`p2pRelay.ts`):
 - Maximum payload: 16 KB (`P2P_RELAY_MAX_PAYLOAD_BYTES`).
@@ -127,6 +134,9 @@ hop. For a turn-based card game this latency is negligible.
   envelopes).
 - Frames that fail validation are silently dropped (no client-visible error).
   This is intentional — surfacing failure shape would be a probe channel.
+- `phase_checkpoint_propose_v1` is consumed by the relay instead of fanned out.
+  Matching proposals produce server-only `__sys.event=phase_checkpoint`; a
+  mismatch freezes the room and never selects a winner.
 
 **Keepalive**: WS-level ping/pong every 15s (`p2pRelay.ts:235-243`). An
 app-level `heartbeat` envelope (sent by `useWireSync`) runs on top.
@@ -201,9 +211,9 @@ in phases 0-2 before any gameplay action is sent.
    to the joining player. The other player learns of the match by polling
    `/api/matchmaking/status/:peerId` with its `x-p2p-queue-token`; the status
    response includes only that peer's own `matchTicket`.
-4. The first arrival becomes "host" by matchmaking convention. NOTE: the
-   relay also emits `isHost` based on WS arrival order. These two
-   `isHost` values are NOT guaranteed to agree — the WS-relay value is the
+4. The first arrival becomes "host" by matchmaking convention. The relay
+   emits `isHost` from lexical `peerId` order so reconnect cannot flip it. These
+   two `isHost` values are NOT guaranteed to agree — the WS-relay value is the
    one that drives downstream code (`peerStore.ts` consumes
    `__sys.open.isHost`).
 
@@ -277,10 +287,14 @@ the moment the connection becomes ready. Every move recorded — by the local
 player at send time, or by the remote peer at receive time — appends to it
 (see §7).
 
-### Phase 4 — Result Proposal (dual-sig)
+### Phase 4 — Local Result (current) / dual-sig proposal (future)
 
-When `gameState.gamePhase === 'game_over'`, `BlockchainSubscriber` packages
-the result (`BlockchainSubscriber.ts:272-294`):
+When `gameState.gamePhase === 'game_over'`, the current testnet displays and
+exports the local result after the terminal checkpoint commits. It opens no
+Keychain prompt and emits no Hive operation.
+
+The retained future settlement implementation in `BlockchainSubscriber`
+packages the result (`BlockchainSubscriber.ts:272-294`):
 1. Computes the merkle root of the transcript (`buildMerkleTree()`).
 2. Pins the transcript bundle to IPFS (best-effort, non-blocking).
 3. Calls `attemptDualSig`:
@@ -304,13 +318,15 @@ the result (`BlockchainSubscriber.ts:272-294`):
    - On agreement: sends `result_reject: signature_deferred` instead of opening
      Keychain. Countersigning needs a visible wallet action.
    - On disagreement: sends `result_reject` with a reason code.
-5. Without dual-sig the result is NOT broadcast for ranked matches.
+5. Without explicit future dual-sig the result is NOT broadcast. In the current
+   testnet no dual-sig attempt is authorized at all.
 
 ### Phase 5 — Cleanup
 
 - `clearTranscript()` runs in the seed-exchange effect's cleanup
   (`useWireSync.ts:248-250`).
-- The relay garbage-collects the room when both peers disconnect.
+- The relay garbage-collects socket membership when both peers disconnect and
+  retains only the constant-size phase checkpoint tombstone for 120s.
 - The server's `activeMatches` map evicts the match after 300s
   (`ACTIVE_MATCH_TTL_MS` in `matchmakingRoutes.ts`, applied uniformly at
   both the periodic sweep and the post-pair `setTimeout`).
@@ -334,21 +350,24 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `game_command` (envelope) | client → host | client | Phase 3 cards: requests an action from host |
 | `gameState` | host → client | host | Phase 3 cards: sync authoritative state (debounced), compressed as `json+gzip+base64url@1` |
 | `chess_command` (envelope) | both | both (symmetric) | Phase 3 chess: discriminated union of `chess_move` (quiet), `chess_attack` (instant-kill capture), and `chess_combat_initiated` (non-instant capture into poker) — see §5 |
+| `transition_receipt_v1` | receiver → command sender | both (symmetric) | Post-commit chess receipt binding the command intent to the receiver's pre/post chess+cards integrity roots. A rejection or root mismatch quarantines further local chess actions. |
+| `phase_checkpoint_propose_v1` | peer → relay | both | Fixed-size proposal for a deterministic phase boundary; consumed by the relay and never fanned out. |
+| `phase_checkpoint_commit_v1` / `phase_checkpoint_dispute_v1` | relay → peers inside `__sys.event=phase_checkpoint` | relay only | Confirms identical proposals or freezes the room on disagreement. |
 | `poker_action` | both | both (symmetric) | Phase 3 poker: deterministic local apply + relay to peer; includes optional compact tuple for transcript/DataChannel migration |
 | `hash_check` | host → client | host | Periodic state-hash sanity check |
 | `hash_mismatch` | client → host | client | Reports a divergent state hash |
-| `result_propose` | winner → loser | winner | Phase 4: proposed match result with broadcaster sig over compact commitment |
-| `result_countersign` | loser → winner | loser | Phase 4: opponent's signature on the same commitment |
-| `result_reject` | loser → winner | loser | Phase 4: opponent refuses to sign with reason |
+| `result_propose` | winner → loser | winner | **Deferred settlement surface**: older/future peer proposes a signed result; current testnet never initiates it |
+| `result_countersign` | loser → winner | loser | **Deferred settlement surface**: opponent signature; current testnet never signs |
+| `result_reject` | loser → winner | loser | Compatibility response; current client returns `signature_deferred` without opening Keychain |
 | `heartbeat` | both | both | App-level keepalive |
 | `ping` / `pong` | both | both | Lower-level RTT probe |
 | `opponentDisconnected` | (relay only) | relay | Surfaced to UI |
 | `spectator_state` | host | host | Future / unused in beta |
 | `session_authorize` | peer→peer | both | Future ranked/settlement path: broadcast `{ matchId, ephemeralPubkey, hiveSig }` signed with Hive Posting authority so the opponent binds the ephemeral signing key to the Hive identity. Closed-beta full NFT gameplay skips this prompt; NFT custody is enforced by deck verification while P2P RUNE/ELO settlement remains disabled. |
-| `session_renewal` | peer→peer | both | Phase 0 (ADR 0004): after reload/crash, broadcast `{ matchId, newPubkey, hiveSig }` signed with Hive Posting authority so the opponent accepts a fresh ephemeral key for the same match |
-| `session_resumed` | peer→peer | both | Phase 0 (ADR 0004): acknowledge a renewal with `{ matchId, lastSeenStateHash }` so the resuming peer can decide between replay-from-log and `state_sync_request` |
-| `state_sync_request` | peer→peer | both | Phase 0 (ADR 0004): request the signed action log from a turn onwards (`{ matchId, fromTurn }`) when local IndexedDB replay is unavailable or corrupted |
-| `action_envelope` | peer→peer | broadcaster | Phase 0 (ADR 0004): per-action signed envelope `{ matchId, seq, prevHash, action, sig }`. `action` stays `unknown` on this layer — issue 03 owns the inner schema and per-action validation |
+| `session_renewal` | peer→peer | both | **Future ADR 0004 settlement path**; disabled because current matches cannot request a reload Keychain signature |
+| `session_resumed` | peer→peer | both | **Future ADR 0004 settlement path**; not a current testnet release gate |
+| `state_sync_request` | peer→peer | both | **Future signed-log recovery path**; not a current testnet release gate |
+| `action_envelope` | peer→peer | broadcaster | **Future ADR 0004 settlement path**: per-action signed envelope; current gameplay uses its existing deterministic command envelopes |
 
 Envelope schemas live next to their handlers:
 - Cards: `client/src/game/hooks/p2pEnvelope.ts` (`GameCommandEnvelope`)
@@ -464,22 +483,47 @@ time and surfacing as `attacker_position_mismatch` later. Blocked at
 OPEN-9).
 
 **Receiver pipeline** (`useWireSync.ts` case `chess_command`): common
-validations (schema, matchId, monotonic seq, commandId dedup, rate
+validations (schema, matchId, contiguous sender-local seq, commandId dedup, rate
 limit, attacker lookup, position match, ownership boundary, currentTurn)
 run once; then a branch on `command.type` dispatches to the move or
-attack apply. Reject codes are verbose snake_case (e.g.
+attack apply. The reducer returns an explicit `applied | rejected` union;
+only an applied result advances seq/transcript and emits
+`transition_receipt_v1`. Reject codes are verbose snake_case (e.g.
 `non_instant_capture_not_supported_p2p`,
 `remote_attempting_to_move_my_piece`, `attacker_not_found_*` with
 roster dump diagnostic).
 
 **Implementation locations**:
 - Schema + predicate: `shared/p2p-wire/chess.ts`.
+- Integrity schema/root: `shared/p2p-wire/integrity.ts`.
 - Sender: `client/src/game/p2p/chessWireSender.ts` (`sendChessMove`,
   `sendChessAttack`, shared `dispatchChessCommand` helper).
-- Receiver: `client/src/game/hooks/useWireSync.ts` case `chess_command`.
+- Receiver: `client/src/game/match/modes/p2p/wireSync/useWireSync.ts` case
+  `chess_command`.
 - Click handler gate: `client/src/game/components/chess/useChessBoardInteractions.ts`.
 - Mine block: `client/src/game/hooks/useKingChessAbility.ts`
   `enterPlacementMode`.
+
+### Chess transition-integrity receipt v1
+
+The sender computes a pre-root from the hashes already carried by the chess
+envelope, applies locally, computes its expected post-root, and permits only
+one outstanding transition. The receiver independently validates and applies
+the command, then emits a strict receipt containing `intentHash`, `prevRoot`
+and `nextRoot`. `intentHash` binds match, sender-local seq, UUID commandId,
+pre-root and the canonical command payload.
+
+The receiver caches the bounded receipt by `commandId`. A duplicate intent
+returns the original receipt without reapplying the reducer. After a same-tab
+reconnect, the sender re-emits its single pending envelope; this recovers both
+"intent lost" and "receipt lost" without server-side state.
+
+This is deliberately a partial root with `scope: 'chess+cards'`. It detects
+divergence in the domains currently covered by the existing canonicalizers;
+it is not a full-match commitment and does not yet cover rich chess stats,
+poker, `pendingCombat` or the round FSM. The monitor is not protocol authority:
+the reducer/executor creates the receipt, while the monitor only confirms or
+quarantines. The relay only whitelists and forwards this opaque frame.
 
 **Coordination**:
 - Both peers reach `phase === 'chess'` after seed exchange and a P2P-
@@ -644,9 +688,14 @@ and inbound P2P messages cannot open Keychain.
 
 ---
 
-## §8 Match-Result Broadcast (On-Chain)
+## §8 Future Match-Result Broadcast (On-Chain, Disabled in Current Testnet)
 
-Once dual-sig completes, `BlockchainSubscriber.enqueueResult`
+ADR 0007 disables this entire section for the gameplay-only testnet. The client
+must not request either signature, enqueue `match_result` or broadcast after
+`game_over`. The shape below is retained as a future ranked settlement contract.
+
+In a future explicitly activated ranked flow, once dual-sig completes,
+`BlockchainSubscriber.enqueueResult`
 (`BlockchainSubscriber.ts:396-408`) broadcasts a compact `match_result`
 custom_json with PoW (64 challenges × 6-bit). The on-chain shape lives in
 `PackagedMatchResultOnChain` (`client/src/data/blockchain/types.ts:72-85`):
@@ -682,6 +731,7 @@ the `tc` CID; the chain only carries enough to verify integrity.
 | Build-hash mismatch | `version_check` envelope | Toast warning, continue (not a slash) |
 | Seed commitment mismatch | `seed_reveal` validation | Disconnect; possible cheating |
 | State hash mismatch (cards) | `hash_check` from host | Toast + `slash_evidence_deferred` record |
+| Chess transition root/rejection mismatch | `transition_receipt_v1` | Quarantine local chess actions; retain session evidence; no automatic settlement |
 | Mid-match disconnect | WS close handler | No auto-broadcast; future evidence flow required |
 | Duplicate match_result on-chain | Found via `findExistingMatchResult` | `slash_evidence_deferred` record |
 | Transcript root mismatch at result proposal | Opponent local root check | Reject `result_propose`; ranked result is not broadcast |
@@ -831,7 +881,7 @@ the design is settled.
 | **dual-sig** | Both peers sign the same compact match-result commitment `ch` before on-chain broadcast. |
 | **envelope** | A wire frame — `chess_command`, `game_command`, `result_propose`, etc. |
 | **guest sentinel** | The `'guest:' + peerId.slice(0, 8)` playerId used when no Hive username is bound. Indicates a non-arbitrable move. |
-| **host** | The peer that arrived first at the relay. Authoritative for cards/poker; tied for chess. NOT a server. |
+| **host** | The peer with the lexicographically smaller `peerId`. Stable across reconnect order; authoritative for cards and tied for symmetric chess/poker actions. NOT a server. |
 | **instant-kill** | Chess capture that resolves without entering the poker phase. Triggered when attacker is `pawn`/`king` (Valkyrie weapon) OR defender is `pawn`. Predicate `isChessAttackInstantKill` in `shared/p2p-wire/chess.ts`. |
 | **isHost** | The transport-level hint emitted by the relay's `__sys.open`. |
 | **matchId** | `SHA256(matchSeed + sortedPeerIds)`, 16 hex chars. Binds every action to one match. |

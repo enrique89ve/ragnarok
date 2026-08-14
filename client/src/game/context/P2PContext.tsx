@@ -22,6 +22,7 @@ export const P2PProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 		dispatchGameCommand: () => undefined,
 		sendPokerAction: () => undefined,
 		sendPokerTurnStarted: () => undefined,
+		requestPhaseCheckpoint: async () => ({ status: 'unavailable', reason: 'not_connected' }),
 		downloadSessionLog: () => undefined,
 		gameState: null,
 		isConnected: false,
@@ -56,6 +57,7 @@ export const P2PProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 	};
 	ref.current.sendPokerAction = p2pSync.sendPokerAction;
 	ref.current.sendPokerTurnStarted = p2pSync.sendPokerTurnStarted;
+	ref.current.requestPhaseCheckpoint = p2pSync.requestPhaseCheckpoint;
 	ref.current.downloadSessionLog = p2pSync.downloadSessionLog;
 	ref.current.gameState = gameState;
 	ref.current.isConnected = p2pSync.isConnected;

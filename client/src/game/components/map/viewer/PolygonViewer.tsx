@@ -1,16 +1,16 @@
 import type { RealmPolygon } from '../data/polygons';
-import { getMapRealmById } from '../mapData';
 import { contourToSvgPath } from '../queries/polygonOps';
-import type { MapRealmId } from '../types';
+import type { MapRealmId, MapRealmLegend } from '../types';
 
 interface PolygonViewerProps {
 	polygons: Readonly<Record<MapRealmId, RealmPolygon>>;
 	order: readonly MapRealmId[];
 	selectedRealmId?: MapRealmId;
 	activeRealmId?: MapRealmId | null;
+	getRealmById: (realmId: MapRealmId) => MapRealmLegend;
 }
 
-export default function PolygonViewer({ polygons, order, selectedRealmId, activeRealmId }: PolygonViewerProps) {
+export default function PolygonViewer({ polygons, order, selectedRealmId, activeRealmId, getRealmById }: PolygonViewerProps) {
 	return (
 		<svg
 			viewBox="0 0 100 100"
@@ -21,7 +21,7 @@ export default function PolygonViewer({ polygons, order, selectedRealmId, active
 			{order.map(realmId => {
 				const polygon = polygons[realmId];
 				if (polygon.contours.length === 0) return null;
-				const realm = getMapRealmById(realmId);
+				const realm = getRealmById(realmId);
 				const isActive = realmId === activeRealmId;
 				const isSelected = realmId === selectedRealmId;
 				const fillOpacity = isActive ? 0.35 : isSelected ? 0.22 : 0.1;

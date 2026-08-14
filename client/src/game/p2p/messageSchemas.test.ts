@@ -11,6 +11,10 @@ import { describe, expect, it } from 'vitest';
 
 import { encodePokerAction } from '@shared/p2p-wire/combat';
 import { CHALLENGE_SIGNATURE_ALGORITHM } from '@shared/p2pAvailability';
+import {
+	CHESS_INTEGRITY_PROTOCOL_VERSION,
+	CHESS_INTEGRITY_SCOPE,
+} from '@shared/p2p-wire/integrity';
 
 import { createSeededIdGen, createSeededRng } from '../utils/seededRng';
 import { initializeGameSeeded } from '../utils/gameUtils';
@@ -310,6 +314,29 @@ describe('parseWireMessage — deck verification variants', () => {
 });
 
 describe('parseWireMessage — integrity probes', () => {
+	const root = 'a'.repeat(64);
+	const intentHash = 'b'.repeat(64);
+	const receipt = {
+		type: 'transition_receipt_v1' as const,
+		protocolVersion: CHESS_INTEGRITY_PROTOCOL_VERSION,
+		scope: CHESS_INTEGRITY_SCOPE,
+		matchId: 'match-integrity-1',
+		seq: 0,
+		commandId: '11111111-2222-4333-8444-555555555555',
+		intentHash,
+		status: 'applied' as const,
+		prevRoot: root,
+		nextRoot: root,
+	};
+
+	it('accepts a strict transition receipt and rejects hostile variants', () => {
+		expect(parseWireMessage(receipt)).not.toBeNull();
+		expect(parseWireMessage({ ...receipt, nextRoot: 'short' })).toBeNull();
+		expect(parseWireMessage({ ...receipt, seq: -1 })).toBeNull();
+		expect(parseWireMessage({ ...receipt, commandId: 'not-a-uuid' })).toBeNull();
+		expect(parseWireMessage({ ...receipt, extra: true })).toBeNull();
+	});
+
 	it('accepts hash_check / hash_mismatch with non-empty hash + non-negative turn', () => {
 		expect(parseWireMessage({ type: 'hash_check', stateHash: 'h', chessStateHash: 'c', chessMoveCount: 0, turnNumber: 0 })).not.toBeNull();
 		expect(parseWireMessage({ type: 'hash_mismatch', turnNumber: 3, myHash: 'h' })).not.toBeNull();

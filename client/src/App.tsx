@@ -56,7 +56,20 @@ const PacksPage = lazy(() => import('./game/components/packs/PacksPage'));
 const CollectionPage = lazy(() => import('./game/components/collection/CollectionPage'));
 const RankedLadderPage = lazy(() => import('./game/components/ladder/RankedLadderPage'));
 const CampaignPage = lazy(() => import('./game/components/campaign/CampaignPage'));
-const MapPage = lazy(() => import('./game/components/map/MapPage'));
+const MapPage = lazy(async () => {
+	const [{ default: MapPageComponent }, { AtlasDataProvider }, { GAME_ATLAS_DATA }] = await Promise.all([
+		import('./game/components/map/MapPage'),
+		import('./game/components/map/atlasDataContext'),
+		import('./game/atlasAdapter'),
+	]);
+	return {
+		default: () => (
+			<AtlasDataProvider data={GAME_ATLAS_DATA}>
+				<MapPageComponent />
+			</AtlasDataProvider>
+		),
+	};
+});
 const TournamentListPage = lazy(() => import('./game/components/tournament/TournamentListPage'));
 const MatchHistoryPage = lazy(() => import('./game/components/replay/MatchHistoryPage'));
 const SettingsPage = lazy(() => import('./game/components/settings/SettingsPage'));

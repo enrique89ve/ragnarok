@@ -2,6 +2,11 @@
 
 Status: current runtime contract for the server-side Ragnarok read model.
 
+Activation is separate from replay capability: per
+[`ADR 0007`](./adr/0007-p2p-gameplay-only-testnet.md), the current P2P testnet
+does not emit `match_anchor` or `match_result`. The indexer may retain handlers
+for future ranked settlement without making them part of the current match flow.
+
 This document is the source of truth for what the server indexer reads from
 Hive, how it decides an operation belongs to Ragnarok, which deterministic
 validations it applies, and what evidence the API exposes.

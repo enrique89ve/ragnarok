@@ -106,9 +106,10 @@ describe('chessAnimationSlice', () => {
 			},
 		});
 
-		useUnifiedCombatStore.getState().beginChessAttack(attacker, defender, false);
+		const result = useUnifiedCombatStore.getState().beginChessAttack(attacker, defender, false);
 		const beforeCleanup = useUnifiedCombatStore.getState();
 
+		expect(result).toEqual({ status: 'applied' });
 		expect(beforeCleanup.pendingAttackAnimation).not.toBeNull();
 		expect(beforeCleanup.pendingCombat?.attacker.id).toBe('a1');
 		expect(beforeCleanup.pendingCombat?.defender.id).toBe('d1');
@@ -121,6 +122,28 @@ describe('chessAnimationSlice', () => {
 		expect(afterCleanup.pendingCombat?.attacker.id).toBe('a1');
 		expect(afterCleanup.pendingCombat?.defender.id).toBe('d1');
 		expect(afterCleanup.boardState.gameStatus).toBe('combat');
+	});
+
+	it('rejects a non-geometric attack without staging animation or combat', () => {
+		const attacker = makePiece({ id: 'a1', type: 'queen', owner: 'player', position: { row: 1, col: 1 } });
+		const defender = makePiece({ id: 'd1', type: 'rook', owner: 'opponent', position: { row: 2, col: 3 } });
+
+		useUnifiedCombatStore.setState({
+			boardState: {
+				...initialBoardState,
+				pieces: [attacker, defender],
+				currentTurn: 'player',
+				gameStatus: 'playing',
+			},
+		});
+
+		const result = useUnifiedCombatStore.getState().beginChessAttack(attacker, defender, false);
+		const state = useUnifiedCombatStore.getState();
+
+		expect(result).toEqual({ status: 'rejected', reason: 'illegal-target' });
+		expect(state.pendingAttackAnimation).toBeNull();
+		expect(state.pendingCombat).toBeNull();
+		expect(state.boardState.gameStatus).toBe('playing');
 	});
 
 	it('beginChessAttack resolves an instant chess attack before animation cleanup', () => {

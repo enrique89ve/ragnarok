@@ -6,19 +6,19 @@ import {
 	Sparkles,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import type { FactionDef, FactionId } from '../../pvp/pvpData';
+import type { AtlasFaction } from './adapter';
 import type { MapRealmId, MapRealmLegend } from './types';
 
 interface MapLaunchPanelProps {
-	factions: readonly FactionDef[];
-	selectedFaction: FactionDef;
+	factions: readonly AtlasFaction[];
+	selectedFaction: AtlasFaction;
 	selectedFactionHomeRealm: MapRealmLegend;
-	selectedFactionId: FactionId;
+	selectedFactionId: string;
 	realms: readonly MapRealmLegend[];
 	selectedRealm: MapRealmLegend;
 	selectedRealmId: MapRealmId;
 	zoom: number;
-	onSelectFaction: (id: FactionId) => void;
+	onSelectFaction: (id: string) => void;
 	onSelectRealm: (id: MapRealmId) => void;
 }
 

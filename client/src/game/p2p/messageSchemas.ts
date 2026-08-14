@@ -24,6 +24,12 @@ import { z } from 'zod';
 
 import { ChessCommandEnvelopeSchema } from '@shared/p2p-wire/chess';
 import { CompactPokerActionSchema, isPokerActionCompactConsistent } from '@shared/p2p-wire/combat';
+import { TransitionReceiptMessageSchema } from '@shared/p2p-wire/integrity';
+import {
+	PhaseCheckpointCommitSchema,
+	PhaseCheckpointDisputeSchema,
+	PhaseCheckpointProposalSchema,
+} from '@shared/p2p-wire/phaseCheckpoint';
 import { DeckCardClaimsSchema } from '@shared/protocol-core/deckVerification';
 import { CHALLENGE_SIGNATURE_ALGORITHM } from '@shared/p2pAvailability';
 
@@ -331,6 +337,10 @@ const ActionEnvelopeSchema = z.object({
 const SCHEMA_BY_TYPE = {
 	game_command: GameCommandEnvelopeSchema,
 	chess_command: ChessCommandEnvelopeSchema,
+	transition_receipt_v1: TransitionReceiptMessageSchema,
+	phase_checkpoint_propose_v1: PhaseCheckpointProposalSchema,
+	phase_checkpoint_commit_v1: PhaseCheckpointCommitSchema,
+	phase_checkpoint_dispute_v1: PhaseCheckpointDisputeSchema,
 	init: InitSchema,
 	gameState: GameStateSchema,
 	opponentDisconnected: OpponentDisconnectedSchema,

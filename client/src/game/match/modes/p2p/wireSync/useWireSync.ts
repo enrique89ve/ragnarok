@@ -27,7 +27,12 @@ import { GAME_COMMAND_TYPES } from '../../../../core/commands';
 import type { GameCommandEnvelope, WireGameCommand } from '../../../../hooks/p2pEnvelope';
 import { useWarbandStore, selectArmy, selectDeckCardIds } from '../../../../../lib/stores/useWarbandStore';
 import { deriveCanonicalSide, isChessAttackInstantKill, tryParseChessCommandEnvelope, type ChessCommandEnvelope } from '../../../../../../../shared/p2p-wire/chess';
-import { resetChessWireSender, setChessSendObserver } from '../../../../p2p/chessWireSender';
+import {
+	confirmChessTransitionReceipt,
+	resetChessWireSender,
+	retryPendingChessTransition,
+	setChessSendObserver,
+} from '../../../../p2p/chessWireSender';
 import { getP2PProcessFlags, getP2PTransportRole } from '../../../../p2p/p2pPerspective';
 import type { P2PMessage } from '../../../../p2p/messages';
 import { parseWireMessage } from '../../../../p2p/messageSchemas';
@@ -56,6 +61,23 @@ import { buildRagnarokRuntimeEvidence, isNftFullTestnetRuntimePhase } from '@sha
 import { getP2PPokerCombatAdapter } from './pokerP2PCombatAdapter';
 import { stripRelayMatchTicketFromSessionChallenge } from '../../../../p2p/sessionAuthChallenge';
 import { decodeWireGameState, encodeGameStateForWire } from '../../../../p2p/stateFrameCodec';
+import {
+	CHESS_INTEGRITY_PROTOCOL_VERSION,
+	CHESS_INTEGRITY_SCOPE,
+	computeTransitionIntentHash,
+	type TransitionReceiptMessage,
+} from '@shared/p2p-wire/integrity';
+import {
+	buildChessIntegrityCheckpoint,
+	captureChessIntegrityCheckpoint,
+} from '../../../../p2p/chessIntegrityCheckpoint';
+import { chessIntegrityMonitor } from '../../../../p2p/chessIntegrityMonitor';
+import {
+	phaseCheckpointClient,
+	type PhaseCheckpointRequestResult,
+} from '../../../../p2p/phaseCheckpointClient';
+import type { Hash256 } from '@shared/p2p-wire/integrity';
+import type { PhaseCheckpointPhase } from '@shared/p2p-wire/phaseCheckpoint';
 
 export type { GameCommandEnvelope, WireGameCommand } from '../../../../hooks/p2pEnvelope';
 export type { P2PMessage } from '../../../../p2p/messages';
@@ -264,6 +286,8 @@ export function useWireSync() {
 	const lastIncomingChessSeqRef = useRef<number>(-1);
 	const seenChessCommandIdsRef = useRef<Set<string>>(new Set());
 	const seenChessCommandIdsOrderRef = useRef<string[]>([]);
+	const chessReceiptByCommandIdRef = useRef<Map<string, TransitionReceiptMessage>>(new Map());
+	const chessReceiptCommandOrderRef = useRef<string[]>([]);
 	const seenPokerDecisionIdsRef = useRef<Set<string>>(new Set());
 	const seenPokerDecisionIdsOrderRef = useRef<string[]>([]);
 
@@ -323,9 +347,12 @@ export function useWireSync() {
 				lastIncomingChessSeqRef.current = -1;
 				seenChessCommandIdsRef.current.clear();
 				seenChessCommandIdsOrderRef.current.length = 0;
+				chessReceiptByCommandIdRef.current.clear();
+				chessReceiptCommandOrderRef.current.length = 0;
 				seenPokerDecisionIdsRef.current.clear();
 				seenPokerDecisionIdsOrderRef.current.length = 0;
 				resetChessWireSender();
+				phaseCheckpointClient.reset();
 			lastEnvelopeSentAtRef.current = 0;
 			sessionKeyRef.current = null;
 			actionLogDbRef.current = null;
@@ -366,7 +393,9 @@ export function useWireSync() {
 				matchId: resumedMatchId,
 				localLeaves: signedTranscriptRef.current?.leaves.length ?? 0,
 			});
-			return undefined;
+				retryPendingChessTransition();
+				phaseCheckpointClient.retryPending(send);
+				return undefined;
 		}
 
 		loadWasmEngine().then(() => {
@@ -433,6 +462,7 @@ export function useWireSync() {
 	useEffect(() => () => {
 		clearTranscript();
 		resetChessWireSender();
+		phaseCheckpointClient.reset();
 	}, []);
 
 	// Host sends init AFTER seed exchange completes (replaces old 200ms timer)
@@ -520,7 +550,22 @@ export function useWireSync() {
 				return;
 			}
 
-			switch (data.type) {
+				switch (data.type) {
+				case 'phase_checkpoint_propose_v1':
+					// The relay consumes proposals. Seeing one here would mean a
+					// protocol boundary regression, so never treat it as peer data.
+					debug.warn('[wireSync] Dropped peer-sent phase checkpoint proposal');
+					break;
+
+				case 'phase_checkpoint_commit_v1':
+				case 'phase_checkpoint_dispute_v1': {
+					const accepted = phaseCheckpointClient.handleServerMessage(data);
+					if (!accepted) {
+						debug.warn('[wireSync] Ignored stale or mismatched phase checkpoint response');
+					}
+					break;
+				}
+
 				case 'version_check': {
 					const myHash = typeof __BUILD_HASH__ !== 'undefined' ? __BUILD_HASH__ : 'dev';
 					if (data.buildHash !== myHash && data.buildHash !== 'dev' && myHash !== 'dev') {
@@ -544,6 +589,31 @@ export function useWireSync() {
 						});
 						usePeerStore.getState().disconnect();
 					}
+					break;
+				}
+
+				case 'transition_receipt_v1': {
+					const confirmation = confirmChessTransitionReceipt(data);
+					if (confirmation.status === 'confirmed') {
+						debug.log('[wireSync] transition receipt confirmed', {
+							commandId: confirmation.commandId.slice(0, 8),
+						});
+						break;
+					}
+					if (confirmation.status === 'ignored') {
+						debug.warn(`[wireSync] transition receipt ignored — ${confirmation.reason}`);
+						break;
+					}
+					recordSessionEvent('transition_integrity_quarantined', {
+						reason: confirmation.divergence.reason,
+						commandId: confirmation.divergence.commandId,
+						detail: confirmation.divergence.detail,
+					});
+					GameEventBus.emitNotification({
+						level: 'error',
+						message: 'Game integrity diverged. Actions are paused to protect the match.',
+						duration: 10_000,
+					});
 					break;
 				}
 
@@ -1097,8 +1167,12 @@ export function useWireSync() {
 									seq: data.seq,
 									commandId: data.commandId,
 								});
-							recordSessionEvent('chess_command_rejected', { cause });
-						};
+						recordSessionEvent('chess_command_rejected', { cause });
+					};
+					if (chessIntegrityMonitor.getState().status === 'quarantined') {
+						reject('integrity_session_quarantined');
+						break;
+					}
 
 					const envelope: ChessCommandEnvelope | null = tryParseChessCommandEnvelope(data);
 					if (!envelope) {
@@ -1115,12 +1189,22 @@ export function useWireSync() {
 						reject('match_id_mismatch');
 						break;
 					}
+					const cachedReceipt = chessReceiptByCommandIdRef.current.get(envelope.commandId);
+					if (cachedReceipt) {
+						send(cachedReceipt);
+						debug.log('[wireSync] replayed cached transition receipt', {
+							commandId: envelope.commandId.slice(0, 8),
+						});
+						break;
+					}
 
-					// Symmetric P2P: monotonic-non-decreasing seq instead of strict
-					// contiguous. Each peer maintains its OWN outgoing counter; the
-					// receiver only needs replay protection (seq must not regress).
-					if (envelope.seq < lastIncomingChessSeqRef.current) {
-						reject(`seq_regressed_last_${lastIncomingChessSeqRef.current}_got_${envelope.seq}`);
+					// WebSocket ordering plus one sender-local counter gives a strict,
+					// contiguous sequence for this direction. Reject gaps and repeated
+					// sequence numbers even when commandId differs: both would make a
+					// transition receipt ambiguous during replay.
+					const expectedChessSeq = lastIncomingChessSeqRef.current + 1;
+					if (envelope.seq !== expectedChessSeq) {
+						reject(`seq_mismatch_expected_${expectedChessSeq}_got_${envelope.seq}`);
 						break;
 					}
 
@@ -1145,6 +1229,7 @@ export function useWireSync() {
 					// the cards path. Mismatch with non-empty claim is a hard reject
 					// with the domain-specific code so post-incident triage points
 					// at the right slice.
+					let preCheckpoint: ReturnType<typeof buildChessIntegrityCheckpoint> = null;
 					{
 						const senderChessHash = envelope.prevChessStateHash;
 						const senderCardsHash = envelope.prevCardsStateHash;
@@ -1172,6 +1257,18 @@ export function useWireSync() {
 							reject(`prev_cards_state_hash_mismatch_local_${localCardsHash.slice(0, 16)}_got_${senderCardsHash.slice(0, 16)}`);
 							break;
 						}
+						preCheckpoint = buildChessIntegrityCheckpoint({
+							matchId: envelope.matchId,
+							chessHash: localChessHash,
+							cardsHash: localCardsHash,
+						});
+						if (preCheckpoint === null) {
+							reject('integrity_root_unavailable');
+							break;
+						}
+					}
+					if (preCheckpoint === null) {
+						break;
 					}
 
 						const cs = useUnifiedCombatStore.getState();
@@ -1182,6 +1279,24 @@ export function useWireSync() {
 					// `envelope.command` repeatedly loses the narrow because TS
 					// treats property reads on objects as pessimistic.
 					const cmd = envelope.command;
+					const intentHash = computeTransitionIntentHash({
+						matchId: envelope.matchId,
+						seq: envelope.seq,
+						commandId: envelope.commandId,
+						prevRoot: preCheckpoint.root,
+						action: cmd,
+					});
+					const emitTransitionReceipt = (receipt: TransitionReceiptMessage): void => {
+						chessReceiptByCommandIdRef.current.set(receipt.commandId, receipt);
+						chessReceiptCommandOrderRef.current.push(receipt.commandId);
+						while (chessReceiptCommandOrderRef.current.length > SEEN_COMMAND_IDS_MAX) {
+							const evicted = chessReceiptCommandOrderRef.current.shift();
+							if (evicted !== undefined) {
+								chessReceiptByCommandIdRef.current.delete(evicted);
+							}
+						}
+						send(receipt);
+					};
 
 					// Common: locate attacker piece and verify position.
 						const attacker = pieces.find(p => p.id === cmd.pieceId);
@@ -1225,13 +1340,14 @@ export function useWireSync() {
 					// Branch by command discriminator.
 					let transcriptAction: 'chess_move' | 'chess_attack' | 'chess_combat_initiated';
 					let transcriptExtra: Record<string, unknown> = {};
+					let mutationResult: ReturnType<typeof cs.executeMove>;
 
 					if (cmd.type === 'chess_move') {
 						if (!cs.executeMove) {
 							reject('execute_move_unavailable');
 							break;
 						}
-						cs.executeMove(cmd.from, cmd.to);
+						mutationResult = cs.executeMove(cmd.from, cmd.to);
 						transcriptAction = 'chess_move';
 						} else {
 							const defender = pieces.find(p => p.id === cmd.defenderId);
@@ -1271,13 +1387,71 @@ export function useWireSync() {
 							break;
 						}
 
-						cs.beginChessAttack(attacker, defender, instantKill);
+						mutationResult = cs.beginChessAttack(attacker, defender, instantKill);
 						transcriptAction = cmd.type;
 						transcriptExtra = {
 							defenderId: cmd.defenderId,
 							isInstantKill: instantKill,
 						};
 					}
+
+					if (mutationResult.status === 'rejected') {
+						emitTransitionReceipt({
+							type: 'transition_receipt_v1',
+							protocolVersion: CHESS_INTEGRITY_PROTOCOL_VERSION,
+							scope: CHESS_INTEGRITY_SCOPE,
+							matchId: envelope.matchId,
+							seq: envelope.seq,
+							commandId: envelope.commandId,
+							intentHash,
+							status: 'rejected',
+							currentRoot: preCheckpoint.root,
+							reason: mutationResult.reason,
+						});
+						reject(`reducer_${mutationResult.reason}`);
+						break;
+					}
+
+					const postCheckpoint = captureChessIntegrityCheckpoint({
+						matchId: envelope.matchId,
+						isCardsAuthority,
+					});
+					if (postCheckpoint === null) {
+						chessIntegrityMonitor.quarantine({
+							reason: 'local_checkpoint_unavailable',
+							commandId: envelope.commandId,
+							expectedRoot: preCheckpoint.root,
+							receivedRoot: null,
+							detail: 'post-transition chess+cards checkpoint is unavailable',
+						});
+						emitTransitionReceipt({
+							type: 'transition_receipt_v1',
+							protocolVersion: CHESS_INTEGRITY_PROTOCOL_VERSION,
+							scope: CHESS_INTEGRITY_SCOPE,
+							matchId: envelope.matchId,
+							seq: envelope.seq,
+							commandId: envelope.commandId,
+							intentHash,
+							status: 'rejected',
+							currentRoot: preCheckpoint.root,
+							reason: 'integrity-root-unavailable',
+						});
+						reject('post_integrity_root_unavailable');
+						break;
+					}
+
+					emitTransitionReceipt({
+						type: 'transition_receipt_v1',
+						protocolVersion: CHESS_INTEGRITY_PROTOCOL_VERSION,
+						scope: CHESS_INTEGRITY_SCOPE,
+						matchId: envelope.matchId,
+						seq: envelope.seq,
+						commandId: envelope.commandId,
+						intentHash,
+						status: 'applied',
+						prevRoot: preCheckpoint.root,
+						nextRoot: postCheckpoint.root,
+					});
 
 					// Mark applied: advance chess seq + register commandId in dedup ring.
 					lastIncomingChessSeqRef.current = envelope.seq;
@@ -2409,6 +2583,24 @@ export function useWireSync() {
 		return signedTranscriptRef.current?.merkleRoot ?? null;
 	}, []);
 
+	const requestPhaseCheckpoint = useCallback((input: {
+		readonly fromPhase: PhaseCheckpointPhase;
+		readonly toPhase: PhaseCheckpointPhase;
+		readonly stateRoot: Hash256;
+	}): Promise<PhaseCheckpointRequestResult> => {
+		const matchId = matchIdRef.current;
+		if (connectionState !== 'connected' || !matchId) {
+			return Promise.resolve({ status: 'unavailable', reason: 'not_connected' });
+		}
+		return phaseCheckpointClient.request({
+			matchId,
+			fromPhase: input.fromPhase,
+			toPhase: input.toPhase,
+			stateRoot: input.stateRoot,
+			send,
+		});
+	}, [connectionState, send]);
+
 	return {
 		syncGameState,
 		playCard: wrappedPlayCard,
@@ -2421,6 +2613,7 @@ export function useWireSync() {
 		proposeResult,
 		downloadSessionLog,
 		getSignedTranscriptRoot,
+		requestPhaseCheckpoint,
 		isConnected: connectionState === 'connected',
 		isHost: transportRole === 'host',
 	};

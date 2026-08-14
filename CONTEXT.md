@@ -8,6 +8,14 @@ This context defines the release language for taking Ragnarok from internal deve
 A resettable shared environment used to validate gameplay, P2P, NFT, rewards, replay, and economy flows without permanent value.
 _Avoid_: Production, mainnet, permanent economy
 
+**Gameplay-only P2P Testnet**:
+The current P2P slice: both browsers run chess and poker, and the WebSocket
+relay compares opaque deterministic roots only at phase changes. The match
+shows a local terminal result but does not sign or broadcast `match_anchor` or
+`match_result`, open Keychain after matchmaking, or mutate P2P RUNE, ELO,
+Season Score, CardXP, NFTLox progress, or ownership.
+_Avoid_: Ranked settlement, official winner, on-chain result, server gameplay judge
+
 **QA Testnet Season 0**:
 A resettable Testnet rehearsal that uses a separate Hive protocol id, fresh index start, and real replay-derived RUNE while deliberately granting testers full-catalog gameplay access for mechanics coverage. Its card access is a QA entitlement, not ownership, and it must not validate NFT custody, scarcity, marketplace value, or official ranking.
 _Avoid_: Local sandbox, mainnet season, NFT ownership test, public beta
@@ -35,6 +43,9 @@ _Avoid_: Full catalog audit, every card validated, final balance
 ## Relationships
 
 - A **Closed Testnet Beta** runs inside **Testnet**.
+- **Gameplay-only P2P Testnet** is the active P2P validation slice and follows
+  [`ADR 0007`](docs/adr/0007-p2p-gameplay-only-testnet.md); ranked settlement is
+  a later slice.
 - **QA Testnet Season 0** may run before **Closed Testnet Beta** to stress gameplay with full-catalog access while still using resettable Hive replay and RUNE.
 - Every resettable QA or beta phase must declare a **Testnet Reset Epoch** before testers start.
 - A **Public Testnet Beta** follows a successful **Closed Testnet Beta**.

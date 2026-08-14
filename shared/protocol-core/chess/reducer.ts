@@ -124,6 +124,11 @@ const reduceCapture = <P extends ChessProtocolPiece>(
 	if (victim.position.row !== to.row || victim.position.col !== to.col) {
 		return { ok: false, reason: 'illegal-target' };
 	}
+	const { attacks } = getValidMoves(attacker, state.pieces);
+	const legalCapture = attacks.some(position =>
+		position.row === to.row && position.col === to.col
+	);
+	if (!legalCapture) return { ok: false, reason: 'illegal-target' };
 
 	const nextPieces: P[] = state.pieces
 		.filter(p => p.id !== victimId)

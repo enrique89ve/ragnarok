@@ -1,4 +1,3 @@
-import type { NineRealm } from '../../../types/NorseTypes';
 import type { MapRealmId } from '../types';
 
 export const MAP_REALM_IDS = [
@@ -11,7 +10,7 @@ export const MAP_REALM_IDS = [
 	'alfheim',
 	'svartalfheim',
 	'vanaheim',
-] as const satisfies readonly NineRealm[];
+] as const satisfies readonly MapRealmId[];
 
 export function isMapRealmId(id: string): id is MapRealmId {
 	return MAP_REALM_IDS.includes(id as MapRealmId);

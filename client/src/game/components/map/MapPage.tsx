@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
 	ChevronLeft,
@@ -15,10 +15,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { ComponentType, PointerEvent, WheelEvent } from 'react';
-import { routes } from '../../../lib/routes';
-import { FACTIONS } from '../../pvp/pvpData';
-import type { FactionId } from '../../pvp/pvpData';
-import { MAP_REALMS, getFactionHomeRealm, getMapRealmById, getMapRealmCardSections } from './mapData';
+import { useAtlasData } from './atlasDataContext';
 import AtlasAmbientCanvas from './AtlasAmbientCanvas';
 import AtlasPathCanvas from './AtlasPathCanvas';
 import { REALM_EFFECTS } from './data/effects';
@@ -61,13 +58,6 @@ const REALM_MARKERS: ReadonlyArray<RealmMarker> = [
 	{ id: 'svartalfheim', point: { x: 56.0, y: 75.8 } },
 	{ id: 'vanaheim', point: { x: 70.6, y: 80.7 } },
 ];
-const FACTION_BY_HOME_REALM: Partial<Record<MapRealmId, FactionId>> = {
-	asgard: 'aesir',
-	vanaheim: 'vanir',
-	jotunheim: 'jotun',
-	helheim: 'helheim',
-	muspelheim: 'muspell',
-};
 
 // `import.meta.glob` only resolves modules that exist at build time. The editor
 // overlay file is intentionally gitignored (internal authoring tool) — when it
@@ -127,8 +117,16 @@ export default function MapPage() {
 	}, [editorRequested]);
 
 	const editorActive = editorRequested && EditorOverlay !== null;
+	const { data, services } = useAtlasData();
+	const factionByRealm = useMemo(() => {
+		const map: Partial<Record<MapRealmId, string>> = {};
+		for (const [factionId, realmId] of Object.entries(data.factionHomeRealms)) {
+			map[realmId] = factionId;
+		}
+		return map;
+	}, [data.factionHomeRealms]);
 	const [selectedRealmId, setSelectedRealmId] = useState<MapRealmId>('asgard');
-	const [selectedFactionId, setSelectedFactionId] = useState<FactionId>('aesir');
+	const [selectedFactionId, setSelectedFactionId] = useState<string>(() => data.factions[0]?.id ?? '');
 	const [activeCardSectionId, setActiveCardSectionId] = useState<MapCardSectionId>('characters');
 	const [isCardDossierOpen, setIsCardDossierOpen] = useState(false);
 	const [view, setView] = useState<MapViewState>(DEFAULT_VIEW);
@@ -136,11 +134,11 @@ export default function MapPage() {
 	const dragStateRef = useRef<MapDragState | null>(null);
 	const markerLayerRef = useRef<HTMLDivElement | null>(null);
 
-	const selectedRealm = getMapRealmById(selectedRealmId);
-	const selectedFaction = FACTIONS.find(faction => faction.id === selectedFactionId) ?? FACTIONS[0];
-	const selectedFactionHomeRealm = getMapRealmById(getFactionHomeRealm(selectedFaction.id));
-	const cardSections = getMapRealmCardSections(selectedRealmId);
-	const selectedRealmFaction = FACTIONS.find(faction => faction.id === FACTION_BY_HOME_REALM[selectedRealmId]);
+	const selectedRealm = services.getRealmById(selectedRealmId);
+	const selectedFaction = data.factions.find(faction => faction.id === selectedFactionId) ?? data.factions[0];
+	const selectedFactionHomeRealm = services.getRealmById(services.getFactionHomeRealm(selectedFaction.id));
+	const cardSections = services.getCardSections(selectedRealmId);
+	const selectedRealmFaction = data.factions.find(faction => faction.id === factionByRealm[selectedRealmId]);
 	const cardDossierContextLabel = selectedRealmFaction?.name ?? 'Yggdrasil Atlas';
 	const cardDossierContextColor = selectedRealmFaction?.color ?? selectedRealm.color;
 
@@ -173,13 +171,13 @@ export default function MapPage() {
 	};
 	const openRealmCards = (id: MapRealmId) => {
 		selectRealm(id);
-		const factionId = FACTION_BY_HOME_REALM[id];
+		const factionId = factionByRealm[id];
 		if (factionId) setSelectedFactionId(factionId);
 		setIsCardDossierOpen(true);
 	};
-	const selectFaction = (id: FactionId) => {
+	const selectFaction = (id: string) => {
 		setSelectedFactionId(id);
-		setSelectedRealmId(getFactionHomeRealm(id));
+		setSelectedRealmId(services.getFactionHomeRealm(id));
 		setActiveCardSectionId('characters');
 		setIsCardDossierOpen(false);
 		resetView();
@@ -250,7 +248,7 @@ export default function MapPage() {
 				<div className="mx-auto flex h-16 max-w-[1800px] items-center justify-between gap-4 px-4 md:px-6">
 					<div className="flex min-w-0 items-center gap-3">
 						<Link
-							to={routes.home}
+							to={data.homePath}
 							aria-label="Back home"
 							className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-obsidian-700 bg-obsidian-900/80 text-ink-200 transition-colors hover:border-gold-300/45 hover:text-gold-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
 						>
@@ -265,7 +263,7 @@ export default function MapPage() {
 					</div>
 
 					<div className="hidden items-center gap-2 md:grid md:grid-cols-3" aria-label="Atlas summary">
-						<HeaderMetric value={MAP_REALMS.length} label="Realms" />
+						<HeaderMetric value={services.realms.length} label="Realms" />
 						<HeaderMetric value={selectedRealm.connections.length} label="Links" />
 						<HeaderMetric value={`${view.zoom.toFixed(1)}x`} label="Zoom" />
 					</div>
@@ -324,7 +322,7 @@ export default function MapPage() {
 										paused={false}
 									/>
 									{!editorActive && REALM_MARKERS.map(marker => {
-										const realm = getMapRealmById(marker.id);
+										const realm = services.getRealmById(marker.id);
 										const active = marker.id === selectedRealmId;
 
 										return (
@@ -401,6 +399,7 @@ export default function MapPage() {
 							markerLayerRef={markerLayerRef}
 							selectedRealmId={selectedRealmId}
 							defaultRealmMarkers={REALM_MARKERS}
+							realms={services.realms}
 						/>
 					) : null}
 
@@ -418,11 +417,11 @@ export default function MapPage() {
 				</div>
 
 				<MapLaunchPanel
-					factions={FACTIONS}
+					factions={data.factions}
 					selectedFaction={selectedFaction}
 					selectedFactionHomeRealm={selectedFactionHomeRealm}
 					selectedFactionId={selectedFactionId}
-					realms={MAP_REALMS}
+					realms={services.realms}
 					selectedRealm={selectedRealm}
 					selectedRealmId={selectedRealmId}
 					zoom={view.zoom}

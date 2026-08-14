@@ -26,6 +26,7 @@ import {
 	P2P_MATCH_TICKET_WS_PROTOCOL_PREFIX,
 	type P2PMatchTicket,
 } from '@shared/p2pAvailability';
+import { tryParsePhaseCheckpointServerMessage } from '@shared/p2p-wire/phaseCheckpoint';
 
 type TransportEvent = 'data' | 'open' | 'close' | 'error';
 type TransportCloseReason = 'local' | 'opponent';
@@ -159,6 +160,7 @@ export class LocalWebSocketTransport {
 		readonly isHost?: unknown;
 		readonly remotePeerId?: unknown;
 		readonly reason?: unknown;
+		readonly message?: unknown;
 	}): void {
 		switch (msg.event) {
 			case 'open': {
@@ -185,6 +187,15 @@ export class LocalWebSocketTransport {
 				const reason = typeof msg.reason === 'string' ? msg.reason : 'unknown';
 				debug.warn(`[WSTransport] server error: ${reason}`);
 				this.emit('error', new Error(reason));
+				return;
+			}
+			case 'phase_checkpoint': {
+				const message = tryParsePhaseCheckpointServerMessage(msg.message);
+				if (!message) {
+					debug.warn('[WSTransport] malformed server phase checkpoint');
+					return;
+				}
+				this.emit('data', message);
 				return;
 			}
 			default:

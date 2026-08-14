@@ -1,5 +1,10 @@
 import type { ChessCommandEnvelope } from '../../../../shared/p2p-wire/chess';
 import type { CompactPokerAction } from '../../../../shared/p2p-wire/combat';
+import type { TransitionReceiptMessage } from '../../../../shared/p2p-wire/integrity';
+import type {
+	PhaseCheckpointProposal,
+	PhaseCheckpointServerMessage,
+} from '../../../../shared/p2p-wire/phaseCheckpoint';
 import type { DeckCardClaim } from '../../../../shared/protocol-core/deckVerification';
 import type { ServerSignedChallenge } from '@shared/p2pAvailability';
 import type { PackagedMatchResult } from '../../data/blockchain/types';
@@ -50,6 +55,9 @@ export type WireMessage =
 	| { type: 'poker_action'; playerId: string; action: string; hpCommitment?: number; compact?: CompactPokerAction; turnId?: string; decisionId: string; sentAtMs?: number }
 	| { type: 'poker_turn_started'; combatId: string; turnId: string; phase: string; activePlayerId: string; actionsThisRound: number; durationMs: number; remainingMs?: number; sentAtMs: number }
 	| ChessCommandEnvelope
+	| TransitionReceiptMessage
+	| PhaseCheckpointProposal
+	| PhaseCheckpointServerMessage
 	// ── Phase 0 protocol-v2 envelopes (ADR 0004 §Decision.6) ─────────────
 	// Schema/wire only at this stage — handlers land in issues 02 / 06 / 03.
 	// Inner `action: unknown` on `action_envelope` is intentional: the per-

@@ -22,6 +22,10 @@ import type { Duplex } from 'stream';
 import { WebSocketServer, WebSocket, type RawData } from 'ws';
 import { z } from 'zod';
 import {
+	tryParsePhaseCheckpointProposal,
+	type PhaseCheckpointServerMessage,
+} from '../../shared/p2p-wire/phaseCheckpoint';
+import {
 	P2P_MATCH_TICKET_WS_PROTOCOL,
 	isSafePeerId,
 	isSafeRoomOrMatchId,
@@ -36,6 +40,7 @@ import {
 	type P2PRelayTelemetrySnapshot,
 } from '../services/p2pTelemetry';
 import { verifyP2PMatchTicketForRoom } from '../services/p2pMatchTicketSigner';
+import { createP2PPhaseCheckpointCoordinator } from '../services/p2pPhaseCheckpointCoordinator';
 import {
 	isP2PRelayOriginAllowed,
 } from '../services/p2pRelayOrigin';
@@ -53,9 +58,15 @@ type RoomMember = {
 
 const rooms = new Map<string, RoomMember[]>();
 const relayAliveSockets = new WeakSet<WebSocket>();
+const phaseCheckpointCoordinator = createP2PPhaseCheckpointCoordinator();
+const emptyCheckpointRoomExpiry = new Map<string, number>();
 
 const ROOM_MAX_PEERS = 2;
 const KEEPALIVE_INTERVAL_MS = 15_000;
+const CHECKPOINT_RECONNECT_RETENTION_MS = 120_000;
+const CHECKPOINT_SWEEP_INTERVAL_MS = 30_000;
+const CHECKPOINT_TOKEN_CAPACITY = 8;
+const CHECKPOINT_TOKEN_REFILL_MS = 2_000;
 // Initial GameState sync is gzip-framed before relay fan-out; keep frames tight.
 export const P2P_RELAY_MAX_PAYLOAD_BYTES = 16 * 1024;
 
@@ -73,6 +84,7 @@ const RELAY_ALLOWED_MESSAGE_TYPES: ReadonlySet<string> = new Set([
 	'init',
 	'game_command',
 	'chess_command',
+	'transition_receipt_v1',
 	'gameState',
 	'opponentDisconnected',
 	'ping',
@@ -97,6 +109,7 @@ const RELAY_ALLOWED_MESSAGE_TYPES: ReadonlySet<string> = new Set([
 	'state_sync_request',
 	'action_envelope',
 	'spectator_state',
+	'phase_checkpoint_propose_v1',
 ]);
 
 /**
@@ -112,7 +125,7 @@ const relayEnvelopeSchema = z.object({
 
 type ValidationOk = { readonly ok: true; readonly type: string };
 type ValidationFail = { readonly ok: false; readonly reason: string };
-type ValidationResult = ValidationOk | ValidationFail;
+export type P2PRelayFrameValidationResult = ValidationOk | ValidationFail;
 type RelayUpgradeAccess =
 	| { readonly ok: true }
 	| { readonly ok: false; readonly status: number; readonly telemetryReason: P2PRelayErrorReason; readonly reason: string };
@@ -201,7 +214,7 @@ function rejectUpgrade(socket: { write: (chunk: string) => unknown; destroy: () 
 	try { socket.destroy(); } catch { /* already closed */ }
 }
 
-function validateRelayFrame(text: string): ValidationResult {
+export function validateP2PRelayFrame(text: string): P2PRelayFrameValidationResult {
 	if (Buffer.byteLength(text, 'utf8') > P2P_RELAY_MAX_PAYLOAD_BYTES) {
 		return { ok: false, reason: 'oversize' };
 	}
@@ -231,13 +244,21 @@ function sendSys(ws: WebSocket, payload: Record<string, unknown>): void {
 	} catch { /* socket closed mid-send */ }
 }
 
+function sendPhaseCheckpoint(
+	ws: WebSocket,
+	message: PhaseCheckpointServerMessage,
+): void {
+	sendSys(ws, { event: 'phase_checkpoint', message });
+}
+
 function notifyRoomFull(room: readonly RoomMember[]): void {
 	if (room.length !== ROOM_MAX_PEERS) return;
 	const [first, second] = room;
-	// First arrival is the host (canonical pick — useWireSync seed-exchange
-	// breaks ties by lexicographical peerId comparison anyway).
-	sendSys(first.ws, { event: 'open', isHost: true,  remotePeerId: second.peerId });
-	sendSys(second.ws, { event: 'open', isHost: false, remotePeerId: first.peerId });
+	// Stable across reconnect order: the lexicographically smaller peer keeps
+	// cards authority instead of authority silently flipping after a dropout.
+	const firstIsHost = first.peerId.localeCompare(second.peerId) < 0;
+	sendSys(first.ws, { event: 'open', isHost: firstIsHost, remotePeerId: second.peerId });
+	sendSys(second.ws, { event: 'open', isHost: !firstIsHost, remotePeerId: first.peerId });
 }
 
 function relayRawFrameToText(raw: RawData): string {
@@ -332,6 +353,7 @@ export function attachP2PRelay(server: HttpServer): void {
 			room = [];
 			rooms.set(roomId, room);
 		}
+		emptyCheckpointRoomExpiry.delete(roomId);
 
 		if (room.length >= ROOM_MAX_PEERS) {
 			recordP2PRelayError('room_full');
@@ -355,11 +377,24 @@ export function attachP2PRelay(server: HttpServer): void {
 
 		if (room.length === ROOM_MAX_PEERS) notifyRoomFull(room);
 
+		let checkpointTokens = CHECKPOINT_TOKEN_CAPACITY;
+		let checkpointTokensRefilledAt = Date.now();
+		const consumeCheckpointToken = (): boolean => {
+			const now = Date.now();
+			const refill = Math.floor((now - checkpointTokensRefilledAt) / CHECKPOINT_TOKEN_REFILL_MS);
+			if (refill > 0) {
+				checkpointTokens = Math.min(CHECKPOINT_TOKEN_CAPACITY, checkpointTokens + refill);
+				checkpointTokensRefilledAt += refill * CHECKPOINT_TOKEN_REFILL_MS;
+			}
+			if (checkpointTokens <= 0) return false;
+			checkpointTokens--;
+			return true;
+		};
+
 		ws.on('message', (raw: RawData) => {
 			const currentRoom = rooms.get(roomId);
 			if (!currentRoom) return;
-			const other = currentRoom.find(m => m.peerId !== peerId);
-			if (!other || other.ws.readyState !== WebSocket.OPEN) return;
+			if (!currentRoom.some(member => member.peerId === peerId && member.ws === ws)) return;
 
 			// Coerce to string so the recipient sees the same shape regardless of
 			// how the sender's WebSocket lib emitted the frame. App payloads are
@@ -371,12 +406,41 @@ export function attachP2PRelay(server: HttpServer): void {
 			// contract here: well-formed JSON, known type, non-reserved, sane size.
 			// Drops are logged but silent to the sender — surfacing them risks an
 			// info-leak channel for probing the whitelist.
-			const validation = validateRelayFrame(text);
+			const validation = validateP2PRelayFrame(text);
 			if (!validation.ok) {
 				recordP2PRelayDrop(validation.reason);
 				log(`dropping frame room=${roomId.slice(0, 16)}… peer=${peerId.slice(0, 8)}… reason=${validation.reason}`, 'Relay');
 				return;
 			}
+
+			if (validation.type === 'phase_checkpoint_propose_v1') {
+				if (!consumeCheckpointToken()) {
+					recordP2PRelayDrop('phase_checkpoint_rate_limited');
+					return;
+				}
+				let parsedJson: unknown;
+				try { parsedJson = JSON.parse(text); }
+				catch { return; }
+				const proposal = tryParsePhaseCheckpointProposal(parsedJson);
+				if (!proposal) {
+					recordP2PRelayDrop('malformed_phase_checkpoint');
+					return;
+				}
+				const result = phaseCheckpointCoordinator.submit({ roomId, peerId, proposal });
+				if (result.status === 'pending') return;
+				if (result.recipients === 'sender') {
+					sendPhaseCheckpoint(ws, result.message);
+					return;
+				}
+				for (const member of currentRoom) {
+					sendPhaseCheckpoint(member.ws, result.message);
+				}
+				recordP2PRelayMessage();
+				return;
+			}
+
+			const other = currentRoom.find(m => m.peerId !== peerId);
+			if (!other || other.ws.readyState !== WebSocket.OPEN) return;
 
 			try {
 				other.ws.send(text);
@@ -398,7 +462,13 @@ export function attachP2PRelay(server: HttpServer): void {
 			if (survivor && survivor.ws.readyState === WebSocket.OPEN) {
 				sendSys(survivor.ws, { event: 'close' });
 			}
-			if (currentRoom.length === 0) rooms.delete(roomId);
+			if (currentRoom.length === 0) {
+				rooms.delete(roomId);
+				emptyCheckpointRoomExpiry.set(
+					roomId,
+					Date.now() + CHECKPOINT_RECONNECT_RETENTION_MS,
+				);
+			}
 		};
 
 		ws.on('close', handleDeparture);
@@ -424,4 +494,14 @@ export function attachP2PRelay(server: HttpServer): void {
 		});
 	}, KEEPALIVE_INTERVAL_MS);
 	keepaliveTimer.unref?.();
+
+	const checkpointSweepTimer = setInterval(() => {
+		const now = Date.now();
+		for (const [roomId, expiresAt] of emptyCheckpointRoomExpiry) {
+			if (expiresAt > now || rooms.has(roomId)) continue;
+			emptyCheckpointRoomExpiry.delete(roomId);
+			phaseCheckpointCoordinator.dropRoom(roomId);
+		}
+	}, CHECKPOINT_SWEEP_INTERVAL_MS);
+	checkpointSweepTimer.unref?.();
 }

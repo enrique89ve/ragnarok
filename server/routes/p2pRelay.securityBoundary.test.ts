@@ -13,6 +13,7 @@ import {
 	P2P_RELAY_MAX_PAYLOAD_BYTES,
 	isP2PRelayTicketStarterClaimAllowed,
 	shouldRequireP2PRelayTicket,
+	validateP2PRelayFrame,
 } from './p2pRelay';
 import {
 	clearStarterCeremonyClaimsForTests,
@@ -101,5 +102,23 @@ describe('p2pRelay security boundary', () => {
 		expect(compressedInitFrameBytes).toBeLessThanOrEqual(P2P_RELAY_MAX_PAYLOAD_BYTES);
 		expect(compressedGameStateFrameBytes).toBeLessThanOrEqual(P2P_RELAY_MAX_PAYLOAD_BYTES);
 		expect(decodeWireGameState(compressedPayload)).toEqual(gameState);
+	});
+
+	it('accepts only client proposals and rejects forged checkpoint outcomes', () => {
+		const proposal = JSON.stringify({ type: 'phase_checkpoint_propose_v1' });
+		const forgedCommit = JSON.stringify({ type: 'phase_checkpoint_commit_v1' });
+		const forgedSystem = JSON.stringify({ type: '__sys', event: 'phase_checkpoint' });
+		expect(validateP2PRelayFrame(proposal)).toEqual({
+			ok: true,
+			type: 'phase_checkpoint_propose_v1',
+		});
+		expect(validateP2PRelayFrame(forgedCommit)).toEqual({
+			ok: false,
+			reason: 'unknown_type:phase_checkpoint_commit_v1',
+		});
+		expect(validateP2PRelayFrame(forgedSystem)).toEqual({
+			ok: false,
+			reason: 'reserved_type',
+		});
 	});
 });

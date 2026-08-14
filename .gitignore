@@ -91,6 +91,11 @@ __tests__/
 !client/src/data/blockchain/matchResultPackager.test.ts
 !client/src/data/blockchain/transcriptBuilder.test.ts
 !client/src/game/match/modes/p2p/winnerArbiter.test.ts
+!client/src/game/p2p/chessIntegrityMonitor.test.ts
+!client/src/game/p2p/phaseCheckpointClient.test.ts
+!client/src/game/p2p/phaseBoundaryRoot.test.ts
+!shared/p2p-wire/integrity.test.ts
+!shared/p2p-wire/phaseCheckpoint.test.ts
 !client/src/data/HiveAuth.test.ts
 !client/src/data/HiveDataLayer.test.ts
 !server/services/serverStateAdapter.test.ts
@@ -180,6 +185,7 @@ __tests__/
 !server/services/p2pChallengeSigner.test.ts
 !server/services/p2pMatchTicketSigner.securityBoundary.test.ts
 !server/services/p2pRateLimit.test.ts
+!server/services/p2pPhaseCheckpointCoordinator.test.ts
 !server/services/p2pRelayOrigin.securityBoundary.test.ts
 !server/services/p2pRelayProtocol.securityBoundary.test.ts
 !server/routes/matchmakingRelay.integration.test.ts
@@ -290,11 +296,8 @@ client/public/art/unused/
 
 # Internal map editor (local-only authoring tool). The viewer ships publicly;
 # only the editor-specific files stay local. The map image is publicly served.
-client/src/game/components/map/MapAtlasEditor.tsx
-client/src/game/components/map/MapAtlasEditorOverlay.tsx
-client/src/game/components/map/MapAtlasTerritoryEditor.tsx
-client/src/game/components/map/MapAtlasFxEditor.tsx
-client/src/game/components/map/MapAtlasPathEditor.tsx
+# Pattern-based so any future MapAtlas* authoring file stays local too.
+client/src/game/components/map/MapAtlas*.tsx
 client/src/game/components/map/editor/
 
 # Local combat layout prototypes. Approved layout data belongs in

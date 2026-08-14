@@ -2,6 +2,12 @@
 
 Status: audit draft, 2026-05-19.
 
+Current P2P activation is resolved by
+[`ADR 0007`](./adr/0007-p2p-gameplay-only-testnet.md): login may use Keychain
+before matchmaking, while `match_anchor`, `session_authorize`,
+`session_renewal`, `match_result` and every match-driven wallet prompt are
+disabled for the gameplay-only testnet.
+
 This document maps the Hive operations Ragnarok needs, who should sign them,
 and whether they belong to the browser wallet or to the server/operator side.
 When docs and code disagree, this audit treats code as the current runtime
@@ -119,8 +125,8 @@ the resulting state, but it should not become gameplay truth.
 | `login` / REST auth body | player | Posting message signature, no chain op | Live. Used by Hive login and signed REST bodies. |
 | `queue_join` | player | Posting custom_json | Live in Hive mode via `broadcastQueueJoin`; includes PoW. |
 | `queue_leave` | player | Posting custom_json | Live; best-effort cancel path. |
-| `match_anchor` | either participant | Posting custom_json | Helper exists; should pin participants, pubkeys, deck hashes, engine/registry. |
-| `match_result` | winner/proposer after opponent countersigns | Posting custom_json plus two off-chain Posting signatures | Ranked result signing is deferred behind a future visible wallet review; hidden match-end Keychain prompts are disabled. |
+| `match_anchor` | either participant | Posting custom_json | **Future ranked settlement**; helper exists but current P2P testnet does not sign or broadcast it. |
+| `match_result` | winner/proposer after opponent countersigns | Posting custom_json plus two off-chain Posting signatures | **Future ranked settlement**; current P2P testnet neither signs nor broadcasts it and the terminal result stays local. |
 | `campaign_result` | player | Posting custom_json | Live. Broadcaster is the campaign/RUNE owner. Payload usernames are omitted/ignored. |
 | `daily_quest_claim` | player | Posting custom_json | Live. Progress is local; explicit Claim button invokes Keychain. Chain validates date/slot/idempotency and computes flat reward. |
 | `reward_claim` | player or tournament flow | Posting custom_json | Method exists; tournament server path is still pending/deferred. |
@@ -202,19 +208,17 @@ calls from UI surfaces:
 
 ## Remaining Ambiguities
 
-1. `match_result` beta status is unclear. `docs/RUNE.md` and `client/src/game/match/modes/p2p/lifecycle.ts` say P2P settlement is deferred; the subscriber now defers ranked result signing instead of opening Keychain at match end.
-2. `RAGNAROK_PROTOCOL_V1.md` still describes an 18/19-op v1 surface, while `CANONICAL_ACTIONS` now has the extended v1.1/v1.2 set: pack NFTs, lineage, marketplace, and DUAT operations.
-3. P2P `session_authorize`, `result_countersign`, `slash_evidence`, matchmaking queue ops, Collection custody/crafting, Marketplace, Admin, Treasury, and the Hive transaction outbox UI still need full migration through the client wallet invocation seam before public beta.
+1. `RAGNAROK_PROTOCOL_V1.md` still describes an 18/19-op v1 surface, while `CANONICAL_ACTIONS` now has the extended v1.1/v1.2 set: pack NFTs, lineage, marketplace, and DUAT operations.
+2. Future P2P `session_authorize`, `result_countersign`, `slash_evidence`, on-chain matchmaking queue ops, Collection custody/crafting, Marketplace, Admin, Treasury, and the Hive transaction outbox UI still need full migration through the client wallet invocation seam before public beta.
 
 ## Decision Targets
 
 Before hardening or publishing this as the canonical diagram, resolve these
 choices explicitly:
 
-1. Is P2P `match_result` truly disabled for Closed Testnet Beta, or should a
-   visible result review/sign flow become the intended guarded release path?
-2. Should the protocol doc be updated to the full current op set, or should
+1. Should the protocol doc be updated to the full current op set, or should
    some v1.1/v1.2 operations remain experimental and hidden from the launch
    authority matrix?
-3. Which P2P wallet prompts should be explicit pre-match actions, which belong
-   in the result review flow, and which should use the visible wallet outbox?
+2. When ranked settlement is scheduled in a later phase, which wallet prompts
+   should be explicit pre-match actions, which belong in visible result review,
+   and which should use the visible wallet outbox?

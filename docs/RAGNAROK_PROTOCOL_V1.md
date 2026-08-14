@@ -4,6 +4,12 @@
 **Layer**: Hive Layer 1 (`custom_json` reader protocol)
 **Model**: Ordinals-style reader-defined L1 asset and gameplay protocol
 
+> **Runtime activation note:** this file defines the Hive protocol contract,
+> not which operations the current client is allowed to emit. Under
+> [ADR 0007](./adr/0007-p2p-gameplay-only-testnet.md), current P2P testnet
+> matches do not sign or broadcast `match_anchor`/`match_result` and produce no
+> P2P economic settlement.
+
 ---
 
 ## 1. Scope

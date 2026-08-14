@@ -26,6 +26,7 @@ import {
 } from '../../types/PokerCombatTypes';
 import type { SeededRng, SeededIdGen } from '@shared/p2p-wire/rng';
 import type { HeroDeckLoadout } from '../../deck/heroDeckRules';
+import type { ChessRejection } from '@shared/protocol-core/chess';
 
 export type CombatPhase = 
   | 'SETUP'
@@ -219,20 +220,24 @@ export interface ChessCombatSliceState {
   _logCounter: number;
 }
 
+export type ChessMutationResult =
+	| { readonly status: 'applied' }
+	| { readonly status: 'rejected'; readonly reason: ChessRejection };
+
 export interface ChessCombatSliceActions {
   initializeCombat: (playerPieces: ChessPieceState[], opponentPieces: ChessPieceState[]) => void;
   movePiece: (pieceIdOrPosition: string | ChessBoardPosition, newPosition?: { row: number; col: number }) => ChessCollision | null | void;
   capturePiece: (attackerId: string, targetId: string) => void;
   initializeBoard: (playerArmy: ArmySelection, opponentArmy: ArmySelection, idGen: () => string, playerDeckLoadout?: HeroDeckLoadout) => void;
   selectPiece: (piece: ChessPiece | null) => void;
-  executeMove: (from: ChessBoardPosition, to: ChessBoardPosition) => void;
-  executeInstantKill: (attacker: ChessPiece, defender: ChessPiece, targetPosition: ChessBoardPosition) => void;
+  executeMove: (from: ChessBoardPosition, to: ChessBoardPosition) => ChessMutationResult;
+  executeInstantKill: (attacker: ChessPiece, defender: ChessPiece, targetPosition: ChessBoardPosition) => ChessMutationResult;
   getValidMoves: (piece: ChessPiece) => { moves: ChessBoardPosition[]; attacks: ChessBoardPosition[] };
   getPieceAt: (position: ChessBoardPosition) => ChessPiece | null;
   // Gameplay command for a legal chess capture. Records the presentation
   // marker and applies the attack intent through chessCombatSlice; movement
   // legality and instant-kill rules stay unchanged.
-  beginChessAttack: (attacker: ChessPiece, defender: ChessPiece, isInstantKill: boolean) => void;
+  beginChessAttack: (attacker: ChessPiece, defender: ChessPiece, isInstantKill: boolean) => ChessMutationResult;
   removePiece: (pieceId: string) => void;
   updatePieceHealth: (pieceId: string, newHealth: number) => void;
   updatePieceStamina: (pieceId: string, newStamina: number) => void;

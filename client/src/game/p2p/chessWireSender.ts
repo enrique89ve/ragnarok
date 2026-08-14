@@ -49,8 +49,18 @@ import { encodeChessCombatInitiated } from '../../../../shared/p2p-wire/combat';
 import { computeChessPrevStateHash } from '../engine/chessHash';
 import { computeCardsPrevStateHash } from '../engine/wireHash';
 import { debug } from '../config/debugConfig';
+import {
+	computeTransitionIntentHash,
+	type TransitionReceiptMessage,
+} from '@shared/p2p-wire/integrity';
+import {
+	buildChessIntegrityCheckpoint,
+	captureChessIntegrityCheckpoint,
+} from './chessIntegrityCheckpoint';
+import { chessIntegrityMonitor } from './chessIntegrityMonitor';
 
 let outgoingChessSeq = 0;
+let pendingChessEnvelope: ChessCommandEnvelope | null = null;
 
 /**
  * Snapshot the local chess board for hashing. The combat store's
@@ -196,12 +206,53 @@ function dispatchChessCommand(
 	const envelope: ChessCommandEnvelope = {
 		type: 'chess_command',
 		matchId,
-		seq: outgoingChessSeq++,
+		seq: outgoingChessSeq,
 		commandId: crypto.randomUUID(),
 		prevChessStateHash: prev.chess,
 		prevCardsStateHash: prev.cards,
 		command,
 	};
+	const preCheckpoint = buildChessIntegrityCheckpoint({
+		matchId,
+		chessHash: prev.chess,
+		cardsHash: prev.cards,
+	});
+	const postCheckpoint = captureChessIntegrityCheckpoint({
+		matchId,
+		isCardsAuthority: peerState.isHost,
+	});
+	if (preCheckpoint === null || postCheckpoint === null) {
+		chessIntegrityMonitor.quarantine({
+			reason: 'local_checkpoint_unavailable',
+			commandId: envelope.commandId,
+			expectedRoot: preCheckpoint?.root ?? null,
+			receivedRoot: postCheckpoint?.root ?? null,
+			detail: 'cannot build a complete chess+cards transition checkpoint',
+		});
+		debug.error('[chessWireSender] transition blocked — integrity checkpoint unavailable');
+		return false;
+	}
+	const intentHash = computeTransitionIntentHash({
+		matchId,
+		seq: envelope.seq,
+		commandId: envelope.commandId,
+		prevRoot: preCheckpoint.root,
+		action: command,
+	});
+	const registration = chessIntegrityMonitor.register({
+		matchId,
+		seq: envelope.seq,
+		commandId: envelope.commandId,
+		intentHash,
+		prevRoot: preCheckpoint.root,
+		nextRoot: postCheckpoint.root,
+	});
+	if (registration.status === 'blocked') {
+		debug.warn(`[chessWireSender] transition blocked — ${registration.reason}`);
+		return false;
+	}
+	pendingChessEnvelope = envelope;
+	outgoingChessSeq += 1;
 
 	// Unconditional console.log — temporary diagnostic. Will move back to
 	// debug.chess once the channel is verified active for users.
@@ -229,6 +280,31 @@ function dispatchChessCommand(
 	}
 
 	debug.chess(`[chessWireSender] sent ${command.type} seq=${envelope.seq} piece=${command.pieceId.slice(0, 8)} (${command.from.row},${command.from.col})→(${command.to.row},${command.to.col})`);
+	return true;
+}
+
+export function confirmChessTransitionReceipt(
+	receipt: TransitionReceiptMessage,
+): ReturnType<typeof chessIntegrityMonitor.confirm> {
+	const confirmation = chessIntegrityMonitor.confirm(receipt);
+	if (confirmation.status === 'confirmed' || confirmation.status === 'quarantined') {
+		pendingChessEnvelope = null;
+	}
+	return confirmation;
+}
+
+/**
+ * Re-send the single unconfirmed intent after a same-tab transport reconnect.
+ * The receiver caches the original receipt by commandId, so this is
+ * idempotent whether the first intent was lost or only its receipt was lost.
+ */
+export function retryPendingChessTransition(): boolean {
+	const envelope = pendingChessEnvelope;
+	if (envelope === null) return false;
+	if (chessIntegrityMonitor.getState().status !== 'healthy') return false;
+	const peer = usePeerStore.getState();
+	if (peer.connectionState !== 'connected') return false;
+	peer.send(envelope);
 	return true;
 }
 
@@ -299,4 +375,6 @@ export function sendChessCombatInitiated(attack: ChessCombatInitiatedEmit, prev:
  */
 export function resetChessWireSender(): void {
 	outgoingChessSeq = 0;
+	pendingChessEnvelope = null;
+	chessIntegrityMonitor.reset();
 }

@@ -2,7 +2,12 @@
 
 ## Status
 
-Required before enabling closed-beta ranked P2P RUNE, ELO, or Season Score.
+**Deferred future ranked-settlement design.** It is not required to complete the
+current gameplay-only P2P testnet defined by
+[`ADR 0007`](./adr/0007-p2p-gameplay-only-testnet.md).
+
+Required before any later activation of ranked P2P RUNE, ELO, Season Score,
+CardXP or Hive `match_result` broadcast.
 Until this lands, P2P game-over may show QA local reward feedback only in a QA
 full-catalog reset epoch; it must not broadcast `match_result` or credit
 `p2p_ranked` RUNE.
