@@ -64,22 +64,6 @@ function todayUtcString(): string {
 	return new Date().toISOString().slice(0, 10);
 }
 
-/**
- * The chain accepts daily_quest_claim ops whose `ymd_utc` is within ±48h
- * of `op.timestamp`. Past that window a deferred claim cannot land, so
- * holding the UI hostage for that quest only frustrates the player.
- * After 2 days a held set is allowed to rotate.
- */
-const CHAIN_CLAIM_GRACE_DAYS = 2;
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
-function isWithinChainAcceptanceWindow(refreshDate: string, today: string): boolean {
-	const refresh = Date.parse(`${refreshDate}T00:00:00Z`);
-	const now = Date.parse(`${today}T00:00:00Z`);
-	if (!Number.isFinite(refresh) || !Number.isFinite(now)) return false;
-	return (now - refresh) <= CHAIN_CLAIM_GRACE_DAYS * MS_PER_DAY;
-}
-
 function computeQuestHash(quest: Partial<DailyQuest>, salt: string): string {
 	const data = `${quest.ymdUtc}|${quest.slot}|${quest.type}|${salt}`;
 	let hash = 0;
@@ -116,7 +100,7 @@ async function broadcastDailyQuestClaim(quest: DailyQuest): Promise<boolean> {
 	const bridge = getNFTBridge();
 	if (!bridge.isHiveMode()) return false;
 	try {
-		const result = await bridge.claimDailyQuest(quest.ymdUtc, quest.slot, quest.type);
+		const result = await bridge.claimDailyQuest(quest.slot, quest.type);
 		if (!result.success) {
 			debug.warn('[DailyQuest] Claim broadcast rejected:', result.error);
 			return false;
@@ -175,20 +159,6 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 					}
 					return;
 				}
-
-				// Day rolled over. Completed-but-unclaimed quests are held, but
-				// refresh never opens Keychain. The wallet prompt belongs to the
-				// explicit Claim button in the quest panel.
-				// If anything is still pending (not yet claimed, Keychain rejected,
-				// guest mode), hold the rotation. The chain validates ymd_utc
-				// within ±48h of op.timestamp, so a held quest can still claim
-				// for up to 2 days; after that the player has effectively lost
-				// the reward but we stop blocking the daily quest UI by
-				// allowing the next refreshIfNeeded call to force-rotate.
-				const stillPending = get().quests.some(q => q.completed && !q.claimed);
-				const refreshDate = current.lastRefreshDate || today;
-				const isStale = !isWithinChainAcceptanceWindow(refreshDate, today);
-				if (stillPending && !isStale) return;
 
 				const account = getNFTBridge().getUsername() ?? 'guest';
 				const economy = getActiveEconomy();

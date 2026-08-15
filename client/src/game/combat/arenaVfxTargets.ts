@@ -1,6 +1,7 @@
 export const ARENA_VFX_LAYER_ATTRIBUTE = 'data-vfx-layer' as const;
 export const ARENA_VFX_TARGET_ATTRIBUTE = 'data-vfx-target' as const;
 export const ARENA_VFX_SLOT_INDEX_ATTRIBUTE = 'data-vfx-slot-index' as const;
+export const ARENA_VFX_OWNER_ATTRIBUTE = 'data-vfx-owner' as const;
 
 export const ARENA_VFX_LAYERS = {
 	vfx: 'arena-vfx',
@@ -16,6 +17,8 @@ export const ARENA_VFX_TARGETS = {
 	riskDisplay: 'risk-display',
 	playerMinion: 'player-minion',
 	opponentMinion: 'opponent-minion',
+	spellTrayCard: 'spell-tray-card',
+	wagerMinion: 'wager-minion',
 } as const;
 
 export type ArenaVfxLayer = typeof ARENA_VFX_LAYERS[keyof typeof ARENA_VFX_LAYERS];
@@ -24,6 +27,7 @@ export type ArenaVfxOwner = 'player' | 'opponent';
 export type ArenaVfxLayerProps = Record<typeof ARENA_VFX_LAYER_ATTRIBUTE, ArenaVfxLayer>;
 export type ArenaVfxTargetProps = Record<typeof ARENA_VFX_TARGET_ATTRIBUTE, ArenaVfxTarget>;
 export type ArenaVfxCommunitySlotProps = ArenaVfxTargetProps & Record<typeof ARENA_VFX_SLOT_INDEX_ATTRIBUTE, string>;
+export type ArenaVfxWagerMinionProps = ArenaVfxTargetProps & Record<typeof ARENA_VFX_OWNER_ATTRIBUTE, ArenaVfxOwner>;
 
 type QueryRoot = Document | Element;
 
@@ -40,6 +44,13 @@ export function arenaVfxCommunitySlotProps(slotIndex: number): ArenaVfxCommunity
 		...arenaVfxTargetProps(ARENA_VFX_TARGETS.communitySlot),
 		[ARENA_VFX_SLOT_INDEX_ATTRIBUTE]: String(slotIndex),
 	} as ArenaVfxCommunitySlotProps;
+}
+
+export function arenaVfxWagerMinionProps(owner: ArenaVfxOwner): ArenaVfxWagerMinionProps {
+	return {
+		...arenaVfxTargetProps(ARENA_VFX_TARGETS.wagerMinion),
+		[ARENA_VFX_OWNER_ATTRIBUTE]: owner,
+	} as ArenaVfxWagerMinionProps;
 }
 
 export function arenaVfxLayerSelector(layer: ArenaVfxLayer): string {
@@ -87,6 +98,15 @@ export function getArenaVfxMinionFieldTarget(owner: ArenaVfxOwner, root?: QueryR
 export function getArenaVfxCommunitySlot(slotIndex: number, root?: QueryRoot | null): HTMLElement | null {
 	const slots = getArenaVfxTargets(ARENA_VFX_TARGETS.communitySlot, root);
 	return slots.find(slot => slot.getAttribute(ARENA_VFX_SLOT_INDEX_ATTRIBUTE) === String(slotIndex)) ?? slots[slotIndex] ?? null;
+}
+
+export function getArenaVfxSpellTrayCards(root?: QueryRoot | null): HTMLElement[] {
+	return getArenaVfxTargets(ARENA_VFX_TARGETS.spellTrayCard, root);
+}
+
+export function getArenaVfxWagerTargets(owner: ArenaVfxOwner, root?: QueryRoot | null): HTMLElement[] {
+	return getArenaVfxTargets(ARENA_VFX_TARGETS.wagerMinion, root)
+		.filter(element => element.getAttribute(ARENA_VFX_OWNER_ATTRIBUTE) === owner);
 }
 
 function hasTargetIdentity(element: HTMLElement, targetId: string): boolean {

@@ -90,6 +90,8 @@ __tests__/
 !client/src/data/blockchain/deckVerification.test.ts
 !client/src/data/blockchain/matchResultPackager.test.ts
 !client/src/data/blockchain/transcriptBuilder.test.ts
+!client/src/data/HiveSync.claimDailyQuest.test.ts
+!shared/protocol-core/normalize.test.ts
 !client/src/game/match/modes/p2p/winnerArbiter.test.ts
 !client/src/game/p2p/chessIntegrityMonitor.test.ts
 !client/src/game/p2p/phaseCheckpointClient.test.ts

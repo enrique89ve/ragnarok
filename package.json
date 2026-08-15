@@ -31,6 +31,7 @@
 		"start:mainnet": "NODE_ENV=production node dist/index.js --mode mainnet",
 		"check": "tsc",
 		"build:card-frames": "tsx scripts/exportCardFrames.ts",
+		"audit:card-description-budget": "node scripts/auditCardDescriptionBudget.mjs",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"smoke:phase0": "vitest run client/src/game/protocol/phase0.smoke.test.ts",

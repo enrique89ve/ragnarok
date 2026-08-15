@@ -1,9 +1,10 @@
 /**
- * <CardDescription> — slot: keyword row + optional text body.
+ * <CardDescription> — slots: keyword row + optional text body.
  *
  * When `keywords` is non-empty, renders a row of keyword chips.
  * When `description` is set, renders the text body below.
- * Both stack vertically inside the same container.
+ * The two slots stay as siblings so keyword layout never becomes part of the
+ * description panel's width, height, or alignment contract.
  */
 
 import React from 'react';
@@ -48,9 +49,14 @@ const CardDescription: React.FC<CardDescriptionProps> = ({
 		label: formatCardKeywordLabel(keyword),
 		semantics: getCardKeywordSemantics(keyword),
 	}));
+	const stackVariant = description && hasKeywords
+		? 'card-frame__description-stack--with-keywords'
+		: description
+			? 'card-frame__description-stack--description-only'
+			: 'card-frame__description-stack--keywords-only';
 
 	return (
-		<div className="card-frame__description">
+		<div className={`card-frame__description-stack ${stackVariant}`}>
 			{hasKeywords && (
 				<div className="card-frame__keywords" data-keyword-label-mode={keywordLabelMode}>
 					{visibleKeywordEntries.map(({ keyword, Icon, label, semantics }) => (
@@ -82,13 +88,15 @@ const CardDescription: React.FC<CardDescriptionProps> = ({
 				</div>
 			)}
 			{description && (
-				<p
-					className="card-frame__description-text"
-					data-layout-allow-truncate="card-description-preview"
-					title={description}
-				>
-					{description}
-				</p>
+				<div className="card-frame__description">
+					<p
+						className="card-frame__description-text"
+						data-layout-allow-truncate="card-description-preview"
+						title={description}
+					>
+						{description}
+					</p>
+				</div>
 			)}
 		</div>
 	);

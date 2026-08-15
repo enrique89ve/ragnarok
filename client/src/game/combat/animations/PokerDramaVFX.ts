@@ -18,8 +18,10 @@ import {
 	getArenaVfxCommunitySlot,
 	getArenaVfxHeroTarget,
 	getArenaVfxLayer,
+	getArenaVfxSpellTrayCards,
 	getArenaVfxTarget,
 	getArenaVfxTargets,
+	getArenaVfxWagerTargets,
 } from '../arenaVfxTargets';
 
 const DRAMA_CONTAINER_ID = 'poker-drama-vfx-layer';
@@ -1094,15 +1096,13 @@ export function playPokerSpellCast(
 	container.appendChild(vignette);
 	gsap.to(vignette, { opacity: 0, duration: 0.9, onComplete: () => cleanup(vignette) });
 
-	document
-		.querySelectorAll('.poker-spell-tray .card-frame--family-poker-spell')
-		.forEach((el) => {
-			el.classList.remove('is-casting');
-			// Force reflow so the animation re-fires for repeat casts.
-			void (el as HTMLElement).offsetWidth;
-			el.classList.add('is-casting');
-			setTimeout(() => el.classList.remove('is-casting'), 1500);
-		});
+	getArenaVfxSpellTrayCards().forEach((el) => {
+		el.classList.remove('is-casting');
+		// Force reflow so the animation re-fires for repeat casts.
+		void el.offsetWidth;
+		el.classList.add('is-casting');
+		setTimeout(() => el.classList.remove('is-casting'), 1500);
+	});
 }
 
 /**
@@ -1130,12 +1130,9 @@ export function playWagerActivate(
 	container.appendChild(vignette);
 	gsap.to(vignette, { opacity: 0, duration: 0.8, onComplete: () => cleanup(vignette) });
 
-	const sel = side === 'player'
-		? '.player-battlefield-cards .has-wager .card-frame--family-nft, .player-battlefield-cards .card-frame--family-nft.has-wager'
-		: '.opponent-battlefield-cards .has-wager .card-frame--family-nft, .opponent-battlefield-cards .card-frame--family-nft.has-wager';
-	document.querySelectorAll(sel).forEach((el) => {
+	getArenaVfxWagerTargets(side).forEach((el) => {
 		el.classList.remove('is-activating');
-		void (el as HTMLElement).offsetWidth;
+		void el.offsetWidth;
 		el.classList.add('is-activating');
 		setTimeout(() => el.classList.remove('is-activating'), 1100);
 	});

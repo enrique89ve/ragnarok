@@ -9,6 +9,10 @@ import { getCardById } from "../../data/allCards";
 import type { NorseElement } from "../../types/NorseTypes";
 import type { CardSize, CardStatsMode } from "../card/types";
 import {
+  getCardFrameProfile,
+  toCardFrameType,
+} from "../card/cardFrameProfile";
+import {
   CardFrame,
   CardArt,
   CardManaGem,
@@ -123,6 +127,7 @@ export function CollectionCardTile({
       ? (cardDef.element as NorseElement)
       : "neutral");
   const sourceLabel = getCollectionSourceLabel(card);
+  const frameProfile = getCardFrameProfile(card.type);
   const attackValue = stats?.attack ?? (
     card.attack !== undefined ? { value: card.attack, tone: "base" as const } : undefined
   );
@@ -131,6 +136,7 @@ export function CollectionCardTile({
   );
   const hasCombatStats =
     fields?.showStats !== false &&
+    frameProfile.showCombatStats &&
     attackValue !== undefined &&
     healthValue !== undefined;
   const statsLabel = hasCombatStats
@@ -164,6 +170,7 @@ export function CollectionCardTile({
         `norse-card-shell--rarity-${card.rarity}`,
         "collection-card-shell",
         `collection-card-shell--rarity-${card.rarity}`,
+        `collection-card-shell--profile-${frameProfile.id}`,
         shellClassName,
       ].filter(Boolean).join(" ")}
       style={{ width: "100%", ...shellStyle }}
@@ -174,6 +181,7 @@ export function CollectionCardTile({
         shape="tile"
         rarity={card.rarity as Rarity}
         element={element}
+        cardType={toCardFrameType(card.type)}
         size={frameSize}
         render="css"
         interactive={false}
@@ -184,6 +192,7 @@ export function CollectionCardTile({
         data-card-surface={dataCardSurface}
         className={[
           "w-full norse-card-frame collection-card-frame",
+          `collection-card-frame--profile-${frameProfile.id}`,
           frameClassName,
         ].filter(Boolean).join(" ")}
         style={{ width: "100%", height: "auto", ...frameStyle }}
@@ -264,6 +273,7 @@ function CollectionCardStatBadge({
   const iconName: IconName = kind === "attack" ? "swords" : "heart";
   const label = kind === "attack" ? "ATK" : "HP";
   const tone = stat.tone ?? "base";
+  const digitCount = Math.min(2, String(stat.value).replace(/^-/, "").length);
 
   return (
     <div
@@ -274,7 +284,12 @@ function CollectionCardStatBadge({
       <span className="collection-card-frame__stat-icon" aria-hidden="true">
         <GameIcon name={iconName} size={12} strokeWidth={2.6} />
       </span>
-      <span className="collection-card-frame__stat-value">{stat.value}</span>
+      <span
+        className="collection-card-frame__stat-value"
+        data-digit-count={digitCount}
+      >
+        {stat.value}
+      </span>
     </div>
   );
 }

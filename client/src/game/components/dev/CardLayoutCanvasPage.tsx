@@ -79,7 +79,7 @@ import {
 	type CollectionTileStats,
 } from '../collection/CollectionCardTile';
 import { RARITY, type Rarity } from '@shared/schemas/rarity';
-import { sampleForRarity, resolveSample } from './cardLab/sampleCards';
+import { FRAME_STUDY_SAMPLES, sampleForRarity, resolveSample } from './cardLab/sampleCards';
 import { DEFAULT_PORTRAIT, getCardArtPath } from '../../utils/art/artMapping';
 import { ELEMENT_BAND } from '../../utils/art/elementBand';
 import './CardLayoutCanvasPage.css';
@@ -296,6 +296,27 @@ const fieldsForRenderData = (
 		...(isFieldRendered(renderData, card, 'tribe') && card.tribe ? { tribe: card.tribe } : {}),
 		...(isFieldRendered(renderData, card, 'description') && card.description ? { description: card.description } : {}),
 		...(isFieldRendered(renderData, card, 'keywords') && renderedKeywords.length > 0 ? { keywords: renderedKeywords } : {}),
+		keywordLimit: null,
+		keywordLabelMode: renderData.surface.surface === 'gameplay' ? 'compact' : 'full',
+	};
+};
+
+const fieldsForTypeStudy = (
+	renderData: CardLayoutRenderData,
+	card: SimpleCardData,
+): CollectionTileRenderedFields => {
+	const renderedKeywords = getCardKeywordsForSurface(card.keywords, renderData.surface.surface);
+	const slotVisible = (slotId: CardLayoutSlotId): boolean => isSlotVisible(renderData.slots, slotId);
+	return {
+		showArt: slotVisible('art'),
+		showCount: slotVisible('count'),
+		showMana: slotVisible('mana'),
+		showName: slotVisible('name'),
+		showRarity: slotVisible('rarity'),
+		showStats: slotVisible('attack') || slotVisible('health'),
+		...(slotVisible('tribe') && card.tribe ? { tribe: card.tribe } : {}),
+		...(slotVisible('description') && card.description ? { description: card.description } : {}),
+		...(slotVisible('keywords') && renderedKeywords.length > 0 ? { keywords: renderedKeywords } : {}),
 		keywordLimit: null,
 		keywordLabelMode: renderData.surface.surface === 'gameplay' ? 'compact' : 'full',
 	};
@@ -678,7 +699,8 @@ const RealCardRenderer: React.FC<{
 	readonly renderData: CardLayoutRenderData;
 	readonly card: SimpleCardData;
 	readonly variant: 'canvas' | 'preview';
-}> = ({ renderData, card, variant }) => {
+	readonly fields?: CollectionTileRenderedFields;
+}> = ({ renderData, card, variant, fields }) => {
 	const slotStyle = useMemo(() => {
 		const style: React.CSSProperties & { [key: `--card-layout-slot-${string}`]: string } = { maxWidth: 'none' };
 		for (const slot of renderData.slots) {
@@ -696,7 +718,7 @@ const RealCardRenderer: React.FC<{
 		<CollectionCardTile
 			card={toCollectionTileCard(card)}
 			dataCardSurface={renderData.surface.renderer.surface}
-			fields={fieldsForRenderData(renderData, card)}
+			fields={fields ?? fieldsForRenderData(renderData, card)}
 			frameClassName={`card-layout-real-frame card-layout-real-frame--${variant} card-layout-real-frame--surface-${renderData.surface.surface}`}
 			frameSize={renderData.surface.renderer.size}
 			frameStyle={variant === 'canvas' ? { ...slotStyle, height: '100%' } : slotStyle}
@@ -706,6 +728,54 @@ const RealCardRenderer: React.FC<{
 		/>
 	);
 };
+
+const FrameStudyTypeCoverage: React.FC<{
+	readonly renderData: CardLayoutRenderData;
+}> = ({ renderData }) => (
+	<section className="card-layout-frame-study__type-coverage" aria-labelledby="card-layout-type-coverage-title">
+		<header className="card-layout-frame-study__section-heading">
+			<div>
+				<p className="card-layout-frame-study__eyebrow">Type coverage</p>
+				<h3 id="card-layout-type-coverage-title">One frame, four card contracts</h3>
+				<p>
+					The PNG frame and mana gem stay shared. The lower composition follows the card type,
+					so spells do not inherit minion attack/health sockets and pets keep the minion footer.
+				</p>
+			</div>
+			<div className="card-layout-frame-study__shared-badge">Shared PNG frame</div>
+		</header>
+
+		<div className="card-layout-frame-study__type-grid">
+			{FRAME_STUDY_SAMPLES.map((sampleDefinition) => {
+				const sampleCard = toSimpleCardData(resolveSample(sampleDefinition.sample));
+				if (sampleCard === null) return null;
+				return (
+					<article
+						key={sampleDefinition.id}
+						className={`card-layout-frame-study__type-option card-layout-frame-study__type-option--${sampleDefinition.id}`}
+					>
+						<header className="card-layout-frame-study__type-header">
+							<div>
+								<p className="card-layout-frame-study__eyebrow">{sampleDefinition.label}</p>
+								<h4>{sampleCard.name}</h4>
+							</div>
+							<span className="card-layout-frame-study__type-contract">{sampleDefinition.statContract}</span>
+						</header>
+						<div className="card-layout-frame-study__type-card card-layout-frame-study__card--concept">
+							<RealCardRenderer
+								renderData={renderData}
+								card={sampleCard}
+								variant="preview"
+								fields={fieldsForTypeStudy(renderData, sampleCard)}
+							/>
+						</div>
+						<p className="card-layout-frame-study__type-description">{sampleDefinition.description}</p>
+					</article>
+				);
+			})}
+		</div>
+	</section>
+);
 
 const FrameStudy: React.FC<{
 	readonly card: SimpleCardData;
@@ -768,6 +838,8 @@ const FrameStudy: React.FC<{
 			</article>
 		</div>
 
+		<FrameStudyTypeCoverage renderData={renderData} />
+
 		<dl className="card-layout-frame-study__facts">
 			<div><dt>Frame weight</dt><dd>3.5–3.8% side rails</dd></div>
 			<div><dt>Art contract</dt><dd>7:10 · cover · centered</dd></div>
@@ -795,7 +867,10 @@ const StageSlot: React.FC<{
 		top: slot.css.top,
 		width: slot.css.width,
 		height: slot.css.height,
-		fontSize: `calc(var(--slot-font-scale, 1) * 0.65rem)`,
+		// The stage is a size container. Use its width as the single scale
+		// reference so overlay labels follow the card instead of staying at a
+		// viewport-sized rem value when the stage becomes narrower.
+		fontSize: `calc(var(--slot-font-scale, 1) * 3.17cqw)`,
 	};
 	return (
 		<div

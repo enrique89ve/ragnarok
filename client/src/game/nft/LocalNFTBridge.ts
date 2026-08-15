@@ -120,7 +120,7 @@ export class LocalNFTBridge implements INFTBridge {
 		return SUCCESS;
 	}
 
-	async claimDailyQuest(_ymdUtc: string, _slot: number, _questType: string): Promise<BroadcastResult> {
+	async claimDailyQuest(_slot: number, _questType: string): Promise<BroadcastResult> {
 		return SUCCESS;
 	}
 

@@ -14,7 +14,7 @@
   --norse-card-stat-badge-side: 0px;
   --norse-card-stat-badge-height: calc(17px * var(--norse-card-ui-scale));
   --norse-card-stat-badge-width: calc(31px * var(--norse-card-ui-scale));
-  --norse-card-stat-font-size: calc(0.58rem * var(--norse-card-ui-scale));
+  --norse-card-stat-font-size: calc(0.58rem * 1.3 * var(--norse-card-ui-scale));
   --norse-card-name-color: #f2e8cc;
   --norse-card-crest-wing: #7ea6dd;
   --norse-card-name-bottom: calc(13px * var(--norse-card-ui-scale));
@@ -31,7 +31,7 @@
   --norse-card-mana-top: calc(4px * var(--norse-card-ui-scale));
   --norse-card-mana-side: calc(4px * var(--norse-card-ui-scale));
   --norse-card-mana-size: calc(16px * var(--norse-card-ui-scale));
-  --norse-card-mana-font-size: calc(0.54rem * var(--norse-card-ui-scale));
+  --norse-card-mana-font-size: calc(0.54rem * 1.3 * var(--norse-card-ui-scale));
   --norse-card-rarity-mark-width: calc(40px * var(--norse-card-ui-scale));
   --norse-card-rarity-mark-height: calc(14px * var(--norse-card-ui-scale));
   --norse-card-rarity-mark-bottom: calc(1px * var(--norse-card-ui-scale));
@@ -285,10 +285,13 @@
     );
 }
 
-.norse-card-frame:not(.norse-card-frame--poker) .card-frame__description:has(.card-frame__description-text) {
+.norse-card-frame:not(.norse-card-frame--poker) .card-frame__description-stack:has(.card-frame__description-text) {
   gap: 3px;
-  padding: 4px 5px;
   justify-content: flex-start;
+}
+
+.norse-card-frame:not(.norse-card-frame--poker) .card-frame__description-stack:has(.card-frame__description-text) .card-frame__description {
+  padding: 4px 5px;
   border: 1px solid color-mix(in srgb, var(--collection-frame-color) 34%, transparent);
   border-radius: 3px;
   background:
@@ -304,7 +307,7 @@
     inset 0 0 12px color-mix(in srgb, var(--collection-frame-blue) 8%, transparent);
 }
 
-.norse-card-frame:not(.norse-card-frame--poker) .card-frame__description:has(.card-frame__description-text)::before {
+.norse-card-frame:not(.norse-card-frame--poker) .card-frame__description-stack:has(.card-frame__description-text) .card-frame__description::before {
   content: "";
   position: absolute;
   top: -1px;
@@ -387,22 +390,22 @@
     ),
     radial-gradient(
       circle at 74% 72%,
-      color-mix(in srgb, var(--collection-frame-blue) 72%, #06111f 28%) 0%,
-      color-mix(in srgb, var(--obsidian-700) 74%, var(--collection-frame-blue) 26%) 34%,
-      color-mix(in srgb, var(--obsidian-900) 88%, var(--collection-frame-blue) 12%) 62%
+      color-mix(in srgb, var(--collection-frame-blue) 56%, #06111f 44%) 0%,
+      color-mix(in srgb, var(--obsidian-700) 82%, var(--collection-frame-blue) 18%) 34%,
+      color-mix(in srgb, var(--obsidian-900) 92%, var(--collection-frame-blue) 8%) 62%
     ),
     linear-gradient(
       145deg,
       var(--gold-100) 0%,
       var(--gold-400) 34%,
-      color-mix(in srgb, var(--obsidian-700) 76%, var(--collection-frame-blue) 24%) 68%,
+      color-mix(in srgb, var(--obsidian-700) 84%, var(--collection-frame-blue) 16%) 68%,
       var(--obsidian-950) 100%
     );
-  border: 1px solid color-mix(in srgb, var(--gold-100) 68%, var(--collection-frame-blue) 32%);
+  border: 1px solid color-mix(in srgb, var(--gold-100) 78%, var(--collection-frame-blue) 22%);
   box-shadow:
     0 2px 6px rgba(0, 0, 0, 0.62),
     0 0 0 1px rgba(0, 0, 0, 0.52),
-    0 0 9px color-mix(in srgb, var(--collection-frame-blue) 34%, transparent),
+    0 0 7px color-mix(in srgb, var(--collection-frame-blue) 22%, transparent),
     inset 0 1px 1px rgba(255, 255, 255, 0.62),
     inset 0 -2px 3px rgba(10, 12, 18, 0.78),
     inset 0 0 0 999px rgba(2, 8, 18, 0.06);
@@ -435,8 +438,19 @@
 }
 
 .norse-card-frame .card-frame__mana-cost {
-  position: relative;
-  z-index: 1;
+	position: absolute;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	inline-size: auto;
+	z-index: 1;
+	line-height: 1;
+	text-align: center;
+	white-space: nowrap;
+}
+
+.norse-card-frame .card-frame__mana-cost[data-digit-count="1"] {
+	transform: translateX(0.5px);
 }
 
 .norse-card-frame .card-frame__stat-gems {
@@ -753,12 +767,20 @@
     .norse-card-frame--surface-compact,
     .norse-card-frame--surface-mulligan,
     .norse-card-frame--surface-preview
-  ) .card-frame__description {
+) .card-frame__description-stack {
   right: var(--norse-card-keyword-inline);
   bottom: var(--norse-card-keyword-bottom);
   left: var(--norse-card-keyword-inline);
   z-index: 13;
   gap: 2px;
+}
+
+.norse-card-frame:not(.norse-card-frame--poker) .card-frame__description-stack--description-only {
+  bottom: var(--norse-card-keyword-bottom, 30px);
+}
+
+.norse-card-frame:not(.norse-card-frame--poker) .card-frame__description-stack.card-frame__description-stack--with-keywords:has(.card-frame__description-text) {
+  gap: 5px;
 }
 
 .norse-card-frame:is(
@@ -799,12 +821,12 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-.norse-card-frame:not(.norse-card-frame--poker) .card-frame__description:has(.card-frame__description-text) .card-frame__keywords {
+.norse-card-frame:not(.norse-card-frame--poker) .card-frame__description-stack:has(.card-frame__description-text) .card-frame__keywords {
   gap: 4px;
   justify-content: flex-start;
 }
 
-.norse-card-frame:not(.norse-card-frame--poker) .card-frame__description:has(.card-frame__description-text) .card-frame__keyword-chip--icon {
+.norse-card-frame:not(.norse-card-frame--poker) .card-frame__description-stack:has(.card-frame__description-text) .card-frame__keyword-chip--icon {
   width: 19px;
   height: 19px;
   border-color: color-mix(in srgb, var(--collection-frame-blue) 44%, var(--gold-100) 16%);
@@ -850,20 +872,24 @@
 }
 
 .norse-card-frame:not(.norse-card-frame--poker) .card-frame__description-text {
-  flex: 0 0 auto;
-  display: -webkit-box;
-  min-height: calc(2 * 1.16em);
-  max-height: calc(2 * 1.16em);
-  color: color-mix(in srgb, var(--ink-100) 86%, var(--gold-100) 14%);
-  font-size: clamp(0.54rem, calc(var(--norse-card-keyword-font-size) + 0.1rem), 0.62rem);
-  font-weight: 600;
-  line-height: 1.16;
-  letter-spacing: 0;
-  text-shadow:
-    0 1px 1px rgba(0, 0, 0, 0.95),
-    0 0 4px rgba(0, 0, 0, 0.74);
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+	flex: 0 0 auto;
+	display: -webkit-box;
+	width: 100%;
+	max-width: 100%;
+	min-height: calc(2 * 1.16em);
+	max-height: calc(2 * 1.16em);
+	color: color-mix(in srgb, var(--ink-100) 86%, var(--gold-100) 14%);
+	font-size: clamp(0.54rem, calc(var(--norse-card-keyword-font-size) + 0.1rem), 0.62rem);
+	font-weight: 600;
+	line-height: 1.16;
+	letter-spacing: 0;
+	text-align: center;
+	text-shadow:
+		0 1px 1px rgba(0, 0, 0, 0.95),
+		0 0 4px rgba(0, 0, 0, 0.74);
+	overflow-wrap: anywhere;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
 }
 
 .norse-card-frame:is(

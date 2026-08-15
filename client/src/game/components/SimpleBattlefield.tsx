@@ -18,6 +18,7 @@ import { MAX_BATTLEFIELD_SIZE } from '../constants/gameConstants';
 import { hasKeyword } from '../utils/cards/keywordUtils';
 import type { SimpleCardStatTone, SimpleCardStatView } from './card/SimpleCardCompat';
 import './SimpleBattlefield.css';
+import { arenaVfxWagerMinionProps } from '../combat/arenaVfxTargets';
 import { GameIcon } from '../utils/ui/GameIcon';
 import type { IconName } from '../utils/ui/iconMap';
 
@@ -161,6 +162,7 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
                 key={card.instanceId}
                 data-instance-id={card.instanceId}
                 data-card-family="nft"
+                {...(hasWager ? arenaVfxWagerMinionProps(side) : null)}
                 className={`bf-card-wrapper
                   ${isShaking ? 'shake' : ''}
                   ${isAttacking ? 'attacking' : ''}

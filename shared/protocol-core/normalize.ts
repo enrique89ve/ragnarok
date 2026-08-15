@@ -62,72 +62,129 @@ const LEGACY_MAP: Record<string, ProtocolAction> = {
 	'rp_market_reject': 'market_reject',
 };
 
+export const GLOBAL_RAW_JSON_BYTE_CEILING = 8192;
+export const DAILY_QUEST_CLAIM_RAW_JSON_BYTE_LIMIT = 200;
+export const RUNE_EXCHANGE_RAW_JSON_BYTE_LIMIT = 180;
+
 // ============================================================
 // normalizeRawOp
 // ============================================================
 
 export type NormalizeResult =
 	| { status: 'ok'; op: ProtocolOp }
-	| { status: 'ignore'; reason: string };
+	| { status: 'ignore'; reason: string }
+	| { status: 'reject'; reason: string };
 
 export interface NormalizeOptions {
 	readonly protocolIds?: readonly string[];
 	readonly acceptLegacyProtocolIds?: boolean;
 }
 
+type IdClassification = 'canonical' | 'legacy' | 'foreign';
+
+function classifyCustomJsonId(
+	customJsonId: string,
+	protocolIds: readonly string[],
+	acceptLegacyProtocolIds: boolean,
+): IdClassification {
+	if (protocolIds.includes(customJsonId)) return 'canonical';
+	if (acceptLegacyProtocolIds) {
+		if (customJsonId === 'ragnarok_level_up' || customJsonId.startsWith('rp_')) {
+			return 'legacy';
+		}
+	}
+	return 'foreign';
+}
+
+export function rawJsonByteLength(json: string): number {
+	return new TextEncoder().encode(json).byteLength;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function resolveAction(
+	classification: IdClassification,
+	payload: Record<string, unknown>,
+	customJsonId: string,
+): { action: ProtocolAction } | { ignore: string } | { reject: string } {
+	if (classification === 'canonical') {
+		const bodyAction = payload.action;
+		if (typeof bodyAction !== 'string') {
+			return { reject: `${customJsonId} op missing action field` };
+		}
+		if (isCanonicalAction(bodyAction)) {
+			return { action: bodyAction as CanonicalAction };
+		}
+		return { reject: `unknown action: ${bodyAction}` };
+	}
+
+	if (customJsonId === 'ragnarok_level_up') {
+		return { action: 'level_up' };
+	}
+	if (customJsonId === 'rp_team_submit') {
+		return { ignore: 'team_submit is informational only' };
+	}
+	const mapped = LEGACY_MAP[customJsonId];
+	if (mapped) return { action: mapped };
+	return { ignore: `unknown legacy op: ${customJsonId}` };
+}
+
 export function normalizeRawOp(raw: RawHiveOp, options: NormalizeOptions = {}): NormalizeResult {
 	const protocolIds = options.protocolIds ?? RAGNAROK_PROTOCOL_IDS;
 	const acceptLegacyProtocolIds = options.acceptLegacyProtocolIds ?? true;
 
-	// Step 1: Determine action from custom_json id
-	let action: ProtocolAction | null = null;
-	let payload: Record<string, unknown>;
-
-	try {
-		payload = JSON.parse(raw.json) as Record<string, unknown>;
-	} catch {
-		return { status: 'ignore', reason: 'malformed JSON' };
-	}
-
-	if (protocolIds.includes(raw.customJsonId)) {
-		// Canonical format: action is inside the JSON body
-		const bodyAction = payload.action as string | undefined;
-		if (!bodyAction) {
-			return { status: 'ignore', reason: `${raw.customJsonId} op missing action field` };
-		}
-		if (isCanonicalAction(bodyAction)) {
-			action = bodyAction as CanonicalAction;
-		} else {
-			return { status: 'ignore', reason: `unknown action: ${bodyAction}` };
-		}
-	} else if (acceptLegacyProtocolIds && raw.customJsonId === 'ragnarok_level_up') {
-		// Legacy level_up format
-		action = 'level_up';
-	} else if (acceptLegacyProtocolIds && raw.customJsonId.startsWith('rp_')) {
-		// Legacy rp_ prefix format
-		const mapped = LEGACY_MAP[raw.customJsonId];
-		if (mapped) {
-			action = mapped;
-		} else if (raw.customJsonId === 'rp_team_submit') {
-			return { status: 'ignore', reason: 'team_submit is informational only' };
-		} else {
-			return { status: 'ignore', reason: `unknown legacy op: ${raw.customJsonId}` };
-		}
-	} else {
+	const classification = classifyCustomJsonId(raw.customJsonId, protocolIds, acceptLegacyProtocolIds);
+	if (classification === 'foreign') {
 		return { status: 'ignore', reason: `not a ragnarok op: ${raw.customJsonId}` };
 	}
 
-	// Step 2: Check authority level
-	const usedActiveAuth = raw.requiredAuths.length > 0;
+	const rawBytes = rawJsonByteLength(raw.json);
+	if (rawBytes > GLOBAL_RAW_JSON_BYTE_CEILING) {
+		return { status: 'reject', reason: 'raw json exceeds global byte ceiling' };
+	}
+
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(raw.json);
+	} catch {
+		return { status: 'reject', reason: 'malformed JSON' };
+	}
+	if (!isPlainObject(parsed)) {
+		return { status: 'reject', reason: 'payload is not a JSON object' };
+	}
+	const payload = parsed as Record<string, unknown>;
+
+	const resolvedAction = resolveAction(classification, payload, raw.customJsonId);
+	if ('reject' in resolvedAction) {
+		return { status: 'reject', reason: resolvedAction.reject };
+	}
+	if ('ignore' in resolvedAction) {
+		return { status: 'ignore', reason: resolvedAction.ignore };
+	}
+	const action = resolvedAction.action;
+
+	const signedPosting = raw.requiredPostingAuths.includes(raw.broadcaster);
+	const signedActive = raw.requiredAuths.includes(raw.broadcaster);
+	if (!signedPosting && !signedActive) {
+		return { status: 'reject', reason: `${action} broadcaster not in required authorities` };
+	}
 
 	if (action !== 'legacy_pack_open' && action !== 'slash_evidence') {
 		const canonicalAction = action as CanonicalAction;
-		if (ACTIVE_AUTH_OPS.has(canonicalAction) && !usedActiveAuth) {
-			return { status: 'ignore', reason: `${action} requires active auth, got posting` };
+		if (ACTIVE_AUTH_OPS.has(canonicalAction) && !signedActive) {
+			return { status: 'reject', reason: `${action} requires active auth, got posting` };
 		}
 	}
 
-	// Step 3: Build normalized op
+	if (action === 'daily_quest_claim' && rawBytes > DAILY_QUEST_CLAIM_RAW_JSON_BYTE_LIMIT) {
+		return { status: 'reject', reason: 'daily_quest_claim raw json exceeds 200 bytes' };
+	}
+	if (action === 'rune_exchange' && rawBytes > RUNE_EXCHANGE_RAW_JSON_BYTE_LIMIT) {
+		return { status: 'reject', reason: 'rune_exchange raw json exceeds 180 bytes' };
+	}
+
 	const op: ProtocolOp = {
 		action,
 		payload,
@@ -136,7 +193,7 @@ export function normalizeRawOp(raw: RawHiveOp, options: NormalizeOptions = {}): 
 		operationId: `${raw.trxId}:${raw.opInTrx}`,
 		blockNum: raw.blockNum,
 		timestamp: raw.timestamp,
-		usedActiveAuth,
+		usedActiveAuth: signedActive,
 	};
 
 	return { status: 'ok', op };

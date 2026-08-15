@@ -105,7 +105,7 @@ Constants live in [shared/protocol-core/runeEconomy.ts](../shared/protocol-core/
 |---|---|---|---|---|
 | `p2p_ranked` | `match_result` (ranked) | win = 2, loss = 0 | `p2p:S01:{matchId}:{winner|loser}:{account}` | Match is consumed by prefix `p2p:S01:{matchId}:`; S01 loser reward is 0 so only the winner writes a ledger entry |
 | `campaign_first_clear` | `campaign_result` | per ordinal table `[2,2,2,2,1,1]` | `campaign:S01:{account}:{cid}:{m}` | Only first clear ever pays; replays update best stats, not RUNE |
-| `daily_quest_claim` | `daily_quest_claim` | flat 2 RUNE/slot | `daily_quest:S01:{account}:{ymd_utc}:{slot}` | Completed locally, then claimed from an explicit wallet action; chain trusts client (no match transcript); per-day cap = 3 slots × 2 RUNE = 6 RUNE; ymd_utc validated within ±48h of `op.timestamp` |
+| `daily_quest_claim` | `daily_quest_claim` | flat 2 RUNE/slot | `daily_quest:S01:{account}:{utc_day}:{slot}` | Completed locally, then claimed from an explicit wallet action; chain trusts client (no match transcript); per-day cap = 3 slots × 2 RUNE = 6 RUNE; `utc_day` is derived solely from `op.timestamp` (the Hive block timestamp) — the client does not broadcast `ymd_utc`, and claims belong to the UTC day of inclusion |
 | `reward_claim` | `reward_claim` (generic) | per reward def | `reward:S01:{account}:{rewardId}` | Tournament rewards only (`first_victory`, `elo_*`, etc) — `reward_claim` campaign:* path was removed in [commit 00d48fb](../shared/protocol-core/apply.ts), `reward_claim` daily_quest:* path replaced by `daily_quest_claim` op |
 
 ## Sink (debit op)
@@ -153,15 +153,15 @@ dailyQuestStore.updateProgress(type, delta)        ─ mid-combat
 
 DailyQuestPanel Claim button                       ─ explicit wallet invocation
   └→ for each (completed && !claimed) quest:
-       └→ getNFTBridge().claimDailyQuest(ymdUtc, slot, questType)
+       └→ getNFTBridge().claimDailyQuest(slot, questType)
             └→ hiveSync.broadcastCustomJson('rp_daily_quest_claim', payload)
                  └→ chain replay: applyDailyQuestClaim(op, deps)
-                      ├ parse payload (ymd_utc, slot, quest_type)
-                      ├ validate ymd_utc within ±48h of op.timestamp
-                      ├ idempotency by (account, ymd_utc, slot)
+                      ├ parse payload (slot, quest_type)
+                      ├ derive utc_day from op.timestamp (Hive block time)
+                      ├ idempotency by (account, utc_day, slot)
                       └ calculateCappedRuneCredit + putRuneLedgerEntryAndBalance
                            ├ source: daily_quest_claim
-                           └ key:    daily_quest:S01:{account}:{ymd}:{slot}
+                           └ key:    daily_quest:S01:{account}:{utc_day}:{slot}
        └→ on broadcast success: set claimed=true, emit "+N RUNE" toast
 ```
 
@@ -174,22 +174,17 @@ Progress lives entirely client-side in `localStorage['ragnarok-daily-quests:{acc
 
 ### Multi-device
 
-The quest pick is deterministic. `pickRandomQuests` seeds a mulberry32 PRNG with `sha256("daily:{account}:{ymd_utc}")`, so the same account logged into two browsers on the same UTC day sees the **same three quests** (and the same replacement when one is rerolled). Without this, two browsers would draw uncorrelated sets and a "complete slot 0" on each device could fire two different `quest_type` claims for the same `(account, ymd_utc, slot)` — chain would reject the second as duplicate but the local UI on the second device would still show a misleading "+2 RUNE" toast. Determinism keeps the local state honest.
+The quest pick is deterministic. `pickRandomQuests` seeds a mulberry32 PRNG with `sha256("daily:{account}:{ymd_utc}")`, so the same account logged into two browsers on the same UTC day sees the **same three quests** (and the same replacement when one is rerolled). Without this, two browsers would draw uncorrelated sets and a "complete slot 0" on each device could fire two different `quest_type` claims for the same `(account, day, slot)` — chain would reject the second as duplicate but the local UI on the second device would still show a misleading "+2 RUNE" toast. Determinism keeps the local state honest.
 
 Progress and the `rerollsUsedToday` counter are still local-only and not synced across devices: each browser counts its own completions and gets its own daily reroll. The chain remains the single source of truth for what was actually credited.
 
 ### Midnight UTC rollover
 
-At a UTC day change, `refreshIfNeeded` never opens Keychain. If a quest is still pending (not claimed yet, Keychain rejected, guest mode, network down), the rotation is **held** — the panel keeps yesterday's quest visible so the player can use the explicit Claim action. Holds last up to 2 days, matching the chain's `ymd_utc` acceptance window of ±48h; past that point the rotation force-completes to unblock the daily quest UI, accepting that the unclaimed quest can no longer be redeemed.
+At a UTC day change, `refreshIfNeeded` never opens Keychain. A completed-but-unclaimed quest is **not held** across the rollover — claims belong to the UTC day of inclusion (the chain derives the day from the Hive block timestamp), so an unclaimed quest expires and the daily set rotates immediately. The local `ymdUtc` on each quest remains for deterministic quest selection and local identity only; it is never broadcast.
 
-`quest_type` is informational only — chain does NOT vary reward by it. Daily
-quest progress lives entirely client-side (event-bus subscribed), so a
-verifiable per-quest-type reward would require match transcripts (deferred
-to Phase 2 of ADR 0004). Flat reward removes spoof incentive.
+`quest_type` is a bounded canonical vocabulary validated in `protocol-core` (informational only — the chain does NOT vary reward by it). Daily quest progress lives entirely client-side (event-bus subscribed), so a verifiable per-quest-type reward would require match transcripts (deferred to Phase 2 of ADR 0004). Flat reward removes spoof incentive.
 
-Refresh boundary is UTC (`new Date().toISOString().slice(0,10)`); a local
-clock shift cannot harvest extra quests because the chain idempotency key
-uses the broadcast `ymd_utc` and rejects out-of-skew dates.
+Refresh boundary is UTC (`new Date().toISOString().slice(0,10)`); the chain idempotency key uses the block-derived UTC day plus slot, so a local clock shift cannot harvest extra quests.
 
 ## How a P2P ranked win becomes RUNE
 

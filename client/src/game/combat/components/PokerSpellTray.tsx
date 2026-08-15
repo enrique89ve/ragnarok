@@ -21,6 +21,7 @@ import React, { useMemo } from 'react';
 import { CardFrame } from '../../components/card';
 import { usePokerSpells } from '../../hooks/usePokerSpells';
 import type { PokerSpellCard } from '../../types/CardTypes';
+import { ARENA_VFX_TARGETS, arenaVfxTargetProps } from '../arenaVfxTargets';
 import '../styles/poker-spell-tray.css';
 
 const SPELL_LIMIT = 4;
@@ -58,6 +59,7 @@ export const PokerSpellTray: React.FC<PokerSpellTrayProps> = ({ caster }) => {
 						cardFamily="poker-spell"
 						cardKind="poker_spell"
 						isPlayable={false}
+						{...arenaVfxTargetProps(ARENA_VFX_TARGETS.spellTrayCard)}
 					>
 						<div
 							style={{

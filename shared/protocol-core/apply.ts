@@ -23,8 +23,10 @@ import {
 	MAX_REPLICAS_PER_CARD, MAX_GENERATION, REPLICA_COOLDOWN_BLOCKS,
 	PACK_ENTROPY_DELAY_BLOCKS, PACK_REVEAL_DEADLINE_BLOCKS,
 	DUAT_CLAIM_WINDOW_BLOCKS,
+	RAGNAROK_PROTOCOL_IDS,
 	getPackDefinition,
 	getRuneEconomy,
+	isRuneRedeemablePackKey,
 	TESTNET_RUNE_SEASON_ID,
 	TESTNET_EITR_SEASON_ID,
 	calculateCappedRuneCredit,
@@ -51,6 +53,7 @@ import type { ForgeCommitRecord } from './types';
 import { classifyCard } from '../schemas/cardCategory';
 import { verifyPoW, POW_CONFIG } from './pow';
 import { canonicalStringify, sha256Hash } from './hash';
+import { isDailyQuestType, utcDayString, type DailyQuestType } from './dailyQuest';
 import {
 	buildCompactMatchResultCommitmentInput,
 	buildMatchResultSignatureMessage,
@@ -1154,6 +1157,48 @@ function readPositiveIntegerField(
 	return value;
 }
 
+const PROTOCOL_METADATA_KEYS: ReadonlySet<string> = new Set(['app', 'p', 'action']);
+const PROTOCOL_ID_SET: ReadonlySet<string> = new Set(RAGNAROK_PROTOCOL_IDS);
+const DAILY_QUEST_CLAIM_PAYLOAD_KEYS: ReadonlySet<string> = new Set([
+	...PROTOCOL_METADATA_KEYS,
+	'slot',
+	'quest_type',
+]);
+const RUNE_EXCHANGE_PAYLOAD_KEYS: ReadonlySet<string> = new Set([
+	...PROTOCOL_METADATA_KEYS,
+	'pack_type',
+	'quantity',
+]);
+
+function validateStrictOpPayload(
+	op: ProtocolOp,
+	allowedFields: ReadonlySet<string>,
+): OpResult | null {
+	for (const key of Object.keys(op.payload)) {
+		if (!allowedFields.has(key)) {
+			return reject(`${op.action} unexpected field: ${key}`);
+		}
+	}
+
+	const payloadAction = op.payload.action;
+	if (payloadAction !== undefined && payloadAction !== op.action) {
+		return reject(`${op.action} metadata action mismatch`);
+	}
+
+	for (const key of ['app', 'p'] as const) {
+		const value = op.payload[key];
+		if (value === undefined) continue;
+		if (typeof value !== 'string' || !PROTOCOL_ID_SET.has(value)) {
+			return reject(`${op.action} metadata ${key} does not match an accepted protocol id`);
+		}
+	}
+	if (op.payload.app !== undefined && op.payload.p !== undefined && op.payload.app !== op.payload.p) {
+		return reject(`${op.action} metadata app and p mismatch`);
+	}
+
+	return null;
+}
+
 function readCampaignDifficulty(value: string): CampaignDifficulty | OpResult {
 	if (value === 'normal' || value === 'heroic' || value === 'mythic') return value;
 	return reject(`invalid difficulty: ${value}`);
@@ -1629,21 +1674,7 @@ function checkRewardCondition(
 type DailyQuestClaimPayloadFields = {
 	ymdUtc: string;
 	slot: number;
-	questType: string;
 };
-
-const DAILY_QUEST_YMD_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
-const DAILY_QUEST_DAY_MS = 24 * 60 * 60 * 1000;
-const DAILY_QUEST_CLOCK_SKEW_MS = 2 * DAILY_QUEST_DAY_MS; // ±48h tolerance
-
-function parseDailyQuestYmdUtc(value: string): number | OpResult {
-	const match = DAILY_QUEST_YMD_RE.exec(value);
-	if (!match) return reject(`invalid ymd_utc: ${value}`);
-	const [, yyyy, mm, dd] = match;
-	const ms = Date.UTC(Number(yyyy), Number(mm) - 1, Number(dd));
-	if (!Number.isFinite(ms)) return reject(`invalid ymd_utc: ${value}`);
-	return ms;
-}
 
 function parseDailyQuestSlot(payload: Record<string, unknown>, dailyQuestSlotsPerDay: number): number | OpResult {
 	const value = payload.slot;
@@ -1656,28 +1687,35 @@ function parseDailyQuestSlot(payload: Record<string, unknown>, dailyQuestSlotsPe
 	return value;
 }
 
+function parseDailyQuestType(payload: Record<string, unknown>): DailyQuestType | OpResult {
+	const value = payload.quest_type;
+	if (!isDailyQuestType(value)) {
+		return reject('invalid quest_type');
+	}
+	return value;
+}
+
 function parseDailyQuestClaimPayload(
 	op: ProtocolOp,
 	dailyQuestSlotsPerDay: number,
 ): DailyQuestClaimPayloadFields | OpResult {
-	const ymdUtc = readStringField(op.payload, 'ymd_utc');
-	if (isOpResult(ymdUtc)) return ymdUtc;
-
-	const ymdMs = parseDailyQuestYmdUtc(ymdUtc);
-	if (isOpResult(ymdMs)) return ymdMs;
-
-	const skew = Math.abs(op.timestamp - ymdMs);
-	if (skew > DAILY_QUEST_CLOCK_SKEW_MS) {
-		return reject(`daily_quest ymd_utc outside clock skew tolerance: ${ymdUtc}`);
+	if ('ymd_utc' in op.payload) {
+		return reject('daily_quest_claim no longer accepts ymd_utc');
 	}
+
+	const fieldsResult = validateStrictOpPayload(op, DAILY_QUEST_CLAIM_PAYLOAD_KEYS);
+	if (fieldsResult) return fieldsResult;
 
 	const slot = parseDailyQuestSlot(op.payload, dailyQuestSlotsPerDay);
 	if (isOpResult(slot)) return slot;
 
-	const questType = readStringField(op.payload, 'quest_type');
-	if (isOpResult(questType)) return questType;
+	const questTypeResult = parseDailyQuestType(op.payload);
+	if (isOpResult(questTypeResult)) return questTypeResult;
 
-	return { ymdUtc, slot, questType };
+	const ymdUtc = utcDayString(op.timestamp);
+	if (!ymdUtc) return reject('invalid op.timestamp');
+
+	return { ymdUtc, slot };
 }
 
 async function applyDailyQuestClaim(
@@ -1815,17 +1853,20 @@ function parseRuneExchangeDetails(
 	runeExchange: RuneExchangeAdapter,
 	maxRuneExchangeSpendPerOp: number,
 ): RuneExchangeDetails | OpResult {
-	const packTypeValue = op.payload.pack_type ?? op.payload.packType;
-	if (typeof packTypeValue !== 'string') {
-		return reject('missing pack_type');
+	const fieldsResult = validateStrictOpPayload(op, RUNE_EXCHANGE_PAYLOAD_KEYS);
+	if (fieldsResult) return fieldsResult;
+
+	const packTypeValue = op.payload.pack_type;
+	if (typeof packTypeValue !== 'string' || !isRuneRedeemablePackKey(packTypeValue)) {
+		return reject('invalid rune_exchange pack_type');
 	}
 
-	const quantity = Number(op.payload.quantity ?? 1);
-	if (!Number.isInteger(quantity) || quantity < 1) {
+	const quantityValue = op.payload.quantity;
+	if (typeof quantityValue !== 'number' || !Number.isInteger(quantityValue) || quantityValue < 1) {
 		return reject('quantity must be a positive integer');
 	}
 
-	const quote = runeExchange.getQuote({ packType: packTypeValue, quantity });
+	const quote = runeExchange.getQuote({ packType: packTypeValue, quantity: quantityValue });
 	if (!quote) {
 		return reject(`invalid rune_exchange pack_type: ${packTypeValue}`);
 	}

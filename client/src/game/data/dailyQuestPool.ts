@@ -1,16 +1,7 @@
 import { seededRngFromString, seededShuffle } from '../utils/seededRng';
+import type { DailyQuestType } from '@shared/protocol-core/dailyQuest';
 
-export type DailyQuestType =
-	| 'win_games'
-	| 'play_minions'
-	| 'play_spells'
-	| 'deal_damage'
-	| 'destroy_minions'
-	| 'use_hero_power'
-	| 'play_mythic'
-	| 'play_weapons'
-	| 'win_with_class'
-	| 'play_cards';
+export type { DailyQuestType } from '@shared/protocol-core/dailyQuest';
 
 /**
  * QuestTemplate — content + difficulty (goal) + local XP grant.

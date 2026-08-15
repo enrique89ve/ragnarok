@@ -10,9 +10,10 @@ ENV NPM_CONFIG_FETCH_RETRIES=5
 ENV NPM_CONFIG_FETCH_RETRY_MINTIMEOUT=20000
 ENV NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT=120000
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     corepack enable \
+    && printf 'node-linker=hoisted\n' >> .npmrc \
     && pnpm install --frozen-lockfile
 
 FROM deps AS build

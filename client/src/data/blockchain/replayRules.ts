@@ -176,6 +176,10 @@ export async function applyOp(op: RawOp): Promise<void> {
 		acceptLegacyProtocolIds: runtime.acceptsLegacyProtocolIds,
 	});
 	if (normalized.status === 'ignore') return;
+	if (normalized.status === 'reject') {
+		console.warn(`[replayRules] REJECTED ${op.broadcaster} custom_json id=${rawHiveOp.customJsonId}: ${normalized.reason}`);
+		return;
+	}
 
 	// Build context with LIB + block-id lookup
 	const lib = await getLastIrreversibleBlock();

@@ -5,8 +5,16 @@
  * Both client and server call this with their own StateAdapter implementation.
  */
 
-export { normalizeRawOp } from './normalize';
-export type { NormalizeResult } from './normalize';
+export {
+	normalizeRawOp,
+	rawJsonByteLength,
+	GLOBAL_RAW_JSON_BYTE_CEILING,
+	DAILY_QUEST_CLAIM_RAW_JSON_BYTE_LIMIT,
+	RUNE_EXCHANGE_RAW_JSON_BYTE_LIMIT,
+} from './normalize';
+export type { NormalizeResult, NormalizeOptions } from './normalize';
+export { DAILY_QUEST_TYPES, isDailyQuestType, utcDayString } from './dailyQuest';
+export type { DailyQuestType } from './dailyQuest';
 export { applyOp, autoFinalizeExpiredCommits } from './apply';
 export type { ProtocolCoreDeps } from './apply';
 export { canonicalStringify, sha256Hash } from './hash';

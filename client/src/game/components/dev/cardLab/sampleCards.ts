@@ -28,6 +28,50 @@ export const RARITY_SAMPLES: SampleCard[] = [
 	{ id: 4303, fallbackName: 'Root-Gnawer of Yggdrasil', fallbackRarity: 'mythic', fallbackType: 'minion', fallbackElement: 'grass' },
 ];
 
+export interface FrameStudySample {
+	id: 'minion' | 'spell' | 'weapon' | 'pet';
+	label: string;
+	statContract: string;
+	description: string;
+	sample: SampleCard;
+}
+
+/**
+ * Real cards used by the frame comparison. Pets intentionally resolve as
+ * minions: that is their canonical data type, while `petStage` carries the
+ * evolution identity without changing the combat footer contract.
+ */
+export const FRAME_STUDY_SAMPLES: readonly FrameStudySample[] = [
+	{
+		id: 'minion',
+		label: 'Minion',
+		statContract: 'ATK · HP',
+		description: 'Full combat footer with both lower stat sockets.',
+		sample: { id: 4303, fallbackName: 'Root-Gnawer of Yggdrasil', fallbackRarity: 'mythic', fallbackType: 'minion', fallbackElement: 'grass' },
+	},
+	{
+		id: 'spell',
+		label: 'Spell',
+		statContract: 'No combat stats',
+		description: 'Keeps the shared mana and frame, without attack or health.',
+		sample: { id: 5014, fallbackName: 'War Horn of Asgard', fallbackRarity: 'common', fallbackType: 'spell', fallbackElement: 'neutral' },
+	},
+	{
+		id: 'weapon',
+		label: 'Weapon',
+		statContract: 'Weapon footer',
+		description: 'Uses its own lower contract instead of minion attack/health sockets.',
+		sample: { id: 5001, fallbackName: 'Muspelheim Flame', fallbackRarity: 'common', fallbackType: 'weapon', fallbackElement: 'fire' },
+	},
+	{
+		id: 'pet',
+		label: 'Pet',
+		statContract: 'ATK · HP',
+		description: 'A pet is a minion visually; evolution metadata stays independent.',
+		sample: { id: 50040, fallbackName: 'Ember Cub', fallbackRarity: 'common', fallbackType: 'minion', fallbackElement: 'fire' },
+	},
+];
+
 const RARITY_INDEX = new Map<SampleCard['fallbackRarity'], SampleCard>(
 	RARITY_SAMPLES.map((s) => [s.fallbackRarity, s]),
 );

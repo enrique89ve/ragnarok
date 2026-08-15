@@ -55,7 +55,7 @@ const CardStatGems: React.FC<CardStatGemsProps> = ({ attack, health, statView })
 						'card-frame__stat-gem--atk',
 						TONE_CLASS[atk.tone],
 					].filter(Boolean).join(' ')}
-					style={{ fontSize: isPreview ? '1.1rem' : undefined }}
+					style={{ fontSize: isPreview ? '1.43rem' : undefined }}
 				>
 					{atk.value}
 				</div>
@@ -67,7 +67,7 @@ const CardStatGems: React.FC<CardStatGemsProps> = ({ attack, health, statView })
 						'card-frame__stat-gem--hp',
 						TONE_CLASS[hp.tone],
 					].filter(Boolean).join(' ')}
-					style={{ fontSize: isPreview ? '1.1rem' : undefined }}
+					style={{ fontSize: isPreview ? '1.43rem' : undefined }}
 				>
 					{hp.value}
 				</div>

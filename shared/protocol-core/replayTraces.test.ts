@@ -2055,7 +2055,6 @@ describe('Protocol Core: Replay Traces', () => {
 
 		const dailySourceKey = 'daily_quest:S01:alice:2026-05-20:0';
 		const daily = await applyOp(makeOp('daily_quest_claim', {
-			ymd_utc: '2026-05-20',
 			slot: 0,
 			quest_type: 'win_games',
 		}, {
@@ -2074,7 +2073,6 @@ describe('Protocol Core: Replay Traces', () => {
 		});
 
 		const dailyDuplicate = await applyOp(makeOp('daily_quest_claim', {
-			ymd_utc: '2026-05-20',
 			slot: 0,
 			quest_type: 'win_games',
 		}, {
@@ -2385,8 +2383,66 @@ describe('Protocol Core: Replay Traces', () => {
 			expect(result.status).toBe('rejected');
 			expect((result as { reason: string }).reason).toContain('pack cap');
 			expect(state.packs.size).toBe(0);
-			});
 		});
+
+		it('rejects a non-canonical pack_type', async () => {
+			await seedSealedGenesis(state, deps);
+			await deps.state.putTokenBalance({ account: 'alice', RUNE: 10 });
+
+			const result = await applyOp(makeOp('rune_exchange', {
+				pack_type: 'booster',
+				quantity: 1,
+			}, { broadcaster: 'alice', trxId: 'rune-x-bad-pack', blockNum: 2000 }), defaultCtx, deps);
+
+			expect(result.status).toBe('rejected');
+			expect((result as { reason: string }).reason).toContain('pack_type');
+			expect(state.packs.size).toBe(0);
+			expect(state.runeLedger.size).toBe(0);
+		});
+
+		it('rejects a string quantity (no coercion)', async () => {
+			await seedSealedGenesis(state, deps);
+			await deps.state.putTokenBalance({ account: 'alice', RUNE: 10 });
+
+			const result = await applyOp(makeOp('rune_exchange', {
+				pack_type: 'standard',
+				quantity: '1',
+			}, { broadcaster: 'alice', trxId: 'rune-x-str-qty', blockNum: 2000 }), defaultCtx, deps);
+
+			expect(result.status).toBe('rejected');
+			expect((result as { reason: string }).reason).toContain('quantity');
+			expect(state.packs.size).toBe(0);
+		});
+
+		it('rejects a fractional quantity', async () => {
+			await seedSealedGenesis(state, deps);
+			await deps.state.putTokenBalance({ account: 'alice', RUNE: 10 });
+
+			const result = await applyOp(makeOp('rune_exchange', {
+				pack_type: 'standard',
+				quantity: 1.5,
+			}, { broadcaster: 'alice', trxId: 'rune-x-frac-qty', blockNum: 2000 }), defaultCtx, deps);
+
+			expect(result.status).toBe('rejected');
+			expect((result as { reason: string }).reason).toContain('quantity');
+			expect(state.packs.size).toBe(0);
+		});
+
+		it('rejects an unexpected payload field', async () => {
+			await seedSealedGenesis(state, deps);
+			await deps.state.putTokenBalance({ account: 'alice', RUNE: 10 });
+
+			const result = await applyOp(makeOp('rune_exchange', {
+				pack_type: 'standard',
+				quantity: 1,
+				hack: 'injected',
+			}, { broadcaster: 'alice', trxId: 'rune-x-extra-field', blockNum: 2000 }), defaultCtx, deps);
+
+			expect(result.status).toBe('rejected');
+			expect((result as { reason: string }).reason).toContain('unexpected field');
+			expect(state.packs.size).toBe(0);
+		});
+	});
 
 		describe('pack_purchase', () => {
 			function withHbdPurchaseTransfer(trxId: string, amount: string, to = deps.runtime.treasuryAccount) {

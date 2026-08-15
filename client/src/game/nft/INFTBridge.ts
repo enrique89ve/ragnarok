@@ -102,7 +102,7 @@ export interface INFTBridge {
 
 	// ── Transactions ──
 	claimReward(rewardId: string): Promise<BroadcastResult>;
-	claimDailyQuest(ymdUtc: string, slot: number, questType: string): Promise<BroadcastResult>;
+	claimDailyQuest(slot: number, questType: string): Promise<BroadcastResult>;
 	submitCampaignResult(payload: CampaignResultBroadcastPayload): Promise<BroadcastResult>;
 	transferCard(cardUid: string, toUser: string, memo?: string): Promise<BroadcastResult>;
 	transferCards(cardUids: string[], toUser: string, memo?: string): Promise<BroadcastResult>;

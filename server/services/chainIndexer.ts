@@ -715,10 +715,10 @@ function groupOpsByTransaction(ops: readonly BlockchainOp[]): Map<string, unknow
 }
 
 function parseBlockTimestamp(timestamp: string): number {
-	if (!timestamp) return Date.now();
+	if (!timestamp) return Number.NaN;
 	const value = timestamp.endsWith('Z') ? timestamp : `${timestamp}Z`;
 	const t = Date.parse(value);
-	return Number.isFinite(t) ? t : Date.now();
+	return Number.isFinite(t) ? t : Number.NaN;
 }
 
 function sortOpsForBlock(ops: readonly BlockchainOp[]): BlockchainOp[] {
@@ -773,6 +773,10 @@ async function processBlockOps(
 			acceptLegacyProtocolIds: runtime.acceptsLegacyProtocolIds,
 		});
 		if (normalized.status === 'ignore') continue;
+		if (normalized.status === 'reject') {
+			console.warn(`[chainIndexer] REJECTED ${broadcaster} custom_json id=${opId} block=${blockNum}: ${normalized.reason}`);
+			continue;
+		}
 
 		serverStateAdapter.setTrxSiblings(op.trx_id, siblingsByTrx.get(op.trx_id) ?? []);
 

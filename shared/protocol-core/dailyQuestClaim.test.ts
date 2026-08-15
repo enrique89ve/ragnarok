@@ -33,7 +33,6 @@ import type { EitrLedgerEntry } from './eitrEconomy';
 // ============================================================
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const TEST_YMD = '2026-05-14';
 const TEST_YMD_MS = Date.UTC(2026, 4, 14);
 
 function createStateAdapter(): StateAdapter & {
@@ -215,29 +214,28 @@ function createDeps(state: StateAdapter): ProtocolCoreDeps {
 
 interface DailyQuestClaimOpInput {
 	readonly account?: string;
-	readonly ymdUtc?: string;
 	readonly slot?: number;
 	readonly questType?: string;
 	readonly timestamp?: number;
 	readonly blockNum?: number;
 	readonly trxId?: string;
+	readonly extraFields?: Record<string, unknown>;
 }
 
 function makeDailyQuestRawOp(input: DailyQuestClaimOpInput = {}) {
 	const account = input.account ?? 'alice';
-	const ymdUtc = input.ymdUtc ?? TEST_YMD;
 	const slot = input.slot ?? 0;
 	const blockNum = input.blockNum ?? 20;
 	const timestamp = input.timestamp ?? TEST_YMD_MS + 12 * 60 * 60 * 1000; // midday UTC
 	return {
 		customJsonId: 'rp_daily_quest_claim',
 		json: JSON.stringify({
-			ymd_utc: ymdUtc,
 			slot,
 			quest_type: input.questType ?? 'win_games',
+			...(input.extraFields ?? {}),
 		}),
 		broadcaster: account,
-		trxId: input.trxId ?? `trx-${account}-${ymdUtc}-${slot}`,
+		trxId: input.trxId ?? `trx-${account}-${slot}`,
 		blockNum,
 		timestamp,
 		requiredPostingAuths: [account],
@@ -308,7 +306,7 @@ describe('daily_quest_claim protocol op', () => {
 		expect((result as { reason: string }).reason).toContain('slot out of range');
 	});
 
-	it('ignores a duplicate (account, ymd_utc, slot)', async () => {
+	it('ignores a duplicate (account, day, slot)', async () => {
 		const state = createStateAdapter();
 		const deps = createDeps(state);
 
@@ -342,10 +340,10 @@ describe('daily_quest_claim protocol op', () => {
 		const day2Ms = day1Ms + DAY_MS;
 
 		for (const slot of [0, 1, 2]) {
-			await applyDailyQuestClaim(deps, { slot, ymdUtc: '2026-05-14', timestamp: day1Ms });
+			await applyDailyQuestClaim(deps, { slot, timestamp: day1Ms });
 		}
 		for (const slot of [0, 1, 2]) {
-			await applyDailyQuestClaim(deps, { slot, ymdUtc: '2026-05-15', timestamp: day2Ms });
+			await applyDailyQuestClaim(deps, { slot, timestamp: day2Ms });
 		}
 
 		expect((await state.getTokenBalance('alice')).RUNE).toBe(12);
@@ -416,28 +414,101 @@ describe('daily_quest_claim protocol op', () => {
 		})).toBe(TESTNET_RUNE_ECONOMY.dailyQuestCap);
 	});
 
-	it('rejects ymd_utc more than 48h away from op.timestamp', async () => {
+	it('rejects ymd_utc in the payload (no longer accepted)', async () => {
 		const state = createStateAdapter();
 		const deps = createDeps(state);
 
 		const result = await applyDailyQuestClaim(deps, {
-			ymdUtc: '2026-05-14',
-			timestamp: TEST_YMD_MS + 3 * DAY_MS, // 3 days after the claimed day
+			extraFields: { ymd_utc: '2026-05-14' },
 		});
 
 		expect(result.status).toBe('rejected');
-		expect((result as { reason: string }).reason).toContain('clock skew');
+		expect((result as { reason: string }).reason).toContain('ymd_utc');
 		expect(state.runeLedger.size).toBe(0);
 	});
 
-	it('rejects a malformed ymd_utc string', async () => {
+	it('rejects a non-canonical quest_type', async () => {
 		const state = createStateAdapter();
 		const deps = createDeps(state);
 
-		const result = await applyDailyQuestClaim(deps, { ymdUtc: '2026/05/14' });
+		const result = await applyDailyQuestClaim(deps, { questType: 'free_runes' });
 
 		expect(result.status).toBe('rejected');
-		expect((result as { reason: string }).reason).toContain('invalid ymd_utc');
+		expect((result as { reason: string }).reason).toContain('quest_type');
+		expect(state.runeLedger.size).toBe(0);
+	});
+
+	it('rejects a non-integer slot', async () => {
+		const state = createStateAdapter();
+		const deps = createDeps(state);
+
+		const result = await applyDailyQuestClaim(deps, {
+			extraFields: { slot: 1.5 },
+		});
+
+		expect(result.status).toBe('rejected');
+		expect((result as { reason: string }).reason).toContain('slot');
+		expect(state.runeLedger.size).toBe(0);
+	});
+
+	it('rejects an unexpected payload field', async () => {
+		const state = createStateAdapter();
+		const deps = createDeps(state);
+
+		const result = await applyDailyQuestClaim(deps, {
+			extraFields: { hack: 'injected' },
+		});
+
+		expect(result.status).toBe('rejected');
+		expect((result as { reason: string }).reason).toContain('unexpected field');
+		expect(state.runeLedger.size).toBe(0);
+	});
+
+	it('rejects mismatched protocol metadata', async () => {
+		const state = createStateAdapter();
+		const deps = createDeps(state);
+
+		const result = await applyDailyQuestClaim(deps, {
+			extraFields: { app: 'ragnarok-cards', p: 'rk_game_testnet' },
+		});
+
+		expect(result.status).toBe('rejected');
+		expect((result as { reason: string }).reason).toContain('mismatch');
+		expect(state.runeLedger.size).toBe(0);
+	});
+
+	it('rejects an invalid block timestamp without mutation', async () => {
+		const state = createStateAdapter();
+		const deps = createDeps(state);
+
+		const result = await applyDailyQuestClaim(deps, { timestamp: Number.NaN });
+
+		expect(result.status).toBe('rejected');
+		expect((result as { reason: string }).reason).toContain('timestamp');
+		expect(state.runeLedger.size).toBe(0);
+	});
+
+	it('derives the UTC day from op.timestamp across the midnight boundary', async () => {
+		const state = createStateAdapter();
+		const deps = createDeps(state);
+
+		const beforeMidnight = await applyDailyQuestClaim(deps, {
+			slot: 0,
+			timestamp: Date.UTC(2026, 4, 14, 23, 59, 59, 999),
+			trxId: 'trx-before-midnight',
+		});
+		expect(beforeMidnight.status).toBe('applied');
+		expect(state.runeLedger.get('S01:credit:daily_quest_claim:daily_quest:S01:alice:2026-05-14:0')).toBeDefined();
+
+		const afterMidnight = await applyDailyQuestClaim(deps, {
+			slot: 0,
+			timestamp: Date.UTC(2026, 4, 15, 0, 0, 0, 0),
+			trxId: 'trx-after-midnight',
+		});
+		expect(afterMidnight.status).toBe('applied');
+		expect(state.runeLedger.get('S01:credit:daily_quest_claim:daily_quest:S01:alice:2026-05-15:0')).toBeDefined();
+
+		expect((await state.getTokenBalance('alice')).RUNE).toBe(4);
 	});
 
 	it('daily quest pool is isolated from P2P and campaign pools', async () => {
