@@ -195,25 +195,6 @@
   }
 }
 
-@keyframes damageShake {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  20% {
-    transform: translateX(-3px);
-  }
-  40% {
-    transform: translateX(3px);
-  }
-  60% {
-    transform: translateX(-2px);
-  }
-  80% {
-    transform: translateX(2px);
-  }
-}
-
 .winning-card-glow.celebration {
   animation: winningCardCelebrate 1.5s ease-in-out infinite;
   z-index: 10;

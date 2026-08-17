@@ -1,8 +1,13 @@
 import { useEffect, useRef } from 'react';
-import { CombatPhase, PokerCombatState, PokerCard } from '../../types/PokerCombatTypes';
+import { CombatPhase, PokerCombatState, PokerCard, PokerHandRank } from '../../types/PokerCombatTypes';
 import { initializeCombatEventSubscribers, cleanupCombatEventSubscribers } from '../../services/CombatEventSubscribers';
 import { useGameStore } from '../../stores/gameStore';
-import { getPokerDramaCallbacks } from './usePokerDrama';
+import {
+	emitHandRankAnnounced,
+	emitRagnarokTriggered,
+	emitShowdownDamage,
+	emitStreakAnnounced,
+} from '../vfx/events';
 
 export interface ShowdownCelebration {
   resolution: {
@@ -72,6 +77,36 @@ export function useCombatEvents(options: UseCombatEventsOptions): void {
     const result = resolveCombat();
     if (!result) return; // Don't lock ref if resolution failed — allow retry
     hasResolvedRef.current = true;
+
+    // Showdown drama choreography — emitted post-commit for BOTH the
+    // match-over (lethal) and next-hand cases so the lethal cue can fire
+    // on the killing blow. The handler module owns the timing.
+    const playerRank = result.playerHand?.rank || PokerHandRank.HIGH_CARD;
+    const opponentRank = result.opponentHand?.rank || PokerHandRank.HIGH_CARD;
+    const damage = result.winner === 'player' ? result.opponentDamage : result.playerDamage;
+
+    if (playerRank === PokerHandRank.RAGNAROK || opponentRank === PokerHandRank.RAGNAROK) {
+      emitRagnarokTriggered({
+        side: playerRank === PokerHandRank.RAGNAROK ? 'player' : 'opponent',
+      });
+    }
+    emitHandRankAnnounced({ side: 'player', rank: playerRank, winner: result.winner });
+    emitHandRankAnnounced({ side: 'opponent', rank: opponentRank, winner: result.winner });
+    if (result.winner !== 'draw' && (damage || 0) > 0) {
+      emitShowdownDamage({
+        winner: result.winner,
+        damage: damage || 0,
+        isLethal: result.playerFinalHealth <= 0 || result.opponentFinalHealth <= 0,
+      });
+    }
+    if (result.winner === 'player' && combatState) {
+      const pHP = combatState.player.pet.stats.currentHealth;
+      const pMax = combatState.player.pet.stats.maxHealth;
+      if (pMax > 0 && pHP / pMax <= 0.2) {
+        emitStreakAnnounced({ side: 'player', streak: 0, kind: 'last_stand' });
+      }
+    }
+
     {
       const matchOver = result.playerFinalHealth <= 0 || result.opponentFinalHealth <= 0;
 
@@ -107,18 +142,6 @@ export function useCombatEvents(options: UseCombatEventsOptions): void {
           },
           winningCards
         });
-
-        // Trigger showdown drama VFX
-        try {
-          const dramaCallbacks = getPokerDramaCallbacks();
-          const damage = result.winner === 'player' ? result.opponentDamage : result.playerDamage;
-          dramaCallbacks.onShowdown(
-            result.playerHand?.rank || 1,
-            result.opponentHand?.rank || 1,
-            result.winner,
-            damage || 0
-          );
-        } catch { /* drama VFX is non-critical */ }
       }
     }
   }, [combatState?.phase, combatState?.player?.isReady, combatState?.opponent?.isReady, isActive, resolveCombat, onShowdownCelebration, onHeroDeath, setResolution, cardGameMulliganActive]);

@@ -17,14 +17,14 @@
   --norse-card-stat-font-size: calc(0.58rem * 1.3 * var(--norse-card-ui-scale));
   --norse-card-name-color: #f2e8cc;
   --norse-card-crest-wing: #7ea6dd;
-  --norse-card-name-bottom: calc(13px * var(--norse-card-ui-scale));
+  --norse-card-name-bottom: calc(5px * var(--norse-card-ui-scale));
   --norse-card-name-inline: calc(7px * var(--norse-card-ui-scale));
   --norse-card-name-height: calc(15px * var(--norse-card-ui-scale));
   --norse-card-name-font-size: calc(0.56rem * var(--norse-card-ui-scale));
   --norse-card-name-font-scale: 1;
-  --norse-card-keyword-bottom: calc(30px * var(--norse-card-ui-scale));
+  --norse-card-keyword-bottom: calc(22px * var(--norse-card-ui-scale));
   --norse-card-keyword-inline: calc(6px * var(--norse-card-ui-scale));
-  --norse-card-keyword-font-size: calc(0.48rem * var(--norse-card-ui-scale));
+  --norse-card-keyword-font-size: calc(0.36rem * var(--norse-card-ui-scale));
   --norse-card-badge-top: calc(4px * var(--norse-card-ui-scale));
   --norse-card-badge-side: calc(4px * var(--norse-card-ui-scale));
   --norse-card-badge-size: calc(16px * var(--norse-card-ui-scale));
@@ -237,6 +237,35 @@
     inset 0 1px 0 color-mix(in srgb, var(--gold-100) 18%, transparent),
     inset 0 -30px 40px rgba(0, 0, 0, 0.38),
     inset 0 0 18px color-mix(in srgb, var(--collection-frame-blue) 6%, transparent);
+}
+
+/* The PNG owns the frame silhouette for the shared war-table asset. */
+.norse-card-frame.card-frame--asset-minimal-war-table-v4::before,
+.norse-card-frame.card-frame--asset-minimal-war-table-v4::after {
+	display: none !important;
+}
+
+.norse-card-frame.card-frame--asset-minimal-war-table-v4-clean::before,
+.norse-card-frame.card-frame--asset-minimal-war-table-v4-clean::after,
+.norse-card-frame.card-frame--asset-minimal-war-table-v5-gameplay::before,
+.norse-card-frame.card-frame--asset-minimal-war-table-v5-gameplay::after,
+.norse-card-frame.card-frame--asset-minimal-war-table-v5-gameplay-clean::before,
+.norse-card-frame.card-frame--asset-minimal-war-table-v5-gameplay-clean::after {
+	display: none !important;
+}
+
+/*
+ * Concept PNGs are the complete frame silhouette. Keep the live card slots
+ * above them, but do not let the legacy CSS chrome paint a second mana gem,
+ * element glyph, or frame treatment on top of the bitmap.
+ */
+:is(
+	.norse-card-frame.card-frame--asset-minimal-war-table-v4,
+	.norse-card-frame.card-frame--asset-minimal-war-table-v4-clean,
+	.norse-card-frame.card-frame--asset-minimal-war-table-v5-gameplay,
+	.norse-card-frame.card-frame--asset-minimal-war-table-v5-gameplay-clean
+) .card-frame__mana-element {
+	display: none !important;
 }
 
 .norse-card-frame .card-frame__art-layer {
@@ -630,20 +659,38 @@
 .norse-card-frame--surface-mulligan {
   --norse-card-ui-scale: 1.28;
   --collection-frame-line-inset: 4px;
-  --norse-card-name-bottom: calc(14px * var(--norse-card-ui-scale));
+  --norse-card-name-bottom: calc(4px * var(--norse-card-ui-scale));
   --norse-card-name-inline: calc(8px * var(--norse-card-ui-scale));
-  --norse-card-name-height: calc(14px * var(--norse-card-ui-scale));
-  --norse-card-name-font-size: calc(0.54rem * var(--norse-card-ui-scale));
+  --norse-card-name-height: calc(12px * var(--norse-card-ui-scale));
+  --norse-card-name-font-size: calc(0.46rem * var(--norse-card-ui-scale));
   --norse-card-rarity-mark-bottom: calc(2px * var(--norse-card-ui-scale));
+}
+
+/* Pets reserve the upper two thirds for their evolution art. Their readable
+   metadata remains in the same shared slots, but settles against the lowest
+   safe rail immediately above the combat sockets. */
+.norse-card-frame.collection-card-frame--pet:not(.norse-card-frame--poker) {
+  --norse-card-name-bottom: calc(3px * var(--norse-card-ui-scale));
+  --norse-card-keyword-bottom: calc(20px * var(--norse-card-ui-scale));
 }
 
 .norse-card-frame--surface-gameplay {
   --norse-card-ui-scale: 1.04;
+  --norse-card-rarity-mark-width: calc(60px * var(--norse-card-ui-scale));
+  --norse-card-rarity-mark-height: calc(21px * var(--norse-card-ui-scale));
+  --norse-card-name-height: calc(24px * var(--norse-card-ui-scale));
+  --norse-card-name-font-size: calc(1rem * var(--norse-card-ui-scale));
+  --norse-card-keyword-bottom: calc(39px * var(--norse-card-ui-scale));
 }
 
 .norse-card-frame--surface-battlefield {
   --norse-card-ui-scale: 1.08;
   --collection-frame-line-inset: 3px;
+  --norse-card-rarity-mark-width: calc(60px * var(--norse-card-ui-scale));
+  --norse-card-rarity-mark-height: calc(21px * var(--norse-card-ui-scale));
+  --norse-card-name-height: calc(24px * var(--norse-card-ui-scale));
+  --norse-card-name-font-size: calc(1rem * var(--norse-card-ui-scale));
+  --norse-card-keyword-bottom: calc(39px * var(--norse-card-ui-scale));
   --norse-card-badge-top: calc(2px * var(--norse-card-ui-scale));
   --norse-card-badge-side: calc(2px * var(--norse-card-ui-scale));
   --norse-card-mana-top: calc(2px * var(--norse-card-ui-scale));
@@ -653,6 +700,12 @@
 .norse-card-frame--surface-compact {
   --norse-card-ui-scale: 0.96;
   --collection-frame-line-inset: 3px;
+  --norse-card-rarity-mark-width: calc(60px * var(--norse-card-ui-scale));
+  --norse-card-rarity-mark-height: calc(21px * var(--norse-card-ui-scale));
+  --norse-card-name-bottom: calc(20px * var(--norse-card-ui-scale));
+  --norse-card-name-height: calc(18px * var(--norse-card-ui-scale));
+  --norse-card-name-font-size: calc(0.76rem * var(--norse-card-ui-scale));
+  --norse-card-keyword-bottom: calc(44px * var(--norse-card-ui-scale));
   --norse-card-badge-top: calc(2px * var(--norse-card-ui-scale));
   --norse-card-badge-side: calc(2px * var(--norse-card-ui-scale));
   --norse-card-mana-top: calc(2px * var(--norse-card-ui-scale));
@@ -706,6 +759,10 @@
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.78),
     inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.norse-card-frame--surface-compact .card-frame__name-plate {
+  max-height: calc(var(--norse-card-name-height) * 1.55);
 }
 
 .norse-card-frame:not(.norse-card-frame--poker) .card-frame__tribe-line {
@@ -767,9 +824,9 @@
     .norse-card-frame--surface-compact,
     .norse-card-frame--surface-mulligan,
     .norse-card-frame--surface-preview
-) .card-frame__description-stack {
+  ) .card-frame__description-stack {
   right: var(--norse-card-keyword-inline);
-  bottom: var(--norse-card-keyword-bottom);
+  bottom: calc(var(--norse-card-keyword-bottom) + 2px);
   left: var(--norse-card-keyword-inline);
   z-index: 13;
   gap: 2px;
@@ -779,18 +836,31 @@
   bottom: var(--norse-card-keyword-bottom, 30px);
 }
 
+/* Collection grid uses the keyword rail as the compact rules summary. The
+ * full description belongs to the detail surface, where there is enough
+ * vertical budget to read it without competing with the name/stat rail. */
+.norse-card-frame--surface-collection .card-frame__description-stack--keywords-only {
+  bottom: calc(var(--norse-card-keyword-bottom) + 2px);
+}
+
 .norse-card-frame:not(.norse-card-frame--poker) .card-frame__description-stack.card-frame__description-stack--with-keywords:has(.card-frame__description-text) {
   gap: 5px;
 }
 
 .norse-card-frame:is(
     .norse-card-frame--surface-collection,
+    .norse-card-frame--surface-gameplay,
     .norse-card-frame--surface-battlefield,
-    .norse-card-frame--surface-compact
+    .norse-card-frame--surface-compact,
+    .norse-card-frame--surface-mulligan,
+    .norse-card-frame--surface-preview
   ) .card-frame__keywords {
+  width: 100%;
   flex-wrap: nowrap;
   overflow: hidden;
-  justify-content: flex-start;
+  align-items: center;
+  gap: 4px;
+  justify-content: center;
 }
 
 .norse-card-frame:is(
@@ -823,19 +893,34 @@
 
 .norse-card-frame:not(.norse-card-frame--poker) .card-frame__description-stack:has(.card-frame__description-text) .card-frame__keywords {
   gap: 4px;
-  justify-content: flex-start;
+  justify-content: center;
 }
 
-.norse-card-frame:not(.norse-card-frame--poker) .card-frame__description-stack:has(.card-frame__description-text) .card-frame__keyword-chip--icon {
-  width: 19px;
-  height: 19px;
-  border-color: color-mix(in srgb, var(--collection-frame-blue) 44%, var(--gold-100) 16%);
+.norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-chip--with-icon {
+  gap: 3px;
+  padding-left: 2px;
+  border-radius: 999px;
+}
+
+.norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-chip--icon-only {
+  width: calc((var(--norse-card-keyword-font-size) + 15px) * 1.4);
+  padding: 2px;
+}
+
+.norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-icon-mark {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: calc((var(--norse-card-keyword-font-size) + 11px) * 1.4);
+  height: calc((var(--norse-card-keyword-font-size) + 11px) * 1.4);
+  border: 1px solid color-mix(in srgb, var(--keyword-tone, var(--collection-frame-blue)) 56%, var(--gold-100) 12%);
   border-radius: 4px;
   background:
     radial-gradient(circle at 32% 20%, rgba(255, 255, 255, 0.18), transparent 42%),
     linear-gradient(
       145deg,
-      color-mix(in srgb, var(--collection-frame-blue) 36%, rgba(3, 8, 16, 0.96)),
+      color-mix(in srgb, var(--keyword-tone, var(--collection-frame-blue)) 36%, rgba(3, 8, 16, 0.96)),
       rgba(3, 8, 16, 0.96)
     );
   color: color-mix(in srgb, var(--gold-100) 78%, white 10%);
@@ -845,17 +930,51 @@
     inset 0 -1px 0 rgba(0, 0, 0, 0.48);
 }
 
-.norse-card-frame:is(
-    .norse-card-frame--surface-collection,
-    .norse-card-frame--surface-gameplay,
-    .norse-card-frame--surface-battlefield,
-    .norse-card-frame--surface-compact,
-    .norse-card-frame--surface-mulligan,
-    .norse-card-frame--surface-preview
-  ) .card-frame__keyword-chip--icon {
-  width: calc(var(--norse-card-keyword-font-size) + 9px);
-  height: calc(var(--norse-card-keyword-font-size) + 9px);
-  padding: 2px;
+.norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-chip[data-tone="combat"] {
+  --keyword-tone: #f05f67;
+}
+
+.norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-chip[data-tone="trigger"] {
+  --keyword-tone: #f2c35a;
+}
+
+.norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-chip[data-tone="state"] {
+  --keyword-tone: #a98cff;
+}
+
+.norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-chip[data-tone="resource"] {
+  --keyword-tone: #67d2c2;
+}
+
+.norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-chip[data-tone="choice"] {
+  --keyword-tone: #74c7ff;
+}
+
+.norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-chip[data-tone="progression"] {
+  --keyword-tone: #7fd36d;
+}
+
+.norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-chip[data-tone="summon"] {
+  --keyword-tone: #d0a1ff;
+}
+
+.norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-chip[data-tone="poker"] {
+  --keyword-tone: #ff7ac8;
+}
+
+.norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-chip:is(
+    [data-tone="filter"],
+    [data-tone="theme"]
+  ) {
+  --keyword-tone: #9ba8b8;
+}
+
+.norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-label {
+  min-width: 0;
+  overflow: hidden;
+  color: color-mix(in srgb, var(--ink-100) 84%, var(--keyword-tone, var(--gold-100)) 16%);
+  letter-spacing: 0.03em;
+  text-overflow: ellipsis;
 }
 
 .norse-card-frame:is(
@@ -877,7 +996,7 @@
 	width: 100%;
 	max-width: 100%;
 	min-height: calc(2 * 1.16em);
-	max-height: calc(2 * 1.16em);
+	max-height: calc(4 * 1.16em);
 	color: color-mix(in srgb, var(--ink-100) 86%, var(--gold-100) 14%);
 	font-size: clamp(0.54rem, calc(var(--norse-card-keyword-font-size) + 0.1rem), 0.62rem);
 	font-weight: 600;
@@ -888,8 +1007,76 @@
 		0 1px 1px rgba(0, 0, 0, 0.95),
 		0 0 4px rgba(0, 0, 0, 0.74);
 	overflow-wrap: anywhere;
-	-webkit-line-clamp: 2;
+	-webkit-line-clamp: 4;
 	-webkit-box-orient: vertical;
+}
+
+.norse-card-frame--surface-collection .card-frame__name-plate {
+  max-height: var(--norse-card-name-height);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+/* Collection keyword rail: symbols only. The semantic tone belongs to the
+ * keyword, not to the shared card frame, so each icon remains distinguishable
+ * without increasing the card's text height. */
+.norse-card-frame--surface-collection .card-frame__keywords {
+  gap: 3px;
+  justify-content: center;
+  min-height: 16px;
+}
+
+.norse-card-frame--surface-collection .card-frame__keyword-chip {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  max-width: 16px;
+  padding: 1px;
+  border-color: color-mix(
+    in srgb,
+    var(--keyword-tone, var(--collection-frame-color)) 78%,
+    var(--obsidian-950) 22%
+  );
+  border-radius: 4px;
+  background: color-mix(
+    in srgb,
+    var(--keyword-tone, var(--collection-frame-color)) 22%,
+    var(--obsidian-950) 78%
+  );
+  color: color-mix(
+    in srgb,
+    var(--keyword-tone, var(--gold-100)) 78%,
+    white 22%
+  );
+}
+
+.norse-card-frame--surface-collection .card-frame__keyword-chip--overflow {
+  flex-basis: 16px;
+  width: 16px;
+  min-width: 16px;
+  max-width: 16px;
+  color: var(--gold-100);
+  font-size: 0.48rem;
+}
+
+.norse-card-frame--surface-collection .card-frame__keyword-label {
+  display: none;
+}
+
+.norse-card-frame--surface-collection .card-frame__keyword-icon-mark {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.norse-card-frame--surface-collection .card-frame__keyword-icon {
+  width: 100%;
+  height: 100%;
 }
 
 .norse-card-frame:is(
@@ -1094,5 +1281,87 @@
 
 .norse-card-frame--poker .card-frame__legibility,
 .norse-card-frame--poker .card-frame__band {
+  display: none;
+}
+
+/* Surface boundary: this is intentionally the final Collection block. Older
+ * shared rules still support gameplay and legacy cards, but cannot resize or
+ * repaint the compact Collection symbol rail. */
+.norse-card-frame.norse-card-frame--surface-collection .card-frame__keywords {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 16px;
+  max-height: 16px;
+  overflow: visible;
+}
+
+.norse-card-frame.norse-card-frame--surface-collection .card-frame__keyword-chip:not(.card-frame__keyword-chip--overflow) {
+  box-sizing: border-box;
+  flex: 0 0 16px;
+  width: 16px;
+  min-width: 16px;
+  max-width: 16px;
+  height: 16px;
+  padding: 1px;
+  overflow: hidden;
+  border: 1px solid color-mix(
+    in srgb,
+    var(--keyword-tone, var(--collection-frame-color)) 78%,
+    var(--obsidian-950) 22%
+  );
+  border-radius: 4px;
+  background: color-mix(
+    in srgb,
+    var(--keyword-tone, var(--collection-frame-color)) 22%,
+    var(--obsidian-950) 78%
+  );
+  box-shadow: none;
+  color: color-mix(
+    in srgb,
+    var(--keyword-tone, var(--gold-100)) 78%,
+    white 22%
+  );
+  text-shadow: none;
+}
+
+.norse-card-frame.norse-card-frame--surface-collection .card-frame__keyword-chip--overflow {
+  box-sizing: border-box;
+  flex: 0 0 16px;
+  width: 16px;
+  min-width: 16px;
+  max-width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid var(--gold-500);
+  border-radius: 4px;
+  background: var(--obsidian-950);
+  box-shadow: none;
+  font-size: 0.48rem;
+}
+
+.norse-card-frame.norse-card-frame--surface-collection .card-frame__keyword-icon-mark {
+  display: inline-flex;
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+}
+
+.norse-card-frame.norse-card-frame--surface-collection .card-frame__keyword-icon {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.norse-card-frame.norse-card-frame--surface-collection .card-frame__keyword-label {
   display: none;
 }

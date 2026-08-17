@@ -49,6 +49,14 @@ export type HoloMask = 'art-window' | 'full';
  *  `css` — CSS-only border + band, no SVG, no PNG. Used by `row`. */
 export type CardFrameRender = 'png' | 'svg' | 'css';
 
+/** Static frame artwork selected by the layout adapter. */
+export type CardFrameAsset =
+	| 'minimal-war-table-v4'
+	| 'minimal-war-table-v4-clean'
+	| 'minimal-war-table-v5-gameplay'
+	| 'minimal-war-table-v5-gameplay-clean'
+	| 'rarity-element';
+
 /** Stat-gem presentation:
  *  `frame`       — bottom-left of the frame (default).
  *  `battlefield` — compact square variant pinned to the card edge.
@@ -107,6 +115,9 @@ export interface CardFrameProps
 
 	/** Render technology. Default: 'png'. Falls back to 'svg' on PNG 404. */
 	render?: CardFrameRender;
+
+	/** PNG artwork used as the shared frame source. */
+	frameAsset?: CardFrameAsset;
 
 	/** Skip the PNG layer entirely (forces svg/css). Equivalent to
 	 *  `render: 'svg'`; keeps caller intent obvious for `row` variants. */

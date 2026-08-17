@@ -50,6 +50,7 @@ import {
   type PokerTurnIdentityInput,
 } from '@shared/p2p-wire/pokerTurnClock';
 import { validatePokerActionIntent } from '../../combat/rules/pokerActionRules';
+import { emitCommunityCardRevealed, emitPhaseEntered } from '../../combat/vfx/events';
 
 // ── v1.1: Wager Keyword Utilities ──
 
@@ -500,6 +501,10 @@ export const createPokerCombatSlice: StateCreator<
       type: 'poker',
       message: `Poker combat initialized: ${playerName} vs ${opponentName}`
     });
+
+    // Post-commit: phase drama fires for the opening phase too (legacy
+    // usePokerDrama edge-detection played it on first mount).
+    emitPhaseEntered({ phase: startingPhase });
   },
 
   completeFirstStrike: () => {
@@ -578,6 +583,9 @@ export const createPokerCombatSlice: StateCreator<
       type: 'attack',
       message: `First strike! ${target === 'player' ? 'Player' : 'Opponent'} takes ${damage} damage`
     });
+
+    // Post-commit: shake on the MULLIGAN/SPELL_PET transition.
+    emitPhaseEntered({ phase: nextPhase });
   },
 
   completeMulligan: () => {
@@ -622,6 +630,9 @@ export const createPokerCombatSlice: StateCreator<
       pokerDeck: deck,
       mulliganComplete: true
     });
+
+    // Post-commit: shake on the SPELL_PET transition.
+    emitPhaseEntered({ phase: PokerCombatPhase.SPELL_PET });
   },
 
   performPokerAction: (playerId: string, action: CombatAction, hpCommitment?: number) => {
@@ -843,6 +854,12 @@ export const createPokerCombatSlice: StateCreator<
     });
     
     set({ pokerCombatState: applyLocalPokerTurnClock(newState) });
+
+    // Post-commit: BRACE writes phase = RESOLUTION directly; every phase
+    // writer emits phaseEntered so the phase shake fires for it too.
+    if (newState.phase !== state.pokerCombatState.phase) {
+      emitPhaseEntered({ phase: newState.phase });
+    }
   },
 
   advancePokerPhase: () => {
@@ -1018,6 +1035,20 @@ export const createPokerCombatSlice: StateCreator<
       type: 'poker',
       message: `Poker phase advanced to ${newPhase}`
     });
+
+    // Post-commit: phase drama shake for every FSM transition.
+    emitPhaseEntered({ phase: newPhase });
+
+    // Post-commit visual events for the cards dealt by this transition.
+    if (newPhase === PokerCombatPhase.FAITH && newCommunityCards.faith) {
+      newCommunityCards.faith.forEach((card, index) => {
+        emitCommunityCardRevealed({ phase: newPhase, slotIndex: index, card });
+      });
+    } else if (newPhase === PokerCombatPhase.FORESIGHT && newCommunityCards.foresight) {
+      emitCommunityCardRevealed({ phase: newPhase, slotIndex: 3, card: newCommunityCards.foresight });
+    } else if (newPhase === PokerCombatPhase.DESTINY && newCommunityCards.destiny) {
+      emitCommunityCardRevealed({ phase: newPhase, slotIndex: 4, card: newCommunityCards.destiny });
+    }
   },
 
   resolvePokerCombat: (): CombatResolution | null => {
@@ -1745,6 +1776,9 @@ export const createPokerCombatSlice: StateCreator<
         }
       })
     });
+
+    // Post-commit: shake on the new-hand SPELL_PET transition.
+    emitPhaseEntered({ phase: PokerCombatPhase.SPELL_PET });
   },
 
   startNextHandDelayed: (resolution: CombatResolution) => {

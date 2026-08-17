@@ -1,7 +1,7 @@
 /**
  * Tracks whether the static PNG frame failed to load (404 or network).
  *
- * Pattern lifted from the lab `FrameStatic.tsx`: a local `useState`
+ * Pattern for a local `useState`
  * flag flipped by an `<img onError>` handler. When `pngFailed` is
  * true, the consumer renders the SVG-only fallback chrome instead.
  *

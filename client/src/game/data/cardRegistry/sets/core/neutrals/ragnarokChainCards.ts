@@ -33,7 +33,7 @@ export const ragnarokChainCards: CardData[] = [
 		id: 30402,
 		name: 'Gleipnir, the Silk Chain',
 		manaCost: 2,
-		description: 'Chain: While alive, Fenrir cannot gain Rush. Taunt.',
+		description: 'Chain: While alive, Fenrir cannot gain Rush.',
 		flavorText: 'Forged from impossible things: the sound of a cat, the roots of a mountain.',
 		type: 'minion',
 		rarity: 'rare',

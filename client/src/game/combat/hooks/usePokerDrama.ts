@@ -1,55 +1,37 @@
 /**
- * usePokerDrama — Wires poker phase transitions and betting actions
- * to the PokerDramaVFX engine for cinematic combat feel.
+ * usePokerDrama — Wires poker ambient state to the PokerDramaVFX engine.
  *
- * Responsibilities:
- * - Triggers card deal VFX on phase transitions (FAITH/FORESIGHT/DESTINY)
- * - Triggers betting action VFX (raise/reraise/call/check/fold)
- * - Tracks reraise level for escalating pressure effects
- * - Tracks hand strength for live indicator + improvement flashes
- * - Tracks round momentum (win/loss streaks)
- * - Sets ambient tension level based on pot/HP ratio
- * - Emits HP zone data attributes for CSS darkening
+ * Moment effects (betting, reveals, showdown, phase drama) have moved to
+ * VisualEvent handlers (vfx/handlers/pokerDramaHandlers.ts). This hook
+ * keeps the continuous, state-projected concerns:
+ * - Hand strength tracking for the live indicator + improvement flashes
+ *   (improvement is a moment — emitted as a handImproved VisualEvent)
+ * - Ambient tension level based on pot/HP ratio
+ * - HP zone data attributes for CSS darkening
+ * - Streak glow data attributes (fed by streakAnnounced VisualEvents)
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ARENA_VFX_LAYERS, getArenaVfxLayer } from '../arenaVfxTargets';
 import {
-	CombatPhase,
-	CombatAction,
 	PokerCombatState,
 	PokerHandRank,
 	HAND_RANK_NAMES,
 } from '../../types/PokerCombatTypes';
 import { evaluatePokerHand } from '../../stores/combat/pokerCombatSlice';
 import {
-	playFlopRevealVFX,
-	playTurnRevealVFX,
-	playRiverRevealVFX,
-	playRaiseVFX,
-	playReraiseVFX,
-	playCallVFX,
-	playCheckVFX,
-	playFoldVFX,
-	playHandRankAnnouncement,
-	playRagnarokVFX,
-	playShowdownDamageVFX,
-	playPhaseDramaVFX,
-	playStreakAnnouncementVFX,
-	playHandImprovementVFX,
 	setTensionLevel,
-	playCardSlamSound,
-	playClashSound,
 	startPokerOrphanSweep,
 	stopPokerOrphanSweep,
 	killAllPokerVFX,
 } from '../animations/PokerDramaVFX';
+import { emitHandImproved } from '../vfx/events';
+import { subscribeVisualEvent } from '../vfx/emitter';
 
 export interface PokerDramaState {
 	currentHandRank: PokerHandRank;
 	currentHandName: string;
 	handTier: 'low' | 'mid' | 'high' | 'godly';
-	reraiseCount: number;
 	playerStreak: number;
 	opponentStreak: number;
 }
@@ -69,12 +51,8 @@ function getHandTier(rank: PokerHandRank): 'low' | 'mid' | 'high' | 'godly' {
 export function usePokerDrama(options: UsePokerDramaOptions): PokerDramaState {
 	const { combatState, isActive } = options;
 
-	const prevPhaseRef = useRef<CombatPhase | null>(null);
 	const prevHandRankRef = useRef<PokerHandRank>(PokerHandRank.HIGH_CARD);
-	const reraiseCountRef = useRef(0);
-	const playerStreakRef = useRef(0);
-	const opponentStreakRef = useRef(0);
-	const prevActionCountRef = useRef(0);
+	const [streaks, setStreaks] = useState({ player: 0, opponent: 0 });
 
 	// Start/stop orphan sweep with mount
 	useEffect(() => {
@@ -85,45 +63,16 @@ export function usePokerDrama(options: UsePokerDramaOptions): PokerDramaState {
 		};
 	}, []);
 
-	// === Phase transition VFX ===
+	// Streak counters are owned by the showdown choreography handler, which
+	// re-emits them as streakAnnounced events; mirror them into React state
+	// so the dataset below re-projects with real values (the legacy refs
+	// version never re-ran because ref reads cannot be effect dependencies).
 	useEffect(() => {
-		if (!combatState || !isActive) return;
-		const phase = combatState.phase;
-		if (phase === prevPhaseRef.current) return;
-		const prevPhase = prevPhaseRef.current;
-		prevPhaseRef.current = phase;
-
-		// Reset reraise count on new betting round
-		reraiseCountRef.current = 0;
-
-		// Phase banner drama
-		playPhaseDramaVFX(phase);
-
-		// Community card reveals
-		if (phase === CombatPhase.FAITH && prevPhase !== CombatPhase.FAITH) {
-			const faithCards = combatState.communityCards.faith;
-			if (faithCards.length === 3) {
-				playFlopRevealVFX(faithCards.map(c => ({ suit: c.suit, value: c.value })));
-				playCardSlamSound();
-			}
-		}
-
-		if (phase === CombatPhase.FORESIGHT && prevPhase !== CombatPhase.FORESIGHT) {
-			const turnCard = combatState.communityCards.foresight;
-			if (turnCard) {
-				playTurnRevealVFX({ suit: turnCard.suit, value: turnCard.value });
-				playCardSlamSound();
-			}
-		}
-
-		if (phase === CombatPhase.DESTINY && prevPhase !== CombatPhase.DESTINY) {
-			const riverCard = combatState.communityCards.destiny;
-			if (riverCard) {
-				playRiverRevealVFX({ suit: riverCard.suit, value: riverCard.value });
-				playCardSlamSound();
-			}
-		}
-	}, [combatState?.phase, isActive]);
+		return subscribeVisualEvent('streakAnnounced', event => {
+			if (event.kind !== 'win') return;
+			setStreaks(prev => ({ ...prev, [event.side]: event.streak }));
+		});
+	}, []);
 
 	// === Live hand strength tracking ===
 	const currentHandRank = useRef(PokerHandRank.HIGH_CARD);
@@ -153,10 +102,10 @@ export function usePokerDrama(options: UsePokerDramaOptions): PokerDramaState {
 		currentHandRank.current = hand.rank;
 		currentHandName.current = HAND_RANK_NAMES[hand.rank] || '';
 
-		// Flash on improvement
+		// Improvement is a moment: edge-detect the rank jump here and emit
+		// it so the registry handler (and future composers) can react.
 		if (hand.rank > prevRank && prevRank > 0) {
-			const tier = getHandTier(hand.rank);
-			playHandImprovementVFX(tier);
+			emitHandImproved({ tier: getHandTier(hand.rank) });
 		}
 
 		prevHandRankRef.current = hand.rank;
@@ -169,6 +118,9 @@ export function usePokerDrama(options: UsePokerDramaOptions): PokerDramaState {
 	]);
 
 	// === Tension level tracking ===
+	// Deliberately a direct state projection, not a VisualEvent: tension is
+	// continuous state (pot ratio / all-in flag), not a discrete moment, and
+	// the CSS variable must track every state change.
 	useEffect(() => {
 		if (!combatState || !isActive) return;
 
@@ -187,6 +139,9 @@ export function usePokerDrama(options: UsePokerDramaOptions): PokerDramaState {
 	}, [combatState?.pot, isActive]);
 
 	// === HP zone tracking for CSS darkening ===
+	// Deliberately a direct state projection, not a VisualEvent: HP is
+	// continuous state and the zone classes must re-apply on every health
+	// delta, including non-showdown damage and healing.
 	useEffect(() => {
 		if (!combatState || !isActive) return;
 
@@ -205,119 +160,25 @@ export function usePokerDrama(options: UsePokerDramaOptions): PokerDramaState {
 		viewport.dataset.opponentHpZone = opponentPct <= 0.2 ? 'critical' : opponentPct <= 0.4 ? 'danger' : 'normal';
 	}, [combatState?.player.pet.stats.currentHealth, combatState?.opponent.pet.stats.currentHealth, isActive]);
 
-	// === Streak tracking ===
+	// === Streak glow dataset ===
+	// Projection of the streak counts mirrored from streakAnnounced events.
+	// Real state values as dependencies — the legacy version listed refs
+	// here, which never change, so the data-*-streak attributes were stale.
 	useEffect(() => {
 		if (!combatState || !isActive) return;
 
 		const viewport = getArenaVfxLayer(ARENA_VFX_LAYERS.viewport);
-		if (viewport) {
-			viewport.dataset.playerStreak = String(playerStreakRef.current);
-			viewport.dataset.opponentStreak = String(opponentStreakRef.current);
-		}
-	}, [playerStreakRef.current, opponentStreakRef.current, isActive]);
+		if (!viewport) return;
 
-	// === Betting action VFX callback (called from handleAction) ===
-	const onBettingAction = useCallback((action: CombatAction, isPlayer: boolean) => {
-		switch (action) {
-			case CombatAction.ATTACK:
-				playRaiseVFX(isPlayer);
-				break;
-			case CombatAction.COUNTER_ATTACK:
-				reraiseCountRef.current++;
-				playReraiseVFX(isPlayer, reraiseCountRef.current);
-				break;
-			case CombatAction.ENGAGE:
-				playCallVFX();
-				playClashSound();
-				break;
-			case CombatAction.DEFEND:
-				playCheckVFX(isPlayer);
-				break;
-			case CombatAction.BRACE:
-				playFoldVFX(isPlayer);
-				break;
-		}
-	}, []);
-
-	// === Showdown VFX callback ===
-	const onShowdown = useCallback((
-		playerRank: PokerHandRank,
-		opponentRank: PokerHandRank,
-		winner: 'player' | 'opponent' | 'draw',
-		damage: number
-	) => {
-		const playerName = HAND_RANK_NAMES[playerRank] || '';
-		const opponentName = HAND_RANK_NAMES[opponentRank] || '';
-
-		// Check for RAGNAROK
-		if (playerRank === PokerHandRank.RAGNAROK || opponentRank === PokerHandRank.RAGNAROK) {
-			playRagnarokVFX();
-		}
-
-		// Announce hands
-		setTimeout(() => {
-			playHandRankAnnouncement(playerName, playerRank, winner === 'player', true);
-		}, 400);
-		setTimeout(() => {
-			playHandRankAnnouncement(opponentName, opponentRank, winner === 'opponent', false);
-		}, 900);
-
-		// Damage delivery
-		if (winner !== 'draw' && damage > 0) {
-			const rankDiff = Math.abs(playerRank - opponentRank);
-			setTimeout(() => {
-				playShowdownDamageVFX(damage, winner === 'player', rankDiff);
-			}, 1400);
-		}
-
-		// Update streaks
-		if (winner === 'player') {
-			playerStreakRef.current++;
-			opponentStreakRef.current = 0;
-			if (playerStreakRef.current === 3) {
-				setTimeout(() => playStreakAnnouncementVFX('DOMINATION', '#fbbf24'), 2000);
-			}
-		} else if (winner === 'opponent') {
-			opponentStreakRef.current++;
-			playerStreakRef.current = 0;
-			if (opponentStreakRef.current === 3) {
-				setTimeout(() => playStreakAnnouncementVFX('DOMINATION', '#ef4444'), 2000);
-			}
-		}
-
-		// Comeback detection
-		if (winner === 'player' && combatState) {
-			const pHP = combatState.player.pet.stats.currentHealth;
-			const pMax = combatState.player.pet.stats.maxHealth;
-			if (pHP / pMax <= 0.2) {
-				setTimeout(() => playStreakAnnouncementVFX('LAST STAND', '#e2e8f0'), 2200);
-			}
-		}
-	}, [combatState]);
-
-	// Expose for external wiring
-	(usePokerDrama as any).__onBettingAction = onBettingAction;
-	(usePokerDrama as any).__onShowdown = onShowdown;
+		viewport.dataset.playerStreak = String(streaks.player);
+		viewport.dataset.opponentStreak = String(streaks.opponent);
+	}, [streaks.player, streaks.opponent, isActive]);
 
 	return {
 		currentHandRank: currentHandRank.current,
 		currentHandName: currentHandName.current,
 		handTier: getHandTier(currentHandRank.current),
-		reraiseCount: reraiseCountRef.current,
-		playerStreak: playerStreakRef.current,
-		opponentStreak: opponentStreakRef.current,
-	};
-}
-
-/**
- * Get the drama action callback for use in handleAction
- */
-export function getPokerDramaCallbacks(): {
-	onBettingAction: (action: CombatAction, isPlayer: boolean) => void;
-	onShowdown: (playerRank: PokerHandRank, opponentRank: PokerHandRank, winner: 'player' | 'opponent' | 'draw', damage: number) => void;
-} {
-	return {
-		onBettingAction: (usePokerDrama as any).__onBettingAction || (() => {}),
-		onShowdown: (usePokerDrama as any).__onShowdown || (() => {}),
+		playerStreak: streaks.player,
+		opponentStreak: streaks.opponent,
 	};
 }

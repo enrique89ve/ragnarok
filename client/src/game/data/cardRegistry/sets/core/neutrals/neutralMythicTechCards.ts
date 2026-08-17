@@ -144,7 +144,7 @@ export const neutralMythicTechCards: CardData[] = [
 		manaCost: 2,
 		attack: 2,
 		health: 3,
-		description: 'Divine Shield. Battlecry: The next spell cast on this minion triggers twice.',
+		description: 'Battlecry: The next spell cast on this minion triggers twice.',
 		flavorText: 'Swear upon the ring and your oath becomes unbreakable — as does your shield.',
 		type: 'minion',
 		rarity: 'epic',

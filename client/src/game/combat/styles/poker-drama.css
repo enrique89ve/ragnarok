@@ -38,63 +38,22 @@
 
 /* ========================================
    COMMUNITY CARD DEAL ANIMATION
-   Applied via .card-dealing class
+   GSAP-only (playCardDealVFX). The legacy .card-dealing/.cardSlam
+   CSS path was removed so each slot animates through a single
+   mechanism — GSAP owns the bounce, table shake and particles.
    ======================================== */
-.community-slot.card-dealing {
-	z-index: 10;
-}
-
-.community-slot.card-dealing .arena-poker-card {
-	animation: cardSlam 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-@keyframes cardSlam {
-	0% {
-		transform: translateY(-30px) scale(1.15);
-		opacity: 0.7;
-	}
-	60% {
-		transform: translateY(2px) scale(0.98);
-		opacity: 1;
-	}
-	100% {
-		transform: translateY(0) scale(1);
-		opacity: 1;
-	}
-}
-
-/* Card flip for newly revealed cards */
-.community-slot .arena-poker-card.card-revealing {
-	animation: cardFlipReveal 0.4s ease-out forwards;
-	transform-style: preserve-3d;
-}
-
-@keyframes cardFlipReveal {
-	0% {
-		transform: perspective(800px) rotateY(90deg) scale(1.1);
-		opacity: 0.5;
-	}
-	50% {
-		transform: perspective(800px) rotateY(45deg) scale(1.05);
-		opacity: 0.8;
-	}
-	100% {
-		transform: perspective(800px) rotateY(0deg) scale(1);
-		opacity: 1;
-	}
-}
 
 
 /* ========================================
    PHASE BANNER — DRAMATIC OVERHAUL
    Full-width slash across screen
    ======================================== */
-/* Banner is portaled INSIDE `.zone-board` (the community-cards row).
-   inset:0 fills that row so the banner is automatically bounded by
-   the table width — never wider than the gameplay surface.  Per-phase
-   text length changes happen inside the centred flex content; the
-   outer box is dimensionally stable (board-zone size is driven by
-   flex distribution, not by banner content). */
+/* Banner is portaled INSIDE `#arena-layer-vfx` (the canvas-clipped VFX
+   layer). inset:0 fills that layer so the banner is automatically bounded
+   by the arena canvas — never wider than the gameplay surface. Per-phase
+   text length changes happen inside the centred flex content; the outer
+   box is dimensionally stable (layer size is driven by canvas geometry,
+   not by banner content). */
 .phase-banner {
 	position: absolute;
 	inset: 0;
@@ -392,8 +351,6 @@
 @media (prefers-reduced-motion: reduce) {
 	.phase-banner-enter,
 	.phase-banner-exit,
-	.community-slot.card-dealing .arena-poker-card,
-	.community-slot .arena-poker-card.card-revealing,
 	.hand-strength-indicator.improved {
 		animation: none;
 	}

@@ -27,6 +27,17 @@ import {
 const DRAMA_CONTAINER_ID = 'poker-drama-vfx-layer';
 const MAX_ORPHAN_AGE_MS = 6000;
 
+// Screen-point helper: the drama container fills the arena vfx layer
+// (canvas-sized), so positions derived from its rect track the scaled
+// 1920x1080 canvas instead of raw window fractions.
+function getDramaContainerPoint(container: HTMLElement, yRatio = 0.5): { x: number; y: number } {
+	const rect = container.getBoundingClientRect();
+	return {
+		x: rect.left + rect.width / 2,
+		y: rect.top + rect.height * yRatio,
+	};
+}
+
 function getOrCreateContainer(): HTMLDivElement | null {
 	const target = getArenaVfxLayer(ARENA_VFX_LAYERS.vfx);
 	if (!target) return null;
@@ -139,12 +150,10 @@ export function playCardDealVFX(
 	const cx = rect.left + rect.width / 2;
 	const cy = rect.top + rect.height / 2;
 
-	// Add slam class for CSS impact
-	slot.classList.add('card-dealing');
-
-	const tl = gsap.timeline({
-		onComplete: () => slot.classList.remove('card-dealing')
-	});
+	// Deal animation is GSAP-only: the legacy `.card-dealing` CSS class
+	// (cardSlam keyframes) was removed to avoid double-animating the slot.
+	// GSAP owns the scale bounce, table shake, particles and river slow-mo.
+	const tl = gsap.timeline();
 
 	const timeScale = isRiver ? 0.5 : 1;
 	tl.timeScale(timeScale);
@@ -224,30 +233,9 @@ export function playCardDealVFX(
 	}
 }
 
-/**
- * Animate flop reveal — 3 staggered card slams
- */
-export function playFlopRevealVFX(cards: Array<{ suit: string; value: string }>) {
-	cards.forEach((card, i) => {
-		setTimeout(() => {
-			playCardDealVFX(i, card.suit, card.value, false);
-		}, i * 200);
-	});
-}
-
-/**
- * Animate turn reveal — single card with extra weight
- */
-export function playTurnRevealVFX(card: { suit: string; value: string }) {
-	playCardDealVFX(3, card.suit, card.value, false);
-}
-
-/**
- * Animate river reveal — slow-mo dramatic card
- */
-export function playRiverRevealVFX(card: { suit: string; value: string }) {
-	playCardDealVFX(4, card.suit, card.value, true);
-}
+// Reveal scheduling (flop stagger, turn weight, river slow-mo) lives in
+// the VisualEvent handler (vfx/handlers/pokerDramaHandlers.ts), which
+// calls playCardDealVFX per communityCardRevealed event.
 
 
 // ═══════════════════════════════════════════════════
@@ -403,6 +391,9 @@ export function playReraiseVFX(isPlayer: boolean, reraiseLevel: number = 1) {
  * ENGAGE (call) — clash spark at center
  */
 export function playCallVFX() {
+	const container = getOrCreateContainer();
+	if (!container) return;
+
 	// Both heroes flash white briefly
 	const heroes = [
 		...getArenaVfxTargets(ARENA_VFX_TARGETS.playerHero),
@@ -415,11 +406,10 @@ export function playCallVFX() {
 		);
 	});
 
-	// Center clash spark
-	const vw = window.innerWidth / 2;
-	const vh = window.innerHeight / 2;
-	spawnParticleBurst(vw, vh, 15, LIGHT_PALETTE);
-	spawnImpactRing(vw, vh, WHITE_PALETTE);
+	// Center clash spark — anchored to the arena canvas, not the window
+	const center = getDramaContainerPoint(container);
+	spawnParticleBurst(center.x, center.y, 15, LIGHT_PALETTE);
+	spawnImpactRing(center.x, center.y, WHITE_PALETTE);
 }
 
 /**
@@ -628,14 +618,13 @@ export function playRagnarokVFX() {
 		onComplete: () => cleanup(ragnarokText)
 	});
 
-	// Particle explosions
+	// Particle explosions — anchored to the arena canvas, not the window
 	setTimeout(() => {
-		const cx = window.innerWidth / 2;
-		const cy = window.innerHeight / 2;
-		spawnParticleBurst(cx, cy, 25, ELEMENT_PALETTES.fire);
-		spawnImpactRing(cx, cy, RED_PALETTE);
-		setTimeout(() => spawnParticleBurst(cx - 100, cy, 20, ELEMENT_PALETTES.fire), 200);
-		setTimeout(() => spawnParticleBurst(cx + 100, cy, 20, ELEMENT_PALETTES.fire), 400);
+		const center = getDramaContainerPoint(container);
+		spawnParticleBurst(center.x, center.y, 25, ELEMENT_PALETTES.fire);
+		spawnImpactRing(center.x, center.y, RED_PALETTE);
+		setTimeout(() => spawnParticleBurst(center.x - 100, center.y, 20, ELEMENT_PALETTES.fire), 200);
+		setTimeout(() => spawnParticleBurst(center.x + 100, center.y, 20, ELEMENT_PALETTES.fire), 400);
 	}, 800);
 
 	// Heavy screen shake — wrapper, not viewport (see getShakeTarget)
@@ -775,15 +764,8 @@ export function playShowdownDamageVFX(
  * Phase-specific screen effects triggered when a new phase banner shows
  */
 export function playPhaseDramaVFX(phase: string) {
-	const configs: Record<string, { color: string; burstElement: string }> = {
-		pre_flop: { color: '#ef4444', burstElement: 'fire' },
-		faith: { color: '#8b5cf6', burstElement: 'ice' },
-		foresight: { color: '#22c55e', burstElement: 'grass' },
-		destiny: { color: '#fbbf24', burstElement: 'fire' }
-	};
-
-	const config = configs[phase];
-	if (!config) return;
+	const SHAKE_PHASES = new Set(['pre_flop', 'faith', 'foresight', 'destiny']);
+	if (!SHAKE_PHASES.has(phase)) return;
 
 	/*
 	 * Horizontal slash line REMOVED.  Used to inject a `width: 100%` div
@@ -1082,11 +1064,10 @@ export function playPokerSpellCast(
 	const container = getOrCreateContainer();
 	if (!container) return;
 	const palette = POKER_SPELL_PALETTES[effectType] || POKER_SPELL_PALETTES.bluff_rune;
-	const cx = window.innerWidth / 2;
-	const cy = caster === 'player' ? window.innerHeight * 0.75 : window.innerHeight * 0.25;
+	const burst = getDramaContainerPoint(container, caster === 'player' ? 0.75 : 0.25);
 
-	spawnParticleBurst(cx, cy, 22, palette);
-	spawnImpactRing(cx, cy, palette);
+	spawnParticleBurst(burst.x, burst.y, 22, palette);
+	spawnImpactRing(burst.x, burst.y, palette);
 
 	const vignette = createDiv({
 		inset: '0',
@@ -1116,11 +1097,10 @@ export function playWagerActivate(
 	const container = getOrCreateContainer();
 	if (!container) return;
 	const palette = WAGER_PALETTES[wagerType] || WAGER_PALETTES.showdown_win_armor;
-	const cx = window.innerWidth / 2;
-	const cy = side === 'player' ? window.innerHeight * 0.7 : window.innerHeight * 0.3;
+	const burst = getDramaContainerPoint(container, side === 'player' ? 0.7 : 0.3);
 
-	spawnParticleBurst(cx, cy, 14, palette);
-	spawnImpactRing(cx, cy, palette);
+	spawnParticleBurst(burst.x, burst.y, 14, palette);
+	spawnImpactRing(burst.x, burst.y, palette);
 
 	const vignette = createDiv({
 		inset: '0',

@@ -7,13 +7,13 @@
  * state).
  *
  * The art asset and a synthetic card dataset are picked from the same
- * `cardLab/sampleCards` source so paths and dims match production.
+ * dev sample source so paths and dims match production.
  */
 
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { routes } from '../../../lib/routes';
-import { sampleForRarity, resolveSample } from './cardLab/sampleCards';
+import { sampleForRarity, resolveSample } from './sampleCards';
 import { SimpleCardCompat } from '../card/SimpleCardCompat';
 import {
 	CardCardBack,

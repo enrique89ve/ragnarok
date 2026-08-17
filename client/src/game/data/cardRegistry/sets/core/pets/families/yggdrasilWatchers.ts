@@ -114,7 +114,6 @@ export const yggdrasilWatchersPets: CardData[] = [
 		health: 5,
 		type: 'minion',
 		rarity: 'common',
-		description: 'Taunt. Lifesteal.',
 		flavorText: 'Its roar shakes the World Tree to its roots.',
 		keywords: ['taunt', 'lifesteal'],
 		class: 'Neutral',

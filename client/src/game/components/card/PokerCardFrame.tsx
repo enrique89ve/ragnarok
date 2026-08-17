@@ -60,6 +60,7 @@ const PokerCardFrame: React.FC<PokerCardFrameProps> = ({
 	const rootClasses = [
 		'norse-card-frame',
 		'norse-card-frame--poker',
+		'norse-card-frame--surface-poker',
 		'poker-card-frame',
 		`poker-card-frame--${variant}`,
 		className,

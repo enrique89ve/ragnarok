@@ -91,26 +91,6 @@ const FactionPledgePopup = lazy(() =>
 );
 const SocialPresenceHeartbeat = lazy(() => import('./game/components/social/SocialPresenceHeartbeat'));
 
-const cardLayoutCanvasModules = import.meta.glob('./game/components/dev/CardLayoutCanvasPage.tsx');
-const CardLayoutCanvasPage = lazy(async () => {
-	const loadCanvas = cardLayoutCanvasModules['./game/components/dev/CardLayoutCanvasPage.tsx'];
-	if (!import.meta.env.DEV || loadCanvas === undefined) {
-		return { default: () => <Navigate to={routes.home} replace /> };
-	}
-
-	return loadCanvas() as Promise<{ default: React.ComponentType }>;
-});
-
-const cardLabModules = import.meta.glob('./game/components/dev/CardLabPage.tsx');
-const CardLabPage = lazy(async () => {
-	const loadLab = cardLabModules['./game/components/dev/CardLabPage.tsx'];
-	if (!import.meta.env.DEV || loadLab === undefined) {
-		return { default: () => <Navigate to={routes.home} replace /> };
-	}
-
-	return loadLab() as Promise<{ default: React.ComponentType }>;
-});
-
 const frameTestModules = import.meta.glob('./game/components/dev/FrameTestPage.tsx');
 const FrameTestPage = lazy(async () => {
 	const loadTest = frameTestModules['./game/components/dev/FrameTestPage.tsx'];
@@ -1206,14 +1186,6 @@ function App() {
 				<Suspense fallback={<LoadingScreen />}>
 					<Routes>
 						<Route path={routes.map} element={<MapPage />} />
-						<Route
-							path={routes.cardLayoutCanvas}
-							element={import.meta.env.DEV ? <CardLayoutCanvasPage /> : <Navigate to={routes.home} replace />}
-						/>
-						<Route
-							path={routes.cardLab}
-							element={import.meta.env.DEV ? <CardLabPage /> : <Navigate to={routes.home} replace />}
-						/>
 						<Route
 							path={routes.frameTest}
 							element={import.meta.env.DEV ? <FrameTestPage /> : <Navigate to={routes.home} replace />}

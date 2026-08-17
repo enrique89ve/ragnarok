@@ -41,7 +41,7 @@ export const yggdrasilGolemCards: CardData[] = [
     manaCost: 2,
     attack: 1,
     health: 1,
-    description: "Stealth. Deathrattle: Summon a Yggdrasil Golem.",
+    description: "Deathrattle: Summon a Yggdrasil Golem.",
     flavorText: "A root-born creature strikes from the shadows of the World Tree.",
     type: "minion",
     rarity: "common",

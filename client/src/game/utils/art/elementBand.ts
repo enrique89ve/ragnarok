@@ -9,7 +9,7 @@
  * `client/src/game/types/NorseTypes.ts` — a missing key is a compile
  * error via the `Record<NorseElement, ElementBand>` type.
  *
- * Promoted from `client/src/game/components/dev/cardLab/elementBand.ts`
+ * Shared element-band palette for card presentation surfaces.
  * during the <CardFrame> unification (2026-06-11). The dev lab now
  * re-imports from here.
  */

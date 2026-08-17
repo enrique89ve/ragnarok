@@ -37,6 +37,7 @@ import CardRankSuit from './slots/CardRankSuit';
 import CardCardBack from './slots/CardCardBack';
 import './CardFrame.css';
 import './NorseCardFrame.css';
+import './cardSurfaceContract.css';
 
 const CardFrame: React.FC<CardFrameProps> = ({
 	shape = 'tile',
@@ -44,6 +45,7 @@ const CardFrame: React.FC<CardFrameProps> = ({
 	element = 'neutral',
 	size = 'medium',
 	render = 'png',
+	frameAsset = 'minimal-war-table-v4',
 	disablePng = false,
 	onClick,
 	overrideWidth,
@@ -114,6 +116,7 @@ const CardFrame: React.FC<CardFrameProps> = ({
 		shape,
 		rarity,
 		render: effectiveRender,
+		frameAsset,
 		holoTier,
 		cardType,
 		cardKind,
@@ -125,7 +128,7 @@ const CardFrame: React.FC<CardFrameProps> = ({
 	});
 
 	const showPng = effectiveRender === 'png' && !pngFailed;
-	const frameSrc = showPng ? framePathFor(rarity, element) : undefined;
+	const frameSrc = showPng ? framePathFor(rarity, element, frameAsset) : undefined;
 
 	return (
 		<CardFrameContext.Provider value={contextValue}>
@@ -295,6 +298,7 @@ function buildFrameClasses(args: {
 	shape: string;
 	rarity: string;
 	render: string;
+	frameAsset: string;
 	holoTier: string | null;
 	cardType: string | null;
 	cardKind: string | null;
@@ -309,6 +313,7 @@ function buildFrameClasses(args: {
 		`card-frame--${args.shape}`,
 		`card-frame--rarity-${args.rarity}`,
 		`card-frame--render-${args.render}`,
+		`card-frame--asset-${args.frameAsset}`,
 		args.cardType ? `card-frame--type-${args.cardType}` : '',
 		args.cardKind ? `card-frame--kind-${args.cardKind}` : '',
 		args.cardFamily ? `card-frame--family-${args.cardFamily}` : '',

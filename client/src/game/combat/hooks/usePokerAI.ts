@@ -14,7 +14,7 @@ import {
   getPokerActionPresentation,
   POKER_AI_ACTION_SETTLE_DELAY_MS,
 } from '../decision/pokerActionPresentation';
-import { getPokerDramaCallbacks } from './usePokerDrama';
+import { emitBettingAction } from '../vfx/events';
 
 interface UsePokerAIOptions {
   combatState: PokerCombatState | null;
@@ -106,10 +106,12 @@ export function usePokerAI(options: UsePokerAIOptions): void {
       });
     }
 
-    try {
-      const dramaCallbacks = getPokerDramaCallbacks();
-      dramaCallbacks.onBettingAction(action, false);
-    } catch { /* drama VFX is non-critical */ }
+    emitBettingAction({
+      phase: sourceState.phase,
+      action,
+      side: 'opponent',
+      hpCommitment,
+    });
   }, [addHeroBattlePopup]);
 
   useEffect(() => {

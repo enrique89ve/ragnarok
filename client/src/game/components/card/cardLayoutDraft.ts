@@ -163,13 +163,15 @@ const collectionSlots = (): readonly CardLayoutSlot[] => [
 	// visual weight of the lower stat badges.
 	defineSlot({ id: 'mana', label: 'Mana', x: 3.5, y: 2.5, w: 7.7, h: 5.4, fontScale: 1, visible: true, textPolicy: 'fit' }),
 	defineSlot({ id: 'badge', label: 'Badge', x: 86, y: 3.2, w: 10.8, h: 7.6, fontScale: 1, visible: false, textPolicy: 'fit' }),
-	defineSlot({ id: 'description', label: 'Description', x: 8, y: 57.2, w: 84, h: 16.7, fontScale: 0.92, visible: false, textPolicy: 'wrap' }),
+	defineSlot({ id: 'description', label: 'Description', x: 8, y: 54, w: 84, h: 30, fontScale: 0.92, visible: false, textPolicy: 'wrap' }),
 	// Keywords are rendered inside the description slot. Keep their editor
 	// rectangle as a centered inner rail instead of duplicating the full text
 	// region, so the default canvas explains the composite layout at a glance.
-	defineSlot({ id: 'keywords', label: 'Keywords', x: 27, y: 57.2, w: 46, h: 5.6, fontScale: 1, visible: false, textPolicy: 'fit' }),
-	defineSlot({ id: 'tribe', label: 'Tribe', x: 24, y: 75.2, w: 52, h: 4.3, fontScale: 0.66, visible: false, textPolicy: 'fit' }),
-	defineSlot({ id: 'name', label: 'Name', x: 13.5, y: 81.3, w: 73, h: 7.5, fontScale: 0.76, visible: true, textPolicy: 'wrap' }),
+	defineSlot({ id: 'keywords', label: 'Keywords', x: 22, y: 69, w: 56, h: 7.3, fontScale: 1.3, visible: false, textPolicy: 'fit' }),
+	// Tribe owns the lower center channel between the stat sockets. Keeping it
+	// below the name prevents taxonomy from competing with rules text or art.
+	defineSlot({ id: 'tribe', label: 'Tribe', x: 28, y: 90.5, w: 44, h: 2.8, fontScale: 0.76, visible: false, textPolicy: 'fit' }),
+	defineSlot({ id: 'name', label: 'Name', x: 13.5, y: 85.5, w: 73, h: 4.3, fontScale: 0.76, visible: true, textPolicy: 'wrap' }),
 	// Give the lower stat badges matching side margins while keeping the
 	// centered rarity rail balanced between them.
 	defineSlot({ id: 'attack', label: 'Attack', x: 3, y: 94.1, w: 14, h: 5.9, fontScale: 0.92, visible: true, textPolicy: 'fit' }),
@@ -275,7 +277,7 @@ export const DEFAULT_CARD_LAYOUT_DRAFT = {
 			scene: 'mulligan',
 			baseWidth: 220,
 			aspectRatio: NFT_ASPECT,
-			renderer: { surface: 'collection', shape: 'tile', size: 'large', statsMode: 'frame', showDescription: false },
+			renderer: { surface: 'mulligan', shape: 'tile', size: 'large', statsMode: 'frame', showDescription: false },
 			renderFields: pregameRenderFields(),
 			slots: collectionSlotsWithVisibility({ keywords: true }),
 		},
@@ -398,7 +400,7 @@ const MODE_BY_SURFACE = {
 } satisfies Record<CardLayoutSurface, CardLayoutMode>;
 const RENDERER_SURFACE_BY_SURFACE = {
 	collection: 'collection',
-	pregame: 'collection',
+	pregame: 'mulligan',
 	gameplay: 'gameplay',
 } satisfies Record<CardLayoutSurface, CardFrameLayoutSurface>;
 

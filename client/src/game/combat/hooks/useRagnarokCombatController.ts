@@ -44,10 +44,10 @@ import { COMBAT_DEBUG } from '../debugConfig';
 import { hasKeyword } from '../../utils/cards/keywordUtils';
 import { debug } from '../../config/debugConfig';
 import type { HeroBattlePopupData, BattlePopupAction, BattlePopupTarget } from '../components/HeroBattlePopup';
-import { getPokerDramaCallbacks } from './usePokerDrama';
 import { validatePokerActionIntent } from '../rules/pokerActionRules';
 import { getPokerTurnProcessMode } from '../decision/pokerTurnPolicy';
 import { getPokerActionPresentation } from '../decision/pokerActionPresentation';
+import { emitBettingAction } from '../vfx/events';
 
 /**
  * Hero power targeting state structure
@@ -926,11 +926,8 @@ export function useRagnarokCombatController(
     performAction(freshState.player.playerId, action, hp);
     maybeCloseBettingRound();
 
-    // Trigger poker drama VFX for the betting action
-    try {
-      const dramaCallbacks = getPokerDramaCallbacks();
-      dramaCallbacks.onBettingAction(action, true);
-    } catch { /* drama VFX is non-critical */ }
+    // Trigger poker drama VFX for the betting action (post-commit)
+    emitBettingAction({ phase: freshState.phase, action, side: 'player' });
 
     if (action === CombatAction.BRACE && !connectedP2P) {
       endTurn();

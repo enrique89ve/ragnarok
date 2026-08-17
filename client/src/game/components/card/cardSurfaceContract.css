@@ -1,0 +1,52 @@
+/*
+ * Card surface contract.
+ *
+ * CardFrame is shared by collection cards and poker cards, but their layout
+ * jobs are different:
+ *   - collection cards expose metadata rails and framed card slots;
+ *   - poker cards expose only the rank/suit or face-down playing-card slot.
+ *
+ * Keep this boundary after the shared Norse skin. A surface-specific rule
+ * belongs here when it protects one surface from geometry owned by another.
+ * Do not put collection presentation rules in CardFrame.css.
+ */
+
+.norse-card-frame--surface-collection {
+	--card-surface: collection;
+	--card-surface-metadata-display: block;
+}
+
+.norse-card-frame--surface-poker {
+	--card-surface: poker;
+	--card-surface-metadata-display: none;
+	--norse-card-ui-scale: 1;
+	overflow: hidden;
+	contain: layout paint;
+}
+
+/* Poker's playing-card slot owns the full card rectangle. The Norse card
+ * skin's inset art window is correct for collection frames but creates a
+ * second, smaller frame around rank/suit cards. */
+.norse-card-frame--surface-poker .card-frame__art-layer {
+	inset: 0;
+	border-radius: inherit;
+}
+
+.norse-card-frame--surface-poker .card-frame__art {
+	transform: none;
+}
+
+/* Poker has no collection metadata rail. These guards make the contract
+ * explicit even if a future poker child reuses a generic card slot class. */
+.norse-card-frame--surface-poker :is(
+	.card-frame__description-stack,
+	.card-frame__info-overlay,
+	.card-frame__name-plate,
+	.card-frame__tribe-line,
+	.collection-card-frame__footer,
+	.collection-card-frame__footer-rail,
+	.collection-card-frame__stat-badge,
+	.collection-card-frame__mana-corner
+) {
+	display: none;
+}

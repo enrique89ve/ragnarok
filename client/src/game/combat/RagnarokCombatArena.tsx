@@ -48,6 +48,7 @@ import { debug } from '../config/debugConfig';
 import { GameLog } from '../components/GameLog';
 import { useGameLogIntegration } from '../hooks/useGameLogIntegration';
 import { usePokerDrama } from './hooks/usePokerDrama';
+import { registerPokerDramaVisualEffects } from './vfx/handlers/pokerDramaHandlers';
 import { HandStrengthIndicator } from './components/HandStrengthIndicator';
 import { useEventAnimationBridge } from '../hooks/useEventAnimationBridge';
 import { useKingPassiveEventStore } from '../stores/kingPassiveEventStore';
@@ -970,6 +971,12 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
   } = useRagnarokCombatController({ onCombatEnd });
 
   const pokerDrama = usePokerDrama({ combatState, isActive });
+
+  // Register poker drama VisualEvent handlers once per arena mount.
+  useEffect(() => {
+    const unregister = registerPokerDramaVisualEffects();
+    return unregister;
+  }, []);
 
   const elementalBuff = useElementalBuff();
 

@@ -79,7 +79,7 @@ const neutralTokens: CardData[] = [
   {
     id: 3100,
     name: 'Shield of the Colossus',
-    description: "Part of Colossus of the Moon. Taunt. Divine Shield. Can't attack.",
+    description: "Part of Colossus of the Moon. Can't attack.",
     flavorText: 'A shard of something far larger and far older.',
     type: 'minion',
     rarity: 'rare',
@@ -107,7 +107,6 @@ const neutralTokens: CardData[] = [
   {
     id: 30059,
     name: 'Boar',
-    description: 'Charge',
     flavorText: 'Angry, tusked, and charging. Welcome to Midgard.',
     type: 'minion',
     rarity: 'common',
@@ -122,7 +121,6 @@ const neutralTokens: CardData[] = [
   {
     id: 30084,
     name: 'Spark',
-    description: 'Rush',
     flavorText: 'A mote of elemental fury.',
     type: 'minion',
     rarity: 'common',
@@ -157,7 +155,6 @@ const neutralTokens: CardData[] = [
   {
     id: 30092,
     name: 'Free Agent',
-    description: 'Taunt',
     flavorText: 'Loyal to the highest bidder. Currently, that\'s you.',
     type: 'minion',
     rarity: 'common',
@@ -214,7 +211,6 @@ const neutralTokens: CardData[] = [
   {
     id: 9070,
     name: 'Slime',
-    description: 'Taunt',
     flavorText: 'It oozes. It blocks. It is deeply unpleasant.',
     type: 'minion',
     rarity: 'common',
@@ -263,7 +259,6 @@ const hunterTokens: CardData[] = [
   {
     id: 7510,
     name: 'Bear of Bjorn',
-    description: 'Taunt',
     flavorText: 'Bjorn never hunts alone. His sacred bear answers only to him.',
     type: 'minion',
     rarity: 'common',
@@ -535,7 +530,6 @@ const warriorTokens: CardData[] = [
   {
     id: 15017,
     name: 'Fury of Ares',
-    description: 'Rush',
     flavorText: "War god's blessing grants swift vengeance.",
     type: 'minion',
     rarity: 'common',
@@ -592,7 +586,6 @@ const norseMythologyTokens: CardData[] = [
     manaCost: 2,
     attack: 2,
     health: 2,
-    description: 'Stealth',
     flavorText: 'A wolf born of shadow, loyal to the Alpha.',
     rarity: 'common',
     type: 'minion',
@@ -609,7 +602,6 @@ const norseMythologyTokens: CardData[] = [
     manaCost: 3,
     attack: 3,
     health: 3,
-    description: 'Stealth',
     flavorText: 'Emerges from the darkness to claim the weak.',
     rarity: 'common',
     type: 'minion',
@@ -626,7 +618,6 @@ const norseMythologyTokens: CardData[] = [
     manaCost: 1,
     attack: 1,
     health: 1,
-    description: 'Stealth',
     flavorText: 'A tiny predator, eager to grow into a wolf.',
     rarity: 'common',
     type: 'minion',
@@ -678,7 +669,6 @@ const norseMythologyTokens: CardData[] = [
     manaCost: 1,
     attack: 1,
     health: 3,
-    description: 'Taunt',
     flavorText: 'A living root of the World Tree.',
     rarity: 'common',
     type: 'minion',
@@ -713,7 +703,6 @@ const norseMythologyTokens: CardData[] = [
     manaCost: 2,
     attack: 2,
     health: 2,
-    description: 'Charge',
     flavorText: "A loyal companion to Thor's mighty goats.",
     rarity: 'common',
     type: 'minion',
@@ -735,7 +724,7 @@ const effectTokens: CardData[] = [
   {
     id: 20612,
     name: 'Fenrir, the Worldbreaker',
-    description: 'Rush. Mega-Windfury (can attack four times). Immune while attacking.',
+    description: 'Mega-Windfury (can attack four times). Immune while attacking.',
     flavorText: 'Unbound, unchained, unstoppable. The end has teeth.',
     type: 'minion',
     rarity: 'epic',

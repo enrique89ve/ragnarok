@@ -42,6 +42,7 @@ export interface PhaseEnteredEvent extends VisualEventBase {
 
 export interface CommunityCardRevealedEvent extends VisualEventBase {
 	type: 'communityCardRevealed';
+	phase: CombatPhase;
 	slotIndex: number;
 	card: PokerCard;
 }
@@ -58,6 +59,7 @@ export interface HandRankAnnouncedEvent extends VisualEventBase {
 	type: 'handRankAnnounced';
 	side: ArenaVfxOwner;
 	rank: PokerHandRank;
+	winner: ArenaVfxOwner | 'draw';
 }
 
 export interface ShowdownDamageEvent extends VisualEventBase {
@@ -65,6 +67,24 @@ export interface ShowdownDamageEvent extends VisualEventBase {
 	winner: ArenaVfxOwner;
 	target: ArenaVfxTarget;
 	damage: number;
+	isLethal?: boolean;
+}
+
+export interface RagnarokTriggeredEvent extends VisualEventBase {
+	type: 'ragnarokTriggered';
+	side: ArenaVfxOwner;
+}
+
+export interface StreakAnnouncedEvent extends VisualEventBase {
+	type: 'streakAnnounced';
+	side: ArenaVfxOwner;
+	streak: number;
+	kind: 'win' | 'last_stand';
+}
+
+export interface HandImprovedEvent extends VisualEventBase {
+	type: 'handImproved';
+	tier: 'low' | 'mid' | 'high' | 'godly';
 }
 
 export interface SpellCastEvent extends VisualEventBase {
@@ -85,6 +105,9 @@ export interface VisualEventMap {
 	bettingAction: BettingActionEvent;
 	handRankAnnounced: HandRankAnnouncedEvent;
 	showdownDamage: ShowdownDamageEvent;
+	ragnarokTriggered: RagnarokTriggeredEvent;
+	streakAnnounced: StreakAnnouncedEvent;
+	handImproved: HandImprovedEvent;
 	spellCast: SpellCastEvent;
 	wagerActivated: WagerActivatedEvent;
 }
@@ -118,6 +141,9 @@ export function visualEventTypeOf(event: VisualEvent): VisualEventType {
 		case 'bettingAction':
 		case 'handRankAnnounced':
 		case 'showdownDamage':
+		case 'ragnarokTriggered':
+		case 'streakAnnounced':
+		case 'handImproved':
 		case 'spellCast':
 		case 'wagerActivated':
 			return event.type;
@@ -165,6 +191,30 @@ export function emitShowdownDamage(
 		...data,
 		target: heroTargetForOwner(opponentOf(data.winner)),
 	};
+	emitVisualEvent(event);
+	return event;
+}
+
+export function emitRagnarokTriggered(
+	data: Omit<RagnarokTriggeredEvent, 'type' | 'id' | 'timestamp'>
+): RagnarokTriggeredEvent {
+	const event: RagnarokTriggeredEvent = { type: 'ragnarokTriggered', ...baseEventFields(), ...data };
+	emitVisualEvent(event);
+	return event;
+}
+
+export function emitStreakAnnounced(
+	data: Omit<StreakAnnouncedEvent, 'type' | 'id' | 'timestamp'>
+): StreakAnnouncedEvent {
+	const event: StreakAnnouncedEvent = { type: 'streakAnnounced', ...baseEventFields(), ...data };
+	emitVisualEvent(event);
+	return event;
+}
+
+export function emitHandImproved(
+	data: Omit<HandImprovedEvent, 'type' | 'id' | 'timestamp'>
+): HandImprovedEvent {
+	const event: HandImprovedEvent = { type: 'handImproved', ...baseEventFields(), ...data };
 	emitVisualEvent(event);
 	return event;
 }

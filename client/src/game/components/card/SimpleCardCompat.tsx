@@ -6,8 +6,8 @@
  * migrate with one import-path swap. Internally renders <CardFrame>
  * with the matching slot children.
  *
- * Re-exports the SimpleCard type family so consumers (FrameSvgOnly,
- * card lab types) keep importing the same names.
+ * Re-exports the SimpleCard type family so legacy dev/test consumers keep
+ * importing the same names.
  */
 
 import React from 'react';
@@ -199,6 +199,7 @@ export const SimpleCardCompat: React.FC<SimpleCardCompatProps> = ({
 	const layoutAdapter = resolveSimpleCardFrameLayoutAdapter({
 		size,
 		statsMode,
+		cardType: card.type,
 		showDescription,
 		...(surface !== undefined ? { surface } : {}),
 	});
@@ -215,6 +216,7 @@ export const SimpleCardCompat: React.FC<SimpleCardCompatProps> = ({
 	const fields: CollectionTileRenderedFields = {
 		showArt,
 		showCount: false,
+		showName: layoutAdapter.showName,
 		showStats: showCombatStats,
 		...(layoutAdapter.showTribeLine && card.tribe ? { tribe: card.tribe } : {}),
 		...(layoutAdapter.showDescriptionText && card.description ? { description: card.description } : {}),
@@ -239,7 +241,9 @@ export const SimpleCardCompat: React.FC<SimpleCardCompatProps> = ({
 			dataCardSurface={layoutAdapter.surface}
 			disableTooltips={disableTooltips}
 			fields={fields}
-			frameClassName={frameClassName}
+		frameClassName={frameClassName}
+		frameAsset={layoutAdapter.frameAsset}
+		frameRender={layoutAdapter.frameRender}
 			frameSize={size}
 			frameStyle={{
 				maxWidth: 'none',

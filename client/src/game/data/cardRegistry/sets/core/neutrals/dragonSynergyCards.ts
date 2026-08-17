@@ -31,7 +31,7 @@ export const dragonSynergyCards: CardData[] = [
 		manaCost: 4,
 		attack: 3,
 		health: 5,
-		description: 'Taunt. Battlecry: If you\'re holding a Dragon, gain +2 Health.',
+		description: 'Battlecry: If you\'re holding a Dragon, gain +2 Health.',
 		flavorText: 'Dragon scales make the finest armor — if you can survive harvesting them.',
 		type: 'minion',
 		rarity: 'rare',

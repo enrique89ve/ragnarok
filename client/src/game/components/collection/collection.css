@@ -670,6 +670,77 @@
   );
 }
 
+.collection-card-frame__lower-content {
+  width: 100%;
+  margin-top: auto;
+}
+
+.collection-card-frame__footer-rail {
+  width: 100%;
+}
+
+/*
+ * Collection footer contract:
+ * rarity owns the lowest centered slot, the name sits above it, and the
+ * keyword rail is promoted above the name. These slots are calculated from
+ * the shared surface scale so the frame cannot make them collide again when
+ * the tile size changes.
+ */
+.collection-card-frame.norse-card-frame--surface-collection {
+  --norse-card-rarity-mark-bottom: 0px;
+  --norse-card-name-bottom: calc(
+    var(--norse-card-rarity-mark-bottom) +
+      var(--norse-card-rarity-mark-height) +
+      calc(4px * var(--norse-card-ui-scale))
+  );
+  --norse-card-keyword-bottom: calc(
+    var(--norse-card-name-bottom) +
+      var(--norse-card-name-height) +
+      calc(3px * var(--norse-card-ui-scale))
+  );
+}
+
+.collection-card-frame.norse-card-frame--surface-collection
+  .card-frame__keywords {
+  min-height: calc(16px * 1.1 * var(--norse-card-ui-scale));
+}
+
+.collection-card-frame.norse-card-frame--surface-collection
+  .card-frame__keyword-chip:not(.card-frame__keyword-chip--overflow) {
+  flex-basis: calc(16px * 1.1 * var(--norse-card-ui-scale));
+  width: calc(16px * 1.1 * var(--norse-card-ui-scale));
+  height: calc(16px * 1.1 * var(--norse-card-ui-scale));
+  min-width: calc(16px * 1.1 * var(--norse-card-ui-scale));
+  max-width: calc(16px * 1.1 * var(--norse-card-ui-scale));
+}
+
+.collection-card-frame.norse-card-frame--surface-collection
+  .card-frame__rarity-mark {
+  bottom: var(--norse-card-rarity-mark-bottom);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.collection-card-frame.norse-card-frame--surface-collection
+  .card-frame__name-plate {
+  display: flex;
+  border: 0;
+  height: var(--norse-card-name-height);
+  min-height: var(--norse-card-name-height);
+  max-height: var(--norse-card-name-height);
+  overflow: hidden;
+  overflow-wrap: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collection-card-frame.norse-card-frame--surface-collection
+  .collection-card-frame__footer
+  .card-frame__name-plate {
+  -webkit-box-orient: initial;
+  -webkit-line-clamp: unset;
+}
+
 /*
  * Non-minion cards keep the shared frame and mana gem, but their lower rail
  * is a single centered composition. Do not leave empty combat-stat gutters
@@ -722,12 +793,14 @@
 }
 
 .collection-card-frame__footer .card-frame__name-plate {
-  display: -webkit-box;
+  display: flex;
   overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  -webkit-box-orient: initial;
+  -webkit-line-clamp: unset;
   min-width: 0;
   max-width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .collection-card-frame__name-wrap {
@@ -910,6 +983,258 @@
 .collection-card-frame__stat-badge--unknown .collection-card-frame__stat-value {
   color: #d9e5ef;
   font-style: italic;
+}
+
+/*
+ * The war-table PNGs own the sockets and their decorative rims. The
+ * collection rules above are kept for the legacy CSS/SVG renderer, but must
+ * not create a second set of plates when the shared PNG adapter is active.
+ */
+.collection-card-frame--png-concept .collection-card-frame__stat-badge::before,
+.collection-card-frame--png-concept .collection-card-frame__stat-badge::after,
+.collection-card-frame--png-concept .collection-card-frame__stat-icon,
+.collection-card-frame--png-concept .collection-card-frame__mana-corner::before,
+.collection-card-frame--png-concept .collection-card-frame__mana-corner::after {
+  display: none !important;
+}
+
+/* These percentages match the transparent sockets in the canonical 7:10
+ * frame. Values are still live DOM text; only their bitmap plates are
+ * removed. */
+.collection-card-frame--png-concept {
+  container-type: inline-size;
+}
+
+.collection-card-frame--png-concept .card-frame__rarity-mark {
+  /* Keep the original marker proportions fully inside the clipped card frame. */
+  right: auto;
+  top: auto;
+  bottom: 0;
+  left: 50%;
+  width: 40cqw;
+  height: 14cqw;
+  transform: translateX(-50%);
+}
+
+.collection-card-frame--png-concept .card-frame__rarity-mark svg {
+  /* The SVG viewBox has transparent room below the socket paths. Lower the
+   * drawing inside its unchanged box so the socket sits on the bottom rail. */
+  transform: translateY(18%);
+}
+
+.collection-card-frame--png-concept .collection-card-frame__mana-corner {
+  top: 1.45% !important;
+  left: 2.35% !important;
+  width: 16.25% !important;
+  height: 11.4% !important;
+}
+
+.collection-card-frame--png-concept
+  .collection-card-frame__mana-corner .card-frame__mana-gem {
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden;
+  border: max(1px, 1.05cqw) solid #d8a63a !important;
+  border-radius: 50% !important;
+  background:
+    radial-gradient(
+      circle at 31% 20%,
+      rgba(255, 255, 255, 0.82) 0 5%,
+      rgba(135, 204, 255, 0.26) 10%,
+      transparent 24%
+    ),
+    radial-gradient(
+      circle at 48% 45%,
+      #123e78 0 19%,
+      #092c5d 48%,
+      #04152f 76%,
+      #020711 100%
+    ) !important;
+  box-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.88),
+    0 0 0 1px #3d2208,
+    0 0 0 3px rgba(239, 190, 72, 0.92),
+    0 0 0 4px rgba(31, 18, 5, 0.92),
+    0 0 9px rgba(24, 86, 166, 0.38),
+    inset 0 1px 1px rgba(255, 245, 202, 0.72),
+    inset 0 -5px 8px rgba(0, 5, 18, 0.82),
+    inset 0 0 0 2px rgba(5, 14, 28, 0.72) !important;
+  color: #fff8df;
+  font-family: var(--type-numeric);
+  font-size: 12.39cqw !important;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-shadow:
+    0 -1px 0 rgba(255, 255, 255, 0.34),
+    0 1px 0 #05070d,
+    0 2px 3px rgba(0, 0, 0, 0.96);
+}
+
+.collection-card-frame--png-concept
+  .collection-card-frame__mana-corner .card-frame__mana-gem::before {
+  content: "";
+  position: absolute;
+  inset: 9%;
+  border: 1px solid rgba(255, 221, 132, 0.42);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(5, 17, 38, 0.82);
+  pointer-events: none;
+}
+
+.collection-card-frame--png-concept
+  .collection-card-frame__mana-corner .card-frame__mana-gem::after {
+  content: "";
+  position: absolute;
+  top: 13%;
+  right: 19%;
+  width: 12%;
+  height: 24%;
+  border-radius: 50%;
+  background: rgba(206, 235, 255, 0.48);
+  filter: blur(0.5px);
+  transform: rotate(-28deg);
+  pointer-events: none;
+}
+
+.collection-card-frame--png-concept
+  .collection-card-frame__mana-corner .card-frame__mana-cost {
+  position: absolute !important;
+  inset: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transform: translateY(-1%) !important;
+}
+
+.collection-card-frame--contract-minion.collection-card-frame--png-concept
+  .collection-card-frame__stat-badge,
+.collection-card-frame--contract-pet.collection-card-frame--png-concept
+  .collection-card-frame__stat-badge {
+  /* Socket centers projected from the canonical 420x600 frame asset. */
+  top: 90.65% !important;
+  bottom: auto !important;
+  width: 13% !important;
+  height: 8.7% !important;
+  clip-path: none !important;
+  filter: none !important;
+}
+
+.collection-card-frame--contract-minion.collection-card-frame--png-concept
+  .collection-card-frame__stat-badge--attack,
+.collection-card-frame--contract-pet.collection-card-frame--png-concept
+  .collection-card-frame__stat-badge--attack {
+  left: 3.2% !important;
+}
+
+.collection-card-frame--contract-minion.collection-card-frame--png-concept
+  .collection-card-frame__stat-badge--health,
+.collection-card-frame--contract-pet.collection-card-frame--png-concept
+  .collection-card-frame__stat-badge--health {
+  right: 3.2% !important;
+  left: auto !important;
+}
+
+.collection-card-frame--contract-minion.collection-card-frame--png-concept
+  .collection-card-frame__stat-value,
+.collection-card-frame--contract-pet.collection-card-frame--png-concept
+  .collection-card-frame__stat-value {
+  top: 50% !important;
+  left: 50% !important;
+  color: #fff8df;
+  font-family: var(--type-numeric);
+  /* 3% smaller than the previous 11.4cqw value. */
+  font-size: 11.058cqw !important;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.025em;
+  line-height: 1;
+  transform: translate(-50%, -50%) !important;
+  -webkit-text-stroke: 0.35px rgba(17, 8, 2, 0.86);
+  text-shadow:
+    0 -1px 0 rgba(255, 255, 255, 0.3),
+    0 1px 0 rgba(35, 8, 2, 0.96),
+    0 2px 3px rgba(0, 0, 0, 0.94);
+}
+
+/* A clean frame is intentionally stateless: spells and weapons must never
+ * inherit the minion/pet attack-health sockets from a caller. */
+.collection-card-frame--contract-spell.collection-card-frame--png-concept
+  .collection-card-frame__stat-badge,
+.collection-card-frame--contract-weapon.collection-card-frame--png-concept
+  .collection-card-frame__stat-badge {
+  display: none !important;
+}
+
+/* Gameplay cards render at roughly 150x210 on the 1920x1080 canvas. Their
+ * dedicated frame enlarges the three critical resource sockets by 50% while
+ * leaving collection, mulligan, and preview cards on the denser v4 frame. */
+.card-frame--asset-minimal-war-table-v5-gameplay
+  .collection-card-frame__mana-corner,
+.card-frame--asset-minimal-war-table-v5-gameplay-clean
+  .collection-card-frame__mana-corner {
+  top: 0.6% !important;
+  left: 1% !important;
+  width: 22.5% !important;
+  height: 15.75% !important;
+}
+
+.card-frame--asset-minimal-war-table-v5-gameplay
+  .collection-card-frame__mana-corner .card-frame__mana-gem,
+.card-frame--asset-minimal-war-table-v5-gameplay-clean
+  .collection-card-frame__mana-corner .card-frame__mana-gem {
+  font-size: 18.585cqw !important;
+}
+
+:is(
+  .card-frame--asset-minimal-war-table-v5-gameplay,
+  .card-frame--asset-minimal-war-table-v5-gameplay-clean
+) .collection-card-frame__mana-corner .card-frame__mana-cost[data-digit-count="2"] {
+  font-size: 0.76em;
+}
+
+:is(
+  .collection-card-frame--contract-minion,
+  .collection-card-frame--contract-pet
+).card-frame--asset-minimal-war-table-v5-gameplay
+  .collection-card-frame__stat-badge {
+  top: 85.8% !important;
+  width: 18% !important;
+  height: 12.5% !important;
+}
+
+:is(
+  .collection-card-frame--contract-minion,
+  .collection-card-frame--contract-pet
+).card-frame--asset-minimal-war-table-v5-gameplay
+  .collection-card-frame__stat-badge--attack {
+  left: 4.1% !important;
+}
+
+:is(
+  .collection-card-frame--contract-minion,
+  .collection-card-frame--contract-pet
+).card-frame--asset-minimal-war-table-v5-gameplay
+  .collection-card-frame__stat-badge--health {
+  right: 4.1% !important;
+}
+
+:is(
+  .collection-card-frame--contract-minion,
+  .collection-card-frame--contract-pet
+).card-frame--asset-minimal-war-table-v5-gameplay
+  .collection-card-frame__stat-value {
+  font-size: 16.587cqw !important;
+}
+
+:is(
+  .collection-card-frame--contract-minion,
+  .collection-card-frame--contract-pet
+).card-frame--asset-minimal-war-table-v5-gameplay
+  .collection-card-frame__stat-value[data-digit-count="2"] {
+  font-size: 13.27cqw !important;
 }
 
 .collection-card-frame__mana-corner {

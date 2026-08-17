@@ -1,17 +1,14 @@
 /**
- * Curated card samples for the lab.
+ * Curated card samples shared by the remaining development previews.
  *
  * Real cards from the registry, picked one-per-rarity so the rarity
- * gradient is always visible. Each entry is a fallback — if the id
- * cannot be found in the registry at runtime, the lab shows a labelled
- * placeholder rather than crashing.
- *
- * `getCardArtPath` (artMapping.ts) is the canonical art resolver.
+ * gradient is always visible. Each entry is a fallback if the id cannot be
+ * found in the registry at runtime.
  */
 
-import type { CardData } from '../../../types';
-import type { NorseElement } from '../../../types/NorseTypes';
-import { cardRegistry } from '../../../data/cardRegistry';
+import type { CardData } from '../../types';
+import type { NorseElement } from '../../types/NorseTypes';
+import { cardRegistry } from '../../data/cardRegistry';
 
 export interface SampleCard {
 	id: number;
@@ -36,11 +33,7 @@ export interface FrameStudySample {
 	sample: SampleCard;
 }
 
-/**
- * Real cards used by the frame comparison. Pets intentionally resolve as
- * minions: that is their canonical data type, while `petStage` carries the
- * evolution identity without changing the combat footer contract.
- */
+/** Pets intentionally resolve as minions; petStage carries evolution identity. */
 export const FRAME_STUDY_SAMPLES: readonly FrameStudySample[] = [
 	{
 		id: 'minion',
@@ -73,19 +66,15 @@ export const FRAME_STUDY_SAMPLES: readonly FrameStudySample[] = [
 ];
 
 const RARITY_INDEX = new Map<SampleCard['fallbackRarity'], SampleCard>(
-	RARITY_SAMPLES.map((s) => [s.fallbackRarity, s]),
+	RARITY_SAMPLES.map((sample) => [sample.fallbackRarity, sample]),
 );
 
 export function sampleForRarity(rarity: SampleCard['fallbackRarity']): SampleCard {
 	return RARITY_INDEX.get(rarity) ?? RARITY_SAMPLES[0];
 }
 
-/**
- * Resolve a sample into a CardData-shaped record. Falls back to the
- * sample's own fallback fields if the id is not in the registry.
- */
 export function resolveSample(sample: SampleCard): CardData {
-	const found = cardRegistry.find((c: CardData) => c.id === sample.id);
+	const found = cardRegistry.find((card: CardData) => card.id === sample.id);
 	if (found) return found;
 	return {
 		id: sample.id,

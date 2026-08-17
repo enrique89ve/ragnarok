@@ -8,11 +8,8 @@
  */
 
 import React from 'react';
-import {
-	formatCardKeywordCompactLabel,
-	formatCardKeywordLabel,
-} from '../cardKeywordDisplay';
-import { getCardKeywordSemantics } from '../cardPresentationContract';
+import { adaptCardKeywordsForPresentation } from '../cardKeywordPresentationAdapter';
+import type { CardPresentationSurface } from '../cardPresentationContract';
 import { KEYWORD_ICON_MAP } from '../../ui/CardIconsSVG';
 
 export interface CardDescriptionProps {
@@ -20,9 +17,11 @@ export interface CardDescriptionProps {
 	keywords?: readonly string[];
 	keywordLimit?: number | null;
 	keywordLabelMode?: 'full' | 'compact';
+	surface?: CardPresentationSurface;
 }
 
 type KeywordIconComponent = React.FC<React.SVGProps<SVGSVGElement>>;
+type KeywordChipStyle = React.CSSProperties & { '--keyword-tone'?: string };
 
 const keywordIconLookup: Readonly<Partial<Record<string, KeywordIconComponent>>> = KEYWORD_ICON_MAP;
 
@@ -31,24 +30,16 @@ const CardDescription: React.FC<CardDescriptionProps> = ({
 	keywords,
 	keywordLimit = null,
 	keywordLabelMode = 'full',
+	surface = 'collection',
 }) => {
-	const keywordList = keywords ?? [];
-	const hasKeywords = keywordList.length > 0;
+	const presentation = adaptCardKeywordsForPresentation({
+		keywords,
+		surface,
+		limit: keywordLimit,
+		labelMode: keywordLabelMode,
+	});
+	const hasKeywords = presentation.totalCount > 0;
 	if (!hasKeywords && !description) return null;
-
-	const maxKeywords = keywordLimit === null ? keywordList.length : Math.max(0, keywordLimit);
-	const visibleKeywords = keywordList.slice(0, maxKeywords);
-	const hiddenKeywords = keywordList.slice(maxKeywords);
-	const hiddenKeywordSummary = hiddenKeywords.map(formatCardKeywordLabel).join(', ');
-	const formatKeyword = keywordLabelMode === 'compact'
-		? formatCardKeywordCompactLabel
-		: formatCardKeywordLabel;
-	const visibleKeywordEntries = visibleKeywords.map((keyword) => ({
-		keyword,
-		Icon: keywordIconLookup[keyword],
-		label: formatCardKeywordLabel(keyword),
-		semantics: getCardKeywordSemantics(keyword),
-	}));
 	const stackVariant = description && hasKeywords
 		? 'card-frame__description-stack--with-keywords'
 		: description
@@ -59,30 +50,39 @@ const CardDescription: React.FC<CardDescriptionProps> = ({
 		<div className={`card-frame__description-stack ${stackVariant}`}>
 			{hasKeywords && (
 				<div className="card-frame__keywords" data-keyword-label-mode={keywordLabelMode}>
-					{visibleKeywordEntries.map(({ keyword, Icon, label, semantics }) => (
-						<span
-							key={keyword}
-							className={`card-frame__keyword-chip${Icon ? ' card-frame__keyword-chip--icon' : ''}`}
-							data-keyword={keyword}
-							data-keyword-functions={semantics.functions.join(' ')}
-							data-keyword-gameplay={semantics.gameplay}
-							data-keyword-pregame={semantics.pregame}
-							aria-label={label}
-							title={label}
-						>
-							{Icon ? (
-								<Icon className="card-frame__keyword-icon" focusable="false" aria-hidden="true" />
-							) : (
-								formatKeyword(keyword)
-							)}
-						</span>
-					))}
-					{hiddenKeywords.length > 0 && (
+						{presentation.entries.map((entry) => {
+							const Icon = keywordIconLookup[entry.keyword];
+							const showKeywordLabel = keywordLabelMode !== 'compact' || Icon === undefined;
+							return (
+								<span
+									key={entry.keyword}
+									className={`card-frame__keyword-chip${Icon ? ' card-frame__keyword-chip--with-icon' : ''}${!showKeywordLabel ? ' card-frame__keyword-chip--icon-only' : ''}`}
+								data-keyword={entry.keyword}
+								data-keyword-functions={entry.functions.join(' ')}
+								data-keyword-gameplay={entry.gameplayImportance}
+								data-keyword-pregame={entry.pregameImportance}
+								data-tone={entry.tone}
+								data-keyword-importance={entry.importance}
+								style={{ '--keyword-tone': entry.accent } as KeywordChipStyle}
+								aria-label={entry.label}
+								title={`${entry.label}: ${entry.description}`}
+							>
+								{Icon && (
+									<span className="card-frame__keyword-icon-mark" aria-hidden="true">
+										<Icon className="card-frame__keyword-icon" focusable="false" />
+									</span>
+								)}
+									{showKeywordLabel && <span className="card-frame__keyword-label">{entry.displayLabel}</span>}
+							</span>
+						);
+					})}
+					{presentation.hiddenCount > 0 && (
 						<span
 							className="card-frame__keyword-chip card-frame__keyword-chip--overflow"
-							data-keyword-summary={hiddenKeywordSummary}
+							data-keyword-summary={presentation.hiddenSummary}
+							title={presentation.hiddenSummary}
 						>
-							+{hiddenKeywords.length}
+							+{presentation.hiddenCount}
 						</span>
 					)}
 				</div>

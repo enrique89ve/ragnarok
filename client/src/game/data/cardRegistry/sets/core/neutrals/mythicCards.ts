@@ -26,7 +26,7 @@ export const classMythicMinions: CardData[] = [
     health: 6,
     type: "minion",
     rarity: "epic",
-    description: "Divine Shield. Taunt. Deathrattle: Equip a 5/3 Ashbringer.",
+    description: "Deathrattle: Equip a 5/3 Ashbringer.",
     flavorText: 'Tyr\'s echo fights on, even after the god has fallen. Honor does not die.',
     keywords: ["divine_shield", "taunt", "deathrattle"],
     heroClass: "paladin",

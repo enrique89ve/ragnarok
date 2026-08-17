@@ -6,6 +6,7 @@ import {
 	CARD_PRESENTATION_SURFACES,
 	getCardElementSurfaceContract,
 	getCardKeywordsForSurface,
+	getCardKeywordSemantics,
 	shouldRenderCardKeywordOnSurface,
 } from './cardPresentationContract';
 import {
@@ -92,5 +93,33 @@ describe('card presentation contract', () => {
 	it('treats unclassified future keywords as searchable metadata until classified', () => {
 		expect(shouldRenderCardKeywordOnSurface('future_keyword', 'collection')).toBe(true);
 		expect(shouldRenderCardKeywordOnSurface('future_keyword', 'gameplay')).toBe(false);
+	});
+
+	it('keeps keyword accents distinct and bright on the card background', async () => {
+		const {
+			getCardKeywordAccent,
+			CARD_KEYWORD_ACCENT_BACKGROUND,
+			CARD_KEYWORD_ACCENT_COLORS,
+		} = await import('./cardKeywordPalette');
+		const accents = ['taunt', 'battlecry', 'freeze', 'quest', 'poisonous', 'wager']
+			.map((keyword) => getCardKeywordAccent(keyword, 'combat', 'decisive'));
+		expect(new Set(accents).size).toBeGreaterThanOrEqual(5);
+		expect(CARD_KEYWORD_ACCENT_BACKGROUND).toBe('#030810');
+		expect(getCardKeywordAccent('future_keyword', 'filter', 'metadata')).toBe('#94a3b8');
+		expect(getCardKeywordAccent('taunt', 'combat', 'decisive')).not.toBe('#94a3b8');
+
+		const relativeLuminance = (hex: string): number => {
+			const channels = [1, 3, 5].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16) / 255);
+			const linear = channels.map((channel) => channel <= 0.03928
+				? channel / 12.92
+				: ((channel + 0.055) / 1.055) ** 2.4);
+			return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+		};
+		const backgroundLuminance = relativeLuminance(CARD_KEYWORD_ACCENT_BACKGROUND);
+		for (const accent of Object.values(CARD_KEYWORD_ACCENT_COLORS)) {
+			const contrast = (Math.max(relativeLuminance(accent), backgroundLuminance) + 0.05) /
+				(Math.min(relativeLuminance(accent), backgroundLuminance) + 0.05);
+			expect(contrast).toBeGreaterThanOrEqual(4.5);
+		}
 	});
 });
