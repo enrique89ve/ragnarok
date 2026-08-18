@@ -54,7 +54,10 @@ ENV VITE_SEASON_START=$VITE_SEASON_START
 ENV VITE_RAGNAROK_INDEX_START_BLOCK=$VITE_RAGNAROK_INDEX_START_BLOCK
 
 COPY . .
-RUN pnpm run verify:runtime-env -- --mode=alfa-testnet && pnpm run build:alfa-testnet
+RUN pnpm run verify:runtime-env -- --mode=alfa-testnet && pnpm run build:alfa-testnet \
+	&& mkdir -p /opt/runtime-esbuild \
+	&& cp -a node_modules/esbuild /opt/runtime-esbuild/esbuild \
+	&& if [ -d node_modules/@esbuild ]; then cp -a node_modules/@esbuild /opt/runtime-esbuild/@esbuild; fi
 
 FROM deps AS prod-deps
 WORKDIR /app
@@ -95,8 +98,7 @@ ENV RAGNAROK_INDEX_CHECKPOINT_DRY_RUN=true
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
-COPY --from=build /app/node_modules/esbuild ./node_modules/esbuild
-COPY --from=build /app/node_modules/@esbuild ./node_modules/@esbuild
+COPY --from=build /opt/runtime-esbuild/ ./node_modules/
 COPY --from=build /app/scripts/verifyRuntimeEnv.mjs ./scripts/verifyRuntimeEnv.mjs
 
 EXPOSE 5000
