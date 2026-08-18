@@ -47,10 +47,10 @@ function isServiceWorkerImmutableChunk(chunkUrl: string): boolean {
 describe('service worker reset epoch cache name', () => {
 	it('isolates asset caches by reset epoch', () => {
 		expect(readServiceWorkerCacheName('https://example.test/sw.js?resetEpoch=QA%20Season%200%20%2F%202026-05')).toBe(
-			'ragnarok-assets-v3-qa-season-0-2026-05',
+			'ragnarok-assets-v4-qa-season-0-2026-05',
 		);
 		expect(readServiceWorkerCacheName('https://example.test/sw.js?resetEpoch=Closed%20Beta%20%2F%202026-06')).toBe(
-			'ragnarok-assets-v3-closed-beta-2026-06',
+			'ragnarok-assets-v4-closed-beta-2026-06',
 		);
 	});
 

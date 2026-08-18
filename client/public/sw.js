@@ -17,7 +17,7 @@ function readResetEpoch() {
 }
 
 // Cache shared with assetCacheStore.ts bulk downloader
-var CACHE_NAME = 'ragnarok-assets-v3-' + normalizeSegment(readResetEpoch());
+var CACHE_NAME = 'ragnarok-assets-v4-' + normalizeSegment(readResetEpoch());
 
 var ASSET_DIRS = [
 	'/art/', '/portraits/', '/textures/', '/sounds/',
