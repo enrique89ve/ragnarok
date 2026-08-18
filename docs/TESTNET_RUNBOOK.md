@@ -154,18 +154,16 @@ pnpm run build:alfa-testnet
 pnpm run start:alfa-testnet
 ```
 
-The Alfa env must keep:
+The Alfa Docker image already bakes the public profile
+(`VITE_NETWORK_STAGE=testnet`, `rk_game_testnet`, `alfa-testnet-*` epoch,
+JSON state file). Dokploy only needs:
 
 ```env
-VITE_NETWORK_STAGE=testnet
-VITE_RAGNAROK_PROTOCOL_ID=rk_game_testnet
-VITE_RAGNAROK_COLLECTION_ID=ragnarok-testnet
-VITE_RAGNAROK_RESET_EPOCH=alfa-testnet-full-nft-2026-05-22
-ENABLE_CHAIN_INDEXER=true
-RAGNAROK_CHAIN_STATE_FILE=data/chain-state.alfa-testnet.json
-RAGNAROK_NFT_OWNERSHIP_SOURCE=json
 P2P_CHALLENGE_SIGNING_SECRET=<64-hex-chars>
 ```
+
+See [`DOKPLOY_DEPLOYMENT.md`](./DOKPLOY_DEPLOYMENT.md) for the baked list and
+optional operator keys.
 
 Expected Alfa signals:
 

@@ -498,9 +498,9 @@ pnpm run start:mainnet   # built server with .env.mainnet
 
 Copy `.env.testnet.example` to `.env.testnet` for generic testnet, QA Season 0,
 or Closed Testnet Beta work; set the reset epoch deliberately for the phase you
-are testing. Copy `.env.alfa-testnet.example` to `.env.alfa-testnet` for the
-Dokploy-hosted Alfa Testnet profile, and `.env.mainnet.example` to `.env.mainnet`
-for mainnet release rehearsals.
+are testing. Dokploy Alfa uses `docker-compose.dokploy.yml`; the image bakes
+the public profile, so `.env.alfa-testnet.example` is secrets-only. Copy
+`.env.mainnet.example` to `.env.mainnet` for mainnet release rehearsals.
 `VITE_NETWORK_STAGE` is the source of truth; `VITE_DATA_LAYER_MODE` and
 `VITE_BLOCKCHAIN_PACKAGING` are debug overrides, not normal profile switches.
 Alfa Testnet still uses `VITE_NETWORK_STAGE=testnet`; `alfa-testnet` is only the

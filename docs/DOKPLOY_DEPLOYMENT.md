@@ -28,37 +28,51 @@ indexer, `/api/health`, admin diagnostics, and the `/ws/p2p` relay.
 The Compose file follows Dokploy's Docker Compose variable model:
 
 - Dokploy's Environment tab writes values to `.env` next to the Compose file.
-- `env_file: .env` injects runtime-only values, including server secrets.
-- Compose interpolation passes selected public `VITE_*` values into Docker
-  build args because Vite embeds them into the browser bundle.
-- Runtime `environment` repeats the non-secret profile values so Express,
-  `/api/health`, and `/api/admin/config` see the same profile as the browser.
+- Compose interpolates only the listed secrets into the container.
+- Leftover public `VITE_*` keys in that tab do not enter the container and
+  cannot override the baked image profile.
+- The Alfa public profile is baked in the `Dockerfile` (Vite build args and
+  runner `ENV`). Compose does not pass `VITE_*` as build args.
+- A missing `P2P_CHALLENGE_SIGNING_SECRET` fails the deploy before start.
 
 Do not put Hive private keys or `P2P_CHALLENGE_SIGNING_SECRET` in Docker build
-args or Build-time Secrets. They are runtime-only server values. Do keep
-`VITE_RAGNAROK_RESET_EPOCH` and other public `VITE_*` values available at build
-time, because the browser bundle needs them.
+args or Build-time Secrets. They are runtime-only server values.
 
-The Docker image is pinned by default to Node `24.19.0` on Alpine `3.24`.
-`Dockerfile`, `docker-compose.dokploy.yml`, `.nvmrc`, and `package.json`
-document this runtime. Override `NODE_VERSION` or `NODE_ALPINE_VERSION` only
-after a local build and smoke pass. pnpm 11 requires Node >= 22.13.
+The Docker image is pinned to Node `24.19.0` on Alpine `3.24` in the
+`Dockerfile`. `.nvmrc` and `package.json` document the same runtime. Do not
+put `NODE_VERSION` or `NODE_ALPINE_VERSION` in Dokploy.
 
 ## Environment Variables
 
-Configure variables in Dokploy's Environment tab. Dokploy writes them to `.env`;
-the compose file injects them into the image build and into the running
-container. Do not put these public profile values only in Build-time Secrets:
-the Express process must also see them at runtime for `/api/health` and
-`/api/admin/config`.
+For this Alfa Testnet phase, the Environment tab should hold **secrets only**.
+Copy `.env.alfa-testnet.example`. Empty leftover public keys override the
+image with a blank and will fail `verifyRuntimeEnv` at boot — delete them.
 
-Public build-time variables are passed as Docker build args because Vite embeds
-`VITE_*` values into the browser bundle:
+Required:
 
 ```dotenv
+P2P_CHALLENGE_SIGNING_SECRET=<64-hex-chars>
+```
+
+Optional runtime secrets (unprefixed; never add `VITE_`):
+
+```dotenv
+RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY=<active-private-key>
+P2P_RELAY_ALLOWED_ORIGINS=https://<your-public-game-host>
+RAGNAROK_INDEX_POSTING_KEY=<posting-private-key>
+WITNESS_HIVE_ACCOUNT=
+WITNESS_HIVE_POSTING_KEY=
+```
+
+`P2P_RELAY_ALLOWED_ORIGINS` is only needed when the browser origin differs
+from the API/relay host. Same-host deploys can omit it. Keep
+`P2P_RELAY_TRUST_FORWARDED_HOST` unset unless Dokploy is behind a trusted
+proxy that overwrites `X-Forwarded-Host`.
+
+Baked in the image (do not paste into Dokploy):
+
+```text
 RAGNAROK_RUNTIME_MODE=alfa-testnet
-NODE_VERSION=24.19.0
-NODE_ALPINE_VERSION=3.24
 VITE_NETWORK_STAGE=testnet
 VITE_RAGNAROK_PROTOCOL_ID=rk_game_testnet
 VITE_RAGNAROK_COLLECTION_ID=ragnarok-testnet
@@ -70,49 +84,28 @@ VITE_RAGNAROK_TREASURY_ACCOUNT=ragp2p
 VITE_RAGNAROK_INDEX_ACCOUNT=ragp2p
 VITE_SEASON_START=2026-06-14T23:28:54Z
 VITE_RAGNAROK_INDEX_START_BLOCK=109016418
-VITE_NFT_ART_BASE_URL=https://your-domain.example
-VITE_EXTERNAL_URL_BASE=https://your-domain.example
-```
-
-Keep `VITE_NETWORK_STAGE=testnet`. Do not set `VITE_NETWORK_STAGE=practice` or
-`VITE_NETWORK_STAGE=alfa-testnet`; Alfa is derived from the
-`alfa-testnet-*` reset epoch. Later NFT-full beta profiles should rotate to a
-`closed-beta-*` reset epoch. Do not use `qa-s0-*` or `qa-season-0-*` here;
-those epochs deliberately enable QA full-catalog entitlement and are not NFT
-custody evidence.
-
-NFTLoX is not an Alfa requirement. Leave `VITE_NFTLOX_PROTOCOL_ID` unset during
-Alfa unless you are explicitly testing the finalized NFTLoX collection flow.
-Closed Beta must set `VITE_NFTLOX_PROTOCOL_ID=nftlox_testnet` only after the
-collection proof exists.
-
-Server-only variables must stay unprefixed. Do not add `VITE_` to private keys:
-
-```dotenv
+VITE_NFT_ART_BASE_URL=https://dhenz14.github.io/norse-mythos-card-game
+VITE_EXTERNAL_URL_BASE=https://dhenz14.github.io/norse-mythos-card-game
 ENABLE_CHAIN_INDEXER=true
 RAGNAROK_CHAIN_STATE_FILE=data/chain-state.alfa-testnet.json
 RAGNAROK_NFT_OWNERSHIP_SOURCE=json
-# Server-side mirror of VITE_SEASON_START for runtime/operator code.
 RAGNAROK_SEASON_START=2026-06-14T23:28:54Z
-# Server-side mirror of VITE_RAGNAROK_INDEX_START_BLOCK for fresh JSON state.
 RAGNAROK_INDEX_START_BLOCK=109016418
 RAGNAROK_RANGE_SCAN=true
 RAGNAROK_HAF_ENDPOINTS=https://api.hive.blog
-P2P_CHALLENGE_SIGNING_SECRET=<64-hex-chars>
-P2P_RELAY_ALLOWED_ORIGINS=https://<your-public-game-host>
-P2P_RELAY_TRUST_FORWARDED_HOST=false
-
 ENABLE_INDEX_CHECKPOINT_PUBLISHER=false
 RAGNAROK_INDEX_CHECKPOINT_DRY_RUN=true
-RAGNAROK_INDEX_ACCOUNT=ragp2p
-RAGNAROK_INDEX_POSTING_KEY=<posting-private-key>
-
-RAGNAROK_ADMIN_OPERATOR_ACCOUNT=ragnarok-test-operator
-RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY=<active-private-key>
-
-WITNESS_HIVE_ACCOUNT=
-WITNESS_HIVE_POSTING_KEY=
 ```
+
+Keep `VITE_NETWORK_STAGE=testnet` if you ever override the image. Do not set
+`VITE_NETWORK_STAGE=practice` or `VITE_NETWORK_STAGE=alfa-testnet`; Alfa is
+derived from the `alfa-testnet-*` reset epoch. Later NFT-full beta profiles
+should rotate to a `closed-beta-*` reset epoch. Do not use `qa-s0-*` or
+`qa-season-0-*` here; those epochs enable QA full-catalog entitlement.
+
+NFTLoX is not an Alfa requirement. Leave `VITE_NFTLOX_PROTOCOL_ID` unset
+during Alfa. Closed Beta must set `VITE_NFTLOX_PROTOCOL_ID=nftlox_testnet`
+only after the collection proof exists.
 
 Generate the P2P challenge secret with:
 
@@ -126,13 +119,6 @@ which is acceptable for local/dev but wrong for shared Alfa/P2P because
 redeploys or future replicas can invalidate challenge envelopes. In production
 Alfa the server now fails closed instead of signing challenges with a
 process-local fallback.
-
-`P2P_RELAY_ALLOWED_ORIGINS` should list the browser origins allowed to open the
-`/ws/p2p` relay when the public frontend host differs from the API/relay host.
-If frontend and API share the same host, the same-host Origin check is enough.
-Keep `P2P_RELAY_TRUST_FORWARDED_HOST=false` unless Dokploy is behind a trusted
-reverse proxy that overwrites `X-Forwarded-Host`; otherwise that header is
-spoofable by direct clients.
 
 The chain indexer operation filter, fast-sync mode, and replay validation
 surface are documented in [`HIVE_INDEXER_CONTRACT.md`](./HIVE_INDEXER_CONTRACT.md).
@@ -150,10 +136,10 @@ The runtime container runs the strict Alfa verifier before boot:
 pnpm run verify:alfa-runtime-env
 ```
 
-That verifier expects `VITE_NETWORK_STAGE=testnet`, an `alfa-testnet-*` reset
-epoch, JSON ownership source, JSON state file, a stable P2P challenge secret,
-and the admin operator active key. Build-time verification still checks only
-public/build-safe values so secrets do not enter the Docker image layer.
+That verifier expects the baked Alfa public profile plus a stable P2P
+challenge secret. Build-time verification still checks only public/build-safe
+values so secrets do not enter the Docker image layer. The admin operator
+active key is not required to boot; add it when the Admin Panel must broadcast.
 The JSON ownership source is an Alfa adapter only; Closed Beta/mainnet NFT
 custody must move to NFTLox once the collection proof exists.
 
