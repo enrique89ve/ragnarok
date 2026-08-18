@@ -6,7 +6,7 @@
  * - BettingEngine: Poker betting/resolution
  * - MinionBattleResolver: Combat resolution
  * - CombatEventBus: Event coordination
- * - CombatDamageService: Damage application
+ * - combatHp channels: hero HP authority during poker
  * 
  * The orchestrator's only job is to answer:
  * - "What phase are we in?"

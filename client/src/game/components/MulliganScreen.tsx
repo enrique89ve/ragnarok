@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CardInstance, MulliganState } from '../types';
@@ -51,6 +51,32 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const firstButtonRef = useRef<HTMLButtonElement>(null);
   const [hoveredCard, setHoveredCard] = useState<CardInstance | null>(null);
+  const [hoveredCardAnchor, setHoveredCardAnchor] = useState<HTMLElement | null>(null);
+  const [hoveredCardRect, setHoveredCardRect] = useState<DOMRect | null>(null);
+  const handleCardHoverChange = useCallback((card: CardInstance | null, anchor?: HTMLElement) => {
+    setHoveredCard(card);
+    setHoveredCardAnchor(anchor ?? null);
+    setHoveredCardRect(anchor?.getBoundingClientRect() ?? null);
+  }, []);
+
+  // Keep the tooltip attached to the card while the viewport or scroll position changes.
+  // The card row itself remains completely outside this measurement/update path.
+  useEffect(() => {
+    if (!hoveredCardAnchor) return;
+
+    const updateAnchorRect = () => {
+      setHoveredCardRect(hoveredCardAnchor.getBoundingClientRect());
+    };
+
+    updateAnchorRect();
+    window.addEventListener('resize', updateAnchorRect);
+    window.addEventListener('scroll', updateAnchorRect, true);
+    return () => {
+      window.removeEventListener('resize', updateAnchorRect);
+      window.removeEventListener('scroll', updateAnchorRect, true);
+    };
+  }, [hoveredCardAnchor]);
+
   const disableMotion = useMemo(() => {
     const prefersReducedMotion =
       typeof window !== 'undefined' &&
@@ -59,7 +85,17 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
   }, [animationsEnabled, reduceMotionSetting]);
   const disableCardFx = disableMotion || !enhancedVFX;
 
-  // Focus the keep-all button on mount so keyboard users land on a real control.
+  const selectedCount = useMemo(
+    () => Object.values(mulligan.playerSelections).filter(Boolean).length,
+    [mulligan.playerSelections]
+  );
+  const validPlayerHand = useMemo(
+    () => playerHand.filter(card => card && card.card),
+    [playerHand]
+  );
+
+  // Focus the first available action on mount so keyboard users land on a real
+  // decision control instead of having to tab through the atmospheric layer.
   useEffect(() => {
     if (!mulligan?.active) return;
     firstButtonRef.current?.focus();
@@ -97,15 +133,6 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
   }, [mulligan?.active, skipMulliganChoice]);
 
   if (!mulligan || !mulligan.active) return null;
-
-  const selectedCount = useMemo(
-    () => Object.values(mulligan.playerSelections).filter(Boolean).length,
-    [mulligan.playerSelections]
-  );
-  const validPlayerHand = useMemo(
-    () => playerHand.filter(card => card && card.card),
-    [playerHand]
-  );
   const isWaiting = mulligan.playerReady;
   const cardRow = validPlayerHand.map((card, i) => {
     const cardNode = (
@@ -113,7 +140,7 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
         card={card}
         isSelected={!!mulligan.playerSelections[card.instanceId]}
         onClick={() => toggleMulliganCard(card.instanceId)}
-        onHoverChange={setHoveredCard}
+        onHoverChange={handleCardHoverChange}
         disableMotion={disableMotion}
         disableCardFx={disableCardFx}
       />
@@ -145,7 +172,7 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
         Mulligan
       </h2>
       <p id="mulligan-subtitle" className={SUBTITLE_CLASS}>
-        Choose cards to replace with new ones from your deck
+        Select cards to replace
       </p>
     </div>
   ) : (
@@ -166,7 +193,7 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
         animate={{ opacity: 1 }}
         transition={{ delay: 0.4, duration: 0.4 }}
       >
-        Choose cards to replace with new ones from your deck
+        Select cards to replace
       </motion.p>
     </div>
   );
@@ -232,7 +259,6 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
       <div className="flex justify-center items-center gap-8 mb-10 py-4 overflow-visible">
         {cardRow}
       </div>
-      <MulliganDetailPanel hoveredCard={hoveredCard} disableMotion />
       <MulliganActionBar
         ref={firstButtonRef}
         selectedCount={selectedCount}
@@ -253,7 +279,6 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
       <div className="flex justify-center items-center gap-8 mb-10 py-4 overflow-visible">
         {cardRow}
       </div>
-      <MulliganDetailPanel hoveredCard={hoveredCard} disableMotion={disableMotion} />
       <MulliganActionBar
         ref={firstButtonRef}
         selectedCount={selectedCount}
@@ -289,6 +314,7 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
       >
         {atmosphere}
         {panel}
+        <MulliganDetailPanel hoveredCard={hoveredCard} anchorRect={hoveredCardRect} disableMotion />
       </div>
     ) : (
       <AnimatePresence>
@@ -307,6 +333,11 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
       >
         {atmosphere}
         {panel}
+        <MulliganDetailPanel
+          hoveredCard={hoveredCard}
+          anchorRect={hoveredCardRect}
+          disableMotion={disableMotion}
+        />
       </motion.div>
       </AnimatePresence>
     )

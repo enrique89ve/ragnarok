@@ -9,6 +9,7 @@ import {
 	calculateSeasonScore,
 	createCampaignFirstClearRuneSourceKey,
 	createDailyQuestRuneSourceKey,
+	parseDailyQuestRuneSourceKey,
 	createP2PRankedMatchSourceKeyPrefix,
 	createP2PRankedRuneSourceKey,
 	createRewardClaimRuneSourceKey,
@@ -152,5 +153,16 @@ describe('rune economy', () => {
 			.toBe('daily_quest:S01:alice:2026-05-14:0');
 		expect(createDailyQuestRuneSourceKey('bob', '2026-05-14', 2))
 			.toBe('daily_quest:S01:bob:2026-05-14:2');
+	});
+
+	it('parses a daily quest source key and rejects malformed keys', () => {
+		expect(parseDailyQuestRuneSourceKey('daily_quest:S01:alice:2026-05-14:0')).toEqual({
+			seasonId: 'S01',
+			account: 'alice',
+			ymdUtc: '2026-05-14',
+			slot: 0,
+		});
+		expect(parseDailyQuestRuneSourceKey('reward:S01:alice:first_victory')).toBeNull();
+		expect(parseDailyQuestRuneSourceKey('daily_quest:S01:alice:20260514:0')).toBeNull();
 	});
 });

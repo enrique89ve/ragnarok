@@ -1,4 +1,12 @@
-const API_BASE = import.meta.env.VITE_API_URL || window.location.origin;
+function getRuneApiBase(): string {
+	if (typeof import.meta.env.VITE_API_URL === 'string' && import.meta.env.VITE_API_URL.length > 0) {
+		return import.meta.env.VITE_API_URL;
+	}
+	if (typeof window !== 'undefined' && window.location?.origin) {
+		return window.location.origin;
+	}
+	return '';
+}
 
 export type RuneDirection = 'credit' | 'debit';
 export type RuneSourceType =
@@ -231,7 +239,7 @@ function appendQuery(path: string, query: Record<string, string | number | undef
 }
 
 async function fetchRuneJSON(path: string, signal?: AbortSignal): Promise<unknown> {
-	const response = await fetch(`${API_BASE}${path}`, { signal });
+	const response = await fetch(`${getRuneApiBase()}${path}`, { signal });
 	const payload = await response.json() as unknown;
 	if (!response.ok) {
 		const error = isRecord(payload) && typeof payload.error === 'string'

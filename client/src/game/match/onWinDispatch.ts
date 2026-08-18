@@ -12,6 +12,7 @@
  *   if (ctx) selectOnWinHandler(ctx)({ iWon, turnCount });
  */
 
+import { GameEventBus } from '../../core/events/GameEventBus';
 import { onCampaignMatchEnd } from './modes/campaign/lifecycle';
 import { onP2PMatchEnd } from './modes/p2p/lifecycle';
 import { onSingleMatchEnd } from './modes/single/lifecycle';
@@ -59,7 +60,17 @@ export function selectOnWinHandler(
  * Keychain. The quest panel exposes an explicit Claim action for the wallet
  * prompt.
  *
- * Idempotent no-op; the completed-but-unclaimed state already lives in the
- * daily quest store.
+ * Emits GAME_ENDED so win_games can advance independently of blockchain
+ * packaging. Duplicate emissions for the same turn are ignored by the
+ * daily-quest subscriber.
  */
-export function markDailyQuestClaimsPendingAfterMatch(): void {}
+export function markDailyQuestClaimsPendingAfterMatch(input: {
+	iWon: boolean;
+	turnCount?: number;
+}): void {
+	GameEventBus.emitGameEnded({
+		winner: input.iWon ? 'player' : 'opponent',
+		reason: 'hero_death',
+		finalTurn: input.turnCount ?? 0,
+	});
+}

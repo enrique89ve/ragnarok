@@ -1,10 +1,28 @@
-import { emitNotification } from '../actions/gameActions';
-import type { ApplyGameCommandResult, GameCommand, GameCommandEffect } from '../core/commands';
-import type { CardInstance, GameState } from '../types';
+import { emitCardPlayed, emitHeroPowerUsed, emitNotification } from '../actions/gameActions';
+import { GAME_COMMAND_TYPES, type ApplyGameCommandResult, type GameCommand, type GameCommandEffect } from '../core/commands';
+import type { CardInstance, CardType, GameState } from '../types';
 import { debug } from '../config/debugConfig';
 import { audioEventBus } from '../audio/audioEventBus';
 import { logActivity } from './activityLogStore';
 import { useTargetingStore } from './targetingStore';
+import { absorbCardsHeroHpDelta } from '../combat/absorbCardsHeroHp';
+
+type QuestCardPlayedType = 'minion' | 'spell' | 'weapon' | 'hero' | 'secret' | 'location';
+
+function mapCardTypeForQuestEvents(cardType: CardType): QuestCardPlayedType {
+	if (cardType === 'poker_spell') return 'spell';
+	if (
+		cardType === 'minion'
+		|| cardType === 'spell'
+		|| cardType === 'weapon'
+		|| cardType === 'hero'
+		|| cardType === 'secret'
+		|| cardType === 'location'
+	) {
+		return cardType;
+	}
+	return 'secret';
+}
 
 export type GameCommandStorePatch = {
 	readonly gameState?: GameState;
@@ -44,7 +62,9 @@ export function applyGameCommandToStore({
 }: ApplyGameCommandToStoreContext): void {
 	if (result.status === 'applied') {
 		setState({ gameState: result.state });
+		absorbCardsHeroHpDelta(beforeState, result.state);
 		applyGameCommandEffects(result.effects, setState);
+		emitAppliedCommandProgress(command, beforeState);
 		return;
 	}
 
@@ -101,7 +121,27 @@ function applyGameCommandEffect(
 	}
 }
 
+function emitAppliedCommandProgress(command: GameCommand, beforeState: GameState): void {
+	if (command.type !== GAME_COMMAND_TYPES.useHeroPower) return;
+	emitHeroPowerUsed({
+		player: 'player',
+		heroPowerName: beforeState.players.player.heroPower?.name ?? 'Hero Power',
+		targetId: command.targetId,
+		cost: beforeState.players.player.heroPower?.cost ?? 0,
+	});
+}
+
 function applyCardPlayedEffect(effect: Extract<GameCommandEffect, { readonly type: 'card_played' }>): void {
+	emitCardPlayed({
+		player: 'player',
+		cardId: String(effect.cardId ?? ''),
+		instanceId: effect.instanceId,
+		cardName: effect.cardName,
+		cardType: mapCardTypeForQuestEvents(effect.cardType),
+		manaCost: 0,
+		rarity: effect.rarity,
+	});
+
 	if (effect.causedDiscovery) {
 		audioEventBus.emit('discover');
 	} else if (effect.rarity === 'mythic') {

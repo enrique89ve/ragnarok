@@ -49,15 +49,13 @@
    motion.div needs a non-Tailwind sizing source the reach-into above can
    target. Keep co-located with the override.
 
-   padding-bottom + bottom-aligned frame visually contains the attack/health
-   stat emblems that SimpleCard positions at `bottom: -16px` (intentional
-   CCG overhang). Without this, the emblems escape the card silhouette and
-   appear to float into the detail panel below. */
+   The current CardFrame surface keeps attack/health sockets inside the frame,
+   so this wrapper must not reserve a second, invisible lower rail. */
 .mulligan-card-wrapper {
   position: relative;
   cursor: pointer;
   width: 200px;
-  padding-bottom: var(--space-28);
+  padding-bottom: 0;
 }
 
 /* Lightweight card mode: remove heavy visual effects and extra repaints during

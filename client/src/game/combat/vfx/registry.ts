@@ -24,6 +24,7 @@ export const VISUAL_EVENT_TYPES: readonly VisualEventType[] = [
 	'handImproved',
 	'spellCast',
 	'wagerActivated',
+	'combatImpact',
 ];
 
 const REGISTRY_EMITTER_PRIORITY = 100;

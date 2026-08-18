@@ -119,15 +119,26 @@ export function CollectionCardRenderer({
           <CardManaGem cost={card.manaCost} />
         </div>
       ) : fields?.showMana !== false ? (
-        <div className="card-frame__type-icon" title={card.type}>
+        <div
+          className="card-frame__type-icon"
+          title={dataCardSurface === "mulligan" ? undefined : card.type}
+        >
           <GameIcon name={getTypeIcon(card.type)} size={16} />
         </div>
       ) : null}
       {fields?.showCount !== false && <CardCountBadge count={card.quantity} />}
       {adapter.hasCombatStats && (
         <>
-          <CollectionCardStatBadge kind="attack" stat={adapter.attackValue!} />
-          <CollectionCardStatBadge kind="health" stat={adapter.healthValue!} />
+          <CollectionCardStatBadge
+            kind="attack"
+            stat={adapter.attackValue!}
+            showNativeTitle={dataCardSurface !== "mulligan"}
+          />
+          <CollectionCardStatBadge
+            kind="health"
+            stat={adapter.healthValue!}
+            showNativeTitle={dataCardSurface !== "mulligan"}
+          />
         </>
       )}
       {fields?.showRarity !== false && <CardRarityMark />}
@@ -170,9 +181,11 @@ export function CollectionCardRenderer({
 function CollectionCardStatBadge({
   kind,
   stat,
+  showNativeTitle,
 }: {
   readonly kind: "attack" | "health";
   readonly stat: { readonly value: number | string; readonly tone?: string };
+  readonly showNativeTitle: boolean;
 }) {
   const iconName: IconName = kind === "attack" ? "swords" : "heart";
   const label = kind === "attack" ? "ATK" : "HP";
@@ -183,7 +196,7 @@ function CollectionCardStatBadge({
     <div
       className={`collection-card-frame__stat-badge collection-card-frame__stat-badge--${kind} collection-card-frame__stat-badge--${tone}`}
       aria-label={`${label} ${stat.value}`}
-      title={`${label} ${stat.value}`}
+      title={showNativeTitle ? `${label} ${stat.value}` : undefined}
     >
       <span className="collection-card-frame__stat-icon" aria-hidden="true">
         <GameIcon name={iconName} size={12} strokeWidth={2.6} />

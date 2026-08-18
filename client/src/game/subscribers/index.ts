@@ -9,3 +9,4 @@ export { initializeNotificationSubscriber } from './NotificationSubscriber';
 export { initializeAnimationSubscriber, getAnimationSubscriber } from './AnimationSubscriber';
 export { initializeBlockchainSubscriber } from './BlockchainSubscriber';
 export { initializeStarterReputationSubscriber } from './StarterReputationSubscriber';
+export { initializeDailyQuestSubscriber } from './DailyQuestSubscriber';

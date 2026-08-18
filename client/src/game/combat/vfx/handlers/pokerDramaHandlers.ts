@@ -27,6 +27,7 @@ import {
 } from '../../animations/PokerDramaVFX';
 import { CombatAction, CombatPhase, HAND_RANK_NAMES, PokerHandRank } from '../../../types/PokerCombatTypes';
 import { registerVisualEffect, type EffectHandle, type VisualEffectUnregister } from '../registry';
+import { registerCombatImpactVisualEffect } from './combatImpactHandler';
 import {
 	emitStreakAnnounced,
 	type BettingActionEvent,
@@ -203,6 +204,7 @@ export function registerPokerDramaVisualEffects(): VisualEffectUnregister {
 		registerVisualEffect('streakAnnounced', handleStreakAnnounced),
 		registerVisualEffect('phaseEntered', handlePhaseEntered),
 		registerVisualEffect('handImproved', handleHandImproved),
+		registerCombatImpactVisualEffect(),
 	];
 	return () => {
 		for (const unregister of unregisterFns) {

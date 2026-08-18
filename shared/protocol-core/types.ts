@@ -33,6 +33,7 @@ export {
 	calculateSeasonScore,
 	createCampaignFirstClearRuneSourceKey,
 	createDailyQuestRuneSourceKey,
+	parseDailyQuestRuneSourceKey,
 	createP2PRankedMatchSourceKey,
 	createP2PRankedMatchSourceKeyPrefix,
 	createP2PRankedRuneSourceKey,

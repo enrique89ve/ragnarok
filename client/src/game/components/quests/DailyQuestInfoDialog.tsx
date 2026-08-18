@@ -78,7 +78,7 @@ export default function DailyQuestInfoDialog({ onClose }: DailyQuestInfoDialogPr
 						<InfoRow
 							icon={<Clock size={14} strokeWidth={2.2} aria-hidden />}
 							title="When they reset"
-							body="New quests arrive at midnight UTC. If a completed quest is still pending, the panel keeps it visible so you can retry the claim."
+							body="New quests arrive at midnight UTC. A completed but unclaimed slot expires with the day — claims belong to the Hive UTC day of inclusion."
 						/>
 						<InfoRow
 							icon={<RotateCcw size={14} strokeWidth={2.2} aria-hidden />}

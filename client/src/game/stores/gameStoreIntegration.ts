@@ -20,6 +20,7 @@ import { initializeNotificationSubscriber } from '@/game/subscribers/Notificatio
 import { initializeAnimationSubscriber } from '@/game/subscribers/AnimationSubscriber';
 import { initializeDailyQuestSubscriber } from '@/game/subscribers/DailyQuestSubscriber';
 import { initializeStarterReputationSubscriber } from '@/game/subscribers/StarterReputationSubscriber';
+import { subscribePokerHeroHpProjection } from '@/game/combat/subscribePokerHeroHpProjection';
 import { isBlockchainPackagingEnabled } from '../config/featureFlags';
 import { debug } from '../config/debugConfig';
 import { getNFTBridge } from '../nft';
@@ -49,6 +50,7 @@ export function initializeGameStoreIntegration(): () => void {
   cleanupFunctions.push(initializeAnimationSubscriber());
   cleanupFunctions.push(initializeDailyQuestSubscriber());
   cleanupFunctions.push(initializeStarterReputationSubscriber());
+  cleanupFunctions.push(subscribePokerHeroHpProjection());
 
   if (getNFTBridge().isHiveMode()) {
     const bridge = getNFTBridge();

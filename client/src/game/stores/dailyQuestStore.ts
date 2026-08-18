@@ -7,6 +7,8 @@ import { accountScopedStorage, registerAccountScopedStore } from '../../lib/stor
 import { pickRandomQuests, type DailyQuestType, type QuestTemplate } from '../data/dailyQuestPool';
 import { getNFTBridge } from '../nft';
 import { debug } from '../config/debugConfig';
+import { fetchRuneLedger } from '../../data/runeAPI';
+import { claimedSlotsFromLedger } from './dailyQuestLedger';
 import {
 	assertClientWalletInvocation,
 	type ClientWalletInvocation,
@@ -127,6 +129,46 @@ function buildClaimFeedback(input: Omit<DailyQuestClaimFeedback, 'updatedAt'>): 
 	};
 }
 
+function markQuestsClaimedFromSlots(
+	quests: DailyQuest[],
+	claimedSlots: ReadonlySet<number>,
+	ymdUtc: string,
+): DailyQuest[] {
+	if (claimedSlots.size === 0) return quests;
+	return quests.map(quest => {
+		if (quest.ymdUtc !== ymdUtc || !claimedSlots.has(quest.slot)) return quest;
+		return {
+			...quest,
+			claimed: true,
+			completed: true,
+			progress: Math.max(quest.progress, quest.goal),
+		};
+	});
+}
+
+async function syncClaimedSlotsFromChain(ymdUtc: string): Promise<void> {
+	const bridge = getNFTBridge();
+	if (!bridge.isHiveMode()) return;
+	const account = bridge.getUsername();
+	if (!account) return;
+
+	try {
+		const ledger = await fetchRuneLedger({
+			account,
+			sourceType: 'daily_quest_claim',
+			limit: 50,
+		});
+		const claimed = claimedSlotsFromLedger(ledger.entries, account, ymdUtc);
+		if (claimed.slots.size === 0) return;
+		useDailyQuestStore.setState(state => ({
+			quests: markQuestsClaimedFromSlots(state.quests, claimed.slots, ymdUtc),
+			claimHistory: { ...state.claimHistory, ...claimed.history },
+		}));
+	} catch (err) {
+		debug.warn('[DailyQuest] Ledger sync failed:', err);
+	}
+}
+
 export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 	persist(
 		(set, get) => ({
@@ -157,6 +199,7 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 							})),
 						}));
 					}
+					await syncClaimedSlotsFromChain(today);
 					return;
 				}
 
@@ -169,6 +212,7 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 				);
 				const quests = templates.map((t, i) => templateToQuest(t, i, today, current.clientSalt));
 				set({ quests, lastRefreshDate: today, rerollsUsedToday: 0 });
+				await syncClaimedSlotsFromChain(today);
 			},
 
 			updateProgress: (type, increment) => {

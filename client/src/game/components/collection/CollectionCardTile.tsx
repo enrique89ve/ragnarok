@@ -34,6 +34,8 @@ export type CollectionTileStats = {
   readonly health?: CollectionTileStatValue;
 };
 
+export type CollectionTileSemanticMode = "content" | "presentation";
+
 export type CollectionTileRenderedFields = {
   readonly tribe?: string;
   readonly keywords?: readonly string[];
@@ -68,6 +70,7 @@ interface CollectionCardTileProps {
   onMouseLeave?: (event: MouseEvent<HTMLDivElement>) => void;
   shellClassName?: string;
   shellStyle?: CSSProperties;
+  semanticMode?: CollectionTileSemanticMode;
   stats?: CollectionTileStats;
   statsMode?: CardStatsMode;
 }
@@ -105,9 +108,17 @@ export function CollectionCardTile({
   onMouseLeave,
   shellClassName,
   shellStyle,
+  semanticMode = "content",
   stats,
   statsMode = "frame",
 }: CollectionCardTileProps) {
+  // Collection tiles can enter with a small reveal. Gameplay cards must be
+  // painted at their authored slot immediately: this component is also used
+  // by the hand, battlefield, and poker surfaces, where an entry transform
+  // changes the board geometry during a chess -> poker handoff.
+  const cardSurface = dataCardSurface ?? "collection";
+  const animateEntry = cardSurface === "collection";
+  const presentationOnly = semanticMode === "presentation";
   const sourceLabel = getCollectionSourceLabel(card);
   const renderAdapter = resolveCollectionCardRenderAdapter({
     card,
@@ -122,7 +133,7 @@ export function CollectionCardTile({
   const frameTitle = [card.name, card.rarity, sourceLabel, statsLabel]
     .filter(Boolean)
     .join(" · ");
-  const interactive = onClick !== undefined;
+  const interactive = !presentationOnly && onClick !== undefined;
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!interactive || (event.key !== "Enter" && event.key !== " ")) return;
     event.preventDefault();
@@ -131,29 +142,31 @@ export function CollectionCardTile({
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
+      initial={animateEntry ? { opacity: 0, scale: 0.9 } : false}
+      animate={animateEntry ? { opacity: 1, scale: 1 } : undefined}
       whileHover={interactive ? { y: -3 } : undefined}
       whileFocus={interactive ? { y: -3 } : undefined}
       transition={{ duration: 0.18, ease: "easeOut" }}
-      onClick={onClick}
+      onClick={interactive ? onClick : undefined}
       onKeyDown={interactive ? handleKeyDown : undefined}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      role={interactive ? "button" : "img"}
+      role={presentationOnly ? undefined : interactive ? "button" : "img"}
       tabIndex={interactive ? 0 : undefined}
       className={[
         "norse-card-shell",
         `norse-card-shell--rarity-${card.rarity}`,
         "collection-card-shell",
         `collection-card-shell--rarity-${card.rarity}`,
+        `collection-card-shell--surface-${cardSurface}`,
         `collection-card-shell--profile-${renderAdapter.frameProfile.id}`,
         `collection-card-shell--contract-${renderAdapter.contract}`,
         shellClassName,
       ].filter(Boolean).join(" ")}
       style={{ width: "100%", ...shellStyle }}
-      title={frameTitle}
-      aria-label={frameTitle}
+      title={presentationOnly ? undefined : frameTitle}
+      aria-label={presentationOnly ? undefined : frameTitle}
+      aria-hidden={presentationOnly ? true : undefined}
     >
       <CollectionCardRenderer
         adapter={renderAdapter}

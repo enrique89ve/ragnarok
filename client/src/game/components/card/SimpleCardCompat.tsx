@@ -25,6 +25,7 @@ import {
 	CollectionCardTile,
 	type CollectionTileCard,
 	type CollectionTileRenderedFields,
+	type CollectionTileSemanticMode,
 	type CollectionTileStats,
 	type CollectionTileStatTone,
 } from '../collection/CollectionCardTile';
@@ -127,6 +128,7 @@ interface SimpleCardCompatProps {
 	surface?: CardFrameLayoutSurface;
 	owned?: boolean;
 	disableTooltips?: boolean;
+	semanticMode?: CollectionTileSemanticMode;
 }
 
 const toneToTile = (tone: SimpleCardStatTone | undefined): CollectionTileStatTone => {
@@ -177,6 +179,7 @@ export const SimpleCardCompat: React.FC<SimpleCardCompatProps> = ({
 	surface,
 	owned = true,
 	disableTooltips = false,
+	semanticMode = 'content',
 }) => {
 	const isMinion = card.type === 'minion';
 	const isWeapon = card.type === 'weapon';
@@ -251,6 +254,7 @@ export const SimpleCardCompat: React.FC<SimpleCardCompatProps> = ({
 			}}
 			isPlayable={isPlayable}
 			isHighlighted={isHighlighted}
+			semanticMode={semanticMode}
 			onClick={onClick}
 			onMouseEnter={onMouseEnter}
 			onMouseLeave={onMouseLeave}

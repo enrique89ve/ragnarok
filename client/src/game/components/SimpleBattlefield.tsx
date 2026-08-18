@@ -37,6 +37,8 @@ interface SimpleBattlefieldProps {
   showPositionPicker?: boolean;
   onPositionSelect?: (insertionIndex: number) => void;
   targetingMode?: 'friendly' | 'enemy' | 'any' | null;
+  /** Render context. Poker cards keep their authored slot on mount. */
+  renderSurface?: 'chess' | 'poker';
 }
 
 const MAX_SLOTS = MAX_BATTLEFIELD_SIZE;
@@ -89,10 +91,12 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
   isInteractionDisabled = false,
   showPositionPicker = false,
   onPositionSelect,
-  targetingMode = null
+  targetingMode = null,
+  renderSurface = 'chess',
 }) => {
   const showOpponent = renderMode === 'both' || renderMode === 'opponent';
   const showPlayer = renderMode === 'both' || renderMode === 'player';
+  const animateCardEntry = renderSurface !== 'poker';
 
   const opponentHasTaunt = useMemo(
     () => opponentCards.some(c => hasKeyword(c, 'taunt')),
@@ -192,8 +196,8 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
                 aria-label={`${card.card?.name || 'Minion'}, ${(card.card as any)?.attack ?? 0} attack, ${card.health ?? (card.card as any)?.health ?? 0} health${cardHasTaunt ? ', taunt' : ''}${canAttack ? ', ready to attack' : ''}`}
                 tabIndex={0}
                 onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); (e.currentTarget as HTMLElement).click(); } }}
-                initial={{ opacity: 0, scale: 0.15, y: side === 'player' ? 80 : -80 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
+                initial={animateCardEntry ? { opacity: 0, scale: 0.15, y: side === 'player' ? 80 : -80 } : false}
+                animate={animateCardEntry ? { opacity: 1, scale: 1, y: 0 } : undefined}
                 exit={{
                   opacity: 0,
                   scale: 0.05,
@@ -336,7 +340,11 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
   const targetClass = targetingMode === 'friendly' ? 'targeting-friendly' : targetingMode === 'enemy' ? 'targeting-enemy' : targetingMode === 'any' ? 'targeting-any' : '';
 
   return (
-    <div className={`simple-battlefield ${targetClass}`} data-max-slots={MAX_SLOTS}>
+    <div
+      className={`simple-battlefield ${targetClass}`}
+      data-max-slots={MAX_SLOTS}
+      data-render-surface={renderSurface}
+    >
       {showOpponent && (
         <div
           className="bf-row opponent-row"

@@ -82,6 +82,12 @@
 .bf-slot.occupied:nth-child(3) { animation-delay: -1.4s; }
 .bf-slot.occupied:nth-child(4) { animation-delay: -2.1s; }
 
+/* Poker owns fixed 1920x1080 zone coordinates. Do not let the generic
+   battlefield idle motion move those cards after the chess handoff. */
+.simple-battlefield[data-render-surface='poker'] .bf-slot.occupied {
+  animation: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bf-slot.occupied { animation: none; }
 }

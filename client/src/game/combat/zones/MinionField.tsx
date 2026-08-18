@@ -55,6 +55,7 @@ export const MinionField: React.FC<MinionFieldProps> = ({
 				isPlayerTurn={isPlayerTurn}
 				registerCardPosition={registerCardPosition}
 				renderMode={role === 'opp' ? 'opponent' : 'player'}
+				renderSurface="poker"
 				shakingTargets={shakingTargets as Set<string>}
 				isInteractionDisabled={isInteractionDisabled}
 			/>

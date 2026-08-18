@@ -285,6 +285,24 @@ export function createDailyQuestRuneSourceKey(
 	return `daily_quest:${seasonId}:${account}:${ymdUtc}:${slot}`;
 }
 
+const DAILY_QUEST_SOURCE_KEY_RE = /^daily_quest:([^:]+):([^:]+):(\d{4}-\d{2}-\d{2}):(\d+)$/;
+
+export function parseDailyQuestRuneSourceKey(sourceKey: string): {
+	seasonId: string;
+	account: string;
+	ymdUtc: string;
+	slot: number;
+} | null {
+	const match = DAILY_QUEST_SOURCE_KEY_RE.exec(sourceKey);
+	if (!match) return null;
+	return {
+		seasonId: match[1],
+		account: match[2],
+		ymdUtc: match[3],
+		slot: Number(match[4]),
+	};
+}
+
 export function getCampaignFirstClearRuneReward(
 	missionId: string,
 	economy = TESTNET_RUNE_ECONOMY,

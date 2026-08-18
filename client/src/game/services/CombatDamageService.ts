@@ -1,16 +1,9 @@
 /**
- * CombatDamageService - Centralized damage resolution system
- * 
- * This service is the SINGLE SOURCE OF TRUTH for all damage in the game.
- * All attack paths (manual, auto, AI, spells) must go through this service.
- * 
- * Benefits:
- * - Guaranteed synchronization between card game HP and poker combat HP
- * - Consistent animation timing (600ms impact point)
- * - Proper failure handling with user-friendly messages
- * - Extensible for future features (shields, damage reduction, etc.)
- * 
- * Architecture: Command pattern with event-driven notifications
+ * CombatDamageService — leftover animation/command helper.
+ *
+ * Not HP authority. Combat hero HP is `combatHp.ts` (poker account) and
+ * the phase-boundary state root. This file must not grow a second ledger
+ * or write `heroHealth` / `pet.stats.currentHealth`.
  */
 
 import { CombatEventBus, BlockReason, DamageSource } from './CombatEventBus';

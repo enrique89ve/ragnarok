@@ -688,7 +688,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
           if (ctx && !isDraw) {
             selectOnWinHandler(ctx)({ iWon, turnCount });
           }
-          markDailyQuestClaimsPendingAfterMatch();
+          markDailyQuestClaimsPendingAfterMatch({ iWon, turnCount });
           const initialSub = isDraw
             ? 'result'
             : getInitialGameOverSubPhase({
@@ -749,7 +749,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
           if (ctx) {
             selectOnWinHandler(ctx)({ iWon, turnCount });
           }
-          markDailyQuestClaimsPendingAfterMatch();
+          markDailyQuestClaimsPendingAfterMatch({ iWon, turnCount });
           const initialSub = getInitialGameOverSubPhase({
             iWon,
             isCampaign,

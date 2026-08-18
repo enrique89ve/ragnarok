@@ -29,6 +29,7 @@ function canonicalPlayer(player: PlayerCombatState) {
 			petClass: player.pet.petClass,
 			stats: {
 				maxHealth: player.pet.stats.maxHealth,
+				// CombatHpAccount.current — hashed here; do not add a second HP root.
 				currentHealth: player.pet.stats.currentHealth,
 				maxStamina: player.pet.stats.maxStamina,
 				currentStamina: player.pet.stats.currentStamina,

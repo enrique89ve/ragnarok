@@ -38,6 +38,10 @@ const CardDescription: React.FC<CardDescriptionProps> = ({
 		limit: keywordLimit,
 		labelMode: keywordLabelMode,
 	});
+	// Mulligan has one deliberate help surface: the anchored detail panel.
+	// Native titles here would compete with it and expose a second copy of the
+	// same explanation at an unpredictable browser-controlled position.
+	const ownsContextualHelp = surface === 'pregame';
 	const hasKeywords = presentation.totalCount > 0;
 	if (!hasKeywords && !description) return null;
 	const stackVariant = description && hasKeywords
@@ -64,8 +68,8 @@ const CardDescription: React.FC<CardDescriptionProps> = ({
 								data-tone={entry.tone}
 								data-keyword-importance={entry.importance}
 								style={{ '--keyword-tone': entry.accent } as KeywordChipStyle}
-								aria-label={entry.label}
-								title={`${entry.label}: ${entry.description}`}
+								aria-label={ownsContextualHelp ? undefined : entry.label}
+								title={ownsContextualHelp ? undefined : `${entry.label}: ${entry.description}`}
 							>
 								{Icon && (
 									<span className="card-frame__keyword-icon-mark" aria-hidden="true">
@@ -80,7 +84,7 @@ const CardDescription: React.FC<CardDescriptionProps> = ({
 						<span
 							className="card-frame__keyword-chip card-frame__keyword-chip--overflow"
 							data-keyword-summary={presentation.hiddenSummary}
-							title={presentation.hiddenSummary}
+							title={ownsContextualHelp ? undefined : presentation.hiddenSummary}
 						>
 							+{presentation.hiddenCount}
 						</span>
@@ -92,7 +96,7 @@ const CardDescription: React.FC<CardDescriptionProps> = ({
 					<p
 						className="card-frame__description-text"
 						data-layout-allow-truncate="card-description-preview"
-						title={description}
+						title={ownsContextualHelp ? undefined : description}
 					>
 						{description}
 					</p>

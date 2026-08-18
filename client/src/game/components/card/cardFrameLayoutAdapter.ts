@@ -48,17 +48,18 @@ export const resolveSimpleCardFrameLayoutAdapter = (
 	const surface = resolveSurface(input);
 	const battlefieldSurface = surface === 'battlefield';
 	const compactSurface = surface === 'battlefield' || surface === 'compact';
-	const collectionSurface = surface === 'collection' || surface === 'mulligan';
+	const collectionSurface = surface === 'collection';
+	const pregameSurface = surface === 'mulligan';
 	const useGameplayFrame = surface === 'gameplay' || surface === 'battlefield' || surface === 'compact';
 
 	return {
 		surface,
-		showDescriptionText: input.showDescription && !battlefieldSurface && !compactSurface && !collectionSurface,
-		showTribeLine: !compactSurface && !collectionSurface,
+		showDescriptionText: input.showDescription && !battlefieldSurface && !compactSurface && !collectionSurface && !pregameSurface,
+		showTribeLine: !compactSurface && !collectionSurface && !pregameSurface,
 		showName: !battlefieldSurface && !compactSurface,
 		showKeywords: !collectionSurface,
-		keywordLimit: compactSurface || surface === 'gameplay' ? 2 : null,
-		keywordLabelMode: compactSurface ? 'compact' : 'full',
+		keywordLimit: compactSurface || surface === 'gameplay' || pregameSurface ? 2 : null,
+		keywordLabelMode: compactSurface || pregameSurface ? 'compact' : 'full',
 		frameRender: 'png',
 		frameAsset: frameAssetForCardType(input.cardType, useGameplayFrame),
 	};

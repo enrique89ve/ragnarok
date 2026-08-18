@@ -48,6 +48,7 @@ import { validatePokerActionIntent } from '../rules/pokerActionRules';
 import { getPokerTurnProcessMode } from '../decision/pokerTurnPolicy';
 import { getPokerActionPresentation } from '../decision/pokerActionPresentation';
 import { emitBettingAction } from '../vfx/events';
+import { emitHeroPowerUsed } from '../../actions/gameActions';
 
 /**
  * Hero power targeting state structure
@@ -371,6 +372,11 @@ export function useRagnarokCombatController(
       ? (isOpponentHeroTarget ? ' on enemy hero' : ' on your hero')
       : (targetMinion?.card?.name ? ` on ${targetMinion.card.name}` : '');
     fireAnnouncement('spell', `${norseHero.name} uses ${heroPower.name}${targetName}!`, { duration: 2000 });
+    emitHeroPowerUsed({
+      player: 'player',
+      heroPowerName: typeof heroPower?.name === 'string' ? heroPower.name : 'Hero Power',
+      cost: typeof heroPower?.cost === 'number' ? heroPower.cost : 0,
+    });
     
     setHeroPowerUsedThisTurn(true);
     setHeroPowerTargeting(null);

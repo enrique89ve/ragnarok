@@ -38,6 +38,17 @@ import {
 } from './types';
 import { getElementAdvantage } from '../../utils/elements';
 import { getCachedHandEvaluation, clearHandCache } from '../../utils/poker/handCache';
+import {
+  applyPokerHpDelta,
+  applyPokerHpDeltaOnSlot,
+  commitPokerHp,
+  growPokerHpMax,
+  pokerHpChannelId,
+  settlePokerHp,
+  settleResolvedPokerHp,
+  uncommitPokerHp,
+} from '../../combat/pokerCombatHp';
+import { notifyOpponentHpDebit } from '../../combat/notifyCombatHp';
 import { compareHands } from '../../combat/modules/HandEvaluator';
 import { debug } from '../../config/debugConfig';
 import { applyStaminaShield, getExtraFoldPenalty } from '../../utils/poker/pokerSpellUtils';
@@ -520,20 +531,17 @@ export const createPokerCombatSlice: StateCreator<
     }
     
     const { damage, target } = state.pokerCombatState.firstStrike;
-    const targetState = target === 'player' ? state.pokerCombatState.player : state.pokerCombatState.opponent;
-    
-    const newHealth = Math.max(1, targetState.pet.stats.currentHealth - damage);
-    
+    const struck = applyPokerHpDeltaOnSlot(state.pokerCombatState, target, -damage);
+    const struckState = struck?.state ?? state.pokerCombatState;
+    const targetAfter = target === 'player' ? struckState.player : struckState.opponent;
+    const floorHealth = Math.max(1, targetAfter.pet.stats.currentHealth);
+    const floored = settlePokerHp(struckState, pokerHpChannelId(struckState, target), floorHealth);
+    const flooredState = floored?.state ?? struckState;
+    if (struck) notifyOpponentHpDebit(state.pokerCombatState, struck, 'first-strike');
+
     const updatedTargetState = {
-      ...targetState,
-      pet: {
-        ...targetState.pet,
-        stats: {
-          ...targetState.pet.stats,
-          currentHealth: newHealth
-        }
-      },
-      preBlindHealth: newHealth
+      ...(target === 'player' ? flooredState.player : flooredState.opponent),
+      preBlindHealth: floorHealth
     };
     
     const nextPhase = state.mulliganComplete ? PokerCombatPhase.SPELL_PET : PokerCombatPhase.MULLIGAN;
@@ -654,34 +662,55 @@ export const createPokerCombatSlice: StateCreator<
       return;
     }
 
-    const newState = { ...state.pokerCombatState };
+    let newState = { ...state.pokerCombatState };
     const permissions = validation.permissions;
     const actionHpCommitment = validation.hpCommitment ?? 0;
+    const otherPlayerId = playerId === newState.player.playerId
+      ? newState.opponent.playerId
+      : newState.player.playerId;
 
-    const isPlayer = playerId === newState.player.playerId;
-    const playerState = isPlayer ? newState.player : newState.opponent;
+    if (newState.player.playerId === newState.opponent.playerId) {
+      debug.combat('[performPokerAction] REJECTED: HP channels collided');
+      return;
+    }
 
-    playerState.currentAction = action;
+    const markAction = (combat: typeof newState): typeof newState => ({
+      ...combat,
+      player: combat.player.playerId === playerId
+        ? { ...combat.player, currentAction: action }
+        : combat.player,
+      opponent: combat.opponent.playerId === playerId
+        ? { ...combat.opponent, currentAction: action }
+        : combat.opponent,
+    });
+    newState = markAction(newState);
+
+    const actingAfter = (combat: typeof newState) => (
+      combat.player.playerId === playerId ? combat.player : combat.opponent
+    );
     
     switch (action) {
       case CombatAction.ATTACK:
         if (actionHpCommitment > 0) {
-          const actualBet = actionHpCommitment;
-          playerState.hpCommitted += actualBet;
-          playerState.pet.stats.currentHealth = Math.max(0, playerState.pet.stats.currentHealth - actualBet);
-          newState.pot += actualBet;
-          newState.currentBet = Math.max(newState.currentBet, playerState.hpCommitted);
+          const committed = commitPokerHp(newState, playerId, actionHpCommitment);
+          if (!committed) return;
+          newState = committed.state;
+          newState.pot += -committed.transition.applied;
+          newState.currentBet = Math.max(newState.currentBet, committed.transition.after.committed);
           newState.preflopBetMade = true;
-          // Deduct STA for betting (1 STA per 10 HP committed)
-          const betStaCost = Math.ceil(actualBet / 10);
+          const betStaCost = Math.ceil(actionHpCommitment / 10);
           if (betStaCost > 0) {
-            playerState.pet.stats.currentStamina = Math.max(0, playerState.pet.stats.currentStamina - betStaCost);
-            debug.combat(`[STA] ${isPlayer ? 'Player' : 'Opponent'} bet ${actualBet} HP: -${betStaCost} STA (now ${playerState.pet.stats.currentStamina}/${playerState.pet.stats.maxStamina})`);
+            const actor = actingAfter(newState);
+            const nextStamina = Math.max(0, actor.pet.stats.currentStamina - betStaCost);
+            newState = actor.playerId === newState.player.playerId
+              ? { ...newState, player: { ...actor, pet: { ...actor.pet, stats: { ...actor.pet.stats, currentStamina: nextStamina } } } }
+              : { ...newState, opponent: { ...actor, pet: { ...actor.pet, stats: { ...actor.pet.stats, currentStamina: nextStamina } } } };
+            debug.combat(`[STA] ${playerId} bet ${actionHpCommitment} HP: -${betStaCost} STA`);
           }
           if (!newState.blindsPosted) {
             newState.blindsPosted = true;
           }
-          if (playerState.pet.stats.currentHealth === 0) {
+          if (actingAfter(newState).pet.stats.currentHealth === 0) {
             newState.isAllInShowdown = true;
           }
         }
@@ -689,25 +718,26 @@ export const createPokerCombatSlice: StateCreator<
 
       case CombatAction.COUNTER_ATTACK:
         {
-          const callAmount = permissions.toCall;
-          const raiseAmount = actionHpCommitment;
-          const totalNeeded = callAmount + raiseAmount;
-          const actualTotal = totalNeeded;
-          playerState.hpCommitted += actualTotal;
-          playerState.pet.stats.currentHealth = Math.max(0, playerState.pet.stats.currentHealth - actualTotal);
-          newState.pot += actualTotal;
-          newState.currentBet = Math.max(newState.currentBet, playerState.hpCommitted);
+          const actualTotal = permissions.toCall + actionHpCommitment;
+          const committed = commitPokerHp(newState, playerId, actualTotal);
+          if (!committed) return;
+          newState = committed.state;
+          newState.pot += -committed.transition.applied;
+          newState.currentBet = Math.max(newState.currentBet, committed.transition.after.committed);
           newState.preflopBetMade = true;
-          // Deduct STA for raising (1 STA per 10 HP committed)
           const raiseStaCost = Math.ceil(actualTotal / 10);
           if (raiseStaCost > 0) {
-            playerState.pet.stats.currentStamina = Math.max(0, playerState.pet.stats.currentStamina - raiseStaCost);
-            debug.combat(`[STA] ${isPlayer ? 'Player' : 'Opponent'} raised ${actualTotal} HP: -${raiseStaCost} STA (now ${playerState.pet.stats.currentStamina}/${playerState.pet.stats.maxStamina})`);
+            const actor = actingAfter(newState);
+            const nextStamina = Math.max(0, actor.pet.stats.currentStamina - raiseStaCost);
+            newState = actor.playerId === newState.player.playerId
+              ? { ...newState, player: { ...actor, pet: { ...actor.pet, stats: { ...actor.pet.stats, currentStamina: nextStamina } } } }
+              : { ...newState, opponent: { ...actor, pet: { ...actor.pet, stats: { ...actor.pet.stats, currentStamina: nextStamina } } } };
+            debug.combat(`[STA] ${playerId} raised ${actualTotal} HP: -${raiseStaCost} STA`);
           }
           if (!newState.blindsPosted) {
             newState.blindsPosted = true;
           }
-          if (playerState.pet.stats.currentHealth === 0) {
+          if (actingAfter(newState).pet.stats.currentHealth === 0) {
             newState.isAllInShowdown = true;
           }
         }
@@ -716,23 +746,26 @@ export const createPokerCombatSlice: StateCreator<
       case CombatAction.ENGAGE:
         const toMatch = Math.min(permissions.toCall, permissions.availableHP);
         if (toMatch > 0) {
-          playerState.hpCommitted += toMatch;
-          playerState.pet.stats.currentHealth = Math.max(0, playerState.pet.stats.currentHealth - toMatch);
-          newState.pot += toMatch;
+          const committed = commitPokerHp(newState, playerId, toMatch);
+          if (!committed) return;
+          newState = committed.state;
+          newState.pot += -committed.transition.applied;
         }
-        if (playerState.hpCommitted < newState.currentBet) {
-          const otherPlayer = isPlayer ? newState.opponent : newState.player;
-          const excess = otherPlayer.hpCommitted - playerState.hpCommitted;
+        if (actingAfter(newState).hpCommitted < newState.currentBet) {
+          const excess = (playerId === newState.player.playerId
+            ? newState.opponent.hpCommitted
+            : newState.player.hpCommitted) - actingAfter(newState).hpCommitted;
           if (excess > 0) {
-            otherPlayer.hpCommitted -= excess;
-            otherPlayer.pet.stats.currentHealth += excess;
-            newState.pot -= excess;
-            newState.currentBet = playerState.hpCommitted;
+            const refunded = uncommitPokerHp(newState, otherPlayerId, excess);
+            if (refunded) {
+              newState = refunded.state;
+              newState.pot -= refunded.transition.applied;
+              newState.currentBet = actingAfter(newState).hpCommitted;
+            }
           }
           newState.isAllInShowdown = true;
         }
-        if (playerState.pet.stats.currentHealth === 0 || 
-            (isPlayer ? newState.opponent : newState.player).pet.stats.currentHealth === 0) {
+        if (newState.player.pet.stats.currentHealth === 0 || newState.opponent.pet.stats.currentHealth === 0) {
           newState.isAllInShowdown = true;
         }
         if (!newState.blindsPosted) {
@@ -749,16 +782,18 @@ export const createPokerCombatSlice: StateCreator<
         if (!newState.blindsPosted) {
           const sbBlind = newState.blindConfig?.smallBlind || BLINDS.SB;
           const bbBlind = newState.blindConfig?.bigBlind || BLINDS.BB;
-          const sbPlayer = newState.playerPosition === 'small_blind' ? newState.player : newState.opponent;
-          const bbPlayer = newState.playerPosition === 'big_blind' ? newState.player : newState.opponent;
-          
-          const sbAmount = Math.min(sbBlind, sbPlayer.pet.stats.currentHealth);
-          const bbAmount = Math.min(bbBlind, bbPlayer.pet.stats.currentHealth);
-          
-          sbPlayer.pet.stats.currentHealth -= sbAmount;
-          sbPlayer.hpCommitted += sbAmount;
-          bbPlayer.pet.stats.currentHealth -= bbAmount;
-          bbPlayer.hpCommitted += bbAmount;
+          const sbChannelId = newState.playerPosition === 'small_blind'
+            ? newState.player.playerId
+            : newState.opponent.playerId;
+          const bbChannelId = newState.playerPosition === 'big_blind'
+            ? newState.player.playerId
+            : newState.opponent.playerId;
+          const sbPosted = commitPokerHp(newState, sbChannelId, sbBlind);
+          if (sbPosted) newState = sbPosted.state;
+          const bbPosted = commitPokerHp(newState, bbChannelId, bbBlind);
+          if (bbPosted) newState = bbPosted.state;
+          const sbAmount = sbPosted ? -sbPosted.transition.applied : 0;
+          const bbAmount = bbPosted ? -bbPosted.transition.applied : 0;
           newState.pot += sbAmount + bbAmount;
           newState.currentBet = bbAmount;
           newState.blindsPosted = true;
@@ -786,31 +821,42 @@ export const createPokerCombatSlice: StateCreator<
         
         // Deduct STA from folder
         if (foldStaPenalty > 0) {
-          playerState.pet.stats.currentStamina = Math.max(0, playerState.pet.stats.currentStamina - foldStaPenalty);
-          debug.combat(`[STA] ${folderSide} folded: -${foldStaPenalty} STA (now ${playerState.pet.stats.currentStamina}/${playerState.pet.stats.maxStamina})`);
+          const actor = actingAfter(newState);
+          const nextStamina = Math.max(0, actor.pet.stats.currentStamina - foldStaPenalty);
+          newState = actor.playerId === newState.player.playerId
+            ? { ...newState, player: { ...actor, pet: { ...actor.pet, stats: { ...actor.pet.stats, currentStamina: nextStamina } } } }
+            : { ...newState, opponent: { ...actor, pet: { ...actor.pet, stats: { ...actor.pet.stats, currentStamina: nextStamina } } } };
+          debug.combat(`[STA] ${folderSide} folded: -${foldStaPenalty} STA`);
         }
         
         newState.foldWinner = folderIsPlayer ? 'opponent' : 'player';
         newState.phase = PokerCombatPhase.RESOLUTION;
-        newState.player.isReady = true;
-        newState.opponent.isReady = true;
+        newState.player = { ...newState.player, isReady: true };
+        newState.opponent = { ...newState.opponent, isReady: true };
         newState.activePlayerId = null;
         break;
         
       case CombatAction.DEFEND:
-        playerState.pet.stats.currentStamina = Math.min(
-          playerState.pet.stats.maxStamina,
-          playerState.pet.stats.currentStamina + 1
-        );
+        {
+          const actor = actingAfter(newState);
+          const nextStamina = Math.min(actor.pet.stats.maxStamina, actor.pet.stats.currentStamina + 1);
+          newState = actor.playerId === newState.player.playerId
+            ? { ...newState, player: { ...actor, pet: { ...actor.pet, stats: { ...actor.pet.stats, currentStamina: nextStamina } } } }
+            : { ...newState, opponent: { ...actor, pet: { ...actor.pet, stats: { ...actor.pet.stats, currentStamina: nextStamina } } } };
+        }
         break;
     }
-    
-    playerState.isReady = true;
+
+    const isPlayer = playerId === newState.player.playerId;
+    newState = isPlayer
+      ? { ...newState, player: { ...newState.player, isReady: true } }
+      : { ...newState, opponent: { ...newState.opponent, isReady: true } };
     newState.actionsThisRound++;
 
     if (action === CombatAction.ATTACK || action === CombatAction.COUNTER_ATTACK) {
-      const otherPlayer = isPlayer ? newState.opponent : newState.player;
-      otherPlayer.isReady = false;
+      newState = isPlayer
+        ? { ...newState, opponent: { ...newState.opponent, isReady: false } }
+        : { ...newState, player: { ...newState.player, isReady: false } };
     }
     
     newState.actionHistory.push({
@@ -916,15 +962,18 @@ export const createPokerCombatSlice: StateCreator<
     // - RESOLUTION: Set to true immediately, no actions needed
     const isResolutionPhase = newPhase === PokerCombatPhase.RESOLUTION;
     
-    const newPlayer = { 
-      ...combatState.player, 
-      isReady: isResolutionPhase,
-      currentAction: undefined 
-    };
-    const newOpponent = { 
-      ...combatState.opponent, 
-      isReady: isResolutionPhase,
-      currentAction: undefined 
+    let phasedCombat = {
+      ...combatState,
+      player: {
+        ...combatState.player,
+        isReady: isResolutionPhase,
+        currentAction: undefined,
+      },
+      opponent: {
+        ...combatState.opponent,
+        isReady: isResolutionPhase,
+        currentAction: undefined,
+      },
     };
     
     // Wager: betting_round_damage — deal damage to enemy hero at start of each betting round
@@ -935,14 +984,19 @@ export const createPokerCombatSlice: StateCreator<
           for (const m of (gs.players?.player?.battlefield || [])) {
             const w = (m.card as any)?.wagerEffect;
             if (w?.type === 'betting_round_damage') {
-              newOpponent.pet.stats.currentHealth = Math.max(0, newOpponent.pet.stats.currentHealth - (w.value || 0));
+              const hit = applyPokerHpDelta(phasedCombat, phasedCombat.opponent.playerId, -(w.value || 0));
+              if (hit) {
+                notifyOpponentHpDebit(phasedCombat, hit, 'betting_round_damage');
+                phasedCombat = hit.state;
+              }
               playWagerActivate('betting_round_damage', 'player');
             }
           }
           for (const m of (gs.players?.opponent?.battlefield || [])) {
             const w = (m.card as any)?.wagerEffect;
             if (w?.type === 'betting_round_damage') {
-              newPlayer.pet.stats.currentHealth = Math.max(0, newPlayer.pet.stats.currentHealth - (w.value || 0));
+              const hit = applyPokerHpDelta(phasedCombat, phasedCombat.player.playerId, -(w.value || 0));
+              if (hit) phasedCombat = hit.state;
               playWagerActivate('betting_round_damage', 'opponent');
             }
           }
@@ -965,22 +1019,20 @@ export const createPokerCombatSlice: StateCreator<
       const bbAmount = (combatState.blindConfig?.bigBlind || BLINDS.BB) * blindMultiplier;
       
       const playerIsSB = combatState.playerPosition === 'small_blind';
-      const sbPlayer = playerIsSB ? newPlayer : newOpponent;
-      const bbPlayer = playerIsSB ? newOpponent : newPlayer;
-      
-      const sbActual = Math.min(sbAmount, sbPlayer.pet.stats.currentHealth);
-      const bbActual = Math.min(bbAmount, bbPlayer.pet.stats.currentHealth);
-      
-      sbPlayer.pet = { ...sbPlayer.pet, stats: { ...sbPlayer.pet.stats, currentHealth: sbPlayer.pet.stats.currentHealth - sbActual } };
-      bbPlayer.pet = { ...bbPlayer.pet, stats: { ...bbPlayer.pet.stats, currentHealth: bbPlayer.pet.stats.currentHealth - bbActual } };
-      sbPlayer.hpCommitted = sbActual;
-      bbPlayer.hpCommitted = bbActual;
+      const sbChannelId = playerIsSB ? phasedCombat.player.playerId : phasedCombat.opponent.playerId;
+      const bbChannelId = playerIsSB ? phasedCombat.opponent.playerId : phasedCombat.player.playerId;
+      const sbPosted = commitPokerHp(phasedCombat, sbChannelId, sbAmount);
+      if (sbPosted) phasedCombat = sbPosted.state;
+      const bbPosted = commitPokerHp(phasedCombat, bbChannelId, bbAmount);
+      if (bbPosted) phasedCombat = bbPosted.state;
+      const sbActual = sbPosted ? -sbPosted.transition.applied : 0;
+      const bbActual = bbPosted ? -bbPosted.transition.applied : 0;
       
       newPot = sbActual + bbActual;
       newCurrentBet = bbActual;
       blindsJustPosted = true;
       
-      if (sbPlayer.pet.stats.currentHealth === 0 || bbPlayer.pet.stats.currentHealth === 0) {
+      if (phasedCombat.player.pet.stats.currentHealth === 0 || phasedCombat.opponent.pet.stats.currentHealth === 0) {
         blindAllIn = true;
       }
       
@@ -1016,8 +1068,8 @@ export const createPokerCombatSlice: StateCreator<
         ...combatState,
         phase: newPhase,
         communityCards: newCommunityCards,
-        player: newPlayer,
-        opponent: newOpponent,
+        player: phasedCombat.player,
+        opponent: phasedCombat.opponent,
         pot: blindsJustPosted ? newPot : combatState.pot,
         currentBet: blindsJustPosted ? newCurrentBet : 0,
         blindsPosted: blindsJustPosted || combatState.blindsPosted,
@@ -1133,40 +1185,29 @@ export const createPokerCombatSlice: StateCreator<
         foldPenalty: loserCommitted,
         whoFolded: loser
       };
-      
+
       const currentState = get();
       if (!currentState.pokerCombatState) return resolution;
+      const settled = settleResolvedPokerHp(
+        currentState.pokerCombatState,
+        resolution.playerFinalHealth,
+        resolution.opponentFinalHealth,
+      );
 
       set({
         pokerCombatState: {
-          ...currentState.pokerCombatState,
+          ...settled,
           pot: 0,
           currentBet: 0,
           player: {
-            ...currentState.pokerCombatState.player,
-            hpCommitted: 0,
+            ...settled.player,
             isReady: false,
             currentAction: undefined,
-            pet: {
-              ...currentState.pokerCombatState.player.pet,
-              stats: {
-                ...currentState.pokerCombatState.player.pet.stats,
-                currentHealth: resolution.playerFinalHealth
-              }
-            }
           },
           opponent: {
-            ...currentState.pokerCombatState.opponent,
-            hpCommitted: 0,
+            ...settled.opponent,
             isReady: false,
             currentAction: undefined,
-            pet: {
-              ...currentState.pokerCombatState.opponent.pet,
-              stats: {
-                ...currentState.pokerCombatState.opponent.pet.stats,
-                currentHealth: resolution.opponentFinalHealth
-              }
-            }
           }
         },
         pokerHandsWonPlayer: winner === 'player' ? currentState.pokerHandsWonPlayer + 1 : currentState.pokerHandsWonPlayer,
@@ -1383,42 +1424,31 @@ export const createPokerCombatSlice: StateCreator<
       wagerAoeDamagePlayer: wagerAoeDamagePlayer || undefined,
       wagerAoeDamageOpponent: wagerAoeDamageOpponent || undefined,
     };
-    
+
     const stateForUpdate = get();
     if (stateForUpdate.pokerCombatState) {
+      const settled = settleResolvedPokerHp(
+        stateForUpdate.pokerCombatState,
+        resolution.playerFinalHealth,
+        resolution.opponentFinalHealth,
+      );
       set({
         pokerCombatState: {
-          ...stateForUpdate.pokerCombatState,
+          ...settled,
           winner,
           pot: 0,
           currentBet: 0,
           player: {
-            ...stateForUpdate.pokerCombatState.player,
-            hpCommitted: 0,
+            ...settled.player,
             isReady: false,
             currentAction: undefined,
             heroArmor: playerFinalArmor,
-            pet: {
-              ...stateForUpdate.pokerCombatState.player.pet,
-              stats: {
-                ...stateForUpdate.pokerCombatState.player.pet.stats,
-                currentHealth: resolution.playerFinalHealth
-              }
-            }
           },
           opponent: {
-            ...stateForUpdate.pokerCombatState.opponent,
-            hpCommitted: 0,
+            ...settled.opponent,
             isReady: false,
             currentAction: undefined,
             heroArmor: opponentFinalArmor,
-            pet: {
-              ...stateForUpdate.pokerCombatState.opponent.pet,
-              stats: {
-                ...stateForUpdate.pokerCombatState.opponent.pet.stats,
-                currentHealth: resolution.opponentFinalHealth
-              }
-            }
           }
         },
         pokerHandsWonPlayer: winner === 'player' ? stateForUpdate.pokerHandsWonPlayer + 1 : stateForUpdate.pokerHandsWonPlayer,
@@ -1534,51 +1564,15 @@ export const createPokerCombatSlice: StateCreator<
   healPlayerHero: (amount: number) => {
     const state = get();
     if (!state.pokerCombatState) return;
-    
-    const currentHealth = state.pokerCombatState.player.pet.stats.currentHealth;
-    const maxHealth = state.pokerCombatState.player.pet.stats.maxHealth;
-    const newHealth = Math.min(currentHealth + amount, maxHealth);
-    
-    set({
-      pokerCombatState: {
-        ...state.pokerCombatState,
-        player: {
-          ...state.pokerCombatState.player,
-          pet: {
-            ...state.pokerCombatState.player.pet,
-            stats: {
-              ...state.pokerCombatState.player.pet.stats,
-              currentHealth: newHealth
-            }
-          }
-        }
-      }
-    });
+    const healed = applyPokerHpDeltaOnSlot(state.pokerCombatState, 'player', amount);
+    if (healed) set({ pokerCombatState: healed.state });
   },
 
   healOpponentHero: (amount: number) => {
     const state = get();
     if (!state.pokerCombatState) return;
-    
-    const currentHealth = state.pokerCombatState.opponent.pet.stats.currentHealth;
-    const maxHealth = state.pokerCombatState.opponent.pet.stats.maxHealth;
-    const newHealth = Math.min(currentHealth + amount, maxHealth);
-    
-    set({
-      pokerCombatState: {
-        ...state.pokerCombatState,
-        opponent: {
-          ...state.pokerCombatState.opponent,
-          pet: {
-            ...state.pokerCombatState.opponent.pet,
-            stats: {
-              ...state.pokerCombatState.opponent.pet.stats,
-              currentHealth: newHealth
-            }
-          }
-        }
-      }
-    });
+    const healed = applyPokerHpDeltaOnSlot(state.pokerCombatState, 'opponent', amount);
+    if (healed) set({ pokerCombatState: healed.state });
   },
 
   setPlayerHeroBuffs: (buffs: { attack?: number; health?: number; armor?: number }) => {
@@ -1592,22 +1586,29 @@ export const createPokerCombatSlice: StateCreator<
     if (buffs.attack !== undefined) {
       newStats.attack += buffs.attack;
     }
+
+    let combat = state.pokerCombatState;
     if (buffs.health !== undefined) {
-      newStats.maxHealth += buffs.health;
-      newStats.currentHealth += buffs.health;
+      const grown = growPokerHpMax(combat, combat.player.playerId, buffs.health);
+      if (grown) {
+        combat = grown.state;
+      }
     }
     
     const newArmor = buffs.armor !== undefined ? currentArmor + buffs.armor : currentArmor;
     
     set({
       pokerCombatState: {
-        ...state.pokerCombatState,
+        ...combat,
         player: {
-          ...state.pokerCombatState.player,
+          ...combat.player,
           heroArmor: newArmor,
           pet: {
-            ...playerPet,
-            stats: newStats
+            ...combat.player.pet,
+            stats: {
+              ...combat.player.pet.stats,
+              attack: newStats.attack,
+            }
           }
         }
       }
@@ -1681,6 +1682,7 @@ export const createPokerCombatSlice: StateCreator<
 
     const playerFinalHP = resolution?.playerFinalHealth ?? state.pokerCombatState.player.pet.stats.currentHealth;
     const opponentFinalHP = resolution?.opponentFinalHealth ?? state.pokerCombatState.opponent.pet.stats.currentHealth;
+    const settledHand = settleResolvedPokerHp(state.pokerCombatState, playerFinalHP, opponentFinalHP);
 
     if (playerFinalHP <= 0 || opponentFinalHP <= 0) {
       set({ isTransitioningHand: false });
@@ -1743,33 +1745,29 @@ export const createPokerCombatSlice: StateCreator<
         activePlayerId: newActivePlayerId,
         actionsThisRound: 0,
         player: {
-          ...state.pokerCombatState.player,
+          ...settledHand.player,
           holeCards: playerHoleCards,
-          hpCommitted: 0,
           preBlindHealth: playerFinalHP,
           isReady: false,
           currentAction: undefined,
           pet: {
-            ...state.pokerCombatState.player.pet,
+            ...settledHand.player.pet,
             stats: {
-              ...state.pokerCombatState.player.pet.stats,
-              currentHealth: playerFinalHP,
+              ...settledHand.player.pet.stats,
               currentStamina: playerNewStamina
             }
           }
         },
         opponent: {
-          ...state.pokerCombatState.opponent,
+          ...settledHand.opponent,
           holeCards: opponentHoleCards,
-          hpCommitted: 0,
           preBlindHealth: opponentFinalHP,
           isReady: false,
           currentAction: undefined,
           pet: {
-            ...state.pokerCombatState.opponent.pet,
+            ...settledHand.opponent.pet,
             stats: {
-              ...state.pokerCombatState.opponent.pet.stats,
-              currentHealth: opponentFinalHP,
+              ...settledHand.opponent.pet.stats,
               currentStamina: opponentNewStamina
             }
           }
@@ -1865,12 +1863,12 @@ export const createPokerCombatSlice: StateCreator<
   applyDirectDamage: (targetPlayerId: 'player' | 'opponent', damage: number, sourceDescription?: string) => {
     const state = get();
     if (!state.pokerCombatState) return;
-    
-    const isPlayer = targetPlayerId === 'player';
-    const target = isPlayer ? state.pokerCombatState.player : state.pokerCombatState.opponent;
-    
-    const newHealth = Math.max(0, target.pet.stats.currentHealth - damage);
-    
+
+    const struck = applyPokerHpDeltaOnSlot(state.pokerCombatState, targetPlayerId, -damage);
+    if (!struck) return;
+    notifyOpponentHpDebit(state.pokerCombatState, struck, sourceDescription || 'direct-damage');
+
+    const target = targetPlayerId === 'player' ? struck.state.player : struck.state.opponent;
     const damageTick = get()._nextLogTick();
     get().addLogEntry({
       id: `damage_${damageTick}`,
@@ -1878,39 +1876,7 @@ export const createPokerCombatSlice: StateCreator<
       type: 'damage',
       message: `${sourceDescription || 'Attack'} dealt ${damage} damage to ${target.playerName}`
     });
-    
-    if (isPlayer) {
-      set({
-        pokerCombatState: {
-          ...state.pokerCombatState,
-          player: {
-            ...state.pokerCombatState.player,
-            pet: {
-              ...state.pokerCombatState.player.pet,
-              stats: {
-                ...state.pokerCombatState.player.pet.stats,
-                currentHealth: newHealth
-              }
-            }
-          }
-        }
-      });
-    } else {
-      set({
-        pokerCombatState: {
-          ...state.pokerCombatState,
-          opponent: {
-            ...state.pokerCombatState.opponent,
-            pet: {
-              ...state.pokerCombatState.opponent.pet,
-              stats: {
-                ...state.pokerCombatState.opponent.pet.stats,
-                currentHealth: newHealth
-              }
-            }
-          }
-        }
-      });
-    }
+
+    set({ pokerCombatState: struck.state });
   },
 });

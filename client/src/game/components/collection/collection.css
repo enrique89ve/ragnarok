@@ -679,8 +679,43 @@
   width: 100%;
 }
 
+/* Mulligan owns a fixed in-frame rail. The Collection footer is retained in
+ * the DOM for the shared renderer, but it must not contribute flow height or
+ * padding; otherwise an absolute name plate is laid out against a second,
+ * invisible footer geometry. */
+.collection-card-frame.norse-card-frame--surface-mulligan
+  .card-frame__info-overlay
+  > div {
+  padding: 0;
+}
+
+.collection-card-frame.norse-card-frame--surface-mulligan
+  .collection-card-frame__lower-content,
+.collection-card-frame.norse-card-frame--surface-mulligan
+  .collection-card-frame__footer-rail {
+  min-height: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.collection-card-frame.norse-card-frame--surface-mulligan
+  .collection-card-frame__footer {
+  display: block;
+  min-height: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.collection-card-frame.norse-card-frame--surface-mulligan
+  .collection-card-frame__name-wrap {
+  height: 0;
+  overflow: visible;
+}
+
 /*
- * Collection footer contract:
+ * Collection and mulligan footer contract:
  * rarity owns the lowest centered slot, the name sits above it, and the
  * keyword rail is promoted above the name. These slots are calculated from
  * the shared surface scale so the frame cannot make them collide again when
@@ -691,6 +726,22 @@
   --norse-card-name-bottom: calc(
     var(--norse-card-rarity-mark-bottom) +
       var(--norse-card-rarity-mark-height) +
+      calc(4px * var(--norse-card-ui-scale))
+  );
+  --norse-card-keyword-bottom: calc(
+    var(--norse-card-name-bottom) +
+      var(--norse-card-name-height) +
+      calc(3px * var(--norse-card-ui-scale))
+  );
+}
+
+/* Mulligan cards use the same fixed lower rail, but their keyword row is
+ * visible. Reserve the complete stat-badge height plus a gap before the name
+ * so the black name plate can never cover attack or health. */
+.collection-card-frame.norse-card-frame--surface-mulligan {
+  --norse-card-rarity-mark-bottom: 0px;
+  --norse-card-name-bottom: calc(
+    var(--norse-card-stat-badge-height) +
       calc(4px * var(--norse-card-ui-scale))
   );
   --norse-card-keyword-bottom: calc(
@@ -714,16 +765,24 @@
   max-width: calc(16px * 1.1 * var(--norse-card-ui-scale));
 }
 
-.collection-card-frame.norse-card-frame--surface-collection
+.collection-card-frame:is(
+  .norse-card-frame--surface-collection,
+  .norse-card-frame--surface-mulligan
+)
   .card-frame__rarity-mark {
   bottom: var(--norse-card-rarity-mark-bottom);
   left: 50%;
   transform: translateX(-50%);
 }
 
-.collection-card-frame.norse-card-frame--surface-collection
+.collection-card-frame:is(
+  .norse-card-frame--surface-collection,
+  .norse-card-frame--surface-mulligan
+)
   .card-frame__name-plate {
   display: flex;
+  align-items: center;
+  justify-content: center;
   border: 0;
   height: var(--norse-card-name-height);
   min-height: var(--norse-card-name-height);
@@ -734,7 +793,17 @@
   white-space: nowrap;
 }
 
-.collection-card-frame.norse-card-frame--surface-collection
+.collection-card-frame.norse-card-frame--surface-mulligan
+  .card-frame__name-plate {
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
+.collection-card-frame:is(
+  .norse-card-frame--surface-collection,
+  .norse-card-frame--surface-mulligan
+)
   .collection-card-frame__footer
   .card-frame__name-plate {
   -webkit-box-orient: initial;

@@ -99,6 +99,13 @@ export interface WagerActivatedEvent extends VisualEventBase {
 	side: ArenaVfxOwner;
 }
 
+export interface CombatImpactEvent extends VisualEventBase {
+	type: 'combatImpact';
+	targetId: string;
+	damage: number;
+	kind: 'hit' | 'counter';
+}
+
 export interface VisualEventMap {
 	phaseEntered: PhaseEnteredEvent;
 	communityCardRevealed: CommunityCardRevealedEvent;
@@ -110,6 +117,7 @@ export interface VisualEventMap {
 	handImproved: HandImprovedEvent;
 	spellCast: SpellCastEvent;
 	wagerActivated: WagerActivatedEvent;
+	combatImpact: CombatImpactEvent;
 }
 
 export type VisualEventType = keyof VisualEventMap;
@@ -146,6 +154,7 @@ export function visualEventTypeOf(event: VisualEvent): VisualEventType {
 		case 'handImproved':
 		case 'spellCast':
 		case 'wagerActivated':
+		case 'combatImpact':
 			return event.type;
 		default: {
 			const unhandled: never = event;
@@ -227,6 +236,14 @@ export function emitSpellCast(data: Omit<SpellCastEvent, 'type' | 'id' | 'timest
 
 export function emitWagerActivated(data: Omit<WagerActivatedEvent, 'type' | 'id' | 'timestamp'>): WagerActivatedEvent {
 	const event: WagerActivatedEvent = { type: 'wagerActivated', ...baseEventFields(), ...data };
+	emitVisualEvent(event);
+	return event;
+}
+
+export function emitCombatImpact(
+	data: Omit<CombatImpactEvent, 'type' | 'id' | 'timestamp'>,
+): CombatImpactEvent {
+	const event: CombatImpactEvent = { type: 'combatImpact', ...baseEventFields(), ...data };
 	emitVisualEvent(event);
 	return event;
 }

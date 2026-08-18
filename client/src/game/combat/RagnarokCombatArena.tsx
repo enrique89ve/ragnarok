@@ -58,6 +58,7 @@ import { usePokerCardClickHandlers } from './hooks/usePokerCardClickHandlers';
 import { usePokerKeyboardShortcuts } from './hooks/usePokerKeyboardShortcuts';
 import { useRealmAnnouncement } from './hooks/useRealmAnnouncement';
 import { useHeroHealthEffects } from './hooks/useHeroHealthEffects';
+import { readViewerCombatHeroHp } from './combatHeroHp';
 import { useAudio } from '../../lib/stores/useAudio';
 import { BossPhaseFlash } from './components/BossPhaseFlash';
 import { BettingPanel } from './components/BettingPanel';
@@ -374,12 +375,14 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
     if (!gameState) return;
     const player = gameState.players.player;
     const opponent = gameState.players.opponent;
+    const playerCombatHp = readViewerCombatHeroHp(combatState, 'player');
+    const opponentCombatHp = readViewerCombatHeroHp(combatState, 'opponent');
 
       const currentSnapshot: HealthSnapshot = {
-      playerHeroHealth: player.heroHealth ?? player.health,
-      playerHeroArmor: player.heroArmor ?? 0,
-      opponentHeroHealth: opponent.heroHealth ?? opponent.health,
-      opponentHeroArmor: opponent.heroArmor ?? 0,
+      playerHeroHealth: playerCombatHp?.current ?? player.heroHealth ?? player.health,
+      playerHeroArmor: combatState?.player.heroArmor ?? player.heroArmor ?? 0,
+      opponentHeroHealth: opponentCombatHp?.current ?? opponent.heroHealth ?? opponent.health,
+      opponentHeroArmor: combatState?.opponent.heroArmor ?? opponent.heroArmor ?? 0,
       playerMinions: new Map(player.battlefield.map(m => [m.instanceId, getCombatUnitHealth(m)])),
       opponentMinions: new Map(opponent.battlefield.map(m => [m.instanceId, getCombatUnitHealth(m)]))
     };
@@ -452,7 +455,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
     }
 
     prevHealthRef.current = currentSnapshot;
-  }, [gameState, triggerDamageAnimation, prevHealthRef]);
+  }, [gameState, combatState, triggerDamageAnimation, prevHealthRef]);
 
   // Card click handlers (extracted to hook)
   const { handlePlayerCardClick, handleOpponentCardClick, handleCardPlay } = usePokerCardClickHandlers({
@@ -660,7 +663,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
         handCards={handCards}
         handCurrentMana={handCurrentMana}
         handIsPlayerTurn={handIsPlayerTurn}
-        heroHealth={gameState?.players?.player ? (gameState.players.player.heroHealth ?? gameState.players.player.health) : 0}
+        heroHealth={readViewerCombatHeroHp(combatState, 'player')?.current ?? 0}
         evolveReadyIds={evolveReadyIds}
         playerBattlefield={playerBattlefield}
         onCardPlay={onCardPlay}
@@ -867,41 +870,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
     setQuipKey(k => k + 1);
   }, [bossQuips]);
 
-  // Low-HP quip — fires once when opponent crosses 50% HP.
-  // Reads opponent HP directly from gameStore here (the canonical
-  // destructure happens later in the file but we need it earlier so the
-  // quip can fire as soon as the threshold is crossed).
-  const quipOpponentHP = useGameStore(state => {
-    const p = state.gameState?.players?.opponent;
-    return p ? (p.heroHealth ?? p.health) : 100;
-  });
-  const quipOpponentMaxHP = useGameStore(state => {
-    const p = state.gameState?.players?.opponent;
-    return p?.maxHealth ?? 100;
-  });
-  useEffect(() => {
-    if (lowHPQuipFiredRef.current) return;
-    if (!bossQuips?.onLowHP) return;
-    if (quipOpponentMaxHP <= 0) return;
-    if (quipOpponentHP / quipOpponentMaxHP > 0.5) return;
-    lowHPQuipFiredRef.current = true;
-    setQuipText(bossQuips.onLowHP);
-    setQuipKey(k => k + 1);
-  }, [bossQuips, quipOpponentHP, quipOpponentMaxHP]);
-
-  // Lethal quip — fires once when opponent crosses 15% HP (boss's last
-  // defiant words before death). Only fires if the low-HP quip already
-  // fired (prevents both hitting in the same frame on a spike).
-  useEffect(() => {
-    if (lethalQuipFiredRef.current) return;
-    if (!lowHPQuipFiredRef.current) return;
-    if (!bossQuips?.onLethal) return;
-    if (quipOpponentMaxHP <= 0) return;
-    if (quipOpponentHP / quipOpponentMaxHP > 0.15) return;
-    lethalQuipFiredRef.current = true;
-    setQuipText(bossQuips.onLethal);
-    setQuipKey(k => k + 1);
-  }, [bossQuips, quipOpponentHP, quipOpponentMaxHP]);
+  // Opponent HP for boss quips is read after the combat controller mounts.
 
   /*
     Boss phases — mid-combat escalation. Watches opponent HP and fires
@@ -912,13 +881,6 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
     and useBossPhases.ts for the runner.
   */
   const [phaseFlash, setPhaseFlash] = useState<BossPhaseFlashKind | null>(null);
-  useBossPhases({
-    opponentCurrentHP: quipOpponentHP,
-    opponentMaxHP: quipOpponentMaxHP,
-    setQuipText,
-    setQuipKey,
-    setFlash: setPhaseFlash,
-  });
 
   /*
     Hero feud taunt — in PvP, when two heroes with a canonical rivalry
@@ -969,6 +931,36 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
     heroBattlePopups,
     removeHeroBattlePopup,
   } = useRagnarokCombatController({ onCombatEnd });
+
+  const quipOpponentHp = readViewerCombatHeroHp(combatState, 'opponent');
+  const quipOpponentHP = quipOpponentHp?.current ?? 100;
+  const quipOpponentMaxHP = quipOpponentHp?.max ?? 100;
+  useBossPhases({
+    opponentCurrentHP: quipOpponentHP,
+    opponentMaxHP: quipOpponentMaxHP,
+    setQuipText,
+    setQuipKey,
+    setFlash: setPhaseFlash,
+  });
+  useEffect(() => {
+    if (lowHPQuipFiredRef.current) return;
+    if (!bossQuips?.onLowHP) return;
+    if (quipOpponentMaxHP <= 0) return;
+    if (quipOpponentHP / quipOpponentMaxHP > 0.5) return;
+    lowHPQuipFiredRef.current = true;
+    setQuipText(bossQuips.onLowHP);
+    setQuipKey(k => k + 1);
+  }, [bossQuips, quipOpponentHP, quipOpponentMaxHP]);
+  useEffect(() => {
+    if (lethalQuipFiredRef.current) return;
+    if (!lowHPQuipFiredRef.current) return;
+    if (!bossQuips?.onLethal) return;
+    if (quipOpponentMaxHP <= 0) return;
+    if (quipOpponentHP / quipOpponentMaxHP > 0.15) return;
+    lethalQuipFiredRef.current = true;
+    setQuipText(bossQuips.onLethal);
+    setQuipKey(k => k + 1);
+  }, [bossQuips, quipOpponentHP, quipOpponentMaxHP]);
 
   const pokerDrama = usePokerDrama({ combatState, isActive });
 
@@ -1051,14 +1043,8 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
   const attackingCardForShortcuts = useGameStore(state => state.attackingCard);
   const selectAttackerForClear = useGameStore(state => state.selectAttacker);
   const selectCard = useGameStore(state => state.selectCard);
-  const playerHeroHealth = useGameStore(state => {
-    const p = state.gameState?.players?.player;
-    return p ? (p.heroHealth ?? p.health) : 0;
-  });
-  const opponentHeroHealth = useGameStore(state => {
-    const p = state.gameState?.players?.opponent;
-    return p ? (p.heroHealth ?? p.health) : 0;
-  });
+  const playerHeroHealth = readViewerCombatHeroHp(combatState, 'player')?.current ?? 0;
+  const opponentHeroHealth = readViewerCombatHeroHp(combatState, 'opponent')?.current ?? 0;
   const [battleIntelOpen, setBattleIntelOpen] = useState(false);
 
   const wagerIntel = useMemo(() => {

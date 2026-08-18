@@ -8,8 +8,6 @@ import { GameIcon } from '../utils/ui/GameIcon';
 
 const ANIMATE_SELECTED = { scale: 0.93, y: 6 };
 const ANIMATE_DEFAULT = { scale: 1, y: 0 };
-const HOVER_SELECTED = {};
-const HOVER_DEFAULT = { scale: 1.06, y: -8 };
 const SPRING_TRANSITION = { type: 'spring' as const, stiffness: 360, damping: 26 };
 const OVERLAY_INITIAL = { opacity: 0, scale: 0.6 };
 const OVERLAY_ANIMATE = { opacity: 1, scale: 1 };
@@ -20,39 +18,44 @@ interface MulliganCardProps {
   card: CardInstance;
   isSelected: boolean;
   onClick: () => void;
-  onHoverChange?: (card: CardInstance | null) => void;
+  onHoverChange?: (card: CardInstance | null, anchor?: HTMLElement) => void;
   disableMotion: boolean;
   disableCardFx: boolean;
 }
+
+export const toMulliganSimpleCardData = (cardData: CardInstance['card']): SimpleCardData => {
+  const cardDataTyped = cardData as any;
+  const evolvesFrom = cardDataTyped.evolvesFrom as number | undefined;
+  const evolvesFromCard = evolvesFrom ? getCardById(evolvesFrom) : undefined;
+
+  return {
+    id: cardData.id || 0,
+    name: cardData.name || 'Unknown',
+    manaCost: cardData.manaCost || 0,
+    attack: cardDataTyped.attack,
+    health: cardDataTyped.health,
+    description: cardData.description || '',
+    type: (cardData.type as 'minion' | 'spell' | 'weapon') || 'minion',
+    rarity: (cardData.rarity as 'common' | 'rare' | 'epic' | 'mythic') || 'common',
+    tribe: cardDataTyped.tribe || cardDataTyped.race,
+    cardClass: (cardDataTyped.cardClass || cardDataTyped.class),
+    keywords: cardData.keywords || [],
+    element: cardDataTyped.element,
+    petStage: cardDataTyped.petStage,
+    petFamily: cardDataTyped.petFamily,
+    evolvesFrom,
+    evolvesFromName: evolvesFromCard?.name,
+    evolutionCondition: cardDataTyped.evolutionCondition,
+    hasStage3Variants: !!(cardDataTyped.stage3Variants && cardDataTyped.stage3Variants.length > 0),
+  };
+};
 
 export const MulliganCard: React.FC<MulliganCardProps> = React.memo(({ card, isSelected, onClick, onHoverChange, disableMotion, disableCardFx }) => {
   const cardData = card?.card;
 
   const simpleCardData: SimpleCardData | null = useMemo(() => {
     if (!cardData) return null;
-    const cardDataTyped = cardData as any;
-    const evolvesFrom = cardDataTyped.evolvesFrom as number | undefined;
-    const evolvesFromCard = evolvesFrom ? getCardById(evolvesFrom) : undefined;
-    return {
-      id: cardData.id || 0,
-      name: cardData.name || 'Unknown',
-      manaCost: cardData.manaCost || 0,
-      attack: cardDataTyped.attack,
-      health: cardDataTyped.health,
-      description: cardData.description || '',
-      type: (cardData.type as 'minion' | 'spell' | 'weapon') || 'minion',
-      rarity: (cardData.rarity as 'common' | 'rare' | 'epic' | 'mythic') || 'common',
-      tribe: cardDataTyped.tribe || cardDataTyped.race,
-      cardClass: (cardDataTyped.cardClass || cardDataTyped.class),
-      keywords: cardData.keywords || [],
-      element: cardDataTyped.element,
-      petStage: cardDataTyped.petStage,
-      petFamily: cardDataTyped.petFamily,
-      evolvesFrom,
-      evolvesFromName: evolvesFromCard?.name,
-      evolutionCondition: cardDataTyped.evolutionCondition,
-      hasStage3Variants: !!(cardDataTyped.stage3Variants && cardDataTyped.stage3Variants.length > 0),
-    };
+    return toMulliganSimpleCardData(cardData);
   }, [cardData]);
 
   if (!simpleCardData) {
@@ -63,11 +66,14 @@ export const MulliganCard: React.FC<MulliganCardProps> = React.memo(({ card, isS
     );
   }
 
-  const wrapperClassName = `mulligan-card-wrapper ${disableCardFx ? 'mulligan-card-no-fx' : ''}`.trim();
+  const wrapperClassName = [
+    'mulligan-card-wrapper',
+    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-400/90',
+    disableCardFx ? 'mulligan-card-no-fx' : '',
+  ].filter(Boolean).join(' ');
 
   const motionProps = {
     animate: isSelected ? ANIMATE_SELECTED : ANIMATE_DEFAULT,
-    whileHover: isSelected ? HOVER_SELECTED : HOVER_DEFAULT,
     transition: SPRING_TRANSITION,
   };
 
@@ -96,9 +102,10 @@ export const MulliganCard: React.FC<MulliganCardProps> = React.memo(({ card, isS
       <SimpleCard
         card={simpleCardData}
         size="large"
-        surface="collection"
+        surface="mulligan"
         showDescription={false}
         disableTooltips
+        semanticMode="presentation"
       />
 
       {overlay}
@@ -108,9 +115,20 @@ export const MulliganCard: React.FC<MulliganCardProps> = React.memo(({ card, isS
   return disableMotion ? (
     <div
       className={wrapperClassName}
+      role="button"
+      tabIndex={0}
+      aria-pressed={isSelected}
+      aria-label={`Inspect ${simpleCardData.name}. Click to ${isSelected ? 'keep' : 'replace'} this card.`}
       onClick={onClick}
-      onMouseEnter={() => onHoverChange?.(card)}
+      onMouseEnter={(event) => onHoverChange?.(card, event.currentTarget)}
       onMouseLeave={() => onHoverChange?.(null)}
+      onFocus={(event) => onHoverChange?.(card, event.currentTarget)}
+      onBlur={() => onHoverChange?.(null)}
+      onKeyDown={(event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        onClick();
+      }}
     >
       {root}
     </div>
@@ -118,9 +136,20 @@ export const MulliganCard: React.FC<MulliganCardProps> = React.memo(({ card, isS
     <motion.div
       className={wrapperClassName}
       {...motionProps}
+      role="button"
+      tabIndex={0}
+      aria-pressed={isSelected}
+      aria-label={`Inspect ${simpleCardData.name}. Click to ${isSelected ? 'keep' : 'replace'} this card.`}
       onClick={onClick}
-      onMouseEnter={() => onHoverChange?.(card)}
+      onMouseEnter={(event) => onHoverChange?.(card, event.currentTarget)}
       onMouseLeave={() => onHoverChange?.(null)}
+      onFocus={(event) => onHoverChange?.(card, event.currentTarget)}
+      onBlur={() => onHoverChange?.(null)}
+      onKeyDown={(event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        onClick();
+      }}
     >
       {root}
     </motion.div>

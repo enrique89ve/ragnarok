@@ -1,22 +1,30 @@
 import { GameEventBus } from '../../core/events/GameEventBus';
-import type { GameEvent } from '../../core/events/GameEvents';
+import type { GameEndedEvent, GameEvent } from '../../core/events/GameEvents';
 import { CombatEventBus } from '../services/CombatEventBus';
 import type { DamageResolvedEvent } from '../services/CombatEventBus';
 import { useDailyQuestStore } from '../stores/dailyQuestStore';
 
 type UnsubscribeFn = () => void;
 
+let lastWinKey = '';
+
+function recordPlayerWin(winner: string | null | undefined, turnNumber: number): void {
+	if (winner !== 'player') return;
+	const winKey = `${winner}_${turnNumber}`;
+	if (winKey === lastWinKey) return;
+	lastWinKey = winKey;
+	useDailyQuestStore.getState().updateProgress('win_games', 1);
+}
+
 export function initializeDailyQuestSubscriber(): UnsubscribeFn {
 	const unsubscribes: UnsubscribeFn[] = [];
+	lastWinKey = '';
 
-	useDailyQuestStore.getState().refreshIfNeeded();
+	void useDailyQuestStore.getState().refreshIfNeeded();
 
 	unsubscribes.push(
-		GameEventBus.subscribe<GameEvent>('GAME_ENDED', (event) => {
-			const data = event as GameEvent & { winner?: string };
-			if (data.winner === 'player') {
-				useDailyQuestStore.getState().updateProgress('win_games', 1);
-			}
+		GameEventBus.subscribe<GameEndedEvent>('GAME_ENDED', (event) => {
+			recordPlayerWin(event.winner, event.finalTurn);
 		}, 5)
 	);
 

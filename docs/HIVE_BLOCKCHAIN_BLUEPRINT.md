@@ -468,8 +468,11 @@ Reward credits flow through different ops depending on the source:
   `reward_claim` broadcast for campaign missions; the chain op carries
   validation, `campaignProgress` write, and RUNE credit in one apply step.
   See [RUNE.md](./RUNE.md) and [CAMPAIGN_PROTOCOL_V1.md](./CAMPAIGN_PROTOCOL_V1.md).
-- **Daily quests / generic rewards** — `dailyQuestStore.claimReward()` →
-  `hiveSync.claimReward('daily_quest:{questId}')` → `applyRewardClaim`.
+- **Daily quests** — `dailyQuestStore.flushPendingClaims()` (explicit Claim
+  button) → `getNFTBridge().claimDailyQuest(slot, questType)` →
+  `hiveSync.broadcastCustomJson('rp_daily_quest_claim', { slot, quest_type })` →
+  `applyDailyQuestClaim`. Generic tournament rewards still use
+  `hiveSync.claimReward(rewardId)` → `applyRewardClaim`. See [RUNE.md](./RUNE.md).
 
 All chain broadcasts are gated behind `isHiveMode()` — zero impact in
 local/test mode.

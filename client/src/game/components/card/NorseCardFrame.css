@@ -25,6 +25,11 @@
   --norse-card-keyword-bottom: calc(22px * var(--norse-card-ui-scale));
   --norse-card-keyword-inline: calc(6px * var(--norse-card-ui-scale));
   --norse-card-keyword-font-size: calc(0.36rem * var(--norse-card-ui-scale));
+  /* One reserved block for the keyword rail. Its height is independent of
+     keyword count, label length, and whether a description exists. */
+  --norse-card-keyword-rail-height: calc(
+    (var(--norse-card-keyword-font-size) + 11px) * 1.4
+  );
   --norse-card-badge-top: calc(4px * var(--norse-card-ui-scale));
   --norse-card-badge-side: calc(4px * var(--norse-card-ui-scale));
   --norse-card-badge-size: calc(16px * var(--norse-card-ui-scale));
@@ -63,6 +68,19 @@
   padding-bottom: var(--collection-card-marker-space);
   cursor: pointer;
   outline: none;
+}
+
+/* A collection tile may let its stat sockets overhang the frame. Cards
+   rendered in a gameplay, mulligan, preview, or compact slot have a fixed
+   rectangle instead; their lower rail must stay inside that rectangle. */
+.norse-card-shell:is(
+  .collection-card-shell--surface-gameplay,
+  .collection-card-shell--surface-battlefield,
+  .collection-card-shell--surface-compact,
+  .collection-card-shell--surface-mulligan,
+  .collection-card-shell--surface-preview
+) {
+  --collection-card-marker-space: 0px;
 }
 
 .norse-card-shell::before {
@@ -719,6 +737,17 @@
 }
 
 .norse-card-frame:is(
+  .norse-card-frame--surface-gameplay,
+  .norse-card-frame--surface-battlefield,
+  .norse-card-frame--surface-compact,
+  .norse-card-frame--surface-mulligan,
+  .norse-card-frame--surface-preview
+) {
+  --norse-card-stat-badge-bottom: 0px;
+  --norse-card-stat-overhang: 0px;
+}
+
+.norse-card-frame:is(
     .norse-card-frame--surface-collection,
     .norse-card-frame--surface-gameplay,
     .norse-card-frame--surface-battlefield,
@@ -763,6 +792,18 @@
 
 .norse-card-frame--surface-compact .card-frame__name-plate {
   max-height: calc(var(--norse-card-name-height) * 1.55);
+}
+
+.norse-card-frame:is(
+    .norse-card-frame--surface-collection,
+    .norse-card-frame--surface-mulligan
+  ) .card-frame__name-plate {
+  box-sizing: border-box;
+  height: var(--norse-card-name-height);
+  min-height: var(--norse-card-name-height);
+  max-height: var(--norse-card-name-height);
+  align-items: center;
+  justify-content: center;
 }
 
 .norse-card-frame:not(.norse-card-frame--poker) .card-frame__tribe-line {
@@ -830,6 +871,34 @@
   left: var(--norse-card-keyword-inline);
   z-index: 13;
   gap: 2px;
+}
+
+/* Collection and Mulligan expose the same lower metadata contract: the name
+ * and keyword rail are fixed slots in the card coordinate system. Content is
+ * allowed to clip inside those slots, but it must never determine their x/y. */
+.norse-card-frame:is(
+    .norse-card-frame--surface-collection,
+    .norse-card-frame--surface-mulligan
+  ) .card-frame__description-stack {
+  box-sizing: border-box;
+  height: var(--norse-card-keyword-rail-height);
+  min-height: var(--norse-card-keyword-rail-height);
+  max-height: var(--norse-card-keyword-rail-height);
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.norse-card-frame:is(
+    .norse-card-frame--surface-collection,
+    .norse-card-frame--surface-mulligan
+  ) .card-frame__keywords {
+  box-sizing: border-box;
+  height: var(--norse-card-keyword-rail-height);
+  min-height: var(--norse-card-keyword-rail-height);
+  max-height: var(--norse-card-keyword-rail-height);
+  align-items: center;
+  overflow: hidden;
 }
 
 .norse-card-frame:not(.norse-card-frame--poker) .card-frame__description-stack--description-only {
@@ -1353,6 +1422,65 @@
   background: transparent;
   box-shadow: none;
   color: inherit;
+}
+
+/* Mulligan uses the same single-socket keyword treatment as Collection.
+ * The chip owns the border; the inner icon wrapper is transparent so a
+ * keyword can never render as two nested badges. */
+.norse-card-frame.norse-card-frame--surface-mulligan
+  .card-frame__keyword-chip--icon-only {
+  box-sizing: border-box;
+  flex: 0 0 calc(16px * 1.5);
+  width: calc(16px * 1.5);
+  min-width: calc(16px * 1.5);
+  max-width: calc(16px * 1.5);
+  height: calc(16px * 1.5);
+  padding: 1px;
+  overflow: hidden;
+  border: 1px solid color-mix(
+    in srgb,
+    var(--keyword-tone, var(--collection-frame-color)) 78%,
+    var(--obsidian-950) 22%
+  );
+  border-radius: 4px;
+  background: color-mix(
+    in srgb,
+    var(--keyword-tone, var(--collection-frame-color)) 22%,
+    var(--obsidian-950) 78%
+  );
+  box-shadow: none;
+  color: color-mix(
+    in srgb,
+    var(--keyword-tone, var(--gold-100)) 78%,
+    white 22%
+  );
+  text-shadow: none;
+}
+
+.norse-card-frame.norse-card-frame--surface-mulligan
+  .card-frame__keyword-chip--icon-only
+  .card-frame__keyword-icon-mark {
+  display: inline-flex;
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+}
+
+.norse-card-frame.norse-card-frame--surface-mulligan
+  .card-frame__keyword-chip--overflow {
+  box-sizing: border-box;
+  flex: 0 0 var(--norse-card-keyword-rail-height);
+  width: var(--norse-card-keyword-rail-height);
+  min-width: var(--norse-card-keyword-rail-height);
+  max-width: var(--norse-card-keyword-rail-height);
+  height: var(--norse-card-keyword-rail-height);
+  padding: 0;
 }
 
 .norse-card-frame.norse-card-frame--surface-collection .card-frame__keyword-icon {
