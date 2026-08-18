@@ -297,6 +297,8 @@ app.use('/api/testnet/rune', (_req, res) => {
 
   {
     const {
+      isIndexCheckpointDryRun,
+      isIndexCheckpointPublisherEnabled,
       shouldValidateIndexCheckpointPublisherConfig,
       validateIndexCheckpointPublisherConfig,
     } = await import('./services/indexCheckpointPublisher');
@@ -304,14 +306,14 @@ app.use('/api/testnet/rune', (_req, res) => {
       const { getRagnarokServerRuntimeConfig } = await import('./services/runtimeConfig');
       try {
         const signer = await validateIndexCheckpointPublisherConfig(getRagnarokServerRuntimeConfig());
-        const { isIndexCheckpointDryRun } = await import('./services/indexCheckpointPublisher');
         const mode = signer.enabled
           ? (isIndexCheckpointDryRun() ? 'enabled dry-run' : 'enabled')
           : 'configured but disabled';
         log(`index checkpoint publisher ${mode}: ${signer.account} (${signer.publicKey.slice(0, 12)}…)`);
       } catch (err) {
         console.error('[boot] index checkpoint publisher config invalid:', err instanceof Error ? err.message : err);
-        throw err;
+        if (isIndexCheckpointPublisherEnabled()) throw err;
+        log('index checkpoint publisher disabled — signer not ready, checkpoints will stay off');
       }
     } else {
       log('index checkpoint publisher disabled — no checkpoint signer configured');

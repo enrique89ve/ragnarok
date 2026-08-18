@@ -221,10 +221,8 @@ export function resetIndexCheckpointPublisherForTests(): void {
 }
 
 export function shouldValidateIndexCheckpointPublisherConfig(): boolean {
-	return isIndexCheckpointPublisherEnabled() || Boolean(
-		process.env[INDEX_ACCOUNT_ENV]
-		|| process.env[INDEX_POSTING_KEY_ENV],
-	);
+	if (isIndexCheckpointPublisherEnabled()) return true;
+	return Boolean(process.env[INDEX_POSTING_KEY_ENV]?.trim());
 }
 
 export async function validateIndexCheckpointPublisherConfig(
