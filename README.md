@@ -475,8 +475,8 @@ pnpm run dev
 ```
 
 Opens at `http://localhost:5000`. No database required for single-player — PostgreSQL is optional for server features.
-The Dokploy container is pinned to Node `22.17.0`/Alpine `3.22`; local tooling
-supports Node 22 (pnpm 11 requires Node >= 22.13). Use `.nvmrc` when you want to match the container.
+The Dokploy container is pinned to Node `24.19.0`/Alpine `3.24`; local tooling
+supports Node 24 (pnpm 11 requires Node >= 22.13). Use `.nvmrc` when you want to match the container.
 
 Playable entry routes:
 

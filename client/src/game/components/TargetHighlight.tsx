@@ -7,7 +7,7 @@
 import React, { useRef, useEffect } from 'react';
 
 interface TargetHighlightProps {
-  targetRef: React.RefObject<HTMLElement>;
+  targetRef: React.RefObject<HTMLElement | null>;
   isActive: boolean;
   color?: string;
 }
@@ -17,7 +17,7 @@ const TargetHighlight: React.FC<TargetHighlightProps> = ({
   isActive,
   color = 'rgba(255, 215, 0, 0.7)' // Golden color by default
 }) => {
-  const requestRef = useRef<number>();
+  const requestRef = useRef<number | undefined>(undefined);
   const highlightRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {

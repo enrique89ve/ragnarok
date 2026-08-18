@@ -4,7 +4,7 @@
  * Applies temporary Pixi filters (shockwave, freeze distortion, bloom, godray)
  * to the Pixi canvas containers. All effects are time-limited and auto-cleanup.
  *
- * Uses pixi-filters for advanced effects + Pixi v8 built-in filters as fallback.
+ * Uses Pixi v8 built-in filters for shader effects.
  * Every public function checks prefers-reduced-motion and returns early if true.
  */
 

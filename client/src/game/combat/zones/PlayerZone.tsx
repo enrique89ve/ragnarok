@@ -70,7 +70,7 @@ export interface PlayerZoneProps {
 	readonly onCardPlay: ((card: any, pos?: any) => void) | undefined;
 	readonly handleCardPlay: (card: any, pos?: any) => void;
 	readonly registerCardPosition: (card: CardInstance, position: Position) => void;
-	readonly battlefieldRef: React.RefObject<HTMLDivElement>;
+	readonly battlefieldRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export const PlayerZone: React.FC<PlayerZoneProps> = ({

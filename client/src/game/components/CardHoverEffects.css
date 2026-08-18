@@ -126,8 +126,20 @@
 
 .card-with-drag.not-playable {
   cursor: default;
-  filter: brightness(0.6) grayscale(0.3);
+  /* Keep inactive hand cards fully painted: gray communicates the state
+     without making the artwork look transparent or washed out. */
+  filter: grayscale(1) brightness(0.82);
   transition: filter 0.3s ease;
+}
+
+.card-with-drag.not-playable.is-hovering {
+  filter: grayscale(1) brightness(0.82) !important;
+}
+
+.card-with-drag.not-playable .card-frame--unplayable {
+  /* The hand wrapper owns the inactive treatment; avoid compounding a
+     second darkening filter on the nested frame. */
+  filter: none;
 }
 
 .card-with-drag.is-hovering {

@@ -36,10 +36,10 @@ App design tokens (`--gold-300`, `--space-*`, `--surface-overlay-deep`, `--radiu
 
 ## Layout schema
 
-`layout/pokerViewportLayout.ts` is the single source of truth for the 1920×1080 zone geometry. It exports:
+`layout/pokerViewportLayout.ts` is the typed layout contract for the 1920×1080 zone geometry. Runtime geometry is owned by `styles/canvas.css`; keeping the values in CSS prevents TSX inline styles and Tailwind utilities from competing with the canvas. It exports:
 
 - `POKER_VIEWPORT_LAYOUT` — frozen layout with all 24 zones.
-- `POKER_VIEWPORT_LAYOUT_STYLE` — pre-computed React `style` object to spread onto the `.unified-combat-arena` element.
+- `POKER_VIEWPORT_LAYOUT_STYLE` — generated style object retained for the dev-only safe-area prototype.
 - `buildPokerViewportLayoutStyle(layout)` — recompute the style for a custom layout (used by the dev-only safe-area prototype).
 - Types: `PokerViewportZoneId`, `PokerViewportLayer`, `PokerViewportZone`, `PokerViewportLayout`, `PokerViewportCssVarName`, `PokerViewportLayoutStyle`.
 

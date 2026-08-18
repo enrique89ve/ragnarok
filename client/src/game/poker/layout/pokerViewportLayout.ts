@@ -115,9 +115,9 @@ const PLAYER_HAND_CARD_RISE = Math.round(PLAYER_HAND_HEIGHT * PLAYER_HAND_CARD_R
 /**
  * Canonical 1920x1080 poker arena layout.
  *
- * Production consumes this through POKER_VIEWPORT_LAYOUT_STYLE. The dev-only
- * safe-area prototype also reads it as its baseline draft, but production must
- * never load prototype localStorage drafts at runtime.
+ * CSS consumes this geometry in `styles/canvas.css` for production. The typed
+ * object remains the editor/validation contract, while the style builder is
+ * retained for the dev-only safe-area prototype.
  */
 export const POKER_VIEWPORT_LAYOUT = {
 	schema: 'norse-poker-layout-draft/v1',

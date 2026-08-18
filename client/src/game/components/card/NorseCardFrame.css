@@ -687,7 +687,7 @@
 /* Pets reserve the upper two thirds for their evolution art. Their readable
    metadata remains in the same shared slots, but settles against the lowest
    safe rail immediately above the combat sockets. */
-.norse-card-frame.collection-card-frame--pet:not(.norse-card-frame--poker) {
+.norse-card-frame.collection-card-frame--pet:not(.norse-card-frame--poker):not(.norse-card-frame--surface-mulligan):not(.norse-card-frame--surface-battlefield) {
   --norse-card-name-bottom: calc(3px * var(--norse-card-ui-scale));
   --norse-card-keyword-bottom: calc(20px * var(--norse-card-ui-scale));
 }
@@ -706,6 +706,9 @@
   --collection-frame-line-inset: 3px;
   --norse-card-rarity-mark-width: calc(60px * var(--norse-card-ui-scale));
   --norse-card-rarity-mark-height: calc(21px * var(--norse-card-ui-scale));
+  /* Battlefield cards share one lower rail. Do not let pet metadata or
+   * keyword count move the name/keyword slots during chess -> poker. */
+  --norse-card-name-bottom: calc(5px * var(--norse-card-ui-scale));
   --norse-card-name-height: calc(24px * var(--norse-card-ui-scale));
   --norse-card-name-font-size: calc(1rem * var(--norse-card-ui-scale));
   --norse-card-keyword-bottom: calc(39px * var(--norse-card-ui-scale));
@@ -723,7 +726,8 @@
   --norse-card-name-bottom: calc(20px * var(--norse-card-ui-scale));
   --norse-card-name-height: calc(18px * var(--norse-card-ui-scale));
   --norse-card-name-font-size: calc(0.76rem * var(--norse-card-ui-scale));
-  --norse-card-keyword-bottom: calc(44px * var(--norse-card-ui-scale));
+  /* Hand/deck cards: keep the keyword rail close to the lower card chrome. */
+  --norse-card-keyword-bottom: calc(25px * var(--norse-card-ui-scale));
   --norse-card-badge-top: calc(2px * var(--norse-card-ui-scale));
   --norse-card-badge-side: calc(2px * var(--norse-card-ui-scale));
   --norse-card-mana-top: calc(2px * var(--norse-card-ui-scale));
@@ -887,6 +891,40 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
+}
+
+/* Battlefield uses the same fixed metadata contract as the collection
+ * surface, but keeps the rail inside the 192px combat card. This must be
+ * explicit because the pet selector above is more specific and otherwise
+ * shifts only pet cards when they carry keywords. */
+.norse-card-frame:is(
+    .norse-card-frame--surface-battlefield
+  ) .card-frame__description-stack {
+  box-sizing: border-box;
+  height: var(--norse-card-keyword-rail-height);
+  min-height: var(--norse-card-keyword-rail-height);
+  max-height: var(--norse-card-keyword-rail-height);
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.norse-card-frame:is(
+    .norse-card-frame--surface-battlefield
+  ) .card-frame__name-plate {
+  box-sizing: border-box;
+  height: var(--norse-card-name-height);
+  min-height: var(--norse-card-name-height);
+  max-height: var(--norse-card-name-height);
+  align-items: center;
+  justify-content: center;
+}
+
+/* Keep this selector at the same specificity as the pet variant above so
+ * the battlefield contract wins regardless of card family. */
+.norse-card-frame.collection-card-frame.norse-card-frame--surface-battlefield {
+  --norse-card-name-bottom: calc(5px * var(--norse-card-ui-scale));
+  --norse-card-keyword-bottom: calc(25px * var(--norse-card-ui-scale));
 }
 
 .norse-card-frame:is(
@@ -1481,6 +1519,50 @@
   max-width: var(--norse-card-keyword-rail-height);
   height: var(--norse-card-keyword-rail-height);
   padding: 0;
+}
+
+/* Battlefield and hand/deck cards use icon-only keywords too. The chip owns
+ * the socket border; keep the nested icon wrapper transparent so a valid
+ * keyword does not appear as a second circle over the first one. */
+.norse-card-frame:is(
+    .norse-card-frame--surface-battlefield,
+    .norse-card-frame--surface-compact
+  ) .card-frame__keyword-chip--icon-only
+  .card-frame__keyword-icon-mark {
+  display: inline-flex;
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+}
+
+/* Preserve each keyword tone on the visible socket in hand and battlefield
+ * cards. The active-card ring is a separate card-level effect and must not
+ * replace the semantic keyword color. */
+.norse-card-frame:is(
+    .norse-card-frame--surface-battlefield,
+    .norse-card-frame--surface-compact
+  ) .card-frame__keyword-chip:not(.card-frame__keyword-chip--overflow) {
+  border-color: color-mix(
+    in srgb,
+    var(--keyword-tone, var(--collection-frame-color)) 78%,
+    var(--obsidian-950) 22%
+  );
+  background: color-mix(
+    in srgb,
+    var(--keyword-tone, var(--collection-frame-color)) 22%,
+    var(--obsidian-950) 78%
+  );
+  color: color-mix(
+    in srgb,
+    var(--keyword-tone, var(--gold-100)) 78%,
+    white 22%
+  );
 }
 
 .norse-card-frame.norse-card-frame--surface-collection .card-frame__keyword-icon {

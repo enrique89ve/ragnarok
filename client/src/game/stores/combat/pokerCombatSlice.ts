@@ -962,7 +962,7 @@ export const createPokerCombatSlice: StateCreator<
     // - RESOLUTION: Set to true immediately, no actions needed
     const isResolutionPhase = newPhase === PokerCombatPhase.RESOLUTION;
     
-    let phasedCombat = {
+	let phasedCombat: PokerCombatState = {
       ...combatState,
       player: {
         ...combatState.player,

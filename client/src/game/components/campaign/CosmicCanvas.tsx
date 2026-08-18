@@ -228,7 +228,7 @@ export default function CosmicCanvas({ realms, connections, className }: CosmicC
 	const mouseRef = useRef({ x: 0.5, y: 0.5 }); // normalized 0-1
 	const starDataRef = useRef<{ gfx: Graphics[]; baseX: number[]; baseY: number[]; phase: number[]; layer: StarLayer }[]>([]);
 	const nebulaRef = useRef<NebulaCloud[]>([]);
-	const dustRef = useRef<{ gfx: Graphics[]; baseX: number[]; baseY: number[] }>();
+	const dustRef = useRef<{ gfx: Graphics[]; baseX: number[]; baseY: number[] } | undefined>(undefined);
 	const flowRef = useRef<FlowParticle[]>([]);
 	const tunnelRibsRef = useRef<TunnelRib[]>([]);
 	const orbitGatesRef = useRef<OrbitGate[]>([]);

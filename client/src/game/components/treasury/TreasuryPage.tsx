@@ -769,7 +769,7 @@ export default function TreasuryPage() {
 	const [pending, setPending] = useState<PendingSigning[]>([]);
 	const [error, setError] = useState<string | null>(null);
 	const [actionMsg, setActionMsg] = useState<string | null>(null);
-	const actionTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+	const actionTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
 	const showAction = useCallback((msg: string) => {
 		setActionMsg(msg);

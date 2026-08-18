@@ -27,7 +27,7 @@ interface HandFanProps {
   onCardPlay?: (card: CardInstance, position?: Position) => void;
   isInteractionDisabled?: boolean;
   registerCardPosition?: (card: CardInstance, position: Position) => void;
-  battlefieldRef: React.RefObject<HTMLDivElement>;
+	 battlefieldRef: React.RefObject<HTMLDivElement | null>;
   evolveReadyIds?: Set<string>;
   battlefieldCount?: number;
   playerBattlefield?: CardInstance[];

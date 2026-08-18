@@ -106,7 +106,7 @@ export const formatCardText = (
     showContainers?: boolean,
     colorizeBoxes?: boolean
   } = {}
-): JSX.Element => {
+): React.JSX.Element => {
   if (!text) return <></>;
   
   // Clean text and remove any unintended line breaks and duplications
@@ -341,7 +341,7 @@ export const formatCardText = (
  * @param name The card name
  * @returns Formatted JSX element
  */
-export const formatCardName = (name: string): JSX.Element => {
+export const formatCardName = (name: string): React.JSX.Element => {
   return <span className="card-name">{name}</span>;
 };
 
@@ -352,7 +352,7 @@ export const formatCardName = (name: string): JSX.Element => {
  * @param type Type of stat ('attack' or 'health')
  * @returns Formatted JSX element
  */
-export const formatStatValue = (value: number, type: 'attack' | 'health'): JSX.Element => {
+export const formatStatValue = (value: number, type: 'attack' | 'health'): React.JSX.Element => {
   return (
     <span className={`card-stats ${type}-value`}>
       {value}
@@ -366,7 +366,7 @@ export const formatStatValue = (value: number, type: 'attack' | 'health'): JSX.E
  * @param value The mana cost value to format
  * @returns Formatted JSX element
  */
-export const formatManaCost = (value: number): JSX.Element => {
+export const formatManaCost = (value: number): React.JSX.Element => {
   return (
     <span className="card-stats mana-value">
       {value}

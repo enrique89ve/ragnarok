@@ -26,7 +26,7 @@ interface CardWithDragProps {
 	onDragStart?: () => void;
 	onDragEnd?: (wasDropped: boolean, position: Position) => void;
 	onValidDrop?: (position: Position) => void;
-	boardRef: React.RefObject<HTMLDivElement>;
+	boardRef: React.RefObject<HTMLDivElement | null>;
 	registerPosition: (card: CardInstance | CardInstanceWithCardData, position: Position) => void;
 	className?: string;
 	attackBuff?: number;

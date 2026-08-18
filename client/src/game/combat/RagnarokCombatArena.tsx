@@ -73,7 +73,7 @@ import { BoardZone } from './zones/BoardZone';
 import { PlayerZone } from './zones/PlayerZone';
 import { MinionField } from './zones/MinionField';
 import { ARENA_VFX_LAYERS, arenaVfxLayerProps } from './arenaVfxTargets';
-import { POKER_VIEWPORT_LAYOUT_STYLE, POKER_VIEWPORT_SAFE_AREA } from '../poker';
+import { POKER_VIEWPORT_SAFE_AREA } from '../poker';
 import { useCampaignStore, getMission } from '../campaign';
 import { isBettingPhase } from './modules/PhaseManager';
 import { resolveHeroPortrait } from '../utils/art/artMapping';
@@ -737,27 +737,11 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
           in pokerViewportLayout. */}
       <div
         className="poker-spell-tray-mount poker-spell-tray-mount--opponent"
-        style={{
-          position: 'absolute',
-          left: 'var(--poker-zone-opponentPokerSpellTray-x)',
-          top: 'var(--poker-zone-opponentPokerSpellTray-y)',
-          width: 'var(--poker-zone-opponentPokerSpellTray-w)',
-          height: 'var(--poker-zone-opponentPokerSpellTray-h)',
-          zIndex: 130,
-        }}
       >
         <PokerSpellTray caster="opponent" />
       </div>
       <div
         className="poker-spell-tray-mount poker-spell-tray-mount--player"
-        style={{
-          position: 'absolute',
-          left: 'var(--poker-zone-playerPokerSpellTray-x)',
-          top: 'var(--poker-zone-playerPokerSpellTray-y)',
-          width: 'var(--poker-zone-playerPokerSpellTray-w)',
-          height: 'var(--poker-zone-playerPokerSpellTray-h)',
-          zIndex: 130,
-        }}
       >
         <PokerSpellTray caster="player" />
       </div>
@@ -766,15 +750,6 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
           so it never blocks the betting panel or hero clicks below. */}
       <div
         className="wager-activation-mount"
-        style={{
-          position: 'absolute',
-          left: 'var(--poker-zone-wagerActivation-x)',
-          top: 'var(--poker-zone-wagerActivation-y)',
-          width: 'var(--poker-zone-wagerActivation-w)',
-          height: 'var(--poker-zone-wagerActivation-h)',
-          zIndex: 320,
-          pointerEvents: 'none',
-        }}
       />
 
       {/* Damage Animations — gated by showDamageNumbers setting */}
@@ -1132,7 +1107,6 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
     >
       <div
         className={`ragnarok-combat-arena viewport-mode bg-transparent ${isPlayerTurn ? 'player-turn' : 'opponent-turn'}`}
-        style={POKER_VIEWPORT_LAYOUT_STYLE}
       >
         {/* ═════════════════════════════════════════════════════════════
             LAYERED ARCHITECTURE — see docs/POKER_ARENA_UI.md §Layers
@@ -1144,9 +1118,9 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
               .layer-hud         z 700-899 pointer-events: auto (opt-in)
               .layer-modal       z 900+   pointer-events: auto (blockers)
             ═════════════════════════════════════════════════════════════ */}
-        <div className="layer-background absolute inset-0 pointer-events-none" style={{ zIndex: 0 }} />
-        <div id="arena-layer-vfx" className="layer-vfx absolute inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 500 }} {...arenaVfxLayerProps(ARENA_VFX_LAYERS.vfx)} />
-        <div id="arena-layer-modal" className="layer-modal absolute inset-0 pointer-events-none" style={{ zIndex: 900 }} {...arenaVfxLayerProps(ARENA_VFX_LAYERS.modal)} />
+        <div className="layer-background" />
+        <div id="arena-layer-vfx" className="layer-vfx" {...arenaVfxLayerProps(ARENA_VFX_LAYERS.vfx)} />
+        <div id="arena-layer-modal" className="layer-modal" {...arenaVfxLayerProps(ARENA_VFX_LAYERS.modal)} />
 
         {/* Hourglass Timer at Top Center */}
         {(() => {
@@ -1414,7 +1388,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
           )}
         </AnimatePresence>
 
-        <div className="arena-content relative w-full h-full block overflow-hidden">
+        <div className="arena-content">
           <UnifiedCombatArena
             onAction={handleAction}
             onEndTurn={handleUnifiedEndTurn}

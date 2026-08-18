@@ -17,7 +17,7 @@ export interface WagerInfoPanelProps {
 export const WagerInfoPanel: React.FC<WagerInfoPanelProps> = (props) => {
 	return (
 		<div
-			className="absolute right-5 top-30 z-500 w-85 max-w-85"
+			className="wager-info-panel"
 			data-zone="wager-info-panel"
 		>
 			<CombatPhaseDirector {...props} pills={props.pills ? [...props.pills] : undefined} />

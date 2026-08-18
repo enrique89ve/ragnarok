@@ -25,6 +25,7 @@ function adminConfigResponse(overrides: Record<string, unknown> = {}): Record<st
 		economic: false,
 		runtimePhase: 'closed-beta',
 		seasonStart: '2026-05-19T00:00:00Z',
+		indexStartBlock: 109016418,
 		storageNamespace: 'ragnarok-testnet-closed-beta-2026-06-rk-game-testnet',
 		qaFullCatalogEnabled: false,
 		state: {

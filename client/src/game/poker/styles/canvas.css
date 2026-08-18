@@ -5,11 +5,179 @@
    grid tracks define the in-canvas distribution only.
    ═══════════════════════════════════════════════════ */
 
+/* Balanced 1920×1080 preset. Layout geometry lives here so TSX does not
+   compete with Tailwind or inject a second set of coordinates. The typed
+   layout schema remains the editor/validation contract. */
+.ragnarok-combat-arena {
+  --poker-reference-width: 1920px;
+  --poker-reference-height: 1080px;
+  --poker-layout-grid: 8px;
+  --poker-bottom-rail-y: 1024px;
+  --poker-bottom-rail-gap: 52px;
+  --poker-player-hand-card-rise: 38px;
+  --poker-betting-controls-drop: 19px;
+  --poker-hud-badge-height: 36px;
+  --poker-zone-turnBadge-x: 1352px;
+  --poker-zone-turnBadge-y: 976px;
+  --poker-zone-turnBadge-w: 152px;
+  --poker-zone-turnBadge-h: 48px;
+  --poker-zone-turnBadge-rot: 0deg;
+  --poker-zone-topHud-x: 584px;
+  --poker-zone-topHud-y: 48px;
+  --poker-zone-topHud-w: 872px;
+  --poker-zone-topHud-h: 72px;
+  --poker-zone-topHud-rot: 0deg;
+  --poker-zone-hourglass-x: 960px;
+  --poker-zone-hourglass-y: 122px;
+  --poker-zone-hourglass-w: 65px;
+  --poker-zone-hourglass-h: 107px;
+  --poker-zone-hourglass-rot: 0deg;
+  --poker-zone-attackModeBanner-x: 696px;
+  --poker-zone-attackModeBanner-y: 152px;
+  --poker-zone-attackModeBanner-w: 576px;
+  --poker-zone-attackModeBanner-h: 56px;
+  --poker-zone-attackModeBanner-rot: 0deg;
+  --poker-zone-battleIntel-x: 256px;
+  --poker-zone-battleIntel-y: 48px;
+  --poker-zone-battleIntel-w: 240px;
+  --poker-zone-battleIntel-h: 56px;
+  --poker-zone-battleIntel-rot: 0deg;
+  --poker-zone-opponentHero-x: 56px;
+  --poker-zone-opponentHero-y: 72px;
+  --poker-zone-opponentHero-w: 192px;
+  --poker-zone-opponentHero-h: 272px;
+  --poker-zone-opponentHeroCards-x: 88px;
+  --poker-zone-opponentHeroCards-y: 320px;
+  --poker-zone-opponentHeroCards-w: 128px;
+  --poker-zone-opponentHeroCards-h: 72px;
+  --poker-zone-opponentHeroCards-rot: -6deg;
+  --poker-zone-opponentHand-x: 280px;
+  --poker-zone-opponentHand-y: 160px;
+  --poker-zone-opponentHand-w: 400px;
+  --poker-zone-opponentHand-h: 88px;
+  --poker-zone-communityCards-x: 88px;
+  --poker-zone-communityCards-y: 472px;
+  --poker-zone-communityCards-w: 472px;
+  --poker-zone-communityCards-h: 120px;
+  --poker-zone-communityCards-rot: 0deg;
+  --poker-zone-battlefield-x: 552px;
+  --poker-zone-battlefield-y: 244px;
+  --poker-zone-battlefield-w: 888px;
+  --poker-zone-battlefield-h: 496px;
+  --poker-zone-opponentBattlefieldCards-x: 616px;
+  --poker-zone-opponentBattlefieldCards-y: 296px;
+  --poker-zone-opponentBattlefieldCards-w: 688px;
+  --poker-zone-opponentBattlefieldCards-h: 192px;
+  --poker-zone-opponentBattlefieldCards-rot: 0deg;
+  --poker-zone-playerBattlefieldCards-x: 672px;
+  --poker-zone-playerBattlefieldCards-y: 532px;
+  --poker-zone-playerBattlefieldCards-w: 688px;
+  --poker-zone-playerBattlefieldCards-h: 192px;
+  --poker-zone-playerBattlefieldCards-rot: 0deg;
+  --poker-zone-playerHero-x: 56px;
+  --poker-zone-playerHero-y: 736px;
+  --poker-zone-playerHero-w: 208px;
+  --poker-zone-playerHero-h: 288px;
+  --poker-zone-playerHeroCards-x: 88px;
+  --poker-zone-playerHeroCards-y: 680px;
+  --poker-zone-playerHeroCards-w: 152px;
+  --poker-zone-playerHeroCards-h: 96px;
+  --poker-zone-playerHeroCards-rot: -8deg;
+  --poker-zone-playerHand-x: 304px;
+  --poker-zone-playerHand-y: 728px;
+  --poker-zone-playerHand-w: 700px;
+  --poker-zone-playerHand-h: 192px;
+  --poker-zone-playerHand-rot: 0deg;
+  --poker-zone-bettingControls-x: 280px;
+  --poker-zone-bettingControls-y: 928px;
+  --poker-zone-bettingControls-w: 608px;
+  --poker-zone-bettingControls-h: 96px;
+  --poker-zone-bettingControls-rot: 0deg;
+  --poker-zone-wagerPanel-x: 1480px;
+  --poker-zone-wagerPanel-y: 224px;
+  --poker-zone-wagerPanel-w: 384px;
+  --poker-zone-wagerPanel-h: 248px;
+  --poker-zone-wagerPanel-rot: 0deg;
+  --poker-zone-deckCounters-x: 1690px;
+  --poker-zone-deckCounters-y: 48px;
+  --poker-zone-deckCounters-w: 174px;
+  --poker-zone-deckCounters-h: 144px;
+  --poker-zone-deckCounters-rot: 0deg;
+  --poker-zone-battleLog-x: 1576px;
+  --poker-zone-battleLog-y: 792px;
+  --poker-zone-battleLog-w: 288px;
+  --poker-zone-battleLog-h: 232px;
+  --poker-zone-battleLog-rot: 0deg;
+  --poker-zone-vfxFocus-x: 616px;
+  --poker-zone-vfxFocus-y: 280px;
+  --poker-zone-vfxFocus-w: 824px;
+  --poker-zone-vfxFocus-h: 416px;
+  --poker-zone-vfxFocus-rot: 0deg;
+  --poker-zone-opponentPokerSpellTray-x: 600px;
+  --poker-zone-opponentPokerSpellTray-y: 160px;
+  --poker-zone-opponentPokerSpellTray-w: 320px;
+  --poker-zone-opponentPokerSpellTray-h: 88px;
+  --poker-zone-playerPokerSpellTray-x: 600px;
+  --poker-zone-playerPokerSpellTray-y: 820px;
+  --poker-zone-playerPokerSpellTray-w: 320px;
+  --poker-zone-playerPokerSpellTray-h: 88px;
+  --poker-zone-wagerActivation-x: 552px;
+  --poker-zone-wagerActivation-y: 244px;
+  --poker-zone-wagerActivation-w: 888px;
+  --poker-zone-wagerActivation-h: 496px;
+}
+
+.ragnarok-combat-arena :is(.layer-background, .layer-vfx, .layer-modal) {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.ragnarok-combat-arena .layer-background { z-index: 0; }
+.ragnarok-combat-arena .layer-vfx { z-index: 500; overflow: hidden; }
+.ragnarok-combat-arena .layer-modal { z-index: 900; }
+
 .ragnarok-combat-arena .arena-content {
-  position: absolute !important;
+  position: absolute;
   inset: 0;
   z-index: 120;
-  overflow: visible !important;
+  overflow: visible;
+}
+
+.unified-combat-arena :is(.poker-spell-tray-mount, .wager-activation-mount) {
+  position: absolute;
+  pointer-events: none;
+}
+
+.unified-combat-arena .poker-spell-tray-mount {
+  left: var(--poker-zone-opponentPokerSpellTray-x);
+  top: var(--poker-zone-opponentPokerSpellTray-y);
+  width: var(--poker-zone-opponentPokerSpellTray-w);
+  height: var(--poker-zone-opponentPokerSpellTray-h);
+  z-index: 130;
+}
+
+.unified-combat-arena .poker-spell-tray-mount--player {
+  left: var(--poker-zone-playerPokerSpellTray-x);
+  top: var(--poker-zone-playerPokerSpellTray-y);
+}
+
+.unified-combat-arena .wager-activation-mount {
+  left: var(--poker-zone-wagerActivation-x);
+  top: var(--poker-zone-wagerActivation-y);
+  width: var(--poker-zone-wagerActivation-w);
+  height: var(--poker-zone-wagerActivation-h);
+  z-index: 320;
+}
+
+.unified-combat-arena .wager-info-panel {
+  position: absolute;
+  left: var(--poker-zone-wagerPanel-x);
+  top: var(--poker-zone-wagerPanel-y);
+  right: auto;
+  width: var(--poker-zone-wagerPanel-w);
+  max-width: var(--poker-zone-wagerPanel-w);
+  z-index: var(--arena-z-wager-panel);
 }
 
 .unified-combat-arena .minion-field {

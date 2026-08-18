@@ -98,28 +98,27 @@ export default defineConfig(({ command, mode }) => {
         re-flagging known large gameplay chunks on every build.
       */
       chunkSizeWarningLimit: 500,
-      rollupOptions: {
+      rolldownOptions: {
         output: {
-          manualChunks(id: string) {
-            // Vendor splits — isolate heavy node_modules
-            if (id.includes('node_modules')) {
-              if (id.includes('react-dom') || id.includes('react/')) return 'react-vendor';
-              if (id.includes('pixi')) return 'pixi-vendor';
-              if (id.includes('framer-motion') || id.includes('@react-spring')) return 'ui-vendor';
-              if (id.includes('zustand') || id.includes('@tanstack')) return 'state-vendor';
-              if (id.includes('gsap')) return 'anim-vendor';
-              if (id.includes('peerjs') || id.includes('uuid')) return 'network-vendor';
-              if (id.includes('drizzle') || id.includes('idb')) return 'db-vendor';
-            }
-            // Card data splits — large static registries benefit from stable chunks.
-            if (id.includes('/game/data/cardRegistry/sets/core/pets/')) return 'card-data-pets';
-            if (id.includes('/game/data/cardRegistry/sets/core/neutrals/')) return 'card-data-neutrals';
-            if (id.includes('/game/data/cardRegistry/sets/core/classes/')) return 'card-data-classes';
-            if (id.includes('/game/data/cardRegistry/sets/')) return 'card-data-sets';
-            if (id.includes('/game/data/norseHeroes/')) return 'card-data-heroes';
-            if (id.includes('/game/data/allCards') || id.includes('/game/data/cardSets/')) return 'card-data';
-            if (id.includes('/game/data/')) return 'card-data';
-            return undefined;
+          codeSplitting: {
+            groups: [
+              // Vendor splits — isolate heavy node_modules with explicit priority.
+              { name: 'react-vendor', test: /node_modules[\\/]react(?:-dom)?[\\/]/, priority: 100 },
+              { name: 'pixi-vendor', test: /node_modules[\\/]pixi(?:\.js|-[^\\/]+)[\\/]/, priority: 90 },
+              { name: 'ui-vendor', test: /node_modules[\\/](?:framer-motion|@react-spring)[\\/]/, priority: 80 },
+              { name: 'state-vendor', test: /node_modules[\\/](?:zustand|@tanstack)[\\/]/, priority: 70 },
+              { name: 'anim-vendor', test: /node_modules[\\/]gsap[\\/]/, priority: 60 },
+              { name: 'network-vendor', test: /node_modules[\\/](?:peerjs|uuid)[\\/]/, priority: 50 },
+              { name: 'db-vendor', test: /node_modules[\\/](?:drizzle|idb)[\\/]/, priority: 40 },
+
+              // Card data splits — large static registries benefit from stable chunks.
+              { name: 'card-data-pets', test: /[\\/]game[\\/]data[\\/]cardRegistry[\\/]sets[\\/]core[\\/]pets[\\/]/, priority: 30 },
+              { name: 'card-data-neutrals', test: /[\\/]game[\\/]data[\\/]cardRegistry[\\/]sets[\\/]core[\\/]neutrals[\\/]/, priority: 29 },
+              { name: 'card-data-classes', test: /[\\/]game[\\/]data[\\/]cardRegistry[\\/]sets[\\/]core[\\/]classes[\\/]/, priority: 28 },
+              { name: 'card-data-sets', test: /[\\/]game[\\/]data[\\/]cardRegistry[\\/]sets[\\/]/, priority: 27 },
+              { name: 'card-data-heroes', test: /[\\/]game[\\/]data[\\/]norseHeroes[\\/]/, priority: 26 },
+              { name: 'card-data', test: /[\\/]game[\\/]data[\\/]/, priority: 24 },
+            ],
           },
         },
       },

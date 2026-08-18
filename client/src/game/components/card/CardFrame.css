@@ -853,7 +853,10 @@
 
 /* Playable / unplayable */
 .card-frame--unplayable {
-	filter: saturate(0.55) brightness(0.7);
+	/* Unplayable cards remain fully painted; communicate the state with a
+	 * solid neutral treatment instead of making the art look transparent. */
+	opacity: 1;
+	filter: grayscale(1) saturate(0.15) brightness(0.82);
 	cursor: not-allowed;
 }
 .card-frame--unplayable[data-interactive='true']:hover {
