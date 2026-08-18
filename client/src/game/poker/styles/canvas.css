@@ -268,8 +268,7 @@
 }
 
 .unified-combat-arena > .zone-board .community-slot .arena-poker-card.norse,
-.unified-combat-arena > .zone-board .community-slot .poker-card-frame,
-.unified-combat-arena > .zone-board .card-placeholder {
+.unified-combat-arena > .zone-board .community-slot .poker-card-frame {
   width: 84px !important;
   max-width: 84px !important;
   height: 118px !important;

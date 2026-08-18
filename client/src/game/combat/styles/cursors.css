@@ -1,7 +1,7 @@
 /* Custom game cursors */
 
 /* Default game cursor - subtle Norse arrow */
-.game-viewport {
+:where(.game-viewport) {
 	cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M4 2L4 20L9 15L14 22L17 20L12 13L19 13Z' fill='%23daa520' stroke='%23000' stroke-width='1.5'/%3E%3C/svg%3E") 4 2, auto;
 }
 

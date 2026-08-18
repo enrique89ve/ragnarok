@@ -24,7 +24,6 @@
 	--realm-divider-glow: color-mix(in srgb, var(--gold-400) 30%, transparent);
 	--realm-fog-color: color-mix(in srgb, var(--obsidian-950) 60%, transparent);
 	--realm-overlay-gradient: none;
-	transition: background 1.5s ease-in-out;
 }
 
 /* ============================================================
@@ -472,7 +471,7 @@
 /* ============================================================
    PROPHECY TRACKER
    ============================================================ */
-.prophecy-tracker {
+.unified-combat-arena .prophecy-tracker {
 	position: absolute;
 	top: 96px;
 	left: 12px;

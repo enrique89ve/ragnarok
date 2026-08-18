@@ -26,10 +26,11 @@ describe('resolveP2P', () => {
 		expect(ctx.matchSeed).toBe('seed-deadbeef');
 	});
 
-	it('produces ranked rewards (xpRunes 1.0 + ELO)', () => {
+	it('produces ranked rewards (Match XP, ranked RUNE, ELO)', () => {
 		const ctx = resolveP2P(baseHandshake);
 		expect(ctx.reward).toEqual({
-			xpRunes: { kind: 'percentage', multiplier: 1.0 },
+			matchXp: { kind: 'percentage', multiplier: 1 },
+			rune: { kind: 'projected', source: 'p2p_ranked' },
 			ranking: { kind: 'elo' },
 		});
 	});

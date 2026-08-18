@@ -20,7 +20,6 @@ import { GameIcon } from '../../utils/ui/GameIcon';
 import { NORSE_TO_GAME_ELEMENT, type NorseElement } from '../../types/NorseTypes';
 import { resolveHeroPortrait, DEFAULT_PORTRAIT } from '../../utils/art/artMapping';
 import '../styles/hero-reactions.css';
-import '../styles/hp-bar.css';
 
 /**
  * Props for the BattlefieldHero component

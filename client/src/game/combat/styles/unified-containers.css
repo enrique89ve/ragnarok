@@ -45,6 +45,7 @@
 .opponent-hero-container {
   position: relative;
   overflow: visible;
+  margin-top: 0.5rem;
 }
 
 .unified-hand-container {

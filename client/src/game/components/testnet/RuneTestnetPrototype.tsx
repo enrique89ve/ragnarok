@@ -10,6 +10,7 @@
  */
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { isDevBuild } from '../../config/buildMode';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
 	AlertTriangle,
@@ -688,7 +689,7 @@ function PrototypeSwitcher({ current }: { current: VariantKey }) {
 	};
 
 	useEffect(() => {
-		if (!import.meta.env.DEV) return;
+		if (!isDevBuild()) return;
 
 		const handleKeyDown = (event: KeyboardEvent) => {
 			if (isEditableElement(document.activeElement)) return;
@@ -700,7 +701,7 @@ function PrototypeSwitcher({ current }: { current: VariantKey }) {
 		return () => window.removeEventListener('keydown', handleKeyDown);
 	});
 
-	if (!import.meta.env.DEV) return null;
+	if (!isDevBuild()) return null;
 
 	const variant = VARIANTS.find(candidate => candidate.key === current) ?? VARIANTS[0];
 

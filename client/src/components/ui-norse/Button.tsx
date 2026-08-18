@@ -40,7 +40,7 @@ const SIZE_CLASSES: Record<Size, string> = {
 const BASE_CLASSES =
 	'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md ' +
 	'font-display font-bold tracking-[0.18em] uppercase ' +
-	'transition-all duration-200 ' +
+	'transition-[background-color,border-color,color,box-shadow] duration-200 ' +
 	'disabled:pointer-events-none disabled:opacity-50 ' +
 	'[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 ' +
 	'focus-visible:outline focus-visible:outline-2 ' +

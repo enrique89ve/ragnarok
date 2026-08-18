@@ -47,6 +47,7 @@
 */
 .game-viewport {
   overflow: hidden;
+  transition: background 1.5s ease-in-out;
   touch-action: none; /* Prevent pinch-zoom/pan during gameplay on mobile */
   /* Realm/background rules live on the scaled canvas. The wrapper only fills
      letterboxed space behind it. */

@@ -374,6 +374,7 @@ async function makeRankedMatchPayload(input: {
 	resultHash?: string;
 	transcriptRoot?: string;
 	transcriptCid?: string;
+	winnerNftUids?: string[];
 }): Promise<Record<string, unknown>> {
 	const payload: Record<string, unknown> = {
 		m: input.matchId,
@@ -389,6 +390,9 @@ async function makeRankedMatchPayload(input: {
 	if (input.transcriptCid) {
 		payload.tc = input.transcriptCid;
 	}
+	if (input.winnerNftUids && input.winnerNftUids.length > 0) {
+		payload.u = input.winnerNftUids;
+	}
 	payload.ch = await computeCompactMatchResultCommitmentHash(
 		buildCompactMatchResultCommitmentInput({
 			matchId: payload.m as string,
@@ -400,6 +404,7 @@ async function makeRankedMatchPayload(input: {
 			version: payload.v as number,
 			transcriptRoot: payload.tr as string,
 			transcriptCid: payload.tc as string | undefined,
+			winnerNftUids: input.winnerNftUids,
 		}),
 	);
 	return { ...payload, pow: await solvePow(payload) };
@@ -1343,6 +1348,35 @@ describe('Protocol Core: Replay Traces', () => {
 		expect(duplicateResult.status).toBe('ignored');
 		expect((await deps.state.getTokenBalance('alice')).RUNE).toBe(2);
 		expect((await deps.state.getElo('alice')).wins).toBe(1);
+	});
+
+	it('ranked match_result awards CardXP only to listed winner instances', async () => {
+		await seedGenesis(state, deps);
+		await seedRankedMatchAnchor(state, 'xp-instance-match');
+		state.cards.set('thor-a', {
+			uid: 'thor-a', cardId: 20001, owner: 'alice', rarity: 'common',
+			level: 1, xp: 0, edition: 'alpha', mintSource: 'genesis',
+			mintTrxId: 'mint-a', mintBlockNum: 100, lastTransferBlock: 0,
+		});
+		state.cards.set('thor-b', {
+			uid: 'thor-b', cardId: 20001, owner: 'alice', rarity: 'common',
+			level: 1, xp: 0, edition: 'alpha', mintSource: 'genesis',
+			mintTrxId: 'mint-b', mintBlockNum: 101, lastTransferBlock: 0,
+		});
+
+		const payload = await makeRankedMatchPayload({
+			matchId: 'xp-instance-match',
+			winnerNftUids: ['thor-a'],
+		});
+		const result = await applyOp(makeOp('match_result', payload, {
+			broadcaster: 'alice',
+			trxId: 'xp-instance-trx',
+			blockNum: 1100,
+		}), defaultCtx, deps);
+
+		expect(result.status).toBe('applied');
+		expect(state.cards.get('thor-a')?.xp).toBe(10);
+		expect(state.cards.get('thor-b')?.xp).toBe(0);
 	});
 
 	it('ranked match_result rejects conflicting winner for an already consumed RUNE source', async () => {

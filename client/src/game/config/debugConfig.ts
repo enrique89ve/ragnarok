@@ -3,6 +3,8 @@
  * Controls logging verbosity and debug features
  */
 
+import { isDevBuild } from './buildMode';
+
 interface DebugConfig {
   enableLogging: boolean;
   enableVerboseLogging: boolean;
@@ -19,7 +21,7 @@ interface DebugConfig {
   logAnimations: boolean;
 }
 
-const IS_DEV = import.meta.env?.DEV ?? process.env.NODE_ENV === 'development';
+const IS_DEV = isDevBuild();
 
 const debugConfig: DebugConfig = {
   enableLogging: IS_DEV,

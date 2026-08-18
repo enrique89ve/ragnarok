@@ -3,13 +3,14 @@ import {
 	isQaFullCatalogEntitlementEnabled,
 	type RagnarokRuntimeConfig,
 } from '@shared/runtimeConfig';
-import { getRuneEconomy } from '@shared/protocol-core/runeEconomy';
+import { projectBattleEndRewards } from '../../battleEndRewards';
 import type { MatchContext, RewardChannel } from '../../types';
 
 export type P2PQaResult = 'victory' | 'defeat' | 'draw';
+export type P2PLocalRewardScope = 'qa_local' | 'testnet_local';
 
 export interface P2PQaLocalRewardPreview {
-	readonly scope: 'qa_local';
+	readonly scope: P2PLocalRewardScope;
 	readonly label: string;
 	readonly result: P2PQaResult;
 	readonly runeShown: number;
@@ -20,15 +21,11 @@ export interface P2PQaLocalRewardPreview {
 	readonly settlementNote: string;
 }
 
-const QA_LOCAL_MATCH_XP_BASE = 25;
-
 export function calculateP2PQaLocalMatchXp(
 	reward: RewardChannel,
 	result: P2PQaResult,
 ): number {
-	if (result !== 'victory') return 0;
-	if (reward.xpRunes.kind === 'none') return 0;
-	return Math.max(0, Math.round(QA_LOCAL_MATCH_XP_BASE * reward.xpRunes.multiplier));
+	return projectBattleEndRewards({ reward, result }).matchXp;
 }
 
 export function createP2PQaLocalRewardPreview(input: {
@@ -39,25 +36,34 @@ export function createP2PQaLocalRewardPreview(input: {
 }): P2PQaLocalRewardPreview | null {
 	const { match, result, runtime } = input;
 	if (!match || match.opponent.kind !== 'peer') return null;
-	if (!isQaFullCatalogEntitlementEnabled(runtime)) return null;
+	if (runtime.stage !== 'testnet' || !runtime.resettable || runtime.economic) return null;
 
-	const economy = getRuneEconomy(runtime.stage);
+	const isQaPreview = isQaFullCatalogEntitlementEnabled(runtime);
+	const projection = projectBattleEndRewards({
+		reward: match.reward,
+		result,
+		runtimeStage: runtime.stage,
+	});
 	const normalizedAccount = normalizePreviewAccount(input.account);
 	const cacheKey = createRagnarokStorageKey(
 		runtime,
-		`qa-p2p-reward-preview:${normalizedAccount}:${match.matchId}`,
+		`${isQaPreview ? 'qa' : 'testnet'}-p2p-reward-preview:${normalizedAccount}:${match.matchId}`,
 	);
 
 	return {
-		scope: 'qa_local',
-		label: result === 'victory' ? 'QA local reward preview' : 'QA local result preview',
+		scope: isQaPreview ? 'qa_local' : 'testnet_local',
+		label: result === 'victory' ? 'Victory rewards' : 'Match result',
 		result,
-		runeShown: result === 'victory' ? economy.p2pWinRune : economy.p2pLossRune,
-		matchXpShown: calculateP2PQaLocalMatchXp(match.reward, result),
+		runeShown: projection.rune,
+		matchXpShown: projection.matchXp,
 		cardXpShown: 0,
 		cacheKey,
-		persistence: 'Local QA preview only; no RUNE ledger, no CardXP, no level_up, no NFTLox mutableData.',
-		settlementNote: 'Ranked RUNE still waits for dual-signed match evidence.',
+		persistence: isQaPreview
+			? 'Local QA preview only; no RUNE ledger, no CardXP, no level_up, no NFTLox mutableData.'
+			: 'Shown on testnet only. Not written to Hive, CardXP, level_up, or the RUNE ledger.',
+		settlementNote: result === 'victory'
+			? 'These amounts are the protocol calculation. Ranked Hive persist waits for dual-signed evidence.'
+			: 'No Match XP or RUNE is awarded on this result.',
 	};
 }
 

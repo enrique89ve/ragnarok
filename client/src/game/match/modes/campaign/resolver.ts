@@ -1,6 +1,6 @@
 /**
  * Resolves a Campaign match — scripted opponent (mission + boss rules
- * + scripted deck), partial xpRunes (default rate from MATCH_ECONOMY.campaign),
+ * + scripted deck), Match XP share + first-clear RUNE from MATCH_ECONOMY.campaign,
  * no ranking.
  *
  * Returns a Result because the missionId may not exist in the registry
@@ -10,7 +10,7 @@
  *
  * Per-mission multiplier override is a future capability: extend
  * CampaignMission with `rewardMultiplier?: number` and pick per-mission
- * OR `MATCH_ECONOMY.campaign.xpRunesShare` here. The override does NOT
+ * OR `MATCH_ECONOMY.campaign.matchXpShare` here. The override does NOT
  * change MATCH_ECONOMY itself — it lives at the resolver layer.
  *
  * matchId / matchSeed are supplied by the setup boundary through

@@ -12,9 +12,8 @@
  *     transcript-verified settlement.
  *   - Update local ELO snapshot + season streak.
  *
- * The xpRunes side of the reward already runs through the same generic
- * handler (`MATCH_ECONOMY[mode].xpRunesShare * BASE_XP_PER_MATCH`); peer
- * mode gets the full pool by default.
+ * Battle-end Match XP and RUNE are projected together via
+ * `projectBattleEndRewards`. P2P RUNE persist stays deferred.
  */
 
 import { debug } from '../../../config/debugConfig';
@@ -26,6 +25,7 @@ import {
 	createDefaultP2PRankedSettlementAdapters,
 	createP2PRankedSettlementModule,
 } from './rankedSettlement';
+import { projectBattleEndRewards } from '../../battleEndRewards';
 import { createP2PQaLocalRewardPreview } from './qaLocalRewardPreview';
 
 const RANKED_SETTLEMENT_MODULE = createP2PRankedSettlementModule(
@@ -36,9 +36,15 @@ const RANKED_SETTLEMENT_MODULE = createP2PRankedSettlementModule(
 
 export function onP2PMatchEnd(ctx: MatchContext, end: MatchEndContext): void {
 	if (ctx.opponent.kind !== 'peer') return;
+	const result = end.iWon ? 'victory' : 'defeat';
+	const battleEndRewards = projectBattleEndRewards({
+		reward: ctx.reward,
+		result,
+		runtimeStage: getRagnarokNetworkConfig().stage,
+	});
 	const qaLocalRewardPreview = createP2PQaLocalRewardPreview({
 		match: ctx,
-		result: end.iWon ? 'victory' : 'defeat',
+		result,
 		runtime: getRagnarokNetworkConfig(),
 	});
 	const rankedDecision = RANKED_SETTLEMENT_MODULE.evaluateMatchEnd(ctx, end);
@@ -53,6 +59,7 @@ export function onP2PMatchEnd(ctx: MatchContext, end: MatchEndContext): void {
 		rankedCanApplyElo: rankedDecision.canApplyElo,
 		reason: 'ranked_settlement_requires_dual_signed_match_anchor',
 		runeSettlement: 'not_credited_from_result_only',
+		battleEndRewards,
 		qaLocalRewardPreview: qaLocalRewardPreview
 			? {
 				scope: qaLocalRewardPreview.scope,

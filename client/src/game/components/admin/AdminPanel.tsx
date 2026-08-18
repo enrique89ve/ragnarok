@@ -1183,7 +1183,7 @@ export default function AdminPanel() {
 										<span>{Math.round((mintProgress.done / mintProgress.total) * 100)}%</span>
 									</div>
 									<div className="h-2 bg-gray-800 rounded-full overflow-hidden">
-										<div className="h-full bg-amber-500 rounded-full transition-all duration-300"
+										<div className="h-full bg-amber-500 rounded-full transition-[width] duration-300"
 											style={{ width: `${(mintProgress.done / mintProgress.total) * 100}%` }} />
 									</div>
 								</div>

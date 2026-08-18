@@ -2,6 +2,7 @@
    Self-contained; the main hero portrait lives in BattlefieldHero.tsx. */
 
 .pet-god-card {
+  position: relative;
   width: 130px;
   background: linear-gradient(
     180deg,

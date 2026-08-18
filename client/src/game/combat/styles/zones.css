@@ -6,7 +6,6 @@
  * RagnarokCombatArena.tsx. Only tokens that are still read by other
  * CSS / components remain:
  *
- *   --zone-risk-*               → styles/pot-display.css
  *   --zone-hole-cards-*-offset  → components/HoleCardsOverlay.tsx
  *   --zone-poker-card-scale     → components/HoleCardsOverlay.tsx
  *
@@ -15,10 +14,6 @@
  */
 
 :root {
-	/* Risk display — positioned by styles/pot-display.css */
-	--zone-risk-left: 320px;
-	--zone-risk-bottom: 540px;
-
 	/* Hole cards — applied via inline style in HoleCardsOverlay.tsx */
 	--zone-hole-cards-player-offset: -20px;
 	--zone-hole-cards-opponent-offset: 12px;

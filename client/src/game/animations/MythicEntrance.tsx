@@ -234,7 +234,7 @@ const MythicEntrance: React.FC<MythicEntranceProps> = ({
   return (
     <div 
       ref={containerRef}
-      className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none transition-all duration-500"
+      className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none"
       style={{ backdropFilter: 'blur(0px)' }}
     >
       {/* Card display - real card component */}

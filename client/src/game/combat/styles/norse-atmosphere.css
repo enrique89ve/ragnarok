@@ -138,8 +138,7 @@
    ======================================== */
 
 @media (prefers-reduced-motion: reduce) {
-  .game-viewport::before,
-  .game-viewport::after {
+  .game-viewport::before {
     animation: none;
     opacity: 0.3;
   }
@@ -192,47 +191,9 @@
    Press feedback (:active) lives in poker-drama.css
    ======================================== */
 
-/* Hover glow enhancement for all buttons */
-.poker-btn.raise-btn:hover:not(:disabled) {
-  box-shadow: 
-    0 0 10px rgba(232, 90, 79, 0.4),
-    0 0 20px rgba(232, 90, 79, 0.2),
-    0 4px 8px rgba(180, 60, 40, 0.4);
-}
-
-.poker-btn.call-btn:hover:not(:disabled) {
-  box-shadow: 
-    0 0 10px rgba(232, 197, 71, 0.4),
-    0 0 20px rgba(232, 197, 71, 0.2),
-    0 4px 8px rgba(180, 140, 40, 0.4);
-}
-
-.poker-btn.fold-btn:hover:not(:disabled) {
-  box-shadow: 
-    0 0 8px rgba(90, 96, 112, 0.3),
-    0 4px 8px rgba(40, 50, 70, 0.4);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .poker-btn:active:not(:disabled) {
     transform: none;
   }
 }
 
-/* ========================================
-   RISK DISPLAY - Norse Treasure Offering
-   ======================================== */
-.risk-display {
-  animation: risk-ambient 3s ease-in-out infinite;
-}
-
-@keyframes risk-ambient {
-  0%, 100% { opacity: 0.85; }
-  50% { opacity: 1; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .risk-display {
-    animation: none;
-  }
-}

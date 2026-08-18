@@ -35,7 +35,7 @@ The on-chain economic asset. One uid per minted card. Categorized via [SET_AXIS.
 
 - **Source ops**: `mint_batch` (admin only), `pack_reveal` (player), `forge_reveal` (player), `reward_claim` (player).
 - **Sink ops**: `burn` — destroys uid permanently, refills `pack_supply[rarity] += 1`.
-- **Mutation ops**: `transfer` (ownership), `level_up` (xp threshold acknowledgement).
+- **Mutation ops**: `transfer` (ownership only — `xp`/`level` stay on the uid), `level_up` (xp threshold acknowledgement). Selling or transferring an NFT does not reset instance CardXP.
 - **Visible at**: [client/src/data/blockchain/replayDB.ts](../client/src/data/blockchain/replayDB.ts) `cards` store; [INFTBridge](../client/src/game/nft/INFTBridge.ts) for client access.
 - **Canonical doc**: [RAGNAROK_PROTOCOL_V1.md](./RAGNAROK_PROTOCOL_V1.md), [SET_AXIS.md](./SET_AXIS.md).
 

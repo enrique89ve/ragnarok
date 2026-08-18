@@ -65,7 +65,7 @@ export const HeroPower: React.FC<HeroPowerProps> = ({
           ${canUseHeroPower ? heroPowerColor : 'bg-gray-800 border-gray-700'} 
           ${canUseHeroPower ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'} 
           ${isTargetMode ? 'ring-2 ring-purple-500' : ''}
-          transition-all transform ${canUseHeroPower ? 'hover:scale-110' : ''}`}
+          transition-[background-color,border-color,box-shadow,transform] ${canUseHeroPower ? 'hover:scale-110' : ''}`}
         onClick={() => canUseHeroPower && onUse()}
       >
         {/* Hero power icon */}

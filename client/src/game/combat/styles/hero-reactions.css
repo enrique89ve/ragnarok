@@ -1,5 +1,5 @@
 /* Idle breathing animation — subtle scale pulse */
-.hero-card-wrapper {
+.battlefield-hero-square .hero-card-wrapper {
 	animation: hero-breathe 4s ease-in-out infinite;
 }
 
@@ -9,7 +9,7 @@
 }
 
 /* Low HP state — desaturated + red vignette pulse */
-.hero-card-wrapper.hero-low-hp {
+.battlefield-hero-square .hero-card-wrapper.hero-low-hp {
 	animation: hero-low-hp-pulse 1.8s ease-in-out infinite;
 	filter: saturate(0.7) brightness(0.9);
 	box-shadow: inset 0 0 35px rgba(220, 38, 38, 0.45);
@@ -21,7 +21,7 @@
 }
 
 /* Critical HP — faster pulse, more desaturated */
-.hero-card-wrapper.hero-critical-hp {
+.battlefield-hero-square .hero-card-wrapper.hero-critical-hp {
 	animation: hero-critical-pulse 1s ease-in-out infinite;
 	filter: saturate(0.4) brightness(0.8);
 	box-shadow: inset 0 0 45px rgba(220, 38, 38, 0.65);
@@ -32,7 +32,7 @@
 	50% { opacity: 1; }
 }
 
-.hero-card-wrapper.hero-damaged {
+.battlefield-hero-square .hero-card-wrapper.hero-damaged {
 	animation: hero-damage-flash 0.5s ease-out;
 }
 
@@ -45,7 +45,7 @@
 	100% { transform: scale(1) translateX(0); }
 }
 
-.hero-card-wrapper.hero-damaged::after {
+.battlefield-hero-square .hero-card-wrapper.hero-damaged::after {
 	content: '';
 	position: absolute;
 	inset: 0;
@@ -62,7 +62,7 @@
 	100% { opacity: 0; }
 }
 
-.hero-card-wrapper.hero-healed {
+.battlefield-hero-square .hero-card-wrapper.hero-healed {
 	animation: hero-heal-glow 0.6s ease-out;
 }
 
@@ -72,7 +72,7 @@
 	100% { opacity: 1; }
 }
 
-.hero-card-wrapper.hero-healed::after {
+.battlefield-hero-square .hero-card-wrapper.hero-healed::after {
 	content: '';
 	position: absolute;
 	inset: 0;
@@ -111,11 +111,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.hero-card-wrapper,
-	.hero-card-wrapper.hero-damaged,
-	.hero-card-wrapper.hero-healed,
-	.hero-card-wrapper.hero-low-hp,
-	.hero-card-wrapper.hero-critical-hp,
+	.battlefield-hero-square .hero-card-wrapper,
+	.battlefield-hero-square .hero-card-wrapper.hero-damaged,
+	.battlefield-hero-square .hero-card-wrapper.hero-healed,
+	.battlefield-hero-square .hero-card-wrapper.hero-low-hp,
+	.battlefield-hero-square .hero-card-wrapper.hero-critical-hp,
 	.hero-portrait.power-activating,
 	.hero-armor-badge.armor-gained {
 		animation: none;

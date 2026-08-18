@@ -14,7 +14,7 @@ import React from 'react';
 
 const CardCardBack: React.FC = () => {
 	return (
-		<div className="card-card-back" aria-label="Card face-down">
+		<div className="card-card-back poker-face-down-surface" aria-label="Card face-down">
 			<div className="card-back-border">
 				<div className="corner-rune tl">ᚱ</div>
 				<div className="corner-rune tr">ᚦ</div>

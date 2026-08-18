@@ -9,33 +9,6 @@
   flex-wrap: nowrap;
 }
 
-/* Empty community slot — gold rim + dark fill + raised Eihwaz rune.
-   Same relief recipe as .card-card-back and
-   .opponent-card-back so all 3 face-down surfaces read as one family. */
-.card-placeholder {
-  width: 112px;
-  height: 158px;
-  /* Background stack + beveled rim live in
-     `client/src/game/components/card/pokerFaceDown.css` (loaded via
-     `poker-core.css`). Only the community-slot geometry stays here. */
-  border-radius: 7px;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.card-placeholder::after {
-  content: 'ᛇ';
-  font-family: 'Cinzel', serif;
-  font-size: 48px;
-  line-height: 1;
-  color: rgba(201, 168, 76, 0.7);
-  text-shadow:
-    -1px -1px 0 rgba(255, 235, 180, 0.5),
-    1px 1px 0 rgba(0, 0, 0, 0.8);
-}
-
 .community-slot {
   display: flex;
   flex-direction: column;
@@ -66,21 +39,6 @@
   font-size: 0.8rem;
 }
 
-.slot-label {
-  font-family: var(--font-display);
-  font-size: 0.78rem;
-  font-weight: 800;
-  color: var(--ui-gold-bright);
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
-}
-
-.slot-label.dimmed {
-  color: rgba(148, 163, 184, 0.55);
-  text-shadow: none;
-}
-
 .community-cards-section {
   display: flex;
   justify-content: center;
@@ -90,16 +48,4 @@
   border-radius: 0;
   margin: 8px 0;
   border: none;
-}
-
-.community-group {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.community-cards-row {
-  display: flex;
-  gap: 3px;
 }

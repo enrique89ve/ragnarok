@@ -494,7 +494,7 @@ export default function MarketplacePage() {
 									<button
 										onClick={handleListCard}
 										disabled={loading || !listCardUid || !listPrice}
-										className="flex-1 px-4 py-2 bg-linear-to-b from-gold-300 to-gold-500 hover:from-gold-200 hover:to-gold-400 disabled:from-obsidian-700 disabled:to-obsidian-700 disabled:text-ink-400 disabled:opacity-60 text-obsidian-950 font-display text-xs font-bold tracking-[0.14em] uppercase rounded transition-all"
+										className="flex-1 px-4 py-2 bg-linear-to-b from-gold-300 to-gold-500 hover:from-gold-200 hover:to-gold-400 disabled:from-obsidian-700 disabled:to-obsidian-700 disabled:text-ink-400 disabled:opacity-60 text-obsidian-950 font-display text-xs font-bold tracking-[0.14em] uppercase rounded transition-[background-color,border-color,color,box-shadow]"
 									>
 										{loading ? 'Listing...' : 'List for Sale'}
 									</button>
@@ -572,7 +572,7 @@ export default function MarketplacePage() {
 									<button
 										onClick={handleMakeOffer}
 										disabled={loading || !offerPrice}
-										className="flex-1 px-4 py-2 bg-linear-to-b from-bifrost-500 to-bifrost-500/70 hover:from-bifrost-300 hover:to-bifrost-500 disabled:from-obsidian-700 disabled:to-obsidian-700 disabled:opacity-60 text-ink-0 font-display text-xs font-bold tracking-[0.14em] uppercase rounded border border-bifrost-300/50 transition-all"
+										className="flex-1 px-4 py-2 bg-linear-to-b from-bifrost-500 to-bifrost-500/70 hover:from-bifrost-300 hover:to-bifrost-500 disabled:from-obsidian-700 disabled:to-obsidian-700 disabled:opacity-60 text-ink-0 font-display text-xs font-bold tracking-[0.14em] uppercase rounded border border-bifrost-300/50 transition-[background-color,border-color,color,box-shadow]"
 									>
 										{loading ? 'Submitting...' : 'Submit Offer'}
 									</button>
@@ -717,7 +717,7 @@ function ListingCard({ listing, isMine, onBuy, onUnlist, onOffer, loading }: {
 								onClick={onBuy}
 								disabled={loading}
 								aria-label={`Buy ${displayName} for ${listing.price} ${listing.currency}`}
-								className="flex-1 px-3 py-1.5 bg-linear-to-b from-gold-300 to-gold-500 hover:from-gold-200 hover:to-gold-400 text-obsidian-950 rounded font-display text-xs font-bold tracking-[0.14em] uppercase transition-all disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-300"
+								className="flex-1 px-3 py-1.5 bg-linear-to-b from-gold-300 to-gold-500 hover:from-gold-200 hover:to-gold-400 text-obsidian-950 rounded font-display text-xs font-bold tracking-[0.14em] uppercase transition-[background-color,border-color,color,box-shadow] disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-300"
 							>
 								Buy
 							</button>

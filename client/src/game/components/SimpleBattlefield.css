@@ -1191,7 +1191,7 @@
 }
 
 /* ─── Prophecy Countdown Tracker ────────────────────────────── */
-.prophecy-tracker {
+.simple-battlefield .prophecy-tracker {
   position: absolute;
   right: 16px;
   top: 50%;

@@ -362,7 +362,7 @@ export function MissionBriefing({
 								key={option}
 								type="button"
 								onClick={() => setDifficulty(option)}
-								className={`campaign-difficulty-card text-left rounded-xl border p-4 transition-all duration-200 ${
+									className={`campaign-difficulty-card text-left rounded-xl border p-4 transition-[background-color,border-color,box-shadow] duration-200 ${
 									active
 										? 'border-gold-300/50 bg-linear-to-b from-gold-300/[0.10] to-gold-300/[0.04] shadow-[inset_0_1px_0_rgba(245,237,224,0.06)]'
 										: 'border-obsidian-700 bg-obsidian-900/60 hover:border-gold-600/50 hover:bg-obsidian-800/70'

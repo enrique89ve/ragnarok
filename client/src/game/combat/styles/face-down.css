@@ -15,7 +15,7 @@
 /* .opponent-hand-display macro layout lives in ../layout/board.css.
    Hover variants below still rely on the class as a selector hook. */
 
-.opponent-card-back {
+.ragnarok-combat-arena .opponent-card-back {
   width: var(--opponent-hand-card-width, 78px);
   height: calc(var(--opponent-hand-card-width, 78px) * 110 / 78);
   /* Background stack + beveled rim live in
@@ -28,17 +28,12 @@
   transition: transform 0.2s ease, margin 0.2s ease;
 }
 
-.opponent-card-back:first-child {
+.ragnarok-combat-arena .opponent-card-back:first-child {
   margin-left: 0;
 }
 
-/* Subtle knotwork inset — removed for minimalist parity with .card-placeholder */
-.opponent-card-back::before {
-  content: '';
-}
-
 /* Eihwaz rune — flat identity mark, scaled down for the 78×110 hand card. */
-.opponent-card-back::after {
+.ragnarok-combat-arena .opponent-card-back::after {
   content: 'ᛇ';
   position: absolute;
   top: 50%;
@@ -52,32 +47,11 @@
 }
 
 /* Fan effect on hover */
-.opponent-hand-display:hover .opponent-card-back {
+.ragnarok-combat-arena .opponent-hand-display:hover .opponent-card-back {
   margin-left: var(--opponent-hand-card-overlap, -39px);
   transform: translateY(-4px);
 }
 
-.opponent-hand-display:hover .opponent-card-back:first-child {
+.ragnarok-combat-arena .opponent-hand-display:hover .opponent-card-back:first-child {
   margin-left: 0;
-}
-
-/* Card count badge */
-.opponent-hand-count {
-  position: absolute;
-  right: -8px;
-  top: -8px;
-  width: 24px;
-  height: 24px;
-  background: linear-gradient(135deg, #dc2626, #991b1b);
-  border: 2px solid #fbbf24;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-  z-index: 10;
 }

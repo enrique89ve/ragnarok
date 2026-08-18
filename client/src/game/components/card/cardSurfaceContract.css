@@ -11,7 +11,7 @@
  * Do not put collection presentation rules in CardFrame.css.
  */
 
-.norse-card-frame--surface-collection {
+.collection-card-frame {
 	--card-surface: collection;
 	--card-surface-metadata-display: block;
 }

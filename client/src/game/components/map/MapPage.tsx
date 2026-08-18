@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { ComponentType, PointerEvent, WheelEvent } from 'react';
+import { isDevBuild } from '../../config/buildMode';
 import { useAtlasData } from './atlasDataContext';
 import AtlasAmbientCanvas from './AtlasAmbientCanvas';
 import AtlasPathCanvas from './AtlasPathCanvas';
@@ -93,7 +94,7 @@ function isInteractiveMapTarget(target: EventTarget | null): boolean {
 
 export default function MapPage() {
 	const [searchParams] = useSearchParams();
-	const editorRequested = import.meta.env.DEV && searchParams.get('editor') === '1';
+	const editorRequested = isDevBuild() && searchParams.get('editor') === '1';
 	const [EditorOverlay, setEditorOverlay] = useState<ComponentType<MapAtlasEditorOverlayProps> | null>(null);
 
 	useEffect(() => {

@@ -1305,7 +1305,7 @@ export default function CollectionPage() {
                   whileTap={{ scale: page === 1 ? 1 : 0.95 }}
                   onClick={() => page > 1 && setPage(page - 1)}
                   disabled={page === 1 || isLoadingMore}
-                  className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-all ${
+                  className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-colors ${
                     page === 1
                       ? "bg-gray-700/50 text-gray-500 cursor-not-allowed"
                       : "bg-gray-700 hover:bg-gray-600 text-white"
@@ -1338,7 +1338,7 @@ export default function CollectionPage() {
                   whileTap={{ scale: page === totalPages ? 1 : 0.95 }}
                   onClick={() => page < totalPages && setPage(page + 1)}
                   disabled={page === totalPages || isLoadingMore}
-                  className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-all ${
+                  className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-colors ${
                     page === totalPages
                       ? "bg-gray-700/50 text-gray-500 cursor-not-allowed"
                       : "bg-gray-700 hover:bg-gray-600 text-white"

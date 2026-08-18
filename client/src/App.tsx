@@ -42,6 +42,7 @@ import {
 	CardDataRuntimeBoundary,
 	GameplayRuntimeBoundary,
 } from "./game/runtime/RuntimeBoundary";
+import { isDevBuild } from './game/config/buildMode';
 import { getSeasonInfo, formatTimeRemaining } from './game/utils/seasonUtils';
 import { isChunkLoadError, recoverFromChunkLoadError } from './lib/chunkLoadRecovery';
 
@@ -94,7 +95,7 @@ const SocialPresenceHeartbeat = lazy(() => import('./game/components/social/Soci
 const frameTestModules = import.meta.glob('./game/components/dev/FrameTestPage.tsx');
 const FrameTestPage = lazy(async () => {
 	const loadTest = frameTestModules['./game/components/dev/FrameTestPage.tsx'];
-	if (!import.meta.env.DEV || loadTest === undefined) {
+	if (!isDevBuild() || loadTest === undefined) {
 		return { default: () => <Navigate to={routes.home} replace /> };
 	}
 
@@ -757,12 +758,12 @@ function HomePage() {
 					style={{ background: mode.atmosphere }}
 				/>
 
-				<Icon className={`n-mode-card-large-icon h-16 w-16 ${a.text} group-hover:scale-110 group-hover:opacity-30`} strokeWidth={1} />
+					<Icon className={`n-mode-card-large-icon h-16 w-16 ${a.text} group-hover/mode:scale-110 group-hover/mode:opacity-30`} strokeWidth={1} />
 
 				<div className="relative z-10 flex flex-col h-full justify-between">
 					<div>
-						<div className={`font-mono text-[10px] uppercase tracking-[0.24em] mb-1 group-hover:text-gold-300 transition-colors ${a.text}`}>{mode.kicker}</div>
-						<h3 className="font-display text-lg font-black uppercase tracking-wider text-ink-0 group-hover:text-gold-100 transition-colors">{mode.title}</h3>
+						<div className={`font-mono text-[10px] uppercase tracking-[0.24em] mb-1 group-hover/mode:text-gold-300 transition-colors ${a.text}`}>{mode.kicker}</div>
+						<h3 className="font-display text-lg font-black uppercase tracking-wider text-ink-0 group-hover/mode:text-gold-100 transition-colors">{mode.title}</h3>
 						<p className="n-mode-card-description mt-2 text-xs text-ink-300 line-clamp-2 leading-relaxed">
 							{mode.description}
 						</p>
@@ -770,14 +771,14 @@ function HomePage() {
 
 					<div className="mt-6 flex justify-end">
 						{isCombat ? (
-							<div className="btn-runic btn-runic--gold btn-runic--sm transition-transform group-hover:scale-105">
+								<div className="btn-runic btn-runic--gold btn-runic--sm transition-transform group-hover/mode:scale-105">
 								<span className="btn-runic-stud" aria-hidden />
 								<Play size={10} fill="currentColor" />
 								{visibleCta}
 								<span className="btn-runic-stud" aria-hidden />
 							</div>
 						) : (
-							<div className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-ink-300 group-hover:text-gold-300 transition-colors">
+								<div className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-ink-300 group-hover/mode:text-gold-300 transition-colors">
 								{visibleCta}
 								<ChevronRight size={12} />
 							</div>
@@ -786,7 +787,7 @@ function HomePage() {
 				</div>
 			</>
 		);
-		const cardClassName = `n-mode-card n-glass-interactive px-5 py-6 min-h-[180px] group no-underline ${locked ? 'opacity-70' : ''}`;
+		const cardClassName = `n-mode-card n-glass-interactive px-5 py-6 min-h-[180px] group/mode no-underline ${locked ? 'opacity-70' : ''}`;
 
 		if (locked) {
 			return (
@@ -1188,7 +1189,7 @@ function App() {
 						<Route path={routes.map} element={<MapPage />} />
 						<Route
 							path={routes.frameTest}
-							element={import.meta.env.DEV ? <FrameTestPage /> : <Navigate to={routes.home} replace />}
+							element={isDevBuild() ? <FrameTestPage /> : <Navigate to={routes.home} replace />}
 						/>
 
 						<Route element={<GlobalOverlaysLayout />}>
@@ -1235,7 +1236,7 @@ function App() {
 							<div className="min-h-screen bg-obsidian-950 flex flex-col items-center justify-center text-ink-0 px-6">
 								<h1 className="font-display text-6xl font-black tracking-[0.18em] text-gold-300 mb-4">404</h1>
 								<p className="font-mono text-[11px] tracking-[0.32em] uppercase text-ink-300 mb-8">Page not found</p>
-								<Link to={routes.home} className="px-6 py-3 bg-linear-to-b from-gold-300 to-gold-500 border border-gold-200 text-obsidian-950 font-display font-bold tracking-[0.18em] uppercase rounded-md transition-all hover:from-gold-200 hover:to-gold-400 hover:scale-[1.02]">
+									<Link to={routes.home} className="px-6 py-3 bg-linear-to-b from-gold-300 to-gold-500 border border-gold-200 text-obsidian-950 font-display font-bold tracking-[0.18em] uppercase rounded-md transition-[background-color,border-color,color,transform] hover:from-gold-200 hover:to-gold-400 hover:scale-[1.02]">
 									Back to Home
 								</Link>
 							</div>

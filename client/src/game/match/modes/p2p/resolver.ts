@@ -1,6 +1,6 @@
 /**
- * Resolves a P2P match — peer opponent, full xpRunes (MATCH_ECONOMY.p2pRanked)
- * plus ELO ranking. Unlike single/campaign, this resolver does NOT mint
+ * Resolves a P2P match — peer opponent, Match XP + ranked RUNE
+ * (MATCH_ECONOMY.p2pRanked) plus ELO ranking. Unlike single/campaign, this resolver does NOT mint
  * identity: matchId and matchSeed come from the handshake (commit-reveal
  * output of two peers' salts; sorted-peer-ids derivation), so both peers
  * resolve to byte-identical MatchContext.matchId / matchSeed values

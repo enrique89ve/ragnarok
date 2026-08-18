@@ -229,18 +229,3 @@
       rotate(calc(var(--poker-zone-hourglass-rot, 0deg) - 0.8deg));
   }
 }
-
-/* Legacy compat */
-.timer-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-5);
-  padding: var(--space-10) 0;
-}
-
-.timer-section .timer-value {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: var(--gold-200);
-}

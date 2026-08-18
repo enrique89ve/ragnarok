@@ -46,9 +46,14 @@
 	pointer-events: none;
 }
 
-.campaign-route-shell > :where(:not(.rune-border-decoration)) {
+.campaign-route-shell > :where(:not(.rune-border-decoration, .cinematic-crawl-overlay)) {
 	position: relative;
 	z-index: 2;
+}
+
+.campaign-route-shell > .cinematic-crawl-overlay {
+	position: fixed;
+	z-index: var(--z-topmost);
 }
 
 .campaign-route-shell > .rune-border-decoration {

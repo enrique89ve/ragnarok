@@ -21,7 +21,7 @@ function TournamentCard({ item, onSelect }: { item: TournamentListItem; onSelect
 	return (
 		<button
 			onClick={onSelect}
-			className="w-full text-left bg-obsidian-900/60 border border-obsidian-700/50 rounded-xl p-5 hover:bg-obsidian-800/60 hover:border-gold-600/50 transition-all"
+			className="w-full text-left bg-obsidian-900/60 border border-obsidian-700/50 rounded-xl p-5 hover:bg-obsidian-800/60 hover:border-gold-600/50 transition-[background-color,border-color]"
 		>
 			<div className="flex items-center justify-between mb-2 gap-3">
 				<h3 className="font-display text-lg font-bold tracking-[0.08em] text-ink-0 truncate">{item.name}</h3>
@@ -227,7 +227,7 @@ export default function TournamentListPage() {
 								<button
 									onClick={handleRegister}
 									disabled={activeTournament.players.some(p => p.username === username)}
-									className="shrink-0 px-5 py-2 bg-linear-to-b from-gold-300 to-gold-500 disabled:from-obsidian-800 disabled:to-obsidian-800 disabled:text-ink-400 border border-gold-200 disabled:border-obsidian-700 text-obsidian-950 rounded-md font-display text-xs font-bold tracking-[0.18em] uppercase transition-all hover:from-gold-200 hover:to-gold-400 disabled:hover:from-obsidian-800 disabled:hover:to-obsidian-800"
+									className="shrink-0 px-5 py-2 bg-linear-to-b from-gold-300 to-gold-500 disabled:from-obsidian-800 disabled:to-obsidian-800 disabled:text-ink-400 border border-gold-200 disabled:border-obsidian-700 text-obsidian-950 rounded-md font-display text-xs font-bold tracking-[0.18em] uppercase transition-[background-color,border-color,color] hover:from-gold-200 hover:to-gold-400 disabled:hover:from-obsidian-800 disabled:hover:to-obsidian-800"
 								>
 									{activeTournament.players.some(p => p.username === username) ? 'Registered' : 'Register'}
 								</button>

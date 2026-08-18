@@ -6,7 +6,6 @@ import { useSettingsStore } from '../../stores/settingsStore';
 import ChessPieceComponent, { type ChessPieceVisualState } from './ChessPiece';
 import MovePlate from './MovePlate';
 import ChessAttackAnimation from './ChessAttackAnimation';
-import './ChessBoardEnhanced.css';
 import { useChessBoardInteractions } from './useChessBoardInteractions';
 import {
   getCellHighlight,

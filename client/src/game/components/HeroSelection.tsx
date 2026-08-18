@@ -80,7 +80,7 @@ const HeroSelection: React.FC<HeroSelectionProps> = ({ onHeroSelect, lastPlayedD
             </div>
             <button
               onClick={onQuickStart}
-              className="px-6 py-3 bg-green-500 hover:bg-green-600 rounded-lg font-bold text-white shadow-lg transition-all hover:scale-105"
+              className="px-6 py-3 bg-green-500 hover:bg-green-600 rounded-lg font-bold text-white shadow-lg transition-[background-color,box-shadow,transform] hover:scale-105"
             >
               Play Again
             </button>

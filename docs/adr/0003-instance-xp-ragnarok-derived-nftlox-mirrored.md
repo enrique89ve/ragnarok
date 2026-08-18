@@ -8,7 +8,8 @@ XP and level are gameplay progression for a specific NFT instance, so Ragnarok r
 
 ## Consequences
 
-- Match/deck payloads that award progression must identify concrete `nftUid`s, not just `cardId`s, otherwise XP cannot be safely assigned per instance.
+- Match/deck payloads that award progression must identify concrete `nftUid`s, not just `cardId`s, otherwise XP cannot be safely assigned per instance. Replay `applyWinnerCardXp` credits only the winner instance uids listed on `match_result` (`u`). Same-`cardId` siblings that are not listed stay at their current XP.
 - NFTLox owner-authored `mutableData` must never be accepted as canonical XP.
 - Marketplace and external readers may use NFTLox `xp`/`level` for display, but gameplay validation must verify against Ragnarok replay when the value matters.
+- Transfer and sale move custody of the same uid. Replay must keep `xp` and `level` on that uid; they are not account balances and must not be zeroed on `card_transfer`.
 

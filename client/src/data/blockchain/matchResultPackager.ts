@@ -10,6 +10,7 @@ import type {
 import { MATCH_RESULT_VERSION } from './types';
 import { hashMatchResult } from './hashUtils';
 import { calculateXPRewards } from './cardXPRewards';
+import { normalizeWinnerInstanceUids } from '@shared/protocol-core/xpEconomy';
 import type { HiveCardAsset } from '../schemas/HiveTypes';
 import { getPlayerNonce, advancePlayerNonce } from './replayDB';
 import { RUNE_LOSS_RANKED, RUNE_WIN_RANKED } from '@shared/protocol-core/runeEconomy';
@@ -177,6 +178,7 @@ export function buildMatchResultCommitmentInput(result: PackagedMatchResult): Co
 		seed: result.seed,
 		version: result.version,
 		cardHex: result.winner.cardsUsed.length > 0 ? encodeCardIds(result.winner.cardsUsed) : undefined,
+		winnerNftUids: winnerInstanceUidsFromResult(result),
 		transcriptRoot: result.transcriptRoot ?? '',
 		transcriptCid: result.transcriptCID,
 	});
@@ -199,6 +201,10 @@ export async function packMatchResultForChain(result: PackagedMatchResult): Prom
 	if (result.winner.cardsUsed.length > 0) {
 		packed.c = encodeCardIds(result.winner.cardsUsed);
 	}
+	const winnerNftUids = winnerInstanceUidsFromResult(result);
+	if (winnerNftUids.length > 0) {
+		packed.u = winnerNftUids;
+	}
 	if (result.transcriptRoot) {
 		packed.tr = result.transcriptRoot;
 	}
@@ -212,4 +218,8 @@ export async function packMatchResultForChain(result: PackagedMatchResult): Prom
 		packed.sig = { b: result.signatures.broadcaster, c: result.signatures.counterparty };
 	}
 	return packed;
+}
+
+function winnerInstanceUidsFromResult(result: PackagedMatchResult): string[] {
+	return normalizeWinnerInstanceUids(result.xpRewards.map(reward => reward.cardUid));
 }

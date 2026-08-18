@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
+import { isDevBuild, isProdBuild } from "./game/config/buildMode";
 import {
   RAGNAROK_NETWORK_CONFIG,
   createRuntimeStorageKey,
@@ -116,13 +117,13 @@ function renderApp(): void {
 }
 
 async function bootstrap(): Promise<void> {
-  const shouldRender = import.meta.env.DEV
+  const shouldRender = isDevBuild()
     ? await resetDevelopmentServiceWorker()
     : true;
 
   if (!shouldRender) return;
 
-  if (import.meta.env.PROD) {
+  if (isProdBuild()) {
     registerProductionServiceWorker();
   }
 
@@ -146,7 +147,7 @@ window.addEventListener('unhandledrejection', (e) => {
     return;
   }
 
-	if (import.meta.env.DEV) console.error('Unhandled rejection:', e.reason);
+	if (isDevBuild()) console.error('Unhandled rejection:', e.reason);
 });
 
 window.addEventListener('error', (e) => {

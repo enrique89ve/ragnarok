@@ -3,6 +3,7 @@ import type {
 	DeckRejection,
 	VerifiedDeckCard,
 } from '@shared/protocol-core/deckVerification';
+import { isDevBuild } from '../game/config/buildMode';
 
 /**
  * chainAPI.ts — Client-side fetch wrapper for /api/chain/* endpoints.
@@ -174,7 +175,7 @@ export async function registerAccount(username: string): Promise<void> {
 		method: 'POST',
 		body: JSON.stringify({ username }),
 	}).catch((err) => {
-		if (import.meta.env.DEV) console.warn('[chainAPI] registerAccount failed:', err);
+		if (isDevBuild()) console.warn('[chainAPI] registerAccount failed:', err);
 	});
 }
 

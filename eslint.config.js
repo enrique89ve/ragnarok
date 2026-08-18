@@ -232,4 +232,17 @@ export default [
 			react: { version: 'detect' },
 		},
 	},
+	{
+		files: ['client/**/*.tsx'],
+		ignores: ['client/src/game/config/buildMode.ts'],
+		rules: {
+			'no-restricted-syntax': ['error', {
+				selector: "MemberExpression[object.object.type='MetaProperty'][object.property.name='env'][property.name='DEV']",
+				message: 'Do not read import.meta.env.DEV in TSX. Use isDevBuild() from client/src/game/config/buildMode.ts.',
+			}, {
+				selector: "MemberExpression[object.object.type='MetaProperty'][object.property.name='env'][property.name='PROD']",
+				message: 'Do not read import.meta.env.PROD in TSX. Use isProdBuild() from client/src/game/config/buildMode.ts.',
+			}],
+		},
+	},
 ];

@@ -122,8 +122,7 @@
   /* NO overflow:hidden — that creates a rectangular clip over the full cell */
 }
 
-.flame-core,
-.flame-outer {
+:is(.flame-core, .flame-outer) {
   position: absolute;
   border-radius: 50%;
   mix-blend-mode: screen;
@@ -450,18 +449,12 @@
 
 .owner-frame-player {
   --side-border-color: #00f2ff;
-}
-.owner-frame-opponent {
-  --side-border-color: #ff3c3c;
-}
-
-.owner-frame-player {
   --piece-owner-primary: rgba(37, 99, 235, 0.26);
   --piece-owner-secondary: rgba(59, 130, 246, 0.95);
   --piece-owner-edge: rgba(191, 219, 254, 0.38);
 }
-
 .owner-frame-opponent {
+  --side-border-color: #ff3c3c;
   --piece-owner-primary: rgba(185, 28, 28, 0.26);
   --piece-owner-secondary: rgba(239, 68, 68, 0.95);
   --piece-owner-edge: rgba(254, 202, 202, 0.38);

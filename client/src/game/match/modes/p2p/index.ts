@@ -1,5 +1,5 @@
 /**
- * P2P mode — peer opponent, full economic reward (xpRunes percentage 1.0)
+ * P2P mode — peer opponent, full Match XP, projected ranked RUNE,
  * plus ranking (ELO). Authority is symmetric (Plan B) — both peers
  * apply commands independently and reconcile via state hash.
  *
@@ -26,6 +26,7 @@ export {
 	createP2PQaLocalRewardPreview,
 } from './qaLocalRewardPreview';
 export type {
+	P2PLocalRewardScope,
 	P2PQaLocalRewardPreview,
 	P2PQaResult,
 } from './qaLocalRewardPreview';

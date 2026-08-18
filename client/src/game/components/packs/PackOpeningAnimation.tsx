@@ -385,7 +385,7 @@ export default function PackOpeningAnimation({
 												type="button"
 												onClick={() => document.getElementById(`reveal-${section.key}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
 												aria-label={`Jump to ${section.label} cards`}
-												className={`reveal-chip reveal-chip--${section.color} snap-start inline-flex items-center gap-2 px-5 py-3 rounded-full border bg-obsidian-900/70 transition-all whitespace-nowrap`}
+											className={`reveal-chip reveal-chip--${section.color} snap-start inline-flex items-center gap-2 px-5 py-3 rounded-full border bg-obsidian-900/70 transition-[background-color,border-color,color,box-shadow,transform] whitespace-nowrap`}
 											>
 												<span aria-hidden="true" className="text-base leading-none">{section.glyph}</span>
 												<span className="font-mono text-[10px] tracking-[0.22em] uppercase">{section.label}</span>
@@ -405,7 +405,7 @@ export default function PackOpeningAnimation({
 									<button
 										type="button"
 										onClick={handleSkipToResults}
-										className="px-5 py-2 bg-obsidian-700/80 hover:bg-obsidian-600 text-ink-0 rounded-md border border-obsidian-500 font-display text-xs tracking-[0.18em] uppercase transition-all"
+										className="px-5 py-2 bg-obsidian-700/80 hover:bg-obsidian-600 text-ink-0 rounded-md border border-obsidian-500 font-display text-xs tracking-[0.18em] uppercase transition-colors"
 									>
 										Skip to Results →
 									</button>

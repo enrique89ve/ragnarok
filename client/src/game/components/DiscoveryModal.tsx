@@ -221,7 +221,7 @@ export const DiscoveryModal: React.FC<DiscoveryModalProps> = ({
             return (
               <div 
                 key={card.id} 
-                className="transition-all duration-200 cursor-pointer"
+                className="cursor-pointer"
                 style={{ 
                   position: 'relative',
                   transform: selectedCard?.id === card.id ? 'scale(1.15)' : 'scale(1)',

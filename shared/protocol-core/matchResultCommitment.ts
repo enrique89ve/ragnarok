@@ -1,4 +1,5 @@
 import { canonicalStringify, sha256Hash } from './hash';
+import { normalizeWinnerInstanceUids } from './xpEconomy';
 
 export const MATCH_RESULT_SIGNATURE_PREFIX = 'ragnarok match_result v1';
 
@@ -11,6 +12,7 @@ export interface CompactMatchResultCommitmentInput {
 	s: string;
 	v: number;
 	c: string;
+	u: string;
 	tr: string;
 	tc: string;
 }
@@ -24,6 +26,7 @@ export interface CompactMatchResultCommitmentFields {
 	seed: string;
 	version: number;
 	cardHex?: string;
+	winnerNftUids?: readonly string[];
 	transcriptRoot: string;
 	transcriptCid?: string;
 }
@@ -40,6 +43,7 @@ export function buildCompactMatchResultCommitmentInput(
 		s: fields.seed,
 		v: fields.version,
 		c: fields.cardHex ?? '',
+		u: normalizeWinnerInstanceUids(fields.winnerNftUids ?? []).join(','),
 		tr: fields.transcriptRoot,
 		tc: fields.transcriptCid ?? '',
 	};

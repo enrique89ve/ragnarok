@@ -180,7 +180,7 @@ export const Hero: React.FC<HeroProps> = ({
       {/* Hero portrait with frame */}
       <div 
         ref={heroRef}
-        className={`w-20 h-20 bg-linear-to-b ${heroClassColor} rounded-full flex items-center justify-center text-white font-bold shadow-lg border-2 transition-all hover:scale-105 relative overflow-hidden ${onHeroClick && !isInteractionDisabled ? 'cursor-pointer' : 'cursor-default'}`}
+        className={`w-20 h-20 bg-linear-to-b ${heroClassColor} rounded-full flex items-center justify-center text-white font-bold shadow-lg border-2 transition-[background-color,border-color,box-shadow,transform] hover:scale-105 relative overflow-hidden ${onHeroClick && !isInteractionDisabled ? 'cursor-pointer' : 'cursor-default'}`}
         onClick={isInteractionDisabled ? undefined : onHeroClick}
       >
         {/* Hero glow effect when it's player's turn */}

@@ -11,10 +11,9 @@
  * This script complements stylelint by failing the build if any selector is
  * defined in more than one file. Pre-commit + CI run this on every CSS commit.
  *
- * Exemptions: hover/focus/active variants, media query overrides, theme
- * variants, and pseudo-classes are NOT exempt — duplicates are duplicates.
- * If you legitimately need the same selector in two files, refactor so the
- * common parts live together.
+ * Token-only rules are treated as a scope layer, not a competing declaration
+ * layer. This lets a component keep its semantic aliases in `tokens.css`
+ * while its visual rules stay in the component stylesheet.
  *
  * Usage:
  *   node scripts/check-css-cross-file-dupes.mjs                # whole client/src/
@@ -47,13 +46,56 @@ const filterFiles = filesIdx >= 0 ? args.slice(filesIdx + 1).map((f) => f.replac
  * for a pre-commit hook. Selectors inside @media / @supports / @keyframes are
  * still extracted as-is; that's intentional (we want to catch them too).
  */
-function extractSelectors(css) {
+function splitSelectorList(selector) {
+  const parts = [];
+  let start = 0;
+  let parentheses = 0;
+  let brackets = 0;
+  let quote = null;
+  let escaped = false;
+
+  for (let index = 0; index < selector.length; index += 1) {
+    const char = selector[index];
+
+    if (quote) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === '\\') {
+        escaped = true;
+      } else if (char === quote) {
+        quote = null;
+      }
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      quote = char;
+    } else if (char === '(') {
+      parentheses += 1;
+    } else if (char === ')') {
+      parentheses = Math.max(0, parentheses - 1);
+    } else if (char === '[') {
+      brackets += 1;
+    } else if (char === ']') {
+      brackets = Math.max(0, brackets - 1);
+    } else if (char === ',' && parentheses === 0 && brackets === 0) {
+      parts.push(selector.slice(start, index));
+      start = index + 1;
+    }
+  }
+
+  parts.push(selector.slice(start));
+  return parts;
+}
+
+function extractRuleData(css) {
   // Strip comments
   const stripped = css.replace(/\/\*[\s\S]*?\*\//g, '');
   // Find all "selector { ... }" blocks. The selector is everything before {.
   // Skip @-rules whose body isn't a declaration block (@import, @charset, @namespace).
   const selectors = new Set();
-  const re = /([^{}@][^{}]*?)\s*\{/g;
+  const tokenOnlySelectors = new Set();
+  const re = /([^{}@][^{}]*?)\s*\{([^{}]*)\}/g;
   let m;
   while ((m = re.exec(stripped)) !== null) {
     let sel = m[1].trim();
@@ -64,15 +106,27 @@ function extractSelectors(css) {
     if (sel.startsWith('@')) continue;
     // Normalize: collapse whitespace, strip trailing commas
     sel = sel.replace(/\s+/g, ' ').replace(/\s*,\s*/g, ',');
-    // Split selector lists into individual selectors so ".a, .b" counts as
-    // BOTH ".a" and ".b" — that way two files defining ".a" in different
-    // selector lists are still flagged.
-    for (const part of sel.split(',')) {
+    // Split only top-level selector lists. Commas inside :is(), :where(),
+    // attribute selectors, or another functional pseudo-class are part of the
+    // same selector and must not become false cross-file duplicates.
+    const parts = splitSelectorList(sel)
+      .map((part) => part.trim())
+      .filter(Boolean);
+    const declarations = m[2]
+      .split(';')
+      .map((declaration) => declaration.trim())
+      .filter(Boolean);
+    const tokenOnly = declarations.length > 0 && declarations.every((declaration) => /^--[\w-]+\s*:/.test(declaration));
+
+    for (const part of parts) {
       const trimmed = part.trim();
-      if (trimmed) selectors.add(trimmed);
+      if (!trimmed) continue;
+      selectors.add(trimmed);
+      if (tokenOnly) tokenOnlySelectors.add(trimmed);
+      else tokenOnlySelectors.delete(trimmed);
     }
   }
-  return selectors;
+  return { selectors, tokenOnlySelectors };
 }
 
 // Always scan the entire project — cross-file detection requires the full set.
@@ -83,21 +137,29 @@ const cssGlob = await glob('client/src/**/*.css', {
 
 /** @type {Map<string, string[]>} selector -> list of files defining it */
 const selectorToFiles = new Map();
+const selectorToTokenOnlyFiles = new Map();
 
 for (const file of cssGlob) {
   const abs = resolve(REPO_ROOT, file);
   const css = readFileSync(abs, 'utf8');
-  const selectors = extractSelectors(css);
+  const { selectors, tokenOnlySelectors } = extractRuleData(css);
   for (const sel of selectors) {
     if (!selectorToFiles.has(sel)) selectorToFiles.set(sel, []);
     const list = selectorToFiles.get(sel);
+    if (!list.includes(file)) list.push(file);
+  }
+  for (const sel of tokenOnlySelectors) {
+    if (!selectorToTokenOnlyFiles.has(sel)) selectorToTokenOnlyFiles.set(sel, []);
+    const list = selectorToTokenOnlyFiles.get(sel);
     if (!list.includes(file)) list.push(file);
   }
 }
 
 const dupes = new Map();
 for (const [sel, files] of selectorToFiles) {
-  if (files.length > 1) dupes.set(sel, files);
+  const tokenOnlyFiles = selectorToTokenOnlyFiles.get(sel) ?? [];
+  const declarationFiles = files.filter((file) => !tokenOnlyFiles.includes(file));
+  if (files.length > 1 && declarationFiles.length > 1) dupes.set(sel, files);
 }
 
 // Build a stable signature for baseline comparison.

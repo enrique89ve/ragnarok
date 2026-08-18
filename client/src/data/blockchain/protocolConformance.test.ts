@@ -14,6 +14,7 @@
 import { describe, it, expect } from 'vitest';
 import { canonicalStringify, sha256Hash } from './hashUtils';
 import { deriveChallenge, verifyPoW, POW_CONFIG } from './proofOfWork';
+import { getEconomicXPConfig } from '@shared/protocol-core/xpEconomy';
 
 // ============================================================
 // 1. CANONICAL SERIALIZATION — golden vectors
@@ -483,8 +484,7 @@ describe('Protocol Conformance: State Transition Traces', () => {
 		const state = freshState();
 		state.cards.set('nft-005', { uid: 'nft-005', owner: 'alice', lastTransferBlock: 0, rarity: 'common', level: 1, xp: 30 });
 
-		// Common rarity thresholds: [0, 50, 150] → level 1 at 30 XP (< 50)
-		const thresholds = [0, 50, 150];
+		const thresholds = getEconomicXPConfig('common').thresholds;
 		const card = state.cards.get('nft-005')!;
 		let derivedLevel = 1;
 		for (let i = 1; i < thresholds.length; i++) {
@@ -502,7 +502,7 @@ describe('Protocol Conformance: State Transition Traces', () => {
 		const state = freshState();
 		state.cards.set('nft-006', { uid: 'nft-006', owner: 'alice', lastTransferBlock: 0, rarity: 'common', level: 1, xp: 75 });
 
-		const thresholds = [0, 50, 150];
+		const thresholds = getEconomicXPConfig('common').thresholds;
 		const card = state.cards.get('nft-006')!;
 		let derivedLevel = 1;
 		for (let i = 1; i < thresholds.length; i++) {

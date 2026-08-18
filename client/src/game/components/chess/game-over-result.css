@@ -176,6 +176,28 @@
 	padding: 0 16px;
 }
 
+.cgo-p2p-rules {
+	width: min(620px, calc(100% - 32px));
+	margin: 0;
+	padding: 0 0 2px;
+	list-style: none;
+	color: rgba(204, 228, 255, 0.78);
+	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	font-size: var(--text-10);
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	line-height: 1.55;
+	text-align: left;
+}
+
+.cgo-p2p-rules li {
+	margin: 0 0 6px;
+	padding: 6px 10px;
+	border: 1px solid rgba(135, 190, 255, 0.16);
+	border-radius: 6px;
+	background: rgba(17, 31, 48, 0.42);
+}
+
 .cgo-p2p-result-note {
 	max-width: 640px;
 	margin: -6px 0 2px;
@@ -453,11 +475,18 @@
 }
 
 .cgo-btn-primary:hover {
+	color: #f7eccb;
 	background: linear-gradient(180deg, #c89942 0%, #9d7426 100%);
 	transform: translateY(-1px);
 	box-shadow:
 		0 9px 28px rgba(180, 130, 40, 0.7),
 		inset 0 1px 0 rgba(255, 220, 140, 0.5);
+}
+
+.cgo-btn-primary:focus-visible {
+	color: #f7eccb;
+	outline: 2px solid #ffd97a;
+	outline-offset: 3px;
 }
 
 .cgo-btn-primary:active {
@@ -484,8 +513,15 @@
 }
 
 .cgo-btn-retry:hover {
+	color: #f7eccb;
 	background: linear-gradient(180deg, #8a2727 0%, #5c1414 100%);
 	transform: translateY(-1px);
+}
+
+.cgo-btn-retry:focus-visible {
+	color: #f7eccb;
+	outline: 2px solid #ffd97a;
+	outline-offset: 3px;
 }
 
 /* PvP rivalry record badge */

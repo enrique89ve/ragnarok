@@ -170,7 +170,7 @@ export default function ReplayViewer({ match, onClose }: { match: MatchRecord; o
 							}}
 						>
 							<div
-								className="h-full bg-amber-500 rounded-full transition-all"
+								className="h-full bg-amber-500 rounded-full transition-[width]"
 								style={{ width: `${progress}%` }}
 							/>
 						</div>

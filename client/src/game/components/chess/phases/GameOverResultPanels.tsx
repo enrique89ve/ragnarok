@@ -279,7 +279,7 @@ function CampaignResultActions({
 			<button
 				type="button"
 				onClick={onPrimaryAction}
-				className="cgo-btn-primary"
+				className="cgo-btn-primary hover:brightness-110 focus-visible:outline focus-visible:outline-2 active:translate-y-px"
 			>
 				{primaryLabel}
 			</button>
@@ -287,7 +287,7 @@ function CampaignResultActions({
 				<button
 					type="button"
 					onClick={onRetry}
-					className="cgo-btn-retry"
+					className="cgo-btn-retry hover:brightness-110 focus-visible:outline focus-visible:outline-2 active:translate-y-px"
 				>
 					Retry Mission
 				</button>
@@ -330,7 +330,7 @@ export function CasualResultPanel({
 
 	return (
 		<>
-			<p className="cgo-subtitle">{getCasualResultSubtitle(result)}</p>
+			<p className="cgo-subtitle">{getCasualResultSubtitle(result, isPeerMatch)}</p>
 			{isPeerMatch && (
 				<P2PResultNotice
 					preview={p2pQaRewardPreview}
@@ -341,7 +341,7 @@ export function CasualResultPanel({
 			<button
 				type="button"
 				onClick={onPrimaryAction}
-				className="cgo-btn-primary"
+				className="cgo-btn-primary hover:brightness-110 focus-visible:outline focus-visible:outline-2 active:translate-y-px"
 			>
 				{primaryLabel}
 			</button>
@@ -364,7 +364,7 @@ function AbandonedMatchActions({
 			<button
 				type="button"
 				onClick={abandonment.onHome}
-				className="cgo-btn-primary"
+				className="cgo-btn-primary hover:brightness-110 focus-visible:outline focus-visible:outline-2 active:translate-y-px"
 			>
 				Return Home
 			</button>
@@ -375,7 +375,12 @@ function AbandonedMatchActions({
 	);
 }
 
-function getCasualResultSubtitle(result: GameOverResult): string {
+function getCasualResultSubtitle(result: GameOverResult, isPeerMatch: boolean): string {
+	if (isPeerMatch) {
+		if (result === 'draw') return 'Local testnet draw. Neither king was forced; this is not a ranked Hive result.';
+		if (result === 'victory') return 'You won. The amounts below are the testnet calculation, not a Hive credit.';
+		return 'You lost this local testnet match. No Hive XP or RUNE was written.';
+	}
 	if (result === 'draw') return 'The remaining board cannot produce a forced win.';
 	if (result === 'victory') return 'Checkmate! The enemy King has no escape.';
 	return 'Checkmate... Your King has been cornered.';
@@ -388,12 +393,32 @@ function P2PResultNotice({
 	readonly preview: P2PQaLocalRewardPreview | null;
 	readonly result: GameOverResult;
 }) {
-	if (preview) return <P2PQaRewardPreviewPanel preview={preview} />;
+	if (preview) {
+		return (
+			<>
+				<P2PQaRewardPreviewPanel preview={preview} />
+				<P2PTesterRules />
+			</>
+		);
+	}
 
 	return (
-		<p className="cgo-p2p-result-note">
-			P2P result: {getP2PResultLabel(result)}. Ranked RUNE waits for dual-signed match evidence.
-		</p>
+		<>
+			<p className="cgo-p2p-result-note">
+				P2P result: {getP2PResultLabel(result)}. Local result only — no Hive write.
+			</p>
+			<P2PTesterRules />
+		</>
+	);
+}
+
+function P2PTesterRules() {
+	return (
+		<ul className="cgo-p2p-rules" aria-label="Testnet combat rules">
+			<li>Pawn or King captures, and any capture of a pawn, resolve instantly. Kings cannot be taken.</li>
+			<li>Other hero collisions go to poker. There is no mulligan; the hand starts at Spellcraft.</li>
+			<li>A poker draw leaves both pieces alive and the attacker does not take the square.</li>
+		</ul>
 	);
 }
 
@@ -417,12 +442,12 @@ function P2PQaRewardPreviewPanel({
 		>
 			<div className="cgo-p2p-qa-preview__header">
 				<span>{preview.label}</span>
-				<span>local qa</span>
+				<span>{preview.scope === 'qa_local' ? 'local qa' : 'local testnet'}</span>
 			</div>
-			<div className="cgo-p2p-qa-preview__values" aria-label="QA local reward preview">
+			<div className="cgo-p2p-qa-preview__values" aria-label={preview.label}>
 				<span>
 					<strong>{formatRewardAmount(preview.runeShown)}</strong>
-					Projected RUNE
+					RUNE
 				</span>
 				<span>
 					<strong>{formatRewardAmount(preview.matchXpShown)}</strong>

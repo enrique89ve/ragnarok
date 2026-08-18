@@ -109,7 +109,7 @@
   font-size: var(--text-lg);
 }
 
-.damage-value {
+.targeting-overlay .damage-value {
   font-size: var(--text-2xl);
   font-weight: 800;
   color: #ff4444;

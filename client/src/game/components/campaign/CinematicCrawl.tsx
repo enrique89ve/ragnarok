@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { CinematicIntro, MusicCueId } from '../../campaign/campaignTypes';
 import { useAudio, type BackgroundMusicTrack } from '../../../lib/stores/useAudio';
@@ -49,6 +50,16 @@ const CinematicCrawl: React.FC<CinematicCrawlProps> = ({ intro, onComplete, open
 			stopBackgroundMusic();
 		};
 	}, [playBackgroundMusic, stopBackgroundMusic, openingMusic]);
+
+	useEffect(() => {
+		const previousOverflow = document.body.style.overflow;
+		document.body.style.overflow = 'hidden';
+		document.body.setAttribute('data-cinematic-open', 'true');
+		return () => {
+			document.body.style.overflow = previousOverflow;
+			document.body.removeAttribute('data-cinematic-open');
+		};
+	}, []);
 
 	useEffect(() => {
 		return () => {
@@ -126,9 +137,20 @@ const CinematicCrawl: React.FC<CinematicCrawlProps> = ({ intro, onComplete, open
 		return () => clearTimeout(timer);
 	}, [phase, sceneIndex, intro.scenes, advanceScene]);
 
-	const handleSkip = useCallback((e: React.MouseEvent) => {
-		e.stopPropagation();
+	const handleSkip = useCallback((e?: React.SyntheticEvent) => {
+		e?.stopPropagation();
 		completeCinematic();
+	}, [completeCinematic]);
+
+	useEffect(() => {
+		const onKeyDown = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') {
+				event.preventDefault();
+				completeCinematic();
+			}
+		};
+		window.addEventListener('keydown', onKeyDown);
+		return () => window.removeEventListener('keydown', onKeyDown);
 	}, [completeCinematic]);
 
 	const handleClick = useCallback(() => {
@@ -143,8 +165,14 @@ const CinematicCrawl: React.FC<CinematicCrawlProps> = ({ intro, onComplete, open
 		? intro.scenes[sceneIndex]
 		: null;
 
-	return (
-		<div className="cinematic-crawl-overlay" onClick={handleClick}>
+	const overlay = (
+		<div
+			className="cinematic-crawl-overlay"
+			role="dialog"
+			aria-modal="true"
+			aria-label={intro.title}
+			onClick={handleClick}
+		>
 			{/* Letterbox bars */}
 			<div className="cinematic-letterbox-top" />
 			<div className="cinematic-letterbox-bottom" />
@@ -263,7 +291,12 @@ const CinematicCrawl: React.FC<CinematicCrawlProps> = ({ intro, onComplete, open
 			)}
 
 			{/* Skip button */}
-			<button type="button" className="cinematic-skip-btn" onClick={handleSkip}>
+			<button
+				type="button"
+				className="cinematic-skip-btn"
+				onClick={handleSkip}
+				aria-label="Skip prologue and open campaign"
+			>
 				Skip
 			</button>
 
@@ -280,6 +313,9 @@ const CinematicCrawl: React.FC<CinematicCrawlProps> = ({ intro, onComplete, open
 			)}
 		</div>
 	);
+
+	if (typeof document === 'undefined') return overlay;
+	return createPortal(overlay, document.body);
 };
 
 export default CinematicCrawl;

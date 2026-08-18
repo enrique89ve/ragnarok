@@ -15,6 +15,9 @@ export type {
 	ScriptedOpponent,
 	PeerOpponent,
 	ScriptPayload,
+	MatchXpChannel,
+	RuneChannel,
+	RuneRewardSource,
 	RewardChannel,
 } from './types';
 
@@ -38,6 +41,9 @@ export {
 	getEconomyFootprint,
 } from './economy';
 export type { ModeEconomy, ModeKey } from './economy';
+
+export { projectBattleEndRewards } from './battleEndRewards';
+export type { BattleEndResult, BattleEndRewardProjection } from './battleEndRewards';
 
 export {
 	createMatchIdentityFactory,

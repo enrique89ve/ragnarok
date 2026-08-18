@@ -16,6 +16,7 @@ import { useCardPositions } from '../hooks/useCardPositions';
 import { AnimationLayer } from './AnimationLayer';
 import { useAnimations } from './AnimationContainer';
 import { useAIActionManager } from '../animations/AIActionManager';
+import { isDevBuild } from '../config/buildMode';
 import DebugRenderCheck from './DebugRenderCheck';
 import { preloadImages } from '../utils/assetPreloader';
 import { getCardArtPath } from '../utils/art/artMapping';
@@ -1876,7 +1877,7 @@ export const GameBoard: React.FC<{}> = () => {
     <NorseBackground>
       <div role="main" aria-label="Game Board" className="virtual-canvas-scaler game-container game-board-enhanced h-full overflow-visible relative z-index-base" ref={gameContainerRef}>
         {/* Debug 3D renderer — DEV only */}
-        {import.meta.env.DEV && <DebugRenderCheck />}
+        {isDevBuild() && <DebugRenderCheck />}
 
         {/* Quest Tracker - displays active quests with progress */}
         <QuestTracker owner="player" />
@@ -2077,7 +2078,7 @@ export const GameBoard: React.FC<{}> = () => {
 
               {/* Enemy hero portrait - clickable for attacks */}
               <div
-                className={`opponent-hero-portrait relative cursor-pointer transition-all ${attackingCard && !opponent.battlefield?.some(c => hasKeyword(c, 'taunt'))
+                className={`opponent-hero-portrait relative cursor-pointer transition-[box-shadow,transform] ${attackingCard && !opponent.battlefield?.some(c => hasKeyword(c, 'taunt'))
                   ? 'ring-2 ring-red-500 ring-offset-2 ring-offset-gray-900 animate-pulse scale-105'
                   : ''
                   }`}
@@ -2262,7 +2263,7 @@ export const GameBoard: React.FC<{}> = () => {
 
               {/* Player hero portrait with HP + armor */}
               <div
-                className="relative cursor-pointer transition-all hover:scale-105 ml-4"
+                className="relative cursor-pointer transition-transform hover:scale-105 ml-4"
                 onClick={() => { if (!isProcessingAIActions) handlePlayerHeroClick(); }}
                 ref={ref => {
                   if (ref) {
@@ -2372,7 +2373,7 @@ export const GameBoard: React.FC<{}> = () => {
         )}
 
         {/* Debug WebGL Diagnostics Panel — DEV only */}
-        {import.meta.env.DEV && <DebugRenderCheck />}
+        {isDevBuild() && <DebugRenderCheck />}
 
         {/* Ultimate CardWithDrag system handles all interactions - no competing systems */}
       </div>

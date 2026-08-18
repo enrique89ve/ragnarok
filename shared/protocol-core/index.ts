@@ -65,6 +65,7 @@ export * from './runeSeason0Smoke';
 export * from './acquisitionProvenance';
 export * from './playerCollection';
 export * from './deckVerification';
+export * from './xpEconomy';
 
 // v1.2: Broadcast utilities (NFTLox-inspired patterns)
 export {

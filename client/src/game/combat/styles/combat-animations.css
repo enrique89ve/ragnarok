@@ -441,28 +441,6 @@
 	100% { opacity: 0; transform: translate(var(--frag-x, 30px), var(--frag-y, -40px)) rotate(var(--frag-rot, 180deg)) scale(0.2); }
 }
 
-/* 15. Spell Cast VFX */
-.spell-cast-flash {
-	position: absolute;
-	inset: 0;
-	pointer-events: none;
-	z-index: 9100;
-	animation: spell-flash 0.4s ease-out forwards;
-}
-
-.spell-cast-flash.element-fire { background: radial-gradient(circle at center, rgba(255, 100, 0, 0.3) 0%, transparent 60%); }
-.spell-cast-flash.element-ice { background: radial-gradient(circle at center, rgba(100, 180, 255, 0.3) 0%, transparent 60%); }
-.spell-cast-flash.element-lightning { background: radial-gradient(circle at center, rgba(255, 255, 100, 0.3) 0%, transparent 60%); }
-.spell-cast-flash.element-shadow { background: radial-gradient(circle at center, rgba(128, 0, 200, 0.3) 0%, transparent 60%); }
-.spell-cast-flash.element-nature { background: radial-gradient(circle at center, rgba(50, 200, 80, 0.3) 0%, transparent 60%); }
-.spell-cast-flash.element-holy { background: radial-gradient(circle at center, rgba(255, 230, 150, 0.3) 0%, transparent 60%); }
-
-@keyframes spell-flash {
-	0% { opacity: 0; transform: scale(0.5); }
-	30% { opacity: 1; transform: scale(1); }
-	100% { opacity: 0; transform: scale(1.5); }
-}
-
 /* 16. Card Draw Fly-in */
 .card-draw-fly-in {
 	animation: card-draw-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
@@ -501,6 +479,5 @@
 	.card-draw-fly-in {
 		animation-duration: 0.01ms !important;
 	}
-	.super-move-flash,
-	.spell-cast-flash { display: none; }
+	.super-move-flash { display: none; }
 }

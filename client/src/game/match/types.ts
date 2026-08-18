@@ -103,21 +103,24 @@ export type OpponentSpec = AiOpponent | ScriptedOpponent | PeerOpponent;
 
 // ── Reward ────────────────────────────────────────────────────────────────
 
+export type MatchXpChannel =
+	| { kind: 'none' }
+	| { kind: 'percentage'; multiplier: number };
+
+export type RuneRewardSource = 'p2p_ranked' | 'campaign_first_clear';
+
+export type RuneChannel =
+	| { kind: 'none' }
+	| { kind: 'projected'; source: RuneRewardSource };
+
 /**
- * Two reward channels (independent):
- *   - xpRunes: economic reward (XP + Runas). Practice = none.
- *   - ranking: competitive reward (ELO). Local modes = none.
- *
- * Today the channels happen to map 1:1 with mode (practice → none/none,
- * campaign → percentage 0.1/none, p2p → percentage 1.0/elo) but they
- * are orthogonal so future modes (co-op campaign in P2P, tournament
- * without XP, daily-challenge without ranking) compose without forcing
- * new enum values.
+ * Independent reward channels. Match XP and RUNE use different tables
+ * (`xpEconomy` vs `runeEconomy`) but both fire from the same battle-end
+ * projector in campaign and P2P. Ranking is ELO only.
  */
 export interface RewardChannel {
-	xpRunes:
-		| { kind: 'none' }
-		| { kind: 'percentage'; multiplier: number };
+	matchXp: MatchXpChannel;
+	rune: RuneChannel;
 	ranking:
 		| { kind: 'none' }
 		| { kind: 'elo' };

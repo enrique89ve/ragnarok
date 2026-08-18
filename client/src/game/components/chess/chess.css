@@ -1,0 +1,16 @@
+/*
+ * CHESS PHASE — single CSS entry.
+ *
+ * ChessPhase is lazy-loaded by the match coordinator. Keeping the board,
+ * pieces, attack effects, portraits, and realm skin behind this manifest
+ * prevents the poker phase from owning or importing Chess presentation.
+ *
+ * The leaf files remain separate by visual concern; this file owns only
+ * their load order and is the only Chess CSS import used by ChessPhase.
+ */
+
+@import "./HeroPortraitEnhanced.css";
+@import "./chess-realm-skins.css";
+@import "./ChessBoardEnhanced.css";
+@import "./ChessPiece.css";
+@import "./ChessAttackAnimation.css";

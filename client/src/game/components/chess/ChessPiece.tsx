@@ -6,7 +6,6 @@ import { useChessHoverStore } from '../../stores/chessHoverStore';
 import { PIECE_PIECE_TONE_BY_OWNER } from './pieceVisuals';
 import { PieceGlyph } from './PieceGlyph';
 import clsx from 'clsx';
-import './ChessPiece.css';
 
 type ChessCellTone = 'light' | 'dark';
 

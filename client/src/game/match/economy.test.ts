@@ -18,71 +18,55 @@ describe('POOL_REWARDS', () => {
 });
 
 describe('MATCH_ECONOMY', () => {
-	it('practice has zero xpRunes share and no ranking', () => {
+	it('practice has no Match XP, RUNE, or ranking', () => {
 		expect(MATCH_ECONOMY.practice).toEqual({
-			xpRunesShare: 0,
+			matchXpShare: 0,
+			rune: 'none',
 			ranking: 'none',
 		});
 	});
 
-	it('campaign reduces to 10% of the pool, no ranking', () => {
-		expect(MATCH_ECONOMY.campaign.xpRunesShare).toBeCloseTo(POOL_REWARDS * 0.10, 10);
+	it('campaign reduces Match XP to 10% and projects first-clear RUNE', () => {
+		expect(MATCH_ECONOMY.campaign.matchXpShare).toBeCloseTo(POOL_REWARDS * 0.10, 10);
+		expect(MATCH_ECONOMY.campaign.rune).toBe('campaign_first_clear');
 		expect(MATCH_ECONOMY.campaign.ranking).toBe('none');
 	});
 
-	it('p2pRanked is the baseline (100% of pool) with ELO ranking', () => {
-		expect(MATCH_ECONOMY.p2pRanked.xpRunesShare).toBeCloseTo(POOL_REWARDS * 1.0, 10);
+	it('p2pRanked is full Match XP, ranked RUNE, and ELO', () => {
+		expect(MATCH_ECONOMY.p2pRanked.matchXpShare).toBeCloseTo(POOL_REWARDS * 1.0, 10);
+		expect(MATCH_ECONOMY.p2pRanked.rune).toBe('p2p_ranked');
 		expect(MATCH_ECONOMY.p2pRanked.ranking).toBe('elo');
-	});
-
-	it('every entry has a non-negative finite xpRunesShare', () => {
-		for (const econ of Object.values(MATCH_ECONOMY)) {
-			expect(Number.isFinite(econ.xpRunesShare)).toBe(true);
-			expect(econ.xpRunesShare).toBeGreaterThanOrEqual(0);
-		}
-	});
-
-	it('every entry has a valid ranking discriminant', () => {
-		const allowed = new Set(['none', 'elo']);
-		for (const econ of Object.values(MATCH_ECONOMY)) {
-			expect(allowed.has(econ.ranking)).toBe(true);
-		}
 	});
 });
 
 describe('modeEconomyToReward', () => {
-	it('collapses xpRunesShare === 0 to xpRunes: { kind: "none" }', () => {
-		const reward = modeEconomyToReward(MATCH_ECONOMY.practice);
-		expect(reward.xpRunes).toEqual({ kind: 'none' });
-	});
-
-	it('expands xpRunesShare > 0 to xpRunes: { kind: "percentage", multiplier }', () => {
-		const reward = modeEconomyToReward(MATCH_ECONOMY.campaign);
-		expect(reward.xpRunes).toEqual({
-			kind: 'percentage',
-			multiplier: MATCH_ECONOMY.campaign.xpRunesShare,
+	it('maps practice to empty channels', () => {
+		expect(modeEconomyToReward(MATCH_ECONOMY.practice)).toEqual({
+			matchXp: { kind: 'none' },
+			rune: { kind: 'none' },
+			ranking: { kind: 'none' },
 		});
 	});
 
-	it('maps ranking "elo" to { kind: "elo" }', () => {
-		const reward = modeEconomyToReward(MATCH_ECONOMY.p2pRanked);
-		expect(reward.ranking).toEqual({ kind: 'elo' });
+	it('maps campaign to Match XP share and first-clear RUNE', () => {
+		expect(modeEconomyToReward(MATCH_ECONOMY.campaign)).toEqual({
+			matchXp: { kind: 'percentage', multiplier: MATCH_ECONOMY.campaign.matchXpShare },
+			rune: { kind: 'projected', source: 'campaign_first_clear' },
+			ranking: { kind: 'none' },
+		});
 	});
 
-	it('maps ranking "none" to { kind: "none" }', () => {
-		const reward = modeEconomyToReward(MATCH_ECONOMY.campaign);
-		expect(reward.ranking).toEqual({ kind: 'none' });
+	it('maps p2pRanked to full Match XP, ranked RUNE, and ELO', () => {
+		expect(modeEconomyToReward(MATCH_ECONOMY.p2pRanked)).toEqual({
+			matchXp: { kind: 'percentage', multiplier: 1 },
+			rune: { kind: 'projected', source: 'p2p_ranked' },
+			ranking: { kind: 'elo' },
+		});
 	});
 });
 
 describe('getEconomyFootprint', () => {
-	it('returns the sum of all per-mode xpRunesShare values (audit baseline)', () => {
-		// 0 + 0.1 + 1.0 = 1.1. If this number changes silently when a new
-		// mode lands, the diff makes the economy delta explicit.
+	it('returns the sum of Match XP shares', () => {
 		expect(getEconomyFootprint()).toBeCloseTo(1.1, 10);
-	});
-
-	it('is a finite number', () => {
-		expect(Number.isFinite(getEconomyFootprint())).toBe(true);
 	});
 });

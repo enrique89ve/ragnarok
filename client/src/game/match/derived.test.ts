@@ -14,7 +14,7 @@ const baseIdentity = {
 const aiCtx: MatchContext = {
 	...baseIdentity,
 	opponent: { kind: 'ai', difficulty: 'normal', deckSource: 'warband' },
-	reward: { xpRunes: { kind: 'none' }, ranking: { kind: 'none' } },
+	reward: { matchXp: { kind: 'none' }, rune: { kind: 'none' }, ranking: { kind: 'none' } },
 };
 
 const scriptedCtx: MatchContext = {
@@ -28,7 +28,7 @@ const scriptedCtx: MatchContext = {
 			difficulty: 'heroic',
 		},
 	},
-	reward: { xpRunes: { kind: 'percentage', multiplier: 0.1 }, ranking: { kind: 'none' } },
+	reward: { matchXp: { kind: 'percentage', multiplier: 0.1 }, rune: { kind: 'projected', source: 'campaign_first_clear' }, ranking: { kind: 'none' } },
 };
 
 const peerCtx: MatchContext = {
@@ -39,7 +39,7 @@ const peerCtx: MatchContext = {
 		myRole: 'first-mover',
 		opponentUsername: null,
 	},
-	reward: { xpRunes: { kind: 'percentage', multiplier: 1 }, ranking: { kind: 'elo' } },
+	reward: { matchXp: { kind: 'percentage', multiplier: 1 }, rune: { kind: 'projected', source: 'p2p_ranked' }, ranking: { kind: 'elo' } },
 };
 
 describe('deriveAuthority', () => {

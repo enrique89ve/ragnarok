@@ -23,6 +23,7 @@
   pointer-events: auto;
   overflow: visible;
   z-index: 20;
+  cursor: grab !important;
 }
 
 /* Hover state - spring lift */
@@ -78,6 +79,10 @@
 
 .hand-card-container {
   pointer-events: none !important;
+  transform-origin: center bottom;
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  perspective: 1200px;
+  padding: 0;
 }
 
 .hand-card-container .hoverable-card-container,
@@ -90,12 +95,19 @@
    ======================================== */
 
 .card-with-drag {
+  min-width: var(--card-width);
+  min-height: var(--card-height);
   width: var(--card-width, 132px);
   height: var(--card-height, 176px);
-  transform-style: flat;
+  transform-style: preserve-3d;
+  perspective: 1000px;
   position: relative;
   transition: transform 0.2s ease-out, filter 0.2s ease;
   transform: translateY(0);
+  z-index: 30;
+  will-change: transform;
+  pointer-events: auto;
+  cursor: grab !important;
 }
 
 .card-with-drag.in-hand {
@@ -121,6 +133,13 @@
 .card-with-drag.is-hovering {
   transform: translateY(-12px);
   z-index: 100;
+  box-shadow: none !important;
+  filter: brightness(1.1) !important;
+}
+
+.card-with-drag.is-dragging {
+  transition: none !important;
+  box-shadow: none !important;
 }
 
 .card-with-drag.playable:active {

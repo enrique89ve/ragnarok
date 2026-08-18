@@ -16,6 +16,7 @@ export interface CampaignRewardFeedback {
 	readonly difficulty: Difficulty;
 	readonly isFirstClear: boolean;
 	readonly previewRune: number;
+	readonly matchXpShown?: number;
 	readonly turnCount: number;
 	readonly trxId: string | null;
 	readonly error: string | null;
@@ -104,6 +105,11 @@ export function getCampaignBriefingRewardCopy(input: {
 	};
 }
 
+function formatCampaignRewardDetail(detail: string, matchXpShown: number | undefined): string {
+	if (!matchXpShown || matchXpShown <= 0) return detail;
+	return `${detail} Local Match XP +${matchXpShown}.`;
+}
+
 export function getCampaignResultRewardCopy(
 	feedback: CampaignRewardFeedback | null,
 ): CampaignRewardCopy | null {
@@ -121,7 +127,10 @@ export function getCampaignResultRewardCopy(
 		case 'first_clear_published':
 			return {
 				label: `First clear: +${feedback.previewRune} RUNE`,
-				detail: 'Campaign result submitted. Replay applies the first-clear credit within the season cap.',
+				detail: formatCampaignRewardDetail(
+					'Campaign result submitted. Replay applies the first-clear credit within the season cap.',
+					feedback.matchXpShown,
+				),
 				tone: 'reward',
 			};
 		case 'first_clear_no_rune':
@@ -133,7 +142,10 @@ export function getCampaignResultRewardCopy(
 		case 'replay_no_reward':
 			return {
 				label: 'Replay: no new RUNE',
-				detail: 'Result submitted as a replay. First-clear rewards are one-time per account and mission.',
+				detail: formatCampaignRewardDetail(
+					'Result submitted as a replay. First-clear rewards are one-time per account and mission.',
+					feedback.matchXpShown,
+				),
 				tone: 'no_reward',
 			};
 		case 'defeat_no_reward':

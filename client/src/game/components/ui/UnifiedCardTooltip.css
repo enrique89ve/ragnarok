@@ -9,8 +9,8 @@
  * (variables --rarity-rare-*, --rarity-epic-*, --rarity-mythic-*)
  */
 
-/* Tooltip-specific variables (component-scoped) */
-:root {
+/* Tooltip-specific variables stay local to the tooltip tree. */
+.unified-card-tooltip {
   --tooltip-bg: linear-gradient(180deg,
     color-mix(in srgb, var(--obsidian-850) 98%, transparent) 0%,
     color-mix(in srgb, var(--obsidian-950) 100%, transparent) 100%);
@@ -21,9 +21,6 @@
   --tooltip-z-index: var(--z-topmost);
   --tooltip-icon-size: 20px;
   --tooltip-transition: var(--transition-fast);
-}
-
-.unified-card-tooltip {
   position: fixed;
   z-index: var(--tooltip-z-index);
   background: var(--tooltip-bg);
@@ -199,12 +196,9 @@
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  :root {
+  .unified-card-tooltip {
     --tooltip-icon-size: 18px;
     --tooltip-padding: var(--space-10);
-  }
-
-  .unified-card-tooltip {
     max-width: calc(100vw - 32px);
   }
 

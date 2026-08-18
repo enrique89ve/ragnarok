@@ -15,13 +15,14 @@ import {
 
 const BASE_CTX: MatchContext = {
 	matchId: 'match-s1-001',
+	matchSeed: 'seed-s1-001',
 	opponent: { kind: 'peer', peerId: 'peer-1', myRole: 'first-mover', opponentUsername: 'bob' },
 	reward: {
-		xpRunes: { kind: 'none', multiplier: 0 },
-		duatCrowns: { kind: 'none', multiplier: 0 },
-		eitr: { kind: 'none', multiplier: 0 },
+		matchXp: { kind: 'none' },
+		rune: { kind: 'none' },
+		ranking: { kind: 'elo' },
 	},
-} as unknown as MatchContext;
+};
 
 const WIN_END: MatchEndContext = { iWon: true, turnCount: 12 };
 const LOSS_END: MatchEndContext = { iWon: false, turnCount: 8 };

@@ -1,7 +1,0 @@
-/* Backward-compatible aggregate. New code should import the narrow manifest:
-   poker-core.css, poker-vfx.css, poker-showdown.css, or poker-campaign.css. */
-
-@import "./poker-core.css";
-@import "./poker-vfx.css";
-@import "./poker-showdown.css";
-@import "./poker-campaign.css";

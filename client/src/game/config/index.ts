@@ -4,6 +4,7 @@
  * Added from Enrique's fork - Jan 31, 2026
  */
 
+export { isDevBuild, isProdBuild } from './buildMode';
 export {
 	FeatureFlags,
 	getDataLayerMode,

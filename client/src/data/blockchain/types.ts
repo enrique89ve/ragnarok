@@ -80,7 +80,8 @@ export interface PackagedMatchResultOnChain {
 	s: string;
 	v: number;
 	c?: string;  // hex-encoded winner card IDs (4 hex chars each, sorted)
-		ch?: string; // sha256(canonical({m,w,l,n,h,s,v,c,tr,tc})) — signed compact commitment
+	u?: string[]; // winner NFT instance uids that receive CardXP
+		ch?: string; // sha256(canonical({m,w,l,n,h,s,v,c,u,tr,tc})) — signed compact commitment
 	sig?: { b: string; c: string };
 	tr?: string; // transcript Merkle root (SHA-256, 64 hex)
 	tc?: string; // transcript IPFS CID (content-addressed, retrievable)

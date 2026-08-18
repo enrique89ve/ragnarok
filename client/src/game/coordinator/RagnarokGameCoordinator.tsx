@@ -62,10 +62,6 @@ const GameOverPhase = lazy(() => import('../components/chess/phases/GameOverPhas
 const VsScreenPhase = lazy(() => import('../components/chess/phases/VsScreenPhase'));
 const PokerCombatPhase = lazy(() => import('../components/chess/phases/PokerCombatPhase'));
 const ChessPhase = lazy(() => import('../components/chess/phases/ChessPhase'));
-import '../components/chess/HeroPortraitEnhanced.css';
-import '../components/chess/chess-realm-skins.css';
-import '../components/chess/game-over-result.css';
-import '../components/campaign/cinematic-crawl.css';
 
 // Realm icon / color / text-color tables moved into MissionIntroPhase.tsx
 // (their only consumer). The coordinator no longer carries them.

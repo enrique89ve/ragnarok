@@ -1,3 +1,10 @@
+.hero-power-wrapper {
+  position: absolute;
+  top: calc(50% - 80px);
+  transform: translateY(-50%);
+  isolation: isolate;
+}
+
 .hero-power-btn {
   width: 100%;
   height: 100%;
@@ -289,7 +296,7 @@
   padding-top: var(--space-10);
 }
 
-.tooltip-header {
+.hero-power-portal-tooltip .tooltip-header {
   font-weight: bold;
   color: #3b82f6;
   font-size: var(--text-sm);
@@ -299,7 +306,7 @@
   align-items: center;
 }
 
-.tooltip-name {
+.hero-power-portal-tooltip .tooltip-name {
   flex: 1;
 }
 
@@ -312,7 +319,7 @@
   margin-left: 8px;
 }
 
-.tooltip-description {
+.hero-power-portal-tooltip .tooltip-description {
   font-size: var(--text-xs);
   color: #e5e7eb;
   line-height: 1.4;

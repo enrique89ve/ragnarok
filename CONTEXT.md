@@ -28,6 +28,15 @@ _Avoid_: Hardcoded cache buckets, manual browser cleanup, reusing local projecti
 The reset-epoch-scoped UX calculation shown after QA full-catalog P2P results so testers can validate victory rewards before winner-arbiter settlement. It may calculate and display projected winner RUNE from the current testnet season constants and local/profile XP from the P2P reward channel. If retained after display, it may live only in browser/profile QA state. It must not create a RUNE ledger entry, update `/api/chain/*`, update CardXP/`level_up`/NFTLox `mutableData`, affect Season Score, or become marketplace/ownership evidence.
 _Avoid_: Local wallet credit, NFT XP, NFTLox data mutation, ranked settlement, mainnet reward history
 
+**XP Economy Protocol**:
+The static, adapter-ready math for Match XP and instance CardXP. Rates and projections live in `shared/protocol-core/xpEconomy.ts`. Replay and local preview must call those functions. A later Hive adapter persists `InstanceXpProjection` through `match_result` / `level_up`; the protocol module itself does not broadcast or write NFTLox.
+CardXP belongs to the genesis NFT `uid`, not to the player account and not to `cardId`. A `card_transfer` or marketplace sale changes `owner` only; `xp` and `level` stay on the instance. Burn destroys the uid and that XP with it. A new forge/pack mint starts at `xp: 0`. Derived level is capped at `MAX_CARD_LEVEL` (3); the XP counter may keep growing past the last threshold. The 1→2 step is 5 ranked wins; the 2→3 step is four times that, so Divine is the long grind.
+_Avoid_: Magic XP numbers in UI, client-only gain formulas, paying CardXP to starter or QA authorities, resetting XP on sale, treating CardXP as account-bound like RUNE
+
+**Testnet Local Reward Feedback**:
+The Alfa/closed-beta game-over display of the battle-end projection so the winner can see Match XP and projected RUNE without Hive. CardXP stays `0` until instance uids persist through `match_result`. It must not write Hive, `/api/chain/*`, `level_up`, NFTLox `mutableData`, or Season Score, and must not be treated as ranked settlement.
+_Avoid_: Crediting RUNE on Alfa, writing CardXP, calling the modal an official wallet credit
+
 **Closed Testnet Beta**:
 The next release milestone where a limited group of testers validates the full playable flow before public access.
 _Avoid_: Public beta, mainnet launch, finished testnet
@@ -39,6 +48,30 @@ _Avoid_: Mainnet launch, production season
 **Playable Beta Flow**:
 The complete tester-facing loop of local play, P2P play, turns, combat, victory, packs, rewards, and critical bug handling.
 _Avoid_: Full catalog audit, every card validated, final balance
+
+**Alfa Player-Ready**:
+The current finish line for shipping Ragnarok to more internal hands. It is true only when two browsers complete the Chess-Poker P2P Spine, the poker board is readable without external explanation, Hive Keychain is used only for pre-match login, and the deployed Alfa runtime proves health/admin/P2P readiness. It is not Closed Testnet Beta, Public Testnet Beta, or mainnet.
+_Avoid_: Finished game, ranked launch, settlement complete, every OPEN in the wire spec closed
+
+**Chess-Poker P2P Spine**:
+The only P2P gameplay path that must stay fluid: `chess → poker_combat → chess → game_over`, with optional instant-kill captures that never leave chess. Both peers apply chess and poker locally from shared seed and intent envelopes. The relay compares opaque **Phase Checkpoint** roots only at those phase changes.
+_Avoid_: Server simulating chess or poker, host-authored poker state, skipping checkpoints, treating cards-phase host sync as the P2P match spine
+
+**Phase Checkpoint**:
+A fixed-size agreement at a legal phase boundary. Each peer submits `phase_checkpoint_propose_v1` with a 32-byte `stateRoot`; the relay emits commit if both roots match or dispute/freeze if they differ. Allowed transitions are only `chess ↔ poker_combat` and `* → game_over`. A commit proves peer agreement, not objective legality.
+_Avoid_: Server gameplay judge, winner selection on mismatch, checkpointing `vs_screen`, treating a commit as Hive settlement evidence
+
+**Instant Kill Capture**:
+A chess capture that stays on the chess board. It is instant when the attacker is pawn or king, or the defender is a pawn. The wire type is `chess_attack`. Both peers apply the kill locally; poker does not start.
+_Avoid_: Opening poker for pawn/king weapon captures, routing this as `chess_combat_initiated`
+
+**Poker Combat Capture**:
+A non-instant chess capture that stages `pendingCombat` and, after the attack animation, boots deterministic poker. The wire type is `chess_combat_initiated`. Poker participant ids are the chess piece ids. Deck and combat ids derive from `matchSeed`, piece ids, positions, and chess move count. Viewer slots may swap; attacker/defender roles stay canonical.
+_Avoid_: Host sending a poker snapshot as bootstrap, `Math.random()` for deal or showdown, treating viewer `player`/`opponent` slots as canonical sides
+
+**Chess Transition Receipt**:
+A post-apply chess integrity receipt (`transition_receipt_v1`) that binds command intent to the receiver's pre/post chess+cards roots. A rejection or root mismatch quarantines further local chess actions. It is a partial root (`scope: 'chess+cards'`), not the **Phase Checkpoint** and not a full-match commitment.
+_Avoid_: Using the receipt as poker or `game_over` authority, recovering from mismatch by trusting one peer's snapshot as truth
 
 ## Relationships
 
@@ -53,8 +86,17 @@ _Avoid_: Full catalog audit, every card validated, final balance
 - **QA Testnet Season 0** does not prove NFT custody or player ownership because its card access is intentionally broader than **NFT Custody**.
 - Client-local replay, tester progress, and operational projections must be isolated by **Testnet Reset Epoch** rather than cleaned manually between phases.
 - **QA Local Reward Feedback** may run only inside the QA full-catalog reset epoch. It is UX rehearsal for reward math, not **RUNE Ledger Protocol**, **NFTLox Progress Mirror**, or official ranking.
+- **Testnet Local Reward Feedback** may run on resettable non-economic testnet P2P (Alfa or Closed Testnet Beta) so the winner sees Match XP and projected RUNE in the game-over modal. It is display-only and not a ledger credit.
+- **XP Economy Protocol** is the only place Match XP and CardXP rates are defined. Preview adapters calculate; Hive adapters persist later.
+- Campaign and P2P battle-end fire Match XP and RUNE together via `projectBattleEndRewards`. The channels stay independent; practice pays neither.
 - Any QA local reward cache must be keyed by stage, protocol id, reset epoch, account, and match id, and must be ignored or purged on stage/epoch/account change so QA feedback cannot leak into Closed Testnet Beta, NFTLox custody, or mainnet.
 - The **Playable Beta Flow** must be stable before **Closed Testnet Beta** opens.
+- **Alfa Player-Ready** is the shortest definition of "the game is finished enough to play." Ranked settlement, NFTLoX custody proof, and Closed Testnet Beta come after that spine is proven.
+- The **Chess-Poker P2P Spine** is the playable core of **Gameplay-only P2P Testnet**.
+- **Instant Kill Capture** never enters poker. **Poker Combat Capture** always enters poker through `pendingCombat` and a **Phase Checkpoint** on `chess → poker_combat`.
+- Poker resolution writes HP/stamina back onto the same chess pieces, then a **Phase Checkpoint** on `poker_combat → chess` must commit before chess inputs resume.
+- `game_over` is legal from chess or poker only after the terminal **Phase Checkpoint**. The displayed winner is local test evidence, not **Anti-Cheat Protocol** settlement.
+- **Chess Transition Receipt** detects mid-chess divergence. **Phase Checkpoint** detects divergence at ruleset changes. Neither replaces later ranked dual-sig.
 
 ## Starter Entitlement
 
@@ -134,6 +176,8 @@ _Avoid_: server as hidden truth, per-request heavyweight recomputation, gameplay
 - **Ragnarok Pack Fulfillment** decides pack contents before **NFT Custody** births or distributes the resulting card instances.
 - **DUAT Airdrop Ceremony** is a claim/open/inspect UX over **Ragnarok Pack Fulfillment** and **NFT Custody**; it must expose the resulting cards as a filterable acquisition path even when **QA Testnet Season 0** grants broader full-catalog access.
 - **NFT Custody** decides who owns a genesis NFT instance; **Ragnarok Replay State** decides what that instance has earned in gameplay.
+- NFTLox **instance DNA** (`nftDna`) identifies one copy. The seed / `cardId` is the template. Two copies of the same `cardId` share the template and have different instance DNA. **XP Economy Protocol** CardXP is bound to that instance (`uid` today, `nftDna` when NFTLox custody is live), so a transfer moves the same DNA and the same XP. A new mint of the same `cardId` is a new DNA and starts at `xp: 0`.
+- A ranked `match_result` may list many `cardId`s for display, but CardXP apply reads only winner instance uids (`u`). Copies of the same `cardId` that did not play receive `0`.
 - **NFTLox Progress Mirror** may be repaired from **Ragnarok Replay State** whenever they drift.
 - **Operational Projection** must never be the only place a sensitive balance, ranking, ownership, or pack distribution decision exists.
 - **Player Collection Protocol** is the seam every UI, deck verification, and match packaging flow uses when it needs playable ownership.
@@ -170,7 +214,14 @@ _Avoid_: `/api/testnet/rune/*`, duplicate RUNE read sources, client-authored RUN
 > **Dev:** "Does full logic mean validating every card in the catalog?"
 > **Domain expert:** "No — it means the **Playable Beta Flow** works end-to-end. Exhaustive card validation is work for beta feedback and targeted fixes."
 
+> **Dev:** "How do we finish Ragnarok as soon as possible?"
+> **Domain expert:** "Finish now means **Alfa Player-Ready**. Prove the **Chess-Poker P2P Spine** in two browsers, make the poker board readable, keep Keychain off the match path, and ship the Alfa runtime. Do not block that on `match_result`, RUNE/ELO, NFTLoX custody, or closing every OPEN in the wire spec."
+
+> **Dev:** "Does the server decide who won the chess-to-poker fight?"
+> **Domain expert:** "No. Both browsers apply the same chess and poker intents. The relay only compares **Phase Checkpoint** roots. On mismatch it freezes; it never picks a winner."
+
 ## Flagged Ambiguities
 
 - "testnet" was used to mean both the resettable environment and the next release milestone. Resolved: the environment is **Testnet**; the next milestone is **Closed Testnet Beta**.
 - "all logic" was used broadly. Resolved: for **Closed Testnet Beta**, it means the **Playable Beta Flow**, not exhaustive validation of every card.
+- "finish the game" was used to mean mainnet completeness. Resolved: the current finish line is **Alfa Player-Ready**; **Closed Testnet Beta** is the next milestone after that spine is proven.

@@ -1,4 +1,5 @@
 import { TESTNET_RUNE_ECONOMY } from '@shared/protocol-core/runeEconomy';
+import { MATCH_XP_BASE } from '@shared/protocol-core/xpEconomy';
 
 /*
  * PROTOTYPE - throwaway P2P ranked settlement state model.
@@ -119,7 +120,7 @@ const MATCH_ID = 'qa-s0-ranked-prototype-001';
 const MATCH_ROOT = 'root:seq-0001-alice-move-bob-move';
 const LOCAL_RACE_ROOT = 'root:local-alice-first';
 const REMOTE_RACE_ROOT = 'root:remote-bob-first';
-const QA_LOCAL_MATCH_XP = 25;
+const QA_LOCAL_MATCH_XP = MATCH_XP_BASE;
 
 export function createInitialSettlementPrototypeState(): SettlementPrototypeState {
 	return withDecision({

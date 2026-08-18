@@ -23,6 +23,41 @@ detalle por dominio, pero este archivo decide el orden actual.
 La meta inmediata no es reabrir todo el protocolo. La meta es que el juego sea
 comprensible, jugable y verificable en testnet real.
 
+**Terminar Ragnarok ahora** significa llegar a **Alfa Player-Ready**, no a
+mainnet ni a settlement ranked. El nucleo jugable es la
+**Chess-Poker P2P Spine** definida en `CONTEXT.md`:
+
+```text
+matchmaking + seed
+        |
+        v
+     chess
+     /    \
+instant    chess_combat_initiated
+ kill              |
+chess_attack       v
+ stays        Phase Checkpoint
+ on chess   chess -> poker_combat
+                   |
+                   v
+            poker_action loop
+                   |
+                   v
+            Phase Checkpoint
+          poker_combat -> chess
+                   |
+                   v
+            chess continues
+                   |
+                   v
+            Phase Checkpoint
+              * -> game_over
+                   |
+                   v
+            local result + JSON export
+            (no Keychain, no Hive op)
+```
+
 La decision normativa es
 [`ADR 0007`](./adr/0007-p2p-gameplay-only-testnet.md): esta fase prueba partidas
 P2P completas y fluidas. El relay arbitra solamente checkpoints deterministas
@@ -69,13 +104,18 @@ Closed Beta no se abre hasta que, ademas de lo anterior:
 
 ## Orden mas corto
 
+El trabajo paralelo que no acorta Alfa Player-Ready (ranked settlement,
+transcript Merkle entre peers, reload recovery completo, cards host-auth
+OPEN-8, mines P2P, CSP de produccion, auditoria de catalogo) se deja fuera
+hasta que el smoke de dos browsers pase.
+
 | Orden | Gate | Estado actual | Cierre minimo |
 |---|---|---|---|
-| 1 | Documentacion activa | Cerrado en este pass | Usar este archivo como entrada unica del plan vivo. |
+| 1 | Documentacion activa | Cerrado en este pass | Usar este archivo y `CONTEXT.md` como entrada unica del plan vivo. |
 | 2 | Poker board entendible | Abierto P0 | Un pass visual/UX sobre `RagnarokCombatArena`, `board.css`, `BettingPanel`, `WagerInfoPanel`, HUD y showdown. |
 | 3 | Runtime Alfa desplegable | Abierto P0 | Probar build/start Alfa, health, admin config, p2p status, headers y cache rules en el target real. |
 | 4 | Hive session | Abierto P0 humano | Login real con Keychain antes de matchmaking; cero prompts causados por la partida. |
-| 5 | P2P smoke dos browsers | Abierto P0 humano | Partida completa con checkpoints de fase, resultado local, session logs exportados y cero `match_result`. |
+| 5 | P2P smoke dos browsers | Abierto P0 humano | Cubrir la spine: quiet move, instant kill, captura a poker, checkpoint ida, resolucion, checkpoint vuelta, `game_over`, reconnect corto, export local. |
 | 6 | Seguridad P2P enfocada | Necesita re-run | `bash scripts/p2p-ticket-security-check.sh` en el arbol final. |
 | 7 | Closed Beta cutover | Bloqueado | NFTLoX proof, epoch `closed-beta-*`, env evidence y operator sign-off. |
 

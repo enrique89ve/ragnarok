@@ -24,6 +24,7 @@ import type { CampaignMission, CampaignChapter, CinematicIntro, Difficulty, Musi
 import CinematicCrawl from '../../campaign/CinematicCrawl';
 import type { GameOverSubPhase } from '../../../flow/round/types';
 import { CampaignResultPanel, CasualResultPanel } from './GameOverResultPanels';
+import '../game-over-result.css';
 
 export type GameOverPhaseProps = {
 	readonly result: 'victory' | 'defeat' | 'draw';

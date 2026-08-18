@@ -60,7 +60,7 @@ const CollectionFilters: React.FC<CollectionFiltersProps> = ({
               {([0, 1, 2, 3, 4, 5, 6, 7, 'all'] as const).map((cost) => (
                 <button
                   key={cost === 'all' ? 'all-mana' : `mana-${cost}`}
-                  className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold transition-all transform ${
+                  className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold transition-[background-color,box-shadow,transform] transform ${
                     filters.manaCost === cost 
                       ? 'bg-blue-600 scale-110 shadow-lg' 
                       : 'bg-blue-400 hover:bg-blue-500'

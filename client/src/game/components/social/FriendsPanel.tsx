@@ -197,7 +197,7 @@ function FriendCard({
 		: 'Invite required';
 
 		return (
-			<div className="flex items-center justify-between rounded-xl border border-white/5 bg-gray-900/35 px-3 py-2.5 transition-colors hover:bg-gray-800/40 group">
+				<div className="group/friend flex items-center justify-between rounded-xl border border-white/5 bg-gray-900/35 px-3 py-2.5 transition-colors hover:bg-gray-800/40">
 				<div className="flex min-w-0 items-center gap-2">
 					<div className={`inline-flex h-7 w-7 items-center justify-center rounded-full ${isAccepted && isOnline ? 'bg-green-500/12 text-green-300' : 'bg-slate-500/12 text-slate-400'}`}>
 						{isAccepted && isOnline
@@ -213,7 +213,7 @@ function FriendCard({
 						<span className="block truncate text-[11px] text-gray-500">{statusLabel}</span>
 					</div>
 				</div>
-				<div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+				<div className="flex items-center gap-2 opacity-0 transition-opacity group-hover/friend:opacity-100">
 					{isAccepted && (
 						<button
 							type="button"

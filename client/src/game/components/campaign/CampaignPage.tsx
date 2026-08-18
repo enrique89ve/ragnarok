@@ -298,7 +298,7 @@ function MissionNode({
 			type="button"
 			onClick={() => unlocked && onSelect(mission)}
 			disabled={!unlocked}
-			className={`mission-node-card group w-full rounded-xl border p-4 text-left transition-all duration-200 ${
+			className={`mission-node-card group/mission w-full rounded-xl border p-4 text-left transition-[background-color,border-color,box-shadow] duration-200 ${
 				completed
 					? 'mission-node-card-completed border-rune-500/40 bg-rune-500/[0.08] hover:bg-rune-500/[0.14] hover:border-rune-300/60'
 					: unlocked
@@ -311,7 +311,7 @@ function MissionNode({
 					completed
 						? 'bg-rune-500 text-obsidian-950 shadow-[0_0_12px_-2px_rgba(143,181,115,0.55)]'
 						: unlocked
-							? 'bg-obsidian-800 border border-obsidian-600 text-ink-100 group-hover:border-gold-300/60 group-hover:text-gold-200'
+							? 'bg-obsidian-800 border border-obsidian-600 text-ink-100 group-hover/mission:border-gold-300/60 group-hover/mission:text-gold-200'
 							: 'bg-obsidian-900 border border-obsidian-700 text-ink-400'
 				}`}>
 					{completed ? <Check size={18} aria-hidden={true} /> : mission.missionNumber}
@@ -1366,7 +1366,7 @@ function BeyondCard({
 				<div className="beyond-card-progress">
 					<div className="h-1.5 flex-1 overflow-hidden rounded-full bg-obsidian-800">
 						<div
-							className="h-full rounded-full bg-linear-to-r from-gold-500 to-gold-200 transition-all duration-500"
+								className="h-full rounded-full bg-linear-to-r from-gold-500 to-gold-200 transition-[width] duration-500"
 							style={{ width: `${progressPct}%` }}
 						/>
 					</div>

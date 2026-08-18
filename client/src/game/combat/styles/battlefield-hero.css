@@ -1,5 +1,5 @@
 /* Battlefield hero square — frame, hover lift, clickable/targetable states.
-   Frame styling + element variants live in hero-card-frame.css / hero-elemental.css. */
+   Frame styling + element variants live in glow-effects.css / elemental-glows.css. */
 
 .battlefield-hero-square {
   width: var(--hero-card-width, 160px);
@@ -109,13 +109,4 @@
   50% {
     box-shadow: 0 0 30px rgba(239, 68, 68, 0.6);
   }
-}
-
-.hero-power-wrapper {
-  position: absolute;
-  top: calc(50% - 80px);
-  transform: translateY(-50%);
-  z-index: 500;
-  pointer-events: auto !important;
-  isolation: isolate;
 }

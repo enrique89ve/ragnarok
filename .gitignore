@@ -7,8 +7,15 @@ jspm_packages/
 # Build outputs
 dist/
 build/
+/output/
 *.pyc
 __pycache__/
+
+# Local Codex state and generated root exports
+.codex
+.codex/
+/card-layout-frame-study-clean.png
+/generated-icon.png
 
 
 PLAN.md

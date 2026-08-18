@@ -7,8 +7,6 @@
 @import "../../combat/styles/zones.css";
 
 @import "../../combat/styles/game-hud.css";
-@import "../../combat/styles/pot-display.css";
-@import "../../combat/styles/betting-controls.css";
 @import "../../combat/styles/timer.css";
 @import "../../combat/styles/hand-strength.css";
 
@@ -21,8 +19,8 @@
 @import "../../combat/styles/hp-bar.css";
 
 /* Shared face-down card chrome — single source of truth for the
-   3-layer background stack + beveled rim used by `.card-card-back`,
-   `.card-placeholder`, and `.opponent-card-back`. Lives in card/ so both card-component CSS
+   3-layer background stack + beveled rim used by `.poker-face-down-surface`
+   and `.opponent-card-back`. Lives in card/ so both card-component CSS
    and combat CSS can target it without circular imports. */
 @import "../../components/card/pokerFaceDown.css";
 
@@ -33,13 +31,10 @@
 
 /* ─── Extracted from the legacy 4201-LOC god file.
    Each file owns one concern; all files stay under 1000 LOC. ─── */
-@import "../../combat/styles/arena-shell.css";
 @import "../../combat/styles/attack-mode-banner.css";
 @import "../../combat/styles/poker-timer.css";
-@import "../../combat/styles/fighting-hp-bars.css";
 @import "../../combat/styles/poker-stats.css";
 @import "../../combat/styles/pet-god-card.css";
-@import "../../combat/styles/community-cards-row.css";
 @import "../../combat/styles/poker-betting.css";
 @import "../../combat/styles/activity-logs.css";
 @import "../../combat/styles/opponent-hand.css";
@@ -47,11 +42,8 @@
 @import "../../combat/styles/mana-display.css";
 @import "../../combat/styles/battlefield-hero.css";
 @import "../../combat/styles/damage-indicator.css";
-@import "../../combat/styles/hand-strength-indicator.css";
 @import "../../combat/styles/battle-intel.css";
 @import "../../combat/styles/unified-containers.css";
-@import "../../combat/styles/hero-card-frame.css";
-@import "../../combat/styles/hero-elemental.css";
 @import "../../combat/styles/combat-phase-director.css";
 @import "../../combat/styles/p2p-turn-status.css";
 @import "../../combat/styles/risk-breakdown.css";

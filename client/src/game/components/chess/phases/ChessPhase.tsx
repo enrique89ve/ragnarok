@@ -29,11 +29,14 @@ import {
 import { useKingChessAbility } from '../../../hooks/useKingChessAbility';
 import { resolveHeroPortrait, DEFAULT_PORTRAIT } from '../../../utils/art/artMapping';
 import { useGameStore } from '../../../stores/gameStore';
+import { isDevBuild } from '../../../config/buildMode';
+import { useMatchStore } from '../../../match/store';
 import { useChessHoverStore } from '../../../stores/chessHoverStore';
 import { Tooltip } from '../../ui/Tooltip';
 import ChessBoard from '../ChessBoard';
 import { ELEMENT_NAMES, PIECE_TYPE_NAMES } from '../chessPieceLabels';
 import { ELEMENT_COLORS, ELEMENT_ICONS } from '../../../types/ChessTypes';
+import '../chess.css';
 
 const COMPACT_FRAME_STYLE: React.CSSProperties = { width: 72, height: 90 };
 const FLANKING_FRAME_STYLE: React.CSSProperties = { width: 108, height: 135 };
@@ -279,7 +282,7 @@ const PlayerHeroPortrait: React.FC<PlayerPortraitProps> = ({ army, pieceCount, c
 								<button
 									key={dir}
 									onClick={() => selectDirection(dir)}
-									className={`px-1.5 py-0.5 rounded text-[10px] font-semibold transition-all ${selectedDirection === dir ? 'bg-yellow-600 text-white border border-yellow-400' : 'bg-gray-700 text-gray-300 border border-gray-600 hover:bg-gray-600'}`}
+										className={`px-1.5 py-0.5 rounded text-[10px] font-semibold transition-[background-color,border-color,color] ${selectedDirection === dir ? 'bg-yellow-600 text-white border border-yellow-400' : 'bg-gray-700 text-gray-300 border border-gray-600 hover:bg-gray-600'}`}
 								>
 									{dir === 'horizontal' ? '↔' : dir === 'vertical' ? '↕' : dir === 'diagonal_up' ? '↗' : '↘'}
 								</button>
@@ -316,7 +319,7 @@ const PlayerHeroPortrait: React.FC<PlayerPortraitProps> = ({ army, pieceCount, c
 								<button
 									key={dir}
 									onClick={() => selectDirection(dir)}
-									className={`px-2 py-1 rounded text-xs font-semibold transition-all ${selectedDirection === dir ? 'bg-yellow-600 text-white border border-yellow-400' : 'bg-gray-700 text-gray-300 border border-gray-600 hover:bg-gray-600'}`}
+								className={`px-2 py-1 rounded text-xs font-semibold transition-[background-color,border-color,color] ${selectedDirection === dir ? 'bg-yellow-600 text-white border border-yellow-400' : 'bg-gray-700 text-gray-300 border border-gray-600 hover:bg-gray-600'}`}
 								>
 									{dir === 'horizontal' ? '↔' : dir === 'vertical' ? '↕' : dir === 'diagonal_up' ? '↗' : '↘'}
 								</button>
@@ -431,6 +434,7 @@ const ChessPhase: React.FC<ChessPhaseProps> = ({
 }) => {
 	const myCanonicalSide = useGameStore(s => s.myCanonicalSide) ?? 'player';
 	const enemyCanonicalSide: 'player' | 'opponent' = myCanonicalSide === 'player' ? 'opponent' : 'player';
+	const isPeerMatch = useMatchStore(s => s.activeMatch?.opponent.kind === 'peer');
 	const { isPlacementMode } = useKingChessAbility(myCanonicalSide);
 	const playerPieceCount = boardState.pieces.filter(p => p.owner === myCanonicalSide).length;
 	const opponentPieceCount = boardState.pieces.filter(p => p.owner === enemyCanonicalSide).length;
@@ -514,8 +518,13 @@ const ChessPhase: React.FC<ChessPhaseProps> = ({
 					You must escape check! Move King, block, or capture the threat.
 				</p>
 			)}
+			{isPeerMatch && (
+				<p className="text-[10px] text-amber-200/70 font-semibold mt-1 text-center max-w-xl tracking-wide uppercase">
+					Pawn or King strike is instant. Other heroes fight in poker. Kings cannot be captured.
+				</p>
+			)}
 
-			{import.meta.env.DEV && (
+			{isDevBuild() && (
 				<button
 					onClick={(e) => {
 						e.preventDefault();

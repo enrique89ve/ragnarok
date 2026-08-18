@@ -1401,12 +1401,12 @@ Current economic NFT XP curves are intentionally small and capped at level 3:
 
 | Rarity | XP per ranked win | MVP bonus | Level thresholds | Max level |
 |---|---:|---:|---|---:|
-| Common | 10 | 3 | 0, 50, 150 | 3 |
-| Rare | 15 | 5 | 0, 100, 300 | 3 |
-| Epic | 20 | 8 | 0, 160, 480 | 3 |
-| Mythic | 25 | 10 | 0, 200, 500 | 3 |
+| Common | 10 | 3 | 0, 50, 250 | 3 |
+| Rare | 15 | 5 | 0, 75, 375 | 3 |
+| Epic | 20 | 8 | 0, 100, 500 | 3 |
+| Mythic | 25 | 10 | 0, 125, 625 | 3 |
 
-Thresholds defined in `cardXPSystem.ts:XP_CONFIG`.
+Thresholds come from `CARD_LEVEL_CURVE` in `shared/protocol-core/xpEconomy.ts`: 5 ranked wins to level 2, then 4× that step to level 3 (25 wins to Divine).
 
 XP itself may continue accumulating beyond the final threshold, but derived card level is capped by `MAX_CARD_LEVEL = 3`. At max level, `getXPToNextLevel()` returns `null`; `level_up` above level 3 is invalid.
 

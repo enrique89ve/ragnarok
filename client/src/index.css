@@ -221,21 +221,6 @@ canvas {
   animation: spellFlash 0.3s ease-in-out;
 }
 
-/* Card sizing and dimensions for consistent appearance */
-.card-with-drag {
-  min-width: var(--card-width);
-  min-height: var(--card-height);
-  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-
-  /* Premium 3D effects */
-  transform-style: preserve-3d;
-  perspective: 1000px;
-  z-index: 30;
-  will-change: transform;
-  pointer-events: auto; /* Only enable pointer events for actual card elements */
-  cursor: grab !important;
-}
-
 /* Dead .battlefield-card .card-with-drag rule removed — class never rendered in JSX */
 
 /* Subtle card hover effects */
@@ -247,20 +232,6 @@ canvas {
 /* REMOVED: Card hover effect styling is now fully managed by CardTransformationManager */
 /* This comment kept as documentation of where the styling was previously defined */
 
-/* State-based card classes for hover and drag states */
-.card-with-drag.is-hovering {
-  /* Glow effects temporarily disabled to isolate hover issues */
-  box-shadow: none !important;
-  filter: brightness(1.1) !important; /* Keep slight brightness for feedback */
-}
-
-.card-with-drag.is-dragging {
-  /* No transitions during dragging for responsiveness */
-  transition: none !important;
-  /* Removed box-shadow to eliminate unwanted outline when dragging */
-  box-shadow: none !important;
-}
-
 /* CRITICAL FIX: Make sure parent container hover only affects the exact card element */
 .card-hover-parent:hover > * {
   z-index: 1000 !important; /* Apply z-index only to direct children (the actual card) */
@@ -269,19 +240,6 @@ canvas {
 /* CRITICAL FIX: Prevent empty spaces between cards from triggering hover */
 .hand-container {
   pointer-events: none; /* Disable pointer events on container (will be re-enabled for cards) */
-}
-
-/* CRITICAL FIX: Card containers and hoverable regions should be precisely sized */
-.hand-card-container {
-  pointer-events: none; /* Disable on outer container */
-  transform-origin: center bottom;
-  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  position: relative;
-  perspective: 1200px;
-  padding: 0; /* No padding for tightest possible arrangement */
-}
-.hand-card-container > * {
-  pointer-events: auto; /* Only re-enable on actual card elements */
 }
 
 /* Special class for cards being dragged */
@@ -347,12 +305,6 @@ canvas {
 .in-hand .card-with-drag {
   width: var(--card-width);
   height: var(--card-height);
-}
-
-/* Ensure premium card containers match the new dimensions */
-.premium-card-container {
-  width: 100%;
-  height: 100%;
 }
 
 /* Taunt styling with border on the card frame */
@@ -488,27 +440,6 @@ canvas {
   /* Optimize for widescreen displays */
   max-width: 100vw;
   margin: 0 auto;
-}
-
-/* Game Log with fixed height to prevent layout shifts */
-.game-log-container {
-  min-height: 150px;
-  max-height: 150px;
-  overflow-y: auto;
-  background-color: rgba(0, 0, 0, 0.6);
-  border-radius: 8px;
-  border: 1px solid var(--norse-accent);
-  padding: 8px;
-}
-
-/* Empty log placeholder to maintain height */
-.game-log-empty {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(255, 255, 255, 0.3);
-  font-style: italic;
 }
 
 /* Z-index hierarchy for proper stacking */
@@ -855,13 +786,6 @@ canvas {
   pointer-events: auto !important;
 }
 
-/* Hero power needs very high z-index to be above overlays */
-.hero-power-wrapper,
-.hero-power-button {
-  z-index: 600 !important;
-  pointer-events: auto !important;
-}
-
 .hero-power-tooltip {
   z-index: 5000 !important;
   pointer-events: auto !important;
@@ -885,11 +809,6 @@ canvas {
   -webkit-user-select: none !important;
   user-select: none !important;
   position: relative !important;
-}
-
-.opponent-hero-container, .player-hero-container {
-  position: relative;
-  margin-top: 0.5rem;
 }
 
 .opponent-hero-portrait, .player-hero-portrait {
@@ -987,32 +906,10 @@ canvas {
   cursor: default !important;
 }
 
-/* Allow cards to show proper cursor */
-.hoverable-card-container {
-  pointer-events: auto !important;
-  cursor: grab !important;
-}
-
 .card-with-drag:active,
 .hoverable-card-container:active,
 .card-renderer:active {
   cursor: grabbing !important;
-}
-
-/* But ensure that deck cards and UI elements remain clickable */
-.deck-card,
-.class-selection *,
-button,
-.saved-deck-item,
-.deck-list-item,
-.select-deck-button,
-[role="button"],
-a,
-input,
-select {
-  pointer-events: auto !important;
-  cursor: pointer !important;
-  z-index: 5 !important;
 }
 
 /* Fix for ghost cards and faint borders - add strict z-indexing */

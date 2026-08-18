@@ -7,8 +7,10 @@ import type { CardCategory } from '@shared/schemas/cardCategory';
 import {
 	getEconomicLevelForXP,
 	getEconomicXPConfig,
+	projectInstanceXpGain,
 	type EconomicXPKey,
-} from '@shared/protocol-core/cardProgression';
+	type XpAuthority,
+} from '@shared/protocol-core/xpEconomy';
 
 /**
  * Starter cards and tokens are filtered upstream and never reach this resolver.
@@ -22,9 +24,9 @@ export const xpKeyFor = (card: { rarity?: string; category?: CardCategory }): Ec
 		: 'common';
 };
 
-function calculateXPGain(rarity: string, isMvp: boolean): number {
-	const config = getEconomicXPConfig(rarity);
-	return isMvp ? config.xpPerWin + config.xpPerMvp : config.xpPerWin;
+function xpAuthorityForSource(source: CardUidMapping['source']): XpAuthority {
+	if (source === 'nft') return 'nft-custody';
+	return 'starter-entitlement';
 }
 
 export function calculateXPRewards(
@@ -36,29 +38,25 @@ export function calculateXPRewards(
 	const rewards: CardXPReward[] = [];
 
 	for (const mapping of cardUids) {
-		if (mapping.source !== 'nft') continue;
-
 		const rarity = cardRarities.get(mapping.cardId) || 'common';
-		const isMvp = mapping.uid === mvpCardUid;
-		const xpGained = calculateXPGain(rarity, isMvp);
-		if (xpGained === 0) continue;
-
-		// Default xp=0 when card isn't in the collection yet (first XP gain after mint).
 		const asset = cardCollection?.find(c => c.uid === mapping.uid);
-		const xpBefore = asset?.xp ?? 0;
-		const xpAfter = xpBefore + xpGained;
-		const levelBefore = getEconomicLevelForXP(rarity, xpBefore);
-		const levelAfter = getEconomicLevelForXP(rarity, xpAfter);
+		const projection = projectInstanceXpGain({
+			rarity,
+			authority: xpAuthorityForSource(mapping.source),
+			xpBefore: asset?.xp ?? 0,
+			isMvp: mapping.uid === mvpCardUid,
+		});
+		if (projection.xpGained === 0) continue;
 
 		rewards.push({
 			cardUid: mapping.uid,
 			cardId: mapping.cardId,
-			xpBefore,
-			xpGained,
-			xpAfter,
-			levelBefore,
-			levelAfter,
-			didLevelUp: levelAfter > levelBefore,
+			xpBefore: projection.xpBefore,
+			xpGained: projection.xpGained,
+			xpAfter: projection.xpAfter,
+			levelBefore: projection.levelBefore,
+			levelAfter: projection.levelAfter,
+			didLevelUp: projection.didLevelUp,
 		});
 	}
 

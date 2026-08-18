@@ -4,10 +4,6 @@
    ======================================== */
 
 /* 1. HERO FRAME — ornate portrait border on battlefield heroes */
-.pet-god-card {
-	position: relative;
-}
-
 .pet-god-card::after {
 	content: '';
 	position: absolute;
@@ -23,10 +19,6 @@
 .pet-god-card > * {
 	position: relative;
 	z-index: 1;
-}
-
-.ragnarok-end-turn.active:hover {
-	filter: brightness(1.15);
 }
 
 .ragnarok-auto-attack.ragnarok-end-turn.active {
@@ -50,7 +42,7 @@
 }
 
 /* 8. HP BAR — blood-textured health fill */
-.fighting-hp-fill {
+.ragnarok-combat-arena .fighting-hp-fill {
 	background: url('/ui/health-bar-blood.png') left center / cover no-repeat !important;
 	box-shadow:
 		0 0 10px rgba(220, 0, 0, 0.8),

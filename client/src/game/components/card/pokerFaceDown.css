@@ -15,8 +15,7 @@
    (width, height, border-radius, flex, etc.).
 
    Surfaces covered:
-     .card-card-back               (slot inside CardCardBack, CardFrame.css)
-     .card-placeholder             (community-cards.css)
+     .poker-face-down-surface      (slot inside CardCardBack)
      .opponent-card-back           (face-down.css, hand display)
 
    Scaling notes:
@@ -28,8 +27,7 @@
    ═══════════════════════════════════════════════════ */
 
 /* ---- Base recipe (80px Celtic square knot + 3px rim) ---- */
-.card-card-back,
-.card-placeholder {
+.poker-face-down-surface {
 	background-color: #0a1422;
 	background-image:
 		/* center vignette — solid dark under the Eihwaz rune for contrast */

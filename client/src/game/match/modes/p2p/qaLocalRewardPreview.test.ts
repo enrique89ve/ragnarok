@@ -27,7 +27,8 @@ const peerMatch: MatchContext = {
 		opponentUsername: 'bob',
 	},
 	reward: {
-		xpRunes: { kind: 'percentage', multiplier: 1 },
+		matchXp: { kind: 'percentage', multiplier: 1 },
+		rune: { kind: 'projected', source: 'p2p_ranked' },
 		ranking: { kind: 'elo' },
 	},
 };
@@ -43,7 +44,7 @@ describe('createP2PQaLocalRewardPreview', () => {
 
 		expect(preview).toMatchObject({
 			scope: 'qa_local',
-			label: 'QA local reward preview',
+			label: 'Victory rewards',
 			runeShown: TESTNET_RUNE_ECONOMY.p2pWinRune,
 			matchXpShown: 25,
 			cardXpShown: 0,
@@ -51,14 +52,51 @@ describe('createP2PQaLocalRewardPreview', () => {
 		expect(preview?.cacheKey).toContain('qa-s0-unit');
 		expect(preview?.cacheKey).toContain('rk-game-testnet');
 		expect(preview?.cacheKey).toContain('alice');
-		expect(preview?.settlementNote).toContain('dual-signed match evidence');
+		expect(preview?.settlementNote).toContain('dual-signed evidence');
 	});
 
-	it('stays disabled outside the QA full-catalog reset epoch', () => {
+	it('shows calculated RUNE and Match XP on Alfa/closed-beta victory without CardXP', () => {
+		const alfaRuntime = resolveRagnarokRuntimeConfig({
+			VITE_NETWORK_STAGE: 'testnet',
+			VITE_RAGNAROK_RESET_EPOCH: 'alfa-testnet-unit',
+		});
+		const preview = createP2PQaLocalRewardPreview({
+			match: peerMatch,
+			result: 'victory',
+			runtime: alfaRuntime,
+			account: 'alice',
+		});
+
+		expect(preview).toMatchObject({
+			scope: 'testnet_local',
+			label: 'Victory rewards',
+			runeShown: TESTNET_RUNE_ECONOMY.p2pWinRune,
+			matchXpShown: 25,
+			cardXpShown: 0,
+		});
+		expect(preview?.persistence).toContain('Not written to Hive');
+
 		expect(createP2PQaLocalRewardPreview({
 			match: peerMatch,
 			result: 'victory',
 			runtime: closedBetaRuntime,
+			account: 'alice',
+		})).toMatchObject({
+			scope: 'testnet_local',
+			runeShown: TESTNET_RUNE_ECONOMY.p2pWinRune,
+			matchXpShown: 25,
+			cardXpShown: 0,
+		});
+	});
+
+	it('stays disabled on mainnet economic runtime', () => {
+		const mainnetRuntime = resolveRagnarokRuntimeConfig({
+			VITE_NETWORK_STAGE: 'mainnet',
+		});
+		expect(createP2PQaLocalRewardPreview({
+			match: peerMatch,
+			result: 'victory',
+			runtime: mainnetRuntime,
 			account: 'alice',
 		})).toBeNull();
 	});
@@ -67,7 +105,7 @@ describe('createP2PQaLocalRewardPreview', () => {
 		const singleMatch: MatchContext = {
 			...peerMatch,
 			opponent: { kind: 'ai', difficulty: 'normal', deckSource: 'default' },
-			reward: { xpRunes: { kind: 'none' }, ranking: { kind: 'none' } },
+			reward: { matchXp: { kind: 'none' }, rune: { kind: 'none' }, ranking: { kind: 'none' } },
 		};
 
 		expect(createP2PQaLocalRewardPreview({
@@ -88,7 +126,7 @@ describe('createP2PQaLocalRewardPreview', () => {
 
 		expect(preview).toMatchObject({
 			scope: 'qa_local',
-			label: 'QA local result preview',
+			label: 'Match result',
 			runeShown: TESTNET_RUNE_ECONOMY.p2pLossRune,
 			matchXpShown: 0,
 			cardXpShown: 0,
@@ -98,8 +136,20 @@ describe('createP2PQaLocalRewardPreview', () => {
 
 describe('calculateP2PQaLocalMatchXp', () => {
 	it('uses the match reward channel multiplier for wins only', () => {
-		expect(calculateP2PQaLocalMatchXp({ xpRunes: { kind: 'percentage', multiplier: 2 }, ranking: { kind: 'elo' } }, 'victory')).toBe(50);
-		expect(calculateP2PQaLocalMatchXp({ xpRunes: { kind: 'percentage', multiplier: 2 }, ranking: { kind: 'elo' } }, 'defeat')).toBe(0);
-		expect(calculateP2PQaLocalMatchXp({ xpRunes: { kind: 'none' }, ranking: { kind: 'none' } }, 'victory')).toBe(0);
+		expect(calculateP2PQaLocalMatchXp({
+			matchXp: { kind: 'percentage', multiplier: 2 },
+			rune: { kind: 'projected', source: 'p2p_ranked' },
+			ranking: { kind: 'elo' },
+		}, 'victory')).toBe(50);
+		expect(calculateP2PQaLocalMatchXp({
+			matchXp: { kind: 'percentage', multiplier: 2 },
+			rune: { kind: 'projected', source: 'p2p_ranked' },
+			ranking: { kind: 'elo' },
+		}, 'defeat')).toBe(0);
+		expect(calculateP2PQaLocalMatchXp({
+			matchXp: { kind: 'none' },
+			rune: { kind: 'none' },
+			ranking: { kind: 'none' },
+		}, 'victory')).toBe(0);
 	});
 });

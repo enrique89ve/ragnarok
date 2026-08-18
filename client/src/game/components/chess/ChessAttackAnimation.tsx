@@ -18,7 +18,6 @@ import { useGameStore } from '../../stores/gameStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { PIECE_COLOR_BY_TYPE } from './pieceVisuals';
 import { PieceGlyph } from './PieceGlyph';
-import './ChessAttackAnimation.css';
 
 type AttackWeightProfile = {
   readonly power: number;

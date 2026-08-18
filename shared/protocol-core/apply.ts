@@ -65,7 +65,7 @@ import {
 	readAdminApproval,
 } from './adminMultisig';
 import { fnv1a } from './broadcast-utils';
-import { getEconomicLevelForXP, getEconomicXPPerWin } from './cardProgression';
+import { calculateInstanceXpGain, getEconomicLevelForXP, parseWinnerInstanceUids } from './xpEconomy';
 import {
 	PACK_ID_RANGES, lcgNext, deriveLegacyPackSeed, pickLegacyPackCardIds,
 } from './packDraw';
@@ -112,6 +112,7 @@ type MatchResultDetails = MatchParticipants & {
 	matchId: string;
 	counterparty: string;
 	cardHex?: string;
+	winnerNftUids: string[];
 	compactHash?: string;
 	resultHash?: string;
 	transcriptRoot?: string;
@@ -791,6 +792,9 @@ function extractMatchResultPayloadFields(
 		matchType: isCompact ? 'ranked' : ((op.payload.matchType as string) ?? 'casual'),
 			matchId: typeof matchIdValue === 'string' ? matchIdValue : '',
 			cardHex: isCompact ? op.payload.c as string | undefined : undefined,
+			winnerNftUids: parseWinnerInstanceUids(
+				isCompact ? op.payload.u : (op.payload.winnerNftUids ?? op.payload.winner_nft_uids),
+			),
 			compactHash: isCompact ? op.payload.ch as string | undefined : undefined,
 			resultHash: isCompact ? op.payload.h as string | undefined : op.payload.hash as string | undefined,
 			transcriptRoot: isCompact ? op.payload.tr as string | undefined : op.payload.transcriptRoot as string | undefined,
@@ -876,6 +880,7 @@ async function validateCompactMatchHash(
 			seed: details.seed,
 			version: details.version,
 			cardHex: details.cardHex,
+			winnerNftUids: details.winnerNftUids,
 			transcriptRoot: details.transcriptRoot,
 			transcriptCid: details.transcriptCid,
 		}),
@@ -1103,15 +1108,17 @@ async function applyWinnerCardXp(
 	details: MatchResultDetails,
 	deps: ProtocolCoreDeps,
 ): Promise<void> {
-	if (!details.cardHex || !details.winner) {
+	if (!details.winner || details.winnerNftUids.length === 0) {
 		return;
 	}
 
-	const winnerCardIds = new Set(decodeCardIds(details.cardHex));
-	const winnerNFTs = await deps.state.getCardsByOwner(details.winner);
-	for (const nft of winnerNFTs) {
-		if (!winnerCardIds.has(nft.cardId)) continue;
-		const xpGain = getEconomicXPPerWin(nft.rarity);
+	for (const uid of details.winnerNftUids) {
+		const nft = await deps.state.getCard(uid);
+		if (!nft || nft.owner !== details.winner) continue;
+		const xpGain = calculateInstanceXpGain({
+			rarity: nft.rarity,
+			authority: 'nft-custody',
+		});
 		if (xpGain <= 0) continue;
 		await deps.state.putCard({ ...nft, xp: nft.xp + xpGain });
 	}
@@ -1429,14 +1436,6 @@ function pickBetterDifficulty(
 	return CAMPAIGN_DIFFICULTY_ORDER[candidate] > CAMPAIGN_DIFFICULTY_ORDER[existing]
 		? candidate
 		: existing;
-}
-
-function decodeCardIds(hex: string): number[] {
-	const ids: number[] = [];
-	for (let i = 0; i + 4 <= hex.length; i += 4) {
-		ids.push(parseInt(hex.slice(i, i + 4), 16));
-	}
-	return ids;
 }
 
 // ============================================================

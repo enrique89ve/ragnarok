@@ -1,6 +1,6 @@
 /**
  * Campaign mode — scripted opponent (mission + boss rules + fixed deck),
- * partial economic reward (xpRunes percentage, default 0.1), no ranking.
+ * Match XP share plus first-clear RUNE, no ranking.
  *
  * Public surface (filled in later phases):
  *   - resolver:    resolveCampaign(args)                  [x] Fase 2

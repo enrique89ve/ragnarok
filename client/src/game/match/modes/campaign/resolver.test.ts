@@ -26,11 +26,12 @@ describe('resolveCampaign', () => {
 		expect(op.script.difficulty).toBe('heroic');
 	});
 
-	it('produces xpRunes percentage 0.1 and no ranking', () => {
+	it('produces Match XP share, first-clear RUNE, and no ranking', () => {
 		const result = resolveCampaign({ identity: TEST_IDENTITY, missionId: KNOWN_MISSION_ID, difficulty: 'normal' });
 		if (!result.ok) throw new Error('expected ok');
 		expect(result.ctx.reward).toEqual({
-			xpRunes: { kind: 'percentage', multiplier: 0.1 },
+			matchXp: { kind: 'percentage', multiplier: 0.1 },
+			rune: { kind: 'projected', source: 'campaign_first_clear' },
 			ranking: { kind: 'none' },
 		});
 	});

@@ -18,11 +18,11 @@
  */
 
 import { toast } from 'sonner';
-import { getCampaignFirstClearRuneReward } from '@shared/protocol-core/runeEconomy';
 import { CAMPAIGN_ID } from '@shared/campaign/constants';
 import { debug } from '../../../config/debugConfig';
 import { publishCampaignVictoryResult, useCampaignStore } from '../../../campaign';
 import { getNFTBridge } from '../../../nft';
+import { projectBattleEndRewards } from '../../battleEndRewards';
 import type { MatchEndContext } from '../../onWinDispatch';
 import type { MatchContext } from '../../types';
 import { recordCeremonyFeedbackEvent } from '../../../protocol/ceremonyFeedback';
@@ -31,13 +31,17 @@ import type { CampaignRewardFeedbackInput } from '../../../campaign';
 export function onCampaignMatchEnd(ctx: MatchContext, end: MatchEndContext): void {
 	if (ctx.opponent.kind !== 'scripted') return;
 	if (ctx.opponent.script.kind !== 'campaign-mission') return;
-	if (!end.iWon) return;
 
 	const { mission, difficulty } = ctx.opponent.script;
 	const localRunId = ctx.opponent.script.localRunId ?? null;
 	const campaign = useCampaignStore.getState();
 	const isFirstClear = !campaign.completedMissions[mission.id];
-	const previewRune = isFirstClear ? getCampaignFirstClearRuneReward(mission.id) : 0;
+	const projection = projectBattleEndRewards({
+		reward: ctx.reward,
+		result: end.iWon ? 'victory' : 'defeat',
+		campaign: { missionId: mission.id, isFirstClear },
+	});
+	const previewRune = projection.rune;
 	const baseFeedback = {
 		campaignId: CAMPAIGN_ID,
 		missionId: mission.id,
@@ -45,6 +49,7 @@ export function onCampaignMatchEnd(ctx: MatchContext, end: MatchEndContext): voi
 		difficulty,
 		isFirstClear,
 		previewRune,
+		matchXpShown: projection.matchXp,
 		turnCount: end.turnCount,
 		trxId: null,
 		error: null,
@@ -107,6 +112,7 @@ function recordCampaignRewardFeedback(input: CampaignRewardFeedbackInput): void 
 		difficulty: input.difficulty,
 		isFirstClear: input.isFirstClear,
 		previewRune: input.previewRune,
+		matchXpShown: input.matchXpShown ?? 0,
 		turnCount: input.turnCount,
 		trxId: input.trxId,
 		error: input.error,

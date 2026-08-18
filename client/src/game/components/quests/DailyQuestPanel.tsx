@@ -50,7 +50,7 @@ function QuestRow({ quest, onReroll, onClaim, canReroll, claiming }: {
 			: 'bg-linear-to-r from-gold-600 to-gold-400';
 
 	return (
-		<div className="daily-quest-row relative group flex items-center gap-4 pl-5 pr-4 py-3.5 rounded-lg border border-obsidian-700 bg-linear-to-r from-obsidian-850 to-obsidian-900/80 transition-all hover:border-gold-600/40 hover:bg-obsidian-850">
+		<div className="daily-quest-row relative flex items-center gap-4 pl-5 pr-4 py-3.5 rounded-lg border border-obsidian-700 bg-linear-to-r from-obsidian-850 to-obsidian-900/80 transition-[background-color,border-color] hover:border-gold-600/40 hover:bg-obsidian-850">
 			<span className={`absolute left-0 top-2 bottom-2 w-[2px] rounded-full ${stripClass}`} />
 
 			<div className="daily-quest-icon shrink-0 w-9 h-9 rounded-md border border-gold-300/25 bg-obsidian-900/60 flex items-center justify-center">
@@ -71,7 +71,7 @@ function QuestRow({ quest, onReroll, onClaim, canReroll, claiming }: {
 				</p>
 				<div className="h-[2px] rounded-full bg-obsidian-700 overflow-hidden mt-2">
 					<div
-						className={`h-full transition-all duration-500 ${progressFill}`}
+						className={`h-full transition-[width] duration-500 ${progressFill}`}
 						style={{ width: `${pct}%` }}
 					/>
 				</div>

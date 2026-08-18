@@ -34,14 +34,6 @@
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-.damage-text {
-  font-size: var(--text-2xl);
-  font-weight: bold;
-  color: #ff4444;
-  text-shadow: 0 0 10px rgba(255, 68, 68, 0.8);
-  animation: pulse 0.3s ease-in-out infinite alternate;
-}
-
 @keyframes announcement-pop {
   0% {
     transform: translate(-50%, -50%) scale(0.5);
@@ -65,18 +57,6 @@
 @keyframes pulse {
   0% { transform: scale(1); }
   100% { transform: scale(1.1); }
-}
-
-.attack-line {
-  stroke-linecap: round;
-}
-
-.attack-line.charging {
-  animation: line-grow 0.3s ease-out forwards;
-}
-
-.attack-line.impact {
-  animation: line-flash 0.2s ease-out forwards;
 }
 
 .impact-circle {

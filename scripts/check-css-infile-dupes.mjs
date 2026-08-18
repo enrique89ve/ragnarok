@@ -69,9 +69,18 @@ const result = spawnSync(
 );
 
 // stylelint quirk: with --formatter=json, the report goes to stderr (not
-// stdout) when there are warnings. Try stdout first, fall back to stderr.
+// stdout) when there are warnings. Package-manager warnings can precede that
+// JSON, so extract the JSON payload instead of parsing the whole stream.
 let report;
-const raw = result.stdout?.trim() || result.stderr?.trim() || '[]';
+const outputCandidates = [result.stdout, result.stderr]
+  .filter((value) => typeof value === 'string' && value.trim().length > 0)
+  .map((value) => value.trim());
+const raw = outputCandidates
+  .map((value) => {
+    const jsonStart = value.indexOf('[');
+    return jsonStart >= 0 ? value.slice(jsonStart) : null;
+  })
+  .find((value) => value !== null) ?? '[]';
 try {
   report = JSON.parse(raw);
 } catch (e) {

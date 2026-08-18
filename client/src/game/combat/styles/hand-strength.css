@@ -64,8 +64,7 @@
   height: 16px;
 }
 
-.hand-strength-compact .strength-name,
-.hand-strength-name {
+.hand-strength-compact .strength-name {
   font-size: 0.85rem;
   font-weight: 700;
   color: #e2e8f0;

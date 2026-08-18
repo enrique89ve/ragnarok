@@ -43,6 +43,7 @@
 .ragnarok-end-turn.active:hover {
   transform: translateY(-50%) scale(1.07);
   animation: none;
+  filter: brightness(1.15);
   background: linear-gradient(180deg, #dbb732 0%, #a17d18 50%, #7d5c12 100%);
   box-shadow:
     0 6px 28px rgba(245, 200, 39, 0.7),
