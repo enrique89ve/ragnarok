@@ -8,10 +8,24 @@ import {
 import { getCardKeywordAccent } from './cardKeywordPalette';
 
 export const CARD_KEYWORD_PREVIEW_LIMITS = {
-	collection: 4,
-	pregame: 3,
-	gameplay: 2,
+	collection: 5,
+	pregame: 5,
+	gameplay: 5,
 } satisfies Record<CardPresentationSurface, number>;
+
+export const CARD_KEYWORD_FIVE_STACK_COUNT = 5;
+
+export const splitKeywordRows = <T,>(
+	entries: readonly T[],
+): readonly (readonly T[])[] => {
+	if (entries.length === CARD_KEYWORD_FIVE_STACK_COUNT) {
+		return [entries.slice(0, 2), entries.slice(2, 5)];
+	}
+	if (entries.length === 4) {
+		return [entries.slice(0, 2), entries.slice(2, 4)];
+	}
+	return [entries];
+};
 
 export type CardKeywordLabelMode = 'full' | 'compact';
 

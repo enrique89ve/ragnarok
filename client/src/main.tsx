@@ -10,6 +10,7 @@ import {
   clearChunkReloadFlag,
   isChunkLoadError,
   recoverFromChunkLoadError,
+  stripChunkCacheBustQuery,
 } from "./lib/chunkLoadRecovery";
 
 const DEV_SW_RESET_KEY = createRuntimeStorageKey('dev-sw-reset');
@@ -117,6 +118,8 @@ function renderApp(): void {
 }
 
 async function bootstrap(): Promise<void> {
+  stripChunkCacheBustQuery();
+
   const shouldRender = isDevBuild()
     ? await resetDevelopmentServiceWorker()
     : true;

@@ -31,9 +31,9 @@ const SIZE_SPECS: Record<CardSize, SizeSpec> = {
  *  poker shape stays visually consistent with the pre-existing PlayingCard
  *  chrome (corner rune weights, value font, etc.). */
 const POKER_SIZE_SPECS: Record<CardSize, SizeSpec> = {
-	small:   { w:  90, h: 130 },
-	medium:  { w: 100, h: 140 },
-	large:   { w: 144, h: 202 },
+	small:   { w: 112, h: 157 },
+	medium:  { w: 132, h: 184 },
+	large:   { w: 160, h: 224 },
 	preview: { w: 200, h: 280 },
 };
 

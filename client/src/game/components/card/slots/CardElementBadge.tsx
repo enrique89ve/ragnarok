@@ -7,7 +7,9 @@
 
 import React from 'react';
 import type { NorseElement } from '../../../types/NorseTypes';
-import { ELEMENT_BAND, getElementBand } from '../../../utils/art/elementBand';
+import { getElementBand } from '../../../utils/art/elementBand';
+import { ELEMENT_ICON_MAP } from '../../ui/CardChromeIconsSVG';
+import { CARD_CHROME_FAQ_ATTR, getElementChromeFaq } from '../cardChromeFaq';
 
 export interface CardElementBadgeProps {
 	element: NorseElement;
@@ -16,17 +18,19 @@ export interface CardElementBadgeProps {
 const CardElementBadge: React.FC<CardElementBadgeProps> = ({ element }) => {
 	if (element === 'neutral') return null;
 	const band = getElementBand(element);
-	const label = ELEMENT_BAND[element]?.label ?? element;
+	const Icon = ELEMENT_ICON_MAP[element];
+	const faq = getElementChromeFaq(element);
 	return (
 		<div
-			className="card-frame__element-badge"
-			aria-label={label}
+			className="card-frame__element-badge card-frame__chrome-faq"
+			aria-label={faq}
+			{...{ [CARD_CHROME_FAQ_ATTR]: faq }}
 			style={{
 				'--cf-eb-from': band.from,
 				'--cf-eb-to': band.to,
 			} as React.CSSProperties}
 		>
-			{label.charAt(0).toUpperCase()}
+			<Icon className="card-frame__chrome-icon" aria-hidden="true" />
 		</div>
 	);
 };

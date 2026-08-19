@@ -105,19 +105,37 @@ const BETTING_CONTROLS_DROP = Math.round(BETTING_CONTROLS_HEIGHT * BETTING_CONTR
 const BATTLE_LOG_HEIGHT = 232;
 const BOTTOM_RAIL_GAP = 52;
 const HUD_BADGE_HEIGHT = 36;
-const DECK_COUNTERS_RIGHT_EDGE_X = 1864;
+const CANVAS_W = 1920;
+const EDGE = 32;
 const DECK_COUNTERS_WIDTH = 174;
+const BATTLE_LOG_WIDTH = 288;
 const PLAYER_HAND_BASE_Y = 728;
 const PLAYER_HAND_HEIGHT = 192;
 const PLAYER_HAND_CARD_RISE_RATIO = 0.2;
 const PLAYER_HAND_CARD_RISE = Math.round(PLAYER_HAND_HEIGHT * PLAYER_HAND_CARD_RISE_RATIO);
+const HERO_X = EDGE;
+	const COMMUNITY_W = 720;
+	const COMMUNITY_H = 200;
+const COMMUNITY_X = HERO_X;
+const COMMUNITY_Y = 416;
+const BATTLE_LOG_X = CANVAS_W - EDGE - BATTLE_LOG_WIDTH;
+const DECK_COUNTERS_X = CANVAS_W - EDGE - DECK_COUNTERS_WIDTH;
+	const FIELD_W = 752;
+const FIELD_X = COMMUNITY_X + COMMUNITY_W + 80;
+const FIELD_H = 184;
+const OPP_FIELD_Y = 280;
+const PLAYER_FIELD_Y = 520;
+const BATTLEFIELD_X = FIELD_X - 32;
+const BATTLEFIELD_Y = OPP_FIELD_Y - 24;
+const BATTLEFIELD_W = FIELD_W + 64;
+const BATTLEFIELD_H = PLAYER_FIELD_Y + FIELD_H - BATTLEFIELD_Y;
 
 /**
- * Canonical 1920x1080 poker arena layout.
+ * Single source of truth for the 1920x1080 poker arena.
  *
- * CSS consumes this geometry in `styles/canvas.css` for production. The typed
- * object remains the editor/validation contract, while the style builder is
- * retained for the dev-only safe-area prototype.
+ * Zone x/y/w/h/rot and rail tokens are authored here only.
+ * `buildPokerViewportLayoutStyle` paints them onto `.ragnarok-combat-arena`.
+ * CSS may consume `var(--poker-zone-*)` — it must not redeclare those names.
  */
 export const POKER_VIEWPORT_LAYOUT = {
 	schema: 'norse-poker-layout-draft/v1',
@@ -201,7 +219,7 @@ export const POKER_VIEWPORT_LAYOUT = {
 			x: 960,
 			y: 122,
 			width: 65,
-			height: 107,
+			height: 128,
 			rotation: 0,
 		},
 		attackModeBanner: {
@@ -225,7 +243,7 @@ export const POKER_VIEWPORT_LAYOUT = {
 		opponentHero: {
 			layer: 'game',
 			label: 'Opponent hero card',
-			x: 56,
+			x: HERO_X,
 			y: 72,
 			width: 192,
 			height: 272,
@@ -234,7 +252,7 @@ export const POKER_VIEWPORT_LAYOUT = {
 		opponentHeroCards: {
 			layer: 'game',
 			label: 'Opponent hero pocket cards',
-			x: 88,
+			x: HERO_X + 32,
 			y: 320,
 			width: 128,
 			height: 72,
@@ -243,7 +261,7 @@ export const POKER_VIEWPORT_LAYOUT = {
 		opponentHand: {
 			layer: 'game',
 			label: 'Opponent poker hand / hidden cards',
-			x: 280,
+			x: HERO_X + 208,
 			y: 160,
 			width: 400,
 			height: 88,
@@ -252,43 +270,43 @@ export const POKER_VIEWPORT_LAYOUT = {
 		communityCards: {
 			layer: 'game',
 			label: 'Community poker board',
-			x: 88,
-			y: 472,
-			width: 472,
-			height: 120,
+			x: COMMUNITY_X,
+			y: COMMUNITY_Y,
+			width: COMMUNITY_W,
+			height: COMMUNITY_H,
 			rotation: 0,
 		},
 		battlefield: {
 			layer: 'game',
 			label: 'Battlefield board surface',
-			x: 552,
-			y: 244,
-			width: 888,
-			height: 496,
+			x: BATTLEFIELD_X,
+			y: BATTLEFIELD_Y,
+			width: BATTLEFIELD_W,
+			height: BATTLEFIELD_H,
 			rotation: 0,
 		},
 		opponentBattlefieldCards: {
 			layer: 'game',
 			label: 'Opponent minion cards in battlefield',
-			x: 616,
-			y: 296,
-			width: 688,
-			height: 192,
+			x: FIELD_X,
+			y: OPP_FIELD_Y,
+			width: FIELD_W,
+			height: FIELD_H,
 			rotation: 0,
 		},
 		playerBattlefieldCards: {
 			layer: 'game',
 			label: 'Player minion cards in battlefield',
-			x: 672,
-			y: 532,
-			width: 688,
-			height: 192,
+			x: FIELD_X,
+			y: PLAYER_FIELD_Y,
+			width: FIELD_W,
+			height: FIELD_H,
 			rotation: 0,
 		},
 		playerHero: {
 			layer: 'game',
 			label: 'Player hero card',
-			x: 56,
+			x: HERO_X,
 			y: POKER_BOTTOM_RAIL_Y - PLAYER_HERO_HEIGHT,
 			width: 208,
 			height: PLAYER_HERO_HEIGHT,
@@ -297,7 +315,7 @@ export const POKER_VIEWPORT_LAYOUT = {
 		playerHeroCards: {
 			layer: 'game',
 			label: 'Player hero pocket cards',
-			x: 88,
+			x: HERO_X + 32,
 			y: 680,
 			width: 152,
 			height: 96,
@@ -333,7 +351,7 @@ export const POKER_VIEWPORT_LAYOUT = {
 		deckCounters: {
 			layer: 'hud',
 			label: 'Enemy and player deck counters',
-			x: DECK_COUNTERS_RIGHT_EDGE_X - DECK_COUNTERS_WIDTH,
+			x: DECK_COUNTERS_X,
 			y: 48,
 			width: DECK_COUNTERS_WIDTH,
 			height: 144,
@@ -342,7 +360,7 @@ export const POKER_VIEWPORT_LAYOUT = {
 		battleLog: {
 			layer: 'hud',
 			label: 'Battle log dock',
-			x: 1576,
+			x: BATTLE_LOG_X,
 			y: POKER_BOTTOM_RAIL_Y - BATTLE_LOG_HEIGHT,
 			width: 288,
 			height: BATTLE_LOG_HEIGHT,
@@ -351,17 +369,17 @@ export const POKER_VIEWPORT_LAYOUT = {
 		vfxFocus: {
 			layer: 'vfx',
 			label: 'VFX interaction band',
-			x: 616,
-			y: 280,
-			width: 824,
-			height: 416,
+			x: FIELD_X,
+			y: OPP_FIELD_Y,
+			width: FIELD_W,
+			height: PLAYER_FIELD_Y + FIELD_H - OPP_FIELD_Y,
 			rotation: 0,
 		},
 		opponentPokerSpellTray: {
 			layer: 'game',
 			label: 'Opponent poker spell tray (Family 2)',
-			x: 600,
-			y: 160,
+			x: FIELD_X + 160,
+			y: 168,
 			width: 320,
 			height: 88,
 			rotation: 0,
@@ -369,8 +387,8 @@ export const POKER_VIEWPORT_LAYOUT = {
 		playerPokerSpellTray: {
 			layer: 'game',
 			label: 'Player poker spell tray (Family 2)',
-			x: 600,
-			y: 820,
+			x: FIELD_X + 160,
+			y: 816,
 			width: 320,
 			height: 88,
 			rotation: 0,
@@ -378,10 +396,10 @@ export const POKER_VIEWPORT_LAYOUT = {
 		wagerActivation: {
 			layer: 'vfx',
 			label: 'Wager activation surface (Family 3)',
-			x: 552,
-			y: 244,
-			width: 888,
-			height: 496,
+			x: BATTLEFIELD_X,
+			y: BATTLEFIELD_Y,
+			width: BATTLEFIELD_W,
+			height: BATTLEFIELD_H,
 			rotation: 0,
 		},
 	},

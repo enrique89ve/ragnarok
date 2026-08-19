@@ -9,7 +9,8 @@ import { dealDamage } from './effects/damageUtils';
 import { MAX_BATTLEFIELD_SIZE, MAX_HAND_SIZE } from '../constants/gameConstants';
 import { addKeyword } from './cards/keywordUtils';
 import { isMinion } from './cards/typeGuards';
-import { cryptoRng, cryptoIdGen } from './seededRng';
+import { cryptoIdGen } from './seededRng';
+import { cardsRng, getCardsRng, withCardsRng } from './cardsCommandRng';
 
 const MAX_DEATHRATTLE_DEPTH = 10;
 let deathrattleDepth = 0;
@@ -17,19 +18,22 @@ let deathrattleDepth = 0;
 export function executeDeathrattle(
   state: GameState,
   card: CardInstance,
-  playerId: 'player' | 'opponent'
+  playerId: 'player' | 'opponent',
+  rng: () => number = getCardsRng(),
 ): GameState {
-  if (deathrattleDepth >= MAX_DEATHRATTLE_DEPTH) {
-    debug.warn(`[Deathrattle] Max recursion depth (${MAX_DEATHRATTLE_DEPTH}) reached, skipping ${card.card.name}`);
-    return state;
-  }
+  return withCardsRng(rng, () => {
+    if (deathrattleDepth >= MAX_DEATHRATTLE_DEPTH) {
+      debug.warn(`[Deathrattle] Max recursion depth (${MAX_DEATHRATTLE_DEPTH}) reached, skipping ${card.card.name}`);
+      return state;
+    }
 
-  deathrattleDepth++;
-  try {
-    return executeDeathrattleInner(state, card, playerId);
-  } finally {
-    deathrattleDepth--;
-  }
+    deathrattleDepth++;
+    try {
+      return executeDeathrattleInner(state, card, playerId);
+    } finally {
+      deathrattleDepth--;
+    }
+  });
 }
 
 function executeDeathrattleInner(
@@ -299,7 +303,7 @@ function executeDeathrattleInner(
     case 'add_random_class_card': {
       const player = newState.players[playerId];
       if (player.hand.length < MAX_HAND_SIZE && player.deck.length > 0) {
-        const randomIdx = Math.floor(cryptoRng() * player.deck.length);
+        const randomIdx = Math.floor(cardsRng() * player.deck.length);
         const randomCard = player.deck[randomIdx];
         const inst = createCardInstance(randomCard, cryptoIdGen());
         player.hand.push(inst);
@@ -312,7 +316,7 @@ function executeDeathrattleInner(
       if (atkDmg > 0) {
         const targets = newState.players[opponent].battlefield;
         if (targets.length > 0) {
-          const target = targets[Math.floor(cryptoRng() * targets.length)];
+          const target = targets[Math.floor(cardsRng() * targets.length)];
           if (target.hasDivineShield) {
             target.hasDivineShield = false;
           } else {
@@ -327,7 +331,7 @@ function executeDeathrattleInner(
       const graveyard = player.graveyard || [];
       const deadMinions = graveyard.filter(c => isMinion(c.card));
       if (deadMinions.length > 0 && player.hand.length < MAX_HAND_SIZE) {
-        const pick = deadMinions[Math.floor(cryptoRng() * deadMinions.length)];
+        const pick = deadMinions[Math.floor(cardsRng() * deadMinions.length)];
         const inst = createCardInstance(pick.card, cryptoIdGen());
         player.hand.push(inst);
       }
@@ -385,14 +389,14 @@ function executeDeathrattleInner(
       if (addCardCondition === 'random_mythic') {
         const mythics = allCards.filter(c => c.rarity === 'mythic');
         if (mythics.length > 0) {
-          const pick = mythics[Math.floor(cryptoRng() * mythics.length)];
+          const pick = mythics[Math.floor(cardsRng() * mythics.length)];
           player.hand.push(createCardInstance(pick, cryptoIdGen()));
         }
       } else if (addCardCondition && addCardCondition.startsWith('random_')) {
         const className = addCardCondition.replace('random_', '');
         const classCards = allCards.filter(c => (c as any).heroClass?.toLowerCase() === className.toLowerCase() || (c as any).class?.toLowerCase() === className.toLowerCase());
         if (classCards.length > 0) {
-          const pick = classCards[Math.floor(cryptoRng() * classCards.length)];
+          const pick = classCards[Math.floor(cardsRng() * classCards.length)];
           player.hand.push(createCardInstance(pick, cryptoIdGen()));
         }
       } else {
@@ -508,7 +512,7 @@ function executeDeathrattleInner(
       const count = deathrattle.value || 1;
       for (let i = 0; i < count; i++) {
         const copy = JSON.parse(JSON.stringify(shuffleCardData)) as CardData;
-        const insertIdx = Math.floor(cryptoRng() * (player.deck.length + 1));
+        const insertIdx = Math.floor(cardsRng() * (player.deck.length + 1));
         player.deck.splice(insertIdx, 0, copy);
       }
       return newState;
@@ -534,7 +538,7 @@ function executeDeathrattleInner(
       for (let i = 0; i < copyCount; i++) {
         if (player.hand.length >= MAX_HAND_SIZE) break;
         if (opponent.deck.length === 0) break;
-        const randomIdx = Math.floor(cryptoRng() * opponent.deck.length);
+        const randomIdx = Math.floor(cardsRng() * opponent.deck.length);
         const copiedCardData = JSON.parse(JSON.stringify(opponent.deck[randomIdx])) as CardData;
         const inst = createCardInstance(copiedCardData, cryptoIdGen());
         player.hand.push(inst);
@@ -588,7 +592,7 @@ function executeDeathrattleInner(
       } else {
         cardToShuffle = JSON.parse(JSON.stringify(card.card)) as CardData;
       }
-      const insertIdx = Math.floor(cryptoRng() * (player.deck.length + 1));
+      const insertIdx = Math.floor(cardsRng() * (player.deck.length + 1));
       player.deck.splice(insertIdx, 0, cardToShuffle);
       return newState;
     }
@@ -601,7 +605,7 @@ function executeDeathrattleInner(
         ((c as any).heroClass?.toLowerCase() === targetClass || (c as any).class?.toLowerCase() === targetClass)
       );
       if (classSpells.length === 0) return newState;
-      const picked = classSpells[Math.floor(cryptoRng() * classSpells.length)];
+      const picked = classSpells[Math.floor(cardsRng() * classSpells.length)];
       player.hand.push(createCardInstance(picked, cryptoIdGen()));
       return newState;
     }
@@ -693,7 +697,7 @@ function executeDeathrattleInner(
       const graveyard = player.graveyard || [];
       const deadMinions = graveyard.filter(c => c.card.type === 'minion');
       if (deadMinions.length === 0) return newState;
-      const pick = deadMinions[Math.floor(cryptoRng() * deadMinions.length)];
+      const pick = deadMinions[Math.floor(cardsRng() * deadMinions.length)];
       const resInst = createCardInstance(pick.card, cryptoIdGen());
       if (resInst.card.type === 'minion') {
         const mc = resInst.card as MinionCardData;
@@ -762,7 +766,7 @@ function executeDeathrattleInner(
       const player = newState.players[playerId];
       if (player.battlefield.length === 0) return newState;
       const buffAmount = deathrattle.value || 1;
-      const randomIdx = Math.floor(cryptoRng() * player.battlefield.length);
+      const randomIdx = Math.floor(cardsRng() * player.battlefield.length);
       const target = player.battlefield[randomIdx];
       if (target.card.type === 'minion') {
         const mc = target.card as MinionCardData;
@@ -885,7 +889,7 @@ function executeDeathrattleEffect(
       } else {
         const bf = newState.players[enemyId].battlefield;
         if (bf.length > 0) {
-          const idx = Math.floor(cryptoRng() * bf.length);
+          const idx = Math.floor(cardsRng() * bf.length);
           newState = destroyCard(newState, bf[idx].instanceId, enemyId);
         }
       }
@@ -1259,7 +1263,7 @@ function executeGiveDivineShieldDeathrattle(
     const currentPlayer = newState.players[playerId];
     
     if (currentPlayer.battlefield && currentPlayer.battlefield.length > 0) {
-      const randomIndex = Math.floor(cryptoRng() * currentPlayer.battlefield.length);
+      const randomIndex = Math.floor(cardsRng() * currentPlayer.battlefield.length);
       const targetMinion = currentPlayer.battlefield[randomIndex];
       
       targetMinion.hasDivineShield = true;
@@ -1301,7 +1305,7 @@ function executeMindControlDeathrattle(
     }
     
     // Select a random enemy minion
-    const randomIndex = Math.floor(cryptoRng() * opponentPlayer.battlefield.length);
+    const randomIndex = Math.floor(cardsRng() * opponentPlayer.battlefield.length);
     const targetMinion = opponentPlayer.battlefield[randomIndex];
     
     // Remove the minion from opponent's battlefield
@@ -1451,7 +1455,7 @@ function executeRecruitDeathrattle(
 
   if (minionIndices.length === 0) return newState;
 
-  const randomIdx = minionIndices[Math.floor(cryptoRng() * minionIndices.length)];
+  const randomIdx = minionIndices[Math.floor(cardsRng() * minionIndices.length)];
   const recruitedCardData = player.deck.splice(randomIdx, 1)[0] as any;
   const cardData = recruitedCardData.card || recruitedCardData;
   const instance = createCardInstance(cardData, cryptoIdGen());
@@ -1583,7 +1587,7 @@ function executeAddRandomToHandDeathrattle(
   for (let i = 0; i < count; i++) {
     if (player.hand.length >= MAX_HAND_SIZE) break;
     if (allCards.length === 0) break;
-    const randomCard = allCards[Math.floor(cryptoRng() * allCards.length)];
+    const randomCard = allCards[Math.floor(cardsRng() * allCards.length)];
     const instance = createCardInstance(randomCard, cryptoIdGen());
     player.hand.push(instance);
   }
@@ -1604,7 +1608,7 @@ function executeSummonRandomMythicDeathrattle(
   const mythics = allCards.filter(c => c.type === 'minion' && c.rarity === 'mythic');
   if (mythics.length === 0) return newState;
 
-  const randomCard = mythics[Math.floor(cryptoRng() * mythics.length)];
+  const randomCard = mythics[Math.floor(cardsRng() * mythics.length)];
   const instance = createCardInstance(randomCard, cryptoIdGen());
   player.battlefield.push(instance);
   trackQuestProgress(playerId, 'summon_minion', instance.card);
@@ -1629,7 +1633,7 @@ function executeSummonFromHandDeathrattle(
 
   if (minionIndices.length === 0) return newState;
 
-  const randomIdx = minionIndices[Math.floor(cryptoRng() * minionIndices.length)];
+  const randomIdx = minionIndices[Math.floor(cardsRng() * minionIndices.length)];
   const minion = player.hand.splice(randomIdx, 1)[0];
   player.battlefield.push(minion);
   trackQuestProgress(playerId, 'summon_minion', minion.card);
@@ -1659,7 +1663,7 @@ function executeShuffleCopiesBuffedDeathrattle(
       minionCopy.attack = (minionCopy.attack ?? 0) + buffAmount;
       minionCopy.health = (minionCopy.health ?? 0) + buffAmount;
     }
-    const insertIdx = Math.floor(cryptoRng() * (player.deck.length + 1));
+    const insertIdx = Math.floor(cardsRng() * (player.deck.length + 1));
     player.deck.splice(insertIdx, 0, copy);
   }
 
@@ -1688,7 +1692,7 @@ function executeRandomDamageDeathrattle(
 
     if (targets.length === 0) break;
 
-    const target = targets[Math.floor(cryptoRng() * targets.length)];
+    const target = targets[Math.floor(cardsRng() * targets.length)];
     if (target.type === 'hero') {
       newState = dealDamage(newState, enemyId, 'hero', 1, undefined, undefined, playerId);
     } else {
@@ -1738,7 +1742,7 @@ function executeGiveSparePartDeathrattle(
   for (let i = 0; i < count; i++) {
     if (player.hand.length >= MAX_HAND_SIZE) break;
     if (allCards.length === 0) break;
-    const randomCard = allCards[Math.floor(cryptoRng() * allCards.length)];
+    const randomCard = allCards[Math.floor(cardsRng() * allCards.length)];
     const instance = createCardInstance(randomCard, cryptoIdGen());
     player.hand.push(instance);
   }
@@ -1757,7 +1761,7 @@ function executeFreezeRandomDeathrattle(
 
   if (enemy.battlefield.length === 0) return newState;
 
-  const randomIdx = Math.floor(cryptoRng() * enemy.battlefield.length);
+  const randomIdx = Math.floor(cardsRng() * enemy.battlefield.length);
   (enemy.battlefield[randomIdx] as any).isFrozen = true;
 
   return newState;
@@ -1860,7 +1864,7 @@ function executeDestroyDeathrattle(
 
   if (enemy.battlefield.length === 0) return newState;
 
-  const randomIdx = Math.floor(cryptoRng() * enemy.battlefield.length);
+  const randomIdx = Math.floor(cardsRng() * enemy.battlefield.length);
   const toDestroy = enemy.battlefield[randomIdx];
 
   // Use destroyCard to properly handle graveyard and deathrattle triggers
@@ -1931,7 +1935,7 @@ function executeShuffleCardDeathrattle(
 
   const player = state.players[playerId];
   const cardCopy = { ...cardData };
-  const insertIdx = Math.floor(cryptoRng() * (player.deck.length + 1));
+  const insertIdx = Math.floor(cardsRng() * (player.deck.length + 1));
   player.deck.splice(insertIdx, 0, cardCopy);
   debug.log(`[Deathrattle] shuffle_card: Shuffled ${cardData.name} into ${playerId}'s deck`);
   return state;
@@ -1954,7 +1958,7 @@ function executeSummonRandomDeathrattle(
 
   if (candidates.length === 0) return state;
 
-  const picked = candidates[Math.floor(cryptoRng() * candidates.length)];
+  const picked = candidates[Math.floor(cardsRng() * candidates.length)];
   const inst = createCardInstance(picked, cryptoIdGen());
   inst.isSummoningSick = true;
   inst.canAttack = false;

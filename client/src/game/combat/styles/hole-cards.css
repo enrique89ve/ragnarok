@@ -60,6 +60,10 @@
     inset 0 0 25px rgba(139, 90, 43, 0.2);
 }
 
+.arena-poker-card.norse:hover:has([data-chrome-inspecting]) {
+  transform: none;
+}
+
 /* Large variant - hole cards */
 .arena-poker-card.norse.large {
   width: 144px;

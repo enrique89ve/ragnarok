@@ -6,20 +6,27 @@
  */
 
 import React from 'react';
+import { CARD_CHROME_ICON_MAP } from '../../ui/CardChromeIconsSVG';
+import { CARD_CHROME_FAQ_ATTR, getEvolutionChromeFaq } from '../cardChromeFaq';
 
 export interface CardEvolutionStarsProps {
 	level: number;
 }
 
+const EvolutionIcon = CARD_CHROME_ICON_MAP.evolution;
+
 const CardEvolutionStars: React.FC<CardEvolutionStarsProps> = ({ level }) => {
 	const safeLevel = Math.max(0, Math.min(3, level));
 	if (safeLevel === 0) return null;
+	const faq = getEvolutionChromeFaq(safeLevel);
 	return (
-		<div className="card-frame__evolution-stars" aria-label={`Evolution level ${safeLevel}`}>
+		<div
+			className="card-frame__evolution-stars card-frame__chrome-faq"
+			aria-label={faq}
+			{...{ [CARD_CHROME_FAQ_ATTR]: faq }}
+		>
 			{Array.from({ length: safeLevel }, (_, i) => (
-				<span key={i} className="card-frame__evolution-star" aria-hidden="true">
-					{'✨'}
-				</span>
+				<EvolutionIcon key={i} className="card-frame__evolution-star" aria-hidden="true" />
 			))}
 		</div>
 	);

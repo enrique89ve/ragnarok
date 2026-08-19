@@ -8,8 +8,8 @@
 
 import React from 'react';
 import { useCardFrame } from '../CardFrameContext';
-import { getRarityLabel } from '../../../utils/rarityUtils';
 import type { Rarity } from '@shared/schemas/rarity';
+import { getRarityChromeFaq } from '../cardChromeFaq';
 
 export type CardRarityMarkProps = {
 	readonly className?: string;
@@ -18,13 +18,15 @@ export type CardRarityMarkProps = {
 const CardRarityMark: React.FC<CardRarityMarkProps> = ({ className = '' }) => {
 	const { rarity } = useCardFrame();
 	const markerShape = getRarityMarkerShape(rarity);
+	const faq = getRarityChromeFaq(rarity);
 
 	return (
 		<div
-			className={['card-frame__rarity-mark', className].filter(Boolean).join(' ')}
+			className={['card-frame__rarity-mark', 'card-frame__chrome-faq', className].filter(Boolean).join(' ')}
 			data-rarity={rarity}
 			data-marker-shape={markerShape}
-			aria-label={`${getRarityLabel(rarity)} rarity`}
+			data-chrome-faq={faq}
+			aria-label={faq}
 		>
 			<svg viewBox="0 0 44 16" focusable="false" aria-hidden="true">
 				<path

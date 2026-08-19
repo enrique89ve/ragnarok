@@ -8,7 +8,7 @@ import { debug } from '../../../config/debugConfig';
 import { GameContext } from '../../../GameContext';
 import { Card, SpellEffect } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
-import { cryptoRng } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 export default function executeDestroyDeckPortion(
   context: GameContext, 
@@ -38,7 +38,7 @@ export default function executeDestroyDeckPortion(
     
     if (randomSelection) {
       for (let i = 0; i < actualCardsToDestroy; i++) {
-        const randomIndex = Math.floor(cryptoRng() * deck.length);
+        const randomIndex = Math.floor(cardsRng() * deck.length);
         const destroyed = deck.splice(randomIndex, 1)[0];
         destroyedCards.push(destroyed.card.name);
       }

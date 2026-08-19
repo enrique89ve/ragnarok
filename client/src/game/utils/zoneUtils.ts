@@ -13,7 +13,8 @@ import { checkPetEvolutionTrigger } from './petEvolutionTriggers';
 import { removeKeyword } from './cards/keywordUtils';
 import { recalculateAuras } from './mechanics/auraUtils';
 import { GameEventBus } from '@/core/events/GameEventBus';
-import { cryptoIdGen, cryptoRng } from './seededRng';
+import { cryptoIdGen } from './seededRng';
+import { cardsRng } from './cardsCommandRng';
 
 /**
  * Moves a card from one zone to another
@@ -282,7 +283,7 @@ export function destroyCard(
       risenCard.einherjarGeneration = einherjarGen + 1;
 
       const deck = newState.players[playerId].deck;
-      const insertIdx = Math.floor(cryptoRng() * (deck.length + 1));
+      const insertIdx = Math.floor(cardsRng() * (deck.length + 1));
       deck.splice(insertIdx, 0, risenCard as any);
       debug.state(`[Einherjar] ${cardToDestroy!.card.name} shuffled back as ${risenCard.name} (gen ${einherjarGen + 1}) for ${playerId}`);
     }

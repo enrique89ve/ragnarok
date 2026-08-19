@@ -1,31 +1,47 @@
 /**
- * <CardKeywordTooltip> — slot: hover portaled tooltip for keywords.
+ * <CardKeywordTooltip> — hover FAQ for keywords and card chrome.
  *
- * Renders a hidden marker into the slot tree. Listens for mouseenter /
- * focus on the frame root (read from context) and portals a tooltip
- * to `document.body` at the cursor / focus point. Closes on leave,
- * blur, Escape, or scroll.
- *
- * Disabled by `disableTooltips` (set by discovery modal which already
- * has its own portal). No-ops when `keywords` is empty.
+ * LoL HUD rule: dock beside the card, never follow the cursor, and never
+ * lift the parent card while a mark is being inspected.
  */
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useCardFrame } from '../CardFrameContext';
-import { getCardKeywordTooltipText } from '../cardKeywordDisplay';
+import { CARD_CHROME_FAQ_ATTR, getKeywordChromeFaq } from '../cardChromeFaq';
+import { resolveChromeFaqDock } from '../cardChromeFaqDock';
 
 export interface CardKeywordTooltipProps {
 	keywords?: readonly string[];
 }
 
 interface TooltipState {
-	x: number;
-	y: number;
+	left: number;
+	top: number;
 	text: string;
+	side: string;
 }
 
-const TOOLTIP_OFFSET = 12;
+const FAQ_SELECTOR = `[${CARD_CHROME_FAQ_ATTR}], .card-frame__keyword-chip`;
+const TOOLTIP_SIZE = { width: 240, height: 72 };
+
+const readFaqText = (node: HTMLElement, keywordSet: Set<string>): string | null => {
+	const marked = node.closest(`[${CARD_CHROME_FAQ_ATTR}]`) as HTMLElement | null;
+	const markedText = marked?.getAttribute(CARD_CHROME_FAQ_ATTR);
+	if (markedText && markedText.length > 0) return markedText;
+
+	const chip = node.closest('.card-frame__keyword-chip') as HTMLElement | null;
+	if (!chip) return null;
+	const summary = chip.dataset.keywordSummary;
+	if (summary !== undefined && summary.length > 0) return summary;
+	const keyword = chip.dataset.keyword ?? '';
+	if (keywordSet.size > 0 && !keywordSet.has(keyword)) return null;
+	if (!keyword) return null;
+	return getKeywordChromeFaq(keyword);
+};
+
+const findFaqNode = (node: HTMLElement): HTMLElement | null =>
+	node.closest(FAQ_SELECTOR);
 
 const CardKeywordTooltip: React.FC<CardKeywordTooltipProps> = ({ keywords }) => {
 	const { rootRef, disableTooltips } = useCardFrame();
@@ -36,51 +52,66 @@ const CardKeywordTooltip: React.FC<CardKeywordTooltipProps> = ({ keywords }) => 
 		keywordSet.current = new Set(keywords ?? []);
 	}, [keywords]);
 
+	const closeTip = useCallback(() => {
+		rootRef.current?.removeAttribute('data-chrome-inspecting');
+		setTip(null);
+	}, [rootRef]);
+
 	const onPointerOver = useCallback((e: PointerEvent) => {
 		if (disableTooltips) return;
 		const target = e.target as HTMLElement | null;
-		if (!target) return;
-		const chip = target.closest('.card-frame__keyword-chip') as HTMLElement | null;
-		if (!chip) return;
-		const summary = chip.dataset.keywordSummary;
-		if (summary !== undefined && summary.length > 0) {
-			setTip({ x: e.clientX, y: e.clientY, text: summary });
-			return;
-		}
-		const keyword = chip.dataset.keyword ?? '';
-		if (!keywordSet.current.has(keyword)) return;
-		setTip({ x: e.clientX, y: e.clientY, text: getCardKeywordTooltipText(keyword) });
-	}, [disableTooltips]);
+		const root = rootRef.current;
+		if (!target || !root) return;
+		const faqNode = findFaqNode(target);
+		const text = readFaqText(target, keywordSet.current);
+		if (!faqNode || !text) return;
+		const dock = resolveChromeFaqDock({
+			mark: faqNode.getBoundingClientRect(),
+			card: root.getBoundingClientRect(),
+			viewport: { width: window.innerWidth, height: window.innerHeight },
+			tooltip: TOOLTIP_SIZE,
+		});
+		root.setAttribute('data-chrome-inspecting', 'true');
+		setTip({ left: dock.left, top: dock.top, text, side: dock.side });
+	}, [disableTooltips, rootRef]);
 
-	const onPointerOut = useCallback((e: Event) => {
+	const onPointerOut = useCallback((e: PointerEvent) => {
 		const target = e.target as HTMLElement | null;
-		if (!target) return;
-		const chip = target.closest('.card-frame__keyword-chip') as HTMLElement | null;
-		if (!chip) return;
-		setTip(null);
-	}, []);
+		const next = e.relatedTarget as HTMLElement | null;
+		if (!target?.closest(FAQ_SELECTOR)) return;
+		if (next?.closest(FAQ_SELECTOR)) return;
+		closeTip();
+	}, [closeTip]);
 
 	useEffect(() => {
 		if (disableTooltips) return;
 		const root = rootRef.current;
 		if (!root) return;
+		const onKeyDown = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') closeTip();
+		};
 		root.addEventListener('pointerover', onPointerOver);
 		root.addEventListener('pointerout', onPointerOut);
+		window.addEventListener('keydown', onKeyDown);
 		return () => {
 			root.removeEventListener('pointerover', onPointerOver);
 			root.removeEventListener('pointerout', onPointerOut);
+			window.removeEventListener('keydown', onKeyDown);
+			root.removeAttribute('data-chrome-inspecting');
 		};
-	}, [rootRef, onPointerOver, onPointerOut, disableTooltips]);
+	}, [rootRef, onPointerOver, onPointerOut, closeTip, disableTooltips]);
 
 	if (tip === null || disableTooltips) return null;
 
 	const tooltipNode = (
 		<div
 			className="card-keyword-tooltip"
+			data-dock-side={tip.side}
+			role="tooltip"
 			style={{
 				position: 'fixed',
-				left: tip.x + TOOLTIP_OFFSET,
-				top: tip.y + TOOLTIP_OFFSET,
+				left: tip.left,
+				top: tip.top,
 				zIndex: 'var(--z-tooltip, 50)',
 				pointerEvents: 'none',
 			}}

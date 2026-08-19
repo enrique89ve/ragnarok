@@ -19,30 +19,16 @@
 
 .community-slot .arena-poker-card.norse,
 .community-slot .poker-card-frame {
-  width: 112px !important;
-  max-width: 112px !important;
-  height: 158px !important;
-  aspect-ratio: 112 / 158 !important;
-}
-
-.community-slot .arena-poker-card .card-value {
-  font-size: 1.3rem;
-}
-
-.community-slot .arena-poker-card .norse-symbol-large {
-  width: 44px;
-  height: 44px;
-  font-size: 2.1rem;
-}
-
-.community-slot .arena-poker-card .card-rune {
-  font-size: 0.8rem;
+  width: 132px !important;
+  max-width: 132px !important;
+  height: 184px !important;
+  aspect-ratio: 132 / 184 !important;
 }
 
 .community-cards-section {
   display: flex;
   justify-content: center;
-  gap: 16px;
+  gap: 12px;
   padding: 12px 8px;
   background: transparent;
   border-radius: 0;

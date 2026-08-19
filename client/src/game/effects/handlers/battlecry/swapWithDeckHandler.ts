@@ -9,7 +9,7 @@ import { debug } from '../../../config/debugConfig';
 import { GameContext } from '../../../GameContext';
 import { Card, BattlecryEffect, CardInstance } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
-import { cryptoRng } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 export default function executeSwapWithDeck(
   context: GameContext, 
@@ -46,7 +46,7 @@ export default function executeSwapWithDeck(
     
     const targetMinion = potentialTargets[0];
     
-    const randomDeckIndex = Math.floor(cryptoRng() * minionsInDeck.length);
+    const randomDeckIndex = Math.floor(cardsRng() * minionsInDeck.length);
     const minionFromDeck = minionsInDeck[randomDeckIndex];
     
     const deckIndex = context.currentPlayer.deck.findIndex(c => c.instanceId === minionFromDeck.instanceId);
@@ -81,7 +81,7 @@ export default function executeSwapWithDeck(
       context.currentPlayer.board.splice(boardIndex, 0, summonedMinion);
       
       for (let i = context.currentPlayer.deck.length - 1; i > 0; i--) {
-        const j = Math.floor(cryptoRng() * (i + 1));
+        const j = Math.floor(cardsRng() * (i + 1));
         [context.currentPlayer.deck[i], context.currentPlayer.deck[j]] = 
           [context.currentPlayer.deck[j], context.currentPlayer.deck[i]];
       }

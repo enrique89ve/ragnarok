@@ -8,7 +8,8 @@ import { debug } from '../../../config/debugConfig';
 import { GameContext } from '../../../GameContext';
 import { Card, BattlecryEffect, CardInstance } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
-import { cryptoRng, cryptoIdGen } from '../../../utils/seededRng';
+import { cryptoIdGen } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 export default function executeShuffleCard(
   context: GameContext,
@@ -31,7 +32,7 @@ export default function executeShuffleCard(
     
     for (let i = 0; i < count; i++) {
       const newCard: CardInstance = {
-        instanceId: `shuffled-${cardId || 'custom'}-${cryptoIdGen()}-${i}-${cryptoRng().toString(36).substr(2, 9)}`,
+        instanceId: `shuffled-${cardId || 'custom'}-${cryptoIdGen()}-${i}-${cardsRng().toString(36).substr(2, 9)}`,
         card: {
           id: typeof cardId === 'number' ? cardId : (cardId ? parseInt(cardId, 10) : 99998),
           name: cardName,
@@ -50,7 +51,7 @@ export default function executeShuffleCard(
         attacksPerformed: 0
       };
       
-      const randomIndex = Math.floor(cryptoRng() * (targetDeck.length + 1));
+      const randomIndex = Math.floor(cardsRng() * (targetDeck.length + 1));
       targetDeck.splice(randomIndex, 0, newCard);
       shuffledCards.push(newCard);
       

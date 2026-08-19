@@ -7,11 +7,15 @@ import type { IconName } from "../../utils/ui/iconMap";
 import type { Rarity } from "@shared/schemas/rarity";
 import {
   CardArt,
+  CardBloodPrice,
   CardCountBadge,
   CardDescription,
+  CardElementBadge,
+  CardEvolutionStars,
   CardFrame,
   CardManaGem,
   CardNamePlate,
+  CardPetStageBadge,
   CardRarityMark,
   CardTribeLine,
 } from "../card";
@@ -21,6 +25,8 @@ import {
   getCardKeywordsForSurface,
 } from "../card/cardPresentationContract";
 import type { CardSize, CardStatsMode } from "../card/types";
+import type { NorseElement } from "../../types/NorseTypes";
+import type { CardData } from "../../types";
 import type {
   CollectionTileCard,
   CollectionTileClasses,
@@ -72,6 +78,7 @@ export function CollectionCardRenderer({
     ? fields.description ?? card.description ?? cardDefinition?.description
     : fields?.description;
   const keywordLabelMode = fields?.keywordLabelMode ?? "compact";
+  const topChrome = resolveCardTopChrome(adapter.element, fields, cardDefinition);
 
   return (
     <CardFrame
@@ -95,6 +102,10 @@ export function CollectionCardRenderer({
         adapter.isPet ? "collection-card-frame--pet" : "",
         `collection-card-frame--contract-${adapter.contract}`,
         adapter.usesConceptPng ? "collection-card-frame--png-concept" : "",
+        topChrome.showElementBadge ? "norse-card-frame--has-element" : "",
+        topChrome.showBloodPrice ? "norse-card-frame--has-blood-price" : "",
+        topChrome.showPetStage ? "norse-card-frame--has-pet-stage" : "",
+        topChrome.showEvolutionStars ? "norse-card-frame--has-evolution" : "",
         frameClassName,
       ].filter(Boolean).join(" ")}
       style={{ width: "100%", height: "auto", ...frameStyle }}
@@ -126,6 +137,24 @@ export function CollectionCardRenderer({
           <GameIcon name={getTypeIcon(card.type)} size={16} />
         </div>
       ) : null}
+      {topChrome.showElementBadge && (
+        <CardElementBadge element={topChrome.element} />
+      )}
+      {(topChrome.showBloodPrice ||
+        topChrome.showPetStage ||
+        topChrome.showEvolutionStars) && (
+        <div className="collection-card-frame__top-center">
+          {topChrome.showBloodPrice && (
+            <CardBloodPrice value={topChrome.bloodPrice} />
+          )}
+          {topChrome.showPetStage && (
+            <CardPetStageBadge stage={topChrome.petStageNumber} />
+          )}
+          {topChrome.showEvolutionStars && (
+            <CardEvolutionStars level={topChrome.evolutionLevel} />
+          )}
+        </div>
+      )}
       {fields?.showCount !== false && <CardCountBadge count={card.quantity} />}
       {adapter.hasCombatStats && (
         <>
@@ -176,6 +205,65 @@ export function CollectionCardRenderer({
       </div>
     </CardFrame>
   );
+}
+
+function readOptionalNumber(
+  source: object | undefined,
+  key: string,
+): number | undefined {
+  if (!source || !(key in source)) return undefined;
+  const value = (source as Record<string, unknown>)[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function readOptionalString(
+  source: object | undefined,
+  key: string,
+): string | undefined {
+  if (!source || !(key in source)) return undefined;
+  const value = (source as Record<string, unknown>)[key];
+  return typeof value === "string" ? value : undefined;
+}
+
+function resolveCardTopChrome(
+  element: NorseElement,
+  fields: CollectionTileRenderedFields | undefined,
+  cardDefinition: CardData | undefined,
+) {
+  const bloodPrice =
+    fields?.bloodPrice ?? readOptionalNumber(cardDefinition, "bloodPrice") ?? 0;
+  const petStageNumber = petStageToNumber(
+    fields?.petStage ?? readOptionalString(cardDefinition, "petStage"),
+  );
+  const evolutionLevel =
+    fields?.evolutionLevel ??
+    readOptionalNumber(cardDefinition, "evolutionLevel") ??
+    0;
+  const showEvolution = fields?.showEvolution !== false;
+  const showPetStage = showEvolution && petStageNumber > 0;
+  return {
+    element,
+    showElementBadge: fields?.showElementBadge !== false && element !== "neutral",
+    bloodPrice,
+    showBloodPrice: fields?.showBloodPrice !== false && bloodPrice > 0,
+    petStageNumber,
+    showPetStage,
+    evolutionLevel,
+    showEvolutionStars: showEvolution && !showPetStage && evolutionLevel > 0,
+  };
+}
+
+function petStageToNumber(stage: string | undefined): number {
+  switch (stage) {
+    case "basic":
+      return 1;
+    case "adept":
+      return 2;
+    case "master":
+      return 3;
+    default:
+      return 0;
+  }
 }
 
 function CollectionCardStatBadge({

@@ -410,7 +410,13 @@ function getActiveMatchLeaveResponse(req: Request, peerId: string): ExistingQueu
 			body: { success: false, error: 'queue token required' },
 		};
 	}
-	removeActiveMatch(matchId);
+	activeMatchIdsByPeerId.delete(peerId);
+	const otherStillMapped = match.player1 === peerId
+		? activeMatchIdsByPeerId.get(match.player2) === matchId
+		: activeMatchIdsByPeerId.get(match.player1) === matchId;
+	if (!otherStillMapped) {
+		removeActiveMatch(matchId);
+	}
 	return {
 		statusCode: 200,
 		body: { success: true },

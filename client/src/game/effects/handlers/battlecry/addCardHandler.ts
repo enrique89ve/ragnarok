@@ -9,7 +9,8 @@ import { GameContext } from '../../../GameContext';
 import { Card, BattlecryEffect, CardInstance } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
 import { MAX_HAND_SIZE } from '../../../constants/gameConstants';
-import { cryptoRng, cryptoIdGen } from '../../../utils/seededRng';
+import { cryptoIdGen } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 export default function executeAddCard(
   context: GameContext,
@@ -39,7 +40,7 @@ export default function executeAddCard(
       const finalCost = Math.max(0, baseCost - costReduction);
       
       const newCardInstance: CardInstance = {
-        instanceId: `added-${cardId}-${cryptoIdGen()}-${i}-${cryptoRng().toString(36).substr(2, 9)}`,
+        instanceId: `added-${cardId}-${cryptoIdGen()}-${i}-${cardsRng().toString(36).substr(2, 9)}`,
         card: {
           id: typeof cardId === 'number' ? cardId : parseInt(cardId, 10),
           name: effect.cardName || `Card ${cardId}`,

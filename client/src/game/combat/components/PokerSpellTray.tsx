@@ -9,8 +9,7 @@
  * resolution). When opponent-only spell tracking lands, split the
  * selector.
  *
- * Empty state: "No spells queued" in the caster's accent color
- * (indigo for player, red for opponent — defined in poker-spell-tray.css).
+ * Empty: render nothing. The tray is a queue, not a permanent label.
  *
  * Selector: `usePokerSpells().pendingSpells` — the live Zustand slice
  * state. Re-renders are stable as long as the slice doesn't allocate
@@ -41,11 +40,7 @@ export const PokerSpellTray: React.FC<PokerSpellTrayProps> = ({ caster }) => {
 	const className = `poker-spell-tray ${caster === 'opponent' ? 'poker-spell-tray--opponent' : ''}`;
 
 	if (visible.length === 0) {
-		return (
-			<div className={className} role="region" aria-label={`${caster} poker spell tray`}>
-				<span className="poker-spell-tray__empty">No spells queued</span>
-			</div>
-		);
+		return null;
 	}
 
 	return (

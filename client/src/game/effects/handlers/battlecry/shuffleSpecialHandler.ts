@@ -8,7 +8,8 @@ import { debug } from '../../../config/debugConfig';
 import { GameContext } from '../../../GameContext';
 import { Card, BattlecryEffect, CardInstance } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
-import { cryptoRng, cryptoIdGen } from '../../../utils/seededRng';
+import { cryptoIdGen } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 export default function executeShuffleSpecial(
   context: GameContext,
@@ -66,7 +67,7 @@ export default function executeShuffleSpecial(
     
     for (let i = 0; i < count; i++) {
       const newCard: CardInstance = {
-        instanceId: `special-${specialType}-${cryptoIdGen()}-${i}-${cryptoRng().toString(36).substr(2, 9)}`,
+        instanceId: `special-${specialType}-${cryptoIdGen()}-${i}-${cardsRng().toString(36).substr(2, 9)}`,
         card: {
           id: effect.cardId || 99997,
           name: template.name || cardName,
@@ -83,7 +84,7 @@ export default function executeShuffleSpecial(
         attacksPerformed: 0
       };
       
-      const randomIndex = Math.floor(cryptoRng() * (targetDeck.length + 1));
+      const randomIndex = Math.floor(cardsRng() * (targetDeck.length + 1));
       targetDeck.splice(randomIndex, 0, newCard);
       shuffledCards.push(newCard);
       

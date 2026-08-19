@@ -9,7 +9,7 @@ import { debug } from '../../../config/debugConfig';
 import { GameContext } from '../../../GameContext';
 import { Card, BattlecryEffect } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
-import { cryptoRng } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 /**
  * Execute a buff_hand battlecry effect
@@ -58,7 +58,7 @@ export default function executeBuffHand(
     
     if (isRandom && count) {
       targetCards = [];
-      const shuffled = [...eligibleCards].sort(() => cryptoRng() - 0.5);
+      const shuffled = [...eligibleCards].sort(() => cardsRng() - 0.5);
       for (let i = 0; i < Math.min(count, shuffled.length); i++) {
         targetCards.push(shuffled[i]);
       }

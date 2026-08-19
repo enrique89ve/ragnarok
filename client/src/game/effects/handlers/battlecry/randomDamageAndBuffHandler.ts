@@ -9,7 +9,7 @@ import { debug } from '../../../config/debugConfig';
 import { GameContext } from '../../../GameContext';
 import { Card, BattlecryEffect } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
-import { cryptoRng } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 /**
  * Execute a random_damage_and_buff battlecry effect
@@ -49,7 +49,7 @@ export default function executeRandomDamageAndBuff(
       damageValue = damageSourceCounter;
       context.logGameEvent(`Using counter value: ${damageValue}`);
     } else {
-      damageValue = Math.floor(cryptoRng() * (maxValue - minValue + 1)) + minValue;
+      damageValue = Math.floor(cardsRng() * (maxValue - minValue + 1)) + minValue;
       context.logGameEvent(`Random damage rolled: ${damageValue} (range: ${minValue}-${maxValue})`);
     }
     
@@ -75,7 +75,7 @@ export default function executeRandomDamageAndBuff(
         
         if (activeTargets.length === 0) break;
         
-        const randomIndex = Math.floor(cryptoRng() * activeTargets.length);
+        const randomIndex = Math.floor(cardsRng() * activeTargets.length);
         const target = activeTargets[randomIndex];
         
         context.dealDamage(target, 1);
@@ -85,7 +85,7 @@ export default function executeRandomDamageAndBuff(
       
       context.logGameEvent(`${sourceCard.name} dealt ${totalDamageDealt} damage split randomly among enemies`);
     } else {
-      const randomIndex = Math.floor(cryptoRng() * targets.length);
+      const randomIndex = Math.floor(cardsRng() * targets.length);
       const target = targets[randomIndex];
       
       context.dealDamage(target, damageValue);

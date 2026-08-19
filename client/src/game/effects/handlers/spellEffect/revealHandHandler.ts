@@ -9,7 +9,8 @@ import { GameContext } from '../../../GameContext';
 import { Card, SpellEffect } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
 import { MAX_HAND_SIZE } from '../../../constants/gameConstants';
-import { cryptoRng, cryptoIdGen } from '../../../utils/seededRng';
+import { cryptoIdGen } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 export default function executeRevealHand(
 	context: GameContext,
@@ -37,7 +38,7 @@ export default function executeRevealHand(
 					context.logGameEvent('Hand full — cannot copy more cards');
 					break;
 				}
-				const randomIdx = Math.floor(cryptoRng() * opponentHand.length);
+				const randomIdx = Math.floor(cardsRng() * opponentHand.length);
 				const cardToCopy = opponentHand[randomIdx];
 				const cardData = cardToCopy.card || cardToCopy;
 

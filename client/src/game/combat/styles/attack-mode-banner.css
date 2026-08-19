@@ -1,20 +1,20 @@
 /* Attack mode banner — floats above the player field when a minion is
    selected as attacker. Position comes from the poker layout contract
-   (see combat/layout/board.css for --poker-zone-attackModeBanner-* tokens). */
+   (see poker/layout/pokerViewportLayout.ts for --poker-zone-attackModeBanner-*). */
 
 .attack-mode-banner {
   position: absolute;
   display: flex;
-  top: var(--poker-zone-attackModeBanner-y, 8%);
-  left: var(--poker-zone-attackModeBanner-x, 50%);
+  top: var(--poker-zone-attackModeBanner-y);
+  left: var(--poker-zone-attackModeBanner-x);
   align-items: center;
   justify-content: center;
   gap: var(--space-10);
   padding: 8px 16px;
   box-sizing: border-box;
-  width: var(--poker-zone-attackModeBanner-w, fit-content);
-  min-height: var(--poker-zone-attackModeBanner-h, auto);
-  max-width: var(--poker-zone-attackModeBanner-w, 480px);
+  width: var(--poker-zone-attackModeBanner-w);
+  min-height: var(--poker-zone-attackModeBanner-h);
+  max-width: var(--poker-zone-attackModeBanner-w);
   background: linear-gradient(
     135deg,
     rgba(30, 20, 5, 0.92) 0%,
@@ -25,7 +25,7 @@
   box-shadow:
     0 0 18px var(--gold-glow),
     0 4px 12px rgba(0, 0, 0, 0.55);
-  transform: rotate(var(--poker-zone-attackModeBanner-rot, 0deg));
+  transform: rotate(var(--poker-zone-attackModeBanner-rot));
   transform-origin: top left;
   animation: attackBannerIn 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
   z-index: 220;
@@ -35,11 +35,11 @@
 @keyframes attackBannerIn {
   from {
     opacity: 0;
-    transform: rotate(var(--poker-zone-attackModeBanner-rot, 0deg)) translateY(6px) scale(0.96);
+    transform: rotate(var(--poker-zone-attackModeBanner-rot)) translateY(6px) scale(0.96);
   }
   to {
     opacity: 1;
-    transform: rotate(var(--poker-zone-attackModeBanner-rot, 0deg)) translateY(0) scale(1);
+    transform: rotate(var(--poker-zone-attackModeBanner-rot)) translateY(0) scale(1);
   }
 }
 

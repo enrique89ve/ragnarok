@@ -4,7 +4,7 @@
  */
 
 import { CardInstance } from '../../types/CardTypes';
-import { cryptoRng } from '../seededRng';
+import { cardsRng } from '../cardsCommandRng';
 import type { IconName } from '../ui/iconMap';
 
 // Status effect types
@@ -130,16 +130,15 @@ export function calculateDamageTaken(minion: CardInstance, baseDamage: number, i
   return damage;
 }
 
-// Check if minion can act (for Frozen, Paralysis)
-export function canMinionAct(minion: CardInstance): { canAct: boolean; reason?: string } {
+export function canMinionAct(
+  minion: { readonly isFrozen?: boolean; readonly isParalyzed?: boolean },
+  rng: () => number = cardsRng,
+): { canAct: boolean; reason?: string } {
   if (minion.isFrozen) {
     return { canAct: false, reason: 'Frozen - cannot act this turn' };
   }
-  if (minion.isParalyzed) {
-    const roll = cryptoRng();
-    if (roll < 0.5) {
-      return { canAct: false, reason: 'Paralyzed - action failed (50% chance)' };
-    }
+  if (minion.isParalyzed && rng() < 0.5) {
+    return { canAct: false, reason: 'Paralyzed - action failed (50% chance)' };
   }
   return { canAct: true };
 }

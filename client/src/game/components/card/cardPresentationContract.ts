@@ -205,6 +205,28 @@ export const CARD_ELEMENT_CONTRACTS = {
 			gameplay: surfaceContract('hidden', ['ownership'], 'Combat state must not depend on collection count.'),
 		},
 	},
+	bloodPrice: {
+		id: 'bloodPrice',
+		label: 'Blood Price',
+		source: 'registry',
+		owner: 'card-registry',
+		surfaces: {
+			collection: surfaceContract('important', ['resource-cost', 'deck-filter'], 'Alternate health cost must be visible when building or inspecting.'),
+			pregame: surfaceContract('decisive', ['resource-cost'], 'Mulligan keep/swap depends on whether the card can be paid with HP.'),
+			gameplay: surfaceContract('decisive', ['resource-cost'], 'Players need the blood cost before committing a play.'),
+		},
+	},
+	evolution: {
+		id: 'evolution',
+		label: 'Evolution',
+		source: 'registry',
+		owner: 'card-registry',
+		surfaces: {
+			collection: surfaceContract('important', ['identity', 'visual-chrome'], 'Pet stage and evolution identity belong on collection tiles.'),
+			pregame: surfaceContract('important', ['identity'], 'Stage I/II/III changes what the card becomes after play.'),
+			gameplay: surfaceContract('hidden', ['identity'], 'Board slots keep combat state; evolution stays on hand, mulligan, and collection.'),
+		},
+	},
 } satisfies Record<CardLayoutSlotId, CardElementContract>;
 
 const defineKeyword = (

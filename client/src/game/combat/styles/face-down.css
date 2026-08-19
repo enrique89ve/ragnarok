@@ -1,10 +1,6 @@
-/* Face Down Cards - Opponent hand card backs.
-   The legacy `.arena-poker-card.norse.face-down` and its slot rules
-   (`.card-back`, `.corner-rune`, `.card-back-shimmer`, etc.) were
-   deleted along with the old <PlayingCard> class — no JSX in the
-   repo still carries `.arena-poker-card`. The poker back surface lives
-   in the `.card-card-back` slot, and the empty-slot chrome lives in
-   community-cards.css (`.card-placeholder`). */
+/* Face Down Cards - Opponent hand card-back geometry.
+   Paint comes from <CardCardBack> inside PokerCardFrame (same chrome
+   as community / hole cards). This file only sizes and fans the tiles. */
 
 /* ========================================
    OPPONENT FACE-DOWN HAND DISPLAY
@@ -17,33 +13,25 @@
 
 .ragnarok-combat-arena .opponent-card-back {
   width: var(--opponent-hand-card-width, 78px);
-  height: calc(var(--opponent-hand-card-width, 78px) * 110 / 78);
-  /* Background stack + beveled rim live in
-     `client/src/game/components/card/pokerFaceDown.css` (loaded via
-     poker-core.css). Only the hand-display geometry stays here. */
-  border-radius: 7px;
+  height: calc(var(--opponent-hand-card-width, 78px) * 7 / 5);
+  border-radius: 5px;
   flex: 0 0 var(--opponent-hand-card-width, 78px);
   position: relative;
+  overflow: hidden;
   margin-left: var(--opponent-hand-card-overlap, -39px);
   transition: transform 0.2s ease, margin 0.2s ease;
 }
 
-.ragnarok-combat-arena .opponent-card-back:first-child {
-  margin-left: 0;
+.ragnarok-combat-arena .opponent-card-back .card-frame {
+  max-width: none !important;
+  max-height: none !important;
+  width: 100% !important;
+  height: 100% !important;
+  aspect-ratio: auto !important;
 }
 
-/* Eihwaz rune — flat identity mark, scaled down for the 78×110 hand card. */
-.ragnarok-combat-arena .opponent-card-back::after {
-  content: 'ᛇ';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-family: 'Cinzel', serif;
-  font-size: 1.4rem;
-  line-height: 1;
-  color: rgba(201, 168, 76, 0.72);
-  text-shadow: none;
+.ragnarok-combat-arena .opponent-card-back:first-child {
+  margin-left: 0;
 }
 
 /* Fan effect on hover */

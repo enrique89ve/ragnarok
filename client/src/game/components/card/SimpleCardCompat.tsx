@@ -224,6 +224,12 @@ export const SimpleCardCompat: React.FC<SimpleCardCompatProps> = ({
 		...(layoutAdapter.showTribeLine && card.tribe ? { tribe: card.tribe } : {}),
 		...(layoutAdapter.showDescriptionText && card.description ? { description: card.description } : {}),
 		...(layoutAdapter.showKeywords && renderedKeywords.length > 0 ? { keywords: renderedKeywords } : {}),
+		showElementBadge: layoutAdapter.showElementBadge,
+		showBloodPrice: layoutAdapter.showBloodPrice,
+		showEvolution: layoutAdapter.showEvolution,
+		...(card.bloodPrice !== undefined ? { bloodPrice: card.bloodPrice } : {}),
+		...(card.evolutionLevel !== undefined ? { evolutionLevel: card.evolutionLevel } : {}),
+		...(card.petStage !== undefined ? { petStage: card.petStage } : {}),
 		keywordLimit: layoutAdapter.keywordLimit,
 		keywordLabelMode: layoutAdapter.keywordLabelMode,
 	};

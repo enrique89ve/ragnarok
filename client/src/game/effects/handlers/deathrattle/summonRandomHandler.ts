@@ -12,7 +12,7 @@ import { EffectResult } from '../../../types/EffectTypes';
 import { getCardsByPredicate, getAllCards } from '../../../data/cardManagement/cardRegistry';
 import { v4 as uuidv4 } from 'uuid';
 import { MAX_BATTLEFIELD_SIZE } from '../../../constants/gameConstants';
-import { cryptoRng } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 /**
  * Execute a summon_random deathrattle effect
@@ -66,7 +66,7 @@ export default function executeSummonRandomSummonRandom(
         break;
       }
       
-      const randomIndex = Math.floor(cryptoRng() * eligibleMinions.length);
+      const randomIndex = Math.floor(cardsRng() * eligibleMinions.length);
       const selectedCard = eligibleMinions[randomIndex];
       
       const newMinion: CardInstance = {

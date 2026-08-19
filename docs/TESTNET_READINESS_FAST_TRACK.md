@@ -81,7 +81,8 @@ Alfa esta lista para mas manos internas cuando todo esto sea verdad:
    prompt de wallet.
 4. El P2P de dos browsers cubre movimiento de chess, captura instantanea,
    captura a poker, checkpoints `chess ↔ poker_combat`, resolucion, retorno a
-   chess, checkpoint terminal, reconnect corto, reload guard, resultado local
+   chess, checkpoint terminal, reconnect corto, reload local snapshot +
+   rejoin, resultado local
    y export JSON sin operacion Hive.
 5. `pnpm run check`, `pnpm run lint:css`, el runner de seguridad P2P y el build
    Alfa pasan en el arbol que se va a desplegar.
@@ -105,9 +106,10 @@ Closed Beta no se abre hasta que, ademas de lo anterior:
 ## Orden mas corto
 
 El trabajo paralelo que no acorta Alfa Player-Ready (ranked settlement,
-transcript Merkle entre peers, reload recovery completo, cards host-auth
-OPEN-8, mines P2P, CSP de produccion, auditoria de catalogo) se deja fuera
-hasta que el smoke de dos browsers pase.
+transcript Merkle entre peers, action-log replay, mines P2P, CSP de
+produccion, auditoria de catalogo) se deja fuera hasta que el smoke de dos
+browsers pase. Cards OPEN-8 (handshake + apply simetrico) ya cerro; no
+reabrir como host-auth.
 
 | Orden | Gate | Estado actual | Cierre minimo |
 |---|---|---|---|
@@ -237,8 +239,9 @@ Flujo minimo:
 7. Ambos peers obtienen commit del checkpoint `chess → poker_combat`; poker
    resuelve y solo vuelve a chess tras el commit `poker_combat → chess`.
 8. Reconnect corto conserva estado o exporta blocker con reject code.
-9. Reload duro muestra warning y queda documentado como riesgo si no hay full
-   recovery.
+9. Reload duro avisa, restaura el snapshot local sellado y reintenta la sala
+   (2 intentos / 60s). Si el snapshot falta o el sello no cuadra, el tester
+   vuelve al lobby; no hay tablero servido por Express.
 10. `game_over` ocurre solo tras el checkpoint terminal; se muestra el resultado
     local y no aparece Keychain ni una operacion Hive.
 11. Export JSON incluye match/session id, roles, reset epoch, reject code si
@@ -247,7 +250,8 @@ Flujo minimo:
 ## P1 despues de Alfa player-ready
 
 - Hash coverage de snapshots de poker y transcript replay compacto.
-- Full reload recovery con snapshot persistido y replay determinista.
+- Replay determinista del `action-log` firmado (ranked). El snapshot local
+  de hard reload ya esta en [`P2P_MATCH_RESUME.md`](./P2P_MATCH_RESUME.md).
 - Dedupe de CSS/Tailwind pendiente en poker.
 - Eliminacion de componentes muertos despues de grep y smoke visual.
 - CSP explicita para assets, Hive APIs, WebSocket y fuentes.

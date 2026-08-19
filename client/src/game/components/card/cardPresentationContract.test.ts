@@ -15,6 +15,8 @@ import {
 	updateCardLayoutRenderField,
 } from './cardLayoutDraft';
 import { KEYWORD_ICON_MAP } from '../ui/CardIconsSVG';
+import { ELEMENT_ICON_MAP } from '../ui/CardChromeIconsSVG';
+import { NORSE_ELEMENTS } from '../../types/NorseTypes';
 
 const readKeywords = (value: unknown): readonly string[] => {
 	if (!Array.isArray(value)) return [];
@@ -41,6 +43,10 @@ describe('card presentation contract', () => {
 		const knownKeywords = new Set(Object.keys(CARD_KEYWORD_SEMANTICS));
 		const missing = registryKeywords.filter((keyword) => !knownKeywords.has(keyword));
 		expect(missing).toEqual([]);
+	});
+
+	it('has a custom icon for every Norse element', () => {
+		expect(Object.keys(ELEMENT_ICON_MAP).sort()).toEqual([...NORSE_ELEMENTS].sort());
 	});
 
 	it('has a custom icon for every classified keyword', () => {

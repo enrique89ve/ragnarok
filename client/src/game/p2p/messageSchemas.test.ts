@@ -64,7 +64,7 @@ describe('parseWireMessage — non-message inputs', () => {
 	});
 });
 
-describe('parseWireMessage — game_command envelope (host-auth integrity)', () => {
+describe('parseWireMessage — game_command envelope (cards integrity)', () => {
 	const validEnvelope = {
 		type: 'game_command' as const,
 		matchId: 'match-1234',
@@ -232,6 +232,29 @@ describe('parseWireMessage — handshake variants', () => {
 
 	it('rejects init with non-boolean isHost', () => {
 		expect(parseWireMessage({ type: 'init', gameState: {}, isHost: 'yes' })).toBeNull();
+	});
+});
+
+describe('parseWireMessage — cards_deck handshake', () => {
+	it('accepts a compact announced deck', () => {
+		const result = parseWireMessage({
+			type: 'cards_deck',
+			heroClass: 'mage',
+			heroId: 'hero-mage',
+			cardIds: [5, 20, 20],
+			nftLevels: [{ cardId: 20, level: 2 }],
+		});
+		expect(result?.type).toBe('cards_deck');
+	});
+
+	it('rejects smuggled fields on cards_deck', () => {
+		expect(parseWireMessage({
+			type: 'cards_deck',
+			heroClass: 'mage',
+			cardIds: [1],
+			nftLevels: [],
+			extra: true,
+		})).toBeNull();
 	});
 });
 

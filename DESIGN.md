@@ -84,7 +84,7 @@ glows.
 - **Radius:** 4px for small controls, 6px for panels, 8px maximum for repeated
   cards/panels unless a circular chip is intentional.
 - **Board geometry:** gameplay coordinates live in
-  `client/src/game/combat/layout/board.css`.
+  `client/src/game/poker/layout/pokerViewportLayout.ts`.
 
 ## Layout
 
@@ -144,8 +144,8 @@ reinforce state, but text/value state must remain stable and readable.
 
 1. Make poker board hierarchy obvious.
 2. Add visible context for action buttons and HP costs.
-3. Reconcile duplicate pot/risk displays.
-4. Constrain `WagerInfoPanel` height across phases.
+3. Reconcile duplicate pot/risk displays. Done: `GameHUD` is the only turn/phase/stakes rail; `WagerInfoPanel` and `TurnBanner` are unmounted.
+4. Constrain `WagerInfoPanel` height across phases. Superseded by unmounting the panel.
 5. Keep P2P turn/reconnect/error state visible during poker.
 6. Remove unnamed layout offsets only after visual smoke confirms replacements.
 7. Delete dead poker components only after grep and runtime smoke.

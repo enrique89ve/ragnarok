@@ -11,7 +11,7 @@ import { Card, BattlecryEffect, CardInstance } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
 import { MAX_BATTLEFIELD_SIZE } from '../../../constants/gameConstants';
 import { v4 as uuidv4 } from 'uuid';
-import { cryptoRng } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 
 /**
@@ -55,7 +55,7 @@ export default function executeSummonCopyFromDeck(
     const actualCount = Math.min(count, availableSlots, minionsInDeck.length);
     const summonedMinions: CardInstance[] = [];
     
-    const shuffledMinions = [...minionsInDeck].sort(() => cryptoRng() - 0.5);
+    const shuffledMinions = [...minionsInDeck].sort(() => cardsRng() - 0.5);
     
     for (let i = 0; i < actualCount; i++) {
       const deckMinion = shuffledMinions[i];

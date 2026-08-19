@@ -6,6 +6,8 @@ import {
 	formatP2PTransportRole,
 	getP2PProcessFlags,
 	getP2PTransportRole,
+	isCardsAuthorityRole,
+	isCardsHostFrame,
 	mapCanonicalValuesToViewer,
 	mapViewerValuesToCanonical,
 	viewerActorToCanonicalOwner,
@@ -58,37 +60,51 @@ describe('p2pPerspective', () => {
 		});
 	});
 
-	it('exposes current host-auth process flags without leaking them into UI decisions', () => {
+	it('defaults cards process flags to symmetric gameplay with host recovery', () => {
 		expect(getP2PProcessFlags({ transportRole: 'host' })).toMatchObject({
-			sendsCardsInit: true,
+			sendsCardsInit: false,
 			adoptsRemoteCardsInit: false,
-			broadcastsCardsState: true,
+			broadcastsCardsState: false,
 			sendsHashBeacon: true,
+			sendsCardsRecoverySnapshot: true,
 			sendsGuestKeepAlive: false,
 			appliesChessCommandsSymmetrically: true,
 			appliesPokerActionsSymmetrically: true,
 		});
 		expect(getP2PProcessFlags({ transportRole: 'guest' })).toMatchObject({
 			sendsCardsInit: false,
-			adoptsRemoteCardsInit: true,
+			adoptsRemoteCardsInit: false,
 			broadcastsCardsState: false,
 			sendsHashBeacon: false,
+			sendsCardsRecoverySnapshot: false,
 			sendsGuestKeepAlive: true,
 			appliesChessCommandsSymmetrically: true,
 			appliesPokerActionsSymmetrically: true,
 		});
 	});
 
-	it('can model a future symmetric cards process without changing visual mapping', () => {
+	it('keeps host-authoritative dumps available as an explicit legacy mode', () => {
 		expect(getP2PProcessFlags({
 			transportRole: 'host',
-			cardsAuthorityMode: 'symmetric',
+			cardsAuthorityMode: 'host-authoritative',
 		})).toMatchObject({
-			sendsCardsInit: false,
+			sendsCardsInit: true,
 			adoptsRemoteCardsInit: false,
-			broadcastsCardsState: false,
-			sendsHashBeacon: false,
-			sendsGuestKeepAlive: false,
+			broadcastsCardsState: true,
 		});
+		expect(isCardsAuthorityRole(true, 'host-authoritative')).toBe(true);
+		expect(isCardsAuthorityRole(false, 'host-authoritative')).toBe(false);
+	});
+
+	it('does not treat either peer as a forward-dump authority in the default mode', () => {
+		expect(isCardsAuthorityRole(true)).toBe(false);
+		expect(isCardsAuthorityRole(false)).toBe(false);
+		expect(isCardsAuthorityRole(true, 'symmetric')).toBe(false);
+		expect(isCardsAuthorityRole(false, 'symmetric')).toBe(false);
+	});
+
+	it('keeps host-as-player as the cards hash frame', () => {
+		expect(isCardsHostFrame(true)).toBe(true);
+		expect(isCardsHostFrame(false)).toBe(false);
 	});
 });

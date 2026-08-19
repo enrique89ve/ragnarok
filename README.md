@@ -647,7 +647,7 @@ server/
 - [ ] Complete Hive/Keychain smoke with an internal testnet account.
 - [ ] Complete the gameplay-only two-browser P2P smoke: quiet chess move,
   instant capture, poker capture, deterministic phase checkpoints, reconnect,
-  reload guard, local result, zero match-driven Keychain prompts, zero Hive
+  local snapshot rejoin on hard reload, local result, zero match-driven Keychain prompts, zero Hive
   result operation, and export JSON.
 - [ ] Create and prove the Ragnarok NFTLoX testnet collection/schema before Closed Beta invites.
 - [ ] Rotate to a `closed-beta-*` reset epoch and prove `closedBetaCutover.inviteBlocked=false` only after NFTLoX proof, Hive/Keychain smoke, two-browser P2P smoke, and operator sign-off env evidence are set.

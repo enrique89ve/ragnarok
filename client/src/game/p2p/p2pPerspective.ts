@@ -17,6 +17,7 @@ export interface P2PProcessFlags {
 	readonly adoptsRemoteCardsInit: boolean;
 	readonly broadcastsCardsState: boolean;
 	readonly sendsHashBeacon: boolean;
+	readonly sendsCardsRecoverySnapshot: boolean;
 	readonly sendsGuestKeepAlive: boolean;
 	readonly appliesChessCommandsSymmetrically: true;
 	readonly appliesPokerActionsSymmetrically: true;
@@ -106,19 +107,39 @@ export function mapCanonicalValuesToViewer<T>(input: {
 	};
 }
 
+/**
+ * Host-as-player is the cards hash frame while both peers store ego-centric
+ * state. Do not use `isCardsAuthorityRole` for hashing — that helper now
+ * tracks forward `gameState` dumps (off in symmetric mode).
+ */
+export function isCardsHostFrame(isHost: boolean): boolean {
+	return isHost;
+}
+
+export function isCardsAuthorityRole(
+	isHost: boolean,
+	cardsAuthorityMode?: P2PCardsAuthorityMode,
+): boolean {
+	return getP2PProcessFlags({
+		transportRole: getP2PTransportRole(isHost),
+		cardsAuthorityMode,
+	}).broadcastsCardsState;
+}
+
 export function getP2PProcessFlags(input: {
 	readonly transportRole: P2PTransportRole;
 	readonly cardsAuthorityMode?: P2PCardsAuthorityMode;
 }): P2PProcessFlags {
-	const mode = input.cardsAuthorityMode ?? 'host-authoritative';
-	const isHostCardsAuthority = mode === 'host-authoritative'
-		&& input.transportRole === 'host';
+	const mode = input.cardsAuthorityMode ?? 'symmetric';
+	const isHost = input.transportRole === 'host';
+	const isHostCardsAuthority = mode === 'host-authoritative' && isHost;
 
 	return {
 		sendsCardsInit: isHostCardsAuthority,
-		adoptsRemoteCardsInit: mode === 'host-authoritative' && !isHostCardsAuthority,
+		adoptsRemoteCardsInit: mode === 'host-authoritative' && !isHost,
 		broadcastsCardsState: isHostCardsAuthority,
-		sendsHashBeacon: isHostCardsAuthority,
+		sendsHashBeacon: isHost,
+		sendsCardsRecoverySnapshot: isHost,
 		sendsGuestKeepAlive: input.transportRole === 'guest',
 		appliesChessCommandsSymmetrically: true,
 		appliesPokerActionsSymmetrically: true,

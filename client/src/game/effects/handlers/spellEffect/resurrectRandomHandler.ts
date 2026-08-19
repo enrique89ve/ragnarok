@@ -8,7 +8,8 @@ import { GameState, CardInstance, GameLogEvent, MinionCardData } from '../../../
 import { SpellEffect } from '../../../types/CardTypes';
 import { v4 as uuidv4 } from 'uuid';
 import { hasKeyword } from '../../../utils/cards/keywordUtils';
-import { cryptoRng, cryptoIdGen } from '../../../utils/seededRng';
+import { cryptoIdGen } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 /**
  * Execute a resurrect_random spellEffect effect
@@ -54,7 +55,7 @@ export function executeResurrectRandomResurrectRandom(
     return state;
   }
 
-  const shuffled = [...deadMinions].sort(() => cryptoRng() - 0.5);
+  const shuffled = [...deadMinions].sort(() => cardsRng() - 0.5);
   const toResurrect = shuffled.slice(0, resurrectionCount);
 
   const logEntries: GameLogEvent[] = [];

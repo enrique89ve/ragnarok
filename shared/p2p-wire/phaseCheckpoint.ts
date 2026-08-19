@@ -70,6 +70,13 @@ export const PhaseCheckpointDisputeReasonSchema = z.enum([
 
 export type PhaseCheckpointDisputeReason = z.infer<typeof PhaseCheckpointDisputeReasonSchema>;
 
+/** Observer-only: a root mismatch is not a winner. Clients may resubmit. */
+export function isRetryablePhaseCheckpointDispute(
+	reason: PhaseCheckpointDisputeReason,
+): boolean {
+	return reason === 'peer_mismatch' || reason === 'equivocation';
+}
+
 export const PhaseCheckpointDisputeSchema = z.object({
 	type: z.literal('phase_checkpoint_dispute_v1'),
 	protocolVersion: z.literal(PHASE_CHECKPOINT_PROTOCOL_VERSION),

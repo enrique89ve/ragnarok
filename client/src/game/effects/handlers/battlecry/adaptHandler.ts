@@ -9,7 +9,7 @@ import { debug } from '../../../config/debugConfig';
 import { GameContext } from '../../../GameContext';
 import { Card, BattlecryEffect, CardInstance } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
-import { cryptoRng } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 const ADAPTATION_OPTIONS = [
   { id: 'crackling_shield', name: 'Crackling Shield', description: 'Divine Shield', apply: (target: CardInstance) => { target.hasDivineShield = true; } },
@@ -27,7 +27,7 @@ const ADAPTATION_OPTIONS = [
 function shuffleArray<T>(array: T[]): T[] {
   const shuffled = [...array];
   for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(cryptoRng() * (i + 1));
+    const j = Math.floor(cardsRng() * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   return shuffled;
@@ -72,7 +72,7 @@ export default function executeAdapt(
     
     for (let i = 0; i < adaptCount; i++) {
       const availableOptions = ADAPTATION_OPTIONS.filter(o => !appliedAdaptations.includes(o.id));
-      const shuffledOptions = shuffleArray(availableOptions);
+      const shuffledOptions = shuffleArray(availableOptions, cardsRng);
       const presentedOptions = shuffledOptions.slice(0, 3);
       
       if (presentedOptions.length === 0) {
@@ -80,7 +80,7 @@ export default function executeAdapt(
         break;
       }
       
-      const selectedOption = presentedOptions[Math.floor(cryptoRng() * presentedOptions.length)];
+      const selectedOption = presentedOptions[Math.floor(cardsRng() * presentedOptions.length)];
       
       if (selectedOption && typeof selectedOption.apply === 'function') {
         selectedOption.apply(target);

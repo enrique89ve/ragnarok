@@ -57,7 +57,7 @@ const Base64UrlPayload = z.string()
 	.max(MAX_COMPRESSED_GAME_STATE_BASE64URL_CHARS)
 	.regex(/^[A-Za-z0-9_-]+$/);
 
-// ── Cards game command (host-auth, see PVP_WIRE_PROTOCOL §5) ───────────────
+// ── Cards game command (symmetric apply; see PVP_WIRE_PROTOCOL §5) ─────────
 
 const PlayCardSchema = z.object({
 	type: z.literal('play_card'),
@@ -162,6 +162,17 @@ const ArmyAnnouncementSchema = z.object({
 	army: OpaqueObject,
 }).strict();
 
+const CardsDeckSchema = z.object({
+	type: z.literal('cards_deck'),
+	heroClass: NonEmptyString(32),
+	heroId: z.string().max(64).optional(),
+	cardIds: z.array(z.number().int().nonnegative()).max(40),
+	nftLevels: z.array(z.object({
+		cardId: z.number().int().nonnegative(),
+		level: z.number().int().min(1).max(100),
+	}).strict()).max(40),
+}).strict();
+
 // ── Result settlement (post-game broadcast) ────────────────────────────────
 
 const ResultProposeSchema = z.object({
@@ -221,7 +232,7 @@ const HashMismatchSchema = z.object({
 	myHash: HashString,
 }).strict();
 
-// ── Poker (host-auth — see OPEN-4) ─────────────────────────────────────────
+// ── Poker (symmetric apply — see OPEN-4 / PVP_WIRE_PROTOCOL §5) ────────────
 
 const PokerActionSchema = z.object({
 	type: z.literal('poker_action'),
@@ -350,6 +361,7 @@ const SCHEMA_BY_TYPE = {
 	seed_commit: SeedCommitSchema,
 	seed_reveal: SeedRevealSchema,
 	army_announcement: ArmyAnnouncementSchema,
+	cards_deck: CardsDeckSchema,
 	result_propose: ResultProposeSchema,
 	result_countersign: ResultCountersignSchema,
 	result_reject: ResultRejectSchema,

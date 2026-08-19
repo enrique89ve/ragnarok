@@ -14,18 +14,18 @@
 /* Norse 2.5D ribbon — outer drop shadow + side bevel + carved-chamfer corners */
 .hud-status-ribbon {
   position: absolute;
-  top: var(--poker-zone-topHud-y, 2%);
-  left: var(--poker-zone-topHud-x, 50%);
-  width: var(--poker-zone-topHud-w, auto);
+  top: var(--poker-zone-topHud-y);
+  left: var(--poker-zone-topHud-x);
+  width: var(--poker-zone-topHud-w);
   min-height: 44px;
-  transform: rotate(var(--poker-zone-topHud-rot, 0deg));
+  transform: rotate(var(--poker-zone-topHud-rot));
   transform-origin: top left;
   display: flex;
   align-items: center;
   flex-wrap: nowrap;
   justify-content: center;
   gap: 8px;
-  max-width: var(--poker-zone-topHud-w, min(1100px, calc(100% - 320px)));
+  max-width: var(--poker-zone-topHud-w);
   padding: 8px 16px;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--gold-300) 28%, transparent);
@@ -167,7 +167,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-6);
-  height: var(--poker-hud-badge-height, 36px);
+  height: var(--poker-hud-badge-height);
   padding: var(--space-7) 10px;
   background: var(--ui-panel-bg);
   border: 1px solid var(--ui-gold-shadow);
@@ -213,29 +213,29 @@
 
 /* Player deck — bottom right, anchored to player hero zone */
 .hud-player-deck {
-  left: var(--poker-zone-deckCounters-x, auto);
+  left: var(--poker-zone-deckCounters-x);
   right: auto;
-  top: calc(var(--poker-bottom-rail-y, 1024px) - var(--poker-hud-badge-height, 36px));
+  top: calc(var(--poker-bottom-rail-y) - var(--poker-hud-badge-height));
   bottom: auto;
-  width: var(--poker-zone-deckCounters-w, auto);
+  width: var(--poker-zone-deckCounters-w);
   border-color: rgba(91, 140, 184, 0.55);
 }
 
 /* Opponent deck — top right, anchored to opponent hero zone */
 .hud-opponent-deck {
-  left: var(--poker-zone-deckCounters-x, auto);
+  left: var(--poker-zone-deckCounters-x);
   right: auto;
-  top: var(--poker-zone-deckCounters-y, 18px);
-  width: var(--poker-zone-deckCounters-w, auto);
+  top: var(--poker-zone-deckCounters-y);
+  width: var(--poker-zone-deckCounters-w);
   border-color: rgba(200, 49, 42, 0.55);
 }
 
 /* Opponent hand count badge — hidden; shown via .opponent-hand-count on the hand display */
 .hud-opponent-hand {
-  left: var(--poker-zone-deckCounters-x, auto);
+  left: var(--poker-zone-deckCounters-x);
   right: auto;
-  top: calc(var(--poker-zone-deckCounters-y, 18px) + 58px);
-  width: var(--poker-zone-deckCounters-w, auto);
+  top: calc(var(--poker-zone-deckCounters-y) + 58px);
+  width: var(--poker-zone-deckCounters-w);
   border-color: rgba(148, 163, 184, 0.4);
 }
 

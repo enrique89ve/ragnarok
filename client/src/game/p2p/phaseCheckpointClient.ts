@@ -13,6 +13,7 @@ import {
 	ZERO_PHASE_CHECKPOINT_ID,
 	computePhaseCheckpointId,
 	samePhaseCheckpointProposal,
+	isRetryablePhaseCheckpointDispute,
 	type PhaseCheckpointCommit,
 	type PhaseCheckpointDispute,
 	type PhaseCheckpointPhase,
@@ -134,6 +135,9 @@ export function createPhaseCheckpointClient(input?: {
 		}
 
 		if (message.type === 'phase_checkpoint_dispute_v1') {
+			if (isRetryablePhaseCheckpointDispute(message.reason)) {
+				return true;
+			}
 			terminalDispute = message;
 			settlePending({ status: 'disputed', dispute: message });
 			return true;

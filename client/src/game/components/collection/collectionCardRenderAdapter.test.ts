@@ -4,7 +4,10 @@ import {
   type CollectionCardRenderInputCard,
 } from "./collectionCardRenderAdapter";
 import { resolveSimpleCardFrameLayoutAdapter } from "../card/cardFrameLayoutAdapter";
-import { adaptCardKeywordsForPresentation } from "../card/cardKeywordPresentationAdapter";
+import {
+	adaptCardKeywordsForPresentation,
+	splitKeywordRows,
+} from "../card/cardKeywordPresentationAdapter";
 
 function createCard(
   overrides: Partial<CollectionCardRenderInputCard> = {},
@@ -101,6 +104,9 @@ describe("gameplay card frame selection", () => {
 		expect(adapter.showDescriptionText).toBe(false);
 		expect(adapter.showName).toBe(false);
 		expect(adapter.showKeywords).toBe(true);
+		expect(adapter.showElementBadge).toBe(true);
+		expect(adapter.showBloodPrice).toBe(true);
+		expect(adapter.showEvolution).toBe(false);
 		expect(adapter.keywordLabelMode).toBe("compact");
 	});
 
@@ -115,6 +121,8 @@ describe("gameplay card frame selection", () => {
 		expect(adapter.surface).toBe("compact");
 		expect(adapter.showName).toBe(false);
 		expect(adapter.showKeywords).toBe(true);
+		expect(adapter.showElementBadge).toBe(true);
+		expect(adapter.showEvolution).toBe(true);
 	});
 
 	it("uses the enlarged socket frame for gameplay minions", () => {
@@ -127,6 +135,8 @@ describe("gameplay card frame selection", () => {
 
     expect(adapter.surface).toBe("gameplay");
     expect(adapter.frameAsset).toBe("minimal-war-table-v5-gameplay");
+    expect(adapter.showElementBadge).toBe(true);
+    expect(adapter.showEvolution).toBe(true);
   });
 
   it("uses the clean enlarged-mana frame for compact gameplay spells", () => {
@@ -164,12 +174,41 @@ describe("card keyword presentation adapter", () => {
     expect(presentation.entries.map((entry) => entry.keyword)).toEqual([
       "taunt",
       "deathrattle",
+      "aura",
     ]);
     expect(presentation.entries.map((entry) => entry.displayLabel)).toEqual([
       "TAUNT",
       "D.RTL",
+      "AURA",
     ]);
-    expect(presentation.hiddenCount).toBe(1);
-    expect(presentation.hiddenSummary).toBe("Aura");
+    expect(presentation.hiddenCount).toBe(0);
+    expect(presentation.hiddenSummary).toBe("");
+  });
+
+  it("stacks five painted keywords as two above and three below", () => {
+    const presentation = adaptCardKeywordsForPresentation({
+      keywords: ["taunt", "divine_shield", "lifesteal", "rush", "windfury"],
+      surface: "collection",
+    });
+    const rows = splitKeywordRows(presentation.entries);
+
+    expect(presentation.entries).toHaveLength(5);
+    expect(rows.map((row) => row.map((entry) => entry.keyword))).toEqual([
+      ["taunt", "divine_shield"],
+      ["lifesteal", "rush", "windfury"],
+    ]);
+  });
+
+  it("stacks four painted keywords as two rows of two", () => {
+    const presentation = adaptCardKeywordsForPresentation({
+      keywords: ["taunt", "divine_shield", "windfury", "charge"],
+      surface: "collection",
+    });
+    const rows = splitKeywordRows(presentation.entries);
+
+    expect(rows.map((row) => row.map((entry) => entry.keyword))).toEqual([
+      ["taunt", "divine_shield"],
+      ["windfury", "charge"],
+    ]);
   });
 });

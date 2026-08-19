@@ -4,8 +4,8 @@
  * Why this file exists: chess phase actions cross the P2P wire as their
  * own envelope shape (separate from `GameCommandEnvelope` for cards),
  * because the chess pipeline is symmetric (Plan B) and independent of
- * the cards pipeline (`applyGameCommand`, host-auth). See session-2
- * grilling Q1/Q4 for the original split.
+ * the cards pipeline (`applyGameCommand`, also symmetric apply). See
+ * session-2 grilling Q1/Q4 for the original split.
  *
  * Surface today (post C-Chess.8):
  *   - `chess_move`: quiet move (no capture). Both peers apply via

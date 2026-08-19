@@ -5,8 +5,8 @@
   --battle-log-width-boost: 128px;
   --battle-log-dock-height-boost: 88px;
   --battle-log-anchor-bottom: calc(
-    var(--poker-reference-height, 1080px) -
-      var(--poker-bottom-rail-y, 1024px) + var(--battle-log-deck-reserve) +
+    var(--poker-reference-height) -
+      var(--poker-bottom-rail-y) + var(--battle-log-deck-reserve) +
       var(--battle-log-bottom-lift)
   );
   --battle-log-panel-bg: color-mix(
@@ -20,18 +20,18 @@
     transparent
   );
   position: absolute;
-  left: calc(var(--poker-zone-battleLog-x, 1576px) - var(--battle-log-width-boost));
+  left: calc(var(--poker-zone-battleLog-x) - var(--battle-log-width-boost));
   right: auto;
   top: auto;
   bottom: var(--battle-log-anchor-bottom);
   z-index: 8000;
   display: flex;
-  width: calc(var(--poker-zone-battleLog-w, 288px) + var(--battle-log-width-boost));
+  width: calc(var(--poker-zone-battleLog-w) + var(--battle-log-width-boost));
   min-height: 0;
   max-height: max(
     160px,
     calc(
-      var(--poker-zone-battleLog-h, 232px) - var(--battle-log-deck-reserve) +
+      var(--poker-zone-battleLog-h) - var(--battle-log-deck-reserve) +
         var(--battle-log-dock-height-boost)
     )
   );
@@ -40,7 +40,7 @@
   border: 0;
   border-radius: 0;
   background: transparent;
-  transform: rotate(var(--poker-zone-battleLog-rot, 0deg));
+  transform: rotate(var(--poker-zone-battleLog-rot));
   transform-origin: top left;
   pointer-events: auto;
 }
@@ -50,14 +50,14 @@
   height: min(
     520px,
     calc(
-      var(--poker-zone-battleLog-h, 232px) + var(--battle-log-open-lift) -
+      var(--poker-zone-battleLog-h) + var(--battle-log-open-lift) -
         var(--battle-log-deck-reserve)
     )
   );
   max-height: min(
     520px,
     calc(
-      var(--poker-zone-battleLog-h, 232px) + var(--battle-log-open-lift) -
+      var(--poker-zone-battleLog-h) + var(--battle-log-open-lift) -
         var(--battle-log-deck-reserve)
     )
   );
@@ -65,8 +65,8 @@
 
 .game-log-container.hidden-dock {
   left: calc(
-    var(--poker-zone-battleLog-x, 1576px) +
-      var(--poker-zone-battleLog-w, 288px) - 50px
+    var(--poker-zone-battleLog-x) +
+      var(--poker-zone-battleLog-w) - 50px
   );
   align-items: center;
   justify-content: center;
@@ -356,7 +356,7 @@
   max-height: max(
     100px,
     calc(
-      var(--poker-zone-battleLog-h, 232px) - var(--battle-log-deck-reserve) -
+      var(--poker-zone-battleLog-h) - var(--battle-log-deck-reserve) -
         48px + var(--battle-log-dock-height-boost)
     )
   );

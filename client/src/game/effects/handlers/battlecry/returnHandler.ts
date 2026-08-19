@@ -10,7 +10,8 @@ import { BattlecryEffect } from '../../../types/CardTypes';
 import { isMinion, getHealth } from '../../../utils/cards/typeGuards';
 import { MAX_HAND_SIZE } from '../../../constants/gameConstants';
 import { hasKeyword } from '../../../utils/cards/keywordUtils';
-import { cryptoRng, cryptoIdGen } from '../../../utils/seededRng';
+import { cryptoIdGen } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 /**
  * Execute a return battlecry effect
@@ -78,7 +79,7 @@ export function executeReturnReturn(
   // Create a new version of the minion for hand with reset properties
   const handMinion: CardInstance = {
     ...targetMinion,
-    instanceId: `hand-${cryptoIdGen()}-${cryptoRng().toString(36).substring(2,9)}`, // Assign new ID
+    instanceId: `hand-${cryptoIdGen()}-${cardsRng().toString(36).substring(2,9)}`, // Assign new ID
     attacksPerformed: 0,
     canAttack: false,
     isPlayed: false,

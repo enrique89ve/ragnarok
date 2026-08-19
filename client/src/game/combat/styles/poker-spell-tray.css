@@ -21,16 +21,3 @@
 	height: 96px;
 	flex: 0 0 auto;
 }
-
-.poker-spell-tray__empty {
-	color: rgba(167, 139, 250, 0.4);
-	font-family: 'Cinzel', serif;
-	font-size: 0.7rem;
-	letter-spacing: 2px;
-	text-transform: uppercase;
-	pointer-events: none;
-}
-
-.poker-spell-tray--opponent .poker-spell-tray__empty {
-	color: rgba(239, 68, 68, 0.4);
-}

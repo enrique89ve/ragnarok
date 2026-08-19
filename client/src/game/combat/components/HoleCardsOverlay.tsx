@@ -60,7 +60,7 @@ export const HoleCardsOverlay: React.FC<HoleCardsOverlayProps> = ({
 				style={{ background: 'transparent', border: 'none' }}
 			>
 				<PokerCardFrame
-					size="medium"
+					size="small"
 					variant={isFaceDown ? 'face-down' : 'face-up'}
 				>
 					{isFaceDown

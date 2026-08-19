@@ -1,10 +1,9 @@
 /**
  * <CardCardBack> — slot: norse poker card back.
  *
- * Renders the face-down variant of `<CardRankSuit>`. Four gold-tinted
- * corner runes (`ᚱ ᚦ ᛉ ᛟ`), a Yggdrasil `ᛇ` center glyph, and an
- * animated diagonal shimmer overlay. The diagonal shimmer respects
- * `prefers-reduced-motion: reduce`.
+ * Renders the face-down poker back: solid dark field, gold rim
+ * (`.poker-face-down-surface`), and a centered Eihwaz `ᛇ` glyph.
+ * Same chrome for community slots, hole cards, and opponent hand.
  *
  * DisplayName `'CardCardBack'` so the frame's NonArtChildren walker
  * places it in the art-layer (z:0) and skips the art-child slot.

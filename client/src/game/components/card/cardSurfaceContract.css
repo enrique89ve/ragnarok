@@ -46,7 +46,12 @@
 	.collection-card-frame__footer,
 	.collection-card-frame__footer-rail,
 	.collection-card-frame__stat-badge,
-	.collection-card-frame__mana-corner
+	.collection-card-frame__mana-corner,
+	.collection-card-frame__top-center,
+	.card-frame__element-badge,
+	.card-frame__blood-price,
+	.card-frame__evolution-stars,
+	.card-frame__pet-stage
 ) {
 	display: none;
 }

@@ -8,7 +8,7 @@ const useGameStore = {
 import { isMinion, getAttack, getHealth } from './cards/typeGuards';
 import { debug } from '../config/debugConfig';
 import { MAX_HAND_SIZE } from '../constants/gameConstants';
-import { cryptoRng } from './seededRng';
+import { cardsRng } from './cardsCommandRng';
 
 /**
  * Filter cards based on discovery parameters
@@ -107,7 +107,7 @@ export function getDiscoveryOptions(
   const usedIndices = new Set<number>();
 
   while (result.length < amount && usedIndices.size < sourceCards.length) {
-    const randomIndex = Math.floor(cryptoRng() * sourceCards.length);
+    const randomIndex = Math.floor(cardsRng() * sourceCards.length);
     
     if (!usedIndices.has(randomIndex)) {
       usedIndices.add(randomIndex);
@@ -261,7 +261,7 @@ export function processDiscovery(
     // Add the selected card to the opponent's hand
     const createCardInstance = (card: CardData) => {
       return {
-        instanceId: `opp-disc-${Math.floor(cryptoRng() * 10000)}`,
+        instanceId: `opp-disc-${Math.floor(cardsRng() * 10000)}`,
         card: { ...card },
         isPlayed: false,
         isSummoningSick: true,

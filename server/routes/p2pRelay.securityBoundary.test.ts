@@ -121,4 +121,11 @@ describe('p2pRelay security boundary', () => {
 			reason: 'reserved_type',
 		});
 	});
+
+	it('drops peer-authored opponentDisconnected so only transport close can signal departure', () => {
+		expect(validateP2PRelayFrame(JSON.stringify({ type: 'opponentDisconnected' }))).toEqual({
+			ok: false,
+			reason: 'unknown_type:opponentDisconnected',
+		});
+	});
 });

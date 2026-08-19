@@ -234,7 +234,8 @@ ADR 0007 gameplay-only testnet):
 
 This historical budget is not acceptable for the current gameplay-only track.
 ADR 0007 requires zero match-driven prompts; reload recovery must either use the
-supported unsigned P2P path or surface a local blocker.
+supported unsigned P2P path or surface a local blocker. The shipped unsigned
+path is [`P2P_MATCH_RESUME.md`](../P2P_MATCH_RESUME.md).
 
 **Edge cases**:
 

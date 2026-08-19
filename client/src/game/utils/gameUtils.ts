@@ -66,6 +66,8 @@ import { recalculateAuras } from './mechanics/auraUtils';
 import { processSpellburst } from './mechanics/spellburstUtils';
 import { GameEventBus } from '@/core/events/GameEventBus';
 import { cryptoIdGen, cryptoRng } from './seededRng';
+import { getCardsRng, withCardsRng } from './cardsCommandRng';
+import { canMinionAct } from './effects/statusEffectUtils';
 
 function attemptPetEvolution(
   state: GameState,
@@ -221,14 +223,17 @@ export interface InitializeGameSeededOpts {
   readonly selectedDeckId?: string;
   readonly selectedHeroClass?: HeroClass;
   readonly selectedHeroId?: string;
+  readonly playerHeroId?: string;
+  readonly playerDeckCards?: CardData[];
+  readonly opponentDeckCards?: CardData[];
+  readonly playerHeroClass?: HeroClass;
+  readonly opponentHeroClass?: HeroClass;
+  readonly opponentHeroId?: string;
   /**
    * NFT collection used for level-scaling enrichment of the player deck.
-   * When omitted, no enrichment runs. In Plan B replay-symmetric this
-   * value must come from the deck-handshake input (announced by both
-   * peers), NOT from a global store — otherwise the two peers would
-   * diverge on the per-card stats. For host-authoritative today the host
-   * passes its own `cardCollection` and the client adopts the host's
-   * resulting state via `init`.
+   * Handshake init passes already-enriched `playerDeckCards` /
+   * `opponentDeckCards` instead. SP / leftover host-only init still
+   * enrich from this collection.
    */
   readonly hiveCollection?: HiveCardAsset[];
 }
@@ -247,8 +252,13 @@ export interface InitializeGameSeededOpts {
 export function initializeGameSeeded(opts: InitializeGameSeededOpts): GameState {
   let playerDeck: CardData[];
   let playerClass: HeroClass;
+  let opponentClass: HeroClass;
+  let opponentDeck: CardData[];
 
-  if (opts.selectedDeckId && opts.selectedHeroClass) {
+  if (opts.playerDeckCards && opts.playerDeckCards.length > 0) {
+    playerDeck = opts.playerDeckCards;
+    playerClass = opts.playerHeroClass ?? opts.selectedHeroClass ?? 'mage';
+  } else if (opts.selectedDeckId && opts.selectedHeroClass) {
     const savedDecks = JSON.parse(localStorage.getItem(createRuntimeStorageKey('ragnarok-decks')) || '[]');
     const selectedDeck = savedDecks.find((deck: any) => deck.id === opts.selectedDeckId);
 
@@ -270,19 +280,21 @@ export function initializeGameSeeded(opts: InitializeGameSeededOpts): GameState 
       debug.warn(`Selected deck not found. Using random deck.`);
     }
   } else {
-    playerClass = 'mage';
+    playerClass = opts.playerHeroClass ?? 'mage';
     playerDeck = createClassDeck(playerClass, 30, opts.rng);
   }
 
-  // Apply NFT card levels from collection when provided. Caller is
-  // responsible for sourcing the collection — see opts.hiveCollection.
-  if (opts.hiveCollection?.length) {
+  if (opts.hiveCollection?.length && !opts.playerDeckCards) {
     playerDeck = enrichDeckWithNFTLevels(playerDeck, opts.hiveCollection);
   }
 
-  // Create opponent deck (AI always gets max-level cards)
-  const opponentClass: HeroClass = 'hunter';
-  const opponentDeck = createClassDeck(opponentClass, 30, opts.rng);
+  if (opts.opponentDeckCards && opts.opponentDeckCards.length > 0) {
+    opponentDeck = opts.opponentDeckCards;
+    opponentClass = opts.opponentHeroClass ?? 'hunter';
+  } else {
+    opponentClass = opts.opponentHeroClass ?? 'hunter';
+    opponentDeck = createClassDeck(opponentClass, 30, opts.rng);
+  }
 
   const { drawnCards: playerInitialCards, remainingDeck: playerRemainingDeck } =
     drawCards(playerDeck, 3, opts.playerIdGen);
@@ -306,7 +318,7 @@ export function initializeGameSeeded(opts: InitializeGameSeededOpts): GameState 
     heroArmor: playerClass === 'warrior' ? 5 : 0,
     armor: playerClass === 'warrior' ? 5 : 0,
     heroClass: playerClass,
-    hero: opts.selectedHeroId ? { id: opts.selectedHeroId } as any : undefined,
+    hero: (opts.playerHeroId ?? opts.selectedHeroId) ? { id: opts.playerHeroId ?? opts.selectedHeroId } as any : undefined,
     heroPower: getDefaultHeroPower(playerClass),
     cardsPlayedThisTurn: 0,
     attacksPerformedThisTurn: 0,
@@ -328,6 +340,7 @@ export function initializeGameSeeded(opts: InitializeGameSeededOpts): GameState 
     heroArmor: 0,
     armor: 0,
     heroClass: opponentClass,
+    hero: opts.opponentHeroId ? { id: opts.opponentHeroId } as any : undefined,
     heroPower: getDefaultHeroPower(opponentClass),
     cardsPlayedThisTurn: 0,
     attacksPerformedThisTurn: 0,
@@ -368,7 +381,26 @@ export function drawCard(state: GameState): GameState {
 /**
  * Play a card from hand to battlefield
  */
-export function playCard(state: GameState, cardInstanceId: string, targetId?: string, targetType?: 'minion' | 'hero', insertionIndex?: number, payWithBlood?: boolean): GameState {
+export function playCard(
+	state: GameState,
+	cardInstanceId: string,
+	targetId?: string,
+	targetType?: 'minion' | 'hero',
+	insertionIndex?: number,
+	payWithBlood?: boolean,
+	rng: () => number = getCardsRng(),
+): GameState {
+	return withCardsRng(rng, () => playCardUnbound(
+		state,
+		cardInstanceId,
+		targetId,
+		targetType,
+		insertionIndex,
+		payWithBlood,
+	));
+}
+
+function playCardUnbound(state: GameState, cardInstanceId: string, targetId?: string, targetType?: 'minion' | 'hero', insertionIndex?: number, payWithBlood?: boolean): GameState {
   // Deep clone the state to avoid mutation
   let newState = JSON.parse(JSON.stringify(state)) as GameState;
 
@@ -2171,11 +2203,7 @@ function processAttackForOpponent(
 
     const attacker = opponentField[attackerIndex];
 
-    // Check if minion can act (Frozen/Paralysis check)
-    if (attacker.isFrozen) {
-      return state;
-    }
-    if (attacker.isParalyzed && cryptoRng() < 0.5) {
+    if (!canMinionAct(attacker).canAct) {
       return state;
     }
 
@@ -2516,11 +2544,7 @@ function processAttackForPlayer(
 
     const attacker = playerField[attackerIndex];
 
-    // Check if minion can act (Frozen/Paralysis check)
-    if (attacker.isFrozen) {
-      return state;
-    }
-    if (attacker.isParalyzed && cryptoRng() < 0.5) {
+    if (!canMinionAct(attacker).canAct) {
       return state;
     }
 
@@ -2916,7 +2940,17 @@ function checkGameOver(state: GameState): GameState {
 export function processAttack(
   state: GameState,
   attackerInstanceId: string,
-  defenderInstanceId?: string // If undefined, attack is directed at the opponent's hero
+  defenderInstanceId?: string, // If undefined, attack is directed at the opponent's hero
+  rng: () => number = getCardsRng(),
+): GameState {
+  return withCardsRng(rng, () => processAttackUnbound(state, attackerInstanceId, defenderInstanceId, rng));
+}
+
+function processAttackUnbound(
+  state: GameState,
+  attackerInstanceId: string,
+  defenderInstanceId: string | undefined,
+  rng: () => number,
 ): GameState {
   // Add comprehensive logging
 
@@ -2941,6 +2975,10 @@ export function processAttack(
 
   const attacker = playerField[attackerIndex];
 
+  if (!canMinionAct(attacker, rng).canAct) {
+    debug.error(`[ATTACK ERROR] Card ${attacker.card.name} cannot act (frozen or paralyzed)`);
+    return state;
+  }
 
   // Check if the card can attack
   if (attacker.isSummoningSick) {

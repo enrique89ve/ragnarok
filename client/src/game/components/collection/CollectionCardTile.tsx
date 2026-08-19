@@ -49,6 +49,12 @@ export type CollectionTileRenderedFields = {
   readonly showName?: boolean;
   readonly showRarity?: boolean;
   readonly showStats?: boolean;
+  readonly showElementBadge?: boolean;
+  readonly showBloodPrice?: boolean;
+  readonly showEvolution?: boolean;
+  readonly bloodPrice?: number;
+  readonly evolutionLevel?: number;
+  readonly petStage?: string;
 };
 
 interface CollectionCardTileProps {

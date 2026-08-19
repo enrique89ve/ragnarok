@@ -20,6 +20,8 @@ import {
 import { useMatchmaking } from '../../hooks/useMatchmaking';
 import { useWarbandStore, selectArmy } from '../../../lib/stores/useWarbandStore';
 import { P2PStatusBadge } from './P2PStatusBadge';
+import { useP2PMatchResume } from '../../p2p/useP2PMatchResume';
+import { clearP2PMatchResume } from '../../p2p/p2pMatchResume';
 import { resolveHeroPortrait } from '../../utils/art/artMapping';
 import { P2PProvider } from '../../context/P2PContext';
 import { computeP2PRenderGuard } from './multiplayerRenderGuard';
@@ -153,6 +155,8 @@ export const MultiplayerGame: React.FC = () => {
 		requiresAuthenticatedSession: true,
 	});
 	const hasHiveSession = p2pAccess.kind === 'allowed' && (!requiresHiveSession || isHiveWalletAvailable());
+	const resumeAccount = authenticatedHiveUsername ?? hiveUsername ?? 'local';
+	const resumeBoot = useP2PMatchResume(hasHiveSession ? resumeAccount : null);
 	const shouldWarnBeforeUnload = gameStarted
 		&& (
 			connectionState === 'connected'
@@ -176,6 +180,10 @@ export const MultiplayerGame: React.FC = () => {
 			});
 		}
 	}, [matchmakingStatus, roomId, persistedArmy, gameStarted]);
+
+	useEffect(() => {
+		if (resumeBoot === 'applied') setGameStarted(true);
+	}, [resumeBoot]);
 
 	const handleBack = () => {
 		navigate(routes.home);
@@ -203,7 +211,7 @@ export const MultiplayerGame: React.FC = () => {
 					evidence: 'download_session_log_if_reload_is_cancelled',
 				});
 			}
-			const warning = 'A live P2P match is in progress. Reloading may forfeit the local session.';
+			const warning = 'A live P2P match is in progress. Reloading tries to rejoin from this device (2 attempts).';
 			event.preventDefault();
 			Reflect.set(event, 'returnValue', warning);
 			return warning;
@@ -219,6 +227,7 @@ export const MultiplayerGame: React.FC = () => {
 
 		const localLost = forfeitSide !== 'opponent';
 		const now = Date.now();
+		void clearP2PMatchResume();
 		recordSessionEvent('p2p_technical_result', {
 			forfeitSide,
 			localOutcome: localLost ? 'defeat' : 'victory',
@@ -260,6 +269,17 @@ export const MultiplayerGame: React.FC = () => {
 	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
+	if (resumeBoot === 'checking') {
+		return (
+			<div className="flex items-center justify-center min-h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
+				<div className="text-center space-y-3 max-w-md px-4">
+					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-(--gold-400) mx-auto" />
+					<p className="text-sm text-(--ink-300)">Checking this device for a saved match…</p>
+				</div>
+			</div>
+		);
+	}
+
 	if (!persistedArmy) {
 		return <Navigate to={getWarbandEntryRoute('multiplayer')} replace />;
 	}
@@ -272,7 +292,7 @@ export const MultiplayerGame: React.FC = () => {
 	// heartbeats from the remote peer are silently dropped, and peerStore declares
 	// the connection dead after `HEARTBEAT_TIMEOUT_MS` (12s).
 		const renderInner = () => {
-		if (showVS && !gameStarted) {
+		if (showVS && !gameStarted && resumeBoot !== 'applied') {
 			return (
 				<PvPVSScreen
 					playerArmy={readyArmy}
@@ -283,7 +303,7 @@ export const MultiplayerGame: React.FC = () => {
 			);
 		}
 
-		if (!gameStarted) {
+		if (!gameStarted && resumeBoot !== 'applied') {
 			return (
 				<MultiplayerLobby
 					onGameStart={() => setShowVS(true)}
@@ -297,21 +317,18 @@ export const MultiplayerGame: React.FC = () => {
 		//   1. computeP2PRenderGuard — user-facing wait spinner. Two checks:
 		//      a. opponentArmyFromPeer: the opponent's army announcement arrived.
 		//         Without it, hero portraits fall back to defaults.
-		//      b. p2pInitApplied: the host's `init` envelope has been applied
-		//         locally (host: after initGameWithSeed; client: after the
-		//         `case 'init'` handler ran setState). Until then the coordinator
-		//         stays unmounted so user input cannot reach an empty / stale
-		//         gameState (TD-15).
+		//      b. p2pInitApplied: cards handshake init has populated local
+		//         gameState (`initGameFromHandshake`). Until then the
+		//         coordinator stays unmounted so input cannot hit empty/stale
+		//         state (TD-15).
 		//   2. <MatchSetupP2P/> — silent ctx wiring. Once seed_reveal +
 		//      p2pInitApplied are in, calls resolveP2P() and pushes the
 		//      MatchContext into useMatchStore BEFORE the coordinator mounts.
-		//      The coordinator's mode-aware code (Fase 3-4) reads ctx as
-		//      non-null from its first render.
 		// Hive session authorization is intentionally not a hard gameplay gate
 		// in closed beta. It feeds audit/settlement transcript evidence, but P2P
 		// gameplay must not fail just because a wallet prompt is pending.
 		// The P2PProvider wrapping all of renderInner keeps useWireSync mounted
-		// behind the spinner so the init envelope is still received.
+		// behind the spinner so `cards_deck` / seed exchange still arrive.
 		const guard = computeP2PRenderGuard({
 			opponentArmyFromPeer,
 			p2pInitApplied,
@@ -321,6 +338,7 @@ export const MultiplayerGame: React.FC = () => {
 			connectionState,
 			reconnectCountdown,
 			reconnectAttemptCount,
+			hardReloadResume: resumeBoot === 'applied',
 		});
 		const spinner = (
 			<div className="flex items-center justify-center min-h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900 p-4">

@@ -24,15 +24,19 @@
   --norse-card-name-font-scale: 1;
   --norse-card-keyword-bottom: calc(22px * var(--norse-card-ui-scale));
   --norse-card-keyword-inline: calc(6px * var(--norse-card-ui-scale));
-  --norse-card-keyword-font-size: calc(0.36rem * var(--norse-card-ui-scale));
-  /* One reserved block for the keyword rail. Its height is independent of
-     keyword count, label length, and whether a description exists. */
-  --norse-card-keyword-rail-height: calc(
+  --norse-card-keyword-font-size: calc(0.396rem * var(--norse-card-ui-scale));
+  /* One reserved block for a single keyword row. Five-keyword cards
+     promote the rail to two of these rows. */
+  --norse-card-keyword-row-height: calc(
     (var(--norse-card-keyword-font-size) + 11px) * 1.4
+  );
+  --norse-card-keyword-rail-height: var(--norse-card-keyword-row-height);
+  --norse-card-keyword-two-row-height: calc(
+    (var(--norse-card-keyword-row-height) * 2) + 3px
   );
   --norse-card-badge-top: calc(4px * var(--norse-card-ui-scale));
   --norse-card-badge-side: calc(4px * var(--norse-card-ui-scale));
-  --norse-card-badge-size: calc(16px * var(--norse-card-ui-scale));
+  --norse-card-badge-size: calc(21.6px * var(--norse-card-ui-scale));
   --norse-card-mana-top: calc(4px * var(--norse-card-ui-scale));
   --norse-card-mana-side: calc(4px * var(--norse-card-ui-scale));
   --norse-card-mana-size: calc(16px * var(--norse-card-ui-scale));
@@ -573,7 +577,8 @@
   width: var(--norse-card-rarity-mark-width);
   height: var(--norse-card-rarity-mark-height);
   color: var(--collection-frame-color);
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: help;
   transform: translateX(-50%);
   transform-origin: 50% 50%;
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.74))
@@ -963,11 +968,41 @@
     .norse-card-frame--surface-preview
   ) .card-frame__keywords {
   width: 100%;
+  display: flex;
+  flex-direction: column;
   flex-wrap: nowrap;
   overflow: hidden;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   justify-content: center;
+}
+
+.norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 100%;
+}
+
+.norse-card-frame:has(.card-frame__keywords[data-keyword-stack="2-3"]) {
+  --norse-card-keyword-rail-height: var(--norse-card-keyword-two-row-height);
+}
+
+.norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-row {
+  height: var(--norse-card-keyword-row-height);
+  min-height: var(--norse-card-keyword-row-height);
+}
+
+.norse-card-frame:not(.norse-card-frame--poker)
+  .card-frame__description-stack[data-keyword-stack="2-3"],
+.norse-card-frame:not(.norse-card-frame--poker)
+  .card-frame__keywords[data-keyword-stack="2-3"] {
+  height: var(--norse-card-keyword-two-row-height);
+  min-height: var(--norse-card-keyword-two-row-height);
+  max-height: var(--norse-card-keyword-two-row-height);
+  overflow: visible;
 }
 
 .norse-card-frame:is(
@@ -1131,15 +1166,15 @@
 .norse-card-frame--surface-collection .card-frame__keywords {
   gap: 3px;
   justify-content: center;
-  min-height: 16px;
+  min-height: 18px;
 }
 
 .norse-card-frame--surface-collection .card-frame__keyword-chip {
-  flex: 0 0 16px;
-  width: 16px;
-  height: 16px;
-  min-width: 16px;
-  max-width: 16px;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  max-width: 18px;
   padding: 1px;
   border-color: color-mix(
     in srgb,
@@ -1160,10 +1195,10 @@
 }
 
 .norse-card-frame--surface-collection .card-frame__keyword-chip--overflow {
-  flex-basis: 16px;
-  width: 16px;
-  min-width: 16px;
-  max-width: 16px;
+  flex-basis: 18px;
+  width: 18px;
+  min-width: 18px;
+  max-width: 18px;
   color: var(--gold-100);
   font-size: 0.48rem;
 }
@@ -1210,15 +1245,7 @@
     .norse-card-frame--surface-compact,
     .norse-card-frame--surface-mulligan,
     .norse-card-frame--surface-preview
-  ) .card-frame__element-badge,
-.norse-card-frame:is(
-    .norse-card-frame--surface-collection,
-    .norse-card-frame--surface-gameplay,
-    .norse-card-frame--surface-battlefield,
-    .norse-card-frame--surface-compact,
-    .norse-card-frame--surface-mulligan,
-    .norse-card-frame--surface-preview
-  ) .card-frame__pet-stage {
+  ) .card-frame__element-badge {
   top: var(--norse-card-badge-top);
   right: var(--norse-card-badge-side);
   width: var(--norse-card-badge-size);
@@ -1234,128 +1261,61 @@
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.72),
     inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  outline: 1px solid rgba(3, 8, 16, 0.72);
 }
 
-.norse-card-frame:is(
-    .norse-card-frame--surface-collection,
-    .norse-card-frame--surface-gameplay,
-    .norse-card-frame--surface-battlefield,
-    .norse-card-frame--surface-compact,
-    .norse-card-frame--surface-mulligan,
-    .norse-card-frame--surface-preview
-  ).norse-card-frame--has-pet-stage.norse-card-frame--has-element
-  .card-frame__element-badge,
-.norse-card-frame:is(
-    .norse-card-frame--surface-collection,
-    .norse-card-frame--surface-gameplay,
-    .norse-card-frame--surface-battlefield,
-    .norse-card-frame--surface-compact,
-    .norse-card-frame--surface-mulligan,
-    .norse-card-frame--surface-preview
-  ).norse-card-frame--has-blood-price
-  .card-frame__element-badge,
-.norse-card-frame:is(
-    .norse-card-frame--surface-collection,
-    .norse-card-frame--surface-gameplay,
-    .norse-card-frame--surface-battlefield,
-    .norse-card-frame--surface-compact,
-    .norse-card-frame--surface-mulligan,
-    .norse-card-frame--surface-preview
-  ).norse-card-frame--has-blood-price
-  .card-frame__pet-stage {
-  top: calc(var(--norse-card-badge-top) + var(--norse-card-badge-size) + 2px);
+.norse-card-frame .collection-card-frame__top-center {
+  position: absolute;
+  top: var(--norse-card-badge-top);
+  left: 50%;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  transform: translateX(-50%);
+  pointer-events: none;
 }
 
-.norse-card-frame:is(
-    .norse-card-frame--surface-collection,
-    .norse-card-frame--surface-gameplay,
-    .norse-card-frame--surface-battlefield,
-    .norse-card-frame--surface-compact,
-    .norse-card-frame--surface-mulligan,
-    .norse-card-frame--surface-preview
-  ).norse-card-frame--has-blood-price.norse-card-frame--has-pet-stage
-  .card-frame__element-badge {
-  top: calc(var(--norse-card-badge-top) + (var(--norse-card-badge-size) + 2px) * 2);
+.norse-card-frame .collection-card-frame__top-center .card-frame__chrome-faq,
+.norse-card-frame .card-frame__rarity-mark.card-frame__chrome-faq {
+  pointer-events: auto;
 }
 
-.norse-card-frame:is(
-    .norse-card-frame--surface-collection,
-    .norse-card-frame--surface-gameplay,
-    .norse-card-frame--surface-battlefield,
-    .norse-card-frame--surface-compact,
-    .norse-card-frame--surface-mulligan,
-    .norse-card-frame--surface-preview
-  ) .card-frame__evolution-stars {
-  top: calc(var(--norse-card-badge-top) + var(--norse-card-badge-size) + 2px);
-  right: var(--norse-card-badge-side);
+.norse-card-frame .card-frame__chrome-icon,
+.norse-card-frame .card-frame__evolution-star {
+  display: block;
+  width: calc(var(--norse-card-badge-size) * 0.78);
+  height: calc(var(--norse-card-badge-size) * 0.78);
+  flex: 0 0 auto;
 }
 
-.norse-card-frame:is(
-    .norse-card-frame--surface-collection,
-    .norse-card-frame--surface-gameplay,
-    .norse-card-frame--surface-battlefield,
-    .norse-card-frame--surface-compact,
-    .norse-card-frame--surface-mulligan,
-    .norse-card-frame--surface-preview
-  ).norse-card-frame--has-element .card-frame__evolution-stars,
-.norse-card-frame:is(
-    .norse-card-frame--surface-collection,
-    .norse-card-frame--surface-gameplay,
-    .norse-card-frame--surface-battlefield,
-    .norse-card-frame--surface-compact,
-    .norse-card-frame--surface-mulligan,
-    .norse-card-frame--surface-preview
-  ).norse-card-frame--has-pet-stage .card-frame__evolution-stars,
-.norse-card-frame:is(
-    .norse-card-frame--surface-collection,
-    .norse-card-frame--surface-gameplay,
-    .norse-card-frame--surface-battlefield,
-    .norse-card-frame--surface-compact,
-    .norse-card-frame--surface-mulligan,
-    .norse-card-frame--surface-preview
-  ).norse-card-frame--has-blood-price .card-frame__evolution-stars {
-  top: calc(var(--norse-card-badge-top) + (var(--norse-card-badge-size) + 2px) * 2);
-}
-
-.norse-card-frame:is(
-    .norse-card-frame--surface-collection,
-    .norse-card-frame--surface-gameplay,
-    .norse-card-frame--surface-battlefield,
-    .norse-card-frame--surface-compact,
-    .norse-card-frame--surface-mulligan,
-    .norse-card-frame--surface-preview
-  ).norse-card-frame--has-element.norse-card-frame--has-pet-stage
-  .card-frame__evolution-stars,
-.norse-card-frame:is(
-    .norse-card-frame--surface-collection,
-    .norse-card-frame--surface-gameplay,
-    .norse-card-frame--surface-battlefield,
-    .norse-card-frame--surface-compact,
-    .norse-card-frame--surface-mulligan,
-    .norse-card-frame--surface-preview
-  ).norse-card-frame--has-blood-price.norse-card-frame--has-element
-  .card-frame__evolution-stars,
-.norse-card-frame:is(
-    .norse-card-frame--surface-collection,
-    .norse-card-frame--surface-gameplay,
-    .norse-card-frame--surface-battlefield,
-    .norse-card-frame--surface-compact,
-    .norse-card-frame--surface-mulligan,
-    .norse-card-frame--surface-preview
-  ).norse-card-frame--has-blood-price.norse-card-frame--has-pet-stage
-  .card-frame__evolution-stars {
-  top: calc(var(--norse-card-badge-top) + (var(--norse-card-badge-size) + 2px) * 3);
-}
-
-.norse-card-frame:is(
-    .norse-card-frame--surface-collection,
-    .norse-card-frame--surface-gameplay,
-    .norse-card-frame--surface-battlefield,
-    .norse-card-frame--surface-compact,
-    .norse-card-frame--surface-mulligan,
-    .norse-card-frame--surface-preview
-  ) .card-frame__evolution-star {
+.norse-card-frame .collection-card-frame__top-center .card-frame__blood-price,
+.norse-card-frame .collection-card-frame__top-center .card-frame__pet-stage,
+.norse-card-frame .collection-card-frame__top-center .card-frame__evolution-stars {
+  position: static;
+  top: auto;
+  right: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: auto;
+  min-width: var(--norse-card-badge-size);
+  height: var(--norse-card-badge-size);
+  padding: 0 2px;
   font-size: calc(var(--norse-card-badge-size) * 0.42);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.norse-card-frame .card-frame__element-badge .card-frame__chrome-icon {
+  color: #fff;
+}
+
+.norse-card-frame .collection-card-frame__top-center .card-frame__blood-price-value,
+.norse-card-frame .collection-card-frame__top-center .card-frame__pet-stage-value {
+  font-variant-numeric: tabular-nums;
 }
 
 .norse-card-frame .card-frame__keyword-chip--overflow {
@@ -1396,22 +1356,33 @@
  * repaint the compact Collection symbol rail. */
 .norse-card-frame.norse-card-frame--surface-collection .card-frame__keywords {
   display: flex;
+  flex-direction: column;
   flex-wrap: nowrap;
   align-items: center;
   justify-content: center;
   gap: 3px;
-  min-height: 16px;
-  max-height: 16px;
+  min-height: 18px;
+  max-height: 18px;
+  overflow: visible;
+}
+
+.norse-card-frame.norse-card-frame--surface-collection
+  .card-frame__keywords[data-keyword-stack="2-3"],
+.norse-card-frame.norse-card-frame--surface-collection
+  .card-frame__description-stack[data-keyword-stack="2-3"] {
+  min-height: var(--norse-card-keyword-two-row-height);
+  max-height: var(--norse-card-keyword-two-row-height);
+  height: var(--norse-card-keyword-two-row-height);
   overflow: visible;
 }
 
 .norse-card-frame.norse-card-frame--surface-collection .card-frame__keyword-chip:not(.card-frame__keyword-chip--overflow) {
   box-sizing: border-box;
-  flex: 0 0 16px;
-  width: 16px;
-  min-width: 16px;
-  max-width: 16px;
-  height: 16px;
+  flex: 0 0 18px;
+  width: 18px;
+  min-width: 18px;
+  max-width: 18px;
+  height: 18px;
   padding: 1px;
   overflow: hidden;
   border: 1px solid color-mix(
@@ -1436,11 +1407,11 @@
 
 .norse-card-frame.norse-card-frame--surface-collection .card-frame__keyword-chip--overflow {
   box-sizing: border-box;
-  flex: 0 0 16px;
-  width: 16px;
-  min-width: 16px;
-  max-width: 16px;
-  height: 16px;
+  flex: 0 0 18px;
+  width: 18px;
+  min-width: 18px;
+  max-width: 18px;
+  height: 18px;
   padding: 0;
   border: 1px solid var(--gold-500);
   border-radius: 4px;

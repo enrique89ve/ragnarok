@@ -8,6 +8,7 @@ import {
 	buildPhaseCheckpointCommit,
 	computePhaseCheckpointId,
 	isAllowedPhaseCheckpointTransition,
+	isRetryablePhaseCheckpointDispute,
 	tryParsePhaseCheckpointProposal,
 } from './phaseCheckpoint';
 
@@ -56,5 +57,12 @@ describe('phase checkpoint wire contract', () => {
 		expect(tryParsePhaseCheckpointProposal({ ...input, stateRoot: 'ABC' })).toBeNull();
 		expect(tryParsePhaseCheckpointProposal({ ...input, epoch: 1.5 })).toBeNull();
 		expect(tryParsePhaseCheckpointProposal({ ...input, injected: true })).toBeNull();
+	});
+
+	it('treats mismatch and equivocation as observer retries, not a winner pick', () => {
+		expect(isRetryablePhaseCheckpointDispute('peer_mismatch')).toBe(true);
+		expect(isRetryablePhaseCheckpointDispute('equivocation')).toBe(true);
+		expect(isRetryablePhaseCheckpointDispute('room_disputed')).toBe(false);
+		expect(isRetryablePhaseCheckpointDispute('chain_mismatch')).toBe(false);
 	});
 });

@@ -13,7 +13,7 @@ import { MAX_BATTLEFIELD_SIZE } from '../../../constants/gameConstants';
 import cardDatabase from '../../../services/cardDatabase';
 import { v4 as uuidv4 } from 'uuid';
 import { isMinion, getAttack, getHealth } from '../../../utils/cards/typeGuards';
-import { cryptoRng } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 
 /**
@@ -49,7 +49,7 @@ export default function executeSummonFromSpellCost(
       return { success: true, additionalData: { noSpellsInDeck: true, summonedCount: 0 } };
     }
     
-    const randomIndex = Math.floor(cryptoRng() * spellsInDeck.length);
+    const randomIndex = Math.floor(cardsRng() * spellsInDeck.length);
     const revealedSpell = spellsInDeck[randomIndex];
     const spellCost = revealedSpell.card.manaCost;
     
@@ -80,7 +80,7 @@ export default function executeSummonFromSpellCost(
       };
     }
     
-    const randomMinionIndex = Math.floor(cryptoRng() * minionsWithCost.length);
+    const randomMinionIndex = Math.floor(cardsRng() * minionsWithCost.length);
     const selectedMinion = minionsWithCost[randomMinionIndex];
     
     const selectedMinionAttack = getAttack(selectedMinion);

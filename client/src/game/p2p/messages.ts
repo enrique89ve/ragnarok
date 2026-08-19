@@ -45,6 +45,13 @@ export type WireMessage =
 	| { type: 'seed_commit'; commitment: string }
 	| { type: 'seed_reveal'; salt: string; hiveUsername?: string }
 	| { type: 'army_announcement'; army: ArmySelection }
+	| {
+			type: 'cards_deck';
+			heroClass: string;
+			heroId?: string;
+			cardIds: readonly number[];
+			nftLevels: readonly { cardId: number; level: number }[];
+		}
 	| { type: 'result_propose'; result: PackagedMatchResult; hash: string; broadcasterSig: string; proposalId: string }
 	| { type: 'result_countersign'; counterpartySig: string; proposalId: string }
 	| { type: 'result_reject'; reason: string }

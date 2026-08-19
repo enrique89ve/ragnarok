@@ -10,7 +10,9 @@
  *
  * All visual classes (`opponent-hero-container`, `opponent-hand-display`,
  * `opponent-revealed-card`, `opponent-card-back`, `opponent-hand-count`)
- * remain in the centralised arena CSS.
+ * remain in the centralised arena CSS. Face-down hand tiles use the same
+ * `<PokerCardFrame variant="face-down"><CardCardBack /></PokerCardFrame>`
+ * chrome as community and hole cards.
  */
 
 import React from 'react';
@@ -20,6 +22,7 @@ import { BattlefieldHero } from '../components/BattlefieldHero';
 import { HoleCardsOverlay } from '../components/HoleCardsOverlay';
 import { HeroResourceDock } from '../components/HeroResourceDock';
 import SimpleCardCompat from '../../components/card/SimpleCardCompat';
+import { PokerCardFrame, CardCardBack } from '../../components/card';
 import { toSimpleCardData } from '../../components/card/cardDataAdapter';
 import type { PokerCard } from '../../types/PokerCombatTypes';
 import type { CardInstance } from '../../types';
@@ -147,7 +150,15 @@ export const OpponentZone: React.FC<OpponentZoneProps> = ({
 							})()}
 						</div>
 					) : (
-						<div key={`opp-card-${index}`} className="opponent-card-back" />
+						<div key={`opp-card-${index}`} className="opponent-card-back">
+							<PokerCardFrame
+								size="small"
+								variant="face-down"
+								style={{ width: '100%', height: '100%' }}
+							>
+								<CardCardBack />
+							</PokerCardFrame>
+						</div>
 					)
 				))}
 				{handCount > 0 && (

@@ -2,6 +2,12 @@ import { createRuntimeStorageKey } from '../game/config/networkConfig';
 
 const CHUNK_RELOAD_KEY = createRuntimeStorageKey('chunk-reload');
 
+/**
+ * One-shot HTTP cache-bust after a stale-chunk failure.
+ * Not a match session, not state sync, not resume. HashRouter never reads it.
+ */
+export const CHUNK_CACHE_BUST_QUERY = 'ragnarokReload';
+
 type ChunkRecoveryStatus = 'started' | 'already-attempted';
 
 function readChunkReloadFlag(): boolean {
@@ -52,9 +58,26 @@ async function deleteRagnarokCaches(): Promise<void> {
 	);
 }
 
+export function hrefWithoutChunkCacheBust(href: string): string | null {
+	const url = new URL(href, 'http://localhost');
+	if (!url.searchParams.has(CHUNK_CACHE_BUST_QUERY)) return null;
+	url.searchParams.delete(CHUNK_CACHE_BUST_QUERY);
+	return `${url.pathname}${url.search}${url.hash}`;
+}
+
+export function stripChunkCacheBustQuery(): void {
+	try {
+		const next = hrefWithoutChunkCacheBust(window.location.href);
+		if (next === null) return;
+		window.history.replaceState(window.history.state, '', next);
+	} catch {
+		// History can be unavailable in hardened or non-browser contexts.
+	}
+}
+
 function reloadWithCacheBust(): void {
 	const nextUrl = new URL(window.location.href);
-	nextUrl.searchParams.set('ragnarokReload', String(Date.now()));
+	nextUrl.searchParams.set(CHUNK_CACHE_BUST_QUERY, String(Date.now()));
 	window.location.replace(nextUrl.toString());
 }
 

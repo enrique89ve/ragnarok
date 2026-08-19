@@ -1,131 +1,11 @@
 /* ═══════════════════════════════════════════════════
    CANVAS-LAYOUT — virtual 1920×1080 poker board
    ─────────────────────────────────────────────────
-   The GameViewport scales the whole canvas. These fixed
-   grid tracks define the in-canvas distribution only.
+   GameViewport scales the canvas. Zone coordinates are
+   authored in poker/layout/pokerViewportLayout.ts and
+   applied as CSS vars on `.ragnarok-combat-arena`.
+   This file only consumes those vars.
    ═══════════════════════════════════════════════════ */
-
-/* Balanced 1920×1080 preset. Layout geometry lives here so TSX does not
-   compete with Tailwind or inject a second set of coordinates. The typed
-   layout schema remains the editor/validation contract. */
-.ragnarok-combat-arena {
-  --poker-reference-width: 1920px;
-  --poker-reference-height: 1080px;
-  --poker-layout-grid: 8px;
-  --poker-bottom-rail-y: 1024px;
-  --poker-bottom-rail-gap: 52px;
-  --poker-player-hand-card-rise: 38px;
-  --poker-betting-controls-drop: 19px;
-  --poker-hud-badge-height: 36px;
-  --poker-zone-turnBadge-x: 1352px;
-  --poker-zone-turnBadge-y: 976px;
-  --poker-zone-turnBadge-w: 152px;
-  --poker-zone-turnBadge-h: 48px;
-  --poker-zone-turnBadge-rot: 0deg;
-  --poker-zone-topHud-x: 584px;
-  --poker-zone-topHud-y: 48px;
-  --poker-zone-topHud-w: 872px;
-  --poker-zone-topHud-h: 72px;
-  --poker-zone-topHud-rot: 0deg;
-  --poker-zone-hourglass-x: 960px;
-  --poker-zone-hourglass-y: 122px;
-  --poker-zone-hourglass-w: 65px;
-  --poker-zone-hourglass-h: 107px;
-  --poker-zone-hourglass-rot: 0deg;
-  --poker-zone-attackModeBanner-x: 696px;
-  --poker-zone-attackModeBanner-y: 152px;
-  --poker-zone-attackModeBanner-w: 576px;
-  --poker-zone-attackModeBanner-h: 56px;
-  --poker-zone-attackModeBanner-rot: 0deg;
-  --poker-zone-battleIntel-x: 256px;
-  --poker-zone-battleIntel-y: 48px;
-  --poker-zone-battleIntel-w: 240px;
-  --poker-zone-battleIntel-h: 56px;
-  --poker-zone-battleIntel-rot: 0deg;
-  --poker-zone-opponentHero-x: 56px;
-  --poker-zone-opponentHero-y: 72px;
-  --poker-zone-opponentHero-w: 192px;
-  --poker-zone-opponentHero-h: 272px;
-  --poker-zone-opponentHeroCards-x: 88px;
-  --poker-zone-opponentHeroCards-y: 320px;
-  --poker-zone-opponentHeroCards-w: 128px;
-  --poker-zone-opponentHeroCards-h: 72px;
-  --poker-zone-opponentHeroCards-rot: -6deg;
-  --poker-zone-opponentHand-x: 280px;
-  --poker-zone-opponentHand-y: 160px;
-  --poker-zone-opponentHand-w: 400px;
-  --poker-zone-opponentHand-h: 88px;
-  --poker-zone-communityCards-x: 88px;
-  --poker-zone-communityCards-y: 472px;
-  --poker-zone-communityCards-w: 472px;
-  --poker-zone-communityCards-h: 120px;
-  --poker-zone-communityCards-rot: 0deg;
-  --poker-zone-battlefield-x: 552px;
-  --poker-zone-battlefield-y: 244px;
-  --poker-zone-battlefield-w: 888px;
-  --poker-zone-battlefield-h: 496px;
-  --poker-zone-opponentBattlefieldCards-x: 616px;
-  --poker-zone-opponentBattlefieldCards-y: 296px;
-  --poker-zone-opponentBattlefieldCards-w: 688px;
-  --poker-zone-opponentBattlefieldCards-h: 192px;
-  --poker-zone-opponentBattlefieldCards-rot: 0deg;
-  --poker-zone-playerBattlefieldCards-x: 672px;
-  --poker-zone-playerBattlefieldCards-y: 532px;
-  --poker-zone-playerBattlefieldCards-w: 688px;
-  --poker-zone-playerBattlefieldCards-h: 192px;
-  --poker-zone-playerBattlefieldCards-rot: 0deg;
-  --poker-zone-playerHero-x: 56px;
-  --poker-zone-playerHero-y: 736px;
-  --poker-zone-playerHero-w: 208px;
-  --poker-zone-playerHero-h: 288px;
-  --poker-zone-playerHeroCards-x: 88px;
-  --poker-zone-playerHeroCards-y: 680px;
-  --poker-zone-playerHeroCards-w: 152px;
-  --poker-zone-playerHeroCards-h: 96px;
-  --poker-zone-playerHeroCards-rot: -8deg;
-  --poker-zone-playerHand-x: 304px;
-  --poker-zone-playerHand-y: 728px;
-  --poker-zone-playerHand-w: 700px;
-  --poker-zone-playerHand-h: 192px;
-  --poker-zone-playerHand-rot: 0deg;
-  --poker-zone-bettingControls-x: 280px;
-  --poker-zone-bettingControls-y: 928px;
-  --poker-zone-bettingControls-w: 608px;
-  --poker-zone-bettingControls-h: 96px;
-  --poker-zone-bettingControls-rot: 0deg;
-  --poker-zone-wagerPanel-x: 1480px;
-  --poker-zone-wagerPanel-y: 224px;
-  --poker-zone-wagerPanel-w: 384px;
-  --poker-zone-wagerPanel-h: 248px;
-  --poker-zone-wagerPanel-rot: 0deg;
-  --poker-zone-deckCounters-x: 1690px;
-  --poker-zone-deckCounters-y: 48px;
-  --poker-zone-deckCounters-w: 174px;
-  --poker-zone-deckCounters-h: 144px;
-  --poker-zone-deckCounters-rot: 0deg;
-  --poker-zone-battleLog-x: 1576px;
-  --poker-zone-battleLog-y: 792px;
-  --poker-zone-battleLog-w: 288px;
-  --poker-zone-battleLog-h: 232px;
-  --poker-zone-battleLog-rot: 0deg;
-  --poker-zone-vfxFocus-x: 616px;
-  --poker-zone-vfxFocus-y: 280px;
-  --poker-zone-vfxFocus-w: 824px;
-  --poker-zone-vfxFocus-h: 416px;
-  --poker-zone-vfxFocus-rot: 0deg;
-  --poker-zone-opponentPokerSpellTray-x: 600px;
-  --poker-zone-opponentPokerSpellTray-y: 160px;
-  --poker-zone-opponentPokerSpellTray-w: 320px;
-  --poker-zone-opponentPokerSpellTray-h: 88px;
-  --poker-zone-playerPokerSpellTray-x: 600px;
-  --poker-zone-playerPokerSpellTray-y: 820px;
-  --poker-zone-playerPokerSpellTray-w: 320px;
-  --poker-zone-playerPokerSpellTray-h: 88px;
-  --poker-zone-wagerActivation-x: 552px;
-  --poker-zone-wagerActivation-y: 244px;
-  --poker-zone-wagerActivation-w: 888px;
-  --poker-zone-wagerActivation-h: 496px;
-}
 
 .ragnarok-combat-arena :is(.layer-background, .layer-vfx, .layer-modal) {
   position: absolute;
@@ -247,13 +127,12 @@
   z-index: 72;
 }
 
-/* Production adapter for the approved 1920×1080 poker layout draft.
-   The values come from combat/layout/pokerViewportLayout.ts as inherited
-   CSS variables on .ragnarok-combat-arena. */
+/* Local arena tokens (z-index, hero chrome). Zone x/y/w/h live in
+   pokerViewportLayout.ts — do not redeclare --poker-zone-* here. */
 .unified-combat-arena {
   --arena-zone-min-height: 166px;
   --arena-z-opponent-field: 150;
-  --arena-z-board: 160;
+  --arena-z-board: 210;
   --arena-z-opponent: 180;
   --arena-z-player-field: 190;
   --arena-z-player: 220;
@@ -268,10 +147,6 @@
   --player-hand-strength-gap: 8px;
   --player-hand-card-width: 132px;
   --player-hand-card-height: 176px;
-  --betting-panel-x: 520px;
-  --betting-panel-width: 330px;
-  --wager-panel-top: 118px;
-  --wager-panel-width: 310px;
   display: block !important;
   position: relative;
   width: 100%;
@@ -283,10 +158,10 @@
 .unified-combat-arena::before {
   content: "";
   position: absolute;
-  left: var(--poker-zone-battlefield-x, 552px);
-  top: var(--poker-zone-battlefield-y, 244px);
-  width: var(--poker-zone-battlefield-w, 888px);
-  height: var(--poker-zone-battlefield-h, 496px);
+  left: var(--poker-zone-battlefield-x);
+  top: var(--poker-zone-battlefield-y);
+  width: var(--poker-zone-battlefield-w);
+  height: var(--poker-zone-battlefield-h);
   z-index: 92;
   pointer-events: none;
   border: 0;
@@ -309,16 +184,16 @@
 .unified-combat-arena::after {
   content: "";
   position: absolute;
-  left: calc(var(--poker-zone-battlefield-x, 552px) + 120px);
+  left: calc(var(--poker-zone-battlefield-x) + 120px);
   top: calc(
-    var(--poker-zone-opponentBattlefieldCards-y, 296px) +
-      var(--poker-zone-opponentBattlefieldCards-h, 192px) - 8px
+    var(--poker-zone-opponentBattlefieldCards-y) +
+      var(--poker-zone-opponentBattlefieldCards-h) - 8px
   );
-  width: calc(var(--poker-zone-battlefield-w, 888px) - 240px);
+  width: calc(var(--poker-zone-battlefield-w) - 240px);
   height: calc(
-    var(--poker-zone-playerBattlefieldCards-y, 532px) -
-      var(--poker-zone-opponentBattlefieldCards-y, 296px) -
-      var(--poker-zone-opponentBattlefieldCards-h, 192px) + 16px
+    var(--poker-zone-playerBattlefieldCards-y) -
+      var(--poker-zone-opponentBattlefieldCards-y) -
+      var(--poker-zone-opponentBattlefieldCards-h) + 16px
   );
   z-index: 93;
   pointer-events: none;
@@ -375,10 +250,10 @@
 
 .unified-combat-arena .opponent-hero-container {
   position: absolute;
-  left: var(--poker-zone-opponentHero-x, 56px);
-  top: var(--poker-zone-opponentHero-y, 72px);
-  width: var(--poker-zone-opponentHero-w, 192px);
-  min-height: var(--poker-zone-opponentHero-h, 272px);
+  left: var(--poker-zone-opponentHero-x);
+  top: var(--poker-zone-opponentHero-y);
+  width: var(--poker-zone-opponentHero-w);
+  min-height: var(--poker-zone-opponentHero-h);
   pointer-events: auto;
 }
 
@@ -391,10 +266,10 @@
   --opponent-hand-max-cards: 8;
 
   position: absolute;
-  left: var(--poker-zone-opponentHand-x, 280px);
-  top: var(--poker-zone-opponentHand-y, 160px);
-  width: var(--poker-zone-opponentHand-w, 432px);
-  height: var(--poker-zone-opponentHand-h, 136px) !important;
+  left: var(--poker-zone-opponentHand-x);
+  top: var(--poker-zone-opponentHand-y);
+  width: var(--poker-zone-opponentHand-w);
+  height: var(--poker-zone-opponentHand-h) !important;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -409,20 +284,22 @@
 }
 
 .unified-combat-arena > .zone-board {
-  left: var(--poker-zone-communityCards-x, 56px);
-  top: var(--poker-zone-communityCards-y, 488px);
-  width: var(--poker-zone-communityCards-w, 456px);
-  min-height: var(--poker-zone-communityCards-h, 128px) !important;
+  left: var(--poker-zone-communityCards-x);
+  top: var(--poker-zone-communityCards-y);
+  width: var(--poker-zone-communityCards-w);
+  height: var(--poker-zone-communityCards-h);
+  min-height: var(--poker-zone-communityCards-h) !important;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 12px !important;
+  padding: 8px !important;
   border: none;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
-  transform: rotate(var(--poker-zone-communityCards-rot, 0deg));
+  transform: rotate(var(--poker-zone-communityCards-rot));
   transform-origin: center center;
+  z-index: var(--arena-z-board);
 }
 
 .unified-combat-arena > .zone-board .community-cards-section {
@@ -435,30 +312,22 @@
   border: 0;
 }
 
-.unified-combat-arena > .zone-board .community-slot .arena-poker-card.norse,
-.unified-combat-arena > .zone-board .community-slot .poker-card-frame {
-  width: 84px !important;
-  max-width: 84px !important;
-  height: 118px !important;
-  aspect-ratio: 84 / 118 !important;
-}
-
 .unified-combat-arena > .zone-opp-field {
-  left: var(--poker-zone-opponentBattlefieldCards-x, 640px);
-  top: var(--poker-zone-opponentBattlefieldCards-y, 328px);
-  width: var(--poker-zone-opponentBattlefieldCards-w, 592px);
-  min-height: var(--poker-zone-opponentBattlefieldCards-h, 152px) !important;
-  transform: rotate(var(--poker-zone-opponentBattlefieldCards-rot, 0deg));
+  left: var(--poker-zone-opponentBattlefieldCards-x);
+  top: var(--poker-zone-opponentBattlefieldCards-y);
+  width: var(--poker-zone-opponentBattlefieldCards-w);
+  min-height: var(--poker-zone-opponentBattlefieldCards-h) !important;
+  transform: rotate(var(--poker-zone-opponentBattlefieldCards-rot));
   transform-origin: center center;
   z-index: var(--arena-z-opponent-field);
 }
 
 .unified-combat-arena > .zone-player-field {
-  left: var(--poker-zone-playerBattlefieldCards-x, 640px);
-  top: var(--poker-zone-playerBattlefieldCards-y, 520px);
-  width: var(--poker-zone-playerBattlefieldCards-w, 592px);
-  min-height: var(--poker-zone-playerBattlefieldCards-h, 152px) !important;
-  transform: rotate(var(--poker-zone-playerBattlefieldCards-rot, 0deg));
+  left: var(--poker-zone-playerBattlefieldCards-x);
+  top: var(--poker-zone-playerBattlefieldCards-y);
+  width: var(--poker-zone-playerBattlefieldCards-w);
+  min-height: var(--poker-zone-playerBattlefieldCards-h) !important;
+  transform: rotate(var(--poker-zone-playerBattlefieldCards-rot));
   transform-origin: center center;
   z-index: var(--arena-z-player-field);
 }
@@ -496,19 +365,19 @@
 
 .unified-combat-arena .unified-hero-section {
   position: absolute;
-  left: var(--poker-zone-playerHero-x, 56px);
-  top: var(--poker-zone-playerHero-y, 736px);
-  width: var(--poker-zone-playerHero-w, 208px);
-  min-height: var(--poker-zone-playerHero-h, 288px);
+  left: var(--poker-zone-playerHero-x);
+  top: var(--poker-zone-playerHero-y);
+  width: var(--poker-zone-playerHero-w);
+  min-height: var(--poker-zone-playerHero-h);
   pointer-events: auto;
 }
 
 .unified-combat-arena .unified-hand-section {
   position: absolute;
-  left: var(--poker-zone-playerHand-x, 264px);
-  top: var(--poker-zone-playerHand-y, 728px);
-  width: var(--poker-zone-playerHand-w, 640px);
-  height: var(--poker-zone-playerHand-h, 192px);
+  left: var(--poker-zone-playerHand-x);
+  top: var(--poker-zone-playerHand-y);
+  width: var(--poker-zone-playerHand-w);
+  height: var(--poker-zone-playerHand-h);
   pointer-events: auto;
   padding: var(--poker-space-10) 12px 0;
   border-radius: 18px 18px 0 0;
@@ -534,56 +403,56 @@
   padding: 0;
   justify-content: flex-start !important;
   transform:
-    translateY(calc(-1 * var(--poker-player-hand-card-rise, 0px)))
-    rotate(var(--poker-zone-playerHand-rot, 0deg));
+    translateY(calc(-1 * var(--poker-player-hand-card-rise)))
+    rotate(var(--poker-zone-playerHand-rot));
   transform-origin: center center;
 }
 
 .ragnarok-combat-arena .opponent-hero-container .battlefield-hero-square {
-  width: var(--poker-zone-opponentHero-w, var(--hero-card-width)) !important;
+  width: var(--poker-zone-opponentHero-w) !important;
   max-width: none !important;
 }
 
 .ragnarok-combat-arena .poker-hero-container .battlefield-hero-square {
-  width: var(--poker-zone-playerHero-w, var(--hero-card-width)) !important;
+  width: var(--poker-zone-playerHero-w) !important;
   max-width: none !important;
 }
 
 .ragnarok-combat-arena .opponent-hero-container .hero-pocket-cards--opponent {
   left: calc(
-    var(--poker-zone-opponentHeroCards-x, 88px) -
-      var(--poker-zone-opponentHero-x, 56px)
+    var(--poker-zone-opponentHeroCards-x) -
+      var(--poker-zone-opponentHero-x)
   );
   top: calc(
-    var(--poker-zone-opponentHeroCards-y, 320px) -
-      var(--poker-zone-opponentHero-y, 72px)
+    var(--poker-zone-opponentHeroCards-y) -
+      var(--poker-zone-opponentHero-y)
   );
-  width: var(--poker-zone-opponentHeroCards-w, 128px);
-  height: var(--poker-zone-opponentHeroCards-h, 72px);
-  transform: rotate(var(--poker-zone-opponentHeroCards-rot, -6deg)) scale(0.58);
+  width: var(--poker-zone-opponentHeroCards-w);
+  height: var(--poker-zone-opponentHeroCards-h);
+  transform: rotate(var(--poker-zone-opponentHeroCards-rot)) scale(0.58);
   transform-origin: center bottom;
 }
 
 .ragnarok-combat-arena .poker-hero-container .hero-pocket-cards--player {
   left: calc(
-    var(--poker-zone-playerHeroCards-x, 88px) -
-      var(--poker-zone-playerHero-x, 56px)
+    var(--poker-zone-playerHeroCards-x) -
+      var(--poker-zone-playerHero-x)
   );
   top: calc(
-    var(--poker-zone-playerHeroCards-y, 680px) -
-      var(--poker-zone-playerHero-y, 736px)
+    var(--poker-zone-playerHeroCards-y) -
+      var(--poker-zone-playerHero-y)
   );
-  width: var(--poker-zone-playerHeroCards-w, 152px);
-  height: var(--poker-zone-playerHeroCards-h, 96px);
-  transform: rotate(var(--poker-zone-playerHeroCards-rot, -8deg)) scale(0.68);
+  width: var(--poker-zone-playerHeroCards-w);
+  height: var(--poker-zone-playerHeroCards-h);
+  transform: rotate(var(--poker-zone-playerHeroCards-rot)) scale(0.68);
   transform-origin: center bottom;
 }
 
 .unified-combat-arena [data-zone="betting-panel"] {
   position: absolute;
-  left: var(--poker-zone-bettingControls-x, var(--betting-panel-x));
+  left: var(--poker-zone-bettingControls-x);
   right: auto;
-  top: var(--poker-zone-bettingControls-y, auto);
+  top: var(--poker-zone-bettingControls-y);
   bottom: auto;
   box-sizing: border-box;
   display: flex;
@@ -591,27 +460,24 @@
   align-items: stretch;
   justify-content: flex-end;
   gap: 4px;
-  width: var(--poker-zone-bettingControls-w, var(--betting-panel-width));
-  height: var(--poker-zone-bettingControls-h, auto);
-  min-height: var(--poker-zone-bettingControls-h, auto);
+  width: var(--poker-zone-bettingControls-w);
+  height: var(--poker-zone-bettingControls-h);
+  min-height: var(--poker-zone-bettingControls-h);
   transform:
-    translateY(var(--poker-betting-controls-drop, 0px))
-    rotate(var(--poker-zone-bettingControls-rot, 0deg));
+    translateY(var(--poker-betting-controls-drop))
+    rotate(var(--poker-zone-bettingControls-rot));
   transform-origin: top left;
   z-index: var(--arena-z-betting-panel);
 }
 
 .unified-combat-arena [data-zone="wager-info-panel"] {
-  left: var(--poker-zone-wagerPanel-x, auto) !important;
-  top: var(--poker-zone-wagerPanel-y, var(--wager-panel-top)) !important;
+  left: var(--poker-zone-wagerPanel-x) !important;
+  top: var(--poker-zone-wagerPanel-y) !important;
   right: auto !important;
-  width: var(--poker-zone-wagerPanel-w, var(--wager-panel-width)) !important;
-  max-width: var(
-    --poker-zone-wagerPanel-w,
-    var(--wager-panel-width)
-  ) !important;
-  min-height: var(--poker-zone-wagerPanel-h, auto);
-  transform: rotate(var(--poker-zone-wagerPanel-rot, 0deg));
+  width: var(--poker-zone-wagerPanel-w) !important;
+  max-width: var(--poker-zone-wagerPanel-w) !important;
+  min-height: var(--poker-zone-wagerPanel-h);
+  transform: rotate(var(--poker-zone-wagerPanel-rot));
   transform-origin: top left;
   z-index: var(--arena-z-wager-panel) !important;
 }
@@ -623,21 +489,21 @@
 }
 
 .unified-combat-arena [data-zone="wager-info-panel"] .combat-phase-director {
-  min-height: var(--poker-zone-wagerPanel-h, auto);
+  min-height: var(--poker-zone-wagerPanel-h);
   box-sizing: border-box;
 }
 
 .unified-combat-arena [data-zone="p2p-poker-turn-status"] {
   position: absolute;
-  left: var(--poker-zone-wagerPanel-x, 1040px);
+  left: var(--poker-zone-wagerPanel-x);
   top: calc(
-    var(--poker-zone-wagerPanel-y, var(--wager-panel-top)) +
-      var(--poker-zone-wagerPanel-h, 188px) + 10px
+    var(--poker-zone-wagerPanel-y) +
+      var(--poker-zone-wagerPanel-h) + 10px
   );
   right: auto;
   box-sizing: border-box;
-  width: min(var(--poker-zone-wagerPanel-w, var(--wager-panel-width)), 360px);
-  transform: rotate(var(--poker-zone-wagerPanel-rot, 0deg));
+  width: min(var(--poker-zone-wagerPanel-w), 360px);
+  transform: rotate(var(--poker-zone-wagerPanel-rot));
   transform-origin: top left;
   z-index: calc(var(--arena-z-wager-panel) + 1);
 }

@@ -46,6 +46,8 @@ export const CARD_LAYOUT_SLOT_IDS = [
 	'rarity',
 	'badge',
 	'count',
+	'bloodPrice',
+	'evolution',
 ] as const;
 
 export type CardLayoutSlotId = typeof CARD_LAYOUT_SLOT_IDS[number];
@@ -142,6 +144,8 @@ const ASPECT_LOCKED_SLOT_IDS = new Set<CardLayoutSlotId>([
 	'health',
 	'rarity',
 	'count',
+	'bloodPrice',
+	'evolution',
 ]);
 
 const isCardLayoutSlotAspectLockedByDefault = (slotId: CardLayoutSlotId): boolean => (
@@ -162,7 +166,9 @@ const collectionSlots = (): readonly CardLayoutSlot[] => [
 	// Reduce the top gem by 30% around its original center so it matches the
 	// visual weight of the lower stat badges.
 	defineSlot({ id: 'mana', label: 'Mana', x: 3.5, y: 2.5, w: 7.7, h: 5.4, fontScale: 1, visible: true, textPolicy: 'fit' }),
-	defineSlot({ id: 'badge', label: 'Badge', x: 86, y: 3.2, w: 10.8, h: 7.6, fontScale: 1, visible: false, textPolicy: 'fit' }),
+	defineSlot({ id: 'badge', label: 'Badge', x: 86, y: 3.2, w: 10.8, h: 7.6, fontScale: 1, visible: true, textPolicy: 'fit' }),
+	defineSlot({ id: 'bloodPrice', label: 'Blood Price', x: 42, y: 2.8, w: 8, h: 5.6, fontScale: 1, visible: false, textPolicy: 'fit' }),
+	defineSlot({ id: 'evolution', label: 'Evolution', x: 51, y: 2.8, w: 8, h: 5.6, fontScale: 1, visible: false, textPolicy: 'fit' }),
 	defineSlot({ id: 'description', label: 'Description', x: 8, y: 54, w: 84, h: 30, fontScale: 0.92, visible: false, textPolicy: 'wrap' }),
 	// Keywords are rendered inside the description slot. Keep their editor
 	// rectangle as a centered inner rail instead of duplicating the full text
@@ -192,6 +198,8 @@ const collectionDetailSlots = (): readonly CardLayoutSlot[] => collectionSlotsWi
 	tribe: true,
 	keywords: true,
 	description: true,
+	bloodPrice: true,
+	evolution: true,
 });
 
 type RenderFieldRuleDefinition = Omit<CardLayoutRenderFieldRule, 'cardTypes' | 'rarities'> & {
@@ -215,7 +223,9 @@ const collectionRenderFields = (): readonly CardLayoutRenderFieldRule[] => [
 	defineRenderFieldRule({ id: 'tribe', label: 'Tribe', enabled: true, priority: 'secondary', cardTypes: ['minion'] }),
 	defineRenderFieldRule({ id: 'keywords', label: 'Keywords', enabled: true, priority: 'secondary' }),
 	defineRenderFieldRule({ id: 'description', label: 'Description', enabled: true, priority: 'secondary' }),
-	defineRenderFieldRule({ id: 'badge', label: 'Element badge', enabled: true, priority: 'tertiary', rarities: ['epic', 'mythic'] }),
+	defineRenderFieldRule({ id: 'badge', label: 'Element badge', enabled: true, priority: 'secondary' }),
+	defineRenderFieldRule({ id: 'bloodPrice', label: 'Blood Price', enabled: true, priority: 'secondary' }),
+	defineRenderFieldRule({ id: 'evolution', label: 'Evolution', enabled: true, priority: 'secondary' }),
 	defineRenderFieldRule({ id: 'count', label: 'Collection count', enabled: true, priority: 'tertiary' }),
 ];
 
@@ -229,7 +239,9 @@ const pregameRenderFields = (): readonly CardLayoutRenderFieldRule[] => [
 	defineRenderFieldRule({ id: 'keywords', label: 'Keywords', enabled: true, priority: 'secondary' }),
 	defineRenderFieldRule({ id: 'description', label: 'Description', enabled: false, priority: 'hidden' }),
 	defineRenderFieldRule({ id: 'tribe', label: 'Tribe', enabled: false, priority: 'hidden' }),
-	defineRenderFieldRule({ id: 'badge', label: 'Element badge', enabled: false, priority: 'hidden' }),
+	defineRenderFieldRule({ id: 'badge', label: 'Element badge', enabled: true, priority: 'primary' }),
+	defineRenderFieldRule({ id: 'bloodPrice', label: 'Blood Price', enabled: true, priority: 'primary' }),
+	defineRenderFieldRule({ id: 'evolution', label: 'Evolution', enabled: true, priority: 'secondary' }),
 	defineRenderFieldRule({ id: 'count', label: 'Collection count', enabled: false, priority: 'hidden' }),
 ];
 
@@ -243,7 +255,9 @@ const gameplayRenderFields = (): readonly CardLayoutRenderFieldRule[] => [
 	defineRenderFieldRule({ id: 'keywords', label: 'Keywords', enabled: true, priority: 'secondary' }),
 	defineRenderFieldRule({ id: 'description', label: 'Description', enabled: false, priority: 'hidden' }),
 	defineRenderFieldRule({ id: 'tribe', label: 'Tribe', enabled: false, priority: 'hidden' }),
-	defineRenderFieldRule({ id: 'badge', label: 'Element badge', enabled: false, priority: 'hidden' }),
+	defineRenderFieldRule({ id: 'badge', label: 'Element badge', enabled: true, priority: 'primary' }),
+	defineRenderFieldRule({ id: 'bloodPrice', label: 'Blood Price', enabled: true, priority: 'primary' }),
+	defineRenderFieldRule({ id: 'evolution', label: 'Evolution', enabled: false, priority: 'hidden' }),
 	defineRenderFieldRule({ id: 'count', label: 'Collection count', enabled: false, priority: 'hidden' }),
 ];
 
@@ -279,7 +293,12 @@ export const DEFAULT_CARD_LAYOUT_DRAFT = {
 			aspectRatio: NFT_ASPECT,
 			renderer: { surface: 'mulligan', shape: 'tile', size: 'large', statsMode: 'frame', showDescription: false },
 			renderFields: pregameRenderFields(),
-			slots: collectionSlotsWithVisibility({ keywords: true }),
+			slots: collectionSlotsWithVisibility({
+				keywords: true,
+				badge: true,
+				bloodPrice: true,
+				evolution: true,
+			}),
 		},
 		{
 			surface: 'gameplay',
@@ -290,7 +309,12 @@ export const DEFAULT_CARD_LAYOUT_DRAFT = {
 			aspectRatio: NFT_ASPECT,
 			renderer: { surface: 'collection', shape: 'tile', size: 'medium', statsMode: 'frame', showDescription: false },
 			renderFields: gameplayRenderFields(),
-			slots: collectionSlotsWithVisibility({ keywords: true }),
+			slots: collectionSlotsWithVisibility({
+				keywords: true,
+				badge: true,
+				bloodPrice: true,
+				evolution: false,
+			}),
 		},
 	],
 } satisfies CardLayoutDraft;

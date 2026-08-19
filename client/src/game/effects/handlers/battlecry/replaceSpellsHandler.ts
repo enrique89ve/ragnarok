@@ -8,7 +8,8 @@ import { debug } from '../../../config/debugConfig';
 import { GameContext } from '../../../GameContext';
 import { Card, BattlecryEffect, CardInstance } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
-import { cryptoRng, cryptoIdGen } from '../../../utils/seededRng';
+import { cryptoIdGen } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 export default function executeReplaceSpells(
   context: GameContext,
@@ -53,7 +54,7 @@ export default function executeReplaceSpells(
         if (filteredPool.length === 0) filteredPool = genericSpellPool;
       }
       
-      const randomSpell = filteredPool[Math.floor(cryptoRng() * filteredPool.length)];
+      const randomSpell = filteredPool[Math.floor(cardsRng() * filteredPool.length)];
       const originalCost = spellCard.card.manaCost;
       
       const newSpellCard: CardInstance = {

@@ -8,7 +8,7 @@ import { debug } from '../../../config/debugConfig';
 import { GameContext } from '../../../GameContext';
 import { Card, BattlecryEffect } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
-import { cryptoRng } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 /**
  * Execute a Damage effect
@@ -61,7 +61,7 @@ export default function executeDamage(
       const splitTargets = [];
       for (let i = 0; i < effect.targetsCount; i++) {
         if (targets.length > 0) {
-          const randomIndex = Math.floor(cryptoRng() * targets.length);
+          const randomIndex = Math.floor(cardsRng() * targets.length);
           splitTargets.push(targets[randomIndex]);
         }
       }

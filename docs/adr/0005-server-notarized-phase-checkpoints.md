@@ -31,9 +31,11 @@ the transition, epoch and previous checkpoint id.
 The relay keeps one last commit and at most two votes per room. When both
 proposals match byte-for-byte it emits a server-only
 `__sys.event=phase_checkpoint` containing `phase_checkpoint_commit_v1`. When
-they differ it emits `phase_checkpoint_dispute_v1` and freezes that room. A
-client cannot forge either response because client frames beginning with `__`
-are rejected.
+they differ it emits `phase_checkpoint_dispute_v1` and clears the votes so
+both peers can retry. The room freezes only after three mismatches on the
+same epoch. Equivocation keeps the first vote and does not freeze the room.
+The relay never chooses a winner. A client cannot forge commit or dispute
+frames because client frames beginning with `__` are rejected.
 
 Allowed transitions are exactly:
 
@@ -53,16 +55,19 @@ viewer slot names, selection state, animation markers, art and audio.
 
 Relay work is O(1) per proposal and O(1) memory per room. Empty-room checkpoint
 state is retained for 120 seconds and removed by one global sweep, so reconnect
-does not require a timer per match. Transport host/cards authority is derived
-from lexical peer-id order and therefore does not change with reconnect order.
+does not require a timer per match. Transport host (seed parity, cards hash
+frame, recovery publisher) is derived from lexical peer-id order and therefore
+does not change with reconnect order. Cards *apply* is symmetric; see
+`PVP_WIRE_PROTOCOL.md` OPEN-8.
 
 ## Trust boundary
 
 A commit proves that the two authenticated room peers agreed on one opaque
 root. It does **not** prove that the gameplay state is objectively legal. Two
 colluding clients can agree on a false state. On mismatch the server cannot
-choose the honest peer without replay or external evidence, so it freezes
-instead.
+choose the honest peer without replay or external evidence. The first
+disagreements are observer retries (clear votes, notify both, do not pick a
+winner). The room freezes only after the mismatch strike budget is exhausted.
 
 The v1 commit is authenticated by the active WSS system channel but is not yet
 a portable server-signed settlement receipt. Binding checkpoint evidence into

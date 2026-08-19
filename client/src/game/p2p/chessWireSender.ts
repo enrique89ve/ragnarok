@@ -58,6 +58,7 @@ import {
 	captureChessIntegrityCheckpoint,
 } from './chessIntegrityCheckpoint';
 import { chessIntegrityMonitor } from './chessIntegrityMonitor';
+import { isCardsHostFrame } from './p2pPerspective';
 
 let outgoingChessSeq = 0;
 let pendingChessEnvelope: ChessCommandEnvelope | null = null;
@@ -104,24 +105,11 @@ export interface ChessPrevHashes {
  * Returns a branded value so the consumers (`sendChessMove`,
  * `sendChessAttack`) cannot accept literally-constructed hashes.
  *
- * Why `peerStore.isHost` here:
- *   `isCardsAuthority` selects the canonical perspective for the cards
- *   hash. Today cards is host-authoritative (see PVP_WIRE_PROTOCOL §5
- *   "Cards Phase — Host-Authoritative"), so `isCardsAuthority === isHost`
- *   is a literal alias — see `useWireSync.ts:70`. The host stores state
- *   from its own perspective; the joiner flips into host perspective
- *   before hashing so the bytes match (`computeCardsPrevStateHash`).
- *
- * TODO(OPEN-8): when cards migrates to symmetric (chess-style), the cards
- * hash perspective will be derived from `Authority.myRole` (first-mover
- * is the canonical owner), NOT from the WS-transport `isHost` axis. The
- * three sites that today read `peerStore.isHost` as a cards-authority
- * proxy must move together: `useWireSync.ts:70`, this function, and
- * `BlockchainSubscriber.ts:319` (proposer gate). Tracked in OPEN-8.
+ * Cards hash perspective uses `isCardsHostFrame` (host-as-player) so both
+ * ego-centric stores serialize the same bytes after the guest flips.
  */
 export function captureChessPrevHashes(): ChessPrevHashes {
-	// Today: cards-authority === ws-host. See JSDoc above.
-	const isCardsAuthority = usePeerStore.getState().isHost;
+	const isCardsAuthority = isCardsHostFrame(usePeerStore.getState().isHost);
 	const cards = computeCardsPrevStateHash(
 		useGameStore.getState().gameState,
 		isCardsAuthority,
@@ -219,7 +207,7 @@ function dispatchChessCommand(
 	});
 	const postCheckpoint = captureChessIntegrityCheckpoint({
 		matchId,
-		isCardsAuthority: peerState.isHost,
+		isCardsAuthority: isCardsHostFrame(peerState.isHost),
 	});
 	if (preCheckpoint === null || postCheckpoint === null) {
 		chessIntegrityMonitor.quarantine({

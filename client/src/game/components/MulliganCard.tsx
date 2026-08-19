@@ -47,6 +47,7 @@ export const toMulliganSimpleCardData = (cardData: CardInstance['card']): Simple
     evolvesFromName: evolvesFromCard?.name,
     evolutionCondition: cardDataTyped.evolutionCondition,
     hasStage3Variants: !!(cardDataTyped.stage3Variants && cardDataTyped.stage3Variants.length > 0),
+    bloodPrice: cardDataTyped.bloodPrice,
   };
 };
 

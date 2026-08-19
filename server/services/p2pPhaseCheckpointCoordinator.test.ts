@@ -47,7 +47,7 @@ describe('P2P phase checkpoint coordinator', () => {
 			: committed);
 	});
 
-	it('freezes the room when peers disagree at the same epoch', () => {
+	it('notifies a peer mismatch without freezing the room on the first disagreement', () => {
 		const coordinator = createP2PPhaseCheckpointCoordinator();
 		coordinator.submit({ roomId: 'room', peerId: 'a', proposal: proposal() });
 		const mismatch = coordinator.submit({
@@ -60,10 +60,41 @@ describe('P2P phase checkpoint coordinator', () => {
 		expect(mismatch.recipients).toBe('room');
 		expect(mismatch.message.type).toBe('phase_checkpoint_dispute_v1');
 		expect(mismatch.message.type === 'phase_checkpoint_dispute_v1' && mismatch.message.reason).toBe('peer_mismatch');
+		expect(coordinator.getStats()).toEqual({
+			activeRooms: 1,
+			pendingRooms: 0,
+			disputedRooms: 0,
+		});
+	});
+
+	it('still commits after a mismatch retry when both peers later agree', () => {
+		const coordinator = createP2PPhaseCheckpointCoordinator();
+		coordinator.submit({ roomId: 'room', peerId: 'a', proposal: proposal() });
+		coordinator.submit({
+			roomId: 'room',
+			peerId: 'b',
+			proposal: proposal({ stateRoot: '2'.repeat(64) }),
+		});
+		expect(coordinator.submit({ roomId: 'room', peerId: 'a', proposal: proposal() })).toEqual({ status: 'pending' });
+		const committed = coordinator.submit({ roomId: 'room', peerId: 'b', proposal: proposal() });
+		expect(committed.status === 'message' && committed.message.type).toBe('phase_checkpoint_commit_v1');
+		expect(coordinator.getStats().disputedRooms).toBe(0);
+	});
+
+	it('freezes only after the observer mismatch budget is exhausted', () => {
+		const coordinator = createP2PPhaseCheckpointCoordinator();
+		const liar = proposal({ stateRoot: '2'.repeat(64) });
+		for (let strike = 0; strike < 2; strike++) {
+			coordinator.submit({ roomId: 'room', peerId: 'a', proposal: proposal() });
+			coordinator.submit({ roomId: 'room', peerId: 'b', proposal: liar });
+		}
+		coordinator.submit({ roomId: 'room', peerId: 'a', proposal: proposal() });
+		const frozen = coordinator.submit({ roomId: 'room', peerId: 'b', proposal: liar });
+		expect(frozen.status === 'message' && frozen.message.type).toBe('phase_checkpoint_dispute_v1');
 		expect(coordinator.getStats().disputedRooms).toBe(1);
 	});
 
-	it('rejects equivocation without retaining unbounded votes', () => {
+	it('keeps the first vote when one peer equivocates and does not freeze the room', () => {
 		const coordinator = createP2PPhaseCheckpointCoordinator();
 		coordinator.submit({ roomId: 'room', peerId: 'a', proposal: proposal() });
 		const result = coordinator.submit({
@@ -73,7 +104,11 @@ describe('P2P phase checkpoint coordinator', () => {
 		});
 		expect(result.status).toBe('message');
 		if (result.status !== 'message' || result.message.type !== 'phase_checkpoint_dispute_v1') return;
+		expect(result.recipients).toBe('sender');
 		expect(result.message.reason).toBe('equivocation');
+		expect(coordinator.getStats().disputedRooms).toBe(0);
+		const committed = coordinator.submit({ roomId: 'room', peerId: 'b', proposal: proposal() });
+		expect(committed.status === 'message' && committed.message.type).toBe('phase_checkpoint_commit_v1');
 	});
 
 	it('chains the next epoch to the previous committed checkpoint', () => {

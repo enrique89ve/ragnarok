@@ -3,11 +3,16 @@
 > **Status**: Historical — absorbed.
 >
 > Los cinco invariantes de este documento (match session binding, gameState
-> authentication, identity binding, result proposal correlation, dual-sig sin
+> authenticity, identity binding, result proposal correlation, dual-sig sin
 > fallback) ya son canon en
 > [`PVP_WIRE_PROTOCOL.md`](./PVP_WIRE_PROTOCOL.md) (hardening invariants).
 > Este archivo se conserva como registro de decisiones; no editar para reflejar
 > el estado actual.
+>
+> **OPEN-8 note (2026-08-19):** the body below still talks about host
+> `gameState` at ~2/sec. Live cards path no longer dumps forward state;
+> host `gameState` is recovery-on-`hash_mismatch` only. Integrity is
+> `prevStateHash` on `game_command` plus host `hash_check`.
 
 **Status**: Implementing
 **Date**: 2026-03-19

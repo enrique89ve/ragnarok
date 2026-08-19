@@ -9,7 +9,8 @@ import { GameContext } from '../../../GameContext';
 import { Card, SpellEffect } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
 import { MAX_HAND_SIZE } from '../../../constants/gameConstants';
-import { cryptoRng, cryptoIdGen } from '../../../utils/seededRng';
+import { cryptoIdGen } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 export default function executeCopyFromOpponent(
   context: GameContext, 
@@ -45,7 +46,7 @@ export default function executeCopyFromOpponent(
       };
     }
     
-    const shuffled = [...sourcePool].sort(() => cryptoRng() - 0.5);
+    const shuffled = [...sourcePool].sort(() => cardsRng() - 0.5);
     const toCopy = shuffled.slice(0, copyCount);
     
     const copiedCards: string[] = [];

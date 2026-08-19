@@ -41,6 +41,7 @@ if (typeof localStorage !== 'undefined') {
 export type GameFlowStore = {
 	readonly current: RoundFlowState | null;
 	readonly start: (input: InitialFlowInput) => void;
+	readonly hydrate: (state: RoundFlowState) => void;
 	readonly dispatch: (event: FlowEvent) => void;
 	readonly clear: () => void;
 };
@@ -50,6 +51,10 @@ export const useGameFlowStore = create<GameFlowStore>()((set) => ({
 
 	start: (input) => {
 		set({ current: initialState(input) });
+	},
+
+	hydrate: (state) => {
+		set({ current: state });
 	},
 
 	dispatch: (event) => {

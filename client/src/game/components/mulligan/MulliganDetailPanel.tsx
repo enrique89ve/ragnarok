@@ -2,7 +2,30 @@ import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { CardInstance } from '../../types';
 import { toMulliganSimpleCardData } from '../MulliganCard';
+import type { SimpleCardData } from '../card/SimpleCardCompat';
 import { adaptCardKeywordsForPresentation } from '../card/cardKeywordPresentationAdapter';
+import {
+	getBloodPriceChromeFaq,
+	getElementChromeFaq,
+	getPetStageChromeFaq,
+	getRarityChromeFaq,
+} from '../card/cardChromeFaq';
+
+const PET_STAGE_FAQ: Record<string, number> = {
+	basic: 1,
+	adept: 2,
+	master: 3,
+};
+
+const readMulliganChromeLines = (card: SimpleCardData): readonly string[] => {
+	const petStage = card.petStage ? PET_STAGE_FAQ[card.petStage] : undefined;
+	return [
+		card.element && card.element !== 'neutral' ? getElementChromeFaq(card.element) : null,
+		card.bloodPrice && card.bloodPrice > 0 ? getBloodPriceChromeFaq(card.bloodPrice) : null,
+		petStage !== undefined ? getPetStageChromeFaq(petStage) : null,
+		card.rarity ? getRarityChromeFaq(card.rarity) : null,
+	].filter((line): line is string => Boolean(line));
+};
 
 /*
   MulliganDetailPanel — contextual keyword tooltip.
@@ -72,7 +95,8 @@ export const MulliganDetailPanel: React.FC<MulliganDetailPanelProps> = ({
     limit: null,
     labelMode: 'full',
   }).entries;
-  const hasInspectionText = keywordEntries.length > 0 || Boolean(card.description);
+  const chromeLines = readMulliganChromeLines(card);
+  const hasInspectionText = keywordEntries.length > 0 || chromeLines.length > 0 || Boolean(card.description);
   if (!hasInspectionText) return null;
 
   const position = resolveTooltipPosition(anchorRect);
@@ -85,6 +109,18 @@ export const MulliganDetailPanel: React.FC<MulliganDetailPanelProps> = ({
 
   const tooltipContent = (
     <>
+      {chromeLines.length > 0 && (
+        <section className={keywordEntries.length > 0 || card.description ? 'mb-2.5' : ''}>
+          <div className="mb-2 text-[9px] font-bold uppercase tracking-[2.5px] text-amber-400/75">
+            Card marks
+          </div>
+          <ul className="space-y-1.5 text-xs leading-[1.45] text-gray-200/90">
+            {chromeLines.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </section>
+      )}
       {keywordEntries.length > 0 && (
         <section>
           <div className="mb-2 text-[9px] font-bold uppercase tracking-[2.5px] text-amber-400/75">

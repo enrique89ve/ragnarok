@@ -12,7 +12,7 @@ import { EffectResult } from '../../../types/EffectTypes';
 import { MAX_BATTLEFIELD_SIZE } from '../../../constants/gameConstants';
 import { v4 as uuidv4 } from 'uuid';
 import { hasKeyword } from '../../../utils/cards/keywordUtils';
-import { cryptoRng } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 
 /**
@@ -81,13 +81,13 @@ export default function executeSummonCopy(
     } else if (copyTarget === 'random_friendly') {
       const friendlyMinions = context.getFriendlyMinions();
       if (friendlyMinions.length > 0) {
-        const randomMinion = friendlyMinions[Math.floor(cryptoRng() * friendlyMinions.length)];
+        const randomMinion = friendlyMinions[Math.floor(cardsRng() * friendlyMinions.length)];
         cardToCopy = randomMinion.card;
       }
     } else if (copyTarget === 'random_enemy') {
       const enemyMinions = context.getEnemyMinions();
       if (enemyMinions.length > 0) {
-        const randomMinion = enemyMinions[Math.floor(cryptoRng() * enemyMinions.length)];
+        const randomMinion = enemyMinions[Math.floor(cardsRng() * enemyMinions.length)];
         cardToCopy = randomMinion.card;
       }
     }

@@ -10,7 +10,7 @@ import { GameContext } from '../../../GameContext';
 import { CardData, CardInstance, DeathrattleEffect } from '../../../types';
 import { EffectResult } from '../../../types/EffectTypes';
 import { addKeyword } from '../../../utils/cards/keywordUtils';
-import { cryptoRng } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 /**
  * Execute a buff deathrattle effect
@@ -46,13 +46,13 @@ export default function executeBuffBuff(
       case 'random_friendly_minion':
         const friendly = context.getFriendlyMinions();
         if (friendly.length > 0) {
-          targets = [friendly[Math.floor(cryptoRng() * friendly.length)] as any];
+          targets = [friendly[Math.floor(cardsRng() * friendly.length)] as any];
         }
         break;
       case 'random_enemy_minion':
         const enemies = context.getEnemyMinions();
         if (enemies.length > 0) {
-          targets = [enemies[Math.floor(cryptoRng() * enemies.length)] as any];
+          targets = [enemies[Math.floor(cardsRng() * enemies.length)] as any];
         }
         break;
       default:

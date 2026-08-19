@@ -3,10 +3,10 @@
 .persistent-turn-badge {
 	position: absolute;
 	box-sizing: border-box;
-	top: var(--poker-zone-turnBadge-y, 14px);
-	left: var(--poker-zone-turnBadge-x, 16px);
-	width: var(--poker-zone-turnBadge-w, 152px);
-	height: var(--poker-zone-turnBadge-h, 48px);
+	top: var(--poker-zone-turnBadge-y);
+	left: var(--poker-zone-turnBadge-x);
+	width: var(--poker-zone-turnBadge-w);
+	height: var(--poker-zone-turnBadge-h);
 	min-height: 0;
 	z-index: 9500;
 	display: inline-flex;
@@ -19,7 +19,7 @@
 	font-weight: 900;
 	text-transform: uppercase;
 	pointer-events: none;
-	transform: rotate(var(--poker-zone-turnBadge-rot, 0deg));
+	transform: rotate(var(--poker-zone-turnBadge-rot));
 	transform-origin: top left;
 	isolation: isolate;
 	overflow: hidden;

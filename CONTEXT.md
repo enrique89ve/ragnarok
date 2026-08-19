@@ -55,7 +55,7 @@ _Avoid_: Finished game, ranked launch, settlement complete, every OPEN in the wi
 
 **Chess-Poker P2P Spine**:
 The only P2P gameplay path that must stay fluid: `chess → poker_combat → chess → game_over`, with optional instant-kill captures that never leave chess. Both peers apply chess and poker locally from shared seed and intent envelopes. The relay compares opaque **Phase Checkpoint** roots only at those phase changes.
-_Avoid_: Server simulating chess or poker, host-authored poker state, skipping checkpoints, treating cards-phase host sync as the P2P match spine
+_Avoid_: Server simulating chess or poker, host-authored poker state, skipping checkpoints, treating cards host `gameState` recovery dumps as the P2P match spine (cards apply is already symmetric; OPEN-8 closed)
 
 **Phase Checkpoint**:
 A fixed-size agreement at a legal phase boundary. Each peer submits `phase_checkpoint_propose_v1` with a 32-byte `stateRoot`; the relay emits commit if both roots match or dispute/freeze if they differ. Allowed transitions are only `chess ↔ poker_combat` and `* → game_over`. A commit proves peer agreement, not objective legality.

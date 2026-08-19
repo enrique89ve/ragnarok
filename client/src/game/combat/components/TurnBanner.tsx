@@ -8,7 +8,7 @@ interface TurnBannerProps {
 }
 
 export const TurnBanner: React.FC<TurnBannerProps> = ({ currentTurn }) => {
-	const badgeRotation = 'var(--poker-zone-turnBadge-rot, 0deg)';
+	const badgeRotation = 'var(--poker-zone-turnBadge-rot)';
 	const badge = getPokerTurnBadgePresentation(currentTurn);
 	if (!badge) return null;
 

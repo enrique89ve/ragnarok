@@ -9,7 +9,8 @@ import { GameContext } from '../../../GameContext';
 import { Card, BattlecryEffect, CardInstance } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
 import { MAX_HAND_SIZE } from '../../../constants/gameConstants';
-import { cryptoRng, cryptoIdGen } from '../../../utils/seededRng';
+import { cryptoIdGen } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 export default function executeGiveCards(
   context: GameContext,
@@ -60,7 +61,7 @@ export default function executeGiveCards(
       }
       
       const newCardInstance: CardInstance = {
-        instanceId: `given-${cardToGive.id}-${cryptoIdGen()}-${i}-${cryptoRng().toString(36).substr(2, 9)}`,
+        instanceId: `given-${cardToGive.id}-${cryptoIdGen()}-${i}-${cardsRng().toString(36).substr(2, 9)}`,
         card: cardToGive,
         canAttack: false,
         isPlayed: false,

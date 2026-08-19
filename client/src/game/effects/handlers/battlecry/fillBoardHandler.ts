@@ -13,7 +13,7 @@ import cardDatabase from '../../../services/cardDatabase';
 import { v4 as uuidv4 } from 'uuid';
 import { isMinion, getAttack, getHealth } from '../../../utils/cards/typeGuards';
 import { MAX_BATTLEFIELD_SIZE } from '../../../constants/gameConstants';
-import { cryptoRng } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 
 /**
@@ -64,7 +64,7 @@ export default function executeFillBoard(
           break;
         }
         
-        const randomIndex = Math.floor(cryptoRng() * candidateMinions.length);
+        const randomIndex = Math.floor(cardsRng() * candidateMinions.length);
         const selectedCard = candidateMinions[randomIndex];
         
         const cardId = typeof selectedCard.id === 'number' ? selectedCard.id : parseInt(String(selectedCard.id), 10) || 99990;

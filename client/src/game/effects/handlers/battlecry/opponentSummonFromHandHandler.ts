@@ -9,7 +9,8 @@ import { GameContext } from '../../../GameContext';
 import { Card, BattlecryEffect, CardInstance } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
 import { MAX_BATTLEFIELD_SIZE } from '../../../constants/gameConstants';
-import { cryptoRng, cryptoIdGen } from '../../../utils/seededRng';
+import { cryptoIdGen } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 export default function executeOpponentSummonFromHand(
   context: GameContext,
@@ -41,7 +42,7 @@ export default function executeOpponentSummonFromHand(
     for (let i = 0; i < count && minionsInHand.length > 0; i++) {
       if (context.opponentPlayer.board.length >= MAX_BATTLEFIELD_SIZE) break;
       
-      const randomIndex = Math.floor(cryptoRng() * minionsInHand.length);
+      const randomIndex = Math.floor(cardsRng() * minionsInHand.length);
       const minionToSummon = minionsInHand[randomIndex];
       
       const handIndex = context.opponentPlayer.hand.indexOf(minionToSummon);

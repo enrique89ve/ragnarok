@@ -23,7 +23,13 @@
   overflow: hidden;
   z-index: 1;
   background:
-    linear-gradient(180deg, rgba(0, 2, 5, 0.76) 0%, rgba(0, 2, 5, 0.58) 46%, rgba(0, 2, 5, 0.82) 100%),
+    radial-gradient(
+      ellipse 54% 70% at 50% 48%,
+      rgba(0, 2, 5, 0.58) 0%,
+      rgba(0, 2, 5, 0.58) 38%,
+      rgba(0, 2, 5, 0.28) 68%,
+      rgba(0, 2, 5, 0.10) 100%
+    ),
     url("/art/campaign/campaign-moba-forest-background-v1.png") center / cover no-repeat,
     #000;
 }

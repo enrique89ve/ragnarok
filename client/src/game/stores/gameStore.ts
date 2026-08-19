@@ -9,7 +9,8 @@ import {
   processOpponentSpellPetSetup,
   autoAttackWithAllCards
 } from '../utils/gameUtils';
-import { cryptoRng, cryptoIdGen, createSeededRng, createSeededIdGen } from '../utils/seededRng';
+import { cryptoRng, cryptoIdGen, createSeededRng, createSeededIdGen, seededRngFromString } from '../utils/seededRng';
+import type { SeededRng } from '@shared/p2p-wire/rng';
 import type { HiveCardAsset } from '../../data/schemas/HiveTypes';
 import { useMulliganStore } from './mulliganStore';
 import { useDiscoveryStore } from './discoveryStore';
@@ -31,6 +32,7 @@ import { usePeerStore } from './peerStore';
 import { computeStateHash } from '../engine/engineBridge';
 import { GAME_COMMAND_TYPES, applyGameCommand, applyOpponentCommand, type GameCommand } from '../core/commands';
 import { applyGameCommandToStore } from './gameCommandStoreAdapter';
+import { buildHandshakeGameState, type CardsDeckAnnounce } from '../p2p/cardsDeckHandshake';
 
 // ============== BATTLEFIELD DEBUG MONITOR ==============
 // Track battlefield changes with stack traces to identify root cause of minion disappearance
@@ -107,12 +109,24 @@ interface GameStore {
   // Game actions
   initGame: () => void;
   /**
-   * Initialize gameState deterministically from a P2P matchSeed (commit-reveal
-   * output). Host-only entry point: the host calls this after seed exchange
-   * resolves, then sends the resulting gameState to the client via the `init`
-   * envelope. The client adopts via `setState` directly and never calls this.
+   * Deterministic init from matchSeed using this browser's local deck only.
+   * Not the live P2P path — prefer `initGameFromHandshake`.
    */
   initGameWithSeed: (matchSeed: string) => void;
+  /**
+   * Live P2P cards init: local + remote `cards_deck` announces, canonical-side id gens.
+   */
+  initGameFromHandshake: (input: {
+    readonly matchSeed: string;
+    readonly myCanonicalSide: 'player' | 'opponent';
+    readonly localDeck: CardsDeckAnnounce;
+    readonly remoteDeck: CardsDeckAnnounce;
+  }) => void;
+  /**
+   * Bind the cards RNG stream from matchSeed without rebuilding gameState.
+   * Guest uses this at seed_reveal so later local apply shares the host stream.
+   */
+  bindCardsRng: (matchSeed: string) => void;
   playCard: (cardId: string, targetId?: string, targetType?: 'minion' | 'hero', insertionIndex?: number, payWithBlood?: boolean) => void;
   /**
    * Apply a command issued by the opponent (P2P host receiving remote peer's envelope).
@@ -146,6 +160,12 @@ interface GameStore {
   // UI actions
   setHoveredCard: (card: CardInstance | CardInstanceWithCardData | null) => void;
   hoveredCard: CardInstance | null;
+}
+
+let cardsRng: SeededRng | null = null;
+
+function commandRng(): () => number {
+	return cardsRng ?? cryptoRng;
 }
 
 // Guard: prevents a second attack from being initiated while one is already animating
@@ -198,6 +218,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
 
     const { selectedDeck, selectedHero, selectedHeroId } = useGame.getState();
     const hiveCollection = readHiveCollection();
+    cardsRng = null;
 
     set({
       gameState: initializeGameSeeded({
@@ -234,6 +255,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
     const rng = createSeededRng(matchSeed);
     const playerIdGen = createSeededIdGen(matchSeed, 'p1');
     const opponentIdGen = createSeededIdGen(matchSeed, 'p2');
+    get().bindCardsRng(matchSeed);
 
     set({
       matchSeed,
@@ -253,6 +275,28 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
     });
   },
 
+  bindCardsRng: (matchSeed: string) => {
+    cardsRng = seededRngFromString(`${matchSeed}:cards`);
+  },
+
+  initGameFromHandshake: (input) => {
+    if (autoEndTurnTimer) { clearTimeout(autoEndTurnTimer); autoEndTurnTimer = null; }
+    isAttackProcessing = false;
+    isAITurnProcessing = false;
+    if (attackWatchdogTimer) { clearTimeout(attackWatchdogTimer); attackWatchdogTimer = null; }
+
+    get().bindCardsRng(input.matchSeed);
+    set({
+      matchSeed: input.matchSeed,
+      myCanonicalSide: input.myCanonicalSide,
+      gameState: buildHandshakeGameState(input),
+      selectedCard: null,
+      hoveredCard: null,
+      attackingCard: null,
+      heroTargetMode: false,
+    });
+  },
+
   playCard: (cardId: string, targetId?: string, targetType?: 'minion' | 'hero', insertionIndex?: number, payWithBlood?: boolean) => {
     const { gameState } = get();
     const command = {
@@ -265,6 +309,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
     } as const;
     const result = applyGameCommand(gameState, command, {
       isAiSimulationMode: isAISimulationMode,
+      rng: commandRng(),
     });
 
     applyGameCommandToStore({
@@ -279,6 +324,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
     const { gameState } = get();
     const result = applyOpponentCommand(gameState, command, {
       isAiSimulationMode: isAISimulationMode,
+      rng: commandRng(),
     });
 
     applyGameCommandToStore({
@@ -316,6 +362,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
     const command = { type: GAME_COMMAND_TYPES.endTurn } as const;
     const result = applyGameCommand(gameState, command, {
       isAiSimulationMode: isAISimulationMode,
+      rng: commandRng(),
     });
 
     applyGameCommandToStore({
@@ -434,6 +481,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
       } as const;
       const result = applyGameCommand(gameState, command, {
         isAiSimulationMode: isAISimulationMode,
+        rng: commandRng(),
       });
 
       // Animation: matches original — fires for valid attempts, suppressed only on windfury rejection
@@ -530,6 +578,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
     if (autoEndTurnTimer) { clearTimeout(autoEndTurnTimer); autoEndTurnTimer = null; }
     isAITurnProcessing = false;
     debug.log('Resetting game state to initial values');
+    cardsRng = null;
     set({
       gameState: initializeGame(),
       matchSeed: null,
@@ -680,6 +729,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
     } as const;
     const result = applyGameCommand(gameState, command, {
       isAiSimulationMode: isAISimulationMode,
+      rng: commandRng(),
     });
 
     applyGameCommandToStore({

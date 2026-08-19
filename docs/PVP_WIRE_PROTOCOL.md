@@ -16,6 +16,8 @@ match-result flow, the transcript pipeline, or the matchmaking surface.
   it is not submitted by the current testnet match flow.
 - `P2P_SECURITY_HARDENING.md` — five security invariants enforced over this
   wire (still valid; folded into §6 below for context).
+- `P2P_MATCH_RESUME.md` — same-tab reconnect, hard-reload snapshot, observer
+  rules. IndexedDB is a local cache, not match authority.
 - `P2P_TICKET_SECURITY_VALIDATION.md` — focused validation matrix for relay
   tickets, Origin checks, subprotocol handling, logging boundaries, and the
   poker P2P adapter seam.
@@ -116,9 +118,9 @@ hop. For a turn-based card game this latency is negligible.
 - Maximum 2 peers per room (`ROOM_MAX_PEERS`, `p2pRelay.ts:31`).
 - When the room reaches 2 peers, the relay sends `__sys.event=open` to
   each. `isHost=true` belongs to the lexicographically smaller `peerId`, so
-  reconnect order cannot flip cards authority. This `isHost` is a **transport-level
-  hint**, used to break ties during seed exchange. It does NOT confer
-  authority by itself.
+  reconnect order cannot flip transport host (seed parity, cards hash frame,
+  recovery publisher). This `isHost` is a **transport-level hint**. It does
+  NOT confer cards gameplay authority by itself (OPEN-8: both peers apply).
 - A peer departure (close or error) sends `__sys.event=close` to the
   survivor. Socket membership is garbage-collected when empty; its constant-size
   checkpoint tombstone remains for 120s and is removed by a global sweep.
@@ -143,8 +145,9 @@ app-level `heartbeat` envelope (sent by `useWireSync`) runs on top.
 
 **Latency and reconnect policy (P0)**:
 - User actions are sent as compact intent envelopes, not full state dumps.
-  Chess/poker carry the minimum semantic action plus optional compact tuples;
-  full `gameState` sync remains a transitional cards-phase fallback.
+  Chess/poker carry the minimum semantic action plus optional compact tuples.
+  Cards applies `game_command` locally on both peers; host `gameState` is
+  recovery-on-`hash_mismatch` only (OPEN-8 closed).
 - Same-tab network loss enters `grace_period`/`reconnecting`; the local seed,
   transcript, seq counters, chess sender state, and queued messages are
   preserved. Reconnect allows two automatic attempts inside a 60s window
@@ -162,10 +165,10 @@ app-level `heartbeat` envelope (sent by `useWireSync`) runs on top.
   60s disconnect threshold before match loss during its RPS / pre-battle flow,
   while tournament rules often count a mid-match disconnect as a loss unless
   both players/admin agree.
-- A hard page reload is still not full recovery: the browser loses in-memory
-  game/chess/poker stores. The UI warns via `beforeunload` during an active
-  P2P match. Full reload recovery requires a persisted match snapshot and a
-  replay-applying recovery path, not only the encrypted action log.
+- A hard page reload restores from the local sealed snapshot (see
+  `P2P_MATCH_RESUME.md`) and rejoins the room with the same 2-attempt / 60s
+  window. The relay does not hold the board. Ranked replay from the signed
+  action log remains deferred (ADR 0007).
 
 ---
 
@@ -245,37 +248,30 @@ Triggered by `useWireSync.ts:166-251` (effect dependent on
 2. Each peer also sends `version_check` (build hash) and `wasm_hash_check`
    (game-engine WASM hash) for transparency. WASM mismatch disconnects
    immediately (`useWireSync.ts:361-372`); build mismatch only warns.
-3. Each peer sends `army_announcement` with their selected army so both
-   sides can render hero portraits and the host can build a deterministic
-   initial gameState (`useWireSync.ts:208-218`).
+3. Each peer sends `army_announcement` (chess portraits) and `cards_deck`
+   (hero class, card ids, NFT levels) so both sides can finish handshake
+   init after `seed_reveal`.
 4. On receiving the opponent's `seed_commit`, each peer sends
-   `seed_reveal: { salt, hiveUsername }` (`useWireSync.ts:434-438`).
+   `seed_reveal: { salt, hiveUsername }`.
 5. On receiving `seed_reveal`, the receiver:
-   - Verifies `SHA256(theirSalt) === theirCommitment`. Mismatch →
-     disconnect (`useWireSync.ts:449-455`).
+   - Verifies `SHA256(theirSalt) === theirCommitment`. Mismatch → disconnect.
    - Derives `matchSeed = SHA256(sortedSalts.join(''))` where sorting is
-     by lexicographical peer-id order (`useWireSync.ts:457-463`).
-   - Derives `matchId = SHA256(matchSeed + sortedPeerIds.join('')).slice(0,16)`
-     (`useWireSync.ts:483-502`). Sorting matters: cards is host-auth so the
-     client never compared, but chess Plan B is symmetric and both peers
+     by lexicographical peer-id order.
+   - Derives `matchId = SHA256(matchSeed + sortedPeerIds.join('')).slice(0,16)`.
+     Sorting matters: chess and cards both hash symmetrically, so both peers
      must arrive at the same value. Bug fixed in commit `dd9112c`.
    - Derives `myCanonicalSide = parity(matchSeed[0]) XOR isHost` →
-     `'player' | 'opponent'` (`shared/p2p-wire/chess.ts:124-132`,
-     `useWireSync.ts:469`). This is the canonical (global) side, NOT
-     viewer-relative. Both peers agree on which side is which.
-   - Stores `opponentUsernameRef.current = data.hiveUsername`
-     (`useWireSync.ts:511-513`).
-   - Both peers initialize the chess engine RNG from `matchSeed` so any
-     chess-side randomness (mine placements, mine ids) converges
-     (`useWireSync.ts:478-480`).
-   - The HOST builds the authoritative initial `gameState` via
-     `initGameWithSeed(matchSeed)` and sends it as `init`
-     (`useWireSync.ts:515-528`).
-6. The non-host applies the `init` after flipping the gameState perspective
-   (`useWireSync.ts:532-536` + `flipGameState`).
+     `'player' | 'opponent'` (`shared/p2p-wire/chess.ts`). This is the
+     canonical (global) side, NOT viewer-relative.
+   - Stores the opponent Hive username from the reveal payload.
+   - Both peers initialize the chess engine RNG from `matchSeed`.
+   - Both peers bind `${matchSeed}:cards` and call `initGameFromHandshake`
+     once seed + both `cards_deck` announces are present.
+6. Live cards init does not wait on host `init`. A leftover `init` envelope
+   is ignored once `p2pInitApplied` is set. Guest recovery `gameState`
+   (hash mismatch only) still applies through `flipGameState`.
 
-Seed exchange has a 10s timeout (`useWireSync.ts:262-269`). On timeout, the
-peer disconnects.
+Seed exchange has a 10s timeout. On timeout, the peer disconnects.
 
 ### Phase 3 — Move Loop
 
@@ -345,14 +341,15 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `version_check` | both | both | Phase 2: build-hash diagnostic |
 | `wasm_hash_check` | both | both | Phase 2: engine-hash check (disconnect on mismatch) |
 | `army_announcement` | both | both | Phase 2: announce selected chess army |
+| `cards_deck` | both | both | Phase 2: announce cards hero + deck ids + NFT levels for both-peer init |
 | `deck_verify` | both | both | Phase 2: announce source-aware `protocolVersion: 2` deck claims for cross-verification |
-| `init` | host → client | host only | Phase 2: send authoritative initial gameState, compressed as `json+gzip+base64url@1` |
-| `game_command` (envelope) | client → host | client | Phase 3 cards: requests an action from host |
-| `gameState` | host → client | host | Phase 3 cards: sync authoritative state (debounced), compressed as `json+gzip+base64url@1` |
+| `init` | host → client | legacy | Phase 2 leftover: ignored after handshake init |
+| `game_command` (envelope) | both | both | Phase 3 cards: intent; both peers apply locally |
+| `gameState` | host → client | host recovery | `hash_mismatch` recovery snapshot only, compressed as `json+gzip+base64url@1` |
 | `chess_command` (envelope) | both | both (symmetric) | Phase 3 chess: discriminated union of `chess_move` (quiet), `chess_attack` (instant-kill capture), and `chess_combat_initiated` (non-instant capture into poker) — see §5 |
 | `transition_receipt_v1` | receiver → command sender | both (symmetric) | Post-commit chess receipt binding the command intent to the receiver's pre/post chess+cards integrity roots. A rejection or root mismatch quarantines further local chess actions. |
 | `phase_checkpoint_propose_v1` | peer → relay | both | Fixed-size proposal for a deterministic phase boundary; consumed by the relay and never fanned out. |
-| `phase_checkpoint_commit_v1` / `phase_checkpoint_dispute_v1` | relay → peers inside `__sys.event=phase_checkpoint` | relay only | Confirms identical proposals or freezes the room on disagreement. |
+| `phase_checkpoint_commit_v1` / `phase_checkpoint_dispute_v1` | relay → peers inside `__sys.event=phase_checkpoint` | relay only | Commit if roots match. Mismatch retries; freeze only after 3 strikes. The relay never picks a winner. |
 | `poker_action` | both | both (symmetric) | Phase 3 poker: deterministic local apply + relay to peer; includes optional compact tuple for transcript/DataChannel migration |
 | `hash_check` | host → client | host | Periodic state-hash sanity check |
 | `hash_mismatch` | client → host | client | Reports a divergent state hash |
@@ -361,12 +358,12 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `result_reject` | loser → winner | loser | Compatibility response; current client returns `signature_deferred` without opening Keychain |
 | `heartbeat` | both | both | App-level keepalive |
 | `ping` / `pong` | both | both | Lower-level RTT probe |
-| `opponentDisconnected` | (relay only) | relay | Surfaced to UI |
+| `opponentDisconnected` | — | — | **Dropped.** Not a legal relay type. Departure is `__sys.close` only. |
 | `spectator_state` | host | host | Future / unused in beta |
 | `session_authorize` | peer→peer | both | Future ranked/settlement path: broadcast `{ matchId, ephemeralPubkey, hiveSig }` signed with Hive Posting authority so the opponent binds the ephemeral signing key to the Hive identity. Closed-beta full NFT gameplay skips this prompt; NFT custody is enforced by deck verification while P2P RUNE/ELO settlement remains disabled. |
 | `session_renewal` | peer→peer | both | **Future ADR 0004 settlement path**; disabled because current matches cannot request a reload Keychain signature |
 | `session_resumed` | peer→peer | both | **Future ADR 0004 settlement path**; not a current testnet release gate |
-| `state_sync_request` | peer→peer | both | **Future signed-log recovery path**; not a current testnet release gate |
+| `state_sync_request` | peer→peer | both | Ask the **peer** for missing transcript leaves after reconnect or hard-reload rejoin. The relay only fans the request out. |
 | `action_envelope` | peer→peer | broadcaster | **Future ADR 0004 settlement path**: per-action signed envelope; current gameplay uses its existing deterministic command envelopes |
 
 Envelope schemas live next to their handlers:
@@ -394,50 +391,37 @@ The deliberate omission of `p2p-host-authoritative` /
 matches are symmetric by design**. Both peers compute and apply each phase
 identically; the wire carries intent, not delegation.
 
-This is the **target** shape. The current code base has two transitional
-exceptions, both tracked as open work:
+Cards apply is symmetric (OPEN-8). Poker already applies `poker_action`
+symmetrically. Hashing still uses the host-as-player frame
+(`isCardsHostFrame`); forward `gameState` dumps are off.
 
-- **Cards phase** runs host-authoritative today (see subsection below).
-  Migration to symmetric tracked in **OPEN-8**.
-- **Poker phase** is being migrated to symmetric in P0: both peers apply
-  the same deterministic `poker_action`, with the relay carrying intent.
-
-While these transitions persist, the bridge layer (today
-`client/src/game/hooks/useWireSync.ts`, scheduled to move under
-`client/src/game/match/modes/p2p/wireSync/` - see
-`TESTNET_READINESS_FAST_TRACK.md`) carries the host/client distinction internally
-by reading `authority.myRole === 'first-mover'`. The wire envelope schemas
-themselves are agnostic to authority; each receiver resolves authority
-locally via `deriveAuthority`.
+Cards-authority *dumps* go through `isCardsAuthorityRole` (false in the
+default symmetric mode). Do not read `peerStore.isHost` as a gameplay-authority
+proxy. Recovery snapshots and the hash beacon still use the transport host.
 
 The single most important piece of context to hold when working on the
 wire is: **a wrong authority assumption causes silent state divergence**.
 Read `deriveAuthority` once at the entry point, propagate the result —
 never re-derive ad-hoc with `isHost`.
 
-### Cards Phase — Host-Authoritative (transitional, OPEN-8)
+### Cards Phase — Symmetric apply, host recovery (OPEN-8)
 
-Pattern: client sends `game_command`, host validates and applies, host
-broadcasts authoritative `gameState` periodically.
+Pattern: both peers announce `cards_deck`, call `initGameFromHandshake`,
+send `game_command`, and apply locally. The transport host still sends
+`hash_check` and a `gameState` snapshot on `hash_mismatch`. There is no
+forward `gameState` dump after each action.
 
 Implementation:
-- Client wraps every action (`playCard`, `attack`, `endTurn`,
-  `useHeroPower`) with `sendCommandEnvelope`
-  (`useWireSync.ts:1170-1218`). The client does NOT apply locally when
-  acting as `!isHost && connectionState === 'connected'`
-  (`useWireSync.ts:1226-1238`); it waits for the host's gameState sync.
-- Host receives `game_command`, runs the validation pipeline
-  (`useWireSync.ts:540-723`), applies via `applyOpponentCommand` to the
-  unified store, and emits a debounced `gameState` sync.
-- The wire envelope carries `prevStateHash` (a quickhash of the host's
-  pre-apply state). Host rejects if it doesn't match — this catches
-  the fast-double-click race where the client sends two commands that
-  reference the same pre-state but the host has already advanced.
-- Cooldown of 250ms between client envelopes (`useWireSync.ts:1180-1185`)
-  caps how fast the client can send.
-
-The host's transcript is the authoritative one; the client's is a local
-copy for QA export.
+- Local action plan: `planCardsLocalAction` in
+  `client/src/game/match/modes/p2p/wireSync/cardsWirePlan.ts`.
+- Remote `game_command` applies on both peers after `p2pInitApplied`.
+  `prevStateHash` uses `isCardsHostFrame` so the guest hashes the
+  host-canonical flip.
+- Both peers bind `${matchSeed}:cards` at `seed_reveal` and init from the
+  shared deck handshake (`cards_deck` + `initGameFromHandshake`).
+- Cards-side command RNG is `commandRng()` / `cardsRng()` from
+  `${matchSeed}:cards`. `cryptoRng` is the SP fallback when `matchSeed`
+  is null.
 
 ### Chess Phase — Symmetric (canonical)
 
@@ -619,7 +603,8 @@ against the local user's `getNFTBridge().getUsername()`
 effect):
 1. `matchId` binds every action envelope to a specific match — replays
    across matches are rejected.
-2. `gameState` carries `stateHash` for tamper detection (cards path).
+2. Cards integrity uses `prevStateHash` on `game_command` plus host
+   `hash_check` / `hash_mismatch` recovery snapshots (not forward dumps).
 3. `seed_reveal.hiveUsername` is the only place identity is announced;
    `deck_verify` cross-verifies source-aware deck claims (`starter-entitlement`,
    `nft-custody`, or reset-epoch-scoped `qa_full_catalog`) against the chain
@@ -818,19 +803,15 @@ replay from `shared/p2p-wire/combat.ts`, and two-browser smoke evidence.
 
 ### OPEN-5 — Disconnect / reconnect mid-match
 
-**Status**: P0 same-tab reconnect implemented. `peerStore` keeps the
-outgoing buffer during reconnect, gives the disconnected side up to 60s,
-uses two automatic reconnect attempts, and flushes queued messages after
-reopen. `useWireSync` preserves seed/session refs while the transport is in
-`grace_period`/`reconnecting`, avoids re-seeding on reconnect, and asks the
-peer for missing transcript leaves via `state_sync_request`. The close
-handler no longer treats a transient close as immediate slash evidence.
+**Status**: closed for Alfa / gameplay-only testnet. See
+[`P2P_MATCH_RESUME.md`](./P2P_MATCH_RESUME.md).
 
-**Remaining**: accidental hard reload is guarded by a `beforeunload` warning,
-not fully recovered. Full reload recovery needs persisted room metadata,
-match/chess/poker snapshots, and deterministic replay from the signed action
-log. Mobile `pagehide`/OS-kill cannot be prevented, so ranked public testing
-should still treat full reload recovery as a live risk until that slice lands.
+Same-tab reconnect, sealed local snapshot, 2 relay attempts / 60s, observer
+checkpoint retries, no HTTP kick of the opponent, no peer-authored disconnect
+frame. The server does not store or judge the board.
+
+**Not this ticket**: ranked `action-log` replay (ADR 0007 / OPEN ranked
+settlement). Cards no longer take *forward* host `gameState`; recovery-on-mismatch remains.
 
 ### OPEN-6 — `result_propose` matchType field source-of-truth
 
@@ -840,23 +821,16 @@ when the result is packaged — the wire never tells the host whether the
 match was ranked, casual, or tournament. Today this is implicit (the
 matchmaking endpoint that originated the match knows).
 
-**Decision needed**: should `matchType` ride the `init` envelope as
-authoritative? Or is it OK to derive client-side from local context?
+**Decision needed**: should `matchType` ride an early match envelope
+(seed/`cards_deck`/matchmaking context) as authoritative? Or is it OK to
+derive client-side from local context? Do not reopen host `init` for this.
 
 ### OPEN-8 — Audit gameState wire and migrate to recovery-on-mismatch
 
-**Where**: today the host sends full `gameState` snapshots (~31KB raw,
-gzip-framed below the 16 KB relay cap)
-debounced post-command (host→client) regardless of whether the client
-needs it. `hash_check` currently records deferred slash evidence, not state
-recovery.
-
-**Decision needed**: refactor so `gameState` flows ONLY when a
-`hash_mismatch` is observed by the receiver — i.e., the wire becomes
-push-on-recovery instead of push-on-every-action. This requires
-migrating cards from host-auth-broadcast to symmetric-replay-with-
-recovery (similar to chess Plan B applied to cards). Multi-step
-workstream (~500+ LoC). Tracked in the project task queue.
+**Status**: closed. Both peers send/apply `game_command`. `cards_deck`
+handshake feeds `initGameFromHandshake` on both sides. Forward `gameState`
+dumps are off. `hash_mismatch` still pushes a host snapshot. Default
+process flags are `symmetric`; hashing uses `isCardsHostFrame`.
 
 ### OPEN-9 — Chess king ability (mine placement) sync
 
@@ -881,12 +855,13 @@ the design is settled.
 | **dual-sig** | Both peers sign the same compact match-result commitment `ch` before on-chain broadcast. |
 | **envelope** | A wire frame — `chess_command`, `game_command`, `result_propose`, etc. |
 | **guest sentinel** | The `'guest:' + peerId.slice(0, 8)` playerId used when no Hive username is bound. Indicates a non-arbitrable move. |
-| **host** | The peer with the lexicographically smaller `peerId`. Stable across reconnect order; authoritative for cards and tied for symmetric chess/poker actions. NOT a server. |
+| **host** | The peer with the lexicographically smaller `peerId`. Stable across reconnect order. Transport role for seed parity, cards hash frame (`isCardsHostFrame`), hash beacon, and `hash_mismatch` recovery — not gameplay authority for cards apply. NOT a server. |
 | **instant-kill** | Chess capture that resolves without entering the poker phase. Triggered when attacker is `pawn`/`king` (Valkyrie weapon) OR defender is `pawn`. Predicate `isChessAttackInstantKill` in `shared/p2p-wire/chess.ts`. |
 | **isHost** | The transport-level hint emitted by the relay's `__sys.open`. |
 | **matchId** | `SHA256(matchSeed + sortedPeerIds)`, 16 hex chars. Binds every action to one match. |
 | **matchSeed** | `SHA256(sortedSalts)`, derived in seed_reveal. The root of all per-match randomness. |
 | **myCanonicalSide** | The local viewer's canonical side, derived from `matchSeed` parity XOR `isHost`. |
-| **prevStateHash** | Pre-apply state hash carried in the cards envelope; protects against fast-double-click race. |
+| **prevStateHash** | Pre-apply state hash carried in the cards envelope; hashed in the host-as-player frame (`isCardsHostFrame`). Protects against fast-double-click race and cross-peer divergence. |
+| **cards_deck** | Phase-2 announce of local cards hero + deck ids + NFT levels. Feeds both-peer `initGameFromHandshake`. |
 | **proposalId** | UUID correlating a `result_propose` with its `result_countersign`. |
 | **transcript** | The ordered list of `GameMove` records hashed at match end into a Merkle tree. |

@@ -7,7 +7,7 @@ import { CardInstance } from './types/CardTypes';
 import { ActiveEffect } from './types';
 import { debug } from './config/debugConfig';
 import { MAX_HAND_SIZE } from './constants/gameConstants';
-import { cryptoRng } from './utils/seededRng';
+import { cardsRng } from './utils/cardsCommandRng';
 
 export interface Player {
   id: string;
@@ -126,13 +126,13 @@ export class GameContext {
         return [this.currentPlayer.hero, this.opponentPlayer.hero];
       case 'random_minion':
         const allMinions = this.getAllMinions();
-        return allMinions.length > 0 ? [allMinions[Math.floor(cryptoRng() * allMinions.length)]] : [];
+        return allMinions.length > 0 ? [allMinions[Math.floor(cardsRng() * allMinions.length)]] : [];
       case 'random_enemy_minion':
         const enemyMinions = this.getEnemyMinions();
-        return enemyMinions.length > 0 ? [enemyMinions[Math.floor(cryptoRng() * enemyMinions.length)]] : [];
+        return enemyMinions.length > 0 ? [enemyMinions[Math.floor(cardsRng() * enemyMinions.length)]] : [];
       case 'random_friendly_minion':
         const friendlyMinions = this.getFriendlyMinions();
-        return friendlyMinions.length > 0 ? [friendlyMinions[Math.floor(cryptoRng() * friendlyMinions.length)]] : [];
+        return friendlyMinions.length > 0 ? [friendlyMinions[Math.floor(cardsRng() * friendlyMinions.length)]] : [];
       case 'adjacent_minions':
         return this.getAdjacentMinions(sourceCard);
       case 'self':

@@ -57,7 +57,7 @@ Every visual element in the arena belongs to exactly **one** logical layer. Back
     │
     ├── HUD elements            z: 700–899   pointer-events: auto (opt-in)
     │   └── GameHUD ribbon, hourglass, BattleIntel, BettingPanel,
-    │       WagerInfoPanel, TurnBanner, hand-strength indicator
+    │       hand-strength indicator
     │
     └── #arena-layer-modal      z: 900+      pointer-events: auto (blockers)
         ↑ portal/mount target for full-screen modals:
@@ -89,7 +89,7 @@ Every visual element in the arena belongs to exactly **one** logical layer. Back
 | `ShowdownCelebration` (portal) | `#arena-layer-modal` | Blocks input during resolution |
 | `GameOverScreen` (portal) | `#arena-layer-modal` | Terminal modal |
 | `BettingPanel` | `[data-zone="betting-panel"]` in HUD z-range | Persistent control surface |
-| `WagerInfoPanel` | `[data-zone="wager-info-panel"]` in HUD z-range | Persistent info panel |
+| `GameHUD` | `[data-vfx-target="risk-display"]` on stakes chip | Only turn/phase/stakes rail |
 | Particle bursts (Pixi) | `#arena-layer-vfx` | Canvas-bounded particles |
 
 ### VFX target contract
@@ -126,7 +126,7 @@ RagnarokGameCoordinator (FSM root)
         └── GameViewport (1920×1080 virtual canvas + JS scale)
             └── .ragnarok-combat-arena (relative, overflow hidden, full canvas)
                 ├── HUD layer (absolute siblings)
-                │   ├── GameHUD              (top ribbon: turn/phase/stakes/committed)
+                │   ├── GameHUD              (only turn/phase/initiative/stakes/to-call rail)
                 │   ├── hourglass-timer      (top-center countdown)
                 │   ├── HandStrengthIndicator (player's current best hand)
                 │   ├── opponent-thinking-indicator
@@ -144,7 +144,7 @@ RagnarokGameCoordinator (FSM root)
                 │
                 └── Overlay layer (absolute siblings, animation/modal)
                     ├── PhaseBanner               (FIRST BLOOD / FAITH / etc. slash)
-                    ├── TurnBanner                (YOUR TURN / ENEMY TURN)
+                     ├── GameHUD                  (turn/phase/stakes rail)
                     ├── ActionAnnouncement        (action text reveal)
                     ├── FirstStrikeAnimation
                     ├── HeroDeathAnimation
@@ -182,7 +182,7 @@ RagnarokGameCoordinator (FSM root)
 
 ## 3. Target DOM zone layout
 
-Canvas `1920×1080`. The gameplay layer is a CSS grid inside `.unified-combat-arena`, with semantic React zone components as grid children. Tailwind classes may describe local flex alignment inside a zone, but the board-level placement belongs to `combat/styles/canvas-layout.css`.
+Canvas `1920×1080`. Board-level placement is absolute, authored in `client/src/game/poker/layout/pokerViewportLayout.ts` and applied as CSS vars on `.ragnarok-combat-arena`. `poker/styles/canvas.css` consumes those vars. Tailwind may describe local flex alignment inside a zone.
 
 ```
 ┌─────────────────────────────────────────── 1920×1080 ──┐
@@ -191,73 +191,46 @@ Canvas `1920×1080`. The gameplay layer is a CSS grid inside `.unified-combat-ar
 │  └──────────────────────────────────────────────────┘  │
 │                                                         │
 │  ┌── .arena-content absolute inset-0 ────────────────┐  │
-│  │  .unified-combat-arena display:grid               │  │
+│  │  .unified-combat-arena  position:relative         │  │
 │  │                                                   │  │
-│  │     grid-area: opponent                           │  │
-│  │     [OPP HERO] [opp hole/hand/deck count]         │  │
-│  │                                                   │  │
-│  │     grid-area: board      grid-area: opp-field    │  │
-│  │     [community 0→5]       [opponent minions]      │  │
-│  │                                                   │  │
-│  │     grid-area: player-field                       │  │
-│  │     [player minions]                              │  │
-│  │                                                   │  │
-│  │     grid-area: player                             │  │
-│  │     [PLAYER HERO] [hand fan] [bet stack overlay]  │  │
+│  │     [OPP HERO] [opp hole/hand] [spell tray]       │  │
+│  │     [community 0→5]   [opponent minions]          │  │
+│  │                    [player minions]               │  │
+│  │     [PLAYER HERO] [hand fan] [bet / turn]         │  │
 │  └───────────────────────────────────────────────────┘  │
 │                                                         │
 │  ┌── Overlay layer (absolute, inset-0, pointer-     │  │
 │  │   events-none with opt-in children) ──────────┐  │  │
-│  │  PhaseBanner, TurnBanner, modals, VFX, prompts │  │  │
+│  │  PhaseBanner, modals, VFX, prompts             │  │  │
 │  └────────────────────────────────────────────────┘  │  │
 └─────────────────────────────────────────────────────────┘
 ```
 
-**Board tracks** live in `.unified-combat-arena`:
-
-```
-grid-template-columns:
-  edge | left | center | right | sidebar
-
-grid-template-rows:
-  top | opponent | upper-gap | board | player-field | lower-gap | player | bottom
-
-grid-template-areas:
-  ". . . . ."
-  ". opponent opponent . ."
-  ". . . . ."
-  ". board opponent-field . ."
-  ". . player-field . ."
-  ". . . . ."
-  ". player player player ."
-  ". . . . ."
-```
+**Board tracks** live in `POKER_VIEWPORT_LAYOUT.zones`. CSS reads `--poker-zone-<id>-x|y|w|h|rot`.
 
 **Zone vocabulary**:
 
-| Zone component | DOM class | Grid area | Contains |
+| Zone component | DOM class | Layout zone id | Contains |
 |---|---|---|---|
-| `OpponentZone` | `.zone-opp` | `opponent` | opponent hero, boss pips, hole cards, opponent hand count |
-| `MinionField role="opp"` | `.zone-opp-field` | `opponent-field` | opponent battlefield cards |
-| `BoardZone` | `.zone-board` | `board` | poker community cards / placeholders |
-| `MinionField role="player"` | `.zone-player-field` | `player-field` | player battlefield cards |
-| `PlayerZone` | `.zone-player` | `player` | player hero, hero resources, hole cards, hand fan |
+| `OpponentZone` | `.zone-opp` | `opponentHero`, `opponentHand`, `opponentHeroCards` | opponent hero, boss pips, hole cards, opponent hand count |
+| `MinionField role="opp"` | `.zone-opp-field` | `opponentBattlefieldCards` | opponent battlefield cards |
+| `BoardZone` | `.zone-board` | `communityCards` | poker community cards / placeholders |
+| `MinionField role="player"` | `.zone-player-field` | `playerBattlefieldCards` | player battlefield cards |
+| `PlayerZone` | `.zone-player` | `playerHero`, `playerHand`, `playerHeroCards` | player hero, hero resources, hole cards, hand fan |
 
-**Editable layout tokens** are in `client/src/game/combat/styles/canvas-layout.css`:
+**Editable layout tokens** are in `client/src/game/poker/layout/pokerViewportLayout.ts`:
 
 | Move this | Prefer editing |
 |---|---|
-| Overall board tracks | `--arena-col-*`, `--arena-row-*`, `grid-template-areas` |
-| Community cards | `--community-cards-*` |
-| Minion rows | `--opponent-field-width`, `--player-field-*` |
-| Player hero + hand cluster | `--player-zone-*`, `--hero-card-width`, `--player-hand-*` |
-| Betting / wager panels | `--betting-panel-*`, `--wager-panel-*` |
-| Hero resource docks | `--hero-resource-dock-*` |
+| Any board/HUD zone box | `POKER_VIEWPORT_LAYOUT.zones.<id>` |
+| Safe area / max scale | `POKER_VIEWPORT_LAYOUT.safeArea` |
+| Community card chrome size | `combat/styles/community-cards.css` |
+| Hero resource docks | `--hero-resource-dock-*` in `poker/styles/canvas.css` |
 
 **Anchors:**
-- Board-level movement: CSS grid + layout tokens.
+- Board-level movement: change the TS zone, not CSS fallbacks.
 - In-zone alignment: Tailwind or small component classes (`flex`, `items-*`, `gap-*`).
-- VFX/HUD/modal: absolute layer siblings, never grid children.
+- VFX/HUD/modal: absolute layer siblings, never a second coordinate table.
 - Do not put primary gameplay zones in `position: fixed`; they must remain inside the scaled canvas.
 
 ---
@@ -366,10 +339,10 @@ These are dependency-free and unit-testable. Keep them in `combat/modules/`. No 
 
 ## 7. CSS architecture
 
-**Current**: 33 combat style files + a 4443-LOC legacy shell (`RagnarokCombatArena.css`). Target = stratified layers, one concern per file, with the board grammar concentrated in `canvas-layout.css`.
+**Current**: `poker/styles/poker.css` is the only arena CSS entry. Geometry is authored in `pokerViewportLayout.ts`. Visual leaves live under `combat/styles/`.
 
-**Cascade order** (per `combat/styles/index.css`):
-1. **Base** — `reset.css`, `zones.css`, `canvas-layout.css`
+**Cascade order** (per `poker/styles/poker.css`):
+1. **Base** — `tokens.css`, `canvas.css` (consumes layout vars), then `poker-core.css` (`reset.css`, `zones.css`)
 2. **Visual** — `norse-atmosphere.css`, `realm-boards.css`
 3. **HUD** — `game-hud.css`, `pot-display.css`, `betting-controls.css`, `timer.css`, `hand-strength.css`
 4. **Cards** — `card-frame.css`, `face-down.css`, `hole-cards.css`, `community-cards.css`, `battlefield.css`
@@ -379,9 +352,9 @@ These are dependency-free and unit-testable. Keep them in `combat/modules/`. No 
 
 **Rule of thumb (CSS vs Tailwind):**
 - **Tailwind in JSX** = local structure and component syntax (`section`, `footer`, `flex`, `items-*`, `gap-*`, `pointer-events-*`, simple transforms).
-- **`canvas-layout.css`** = board-level geometry: grid tracks, grid areas, cross-zone coordinates, scale tokens, and the editable positions of heroes/cards/panels.
+- **`pokerViewportLayout.ts`** = board-level geometry: zone boxes, rail tokens, and the editable positions of heroes/cards/panels.
 - **Other CSS files** = visual identity: colors, borders, shadows, animation keyframes, card art, typography, and state effects.
-- No overlap. If Tailwind and CSS both own the same board-level property, prefer a named layout token in `canvas-layout.css`.
+- No overlap. If Tailwind and CSS both own the same board-level property, prefer a named zone in `pokerViewportLayout.ts`.
 
 **Tailwind-as-base pattern**:
 
@@ -393,7 +366,7 @@ These are dependency-free and unit-testable. Keep them in `combat/modules/`. No 
 </section>
 ```
 
-The JSX names the semantic zone and small local alignment. The CSS grid decides where `.zone-board` lives on the board.
+The JSX names the semantic zone and small local alignment. `pokerViewportLayout.ts` decides where `.zone-board` lives on the board.
 
 **Known conflicts (already deduped in PR1):**
 - `.unified-hand-section { flex: 1 }` → removed (Tailwind centers via parent justify)
@@ -418,8 +391,8 @@ The JSX names the semantic zone and small local alignment. The CSS grid decides 
 
 ### Phase B — Stabilize the board grammar
 1. Keep `GameViewport` as the only responsive scaler.
-2. Keep `.arena-content` absolute and `.unified-combat-arena` grid-based.
-3. Move every cross-zone coordinate into `canvas-layout.css` tokens.
+2. Keep `.arena-content` absolute and `.unified-combat-arena` as the game-layer host.
+3. Move every cross-zone coordinate in `pokerViewportLayout.ts` only.
 4. Add/keep `data-zone` markers for HUD controls that are visually attached to the board but not part of card flow.
 5. Smoke-test landscape mobile, 16:9 desktop, ultrawide desktop, and very large desktop.
 
@@ -461,7 +434,7 @@ Extract zone subcomponents:
 ## 9. Open questions
 
 - **PotDisplay vs hud-status-pot in GameHUD** — pot info is in BOTH places? Reconcile.
-- **WagerInfoPanel = CombatPhaseDirector?** WagerInfoPanel wraps CombatPhaseDirector with positioning. Either fold into Director or keep as positioning shell.
+- **WagerInfoPanel / TurnBanner** — unmounted. `GameHUD` owns turn, phase, initiative, stakes, and to-call. Files remain until a smoke pass deletes them.
 - **`.mulligan-notice` purpose** — is this a transient toast or part of mulligan modal? If toast → make absolute overlay. If part of modal → delete (MulliganScreen handles it).
 - **`.attack-mode-banner` placement** — should be ribbon under HUD when active, not in board flow.
 - **AnimationOverlay vs AIAttackAnimationProcessor** — both manage attack VFX. Verify single owner.

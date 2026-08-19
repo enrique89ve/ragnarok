@@ -4,8 +4,8 @@
  *
  * Why this exists:
  *   The pre-Fase-5 flow let RagnarokGameCoordinator mount on a
- *   half-built P2P state (seed_reveal pending, init envelope pending)
- *   and relied on per-effect gates inside the coordinator
+ *   half-built P2P state (seed_reveal / cards handshake pending) and
+ *   relied on per-effect gates inside the coordinator
  *   (`p2pInitApplied`, `matchSeed` truthy) to defer work. Each new
  *   coordinator effect had to re-implement the same gate.
  *

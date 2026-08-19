@@ -13,7 +13,7 @@ import { MinionCardData } from '../../../types';
 import cardDatabase from '../../../services/cardDatabase';
 import { v4 as uuidv4 } from 'uuid';
 import { isMinion, getAttack, getHealth } from '../../../utils/cards/typeGuards';
-import { cryptoRng } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 
 /**
@@ -88,7 +88,7 @@ export default function executeSummonRandomMinions(
         usedIndices.clear();
       }
       
-      const randomIndex = Math.floor(cryptoRng() * availableCandidates.length);
+      const randomIndex = Math.floor(cardsRng() * availableCandidates.length);
       const selectedCard = availableCandidates[randomIndex];
       const originalIndex = candidateMinions.indexOf(selectedCard);
       usedIndices.add(originalIndex);

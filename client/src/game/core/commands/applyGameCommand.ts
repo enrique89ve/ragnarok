@@ -8,6 +8,8 @@ import { executeHeroPower } from '../../utils/heroPowerUtils';
 import { confirmMulligan, skipMulligan, toggleCardSelection } from '../../utils/mulliganUtils';
 import { getArtifactSpellCostReduction } from '../../utils/artifactTriggerProcessor';
 import { MAX_BATTLEFIELD_SIZE } from '../../constants/gameConstants';
+import { cryptoRng } from '../../utils/seededRng';
+import { withCardsRng } from '../../utils/cardsCommandRng';
 import {
 	appliedGameCommand,
 	ignoredGameCommand,
@@ -19,6 +21,7 @@ import {
 
 export type ApplyGameCommandDeps = {
 	readonly isAiSimulationMode?: () => boolean;
+	readonly rng?: () => number;
 };
 
 /**
@@ -128,6 +131,15 @@ export function applyGameCommand(
 	command: GameCommand,
 	deps: ApplyGameCommandDeps = {},
 ): ApplyGameCommandResult {
+	const rng = deps.rng ?? cryptoRng;
+	return withCardsRng(rng, () => applyGameCommandUnbound(state, command, { ...deps, rng }));
+}
+
+function applyGameCommandUnbound(
+	state: GameState,
+	command: GameCommand,
+	deps: ApplyGameCommandDeps,
+): ApplyGameCommandResult {
 	switch (command.type) {
 		case GAME_COMMAND_TYPES.playCard:
 			return applyPlayCardCommand(state, command, deps);
@@ -185,6 +197,7 @@ function applyPlayCardCommand(
 		command.targetType,
 		command.insertionIndex,
 		command.payWithBlood,
+		deps.rng,
 	);
 
 	if (newState === state) {
@@ -218,7 +231,7 @@ function applyAttackCommand(
 		]);
 	}
 
-	const newState = processAttack(state, command.attackerId, command.defenderId);
+	const newState = processAttack(state, command.attackerId, command.defenderId, deps.rng);
 	if (newState === state) {
 		return ignoredGameCommand(state, 'attack produced no state change', [
 			{ type: 'clear_selection', selection: 'attacking_card' },

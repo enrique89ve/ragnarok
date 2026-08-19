@@ -28,7 +28,6 @@ import { ShowdownCelebration } from './components/ShowdownCelebration';
 import { TargetingPrompt } from './components/TargetingPrompt';
 import { HeroPowerPrompt } from './components/HeroPowerPrompt';
 import { DamageIndicator } from './components/DamageIndicator';
-import { TurnBanner } from './components/TurnBanner';
 import { GameOverScreen } from './components/GameOverScreen';
 import { GameHUD } from './components/GameHUD';
 import { HeroDeathAnimation } from './components/HeroDeathAnimation';
@@ -63,7 +62,7 @@ import { useAudio } from '../../lib/stores/useAudio';
 import { BossPhaseFlash } from './components/BossPhaseFlash';
 import { BettingPanel } from './components/BettingPanel';
 import { PokerSpellTray } from './components/PokerSpellTray';
-import { WagerInfoPanel } from './components/WagerInfoPanel';
+import { useUnifiedCombatStore } from '../stores/unifiedCombatStore';
 import { PokerP2PTurnStatus } from './components/PokerP2PTurnStatus';
 import type { BossPhaseFlash as BossPhaseFlashKind } from '../campaign/campaignTypes';
 import { useBossPhases } from './hooks/useBossPhases';
@@ -73,7 +72,7 @@ import { BoardZone } from './zones/BoardZone';
 import { PlayerZone } from './zones/PlayerZone';
 import { MinionField } from './zones/MinionField';
 import { ARENA_VFX_LAYERS, arenaVfxLayerProps } from './arenaVfxTargets';
-import { POKER_VIEWPORT_SAFE_AREA } from '../poker';
+import { POKER_VIEWPORT_LAYOUT_STYLE, POKER_VIEWPORT_SAFE_AREA } from '../poker';
 import { useCampaignStore, getMission } from '../campaign';
 import { isBettingPhase } from './modules/PhaseManager';
 import { resolveHeroPortrait } from '../utils/art/artMapping';
@@ -257,6 +256,8 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
 
   const cardGameIsPlayerTurn = gameState?.currentTurn === 'player';
   const isP2PCombat = activeMatch?.opponent.kind === 'peer';
+  const pendingPokerSpells = useUnifiedCombatStore(state => state.pendingPokerSpells);
+  const hasQueuedPokerSpells = (pendingPokerSpells?.length ?? 0) > 0;
 
   const [communityCardsRevealed, setCommunityCardsRevealed] = useState(false);
   const [showGearPanel, setShowGearPanel] = useState(false);
@@ -473,9 +474,6 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
     ? !isMulligan && isBettingRound && !combatState.isAllInShowdown
     : false;
   const showBettingInteraction = showBettingControls && Boolean(basePermissions?.isMyTurnToAct);
-  const showCombatDirector = combatState
-    ? !isMulligan && !combatState.isAllInShowdown && combatPhase !== CombatPhase.RESOLUTION
-    : false;
   const phaseAllowsFaith = Boolean(combatPhase) && !isMulligan && combatPhase !== CombatPhase.SPELL_PET && combatPhase !== CombatPhase.PRE_FLOP;
   const showFaith = phaseAllowsFaith && communityCardsRevealed;
   const showForesight = communityCardsRevealed && !isMulligan && (combatPhase === CombatPhase.FORESIGHT || combatPhase === CombatPhase.DESTINY || combatPhase === CombatPhase.RESOLUTION);
@@ -518,52 +516,6 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
   if (!combatState) {
     return <div className="unified-combat-arena">Loading...</div>;
   }
-
-  const currentPhaseLabel = PHASE_LABELS[combatState.phase] || combatState.phase.replace(/_/g, ' ');
-  const phaseDirectorMode = isBettingRound ? 'wager' : 'setup';
-  const phaseDirectorCue = isBettingRound
-    ? basePermissions?.waitingForOpponent
-      ? 'Enemy deciding'
-      : basePermissions?.hasBetToCall
-        ? 'Your response'
-        : 'Open with HP'
-    : isPlayerTurn
-      ? 'Your setup window'
-      : 'Enemy setup window';
-  const phaseDirectorHeadline = combatState.phase === CombatPhase.SPELL_PET
-    ? isPlayerTurn
-      ? 'Shape the board before the wager opens'
-      : 'Enemy setup is resolving'
-    : isBettingRound
-      ? basePermissions?.waitingForOpponent
-        ? 'Waiting for enemy poker action'
-        : basePermissions?.hasBetToCall
-          ? 'Call, raise, or brace'
-          : 'Choose your opening stake'
-      : 'Opening effects are resolving';
-  const phaseDirectorBody = combatState.phase === CombatPhase.SPELL_PET
-    ? isPlayerTurn
-      ? 'Deploy cards, trigger powers, and establish the frontline. When spellcraft closes, the first wager opens automatically.'
-      : 'The board is still being formed. Watch the opening pressure before the first wager decides the pace of the fight.'
-    : isBettingRound
-      ? basePermissions?.waitingForOpponent
-        ? 'Watch the enemy action. If they bet or raise, the choice comes back to you. If they check or match, the round can advance.'
-        : basePermissions?.hasBetToCall
-          ? 'Match the current stake to stay in, raise to increase pressure, or brace to give up the hand.'
-          : 'Commit health to open the wager. The enemy must answer before the round can close.'
-      : 'Passive effects and opening reveals are resolving before the next live wager window begins.';
-  const phaseDirectorPills = isBettingRound
-    ? [
-        `Stakes ${combatState.pot} HP`,
-        basePermissions?.hasBetToCall ? `To call ${basePermissions.toCall ?? 0} HP` : `Next stake ${betAmount} HP`,
-        `${playerBattlefield.length} allies on board`,
-        `${playerMana}/${playerMaxMana} mana`,
-      ]
-    : [
-        `${handCards.length} cards ready`,
-        `${playerBattlefield.length} allies on board`,
-        `${playerMana}/${playerMaxMana} mana`,
-      ];
 
   return (
     <div className="unified-combat-arena" ref={battlefieldRef as React.RefObject<HTMLDivElement>}>
@@ -699,20 +651,6 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
         </div>
       )}
 
-      {showCombatDirector && (
-        <WagerInfoPanel
-          phase={combatState.phase}
-          phaseLabel={currentPhaseLabel}
-          headline={phaseDirectorHeadline}
-          body={phaseDirectorBody}
-          cue={phaseDirectorCue}
-          mode={phaseDirectorMode}
-          isPlayerTurn={isPlayerTurn}
-          isWaiting={Boolean(basePermissions?.waitingForOpponent)}
-          pills={phaseDirectorPills}
-        />
-      )}
-
       <PokerP2PTurnStatus
         combatState={combatState}
         isP2PCombat={isP2PCombat}
@@ -730,21 +668,16 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
         />
       )}
 
-      {/* Family 2 — poker-spell trays (one per caster, both render the
-          shared pendingPokerSpells queue so the player can preview
-          what is about to resolve during SPELL_PET). Mounted via the
-          playerPokerSpellTray / opponentPokerSpellTray zones defined
-          in pokerViewportLayout. */}
-      <div
-        className="poker-spell-tray-mount poker-spell-tray-mount--opponent"
-      >
-        <PokerSpellTray caster="opponent" />
-      </div>
-      <div
-        className="poker-spell-tray-mount poker-spell-tray-mount--player"
-      >
-        <PokerSpellTray caster="player" />
-      </div>
+      {hasQueuedPokerSpells && (
+        <>
+          <div className="poker-spell-tray-mount poker-spell-tray-mount--opponent">
+            <PokerSpellTray caster="opponent" />
+          </div>
+          <div className="poker-spell-tray-mount poker-spell-tray-mount--player">
+            <PokerSpellTray caster="player" />
+          </div>
+        </>
+      )}
 
       {/* Family 3 — wager activation vfx surface. Pointer-events none
           so it never blocks the betting panel or hero clicks below. */}
@@ -1050,6 +983,8 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
   const currentPhaseLabel = combatState?.phase
     ? PHASE_LABELS[combatState.phase] || combatState.phase.replace(/_/g, ' ')
     : 'Battle Ready';
+  const hudCallStake = combatState ? getActionPermissions(combatState, true) : null;
+  const hudToCall = hudCallStake?.hasBetToCall ? hudCallStake.toCall : 0;
 
   useEffect(() => {
     if (!hasBattleIntel) {
@@ -1106,7 +1041,8 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
       maxScale={POKER_VIEWPORT_SAFE_AREA.maxScale}
     >
       <div
-        className={`ragnarok-combat-arena viewport-mode bg-transparent ${isPlayerTurn ? 'player-turn' : 'opponent-turn'}`}
+        className={`ragnarok-combat-arena arena-scaled viewport-mode bg-transparent ${isPlayerTurn ? 'player-turn' : 'opponent-turn'}`}
+        style={POKER_VIEWPORT_LAYOUT_STYLE}
       >
         {/* ═════════════════════════════════════════════════════════════
             LAYERED ARCHITECTURE — see docs/POKER_ARENA_UI.md §Layers
@@ -1131,7 +1067,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
           const botH = (1 - pct) * 30;
           return (
             <div className={`hourglass-timer ${outerDecisionView.timerTone === 'low' ? 'low-time' : ''} ${outerDecisionView.timerTone === 'critical' || outerDecisionView.timerTone === 'expired' ? 'critical' : ''}`}>
-              <svg className="hourglass-svg" viewBox="0 0 60 84" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg className="hourglass-svg" viewBox="0 0 60 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <defs>
                   <linearGradient id="hg-gold" x1="0" y1="0" x2="1" y2="1">
                     <stop offset="0%" stopColor="#fff4dc" />
@@ -1275,8 +1211,15 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
                 <ellipse cx="30" cy="42" rx="5" ry="2.4" fill="none" stroke="url(#hg-gold)" strokeWidth="1.4" />
                 <ellipse cx="30" cy="42" rx="3" ry="1.4" fill="#b8860b" opacity="0.7" />
                 <circle cx="30" cy="42" r="0.8" fill="#fff4dc" />
+                <text
+                  className="hg-countdown-text"
+                  x="30"
+                  y="96"
+                  aria-label={`${t} seconds remaining`}
+                >
+                  {t}
+                </text>
               </svg>
-              <span className="hg-countdown" aria-label={`${t} seconds remaining`}>{t}</span>
             </div>
           );
         })()}
@@ -1536,10 +1479,6 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
         )}
       </AnimatePresence>
 
-      {/* Persistent poker turn indicator */}
-      <TurnBanner currentTurn={visibleTurnForBanner} />
-
-      {/* Game HUD - deck count, hand count, turn counter */}
       <GameHUD
         turnNumber={turnNumber}
         playerDeckCount={playerDeckCount}
@@ -1550,6 +1489,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
         playerCommitted={combatState?.player.hpCommitted ?? 0}
         opponentCommitted={combatState?.opponent.hpCommitted ?? 0}
         isPlayerTurn={visibleTurnForBanner === 'player'}
+        toCall={hudToCall}
         playerElement={combatState ? getCombatElement(combatState.player?.pet?.stats?.element) : undefined}
         opponentElement={combatState ? getCombatElement(combatState.opponent?.pet?.stats?.element) : undefined}
         playerHasAdvantage={elementalBuff.playerHasAdvantage}

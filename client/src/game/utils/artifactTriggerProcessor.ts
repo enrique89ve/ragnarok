@@ -2,7 +2,7 @@ import { GameState, GameLogEvent, CardInstance } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { dealDamage } from './effects/damageUtils';
 import { MAX_HAND_SIZE, MAX_BATTLEFIELD_SIZE } from '../constants/gameConstants';
-import { cryptoRng } from './seededRng';
+import { cardsRng } from './cardsCommandRng';
 
 function getArtifactEffect(state: GameState, playerType: 'player' | 'opponent'): any {
 	const player = state.players[playerType];
@@ -73,7 +73,7 @@ function summonToken(
 function getRandomMinion(battlefield: CardInstance[]): CardInstance | null {
 	const alive = battlefield.filter(m => (m.currentHealth ?? 0) > 0);
 	if (alive.length === 0) return null;
-	return alive[Math.floor(cryptoRng() * alive.length)];
+	return alive[Math.floor(cardsRng() * alive.length)];
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -249,7 +249,7 @@ export function processArtifactOnHeroAttack(
 		const count = effect.onHeroAttack.splashTargets || 2;
 		const enemies = state.players[opponentType].battlefield.filter(m => (m.currentHealth ?? 0) > 0);
 		for (let i = 0; i < Math.min(count, enemies.length); i++) {
-			const idx = Math.floor(cryptoRng() * enemies.length);
+			const idx = Math.floor(cardsRng() * enemies.length);
 			const target = enemies[idx];
 			target.currentHealth = (target.currentHealth ?? 0) - dmg;
 			logArtifactTrigger(state, attackerType, `${name} splashes ${dmg} to ${target.card.name}`);
@@ -492,7 +492,7 @@ export function processArtifactOnMinionPlay(
 		// Grant random keyword (Hoenir)
 		if (effect.onMinionPlay.grantRandomKeyword && minion) {
 			const keywords = effect.onMinionPlay.grantRandomKeyword;
-			const kw = keywords[Math.floor(cryptoRng() * keywords.length)];
+			const kw = keywords[Math.floor(cardsRng() * keywords.length)];
 			switch (kw) {
 				case 'taunt': minion.isTaunt = true; break;
 				case 'divine_shield': minion.hasDivineShield = true; break;
@@ -662,7 +662,7 @@ export function processArtifactOnMinionDeath(
 			// Raise 1/1 copy chance (Hungr & Sultr)
 			if (effect.onMinionDeath?.raiseChance) {
 				const chance = effect.onMinionDeath.raiseChance;
-				if (cryptoRng() * 100 < chance) {
+				if (cardsRng() * 100 < chance) {
 					const stats = effect.onMinionDeath.raiseStats || { attack: 1, health: 1 };
 					const inst = summonToken(state, pType, { name: 'Shade', attack: stats.attack, health: stats.health });
 					if (inst) {
@@ -674,7 +674,7 @@ export function processArtifactOnMinionDeath(
 			// Summon 1/1 drowned copy chance (Ran)
 			if (effect.onEnemyMinionDeath?.summonCopyChance) {
 				const chance = effect.onEnemyMinionDeath.summonCopyChance;
-				if (cryptoRng() * 100 < chance) {
+				if (cardsRng() * 100 < chance) {
 					const stats = effect.onEnemyMinionDeath.copyStats || { attack: 1, health: 1 };
 					const inst = summonToken(state, pType, { name: 'Drowned', attack: stats.attack, health: stats.health });
 					if (inst) {

@@ -27,8 +27,10 @@ import { useGameStore } from '../stores/gameStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import {
   createP2PViewerPerspective,
+  isCardsHostFrame,
   mapViewerValuesToCanonical,
 } from '../p2p/p2pPerspective';
+import { clearP2PMatchResume } from '../p2p/p2pMatchResume';
 import { createSeededIdGen, cryptoIdGen, cryptoRng } from '../utils/seededRng';
 import { getNoLegalMovesStatus } from '@shared/protocol-core/chess';
 import type { PhaseCheckpointPhase } from '@shared/p2p-wire/phaseCheckpoint';
@@ -45,10 +47,13 @@ import {
   getRealmDisplayName,
   getViewerChessResult,
   getWinnerFromGameStatus,
-  derivePokerCombatHandoff,
   resolveVisualRealm,
   shouldTriggerChessCombatFlow,
 } from './gameCoordinatorRules';
+import {
+  bindResumePokerHandoff,
+  isResumeHandoffCurrent,
+} from '../p2p/p2pResumePokerHandoff';
 
 /*
   Phase components are lazy-loaded so casual / multiplayer routes —
@@ -181,10 +186,9 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   const warbandArmy = useWarbandStore(selectArmy);
   const warbandDeck = useWarbandStore(selectDeckCardIds);
   const warbandDeckLoadout = useWarbandStore(selectDeckCardIdsByPiece);
-  // TD-19: in P2P mode, the host's `init` message (post seed-exchange) is the
-  // authoritative source of board state. Local `initializeBoard` calls would
-  // race against — and on the client overwrite — that authoritative state.
-  // Gate every mount-time `initializeBoard` on this flag.
+  // TD-19: in P2P mode, chess board ids come from matchSeed after handshake.
+  // Local `initializeBoard` must not race peer-synced piece ids. Gate every
+  // mount-time `initializeBoard` on this flag.
   const isP2PConnected = ctx?.opponent.kind === 'peer';
   const effectiveInitialArmy: ArmySelectionType | null = initialArmy ?? warbandArmy;
   /*
@@ -212,7 +216,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     const stateRoot = capturePhaseBoundaryStateRoot({
       fromPhase: input.fromPhase,
       toPhase: input.toPhase,
-      isCardsAuthority: p2pActions.isHost,
+      isCardsAuthority: isCardsHostFrame(p2pActions.isHost),
     });
     if (!stateRoot) {
       GameEventBus.emitNotification({
@@ -322,9 +326,8 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   // the empty deterministic shape; whoever drives a local match must call
   // `initGame()` to populate decks, hands, and hero powers. The
   // coordinator owns that responsibility for non-P2P modes (campaign,
-  // warband, picker fallback). P2P matches are populated by the host via
-  // `initGameWithSeed(matchSeed)` from `useWireSync` and adopted by the
-  // client through the `init` envelope, so this effect bails on P2P.
+  // warband, picker fallback). P2P matches are populated by both peers via
+  // `initGameFromHandshake` in `useWireSync`, so this effect bails on P2P.
   // Idempotent via ref — re-mounts on the same coordinator instance do
   // not re-initialize.
   const localPlayInitRef = useRef(false);
@@ -370,10 +373,9 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   // piece id) resolves to the same piece on each side.
   //
   // Pre-Fase-5 this effect also gated on `peerStore.p2pInitApplied` and
-  // `gameStore.matchSeed` truthiness to defer until the host's `init`
-  // envelope had been applied. <MatchSetupP2P/> (Fase 5 C11) makes both
-  // guarantees BEFORE mounting this coordinator: it only renders
-  // children once matchSeed + matchId + p2pInitApplied are populated.
+  // `gameStore.matchSeed`. <MatchSetupP2P/> makes both guarantees BEFORE
+  // mounting this coordinator: it only renders children once matchSeed +
+  // matchId + p2pInitApplied (handshake) are populated.
   // The remaining guards are the local-mode fallthrough (`isP2PConnected`)
   // and the symmetric army-arrival check.
   const matchSeed = useGameStore(s => s.matchSeed);
@@ -399,6 +401,10 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     if (!isP2PConnected) return;
     if (!matchSeed) return;
     if (!initialArmy || !opponentArmy) return;
+    if (boardState.pieces.length > 0) {
+      p2pBoardInitRef.current = true;
+      return;
+    }
     p2pBoardInitRef.current = true;
     const idGen = createSeededIdGen(matchSeed, 'chess-pieces');
     // Canonical-frame init: the first-mover's army goes into the canonical
@@ -413,7 +419,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       remoteValue: opponentArmy,
     });
     initializeBoard(canonicalArmies.player, canonicalArmies.opponent, idGen);
-  }, [isP2PConnected, matchSeed, initialArmy, opponentArmy, initializeBoard, p2pPerspective]);
+  }, [isP2PConnected, matchSeed, initialArmy, opponentArmy, initializeBoard, p2pPerspective, boardState.pieces.length]);
 
   useCampaignGameBootstrap({
     isCampaign,
@@ -493,18 +499,10 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     if (flowState === null || flowState.tag !== 'vs_screen') return;
     const vsPieces = flowState.pieces;
 
-    const freshAttacker = boardState.pieces.find(p => p.id === vsPieces.attacker.id) || vsPieces.attacker;
-    const freshDefender = boardState.pieces.find(p => p.id === vsPieces.defender.id) || vsPieces.defender;
-    const attacker = freshAttacker;
-    const defender = freshDefender;
-
-    debug.combat(`Attacker ${attacker.type} (${attacker.owner}): HP=${attacker.health}, Stamina=${attacker.stamina}`);
-    debug.combat(`Defender ${defender.type} (${defender.owner}): HP=${defender.health}, Stamina=${defender.stamina}`);
-    debug.combat(`First strike will be applied via animation in poker combat`);
-
-    const handoffPlan = derivePokerCombatHandoff({
-      attacker,
-      defender,
+    const binding = bindResumePokerHandoff({
+      flow: flowState,
+      pendingCombat,
+      pieces: [...boardState.pieces, vsPieces.attacker, vsPieces.defender],
       localArmy: playerArmy,
       remoteArmy: opponentArmy,
       perspective: p2pPerspective,
@@ -512,10 +510,15 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       chessMoveCount: boardState.moveCount,
       resolvePortrait: resolveHeroPortrait,
     });
+    if (binding.kind !== 'bound') return;
 
-    if (!handoffPlan) return;
+    const { handoff, adapterInit } = binding.plan;
+    const attacker = handoff.attacker;
+    const defender = handoff.defender;
 
-    const { handoff, adapterInit } = handoffPlan;
+    debug.combat(`Attacker ${attacker.type} (${attacker.owner}): HP=${attacker.health}, Stamina=${attacker.stamina}`);
+    debug.combat(`Defender ${defender.type} (${defender.owner}): HP=${defender.health}, Stamina=${defender.stamina}`);
+    debug.combat(`First strike will be applied via animation in poker combat`);
 
     // (Realm background is now set earlier — see useEffect that watches
     //  campaignData.mission.realm. The chess phase needs the realm class
@@ -535,7 +538,52 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
         playSoundEffect('game_start');
       },
     });
-  }, [flowState, playerArmy, opponentArmy, boardState.pieces, boardState.moveCount, initializeCombatFromPayload, playSoundEffect, setPokerSlotsSwapped, dispatchFlow, matchSeed, p2pPerspective, runPhaseTransition]);
+  }, [flowState, pendingCombat, playerArmy, opponentArmy, boardState.pieces, boardState.moveCount, initializeCombatFromPayload, playSoundEffect, setPokerSlotsSwapped, dispatchFlow, matchSeed, p2pPerspective, runPhaseTransition]);
+
+  const resumeHandoffKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isP2PConnected) return;
+    if (flowState === null || (flowState.tag !== 'poker_combat' && flowState.tag !== 'vs_screen')) {
+      resumeHandoffKeyRef.current = null;
+      return;
+    }
+    const binding = bindResumePokerHandoff({
+      flow: flowState,
+      pendingCombat,
+      pieces: boardState.pieces,
+      localArmy: playerArmy,
+      remoteArmy: opponentArmy,
+      perspective: p2pPerspective,
+      matchSeed,
+      chessMoveCount: boardState.moveCount,
+      resolvePortrait: resolveHeroPortrait,
+    });
+    if (binding.kind !== 'bound') return;
+    const key = [
+      matchSeed ?? '',
+      binding.plan.handoff.attacker.id,
+      binding.plan.handoff.defender.id,
+      String(boardState.moveCount),
+      binding.plan.handoff.slotsSwapped ? '1' : '0',
+    ].join(':');
+    if (resumeHandoffKeyRef.current === key) return;
+    resumeHandoffKeyRef.current = key;
+    setPokerSlotsSwapped(binding.plan.handoff.slotsSwapped);
+    if (!isResumeHandoffCurrent(flowState, binding.plan)) {
+      useGameFlowStore.getState().hydrate(binding.flow);
+    }
+  }, [
+    isP2PConnected,
+    flowState,
+    pendingCombat,
+    boardState.pieces,
+    boardState.moveCount,
+    playerArmy,
+    opponentArmy,
+    p2pPerspective,
+    matchSeed,
+    setPokerSlotsSwapped,
+  ]);
 
   const handleCombatEnd = useCallback((winner: 'player' | 'opponent' | 'draw') => {
     try {
@@ -819,6 +867,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       );
       if (!confirmed) return;
 
+      void clearP2PMatchResume();
       usePeerStore.getState().disconnect();
       useMatchStore.getState().clearMatch();
       useGameStore.getState().resetGameState();
@@ -878,6 +927,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       clearTimeout(gameOverTimerRef.current);
       gameOverTimerRef.current = null;
     }
+    void clearP2PMatchResume();
     setExitPromptOpen(false);
     setMatchAbandoned(true);
     gameEndProcessedRef.current = true;

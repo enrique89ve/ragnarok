@@ -18,10 +18,9 @@
 @import "../../combat/styles/hero-card.css";
 @import "../../combat/styles/hp-bar.css";
 
-/* Shared face-down card chrome — single source of truth for the
-   3-layer background stack + beveled rim used by `.poker-face-down-surface`
-   and `.opponent-card-back`. Lives in card/ so both card-component CSS
-   and combat CSS can target it without circular imports. */
+/* Shared face-down card chrome — solid dark + gold rim used by
+   `.poker-face-down-surface` (CardCardBack). Lives in card/ so both
+   card-component CSS and combat CSS can target it without circular imports. */
 @import "../../components/card/pokerFaceDown.css";
 
 @import "../../combat/styles/turn-banner.css";

@@ -121,6 +121,36 @@ export function getEvolutionLevel(xpLevel: number): EvolutionLevel {
 	return clamped as EvolutionLevel;
 }
 
+function applyBestLevels(deck: CardData[], bestLevelByCardId: Map<number, number>): CardData[] {
+	if (bestLevelByCardId.size === 0) return deck;
+	return deck.map(card => {
+		const cardId = typeof card.id === 'string' ? parseInt(card.id, 10) : card.id;
+		const nftLevel = bestLevelByCardId.get(cardId);
+		if (nftLevel === undefined) return card;
+
+		const evoLevel = getEvolutionLevel(nftLevel);
+		if (evoLevel >= 3) return card;
+
+		const enriched = { ...card, _evolutionLevel: evoLevel };
+		return enriched as CardData;
+	});
+}
+
+export function enrichDeckWithAnnouncedLevels(
+	deck: CardData[],
+	levels: readonly { readonly cardId: number; readonly level: number }[],
+): CardData[] {
+	if (levels.length === 0) return deck;
+	const bestLevelByCardId = new Map<number, number>();
+	for (const row of levels) {
+		const existing = bestLevelByCardId.get(row.cardId);
+		if (existing === undefined || row.level > existing) {
+			bestLevelByCardId.set(row.cardId, row.level);
+		}
+	}
+	return applyBestLevels(deck, bestLevelByCardId);
+}
+
 export function enrichDeckWithNFTLevels(
 	deck: CardData[],
 	collection: HiveCardAsset[]
@@ -137,15 +167,5 @@ export function enrichDeckWithNFTLevels(
 		}
 	}
 
-	return deck.map(card => {
-		const cardId = typeof card.id === 'string' ? parseInt(card.id, 10) : card.id;
-		const nftLevel = bestLevelByCardId.get(cardId);
-		if (nftLevel === undefined) return card;
-
-		const evoLevel = getEvolutionLevel(nftLevel);
-		if (evoLevel >= 3) return card;
-
-		const enriched = { ...card, _evolutionLevel: evoLevel };
-		return enriched as CardData;
-	});
+	return applyBestLevels(deck, bestLevelByCardId);
 }

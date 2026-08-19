@@ -93,6 +93,7 @@ export type PeerStore = {
 	matchChallenge: ServerSignedChallenge | null;
 	opponentMatchChallenge: ServerSignedChallenge | null;
 	matchTicket: P2PMatchTicket | null;
+	lastRoomId: string | null;
 	connection: P2PConnection | null;
 	connectionState: P2PConnectionState;
 	isHost: boolean;
@@ -107,22 +108,23 @@ export type PeerStore = {
 	p2pSessionRemoteAuthorized: boolean;
 	p2pSessionAuthError: string | null;
 	/**
-	 * True once the P2P `init` envelope has been applied locally —
-	 * - host: set after `initGameWithSeed` populates gameState and the
-	 *   init message is sent.
-	 * - client: set inside `case 'init'` after `setState` adopts the
-	 *   host's gameState (flipped).
+	 * True once cards handshake init has populated local gameState —
+	 * both peers set this after `initGameFromHandshake` (seed + both
+	 * `cards_deck` announces). Leftover host `init` adoption still sets
+	 * it in legacy mode.
 	 *
-	 * Reset to false only on hard `disconnect()`; reconnect inside the
-	 * grace period is implicitly handled by the host re-emitting `init`,
-	 * which re-runs the case 'init' handler and re-sets the flag.
+	 * Reset to false only on hard `disconnect()`. F5 resume restores it
+	 * from the sealed snapshot without re-running seed exchange.
 	 *
 	 * Used by `MultiplayerGame.tsx` to gate render of the in-game
-	 * coordinator. Without this gate the coordinator could mount with an
-	 * empty (post-C5) or stale gameState before the host's authoritative
-	 * state arrives, causing TD-15 payload-existence rejections.
+	 * coordinator so input cannot hit an empty/stale gameState (TD-15).
 	 */
 	p2pInitApplied: boolean;
+	/**
+	 * True after applying a local IndexedDB/session resume snapshot.
+	 * useWireSync must not re-run commit-reveal or deck handshake init.
+	 */
+	hardReloadResume: boolean;
 
 	setMyPeerId: (id: string | null) => void;
 	setRemotePeerId: (id: string | null) => void;
@@ -140,6 +142,9 @@ export type PeerStore = {
 	setMatchTicket: (ticket: P2PMatchTicket | null) => void;
 	clearMatchChallenges: () => void;
 	setP2pInitApplied: (applied: boolean) => void;
+	setHardReloadResume: (value: boolean) => void;
+	/** Rejoin a persisted room with the existing 2-attempt / 60s window. */
+	rejoinPersistedRoom: (roomId: string) => void;
 
 	/** Generate a peerId for matchmaking without opening a transport yet.
 	 *  Used by Quick Match — the room id is unknown until matchmaking pairs us. */
@@ -457,6 +462,7 @@ function openTransport(
 	}
 
 	lastRoomId = roomId;
+	set({ lastRoomId: roomId });
 	const transport = new LocalWebSocketTransport({
 		url: deriveRelayUrl(),
 		roomId,
@@ -589,6 +595,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 	matchChallenge: null,
 	opponentMatchChallenge: null,
 	matchTicket: null,
+	lastRoomId: null,
 	connection: null,
 	connectionState: 'disconnected',
 	isHost: false,
@@ -603,6 +610,7 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 	p2pSessionRemoteAuthorized: false,
 	p2pSessionAuthError: null,
 	p2pInitApplied: false,
+	hardReloadResume: false,
 
 	setMyPeerId: (id) => set({ myPeerId: id }),
 	setRemotePeerId: (id) => set({ remotePeerId: id }),
@@ -627,6 +635,24 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 		...(state.error !== undefined ? { p2pSessionAuthError: state.error } : {}),
 	}),
 	setP2pInitApplied: (applied) => set({ p2pInitApplied: applied }),
+	setHardReloadResume: (value) => set({ hardReloadResume: value }),
+
+	rejoinPersistedRoom: (roomId) => {
+		lastRoomId = roomId;
+		reconnectAttempt = 0;
+		reconnectDeadlineAt = Date.now() + DISCONNECT_GRACE_MS;
+		set({
+			hardReloadResume: true,
+			disconnectSide: 'local',
+			forfeitSide: null,
+			connectionState: 'reconnecting',
+			reconnectCountdown: getReconnectCountdownSeconds(),
+			reconnectAttemptCount: 0,
+			error: null,
+		});
+		startGracePeriod('local', get, set);
+		attemptReconnect(roomId, get, set);
+	},
 
 	handleHeartbeat: () => {
 		lastHeartbeatReceived = Date.now();
@@ -778,11 +804,13 @@ export const usePeerStore = create<PeerStore>((set, get) => ({
 			matchChallenge: null,
 			opponentMatchChallenge: null,
 			matchTicket: null,
+			lastRoomId: null,
 			opponentArmy: null,
 			p2pSessionLocalAuthorized: false,
 			p2pSessionRemoteAuthorized: false,
 			p2pSessionAuthError: null,
 			p2pInitApplied: false,
+			hardReloadResume: false,
 		});
 	},
 

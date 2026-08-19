@@ -9,7 +9,7 @@ import { GameContext } from '../../../GameContext';
 import { Card, SpellEffect } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
 import { MAX_BATTLEFIELD_SIZE } from '../../../constants/gameConstants';
-import { cryptoRng } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 export default function executeSummonRandom(
   context: GameContext, 
@@ -43,7 +43,7 @@ export default function executeSummonRandom(
       let summonCardId: string | number;
       
       if (options.length > 0) {
-        const randomIndex = Math.floor(cryptoRng() * options.length);
+        const randomIndex = Math.floor(cardsRng() * options.length);
         summonCardId = options[randomIndex];
       } else {
         summonCardId = `random_minion_${costFilter || 'any'}_${raceFilter || 'any'}`;

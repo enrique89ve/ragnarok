@@ -10,7 +10,7 @@ import { Card, SpellEffect } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
 import { MAX_HAND_SIZE } from '../../../constants/gameConstants';
 import { hasKeyword } from '../../../utils/cards/keywordUtils';
-import { cryptoRng } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 export default function executeDrawSpecific(
   context: GameContext, 
@@ -66,7 +66,7 @@ export default function executeDrawSpecific(
         break;
       }
       
-      const randomIndex = Math.floor(cryptoRng() * eligibleCards.length);
+      const randomIndex = Math.floor(cardsRng() * eligibleCards.length);
       const cardToDraw = eligibleCards.splice(randomIndex, 1)[0];
       
       const deckIndex = context.currentPlayer.deck.indexOf(cardToDraw);

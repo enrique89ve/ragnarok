@@ -9,7 +9,7 @@ import { GameContext } from '../../../GameContext';
 import { Card, BattlecryEffect } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
 import { getGraveyard, GraveyardMinion } from '../../../data/cardManagement/graveyardTracker';
-import { cryptoRng } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 /**
  * Execute a battlecry that discovers a minion from the graveyard
@@ -70,7 +70,7 @@ export default function executeDiscoverFromGraveyard(
     let discoveryOptions = discoveryCards;
     if (discoveryCards.length > discoveryCount) {
       discoveryOptions = [...discoveryCards]
-        .sort(() => cryptoRng() - 0.5)
+        .sort(() => cardsRng() - 0.5)
         .slice(0, discoveryCount);
     }
     

@@ -35,6 +35,7 @@ import CardHolo from './slots/CardHolo';
 import CardArt from './slots/CardArt';
 import CardRankSuit from './slots/CardRankSuit';
 import CardCardBack from './slots/CardCardBack';
+import CardKeywordTooltip from './slots/CardKeywordTooltip';
 import './CardFrame.css';
 import './NorseCardFrame.css';
 import './cardSurfaceContract.css';
@@ -217,6 +218,7 @@ const CardFrame: React.FC<CardFrameProps> = ({
 				)}
 				<NonArtChildren>{children}</NonArtChildren>
 			</div>
+			<CardKeywordTooltip />
 		</CardFrameContext.Provider>
 	);
 };

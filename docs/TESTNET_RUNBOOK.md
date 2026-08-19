@@ -360,9 +360,11 @@ campaign/local AI behavior as proof for P2P.
 7. Disconnect one tab briefly without reloading it. Confirm the visible P2P
    badge enters grace/reconnect state, queued actions stay visible when
    applicable, and the same match resumes inside the current reconnect policy.
-8. Attempt a hard reload during an active match and cancel the browser prompt.
-   Use the P2P badge download button to export the session log; confirm it
-   includes `p2p_reload_guard_prompted`.
+8. Attempt a hard reload during an active match. Cancel once and confirm the
+   session log includes `p2p_reload_guard_prompted`. Confirm a second time and
+   check the UI says it is rejoining a **saved match from this device**
+   (attempt 1/2). The board must come from the local snapshot, not from
+   Express. See [`P2P_MATCH_RESUME.md`](./P2P_MATCH_RESUME.md).
 9. Finish or technically resolve the match. Confirm both peers receive the
    terminal checkpoint commit and see an explicit local win/loss/draw result.
    In QA full-catalog mode the result may calculate and

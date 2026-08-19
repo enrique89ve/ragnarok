@@ -66,7 +66,7 @@ combat/styles/index.css                  ← legacy backward-compat aggregate
 | [client/src/game/combat/styles/element-matchup-banner.css](../client/src/game/combat/styles/element-matchup-banner.css) | 161 | matchup presentation badges |
 | [client/src/game/combat/styles/elemental-glows.css](../client/src/game/combat/styles/elemental-glows.css) | 514 | per-element hero glows, token-based |
 | [client/src/game/combat/styles/end-turn.css](../client/src/game/combat/styles/end-turn.css) | 115 | end turn button (legacy + unified) |
-| [client/src/game/combat/styles/face-down.css](../client/src/game/combat/styles/face-down.css) | 244 | premium Norse card back |
+| [client/src/game/combat/styles/face-down.css](../client/src/game/combat/styles/face-down.css) | 57 | opponent-hand back geometry (paint is CardCardBack) |
 | [client/src/game/combat/styles/fighting-hp-bars.css](../client/src/game/combat/styles/fighting-hp-bars.css) | 209 | MK-style HP/STA bars |
 | [client/src/game/combat/styles/game-hud.css](../client/src/game/combat/styles/game-hud.css) | 262 | deck count, hand count, turn counter |
 | [client/src/game/combat/styles/game-over.css](../client/src/game/combat/styles/game-over.css) | 451 | victory/defeat overlay; one `105vh` use |
@@ -107,23 +107,23 @@ combat/styles/index.css                  ← legacy backward-compat aggregate
 | [client/src/game/combat/styles/unified-containers.css](../client/src/game/combat/styles/unified-containers.css) | 106 | `.poker-hero` / `.opponent-hero` / `.poker-hand` containers |
 | [client/src/game/combat/styles/wager-effects.css](../client/src/game/combat/styles/wager-effects.css) | 57 | left-edge effect ticker |
 | [client/src/game/combat/styles/zones.css](../client/src/game/combat/styles/zones.css) | 28 | zone tokens |
-| [client/src/game/combat/layout/board.css](../client/src/game/combat/layout/board.css) | 537 | **virtual 1920×1080 canvas; `.unified-combat-arena`; `poker-zone-*` positioning; `data-zone` binding; `arena-z-*` layers** |
+| [client/src/game/poker/styles/canvas.css](../client/src/game/poker/styles/canvas.css) | — | consumes `--poker-zone-*` from `pokerViewportLayout.ts`; `.unified-combat-arena` placement |
 
 ---
 
 ## 2. Five-board zones
 
-`.unified-combat-arena` (in [board.css](../client/src/game/combat/layout/board.css)) is a CSS grid; children are zone components. See [POKER_ARENA_UI.md §3](./POKER_ARENA_UI.md) for the grid template.
+`.unified-combat-arena` is an absolute board. Zone boxes are authored in [pokerViewportLayout.ts](../client/src/game/poker/layout/pokerViewportLayout.ts). See [POKER_ARENA_UI.md §3](./POKER_ARENA_UI.md).
 
-| # | Zone component | Grid area | Owns |
+| # | Zone component | Layout zone id | Owns |
 |---|---|---|---|
-| 1 | `OpponentZone` | `opponent` | opponent hero, hole cards, hand count, boss pips |
-| 2 | `MinionField role="opp"` | `opponent-field` | opponent battlefield cards |
-| 3 | `BoardZone` | `board` | community cards (5 slots) |
-| 4 | `MinionField role="player"` | `player-field` | player battlefield cards |
-| 5 | `PlayerZone` | `player` | player hero, hand fan, resources, bet stack |
+| 1 | `OpponentZone` | `opponentHero` / `opponentHand` | opponent hero, hole cards, hand count, boss pips |
+| 2 | `MinionField role="opp"` | `opponentBattlefieldCards` | opponent battlefield cards |
+| 3 | `BoardZone` | `communityCards` | community cards (5 slots) |
+| 4 | `MinionField role="player"` | `playerBattlefieldCards` | player battlefield cards |
+| 5 | `PlayerZone` | `playerHero` / `playerHand` | player hero, hand fan, resources, bet stack |
 
-For zone-level movement, edit `board.css` (grid tracks, `poker-zone-*` tokens, `[data-zone]` bindings). Inside zones, edit the per-element CSS files (§3-§8).
+For zone-level movement, edit `pokerViewportLayout.ts`. Inside zones, edit the per-element CSS files (§3-§8).
 
 ---
 
@@ -237,7 +237,7 @@ This is the audit gold: every rendered thing in the arena, what game value it di
 | Element | TSX | CSS owner | Selectors | Game values shown | State classes |
 |---|---|---|---|---|---|
 | Generic card frame | `PlayingCard.tsx` (or `CardRenderer.tsx`) | [card-frame.css](../client/src/game/combat/styles/card-frame.css) | `.card-frame` | ornate gold frame | — |
-| Face-down card back | (hole + opponent hand) | [face-down.css](../client/src/game/combat/styles/face-down.css) | `.face-down` | Norse card back pattern | — |
+| Face-down card back | hole + opponent hand + community | [pokerFaceDown.css](../client/src/game/components/card/pokerFaceDown.css) | `.poker-face-down-surface` + `<CardCardBack>` | solid dark + gold rim + Eihwaz | — |
 | Suit accent | `PlayingCard.tsx` | [hole-cards.css](../client/src/game/combat/styles/hole-cards.css) | `.arena-poker-card.norse.spades` / `.hearts` / `.diamonds` / `.clubs` | suit color via `--suit-accent` | per suit (see §5) |
 | Corner rune (card) | `PlayingCard.tsx` | `hole-cards.css` | `.arena-poker-card .corner-rune.top-left` etc. | decorative corner runes | — |
 | Card value text | `PlayingCard.tsx` | `hole-cards.css` | `.arena-poker-card .card-value`, `.card-rune` | value + suit rune | — |

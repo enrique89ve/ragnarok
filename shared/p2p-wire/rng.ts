@@ -1,14 +1,13 @@
 /**
  * RNG and IdGen contracts for the P2P symmetric-replay model.
  *
- * Why this file exists: in the host-authoritative model the host is the
- * single source of randomness — but the host's gameState must still be
- * reproducible by the host itself across reloads, and convergence with the
- * client (post-init flip) requires that every random draw and every
- * generated id be a function of `matchSeed` alone, never of `Math.random` or
- * `uuidv4`. Functions that consume randomness or generate identities live
- * in the initial-state and (future) replay paths; their signatures must
- * declare those dependencies as parameters, not pull them from globals.
+ * Why this file exists: both peers apply cards/chess from the same
+ * `matchSeed`. Every random draw and generated id must be a function of that
+ * seed alone — never `Math.random` or `uuidv4` — so ego-centric stores still
+ * hash-agree after the guest flips into the host frame. Functions that
+ * consume randomness or generate identities live in the initial-state and
+ * (future) replay paths; their signatures must declare those dependencies as
+ * parameters, not pull them from globals.
  *
  * The brands below let the type system distinguish a seeded source from an
  * ambient one. Code that operates inside the P2P boundary takes `SeededRng`

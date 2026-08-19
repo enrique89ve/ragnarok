@@ -15,6 +15,9 @@ export type CardFrameLayoutAdapter = {
 	showTribeLine: boolean;
 	showName: boolean;
 	showKeywords: boolean;
+	showElementBadge: boolean;
+	showBloodPrice: boolean;
+	showEvolution: boolean;
 	keywordLimit: number | null;
 	keywordLabelMode: 'full' | 'compact';
 	frameRender: CardFrameRender;
@@ -58,7 +61,10 @@ export const resolveSimpleCardFrameLayoutAdapter = (
 		showTribeLine: !compactSurface && !collectionSurface && !pregameSurface,
 		showName: !battlefieldSurface && !compactSurface,
 		showKeywords: !collectionSurface,
-		keywordLimit: compactSurface || surface === 'gameplay' || pregameSurface ? 2 : null,
+		showElementBadge: true,
+		showBloodPrice: true,
+		showEvolution: !battlefieldSurface,
+		keywordLimit: compactSurface || surface === 'gameplay' || pregameSurface ? 5 : null,
 		keywordLabelMode: compactSurface || pregameSurface ? 'compact' : 'full',
 		frameRender: 'png',
 		frameAsset: frameAssetForCardType(input.cardType, useGameplayFrame),

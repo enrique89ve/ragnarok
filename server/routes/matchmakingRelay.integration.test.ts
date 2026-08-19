@@ -545,9 +545,9 @@ describe('matchmaking and relay integration', () => {
 			expect(leaveResponse.status).toBe(200);
 			expect(leaveResponse.body).toMatchObject({ success: true });
 
-			const clearedStatus = await getJson(baseUrl, `/api/matchmaking/status/${peerOneId}`, peerOneQueueToken);
-			expect(clearedStatus.status).toBe(200);
-			expect(clearedStatus.body).toMatchObject({ success: true, status: 'not_queued' });
+			const remainingPeerStatus = await getJson(baseUrl, `/api/matchmaking/status/${peerOneId}`, peerOneQueueToken);
+			expect(remainingPeerStatus.status).toBe(200);
+			expectMatchedBody(remainingPeerStatus.body);
 		} finally {
 			await closeServer(server);
 		}

@@ -8,7 +8,8 @@ import { debug } from '../../../config/debugConfig';
 import { GameContext } from '../../../GameContext';
 import { Card, BattlecryEffect, CardInstance } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
-import { cryptoRng, cryptoIdGen } from '../../../utils/seededRng';
+import { cryptoIdGen } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 export default function executeRandomWeapon(
   context: GameContext,
@@ -31,7 +32,7 @@ export default function executeRandomWeapon(
     ];
     
     const createRandomWeapon = (): CardInstance => {
-      const randomWeapon = weaponPool[Math.floor(cryptoRng() * weaponPool.length)];
+      const randomWeapon = weaponPool[Math.floor(cardsRng() * weaponPool.length)];
       return {
         instanceId: `random-weapon-${cryptoIdGen()}`,
         card: {

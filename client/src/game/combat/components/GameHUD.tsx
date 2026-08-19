@@ -1,6 +1,8 @@
 import React from 'react';
 import { getElementColor, getElementIconName, ELEMENT_LABELS, type ElementType } from '../../utils/elements/elementAdvantage';
 import { GameIcon } from '../../utils/ui/GameIcon';
+import { ARENA_VFX_TARGETS, arenaVfxTargetProps } from '../arenaVfxTargets';
+import { getPokerTurnBadgePresentation } from '../decision/pokerTurnBadgePresentation';
 import '../styles/game-hud.css';
 
 const glyphStrokeProps = {
@@ -43,6 +45,7 @@ interface GameHUDProps {
 	playerCommitted?: number;
 	opponentCommitted?: number;
 	isPlayerTurn?: boolean;
+	toCall?: number;
 	playerElement?: ElementType;
 	opponentElement?: ElementType;
 	playerHasAdvantage?: boolean;
@@ -59,6 +62,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 	playerCommitted = 0,
 	opponentCommitted = 0,
 	isPlayerTurn = false,
+	toCall = 0,
 	playerElement,
 	opponentElement,
 	playerHasAdvantage = false,
@@ -66,19 +70,32 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 }) => {
 	const showMatchup = playerElement && opponentElement && playerElement !== 'neutral' && opponentElement !== 'neutral';
 	const showCommitment = playerCommitted > 0 || opponentCommitted > 0;
+	const turnBadge = getPokerTurnBadgePresentation(isPlayerTurn ? 'player' : 'opponent');
 
 	return (
 		<div className="game-hud">
 			<div className={`hud-status-ribbon ${isPlayerTurn ? 'player-active' : 'opponent-active'}`}>
 				<span className="hud-status-chip hud-status-turn">Turn {turnNumber}</span>
 				<span className="hud-status-chip hud-status-phase">Phase {phaseLabel}</span>
-				<span className="hud-status-chip hud-status-initiative">{isPlayerTurn ? 'Initiative Yours' : 'Initiative Enemy'}</span>
-				<span className="hud-status-chip hud-status-pot">
+				<span
+					className="hud-status-chip hud-status-initiative"
+					aria-live="polite"
+					aria-label={turnBadge?.ariaLabel}
+				>
+					{isPlayerTurn ? 'Initiative Yours' : 'Initiative Enemy'}
+				</span>
+				<span
+					className="hud-status-chip hud-status-pot"
+					{...arenaVfxTargetProps(ARENA_VFX_TARGETS.riskDisplay)}
+				>
 					<span className="hud-chip-icon">
 						<StakesGlyph />
 					</span>
 					Stakes {pot} HP
 				</span>
+				{toCall > 0 && (
+					<span className="hud-status-chip hud-status-call">To call {toCall} HP</span>
+				)}
 				{showCommitment && (
 					<span className="hud-status-breakdown">
 						Committed You {playerCommitted} · Them {opponentCommitted}

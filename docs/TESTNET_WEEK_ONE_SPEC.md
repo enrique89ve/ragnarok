@@ -114,6 +114,8 @@ Must test with two browser profiles and two Hive testnet identities:
 - non-instant capture into poker and return to chess;
 - reconnect/grace behavior;
 - reload warning with `p2p_reload_guard_prompted` in the downloaded session log;
+  if the reload is confirmed, the client must rejoin from the local sealed
+  snapshot or return to lobby — never from a server board;
 - explicit win/loss/draw result on both peers;
 - matching commits at `chess → poker_combat`, `poker_combat → chess` and the
   terminal boundary;
@@ -137,6 +139,8 @@ pnpm exec vitest run \
   client/src/game/protocol/ceremonyFeedback.test.ts \
   client/src/game/deck/heroDeckRules.test.ts \
   client/src/game/p2p/messageSchemas.test.ts \
+  client/src/game/p2p/p2pMatchResume.test.ts \
+  client/src/lib/chunkLoadRecovery.test.ts \
   client/src/game/match/modes/p2p/wireSync/resultProposalGuard.test.ts \
   client/src/game/match/modes/p2p/qaLocalRewardPreview.test.ts \
   client/src/game/match/modes/p2p/winnerArbiter.test.ts \
@@ -177,8 +181,9 @@ gate, and no bleed from Season 0 data.
 - No P2P `match_anchor`/`match_result` signature or broadcast.
 - No match-driven Keychain prompt during, on reconnect, or after a match.
 - No automatic settlement for disconnects, reloads, or result-only evidence.
-- Hard reload recovery is not complete; the reload guard and evidence export
-  are the Season 0 acceptance path.
+- Hard reload uses a local sealed snapshot + 2 room rejoins. Ranked
+  action-log replay is still deferred. A missing or invalid snapshot is a
+  lobby return, not a server restore.
 
 ## Winner-Arbiter Track
 

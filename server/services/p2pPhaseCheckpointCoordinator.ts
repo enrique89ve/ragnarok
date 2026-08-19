@@ -24,10 +24,13 @@ type PendingCheckpoint = {
 	readonly votes: Map<string, PhaseCheckpointProposal>;
 };
 
+export const PHASE_CHECKPOINT_MISMATCH_STRIKE_LIMIT = 3;
+
 type OpenRoomCheckpointState = {
 	readonly status: 'open';
 	readonly committed: PhaseCheckpointCommit | null;
 	readonly pending: PendingCheckpoint | null;
+	readonly mismatchStrikes: number;
 };
 
 type DisputedRoomCheckpointState = {
@@ -124,6 +127,174 @@ function validateProposalChain(
 		: null;
 }
 
+function roomMatchId(state: RoomCheckpointState | undefined): string | undefined {
+	if (!state) return undefined;
+	if (state.status === 'disputed') return state.dispute.matchId;
+	return state.committed?.matchId ?? state.pending?.votes.values().next().value?.matchId;
+}
+
+function beginSubmitRoom(
+	rooms: Map<string, RoomCheckpointState>,
+	roomId: string,
+	proposal: PhaseCheckpointProposal,
+): RoomCheckpointState | undefined {
+	const current = rooms.get(roomId);
+	const currentMatchId = roomMatchId(current);
+	const startsNewSession = proposal.epoch === 1
+		&& proposal.fromPhase === 'chess'
+		&& proposal.previousCheckpointId === ZERO_PHASE_CHECKPOINT_ID
+		&& currentMatchId !== undefined
+		&& currentMatchId !== proposal.matchId;
+	if (startsNewSession) {
+		rooms.delete(roomId);
+		return undefined;
+	}
+	return current;
+}
+
+function rejectStaleProposal(
+	roomId: string,
+	proposal: PhaseCheckpointProposal,
+	committed: PhaseCheckpointCommit | null,
+	pending: PendingCheckpoint | null,
+): PhaseCheckpointCoordinatorResult | null {
+	const expectedEpoch = committed ? committed.epoch + 1 : proposal.epoch;
+	if (committed && proposal.epoch <= committed.epoch) {
+		return proposalMatchesCommit(proposal, committed)
+			? { status: 'message', recipients: 'sender', message: committed }
+			: {
+				status: 'message',
+				recipients: 'sender',
+				message: buildDispute({
+					roomId,
+					proposal,
+					reason: 'chain_mismatch',
+					expectedEpoch,
+					lastCommitted: committed,
+				}),
+			};
+	}
+	if (committed && proposal.epoch !== expectedEpoch) {
+		return {
+			status: 'message',
+			recipients: 'sender',
+			message: buildDispute({
+				roomId,
+				proposal,
+				reason: 'epoch_gap',
+				expectedEpoch,
+				lastCommitted: committed,
+			}),
+		};
+	}
+	const chainFailure = validateProposalChain(proposal, committed);
+	if (chainFailure) {
+		return {
+			status: 'message',
+			recipients: 'sender',
+			message: buildDispute({
+				roomId,
+				proposal,
+				reason: chainFailure,
+				expectedEpoch,
+				lastCommitted: committed,
+			}),
+		};
+	}
+	if (pending && pending.epoch !== proposal.epoch) {
+		return {
+			status: 'message',
+			recipients: 'sender',
+			message: buildDispute({
+				roomId,
+				proposal,
+				reason: 'epoch_gap',
+				expectedEpoch: pending.epoch,
+				lastCommitted: committed,
+			}),
+		};
+	}
+	return null;
+}
+
+function applyPeerVote(input: {
+	readonly rooms: Map<string, RoomCheckpointState>;
+	readonly roomId: string;
+	readonly peerId: string;
+	readonly proposal: PhaseCheckpointProposal;
+	readonly committed: PhaseCheckpointCommit | null;
+	readonly pending: PendingCheckpoint | null;
+	readonly mismatchStrikes: number;
+}): PhaseCheckpointCoordinatorResult {
+	const activePending: PendingCheckpoint = input.pending ?? {
+		epoch: input.proposal.epoch,
+		votes: new Map(),
+	};
+	const previousVote = activePending.votes.get(input.peerId);
+	if (previousVote) {
+		if (samePhaseCheckpointProposal(previousVote, input.proposal)) {
+			return { status: 'pending' };
+		}
+		return {
+			status: 'message',
+			recipients: 'sender',
+			message: buildDispute({
+				roomId: input.roomId,
+				proposal: input.proposal,
+				reason: 'equivocation',
+				expectedEpoch: activePending.epoch,
+				lastCommitted: input.committed,
+			}),
+		};
+	}
+
+	const firstVote = activePending.votes.values().next().value;
+	if (firstVote && !samePhaseCheckpointProposal(firstVote, input.proposal)) {
+		const strikes = input.mismatchStrikes + 1;
+		const dispute = buildDispute({
+			roomId: input.roomId,
+			proposal: input.proposal,
+			reason: 'peer_mismatch',
+			expectedEpoch: activePending.epoch,
+			lastCommitted: input.committed,
+		});
+		if (strikes >= PHASE_CHECKPOINT_MISMATCH_STRIKE_LIMIT) {
+			input.rooms.set(input.roomId, { status: 'disputed', dispute });
+			return { status: 'message', recipients: 'room', message: dispute };
+		}
+		input.rooms.set(input.roomId, {
+			status: 'open',
+			committed: input.committed,
+			pending: null,
+			mismatchStrikes: strikes,
+		});
+		return { status: 'message', recipients: 'room', message: dispute };
+	}
+
+	activePending.votes.set(input.peerId, input.proposal);
+	if (activePending.votes.size < 2) {
+		input.rooms.set(input.roomId, {
+			status: 'open',
+			committed: input.committed,
+			pending: activePending,
+			mismatchStrikes: input.mismatchStrikes,
+		});
+		return { status: 'pending' };
+	}
+
+	const commit = buildPhaseCheckpointCommit({
+		roomId: input.roomId,
+		proposal: input.proposal,
+	});
+	input.rooms.set(input.roomId, {
+		status: 'open',
+		committed: commit,
+		pending: null,
+		mismatchStrikes: 0,
+	});
+	return { status: 'message', recipients: 'room', message: commit };
+}
+
 export function createP2PPhaseCheckpointCoordinator(): PhaseCheckpointCoordinator {
 	const rooms = new Map<string, RoomCheckpointState>();
 
@@ -132,20 +303,8 @@ export function createP2PPhaseCheckpointCoordinator(): PhaseCheckpointCoordinato
 		readonly peerId: string;
 		readonly proposal: PhaseCheckpointProposal;
 	}): PhaseCheckpointCoordinatorResult {
-		let current = rooms.get(input.roomId);
-		const currentMatchId = current?.status === 'disputed'
-			? current.dispute.matchId
-			: current?.committed?.matchId ?? current?.pending?.votes.values().next().value?.matchId;
-		const startsNewSession = input.proposal.epoch === 1
-			&& input.proposal.fromPhase === 'chess'
-			&& input.proposal.previousCheckpointId === ZERO_PHASE_CHECKPOINT_ID
-			&& currentMatchId !== undefined
-			&& currentMatchId !== input.proposal.matchId;
-		if (startsNewSession) {
-			rooms.delete(input.roomId);
-			current = undefined;
-		}
-		if (current?.status === 'disputed') {
+		const current = beginSubmitRoom(rooms, input.roomId, input.proposal);
+		if (current && current.status === 'disputed') {
 			return {
 				status: 'message',
 				recipients: 'sender',
@@ -154,121 +313,18 @@ export function createP2PPhaseCheckpointCoordinator(): PhaseCheckpointCoordinato
 		}
 
 		const committed = current?.committed ?? null;
-		const expectedEpoch = committed ? committed.epoch + 1 : input.proposal.epoch;
+		const stale = rejectStaleProposal(input.roomId, input.proposal, committed, current?.pending ?? null);
+		if (stale) return stale;
 
-		if (committed && input.proposal.epoch <= committed.epoch) {
-			return proposalMatchesCommit(input.proposal, committed)
-				? { status: 'message', recipients: 'sender', message: committed }
-				: {
-					status: 'message',
-					recipients: 'sender',
-					message: buildDispute({
-						roomId: input.roomId,
-						proposal: input.proposal,
-						reason: 'chain_mismatch',
-						expectedEpoch,
-						lastCommitted: committed,
-					}),
-				};
-		}
-
-		if (committed && input.proposal.epoch !== expectedEpoch) {
-			return {
-				status: 'message',
-				recipients: 'sender',
-				message: buildDispute({
-					roomId: input.roomId,
-					proposal: input.proposal,
-					reason: 'epoch_gap',
-					expectedEpoch,
-					lastCommitted: committed,
-				}),
-			};
-		}
-
-		const chainFailure = validateProposalChain(input.proposal, committed);
-		if (chainFailure) {
-			return {
-				status: 'message',
-				recipients: 'sender',
-				message: buildDispute({
-					roomId: input.roomId,
-					proposal: input.proposal,
-					reason: chainFailure,
-					expectedEpoch,
-					lastCommitted: committed,
-				}),
-			};
-		}
-
-		const pending = current?.pending ?? null;
-		if (pending && pending.epoch !== input.proposal.epoch) {
-			return {
-				status: 'message',
-				recipients: 'sender',
-				message: buildDispute({
-					roomId: input.roomId,
-					proposal: input.proposal,
-					reason: 'epoch_gap',
-					expectedEpoch: pending.epoch,
-					lastCommitted: committed,
-				}),
-			};
-		}
-
-		const activePending: PendingCheckpoint = pending ?? {
-			epoch: input.proposal.epoch,
-			votes: new Map(),
-		};
-		const previousVote = activePending.votes.get(input.peerId);
-		if (previousVote) {
-			if (samePhaseCheckpointProposal(previousVote, input.proposal)) {
-				return { status: 'pending' };
-			}
-			const dispute = buildDispute({
-				roomId: input.roomId,
-				proposal: input.proposal,
-				reason: 'equivocation',
-				expectedEpoch: activePending.epoch,
-				lastCommitted: committed,
-			});
-			rooms.set(input.roomId, { status: 'disputed', dispute });
-			return { status: 'message', recipients: 'room', message: dispute };
-		}
-
-		const firstVote = activePending.votes.values().next().value;
-		if (firstVote && !samePhaseCheckpointProposal(firstVote, input.proposal)) {
-			const dispute = buildDispute({
-				roomId: input.roomId,
-				proposal: input.proposal,
-				reason: 'peer_mismatch',
-				expectedEpoch: activePending.epoch,
-				lastCommitted: committed,
-			});
-			rooms.set(input.roomId, { status: 'disputed', dispute });
-			return { status: 'message', recipients: 'room', message: dispute };
-		}
-
-		activePending.votes.set(input.peerId, input.proposal);
-		if (activePending.votes.size < 2) {
-			rooms.set(input.roomId, {
-				status: 'open',
-				committed,
-				pending: activePending,
-			});
-			return { status: 'pending' };
-		}
-
-		const commit = buildPhaseCheckpointCommit({
+		return applyPeerVote({
+			rooms,
 			roomId: input.roomId,
+			peerId: input.peerId,
 			proposal: input.proposal,
+			committed,
+			pending: current?.pending ?? null,
+			mismatchStrikes: current?.mismatchStrikes ?? 0,
 		});
-		rooms.set(input.roomId, {
-			status: 'open',
-			committed: commit,
-			pending: null,
-		});
-		return { status: 'message', recipients: 'room', message: commit };
 	}
 
 	function dropRoom(roomId: string): void {

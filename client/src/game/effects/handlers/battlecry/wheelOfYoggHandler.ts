@@ -10,7 +10,7 @@ import { GameContext } from '../../../GameContext';
 import { Card, BattlecryEffect, CardInstance } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
 import { MAX_BATTLEFIELD_SIZE, MAX_HAND_SIZE } from '../../../constants/gameConstants';
-import { cryptoRng } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 const ROD_MAX_ITERATIONS = 50;
 
@@ -24,7 +24,7 @@ const YOGG_WHEEL_EFFECTS = [
       let opponentHealth = context.opponentPlayer.health;
       
       while (playerHealth > 0 && opponentHealth > 0 && results.length < ROD_MAX_ITERATIONS) {
-        const targetPlayer = cryptoRng() < 0.5;
+        const targetPlayer = cardsRng() < 0.5;
         if (targetPlayer) {
           playerHealth -= 10;
           results.push('Pyroblast hit you for 10');
@@ -49,9 +49,9 @@ const YOGG_WHEEL_EFFECTS = [
       
       for (let i = 0; i < slotsAvailable; i++) {
         const randomStats = {
-          attack: Math.floor(cryptoRng() * 8) + 1,
-          health: Math.floor(cryptoRng() * 8) + 1,
-          cost: Math.floor(cryptoRng() * 10)
+          attack: Math.floor(cardsRng() * 8) + 1,
+          health: Math.floor(cardsRng() * 8) + 1,
+          cost: Math.floor(cardsRng() * 10)
         };
         
         const randomMinion: CardInstance = {
@@ -92,7 +92,7 @@ const YOGG_WHEEL_EFFECTS = [
       const spellTypes = ['Runefire Bolt', 'Frostbolt', 'Arcane Intellect', 'Runefire Blast', 'Niflheim\'s Embrace', 'Flamestrike'];
       
       for (let i = 0; i < slotsAvailable; i++) {
-        const spellName = spellTypes[Math.floor(cryptoRng() * spellTypes.length)];
+        const spellName = spellTypes[Math.floor(cardsRng() * spellTypes.length)];
         
         const spell: CardInstance = {
           instanceId: 'yogg-spell-' + Date.now() + '-' + i,
@@ -128,7 +128,7 @@ const YOGG_WHEEL_EFFECTS = [
       const enemySlots = MAX_BATTLEFIELD_SIZE - context.opponentPlayer.board.length;
       
       for (let i = 0; i < friendlySlots; i++) {
-        const stats = { attack: Math.floor(cryptoRng() * 6) + 1, health: Math.floor(cryptoRng() * 6) + 1 };
+        const stats = { attack: Math.floor(cardsRng() * 6) + 1, health: Math.floor(cardsRng() * 6) + 1 };
         const minion: CardInstance = {
           instanceId: 'curse-friendly-' + Date.now() + '-' + i,
           card: {
@@ -154,7 +154,7 @@ const YOGG_WHEEL_EFFECTS = [
       }
       
       for (let i = 0; i < enemySlots; i++) {
-        const stats = { attack: Math.floor(cryptoRng() * 6) + 1, health: Math.floor(cryptoRng() * 6) + 1 };
+        const stats = { attack: Math.floor(cardsRng() * 6) + 1, health: Math.floor(cardsRng() * 6) + 1 };
         const minion: CardInstance = {
           instanceId: 'curse-enemy-' + Date.now() + '-' + i,
           card: {
@@ -194,7 +194,7 @@ const YOGG_WHEEL_EFFECTS = [
       for (let i = 0; i < toSteal; i++) {
         if (enemyMinions.length === 0) break;
         
-        const randomIndex = Math.floor(cryptoRng() * enemyMinions.length);
+        const randomIndex = Math.floor(cardsRng() * enemyMinions.length);
         const minion = enemyMinions.splice(randomIndex, 1)[0];
         
         const boardIndex = context.opponentPlayer.board.findIndex(m => m.instanceId === minion.instanceId);
@@ -260,7 +260,7 @@ export default function executeWheelOfYogg(
       }
     }
     
-    const randomEffect = YOGG_WHEEL_EFFECTS[Math.floor(cryptoRng() * YOGG_WHEEL_EFFECTS.length)];
+    const randomEffect = YOGG_WHEEL_EFFECTS[Math.floor(cardsRng() * YOGG_WHEEL_EFFECTS.length)];
     
     context.logGameEvent(`The wheel lands on: ${randomEffect.name} - ${randomEffect.description}`);
     

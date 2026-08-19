@@ -11,7 +11,7 @@ import { EffectResult } from '../../../types/EffectTypes';
 import { MAX_BATTLEFIELD_SIZE } from '../../../constants/gameConstants';
 import cardDatabase from '../../../services/cardDatabase';
 import { v4 as uuidv4 } from 'uuid';
-import { cryptoRng } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 
 /**
@@ -72,7 +72,7 @@ export default function executeSummonRandom(
     const summonedMinions: CardInstance[] = [];
     
     for (let i = 0; i < actualCount; i++) {
-      const randomIndex = Math.floor(cryptoRng() * candidateCards.length);
+      const randomIndex = Math.floor(cardsRng() * candidateCards.length);
       const selectedCard = candidateCards[randomIndex];
       
       const minionInstance: CardInstance = {

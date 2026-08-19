@@ -8,7 +8,8 @@ import { debug } from '../../../config/debugConfig';
 import { GameContext } from '../../../GameContext';
 import { Card, BattlecryEffect, CardInstance } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
-import { cryptoRng, cryptoIdGen } from '../../../utils/seededRng';
+import { cryptoIdGen } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 export default function executeTransformCopyFromDeck(
   context: GameContext,
@@ -31,7 +32,7 @@ export default function executeTransformCopyFromDeck(
       return { success: false, error: 'No minions in deck' };
     }
     
-    const randomMinion = minionsInDeck[Math.floor(cryptoRng() * minionsInDeck.length)];
+    const randomMinion = minionsInDeck[Math.floor(cardsRng() * minionsInDeck.length)];
     
     const sourceOnBoard = context.currentPlayer.board.find(
       m => m.card.id === sourceCard.id

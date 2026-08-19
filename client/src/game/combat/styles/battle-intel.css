@@ -2,11 +2,11 @@
 
 .battle-intel {
   position: absolute;
-  top: var(--poker-zone-battleIntel-y, 108px);
-  left: var(--poker-zone-battleIntel-x, 16px);
-  width: var(--poker-zone-battleIntel-w, auto);
-  min-height: var(--poker-zone-battleIntel-h, auto);
-  transform: rotate(var(--poker-zone-battleIntel-rot, 0deg));
+  top: var(--poker-zone-battleIntel-y);
+  left: var(--poker-zone-battleIntel-x);
+  width: var(--poker-zone-battleIntel-w);
+  min-height: var(--poker-zone-battleIntel-h);
+  transform: rotate(var(--poker-zone-battleIntel-rot));
   transform-origin: top left;
   z-index: 520;
   display: flex;

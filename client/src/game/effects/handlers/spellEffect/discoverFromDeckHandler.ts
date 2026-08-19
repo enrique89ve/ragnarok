@@ -8,7 +8,7 @@ import { GameContext } from '../../../GameContext';
 import { Card, SpellEffect } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
 import { MAX_HAND_SIZE } from '../../../constants/gameConstants';
-import { cryptoRng } from '../../../utils/seededRng';
+import { cardsRng } from '../../../utils/cardsCommandRng';
 
 export function executeDiscoverFromDeckDiscoverFromDeck(
   context: GameContext,
@@ -27,7 +27,7 @@ export function executeDiscoverFromDeckDiscoverFromDeck(
     }
 
     for (let i = deck.length - 1; i > 0; i--) {
-      const j = Math.floor(cryptoRng() * (i + 1));
+      const j = Math.floor(cardsRng() * (i + 1));
       [deck[i], deck[j]] = [deck[j], deck[i]];
     }
 

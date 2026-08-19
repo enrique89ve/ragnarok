@@ -128,20 +128,20 @@ export function cryptoIdGen(): string {
 	return asUuidShape(hex);
 }
 
-/** Proper Fisher-Yates shuffle using `cryptoRng` (replaces old `Math.random` version). */
-export function shuffleArray<T>(arr: T[]): T[] {
+/** Proper Fisher-Yates shuffle. Defaults to `cryptoRng`; pass cardsRng on the command path. */
+export function shuffleArray<T>(arr: T[], rng: () => number = cryptoRng): T[] {
 	const result = [...arr];
 	for (let i = result.length - 1; i > 0; i--) {
-		const j = Math.floor(cryptoRng() * (i + 1));
+		const j = Math.floor(rng() * (i + 1));
 		[result[i], result[j]] = [result[j], result[i]];
 	}
 	return result;
 }
 
-/** In-place Fisher-Yates shuffle using `cryptoRng`. Mutates the array. */
-export function shuffleInPlace<T>(arr: T[]): void {
+/** In-place Fisher-Yates shuffle. Mutates the array. */
+export function shuffleInPlace<T>(arr: T[], rng: () => number = cryptoRng): void {
 	for (let i = arr.length - 1; i > 0; i--) {
-		const j = Math.floor(cryptoRng() * (i + 1));
+		const j = Math.floor(rng() * (i + 1));
 		[arr[i], arr[j]] = [arr[j], arr[i]];
 	}
 }

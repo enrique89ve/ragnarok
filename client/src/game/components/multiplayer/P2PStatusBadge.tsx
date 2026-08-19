@@ -15,6 +15,43 @@ interface P2PStatusBadgeProps {
 	className?: string;
 }
 
+function reconnectStatusLabel(hardReloadResume: boolean, attemptCount: number): string {
+	if (hardReloadResume) {
+		return attemptCount > 0 ? `Rejoining ${attemptCount}/2` : 'Rejoining saved match';
+	}
+	return attemptCount > 0 ? `Attempt ${attemptCount}/2` : 'Reconnecting';
+}
+
+function reconnectPolicyCopy(hardReloadResume: boolean): string {
+	return hardReloadResume
+		? 'This device holds the match. The server only reopens the room (2 attempts, 60s).'
+		: 'Two reconnect attempts are allowed. The disconnected side loses after 60s.';
+}
+
+function badgeCaption(input: {
+	readonly connectionState: string;
+	readonly transportRoleLabel: string;
+	readonly unstableSubject: string;
+	readonly reconnectLabel: string;
+	readonly fallbackLabel: string;
+}): string {
+	if (input.connectionState === 'connected') return `P2P · ${input.transportRoleLabel}`;
+	if (input.connectionState === 'grace_period') return input.unstableSubject;
+	if (input.connectionState === 'reconnecting') return input.reconnectLabel;
+	return input.fallbackLabel;
+}
+
+function shouldShowBadge(connectionState: string): boolean {
+	return connectionState === 'connected'
+		|| connectionState === 'reconnecting'
+		|| connectionState === 'grace_period'
+		|| connectionState === 'error';
+}
+
+function shouldShowReconnectOverlay(connectionState: string): boolean {
+	return connectionState === 'reconnecting' || connectionState === 'grace_period';
+}
+
 const STATUS_CONFIG = {
 	connected: { color: '#4ade80', border: 'rgba(74,222,128,0.5)', label: 'Connected', glow: '#4ade80' },
 	reconnecting: { color: '#fbbf24', border: 'rgba(251,191,36,0.5)', label: 'Reconnecting', glow: '#fbbf24' },
@@ -30,17 +67,17 @@ export const P2PStatusBadge: React.FC<P2PStatusBadgeProps> = ({ className = '' }
 		reconnectAttemptCount,
 		disconnectSide,
 		bufferedMessageCount,
+		hardReloadResume,
 	} = usePeerStore();
 	const { downloadSessionLog } = useP2PActions();
 
-	const isActive = connectionState === 'connected' || connectionState === 'reconnecting' || connectionState === 'grace_period';
-	if (!isActive && connectionState !== 'error') return null;
+	if (!shouldShowBadge(connectionState)) return null;
 
 	const config = STATUS_CONFIG[connectionState as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.connected;
 	const transportRoleLabel = formatP2PTransportRole(getP2PTransportRole(isHost));
-	const showCountdown = (connectionState === 'reconnecting' || connectionState === 'grace_period') && reconnectCountdown > 0;
+	const showCountdown = shouldShowReconnectOverlay(connectionState) && reconnectCountdown > 0;
 	const unstableSubject = disconnectSide === 'opponent' ? 'Opponent unstable' : 'Connection unstable';
-	const reconnectLabel = reconnectAttemptCount > 0 ? `Attempt ${reconnectAttemptCount}/2` : 'Reconnecting';
+	const reconnectLabel = reconnectStatusLabel(hardReloadResume, reconnectAttemptCount);
 
 	return (
 		<>
@@ -77,13 +114,13 @@ export const P2PStatusBadge: React.FC<P2PStatusBadgeProps> = ({ className = '' }
 						flexShrink: 0,
 					}}
 				/>
-				{connectionState === 'connected'
-					? `P2P · ${transportRoleLabel}`
-					: connectionState === 'grace_period'
-						? unstableSubject
-						: connectionState === 'reconnecting'
-							? reconnectLabel
-							: config.label}
+				{badgeCaption({
+					connectionState,
+					transportRoleLabel,
+					unstableSubject,
+					reconnectLabel,
+					fallbackLabel: config.label,
+				})}
 				{showCountdown && ` (${reconnectCountdown}s)`}
 				{bufferedMessageCount > 0 && connectionState !== 'connected' && (
 					<span style={{ fontSize: '9px', opacity: 0.6, marginLeft: 2 }}>
@@ -117,7 +154,7 @@ export const P2PStatusBadge: React.FC<P2PStatusBadgeProps> = ({ className = '' }
 			</div>
 
 			{/* Reconnecting overlay (semi-transparent, doesn't block game — like Madden) */}
-			{(connectionState === 'reconnecting' || connectionState === 'grace_period') && (
+			{shouldShowReconnectOverlay(connectionState) && (
 				<div
 					style={{
 						position: 'fixed',
@@ -140,7 +177,7 @@ export const P2PStatusBadge: React.FC<P2PStatusBadgeProps> = ({ className = '' }
 						</p>
 					)}
 					<p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '11px', marginTop: '8px' }}>
-						Two reconnect attempts are allowed. The disconnected side loses after 60s.
+						{reconnectPolicyCopy(hardReloadResume)}
 					</p>
 				</div>
 			)}

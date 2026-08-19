@@ -39,6 +39,29 @@ describe('phaseCheckpointClient', () => {
 		client.reset();
 	});
 
+	it('does not terminate on a retryable observer mismatch', async () => {
+		const client = createPhaseCheckpointClient({ timeoutMs: 1_000 });
+		const promise = client.request({
+			matchId: 'match-1', fromPhase: 'chess', toPhase: 'poker_combat', stateRoot: ROOT,
+			send: () => undefined,
+		});
+		const proposal = client.getPendingProposal();
+		if (!proposal) throw new Error('expected pending proposal');
+		expect(client.handleServerMessage({
+			type: 'phase_checkpoint_dispute_v1',
+			protocolVersion: proposal.protocolVersion,
+			scope: proposal.scope,
+			roomId: 'room-1',
+			matchId: proposal.matchId,
+			epoch: proposal.epoch,
+			reason: 'peer_mismatch',
+		})).toBe(true);
+		expect(client.getPendingProposal()).toEqual(proposal);
+		const commit = buildPhaseCheckpointCommit({ roomId: 'room-1', proposal });
+		expect(client.handleServerMessage(commit)).toBe(true);
+		await expect(promise).resolves.toEqual({ status: 'committed', commit });
+	});
+
 	it('fails closed after the reconnect-sized timeout', async () => {
 		vi.useFakeTimers();
 		const client = createPhaseCheckpointClient({ timeoutMs: 75_000 });
