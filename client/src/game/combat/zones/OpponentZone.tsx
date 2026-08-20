@@ -125,19 +125,17 @@ export const OpponentZone: React.FC<OpponentZoneProps> = ({
 						mana={opponentMana}
 						maxMana={opponentMaxMana}
 						shakingHero={shakingHero}
-						pocketCardsOverlay={(
-							<HoleCardsOverlay
-								cards={opponentHoleCards as PokerCard[]}
-								variant="opponent"
-								faceDown={!revealedHoleCards}
-								winningCards={showdownCelebration?.winningCards}
-								isShowdown={isShowdown}
-								activeTurn={waitingForOpponent}
-								embedded
-							/>
-							)}
-						/>
+					/>
 					<HeroResourceDock owner="opponent" currentMana={opponentMana} maxMana={opponentMaxMana} />
+					<HoleCardsOverlay
+						cards={opponentHoleCards as PokerCard[]}
+						variant="opponent"
+						faceDown={!revealedHoleCards}
+						winningCards={showdownCelebration?.winningCards}
+						isShowdown={isShowdown}
+						activeTurn={waitingForOpponent}
+						embedded
+					/>
 				</div>
 			)}
 			<div className="opponent-hand-display" style={opponentHandStyle}>

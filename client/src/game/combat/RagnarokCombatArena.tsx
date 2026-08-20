@@ -697,7 +697,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
         />
       ))}
 
-      {/* Hero Gear Panel - shows artifact + armor slots when hero clicked */}
+      {/* Hero Gear Panel - opened from the compact hero dossier */}
       {showGearPanel && gameState?.players?.player && (
         <HeroGearPanel
           artifact={gameState.players.player.artifact}

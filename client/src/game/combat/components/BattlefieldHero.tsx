@@ -2,23 +2,23 @@
  * BattlefieldHero - Enhanced hero display component for the combat arena battlefield
  * 
  * Features:
- * - Hero portraits with elemental effects and particle systems
- * - Interactive hero power activation via portrait click
- * - Tooltips rendered via portal to escape overflow:hidden containers
+ * - Hero portraits with restrained elemental identity
+ * - Compact hero identity and resource display
+ * - Hero dossier rendered in the arena modal layer
  * - HP and Stamina bars with visual feedback
- * - Secret indicators with hover tooltips
- * - Weapon upgrade system display
+ * - Secondary details consolidated into the compact hero dossier
+ * - Hero power remains a dedicated, targetable control
  * 
  * @module combat/components/BattlefieldHero
  */
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import { ALL_NORSE_HEROES } from '../../data/norseHeroes';
-import { getElementColor, getElementIconName, ELEMENT_LABELS, ELEMENT_WEAKNESSES, ELEMENT_STRENGTHS, type ElementType } from '../../utils/elements';
-import { GameIcon } from '../../utils/ui/GameIcon';
+import { ELEMENT_WEAKNESSES, ELEMENT_STRENGTHS } from '../../utils/elements';
 import { NORSE_TO_GAME_ELEMENT, type NorseElement } from '../../types/NorseTypes';
 import { resolveHeroPortrait, DEFAULT_PORTRAIT } from '../../utils/art/artMapping';
+import { GameIcon } from '../../utils/ui/GameIcon';
+import HeroDossierModal from './HeroDossierModal';
 import '../styles/hero-reactions.css';
 
 /**
@@ -53,6 +53,8 @@ export interface BattlefieldHeroProps {
   onHeroPowerClick?: () => void;
   /** Handler for weapon upgrade activation */
   onWeaponUpgradeClick?: () => void;
+  /** Opens the existing equipment detail panel from the dossier. */
+  onOpenEquipment?: () => void;
   /** Whether the weapon has been upgraded */
   isWeaponUpgraded?: boolean;
   /** Equipped artifact card data (if any) */
@@ -62,26 +64,6 @@ export interface BattlefieldHeroProps {
   /** Whether the hero frame should play the explicit damage reaction */
   shakingHero?: boolean;
 }
-
-const getSecretColor = (heroClass: string) => {
-  switch (heroClass) {
-    case 'mage': return 'var(--rarity-rare-color)';
-    case 'hunter': return 'var(--success-500)';
-    case 'paladin': return 'var(--warning-300)';
-    case 'rogue': return 'var(--rarity-common-color)';
-    default: return 'var(--rarity-epic-color)';
-  }
-};
-
-const QUESTION_MARK_STYLE: React.CSSProperties = { color: 'var(--ink-0)', fontWeight: 'bold', fontSize: '16px' };
-const SECRET_COUNT_STYLE: React.CSSProperties = {
-  position: 'absolute', bottom: '-4px', right: '-4px',
-  backgroundColor: 'var(--danger-600)', color: 'var(--ink-0)', fontSize: '10px',
-  fontWeight: 'bold', width: '16px', height: '16px', borderRadius: '50%',
-  display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--ink-0)'
-};
-const SECRET_HEADER_STYLE_BASE: React.CSSProperties = { fontWeight: 'bold', marginBottom: '4px' };
-const SECRET_TEXT_STYLE: React.CSSProperties = { opacity: 0.8 };
 
 /**
  * BattlefieldHero displays an enhanced hero card on the battlefield
@@ -102,6 +84,7 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
   maxMana = 10,
   onHeroPowerClick,
   onWeaponUpgradeClick,
+  onOpenEquipment,
   isWeaponUpgraded = false,
   artifact,
   pocketCardsOverlay,
@@ -138,32 +121,23 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
   const portraitBgStyle = useMemo((): React.CSSProperties => ({
     backgroundImage: `url('${resolvedPortrait}')`,
     backgroundSize: 'cover',
-    backgroundPosition: 'center top',
-    cursor: !isOpponent ? 'pointer' : 'default',
-    pointerEvents: 'auto'
-  }), [resolvedPortrait, isOpponent]);
+    backgroundPosition: 'center top'
+  }), [resolvedPortrait]);
 
   const currentHP = pet.stats.currentHealth;
   const maxHP = pet.stats.maxHealth;
   const effectiveHP = Math.max(0, currentHP - hpCommitted);
   const armor = pet.stats.armor || 0;
-  const healthPercent = Math.max(0, (effectiveHP / maxHP) * 100);
+  const healthPercent = maxHP > 0
+    ? Math.max(0, Math.min(100, (effectiveHP / maxHP) * 100))
+    : 0;
   const currentSta = pet.stats.currentStamina;
   const maxSta = pet.stats.maxStamina;
-  const staminaPercent = maxSta > 0 ? Math.max(0, (currentSta / maxSta) * 100) : 0;
-  const [showSecretTooltip, setShowSecretTooltip] = useState(false);
-  const [showHeroPowerTooltip, setShowHeroPowerTooltip] = useState(false);
-  const [showMatchupTooltip, setShowMatchupTooltip] = useState(false);
-  const [tooltipPosition, setTooltipPosition] = useState<{ top: number; left: number } | null>(null);
-  const [matchupTooltipPos, setMatchupTooltipPos] = useState<{ top: number; left: number } | null>(null);
+  const staminaPercent = maxSta > 0 ? Math.max(0, Math.min(100, (currentSta / maxSta) * 100)) : 0;
   const [damageReaction, setDamageReaction] = useState<'damaged' | 'healed' | null>(null);
   const [powerActivating, setPowerActivating] = useState(false);
-  const [armorGained, setArmorGained] = useState(false);
+  const [isDossierOpen, setIsDossierOpen] = useState(false);
   const prevHealthRef = useRef(effectiveHP);
-  const prevArmorRef = useRef(armor);
-  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const portraitRef = useRef<HTMLDivElement>(null);
-  const matchupBadgeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (prevHealthRef.current === effectiveHP) return;
@@ -177,55 +151,11 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
     return () => clearTimeout(timer);
   }, [effectiveHP]);
 
-  useEffect(() => {
-    if (armor > prevArmorRef.current) {
-      setArmorGained(true);
-      const timer = setTimeout(() => setArmorGained(false), 400);
-      prevArmorRef.current = armor;
-      return () => clearTimeout(timer);
-    }
-    prevArmorRef.current = armor;
-    return undefined;
-  }, [armor]);
-
   const elementClass = heroElement ? `element-${heroElement.toLowerCase()}` : '';
 
   const norseHero = pet.norseHeroId ? ALL_NORSE_HEROES[pet.norseHeroId] : null;
   const heroPower = norseHero?.heroPower;
   const weaponUpgrade = norseHero?.weaponUpgrade;
-
-  const secretColor = getSecretColor(heroClass);
-
-  const secretIndicatorStyle = useMemo((): React.CSSProperties => ({
-    backgroundColor: secretColor,
-    position: 'absolute',
-    top: isOpponent ? 'auto' : '-12px',
-    bottom: isOpponent ? '-12px' : 'auto',
-    right: '50%', transform: 'translateX(50%)',
-    width: '28px', height: '28px', borderRadius: '50%',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    border: '2px solid white',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
-    cursor: 'help', zIndex: 10
-  }), [secretColor, isOpponent]);
-
-  const secretTooltipStyle = useMemo((): React.CSSProperties => ({
-    position: 'absolute',
-    top: isOpponent ? '100%' : 'auto',
-    bottom: isOpponent ? 'auto' : '100%',
-    left: '50%', transform: 'translateX(-50%)',
-    backgroundColor: 'var(--obsidian-950)', color: 'var(--ink-0)',
-    padding: '8px 12px', borderRadius: '6px', fontSize: '12px',
-    whiteSpace: 'nowrap', zIndex: 100,
-    marginTop: isOpponent ? '8px' : '0',
-    marginBottom: isOpponent ? '0' : '8px',
-    border: `2px solid ${secretColor}`,
-    boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
-  }), [secretColor, isOpponent]);
-
-  const secretHeaderStyle = useMemo((): React.CSSProperties => ({
-    ...SECRET_HEADER_STYLE_BASE, color: secretColor
-  }), [secretColor]);
 
   const elementMatchups = useMemo(() => {
     const norseEl = norseHero?.element as NorseElement | undefined;
@@ -242,329 +172,119 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
   const canAffordPower = heroPower ? mana >= heroPower.cost : false;
   const canAffordUpgrade = mana >= WEAPON_COST;
   const canUpgrade = canAffordUpgrade && !isOpponent && !isWeaponUpgraded;
-  const isPowerDisabled = !canAffordPower || isOpponent;
+  const isPowerDisabled = !canAffordPower || isOpponent || !onHeroPowerClick;
 
-  const handlePortraitClick = useCallback((e: React.MouseEvent) => {
-    if (isOpponent) return;
-    e.stopPropagation();
+  const handleCardClick = useCallback(() => {
+    onClick?.();
+    if (!isTargetable) setIsDossierOpen(true);
+  }, [isTargetable, onClick]);
 
-    if (clickTimeoutRef.current) {
-      clearTimeout(clickTimeoutRef.current);
-      clickTimeoutRef.current = null;
-      if (canUpgrade && onWeaponUpgradeClick) {
-        onWeaponUpgradeClick();
-      }
-      return;
-    }
-
-    clickTimeoutRef.current = setTimeout(() => {
-      clickTimeoutRef.current = null;
-      if (onHeroPowerClick) {
-        onHeroPowerClick();
-        setPowerActivating(true);
-        setTimeout(() => setPowerActivating(false), 500);
-      }
-    }, 300);
-  }, [isOpponent, onHeroPowerClick, onWeaponUpgradeClick, canUpgrade]);
-
-  useEffect(() => {
-    return () => {
-      if (clickTimeoutRef.current) {
-        clearTimeout(clickTimeoutRef.current);
-      }
-    };
-  }, []);
+  const handleHeroPowerAction = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    if (isPowerDisabled || !onHeroPowerClick) return;
+    onHeroPowerClick();
+    setPowerActivating(true);
+    setTimeout(() => setPowerActivating(false), 500);
+  }, [isPowerDisabled, onHeroPowerClick]);
 
   return (
     <div
-      className={`battlefield-hero-square ${isOpponent ? 'opponent' : 'player'} ${isTargetable ? 'targetable' : ''} ${onClick ? 'clickable' : ''}`}
-      onClick={onClick}
+      className={`battlefield-hero-square ${elementClass} ${isOpponent ? 'opponent' : 'player'} ${isTargetable ? 'targetable' : ''} clickable`}
     >
       {pocketCardsOverlay}
-      <div className={`hero-card-wrapper ${elementClass} premium-glow ${damageReaction ? `hero-${damageReaction}` : ''} ${healthPercent <= 20 ? 'hero-critical-hp' : healthPercent <= 40 ? 'hero-low-hp' : ''}`}>
-        <div className={`hero-elemental-aura ${elementClass} premium-glow`} />
-
-        <div className={`hero-card-frame ${elementClass} premium-glow ${shakingHero ? 'damage-shake damage-flash' : ''}`}>
-          <div className={`hero-particles ${elementClass} premium-glow`}>
-            <div className="particle particle-1" />
-            <div className="particle particle-2" />
-            <div className="particle particle-3" />
-            <div className="particle particle-4" />
-            <div className="particle particle-5" />
-            <div className="particle particle-6" />
-            <div className="particle particle-7" />
-            <div className="particle particle-8" />
-            <div className="particle particle-9" />
-            <div className="particle particle-10" />
-          </div>
-          <div
-            ref={portraitRef}
-            className={`hero-portrait hero-portrait-interactive ${!isOpponent && heroPower ? 'has-power' : ''} ${!isPowerDisabled ? 'power-ready' : ''} ${canUpgrade ? 'upgrade-ready' : ''} ${isWeaponUpgraded ? 'upgraded' : ''} ${powerActivating ? 'power-activating' : ''}`}
-            style={portraitBgStyle}
-            onClick={(e) => {
-              handlePortraitClick(e);
-            }}
-            onMouseEnter={(e) => {
-              e.stopPropagation();
-              if (portraitRef.current) {
-                const rect = portraitRef.current.getBoundingClientRect();
-                setTooltipPosition({
-                  top: isOpponent ? rect.bottom + 8 : rect.top - 8,
-                  left: rect.left + rect.width / 2
-                });
-              }
-              setShowHeroPowerTooltip(true);
-            }}
-            onMouseLeave={(e) => {
-              e.stopPropagation();
-              setShowHeroPowerTooltip(false);
-              setTooltipPosition(null);
-            }}
-          >
-            {!isOpponent && heroPower && (
-              <div className={`portrait-power-badge ${canAffordPower ? 'affordable' : 'expensive'} ${isWeaponUpgraded ? 'upgraded' : ''}`}>
-                <span className="power-cost">{heroPower.cost}</span>
-                {isWeaponUpgraded && <span className="upgraded-icon"><GameIcon name="swords" size={12} /></span>}
-              </div>
-            )}
-            {artifact && (
-              <div className="artifact-badge">
-                Artifact {artifact.name.split(' ')[0]} {artifact.attack > 0 ? `+${artifact.attack}` : ''}
-              </div>
-            )}
-          </div>
-
-          {showHeroPowerTooltip && heroPower && tooltipPosition && createPortal(
-            <div
-              className="hero-portrait-tooltip-portal"
-              style={{
-                position: 'fixed',
-                top: tooltipPosition.top,
-                left: tooltipPosition.left,
-                transform: isOpponent ? 'translateX(-50%)' : 'translateX(-50%) translateY(-100%)',
-                zIndex: 10000,
-                pointerEvents: 'none',
-                animation: 'tooltip-fade-in 0.15s ease-out'
-              }}
-            >
-              <div className="portrait-tooltip-content">
-                <div className="tooltip-power-header">
-                  <span className="power-name">{heroPower.name}</span>
-                  <span className="power-cost-display">{heroPower.cost} Mana</span>
-                </div>
-                <div className="tooltip-power-desc">{heroPower.description}</div>
-
-                {weaponUpgrade && !isOpponent && (
-                  <div className={`tooltip-upgrade-section ${canUpgrade ? 'can-upgrade' : ''} ${isWeaponUpgraded ? 'is-upgraded' : ''}`}>
-                    <div className="upgrade-header">
-                      {isWeaponUpgraded ? 'Weapon Upgraded' : `Weapon Upgrade: ${weaponUpgrade.name} (${WEAPON_COST} Mana)`}
-                    </div>
-                    <div className="upgrade-effect">
-                      {isWeaponUpgraded
-                        ? `Upgraded effect active: ${weaponUpgrade.immediateEffect.description}`
-                        : `Upgrade for: ${weaponUpgrade.immediateEffect.description}`}
-                    </div>
-                    {!isWeaponUpgraded && (
-                      canUpgrade ? (
-                        <div className="upgrade-hint">Double-click portrait to upgrade!</div>
-                      ) : (
-                        <div className="upgrade-hint disabled">Need {WEAPON_COST - mana} more mana to upgrade</div>
-                      )
-                    )}
-                  </div>
-                )}
-
-                {!isOpponent && !isWeaponUpgraded && (
-                  <div className="tooltip-power-hint">
-                    {isPowerDisabled
-                      ? `Need ${heroPower.cost - mana} more mana`
-                      : 'Single-click to activate'}
-                  </div>
-                )}
-              </div>
-            </div>,
-            document.body
-          )}
-          <div className="hero-name-plate">
-            <span className="hero-name">{pet.name.split(' ')[0]}</span>
-          </div>
-
-          {elementMatchups && (
-            <div
-              ref={matchupBadgeRef}
-              className="hero-matchup-badge"
-              onMouseEnter={() => {
-                if (matchupBadgeRef.current) {
-                  const rect = matchupBadgeRef.current.getBoundingClientRect();
-                  setMatchupTooltipPos({
-                    top: isOpponent ? rect.bottom + 6 : rect.top - 6,
-                    left: rect.left + rect.width / 2,
-                  });
-                }
-                setShowMatchupTooltip(true);
-              }}
-              onMouseLeave={() => {
-                setShowMatchupTooltip(false);
-                setMatchupTooltipPos(null);
-              }}
-            >
-              <span className="matchup-arrow matchup-arrow-weak">▼</span>
-              {elementMatchups.weakTo.map(el => (
-                <span key={el} className="matchup-el-icon matchup-el-weak">
-                  <GameIcon name={getElementIconName(el)} size={12} />
-                </span>
-              ))}
-              <span className="matchup-sep" />
-              <span className="matchup-arrow matchup-arrow-strong">▲</span>
-              {elementMatchups.strongVs.map(el => (
-                <span key={el} className="matchup-el-icon matchup-el-strong">
-                  <GameIcon name={getElementIconName(el)} size={12} />
-                </span>
-              ))}
-            </div>
-          )}
-
-          {showMatchupTooltip && elementMatchups && matchupTooltipPos && createPortal(
-            <div
-              className="matchup-tooltip-portal"
-              style={{
-                position: 'fixed',
-                top: matchupTooltipPos.top,
-                left: matchupTooltipPos.left,
-                transform: isOpponent ? 'translateX(-50%)' : 'translateX(-50%) translateY(-100%)',
-                zIndex: 10000,
-                pointerEvents: 'none',
-                animation: 'tooltip-fade-in 0.15s ease-out',
-              }}
-            >
-              <div className="matchup-tooltip-content">
-                <div className="matchup-tooltip-row matchup-tooltip-weak">
-                  <span className="matchup-tooltip-label">▼ Weak vs</span>
-                  <span className="matchup-tooltip-elements">
-                    {elementMatchups.weakTo.map(el => (
-                      <span key={el} className="matchup-tooltip-el" style={{ '--el-color': getElementColor(el) } as React.CSSProperties}>
-                        <GameIcon name={getElementIconName(el)} size={10} /> {ELEMENT_LABELS[el]}
-                      </span>
-                    ))}
-                  </span>
-                </div>
-                <div className="matchup-tooltip-row matchup-tooltip-strong">
-                  <span className="matchup-tooltip-label">▲ Strong vs</span>
-                  <span className="matchup-tooltip-elements">
-                    {elementMatchups.strongVs.map(el => (
-                      <span key={el} className="matchup-tooltip-el" style={{ '--el-color': getElementColor(el) } as React.CSSProperties}>
-                        <GameIcon name={getElementIconName(el)} size={10} /> {ELEMENT_LABELS[el]}
-                      </span>
-                    ))}
-                  </span>
-                </div>
-              </div>
-            </div>,
-            document.body
-          )}
-
-          <div className={`fighting-hp-bar-container${isOpponent ? ' opponent' : ''}`}>
-            <div className="fighting-hp-bar">
-              <div className="fighting-hp-damage" />
-              <div className="fighting-hp-fill" style={{ transform: `scaleX(${healthPercent / 100})` }} />
-              <span className="fighting-hp-text">{Math.round(effectiveHP)}/{Math.round(maxHP)}</span>
-            </div>
-          </div>
-
-          <div className="hero-stat-bar sta-bar">
-            <div className="stat-bar-fill sta-fill" style={{ transform: `scaleX(${staminaPercent / 100})` }} />
-            <span className="stat-bar-text">STA {currentSta}/{maxSta}</span>
-          </div>
-
-          {armor > 0 && (
-            <div className={`hero-armor-badge${armorGained ? ' armor-gained' : ''}`} title={`Armor: ${armor} - Absorbs damage before HP`}>
-              <svg className="armor-shield-icon" viewBox="0 0 36 40" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <linearGradient id={`armorGrad-${isOpponent ? 'opp' : 'plr'}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#b8b8b8" />
-                    <stop offset="30%" stopColor="#8a8a8a" />
-                    <stop offset="60%" stopColor="#a0a0a0" />
-                    <stop offset="100%" stopColor="#6b6b6b" />
-                  </linearGradient>
-                  <linearGradient id={`armorHighlight-${isOpponent ? 'opp' : 'plr'}`} x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="rgba(255,255,255,0.4)" />
-                    <stop offset="100%" stopColor="rgba(255,255,255,0)" />
-                  </linearGradient>
-                </defs>
-                <path
-                  d="M18 2 L4 10 L4 22 Q4 34 18 38 Q32 34 32 22 L32 10 Z"
-                  fill={`url(#armorGrad-${isOpponent ? 'opp' : 'plr'})`}
-                  stroke="#4a4a4a"
-                  strokeWidth="2"
-                />
-                <path
-                  d="M18 4 L6 11 L6 22 Q6 32 18 36 Q30 32 30 22 L30 11 Z"
-                  fill={`url(#armorHighlight-${isOpponent ? 'opp' : 'plr'})`}
-                  opacity="0.3"
-                />
-                <path
-                  d="M18 6 L8 12 L8 14 L18 8 L28 14 L28 12 Z"
-                  fill="rgba(255,255,255,0.15)"
-                />
-              </svg>
-              <span className="armor-value">{armor}</span>
-            </div>
-          )}
-
-          {secrets && secrets.length > 0 && (
-            <div
-              className="hero-secret-indicator"
-              onMouseEnter={() => setShowSecretTooltip(true)}
-              onMouseLeave={() => setShowSecretTooltip(false)}
-              style={secretIndicatorStyle}
-            >
-              <span style={QUESTION_MARK_STYLE}>?</span>
-              {secrets.length > 1 && (
-                <span style={SECRET_COUNT_STYLE}>
-                  {secrets.length}
-                </span>
-              )}
-            </div>
-          )}
-
-          {showSecretTooltip && secrets && secrets.length > 0 && (
-            <div className="secret-tooltip" style={secretTooltipStyle}>
-              <div style={secretHeaderStyle}>
-                Rune Active
-              </div>
-              <div style={SECRET_TEXT_STYLE}>
-                {secrets.length === 1 ? '1 rune in play' : `${secrets.length} runes in play`}
-              </div>
-            </div>
-          )}
+      <div className={`hero-card-wrapper ${damageReaction ? `hero-${damageReaction}` : ''} ${healthPercent <= 20 ? 'hero-critical-hp' : healthPercent <= 40 ? 'hero-low-hp' : ''}`}>
+        <div
+          className="hero-stamina-rail"
+          role="meter"
+          aria-label={`${pet.name} stamina`}
+          aria-valuemin={0}
+          aria-valuemax={maxSta}
+          aria-valuenow={currentSta}
+          title={`Stamina ${currentSta}/${maxSta}`}
+        >
+          <span className="hero-stamina-label">STA</span>
+          <span className="hero-stamina-track">
+            <span className="hero-stamina-fill" style={{ transform: `scaleY(${staminaPercent / 100})` }} />
+          </span>
+          <strong>{currentSta}</strong>
         </div>
 
-        {/* Risk chip — shows committed HP as poker chip badge */}
-        {hpCommitted > 0 && (
-          <div className={`hero-risk-chip ${isOpponent ? 'opponent' : 'player'}`} title={`Stake: ${hpCommitted} HP committed`}>
-            <span className="risk-chip-amount">{hpCommitted}</span>
-            <span className="risk-chip-unit">HP</span>
+        <div className={`hero-card-frame ${shakingHero ? 'damage-shake damage-flash' : ''}`}>
+          <button
+            type="button"
+            className="hero-card-details-trigger"
+            onClick={handleCardClick}
+            aria-haspopup={isTargetable ? undefined : 'dialog'}
+            aria-label={isTargetable
+              ? `Target ${pet.name}`
+              : `${isOpponent ? 'View opponent' : 'View'} hero details for ${pet.name}`}
+          />
+          <div
+            className={`hero-portrait hero-portrait-interactive ${!isOpponent && heroPower ? 'has-power' : ''} ${isWeaponUpgraded ? 'upgraded' : ''} ${powerActivating ? 'power-activating' : ''}`}
+            style={portraitBgStyle}
+          >
+            {!isOpponent && heroPower && (
+              <button
+                type="button"
+                className={`portrait-power-badge ${canAffordPower ? 'affordable' : 'expensive'} ${isWeaponUpgraded ? 'upgraded' : ''}`}
+                onClick={handleHeroPowerAction}
+                disabled={isPowerDisabled}
+                aria-label={`${heroPower.name}, costs ${heroPower.cost} mana`}
+                title={`${heroPower.name} · ${heroPower.cost} Mana`}
+              >
+                <GameIcon name="zap" size={12} />
+                <span className="power-cost">{heroPower.cost}</span>
+              </button>
+            )}
           </div>
-        )}
 
-        {/* Dealer button — gold Norse coin on the small blind (button) player */}
-        {pokerPosition === 'small_blind' && (
-          <div className={`dealer-button ${isOpponent ? 'opponent' : 'player'}`} title="Dealer">
-            <svg viewBox="0 0 32 32" className="dealer-coin">
-              <defs>
-                <linearGradient id="coinGold" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor="#ffe680" />
-                  <stop offset="40%" stopColor="#d4a017" />
-                  <stop offset="100%" stopColor="#8b6508" />
-                </linearGradient>
-              </defs>
-              <circle cx="16" cy="16" r="14" fill="url(#coinGold)" stroke="#8b6508" strokeWidth="1.5" />
-              <circle cx="16" cy="16" r="11" fill="none" stroke="rgba(255,230,128,0.5)" strokeWidth="0.8" />
-              <text x="16" y="20" textAnchor="middle" fontSize="12" fontWeight="900" fill="#5c3d0a" fontFamily="Cinzel, serif">D</text>
-            </svg>
+          <div className="hero-status-console">
+            <div className="hero-name-plate">
+              <span className="hero-name">{pet.name.split(' ')[0]}</span>
+            </div>
+
+            <div className={`fighting-hp-bar-container${isOpponent ? ' opponent' : ''}`}>
+              <div className="fighting-hp-bar" role="meter" aria-label={`${pet.name} health`} aria-valuemin={0} aria-valuemax={maxHP} aria-valuenow={effectiveHP}>
+                <div className="fighting-hp-damage" />
+                <div className="fighting-hp-fill" style={{ transform: `scaleX(${healthPercent / 100})` }} />
+                <span className="fighting-hp-text">{Math.round(effectiveHP)}/{Math.round(maxHP)}</span>
+              </div>
+            </div>
+
           </div>
-        )}
+        </div>
       </div>
+
+      <HeroDossierModal
+		isOpen={isDossierOpen}
+		isOpponent={isOpponent}
+		heroName={pet.name.split(' ')[0]}
+		heroClass={heroClass}
+		heroElement={heroElement}
+		portraitSrc={resolvedPortrait}
+		level={level}
+		currentHP={effectiveHP}
+		maxHP={maxHP}
+		currentStamina={currentSta}
+		maxStamina={maxSta}
+		currentMana={mana}
+		maxMana={maxMana}
+		pokerPosition={pokerPosition}
+		armor={armor}
+		hpCommitted={hpCommitted}
+		secretsCount={secrets.length}
+		artifact={artifact}
+		heroPower={heroPower}
+		weaponUpgrade={weaponUpgrade}
+		isWeaponUpgraded={isWeaponUpgraded}
+		canAffordPower={canAffordPower}
+		canUpgrade={canUpgrade}
+		elementMatchups={elementMatchups}
+		onClose={() => setIsDossierOpen(false)}
+		onHeroPowerClick={onHeroPowerClick}
+		onWeaponUpgradeClick={onWeaponUpgradeClick}
+		onOpenEquipment={onOpenEquipment}
+	  />
     </div>
   );
 });

@@ -30,7 +30,7 @@ export function WalletConnectPrompt() {
 				<div>
 					<p className="font-mono text-[10px] uppercase tracking-[0.22em] text-gold-200">Your wallet</p>
 					<h2 className="mt-2 font-display text-xl font-black uppercase tracking-[0.12em] text-ink-0">
-						Connect Hive
+						Login
 					</h2>
 					<p className="mt-2 text-sm leading-6 text-ink-300">
 						Wallet only shows the account signed into this device.

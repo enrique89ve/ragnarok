@@ -40,12 +40,3 @@
 	background: url('/ui/resource-runes.jpg') center center / cover no-repeat !important;
 	border: 2px solid rgba(59, 130, 246, 0.6) !important;
 }
-
-/* 8. HP BAR — blood-textured health fill */
-.ragnarok-combat-arena .fighting-hp-fill {
-	background: url('/ui/health-bar-blood.png') left center / cover no-repeat !important;
-	box-shadow:
-		0 0 10px rgba(220, 0, 0, 0.8),
-		inset 0 2px 0 rgba(255, 120, 120, 0.3),
-		inset 0 -2px 0 rgba(0, 0, 0, 0.6) !important;
-}

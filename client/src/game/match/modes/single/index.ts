@@ -3,7 +3,7 @@
  *
  * Public surface:
  *   - resolver:   resolveSingle(args)
- *   - lifecycle:  onSingleMatchEnd()  (no-op for practice)
+ *   - lifecycle:  onSingleMatchEnd()  (local win/loss streak only)
  *   - setup:      <MatchSetupSingle/>
  *
  * Cross-mode rule: code in modes/campaign/ and modes/p2p/ MUST NOT

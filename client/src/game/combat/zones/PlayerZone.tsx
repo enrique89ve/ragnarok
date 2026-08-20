@@ -123,7 +123,7 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({
 							hpCommitted={playerHpCommitted}
 							pokerPosition={playerPosition as any}
 							level={playerLevel}
-							onClick={() => { onPlayerHeroClick?.(); onOpenGearPanel(); }}
+							onClick={onPlayerHeroClick}
 							isTargetable={isPlayerTargetable}
 							isOpponent={false}
 							secrets={playerSecrets as any}
@@ -132,6 +132,7 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({
 							maxMana={playerMaxMana}
 							onHeroPowerClick={onHeroPowerClick}
 							onWeaponUpgradeClick={onWeaponUpgradeClick}
+							onOpenEquipment={onOpenGearPanel}
 							isWeaponUpgraded={isWeaponUpgraded}
 							artifact={artifact}
 							shakingHero={shakingHero}

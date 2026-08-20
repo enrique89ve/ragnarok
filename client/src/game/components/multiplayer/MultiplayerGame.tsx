@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useSyncExternalStore } from 'react';
+import React, { useState, useEffect, useSyncExternalStore } from 'react';
 import { debug } from '../../config/debugConfig';
 import { usePeerStore } from '../../stores/peerStore';
 import { MultiplayerLobby } from './MultiplayerLobby';
@@ -30,7 +30,13 @@ import { HiveKeychainLogin } from '../HiveKeychainLogin';
 import { useNFTUsername } from '../../nft/hooks';
 import { resolveProtectedFlowAccess } from '../../auth/protectedFlowAccess';
 import { useGameStore } from '../../stores/gameStore';
+import { useGameFlowStore, selectFlowTag } from '../../stores/gameFlowStore';
 import { recordSessionEvent } from '../../../data/blockchain/transcriptBuilder';
+import { useMatchReloadGuard } from '../../coordinator/hooks/useMatchReloadGuard';
+import {
+	isLiveP2PReloadGuardTransport,
+	shouldWarnOnMatchReload,
+} from '../../coordinator/matchReloadGuard';
 import { getWarbandEntryRoute } from '../../../lib/warbandRoutes';
 import './MultiplayerGame.css';
 
@@ -145,7 +151,6 @@ export const MultiplayerGame: React.FC = () => {
 	const forfeitSide = usePeerStore(s => s.forfeitSide);
 	const hiveUsername = useNFTUsername();
 	const authenticatedHiveUsername = useAuthenticatedHiveUsername();
-	const reloadGuardPromptedRef = useRef(false);
 	const requiresHiveSession = isSharedNetworkEnvironment();
 	const p2pAccess = resolveProtectedFlowAccess({
 		accountId: hiveUsername,
@@ -157,12 +162,18 @@ export const MultiplayerGame: React.FC = () => {
 	const hasHiveSession = p2pAccess.kind === 'allowed' && (!requiresHiveSession || isHiveWalletAvailable());
 	const resumeAccount = authenticatedHiveUsername ?? hiveUsername ?? 'local';
 	const resumeBoot = useP2PMatchResume(hasHiveSession ? resumeAccount : null);
-	const shouldWarnBeforeUnload = gameStarted
-		&& (
-			connectionState === 'connected'
-			|| connectionState === 'reconnecting'
-			|| connectionState === 'grace_period'
-		);
+	const flowTag = useGameFlowStore(selectFlowTag);
+	const cardsGamePhase = useGameStore((s) => s.gameState?.gamePhase ?? null);
+	const shouldWarnBeforeUnload = shouldWarnOnMatchReload({
+		hasActiveMatch: gameStarted || showVS || resumeBoot === 'applied',
+		flowTag,
+		cardsGamePhase,
+	}) && isLiveP2PReloadGuardTransport(connectionState);
+	useMatchReloadGuard({
+		enabled: shouldWarnBeforeUnload,
+		mode: 'p2p',
+		connectionState,
+	});
 
 	// VS screen is now triggered ONLY when the lobby calls `onGameStart` (after its
 	// own connection-confirmation delay). The previous flow auto-fired VS the instant
@@ -196,29 +207,6 @@ export const MultiplayerGame: React.FC = () => {
 		usePeerStore.getState().disconnect();
 		leaveQueue().catch(() => { /* best effort while rendering auth gate */ });
 	}, [hasHiveSession, leaveQueue]);
-
-	useEffect(() => {
-		if (!shouldWarnBeforeUnload) {
-			reloadGuardPromptedRef.current = false;
-			return undefined;
-		}
-		const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-			if (!reloadGuardPromptedRef.current) {
-				reloadGuardPromptedRef.current = true;
-				recordSessionEvent('p2p_reload_guard_prompted', {
-					connectionState,
-					policy: 'hard_reload_loses_in_memory_game_state',
-					evidence: 'download_session_log_if_reload_is_cancelled',
-				});
-			}
-			const warning = 'A live P2P match is in progress. Reloading tries to rejoin from this device (2 attempts).';
-			event.preventDefault();
-			Reflect.set(event, 'returnValue', warning);
-			return warning;
-		};
-		window.addEventListener('beforeunload', handleBeforeUnload);
-		return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-	}, [connectionState, shouldWarnBeforeUnload]);
 
 	useEffect(() => {
 		if (!gameStarted || !forfeitSide) return;

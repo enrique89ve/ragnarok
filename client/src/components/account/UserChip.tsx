@@ -8,7 +8,7 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { LayoutGrid, LogOut, WalletCards } from 'lucide-react';
+import { LogOut, Settings, Users } from 'lucide-react';
 import { clearActiveHiveSession } from '@/data/HiveAuth';
 import { useHiveDataStore } from '@/data/HiveDataLayer';
 import { routes } from '@/lib/routes';
@@ -23,14 +23,16 @@ interface UserChipProps {
 	secondary?: React.ReactNode;
 	/** Optional portrait URL — when omitted, uses the canonical Hive avatar URL. */
 	portraitUrl?: string;
-	/** Wallet destination. The chip itself opens the account menu. */
+	/** Wallet destination. Unused for navigation; kept for call-site compatibility. */
 	to?: string;
 	/** Compact removes the secondary line — useful for tight headers. */
 	compact?: boolean;
+	/** After the current session is cleared, parent can open Login again. */
+	onSwitchAccount?: () => void;
 }
 
 const MENU_WIDTH = 196;
-const MENU_HEIGHT_ESTIMATE = 148;
+const MENU_HEIGHT_ESTIMATE = 168;
 
 function normalizeHiveUsername(username: string): string {
 	return username.trim().toLowerCase().replace(/^@/, '');
@@ -70,8 +72,8 @@ export function UserChip({
 	username,
 	tier = 'premium',
 	portraitUrl,
-	to,
 	compact = false,
+	onSwitchAccount,
 }: UserChipProps) {
 	const [open, setOpen] = useState(false);
 	const [menuStyle, setMenuStyle] = useState<React.CSSProperties | null>(null);
@@ -81,7 +83,6 @@ export function UserChip({
 	const normalizedUsername = normalizeHiveUsername(username);
 	const displayUsername = `@${normalizedUsername || username.trim()}`;
 	const avatarUrl = portraitUrl ?? getHiveAvatarUrl(username);
-	const walletTo = to ?? routes.wallet;
 	const tierClass =
 		tier === 'mythic' ? 'account-menu-trigger--mythic'
 		: tier === 'standard' ? 'account-menu-trigger--standard'
@@ -122,11 +123,21 @@ export function UserChip({
 		};
 	}, [open]);
 
-	const disconnect = () => {
-		setOpen(false);
+	const endSession = () => {
 		void stopHiveBridgeSync();
 		clearActiveHiveSession();
 		useHiveDataStore.getState().logout();
+	};
+
+	const disconnect = () => {
+		setOpen(false);
+		endSession();
+	};
+
+	const switchAccount = () => {
+		setOpen(false);
+		endSession();
+		onSwitchAccount?.();
 	};
 
 	const menu = open && menuStyle && typeof document !== 'undefined'
@@ -139,32 +150,32 @@ export function UserChip({
 				className="account-menu-panel border border-gold-300/25 bg-obsidian-950/96 p-1.5 shadow-2xl shadow-black/50 backdrop-blur-xl"
 				style={menuStyle}
 			>
+				<button
+					type="button"
+					role="menuitem"
+					onClick={switchAccount}
+					className="account-menu-item hover:text-gold-200 focus-visible:outline"
+				>
+					<Users className="h-4 w-4" aria-hidden="true" />
+					<span>Change account</span>
+				</button>
 				<Link
-					to={walletTo}
+					to={routes.settings}
 					role="menuitem"
 					onClick={() => setOpen(false)}
-					className="account-menu-item"
+					className="account-menu-item hover:text-gold-200 focus-visible:outline"
 				>
-					<WalletCards className="h-4 w-4" aria-hidden="true" />
-					<span>My Wallet</span>
-				</Link>
-				<Link
-					to={routes.collection}
-					role="menuitem"
-					onClick={() => setOpen(false)}
-					className="account-menu-item"
-				>
-					<LayoutGrid className="h-4 w-4" aria-hidden="true" />
-					<span>My Collection</span>
+					<Settings className="h-4 w-4" aria-hidden="true" />
+					<span>Settings</span>
 				</Link>
 				<button
 					type="button"
 					role="menuitem"
 					onClick={disconnect}
-					className="account-menu-item account-menu-item--danger"
+					className="account-menu-item account-menu-item--danger hover:text-ember-200 focus-visible:outline"
 				>
 					<LogOut className="h-4 w-4" aria-hidden="true" />
-					<span>Disconnect</span>
+					<span>Sign out</span>
 				</button>
 			</div>,
 			document.body,
@@ -176,7 +187,7 @@ export function UserChip({
 			<button
 				ref={buttonRef}
 				type="button"
-				className={`account-menu-trigger ${tierClass} ${compact ? 'account-menu-trigger--compact' : ''}`}
+				className={`account-menu-trigger ${tierClass} ${compact ? 'account-menu-trigger--compact' : ''} hover:text-gold-200 focus-visible:outline`}
 				aria-label={`Open account menu for ${displayUsername}`}
 				aria-haspopup="menu"
 				aria-expanded={open}

@@ -1,23 +1,16 @@
-/* Idle breathing animation — subtle scale pulse */
-.battlefield-hero-square .hero-card-frame {
-	animation: hero-breathe 4s ease-in-out infinite;
-}
-
-@keyframes hero-breathe {
-	0%, 100% { transform: scale(1) translateY(0); }
-	50% { transform: scale(1.008) translateY(-1px); }
-}
-
-/* Low HP state — desaturated + red warning, without opacity pulsing */
+/* Low HP changes the state edge, never the readability of portrait/text. */
 .battlefield-hero-square .hero-card-wrapper.hero-low-hp .hero-card-frame {
-	filter: saturate(0.7) brightness(0.9);
-	box-shadow: inset 0 0 35px rgba(220, 38, 38, 0.45);
+	box-shadow:
+		0 10px 24px rgba(0, 0, 0, 0.72),
+		0 0 0 2px color-mix(in srgb, var(--danger-400) 58%, transparent);
 }
 
-/* Critical HP — stronger static warning, without an opacity pulse */
+/* Critical HP is stronger but remains static and glanceable. */
 .battlefield-hero-square .hero-card-wrapper.hero-critical-hp .hero-card-frame {
-	filter: saturate(0.4) brightness(0.8);
-	box-shadow: inset 0 0 45px rgba(220, 38, 38, 0.65);
+	box-shadow:
+		0 10px 24px rgba(0, 0, 0, 0.72),
+		0 0 0 3px color-mix(in srgb, var(--danger-300) 78%, transparent),
+		0 0 18px color-mix(in srgb, var(--danger-400) 38%, transparent);
 }
 
 .battlefield-hero-square .hero-card-wrapper.hero-damaged .hero-card-frame {

@@ -1,0 +1,143 @@
+.match-exit-control {
+	position: fixed;
+	top: 18px;
+	right: 18px;
+	z-index: 140;
+	pointer-events: auto;
+}
+
+.match-exit-button {
+	min-height: 38px;
+	padding: 0 16px;
+	border-radius: 6px;
+	border: 1px solid rgba(248, 113, 113, 0.55);
+	background: rgba(38, 12, 12, 0.82);
+	color: #fecaca;
+	font-family: 'Cinzel', Georgia, serif;
+	font-size: var(--text-xs);
+	font-weight: 800;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	cursor: pointer;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+	transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.match-exit-button:hover,
+.match-exit-button:focus-visible {
+	transform: translateY(-1px);
+	border-color: rgba(252, 165, 165, 0.82);
+	background: rgba(69, 16, 16, 0.9);
+}
+
+.match-exit-button:focus-visible {
+	outline: 2px solid rgba(252, 165, 165, 0.95);
+	outline-offset: 2px;
+}
+
+.match-exit-button:active {
+	transform: translateY(0);
+}
+
+.match-exit-backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: 220;
+	display: grid;
+	place-items: center;
+	padding: var(--space-20);
+	background: rgba(2, 6, 23, 0.72);
+	backdrop-filter: blur(8px);
+}
+
+.match-exit-dialog {
+	width: min(440px, 100%);
+	border-radius: 8px;
+	border: 1px solid rgba(248, 113, 113, 0.4);
+	background:
+		linear-gradient(180deg, rgba(31, 19, 17, 0.96), rgba(12, 10, 18, 0.98));
+	padding: 24px;
+	color: #f8fafc;
+	text-align: center;
+	box-shadow: 0 28px 80px rgba(0, 0, 0, 0.58);
+}
+
+.match-exit-kicker {
+	margin-bottom: 8px;
+	color: #fca5a5;
+	font-family: 'Cinzel', Georgia, serif;
+	font-size: var(--text-11);
+	font-weight: 800;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+}
+
+.match-exit-dialog h2 {
+	margin: 0;
+	color: #fff7ed;
+	font-family: 'Cinzel', Georgia, serif;
+	font-size: var(--text-2xl);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.match-exit-dialog p {
+	margin: var(--space-14) 0 0;
+	color: rgba(226, 232, 240, 0.78);
+	font-size: var(--text-sm);
+	line-height: 1.6;
+}
+
+.match-exit-actions {
+	display: flex;
+	justify-content: center;
+	gap: 12px;
+	margin-top: var(--space-22);
+	flex-wrap: wrap;
+}
+
+:where(.match-exit-secondary, .match-exit-danger) {
+	min-height: 42px;
+	padding: 0 18px;
+	border-radius: 6px;
+	font-family: 'Cinzel', Georgia, serif;
+	font-size: var(--text-xs);
+	font-weight: 800;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	cursor: pointer;
+	transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+:where(.match-exit-secondary, .match-exit-danger):focus-visible {
+	outline: 2px solid rgba(252, 165, 165, 0.95);
+	outline-offset: 2px;
+}
+
+:where(.match-exit-secondary, .match-exit-danger):active {
+	transform: translateY(0);
+}
+
+.match-exit-secondary {
+	border: 1px solid rgba(148, 163, 184, 0.45);
+	background: rgba(15, 23, 42, 0.75);
+	color: #cbd5e1;
+}
+
+.match-exit-secondary:hover,
+.match-exit-secondary:focus-visible {
+	border-color: rgba(203, 213, 225, 0.7);
+	background: rgba(30, 41, 59, 0.9);
+}
+
+.match-exit-danger {
+	border: 1px solid rgba(248, 113, 113, 0.72);
+	background: linear-gradient(180deg, #7f1d1d, #4c0d0d);
+	color: #fee2e2;
+}
+
+.match-exit-danger:hover,
+.match-exit-danger:focus-visible {
+	border-color: rgba(252, 165, 165, 0.9);
+	background: linear-gradient(180deg, #991b1b, #7f1d1d);
+}

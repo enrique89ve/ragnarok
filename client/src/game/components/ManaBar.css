@@ -13,7 +13,10 @@
 }
 
 .mana-bar-container--hero {
-	gap: var(--space-6);
+	align-items: stretch;
+	flex-direction: column;
+	gap: 4px;
+	width: 100%;
 }
 
 .mana-bar-counter {
@@ -65,9 +68,18 @@
 }
 
 .mana-bar-container--hero .mana-bar-tray {
-	gap: 1px;
-	padding: var(--space-2) 4px;
-	border-radius: 10px;
+	justify-content: space-between;
+	gap: 3px;
+	width: 100%;
+	box-sizing: border-box;
+	padding: 4px 7px;
+	background:
+		linear-gradient(180deg, rgba(12, 22, 40, 0.96), rgba(3, 7, 15, 0.98));
+	border-color: color-mix(in srgb, var(--bifrost-300) 44%, var(--obsidian-700));
+	border-radius: 4px;
+	box-shadow:
+		inset 0 1px 0 rgba(201, 224, 255, 0.08),
+		inset 0 -4px 10px rgba(0, 0, 0, 0.45);
 }
 
 .mana-crystal {
@@ -93,20 +105,20 @@
 	--mana-crystal-start: #60a5fa;
 	--mana-crystal-fill: var(--rarity-rare-color);
 	--mana-crystal-stroke: var(--rarity-rare-bright);
-	--mana-crystal-filter: drop-shadow(0 0 6px color-mix(in srgb, var(--rarity-rare-color) 80%, transparent));
+	--mana-crystal-filter: drop-shadow(0 0 3px color-mix(in srgb, var(--bifrost-300) 72%, transparent));
 }
 
 .mana-crystal.is-spent {
 	--mana-crystal-start: var(--rarity-rare-deep);
 	--mana-crystal-fill: var(--rarity-rare-deep);
-	--mana-crystal-opacity: 0.5;
+	--mana-crystal-opacity: 0.38;
 }
 
 .mana-crystal.is-locked {
 	--mana-crystal-start: var(--obsidian-500);
 	--mana-crystal-fill: var(--obsidian-500);
 	--mana-crystal-stroke: var(--obsidian-400);
-	--mana-crystal-opacity: 0.6;
+	--mana-crystal-opacity: 0.24;
 }
 
 .mana-crystal.is-overloaded {
@@ -148,22 +160,30 @@
 .mana-bar-container--hero .mana-label {
 	display: inline-flex;
 	align-items: baseline;
-	gap: 4px;
+	justify-content: space-between;
+	gap: 8px;
 	flex: 0 0 auto;
+	width: 100%;
 	font-family: "Cinzel", Georgia, serif;
-	font-size: 0.58rem;
+	font-size: 0.68rem;
 	font-weight: 800;
 	letter-spacing: 0.08em;
 	line-height: 1;
 	text-transform: uppercase;
-	color: var(--rarity-rare-bright);
-	text-shadow: 0 0 8px color-mix(in srgb, var(--rarity-rare-color) 65%, transparent);
+	color: var(--bifrost-100);
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95);
 }
 
 .mana-bar-container--hero .mana-label strong {
-	font-size: 0.78rem;
+	font-family: var(--type-mono);
+	font-size: 0.82rem;
 	letter-spacing: 0;
 	color: var(--ink-0);
+	font-variant-numeric: tabular-nums;
+}
+
+.mana-bar-container--hero .mana-crystal {
+	flex: 0 0 auto;
 }
 
 @media (prefers-reduced-motion: reduce) {

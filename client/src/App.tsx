@@ -29,6 +29,7 @@ import { EitrMigrationBanner } from "./game/components/migrations/EitrMigrationB
 import { ALL_CHAPTERS, getMission } from "./game/campaign/campaignLookup";
 import type { Difficulty } from "./game/campaign/campaignTypes";
 import { useCampaignStore } from "./game/campaign/campaignStore";
+import { selectPracticeStreakLabel, usePracticeRecordStore } from "./game/data/practiceRecord";
 import { useStarterStore } from "./game/stores/starterStore";
 import type { AiStyle } from "./game/match/types";
 import { useNFTUsername } from './game/nft/hooks';
@@ -544,13 +545,19 @@ function StatRow({ label, value, highlight = false }: { label: string; value: st
 function HomeAccountControl({
 	hiveUsername,
 	onLogin,
+	onSwitchAccount,
 }: {
 	hiveUsername: string | null;
 	onLogin: () => void;
+	onSwitchAccount: () => void;
 }) {
 	if (hiveUsername) {
 		return (
-			<AccountSlot username={hiveUsername} tier="premium" to={routes.wallet} />
+			<AccountSlot
+				username={hiveUsername}
+				tier="premium"
+				onSwitchAccount={onSwitchAccount}
+			/>
 		);
 	}
 
@@ -559,10 +566,9 @@ function HomeAccountControl({
 			type="button"
 			className="n-home-account-control inline-flex min-h-10 shrink-0 items-center gap-2 px-4 py-1 font-mono text-[0.65rem] font-extrabold uppercase tracking-[0.12em]"
 			onClick={onLogin}
-			aria-label={hiveUsername ? `Sign Hive session for @${hiveUsername}` : 'Connect Hive'}
+			aria-label="Login"
 		>
-			<WalletCards size={15} strokeWidth={2} />
-			<span>{hiveUsername ? 'Sign Hive' : 'Connect Hive'}</span>
+			<span>Login</span>
 		</button>
 	);
 }
@@ -574,28 +580,25 @@ function HiveLoginDialog({ onClose }: { onClose: () => void }) {
 				role="dialog"
 				aria-modal="true"
 				aria-labelledby="home-hive-login-title"
-				className="relative w-full max-w-md rounded-xl border border-gold-300/35 bg-obsidian-900/95 p-5 text-ink-0 shadow-2xl shadow-black/50"
+				className="relative w-full max-w-md rounded-md border border-gold-300/35 bg-obsidian-900/95 p-5 text-ink-0 shadow-2xl shadow-black/50"
 			>
 				<button
 					type="button"
 					onClick={onClose}
-					aria-label="Close Hive login"
+					aria-label="Close login"
 					className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-md border border-obsidian-700 bg-obsidian-950/70 text-ink-300 transition-colors hover:border-gold-300/50 hover:text-gold-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-300"
 				>
 					<X size={15} strokeWidth={2} />
 				</button>
-				<p className="font-mono text-[10px] font-semibold uppercase tracking-[0.28em] text-gold-300">
-					Hive login
-				</p>
 				<h2
 					id="home-hive-login-title"
-					className="mt-2 font-display text-xl font-black uppercase tracking-[0.12em] text-ink-0"
+					className="pr-10 font-display text-xl font-black uppercase tracking-[0.12em] text-ink-0"
 				>
-					Connect Hive
+					Login
 				</h2>
 				<div className="mt-4">
-					<Suspense fallback={<div className="h-28 animate-pulse rounded-lg bg-obsidian-800" />}>
-						<HiveKeychainLogin initiallyExpanded onConnected={onClose} />
+					<Suspense fallback={<div className="h-28 animate-pulse rounded-md bg-obsidian-800" />}>
+						<HiveKeychainLogin onConnected={onClose} />
 					</Suspense>
 				</div>
 			</div>
@@ -606,6 +609,7 @@ function HiveLoginDialog({ onClose }: { onClose: () => void }) {
 function HomePage() {
 	const completedMissions = useCampaignStore(s => s.completedMissions);
 	const currentMissionId = useCampaignStore(s => s.currentMission);
+	const practiceStreak = usePracticeRecordStore(selectPracticeStreakLabel);
 	const hiveUsername = useStoredHiveUsername();
 	const isHiveMode = useIsHiveMode();
 	const sharedNetwork = isSharedNetworkEnvironment();
@@ -659,7 +663,7 @@ function HomePage() {
 		? starterClaimAccess.kind === 'blocked'
 			? hiveUsername
 				? 'Sign Hive First'
-				: 'Connect Hive First'
+				: 'Login First'
 			: 'Reveal Starter Deck'
 		: activeMission
 			? 'Resume Campaign'
@@ -843,6 +847,7 @@ function HomePage() {
 					<HomeAccountControl
 						hiveUsername={hiveUsername}
 						onLogin={() => setShowHiveLogin(true)}
+						onSwitchAccount={() => setShowHiveLogin(true)}
 					/>
 				</div>
 			</header>
@@ -914,6 +919,7 @@ function HomePage() {
 						{/* Stats panel */}
 						<aside className="n-home-hero-briefing p-4 sm:p-5 flex flex-col justify-center gap-1">
 							<StatRow label="Saga" value={`${completedMissionCount} / ${totalMissionCount}`} highlight />
+							<StatRow label="Single" value={practiceStreak} />
 							<StatRow label="Active" value={activeFocusTitle} />
 							<StatRow label="Chapter" value={activeFocusChapter} />
 							<StatRow

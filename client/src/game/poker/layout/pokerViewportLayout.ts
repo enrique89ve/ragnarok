@@ -98,6 +98,10 @@ export interface PokerViewportLayout {
 
 const POKER_BOTTOM_RAIL_Y = 1024;
 const TURN_BADGE_HEIGHT = 48;
+const OPPONENT_HERO_Y = 56;
+const OPPONENT_HERO_WIDTH = 192;
+const OPPONENT_HERO_HEIGHT = 272;
+const PLAYER_HERO_WIDTH = 208;
 const PLAYER_HERO_HEIGHT = 288;
 const BETTING_CONTROLS_HEIGHT = 112;
 const BETTING_CONTROLS_DROP_RATIO = 0.2;
@@ -118,7 +122,7 @@ const COMMUNITY_SCALE = 0.81;
 const COMMUNITY_W = 720 * COMMUNITY_SCALE;
 const COMMUNITY_H = 200 * COMMUNITY_SCALE;
 const COMMUNITY_X = HERO_X;
-const COMMUNITY_Y = 458;
+const COMMUNITY_Y = 442;
 const BATTLE_LOG_X = CANVAS_W - EDGE - BATTLE_LOG_WIDTH;
 const DECK_COUNTERS_X = CANVAS_W - EDGE - DECK_COUNTERS_WIDTH;
 	const FIELD_W = 752;
@@ -245,16 +249,16 @@ export const POKER_VIEWPORT_LAYOUT = {
 			layer: 'game',
 			label: 'Opponent hero card',
 			x: HERO_X,
-			y: 72,
-			width: 192,
-			height: 272,
+			y: OPPONENT_HERO_Y,
+			width: OPPONENT_HERO_WIDTH,
+			height: OPPONENT_HERO_HEIGHT,
 			rotation: 0,
 		},
 		opponentHeroCards: {
 			layer: 'game',
 			label: 'Opponent hero pocket cards',
 			x: HERO_X + 32,
-			y: 320,
+			y: OPPONENT_HERO_Y + OPPONENT_HERO_HEIGHT - 42,
 			width: 128,
 			height: 72,
 			rotation: -6,
@@ -309,7 +313,7 @@ export const POKER_VIEWPORT_LAYOUT = {
 			label: 'Player hero card',
 			x: HERO_X,
 			y: POKER_BOTTOM_RAIL_Y - PLAYER_HERO_HEIGHT,
-			width: 208,
+			width: PLAYER_HERO_WIDTH,
 			height: PLAYER_HERO_HEIGHT,
 			rotation: 0,
 		},
@@ -317,7 +321,7 @@ export const POKER_VIEWPORT_LAYOUT = {
 			layer: 'game',
 			label: 'Player hero pocket cards',
 			x: HERO_X + 32,
-			y: 680,
+			y: 688,
 			width: 152,
 			height: 96,
 			rotation: -8,

@@ -40,6 +40,9 @@ import { capturePhaseBoundaryStateRoot } from '../p2p/phaseBoundaryRoot';
 import { GameEventBus } from '../../core/events/GameEventBus';
 import { useCampaignGameBootstrap } from './hooks/useCampaignGameBootstrap';
 import { useBossRuleEffects } from './hooks/useBossRuleEffects';
+import { useMatchReloadGuard } from './hooks/useMatchReloadGuard';
+import { shouldWarnOnMatchReload } from './matchReloadGuard';
+import './matchExitControls.css';
 import {
   getChessRealmClass,
   getFinaleClass,
@@ -114,7 +117,7 @@ function MatchExitControls({
         <div className="match-exit-control">
           <button
             type="button"
-            className="match-exit-button"
+            className="match-exit-button hover:brightness-110 focus-visible:outline"
             onClick={onRequestExit}
           >
             Leave Match
@@ -137,14 +140,14 @@ function MatchExitControls({
             <div className="match-exit-actions">
               <button
                 type="button"
-                className="match-exit-secondary"
+                className="match-exit-secondary hover:brightness-110 focus-visible:outline"
                 onClick={onCancelExit}
               >
                 Stay
               </button>
               <button
                 type="button"
-                className="match-exit-danger"
+                className="match-exit-danger hover:brightness-110 focus-visible:outline"
                 onClick={onConfirmExit}
               >
                 Leave Battle
@@ -806,6 +809,17 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   // P2P match (the hook gates internally on `matchSeed`, see useChessAITurn
   // for the full contract).
   useChessAITurn({ enabled: flowState?.tag === 'chess' });
+
+  const matchOnScreen = flow?.mode === 'campaign'
+    || Boolean(effectiveInitialArmy || playerArmy);
+  useMatchReloadGuard({
+    enabled: flow?.mode !== 'p2p' && shouldWarnOnMatchReload({
+      hasActiveMatch: ctx !== null && matchOnScreen,
+      flowTag: flowState?.tag ?? null,
+      cardsGamePhase: cardsGamePhase ?? null,
+    }),
+    mode: flow?.mode ?? null,
+  });
 
   useEffect(() => {
     if (shouldTriggerChessCombatFlow({

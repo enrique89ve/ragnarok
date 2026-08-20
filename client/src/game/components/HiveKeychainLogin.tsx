@@ -1,20 +1,10 @@
 /**
  * HiveKeychainLogin.tsx
  *
- * Compact wallet connect widget for Hive Keychain integration.
- * Placed in the top-right corner of the homepage.
- *
- * States:
- *   disconnected → expands to username input → Keychain signs a buffer to verify ownership
- *   connected     → shows @username pill + Logout button
- *
- * On connect: calls HiveAuth login, sets HiveDataLayer user, starts chain replay sync.
- * On logout: stops sync, clears HiveDataLayer state.
+ * Hive Keychain login: username + Sign. No extra expand step.
  */
 
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Link2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { useHiveDataStore } from '../../data/HiveDataLayer';
 import {
 	clearActiveHiveSession,
@@ -29,6 +19,7 @@ import { ensureBridgeRuntime } from '../runtime/bridgeRuntime';
 type ConnectStatus = 'idle' | 'connecting' | 'error';
 
 interface HiveKeychainLoginProps {
+	/** Kept for callers; the form is always visible when signed out. */
 	initiallyExpanded?: boolean;
 	onConnected?: () => void;
 }
@@ -47,12 +38,11 @@ async function stopHiveBridgeSync(): Promise<void> {
 	getNFTBridge().stopSync();
 }
 
-export function HiveKeychainLogin({ initiallyExpanded = false, onConnected }: HiveKeychainLoginProps = {}) {
+export function HiveKeychainLogin({ onConnected }: HiveKeychainLoginProps = {}) {
 	const user = useHiveDataStore((s) => s.user);
 	const setUser = useHiveDataStore((s) => s.setUser);
 	const logout = useHiveDataStore((s) => s.logout);
 
-	const [isExpanded, setIsExpanded] = useState(initiallyExpanded);
 	const [username, setUsername] = useState('');
 	const [status, setStatus] = useState<ConnectStatus>('idle');
 	const [errorMsg, setErrorMsg] = useState('');
@@ -62,8 +52,6 @@ export function HiveKeychainLogin({ initiallyExpanded = false, onConnected }: Hi
 	const userAccountId = normalizeHiveUsername(user?.hiveUsername);
 	const userAuthenticated = Boolean(userAccountId && authenticatedUsername === userAccountId);
 
-	// Keep read-only chain sync warm for a persisted account, but do not treat
-	// persisted localStorage as an authenticated Keychain session.
 	useEffect(() => {
 		let cancelled = false;
 
@@ -110,7 +98,6 @@ export function HiveKeychainLogin({ initiallyExpanded = false, onConnected }: Hi
 			accountTier: 'free',
 		});
 		setStatus('idle');
-		setIsExpanded(false);
 		setUsername('');
 		onConnected?.();
 	};
@@ -142,38 +129,32 @@ export function HiveKeychainLogin({ initiallyExpanded = false, onConnected }: Hi
 		setStatus('idle');
 		onConnected?.();
 	};
-	
+
 	const handleLogout = () => {
 		void stopHiveBridgeSync();
 		clearActiveHiveSession();
 		logout();
 	};
 
-	const handleKeyDown = (e: React.KeyboardEvent) => {
-		if (e.key === 'Enter') handleConnect();
-		if (e.key === 'Escape') setIsExpanded(false);
-	};
-
-	// --- Connected state ---
 	if (user) {
 		return (
 			<div className="flex flex-col gap-3">
 				<div className="flex items-center gap-3">
-					<div className="w-10 h-10 rounded-full bg-linear-to-br from-gold-400 to-gold-700 border border-gold-300/60 flex items-center justify-center font-display text-sm font-bold text-obsidian-950 uppercase shrink-0">
+					<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gold-300/60 bg-linear-to-br from-gold-400 to-gold-700 font-display text-sm font-bold uppercase text-obsidian-950">
 						{user.hiveUsername.slice(0, 2)}
 					</div>
 					<div className="min-w-0 flex-1">
 						<div className="flex items-center gap-1.5">
-							<div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+							<div className={`h-1.5 w-1.5 shrink-0 rounded-full ${
 								userAuthenticated
 									? 'bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.6)]'
 									: 'bg-gold-300 shadow-[0_0_6px_rgba(250,204,21,0.45)]'
 							}`} />
-							<span className="font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300">
+							<span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-300">
 								{userAuthenticated ? 'Online' : 'Signature required'}
 							</span>
 						</div>
-						<div className="text-ink-0 font-semibold text-sm truncate">@{user.hiveUsername}</div>
+						<div className="truncate text-sm font-semibold text-ink-0">@{user.hiveUsername}</div>
 					</div>
 				</div>
 				{!userAuthenticated && (
@@ -183,114 +164,100 @@ export function HiveKeychainLogin({ initiallyExpanded = false, onConnected }: Hi
 							size="sm"
 							onClick={handleReconnectStoredUser}
 							disabled={status === 'connecting'}
+							className="hover:brightness-110 focus-visible:outline disabled:opacity-50"
 						>
 							{status === 'connecting' ? 'Signing...' : 'Sign'}
 						</Button>
 						{errorMsg && (
-							<p className="text-blood-300 text-xs leading-relaxed">
+							<p className="text-xs leading-relaxed text-blood-300">
 								{errorMsg}
 							</p>
 						)}
 					</>
 				)}
-				<button
-					onClick={handleLogout}
-					className="self-start font-mono text-[10px] tracking-[0.18em] uppercase text-ink-300 hover:text-blood-300 transition-colors"
-					title="Disconnect wallet"
-				>
-					Disconnect
-				</button>
+				<div className="flex flex-wrap gap-x-4 gap-y-1">
+					<button
+						type="button"
+						onClick={handleLogout}
+						className="self-start font-mono text-[10px] uppercase tracking-[0.18em] text-ink-300 transition-colors hover:text-gold-300"
+					>
+						Change account
+					</button>
+					<button
+						type="button"
+						onClick={handleLogout}
+						className="self-start font-mono text-[10px] uppercase tracking-[0.18em] text-ink-300 transition-colors hover:text-blood-300"
+					>
+						Sign out
+					</button>
+				</div>
 			</div>
 		);
 	}
 
-	// --- Disconnected state ---
+	if (!keychainAvailable) {
+		return (
+			<div className="rounded-md border border-obsidian-700 bg-obsidian-950/60 p-3">
+				<p className="mb-1 text-xs font-semibold text-gold-300">Keychain not found</p>
+				<p className="mb-2 text-xs text-ink-300">
+					Install the Hive Keychain browser extension to log in.
+				</p>
+				<a
+					href="https://hive-keychain.com"
+					target="_blank"
+					rel="noreferrer"
+					className="text-xs text-gold-300 underline hover:text-gold-200"
+				>
+					Get Hive Keychain
+				</a>
+			</div>
+		);
+	}
+
 	return (
 		<div className="flex flex-col gap-3">
-			<p className="text-ink-200 text-xs leading-[1.6]">
-				Sign with Hive Keychain to persist progress, claim NFT cards, and join Warbands.
-			</p>
-			<Button
-				variant="outline"
-				size="lg"
-				onClick={() => { setIsExpanded(!isExpanded); setStatus('idle'); setErrorMsg(''); }}
-				className="w-full"
-			>
-				<Link2 aria-hidden="true" />
-				Connect Hive
-			</Button>
-
-			<AnimatePresence>
-				{isExpanded && (
-					<motion.div
-						initial={{ opacity: 0, height: 0 }}
-						animate={{ opacity: 1, height: 'auto' }}
-						exit={{ opacity: 0, height: 0 }}
-						transition={{ duration: 0.18 }}
-						className="overflow-hidden"
-					>
-						{!keychainAvailable ? (
-							<div className="rounded-lg border border-obsidian-700 bg-obsidian-900/60 p-3">
-								<p className="text-gold-300 text-xs font-semibold mb-1">Keychain Not Found</p>
-								<p className="text-ink-300 text-xs mb-2">
-									Install the Hive Keychain browser extension to connect.
-								</p>
-								<a
-									href="https://hive-keychain.com"
-									target="_blank"
-									rel="noreferrer"
-									className="text-gold-300 hover:text-gold-200 text-xs underline"
-								>
-									Get Hive Keychain →
-								</a>
-							</div>
-						) : (
-							<div className="rounded-lg border border-obsidian-700 bg-obsidian-900/60 p-3">
-								<p className="text-ink-300 text-[11px] mb-2 leading-relaxed">
-									Keychain will ask you to sign a login message — no transaction is posted.
-								</p>
-								<div className="flex gap-2">
-									<input
-										type="text"
-										placeholder="@username"
-										value={username}
-										onChange={(e) => { setUsername(e.target.value); setStatus('idle'); setErrorMsg(''); }}
-										onKeyDown={handleKeyDown}
-										autoFocus
-										spellCheck={false}
-										autoCapitalize="none"
-										className="flex-1 min-w-0 px-3 py-1.5 bg-obsidian-950 border border-obsidian-600/60 rounded-md text-ink-0 text-sm placeholder-ink-400 focus:outline-hidden focus:border-gold-500/60"
-									/>
-									<Button
-										variant="primary"
-										size="sm"
-										onClick={handleConnect}
-										disabled={status === 'connecting' || !username.trim()}
-									>
-										{status === 'connecting' ? (
-											<motion.span
-												animate={{ opacity: [1, 0.4, 1] }}
-												transition={{ duration: 0.8, repeat: Infinity }}
-											>
-												···
-											</motion.span>
-										) : 'Sign'}
-									</Button>
-								</div>
-								{errorMsg && (
-									<motion.p
-										initial={{ opacity: 0 }}
-										animate={{ opacity: 1 }}
-										className="text-blood-300 text-xs mt-2"
-									>
-										{errorMsg}
-									</motion.p>
-								)}
-							</div>
-						)}
-					</motion.div>
-				)}
-			</AnimatePresence>
+			<label htmlFor="hive-login-username" className="text-xs leading-relaxed text-ink-200">
+				Hive username. Keychain will sign a login message — no transaction is posted.
+			</label>
+			<div className="flex gap-2">
+				<input
+					id="hive-login-username"
+					aria-label="Hive username"
+					className="min-h-11 min-w-0 flex-1 rounded-md border border-obsidian-600/60 bg-obsidian-950 px-3 text-sm text-ink-0 placeholder-ink-400 hover:border-gold-500/40 focus-visible:outline"
+					type="text"
+					placeholder="@username"
+					value={username}
+					autoFocus
+					spellCheck={false}
+					autoCapitalize="none"
+					autoComplete="username"
+					onChange={(event) => {
+						setUsername(event.target.value);
+						setStatus('idle');
+						setErrorMsg('');
+					}}
+					onKeyDown={(event) => {
+						if (event.key === 'Enter') {
+							event.preventDefault();
+							void handleConnect();
+						}
+					}}
+				/>
+				<Button
+					variant="primary"
+					type="button"
+					disabled={status === 'connecting' || !username.trim()}
+					className="hover:brightness-110 focus-visible:outline disabled:opacity-50"
+					onClick={() => { void handleConnect(); }}
+				>
+					{status === 'connecting' ? 'Signing…' : 'Sign'}
+				</Button>
+			</div>
+			{errorMsg ? (
+				<p className="text-xs text-blood-300" role="alert">
+					{errorMsg}
+				</p>
+			) : null}
 		</div>
 	);
 }

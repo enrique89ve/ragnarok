@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { PokerCard } from '../../types/PokerCombatTypes';
 import {
 	PokerCardFrame,
@@ -43,31 +43,77 @@ export const HoleCardsOverlay: React.FC<HoleCardsOverlayProps> = ({
 }) => {
 	const isOpponent = variant === 'opponent';
 	const displayCards = cards.length > 0 ? cards : [FACE_DOWN_CARD, FACE_DOWN_CARD];
+	const [pressedIndex, setPressedIndex] = useState<number | null>(null);
+	const canInspect = embedded && !isOpponent;
 
 	const renderCards = () => displayCards.map((card, idx) => {
 		const isWinning = isCardInWinningHand(card, winningCards);
 		const isFirst = idx === 0;
 		const isFaceDown = faceDown && (!isShowdown || cards.length === 0) && !cardIsRevealed(card);
+		const isInspectable = canInspect && !isFaceDown;
+		const isPressed = pressedIndex === idx;
+		const slotClassName = [
+			'hole-card-slot',
+			isFirst ? 'hole-card-slot--first' : 'hole-card-slot--second',
+			isWinning ? 'winning-card-glow celebration' : '',
+			isPressed ? 'hole-card-slot--pressed' : '',
+		].filter(Boolean).join(' ');
+		const cardFrame = (
+			<PokerCardFrame
+				size="small"
+				variant={isFaceDown ? 'face-down' : 'face-up'}
+			>
+				{isFaceDown
+					? <CardCardBack />
+					: <CardRankSuit suit={card.suit as NorseSuit} value={card.value} />}
+			</PokerCardFrame>
+		);
+
+		if (!isInspectable) {
+			return (
+				<div key={`${variant}-hole-${idx}`} className={slotClassName}>
+					{cardFrame}
+				</div>
+			);
+		}
 
 		return (
-			<div
+			<button
 				key={`${variant}-hole-${idx}`}
-				className={[
-					'hole-card-slot',
-					isFirst ? 'rotate-[-8deg]' : 'rotate-[8deg] -ml-3.75',
-					isWinning ? 'winning-card-glow celebration' : '',
-				].filter(Boolean).join(' ')}
-				style={{ background: 'transparent', border: 'none' }}
+				type="button"
+				className={slotClassName}
+				aria-label={`${isPressed ? 'Release' : 'Hold to inspect'} poker card ${card.value} of ${card.suit}`}
+				aria-pressed={isPressed}
+				onPointerDown={(event) => {
+					event.stopPropagation();
+					event.currentTarget.setPointerCapture(event.pointerId);
+					setPressedIndex(idx);
+				}}
+				onPointerUp={(event) => {
+					event.stopPropagation();
+					setPressedIndex(null);
+				}}
+				onPointerCancel={() => setPressedIndex(null)}
+				onLostPointerCapture={() => setPressedIndex(null)}
+				onBlur={() => setPressedIndex(null)}
+				onKeyDown={(event) => {
+					if (event.key !== 'Enter' && event.key !== ' ') return;
+					event.preventDefault();
+					event.stopPropagation();
+					setPressedIndex(idx);
+				}}
+				onKeyUp={(event) => {
+					if (event.key !== 'Enter' && event.key !== ' ') return;
+					event.preventDefault();
+					event.stopPropagation();
+					setPressedIndex(null);
+				}}
+				onClick={(event) => {
+					event.stopPropagation();
+				}}
 			>
-				<PokerCardFrame
-					size="small"
-					variant={isFaceDown ? 'face-down' : 'face-up'}
-				>
-					{isFaceDown
-						? <CardCardBack />
-						: <CardRankSuit suit={card.suit as NorseSuit} value={card.value} />}
-				</PokerCardFrame>
-			</div>
+				{cardFrame}
+			</button>
 		);
 	});
 
@@ -76,6 +122,7 @@ export const HoleCardsOverlay: React.FC<HoleCardsOverlayProps> = ({
 			<div
 				className={[
 					`hero-pocket-cards hero-pocket-cards--${variant}`,
+					pressedIndex !== null ? 'is-pressing' : '',
 					activeTurn ? 'hole-cards-active-turn' : '',
 				].filter(Boolean).join(' ')}
 			>

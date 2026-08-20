@@ -643,17 +643,44 @@ server/
 
 ### Current Gate: Alfa Testnet -> Closed Testnet Beta
 
-- [ ] Prove the deployed Alfa runtime through `/api/health` and `/api/admin/config`: `stage=testnet`, `runtimePhase=alfa-testnet`, `resetEpoch=alfa-testnet-*`, `qaFullCatalogEnabled=false`, JSON state evidence.
-- [ ] Complete Hive/Keychain smoke with an internal testnet account.
+Status 2026-08-20. Code-complete is not the same as human/operator evidence.
+
+**Alfa Player-Ready — already in the tree**
+
+- [x] One coordinator owns practice / campaign / P2P (`RagnarokGameCoordinator`).
+- [x] Match-end owner is `matchEndController` (chess terminal, hero HP=0, Leave Match).
+- [x] Practice local spine smoked: chess → poker writeback → `game_over`.
+- [x] Campaign norse-1 mounts and Leave Match reaches `game_over` (abandon copy fixed).
+- [x] Poker actions labeled (Bet/Call/Raise/Fold/All in + HP).
+- [x] Home funnel: primary CTA is starter or campaign; PvP copy is gameplay-only.
+- [x] Warband and game-over expose a primary CTA (Launch Battle / Play Again / Continue the Saga).
+- [x] Daily quest local Claim: `claimed` / `already_claimed`, no RUNE until Hive.
+- [x] P2P local snapshot + rejoin code (`docs/P2P_MATCH_RESUME.md`).
+- [x] ADR 0007 gameplay-only: no `match_anchor` / `match_result` / ranked P2P RUNE during Alfa.
+
+**Alfa Player-Ready — still open**
+
+- [ ] Prove the deployed Alfa runtime through `/api/health`, `/api/admin/config`, and `/api/admin/p2p/status`: `stage=testnet`, `runtimePhase=alfa-testnet`, `resetEpoch=alfa-testnet-*`, `qaFullCatalogEnabled=false`, JSON state evidence.
+- [ ] Complete Hive/Keychain smoke with an internal testnet account (login before matchmaking; zero match-driven prompts).
+- [ ] Win norse-1 first-clear (not abandon) and confirm replay does not pay extra RUNE.
+- [ ] Daily quest Claim against Hive testnet (local path already works).
+- [ ] Poker arena visual pass at 1366x768, 1920x1080, ultrawide, and mobile landscape.
+- [ ] One `getCardById` helper (stop the `allCards` vs `cardManagement/cardRegistry` split). Do not merge the files this phase.
 - [ ] Complete the gameplay-only two-browser P2P smoke: quiet chess move,
   instant capture, poker capture, deterministic phase checkpoints, reconnect,
   local snapshot rejoin on hard reload, local result, zero match-driven Keychain prompts, zero Hive
   result operation, and export JSON.
+- [ ] Re-run `bash scripts/p2p-ticket-security-check.sh` on the tree that will deploy.
+
+**Closed Testnet Beta — blocked until Alfa Player-Ready**
+
 - [ ] Create and prove the Ragnarok NFTLoX testnet collection/schema before Closed Beta invites.
 - [ ] Rotate to a `closed-beta-*` reset epoch and prove `closedBetaCutover.inviteBlocked=false` only after NFTLoX proof, Hive/Keychain smoke, two-browser P2P smoke, and operator sign-off env evidence are set.
-- [ ] Keep P2P `match_anchor`/`match_result`, ranked RUNE, official ELO, Season
-  Score and CardXP dark; winner arbitration and Hive settlement are a later
-  release track, not a blocker for the gameplay-only smoke.
+
+Keep P2P `match_anchor`/`match_result`, ranked RUNE, official ELO, Season
+Score and CardXP dark. Winner arbitration and Hive settlement are a later
+release track ([ADR 0008](docs/adr/0008-winner-posted-match-result.md)), not a
+blocker for the gameplay-only smoke.
 
 ### Later: Genesis Launch
 

@@ -37,7 +37,7 @@ export interface MatchEndContext {
  * Returns the on-win handler for this match's mode. Always returns a
  * function (no nulls / no defensive null-check at the call site).
  *
- *   ai       => onSingleMatchEnd     (no-op)
+ *   ai       => onSingleMatchEnd     (local result + streak)
  *   scripted => onCampaignMatchEnd   (mark mission + reward dispatch)
  *   peer     => onP2PMatchEnd        (stub until ranking server lands)
  */

@@ -12,7 +12,6 @@ import {
 	isCourtCard,
 	type NorseSuit,
 } from '../../../utils/cards/norsePokerCard';
-import { getPokerRankChromeFaq, getPokerSuitChromeFaq } from '../cardChromeFaq';
 import NorseSuitEmblem from './NorseSuitEmblem';
 
 export interface CardRankSuitProps {
@@ -24,8 +23,6 @@ const CardRankSuit: React.FC<CardRankSuitProps> = ({ suit, value }) => {
 	const { size } = useCardFrame();
 	const color = SUIT_COLOR[suit];
 	const court = isCourtCard(value);
-	const rankFaq = getPokerRankChromeFaq(value);
-	const suitFaq = getPokerSuitChromeFaq(suit);
 
 	return (
 		<div
@@ -38,21 +35,19 @@ const CardRankSuit: React.FC<CardRankSuitProps> = ({ suit, value }) => {
 			<CardIndex
 				value={value}
 				corner="tl"
-				rankFaq={rankFaq}
 			/>
 			{court ? (
-				<div className="card-court" data-chrome-faq={suitFaq} role="img" aria-label={suitFaq}>
+				<div className="card-court" role="img" aria-label={`${suit} suit emblem`}>
 					<NorseSuitEmblem suit={suit} className="card-court__emblem" />
 				</div>
 			) : (
-				<div className="card-suit-emblem" data-chrome-faq={suitFaq} role="img" aria-label={suitFaq}>
+				<div className="card-suit-emblem" role="img" aria-label={`${suit} suit emblem`}>
 					<NorseSuitEmblem suit={suit} className="card-suit-emblem__svg" />
 				</div>
 			)}
 			<CardIndex
 				value={value}
 				corner="br"
-				rankFaq={rankFaq}
 			/>
 		</div>
 	);
@@ -61,15 +56,13 @@ const CardRankSuit: React.FC<CardRankSuitProps> = ({ suit, value }) => {
 function CardIndex({
 	value,
 	corner,
-	rankFaq,
 }: {
 	value: string;
 	corner: 'tl' | 'br';
-	rankFaq: string;
 }) {
 	return (
 		<div className={`card-index card-index--${corner}`}>
-			<span className="card-index__rank" data-chrome-faq={rankFaq} aria-label={rankFaq}>
+			<span className="card-index__rank" aria-label={`Poker rank ${value}`}>
 				{value}
 			</span>
 		</div>

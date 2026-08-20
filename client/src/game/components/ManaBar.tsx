@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useId } from 'react';
-import { motion } from 'framer-motion';
 import { playSound } from '../utils/soundUtils';
 import './ManaBar.css';
 import { GameIcon } from '../utils/ui/GameIcon';
@@ -57,6 +56,11 @@ const ManaBar: React.FC<ManaBarProps> = ({
     <div
       ref={manaBarRef}
       className={`mana-bar-container mana-bar-container--${variant} ${orientationClass}`}
+      role={isHeroVariant ? 'meter' : undefined}
+      aria-label={isHeroVariant ? (label ?? 'Mana') : undefined}
+      aria-valuemin={isHeroVariant ? 0 : undefined}
+      aria-valuemax={isHeroVariant ? maxMana : undefined}
+      aria-valuenow={isHeroVariant ? currentMana : undefined}
     >
       {isHeroVariant ? (
         <span className="mana-label">
@@ -155,12 +159,10 @@ const ManaCrystal: React.FC<ManaCrystalProps> = ({
   };
 
   return (
-    <motion.div
+    <div
       className={`mana-crystal ${stateClass} ${animClass || ''}`}
-      initial={{ scale: 0.8 }}
-      animate={{ scale: 1 }}
-      transition={{ delay: index * 0.02, duration: 0.2 }}
       style={crystalStyle}
+      aria-hidden="true"
     >
       <svg width={size} height={size} viewBox="0 0 20 20">
         <defs>
@@ -170,41 +172,19 @@ const ManaCrystal: React.FC<ManaCrystalProps> = ({
           </linearGradient>
         </defs>
 
-        <motion.polygon
+        <polygon
           points="10,1 18,6 18,14 10,19 2,14 2,6"
           fill={`url(#${gradId})`}
           stroke="var(--mana-crystal-stroke)"
           strokeWidth="1.5"
           style={{ filter: 'var(--mana-crystal-filter)' }}
-          animate={isAvailable ? {
-            filter: ['drop-shadow(0 0 4px rgba(59, 130, 246, 0.6))', 'drop-shadow(0 0 8px rgba(59, 130, 246, 0.9))', 'drop-shadow(0 0 4px rgba(59, 130, 246, 0.6))']
-          } : {}}
-          transition={{ duration: 2, repeat: Infinity }}
         />
 
         {isAvailable && (
-          <>
-            <circle cx="7" cy="7" r="1.5" fill="white" opacity="0.6" />
-            <line x1="6" y1="12" x2="12" y2="8" stroke="white" strokeWidth="0.5" opacity="0.4" />
-          </>
-        )}
-
-        {isLocked && (
-          <g transform="translate(5, 5)">
-            <rect x="2" y="4" width="6" height="5" rx="1" fill="#6b7280" stroke="#9ca3af" strokeWidth="0.5" />
-            <path d="M3.5 4V3C3.5 1.5 4.5 0.5 5 0.5C5.5 0.5 6.5 1.5 6.5 3V4" stroke="#9ca3af" strokeWidth="0.8" fill="none" />
-            <circle cx="5" cy="6.5" r="0.8" fill="#374151" />
-          </g>
-        )}
-
-        {isOverloaded && (
-          <g transform="translate(5, 5)">
-            <rect x="2" y="4" width="6" height="5" rx="1" fill="#b91c1c" stroke="#fca5a5" strokeWidth="0.5" />
-            <path d="M3.5 4V3C3.5 1.5 4.5 0.5 5 0.5C5.5 0.5 6.5 1.5 6.5 3V4" stroke="#fca5a5" strokeWidth="0.8" fill="none" />
-          </g>
+          <path d="M6 11.5 10.8 6.8 9.2 10.2 14 8.5 9.2 13.2 10.8 9.8Z" fill="white" opacity="0.62" />
         )}
       </svg>
-    </motion.div>
+    </div>
   );
 };
 

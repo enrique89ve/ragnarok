@@ -1,52 +1,54 @@
-/* HP Bar - Bold, Readable Health Display */
+/* HP is the primary combat read. The generated bitmap supplies only the
+   forged bezel; CSS owns the live track, value, damage trail, and states. */
 
 .fighting-hp-bar-container {
-	width: 100%;
-	max-width: 280px;
+	width: calc(100% - 6px);
 	position: relative;
-	z-index: 2;
-	margin-top: var(--space-2);
+	z-index: 6;
+	margin: 0 auto 2px;
 }
 
 .fighting-hp-bar {
 	position: relative;
-	height: 32px;
-	background: linear-gradient(180deg,
-		var(--ui-iron-darkest) 0%,
-		var(--ui-obsidian) 50%,
-		var(--ui-iron-darkest) 100%);
-	border: 2px solid;
-	border-image: linear-gradient(135deg,
-		var(--ui-gold-bright) 0%,
-		var(--ui-gold-warm) 50%,
-		var(--ui-gold-bright) 100%) 1;
-	border-radius: var(--radius-norse);
-	overflow: hidden;
-	box-shadow:
-		0 2px 10px rgba(0, 0, 0, 0.92),
-		inset 0 0 12px rgba(0, 0, 0, 0.98),
-		0 0 14px var(--ui-hp-crimson-glow),
-		0 0 3px var(--ui-gold-glow-soft);
+	height: 30px;
+	overflow: visible;
+	background: transparent;
+}
+
+.fighting-hp-bar::before {
+	content: '';
+	position: absolute;
+	inset: 8px 20px 7px;
+	z-index: 0;
+	background: #130608;
+	border: 1px solid rgba(0, 0, 0, 0.9);
+	box-shadow: inset 0 0 7px rgba(0, 0, 0, 0.94);
+}
+
+.fighting-hp-bar::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	z-index: 2;
+	pointer-events: none;
+	background: url('/ui/health-bar-frame-norse-v2.png') center / 100% 100% no-repeat;
+	filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.72));
 }
 
 .fighting-hp-fill {
 	position: absolute;
-	top: 1px;
-	left: 1px;
-	bottom: 1px;
-	right: 1px;
+	inset: 9px 21px 8px;
 	background: linear-gradient(180deg,
-		var(--blood-200, #e23b30) 0%,
-		var(--ui-hp-crimson) 30%,
-		color-mix(in srgb, var(--ui-hp-crimson-deep) 80%, black) 60%,
+		#ef5b55 0%,
+		var(--ui-hp-crimson) 42%,
 		var(--ui-hp-crimson-deep) 100%);
-	border-radius: var(--radius-norse-tight);
-	transition: transform 0.6s ease-out;
+	border-radius: 1px;
+	transition: transform 420ms ease-out;
 	transform-origin: left;
 	box-shadow:
-		0 0 10px var(--ui-hp-crimson-glow),
-		inset 0 2px 0 color-mix(in srgb, white 45%, transparent),
-		inset 0 -2px 0 rgba(0, 0, 0, 0.6);
+		0 0 6px color-mix(in srgb, var(--ui-hp-crimson) 55%, transparent),
+		inset 0 1px 0 rgba(255, 221, 214, 0.34),
+		inset 0 -1px 0 rgba(0, 0, 0, 0.58);
 	z-index: 1;
 }
 
@@ -56,39 +58,36 @@
 	top: 0;
 	left: 0;
 	right: 0;
-	height: 40%;
+	height: 38%;
 	background: linear-gradient(180deg,
 		rgba(255, 255, 255, 0.2) 0%,
 		transparent 100%
 	);
-	border-radius: var(--radius-norse-tight) 2px 0 0;
+	border-radius: 1px 1px 0 0;
 }
 
 .fighting-hp-fill::before {
 	content: '';
 	position: absolute;
-	right: -1px;
+	right: 0;
 	top: 0;
 	bottom: 0;
-	width: 3px;
+	width: 2px;
 	background: linear-gradient(180deg,
 		color-mix(in srgb, white 80%, transparent) 0%,
 		color-mix(in srgb, var(--ui-hp-crimson) 40%, transparent) 100%
 	);
-	border-radius: 0 2px 2px 0;
+	border-radius: 0 1px 1px 0;
 }
 
 .fighting-hp-damage {
 	position: absolute;
-	top: 1px;
-	right: 1px;
-	bottom: 1px;
-	left: 1px;
+	inset: 9px 21px 8px;
 	background: linear-gradient(180deg,
-		color-mix(in srgb, var(--danger-500) 50%, transparent) 0%,
-		color-mix(in srgb, var(--danger-600, #400000) 30%, transparent) 100%
+		#6f111a 0%,
+		#28070a 100%
 	);
-	border-radius: var(--radius-norse-tight);
+	border-radius: 1px;
 	z-index: 0;
 }
 
@@ -98,30 +97,24 @@
 	left: 50%;
 	transform: translate(-50%, -50%);
 	font-family: var(--type-display);
-	font-size: 1.4rem;
+	font-size: 0.88rem;
 	font-weight: 900;
 	color: var(--text-near-white);
 	text-shadow:
-		0 0 4px #000,
-		0 0 10px rgba(0, 0, 0, 1),
-		1px 1px 0 #000,
-		-1px -1px 0 #000,
-		1px -1px 0 #000,
-		-1px 1px 0 #000,
-		0 0 16px var(--ui-hp-crimson-glow);
-	z-index: 2;
-	letter-spacing: 2px;
+		0 1px 2px #000,
+		0 0 5px rgba(0, 0, 0, 0.96);
+	z-index: 3;
+	letter-spacing: 0.04em;
+	font-variant-numeric: tabular-nums;
 	white-space: nowrap;
 }
 
 .fighting-hp-bar-container.opponent .fighting-hp-fill {
-	right: 1px;
-	left: auto;
+	transform-origin: right;
 }
 
-.fighting-hp-bar-container.opponent .fighting-hp-bar {
-	box-shadow:
-		0 2px 10px rgba(0, 0, 0, 0.7),
-		inset 0 0 10px rgba(0, 0, 0, 0.9),
-		0 0 16px var(--danger-glow);
+@media (prefers-reduced-motion: reduce) {
+	.fighting-hp-fill {
+		transition: none;
+	}
 }
