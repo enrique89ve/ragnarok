@@ -32,8 +32,8 @@ import { ARENA_VFX_TARGETS, arenaVfxTargetProps } from '../arenaVfxTargets';
 const OPPONENT_HAND_VISIBLE_LIMIT = 10;
 // Mirrors the opponent hand geometry; the badge follows the right edge of the
 // last visible card while the stack grows.
-const OPPONENT_HAND_CARD_WIDTH_PX = 96;
-const OPPONENT_HAND_CARD_OVERLAP_PX = -48;
+const OPPONENT_HAND_CARD_WIDTH_PX = 77;
+const OPPONENT_HAND_CARD_OVERLAP_PX = -38.5;
 const OPPONENT_HAND_CARD_STEP_PX = OPPONENT_HAND_CARD_WIDTH_PX + OPPONENT_HAND_CARD_OVERLAP_PX;
 
 export interface OpponentZoneProps {

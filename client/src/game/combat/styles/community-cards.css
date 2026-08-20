@@ -19,10 +19,10 @@
 
 .community-slot .arena-poker-card.norse,
 .community-slot .poker-card-frame {
-  width: 132px !important;
-  max-width: 132px !important;
-  height: 184px !important;
-  aspect-ratio: 132 / 184 !important;
+  width: var(--community-card-width, 132px) !important;
+  max-width: var(--community-card-width, 132px) !important;
+  height: var(--community-card-height, 184px) !important;
+  aspect-ratio: var(--community-card-width, 132px) / var(--community-card-height, 184px) !important;
 }
 
 .community-cards-section {

@@ -114,10 +114,11 @@ const PLAYER_HAND_HEIGHT = 192;
 const PLAYER_HAND_CARD_RISE_RATIO = 0.2;
 const PLAYER_HAND_CARD_RISE = Math.round(PLAYER_HAND_HEIGHT * PLAYER_HAND_CARD_RISE_RATIO);
 const HERO_X = EDGE;
-	const COMMUNITY_W = 720;
-	const COMMUNITY_H = 200;
+const COMMUNITY_SCALE = 0.81;
+const COMMUNITY_W = 720 * COMMUNITY_SCALE;
+const COMMUNITY_H = 200 * COMMUNITY_SCALE;
 const COMMUNITY_X = HERO_X;
-const COMMUNITY_Y = 416;
+const COMMUNITY_Y = 458;
 const BATTLE_LOG_X = CANVAS_W - EDGE - BATTLE_LOG_WIDTH;
 const DECK_COUNTERS_X = CANVAS_W - EDGE - DECK_COUNTERS_WIDTH;
 	const FIELD_W = 752;
@@ -258,11 +259,11 @@ export const POKER_VIEWPORT_LAYOUT = {
 			height: 72,
 			rotation: -6,
 		},
-		opponentHand: {
+	opponentHand: {
 			layer: 'game',
 			label: 'Opponent poker hand / hidden cards',
 			x: HERO_X + 208,
-			y: 160,
+			y: 152,
 			width: 400,
 			height: 88,
 			rotation: 0,

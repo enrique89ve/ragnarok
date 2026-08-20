@@ -147,6 +147,9 @@
   --player-hand-strength-gap: 8px;
   --player-hand-card-width: 132px;
   --player-hand-card-height: 176px;
+  --community-card-width: 106px;
+  --community-card-height: 149px;
+  --community-card-gap: 9px;
   display: block !important;
   position: relative;
   width: 100%;
@@ -258,9 +261,9 @@
 }
 
 .unified-combat-arena .opponent-hand-display {
-  --opponent-hand-card-width: 96px;
+  --opponent-hand-card-width: 77px;
   --opponent-hand-card-overlap: calc(var(--opponent-hand-card-width) / -2);
-  /* Max footprint: 8 cards x 96px - 7 x 48px overlap = 432px fan width.
+  /* Max footprint: 8 cards x 77px - 7 x 38.5px overlap = 346.5px fan width.
      Container sized to 400px so the fan never overflows or shifts the
      anchor when the hand has fewer / more cards. */
   --opponent-hand-max-cards: 8;
@@ -304,10 +307,10 @@
 
 .unified-combat-arena > .zone-board .community-cards-section {
   align-items: center;
-  gap: var(--poker-space-9);
+  gap: var(--community-card-gap);
   height: 100%;
   margin: 0;
-  padding: 0;
+  padding: 6px 6px;
   background: transparent;
   border: 0;
 }
