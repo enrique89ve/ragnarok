@@ -1,18 +1,12 @@
 /**
  * Single (practice) match lifecycle handlers.
  *
- * Practice pays no RUNE or ranking. It only stores a local win/loss
- * so the home briefing and History page can show a consecutive streak.
+ * Practice pays no RUNE or ranking. The local battle ledger is written
+ * by the coordinator through `recordLocalBattleEnd`, not here.
  */
 
-import { resultFromMatchEnd, usePracticeRecordStore } from '../../../data/practiceRecord';
 import type { MatchEndContext } from '../../onWinDispatch';
 import type { MatchContext } from '../../types';
 
-export function onSingleMatchEnd(ctx: MatchContext, end: MatchEndContext): void {
-	if (ctx.opponent.kind !== 'ai') return;
-	usePracticeRecordStore.getState().recordPracticeResult({
-		matchId: ctx.matchId,
-		result: resultFromMatchEnd(end.iWon),
-	});
+export function onSingleMatchEnd(_ctx: MatchContext, _end: MatchEndContext): void {
 }

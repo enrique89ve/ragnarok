@@ -1,15 +1,20 @@
 /**
- * Local practice results. No RUNE, no ranking — consecutive W/L only.
+ * Local battle results for History. No RUNE — device ledger only.
  */
 
-export const PRACTICE_RECORD_MAX = 30;
+export const PRACTICE_RECORD_MAX = 50;
 
-export type PracticeMatchResult = 'win' | 'loss';
+export type LocalBattleMode = 'practice' | 'campaign' | 'p2p';
+
+export type BattleLedgerFilter = 'all' | LocalBattleMode;
+
+export type PracticeMatchResult = 'win' | 'loss' | 'draw';
 
 export type PracticeMatchRecord = {
 	readonly matchId: string;
 	readonly result: PracticeMatchResult;
 	readonly endedAt: number;
+	readonly mode: LocalBattleMode;
 };
 
 export type PracticeStreak =
@@ -17,8 +22,33 @@ export type PracticeStreak =
 	| { readonly kind: 'win'; readonly count: number }
 	| { readonly kind: 'loss'; readonly count: number };
 
-export function resultFromMatchEnd(iWon: boolean): PracticeMatchResult {
+export function isBattleLedgerAccount(username: string | null | undefined): boolean {
+	const name = username?.trim().toLowerCase().replace(/^@/, '') ?? '';
+	return name.length > 0 && name !== 'guest';
+}
+
+export function resultFromMatchEnd(iWon: boolean, isDraw = false): PracticeMatchResult {
+	if (isDraw) return 'draw';
 	return iWon ? 'win' : 'loss';
+}
+
+export function normalizeBattleMode(mode: unknown): LocalBattleMode {
+	if (mode === 'campaign' || mode === 'p2p' || mode === 'practice') return mode;
+	return 'practice';
+}
+
+export function normalizeBattleRecord(raw: unknown): PracticeMatchRecord | null {
+	if (typeof raw !== 'object' || raw === null) return null;
+	const record = raw as Record<string, unknown>;
+	if (typeof record.matchId !== 'string' || record.matchId.length === 0) return null;
+	if (record.result !== 'win' && record.result !== 'loss' && record.result !== 'draw') return null;
+	if (typeof record.endedAt !== 'number' || !Number.isFinite(record.endedAt)) return null;
+	return {
+		matchId: record.matchId,
+		result: record.result,
+		endedAt: record.endedAt,
+		mode: normalizeBattleMode(record.mode),
+	};
 }
 
 export function appendPracticeRecord(
@@ -32,11 +62,16 @@ export function appendPracticeRecord(
 
 export function derivePracticeStreak(
 	records: ReadonlyArray<PracticeMatchRecord>,
+	mode?: LocalBattleMode,
 ): PracticeStreak {
-	const latest = records[0];
+	const scoped = mode
+		? records.filter((record) => record.mode === mode)
+		: records;
+	const scored = scoped.filter((record) => record.result !== 'draw');
+	const latest = scored[0];
 	if (!latest) return { kind: 'none' };
 	let count = 0;
-	for (const record of records) {
+	for (const record of scored) {
 		if (record.result !== latest.result) break;
 		count += 1;
 	}
@@ -49,4 +84,18 @@ export function formatPracticeStreak(streak: PracticeStreak): string {
 		? (streak.kind === 'win' ? 'win' : 'loss')
 		: (streak.kind === 'win' ? 'wins' : 'losses');
 	return `${streak.count} ${noun}`;
+}
+
+export function formatBattleMode(mode: LocalBattleMode): string {
+	if (mode === 'campaign') return 'Campaign';
+	if (mode === 'p2p') return 'PvP';
+	return 'Single';
+}
+
+export function filterBattleRecords(
+	records: ReadonlyArray<PracticeMatchRecord>,
+	filter: BattleLedgerFilter,
+): ReadonlyArray<PracticeMatchRecord> {
+	if (filter === 'all') return records;
+	return records.filter((record) => record.mode === filter);
 }

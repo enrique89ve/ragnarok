@@ -151,32 +151,34 @@
    Golden aura on player's turn, crimson on opponent's turn
    ======================================== */
 
-.ragnarok-combat-arena.player-turn .unified-player-area .battlefield-hero-square {
-  box-shadow:
-    0 0 12px 4px rgba(212, 175, 55, 0.7),
-    0 0 28px 10px rgba(212, 175, 55, 0.45),
-    0 0 50px 16px rgba(212, 175, 55, 0.2),
-    0 0 80px 24px rgba(212, 175, 55, 0.08);
+.ragnarok-combat-arena.player-turn [data-hero-role="player"] .battlefield-hero-square {
+  --turn-aura-rgb: 212, 175, 55;
   animation: turn-glow-pulse 2.5s ease-in-out infinite;
 }
 
-.ragnarok-combat-arena.opponent-turn .unified-opponent-hero .battlefield-hero-square {
-  box-shadow:
-    0 0 12px 4px rgba(220, 38, 38, 0.65),
-    0 0 28px 10px rgba(220, 38, 38, 0.4),
-    0 0 50px 16px rgba(220, 38, 38, 0.18),
-    0 0 80px 24px rgba(220, 38, 38, 0.06);
+.ragnarok-combat-arena.opponent-turn [data-hero-role="opponent"] .battlefield-hero-square {
+  --turn-aura-rgb: 220, 38, 38;
   animation: turn-glow-pulse 2.5s ease-in-out infinite;
 }
 
 @keyframes turn-glow-pulse {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
+  0%, 100% {
+    box-shadow:
+      0 0 10px 3px rgba(var(--turn-aura-rgb), 0.48),
+      0 0 24px 8px rgba(var(--turn-aura-rgb), 0.24),
+      0 0 42px 14px rgba(var(--turn-aura-rgb), 0.1);
+  }
+  50% {
+    box-shadow:
+      0 0 13px 4px rgba(var(--turn-aura-rgb), 0.72),
+      0 0 30px 11px rgba(var(--turn-aura-rgb), 0.4),
+      0 0 56px 18px rgba(var(--turn-aura-rgb), 0.16);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ragnarok-combat-arena.player-turn .unified-player-area .battlefield-hero-square,
-  .ragnarok-combat-arena.opponent-turn .unified-opponent-hero .battlefield-hero-square {
+  .ragnarok-combat-arena.player-turn [data-hero-role="player"] .battlefield-hero-square,
+  .ragnarok-combat-arena.opponent-turn [data-hero-role="opponent"] .battlefield-hero-square {
     animation: none;
   }
 }

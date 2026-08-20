@@ -5,7 +5,8 @@ import { ArmySelection as ArmySelectionType } from '../types/ChessTypes';
 import { useChessCombatAdapter } from '../hooks/useChessCombatAdapter';
 import { getDefaultArmySelection } from '../data/ChessPieceConfig';
 import { useCampaignStore } from '../campaign';
-import { deriveIntro, deriveIWonForPhase, deriveMatchFlowPolicy, deriveOpponentArmyForMode, markDailyQuestClaimsPendingAfterMatch, selectOnWinHandler, useMatchStore } from '../match';
+import { deriveIntro, deriveIWonForPhase, deriveMatchFlowPolicy, deriveOpponentArmyForMode, derivePlayableMatchMode, markDailyQuestClaimsPendingAfterMatch, selectOnWinHandler, useMatchStore } from '../match';
+import { recordLocalBattleEnd } from '../data/practiceRecord';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { routes } from '../../lib/routes';
 import { getWarbandEntryRoute } from '../../lib/warbandRoutes';
@@ -262,6 +263,14 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     const { request, initialSub } = input;
     const plan = matchEndCommitPlan(request);
     const apply = () => {
+      if (request.ctx) {
+        recordLocalBattleEnd({
+          matchId: request.ctx.matchId,
+          mode: derivePlayableMatchMode(request.ctx),
+          iWon: request.iWon,
+          isDraw: request.isDraw,
+        });
+      }
       if (plan.runLifecycle && request.ctx) {
         selectOnWinHandler(request.ctx)({
           iWon: request.iWon,

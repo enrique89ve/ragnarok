@@ -9,7 +9,7 @@
   max-width: 192px;
   pointer-events: auto;
   cursor: pointer;
-  transition: transform 180ms ease, opacity 180ms ease;
+  transition: transform 180ms ease;
   margin: 0;
   padding: 0;
   position: relative;

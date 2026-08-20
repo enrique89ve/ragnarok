@@ -2,8 +2,9 @@
    POKER FACE-DOWN SHARED CHROME
    ─────────────────────────────────────────────────
    Single source of truth for every poker card back:
-   solid dark field + gold beveled rim. The Eihwaz
-   center rune lives in <CardCardBack>, not here.
+   forest-green field + Nordic lattice + muted moss rim. The
+   Eihwaz center rune lives in <CardCardBack> and inherits
+   the shared palette below.
 
    Surfaces:
      .poker-face-down-surface   (slot inside CardCardBack)
@@ -15,11 +16,62 @@
    ═══════════════════════════════════════════════════ */
 
 .poker-face-down-surface {
-	background-color: #11151d;
-	background-image: none;
-	border: none;
+  --poker-back-surface: #2a5a3f;
+  --poker-back-rim: #b3dc88;
+  --poker-back-inset: #173b29;
+  --poker-back-rim-soft: rgba(179, 220, 136, 0.78);
+  --poker-back-rune: #eff9d9;
+  --poker-back-pattern-inset: 4px;
+  --poker-back-pattern:
+    linear-gradient(
+      45deg,
+      transparent 46%,
+      rgba(221, 244, 192, 0.12) 48%,
+      rgba(221, 244, 192, 0.12) 52%,
+      transparent 54%
+    ),
+    linear-gradient(
+      -45deg,
+      transparent 46%,
+      rgba(8, 30, 18, 0.16) 48%,
+      rgba(8, 30, 18, 0.16) 52%,
+      transparent 54%
+    );
+
+  background-color: var(--poker-back-surface);
+  background-image: none;
+  border: none;
 	box-shadow:
-		inset 0 0 0 1px #c9a84c,
-		inset 0 0 0 2px #11151d,
-		inset 0 0 0 3px rgba(201, 168, 76, 0.72);
+		inset 0 0 0 1px var(--poker-back-rim),
+		inset 0 0 0 2px var(--poker-back-inset),
+		inset 0 0 0 3px var(--poker-back-rim-soft);
+}
+
+.poker-face-down-surface .card-back-border {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
+
+.poker-face-down-surface .card-back-border::before {
+  position: absolute;
+  inset: var(--poker-back-pattern-inset);
+  z-index: 0;
+  content: '';
+  background-image: var(--poker-back-pattern);
+  background-position: center;
+  background-size: 18px 18px;
+  background-blend-mode: screen, multiply;
+  pointer-events: none;
+}
+
+.poker-face-down-surface .card-back-center {
+  z-index: 1;
+}
+
+.poker-face-down-surface .yggdrasil-symbol {
+  color: var(--poker-back-rune);
+	text-shadow:
+		0 1px 0 #05070b,
+		0 0 5px rgba(239, 249, 217, 0.35);
 }

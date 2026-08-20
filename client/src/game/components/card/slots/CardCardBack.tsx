@@ -1,7 +1,7 @@
 /**
  * <CardCardBack> — slot: norse poker card back.
  *
- * Renders the face-down poker back: solid dark field, gold rim
+ * Renders the face-down poker back: forest-green field, moss rim
  * (`.poker-face-down-surface`), and a centered Eihwaz `ᛇ` glyph.
  * Same chrome for community slots, hole cards, and opponent hand.
  *

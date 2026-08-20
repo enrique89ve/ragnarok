@@ -32,6 +32,10 @@
 
 .hero-portrait.power-activating {
 	box-shadow: inset 0 0 30px 10px rgba(250, 204, 21, 0.6), 0 0 20px rgba(250, 204, 21, 0.4);
+}
+
+.hero-portrait.power-activating::before {
+	background: radial-gradient(circle at center, rgba(255, 235, 150, 0.7), rgba(250, 204, 21, 0.18) 48%, transparent 76%);
 	animation: hero-power-burst 0.5s ease-out;
 }
 
@@ -54,7 +58,7 @@
 @media (prefers-reduced-motion: reduce) {
 	.battlefield-hero-square .hero-card-frame,
 	.battlefield-hero-square .hero-card-wrapper.hero-damaged .hero-card-frame,
-	.hero-portrait.power-activating,
+	.hero-portrait.power-activating::before,
 	.hero-armor-badge.armor-gained {
 		animation: none;
 	}

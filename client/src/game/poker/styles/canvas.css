@@ -98,14 +98,17 @@
   overflow: visible;
   background: linear-gradient(
     180deg,
-    rgba(9, 13, 22, 0.88) 0%,
-    rgba(3, 5, 10, 0.94) 100%
+    #090d16 0%,
+    #03050a 100%
   ) !important;
-	border: 1px solid color-mix(in srgb, var(--bifrost-300) 34%, var(--obsidian-700)) !important;
+	border: 1px solid color-mix(in srgb, var(--bifrost-300) 54%, var(--obsidian-700)) !important;
 	border-radius: 5px !important;
 	box-shadow:
 		0 5px 14px rgba(0, 0, 0, 0.58),
 		inset 0 1px 0 rgba(201, 224, 255, 0.08) !important;
+  opacity: 1;
+  filter: none;
+  isolation: isolate;
   transform: translate3d(0, var(--hero-resource-dock-y), 0);
 }
 
@@ -422,15 +425,19 @@
 
 .ragnarok-combat-arena .opponent-hero-container .hero-pocket-cards--opponent {
   left: 50%;
-  top: calc(var(--poker-zone-opponentHero-h) - 42px);
+  top: calc(
+    var(--poker-zone-opponentHeroCards-y) -
+      var(--poker-zone-opponentHero-y)
+  );
   width: var(--poker-zone-opponentHeroCards-w);
   height: var(--poker-zone-opponentHeroCards-h);
-  z-index: 69;
+  align-items: flex-start;
+  z-index: 40;
   transform:
     translateX(-50%)
     rotate(var(--poker-zone-opponentHeroCards-rot))
     scale(0.58);
-  transform-origin: center bottom;
+  transform-origin: center top;
 }
 
 .ragnarok-combat-arena .poker-hero-container .hero-pocket-cards--player {

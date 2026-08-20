@@ -1,4 +1,5 @@
 import React from 'react';
+import { Axe, CircleCheck, Flag, Scale, ShieldX } from 'lucide-react';
 import { CombatAction } from '../../types/PokerCombatTypes';
 import type { ActionPermissions } from '../../hooks/usePokerCombatAdapter';
 import {
@@ -9,40 +10,21 @@ import {
 	pokerQuickBetHp,
 } from './bettingPanelCopy';
 
-const SwordIcon: React.FC = () => (
-	<svg className="btn-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false">
-		<path d="M16.5 1l-1 3.5-1.2 1.2-5.8 5.8-1.4-1.4 5.8-5.8L14 3.1 15.5 1h1zM7.6 11l1.4 1.4-2.3 2.3 1.1 1.1a1 1 0 01-1.4 1.4l-1.1-1.1-1.8 1.8a1 1 0 01-1.4-1.4l1.8-1.8-1.1-1.1a1 1 0 011.4-1.4l1.1 1.1L7.6 11z" />
-	</svg>
-);
+const ACTION_ICON_PROPS = {
+	'aria-hidden': true,
+	className: 'btn-icon',
+	focusable: false,
+	size: 25,
+	strokeLinecap: 'round',
+	strokeLinejoin: 'round',
+	strokeWidth: 2.6,
+} as const;
 
-const CrossedSwordsIcon: React.FC = () => (
-	<svg className="btn-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false">
-		<path d="M3.5 1l1 3.5 1.2 1.2 4.3 4.3 4.3-4.3L15.5 4.5l1-3.5h1L16 5.3l-1.2 1.2L10 11.3l-1.5 1.5 1.1 1.1a1 1 0 01-1.4 1.4l-1.1-1.1-1.8 1.8a1 1 0 01-1.4-1.4l1.8-1.8-1.1-1.1a1 1 0 011.4-1.4l1.1 1.1L8.6 10 4.3 5.7 3.1 4.5 1 5.5V4.5L2.5 1h1z" />
-		<path d="M11.4 12.4l1.5-1.5 4.8 4.8-1.2 1.2L18 18.5a1 1 0 01-1.4 1.4l-1.6-1.6-1.2 1.2-4.8-4.8z" opacity="0.85" />
-	</svg>
-);
-
-const ShieldIcon: React.FC = () => (
-	<svg className="btn-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false">
-		<path d="M10 1L3 4v5c0 4.5 3 8.3 7 9.8 4-1.5 7-5.3 7-9.8V4l-7-3zm0 2.2L15 5.8v3.4c0 3.5-2.2 6.5-5 7.8-2.8-1.3-5-4.3-5-7.8V5.8L10 3.2z" />
-		<circle cx="10" cy="9.5" r="2.5" opacity="0.6" />
-	</svg>
-);
-
-const HelmIcon: React.FC = () => (
-	<svg className="btn-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false">
-		<path d="M10 2C6.5 2 3.5 4.5 3 8v3c0 .6.4 1 1 1h1v2.5c0 .8.7 1.5 1.5 1.5h1c.6 0 1-.3 1.2-.8L10 13l1.3 2.2c.2.5.6.8 1.2.8h1c.8 0 1.5-.7 1.5-1.5V12h1c.6 0 1-.4 1-1V8c-.5-3.5-3.5-6-7-6zM5 8.5c.3-2.5 2.5-4.5 5-4.5s4.7 2 5 4.5V10H5V8.5z" />
-		<path d="M9.2 7h1.6v3H9.2V7z" opacity="0.5" />
-	</svg>
-);
-
-const FrontlineIcon: React.FC = () => (
-	<svg className="btn-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false">
-		<path d="M5 2.5a1 1 0 012 0V4h8.5l-2 3 2 3H7v7.5a1 1 0 01-2 0v-15z" />
-		<path d="M2 15.5c1.2-2.4 3.8-4 8-4s6.8 1.6 8 4c-1.4 1.1-4.2 2-8 2s-6.6-.9-8-2z" opacity="0.62" />
-		<path d="M4.8 14.8a1.2 1.2 0 112.4 0 1.2 1.2 0 01-2.4 0zm4 0a1.2 1.2 0 112.4 0 1.2 1.2 0 01-2.4 0zm4 0a1.2 1.2 0 112.4 0 1.2 1.2 0 01-2.4 0z" opacity="0.9" />
-	</svg>
-);
+const RaiseIcon: React.FC = () => <Axe {...ACTION_ICON_PROPS} />;
+const MatchIcon: React.FC = () => <Scale {...ACTION_ICON_PROPS} />;
+const CheckIcon: React.FC = () => <CircleCheck {...ACTION_ICON_PROPS} />;
+const FoldIcon: React.FC = () => <ShieldX {...ACTION_ICON_PROPS} />;
+const FrontlineIcon: React.FC = () => <Flag {...ACTION_ICON_PROPS} />;
 
 const ButtonIconFrame: React.FC<{ readonly children: React.ReactNode }> = ({ children }) => (
 	<span className="btn-icon-frame" aria-hidden="true">
@@ -69,7 +51,8 @@ function PokerActionButton({
 	readonly onClick: () => void;
 	readonly reason: string | null;
 }): React.ReactElement {
-	const aria = hp && hp > 0 ? `${label} ${hp} HP` : label;
+	const hasValue = hp != null && hp > 0;
+	const aria = hasValue ? `${label} ${hp} HP` : label;
 	return (
 		<button
 			type="button"
@@ -81,10 +64,11 @@ function PokerActionButton({
 			title={reason ?? aria}
 		>
 			<ButtonIconFrame>{icon}</ButtonIconFrame>
-			<span className="btn-copy">
-				<span className="btn-label">{label}</span>
-				{hp != null && hp > 0 ? <span className="btn-hp">{hp} HP</span> : null}
-			</span>
+			{hasValue && (
+				<span className="btn-copy">
+					{hasValue ? <span className="btn-hp">{hp} HP</span> : null}
+				</span>
+			)}
 		</button>
 	);
 }
@@ -219,7 +203,7 @@ export const BettingPanel: React.FC<BettingPanelProps> = ({
 						className="raise-btn"
 						label={BETTING_ACTION_LABEL[commitKind]}
 						hp={commitHP}
-						icon={<SwordIcon />}
+						icon={<RaiseIcon />}
 						disabled={isDisabled || !commitAllowed}
 						reason={commitReason}
 						onClick={() => onAction(
@@ -232,7 +216,7 @@ export const BettingPanel: React.FC<BettingPanelProps> = ({
 						className="call-btn"
 						label={BETTING_ACTION_LABEL[matchKind]}
 						hp={matchKind === 'call' ? callHP : undefined}
-						icon={matchKind === 'call' ? <CrossedSwordsIcon /> : <HelmIcon />}
+						icon={matchKind === 'call' ? <MatchIcon /> : <CheckIcon />}
 						disabled={isDisabled || !matchAllowed}
 						reason={matchReason}
 						onClick={() => onAction(matchKind === 'call' ? CombatAction.ENGAGE : CombatAction.DEFEND)}
@@ -241,7 +225,7 @@ export const BettingPanel: React.FC<BettingPanelProps> = ({
 						actionId="fold"
 						className="fold-btn"
 						label={BETTING_ACTION_LABEL.fold}
-						icon={<ShieldIcon />}
+						icon={<FoldIcon />}
 						disabled={isDisabled || !canFold}
 						reason={foldReason}
 						onClick={() => onAction(CombatAction.BRACE)}
@@ -253,14 +237,14 @@ export const BettingPanel: React.FC<BettingPanelProps> = ({
 							label={BETTING_ACTION_LABEL.frontline}
 							icon={<FrontlineIcon />}
 							disabled={isDisabled}
-							reason={bettingDisabledReason({
-								isMyTurn: isMyTurnToAct,
-								kind: 'frontline',
-								allowed: isMyTurnToAct,
-								availableHP,
-								toCall,
-								minBet,
-							})}
+								reason={bettingDisabledReason({
+									isMyTurn: isMyTurnToAct,
+									kind: 'frontline',
+									allowed: isMyTurnToAct,
+									availableHP,
+									toCall,
+									minBet,
+								})}
 							onClick={onAutoAttackFrontline}
 						/>
 					)}

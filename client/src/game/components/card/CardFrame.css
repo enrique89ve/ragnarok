@@ -528,7 +528,7 @@
 	width: 100%;
 	height: 100%;
 	border-radius: inherit;
-	/* Solid field + gold rim live in `./pokerFaceDown.css`. */
+	/* Face-down poker chrome lives in `./pokerFaceDown.css`. */
 }
 
 .card-card-back .card-back-border {

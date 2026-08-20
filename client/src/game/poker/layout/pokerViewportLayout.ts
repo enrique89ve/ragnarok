@@ -122,7 +122,7 @@ const COMMUNITY_SCALE = 0.81;
 const COMMUNITY_W = 720 * COMMUNITY_SCALE;
 const COMMUNITY_H = 200 * COMMUNITY_SCALE;
 const COMMUNITY_X = HERO_X;
-const COMMUNITY_Y = 442;
+const COMMUNITY_Y = 474;
 const BATTLE_LOG_X = CANVAS_W - EDGE - BATTLE_LOG_WIDTH;
 const DECK_COUNTERS_X = CANVAS_W - EDGE - DECK_COUNTERS_WIDTH;
 	const FIELD_W = 752;
@@ -254,11 +254,11 @@ export const POKER_VIEWPORT_LAYOUT = {
 			height: OPPONENT_HERO_HEIGHT,
 			rotation: 0,
 		},
-		opponentHeroCards: {
+	opponentHeroCards: {
 			layer: 'game',
 			label: 'Opponent hero pocket cards',
 			x: HERO_X + 32,
-			y: OPPONENT_HERO_Y + OPPONENT_HERO_HEIGHT - 42,
+		y: OPPONENT_HERO_Y + OPPONENT_HERO_HEIGHT - 4,
 			width: 128,
 			height: 72,
 			rotation: -6,

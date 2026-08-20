@@ -27,7 +27,7 @@ export interface PokerCardFrameProps {
 
 	/** Visual variant.
 	 *  `face-up`   — parchment + corner runes (Q, 5, A revealed).
-	 *  `face-down` — solid dark + Eihwaz center rune, no border.
+	 *  `face-down` — forest-green field + Eihwaz center rune, no inner border.
 	 *  Default: `face-up`. */
 	variant?: 'face-up' | 'face-down';
 

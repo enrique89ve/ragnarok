@@ -307,22 +307,23 @@
 
 
 /* ========================================
-   HP-REACTIVE BOARD DARKENING
+   HP-REACTIVE PORTRAIT WASH
+   Resource instruments remain outside the dramatic treatment.
    ======================================== */
 .game-viewport[data-player-hp-zone="danger"] [data-hero-role="player"] {
-	filter: brightness(0.8) saturate(0.7);
+	--hero-portrait-state-wash: rgba(3, 7, 14, 0.2);
 }
 
 .game-viewport[data-player-hp-zone="critical"] [data-hero-role="player"] {
-	filter: brightness(0.65) saturate(0.5);
+	--hero-portrait-state-wash: rgba(3, 7, 14, 0.36);
 }
 
 .game-viewport[data-opponent-hp-zone="danger"] [data-hero-role="opponent"] {
-	filter: brightness(0.8) saturate(0.7);
+	--hero-portrait-state-wash: rgba(3, 7, 14, 0.2);
 }
 
 .game-viewport[data-opponent-hp-zone="critical"] [data-hero-role="opponent"] {
-	filter: brightness(0.65) saturate(0.5);
+	--hero-portrait-state-wash: rgba(3, 7, 14, 0.36);
 }
 
 
