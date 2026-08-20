@@ -40,6 +40,7 @@ import {
   applyChessAction
 } from '@shared/protocol-core/chess';
 import type { ChessReduceResult } from '@shared/protocol-core/chess';
+import { isChessAttackInstantKill } from '@shared/p2p-wire/chess';
 
 export interface ChessAttackResolutionInput {
   attacker: ChessPiece;
@@ -573,14 +574,17 @@ export const createChessCombatSlice: StateCreator<
           defenderPosition: to
         };
         
-        const isInstantKillAttacker = selectedPiece.type === 'pawn' || selectedPiece.type === 'king';
-        const isInstantKillDefender = defender.type === 'pawn';
-        const isInstantKill = isInstantKillAttacker || isInstantKillDefender;
-        
+        const isInstantKill = isChessAttackInstantKill({
+          attackerType: selectedPiece.type,
+          defenderType: defender.type,
+        });
+
         if (isInstantKill) {
-          const reason = isInstantKillAttacker
-            ? `${selectedPiece.type} uses Valkyrie weapon`
-            : `pawn is weak and cannot defend`;
+          const reason = defender.type === 'king'
+            ? 'commander captured'
+            : selectedPiece.type === 'pawn'
+              ? 'Valkyrie weapon'
+              : 'pawn has no deck';
           debug.chess(`[Chess] Instant kill queued: ${selectedPiece.heroName} -> ${defender.heroName} (${reason})`);
           collision.instantKill = true;
         }
@@ -707,6 +711,16 @@ export const createChessCombatSlice: StateCreator<
 
   clearPendingCombat: () => {
     set({ pendingCombat: null });
+  },
+
+  stagePendingPokerCombat: (attacker, defender) => {
+    return resolveChessAttackIntent(get, set, {
+      attacker,
+      defender,
+      attackerPosition: { ...attacker.position },
+      defenderPosition: { ...defender.position },
+      isInstantKill: false,
+    });
   },
 
   completeAttackAnimation: () => {

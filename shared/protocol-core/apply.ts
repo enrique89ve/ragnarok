@@ -919,17 +919,20 @@ async function validateRankedMatchSignatures(
 		? buildMatchResultSignatureMessage(details.compactHash!)
 		: `${details.matchId}:${details.winner}`;
 
-	const bKey = op.broadcaster === anchor!.playerA ? anchor!.pubkeyA! : anchor!.pubkeyB!;
-	const cKey = op.broadcaster === anchor!.playerA ? anchor!.pubkeyB! : anchor!.pubkeyA!;
-	const [bValid, cValid] = await Promise.all([
-		deps.sigs.verifyAnchored(bKey, sigMessage, signatures.broadcasterSig),
-		deps.sigs.verifyAnchored(cKey, sigMessage, signatures.counterpartySig),
-	]);
+	if (op.broadcaster !== details.winner) {
+		return reject('match_result broadcaster must be the winner');
+	}
 
-	if (!bValid) return reject(`broadcaster signature failed for ${op.broadcaster}`);
-	return !cValid
-		? reject(`counterparty signature failed for ${details.counterparty}`)
-		: null;
+	const winnerKey = details.winner === anchor!.playerA ? anchor!.pubkeyA! : anchor!.pubkeyB!;
+	const bValid = await deps.sigs.verifyAnchored(
+		winnerKey,
+		sigMessage,
+		signatures.broadcasterSig,
+	);
+
+	return bValid
+		? null
+		: reject(`broadcaster signature failed for ${op.broadcaster}`);
 }
 
 function validateRankedMatchAnchor(
@@ -960,18 +963,18 @@ function extractMatchResultSignatures(
 ): SignaturePair | OpResult {
 	if (isCompact) {
 		const sig = op.payload.sig as { b?: string; c?: string } | undefined;
-		if (!sig?.b || !sig?.c) return reject('ranked match missing dual signatures');
-		return { broadcasterSig: sig.b, counterpartySig: sig.c };
+		if (!sig?.b) return reject('ranked match_result requires the winner signature');
+		return { broadcasterSig: sig.b, counterpartySig: sig.c ?? '' };
 	}
 
 	const sigs = op.payload.signatures as { broadcaster?: string; counterparty?: string } | undefined;
-	if (!sigs?.broadcaster || !sigs?.counterparty) {
-		return reject('ranked match missing dual signatures');
+	if (!sigs?.broadcaster) {
+		return reject('ranked match_result requires the winner signature');
 	}
 
 	return {
 		broadcasterSig: sigs.broadcaster,
-		counterpartySig: sigs.counterparty,
+		counterpartySig: sigs.counterparty ?? '',
 	};
 }
 

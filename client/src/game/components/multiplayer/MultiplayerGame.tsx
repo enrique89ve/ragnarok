@@ -3,7 +3,7 @@ import { debug } from '../../config/debugConfig';
 import { usePeerStore } from '../../stores/peerStore';
 import { MultiplayerLobby } from './MultiplayerLobby';
 import RagnarokGameCoordinator from '../../coordinator/RagnarokGameCoordinator';
-import { MatchSetupP2P } from '../../match/modes/p2p';
+import { MatchSetupP2P } from '../../match';
 import { ArmySelection as ArmySelectionType } from '../../types/ChessTypes';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { routes } from '../../../lib/routes';

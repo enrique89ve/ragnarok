@@ -1,5 +1,12 @@
 # Ragnarok Combat Arena - Game Flow Documentation
 
+> **Historical.** This file is not the live plan. Routes, stores, and the
+> tester loop live in code plus
+> [`TESTNET_READINESS_FAST_TRACK.md`](./TESTNET_READINESS_FAST_TRACK.md) and
+> `CONTEXT.md`. The diagram below still mentions "Standard Match"; that mode
+> is not an Alfa path. When this document and the coordinator diverge,
+> **code wins**.
+
 This document details the complete game flow, state management, and system interactions.
 
 ## Game Flow Diagram

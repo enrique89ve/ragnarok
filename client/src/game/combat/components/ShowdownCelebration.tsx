@@ -4,6 +4,10 @@ import { PokerCard } from '../../types/PokerCombatTypes';
 import { getCombinedHandName } from '../../types/PokerCombatTypes';
 import { PokerCombatAnimation } from './PokerCombatAnimation';
 import { proceduralAudio } from '../../audio/proceduralAudio';
+import {
+	SHOWDOWN_PRESENTATION_BUDGET_MS,
+	createOnceRunner,
+} from '../pokerResolutionOutcome';
 import '../../poker/styles/poker-showdown.css';
 
 interface ShowdownCelebrationProps {
@@ -27,6 +31,16 @@ interface ShowdownCelebrationProps {
 const ENTRANCE_DELAY = 400;
 const BADGE_DISPLAY_MS = 3200;
 
+function useOnceComplete(onComplete: () => void): () => boolean {
+	const onCompleteRef = useRef(onComplete);
+	onCompleteRef.current = onComplete;
+	const finishRef = useRef<(() => boolean) | null>(null);
+	if (finishRef.current === null) {
+		finishRef.current = createOnceRunner(() => onCompleteRef.current());
+	}
+	return finishRef.current;
+}
+
 export const ShowdownCelebration: React.FC<ShowdownCelebrationProps> = ({
 	resolution,
 	playerHeroId,
@@ -36,14 +50,19 @@ export const ShowdownCelebration: React.FC<ShowdownCelebrationProps> = ({
 	const isShowdown = resolution.resolutionType === 'showdown';
 	const [ready, setReady] = useState(false);
 	const [combatAnimDone, setCombatAnimDone] = useState(false);
-
-	const onCompleteRef = useRef(onComplete);
-	onCompleteRef.current = onComplete;
+	const finish = useOnceComplete(onComplete);
 
 	useEffect(() => {
 		const delayTimer = setTimeout(() => setReady(true), ENTRANCE_DELAY);
 		return () => clearTimeout(delayTimer);
 	}, []);
+
+	useEffect(() => {
+		const budgetTimer = setTimeout(() => {
+			finish();
+		}, SHOWDOWN_PRESENTATION_BUDGET_MS);
+		return () => clearTimeout(budgetTimer);
+	}, [finish]);
 
 	// For draws, skip combat animation after a brief pause
 	useEffect(() => {
@@ -64,10 +83,10 @@ export const ShowdownCelebration: React.FC<ShowdownCelebrationProps> = ({
 			proceduralAudio.play('defeat');
 		}
 		const timer = setTimeout(() => {
-			onCompleteRef.current();
+			finish();
 		}, BADGE_DISPLAY_MS);
 		return () => clearTimeout(timer);
-	}, [combatAnimDone, resolution.winner]);
+	}, [combatAnimDone, resolution.winner, finish]);
 
 	// Determine attacker/defender and damage for the combat animation
 	const getAnimationProps = () => {

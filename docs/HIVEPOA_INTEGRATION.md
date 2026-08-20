@@ -160,7 +160,7 @@ Match ends → TranscriptBuilder serializes NDJSON
 - NFT lifecycle: mint, transfer, burn, replicate, merge
 - Pack system: commit-reveal, deterministic DNA
 - Marketplace: list, buy, offer, accept, reject (6 ops)
-- Match: anchor, result (dual-signed)
+- Match: dual `match_anchor`; winner-posted `match_result` ([ADR 0008](./adr/0008-winner-posted-match-result.md))
 - Airdrop: DUAT claim, finalize
 
 ---

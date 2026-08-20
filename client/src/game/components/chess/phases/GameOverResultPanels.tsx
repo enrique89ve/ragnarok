@@ -6,12 +6,12 @@ import { CAMPAIGN_ID } from '@shared/campaign/constants';
 import { useRivalryStore } from '../../../pvp/rivalryStore';
 import CeremonyEvidenceButton from '../../CeremonyEvidenceButton';
 import { useNFTUsername } from '../../../nft/hooks';
-import { useMatchStore } from '../../../match/store';
-import { getRagnarokNetworkConfig } from '../../../config/networkConfig';
 import {
 	createP2PQaLocalRewardPreview,
+	useMatchStore,
 	type P2PQaLocalRewardPreview,
-} from '../../../match/modes/p2p/qaLocalRewardPreview';
+} from '../../../match';
+import { getRagnarokNetworkConfig } from '../../../config/networkConfig';
 
 type GameOverResult = 'victory' | 'defeat' | 'draw';
 
@@ -54,12 +54,20 @@ export function CampaignResultPanel({
 
 	return (
 		<>
-			<CampaignBossQuip campaign={campaign} isDraw={isDraw} isVictory={isVictory} />
-			<CampaignSubtitle campaign={campaign} isDraw={isDraw} isVictory={isVictory} />
-			<CampaignNarrativeAfter campaign={campaign} isVictory={isVictory} />
+			<CampaignBossQuip campaign={campaign} isAbandoned={isAbandoned} isDraw={isDraw} isVictory={isVictory} />
+			{isAbandoned ? (
+				<p className="cgo-subtitle">
+					You left the battle. This run is closed locally as an abandoned defeat.
+				</p>
+			) : (
+				<>
+					<CampaignSubtitle campaign={campaign} isDraw={isDraw} isVictory={isVictory} />
+					<CampaignNarrativeAfter campaign={campaign} isVictory={isVictory} />
+				</>
+			)}
 			<CampaignStars campaign={campaign} isVictory={isVictory} playerTurnCount={playerTurnCount} />
 			<CampaignChapterSplash campaign={campaign} isVictory={isVictory} />
-			{rewardCopy && (
+			{rewardCopy && !isAbandoned && (
 				<CampaignRewardBlock
 					account={account}
 					activeRewardFeedback={activeRewardFeedback}
@@ -85,14 +93,16 @@ export function CampaignResultPanel({
 
 function CampaignBossQuip({
 	campaign,
+	isAbandoned,
 	isDraw,
 	isVictory,
 }: {
 	readonly campaign: GameOverCampaignContext;
+	readonly isAbandoned: boolean;
 	readonly isDraw: boolean;
 	readonly isVictory: boolean;
 }) {
-	if (isVictory || isDraw || !campaign.mission.bossQuips?.onVictory) return null;
+	if (isAbandoned || !isVictory || isDraw || !campaign.mission.bossQuips?.onVictory) return null;
 
 	return (
 		<motion.p

@@ -1,27 +1,36 @@
 import type { GameOverSubPhase } from '../flow/round/types';
-import type { MatchEndContext } from '../match/onWinDispatch';
+import { deriveCampaignMatch } from '../match/derived';
 import type { MatchContext } from '../match/types';
-import {
-	getInitialGameOverSubPhase,
-	type CampaignData,
-} from './gameCoordinatorRules';
+import { getInitialGameOverSubPhase } from './gameCoordinatorRules';
 
-export interface MatchEndControllerDependencies {
-	readonly dispatchGameEnded: (initialSub: GameOverSubPhase) => void;
-	readonly runWinLifecycle: (ctx: MatchContext, end: MatchEndContext) => void;
-}
+export const GAME_END_DELAY_MS = 1500;
+
+export type MatchEndCommitMode = 'phase-checkpoint' | 'local';
+export type MatchEndFromPhase = 'chess' | 'poker_combat';
 
 export interface MatchEndRequest {
-	readonly ctx: MatchContext;
+	readonly ctx: MatchContext | null;
 	readonly iWon: boolean;
+	readonly isDraw: boolean;
 	readonly turnCount: number;
-	readonly isCampaign: boolean;
-	readonly campaignData: CampaignData;
+	readonly fromPhase: MatchEndFromPhase;
+	readonly commitMode: MatchEndCommitMode;
 	readonly delayMs: number;
+	readonly abandoned?: boolean;
+}
+
+export interface MatchEndCommit {
+	readonly request: MatchEndRequest;
+	readonly initialSub: GameOverSubPhase;
+}
+
+export interface MatchEndControllerDependencies {
+	readonly commit: (input: MatchEndCommit) => void;
 }
 
 export interface MatchEndController {
 	readonly requestGameEnd: (request: MatchEndRequest) => boolean;
+	readonly forceCommit: (request: MatchEndRequest) => void;
 	readonly hasProcessed: () => boolean;
 	readonly cancelPending: () => void;
 	readonly reset: () => void;
@@ -71,6 +80,30 @@ export function parseForceGameEndInput(input: unknown): ForceGameEndOptions {
 	return parsed;
 }
 
+export function resolveMatchEndSubPhase(request: MatchEndRequest): GameOverSubPhase {
+	if (request.isDraw || request.abandoned) return 'result';
+	const campaign = request.ctx ? deriveCampaignMatch(request.ctx) : null;
+	return getInitialGameOverSubPhase({
+		iWon: request.iWon,
+		campaignData: campaign
+			? { mission: campaign.mission, chapter: campaign.chapter }
+			: null,
+	});
+}
+
+export function matchEndCommitPlan(request: MatchEndRequest): {
+	readonly runLifecycle: boolean;
+	readonly markDailyQuests: boolean;
+	readonly usePhaseCheckpoint: boolean;
+} {
+	const usePhaseCheckpoint = request.commitMode === 'phase-checkpoint';
+	return {
+		runLifecycle: usePhaseCheckpoint && request.ctx !== null && !request.isDraw,
+		markDailyQuests: usePhaseCheckpoint,
+		usePhaseCheckpoint,
+	};
+}
+
 export function createMatchEndController(
 	deps: MatchEndControllerDependencies,
 ): MatchEndController {
@@ -85,16 +118,10 @@ export function createMatchEndController(
 
 	const run = (request: MatchEndRequest): void => {
 		pendingTimer = null;
-		const initialSub = getInitialGameOverSubPhase({
-			iWon: request.iWon,
-			isCampaign: request.isCampaign,
-			campaignData: request.campaignData,
+		deps.commit({
+			request,
+			initialSub: resolveMatchEndSubPhase(request),
 		});
-		deps.runWinLifecycle(request.ctx, {
-			iWon: request.iWon,
-			turnCount: request.turnCount,
-		});
-		deps.dispatchGameEnded(initialSub);
 	};
 
 	return {
@@ -107,6 +134,11 @@ export function createMatchEndController(
 			}
 			pendingTimer = setTimeout(() => run(request), request.delayMs);
 			return true;
+		},
+		forceCommit(request) {
+			cancelPending();
+			processed = true;
+			run(request);
 		},
 		hasProcessed() {
 			return processed;

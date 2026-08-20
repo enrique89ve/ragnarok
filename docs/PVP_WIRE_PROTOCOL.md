@@ -8,11 +8,13 @@
 > `match_anchor`, `match_result`, economic settlement and every match-driven
 > Keychain prompt. A completed match shows and exports a local result only.
 
-**Audience**: contributors writing or auditing P2P wire code, the dual-sig
-match-result flow, the transcript pipeline, or the matchmaking surface.
+**Audience**: contributors writing or auditing P2P wire code, the transcript
+pipeline, or the matchmaking surface. Ranked settlement canon:
+[ADR 0008](adr/0008-winner-posted-match-result.md).
 
 **Companion specs**:
-- `RAGNAROK_PROTOCOL_V1.md` — future on-chain custom_json settlement surface;
+- `adr/0008-winner-posted-match-result.md` — ranked settlement (winner posts, replay validates)
+- `RAGNAROK_PROTOCOL_V1.md` — on-chain custom_json surface; ranked result follows ADR 0008;
   it is not submitted by the current testnet match flow.
 - `P2P_SECURITY_HARDENING.md` — five security invariants enforced over this
   wire (still valid; folded into §6 below for context).
@@ -283,7 +285,7 @@ the moment the connection becomes ready. Every move recorded — by the local
 player at send time, or by the remote peer at receive time — appends to it
 (see §7).
 
-### Phase 4 — Local Result (current) / dual-sig proposal (future)
+### Phase 4 — Local Result (current) / winner-posted result (future, ADR 0008)
 
 When `gameState.gamePhase === 'game_over'`, the current testnet displays and
 exports the local result after the terminal checkpoint commits. It opens no
@@ -314,8 +316,8 @@ packages the result (`BlockchainSubscriber.ts:272-294`):
    - On agreement: sends `result_reject: signature_deferred` instead of opening
      Keychain. Countersigning needs a visible wallet action.
    - On disagreement: sends `result_reject` with a reason code.
-5. Without explicit future dual-sig the result is NOT broadcast. In the current
-   testnet no dual-sig attempt is authorized at all.
+5. Without a later ranked gate the result is NOT broadcast. Alfa never posts
+   `match_result`. Closed Beta posts winner-only (ADR 0008).
 
 ### Phase 5 — Cleanup
 
@@ -353,9 +355,9 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `poker_action` | both | both (symmetric) | Phase 3 poker: deterministic local apply + relay to peer; includes optional compact tuple for transcript/DataChannel migration |
 | `hash_check` | host → client | host | Periodic state-hash sanity check |
 | `hash_mismatch` | client → host | client | Reports a divergent state hash |
-| `result_propose` | winner → loser | winner | **Deferred settlement surface**: older/future peer proposes a signed result; current testnet never initiates it |
-| `result_countersign` | loser → winner | loser | **Deferred settlement surface**: opponent signature; current testnet never signs |
-| `result_reject` | loser → winner | loser | Compatibility response; current client returns `signature_deferred` without opening Keychain |
+| `result_propose` | winner → relay/indexer path | winner | **Obsolete as loser handshake.** ADR 0008: winner posts `match_result` to Hive. Alfa never initiates it. |
+| `result_countersign` | — | — | **Obsolete.** Loser does not countersign game_over (ADR 0008). |
+| `result_reject` | — | — | Compatibility only; not a settlement vote. |
 | `heartbeat` | both | both | App-level keepalive |
 | `ping` / `pong` | both | both | Lower-level RTT probe |
 | `opponentDisconnected` | — | — | **Dropped.** Not a legal relay type. Departure is `__sys.close` only. |
@@ -452,10 +454,10 @@ itself didn't perform.
 
 **Capture routing rule** (single source of truth:
 `shared/p2p-wire/chess.ts` `isChessAttackInstantKill`): an attack is
-instant-kill when `attacker.type ∈ {pawn, king}` (Valkyrie weapon) OR
-`defender.type === pawn` (too weak to defend). Sender and receiver use
-the predicate to route `chess_attack` vs `chess_combat_initiated`; same
-module = no drift.
+instant-kill when the attacker is a pawn (Valkyrie execute), the
+defender is a pawn (no deck), or the defender is a king (touching the
+commander wins). Kings do not capture. Hero vs hero (N/B/R/Q) uses
+`chess_combat_initiated`. Sender and receiver share the predicate.
 
 **King ability (mine placement) blocked in P2P**: each peer's mines
 live in their local store and don't cross the wire today. If kept
@@ -611,7 +613,9 @@ effect):
    projection and runtime entitlement rules.
 4. `result_propose.proposalId` correlates the proposal with its
    countersignature (prevents pairing two simultaneous proposals).
-5. Ranked matches require dual-sig — no single-sig fallback broadcast.
+5. Ranked `match_result` is winner-posted (ADR 0008). Dual signatures belong
+   to `match_anchor` and session-signed moves, not to a loser game_over
+   countersign. Result-only claims without transcript replay are rejected.
 
 ---
 
@@ -657,9 +661,8 @@ tree at match end. The root is embedded in the on-chain `match_result`.
 - Empty transcript → `SHA256('empty_transcript')`.
 
 **Authority rule** (CRITICAL): the **winner's compact commitment** is what
-would go on-chain once the visible result review/sign flow exists. Current
-client behavior defers both proposal signing and countersigning so match-end
-and inbound P2P messages cannot open Keychain.
+goes on-chain (ADR 0008). The loser does not countersign. Alfa defers all
+Keychain at match-end.
 
 **Arbitration surface** (off-wire, post-match):
 - Server-side arbitrator (NOT yet implemented as a service — see
@@ -676,10 +679,10 @@ and inbound P2P messages cannot open Keychain.
 ## §8 Future Match-Result Broadcast (On-Chain, Disabled in Current Testnet)
 
 ADR 0007 disables this entire section for the gameplay-only testnet. The client
-must not request either signature, enqueue `match_result` or broadcast after
-`game_over`. The shape below is retained as a future ranked settlement contract.
+must not enqueue `match_result` or broadcast after `game_over`. ADR 0008 is the
+ranked contract: winner-posted result, terminal receipt, replay on the indexer.
 
-In a future explicitly activated ranked flow, once dual-sig completes,
+In a future explicitly activated ranked flow, after the winner signs,
 `BlockchainSubscriber.enqueueResult`
 (`BlockchainSubscriber.ts:396-408`) broadcasts a compact `match_result`
 custom_json with PoW (64 challenges × 6-bit). The on-chain shape lives in
@@ -852,11 +855,11 @@ the design is settled.
 |---|---|
 | **canonical side** | Global side label (`'player'` = first-mover, `'opponent'` = second-mover). Decided at seed_reveal. NOT viewer-relative. |
 | **commandId** | UUID minted per envelope; used for dedup independent of seq. |
-| **dual-sig** | Both peers sign the same compact match-result commitment `ch` before on-chain broadcast. |
+| **dual-sig** | Both peers sign `match_anchor` at start. Ranked `match_result` is winner-posted (ADR 0008); the loser does not countersign game_over. |
 | **envelope** | A wire frame — `chess_command`, `game_command`, `result_propose`, etc. |
 | **guest sentinel** | The `'guest:' + peerId.slice(0, 8)` playerId used when no Hive username is bound. Indicates a non-arbitrable move. |
 | **host** | The peer with the lexicographically smaller `peerId`. Stable across reconnect order. Transport role for seed parity, cards hash frame (`isCardsHostFrame`), hash beacon, and `hash_mismatch` recovery — not gameplay authority for cards apply. NOT a server. |
-| **instant-kill** | Chess capture that resolves without entering the poker phase. Triggered when attacker is `pawn`/`king` (Valkyrie weapon) OR defender is `pawn`. Predicate `isChessAttackInstantKill` in `shared/p2p-wire/chess.ts`. |
+| **instant-kill** | Chess capture that resolves without entering poker. Triggered when the attacker is a pawn, the defender is a pawn, or the defender is a king. Kings do not capture. Predicate `isChessAttackInstantKill` in `shared/p2p-wire/chess.ts`. |
 | **isHost** | The transport-level hint emitted by the relay's `__sys.open`. |
 | **matchId** | `SHA256(matchSeed + sortedPeerIds)`, 16 hex chars. Binds every action to one match. |
 | **matchSeed** | `SHA256(sortedSalts)`, derived in seed_reveal. The root of all per-match randomness. |

@@ -1,6 +1,13 @@
 import React from 'react';
 import { CombatAction } from '../../types/PokerCombatTypes';
 import type { ActionPermissions } from '../../hooks/usePokerCombatAdapter';
+import {
+	BETTING_ACTION_LABEL,
+	bettingCommitKind,
+	bettingDisabledReason,
+	bettingMatchKind,
+	pokerQuickBetHp,
+} from './bettingPanelCopy';
 
 const SwordIcon: React.FC = () => (
 	<svg className="btn-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false">
@@ -42,6 +49,45 @@ const ButtonIconFrame: React.FC<{ readonly children: React.ReactNode }> = ({ chi
 		{children}
 	</span>
 );
+
+function PokerActionButton({
+	actionId,
+	className,
+	disabled,
+	hp,
+	icon,
+	label,
+	onClick,
+	reason,
+}: {
+	readonly actionId: string;
+	readonly className: string;
+	readonly disabled: boolean;
+	readonly hp?: number;
+	readonly icon: React.ReactNode;
+	readonly label: string;
+	readonly onClick: () => void;
+	readonly reason: string | null;
+}): React.ReactElement {
+	const aria = hp && hp > 0 ? `${label} ${hp} HP` : label;
+	return (
+		<button
+			type="button"
+			className={`poker-btn ${className}`}
+			data-poker-action={actionId}
+			onClick={onClick}
+			disabled={disabled}
+			aria-label={aria}
+			title={reason ?? aria}
+		>
+			<ButtonIconFrame>{icon}</ButtonIconFrame>
+			<span className="btn-copy">
+				<span className="btn-label">{label}</span>
+				{hp != null && hp > 0 ? <span className="btn-hp">{hp} HP</span> : null}
+			</span>
+		</button>
+	);
+}
 
 const QUICK_BETS: ReadonlyArray<{ readonly label: string; readonly pct: number }> = [
 	{ label: '25%', pct: 0.25 },
@@ -85,12 +131,49 @@ export const BettingPanel: React.FC<BettingPanelProps> = ({
 	} = permissions;
 
 	const isDisabled = !isMyTurnToAct;
-	const maxBet = Math.max(1, availableHP);
-	const clampedBet = Math.min(betAmount, maxBet);
-	const effectiveBet = maxBetAmount >= minBet ? Math.min(Math.max(minBet, clampedBet), maxBetAmount) : 0;
+	const sliderMax = Math.max(0, maxBetAmount);
+	const sliderMin = sliderMax > 0 ? Math.max(1, minBet) : 0;
+	const clampedBet = sliderMax > 0 ? Math.min(Math.max(sliderMin, betAmount), sliderMax) : 0;
+	const effectiveBet = maxBetAmount >= minBet ? clampedBet : 0;
 	const actualCanRaise = canRaise && maxBetAmount >= minBet && effectiveBet >= minBet;
-	const attackHP = hasBetToCall ? toCall + effectiveBet : effectiveBet;
+	const commitKind = bettingCommitKind(hasBetToCall);
+	const matchKind = bettingMatchKind(hasBetToCall);
+	const commitAllowed = hasBetToCall ? actualCanRaise : canBet;
+	const matchAllowed = hasBetToCall ? canCall : canCheck;
+	const commitHP = hasBetToCall ? toCall + effectiveBet : effectiveBet;
 	const callHP = Math.min(toCall, availableHP);
+	const commitReason = bettingDisabledReason({
+		isMyTurn: isMyTurnToAct,
+		kind: commitKind,
+		allowed: commitAllowed,
+		availableHP,
+		toCall,
+		minBet,
+	});
+	const matchReason = bettingDisabledReason({
+		isMyTurn: isMyTurnToAct,
+		kind: matchKind,
+		allowed: matchAllowed,
+		availableHP,
+		toCall,
+		minBet,
+	});
+	const foldReason = bettingDisabledReason({
+		isMyTurn: isMyTurnToAct,
+		kind: 'fold',
+		allowed: canFold,
+		availableHP,
+		toCall,
+		minBet,
+	});
+	const allInReason = bettingDisabledReason({
+		isMyTurn: isMyTurnToAct,
+		kind: 'all_in',
+		allowed: sliderMax > 0,
+		availableHP,
+		toCall,
+		minBet,
+	});
 
 	return (
 		<div
@@ -100,98 +183,86 @@ export const BettingPanel: React.FC<BettingPanelProps> = ({
 			<div className="poker-hp-slider-container">
 				<div className="poker-quick-bets">
 					{QUICK_BETS.map(({ label, pct }) => {
-						const target = Math.max(minBet || 1, Math.floor((maxBetAmount || 100) * pct));
+						const target = pokerQuickBetHp({ pct, maxBetAmount: sliderMax, minBet });
+						const isAllIn = label === 'ALL';
 						return (
 							<button
 								key={label}
 								type="button"
-								className={`quick-bet-btn ${label === 'ALL' ? 'all-in' : ''}`}
-								onClick={() => onBetAmountChange(Math.min(target, maxBetAmount || 100))}
-								disabled={isDisabled}
+								className={`quick-bet-btn ${isAllIn ? 'all-in' : ''}`}
+								onClick={() => onBetAmountChange(target)}
+								disabled={isDisabled || target <= 0}
+								title={isAllIn ? (allInReason ?? `All in ${target} HP`) : `${label} of remaining HP`}
 							>
-								{label}
+								{isAllIn ? 'All in' : label}
 							</button>
 						);
 					})}
 				</div>
 				<input
 					type="range"
-					min={minBet || 1}
-					max={maxBetAmount || 100}
-					value={betAmount}
+					min={sliderMin}
+					max={Math.max(sliderMin, sliderMax)}
+					value={clampedBet}
 					onChange={(e) => onBetAmountChange(Number(e.target.value))}
 					className="poker-hp-slider"
-					disabled={isDisabled}
+					disabled={isDisabled || sliderMax <= 0}
+					aria-label="Bet amount in HP"
 				/>
-				<span className="slider-value">{betAmount} HP</span>
+				<span className="slider-value">{clampedBet} HP</span>
 			</div>
 
 			<div className="unified-betting-actions poker-actions">
 				<div className="action-buttons-group">
-					<button
-						type="button"
-						className="poker-btn raise-btn"
+					<PokerActionButton
+						actionId={commitKind}
+						className="raise-btn"
+						label={BETTING_ACTION_LABEL[commitKind]}
+						hp={commitHP}
+						icon={<SwordIcon />}
+						disabled={isDisabled || !commitAllowed}
+						reason={commitReason}
 						onClick={() => onAction(
 							hasBetToCall ? CombatAction.COUNTER_ATTACK : CombatAction.ATTACK,
 							effectiveBet,
 						)}
-						disabled={isDisabled || (hasBetToCall ? !actualCanRaise : !canBet)}
-						aria-label={`${hasBetToCall ? 'Raise' : 'Bet'} ${attackHP} HP`}
-						title={hasBetToCall ? 'Raise — increase the stakes' : 'Bet — commit HP to the pot'}
-					>
-						<ButtonIconFrame>
-							<SwordIcon />
-						</ButtonIconFrame>
-					</button>
-
-					<button
-						type="button"
-						className="poker-btn call-btn"
-						onClick={() => onAction(canCall ? CombatAction.ENGAGE : CombatAction.DEFEND)}
-						disabled={isDisabled || (!canCall && !canCheck)}
-						aria-label={canCall ? `Call ${callHP} HP` : 'Check'}
-						title={canCall ? 'Call — match the bet' : 'Check — pass without betting'}
-					>
-						{canCall ? (
-							<>
-								<ButtonIconFrame>
-									<CrossedSwordsIcon />
-								</ButtonIconFrame>
-							</>
-						) : (
-							<>
-								<ButtonIconFrame>
-									<HelmIcon />
-								</ButtonIconFrame>
-							</>
-						)}
-					</button>
-
-					<button
-						type="button"
-						className="poker-btn fold-btn"
-						onClick={() => onAction(CombatAction.BRACE)}
+					/>
+					<PokerActionButton
+						actionId={matchKind}
+						className="call-btn"
+						label={BETTING_ACTION_LABEL[matchKind]}
+						hp={matchKind === 'call' ? callHP : undefined}
+						icon={matchKind === 'call' ? <CrossedSwordsIcon /> : <HelmIcon />}
+						disabled={isDisabled || !matchAllowed}
+						reason={matchReason}
+						onClick={() => onAction(matchKind === 'call' ? CombatAction.ENGAGE : CombatAction.DEFEND)}
+					/>
+					<PokerActionButton
+						actionId="fold"
+						className="fold-btn"
+						label={BETTING_ACTION_LABEL.fold}
+						icon={<ShieldIcon />}
 						disabled={isDisabled || !canFold}
-						aria-label="Fold"
-						title="Fold — surrender this hand and lose committed HP"
-					>
-						<ButtonIconFrame>
-							<ShieldIcon />
-						</ButtonIconFrame>
-					</button>
-
+						reason={foldReason}
+						onClick={() => onAction(CombatAction.BRACE)}
+					/>
 					{showFrontlineButton && (
-						<button
-							type="button"
-							className="poker-btn auto-attack-btn"
+						<PokerActionButton
+							actionId="frontline"
+							className="auto-attack-btn"
+							label={BETTING_ACTION_LABEL.frontline}
+							icon={<FrontlineIcon />}
+							disabled={isDisabled}
+							reason={bettingDisabledReason({
+								isMyTurn: isMyTurnToAct,
+								kind: 'frontline',
+								allowed: isMyTurnToAct,
+								availableHP,
+								toCall,
+								minBet,
+							})}
 							onClick={onAutoAttackFrontline}
-							aria-label="Order frontline to attack"
-							title="Order the frontline to attack enemy minions automatically"
-						>
-							<ButtonIconFrame>
-								<FrontlineIcon />
-							</ButtonIconFrame>
-						</button>
+						/>
 					)}
 				</div>
 			</div>

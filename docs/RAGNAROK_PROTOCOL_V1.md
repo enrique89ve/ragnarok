@@ -8,7 +8,9 @@
 > not which operations the current client is allowed to emit. Under
 > [ADR 0007](./adr/0007-p2p-gameplay-only-testnet.md), current P2P testnet
 > matches do not sign or broadcast `match_anchor`/`match_result` and produce no
-> P2P economic settlement.
+> P2P economic settlement. Ranked `match_result` shape and authority follow
+> [ADR 0008](./adr/0008-winner-posted-match-result.md) (winner posts; replay
+> validates; loser does not countersign).
 
 ---
 
@@ -710,15 +712,17 @@ Settles a match with transcript commitment.
   "transcript_merkle_root": "sha256hex",
   "terminal_state_hash": "sha256hex",
   "pow": { "nonces": [123, 456, "...64 total"] },
-  "sig_a": "hex",
-  "sig_b": "hex"
+  "sig_winner": "hex",
+  "receipt_hash": "hex"
 }
 ```
 
 - Referenced `match_anchor` MUST exist
 - Referenced `match_anchor` MUST be dual-anchored before result replay reaches this op
-- Both signatures MUST verify against anchored pubkeys (not current chain keys)
+- The Hive broadcaster MUST be the payload `winner` ([ADR 0008](adr/0008-winner-posted-match-result.md))
+- The winner signature MUST verify against the winner pubkey pinned on `match_anchor` (not current chain keys). The loser does not countersign `match_result`; dual signatures belong to `match_anchor` and to session-signed moves.
 - `winner` and `loser` MUST match anchored players
+- Replay of the anchored transcript MUST agree with payload `winner` before RUNE/ELO apply
 - `result_nonce` MUST advance per broadcaster monotonic nonce rules
 - Proof of work MUST be valid: 64 challenges, 6-bit difficulty over canonical payload hash
 - Ranked rewards, XP, and ELO changes are derived only from valid `match_result`
@@ -893,7 +897,7 @@ so campaign participation matters without letting raw farming overpower ELO.
 
 Derived non-transferable reward points. Caps, sources, source keys, read endpoints, and code pointers live in [RUNE.md](./RUNE.md) — that file is canon. The protocol-visible surface is:
 
-- **Owner rule**: self-directed RUNE ops mutate only the authenticated Hive broadcaster's balance; ranked P2P uses the balance owner proven by the dual-signed match envelope.
+- **Owner rule**: self-directed RUNE ops mutate only the authenticated Hive broadcaster's balance; ranked P2P uses the balance owner proven by winner-posted `match_result` replay ([ADR 0008](adr/0008-winner-posted-match-result.md)).
 - **Sources**: `match_result` (P2P ranked, sourceType `p2p_ranked`), `campaign_result` (first-clear inline credit, sourceType `campaign_first_clear`), `daily_quest_claim` (slot/day credit, sourceType `daily_quest_claim`), `reward_claim` (non-campaign rewards, sourceType `reward_claim`).
 - **Sink**: `rune_exchange` (debits RUNE, delegates pack delivery to the exchange adapter).
 - **Independent per-account pools**: P2P, campaign, and daily quest caps do not share quota.

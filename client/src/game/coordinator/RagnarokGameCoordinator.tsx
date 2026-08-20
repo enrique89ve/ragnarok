@@ -5,7 +5,7 @@ import { ArmySelection as ArmySelectionType } from '../types/ChessTypes';
 import { useChessCombatAdapter } from '../hooks/useChessCombatAdapter';
 import { getDefaultArmySelection } from '../data/ChessPieceConfig';
 import { useCampaignStore } from '../campaign';
-import { deriveIntro, deriveIWonForPhase, deriveOpponentArmyForMode, markDailyQuestClaimsPendingAfterMatch, selectOnWinHandler, useMatchStore } from '../match';
+import { deriveIntro, deriveIWonForPhase, deriveMatchFlowPolicy, deriveOpponentArmyForMode, markDailyQuestClaimsPendingAfterMatch, selectOnWinHandler, useMatchStore } from '../match';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { routes } from '../../lib/routes';
 import { getWarbandEntryRoute } from '../../lib/warbandRoutes';
@@ -43,7 +43,6 @@ import { useBossRuleEffects } from './hooks/useBossRuleEffects';
 import {
   getChessRealmClass,
   getFinaleClass,
-  getInitialGameOverSubPhase,
   getRealmDisplayName,
   getViewerChessResult,
   getWinnerFromGameStatus,
@@ -54,6 +53,14 @@ import {
   bindResumePokerHandoff,
   isResumeHandoffCurrent,
 } from '../p2p/p2pResumePokerHandoff';
+import {
+  GAME_END_DELAY_MS,
+  createMatchEndController,
+  matchEndCommitPlan,
+  type MatchEndCommit,
+  type MatchEndController,
+  type MatchEndRequest,
+} from './matchEndController';
 
 /*
   Phase components are lazy-loaded so casual / multiplayer routes —
@@ -162,11 +169,8 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
 
   const campaignDifficultyFromStore = useCampaignStore(s => s.currentDifficulty);
   const clearCurrent = useCampaignStore(s => s.clearCurrent);
-  const campaignMatch = useMemo(() => {
-    if (ctx?.opponent.kind !== 'scripted') return null;
-    if (ctx.opponent.script.kind !== 'campaign-mission') return null;
-    return ctx.opponent.script;
-  }, [ctx]);
+  const flow = useMemo(() => ctx ? deriveMatchFlowPolicy(ctx) : null, [ctx]);
+  const campaignMatch = flow?.campaign ?? null;
   const campaignData = useMemo(
     () => campaignMatch
       ? { mission: campaignMatch.mission, chapter: campaignMatch.chapter }
@@ -174,7 +178,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     [campaignMatch],
   );
   const campaignDifficulty = campaignMatch?.difficulty ?? campaignDifficultyFromStore;
-  const isCampaign = campaignMatch !== null;
+  const isCampaign = flow?.mode === 'campaign';
 
   const markCinematicSeen = useCampaignStore(s => s.markCinematicSeen);
   const seenChapterIds = useCampaignStore(s => s.seenCinematics);
@@ -189,7 +193,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   // TD-19: in P2P mode, chess board ids come from matchSeed after handshake.
   // Local `initializeBoard` must not race peer-synced piece ids. Gate every
   // mount-time `initializeBoard` on this flag.
-  const isP2PConnected = ctx?.opponent.kind === 'peer';
+  const isP2PConnected = flow?.usesPeerPhaseCheckpoint === true;
   const effectiveInitialArmy: ArmySelectionType | null = initialArmy ?? warbandArmy;
   /*
     Round-level FSM (G4). The single source of truth for which phase
@@ -251,6 +255,45 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     phaseTransitionGateRef.current = gate;
   }, [isP2PConnected, p2pActions]);
 
+  const commitMatchEnd = useCallback((input: MatchEndCommit) => {
+    const { request, initialSub } = input;
+    const plan = matchEndCommitPlan(request);
+    const apply = () => {
+      if (plan.runLifecycle && request.ctx) {
+        selectOnWinHandler(request.ctx)({
+          iWon: request.iWon,
+          turnCount: request.turnCount,
+        });
+      }
+      if (plan.markDailyQuests) {
+        markDailyQuestClaimsPendingAfterMatch({
+          iWon: request.iWon,
+          turnCount: request.turnCount,
+        });
+      }
+      dispatchFlow({ type: 'GAME_ENDED', initialSub });
+    };
+    if (plan.usePhaseCheckpoint) {
+      runPhaseTransition({
+        fromPhase: request.fromPhase,
+        toPhase: 'game_over',
+        apply,
+      });
+      return;
+    }
+    apply();
+  }, [dispatchFlow, runPhaseTransition]);
+
+  const matchEndCommitRef = useRef(commitMatchEnd);
+  matchEndCommitRef.current = commitMatchEnd;
+  const matchEndControllerRef = useRef<MatchEndController | null>(null);
+  if (matchEndControllerRef.current === null) {
+    matchEndControllerRef.current = createMatchEndController({
+      commit: (input) => matchEndCommitRef.current(input),
+    });
+  }
+  const matchEndController = matchEndControllerRef.current;
+
   const [playerArmy, setPlayerArmy] = useState<ArmySelectionType | null>(effectiveInitialArmy);
   const [exitPromptOpen, setExitPromptOpen] = useState(false);
   const [matchAbandoned, setMatchAbandoned] = useState(false);
@@ -284,8 +327,6 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   const resetBossRulesApplied = useCampaignStore(s => s.resetBossRulesApplied);
   const gameOverSubPhase: 'cinematic' | 'result' | 'bridge' =
     flowState !== null && flowState.tag === 'game_over' ? flowState.sub : 'result';
-  const gameEndProcessedRef = useRef(false);
-  const gameOverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     boardState,
@@ -318,7 +359,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     return getDefaultArmySelection();
   }, [ctx, opponentArmyProp]);
 
-  const missionRealm = isCampaign ? campaignData?.mission?.realm : undefined;
+  const missionRealm = campaignData?.mission?.realm;
   const visualRealm = useMemo(() => resolveVisualRealm(missionRealm), [missionRealm]);
   const realmDisplayName = getRealmDisplayName(visualRealm);
 
@@ -357,7 +398,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   const bootstrappedFromWarbandRef = useRef(false);
   useEffect(() => {
     if (bootstrappedFromWarbandRef.current) return;
-    if (initialArmy || isCampaign) return;
+    if (initialArmy || !flow?.bootstrapsWarband) return;
     if (!warbandArmy) return;
     if (isP2PConnected) return;
     bootstrappedFromWarbandRef.current = true;
@@ -366,7 +407,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       setSharedDeck([...warbandDeck]);
     }
     playSoundEffect('game_start');
-  }, [warbandArmy, warbandDeck, warbandDeckLoadout, isCampaign, initialArmy, opponentArmy, initializeBoard, setSharedDeck, playSoundEffect, isP2PConnected]);
+  }, [warbandArmy, warbandDeck, warbandDeckLoadout, flow?.bootstrapsWarband, initialArmy, opponentArmy, initializeBoard, setSharedDeck, playSoundEffect, isP2PConnected]);
 
   // P2P chess board bootstrap. Both peers compute identical piece ids
   // from `matchSeed + 'chess-pieces'`, so any future move reference (by
@@ -422,7 +463,6 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   }, [isP2PConnected, matchSeed, initialArmy, opponentArmy, initializeBoard, p2pPerspective, boardState.pieces.length]);
 
   useCampaignGameBootstrap({
-    isCampaign,
     missionRealm,
     visualRealm,
     realmDisplayName,
@@ -459,7 +499,6 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   }, [playSoundEffect, dispatchFlow]);
 
   useBossRuleEffects({
-    isCampaign,
     campaignData,
     campaignDifficulty,
     flowState,
@@ -587,10 +626,10 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
 
   const handleCombatEnd = useCallback((winner: 'player' | 'opponent' | 'draw') => {
     try {
-      // Match-end already claimed by a victory effect that owns the FSM
-      // transition into game_over. Dispatching COMBAT_RESOLVED here would
-      // race the pending GAME_ENDED and flash chess in limbo.
-      if (gameEndProcessedRef.current) {
+      // Match-end already claimed by the single matchEndController.
+      // Dispatching COMBAT_RESOLVED here would race GAME_ENDED and flash
+      // chess in limbo.
+      if (matchEndController.hasProcessed()) {
         clearPendingCombat();
         setPokerSlotsSwapped(false);
         endCombat();
@@ -697,22 +736,16 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
         });
       }
     }
-  }, [pokerSlotsSwapped, resolveCombat, clearPendingCombat, endCombat, playSoundEffect, updatePieceStamina, updatePieceHealth, incrementAllStamina, nextTurn, setPokerSlotsSwapped, dispatchFlow, flowState?.tag, runPhaseTransition, isP2PConnected]);
+  }, [pokerSlotsSwapped, resolveCombat, clearPendingCombat, endCombat, playSoundEffect, updatePieceStamina, updatePieceHealth, incrementAllStamina, nextTurn, setPokerSlotsSwapped, dispatchFlow, flowState?.tag, runPhaseTransition, isP2PConnected, matchEndController]);
 
-  // Chess terminal game-end pipeline. Fires when chess reaches checkmate,
-  // explicit draw, or king/material terminal status (boardState.gameStatus). The cards-victory
-  // pipeline (hero HP=0) lives in the next useEffect — they share
-  // `gameEndProcessedRef` for idempotency so only the first signal wins.
+  // Chess terminal: checkmate, draw, or king/material. Cards-victory (hero
+  // HP=0) is the next effect. Both go through matchEndController so the
+  // first signal owns game_over and re-renders cannot cancel the delay.
   useEffect(() => {
     const winner = getWinnerFromGameStatus(boardState.gameStatus);
     const terminalResult = viewerChessResult;
     if (!terminalResult) return;
-    if (gameEndProcessedRef.current) return;
-    gameEndProcessedRef.current = true;
 
-    // Chess uses the CANONICAL frame ('player' = first-mover globally).
-    // deriveIWonForPhase encapsulates the comparison rule so it can't get
-    // mixed up with the viewer-relative cards path below.
     const iWon = winner
       ? deriveIWonForPhase({
           kind: 'chess',
@@ -721,103 +754,45 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
         })
       : false;
     const isDraw = terminalResult === 'draw';
-    const terminalFromPhase: PhaseCheckpointPhase = flowState?.tag === 'poker_combat'
-      ? 'poker_combat'
-      : 'chess';
-    playSoundEffect(isDraw ? 'defeat' : iWon ? 'victory' : 'defeat');
-    gameOverTimerRef.current = setTimeout(() => {
-      gameOverTimerRef.current = null;
-      runPhaseTransition({
-        fromPhase: terminalFromPhase,
-        toPhase: 'game_over',
-        apply: () => {
-          // Rewards and settlement-facing state are downstream of the terminal
-          // checkpoint, never merely downstream of a local victory signal.
-          if (ctx && !isDraw) {
-            selectOnWinHandler(ctx)({ iWon, turnCount });
-          }
-          markDailyQuestClaimsPendingAfterMatch({ iWon, turnCount });
-          const initialSub = isDraw
-            ? 'result'
-            : getInitialGameOverSubPhase({
-                iWon,
-                isCampaign,
-                campaignData,
-              });
-          dispatchFlow({ type: 'GAME_ENDED', initialSub });
-        },
-      });
-    }, 1500);
-
-    return () => {
-      if (gameOverTimerRef.current) {
-        clearTimeout(gameOverTimerRef.current);
-        gameOverTimerRef.current = null;
-      }
+    const request: MatchEndRequest = {
+      ctx,
+      iWon,
+      isDraw,
+      turnCount,
+      fromPhase: flowState?.tag === 'poker_combat' ? 'poker_combat' : 'chess',
+      commitMode: 'phase-checkpoint',
+      delayMs: GAME_END_DELAY_MS,
     };
-    // Deps intentionally minimal: only the trigger signal + `playSoundEffect`.
-    // `ctx`, `turnCount`, `myCanonicalSide`, etc. are read via stale closure
-    // on purpose — they capture the values at the moment game-over was
-    // detected, and gameEndProcessedRef ensures we only dispatch once anyway.
-    // Adding them to the deps array would let mid-flight re-renders cancel
-    // the 1.5s timer (cleanup runs on every re-render with new deps), losing
-    // the dispatch entirely. eslint-disable to make the intent explicit.
+    if (!matchEndController.requestGameEnd(request)) return;
+    playSoundEffect(isDraw ? 'defeat' : iWon ? 'victory' : 'defeat');
+    // Trigger signals only. Request snapshots lifecycle inputs so later
+    // renders cannot cancel the delay (the previous inline timer did).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardState.gameStatus, viewerChessResult, playSoundEffect]);
 
-  // Cards-victory match-end (hero HP=0 in cards combat). The 1.5s timeout
-  // holds the GameOverScreen modal on screen before dispatching GAME_ENDED;
-  // without it the FSM stays in 'poker_combat' and routes back to chess
-  // in a limbo state (chess.gameStatus='playing' while cards declared
-  // game-over). Shares gameEndProcessedRef with the chess-victory effect
-  // above so only the first signal owns the lifecycle dispatch.
+  // Cards-victory (hero HP=0). Without a terminal claim the FSM stays in
+  // poker_combat and handleCombatEnd would send chess back into limbo.
   const cardsGamePhase = useGameStore(s => s.gameState?.gamePhase);
   const cardsWinner = useGameStore(s => s.gameState?.winner);
   useEffect(() => {
     if (cardsGamePhase !== 'game_over') return;
     if (!cardsWinner || cardsWinner === 'draw') return;
-    if (gameEndProcessedRef.current) return;
-    gameEndProcessedRef.current = true;
 
     const iWon = deriveIWonForPhase({
       kind: 'cards',
       viewerWinner: cardsWinner,
     });
-    const terminalFromPhase: PhaseCheckpointPhase = flowState?.tag === 'chess'
-      ? 'chess'
-      : 'poker_combat';
-    playSoundEffect(iWon ? 'victory' : 'defeat');
-
-    gameOverTimerRef.current = setTimeout(() => {
-      gameOverTimerRef.current = null;
-      runPhaseTransition({
-        fromPhase: terminalFromPhase,
-        toPhase: 'game_over',
-        apply: () => {
-          if (ctx) {
-            selectOnWinHandler(ctx)({ iWon, turnCount });
-          }
-          markDailyQuestClaimsPendingAfterMatch({ iWon, turnCount });
-          const initialSub = getInitialGameOverSubPhase({
-            iWon,
-            isCampaign,
-            campaignData,
-          });
-          dispatchFlow({ type: 'GAME_ENDED', initialSub });
-        },
-      });
-    }, 1500);
-
-    return () => {
-      if (gameOverTimerRef.current) {
-        clearTimeout(gameOverTimerRef.current);
-        gameOverTimerRef.current = null;
-      }
+    const request: MatchEndRequest = {
+      ctx,
+      iWon,
+      isDraw: false,
+      turnCount,
+      fromPhase: flowState?.tag === 'chess' ? 'chess' : 'poker_combat',
+      commitMode: 'phase-checkpoint',
+      delayMs: GAME_END_DELAY_MS,
     };
-    // Same minimal-deps discipline as the chess effect above: trigger
-    // signals only, lifecycle inputs (ctx, turnCount) read via stale
-    // closure intentionally so mid-flight re-renders cannot cancel the
-    // dispatch timer.
+    if (!matchEndController.requestGameEnd(request)) return;
+    playSoundEffect(iWon ? 'victory' : 'defeat');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cardsGamePhase, cardsWinner, playSoundEffect]);
 
@@ -879,22 +854,22 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     resetPlayerTurnCount();
     setExitPromptOpen(false);
     setMatchAbandoned(false);
-    gameEndProcessedRef.current = false;
+    matchEndController.reset();
     bootstrappedFromWarbandRef.current = false;
     clearFlow();
-    if (isCampaign) {
+    const restart = flow?.restartDestination;
+    if (restart?.kind === 'campaign-map') {
       clearCurrent();
-      // After clearCurrent, isCampaign becomes false on next render and the
+      // After clearCurrent, campaign mode becomes false on next render and the
       // /warband redirect guard catches us. The FSM bootstrap effect will
       // re-fire if a new mission is started later.
     } else {
-      navigate(
-        isP2PConnected ? getWarbandEntryRoute('multiplayer') : getWarbandEntryRoute('single'),
-      );
+      navigate(getWarbandEntryRoute(restart?.intent ?? 'single'));
     }
   }, [
     resetBoard,
-    isCampaign,
+    flow?.restartDestination,
+    matchEndController,
     clearCurrent,
     navigate,
     resetPlayerTurnCount,
@@ -904,10 +879,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   ]);
 
   const handleReturnHome = useCallback(() => {
-    if (gameOverTimerRef.current) {
-      clearTimeout(gameOverTimerRef.current);
-      gameOverTimerRef.current = null;
-    }
+    matchEndController.reset();
     resetBoard();
     setPlayerArmy(null);
     setSharedDeck([]);
@@ -915,28 +887,40 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     resetBossRulesApplied();
     setExitPromptOpen(false);
     setMatchAbandoned(false);
-    gameEndProcessedRef.current = false;
     bootstrappedFromWarbandRef.current = false;
     clearFlow();
     if (isCampaign) clearCurrent();
     navigate(routes.home);
-  }, [resetBoard, setSharedDeck, resetPlayerTurnCount, resetBossRulesApplied, clearFlow, isCampaign, clearCurrent, navigate]);
+  }, [resetBoard, setSharedDeck, resetPlayerTurnCount, resetBossRulesApplied, clearFlow, isCampaign, clearCurrent, navigate, matchEndController]);
 
   const handleConfirmExit = useCallback(() => {
-    if (gameOverTimerRef.current) {
-      clearTimeout(gameOverTimerRef.current);
-      gameOverTimerRef.current = null;
-    }
     void clearP2PMatchResume();
     setExitPromptOpen(false);
     setMatchAbandoned(true);
-    gameEndProcessedRef.current = true;
     clearPendingCombat();
     setPokerSlotsSwapped(false);
     endCombat();
     playSoundEffect('defeat');
-    dispatchFlow({ type: 'GAME_ENDED', initialSub: 'result' });
-  }, [clearPendingCombat, setPokerSlotsSwapped, endCombat, playSoundEffect, dispatchFlow]);
+    matchEndController.forceCommit({
+      ctx,
+      iWon: false,
+      isDraw: false,
+      turnCount,
+      fromPhase: flowState?.tag === 'poker_combat' ? 'poker_combat' : 'chess',
+      commitMode: 'local',
+      delayMs: 0,
+      abandoned: true,
+    });
+  }, [
+    clearPendingCombat,
+    setPokerSlotsSwapped,
+    endCombat,
+    playSoundEffect,
+    ctx,
+    turnCount,
+    flowState?.tag,
+    matchEndController,
+  ]);
 
   /*
     "Back to Campaign" — if the player won AND the mission has an authored
@@ -965,7 +949,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     setPlayerArmy(null);
     resetPlayerTurnCount();
     resetBossRulesApplied();
-    gameEndProcessedRef.current = false;
+    matchEndController.reset();
     setExitPromptOpen(false);
     setMatchAbandoned(false);
     const defaultArmy = getDefaultArmySelection();
@@ -974,10 +958,10 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
     clearFlow();
     startFlow({ kind: 'chess' });
     playSoundEffect('game_start');
-  }, [resetBoard, opponentArmy, initializeBoard, playSoundEffect, resetPlayerTurnCount, resetBossRulesApplied, clearFlow, startFlow]);
+  }, [resetBoard, opponentArmy, initializeBoard, playSoundEffect, resetPlayerTurnCount, resetBossRulesApplied, clearFlow, startFlow, matchEndController]);
 
   const handleBattleMode = useCallback(() => {
-    // Dev-only Battle Sandbox: pick a random local-side piece vs random enemy-side piece.
+    // Dev-only Battle Sandbox: hero vs hero so poker has a deck on both sides.
     const playerPieces = boardState.pieces.filter(p => p.owner === myCanonicalSide && p.type !== 'pawn' && p.type !== 'king');
     const opponentPieces = boardState.pieces.filter(p => p.owner === enemyCanonicalSide && p.type !== 'pawn' && p.type !== 'king');
 
@@ -988,10 +972,15 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
 
     const attacker = playerPieces[Math.floor(cryptoRng() * playerPieces.length)];
     const defender = opponentPieces[Math.floor(cryptoRng() * opponentPieces.length)];
+    const staged = useUnifiedCombatStore.getState().stagePendingPokerCombat(attacker, defender);
+    if (staged.status !== 'applied') {
+      debug.chess(`BattleMode: failed to stage poker combat (${staged.status === 'rejected' ? staged.reason : 'unknown'})`);
+      return;
+    }
 
     dispatchFlow({ type: 'COMBAT_TRIGGERED', pieces: { attacker, defender } });
     playSoundEffect('card_draw');
-  }, [boardState.pieces, playSoundEffect, dispatchFlow]);
+  }, [boardState.pieces, myCanonicalSide, enemyCanonicalSide, playSoundEffect, dispatchFlow]);
 
   // Chess root carries the realm-{id} class so the chess phase board can
   // get its own thematic background per mission. CSS rules live in
@@ -1001,14 +990,14 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
   const animationsEnabled = useSettingsStore(s => s.animationsEnabled);
   const reduceMotion = useSettingsStore(s => s.reduceMotion);
   const chessRootMotionClass = (animationsEnabled && !reduceMotion) ? 'chess-motion-on' : 'chess-motion-off';
-  const chessRealmClass = getChessRealmClass({ isCampaign, missionRealm, visualRealm });
-  const finaleClass = getFinaleClass({ isCampaign, campaignData });
+  const chessRealmClass = getChessRealmClass({ missionRealm, visualRealm });
+  const finaleClass = getFinaleClass(campaignData);
   const canLeaveActiveMatch = flowState?.tag === 'chess'
     || flowState?.tag === 'vs_screen'
     || flowState?.tag === 'poker_combat';
 
   // Guard: arriving at a gameplay route with no warband and not in campaign -> redirect to picker
-  if (!effectiveInitialArmy && !isCampaign && !playerArmy) {
+  if (!effectiveInitialArmy && !playerArmy && flow?.mode !== 'campaign') {
     return <Navigate to={getWarbandEntryRoute('single')} replace />;
   }
 

@@ -257,6 +257,9 @@ export interface ChessCombatSliceActions {
   // by construction.
   _nextLogTick: () => number;
   clearPendingCombat: () => void;
+  // Dev Battle Sandbox and any non-geometric duel entry. Same pendingCombat
+  // owner as a legal hero-vs-hero capture so poker HP writeback has a collision.
+  stagePendingPokerCombat: (attacker: ChessPiece, defender: ChessPiece) => ChessMutationResult;
   // Presentation cleanup only. Attack mechanics are resolved when
   // beginChessAttack records the attack intent; this clears the transient
   // marker so the coordinator can advance from chess to poker after the strike

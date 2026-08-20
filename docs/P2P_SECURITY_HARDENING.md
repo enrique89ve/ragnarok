@@ -9,10 +9,13 @@
 > Este archivo se conserva como registro de decisiones; no editar para reflejar
 > el estado actual.
 >
-> **OPEN-8 note (2026-08-19):** the body below still talks about host
-> `gameState` at ~2/sec. Live cards path no longer dumps forward state;
-> host `gameState` is recovery-on-`hash_mismatch` only. Integrity is
-> `prevStateHash` on `game_command` plus host `hash_check`.
+> **OPEN-8 note (2026-08-19):** CLOSED. The body below still talks about host
+> `gameState` at ~2/sec and must not be used as Alfa truth. Live cards path
+> no longer dumps forward state. Both peers send/apply `game_command`.
+> `cards_deck` handshake feeds `initGameFromHandshake` on both sides. Host
+> `gameState` is recovery-on-`hash_mismatch` only. Integrity is
+> `prevStateHash` on `game_command` plus host `hash_check`. See
+> [`PVP_WIRE_PROTOCOL.md`](./PVP_WIRE_PROTOCOL.md) §10 OPEN-8.
 
 **Status**: Implementing
 **Date**: 2026-03-19
@@ -48,6 +51,9 @@
 
 ### 5. Enforce Dual-Sig (No Single-Sig Fallback)
 
-**Problem**: If client doesn't countersign in 30s, host broadcasts with empty signature. Chain may reject (good) but wastes transactions.
+**Problem**: Waiting for the loser to countersign game_over never completes
+(they will not sign an ELO loss). Empty-signature broadcasts waste chain.
 
-**Fix**: On timeout, mark result as "disputed" — don't broadcast. Both players can submit slash evidence if they believe opponent griefed. No single-sig broadcasts for ranked matches.
+**Fix**: On timeout, mark result as "disputed" — don't broadcast a result-only
+claim. The winner may later post a forfeit path with anchor + silence proof
+(ADR 0008). Hive does not invent the winner.

@@ -520,7 +520,7 @@ const ChessPhase: React.FC<ChessPhaseProps> = ({
 			)}
 			{isPeerMatch && (
 				<p className="text-[10px] text-amber-200/70 font-semibold mt-1 text-center max-w-xl tracking-wide uppercase">
-					Pawn or King strike is instant. Other heroes fight in poker. Kings cannot be captured.
+					Pawns execute on the board. Heroes fight in poker. Touch the king and you win. The king does not capture.
 				</p>
 			)}
 

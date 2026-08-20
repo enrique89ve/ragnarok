@@ -12,6 +12,8 @@ import { getCard, putCard } from '@/data/blockchain/replayDB';
 import { xpKeyFor } from '@/data/blockchain/cardXPRewards';
 import { getEconomicLevelForXP } from '@shared/protocol-core/cardProgression';
 import { usePeerStore } from '../stores/peerStore';
+import { useMatchStore } from '../match/store';
+import { derivePackagedMatchType } from '../match/packagedMatchType';
 import { getActiveTranscript, clearTranscript, recordSessionEvent } from '@/data/blockchain/transcriptBuilder';
 import { pinTranscript } from '@/data/blockchain/transcriptIPFS';
 import { registerAccount, fetchPlayerElo } from '@/data/chainAPI';
@@ -203,11 +205,11 @@ async function handleGameEnded(_event: GameEndedEvent): Promise<void> {
 		gameState.players.opponent.heroId ??
 		'ai-opponent';
 
-	// Determine match type from game context — only P2P games against real Hive users are ranked
-	const peer = usePeerStore.getState();
-	const isP2PMatch = peer.connectionState === 'connected';
 	const hasRealOpponent = opponentUsername !== 'ai-opponent' && HIVE_USERNAME_RE.test(opponentUsername);
-	const matchType = (isP2PMatch && hasRealOpponent) ? 'ranked' as const : 'casual' as const;
+	const matchType = derivePackagedMatchType({
+		ctx: useMatchStore.getState().activeMatch,
+		hasDualSignedAnchor: false,
+	});
 
 	/*
 	  PvP narrative wrapper — record this match in the local rivalry

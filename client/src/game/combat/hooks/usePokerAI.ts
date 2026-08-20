@@ -7,9 +7,12 @@ import { COMBAT_DEBUG } from '../debugConfig';
 import { debug } from '../../config/debugConfig';
 import { ALL_NORSE_HEROES } from '../../data/norseHeroes';
 import type { BattlePopupAction, BattlePopupTarget } from '../components/HeroBattlePopup';
-import { useCampaignStore, getMission } from '../../campaign';
-import { profileToSmartAIConfig } from '../../campaign/campaignTypes';
+import { useMatchStore } from '../../match/store';
 import { deriveLegalPokerAiAction } from '../decision/pokerAiDecisionPolicy';
+import {
+  derivePokerAiConfigFromMatch,
+  escalatePokerAiConfigForPhase,
+} from '../decision/pokerAiMatchConfig';
 import {
   getPokerActionPresentation,
   POKER_AI_ACTION_SETTLE_DELAY_MS,
@@ -55,36 +58,15 @@ export function usePokerAI(options: UsePokerAIOptions): void {
   const actionsThisRound = combatState?.actionsThisRound;
 
   /*
-    Look up the active campaign mission to derive the AI config used in
-    combat. Outside of campaign mode (PvP, dev test, etc.) `currentMission`
-    is null and we fall back to SmartAI's DEFAULT_AI_CONFIG. Inside a
-    campaign mission, the mission's hand-tuned AIBehaviorProfile is run
-    through profileToSmartAIConfig() with the active difficulty so the
-    AI actually plays differently per boss AND per difficulty tier.
-
-    Before this fix, all 41 mission AI profiles were dead data —
-    getSmartAIAction was called with no config arg so DEFAULT_AI_CONFIG
-    won every time, regardless of mission or difficulty.
-
-    A ref captures the latest value so the 600ms-deferred AI decision
-    timer reads the current config when it fires, not the stale value
-    from when the effect was scheduled.
+    Poker AI config comes from MatchContext, not campaignStore.
+    Single/practice has no mission profile and no rewards — SmartAI default.
+    Campaign uses the mission's authored aiProfile + difficulty captured at
+    match setup, so a leftover currentMission cannot leak into Quick Match.
   */
-  const currentMissionId = useCampaignStore(s => s.currentMission);
-  const currentDifficulty = useCampaignStore(s => s.currentDifficulty);
-  const aiConfigRef = useRef<{ aggressiveness: number; bluffFrequency: number; tightness: number } | undefined>(undefined);
-  useEffect(() => {
-    if (currentMissionId) {
-      const found = getMission(currentMissionId);
-      if (found?.mission?.aiProfile) {
-        aiConfigRef.current = profileToSmartAIConfig(found.mission.aiProfile, currentDifficulty);
-      } else {
-        aiConfigRef.current = undefined;
-      }
-    } else {
-      aiConfigRef.current = undefined;
-    }
-  }, [currentMissionId, currentDifficulty]);
+  const activeMatch = useMatchStore(s => s.activeMatch);
+  const aiConfig = derivePokerAiConfigFromMatch(activeMatch);
+  const aiConfigRef = useRef(aiConfig);
+  aiConfigRef.current = aiConfig;
 
   const presentOpponentAction = useCallback((
     sourceState: PokerCombatState,
@@ -219,23 +201,11 @@ export function usePokerAI(options: UsePokerAIOptions): void {
           return;
         }
 
-        // Boss escalation — ramp aggression/bluff as poker phases advance.
-        // PRE_FLOP/FAITH = early (baseline), FORESIGHT = mid (+15%),
-        // DESTINY = late (+30%). Creates the cinematic feel of a boss
-        // becoming more desperate as the hand plays out.
-        let escalatedConfig = aiConfigRef.current;
-        if (escalatedConfig) {
-          const phaseEsc =
-            freshState.phase === CombatPhase.DESTINY ? 0.30 :
-            freshState.phase === CombatPhase.FORESIGHT ? 0.15 : 0;
-          if (phaseEsc > 0) {
-            escalatedConfig = {
-              aggressiveness: Math.min(1, escalatedConfig.aggressiveness + phaseEsc),
-              bluffFrequency: Math.min(1, escalatedConfig.bluffFrequency + phaseEsc * 0.5),
-              tightness: Math.max(0, escalatedConfig.tightness - phaseEsc * 0.4),
-            };
-          }
-        }
+        // Boss escalation is campaign-only: single has no authored config.
+        const escalatedConfig = escalatePokerAiConfigForPhase(
+          aiConfigRef.current,
+          freshState.phase,
+        );
 
         if (COMBAT_DEBUG.AI) {
           debug.ai('[AI Effect] AI making decision now', { aiConfig: escalatedConfig });

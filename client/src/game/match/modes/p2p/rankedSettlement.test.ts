@@ -40,7 +40,7 @@ const VERIFIED_DECISION: P2PWinnerArbiterDecision = {
 		canBroadcastMatchResult: true,
 		canApplyP2PRankedRune: true,
 		canApplyElo: true,
-		rewardEvidence: 'verified_dual_signed_match_result',
+		rewardEvidence: 'verified_winner_posted_match_result',
 	},
 };
 
@@ -198,7 +198,7 @@ describe('P2PRankedSettlementModule.evaluateMatchEnd', () => {
 			buildCandidate: () => BASE_CANDIDATE,
 			verifyCandidate: () => VERIFIED_DECISION,
 			readRuntimeGate: () => true,
-			computeReward: () => ({ eloDelta: 16, runeDelta: 2, evidenceTag: 'verified_dual_signed_match_result' }),
+			computeReward: () => ({ eloDelta: 16, runeDelta: 2, evidenceTag: 'verified_winner_posted_match_result' }),
 		});
 		const decision = module.evaluateMatchEnd(BASE_CTX, WIN_END);
 		expect(decision.status).toBe('verified_broadcast_ready');
@@ -222,7 +222,7 @@ describe('P2PRankedSettlementModule.evaluateMatchEnd', () => {
 			}),
 			buildCandidate: () => BASE_CANDIDATE,
 			verifyCandidate: () => VERIFIED_DECISION,
-			computeReward: () => ({ eloDelta: 16, runeDelta: 2, evidenceTag: 'verified_dual_signed_match_result' }),
+			computeReward: () => ({ eloDelta: 16, runeDelta: 2, evidenceTag: 'verified_winner_posted_match_result' }),
 		});
 		const decision = module.evaluateMatchEnd(BASE_CTX, WIN_END);
 		expect(decision.status).not.toBe('verified_broadcast_ready');

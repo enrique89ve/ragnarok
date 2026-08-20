@@ -6,15 +6,15 @@ import { debug } from '../../config/debugConfig';
 import { proceduralAudio } from '../../audio/proceduralAudio';
 import type { BattlePopupAction, BattlePopupTarget } from '../components/HeroBattlePopup';
 import { getPokerTurnRemainingSeconds } from '../../../../../shared/p2p-wire/pokerTurnClock';
-import { GameEventBus } from '../../../core/events/GameEventBus';
 import { derivePokerDecisionView } from '../decision/pokerDecisionView';
-import { derivePokerTurnPolicy } from '../decision/pokerTurnPolicy';
+import { derivePokerTurnPolicy, type PokerOpponentKind } from '../decision/pokerTurnPolicy';
 
 interface UseCombatTimerOptions {
   combatState: PokerCombatState | null;
   isActive: boolean;
   updateTimer: (newTime: number) => void;
   isP2PCombat?: boolean;
+  opponentKind?: PokerOpponentKind | null;
   sendPokerAction?: (input: {
     playerId: string;
     action: CombatAction;
@@ -34,7 +34,7 @@ interface UseCombatTimerOptions {
 }
 
 export function useCombatTimer(options: UseCombatTimerOptions): void {
-  const { combatState, isActive, updateTimer, isP2PCombat = false, sendPokerAction, sendPokerTurnStarted, addHeroBattlePopup } = options;
+  const { combatState, isActive, updateTimer, isP2PCombat = false, opponentKind = null, sendPokerAction, sendPokerTurnStarted, addHeroBattlePopup } = options;
   const announcedTurnIdRef = useRef<string | null>(null);
   const expiredTurnIdRef = useRef<string | null>(null);
 
@@ -57,6 +57,7 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
       remotePlayerId: combatState.opponent.playerId,
       localPlayerIsReady: combatState.player.isReady,
       isP2PCombat,
+      opponentKind,
     });
 
     if (isP2PCombat && combatState.turnId && announcedTurnIdRef.current !== combatState.turnId) {
@@ -82,13 +83,6 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
             remainingMs,
           });
         }
-        GameEventBus.emitNotification({
-          level: turnPolicy.actor === 'local_human' ? 'info' : 'warning',
-          message: turnPolicy.actor === 'local_human'
-            ? 'Your poker decision started.'
-            : 'Opponent poker decision started.',
-          duration: 1800,
-        });
       }
     }
 
@@ -118,6 +112,7 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
         remotePlayerId: freshState.opponent.playerId,
         localPlayerIsReady: freshState.player.isReady,
         isP2PCombat,
+        opponentKind,
       });
 
       if (freshTurnPolicy.shouldSkipTimerAfterLocalReady) {
@@ -182,6 +177,7 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
     isActive,
     updateTimer,
     isP2PCombat,
+    opponentKind,
     sendPokerAction,
     sendPokerTurnStarted,
     cardGameMulliganActive,

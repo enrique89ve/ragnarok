@@ -125,8 +125,8 @@ the resulting state, but it should not become gameplay truth.
 | `login` / REST auth body | player | Posting message signature, no chain op | Live. Used by Hive login and signed REST bodies. |
 | `queue_join` | player | Posting custom_json | Live in Hive mode via `broadcastQueueJoin`; includes PoW. |
 | `queue_leave` | player | Posting custom_json | Live; best-effort cancel path. |
-| `match_anchor` | either participant | Posting custom_json | **Future ranked settlement**; helper exists but current P2P testnet does not sign or broadcast it. |
-| `match_result` | winner/proposer after opponent countersigns | Posting custom_json plus two off-chain Posting signatures | **Future ranked settlement**; current P2P testnet neither signs nor broadcasts it and the terminal result stays local. |
+| `match_anchor` | both participants (dual-anchored) | Posting custom_json | **Future ranked** ([ADR 0008](./adr/0008-winner-posted-match-result.md)). Alfa does not sign or broadcast it. |
+| `match_result` | **winner only** | Posting custom_json + winner signature + Terminal Checkpoint Receipt | **Future ranked** (ADR 0008). Loser does not countersign. Alfa neither signs nor broadcasts; local `game_over` only. |
 | `campaign_result` | player | Posting custom_json | Live. Broadcaster is the campaign/RUNE owner. Payload usernames are omitted/ignored. |
 | `daily_quest_claim` | player | Posting custom_json | Live. Progress is local; explicit Claim button invokes Keychain. Chain validates date/slot/idempotency and computes flat reward. |
 | `reward_claim` | player or tournament flow | Posting custom_json | Method exists; tournament server path is still pending/deferred. |
@@ -209,7 +209,7 @@ calls from UI surfaces:
 ## Remaining Ambiguities
 
 1. `RAGNAROK_PROTOCOL_V1.md` still describes an 18/19-op v1 surface, while `CANONICAL_ACTIONS` now has the extended v1.1/v1.2 set: pack NFTs, lineage, marketplace, and DUAT operations.
-2. Future P2P `session_authorize`, `result_countersign`, `slash_evidence`, on-chain matchmaking queue ops, Collection custody/crafting, Marketplace, Admin, Treasury, and the Hive transaction outbox UI still need full migration through the client wallet invocation seam before public beta.
+2. Future P2P `session_authorize`, winner `match_result` review (ADR 0008; no loser countersign), `slash_evidence`, on-chain matchmaking queue ops, Collection custody/crafting, Marketplace, Admin, Treasury, and the Hive transaction outbox UI still need full migration through the client wallet invocation seam before public beta.
 
 ## Decision Targets
 

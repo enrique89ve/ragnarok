@@ -122,7 +122,7 @@ export type P2PRankedDecision =
 		readonly canBroadcastMatchResult: false;
 		readonly canApplyP2PRankedRune: false;
 		readonly canApplyElo: false;
-		readonly rewardEvidence: 'verified_dual_signed_match_result';
+		readonly rewardEvidence: 'verified_winner_posted_match_result';
 	}
 	| {
 		readonly status: 'verified_broadcast_ready';
@@ -132,7 +132,7 @@ export type P2PRankedDecision =
 		readonly canBroadcastMatchResult: true;
 		readonly canApplyP2PRankedRune: true;
 		readonly canApplyElo: true;
-		readonly rewardEvidence: 'verified_dual_signed_match_result';
+		readonly rewardEvidence: 'verified_winner_posted_match_result';
 	}
 	| {
 		readonly status: 'submitted';
@@ -142,7 +142,7 @@ export type P2PRankedDecision =
 		readonly canBroadcastMatchResult: true;
 		readonly canApplyP2PRankedRune: true;
 		readonly canApplyElo: true;
-		readonly rewardEvidence: 'verified_dual_signed_match_result';
+		readonly rewardEvidence: 'verified_winner_posted_match_result';
 	};
 
 /** Public Module shape. */
@@ -171,7 +171,7 @@ function blockedByGate(
 		canBroadcastMatchResult: false,
 		canApplyP2PRankedRune: false,
 		canApplyElo: false,
-		rewardEvidence: 'verified_dual_signed_match_result',
+		rewardEvidence: 'verified_winner_posted_match_result',
 	};
 }
 
@@ -218,7 +218,7 @@ function verifiedReady(
 		canBroadcastMatchResult: true,
 		canApplyP2PRankedRune: true,
 		canApplyElo: true,
-		rewardEvidence: 'verified_dual_signed_match_result',
+		rewardEvidence: 'verified_winner_posted_match_result',
 	};
 }
 
@@ -235,7 +235,7 @@ function submitted(
 		canBroadcastMatchResult: true,
 		canApplyP2PRankedRune: true,
 		canApplyElo: true,
-		rewardEvidence: 'verified_dual_signed_match_result',
+		rewardEvidence: 'verified_winner_posted_match_result',
 	};
 }
 

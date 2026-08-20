@@ -95,7 +95,7 @@ const BASE_CANDIDATE: P2PWinnerArbiterCandidate = {
 };
 
 	describe('verifyP2PWinnerArbiterCandidate', () => {
-	it('verifies full NFT ranked evidence with dual anchor, replay agreement, visible review, and dual signatures', () => {
+	it('verifies full NFT ranked evidence with dual anchor, replay agreement, visible review, and winner-posted signature', () => {
 		expect(verifyP2PWinnerArbiterCandidate(BASE_CANDIDATE)).toEqual({
 			status: 'verified',
 			matchId: 'match-s0-001',
@@ -109,7 +109,7 @@ const BASE_CANDIDATE: P2PWinnerArbiterCandidate = {
 				canBroadcastMatchResult: true,
 				canApplyP2PRankedRune: true,
 				canApplyElo: true,
-				rewardEvidence: 'verified_dual_signed_match_result',
+				rewardEvidence: 'verified_winner_posted_match_result',
 			},
 		});
 	});
@@ -259,13 +259,22 @@ const BASE_CANDIDATE: P2PWinnerArbiterCandidate = {
 		})).toBe(P2P_WINNER_ARBITER_REJECT_REASONS.visibleReview);
 	});
 
-	it('rejects disconnect-before-signature candidates without both peer signatures', () => {
+	it('accepts a winner-posted result when the loser does not countersign', () => {
 		expect(rejectReason({
 			signatures: {
 				...BASE_CANDIDATE.signatures,
 				loser: null,
 			},
-		})).toBe(P2P_WINNER_ARBITER_REJECT_REASONS.dualSignatures);
+		})).toBe('verified');
+	});
+
+	it('rejects a result with no winner signature', () => {
+		expect(rejectReason({
+			signatures: {
+				winner: null,
+				loser: null,
+			},
+		})).toBe(P2P_WINNER_ARBITER_REJECT_REASONS.winnerPostedSignature);
 	});
 
 	it('rejects signatures that were not verified against anchored pubkeys', () => {
@@ -280,16 +289,16 @@ const BASE_CANDIDATE: P2PWinnerArbiterCandidate = {
 		})).toBe(P2P_WINNER_ARBITER_REJECT_REASONS.signatureVerification);
 	});
 
-	it('rejects signatures over different commitments', () => {
+	it('rejects a winner signature over a different commitment', () => {
 		expect(rejectReason({
 			signatures: {
 				...BASE_CANDIDATE.signatures,
-				loser: {
-					...BASE_LOSER_SIGNATURE,
+				winner: {
+					...BASE_WINNER_SIGNATURE,
 					commitmentHash: 'other-commitment',
 				},
 			},
-		})).toBe(P2P_WINNER_ARBITER_REJECT_REASONS.dualSignatures);
+		})).toBe(P2P_WINNER_ARBITER_REJECT_REASONS.winnerPostedSignature);
 	});
 });
 

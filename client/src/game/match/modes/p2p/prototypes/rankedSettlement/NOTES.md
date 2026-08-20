@@ -1,7 +1,7 @@
 # PROTOTYPE - P2P Ranked Settlement / Winner Arbiter
 
 Question: how can QA full-catalog show local RUNE/XP reward feedback while
-keeping economic ranked settlement blocked until dual-signed evidence exists?
+keeping economic ranked settlement blocked until ADR 0008 evidence exists?
 
 Run:
 
@@ -14,11 +14,11 @@ Useful presets:
 - `1` QA local reward flow: shows `+2` RUNE preview and match XP locally, but
   chain RUNE remains `0` and CardXP remains `0`.
 - `2` full NFT happy path: dual anchor, deterministic transcript, visible review,
-  both signatures, arbiter verify -> `+2` winner RUNE.
+  winner-posted signature, arbiter verify -> `+2` winner RUNE.
 - `3` result-only: local result without dual anchor -> blocked.
 - `4` transcript mismatch: honest-looking result with divergent roots -> blocked.
 - `5` hidden prompt: no visible review -> blocked.
-- `6` disconnect before final signatures -> no settlement.
+- `6` disconnect before terminal checkpoint / receipt -> no happy-path settlement.
 
 Current read from the prototype:
 

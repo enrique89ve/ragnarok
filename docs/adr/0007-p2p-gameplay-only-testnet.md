@@ -34,11 +34,11 @@ The current Alfa/closed testnet P2P track is **gameplay-only**:
 - The terminal result is displayed and exported as local test evidence only.
   It is not canonical economic evidence.
 
-The result proposal/countersignature, ephemeral Hive-authorized session keys,
-signed action envelopes, winner arbiter and Hive broadcast remain future ranked
-settlement work. Their existing schemas and design documents may stay in the
-repository, but they must be labeled deferred and must not be testnet release
-gates for the gameplay-only track.
+The winner-posted `match_result` path, session keys, winner arbiter and Hive
+broadcast remain future ranked work under
+[ADR 0008](./0008-winner-posted-match-result.md). Those documents stay in the
+repository, labeled deferred, and must not be testnet release gates for this
+gameplay-only track. There is no loser `game_over` countersign.
 
 ## Server boundary
 
@@ -70,5 +70,7 @@ operation.
   economic mutation.
 - Checkpoint agreement detects divergence but does not prove objective legality;
   colluding clients may agree on a false root.
-- Ranked settlement requires a later ADR or explicit activation decision with
-  visible wallet consent, winner arbitration and end-to-end Hive evidence.
+- Ranked settlement is specified by
+  [ADR 0008](./0008-winner-posted-match-result.md): winner-posted `match_result`,
+  server replay validation, no loser countersign at game_over. It stays
+  inactive until Closed Beta explicitly opens that gate.

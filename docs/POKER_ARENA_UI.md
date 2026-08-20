@@ -88,7 +88,7 @@ Every visual element in the arena belongs to exactly **one** logical layer. Back
 | `MulliganScreen` (portal) | `#arena-layer-modal` | Blocks input until mulligan committed |
 | `ShowdownCelebration` (portal) | `#arena-layer-modal` | Blocks input during resolution |
 | `GameOverScreen` (portal) | `#arena-layer-modal` | Terminal modal |
-| `BettingPanel` | `[data-zone="betting-panel"]` in HUD z-range | Persistent control surface |
+| `BettingPanel` | `[data-zone="betting-panel"]` in HUD z-range | Persistent control surface. Actions show **Bet/Raise/Call/Check/Fold/All in** plus HP, not icon-only. Disabled buttons keep the same label and explain why in `title`. |
 | `GameHUD` | `[data-vfx-target="risk-display"]` on stakes chip | Only turn/phase/stakes rail |
 | Particle bursts (Pixi) | `#arena-layer-vfx` | Canvas-bounded particles |
 

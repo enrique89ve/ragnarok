@@ -151,19 +151,15 @@ export function getRealmDisplayName(visualRealm: RealmId): string {
 }
 
 export function getChessRealmClass(input: {
-  readonly isCampaign: boolean;
   readonly missionRealm: string | undefined;
   readonly visualRealm: RealmId;
 }): string {
-  if (!input.isCampaign || !input.missionRealm) return '';
+  if (!input.missionRealm) return '';
   return `realm-${input.visualRealm}`;
 }
 
-export function getFinaleClass(input: {
-  readonly isCampaign: boolean;
-  readonly campaignData: CampaignData;
-}): string {
-  if (!input.isCampaign || !input.campaignData?.mission.isChapterFinale) return '';
+export function getFinaleClass(campaignData: CampaignData): string {
+  if (!campaignData?.mission.isChapterFinale) return '';
   return 'mission-finale';
 }
 
@@ -360,11 +356,10 @@ export function getViewerChessResult(input: {
  */
 export function getInitialGameOverSubPhase(input: {
   readonly iWon: boolean;
-  readonly isCampaign: boolean;
   readonly campaignData: CampaignData;
 }): GameOverSubPhase {
-  const { iWon, isCampaign, campaignData } = input;
-  if (!isCampaign || !campaignData) return 'result';
+  const { iWon, campaignData } = input;
+  if (!campaignData) return 'result';
 
   const hasVictoryCinematic =
     iWon && (campaignData.mission.victoryCinematic?.length ?? 0) > 0;

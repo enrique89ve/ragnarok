@@ -113,6 +113,11 @@ let outgoingSeqCounter = 0;
 // counter must be a singleton — splitting it would break monotonic moveNumber
 // across the cards / chess / poker entry points.
 
+function p2pEngineLoadNotice(err: unknown): string {
+	const detail = err instanceof Error ? err.message : 'unknown engine error';
+	return `Match engine failed to load. This P2P match cannot continue. ${detail}`;
+}
+
 function deferSlashEvidence(params: SlashEvidenceParams): void {
 	recordSessionEvent('slash_evidence_deferred', { ...params });
 	debug.warn(`[wireSync] Slash evidence deferred (${params.reason}) — hidden Keychain prompts are disabled`);
@@ -412,7 +417,7 @@ export function useWireSync() {
 			}).catch(err => {
 				GameEventBus.emitNotification({
 					level: 'error',
-					message: `WASM engine failed to load after reconnect — ranked play blocked — ${err instanceof Error ? err.message : 'Unknown WASM error'}`,
+					message: p2pEngineLoadNotice(err),
 					duration: 15000,
 				});
 			});
@@ -438,7 +443,7 @@ export function useWireSync() {
 		}).catch(err => {
 			GameEventBus.emitNotification({
 				level: 'error',
-				message: `WASM engine failed to load — ranked play blocked — ${err instanceof Error ? err.message : 'Unknown WASM error'}`,
+				message: p2pEngineLoadNotice(err),
 				duration: 15000,
 			});
 		});

@@ -23,12 +23,23 @@ const hasSquare = (
 ): boolean => squares.some(square => square.row === row && square.col === col);
 
 describe('chessRules', () => {
-	it('does not expose direct king captures as legal attacks', () => {
+	it('exposes capturing the commander as a legal attack', () => {
 		const playerQueen = piece('player-queen', 'queen', 'player', 0, 0);
 		const opponentKing = piece('opponent-king', 'king', 'opponent', 0, 2);
 		const { attacks } = getValidMoves(playerQueen, [playerQueen, opponentKing]);
 
-		expect(hasSquare(attacks, 0, 2)).toBe(false);
+		expect(hasSquare(attacks, 0, 2)).toBe(true);
+	});
+
+	it('gives the king quiet steps only (commander does not capture)', () => {
+		const playerKing = piece('player-king', 'king', 'player', 4, 2);
+		const opponentQueen = piece('opponent-queen', 'queen', 'opponent', 0, 0);
+		const opponentPawn = piece('opponent-pawn', 'pawn', 'opponent', 4, 3);
+		const { moves, attacks } = getValidMoves(playerKing, [playerKing, opponentQueen, opponentPawn]);
+
+		expect(attacks).toEqual([]);
+		expect(hasSquare(moves, 4, 1)).toBe(true);
+		expect(hasSquare(moves, 4, 3)).toBe(false);
 	});
 
 	it('awards the side with decisive material against a bare king', () => {
@@ -55,8 +66,8 @@ describe('chessRules', () => {
 	});
 
 	it('draws stalemate when the side to move has no legal moves but is not in check', () => {
-		const playerKing = piece('player-king', 'king', 'player', 2, 0);
-		const playerRook = piece('player-rook', 'rook', 'player', 6, 4);
+		const playerKing = piece('player-king', 'king', 'player', 6, 0);
+		const playerRook = piece('player-rook', 'rook', 'player', 1, 4);
 		const opponentKing = piece('opponent-king', 'king', 'opponent', 0, 0);
 		const opponentPawn = piece('opponent-pawn', 'pawn', 'opponent', 0, 1);
 

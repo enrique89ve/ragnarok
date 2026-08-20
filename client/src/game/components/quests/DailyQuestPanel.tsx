@@ -104,7 +104,7 @@ function QuestRow({ quest, onReroll, onClaim, canReroll, claiming }: {
 							onClick={onClaim}
 							disabled={claiming}
 							className="inline-flex min-h-11 items-center gap-1.5 px-2 font-mono text-[10px] tracking-[0.18em] uppercase text-amber-300 transition-colors hover:text-gold-200 disabled:cursor-not-allowed disabled:opacity-50"
-							title="Sign the next custom_json in Hive Keychain to credit the reward."
+							title="Claim completed daily quests. Hive testnet credits RUNE; local mode records the claim only."
 						>
 							<Wallet size={11} strokeWidth={2} />
 							{claiming ? 'Wait' : 'Claim'}
@@ -238,6 +238,12 @@ function getDailyQuestStatusCopy(input: {
 		return {
 			title: 'Claim unavailable in this runtime',
 			detail: input.claimFeedback.errors[0] ?? 'Daily quest RUNE claims require Hive testnet mode.',
+		};
+	}
+	if (input.claimFeedback?.status === 'claimed' && input.claimFeedback.runeEarned === 0) {
+		return {
+			title: 'Daily quests recorded locally',
+			detail: 'No RUNE until a Hive testnet Claim. Duplicate claim is a no-op.',
 		};
 	}
 	if (input.claimFeedback?.status === 'rejected' || input.claimFeedback?.status === 'partial') {

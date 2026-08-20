@@ -12,7 +12,7 @@
    - [King Divine Command System](#king-divine-command-system)
 6. [Poker Combat System](#poker-combat-system)
    - [Poker Spells](#poker-spells)
-7. [Standard Match Rules](#standard-match-rules)
+7. [Standard Match Rules](#standard-match-rules) (historical, not Alfa)
 8. [Keywords & Abilities](#keywords--abilities)
 9. [Norse Mechanics](#norse-mechanics)
    - [Blood Price](#blood-price)
@@ -38,7 +38,7 @@ Ragnarok Combat Arena is a multi-mythology digital collectible card game featuri
 
 - **2,400+ collectible cards** across 5 mythological factions (Norse, Greek, Egyptian, Celtic, Eastern)
 - **80+ playable heroes** across 12 classes
-- **Two distinct game modes**: Ragnarok Chess and Standard Match
+- **Three playable Alfa modes**, all on the same chess + poker spine: practice, campaign, and P2P. There is no live "Standard Match" (cards-only, no chess) path.
 - **Poker-inspired combat** with Texas Hold'em mechanics
 - **Strategic deck building** with class-specific and neutral cards
 
@@ -50,22 +50,18 @@ Players engage in strategic battles using heroes from various mythologies. Each 
 
 ## Game Modes
 
-### Ragnarok Chess Mode
+The live product path is chess movement plus poker combat. Practice, campaign,
+and P2P all use `RagnarokGameCoordinator`. Alfa Testnet requires one complete
+loop of each: practice, one Norse campaign mission, and two-browser P2P.
+See [`TESTNET_READINESS_FAST_TRACK.md`](./TESTNET_READINESS_FAST_TRACK.md).
 
-A strategic chess variant where pieces represent heroes. When pieces collide, combat is resolved through the Poker Combat System.
+### Practice (single)
 
-**Flow:**
-```
-Main Menu → Mode Selection → Ragnarok Chess → Army Selection → Chess Board → Attack → Poker Combat → Hero Death → Chess Victory
-```
-
-### Standard Match Mode
-
-Classic 1v1 card battles without the chess layer.
+Local AI match. Same spine as campaign/P2P. Pays no Match XP, RUNE, or ranking.
 
 **Flow:**
 ```
-Main Menu → Mode Selection → Standard Match → Hero Selection → Deck Building (optional) → Combat Arena → Mulligan Phase → Turn Loop → Victory/Defeat
+Home → Warband (single) → /#/game/single → Chess → Poker on capture → Chess → Game Over
 ```
 
 ### Campaign Mode
@@ -75,12 +71,29 @@ Twilight, Greek, Egyptian, Celtic, Eastern). Each victory broadcasts a
 single `rp_campaign_result` op which writes verified campaign progress
 and credits any first-clear RUNE in the same chain apply step.
 
+Alfa Testnet gates **one Norse mission** end-to-end. Remaining chapters are
+content, not the release gate.
+
 Chapter mission counts are narrative — only the first six mission ordinals
 across all chapters participate in the campaign economy. Per-mission RUNE:
 ordinals `*-1`..`*-4` pay 2 RUNE, `*-5`..`*-6` pay 1 RUNE, and any later
 ordinal is narrative-only. The per-account season cap is 10 RUNE total
 from campaign first-clears; once reached, subsequent first-clears are
 recorded as progress but pay 0 RUNE.
+
+### P2P Multiplayer
+
+Two browsers run the same spine. The relay notarizes **Phase Checkpoint**
+roots only at `chess ↔ poker_combat` and `* → game_over`. Alfa P2P is
+gameplay-only: no `match_result`, no ranked RUNE/ELO. See
+[`adr/0007-p2p-gameplay-only-testnet.md`](./adr/0007-p2p-gameplay-only-testnet.md).
+Future ranked settlement is [`adr/0008-winner-posted-match-result.md`](./adr/0008-winner-posted-match-result.md).
+
+### Standard Match (historical, not Alfa)
+
+Classic 1v1 card battles without the chess layer existed as `GameBoard`.
+That surface has no live route. Do not implement or test it for Alfa. Poker
+combat inside chess remains the only combat arena.
 
 ---
 
@@ -227,15 +240,22 @@ Row 6: Rook  | Bishop| King | Queen  | Knight
 | **Rook** | Horizontal and vertical only, unlimited distance |
 | **Bishop** | Diagonal only, unlimited distance |
 | **Knight** | L-shape (2+1 squares), can jump over pieces |
-| **Pawn** | Forward only, 1 square |
+| **Pawn** | Forward 1 square if empty. Unmoved pawns may step 2. Captures are diagonal-forward only. |
 
 ### Combat Rules
 
+Pieces with no deck (pawn, king) never enter poker. Source of truth:
+`isChessAttackInstantKill` in `shared/p2p-wire/chess.ts`.
+
 When a piece moves to a square occupied by an enemy piece:
 
-1. **Pawn or King vs non-King / Any vs Pawn**: Instant kill (Valkyrie Weapon rule)
-2. **Major Piece vs Major Piece**: Triggers Poker Combat
-3. **Direct King capture**: Not legal. King pressure resolves through checkmate or explicit endgame rules.
+1. **Pawn captures anything** (including the king): instant kill on chess (Valkyrie).
+2. **Hero captures a pawn**: instant kill on chess (pawn has no deck).
+3. **Hero vs hero** (knight, bishop, rook, queen): Poker Combat.
+4. **King captures**: illegal. The king does not fight; mines are its weapon.
+5. **Anyone captures the king**: instant kill and that side **wins**.
+
+Pawns cannot capture forward; a pawn on the file ahead only blocks.
 
 ### Stamina System
 
@@ -250,7 +270,7 @@ When a piece moves to a square occupied by an enemy piece:
 - **Bare King vs decisive material**: If a side has only its King and the opponent still has a Queen, Rook, or Pawn, the opponent wins
 - **Insufficient material draw**: King vs King, or King plus one Bishop/Knight vs lone King, is a draw
 - **Stalemate draw**: If no material terminal has already applied and the side to move has no legal moves while not in check, the game is a draw
-- Kings can attack non-King pieces, but Kings cannot be captured directly
+- Kings do not capture. Touching the king (legal capture) wins the match immediately. Check still warns; capturing the commander is the finish.
 
 ### King Divine Command System
 
@@ -291,7 +311,8 @@ Each of the 9 Primordial Norse Kings possesses a unique **Divine Command** abili
 
 ### Victory Conditions
 
-- Capture the enemy King (checkmate)
+- Capture the enemy King (instant kill — touching the commander wins)
+- Checkmate if the king has no legal step and is in check
 - Eliminate all enemy pieces
 
 ---
@@ -461,6 +482,11 @@ Poker Spells are cast during the **Spell/Pet Phase**. The dedicated wager rounds
 ---
 
 ## Standard Match Rules
+
+> Historical. This section describes the unused cards-only `GameBoard` path.
+> Alfa playable combat is chess + poker. Do not treat these setup numbers as
+> current product rules; when they diverge from `RagnarokCombatArena` /
+> protocol-core, **code wins**.
 
 ### Setup
 

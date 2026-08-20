@@ -1,6 +1,7 @@
 export type PokerTurnProcessMode = 'p2p' | 'local_ai';
 export type PokerTurnProfileMode = 'p2p' | 'campaign' | 'vs_ai';
 export type PokerTurnActor = 'local_human' | 'remote_peer' | 'remote_ai' | 'none';
+export type PokerOpponentKind = 'ai' | 'scripted' | 'peer';
 
 export type PokerTurnPolicy = {
 	readonly processMode: PokerTurnProcessMode;
@@ -17,12 +18,27 @@ export function getPokerTurnProcessMode(isP2PCombat: boolean): PokerTurnProcessM
 	return isP2PCombat ? 'p2p' : 'local_ai';
 }
 
-export function getPokerTurnProfileMode(input: {
-	readonly isP2PCombat: boolean;
-	readonly isCampaign: boolean;
-}): PokerTurnProfileMode {
-	if (input.isP2PCombat) return 'p2p';
-	return input.isCampaign ? 'campaign' : 'vs_ai';
+export function getPokerTurnProfileMode(opponentKind: PokerOpponentKind | null | undefined): PokerTurnProfileMode {
+	switch (opponentKind) {
+		case 'peer':
+			return 'p2p';
+		case 'scripted':
+			return 'campaign';
+		case 'ai':
+		default:
+			return 'vs_ai';
+	}
+}
+
+function resolvePokerOpponentKind(input: {
+	readonly opponentKind?: PokerOpponentKind | null;
+	readonly isP2PCombat?: boolean;
+	readonly isCampaign?: boolean;
+}): PokerOpponentKind {
+	if (input.opponentKind) return input.opponentKind;
+	if (input.isP2PCombat) return 'peer';
+	if (input.isCampaign) return 'scripted';
+	return 'ai';
 }
 
 export function derivePokerTurnPolicy(input: {
@@ -30,14 +46,13 @@ export function derivePokerTurnPolicy(input: {
 	readonly localPlayerId: string;
 	readonly remotePlayerId: string;
 	readonly localPlayerIsReady: boolean | undefined;
-	readonly isP2PCombat: boolean;
+	readonly opponentKind?: PokerOpponentKind | null;
+	readonly isP2PCombat?: boolean;
 	readonly isCampaign?: boolean;
 }): PokerTurnPolicy {
-	const processMode = getPokerTurnProcessMode(input.isP2PCombat);
-	const profileMode = getPokerTurnProfileMode({
-		isP2PCombat: input.isP2PCombat,
-		isCampaign: input.isCampaign ?? false,
-	});
+	const opponentKind = resolvePokerOpponentKind(input);
+	const processMode = getPokerTurnProcessMode(opponentKind === 'peer');
+	const profileMode = getPokerTurnProfileMode(opponentKind);
 	const actor = getPokerTurnActor({
 		activePlayerId: input.activePlayerId,
 		localPlayerId: input.localPlayerId,

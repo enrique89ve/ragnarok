@@ -25,6 +25,7 @@ Package manager is **pnpm** (see `pnpm-workspace.yaml`). Install with `pnpm inst
 - **On-chain protocol** → `docs/RAGNAROK_PROTOCOL_V1.md`
 - **Hive indexer contract** → `docs/HIVE_INDEXER_CONTRACT.md`
 - **PvP wire protocol** → `docs/PVP_WIRE_PROTOCOL.md` (transport, lifecycle, envelopes, authority model, transcript)
+- **Ranked P2P settlement** → `docs/adr/0008-winner-posted-match-result.md` (winner posts, replay validates, loser does not countersign). Alfa remains gameplay-only per ADR 0007.
 - **P2P reload / local snapshot** → `docs/P2P_MATCH_RESUME.md`
 - **Current Alfa → Closed Beta readiness** → `docs/TESTNET_READINESS_FAST_TRACK.md`
 - **Card chrome by stage** → `docs/CARD_SURFACE_RENDER.md`

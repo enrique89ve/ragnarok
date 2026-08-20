@@ -7,10 +7,12 @@
 > for NFT custody. Do not use this blueprint as the current indexer or NFT
 > ownership authority.
 >
-> Its match anchoring, result signing and settlement sections describe the
-> future ranked economy. [ADR 0007](./adr/0007-p2p-gameplay-only-testnet.md)
-> disables those operations and all match-driven Keychain prompts in the
-> current gameplay-only P2P testnet.
+> Ranked settlement canon is
+> [ADR 0008](./adr/0008-winner-posted-match-result.md): winner-posted
+> `match_result`, replay validates, loser does not countersign game_over.
+> Sections below that still say both players co-sign the result are
+> historical. [ADR 0007](./adr/0007-p2p-gameplay-only-testnet.md) disables
+> those operations in the current gameplay-only P2P testnet.
 
 **Status**: Phase 2 complete — all chain ops wired end-to-end. NFT provenance viewer, direct card gifting, ownership enforcement, post-match IDB→Zustand refresh, HiveEvents toast notifications, reward claiming on chain. Genesis launch (broadcast genesis + seal on Hive mainnet) is next.
 **Layer**: Hive Layer 1 (no Hive-Engine dependency)
@@ -706,7 +708,10 @@ Any observer can verify the proof without downloading the full game. The transcr
 
 ### 7.4 Result Broadcast to Hive
 
-At game end, both players co-sign the result. **A `match_result` is only valid if a dual-anchored `match_start` exists for that `match_id`.**
+**Superseded by [ADR 0008](./adr/0008-winner-posted-match-result.md):** only
+the winner Hive-signs `match_result`. The loser does not co-sign game_over.
+A `match_result` is only valid if a dual-anchored `match_anchor` exists for
+that `match_id` and replay of the transcript agrees with the payload winner.
 
 ```json
 {
@@ -733,8 +738,9 @@ At game end, both players co-sign the result. **A `match_result` is only valid i
 
 This goes on Hive as an immutable record. Ladder rankings, ban systems, and reward distributions read from this log. A result is ignored by the reader if:
 
-- It lacks both player signatures (dual-signed requirement)
-- No matching dual-anchored `match_start` exists for the `match_id`
+- The winner signature is missing or the broadcaster is not the winner (ADR 0008)
+- No matching dual-anchored `match_anchor` exists for the `match_id`
+- Replay of the transcript disagrees with payload `winner`
 - The PoW is missing or invalid (see Section 8.4)
 
 ### 7.5 Dispute: One Player Disconnects
@@ -753,8 +759,8 @@ Case 2: match_start from Player A only (not dual-anchored)
    → No penalty — match simply never started
    → Player A's queue entry is released
 
-Case 3: match_start (dual-anchored) + match_result (dual-signed)
-   → Normal completed match — no dispute
+Case 3: match_anchor (dual-anchored) + winner-posted match_result (ADR 0008)
+   → Normal completed match — no dispute if replay agrees
 ```
 
 The `match_start` anchor is what makes disconnect detection trustworthy. Without it, a malicious player could claim their opponent disconnected when no match ever happened.

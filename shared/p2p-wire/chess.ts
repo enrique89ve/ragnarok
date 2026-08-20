@@ -10,10 +10,9 @@
  * Surface today (post C-Chess.8):
  *   - `chess_move`: quiet move (no capture). Both peers apply via
  *     `executeMove` independently.
- *   - `chess_attack`: instant-kill capture only (attacker is pawn/king
- *     OR defender is pawn — see `isChessAttackInstantKill` below).
- *     Receiver runs `beginChessAttack` with isInstantKill=true; animation
- *     completion is presentation cleanup only.
+ *   - `chess_attack`: instant-kill capture only (see
+ *     `isChessAttackInstantKill`). Receiver runs `beginChessAttack` with
+ *     isInstantKill=true; animation completion is presentation cleanup.
  *   - `chess_combat_initiated`: non-instant capture that enters the
  *     poker/combat phase. Receiver runs `beginChessAttack` with
  *     isInstantKill=false; mechanics stage `pendingCombat` immediately,
@@ -268,17 +267,20 @@ export type ChessAttackPieceKind = 'pawn' | 'knight' | 'bishop' | 'rook' | 'quee
  * the poker/combat phase. Keeping the rule in one place guarantees sender and
  * receiver never disagree about which wire discriminator applies.
  *
- * Rule (mirrors `chessCombatSlice.movePiece` lines 693-695): an attack
- * is instant-kill when the attacker is a pawn or king (Valkyrie weapon)
- * OR the defender is a pawn (too weak to defend). Anything else enters
- * poker/combat.
+ * Pieces with no deck (pawn, king) never enter poker.
+ *   - Pawn attacker: Valkyrie execute, stays on chess (including vs king).
+ *   - Pawn defender: no deck, dies on chess.
+ *   - King defender: touching the commander wins; stays on chess.
+ *   - King attacker: not a capture routing case — kings have no attacks.
+ * Hero vs hero (N/B/R/Q) returns false and uses `chess_combat_initiated`.
  */
 export function isChessAttackInstantKill(input: {
 	readonly attackerType: ChessAttackPieceKind;
 	readonly defenderType: ChessAttackPieceKind;
 }): boolean {
+	if (input.attackerType === 'king') return false;
 	if (input.attackerType === 'pawn') return true;
-	if (input.attackerType === 'king') return true;
 	if (input.defenderType === 'pawn') return true;
+	if (input.defenderType === 'king') return true;
 	return false;
 }

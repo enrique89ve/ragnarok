@@ -8,6 +8,7 @@ import {
 	emitShowdownDamage,
 	emitStreakAnnounced,
 } from '../vfx/events';
+import { planPokerResolutionOutcome } from '../pokerResolutionOutcome';
 
 export interface ShowdownCelebration {
   resolution: {
@@ -108,18 +109,17 @@ export function useCombatEvents(options: UseCombatEventsOptions): void {
     }
 
     {
-      const matchOver = result.playerFinalHealth <= 0 || result.opponentFinalHealth <= 0;
+      const outcome = planPokerResolutionOutcome(result);
 
-      if (matchOver) {
-        const isPlayerDead = result.playerFinalHealth <= 0;
-        const deadHeroName = isPlayerDead
+      if (outcome.kind === 'combat-over') {
+        const deadHeroName = outcome.isPlayerDead
           ? (combatState?.player?.pet?.name || 'Hero')
           : (combatState?.opponent?.pet?.name || 'Enemy');
 
         onHeroDeath({
           isAnimating: true,
           deadHeroName,
-          isPlayerDead,
+          isPlayerDead: outcome.isPlayerDead,
           pendingResolution: result
         });
       } else {

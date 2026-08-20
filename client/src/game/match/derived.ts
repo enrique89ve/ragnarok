@@ -15,16 +15,15 @@
  * allowed to know about each mode for dispatching.
  *
  * Phase ownership:
- *   - Fase 1: deriveAuthority.
- *   - Fase 4 (this file growing): deriveOpponentArmyForMode.
- *   - Fase 4 next steps: deriveIntro, selectOnWinHandler.
+ *   - deriveAuthority, deriveOpponentArmyForMode, deriveIntro, deriveIWonForPhase.
+ *   - deriveMatchFlowPolicy compresses practice / campaign / p2p flow facts.
  */
 
 import { buildCampaignArmy } from '../campaign/campaignArmyBuilder';
-import type { CampaignChapter, CampaignMission } from '../campaign/campaignTypes';
+import type { CampaignChapter, CampaignMission, Difficulty } from '../campaign/campaignTypes';
 import { getDefaultArmySelection } from '../data/ChessPieceConfig';
 import type { ArmySelection } from '../types/ChessTypes';
-import type { MatchContext } from './types';
+import type { AiStyle, MatchContext, ScriptPayload } from './types';
 
 // ── Authority ─────────────────────────────────────────────────────────────
 
@@ -150,4 +149,104 @@ export function deriveIntro(
 	if (!chapter.cinematicIntro) return { kind: 'none' };
 	if (seenChapterIds.includes(chapter.id)) return { kind: 'none' };
 	return { kind: 'cinematic', chapter, mission };
+}
+
+// ── Playable match mode + flow policy ─────────────────────────────────────
+
+/**
+ * Alfa playable modes. `practice` is the local AI match (route `/game/single`,
+ * UI "Quick Match"). Chess and poker rules are shared; only flow differs.
+ */
+export type PlayableMatchMode = 'practice' | 'campaign' | 'p2p';
+
+export type CampaignMatchScript = Extract<ScriptPayload, { kind: 'campaign-mission' }>;
+
+export type RestartDestination =
+	| { kind: 'campaign-map' }
+	| { kind: 'warband'; intent: 'single' | 'multiplayer' };
+
+export type LocalAiProfile = {
+	readonly difficulty: Difficulty;
+	readonly style: AiStyle;
+	readonly behaviorProfile: 'practice' | 'campaign';
+};
+
+/**
+ * Compressed flow facts for one MatchContext. Callers read this instead of
+ * reconstructing `isCampaign` / `isP2PConnected` from opponent.kind.
+ */
+export type MatchFlowPolicy = {
+	readonly mode: PlayableMatchMode;
+	readonly authority: Authority;
+	readonly usesPeerPhaseCheckpoint: boolean;
+	readonly usesLocalAi: boolean;
+	readonly bootstrapsWarband: boolean;
+	readonly requiresWarbandArmy: boolean;
+	readonly campaign: CampaignMatchScript | null;
+	readonly restartDestination: RestartDestination;
+	readonly localAi: LocalAiProfile | null;
+};
+
+export function derivePlayableMatchMode(ctx: MatchContext): PlayableMatchMode {
+	switch (ctx.opponent.kind) {
+		case 'ai':
+			return 'practice';
+		case 'scripted':
+			return 'campaign';
+		case 'peer':
+			return 'p2p';
+	}
+}
+
+export function deriveCampaignMatch(ctx: MatchContext): CampaignMatchScript | null {
+	if (ctx.opponent.kind !== 'scripted') return null;
+	if (ctx.opponent.script.kind !== 'campaign-mission') return null;
+	return ctx.opponent.script;
+}
+
+export function deriveLocalAiProfile(ctx: MatchContext): LocalAiProfile | null {
+	switch (ctx.opponent.kind) {
+		case 'peer':
+			return null;
+		case 'ai':
+			return {
+				difficulty: ctx.opponent.difficulty,
+				style: ctx.opponent.style ?? 'balanced',
+				behaviorProfile: 'practice',
+			};
+		case 'scripted':
+			return {
+				difficulty: campaignScriptDifficulty(ctx.opponent.script),
+				style: 'balanced',
+				behaviorProfile: 'campaign',
+			};
+	}
+}
+
+function campaignScriptDifficulty(script: ScriptPayload): Difficulty {
+	return script.kind === 'campaign-mission' ? script.difficulty : 'normal';
+}
+
+export function deriveMatchFlowPolicy(ctx: MatchContext): MatchFlowPolicy {
+	const mode = derivePlayableMatchMode(ctx);
+	const authority = deriveAuthority(ctx);
+	return {
+		mode,
+		authority,
+		usesPeerPhaseCheckpoint: authority.kind === 'p2p-symmetric',
+		usesLocalAi: authority.kind === 'local',
+		bootstrapsWarband: mode === 'practice',
+		requiresWarbandArmy: mode !== 'campaign',
+		campaign: deriveCampaignMatch(ctx),
+		restartDestination: restartDestinationFor(mode),
+		localAi: deriveLocalAiProfile(ctx),
+	};
+}
+
+function restartDestinationFor(mode: PlayableMatchMode): RestartDestination {
+	if (mode === 'campaign') return { kind: 'campaign-map' };
+	return {
+		kind: 'warband',
+		intent: mode === 'p2p' ? 'multiplayer' : 'single',
+	};
 }

@@ -24,6 +24,9 @@ import {
   ChessAnimationSlice,
   UnifiedCombatStore
 } from './types';
+import { debug } from '../../config/debugConfig';
+
+const ATTACK_ANIMATION_BUDGET_MS = 2000;
 
 export const createChessAnimationSlice: StateCreator<
   UnifiedCombatStore,
@@ -36,6 +39,7 @@ export const createChessAnimationSlice: StateCreator<
   lastMineTriggered: null,
 
   startAttackAnimation: (attacker: ChessPiece, defender: ChessPiece, isInstantKill: boolean) => {
+    const timestamp = get()._nextLogTick();
     set({
       pendingAttackAnimation: {
         attacker,
@@ -43,9 +47,16 @@ export const createChessAnimationSlice: StateCreator<
         attackerPosition: { ...attacker.position },
         defenderPosition: { ...defender.position },
         isInstantKill,
-        timestamp: get()._nextLogTick()
+        timestamp,
       }
     });
+    globalThis.setTimeout(() => {
+      const pending = get().pendingAttackAnimation;
+      if (pending && pending.timestamp === timestamp) {
+        debug.chess('[Chess] attack animation budget exceeded — clearing marker so chess can continue');
+        get().clearAttackAnimation();
+      }
+    }, ATTACK_ANIMATION_BUDGET_MS);
   },
 
   clearAttackAnimation: () => {

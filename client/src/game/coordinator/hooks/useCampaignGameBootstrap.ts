@@ -15,7 +15,6 @@ type CampaignData = {
 } | null;
 
 export type CampaignActiveRealmSyncInput = {
-  readonly isCampaign: boolean;
   readonly missionRealm: string | undefined;
   readonly visualRealm: RealmId;
   readonly realmDisplayName: string;
@@ -26,14 +25,12 @@ type ActiveRealmInput = CampaignActiveRealmSyncInput;
 type FlowBootstrapInput = {
   readonly flowState: RoundFlowState | null;
   readonly effectiveInitialArmy: ArmySelection | null;
-  readonly isCampaign: boolean;
   readonly hasCinematic: boolean;
   readonly campaignData: CampaignData;
   readonly startFlow: (input: InitialFlowInput) => void;
 };
 
 type BoardBootstrapInput = {
-  readonly isCampaign: boolean;
   readonly campaignData: CampaignData;
   readonly hasCinematic: boolean;
   readonly initialArmy: ArmySelection | null;
@@ -46,7 +43,6 @@ type BoardBootstrapInput = {
 };
 
 export type CampaignBoardBootstrapGuardInput = {
-  readonly isCampaign: boolean;
   readonly playerArmy: ArmySelection | null;
   readonly initialArmy: ArmySelection | null;
   readonly alreadyBootstrapped: boolean;
@@ -83,7 +79,7 @@ function isMatchingCampaignRealm(
 }
 
 export function syncCampaignActiveRealm(input: CampaignActiveRealmSyncInput): boolean {
-  if (!input.isCampaign || !input.missionRealm) return false;
+  if (!input.missionRealm) return false;
 
   const { activeRealm } = useGameStore.getState().gameState;
   if (isMatchingCampaignRealm(activeRealm, input.visualRealm, input.realmDisplayName)) {
@@ -104,15 +100,13 @@ export function syncCampaignActiveRealm(input: CampaignActiveRealmSyncInput): bo
 }
 
 export function shouldBootstrapCampaignBoard(input: CampaignBoardBootstrapGuardInput): boolean {
-  return input.isCampaign
-    && !input.alreadyBootstrapped
+  return !input.alreadyBootstrapped
     && !input.playerArmy
     && !input.initialArmy;
 }
 
 export function useCampaignGameBootstrap(input: CampaignGameBootstrapInput): void {
   const {
-    isCampaign,
     missionRealm,
     realmDisplayName,
     visualRealm,
@@ -130,10 +124,11 @@ export function useCampaignGameBootstrap(input: CampaignGameBootstrapInput): voi
     playSoundEffect,
   } = input;
   const boardBootstrappedRef = useRef(false);
+  const isCampaign = campaignData !== null;
 
   useEffect(() => {
-    syncCampaignActiveRealm({ isCampaign, missionRealm, realmDisplayName, visualRealm });
-  }, [isCampaign, missionRealm, realmDisplayName, visualRealm]);
+    syncCampaignActiveRealm({ missionRealm, realmDisplayName, visualRealm });
+  }, [missionRealm, realmDisplayName, visualRealm]);
 
   useEffect(() => {
     if (flowState !== null) return;
@@ -143,7 +138,7 @@ export function useCampaignGameBootstrap(input: CampaignGameBootstrapInput): voi
       return;
     }
 
-    if (!isCampaign || !campaignData) return;
+    if (!campaignData) return;
 
     const intro = campaignData.chapter.cinematicIntro;
     const narrative = campaignData.mission.narrativeBefore;
@@ -187,7 +182,6 @@ export function useCampaignGameBootstrap(input: CampaignGameBootstrapInput): voi
     }
 
     if (!shouldBootstrapCampaignBoard({
-      isCampaign,
       playerArmy,
       initialArmy,
       alreadyBootstrapped: boardBootstrappedRef.current,

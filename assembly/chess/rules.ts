@@ -79,6 +79,7 @@ export function getThreateningPieces(
 	for (let i = 0; i < pieces.length; i++) {
 		const piece = pieces[i];
 		if (piece.owner != attackerSide) continue;
+		if (piece.pieceType == PIECE_KING) continue;
 
 		if (piece.pieceType == PIECE_PAWN) {
 			const forwardDir = piece.owner == SIDE_PLAYER ? 1 : -1;
@@ -320,13 +321,12 @@ export function getValidMoves(piece: Piece, pieces: Piece[]): ValidMoves {
 			result.moves.push(m);
 		}
 	}
-	for (let i = 0; i < rawAttacks.length; i++) {
-		const a = rawAttacks[i];
-		if (wouldExposeKing(pieces, moverIdx, a.row, a.col, true)) continue;
-		// Strip direct king captures — king pressure resolves via terminal board rules.
-		const targetIdx = findPieceAt(a.row, a.col, pieces);
-		if (targetIdx >= 0 && pieces[targetIdx].pieceType == PIECE_KING) continue;
-		result.attacks.push(a);
+	if (piece.pieceType != PIECE_KING) {
+		for (let i = 0; i < rawAttacks.length; i++) {
+			const a = rawAttacks[i];
+			if (wouldExposeKing(pieces, moverIdx, a.row, a.col, true)) continue;
+			result.attacks.push(a);
+		}
 	}
 
 	return result;

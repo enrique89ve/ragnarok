@@ -14,7 +14,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useUnifiedCombatStore } from '../../stores/unifiedCombatStore';
-import { useMatchStore } from '../../match';
+import { deriveLocalAiProfile, derivePlayableMatchMode, useMatchStore } from '../../match';
 import { cryptoRng } from '../../utils/seededRng';
 import { debug } from '../../config/debugConfig';
 import {
@@ -35,16 +35,12 @@ export function useChessAITurn({ enabled }: ChessAITurnOptions): void {
 	const currentTurn = useUnifiedCombatStore((s) => s.boardState.currentTurn);
 	const gameStatus = useUnifiedCombatStore((s) => s.boardState.gameStatus);
 	const activeMatch = useMatchStore((s) => s.activeMatch);
-	const isP2PMatch = activeMatch?.opponent.kind === 'peer';
-	const behaviorProfile: ChessAIBehaviorProfile = activeMatch?.opponent.kind === 'ai' ? 'single' : 'campaign';
-	const aiDifficulty = activeMatch?.opponent.kind === 'ai'
-		? activeMatch.opponent.difficulty
-		: activeMatch?.opponent.kind === 'scripted' && activeMatch.opponent.script.kind === 'campaign-mission'
-			? activeMatch.opponent.script.difficulty
-			: 'normal';
-	const aiStyle = activeMatch?.opponent.kind === 'ai'
-		? (activeMatch.opponent.style ?? 'balanced')
-		: 'balanced';
+	const matchMode = activeMatch ? derivePlayableMatchMode(activeMatch) : null;
+	const localAi = activeMatch ? deriveLocalAiProfile(activeMatch) : null;
+	const isP2PMatch = matchMode === 'p2p';
+	const behaviorProfile: ChessAIBehaviorProfile = localAi?.behaviorProfile === 'practice' ? 'single' : 'campaign';
+	const aiDifficulty = localAi?.difficulty ?? 'normal';
+	const aiStyle = localAi?.style ?? 'balanced';
 
 	const timeoutsRef = useRef<TimeoutId[]>([]);
 
@@ -89,5 +85,5 @@ export function useChessAITurn({ enabled }: ChessAITurnOptions): void {
 		const firstAttemptDelayMs = getAIFirstAttemptDelayMs(aiDifficulty, rng, aiStyle);
 		schedule(() => driver.runAITurn(), firstAttemptDelayMs);
 		return clearAllTimeouts;
-	}, [enabled, currentTurn, gameStatus, isP2PMatch, aiDifficulty, aiStyle]);
+	}, [enabled, currentTurn, gameStatus, isP2PMatch, aiDifficulty, aiStyle, behaviorProfile]);
 }

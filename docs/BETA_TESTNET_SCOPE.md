@@ -133,7 +133,7 @@ Complete the QA Season 0 week-one readiness gate:
 - Daily quests — up to `20` RUNE per account/S01 (`3` slots × `2` RUNE/slot per UTC day; auto-claimed on completion).
 - Multiplayer P2P manual host/join — gameplay-only. It does not sign or
   broadcast `match_result` and does not credit RUNE, ELO, Season Score or
-  CardXP. The [winner-arbiter](./P2P_WINNER_ARBITER.md) is future work.
+  CardXP. Ranked settlement canon is [ADR 0008](./adr/0008-winner-posted-match-result.md).
 - QA full-catalog P2P result preview — may calculate and show projected winner RUNE plus local match/profile XP for UX rehearsal. If stored after display, it must use reset-epoch-scoped local state. It is not RUNE, CardXP, NFTLox progress, Season Score, or ownership.
 - Quick Match P2P as experimental matchmaking, not official ranked.
 
@@ -143,8 +143,8 @@ Active closed-beta earn surface: **campaign (max 10) + daily quest (max 20) = 30
 
 **Future ranked-economy gate (not a gate for gameplay-only testnet):** ELO and
 the Season Score leaderboard may go live only after the
-[winner-arbiter](./P2P_WINNER_ARBITER.md) ships and P2P `match_result`
-broadcast is explicitly activated. Until then,
+[ADR 0008](./adr/0008-winner-posted-match-result.md) ranked path is explicitly
+activated. Until then,
 campaign + daily quest RUNE accrue normally but the public leaderboard stays
 dark (no ranked match history to rank against). See
 [RUNE.md § Beta status](./RUNE.md#beta-status).
@@ -195,9 +195,11 @@ injects an amount or exceeds a cap, replay rejects it.
 
 The balance owner is also derived, not accepted from client payloads. For
 self-directed RUNE ops the owner is the authenticated Hive broadcaster; for
-ranked P2P it is the winner or loser account proven by the dual-signed match
-envelope. Ranked P2P must also reference a prior dual-anchored `match_anchor`;
-there is no RUNE credit for result-only matches.
+ranked P2P it is the winner or loser account proven by winner-posted
+`match_result` replay ([ADR 0008](./adr/0008-winner-posted-match-result.md)).
+Ranked P2P must also reference a prior dual-anchored `match_anchor`;
+there is no RUNE credit for result-only matches. The loser does not
+countersign game_over.
 
 The canonical RUNE read endpoints (also listed in [RUNE.md](./RUNE.md)) live
 under `/api/chain/rune/*` and `/api/chain/player/:username/rune`. Do not add or

@@ -112,8 +112,8 @@ describe('gameCoordinatorRules', () => {
     expect(resolveVisualRealm('olympus')).toBe('asgard');
     expect(resolveVisualRealm('unknown-realm')).toBe('midgard');
     expect(getRealmDisplayName('asgard')).toBe('Asgard');
-    expect(getChessRealmClass({ isCampaign: true, missionRealm: 'olympus', visualRealm: 'asgard' })).toBe('realm-asgard');
-    expect(getChessRealmClass({ isCampaign: false, missionRealm: 'olympus', visualRealm: 'asgard' })).toBe('');
+    expect(getChessRealmClass({ missionRealm: 'olympus', visualRealm: 'asgard' })).toBe('realm-asgard');
+    expect(getChessRealmClass({ missionRealm: undefined, visualRealm: 'asgard' })).toBe('');
   });
 
   it('keeps the local viewer in the poker player slot', () => {
@@ -359,7 +359,6 @@ describe('gameCoordinatorRules', () => {
     it('returns cinematic when I won and victoryCinematic has scenes', () => {
       expect(getInitialGameOverSubPhase({
         iWon: true,
-        isCampaign: true,
         campaignData,
       })).toBe('cinematic');
     });
@@ -367,7 +366,6 @@ describe('gameCoordinatorRules', () => {
     it('returns cinematic when I lost and defeatCinematic has scenes', () => {
       expect(getInitialGameOverSubPhase({
         iWon: false,
-        isCampaign: true,
         campaignData,
       })).toBe('cinematic');
     });
@@ -375,20 +373,17 @@ describe('gameCoordinatorRules', () => {
     it('returns result when not in campaign mode regardless of outcome', () => {
       expect(getInitialGameOverSubPhase({
         iWon: true,
-        isCampaign: false,
-        campaignData,
+        campaignData: null,
       })).toBe('result');
       expect(getInitialGameOverSubPhase({
         iWon: false,
-        isCampaign: false,
-        campaignData,
+        campaignData: null,
       })).toBe('result');
     });
 
     it('returns result when campaign data is missing', () => {
       expect(getInitialGameOverSubPhase({
         iWon: true,
-        isCampaign: true,
         campaignData: null,
       })).toBe('result');
     });
@@ -401,7 +396,6 @@ describe('gameCoordinatorRules', () => {
       const dataNoVictory = { ...campaignData, mission: missionNoVictory };
       expect(getInitialGameOverSubPhase({
         iWon: true,
-        isCampaign: true,
         campaignData: dataNoVictory,
       })).toBe('result');
 
@@ -412,7 +406,6 @@ describe('gameCoordinatorRules', () => {
       const dataNoDefeat = { ...campaignData, mission: missionNoDefeat };
       expect(getInitialGameOverSubPhase({
         iWon: false,
-        isCampaign: true,
         campaignData: dataNoDefeat,
       })).toBe('result');
     });

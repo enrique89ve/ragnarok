@@ -418,10 +418,11 @@ export function MissionBriefing({
 						<Button
 							variant="primary"
 							size="lg"
-							className="whitespace-nowrap"
+							className="relative z-10 whitespace-nowrap"
+							aria-label="Enter Battle"
 							onClick={() => onStart(difficulty)}
 						>
-							<Play size={14} strokeWidth={2.4} fill="currentColor" />
+							<Play size={14} strokeWidth={2.4} fill="currentColor" aria-hidden="true" />
 							Enter Battle
 						</Button>
 						<CeremonyEvidenceButton

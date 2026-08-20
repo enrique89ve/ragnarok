@@ -15,6 +15,7 @@
  */
 
 import type { ChessBoardPosition, ChessPieceType, ChessProtocolPiece } from '@shared/protocol-core/chess';
+import { isChessAttackInstantKill } from '@shared/p2p-wire/chess';
 
 export type ChessAIDifficulty = 'normal' | 'heroic' | 'mythic';
 export type ChessAIStyle = 'balanced' | 'aggressive' | 'defensive' | 'human';
@@ -158,20 +159,19 @@ export const getDefaultChessAIDifficulty = (difficulty?: ChessAIDifficulty): Che
 export const getChessAIConfig = (difficulty: ChessAIDifficulty): ChessAIConfig =>
 	AI_CONFIG_BY_DIFFICULTY[difficulty];
 
-const isInstantKillAttacker = (type: ChessPieceType): boolean =>
-	type === 'pawn' || type === 'king';
-
 const scoreAttack = <P extends ChessProtocolPiece>(
 	attacker: P,
 	defender: P
 ): number => {
 	const attackerValue = PIECE_VALUE[attacker.type];
 	const targetValue = PIECE_VALUE[defender.type];
-	const isInstantKill =
-		isInstantKillAttacker(attacker.type) || defender.type === 'pawn';
+	const isInstantKill = isChessAttackInstantKill({
+		attackerType: attacker.type,
+		defenderType: defender.type,
+	});
 
 	if (isInstantKill) {
-		const attackBias = isInstantKillAttacker(attacker.type) ? 15 : 10;
+		const attackBias = attacker.type === 'pawn' ? 15 : 10;
 		return targetValue + attackBias;
 	}
 	const riskFactor = attackerValue * 0.3;
@@ -198,8 +198,10 @@ const buildScoredAttack = <P extends ChessProtocolPiece>(
 	const base = scoreAttack(attacker, defender);
 	const attackerValue = PIECE_VALUE[attacker.type];
 	const riskPenalty = attackerValue * config.riskPenalty;
-	const isInstantKill =
-		isInstantKillAttacker(attacker.type) || defender.type === 'pawn';
+	const isInstantKill = isChessAttackInstantKill({
+		attackerType: attacker.type,
+		defenderType: defender.type,
+	});
 	const instantKillBonus = isInstantKill ? config.instantKillBonus : 0;
 	const score = base + config.attackBias + instantKillBonus + rng() * config.quietNoise - riskPenalty;
 	return { piece: attacker, target, isAttack: true, score };

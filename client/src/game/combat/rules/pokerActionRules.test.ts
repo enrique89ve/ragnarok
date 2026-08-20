@@ -171,6 +171,24 @@ describe('poker action intent rules', () => {
     expect(permissions?.isMyTurnToAct).toBe(false);
     expect(permissions?.waitingForOpponent).toBe(true);
   });
+
+  it('keeps fold open when stamina cannot cover an open call', () => {
+    const base = createCombatState();
+    const permissions = getPokerActionPermissions(createCombatState({
+      currentBet: 20,
+      player: {
+        ...base.player,
+        hpCommitted: 5,
+        pet: createPet('player-pet', 25, 0),
+      },
+    }), true);
+
+    expect(permissions?.canCall).toBe(false);
+    expect(permissions?.canCheck).toBe(false);
+    expect(permissions?.canRaise).toBe(false);
+    expect(permissions?.canFold).toBe(true);
+    expect(permissions?.availableHP).toBe(0);
+  });
 });
 
 describe('poker combat store exploit shields', () => {

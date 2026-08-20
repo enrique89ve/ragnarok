@@ -4,8 +4,9 @@ Status: current runtime contract for the server-side Ragnarok read model.
 
 Activation is separate from replay capability: per
 [`ADR 0007`](./adr/0007-p2p-gameplay-only-testnet.md), the current P2P testnet
-does not emit `match_anchor` or `match_result`. The indexer may retain handlers
-for future ranked settlement without making them part of the current match flow.
+does not emit `match_anchor` or `match_result`. Ranked settlement canon is
+[`ADR 0008`](./adr/0008-winner-posted-match-result.md). The indexer may retain
+handlers for that future path without making them part of the current match flow.
 
 This document is the source of truth for what the server indexer reads from
 Hive, how it decides an operation belongs to Ragnarok, which deterministic
@@ -219,10 +220,11 @@ Admin validation:
 Match validation:
 
 - `match_anchor` requires proof of work and participant membership.
-- `match_result` requires genesis, valid participants, broadcaster membership,
+- `match_result` requires genesis, valid participants, **broadcaster === winner**,
   monotonic nonce, proof of work, compact result hash integrity for compact
-  payloads, ranked match anchor presence, pinned pubkeys, and dual anchored
-  signatures for ranked settlement.
+  payloads, ranked match anchor presence, pinned pubkeys, and the **winner**
+  signature for ranked settlement ([ADR 0008](./adr/0008-winner-posted-match-result.md)).
+  The loser does not countersign. Replay must agree with payload winner.
 - Ranked settlement derives ELO, RUNE credit, and winner card XP from replayed
   data.
 

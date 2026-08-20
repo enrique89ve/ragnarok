@@ -24,41 +24,41 @@ vi.mock('./wasmInterface', async () => {
 			return true;
 		},
 		getWasmBinaryHash: () => {
-			if (!_wasmReady) throw new Error('WASM engine not loaded — ranked play blocked. Call loadWasmEngine() first.');
+			if (!_wasmReady) throw new Error('WASM engine not loaded — P2P play blocked. Call loadWasmEngine() first.');
 			return 'abc123def456';
 		},
 		getWasmLoadError: () => _wasmReady ? null : 'test mock',
 		hashGameState: (state: unknown) => {
-			if (!_wasmReady) throw new Error('WASM engine not loaded — ranked play blocked. Call loadWasmEngine() first.');
+			if (!_wasmReady) throw new Error('WASM engine not loaded — P2P play blocked. Call loadWasmEngine() first.');
 			_mockHash = 'wasm_hash_' + JSON.stringify(state).length;
 			return _mockHash;
 		},
 		hashJsonString: (json: string) => {
-			if (!_wasmReady) throw new Error('WASM engine not loaded — ranked play blocked. Call loadWasmEngine() first.');
+			if (!_wasmReady) throw new Error('WASM engine not loaded — P2P play blocked. Call loadWasmEngine() first.');
 			return 'wasm_hash_' + json.length;
 		},
 		getEngineVersion: () => {
-			if (!_wasmReady) throw new Error('WASM engine not loaded — ranked play blocked. Call loadWasmEngine() first.');
+			if (!_wasmReady) throw new Error('WASM engine not loaded — P2P play blocked. Call loadWasmEngine() first.');
 			return '1.0.0';
 		},
 		wasmCalculateFinalDamage: (baseAttack: number) => {
-			if (!_wasmReady) throw new Error('WASM engine not loaded — ranked play blocked. Call loadWasmEngine() first.');
+			if (!_wasmReady) throw new Error('WASM engine not loaded — P2P play blocked. Call loadWasmEngine() first.');
 			return baseAttack * 2;
 		},
 		wasmGetNextPhase: (phase: number) => {
-			if (!_wasmReady) throw new Error('WASM engine not loaded — ranked play blocked. Call loadWasmEngine() first.');
+			if (!_wasmReady) throw new Error('WASM engine not loaded — P2P play blocked. Call loadWasmEngine() first.');
 			return phase + 1;
 		},
 		wasmIsBettingPhase: (phase: number) => {
-			if (!_wasmReady) throw new Error('WASM engine not loaded — ranked play blocked. Call loadWasmEngine() first.');
+			if (!_wasmReady) throw new Error('WASM engine not loaded — P2P play blocked. Call loadWasmEngine() first.');
 			return phase === 1;
 		},
 		wasmIsRevealPhase: (phase: number) => {
-			if (!_wasmReady) throw new Error('WASM engine not loaded — ranked play blocked. Call loadWasmEngine() first.');
+			if (!_wasmReady) throw new Error('WASM engine not loaded — P2P play blocked. Call loadWasmEngine() first.');
 			return phase === 3;
 		},
 		loadCardDataIntoWasm: async () => {
-			if (!_wasmReady) throw new Error('WASM engine not loaded — ranked play blocked. Call loadWasmEngine() first.');
+			if (!_wasmReady) throw new Error('WASM engine not loaded — P2P play blocked. Call loadWasmEngine() first.');
 			return 1500;
 		},
 		__setWasmReady: (ready: boolean) => { _wasmReady = ready; },

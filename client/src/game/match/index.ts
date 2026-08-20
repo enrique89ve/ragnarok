@@ -23,8 +23,26 @@ export type {
 
 export { useMatchStore } from './store';
 
-export { deriveAuthority, deriveOpponentArmyForMode, deriveIntro, deriveIWonForPhase } from './derived';
-export type { Authority, IntroSpec, WinnerSignal } from './derived';
+export {
+	deriveAuthority,
+	deriveOpponentArmyForMode,
+	deriveIntro,
+	deriveIWonForPhase,
+	derivePlayableMatchMode,
+	deriveCampaignMatch,
+	deriveLocalAiProfile,
+	deriveMatchFlowPolicy,
+} from './derived';
+export type {
+	Authority,
+	IntroSpec,
+	WinnerSignal,
+	PlayableMatchMode,
+	CampaignMatchScript,
+	RestartDestination,
+	LocalAiProfile,
+	MatchFlowPolicy,
+} from './derived';
 
 export { selectOnWinHandler, markDailyQuestClaimsPendingAfterMatch } from './onWinDispatch';
 export type { MatchEndContext } from './onWinDispatch';
@@ -68,3 +86,13 @@ export { MatchSetupCampaign } from './modes/campaign';
 
 export { resolveP2P } from './modes/p2p';
 export type { P2PHandshake } from './modes/p2p';
+export { MatchSetupP2P } from './modes/p2p';
+export {
+	calculateP2PQaLocalMatchXp,
+	createP2PQaLocalRewardPreview,
+} from './modes/p2p';
+export type {
+	P2PLocalRewardScope,
+	P2PQaLocalRewardPreview,
+	P2PQaResult,
+} from './modes/p2p';

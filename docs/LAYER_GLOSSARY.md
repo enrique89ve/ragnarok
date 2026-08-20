@@ -102,7 +102,7 @@ undefined` and gated every effect with ad-hoc guards (`p2pInitApplied`,
 sees a complete context at first render.
 
 **Real example.** `client/src/game/match/modes/p2p/MatchSetupP2P.tsx`.
-Single + campaign analogs are scheduled for Fase 7 C15a.
+Practice and campaign analogs are `MatchSetupSingle` and `MatchSetupCampaign`. Public callers import all three from `client/src/game/match`.
 
 ---
 
@@ -207,6 +207,7 @@ construction. Same property protects future workers (no
 - `deriveAuthority(ctx)` → `Authority`
 - `deriveOpponentArmyForMode(ctx)` → `ArmySelection | null`
 - `deriveIntro(ctx, seenChapterIds)` → `IntroSpec`
+- `deriveMatchFlowPolicy(ctx)` → `MatchFlowPolicy` (practice / campaign / p2p flow facts; replaces reconstructed `isCampaign` / `isP2PConnected` flags)
 
 ---
 

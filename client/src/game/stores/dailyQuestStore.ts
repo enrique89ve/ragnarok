@@ -115,6 +115,29 @@ async function broadcastDailyQuestClaim(quest: DailyQuest): Promise<boolean> {
 	}
 }
 
+export function settleLocalDailyQuestClaims(pending: ReadonlyArray<DailyQuest>): {
+	readonly claimedIds: ReadonlyArray<string>;
+	readonly history: Record<string, string>;
+	readonly feedback: DailyQuestClaimFeedback;
+} {
+	const claimedAt = `local:${Date.now()}`;
+	const history: Record<string, string> = {};
+	for (const quest of pending) {
+		history[`${quest.ymdUtc}:${quest.slot}`] = claimedAt;
+	}
+	return {
+		claimedIds: pending.map((quest) => quest.id),
+		history,
+		feedback: buildClaimFeedback({
+			status: 'claimed',
+			claimedCount: pending.length,
+			alreadyClaimedCount: 0,
+			runeEarned: 0,
+			errors: [],
+		}),
+	};
+}
+
 function emitClaimToast(quest: DailyQuest, slotOrdinal: number): void {
 	toast.success(quest.title, {
 		description: `+${quest.reward.rune} RUNE · Slot ${slotOrdinal} of ${TESTNET_RUNE_ECONOMY.dailyQuestSlotsPerDay} today`,
@@ -267,19 +290,24 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 				}
 				const bridge = getNFTBridge();
 				if (!bridge.isHiveMode()) {
-					const feedback = buildClaimFeedback({
-						status: 'unavailable',
-						claimedCount: 0,
-						alreadyClaimedCount: 0,
+					const settled = settleLocalDailyQuestClaims(pending);
+					const claimed = new Set(settled.claimedIds);
+					set((state) => ({
+						quests: state.quests.map((quest) => (
+							claimed.has(quest.id) ? { ...quest, claimed: true } : quest
+						)),
+						totalCompleted: state.totalCompleted + settled.claimedIds.length,
+						claimHistory: { ...state.claimHistory, ...settled.history },
+						lastClaimFeedback: settled.feedback,
+					}));
+					recordCeremonyFeedbackEvent('daily_quest_claim', 'local_recorded', {
+						status: settled.feedback.status,
+						claimedCount: settled.feedback.claimedCount,
 						runeEarned: 0,
-						errors: ['Daily quest RUNE claims require Hive testnet mode.'],
 					});
-					set({ lastClaimFeedback: feedback });
-					recordCeremonyFeedbackEvent('daily_quest_claim', 'unavailable', {
-						status: feedback.status,
-						errors: feedback.errors,
+					toast.info('Daily quests recorded locally.', {
+						description: 'Hive testnet Claim is required to credit RUNE. Duplicate claim is a no-op.',
 					});
-					toast.error('Daily quest RUNE claims require Hive testnet mode.');
 					return;
 				}
 

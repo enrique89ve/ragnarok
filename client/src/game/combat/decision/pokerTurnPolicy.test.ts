@@ -52,7 +52,7 @@ describe('derivePokerTurnPolicy', () => {
 			...BASE_INPUT,
 			activePlayerId: 'remote-piece',
 			localPlayerIsReady: true,
-			isP2PCombat: false,
+			opponentKind: 'ai',
 		});
 
 		expect(policy).toMatchObject({
@@ -71,12 +71,23 @@ describe('derivePokerTurnPolicy', () => {
 		const policy = derivePokerTurnPolicy({
 			...BASE_INPUT,
 			activePlayerId: 'remote-piece',
-			isCampaign: true,
+			opponentKind: 'scripted',
 		});
 
 		expect(policy.processMode).toBe('local_ai');
 		expect(policy.profileMode).toBe('campaign');
 		expect(policy.actor).toBe('remote_ai');
 		expect(policy.shouldScheduleAiDecision).toBe(true);
+	});
+
+	it('lets opponentKind win over leftover isP2PCombat / isCampaign flags', () => {
+		const policy = derivePokerTurnPolicy({
+			...BASE_INPUT,
+			opponentKind: 'scripted',
+			isP2PCombat: true,
+			isCampaign: false,
+		});
+		expect(policy.processMode).toBe('local_ai');
+		expect(policy.profileMode).toBe('campaign');
 	});
 });

@@ -29,12 +29,13 @@ Adopt a bank-ledger model for RUNE:
   `op.broadcaster`.
 - Payload account fields are not authority for RUNE ownership. They are ignored
   or rejected depending on the op shape.
-- For ranked P2P, the owner is the winner or loser account proven by the
-  dual-signed match envelope. The broadcaster alone cannot choose the credited
-  owner.
-- Ranked P2P settlement requires a prior dual-anchored `match_anchor`. A
-  result-only match is not enough to credit RUNE, even when both final
-  signatures are present.
+- For ranked P2P, the owner is the winner or loser account proven by
+  winner-posted `match_result` replay ([ADR 0008](./0008-winner-posted-match-result.md)).
+  The payload `winner` field alone cannot choose the credited owner.
+- Ranked P2P settlement requires a prior dual-anchored `match_anchor` plus
+  transcript replay (and, when live, a Terminal Checkpoint Receipt). A
+  result-only match is not enough to credit RUNE. The loser does not
+  countersign game_over.
 - Amounts are computed from source type, season config, account, source key,
   and pack quote. Client-supplied RUNE amounts are invalid.
 - Balance mutation must happen through a ledger entry. Scalar balances are

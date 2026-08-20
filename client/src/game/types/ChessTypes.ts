@@ -147,7 +147,7 @@ export interface ChessCollision {
   defender: ChessPiece;
   attackerPosition: ChessBoardPosition;
   defenderPosition: ChessBoardPosition;
-  instantKill?: boolean; // True for pawn/king attacks (Valkyrie weapon - no PvP combat)
+  instantKill?: boolean; // Stays on chess: pawn attacker, pawn defender, or king defender
 }
 
 /**

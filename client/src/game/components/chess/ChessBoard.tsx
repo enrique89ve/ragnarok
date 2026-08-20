@@ -170,6 +170,8 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
       <div
         key={`${row}-${col}`}
         className="chess-cell relative flex items-center justify-center"
+        data-row={row}
+        data-col={col}
         data-cell-tone={cellTone}
         data-cell-highlight={getCellHighlight({ isValidMove: isValid, isAttackMove: isAttack })}
         data-mine-preview={isMinePreview ? (canPlaceHere ? 'valid' : 'blocked') : 'none'}

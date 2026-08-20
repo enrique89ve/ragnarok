@@ -11,7 +11,6 @@ type CampaignData = {
 } | null;
 
 type BossRuleEffectsInput = {
-  readonly isCampaign: boolean;
   readonly campaignData: CampaignData;
   readonly campaignDifficulty: Difficulty;
   readonly flowState: RoundFlowState | null;
@@ -34,7 +33,6 @@ function getDifficultyPassiveDamage(difficulty: Difficulty): number {
 
 export function useBossRuleEffects(input: BossRuleEffectsInput): void {
   const {
-    isCampaign,
     campaignData,
     campaignDifficulty,
     flowState,
@@ -48,7 +46,7 @@ export function useBossRuleEffects(input: BossRuleEffectsInput): void {
   const lastBossRuleTurnRef = useRef('');
 
   useEffect(() => {
-    if (!isCampaign || !campaignData) return;
+    if (!campaignData) return;
     if (bossRulesApplied || bossRulesInitRef.current) return;
 
     const store = useUnifiedCombatStore.getState();
@@ -137,12 +135,11 @@ export function useBossRuleEffects(input: BossRuleEffectsInput): void {
     bossRulesApplied,
     campaignData,
     campaignDifficulty,
-    isCampaign,
     markBossRulesApplied,
   ]);
 
   useEffect(() => {
-    if (!isCampaign || !campaignData || flowState?.tag !== 'chess') return;
+    if (!campaignData || flowState?.tag !== 'chess') return;
 
     const turnKey = `${boardState.currentTurn}-${turnCount}`;
     if (lastBossRuleTurnRef.current === turnKey) return;
@@ -210,7 +207,6 @@ export function useBossRuleEffects(input: BossRuleEffectsInput): void {
     campaignData,
     campaignDifficulty,
     flowState,
-    isCampaign,
     turnCount,
     updatePieceHealth,
   ]);

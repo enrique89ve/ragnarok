@@ -204,7 +204,7 @@ export async function initializeWasm(): Promise<boolean> {
 
 function requireWasm(): WasmExports {
 	if (!wasmExports) {
-		throw new Error(`WASM engine not loaded — ranked play blocked. ${loadError ?? 'Call loadWasmEngine() first.'}`);
+		throw new Error(`WASM engine not loaded — P2P play blocked. ${loadError ?? 'Call loadWasmEngine() first.'}`);
 	}
 	return wasmExports;
 }

@@ -478,9 +478,9 @@ const PLAY_MODE_CARDS: ReadonlyArray<ModeCard> = [
 		intent: 'combat',
 	},
 	{
-		title: 'Ranked PvP',
-		kicker: 'Competitive',
-		description: 'Muster a warband, queue into live opponents, and climb with the full combat ruleset.',
+		title: 'PvP',
+		kicker: 'Live match',
+		description: 'Muster a warband and play another person. This Alfa phase is gameplay-only: no ranked RUNE, ELO, or on-chain match result.',
 		to: getWarbandEntryRoute('multiplayer'),
 		icon: Swords,
 		accent: 'ember',

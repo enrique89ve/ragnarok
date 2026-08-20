@@ -212,7 +212,6 @@ describe('campaign active realm bootstrap', () => {
 
 		try {
 			const input = {
-				isCampaign: true,
 				missionRealm: 'olympus',
 				visualRealm: 'asgard' as const,
 				realmDisplayName: 'Asgard',
@@ -228,6 +227,14 @@ describe('campaign active realm bootstrap', () => {
 			unsubscribe();
 		}
 	});
+
+	it('does not sync a realm when there is no campaign mission realm', () => {
+		expect(syncCampaignActiveRealm({
+			missionRealm: undefined,
+			visualRealm: 'asgard',
+			realmDisplayName: 'Asgard',
+		})).toBe(false);
+	});
 });
 
 describe('campaign board bootstrap guard', () => {
@@ -235,14 +242,12 @@ describe('campaign board bootstrap guard', () => {
 
 	it('allows exactly the first campaign board bootstrap without local armies', () => {
 		expect(shouldBootstrapCampaignBoard({
-			isCampaign: true,
 			playerArmy: null,
 			initialArmy: null,
 			alreadyBootstrapped: false,
 		})).toBe(true);
 
 		expect(shouldBootstrapCampaignBoard({
-			isCampaign: true,
 			playerArmy: null,
 			initialArmy: null,
 			alreadyBootstrapped: true,
@@ -251,25 +256,14 @@ describe('campaign board bootstrap guard', () => {
 
 	it('does not bootstrap campaign board over an existing army source', () => {
 		expect(shouldBootstrapCampaignBoard({
-			isCampaign: true,
 			playerArmy: army,
 			initialArmy: null,
 			alreadyBootstrapped: false,
 		})).toBe(false);
 
 		expect(shouldBootstrapCampaignBoard({
-			isCampaign: true,
 			playerArmy: null,
 			initialArmy: army,
-			alreadyBootstrapped: false,
-		})).toBe(false);
-	});
-
-	it('does not run for non-campaign matches', () => {
-		expect(shouldBootstrapCampaignBoard({
-			isCampaign: false,
-			playerArmy: null,
-			initialArmy: null,
 			alreadyBootstrapped: false,
 		})).toBe(false);
 	});

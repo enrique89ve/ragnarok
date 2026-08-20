@@ -28,11 +28,8 @@ import {
 	PIECE_MOVEMENT_PATTERNS
 } from './types';
 
-/**
- * True if the piece occupying `position` is a king (the only piece type
- * that cannot be captured directly — checkmate is the only termination).
- */
-const isKingPiece = (piece: ChessProtocolPiece): boolean => piece.type === 'king';
+/** Commanders do not fight. Mines are their weapon; they have no capture. */
+const pieceCanCapture = (piece: ChessProtocolPiece): boolean => piece.type !== 'king';
 
 /**
  * Inspect a target cell relative to a moving piece. Returns whether the
@@ -68,6 +65,7 @@ export const getThreateningPieces = <P extends ChessProtocolPiece>(
 	const attackerPieces = pieces.filter(p => p.owner === attackerSide);
 
 	for (const piece of attackerPieces) {
+		if (!pieceCanCapture(piece)) continue;
 		const pattern = PIECE_MOVEMENT_PATTERNS[piece.type];
 		if (!pattern.directions) continue;
 
@@ -135,9 +133,8 @@ export const isKingInCheck = (
 
 /**
  * Move/attack candidates for a piece, already filtered to only the moves
- * that do NOT leave the mover's king in check. Direct king captures are
- * stripped from the attack list; king pressure resolves through terminal
- * board rules rather than by removing the king from a legal attack list.
+ * that do NOT leave the mover's king in check. Kings generate quiet
+ * steps only. Capturing a king is a legal instant-kill attack.
  */
 export interface ValidMoves {
 	moves: ChessBoardPosition[];
@@ -196,7 +193,7 @@ export const getValidMoves = (
 			const status = inspectCell(targetRow, targetCol, piece, pieces);
 			if (status === 'empty') {
 				moves.push({ row: targetRow, col: targetCol });
-			} else if (status === 'enemy') {
+			} else if (status === 'enemy' && pieceCanCapture(piece)) {
 				attacks.push({ row: targetRow, col: targetCol });
 			}
 		}
@@ -215,12 +212,8 @@ export const getValidMoves = (
 
 	const safeMoves = moves.filter(move => !wouldExposeKing(move, false));
 	const safeAttacks = attacks.filter(attack => !wouldExposeKing(attack, true));
-	const finalAttacks = safeAttacks.filter(pos => {
-		const target = pieces.find(p => p.position.row === pos.row && p.position.col === pos.col);
-		return !target || !isKingPiece(target);
-	});
 
-	return { moves: safeMoves, attacks: finalAttacks };
+	return { moves: safeMoves, attacks: safeAttacks };
 };
 
 /**
@@ -267,9 +260,8 @@ const opponentOf = (side: ChessPlayerSide): ChessPlayerSide =>
 	side === 'player' ? 'opponent' : 'player';
 
 /**
- * Terminal status for the board. Missing king is a defensive terminal
- * fallback. Real king pressure is checkmate/stalemate. Bare-king material
- * is resolved explicitly:
+ * Terminal status for the board. Capturing the commander (missing king)
+ * is a win. Bare-king material is resolved explicitly:
  *
  * - King vs King: draw.
  * - King + lone Bishop/Knight vs King: draw, because it cannot force mate.

@@ -49,6 +49,10 @@ import { getPokerTurnProcessMode } from '../decision/pokerTurnPolicy';
 import { getPokerActionPresentation } from '../decision/pokerActionPresentation';
 import { emitBettingAction } from '../vfx/events';
 import { emitHeroPowerUsed } from '../../actions/gameActions';
+import {
+	HERO_DEATH_PRESENTATION_BUDGET_MS,
+	SHOWDOWN_BACKUP_MS,
+} from '../pokerResolutionOutcome';
 
 /**
  * Hero power targeting state structure
@@ -189,7 +193,8 @@ export function useRagnarokCombatController(
   const p2pActions = useP2PActions();
   const activeMatch = useMatchStore(state => state.activeMatch);
   const connectionState = usePeerStore(state => state.connectionState);
-  const isP2PCombat = activeMatch?.opponent.kind === 'peer';
+  const opponentKind = activeMatch?.opponent.kind ?? null;
+  const isP2PCombat = opponentKind === 'peer';
   const pokerTurnProcessMode = getPokerTurnProcessMode(isP2PCombat);
   const p2pTransportConnected = connectionState === 'connected';
   const isP2PActionLocked = isP2PCombat && !p2pTransportConnected;
@@ -208,6 +213,7 @@ export function useRagnarokCombatController(
     isActive: isActive && !isP2PActionLocked,
     updateTimer,
     isP2PCombat,
+    opponentKind,
     sendPokerAction: p2pActions.sendPokerAction,
     sendPokerTurnStarted: p2pActions.sendPokerTurnStarted,
     addHeroBattlePopup,
@@ -1011,7 +1017,7 @@ export function useRagnarokCombatController(
         debug.warn('[RagnarokCombatArena] Showdown backup timer fired - forcing combat end', { hasResolution: !!resolution });
         setShowdownCelebration(null);
         handleCombatEnd();
-      }, 9000);
+      }, SHOWDOWN_BACKUP_MS);
     }
     
     return () => {
@@ -1057,23 +1063,43 @@ export function useRagnarokCombatController(
     };
   }, [combatState?.phase, showdownCelebration, heroDeathState, isActive, advanceTurnPhase, grantPokerHandRewards]);
 
+  const heroDeathFinishedRef = useRef(false);
+  useEffect(() => {
+    if (heroDeathState?.isAnimating) {
+      heroDeathFinishedRef.current = false;
+    }
+  }, [heroDeathState?.isAnimating]);
+
   const handleHeroDeathComplete = useCallback(() => {
     if (!heroDeathState) return;
-    
-    let winner: 'player' | 'opponent' = heroDeathState.isPlayerDead ? 'opponent' : 'player';
-    if (heroDeathState.pendingResolution?.winner === 'player' || 
-        heroDeathState.pendingResolution?.winner === 'opponent') {
-      winner = heroDeathState.pendingResolution.winner;
+    if (heroDeathFinishedRef.current) return;
+    heroDeathFinishedRef.current = true;
+
+    const pendingWinner = heroDeathState.pendingResolution?.winner;
+    let winner: 'player' | 'opponent' | 'draw' = heroDeathState.isPlayerDead ? 'opponent' : 'player';
+    if (pendingWinner === 'player' || pendingWinner === 'opponent' || pendingWinner === 'draw') {
+      winner = pendingWinner;
     }
-    
+
     setHeroDeathState(null);
     setShowdownCelebration(null);
-    
+
     if (onCombatEnd) {
       onCombatEnd(winner);
     }
     endCombat();
   }, [heroDeathState, onCombatEnd, endCombat]);
+
+  const handleHeroDeathCompleteRef = useRef(handleHeroDeathComplete);
+  handleHeroDeathCompleteRef.current = handleHeroDeathComplete;
+  useEffect(() => {
+    if (!heroDeathState?.isAnimating) return;
+    const timer = setTimeout(() => {
+      debug.warn('[HeroDeath] presentation budget exceeded — completing combat');
+      handleHeroDeathCompleteRef.current();
+    }, HERO_DEATH_PRESENTATION_BUDGET_MS);
+    return () => clearTimeout(timer);
+  }, [heroDeathState?.isAnimating]);
 
   const handleUnifiedEndTurn = useCallback(() => {
     if (!combatState) return;

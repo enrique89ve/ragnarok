@@ -5,13 +5,13 @@ One stop for everything RUNE. Other docs link here; this file is authoritative f
 ## TL;DR
 
 - Non-transferable, season-scoped, replay-derived from chain ops.
-- Bank-ledger model: every ledger entry has one balance owner, and that owner is derived from the authenticated Hive broadcaster or from a dual-signed match envelope.
+- Bank-ledger model: every ledger entry has one balance owner, and that owner is derived from the authenticated Hive broadcaster or from **Winner-Posted Match Result** replay ([ADR 0008](./adr/0008-winner-posted-match-result.md)).
 - Earned via P2P ranked wins, campaign first-clears, and daily quests. Spent via `rune_exchange` for packs.
 - Each source has an independent per-account cap. **P2P (100), campaign (10), and daily quest (20) do NOT share quota** — same account can hold up to 100 + 10 + 20 = 130 RUNE/season.
 - P2P is canon-only in the current gameplay-only testnet: the on-chain handler
   is wired but the client does **not** sign or broadcast `match_result`. The
-  [winner-arbiter](./P2P_WINNER_ARBITER.md) is future ranked-settlement work,
-  not a current gameplay gate (see [ADR 0007](./adr/0007-p2p-gameplay-only-testnet.md)).
+  ranked contract is [ADR 0008](./adr/0008-winner-posted-match-result.md);
+  it is not a current gameplay gate (see [ADR 0007](./adr/0007-p2p-gameplay-only-testnet.md)).
   The current earn surface is **campaign (10) + daily quest (20) = 30
   RUNE/season per account**.
 - QA full-catalog P2P may show a local projected reward after victory, but that preview is not RUNE until a replay-derived ledger entry exists.
@@ -28,9 +28,11 @@ Hard invariants:
   `daily_quest_claim`, `reward_claim`, and `rune_exchange`, the RUNE balance
   owner is `op.broadcaster`. Payload account fields are ignored or invalid.
 - **P2P is multi-party authority.** A ranked `match_result` may credit the
-  winner only when the result references a prior dual-anchored `match_anchor`
-  and is bound to the participants. The broadcaster alone is not enough to
-  choose the RUNE owner.
+  winner only when it references a prior dual-anchored `match_anchor`, the
+  broadcaster is that winner, replay of the anchored transcript agrees, and
+  (when live) a Terminal Checkpoint Receipt matches the terminal root.
+  The payload `winner` field alone is not enough to choose the RUNE owner
+  ([ADR 0008](./adr/0008-winner-posted-match-result.md)).
 - **Amounts are computed, never supplied.** The protocol computes credit/debit
   amounts from source type, season config, account, source key, and pack quote.
 - **Ledger first, balance second.** Balance changes must go through a
@@ -78,8 +80,8 @@ It must not:
 Cache keys for this preview must include stage, protocol id, reset epoch,
 account, and match id. On any mismatch, the UI must ignore or purge the preview
 before rendering. Result-only evidence remains insufficient for `p2p_ranked`;
-the economic path still starts at dual `match_anchor` plus a dual-signed,
-deterministically replayable result.
+the economic path starts at dual `match_anchor` plus a winner-posted,
+deterministically replayable result (ADR 0008).
 
 ## Caps (S01)
 
@@ -190,17 +192,16 @@ Refresh boundary is UTC (`new Date().toISOString().slice(0,10)`); the chain idem
 
 > **Future ranked flow:** the current client neither signs nor broadcasts
 > `match_result`. The chain handler below is retained for later activation and
-> requires the [winner-arbiter](./P2P_WINNER_ARBITER.md), explicit visible wallet
-> consent and a separate release decision.
+> requires [ADR 0008](./adr/0008-winner-posted-match-result.md), the
+> [winner-arbiter](./P2P_WINNER_ARBITER.md) checklist, visible winner Keychain,
+> and a separate release decision.
 
 ```
-match_anchor (start) ─ pins participants, session pubkeys, deck hashes,
-                       engine hash, registry hash, seed commitments
-  └→ match_result (ranked, end) ─ dual-signed transcript settlement
-       └→ applyRankedMatchSettlement
-            └→ P2P RUNE credit
-                 ├ source: p2p_ranked
-                 └ key:    p2p:S01:{matchId}:winner:{winner}
+match_anchor (start, both players) ─ participants, session pubkeys, decks, seed
+  └→ terminal phase checkpoint ─ relay may mint one Terminal Checkpoint Receipt
+       └→ match_result (winner-posted) ─ winner Hive-signs; loser does not
+            └→ applyRankedMatchSettlement (replay + receipt + winner === broadcaster)
+                 └→ P2P RUNE credit  key: p2p:S01:{matchId}:winner:{winner}
 ```
 
 Implementation: [shared/protocol-core/apply.ts](../shared/protocol-core/apply.ts) — search `'p2p_ranked'`.

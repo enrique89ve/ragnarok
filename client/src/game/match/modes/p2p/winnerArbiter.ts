@@ -16,7 +16,7 @@ export const P2P_WINNER_ARBITER_REJECT_REASONS = {
 	winnerMismatch: 'winner mismatch',
 	visibleReview: 'visible result review/sign flow required before Keychain',
 	signatureVerification: 'ranked match_result signatures must verify against anchored pubkeys',
-	dualSignatures: 'ranked match_result requires winner and loser signatures',
+	winnerPostedSignature: 'ranked match_result requires the winner signature',
 } as const;
 
 export type P2PWinnerArbiterRejectReason =
@@ -124,7 +124,7 @@ export type P2PWinnerArbiterVerifiedEffects = {
 	readonly canBroadcastMatchResult: true;
 	readonly canApplyP2PRankedRune: true;
 	readonly canApplyElo: true;
-	readonly rewardEvidence: 'verified_dual_signed_match_result';
+	readonly rewardEvidence: 'verified_winner_posted_match_result';
 };
 
 export type P2PWinnerArbiterRejectedEffects = {
@@ -147,7 +147,7 @@ const VERIFIED_EFFECTS: P2PWinnerArbiterVerifiedEffects = {
 	canBroadcastMatchResult: true,
 	canApplyP2PRankedRune: true,
 	canApplyElo: true,
-	rewardEvidence: 'verified_dual_signed_match_result',
+	rewardEvidence: 'verified_winner_posted_match_result',
 };
 
 const ARBITER_BLOCKERS: readonly ArbiterBlocker[] = [
@@ -162,7 +162,7 @@ const ARBITER_BLOCKERS: readonly ArbiterBlocker[] = [
 	requireMatchingDeterministicTranscript,
 	requireReplayWinnerAgreement,
 	requireVisibleReviewBeforeSigning,
-	requireDualSignedCommitment,
+	requireWinnerPostedCommitment,
 ];
 
 export function verifyP2PWinnerArbiterCandidate(
@@ -318,17 +318,14 @@ function requireVisibleReviewBeforeSigning(candidate: P2PWinnerArbiterCandidate)
 		: P2P_WINNER_ARBITER_REJECT_REASONS.visibleReview;
 }
 
-function requireDualSignedCommitment(candidate: P2PWinnerArbiterCandidate): P2PWinnerArbiterRejectReason | null {
-	const { loser, winner } = candidate.signatures;
-	if (!winner || !loser) return P2P_WINNER_ARBITER_REJECT_REASONS.dualSignatures;
-	if (!winner.verifiedByPinnedPubkey || !loser.verifiedByPinnedPubkey) {
+function requireWinnerPostedCommitment(candidate: P2PWinnerArbiterCandidate): P2PWinnerArbiterRejectReason | null {
+	const { winner } = candidate.signatures;
+	if (!winner) return P2P_WINNER_ARBITER_REJECT_REASONS.winnerPostedSignature;
+	if (!winner.verifiedByPinnedPubkey) {
 		return P2P_WINNER_ARBITER_REJECT_REASONS.signatureVerification;
 	}
 	if (!isSignatureForResult(candidate, winner, candidate.result.winner)) {
-		return P2P_WINNER_ARBITER_REJECT_REASONS.dualSignatures;
-	}
-	if (!isSignatureForResult(candidate, loser, candidate.result.loser)) {
-		return P2P_WINNER_ARBITER_REJECT_REASONS.dualSignatures;
+		return P2P_WINNER_ARBITER_REJECT_REASONS.winnerPostedSignature;
 	}
 	return null;
 }

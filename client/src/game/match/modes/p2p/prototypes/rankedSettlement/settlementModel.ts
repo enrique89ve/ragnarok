@@ -475,9 +475,9 @@ function requireVisibleReview(state: SettlementDecisionInput): string | null {
 }
 
 function requireDualSignatures(state: SettlementDecisionInput): string | null {
-	return state.signatures.winner && state.signatures.loser
+	return state.signatures.winner
 		? null
-		: 'ranked match_result requires winner and loser signatures';
+		: 'ranked match_result requires the winner signature';
 }
 
 function blocked(reason: string): SettlementDecision {

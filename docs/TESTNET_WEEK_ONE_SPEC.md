@@ -187,11 +187,11 @@ gate, and no bleed from Season 0 data.
 
 ## Winner-Arbiter Track
 
-The current arbiter slice is client-local and fail-closed. It verifies the
-candidate shape for future full NFT ranked settlement, including dual anchor,
-pinned participants, pre-match NFT custody deck evidence tied to anchored deck
-hashes, deterministic transcript finalizer evidence, visible review, dual
-signatures, and prior signature verification against anchored pubkeys.
+The current arbiter slice is client-local and fail-closed. Ranked canon is
+[ADR 0008](./adr/0008-winner-posted-match-result.md): dual `match_anchor`,
+pinned participants, NFT custody at start, deterministic transcript, visible
+**winner** review, winner-posted signature, replay agreement. The loser does
+not countersign game_over.
 
 For Week One, this is a guardrail and spec proof. It is not wired to broadcast
 `match_result`, and the QA week must continue to treat P2P ranked settlement as

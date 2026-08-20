@@ -51,9 +51,9 @@ The current TypeScript seam is:
 
 ## Remaining Migration Targets
 
-- Future P2P ranked settlement `session_authorize` and `result_countersign` need
-  visible authorize/sign surfaces before P2P RUNE/ELO can be considered. They
-  are disabled, not merely hidden, in the current gameplay-only testnet.
+- Future P2P ranked settlement `session_authorize` (start) and winner
+  `match_result` review (end) need visible wallet surfaces ([ADR 0008](./adr/0008-winner-posted-match-result.md)).
+  There is no loser `result_countersign`. Disabled on the gameplay-only testnet.
 - The transaction queue needs a visible wallet outbox UI for manual Hive
   submission and retry.
 - `slash_evidence` needs a durable evidence queue and a Submit evidence action.

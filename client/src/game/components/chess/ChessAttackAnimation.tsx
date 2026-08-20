@@ -115,6 +115,8 @@ export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
 
   const [phase, setPhase] = useState<AttackPhase>('idle');
   const animationIdRef = useRef<string | null>(null);
+  const onAnimationCompleteRef = useRef(onAnimationComplete);
+  onAnimationCompleteRef.current = onAnimationComplete;
 
   const attackWeight = getAttackProfile(animation?.attacker.type ?? 'pawn').power;
   const attackSpeedScale = getAttackSpeedScale(animation?.attacker.type ?? 'pawn');
@@ -179,7 +181,7 @@ export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
     if (!shouldAnimate) {
       animationIdRef.current = animationSignature;
       setPhase('done');
-      onAnimationComplete();
+      onAnimationCompleteRef.current();
       return;
     }
 
@@ -204,7 +206,7 @@ export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
       const completeTimeout = window.setTimeout(() => {
         if (animationIdRef.current !== animationSignature) return;
         setPhase('done');
-        onAnimationComplete();
+        onAnimationCompleteRef.current();
       // Do not clear animationIdRef. Parent may re-render before prop nulls,
       // so this guard avoids replaying stale payload.
     }, strikeSafeDelayMs);
@@ -223,7 +225,6 @@ export const ChessAttackAnimation: React.FC<ChessAttackAnimationProps> = ({
     impactDurationMs,
     settleDurationMs,
     strikeSafeDelayMs,
-    onAnimationComplete,
   ]);
 
   const isPlayer = animation ? animation.attacker.owner === myCanonicalSide : false;

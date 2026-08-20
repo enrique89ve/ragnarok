@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_CHAPTERS } from '../campaign';
-import { deriveAuthority, deriveIntro, deriveIWonForPhase, deriveOpponentArmyForMode } from './derived';
+import {
+	deriveAuthority,
+	deriveCampaignMatch,
+	deriveIntro,
+	deriveIWonForPhase,
+	deriveLocalAiProfile,
+	deriveMatchFlowPolicy,
+	deriveOpponentArmyForMode,
+	derivePlayableMatchMode,
+} from './derived';
 import type { MatchContext } from './types';
 
 const KNOWN_CHAPTER = ALL_CHAPTERS[0];
@@ -26,6 +35,7 @@ const scriptedCtx: MatchContext = {
 			mission: KNOWN_MISSION,
 			chapter: KNOWN_CHAPTER,
 			difficulty: 'heroic',
+			localRunId: 'run-1',
 		},
 	},
 	reward: { matchXp: { kind: 'percentage', multiplier: 0.1 }, rune: { kind: 'projected', source: 'campaign_first_clear' }, ranking: { kind: 'none' } },
@@ -116,6 +126,7 @@ describe('deriveIntro', () => {
 					mission: KNOWN_MISSION,
 					chapter: { ...KNOWN_CHAPTER, cinematicIntro: undefined },
 					difficulty: 'normal',
+					localRunId: null,
 				},
 			},
 		};
@@ -165,6 +176,63 @@ describe('deriveIWonForPhase', () => {
 				canonicalWinner: 'opponent',
 				myCanonicalSide: 'player',
 			})).toBe(false);
+		});
+	});
+});
+
+describe('deriveMatchFlowPolicy', () => {
+	it('compresses practice into local AI, warband bootstrap, no campaign script', () => {
+		expect(derivePlayableMatchMode(aiCtx)).toBe('practice');
+		expect(deriveCampaignMatch(aiCtx)).toBeNull();
+		expect(deriveMatchFlowPolicy(aiCtx)).toEqual({
+			mode: 'practice',
+			authority: { kind: 'local' },
+			usesPeerPhaseCheckpoint: false,
+			usesLocalAi: true,
+			bootstrapsWarband: true,
+			requiresWarbandArmy: true,
+			campaign: null,
+			restartDestination: { kind: 'warband', intent: 'single' },
+			localAi: {
+				difficulty: 'normal',
+				style: 'balanced',
+				behaviorProfile: 'practice',
+			},
+		});
+	});
+
+	it('compresses campaign into scripted mission flow with local AI', () => {
+		expect(derivePlayableMatchMode(scriptedCtx)).toBe('campaign');
+		expect(deriveCampaignMatch(scriptedCtx)?.mission.id).toBe(KNOWN_MISSION.id);
+		const policy = deriveMatchFlowPolicy(scriptedCtx);
+		expect(policy.mode).toBe('campaign');
+		expect(policy.authority).toEqual({ kind: 'local' });
+		expect(policy.usesPeerPhaseCheckpoint).toBe(false);
+		expect(policy.usesLocalAi).toBe(true);
+		expect(policy.bootstrapsWarband).toBe(false);
+		expect(policy.requiresWarbandArmy).toBe(false);
+		expect(policy.restartDestination).toEqual({ kind: 'campaign-map' });
+		expect(policy.localAi).toEqual({
+			difficulty: 'heroic',
+			style: 'balanced',
+			behaviorProfile: 'campaign',
+		});
+		expect(policy.campaign?.localRunId).toBe('run-1');
+	});
+
+	it('compresses p2p into peer checkpoints and no local AI', () => {
+		expect(derivePlayableMatchMode(peerCtx)).toBe('p2p');
+		expect(deriveLocalAiProfile(peerCtx)).toBeNull();
+		expect(deriveMatchFlowPolicy(peerCtx)).toEqual({
+			mode: 'p2p',
+			authority: { kind: 'p2p-symmetric', myRole: 'first-mover' },
+			usesPeerPhaseCheckpoint: true,
+			usesLocalAi: false,
+			bootstrapsWarband: false,
+			requiresWarbandArmy: true,
+			campaign: null,
+			restartDestination: { kind: 'warband', intent: 'multiplayer' },
+			localAi: null,
 		});
 	});
 });

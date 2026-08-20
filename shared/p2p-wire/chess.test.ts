@@ -208,20 +208,26 @@ describe('ChessCommandSchema (discriminated union)', () => {
 });
 
 describe('isChessAttackInstantKill', () => {
-	it('returns true when attacker is a pawn (Valkyrie weapon)', () => {
+	it('returns true when attacker is a pawn (Valkyrie execute)', () => {
 		expect(isChessAttackInstantKill({ attackerType: 'pawn', defenderType: 'queen' })).toBe(true);
 		expect(isChessAttackInstantKill({ attackerType: 'pawn', defenderType: 'rook' })).toBe(true);
+		expect(isChessAttackInstantKill({ attackerType: 'pawn', defenderType: 'king' })).toBe(true);
 	});
 
-	it('returns true when attacker is a king (Valkyrie weapon)', () => {
-		expect(isChessAttackInstantKill({ attackerType: 'king', defenderType: 'queen' })).toBe(true);
-		expect(isChessAttackInstantKill({ attackerType: 'king', defenderType: 'bishop' })).toBe(true);
+	it('returns false when attacker is a king (commander does not fight)', () => {
+		expect(isChessAttackInstantKill({ attackerType: 'king', defenderType: 'queen' })).toBe(false);
+		expect(isChessAttackInstantKill({ attackerType: 'king', defenderType: 'pawn' })).toBe(false);
 	});
 
-	it('returns true when defender is a pawn (too weak to defend)', () => {
+	it('returns true when defender is a pawn (no deck)', () => {
 		expect(isChessAttackInstantKill({ attackerType: 'queen', defenderType: 'pawn' })).toBe(true);
 		expect(isChessAttackInstantKill({ attackerType: 'rook', defenderType: 'pawn' })).toBe(true);
 		expect(isChessAttackInstantKill({ attackerType: 'knight', defenderType: 'pawn' })).toBe(true);
+	});
+
+	it('returns true when defender is a king (touching the commander wins)', () => {
+		expect(isChessAttackInstantKill({ attackerType: 'queen', defenderType: 'king' })).toBe(true);
+		expect(isChessAttackInstantKill({ attackerType: 'knight', defenderType: 'king' })).toBe(true);
 	});
 
 	it('returns false for queen vs rook (non-instant — needs poker resolution)', () => {
@@ -236,11 +242,8 @@ describe('isChessAttackInstantKill', () => {
 		expect(isChessAttackInstantKill({ attackerType: 'queen', defenderType: 'queen' })).toBe(false);
 	});
 
-	it('is symmetric for pawn-king edge cases', () => {
-		// pawn attacker AND king defender: instant via attacker rule
+	it('keeps pawn vs king as Valkyrie execute', () => {
 		expect(isChessAttackInstantKill({ attackerType: 'pawn', defenderType: 'king' })).toBe(true);
-		// king attacker AND pawn defender: instant via BOTH rules; result still true
-		expect(isChessAttackInstantKill({ attackerType: 'king', defenderType: 'pawn' })).toBe(true);
 	});
 });
 

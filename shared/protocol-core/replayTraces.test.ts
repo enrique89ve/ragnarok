@@ -1338,11 +1338,19 @@ describe('Protocol Core: Replay Traces', () => {
 		expect([...state.runeLedger.values()][0]?.sourceKey)
 			.toBe('p2p:S01:ledger-match-1:winner:alice');
 
-		const duplicatePayload = await makeRankedMatchPayload({ matchId: 'ledger-match-1', nonce: 2 });
-		const duplicateResult = await applyOp(makeOp('match_result', duplicatePayload, {
+		const loserPosted = await applyOp(makeOp('match_result', payload, {
 			broadcaster: 'bob',
 			trxId: 'match-trx-1b',
 			blockNum: 1001,
+		}), defaultCtx, deps);
+		expect(loserPosted.status).toBe('rejected');
+		expect((loserPosted as { reason: string }).reason).toContain('broadcaster must be the winner');
+
+		const duplicatePayload = await makeRankedMatchPayload({ matchId: 'ledger-match-1', nonce: 2 });
+		const duplicateResult = await applyOp(makeOp('match_result', duplicatePayload, {
+			broadcaster: 'alice',
+			trxId: 'match-trx-1c',
+			blockNum: 1002,
 		}), defaultCtx, deps);
 
 		expect(duplicateResult.status).toBe('ignored');
@@ -1552,7 +1560,7 @@ describe('Protocol Core: Replay Traces', () => {
 			expect((result as { reason: string }).reason).toContain('compact hash mismatch');
 		});
 
-		it('ranked match_result verifies dual signatures over the compact commitment', async () => {
+		it('ranked match_result verifies the winner signature over the compact commitment', async () => {
 			await seedGenesis(state, deps);
 			await seedRankedMatchAnchor(state, 'commitment-signed-1');
 
@@ -1578,7 +1586,7 @@ describe('Protocol Core: Replay Traces', () => {
 			}), defaultCtx, deps);
 
 			expect(result.status).toBe('applied');
-			expect(seenMessages).toEqual([expectedMessage, expectedMessage]);
+			expect(seenMessages).toEqual([expectedMessage]);
 		});
 
 		// --- Pack commit-reveal flow ---
