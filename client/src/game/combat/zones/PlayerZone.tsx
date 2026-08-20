@@ -115,7 +115,7 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({
 		<footer className="zone-player combat-zone combat-zone--player">
 			{playerPet && (
 				<div
-					className={`unified-hero-section ${shakingHero ? 'damage-shake damage-flash' : ''} ${isPlayerTurn ? 'turn-active' : ''}`}
+					className={`unified-hero-section ${isPlayerTurn ? 'turn-active' : ''}`}
 				>
 					<div data-hero-role="player" className="poker-hero-container" {...arenaVfxTargetProps(ARENA_VFX_TARGETS.playerHero)}>
 						<BattlefieldHero
@@ -134,6 +134,7 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({
 							onWeaponUpgradeClick={onWeaponUpgradeClick}
 							isWeaponUpgraded={isWeaponUpgraded}
 							artifact={artifact}
+							shakingHero={shakingHero}
 							pocketCardsOverlay={(
 								<HoleCardsOverlay
 									cards={playerHoleCards as PokerCard[]}

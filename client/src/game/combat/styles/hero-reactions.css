@@ -1,5 +1,5 @@
 /* Idle breathing animation — subtle scale pulse */
-.battlefield-hero-square .hero-card-wrapper {
+.battlefield-hero-square .hero-card-frame {
 	animation: hero-breathe 4s ease-in-out infinite;
 }
 
@@ -8,31 +8,19 @@
 	50% { transform: scale(1.008) translateY(-1px); }
 }
 
-/* Low HP state — desaturated + red vignette pulse */
-.battlefield-hero-square .hero-card-wrapper.hero-low-hp {
-	animation: hero-low-hp-pulse 1.8s ease-in-out infinite;
+/* Low HP state — desaturated + red warning, without opacity pulsing */
+.battlefield-hero-square .hero-card-wrapper.hero-low-hp .hero-card-frame {
 	filter: saturate(0.7) brightness(0.9);
 	box-shadow: inset 0 0 35px rgba(220, 38, 38, 0.45);
 }
 
-@keyframes hero-low-hp-pulse {
-	0%, 100% { opacity: 0.7; }
-	50% { opacity: 1; }
-}
-
-/* Critical HP — faster pulse, more desaturated */
-.battlefield-hero-square .hero-card-wrapper.hero-critical-hp {
-	animation: hero-critical-pulse 1s ease-in-out infinite;
+/* Critical HP — stronger static warning, without an opacity pulse */
+.battlefield-hero-square .hero-card-wrapper.hero-critical-hp .hero-card-frame {
 	filter: saturate(0.4) brightness(0.8);
 	box-shadow: inset 0 0 45px rgba(220, 38, 38, 0.65);
 }
 
-@keyframes hero-critical-pulse {
-	0%, 100% { opacity: 0.7; }
-	50% { opacity: 1; }
-}
-
-.battlefield-hero-square .hero-card-wrapper.hero-damaged {
+.battlefield-hero-square .hero-card-wrapper.hero-damaged .hero-card-frame {
 	animation: hero-damage-flash 0.5s ease-out;
 }
 
@@ -45,48 +33,8 @@
 	100% { transform: scale(1) translateX(0); }
 }
 
-.battlefield-hero-square .hero-card-wrapper.hero-damaged::after {
-	content: '';
-	position: absolute;
-	inset: 0;
-	border-radius: inherit;
-	background: radial-gradient(ellipse at center, transparent 30%, rgba(220, 38, 38, 0.4) 100%);
-	pointer-events: none;
-	animation: hero-damage-vignette 0.5s ease-out forwards;
-	z-index: 5;
-}
-
-@keyframes hero-damage-vignette {
-	0% { opacity: 0; }
-	15% { opacity: 1; }
-	100% { opacity: 0; }
-}
-
-.battlefield-hero-square .hero-card-wrapper.hero-healed {
-	animation: hero-heal-glow 0.6s ease-out;
-}
-
-@keyframes hero-heal-glow {
-	0% { opacity: 1; }
-	20% { opacity: 0.85; }
-	100% { opacity: 1; }
-}
-
-.battlefield-hero-square .hero-card-wrapper.hero-healed::after {
-	content: '';
-	position: absolute;
-	inset: 0;
-	border-radius: inherit;
-	background: radial-gradient(ellipse at center, rgba(34, 197, 94, 0.3) 0%, transparent 70%);
-	pointer-events: none;
-	animation: hero-heal-vignette 0.6s ease-out forwards;
-	z-index: 5;
-}
-
-@keyframes hero-heal-vignette {
-	0% { opacity: 0; }
-	20% { opacity: 1; }
-	100% { opacity: 0; }
+.battlefield-hero-square .hero-card-wrapper.hero-healed .hero-card-frame {
+	box-shadow: 0 0 22px rgba(34, 197, 94, 0.35);
 }
 
 .hero-portrait.power-activating {
@@ -111,17 +59,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.battlefield-hero-square .hero-card-wrapper,
-	.battlefield-hero-square .hero-card-wrapper.hero-damaged,
-	.battlefield-hero-square .hero-card-wrapper.hero-healed,
-	.battlefield-hero-square .hero-card-wrapper.hero-low-hp,
-	.battlefield-hero-square .hero-card-wrapper.hero-critical-hp,
+	.battlefield-hero-square .hero-card-frame,
+	.battlefield-hero-square .hero-card-wrapper.hero-damaged .hero-card-frame,
 	.hero-portrait.power-activating,
 	.hero-armor-badge.armor-gained {
 		animation: none;
-	}
-	.hero-card-wrapper.hero-damaged::after,
-	.hero-card-wrapper.hero-healed::after {
-		display: none;
 	}
 }

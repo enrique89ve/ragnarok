@@ -215,7 +215,16 @@ export const createPokerCombatSlice: StateCreator<
   [],
   [],
   PokerCombatSlice
-> = (set, get) => ({
+> = (set, get) => {
+  let pendingNextHandTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  const cancelPendingPokerHandTransition = (): void => {
+    if (pendingNextHandTimeout === null) return;
+    clearTimeout(pendingNextHandTimeout);
+    pendingNextHandTimeout = null;
+  };
+
+  return {
   pokerState: null,
   pokerCombatState: null,
   pokerDeck: [],
@@ -351,6 +360,7 @@ export const createPokerCombatSlice: StateCreator<
     firstStrikeTarget?: 'player' | 'opponent',
     deterministic?: PokerCombatDeterministicOptions
   ) => {
+    cancelPendingPokerHandTransition();
     clearHandCache();
     let deck = createShuffledPokerDeck(deterministic?.deckSeed);
     
@@ -1468,6 +1478,7 @@ export const createPokerCombatSlice: StateCreator<
   },
 
   endPokerCombat: () => {
+    cancelPendingPokerHandTransition();
     set({
       pokerCombatState: null,
       pokerDeck: [],
@@ -1781,22 +1792,38 @@ export const createPokerCombatSlice: StateCreator<
 
   startNextHandDelayed: (resolution: CombatResolution) => {
     const state = get();
+    const scheduledCombatId = state.pokerCombatState?.combatId;
+    if (!scheduledCombatId) {
+      debug.combat('[startNextHandDelayed] Skipped: no active poker combat');
+      return;
+    }
     if (state.isTransitioningHand) {
       debug.combat('[startNextHandDelayed] Skipped: already transitioning');
       return;
     }
 
+    cancelPendingPokerHandTransition();
     set({ isTransitioningHand: true });
 
-    setTimeout(() => {
+    pendingNextHandTimeout = setTimeout(() => {
+      pendingNextHandTimeout = null;
+      const currentState = get();
+      if (
+        !currentState.pokerIsActive
+        || currentState.pokerCombatState?.combatId !== scheduledCombatId
+      ) {
+        return;
+      }
       try {
-        get().startNextHand(resolution);
+        currentState.startNextHand(resolution);
       } catch (err) {
         debug.error('[startNextHandDelayed] startNextHand threw:', err);
         set({ isTransitioningHand: false });
       }
     }, 2000);
   },
+
+  cancelPendingPokerHandTransition,
 
   maybeCloseBettingRound: () => {
     const state = get();
@@ -1879,4 +1906,5 @@ export const createPokerCombatSlice: StateCreator<
 
     set({ pokerCombatState: struck.state });
   },
-});
+  };
+};

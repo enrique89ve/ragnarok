@@ -185,6 +185,7 @@ export interface PokerCombatSliceActions {
   markBothPlayersReady: () => void;
   startNextHand: (resolution?: CombatResolution) => void;
   startNextHandDelayed: (resolution: CombatResolution) => void;
+  cancelPendingPokerHandTransition: () => void;
   maybeCloseBettingRound: () => void;
   applyDirectDamage: (targetPlayerId: 'player' | 'opponent', damage: number, sourceDescription?: string) => void;
   setPokerSlotsSwapped: (swapped: boolean) => void;

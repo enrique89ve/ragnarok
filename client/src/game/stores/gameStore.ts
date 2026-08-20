@@ -28,9 +28,9 @@ import { useTargetingStore } from './targetingStore';
 import { logActivity } from './activityLogStore';
 import { CombatEventBus } from '../services/CombatEventBus';
 import { getAttack } from '../utils/cards/typeGuards';
-import { usePeerStore } from './peerStore';
+import { useMatchStore } from '../match/store';
 import { computeStateHash } from '../engine/engineBridge';
-import { GAME_COMMAND_TYPES, applyGameCommand, applyOpponentCommand, type GameCommand } from '../core/commands';
+import { GAME_COMMAND_TYPES, applyGameCommand, applyOpponentCommand, type ApplyGameCommandResult, type GameCommand } from '../core/commands';
 import { applyGameCommandToStore } from './gameCommandStoreAdapter';
 import { buildHandshakeGameState, type CardsDeckAnnounce } from '../p2p/cardsDeckHandshake';
 
@@ -133,7 +133,7 @@ interface GameStore {
    * Goes through the canonical pipeline via state swap so the host's state correctly
    * reflects the opponent's action. Effects are translated to host perspective.
    */
-  applyOpponentCommand: (command: GameCommand) => void;
+  applyOpponentCommand: (command: GameCommand) => ApplyGameCommandResult;
   attackWithCard: (attackerId: string, defenderId?: string) => void; // If defenderId is undefined, attack hero
   autoAttackAll: (mode?: 'minion' | 'hero') => void; // Auto-attack with all minions
   selectAttacker: (card: CardInstance | CardInstanceWithCardData | null) => void; // Select card to attack with
@@ -166,6 +166,14 @@ let cardsRng: SeededRng | null = null;
 
 function commandRng(): () => number {
 	return cardsRng ?? cryptoRng;
+}
+
+/**
+ * Match authority is independent from transport availability. A peer match
+ * remains P2P throughout grace, reconnect, disconnect, and error states.
+ */
+function isPeerOpponentMatch(): boolean {
+	return useMatchStore.getState().activeMatch?.opponent.kind === 'peer';
 }
 
 // Guard: prevents a second attack from being initiated while one is already animating
@@ -333,6 +341,8 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
       result,
       setState: set,
     });
+
+    return result;
   },
 
   endTurn: () => {
@@ -374,8 +384,10 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
 
     if (result.status !== 'applied') return;
 
+    // A peer match must never arm local opponent AI, even if its transport is down.
+    if (isPeerOpponentMatch()) return;
+
     // AI delay + AI turn — kept in wrapper so the isAITurnProcessing guard above remains coherent.
-    // Skip if opponent is a real human (P2P connected).
     const aiDelay = 1800 + Math.random() * 1000;
     const scheduledTurnNumber = result.state.turnNumber;
     isAITurnProcessing = true;
@@ -385,7 +397,8 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
         if (currentState.currentTurn !== 'opponent') return;
         if (currentState.gamePhase === 'game_over') return;
         if (currentState.turnNumber !== scheduledTurnNumber) return;
-        if (usePeerStore.getState().connectionState === 'connected') return;
+        // Re-check in case the match mode changed while a local-AI timer was pending.
+        if (isPeerOpponentMatch()) return;
 
         const finalState = processAITurn(currentState);
         logActivity('turn_start', 'player', `Turn ${finalState.turnNumber} - Your turn`);
@@ -786,7 +799,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
   setupOpponentSpellPetCards: () => {
     const { gameState } = get();
     if (!gameState) return;
-    if (usePeerStore.getState().connectionState === 'connected') return;
+    if (isPeerOpponentMatch()) return;
 
     const newState = processOpponentSpellPetSetup(gameState);
     if (newState !== gameState) {

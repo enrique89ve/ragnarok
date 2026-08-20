@@ -86,6 +86,7 @@ import {
 } from '../../../../p2p/phaseCheckpointClient';
 import type { Hash256 } from '@shared/p2p-wire/integrity';
 import { isRetryablePhaseCheckpointDispute, type PhaseCheckpointPhase } from '@shared/p2p-wire/phaseCheckpoint';
+import { settleRemoteCommand } from './remoteCommandSettlement';
 
 export type { GameCommandEnvelope, WireGameCommand } from '../../../../hooks/p2pEnvelope';
 export type { P2PMessage } from '../../../../p2p/messages';
@@ -1141,10 +1142,9 @@ export function useWireSync() {
 							break;
 						}
 
-						// Mark a successfully-applied envelope: advance seq, register commandId
-						// in the dedup ring (FIFO eviction at SEEN_COMMAND_IDS_MAX), and trigger
-						// the post-apply sync to the peer. Fails-fast with `false` if the dedup
-						// ring is corrupt — but `add` cannot fail, so this always returns `true`.
+						// Mark a successfully-applied envelope: advance seq and register commandId
+						// in the dedup ring (FIFO eviction at SEEN_COMMAND_IDS_MAX). Post-apply
+						// transcript recording and sync are settled alongside this callback.
 						const markCommandApplied = (): void => {
 							lastIncomingSeqRef.current = data.seq;
 							seenCommandIdsRef.current.add(data.commandId);
@@ -1181,17 +1181,21 @@ export function useWireSync() {
 									reject('play_card_target_not_found');
 									break;
 								}
-								recordMove('playCard', {
-									cardId: wireCommand.cardId,
-									targetId: wireCommand.targetId,
-									targetType: wireCommand.targetType,
-									insertionIndex: wireCommand.insertionIndex,
-									commandId: data.commandId,
-									seq: data.seq,
-								}, remoteTranscriptId);
-								applyOpponentCommandToStore(wireCommand);
-								markCommandApplied();
-								debouncedSyncRef.current?.();
+								settleRemoteCommand(applyOpponentCommandToStore(wireCommand), {
+									onApplied: () => {
+										recordMove('playCard', {
+											cardId: wireCommand.cardId,
+											targetId: wireCommand.targetId,
+											targetType: wireCommand.targetType,
+											insertionIndex: wireCommand.insertionIndex,
+											commandId: data.commandId,
+											seq: data.seq,
+										}, remoteTranscriptId);
+										markCommandApplied();
+										debouncedSyncRef.current?.();
+									},
+									onUnapplied: (reason) => reject(reason),
+								});
 								break;
 							case GAME_COMMAND_TYPES.attack:
 								if (typeof wireCommand.attackerId !== 'string' || wireCommand.attackerId.length > 64) {
@@ -1212,24 +1216,32 @@ export function useWireSync() {
 									reject('attack_defender_not_on_player_battlefield');
 									break;
 								}
-								recordMove('attack', {
-									attackerId: wireCommand.attackerId,
-									defenderId: wireCommand.defenderId,
-									commandId: data.commandId,
-									seq: data.seq,
-								}, remoteTranscriptId);
-								applyOpponentCommandToStore(wireCommand);
-								markCommandApplied();
-								debouncedSyncRef.current?.();
+								settleRemoteCommand(applyOpponentCommandToStore(wireCommand), {
+									onApplied: () => {
+										recordMove('attack', {
+											attackerId: wireCommand.attackerId,
+											defenderId: wireCommand.defenderId,
+											commandId: data.commandId,
+											seq: data.seq,
+										}, remoteTranscriptId);
+										markCommandApplied();
+										debouncedSyncRef.current?.();
+									},
+									onUnapplied: (reason) => reject(reason),
+								});
 								break;
 							case GAME_COMMAND_TYPES.endTurn:
-								recordMove('endTurn', {
-									commandId: data.commandId,
-									seq: data.seq,
-								}, remoteTranscriptId);
-								applyOpponentCommandToStore(wireCommand);
-								markCommandApplied();
-								debouncedSyncRef.current?.();
+								settleRemoteCommand(applyOpponentCommandToStore(wireCommand), {
+									onApplied: () => {
+										recordMove('endTurn', {
+											commandId: data.commandId,
+											seq: data.seq,
+										}, remoteTranscriptId);
+										markCommandApplied();
+										debouncedSyncRef.current?.();
+									},
+									onUnapplied: (reason) => reject(reason),
+								});
 								break;
 							case GAME_COMMAND_TYPES.useHeroPower:
 								if (wireCommand.targetId !== undefined
@@ -1238,14 +1250,18 @@ export function useWireSync() {
 									reject('hero_power_target_not_found');
 									break;
 								}
-								recordMove('useHeroPower', {
-									targetId: wireCommand.targetId,
-									commandId: data.commandId,
-									seq: data.seq,
-								}, remoteTranscriptId);
-								applyOpponentCommandToStore(wireCommand);
-								markCommandApplied();
-								debouncedSyncRef.current?.();
+								settleRemoteCommand(applyOpponentCommandToStore(wireCommand), {
+									onApplied: () => {
+										recordMove('useHeroPower', {
+											targetId: wireCommand.targetId,
+											commandId: data.commandId,
+											seq: data.seq,
+										}, remoteTranscriptId);
+										markCommandApplied();
+										debouncedSyncRef.current?.();
+									},
+									onUnapplied: (reason) => reject(reason),
+								});
 								break;
 							default:
 								reject(`unknown_command_type_${(wireCommand as { type: string }).type}`);

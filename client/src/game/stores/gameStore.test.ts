@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // `gameStore` transitively imports `useGame` which touches `localStorage`
 // at module-load time. The default vitest env is `node`, so we install a
@@ -22,6 +22,10 @@ vi.hoisted(() => {
 });
 
 import { useGameStore, selectPlayerHand, EMPTY_HAND } from './gameStore';
+import { GAME_COMMAND_TYPES } from '../core/commands';
+import { useMatchStore } from '../match/store';
+import type { MatchContext } from '../match/types';
+import { usePeerStore, type P2PConnectionState } from './peerStore';
 import { initializeGame, processAITurn } from '../utils/gameUtils';
 import type { CardData, CardInstance, GameState, HeroClass, Player } from '../types';
 import {
@@ -161,6 +165,127 @@ describe('setupOpponentSpellPetCards', () => {
 		expect(nextState.players.opponent.hand).toHaveLength(0);
 		expect(nextState.players.opponent.battlefield).toHaveLength(1);
 		expect(nextState.players.opponent.battlefield[0].instanceId).toBe(freeMinion.instanceId);
+	});
+});
+
+const peerMatchContext = (): MatchContext => ({
+	matchId: 'peer-match',
+	matchSeed: 'peer-seed',
+	opponent: {
+		kind: 'peer',
+		peerId: 'remote-peer',
+		myRole: 'first-mover',
+		opponentUsername: null,
+	},
+	reward: { matchXp: { kind: 'none' }, rune: { kind: 'none' }, ranking: { kind: 'none' } },
+});
+
+const aiMatchContext = (): MatchContext => ({
+	matchId: 'ai-match',
+	matchSeed: 'ai-seed',
+	opponent: { kind: 'ai', difficulty: 'normal', deckSource: 'default' },
+	reward: { matchXp: { kind: 'none' }, rune: { kind: 'none' }, ranking: { kind: 'none' } },
+});
+
+describe('match authority at local opponent automation boundaries', () => {
+	beforeEach(() => {
+		useMatchStore.setState({ activeMatch: null });
+		usePeerStore.setState({ connectionState: 'disconnected', connection: null, isHost: false });
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+		useMatchStore.setState({ activeMatch: null });
+		usePeerStore.setState({ connectionState: 'disconnected', connection: null, isHost: false });
+	});
+
+	it.each(['disconnected', 'reconnecting'] satisfies readonly P2PConnectionState[])(
+		'does not set up opponent spell-pet cards for a peer match while %s',
+		(connectionState) => {
+			useMatchStore.setState({ activeMatch: peerMatchContext() });
+			usePeerStore.setState({ connectionState, connection: null });
+			useGameStore.setState({ gameState: createPlayerTurnSetupState([createAiCardInstance()]) });
+
+			useGameStore.getState().setupOpponentSpellPetCards();
+
+			const nextState = useGameStore.getState().gameState;
+			expect(nextState.players.opponent.hand).toHaveLength(1);
+			expect(nextState.players.opponent.battlefield).toHaveLength(0);
+		},
+	);
+
+	it('keeps local AI behavior independent from a stale connected transport', () => {
+		useMatchStore.setState({ activeMatch: aiMatchContext() });
+		usePeerStore.setState({ connectionState: 'connected', connection: null });
+		useGameStore.setState({ gameState: createPlayerTurnSetupState([createAiCardInstance()]) });
+
+		useGameStore.getState().setupOpponentSpellPetCards();
+
+		const nextState = useGameStore.getState().gameState;
+		expect(nextState.players.opponent.hand).toHaveLength(0);
+		expect(nextState.players.opponent.battlefield).toHaveLength(1);
+	});
+
+	it('never arms peer AI even if the match context clears before a timer could fire', () => {
+		vi.useFakeTimers();
+		useMatchStore.setState({ activeMatch: peerMatchContext() });
+		usePeerStore.setState({ connectionState: 'disconnected', connection: null });
+		useGameStore.setState({ gameState: createPlayerTurnSetupState([createAiCardInstance()]) });
+
+		useGameStore.getState().endTurn();
+		useMatchStore.getState().clearMatch();
+		vi.advanceTimersByTime(4_000);
+
+		const finalState = useGameStore.getState().gameState;
+		expect(finalState.players.opponent.hand).toHaveLength(1);
+		expect(finalState.players.opponent.battlefield).toHaveLength(0);
+		expect(finalState.currentTurn).toBe('opponent');
+	});
+
+	it('still runs opponent AI for a local AI match', () => {
+		vi.useFakeTimers();
+		useMatchStore.setState({ activeMatch: aiMatchContext() });
+		usePeerStore.setState({ connectionState: 'connected', connection: null });
+		useGameStore.setState({ gameState: createPlayerTurnSetupState([createAiCardInstance()]) });
+
+		useGameStore.getState().endTurn();
+		vi.advanceTimersByTime(4_000);
+
+		const finalState = useGameStore.getState().gameState;
+		expect(finalState.players.opponent.hand).toHaveLength(0);
+		expect(finalState.players.opponent.battlefield).toHaveLength(1);
+		expect(finalState.currentTurn).toBe('player');
+	});
+});
+
+describe('applyOpponentCommand status contract', () => {
+	it('returns applied for a legal remote end turn', () => {
+		useGameStore.setState({ gameState: createOpponentTurnState([]) });
+
+		const result = useGameStore.getState().applyOpponentCommand({ type: GAME_COMMAND_TYPES.endTurn });
+
+		expect(result.status).toBe('applied');
+		expect(useGameStore.getState().gameState.currentTurn).toBe('player');
+	});
+
+	it('returns rejected or ignored without a semantic state mutation', () => {
+		const rejectedState = createPlayerTurnSetupState([createAiCardInstance()]);
+		useGameStore.setState({ gameState: rejectedState });
+		const rejected = useGameStore.getState().applyOpponentCommand({
+			type: GAME_COMMAND_TYPES.playCard,
+			cardId: 'free-minion-instance',
+		});
+		expect(rejected.status).toBe('rejected');
+		expect(useGameStore.getState().gameState).toEqual(rejectedState);
+
+		const ignoredState = createOpponentTurnState([]);
+		useGameStore.setState({ gameState: ignoredState });
+		const ignored = useGameStore.getState().applyOpponentCommand({
+			type: GAME_COMMAND_TYPES.playCard,
+			cardId: 'ghost-instance',
+		});
+		expect(ignored.status).toBe('ignored');
+		expect(useGameStore.getState().gameState).toEqual(ignoredState);
 	});
 });
 

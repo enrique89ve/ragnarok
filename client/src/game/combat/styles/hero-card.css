@@ -22,16 +22,19 @@
   gap: 0;
   width: 176px;
   pointer-events: none;
-  opacity: 0.92;
-  filter:
-    drop-shadow(0 -2px 8px rgba(0, 0, 0, 0.75))
-    saturate(0.9);
+  opacity: 1;
   transform: translateX(-50%) scale(0.78);
   transform-origin: center bottom;
 }
 
+/* Player pocket cards sit behind the avatar and need a small readability lift.
+   Keep the opponent treatment independent so both avatars retain their visual
+   balance. 0.86 = one more 5% lift over the previous 0.819 scale. */
+.hero-pocket-cards--player {
+  transform: translateX(-50%) scale(0.86);
+}
+
 .hero-pocket-cards--opponent {
-  opacity: 0.86;
   top: -74px;
   transform: translateX(-50%) scale(0.72);
 }

@@ -53,6 +53,7 @@ export const useUnifiedCombatStore = create<UnifiedCombatStore>()((set, get, api
   
   reset: () => {
     turnManager.reset();
+    get().cancelPendingPokerHandTransition();
     set({
       combatPhase: 'SETUP',
       pokerState: null,

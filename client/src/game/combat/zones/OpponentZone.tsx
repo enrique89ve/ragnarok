@@ -98,7 +98,7 @@ export const OpponentZone: React.FC<OpponentZoneProps> = ({
 
 	return (
 		<header
-			className={`zone-opp combat-zone combat-zone--opponent ${shakingHero ? 'damage-shake damage-flash' : ''} ${!isPlayerTurn ? 'turn-active' : ''}`}
+			className={`zone-opp combat-zone combat-zone--opponent ${!isPlayerTurn ? 'turn-active' : ''}`}
 		>
 			{opponentPet && (
 				<div data-hero-role="opponent" className="opponent-hero-container" {...arenaVfxTargetProps(ARENA_VFX_TARGETS.opponentHero)}>
@@ -124,6 +124,7 @@ export const OpponentZone: React.FC<OpponentZoneProps> = ({
 						heroClass={opponentHeroClass as any}
 						mana={opponentMana}
 						maxMana={opponentMaxMana}
+						shakingHero={shakingHero}
 						pocketCardsOverlay={(
 							<HoleCardsOverlay
 								cards={opponentHoleCards as PokerCard[]}

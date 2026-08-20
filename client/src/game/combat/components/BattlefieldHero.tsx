@@ -59,6 +59,8 @@ export interface BattlefieldHeroProps {
   artifact?: { name: string; attack: number };
   /** Poker hole cards tucked inside the hero frame */
   pocketCardsOverlay?: React.ReactNode;
+  /** Whether the hero frame should play the explicit damage reaction */
+  shakingHero?: boolean;
 }
 
 const getSecretColor = (heroClass: string) => {
@@ -102,7 +104,8 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
   onWeaponUpgradeClick,
   isWeaponUpgraded = false,
   artifact,
-  pocketCardsOverlay
+  pocketCardsOverlay,
+  shakingHero = false
 }) => {
   const heroElement = useMemo(() => {
     if (elementProp) return elementProp;
@@ -277,11 +280,11 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
       className={`battlefield-hero-square ${isOpponent ? 'opponent' : 'player'} ${isTargetable ? 'targetable' : ''} ${onClick ? 'clickable' : ''}`}
       onClick={onClick}
     >
+      {pocketCardsOverlay}
       <div className={`hero-card-wrapper ${elementClass} premium-glow ${damageReaction ? `hero-${damageReaction}` : ''} ${healthPercent <= 20 ? 'hero-critical-hp' : healthPercent <= 40 ? 'hero-low-hp' : ''}`}>
         <div className={`hero-elemental-aura ${elementClass} premium-glow`} />
-        {pocketCardsOverlay}
 
-        <div className={`hero-card-frame ${elementClass} premium-glow`}>
+        <div className={`hero-card-frame ${elementClass} premium-glow ${shakingHero ? 'damage-shake damage-flash' : ''}`}>
           <div className={`hero-particles ${elementClass} premium-glow`}>
             <div className="particle particle-1" />
             <div className="particle particle-2" />
