@@ -1320,6 +1320,240 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Poker battlefield chrome — jewel sockets for the two small card marks.
+ *
+ * These cards are rendered through the shared Mythos frame, but only the
+ * poker battlefield should get the more ornamental treatment. The socket is
+ * a CSS-owned octagonal jewel so the SVG glyph stays crisp and readable at
+ * the compact board scale; the inner facet adds the magical depth without
+ * hiding the semantic tone of the icon. Hand, Collection, mulligan and
+ * PokerCardFrame surfaces intentionally keep their existing chrome.
+ */
+.ragnarok-combat-arena
+  .simple-battlefield[data-render-surface="poker"]
+  .norse-card-frame.norse-card-frame--surface-battlefield {
+  --poker-chrome-socket-size: calc(26px * var(--norse-card-ui-scale));
+  --poker-chrome-socket-radius: polygon(
+    50% 0%,
+    88% 12%,
+    100% 50%,
+    88% 88%,
+    50% 100%,
+    12% 88%,
+    0% 50%,
+    12% 12%
+  );
+}
+
+.ragnarok-combat-arena
+  .simple-battlefield[data-render-surface="poker"]
+  .norse-card-frame.norse-card-frame--surface-battlefield
+  .card-frame__element-badge,
+.ragnarok-combat-arena
+  .simple-battlefield[data-render-surface="poker"]
+  .norse-card-frame.norse-card-frame--surface-battlefield
+  .collection-card-frame__top-center
+  :is(
+    .card-frame__blood-price,
+    .card-frame__pet-stage,
+    .card-frame__evolution-stars
+  ) {
+  position: relative;
+  isolation: isolate;
+  width: var(--poker-chrome-socket-size);
+  min-width: var(--poker-chrome-socket-size);
+  height: var(--poker-chrome-socket-size);
+  min-height: var(--poker-chrome-socket-size);
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  clip-path: var(--poker-chrome-socket-radius);
+  background:
+    radial-gradient(circle at 28% 18%, rgba(255, 255, 255, 0.82) 0 7%, transparent 25%),
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--poker-chrome-hi, #f5d77b) 94%, white 6%),
+      var(--poker-chrome-mid, #9b641d) 52%,
+      var(--poker-chrome-deep, #241204)
+    );
+  box-shadow: none;
+  filter:
+    drop-shadow(0 2px 2px rgba(0, 0, 0, 0.9))
+    drop-shadow(0 0 5px color-mix(in srgb, var(--poker-chrome-glow, #f5c542) 48%, transparent));
+  transform: none;
+  animation: none;
+}
+
+.ragnarok-combat-arena
+  .simple-battlefield[data-render-surface="poker"]
+  .norse-card-frame.norse-card-frame--surface-battlefield
+  .card-frame__element-badge::before,
+.ragnarok-combat-arena
+  .simple-battlefield[data-render-surface="poker"]
+  .norse-card-frame.norse-card-frame--surface-battlefield
+  .collection-card-frame__top-center
+  :is(
+    .card-frame__blood-price,
+    .card-frame__pet-stage,
+    .card-frame__evolution-stars
+  )::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  z-index: 0;
+  clip-path: var(--poker-chrome-socket-radius);
+  background:
+    radial-gradient(circle at 34% 22%, rgba(255, 255, 255, 0.12), transparent 32%),
+    linear-gradient(
+      155deg,
+      color-mix(in srgb, var(--poker-chrome-inner, #182235) 86%, white 14%),
+      var(--poker-chrome-inner, #182235) 62%,
+      color-mix(in srgb, var(--poker-chrome-inner, #182235) 72%, black 28%)
+    );
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.22),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.56);
+}
+
+.ragnarok-combat-arena
+  .simple-battlefield[data-render-surface="poker"]
+  .norse-card-frame.norse-card-frame--surface-battlefield
+  :where(.card-frame__element-badge) {
+  --poker-chrome-hi: color-mix(in srgb, var(--cf-eb-from) 76%, white 24%);
+  --poker-chrome-mid: color-mix(in srgb, var(--cf-eb-to) 84%, #0b1020 16%);
+  --poker-chrome-deep: color-mix(in srgb, var(--cf-eb-to) 74%, #02050d 26%);
+  --poker-chrome-inner: color-mix(in srgb, var(--cf-eb-to) 32%, #07101d 68%);
+  --poker-chrome-glow: var(--cf-eb-from);
+}
+
+.ragnarok-combat-arena
+  .simple-battlefield[data-render-surface="poker"]
+  .norse-card-frame.norse-card-frame--surface-battlefield
+  .card-frame__element-badge .card-frame__chrome-icon {
+  position: relative;
+  z-index: 2;
+  width: 72%;
+  height: 72%;
+  color: #f7fbff;
+  filter:
+    drop-shadow(0 0 1px rgba(255, 255, 255, 0.9))
+    drop-shadow(0 1px 1px rgba(0, 0, 0, 0.95));
+}
+
+.ragnarok-combat-arena
+  .simple-battlefield[data-render-surface="poker"]
+  .norse-card-frame.norse-card-frame--surface-battlefield
+  .collection-card-frame__top-center {
+  gap: 3px;
+}
+
+.ragnarok-combat-arena
+  .simple-battlefield[data-render-surface="poker"]
+  .norse-card-frame.norse-card-frame--surface-battlefield
+  .collection-card-frame__top-center
+  :where(.card-frame__evolution-stars) {
+  width: calc(var(--poker-chrome-socket-size) * 1.72);
+  min-width: calc(var(--poker-chrome-socket-size) * 1.72);
+  padding: 0 4px;
+  clip-path: polygon(
+    8% 0%,
+    92% 0%,
+    100% 50%,
+    92% 100%,
+    8% 100%,
+    0% 50%
+  );
+}
+
+.ragnarok-combat-arena
+  .simple-battlefield[data-render-surface="poker"]
+  .norse-card-frame.norse-card-frame--surface-battlefield
+  .collection-card-frame__top-center
+  .card-frame__blood-price {
+  --poker-chrome-hi: #ffaaa7;
+  --poker-chrome-mid: #c8323c;
+  --poker-chrome-deep: #430711;
+  --poker-chrome-inner: #250913;
+  --poker-chrome-glow: #ef4444;
+}
+
+.ragnarok-combat-arena
+  .simple-battlefield[data-render-surface="poker"]
+  .norse-card-frame.norse-card-frame--surface-battlefield
+  .collection-card-frame__top-center
+  .card-frame__pet-stage {
+  --poker-chrome-hi: #f0c8ff;
+  --poker-chrome-mid: #9a4bd1;
+  --poker-chrome-deep: #34135f;
+  --poker-chrome-inner: #1c1035;
+  --poker-chrome-glow: #c084fc;
+  color: #f7eaff;
+}
+
+.ragnarok-combat-arena
+  .simple-battlefield[data-render-surface="poker"]
+  .norse-card-frame.norse-card-frame--surface-battlefield
+  .collection-card-frame__top-center
+  .card-frame__evolution-stars {
+  --poker-chrome-hi: #fff0a8;
+  --poker-chrome-mid: #c99026;
+  --poker-chrome-deep: #4a2808;
+  --poker-chrome-inner: #251b08;
+  --poker-chrome-glow: #f5c542;
+  color: #fff5b8;
+}
+
+.ragnarok-combat-arena
+  .simple-battlefield[data-render-surface="poker"]
+  .norse-card-frame.norse-card-frame--surface-battlefield
+  .collection-card-frame__top-center
+  :is(.card-frame__blood-price, .card-frame__pet-stage, .card-frame__evolution-stars)
+  .card-frame__chrome-icon,
+.ragnarok-combat-arena
+  .simple-battlefield[data-render-surface="poker"]
+  .norse-card-frame.norse-card-frame--surface-battlefield
+  .collection-card-frame__top-center
+  .card-frame__evolution-star {
+  position: relative;
+  z-index: 2;
+  width: 68%;
+  height: 68%;
+  color: currentColor;
+  filter:
+    drop-shadow(0 0 1px rgba(255, 255, 255, 0.72))
+    drop-shadow(0 1px 1px rgba(0, 0, 0, 0.94));
+}
+
+.ragnarok-combat-arena
+  .simple-battlefield[data-render-surface="poker"]
+  .norse-card-frame.norse-card-frame--surface-battlefield
+  .collection-card-frame__top-center
+  .card-frame__evolution-stars
+  .card-frame__evolution-star {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  height: 68%;
+}
+
+.ragnarok-combat-arena
+  .simple-battlefield[data-render-surface="poker"]
+  .norse-card-frame.norse-card-frame--surface-battlefield
+  .collection-card-frame__top-center
+  .card-frame__blood-price-value,
+.ragnarok-combat-arena
+  .simple-battlefield[data-render-surface="poker"]
+  .norse-card-frame.norse-card-frame--surface-battlefield
+  .collection-card-frame__top-center
+  .card-frame__pet-stage-value {
+  position: relative;
+  z-index: 2;
+  color: #fff;
+  font-size: 0.62em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.96);
+}
+
 .norse-card-frame .card-frame__keyword-chip--overflow {
   min-width: 16px;
   color: var(--gold-100);
