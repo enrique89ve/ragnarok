@@ -18,6 +18,7 @@ import { ELEMENT_WEAKNESSES, ELEMENT_STRENGTHS } from '../../utils/elements';
 import { NORSE_TO_GAME_ELEMENT, type NorseElement } from '../../types/NorseTypes';
 import { resolveHeroPortrait, DEFAULT_PORTRAIT } from '../../utils/art/artMapping';
 import { GameIcon } from '../../utils/ui/GameIcon';
+import { isScorchingBurstPower, ScorchingBurstIcon } from '../../components/ui/ScorchingBurstIcon';
 import HeroDossierModal from './HeroDossierModal';
 import '../styles/hero-reactions.css';
 
@@ -156,6 +157,7 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
   const norseHero = pet.norseHeroId ? ALL_NORSE_HEROES[pet.norseHeroId] : null;
   const heroPower = norseHero?.heroPower;
   const weaponUpgrade = norseHero?.weaponUpgrade;
+  const isScorchingBurst = isScorchingBurstPower(heroPower?.id);
 
   const elementMatchups = useMemo(() => {
     const norseEl = norseHero?.element as NorseElement | undefined;
@@ -232,7 +234,7 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
                 aria-label={`${heroPower.name}, costs ${heroPower.cost} mana`}
                 title={`${heroPower.name} · ${heroPower.cost} Mana`}
               >
-                <GameIcon name="zap" size={12} />
+                {isScorchingBurst ? <ScorchingBurstIcon className="scorching-burst-icon" size={28} /> : <GameIcon name="zap" size={12} />}
                 <span className="power-cost">{heroPower.cost}</span>
               </button>
             )}

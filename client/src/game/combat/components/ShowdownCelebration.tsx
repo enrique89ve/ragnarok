@@ -31,6 +31,20 @@ interface ShowdownCelebrationProps {
 const ENTRANCE_DELAY = 400;
 const BADGE_DISPLAY_MS = 3200;
 
+const NorseResultFrame = () => (
+	<svg
+		className="winner-badge-frame"
+		viewBox="0 0 640 180"
+		preserveAspectRatio="none"
+		aria-hidden="true"
+	>
+		<path className="winner-badge-frame-outer" d="M28 8h584l24 24v116l-24 24H28L4 148V32L28 8Z" />
+		<path className="winner-badge-frame-inner" d="M36 18h568l18 18v100l-18 18H36l-18-18V36l18-18Z" />
+		<path className="winner-badge-frame-knot" d="M320 8v18l-10 10 10 10 10-10-10-10M320 154v18l-10-10 10-10 10 10" />
+		<path className="winner-badge-frame-rune" d="M4 90h30l12-12M636 90h-30l-12 12M40 20l18 18M600 20l-18 18M40 160l18-18M600 160l-18-18" />
+	</svg>
+);
+
 function useOnceComplete(onComplete: () => void): () => boolean {
 	const onCompleteRef = useRef(onComplete);
 	onCompleteRef.current = onComplete;
@@ -175,59 +189,64 @@ export const ShowdownCelebration: React.FC<ShowdownCelebrationProps> = ({
 							type: 'spring',
 							stiffness: 300,
 							damping: 20,
-							duration: 0.5
+							duration: 0.5,
 						}}
 					>
-						<div className="winner-badge-text">{getWinnerText()}</div>
-						{isShowdown && (
-							<>
+						<NorseResultFrame />
+						<div className="winner-badge-content">
+							<div className="winner-badge-kicker">{isShowdown ? 'SHOWDOWN' : 'WAGER RESOLVED'}</div>
+							<div className="winner-badge-rule" aria-hidden="true" />
+							<div className="winner-badge-text">{getWinnerText()}</div>
+							{isShowdown && (
+								<>
+									<motion.div
+										className="winner-hand-name"
+										initial={{ opacity: 0, y: 10 }}
+										animate={{ opacity: 1, y: 0 }}
+										transition={{ delay: 0.3 }}
+									>
+										{getHandName()}
+									</motion.div>
+									{/* Show both hands so player understands why they won/lost */}
+									{resolution.winner !== 'draw' && (
+										<motion.div
+											className="showdown-hand-comparison"
+											initial={{ opacity: 0 }}
+											animate={{ opacity: 0.7 }}
+											transition={{ delay: 0.5 }}
+										>
+											<span className={resolution.winner === 'player' ? 'hand-winner' : 'hand-loser'}>
+												You: {getCombinedHandName(resolution.playerHand.rank)}
+											</span>
+											<span className="hand-vs">vs</span>
+											<span className={resolution.winner === 'opponent' ? 'hand-winner' : 'hand-loser'}>
+												Foe: {getCombinedHandName(resolution.opponentHand.rank)}
+											</span>
+										</motion.div>
+									)}
+								</>
+							)}
+							{!isShowdown && (
 								<motion.div
-									className="winner-hand-name"
+									className="fold-message"
 									initial={{ opacity: 0, y: 10 }}
 									animate={{ opacity: 1, y: 0 }}
-									transition={{ delay: 0.3 }}
+									transition={{ delay: 0.2 }}
 								>
 									{getHandName()}
 								</motion.div>
-								{/* Show both hands so player understands why they won/lost */}
-								{resolution.winner !== 'draw' && (
-									<motion.div
-										className="showdown-hand-comparison"
-										initial={{ opacity: 0 }}
-										animate={{ opacity: 0.7 }}
-										transition={{ delay: 0.5 }}
-									>
-										<span className={resolution.winner === 'player' ? 'hand-winner' : 'hand-loser'}>
-											You: {getCombinedHandName(resolution.playerHand.rank)}
-										</span>
-										<span className="hand-vs">vs</span>
-										<span className={resolution.winner === 'opponent' ? 'hand-winner' : 'hand-loser'}>
-											Foe: {getCombinedHandName(resolution.opponentHand.rank)}
-										</span>
-									</motion.div>
-								)}
-							</>
-						)}
-						{!isShowdown && (
-							<motion.div
-								className="fold-message"
-								initial={{ opacity: 0, y: 10 }}
-								animate={{ opacity: 1, y: 0 }}
-								transition={{ delay: 0.2 }}
-							>
-								{getHandName()}
-							</motion.div>
-						)}
-						{getDamageText() && (
-							<motion.div
-								className="showdown-damage-text"
-								initial={{ opacity: 0, scale: 0.8 }}
-								animate={{ opacity: 1, scale: 1 }}
-								transition={{ delay: 0.5 }}
-							>
-								{getDamageText()}
-							</motion.div>
-						)}
+							)}
+							{getDamageText() && (
+								<motion.div
+									className="showdown-damage-text"
+									initial={{ opacity: 0, scale: 0.8 }}
+									animate={{ opacity: 1, scale: 1 }}
+									transition={{ delay: 0.5 }}
+								>
+									{getDamageText()}
+								</motion.div>
+							)}
+						</div>
 					</motion.div>
 				)}
 

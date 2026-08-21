@@ -85,85 +85,154 @@
 
 .winner-badge {
   position: absolute;
+  width: min(44%, 620px);
+  min-height: 148px;
+  box-sizing: border-box;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 16px 32px;
-  background: linear-gradient(
-    145deg,
-    rgba(20, 20, 30, 0.95),
-    rgba(30, 30, 45, 0.9)
-  );
-  border: 2px solid rgba(251, 191, 36, 0.6);
-  border-radius: 0;
+  justify-content: center;
+  padding: 22px 54px 20px;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(221, 184, 74, 0.16), transparent 54%),
+    linear-gradient(145deg, rgba(7, 12, 20, 0.98), rgba(18, 24, 35, 0.96) 52%, rgba(5, 8, 14, 0.99));
+  clip-path: polygon(4.5% 0, 95.5% 0, 100% 18%, 100% 82%, 95.5% 100%, 4.5% 100%, 0 82%, 0 18%);
   box-shadow:
-    0 0 30px rgba(251, 191, 36, 0.4),
-    0 8px 32px rgba(0, 0, 0, 0.6),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 0 34px rgba(221, 184, 74, 0.26),
+    0 18px 38px rgba(0, 0, 0, 0.72);
   z-index: 200;
-  animation:
-    winnerBadgePulse 1s ease-in-out infinite,
-    winnerBadgeFloat 2s ease-in-out infinite;
+  animation: winnerBadgePulse 2.4s ease-in-out infinite;
 }
 
 .winner-badge.player-side {
   bottom: 25%;
   left: 50%;
-  transform: translateX(-50%);
+  translate: -50% 0;
 }
 
 .winner-badge.opponent-side {
   top: 25%;
   left: 50%;
-  transform: translateX(-50%);
+  translate: -50% 0;
 }
 
 .winner-badge.center {
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
-  animation:
-    winnerBadgePulse 1s ease-in-out infinite,
-    winnerBadgeCenterFloat 2s ease-in-out infinite;
+  translate: -50% -50%;
 }
 
-@keyframes winnerBadgeCenterFloat {
-  0%,
-  100% {
-    top: 50%;
-  }
-  50% {
-    top: 48%;
-  }
+.winner-badge::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  z-index: 0;
+  background: linear-gradient(180deg, rgba(28, 38, 52, 0.5), rgba(3, 7, 13, 0.62));
+  clip-path: polygon(4.5% 0, 95.5% 0, 100% 18%, 100% 82%, 95.5% 100%, 4.5% 100%, 0 82%, 0 18%);
+  pointer-events: none;
+}
+
+.winner-badge-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.winner-badge-frame path {
+  fill: none;
+  stroke: rgba(221, 184, 74, 0.82);
+  stroke-linecap: square;
+  stroke-linejoin: bevel;
+}
+
+.winner-badge-frame-outer {
+  stroke-width: 2;
+  filter: drop-shadow(0 0 5px rgba(221, 184, 74, 0.42));
+}
+
+.winner-badge-frame-inner {
+  stroke-width: 1;
+  opacity: 0.58;
+}
+
+.winner-badge-frame-knot {
+  stroke-width: 1.4;
+  opacity: 0.9;
+}
+
+.winner-badge-frame-rune {
+  stroke-width: 1;
+  opacity: 0.7;
+}
+
+.winner-badge-content {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  gap: 5px;
+  text-align: center;
+}
+
+.winner-badge-kicker {
+  color: rgba(221, 184, 74, 0.74);
+  font-family: var(--type-display, 'Cinzel', Georgia, serif);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.winner-badge-rule {
+  width: min(190px, 70%);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(221, 184, 74, 0.72), transparent);
 }
 
 .winner-badge-text {
-  font-family: "Cinzel", "Georgia", serif;
-  font-size: 2rem;
-  font-weight: 700;
-  color: #fbbf24;
+  font-family: var(--type-display, "Cinzel", Georgia, serif);
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--gold-200, #e9c877);
   text-shadow:
-    0 0 20px rgba(251, 191, 36, 0.8),
-    0 2px 4px rgba(0, 0, 0, 0.5);
-  letter-spacing: 2px;
+    0 0 18px rgba(221, 184, 74, 0.54),
+    0 2px 5px rgba(0, 0, 0, 0.82);
+  letter-spacing: 0.08em;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .winner-hand-name {
-  font-family: "Cinzel", "Georgia", serif;
-  font-size: 1.2rem;
+  font-family: var(--type-display, "Cinzel", Georgia, serif);
+  font-size: 0.96rem;
   font-weight: 600;
-  color: #4ade80;
-  text-shadow: 0 0 15px rgba(74, 222, 128, 0.6);
-  letter-spacing: 1px;
+  color: var(--success-300, #4ade80);
+  text-shadow: 0 0 12px rgba(74, 222, 128, 0.48);
+  letter-spacing: 0.06em;
+}
+
+.fold-message {
+  color: var(--ink-100, #e6dcc8);
+  font-family: var(--font-body, "Source Sans 3", sans-serif);
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
 }
 
 .showdown-damage-text {
-  font-family: "Inter", sans-serif;
-  font-size: 1.1rem;
+  font-family: var(--font-body, "Source Sans 3", sans-serif);
+  font-size: 0.9rem;
   font-weight: 700;
-  color: #ef4444;
-  text-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
+  color: var(--danger-300, #f87171);
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 12px rgba(239, 68, 68, 0.55);
   animation: damageShake 0.5s ease-in-out;
 }
 
@@ -171,27 +240,11 @@
   0%,
   100% {
     opacity: 1;
-    box-shadow:
-      0 0 30px rgba(251, 191, 36, 0.4),
-      0 8px 32px rgba(0, 0, 0, 0.6),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    filter: brightness(1);
   }
   50% {
-    opacity: 0.95;
-    box-shadow:
-      0 0 50px rgba(251, 191, 36, 0.6),
-      0 8px 32px rgba(0, 0, 0, 0.6),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  }
-}
-
-@keyframes winnerBadgeFloat {
-  0%,
-  100% {
-    transform: translateX(-50%) translateY(0);
-  }
-  50% {
-    transform: translateX(-50%) translateY(-10px);
+    opacity: 0.98;
+    filter: brightness(1.08);
   }
 }
 

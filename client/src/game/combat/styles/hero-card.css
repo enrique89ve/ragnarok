@@ -123,6 +123,19 @@
   z-index: 6;
 }
 
+.hero-card-details-trigger:hover {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hero-element-accent) 28%, transparent);
+}
+
+.hero-card-details-trigger:focus-visible {
+  outline: 3px solid var(--ink-0);
+  outline-offset: 3px;
+}
+
+.hero-card-details-trigger:active {
+  transform: scale(0.995);
+}
+
 /* The card-sized details trigger owns portrait inspection. The only nested
    interactive control is the dedicated hero-power button. */
 .hero-portrait-interactive {
@@ -214,6 +227,15 @@
   font-variant-numeric: tabular-nums;
 }
 
+.portrait-power-badge .scorching-burst-icon {
+  --scorching-core: var(--gold-100, #fff3c4);
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  color: var(--warning-300, #fbbf24);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.72));
+}
+
 .portrait-power-badge:disabled {
   cursor: not-allowed;
   animation: none;
@@ -223,6 +245,14 @@
 .portrait-power-badge:not(:disabled):hover {
   transform: translateY(-1px);
   background: color-mix(in srgb, var(--bifrost-500) 24%, var(--obsidian-950));
+}
+
+.portrait-power-badge:hover {
+  transform: translateY(-1px);
+}
+
+.portrait-power-badge:active {
+  transform: translateY(1px) scale(0.96);
 }
 
 .portrait-power-badge:focus-visible {

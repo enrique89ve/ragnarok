@@ -468,26 +468,6 @@
     0 0 5px rgba(0, 0, 0, 0.92);
 }
 
-.norse-card-frame .card-frame__mana-element {
-  position: absolute;
-  inset: -22%;
-  z-index: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(255, 255, 255, 0.5);
-  font-family: var(--font-display);
-  font-size: calc(var(--norse-card-mana-size) * 1.12);
-  font-weight: 900;
-  line-height: 1;
-  text-shadow: none;
-  transform: translate(10%, 8%) rotate(-16deg);
-}
-
-.norse-card-frame .card-frame__mana-gem[data-element="neutral"] .card-frame__mana-element {
-  opacity: 0.48;
-}
-
 .norse-card-frame .card-frame__mana-cost {
 	position: absolute;
 	inset: 0;
@@ -502,6 +482,17 @@
 
 .norse-card-frame .card-frame__mana-cost[data-digit-count="1"] {
 	transform: translateX(0.5px);
+}
+
+/* The mana anchor owns the upper-left socket. Element chrome may tint the
+ * mana gem, but no independent slot should paint over it. Keep the wrapper
+ * elevated as well as the gem itself because Collection adds a positioned
+ * corner wrapper. */
+.norse-card-frame :is(
+  .collection-card-frame__mana-corner,
+  .card-frame__mana-gem
+) {
+  z-index: 20;
 }
 
 .norse-card-frame .card-frame__stat-gems {

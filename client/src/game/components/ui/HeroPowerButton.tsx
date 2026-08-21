@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { ALL_NORSE_HEROES, getHeroClass } from '../../data/norseHeroes';
 import { getClassAttackIcon } from '../../assets/classAttackIcons';
 import { GameIcon } from '../../utils/ui/GameIcon';
+import { isScorchingBurstPower, ScorchingBurstIcon } from './ScorchingBurstIcon';
 import './HeroPowerButton.css';
 
 interface HeroPowerButtonProps {
@@ -31,6 +32,7 @@ export const HeroPowerButton: React.FC<HeroPowerButtonProps> = ({
   const norseHero = norseHeroId ? ALL_NORSE_HEROES[norseHeroId] : null;
   const heroPower = norseHero?.heroPower;
   const weaponUpgrade = norseHero?.weaponUpgrade;
+  const isScorchingBurst = isScorchingBurstPower(heroPower?.id);
   // Use smart class detection from hero ID mapping
   const heroClass = norseHeroId ? getHeroClass(norseHeroId) : 'neutral';
   const classIcon = getClassAttackIcon(heroClass);
@@ -161,11 +163,15 @@ export const HeroPowerButton: React.FC<HeroPowerButtonProps> = ({
           <span className="cost-value">{heroPower.cost}</span>
         </div>
         <div className="hero-power-btn-icon">
-          {classIcon ? (
+          {isScorchingBurst ? (
+            <ScorchingBurstIcon className="scorching-burst-icon" size={28} />
+          ) : classIcon ? (
             <img
               src={classIcon}
               alt={`${heroClass} power`}
               className="class-attack-icon"
+              width={32}
+              height={32}
               loading="lazy"
             />
           ) : (
