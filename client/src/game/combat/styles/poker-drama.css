@@ -331,13 +331,27 @@
    BUTTON PRESS FEEDBACK
    Enhanced action button reactions
    ======================================== */
-.poker-btn.raise-btn:active:not(:disabled),
+.poker-btn.raise-btn:active:not(:disabled) {
+	transform: translateY(2px) scale(0.96);
+	filter:
+		brightness(0.92)
+		drop-shadow(0 0 8px color-mix(in srgb, var(--danger-400) 58%, transparent));
+	box-shadow: none;
+}
+
 .action-btn.attack:active:not(:disabled) {
 	transform: translateY(2px) scale(0.96);
 	box-shadow: 0 0 25px color-mix(in srgb, var(--danger-400) 60%, transparent);
 }
 
-.poker-btn.call-btn:active:not(:disabled),
+.poker-btn.call-btn:active:not(:disabled) {
+	transform: translateY(2px) scale(0.96);
+	filter:
+		brightness(0.92)
+		drop-shadow(0 0 8px color-mix(in srgb, var(--gold-300) 58%, transparent));
+	box-shadow: none;
+}
+
 .action-btn.engage:active:not(:disabled) {
 	transform: translateY(2px) scale(0.96);
 	box-shadow: 0 0 25px color-mix(in srgb, var(--gold-300) 60%, transparent);
@@ -345,7 +359,10 @@
 
 .poker-btn.fold-btn:active:not(:disabled) {
 	transform: translateY(2px) scale(0.96);
-	filter: brightness(0.7);
+	filter:
+		brightness(0.76)
+		drop-shadow(0 0 7px color-mix(in srgb, var(--poker-button-accent) 48%, transparent));
+	box-shadow: none;
 }
 
 

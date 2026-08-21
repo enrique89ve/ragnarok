@@ -113,7 +113,10 @@
   transform: none;
 }
 
-.hero-card-frame .hero-name-plate,
+.hero-card-frame .hero-name-plate {
+  z-index: 6;
+}
+
 .hero-card-frame .fighting-hp-bar-container,
 .hero-card-frame .hero-stat-bar {
   position: relative;
@@ -408,8 +411,8 @@
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-/* The lower console owns identity + HP. Stamina is an external instrument so
-   it stays readable without covering portrait art. */
+/* The lower console is reserved for HP. Hero identity is integrated into the
+   portrait, while stamina remains an external instrument. */
 .hero-status-console {
   position: relative;
   z-index: 6;

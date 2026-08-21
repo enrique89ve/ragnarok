@@ -16,6 +16,7 @@ const cardFrameCss = readFileSync(resolve(layoutDir, '../../combat/styles/card-f
 const reactionsCss = readFileSync(resolve(layoutDir, '../../combat/styles/hero-reactions.css'), 'utf8');
 const pokerDramaCss = readFileSync(resolve(layoutDir, '../../combat/styles/poker-drama.css'), 'utf8');
 const manaCss = readFileSync(resolve(layoutDir, '../../components/ManaBar.css'), 'utf8');
+const timerCss = readFileSync(resolve(layoutDir, '../../combat/styles/timer.css'), 'utf8');
 
 describe('pokerViewportLayout', () => {
 	it('emits every zone box as CSS variables', () => {
@@ -59,6 +60,25 @@ describe('pokerViewportLayout', () => {
 		expect(canvasCss).toMatch(/\.opponent-hero-container \.hero-pocket-cards--opponent\s*\{[\s\S]*?z-index:\s*40/);
 		expect(canvasCss).toMatch(/\.opponent-hero-container \.hero-pocket-cards--opponent\s*\{[\s\S]*?align-items:\s*flex-start/);
 		expect(canvasCss).toMatch(/\.opponent-hero-container \.hero-pocket-cards--opponent\s*\{[\s\S]*?transform-origin:\s*center top/);
+	});
+
+	it('raises the lower player hand by the requested 15 percent', () => {
+		expect(POKER_VIEWPORT_LAYOUT.zones.playerHand.height).toBe(192);
+		expect(POKER_VIEWPORT_LAYOUT_STYLE['--poker-player-hand-card-rise']).toBe('96px');
+	});
+
+	it('raises the hourglass by 25 percent and enlarges its countdown by 50 percent', () => {
+		expect(POKER_VIEWPORT_LAYOUT.zones.hourglass.y).toBe(90);
+		expect(POKER_VIEWPORT_LAYOUT.zones.hourglass.height).toBe(128);
+		expect(timerCss).toMatch(/\.hg-countdown-text\s*\{[\s\S]*?font-size:\s*21px/);
+	});
+
+	it('raises the central battlefield group by 10 percent', () => {
+		const { battlefield, opponentBattlefieldCards, playerBattlefieldCards } = POKER_VIEWPORT_LAYOUT.zones;
+		expect(battlefield.y).toBe(211);
+		expect(opponentBattlefieldCards.y).toBe(235);
+		expect(playerBattlefieldCards.y).toBe(475);
+		expect(playerBattlefieldCards.y - opponentBattlefieldCards.y).toBe(240);
 	});
 
 	it('keeps edge chrome outside the minion field', () => {

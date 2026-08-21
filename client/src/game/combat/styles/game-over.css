@@ -236,6 +236,11 @@
 	gap: 4px;
 }
 
+.game-over-stat-value:not(.game-over-stat-icon-badge, .result-badge) {
+	font-family: var(--type-mono), "JetBrains Mono", ui-monospace, monospace;
+	font-variant-numeric: tabular-nums;
+}
+
 .game-over-stat-value {
 	font-size: 26px;
 	font-weight: 800;

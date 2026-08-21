@@ -236,13 +236,13 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
                 <span className="power-cost">{heroPower.cost}</span>
               </button>
             )}
-          </div>
 
-          <div className="hero-status-console">
             <div className="hero-name-plate">
               <span className="hero-name">{pet.name.split(' ')[0]}</span>
             </div>
+          </div>
 
+          <div className="hero-status-console">
             <div className={`fighting-hp-bar-container${isOpponent ? ' opponent' : ''}`}>
               <div className="fighting-hp-bar" role="meter" aria-label={`${pet.name} health`} aria-valuemin={0} aria-valuemax={maxHP} aria-valuenow={effectiveHP}>
                 <div className="fighting-hp-damage" />

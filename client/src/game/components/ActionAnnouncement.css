@@ -9,21 +9,21 @@
 }
 
 .action-announcement {
-  width: min(44%, 720px);
-  min-height: 148px;
+  width: min(38%, 620px);
+  min-height: 116px;
   box-sizing: border-box;
   display: grid;
-  grid-template-columns: 88px minmax(0, 1fr);
+  grid-template-columns: 72px minmax(0, 1fr);
   align-items: center;
-  gap: 22px;
-  padding: 22px 34px 22px 22px;
+  gap: 16px;
+  padding: 16px 24px 16px 16px;
   background: linear-gradient(
     135deg,
     color-mix(in srgb, var(--surface-overlay-mid, #1f3d62) 96%, var(--rarity-color, var(--gold-300))) 0%,
     color-mix(in srgb, var(--surface-overlay-deep, #0b1628) 98%, #000 2%) 100%
   );
   border: 1px solid color-mix(in srgb, var(--rarity-color, var(--gold-300)) 78%, #e5e7eb 22%);
-  border-radius: 8px;
+  border-radius: 6px;
   box-shadow:
     0 0 28px color-mix(in srgb, var(--rarity-color, var(--gold-300)) 24%, transparent),
     0 14px 30px rgba(0, 0, 0, 0.48),
@@ -69,7 +69,7 @@
   height: 11px;
   border: 1px solid color-mix(in srgb, var(--rarity-color, var(--gold-300)) 72%, transparent);
   transform: rotate(45deg);
-  opacity: 0.9;
+  opacity: 0.82;
 }
 
 .announcement-rune-top {
@@ -90,8 +90,8 @@
 }
 
 .announcement-icon-wrapper {
-  width: 76px;
-  height: 76px;
+  width: 62px;
+  height: 62px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -115,7 +115,7 @@
 .announcement-icon-caption {
   color: color-mix(in srgb, var(--rarity-color, var(--gold-300)) 72%, #cbd5e1 28%);
   font-family: var(--type-display, 'Cinzel', serif);
-  font-size: 8px;
+  font-size: 7px;
   font-weight: 800;
   letter-spacing: 0.22em;
   line-height: 1;
@@ -124,7 +124,7 @@
 .announcement-content {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
   padding-top: 2px;
 }
@@ -152,7 +152,7 @@
 
 .announcement-title {
   font-family: var(--type-display, 'Cinzel', serif);
-  font-size: clamp(20px, 1.5vw, 28px);
+  font-size: clamp(18px, 1.25vw, 24px);
   font-weight: 800;
   color: var(--text-near-white);
   text-shadow:
@@ -167,7 +167,7 @@
 .announcement-subtitle {
   max-width: 54ch;
   font-family: var(--font-body, 'Source Sans 3', sans-serif);
-  font-size: clamp(13px, 0.95vw, 17px);
+  font-size: clamp(12px, 0.78vw, 15px);
   font-weight: 500;
   color: rgba(229, 231, 235, 0.84);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
@@ -279,15 +279,15 @@
 @media (max-width: 760px) {
   .action-announcement {
     width: 72%;
-    min-height: 128px;
-    grid-template-columns: 64px minmax(0, 1fr);
+    min-height: 104px;
+    grid-template-columns: 58px minmax(0, 1fr);
     gap: 14px;
     padding: 18px 22px 18px 16px;
   }
 
   .announcement-icon-wrapper {
-    width: 58px;
-    height: 58px;
+    width: 52px;
+    height: 52px;
   }
 
   .announcement-icon-caption {

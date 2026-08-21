@@ -38,9 +38,10 @@
 }
 
 .mana-bar-counter-value {
-	font-family: "Cinzel", Georgia, serif;
+	font-family: var(--type-mono), "JetBrains Mono", ui-monospace, monospace;
 	font-size: 0.95rem;
 	font-weight: 800;
+	font-variant-numeric: tabular-nums;
 	color: var(--rarity-rare-bright);
 	text-shadow:
 		0 0 12px color-mix(in srgb, var(--rarity-rare-color) 80%, transparent),

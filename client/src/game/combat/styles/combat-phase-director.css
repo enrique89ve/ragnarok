@@ -213,6 +213,8 @@
   font-weight: 900;
   letter-spacing: 0.04em;
   flex-shrink: 0;
+  font-family: var(--type-mono), "JetBrains Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 .combat-phase-step.current .combat-phase-step-marker {
@@ -330,6 +332,8 @@
   color: var(--director-text);
   font-size: var(--text-11);
   font-weight: 900;
+  font-family: var(--type-mono), "JetBrains Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
 }
 

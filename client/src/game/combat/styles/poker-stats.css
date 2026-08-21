@@ -34,8 +34,10 @@
 }
 
 .stat-badge .stat-value {
+  font-family: var(--type-mono), "JetBrains Mono", ui-monospace, monospace;
   font-size: 0.9rem;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   color: #f1f5f9;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   white-space: nowrap;
@@ -81,8 +83,10 @@
 }
 
 .stat-box .stat-value {
+  font-family: var(--type-mono), "JetBrains Mono", ui-monospace, monospace;
   font-size: 1.1rem;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   color: #f1f5f9;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }

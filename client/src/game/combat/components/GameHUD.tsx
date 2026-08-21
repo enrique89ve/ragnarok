@@ -75,7 +75,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 	return (
 		<div className="game-hud">
 			<div className={`hud-status-ribbon ${isPlayerTurn ? 'player-active' : 'opponent-active'}`}>
-				<span className="hud-status-chip hud-status-turn">Turn {turnNumber}</span>
+				<span className="hud-status-chip hud-status-turn">Turn <span className="hud-numeric">{turnNumber}</span></span>
 				<span className="hud-status-chip hud-status-phase">Phase {phaseLabel}</span>
 				<span
 					className="hud-status-chip hud-status-initiative"
@@ -91,14 +91,15 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 					<span className="hud-chip-icon">
 						<StakesGlyph />
 					</span>
-					Stakes {pot} HP
+					Stakes <span className="hud-numeric">{pot}</span> HP
 				</span>
 				{toCall > 0 && (
-					<span className="hud-status-chip hud-status-call">To call {toCall} HP</span>
+					<span className="hud-status-chip hud-status-call">To call <span className="hud-numeric">{toCall}</span> HP</span>
 				)}
 				{showCommitment && (
 					<span className="hud-status-breakdown">
-						Committed You {playerCommitted} · Them {opponentCommitted}
+						Committed You <span className="hud-numeric">{playerCommitted}</span> · Them{' '}
+						<span className="hud-numeric">{opponentCommitted}</span>
 					</span>
 				)}
 			</div>

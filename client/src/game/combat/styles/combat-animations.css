@@ -35,9 +35,10 @@
 /* 3. Damage Number */
 .combat-damage-number {
 	position: absolute;
-	font-family: 'Cinzel', serif;
+	font-family: var(--type-mono), 'JetBrains Mono', ui-monospace, monospace;
 	font-size: 3rem;
 	font-weight: 900;
+	font-variant-numeric: tabular-nums;
 	color: #ff4444;
 	text-shadow:
 		0 0 8px rgba(0, 0, 0, 0.8),

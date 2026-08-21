@@ -20,9 +20,12 @@
 	position: absolute;
 	inset: 8px 20px 7px;
 	z-index: 0;
-	background: #130608;
+	background: #17070c;
 	border: 1px solid rgba(0, 0, 0, 0.9);
-	box-shadow: inset 0 0 7px rgba(0, 0, 0, 0.94);
+	box-shadow:
+		inset 0 0 8px rgba(0, 0, 0, 0.94),
+		inset 0 1px 0 rgba(255, 94, 94, 0.08),
+		inset 0 -1px 0 rgba(0, 0, 0, 0.88);
 }
 
 .fighting-hp-bar::after {
@@ -39,16 +42,16 @@
 	position: absolute;
 	inset: 9px 21px 8px;
 	background: linear-gradient(180deg,
-		#ef5b55 0%,
-		var(--ui-hp-crimson) 42%,
-		var(--ui-hp-crimson-deep) 100%);
+		#ff574f 0%,
+		#f01d31 44%,
+		#b6071e 100%);
 	border-radius: 1px;
 	transition: transform 420ms ease-out;
 	transform-origin: left;
 	box-shadow:
-		0 0 6px color-mix(in srgb, var(--ui-hp-crimson) 55%, transparent),
-		inset 0 1px 0 rgba(255, 221, 214, 0.34),
-		inset 0 -1px 0 rgba(0, 0, 0, 0.58);
+		0 0 8px color-mix(in srgb, var(--ui-hp-crimson) 68%, transparent),
+		inset 0 1px 0 rgba(255, 241, 238, 0.5),
+		inset 0 -1px 0 rgba(70, 0, 8, 0.8);
 	z-index: 1;
 }
 
@@ -84,8 +87,8 @@
 	position: absolute;
 	inset: 9px 21px 8px;
 	background: linear-gradient(180deg,
-		#6f111a 0%,
-		#28070a 100%
+		#2b0a12 0%,
+		#12050a 100%
 	);
 	border-radius: 1px;
 	z-index: 0;
@@ -96,7 +99,7 @@
 	top: 50%;
 	left: 50%;
 	transform: translate(-50%, -50%);
-	font-family: var(--type-display);
+	font-family: var(--type-mono), "JetBrains Mono", ui-monospace, monospace;
 	font-size: 0.88rem;
 	font-weight: 900;
 	color: var(--text-near-white);

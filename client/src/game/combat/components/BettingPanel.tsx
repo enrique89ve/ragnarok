@@ -63,14 +63,32 @@ function PokerActionButton({
 			aria-label={aria}
 			title={reason ?? aria}
 		>
-			<ButtonIconFrame>{icon}</ButtonIconFrame>
-			{hasValue && (
-				<span className="btn-copy">
-					{hasValue ? <span className="btn-hp">{hp} HP</span> : null}
-				</span>
-			)}
+			<ButtonIconFrame>
+				{icon}
+				{hasValue ? <span className="btn-hp">{hp}</span> : null}
+			</ButtonIconFrame>
 		</button>
 	);
+}
+
+function getFrontlineDisabledReason(input: {
+	readonly isMyTurnToAct: boolean;
+	readonly isAvailable: boolean;
+	readonly availableHP: number;
+	readonly toCall: number;
+	readonly minBet: number;
+}): string | null {
+	if (!input.isMyTurnToAct) {
+		return bettingDisabledReason({
+			isMyTurn: false,
+			kind: 'frontline',
+			allowed: false,
+			availableHP: input.availableHP,
+			toCall: input.toCall,
+			minBet: input.minBet,
+		});
+	}
+	return input.isAvailable ? null : 'No frontline units are ready to attack.';
 }
 
 const QUICK_BETS: ReadonlyArray<{ readonly label: string; readonly pct: number }> = [
@@ -97,8 +115,12 @@ export const BettingPanel: React.FC<BettingPanelProps> = ({
 	showFrontlineButton,
 }) => {
 	if (!permissions) {
-		return null;
-	}
+	return null;
+}
+
+function shouldDisableHpBetting(isDisabled: boolean, sliderMax: number): boolean {
+	return isDisabled || sliderMax <= 0;
+}
 
 	const {
 		hasBetToCall,
@@ -158,13 +180,21 @@ export const BettingPanel: React.FC<BettingPanelProps> = ({
 		toCall,
 		minBet,
 	});
+	const frontlineReason = getFrontlineDisabledReason({
+		isMyTurnToAct,
+		isAvailable: showFrontlineButton,
+		availableHP,
+		toCall,
+		minBet,
+	});
+	const isHpBettingDisabled = shouldDisableHpBetting(isDisabled, sliderMax);
 
 	return (
 		<div
 			className="betting-panel"
 			data-zone="betting-panel"
 		>
-			<div className="poker-hp-slider-container">
+			<div className="poker-hp-slider-container" data-disabled={isHpBettingDisabled}>
 				<div className="poker-quick-bets">
 					{QUICK_BETS.map(({ label, pct }) => {
 						const target = pokerQuickBetHp({ pct, maxBetAmount: sliderMax, minBet });
@@ -175,7 +205,7 @@ export const BettingPanel: React.FC<BettingPanelProps> = ({
 								type="button"
 								className={`quick-bet-btn ${isAllIn ? 'all-in' : ''}`}
 								onClick={() => onBetAmountChange(target)}
-								disabled={isDisabled || target <= 0}
+								disabled={isHpBettingDisabled || target <= 0}
 								title={isAllIn ? (allInReason ?? `All in ${target} HP`) : `${label} of remaining HP`}
 							>
 								{isAllIn ? 'All in' : label}
@@ -190,7 +220,7 @@ export const BettingPanel: React.FC<BettingPanelProps> = ({
 					value={clampedBet}
 					onChange={(e) => onBetAmountChange(Number(e.target.value))}
 					className="poker-hp-slider"
-					disabled={isDisabled || sliderMax <= 0}
+					disabled={isHpBettingDisabled}
 					aria-label="Bet amount in HP"
 				/>
 				<span className="slider-value">{clampedBet} HP</span>
@@ -230,24 +260,15 @@ export const BettingPanel: React.FC<BettingPanelProps> = ({
 						reason={foldReason}
 						onClick={() => onAction(CombatAction.BRACE)}
 					/>
-					{showFrontlineButton && (
-						<PokerActionButton
-							actionId="frontline"
-							className="auto-attack-btn"
-							label={BETTING_ACTION_LABEL.frontline}
-							icon={<FrontlineIcon />}
-							disabled={isDisabled}
-								reason={bettingDisabledReason({
-									isMyTurn: isMyTurnToAct,
-									kind: 'frontline',
-									allowed: isMyTurnToAct,
-									availableHP,
-									toCall,
-									minBet,
-								})}
-							onClick={onAutoAttackFrontline}
-						/>
-					)}
+					<PokerActionButton
+						actionId="frontline"
+						className="auto-attack-btn"
+						label={BETTING_ACTION_LABEL.frontline}
+						icon={<FrontlineIcon />}
+						disabled={isDisabled || !showFrontlineButton}
+						reason={frontlineReason}
+						onClick={onAutoAttackFrontline}
+					/>
 				</div>
 			</div>
 		</div>

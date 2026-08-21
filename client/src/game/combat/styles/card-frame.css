@@ -105,12 +105,20 @@
   pointer-events: none;
 }
 
-/* Hero name is the title row of the resource console. */
+/* Hero identity belongs to the portrait, keeping the HP console visually
+   dedicated to combat state. */
 .hero-name-plate {
-  background: rgba(2, 4, 9, 0.96);
-  padding: 5px 8px 3px;
+  position: absolute;
+  inset: auto 0 0;
+  padding: 22px 8px 6px;
   text-align: center;
-  border-top: 1px solid color-mix(in srgb, var(--hero-element-accent) 52%, transparent);
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(2, 4, 9, 0.76) 48%,
+    rgba(2, 4, 9, 0.96) 100%
+  );
+  pointer-events: none;
 }
 
 .hero-name {
@@ -124,7 +132,8 @@
   overflow-wrap: break-word;
   line-height: 1.1;
   text-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.98);
+    0 1px 2px rgba(0, 0, 0, 0.98),
+    0 0 8px rgba(0, 0, 0, 0.82);
 }
 
 /* Dead .hero-initial, .damage-modifiers, .mod-box removed (not in JSX) */

@@ -185,7 +185,8 @@
 .arena-poker-card .card-value {
   font-size: 1.6rem;
   font-weight: 900;
-  font-family: 'Cinzel', 'Times New Roman', serif;
+  font-family: var(--type-mono), 'JetBrains Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
   text-shadow: 1px 1px 0 rgba(255,255,255,0.6), 0 0 4px rgba(0,0,0,0.3);
   background: rgba(255, 255, 255, 0.85);
   padding: 1px 4px;
