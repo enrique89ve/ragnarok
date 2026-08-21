@@ -1,7 +1,7 @@
 /**
  * Poker AI config from MatchContext.
  *
- * Single (practice / Quick Match) pays no economy and uses SmartAI's default
+ * Single pays no economy and uses SmartAI's default
  * config. Campaign uses the mission's authored aiProfile plus difficulty.
  * P2P never runs local poker AI — this still returns undefined so a stray
  * call cannot pick up a leftover campaignStore mission.

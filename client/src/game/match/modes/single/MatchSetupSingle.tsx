@@ -1,8 +1,8 @@
 /**
- * <MatchSetupSingle/> — synchronous wrapper for local practice matches.
+ * <MatchSetupSingle/> — synchronous wrapper for local Single matches.
  *
  * The route owns mode resolution. By the time the coordinator mounts,
- * useMatchStore.activeMatch is already an AI/practice MatchContext.
+ * useMatchStore.activeMatch is already an AI Single MatchContext.
  */
 
 import { useEffect, useState, type ReactNode } from 'react';

@@ -1,7 +1,7 @@
 /**
  * Browser reload guard for a live match.
  *
- * Practice and campaign keep the board in RAM — F5 abandons the run.
+ * Single and campaign keep the board in RAM — F5 abandons the run.
  * P2P tries a local snapshot rejoin (see docs/P2P_MATCH_RESUME.md).
  * Browsers own the dialog copy; returnValue only opts into the prompt.
  */

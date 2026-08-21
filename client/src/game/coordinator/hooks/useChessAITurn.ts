@@ -38,7 +38,7 @@ export function useChessAITurn({ enabled }: ChessAITurnOptions): void {
 	const matchMode = activeMatch ? derivePlayableMatchMode(activeMatch) : null;
 	const localAi = activeMatch ? deriveLocalAiProfile(activeMatch) : null;
 	const isP2PMatch = matchMode === 'p2p';
-	const behaviorProfile: ChessAIBehaviorProfile = localAi?.behaviorProfile === 'practice' ? 'single' : 'campaign';
+	const behaviorProfile: ChessAIBehaviorProfile = localAi?.behaviorProfile ?? 'campaign';
 	const aiDifficulty = localAi?.difficulty ?? 'normal';
 	const aiStyle = localAi?.style ?? 'balanced';
 

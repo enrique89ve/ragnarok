@@ -58,7 +58,7 @@ new network stages.
 |---|---|---|---|---|---|
 | 0 | Local development | `VITE_NETWORK_STAGE=local`, `runtimePhase=local` | Private iteration, mocks, fast gameplay checks. | Tester claims, real Hive value, public readiness claims. | Focused checks for the touched area. |
 | 1 | QA Testnet Season 0 | `stage=testnet`, `runtimePhase=qa-season-0`, reset epoch `qa-s0-*` | Resettable full-catalog rehearsal, evidence exports, RUNE/pack/campaign/P2P smoke paths. | NFT ownership claims, CardXP, ELO, Season Score, mainnet value. | Week-one evidence matrix complete, including P2P pass or captured blocker. |
-| 2 | Alfa Testnet (current) | `stage=testnet`, `runtimePhase=alfa-testnet`, reset epoch `alfa-testnet-*`, JSON state | Hosted runtime plus the playable loop: practice, one Norse campaign mission, and two-browser P2P all finish chess↔poker→`game_over`; poker HUD readable; daily quest claimable. | Closed Beta invites, mainnet acceptance, permanent value, NFTLoX custody claims, ranked P2P RUNE. | **Alfa Player-Ready** in [`docs/TESTNET_READINESS_FAST_TRACK.md`](docs/TESTNET_READINESS_FAST_TRACK.md): runtime health + spine in three modes + poker readability + daily claim. |
+| 2 | Alfa Testnet (current) | `stage=testnet`, `runtimePhase=alfa-testnet`, reset epoch `alfa-testnet-*`, JSON state | Hosted runtime plus the playable loop: single, one Norse campaign mission, and two-browser P2P all finish chess↔poker→`game_over`; poker HUD readable; daily quest claimable. | Closed Beta invites, mainnet acceptance, permanent value, NFTLoX custody claims, ranked P2P RUNE. | **Alfa Player-Ready** in [`docs/TESTNET_READINESS_FAST_TRACK.md`](docs/TESTNET_READINESS_FAST_TRACK.md): runtime health + spine in three modes + poker readability + daily claim. |
 | 3 | Closed Testnet Beta | `stage=testnet`, `runtimePhase=closed-beta`, reset epoch `closed-beta-*`, `qaFullCatalogEnabled=false` | Limited testers with Hive/Keychain, resettable testnet ownership, starter/DUAT/RUNE pack gates, campaign/daily RUNE. | P2P ranked RUNE, official ELO/Season Score, public season, permanent value. | `closedBetaCutover.inviteBlocked=false`, NFTLoX collection proof, two-browser P2P smoke, operator sign-off. |
 | 4 | Genesis / mainnet rehearsal | `stage=mainnet` in a controlled rehearsal | Multisig ceremony, irreversible replay, pack minting, seal lifecycle, production indexer behavior. | Treating rehearsal balances as final user value. | Tabletop rehearsal, hash bundle, post-seal replay validation. |
 | 5 | Mainnet | `VITE_NETWORK_STAGE=mainnet`, `runtimePhase=mainnet`, `economic=true` | Permanent ownership and economy. | Resettable shortcuts, QA catalog, testnet protocol ids. | Only after Genesis gates are closed. |
@@ -480,7 +480,7 @@ supports Node 24 (pnpm 11 requires Node >= 22.13). Use `.nvmrc` when you want to
 
 Playable entry routes:
 
-- `/#/warband?mode=single` — shared Warband surface for practice; launches `/#/game/single`.
+- `/#/warband?mode=single` — shared Warband surface for Single; launches `/#/game/single`.
 - `/#/warband?mode=multiplayer` — shared Warband surface for PvP; continues into the `/#/multiplayer` lobby.
 - `/#/campaign` — campaign chapter and mission flow; staged missions launch `/#/game/campaign`.
 - `/#/multiplayer` remains a direct lobby/compatibility entry for challenges and old tester links. It consumes a ready Warband and redirects to `/#/warband?mode=multiplayer` when loadout state is missing.
@@ -647,9 +647,9 @@ Status 2026-08-20. Code-complete is not the same as human/operator evidence.
 
 **Alfa Player-Ready — already in the tree**
 
-- [x] One coordinator owns practice / campaign / P2P (`RagnarokGameCoordinator`).
+- [x] One coordinator owns single / campaign / P2P (`RagnarokGameCoordinator`).
 - [x] Match-end owner is `matchEndController` (chess terminal, hero HP=0, Leave Match).
-- [x] Practice local spine smoked: chess → poker writeback → `game_over`.
+- [x] Single local spine smoked: chess → poker writeback → `game_over`.
 - [x] Campaign norse-1 mounts and Leave Match reaches `game_over` (abandon copy fixed).
 - [x] Poker actions labeled (Bet/Call/Raise/Fold/All in + HP).
 - [x] Home funnel: primary CTA is starter or campaign; PvP copy is gameplay-only.

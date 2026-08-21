@@ -1056,16 +1056,16 @@
   justify-content: center;
   width: calc((var(--norse-card-keyword-font-size) + 11px) * 1.4);
   height: calc((var(--norse-card-keyword-font-size) + 11px) * 1.4);
-  border: 1px solid color-mix(in srgb, var(--keyword-tone, var(--collection-frame-blue)) 56%, var(--gold-100) 12%);
+  border: 1px solid color-mix(in srgb, var(--keyword-tone, var(--collection-frame-blue)) 90%, var(--ink-0) 10%);
   border-radius: 4px;
   background:
     radial-gradient(circle at 32% 20%, rgba(255, 255, 255, 0.18), transparent 42%),
     linear-gradient(
       145deg,
-      color-mix(in srgb, var(--keyword-tone, var(--collection-frame-blue)) 36%, rgba(3, 8, 16, 0.96)),
+      color-mix(in srgb, var(--keyword-tone, var(--collection-frame-blue)) 32%, rgba(3, 8, 16, 0.96)),
       rgba(3, 8, 16, 0.96)
     );
-  color: color-mix(in srgb, var(--gold-100) 78%, white 10%);
+  color: color-mix(in srgb, var(--ink-0) 92%, var(--keyword-tone, var(--gold-100)) 8%);
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.74),
     inset 0 1px 0 rgba(255, 255, 255, 0.16),
@@ -1073,42 +1073,42 @@
 }
 
 .norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-chip[data-tone="combat"] {
-  --keyword-tone: #f05f67;
+  --keyword-tone: #ff7b84;
 }
 
 .norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-chip[data-tone="trigger"] {
-  --keyword-tone: #f2c35a;
+  --keyword-tone: #ffd166;
 }
 
 .norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-chip[data-tone="state"] {
-  --keyword-tone: #a98cff;
+  --keyword-tone: #b9a6ff;
 }
 
 .norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-chip[data-tone="resource"] {
-  --keyword-tone: #67d2c2;
+  --keyword-tone: #65e1d2;
 }
 
 .norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-chip[data-tone="choice"] {
-  --keyword-tone: #74c7ff;
+  --keyword-tone: #79cfff;
 }
 
 .norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-chip[data-tone="progression"] {
-  --keyword-tone: #7fd36d;
+  --keyword-tone: #b9f36f;
 }
 
 .norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-chip[data-tone="summon"] {
-  --keyword-tone: #d0a1ff;
+  --keyword-tone: #d8b4ff;
 }
 
 .norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-chip[data-tone="poker"] {
-  --keyword-tone: #ff7ac8;
+  --keyword-tone: #ff8bd4;
 }
 
 .norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-chip:is(
     [data-tone="filter"],
     [data-tone="theme"]
   ) {
-  --keyword-tone: #9ba8b8;
+  --keyword-tone: #d7e0ed;
 }
 
 .norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-label {
@@ -1129,7 +1129,9 @@
   ) .card-frame__keyword-icon {
   width: 100%;
   height: 100%;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.85));
+  filter:
+    drop-shadow(0 0 1px rgba(255, 255, 255, 0.24))
+    drop-shadow(0 1px 1px rgba(0, 0, 0, 0.9));
 }
 
 .norse-card-frame:not(.norse-card-frame--poker) .card-frame__description-text {
@@ -1178,19 +1180,19 @@
   padding: 1px;
   border-color: color-mix(
     in srgb,
-    var(--keyword-tone, var(--collection-frame-color)) 78%,
-    var(--obsidian-950) 22%
+    var(--keyword-tone, var(--collection-frame-color)) 92%,
+    var(--ink-0) 8%
   );
   border-radius: 4px;
   background: color-mix(
     in srgb,
-    var(--keyword-tone, var(--collection-frame-color)) 22%,
-    var(--obsidian-950) 78%
+    var(--keyword-tone, var(--collection-frame-color)) 34%,
+    var(--obsidian-950) 66%
   );
   color: color-mix(
     in srgb,
-    var(--keyword-tone, var(--gold-100)) 78%,
-    white 22%
+    var(--ink-0) 92%,
+    var(--keyword-tone, var(--gold-100)) 8%
   );
 }
 
@@ -1387,20 +1389,20 @@
   overflow: hidden;
   border: 1px solid color-mix(
     in srgb,
-    var(--keyword-tone, var(--collection-frame-color)) 78%,
-    var(--obsidian-950) 22%
+    var(--keyword-tone, var(--collection-frame-color)) 92%,
+    var(--ink-0) 8%
   );
   border-radius: 4px;
   background: color-mix(
     in srgb,
-    var(--keyword-tone, var(--collection-frame-color)) 22%,
-    var(--obsidian-950) 78%
+    var(--keyword-tone, var(--collection-frame-color)) 34%,
+    var(--obsidian-950) 66%
   );
   box-shadow: none;
   color: color-mix(
     in srgb,
-    var(--keyword-tone, var(--gold-100)) 78%,
-    white 22%
+    var(--ink-0) 92%,
+    var(--keyword-tone, var(--gold-100)) 8%
   );
   text-shadow: none;
 }
@@ -1521,18 +1523,18 @@
   ) .card-frame__keyword-chip:not(.card-frame__keyword-chip--overflow) {
   border-color: color-mix(
     in srgb,
-    var(--keyword-tone, var(--collection-frame-color)) 78%,
-    var(--obsidian-950) 22%
+    var(--keyword-tone, var(--collection-frame-color)) 92%,
+    var(--ink-0) 8%
   );
   background: color-mix(
     in srgb,
-    var(--keyword-tone, var(--collection-frame-color)) 22%,
-    var(--obsidian-950) 78%
+    var(--keyword-tone, var(--collection-frame-color)) 34%,
+    var(--obsidian-950) 66%
   );
   color: color-mix(
     in srgb,
-    var(--keyword-tone, var(--gold-100)) 78%,
-    white 22%
+    var(--ink-0) 92%,
+    var(--keyword-tone, var(--gold-100)) 8%
   );
 }
 

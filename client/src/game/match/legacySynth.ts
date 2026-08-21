@@ -13,7 +13,7 @@
  *      legacy bridge stays out of the way so it cannot race with — or
  *      overwrite — what the wrapper just installed.
  *   2. Campaign (mission set in campaignStore).
- *   3. Single (default fallback — practice).
+ *   3. Single (default fallback — local AI).
  *
  * THIS FILE IS THROWAWAY — Fase 7 deletes the bridge once single /
  * campaign flows shift to a menu-driven resolver path. The retained
@@ -63,7 +63,7 @@ export function synthesizeLegacyMatchContext(
 		return result.ctx;
 	}
 
-	// Single (practice). Difficulty/deckSource defaults match the implicit
+	// Single. Difficulty/deckSource defaults match the implicit
 	// pre-Fase-3 behavior — coordinator and warband flow today do not
 	// expose difficulty selection for single matches, so 'normal' is the
 	// only real value. When Fase 7's menu lands, real user input populates

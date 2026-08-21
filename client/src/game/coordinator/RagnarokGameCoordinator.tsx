@@ -6,7 +6,7 @@ import { useChessCombatAdapter } from '../hooks/useChessCombatAdapter';
 import { getDefaultArmySelection } from '../data/ChessPieceConfig';
 import { useCampaignStore } from '../campaign';
 import { deriveIntro, deriveIWonForPhase, deriveMatchFlowPolicy, deriveOpponentArmyForMode, derivePlayableMatchMode, markDailyQuestClaimsPendingAfterMatch, selectOnWinHandler, useMatchStore } from '../match';
-import { recordLocalBattleEnd } from '../data/practiceRecord';
+import { recordLocalBattleEnd } from '../data/singleRecord';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { routes } from '../../lib/routes';
 import { getWarbandEntryRoute } from '../../lib/warbandRoutes';

@@ -51,6 +51,7 @@ describe('getPokerActionPresentation', () => {
 			actorName: 'Odin',
 		})).toMatchObject({
 			showPopup: true,
+			action: CombatAction.COUNTER_ATTACK,
 			target: 'opponent',
 			text: 'Odin raises 20 HP',
 			subtitle: 'Your response',

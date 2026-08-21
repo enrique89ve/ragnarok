@@ -14,7 +14,7 @@ type BattleSessionIdentityInput = {
 	randomFraction: number;
 };
 
-const BATTLE_MODES: readonly BattleMode[] = ['pvp', 'pve', 'practice', 'campaign'];
+const BATTLE_MODES: readonly BattleMode[] = ['pvp', 'pve', 'single', 'campaign'];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null;

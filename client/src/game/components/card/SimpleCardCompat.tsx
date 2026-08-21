@@ -118,6 +118,8 @@ interface SimpleCardCompatProps {
 	onMouseLeave?: (e: React.MouseEvent) => void;
 	size?: CardSize;
 	showDescription?: boolean;
+	showName?: boolean;
+	keywordLabelMode?: 'full' | 'compact';
 	className?: string;
 	style?: React.CSSProperties;
 	attackBuff?: number;
@@ -169,6 +171,8 @@ export const SimpleCardCompat: React.FC<SimpleCardCompatProps> = ({
 	onMouseLeave,
 	size = 'medium',
 	showDescription = false,
+	showName,
+	keywordLabelMode,
 	className = '',
 	style,
 	attackBuff = 0,
@@ -219,7 +223,7 @@ export const SimpleCardCompat: React.FC<SimpleCardCompatProps> = ({
 	const fields: CollectionTileRenderedFields = {
 		showArt,
 		showCount: false,
-		showName: layoutAdapter.showName,
+		showName: showName ?? layoutAdapter.showName,
 		showStats: showCombatStats,
 		...(layoutAdapter.showTribeLine && card.tribe ? { tribe: card.tribe } : {}),
 		...(layoutAdapter.showDescriptionText && card.description ? { description: card.description } : {}),
@@ -231,7 +235,7 @@ export const SimpleCardCompat: React.FC<SimpleCardCompatProps> = ({
 		...(card.evolutionLevel !== undefined ? { evolutionLevel: card.evolutionLevel } : {}),
 		...(card.petStage !== undefined ? { petStage: card.petStage } : {}),
 		keywordLimit: layoutAdapter.keywordLimit,
-		keywordLabelMode: layoutAdapter.keywordLabelMode,
+		keywordLabelMode: keywordLabelMode ?? layoutAdapter.keywordLabelMode,
 	};
 
 	const frameClassName = [

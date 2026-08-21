@@ -57,31 +57,6 @@
 	white-space: nowrap;
 }
 
-/* Brace: silver shield glow */
-.hbp-brace {
-	--hbp-color: #9E9E9E;
-}
-
-/* Attack: orange sword glow */
-.hbp-attack {
-	--hbp-color: #FF9800;
-}
-
-/* Counter-attack: deep orange */
-.hbp-counter_attack {
-	--hbp-color: #FF5722;
-}
-
-/* Engage: blue crossed swords */
-.hbp-engage {
-	--hbp-color: #2196F3;
-}
-
-/* Defend: green helm */
-.hbp-defend {
-	--hbp-color: #4CAF50;
-}
-
 @keyframes hbp-icon-pulse {
 	0% {
 		transform: scale(1);

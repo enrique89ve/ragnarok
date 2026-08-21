@@ -40,4 +40,30 @@ describe('adaptGameLogEntry', () => {
 		expect(item.actorLabel).toBe('System');
 		expect(item.meta).toEqual(['System', 'reconnecting']);
 	});
+
+	it('renders poker bets and stamina as distinct log rows', () => {
+		const bet = adaptGameLogEntry({
+			id: 'bet-1',
+			timestamp: 1,
+			turn: 3,
+			actor: 'player',
+			type: 'poker_bet',
+			message: 'You bet 12 HP (-2 STA)',
+			details: { amount: 12, phaseLabel: 'Faith' },
+		});
+		expect(bet.title).toBe('Poker action');
+		expect(bet.amountLabel).toBe('-12');
+
+		const stamina = adaptGameLogEntry({
+			id: 'sta-1',
+			timestamp: 1,
+			turn: 3,
+			actor: 'player',
+			type: 'stamina',
+			message: 'You check (+1 STA)',
+			details: { amount: 1 },
+		});
+		expect(stamina.title).toBe('Stamina');
+		expect(stamina.tone).toBe('neutral');
+	});
 });

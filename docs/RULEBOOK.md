@@ -38,7 +38,7 @@ Ragnarok Combat Arena is a multi-mythology digital collectible card game featuri
 
 - **2,400+ collectible cards** across 5 mythological factions (Norse, Greek, Egyptian, Celtic, Eastern)
 - **80+ playable heroes** across 12 classes
-- **Three playable Alfa modes**, all on the same chess + poker spine: practice, campaign, and P2P. There is no live "Standard Match" (cards-only, no chess) path.
+- **Three playable Alfa modes**, all on the same chess + poker spine: single, campaign, and P2P. There is no live "Standard Match" (cards-only, no chess) path.
 - **Poker-inspired combat** with Texas Hold'em mechanics
 - **Strategic deck building** with class-specific and neutral cards
 
@@ -50,14 +50,14 @@ Players engage in strategic battles using heroes from various mythologies. Each 
 
 ## Game Modes
 
-The live product path is chess movement plus poker combat. Practice, campaign,
+The live product path is chess movement plus poker combat. Single, campaign,
 and P2P all use `RagnarokGameCoordinator`. Alfa Testnet requires one complete
-loop of each: practice, one Norse campaign mission, and two-browser P2P.
+loop of each: single, one Norse campaign mission, and two-browser P2P.
 See [`TESTNET_READINESS_FAST_TRACK.md`](./TESTNET_READINESS_FAST_TRACK.md).
 
-### Practice (single)
+### Single
 
-Local AI match. Same spine as campaign/P2P. Pays no Match XP, RUNE, or ranking.
+Local AI match (`/#/game/single`). Same spine as campaign/P2P. Pays no Match XP, RUNE, or ranking.
 
 **Flow:**
 ```
@@ -927,7 +927,7 @@ All new players receive **45 free base cards** when they first start:
 
 Base cards are infinite supply — they are NOT NFTs and don't count toward the 2.7M collectible cap. They're slightly weaker than common-rarity cards but include a few "value gems" that keep starter decks competitive.
 
-The 45 cards are delivered as a **single deterministic Starter Pack** claimed once per account. The pack content is fixed (no random draw) and sourced from the canonical entitlement table in `shared/schemas/starterEntitlement.ts`. After the pack opens, the new player picks an entry mode (Campaign / Quick Match / Multiplayer) and starts playing. See [`docs/SET_AXIS.md`](SET_AXIS.md) for the category model and [`docs/RAGNAROK_PROTOCOL_V1.md`](RAGNAROK_PROTOCOL_V1.md) §15.2 for the protocol-level rejection rules that keep starter outside the on-chain pack flow.
+The 45 cards are delivered as a **single deterministic Starter Pack** claimed once per account. The pack content is fixed (no random draw) and sourced from the canonical entitlement table in `shared/schemas/starterEntitlement.ts`. After the pack opens, the new player picks an entry mode (Campaign / Single / Multiplayer) and starts playing. See [`docs/SET_AXIS.md`](SET_AXIS.md) for the category model and [`docs/RAGNAROK_PROTOCOL_V1.md`](RAGNAROK_PROTOCOL_V1.md) §15.2 for the protocol-level rejection rules that keep starter outside the on-chain pack flow.
 
 ### Deck Rules
 

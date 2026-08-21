@@ -57,7 +57,7 @@ Every visual element in the arena belongs to exactly **one** logical layer. Back
     │
     ├── HUD elements            z: 700–899   pointer-events: auto (opt-in)
     │   └── GameHUD ribbon, hourglass, BattleIntel, BettingPanel,
-    │       hand-strength indicator
+    │       hand-strength indicator, CombatFeedbackStack (LoR-style chips)
     │
     └── #arena-layer-modal      z: 900+      pointer-events: auto (blockers)
         ↑ portal/mount target for full-screen modals:
@@ -88,9 +88,23 @@ Every visual element in the arena belongs to exactly **one** logical layer. Back
 | `MulliganScreen` (portal) | `#arena-layer-modal` | Blocks input until mulligan committed |
 | `ShowdownCelebration` (portal) | `#arena-layer-modal` | Blocks input during resolution |
 | `GameOverScreen` (portal) | `#arena-layer-modal` | Terminal modal |
+| `CombatFeedbackStack` | `feedbackStack` HUD zone above community cards | Spell/status chips. Waits while PhaseBanner or ActionAnnouncement occupies cinema. Game log always records the same event. |
 | `BettingPanel` | `[data-zone="betting-panel"]` in HUD z-range | Persistent control surface. Actions show **Bet/Raise/Call/Check/Fold/All in** plus HP, not icon-only. Disabled buttons keep the same label and explain why in `title`. |
 | `GameHUD` | `[data-vfx-target="risk-display"]` on stakes chip | Only turn/phase/stakes rail |
 | Particle bursts (Pixi) | `#arena-layer-vfx` | Canvas-bounded particles |
+
+### Feedback lanes (log + overlay)
+
+Gameplay events write `gameLogStore` always (practice, campaign, P2P). Overlay is a separate lane so announcements never stack on the same pixel:
+
+| Lane | Occupant | Rule |
+|---|---|---|
+| Cinema | `PhaseBanner`, `ActionAnnouncement` | Exclusive. Stack waits. |
+| Stack | `CombatFeedbackStack` chips | Max 3, horizontal above the flop. Reading dwell = enter 200ms + words + exit 160ms. |
+| Floater | `HeroBattlePopup`, `DamageIndicator` | On the actor, not the center. |
+| Log | `GameLog` dock | Persistent. If the flash is missed, the dock still has it. |
+
+`showStatus` / `NOTIFICATION` enqueue the stack, not Sonner. Sonner stays out of the poker canvas.
 
 ### VFX target contract
 

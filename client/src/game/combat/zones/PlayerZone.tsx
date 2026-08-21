@@ -71,6 +71,7 @@ export interface PlayerZoneProps {
 	readonly handleCardPlay: (card: any, pos?: any) => void;
 	readonly registerCardPosition: (card: CardInstance, position: Position) => void;
 	readonly battlefieldRef: React.RefObject<HTMLDivElement | null>;
+	readonly onCardInspect: (card: CardInstance) => void;
 }
 
 export const PlayerZone: React.FC<PlayerZoneProps> = ({
@@ -108,6 +109,7 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({
 	handleCardPlay,
 	registerCardPosition,
 	battlefieldRef,
+	onCardInspect,
 }) => {
 	const isShowdown = showdownCelebration?.resolution.resolutionType === 'showdown';
 
@@ -176,6 +178,7 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({
 							evolveReadyIds={evolveReadyIds as Set<string>}
 							battlefieldCount={playerBattlefield.length}
 							playerBattlefield={playerBattlefield as any}
+							onCardInspect={onCardInspect}
 						/>
 					</div>
 				)}

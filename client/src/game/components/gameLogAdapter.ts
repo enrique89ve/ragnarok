@@ -51,6 +51,9 @@ const EVENT_TITLES: Record<GameLogEntry['type'], string> = {
 	deathrattle: 'Deathrattle',
 	poker_turn: 'Poker decision',
 	poker_phase: 'Poker phase',
+	poker_bet: 'Poker action',
+	stamina: 'Stamina',
+	mana: 'Mana',
 	p2p_status: 'P2P status',
 };
 
@@ -70,6 +73,9 @@ const EVENT_ICONS: Record<GameLogEntry['type'], BattleLogIconName> = {
 	deathrattle: 'skull',
 	poker_turn: 'clock',
 	poker_phase: 'radio',
+	poker_bet: 'flame',
+	stamina: 'zap',
+	mana: 'sparkles',
 	p2p_status: 'repeat',
 };
 
@@ -81,15 +87,18 @@ function getActorLabel(actor: GameLogEntry['actor']): string {
 function getTone(entry: GameLogEntry): BattleLogTone {
 	if (entry.actor === 'system' || entry.type === 'poker_phase' || entry.type === 'p2p_status') return 'neutral';
 	if (entry.type === 'damage' || entry.type === 'fatigue' || entry.type === 'death') return 'danger';
-	if (entry.type === 'heal') return 'heal';
+	if (entry.type === 'heal' || entry.type === 'stamina' || entry.type === 'mana') return entry.type === 'heal' ? 'heal' : 'neutral';
 	return entry.actor === 'player' ? 'player' : 'opponent';
 }
 
 function getAmountLabel(entry: GameLogEntry): string | null {
 	const amount = entry.details?.amount;
 	if (amount === undefined) return null;
-	if (entry.type === 'heal') return `+${amount}`;
-	if (entry.type === 'damage' || entry.type === 'fatigue') return `-${amount}`;
+	if (entry.type === 'heal' || entry.type === 'stamina' || entry.type === 'mana') {
+		if (entry.type === 'heal') return `+${amount}`;
+		return String(amount);
+	}
+	if (entry.type === 'damage' || entry.type === 'fatigue' || entry.type === 'poker_bet') return `-${amount}`;
 	return String(amount);
 }
 

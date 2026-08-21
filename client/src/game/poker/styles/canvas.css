@@ -15,7 +15,10 @@
 
 .ragnarok-combat-arena .layer-background { z-index: 0; }
 .ragnarok-combat-arena .layer-vfx { z-index: 500; overflow: hidden; }
-.ragnarok-combat-arena .layer-modal { z-index: 900; }
+.ragnarok-combat-arena .layer-modal {
+  z-index: var(--z-topmost, 10000);
+  isolation: isolate;
+}
 
 .ragnarok-combat-arena .arena-content {
   position: absolute;

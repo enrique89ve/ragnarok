@@ -309,8 +309,8 @@ const GAME_MODES: readonly GameMode[] = [
 	},
 	{
 		key: 'single',
-		title: 'Quick Match',
-		kicker: 'Practice · vs AI',
+		title: 'Single',
+		kicker: 'Local AI',
 		description: 'Muster a warband, then test it against an AI opponent.',
 		route: getWarbandEntryRoute('single'),
 		glyph: '剣',

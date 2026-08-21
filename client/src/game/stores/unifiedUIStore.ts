@@ -7,6 +7,7 @@
 
 import { create } from 'zustand';
 import type { IconName } from '../utils/ui/iconMap';
+import { overlayHoldMs } from '../combat/feedback/combatFeedback';
 
 export type AnimationType = 
   | 'attack'
@@ -322,7 +323,9 @@ export const useUnifiedUIStore = create<UnifiedUIStore>((set, get) => ({
     const newAnnouncement: ActionAnnouncement = {
       ...announcement,
       id,
-      duration: announcement.duration || 1800
+      duration: announcement.duration ?? overlayHoldMs(
+        [announcement.title, announcement.subtitle].filter(Boolean).join(' '),
+      ),
     };
     
     set(state => ({

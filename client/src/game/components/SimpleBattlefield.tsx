@@ -34,6 +34,7 @@ interface SimpleBattlefieldProps {
   renderMode?: 'both' | 'player' | 'opponent';
   shakingTargets?: Set<string>;
   isInteractionDisabled?: boolean;
+  allowDisabledCardClick?: boolean;
   showPositionPicker?: boolean;
   onPositionSelect?: (insertionIndex: number) => void;
   targetingMode?: 'friendly' | 'enemy' | 'any' | null;
@@ -89,6 +90,7 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
   renderMode = 'both',
   shakingTargets = EMPTY_SET,
   isInteractionDisabled = false,
+  allowDisabledCardClick = false,
   showPositionPicker = false,
   onPositionSelect,
   targetingMode = null,
@@ -216,7 +218,7 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
                     isInteractionDisabled,
                     attackingCard: !!attackingCard
                   });
-                  !isInteractionDisabled && onClick?.(card);
+                  if (!isInteractionDisabled || allowDisabledCardClick) onClick?.(card);
                 }}
               >
                 {(() => {
@@ -298,12 +300,12 @@ export const SimpleBattlefield: React.FC<SimpleBattlefieldProps> = React.memo(({
 
   const playerSlots = useMemo(
     () => renderSlots(playerCards, 'player', onCardClick),
-    [playerCards, onCardClick, shakingTargets, attackingCard, isPlayerTurn, isInteractionDisabled, opponentHasTaunt]
+    [playerCards, onCardClick, shakingTargets, attackingCard, isPlayerTurn, isInteractionDisabled, allowDisabledCardClick, opponentHasTaunt]
   );
 
   const opponentSlots = useMemo(
     () => renderSlots(opponentCards, 'opponent', onOpponentCardClick),
-    [opponentCards, onOpponentCardClick, shakingTargets, attackingCard, isPlayerTurn, isInteractionDisabled, opponentHasTaunt]
+    [opponentCards, onOpponentCardClick, shakingTargets, attackingCard, isPlayerTurn, isInteractionDisabled, allowDisabledCardClick, opponentHasTaunt]
   );
 
   const playerRowRef = useRef<HTMLDivElement>(null);

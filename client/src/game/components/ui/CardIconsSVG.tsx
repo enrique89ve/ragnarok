@@ -209,21 +209,24 @@ export const IconFrenzy: React.FC<IconProps> = (p) => (
 
 export const IconCorrupt: React.FC<IconProps> = (p) => (
 	<svg {...svgBase} {...p}>
-		<path d="M12 3c-3 3-5 5-5 9s5 9 5 9 5-5 5-9-2-6-5-9z" fill="currentColor" opacity={0.2} strokeWidth={1.5} />
+		<path d="M12 3c-3 3-5 5-5 9s5 9 5 9 5-5 5-9-2-6-5-9z" fill="currentColor" opacity={0.38} strokeWidth={1.8} />
 		<path d="M12 8v4M12 16v.01" strokeWidth={2.5} />
 	</svg>
 );
 
 export const IconDormant: React.FC<IconProps> = (p) => (
 	<svg {...svgBase} {...p}>
-		<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" fill="currentColor" opacity={0.2} strokeWidth={1.5} />
+		<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" fill="currentColor" opacity={0.7} strokeWidth={1.8} />
+		<path d="M7.3 16.8c1.2 1.1 2.8 1.8 4.7 1.8" stroke="currentColor" strokeWidth={1.5} opacity={0.9} />
+		<path d="M16.8 5.6l.4 1.1 1.1.4-1.1.4-.4 1.1-.4-1.1-1.1-.4 1.1-.4z" fill="currentColor" stroke="none" />
 	</svg>
 );
 
 export const IconImmune: React.FC<IconProps> = (p) => (
 	<svg {...svgBase} {...p}>
-		<path d="M12 3l8 4v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V7l8-4z" fill="currentColor" opacity={0.25} strokeWidth={1.5} />
-		<circle cx="12" cy="12" r="3" fill="currentColor" opacity={0.4} />
+		<path d="M12 3l8 4v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V7l8-4z" fill="currentColor" opacity={0.38} strokeWidth={1.8} />
+		<circle cx="12" cy="12" r="3.5" fill="currentColor" opacity={0.74} />
+		<path d="M9.5 12h5M12 9.5v5" stroke="currentColor" strokeWidth={1.6} />
 	</svg>
 );
 
@@ -277,7 +280,7 @@ export const IconProphecy: React.FC<IconProps> = (p) => (
 
 export const IconSecret: React.FC<IconProps> = (p) => (
 	<svg {...svgBase} {...p}>
-		<circle cx="12" cy="12" r="9" strokeWidth={1.5} fill="currentColor" opacity={0.15} />
+		<circle cx="12" cy="12" r="9" strokeWidth={1.8} fill="currentColor" opacity={0.34} />
 		<path d="M12 8a3 3 0 013 3c0 1.5-1.5 2-1.5 3.5M12 17v.01" strokeWidth={2.5} />
 	</svg>
 );
@@ -318,16 +321,17 @@ export const IconOutcast: React.FC<IconProps> = (p) => (
 
 export const IconQuest: React.FC<IconProps> = (p) => (
 	<svg {...svgBase} {...p}>
-		<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" fill="currentColor" opacity={0.2} strokeWidth={1.5} />
-		<line x1="4" y1="22" x2="4" y2="3" strokeWidth={2} />
+		<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" fill="currentColor" opacity={0.4} strokeWidth={1.8} />
+		<line x1="4" y1="22" x2="4" y2="3" strokeWidth={2.4} />
 	</svg>
 );
 
 export const IconSidequest: React.FC<IconProps> = (p) => (
 	<svg {...svgBase} {...p}>
-		<path d="M5 4h14l-1 16H6L5 4z" fill="currentColor" opacity={0.15} strokeWidth={1.5} />
+		<path d="M5 4h14l-1 16H6L5 4z" fill="currentColor" opacity={0.36} strokeWidth={1.8} />
 		<line x1="9" y1="4" x2="9" y2="1" strokeWidth={1.5} />
 		<line x1="15" y1="4" x2="15" y2="1" strokeWidth={1.5} />
+		<path d="M8 9h8M8 13h5" strokeWidth={1.5} opacity={0.9} />
 	</svg>
 );
 
@@ -373,16 +377,17 @@ export const IconCleave: React.FC<IconProps> = (p) => (
 
 export const IconAura: React.FC<IconProps> = (p) => (
 	<svg {...svgBase} {...p}>
-		<circle cx="12" cy="12" r="3" fill="currentColor" opacity={0.4} strokeWidth={1.5} />
-		<circle cx="12" cy="12" r="6" strokeWidth={1.5} opacity={0.6} strokeDasharray="3 2" />
-		<circle cx="12" cy="12" r="9" strokeWidth={1} opacity={0.3} strokeDasharray="2 3" />
+		<circle cx="12" cy="12" r="3" fill="currentColor" opacity={0.72} strokeWidth={1.5} />
+		<circle cx="12" cy="12" r="6.5" strokeWidth={1.8} opacity={0.86} strokeDasharray="3 2" />
+		<circle cx="12" cy="12" r="9.5" strokeWidth={1.3} opacity={0.58} strokeDasharray="2 3" />
 	</svg>
 );
 
 export const IconFlying: React.FC<IconProps> = (p) => (
 	<svg {...svgBase} {...p}>
-		<path d="M2 12c3-1 6-4 10-4s5 1 10 4c-5 1-6 4-10 4s-7-3-10-4z" fill="currentColor" opacity={0.2} strokeWidth={1.5} />
-		<line x1="12" y1="8" x2="12" y2="16" strokeWidth={1.5} />
+		<path d="M2 12c3-1 6-4 10-4s5 1 10 4c-5 1-6 4-10 4s-7-3-10-4z" fill="currentColor" opacity={0.42} strokeWidth={1.8} />
+		<path d="M4 12c3-.4 5.4-2.3 8-2.3s5 1.9 8 2.3c-3 .4-5 2.3-8 2.3S7 12.4 4 12z" fill="currentColor" opacity={0.78} stroke="none" />
+		<line x1="12" y1="8" x2="12" y2="16" strokeWidth={1.8} />
 	</svg>
 );
 
@@ -491,6 +496,97 @@ export const IconSpellTrigger: React.FC<IconProps> = (p) => (
 		<path d="M4 20l7-7M9 15l2 2" strokeWidth={2.3} />
 		<path d="M13 3l1.4 4.2L19 8.5l-3.6 2.7.3 4.6L12 13.2l-3.7 2.6.3-4.6L5 8.5l4.6-1.3z" fill="currentColor" opacity={0.3} strokeWidth={1.4} />
 		<circle cx="14" cy="9" r="6.5" strokeWidth={1.1} opacity={0.38} />
+	</svg>
+);
+
+/* ─── COMBAT STATE ICONS ─────────────────────────────────── */
+
+/** Raised blade and target — the unit is ready to attack. */
+export const IconReadyState: React.FC<IconProps> = (p) => (
+	<svg {...svgBase} {...p}>
+		<circle cx="16.5" cy="16.5" r="4.5" strokeWidth={1.4} opacity={0.55} />
+		<circle cx="16.5" cy="16.5" r="1.3" fill="currentColor" stroke="none" />
+		<path d="M4 20L14.5 9.5M11.5 6.5l6 6M13 4l2.5 2.5-3 3L10 7z" strokeWidth={2} />
+	</svg>
+);
+
+/** Controlled flame — the unit is taking burn damage. */
+export const IconBurningState: React.FC<IconProps> = (p) => (
+	<svg {...svgBase} {...p}>
+		<path d="M12 3c1.8 3.3 5.5 5 5.5 9.5A5.5 5.5 0 116.5 12c0-2.5 1.5-4.4 3.2-6.2.1 2 1 3.1 2.3 4.2.5-2.4-.3-4.5 0-7z" fill="currentColor" opacity={0.22} strokeWidth={1.5} />
+		<path d="M12 13c1.4 1.2 2.3 2.3 2.3 3.7a2.3 2.3 0 11-4.6 0c0-1.1.8-2.3 2.3-3.7z" fill="currentColor" opacity={0.82} stroke="none" />
+	</svg>
+);
+
+/** Venom drop — damage over time is active. */
+export const IconPoisonedState: React.FC<IconProps> = (p) => (
+	<svg {...svgBase} {...p}>
+		<path d="M12 3c-2.7 3.8-5 6.7-5 10a5 5 0 0010 0c0-3.3-2.3-6.2-5-10z" fill="currentColor" opacity={0.24} strokeWidth={1.5} />
+		<circle cx="10" cy="13" r="1.1" fill="currentColor" stroke="none" />
+		<circle cx="14" cy="16" r="1.1" fill="currentColor" stroke="none" />
+		<path d="M8 21h8" strokeWidth={1.8} opacity={0.72} />
+	</svg>
+);
+
+/** Split blood drop — the unit is bleeding. */
+export const IconBleedingState: React.FC<IconProps> = (p) => (
+	<svg {...svgBase} {...p}>
+		<path d="M12 3c-2.7 3.8-5 6.7-5 10a5 5 0 0010 0c0-3.3-2.3-6.2-5-10z" fill="currentColor" opacity={0.24} strokeWidth={1.5} />
+		<path d="M9 17l6-8" strokeWidth={2.2} />
+		<circle cx="8" cy="20" r="1.2" fill="currentColor" stroke="none" />
+	</svg>
+);
+
+/** Interrupted lightning — actions can fail. */
+export const IconParalyzedState: React.FC<IconProps> = (p) => (
+	<svg {...svgBase} {...p}>
+		<path d="M13.5 2L5 13h5l-1.5 9L17 11h-5z" fill="currentColor" opacity={0.2} strokeWidth={1.5} />
+		<path d="M4 5l3 3M20 5l-3 3M4 19l3-3M20 19l-3-3" strokeWidth={1.8} opacity={0.78} />
+		<path d="M11 13h2" strokeWidth={2} />
+	</svg>
+);
+
+/** Dented blade — current attack is reduced. */
+export const IconWeakenedState: React.FC<IconProps> = (p) => (
+	<svg {...svgBase} {...p}>
+		<path d="M5 5l5 5M14 14l5 5M8 3l13 13-3 3L5 6z" fill="currentColor" opacity={0.2} strokeWidth={1.5} />
+		<path d="M8 17l-4 4M16 12l4-4" strokeWidth={1.8} opacity={0.72} />
+		<path d="M12 4v7M9 8l3 3 3-3" strokeWidth={1.7} />
+	</svg>
+);
+
+/** Cracked shield — damage taken from all sources is increased. */
+export const IconVulnerableState: React.FC<IconProps> = (p) => (
+	<svg {...svgBase} {...p}>
+		<path d="M12 3l8 4v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V7z" fill="currentColor" opacity={0.18} strokeWidth={1.5} />
+		<path d="M13 5l-2 6 3 1-3 7M4 8l4 2M20 8l-4 2" strokeWidth={1.8} />
+	</svg>
+);
+
+/** Rune crosshair — the unit is exposed to targeting. */
+export const IconMarkedState: React.FC<IconProps> = (p) => (
+	<svg {...svgBase} {...p}>
+		<circle cx="12" cy="12" r="5.5" strokeWidth={1.5} opacity={0.82} />
+		<circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
+		<path d="M12 2v4M12 18v4M2 12h4M18 12h4" strokeWidth={2} />
+	</svg>
+);
+
+/** Ascending rune — the evolution condition is complete. */
+export const IconEvolutionReadyState: React.FC<IconProps> = (p) => (
+	<svg {...svgBase} {...p}>
+		<path d="M6 17a7 7 0 0111.5-5.4M18 7v5h-5" strokeWidth={1.8} />
+		<path d="M18 7a7 7 0 01-11.5 5.4M6 17v-5h5" strokeWidth={1.8} opacity={0.62} />
+		<path d="M12 4l1.2 2.6L16 8l-2.8 1.4L12 12l-1.2-2.6L8 8l2.8-1.4z" fill="currentColor" stroke="none" />
+	</svg>
+);
+
+/** Linked runes — a partner chain is active. */
+export const IconRagnarokChainState: React.FC<IconProps> = (p) => (
+	<svg {...svgBase} {...p}>
+		<rect x="3" y="7" width="10" height="6" rx="3" transform="rotate(-28 8 10)" strokeWidth={1.8} />
+		<rect x="11" y="11" width="10" height="6" rx="3" transform="rotate(-28 16 14)" strokeWidth={1.8} />
+		<path d="M9 13l6-2" strokeWidth={1.8} />
 	</svg>
 );
 
@@ -607,4 +703,25 @@ export const KEYWORD_ICON_MAP: Record<string, React.FC<IconProps>> = {
 	poker_spell: IconPokerSpell,
 	spell_trigger: IconSpellTrigger,
 	spellDamage: IconSpellDamage,
+};
+
+/** Runtime combat states use their own semantic map so they do not pollute keyword chrome. */
+export const COMBAT_STATE_ICON_MAP: Record<string, React.FC<IconProps>> = {
+	ready: IconReadyState,
+	divine_shield: IconDivineShield,
+	stealth: IconStealth,
+	taunt: IconTaunt,
+	frozen: IconFrozenState,
+	burning: IconBurningState,
+	poisoned: IconPoisonedState,
+	bleeding: IconBleedingState,
+	paralyzed: IconParalyzedState,
+	weakened: IconWeakenedState,
+	vulnerable: IconVulnerableState,
+	marked: IconMarkedState,
+	dormant: IconDormant,
+	submerged: IconSubmerge,
+	coiled: IconCoil,
+	evolution_ready: IconEvolutionReadyState,
+	ragnarok_chain: IconRagnarokChainState,
 };

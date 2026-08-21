@@ -111,8 +111,8 @@ describe('card presentation contract', () => {
 			.map((keyword) => getCardKeywordAccent(keyword, 'combat', 'decisive'));
 		expect(new Set(accents).size).toBeGreaterThanOrEqual(5);
 		expect(CARD_KEYWORD_ACCENT_BACKGROUND).toBe('#030810');
-		expect(getCardKeywordAccent('future_keyword', 'filter', 'metadata')).toBe('#94a3b8');
-		expect(getCardKeywordAccent('taunt', 'combat', 'decisive')).not.toBe('#94a3b8');
+		expect(getCardKeywordAccent('future_keyword', 'filter', 'metadata')).toBe('#d7e0ed');
+		expect(getCardKeywordAccent('taunt', 'combat', 'decisive')).not.toBe('#d7e0ed');
 
 		const relativeLuminance = (hex: string): number => {
 			const channels = [1, 3, 5].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16) / 255);

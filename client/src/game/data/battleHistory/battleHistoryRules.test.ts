@@ -54,7 +54,7 @@ describe('normalizeBattleMode', () => {
 	it('defaults missing or unknown modes to pve', () => {
 		expect(normalizeBattleMode(undefined)).toBe('pve');
 		expect(normalizeBattleMode('pvp')).toBe('pvp');
-		expect(normalizeBattleMode('practice')).toBe('practice');
+		expect(normalizeBattleMode('single')).toBe('single');
 		expect(normalizeBattleMode('campaign')).toBe('campaign');
 		expect(normalizeBattleMode('unknown' as never)).toBe('pve');
 	});

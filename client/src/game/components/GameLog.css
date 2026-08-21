@@ -45,6 +45,12 @@
   pointer-events: auto;
 }
 
+/* The card inspector owns the interaction surface while it is open. */
+.ragnarok-combat-arena:has(.card-inspector-overlay) .game-log-container {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .game-log-container.is-open {
   bottom: var(--battle-log-anchor-bottom);
   height: min(

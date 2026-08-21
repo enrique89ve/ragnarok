@@ -4,9 +4,8 @@ import type { CardRenderImportance } from './cardPresentationContract';
  * Visual accents for keyword chips.
  *
  * The card surface is intentionally very dark, so these accents stay in a
- * bright range and are used for borders, icon marks, and subtle text mixing.
- * Gameplay meaning still comes from `data-tone`; this palette only improves
- * recognition and variety.
+ * bright range for surfaces that need a per-keyword accent. Card chrome uses
+ * `data-tone` for the visible role color so visual meaning stays consistent.
  */
 
 export const CARD_KEYWORD_ACCENT_COLORS: Readonly<Record<string, string>> = {
@@ -28,18 +27,18 @@ export const CARD_KEYWORD_ACCENT_COLORS: Readonly<Record<string, string>> = {
 	deathrattle: '#f43f5e',
 	discover: '#60a5fa',
 	divine_shield: '#fde68a',
-	dormant: '#818cf8',
-	dual_class: '#cbd5e1',
-	echo: '#22d3ee',
+	dormant: '#b9a6ff',
+	dual_class: '#d7e0ed',
+	echo: '#76e6f4',
 	einherjar: '#34d399',
 	elusive: '#67e8f9',
 	enrage: '#fb923c',
 	fateweave: '#e879f9',
 	flying: '#93c5fd',
-	freeze: '#7dd3fc',
+	freeze: '#8fe4ff',
 	freeze_on_damage: '#22d3ee',
 	frenzy: '#facc15',
-	frozen: '#38bdf8',
+	frozen: '#8fe4ff',
 	immune: '#d8b4fe',
 	inspire: '#f9a8d4',
 	lifesteal: '#fda4af',
@@ -55,14 +54,14 @@ export const CARD_KEYWORD_ACCENT_COLORS: Readonly<Record<string, string>> = {
 	reborn: '#86efac',
 	recruit: '#4ade80',
 	rush: '#38bdf8',
-	secret: '#a5b4fc',
+	secret: '#ffd166',
 	sidequest: '#fcd34d',
-	silence: '#94a3b8',
+	silence: '#d7e0ed',
 	spell_damage: '#fb923c',
 	spellburst: '#f0abfc',
 	spell_trigger: '#e879f9',
 	spellDamage: '#fb923c',
-	stealth: '#94a3b8',
+	stealth: '#d7e0ed',
 	pet_evolution: '#a3e635',
 	master_evolution: '#bef264',
 	submerge: '#67e8f9',
@@ -74,19 +73,19 @@ export const CARD_KEYWORD_ACCENT_COLORS: Readonly<Record<string, string>> = {
 };
 
 const FALLBACK_ACCENT_BY_TONE: Readonly<Record<string, string>> = {
-	combat: '#fb7185',
-	choice: '#60a5fa',
-	filter: '#cbd5e1',
-	poker: '#f9a8d4',
-	progression: '#a3e635',
-	resource: '#5eead4',
-	state: '#a78bfa',
-	summon: '#c084fc',
-	theme: '#f472b6',
-	trigger: '#e879f9',
+	combat: '#ff7b84',
+	choice: '#79cfff',
+	filter: '#d7e0ed',
+	poker: '#ff8bd4',
+	progression: '#b9f36f',
+	resource: '#65e1d2',
+	state: '#b9a6ff',
+	summon: '#d8b4ff',
+	theme: '#f5acd8',
+	trigger: '#ffd166',
 };
 
-const MUTED_KEYWORD_ACCENT = '#94a3b8';
+const MUTED_KEYWORD_ACCENT = '#d7e0ed';
 
 export const getCardKeywordAccent = (
 	keyword: string,

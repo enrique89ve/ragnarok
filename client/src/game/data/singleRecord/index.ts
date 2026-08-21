@@ -1,23 +1,23 @@
 export {
-	appendPracticeRecord,
-	derivePracticeStreak,
+	appendSingleRecord,
+	deriveSingleStreak,
 	filterBattleRecords,
 	formatBattleMode,
-	formatPracticeStreak,
-	PRACTICE_RECORD_MAX,
+	formatSingleStreak,
+	SINGLE_RECORD_MAX,
 	resultFromMatchEnd,
-} from './practiceRecordRules';
+} from './singleRecordRules';
 export type {
 	BattleLedgerFilter,
 	LocalBattleMode,
-	PracticeMatchRecord,
-	PracticeMatchResult,
-	PracticeStreak,
-} from './practiceRecordRules';
+	SingleMatchRecord,
+	SingleMatchResult,
+	SingleStreak,
+} from './singleRecordRules';
 export {
-	selectPracticeStreakLabel,
-	usePracticeRecordStore,
-} from './practiceRecordStore';
+	selectSingleStreakLabel,
+	useSingleRecordStore,
+} from './singleRecordStore';
 export {
 	presentLocalBattleLedger,
 	readLocalBattleAccount,

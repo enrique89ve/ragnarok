@@ -1,5 +1,5 @@
 /**
- * Single mode — AI opponent, practice rewards (no XP/runas, no ranking).
+ * Single mode — AI opponent, no Match XP / RUNE / ranking.
  *
  * Public surface:
  *   - resolver:   resolveSingle(args)

@@ -1,12 +1,12 @@
 import { CombatAction } from '../../types/PokerCombatTypes';
+import { getPokerActionDefinition } from './pokerActionCatalog';
 
 export type PokerActionActor = 'player' | 'opponent';
-export type PokerActionPopupAction = 'brace' | 'attack' | 'counter_attack' | 'engage' | 'defend';
 export type PokerActionPopupTarget = 'player' | 'opponent' | 'both';
 
 export interface PokerActionPresentation {
 	readonly showPopup: boolean;
-	readonly popupAction: PokerActionPopupAction;
+	readonly action: CombatAction;
 	readonly target: PokerActionPopupTarget;
 	readonly text: string;
 	readonly subtitle: string;
@@ -50,7 +50,7 @@ interface PokerActionPresentationContext {
 function getAttackPresentation(context: PokerActionPresentationContext): PokerActionPresentation {
 	return {
 		showPopup: context.showPopup,
-		popupAction: 'attack',
+		action: CombatAction.ATTACK,
 		target: context.target,
 		text: context.actor === 'player'
 			? formatAmount('You commit', context.amount)
@@ -62,7 +62,7 @@ function getAttackPresentation(context: PokerActionPresentationContext): PokerAc
 function getCounterAttackPresentation(context: PokerActionPresentationContext): PokerActionPresentation {
 	return {
 		showPopup: context.showPopup,
-		popupAction: 'counter_attack',
+		action: CombatAction.COUNTER_ATTACK,
 		target: context.target,
 		text: context.actor === 'player'
 			? formatAmount('You raise', context.amount)
@@ -74,7 +74,7 @@ function getCounterAttackPresentation(context: PokerActionPresentationContext): 
 function getEngagePresentation(context: PokerActionPresentationContext): PokerActionPresentation {
 	return {
 		showPopup: context.showPopup,
-		popupAction: 'engage',
+		action: CombatAction.ENGAGE,
 		target: context.target,
 		text: context.actor === 'player' ? 'You match the stake' : `${context.actorName} matches the stake`,
 		subtitle: 'Round can close',
@@ -84,7 +84,7 @@ function getEngagePresentation(context: PokerActionPresentationContext): PokerAc
 function getDefendPresentation(context: PokerActionPresentationContext): PokerActionPresentation {
 	return {
 		showPopup: context.showPopup,
-		popupAction: 'defend',
+		action: CombatAction.DEFEND,
 		target: context.target,
 		text: context.actor === 'player' ? 'You check' : `${context.actorName} checks`,
 		subtitle: context.actor === 'player' ? '+1 STA' : 'Round can close',
@@ -94,7 +94,7 @@ function getDefendPresentation(context: PokerActionPresentationContext): PokerAc
 function getBracePresentation(context: PokerActionPresentationContext): PokerActionPresentation {
 	return {
 		showPopup: context.showPopup,
-		popupAction: 'brace',
+		action: CombatAction.BRACE,
 		target: context.target,
 		text: context.actor === 'player' ? 'You brace' : `${context.actorName} braces`,
 		subtitle: context.actor === 'player' ? 'You yield this hand' : 'Enemy yields this hand',
@@ -102,9 +102,7 @@ function getBracePresentation(context: PokerActionPresentationContext): PokerAct
 }
 
 function isMajorPlayerAction(action: CombatAction): boolean {
-	return action === CombatAction.ATTACK
-		|| action === CombatAction.COUNTER_ATTACK
-		|| action === CombatAction.BRACE;
+	return getPokerActionDefinition(action).showForPlayer;
 }
 
 function formatAmount(prefix: string, amount: number | undefined): string {

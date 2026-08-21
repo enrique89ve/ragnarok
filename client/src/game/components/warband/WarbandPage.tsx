@@ -74,7 +74,7 @@ const WarbandPage: React.FC = () => {
 				aria-pressed={intent === 'single'}
 				onClick={() => switchIntent('single')}
 			>
-				Practice
+				Single
 			</button>
 			<button
 				type="button"

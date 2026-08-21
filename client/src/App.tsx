@@ -29,7 +29,7 @@ import { EitrMigrationBanner } from "./game/components/migrations/EitrMigrationB
 import { ALL_CHAPTERS, getMission } from "./game/campaign/campaignLookup";
 import type { Difficulty } from "./game/campaign/campaignTypes";
 import { useCampaignStore } from "./game/campaign/campaignStore";
-import { selectPracticeStreakLabel, usePracticeRecordStore } from "./game/data/practiceRecord";
+import { selectSingleStreakLabel, useSingleRecordStore } from "./game/data/singleRecord";
 import { useStarterStore } from "./game/stores/starterStore";
 import type { AiStyle } from "./game/match/types";
 import { useNFTUsername } from './game/nft/hooks';
@@ -467,7 +467,7 @@ const ACCENT: Record<AccentKey, { text: string; strip: string; border: string; a
 const PLAY_MODE_CARDS: ReadonlyArray<ModeCard> = [
 	{
 		title: 'Single',
-		kicker: 'Practice',
+		kicker: 'Local AI',
 		description: 'Muster a warband, test decks, and learn the combat loop without ranked pressure.',
 		to: getWarbandEntryRoute('single'),
 		icon: Play,
@@ -609,7 +609,7 @@ function HiveLoginDialog({ onClose }: { onClose: () => void }) {
 function HomePage() {
 	const completedMissions = useCampaignStore(s => s.completedMissions);
 	const currentMissionId = useCampaignStore(s => s.currentMission);
-	const practiceStreak = usePracticeRecordStore(selectPracticeStreakLabel);
+	const singleStreak = useSingleRecordStore(selectSingleStreakLabel);
 	const hiveUsername = useStoredHiveUsername();
 	const isHiveMode = useIsHiveMode();
 	const sharedNetwork = isSharedNetworkEnvironment();
@@ -919,7 +919,7 @@ function HomePage() {
 						{/* Stats panel */}
 						<aside className="n-home-hero-briefing p-4 sm:p-5 flex flex-col justify-center gap-1">
 							<StatRow label="Saga" value={`${completedMissionCount} / ${totalMissionCount}`} highlight />
-							<StatRow label="Single" value={practiceStreak} />
+							<StatRow label="Single" value={singleStreak} />
 							<StatRow label="Active" value={activeFocusTitle} />
 							<StatRow label="Chapter" value={activeFocusChapter} />
 							<StatRow

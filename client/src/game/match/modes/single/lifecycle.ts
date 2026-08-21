@@ -1,7 +1,7 @@
 /**
- * Single (practice) match lifecycle handlers.
+ * Single match lifecycle handlers.
  *
- * Practice pays no RUNE or ranking. The local battle ledger is written
+ * Single pays no RUNE or ranking. The local battle ledger is written
  * by the coordinator through `recordLocalBattleEnd`, not here.
  */
 

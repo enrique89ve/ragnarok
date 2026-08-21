@@ -6,11 +6,11 @@ import { getWarbandEntryRoute } from '../../../lib/warbandRoutes';
 import {
 	formatBattleMode,
 	presentLocalBattleLedger,
-	usePracticeRecordStore,
+	useSingleRecordStore,
 	type BattleLedgerFilter,
 	type LocalBattleMode,
-	type PracticeMatchRecord,
-} from '../../data/practiceRecord';
+	type SingleMatchRecord,
+} from '../../data/singleRecord';
 import { routes } from '../../../lib/routes';
 import { useNFTUsername } from '../../nft/hooks';
 import { useReplayStore, type MatchRecord } from '../../stores/replayStore';
@@ -42,13 +42,13 @@ const LEDGER_FILTERS: ReadonlyArray<{
 	readonly label: string;
 }> = [
 	{ id: 'all', label: 'All' },
-	{ id: 'practice', label: 'Single' },
+	{ id: 'single', label: 'Single' },
 	{ id: 'campaign', label: 'Campaign' },
 	{ id: 'p2p', label: 'PvP' },
 ];
 
 function countByMode(
-	records: ReadonlyArray<PracticeMatchRecord>,
+	records: ReadonlyArray<SingleMatchRecord>,
 	mode: LocalBattleMode,
 ): number {
 	return records.filter((record) => record.mode === mode).length;
@@ -61,7 +61,7 @@ function LedgerFilterBar({
 }: {
 	readonly filter: BattleLedgerFilter;
 	readonly onChange: (next: BattleLedgerFilter) => void;
-	readonly records: ReadonlyArray<PracticeMatchRecord>;
+	readonly records: ReadonlyArray<SingleMatchRecord>;
 }) {
 	return (
 		<div
@@ -150,7 +150,7 @@ function BattleStreakPanel({
 	);
 }
 
-function resultCopy(result: PracticeMatchRecord['result']): {
+function resultCopy(result: SingleMatchRecord['result']): {
 	readonly label: string;
 	readonly railClass: string;
 	readonly textClass: string;
@@ -164,7 +164,7 @@ function resultCopy(result: PracticeMatchRecord['result']): {
 	return { label: 'Defeat', railClass: 'bg-blood-500', textClass: 'text-ember-300' };
 }
 
-function BattleResultRow({ record }: { readonly record: PracticeMatchRecord }) {
+function BattleResultRow({ record }: { readonly record: SingleMatchRecord }) {
 	const copy = resultCopy(record.result);
 	return (
 		<article className={LEDGER_SHELL}>
@@ -266,14 +266,14 @@ export default function MatchHistoryPage() {
 	const loadReplay = useReplayStore((s) => s.loadReplay);
 	const closeReplay = useReplayStore((s) => s.closeReplay);
 	const clearHistory = useReplayStore((s) => s.clearHistory);
-	const practiceRecords = usePracticeRecordStore((s) => s.records);
+	const singleRecords = useSingleRecordStore((s) => s.records);
 	const username = useNFTUsername();
 	const [confirmClear, setConfirmClear] = useState(false);
 	const [ledgerFilter, setLedgerFilter] = useState<BattleLedgerFilter>('all');
 
 	const ledger = presentLocalBattleLedger({
 		account: username,
-		records: practiceRecords,
+		records: singleRecords,
 		filter: ledgerFilter,
 	});
 	const historySecondary = !ledger.signedIn
@@ -352,7 +352,7 @@ export default function MatchHistoryPage() {
 						<LedgerFilterBar
 							filter={ledgerFilter}
 							onChange={setLedgerFilter}
-							records={practiceRecords}
+							records={singleRecords}
 						/>
 					</div>
 					{ledger.rows.length === 0 ? (

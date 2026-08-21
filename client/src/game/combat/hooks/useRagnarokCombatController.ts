@@ -916,7 +916,7 @@ export function useRagnarokCombatController(
     });
     if (feedback.showPopup) {
       addHeroBattlePopup({
-        action: feedback.popupAction,
+        action: feedback.action,
         target: feedback.target,
         text: feedback.text,
         subtitle: feedback.subtitle,

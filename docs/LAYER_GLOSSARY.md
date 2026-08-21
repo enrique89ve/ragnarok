@@ -102,7 +102,7 @@ undefined` and gated every effect with ad-hoc guards (`p2pInitApplied`,
 sees a complete context at first render.
 
 **Real example.** `client/src/game/match/modes/p2p/MatchSetupP2P.tsx`.
-Practice and campaign analogs are `MatchSetupSingle` and `MatchSetupCampaign`. Public callers import all three from `client/src/game/match`.
+Single and campaign analogs are `MatchSetupSingle` and `MatchSetupCampaign`. Public callers import all three from `client/src/game/match`.
 
 ---
 

@@ -59,9 +59,9 @@ export function usePokerAI(options: UsePokerAIOptions): void {
 
   /*
     Poker AI config comes from MatchContext, not campaignStore.
-    Single/practice has no mission profile and no rewards — SmartAI default.
+    Single has no mission profile and no rewards — SmartAI default.
     Campaign uses the mission's authored aiProfile + difficulty captured at
-    match setup, so a leftover currentMission cannot leak into Quick Match.
+    match setup, so a leftover currentMission cannot leak into Single.
   */
   const activeMatch = useMatchStore(s => s.activeMatch);
   const aiConfig = derivePokerAiConfigFromMatch(activeMatch);
@@ -81,7 +81,7 @@ export function usePokerAI(options: UsePokerAIOptions): void {
     });
     if (feedback.showPopup) {
       addHeroBattlePopup?.({
-        action: feedback.popupAction,
+        action: feedback.action,
         target: feedback.target,
         text: feedback.text,
         subtitle: feedback.subtitle,

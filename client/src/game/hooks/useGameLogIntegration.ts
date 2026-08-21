@@ -3,9 +3,18 @@ import { useGameStore } from '../stores/gameStore';
 import { useGameLogStore, type GameLogEntry } from '../stores/gameLogStore';
 import { useMatchStore } from '../match/store';
 import { usePeerStore, type P2PConnectionState } from '../stores/peerStore';
-import { useUnifiedCombatStore, type CombatLogEntry } from '../stores/unifiedCombatStore';
+import { useUnifiedCombatStore } from '../stores/unifiedCombatStore';
 import { usePokerCombatAdapter } from './usePokerCombatAdapter';
 import { CombatPhase } from '../types/PokerCombatTypes';
+import { recordCombatFeedback } from '../combat/feedback/combatFeedbackStore';
+import {
+	logsFromPokerResourceDiff,
+	manaLogEntry,
+	mapCombatLogToGameLog,
+	overlayLaneForCombatLog,
+	shouldForwardCombatLog,
+	type PokerResourceSnapshot,
+} from '../combat/feedback/combatFeedback';
 
 const POKER_PHASE_LABELS: Partial<Record<CombatPhase, string>> = {
 	[CombatPhase.PRE_FLOP]: 'First Blood',
@@ -19,11 +28,6 @@ function formatPokerPhase(phase: CombatPhase | string | undefined): string {
 	if (!phase) return 'Poker';
 	if (phase in POKER_PHASE_LABELS) return POKER_PHASE_LABELS[phase as CombatPhase] ?? String(phase);
 	return String(phase).replace(/_/g, ' ');
-}
-
-function isPokerCombatLogEntry(entry: CombatLogEntry): boolean {
-	if (entry.type === 'poker') return true;
-	return entry.type === 'phase' && /poker/i.test(entry.message);
 }
 
 function getP2PStatusMessage(state: P2PConnectionState): string {
@@ -47,10 +51,18 @@ interface LoggedPlayerState {
 	readonly battlefield?: readonly LoggedBattlefieldCard[];
 	readonly heroHealth?: number;
 	readonly health?: number;
+	readonly currentMana?: number;
+	readonly mana?: {
+		readonly current?: number;
+	};
 }
 
 function getHeroHealth(player: LoggedPlayerState): number {
 	return player.heroHealth ?? player.health ?? 100;
+}
+
+function getMana(player: LoggedPlayerState): number {
+	return player.mana?.current ?? player.currentMana ?? 0;
 }
 
 function logTurnShift(input: {
@@ -135,6 +147,126 @@ function logHeroHealthChanges(input: {
 	}
 }
 
+function logManaChanges(input: {
+	readonly turn: number;
+	readonly playerMana: number;
+	readonly opponentMana: number;
+	readonly previousPlayerMana: number;
+	readonly previousOpponentMana: number;
+	readonly addEntry: AddGameLogEntry;
+}): void {
+	if (input.previousPlayerMana > 0) {
+		const entry = manaLogEntry('player', input.playerMana - input.previousPlayerMana, input.turn);
+		if (entry) input.addEntry(entry);
+	}
+	if (input.previousOpponentMana > 0) {
+		const entry = manaLogEntry('opponent', input.opponentMana - input.previousOpponentMana, input.turn);
+		if (entry) input.addEntry(entry);
+	}
+}
+
+function syncCardLayerLogs(input: {
+	readonly turn: number;
+	readonly currentTurn: string | undefined;
+	readonly player: LoggedPlayerState;
+	readonly opponent: LoggedPlayerState;
+	readonly pokerIsActive: boolean;
+	readonly previous: {
+		turn: number;
+		playerHand: number;
+		opponentHand: number;
+		playerBf: number;
+		opponentBf: number;
+		playerHealth: number;
+		opponentHealth: number;
+		playerMana: number;
+		opponentMana: number;
+	};
+	readonly addEntry: AddGameLogEntry;
+}): {
+	readonly playerHand: number;
+	readonly opponentHand: number;
+	readonly playerBf: number;
+	readonly opponentBf: number;
+	readonly playerHealth: number;
+	readonly opponentHealth: number;
+	readonly playerMana: number;
+	readonly opponentMana: number;
+} {
+	const playerHand = input.player.hand?.length || 0;
+	const opponentHand = input.opponent.hand?.length || 0;
+	const playerBf = input.player.battlefield?.length || 0;
+	const opponentBf = input.opponent.battlefield?.length || 0;
+	const playerHealth = getHeroHealth(input.player);
+	const opponentHealth = getHeroHealth(input.opponent);
+	const playerMana = getMana(input.player);
+	const opponentMana = getMana(input.opponent);
+	logTurnShift({
+		turn: input.turn,
+		previousTurn: input.previous.turn,
+		currentTurn: input.currentTurn,
+		addEntry: input.addEntry,
+	});
+	logDraws({
+		turn: input.turn,
+		playerHand,
+		opponentHand,
+		previousPlayerHand: input.previous.playerHand,
+		previousOpponentHand: input.previous.opponentHand,
+		addEntry: input.addEntry,
+	});
+	logPlayedCards({
+		turn: input.turn,
+		player: input.player,
+		opponent: input.opponent,
+		playerBattlefield: playerBf,
+		opponentBattlefield: opponentBf,
+		playerHand,
+		opponentHand,
+		previousPlayerBattlefield: input.previous.playerBf,
+		previousOpponentBattlefield: input.previous.opponentBf,
+		previousPlayerHand: input.previous.playerHand,
+		previousOpponentHand: input.previous.opponentHand,
+		addEntry: input.addEntry,
+	});
+	if (!input.pokerIsActive) {
+		logHeroHealthChanges({
+			turn: input.turn,
+			playerHealth,
+			opponentHealth,
+			previousPlayerHealth: input.previous.playerHealth,
+			previousOpponentHealth: input.previous.opponentHealth,
+			addEntry: input.addEntry,
+		});
+	}
+	logManaChanges({
+		turn: input.turn,
+		playerMana,
+		opponentMana,
+		previousPlayerMana: input.previous.playerMana,
+		previousOpponentMana: input.previous.opponentMana,
+		addEntry: input.addEntry,
+	});
+	logMinionDeaths({
+		turn: input.turn,
+		playerBattlefield: playerBf,
+		opponentBattlefield: opponentBf,
+		previousPlayerBattlefield: input.previous.playerBf,
+		previousOpponentBattlefield: input.previous.opponentBf,
+		addEntry: input.addEntry,
+	});
+	return {
+		playerHand,
+		opponentHand,
+		playerBf,
+		opponentBf,
+		playerHealth,
+		opponentHealth,
+		playerMana,
+		opponentMana,
+	};
+}
+
 function logMinionDeaths(input: {
 	readonly turn: number;
 	readonly playerBattlefield: number;
@@ -170,9 +302,13 @@ export function useGameLogIntegration() {
 	const prevOpponentBfRef = useRef(0);
 	const prevPlayerHealthRef = useRef(100);
 	const prevOpponentHealthRef = useRef(100);
+	const prevPlayerManaRef = useRef(0);
+	const prevOpponentManaRef = useRef(0);
+	const prevPokerResourcesRef = useRef<PokerResourceSnapshot | null>(null);
 	const prevPokerTurnIdRef = useRef<string | null>(null);
 	const prevConnectionStateRef = useRef<P2PConnectionState>(connectionState);
 	const forwardedCombatLogIdsRef = useRef<Set<string>>(new Set());
+	const pokerIsActive = Boolean(combatState);
 	const pokerTurnId = combatState?.turnId ?? null;
 	const pokerActivePlayerId = combatState?.activePlayerId ?? null;
 	const pokerPlayerId = combatState?.player.playerId ?? null;
@@ -180,68 +316,39 @@ export function useGameLogIntegration() {
 
 	useEffect(() => {
 		if (!gameState) return;
-
-		const turn = gameState.turnNumber || 0;
-		const currentTurn = gameState.currentTurn;
 		const player: LoggedPlayerState | undefined = gameState.players?.player;
 		const opponent: LoggedPlayerState | undefined = gameState.players?.opponent;
 		if (!player || !opponent) return;
-
-		const playerHand = player.hand?.length || 0;
-		const opponentHand = opponent.hand?.length || 0;
-		const playerBf = player.battlefield?.length || 0;
-		const opponentBf = opponent.battlefield?.length || 0;
-		const playerHealth = getHeroHealth(player);
-		const opponentHealth = getHeroHealth(opponent);
-
-		logTurnShift({ turn, previousTurn: prevTurnRef.current, currentTurn, addEntry });
-		logDraws({
+		const turn = gameState.turnNumber || 0;
+		const next = syncCardLayerLogs({
 			turn,
-			playerHand,
-			opponentHand,
-			previousPlayerHand: prevPlayerHandRef.current,
-			previousOpponentHand: prevOpponentHandRef.current,
-			addEntry,
-		});
-		logPlayedCards({
-			turn,
+			currentTurn: gameState.currentTurn,
 			player,
 			opponent,
-			playerBattlefield: playerBf,
-			opponentBattlefield: opponentBf,
-			playerHand,
-			opponentHand,
-			previousPlayerBattlefield: prevPlayerBfRef.current,
-			previousOpponentBattlefield: prevOpponentBfRef.current,
-			previousPlayerHand: prevPlayerHandRef.current,
-			previousOpponentHand: prevOpponentHandRef.current,
+			pokerIsActive,
+			previous: {
+				turn: prevTurnRef.current,
+				playerHand: prevPlayerHandRef.current,
+				opponentHand: prevOpponentHandRef.current,
+				playerBf: prevPlayerBfRef.current,
+				opponentBf: prevOpponentBfRef.current,
+				playerHealth: prevPlayerHealthRef.current,
+				opponentHealth: prevOpponentHealthRef.current,
+				playerMana: prevPlayerManaRef.current,
+				opponentMana: prevOpponentManaRef.current,
+			},
 			addEntry,
 		});
-		logHeroHealthChanges({
-			turn,
-			playerHealth,
-			opponentHealth,
-			previousPlayerHealth: prevPlayerHealthRef.current,
-			previousOpponentHealth: prevOpponentHealthRef.current,
-			addEntry,
-		});
-		logMinionDeaths({
-			turn,
-			playerBattlefield: playerBf,
-			opponentBattlefield: opponentBf,
-			previousPlayerBattlefield: prevPlayerBfRef.current,
-			previousOpponentBattlefield: prevOpponentBfRef.current,
-			addEntry,
-		});
-
 		prevTurnRef.current = turn;
-		prevPlayerHandRef.current = playerHand;
-		prevOpponentHandRef.current = opponentHand;
-		prevPlayerBfRef.current = playerBf;
-		prevOpponentBfRef.current = opponentBf;
-		prevPlayerHealthRef.current = playerHealth;
-		prevOpponentHealthRef.current = opponentHealth;
-	}, [gameState, addEntry]);
+		prevPlayerHandRef.current = next.playerHand;
+		prevOpponentHandRef.current = next.opponentHand;
+		prevPlayerBfRef.current = next.playerBf;
+		prevOpponentBfRef.current = next.opponentBf;
+		prevPlayerHealthRef.current = next.playerHealth;
+		prevOpponentHealthRef.current = next.opponentHealth;
+		prevPlayerManaRef.current = next.playerMana;
+		prevOpponentManaRef.current = next.opponentMana;
+	}, [gameState, addEntry, pokerIsActive]);
 
 	useEffect(() => {
 		if (gameState?.gamePhase === 'playing' && prevTurnRef.current === 0) {
@@ -302,26 +409,55 @@ export function useGameLogIntegration() {
 	}, [addEntry, connectionState, gameState?.turnNumber, isP2PMatch]);
 
 	useEffect(() => {
+		if (!combatState) {
+			prevPokerResourcesRef.current = null;
+			return;
+		}
+		const next: PokerResourceSnapshot = {
+			playerHpCommitted: combatState.player.hpCommitted,
+			opponentHpCommitted: combatState.opponent.hpCommitted,
+			playerStamina: combatState.player.pet.stats.currentStamina,
+			opponentStamina: combatState.opponent.pet.stats.currentStamina,
+			playerAction: combatState.player.currentAction ?? null,
+			opponentAction: combatState.opponent.currentAction ?? null,
+		};
+		const previous = prevPokerResourcesRef.current;
+		prevPokerResourcesRef.current = next;
+		if (!previous) return;
+		const turn = gameState?.turnNumber ?? 0;
+		const phaseLabel = formatPokerPhase(pokerPhase);
+		for (const log of logsFromPokerResourceDiff(previous, next, turn, phaseLabel)) {
+			addEntry(log);
+		}
+	}, [addEntry, combatState, gameState?.turnNumber, pokerPhase]);
+
+	useEffect(() => {
 		if (combatLog.length === 0) {
 			forwardedCombatLogIdsRef.current.clear();
 			return;
 		}
-		if (!isP2PMatch) return;
 
+		const turn = gameState?.turnNumber ?? 0;
+		const phaseLabel = formatPokerPhase(pokerPhase);
 		for (const entry of combatLog) {
 			if (forwardedCombatLogIdsRef.current.has(entry.id)) continue;
 			forwardedCombatLogIdsRef.current.add(entry.id);
-			if (!isPokerCombatLogEntry(entry)) continue;
+			if (!shouldForwardCombatLog(entry)) continue;
 
-			addEntry({
-				turn: gameState?.turnNumber ?? 0,
-				actor: 'system',
-				type: 'poker_phase',
-				message: entry.message,
-				details: {
-					phaseLabel: formatPokerPhase(pokerPhase),
-				},
-			});
+			const log = mapCombatLogToGameLog(entry, turn, phaseLabel);
+			const overlayLane = overlayLaneForCombatLog(entry);
+			if (overlayLane) {
+				recordCombatFeedback({
+					log,
+					overlay: {
+						lane: overlayLane,
+						title: entry.message,
+						tone: entry.type === 'spell' ? 'info' : 'warning',
+					},
+				});
+				continue;
+			}
+			addEntry(log);
 		}
-	}, [addEntry, combatLog, gameState?.turnNumber, isP2PMatch, pokerPhase]);
+	}, [addEntry, combatLog, gameState?.turnNumber, pokerPhase]);
 }

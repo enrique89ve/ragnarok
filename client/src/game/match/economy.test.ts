@@ -18,8 +18,8 @@ describe('POOL_REWARDS', () => {
 });
 
 describe('MATCH_ECONOMY', () => {
-	it('practice has no Match XP, RUNE, or ranking', () => {
-		expect(MATCH_ECONOMY.practice).toEqual({
+	it('single has no Match XP, RUNE, or ranking', () => {
+		expect(MATCH_ECONOMY.single).toEqual({
 			matchXpShare: 0,
 			rune: 'none',
 			ranking: 'none',
@@ -40,8 +40,8 @@ describe('MATCH_ECONOMY', () => {
 });
 
 describe('modeEconomyToReward', () => {
-	it('maps practice to empty channels', () => {
-		expect(modeEconomyToReward(MATCH_ECONOMY.practice)).toEqual({
+	it('maps single to empty channels', () => {
+		expect(modeEconomyToReward(MATCH_ECONOMY.single)).toEqual({
 			matchXp: { kind: 'none' },
 			rune: { kind: 'none' },
 			ranking: { kind: 'none' },

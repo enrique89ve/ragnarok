@@ -31,7 +31,7 @@ describe('resolveSingle', () => {
 		}
 	});
 
-	it('produces a practice reward channel (none/none)', () => {
+	it('produces a single reward channel (none/none)', () => {
 		const ctx = resolveSingle({ identity: TEST_IDENTITY, difficulty: 'normal', deckSource: 'warband' });
 		expect(ctx.reward).toEqual({
 			matchXp: { kind: 'none' },

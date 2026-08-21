@@ -18,7 +18,7 @@ export const StorageKeys = {
 	// Battle History
 	BATTLE_HISTORY: 'ragnarok-battle-history',
 	CURRENT_BATTLE_ID: 'ragnarok-current-battle-id',
-	PRACTICE_RECORD: 'ragnarok-practice-record',
+	SINGLE_RECORD: 'ragnarok-single-record',
 
 	// Hive Data Layer
 	HIVE_USER_DATA: 'ragnarok-hive-user',

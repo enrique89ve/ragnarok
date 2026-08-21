@@ -88,7 +88,7 @@ Hero Death            ▼             │
 ### Current Implementation Notes
 	
 - **Home shell**: `App.tsx` is the current funnel entry. Daily quests, friends, wallet, primary mode cards, and utility links all mount there, so browser QA should validate that the primary "continue playing" action stays dominant on both desktop and mobile.
-- **Starter handoff**: `StarterPackCeremony.tsx` ends in a **mode-select** screen — three tiles (Campaign / Quick Match / Multiplayer) — after the reveal animation. There is **no skip** and no auto-redirect to `/campaign`. The intended first-run path is now home → starter ceremony → reveal → mode-select → chosen mode. Mode-select is implemented inline in `StarterPackCeremony.tsx` (function `ModeSelect`); Campaign resolves to `routes.campaign`, while Quick Match and Multiplayer resolve to the shared Warband surface via `getWarbandEntryRoute('single')` and `getWarbandEntryRoute('multiplayer')`.
+- **Starter handoff**: `StarterPackCeremony.tsx` ends in a **mode-select** screen — three tiles (Campaign / Single / Multiplayer) — after the reveal animation. There is **no skip** and no auto-redirect to `/campaign`. The intended first-run path is now home → starter ceremony → reveal → mode-select → chosen mode. Mode-select is implemented inline in `StarterPackCeremony.tsx` (function `ModeSelect`); Campaign resolves to `routes.campaign`, while Single and Multiplayer resolve to the shared Warband surface via `getWarbandEntryRoute('single')` and `getWarbandEntryRoute('multiplayer')`.
 - **Campaign navigation**: `CampaignPage.tsx` now stages the campaign as a chapter-theater funnel instead of a flat mission picker. Chapter prologues can autoplay from the campaign shell, Norse/Greek maps now sit over a live cosmic canvas, realm panels surface the next authored route, and the mission briefing is structured as a launch sequence rather than a loose settings card.
 - **Army staging**: `ArmySelection.tsx` now reads as one Warband launch surface instead of separate single/PvP pickers: command, loadout, and launch states are surfaced explicitly, and `WarbandPage.tsx` owns the `mode=single|multiplayer` intent before sending the player to `/#/game/single` or the `/#/multiplayer` lobby. Direct consumer routes (`/#/game/single`, `/#/multiplayer`) redirect back to the matching Warband entry when the ready loadout state is missing.
 - **Combat feel**: `RagnarokCombatArena.tsx` now uses a shared phase director for setup and wagering instead of separate loose cards. Disabled wagering controls are hidden when the opponent owns the decision window, so each phase exposes fewer active controls at once and the cadence reads more deliberately during live play.
@@ -532,7 +532,7 @@ StarterPackCeremony.tsx
   │
   ▼ Animation complete (close button or auto)
   ├── Phase 3: Mode Select
-  │   Three tiles: Campaign / Quick Match / Multiplayer
+  │   Three tiles: Campaign / Single / Multiplayer
   │   No skip — the player MUST pick a mode (the previous design
   │   auto-redirected to /campaign, which felt forced).
   │

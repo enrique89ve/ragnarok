@@ -1,6 +1,6 @@
 /**
- * Resolves a Single match — AI opponent, practice rewards (no XP/runas,
- * no ranking). The local player picks difficulty + deck source before
+ * Resolves a Single match — AI opponent, no Match XP/RUNE/ranking.
+ * The local player picks difficulty + deck source before
  * this is called; the resolver itself is pure (input args → MatchContext).
  *
  * matchId / matchSeed: supplied by the route/setup boundary through
@@ -29,6 +29,6 @@ export function resolveSingle(args: SingleResolveArgs): MatchContext {
 			difficulty: args.difficulty,
 			deckSource: args.deckSource,
 		},
-		reward: modeEconomyToReward(MATCH_ECONOMY.practice),
+		reward: modeEconomyToReward(MATCH_ECONOMY.single),
 	};
 }

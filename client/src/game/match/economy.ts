@@ -7,7 +7,7 @@ import type { RewardChannel, RuneRewardSource } from './types';
 
 export const POOL_REWARDS = 1.0;
 
-const PRACTICE_MATCH_XP_SHARE = 0;
+const SINGLE_MATCH_XP_SHARE = 0;
 const CAMPAIGN_MATCH_XP_SHARE = POOL_REWARDS * 0.10;
 const P2P_MATCH_XP_SHARE = POOL_REWARDS * 1.00;
 
@@ -18,8 +18,8 @@ export interface ModeEconomy {
 }
 
 export const MATCH_ECONOMY = {
-	practice: {
-		matchXpShare: PRACTICE_MATCH_XP_SHARE,
+	single: {
+		matchXpShare: SINGLE_MATCH_XP_SHARE,
 		rune: 'none',
 		ranking: 'none',
 	},

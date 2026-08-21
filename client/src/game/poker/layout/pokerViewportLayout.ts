@@ -10,6 +10,7 @@ export const POKER_VIEWPORT_ZONE_IDS = [
   "opponentHeroCards",
   "opponentHand",
   "communityCards",
+  "feedbackStack",
   "battlefield",
   "opponentBattlefieldCards",
   "playerBattlefieldCards",
@@ -296,6 +297,15 @@ export const POKER_VIEWPORT_LAYOUT = {
       y: COMMUNITY_Y,
       width: COMMUNITY_W,
       height: COMMUNITY_H,
+      rotation: 0,
+    },
+    feedbackStack: {
+      layer: "hud",
+      label: "Combat feedback stack",
+      x: COMMUNITY_X,
+      y: COMMUNITY_Y - 72,
+      width: COMMUNITY_W,
+      height: 68,
       rotation: 0,
     },
     battlefield: {

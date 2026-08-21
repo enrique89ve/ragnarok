@@ -6,6 +6,13 @@
 	pointer-events: auto;
 }
 
+/* Leave Match is fixed outside the arena, so explicitly suspend it while a
+   card inspector is open instead of allowing it to float above the modal. */
+.ragnarok-chess-game:has(.card-inspector-overlay) :is(.match-exit-control, .match-exit-backdrop) {
+	visibility: hidden;
+	pointer-events: none;
+}
+
 .match-exit-button {
 	min-height: 38px;
 	padding: 0 16px;

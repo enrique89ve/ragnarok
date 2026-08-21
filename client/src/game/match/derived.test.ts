@@ -181,11 +181,11 @@ describe('deriveIWonForPhase', () => {
 });
 
 describe('deriveMatchFlowPolicy', () => {
-	it('compresses practice into local AI, warband bootstrap, no campaign script', () => {
-		expect(derivePlayableMatchMode(aiCtx)).toBe('practice');
+	it('compresses single into local AI, warband bootstrap, no campaign script', () => {
+		expect(derivePlayableMatchMode(aiCtx)).toBe('single');
 		expect(deriveCampaignMatch(aiCtx)).toBeNull();
 		expect(deriveMatchFlowPolicy(aiCtx)).toEqual({
-			mode: 'practice',
+			mode: 'single',
 			authority: { kind: 'local' },
 			usesPeerPhaseCheckpoint: false,
 			usesLocalAi: true,
@@ -196,7 +196,7 @@ describe('deriveMatchFlowPolicy', () => {
 			localAi: {
 				difficulty: 'normal',
 				style: 'balanced',
-				behaviorProfile: 'practice',
+				behaviorProfile: 'single',
 			},
 		});
 	});

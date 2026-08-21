@@ -42,6 +42,7 @@
 @import "../../combat/styles/battlefield-hero.css";
 @import "../../combat/styles/damage-indicator.css";
 @import "../../combat/styles/battle-intel.css";
+@import "../../combat/styles/card-inspector.css";
 @import "../../combat/styles/unified-containers.css";
 @import "../../combat/styles/combat-phase-director.css";
 @import "../../combat/styles/p2p-turn-status.css";

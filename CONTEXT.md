@@ -50,16 +50,20 @@ The complete tester-facing loop of local play, P2P play, turns, combat, victory,
 _Avoid_: Full catalog audit, every card validated, final balance
 
 **Alfa Player-Ready**:
-The current finish line for shipping Ragnarok to more internal hands. It is true only when practice, one Norse campaign mission, and two-browser P2P all complete the **Playable Match Spine**, the poker board and tester funnel are readable without external explanation, daily quests can be claimed after a match, Hive Keychain is used only for pre-match login or an explicit daily-quest Claim, and the deployed Alfa runtime proves health/admin/P2P readiness. It is not Closed Testnet Beta, Public Testnet Beta, or mainnet.
+The current finish line for shipping Ragnarok to more internal hands. It is true only when **single**, one Norse campaign mission, and two-browser P2P all complete the **Playable Match Spine**, the poker board and tester funnel are readable without external explanation, daily quests can be claimed after a match, Hive Keychain is used only for pre-match login or an explicit daily-quest Claim, and the deployed Alfa runtime proves health/admin/P2P readiness. It is not Closed Testnet Beta, Public Testnet Beta, or mainnet.
 _Avoid_: Finished game, ranked launch, settlement complete, every OPEN in the wire spec closed, all 49 campaign missions, deleting every unused file
 
 **Playable Match Spine**:
-The shared local path used by practice, campaign, and P2P: `chess → poker_combat → chess → game_over`, with optional instant-kill captures that never leave chess. One coordinator (`RagnarokGameCoordinator`) owns the loop. Practice pays no economy. Campaign Alfa is one Norse mission end-to-end, not the full chapter list.
+The shared local path used by **single**, campaign, and P2P: `chess → poker_combat → chess → game_over`, with optional instant-kill captures that never leave chess. One coordinator (`RagnarokGameCoordinator`) owns the loop. Single pays no economy. Campaign Alfa is one Norse mission end-to-end, not the full chapter list.
 _Avoid_: Standard Match / `GameBoard` as a live mode, a second coordinator, skipping `game_over`, treating card-quests (`questStore`) as the tester daily-quest loop
 
+**Single**:
+Local AI match from a warband. Route `/#/game/single`, module `match/modes/single`, discriminant `PlayableMatchMode = 'single'`. Pays no Match XP, RUNE, or ranking.
+_Avoid_: Practice, Quick Match, or a second local-AI mode name
+
 **Match Mode Frontier**:
-Practice, campaign, and P2P share chess and poker rules. They differ only at the `MatchContext` seam: opponent, reward, and flow (`deriveMatchFlowPolicy`). Practice is local AI from a warband (`/game/single`). Campaign is a scripted mission with boss rules and first-clear RUNE. P2P is symmetric peer authority with Phase Checkpoints and no local AI. Mode modules under `match/modes/{single,campaign,p2p}` must not import each other.
-_Avoid_: branching chess/poker rules on mode, reconstructing `isCampaign`/`isP2PConnected` from stores, importing `modes/X` from `modes/Y`
+**Single**, campaign, and P2P share chess and poker rules. They differ only at the `MatchContext` seam: opponent, reward, and flow (`deriveMatchFlowPolicy`). Single is local AI from a warband (`/game/single`). Campaign is a scripted mission with boss rules and first-clear RUNE. P2P is symmetric peer authority with Phase Checkpoints and no local AI. Mode modules under `match/modes/{single,campaign,p2p}` must not import each other.
+_Avoid_: branching chess/poker rules on mode, reconstructing `isCampaign`/`isP2PConnected` from stores, importing `modes/X` from `modes/Y`, calling Single "practice" or "Quick Match"
 
 **Chess-Poker P2P Spine**:
 The P2P instance of the **Playable Match Spine**. Both peers apply chess and poker locally from shared seed and intent envelopes. The relay compares opaque **Phase Checkpoint** roots only at those phase changes.
@@ -96,12 +100,12 @@ _Avoid_: Using the receipt as poker or `game_over` authority, recovering from mi
 - **QA Local Reward Feedback** may run only inside the QA full-catalog reset epoch. It is UX rehearsal for reward math, not **RUNE Ledger Protocol**, **NFTLox Progress Mirror**, or official ranking.
 - **Testnet Local Reward Feedback** may run on resettable non-economic testnet P2P (Alfa or Closed Testnet Beta) so the winner sees Match XP and projected RUNE in the game-over modal. It is display-only and not a ledger credit.
 - **XP Economy Protocol** is the only place Match XP and CardXP rates are defined. Preview adapters calculate; Hive adapters persist later.
-- Campaign and P2P battle-end fire Match XP and RUNE together via `projectBattleEndRewards`. The channels stay independent; practice pays neither.
+- Campaign and P2P battle-end fire Match XP and RUNE together via `projectBattleEndRewards`. The channels stay independent; **single** pays neither.
 - Any QA local reward cache must be keyed by stage, protocol id, reset epoch, account, and match id, and must be ignored or purged on stage/epoch/account change so QA feedback cannot leak into Closed Testnet Beta, NFTLox custody, or mainnet.
 - The **Playable Beta Flow** must be stable before **Closed Testnet Beta** opens.
 - **Alfa Player-Ready** is the shortest definition of "the game is finished enough to play." Ranked settlement, NFTLoX custody proof, and Closed Testnet Beta come after that spine is proven.
-- The **Playable Match Spine** is required in practice, one campaign mission, and P2P. The **Chess-Poker P2P Spine** is that same loop plus **Phase Checkpoint** agreement.
-- **Match Mode Frontier** keeps those three flows behind `MatchContext`. Chess and poker rules stay mode-agnostic; practice, campaign, and P2P only change opponent, reward, and flow.
+- The **Playable Match Spine** is required in **single**, one campaign mission, and P2P. The **Chess-Poker P2P Spine** is that same loop plus **Phase Checkpoint** agreement.
+- **Match Mode Frontier** keeps those three flows behind `MatchContext`. Chess and poker rules stay mode-agnostic; single, campaign, and P2P only change opponent, reward, and flow.
 - Daily quest Claim is a tester ceremony after the match. In-match card quests are a separate mechanic and are not an Alfa gate.
 - **Instant Kill Capture** never enters poker. Kings do not capture; capturing the king wins immediately. **Poker Combat Capture** is hero vs hero only (knight, bishop, rook, queen) and always enters poker through `pendingCombat` and a **Phase Checkpoint** on `chess → poker_combat`.
 - Poker resolution writes HP/stamina back onto the same chess pieces, then a **Phase Checkpoint** on `poker_combat → chess` must commit before chess inputs resume.
@@ -230,7 +234,7 @@ _Avoid_: `/api/testnet/rune/*`, duplicate RUNE read sources, client-authored RUN
 > **Domain expert:** "No — it means the **Playable Beta Flow** works end-to-end. Exhaustive card validation is work for beta feedback and targeted fixes."
 
 > **Dev:** "How do we finish Ragnarok as soon as possible?"
-> **Domain expert:** "Finish now means **Alfa Player-Ready**. Prove the **Playable Match Spine** in practice, one Norse campaign mission, and two-browser P2P, make the poker board readable, keep Keychain off the match path except daily-quest Claim, freeze dual sources of truth, and ship the Alfa runtime. Do not block that on `match_result`, ranked RUNE/ELO, NFTLoX custody, all 49 missions, or closing every OPEN in the wire spec."
+> **Domain expert:** "Finish now means **Alfa Player-Ready**. Prove the **Playable Match Spine** in **single**, one Norse campaign mission, and two-browser P2P, make the poker board readable, keep Keychain off the match path except daily-quest Claim, freeze dual sources of truth, and ship the Alfa runtime. Do not block that on `match_result`, ranked RUNE/ELO, NFTLoX custody, all 49 missions, or closing every OPEN in the wire spec."
 
 > **Dev:** "Does the server decide who won the chess-to-poker fight?"
 > **Domain expert:** "No. Both browsers apply the same chess and poker intents. The relay only compares **Phase Checkpoint** roots. On mismatch it freezes; it never picks a winner."
@@ -241,5 +245,6 @@ _Avoid_: `/api/testnet/rune/*`, duplicate RUNE read sources, client-authored RUN
 - "all logic" was used broadly. Resolved: for **Closed Testnet Beta**, it means the **Playable Beta Flow**, not exhaustive validation of every card.
 - "finish the game" was used to mean mainnet completeness. Resolved: the current finish line is **Alfa Player-Ready**; **Closed Testnet Beta** is the next milestone after that spine is proven.
 - "quest" was used to mean both tester daily RUNE quests and in-match card quests. Resolved: Alfa gates **daily quests**; card-quests are a combat mechanic, not the testnet loop.
-- "Standard Match" was used as a live mode. Resolved: Alfa playable modes are practice, campaign, and P2P, all on the **Playable Match Spine**. `GameBoard` / Standard Match is historical.
+- "Standard Match" was used as a live mode. Resolved: Alfa playable modes are **single**, campaign, and P2P, all on the **Playable Match Spine**. `GameBoard` / Standard Match is historical.
+- "Practice" was used as a second name for the local AI match. Resolved: the mode is **single** (`/game/single`, `match/modes/single`, `PlayableMatchMode = 'single'`, ledger `data/singleRecord`).
 - Ranked `match_result` was specified as dual-signed at game_over. Resolved: **Winner-Posted Match Result** ([ADR 0008](docs/adr/0008-winner-posted-match-result.md)). Dual signatures stay on `match_anchor` and session-signed moves. The loser does not countersign the loss.

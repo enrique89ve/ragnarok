@@ -1,30 +1,14 @@
 import React from 'react';
-import { Axe, CircleCheck, Flag, Scale, ShieldX } from 'lucide-react';
 import { CombatAction } from '../../types/PokerCombatTypes';
 import type { ActionPermissions } from '../../hooks/usePokerCombatAdapter';
+import { FRONTLINE_CONTROL_DEFINITION, getPokerActionDefinition } from '../decision/pokerActionCatalog';
+import { PokerActionIcon } from './PokerActionIcon';
 import {
-	BETTING_ACTION_LABEL,
 	bettingCommitKind,
 	bettingDisabledReason,
 	bettingMatchKind,
 	pokerQuickBetHp,
 } from './bettingPanelCopy';
-
-const ACTION_ICON_PROPS = {
-	'aria-hidden': true,
-	className: 'btn-icon',
-	focusable: false,
-	size: 25,
-	strokeLinecap: 'round',
-	strokeLinejoin: 'round',
-	strokeWidth: 2.6,
-} as const;
-
-const RaiseIcon: React.FC = () => <Axe {...ACTION_ICON_PROPS} />;
-const MatchIcon: React.FC = () => <Scale {...ACTION_ICON_PROPS} />;
-const CheckIcon: React.FC = () => <CircleCheck {...ACTION_ICON_PROPS} />;
-const FoldIcon: React.FC = () => <ShieldX {...ACTION_ICON_PROPS} />;
-const FrontlineIcon: React.FC = () => <Flag {...ACTION_ICON_PROPS} />;
 
 const ButtonIconFrame: React.FC<{ readonly children: React.ReactNode }> = ({ children }) => (
 	<span className="btn-icon-frame" aria-hidden="true">
@@ -39,6 +23,7 @@ function PokerActionButton({
 	hp,
 	icon,
 	label,
+	pokerLabel,
 	onClick,
 	reason,
 }: {
@@ -48,11 +33,13 @@ function PokerActionButton({
 	readonly hp?: number;
 	readonly icon: React.ReactNode;
 	readonly label: string;
+	readonly pokerLabel?: string;
 	readonly onClick: () => void;
 	readonly reason: string | null;
 }): React.ReactElement {
 	const hasValue = hp != null && hp > 0;
-	const aria = hasValue ? `${label} ${hp} HP` : label;
+	const actionName = pokerLabel ? `${label} (${pokerLabel})` : label;
+	const aria = hasValue ? `${actionName} ${hp} HP` : actionName;
 	return (
 		<button
 			type="button"
@@ -144,6 +131,11 @@ function shouldDisableHpBetting(isDisabled: boolean, sliderMax: number): boolean
 	const actualCanRaise = canRaise && maxBetAmount >= minBet && effectiveBet >= minBet;
 	const commitKind = bettingCommitKind(hasBetToCall);
 	const matchKind = bettingMatchKind(hasBetToCall);
+	const commitAction = hasBetToCall ? CombatAction.COUNTER_ATTACK : CombatAction.ATTACK;
+	const matchAction = hasBetToCall ? CombatAction.ENGAGE : CombatAction.DEFEND;
+	const commitDefinition = getPokerActionDefinition(commitAction);
+	const matchDefinition = getPokerActionDefinition(matchAction);
+	const braceDefinition = getPokerActionDefinition(CombatAction.BRACE);
 	const commitAllowed = hasBetToCall ? actualCanRaise : canBet;
 	const matchAllowed = hasBetToCall ? canCall : canCheck;
 	const commitHP = hasBetToCall ? toCall + effectiveBet : effectiveBet;
@@ -231,31 +223,31 @@ function shouldDisableHpBetting(isDisabled: boolean, sliderMax: number): boolean
 					<PokerActionButton
 						actionId={commitKind}
 						className="raise-btn"
-						label={BETTING_ACTION_LABEL[commitKind]}
+						label={commitDefinition.buttonLabel}
+						pokerLabel={commitDefinition.pokerLabel}
 						hp={commitHP}
-						icon={<RaiseIcon />}
+						icon={<PokerActionIcon glyph={commitDefinition.glyph} className="btn-icon" />}
 						disabled={isDisabled || !commitAllowed}
 						reason={commitReason}
-						onClick={() => onAction(
-							hasBetToCall ? CombatAction.COUNTER_ATTACK : CombatAction.ATTACK,
-							effectiveBet,
-						)}
+						onClick={() => onAction(commitAction, effectiveBet)}
 					/>
 					<PokerActionButton
 						actionId={matchKind}
 						className="call-btn"
-						label={BETTING_ACTION_LABEL[matchKind]}
+						label={matchDefinition.buttonLabel}
+						pokerLabel={matchDefinition.pokerLabel}
 						hp={matchKind === 'call' ? callHP : undefined}
-						icon={matchKind === 'call' ? <MatchIcon /> : <CheckIcon />}
+						icon={<PokerActionIcon glyph={matchDefinition.glyph} className="btn-icon" />}
 						disabled={isDisabled || !matchAllowed}
 						reason={matchReason}
-						onClick={() => onAction(matchKind === 'call' ? CombatAction.ENGAGE : CombatAction.DEFEND)}
+						onClick={() => onAction(matchAction)}
 					/>
 					<PokerActionButton
 						actionId="fold"
 						className="fold-btn"
-						label={BETTING_ACTION_LABEL.fold}
-						icon={<FoldIcon />}
+						label={braceDefinition.buttonLabel}
+						pokerLabel={braceDefinition.pokerLabel}
+						icon={<PokerActionIcon glyph={braceDefinition.glyph} className="btn-icon" />}
 						disabled={isDisabled || !canFold}
 						reason={foldReason}
 						onClick={() => onAction(CombatAction.BRACE)}
@@ -263,8 +255,8 @@ function shouldDisableHpBetting(isDisabled: boolean, sliderMax: number): boolean
 					<PokerActionButton
 						actionId="frontline"
 						className="auto-attack-btn"
-						label={BETTING_ACTION_LABEL.frontline}
-						icon={<FrontlineIcon />}
+						label={FRONTLINE_CONTROL_DEFINITION.buttonLabel}
+						icon={<PokerActionIcon glyph={FRONTLINE_CONTROL_DEFINITION.glyph} className="btn-icon" />}
 						disabled={isDisabled || !showFrontlineButton}
 						reason={frontlineReason}
 						onClick={onAutoAttackFrontline}

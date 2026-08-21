@@ -1,8 +1,12 @@
+import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getAnnouncementConfig } from '../stores/unifiedUIStore';
 import { useAnimationAdapter } from '../hooks';
 import { GameIcon } from '../utils/ui/GameIcon';
+import { useCombatFeedbackStore } from '../combat/feedback/combatFeedbackStore';
 import './ActionAnnouncement.css';
+
+const ANNOUNCEMENT_CINEMA_HOLDER = 'action-announcement';
 
 const ANNOUNCEMENT_LABELS: Record<string, string> = {
   battlecry: 'Battlecry',
@@ -30,6 +34,16 @@ function getAnnouncementLabel(type: string): string {
 export function ActionAnnouncement() {
   const { currentAnnouncement } = useAnimationAdapter();
 
+  useEffect(() => {
+    const store = useCombatFeedbackStore.getState();
+    if (currentAnnouncement) {
+      store.holdCinema(ANNOUNCEMENT_CINEMA_HOLDER);
+      return () => store.releaseCinema(ANNOUNCEMENT_CINEMA_HOLDER);
+    }
+    store.releaseCinema(ANNOUNCEMENT_CINEMA_HOLDER);
+    return undefined;
+  }, [currentAnnouncement]);
+
   return (
     <div className="action-announcement-container">
       <AnimatePresence mode="wait">
@@ -39,8 +53,8 @@ export function ActionAnnouncement() {
             className={`action-announcement action-announcement-${currentAnnouncement.type}`}
             initial={{
               opacity: 0,
-              scale: 0.85,
-              y: -20
+              scale: 0.95,
+              y: -12
             }}
             animate={{
               opacity: 1,
@@ -49,12 +63,12 @@ export function ActionAnnouncement() {
             }}
             exit={{
               opacity: 0,
-              scale: 0.9,
-              y: -10
+              scale: 0.97,
+              y: -8
             }}
             transition={{
-              duration: 0.25,
-              ease: [0.25, 0.1, 0.25, 1]
+              duration: 0.2,
+              ease: [0.23, 1, 0.32, 1]
             }}
             style={{
               '--rarity-color': getAnnouncementConfig(currentAnnouncement.type).color

@@ -31,6 +31,7 @@ interface HandFanProps {
   evolveReadyIds?: Set<string>;
   battlefieldCount?: number;
   playerBattlefield?: CardInstance[];
+  onCardInspect?: (card: CardInstance) => void;
 }
 
 const MAX_ROTATION = 4;
@@ -50,9 +51,11 @@ export const HandFan = React.memo<HandFanProps>(({
   battlefieldRef,
   evolveReadyIds,
   battlefieldCount = 0,
-  playerBattlefield
+  playerBattlefield,
+  onCardInspect,
 }) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [shakingCardId, setShakingCardId] = useState<string | null>(null);
   const [bloodModeCardId, setBloodModeCardId] = useState<string | null>(null);
   const [drawCounter, setDrawCounter] = useState(0);
@@ -60,6 +63,17 @@ export const HandFan = React.memo<HandFanProps>(({
   const [playCounter, setPlayCounter] = useState(0);
   const shakeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevCardCount = useRef<number>(0);
+  const longPressRef = useRef<{
+    readonly pointerId: number;
+    readonly startX: number;
+    readonly startY: number;
+    readonly timer: ReturnType<typeof setTimeout>;
+  } | null>(null);
+
+  const clearLongPress = useCallback(() => {
+    if (longPressRef.current) clearTimeout(longPressRef.current.timer);
+    longPressRef.current = null;
+  }, []);
 
   const triggerCardShake = (instanceId: string) => {
     if (shakeTimerRef.current) clearTimeout(shakeTimerRef.current);
@@ -70,8 +84,9 @@ export const HandFan = React.memo<HandFanProps>(({
   useEffect(() => {
     return () => {
       if (shakeTimerRef.current) clearTimeout(shakeTimerRef.current);
+      clearLongPress();
     };
-  }, []);
+  }, [clearLongPress]);
 
   const elementalBuff = useElementalBuff();
   const atkBuff = elementalBuff.playerBuff?.attackBonus ?? 0;
@@ -120,6 +135,10 @@ export const HandFan = React.memo<HandFanProps>(({
 
   const cardCount = adaptedCards.length;
   const centerIndex = (cardCount - 1) / 2;
+  const selectedIndex = selectedCardId
+    ? adaptedCards.findIndex(card => card.instanceId === selectedCardId)
+    : -1;
+  const activeIndex = hoveredIndex ?? (selectedIndex >= 0 ? selectedIndex : null);
 
   const getCardTransform = (index: number): React.CSSProperties => {
     const offset = index - centerIndex;
@@ -147,7 +166,7 @@ export const HandFan = React.memo<HandFanProps>(({
   // Calculate dynamic positioning for spread effect
   const getCardStyle = (index: number): React.CSSProperties => {
     const baseTransform = getCardTransform(index);
-    const isHovered = hoveredIndex === index;
+    const isHovered = activeIndex === index;
     const springTransition = 'transform 0.35s cubic-bezier(0.34, 1.18, 0.64, 1)';
     const smoothTransition = 'transform 0.3s cubic-bezier(0.19, 1, 0.22, 1)';
     
@@ -161,8 +180,8 @@ export const HandFan = React.memo<HandFanProps>(({
     }
     
     // When a card is hovered, push ALL other cards with weighted distance
-    if (hoveredIndex !== null) {
-      const distance = index - hoveredIndex; // Signed distance (negative = left, positive = right)
+    if (activeIndex !== null) {
+      const distance = index - activeIndex; // Signed distance (negative = left, positive = right)
       const absDistance = Math.abs(distance);
       
       // Push cards with decreasing intensity based on distance (up to 3 cards away)
@@ -185,7 +204,7 @@ export const HandFan = React.memo<HandFanProps>(({
   };
 
   return (
-    <div className="hand-fan-container" style={hoveredIndex !== null ? HOVERED_CONTAINER_STYLE : undefined}>
+    <div className="hand-fan-container" style={activeIndex !== null ? HOVERED_CONTAINER_STYLE : undefined}>
       <CardDrawAnimation drawCount={drawCounter} />
       <CardPlayAnimation playedCard={playedCardData} playCount={playCounter} />
       {adaptedCards.map((card, index) => {
@@ -232,7 +251,7 @@ export const HandFan = React.memo<HandFanProps>(({
           canAffordMana,
           canAffordBlood,
         });
-        const isHovered = hoveredIndex === index;
+        const isHovered = activeIndex === index;
         
         const isShaking = shakingCardId === card.instanceId;
         const isEvolveReady = evolveReadyIds?.has(card.instanceId) ?? false;
@@ -244,9 +263,15 @@ export const HandFan = React.memo<HandFanProps>(({
             style={getCardStyle(index)}
             tabIndex={0}
             role="button"
-            aria-label={`${card.card.name}, ${manaCost} mana`}
+            aria-label={`${card.card.name}, ${manaCost} mana. Enter for details. Space to play.`}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                setSelectedCardId(card.instanceId);
+                onCardInspect?.(card);
+                return;
+              }
+              if (e.key === ' ') {
                 e.preventDefault();
                 if (canPlay) {
                   handleCardPlay(card);
@@ -265,21 +290,32 @@ export const HandFan = React.memo<HandFanProps>(({
               }
             }}
             onClick={() => {
-              if (!canPlay && isPlayerTurn && !isInteractionDisabled) {
-                triggerCardShake(card.instanceId);
-                playSound('error');
-                if (boardFull) {
-                  showStatus('Battlefield is full', 'error');
-                } else if (isBloodMode && bloodCost) {
-                  showStatus(`Need more than ${bloodCost} HP to pay Blood Price`, 'error');
-                } else {
-                  const deficit = manaCost - currentMana;
-                  if (deficit > 0) {
-                    showStatus(bloodCost ? `Need ${deficit} more mana (right-click for Blood Price)` : `Need ${deficit} more mana`, 'error');
-                  }
-                }
-              }
+              setSelectedCardId(card.instanceId);
             }}
+            onDoubleClick={() => {
+              setSelectedCardId(card.instanceId);
+              onCardInspect?.(card);
+            }}
+            onPointerDown={(event) => {
+              if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
+              clearLongPress();
+              const pointerId = event.pointerId;
+              const startX = event.clientX;
+              const startY = event.clientY;
+              const timer = setTimeout(() => {
+                setSelectedCardId(card.instanceId);
+                onCardInspect?.(card);
+                longPressRef.current = null;
+              }, 650);
+              longPressRef.current = { pointerId, startX, startY, timer };
+            }}
+            onPointerMove={(event) => {
+              const pending = longPressRef.current;
+              if (!pending || pending.pointerId !== event.pointerId) return;
+              if (Math.hypot(event.clientX - pending.startX, event.clientY - pending.startY) >= 8) clearLongPress();
+            }}
+            onPointerUp={clearLongPress}
+            onPointerCancel={clearLongPress}
             onContextMenu={(e) => {
               e.preventDefault();
               if (!bloodCost) return;
@@ -290,12 +326,13 @@ export const HandFan = React.memo<HandFanProps>(({
             }}
             onMouseEnter={() => setHoveredIndex(index)}
             onMouseLeave={clearHover}
+            onFocus={() => setHoveredIndex(index)}
+            onBlur={clearHover}
           >
             <CardWithDrag
               card={card}
               isInHand={true}
               isPlayable={canPlay}
-              onClick={canPlay ? () => handleCardPlay(card) : undefined}
               onValidDrop={canPlay ? (position) => handleCardPlay(card, position) : undefined}
               boardRef={battlefieldRef}
               registerPosition={stableRegisterPosition}

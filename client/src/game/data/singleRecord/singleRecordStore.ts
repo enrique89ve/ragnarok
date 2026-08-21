@@ -4,57 +4,57 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { accountScopedStorage, registerAccountScopedStore } from '../../../lib/storage/accountScopedStorage';
 import { StorageKeys } from '../../config/storageKeys';
 import {
-	appendPracticeRecord,
-	derivePracticeStreak,
-	formatPracticeStreak,
+	appendSingleRecord,
+	deriveSingleStreak,
+	formatSingleStreak,
 	normalizeBattleRecord,
-	PRACTICE_RECORD_MAX,
+	SINGLE_RECORD_MAX,
 	type LocalBattleMode,
-	type PracticeMatchRecord,
-	type PracticeMatchResult,
-} from './practiceRecordRules';
+	type SingleMatchRecord,
+	type SingleMatchResult,
+} from './singleRecordRules';
 
-type PracticeRecordState = {
-	readonly records: ReadonlyArray<PracticeMatchRecord>;
+type SingleRecordState = {
+	readonly records: ReadonlyArray<SingleMatchRecord>;
 	readonly recordBattleResult: (input: {
 		readonly matchId: string;
-		readonly result: PracticeMatchResult;
+		readonly result: SingleMatchResult;
 		readonly mode: LocalBattleMode;
 		readonly endedAt?: number;
 	}) => void;
-	readonly recordPracticeResult: (input: {
+	readonly recordSingleResult: (input: {
 		readonly matchId: string;
-		readonly result: PracticeMatchResult;
+		readonly result: SingleMatchResult;
 		readonly endedAt?: number;
 	}) => void;
 	readonly clearRecords: () => void;
 };
 
-export const usePracticeRecordStore = create<PracticeRecordState>()(
+export const useSingleRecordStore = create<SingleRecordState>()(
 	persist(
 		(set, get) => ({
 			records: [],
 			recordBattleResult: (input) => {
-				const next: PracticeMatchRecord = {
+				const next: SingleMatchRecord = {
 					matchId: input.matchId,
 					result: input.result,
 					mode: input.mode,
 					endedAt: input.endedAt ?? Date.now(),
 				};
-				const records = appendPracticeRecord(get().records, next, PRACTICE_RECORD_MAX);
+				const records = appendSingleRecord(get().records, next, SINGLE_RECORD_MAX);
 				if (records === get().records) return;
 				set({ records });
 			},
-			recordPracticeResult: (input) => {
+			recordSingleResult: (input) => {
 				get().recordBattleResult({
 					...input,
-					mode: 'practice',
+					mode: 'single',
 				});
 			},
 			clearRecords: () => set({ records: [] }),
 		}),
 		{
-			name: StorageKeys.PRACTICE_RECORD,
+			name: StorageKeys.SINGLE_RECORD,
 			storage: createJSONStorage(() => accountScopedStorage),
 			partialize: (state) => ({ records: state.records }),
 			merge: (persistedState, currentState) => {
@@ -65,15 +65,15 @@ export const usePracticeRecordStore = create<PracticeRecordState>()(
 					...currentState,
 					records: rawRecords
 						.map(normalizeBattleRecord)
-						.filter((record): record is PracticeMatchRecord => record !== null),
+						.filter((record): record is SingleMatchRecord => record !== null),
 				};
 			},
 		},
 	),
 );
 
-registerAccountScopedStore(usePracticeRecordStore);
+registerAccountScopedStore(useSingleRecordStore);
 
-export function selectPracticeStreakLabel(state: PracticeRecordState): string {
-	return formatPracticeStreak(derivePracticeStreak(state.records, 'practice'));
+export function selectSingleStreakLabel(state: SingleRecordState): string {
+	return formatSingleStreak(deriveSingleStreak(state.records, 'single'));
 }

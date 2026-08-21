@@ -42,6 +42,14 @@ describe('pokerViewportLayout', () => {
 		expect(canvasCss).not.toMatch(/--poker-bottom-rail-y\s*:/);
 	});
 
+	it('parks the feedback stack above the flop without leaving the hero column', () => {
+		const { communityCards, feedbackStack } = POKER_VIEWPORT_LAYOUT.zones;
+		expect(feedbackStack.x).toBe(communityCards.x);
+		expect(feedbackStack.width).toBe(communityCards.width);
+		expect(feedbackStack.y + feedbackStack.height).toBeLessThanOrEqual(communityCards.y);
+		expect(communityCards.y - (feedbackStack.y + feedbackStack.height)).toBeLessThanOrEqual(8);
+	});
+
 	it('aligns the flop with the hero column between both avatars', () => {
 		const { communityCards, opponentHero, playerHero } = POKER_VIEWPORT_LAYOUT.zones;
 		expect(communityCards.y).toBe(474);

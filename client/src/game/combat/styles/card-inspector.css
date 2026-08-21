@@ -1,0 +1,387 @@
+.card-inspector-overlay {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1;
+	isolation: isolate;
+	pointer-events: auto;
+	padding: 28px;
+	background: rgba(2, 5, 10, 0.48);
+	backdrop-filter: blur(5px) brightness(0.72) saturate(0.82);
+	animation: card-inspector-fade-in 160ms ease-out;
+}
+
+.card-inspector-dialog {
+	display: flex;
+	flex-direction: column;
+	position: relative;
+	z-index: 1;
+	width: min(1280px, 100%);
+	max-height: calc(100% - 12px);
+	overflow: hidden;
+	color: var(--ink-0);
+	background:
+		linear-gradient(135deg, rgba(18, 25, 38, 0.99), rgba(4, 8, 15, 0.99)),
+		var(--obsidian-950);
+	border: 1px solid color-mix(in srgb, var(--gold-500) 72%, transparent);
+	border-radius: 8px;
+	box-shadow:
+		0 28px 96px rgba(0, 0, 0, 0.88),
+		0 0 42px color-mix(in srgb, var(--gold-500) 18%, transparent),
+		inset 0 1px 0 color-mix(in srgb, var(--gold-300) 24%, transparent);
+	animation: card-inspector-rise-in 180ms ease-out;
+}
+
+.card-inspector-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 20px;
+	padding: 18px 22px 16px;
+	border-bottom: 1px solid color-mix(in srgb, var(--gold-500) 28%, transparent);
+}
+
+.card-inspector-kicker {
+	font-family: var(--type-display);
+	font-size: 11px;
+	font-weight: 800;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--gold-300);
+}
+
+.card-inspector-header h2 {
+	margin: 3px 0 0;
+	font-family: var(--type-display);
+	font-size: 28px;
+	line-height: 1.1;
+	color: var(--ink-0);
+}
+
+.card-inspector-close {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 48px;
+	height: 48px;
+	flex: 0 0 48px;
+	padding: 0;
+	color: var(--ink-300);
+	background: rgba(15, 23, 42, 0.78);
+	border: 1px solid rgba(148, 163, 184, 0.3);
+	border-radius: 5px;
+	cursor: pointer;
+	transition: color 140ms ease, border-color 140ms ease, background-color 140ms ease;
+}
+
+.card-inspector-close:hover,
+.card-inspector-close:focus-visible {
+	color: var(--ink-0);
+	background: rgba(51, 65, 85, 0.88);
+	border-color: var(--gold-300);
+	outline: 2px solid color-mix(in srgb, var(--gold-300) 55%, transparent);
+	outline-offset: 2px;
+}
+
+.card-inspector-layout {
+	display: grid;
+	grid-template-columns: 296px minmax(0, 1fr);
+	gap: 20px;
+	min-height: 0;
+	padding: 20px 22px;
+	overflow: hidden;
+}
+
+.card-inspector-preview {
+	display: grid;
+	align-content: start;
+	gap: 10px;
+	min-width: 0;
+	padding: 0;
+	background: transparent;
+	border: 0;
+	box-shadow: none;
+}
+
+.card-inspector-preview-sector {
+	min-width: 0;
+	padding: 12px;
+	background: rgba(2, 6, 14, 0.74);
+	border: 1px solid rgba(148, 163, 184, 0.28);
+	border-radius: 7px;
+	box-shadow: inset 0 1px 0 rgba(229, 231, 235, 0.04);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+}
+
+.card-inspector-preview-sector h3 {
+	align-self: stretch;
+	margin: 0;
+	font-family: var(--type-display);
+	font-size: 10px;
+	font-weight: 800;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--gold-300);
+}
+
+.card-inspector-preview-frame {
+	display: flex;
+	justify-content: center;
+	width: 100%;
+}
+
+.card-inspector-preview .simple-card-shell {
+	flex: 0 0 auto;
+}
+
+.card-inspector-details {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	align-content: start;
+	gap: 12px;
+	min-width: 0;
+	overflow: auto;
+	padding-right: 4px;
+	scrollbar-width: thin;
+	scrollbar-color: rgba(212, 175, 55, 0.5) rgba(15, 23, 42, 0.5);
+}
+
+.card-inspector-section {
+	min-width: 0;
+	padding: 15px;
+	background: rgba(2, 6, 14, 0.72);
+	border: 1px solid rgba(148, 163, 184, 0.25);
+	border-radius: 6px;
+	box-shadow: inset 0 1px 0 rgba(229, 231, 235, 0.035);
+}
+
+.card-inspector-overview {
+	padding: 12px;
+}
+
+.card-inspector-section h3 {
+	align-self: stretch;
+	font-family: var(--type-display);
+	font-size: 11px;
+	font-weight: 800;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--gold-300);
+	margin: 0 0 9px;
+}
+
+.card-inspector-overview > p,
+.card-inspector-empty {
+	margin: 0;
+	font-size: 13px;
+	line-height: 1.45;
+	color: var(--ink-100);
+}
+
+.card-inspector-facts-sector,
+.card-inspector-abilities,
+.card-inspector-modifiers,
+.card-inspector-combat-states {
+	grid-column: 1 / -1;
+}
+
+.card-inspector-facts {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 8px;
+	margin: 0;
+}
+
+.card-inspector-facts > div {
+	min-width: 0;
+	padding: 8px 9px;
+	background: rgba(15, 23, 42, 0.86);
+	border: 1px solid rgba(148, 163, 184, 0.24);
+	border-radius: 4px;
+}
+
+.card-inspector-facts dt {
+	font-size: 10px;
+	font-weight: 750;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--ink-300);
+}
+
+.card-inspector-facts dd {
+	margin: 3px 0 0;
+	overflow-wrap: anywhere;
+	font-size: 12px;
+	line-height: 1.35;
+	text-transform: capitalize;
+	color: var(--ink-100);
+}
+
+.card-inspector-feature-list {
+	display: grid;
+	gap: 7px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.card-inspector-abilities .card-inspector-feature-list,
+.card-inspector-modifiers .card-inspector-feature-list {
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.card-inspector-combat-states .card-inspector-feature-list {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.card-inspector-feature {
+	display: grid;
+	grid-template-columns: 8px minmax(0, 1fr);
+	gap: 9px;
+	padding: 8px 10px;
+	background: rgba(15, 23, 42, 0.84);
+	border: 1px solid rgba(148, 163, 184, 0.24);
+	border-radius: 4px;
+}
+
+.card-inspector-feature.is-active {
+	border-color: color-mix(in srgb, var(--success-400) 34%, rgba(148, 163, 184, 0.24));
+	box-shadow: inset 2px 0 0 var(--success-400);
+}
+
+.card-inspector-feature-state {
+	width: 7px;
+	height: 7px;
+	margin-top: 4px;
+	background: var(--success-400);
+	border-radius: 50%;
+	box-shadow: 0 0 8px color-mix(in srgb, var(--success-400) 60%, transparent);
+}
+
+.card-inspector-feature-heading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.card-inspector-feature-name {
+	display: inline-flex;
+	align-items: center;
+	min-width: 0;
+	gap: 5px;
+}
+
+.card-inspector-feature-name strong {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 12px;
+	color: var(--ink-0);
+}
+
+.card-inspector-feature-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 30px;
+	width: 30px;
+	height: 30px;
+	color: var(--gold-300);
+}
+
+.card-inspector-feature-icon svg {
+	width: 28px;
+	height: 28px;
+}
+
+.card-inspector-feature-status {
+	font-family: var(--type-mono);
+	font-size: 9px;
+	font-weight: 800;
+	letter-spacing: 0.07em;
+	text-transform: uppercase;
+	color: var(--success-400);
+}
+
+.card-inspector-feature p {
+	margin: 3px 0 0;
+	font-size: 11px;
+	line-height: 1.4;
+	color: var(--ink-300);
+}
+
+.card-inspector-feature.is-inactive {
+	background: rgba(15, 23, 42, 0.7);
+	opacity: 0.72;
+}
+
+.card-inspector-feature.is-inactive .card-inspector-feature-state {
+	background: var(--ink-500);
+	box-shadow: none;
+}
+
+.card-inspector-feature.is-inactive .card-inspector-feature-status,
+.card-inspector-feature.is-inactive .card-inspector-feature-icon {
+	color: var(--ink-300);
+}
+
+.card-inspector-footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 10px 20px;
+	font-size: 11px;
+	color: var(--ink-400);
+	border-top: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.card-inspector-footer kbd {
+	padding: 2px 5px;
+	font-family: var(--type-mono);
+	color: var(--ink-200);
+	background: rgba(15, 23, 42, 0.9);
+	border: 1px solid rgba(148, 163, 184, 0.28);
+	border-radius: 3px;
+}
+
+@keyframes card-inspector-fade-in {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+
+@keyframes card-inspector-rise-in {
+	from { opacity: 0; transform: translateY(10px) scale(0.985); }
+	to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 900px) {
+	.card-inspector-overlay { padding: 18px; }
+	.card-inspector-dialog { max-height: calc(100% - 12px); }
+	.card-inspector-layout { grid-template-columns: 245px minmax(0, 1fr); gap: 16px; padding: 16px; }
+	.card-inspector-preview .simple-card-shell { transform: scale(0.78); transform-origin: top center; margin-bottom: -88px; }
+	.card-inspector-details { grid-template-columns: minmax(0, 1fr); }
+	.card-inspector-facts-sector,
+	.card-inspector-abilities,
+	.card-inspector-modifiers,
+	.card-inspector-combat-states { grid-column: auto; }
+	.card-inspector-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+	.card-inspector-combat-states .card-inspector-feature-list { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.card-inspector-overlay,
+	.card-inspector-dialog {
+		animation: none;
+	}
+	.card-inspector-close {
+		transition: none;
+	}
+}

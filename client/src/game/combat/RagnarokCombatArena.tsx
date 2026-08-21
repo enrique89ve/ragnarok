@@ -19,6 +19,7 @@ import { Position } from '../types/Position';
 import { TargetingOverlay } from '../components/TargetingOverlay';
 import { CardBurnOverlay } from '../components/CardBurnOverlay';
 import { ActionAnnouncement } from '../components/ActionAnnouncement';
+import { CombatFeedbackStack } from './components/CombatFeedbackStack';
 import '../poker/styles/poker.css';
 import AIAttackAnimationProcessor from '../components/AIAttackAnimationProcessor';
 import { PixiParticleCanvas } from '../animations/PixiParticleCanvas';
@@ -79,6 +80,9 @@ import { resolveHeroPortrait } from '../utils/art/artMapping';
 import { getHeroFeud } from '../pvp/pvpData';
 import type { CardInstance } from '../types';
 import { derivePokerDecisionView } from './decision/pokerDecisionView';
+import { BattlefieldCardInspector } from './components/BattlefieldCardInspector';
+import type { CardInspectorSource } from './cardInspector/cardInspectorModel';
+import { resolveBattlefieldCardClickIntent, type BattlefieldCardSide } from './cardInspector/battlefieldCardIntent';
 
 const CrossedSwordsIcon = () => (
 	<svg className="btn-icon" viewBox="0 0 20 20" fill="currentColor">
@@ -251,6 +255,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
   const gameState = useGameStore(s => s.gameState);
   const autoAttackAll = useGameStore(s => s.autoAttackAll);
   const selectAttacker = useGameStore(s => s.selectAttacker);
+  const selectedHandCard = useGameStore(s => s.selectedCard);
   const activeMatch = useMatchStore(s => s.activeMatch);
   const connectionState = usePeerStore(s => s.connectionState);
 
@@ -261,6 +266,10 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
 
   const [communityCardsRevealed, setCommunityCardsRevealed] = useState(false);
   const [showGearPanel, setShowGearPanel] = useState(false);
+  const [inspectedCard, setInspectedCard] = useState<{
+    readonly card: CardInstance;
+    readonly source: CardInspectorSource;
+  } | null>(null);
 
   useEffect(() => {
     if (!combatState?.phase) return;
@@ -467,6 +476,48 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
     gameState,
   });
 
+  const isCardInteractionDisabled = gameState?.gamePhase === 'game_over';
+  const openCardInspector = useCallback((card: CardInstance, source: CardInspectorSource) => {
+    setInspectedCard({ card, source });
+  }, []);
+  const handleBattlefieldCardClick = useCallback((side: BattlefieldCardSide, card: CardInstance) => {
+    const intent = resolveBattlefieldCardClickIntent({
+      side,
+      isPlayerTurn,
+      cardCanAttack: card.canAttack === true,
+      cardIsSummoningSick: card.isSummoningSick === true,
+      cardIsFrozen: card.isFrozen === true,
+      hasSelectedAttacker: Boolean(rawAttackingCard),
+      hasSelectedHandCard: Boolean(selectedHandCard),
+      isHeroPowerTargeting: heroPowerTargeting?.active === true,
+      isInteractionDisabled: isCardInteractionDisabled,
+    });
+
+    if (intent === 'inspect') {
+      openCardInspector(card, side === 'player' ? 'player-battlefield' : 'opponent-battlefield');
+      return;
+    }
+    if (side === 'player') handlePlayerCardClick(card);
+    else handleOpponentCardClick(card);
+  }, [
+    handleOpponentCardClick,
+    handlePlayerCardClick,
+    heroPowerTargeting?.active,
+    isCardInteractionDisabled,
+    isPlayerTurn,
+    openCardInspector,
+    rawAttackingCard,
+    selectedHandCard,
+  ]);
+  const handlePlayerBattlefieldCardClick = useCallback(
+    (card: CardInstance) => handleBattlefieldCardClick('player', card),
+    [handleBattlefieldCardClick],
+  );
+  const handleOpponentBattlefieldCardClick = useCallback(
+    (card: CardInstance) => handleBattlefieldCardClick('opponent', card),
+    [handleBattlefieldCardClick],
+  );
+
   const combatPhase = combatState?.phase;
   const isMulligan = combatPhase === CombatPhase.MULLIGAN;
   const isBettingRound = combatPhase ? isBettingPhase(combatPhase) : false;
@@ -550,14 +601,14 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
         role="opp"
         playerCards={[]}
         opponentCards={opponentBattlefield}
-        onCardClick={handlePlayerCardClick}
-        onOpponentCardClick={handleOpponentCardClick}
+        onCardClick={handlePlayerBattlefieldCardClick}
+        onOpponentCardClick={handleOpponentBattlefieldCardClick}
         onOpponentHeroClick={onOpponentHeroClick}
         attackingCard={attackingCard}
         isPlayerTurn={isPlayerTurn}
         registerCardPosition={registerCardPosition || noopRegisterCardPosition}
         shakingTargets={shakingTargets}
-        isInteractionDisabled={gameState?.gamePhase === 'game_over'}
+        isInteractionDisabled={isCardInteractionDisabled}
       />
 
       {/* ═══════════ ZONE 3 · BOARD (community cards) ═══════════ */}
@@ -574,13 +625,13 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
         role="player"
         playerCards={playerBattlefield}
         opponentCards={[]}
-        onCardClick={handlePlayerCardClick}
-        onOpponentCardClick={handleOpponentCardClick}
+        onCardClick={handlePlayerBattlefieldCardClick}
+        onOpponentCardClick={handleOpponentBattlefieldCardClick}
         attackingCard={attackingCard}
         isPlayerTurn={isPlayerTurn}
         registerCardPosition={registerCardPosition || noopRegisterCardPosition}
         shakingTargets={shakingTargets}
-        isInteractionDisabled={gameState?.gamePhase === 'game_over'}
+        isInteractionDisabled={isCardInteractionDisabled}
       />
 
       {/* ═══════════ ZONE 5 · PLAYER (hero + hand) ═══════════ */}
@@ -622,6 +673,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
         handleCardPlay={handleCardPlay}
         registerCardPosition={registerCardPosition || noopRegisterCardPosition}
         battlefieldRef={battlefieldRef as React.RefObject<HTMLDivElement>}
+        onCardInspect={card => openCardInspector(card, 'hand')}
       />
 
       {/* ═══════════ OVERLAY LAYER (absolute, layered on top of zones) ═══════════ */}
@@ -706,6 +758,12 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
           onClose={() => setShowGearPanel(false)}
         />
       )}
+
+      <BattlefieldCardInspector
+        card={inspectedCard?.card ?? null}
+        source={inspectedCard?.source ?? 'hand'}
+        onClose={() => setInspectedCard(null)}
+      />
     </div>
   );
 };
@@ -1225,6 +1283,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
         })()}
         
         <PhaseBanner phase={combatState.phase} forceHide={!!showdownCelebration} />
+        <CombatFeedbackStack />
 
         {/* Hand strength indicator — live display of current best hand */}
         <HandStrengthIndicator

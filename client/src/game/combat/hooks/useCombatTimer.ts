@@ -7,6 +7,7 @@ import { proceduralAudio } from '../../audio/proceduralAudio';
 import type { BattlePopupAction, BattlePopupTarget } from '../components/HeroBattlePopup';
 import { getPokerTurnRemainingSeconds } from '../../../../../shared/p2p-wire/pokerTurnClock';
 import { derivePokerDecisionView } from '../decision/pokerDecisionView';
+import { getPokerActionDefinition } from '../decision/pokerActionCatalog';
 import { derivePokerTurnPolicy, type PokerOpponentKind } from '../decision/pokerTurnPolicy';
 
 interface UseCombatTimerOptions {
@@ -143,9 +144,19 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
         let autoAction = CombatAction.DEFEND;
         if (permissions?.hasBetToCall) {
           autoAction = CombatAction.BRACE;
-          addHeroBattlePopup?.({ action: 'brace', target: 'player', text: 'Brace', subtitle: 'Time expired' });
+          addHeroBattlePopup?.({
+            action: CombatAction.BRACE,
+            target: 'player',
+            text: getPokerActionDefinition(CombatAction.BRACE).label,
+            subtitle: 'Time expired',
+          });
         } else {
-          addHeroBattlePopup?.({ action: 'defend', target: 'player', text: 'Defend', subtitle: 'Time expired' });
+          addHeroBattlePopup?.({
+            action: CombatAction.DEFEND,
+            target: 'player',
+            text: getPokerActionDefinition(CombatAction.DEFEND).label,
+            subtitle: 'Time expired',
+          });
         }
 
         if (isP2PCombat) {

@@ -5,7 +5,7 @@ export interface GameLogEntry {
 	timestamp: number;
 	turn: number;
 	actor: 'player' | 'opponent' | 'system';
-	type: 'play_card' | 'attack' | 'hero_power' | 'spell' | 'draw' | 'death' | 'damage' | 'heal' | 'secret' | 'end_turn' | 'fatigue' | 'battlecry' | 'deathrattle' | 'poker_turn' | 'poker_phase' | 'p2p_status';
+	type: 'play_card' | 'attack' | 'hero_power' | 'spell' | 'draw' | 'death' | 'damage' | 'heal' | 'secret' | 'end_turn' | 'fatigue' | 'battlecry' | 'deathrattle' | 'poker_turn' | 'poker_phase' | 'poker_bet' | 'stamina' | 'mana' | 'p2p_status';
 	message: string;
 	details?: {
 		cardName?: string;

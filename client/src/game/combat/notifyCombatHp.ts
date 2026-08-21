@@ -2,7 +2,6 @@ import { CombatEventBus } from '../services/CombatEventBus';
 import type { PokerCombatState } from '../types/PokerCombatTypes';
 import type { CombatHpChannelId } from './combatHpBook';
 import { isOpponentHpChannel, type PokerHpWrite } from './pokerCombatHp';
-import { emitCombatImpact } from './vfx/events';
 
 export function notifyOpponentHpDebit(
 	state: PokerCombatState,
@@ -24,11 +23,6 @@ export function notifyOpponentHpDebit(
 		targetHealthBefore: write.transition.before.current,
 		targetHealthAfter: write.transition.after.current,
 		targetDied: write.transition.after.current <= 0,
-	});
-	emitCombatImpact({
-		targetId: 'opponent-hero',
-		damage: actualDamage,
-		kind: 'hit',
 	});
 }
 

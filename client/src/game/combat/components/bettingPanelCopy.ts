@@ -1,13 +1,16 @@
+import { CombatAction } from '../../types/PokerCombatTypes';
+import { getPokerActionDefinition } from '../decision/pokerActionCatalog';
+
 export type BettingMatchKind = 'call' | 'check';
 export type BettingCommitKind = 'bet' | 'raise';
 export type BettingActionKind = BettingCommitKind | BettingMatchKind | 'fold' | 'all_in' | 'frontline';
 
 export const BETTING_ACTION_LABEL = {
-	bet: 'Bet',
-	raise: 'Raise',
-	call: 'Call',
-	check: 'Check',
-	fold: 'Fold',
+	bet: getPokerActionDefinition(CombatAction.ATTACK).pokerLabel,
+	raise: getPokerActionDefinition(CombatAction.COUNTER_ATTACK).pokerLabel,
+	call: getPokerActionDefinition(CombatAction.ENGAGE).pokerLabel,
+	check: getPokerActionDefinition(CombatAction.DEFEND).pokerLabel,
+	fold: getPokerActionDefinition(CombatAction.BRACE).pokerLabel,
 	frontline: 'Frontline',
 	all_in: 'All in',
 } as const satisfies Record<BettingActionKind, string>;

@@ -44,7 +44,11 @@ export const MinionField: React.FC<MinionFieldProps> = ({
 	const zoneClass = role === 'opp' ? 'zone-opp-field' : 'zone-player-field';
 	const vfxTarget = role === 'opp' ? ARENA_VFX_TARGETS.opponentMinion : ARENA_VFX_TARGETS.playerMinion;
 	return (
-		<section className={`${zoneClass} minion-field minion-field--${role}`} {...arenaVfxTargetProps(vfxTarget)}>
+		<section
+			className={`${zoneClass} minion-field minion-field--${role}`}
+			data-card-drop-zone={role === 'player' ? 'battlefield' : undefined}
+			{...arenaVfxTargetProps(vfxTarget)}
+		>
 			<SimpleBattlefield
 				playerCards={playerCards as any}
 				opponentCards={opponentCards as any}
@@ -58,6 +62,7 @@ export const MinionField: React.FC<MinionFieldProps> = ({
 				renderSurface="poker"
 				shakingTargets={shakingTargets as Set<string>}
 				isInteractionDisabled={isInteractionDisabled}
+				allowDisabledCardClick
 			/>
 		</section>
 	);

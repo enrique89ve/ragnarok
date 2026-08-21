@@ -25,8 +25,6 @@ export interface CardDescriptionProps {
 }
 
 type KeywordIconComponent = React.FC<React.SVGProps<SVGSVGElement>>;
-type KeywordChipStyle = React.CSSProperties & { '--keyword-tone'?: string };
-
 const keywordIconLookup: Readonly<Partial<Record<string, KeywordIconComponent>>> = KEYWORD_ICON_MAP;
 
 const CardDescription: React.FC<CardDescriptionProps> = ({
@@ -89,7 +87,6 @@ const CardDescription: React.FC<CardDescriptionProps> = ({
 										data-keyword-pregame={entry.pregameImportance}
 										data-tone={entry.tone}
 										data-keyword-importance={entry.importance}
-										style={{ '--keyword-tone': entry.accent } as KeywordChipStyle}
 									aria-label={ownsContextualHelp ? undefined : entry.label}
 									data-chrome-faq={ownsContextualHelp ? undefined : getKeywordChromeFaq(entry.keyword)}
 									>

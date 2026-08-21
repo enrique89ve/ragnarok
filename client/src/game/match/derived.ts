@@ -16,7 +16,7 @@
  *
  * Phase ownership:
  *   - deriveAuthority, deriveOpponentArmyForMode, deriveIntro, deriveIWonForPhase.
- *   - deriveMatchFlowPolicy compresses practice / campaign / p2p flow facts.
+ *   - deriveMatchFlowPolicy compresses single / campaign / p2p flow facts.
  */
 
 import { buildCampaignArmy } from '../campaign/campaignArmyBuilder';
@@ -154,10 +154,10 @@ export function deriveIntro(
 // ── Playable match mode + flow policy ─────────────────────────────────────
 
 /**
- * Alfa playable modes. `practice` is the local AI match (route `/game/single`,
- * UI "Quick Match"). Chess and poker rules are shared; only flow differs.
+ * Alfa playable modes. `single` is the local AI match (route `/game/single`).
+ * Chess and poker rules are shared; only flow differs.
  */
-export type PlayableMatchMode = 'practice' | 'campaign' | 'p2p';
+export type PlayableMatchMode = 'single' | 'campaign' | 'p2p';
 
 export type CampaignMatchScript = Extract<ScriptPayload, { kind: 'campaign-mission' }>;
 
@@ -168,7 +168,7 @@ export type RestartDestination =
 export type LocalAiProfile = {
 	readonly difficulty: Difficulty;
 	readonly style: AiStyle;
-	readonly behaviorProfile: 'practice' | 'campaign';
+	readonly behaviorProfile: 'single' | 'campaign';
 };
 
 /**
@@ -190,7 +190,7 @@ export type MatchFlowPolicy = {
 export function derivePlayableMatchMode(ctx: MatchContext): PlayableMatchMode {
 	switch (ctx.opponent.kind) {
 		case 'ai':
-			return 'practice';
+			return 'single';
 		case 'scripted':
 			return 'campaign';
 		case 'peer':
@@ -212,7 +212,7 @@ export function deriveLocalAiProfile(ctx: MatchContext): LocalAiProfile | null {
 			return {
 				difficulty: ctx.opponent.difficulty,
 				style: ctx.opponent.style ?? 'balanced',
-				behaviorProfile: 'practice',
+				behaviorProfile: 'single',
 			};
 		case 'scripted':
 			return {
@@ -235,7 +235,7 @@ export function deriveMatchFlowPolicy(ctx: MatchContext): MatchFlowPolicy {
 		authority,
 		usesPeerPhaseCheckpoint: authority.kind === 'p2p-symmetric',
 		usesLocalAi: authority.kind === 'local',
-		bootstrapsWarband: mode === 'practice',
+		bootstrapsWarband: mode === 'single',
 		requiresWarbandArmy: mode !== 'campaign',
 		campaign: deriveCampaignMatch(ctx),
 		restartDestination: restartDestinationFor(mode),

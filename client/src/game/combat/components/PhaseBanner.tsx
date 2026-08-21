@@ -2,7 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { CombatPhase } from '../../types/PokerCombatTypes';
 import { ARENA_VFX_LAYERS, getArenaVfxLayer } from '../arenaVfxTargets';
+import { useCombatFeedbackStore } from '../feedback/combatFeedbackStore';
 import '../styles/poker-drama.css';
+
+const PHASE_CINEMA_HOLDER = 'phase-banner';
 
 interface PhaseBannerProps {
 	phase: CombatPhase;
@@ -40,13 +43,15 @@ export const PhaseBanner: React.FC<PhaseBannerProps> = ({ phase, forceHide = fal
 		setBannerData(config);
 		setShowBanner(true);
 		setIsVisible(true);
+		useCombatFeedbackStore.getState().holdCinema(PHASE_CINEMA_HOLDER);
 
 		const hideTimer = setTimeout(() => {
 			setIsVisible(false);
 			const removeTimer = setTimeout(() => {
 				setShowBanner(false);
 				setBannerData(null);
-			}, 300);
+				useCombatFeedbackStore.getState().releaseCinema(PHASE_CINEMA_HOLDER);
+			}, 160);
 			timersRef.current.push(removeTimer);
 		}, 1700);
 		timersRef.current.push(hideTimer);
@@ -59,13 +64,17 @@ export const PhaseBanner: React.FC<PhaseBannerProps> = ({ phase, forceHide = fal
 			const t = setTimeout(() => {
 				setShowBanner(false);
 				setBannerData(null);
-			}, 200);
+				useCombatFeedbackStore.getState().releaseCinema(PHASE_CINEMA_HOLDER);
+			}, 160);
 			timersRef.current.push(t);
 		}
 	}, [forceHide, showBanner]);
 
 	useEffect(() => {
-		return () => clearAllTimers();
+		return () => {
+			clearAllTimers();
+			useCombatFeedbackStore.getState().releaseCinema(PHASE_CINEMA_HOLDER);
+		};
 	}, []);
 
 	if (!showBanner || !bannerData) return null;

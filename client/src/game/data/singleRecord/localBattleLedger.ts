@@ -8,20 +8,20 @@
 
 import { useHiveDataStore } from '../../../data/HiveDataLayer';
 import {
-	derivePracticeStreak,
+	deriveSingleStreak,
 	filterBattleRecords,
 	formatBattleMode,
-	formatPracticeStreak,
+	formatSingleStreak,
 	isBattleLedgerAccount,
 	resultFromMatchEnd,
 	type BattleLedgerFilter,
 	type LocalBattleMode,
-	type PracticeMatchRecord,
-} from './practiceRecordRules';
-import { usePracticeRecordStore } from './practiceRecordStore';
+	type SingleMatchRecord,
+} from './singleRecordRules';
+import { useSingleRecordStore } from './singleRecordStore';
 
 export function readLocalBattleAccount(): string | null {
-	const raw = useHiveDataStore.getState().user?.hiveUsername;
+	const raw = useHiveDataStore.getState().user?.hiveUsername ?? null;
 	if (!isBattleLedgerAccount(raw)) return null;
 	return raw.trim().toLowerCase().replace(/^@/, '');
 }
@@ -34,7 +34,7 @@ export function recordLocalBattleEnd(input: {
 	readonly endedAt?: number;
 }): boolean {
 	if (!readLocalBattleAccount()) return false;
-	usePracticeRecordStore.getState().recordBattleResult({
+	useSingleRecordStore.getState().recordBattleResult({
 		matchId: input.matchId,
 		mode: input.mode,
 		result: resultFromMatchEnd(input.iWon, input.isDraw === true),
@@ -45,7 +45,7 @@ export function recordLocalBattleEnd(input: {
 
 export type LocalBattleLedgerView = {
 	readonly signedIn: boolean;
-	readonly rows: ReadonlyArray<PracticeMatchRecord>;
+	readonly rows: ReadonlyArray<SingleMatchRecord>;
 	readonly streakLabel: string;
 	readonly wins: number;
 	readonly losses: number;
@@ -54,7 +54,7 @@ export type LocalBattleLedgerView = {
 	readonly recordedCount: number;
 };
 
-function countResults(records: ReadonlyArray<PracticeMatchRecord>): {
+function countResults(records: ReadonlyArray<SingleMatchRecord>): {
 	readonly wins: number;
 	readonly losses: number;
 	readonly draws: number;
@@ -72,13 +72,13 @@ function countResults(records: ReadonlyArray<PracticeMatchRecord>): {
 
 export function presentLocalBattleLedger(input: {
 	readonly account: string | null | undefined;
-	readonly records: ReadonlyArray<PracticeMatchRecord>;
+	readonly records: ReadonlyArray<SingleMatchRecord>;
 	readonly filter: BattleLedgerFilter;
 }): LocalBattleLedgerView {
 	const signedIn = isBattleLedgerAccount(input.account);
 	const source = signedIn ? input.records : [];
 	const rows = filterBattleRecords(source, input.filter);
-	const streak = formatPracticeStreak(derivePracticeStreak(rows));
+	const streak = formatSingleStreak(deriveSingleStreak(rows));
 	const counts = countResults(rows);
 	return {
 		signedIn,
