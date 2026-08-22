@@ -1,4 +1,4 @@
-import type { RuneSourceType } from '../../../data/runeAPI';
+import type { RuneSourceType } from '@shared/protocol-core/types';
 
 export const SOURCE_LABELS: Record<RuneSourceType, string> = {
 	p2p_ranked: 'Ranked reward',

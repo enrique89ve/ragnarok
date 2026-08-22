@@ -20,7 +20,16 @@ import { resolveHeroPortrait, DEFAULT_PORTRAIT } from '../../utils/art/artMappin
 import { GameIcon } from '../../utils/ui/GameIcon';
 import { isScorchingBurstPower, ScorchingBurstIcon } from '../../components/ui/ScorchingBurstIcon';
 import HeroDossierModal from './HeroDossierModal';
+import { PokerHeroFrameLayers } from './PokerHeroFrameLayers';
+import { POKER_HERO_BOARD_COMPOSITION } from '../../utils/pokerHeroComposition';
+import {
+  adaptPokerHeroComposition,
+  createPokerHeroFrameRenderPlan,
+  createPokerHeroPortraitProfile,
+} from '../../utils/pokerHeroFrameAdapter';
 import '../styles/hero-reactions.css';
+
+const POKER_HERO_FRAME_KIT = adaptPokerHeroComposition(POKER_HERO_BOARD_COMPOSITION);
 
 /**
  * Props for the BattlefieldHero component
@@ -64,6 +73,8 @@ export interface BattlefieldHeroProps {
   pocketCardsOverlay?: React.ReactNode;
   /** Whether the hero frame should play the explicit damage reaction */
   shakingHero?: boolean;
+  /** Enables the approved layered frame only on the poker board surface. */
+  frameComposition?: 'poker-v1';
 }
 
 /**
@@ -89,7 +100,8 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
   isWeaponUpgraded = false,
   artifact,
   pocketCardsOverlay,
-  shakingHero = false
+  shakingHero = false,
+  frameComposition,
 }) => {
   const heroElement = useMemo(() => {
     if (elementProp) return elementProp;
@@ -124,6 +136,10 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
     backgroundSize: 'cover',
     backgroundPosition: 'center top'
   }), [resolvedPortrait]);
+  const pokerFramePlan = useMemo(() => createPokerHeroFrameRenderPlan(
+    POKER_HERO_FRAME_KIT,
+    createPokerHeroPortraitProfile(resolvedPortrait),
+  ), [resolvedPortrait]);
 
   const currentHP = pet.stats.currentHealth;
   const maxHP = pet.stats.maxHealth;
@@ -211,7 +227,10 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
           <strong>{currentSta}</strong>
         </div>
 
-        <div className={`hero-card-frame ${shakingHero ? 'damage-shake damage-flash' : ''}`}>
+        <div
+          className={`hero-card-frame ${frameComposition === 'poker-v1' ? 'hero-card-frame--fusion' : ''} ${shakingHero ? 'damage-shake damage-flash' : ''}`}
+          style={frameComposition === 'poker-v1' ? pokerFramePlan.surfaceStyle : undefined}
+        >
           <button
             type="button"
             className="hero-card-details-trigger"
@@ -221,10 +240,24 @@ export const BattlefieldHero: React.FC<BattlefieldHeroProps> = React.memo(({
               ? `Target ${pet.name}`
               : `${isOpponent ? 'View opponent' : 'View'} hero details for ${pet.name}`}
           />
+          {frameComposition === 'poker-v1' && <PokerHeroFrameLayers side={isOpponent ? 'opponent' : 'player'} />}
           <div
             className={`hero-portrait hero-portrait-interactive ${!isOpponent && heroPower ? 'has-power' : ''} ${isWeaponUpgraded ? 'upgraded' : ''} ${powerActivating ? 'power-activating' : ''}`}
-            style={portraitBgStyle}
+            style={frameComposition === 'poker-v1' ? undefined : portraitBgStyle}
           >
+            {frameComposition === 'poker-v1' && (
+              <img
+                className="hero-portrait-art"
+                src={resolvedPortrait}
+                alt=""
+                width={700}
+                height={1050}
+                fetchPriority={isOpponent ? undefined : 'high'}
+                loading={isOpponent ? 'lazy' : 'eager'}
+                decoding="async"
+                style={pokerFramePlan.portraitStyle}
+              />
+            )}
             {!isOpponent && heroPower && (
               <button
                 type="button"

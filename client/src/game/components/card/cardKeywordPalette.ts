@@ -60,7 +60,6 @@ export const CARD_KEYWORD_ACCENT_COLORS: Readonly<Record<string, string>> = {
 	spell_damage: '#fb923c',
 	spellburst: '#f0abfc',
 	spell_trigger: '#e879f9',
-	spellDamage: '#fb923c',
 	stealth: '#d7e0ed',
 	pet_evolution: '#a3e635',
 	master_evolution: '#bef264',

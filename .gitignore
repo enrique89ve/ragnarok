@@ -93,6 +93,8 @@ __tests__/
 *.test.ts
 !**/protocolConformance.test.ts
 !client/src/game/poker/layout/pokerViewportLayout.test.ts
+!client/src/game/utils/pokerHeroComposition.test.ts
+!client/src/game/utils/pokerHeroFrameAdapter.test.ts
 !client/src/data/blockchain/cardXPRewards.test.ts
 !client/src/data/blockchain/adminAdapters.test.ts
 !client/src/data/blockchain/deckVerification.test.ts

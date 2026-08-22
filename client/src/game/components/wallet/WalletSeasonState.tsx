@@ -5,7 +5,7 @@ import {
 	Trophy,
 	type LucideIcon,
 } from 'lucide-react';
-import type { RuneStateSnapshot } from '../../../data/runeAPI';
+import type { LocalRuneSeasonState } from '../../../data/runeSeasonReadModel';
 import { formatNumber } from './walletFormatting';
 
 type CapStatus = 'active' | 'deferred';
@@ -19,14 +19,14 @@ type CapRow = {
 	status: CapStatus;
 };
 
-function buildRows(state: RuneStateSnapshot): CapRow[] {
+function buildRows(state: LocalRuneSeasonState): CapRow[] {
 	return [
 		{
 			key: 'p2p_ranked',
 			label: 'Ranked reward',
 			icon: Trophy,
 			cap: state.p2pCap,
-			issued: state.p2pCreditTotal,
+			issued: state.earnedBySource.p2p_ranked,
 			status: 'deferred',
 		},
 		{
@@ -34,7 +34,7 @@ function buildRows(state: RuneStateSnapshot): CapRow[] {
 			label: 'Campaign clear',
 			icon: Sparkles,
 			cap: state.campaignCap,
-			issued: state.campaignCreditTotal,
+			issued: state.earnedBySource.campaign_first_clear,
 			status: 'active',
 		},
 		{
@@ -42,7 +42,7 @@ function buildRows(state: RuneStateSnapshot): CapRow[] {
 			label: 'Daily quest',
 			icon: CalendarCheck,
 			cap: state.dailyQuestCap,
-			issued: state.dailyQuestCreditTotal,
+			issued: state.earnedBySource.daily_quest_claim,
 			status: 'active',
 		},
 	];
@@ -59,7 +59,7 @@ function formatPercent(issued: number, cap: number): string {
 	return `${ratio(issued, cap).toFixed(1)}%`;
 }
 
-export function SeasonStateOverview({ state }: { state: RuneStateSnapshot }) {
+export function SeasonStateOverview({ state }: { state: LocalRuneSeasonState }) {
 	const rows = buildRows(state);
 
 	return (

@@ -14,7 +14,8 @@ import { getRarityColor, getRarityCssColor } from '../../utils/rarityUtils';
 import { NumericRitual, OrnateCorners, SigilBackplate, type Tier } from '../../../components/ornaments/RunicSigils';
 import { RichTooltip } from '../../../components/ornaments/RichTooltip';
 import { SplashBackdrop } from '../../../components/ornaments/SplashBackdrop';
-import { useNFTUsername, useNFTTokenBalance } from '../../nft/hooks';
+import { useNFTUsername } from '../../nft/hooks';
+import { useLocalRuneBalance } from '../../hooks/useLocalRuneBalance';
 import { HBD_CURRENCY_CODE, formatHbdPrice, formatHbdThousandths } from '@shared/protocol-core';
 import { forceSync } from '../../../data/blockchain/replayEngine';
 import { RuneExchangeModal } from './RuneExchangeModal';
@@ -98,9 +99,8 @@ import type {
 } from '../packs/types';
 
 export default function PackCatalog() {
-	const tokenBalance = useNFTTokenBalance();
 	const hiveUsername = useNFTUsername();
-	const runeBalance = tokenBalance?.RUNE ?? 0;
+	const runeBalance = useLocalRuneBalance(hiveUsername);
 	const runeExchange = useRunePackExchange({ hiveUsername, runeBalance });
 	const hbdPurchase = useHbdPackPurchase();
 

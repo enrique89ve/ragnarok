@@ -33,6 +33,10 @@ import {
 	isDuatAcquisitionProvenance,
 	type AcquisitionProvenance,
 } from '../../shared/protocol-core/acquisitionProvenance';
+import {
+	projectRuneSeason,
+	projectRuneSeasonAccount,
+} from '../../shared/protocol-core/runeSeasonView';
 import { getRagnarokRuntimePhase } from '../../shared/runtimeConfig';
 import { getRagnarokServerRuntimeConfig } from './runtimeConfig';
 
@@ -1378,38 +1382,23 @@ export function getUnrevealedForgeCommitsBefore(deadlineBlock: number): ForgeCom
 }
 
 export function getRuneSeasonStats(seasonId: string): RuneSeasonStats {
-	const stats: RuneSeasonStats = {
-		ledgerCreditTotal: 0,
-		ledgerDebitTotal: 0,
-		p2pCreditTotal: 0,
-		campaignCreditTotal: 0,
-		rewardClaimCreditTotal: 0,
-		dailyQuestCreditTotal: 0,
-		runeExchangeDebitTotal: 0,
+	const projection = projectRuneSeason(Array.from(runeLedger.values()), seasonId);
+	return {
+		ledgerCreditTotal: projection.credits,
+		ledgerDebitTotal: projection.debits,
+		p2pCreditTotal: projection.earnedBySource.p2p_ranked,
+		campaignCreditTotal: projection.earnedBySource.campaign_first_clear,
+		rewardClaimCreditTotal: projection.earnedBySource.reward_claim,
+		dailyQuestCreditTotal: projection.earnedBySource.daily_quest_claim,
+		runeExchangeDebitTotal: projection.spentOnExchange,
 	};
-
-	for (const entry of runeLedger.values()) {
-		if (entry.seasonId !== seasonId) continue;
-
-		if (entry.direction === 'credit') {
-			stats.ledgerCreditTotal += entry.amount;
-			if (entry.sourceType === 'p2p_ranked') stats.p2pCreditTotal += entry.amount;
-			if (entry.sourceType === 'campaign_first_clear') stats.campaignCreditTotal += entry.amount;
-			if (entry.sourceType === 'reward_claim') stats.rewardClaimCreditTotal += entry.amount;
-			if (entry.sourceType === 'daily_quest_claim') stats.dailyQuestCreditTotal += entry.amount;
-			continue;
-		}
-
-		stats.ledgerDebitTotal += entry.amount;
-		if (entry.sourceType === 'rune_exchange') stats.runeExchangeDebitTotal += entry.amount;
-	}
-
-	return stats;
 }
 
 export function getLastRuneBlock(account: string, seasonId: string): number {
-	const entries = getRuneLedgerEntries({ seasonId, account });
-	return entries.reduce((lastBlock, entry) => Math.max(lastBlock, entry.blockNum), 0);
+	return projectRuneSeasonAccount(
+		Array.from(runeLedger.values()),
+		{ account, seasonId },
+	).lastBlock;
 }
 
 export function getRuneAccountSummary(account: string, seasonId: string): RuneAccountSummary {
@@ -1417,38 +1406,19 @@ export function getRuneAccountSummary(account: string, seasonId: string): RuneAc
 }
 
 export function getRuneAccountSummaries(accounts: readonly string[], seasonId: string): RuneAccountSummary[] {
-	const tallies = new Map<string, { credits: number; debits: number; lastBlock: number }>();
-	for (const account of accounts) {
-		tallies.set(account, { credits: 0, debits: 0, lastBlock: 0 });
-	}
-
-	if (tallies.size > 0) {
-		for (const entry of runeLedger.values()) {
-			if (entry.seasonId !== seasonId) continue;
-			const tally = tallies.get(entry.account);
-			if (!tally) continue;
-
-			if (entry.direction === 'credit') {
-				tally.credits += entry.amount;
-			} else {
-				tally.debits += entry.amount;
-			}
-			tally.lastBlock = Math.max(tally.lastBlock, entry.blockNum);
-		}
-	}
+	const entries = Array.from(runeLedger.values());
 
 	return accounts.map(account => {
-		const tally = tallies.get(account) ?? { credits: 0, debits: 0, lastBlock: 0 };
+		const projection = projectRuneSeasonAccount(entries, { account, seasonId });
 		const runeBalance = getTokenBalance(account)?.RUNE ?? 0;
-		const projectedBalance = tally.credits - tally.debits;
 
 		return {
 			account,
 			runeBalance,
-			credits: tally.credits,
-			debits: tally.debits,
-			drift: runeBalance - projectedBalance,
-			lastBlock: tally.lastBlock,
+			credits: projection.credits,
+			debits: projection.debits,
+			drift: runeBalance - projection.balance,
+			lastBlock: projection.lastBlock,
 			indexed: isAccountKnown(account),
 		};
 	});

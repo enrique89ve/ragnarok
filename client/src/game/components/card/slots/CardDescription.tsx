@@ -13,7 +13,7 @@ import {
 	splitKeywordRows,
 } from '../cardKeywordPresentationAdapter';
 import type { CardPresentationSurface } from '../cardPresentationContract';
-import { KEYWORD_ICON_MAP } from '../../ui/CardIconsSVG';
+import { getKeywordIcon } from '../../ui/CardIconsSVG';
 import { getKeywordChromeFaq } from '../cardChromeFaq';
 
 export interface CardDescriptionProps {
@@ -23,9 +23,6 @@ export interface CardDescriptionProps {
 	keywordLabelMode?: 'full' | 'compact';
 	surface?: CardPresentationSurface;
 }
-
-type KeywordIconComponent = React.FC<React.SVGProps<SVGSVGElement>>;
-const keywordIconLookup: Readonly<Partial<Record<string, KeywordIconComponent>>> = KEYWORD_ICON_MAP;
 
 const CardDescription: React.FC<CardDescriptionProps> = ({
 	description,
@@ -74,7 +71,7 @@ const CardDescription: React.FC<CardDescriptionProps> = ({
 							data-keyword-row={rowIndex + 1}
 						>
 							{row.map((entry) => {
-								const Icon = keywordIconLookup[entry.keyword];
+								const Icon = getKeywordIcon(entry.keyword);
 								const showKeywordLabel =
 									fiveStackLabelMode !== 'compact' || Icon === undefined;
 								return (

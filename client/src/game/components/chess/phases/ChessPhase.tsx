@@ -35,7 +35,9 @@ import { useChessHoverStore } from '../../../stores/chessHoverStore';
 import { Tooltip } from '../../ui/Tooltip';
 import ChessBoard from '../ChessBoard';
 import { ELEMENT_NAMES, PIECE_TYPE_NAMES } from '../chessPieceLabels';
-import { ELEMENT_COLORS, ELEMENT_ICONS } from '../../../types/ChessTypes';
+import { ELEMENT_COLORS } from '../../../types/ChessTypes';
+import { ChessManaIcon, ChessStaminaIcon } from '../ChessIconsSVG';
+import { getElementIcon } from '../../ui/ElementIconsSVG';
 import '../chess.css';
 
 const COMPACT_FRAME_STYLE: React.CSSProperties = { width: 72, height: 90 };
@@ -194,9 +196,9 @@ const PlayerHeroPortrait: React.FC<PlayerPortraitProps> = ({ army, pieceCount, c
 			</div>
 			<div className="portal-tooltip-description">{description}</div>
 			<div className="portal-tooltip-meta">
-				<div style={{ color: '#fbbf24' }}>⚡ {minesRemaining}/5 uses</div>
-				<div style={{ color: '#ef4444', marginTop: '4px' }}>💀 STA: -{config?.staPenalty || 2}</div>
-				<div style={{ color: '#22d3ee', marginTop: '4px' }}>✨ Mana: +{config?.manaBoost || 1} next PvP</div>
+				<div style={{ color: '#fbbf24' }}><ChessStaminaIcon aria-hidden="true" /> {minesRemaining}/5 uses</div>
+				<div style={{ color: '#ef4444', marginTop: '4px' }}><ChessStaminaIcon aria-hidden="true" /> STA: -{config?.staPenalty || 2}</div>
+				<div style={{ color: '#22d3ee', marginTop: '4px' }}><ChessManaIcon aria-hidden="true" /> Mana: +{config?.manaBoost || 1} next PvP</div>
 				<div style={{ color: '#9ca3af', marginTop: '4px', fontStyle: 'italic' }}>Click portrait to {isPlacementMode ? 'cancel' : 'activate'}</div>
 			</div>
 		</div>
@@ -390,7 +392,7 @@ const PieceInfoPanel: React.FC<PieceInfoPanelProps> = ({ boardState }) => {
 				<div className="flex items-center justify-between text-xs">
 					<span className="text-red-300 font-semibold">HP {piece.health}/{piece.maxHealth}</span>
 					{piece.stamina > 0 && (
-						<span className="text-amber-300 font-semibold">⚡{piece.stamina}</span>
+						<span className="text-amber-300 font-semibold"><ChessStaminaIcon aria-hidden="true" />{piece.stamina}</span>
 					)}
 				</div>
 			)}
@@ -403,7 +405,7 @@ const PieceInfoPanel: React.FC<PieceInfoPanelProps> = ({ boardState }) => {
 						color: elementColor,
 					}}
 				>
-					<span>{ELEMENT_ICONS[element]}</span>
+					{React.createElement(getElementIcon(element), { 'aria-hidden': true })}
 					<span>{ELEMENT_NAMES[element]}</span>
 				</div>
 			)}

@@ -7,6 +7,7 @@ import {
 	getCardElementSurfaceContract,
 	getCardKeywordsForSurface,
 	getCardKeywordSemantics,
+	normalizeCardKeyword,
 	shouldRenderCardKeywordOnSurface,
 } from './cardPresentationContract';
 import {
@@ -14,7 +15,8 @@ import {
 	createDefaultCardLayoutDraft,
 	updateCardLayoutRenderField,
 } from './cardLayoutDraft';
-import { KEYWORD_ICON_MAP } from '../ui/CardIconsSVG';
+import { getKeywordIcon, KEYWORD_ICON_MAP } from '../ui/CardIconsSVG';
+import { CARD_KEYWORD_DICTIONARY, getKnownCardKeywordDictionaryEntry } from './cardKeywordDictionary';
 import { ELEMENT_ICON_MAP } from '../ui/CardChromeIconsSVG';
 import { NORSE_ELEMENTS } from '../../types/NorseTypes';
 
@@ -41,7 +43,7 @@ describe('card presentation contract', () => {
 			new Set(cardRegistry.flatMap((card) => readKeywords(card.keywords))),
 		).sort();
 		const knownKeywords = new Set(Object.keys(CARD_KEYWORD_SEMANTICS));
-		const missing = registryKeywords.filter((keyword) => !knownKeywords.has(keyword));
+		const missing = registryKeywords.filter((keyword) => !knownKeywords.has(normalizeCardKeyword(keyword)));
 		expect(missing).toEqual([]);
 	});
 
@@ -50,10 +52,23 @@ describe('card presentation contract', () => {
 	});
 
 	it('has a custom icon for every classified keyword', () => {
-		const missing = Object.keys(CARD_KEYWORD_SEMANTICS)
-			.filter((keyword) => !Object.prototype.hasOwnProperty.call(KEYWORD_ICON_MAP, keyword))
-			.sort();
-		expect(missing).toEqual([]);
+		expect(Object.keys(KEYWORD_ICON_MAP).sort()).toEqual(Object.keys(CARD_KEYWORD_SEMANTICS).sort());
+	});
+
+	it('derives one keyword dictionary entry from the semantic contract and SVG registry', () => {
+		expect(Object.keys(CARD_KEYWORD_DICTIONARY).sort()).toEqual(Object.keys(CARD_KEYWORD_SEMANTICS).sort());
+		for (const keyword of Object.keys(CARD_KEYWORD_SEMANTICS)) {
+			const entry = getKnownCardKeywordDictionaryEntry(keyword);
+			expect(entry?.label).toBe(CARD_KEYWORD_SEMANTICS[keyword].label);
+			expect(entry?.description).toBe(CARD_KEYWORD_SEMANTICS[keyword].description);
+			expect(entry?.icon).toBeDefined();
+		}
+	});
+
+	it('normalizes legacy keyword spellings without creating a second semantic entry', () => {
+		expect(normalizeCardKeyword('spellDamage')).toBe('spell_damage');
+		expect(getCardKeywordSemantics('spellDamage')).toEqual(CARD_KEYWORD_SEMANTICS.spell_damage);
+		expect(getKeywordIcon('Spell Damage')).toBe(KEYWORD_ICON_MAP.spell_damage);
 	});
 
 	it('updates render field rules by surface without mutating other surfaces', () => {

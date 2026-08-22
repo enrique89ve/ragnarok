@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { GameIcon } from '../../utils/ui/GameIcon';
-import { type ElementType, ELEMENT_LABELS, getElementIconName } from '../../utils/elements';
+import { getElementIcon } from '../../components/ui/ElementIconsSVG';
+import { type ElementType, ELEMENT_LABELS } from '../../utils/elements';
 import { ARENA_VFX_LAYERS, getArenaVfxLayer } from '../arenaVfxTargets';
 import './HeroDossierModal.css';
 
@@ -239,12 +240,12 @@ export const HeroDossierModal: React.FC<HeroDossierModalProps> = ({
 						<span className="hero-dossier-tag hero-dossier-tag--element">{heroElement}</span>
 						{elementMatchups?.weakTo.map((element) => (
 							<span key={`weak-${element}`} className="hero-dossier-element-chip hero-dossier-element-chip--weak" title={`Weak against ${ELEMENT_LABELS[element]}`}>
-								<GameIcon name={getElementIconName(element)} size={12} />
+								{React.createElement(getElementIcon(element), { 'aria-hidden': true })}
 							</span>
 						))}
 						{elementMatchups?.strongVs.map((element) => (
 							<span key={`strong-${element}`} className="hero-dossier-element-chip hero-dossier-element-chip--strong" title={`Strong against ${ELEMENT_LABELS[element]}`}>
-								<GameIcon name={getElementIconName(element)} size={12} />
+								{React.createElement(getElementIcon(element), { 'aria-hidden': true })}
 							</span>
 						))}
 					</div>

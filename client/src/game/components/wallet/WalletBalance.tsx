@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Clipboard, Wallet } from 'lucide-react';
-import type { AccountRuneSummary } from '../../../data/runeAPI';
+import type { RuneSeasonAccountView } from '@shared/protocol-core/types';
 import { formatNumber } from './walletFormatting';
 
 type CopyState = 'idle' | 'copied' | 'failed';
 
-export function BalanceOverview({ account }: { account: AccountRuneSummary }) {
+export function BalanceOverview({ account }: { account: RuneSeasonAccountView }) {
 	const [copyState, setCopyState] = useState<CopyState>('idle');
 
 	const copyAccount = async () => {
@@ -58,7 +58,7 @@ export function BalanceOverview({ account }: { account: AccountRuneSummary }) {
 					<p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-400">Balance</p>
 					<div className="mt-2 flex flex-wrap items-end gap-x-3 gap-y-1">
 						<p className="numeric-display text-5xl leading-none text-ink-0 md:text-6xl">
-							{formatNumber(account.runeBalance)}
+							{formatNumber(account.balance)}
 						</p>
 						<p className="pb-1.5 font-display text-base font-black uppercase tracking-[0.18em] text-gold-200 md:text-lg">
 							RUNE

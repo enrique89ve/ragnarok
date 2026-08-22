@@ -2,7 +2,7 @@ import React from 'react';
 import { CardData, CardInstance } from '../types';
 import { isMinion } from '../utils/cards/typeGuards';
 import { GameIcon } from '../utils/ui/GameIcon';
-import type { IconName } from '../utils/ui/iconMap';
+import { getKnownCardKeywordDictionaryEntry } from './card/cardKeywordDictionary';
 
 interface CardDetailViewProps {
   card: CardInstance | CardData;
@@ -40,42 +40,25 @@ export const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onClose })
     }
   };
   
-  // For keywords, map them to nice display formats with icons
+  // Render canonical keyword entries with their shared SVG icon and meaning.
   const renderKeywords = (keywords: string[] | undefined) => {
     if (!keywords || keywords.length === 0) return null;
-    
-    // Map of keywords to their icon and description
-    const keywordInfo: {[key: string]: {iconName: IconName, desc: string}} = {
-      'battlecry': { iconName: 'zap', desc: 'Effect triggers when played from hand' },
-      'deathrattle': { iconName: 'skull', desc: 'Effect triggers when this minion dies' },
-      'taunt': { iconName: 'shield', desc: 'Enemies must attack this minion first' },
-      'divine_shield': { iconName: 'sparkles', desc: 'The first time this minion takes damage, ignore it' },
-      'rush': { iconName: 'wind', desc: 'Can attack minions the turn it\'s played' },
-      'charge': { iconName: 'zap', desc: 'Can attack immediately' },
-      'windfury': { iconName: 'wind', desc: 'Can attack twice per turn' },
-      'discover': { iconName: 'search', desc: 'Choose one of three random cards' },
-      'lifesteal': { iconName: 'heart', desc: 'Damage dealt by this card heals your hero' },
-      'poisonous': { iconName: 'skullCrossed', desc: 'Destroys any minion damaged by this' },
-      'stealth': { iconName: 'eye', desc: 'Can\'t be targeted until it attacks' },
-      'magnetic': { iconName: 'magnet', desc: 'Runic Bond — attaches to a friendly Automaton to combine stats' },
-      'echo': { iconName: 'refresh', desc: 'Can be played multiple times on the same turn' },
-      'overkill': { iconName: 'flame', desc: 'Triggers an effect when this deals excess damage' },
-      'reborn': { iconName: 'refresh', desc: 'Returns to life with 1 health the first time it dies' }
-    };
     
     return (
       <div className="mt-4">
         <h4 className="text-white text-sm font-bold mb-2">Keywords:</h4>
         <div className="space-y-2">
           {keywords.map((keyword, index) => {
-            const info = keywordInfo[keyword.toLowerCase()];
-            const iconName: IconName = info?.iconName ?? 'sparkles';
+            const entry = getKnownCardKeywordDictionaryEntry(keyword);
+            const Icon = entry?.icon;
             return (
               <div key={index} className="flex items-center bg-black/30 rounded p-2">
-                <span className="mr-2 text-xl"><GameIcon name={iconName} size={20} /></span>
+                <span className="mr-2 text-xl" style={entry ? { color: entry.accent } : undefined}>
+                  {Icon && <Icon width="1em" height="1em" aria-label={entry.label} />}
+                </span>
                 <div>
-                  <div className="text-yellow-300 font-bold">{keyword}</div>
-                  <div className="text-xs text-gray-300">{info?.desc ?? keyword}</div>
+                  <div className="font-bold" style={entry ? { color: entry.accent } : undefined}>{entry?.label ?? keyword}</div>
+                  <div className="text-xs text-gray-300">{entry?.description ?? keyword}</div>
                 </div>
               </div>
             );

@@ -122,6 +122,7 @@ export const OpponentZone: React.FC<OpponentZoneProps> = ({
 						isOpponent={true}
 						secrets={opponentSecrets as any}
 						heroClass={opponentHeroClass as any}
+						frameComposition="poker-v1"
 						mana={opponentMana}
 						maxMana={opponentMaxMana}
 						shakingHero={shakingHero}

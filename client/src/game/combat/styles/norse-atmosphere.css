@@ -151,14 +151,26 @@
    Golden aura on player's turn, crimson on opponent's turn
    ======================================== */
 
-.ragnarok-combat-arena.player-turn [data-hero-role="player"] .battlefield-hero-square {
+.ragnarok-combat-arena.player-turn [data-hero-role="player"] .battlefield-hero-square:not(:has(.hero-card-frame--fusion)) {
   --turn-aura-rgb: 212, 175, 55;
   animation: turn-glow-pulse 2.5s ease-in-out infinite;
 }
 
-.ragnarok-combat-arena.opponent-turn [data-hero-role="opponent"] .battlefield-hero-square {
+.ragnarok-combat-arena.opponent-turn [data-hero-role="opponent"] .battlefield-hero-square:not(:has(.hero-card-frame--fusion)) {
   --turn-aura-rgb: 220, 38, 38;
   animation: turn-glow-pulse 2.5s ease-in-out infinite;
+}
+
+/* Poker's layered frame owns the exact 3:4 visual bounds. Keep the active
+   turn colors, but attach their aura to the frame instead of the wrapper that
+   also contains the stamina rail and pocket cards. */
+.ragnarok-combat-arena.player-turn [data-hero-role="player"] .battlefield-hero-square:has(.hero-card-frame--fusion) .hero-card-frame--fusion {
+	--turn-aura-rgb: 212, 175, 55;
+	animation: turn-glow-pulse 2.5s ease-in-out infinite;
+}
+
+.ragnarok-combat-arena.opponent-turn [data-hero-role="opponent"] .battlefield-hero-square:has(.hero-card-frame--fusion) .hero-card-frame--fusion {
+	--turn-aura-rgb: 220, 38, 38;
 }
 
 @keyframes turn-glow-pulse {
@@ -178,7 +190,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .ragnarok-combat-arena.player-turn [data-hero-role="player"] .battlefield-hero-square,
-  .ragnarok-combat-arena.opponent-turn [data-hero-role="opponent"] .battlefield-hero-square {
+  .ragnarok-combat-arena.opponent-turn [data-hero-role="opponent"] .battlefield-hero-square,
+  .ragnarok-combat-arena.player-turn [data-hero-role="player"] .battlefield-hero-square:has(.hero-card-frame--fusion) .hero-card-frame--fusion,
+  .ragnarok-combat-arena.opponent-turn [data-hero-role="opponent"] .battlefield-hero-square:has(.hero-card-frame--fusion) .hero-card-frame--fusion {
     animation: none;
   }
 }

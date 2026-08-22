@@ -1,4 +1,4 @@
-import { getKeywordDefinition } from '../../data/keywordDefinitions';
+import { getCardKeywordSemantics, normalizeCardKeyword } from '../../components/card/cardPresentationContract';
 import type { CardInstance } from '../../types';
 import { toSimpleCardData, type SimpleCardData } from '../../components/card/cardDataAdapter';
 
@@ -48,8 +48,6 @@ const SOURCE_LABELS: Record<CardInspectorSource, string> = {
 	'player-battlefield': 'Allied battlefield',
 	'opponent-battlefield': 'Enemy battlefield',
 };
-
-const normalizeKeyword = (keyword: string): string => keyword.toLowerCase().replace(/[\s-]/g, '_');
 
 const compareStat = (current: number, base: number): CardInspectorStat['state'] => {
 	if (current > base) return 'buffed';
@@ -241,15 +239,15 @@ export function buildCardInspectorModel(card: CardInstance, source: CardInspecto
 	const simpleCard = toSimpleCardData(card);
 	if (!simpleCard) return null;
 
-	const keywordIds = (card.instanceKeywords ?? card.card.keywords ?? []).map(normalizeKeyword);
+	const keywordIds = (card.instanceKeywords ?? card.card.keywords ?? []).map(normalizeCardKeyword);
 	const keywordSet = new Set(keywordIds);
 	const isSilenced = card.silenced === true || card.isSilenced === true;
 	const keywords = keywordIds.map<CardInspectorFeature>(id => {
-		const definition = getKeywordDefinition(id);
+		const definition = getCardKeywordSemantics(id);
 		return {
 			id,
-			name: definition?.name ?? id.replace(/_/g, ' '),
-			description: definition?.description ?? 'This card has a special gameplay ability.',
+			name: definition.label,
+			description: definition.description,
 			active: !isSilenced,
 			...(isSilenced ? { value: 'Silenced' } : {}),
 		};

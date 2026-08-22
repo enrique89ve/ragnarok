@@ -8,7 +8,7 @@ import {
 	Trophy,
 	type LucideIcon,
 } from 'lucide-react';
-import type { RuneDirection, RuneLedgerEntryView, RuneSourceType } from '../../../data/runeAPI';
+import type { RuneLedgerDirection as RuneDirection, RuneLedgerEntry, RuneSourceType } from '@shared/protocol-core/types';
 import { compactId, formatBlock, formatNumber, formatTimestamp, SOURCE_LABELS } from './walletFormatting';
 
 const SOURCE_ICONS: Record<RuneSourceType, LucideIcon> = {
@@ -39,7 +39,7 @@ const DIRECTION_THEME: Record<RuneDirection, {
 	},
 };
 
-export function ActivityFeed({ entries }: { entries: RuneLedgerEntryView[] }) {
+export function ActivityFeed({ entries }: { entries: readonly RuneLedgerEntry[] }) {
 	return (
 		<section className="runic-panel texture-grain relative border border-obsidian-700 bg-obsidian-900/80 p-5">
 			<span className="runic-corners runic-corners--bifrost" aria-hidden="true" />
@@ -70,7 +70,7 @@ export function ActivityFeed({ entries }: { entries: RuneLedgerEntryView[] }) {
 	);
 }
 
-function ActivityItem({ entry }: { entry: RuneLedgerEntryView }) {
+function ActivityItem({ entry }: { entry: RuneLedgerEntry }) {
 	const direction = DIRECTION_THEME[entry.direction];
 	const DirectionIcon = direction.icon;
 	const SourceIcon = SOURCE_ICONS[entry.sourceType];

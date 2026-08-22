@@ -136,6 +136,7 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({
 							onWeaponUpgradeClick={onWeaponUpgradeClick}
 							onOpenEquipment={onOpenGearPanel}
 							isWeaponUpgraded={isWeaponUpgraded}
+							frameComposition="poker-v1"
 							artifact={artifact}
 							shakingHero={shakingHero}
 							pocketCardsOverlay={(

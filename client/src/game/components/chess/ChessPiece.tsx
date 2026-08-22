@@ -1,10 +1,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ChessPiece as ChessPieceType, ELEMENT_COLORS, ELEMENT_ICONS, type ElementType } from '../../types/ChessTypes';
+import { ChessPiece as ChessPieceType, ELEMENT_COLORS, type ElementType } from '../../types/ChessTypes';
 import { useGameStore } from '../../stores/gameStore';
 import { useChessHoverStore } from '../../stores/chessHoverStore';
 import { PIECE_PIECE_TONE_BY_OWNER } from './pieceVisuals';
 import { PieceGlyph } from './PieceGlyph';
+import { getElementIcon } from '../ui/ElementIconsSVG';
 import clsx from 'clsx';
 
 type ChessCellTone = 'light' | 'dark';
@@ -103,6 +104,7 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
   });
   const healthPercent = (isPawn || isKing) ? 100 : (piece.health / piece.maxHealth) * 100;
   const pieceElement = piece.element ?? 'neutral';
+  const ElementIcon = getElementIcon(pieceElement);
   const elementGlow = ELEMENT_GLOW[pieceElement];
   const hasElement = pieceElement !== 'neutral';
   const animateScale = visualState.tag === 'selected'
@@ -264,7 +266,7 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
           className={`element-badge-large element-badge-${pieceElement}`}
           style={{ backgroundColor: ELEMENT_COLORS[pieceElement] }}
         >
-          <span className="element-icon-large">{ELEMENT_ICONS[pieceElement]}</span>
+          <span className="element-icon-large"><ElementIcon aria-hidden="true" /></span>
         </div>
       )}
 

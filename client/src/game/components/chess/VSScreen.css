@@ -180,6 +180,12 @@
   color: var(--ink-0);
 }
 
+.vs-stat svg {
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.12em;
+}
+
 .vs-center {
   position: relative;
   z-index: 3;

@@ -1,17 +1,14 @@
 import { useEffect, useState } from 'react';
+import type { RuneLedgerEntry, RuneSeasonAccountView } from '@shared/protocol-core/types';
 import {
-	fetchRuneAccount,
-	fetchRuneLedger,
-	fetchRuneState,
-	type AccountRuneSummary,
-	type RuneLedgerEntryView,
-	type RuneStateSnapshot,
-} from '../../../data/runeAPI';
+	readLocalRuneSeason,
+	type LocalRuneSeasonState,
+} from '../../../data/runeSeasonReadModel';
 
 export type WalletData = {
-	state: RuneStateSnapshot;
-	selectedAccount: AccountRuneSummary;
-	selectedAccountLedger: RuneLedgerEntryView[];
+	state: LocalRuneSeasonState;
+	selectedAccount: RuneSeasonAccountView;
+	selectedAccountLedger: readonly RuneLedgerEntry[];
 };
 
 export type WalletLoadState =
@@ -36,20 +33,16 @@ export function useWalletData(accountName: string | null): WalletLoadState {
 		const controller = new AbortController();
 		setLoadState({ status: 'loading' });
 
-		Promise.all([
-			fetchRuneState('S01', controller.signal),
-			fetchRuneAccount(accountName, 'S01', controller.signal),
-			fetchRuneLedger({ seasonId: 'S01', account: accountName, limit: 25 }, controller.signal),
-		])
-			.then(([state, selectedAccount, selectedLedger]) => {
+		readLocalRuneSeason(accountName)
+			.then(({ state, account, entries }) => {
 				if (controller.signal.aborted) return;
 
 				setLoadState({
 					status: 'loaded',
 					data: {
 						state,
-						selectedAccount,
-						selectedAccountLedger: selectedLedger.entries,
+						selectedAccount: account,
+						selectedAccountLedger: entries.slice(0, 25),
 					},
 				});
 			})

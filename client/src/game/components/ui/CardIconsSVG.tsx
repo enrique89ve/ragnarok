@@ -7,8 +7,10 @@
  */
 
 import React from 'react';
+import { normalizeCardKeyword } from '../card/cardPresentationContract';
 
 type IconProps = React.SVGProps<SVGSVGElement>;
+export type KeywordIconComponent = React.FC<IconProps>;
 
 const svgBase: IconProps = {
 	xmlns: 'http://www.w3.org/2000/svg',
@@ -643,7 +645,6 @@ export const KEYWORD_ICON_MAP: Record<string, React.FC<IconProps>> = {
 	battlecry: IconBattlecry,
 	deathrattle: IconDeathrattle,
 	taunt: IconTaunt,
-	'divine shield': IconDivineShield,
 	divine_shield: IconDivineShield,
 	adapt_option: IconAdaptOption,
 	artifact: IconArtifact,
@@ -656,7 +657,6 @@ export const KEYWORD_ICON_MAP: Record<string, React.FC<IconProps>> = {
 	freeze: IconFreeze,
 	silence: IconSilence,
 	spell_damage: IconSpellDamage,
-	'spell damage': IconSpellDamage,
 	overload: IconOverload,
 	reborn: IconReborn,
 	discover: IconDiscover,
@@ -702,8 +702,11 @@ export const KEYWORD_ICON_MAP: Record<string, React.FC<IconProps>> = {
 	frozen: IconFrozenState,
 	poker_spell: IconPokerSpell,
 	spell_trigger: IconSpellTrigger,
-	spellDamage: IconSpellDamage,
 };
+
+/** Resolve the single visual authority for a canonical card keyword. */
+export const getKeywordIcon = (keyword: string): KeywordIconComponent | null =>
+	KEYWORD_ICON_MAP[normalizeCardKeyword(keyword)] ?? null;
 
 /** Runtime combat states use their own semantic map so they do not pollute keyword chrome. */
 export const COMBAT_STATE_ICON_MAP: Record<string, React.FC<IconProps>> = {

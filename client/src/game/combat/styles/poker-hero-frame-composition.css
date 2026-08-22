@@ -1,0 +1,125 @@
+/* Runtime layers exported from the poker hero fusion lab. */
+
+.poker-hero-frame-layers {
+	position: absolute;
+	top: var(--poker-hero-frame-layer-y);
+	left: var(--poker-hero-frame-layer-x);
+	width: var(--poker-hero-frame-layer-width);
+	height: var(--poker-hero-frame-layer-height);
+	overflow: hidden;
+	pointer-events: none;
+	z-index: 3;
+}
+
+.poker-hero-frame-layers__base {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: fill;
+	z-index: 1;
+}
+
+.poker-hero-frame-layers__corner {
+	position: absolute;
+	top: auto;
+	left: auto;
+	right: auto;
+	bottom: auto;
+	height: auto;
+	max-width: none;
+	object-fit: contain;
+	filter: drop-shadow(0 2px 2px rgb(0 0 0 / 0.72));
+	z-index: 13;
+}
+
+.poker-hero-frame-layers__corner--left {
+	top: var(--corner-left-y);
+	left: var(--corner-left-x);
+	width: calc(100% * var(--corner-left-scale));
+}
+
+.poker-hero-frame-layers__corner--right {
+	top: var(--corner-right-y);
+	right: var(--corner-right-x);
+	width: calc(100% * var(--corner-right-scale));
+}
+
+.poker-hero-frame-layers__identity {
+	position: absolute;
+	top: var(--ornament-y);
+	left: var(--ornament-x);
+	width: var(--ornament-size);
+	height: auto;
+	max-width: none;
+	object-fit: contain;
+	transform: translate(-50%, -50%) rotate(var(--ornament-rotation));
+	filter: drop-shadow(0 2px 2px rgb(0 0 0 / 0.8));
+	z-index: 12;
+}
+
+.hero-card-frame.hero-card-frame--fusion {
+	--poker-hero-corner-cut: 6px;
+
+	width: 100%;
+	height: 100%;
+	aspect-ratio: var(--poker-hero-stage-aspect);
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+	overflow: hidden;
+	min-height: 0;
+	clip-path: polygon(
+		var(--poker-hero-corner-cut) 0,
+		calc(100% - var(--poker-hero-corner-cut)) 0,
+		100% var(--poker-hero-corner-cut),
+		100% calc(100% - var(--poker-hero-corner-cut)),
+		calc(100% - var(--poker-hero-corner-cut)) 100%,
+		var(--poker-hero-corner-cut) 100%,
+		0 calc(100% - var(--poker-hero-corner-cut)),
+		0 var(--poker-hero-corner-cut)
+	);
+}
+
+.hero-card-frame--fusion .hero-portrait-interactive {
+	position: absolute;
+	top: var(--poker-hero-art-window-y);
+	left: var(--poker-hero-art-window-x);
+	z-index: 0;
+	flex: none;
+	width: var(--poker-hero-art-window-width);
+	height: var(--poker-hero-art-window-height);
+	border-radius: 4% 4% 3% 3%;
+	overflow: hidden;
+	isolation: isolate;
+}
+
+.hero-card-frame--fusion .hero-portrait-art {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	max-width: none;
+}
+
+.hero-card-frame.hero-card-frame--fusion::before {
+	display: none;
+}
+
+/* The PNG frame is the only chrome border. The generic hero-frame shadow
+   follows the full layout box, including the PNG's transparent bleed, and
+   therefore reads as an oversized second frame on the poker board. */
+.hero-card-frame.hero-card-frame--fusion::after {
+	display: none;
+}
+
+.hero-card-frame--fusion .hero-status-console {
+	position: absolute;
+	right: var(--poker-hero-art-window-x);
+	bottom: var(--poker-hero-art-window-y);
+	left: var(--poker-hero-art-window-x);
+	z-index: 6;
+	background: transparent;
+	border-top: 0;
+}

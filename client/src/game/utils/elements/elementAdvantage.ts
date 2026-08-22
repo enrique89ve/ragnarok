@@ -1,7 +1,5 @@
 export type ElementType = 'fire' | 'water' | 'wind' | 'earth' | 'holy' | 'shadow' | 'neutral';
 
-import type { IconName } from '../ui/iconMap';
-
 export const ELEMENT_STRENGTHS: Record<ElementType, ElementType[]> = {
   fire: ['earth', 'wind'],
   water: ['fire', 'shadow'],
@@ -30,18 +28,6 @@ export const ELEMENT_COLORS: Record<ElementType, string> = {
   holy: 'var(--element-holy)',
   shadow: 'var(--element-shadow)',
   neutral: 'var(--element-neutral)'
-};
-
-// ELEMENT_ICONS legacy emoji map moved to ./elementIconsLegacy.ts (chess-only).
-
-export const ELEMENT_ICON_NAMES: Record<ElementType, IconName> = {
-  fire: 'flame',
-  water: 'droplet',
-  wind: 'wind',
-  earth: 'mountain',
-  holy: 'sparkles',
-  shadow: 'moon',
-  neutral: 'circle'
 };
 
 export const ELEMENT_LABELS: Record<ElementType, string> = {
@@ -92,8 +78,4 @@ export const hasElementAdvantage = (
 
 export const getElementColor = (element: ElementType): string => {
   return ELEMENT_COLORS[element] || ELEMENT_COLORS.neutral;
-};
-
-export const getElementIconName = (element: ElementType): IconName => {
-  return ELEMENT_ICON_NAMES[element] || ELEMENT_ICON_NAMES.neutral;
 };

@@ -4,6 +4,7 @@ import { ChessPiece, ChessPieceType, PIECE_DISPLAY_NAMES } from '../../types/Che
 import { useGameStore } from '../../stores/gameStore';
 import { PIECE_COLOR_BY_TYPE } from './pieceVisuals';
 import { PieceGlyph } from './PieceGlyph';
+import { ChessHealthIcon } from './ChessIconsSVG';
 import './VSScreen.css';
 
 interface VSScreenProps {
@@ -102,7 +103,7 @@ const VSScreen: React.FC<VSScreenProps> = ({
               <span className="vs-fighter-name">{getPieceTitle(attacker)}</span>
               <span className="vs-fighter-type">{PIECE_DISPLAY_NAMES[attacker.type as ChessPieceType].toUpperCase()}</span>
               <div className="vs-fighter-stats">
-                <span className="vs-stat">❤️ {attacker.health}</span>
+					<span className="vs-stat" aria-label={`Health ${attacker.health}`}><ChessHealthIcon aria-hidden="true" /> {attacker.health}</span>
               </div>
             </div>
           </motion.div>
@@ -160,7 +161,7 @@ const VSScreen: React.FC<VSScreenProps> = ({
               <span className="vs-fighter-name">{getPieceTitle(defender)}</span>
               <span className="vs-fighter-type">{PIECE_DISPLAY_NAMES[defender.type as ChessPieceType].toUpperCase()}</span>
               <div className="vs-fighter-stats">
-                <span className="vs-stat">❤️ {defender.health}</span>
+					<span className="vs-stat" aria-label={`Health ${defender.health}`}><ChessHealthIcon aria-hidden="true" /> {defender.health}</span>
               </div>
             </div>
           </motion.div>

@@ -306,7 +306,6 @@ export const CARD_KEYWORD_SEMANTICS = {
 	spell_damage: defineKeyword('spell_damage', keyword('Spell Damage', 'S.DMG', 'Increases spell damage.', ['static-combat-rule'], importantBoard)),
 	spell_trigger: defineKeyword('spell_trigger', keyword('Spell Trigger', 'S.TRG', 'Triggers from spell casts or spell resolution.', ['trigger'], contextualBoard)),
 	spellburst: defineKeyword('spellburst', keyword('Spellburst', 'S.BST', 'Triggers once after a spell is cast.', ['trigger'], importantBoard)),
-	spellDamage: defineKeyword('spellDamage', keyword('Spell Damage', 'S.DMG', 'Legacy alias for Spell Damage.', ['static-combat-rule'], importantBoard)),
 	stealth: defineKeyword('stealth', keyword('Stealth', 'STLH', 'Cannot be targeted until it attacks or is revealed.', ['targeting-rule', 'state-rule'], decisiveBoard)),
 	taunt: defineKeyword('taunt', keyword('Taunt', 'TAUNT', 'Enemies must target this before other valid targets.', ['targeting-rule', 'static-combat-rule'], decisiveBoard)),
 	tradeable: defineKeyword('tradeable', keyword('Tradeable', 'TRAD', 'Can be cycled for a replacement draw.', ['resource-rule', 'card-generation'], setupOnly)),
@@ -321,6 +320,18 @@ export const CARD_KEYWORD_SEMANTICS = {
 } satisfies Record<string, CardKeywordSemantics>;
 
 const CARD_KEYWORD_SEMANTICS_LOOKUP: Readonly<Record<string, CardKeywordSemantics>> = CARD_KEYWORD_SEMANTICS;
+
+const CARD_KEYWORD_ALIASES: Readonly<Record<string, string>> = {
+	spelldamage: 'spell_damage',
+};
+
+export const normalizeCardKeyword = (keywordValue: string): string => {
+	const normalized = keywordValue.trim().toLowerCase().replace(/[\s-]+/g, '_');
+	return CARD_KEYWORD_ALIASES[normalized] ?? normalized;
+};
+
+export const isKnownCardKeyword = (keywordValue: string): boolean =>
+	Object.prototype.hasOwnProperty.call(CARD_KEYWORD_SEMANTICS_LOOKUP, normalizeCardKeyword(keywordValue));
 
 const titleCase = (value: string): string =>
 	value
@@ -363,8 +374,9 @@ export const getCardElementSurfaceContract = (
 ): CardElementSurfaceContract => CARD_ELEMENT_CONTRACTS[slotId].surfaces[surface];
 
 export const getCardKeywordSemantics = (keywordValue: string): CardKeywordSemantics => {
-	const found = CARD_KEYWORD_SEMANTICS_LOOKUP[keywordValue];
-	return found ?? fallbackKeywordSemantics(keywordValue);
+	const normalizedKeyword = normalizeCardKeyword(keywordValue);
+	const found = CARD_KEYWORD_SEMANTICS_LOOKUP[normalizedKeyword];
+	return found ?? fallbackKeywordSemantics(normalizedKeyword);
 };
 
 export const getCardKeywordRenderImportance = (

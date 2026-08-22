@@ -90,6 +90,12 @@
 	filter: drop-shadow(0 0 4px var(--element-glow, transparent));
 }
 
+.matchup-element-icon svg {
+	display: block;
+	width: 1em;
+	height: 1em;
+}
+
 .matchup-element-name {
 	font-size: 0.9rem;
 	font-weight: 700;

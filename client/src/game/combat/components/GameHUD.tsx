@@ -1,6 +1,6 @@
 import React from 'react';
-import { getElementColor, getElementIconName, ELEMENT_LABELS, type ElementType } from '../../utils/elements/elementAdvantage';
-import { GameIcon } from '../../utils/ui/GameIcon';
+import { getElementColor, ELEMENT_LABELS, type ElementType } from '../../utils/elements/elementAdvantage';
+import { getElementIcon } from '../../components/ui/ElementIconsSVG';
 import { ARENA_VFX_TARGETS, arenaVfxTargetProps } from '../arenaVfxTargets';
 import { getPokerTurnBadgePresentation } from '../decision/pokerTurnBadgePresentation';
 import '../styles/game-hud.css';
@@ -116,13 +116,13 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 					}
 				>
 					<span className="hud-matchup-icon" style={{ color: getElementColor(playerElement!) }}>
-						<GameIcon name={getElementIconName(playerElement!)} size={14} />
+						{React.createElement(getElementIcon(playerElement!), { 'aria-hidden': true })}
 					</span>
 					<span className="hud-matchup-arrow">
 						{playerHasAdvantage ? '\u25B2' : opponentHasAdvantage ? '\u25BC' : '\u2014'}
 					</span>
 					<span className="hud-matchup-icon" style={{ color: getElementColor(opponentElement!) }}>
-						<GameIcon name={getElementIconName(opponentElement!)} size={14} />
+						{React.createElement(getElementIcon(opponentElement!), { 'aria-hidden': true })}
 					</span>
 				</div>
 			)}

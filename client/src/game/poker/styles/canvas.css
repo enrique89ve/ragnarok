@@ -76,7 +76,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 0;
   overflow: visible;
 }
 
@@ -88,6 +88,8 @@
 }
 
 .ragnarok-combat-arena .hero-resource-dock {
+	--hero-resource-corner-cut: 5px;
+
   position: relative;
   z-index: 70;
   display: flex;
@@ -105,10 +107,20 @@
     #03050a 100%
   ) !important;
 	border: 1px solid color-mix(in srgb, var(--bifrost-300) 54%, var(--obsidian-700)) !important;
-	border-radius: 5px !important;
+	border-radius: 0 !important;
 	box-shadow:
 		0 5px 14px rgba(0, 0, 0, 0.58),
 		inset 0 1px 0 rgba(201, 224, 255, 0.08) !important;
+	clip-path: polygon(
+		var(--hero-resource-corner-cut) 0,
+		calc(100% - var(--hero-resource-corner-cut)) 0,
+		100% var(--hero-resource-corner-cut),
+		100% calc(100% - var(--hero-resource-corner-cut)),
+		calc(100% - var(--hero-resource-corner-cut)) 100%,
+		var(--hero-resource-corner-cut) 100%,
+		0 calc(100% - var(--hero-resource-corner-cut)),
+		0 var(--hero-resource-corner-cut)
+	);
   opacity: 1;
   filter: none;
   isolation: isolate;
@@ -125,6 +137,18 @@
 
 .ragnarok-combat-arena .hero-resource-dock .mana-bar-tray {
 	flex: 0 0 auto;
+	gap: 1px;
+	border-radius: 0;
+	clip-path: polygon(
+		3px 0,
+		calc(100% - 3px) 0,
+		100% 3px,
+		100% calc(100% - 3px),
+		calc(100% - 3px) 100%,
+		3px 100%,
+		0 calc(100% - 3px),
+		0 3px
+	);
 }
 
 .ragnarok-combat-arena .poker-hero-container .hand-strength-compact {
@@ -146,8 +170,8 @@
   --arena-z-wager-panel: 740;
   --arena-z-betting-panel: 760;
   --hero-card-width: 188px;
-	--hero-resource-dock-width: 208px;
-  --hero-resource-dock-y: -4px;
+	--hero-resource-dock-width: var(--hero-card-width);
+  --hero-resource-dock-y: 0;
   --hero-resource-dock-scale: 1;
   --player-hand-strength-gap: 8px;
   --player-hand-card-width: 132px;

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { fetchRuneLedger, type RuneLedgerEntryView } from '../../../data/runeAPI';
+import { readLocalRuneLedger } from '../../../data/runeSeasonReadModel';
+import type { RuneLedgerEntry } from '@shared/protocol-core/types';
 import { getNFTBridge, type BroadcastResult } from '../../nft';
 import { recordCeremonyFeedbackEvent } from '../../protocol/ceremonyFeedback';
 import type { PackType } from '../packs/types';
@@ -56,7 +57,6 @@ export interface UseRunePackExchangeResult {
 	submitExchange: () => Promise<BroadcastResult>;
 }
 
-const LEDGER_PAGE_SIZE = 200;
 const IDLE_CONFIRMATION: RuneExchangeConfirmation = {
 	stage: 'idle',
 	step: 0,
@@ -331,25 +331,13 @@ export function useRunePackExchange({
 
 async function fetchRedeemedRuneExchangeQuantities(
 	account: string,
-	signal?: AbortSignal,
+	_signal?: AbortSignal,
 ): Promise<RedeemedRuneExchangeQuantities> {
-	const entries: RuneLedgerEntryView[] = [];
-	let offset = 0;
-	let total = 0;
-
-	do {
-		const page = await fetchRuneLedger({
-			account,
-			direction: 'debit',
-			sourceType: 'rune_exchange',
-			limit: LEDGER_PAGE_SIZE,
-			offset,
-		}, signal);
-
-		entries.push(...page.entries);
-		total = page.total;
-		offset += page.entries.length;
-	} while (entries.length < total && offset > 0);
+	const entries: readonly RuneLedgerEntry[] = await readLocalRuneLedger({
+		account,
+		direction: 'debit',
+		sourceType: 'rune_exchange',
+	});
 
 	return countRedeemedRuneExchangePacks(entries);
 }
