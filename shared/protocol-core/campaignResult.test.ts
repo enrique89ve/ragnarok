@@ -4,6 +4,7 @@ import { applyOp, type ProtocolCoreDeps } from './apply';
 import { canonicalStringify, sha256Hash } from './hash';
 import { normalizeRawOp } from './normalize';
 import { RAGNAROK_RUNTIME_CONFIGS } from '../runtimeConfig';
+import { deriveRuneSeasonId } from './runeSeasonHash';
 import type {
 	CampaignProgressRecord,
 	CampaignSubmissionRecord,
@@ -30,20 +31,19 @@ import type { EitrLedgerEntry } from './eitrEconomy';
 
 const CAMPAIGN_ID = 'war-of-pantheons';
 const RULESET_HASH = 'ruleset-hash-v1';
+const TESTNET_SEASON_ID = deriveRuneSeasonId(RAGNAROK_RUNTIME_CONFIGS.testnet);
 
 function createStateAdapter(): StateAdapter & {
 	readonly campaignProgress: Map<string, CampaignProgressRecord>;
 	readonly campaignSubmissions: Map<string, CampaignSubmissionRecord>;
 	readonly rewardClaims: Set<string>;
 	readonly runeLedger: Map<string, RuneLedgerEntry>;
-	readonly tokens: Map<string, TokenBalance>;
 } {
 	const campaignNonces = new Map<string, number>();
 	const campaignSubmissions = new Map<string, CampaignSubmissionRecord>();
 	const campaignProgress = new Map<string, CampaignProgressRecord>();
 	const rewardClaims = new Set<string>();
 	const runeLedger = new Map<string, RuneLedgerEntry>();
-	const tokens = new Map<string, TokenBalance>();
 	let genesis: GenesisRecord | null = {
 		version: '1',
 		sealed: false,
@@ -57,7 +57,6 @@ function createStateAdapter(): StateAdapter & {
 		campaignSubmissions,
 		rewardClaims,
 		runeLedger,
-		tokens,
 
 		async getGenesis(): Promise<GenesisRecord | null> { return genesis; },
 		async putGenesis(nextGenesis: GenesisRecord): Promise<void> { genesis = nextGenesis; },
@@ -72,18 +71,10 @@ function createStateAdapter(): StateAdapter & {
 			return { account, elo: 1000, wins: 0, losses: 0 };
 		},
 		async putElo(): Promise<void> { /* noop */ },
-		async getTokenBalance(account: string): Promise<TokenBalance> {
-			return tokens.get(account) ?? { account, RUNE: 0 };
-		},
-		async putTokenBalance(balance: TokenBalance): Promise<void> {
-			tokens.set(balance.account, balance);
-		},
-		async getRuneBalanceTotal(): Promise<number> {
-			let total = 0;
-			for (const balance of tokens.values()) {
-				total += balance.RUNE;
-			}
-			return total;
+		async getTokenBalance(account: string, seasonId: string): Promise<TokenBalance> {
+			const credits = await this.getRuneLedgerTotal({ seasonId, account, direction: 'credit' });
+			const debits = await this.getRuneLedgerTotal({ seasonId, account, direction: 'debit' });
+			return { account, RUNE: credits - debits };
 		},
 		async getRuneLedgerEntry(entryId: string): Promise<RuneLedgerEntry | null> {
 			return runeLedger.get(entryId) ?? null;
@@ -311,13 +302,13 @@ describe('campaign_result protocol op', () => {
 			status: 'verified',
 		});
 
-		expect((await state.getTokenBalance('alice')).RUNE).toBe(2);
-		expect(state.runeLedger.get('S01:credit:campaign_first_clear:campaign:S01:alice:war-of-pantheons:norse-1')).toMatchObject({
+		expect((await state.getTokenBalance('alice', TESTNET_SEASON_ID)).RUNE).toBe(2);
+		expect(state.runeLedger.get(`${TESTNET_SEASON_ID}:credit:campaign_first_clear:campaign:${TESTNET_SEASON_ID}:alice:war-of-pantheons:norse-1`)).toMatchObject({
 			account: 'alice',
 			amount: 2,
 			balanceBefore: 0,
 			balanceAfter: 2,
-			sourceKey: 'campaign:S01:alice:war-of-pantheons:norse-1',
+			sourceKey: `campaign:${TESTNET_SEASON_ID}:alice:war-of-pantheons:norse-1`,
 		});
 	});
 
@@ -327,7 +318,7 @@ describe('campaign_result protocol op', () => {
 
 		const first = await applyCampaignResult(deps, { missionId: 'norse-2', nonce: 1, turnCount: 14 });
 		expect(first.status).toBe('applied');
-		expect((await state.getTokenBalance('alice')).RUNE).toBe(2);
+		expect((await state.getTokenBalance('alice', TESTNET_SEASON_ID)).RUNE).toBe(2);
 
 		const replay = await applyCampaignResult(deps, {
 			missionId: 'norse-2',
@@ -338,7 +329,7 @@ describe('campaign_result protocol op', () => {
 		expect(replay.status).toBe('applied');
 
 		// Personal-best stats improved, but RUNE balance is unchanged.
-		expect((await state.getTokenBalance('alice')).RUNE).toBe(2);
+		expect((await state.getTokenBalance('alice', TESTNET_SEASON_ID)).RUNE).toBe(2);
 		const progress = state.campaignProgress.get('alice:war-of-pantheons:norse-2');
 		expect(progress?.bestTurns).toBe(8);
 		expect(progress?.bestStars).toBe(3);
@@ -358,7 +349,7 @@ describe('campaign_result protocol op', () => {
 			trxId: 'trx-duplicate',
 		});
 		expect(duplicate.status).toBe('ignored');
-		expect((await state.getTokenBalance('alice')).RUNE).toBe(2);
+		expect((await state.getTokenBalance('alice', TESTNET_SEASON_ID)).RUNE).toBe(2);
 		expect(state.runeLedger.size).toBe(1);
 	});
 
@@ -367,8 +358,8 @@ describe('campaign_result protocol op', () => {
 		const deps = createDeps(state);
 
 		await state.putRuneLedgerEntry({
-			entryId: 'S01:credit:campaign_first_clear:prefill-account-cap',
-			seasonId: 'S01',
+			entryId: `${TESTNET_SEASON_ID}:credit:campaign_first_clear:prefill-account-cap`,
+			seasonId: TESTNET_SEASON_ID,
 			account: 'alice',
 			direction: 'credit',
 			sourceType: 'campaign_first_clear',
@@ -380,13 +371,11 @@ describe('campaign_result protocol op', () => {
 			blockNum: 1,
 			timestamp: 1,
 		});
-		await state.putTokenBalance({ account: 'alice', RUNE: 9 });
-
 		const result = await applyCampaignResult(deps, { missionId: 'norse-3', nonce: 1 });
 
 		expect(result.status).toBe('applied');
-		expect((await state.getTokenBalance('alice')).RUNE).toBe(10);
-		expect(state.runeLedger.get('S01:credit:campaign_first_clear:campaign:S01:alice:war-of-pantheons:norse-3')).toMatchObject({
+		expect((await state.getTokenBalance('alice', TESTNET_SEASON_ID)).RUNE).toBe(10);
+		expect(state.runeLedger.get(`${TESTNET_SEASON_ID}:credit:campaign_first_clear:campaign:${TESTNET_SEASON_ID}:alice:war-of-pantheons:norse-3`)).toMatchObject({
 			amount: 1,
 			balanceBefore: 9,
 			balanceAfter: 10,
@@ -399,7 +388,7 @@ describe('campaign_result protocol op', () => {
 
 		await state.putRuneLedgerEntry({
 			entryId: 'S01:credit:campaign_first_clear:prefill-global-cap',
-			seasonId: 'S01',
+			seasonId: TESTNET_SEASON_ID,
 			account: 'mallory',
 			direction: 'credit',
 			sourceType: 'campaign_first_clear',
@@ -415,9 +404,9 @@ describe('campaign_result protocol op', () => {
 		const result = await applyCampaignResult(deps, { missionId: 'norse-4', nonce: 1 });
 
 		expect(result.status).toBe('applied');
-		expect((await state.getTokenBalance('alice')).RUNE).toBe(1);
+		expect((await state.getTokenBalance('alice', TESTNET_SEASON_ID)).RUNE).toBe(1);
 		expect(await state.getRuneLedgerTotal({
-			seasonId: 'S01',
+			seasonId: TESTNET_SEASON_ID,
 			direction: 'credit',
 			sourceType: 'campaign_first_clear',
 		})).toBe(200_000);
@@ -430,7 +419,7 @@ describe('campaign_result protocol op', () => {
 		const result = await applyCampaignResult(deps, { missionId: 'norse-7', nonce: 1 });
 
 		expect(result.status).toBe('applied');
-		expect((await state.getTokenBalance('alice')).RUNE).toBe(0);
+		expect((await state.getTokenBalance('alice', TESTNET_SEASON_ID)).RUNE).toBe(0);
 		expect(state.runeLedger.size).toBe(0);
 
 		// Progress IS written even when reward is zero — narrative completion still
@@ -465,7 +454,7 @@ describe('campaign_result protocol op', () => {
 		expect(state.campaignSubmissions.size).toBe(0);
 		expect(state.campaignProgress.size).toBe(0);
 		expect(state.runeLedger.size).toBe(0);
-		expect((await state.getTokenBalance('alice')).RUNE).toBe(0);
+		expect((await state.getTokenBalance('alice', TESTNET_SEASON_ID)).RUNE).toBe(0);
 	});
 
 	it('never credits more than 10 RUNE per account across all paying missions and chapters', async () => {
@@ -493,12 +482,12 @@ describe('campaign_result protocol op', () => {
 		for (const step of plan) {
 			const r = await applyCampaignResult(deps, step);
 			expect(r.status).toBe('applied');
-			expect((await state.getTokenBalance('alice')).RUNE).toBeLessThanOrEqual(10);
+			expect((await state.getTokenBalance('alice', TESTNET_SEASON_ID)).RUNE).toBeLessThanOrEqual(10);
 		}
 
-		expect((await state.getTokenBalance('alice')).RUNE).toBe(10);
+		expect((await state.getTokenBalance('alice', TESTNET_SEASON_ID)).RUNE).toBe(10);
 		expect(await state.getRuneLedgerTotal({
-			seasonId: 'S01',
+			seasonId: TESTNET_SEASON_ID,
 			direction: 'credit',
 			sourceType: 'campaign_first_clear',
 			account: 'alice',
@@ -512,11 +501,11 @@ describe('campaign_result protocol op', () => {
 		await applyCampaignResult(deps, { account: 'alice', missionId: 'norse-1', nonce: 1 });
 		await applyCampaignResult(deps, { account: 'bob', missionId: 'norse-1', nonce: 1 });
 
-		expect((await state.getTokenBalance('alice')).RUNE).toBe(2);
-		expect((await state.getTokenBalance('bob')).RUNE).toBe(2);
+		expect((await state.getTokenBalance('alice', TESTNET_SEASON_ID)).RUNE).toBe(2);
+		expect((await state.getTokenBalance('bob', TESTNET_SEASON_ID)).RUNE).toBe(2);
 
-		const aliceEntry = state.runeLedger.get('S01:credit:campaign_first_clear:campaign:S01:alice:war-of-pantheons:norse-1');
-		const bobEntry = state.runeLedger.get('S01:credit:campaign_first_clear:campaign:S01:bob:war-of-pantheons:norse-1');
+		const aliceEntry = state.runeLedger.get(`${TESTNET_SEASON_ID}:credit:campaign_first_clear:campaign:${TESTNET_SEASON_ID}:alice:war-of-pantheons:norse-1`);
+		const bobEntry = state.runeLedger.get(`${TESTNET_SEASON_ID}:credit:campaign_first_clear:campaign:${TESTNET_SEASON_ID}:bob:war-of-pantheons:norse-1`);
 		expect(aliceEntry?.account).toBe('alice');
 		expect(bobEntry?.account).toBe('bob');
 		expect(aliceEntry?.amount).toBe(2);
@@ -530,12 +519,12 @@ describe('campaign_result protocol op', () => {
 		// Pre-seed alice at the P2P account cap (100 RUNE from p2p_ranked).
 		// Campaign credit must NOT see the P2P balance as filling its own cap.
 		await state.putRuneLedgerEntry({
-			entryId: 'S01:credit:p2p_ranked:p2p:S01:match-prefill',
-			seasonId: 'S01',
+			entryId: `${TESTNET_SEASON_ID}:credit:p2p_ranked:p2p:${TESTNET_SEASON_ID}:match-prefill`,
+			seasonId: TESTNET_SEASON_ID,
 			account: 'alice',
 			direction: 'credit',
 			sourceType: 'p2p_ranked',
-			sourceKey: 'p2p:S01:match-prefill',
+			sourceKey: `p2p:${TESTNET_SEASON_ID}:match-prefill`,
 			amount: 100,
 			balanceBefore: 0,
 			balanceAfter: 100,
@@ -543,21 +532,19 @@ describe('campaign_result protocol op', () => {
 			blockNum: 1,
 			timestamp: 1,
 		});
-		await state.putTokenBalance({ account: 'alice', RUNE: 100 });
-
 		const result = await applyCampaignResult(deps, { missionId: 'norse-1', nonce: 1 });
 
 		expect(result.status).toBe('applied');
 		// P2P pool already maxed; campaign pool fresh → +2 RUNE on top.
-		expect((await state.getTokenBalance('alice')).RUNE).toBe(102);
+		expect((await state.getTokenBalance('alice', TESTNET_SEASON_ID)).RUNE).toBe(102);
 		expect(await state.getRuneLedgerTotal({
-			seasonId: 'S01',
+			seasonId: TESTNET_SEASON_ID,
 			direction: 'credit',
 			sourceType: 'campaign_first_clear',
 			account: 'alice',
 		})).toBe(2);
 		expect(await state.getRuneLedgerTotal({
-			seasonId: 'S01',
+			seasonId: TESTNET_SEASON_ID,
 			direction: 'credit',
 			sourceType: 'p2p_ranked',
 			account: 'alice',

@@ -5,8 +5,6 @@
 import type { Rarity } from '../schemas/rarity';
 import { RARITY, eitrDissolve, eitrForge, tryAdaptRarity } from '../schemas/rarity';
 
-export const TESTNET_EITR_SEASON_ID = 'S01';
-
 export type EitrLedgerDirection = 'credit' | 'debit';
 
 export type EitrSourceType =

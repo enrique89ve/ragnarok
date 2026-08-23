@@ -204,13 +204,13 @@ node -e "fetch('http://127.0.0.1:5010/api/health').then(r=>r.json()).then(j=>con
 Testnet uses the same public chain-derived API namespace as every other
 runtime profile. Do not use or reintroduce `/api/testnet/rune/*`.
 
-- `GET /api/chain/player/:username/rune?seasonId=S01` returns one account's
+- `GET /api/chain/player/:username/rune?seasonId=<seasonHash>` returns one account's
   RUNE balance, credits, debits, drift, last RUNE block, and indexed flag.
-- `GET /api/chain/rune/state?seasonId=S01` returns global RUNE caps, emission
+- `GET /api/chain/rune/state?seasonId=<seasonHash>` returns global RUNE caps, emission
   totals, and drift.
-- `GET /api/chain/rune/ledger?seasonId=S01&account=:username` returns
+- `GET /api/chain/rune/ledger?seasonId=<seasonHash>&account=:username` returns
   paginated RUNE ledger entries.
-- `GET /api/chain/rune/balances?seasonId=S01` returns paginated account balance
+- `GET /api/chain/rune/balances?seasonId=<seasonHash>` returns paginated account balance
   summaries.
 
 Expected cadence: wallet/testnet panels may request `state`, account summary,
@@ -292,8 +292,8 @@ wallet balance, seed a parallel API, or use `/api/testnet/rune/*`.
 8. As an offline replay/fixture validation only, feed ranked result-only evidence
    without a prior dual-anchored `match_anchor`. Do not sign or broadcast it.
    Confirm replay rejects it and no `p2p_ranked` RUNE ledger entry appears.
-9. Compare `/api/chain/player/<account>/rune?seasonId=S01` with
-   `/api/chain/rune/ledger?seasonId=S01&account=<account>`: credits minus debits
+9. Compare `/api/chain/player/<account>/rune?seasonId=<seasonHash>` with
+   `/api/chain/rune/ledger?seasonId=<seasonHash>&account=<account>`: credits minus debits
    must equal `runeBalance`, and `drift` must be `0`.
 10. Export ceremony evidence for the daily quest, campaign reward, RUNE
     exchange, and RUNE pack opening. The JSON should include the account,

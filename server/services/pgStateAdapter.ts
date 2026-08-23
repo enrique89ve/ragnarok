@@ -9,7 +9,7 @@
 import type {
 	StateAdapter, CardAsset, GenesisRecord,
 	MatchAnchorRecord, PackCommitRecord, SupplyRecord,
-	TokenBalance, RuneLedgerEntry, RuneLedgerEntryQuery,
+	RuneLedgerEntry, RuneLedgerEntryQuery,
 	RuneLedgerTotalQuery, EitrLedgerEntry, EitrLedgerEntryQuery,
 	EitrLedgerTotalQuery, ForgeCommitRecord,
 	CampaignSubmissionRecord, CampaignProgressRecord,
@@ -81,16 +81,9 @@ export const pgStateAdapter: StateAdapter = {
 			[r.account, r.elo, r.wins, r.losses]);
 	},
 
-	async getTokenBalance(account) {
-		const rows = await query<any>('SELECT SUM(CASE WHEN direction = \'credit\' THEN amount ELSE -amount END) as balance FROM rune_ledger WHERE account = $1', [account]);
+	async getTokenBalance(account, seasonId) {
+		const rows = await query<any>('SELECT SUM(CASE WHEN direction = \'credit\' THEN amount ELSE -amount END) as balance FROM rune_ledger WHERE account = $1 AND season_id = $2', [account, seasonId]);
 		return { account, RUNE: Number(rows[0]?.balance || 0) };
-	},
-	async putTokenBalance(_b) {
-		// No-op for PG: balances are derived from ledger to ensure 100% auditability
-	},
-	async getRuneBalanceTotal() {
-		const rows = await query<any>('SELECT SUM(CASE WHEN direction = \'credit\' THEN amount ELSE -amount END) as total FROM rune_ledger');
-		return Number(rows[0]?.total || 0);
 	},
 	async getRuneLedgerEntry(entryId) {
 		const rows = await query<RuneLedgerEntry>('SELECT * FROM rune_ledger WHERE entry_id = $1', [entryId]);

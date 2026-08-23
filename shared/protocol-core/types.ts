@@ -22,7 +22,6 @@ import {
 export {
 	RUNE_LOSS_RANKED,
 	RUNE_WIN_RANKED,
-	TESTNET_RUNE_SEASON_ID,
 	TESTNET_RUNE_ECONOMY,
 	MAINNET_RUNE_ECONOMY,
 	getRuneEconomy,
@@ -74,11 +73,15 @@ export {
 	type RuneSeasonLedgerReader,
 	type RuneSeasonProjection,
 } from './runeSeasonView';
+export {
+	deriveRuneSeasonId,
+	isRuneSeasonId,
+	type RuneSeasonIdInput,
+} from './runeSeasonHash';
 
 export {
 	EITR_DISSOLVE_VALUES,
 	EITR_FORGE_COSTS,
-	TESTNET_EITR_SEASON_ID,
 	createBurnEitrSourceKey,
 	createEitrLedgerEntryId,
 	createForgeCommitEitrSourceKey,
@@ -526,10 +529,10 @@ export interface StateAdapter {
 	getElo(account: string): Promise<EloRecord>;
 	putElo(record: EloRecord): Promise<void>;
 
-	// Tokens
-	getTokenBalance(account: string): Promise<TokenBalance>;
-	putTokenBalance(balance: TokenBalance): Promise<void>;
-	getRuneBalanceTotal(): Promise<number>;
+	// Tokens — RUNE balance is a ledger projection (no mutable scalar):
+	// adapters derive credits − debits for the requested (account, seasonId).
+	// This is the "ledger first, balance second" anti-cheat contract.
+	getTokenBalance(account: string, seasonId: string): Promise<TokenBalance>;
 	getRuneLedgerEntry(entryId: string): Promise<RuneLedgerEntry | null>;
 	putRuneLedgerEntry(entry: RuneLedgerEntry): Promise<void>;
 	getRuneLedgerEntries(query: RuneLedgerEntryQuery): Promise<RuneLedgerEntry[]>;

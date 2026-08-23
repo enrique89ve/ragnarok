@@ -38,10 +38,25 @@ import { ELEMENT_NAMES, PIECE_TYPE_NAMES } from '../chessPieceLabels';
 import { ELEMENT_COLORS } from '../../../types/ChessTypes';
 import { ChessManaIcon, ChessStaminaIcon } from '../ChessIconsSVG';
 import { getElementIcon } from '../../ui/ElementIconsSVG';
+import ChessScenePixiFx from '../ChessScenePixiFx';
+import { getCheckNoticePresentation } from '../chessBoardPresentation';
 import '../chess.css';
 
 const COMPACT_FRAME_STYLE: React.CSSProperties = { width: 72, height: 90 };
 const FLANKING_FRAME_STYLE: React.CSSProperties = { width: 108, height: 135 };
+
+type ChessSceneLayersProps = Readonly<{
+	fxEnabled: boolean;
+	motionEnabled: boolean;
+}>;
+
+const ChessSceneLayers: React.FC<ChessSceneLayersProps> = ({ fxEnabled, motionEnabled }) => (
+	<div className="chess-scene-layers" aria-hidden="true">
+		<div className="chess-scene-layer chess-scene-layer--atmosphere" />
+		{fxEnabled && <ChessScenePixiFx paused={!motionEnabled} />}
+		<div className="chess-scene-layer chess-scene-layer--focus" />
+	</div>
+);
 
 /* ============================================================
    HeroPortraitPanel — static portrait for the opponent side. The
@@ -52,12 +67,13 @@ const FLANKING_FRAME_STYLE: React.CSSProperties = { width: 108, height: 135 };
 type HeroPortraitPanelProps = {
 	readonly army: ArmySelectionType;
 	readonly side: 'player' | 'opponent';
+	readonly isActiveTurn?: boolean;
 	readonly pieceCount?: number;
 	readonly compact?: boolean;
 	readonly frameStyle?: React.CSSProperties;
 };
 
-const HeroPortraitPanel: React.FC<HeroPortraitPanelProps> = ({ army, side, pieceCount, compact, frameStyle }) => {
+const HeroPortraitPanel: React.FC<HeroPortraitPanelProps> = ({ army, side, isActiveTurn = false, pieceCount, compact, frameStyle }) => {
 	const king = army.king;
 	const kingPortrait = resolveHeroPortrait(king.id, king.portrait) ?? DEFAULT_PORTRAIT;
 	const fallbackPortrait = DEFAULT_PORTRAIT;
@@ -65,8 +81,8 @@ const HeroPortraitPanel: React.FC<HeroPortraitPanelProps> = ({ army, side, piece
 	const isPlayer = side === 'player';
 
 	const wrapperClass = compact
-		? `flex items-center gap-3 ${isPlayer ? 'flex-row-reverse text-right' : 'flex-row text-left'}`
-		: 'flex flex-col items-center';
+		? `chess-hero-anchor chess-hero-anchor--${side} flex items-center gap-3 ${isPlayer ? 'flex-row-reverse text-right' : 'flex-row text-left'}`
+		: `chess-hero-anchor chess-hero-anchor--${side} flex flex-col items-center`;
 
 	return (
 		<motion.div
@@ -78,6 +94,7 @@ const HeroPortraitPanel: React.FC<HeroPortraitPanelProps> = ({ army, side, piece
 			<div
 				className={`hero-portrait-frame ${isPlayer ? 'hero-portrait-player' : 'hero-portrait-opponent'}`}
 				data-element={king.element || (isPlayer ? 'holy' : 'shadow')}
+				data-turn-active={isActiveTurn ? 'true' : 'false'}
 				style={compact ? COMPACT_FRAME_STYLE : frameStyle}
 			>
 				<img
@@ -137,12 +154,13 @@ const HeroPortraitPanel: React.FC<HeroPortraitPanelProps> = ({ army, side, piece
 
 type PlayerPortraitProps = {
 	readonly army: ArmySelectionType;
+	readonly isActiveTurn?: boolean;
 	readonly pieceCount?: number;
 	readonly compact?: boolean;
 	readonly frameStyle?: React.CSSProperties;
 };
 
-const PlayerHeroPortrait: React.FC<PlayerPortraitProps> = ({ army, pieceCount, compact, frameStyle: extraFrameStyle }) => {
+const PlayerHeroPortrait: React.FC<PlayerPortraitProps> = ({ army, isActiveTurn = false, pieceCount, compact, frameStyle: extraFrameStyle }) => {
 	const king = army.king;
 	const kingPortrait = resolveHeroPortrait(king.id, king.portrait) ?? DEFAULT_PORTRAIT;
 	const fallbackPortrait = DEFAULT_PORTRAIT;
@@ -205,8 +223,8 @@ const PlayerHeroPortrait: React.FC<PlayerPortraitProps> = ({ army, pieceCount, c
 	);
 
 	const wrapperClass = compact
-		? 'flex flex-row-reverse items-center gap-3 text-right'
-		: 'flex flex-col items-center';
+		? 'chess-hero-anchor chess-hero-anchor--player flex flex-row-reverse items-center gap-3 text-right'
+		: 'chess-hero-anchor chess-hero-anchor--player flex flex-col items-center';
 
 	const frameStyle: React.CSSProperties = {
 		cursor: isClickable ? 'pointer' : 'default',
@@ -217,6 +235,7 @@ const PlayerHeroPortrait: React.FC<PlayerPortraitProps> = ({ army, pieceCount, c
 		<div
 			className={`hero-portrait-frame hero-portrait-player ${isClickable ? 'king-clickable' : ''} ${isPlacementMode ? 'king-placement-active' : ''} ${isCasting ? 'king-casting' : ''}`}
 			data-element={king.element || 'holy'}
+			data-turn-active={isActiveTurn ? 'true' : 'false'}
 			onClick={handlePortraitClick}
 			style={frameStyle}
 		>
@@ -235,8 +254,13 @@ const PlayerHeroPortrait: React.FC<PlayerPortraitProps> = ({ army, pieceCount, c
 				loading="lazy"
 			/>
 
-			<div className={`king-uses-badge ${minesRemaining === 0 ? 'king-uses-empty' : ''} ${isPlacementMode ? 'king-uses-active' : ''}`}>
-				{minesRemaining}/5
+			<div
+				className={`king-uses-badge ${minesRemaining === 0 ? 'king-uses-empty' : ''} ${isPlacementMode ? 'king-uses-active' : ''}`}
+				aria-label={`${minesRemaining} of 5 uses remaining`}
+			>
+				<span className="king-uses-current" aria-hidden="true">{minesRemaining}</span>
+				<span className="king-uses-divider" aria-hidden="true">/</span>
+				<span className="king-uses-maximum" aria-hidden="true">5</span>
 			</div>
 
 			<AnimatePresence>
@@ -425,6 +449,8 @@ export type ChessPhaseProps = {
 	readonly opponentArmy: ArmySelectionType;
 	readonly onCombatTriggered: (attackerId: string, defenderId: string) => void;
 	readonly onBattleMode: () => void;
+	readonly sceneFxEnabled: boolean;
+	readonly motionEnabled: boolean;
 };
 
 const ChessPhase: React.FC<ChessPhaseProps> = ({
@@ -433,6 +459,8 @@ const ChessPhase: React.FC<ChessPhaseProps> = ({
 	opponentArmy,
 	onCombatTriggered,
 	onBattleMode,
+	sceneFxEnabled,
+	motionEnabled,
 }) => {
 	const myCanonicalSide = useGameStore(s => s.myCanonicalSide) ?? 'player';
 	const enemyCanonicalSide: 'player' | 'opponent' = myCanonicalSide === 'player' ? 'opponent' : 'player';
@@ -440,6 +468,9 @@ const ChessPhase: React.FC<ChessPhaseProps> = ({
 	const { isPlacementMode } = useKingChessAbility(myCanonicalSide);
 	const playerPieceCount = boardState.pieces.filter(p => p.owner === myCanonicalSide).length;
 	const opponentPieceCount = boardState.pieces.filter(p => p.owner === enemyCanonicalSide).length;
+	const checkNotice = boardState.inCheck
+		? getCheckNoticePresentation({ checkedSide: boardState.inCheck, viewerSide: myCanonicalSide })
+		: null;
 
 	return (
 		<motion.div
@@ -449,34 +480,19 @@ const ChessPhase: React.FC<ChessPhaseProps> = ({
 			exit={{ opacity: 0, scale: 0.9 }}
 			className="relative w-full h-full flex flex-col items-center justify-center p-4 gap-3"
 		>
-			{/* Title chip — top-left corner, low-key identity anchor */}
-			<motion.div
-				initial={{ opacity: 0, y: -10 }}
-				animate={{ opacity: 1, y: 0 }}
-				transition={{ duration: 0.4, delay: 0.1 }}
-				className="absolute top-4 left-4 px-3 py-1.5 rounded-md bg-black/50 border border-amber-500/30 backdrop-blur-sm pointer-events-none"
-			>
-				<span
-					className="text-xs font-bold tracking-[2px] uppercase"
-					style={{
-						background: 'linear-gradient(180deg, #ffd700, #ff8c00)',
-						WebkitBackgroundClip: 'text',
-						WebkitTextFillColor: 'transparent',
-					}}
-				>
-					Ragnarok Chess
-				</span>
-			</motion.div>
+			<ChessSceneLayers fxEnabled={sceneFxEnabled} motionEnabled={motionEnabled} />
 
 			<AnimatePresence>
-				{boardState.inCheck && (
+				{checkNotice && (
 					<motion.div
 						initial={{ opacity: 0, scale: 0.8, y: -20 }}
 						animate={{ opacity: 1, scale: 1, y: 0 }}
 						exit={{ opacity: 0, scale: 0.8, y: -20 }}
 						className="check-warning-banner"
+						data-check-state={checkNotice.state}
+						role="alert"
 					>
-						CHECK! {boardState.inCheck === myCanonicalSide ? 'Your King is in danger!' : "Enemy King is threatened!"}
+						{checkNotice.label}
 					</motion.div>
 				)}
 			</AnimatePresence>
@@ -490,12 +506,14 @@ const ChessPhase: React.FC<ChessPhaseProps> = ({
 					<HeroPortraitPanel
 						army={opponentArmy}
 						side="opponent"
+						isActiveTurn={boardState.currentTurn === enemyCanonicalSide}
 						pieceCount={opponentPieceCount}
 						frameStyle={FLANKING_FRAME_STYLE}
 					/>
 				</div>
 
-				<div className="relative flex flex-col items-center">
+				<div className="relative flex flex-col items-center chess-board-stage">
+					<div className="chess-board-relief" aria-hidden="true" />
 					<ChessBoard
 						onCombatTriggered={onCombatTriggered}
 						disabled={isPlacementMode}
@@ -507,6 +525,7 @@ const ChessPhase: React.FC<ChessPhaseProps> = ({
 					{playerArmy && (
 						<PlayerHeroPortrait
 							army={playerArmy}
+							isActiveTurn={boardState.currentTurn === myCanonicalSide}
 							pieceCount={playerPieceCount}
 							frameStyle={FLANKING_FRAME_STYLE}
 						/>
@@ -515,13 +534,13 @@ const ChessPhase: React.FC<ChessPhaseProps> = ({
 			</div>
 
 			{/* Check escape hint — only when relevant. Turn indicator owned by ChessBoard's internal banner. */}
-			{boardState.inCheck === boardState.currentTurn && (
+			{boardState.inCheck === myCanonicalSide && (
 				<p className="text-xs text-yellow-400 font-semibold mt-1 text-center">
 					You must escape check! Move King, block, or capture the threat.
 				</p>
 			)}
 			{isPeerMatch && (
-				<p className="text-[10px] text-amber-200/70 font-semibold mt-1 text-center max-w-xl tracking-wide uppercase">
+				<p className="chess-context-notice text-[10px] text-amber-200/70 font-semibold mt-1 text-center tracking-wide uppercase">
 					Pawns execute on the board. Heroes fight in poker. Touch the king and you win. The king does not capture.
 				</p>
 			)}

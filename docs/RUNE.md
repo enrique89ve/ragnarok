@@ -36,12 +36,16 @@ Hard invariants:
 - **Amounts are computed, never supplied.** The protocol computes credit/debit
   amounts from source type, season config, account, source key, and pack quote.
 - **Ledger first, balance second.** Balance changes must go through a
-  `RuneLedgerEntry` with `balanceBefore`/`balanceAfter`; scalar token balances
-  are replay projections and drift-detection surfaces.
+  `RuneLedgerEntry` with `balanceBefore`/`balanceAfter`. RUNE balances are
+  **pure ledger projections** — `credits − debits` for `(account, seasonId)` —
+  with no stored scalar anywhere (server Map, PG, client IDB, or UI store).
+  Drift between balance and replay is impossible by construction.
 - **One economic event, one idempotency key.** Replays and retries are safe
   because every source key is deterministic and consumed once.
-- **Caps are protocol rules.** Account caps, source-pool caps, active-balance
-  caps, and total-emission caps are enforced during replay.
+- **Caps are protocol rules.** Per-account caps, per-source pool caps, and the
+  season total-emission cap are enforced during replay. The active-balance cap
+  (`credits − debits ≤ totalCap`) holds by construction and needs no separate
+  check.
 - **Reads are not authority.** `/api/chain/rune/*` and wallet displays are
   projections. Any disagreement with replay is a bug in the projection.
 
@@ -83,7 +87,20 @@ before rendering. Result-only evidence remains insufficient for `p2p_ranked`;
 the economic path starts at dual `match_anchor` plus a winner-posted,
 deterministically replayable result (ADR 0008).
 
-## Caps (S01)
+## Caps (testnet)
+
+> **Season id is stage-derived, not a label — one knob, one trigger.**
+> `seasonId` = the first 16 hex chars of
+> `fnv1a(canonicalStringify({stage, seasonStart}))` via
+> `deriveRuneSeasonId(config)`
+> (`shared/protocol-core/runeSeasonHash.ts`). Changing `seasonStart` rotates
+> the RUNE/Eitr season (players restart at 0; NFTs, packs, XP, and levels are
+> NOT season-scoped and persist). `resetEpoch` and `protocolId` are storage
+> and environment boundaries — they wipe or separate all state via the
+> storage namespace, so they deliberately do not participate in season
+> identity. The legacy `S01`/`M01` labels were removed from the economy
+> tables; every source key and ledger entry embeds the current hash (e.g.
+> `3fcbaa819ffd1647` for the current testnet boundary).
 
 | Cap | Value | Scope |
 |---|---|---|
@@ -105,16 +122,16 @@ Constants live in [shared/protocol-core/runeEconomy.ts](../shared/protocol-core/
 
 | `sourceType` | Op | Per-clear | Source key | Notes |
 |---|---|---|---|---|
-| `p2p_ranked` | `match_result` (ranked) | win = 2, loss = 0 | `p2p:S01:{matchId}:{winner|loser}:{account}` | Match is consumed by prefix `p2p:S01:{matchId}:`; S01 loser reward is 0 so only the winner writes a ledger entry |
-| `campaign_first_clear` | `campaign_result` | per ordinal table `[2,2,2,2,1,1]` | `campaign:S01:{account}:{cid}:{m}` | Only first clear ever pays; replays update best stats, not RUNE |
-| `daily_quest_claim` | `daily_quest_claim` | flat 2 RUNE/slot | `daily_quest:S01:{account}:{utc_day}:{slot}` | Completed locally, then claimed from an explicit wallet action; chain trusts client (no match transcript); per-day cap = 3 slots × 2 RUNE = 6 RUNE; `utc_day` is derived solely from `op.timestamp` (the Hive block timestamp) — the client does not broadcast `ymd_utc`, and claims belong to the UTC day of inclusion |
-| `reward_claim` | `reward_claim` (generic) | per reward def | `reward:S01:{account}:{rewardId}` | Tournament rewards only (`first_victory`, `elo_*`, etc) — `reward_claim` campaign:* path was removed in [commit 00d48fb](../shared/protocol-core/apply.ts), `reward_claim` daily_quest:* path replaced by `daily_quest_claim` op |
+| `p2p_ranked` | `match_result` (ranked) | win = 2, loss = 0 | `p2p:{seasonId}:{matchId}:{winner|loser}:{account}` | Match is consumed by prefix `p2p:{seasonId}:{matchId}:`; loser reward is 0 so only the winner writes a ledger entry |
+| `campaign_first_clear` | `campaign_result` | per ordinal table `[2,2,2,2,1,1]` | `campaign:{seasonId}:{account}:{cid}:{m}` | Only first clear ever pays; replays update best stats, not RUNE |
+| `daily_quest_claim` | `daily_quest_claim` | flat 2 RUNE/slot | `daily_quest:{seasonId}:{account}:{utc_day}:{slot}` | Completed locally, then claimed from an explicit wallet action; chain trusts client (no match transcript); per-day cap = 3 slots × 2 RUNE = 6 RUNE; `utc_day` is derived solely from `op.timestamp` (the Hive block timestamp) — the client does not broadcast `ymd_utc`, and claims belong to the UTC day of inclusion |
+| `reward_claim` | `reward_claim` (generic) | per reward def | `reward:{seasonId}:{account}:{rewardId}` | Tournament rewards only (`first_victory`, `elo_*`, etc) — `reward_claim` campaign:* path was removed in [commit 00d48fb](../shared/protocol-core/apply.ts), `reward_claim` daily_quest:* path replaced by `daily_quest_claim` op |
 
 ## Sink (debit op)
 
 | `sourceType` | Op | Source key | Notes |
 |---|---|---|---|
-| `rune_exchange` | `rune_exchange` | `pack:S01:{account}:{trxId}:{packType}:{quantity}` | Debits RUNE, delegates pack delivery to `RuneExchangeAdapter` |
+| `rune_exchange` | `rune_exchange` | `pack:{seasonId}:{account}:{trxId}:{packType}:{quantity}` | Debits RUNE, delegates pack delivery to `RuneExchangeAdapter` |
 
 ## Campaign ordinal table
 
@@ -163,7 +180,7 @@ DailyQuestPanel Claim button                       ─ explicit wallet invocatio
                       ├ idempotency by (account, utc_day, slot)
                       └ calculateCappedRuneCredit + putRuneLedgerEntryAndBalance
                            ├ source: daily_quest_claim
-                           └ key:    daily_quest:S01:{account}:{utc_day}:{slot}
+                           └ key:    daily_quest:{seasonId}:{account}:{utc_day}:{slot}
        └→ on broadcast success: set claimed=true, emit "+N RUNE" toast
 ```
 
@@ -201,7 +218,7 @@ match_anchor (start, both players) ─ participants, session pubkeys, decks, see
   └→ terminal phase checkpoint ─ relay may mint one Terminal Checkpoint Receipt
        └→ match_result (winner-posted) ─ winner Hive-signs; loser does not
             └→ applyRankedMatchSettlement (replay + receipt + winner === broadcaster)
-                 └→ P2P RUNE credit  key: p2p:S01:{matchId}:winner:{winner}
+                 └→ P2P RUNE credit  key: p2p:{seasonId}:{matchId}:winner:{winner}
 ```
 
 Implementation: [shared/protocol-core/apply.ts](../shared/protocol-core/apply.ts) — search `'p2p_ranked'`.
@@ -210,10 +227,10 @@ Implementation: [shared/protocol-core/apply.ts](../shared/protocol-core/apply.ts
 
 All read-only, derived from chain replay. There is no `/api/testnet/rune/*` namespace — testnet is a runtime profile.
 
-- `GET /api/chain/player/:username/rune?seasonId=S01` — single account summary
-- `GET /api/chain/rune/state?seasonId=S01` — global caps + emission totals
-- `GET /api/chain/rune/ledger?seasonId=S01&account=:user&sourceType=:type` — paginated entries
-- `GET /api/chain/rune/balances?seasonId=S01` — paginated per-account balance
+- `GET /api/chain/player/:username/rune?seasonId=<seasonHash>` — single account summary
+- `GET /api/chain/rune/state?seasonId=<seasonHash>` — global caps + emission totals
+- `GET /api/chain/rune/ledger?seasonId=<seasonHash>&account=:user&sourceType=:type` — paginated entries
+- `GET /api/chain/rune/balances?seasonId=<seasonHash>` — paginated per-account balance
 
 Rate limits: 60 req/min per IP in production for `state`/`ledger`/`balances`. Refresh UI ≥30s apart.
 
@@ -223,11 +240,15 @@ Rate limits: 60 req/min per IP in production for `state`/`ledger`/`balances`. Re
 |---|---|
 | Constants + caps + ordinal table | [shared/protocol-core/runeEconomy.ts](../shared/protocol-core/runeEconomy.ts) |
 | Apply ops + credit logic | [shared/protocol-core/apply.ts](../shared/protocol-core/apply.ts) |
+| Season hash (identity) | [shared/protocol-core/runeSeasonHash.ts](../shared/protocol-core/runeSeasonHash.ts) |
 | Ledger storage adapter (client) | [client/src/data/blockchain/clientStateAdapter.ts](../client/src/data/blockchain/clientStateAdapter.ts) |
 | Ledger storage adapter (server) | [server/services/serverStateAdapter.ts](../server/services/serverStateAdapter.ts) |
 | Client API | [client/src/data/runeAPI.ts](../client/src/data/runeAPI.ts) |
 | Server routes | [server/routes/runeRoutes.ts](../server/routes/runeRoutes.ts) |
 | Exchange adapter (server) | [server/services/runeExchangeAdapter.ts](../server/services/runeExchangeAdapter.ts) |
+
+Balances are projections of `rune_ledger` (`credits − debits` per
+`(account, seasonId)`); there is no stored balance state.
 
 ## Tests
 

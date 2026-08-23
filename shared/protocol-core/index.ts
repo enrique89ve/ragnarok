@@ -19,6 +19,11 @@ export { applyOp, autoFinalizeExpiredCommits } from './apply';
 export type { ProtocolCoreDeps } from './apply';
 export { canonicalStringify, sha256Hash } from './hash';
 export {
+	deriveRuneSeasonId,
+	isRuneSeasonId,
+	type RuneSeasonIdInput,
+} from './runeSeasonHash';
+export {
 	ADMIN_APPROVAL_DOMAIN,
 	ADMIN_APPROVAL_KEY_TYPE,
 	ADMIN_BROADCAST_PROTOCOLS,

@@ -4,7 +4,9 @@
 
    1. Reach-into SimpleCard override (cross-component coupling that needs
       !important to win the cascade vs SimpleCard's own .large rule).
-   2. Decorative rune rings — positioned with negative margins to play nicely
+   2. Cinematic card reveal — the back/front planes stay inside the card
+      wrapper so the entrance timeline can animate the outer card safely.
+   3. Decorative rune rings — positioned with negative margins to play nicely
       with framer-motion's inline `transform: rotate()` (translateX/Y in CSS
       would be clobbered by the motion library's transform).
    ========================================================================== */
@@ -45,8 +47,154 @@
   border-color: rgba(251, 191, 36, 0.04);
 }
 
-/* Card wrapper for MulliganCard — width fixed here because MulliganCard's
-   motion.div needs a non-Tailwind sizing source the reach-into above can
+/* Cinematic entrance layers. The portal is centered by its parent so Framer
+   Motion can own scale/rotation without fighting a CSS translate. */
+.mulligan-atmosphere-layers {
+  z-index: 1;
+  perspective: 1200px;
+  contain: paint;
+}
+
+.mulligan-portal-layer {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+:is(.mulligan-portal-aura, .mulligan-portal-flare) {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.mulligan-portal-aura {
+  width: min(72vw, 840px);
+  aspect-ratio: 1;
+  background: radial-gradient(
+    circle,
+    rgba(251, 191, 36, 0.2) 0%,
+    rgba(56, 189, 248, 0.08) 18%,
+    rgba(15, 23, 42, 0.04) 40%,
+    transparent 67%
+  );
+  mix-blend-mode: screen;
+  opacity: 0.36;
+}
+
+.mulligan-portal-flare {
+  width: min(43vw, 520px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(251, 191, 36, 0.16);
+  background: radial-gradient(
+    circle,
+    rgba(255, 244, 190, 0.18) 0%,
+    rgba(251, 191, 36, 0.08) 18%,
+    transparent 62%
+  );
+  box-shadow:
+    0 0 52px rgba(251, 191, 36, 0.12),
+    inset 0 0 44px rgba(56, 189, 248, 0.08);
+  opacity: 0.18;
+}
+
+.mulligan-portal-beam {
+  position: absolute;
+  width: min(92vw, 1180px);
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(56, 189, 248, 0.12) 27%,
+    rgba(255, 250, 218, 0.92) 50%,
+    rgba(251, 191, 36, 0.22) 73%,
+    transparent 100%
+  );
+  box-shadow:
+    0 0 12px rgba(255, 250, 218, 0.72),
+    0 0 40px rgba(251, 191, 36, 0.25);
+  transform-origin: 50% 50%;
+}
+
+.mulligan-portal-beam-horizontal {
+  transform: scaleX(1);
+}
+
+.mulligan-portal-beam-diagonal {
+  height: 1px;
+  opacity: 0.68;
+}
+
+.mulligan-portal-core {
+  width: 34px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    #fffdf1 0%,
+    rgba(255, 248, 192, 0.98) 18%,
+    rgba(251, 191, 36, 0.5) 42%,
+    transparent 72%
+  );
+  box-shadow:
+    0 0 18px rgba(255, 253, 241, 0.95),
+    0 0 68px rgba(251, 191, 36, 0.58),
+    0 0 120px rgba(56, 189, 248, 0.18);
+}
+
+.mulligan-entrance-shell,
+.mulligan-entrance-header,
+.mulligan-entrance-card,
+.mulligan-action-entrance {
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+  transform-origin: 50% 50%;
+}
+
+@media (max-width: 720px) {
+  .mulligan-portal-aura {
+    width: 120vw;
+  }
+
+  .mulligan-portal-flare {
+    width: 72vw;
+  }
+
+  .mulligan-portal-beam {
+    width: 138vw;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mulligan-portal-aura,
+  .mulligan-portal-flare,
+  .mulligan-portal-beam,
+  .mulligan-portal-core,
+  .mulligan-entrance-shell,
+  .mulligan-entrance-header,
+  .mulligan-entrance-card,
+  .mulligan-action-entrance,
+  .mulligan-card-flip-stage--cinematic .mulligan-card-flip-face--back,
+  .mulligan-card-flip-stage--cinematic .mulligan-card-flip-face--front {
+    will-change: auto;
+    animation: none;
+  }
+
+  .mulligan-card-flip-face--front {
+    transform: none;
+  }
+
+  .mulligan-card-flip-face--back {
+    display: none;
+  }
+}
+
+/* Card wrapper for MulliganCard — width fixed here because the entrance
+   timeline needs a non-Tailwind sizing source the reach-into above can
    target. Keep co-located with the override.
 
    The current CardFrame surface keeps attack/health sockets inside the frame,
@@ -56,6 +204,105 @@
   cursor: pointer;
   width: 200px;
   padding-bottom: 0;
+}
+
+/* One-shot card reveal. The outer card travel is owned by GSAP; these nested
+   planes own only the face change, so no animation library fights over the
+   same transform property. */
+.mulligan-card-flip-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 7 / 10;
+  transform-style: preserve-3d;
+  perspective: 1200px;
+}
+
+.mulligan-card-flip-face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+}
+
+.mulligan-card-flip-face--back {
+  background: #173b29;
+}
+
+.mulligan-card-flip-face--back .card-card-back {
+  border-radius: inherit;
+}
+
+.mulligan-card-flip-face--front {
+  display: block;
+  transform: rotateY(180deg);
+}
+
+.mulligan-card-flip-face--front .simple-card.large {
+  width: 100% !important;
+  height: 100% !important;
+  aspect-ratio: auto;
+}
+
+.mulligan-card-flip-stage--static .mulligan-card-flip-face--back {
+  display: none;
+}
+
+.mulligan-card-flip-stage--static .mulligan-card-flip-face--front {
+  transform: none;
+}
+
+.mulligan-card-flip-stage--cinematic .mulligan-card-flip-face--back {
+  animation-duration: 560ms;
+  animation-delay: var(--mulligan-card-reveal-delay, 0s);
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: both;
+  animation-iteration-count: 1;
+  animation-name: mulligan-card-back-exit;
+}
+
+.mulligan-card-flip-stage--cinematic .mulligan-card-flip-face--front {
+  animation-duration: 560ms;
+  animation-delay: var(--mulligan-card-reveal-delay, 0s);
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: both;
+  animation-iteration-count: 1;
+  animation-name: mulligan-card-front-enter;
+}
+
+@keyframes mulligan-card-back-exit {
+  0% {
+    opacity: 1;
+    transform: rotateY(0deg);
+  }
+
+  45% {
+    opacity: 1;
+    transform: rotateY(90deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform: rotateY(180deg);
+  }
+}
+
+@keyframes mulligan-card-front-enter {
+  0% {
+    opacity: 0;
+    transform: rotateY(180deg);
+  }
+
+  45% {
+    opacity: 0;
+    transform: rotateY(90deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: rotateY(0deg);
+  }
 }
 
 /* Lightweight card mode: remove heavy visual effects and extra repaints during

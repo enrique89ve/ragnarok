@@ -108,7 +108,6 @@ export interface RuneExchangeAdapter {
 
 export const TESTNET_RUNE_ECONOMY = {
 	phase: 'testnet',
-	seasonId: 'S01',
 	totalCap: 2_600_000,
 	targetAccounts: 20_000,
 	p2pCap: 2_000_000,
@@ -129,7 +128,6 @@ export const TESTNET_RUNE_ECONOMY = {
 
 export const MAINNET_RUNE_ECONOMY = {
 	phase: 'mainnet',
-	seasonId: 'M01',
 	totalCap: 1_000_000,
 	targetAccounts: 50_000,
 	p2pCap: 600_000,
@@ -150,7 +148,6 @@ export const MAINNET_RUNE_ECONOMY = {
 
 export const RUNE_WIN_RANKED = TESTNET_RUNE_ECONOMY.p2pWinRune;
 export const RUNE_LOSS_RANKED = TESTNET_RUNE_ECONOMY.p2pLossRune;
-export const TESTNET_RUNE_SEASON_ID = TESTNET_RUNE_ECONOMY.seasonId;
 
 export function getRuneEconomy(phase: 'testnet' | 'mainnet' | string = 'testnet') {
 	return phase === 'mainnet' ? MAINNET_RUNE_ECONOMY : TESTNET_RUNE_ECONOMY;
@@ -228,14 +225,14 @@ export function calculateRuneBalanceTrace(input: RuneBalanceTraceInput): RuneBal
 
 export function createP2PRankedMatchSourceKey(
 	matchId: string,
-	seasonId = TESTNET_RUNE_SEASON_ID,
+	seasonId: string,
 ): string {
 	return `p2p:${seasonId}:${matchId}`;
 }
 
 export function createP2PRankedMatchSourceKeyPrefix(
 	matchId: string,
-	seasonId = TESTNET_RUNE_SEASON_ID,
+	seasonId: string,
 ): string {
 	return `${createP2PRankedMatchSourceKey(matchId, seasonId)}:`;
 }
@@ -244,7 +241,7 @@ export function createP2PRankedRuneSourceKey(
 	matchId: string,
 	role: P2PRankedRuneRole,
 	account: string,
-	seasonId = TESTNET_RUNE_SEASON_ID,
+	seasonId: string,
 ): string {
 	return `${createP2PRankedMatchSourceKey(matchId, seasonId)}:${role}:${account}`;
 }
@@ -253,7 +250,7 @@ export function createCampaignFirstClearRuneSourceKey(
 	account: string,
 	campaignId: string,
 	missionId: string,
-	seasonId = TESTNET_RUNE_SEASON_ID,
+	seasonId: string,
 ): string {
 	return `campaign:${seasonId}:${account}:${campaignId}:${missionId}`;
 }
@@ -261,7 +258,7 @@ export function createCampaignFirstClearRuneSourceKey(
 export function createRewardClaimRuneSourceKey(
 	account: string,
 	rewardId: string,
-	seasonId = TESTNET_RUNE_SEASON_ID,
+	seasonId: string,
 ): string {
 	return `reward:${seasonId}:${account}:${rewardId}`;
 }
@@ -271,7 +268,7 @@ export function createRuneExchangeSourceKey(
 	trxId: string,
 	packType: string,
 	quantity: number,
-	seasonId = TESTNET_RUNE_SEASON_ID,
+	seasonId: string,
 ): string {
 	return `pack:${seasonId}:${account}:${trxId}:${packType}:${quantity}`;
 }
@@ -280,7 +277,7 @@ export function createDailyQuestRuneSourceKey(
 	account: string,
 	ymdUtc: string,
 	slot: number,
-	seasonId = TESTNET_RUNE_SEASON_ID,
+	seasonId: string,
 ): string {
 	return `daily_quest:${seasonId}:${account}:${ymdUtc}:${slot}`;
 }

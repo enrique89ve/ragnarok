@@ -17,8 +17,7 @@ import {
 	registerAccount,
 	getGenesisState, setGenesisState,
 	getSupplyCounter, setSupplyCounter,
-	getTokenBalance as csGetTokenBalance, setTokenBalance as csSetTokenBalance,
-	getRuneBalanceTotal as csGetRuneBalanceTotal,
+	getRuneBalance as csGetRuneBalance,
 	getRuneLedgerEntry as csGetRuneLedgerEntry, setRuneLedgerEntry as csSetRuneLedgerEntry,
 	getRuneLedgerEntries as csGetRuneLedgerEntries,
 	getRuneLedgerTotal as csGetRuneLedgerTotal,
@@ -190,12 +189,10 @@ export const serverStateAdapter: StateAdapter = {
 		p.losses = r.losses;
 	},
 
-	async getTokenBalance(account) {
-		const r = csGetTokenBalance(account);
+	async getTokenBalance(account, seasonId) {
+		const r = csGetRuneBalance(account, seasonId);
 		return r ? { account: r.account, RUNE: r.RUNE } : { account, RUNE: 0 };
 	},
-	async putTokenBalance(b) { csSetTokenBalance(b.account, { account: b.account, RUNE: b.RUNE }); },
-	async getRuneBalanceTotal() { return csGetRuneBalanceTotal(); },
 	async getRuneLedgerEntry(entryId) { return csGetRuneLedgerEntry(entryId) ?? null; },
 	async putRuneLedgerEntry(entry) { csSetRuneLedgerEntry(entry); },
 	async getRuneLedgerEntries(query) { return csGetRuneLedgerEntries(query); },

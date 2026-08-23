@@ -40,6 +40,7 @@ import {
 	type RuneSourceType,
 	type RuneStateSnapshot,
 } from '../../../data/runeAPI';
+import { getClientRuneSeasonId } from '../../../data/runeSeasonReadModel';
 
 type VariantKey = 'A' | 'B' | 'C';
 type RunePanelData = {
@@ -140,13 +141,14 @@ function useRunePanelData(selectedAccountName: string): RunePanelLoadState {
 	useEffect(() => {
 		const controller = new AbortController();
 		setLoadState({ status: 'loading' });
+		const seasonId = getClientRuneSeasonId();
 
 		Promise.all([
-			fetchRuneState('S01', controller.signal),
-			fetchRuneLedger({ seasonId: 'S01', limit: 100 }, controller.signal),
-			fetchRuneBalances({ seasonId: 'S01', limit: 25 }, controller.signal),
-			fetchRuneAccount(selectedAccountName, 'S01', controller.signal),
-			fetchRuneLedger({ seasonId: 'S01', account: selectedAccountName, limit: 50 }, controller.signal),
+			fetchRuneState(seasonId, controller.signal),
+			fetchRuneLedger({ seasonId, limit: 100 }, controller.signal),
+			fetchRuneBalances({ seasonId, limit: 25 }, controller.signal),
+			fetchRuneAccount(selectedAccountName, seasonId, controller.signal),
+			fetchRuneLedger({ seasonId, account: selectedAccountName, limit: 50 }, controller.signal),
 		])
 			.then(([state, ledger, balances, selectedAccount, selectedLedger]) => {
 				if (controller.signal.aborted) return;

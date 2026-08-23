@@ -65,8 +65,9 @@ describe('rune economy', () => {
 			'alice',
 			'war-of-pantheons',
 			'norse-1',
+			'S01',
 		)).toBe('campaign:S01:alice:war-of-pantheons:norse-1');
-		expect(createRewardClaimRuneSourceKey('alice', 'first_victory'))
+		expect(createRewardClaimRuneSourceKey('alice', 'first_victory', 'S01'))
 			.toBe('reward:S01:alice:first_victory');
 		expect(getCampaignFirstClearRuneReward('norse-1')).toBe(2);
 		expect(getCampaignFirstClearRuneReward('norse-4')).toBe(2);
@@ -76,11 +77,11 @@ describe('rune economy', () => {
 	});
 
 	it('derives P2P source keys from match id, role, and balance owner', () => {
-		expect(createP2PRankedMatchSourceKeyPrefix('match-123'))
+		expect(createP2PRankedMatchSourceKeyPrefix('match-123', 'S01'))
 			.toBe('p2p:S01:match-123:');
-		expect(createP2PRankedRuneSourceKey('match-123', 'winner', 'alice'))
+		expect(createP2PRankedRuneSourceKey('match-123', 'winner', 'alice', 'S01'))
 			.toBe('p2p:S01:match-123:winner:alice');
-		expect(createP2PRankedRuneSourceKey('match-123', 'loser', 'bob'))
+		expect(createP2PRankedRuneSourceKey('match-123', 'loser', 'bob', 'S01'))
 			.toBe('p2p:S01:match-123:loser:bob');
 	});
 
@@ -149,9 +150,9 @@ describe('rune economy', () => {
 	});
 
 	it('derives daily quest source key from account + UTC day + slot', () => {
-		expect(createDailyQuestRuneSourceKey('alice', '2026-05-14', 0))
+		expect(createDailyQuestRuneSourceKey('alice', '2026-05-14', 0, 'S01'))
 			.toBe('daily_quest:S01:alice:2026-05-14:0');
-		expect(createDailyQuestRuneSourceKey('bob', '2026-05-14', 2))
+		expect(createDailyQuestRuneSourceKey('bob', '2026-05-14', 2, 'S01'))
 			.toBe('daily_quest:S01:bob:2026-05-14:2');
 	});
 

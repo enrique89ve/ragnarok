@@ -27,6 +27,7 @@ import { useHiveDataStore } from '../HiveDataLayer';
 import { HIVE_NODES, NFTLOX_PROTOCOL_ID } from './hiveConfig';
 import { clientStateAdapter } from './clientStateAdapter';
 import { PACK_ENTROPY_DELAY_BLOCKS } from '@shared/protocol-core';
+import { deriveRuneSeasonId } from '@shared/protocol-core/runeSeasonHash';
 import { shouldAcceptCustomJsonId } from '@shared/runtimeConfig';
 import { getRagnarokNetworkConfig } from '@/game/config/networkConfig';
 
@@ -277,10 +278,11 @@ async function _doSync(username: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 async function hydrateStore(username: string): Promise<void> {
+	const seasonId = deriveRuneSeasonId(getRagnarokNetworkConfig());
 	const [cards, matches, tokenBalance, eloRating, packs] = await Promise.all([
 		getCardsByOwner(username),
 		getMatchesByAccount(username),
-		getTokenBalance(username),
+		getTokenBalance(username, seasonId),
 		getEloRating(username),
 		getPacksByOwner(username),
 	]);

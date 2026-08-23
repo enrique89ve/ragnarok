@@ -11,6 +11,7 @@ import {
   getCellHighlight,
   getCellTone,
   getMoveAnimationOffset,
+  getTurnNoticePresentation,
 } from './chessBoardPresentation';
 
 const PIECE_SLIDE_TRANSITION = {
@@ -99,6 +100,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
   const { currentTurn } = boardState;
   const myCanonicalSide = useGameStore(s => s.myCanonicalSide) ?? 'player';
   const isMyTurn = currentTurn === myCanonicalSide;
+  const turnNotice = getTurnNoticePresentation({ currentTurn, viewerSide: myCanonicalSide });
   const isFlipped = myCanonicalSide === 'opponent';
   const attackAnimationKey = buildAttackAnimationKey(pendingAttackAnimation);
   const orderedCellCoords = useMemo(() => {
@@ -285,11 +287,28 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ onCombatTriggered, disabled = f
       <div
         className="chess-turn-banner mb-4 py-2 px-6 bg-slate-900/60 border border-slate-700 rounded-full"
         data-motion={shouldAnimateTurnBanner ? 'on' : 'off'}
+        data-turn-state={turnNotice.state}
+        role="status"
+        aria-live="polite"
       >
         <span className="text-sm font-runic text-slate-200 tracking-widest">
-          {isMyTurn ? 'ᚱ YOUR COMMAND ᚱ' : 'ᚱ FOE STIRS ᚱ'}
+          {turnNotice.label}
         </span>
       </div>
+
+      {isMyTurn && (
+        <div
+          key={`turn-toast-${boardState.moveCount}`}
+          className="chess-turn-toast-anchor"
+          aria-hidden="true"
+        >
+          <div className="chess-turn-toast">
+            <span className="chess-turn-toast-rune">ᚱ</span>
+            <span>TU TURNO</span>
+            <span className="chess-turn-toast-rune">ᚱ</span>
+          </div>
+        </div>
+      )}
 
       <div className="relative [perspective:1200px]">
         <motion.div

@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchEitrAccount, type AccountEitrSummary } from '../../data/eitrAPI';
+import { deriveRuneSeasonId } from '@shared/protocol-core/runeSeasonHash';
+import { getRagnarokNetworkConfig } from '../config/networkConfig';
 import { hiveEvents, type HiveEvent } from '../../data/HiveEvents';
+
+function activeClientSeasonId(): string {
+	return deriveRuneSeasonId(getRagnarokNetworkConfig());
+}
 
 export interface UseEitrBalanceResult {
 	balance: number;
@@ -21,7 +27,7 @@ const EMPTY_SUMMARY: UseEitrBalanceResult = {
 // Subscribes to /api/chain/player/:u/eitr and refetches when the bridge emits
 // a `token:updated` event for `'Eitr'`. Per ADR 0001, balance is replay-derived
 // (credits − debits) — no local scalar. Hook returns 0 when account is null.
-export function useEitrBalance(account: string | null, seasonId = 'S01'): UseEitrBalanceResult {
+export function useEitrBalance(account: string | null, seasonId = activeClientSeasonId()): UseEitrBalanceResult {
 	const [summary, setSummary] = useState<AccountEitrSummary | null>(null);
 	const [loading, setLoading] = useState<boolean>(false);
 	const [error, setError] = useState<string | null>(null);

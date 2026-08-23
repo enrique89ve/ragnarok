@@ -33,7 +33,7 @@ import {
 	sweepExpired,
 } from '../services/matchPendingQueue';
 import { getBlockCursor } from '../services/chainState';
-import { TESTNET_RUNE_SEASON_ID } from '../../shared/protocol-core/types';
+import { deriveRuneSeasonId } from '../../shared/protocol-core/runeSeasonHash';
 import {
 	buildPlayerCollection,
 } from '../../shared/protocol-core/playerCollection';
@@ -81,7 +81,7 @@ function getSingleQueryValue(value: unknown): string | undefined {
 }
 
 function validateSeasonId(value: unknown): SeasonIdValidation {
-	const raw = getSingleQueryValue(value) ?? TESTNET_RUNE_SEASON_ID;
+	const raw = getSingleQueryValue(value) ?? deriveRuneSeasonId(getRagnarokServerRuntimeConfig());
 	if (!SEASON_ID_RE.test(raw)) {
 		return { status: 'invalid', code: 400, error: 'Invalid seasonId' };
 	}

@@ -2,11 +2,48 @@
    CHESS BOARD ENHANCED - Apocalyptic Ragnarok Theme
    ============================================ */
 
-/* 0. RAGNAROK SKY BACKGROUND for game container */
-.ragnarok-chess-game {
-  background: url('/ui/background.jpg') center center / cover no-repeat !important;
+/* 0. DEFAULT MIDGARD BACKGROUND for non-campaign game routes.
+   Campaign realm art is owned by chess-realm-skins.css. */
+.ragnarok-chess-game:not([class*="realm-"]) {
+  background: #05070d url('/art/chess/ragnarok-arena-base-v2.webp') center center / cover no-repeat;
   position: relative;
   min-height: 100dvh;
+}
+
+/* The board is seated into the arena instead of floating over the backdrop. */
+.chess-board-stage {
+  isolation: isolate;
+}
+
+.chess-board-relief {
+  position: absolute;
+  z-index: -1;
+  top: 52px;
+  bottom: -24px;
+  left: -18px;
+  right: -18px;
+  clip-path: polygon(10% 0, 90% 0, 100% 8%, 100% 92%, 90% 100%, 10% 100%, 0 92%, 0 8%);
+  border: 1px solid rgba(212, 168, 92, 0.28);
+  background:
+    linear-gradient(90deg, transparent 0 8%, rgba(56, 189, 248, 0.06) 8% 9%, transparent 9% 91%, rgba(220, 38, 38, 0.06) 91% 92%, transparent 92%),
+    radial-gradient(ellipse 90% 55% at 50% 100%, rgba(56, 189, 248, 0.11), transparent 72%),
+    linear-gradient(180deg, rgba(25, 32, 42, 0.72), rgba(5, 7, 13, 0.9));
+  box-shadow:
+    0 30px 70px rgba(0, 0, 0, 0.82),
+    0 0 0 5px rgba(2, 6, 12, 0.42),
+    inset 0 0 0 1px rgba(245, 197, 66, 0.09),
+    inset 0 -32px 54px rgba(0, 0, 0, 0.5);
+}
+
+.chess-board-relief::before {
+  content: '';
+  position: absolute;
+  inset: 14px 14%;
+  border-top: 1px solid rgba(245, 197, 66, 0.2);
+  border-bottom: 1px solid rgba(245, 197, 66, 0.2);
+  background:
+    linear-gradient(90deg, transparent, rgba(245, 197, 66, 0.1), transparent) top / 100% 14px no-repeat,
+    linear-gradient(90deg, transparent, rgba(245, 197, 66, 0.1), transparent) bottom / 100% 14px no-repeat;
 }
 
 /* Deep vignette overlay for non-realm chess routes. Campaign realm skins
@@ -281,8 +318,15 @@
 }
 
 /* 5. TURN INDICATOR - Mythic Runic Glow */
+.chess-board-container {
+  position: relative;
+}
+
 .chess-turn-banner {
   position: relative;
+  inline-size: min(100%, 420px);
+  max-inline-size: calc(100vw - 32px);
+  box-sizing: border-box;
   background: linear-gradient(
     90deg,
     transparent 0%,
@@ -296,7 +340,7 @@
   padding: 8px 40px;
   text-align: center;
   box-shadow: none;
-  overflow: visible;
+  overflow: hidden;
   animation: chess-banner-enter 0.4s ease-out;
 }
 
@@ -333,6 +377,13 @@
   letter-spacing: 3px;
   text-transform: uppercase;
   font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.chess-context-notice {
+  inline-size: min(36rem, calc(100vw - 32px));
+  max-inline-size: 100%;
+  text-wrap: balance;
 }
 
 @keyframes chess-banner-enter {
@@ -381,6 +432,75 @@
   opacity: 0.3;
 }
 
+/* Brief local-turn callout. The persistent state remains on the hero portrait. */
+.chess-turn-toast-anchor {
+  position: absolute;
+  z-index: 70;
+  top: 52px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  max-inline-size: 100%;
+  pointer-events: none;
+}
+
+.chess-turn-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-inline-size: calc(100% - 24px);
+  padding: 9px 24px;
+  border: 1px solid rgb(74 222 128 / 0.82);
+  clip-path: polygon(9px 0, calc(100% - 9px) 0, 100% 50%, calc(100% - 9px) 100%, 9px 100%, 0 50%);
+  background:
+    linear-gradient(180deg, rgb(13 31 29 / 0.97), rgb(4 18 20 / 0.98)),
+    radial-gradient(circle at 50% 0%, rgb(74 222 128 / 0.18), transparent 68%);
+  color: #dcfce7;
+  box-shadow:
+    0 8px 20px rgb(0 0 0 / 0.58),
+    0 0 18px rgb(34 197 94 / 0.28),
+    inset 0 0 12px rgb(34 197 94 / 0.1);
+  font-family: var(--font-runic, serif);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  line-height: 1;
+  text-shadow: 0 0 10px rgb(74 222 128 / 0.54);
+  white-space: nowrap;
+  animation: chess-turn-toast-life 3000ms ease-out both;
+}
+
+.chess-turn-toast-rune {
+  color: #4ade80;
+  font-size: 0.92em;
+}
+
+@keyframes chess-turn-toast-life {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.94);
+  }
+  8% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  82% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+@keyframes chess-turn-toast-fade-only {
+  0% { opacity: 0; }
+  8%, 82% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 
 /* 7. PIECE COUNT BAR */
 .chess-piece-count {
@@ -393,46 +513,59 @@
 }
 
 .chess-piece-count-shield {
+  --count-accent-rgb: 148 163 184;
+
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 14px;
-  border-radius: 6px;
+  justify-content: center;
+  min-width: 88px;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 0;
   position: relative;
-  background: linear-gradient(
-    180deg,
-    rgba(30, 41, 59, 0.8) 0%,
-    rgba(15, 23, 42, 0.9) 100%
-  );
-  border: 1.5px solid rgba(139, 105, 20, 0.4);
+  clip-path: polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px);
+  background:
+    linear-gradient(90deg, rgb(var(--count-accent-rgb) / 0.12), transparent 32%, transparent 68%, rgb(var(--count-accent-rgb) / 0.12)),
+    linear-gradient(180deg, var(--obsidian-800), var(--obsidian-950));
+  border: 1px solid rgb(var(--count-accent-rgb) / 0.5);
   box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.3),
-    inset 0 1px 2px rgba(255, 255, 255, 0.05);
+    0 3px 10px rgb(0 0 0 / 0.5),
+    inset 0 1px 0 rgb(255 255 255 / 0.06),
+    inset 0 0 8px rgb(var(--count-accent-rgb) / 0.08);
+  font-family: var(--font-mono);
 }
 
 .chess-piece-count-shield::before {
   content: '';
   position: absolute;
-  top: 2px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 60%;
+  top: 0;
+  left: 12px;
+  right: 12px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(251, 191, 36, 0.3), transparent);
+  background: linear-gradient(90deg, transparent, var(--gold-300), transparent);
+  opacity: 0.62;
 }
 
 .chess-piece-count-player {
-  border-color: rgba(37, 99, 235, 0.5);
+  --count-accent-rgb: 56 189 248;
+
+  border-color: rgb(var(--count-accent-rgb) / 0.52);
   box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.3),
-    0 0 8px rgba(37, 99, 235, 0.15);
+    0 3px 10px rgb(0 0 0 / 0.5),
+    0 0 12px rgb(var(--count-accent-rgb) / 0.16),
+    inset 0 1px 0 rgb(255 255 255 / 0.06),
+    inset 0 0 8px rgb(var(--count-accent-rgb) / 0.08);
 }
 
 .chess-piece-count-opponent {
-  border-color: rgba(220, 38, 38, 0.5);
+  --count-accent-rgb: 220 38 38;
+
+  border-color: rgb(var(--count-accent-rgb) / 0.52);
   box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.3),
-    0 0 8px rgba(220, 38, 38, 0.15);
+    0 3px 10px rgb(0 0 0 / 0.5),
+    0 0 12px rgb(var(--count-accent-rgb) / 0.16),
+    inset 0 1px 0 rgb(255 255 255 / 0.06),
+    inset 0 0 8px rgb(var(--count-accent-rgb) / 0.08);
 }
 
 /* 9. BOTTOM FOG LAYER */
@@ -471,6 +604,10 @@
 
   .chess-turn-banner {
     animation: none !important;
+  }
+
+  .chess-turn-toast {
+    animation-name: chess-turn-toast-fade-only;
   }
 
   .ragnarok-chess-game:not([class*="realm-"])::after {

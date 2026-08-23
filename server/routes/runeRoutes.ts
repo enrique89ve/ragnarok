@@ -8,10 +8,9 @@ import {
 	getRuneLedgerEntries,
 	getRuneSeasonStats,
 } from '../services/chainState';
-import {
-	TESTNET_RUNE_ECONOMY,
-	TESTNET_RUNE_SEASON_ID,
-} from '../../shared/protocol-core/types';
+import { deriveRuneSeasonId } from '../../shared/protocol-core/runeSeasonHash';
+import { getRuneEconomy } from '../../shared/protocol-core/runeEconomy';
+import { getRagnarokServerRuntimeConfig } from '../services/runtimeConfig';
 import { createQueryValidationMiddleware } from '../middleware/validation';
 
 const RUNE_DIRECTIONS = ['credit', 'debit'] as const;
@@ -23,7 +22,15 @@ const RUNE_SOURCE_TYPES = [
 	'rune_exchange',
 ] as const;
 
-const SeasonIdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).default(TESTNET_RUNE_SEASON_ID);
+function activeSeasonId(): string {
+	return deriveRuneSeasonId(getRagnarokServerRuntimeConfig());
+}
+
+function activeRuneEconomy() {
+	return getRuneEconomy(getRagnarokServerRuntimeConfig().stage);
+}
+
+const SeasonIdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).default(activeSeasonId());
 const AccountSchema = z.string().regex(/^[a-z][a-z0-9._-]{2,31}$/);
 const LimitSchema = z.coerce.number().int().min(1).max(200).default(50);
 const OffsetSchema = z.coerce.number().int().min(0).max(1_000_000).default(0);
@@ -57,15 +64,16 @@ router.get('/state', createQueryValidationMiddleware(SeasonIdQuerySchema), (req:
 
 	const runeStats = getRuneSeasonStats(seasonId);
 	const ledgerActiveTotal = runeStats.ledgerCreditTotal - runeStats.ledgerDebitTotal;
-	const activeBalanceTotal = getRuneBalanceTotal();
+	const activeBalanceTotal = getRuneBalanceTotal(seasonId);
+	const economy = activeRuneEconomy();
 
 	res.json({
 		success: true,
 		seasonId,
-		totalCap: TESTNET_RUNE_ECONOMY.totalCap,
-		p2pCap: TESTNET_RUNE_ECONOMY.p2pCap,
-		campaignCap: TESTNET_RUNE_ECONOMY.campaignCap,
-		dailyQuestCap: TESTNET_RUNE_ECONOMY.dailyQuestCap,
+		totalCap: economy.totalCap,
+		p2pCap: economy.p2pCap,
+		campaignCap: economy.campaignCap,
+		dailyQuestCap: economy.dailyQuestCap,
 		activeBalanceTotal,
 		ledgerCreditTotal: runeStats.ledgerCreditTotal,
 		ledgerDebitTotal: runeStats.ledgerDebitTotal,
@@ -115,7 +123,7 @@ router.get('/ledger', createQueryValidationMiddleware(LedgerQuerySchema), (req: 
 router.get('/balances', createQueryValidationMiddleware(BalancesQuerySchema), (req: Request, res: Response) => {
 	const query = req.query as unknown as z.infer<typeof BalancesQuerySchema>;
 
-	const result = getAllTokenBalances(query.limit, query.offset);
+	const result = getAllTokenBalances(query.seasonId, query.limit, query.offset);
 	const accountNames = result.balances.map(balance => balance.account);
 	const accounts = getRuneAccountSummaries(accountNames, query.seasonId);
 

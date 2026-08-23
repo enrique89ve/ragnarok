@@ -71,7 +71,85 @@
    ============================================================ */
 
 .ragnarok-chess-game.realm-midgard {
-	background-image: url('/ui/background.jpg');
+	background-image: url('/art/chess/ragnarok-arena-base-v2.webp');
+}
+
+/* ============================================================
+   COMPOSABLE CHESS SCENE FX
+   ============================================================
+   The background plate stays quiet and readable. Mythic energy lives in
+   independent, non-interactive layers so a realm, combat beat, or setting can
+   enable, tint, animate, or replace one effect without regenerating the plate.
+   Keep gameplay and HUD content above this stack.
+   ============================================================ */
+
+.chess-scene-layers {
+	position: absolute;
+	inset: 0;
+	z-index: 0;
+	overflow: hidden;
+	pointer-events: none;
+	isolation: isolate;
+}
+
+.chess-scene-layers ~ * {
+	position: relative;
+	z-index: 1;
+}
+
+.chess-scene-layer {
+	position: absolute;
+	inset: -2%;
+	background-position: center;
+	background-repeat: no-repeat;
+	background-size: cover;
+	pointer-events: none;
+}
+
+.chess-scene-layer--atmosphere {
+	z-index: 0;
+	background:
+		radial-gradient(ellipse 24% 64% at 50% 52%, rgba(3, 7, 14, 0.28) 0%, rgba(3, 7, 14, 0.12) 58%, transparent 100%),
+		linear-gradient(90deg, rgba(4, 7, 13, 0.2), transparent 22%, transparent 78%, rgba(4, 7, 13, 0.2));
+	mix-blend-mode: multiply;
+}
+
+.chess-scene-pixi {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	overflow: hidden;
+	pointer-events: none;
+	opacity: 0.82;
+	mix-blend-mode: screen;
+}
+
+.chess-scene-pixi__canvas {
+	display: block;
+	width: 100%;
+	height: 100%;
+	pointer-events: none;
+}
+
+/* WebGL fallback: quiet energy pools preserve the composition without
+   bringing the previous full-frame overlay images back. */
+.chess-scene-pixi[data-state='failed'] {
+	background:
+		radial-gradient(ellipse 8% 12% at 6.7% 64.8%, rgba(255, 74, 16, 0.28), transparent 72%),
+		radial-gradient(ellipse 8% 12% at 93.3% 64.1%, rgba(255, 74, 16, 0.24), transparent 72%),
+		radial-gradient(ellipse 24% 42% at 8% 4%, rgba(56, 189, 248, 0.15), transparent 74%),
+		radial-gradient(ellipse 24% 42% at 92% 4%, rgba(56, 189, 248, 0.13), transparent 74%);
+}
+
+.chess-scene-layer--focus {
+	z-index: 2;
+	background:
+		radial-gradient(ellipse 34% 72% at 50% 50%, rgba(2, 6, 12, 0.04) 0%, rgba(2, 6, 12, 0.16) 72%, transparent 100%),
+		radial-gradient(ellipse 88% 82% at 50% 48%, transparent 48%, rgba(0, 0, 0, 0.58) 100%);
+}
+
+.chess-motion-off .chess-scene-pixi {
+	opacity: 0.58;
 }
 
 .ragnarok-chess-game.realm-asgard {
@@ -166,6 +244,10 @@
 @media (prefers-reduced-motion: reduce) {
 	.ragnarok-chess-game[class*="realm-"] {
 		transition: none;
+	}
+
+	.chess-scene-pixi {
+		opacity: 0.58;
 	}
 }
 

@@ -29,7 +29,7 @@ export type ArenaVfxTargetProps = Record<typeof ARENA_VFX_TARGET_ATTRIBUTE, Aren
 export type ArenaVfxCommunitySlotProps = ArenaVfxTargetProps & Record<typeof ARENA_VFX_SLOT_INDEX_ATTRIBUTE, string>;
 export type ArenaVfxWagerMinionProps = ArenaVfxTargetProps & Record<typeof ARENA_VFX_OWNER_ATTRIBUTE, ArenaVfxOwner>;
 
-type QueryRoot = Document | Element;
+export type QueryRoot = Document | Element;
 
 export function arenaVfxLayerProps(layer: ArenaVfxLayer): ArenaVfxLayerProps {
 	return { [ARENA_VFX_LAYER_ATTRIBUTE]: layer } as ArenaVfxLayerProps;

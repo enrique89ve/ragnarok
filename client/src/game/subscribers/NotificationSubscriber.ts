@@ -19,8 +19,9 @@ import type {
   OverloadTriggeredEvent,
   NotificationEvent,
 } from '@/core/events/GameEvents';
-import { toast } from 'sonner';
 import { useBannerStore } from '@/game/components/ui/GameStatusBanner';
+import { GAME_MESSAGE_IDS } from '@/game/effects/feedback/gameMessageCatalog';
+import { publishGameMessage } from '@/game/effects/feedback/gameMessageAdapter';
 
 type UnsubscribeFn = () => void;
 
@@ -63,8 +64,9 @@ export function initializeNotificationSubscriber(
     unsubscribes.push(
       GameEventBus.subscribe<CardPlayedEvent>('CARD_PLAYED', (event) => {
         if (event.rarity === 'mythic') {
-          toast.success(`Mythic! ${event.cardName}`, {
-            duration: 2000
+          publishGameMessage({
+            id: GAME_MESSAGE_IDS.CARD_MYTHIC,
+            params: { cardName: event.cardName },
           });
         }
       })
@@ -75,9 +77,9 @@ export function initializeNotificationSubscriber(
   unsubscribes.push(
     GameEventBus.subscribe<CardDiscardedEvent>('CARD_DISCARDED', (event) => {
       if (event.reason === 'hand_full') {
-        const player = event.player === 'player' ? 'Your' : 'Opponent\'s';
-        toast.warning(`${player} ${event.cardName} was burned!`, {
-          duration: 3000
+        publishGameMessage({
+          id: GAME_MESSAGE_IDS.CARD_BURNED,
+          params: { player: event.player, cardName: event.cardName },
         });
       }
     })
@@ -89,8 +91,9 @@ export function initializeNotificationSubscriber(
       GameEventBus.subscribe<BattlecryTriggeredEvent>('BATTLECRY_TRIGGERED', (event) => {
         // Only show for significant battlecries
         if (event.value && event.value >= 3) {
-          toast.info(`${event.sourceName}: ${event.effectType}`, {
-            duration: 2000
+          publishGameMessage({
+            id: GAME_MESSAGE_IDS.BATTLECRY_TRIGGERED,
+            params: { sourceName: event.sourceName, effectType: event.effectType },
           });
         }
       })
@@ -101,8 +104,9 @@ export function initializeNotificationSubscriber(
   if (cfg.showDeathrattles) {
     unsubscribes.push(
       GameEventBus.subscribe<DeathrattleTriggeredEvent>('DEATHRATTLE_TRIGGERED', (event) => {
-        toast.info(`Deathrattle: ${event.sourceName}`, {
-          duration: 2000
+        publishGameMessage({
+          id: GAME_MESSAGE_IDS.DEATHRATTLE_TRIGGERED,
+          params: { sourceName: event.sourceName },
         });
       })
     );
@@ -112,9 +116,9 @@ export function initializeNotificationSubscriber(
   if (cfg.showSecrets) {
     unsubscribes.push(
       GameEventBus.subscribe<SecretRevealedEvent>('SECRET_REVEALED', (event) => {
-        const player = event.player === 'player' ? 'Your' : 'Opponent\'s';
-        toast.info(`${player} rune: ${event.cardName}!`, {
-          duration: 3000
+        publishGameMessage({
+          id: GAME_MESSAGE_IDS.SECRET_REVEALED,
+          params: { player: event.player, cardName: event.cardName },
         });
       })
     );
@@ -125,7 +129,10 @@ export function initializeNotificationSubscriber(
     unsubscribes.push(
       GameEventBus.subscribe<TurnStartedEvent>('TURN_STARTED', (event) => {
         if (event.player === 'player') {
-          toast.success('Your turn!', { duration: 1500 });
+          publishGameMessage({
+            id: GAME_MESSAGE_IDS.PLAYER_TURN,
+            params: {},
+          });
         }
       })
     );
@@ -138,8 +145,9 @@ export function initializeNotificationSubscriber(
   // Silence Applied
   unsubscribes.push(
     GameEventBus.subscribe<SilenceAppliedEvent>('SILENCE_APPLIED', (event) => {
-      toast.info(`${event.targetName} was silenced!`, {
-        duration: 2000
+      publishGameMessage({
+        id: GAME_MESSAGE_IDS.SILENCE_APPLIED,
+        params: { targetName: event.targetName },
       });
     })
   );
@@ -148,8 +156,9 @@ export function initializeNotificationSubscriber(
   unsubscribes.push(
     GameEventBus.subscribe<OverloadTriggeredEvent>('OVERLOAD_TRIGGERED', (event) => {
       if (event.player === 'player') {
-        toast.warning(`Overloaded: ${event.amount} mana`, {
-          duration: 2000
+        publishGameMessage({
+          id: GAME_MESSAGE_IDS.OVERLOAD_TRIGGERED,
+          params: { amount: event.amount },
         });
       }
     })

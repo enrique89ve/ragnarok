@@ -44,7 +44,7 @@ import {
 	getListingsBySeller,
 	getOffersByBuyer,
 	getAllSupplyCounters,
-	getTokenBalance,
+	getRuneBalance,
 	getAllTokenBalances,
 	getGenesisState,
 	getBlockCursor,
@@ -52,8 +52,13 @@ import {
 } from '../services/chainState';
 import { isValidHiveUsername } from '../services/hiveAuth';
 import { getRagnarokServerRuntimeConfig } from '../services/runtimeConfig';
+import { deriveRuneSeasonId } from '../../shared/protocol-core/runeSeasonHash';
 
 const router = Router();
+
+function activeSeasonId(): string {
+	return deriveRuneSeasonId(getRagnarokServerRuntimeConfig());
+}
 
 function clampInt(val: string | undefined, def: number, min: number, max: number): number {
 	const n = parseInt(val as string, 10);
@@ -149,7 +154,7 @@ router.get('/users/:username', (req: Request, res: Response) => {
 
 	const player = getPlayer(username) ?? { username, elo: 1000, wins: 0, losses: 0, lastMatchAt: 0 };
 	const nftCounts = getUserNftCounts(username);
-	const balance = getTokenBalance(username);
+	const balance = getRuneBalance(username, activeSeasonId());
 
 	res.json({
 		username,
@@ -214,7 +219,7 @@ router.get('/users/:username/tokens', (req: Request, res: Response) => {
 		return;
 	}
 
-	const balance = getTokenBalance(username);
+	const balance = getRuneBalance(username, activeSeasonId());
 	res.json({ username, RUNE: balance?.RUNE ?? 0 });
 });
 
@@ -292,7 +297,7 @@ router.get('/token-balances', (req: Request, res: Response) => {
 	const limit = clampInt(req.query.limit as string, 50, 1, 200);
 	const offset = clampInt(req.query.offset as string, 0, 0, 100000);
 
-	const result = getAllTokenBalances(limit, offset);
+	const result = getAllTokenBalances(activeSeasonId(), limit, offset);
 	res.json({ balances: result.balances, total: result.total, limit, offset });
 });
 

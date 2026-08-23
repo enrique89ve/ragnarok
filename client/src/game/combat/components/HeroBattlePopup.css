@@ -1,59 +1,84 @@
 .hbp-overlay {
+	position: fixed;
 	pointer-events: none;
 	z-index: 700;
+	box-sizing: border-box;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 4px;
-	padding: var(--space-10) 16px;
-	border-radius: 10px;
-	background: radial-gradient(ellipse at center, rgba(20, 16, 28, 0.92) 0%, rgba(10, 8, 18, 0.88) 100%);
-	border: 2px solid var(--hbp-color, #9E9E9E);
+	justify-content: center;
+	gap: 5px;
+	inline-size: 104px;
+	min-block-size: 88px;
+	padding: 10px 8px 9px;
+	overflow: hidden;
+	background:
+		linear-gradient(180deg, color-mix(in srgb, var(--hbp-color, var(--gold-300)) 18%, var(--obsidian-900)) 0%, var(--obsidian-950) 55%, rgba(3, 7, 13, 0.98) 100%);
+	border: 1px solid color-mix(in srgb, var(--hbp-color, var(--gold-300)) 82%, var(--ink-0));
 	box-shadow:
-		0 0 12px color-mix(in srgb, var(--hbp-color, #9E9E9E) 50%, transparent),
-		0 0 24px color-mix(in srgb, var(--hbp-color, #9E9E9E) 25%, transparent),
-		inset 0 0 8px rgba(0, 0, 0, 0.4);
-	min-width: 80px;
-	max-width: 180px;
+		0 0 14px color-mix(in srgb, var(--hbp-color, var(--gold-300)) 38%, transparent),
+		0 7px 16px rgba(0, 0, 0, 0.48),
+		inset 0 1px 0 color-mix(in srgb, var(--ink-0) 13%, transparent),
+		inset 0 -8px 14px rgba(0, 0, 0, 0.34);
+	clip-path: polygon(
+		8px 0,
+		calc(100% - 8px) 0,
+		100% 8px,
+		100% calc(100% - 8px),
+		calc(100% - 8px) 100%,
+		8px 100%,
+		0 calc(100% - 8px),
+		0 8px
+	);
+}
+
+.hbp-overlay::before {
+	content: '';
+	position: absolute;
+	inset: 5px;
+	border: 1px solid color-mix(in srgb, var(--hbp-color, var(--gold-300)) 34%, transparent);
+	clip-path: inherit;
+	pointer-events: none;
 }
 
 .hbp-icon-wrap {
+	position: relative;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 52px;
-	height: 52px;
-	border-radius: 50%;
-	background: radial-gradient(circle, color-mix(in srgb, var(--hbp-color, #9E9E9E) 30%, transparent) 0%, transparent 70%);
-	color: var(--hbp-color, #9E9E9E);
-	filter: drop-shadow(0 0 6px var(--hbp-color, #9E9E9E));
+	inline-size: 46px;
+	block-size: 46px;
+	color: var(--ink-0);
+	background:
+		radial-gradient(circle, color-mix(in srgb, var(--hbp-color, var(--gold-300)) 28%, transparent), transparent 68%),
+		color-mix(in srgb, var(--hbp-color, var(--gold-300)) 12%, var(--obsidian-950));
+	border: 1px solid color-mix(in srgb, var(--hbp-color, var(--gold-300)) 64%, transparent);
+	clip-path: polygon(50% 0, 86% 15%, 100% 50%, 86% 85%, 50% 100%, 14% 85%, 0 50%, 14% 15%);
+	filter: drop-shadow(0 0 6px color-mix(in srgb, var(--hbp-color, var(--gold-300)) 70%, transparent));
 	animation: hbp-icon-pulse 1.2s ease-in-out 1;
 }
 
 .hbp-icon-wrap svg {
-	width: 36px;
-	height: 36px;
+	width: 30px;
+	height: 30px;
 }
 
 .hbp-text {
-	font-size: var(--text-sm);
+	position: relative;
+	max-inline-size: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-family: var(--type-display, 'Cinzel', serif);
+	font-size: var(--text-11);
 	font-weight: 700;
 	text-transform: uppercase;
-	letter-spacing: 0.05em;
-	color: #fff;
+	letter-spacing: 0.16em;
+	color: var(--ink-0);
 	text-shadow:
-		0 0 6px var(--hbp-color, #9E9E9E),
+		0 0 6px color-mix(in srgb, var(--hbp-color, var(--gold-300)) 80%, transparent),
 		0 1px 2px rgba(0, 0, 0, 0.6);
 	text-align: center;
 	line-height: 1.2;
-	white-space: nowrap;
-}
-
-.hbp-subtitle {
-	font-size: var(--text-11);
-	font-weight: 600;
-	color: rgba(255, 255, 255, 0.65);
-	text-align: center;
 	white-space: nowrap;
 }
 

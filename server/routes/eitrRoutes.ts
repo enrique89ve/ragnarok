@@ -6,10 +6,11 @@ import {
 	getEitrSeasonStats,
 } from '../services/chainState';
 import {
-	TESTNET_EITR_SEASON_ID,
 	type EitrLedgerDirection,
 	type EitrSourceType,
 } from '../../shared/protocol-core/types';
+import { deriveRuneSeasonId } from '../../shared/protocol-core/runeSeasonHash';
+import { getRagnarokServerRuntimeConfig } from '../services/runtimeConfig';
 
 type ValidationResult<T> =
 	| { status: 'valid'; value: T }
@@ -44,7 +45,7 @@ function getSingleQueryValue(value: unknown): string | undefined {
 }
 
 function validateSeasonId(value: unknown): ValidationResult<string> {
-	const raw = getSingleQueryValue(value) ?? TESTNET_EITR_SEASON_ID;
+	const raw = getSingleQueryValue(value) ?? deriveRuneSeasonId(getRagnarokServerRuntimeConfig());
 	if (!/^[A-Za-z0-9_-]{1,32}$/.test(raw)) {
 		return { status: 'invalid', code: 400, error: 'Invalid seasonId' };
 	}

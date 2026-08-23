@@ -15,8 +15,6 @@ import {
 	getCard, putCard, deleteCard, getCardsByOwner,
 	getGenesisState, putGenesisState,
 	getSupplyCounter, putSupplyCounter,
-	getTokenBalance, putTokenBalance,
-	getRuneBalanceTotal as idbGetRuneBalanceTotal,
 	getRuneLedgerEntry as idbGetRuneLedgerEntry, putRuneLedgerEntry as idbPutRuneLedgerEntry,
 	getRuneLedgerEntries as idbGetRuneLedgerEntries,
 	getRuneLedgerTotal as idbGetRuneLedgerTotal,
@@ -135,16 +133,11 @@ export const clientStateAdapter: StateAdapter = {
 		await putEloRating({ ...existing, elo: r.elo, wins: r.wins, losses: r.losses });
 	},
 
-	async getTokenBalance(account) {
-		const r = await getTokenBalance(account);
-		return { account, RUNE: r.RUNE };
-	},
-	async putTokenBalance(b) {
-		const existing = await getTokenBalance(b.account);
-		await putTokenBalance({ ...existing, RUNE: b.RUNE });
-	},
-	async getRuneBalanceTotal() {
-		return idbGetRuneBalanceTotal();
+	async getTokenBalance(account, seasonId) {
+		// Balance is a ledger projection for (account, seasonId): credits − debits.
+		const credits = await idbGetRuneLedgerTotal({ seasonId, account, direction: 'credit' });
+		const debits = await idbGetRuneLedgerTotal({ seasonId, account, direction: 'debit' });
+		return { account, RUNE: credits - debits };
 	},
 	async getRuneLedgerEntry(entryId) {
 		return await idbGetRuneLedgerEntry(entryId) ?? null;

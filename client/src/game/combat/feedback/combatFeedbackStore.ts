@@ -8,6 +8,10 @@ import {
 	type FeedbackTone,
 	type GameLogDraft,
 } from './combatFeedback';
+import {
+	gameEffectCoordinator,
+	type GameEffectHandle,
+} from '@/game/effects/core/gameEffectCoordinator';
 
 export type { FeedbackLane, FeedbackTone, GameLogDraft };
 
@@ -32,8 +36,8 @@ interface CombatFeedbackState {
 }
 
 let chipSeq = 0;
-const dismissTimers = new Map<string, ReturnType<typeof setTimeout>>();
-let flushTimer: ReturnType<typeof setTimeout> | null = null;
+const dismissTimers = new Map<string, GameEffectHandle>();
+let flushTimer: GameEffectHandle | null = null;
 
 function nextChipId(): string {
 	chipSeq += 1;
@@ -46,17 +50,24 @@ function isCinemaHeld(holders: readonly string[]): boolean {
 
 function scheduleDismiss(id: string, holdMs: number, dismiss: (id: string) => void): void {
 	const existing = dismissTimers.get(id);
-	if (existing) clearTimeout(existing);
-	dismissTimers.set(id, setTimeout(() => {
+	if (existing) existing.cancel();
+	dismissTimers.set(id, gameEffectCoordinator.schedule({
+		owner: 'feedback',
+		lane: 'feedback',
+		key: id,
+		priority: 'normal',
+		delayMs: holdMs,
+		run: () => {
 		dismissTimers.delete(id);
 		dismiss(id);
-	}, holdMs));
+		},
+	}));
 }
 
 export const useCombatFeedbackStore = create<CombatFeedbackState>((set, get) => {
 	const flushPending = () => {
 		if (flushTimer) {
-			clearTimeout(flushTimer);
+			flushTimer.cancel();
 			flushTimer = null;
 		}
 		const state = get();
@@ -66,7 +77,14 @@ export const useCombatFeedbackStore = create<CombatFeedbackState>((set, get) => 
 		set({ stack: visible, pending: rest });
 		scheduleDismiss(next.id, next.holdMs, get().dismiss);
 		if (rest.length > 0) {
-			flushTimer = setTimeout(flushPending, FEEDBACK_STAGGER_MS);
+			flushTimer = gameEffectCoordinator.schedule({
+				owner: 'feedback',
+				lane: 'feedback',
+				key: 'flush',
+				priority: 'normal',
+				delayMs: FEEDBACK_STAGGER_MS,
+				run: flushPending,
+			});
 		}
 	};
 
@@ -115,7 +133,7 @@ export const useCombatFeedbackStore = create<CombatFeedbackState>((set, get) => 
 		dismiss: (id) => {
 			const timer = dismissTimers.get(id);
 			if (timer) {
-				clearTimeout(timer);
+				timer.cancel();
 				dismissTimers.delete(id);
 			}
 			set((state) => ({
@@ -126,10 +144,10 @@ export const useCombatFeedbackStore = create<CombatFeedbackState>((set, get) => 
 		},
 
 		reset: () => {
-			dismissTimers.forEach((timer) => clearTimeout(timer));
+			dismissTimers.forEach((timer) => timer.cancel());
 			dismissTimers.clear();
 			if (flushTimer) {
-				clearTimeout(flushTimer);
+				flushTimer.cancel();
 				flushTimer = null;
 			}
 			set({ cinemaHolders: [], stack: [], pending: [] });

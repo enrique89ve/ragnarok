@@ -1,8 +1,11 @@
 import {
-	getRuneEconomy,
 	type RuneLedgerEntry,
 	type RuneSourceType,
 } from './runeEconomy';
+import {
+	deriveRuneSeasonId,
+	type RuneSeasonIdInput,
+} from './runeSeasonHash';
 
 export type RuneSeasonCreditSource =
 	| 'p2p_ranked'
@@ -56,8 +59,8 @@ const EMPTY_EARNED: RuneSeasonEarnedBySource = {
 	reward_claim: 0,
 };
 
-export function getActiveRuneSeasonId(stage: string = 'testnet'): string {
-	return getRuneEconomy(stage).seasonId;
+export function getActiveRuneSeasonId(config: RuneSeasonIdInput): string {
+	return deriveRuneSeasonId(config);
 }
 
 export function projectRuneSeasonAccount(

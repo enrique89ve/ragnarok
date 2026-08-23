@@ -15,7 +15,7 @@ import React from 'react';
 import type { ChessPiece } from '../../../types/ChessTypes';
 import VSScreen from '../VSScreen';
 
-const DEFAULT_VS_DURATION_MS = 4200;
+const DEFAULT_VS_DURATION_MS = 3800;
 
 export type VsScreenPhaseProps = {
 	readonly attacker: ChessPiece;

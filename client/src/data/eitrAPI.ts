@@ -2,8 +2,15 @@
 // Eitr is non-transferable, season-scoped, replay-derived.
 // No TokenBalance scalar — balance derived from ledger queries server-side.
 
+import { deriveRuneSeasonId } from '@shared/protocol-core/runeSeasonHash';
+import { getRagnarokNetworkConfig } from '../game/config/networkConfig';
+
 const API_BASE = import.meta.env.VITE_API_URL
 	|| (typeof window !== 'undefined' ? window.location.origin : '');
+
+function activeClientSeasonId(): string {
+	return deriveRuneSeasonId(getRagnarokNetworkConfig());
+}
 
 export type EitrDirection = 'credit' | 'debit';
 export type EitrSourceType = 'burn' | 'forge_commit' | 'forge_refund';
@@ -218,7 +225,7 @@ async function fetchEitrJSON(path: string, signal?: AbortSignal): Promise<unknow
 	return payload;
 }
 
-export async function fetchEitrState(seasonId = 'S01', signal?: AbortSignal): Promise<EitrStateSnapshot> {
+export async function fetchEitrState(seasonId = activeClientSeasonId(), signal?: AbortSignal): Promise<EitrStateSnapshot> {
 	const payload = await fetchEitrJSON(appendQuery('/api/chain/eitr/state', { seasonId }), signal);
 	return parseEitrState(payload);
 }
@@ -233,7 +240,7 @@ export async function fetchEitrBalances(query: EitrBalancesQuery = {}, signal?: 
 	return parseEitrBalancesResponse(payload);
 }
 
-export async function fetchEitrAccount(username: string, seasonId = 'S01', signal?: AbortSignal): Promise<AccountEitrSummary> {
+export async function fetchEitrAccount(username: string, seasonId = activeClientSeasonId(), signal?: AbortSignal): Promise<AccountEitrSummary> {
 	const payload = await fetchEitrJSON(
 		appendQuery(`/api/chain/player/${encodeURIComponent(username)}/eitr`, { seasonId }),
 		signal,

@@ -43,6 +43,7 @@ import { useCampaignGameBootstrap } from './hooks/useCampaignGameBootstrap';
 import { useBossRuleEffects } from './hooks/useBossRuleEffects';
 import { useMatchReloadGuard } from './hooks/useMatchReloadGuard';
 import { shouldWarnOnMatchReload } from './matchReloadGuard';
+import { shouldEnableRagnarokSceneFx } from '../components/chess/chessSceneFxModel';
 import './matchExitControls.css';
 import {
   getChessRealmClass,
@@ -1059,6 +1060,8 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
               opponentArmy={opponentArmy}
               onCombatTriggered={handleCombatTriggered}
               onBattleMode={handleBattleMode}
+              sceneFxEnabled={shouldEnableRagnarokSceneFx(chessRealmClass)}
+              motionEnabled={animationsEnabled && !reduceMotion}
             />
           )}
 

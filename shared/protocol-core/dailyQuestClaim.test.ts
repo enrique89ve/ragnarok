@@ -4,6 +4,7 @@ import { applyOp, type ProtocolCoreDeps } from './apply';
 import { RAGNAROK_RUNTIME_CONFIGS } from '../runtimeConfig';
 import { normalizeRawOp } from './normalize';
 import { TESTNET_RUNE_ECONOMY } from './runeEconomy';
+import { deriveRuneSeasonId } from './runeSeasonHash';
 import type {
 	CampaignProgressRecord,
 	CampaignSubmissionRecord,
@@ -34,10 +35,10 @@ import type { EitrLedgerEntry } from './eitrEconomy';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TEST_YMD_MS = Date.UTC(2026, 4, 14);
+const TESTNET_SEASON_ID = deriveRuneSeasonId(RAGNAROK_RUNTIME_CONFIGS.testnet);
 
 function createStateAdapter(): StateAdapter & {
 	readonly runeLedger: Map<string, RuneLedgerEntry>;
-	readonly tokens: Map<string, TokenBalance>;
 	readonly slashed: Set<string>;
 } {
 	const campaignNonces = new Map<string, number>();
@@ -45,7 +46,6 @@ function createStateAdapter(): StateAdapter & {
 	const campaignProgress = new Map<string, CampaignProgressRecord>();
 	const rewardClaims = new Set<string>();
 	const runeLedger = new Map<string, RuneLedgerEntry>();
-	const tokens = new Map<string, TokenBalance>();
 	const slashed = new Set<string>();
 	let genesis: GenesisRecord | null = {
 		version: '1',
@@ -57,7 +57,6 @@ function createStateAdapter(): StateAdapter & {
 
 	return {
 		runeLedger,
-		tokens,
 		slashed,
 
 		async getGenesis(): Promise<GenesisRecord | null> { return genesis; },
@@ -73,18 +72,10 @@ function createStateAdapter(): StateAdapter & {
 			return { account, elo: 1000, wins: 0, losses: 0 };
 		},
 		async putElo(): Promise<void> { /* noop */ },
-		async getTokenBalance(account: string): Promise<TokenBalance> {
-			return tokens.get(account) ?? { account, RUNE: 0 };
-		},
-		async putTokenBalance(balance: TokenBalance): Promise<void> {
-			tokens.set(balance.account, balance);
-		},
-		async getRuneBalanceTotal(): Promise<number> {
-			let total = 0;
-			for (const balance of tokens.values()) {
-				total += balance.RUNE;
-			}
-			return total;
+		async getTokenBalance(account: string, seasonId: string): Promise<TokenBalance> {
+			const credits = await this.getRuneLedgerTotal({ seasonId, account, direction: 'credit' });
+			const debits = await this.getRuneLedgerTotal({ seasonId, account, direction: 'debit' });
+			return { account, RUNE: credits - debits };
 		},
 		async getRuneLedgerEntry(entryId: string): Promise<RuneLedgerEntry | null> {
 			return runeLedger.get(entryId) ?? null;
@@ -262,13 +253,13 @@ describe('daily_quest_claim protocol op', () => {
 		const result = await applyDailyQuestClaim(deps);
 
 		expect(result.status).toBe('applied');
-		expect((await state.getTokenBalance('alice')).RUNE).toBe(2);
-		expect(state.runeLedger.get('S01:credit:daily_quest_claim:daily_quest:S01:alice:2026-05-14:0')).toMatchObject({
+		expect((await state.getTokenBalance('alice', TESTNET_SEASON_ID)).RUNE).toBe(2);
+		expect(state.runeLedger.get(`${TESTNET_SEASON_ID}:credit:daily_quest_claim:daily_quest:${TESTNET_SEASON_ID}:alice:2026-05-14:0`)).toMatchObject({
 			account: 'alice',
 			amount: 2,
 			balanceBefore: 0,
 			balanceAfter: 2,
-			sourceKey: 'daily_quest:S01:alice:2026-05-14:0',
+			sourceKey: `daily_quest:${TESTNET_SEASON_ID}:alice:2026-05-14:0`,
 		});
 	});
 
@@ -281,7 +272,7 @@ describe('daily_quest_claim protocol op', () => {
 			expect(r.status).toBe('applied');
 		}
 
-		expect((await state.getTokenBalance('alice')).RUNE).toBe(6);
+		expect((await state.getTokenBalance('alice', TESTNET_SEASON_ID)).RUNE).toBe(6);
 		expect(state.runeLedger.size).toBe(3);
 	});
 
@@ -315,7 +306,7 @@ describe('daily_quest_claim protocol op', () => {
 
 		const duplicate = await applyDailyQuestClaim(deps, { slot: 0, trxId: 'trx-duplicate' });
 		expect(duplicate.status).toBe('ignored');
-		expect((await state.getTokenBalance('alice')).RUNE).toBe(2);
+		expect((await state.getTokenBalance('alice', TESTNET_SEASON_ID)).RUNE).toBe(2);
 		expect(state.runeLedger.size).toBe(1);
 	});
 
@@ -328,7 +319,7 @@ describe('daily_quest_claim protocol op', () => {
 
 		expect(result.status).toBe('rejected');
 		expect((result as { reason: string }).reason).toContain('slashed');
-		expect((await state.getTokenBalance('alice')).RUNE).toBe(0);
+		expect((await state.getTokenBalance('alice', TESTNET_SEASON_ID)).RUNE).toBe(0);
 		expect(state.runeLedger.size).toBe(0);
 	});
 
@@ -346,7 +337,7 @@ describe('daily_quest_claim protocol op', () => {
 			await applyDailyQuestClaim(deps, { slot, timestamp: day2Ms });
 		}
 
-		expect((await state.getTokenBalance('alice')).RUNE).toBe(12);
+		expect((await state.getTokenBalance('alice', TESTNET_SEASON_ID)).RUNE).toBe(12);
 		expect(state.runeLedger.size).toBe(6);
 	});
 
@@ -356,8 +347,8 @@ describe('daily_quest_claim protocol op', () => {
 
 		// Pre-seed alice at 18 RUNE earned from daily quests this season.
 		await state.putRuneLedgerEntry({
-			entryId: 'S01:credit:daily_quest_claim:prefill-account-cap',
-			seasonId: 'S01',
+			entryId: `${TESTNET_SEASON_ID}:credit:daily_quest_claim:prefill-account-cap`,
+			seasonId: TESTNET_SEASON_ID,
 			account: 'alice',
 			direction: 'credit',
 			sourceType: 'daily_quest_claim',
@@ -369,19 +360,18 @@ describe('daily_quest_claim protocol op', () => {
 			blockNum: 1,
 			timestamp: 1,
 		});
-		await state.putTokenBalance({ account: 'alice', RUNE: 18 });
 
 		const result = await applyDailyQuestClaim(deps);
 
 		expect(result.status).toBe('applied');
 		// Only 2 RUNE remaining headroom → exactly the full slot reward fits.
-		expect((await state.getTokenBalance('alice')).RUNE).toBe(20);
+		expect((await state.getTokenBalance('alice', TESTNET_SEASON_ID)).RUNE).toBe(20);
 
 		// A second claim must clamp to 0 (no more headroom).
 		const result2 = await applyDailyQuestClaim(deps, { slot: 1 });
 		expect(result2.status).toBe('applied');
-		expect((await state.getTokenBalance('alice')).RUNE).toBe(20);
-		expect(state.runeLedger.get('S01:credit:daily_quest_claim:daily_quest:S01:alice:2026-05-14:1')?.amount).toBe(0);
+		expect((await state.getTokenBalance('alice', TESTNET_SEASON_ID)).RUNE).toBe(20);
+		expect(state.runeLedger.get(`${TESTNET_SEASON_ID}:credit:daily_quest_claim:daily_quest:${TESTNET_SEASON_ID}:alice:2026-05-14:1`)?.amount).toBe(0);
 	});
 
 	it('clamps RUNE credit to the global daily quest pool cap', async () => {
@@ -389,8 +379,8 @@ describe('daily_quest_claim protocol op', () => {
 		const deps = createDeps(state);
 
 		await state.putRuneLedgerEntry({
-			entryId: 'S01:credit:daily_quest_claim:prefill-global-cap',
-			seasonId: 'S01',
+			entryId: `${TESTNET_SEASON_ID}:credit:daily_quest_claim:prefill-global-cap`,
+			seasonId: TESTNET_SEASON_ID,
 			account: 'mallory',
 			direction: 'credit',
 			sourceType: 'daily_quest_claim',
@@ -406,9 +396,9 @@ describe('daily_quest_claim protocol op', () => {
 		const result = await applyDailyQuestClaim(deps);
 
 		expect(result.status).toBe('applied');
-		expect((await state.getTokenBalance('alice')).RUNE).toBe(1);
+		expect((await state.getTokenBalance('alice', TESTNET_SEASON_ID)).RUNE).toBe(1);
 		expect(await state.getRuneLedgerTotal({
-			seasonId: 'S01',
+			seasonId: TESTNET_SEASON_ID,
 			direction: 'credit',
 			sourceType: 'daily_quest_claim',
 		})).toBe(TESTNET_RUNE_ECONOMY.dailyQuestCap);
@@ -498,7 +488,7 @@ describe('daily_quest_claim protocol op', () => {
 			trxId: 'trx-before-midnight',
 		});
 		expect(beforeMidnight.status).toBe('applied');
-		expect(state.runeLedger.get('S01:credit:daily_quest_claim:daily_quest:S01:alice:2026-05-14:0')).toBeDefined();
+		expect(state.runeLedger.get(`${TESTNET_SEASON_ID}:credit:daily_quest_claim:daily_quest:${TESTNET_SEASON_ID}:alice:2026-05-14:0`)).toBeDefined();
 
 		const afterMidnight = await applyDailyQuestClaim(deps, {
 			slot: 0,
@@ -506,9 +496,9 @@ describe('daily_quest_claim protocol op', () => {
 			trxId: 'trx-after-midnight',
 		});
 		expect(afterMidnight.status).toBe('applied');
-		expect(state.runeLedger.get('S01:credit:daily_quest_claim:daily_quest:S01:alice:2026-05-15:0')).toBeDefined();
+		expect(state.runeLedger.get(`${TESTNET_SEASON_ID}:credit:daily_quest_claim:daily_quest:${TESTNET_SEASON_ID}:alice:2026-05-15:0`)).toBeDefined();
 
-		expect((await state.getTokenBalance('alice')).RUNE).toBe(4);
+		expect((await state.getTokenBalance('alice', TESTNET_SEASON_ID)).RUNE).toBe(4);
 	});
 
 	it('daily quest pool is isolated from P2P and campaign pools', async () => {
@@ -517,12 +507,12 @@ describe('daily_quest_claim protocol op', () => {
 
 		// Pre-seed alice at both other source caps to prove independence.
 		await state.putRuneLedgerEntry({
-			entryId: 'S01:credit:p2p_ranked:p2p:S01:match-prefill',
-			seasonId: 'S01',
+			entryId: `${TESTNET_SEASON_ID}:credit:p2p_ranked:p2p:${TESTNET_SEASON_ID}:match-prefill`,
+			seasonId: TESTNET_SEASON_ID,
 			account: 'alice',
 			direction: 'credit',
 			sourceType: 'p2p_ranked',
-			sourceKey: 'p2p:S01:match-prefill',
+			sourceKey: `p2p:${TESTNET_SEASON_ID}:match-prefill`,
 			amount: 100,
 			balanceBefore: 0,
 			balanceAfter: 100,
@@ -531,8 +521,8 @@ describe('daily_quest_claim protocol op', () => {
 			timestamp: 1,
 		});
 		await state.putRuneLedgerEntry({
-			entryId: 'S01:credit:campaign_first_clear:campaign-prefill',
-			seasonId: 'S01',
+			entryId: `${TESTNET_SEASON_ID}:credit:campaign_first_clear:campaign-prefill`,
+			seasonId: TESTNET_SEASON_ID,
 			account: 'alice',
 			direction: 'credit',
 			sourceType: 'campaign_first_clear',
@@ -544,15 +534,14 @@ describe('daily_quest_claim protocol op', () => {
 			blockNum: 1,
 			timestamp: 1,
 		});
-		await state.putTokenBalance({ account: 'alice', RUNE: 110 });
 
 		const result = await applyDailyQuestClaim(deps);
 
 		expect(result.status).toBe('applied');
 		// P2P + campaign caps already maxed; daily quest pool fresh → +2 RUNE on top.
-		expect((await state.getTokenBalance('alice')).RUNE).toBe(112);
+		expect((await state.getTokenBalance('alice', TESTNET_SEASON_ID)).RUNE).toBe(112);
 		expect(await state.getRuneLedgerTotal({
-			seasonId: 'S01',
+			seasonId: TESTNET_SEASON_ID,
 			direction: 'credit',
 			sourceType: 'daily_quest_claim',
 			account: 'alice',
@@ -566,11 +555,11 @@ describe('daily_quest_claim protocol op', () => {
 		await applyDailyQuestClaim(deps, { account: 'alice' });
 		await applyDailyQuestClaim(deps, { account: 'bob' });
 
-		expect((await state.getTokenBalance('alice')).RUNE).toBe(2);
-		expect((await state.getTokenBalance('bob')).RUNE).toBe(2);
+		expect((await state.getTokenBalance('alice', TESTNET_SEASON_ID)).RUNE).toBe(2);
+		expect((await state.getTokenBalance('bob', TESTNET_SEASON_ID)).RUNE).toBe(2);
 
-		const aliceEntry = state.runeLedger.get('S01:credit:daily_quest_claim:daily_quest:S01:alice:2026-05-14:0');
-		const bobEntry = state.runeLedger.get('S01:credit:daily_quest_claim:daily_quest:S01:bob:2026-05-14:0');
+		const aliceEntry = state.runeLedger.get(`${TESTNET_SEASON_ID}:credit:daily_quest_claim:daily_quest:${TESTNET_SEASON_ID}:alice:2026-05-14:0`);
+		const bobEntry = state.runeLedger.get(`${TESTNET_SEASON_ID}:credit:daily_quest_claim:daily_quest:${TESTNET_SEASON_ID}:bob:2026-05-14:0`);
 		expect(aliceEntry?.account).toBe('alice');
 		expect(bobEntry?.account).toBe('bob');
 	});

@@ -1,3 +1,6 @@
+import { deriveRuneSeasonId } from '@shared/protocol-core/runeSeasonHash';
+import { getRagnarokNetworkConfig } from '../game/config/networkConfig';
+
 function getRuneApiBase(): string {
 	if (typeof import.meta.env.VITE_API_URL === 'string' && import.meta.env.VITE_API_URL.length > 0) {
 		return import.meta.env.VITE_API_URL;
@@ -250,7 +253,7 @@ async function fetchRuneJSON(path: string, signal?: AbortSignal): Promise<unknow
 	return payload;
 }
 
-export async function fetchRuneState(seasonId = 'S01', signal?: AbortSignal): Promise<RuneStateSnapshot> {
+export async function fetchRuneState(seasonId = activeClientSeasonId(), signal?: AbortSignal): Promise<RuneStateSnapshot> {
 	const payload = await fetchRuneJSON(appendQuery('/api/chain/rune/state', { seasonId }), signal);
 	return parseRuneState(payload);
 }
@@ -265,10 +268,14 @@ export async function fetchRuneBalances(query: RuneBalancesQuery = {}, signal?: 
 	return parseRuneBalancesResponse(payload);
 }
 
-export async function fetchRuneAccount(username: string, seasonId = 'S01', signal?: AbortSignal): Promise<AccountRuneSummary> {
+export async function fetchRuneAccount(username: string, seasonId = activeClientSeasonId(), signal?: AbortSignal): Promise<AccountRuneSummary> {
 	const payload = await fetchRuneJSON(
 		appendQuery(`/api/chain/player/${encodeURIComponent(username)}/rune`, { seasonId }),
 		signal,
 	);
 	return parseRuneAccountResponse(payload);
+}
+
+function activeClientSeasonId(): string {
+	return deriveRuneSeasonId(getRagnarokNetworkConfig());
 }

@@ -23,6 +23,7 @@ import {
 	getArenaVfxTargets,
 	getArenaVfxWagerTargets,
 } from '../arenaVfxTargets';
+import { gameEffectCoordinator } from '@/game/effects/core/gameEffectCoordinator';
 
 const DRAMA_CONTAINER_ID = 'poker-drama-vfx-layer';
 const MAX_ORPHAN_AGE_MS = 6000;
@@ -619,13 +620,23 @@ export function playRagnarokVFX() {
 	});
 
 	// Particle explosions — anchored to the arena canvas, not the window
-	setTimeout(() => {
-		const center = getDramaContainerPoint(container);
-		spawnParticleBurst(center.x, center.y, 25, ELEMENT_PALETTES.fire);
-		spawnImpactRing(center.x, center.y, RED_PALETTE);
-		setTimeout(() => spawnParticleBurst(center.x - 100, center.y, 20, ELEMENT_PALETTES.fire), 200);
-		setTimeout(() => spawnParticleBurst(center.x + 100, center.y, 20, ELEMENT_PALETTES.fire), 400);
-	}, 800);
+	gameEffectCoordinator.scheduleSequence({
+		owner: 'poker-renderer',
+		lane: 'ragnarok-particles',
+		key: 'ragnarok',
+		priority: 'critical',
+		delaysMs: [800, 1_000, 1_200],
+		run: (stepIndex) => {
+			const center = getDramaContainerPoint(container);
+			if (stepIndex === 0) {
+				spawnParticleBurst(center.x, center.y, 25, ELEMENT_PALETTES.fire);
+				spawnImpactRing(center.x, center.y, RED_PALETTE);
+			} else {
+				const direction = stepIndex === 1 ? -1 : 1;
+				spawnParticleBurst(center.x + direction * 100, center.y, 20, ELEMENT_PALETTES.fire);
+			}
+		},
+	});
 
 	// Heavy screen shake — wrapper, not viewport (see getShakeTarget)
 	const shakeTarget = getShakeTarget();
@@ -1077,12 +1088,19 @@ export function playPokerSpellCast(
 	container.appendChild(vignette);
 	gsap.to(vignette, { opacity: 0, duration: 0.9, onComplete: () => cleanup(vignette) });
 
-	getArenaVfxSpellTrayCards().forEach((el) => {
+	getArenaVfxSpellTrayCards().forEach((el, index) => {
 		el.classList.remove('is-casting');
 		// Force reflow so the animation re-fires for repeat casts.
 		void el.offsetWidth;
 		el.classList.add('is-casting');
-		setTimeout(() => el.classList.remove('is-casting'), 1500);
+		gameEffectCoordinator.schedule({
+			owner: 'poker-renderer',
+			lane: 'spell-state',
+			key: `spell-cast:${index}`,
+			priority: 'normal',
+			delayMs: 1_500,
+			run: () => el.classList.remove('is-casting'),
+		});
 	});
 }
 
@@ -1110,10 +1128,17 @@ export function playWagerActivate(
 	container.appendChild(vignette);
 	gsap.to(vignette, { opacity: 0, duration: 0.8, onComplete: () => cleanup(vignette) });
 
-	getArenaVfxWagerTargets(side).forEach((el) => {
+	getArenaVfxWagerTargets(side).forEach((el, index) => {
 		el.classList.remove('is-activating');
 		void el.offsetWidth;
 		el.classList.add('is-activating');
-		setTimeout(() => el.classList.remove('is-activating'), 1100);
+		gameEffectCoordinator.schedule({
+			owner: 'poker-renderer',
+			lane: 'wager-state',
+			key: `wager-activate:${side}:${index}`,
+			priority: 'normal',
+			delayMs: 1_100,
+			run: () => el.classList.remove('is-activating'),
+		});
 	});
 }

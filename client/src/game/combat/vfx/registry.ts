@@ -1,11 +1,9 @@
 import { debug } from '../../config/debugConfig';
 import { subscribeAllVisualEvents } from './emitter';
 import type { VisualEvent, VisualEventMap, VisualEventType } from './events';
+import type { GameEffectHandle } from '@/game/effects/core/gameEffectCoordinator';
 
-export interface EffectHandle {
-	cancel(): void;
-	onComplete?: Promise<void>;
-}
+export type EffectHandle = GameEffectHandle;
 
 export type VisualEffectHandler<T extends VisualEventType = VisualEventType> = (
 	event: VisualEventMap[T]

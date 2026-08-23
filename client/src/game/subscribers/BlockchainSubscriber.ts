@@ -9,6 +9,8 @@ import { getStarterUid, isStarterEntitlementAsset, type HiveCardAsset } from '@/
 import { debug } from '../config/debugConfig';
 import type { CardOwnershipSource, CardUidMapping, PackagedMatchResult } from '@/data/blockchain/types';
 import { getCard, putCard } from '@/data/blockchain/replayDB';
+import { deriveRuneSeasonId } from '@shared/protocol-core/runeSeasonHash';
+import { getRagnarokNetworkConfig } from '../config/networkConfig';
 import { xpKeyFor } from '@/data/blockchain/cardXPRewards';
 import { getEconomicLevelForXP } from '@shared/protocol-core/cardProgression';
 import { usePeerStore } from '../stores/peerStore';
@@ -54,9 +56,10 @@ async function refreshHiveDataStoreFromIDB(): Promise<void> {
 	if (!username) return;
 
 	try {
+		const seasonId = deriveRuneSeasonId(getRagnarokNetworkConfig());
 		const [cards, tokenBalance, eloRating] = await Promise.all([
 			getCardsByOwner(username),
-			getTokenBalance(username),
+			getTokenBalance(username, seasonId),
 			getEloRating(username),
 		]);
 

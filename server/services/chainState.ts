@@ -136,11 +136,6 @@ export interface PackCommitStateRecord {
 	revealed: boolean;
 }
 
-export interface TokenBalanceRecord {
-	account: string;
-	RUNE: number;
-}
-
 export interface QueueStateRecord {
 	mode: string;
 	elo: number;
@@ -158,6 +153,11 @@ export interface RuneAccountSummary {
 	drift: number;
 	lastBlock: number;
 	indexed: boolean;
+}
+
+export interface RuneBalanceRecord {
+	account: string;
+	RUNE: number;
 }
 
 export interface RuneSeasonStats {
@@ -199,7 +199,6 @@ interface SerializedState {
 	lastIrreversibleBlockProcessed?: number;
 	genesis?: GenesisStateRecord | null;
 	supplyCounters?: [string, SupplyCounterRecord][];
-	tokenBalances?: [string, TokenBalanceRecord][];
 	matchAnchors?: [string, MatchAnchorStateRecord][];
 	packCommits?: [string, PackCommitStateRecord][];
 	rewardClaims?: string[];
@@ -292,11 +291,6 @@ const SupplyCounterRecordSchema = z.object({
 	pool: z.enum(['pack', 'reward']),
 	cap: NonNegativeInt,
 	minted: NonNegativeInt,
-}).passthrough();
-
-const TokenBalanceRecordSchema = z.object({
-	account: z.string(),
-	RUNE: IntNumber,
 }).passthrough();
 
 const MatchAnchorStateRecordSchema = z.object({
@@ -462,7 +456,6 @@ const ChainStateContractSchema = z.object({
 	lastIrreversibleBlockProcessed: NonNegativeInt.default(0).catch(0),
 	genesis: GenesisStateSchema.nullable().catch(null).default(null),
 	supplyCounters: z.array(Pair(SupplyCounterRecordSchema)).catch([]).default([]),
-	tokenBalances: z.array(Pair(TokenBalanceRecordSchema)).catch([]).default([]),
 	matchAnchors: z.array(Pair(MatchAnchorStateRecordSchema)).catch([]).default([]),
 	packCommits: z.array(Pair(PackCommitStateRecordSchema)).catch([]).default([]),
 	rewardClaims: z.array(z.string()).catch([]).default([]),
@@ -532,7 +525,6 @@ function emptyChainState(initialBlockCursor: number): ChainStateContract {
 		lastIrreversibleBlockProcessed: initialBlockCursor,
 		genesis: null,
 		supplyCounters: [],
-		tokenBalances: [],
 		matchAnchors: [],
 		packCommits: [],
 		rewardClaims: [],
@@ -571,7 +563,6 @@ let lastSyncedAt = 0;
 let lastIrreversibleBlockProcessed = 0;
 let genesisState: GenesisStateRecord | null = null;
 const supplyCounters = new Map<string, SupplyCounterRecord>();
-const tokenBalances = new Map<string, TokenBalanceRecord>();
 const matchAnchors = new Map<string, MatchAnchorStateRecord>();
 const packCommits = new Map<string, PackCommitStateRecord>();
 const rewardClaims = new Set<string>();
@@ -738,9 +729,6 @@ export function loadState(): void {
 		supplyCounters.clear();
 		for (const [k, v] of data.supplyCounters ?? []) supplyCounters.set(k, v);
 
-		tokenBalances.clear();
-		for (const [k, v] of data.tokenBalances ?? []) tokenBalances.set(k, v);
-
 		matchAnchors.clear();
 		for (const [k, v] of data.matchAnchors ?? []) matchAnchors.set(k, v);
 
@@ -823,7 +811,6 @@ export function exportState(): SerializedState {
 		lastIrreversibleBlockProcessed,
 		genesis: genesisState,
 		supplyCounters: [...supplyCounters.entries()],
-		tokenBalances: [...tokenBalances.entries()],
 		matchAnchors: [...matchAnchors.entries()],
 		packCommits: [...packCommits.entries()],
 		rewardClaims: [...rewardClaims],
@@ -874,9 +861,6 @@ export function importState(data: SerializedState): void {
 
 	supplyCounters.clear();
 	for (const [k, v] of normalized.supplyCounters ?? []) supplyCounters.set(k, v);
-
-	tokenBalances.clear();
-	for (const [k, v] of normalized.tokenBalances ?? []) tokenBalances.set(k, v);
 
 	matchAnchors.clear();
 	for (const [k, v] of normalized.matchAnchors ?? []) matchAnchors.set(k, v);
@@ -1210,14 +1194,15 @@ export function setGenesisState(g: GenesisStateRecord | null): void { genesisSta
 export function getSupplyCounter(key: string): SupplyCounterRecord | undefined { return supplyCounters.get(key); }
 export function setSupplyCounter(key: string, r: SupplyCounterRecord): void { supplyCounters.set(key, r); markDirty(); }
 
-export function getTokenBalance(account: string): TokenBalanceRecord | undefined { return tokenBalances.get(account); }
-export function setTokenBalance(account: string, b: TokenBalanceRecord): void { tokenBalances.set(account, b); markDirty(); }
-export function getRuneBalanceTotal(): number {
-	let total = 0;
-	for (const balance of tokenBalances.values()) {
-		total += balance.RUNE;
-	}
-	return total;
+export function getRuneBalance(account: string, seasonId: string): RuneBalanceRecord {
+	const entries = Array.from(runeLedger.values());
+	const projection = projectRuneSeasonAccount(entries, { account, seasonId });
+	return { account, RUNE: projection.balance };
+}
+
+export function getRuneBalanceTotal(seasonId: string): number {
+	const entries = Array.from(runeLedger.values());
+	return projectRuneSeason(entries, seasonId).balance;
 }
 
 export function getRuneLedgerEntry(entryId: string): RuneLedgerEntry | undefined {
@@ -1410,14 +1395,16 @@ export function getRuneAccountSummaries(accounts: readonly string[], seasonId: s
 
 	return accounts.map(account => {
 		const projection = projectRuneSeasonAccount(entries, { account, seasonId });
-		const runeBalance = getTokenBalance(account)?.RUNE ?? 0;
+		// Balance is a ledger projection: credits − debits for this season.
+		// drift is structurally 0 — kept for API shape stability.
+		const runeBalance = projection.balance;
 
 		return {
 			account,
 			runeBalance,
 			credits: projection.credits,
 			debits: projection.debits,
-			drift: runeBalance - projection.balance,
+			drift: 0,
 			lastBlock: projection.lastBlock,
 			indexed: isAccountKnown(account),
 		};
@@ -1630,7 +1617,17 @@ export function getAllSupplyCounters(): SupplyCounterRecord[] {
 	return [...supplyCounters.values()];
 }
 
-export function getAllTokenBalances(limit: number, offset: number): { balances: TokenBalanceRecord[]; total: number } {
-	const all = [...tokenBalances.values()].sort((a, b) => b.RUNE - a.RUNE);
+// Leaderboard-style view derived from the RUNE ledger for one season.
+// Each account's RUNE is credits − debits within (account, seasonId).
+export function getAllTokenBalances(seasonId: string, limit: number, offset: number): { balances: RuneBalanceRecord[]; total: number } {
+	const entries = Array.from(runeLedger.values());
+	const byAccount = new Map<string, { account: string; RUNE: number }>();
+	for (const entry of entries) {
+		if (entry.seasonId !== seasonId) continue;
+		const current = byAccount.get(entry.account) ?? { account: entry.account, RUNE: 0 };
+		current.RUNE += entry.direction === 'credit' ? entry.amount : -entry.amount;
+		byAccount.set(entry.account, current);
+	}
+	const all = [...byAccount.values()].sort((a, b) => b.RUNE - a.RUNE);
 	return { balances: all.slice(offset, offset + limit), total: all.length };
 }

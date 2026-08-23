@@ -6,7 +6,8 @@
  * VisualEvent bus. Each handler only calls the existing play* functions
  * from PokerDramaVFX — effects themselves are not rewritten here.
  *
- * Effects are fire-and-forget, same as the legacy hook behavior.
+ * Effects remain fire-and-forget from the event bus, but delayed choreography
+ * is tracked and cancellable so stale work cannot leak into the next hand.
  */
 
 import {
@@ -29,6 +30,13 @@ import { CombatAction, CombatPhase, HAND_RANK_NAMES, PokerHandRank } from '../..
 import { registerVisualEffect, type EffectHandle, type VisualEffectUnregister } from '../registry';
 import { registerCombatImpactVisualEffect } from './combatImpactHandler';
 import {
+	bettingActionMotion,
+	cancelPokerMotionSchedules,
+	POKER_MOTION_SPECS,
+	schedulePokerMotion,
+	showdownImpactMotion,
+	} from '@/game/effects/poker';
+import {
 	emitStreakAnnounced,
 	type BettingActionEvent,
 	type CommunityCardRevealedEvent,
@@ -41,7 +49,7 @@ import {
 } from '../events';
 import type { ArenaVfxOwner } from '../../arenaVfxTargets';
 
-const NO_OP_HANDLE: EffectHandle = { cancel() {} };
+const COMPLETED_HANDLE: EffectHandle = { cancel() {} };
 
 let bettingPressureLevel = 0;
 let playerStreak = 0;
@@ -58,38 +66,40 @@ export function resetPokerBettingPressure(): void {
 
 function handleBettingAction(event: BettingActionEvent): EffectHandle | null {
 	const isPlayer = event.side === 'player';
-	switch (event.action) {
-		case CombatAction.ATTACK:
-			playRaiseVFX(isPlayer);
-			break;
-		case CombatAction.COUNTER_ATTACK:
-			bettingPressureLevel += 1;
-			playReraiseVFX(isPlayer, bettingPressureLevel);
-			break;
-		case CombatAction.ENGAGE:
-			playCallVFX();
-			playClashSound();
-			break;
-		case CombatAction.DEFEND:
-			playCheckVFX(isPlayer);
-			break;
-		case CombatAction.BRACE:
-			playFoldVFX(isPlayer);
-			break;
-	}
-	return NO_OP_HANDLE;
+	const motion = bettingActionMotion(event.action, event.side);
+	return schedulePokerMotion(motion, [0], () => {
+		switch (event.action) {
+			case CombatAction.ATTACK:
+				playRaiseVFX(isPlayer);
+				break;
+			case CombatAction.COUNTER_ATTACK:
+				bettingPressureLevel += 1;
+				playReraiseVFX(isPlayer, bettingPressureLevel);
+				break;
+			case CombatAction.ENGAGE:
+				playCallVFX();
+				playClashSound();
+				break;
+			case CombatAction.DEFEND:
+				playCheckVFX(isPlayer);
+				break;
+			case CombatAction.BRACE:
+				playFoldVFX(isPlayer);
+				break;
+		}
+	}, `action-${event.side}`);
 }
 
 function handleCommunityCardRevealed(event: CommunityCardRevealedEvent): EffectHandle | null {
-	// Flop: stagger each of the 3 slots by 200ms and play a single slam
+	// Flop: stagger each of the 3 slots by 160ms and play a single slam
 	// sound for the whole flop. Turn: instant. River: slow-mo drama.
 	if (event.phase === CombatPhase.FAITH) {
 		if (event.slotIndex === 0) {
 			playCardSlamSound();
 		}
-		setTimeout(() => {
+		return schedulePokerMotion(POKER_MOTION_SPECS['community-reveal'], [event.slotIndex * 160], () => {
 			playCardDealVFX(event.slotIndex, event.card.suit, event.card.value, false);
-		}, event.slotIndex * 200);
+		}, `community-${event.slotIndex}`);
 	} else if (event.phase === CombatPhase.FORESIGHT) {
 		playCardSlamSound();
 		playCardDealVFX(event.slotIndex, event.card.suit, event.card.value, false);
@@ -97,7 +107,7 @@ function handleCommunityCardRevealed(event: CommunityCardRevealedEvent): EffectH
 		playCardSlamSound();
 		playCardDealVFX(event.slotIndex, event.card.suit, event.card.value, true);
 	}
-	return NO_OP_HANDLE;
+	return COMPLETED_HANDLE;
 }
 
 // ── Showdown choreography ─────────────────────────────────────────────
@@ -115,7 +125,7 @@ function updateShowdownStreaks(winner: ArenaVfxOwner | 'draw'): void {
 		emitStreakAnnounced({ side: 'player', streak: playerStreak, kind: 'win' });
 		emitStreakAnnounced({ side: 'opponent', streak: 0, kind: 'win' });
 		if (playerStreak === 3) {
-			setTimeout(() => playStreakAnnouncementVFX('DOMINATION', '#fbbf24'), 2000);
+			schedulePokerMotion(POKER_MOTION_SPECS['streak-announcement'], [2000], () => playStreakAnnouncementVFX('DOMINATION', '#fbbf24'), 'domination');
 		}
 	} else if (winner === 'opponent') {
 		opponentStreak += 1;
@@ -123,7 +133,7 @@ function updateShowdownStreaks(winner: ArenaVfxOwner | 'draw'): void {
 		emitStreakAnnounced({ side: 'opponent', streak: opponentStreak, kind: 'win' });
 		emitStreakAnnounced({ side: 'player', streak: 0, kind: 'win' });
 		if (opponentStreak === 3) {
-			setTimeout(() => playStreakAnnouncementVFX('DOMINATION', '#ef4444'), 2000);
+			schedulePokerMotion(POKER_MOTION_SPECS['streak-announcement'], [2000], () => playStreakAnnouncementVFX('DOMINATION', '#ef4444'), 'domination');
 		}
 	}
 }
@@ -132,60 +142,58 @@ function handleHandRankAnnounced(event: HandRankAnnouncedEvent): EffectHandle | 
 	const isPlayer = event.side === 'player';
 	const rankName = HAND_RANK_NAMES[event.rank] || '';
 	if (isPlayer) {
+		// A new showdown supersedes any queued choreography from the previous one.
+		cancelPokerMotionSchedules();
 		// Player announcement anchors the burst: capture the full showdown
 		// picture for the damage step, then replay the legacy timing.
 		showdownContext = { playerRank: event.rank, opponentRank: event.rank, winner: event.winner };
-		setTimeout(() => {
-			playHandRankAnnouncement(rankName, event.rank, event.winner === 'player', true);
-		}, 400);
 		updateShowdownStreaks(event.winner);
+		return schedulePokerMotion(POKER_MOTION_SPECS['hand-rank'], [400], () => {
+			playHandRankAnnouncement(rankName, event.rank, event.winner === 'player', true);
+		}, `hand-rank-${event.side}`);
 	} else {
 		if (showdownContext) {
 			showdownContext.opponentRank = event.rank;
 		}
-		setTimeout(() => {
+		return schedulePokerMotion(POKER_MOTION_SPECS['hand-rank'], [900], () => {
 			playHandRankAnnouncement(rankName, event.rank, event.winner === 'opponent', false);
-		}, 900);
+		}, `hand-rank-${event.side}`);
 	}
-	return NO_OP_HANDLE;
 }
 
 function handleShowdownDamage(event: ShowdownDamageEvent): EffectHandle | null {
-	if (event.damage <= 0) return NO_OP_HANDLE;
+	if (event.damage <= 0) return COMPLETED_HANDLE;
 	const rankDiff = showdownContext
 		? Math.abs(showdownContext.playerRank - showdownContext.opponentRank)
 		: 0;
 	const isPlayerWinner = event.winner === 'player';
 	const isLethal = event.isLethal ?? false;
-	setTimeout(() => {
+	const targetOwner = event.target === 'player-hero' ? 'player' : 'opponent';
+	return schedulePokerMotion(showdownImpactMotion(targetOwner), [1400], () => {
 		playShowdownDamageVFX(event.damage, isPlayerWinner, rankDiff, isLethal);
-	}, 1400);
-	return NO_OP_HANDLE;
+	}, `showdown-impact-${targetOwner}`);
 }
 
 function handleRagnarokTriggered(_event: RagnarokTriggeredEvent): EffectHandle | null {
-	playRagnarokVFX();
-	return NO_OP_HANDLE;
+	return schedulePokerMotion(POKER_MOTION_SPECS['streak-announcement'], [0], () => playRagnarokVFX(), 'ragnarok');
 }
 
 function handleStreakAnnounced(event: StreakAnnouncedEvent): EffectHandle | null {
 	if (event.kind === 'last_stand') {
-		setTimeout(() => playStreakAnnouncementVFX('LAST STAND', '#e2e8f0'), 2200);
+		return schedulePokerMotion(POKER_MOTION_SPECS['streak-announcement'], [2200], () => playStreakAnnouncementVFX('LAST STAND', '#e2e8f0'), 'last-stand');
 	}
-	return NO_OP_HANDLE;
+	return COMPLETED_HANDLE;
 }
 
 function handlePhaseEntered(event: PhaseEnteredEvent): EffectHandle | null {
 	// Legacy behavior: every phase change reset the re-raise pressure
 	// counter; keep that here so the counter lives with its handler.
 	resetPokerBettingPressure();
-	playPhaseDramaVFX(event.phase);
-	return NO_OP_HANDLE;
+	return schedulePokerMotion(POKER_MOTION_SPECS['phase-reveal'], [0], () => playPhaseDramaVFX(event.phase), 'phase');
 }
 
 function handleHandImproved(event: HandImprovedEvent): EffectHandle | null {
-	playHandImprovementVFX(event.tier);
-	return NO_OP_HANDLE;
+	return schedulePokerMotion(POKER_MOTION_SPECS['betting-action'], [0], () => playHandImprovementVFX(event.tier), 'hand-improved');
 }
 
 export function registerPokerDramaVisualEffects(): VisualEffectUnregister {
@@ -207,6 +215,7 @@ export function registerPokerDramaVisualEffects(): VisualEffectUnregister {
 		registerCombatImpactVisualEffect(),
 	];
 	return () => {
+		cancelPokerMotionSchedules();
 		for (const unregister of unregisterFns) {
 			unregister();
 		}

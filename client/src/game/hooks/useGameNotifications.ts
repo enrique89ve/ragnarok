@@ -1,4 +1,4 @@
-import { showStatus } from '../components/ui/GameStatusBanner';
+import { publishTextFeedback } from '../effects/feedback/gameMessageAdapter';
 
 // Types of game notifications
 type NotificationType = 'success' | 'error' | 'info' | 'warning';
@@ -40,7 +40,7 @@ export function useGameNotifications() {
     duration = 2800
   }: GameNotification) => {
     const text = description ? `${title} — ${description}` : title;
-    showStatus(text, type, Math.min(duration, 3500));
+    publishTextFeedback(text, type, Math.min(duration, 3500));
   };
 
   /**

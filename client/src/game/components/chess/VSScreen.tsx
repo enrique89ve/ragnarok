@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { ChessPiece, ChessPieceType, PIECE_DISPLAY_NAMES } from '../../types/ChessTypes';
 import { useGameStore } from '../../stores/gameStore';
 import { PIECE_COLOR_BY_TYPE } from './pieceVisuals';
@@ -14,10 +14,10 @@ interface VSScreenProps {
   duration?: number;
 }
 
-const VS_DEFAULT_DURATION_MS = 4200;
-const VS_ENTER_DELAY_MS = 540;
-const VS_EXIT_LEAD_MS = 780;
-const VS_MIN_DURATION_MS = 4000;
+const VS_DEFAULT_DURATION_MS = 3800;
+const VS_ENTER_DELAY_MS = 320;
+const VS_EXIT_LEAD_MS = 620;
+const VS_MIN_DURATION_MS = 3400;
 
 const VSScreen: React.FC<VSScreenProps> = ({ 
   attacker, 
@@ -26,10 +26,12 @@ const VSScreen: React.FC<VSScreenProps> = ({
   duration = VS_DEFAULT_DURATION_MS 
 }) => {
   const [phase, setPhase] = useState<'enter' | 'vs' | 'exit'>('enter');
+  const reducedMotion = useReducedMotion();
   // Viewer-relative labeling: "PLAYER" = me locally regardless of canonical side.
   const myCanonicalSide = useGameStore(s => s.myCanonicalSide) ?? 'player';
   const safeDuration = Math.max(VS_MIN_DURATION_MS, duration);
   const exitAt = Math.max(VS_EXIT_LEAD_MS + VS_ENTER_DELAY_MS, safeDuration - VS_EXIT_LEAD_MS);
+  const visualPhase = reducedMotion ? 'vs' : phase;
 
   useEffect(() => {
     const enterTimer = setTimeout(() => setPhase('vs'), VS_ENTER_DELAY_MS);
@@ -42,18 +44,6 @@ const VSScreen: React.FC<VSScreenProps> = ({
       clearTimeout(completeTimer);
     };
   }, [safeDuration, exitAt, onComplete]);
-
-  const getClassColor = (heroClass: string): string => {
-    const colorMap: Record<string, string> = {
-      mage: '#7ba7f8',
-      warrior: '#a37a3f',
-      priest: '#d7c08a',
-      rogue: '#a086ff',
-      paladin: '#ca9f43',
-      neutral: '#70808f',
-    };
-    return colorMap[heroClass] || colorMap['neutral'];
-  };
 
   const getPieceTitle = (piece: ChessPiece) => {
     return piece.heroName || `${piece.type.charAt(0).toUpperCase()}${piece.type.slice(1)}`;
@@ -73,51 +63,57 @@ const VSScreen: React.FC<VSScreenProps> = ({
         <div className="vs-screen-content">
           <motion.div 
             className="vs-fighter vs-fighter-left"
-            initial={{ x: '-100vw' }}
+            initial={reducedMotion ? false : { x: '-100vw', opacity: 0, scale: 0.92 }}
             animate={{ 
-              x: phase === 'exit' ? '-100vw' : 0
+              x: visualPhase === 'exit' ? '-100vw' : 0,
+              opacity: visualPhase === 'exit' ? 0 : 1,
+              scale: visualPhase === 'exit' ? 0.96 : 1,
             }}
             transition={{ 
               type: 'tween',
-              duration: 0.78,
-              ease: 'easeOut'
+              duration: reducedMotion ? 0 : 0.68,
+              ease: [0.16, 1, 0.3, 1]
             }}
           >
             <div className="vs-fighter-glow vs-fighter-glow-blue" />
-            <div 
-              className="vs-portrait-container"
-              style={{ backgroundColor: getClassColor(attacker.heroClass) }}
-            >
-              <PieceGlyph
-                pieceType={attacker.type}
-                fallbackColor={PIECE_COLOR_BY_TYPE[attacker.type]}
-                size="clamp(114px, 23cqw, 218px)"
-                className="vs-portrait-glyph"
-                fallbackTextShadow="0 4px 14px rgba(0,0,0,0.7)"
-              />
-            </div>
-            <div className="vs-fighter-info">
-              <span className="vs-fighter-owner">
-                {attacker.owner === myCanonicalSide ? 'PLAYER' : 'OPPONENT'}
-              </span>
-              <span className="vs-fighter-name">{getPieceTitle(attacker)}</span>
-              <span className="vs-fighter-type">{PIECE_DISPLAY_NAMES[attacker.type as ChessPieceType].toUpperCase()}</span>
-              <div className="vs-fighter-stats">
-					<span className="vs-stat" aria-label={`Health ${attacker.health}`}><ChessHealthIcon aria-hidden="true" /> {attacker.health}</span>
+            <div className="vs-fighter-frame">
+              <div className="vs-fighter-owner">
+                <span>{attacker.owner === myCanonicalSide ? 'PLAYER' : 'OPPONENT'}</span>
+              </div>
+              <div className="vs-portrait-container">
+                <PieceGlyph
+                  pieceType={attacker.type}
+                  fallbackColor={PIECE_COLOR_BY_TYPE[attacker.type]}
+                  size="clamp(114px, 23cqw, 218px)"
+                  className="vs-portrait-glyph"
+                  style={{ color: 'var(--vs-piece-color)', textShadow: '0 4px 14px rgba(0,0,0,0.7)' }}
+                  fallbackTextShadow="0 4px 14px rgba(0,0,0,0.7)"
+                />
+              </div>
+              <div className="vs-fighter-info">
+                <span className="vs-fighter-name">{getPieceTitle(attacker)}</span>
+                <span className="vs-fighter-type">{PIECE_DISPLAY_NAMES[attacker.type as ChessPieceType].toUpperCase()}</span>
+                <div className="vs-fighter-stats">
+                  <span className="vs-stat" aria-label={`Health ${attacker.health}`}>
+                    <ChessHealthIcon aria-hidden="true" />
+                    <span className="vs-stat-value">{attacker.health}</span>
+                  </span>
+                </div>
               </div>
             </div>
           </motion.div>
 
           <motion.div 
             className="vs-center"
-            initial={{ scale: 0.85, opacity: 0 }}
+            initial={reducedMotion ? false : { scale: 0.72, opacity: 0, rotate: -4 }}
             animate={{ 
-              scale: phase === 'vs' ? 1 : (phase === 'exit' ? 0 : 0.85),
-              opacity: phase === 'exit' ? 0 : 1
+              scale: visualPhase === 'vs' ? 1 : (visualPhase === 'exit' ? 0.72 : 0.72),
+              opacity: visualPhase === 'exit' ? 0 : 1,
+              rotate: visualPhase === 'vs' ? 0 : -4,
             }}
             transition={{ 
-              duration: 0.85,
-              ease: 'easeOut'
+              duration: reducedMotion ? 0 : 0.72,
+              ease: [0.16, 1, 0.3, 1]
             }}
           >
             <div className="vs-center-frame">
@@ -131,37 +127,43 @@ const VSScreen: React.FC<VSScreenProps> = ({
 
           <motion.div 
             className="vs-fighter vs-fighter-right"
-            initial={{ x: '100vw' }}
+            initial={reducedMotion ? false : { x: '100vw', opacity: 0, scale: 0.92 }}
             animate={{ 
-              x: phase === 'exit' ? '100vw' : 0
+              x: visualPhase === 'exit' ? '100vw' : 0,
+              opacity: visualPhase === 'exit' ? 0 : 1,
+              scale: visualPhase === 'exit' ? 0.96 : 1,
             }}
             transition={{ 
               type: 'tween',
-              duration: 0.78,
-              ease: 'easeOut'
+              delay: reducedMotion ? 0 : 0.05,
+              duration: reducedMotion ? 0 : 0.68,
+              ease: [0.16, 1, 0.3, 1]
             }}
           >
             <div className="vs-fighter-glow vs-fighter-glow-red" />
-            <div 
-              className="vs-portrait-container"
-              style={{ backgroundColor: getClassColor(defender.heroClass) }}
-            >
-              <PieceGlyph
-                pieceType={defender.type}
-                fallbackColor={PIECE_COLOR_BY_TYPE[defender.type]}
-                size="clamp(114px, 23cqw, 218px)"
-                className="vs-portrait-glyph"
-                fallbackTextShadow="0 4px 14px rgba(0,0,0,0.7)"
-              />
-            </div>
-            <div className="vs-fighter-info">
-              <span className="vs-fighter-owner">
-                {defender.owner === myCanonicalSide ? 'PLAYER' : 'OPPONENT'}
-              </span>
-              <span className="vs-fighter-name">{getPieceTitle(defender)}</span>
-              <span className="vs-fighter-type">{PIECE_DISPLAY_NAMES[defender.type as ChessPieceType].toUpperCase()}</span>
-              <div className="vs-fighter-stats">
-					<span className="vs-stat" aria-label={`Health ${defender.health}`}><ChessHealthIcon aria-hidden="true" /> {defender.health}</span>
+            <div className="vs-fighter-frame">
+              <div className="vs-fighter-owner">
+                <span>{defender.owner === myCanonicalSide ? 'PLAYER' : 'OPPONENT'}</span>
+              </div>
+              <div className="vs-portrait-container">
+                <PieceGlyph
+                  pieceType={defender.type}
+                  fallbackColor={PIECE_COLOR_BY_TYPE[defender.type]}
+                  size="clamp(114px, 23cqw, 218px)"
+                  className="vs-portrait-glyph"
+                  style={{ color: 'var(--vs-piece-color)', textShadow: '0 4px 14px rgba(0,0,0,0.7)' }}
+                  fallbackTextShadow="0 4px 14px rgba(0,0,0,0.7)"
+                />
+              </div>
+              <div className="vs-fighter-info">
+                <span className="vs-fighter-name">{getPieceTitle(defender)}</span>
+                <span className="vs-fighter-type">{PIECE_DISPLAY_NAMES[defender.type as ChessPieceType].toUpperCase()}</span>
+                <div className="vs-fighter-stats">
+                  <span className="vs-stat" aria-label={`Health ${defender.health}`}>
+                    <ChessHealthIcon aria-hidden="true" />
+                    <span className="vs-stat-value">{defender.health}</span>
+                  </span>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -169,9 +171,9 @@ const VSScreen: React.FC<VSScreenProps> = ({
 
         <motion.div 
           className="vs-bottom-bar"
-          initial={{ y: 100 }}
-          animate={{ y: 0 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
+          initial={reducedMotion ? false : { y: 40, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: reducedMotion ? 0 : 0.72, duration: reducedMotion ? 0 : 0.38, ease: 'easeOut' }}
         >
           <span className="vs-battle-text">PREPARE FOR BATTLE</span>
         </motion.div>

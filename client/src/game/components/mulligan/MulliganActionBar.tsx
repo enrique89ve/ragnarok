@@ -1,5 +1,6 @@
 import React, { forwardRef } from 'react';
 import { motion } from 'framer-motion';
+import './mulliganActionBar.css';
 
 /*
   MulliganActionBar — one clear commit action, plus a keep-all shortcut when
@@ -17,6 +18,7 @@ interface MulliganActionBarProps {
 	readonly onKeepAll: () => void;
 	readonly onConfirm: () => void;
 	readonly disableMotion: boolean;
+	readonly entranceDelay?: number;
 }
 
 const BTN_BASE =
@@ -40,12 +42,12 @@ const BTN_REPLACE_SELECTED =
 	'shadow-[0_4px_20px_rgba(245,158,11,0.4)] border-amber-300/75';
 
 export const MulliganActionBar = forwardRef<HTMLButtonElement, MulliganActionBarProps>(
-	({ selectedCount, onKeepAll, onConfirm, disableMotion }, firstButtonRef) => {
+	({ selectedCount, onKeepAll, onConfirm, disableMotion, entranceDelay = 1 }, firstButtonRef) => {
 		const replaceButton = (
 			<button
 				ref={selectedCount === 0 ? firstButtonRef : undefined}
 				type="button"
-				className={`${BTN_BASE} ${selectedCount > 0 ? `${BTN_REPLACE_BASE} ${BTN_REPLACE_SELECTED}` : BTN_KEEP}`}
+				className={`${BTN_BASE} hover:-translate-y-[3px] active:translate-y-0 focus-visible:outline focus-visible:outline-2 ${selectedCount > 0 ? `${BTN_REPLACE_BASE} ${BTN_REPLACE_SELECTED}` : BTN_KEEP}`}
 				onClick={onConfirm}
 				aria-label={
 					selectedCount === 0
@@ -65,7 +67,7 @@ export const MulliganActionBar = forwardRef<HTMLButtonElement, MulliganActionBar
 				<button
 					ref={firstButtonRef}
 					type="button"
-					className={`${BTN_BASE} ${BTN_KEEP}`}
+					className={`${BTN_BASE} hover:-translate-y-[3px] active:translate-y-0 focus-visible:outline focus-visible:outline-2 ${BTN_KEEP}`}
 					onClick={onKeepAll}
 					aria-label="Keep all cards and start the match"
 				>
@@ -81,10 +83,16 @@ export const MulliganActionBar = forwardRef<HTMLButtonElement, MulliganActionBar
 			</div>
 		) : (
 			<motion.div
-				className="relative z-[3] flex items-center justify-center gap-6 isolate"
-				initial={{ opacity: 0, y: 20 }}
-				animate={{ opacity: 1, y: 0 }}
-				transition={{ delay: 0.65, duration: 0.35 }}
+				className="mulligan-action-entrance relative z-[3] flex items-center justify-center gap-6 isolate"
+				initial={{ opacity: 0, y: 22, scale: 0.9, rotateX: 7 }}
+				animate={{ opacity: 1, y: 0, scale: 1, rotateX: 0 }}
+				transition={{
+					delay: entranceDelay,
+					type: 'spring',
+					stiffness: 220,
+					damping: 22,
+					mass: 0.72,
+				}}
 			>
 				{content}
 			</motion.div>

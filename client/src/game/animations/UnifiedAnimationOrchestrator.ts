@@ -11,6 +11,10 @@
 
 import { debug } from '../config/debugConfig';
 import { create } from 'zustand';
+import {
+	gameEffectCoordinator,
+	type GameEffectHandle,
+} from '@/game/effects/core/gameEffectCoordinator';
 
 export type AnimationCategory = 
   | 'summon'
@@ -50,7 +54,7 @@ export interface AnimationEffect {
 
 interface TimerHandle {
   id: string;
-  timeoutId: ReturnType<typeof setTimeout>;
+  effectHandle: GameEffectHandle;
   phase?: string;
   category: AnimationCategory;
 }
@@ -99,7 +103,13 @@ export const useAnimationOrchestrator = create<AnimationOrchestratorState>((set,
       return { activeEffects: newEffects };
     });
     
-    const timeoutId = setTimeout(() => {
+    const effectHandle = gameEffectCoordinator.schedule({
+      owner: 'animation-overlay',
+      lane: effect.category,
+      key: id,
+      priority: effect.priority,
+      delayMs: effect.duration,
+      run: () => {
       // Use a single atomic state update to prevent race conditions
       set(s => {
         const newEffects = new Map(s.activeEffects);
@@ -108,13 +118,14 @@ export const useAnimationOrchestrator = create<AnimationOrchestratorState>((set,
         newHandles.delete(id);
         return { activeEffects: newEffects, timerHandles: newHandles };
       });
-      
+
       effect.onComplete?.();
-    }, effect.duration);
-    
+      },
+    });
+
     const handle: TimerHandle = {
       id,
-      timeoutId,
+      effectHandle,
       phase: effect.phase,
       category: effect.category,
     };
@@ -131,9 +142,9 @@ export const useAnimationOrchestrator = create<AnimationOrchestratorState>((set,
   cancelEffect: (id) => {
     const state = get();
     const handle = state.timerHandles.get(id);
-    
+
     if (handle) {
-      clearTimeout(handle.timeoutId);
+      handle.effectHandle.cancel();
     }
     
     set(s => {
@@ -148,10 +159,10 @@ export const useAnimationOrchestrator = create<AnimationOrchestratorState>((set,
   cancelCategory: (category) => {
     const state = get();
     const toCancel: string[] = [];
-    
+
     state.timerHandles.forEach((handle, id) => {
       if (handle.category === category) {
-        clearTimeout(handle.timeoutId);
+        handle.effectHandle.cancel();
         toCancel.push(id);
       }
     });
@@ -170,10 +181,10 @@ export const useAnimationOrchestrator = create<AnimationOrchestratorState>((set,
   cancelPhase: (phase) => {
     const state = get();
     const toCancel: string[] = [];
-    
+
     state.timerHandles.forEach((handle, id) => {
       if (handle.phase === phase) {
-        clearTimeout(handle.timeoutId);
+        handle.effectHandle.cancel();
         toCancel.push(id);
       }
     });
@@ -191,9 +202,9 @@ export const useAnimationOrchestrator = create<AnimationOrchestratorState>((set,
   
   cancelAll: () => {
     const state = get();
-    
+
     state.timerHandles.forEach(handle => {
-      clearTimeout(handle.timeoutId);
+      handle.effectHandle.cancel();
     });
     
     set({

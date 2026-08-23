@@ -6,6 +6,8 @@ import {
 import { CombatPhase } from '../../types/PokerCombatTypes';
 import { killAllPokerVFX, startPokerOrphanSweep, stopPokerOrphanSweep } from '../animations/PokerDramaVFX';
 import { cancelAllActiveVisualEffects } from './registry';
+import { gameEffectCoordinator } from '@/game/effects/core/gameEffectCoordinator';
+import { startGameEffectBrowserRuntime } from '@/game/effects/core/gameEffectBrowserRuntime';
 
 const POKER_VFX_ORCHESTRATOR_CATEGORIES: readonly AnimationCategory[] = [
 	'announcement',
@@ -16,6 +18,8 @@ const POKER_VFX_ORCHESTRATOR_CATEGORIES: readonly AnimationCategory[] = [
 function hasDom(): boolean {
 	return typeof document !== 'undefined';
 }
+
+let stopBrowserEffectRuntime: (() => void) | null = null;
 
 function cancelPokerOrchestratedEffects(): void {
 	for (const phase of Object.values(CombatPhase)) {
@@ -28,13 +32,22 @@ function cancelPokerOrchestratedEffects(): void {
 
 export function cancelAllVisualEffects(): void {
 	cancelAllActiveVisualEffects();
+	gameEffectCoordinator.cancelOwner('poker');
+	gameEffectCoordinator.cancelOwner('animation-overlay');
+	gameEffectCoordinator.cancelOwner('feedback');
+	gameEffectCoordinator.cancelOwner('visual-impact');
+	gameEffectCoordinator.cancelOwner('poker-renderer');
 	cancelPokerOrchestratedEffects();
 	if (!hasDom()) return;
 	killAllPokerVFX();
 	stopPokerOrphanSweep();
+	stopBrowserEffectRuntime?.();
+	stopBrowserEffectRuntime = null;
 }
 
 export function startPokerVfxLifecycle(): void {
 	if (!hasDom()) return;
+	stopBrowserEffectRuntime?.();
+	stopBrowserEffectRuntime = startGameEffectBrowserRuntime();
 	startPokerOrphanSweep();
 }

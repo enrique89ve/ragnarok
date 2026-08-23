@@ -1,4 +1,4 @@
-import { BOARD_COLS, BOARD_ROWS, type ChessBoardPosition, type ChessPiece } from '../../types/ChessTypes';
+import { BOARD_COLS, BOARD_ROWS, type ChessBoardPosition, type ChessPiece, type ChessPlayerSide } from '../../types/ChessTypes';
 
 export type ChessCellTone = 'light' | 'dark';
 export type ChessCellHighlight = 'none' | 'move' | 'attack';
@@ -6,6 +6,12 @@ export type ChessCellMineState = 'none' | 'active' | 'placement-burst' | 'trigge
 export type ChessCellPlacementPreview = 'none' | 'valid' | 'invalid';
 export type ChessPieceHealthState = 'healthy' | 'warning' | 'danger';
 export type ChessBoardOrientation = 'standard' | 'flipped';
+export type ChessNoticeState = 'self' | 'opponent';
+
+export type ChessNoticePresentation = Readonly<{
+  state: ChessNoticeState;
+  label: string;
+}>;
 
 export type ChessVisualGridPosition = {
   readonly row: number;
@@ -16,6 +22,24 @@ export type ChessMoveAnimationOffset = {
   readonly x: number;
   readonly y: number;
 };
+
+export function getTurnNoticePresentation(input: {
+  readonly currentTurn: ChessPlayerSide;
+  readonly viewerSide: ChessPlayerSide;
+}): ChessNoticePresentation {
+  return input.currentTurn === input.viewerSide
+    ? { state: 'self', label: 'ᚱ YOUR COMMAND ᚱ' }
+    : { state: 'opponent', label: 'ᚱ FOE STIRS ᚱ' };
+}
+
+export function getCheckNoticePresentation(input: {
+  readonly checkedSide: ChessPlayerSide;
+  readonly viewerSide: ChessPlayerSide;
+}): ChessNoticePresentation {
+  return input.checkedSide === input.viewerSide
+    ? { state: 'self', label: 'CHECK! YOUR KING IS IN DANGER' }
+    : { state: 'opponent', label: 'ENEMY KING IN CHECK' };
+}
 
 export function getCellTone(row: number, col: number): ChessCellTone {
   return (row + col) % 2 === 0 ? 'light' : 'dark';

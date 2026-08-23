@@ -9,6 +9,7 @@ import {
 	type RuneSeasonProjection,
 } from '@shared/protocol-core/types';
 import { getRuntimeExecutionMode } from '../game/config/featureFlags';
+import { getRagnarokNetworkConfig } from '../game/config/networkConfig';
 import { clientStateAdapter } from './blockchain/clientStateAdapter';
 
 export type LocalRuneSeasonState = RuneSeasonProjection & {
@@ -29,7 +30,7 @@ export type LocalRuneLedgerQuery = Omit<RuneLedgerEntryQuery, 'seasonId'> & {
 };
 
 export function getClientRuneSeasonId(): string {
-	return getActiveRuneSeasonId(getRuntimeExecutionMode());
+	return getActiveRuneSeasonId(getRagnarokNetworkConfig());
 }
 
 export async function readLocalRuneLedger(

@@ -1,6 +1,7 @@
 import type { CombatLogEntry } from '../../stores/combat/types';
 import type { GameLogEntry } from '../../stores/gameLogStore';
 import { CombatAction } from '../../types/PokerCombatTypes';
+import type { GameFeedbackTone } from '@/game/effects/core/gameEffectTypes';
 
 const ACTION_VERBS: Record<CombatAction, string> = {
 	[CombatAction.ATTACK]: 'bet',
@@ -19,7 +20,7 @@ export const FEEDBACK_STACK_CAP = 3;
 export const FEEDBACK_STAGGER_MS = 80;
 
 export type FeedbackLane = 'cinema' | 'stack' | 'floater' | 'error';
-export type FeedbackTone = 'info' | 'success' | 'warning' | 'error';
+export type FeedbackTone = GameFeedbackTone;
 export type GameLogDraft = Omit<GameLogEntry, 'id' | 'timestamp'>;
 
 export function countWords(text: string): number {

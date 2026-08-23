@@ -47,6 +47,7 @@ Non-transferable season points used for ranking score bonus and for the `rune_ex
 - **Sources**: `match_result` (P2P ranked), `campaign_result` (first-clear inline credit), `daily_quest_claim` (slot/day credit), `reward_claim` (non-campaign rewards).
 - **Sink**: `rune_exchange`.
 - **Owner rule**: self-directed ops mutate only the authenticated Hive broadcaster's balance; ranked P2P uses winner-posted `match_result` replay ([ADR 0008](./adr/0008-winner-posted-match-result.md)).
+- **Storage**: `rune_ledger` (IDB store client-side / Map server-side). Balance is a pure projection `credits − debits` for `(account, seasonId)` — no stored scalar exists (removed `tokenBalances`/`token_balances` surfaces in the ledger-first refactor).
 - **Independent caps**: P2P (`maxP2PRunePerAccount: 100`), campaign (`maxCampaignRunePerAccount: 10`), and daily quest (`maxDailyQuestRunePerAccount: 20`) are separate pools — one account can earn all three.
 
 ### Eitr
@@ -57,10 +58,10 @@ Non-transferable season-scoped crafting dust. Sole source is dissolving NFTs; so
 - **Sink ops**: `forge_commit` (debit at commit) → `forge_reveal` (mint a random card_id within the rarity, or `forge_refund` credit on exhaustion).
 - **Storage**: [`eitr_ledger`](../client/src/data/blockchain/replayDB.ts) IDB store (client) / `eitrLedger` Map (server `chainState.ts`). Balance derived from `getEitrLedgerTotal({direction})` queries; no scalar `TokenBalance.Eitr` field.
 - **Server endpoints** (mirror of `/api/chain/rune/*`):
-	- `GET /api/chain/eitr/state?seasonId=S01` — season-wide totals + emission breakdown
+	- `GET /api/chain/eitr/state?seasonId=<seasonHash>` — season-wide totals + emission breakdown
 	- `GET /api/chain/eitr/ledger?seasonId=...&account=...&direction=...&sourceType=...` — paginated entries
 	- `GET /api/chain/eitr/balances?seasonId=...` — paginated per-account `eitrBalance = credits − debits`
-	- `GET /api/chain/player/:username/eitr?seasonId=S01` — single account summary
+	- `GET /api/chain/player/:username/eitr?seasonId=<seasonHash>` — single account summary
 - **Caps**: implicit — bounded by `Σ NFT_supply[rarity] × EITR_DISSOLVE_VALUES[rarity]`. No configured pool cap.
 - **Canonical doc**: [ADR 0001](./adr/0001-eitr-v1-canonical.md), [RULEBOOK.md Card Rarity table](./RULEBOOK.md#card-rarity), [RAGNAROK_PROTOCOL_V1.md §10.15–10.16, §13](./RAGNAROK_PROTOCOL_V1.md#1015-forge_commit).
 

@@ -2,8 +2,10 @@ import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { CardInstance } from '../types';
 import { SimpleCard, SimpleCardData } from './card/SimpleCardCompat';
+import CardCardBack from './card/slots/CardCardBack';
 import { getCardById } from '../data/allCards';
 import './mulligan.css';
+import './card/pokerFaceDown.css';
 import { GameIcon } from '../utils/ui/GameIcon';
 
 const ANIMATE_SELECTED = { scale: 0.93, y: 6 };
@@ -21,6 +23,7 @@ interface MulliganCardProps {
   onHoverChange?: (card: CardInstance | null, anchor?: HTMLElement) => void;
   disableMotion: boolean;
   disableCardFx: boolean;
+  entranceRevealDelay?: number;
 }
 
 export const toMulliganSimpleCardData = (cardData: CardInstance['card']): SimpleCardData => {
@@ -51,7 +54,7 @@ export const toMulliganSimpleCardData = (cardData: CardInstance['card']): Simple
   };
 };
 
-export const MulliganCard: React.FC<MulliganCardProps> = React.memo(({ card, isSelected, onClick, onHoverChange, disableMotion, disableCardFx }) => {
+export const MulliganCard: React.FC<MulliganCardProps> = React.memo(({ card, isSelected, onClick, onHoverChange, disableMotion, disableCardFx, entranceRevealDelay = 0 }) => {
   const cardData = card?.card;
 
   const simpleCardData: SimpleCardData | null = useMemo(() => {
@@ -98,19 +101,32 @@ export const MulliganCard: React.FC<MulliganCardProps> = React.memo(({ card, isS
     )
   ) : null;
 
-  const root = (
-    <>
-      <SimpleCard
-        card={simpleCardData}
-        size="large"
-        surface="mulligan"
-        showDescription={false}
-        disableTooltips
-        semanticMode="presentation"
-      />
+  const flipStageClassName = [
+    'mulligan-card-flip-stage',
+    !disableMotion ? 'mulligan-card-flip-stage--cinematic' : 'mulligan-card-flip-stage--static',
+  ].filter(Boolean).join(' ');
+  const flipStageStyle = !disableMotion
+    ? ({ '--mulligan-card-reveal-delay': `${entranceRevealDelay}s` } as React.CSSProperties)
+    : undefined;
 
-      {overlay}
-    </>
+  const root = (
+    <div className={flipStageClassName} style={flipStageStyle}>
+      <div className="mulligan-card-flip-face mulligan-card-flip-face--back" aria-hidden="true">
+        <CardCardBack />
+      </div>
+      <div className="mulligan-card-flip-face mulligan-card-flip-face--front">
+        <SimpleCard
+          card={simpleCardData}
+          size="large"
+          surface="mulligan"
+          showDescription={false}
+          disableTooltips
+          semanticMode="presentation"
+        />
+
+        {overlay}
+      </div>
+    </div>
   );
 
   return disableMotion ? (

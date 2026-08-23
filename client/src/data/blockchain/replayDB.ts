@@ -334,18 +334,17 @@ export const putSyncCursor = (cursor: SyncCursor): Promise<void> =>
 // ---------------------------------------------------------------------------
 // Token Balances API
 // ---------------------------------------------------------------------------
+//
+// RUNE is a ledger projection (credits − debits for the requested season), not
+// a stored scalar. Legacy fields (VALKYRIE, SEASON_POINTS) still hydrate from
+// the token_balances store; RUNE always derives from the local rune_ledger.
 
-export async function getTokenBalance(username: string): Promise<HiveTokenBalance> {
+export async function getTokenBalance(username: string, seasonId: string): Promise<HiveTokenBalance> {
 	const stored = await idbGet<HiveTokenBalance>('token_balances', username);
-	return stored ?? { ...DEFAULT_TOKEN_BALANCE, hiveUsername: username };
-}
-
-export const putTokenBalance = (balance: HiveTokenBalance): Promise<void> =>
-	idbPut('token_balances', balance);
-
-export async function getRuneBalanceTotal(): Promise<number> {
-	const balances = await idbGetAll<HiveTokenBalance>('token_balances');
-	return balances.reduce((total, balance) => total + balance.RUNE, 0);
+	const base = stored ?? { ...DEFAULT_TOKEN_BALANCE, hiveUsername: username };
+	const credits = await getRuneLedgerTotal({ seasonId, account: username, direction: 'credit' });
+	const debits = await getRuneLedgerTotal({ seasonId, account: username, direction: 'debit' });
+	return { ...base, RUNE: credits - debits };
 }
 
 // ---------------------------------------------------------------------------

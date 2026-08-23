@@ -27,8 +27,7 @@ import {
 	getPackDefinition,
 	getRuneEconomy,
 	isRuneRedeemablePackKey,
-	TESTNET_RUNE_SEASON_ID,
-	TESTNET_EITR_SEASON_ID,
+	deriveRuneSeasonId,
 	calculateCappedRuneCredit,
 	createBurnEitrSourceKey,
 	createCampaignFirstClearRuneSourceKey,
@@ -131,6 +130,7 @@ type MarketNftAsset =
 	| { nftType: 'pack'; asset: PackAsset };
 
 type RuneExchangeDetails = {
+	seasonId: string;
 	packType: string;
 	quantity: number;
 	runeCost: number;
@@ -302,13 +302,20 @@ function isOpResult(value: OpResult | unknown): value is OpResult {
 		&& 'status' in value;
 }
 
+function activeRuneSeasonId(deps: ProtocolCoreDeps): string {
+	return deriveRuneSeasonId(deps.runtime);
+}
+
 type NewRuneLedgerEntry = Omit<RuneLedgerEntry, 'balanceBefore' | 'balanceAfter'>;
 
 async function putRuneLedgerEntryAndBalance(
 	deps: ProtocolCoreDeps,
 	entry: NewRuneLedgerEntry,
 ): Promise<OpResult | null> {
-	const balance = await deps.state.getTokenBalance(entry.account);
+	// Balance is a ledger projection for the active season: credits − debits
+	// for (account, seasonId). No mutable scalar exists, so balanceBefore can
+	// never drift from replay — the anti-cheat contract in docs/RUNE.md.
+	const balance = await deps.state.getTokenBalance(entry.account, entry.seasonId);
 	const trace = calculateRuneBalanceTrace({
 		balanceBefore: balance.RUNE,
 		direction: entry.direction,
@@ -319,15 +326,10 @@ async function putRuneLedgerEntryAndBalance(
 	}
 
 	const economy = getRuneEconomy(deps.runtime.stage);
-	const currentRuneBalanceTotal = await deps.state.getRuneBalanceTotal();
-	const projectedRuneBalanceTotal = currentRuneBalanceTotal - balance.RUNE + trace.balanceAfter;
-	if (
-		currentRuneBalanceTotal > economy.totalCap
-		|| projectedRuneBalanceTotal > economy.totalCap
-	) {
-		return reject('RUNE active balance cap exceeded');
-	}
-
+	// Single authoritative cap: season emission (credits) cannot exceed
+	// totalCap. The active-balance cap (credits − debits ≤ totalCap) follows
+	// by construction, since active balance ≤ total credited. No separate
+	// check keeps a redundant surface out of the security model.
 	if (entry.direction === 'credit' && entry.amount > 0) {
 		const totalCredited = await deps.state.getRuneLedgerTotal({
 			seasonId: entry.seasonId,
@@ -339,7 +341,6 @@ async function putRuneLedgerEntryAndBalance(
 	}
 
 	await deps.state.putRuneLedgerEntry({ ...entry, ...trace });
-	await deps.state.putTokenBalance({ ...balance, RUNE: trace.balanceAfter });
 	return null;
 }
 
@@ -593,13 +594,13 @@ async function applyBurn(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpResu
 	if (!supply) return reject('genesis supply missing for rarity');
 
 	const sourceKey = createBurnEitrSourceKey({
-		seasonId: TESTNET_EITR_SEASON_ID,
+		seasonId: activeRuneSeasonId(deps),
 		account: op.broadcaster,
 		trxId: op.trxId,
 		uid: nftId,
 	});
 	const entryId = createEitrLedgerEntryId({
-		seasonId: TESTNET_EITR_SEASON_ID,
+		seasonId: activeRuneSeasonId(deps),
 		direction: 'credit',
 		sourceType: 'burn',
 		sourceKey,
@@ -615,7 +616,7 @@ async function applyBurn(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpResu
 	const balanceBefore = await getEitrBalanceFor(deps, op.broadcaster);
 	await deps.state.putEitrLedgerEntry({
 		entryId,
-		seasonId: TESTNET_EITR_SEASON_ID,
+		seasonId: activeRuneSeasonId(deps),
 		account: op.broadcaster,
 		direction: 'credit',
 		sourceType: 'burn',
@@ -637,12 +638,12 @@ async function applyBurn(op: ProtocolOp, deps: ProtocolCoreDeps): Promise<OpResu
 // credits minus debits, mirroring how server-side stats derive it.
 async function getEitrBalanceFor(deps: ProtocolCoreDeps, account: string): Promise<number> {
 	const credits = await deps.state.getEitrLedgerTotal({
-		seasonId: TESTNET_EITR_SEASON_ID,
+		seasonId: activeRuneSeasonId(deps),
 		account,
 		direction: 'credit',
 	});
 	const debits = await deps.state.getEitrLedgerTotal({
-		seasonId: TESTNET_EITR_SEASON_ID,
+		seasonId: activeRuneSeasonId(deps),
 		account,
 		direction: 'debit',
 	});
@@ -991,9 +992,10 @@ async function applyRankedMatchSettlement(
 	}
 
 	const loserAccount = details.winner === details.p1 ? details.p2 : details.p1;
-	const sourceKeyPrefix = createP2PRankedMatchSourceKeyPrefix(details.matchId);
+	const seasonId = activeRuneSeasonId(deps);
+	const sourceKeyPrefix = createP2PRankedMatchSourceKeyPrefix(details.matchId, seasonId);
 	const existingRuneEntries = await deps.state.getRuneLedgerEntries({
-		seasonId: TESTNET_RUNE_SEASON_ID,
+		seasonId,
 		direction: 'credit',
 		sourceType: 'p2p_ranked',
 		sourceKeyPrefix,
@@ -1003,6 +1005,7 @@ async function applyRankedMatchSettlement(
 			details.matchId,
 			'winner',
 			details.winner,
+			seasonId,
 		);
 		return existingRuneEntries.some(entry =>
 			entry.account === details.winner && entry.sourceKey === winnerSourceKey)
@@ -1053,13 +1056,15 @@ async function applyP2PRankedRuneCredit(
 		role: P2PRankedRuneRole;
 	},
 ): Promise<OpResult | null> {
+	const seasonId = activeRuneSeasonId(deps);
 	const sourceKey = createP2PRankedRuneSourceKey(
 		input.matchId,
 		input.role,
 		input.account,
+		seasonId,
 	);
 	const entryId = createRuneLedgerEntryId({
-		seasonId: TESTNET_RUNE_SEASON_ID,
+		seasonId,
 		direction: 'credit',
 		sourceType: 'p2p_ranked',
 		sourceKey,
@@ -1072,13 +1077,13 @@ async function applyP2PRankedRuneCredit(
 	}
 
 	const accountEarned = await deps.state.getRuneLedgerTotal({
-		seasonId: TESTNET_RUNE_SEASON_ID,
+		seasonId,
 		direction: 'credit',
 		sourceType: 'p2p_ranked',
 		account: input.account,
 	});
 	const globalEarned = await deps.state.getRuneLedgerTotal({
-		seasonId: TESTNET_RUNE_SEASON_ID,
+		seasonId,
 		direction: 'credit',
 		sourceType: 'p2p_ranked',
 	});
@@ -1092,7 +1097,7 @@ async function applyP2PRankedRuneCredit(
 
 	const ledgerResult = await putRuneLedgerEntryAndBalance(deps, {
 		entryId,
-		seasonId: TESTNET_RUNE_SEASON_ID,
+		seasonId,
 		account: input.account,
 		direction: 'credit',
 		sourceType: 'p2p_ranked',
@@ -1522,13 +1527,15 @@ async function applyCampaignFirstClearRuneCredit(
 		return null;
 	}
 
+	const seasonId = activeRuneSeasonId(deps);
 	const sourceKey = createCampaignFirstClearRuneSourceKey(
 		progress.account,
 		progress.campaignId,
 		progress.missionId,
+		seasonId,
 	);
 	const entryId = createRuneLedgerEntryId({
-		seasonId: TESTNET_RUNE_SEASON_ID,
+		seasonId,
 		direction: 'credit',
 		sourceType: 'campaign_first_clear',
 		sourceKey,
@@ -1541,13 +1548,13 @@ async function applyCampaignFirstClearRuneCredit(
 	}
 
 	const accountEarned = await deps.state.getRuneLedgerTotal({
-		seasonId: TESTNET_RUNE_SEASON_ID,
+		seasonId,
 		direction: 'credit',
 		sourceType: 'campaign_first_clear',
 		account: progress.account,
 	});
 	const globalEarned = await deps.state.getRuneLedgerTotal({
-		seasonId: TESTNET_RUNE_SEASON_ID,
+		seasonId,
 		direction: 'credit',
 		sourceType: 'campaign_first_clear',
 	});
@@ -1561,7 +1568,7 @@ async function applyCampaignFirstClearRuneCredit(
 
 	const ledgerResult = await putRuneLedgerEntryAndBalance(deps, {
 		entryId,
-		seasonId: TESTNET_RUNE_SEASON_ID,
+		seasonId,
 		account: progress.account,
 		direction: 'credit',
 		sourceType: 'campaign_first_clear',
@@ -1627,9 +1634,10 @@ async function applyRewardRuneBonus(
 		return null;
 	}
 
-	const sourceKey = createRewardClaimRuneSourceKey(op.broadcaster, reward.id);
+	const seasonId = activeRuneSeasonId(deps);
+	const sourceKey = createRewardClaimRuneSourceKey(op.broadcaster, reward.id, seasonId);
 	const entryId = createRuneLedgerEntryId({
-		seasonId: TESTNET_RUNE_SEASON_ID,
+		seasonId,
 		direction: 'credit',
 		sourceType: 'reward_claim',
 		sourceKey,
@@ -1643,7 +1651,7 @@ async function applyRewardRuneBonus(
 
 	const ledgerResult = await putRuneLedgerEntryAndBalance(deps, {
 		entryId,
-		seasonId: TESTNET_RUNE_SEASON_ID,
+		seasonId,
 		account: op.broadcaster,
 		direction: 'credit',
 		sourceType: 'reward_claim',
@@ -1728,9 +1736,10 @@ async function applyDailyQuestClaim(
 	const parsed = parseDailyQuestClaimPayload(op, economy.dailyQuestSlotsPerDay);
 	if (isOpResult(parsed)) return parsed;
 
-	const sourceKey = createDailyQuestRuneSourceKey(op.broadcaster, parsed.ymdUtc, parsed.slot);
+	const seasonId = activeRuneSeasonId(deps);
+	const sourceKey = createDailyQuestRuneSourceKey(op.broadcaster, parsed.ymdUtc, parsed.slot, seasonId);
 	const entryId = createRuneLedgerEntryId({
-		seasonId: TESTNET_RUNE_SEASON_ID,
+		seasonId,
 		direction: 'credit',
 		sourceType: 'daily_quest_claim',
 		sourceKey,
@@ -1744,13 +1753,13 @@ async function applyDailyQuestClaim(
 	}
 
 	const accountEarned = await deps.state.getRuneLedgerTotal({
-		seasonId: TESTNET_RUNE_SEASON_ID,
+		seasonId,
 		direction: 'credit',
 		sourceType: 'daily_quest_claim',
 		account: op.broadcaster,
 	});
 	const globalEarned = await deps.state.getRuneLedgerTotal({
-		seasonId: TESTNET_RUNE_SEASON_ID,
+		seasonId,
 		direction: 'credit',
 		sourceType: 'daily_quest_claim',
 	});
@@ -1764,7 +1773,7 @@ async function applyDailyQuestClaim(
 
 	const ledgerResult = await putRuneLedgerEntryAndBalance(deps, {
 		entryId,
-		seasonId: TESTNET_RUNE_SEASON_ID,
+		seasonId,
 		account: op.broadcaster,
 		direction: 'credit',
 		sourceType: 'daily_quest_claim',
@@ -1791,6 +1800,7 @@ async function applyRuneExchange(op: ProtocolOp, deps: ProtocolCoreDeps): Promis
 		op,
 		deps.runeExchange,
 		getRuneEconomy(deps.runtime.stage).maxRuneExchangeSpendPerOp,
+		activeRuneSeasonId(deps),
 	);
 	if (isOpResult(details)) return details;
 
@@ -1801,7 +1811,7 @@ async function applyRuneExchange(op: ProtocolOp, deps: ProtocolCoreDeps): Promis
 		}
 
 		await deps.runeExchange.fulfill({
-			seasonId: TESTNET_RUNE_SEASON_ID,
+			seasonId: details.seasonId,
 			account: op.broadcaster,
 			sourceKey: details.sourceKey,
 			packType: details.packType,
@@ -1814,7 +1824,7 @@ async function applyRuneExchange(op: ProtocolOp, deps: ProtocolCoreDeps): Promis
 		return { status: 'ignored' };
 	}
 
-	const balance = await deps.state.getTokenBalance(op.broadcaster);
+	const balance = await deps.state.getTokenBalance(op.broadcaster, details.seasonId);
 	if (balance.RUNE < details.totalCost) {
 		return reject('insufficient RUNE balance');
 	}
@@ -1824,7 +1834,7 @@ async function applyRuneExchange(op: ProtocolOp, deps: ProtocolCoreDeps): Promis
 
 	const ledgerResult = await putRuneLedgerEntryAndBalance(deps, {
 		entryId: details.entryId,
-		seasonId: TESTNET_RUNE_SEASON_ID,
+		seasonId: details.seasonId,
 		account: op.broadcaster,
 		direction: 'debit',
 		sourceType: 'rune_exchange',
@@ -1836,7 +1846,7 @@ async function applyRuneExchange(op: ProtocolOp, deps: ProtocolCoreDeps): Promis
 	});
 	if (ledgerResult) return ledgerResult;
 	await deps.runeExchange.fulfill({
-		seasonId: TESTNET_RUNE_SEASON_ID,
+		seasonId: details.seasonId,
 		account: op.broadcaster,
 		sourceKey: details.sourceKey,
 		packType: details.packType,
@@ -1854,6 +1864,7 @@ function parseRuneExchangeDetails(
 	op: ProtocolOp,
 	runeExchange: RuneExchangeAdapter,
 	maxRuneExchangeSpendPerOp: number,
+	seasonId: string,
 ): RuneExchangeDetails | OpResult {
 	const fieldsResult = validateStrictOpPayload(op, RUNE_EXCHANGE_PAYLOAD_KEYS);
 	if (fieldsResult) return fieldsResult;
@@ -1881,15 +1892,17 @@ function parseRuneExchangeDetails(
 		op.trxId,
 		quote.packType,
 		quote.quantity,
+		seasonId,
 	);
 	const entryId = createRuneLedgerEntryId({
-		seasonId: TESTNET_RUNE_SEASON_ID,
+		seasonId,
 		direction: 'debit',
 		sourceType: 'rune_exchange',
 		sourceKey,
 	});
 
 	return {
+		seasonId,
 		packType: quote.packType,
 		quantity: quote.quantity,
 		runeCost: quote.runeCost,
@@ -1924,12 +1937,13 @@ async function getRedeemedRuneExchangeQuantity(
 	packType: string,
 	deps: ProtocolCoreDeps,
 ): Promise<number> {
+	const seasonId = activeRuneSeasonId(deps);
 	const entries = await deps.state.getRuneLedgerEntries({
-		seasonId: TESTNET_RUNE_SEASON_ID,
+		seasonId,
 		direction: 'debit',
 		sourceType: 'rune_exchange',
 		account,
-		sourceKeyPrefix: `pack:${TESTNET_RUNE_SEASON_ID}:${account}:`,
+		sourceKeyPrefix: `pack:${seasonId}:${account}:`,
 	});
 
 	let quantity = 0;
@@ -2337,12 +2351,12 @@ async function applyForgeCommit(op: ProtocolOp, deps: ProtocolCoreDeps): Promise
 	if (!supply) return reject('genesis supply missing for rarity');
 
 	const sourceKey = createForgeCommitEitrSourceKey({
-		seasonId: TESTNET_EITR_SEASON_ID,
+		seasonId: activeRuneSeasonId(deps),
 		account: op.broadcaster,
 		trxId: op.trxId,
 	});
 	const entryId = createEitrLedgerEntryId({
-		seasonId: TESTNET_EITR_SEASON_ID,
+		seasonId: activeRuneSeasonId(deps),
 		direction: 'debit',
 		sourceType: 'forge_commit',
 		sourceKey,
@@ -2351,7 +2365,7 @@ async function applyForgeCommit(op: ProtocolOp, deps: ProtocolCoreDeps): Promise
 	// Ledger debit → commit record (in this order, idempotent recovery on crash).
 	await deps.state.putEitrLedgerEntry({
 		entryId,
-		seasonId: TESTNET_EITR_SEASON_ID,
+		seasonId: activeRuneSeasonId(deps),
 		account: op.broadcaster,
 		direction: 'debit',
 		sourceType: 'forge_commit',
@@ -2474,12 +2488,12 @@ async function drawForgeCard(
 
 async function creditForgeRefund(commit: ForgeCommitRecord, op: ProtocolOp, deps: ProtocolCoreDeps): Promise<void> {
 	const sourceKey = createForgeRefundEitrSourceKey({
-		seasonId: TESTNET_EITR_SEASON_ID,
+		seasonId: activeRuneSeasonId(deps),
 		account: commit.account,
 		revealTrxId: op.trxId,
 	});
 	const entryId = createEitrLedgerEntryId({
-		seasonId: TESTNET_EITR_SEASON_ID,
+		seasonId: activeRuneSeasonId(deps),
 		direction: 'credit',
 		sourceType: 'forge_refund',
 		sourceKey,
@@ -2487,7 +2501,7 @@ async function creditForgeRefund(commit: ForgeCommitRecord, op: ProtocolOp, deps
 	const balanceBefore = await getEitrBalanceFor(deps, commit.account);
 	await deps.state.putEitrLedgerEntry({
 		entryId,
-		seasonId: TESTNET_EITR_SEASON_ID,
+		seasonId: activeRuneSeasonId(deps),
 		account: commit.account,
 		direction: 'credit',
 		sourceType: 'forge_refund',

@@ -13,12 +13,12 @@ import { applyOp, type ProtocolCoreDeps } from './apply';
 import { normalizeRawOp } from './normalize';
 import {
 	PACK_SIZES,
-	TESTNET_RUNE_ECONOMY,
 	buildHbdPackPurchaseMemo,
 	formatHbdTransferAmount,
 	getRuneExchangePackQuote,
 	type RuneExchangeAdapter,
 } from './types';
+import { deriveRuneSeasonId } from './runeSeasonHash';
 import type {
 	StateAdapter, CardAsset, GenesisRecord, EloRecord,
 	TokenBalance, MatchAnchorRecord, PackCommitRecord, SupplyRecord,
@@ -54,7 +54,6 @@ class MemoryState implements StateAdapter {
 	supply = new Map<string, SupplyRecord>();
 	nonces = new Map<string, number>();
 	elo = new Map<string, EloRecord>();
-	tokens = new Map<string, TokenBalance>();
 	runeLedger = new Map<string, RuneLedgerEntry>();
 	anchors = new Map<string, MatchAnchorRecord>();
 	commits = new Map<string, PackCommitRecord>();
@@ -85,16 +84,10 @@ class MemoryState implements StateAdapter {
 		return this.elo.get(account) ?? { account, elo: 1000, wins: 0, losses: 0 };
 	}
 	async putElo(r: EloRecord) { this.elo.set(r.account, r); }
-	async getTokenBalance(account: string): Promise<TokenBalance> {
-		return this.tokens.get(account) ?? { account, RUNE: 0 };
-	}
-	async putTokenBalance(b: TokenBalance) { this.tokens.set(b.account, b); }
-	async getRuneBalanceTotal() {
-		let total = 0;
-		for (const balance of this.tokens.values()) {
-			total += balance.RUNE;
-		}
-		return total;
+	async getTokenBalance(account: string, seasonId: string): Promise<TokenBalance> {
+		const credits = await this.getRuneLedgerTotal({ seasonId, account, direction: 'credit' });
+		const debits = await this.getRuneLedgerTotal({ seasonId, account, direction: 'debit' });
+		return { account, RUNE: credits - debits };
 	}
 	async getRuneLedgerEntry(entryId: string) { return this.runeLedger.get(entryId) ?? null; }
 	async putRuneLedgerEntry(entry: RuneLedgerEntry) { this.runeLedger.set(entry.entryId, entry); }
@@ -252,6 +245,8 @@ const TESTNET_TRACE_RUNTIME = {
 	treasuryAccount: 'ragnarok-treasury',
 	indexAccount: 'ragnarok-index',
 };
+
+const TESTNET_TRACE_SEASON_ID = deriveRuneSeasonId(TESTNET_TRACE_RUNTIME);
 
 const mockRewards: RewardProvider = {
 	getRewardById(id: string) {
@@ -459,6 +454,23 @@ async function seedGenesis(state: MemoryState, deps: ProtocolCoreDeps) {
 	}, { broadcaster: 'ragnarok', usedActiveAuth: true }), defaultCtx, deps);
 }
 
+async function seedRuneBalance(state: MemoryState, account: string, amount: number, label: string) {
+	await state.putRuneLedgerEntry({
+		entryId: `${TESTNET_TRACE_SEASON_ID}:credit:reward_claim:${label}`,
+		seasonId: TESTNET_TRACE_SEASON_ID,
+		account,
+		direction: 'credit',
+		sourceType: 'reward_claim',
+		sourceKey: `seed:${label}`,
+		amount,
+		balanceBefore: 0,
+		balanceAfter: amount,
+		trxId: label,
+		blockNum: 1,
+		timestamp: 1,
+	});
+}
+
 function makeCampaignSmokePayload(input: {
 	readonly campaignId: string;
 	readonly missionId: string;
@@ -484,16 +496,16 @@ function makeCampaignSmokePayload(input: {
 
 async function buildSmokeAccountSummary(state: MemoryState, account: string) {
 	const credits = await state.getRuneLedgerTotal({
-		seasonId: 'S01',
+		seasonId: TESTNET_TRACE_SEASON_ID,
 		account,
 		direction: 'credit',
 	});
 	const debits = await state.getRuneLedgerTotal({
-		seasonId: 'S01',
+		seasonId: TESTNET_TRACE_SEASON_ID,
 		account,
 		direction: 'debit',
 	});
-	const balance = (await state.getTokenBalance(account)).RUNE;
+	const balance = (await state.getTokenBalance(account, TESTNET_TRACE_SEASON_ID)).RUNE;
 	const entries = [...state.runeLedger.values()].filter(entry => entry.account === account);
 
 	return {
@@ -864,7 +876,7 @@ describe('Protocol Core: Replay Traces', () => {
 
 		// Eitr credited at the rarity's dissolve value (mythic = 400)
 		const eitrTotal = await state.getEitrLedgerTotal({
-			seasonId: 'S01', account: 'alice', direction: 'credit', sourceType: 'burn',
+			seasonId: TESTNET_TRACE_SEASON_ID, account: 'alice', direction: 'credit', sourceType: 'burn',
 		});
 		expect(eitrTotal).toBe(400);
 
@@ -894,8 +906,8 @@ describe('Protocol Core: Replay Traces', () => {
 			}, { trxId: `burn-${rarity}`, usedActiveAuth: true }), defaultCtx, deps);
 			expect(result.status, `burn ${rarity}`).toBe('applied');
 			const credit = await state.getEitrLedgerTotal({
-				seasonId: 'S01', account: 'alice', direction: 'credit',
-				sourceKeyPrefix: `burn:S01:alice:burn-${rarity}:`,
+				seasonId: TESTNET_TRACE_SEASON_ID, account: 'alice', direction: 'credit',
+				sourceKeyPrefix: `burn:${TESTNET_TRACE_SEASON_ID}:alice:burn-${rarity}:`,
 			});
 			expect(credit, `${rarity} credit`).toBe(expected);
 		}
@@ -925,7 +937,7 @@ describe('Protocol Core: Replay Traces', () => {
 
 		// Only one credit entry exists (no double-credit on replay)
 		const credits = await state.getEitrLedgerEntries({
-			seasonId: 'S01', account: 'alice', direction: 'credit', sourceType: 'burn',
+			seasonId: TESTNET_TRACE_SEASON_ID, account: 'alice', direction: 'credit', sourceType: 'burn',
 		});
 		expect(credits.length).toBe(1);
 		expect(credits[0].amount).toBe(20);
@@ -947,7 +959,7 @@ describe('Protocol Core: Replay Traces', () => {
 		expect(result.status).toBe('rejected');
 		// Card still alive, no eitr credit
 		expect(state.cards.has('starter-uid-1')).toBe(true);
-		const total = await state.getEitrLedgerTotal({ seasonId: 'S01', account: 'alice' });
+		const total = await state.getEitrLedgerTotal({ seasonId: TESTNET_TRACE_SEASON_ID, account: 'alice' });
 		expect(total).toBe(0);
 	});
 
@@ -1070,14 +1082,14 @@ describe('Protocol Core: Replay Traces', () => {
 		expect(rewardCard).toBeDefined();
 		expect(rewardCard!.mintSource).toBe('reward');
 		// RUNE bonus is ledger-backed, not a direct balance-only mutation.
-		expect(state.tokens.get('alice')!.RUNE).toBe(50);
+		expect((await state.getTokenBalance('alice', TESTNET_TRACE_SEASON_ID)).RUNE).toBe(50);
 		expect(await deps.state.getRuneLedgerTotal({
-			seasonId: 'S01',
+			seasonId: TESTNET_TRACE_SEASON_ID,
 			direction: 'credit',
 			sourceType: 'reward_claim',
 			account: 'alice',
 		})).toBe(50);
-		expect([...state.runeLedger.values()][0]?.sourceKey).toBe('reward:S01:alice:first_victory');
+		expect([...state.runeLedger.values()][0]?.sourceKey).toBe(`reward:${TESTNET_TRACE_SEASON_ID}:alice:first_victory`);
 	});
 
 	it('reward claim is idempotent', async () => {
@@ -1088,7 +1100,7 @@ describe('Protocol Core: Replay Traces', () => {
 		const result = await applyOp(makeOp('reward_claim', { reward_id: 'first_victory' }), defaultCtx, deps);
 
 		expect(result.status).toBe('ignored');
-		expect(state.tokens.get('alice')!.RUNE).toBe(50); // not doubled
+		expect((await state.getTokenBalance('alice', TESTNET_TRACE_SEASON_ID)).RUNE).toBe(50); // not doubled
 		expect(state.runeLedger.size).toBe(1);
 	});
 
@@ -1096,8 +1108,8 @@ describe('Protocol Core: Replay Traces', () => {
 		await seedGenesis(state, deps);
 		state.elo.set('alice', { account: 'alice', elo: 1200, wins: 5, losses: 2 });
 		await deps.state.putRuneLedgerEntry({
-			entryId: 'S01:credit:p2p_ranked:prefill-total-cap',
-			seasonId: 'S01',
+			entryId: `${TESTNET_TRACE_SEASON_ID}:credit:p2p_ranked:prefill-total-cap`,
+			seasonId: TESTNET_TRACE_SEASON_ID,
 			account: 'mallory',
 			direction: 'credit',
 			sourceType: 'p2p_ranked',
@@ -1116,27 +1128,12 @@ describe('Protocol Core: Replay Traces', () => {
 
 		expect(result.status).toBe('rejected');
 		expect((result as { reason: string }).reason).toContain('total emission cap');
-		expect(state.tokens.get('alice')?.RUNE ?? 0).toBe(0);
+		expect((await state.getTokenBalance('alice', TESTNET_TRACE_SEASON_ID)).RUNE).toBe(0);
 		expect(state.runeLedger.size).toBe(1);
 	});
 
-	it('reward claim cannot exceed the active RUNE balance cap', async () => {
-		await seedGenesis(state, deps);
-		state.elo.set('alice', { account: 'alice', elo: 1200, wins: 5, losses: 2 });
-		await deps.state.putTokenBalance({
-			account: 'mallory',
-			RUNE: TESTNET_RUNE_ECONOMY.totalCap,
-		});
-
-		const result = await applyOp(makeOp('reward_claim', {
-			reward_id: 'first_victory',
-		}), defaultCtx, deps);
-
-		expect(result.status).toBe('rejected');
-		expect((result as { reason: string }).reason).toContain('active balance cap');
-		expect(state.tokens.get('alice')?.RUNE ?? 0).toBe(0);
-		expect(state.runeLedger.size).toBe(0);
-	});
+	// The active-balance cap (credits − debits ≤ totalCap) is structurally
+	// guaranteed by the emission cap; it has no separate check anymore.
 
 	// --- Normalizer ---
 
@@ -1298,7 +1295,7 @@ describe('Protocol Core: Replay Traces', () => {
 
 	it('slashed account cannot rune_exchange without spending RUNE or minting a pack', async () => {
 		state.slashed.add('mallory');
-		await deps.state.putTokenBalance({ account: 'mallory', RUNE: 10 });
+		await seedRuneBalance(state, 'mallory', 10, 'slashed-seed');
 
 		const result = await applyOp(makeOp('rune_exchange', {
 			pack_type: 'standard',
@@ -1307,8 +1304,9 @@ describe('Protocol Core: Replay Traces', () => {
 
 		expect(result.status).toBe('rejected');
 		expect((result as { reason: string }).reason).toContain('slashed');
-		expect((await deps.state.getTokenBalance('mallory')).RUNE).toBe(10);
-		expect(state.runeLedger.size).toBe(0);
+		expect((await deps.state.getTokenBalance('mallory', TESTNET_TRACE_SEASON_ID)).RUNE).toBe(10);
+		// 1 credit seed, no exchange entry
+		expect(state.runeLedger.size).toBe(1);
 		expect(state.packs.size).toBe(0);
 	});
 
@@ -1326,17 +1324,17 @@ describe('Protocol Core: Replay Traces', () => {
 		}), defaultCtx, deps);
 
 		expect(firstResult.status).toBe('applied');
-		expect((await deps.state.getTokenBalance('alice')).RUNE).toBe(2);
-		expect((await deps.state.getTokenBalance('bob')).RUNE).toBe(0);
+		expect((await deps.state.getTokenBalance('alice', TESTNET_TRACE_SEASON_ID)).RUNE).toBe(2);
+		expect((await deps.state.getTokenBalance('bob', TESTNET_TRACE_SEASON_ID)).RUNE).toBe(0);
 		expect(state.runeLedger.size).toBe(1);
 		expect(await deps.state.getRuneLedgerTotal({
-			seasonId: 'S01',
+			seasonId: TESTNET_TRACE_SEASON_ID,
 			direction: 'credit',
 			sourceType: 'p2p_ranked',
 			account: 'alice',
 		})).toBe(2);
 		expect([...state.runeLedger.values()][0]?.sourceKey)
-			.toBe('p2p:S01:ledger-match-1:winner:alice');
+			.toBe(`p2p:${TESTNET_TRACE_SEASON_ID}:ledger-match-1:winner:alice`);
 
 		const loserPosted = await applyOp(makeOp('match_result', payload, {
 			broadcaster: 'bob',
@@ -1354,7 +1352,7 @@ describe('Protocol Core: Replay Traces', () => {
 		}), defaultCtx, deps);
 
 		expect(duplicateResult.status).toBe('ignored');
-		expect((await deps.state.getTokenBalance('alice')).RUNE).toBe(2);
+		expect((await deps.state.getTokenBalance('alice', TESTNET_TRACE_SEASON_ID)).RUNE).toBe(2);
 		expect((await deps.state.getElo('alice')).wins).toBe(1);
 	});
 
@@ -1413,7 +1411,7 @@ describe('Protocol Core: Replay Traces', () => {
 
 		expect(conflictingResult.status).toBe('rejected');
 		expect((conflictingResult as { reason: string }).reason).toContain('different result');
-		expect((await deps.state.getTokenBalance('bob')).RUNE).toBe(0);
+		expect((await deps.state.getTokenBalance('bob', TESTNET_TRACE_SEASON_ID)).RUNE).toBe(0);
 		expect((await deps.state.getElo('bob')).wins).toBe(0);
 	});
 
@@ -1421,8 +1419,8 @@ describe('Protocol Core: Replay Traces', () => {
 		await seedGenesis(state, deps);
 		await seedRankedMatchAnchor(state, 'ledger-match-3');
 		await deps.state.putRuneLedgerEntry({
-			entryId: 'S01:credit:p2p_ranked:prefill-account-cap',
-			seasonId: 'S01',
+			entryId: `${TESTNET_TRACE_SEASON_ID}:credit:p2p_ranked:prefill-account-cap`,
+			seasonId: TESTNET_TRACE_SEASON_ID,
 			account: 'alice',
 			direction: 'credit',
 			sourceType: 'p2p_ranked',
@@ -1434,7 +1432,7 @@ describe('Protocol Core: Replay Traces', () => {
 			blockNum: 1,
 			timestamp: 1,
 		});
-		await deps.state.putTokenBalance({ account: 'alice', RUNE: 99 });
+		
 
 		const payload = await makeRankedMatchPayload({ matchId: 'ledger-match-3' });
 		const result = await applyOp(makeOp('match_result', payload, {
@@ -1444,9 +1442,9 @@ describe('Protocol Core: Replay Traces', () => {
 		}), defaultCtx, deps);
 
 		expect(result.status).toBe('applied');
-		expect((await deps.state.getTokenBalance('alice')).RUNE).toBe(100);
+		expect((await deps.state.getTokenBalance('alice', TESTNET_TRACE_SEASON_ID)).RUNE).toBe(100);
 		expect(await deps.state.getRuneLedgerTotal({
-			seasonId: 'S01',
+			seasonId: TESTNET_TRACE_SEASON_ID,
 			direction: 'credit',
 			sourceType: 'p2p_ranked',
 			account: 'alice',
@@ -1457,8 +1455,8 @@ describe('Protocol Core: Replay Traces', () => {
 		await seedGenesis(state, deps);
 		await seedRankedMatchAnchor(state, 'ledger-match-4');
 		await deps.state.putRuneLedgerEntry({
-			entryId: 'S01:credit:p2p_ranked:prefill-global-cap',
-			seasonId: 'S01',
+			entryId: `${TESTNET_TRACE_SEASON_ID}:credit:p2p_ranked:prefill-global-cap`,
+			seasonId: TESTNET_TRACE_SEASON_ID,
 			account: 'mallory',
 			direction: 'credit',
 			sourceType: 'p2p_ranked',
@@ -1479,9 +1477,9 @@ describe('Protocol Core: Replay Traces', () => {
 		}), defaultCtx, deps);
 
 		expect(result.status).toBe('applied');
-		expect((await deps.state.getTokenBalance('alice')).RUNE).toBe(1);
+		expect((await deps.state.getTokenBalance('alice', TESTNET_TRACE_SEASON_ID)).RUNE).toBe(1);
 		expect(await deps.state.getRuneLedgerTotal({
-			seasonId: 'S01',
+			seasonId: TESTNET_TRACE_SEASON_ID,
 			direction: 'credit',
 			sourceType: 'p2p_ranked',
 		})).toBe(2_000_000);
@@ -1724,12 +1722,12 @@ describe('Protocol Core: Replay Traces', () => {
 	async function seedEitrCredit(account: string, amount: number, trxId = 'eitr-seed') {
 		// Helper: simulate a prior burn credit by writing directly to the ledger.
 		await state.putEitrLedgerEntry({
-			entryId: `S01:credit:burn:burn:S01:${account}:${trxId}:seed-uid`,
-			seasonId: 'S01',
+			entryId: `${TESTNET_TRACE_SEASON_ID}:credit:burn:burn:${TESTNET_TRACE_SEASON_ID}:${account}:${trxId}:seed-uid`,
+			seasonId: TESTNET_TRACE_SEASON_ID,
 			account,
 			direction: 'credit',
 			sourceType: 'burn',
-			sourceKey: `burn:S01:${account}:${trxId}:seed-uid`,
+			sourceKey: `burn:${TESTNET_TRACE_SEASON_ID}:${account}:${trxId}:seed-uid`,
 			amount,
 			balanceBefore: 0,
 			balanceAfter: amount,
@@ -1760,7 +1758,7 @@ describe('Protocol Core: Replay Traces', () => {
 
 		// Debit appears in ledger; balance now = 200 - 100 = 100
 		const debits = await state.getEitrLedgerTotal({
-			seasonId: 'S01', account: 'alice', direction: 'debit', sourceType: 'forge_commit',
+			seasonId: TESTNET_TRACE_SEASON_ID, account: 'alice', direction: 'debit', sourceType: 'forge_commit',
 		});
 		expect(debits).toBe(100);
 	});
@@ -1779,7 +1777,7 @@ describe('Protocol Core: Replay Traces', () => {
 		expect(result.status).toBe('rejected');
 		// No debit recorded
 		const debits = await state.getEitrLedgerTotal({
-			seasonId: 'S01', account: 'alice', direction: 'debit',
+			seasonId: TESTNET_TRACE_SEASON_ID, account: 'alice', direction: 'debit',
 		});
 		expect(debits).toBe(0);
 	});
@@ -1812,7 +1810,7 @@ describe('Protocol Core: Replay Traces', () => {
 
 		// Only one debit
 		const debits = await state.getEitrLedgerEntries({
-			seasonId: 'S01', account: 'alice', direction: 'debit', sourceType: 'forge_commit',
+			seasonId: TESTNET_TRACE_SEASON_ID, account: 'alice', direction: 'debit', sourceType: 'forge_commit',
 		});
 		expect(debits.length).toBe(1);
 	});
@@ -1850,7 +1848,7 @@ describe('Protocol Core: Replay Traces', () => {
 
 		// No refund credit appears
 		const refunds = await state.getEitrLedgerEntries({
-			seasonId: 'S01', account: 'alice', direction: 'credit', sourceType: 'forge_refund',
+			seasonId: TESTNET_TRACE_SEASON_ID, account: 'alice', direction: 'credit', sourceType: 'forge_refund',
 		});
 		expect(refunds.length).toBe(0);
 	});
@@ -1898,7 +1896,7 @@ describe('Protocol Core: Replay Traces', () => {
 		expect((await state.getCardsByOwner('alice')).length).toBe(cardsBefore);
 		// Refund credit matches original debit (100)
 		const refund = await state.getEitrLedgerTotal({
-			seasonId: 'S01', account: 'alice', direction: 'credit', sourceType: 'forge_refund',
+			seasonId: TESTNET_TRACE_SEASON_ID, account: 'alice', direction: 'credit', sourceType: 'forge_refund',
 		});
 		expect(refund).toBe(100);
 	});
@@ -2095,7 +2093,7 @@ describe('Protocol Core: Replay Traces', () => {
 		const protocolId = smokeDeps.runtime.protocolId;
 		const operations: RuneSeason0SmokeOperation[] = [];
 
-		const dailySourceKey = 'daily_quest:S01:alice:2026-05-20:0';
+		const dailySourceKey = `daily_quest:${TESTNET_TRACE_SEASON_ID}:alice:2026-05-20:0`;
 		const daily = await applyOp(makeOp('daily_quest_claim', {
 			slot: 0,
 			quest_type: 'win_games',
@@ -2132,7 +2130,7 @@ describe('Protocol Core: Replay Traces', () => {
 			sourceKeys: [dailySourceKey],
 		});
 
-		const campaignSourceKey = `campaign:S01:alice:${campaignId}:norse-1`;
+		const campaignSourceKey = `campaign:${TESTNET_TRACE_SEASON_ID}:alice:${campaignId}:norse-1`;
 		const campaignFirstClear = await applyOp(makeOp('campaign_result', makeCampaignSmokePayload({
 			campaignId,
 			missionId: 'norse-1',
@@ -2172,7 +2170,7 @@ describe('Protocol Core: Replay Traces', () => {
 			sourceKeys: [campaignSourceKey],
 		});
 
-		const exchangeSourceKey = 'pack:S01:alice:season0-rune-1:standard:1';
+		const exchangeSourceKey = `pack:${TESTNET_TRACE_SEASON_ID}:alice:season0-rune-1:standard:1`;
 		const exchange = await applyOp(makeOp('rune_exchange', {
 			pack_type: 'standard',
 			quantity: 1,
@@ -2254,9 +2252,9 @@ describe('Protocol Core: Replay Traces', () => {
 			.map(card => card.uid);
 		expect(revealedCardUids).toHaveLength(PACK_SIZES.standard);
 		expect(state.packs.has(packUid)).toBe(false);
-		expect((await state.getTokenBalance('alice')).RUNE).toBe(2);
+		expect((await state.getTokenBalance('alice', TESTNET_TRACE_SEASON_ID)).RUNE).toBe(2);
 		expect((await state.getRuneLedgerEntries({
-			seasonId: 'S01',
+			seasonId: TESTNET_TRACE_SEASON_ID,
 			sourceType: 'p2p_ranked',
 			account: 'alice',
 		}))).toHaveLength(0);
@@ -2296,7 +2294,7 @@ describe('Protocol Core: Replay Traces', () => {
 		describe('rune_exchange', () => {
 		it('spends RUNE and delegates sealed pack fulfillment to the adapter', async () => {
 			await seedSealedGenesis(state, deps);
-			await deps.state.putTokenBalance({ account: 'alice', RUNE: 10 });
+			await seedRuneBalance(state, 'alice', 10, 'exchange-seed');
 
 			const result = await applyOp(makeOp('rune_exchange', {
 				pack_type: 'standard',
@@ -2304,14 +2302,14 @@ describe('Protocol Core: Replay Traces', () => {
 			}, { broadcaster: 'alice', trxId: 'rune-x-1', blockNum: 2000 }), defaultCtx, deps);
 
 			expect(result.status).toBe('applied');
-			expect((await deps.state.getTokenBalance('alice')).RUNE).toBe(8);
+			expect((await deps.state.getTokenBalance('alice', TESTNET_TRACE_SEASON_ID)).RUNE).toBe(8);
 			expect(await deps.state.getRuneLedgerTotal({
-				seasonId: 'S01',
+				seasonId: TESTNET_TRACE_SEASON_ID,
 				direction: 'debit',
 				sourceType: 'rune_exchange',
 				account: 'alice',
 			})).toBe(2);
-			expect(state.runeLedger.get('S01:debit:rune_exchange:pack:S01:alice:rune-x-1:standard:1')).toMatchObject({
+			expect(state.runeLedger.get(`${TESTNET_TRACE_SEASON_ID}:debit:rune_exchange:pack:${TESTNET_TRACE_SEASON_ID}:alice:rune-x-1:standard:1`)).toMatchObject({
 				amount: 2,
 				balanceBefore: 10,
 				balanceAfter: 8,
@@ -2331,7 +2329,7 @@ describe('Protocol Core: Replay Traces', () => {
 
 		it('ignores duplicate rune_exchange sources without double spend', async () => {
 			await seedSealedGenesis(state, deps);
-			await deps.state.putTokenBalance({ account: 'alice', RUNE: 10 });
+			await seedRuneBalance(state, 'alice', 10, 'exchange-seed');
 
 			const op = makeOp('rune_exchange', {
 				pack_type: 'standard',
@@ -2348,15 +2346,16 @@ describe('Protocol Core: Replay Traces', () => {
 			expect(firstResult.status).toBe('applied');
 			expect(duplicateResult.status).toBe('ignored');
 			expect(repeatedDuplicateResult.status).toBe('ignored');
-			expect((await deps.state.getTokenBalance('alice')).RUNE).toBe(8);
+			expect((await deps.state.getTokenBalance('alice', TESTNET_TRACE_SEASON_ID)).RUNE).toBe(8);
 			expect(state.packs.size).toBe(1);
 			expect(state.packSupply.get('standard')?.minted).toBe(1);
-			expect(state.runeLedger.size).toBe(1);
+			// 1 credit seed + 1 rune_exchange debit
+			expect(state.runeLedger.size).toBe(2);
 		});
 
 		it('rejects rune_exchange when the account balance is too low', async () => {
 			await seedSealedGenesis(state, deps);
-			await deps.state.putTokenBalance({ account: 'alice', RUNE: 1 });
+			await seedRuneBalance(state, 'alice', 1, 'low-balance-seed');
 
 			const result = await applyOp(makeOp('rune_exchange', {
 				pack_type: 'standard',
@@ -2366,12 +2365,13 @@ describe('Protocol Core: Replay Traces', () => {
 			expect(result.status).toBe('rejected');
 			expect((result as { reason: string }).reason).toContain('insufficient');
 			expect(state.packs.size).toBe(0);
-			expect(state.runeLedger.size).toBe(0);
+			// 1 credit seed, no exchange entry
+			expect(state.runeLedger.size).toBe(1);
 		});
 
 		it('rejects rune_exchange above the per-account pack limit', async () => {
 			await seedSealedGenesis(state, deps);
-			await deps.state.putTokenBalance({ account: 'alice', RUNE: 20 });
+			await seedRuneBalance(state, 'alice', 20, 'pack-limit-seed');
 
 			// Standard pack per-account limit is 5 (TESTNET_RUNE_PACK_POOL). Buy 5 then expect rejection on 6th.
 			for (let i = 1; i <= 5; i++) {
@@ -2389,13 +2389,13 @@ describe('Protocol Core: Replay Traces', () => {
 
 			expect(overLimit.status).toBe('rejected');
 			expect((overLimit as { reason: string }).reason).toContain('account limit');
-			expect((await deps.state.getTokenBalance('alice')).RUNE).toBe(10);
+			expect((await deps.state.getTokenBalance('alice', TESTNET_TRACE_SEASON_ID)).RUNE).toBe(10);
 			expect(state.packs.size).toBe(5);
 		});
 
 		it('rejects rune_exchange above the per-op spend cap', async () => {
 			await seedSealedGenesis(state, deps);
-			await deps.state.putTokenBalance({ account: 'alice', RUNE: 100 });
+			await seedRuneBalance(state, 'alice', 100, 'spend-cap-seed');
 
 			const result = await applyOp(makeOp('rune_exchange', {
 				pack_type: 'mythic',
@@ -2404,12 +2404,12 @@ describe('Protocol Core: Replay Traces', () => {
 
 			expect(result.status).toBe('rejected');
 			expect((result as { reason: string }).reason).toContain('per-op cap');
-			expect((await deps.state.getTokenBalance('alice')).RUNE).toBe(100);
+			expect((await deps.state.getTokenBalance('alice', TESTNET_TRACE_SEASON_ID)).RUNE).toBe(100);
 		});
 
 		it('rejects rune_exchange above the global pack cap', async () => {
 			await seedSealedGenesis(state, deps);
-			await deps.state.putTokenBalance({ account: 'alice', RUNE: 10 });
+			await seedRuneBalance(state, 'alice', 10, 'exchange-seed');
 			await deps.state.putPackSupply({
 				packType: 'standard',
 				minted: 100_000,
@@ -2429,7 +2429,7 @@ describe('Protocol Core: Replay Traces', () => {
 
 		it('rejects a non-canonical pack_type', async () => {
 			await seedSealedGenesis(state, deps);
-			await deps.state.putTokenBalance({ account: 'alice', RUNE: 10 });
+			await seedRuneBalance(state, 'alice', 10, 'exchange-seed');
 
 			const result = await applyOp(makeOp('rune_exchange', {
 				pack_type: 'booster',
@@ -2439,12 +2439,13 @@ describe('Protocol Core: Replay Traces', () => {
 			expect(result.status).toBe('rejected');
 			expect((result as { reason: string }).reason).toContain('pack_type');
 			expect(state.packs.size).toBe(0);
-			expect(state.runeLedger.size).toBe(0);
+			// 1 credit seed, no exchange entry
+			expect(state.runeLedger.size).toBe(1);
 		});
 
 		it('rejects a string quantity (no coercion)', async () => {
 			await seedSealedGenesis(state, deps);
-			await deps.state.putTokenBalance({ account: 'alice', RUNE: 10 });
+			await seedRuneBalance(state, 'alice', 10, 'exchange-seed');
 
 			const result = await applyOp(makeOp('rune_exchange', {
 				pack_type: 'standard',
@@ -2458,7 +2459,7 @@ describe('Protocol Core: Replay Traces', () => {
 
 		it('rejects a fractional quantity', async () => {
 			await seedSealedGenesis(state, deps);
-			await deps.state.putTokenBalance({ account: 'alice', RUNE: 10 });
+			await seedRuneBalance(state, 'alice', 10, 'exchange-seed');
 
 			const result = await applyOp(makeOp('rune_exchange', {
 				pack_type: 'standard',
@@ -2472,7 +2473,7 @@ describe('Protocol Core: Replay Traces', () => {
 
 		it('rejects an unexpected payload field', async () => {
 			await seedSealedGenesis(state, deps);
-			await deps.state.putTokenBalance({ account: 'alice', RUNE: 10 });
+			await seedRuneBalance(state, 'alice', 10, 'exchange-seed');
 
 			const result = await applyOp(makeOp('rune_exchange', {
 				pack_type: 'standard',

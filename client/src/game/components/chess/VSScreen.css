@@ -1,311 +1,578 @@
 .vs-screen-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-topmost);
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  color: var(--ink-0);
-  font-family: var(--type-ui);
-  padding:
-    max(1rem, env(safe-area-inset-top))
-    max(1rem, env(safe-area-inset-right))
-    max(1rem, env(safe-area-inset-bottom))
-    max(1rem, env(safe-area-inset-left));
+	position: fixed;
+	inset: 0;
+	z-index: var(--z-topmost);
+	display: grid;
+	place-items: center;
+	overflow: hidden;
+	isolation: isolate;
+	color: var(--ink-0);
+	font-family: var(--type-ui);
+	background: #05070d;
+	padding:
+		max(1rem, env(safe-area-inset-top))
+		max(1rem, env(safe-area-inset-right))
+		max(1rem, env(safe-area-inset-bottom))
+		max(1rem, env(safe-area-inset-left));
+}
+
+.vs-screen-overlay::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	pointer-events: none;
+	background:
+		radial-gradient(ellipse 58% 65% at 50% 48%, transparent 20%, rgba(2, 4, 9, 0.18) 72%, rgba(1, 2, 5, 0.82) 100%),
+		linear-gradient(90deg, rgba(3, 6, 12, 0.26), transparent 28%, transparent 72%, rgba(3, 6, 12, 0.26));
 }
 
 .vs-screen-backdrop {
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(180deg, rgba(5, 7, 14, 0.96), rgba(4, 5, 12, 0.98)),
-    radial-gradient(circle at 16% 18%, rgba(122, 169, 255, 0.16), transparent 44%),
-    radial-gradient(circle at 84% 82%, rgba(255, 124, 124, 0.14), transparent 48%);
+	position: absolute;
+	inset: -2%;
+	z-index: 0;
+	background-color: #05070d;
+	background-image:
+		linear-gradient(180deg, rgba(3, 5, 11, 0.32), rgba(3, 5, 10, 0.5)),
+		url('/art/chess/vs-ragnarok-battlefield-v1.png');
+	background-position: center;
+	background-size: cover;
+	background-repeat: no-repeat;
+	filter: saturate(0.86) contrast(1.08);
+	transform: scale(1.02);
 }
 
 .vs-screen-backdrop::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    to right,
-    transparent 0,
-    transparent 56px,
-    rgba(226, 232, 240, 0.03) 57px,
-    transparent 58px
-  );
-  opacity: 0.2;
-  pointer-events: none;
+	content: '';
+	position: absolute;
+	inset: 0;
+	background:
+		repeating-linear-gradient(90deg, transparent 0, transparent 70px, rgba(226, 232, 240, 0.025) 71px, transparent 72px),
+		radial-gradient(ellipse 30% 24% at 50% 76%, rgba(245, 197, 66, 0.1), transparent 70%);
+	opacity: 0.32;
+	pointer-events: none;
 }
 
 .vs-screen-content {
-  position: relative;
-  width: min(1120px, calc(100% - 2rem));
-  height: min(66vh, calc(520px - 0.4rem));
-  margin-inline: auto;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center;
-  gap: clamp(0.8rem, 2vw, 2rem);
-  padding: clamp(0.75rem, 2vw, 1rem);
-  box-sizing: border-box;
+	position: relative;
+	z-index: 2;
+	width: min(1260px, calc(100% - 2rem));
+	height: min(72vh, 650px);
+	margin-inline: auto;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) clamp(148px, 15vw, 202px) minmax(0, 1fr);
+	align-items: center;
+	justify-items: center;
+	gap: clamp(1rem, 4vw, 4.2rem);
+	padding: clamp(0.75rem, 2vw, 1.5rem);
+	box-sizing: border-box;
 }
 
 .vs-fighter {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  width: min(220px, 35vw);
-  margin-inline: auto;
-  padding: 0.75rem 0.45rem 0.6rem;
-  gap: 0.52rem;
-  justify-content: center;
+	--vs-accent: #38bdf8;
+	--vs-accent-soft: rgba(56, 189, 248, 0.22);
+	--vs-piece-color: #f1ead7;
+	position: relative;
+	z-index: 2;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	width: min(270px, 100%);
+	margin-inline: auto;
+	justify-content: center;
 }
 
 .vs-fighter-glow {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(120deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.01));
-  opacity: 0.06;
-  z-index: -1;
-  pointer-events: none;
+	position: absolute;
+	inset: 8% -12%;
+	z-index: -1;
+	opacity: 0.52;
+	filter: blur(28px);
+	pointer-events: none;
+}
+
+.vs-fighter-glow-blue {
+	background: radial-gradient(ellipse, var(--vs-accent-soft), transparent 68%);
+}
+
+.vs-fighter-right {
+	--vs-accent: #f59e0b;
+	--vs-accent-soft: rgba(245, 158, 11, 0.28);
+	--vs-piece-color: #ffe2a0;
+}
+
+.vs-fighter-glow-red {
+	background: radial-gradient(ellipse, var(--vs-accent-soft), transparent 68%);
+}
+
+.vs-fighter-frame {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	width: 100%;
+	padding: clamp(0.65rem, 1.2vw, 1rem) clamp(0.65rem, 1.4vw, 1.1rem) 0.8rem;
+	gap: 0.66rem;
+	box-sizing: border-box;
+	background:
+		radial-gradient(ellipse 82% 36% at 50% 0%, color-mix(in srgb, var(--vs-accent) 18%, transparent), transparent 78%),
+		linear-gradient(145deg, rgba(20, 25, 33, 0.92), rgba(4, 8, 15, 0.86)),
+		linear-gradient(90deg, color-mix(in srgb, var(--vs-accent) 15%, transparent), transparent 34%, transparent 66%, color-mix(in srgb, var(--vs-accent) 15%, transparent));
+	border: 1px solid color-mix(in srgb, var(--vs-accent) 72%, var(--gold-300));
+	box-shadow:
+		0 0 0 1px rgba(4, 8, 14, 0.82) inset,
+		0 0 24px color-mix(in srgb, var(--vs-accent) 18%, transparent),
+		0 18px 42px rgba(0, 0, 0, 0.42);
+	clip-path: polygon(0 12px, 12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px));
+}
+
+.vs-fighter-frame::before {
+	content: '';
+	position: absolute;
+	inset: 5px;
+	border: 1px solid color-mix(in srgb, var(--gold-300) 25%, transparent);
+	clip-path: inherit;
+	pointer-events: none;
+}
+
+.vs-fighter-frame::after {
+	content: '';
+	position: absolute;
+	top: -1px;
+	left: 14%;
+	right: 14%;
+	height: 2px;
+	background: linear-gradient(90deg, transparent, var(--vs-accent), transparent);
+	box-shadow: 0 0 12px color-mix(in srgb, var(--vs-accent) 72%, transparent);
+	pointer-events: none;
 }
 
 .vs-portrait-container {
-  position: relative;
-  width: min(178px, 22vw);
-  aspect-ratio: 1 / 1;
-  background: #09090f;
-  border: 1px solid var(--obsidian-600);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+	position: relative;
+	width: min(214px, 100%);
+	aspect-ratio: 1 / 1;
+	background-color: #09090f;
+	background-image:
+		linear-gradient(145deg, color-mix(in srgb, var(--vs-accent) 11%, transparent), transparent 36%, rgba(3, 7, 13, 0.3)),
+		url('/art/chess/vs-piece-ornament-v1.png');
+	background-position: center;
+	background-size: cover;
+	background-repeat: no-repeat;
+	background-blend-mode: screen, normal;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+	border: 1px solid rgba(226, 232, 240, 0.22);
+	box-shadow:
+		0 0 0 4px rgba(4, 8, 14, 0.56),
+		0 0 26px color-mix(in srgb, var(--vs-accent) 26%, transparent),
+		inset 0 0 28px color-mix(in srgb, var(--vs-accent) 15%, transparent),
+		0 0 22px rgba(0, 0, 0, 0.48);
 }
 
 .vs-fighter-left .vs-portrait-container {
-  border-color: #7aa9ff;
+	border-color: color-mix(in srgb, var(--vs-accent) 72%, var(--gold-300));
 }
 
 .vs-fighter-right .vs-portrait-container {
-  border-color: #ff6f6f;
+	border-color: color-mix(in srgb, var(--vs-accent) 74%, var(--gold-300));
 }
 
 .vs-portrait-container::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  pointer-events: none;
+	content: '';
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	background: linear-gradient(140deg, rgba(255, 255, 255, 0.12), transparent 22%, transparent 76%, rgba(0, 0, 0, 0.25));
+	pointer-events: none;
+}
+
+.vs-portrait-container::after {
+	content: '';
+	position: absolute;
+	inset: 8px;
+	z-index: 1;
+	border: 1px solid rgba(245, 197, 66, 0.2);
+	pointer-events: none;
 }
 
 .vs-portrait {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
 }
 
 .vs-portrait-glyph {
-  width: min(78%, 158px) !important;
-  height: min(78%, 158px) !important;
-  transform-origin: center;
-  z-index: 2;
+	width: min(78%, 172px) !important;
+	height: min(78%, 172px) !important;
+	transform-origin: center;
+	z-index: 2;
+	filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.62));
 }
 
 .vs-portrait-glyph.piece-glyph-image {
-  animation: none;
+	animation: none;
 }
 
 .vs-portrait-glyph.piece-glyph-fallback {
-  font-size: clamp(52px, 10.5vw, 90px);
-  line-height: 1;
-  font-family: var(--type-numeric);
+	font-size: clamp(52px, 10.5vw, 90px) !important;
+	line-height: 1;
+	font-family: var(--type-numeric);
 }
 
 .vs-fighter-info {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.22rem;
-  min-height: 4.55rem;
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.2rem;
+	min-height: 3.7rem;
 }
 
 .vs-fighter-owner {
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  color: var(--text-bright);
+	width: 100%;
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 1.45rem;
+	padding: 0.18rem 0.5rem 0.14rem;
+	font-size: 0.64rem;
+	font-weight: 900;
+	text-transform: uppercase;
+	letter-spacing: 0.19em;
+	color: var(--vs-accent);
+	border-bottom: 1px solid color-mix(in srgb, var(--vs-accent) 52%, transparent);
+	text-shadow: 0 0 10px color-mix(in srgb, var(--vs-accent) 50%, transparent);
 }
 
 .vs-fighter-name {
-  font-size: 1.06rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  line-height: 1.04;
-  text-wrap: balance;
-  max-width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+	font-size: clamp(0.94rem, 1.55vw, 1.2rem);
+	font-weight: 850;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	line-height: 1.04;
+	text-wrap: balance;
+	max-width: 100%;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	text-shadow: 0 2px 10px rgba(0, 0, 0, 0.65);
 }
 
 .vs-fighter-type {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.17em;
-  font-weight: 600;
-  color: color-mix(in srgb, var(--text-bright) 72%, transparent);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+	font-size: 0.68rem;
+	text-transform: uppercase;
+	letter-spacing: 0.18em;
+	font-weight: 600;
+	color: color-mix(in srgb, var(--text-bright) 72%, transparent);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .vs-fighter-stats {
-  margin-top: 0.35rem;
-  display: flex;
-  justify-content: center;
+	margin-top: 0.36rem;
+	display: flex;
+	justify-content: center;
 }
 
 .vs-stat {
-  font-size: 1.01rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--ink-0);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.38rem;
+	font-size: 1.1rem;
+	font-weight: 900;
+	letter-spacing: 0.08em;
+	font-family: var(--type-numeric);
+	color: var(--ink-0);
+	text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
 }
 
 .vs-stat svg {
-  width: 1em;
-  height: 1em;
-  vertical-align: -0.12em;
+	width: 1.38em;
+	height: 1.38em;
+	flex: 0 0 auto;
+	color: var(--vs-accent);
+	filter: drop-shadow(0 0 5px color-mix(in srgb, var(--vs-accent) 62%, transparent));
+}
+
+.vs-stat-value {
+	font-size: 1.18em;
+	font-weight: 950;
+	line-height: 1;
 }
 
 .vs-center {
-  position: relative;
-  z-index: 3;
-  width: clamp(132px, 16vw, 180px);
-  aspect-ratio: 1 / 0.94;
-  justify-self: center;
-  align-self: center;
+	position: relative;
+	z-index: 3;
+	width: 100%;
+	aspect-ratio: 1 / 0.94;
+	justify-self: center;
+	align-self: center;
+}
+
+.vs-center::before {
+	content: '';
+	position: absolute;
+	inset: -12%;
+	border: 1px solid color-mix(in srgb, var(--gold-300) 28%, transparent);
+	border-radius: 50%;
+	transform: rotate(45deg) scaleY(0.72);
+	pointer-events: none;
+}
+
+.vs-center::after {
+	content: '';
+	position: absolute;
+	inset: 4%;
+	border: 1px solid color-mix(in srgb, var(--gold-300) 28%, transparent);
+	border-radius: 50%;
+	border-color: color-mix(in srgb, #38bdf8 22%, var(--gold-300));
+	transform: rotate(-45deg) scaleY(0.7);
+	opacity: 0.72;
+	pointer-events: none;
 }
 
 .vs-center-frame {
-  width: 100%;
-  height: 100%;
-  border: 1px solid color-mix(in srgb, var(--gold-300) 48%, transparent);
-  background: linear-gradient(180deg, rgba(12, 16, 26, 0.84), rgba(6, 8, 14, 0.92));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
+	width: 100%;
+	height: 100%;
+	border: 1px solid color-mix(in srgb, var(--gold-300) 82%, transparent);
+	background:
+		linear-gradient(90deg, rgba(56, 189, 248, 0.14), transparent 38%, transparent 62%, rgba(245, 158, 11, 0.16)),
+		radial-gradient(circle at 50% 46%, rgba(245, 197, 66, 0.16), transparent 46%),
+		linear-gradient(145deg, rgba(16, 21, 30, 0.95), rgba(3, 6, 12, 0.96));
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	position: relative;
+	box-shadow:
+		0 0 0 4px rgba(4, 8, 14, 0.64),
+		0 0 26px color-mix(in srgb, var(--gold-300) 24%, transparent),
+		0 16px 34px rgba(0, 0, 0, 0.44);
+	clip-path: polygon(0 14px, 14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px));
 }
 
 .vs-center-frame::before {
-  content: '';
-  position: absolute;
-  inset: 5px;
-  border: 1px solid color-mix(in srgb, var(--gold-300) 22%, transparent);
-  pointer-events: none;
+	content: '';
+	position: absolute;
+	inset: 7px;
+	border: 1px solid color-mix(in srgb, var(--gold-300) 28%, transparent);
+	clip-path: inherit;
+	pointer-events: none;
+}
+
+.vs-center-frame::after {
+	content: '';
+	position: absolute;
+	inset: 22%;
+	border: 1px solid color-mix(in srgb, var(--gold-300) 42%, transparent);
+	border-radius: 50%;
+	box-shadow: 0 0 16px color-mix(in srgb, var(--gold-300) 26%, transparent);
+	pointer-events: none;
 }
 
 .vs-text {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  z-index: 2;
-  gap: 0.2rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	position: relative;
+	z-index: 2;
+	gap: 0.12rem;
+	transform: translateX(0.06em);
 }
 
 .vs-letter {
-  font-size: clamp(2.8rem, 8vw, 4.4rem);
-  line-height: 0.9;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ink-0);
+	font-family: var(--type-display, var(--type-ui));
+	font-size: clamp(3rem, 7vw, 5rem);
+	line-height: 0.9;
+	font-weight: 850;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: #fff5dc;
+	text-shadow:
+		0 0 8px rgba(245, 197, 66, 0.64),
+		0 3px 0 rgba(89, 52, 12, 0.86),
+		0 8px 18px rgba(0, 0, 0, 0.78);
+}
+
+.vs-letter:first-child {
+	color: #7ddcff;
+	text-shadow:
+		0 0 10px rgba(56, 189, 248, 0.9),
+		0 3px 0 rgba(7, 55, 78, 0.9),
+		0 8px 18px rgba(0, 0, 0, 0.78);
+}
+
+.vs-letter:last-child {
+	color: #ffd477;
+	text-shadow:
+		0 0 10px rgba(245, 158, 11, 0.9),
+		0 3px 0 rgba(89, 52, 12, 0.9),
+		0 8px 18px rgba(0, 0, 0, 0.78);
 }
 
 .vs-sparks {
-  display: none;
+	position: absolute;
+	inset: 16%;
+	z-index: 1;
+	border-radius: 50%;
+	background:
+		radial-gradient(circle at 10% 20%, rgba(245, 197, 66, 0.82) 0 1px, transparent 2px),
+		radial-gradient(circle at 86% 26%, rgba(56, 189, 248, 0.8) 0 1px, transparent 2px),
+		radial-gradient(circle at 78% 86%, rgba(245, 158, 11, 0.75) 0 1px, transparent 2px),
+		radial-gradient(circle at 18% 78%, rgba(226, 232, 240, 0.72) 0 1px, transparent 2px);
+	opacity: 0.72;
+	animation: vs-rune-pulse 1.6s ease-in-out infinite;
+	pointer-events: none;
 }
 
 .vs-bottom-bar {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: max(0.6rem, env(safe-area-inset-bottom));
-  display: flex;
-  justify-content: center;
-  pointer-events: none;
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: max(0.7rem, env(safe-area-inset-bottom));
+	z-index: 3;
+	display: flex;
+	justify-content: center;
+	pointer-events: none;
 }
 
 .vs-battle-text {
-  padding: 0.42rem 1rem 0.38rem;
-  border: 1px solid rgba(226, 232, 240, 0.25);
-  background: rgba(5, 8, 14, 0.76);
-  color: #f2d38a;
-  font-size: 0.82rem;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  font-weight: 700;
+	position: relative;
+	padding: 0.48rem 1.2rem 0.42rem;
+	border: 1px solid color-mix(in srgb, var(--gold-300) 56%, transparent);
+	background: rgba(5, 8, 14, 0.76);
+	box-shadow: 0 0 18px rgba(0, 0, 0, 0.36);
+	color: #f2d38a;
+	font-size: 0.78rem;
+	letter-spacing: 0.3em;
+	text-transform: uppercase;
+	font-weight: 800;
+}
+
+.vs-battle-text::before {
+	content: '';
+	position: absolute;
+	top: 50%;
+	width: clamp(28px, 8vw, 120px);
+	height: 1px;
+	background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--gold-300) 64%, transparent));
+	right: 100%;
+}
+
+.vs-battle-text::after {
+	content: '';
+	position: absolute;
+	top: 50%;
+	width: clamp(28px, 8vw, 120px);
+	height: 1px;
+	background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--gold-300) 64%, transparent));
+	left: 100%;
+	transform: rotate(180deg);
+}
+
+@keyframes vs-rune-pulse {
+	0%,
+	100% {
+		transform: scale(0.94);
+		opacity: 0.5;
+	}
+
+	50% {
+		transform: scale(1.06);
+		opacity: 0.9;
+	}
 }
 
 @media (max-width: 820px) {
-  .vs-screen-content {
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    gap: 0.55rem;
-    padding: 0.75rem 0.5rem;
-    align-items: center;
-  }
+	.vs-screen-content {
+		grid-template-columns: minmax(0, 1fr) clamp(104px, 22vw, 140px) minmax(0, 1fr);
+		gap: 0.55rem;
+		padding: 0.75rem 0.35rem;
+	}
 
-  .vs-fighter {
-    width: min(156px, 32vw);
-    padding: 0.55rem 0.35rem 0.4rem;
-    gap: 0.38rem;
-  }
+	.vs-fighter {
+		width: min(180px, 100%);
+	}
 
-  .vs-portrait-container {
-    width: min(124px, 24vw);
-  }
+	.vs-fighter-frame {
+		padding: 0.48rem 0.42rem 0.6rem;
+		gap: 0.46rem;
+	}
 
-  .vs-fighter-info {
-    min-height: 3.95rem;
-  }
+	.vs-portrait-container {
+		width: min(132px, 100%);
+	}
 
-  .vs-fighter-owner {
-    letter-spacing: 0.12em;
-  }
+	.vs-portrait-glyph {
+		width: min(78%, 108px) !important;
+		height: min(78%, 108px) !important;
+	}
 
-  .vs-fighter-name {
-    font-size: 0.84rem;
-  }
+	.vs-fighter-info {
+		min-height: 3.75rem;
+	}
 
-  .vs-fighter-type {
-    font-size: 0.58rem;
-  }
+	.vs-fighter-owner {
+		font-size: 0.55rem;
+		letter-spacing: 0.12em;
+		min-height: 1.15rem;
+	}
 
-  .vs-stat {
-    font-size: 0.9rem;
-  }
+	.vs-fighter-name {
+		font-size: 0.76rem;
+	}
 
-  .vs-center {
-    width: clamp(108px, 24vw, 132px);
-  }
+	.vs-fighter-type {
+		font-size: 0.53rem;
+		letter-spacing: 0.12em;
+	}
 
-  .vs-letter {
-    font-size: 2.6rem;
-  }
+	.vs-stat {
+		font-size: 0.9rem;
+	}
 
-  .vs-battle-text {
-    font-size: 0.66rem;
-    letter-spacing: 0.2em;
-    padding-inline: 0.76rem;
-  }
+	.vs-letter {
+		font-size: 2.7rem;
+	}
+
+	.vs-battle-text {
+		font-size: 0.62rem;
+		letter-spacing: 0.18em;
+		padding-inline: 0.72rem;
+	}
+}
+
+@media (max-height: 500px) {
+	.vs-screen-content {
+		height: 92vh;
+	}
+
+	.vs-fighter-frame {
+		padding-block: 0.34rem;
+		gap: 0.28rem;
+	}
+
+	.vs-portrait-container {
+		width: min(116px, 24vh);
+	}
+
+	.vs-fighter-info {
+		min-height: 3.1rem;
+	}
+
+	.vs-battle-text {
+		bottom: 0.3rem;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.vs-sparks {
+		animation: none;
+	}
 }

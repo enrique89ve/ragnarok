@@ -57,7 +57,6 @@ export {
 	getSyncCursor,
 	putSyncCursor,
 	getTokenBalance,
-	putTokenBalance,
 } from './replayDB';
 
 export { applyOp, retryPendingSlashes } from './replayRules';
