@@ -35,7 +35,7 @@ export interface P2PActions {
 		actionsThisRound: number;
 		durationMs: number;
 		remainingMs?: number;
-	}) => void;
+	}) => boolean;
 	requestPhaseCheckpoint: (input: {
 		readonly fromPhase: PhaseCheckpointPhase;
 		readonly toPhase: PhaseCheckpointPhase;

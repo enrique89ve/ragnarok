@@ -24,7 +24,7 @@ export const P2PProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 		performHeroPower: gsPerformHeroPower,
 		dispatchGameCommand: () => undefined,
 		sendPokerAction: () => undefined,
-		sendPokerTurnStarted: () => undefined,
+		sendPokerTurnStarted: () => false,
 		requestPhaseCheckpoint: async () => ({ status: 'unavailable', reason: 'not_connected' }),
 		downloadSessionLog: () => undefined,
 		gameState: null,

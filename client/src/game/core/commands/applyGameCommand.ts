@@ -18,7 +18,7 @@ import {
 	type ApplyGameCommandResult,
 	type GameCommandEffect,
 } from './gameCommandResult';
-import { canPlayCardInPokerWindow, type PokerCardTimingContext } from './pokerCardTiming';
+import { canActInPokerWindow, canPlayCardInPokerWindow, type PokerCardTimingContext } from './pokerCardTiming';
 
 export type ApplyGameCommandDeps = {
 	readonly isAiSimulationMode?: () => boolean;
@@ -122,6 +122,9 @@ export function applyOpponentCommand(
 	deps: ApplyGameCommandDeps = {},
 ): ApplyGameCommandResult {
 	const swapped = swapPlayerOpponent(state);
+	const commandState = deps.pokerCombat
+		? { ...swapped, currentTurn: 'player' as const }
+		: swapped;
 	const swappedDeps = deps.pokerCombat
 		? {
 			...deps,
@@ -132,22 +135,50 @@ export function applyOpponentCommand(
 			},
 		}
 		: deps;
-	const result = applyGameCommand(swapped, command, swappedDeps);
-	const restoredState = swapPlayerOpponent(result.state);
+	const result = applyGameCommand(commandState, command, swappedDeps);
+	const restoredState = result.state === commandState
+		? state
+		: swapPlayerOpponent(result.state);
+	const perspectiveRestoredState = deps.pokerCombat && restoredState !== state
+		? { ...restoredState, currentTurn: state.currentTurn }
+		: restoredState;
 	const flippedEffects = flipEffectsToOpponentPerspective(result.effects);
 
 	if (result.status === 'applied') {
-		return { status: 'applied', state: restoredState, effects: flippedEffects };
+		return { status: 'applied', state: perspectiveRestoredState, effects: flippedEffects };
 	}
 	if (result.status === 'rejected') {
-		return { status: 'rejected', state: restoredState, reason: result.reason, effects: flippedEffects };
+		return { status: 'rejected', state: perspectiveRestoredState, reason: result.reason, effects: flippedEffects };
 	}
-	return { status: 'ignored', state: restoredState, reason: result.reason, effects: flippedEffects };
+	return { status: 'ignored', state: perspectiveRestoredState, reason: result.reason, effects: flippedEffects };
 }
 
-const isPlayerCommandAllowed = (state: GameState, deps: ApplyGameCommandDeps): boolean => (
-	state.currentTurn === 'player' || deps.isAiSimulationMode?.() === true
-);
+const isPlayerCommandAllowed = (state: GameState, deps: ApplyGameCommandDeps): boolean => {
+	if (deps.pokerCombat) {
+		return deps.pokerCombat.activePlayerId === deps.pokerCombat.playerId;
+	}
+	return state.currentTurn === 'player' || deps.isAiSimulationMode?.() === true;
+};
+
+function toPokerCommandPerspective(state: GameState, deps: ApplyGameCommandDeps): GameState {
+	return deps.pokerCombat && state.currentTurn !== 'player'
+		? { ...state, currentTurn: 'player' }
+		: state;
+}
+
+function restorePokerCommandPerspective(
+	originalState: GameState,
+	commandState: GameState,
+	result: ApplyGameCommandResult,
+	deps: ApplyGameCommandDeps,
+): ApplyGameCommandResult {
+	if (!deps.pokerCombat || commandState === originalState) return result;
+	if (result.state === commandState) return { ...result, state: originalState };
+	return {
+		...result,
+		state: { ...result.state, currentTurn: originalState.currentTurn },
+	};
+}
 
 export function applyGameCommand(
 	state: GameState,
@@ -190,14 +221,25 @@ function applyPlayCardCommand(
 	command: Extract<GameCommand, { type: typeof GAME_COMMAND_TYPES.playCard }>,
 	deps: ApplyGameCommandDeps,
 ): ApplyGameCommandResult {
+	const commandState = toPokerCommandPerspective(state, deps);
+	const finish = (result: ApplyGameCommandResult) => restorePokerCommandPerspective(state, commandState, result, deps);
+	return applyPlayCardCommandInPerspective(commandState, command, deps, finish);
+}
+
+function applyPlayCardCommandInPerspective(
+	state: GameState,
+	command: Extract<GameCommand, { type: typeof GAME_COMMAND_TYPES.playCard }>,
+	deps: ApplyGameCommandDeps,
+	finish: (result: ApplyGameCommandResult) => ApplyGameCommandResult,
+): ApplyGameCommandResult {
 	if (!isPlayerCommandAllowed(state, deps)) {
-		return rejectedGameCommand(state, 'not player turn');
+		return finish(rejectedGameCommand(state, 'not player turn'));
 	}
 
 	const player = state.players.player;
 	const cardResult = findCardInstance(player.hand, command.cardId);
 	if (!cardResult) {
-		return ignoredGameCommand(state, 'card not found in hand');
+		return finish(ignoredGameCommand(state, 'card not found in hand'));
 	}
 
 	const cardInstance = cardResult.card;
@@ -209,19 +251,19 @@ function applyPlayCardCommand(
 			nowMs: deps.nowMs,
 		});
 		if (!pokerTiming.ok) {
-			return rejectedGameCommand(state, pokerTiming.reason);
+			return finish(rejectedGameCommand(state, pokerTiming.reason));
 		}
 	}
 	const playCardRejection = getPlayCardRejection(state, cardInstance, command, cardResult.index);
 	if (playCardRejection) {
-		return rejectedGameCommand(state, playCardRejection);
+		return finish(rejectedGameCommand(state, playCardRejection));
 	}
 
 	if (cardInstance.card.type === 'minion'
 		&& hasKeyword(cardInstance, 'battlecry')
 		&& cardInstance.card.battlecry?.requiresTarget
 		&& !command.targetId) {
-		return ignoredGameCommand(state, 'battlecry target required');
+		return finish(ignoredGameCommand(state, 'battlecry target required'));
 	}
 
 	const newState = playCard(
@@ -235,13 +277,13 @@ function applyPlayCardCommand(
 	);
 
 	if (newState === state) {
-		return ignoredGameCommand(state, 'play card produced no state change');
+		return finish(ignoredGameCommand(state, 'play card produced no state change'));
 	}
 
-	return appliedGameCommand(newState, [
+	return finish(appliedGameCommand(newState, [
 		getCardPlayedEffect(cardInstance, newState),
 		{ type: 'clear_selection', selection: 'selected_card' },
-	]);
+	]));
 }
 
 function applyAttackCommand(
@@ -249,34 +291,49 @@ function applyAttackCommand(
 	command: Extract<GameCommand, { type: typeof GAME_COMMAND_TYPES.attack }>,
 	deps: ApplyGameCommandDeps,
 ): ApplyGameCommandResult {
+	const commandState = toPokerCommandPerspective(state, deps);
+	const finish = (result: ApplyGameCommandResult) => restorePokerCommandPerspective(state, commandState, result, deps);
+	return applyAttackCommandInPerspective(commandState, command, deps, finish);
+}
+
+function applyAttackCommandInPerspective(
+	state: GameState,
+	command: Extract<GameCommand, { type: typeof GAME_COMMAND_TYPES.attack }>,
+	deps: ApplyGameCommandDeps,
+	finish: (result: ApplyGameCommandResult) => ApplyGameCommandResult,
+): ApplyGameCommandResult {
 	if (!isPlayerCommandAllowed(state, deps)) {
-		return rejectedGameCommand(state, 'not player turn');
+		return finish(rejectedGameCommand(state, 'not player turn'));
+	}
+	if (deps.pokerCombat) {
+		const timing = canActInPokerWindow({ combatState: deps.pokerCombat, actor: deps.pokerCombat.playerId, nowMs: deps.nowMs });
+		if (!timing.ok) return finish(rejectedGameCommand(state, timing.reason));
 	}
 
 	const attacker = state.players.player.battlefield.find(card => card.instanceId === command.attackerId);
 	if (!attacker) {
-		return ignoredGameCommand(state, 'attacker not found');
+		return finish(ignoredGameCommand(state, 'attacker not found'));
 	}
 
 	const maxAttacks = hasKeyword(attacker, 'mega_windfury') ? 4 : hasKeyword(attacker, 'windfury') ? 2 : 1;
 	if ((attacker.attacksPerformed ?? 0) >= maxAttacks) {
-		return rejectedGameCommand(state, 'no attacks left', [
+		return finish(rejectedGameCommand(state, 'no attacks left', [
 			{ type: 'clear_selection', selection: 'attacking_card' },
-		]);
+		]));
 	}
 
 	const newState = processAttack(state, command.attackerId, command.defenderId, deps.rng);
 	if (newState === state) {
-		return ignoredGameCommand(state, 'attack produced no state change', [
+		return finish(ignoredGameCommand(state, 'attack produced no state change', [
 			{ type: 'clear_selection', selection: 'attacking_card' },
-		]);
+		]));
 	}
 
 	const targetName = !command.defenderId || command.defenderId === 'opponent-hero'
 		? 'enemy hero'
 		: state.players.opponent.battlefield.find(card => card.instanceId === command.defenderId)?.card.name ?? 'enemy minion';
 
-	return appliedGameCommand(newState, [
+	return finish(appliedGameCommand(newState, [
 		{ type: 'play_sound', sound: 'attack' },
 		{
 			type: 'log_activity',
@@ -290,7 +347,7 @@ function applyAttackCommand(
 			},
 		},
 		{ type: 'clear_selection', selection: 'all' },
-	]);
+	]));
 }
 
 function applyEndTurnCommand(state: GameState): ApplyGameCommandResult {
@@ -323,25 +380,40 @@ function applyUseHeroPowerCommand(
 	command: Extract<GameCommand, { type: typeof GAME_COMMAND_TYPES.useHeroPower }>,
 	deps: ApplyGameCommandDeps,
 ): ApplyGameCommandResult {
+	const commandState = toPokerCommandPerspective(state, deps);
+	const finish = (result: ApplyGameCommandResult) => restorePokerCommandPerspective(state, commandState, result, deps);
+	return applyUseHeroPowerCommandInPerspective(commandState, command, deps, finish);
+}
+
+function applyUseHeroPowerCommandInPerspective(
+	state: GameState,
+	command: Extract<GameCommand, { type: typeof GAME_COMMAND_TYPES.useHeroPower }>,
+	deps: ApplyGameCommandDeps,
+	finish: (result: ApplyGameCommandResult) => ApplyGameCommandResult,
+): ApplyGameCommandResult {
 	if (!isPlayerCommandAllowed(state, deps)) {
-		return rejectedGameCommand(state, 'not player turn');
+		return finish(rejectedGameCommand(state, 'not player turn'));
+	}
+	if (deps.pokerCombat) {
+		const timing = canActInPokerWindow({ combatState: deps.pokerCombat, actor: deps.pokerCombat.playerId, nowMs: deps.nowMs });
+		if (!timing.ok) return finish(rejectedGameCommand(state, timing.reason));
 	}
 
 	const player = state.players.player;
 	if (player.heroPower.used) {
-		return rejectedGameCommand(state, 'hero power already used');
+		return finish(rejectedGameCommand(state, 'hero power already used'));
 	}
 
 	if (player.mana.current < player.heroPower.cost) {
-		return rejectedGameCommand(state, 'not enough mana');
+		return finish(rejectedGameCommand(state, 'not enough mana'));
 	}
 
 	const newState = executeHeroPower(state, 'player', command.targetId, command.targetType);
 	if (newState === state) {
-		return ignoredGameCommand(state, 'hero power produced no state change');
+		return finish(ignoredGameCommand(state, 'hero power produced no state change'));
 	}
 
-	return appliedGameCommand(newState, [
+	return finish(appliedGameCommand(newState, [
 		{ type: 'play_sound', sound: 'hero_power' },
 		{
 			type: 'log_activity',
@@ -350,7 +422,7 @@ function applyUseHeroPowerCommand(
 			message: `Used ${player.heroPower.name}`,
 		},
 		{ type: 'clear_selection', selection: 'hero_target_mode' },
-	]);
+	]));
 }
 
 function applyToggleMulliganCardCommand(state: GameState, cardId: string): ApplyGameCommandResult {

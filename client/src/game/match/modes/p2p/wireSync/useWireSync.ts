@@ -2732,8 +2732,8 @@ export function useWireSync() {
 		actionsThisRound: number;
 		durationMs: number;
 		remainingMs?: number;
-	}) => {
-		if (connectionState !== 'connected') return;
+	}): boolean => {
+		if (connectionState !== 'connected') return false;
 		send({
 			type: 'poker_turn_started',
 			combatId: input.combatId,
@@ -2745,6 +2745,7 @@ export function useWireSync() {
 			remainingMs: input.remainingMs,
 			sentAtMs: Date.now(),
 		});
+		return true;
 	}, [connectionState, send]);
 
 	/**

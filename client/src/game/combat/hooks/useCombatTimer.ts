@@ -10,6 +10,7 @@ import { derivePokerDecisionView } from '../decision/pokerDecisionView';
 import { getPokerActionDefinition } from '../decision/pokerActionCatalog';
 import { derivePokerTurnPolicy, type PokerOpponentKind } from '../decision/pokerTurnPolicy';
 import { derivePokerTimeoutIntent } from '../rules/pokerActionRules';
+import { resolvePokerTurnAnnouncement } from '../decision/pokerTurnAnnouncement';
 
 interface UseCombatTimerOptions {
   combatState: PokerCombatState | null;
@@ -31,13 +32,14 @@ interface UseCombatTimerOptions {
     actionsThisRound: number;
     durationMs: number;
     remainingMs?: number;
-  }) => void;
+  }) => boolean;
+  p2pTransportConnected?: boolean;
   confirmMulligan?: () => void;
   addHeroBattlePopup?: (params: { action: BattlePopupAction; target: BattlePopupTarget; text: string; subtitle?: string }) => void;
 }
 
 export function useCombatTimer(options: UseCombatTimerOptions): void {
-  const { combatState, isActive, updateTimer, isP2PCombat = false, opponentKind = null, sendPokerAction, sendPokerTurnStarted, confirmMulligan, addHeroBattlePopup } = options;
+  const { combatState, isActive, updateTimer, isP2PCombat = false, opponentKind = null, sendPokerAction, sendPokerTurnStarted, p2pTransportConnected = true, confirmMulligan, addHeroBattlePopup } = options;
   const announcedTurnIdRef = useRef<string | null>(null);
   const expiredTurnIdRef = useRef<string | null>(null);
   const mulliganDeadlineRef = useRef<{ readonly key: string; readonly deadlineAtMs: number } | null>(null);
@@ -77,8 +79,18 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
       opponentKind,
     });
 
-    if (isP2PCombat && combatState.turnId && announcedTurnIdRef.current !== combatState.turnId) {
-      announcedTurnIdRef.current = combatState.turnId;
+    if (!isP2PCombat) {
+      announcedTurnIdRef.current = null;
+    }
+    const announcement = isP2PCombat
+      ? resolvePokerTurnAnnouncement({
+          turnId: combatState.turnId,
+          announcedTurnId: announcedTurnIdRef.current,
+          transportConnected: p2pTransportConnected,
+        })
+      : null;
+    if (announcement) announcedTurnIdRef.current = announcement.nextAnnouncedTurnId;
+    if (isP2PCombat && announcement?.shouldSend && combatState.turnId) {
       if (combatState.activePlayerId) {
         const nowMs = Date.now();
         const decisionView = derivePokerDecisionView({
@@ -90,7 +102,7 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
           ? decisionView.remainingSeconds * 1_000
           : Math.max(0, combatState.turnDeadlineAtMs - nowMs);
         if (turnPolicy.shouldBroadcastTurnStart) {
-          sendPokerTurnStarted?.({
+          const sent = sendPokerTurnStarted?.({
             combatId: combatState.combatId,
             turnId: combatState.turnId,
             phase: combatState.phase,
@@ -98,7 +110,8 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
 					actionsThisRound: combatState.actionsThisRound,
 					durationMs: turnPolicy.turnClockPolicy.durationMs,
             remainingMs,
-          });
+          }) ?? false;
+          if (sent) announcedTurnIdRef.current = combatState.turnId;
         }
       }
     }
@@ -198,6 +211,7 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
     updateTimer,
     isP2PCombat,
     opponentKind,
+    p2pTransportConnected,
     sendPokerAction,
     sendPokerTurnStarted,
     confirmMulligan,

@@ -30,7 +30,7 @@ import { CombatEventBus } from '../services/CombatEventBus';
 import { getAttack } from '../utils/cards/typeGuards';
 import { useMatchStore } from '../match/store';
 import { computeStateHash } from '../engine/engineBridge';
-import { GAME_COMMAND_TYPES, applyGameCommand, applyOpponentCommand, type ApplyGameCommandResult, type GameCommand, type PokerCardTimingContext } from '../core/commands';
+import { GAME_COMMAND_TYPES, applyGameCommand, applyOpponentCommand, canActInPokerWindow, type ApplyGameCommandResult, type GameCommand, type PokerCardTimingContext } from '../core/commands';
 import { applyGameCommandToStore } from './gameCommandStoreAdapter';
 import { buildHandshakeGameState, type CardsDeckAnnounce } from '../p2p/cardsDeckHandshake';
 
@@ -511,6 +511,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
       const result = applyGameCommand(gameState, command, {
         isAiSimulationMode: isAISimulationMode,
         rng: commandRng(),
+        pokerCombat: getPokerCardTimingContext(),
       });
 
       // Animation: matches original — fires for valid attempts, suppressed only on windfury rejection
@@ -587,6 +588,25 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
 
   autoAttackAll: (mode: 'minion' | 'hero' = 'minion') => {
     const { gameState } = get();
+    const pokerCombat = getPokerCardTimingContext();
+    if (pokerCombat) {
+      const timing = canActInPokerWindow({ combatState: pokerCombat, actor: pokerCombat.playerId });
+      if (!timing.ok) return;
+      const commandState = gameState.currentTurn === 'player'
+        ? gameState
+        : { ...gameState, currentTurn: 'player' as const };
+      const newState = autoAttackWithAllCards(commandState, mode);
+      if (newState !== commandState) {
+        set({
+          gameState: commandState === gameState
+            ? newState
+            : { ...newState, currentTurn: gameState.currentTurn },
+          attackingCard: null,
+          selectedCard: null,
+        });
+      }
+      return;
+    }
     if (gameState.currentTurn !== 'player') return;
     const newState = autoAttackWithAllCards(gameState, mode);
     if (newState !== gameState) {
@@ -685,7 +705,11 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
     const { heroTargetMode, gameState } = get();
 
     // Can only enter hero power mode if it's player's turn and hero power is not used
-    if (!heroTargetMode && gameState.currentTurn === 'player' && !gameState.players.player.heroPower.used) {
+    const pokerCombat = getPokerCardTimingContext();
+    const canAct = pokerCombat
+      ? canActInPokerWindow({ combatState: pokerCombat, actor: pokerCombat.playerId }).ok
+      : gameState.currentTurn === 'player';
+    if (!heroTargetMode && canAct && !gameState.players.player.heroPower.used) {
       // Check if player has enough mana for hero power
       if (gameState.players.player.mana.current >= gameState.players.player.heroPower.cost) {
         set({
@@ -767,6 +791,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
     const result = applyGameCommand(gameState, command, {
       isAiSimulationMode: isAISimulationMode,
       rng: commandRng(),
+      pokerCombat: getPokerCardTimingContext(),
     });
 
     applyGameCommandToStore({

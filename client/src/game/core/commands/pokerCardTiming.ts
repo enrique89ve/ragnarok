@@ -40,6 +40,27 @@ export function canPlayCardInPokerWindow(input: {
 	readonly actor: string;
 	readonly nowMs?: number;
 }): PokerCardTimingResult {
+	const timing = canActInPokerWindow({
+		combatState: input.combatState,
+		actor: input.actor,
+		nowMs: input.nowMs,
+	});
+	if (!timing.ok) return timing;
+
+	const cardTiming = getPokerCardTiming(input.card);
+	if (!isPokerCardTimingAllowed(cardTiming, input.combatState?.phase ?? '')) {
+		return { ok: false, reason: 'poker_card_timing_not_allowed' };
+	}
+
+	return { ok: true };
+}
+
+/** Shared deadline/actor gate for all auxiliary Poker actions. */
+export function canActInPokerWindow(input: {
+	readonly combatState: PokerCardTimingContext | null;
+	readonly actor: string;
+	readonly nowMs?: number;
+}): PokerCardTimingResult {
 	const combatState = input.combatState;
 	if (combatState === null || combatState.combatId.length === 0) {
 		return { ok: false, reason: 'poker_combat_inactive' };
@@ -58,12 +79,6 @@ export function canPlayCardInPokerWindow(input: {
 	if (!Number.isFinite(nowMs) || nowMs >= combatState.turnDeadlineAtMs) {
 		return { ok: false, reason: 'poker_turn_expired' };
 	}
-
-	const timing = getPokerCardTiming(input.card);
-	if (!isPokerCardTimingAllowed(timing, combatState.phase)) {
-		return { ok: false, reason: 'poker_card_timing_not_allowed' };
-	}
-
 	return { ok: true };
 }
 

@@ -375,8 +375,8 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
     }),
     [combatState, connectionState, isP2PCombat, basePermissions]
   );
-  const isPlayerTurn = pokerDecisionView.displayTurn
-    ? pokerDecisionView.displayTurn === 'player'
+  const isPlayerTurn = combatState
+    ? pokerDecisionView.localCanAct
     : cardGameIsPlayerTurn;
 
   // Health change detection — triggers floating damage/heal numbers
@@ -717,7 +717,9 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
           betAmount={betAmount}
           onBetAmountChange={setBetAmount}
           onAction={wrappedOnAction}
-          onAutoAttackFrontline={() => autoAttackAll('minion')}
+          onAutoAttackFrontline={() => {
+            if (isPlayerTurn) autoAttackAll('minion');
+          }}
           showFrontlineButton={isPlayerTurn && playerBattlefield.length > 0}
         />
       )}

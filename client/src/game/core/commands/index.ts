@@ -17,6 +17,7 @@ export {
 export { applyGameCommand, applyOpponentCommand, type ApplyGameCommandDeps } from './applyGameCommand';
 export {
 	canPlayCardInPokerWindow,
+	canActInPokerWindow,
 	isPokerCardTimingAllowed,
 	type PokerCardTimingContext,
 	type PokerCardTimingRejectReason,

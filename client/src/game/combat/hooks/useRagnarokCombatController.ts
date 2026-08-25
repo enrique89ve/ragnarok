@@ -46,6 +46,7 @@ import { debug } from '../../config/debugConfig';
 import type { HeroBattlePopupData, BattlePopupAction, BattlePopupTarget } from '../components/HeroBattlePopup';
 import { validatePokerActionIntent } from '../rules/pokerActionRules';
 import { getPokerTurnProcessMode } from '../decision/pokerTurnPolicy';
+import { derivePokerDecisionView } from '../decision/pokerDecisionView';
 import { getPokerActionPresentation } from '../decision/pokerActionPresentation';
 import { emitBettingAction } from '../vfx/events';
 import { emitHeroPowerUsed } from '../../actions/gameActions';
@@ -221,6 +222,7 @@ export function useRagnarokCombatController(
     updateTimer,
     isP2PCombat,
     opponentKind,
+    p2pTransportConnected,
     sendPokerAction: p2pActions.sendPokerAction,
     sendPokerTurnStarted: p2pActions.sendPokerTurnStarted,
     confirmMulligan: () => p2pActions.dispatchGameCommand({ type: GAME_COMMAND_TYPES.confirmMulligan }),
@@ -282,7 +284,16 @@ export function useRagnarokCombatController(
   const opponentMana = useGameStore(state => state.gameState?.players?.opponent?.mana?.current ?? 0);
   const opponentMaxMana = useGameStore(state => state.gameState?.players?.opponent?.mana?.max ?? 10);
   
-  const isPlayerTurn = currentTurn === 'player';
+  const pokerDecisionView = derivePokerDecisionView({
+    combatState,
+    connectionState,
+    isP2PCombat,
+    permissions: getActionPermissions(combatState, true),
+  });
+  // During Poker, activePlayerId + deadline are the only local-action
+  // authority. currentTurn remains a card-game presentation field outside
+  // Poker and must not gate auxiliary Poker actions.
+  const isPlayerTurn = combatState ? pokerDecisionView.localCanAct : currentTurn === 'player';
   const isOpponentTargetable: boolean = !!(isPlayerTurn && (!!attackingCard || !!heroTargetMode ||
     (!!selectedCard && (selectedCard.card.type === 'spell' ||
       (selectedCard.card.type === 'minion' && hasKeyword(selectedCard, 'battlecry'))))));
@@ -350,6 +361,7 @@ export function useRagnarokCombatController(
   }, [isActive]);
   
   const executeHeroPowerEffect = useCallback((norseHero: any, heroPower: any, target: any) => {
+    if (combatState && !isPlayerTurn) return;
     
     const heroPowerGameState = useGameStore.getState();
     const playerState = heroPowerGameState.gameState?.players?.player;
@@ -527,10 +539,11 @@ export function useRagnarokCombatController(
         break;
     }
     
-  }, [applyDirectDamage, setHeroPowerUsedThisTurn, setHeroPowerTargeting]);
+  }, [applyDirectDamage, combatState, isPlayerTurn, setHeroPowerUsedThisTurn, setHeroPowerTargeting]);
   
   const handleHeroPower = useCallback(() => {
     if (heroPowerProcessingRef.current) return;
+    if (combatState && !isPlayerTurn) return;
     heroPowerProcessingRef.current = true;
 
     if (COMBAT_DEBUG.PHASES) {
@@ -626,7 +639,7 @@ export function useRagnarokCombatController(
     });
     fireAnnouncement('spell', `Select a target for ${heroPower.name}`, { duration: 3000 });
     heroPowerProcessingRef.current = false;
-  }, [combatState, heroPowerUsedThisTurn, playerMana, executeHeroPowerEffect]);
+  }, [combatState, heroPowerUsedThisTurn, isPlayerTurn, playerMana, executeHeroPowerEffect]);
   
   const cancelHeroPowerTargeting = useCallback(() => {
     if (heroPowerTargeting?.active) {
@@ -636,6 +649,7 @@ export function useRagnarokCombatController(
   
   const handleWeaponUpgrade = useCallback(() => {
     if (weaponUpgradeProcessingRef.current) return;
+    if (combatState && !isPlayerTurn) return;
     weaponUpgradeProcessingRef.current = true;
 
     const norseHeroId = combatState?.player?.pet?.norseHeroId;
@@ -710,7 +724,7 @@ export function useRagnarokCombatController(
     }
 
     weaponUpgradeProcessingRef.current = false;
-  }, [combatState, weaponUpgraded, applyDirectDamage, playerMana]);
+  }, [combatState, isPlayerTurn, weaponUpgraded, applyDirectDamage, playerMana]);
   
   const handleOpponentHeroClick = useCallback(() => {
     if (heroPowerTargeting?.active) {
@@ -888,6 +902,7 @@ export function useRagnarokCombatController(
   const grantPokerHandRewards = useGameStore(state => state.grantPokerHandRewards);
   
   const handleAction = useCallback((action: CombatAction, hp?: number) => {
+    if (combatState && !isPlayerTurn) return;
     if (isP2PActionLocked) {
       fireAnnouncement('warning', 'P2P reconnecting', {
         subtitle: 'Actions resume when the peer connection recovers.',
@@ -966,6 +981,7 @@ export function useRagnarokCombatController(
     p2pActions,
     isP2PActionLocked,
     isP2PCombat,
+    isPlayerTurn,
     p2pTransportConnected,
   ]);
   
@@ -1111,6 +1127,7 @@ export function useRagnarokCombatController(
 
   const handleUnifiedEndTurn = useCallback(() => {
     if (!combatState) return;
+    if (!isPlayerTurn) return;
     if (isP2PActionLocked) {
       fireAnnouncement('warning', 'P2P reconnecting', {
         subtitle: 'Actions resume when the peer connection recovers.',
@@ -1125,7 +1142,7 @@ export function useRagnarokCombatController(
     
     endTurn();
     
-  }, [combatState, performAction, endTurn, isP2PActionLocked]);
+  }, [combatState, endTurn, isP2PActionLocked, isPlayerTurn, performAction]);
 
   return {
     combatState,
