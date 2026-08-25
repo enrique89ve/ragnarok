@@ -11,7 +11,7 @@ import { addKeyword, clearKeywords } from './cards/keywordUtils';
 import { trackQuestProgress } from './quests/questProgress';
 import { debug } from '../config/debugConfig';
 import { dealDamage, addArmor } from './effects/damageUtils';
-import { MAX_BATTLEFIELD_SIZE } from '../constants/gameConstants';
+import { MAX_ARMOR, MAX_BATTLEFIELD_SIZE } from '../constants/gameConstants';
 import { cryptoRng, cryptoIdGen } from './seededRng';
 
 // Type for animation callback function
@@ -446,7 +446,7 @@ function executeNorseHeroPower(
       
       // Handle secondaryValue for armor gain (like Tyr)
       if (power.secondaryValue) {
-        state.players[playerType].heroArmor = Math.min(30, (state.players[playerType].heroArmor || 0) + power.secondaryValue);
+        state.players[playerType].heroArmor = Math.min(MAX_ARMOR, (state.players[playerType].heroArmor || 0) + power.secondaryValue);
         debug.log(`[Hero Power] Gained ${power.secondaryValue} armor`);
       }
       return state;
@@ -555,7 +555,7 @@ function executeNorseHeroPower(
       const armorValue = power.armorValue || 1;
       if (!player.tempStats) player.tempStats = { attack: 0 };
       player.tempStats.attack = (player.tempStats.attack || 0) + attackValue;
-      player.heroArmor = Math.min(30, (player.heroArmor || 0) + armorValue);
+      player.heroArmor = Math.min(MAX_ARMOR, (player.heroArmor || 0) + armorValue);
       debug.log(`[Hero Power] Hero gained +${attackValue} attack and +${armorValue} armor`);
       return state;
     }
@@ -1235,7 +1235,7 @@ function executeWarriorPower(state: GameState, playerType: 'player' | 'opponent'
 function executePaladinPower(state: GameState, playerType: 'player' | 'opponent'): GameState {
   const player = state.players[playerType];
 
-  // Check if the battlefield is full (max 7 minions)
+  // Check if the battlefield is full (max 5 minions)
   if (player.battlefield.length >= MAX_BATTLEFIELD_SIZE) {
     debug.error('Battlefield is full, cannot summon recruit');
     return state;
@@ -1311,7 +1311,7 @@ function executeDruidPower(state: GameState, playerType: 'player' | 'opponent'):
   player.tempStats.attack = (player.tempStats.attack || 0) + 1;
   
   // Gain 1 armor 
-  player.heroArmor = Math.min(30, (player.heroArmor || 0) + 1);
+  player.heroArmor = Math.min(MAX_ARMOR, (player.heroArmor || 0) + 1);
   
   
   return state;
@@ -1407,7 +1407,7 @@ function executeWarlockPower(state: GameState, playerType: 'player' | 'opponent'
 function executeShamanPower(state: GameState, playerType: 'player' | 'opponent'): GameState {
   const player = state.players[playerType];
 
-  // Check if the battlefield is full (max 7 minions)
+  // Check if the battlefield is full (max 5 minions)
   if (player.battlefield.length >= MAX_BATTLEFIELD_SIZE) {
     debug.error('Battlefield is full, cannot summon totem');
     return state;

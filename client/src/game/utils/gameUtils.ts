@@ -29,7 +29,7 @@ import { performTurnStartResets } from './resetUtils';
 import { hasEcho, createEchoCopy, expireEchoCardsAtEndOfTurn } from './mechanics/echoUtils';
 import { processAfterAttackEffects, processAfterHeroAttackEffects } from './mechanics/afterAttackUtils';
 import { dealDamage, dealDamageToAllEnemyMinions, dealDamageToAllMinions, dealDamageToHero } from './effects/damageUtils';
-import { MAX_BATTLEFIELD_SIZE } from '../constants/gameConstants';
+import { MAX_ARMOR, MAX_BATTLEFIELD_SIZE, MAX_MANA } from '../constants/gameConstants';
 import { removeKeyword, hasKeyword, getKeywords } from './cards/keywordUtils';
 import { canMagnetize, applyMagnetization, isValidMagneticTarget } from './mechanics/magneticUtils';
 import { getCardById } from '../data/cardRegistry';
@@ -1392,7 +1392,7 @@ export function endTurn(state: GameState, skipAISimulation = false): GameState {
 
   // Calculate new max mana for the next player (capped at 10)
   // Max mana increases at the start of EACH player's turn
-  const newMaxMana = Math.min(state.players[nextPlayer].mana.max + 1, 10);
+  const newMaxMana = Math.min(state.players[nextPlayer].mana.max + 1, MAX_MANA);
 
   // Track turn change between players
   // Update max mana for next player
@@ -1522,7 +1522,7 @@ export function endTurn(state: GameState, skipAISimulation = false): GameState {
       // Set up player's next turn - prepare base state, then apply standard pipeline
       const playerState = newState.players.player;
       const newTurnNumber = newState.turnNumber + 1;
-      const newPlayerMaxMana = Math.min(playerState.mana.max + 1, 10);
+      const newPlayerMaxMana = Math.min(playerState.mana.max + 1, MAX_MANA);
       const playerOverloaded = playerState.mana.overloaded || 0;
       const availableMana = Math.max(0, newPlayerMaxMana - playerOverloaded);
 
@@ -1559,7 +1559,7 @@ export function endTurn(state: GameState, skipAISimulation = false): GameState {
       // Error recovery - set up base state and use standard pipeline
       const playerState = newState.players.player;
       const newTurnNumber = newState.turnNumber + 1;
-      const newPlayerMaxMana = Math.min(playerState.mana.max + 1, 10);
+      const newPlayerMaxMana = Math.min(playerState.mana.max + 1, MAX_MANA);
 
       try {
         // Set up base state for player's turn
@@ -1615,7 +1615,7 @@ export function processAITurn(state: GameState): GameState {
 
     const playerState = newState.players.player;
     const newTurnNumber = newState.turnNumber + 1;
-    const newPlayerMaxMana = Math.min(playerState.mana.max + 1, 10);
+      const newPlayerMaxMana = Math.min(playerState.mana.max + 1, MAX_MANA);
     const playerOverloaded = playerState.mana.overloaded || 0;
     const availableMana = Math.max(0, newPlayerMaxMana - playerOverloaded);
 
@@ -1647,7 +1647,7 @@ export function processAITurn(state: GameState): GameState {
     debug.error("Error during AI turn processing:", error);
     const playerState = newState.players.player;
     const newTurnNumber = newState.turnNumber + 1;
-    const newPlayerMaxMana = Math.min(playerState.mana.max + 1, 10);
+      const newPlayerMaxMana = Math.min(playerState.mana.max + 1, MAX_MANA);
 
     try {
       newState = {
@@ -2452,7 +2452,7 @@ function processAttackForOpponent(
         } else if (desc.includes('draw a card')) {
           newState = drawCardFromDeck(newState, 'opponent');
         } else if (desc.includes('gain 3 armor')) {
-          newState.players.opponent.heroArmor = (newState.players.opponent.heroArmor || 0) + 3;
+        newState.players.opponent.heroArmor = Math.min(MAX_ARMOR, (newState.players.opponent.heroArmor || 0) + 3);
         } else if (desc.includes('summon a copy')) {
           if (newState.players.opponent.battlefield.length < MAX_BATTLEFIELD_SIZE) {
             const copyInstance = createCardInstance(attacker.card, cryptoIdGen());
@@ -3211,7 +3211,7 @@ function processAttackUnbound(
       } else if (desc.includes('draw a card')) {
         newState = drawCardFromDeck(newState, 'player');
       } else if (desc.includes('gain 3 armor')) {
-        newState.players.player.heroArmor = (newState.players.player.heroArmor || 0) + 3;
+        newState.players.player.heroArmor = Math.min(MAX_ARMOR, (newState.players.player.heroArmor || 0) + 3);
       } else if (desc.includes('summon a copy')) {
         if (newState.players.player.battlefield.length < MAX_BATTLEFIELD_SIZE) {
           const copyInstance = createCardInstance(attacker.card, cryptoIdGen());

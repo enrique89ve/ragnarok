@@ -107,6 +107,7 @@ Ready handshake is therefore rejected, even as a permanent compatibility path.
   `pokerP2PCombatAdapter.ts`
 - [x] Remove normal-poker Ready UI and Spellcraft wire paths
 - [x] Focused contract, runtime and P2P regression tests
+- [x] Shared resource caps and Poker transition validation
 - [x] Update `docs/PVP_WIRE_PROTOCOL.md` after the wire shape is stable
 
 ## Evidence gate

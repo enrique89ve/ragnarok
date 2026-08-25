@@ -270,7 +270,7 @@ export function logCardDraw(
   let eventType: GameLogEventType = 'draw';
 
   if (isBurned) {
-    // Card was drawn but burned because hand was full (10 cards)
+    // Card was drawn but burned because hand was full (6 cards)
     text = `${playerName} burned a card (hand full)`;
     eventType = 'burn';
     

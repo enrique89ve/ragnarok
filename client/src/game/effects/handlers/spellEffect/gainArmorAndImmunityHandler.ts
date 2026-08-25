@@ -7,6 +7,7 @@
 import { GameState, CardInstance } from '../../../types';
 import { SpellEffect } from '../../../types/CardTypes';
 import { cryptoIdGen } from '../../../utils/seededRng';
+import { MAX_ARMOR } from '../../../constants/gameConstants';
 
 /**
  * Execute a gain_armor_and_immunity spellEffect effect
@@ -33,11 +34,11 @@ export function executeGainArmorAndImmunityGainArmorAndImmunity(
   newState.players = { ...state.players };
   if (currentTurn === 'player') {
     newState.players.player = { ...state.players.player };
-    newState.players.player.heroArmor = Math.min(30, (newState.players.player.heroArmor || 0) + armorValue);
+    newState.players.player.heroArmor = Math.min(MAX_ARMOR, (newState.players.player.heroArmor || 0) + armorValue);
     (newState.players.player as any).isImmune = true;
   } else {
     newState.players.opponent = { ...state.players.opponent };
-    newState.players.opponent.heroArmor = Math.min(30, (newState.players.opponent.heroArmor || 0) + armorValue);
+    newState.players.opponent.heroArmor = Math.min(MAX_ARMOR, (newState.players.opponent.heroArmor || 0) + armorValue);
     (newState.players.opponent as any).isImmune = true;
   }
 

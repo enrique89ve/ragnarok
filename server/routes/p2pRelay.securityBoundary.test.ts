@@ -128,4 +128,11 @@ describe('p2pRelay security boundary', () => {
 			reason: 'unknown_type:opponentDisconnected',
 		});
 	});
+
+	it('relays the turn-scoped Poker integrity probe as an application frame', () => {
+		expect(validateP2PRelayFrame(JSON.stringify({ type: 'poker_hash_check' }))).toEqual({
+			ok: true,
+			type: 'poker_hash_check',
+		});
+	});
 });

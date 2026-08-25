@@ -8,6 +8,7 @@ import { debug } from '../../../config/debugConfig';
 import { GameContext } from '../../../GameContext';
 import { Card, SpellEffect } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
+import { MAX_MANA } from '../../../constants/gameConstants';
 
 export default function executeTempMana(
   context: GameContext, 
@@ -22,7 +23,8 @@ export default function executeTempMana(
     const currentPlayer = context.currentPlayer as any;
     
     const currentMana = currentPlayer.currentMana || currentPlayer.mana?.current || 0;
-    const newMana = Math.min(currentMana + manaValue, 10);
+    const manaCap = Math.min(currentPlayer.mana?.max ?? MAX_MANA, MAX_MANA);
+    const newMana = Math.min(currentMana + manaValue, manaCap);
     const actualGain = newMana - currentMana;
     
     currentPlayer.currentMana = newMana;

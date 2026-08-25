@@ -8,6 +8,7 @@ import { debug } from '../../../config/debugConfig';
 import { GameContext } from '../../../GameContext';
 import { Card, SpellEffect } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
+import { MAX_MANA } from '../../../constants/gameConstants';
 
 export default function executeGainMana(
   context: GameContext, 
@@ -24,7 +25,7 @@ export default function executeGainMana(
     const currentPlayer = context.currentPlayer;
     
     if (isPermanent) {
-      const maxManaLimit = 10;
+      const maxManaLimit = MAX_MANA;
       const newMaxMana = Math.min((currentPlayer.mana.max || 0) + manaValue, maxManaLimit);
       const manaGained = newMaxMana - (currentPlayer.mana.max || 0);
       
@@ -38,7 +39,10 @@ export default function executeGainMana(
         additionalData: { manaGained, isTemporary: false }
       };
     } else {
-      const newCurrentMana = Math.min((currentPlayer.mana.current || 0) + manaValue, 10);
+      const newCurrentMana = Math.min(
+        (currentPlayer.mana.current || 0) + manaValue,
+        Math.min(currentPlayer.mana.max, MAX_MANA),
+      );
       const manaGained = newCurrentMana - (currentPlayer.mana.current || 0);
       
       currentPlayer.mana.current = newCurrentMana;

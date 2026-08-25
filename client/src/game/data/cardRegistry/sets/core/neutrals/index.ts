@@ -8258,7 +8258,7 @@ const comboDrawCards: CardData[] = [
   {
     id: 33202,
     name: 'Messenger of Hermes',
-    description: 'Battlecry: Draw a card. If you have 10+ cards in hand, draw 2 instead.',
+    description: 'Battlecry: Draw a card. If you have 6+ cards in hand, draw 2 instead.',
     flavorText: 'Swift as the wind, carrying wisdom from Olympus.',
     type: 'minion',
     rarity: 'rare',

@@ -48,6 +48,7 @@ import { getPokerTurnProcessMode } from '../decision/pokerTurnPolicy';
 import { derivePokerDecisionView } from '../decision/pokerDecisionView';
 import { getPokerActionPresentation } from '../decision/pokerActionPresentation';
 import { emitBettingAction } from '../vfx/events';
+import { MAX_MANA } from '../../constants/gameConstants';
 import { emitHeroPowerUsed } from '../../actions/gameActions';
 import {
 	HERO_DEATH_PRESENTATION_BUDGET_MS,
@@ -279,9 +280,9 @@ export function useRagnarokCombatController(
   const selectAttacker = useGameStore(state => state.selectAttacker);
   const heroTargetMode = useGameStore(state => state.heroTargetMode);
   const playerMana = useGameStore(state => state.gameState?.players?.player?.mana?.current ?? 0);
-  const playerMaxMana = useGameStore(state => state.gameState?.players?.player?.mana?.max ?? 10);
+  const playerMaxMana = useGameStore(state => state.gameState?.players?.player?.mana?.max ?? MAX_MANA);
   const opponentMana = useGameStore(state => state.gameState?.players?.opponent?.mana?.current ?? 0);
-  const opponentMaxMana = useGameStore(state => state.gameState?.players?.opponent?.mana?.max ?? 10);
+  const opponentMaxMana = useGameStore(state => state.gameState?.players?.opponent?.mana?.max ?? MAX_MANA);
   
   const pokerDecisionView = derivePokerDecisionView({
     combatState,
@@ -769,6 +770,7 @@ export function useRagnarokCombatController(
       p2pActions.sendPokerAction({
         playerId: freshState.player.playerId,
         action,
+				origin: 'player',
         hpCommitment: hp,
         turnId: freshState.turnId,
       });

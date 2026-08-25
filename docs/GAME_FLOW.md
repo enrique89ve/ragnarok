@@ -267,8 +267,8 @@ Choose from 77 heroes across 12 classes.
 const DECK_SIZE = 30;
 const MAX_COPIES = 2;           // Per card
 const MAX_MYTHIC_COPIES = 1;    // Mythics only
-const MAX_HAND_SIZE = 9;
-const MAX_BOARD_SIZE = 7;
+const MAX_HAND_SIZE = 6;
+const MAX_BOARD_SIZE = 5;
 ```
 
 **UI Component**: `HeroDeckBuilder.tsx`

@@ -13,7 +13,7 @@ import {
 import { debug } from '../config/debugConfig';
 import { assetPath } from './assetPath';
 import { trackQuestProgress } from './quests/questProgress';
-import { MAX_BATTLEFIELD_SIZE, MAX_HAND_SIZE } from '../constants/gameConstants';
+import { MAX_ARMOR, MAX_BATTLEFIELD_SIZE, MAX_HAND_SIZE, MAX_MANA } from '../constants/gameConstants';
 import { useAnimationStore } from '../animations/AnimationManager';
 import allCards, { getCardById } from '../data/allCards';
 import { addKeyword, setKeywords, getKeywords, hasKeyword } from './cards/keywordUtils';
@@ -791,7 +791,7 @@ function executeBattlecryUnbound(
 
       case 'gain_armor': {
         const armorVal = battlecry.value || 0;
-        newState.players.player.heroArmor = Math.min(30, (newState.players.player.heroArmor || 0) + armorVal);
+        newState.players.player.heroArmor = Math.min(MAX_ARMOR, (newState.players.player.heroArmor || 0) + armorVal);
         return newState;
       }
 
@@ -1762,7 +1762,7 @@ function executeBattlecryUnbound(
         }
         newState = dealDamage(newState, 'opponent', 'hero', daeaVal);
         newState.players.opponent.battlefield = newState.players.opponent.battlefield.filter(m => (m.currentHealth ?? 1) > 0);
-        newState.players.player.heroArmor = Math.min(30, (newState.players.player.heroArmor || 0) + daeaVal);
+        newState.players.player.heroArmor = Math.min(MAX_ARMOR, (newState.players.player.heroArmor || 0) + daeaVal);
         return newState;
       }
 
@@ -2133,7 +2133,7 @@ function executeBattlecryUnbound(
         const dgaTarget = newState.players.opponent.battlefield.find(m => m.instanceId === targetId);
         const dgaAtk = dgaTarget ? (dgaTarget.currentAttack ?? (dgaTarget.card as MinionCardData).attack ?? 0) : 0;
         newState = destroyCard(newState, targetId, 'opponent');
-        newState.players.player.heroArmor = Math.min(30, (newState.players.player.heroArmor || 0) + dgaAtk);
+        newState.players.player.heroArmor = Math.min(MAX_ARMOR, (newState.players.player.heroArmor || 0) + dgaAtk);
         return newState;
       }
 
@@ -2641,7 +2641,7 @@ function executeBattlecryUnbound(
           (inst.card as any).manaCost = Math.max(0, ((inst.card as any).manaCost || 0) - fhdaDiscount);
           newState.players.player.hand.push(inst);
         }
-        newState.players.player.heroArmor = Math.min(30, (newState.players.player.heroArmor || 0) + 5);
+        newState.players.player.heroArmor = Math.min(MAX_ARMOR, (newState.players.player.heroArmor || 0) + 5);
         return newState;
       }
 
@@ -3928,7 +3928,7 @@ function executeDrawBattlecry(
   // Apply armor gain if specified on the draw battlecry
   const armorGain = (battlecry as any).armor as number | undefined;
   if (armorGain && armorGain > 0) {
-    state.players.player.heroArmor = Math.min(30, (state.players.player.heroArmor || 0) + armorGain);
+    state.players.player.heroArmor = Math.min(MAX_ARMOR, (state.players.player.heroArmor || 0) + armorGain);
   }
 
   if (typeof window !== 'undefined' && drawnCount > 0) {
@@ -4884,7 +4884,7 @@ function executeBuffAdjacentBattlecry(
 
   const armorGain = (battlecry as any).armor as number | undefined;
   if (armorGain && armorGain > 0) {
-    state.players.player.heroArmor = Math.min(30, (state.players.player.heroArmor || 0) + armorGain);
+    state.players.player.heroArmor = Math.min(MAX_ARMOR, (state.players.player.heroArmor || 0) + armorGain);
   }
 
   return state;
@@ -5096,7 +5096,7 @@ function executeGiveManaBattlecry(
 ): GameState {
   const amount = battlecry.value || 1;
   const player = state.players.player as any;
-  player.maxMana = Math.min(10, (player.maxMana || 0) + amount);
+  player.maxMana = Math.min(MAX_MANA, (player.maxMana || 0) + amount);
   player.currentMana = Math.min(player.maxMana, (player.currentMana || 0) + amount);
   return state;
 }
@@ -5141,7 +5141,8 @@ function executeGainTemporaryManaBattlecry(
   battlecry: BattlecryEffect
 ): GameState {
   const amount = battlecry.value || 1;
-  (state.players.player as any).currentMana = ((state.players.player as any).currentMana || 0) + amount;
+  const player = state.players.player as any;
+  player.currentMana = Math.min(player.maxMana || 0, (player.currentMana || 0) + amount);
   return state;
 }
 
@@ -5188,7 +5189,9 @@ function checkBattlecryCondition(state: GameState, condition: string): boolean {
     case 'minion_count_3':
       return battlefield.length >= 3;
     case 'minion_count_7':
-      return battlefield.length >= 7;
+      // Legacy condition name retained for card-data compatibility. The
+      // legal full-board threshold is the shared five-slot limit.
+      return battlefield.length >= MAX_BATTLEFIELD_SIZE;
     case 'control_2_minions':
       return battlefield.length >= 2;
     case 'control_automaton':
@@ -5228,7 +5231,9 @@ function checkBattlecryCondition(state: GameState, condition: string): boolean {
       return !deck1.some(c => (c.manaCost ?? 0) === 1);
     }
     case 'hand_size_10_plus':
-      return (player.hand || []).length >= 10;
+      // Legacy condition name retained for card-data compatibility. The
+      // universal hand cap is six, so a full hand is the legal equivalent.
+      return (player.hand || []).length >= MAX_HAND_SIZE;
     case 'realm_active':
       return !!state.activeRealm;
     case 'realm_shifts_2':
@@ -5279,7 +5284,7 @@ function executeConditionalArmorBattlecry(
     if (onOpponentField) ownerKey = 'opponent';
   }
   const armorGain = (battlecry as any).armorGain || battlecry.value || 5;
-  state.players[ownerKey].heroArmor = Math.min(30, (state.players[ownerKey].heroArmor || 0) + armorGain);
+  state.players[ownerKey].heroArmor = Math.min(MAX_ARMOR, (state.players[ownerKey].heroArmor || 0) + armorGain);
   return state;
 }
 
@@ -5770,7 +5775,7 @@ function executeBuffHeroBattlecry(
   battlecry: BattlecryEffect
 ): GameState {
   const amount = battlecry.value || 0;
-  state.players.player.heroArmor = Math.min(30, (state.players.player.heroArmor || 0) + amount);
+  state.players.player.heroArmor = Math.min(MAX_ARMOR, (state.players.player.heroArmor || 0) + amount);
   return state;
 }
 

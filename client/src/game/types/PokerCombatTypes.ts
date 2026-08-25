@@ -5,6 +5,8 @@
  * Integrates pet battles with poker mechanics for PvP battles.
  */
 
+import type { PokerActionOrigin } from '@shared/p2p-wire/combat';
+
 /**
  * Poker card suits
  */
@@ -141,6 +143,7 @@ export enum CombatAction {
  */
 export interface CombatActionDetails {
   action: CombatAction;
+  origin: PokerActionOrigin;
   hpCommitment?: number;       // HP committed for attack/counter
   timestamp: number;
 }

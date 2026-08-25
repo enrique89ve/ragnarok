@@ -104,6 +104,7 @@ export function canonicalizePokerCombatState(state: PokerCombatState | null): un
 		turnId: state.turnId,
 		actionHistory: state.actionHistory.map((action) => ({
 			action: action.action,
+			origin: action.origin ?? 'player',
 			hpCommitment: action.hpCommitment ?? null,
 		})),
 		winner,

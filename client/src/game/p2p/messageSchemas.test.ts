@@ -371,6 +371,25 @@ describe('parseWireMessage — integrity probes', () => {
 		expect(parseWireMessage({ type: 'hash_mismatch', turnNumber: 3, myHash: 'h' })).not.toBeNull();
 	});
 
+	it('accepts a turn-scoped Poker hash check', () => {
+		expect(parseWireMessage({
+			type: 'poker_hash_check',
+			pokerStateHash: 'poker-root',
+			phase: 'faith',
+			turnId: 'combat-a:faith:remote-piece:0',
+			actionsThisRound: 0,
+		})).not.toBeNull();
+	});
+
+	it('rejects a Poker hash check without its turn identity', () => {
+		expect(parseWireMessage({
+			type: 'poker_hash_check',
+			pokerStateHash: 'poker-root',
+			phase: 'faith',
+			actionsThisRound: 0,
+		})).toBeNull();
+	});
+
 	it('rejects hash_check with empty stateHash', () => {
 		expect(parseWireMessage({ type: 'hash_check', stateHash: '', chessStateHash: 'c', chessMoveCount: 0, turnNumber: 1 })).toBeNull();
 	});
@@ -409,6 +428,7 @@ describe('parseWireMessage — poker action and clock variants', () => {
 		type: 'poker_action' as const,
 		playerId: 'remote-piece',
 		action: 'attack' as const,
+		origin: 'player' as const,
 		hpCommitment: 20,
 		compact: encodePokerAction({ action: 'attack', hpCommitment: 20 }),
 		turnId: 'combat-a:faith:remote-piece:0',
@@ -418,6 +438,11 @@ describe('parseWireMessage — poker action and clock variants', () => {
 
 	it('accepts poker_action when legacy fields and compact tuple agree', () => {
 		expect(parseWireMessage(validPokerAction)).not.toBeNull();
+	});
+
+	it('rejects poker_action without an explicit origin', () => {
+		const { origin: _, ...withoutOrigin } = validPokerAction;
+		expect(parseWireMessage(withoutOrigin)).toBeNull();
 	});
 
 	it('rejects poker_action without decisionId', () => {

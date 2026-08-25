@@ -13,6 +13,7 @@ import { isMinion, getHealth } from '../cards/typeGuards';
 import { debug } from '../../config/debugConfig';
 import { processArtifactOnHeroDamaged, processArtifactOnLethal } from '../artifactTriggerProcessor';
 import { hasKeyword } from '../cards/keywordUtils';
+import { MAX_ARMOR } from '../../constants/gameConstants';
 
 /**
  * Utility function to handle damage dealing to heroes or minions
@@ -473,7 +474,7 @@ export function addArmor(
   newState.players[targetPlayerId] = targetPlayer;
 
   // Add armor (capped at 30)
-  targetPlayer.heroArmor = Math.min(30, (targetPlayer.heroArmor || 0) + amount);
+  targetPlayer.heroArmor = Math.min(MAX_ARMOR, (targetPlayer.heroArmor || 0) + amount);
 
   newState.gameLog.push({
     id: uuidv4(),

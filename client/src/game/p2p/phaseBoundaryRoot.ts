@@ -14,6 +14,7 @@ import {
 	canonicalPokerCard,
 	canonicalizePokerCombatState,
 } from './phaseBoundaryProjection';
+export { computePokerCombatStateHash } from './pokerStateHash';
 
 const ENCODER = new TextEncoder();
 const PHASE_BOUNDARY_ROOT_VERSION = 1 as const;

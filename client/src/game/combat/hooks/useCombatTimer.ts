@@ -11,6 +11,7 @@ import { getPokerActionDefinition } from '../decision/pokerActionCatalog';
 import { derivePokerTurnPolicy, type PokerOpponentKind } from '../decision/pokerTurnPolicy';
 import { derivePokerTimeoutIntent } from '../rules/pokerActionRules';
 import { resolvePokerTurnAnnouncement } from '../decision/pokerTurnAnnouncement';
+import type { PokerActionOrigin } from '../../../../../shared/p2p-wire/combat';
 
 interface UseCombatTimerOptions {
   combatState: PokerCombatState | null;
@@ -21,6 +22,7 @@ interface UseCombatTimerOptions {
   sendPokerAction?: (input: {
     playerId: string;
     action: CombatAction;
+    origin: PokerActionOrigin;
     hpCommitment?: number;
     turnId?: string | null;
   }) => void;
@@ -177,7 +179,7 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
         }
 
         const previousState = freshState;
-        getPokerCombatAdapterState().performAction(actorId, autoAction, undefined, true);
+        getPokerCombatAdapterState().performAction(actorId, autoAction, undefined, 'timeout');
         const appliedState = getPokerCombatAdapterState().combatState;
         if (!appliedState || appliedState === previousState) return;
 
@@ -186,6 +188,7 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
           sendPokerAction?.({
             playerId: actorId,
             action: autoAction,
+            origin: 'timeout',
             turnId: freshState.turnId,
           });
         }

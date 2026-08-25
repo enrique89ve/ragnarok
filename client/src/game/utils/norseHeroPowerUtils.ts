@@ -12,7 +12,7 @@ import { debug } from '../config/debugConfig';
 import { destroyCard } from './zoneUtils';
 import { dealDamage } from './effects/damageUtils';
 import { addKeyword, clearKeywords, hasKeyword } from './cards/keywordUtils';
-import { MAX_BATTLEFIELD_SIZE, MAX_HAND_SIZE } from '../constants/gameConstants';
+import { MAX_ARMOR, MAX_BATTLEFIELD_SIZE, MAX_HAND_SIZE } from '../constants/gameConstants';
 import { cryptoRng, cryptoIdGen } from './seededRng';
 
 type NorseHeroPowerRandomness = Readonly<{
@@ -1659,7 +1659,7 @@ function executeGainArmor(
   const player = state.players[playerType];
   const armorAmount = power.armorValue || power.value || 0;
 
-  player.heroArmor = Math.min(30, (player.heroArmor || 0) + armorAmount);
+  player.heroArmor = Math.min(MAX_ARMOR, (player.heroArmor || 0) + armorAmount);
 
   return state;
 }
@@ -1757,7 +1757,7 @@ function executeBuffHero(
   player.tempStats.attack = (player.tempStats.attack || 0) + attackBuff;
 
   if (armorBuff > 0) {
-    player.heroArmor = Math.min(30, (player.heroArmor || 0) + armorBuff);
+  player.heroArmor = Math.min(MAX_ARMOR, (player.heroArmor || 0) + armorBuff);
   }
 
   return state;

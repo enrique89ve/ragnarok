@@ -5,7 +5,7 @@
  *   opp hero portrait column · opp hand display column
  *
  * Hero column contains: boss-quip bubble, phase pip strip, BattlefieldHero
- * portrait, opponent hole cards, mana bar. Hand display shows up to 10
+ * portrait, opponent hole cards, mana bar. Hand display shows up to 6
  * card backs (or face-up reveals) plus a count badge.
  *
  * All visual classes (`opponent-hero-container`, `opponent-hand-display`,
@@ -28,8 +28,9 @@ import type { PokerCard } from '../../types/PokerCombatTypes';
 import type { CardInstance } from '../../types';
 import type { ShowdownCelebration } from '../hooks/useCombatEvents';
 import { ARENA_VFX_TARGETS, arenaVfxTargetProps } from '../arenaVfxTargets';
+import { MAX_HAND_SIZE } from '../../constants/gameConstants';
 
-const OPPONENT_HAND_VISIBLE_LIMIT = 10;
+const OPPONENT_HAND_VISIBLE_LIMIT = MAX_HAND_SIZE;
 // Mirrors the opponent hand geometry; the badge follows the right edge of the
 // last visible card while the stack grows.
 const OPPONENT_HAND_CARD_WIDTH_PX = 77;

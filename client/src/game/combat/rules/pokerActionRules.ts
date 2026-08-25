@@ -5,6 +5,8 @@ import {
   type PokerCombatState,
 } from '../../types/PokerCombatTypes';
 import { isTimedPokerDecisionPhase } from '../../../../../shared/p2p-wire/pokerTurnClock';
+import type { PokerActionOrigin } from '../../../../../shared/p2p-wire/combat';
+import { derivePokerTimeoutAction } from '@shared/protocol-core/pokerActionPolicy';
 
 export interface ActionPermissions {
   isPreForesight: boolean;
@@ -42,7 +44,9 @@ export type PokerActionRejectReason =
   | 'call_not_allowed'
   | 'check_not_allowed'
   | 'fold_not_allowed'
-  | 'turn_expired';
+  | 'turn_expired'
+  | 'timeout_not_due'
+  | 'invalid_timeout_action';
 
 export type PokerActionValidationResult =
   | {
@@ -133,7 +137,9 @@ export function derivePokerTimeoutIntent(combatState: PokerCombatState | null): 
 
   return {
     actorId: combatState.activePlayerId,
-    action: permissions.hasBetToCall ? CombatAction.BRACE : CombatAction.DEFEND,
+    action: derivePokerTimeoutAction(permissions) === 'brace'
+      ? CombatAction.BRACE
+      : CombatAction.DEFEND,
   };
 }
 
@@ -143,9 +149,9 @@ export function validatePokerActionIntent(input: {
   action: CombatAction;
   hpCommitment?: number;
   nowMs?: number;
-  allowExpiredTurn?: boolean;
+  origin?: PokerActionOrigin;
 }): PokerActionValidationResult {
-  const { combatState, playerId, action, hpCommitment, nowMs, allowExpiredTurn = false } = input;
+  const { combatState, playerId, action, hpCommitment, nowMs, origin = 'player' } = input;
   if (!combatState) return reject('missing_combat_state', null);
 
   const actorSide = getActorSide(combatState, playerId);
@@ -157,8 +163,16 @@ export function validatePokerActionIntent(input: {
   if (combatState.phase === CombatPhase.RESOLUTION || combatState.foldWinner) return reject('combat_resolved', permissions);
   if (combatState.isAllInShowdown) return reject('all_in_showdown', permissions);
   if (combatState.activePlayerId !== playerId) return reject('not_active_player', permissions);
-	if (!allowExpiredTurn && combatState.turnDeadlineAtMs !== null
-		&& (nowMs ?? Date.now()) >= combatState.turnDeadlineAtMs) {
+	const currentTimeMs = nowMs ?? Date.now();
+	if (origin === 'timeout') {
+		if (combatState.turnDeadlineAtMs === null || currentTimeMs < combatState.turnDeadlineAtMs) {
+			return reject('timeout_not_due', permissions);
+		}
+		const timeoutIntent = derivePokerTimeoutIntent(combatState);
+		if (!timeoutIntent || timeoutIntent.actorId !== playerId || timeoutIntent.action !== action) {
+			return reject('invalid_timeout_action', permissions);
+		}
+	} else if (combatState.turnDeadlineAtMs !== null && currentTimeMs >= combatState.turnDeadlineAtMs) {
 		return reject('turn_expired', permissions);
 	}
 

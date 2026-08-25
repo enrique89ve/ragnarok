@@ -1,5 +1,6 @@
 import { GameState, ArmorPiece, ArmorSlot, ArmorPassive, GameLogEvent } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import { MAX_ARMOR } from '../constants/gameConstants';
 
 export function equipArmorPiece(
 	state: GameState,
@@ -20,7 +21,7 @@ export function equipArmorPiece(
 	}
 
 	player.armorGear[slot] = piece;
-	player.heroArmor = Math.min(30, (player.heroArmor || 0) + piece.armorValue);
+	player.heroArmor = Math.min(MAX_ARMOR, (player.heroArmor || 0) + piece.armorValue);
 
 	const logEvent: GameLogEvent = {
 		id: uuidv4(),

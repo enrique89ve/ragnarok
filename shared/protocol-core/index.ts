@@ -76,6 +76,8 @@ export * from './eloEconomy';
 export * from './phaseGate';
 export * from './localCampaignSettlement';
 export * from './localDailyQuestSettlement';
+export * from './gameLimits';
+export * from './pokerActionPolicy';
 
 // v1.2: Broadcast utilities (NFTLox-inspired patterns)
 export {

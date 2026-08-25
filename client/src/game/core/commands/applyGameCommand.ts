@@ -9,6 +9,7 @@ import { applyWeaponUpgrade, executeNorseHeroPower, getNorseHeroById, withNorseH
 import { confirmMulligan, skipMulligan, toggleCardSelection } from '../../utils/mulliganUtils';
 import { getArtifactSpellCostReduction } from '../../utils/artifactTriggerProcessor';
 import { MAX_BATTLEFIELD_SIZE } from '../../constants/gameConstants';
+import { validateResourceInvariants, type ResourceInvariantViolation } from '@shared/protocol-core/gameLimits';
 import { createSeededIdGen, cryptoRng } from '../../utils/seededRng';
 import { withCardsRng } from '../../utils/cardsCommandRng';
 import {
@@ -186,8 +187,37 @@ export function applyGameCommand(
 	command: GameCommand,
 	deps: ApplyGameCommandDeps = {},
 ): ApplyGameCommandResult {
+	const beforeViolation = findGameStateResourceViolation(state);
+	if (beforeViolation) {
+		return rejectedGameCommand(state, formatResourceViolation(beforeViolation));
+	}
 	const rng = deps.rng ?? cryptoRng;
-	return withCardsRng(rng, () => applyGameCommandUnbound(state, command, { ...deps, rng }));
+	const result = withCardsRng(rng, () => applyGameCommandUnbound(state, command, { ...deps, rng }));
+	if (result.status !== 'applied') return result;
+	const afterViolation = findGameStateResourceViolation(result.state);
+	return afterViolation
+		? rejectedGameCommand(state, formatResourceViolation(afterViolation))
+		: result;
+}
+
+function findGameStateResourceViolation(state: GameState): ResourceInvariantViolation | null {
+	for (const player of [state.players.player, state.players.opponent]) {
+		const violation = validateResourceInvariants({
+			battlefieldCount: player.battlefield.length,
+			handCount: player.hand.length,
+			manaCurrent: player.mana.current,
+			manaMax: player.mana.max,
+			armor: player.heroArmor ?? player.armor ?? 0,
+			currentHealth: player.heroHealth ?? player.health,
+			maxHealth: player.maxHealth,
+		});
+		if (violation) return violation;
+	}
+	return null;
+}
+
+function formatResourceViolation(violation: ResourceInvariantViolation): string {
+	return `resource invariant violated: ${violation.code} (${violation.value}${violation.maximum === undefined ? '' : ` > ${violation.maximum}`})`;
 }
 
 function applyGameCommandUnbound(

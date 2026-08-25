@@ -9,6 +9,7 @@ import {
 	type PokerCombatState,
 } from '../types/PokerCombatTypes';
 import { canonicalizePokerCombatState } from './phaseBoundaryProjection';
+import { computePokerCombatStateHash } from './pokerStateHash';
 
 const ACE_SPADES: PokerCard = { suit: 'spades', value: 'A', numericValue: 14 };
 const KING_HEARTS: PokerCard = { suit: 'hearts', value: 'K', numericValue: 13 };
@@ -123,5 +124,21 @@ describe('phase boundary poker projection', () => {
 		changedHealth.player.pet.stats.currentHealth -= 1;
 		expect(canonicalStringify(canonicalizePokerCombatState(changedHealth)))
 			.not.toBe(canonicalStringify(canonicalizePokerCombatState(first)));
+	});
+
+	it('hashes the canonical Poker projection and binds timeout origin', () => {
+		const first = attackerView();
+		expect(computePokerCombatStateHash(null)).toBeNull();
+		expect(computePokerCombatStateHash(first)).toMatch(/^[0-9a-f]{64}$/);
+
+		const timeoutState = {
+			...first,
+			actionHistory: [{
+				...first.actionHistory[0],
+				origin: 'timeout' as const,
+			}],
+		};
+		expect(computePokerCombatStateHash(timeoutState))
+			.not.toBe(computePokerCombatStateHash(first));
 	});
 });

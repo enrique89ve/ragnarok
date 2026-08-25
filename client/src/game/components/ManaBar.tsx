@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef, useId } from 'react';
 import { playSound } from '../utils/soundUtils';
 import './ManaBar.css';
 import { GameIcon } from '../utils/ui/GameIcon';
+import { MAX_MANA } from '../constants/gameConstants';
 
-const MAX_MANA_SLOTS = 10;
+const MAX_MANA_SLOTS = MAX_MANA;
 const CRYSTAL_SIZE = 20; // Larger crystals for better visibility
 
 interface ManaBarProps {

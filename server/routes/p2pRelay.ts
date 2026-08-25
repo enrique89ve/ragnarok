@@ -100,6 +100,7 @@ const RELAY_ALLOWED_MESSAGE_TYPES: ReadonlySet<string> = new Set([
 	'version_check',
 	'wasm_hash_check',
 	'hash_check',
+	'poker_hash_check',
 	'hash_mismatch',
 	'poker_action',
 	'poker_turn_started',

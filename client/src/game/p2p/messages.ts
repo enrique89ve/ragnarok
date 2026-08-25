@@ -1,5 +1,5 @@
 import type { ChessCommandEnvelope } from '../../../../shared/p2p-wire/chess';
-import type { CompactPokerAction } from '../../../../shared/p2p-wire/combat';
+import type { CompactPokerAction, PokerActionOrigin } from '../../../../shared/p2p-wire/combat';
 import type { TransitionReceiptMessage } from '../../../../shared/p2p-wire/integrity';
 import type {
 	PhaseCheckpointProposal,
@@ -58,8 +58,9 @@ export type WireMessage =
 	| { type: 'version_check'; buildHash: string }
 	| { type: 'wasm_hash_check'; wasmHash: string }
 	| { type: 'hash_check'; stateHash: string; chessStateHash: string; chessMoveCount: number; turnNumber: number }
+	| { type: 'poker_hash_check'; pokerStateHash: string; phase: 'pre_flop' | 'faith' | 'foresight' | 'destiny'; turnId: string; actionsThisRound: number }
 	| { type: 'hash_mismatch'; turnNumber: number; myHash: string }
-	| { type: 'poker_action'; playerId: string; action: string; hpCommitment?: number; compact?: CompactPokerAction; turnId?: string; decisionId: string; sentAtMs?: number }
+	| { type: 'poker_action'; playerId: string; action: string; origin: PokerActionOrigin; hpCommitment?: number; compact?: CompactPokerAction; turnId?: string; decisionId: string; sentAtMs?: number }
 	| { type: 'poker_turn_started'; combatId: string; turnId: string; phase: string; activePlayerId: string; actionsThisRound: number; durationMs: number; remainingMs?: number; sentAtMs: number }
 	| ChessCommandEnvelope
 	| TransitionReceiptMessage

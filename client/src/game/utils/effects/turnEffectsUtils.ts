@@ -15,6 +15,7 @@ import { executeDeathrattle } from '../deathrattleUtils';
 import { removeDeadMinions } from '../zoneUtils';
 import { getCardById } from '../../data/allCards';
 import { cryptoRng } from '../seededRng';
+import { MAX_BATTLEFIELD_SIZE } from '../../constants/gameConstants';
 
 // Helper to create type-safe game log entries for effects
 function createEffectLogEntry(
@@ -356,9 +357,8 @@ function processGenericStartOfTurnEffect(
         break;
       }
       const playerState = newState.players[currentPlayer];
-      const MAX_BATTLEFIELD = 7;
       for (let i = 0; i < count; i++) {
-        if (playerState.battlefield.length >= MAX_BATTLEFIELD) break;
+        if (playerState.battlefield.length >= MAX_BATTLEFIELD_SIZE) break;
         const tokenInstance: CardInstance = {
           instanceId: uuidv4(),
           card: tokenCard as CardData,

@@ -21,6 +21,7 @@ import { getWasmHash, loadWasmEngine } from '../../../../engine/wasmLoader';
 import { computeStateHash } from '../../../../engine/engineBridge';
 import { flipGameState, computeCardsPrevStateHash } from '../../../../engine/wireHash';
 import { computeChessPrevStateHash } from '../../../../engine/chessHash';
+import { computePokerCombatStateHash } from '../../../../p2p/phaseBoundaryRoot';
 import { isSharedNetworkEnvironment } from '../../../../config/featureFlags';
 import { findExistingMatchResult, type SlashEvidenceParams } from '../../../../../data/blockchain/slashEvidence';
 import { GAME_COMMAND_TYPES } from '../../../../core/commands';
@@ -54,7 +55,7 @@ import type { P2PMessage } from '../../../../p2p/messages';
 import { parseWireMessage } from '../../../../p2p/messageSchemas';
 import { CombatAction, CombatPhase } from '../../../../types/PokerCombatTypes';
 import { encodePokerAction, isPokerActionCompactConsistent, type CompactPokerActionName } from '../../../../../../../shared/p2p-wire/combat';
-import { UNIVERSAL_POKER_TURN_CLOCK_POLICY } from '../../../../../../../shared/p2p-wire/pokerTurnClock';
+import { isTimedPokerDecisionPhase, UNIVERSAL_POKER_TURN_CLOCK_POLICY } from '../../../../../../../shared/p2p-wire/pokerTurnClock';
 import { generateSessionKey, type SessionKey } from '../../../../protocol/sessionKey';
 import { CHALLENGE_STALE_THRESHOLD_MS, type ServerSignedChallenge } from '@shared/p2pAvailability';
 import {
@@ -870,6 +871,32 @@ export function useWireSync() {
 								}
 						}
 					}
+					break;
+				}
+
+				case 'poker_hash_check': {
+					const pokerState = getP2PPokerCombatAdapter().getPokerState();
+					if (!pokerState
+						|| pokerState.phase !== data.phase
+						|| pokerState.turnId !== data.turnId
+						|| pokerState.actionsThisRound !== data.actionsThisRound) {
+						break;
+					}
+					const localPokerHash = computePokerCombatStateHash(pokerState);
+					if (!localPokerHash || localPokerHash === data.pokerStateHash) break;
+					debug.error(`[wireSync] Poker state hash mismatch at ${data.turnId}: local=${localPokerHash.slice(0, 16)}, remote=${data.pokerStateHash.slice(0, 16)}`);
+					recordSessionEvent('poker_integrity_mismatch', {
+						turnId: data.turnId,
+						phase: data.phase,
+						actionsThisRound: data.actionsThisRound,
+						localHash: localPokerHash,
+						remoteHash: data.pokerStateHash,
+					});
+					GameEventBus.emitNotification({
+						level: 'error',
+						message: 'Poker state verification failed — the combat state diverged from the opponent.',
+						duration: 8000,
+					});
 					break;
 				}
 
@@ -1847,6 +1874,7 @@ export function useWireSync() {
 					const actionResult = pokerAdapter.applyRemotePokerAction({
 						playerId: data.playerId,
 						action: combatAction,
+						origin: data.origin,
 						hpCommitment: data.hpCommitment,
 					});
 					settleRemotePokerAction(actionResult, {
@@ -1861,6 +1889,7 @@ export function useWireSync() {
 
 							recordMove('poker_action', {
 								action: data.action,
+								origin: data.origin,
 								hpCommitment: data.hpCommitment,
 								turnId: data.turnId,
 								decisionId: data.decisionId,
@@ -2770,6 +2799,17 @@ export function useWireSync() {
 					const chessMoveCount = chessSnapshot?.moveCount ?? -1;
 					if (!cancelled) {
 						send({ type: 'hash_check', stateHash, chessStateHash, chessMoveCount, turnNumber: gs.turnNumber });
+						const pokerState = getP2PPokerCombatAdapter().getPokerState();
+						const pokerStateHash = computePokerCombatStateHash(pokerState);
+						if (pokerStateHash && pokerState?.turnId && isTimedPokerDecisionPhase(pokerState.phase)) {
+							send({
+								type: 'poker_hash_check',
+								pokerStateHash,
+								phase: pokerState.phase,
+								turnId: pokerState.turnId,
+								actionsThisRound: pokerState.actionsThisRound,
+							});
+						}
 					}
 				}
 				scheduleCheck();
@@ -2792,6 +2832,7 @@ export function useWireSync() {
 	const sendPokerAction = useCallback((input: {
 		playerId: string;
 		action: CombatAction;
+		origin: import('@shared/p2p-wire/combat').PokerActionOrigin;
 		hpCommitment?: number;
 		turnId?: string | null;
 	}) => {
@@ -2801,6 +2842,7 @@ export function useWireSync() {
 			type: 'poker_action',
 			playerId: input.playerId,
 			action: input.action,
+			origin: input.origin,
 			hpCommitment: input.hpCommitment,
 			turnId: input.turnId ?? undefined,
 			decisionId: `${input.turnId ?? 'unclocked'}:${input.playerId}:${sentAtMs}`,

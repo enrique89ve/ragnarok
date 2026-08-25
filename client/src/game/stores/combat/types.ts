@@ -27,6 +27,7 @@ import {
 import type { SeededRng, SeededIdGen } from '@shared/p2p-wire/rng';
 import type { HeroDeckLoadout } from '../../deck/heroDeckRules';
 import type { ChessRejection } from '@shared/protocol-core/chess';
+import type { PokerActionOrigin } from '@shared/p2p-wire/combat';
 
 export type CombatPhase = 
   | 'SETUP'
@@ -159,7 +160,7 @@ export interface PokerCombatSliceActions {
   ) => void;
   completeFirstStrike: () => void;
   completeMulligan: () => void;
-  performPokerAction: (playerId: string, action: CombatAction, hpCommitment?: number, allowExpiredTurn?: boolean) => void;
+  performPokerAction: (playerId: string, action: CombatAction, hpCommitment?: number, origin?: PokerActionOrigin) => void;
   advancePokerPhase: () => void;
   resolvePokerCombat: () => CombatResolution | null;
   endPokerCombat: () => void;

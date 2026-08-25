@@ -11,6 +11,7 @@ import { createContext } from 'react';
 import type { GameCommand } from '../core/commands';
 import type { FrontlineAttackMode } from '../core/commands';
 import type { CombatAction } from '../types/PokerCombatTypes';
+import type { PokerActionOrigin } from '@shared/p2p-wire/combat';
 import type { GameState } from '../types';
 import type { Hash256 } from '@shared/p2p-wire/integrity';
 import type { PhaseCheckpointPhase } from '@shared/p2p-wire/phaseCheckpoint';
@@ -28,6 +29,7 @@ export interface P2PActions {
 	sendPokerAction: (input: {
 		playerId: string;
 		action: CombatAction;
+		origin: PokerActionOrigin;
 		hpCommitment?: number;
 		turnId?: string | null;
 	}) => void;

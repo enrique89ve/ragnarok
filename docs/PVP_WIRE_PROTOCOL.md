@@ -369,6 +369,7 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `phase_checkpoint_propose_v1` | peer → relay | both | Fixed-size proposal for a deterministic phase boundary; consumed by the relay and never fanned out. |
 | `phase_checkpoint_commit_v1` / `phase_checkpoint_dispute_v1` | relay → peers inside `__sys.event=phase_checkpoint` | relay only | Commit if roots match. Mismatch retries; freeze only after 3 strikes. The relay never picks a winner. |
 | `poker_action` | both | both (symmetric) | Phase 3 poker: deterministic local apply + relay to peer; includes optional compact tuple for transcript/DataChannel migration |
+| `poker_hash_check` | host → client | host | Turn-scoped Poker integrity probe; compared only when phase, turn id and action count match locally |
 | `hash_check` | host → client | host | Periodic state-hash sanity check |
 | `hash_mismatch` | client → host | client | Reports a divergent state hash |
 | `result_propose` | winner → relay/indexer path | winner | **Obsolete as loser handshake.** ADR 0008: winner posts `match_result` to Hive. Alfa never initiates it. |
@@ -571,7 +572,9 @@ Implementation:
 - `poker_action` is applied locally by the sender and by the receiver in
   `useWireSync`. The message keeps legacy object fields plus a compact
   tuple from `shared/p2p-wire/combat.ts`, and carries a required `decisionId`
-  for receiver-side duplicate rejection.
+  for receiver-side duplicate rejection. It also carries required
+  `origin: 'player' | 'timeout'`; timeout is semantic gameplay input, not a
+  client permission flag.
 - On receive, the engine result is discriminated as `applied` or `rejected`.
   Only `applied` commits the decision id to dedup/eviction, records the
   transcript move, and closes the betting round. A rejected/no-op engine action
@@ -593,6 +596,11 @@ Implementation:
   ms), for the same combat/phase/actor, and the actor is the receiver's remote
   poker slot. Senders include `remainingMs`, so receivers derive their local
   deadline from receipt time instead of trusting the sender's wall clock.
+- `origin: 'timeout'` is accepted only at or after the local deadline and only
+  when the action equals the shared derivation: no pending wager → `DEFEND`,
+  pending wager → `BRACE`. Timeout `DEFEND` preserves stamina; it never grants
+  the manual-check `+1 STA` reward. Missing origin is rejected at the wire
+  schema.
 - The receiving store records the remote actor as the `turnClockOwnerId` for
   that `turnId`; duplicate announcements from that owner are ignored. A new
   owner is accepted only when the turn identity changes, so reconnect or
@@ -609,9 +617,19 @@ Implementation:
 - The battlefield remains a hard five-slot limit (`MAX_BATTLEFIELD_SIZE = 5`).
   A minion command is rejected when `battlefield.length >= 5`, regardless of
   remaining mana or time; card timing never creates a sixth slot.
-- P2P poker freezes local input, timers, and AI fallback while the transport
-  is in reconnect/grace states. Local-only poker mutations must not happen
-  during reconnect.
+- Shared resource validation also rejects impossible state before and after a
+  card command or Poker action: hand `<= 6`, mana `0 <= current <= max <= 10`,
+  armor `0 <= armor <= 30`, and current health/stamina may not exceed their
+  respective maxima. Timeout `DEFEND` has an exact stamina delta of `0`;
+  manual `DEFEND` has at most `+1` after the max-stamina clamp.
+- P2P poker freezes local input and phase advancement while the transport is
+  in reconnect/grace states, but the absolute deadline remains live. A
+  deterministic timeout may resolve locally; reconnect re-announces the
+  current turn when needed.
+- The host emits `poker_hash_check` from the same canonical Poker projection
+  used by phase checkpoints. The receiver compares only the same turn identity
+  and action count, then records a Poker integrity mismatch without treating
+  the relay as a gameplay judge.
 - Showdown wager coin flips are derived from deterministic combat metadata
   instead of browser randomness so both peers can replay the same result.
 
@@ -764,6 +782,7 @@ the `tc` CID; the chain only carries enough to verify integrity.
 | Build-hash mismatch | `version_check` envelope | Toast warning, continue (not a slash) |
 | Seed commitment mismatch | `seed_reveal` validation | Disconnect; possible cheating |
 | State hash mismatch (cards) | `hash_check` from host | Toast + `slash_evidence_deferred` record |
+| Poker state hash mismatch | `poker_hash_check` with matching turn identity | Integrity event + diagnostic path; no relay-side winner selection |
 | Chess transition root/rejection mismatch | `transition_receipt_v1` | Quarantine local chess actions; retain session evidence; no automatic settlement |
 | Mid-match disconnect | WS close handler | No auto-broadcast; future evidence flow required |
 | Duplicate match_result on-chain | Found via `findExistingMatchResult` | `slash_evidence_deferred` record |
@@ -846,8 +865,12 @@ each individually blocked or guarded.
 capacity checks, compact tuple mismatch rejection, remote-actor binding,
 duplicate `decisionId` rejection, all-in action lockout, deterministic
 showdown coin flips, and turn-clock duration guards are implemented.
-Remaining hardening is hash coverage for poker snapshots, compact transcript
-replay from `shared/p2p-wire/combat.ts`, and two-browser smoke evidence.
+Remaining hardening is compact transcript replay from
+`shared/p2p-wire/combat.ts` and two-browser smoke evidence.
+
+Live Poker hash coverage now uses the turn-scoped `poker_hash_check`
+projection; it remains peer-side evidence because the relay does not execute
+the Poker reducer.
 
 ### OPEN-5 — Disconnect / reconnect mid-match
 

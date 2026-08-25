@@ -123,6 +123,38 @@ describe('poker action intent rules', () => {
     })).toMatchObject({ ok: false, reason: 'turn_expired' });
   });
 
+	it('allows only the derived timeout action and never grants timeout stamina', () => {
+		const expired = createCombatState({
+			turnDeadlineAtMs: Date.now() - 1,
+			player: {
+				...createCombatState().player,
+				pet: createPet('player-pet', 100, 4),
+			},
+		});
+
+		expect(validatePokerActionIntent({
+			combatState: expired,
+			playerId: 'player-piece',
+			action: CombatAction.DEFEND,
+			origin: 'timeout',
+			nowMs: Date.now(),
+		})).toMatchObject({ ok: true });
+
+		expect(validatePokerActionIntent({
+			combatState: expired,
+			playerId: 'player-piece',
+			action: CombatAction.BRACE,
+			origin: 'timeout',
+			nowMs: Date.now(),
+		})).toMatchObject({ ok: false, reason: 'invalid_timeout_action' });
+
+		useUnifiedCombatStore.setState({ pokerCombatState: expired, pokerIsActive: true });
+		useUnifiedCombatStore.getState().performPokerAction('player-piece', CombatAction.DEFEND, undefined, 'timeout');
+		const after = useUnifiedCombatStore.getState().pokerCombatState;
+		expect(after?.player.pet.stats.currentStamina).toBe(4);
+		expect(after?.actionHistory.at(-1)?.origin).toBe('timeout');
+	});
+
   it('derives deterministic timeout actions for either active peer', () => {
     expect(derivePokerTimeoutIntent(createCombatState())).toEqual({
       actorId: 'player-piece',
@@ -233,7 +265,7 @@ describe('poker combat store exploit shields', () => {
     useUnifiedCombatStore.getState().reset();
   });
 
-  it('does not mutate combat state for over-cap peer bets', () => {
+	it('does not mutate combat state for over-cap peer bets', () => {
     useUnifiedCombatStore.setState({
       pokerCombatState: createCombatState({
         player: {
@@ -249,8 +281,22 @@ describe('poker combat store exploit shields', () => {
     const state = useUnifiedCombatStore.getState().pokerCombatState;
     expect(state?.player.hpCommitted).toBe(0);
     expect(state?.player.pet.stats.currentHealth).toBe(100);
-    expect(state?.pot).toBe(0);
-  });
+		expect(state?.pot).toBe(0);
+	});
+
+	it('rejects a Poker action when the participant already has impossible resources', () => {
+		const invalid = createCombatState({
+			player: {
+				...createCombatState().player,
+				heroArmor: 31,
+			},
+		});
+		useUnifiedCombatStore.setState({ pokerCombatState: invalid, pokerIsActive: true });
+
+		useUnifiedCombatStore.getState().performPokerAction('player-piece', CombatAction.DEFEND);
+
+		expect(useUnifiedCombatStore.getState().pokerCombatState).toBe(invalid);
+	});
 
   it('caps valid peer bets by stamina and records the normalized commitment', () => {
     useUnifiedCombatStore.setState({

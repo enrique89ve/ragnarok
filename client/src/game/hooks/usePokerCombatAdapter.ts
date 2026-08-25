@@ -21,6 +21,7 @@ import {
   type ActionPermissions,
 } from '../combat/rules/pokerActionRules';
 import type { PokerCombatAdapterInit } from '../combat/pokerCombatAdapterContract';
+import type { PokerActionOrigin } from '@shared/p2p-wire/combat';
 
 export type { ActionPermissions };
 
@@ -51,7 +52,7 @@ export interface PokerCombatAdapter {
     deterministic?: PokerCombatDeterministicOptions
   ) => void;
   initializeCombatFromPayload: (payload: PokerCombatAdapterInit) => void;
-  performAction: (playerId: string, action: CombatAction, hpCommitment?: number, allowExpiredTurn?: boolean) => void;
+  performAction: (playerId: string, action: CombatAction, hpCommitment?: number, origin?: PokerActionOrigin) => void;
   advancePhase: () => void;
   maybeCloseBettingRound: () => void;
   resolveCombat: () => CombatResolution | null;
@@ -198,8 +199,8 @@ export function usePokerCombatAdapter(): PokerCombatAdapter {
       },
       initializeCombatFromPayload,
 
-      performAction: (playerId, action, hpCommitment, allowExpiredTurn) => {
-        performPokerAction(playerId, action, hpCommitment, allowExpiredTurn);
+      performAction: (playerId, action, hpCommitment, origin) => {
+        performPokerAction(playerId, action, hpCommitment, origin);
       },
 
       advancePhase: () => {
@@ -357,8 +358,8 @@ export function getPokerCombatAdapterState(): PokerCombatAdapter {
       getStore().completeMulligan();
     },
 
-    performAction: (playerId, action, hpCommitment, allowExpiredTurn) => {
-      getStore().performPokerAction(playerId, action, hpCommitment, allowExpiredTurn);
+    performAction: (playerId, action, hpCommitment, origin) => {
+      getStore().performPokerAction(playerId, action, hpCommitment, origin);
     },
 
     advancePhase: () => {

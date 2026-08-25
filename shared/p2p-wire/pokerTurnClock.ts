@@ -40,7 +40,7 @@ export const UNIVERSAL_POKER_TURN_CLOCK_POLICY: TurnClockPolicy = {
 	timeoutResolution: 'check_or_fold',
 };
 
-const TIMED_POKER_PHASES = new Set(['pre_flop', 'faith', 'foresight', 'destiny']);
+export type TimedPokerDecisionPhase = 'pre_flop' | 'faith' | 'foresight' | 'destiny';
 
 export type PokerTurnClock = Readonly<{
 	turnId: string;
@@ -56,8 +56,11 @@ export type PokerTurnIdentityInput = Readonly<{
 	actionsThisRound: number;
 }>;
 
-export function isTimedPokerDecisionPhase(phase: string): boolean {
-	return TIMED_POKER_PHASES.has(phase);
+export function isTimedPokerDecisionPhase(phase: string): phase is TimedPokerDecisionPhase {
+	return phase === 'pre_flop'
+		|| phase === 'faith'
+		|| phase === 'foresight'
+		|| phase === 'destiny';
 }
 
 export function isUniversalPokerTurnClock(policy: TurnClockPolicy): boolean {

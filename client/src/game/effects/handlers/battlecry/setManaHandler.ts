@@ -8,6 +8,7 @@ import { debug } from '../../../config/debugConfig';
 import { GameContext } from '../../../GameContext';
 import { Card, BattlecryEffect } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
+import { MAX_MANA } from '../../../constants/gameConstants';
 
 /**
  * Execute a set_mana battlecry effect
@@ -33,7 +34,7 @@ export default function executeSetMana(
       return { success: false, error: 'No mana value specified' };
     }
     
-    const manaValue = Math.max(0, Math.min(10, value));
+    const manaValue = Math.max(0, Math.min(MAX_MANA, value));
     
     const previousCurrentMana = context.currentPlayer.mana.max;
     const previousOpponentMana = context.opponentPlayer.mana.max;

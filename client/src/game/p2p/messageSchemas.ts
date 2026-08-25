@@ -271,12 +271,21 @@ const HashMismatchSchema = z.object({
 	myHash: HashString,
 }).strict();
 
+const PokerHashCheckSchema = z.object({
+	type: z.literal('poker_hash_check'),
+	pokerStateHash: HashString,
+	phase: z.enum(['pre_flop', 'faith', 'foresight', 'destiny']),
+	turnId: NonEmptyString(256),
+	actionsThisRound: NonNegativeInt,
+}).strict();
+
 // ── Poker (symmetric apply — see OPEN-4 / PVP_WIRE_PROTOCOL §5) ────────────
 
 const PokerActionSchema = z.object({
 	type: z.literal('poker_action'),
 	playerId: NonEmptyString(128),
 	action: z.enum(['attack', 'counter', 'engage', 'brace', 'defend']),
+	origin: z.enum(['player', 'timeout']),
 	hpCommitment: PokerHpCommitment.optional(),
 	compact: CompactPokerActionSchema.optional(),
 	turnId: NonEmptyString(256).optional(),
@@ -407,6 +416,7 @@ const SCHEMA_BY_TYPE = {
 	version_check: VersionCheckSchema,
 	wasm_hash_check: WasmHashCheckSchema,
 	hash_check: HashCheckSchema,
+	poker_hash_check: PokerHashCheckSchema,
 	hash_mismatch: HashMismatchSchema,
 	poker_action: PokerActionSchema,
 	poker_turn_started: PokerTurnStartedSchema,

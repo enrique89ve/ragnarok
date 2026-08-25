@@ -19,6 +19,7 @@ import {
   CardRarity,
   HeroClass
 } from '../types';
+import { MAX_ARMOR } from '../constants/gameConstants';
 import { addGameLogEvent } from './gameLogUtils';
 import { MAX_BATTLEFIELD_SIZE, MAX_HAND_SIZE } from '../constants/gameConstants';
 import { v4 as uuidv4 } from 'uuid';
@@ -544,8 +545,10 @@ export const handleSecretTrigger = (
         // Gain armor or heal (e.g., Ice Barrier)
         if (secretEffect.value) {
           // Ice Barrier gives armor
-          newGameState.players[secretOwner].heroArmor =
-            (newGameState.players[secretOwner].heroArmor || 0) + secretEffect.value;
+          newGameState.players[secretOwner].heroArmor = Math.min(
+            MAX_ARMOR,
+            (newGameState.players[secretOwner].heroArmor || 0) + secretEffect.value,
+          );
         }
         break;
         

@@ -29,6 +29,9 @@ export const COMPACT_POKER_ACTION_CODE = {
 export type CompactPokerActionName = keyof typeof COMPACT_POKER_ACTION_CODE;
 export type CompactPokerActionCode = typeof COMPACT_POKER_ACTION_CODE[CompactPokerActionName];
 
+/** Semantic source of a poker decision. Timeout is outcome-bearing metadata. */
+export type PokerActionOrigin = 'player' | 'timeout';
+
 const POKER_ACTION_BY_CODE: Record<CompactPokerActionCode, CompactPokerActionName> = {
 	1: 'attack',
 	2: 'counter',

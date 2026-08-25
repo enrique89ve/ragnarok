@@ -1818,7 +1818,7 @@ const greekLegendaries: CardData[] = [
     manaCost: 2,
     attack: 1,
     health: 1,
-    description: "Deathrattle: If you have 7 minions, deal 5 damage to the enemy hero. At the end of your turn, if you have 7 minions, deal 1 damage to the enemy hero.",
+    description: "Deathrattle: If you have 5 minions, deal 5 damage to the enemy hero. At the end of your turn, if you have 5 minions, deal 1 damage to the enemy hero.",
     flavorText: "The golden rooster whose crow heralds the end of days.",
     rarity: "rare",
     type: "minion",

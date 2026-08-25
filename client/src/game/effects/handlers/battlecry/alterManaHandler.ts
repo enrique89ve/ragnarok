@@ -8,6 +8,7 @@ import { debug } from '../../../config/debugConfig';
 import { GameContext } from '../../../GameContext';
 import { Card, BattlecryEffect } from '../../../types/CardTypes';
 import { EffectResult } from '../../../types/EffectTypes';
+import { MAX_MANA } from '../../../constants/gameConstants';
 
 /**
  * Execute an alter_mana battlecry effect
@@ -39,14 +40,14 @@ export default function executeAlterMana(
     const previousCurrentMana = targetPlayer.mana.current;
     
     if (temporaryEffect) {
-      targetPlayer.mana.current = Math.max(0, Math.min(10, targetPlayer.mana.current + value));
+      targetPlayer.mana.current = Math.max(0, Math.min(targetPlayer.mana.max, targetPlayer.mana.current + value));
       context.logGameEvent(`${sourceCard.name} ${value > 0 ? 'added' : 'removed'} ${Math.abs(value)} mana temporarily. Current mana: ${targetPlayer.mana.current}`);
     } else {
       if (affectEmpty) {
-        targetPlayer.mana.max = Math.max(0, Math.min(10, targetPlayer.mana.max + value));
+        targetPlayer.mana.max = Math.max(0, Math.min(MAX_MANA, targetPlayer.mana.max + value));
         context.logGameEvent(`${sourceCard.name} ${value > 0 ? 'gained' : 'destroyed'} ${Math.abs(value)} empty mana crystal(s). Max mana: ${targetPlayer.mana.max}`);
       } else {
-        targetPlayer.mana.max = Math.max(0, Math.min(10, targetPlayer.mana.max + value));
+        targetPlayer.mana.max = Math.max(0, Math.min(MAX_MANA, targetPlayer.mana.max + value));
         if (value > 0) {
           targetPlayer.mana.current = Math.min(targetPlayer.mana.max, targetPlayer.mana.current + value);
         } else {

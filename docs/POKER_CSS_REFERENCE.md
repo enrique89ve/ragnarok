@@ -155,7 +155,7 @@ This is the audit gold: every rendered thing in the arena, what game value it di
 | Boss quip bubble | `BossQuipBubble.tsx` | `BossQuipBubble.css` | `.boss-quip-bubble`, `.boss-quip-portrait` | boss line of dialogue | — |
 | Phase pip indicator | `PhasePipIndicator.tsx` | `PhasePipIndicator.css` | `.phase-pip-indicator`, `.phase-pip` | 4 phase pips (PRE_FLOP / FAITH / FORESIGHT / DESTINY) | `.phase-pip-fired` |
 | Opponent hole cards | `HoleCardsOverlay.tsx` | [hole-cards.css](../client/src/game/combat/styles/hole-cards.css) | `.opponent-hole-cards`, `.hero-pocket-cards--opponent` | 2 face-down cards (revealed on showdown) | `.hole-cards-active-turn` |
-| Opponent hand display | `OpponentZone.tsx` | [opponent-hand.css](../client/src/game/combat/styles/opponent-hand.css) | `.opponent-hand-display`, `.opponent-card-back` | fan of 1-10 card backs | — |
+| Opponent hand display | `OpponentZone.tsx` | [opponent-hand.css](../client/src/game/combat/styles/opponent-hand.css) | `.opponent-hand-display`, `.opponent-card-back` | fan of 1-6 card backs | — |
 | Opponent hand count badge | `OpponentZone.tsx` | `opponent-hand.css` | `.opponent-hand-count` | numeric hand size | — |
 | Opponent revealed card | `OpponentZone.tsx` | `opponent-hand.css` | `.opponent-revealed-card` | a single face-up opponent card | — |
 | Opponent resource dock | `HeroResourceDock.tsx` | `hero-resource.css` (port) | `.hero-resource-dock` | mana gem, eitr, etc. | — |

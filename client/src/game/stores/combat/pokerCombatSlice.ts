@@ -37,6 +37,9 @@ import {
   UnifiedCombatStore
 } from './types';
 import { getElementAdvantage } from '../../utils/elements';
+import type { PokerActionOrigin } from '@shared/p2p-wire/combat';
+import { deriveDefendStaminaAfterAction } from '@shared/protocol-core/pokerActionPolicy';
+import { validatePokerResourceInvariants, type ResourceInvariantViolation } from '@shared/protocol-core/gameLimits';
 import { getCachedHandEvaluation, clearHandCache } from '../../utils/poker/handCache';
 import {
   applyPokerHpDelta,
@@ -64,6 +67,22 @@ import {
 } from '@shared/p2p-wire/pokerTurnClock';
 import { validatePokerActionIntent } from '../../combat/rules/pokerActionRules';
 import { emitCommunityCardRevealed, emitPhaseEntered } from '../../combat/vfx/events';
+
+function findPokerResourceViolation(state: PokerCombatState): ResourceInvariantViolation | null {
+	for (const participant of [state.player, state.opponent]) {
+		const violation = validatePokerResourceInvariants({
+			manaCurrent: participant.mana,
+			manaMax: participant.maxMana,
+			armor: participant.heroArmor,
+			currentHealth: participant.pet.stats.currentHealth,
+			maxHealth: participant.pet.stats.maxHealth,
+			currentStamina: participant.pet.stats.currentStamina,
+			maxStamina: participant.pet.stats.maxStamina,
+		});
+		if (violation) return violation;
+	}
+	return null;
+}
 
 // ── v1.1: Wager Keyword Utilities ──
 
@@ -662,9 +681,14 @@ export const createPokerCombatSlice: StateCreator<
 	    emitPhaseEntered({ phase: PokerCombatPhase.PRE_FLOP });
   },
 
-  performPokerAction: (playerId: string, action: CombatAction, hpCommitment?: number, allowExpiredTurn = false) => {
+  performPokerAction: (playerId: string, action: CombatAction, hpCommitment?: number, origin: PokerActionOrigin = 'player') => {
     const state = get();
     if (!state.pokerCombatState) return;
+	const beforeResourceViolation = findPokerResourceViolation(state.pokerCombatState);
+	if (beforeResourceViolation) {
+		debug.combat('[performPokerAction] REJECTED: resource invariant violated', beforeResourceViolation);
+		return;
+	}
 
     const validation = validatePokerActionIntent({
       combatState: state.pokerCombatState,
@@ -672,7 +696,7 @@ export const createPokerCombatSlice: StateCreator<
       action,
       hpCommitment,
 		  nowMs: Date.now(),
-		  allowExpiredTurn,
+		  origin,
     });
     if (!validation.ok) {
       debug.combat('[performPokerAction] REJECTED:', {
@@ -683,7 +707,8 @@ export const createPokerCombatSlice: StateCreator<
       return;
     }
 
-    let newState = { ...state.pokerCombatState };
+    let newState = { ...state.pokerCombatState, actionHistory: [...state.pokerCombatState.actionHistory] };
+	let nextPokerSpellState = state.pokerSpellState;
     const permissions = validation.permissions;
     const actionHpCommitment = validation.hpCommitment ?? 0;
     const otherPlayerId = playerId === newState.player.playerId
@@ -826,7 +851,7 @@ export const createPokerCombatSlice: StateCreator<
         let foldStaPenalty = 1;
         
         // Check fold curse from spell state (extra -1 STA)
-        const spellState = get().pokerSpellState;
+        const spellState = nextPokerSpellState;
         if (spellState) {
           foldStaPenalty += getExtraFoldPenalty(spellState, folderSide);
           
@@ -836,7 +861,7 @@ export const createPokerCombatSlice: StateCreator<
           
           // Update spell state if shield was consumed
           if (shieldResult.newState !== spellState) {
-            set({ pokerSpellState: shieldResult.newState });
+            nextPokerSpellState = shieldResult.newState;
           }
         }
         
@@ -860,7 +885,12 @@ export const createPokerCombatSlice: StateCreator<
       case CombatAction.DEFEND:
         {
           const actor = actingAfter(newState);
-          const nextStamina = Math.min(actor.pet.stats.maxStamina, actor.pet.stats.currentStamina + 1);
+          const nextStamina = deriveDefendStaminaAfterAction({
+            action,
+            origin,
+            currentStamina: actor.pet.stats.currentStamina,
+            maxStamina: actor.pet.stats.maxStamina,
+          });
           newState = actor.playerId === newState.player.playerId
             ? { ...newState, player: { ...actor, pet: { ...actor.pet, stats: { ...actor.pet.stats, currentStamina: nextStamina } } } }
             : { ...newState, opponent: { ...actor, pet: { ...actor.pet, stats: { ...actor.pet.stats, currentStamina: nextStamina } } } };
@@ -882,6 +912,7 @@ export const createPokerCombatSlice: StateCreator<
     
     newState.actionHistory.push({
       action,
+      origin,
       hpCommitment: actionHpCommitment,
       timestamp: get()._nextLogTick()
     });
@@ -919,8 +950,18 @@ export const createPokerCombatSlice: StateCreator<
       playerReady: newState.player.isReady,
       opponentReady: newState.opponent.isReady
     });
-    
-    set({ pokerCombatState: applyLocalPokerTurnClock(newState) });
+
+	const afterResourceViolation = findPokerResourceViolation(newState);
+	if (afterResourceViolation) {
+		debug.combat('[performPokerAction] REJECTED: action produced invalid resources', afterResourceViolation);
+		return;
+	}
+
+	const nextCombatState = applyLocalPokerTurnClock(newState);
+	set({
+		pokerCombatState: nextCombatState,
+		...(nextPokerSpellState !== state.pokerSpellState ? { pokerSpellState: nextPokerSpellState } : {}),
+	});
 
     // Post-commit: BRACE writes phase = RESOLUTION directly; every phase
     // writer emits phaseEntered so the phase shake fires for it too.

@@ -20,7 +20,7 @@ const useGameStore = {
 import { isMinion, isSpell, isWeapon, getAttack, getHealth } from '../cards/typeGuards';
 import { trackQuestProgress } from '../quests/questProgress';
 import { debug } from '../../config/debugConfig';
-import { MAX_BATTLEFIELD_SIZE, MAX_HAND_SIZE } from '../../constants/gameConstants';
+import { MAX_ARMOR, MAX_BATTLEFIELD_SIZE, MAX_HAND_SIZE, MAX_MANA } from '../../constants/gameConstants';
 import { checkPetEvolutionTrigger } from '../petEvolutionTriggers';
 import { addKeyword, removeKeyword, hasKeyword } from '../cards/keywordUtils';
 import { shuffleInPlace, shuffleArray, cryptoIdGen } from '../seededRng';
@@ -67,25 +67,17 @@ function executeManaSpell(
   if (currentPlayer === 'player') {
     newState.players.player.mana.current += manaAmount;
     
-    // If this is temporary mana, we don't need to cap it
-    // Otherwise, ensure we don't exceed max mana
-    if (!effect.isTemporaryMana) {
-      newState.players.player.mana.current = Math.min(
-        newState.players.player.mana.current,
-        newState.players.player.mana.max
-      );
-    }
+    newState.players.player.mana.current = Math.min(
+      newState.players.player.mana.current,
+      newState.players.player.mana.max
+    );
   } else {
     newState.players.opponent.mana.current += manaAmount;
     
-    // If this is temporary mana, we don't need to cap it
-    // Otherwise, ensure we don't exceed max mana
-    if (!effect.isTemporaryMana) {
-      newState.players.opponent.mana.current = Math.min(
-        newState.players.opponent.mana.current,
-        newState.players.opponent.mana.max
-      );
-    }
+    newState.players.opponent.mana.current = Math.min(
+      newState.players.opponent.mana.current,
+      newState.players.opponent.mana.max
+    );
   }
   
   return newState;
@@ -3376,8 +3368,8 @@ function executeReturnToHandSpell(
     const minion = playerBattlefield[playerIdx];
     
     // Check if hand is full before adding
-    if (playerHand.length >= 10) {
-      debug.warn(`Cannot return ${minion.card.name} to hand: hand is full (10/10)`);
+    if (playerHand.length >= MAX_HAND_SIZE) {
+      debug.warn(`Cannot return ${minion.card.name} to hand: hand is full (${MAX_HAND_SIZE}/${MAX_HAND_SIZE})`);
       return state;
     }
     
@@ -3404,8 +3396,8 @@ function executeReturnToHandSpell(
     const minion = opponentBattlefield[oppIdx];
 
     // Check if hand is full before adding
-    if (opponentHand.length >= 10) {
-      debug.warn(`Cannot return ${minion.card.name} to opponent's hand: hand is full (10/10)`);
+    if (opponentHand.length >= MAX_HAND_SIZE) {
+      debug.warn(`Cannot return ${minion.card.name} to opponent's hand: hand is full (${MAX_HAND_SIZE}/${MAX_HAND_SIZE})`);
       return state;
     }
 
@@ -3506,7 +3498,7 @@ function executeAddCardSpell(
     // Add specific card(s)
     const cardToAdd = getCardById(effect.addCardId as number);
     if (cardToAdd) {
-      for (let i = 0; i < count && playerHand.length < 10; i++) {
+      for (let i = 0; i < count && playerHand.length < MAX_HAND_SIZE; i++) {
         const instance: CardInstance = {
           instanceId: uuidv4(),
           card: cardToAdd,
@@ -3521,7 +3513,7 @@ function executeAddCardSpell(
   } else if (effect.addRandomType) {
     // Add random cards of a type
     const validCards = allCards.filter(c => c.type === effect.addRandomType && c.collectible);
-    for (let i = 0; i < count && playerHand.length < 10; i++) {
+    for (let i = 0; i < count && playerHand.length < MAX_HAND_SIZE; i++) {
       const randomCard = validCards[Math.floor(cardsRng() * validCards.length)];
       if (randomCard) {
         const instance: CardInstance = {
@@ -3879,12 +3871,15 @@ function executeGainManaSpell(
   
   if (effect.permanent) {
     // Permanent mana crystal (like Wild Growth)
-    playerState.mana.max = Math.min((playerState.mana.max || 1) + effect.value, 10);
+    playerState.mana.max = Math.min((playerState.mana.max || 1) + effect.value, MAX_MANA);
     // Also increase current mana for this turn
     playerState.mana.current = Math.min(playerState.mana.current + effect.value, playerState.mana.max);
   } else {
-    // Temporary mana this turn (like Innervate) - no cap, can exceed max
-    playerState.mana.current = (playerState.mana.current || 0) + effect.value;
+    // Temporary mana remains inside the bounded mana pool.
+    playerState.mana.current = Math.min(
+      playerState.mana.max,
+      (playerState.mana.current || 0) + effect.value,
+    );
   }
   
   
@@ -5663,7 +5658,7 @@ function executeGainManaCrystalsSpell(
   const playerState = currentPlayer === 'player' ? newState.players.player : newState.players.opponent;
   
   const crystals = effect.value || 1;
-  playerState.mana.max = Math.min(10, playerState.mana.max + crystals);
+  playerState.mana.max = Math.min(MAX_MANA, playerState.mana.max + crystals);
   playerState.mana.current = Math.min(playerState.mana.max, playerState.mana.current + crystals);
   
   return newState;
@@ -5937,7 +5932,7 @@ function executeGainArmorSpell(
   const playerState = currentPlayer === 'player' ? newState.players.player : newState.players.opponent;
   
   const armorAmount = effect.value || 0;
-  playerState.heroArmor = Math.min(30, (playerState.heroArmor || 0) + armorAmount);
+  playerState.heroArmor = Math.min(MAX_ARMOR, (playerState.heroArmor || 0) + armorAmount);
 
   return newState;
 }
@@ -5954,7 +5949,7 @@ function executeArmorBasedOnMissingHealthSpell(
   const currentHealth = playerState.heroHealth ?? playerState.health ?? maxHp;
   const missingHealth = Math.max(0, maxHp - currentHealth);
 
-  playerState.heroArmor = Math.min(30, (playerState.heroArmor || 0) + missingHealth);
+  playerState.heroArmor = Math.min(MAX_ARMOR, (playerState.heroArmor || 0) + missingHealth);
 
   const drawPerArmor = (effect as any).drawPerArmorGained || 0;
   if (drawPerArmor > 0 && missingHealth > 0) {
@@ -5981,14 +5976,14 @@ function executeGainArmorAndImmunitySpell(
   if (currentPlayer === 'player') {
     const updatedPlayer = {
       ...newState.players.player,
-      heroArmor: (newState.players.player.heroArmor || 0) + (effect.value || 0)
+      heroArmor: Math.min(MAX_ARMOR, (newState.players.player.heroArmor || 0) + (effect.value || 0))
     };
     (updatedPlayer as any).isImmune = true;
     newState.players = { ...newState.players, player: updatedPlayer };
   } else {
     const updatedOpponent = {
       ...newState.players.opponent,
-      heroArmor: (newState.players.opponent.heroArmor || 0) + (effect.value || 0)
+      heroArmor: Math.min(MAX_ARMOR, (newState.players.opponent.heroArmor || 0) + (effect.value || 0))
     };
     (updatedOpponent as any).isImmune = true;
     newState.players = { ...newState.players, opponent: updatedOpponent };
@@ -6011,14 +6006,14 @@ function executeGainArmorAndLifestealSpell(
   if (currentPlayer === 'player') {
     const updatedPlayer = {
       ...newState.players.player,
-      heroArmor: (newState.players.player.heroArmor || 0) + (effect.value || 0)
+      heroArmor: Math.min(MAX_ARMOR, (newState.players.player.heroArmor || 0) + (effect.value || 0))
     };
     (updatedPlayer as any).hasLifesteal = true;
     newState.players = { ...newState.players, player: updatedPlayer };
   } else {
     const updatedOpponent = {
       ...newState.players.opponent,
-      heroArmor: (newState.players.opponent.heroArmor || 0) + (effect.value || 0)
+      heroArmor: Math.min(MAX_ARMOR, (newState.players.opponent.heroArmor || 0) + (effect.value || 0))
     };
     (updatedOpponent as any).hasLifesteal = true;
     newState.players = { ...newState.players, opponent: updatedOpponent };
@@ -6372,7 +6367,7 @@ function executeGainArmorAndDrawSpell(
       ...newState.players,
       player: {
         ...newState.players.player,
-        heroArmor: (newState.players.player.heroArmor || 0) + armorGain
+        heroArmor: Math.min(MAX_ARMOR, (newState.players.player.heroArmor || 0) + armorGain)
       }
     };
   } else {
@@ -6380,7 +6375,7 @@ function executeGainArmorAndDrawSpell(
       ...newState.players,
       opponent: {
         ...newState.players.opponent,
-        heroArmor: (newState.players.opponent.heroArmor || 0) + armorGain
+        heroArmor: Math.min(MAX_ARMOR, (newState.players.opponent.heroArmor || 0) + armorGain)
       }
     };
   }
@@ -6633,7 +6628,7 @@ function executeConditionalArmorSpell(
         ...newState.players,
         player: {
           ...newState.players.player,
-          heroArmor: (newState.players.player.heroArmor || 0) + armorGain
+          heroArmor: Math.min(MAX_ARMOR, (newState.players.player.heroArmor || 0) + armorGain)
         }
       };
     } else {
@@ -6641,7 +6636,7 @@ function executeConditionalArmorSpell(
         ...newState.players,
         opponent: {
           ...newState.players.opponent,
-          heroArmor: (newState.players.opponent.heroArmor || 0) + armorGain
+          heroArmor: Math.min(MAX_ARMOR, (newState.players.opponent.heroArmor || 0) + armorGain)
         }
       };
     }
@@ -7356,7 +7351,7 @@ function executeGainArmorReduceCostSpell(
   const playerState = currentPlayer === 'player' ? newState.players.player : newState.players.opponent;
 
   const armorAmount = effect.value || 5;
-  playerState.heroArmor = Math.min(30, (playerState.heroArmor || 0) + armorAmount);
+  playerState.heroArmor = Math.min(MAX_ARMOR, (playerState.heroArmor || 0) + armorAmount);
 
   const costReduction = (effect as any).costReduction || 1;
   const targetCardType = (effect as any).targetCardType || 'all';
@@ -7577,7 +7572,7 @@ function executeHeroAttackBuffSpell(
   };
   (updatedPlayer as any).heroAttack = ((newState.players[side] as any).heroAttack || 0) + attackValue;
   if (armorValue > 0) {
-    updatedPlayer.heroArmor = Math.min(30, (updatedPlayer.heroArmor || 0) + armorValue);
+    updatedPlayer.heroArmor = Math.min(MAX_ARMOR, (updatedPlayer.heroArmor || 0) + armorValue);
   }
   newState.players = { ...newState.players, [side]: updatedPlayer };
 
@@ -7842,7 +7837,7 @@ function executeGainArmorAndRecruitSpell(state: GameState, effect: SpellEffect):
   const currentPlayer = state.currentTurn || 'player';
   const playerState = currentPlayer === 'player' ? newState.players.player : newState.players.opponent;
   const armorAmount = (effect as any).armorValue || effect.value || 0;
-  playerState.heroArmor = Math.min(30, (playerState.heroArmor || 0) + armorAmount);
+  playerState.heroArmor = Math.min(MAX_ARMOR, (playerState.heroArmor || 0) + armorAmount);
   return executeRecruitSpell(newState, effect);
 }
 

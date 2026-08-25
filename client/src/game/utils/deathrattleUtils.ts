@@ -6,7 +6,7 @@ import allCards, { getCardById } from '../data/allCards';
 import { trackQuestProgress } from './quests/questProgress';
 import { debug } from '../config/debugConfig';
 import { dealDamage } from './effects/damageUtils';
-import { MAX_BATTLEFIELD_SIZE, MAX_HAND_SIZE } from '../constants/gameConstants';
+import { MAX_ARMOR, MAX_BATTLEFIELD_SIZE, MAX_HAND_SIZE } from '../constants/gameConstants';
 import { addKeyword } from './cards/keywordUtils';
 import { isMinion } from './cards/typeGuards';
 import { cryptoIdGen } from './seededRng';
@@ -218,7 +218,7 @@ function executeDeathrattleInner(
     }
     case 'gain_armor': {
       const armorVal = deathrattle.value || 0;
-      newState.players[playerId].heroArmor = Math.min(30, (newState.players[playerId].heroArmor || 0) + armorVal);
+      newState.players[playerId].heroArmor = Math.min(MAX_ARMOR, (newState.players[playerId].heroArmor || 0) + armorVal);
       return newState;
     }
     case 'resummon': {
@@ -928,7 +928,7 @@ function executeSummonDeathrattle(
   
   const player = newState.players[playerId];
   
-  // Check if there's room on the battlefield (max 7 minions)
+  // Check if there's room on the battlefield (max 5 minions)
   if (player.battlefield.length >= MAX_BATTLEFIELD_SIZE) {
     return newState;
   }
@@ -1100,7 +1100,9 @@ function checkDeathrattleCondition(state: GameState, condition: string, playerId
   const battlefield = player.battlefield || [];
   switch (condition) {
     case 'minion_count_7':
-      return battlefield.length >= 7;
+      // Legacy condition name retained for card-data compatibility. The
+      // legal full-board threshold is the shared five-slot limit.
+      return battlefield.length >= MAX_BATTLEFIELD_SIZE;
     case 'minion_died_this_turn':
       return ((state as any).minionsDeadThisTurn || 0) > 0;
     default:
