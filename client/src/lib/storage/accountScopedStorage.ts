@@ -26,7 +26,8 @@ import {
 	getRagnarokNetworkConfig,
 } from '../../game/config/networkConfig';
 
-const GUEST_BUCKET = 'guest';
+export const GUEST_ACCOUNT_ID = 'guest';
+const GUEST_BUCKET = GUEST_ACCOUNT_ID;
 const LEGACY_HIVE_STORE_KEY = 'ragnarok-hive-data';
 const HIVE_STORE_KEY = createRuntimeStorageKey(LEGACY_HIVE_STORE_KEY);
 

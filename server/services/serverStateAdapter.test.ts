@@ -8,6 +8,7 @@ import {
 	getOffersByNft,
 	importState,
 } from './chainState';
+import { getCurrentServerProtocolRuntimeFingerprint } from './chainState';
 import { serverStateAdapter } from './serverStateAdapter';
 
 function resetChainState(): void {
@@ -19,6 +20,7 @@ function resetChainState(): void {
 		syncCursors: [],
 		lastSyncedAt: 0,
 		playerNonces: [],
+		runtimeFingerprint: getCurrentServerProtocolRuntimeFingerprint(),
 	});
 }
 

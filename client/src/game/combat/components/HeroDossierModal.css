@@ -21,7 +21,8 @@
 		linear-gradient(135deg, rgba(18, 25, 38, 0.98), rgba(5, 8, 15, 0.99)),
 		var(--obsidian-950);
 	border: 1px solid color-mix(in srgb, var(--gold-500) 68%, transparent);
-	border-radius: 8px;
+	border-radius: 0;
+	clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px), 0 10px);
 	box-shadow:
 		0 20px 60px rgba(0, 0, 0, 0.7),
 		0 0 36px color-mix(in srgb, var(--gold-500) 16%, transparent),
@@ -84,7 +85,7 @@
 	color: var(--ink-300);
 	background: rgba(15, 23, 42, 0.7);
 	border: 1px solid rgba(148, 163, 184, 0.24);
-	border-radius: 4px;
+	border-radius: 0;
 	cursor: pointer;
 }
 
@@ -109,7 +110,7 @@
 	overflow: hidden;
 	background: var(--obsidian-950);
 	border: 2px solid var(--gold-500);
-	border-radius: 6px;
+	border-radius: 0;
 	box-shadow: 0 10px 26px rgba(0, 0, 0, 0.42);
 }
 
@@ -132,7 +133,7 @@
 	color: var(--ink-0);
 	background: rgba(3, 7, 18, 0.84);
 	border: 1px solid rgba(148, 163, 184, 0.35);
-	border-radius: 3px;
+	border-radius: 0;
 }
 
 .hero-dossier-content {
@@ -146,7 +147,7 @@
 	padding: 12px;
 	background: rgba(2, 6, 14, 0.52);
 	border: 1px solid rgba(148, 163, 184, 0.16);
-	border-radius: 5px;
+	border-radius: 0;
 }
 
 .hero-dossier-section h3 {
@@ -187,7 +188,7 @@
 	overflow: hidden;
 	background: rgba(15, 23, 42, 0.9);
 	border: 1px solid rgba(148, 163, 184, 0.18);
-	border-radius: 2px;
+	border-radius: 0;
 }
 
 .hero-dossier-meter span {
@@ -241,7 +242,7 @@
 	color: var(--ink-0);
 	background: rgba(37, 99, 235, 0.3);
 	border: 1px solid rgba(96, 165, 250, 0.5);
-	border-radius: 4px;
+	border-radius: 0;
 	cursor: pointer;
 }
 
@@ -292,7 +293,7 @@
 	color: var(--ink-200);
 	background: rgba(30, 41, 59, 0.82);
 	border: 1px solid rgba(148, 163, 184, 0.24);
-	border-radius: 3px;
+	border-radius: 0;
 }
 
 .hero-dossier-tag--artifact { color: var(--gold-200); border-color: rgba(245, 197, 66, 0.32); }

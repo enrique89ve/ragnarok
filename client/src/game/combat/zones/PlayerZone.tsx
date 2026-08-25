@@ -64,6 +64,8 @@ export interface PlayerZoneProps {
 	readonly handCards: ReadonlyArray<unknown>;
 	readonly handCurrentMana: number;
 	readonly handIsPlayerTurn: boolean;
+	readonly handIsPlayWindowOpen: boolean;
+	readonly handIsInteractionDisabled: boolean;
 	readonly heroHealth: number;
 	readonly evolveReadyIds: ReadonlySet<string>;
 	readonly playerBattlefield: ReadonlyArray<unknown>;
@@ -102,6 +104,8 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({
 	handCards,
 	handCurrentMana,
 	handIsPlayerTurn,
+	handIsPlayWindowOpen,
+	handIsInteractionDisabled,
 	heroHealth,
 	evolveReadyIds,
 	playerBattlefield,
@@ -173,6 +177,8 @@ export const PlayerZone: React.FC<PlayerZoneProps> = ({
 							currentMana={handCurrentMana}
 							heroHealth={heroHealth}
 							isPlayerTurn={handIsPlayerTurn}
+							isPlayWindowOpen={handIsPlayWindowOpen}
+							isInteractionDisabled={handIsInteractionDisabled}
 							onCardPlay={handleCardPlay}
 							registerCardPosition={registerCardPosition}
 							battlefieldRef={battlefieldRef}

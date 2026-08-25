@@ -975,15 +975,12 @@
   justify-content: center;
   gap: 3px;
   width: 100%;
+  height: var(--norse-card-keyword-row-height);
+  min-height: var(--norse-card-keyword-row-height);
 }
 
 .norse-card-frame:has(.card-frame__keywords[data-keyword-stack="2-3"]) {
   --norse-card-keyword-rail-height: var(--norse-card-keyword-two-row-height);
-}
-
-.norse-card-frame:not(.norse-card-frame--poker) .card-frame__keyword-row {
-  height: var(--norse-card-keyword-row-height);
-  min-height: var(--norse-card-keyword-row-height);
 }
 
 .norse-card-frame:not(.norse-card-frame--poker)

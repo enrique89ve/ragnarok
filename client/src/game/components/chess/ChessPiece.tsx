@@ -88,7 +88,6 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
 		: OWNER_CLASSES.opponent;
 	const isPawn = piece.type === 'pawn';
 	const isKing = piece.type === 'king';
-	const isOpponentKing = isKing && piece.owner !== myCanonicalSide;
   const isAttackTarget = visualState.tag === 'attackable';
   const isQueen = piece.type === 'queen';
   const isRook = piece.type === 'rook';
@@ -178,16 +177,6 @@ const ChessPieceComponent: React.FC<ChessPieceProps> = ({
           <div className="flame-outer" />
           {isKing && <div className="flame-rays" />}
         </div>
-      )}
-
-      {isKing && hasElement && false && useEnhancedFx && (
-        <span
-          className={cx(
-            "king-contrast-shadow",
-            isOpponentKing && "king-contrast-shadow-opponent"
-        )}
-          aria-hidden="true"
-        />
       )}
 
       {/* THE PIECE GLYPH */}

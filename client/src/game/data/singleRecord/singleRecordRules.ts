@@ -2,6 +2,8 @@
  * Local battle results for History. No RUNE — device ledger only.
  */
 
+import { isReservedAnonymousAccount } from '../../auth/progressAccount';
+
 export const SINGLE_RECORD_MAX = 50;
 
 export type LocalBattleMode = 'single' | 'campaign' | 'p2p';
@@ -22,9 +24,9 @@ export type SingleStreak =
 	| { readonly kind: 'win'; readonly count: number }
 	| { readonly kind: 'loss'; readonly count: number };
 
-export function isBattleLedgerAccount(username: string | null | undefined): boolean {
+export function isBattleLedgerAccount(username: string | null | undefined): username is string {
 	const name = username?.trim().toLowerCase().replace(/^@/, '') ?? '';
-	return name.length > 0 && name !== 'guest';
+	return name.length > 0 && !isReservedAnonymousAccount(name);
 }
 
 export function resultFromMatchEnd(iWon: boolean, isDraw = false): SingleMatchResult {

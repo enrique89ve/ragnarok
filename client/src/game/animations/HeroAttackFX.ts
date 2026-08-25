@@ -7,6 +7,10 @@ import {
 	ELEMENT_PALETTES,
 	type ParticleColor
 } from './PixiParticleCanvas';
+import {
+	ARENA_VFX_LAYERS,
+	getArenaVfxLayer,
+} from '../combat/arenaVfxTargets';
 import './dom-vfx.css';
 
 export interface AttackFXConfig {
@@ -96,11 +100,14 @@ export function playHeroAttackFX(config: AttackFXConfig): gsap.core.Timeline | n
 		// Screen shake on document body
 		const shakeTl = gsap.timeline();
 		const s = tier.shakePx;
-		shakeTl.to(document.body, { x: -s, y: s * 0.5, duration: 0.04, ease: 'none' });
-		shakeTl.to(document.body, { x: s, y: -s * 0.5, duration: 0.04, ease: 'none' });
-		shakeTl.to(document.body, { x: -s * 0.6, y: s * 0.3, duration: 0.04, ease: 'none' });
-		shakeTl.to(document.body, { x: s * 0.4, y: -s * 0.2, duration: 0.04, ease: 'none' });
-		shakeTl.to(document.body, { x: 0, y: 0, duration: 0.06, ease: 'power2.out' });
+		const shakeTarget = getArenaVfxLayer(ARENA_VFX_LAYERS.viewportWrapper);
+		if (shakeTarget) {
+			shakeTl.to(shakeTarget, { x: -s, y: s * 0.5, duration: 0.04, ease: 'none' });
+			shakeTl.to(shakeTarget, { x: s, y: -s * 0.5, duration: 0.04, ease: 'none' });
+			shakeTl.to(shakeTarget, { x: -s * 0.6, y: s * 0.3, duration: 0.04, ease: 'none' });
+			shakeTl.to(shakeTarget, { x: s * 0.4, y: -s * 0.2, duration: 0.04, ease: 'none' });
+			shakeTl.to(shakeTarget, { x: 0, y: 0, duration: 0.06, ease: 'power2.out' });
+		}
 
 			// Screen flash for heavy hits
 			if (tier.flash !== 'none') {
@@ -111,7 +118,9 @@ export function playHeroAttackFX(config: AttackFXConfig): gsap.core.Timeline | n
 					'--vfx-screen-flash-bg',
 					tier.flash === 'gold' ? 'rgba(255,215,0,0.35)' : 'rgba(255,255,255,0.4)'
 				);
-				document.body.appendChild(flash);
+				const vfxLayer = getArenaVfxLayer(ARENA_VFX_LAYERS.vfx);
+				if (!vfxLayer) return;
+				vfxLayer.appendChild(flash);
 				gsap.to(flash, {
 				opacity: 0,
 				duration: tier.flash === 'gold' ? 0.15 : 0.1,
@@ -151,36 +160,6 @@ export function playHeroAttackFX(config: AttackFXConfig): gsap.core.Timeline | n
 	tl.add(() => {
 		spawnEmbers(tgt.x, tgt.y, tier.emberCount, palette);
 	}, '-=0.1');
-
-	// Floating damage number
-	const dmgEl = document.createElement('div');
-	dmgEl.className = 'vfx-floating-damage';
-	dmgEl.textContent = `-${damage}`;
-	dmgEl.style.setProperty('--vfx-damage-x', `${tgt.x}px`);
-	dmgEl.style.setProperty('--vfx-damage-y', `${tgt.y}px`);
-	dmgEl.style.setProperty('--vfx-damage-size', damage >= 15 ? '2.5rem' : '1.8rem');
-	dmgEl.style.setProperty('--vfx-damage-color', damage >= 30 ? '#ffd700' : '#ff4444');
-	document.body.appendChild(dmgEl);
-
-	tl.fromTo(dmgEl,
-		{ opacity: 0, y: 0, scale: 0.5 },
-		{
-			opacity: 1,
-			y: -30,
-			scale: 1.3,
-			duration: 0.2,
-			ease: 'back.out(2)',
-		},
-		'-=0.25'
-	);
-	tl.to(dmgEl, {
-		y: -70,
-		opacity: 0,
-		scale: 0.8,
-		duration: 0.5,
-		ease: 'power2.in',
-		onComplete: () => dmgEl.remove()
-	});
 
 	return tl;
 }

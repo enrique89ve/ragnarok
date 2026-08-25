@@ -38,6 +38,10 @@ pipeline, or the matchmaking surface. Ranked settlement canon:
 
 ## §0 Table of Contents
 
+The wire protocol is transport/gameplay authority only. In F1 terminal local
+settlement is persisted by replay/IndexedDB in a separate envelope; the wire
+never emits Hive `match_anchor`/`match_result` or canonical economy.
+
 1. Architecture overview
 2. Transport: WebSocket relay
 3. Match lifecycle
@@ -192,7 +196,9 @@ in phases 0-2 before any gameplay action is sent.
    does not trust the body boolean as proof that onboarding happened: it also
    requires a server-side starter ceremony receipt recorded through
    `/api/starter/claim` before shared-network matchmaking can enqueue the
-   account. The server returns a process-local `queueToken`; clients send it
+   account. After login/identity, F1 registers that receipt without a second
+   wallet invocation; F2/F3 retain signed body authentication. The server returns
+   a process-local `queueToken`; clients send it
    back as `x-p2p-queue-token` for queue rechecks, status polling, and leave
    requests. Queue/status handling re-checks that receipt before returning
    queued/matched state: a peer that loses starter access is removed from the
@@ -250,9 +256,11 @@ Triggered by `useWireSync.ts:166-251` (effect dependent on
 2. Each peer also sends `version_check` (build hash) and `wasm_hash_check`
    (game-engine WASM hash) for transparency. WASM mismatch disconnects
    immediately (`useWireSync.ts:361-372`); build mismatch only warns.
-3. Each peer sends `army_announcement` (chess portraits) and `cards_deck`
-   (hero class, card ids, NFT levels) so both sides can finish handshake
-   init after `seed_reveal`.
+3. Each peer sends `army_announcement` (chess portraits) and a cards-deck
+   announcement (hero class, card ids, NFT levels). In shared-network mode,
+   the peer derives source-aware ownership claims from that exact deck and
+   sends `deck_verify`; the immutable handshake snapshot binds deck, claims,
+   `deckHash`, and `claimsHash`.
 4. On receiving the opponent's `seed_commit`, each peer sends
    `seed_reveal: { salt, hiveUsername }`.
 5. On receiving `seed_reveal`, the receiver:
@@ -265,10 +273,18 @@ Triggered by `useWireSync.ts:166-251` (effect dependent on
    - Derives `myCanonicalSide = parity(matchSeed[0]) XOR isHost` →
      `'player' | 'opponent'` (`shared/p2p-wire/chess.ts`). This is the
      canonical (global) side, NOT viewer-relative.
-   - Stores the opponent Hive username from the reveal payload.
+   - Stores the opponent Hive username from the reveal payload. A
+     `deck_verify.hiveAccount` must normalize to that identity; a missing
+     identity remains pending only until `seed_reveal` resolves, then fails
+     closed.
    - Both peers initialize the chess engine RNG from `matchSeed`.
-   - Both peers bind `${matchSeed}:cards` and call `initGameFromHandshake`
-     once seed + both `cards_deck` announces are present.
+   - Both peers bind `${matchSeed}:cards`. In local-dev, the cards handshake
+     may initialize from the two deck snapshots without Hive verification. In
+     shared-network, `initGameFromHandshake` is blocked until the remote
+     snapshot's claims bind to the announced card multiset, the Hive identity
+     matches, and both local IndexedDB ownership and server verification return
+     approved. Any mismatch or verifier failure disconnects; it is never
+     treated as an approval.
 6. Live cards init does not wait on host `init`. A leftover `init` envelope
    is ignored once `p2pInitApplied` is set. Guest recovery `gameState`
    (hash mismatch only) still applies through `flipGameState`.
@@ -343,8 +359,8 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `version_check` | both | both | Phase 2: build-hash diagnostic |
 | `wasm_hash_check` | both | both | Phase 2: engine-hash check (disconnect on mismatch) |
 | `army_announcement` | both | both | Phase 2: announce selected chess army |
-| `cards_deck` | both | both | Phase 2: announce cards hero + deck ids + NFT levels for both-peer init |
-| `deck_verify` | both | both | Phase 2: announce source-aware `protocolVersion: 2` deck claims for cross-verification |
+| `cards_deck` | both | both | Phase 2: announce the deck half of the immutable deck+claims snapshot |
+| `deck_verify` | both | both | Phase 2: bind source-aware `protocolVersion: 2` claims to the announced deck; shared-network init waits for identity + IndexedDB + server approval |
 | `init` | host → client | legacy | Phase 2 leftover: ignored after handshake init |
 | `game_command` (envelope) | both | both | Phase 3 cards: intent; both peers apply locally |
 | `gameState` | host → client | host recovery | `hash_mismatch` recovery snapshot only, compressed as `json+gzip+base64url@1` |
@@ -408,8 +424,9 @@ never re-derive ad-hoc with `isHost`.
 
 ### Cards Phase — Symmetric apply, host recovery (OPEN-8)
 
-Pattern: both peers announce `cards_deck`, call `initGameFromHandshake`,
-send `game_command`, and apply locally. The transport host still sends
+Pattern: both peers announce a single deck+claims snapshot, pass the
+shared-network verification gate when applicable, then call
+`initGameFromHandshake`, send `game_command`, and apply locally. The transport host still sends
 `hash_check` and a `gameState` snapshot on `hash_mismatch`. There is no
 forward `gameState` dump after each action.
 
@@ -420,7 +437,8 @@ Implementation:
   `prevStateHash` uses `isCardsHostFrame` so the guest hashes the
   host-canonical flip.
 - Both peers bind `${matchSeed}:cards` at `seed_reveal` and init from the
-  shared deck handshake (`cards_deck` + `initGameFromHandshake`).
+  shared deck handshake only after the snapshot gate (`cards_deck` + bound
+  `deck_verify` + verification approval in shared-network).
 - Cards-side command RNG is `commandRng()` / `cardsRng()` from
   `${matchSeed}:cards`. `cryptoRng` is the SP fallback when `matchSeed`
   is null.
@@ -548,6 +566,10 @@ Implementation:
   `useWireSync`. The message keeps legacy object fields plus a compact
   tuple from `shared/p2p-wire/combat.ts`, and carries a required `decisionId`
   for receiver-side duplicate rejection.
+- On receive, the engine result is discriminated as `applied` or `rejected`.
+  Only `applied` commits the decision id to dedup/eviction, records the
+  transcript move, and closes the betting round. A rejected/no-op engine action
+  changes none of those three authorities.
 - Store-level validation is mandatory before any poker action mutates state:
   phase must be a betting phase, `activePlayerId` must match, checks are
   rejected when a wager is pending, folds require a wager to answer, and
@@ -865,6 +887,6 @@ the design is settled.
 | **matchSeed** | `SHA256(sortedSalts)`, derived in seed_reveal. The root of all per-match randomness. |
 | **myCanonicalSide** | The local viewer's canonical side, derived from `matchSeed` parity XOR `isHost`. |
 | **prevStateHash** | Pre-apply state hash carried in the cards envelope; hashed in the host-as-player frame (`isCardsHostFrame`). Protects against fast-double-click race and cross-peer divergence. |
-| **cards_deck** | Phase-2 announce of local cards hero + deck ids + NFT levels. Feeds both-peer `initGameFromHandshake`. |
+| **cards_deck** | Deck half of the Phase-2 immutable deck+claims snapshot. In shared-network it feeds `initGameFromHandshake` only after identity, binding, IndexedDB, and server approval. |
 | **proposalId** | UUID correlating a `result_propose` with its `result_countersign`. |
 | **transcript** | The ordered list of `GameMove` records hashed at match end into a Merkle tree. |

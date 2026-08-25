@@ -1,11 +1,18 @@
 /**
- * DamageIndicator - Floating damage/heal number animation
+ * DamageIndicator - Floating damage/heal number animation.
  *
- * Uses position:fixed so viewport-relative coordinates from getBoundingClientRect work correctly.
- * Green for heals, red for damage, gold for critical hits (8+).
+ * Damage numbers are VFX, not HUD. They are converted into the bounded
+ * 1920x1080 arena space and portaled into the VFX layer.
  */
 
 import React, { useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
+import { gameEffectCoordinator } from '@/game/effects/core/gameEffectCoordinator';
+import {
+	ARENA_VFX_LAYERS,
+	getArenaLocalPoint,
+	getArenaVfxLayer,
+} from '../arenaVfxTargets';
 
 export interface DamageAnimation {
 	id: string;
@@ -18,6 +25,7 @@ export interface DamageAnimation {
 }
 
 interface DamageIndicatorProps {
+	id: string;
 	damage: number;
 	x: number;
 	y: number;
@@ -26,22 +34,37 @@ interface DamageIndicatorProps {
 }
 
 export const DamageIndicator: React.FC<DamageIndicatorProps> = ({
+	id,
 	damage,
 	x,
 	y,
 	isHeal = false,
-	onComplete
+	onComplete,
 }) => {
-	useEffect(() => {
-		const timer = setTimeout(onComplete, 2000);
-		return () => clearTimeout(timer);
-	}, [onComplete]);
-
 	const isBig = damage >= 5;
 	const isCritical = damage >= 8;
 	const isCrit = damage >= 10;
-	const jitterX = useMemo(() => (Math.random() - 0.5) * 10, []);
-	const jitterY = useMemo(() => (Math.random() - 0.5) * 4, []);
+
+	useEffect(() => {
+		const handle = gameEffectCoordinator.schedule({
+			owner: 'poker-renderer',
+			lane: 'damage-indicator',
+			key: id,
+			priority: isCritical ? 'high' : 'normal',
+			delayMs: 2000,
+			run: onComplete,
+		});
+		return () => handle.cancel();
+	}, [id, isCritical, onComplete]);
+
+	const jitter = useMemo(() => {
+		let hash = 0;
+		for (const character of id) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+		return {
+			x: ((hash % 101) / 100 - 0.5) * 10,
+			y: (((hash >>> 8) % 101) / 100 - 0.5) * 4,
+		};
+	}, [id]);
 
 	const className = [
 		'damage-indicator',
@@ -50,21 +73,28 @@ export const DamageIndicator: React.FC<DamageIndicatorProps> = ({
 		isCritical ? 'damage-critical' : '',
 	].filter(Boolean).join(' ');
 
-	return (
+	const portalTarget = getArenaVfxLayer(ARENA_VFX_LAYERS.vfx);
+	const position = portalTarget ? getArenaLocalPoint({ x, y }, portalTarget) : null;
+	if (!portalTarget || !position) return null;
+
+	return createPortal(
 		<div
 			className={className}
 			style={{
-				position: 'fixed',
-				left: x + jitterX,
-				top: y + jitterY,
+				position: 'absolute',
+				left: position.x + jitter.x,
+				top: position.y + jitter.y,
 				pointerEvents: 'none',
-				zIndex: 10000,
+				zIndex: 35,
 				transform: 'translateX(-50%)',
 			}}
 		>
-			<span className={`damage-number-text ${isHeal ? 'combat-heal-number' : 'combat-damage-number'} ${!isHeal && isCrit ? 'crit' : ''}`}>{isHeal ? '+' : '-'}{damage}</span>
+			<span className={`damage-number-text ${isHeal ? 'combat-heal-number' : 'combat-damage-number'} ${!isHeal && isCrit ? 'crit' : ''}`}>
+				{isHeal ? '+' : '-'}{damage}
+			</span>
 			{isCritical && !isHeal && <span className="damage-crit-label">CRIT!</span>}
-		</div>
+		</div>,
+		portalTarget,
 	);
 };
 

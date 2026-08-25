@@ -3,19 +3,18 @@ import { CombatPhase, PokerCombatState } from '../../types/PokerCombatTypes';
 import { getPokerCombatAdapterState } from '../../hooks/usePokerCombatAdapter';
 import { useGameStore } from '../../stores/gameStore';
 import { debug } from '../../config/debugConfig';
-
-// SPELL_PET phase duration in milliseconds - time for players to play cards
-const SPELL_PET_PHASE_DURATION_MS = 2500;
+import type { PokerTurnProcessMode } from '../decision/pokerTurnPolicy';
+import { shouldPrepareLocalAiSpellcraftOpponent } from '../decision/spellcraftDecision';
 
 interface UsePokerPhasesOptions {
   combatState: PokerCombatState | null;
   isActive: boolean;
+  processMode: PokerTurnProcessMode;
 }
 
 export function usePokerPhases(options: UsePokerPhasesOptions): void {
-  const { combatState, isActive } = options;
+  const { combatState, isActive, processMode } = options;
   const allInAdvanceInProgressRef = useRef(false);
-  const spellPetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const opponentSpellPetSetupKeyRef = useRef<string | null>(null);
 
   const cardGameMulliganActive = useGameStore(state => state.gameState?.mulligan?.active);
@@ -29,51 +28,35 @@ export function usePokerPhases(options: UsePokerPhasesOptions): void {
       return;
     }
 
-    if (spellPetTimerRef.current) {
-      clearTimeout(spellPetTimerRef.current);
-      spellPetTimerRef.current = null;
+    const setupKey = `${combatState.combatId}:${combatState.handNumber}`;
+    if (!shouldPrepareLocalAiSpellcraftOpponent({
+      phase: combatState.phase,
+      isActive,
+      isMulliganActive: Boolean(cardGameMulliganActive),
+      processMode,
+      setupAlreadyApplied: opponentSpellPetSetupKeyRef.current === setupKey,
+    })) {
+      return;
     }
 
-    const setupKey = `${combatState.combatId}:${combatState.spellPetPhaseStartTime ?? 'pending'}`;
-    if (opponentSpellPetSetupKeyRef.current !== setupKey) {
-      useGameStore.getState().setupOpponentSpellPetCards();
-      opponentSpellPetSetupKeyRef.current = setupKey;
+    useGameStore.getState().setupOpponentSpellPetCards();
+    opponentSpellPetSetupKeyRef.current = setupKey;
+
+    const adapter = getPokerCombatAdapterState();
+    const freshState = adapter.combatState;
+    if (
+      !freshState
+      || freshState.combatId !== combatState.combatId
+      || freshState.phase !== CombatPhase.SPELL_PET
+    ) {
+      return;
     }
 
-    const startTime = combatState.spellPetPhaseStartTime || Date.now();
-    const elapsed = Date.now() - startTime;
-    const remainingTime = Math.max(0, SPELL_PET_PHASE_DURATION_MS - elapsed);
-
-    debug.combat('[SPELL_PET Phase] Started, will advance to FAITH in', remainingTime, 'ms');
-
-    spellPetTimerRef.current = setTimeout(() => {
-      const mulliganStillActive = useGameStore.getState().gameState?.mulligan?.active;
-      if (mulliganStillActive) {
-        debug.combat('[SPELL_PET Phase] Blocked at timer fire: card game mulligan still active');
-        return;
-      }
-
-      const adapter = getPokerCombatAdapterState();
-      const freshState = adapter.combatState;
-
-      if (!freshState || freshState.phase !== CombatPhase.SPELL_PET) {
-        return;
-      }
-
-      debug.combat('[SPELL_PET Phase] Timing window complete, advancing to FAITH');
-
-      adapter.setPlayerReady(freshState.player.playerId);
+    if (!freshState.opponent.isReady) {
       adapter.setPlayerReady(freshState.opponent.playerId);
-      adapter.maybeCloseBettingRound();
-    }, remainingTime);
-
-    return () => {
-      if (spellPetTimerRef.current) {
-        clearTimeout(spellPetTimerRef.current);
-        spellPetTimerRef.current = null;
-      }
-    };
-  }, [combatState?.phase, combatState?.spellPetPhaseStartTime, isActive, cardGameMulliganActive]);
+    }
+    adapter.maybeCloseBettingRound();
+  }, [combatState?.combatId, combatState?.handNumber, combatState?.phase, isActive, cardGameMulliganActive, processMode]);
 
   useEffect(() => {
     if (!combatState) return;

@@ -17,6 +17,7 @@ import { onCampaignMatchEnd } from './modes/campaign/lifecycle';
 import { onP2PMatchEnd } from './modes/p2p/lifecycle';
 import { onSingleMatchEnd } from './modes/single/lifecycle';
 import type { MatchContext } from './types';
+import type { GameState } from '../types';
 
 /** Inputs the lifecycle handler needs from the coordinator on game-end. */
 export interface MatchEndContext {
@@ -31,6 +32,8 @@ export interface MatchEndContext {
 	 * tracking; ignored by other modes today.
 	 */
 	turnCount: number;
+	/** Immutable terminal card state used by local campaign progression. */
+	finalGameState?: GameState;
 }
 
 /**
@@ -39,7 +42,7 @@ export interface MatchEndContext {
  *
  *   ai       => onSingleMatchEnd     (local result + streak)
  *   scripted => onCampaignMatchEnd   (mark mission + reward dispatch)
- *   peer     => onP2PMatchEnd        (stub until ranking server lands)
+ *   peer     => onP2PMatchEnd        (local IndexedDB or future Hive route)
  */
 export function selectOnWinHandler(
 	ctx: MatchContext,

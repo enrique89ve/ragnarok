@@ -39,6 +39,14 @@ import {
 	savedDecksStorageKey,
 	type CardsDeckAnnounce,
 } from '../../../../p2p/cardsDeckHandshake';
+import {
+	bindDeckClaimsToAnnounce,
+	canInitDeckHandshake,
+	checkDeckVerificationIdentity,
+	createDeckHandshakeSnapshot,
+	isCurrentDeckVerificationGeneration,
+	type DeckHandshakeSnapshot,
+} from '../../../../p2p/deckHandshakeAuthority';
 import useGame from '../../../../../lib/stores/useGame';
 import type { HiveCardAsset } from '../../../../../data/schemas/HiveTypes';
 import { planCardsLocalAction, planCardsMismatchRecovery } from './cardsWirePlan';
@@ -65,8 +73,11 @@ import {
 	type StoredLeaf,
 } from '../../../../protocol/actionLog';
 import { verifyResultProposalTranscriptRoot } from './resultProposalGuard';
-import { buildRagnarokRuntimeEvidence, isNftFullTestnetRuntimePhase } from '@shared/runtimeConfig';
+import { buildRagnarokRuntimeEvidence } from '@shared/runtimeConfig';
+import { resolveWalletInvocationAuthMode } from '@shared/protocolPhase';
 import { getP2PPokerCombatAdapter } from './pokerP2PCombatAdapter';
+import { settleRemotePokerAction } from './pokerP2PActionCommit';
+import { commitRemotePokerDecision, hasRemotePokerDecision } from './remotePokerDecisionLedger';
 import { stripRelayMatchTicketFromSessionChallenge } from '../../../../p2p/sessionAuthChallenge';
 import { decodeWireGameState, encodeGameStateForWire } from '../../../../p2p/stateFrameCodec';
 import {
@@ -87,6 +98,26 @@ import {
 import type { Hash256 } from '@shared/p2p-wire/integrity';
 import { isRetryablePhaseCheckpointDispute, type PhaseCheckpointPhase } from '@shared/p2p-wire/phaseCheckpoint';
 import { settleRemoteCommand } from './remoteCommandSettlement';
+import {
+	createSpellcraftReadyAckMessage,
+	createSpellcraftReadyMessage,
+	oppositeSpellcraftActorSide,
+	type SpellcraftReadyMessage,
+} from '@shared/p2p-wire/spellcraft';
+import {
+	createSpellcraftReadyLedger,
+	resetSpellcraftReadyLedger,
+	settleRemoteSpellcraftReady,
+} from './spellcraftReadyBoundary';
+import {
+	applySpellcraftReadyAck,
+	claimSpellcraftClose,
+	commitSpellcraftTranscriptPair,
+	createSpellcraftReadySession,
+	resetSpellcraftReadySession,
+	shouldReemitSpellcraftReady,
+	stageAppliedSpellcraftReady,
+} from './spellcraftReadySession';
 
 export type { GameCommandEnvelope, WireGameCommand } from '../../../../hooks/p2pEnvelope';
 export type { P2PMessage } from '../../../../p2p/messages';
@@ -133,7 +164,7 @@ const RESULT_SIGN_TIMEOUT_MS = 30_000;
 
 function shouldRequestP2PSessionAuthorizePrompt(): boolean {
 	const runtime = buildRagnarokRuntimeEvidence(getRagnarokNetworkConfig());
-	return !isNftFullTestnetRuntimePhase(runtime.runtimePhase);
+	return resolveWalletInvocationAuthMode(runtime.phasePolicy) === 'hive-body-auth';
 }
 
 function isFreshMatchChallenge(challenge: ServerSignedChallenge): boolean {
@@ -250,9 +281,8 @@ export function useWireSync() {
 	// Session binding: matchId derived from seed exchange
 	const matchIdRef = useRef<string | null>(null);
 	// ADR 0004 §Decision.3 — ephemeral session keys for future ranked
-	// settlement. Closed-beta full NFT gameplay deliberately skips this wallet
-	// prompt: NFT custody is enforced by deck verification, while P2P RUNE/ELO
-	// settlement waits for the winner arbiter.
+	// settlement. F1 walletInvocation=false skips this Posting prompt;
+	// F2/F3 may bind the session key after explicit wallet policy.
 	const sessionKeyRef = useRef<SessionKey | null>(null);
 	const sessionAuthorizeSentRef = useRef(false);
 	const opponentSessionPubkeyRef = useRef<string | null>(null);
@@ -265,8 +295,8 @@ export function useWireSync() {
 	const signedTranscriptRef = useRef<Transcript | null>(null);
 	const myBroadcasterRef = useRef<Broadcaster | null>(null);
 	// ADR 0004 §Decision.6 (issue 04) — encrypted IndexedDB action log. This is
-	// available only when session_authorize is enabled; full NFT testnet P2P
-	// skips it to avoid hidden or premature Posting prompts.
+	// available only when session_authorize is enabled; F1 skips it because
+	// walletInvocation is off.
 	const actionLogDbRef = useRef<Awaited<ReturnType<typeof openActionLog>> | null>(null);
 	const actionLogEncKeyRef = useRef<CryptoKey | null>(null);
 	// Per-session seq tracking: monotonic, contiguous, reset on new session
@@ -274,8 +304,12 @@ export function useWireSync() {
 	// Identity binding: opponent's Hive username from seed_reveal
 	const opponentUsernameRef = useRef<string | null>(null);
 	const pendingSyncRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const localCardsDeckRef = useRef<CardsDeckAnnounce | null>(null);
-	const remoteCardsDeckRef = useRef<CardsDeckAnnounce | null>(null);
+	const localCardsDeckRef = useRef<DeckHandshakeSnapshot | null>(null);
+	const remoteCardsDeckRef = useRef<DeckHandshakeSnapshot | null>(null);
+	const remoteDeckAnnounceRef = useRef<CardsDeckAnnounce | null>(null);
+	const remoteDeckClaimsRef = useRef<{ hiveAccount: string; claims: readonly DeckCardClaim[] } | null>(null);
+	const remoteDeckVerificationRef = useRef<'pending' | 'checking' | 'approved' | 'rejected'>('pending');
+	const deckVerificationGenerationRef = useRef(0);
 
 	const isCurrentConnectedMatch = useCallback((matchId: string): boolean => {
 		const peerState = usePeerStore.getState();
@@ -318,6 +352,99 @@ export function useWireSync() {
 	const chessReceiptCommandOrderRef = useRef<string[]>([]);
 	const seenPokerDecisionIdsRef = useRef<Set<string>>(new Set());
 	const seenPokerDecisionIdsOrderRef = useRef<string[]>([]);
+	const spellcraftReadyLedgerRef = useRef(createSpellcraftReadyLedger());
+	const spellcraftReadySessionRef = useRef(createSpellcraftReadySession());
+	const spellcraftReadyMatchIdRef = useRef<string | null>(null);
+
+	useEffect(() => {
+		const nextMatchId = activeMatchForAuthority?.matchId ?? null;
+		if (spellcraftReadyMatchIdRef.current === nextMatchId) return;
+		spellcraftReadyMatchIdRef.current = nextMatchId;
+		resetSpellcraftReadyLedger(spellcraftReadyLedgerRef.current);
+		resetSpellcraftReadySession(spellcraftReadySessionRef.current);
+	}, [activeMatchForAuthority?.matchId]);
+
+	const createCurrentSpellcraftReady = useCallback((actor: 'local' | 'remote'): SpellcraftReadyMessage | null => {
+		const activeMatch = useMatchStore.getState().activeMatch;
+		const matchId = matchIdRef.current;
+		const pokerAdapter = getP2PPokerCombatAdapter();
+		const pokerState = pokerAdapter.getPokerState();
+		if (!activeMatch || activeMatch.opponent.kind !== 'peer' || !matchId || !pokerState) return null;
+		const actorSide = actor === 'local'
+			? activeMatch.opponent.myRole
+			: oppositeSpellcraftActorSide(activeMatch.opponent.myRole);
+		const actorPlayerId = actor === 'local'
+			? pokerState.player.playerId
+			: pokerState.opponent.playerId;
+		return createSpellcraftReadyMessage({
+			matchId,
+			combatId: pokerState.combatId,
+			handNumber: pokerState.handNumber,
+			actorSide,
+			actorPlayerId,
+			seq: pokerState.handNumber,
+		});
+	}, []);
+
+	const commitSpellcraftTranscript = useCallback((
+		pair: readonly [SpellcraftReadyMessage, SpellcraftReadyMessage],
+	): void => {
+		const activeMatch = useMatchStore.getState().activeMatch;
+		if (!activeMatch || activeMatch.opponent.kind !== 'peer') return;
+		const localSide = activeMatch.opponent.myRole;
+		const existingDecisionIds = new Set(
+			(getActiveTranscript()?.getRawMoves() ?? [])
+				.filter(move => move.action === 'spellcraft_ready_v1')
+				.map(move => move.payload.decisionId)
+				.filter((decisionId): decisionId is string => typeof decisionId === 'string'),
+		);
+		const result = commitSpellcraftTranscriptPair({
+			session: spellcraftReadySessionRef.current,
+			pair,
+			alreadyRecordedDecisionIds: existingDecisionIds,
+			record: (message) => {
+				const isLocal = message.actorSide === localSide;
+				recordMove('spellcraft_ready_v1', {
+					combatId: message.combatId,
+					handNumber: message.handNumber,
+					windowKey: message.windowKey,
+					actorSide: message.actorSide,
+					actorPlayerId: message.actorPlayerId,
+					seq: message.seq,
+					decisionId: message.decisionId,
+				}, isLocal
+					? localPlayerId({
+						hiveUsername: getNFTBridge().getUsername(),
+						myPeerId: usePeerStore.getState().myPeerId,
+					})
+					: remotePlayerId({
+						opponentUsername: opponentUsernameRef.current,
+						remotePeerId: usePeerStore.getState().remotePeerId,
+					}));
+			},
+		});
+		if (result === 'incomplete_existing_transcript') {
+			debug.warn('[wireSync] Spellcraft transcript pair incomplete — close remains fail-closed', {
+				windowKey: pair[0].windowKey,
+			});
+		}
+	}, []);
+
+	const stageSpellcraftReady = useCallback((message: SpellcraftReadyMessage): void => {
+		const pair = stageAppliedSpellcraftReady(spellcraftReadySessionRef.current, message);
+		if (pair) commitSpellcraftTranscript(pair);
+	}, [commitSpellcraftTranscript]);
+
+	const closeAcknowledgedSpellcraftWindow = useCallback((localReady: SpellcraftReadyMessage): void => {
+		const pokerAdapter = getP2PPokerCombatAdapter();
+		if (claimSpellcraftClose({
+			session: spellcraftReadySessionRef.current,
+			localReady,
+			pokerState: pokerAdapter.getPokerState(),
+		})) {
+			pokerAdapter.maybeCloseBettingRound();
+		}
+	}, []);
 
 	// Last envelope send timestamp — used by `sendCommandEnvelope` to enforce a
 	// short cooldown that avoids the prevStateHash race when the user clicks
@@ -361,6 +488,7 @@ export function useWireSync() {
 	// Also send version_check and start a new transcript
 	useEffect(() => {
 		if (!connection || connectionState !== 'connected') {
+			deckVerificationGenerationRef.current += 1;
 			if (connectionState === 'grace_period' || connectionState === 'reconnecting') {
 				return undefined;
 			}
@@ -379,6 +507,9 @@ export function useWireSync() {
 				chessReceiptCommandOrderRef.current.length = 0;
 				seenPokerDecisionIdsRef.current.clear();
 				seenPokerDecisionIdsOrderRef.current.length = 0;
+				resetSpellcraftReadyLedger(spellcraftReadyLedgerRef.current);
+				resetSpellcraftReadySession(spellcraftReadySessionRef.current);
+				spellcraftReadyMatchIdRef.current = null;
 				resetChessWireSender();
 				phaseCheckpointClient.reset();
 			lastEnvelopeSentAtRef.current = 0;
@@ -490,7 +621,19 @@ export function useWireSync() {
 				warbandCardIds: selectDeckCardIds(useWarbandStore.getState()),
 				hiveCollection: readHiveCollectionForHandshake(),
 			});
-			localCardsDeckRef.current = localDeck;
+			let localClaims: readonly DeckCardClaim[] = [];
+			if (isSharedNetworkEnvironment()) {
+				const bridge = getNFTBridge();
+				const username = bridge.getUsername();
+				if (!username) throw new Error('Shared-network deck verification requires a Hive account.');
+				const parsed = buildClientDeckClaimsFromCardIds(localDeck.cardIds, bridge);
+				if (parsed.status !== 'parsed') {
+					throw new Error(`Could not derive deck ownership claims: ${parsed.rejections[0]?.detail ?? 'invalid claims'}`);
+				}
+				localClaims = parsed.claims;
+			}
+			const localSnapshot = createDeckHandshakeSnapshot(localDeck, localClaims);
+			localCardsDeckRef.current = localSnapshot;
 			send({
 				type: 'cards_deck',
 				heroClass: localDeck.heroClass,
@@ -502,27 +645,17 @@ export function useWireSync() {
 				heroClass: localDeck.heroClass,
 				cardCount: localDeck.cardIds.length,
 			});
+			if (isSharedNetworkEnvironment()) {
+				const username = getNFTBridge().getUsername();
+				if (!username) throw new Error('Shared-network deck verification requires a Hive account.');
+				send({ type: 'deck_verify', hiveAccount: username, protocolVersion: 2, claims: [...localClaims] });
+				debug.combat(`[wireSync] Sent deck_verify: ${localClaims.length} source-aware claim(s) for @${username}`);
+			}
 		} catch (err) {
 			debug.warn('[wireSync] Failed to send cards_deck:', err);
-		}
-
-		// Cross-verify deck ownership with source-aware claims.
-		if (isSharedNetworkEnvironment()) {
-			try {
-					const bridge = getNFTBridge();
-					const username = bridge.getUsername();
-					if (username) {
-						const deckCardIds = selectDeckCardIds(useWarbandStore.getState());
-						const parsed = buildClientDeckClaimsFromCardIds(deckCardIds, bridge);
-						if (parsed.status === 'parsed') {
-							send({ type: 'deck_verify', hiveAccount: username, protocolVersion: 2, claims: parsed.claims });
-							debug.combat(`[wireSync] Sent deck_verify: ${parsed.claims.length} source-aware claim(s) for @${username}`);
-						} else {
-							debug.warn('[wireSync] Could not derive deck_verify claims:', parsed.rejections);
-						}
-					}
-			} catch (err) {
-				debug.warn('[wireSync] Failed to send deck verification:', err);
+			if (isSharedNetworkEnvironment()) {
+				GameEventBus.emitNotification({ level: 'error', message: 'Deck verification could not start. Shared-network match cannot continue.', duration: 6000 });
+				usePeerStore.getState().disconnect();
 			}
 		}
 
@@ -541,6 +674,11 @@ export function useWireSync() {
 	useEffect(() => {
 		if (!connection || connectionState !== 'connected') {
 			initSentRef.current = false;
+			localCardsDeckRef.current = null;
+			remoteCardsDeckRef.current = null;
+			remoteDeckAnnounceRef.current = null;
+			remoteDeckClaimsRef.current = null;
+			remoteDeckVerificationRef.current = 'pending';
 			return undefined;
 		}
 		if (seedResolvedRef.current) return undefined;
@@ -603,17 +741,72 @@ export function useWireSync() {
 			const localDeck = localCardsDeckRef.current;
 			const remoteDeck = remoteCardsDeckRef.current;
 			if (!matchSeed || !myCanonicalSide || !localDeck || !remoteDeck) return;
+			if (!canInitDeckHandshake({
+				matchSeed,
+				myCanonicalSide,
+				localSnapshot: localDeck,
+				remoteSnapshot: remoteDeck,
+				sharedNetwork: isSharedNetworkEnvironment(),
+				remoteVerification: remoteDeckVerificationRef.current,
+			})) return;
 			useGameStore.getState().initGameFromHandshake({
 				matchSeed,
 				myCanonicalSide,
-				localDeck,
-				remoteDeck,
+				localDeck: localDeck.deck,
+				remoteDeck: remoteDeck.deck,
 			});
 			usePeerStore.getState().setP2pInitApplied(true);
 			debug.log('[wireSync] cards handshake init applied', {
 				myCanonicalSide,
-				localHero: localDeck.heroClass,
-				remoteHero: remoteDeck.heroClass,
+				localHero: localDeck.deck.heroClass,
+				remoteHero: remoteDeck.deck.heroClass,
+			});
+		};
+		const rejectRemoteDeckVerification = (message: string): void => {
+			remoteDeckVerificationRef.current = 'rejected';
+			GameEventBus.emitNotification({ level: 'error', message, duration: 6000 });
+			setTimeout(() => usePeerStore.getState().disconnect(), 2000);
+		};
+		const verifyRemoteDeck = (): void => {
+			const announce = remoteDeckAnnounceRef.current;
+			const envelope = remoteDeckClaimsRef.current;
+			if (!announce || !envelope || remoteDeckVerificationRef.current === 'checking' || remoteDeckVerificationRef.current === 'approved') return;
+			const identity = checkDeckVerificationIdentity(
+				envelope.hiveAccount,
+				opponentUsernameRef.current,
+				seedResolvedRef.current,
+			);
+			if (identity === 'pending') return;
+			if (identity === 'rejected') {
+				rejectRemoteDeckVerification('Opponent deck identity is missing or does not match the announced Hive account. Disconnecting.');
+				return;
+			}
+			const bound = bindDeckClaimsToAnnounce(announce, envelope.claims);
+			if (bound.status !== 'bound') {
+				rejectRemoteDeckVerification(`Opponent deck claims do not match the announced deck. Disconnecting.`);
+				return;
+			}
+			remoteDeckVerificationRef.current = 'checking';
+			remoteCardsDeckRef.current = bound.snapshot;
+			const verificationGeneration = deckVerificationGenerationRef.current;
+			Promise.all([
+				verifyDeckOwnership(envelope.hiveAccount, envelope.claims.map(claim => (
+					claim.authority === 'nft-custody'
+						? { nft_id: claim.nftUid, cardId: claim.cardId }
+						: { cardId: claim.cardId, category: claim.authority === 'starter-entitlement' ? 'starter' as const : 'genesis' as const }
+				))),
+				verifyDeckClaimsOnServer(envelope.hiveAccount, envelope.claims),
+			]).then(([ownership, server]) => {
+				if (!isCurrentDeckVerificationGeneration(verificationGeneration, deckVerificationGenerationRef.current)) return;
+				if (!ownership.valid || !server.verified) {
+					rejectRemoteDeckVerification('Opponent deck verification failed. The shared-network match was disconnected.');
+					return;
+				}
+				remoteDeckVerificationRef.current = 'approved';
+				applyCardsDeckHandshakeIfReady();
+			}).catch(() => {
+				if (!isCurrentDeckVerificationGeneration(verificationGeneration, deckVerificationGenerationRef.current)) return;
+				rejectRemoteDeckVerification('Deck verification service unavailable. The shared-network match was disconnected.');
 			});
 		};
 		const processMessage = async (data: P2PMessage) => {
@@ -910,6 +1103,13 @@ export function useWireSync() {
 					if (data.hiveUsername) {
 						opponentUsernameRef.current = data.hiveUsername;
 					}
+					if (isSharedNetworkEnvironment()) {
+						if (!data.hiveUsername && remoteDeckAnnounceRef.current) {
+							rejectRemoteDeckVerification('Opponent did not announce a Hive identity for shared-network deck verification. Disconnecting.');
+						} else {
+							verifyRemoteDeck();
+						}
+					}
 
 					// Future ranked settlement can bind an ephemeral action-signing
 					// key to the Hive identity here. Full NFT testnet gameplay
@@ -920,7 +1120,7 @@ export function useWireSync() {
 						sessionAuthorizeSentRef.current = true;
 						const localMatchId = truncatedMatchId;
 						if (!shouldRequestP2PSessionAuthorizePrompt()) {
-							debug.log('[wireSync] session_authorize skipped — full NFT testnet P2P does not request Posting signature');
+							debug.log('[wireSync] session_authorize skipped — walletInvocation is disabled for this phase');
 							usePeerStore.getState().setP2pSessionAuthorization({
 								localAuthorized: false,
 								remoteAuthorized: false,
@@ -1016,12 +1216,18 @@ export function useWireSync() {
 				}
 
 				case 'cards_deck': {
-					remoteCardsDeckRef.current = {
+					remoteDeckAnnounceRef.current = {
 						heroClass: data.heroClass,
 						...(data.heroId ? { heroId: data.heroId } : {}),
 						cardIds: data.cardIds,
 						nftLevels: data.nftLevels,
 					};
+					if (!isSharedNetworkEnvironment()) {
+						remoteCardsDeckRef.current = createDeckHandshakeSnapshot(remoteDeckAnnounceRef.current, []);
+					} else if (seedResolvedRef.current && !opponentUsernameRef.current) {
+						rejectRemoteDeckVerification('Opponent did not announce a Hive identity for shared-network deck verification. Disconnecting.');
+					}
+					verifyRemoteDeck();
 					applyCardsDeckHandshakeIfReady();
 					break;
 				}
@@ -1627,10 +1833,10 @@ export function useWireSync() {
 						break;
 					}
 
-						const pokerAdapter = getP2PPokerCombatAdapter();
-						const pokerState = pokerAdapter.getPokerState();
-						if (!pokerState || pokerState.foldWinner) break;
-						if (pokerState.phase === CombatPhase.RESOLUTION) break;
+					const pokerAdapter = getP2PPokerCombatAdapter();
+					const pokerState = pokerAdapter.getPokerState();
+					if (!pokerState || pokerState.foldWinner) break;
+					if (pokerState.phase === CombatPhase.RESOLUTION) break;
 
 					if (typeof data.playerId !== 'string' || data.playerId.length > 128) break;
 					if (!data.turnId || !pokerState.turnId || data.turnId !== pokerState.turnId) {
@@ -1648,36 +1854,104 @@ export function useWireSync() {
 						break;
 					}
 					if (pokerState.activePlayerId !== data.playerId) break;
-					if (seenPokerDecisionIdsRef.current.has(data.decisionId)) {
+					const pokerDecisionLedger = { seen: seenPokerDecisionIdsRef.current, order: seenPokerDecisionIdsOrderRef.current };
+					if (hasRemotePokerDecision(pokerDecisionLedger, data.decisionId)) {
 						debug.warn('[wireSync] poker_action dropped — duplicate decisionId', {
 							decisionId: data.decisionId.slice(0, 24),
 						});
 						break;
 					}
-					seenPokerDecisionIdsRef.current.add(data.decisionId);
-					seenPokerDecisionIdsOrderRef.current.push(data.decisionId);
-					while (seenPokerDecisionIdsOrderRef.current.length > SEEN_COMMAND_IDS_MAX) {
-						const evicted = seenPokerDecisionIdsOrderRef.current.shift();
-						if (evicted !== undefined) seenPokerDecisionIdsRef.current.delete(evicted);
+					const actionResult = pokerAdapter.applyRemotePokerAction({
+						playerId: data.playerId,
+						action: combatAction,
+						hpCommitment: data.hpCommitment,
+					});
+					settleRemotePokerAction(actionResult, {
+						onRejected: (reason) => {
+							debug.warn('[wireSync] poker_action rejected by engine', {
+								reason,
+								decisionId: data.decisionId.slice(0, 24),
+							});
+						},
+						onApplied: () => {
+							commitRemotePokerDecision(pokerDecisionLedger, data.decisionId, SEEN_COMMAND_IDS_MAX);
+
+							recordMove('poker_action', {
+								action: data.action,
+								hpCommitment: data.hpCommitment,
+								turnId: data.turnId,
+								decisionId: data.decisionId,
+							}, remotePlayerId({
+								opponentUsername: opponentUsernameRef.current,
+								remotePeerId: usePeerStore.getState().remotePeerId,
+							}));
+							pokerAdapter.maybeCloseBettingRound();
+						},
+					});
+					break;
 					}
 
-					recordMove('poker_action', {
-						action: data.action,
-						hpCommitment: data.hpCommitment,
-						turnId: data.turnId,
-						decisionId: data.decisionId,
-					}, remotePlayerId({
-						opponentUsername: opponentUsernameRef.current,
-						remotePeerId: usePeerStore.getState().remotePeerId,
-					}));
-							pokerAdapter.applyRemotePokerAction({
-								playerId: data.playerId,
-								action: combatAction,
-								hpCommitment: data.hpCommitment,
-							});
-						pokerAdapter.maybeCloseBettingRound();
+				case 'spellcraft_ready_v1': {
+					const activeMatch = useMatchStore.getState().activeMatch;
+					if (!activeMatch || activeMatch.opponent.kind !== 'peer') {
+						debug.warn('[wireSync] spellcraft_ready_v1 dropped — no peer authority');
 						break;
 					}
+					const pokerAdapter = getP2PPokerCombatAdapter();
+					const result = settleRemoteSpellcraftReady({
+						message: data,
+						connectionState: usePeerStore.getState().connectionState,
+						expectedMatchId: matchIdRef.current,
+						expectedRemoteSide: oppositeSpellcraftActorSide(activeMatch.opponent.myRole),
+						pokerState: pokerAdapter.getPokerState(),
+						ledger: spellcraftReadyLedgerRef.current,
+						maxLedgerEntries: SEEN_COMMAND_IDS_MAX,
+					}, {
+						applyRemoteReady: () => pokerAdapter.applyRemoteSpellcraftReady({
+							combatId: data.combatId,
+							handNumber: data.handNumber,
+							actorPlayerId: data.actorPlayerId,
+						}),
+						onApplied: () => stageSpellcraftReady(data),
+					});
+					if (result.status === 'applied' || result.status === 'duplicate') {
+						// ACK is emitted before any close attempt, including duplicate
+						// replay after reload/phase advance.
+						send(createSpellcraftReadyAckMessage({
+							ready: data,
+							acknowledgerSide: activeMatch.opponent.myRole,
+						}));
+						const localReady = createCurrentSpellcraftReady('local');
+						if (localReady) {
+							const currentState = pokerAdapter.getPokerState();
+							if (currentState?.player.isReady) stageSpellcraftReady(localReady);
+							closeAcknowledgedSpellcraftWindow(localReady);
+						}
+					}
+					if (result.status === 'rejected') {
+						debug.warn('[wireSync] spellcraft_ready_v1 rejected', { reason: result.reason });
+					}
+					break;
+				}
+
+				case 'spellcraft_ready_ack_v1': {
+					const activeMatch = useMatchStore.getState().activeMatch;
+					const localReady = createCurrentSpellcraftReady('local');
+					if (!activeMatch || activeMatch.opponent.kind !== 'peer' || !localReady) break;
+					const result = applySpellcraftReadyAck({
+						session: spellcraftReadySessionRef.current,
+						ack: data,
+						localReady,
+						localSide: activeMatch.opponent.myRole,
+						connectionState: usePeerStore.getState().connectionState,
+						pokerState: getP2PPokerCombatAdapter().getPokerState(),
+					});
+					if (result.status === 'applied') closeAcknowledgedSpellcraftWindow(localReady);
+					if (result.status === 'rejected') {
+						debug.warn('[wireSync] spellcraft_ready_ack_v1 rejected', { reason: result.reason });
+					}
+					break;
+				}
 
 					case 'poker_turn_started': {
 						const pokerAdapter = getP2PPokerCombatAdapter();
@@ -1782,44 +2056,8 @@ export function useWireSync() {
 					break;
 
 				case 'deck_verify': {
-					let disconnecting = false;
-					const disconnectOnce = () => {
-						if (disconnecting) return;
-						disconnecting = true;
-						setTimeout(() => usePeerStore.getState().disconnect(), 2000);
-					};
-
-					const claims = data.claims;
-					verifyDeckOwnership(data.hiveAccount, claims.map(claim => (
-						claim.authority === 'nft-custody'
-							? { nft_id: claim.nftUid, cardId: claim.cardId }
-							: {
-								cardId: claim.cardId,
-								category: claim.authority === 'starter-entitlement' ? 'starter' as const : 'genesis' as const,
-							}
-					))).then(result => {
-						if (!result.valid) {
-							GameEventBus.emitNotification({
-								level: 'error',
-								message: `Opponent deck verification failed — ${result.invalidCards.length} card(s) not owned by ${data.hiveAccount}. Disconnecting.`,
-								duration: 5000,
-							});
-							disconnectOnce();
-						}
-					}).catch(() => { /* IndexedDB unavailable in dev mode — skip */ });
-
-					verifyDeckClaimsOnServer(data.hiveAccount, claims)
-						.then(sv => {
-							if (!sv.verified) {
-								GameEventBus.emitNotification({
-									level: 'error',
-									message: `Server deck verification failed — ${sv.rejections.length} card claim(s) rejected for ${data.hiveAccount}. Disconnecting.`,
-									duration: 5000,
-								});
-								disconnectOnce();
-							}
-						})
-						.catch(() => { /* Chain indexer unavailable — skip */ });
+					remoteDeckClaimsRef.current = { hiveAccount: data.hiveAccount, claims: data.claims };
+					verifyRemoteDeck();
 					break;
 				}
 
@@ -2301,7 +2539,7 @@ export function useWireSync() {
 				pendingSyncRef.current = null;
 			}
 		};
-	}, [connection, connectionState, isHostFrame, isWsHost, sendsCardsInit, adoptsRemoteCardsInit, sendsCardsRecoverySnapshot, send, playCard, attackWithCard, endTurn, performHeroPower, applyOpponentCommandToStore, isCurrentConnectedMatch]);
+	}, [connection, connectionState, isHostFrame, isWsHost, sendsCardsInit, adoptsRemoteCardsInit, sendsCardsRecoverySnapshot, send, playCard, attackWithCard, endTurn, performHeroPower, applyOpponentCommandToStore, isCurrentConnectedMatch, createCurrentSpellcraftReady, stageSpellcraftReady, closeAcknowledgedSpellcraftWindow]);
 
 	const syncGameState = useCallback(() => {
 		if (connectionState !== 'connected' || !sendsCardsRecoverySnapshot) return;
@@ -2626,6 +2864,72 @@ export function useWireSync() {
 		});
 	}, [connectionState, send]);
 
+	const sendSpellcraftReady = useCallback((input: {
+		readonly combatId: string;
+		readonly handNumber: number;
+		readonly actorPlayerId: string;
+	}) => {
+		if (connectionState !== 'connected') {
+			return { status: 'rejected' as const, reason: 'not_connected' as const };
+		}
+		const activeMatch = useMatchStore.getState().activeMatch;
+		const matchId = matchIdRef.current;
+		if (!activeMatch || activeMatch.opponent.kind !== 'peer' || !matchId || activeMatch.matchId !== matchId) {
+			return { status: 'rejected' as const, reason: 'match_unavailable' as const };
+		}
+		const pokerAdapter = getP2PPokerCombatAdapter();
+		const pokerState = pokerAdapter.getPokerState();
+		if (
+			!pokerState
+			|| pokerState.phase !== CombatPhase.SPELL_PET
+			|| pokerState.combatId !== input.combatId
+			|| pokerState.handNumber !== input.handNumber
+			|| pokerState.player.playerId !== input.actorPlayerId
+			|| pokerState.player.isReady
+		) {
+			return { status: 'rejected' as const, reason: 'state_mismatch' as const };
+		}
+
+		const message = createSpellcraftReadyMessage({
+			matchId,
+			combatId: input.combatId,
+			handNumber: input.handNumber,
+			actorSide: activeMatch.opponent.myRole,
+			actorPlayerId: input.actorPlayerId,
+			seq: input.handNumber,
+		});
+		const applied = pokerAdapter.applyLocalSpellcraftReady(input);
+		if (applied.status !== 'applied') {
+			return { status: 'rejected' as const, reason: applied.reason };
+		}
+		stageSpellcraftReady(message);
+		send(message);
+		return { status: 'sent' as const, message };
+	}, [connectionState, send, stageSpellcraftReady]);
+
+	// Reconstruct from canonical engine state after hook reload/reconnect. A
+	// missing ACK causes the same deterministic Ready/decisionId to be resent;
+	// the receiver's applied-only boundary treats it idempotently.
+	useEffect(() => {
+		if (connectionState !== 'connected') return;
+		const pokerState = getP2PPokerCombatAdapter().getPokerState();
+		const localReady = createCurrentSpellcraftReady('local');
+		if (!pokerState || !localReady) return;
+		if (pokerState.player.isReady) stageSpellcraftReady(localReady);
+		if (pokerState.opponent.isReady) {
+			const remoteReady = createCurrentSpellcraftReady('remote');
+			if (remoteReady) stageSpellcraftReady(remoteReady);
+		}
+		if (shouldReemitSpellcraftReady({
+			session: spellcraftReadySessionRef.current,
+			localReady,
+			pokerState,
+			connectionState,
+		})) {
+			send(localReady);
+		}
+	}, [connectionState, send, createCurrentSpellcraftReady, stageSpellcraftReady]);
+
 	/**
 	 * Propose a match result to the opponent for dual-signature verification.
 	 * Returns the signatures object if the opponent counter-signs within 30s,
@@ -2714,6 +3018,7 @@ export function useWireSync() {
 		performHeroPower: wrappedUseHeroPower,
 		sendPokerAction,
 		sendPokerTurnStarted,
+		sendSpellcraftReady,
 		sendDeckVerification,
 		proposeResult,
 		downloadSessionLog,

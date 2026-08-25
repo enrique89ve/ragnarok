@@ -96,13 +96,15 @@ describe('matchmakingRoutes P2P ticket boundary', () => {
 		expect(getP2PMatchPeerView(match, 'unknown-peer')).toBeNull();
 	});
 
-	it('requires signed Hive identity for shared-network queue entries', () => {
+	it('requires Hive identity for shared-network queue entries and signs only when walletInvocation is allowed', () => {
 		const sourcePath = join(dirname(fileURLToPath(import.meta.url)), 'matchmakingRoutes.ts');
 		const source = readFileSync(sourcePath, 'utf8');
 
 		expect(source).toContain('const sharedNetworkQueueAuth = requireHiveBodyAuth({');
 		expect(source).toContain('buildMessage: buildQueueAuthMessage');
 		expect(source).toContain("missingUsernameMessage: 'Hive username required for shared-network matchmaking'");
+		expect(source).toContain('resolveWalletInvocationAuthMode(policy) === \'hive-body-auth\'');
+		expect(source).toContain('attachUnsignedQueueUsername');
 		expect(source).toContain("process.env.VITE_NETWORK_STAGE === 'testnet'");
 		expect(source).toContain("process.env.VITE_NETWORK_STAGE === 'mainnet'");
 		expect(source).toContain('router.post(\'/queue\', validateQueuePeerId, requireQueueAuthForRuntime');

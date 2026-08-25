@@ -40,6 +40,17 @@ export const QUEST_POOL: QuestTemplate[] = [
 	{ type: 'play_cards', title: 'The Great Saga', description: 'Play {goal} cards from your hand', goal: 30, xp: 65 },
 ];
 
+/** Gameplay Validation pool: every assigned target is reachable in 1–2 matches. */
+export const LOCAL_GAMEPLAY_QUEST_POOL = QUEST_POOL.filter(quest =>
+	(quest.type === 'win_games' && quest.goal <= 2)
+	|| (quest.type === 'play_minions' && quest.goal <= 10)
+	|| (quest.type === 'play_spells' && quest.goal <= 5)
+	|| (quest.type === 'deal_damage' && quest.goal <= 30)
+	|| (quest.type === 'destroy_minions' && quest.goal <= 8)
+	|| (quest.type === 'use_hero_power' && quest.goal <= 5)
+	|| (quest.type === 'play_cards' && quest.goal <= 15),
+);
+
 /**
  * Pick `count` quests from the pool deterministically.
  *
@@ -54,7 +65,7 @@ export function pickRandomQuests(
 	exclude: string[],
 	seedKey: string,
 ): QuestTemplate[] {
-	const available = QUEST_POOL.filter(q => !exclude.includes(q.title));
+	const available = LOCAL_GAMEPLAY_QUEST_POOL.filter(q => !exclude.includes(q.title));
 	const rng = seededRngFromString(seedKey);
 	const shuffled = seededShuffle(available, rng);
 	return shuffled.slice(0, count);

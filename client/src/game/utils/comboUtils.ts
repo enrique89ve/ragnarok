@@ -9,6 +9,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { createGameLogEvent } from './gameLogUtils';
 import { dealDamage, getValidTargets } from './effects/damageUtils';
 import { isMinion, getAttack, getHealth } from './cards/typeGuards';
+import { drawCardFromDeck } from './drawUtils';
+import { addKeyword } from './cards/keywordUtils';
+import { cardsRng } from './cardsCommandRng';
 
 /**
  * Check if a combo is active for the player
@@ -21,7 +24,7 @@ export function isComboActive(
   playerType: 'player' | 'opponent'
 ): boolean {
   // Combo is active if the player has played at least one other card this turn
-  return state.players[playerType].cardsPlayedThisTurn > 0;
+  return state.players[playerType].cardsPlayedThisTurn > 1;
 }
 
 /**
@@ -36,7 +39,7 @@ export function shouldActivateCombo(
 ): boolean {
   // Same implementation as isComboActive but with a more descriptive name
   // Used by gameUtils for clarity
-  return state.players[playerType].cardsPlayedThisTurn > 0;
+  return state.players[playerType].cardsPlayedThisTurn > 1;
 }
 
 /**
@@ -90,7 +93,7 @@ export function executeComboEffect(
   }
   
   // Get the combo effect - combo can be on minion or spell cards
-  const comboEffect = (comboCard.card as any).combo;
+  const comboEffect = (comboCard.card as any).comboEffect ?? (comboCard.card as any).combo;
   
   // If no combo effect, return unchanged state
   if (!comboEffect) {
@@ -133,6 +136,37 @@ export function executeComboEffect(
     case 'buff_per_card':
       newState = handleComboBuffPerCard(newState, playerType, comboCard, comboEffect);
       break;
+    case 'gain_keyword': {
+      const keyword = typeof comboEffect.keyword === 'string' ? comboEffect.keyword : '';
+      if (keyword) addKeyword(comboCard, keyword);
+      break;
+    }
+    case 'draw': {
+      const drawCount = comboEffect.value ?? 1;
+      for (let index = 0; index < drawCount; index += 1) {
+        newState = drawCardFromDeck(newState, playerType);
+      }
+      break;
+    }
+    case 'damage_random': {
+      const enemy: 'player' | 'opponent' = playerType === 'player' ? 'opponent' : 'player';
+      const targets: Array<
+        { readonly type: 'hero' }
+        | { readonly type: 'minion'; readonly instanceId: string }
+      > = [
+        ...newState.players[enemy].battlefield.map((card: CardInstance) => ({
+          type: 'minion' as const,
+          instanceId: card.instanceId,
+        })),
+        { type: 'hero' },
+      ];
+      const target = targets[Math.floor(cardsRng() * targets.length)];
+      const damage = comboEffect.value ?? 0;
+      newState = target.type === 'hero'
+        ? dealDamage(newState, enemy, 'hero', damage, undefined, undefined, playerType)
+        : dealDamage(newState, enemy, 'minion', damage, target.instanceId, undefined, playerType);
+      break;
+    }
     // Additional combo effect types would be handled here
     default:
       // Unknown combo effect type, log and return unchanged state

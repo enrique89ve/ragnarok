@@ -336,6 +336,7 @@ export const DEFAULT_BLIND_CONFIG: BlindConfig = {
  */
 export interface PokerCombatState {
   combatId: string;
+  handNumber: number;       // Deterministic zero-based hand ordinal within this combat
   phase: CombatPhase;
   player: PlayerCombatState;
   opponent: PlayerCombatState;

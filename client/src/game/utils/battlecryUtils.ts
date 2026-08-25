@@ -576,6 +576,29 @@ function executeBattlecryUnbound(
       case 'deal_damage':
         return executeDamageBattlecry(newState, battlecry, targetId, targetType);
 
+      case 'damage_random': {
+        const sourceOwner: 'player' | 'opponent' = newState.players.player.battlefield.some(
+          card => card.instanceId === cardInstanceId,
+        ) ? 'player' : 'opponent';
+        const enemy: 'player' | 'opponent' = sourceOwner === 'player' ? 'opponent' : 'player';
+        const targets: Array<
+          { readonly type: 'hero' }
+          | { readonly type: 'minion'; readonly instanceId: string }
+        > = [
+          ...newState.players[enemy].battlefield.map(card => ({
+            type: 'minion' as const,
+            instanceId: card.instanceId,
+          })),
+          { type: 'hero' },
+        ];
+        const target = targets[Math.floor(cardsRng() * targets.length)];
+        const damage = battlecry.value ?? 0;
+        if (damage <= 0) return newState;
+        return target.type === 'hero'
+          ? dealDamage(newState, enemy, 'hero', damage, undefined, undefined, sourceOwner)
+          : dealDamage(newState, enemy, 'minion', damage, target.instanceId, undefined, sourceOwner);
+      }
+
       case 'damage_aoe':
       case 'damage_all':
         return executeAoEDamageBattlecry(newState, battlecry, targetId, targetType);
@@ -2746,13 +2769,28 @@ function executeBattlecryUnbound(
 
       case 'conditional_buff_self': {
         const cbsCondition = battlecry.condition;
+        const sourceOwner: 'player' | 'opponent' | undefined =
+          newState.players.player.battlefield.some(card => card.instanceId === cardInstanceId)
+            ? 'player'
+            : newState.players.opponent.battlefield.some(card => card.instanceId === cardInstanceId)
+              ? 'opponent'
+              : undefined;
         let cbsConditionMet = false;
-        if (cbsCondition === 'hero_hp_30_or_below') {
-          const heroHP = player.heroHealth ?? player.health ?? 100;
+        if (cbsCondition === 'hero_hp_30_or_below' && sourceOwner) {
+          const ownerState = newState.players[sourceOwner];
+          const heroHP = ownerState.heroHealth ?? ownerState.health ?? 100;
           cbsConditionMet = heroHP <= 30;
+        } else if (cbsCondition === 'spell_cast_this_turn' && sourceOwner) {
+          cbsConditionMet = newState.gameLog.some(event =>
+            event.type === 'spell_cast'
+            && event.player === sourceOwner
+            && event.turn === newState.turnNumber,
+          );
         }
-        if (cbsConditionMet) {
-          const sourceMinion = newState.players.player.battlefield.find((m: CardInstance) => m.instanceId === cardInstanceId);
+        if (cbsConditionMet && sourceOwner) {
+          const sourceMinion = newState.players[sourceOwner].battlefield.find(
+            (m: CardInstance) => m.instanceId === cardInstanceId,
+          );
           if (sourceMinion) {
             sourceMinion.currentAttack = (sourceMinion.currentAttack || 0) + (battlecry.buffAttack || 0);
             sourceMinion.currentHealth = (sourceMinion.currentHealth || 0) + (battlecry.buffHealth || 0);

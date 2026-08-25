@@ -2,7 +2,7 @@ import React, { useLayoutEffect, useState } from 'react';
 import { ARENA_VFX_LAYERS, arenaVfxLayerProps } from './arenaVfxTargets';
 import './GameViewport.css';
 
-interface GameViewportProps {
+type GameViewportProps = {
   children: React.ReactNode;
   /** Kept for API compatibility — not used. Canvas is fixed 1920×1080. */
   aspectRatio?: number;
@@ -12,31 +12,85 @@ interface GameViewportProps {
   safeY?: number;
   maxScale?: number;
   extraClassName?: string;
-}
+};
+
+export type GameViewportFitInput = {
+  readonly viewportWidth: number;
+  readonly viewportHeight: number;
+  readonly referenceWidth: number;
+  readonly referenceHeight: number;
+  readonly safeX: number;
+  readonly safeY: number;
+  readonly maxScale?: number;
+};
+
+export type GameViewportFit = {
+  readonly scale: number;
+  readonly offsetX: number;
+  readonly offsetY: number;
+  readonly effectiveSafeY: number;
+  readonly compactLandscape: boolean;
+};
 
 const REF_W = 1920;
 const REF_H = 1080;
+const COMPACT_LANDSCAPE_MAX_HEIGHT = 500;
+const COMPACT_LANDSCAPE_MIN_ASPECT = 16 / 9;
+const COMPACT_LANDSCAPE_SAFE_Y = 4;
+
+export const COMPACT_LANDSCAPE_POKER_HITBOX_SIZE = 124;
 
 /**
- * Compute scale + offset synchronously from window dimensions.
- * Pure function — used by both useState initializer (no first-paint flash)
- * and the resize listener.
+ * Compute scale + offset from explicit physical dimensions. Compact landscape
+ * keeps the horizontal notch inset while reducing only the vertical margin.
  */
-function computeFit(refW: number, refH: number, safeX: number, safeY: number, maxScale: number | undefined) {
-  if (typeof window === 'undefined') {
-    return { scale: 1, offsetX: 0, offsetY: 0 };
-  }
-  const w = window.innerWidth;
-  const h = window.innerHeight;
-  const availableWidth = Math.max(1, w - safeX * 2);
-  const availableHeight = Math.max(1, h - safeY * 2);
-  const rawScale = Math.min(availableWidth / refW, availableHeight / refH);
-  const scale = maxScale === undefined ? rawScale : Math.min(rawScale, maxScale);
+export function computeGameViewportFit(input: GameViewportFitInput): GameViewportFit {
+  const compactLandscape = input.viewportHeight <= COMPACT_LANDSCAPE_MAX_HEIGHT
+    && input.viewportWidth / Math.max(1, input.viewportHeight) >= COMPACT_LANDSCAPE_MIN_ASPECT;
+  const effectiveSafeY = compactLandscape ? COMPACT_LANDSCAPE_SAFE_Y : input.safeY;
+  const availableWidth = Math.max(1, input.viewportWidth - input.safeX * 2);
+  const availableHeight = Math.max(1, input.viewportHeight - effectiveSafeY * 2);
+  const rawScale = Math.min(
+    availableWidth / input.referenceWidth,
+    availableHeight / input.referenceHeight,
+  );
+  const scale = input.maxScale === undefined ? rawScale : Math.min(rawScale, input.maxScale);
+
   return {
     scale,
-    offsetX: safeX + (availableWidth - refW * scale) / 2,
-    offsetY: safeY + (availableHeight - refH * scale) / 2,
+    offsetX: input.safeX + (availableWidth - input.referenceWidth * scale) / 2,
+    offsetY: effectiveSafeY + (availableHeight - input.referenceHeight * scale) / 2,
+    effectiveSafeY,
+    compactLandscape,
   };
+}
+
+function computeWindowFit(
+  referenceWidth: number,
+  referenceHeight: number,
+  safeX: number,
+  safeY: number,
+  maxScale: number | undefined,
+): GameViewportFit {
+  if (typeof window === 'undefined') {
+    return {
+      scale: 1,
+      offsetX: 0,
+      offsetY: 0,
+      effectiveSafeY: safeY,
+      compactLandscape: false,
+    };
+  }
+
+  return computeGameViewportFit({
+    viewportWidth: window.innerWidth,
+    viewportHeight: window.innerHeight,
+    referenceWidth,
+    referenceHeight,
+    safeX,
+    safeY,
+    maxScale,
+  });
 }
 
 /**
@@ -66,10 +120,10 @@ export const GameViewport: React.FC<GameViewportProps> = ({
   extraClassName = '',
 }) => {
   // Sync init — first paint already has the correct scale, no flash.
-  const [fit, setFit] = useState(() => computeFit(referenceWidth, referenceHeight, safeX, safeY, maxScale));
+  const [fit, setFit] = useState(() => computeWindowFit(referenceWidth, referenceHeight, safeX, safeY, maxScale));
 
   useLayoutEffect(() => {
-    const update = () => setFit(computeFit(referenceWidth, referenceHeight, safeX, safeY, maxScale));
+    const update = () => setFit(computeWindowFit(referenceWidth, referenceHeight, safeX, safeY, maxScale));
     // Recompute once on mount in case window changed between initial state
     // and effect run (rare but real on slow loads).
     update();
@@ -108,7 +162,11 @@ export const GameViewport: React.FC<GameViewportProps> = ({
     .join(' ');
 
   return (
-    <div className={`game-viewport-wrapper ${shakeClasses}`.trim()} {...arenaVfxLayerProps(ARENA_VFX_LAYERS.viewportWrapper)}>
+    <div
+      className={`game-viewport-wrapper ${shakeClasses}`.trim()}
+      data-compact-landscape={fit.compactLandscape ? 'true' : 'false'}
+      {...arenaVfxLayerProps(ARENA_VFX_LAYERS.viewportWrapper)}
+    >
       <div className={`game-viewport ${innerClasses}`.trim()} style={style} {...arenaVfxLayerProps(ARENA_VFX_LAYERS.viewport)}>
         {children}
       </div>

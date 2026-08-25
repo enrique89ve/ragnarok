@@ -10,6 +10,11 @@ export const ARENA_VFX_LAYERS = {
 	viewportWrapper: 'game-viewport-wrapper',
 } as const;
 
+export const ARENA_CANVAS_SIZE = {
+	width: 1920,
+	height: 1080,
+} as const;
+
 export const ARENA_VFX_TARGETS = {
 	playerHero: 'player-hero',
 	opponentHero: 'opponent-hero',
@@ -69,6 +74,20 @@ function getQueryRoot(root?: QueryRoot | null): QueryRoot | null {
 
 export function getArenaVfxLayer(layer: ArenaVfxLayer, root?: QueryRoot | null): HTMLElement | null {
 	return getQueryRoot(root)?.querySelector<HTMLElement>(arenaVfxLayerSelector(layer)) ?? null;
+}
+
+/** Convert physical viewport coordinates into the arena's 1920x1080 space. */
+export function getArenaLocalPoint(
+	point: { x: number; y: number },
+	layer: HTMLElement,
+): { x: number; y: number } | null {
+	const rect = layer.getBoundingClientRect();
+	if (rect.width <= 0 || rect.height <= 0) return null;
+
+	return {
+		x: (point.x - rect.left) * (ARENA_CANVAS_SIZE.width / rect.width),
+		y: (point.y - rect.top) * (ARENA_CANVAS_SIZE.height / rect.height),
+	};
 }
 
 export function getArenaVfxTarget(target: ArenaVfxTarget, root?: QueryRoot | null): HTMLElement | null {

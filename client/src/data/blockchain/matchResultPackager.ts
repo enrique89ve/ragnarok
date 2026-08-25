@@ -14,6 +14,7 @@ import { normalizeWinnerInstanceUids } from '@shared/protocol-core/xpEconomy';
 import type { HiveCardAsset } from '../schemas/HiveTypes';
 import { getPlayerNonce, advancePlayerNonce } from './replayDB';
 import { RUNE_LOSS_RANKED, RUNE_WIN_RANKED } from '@shared/protocol-core/runeEconomy';
+import { projectEloMatch } from '@shared/protocol-core/eloEconomy';
 import {
 	buildCompactMatchResultCommitmentInput,
 	computeCompactMatchResultCommitmentHash,
@@ -29,8 +30,6 @@ function getPokerHandsWon(side: 'player' | 'opponent'): number {
 	return side === 'player' ? state.pokerHandsWonPlayer : state.pokerHandsWonOpponent;
 }
 
-const ELO_K_FACTOR = 32;
-
 // Typed game log entry for damage calculation
 interface DamageLogEntry {
 	type: 'damage';
@@ -44,12 +43,6 @@ function isDamageEntry(entry: unknown): entry is DamageLogEntry {
 	return e.type === 'damage' &&
 	       (e.source === 'player' || e.source === 'opponent') &&
 	       typeof e.amount === 'number';
-}
-
-function calculateEloChange(playerElo: number, opponentElo: number, isWinner: boolean): number {
-	const expectedScore = 1 / (1 + Math.pow(10, (opponentElo - playerElo) / 400));
-	const actualScore = isWinner ? 1 : 0;
-	return Math.round(ELO_K_FACTOR * (actualScore - expectedScore));
 }
 
 function extractPlayerData(
@@ -101,18 +94,17 @@ export async function packageMatchResult(
 	const winnerEloBefore = isPlayerWinner ? input.playerEloBefore : input.opponentEloBefore;
 	const loserEloBefore = isPlayerWinner ? input.opponentEloBefore : input.playerEloBefore;
 
-	const winnerEloDelta = calculateEloChange(winnerEloBefore, loserEloBefore, true);
-	const loserEloDelta = calculateEloChange(loserEloBefore, winnerEloBefore, false);
+	const eloProjection = projectEloMatch({ winnerElo: winnerEloBefore, loserElo: loserEloBefore });
 
 	const winnerElo: EloChange = {
 		before: winnerEloBefore,
-		after: Math.max(0, winnerEloBefore + winnerEloDelta),
-		delta: winnerEloDelta,
+		after: eloProjection.winner.after,
+		delta: eloProjection.winner.delta,
 	};
 	const loserElo: EloChange = {
 		before: loserEloBefore,
-		after: Math.max(0, loserEloBefore + loserEloDelta),
-		delta: loserEloDelta,
+		after: eloProjection.loser.after,
+		delta: eloProjection.loser.delta,
 	};
 
 	// XP rewards for winner's cards only (loser gets 0 — intentional "brutal" design)

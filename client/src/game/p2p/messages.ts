@@ -11,6 +11,7 @@ import type { PackagedMatchResult } from '../../data/blockchain/types';
 import type { GameCommandEnvelope } from '../hooks/p2pEnvelope';
 import type { ArmySelection } from '../types/ChessTypes';
 import type { GameStateWirePayload } from './stateFrameCodec';
+import type { SpellcraftReadyAckMessage, SpellcraftReadyMessage } from '@shared/p2p-wire/spellcraft';
 
 /**
  * Challenge shape allowed inside `session_authorize`.
@@ -61,6 +62,8 @@ export type WireMessage =
 	| { type: 'hash_mismatch'; turnNumber: number; myHash: string }
 	| { type: 'poker_action'; playerId: string; action: string; hpCommitment?: number; compact?: CompactPokerAction; turnId?: string; decisionId: string; sentAtMs?: number }
 	| { type: 'poker_turn_started'; combatId: string; turnId: string; phase: string; activePlayerId: string; actionsThisRound: number; durationMs: number; remainingMs?: number; sentAtMs: number }
+	| SpellcraftReadyMessage
+	| SpellcraftReadyAckMessage
 	| ChessCommandEnvelope
 	| TransitionReceiptMessage
 	| PhaseCheckpointProposal

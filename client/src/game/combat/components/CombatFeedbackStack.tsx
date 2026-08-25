@@ -19,9 +19,9 @@ export function CombatFeedbackStack() {
 					className={`combat-feedback-chip combat-feedback-chip--${chip.tone}`}
 					style={{ animationDelay: `${index * 80}ms` }}
 				>
-					<p className="combat-feedback-chip-title">{chip.title}</p>
+					<p className="combat-feedback-chip-copy combat-feedback-chip-title">{chip.title}</p>
 					{chip.subtitle ? (
-						<p className="combat-feedback-chip-subtitle">{chip.subtitle}</p>
+						<p className="combat-feedback-chip-copy combat-feedback-chip-subtitle">{chip.subtitle}</p>
 					) : null}
 				</article>
 			))}

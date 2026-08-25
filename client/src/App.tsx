@@ -37,12 +37,14 @@ import { getAuthenticatedHiveUsername, subscribeHiveSessionIdentity } from "./da
 import { createRuntimeStorageKey, getRagnarokNetworkConfig } from "./game/config/networkConfig";
 import { getDataLayerMode, isSharedNetworkEnvironment, isTestnetStage } from "./game/config/featureFlags";
 import { getRagnarokRuntimePhase } from '@shared/runtimeConfig';
+import { checkRuntimeCapability, type ProtocolCapability } from '@shared/protocol-core/phaseGate';
 import { resolveProtectedFlowAccess, type ProtectedFlowSurface } from "./game/auth/protectedFlowAccess";
 import {
 	BridgeRuntimeBoundary,
 	CardDataRuntimeBoundary,
 	GameplayRuntimeBoundary,
 } from "./game/runtime/RuntimeBoundary";
+import { getCapabilityAvailability, shouldMountCapabilityRoute } from './game/runtime/phaseCapabilityGate';
 import { isDevBuild } from './game/config/buildMode';
 import { getSeasonInfo, formatTimeRemaining } from './game/utils/seasonUtils';
 import { isChunkLoadError, recoverFromChunkLoadError } from './lib/chunkLoadRecovery';
@@ -241,6 +243,30 @@ function useAuthenticatedHiveUsername(): string | null {
 
 function useIsHiveMode(): boolean {
 	return getDataLayerMode() === 'hive';
+}
+
+function PhaseCapabilitySurface({ capability }: { capability: ProtocolCapability }) {
+	const runtime = getRagnarokNetworkConfig();
+	const decision = checkRuntimeCapability(runtime, capability);
+	if (decision.status === 'allowed') return null;
+	const availability = getCapabilityAvailability(runtime, capability);
+	return (
+		<section className="mx-auto flex min-h-[55vh] max-w-3xl items-center px-6 py-16" aria-labelledby="phase-capability-title">
+			<div className="w-full border border-gold-300/20 bg-obsidian-900/90 p-8 shadow-2xl shadow-black/30">
+				<p className="font-mono text-[10px] uppercase tracking-[0.28em] text-gold-300">Gameplay Validation · {decision.phaseId}</p>
+				<h1 id="phase-capability-title" className="mt-3 font-display text-3xl uppercase tracking-[0.08em] text-ink-100">{availability.title}</h1>
+				<p className="mt-4 max-w-xl text-sm leading-6 text-ink-300">{availability.description}</p>
+				<div className="mt-6 border-l-2 border-gold-300/50 pl-4 font-mono text-xs uppercase tracking-[0.16em] text-ink-400" role="status">Disabled during Gameplay Validation</div>
+			</div>
+		</section>
+	);
+}
+
+function PhaseCapabilityGate({ capability, children }: { capability: ProtocolCapability; children: React.ReactNode }) {
+	const runtime = getRagnarokNetworkConfig();
+	return shouldMountCapabilityRoute(runtime, capability)
+		? <>{children}</>
+		: <PhaseCapabilitySurface capability={capability} />;
 }
 
 // Offline wrapper for routes that need a server
@@ -520,11 +546,11 @@ const COLLECTION_CARD: ModeCard = {
 	intent: 'meta',
 };
 
-const UTILITY_LINKS: ReadonlyArray<{ label: string; shortLabel?: string; to: string; icon: typeof Swords }> = [
+const UTILITY_LINKS: ReadonlyArray<{ label: string; shortLabel?: string; to: string; icon: typeof Swords; capability?: ProtocolCapability }> = [
 	{ label: 'Wallet', to: routes.wallet, icon: WalletCards },
 	{ label: 'Atlas', to: routes.map, icon: Compass },
-	{ label: 'Marketplace', shortLabel: 'Market', to: routes.marketplace, icon: ShoppingBag },
-	{ label: 'Packs', to: routes.packs, icon: PackageIcon },
+	{ label: 'Marketplace', shortLabel: 'Market', to: routes.marketplace, icon: ShoppingBag, capability: 'marketplace' },
+	{ label: 'Packs', to: routes.packs, icon: PackageIcon, capability: 'packs' },
 	{ label: 'Tournaments', shortLabel: 'Tourney', to: routes.tournaments, icon: Trophy },
 	{ label: 'History', to: routes.history, icon: HistoryIcon },
 	{ label: 'Treasury', to: routes.treasury, icon: Landmark },
@@ -978,6 +1004,16 @@ function HomePage() {
 				<div className="n-home-utility-inner mx-auto flex max-w-5xl justify-start gap-2 overflow-x-auto [scrollbar-width:none]">
 					{UTILITY_LINKS.map(link => {
 						const Icon = link.icon;
+						const disabled = link.capability !== undefined && checkRuntimeCapability(getRagnarokNetworkConfig(), link.capability).status === 'rejected';
+						const availability = link.capability ? getCapabilityAvailability(getRagnarokNetworkConfig(), link.capability) : null;
+						if (disabled) {
+							return (
+								<span key={link.label} className="n-home-utility-link flex min-h-[3.125rem] min-w-[70px] flex-col items-center gap-1 p-2 text-[9px] font-bold uppercase tracking-wider text-ink-500 sm:min-w-[100px] sm:text-[10px]" aria-disabled="true" title={availability?.title}>
+									<Icon size={14} className="text-ink-500" aria-hidden="true" />
+									<span>{link.shortLabel ?? link.label}</span>
+								</span>
+							);
+						}
 						return (
 							<Link
 								key={link.label}
@@ -1214,14 +1250,14 @@ function App() {
 								<Route element={<BridgeRuntimeBoundary />}>
 									<Route path={routes.warband} element={<StarterEntitlementGate surface="warband"><WarbandPage /></StarterEntitlementGate>} />
 									<Route path={routes.collection} element={<StarterEntitlementGate surface="collection"><CollectionPage /></StarterEntitlementGate>} />
-									<Route path={routes.trading} element={<Navigate to={`${routes.marketplace}?tab=swaps`} replace />} />
-									<Route path={routes.marketplace} element={<OnlineOnly label="Marketplace"><MarketplacePage /></OnlineOnly>} />
+									<Route path={routes.trading} element={<PhaseCapabilityGate capability="marketplace"><Navigate to={`${routes.marketplace}?tab=swaps`} replace /></PhaseCapabilityGate>} />
+									<Route path={routes.marketplace} element={<PhaseCapabilityGate capability="marketplace"><OnlineOnly label="Marketplace"><MarketplacePage /></OnlineOnly></PhaseCapabilityGate>} />
 									<Route path={routes.treasury} element={<OnlineOnly label="Treasury"><TreasuryPage /></OnlineOnly>} />
 									<Route path={routes.wallet} element={<WalletPage />} />
 								</Route>
 
 								<Route element={<CardDataRuntimeBoundary />}>
-									<Route path={routes.packs} element={<ProtectedAccountGate surface="packs"><PacksPage /></ProtectedAccountGate>} />
+									<Route path={routes.packs} element={<PhaseCapabilityGate capability="packs"><ProtectedAccountGate surface="packs"><PacksPage /></ProtectedAccountGate></PhaseCapabilityGate>} />
 								</Route>
 
 								<Route element={<GameOrientationGate><GameplayRuntimeBoundary /></GameOrientationGate>}>

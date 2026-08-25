@@ -9,6 +9,7 @@ import { type Server } from "http";
 import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
 import { log } from "./static";
+import { createNonFatalViteLogger } from './viteLogger';
 
 const viteLogger = createLogger();
 
@@ -54,13 +55,7 @@ export async function setupVite(app: Express, server: Server) {
     ...resolvedConfig,
     mode,
     configFile: false,
-    customLogger: {
-      ...viteLogger,
-      error: (msg, options) => {
-        viteLogger.error(msg, options);
-        process.exit(1);
-      },
-    },
+    customLogger: createNonFatalViteLogger(viteLogger),
     server: serverOptions,
     appType: "custom",
   });

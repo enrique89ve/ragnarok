@@ -1,14 +1,16 @@
 import { useCallback } from 'react';
 import { useMatchmakingStore } from '../stores/matchmakingStore';
 import { usePeerStore } from '../stores/peerStore';
-import { getNFTBridge } from '../nft';
 import { useNFTUsername } from '../nft/hooks';
 import { debug } from '../config/debugConfig';
 import { isHiveWalletAvailable, signHiveMessage } from '../../data/HiveAuth';
 import { getAuthenticatedHiveUsername } from '../../data/HiveSessionIdentity';
 import { isSharedNetworkEnvironment } from '../config/featureFlags';
+import { getRagnarokNetworkConfig } from '../config/networkConfig';
 import { readP2PMatchTicket, readServerSignedChallenge } from '@shared/p2pAvailability';
 import { buildP2PQueueAuthMessage } from '@shared/p2pMatchmakingAuth';
+import { buildRagnarokRuntimeEvidence } from '@shared/runtimeConfig';
+import { resolveWalletInvocationAuthMode, type WalletInvocationAuthMode } from '@shared/protocolPhase';
 import { useStarterStore } from '../stores/starterStore';
 import { ensureSharedNetworkStarterClaimReceipt } from '../data/starterClaim';
 import {
@@ -112,14 +114,36 @@ function readQuickMatchStarterClaimed(input: {
 	return Boolean(input.accountId && useStarterStore.getState().hasClaimed(input.accountId));
 }
 
+function resolveQueueWalletAuthMode(override?: WalletInvocationAuthMode): WalletInvocationAuthMode {
+	return override ?? resolveWalletInvocationAuthMode(
+		buildRagnarokRuntimeEvidence(getRagnarokNetworkConfig()).phasePolicy,
+	);
+}
+
+function unsignedQueueBody(input: {
+	readonly peerId: string;
+	readonly accountId: string;
+	readonly starterClaimed: boolean;
+}): Record<string, unknown> {
+	return {
+		peerId: input.peerId,
+		username: input.accountId,
+		starterClaimed: input.starterClaimed,
+	};
+}
+
 export async function buildQuickMatchQueueBody(input: {
 	readonly peerId: string;
 	readonly accountId: string | null;
 	readonly sharedNetwork: boolean;
 	readonly starterClaimed: boolean;
-	readonly hiveMode: boolean;
+	readonly walletAuthMode?: WalletInvocationAuthMode;
 }): Promise<QueueBodyBuildResult> {
-	if (input.accountId && input.hiveMode) {
+	const walletAuthMode = resolveQueueWalletAuthMode(input.walletAuthMode);
+	if (input.sharedNetwork && !input.accountId) {
+		return { ok: false, message: 'Hive account required before entering matchmaking.' };
+	}
+	if (input.accountId && walletAuthMode === 'hive-body-auth') {
 		const timestamp = Date.now();
 		const message = buildP2PQueueAuthMessage({
 			username: input.accountId,
@@ -138,11 +162,13 @@ export async function buildQuickMatchQueueBody(input: {
 			return {
 				ok: true,
 				body: {
-					peerId: input.peerId,
-					username: input.accountId,
+					...unsignedQueueBody({
+						peerId: input.peerId,
+						accountId: input.accountId,
+						starterClaimed: input.starterClaimed,
+					}),
 					timestamp,
 					signature: result.signature,
-					starterClaimed: input.starterClaimed,
 				},
 			};
 		} catch (err) {
@@ -152,8 +178,15 @@ export async function buildQuickMatchQueueBody(input: {
 			}
 		}
 	}
-	if (input.sharedNetwork) {
-		return { ok: false, message: 'Hive account required before entering matchmaking.' };
+	if (input.accountId) {
+		return {
+			ok: true,
+			body: unsignedQueueBody({
+				peerId: input.peerId,
+				accountId: input.accountId,
+				starterClaimed: input.starterClaimed,
+			}),
+		};
 	}
 	return { ok: true, body: { peerId: input.peerId } };
 }
@@ -320,7 +353,6 @@ export function useMatchmaking() {
 			setStatus('queued');
 			setError(null);
 
-			const nftBridge = getNFTBridge();
 			const sharedNetwork = isSharedNetworkEnvironment();
 			const authenticatedHiveUsername = getAuthenticatedHiveUsername();
 			const matchmakingAccountId = resolveQuickMatchAccountId({
@@ -352,7 +384,6 @@ export function useMatchmaking() {
 				accountId: p2pAccess.accountId,
 				sharedNetwork,
 				starterClaimed,
-				hiveMode: nftBridge.isHiveMode(),
 			});
 			if (!queueBodyResult.ok) return failJoin(queueBodyResult.message);
 

@@ -276,6 +276,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
         selectOnWinHandler(request.ctx)({
           iWon: request.iWon,
           turnCount: request.turnCount,
+          finalGameState: request.finalGameState,
         });
       }
       if (plan.markDailyQuests) {
@@ -775,6 +776,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       fromPhase: flowState?.tag === 'poker_combat' ? 'poker_combat' : 'chess',
       commitMode: 'phase-checkpoint',
       delayMs: GAME_END_DELAY_MS,
+      finalGameState: useGameStore.getState().gameState ?? undefined,
     };
     if (!matchEndController.requestGameEnd(request)) return;
     playSoundEffect(isDraw ? 'defeat' : iWon ? 'victory' : 'defeat');
@@ -803,6 +805,7 @@ const RagnarokGameCoordinator: React.FC<RagnarokGameCoordinatorProps> = ({ initi
       fromPhase: flowState?.tag === 'chess' ? 'chess' : 'poker_combat',
       commitMode: 'phase-checkpoint',
       delayMs: GAME_END_DELAY_MS,
+      finalGameState: useGameStore.getState().gameState ?? undefined,
     };
     if (!matchEndController.requestGameEnd(request)) return;
     playSoundEffect(iWon ? 'victory' : 'defeat');

@@ -10,47 +10,42 @@
  *
  * @see cardRegistry/index.ts for the canonical card data source
  */
-import { CardData, CardType, HeroClass } from '../types';
-import { cardRegistry } from './cardRegistry';
+import type { CardData, CardType, HeroClass } from '../types';
+import {
+	cardRegistry,
+	getCardById as getCanonicalCardById,
+	getCardsByPredicate,
+} from './cardRegistry';
 
 const allCards: CardData[] = cardRegistry;
 
-const idMap = new Map<number, CardData>(allCards.map(c => [c.id as number, c]));
-const classCache = new Map<string, CardData[]>();
-const keywordCache = new Map<string, CardData[]>();
-const typeCache = new Map<string, CardData[]>();
-
-export const getCardById = (id: number): CardData | undefined => {
-	return idMap.get(id);
-};
+export const getCardById = getCanonicalCardById;
 
 export const getCardsByClass = (className: HeroClass | 'neutral'): CardData[] => {
-	if (classCache.has(className)) return classCache.get(className)!;
-	const result = allCards.filter(card => {
+	return getCardsByPredicate(card => {
 		if ('heroClass' in card && card.heroClass === className) {
 			return true;
 		}
-		if ('dualClassInfo' in card && card.dualClassInfo && (card.dualClassInfo as any).classes.includes(className as HeroClass)) {
-			return true;
+		if ('dualClassInfo' in card) {
+			const dualClassInfo: unknown = card.dualClassInfo;
+			if (
+				typeof dualClassInfo === 'object'
+				&& dualClassInfo !== null
+				&& 'classes' in dualClassInfo
+				&& Array.isArray(dualClassInfo.classes)
+				&& dualClassInfo.classes.includes(className)
+			) return true;
 		}
 		return false;
 	});
-	classCache.set(className, result);
-	return result;
 };
 
 export const getCardsByKeyword = (keyword: string): CardData[] => {
-	if (keywordCache.has(keyword)) return keywordCache.get(keyword)!;
-	const result = allCards.filter(card => card.keywords && card.keywords.includes(keyword));
-	keywordCache.set(keyword, result);
-	return result;
+	return getCardsByPredicate(card => card.keywords?.includes(keyword) === true);
 };
 
 export const getCardsByType = (type: CardType): CardData[] => {
-	if (typeCache.has(type)) return typeCache.get(type)!;
-	const result = allCards.filter(card => card.type === type);
-	typeCache.set(type, result);
-	return result;
+	return getCardsByPredicate(card => card.type === type);
 };
 
 // ============================================================================
@@ -77,7 +72,7 @@ export const getOutcastCards = (): CardData[] => getCardsByKeyword('outcast');
 // ============================================================================
 
 export const getMythicCards = (): CardData[] => {
-  return allCards.filter(card => card.rarity === 'mythic');
+  return getCardsByPredicate(card => card.rarity === 'mythic');
 };
 
 export const getSpellCards = (): CardData[] => getCardsByType('spell');
@@ -94,7 +89,7 @@ export const getWeaponCards = (): CardData[] => getCardsByType('weapon');
 
 /** @deprecated Use getCardsByClass instead */
 export const getClassMinions = (): CardData[] => {
-  return allCards.filter(card =>
+  return getCardsByPredicate(card =>
     card.type === 'minion' &&
     'heroClass' in card &&
     card.heroClass !== 'neutral'
@@ -103,12 +98,12 @@ export const getClassMinions = (): CardData[] => {
 
 /** @deprecated Use getCardsByKeyword('battlecry') or similar */
 export const getMechanicCards = (): CardData[] => {
-  return allCards.filter(card =>
-    card.keywords && (
-      card.keywords.includes('battlecry') ||
-      card.keywords.includes('deathrattle') ||
-      card.keywords.includes('combo')
-    )
+  return getCardsByPredicate(card =>
+    card.keywords?.some(keyword => (
+      keyword === 'battlecry' ||
+      keyword === 'deathrattle' ||
+      keyword === 'combo'
+    )) === true
   );
 };
 

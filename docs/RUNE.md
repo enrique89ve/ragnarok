@@ -4,6 +4,13 @@ One stop for everything RUNE. Other docs link here; this file is authoritative f
 
 ## TL;DR
 
+F1 RUNE is a resettable IndexedDB/replay projection. It is local authority for
+gameplay validation, never a Hive canonical ledger or wallet balance. F2/F3
+replay/canonical rules below apply only when their phase capability is enabled.
+
+Older sections in this file describe the future Hive ledger and are explicitly
+F2/F3-only when they mention broadcaster, chain handlers or wallet balances.
+
 - Non-transferable, season-scoped, replay-derived from chain ops.
 - Bank-ledger model: every ledger entry has one balance owner, and that owner is derived from the authenticated Hive broadcaster or from **Winner-Posted Match Result** replay ([ADR 0008](./adr/0008-winner-posted-match-result.md)).
 - Earned via P2P ranked wins, campaign first-clears, and daily quests. Spent via `rune_exchange` for packs.
@@ -14,7 +21,21 @@ One stop for everything RUNE. Other docs link here; this file is authoritative f
   it is not a current gameplay gate (see [ADR 0007](./adr/0007-p2p-gameplay-only-testnet.md)).
   The current earn surface is **campaign (10) + daily quest (20) = 30
   RUNE/season per account**.
-- QA full-catalog P2P may show a local projected reward after victory, but that preview is not RUNE until a replay-derived ledger entry exists.
+
+## F1 local settlement
+
+In `local-gameplay-v1`, campaign first-clear, daily quests and P2P settlement
+write local `RuneLedgerEntry` records in IndexedDB/replay. The batch is
+idempotent; daily `claimed` changes only after commit. Local ELO, SeasonScore,
+CardXP and level-ups are likewise persisted locally. No Keychain, broadcast,
+outbox, Hive `custom_json`, NFTLox write or canonical balance is involved.
+
+F2's future Hive path may accept an explicit claim but remains `awaiting-replay`
+until replay confirms it. F3 is the canonical path. Local values are useful
+test authority, not transferable value.
+- Historical QA full-catalog profiles called the victory feedback a “preview”. In
+  F1, the local replay commit creates the local RUNE ledger entry and is the
+  authority; it is still not a Hive canonical ledger.
 
 ## Bank-ledger anti-cheat contract
 
@@ -49,21 +70,21 @@ Hard invariants:
 - **Reads are not authority.** `/api/chain/rune/*` and wallet displays are
   projections. Any disagreement with replay is a bug in the projection.
 
-## Beta status
+## Phase availability
 
-| Source | Chain handler | Client broadcast | Closed beta |
+| Source | F1 local gameplay | F2 Hive testnet | F3 mainnet |
 |---|---|---|---|
-| `p2p_ranked` | live (`applyRankedMatchSettlement`) | **stub** (no arbiter yet) | **deferred** |
-| `campaign_first_clear` | live | live (`publishCampaignVictoryResult`) | active |
-| `daily_quest_claim` | live | live (explicit Claim button after goal) | active |
-| `reward_claim` (tournament) | live | tournament server pending | deferred |
-| `rune_exchange` (sink) | live | live (pack purchase) | active |
+| `p2p_ranked` | local settlement | Hive replay, no official ranking | canonical/official when enabled |
+| `campaign_first_clear` | local IDB commit | Hive replay | canonical |
+| `daily_quest_claim` | local batch commit | explicit broadcast, then awaiting replay | canonical |
+| `reward_claim` (tournament) | unavailable | future explicit path | enabled by policy |
+| `rune_exchange` (sink) | disabled | disabled | enabled by F3 policy |
 
 The P2P broadcast stub lives in [client/src/game/match/modes/p2p/lifecycle.ts](../client/src/game/match/modes/p2p/lifecycle.ts). ADR 0007 keeps it disabled for the gameplay-only testnet even if a local winner exists: no result signature, Keychain prompt, Hive operation or P2P economic mutation is authorized. Canon emission caps stay declared so the cap structure is forward-compatible.
 
-## QA full-catalog reward preview
+## Historical/future reward preview terminology
 
-QA Testnet Season 0 may calculate and display local reward feedback at P2P
+Older QA profiles may have calculated and displayed local reward feedback at P2P
 game-over so testers can validate the future reward UX. The projected winner
 RUNE should use the same current testnet season value as ranked P2P
 (`TESTNET_RUNE_ECONOMY.p2pWinRune`, currently `2`), and local match/profile XP
@@ -162,34 +183,35 @@ Validation order matters: a duplicate nonce returns `'ignored'` before any state
 
 ## How a daily quest claim becomes RUNE
 
-Single broadcast per slot, single apply step. Goal-completion happens mid-combat,
-but the chain op only fires from an explicit client wallet action. Match-end,
-panel mount, day refresh, and server reads must not open Keychain.
+One deterministic batch per slot. Goal-completion happens mid-combat, but F1
+commits the local ledger before showing `claimed` or reward feedback. Match-end,
+panel mount, day refresh and server reads must not open Keychain.
 
 ```
 dailyQuestStore.updateProgress(type, delta)        ─ mid-combat
   └→ if (newProgress >= goal) set completed=true   (no broadcast yet)
 
-DailyQuestPanel Claim button                       ─ explicit wallet invocation
-  └→ for each (completed && !claimed) quest:
-       └→ getNFTBridge().claimDailyQuest(slot, questType)
-            └→ hiveSync.broadcastCustomJson('rp_daily_quest_claim', payload)
-                 └→ chain replay: applyDailyQuestClaim(op, deps)
-                      ├ parse payload (slot, quest_type)
-                      ├ derive utc_day from op.timestamp (Hive block time)
-                      ├ idempotency by (account, utc_day, slot)
-                      └ calculateCappedRuneCredit + putRuneLedgerEntryAndBalance
-                           ├ source: daily_quest_claim
-                           └ key:    daily_quest:{seasonId}:{account}:{utc_day}:{slot}
-       └→ on broadcast success: set claimed=true, emit "+N RUNE" toast
+F1 flushPendingClaims                              ─ local capability
+  └→ build all deterministic slot entries
+       └→ one atomic IDB commit (ledger + claim records)
+            ├ idempotency by (account, season, utc_day, slot)
+            └→ after commit: set claimed=true, emit "+N local RUNE" toast
+
+F2/F3 explicit path (future for this flow)            ─ wallet invocation
+  └→ broadcast claim → `awaiting-replay:<trxId>`
+       └→ only replay ledger sync promotes `claimed=true`
 ```
 
 Visible state machine in the quest panel:
-**in_progress** (gold) → **awaiting_claim** (amber, after goal hit) → **claimed** (emerald, after explicit Claim broadcast ack).
+**in_progress** (gold) → **awaiting_claim** (amber, after goal hit) → **claimed**
+(emerald, after F1 atomic IDB commit or F2/F3 replay confirmation).
 
 ### Local persistence
 
-Progress lives entirely client-side in `localStorage['ragnarok-daily-quests:{account}']` (account-scoped via [accountScopedStorage](../client/src/lib/storage/accountScopedStorage.ts)). The dev server is not in the data path — claim broadcasts go directly from Hive Keychain to a Hive RPC node, and chain idempotency is the only authoritative arbiter. A server outage does not affect quest progress, claim broadcasts, or RUNE crediting; it only blocks wallet read endpoints (`/api/chain/rune/*`).
+F1 daily progress and RUNE claims are committed through the local IndexedDB
+ledger adapter. A slot becomes `claimed` only after its idempotent batch commit.
+There is no Keychain or broadcast in this path. The future F2 Hive path may
+record `awaiting-replay:<trxId>`; replay, not acceptance, promotes the slot.
 
 ### Multi-device
 

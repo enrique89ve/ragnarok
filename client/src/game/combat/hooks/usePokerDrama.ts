@@ -105,7 +105,7 @@ export function usePokerDrama(options: UsePokerDramaOptions): PokerDramaState {
 		// Improvement is a moment: edge-detect the rank jump here and emit
 		// it so the registry handler (and future composers) can react.
 		if (hand.rank > prevRank && prevRank > 0) {
-			emitHandImproved({ tier: getHandTier(hand.rank) });
+			emitHandImproved({ tier: getHandTier(hand.rank), rank: hand.rank, side: 'player' });
 		}
 
 		prevHandRankRef.current = hand.rank;

@@ -1,11 +1,13 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { CheckCircle2, Clock, Coins, RotateCcw, Swords, X } from 'lucide-react';
+import type { DailyQuestClaimPresentation } from './dailyQuestClaimPresentation';
 
 interface DailyQuestInfoDialogProps {
 	onClose: () => void;
+	claimPresentation: DailyQuestClaimPresentation;
 }
 
-export default function DailyQuestInfoDialog({ onClose }: DailyQuestInfoDialogProps) {
+export default function DailyQuestInfoDialog({ onClose, claimPresentation }: DailyQuestInfoDialogProps) {
 	const titleId = useId();
 	const descId = useId();
 	const closeButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -68,7 +70,7 @@ export default function DailyQuestInfoDialog({ onClose }: DailyQuestInfoDialogPr
 							<InfoRow
 								icon={<CheckCircle2 size={14} strokeWidth={2.2} aria-hidden />}
 								title="Claim timing"
-								body="Completed quests become Pending. In Hive mode, use Claim to open Keychain; the chain confirms the RUNE after the signed custom_json lands."
+								body={claimPresentation.infoClaimTiming}
 							/>
 						<InfoRow
 							icon={<Coins size={14} strokeWidth={2.2} aria-hidden />}
@@ -78,7 +80,7 @@ export default function DailyQuestInfoDialog({ onClose }: DailyQuestInfoDialogPr
 						<InfoRow
 							icon={<Clock size={14} strokeWidth={2.2} aria-hidden />}
 							title="When they reset"
-							body="New quests arrive at midnight UTC. A completed but unclaimed slot expires with the day — claims belong to the Hive UTC day of inclusion."
+							body={claimPresentation.infoReset}
 						/>
 						<InfoRow
 							icon={<RotateCcw size={14} strokeWidth={2.2} aria-hidden />}

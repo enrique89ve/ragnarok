@@ -1,8 +1,10 @@
 import type { Difficulty } from './campaignTypes';
+import type { ProtocolPhasePolicy } from '@shared/protocolPhase';
 
 export type CampaignRewardFeedbackStatus =
 	| 'first_clear_pending'
 	| 'first_clear_published'
+	| 'first_clear_local'
 	| 'first_clear_no_rune'
 	| 'replay_no_reward'
 	| 'defeat_no_reward'
@@ -32,6 +34,7 @@ export type CampaignRewardFeedbackInput =
 export interface CampaignRewardCopy {
 	readonly label: string;
 	readonly detail: string;
+	readonly capDetail?: string;
 	readonly tone: 'reward' | 'pending' | 'no_reward' | 'failed';
 }
 
@@ -81,26 +84,42 @@ export function buildCampaignRewardEvidenceContext(
 export function getCampaignBriefingRewardCopy(input: {
 	readonly completed: boolean;
 	readonly firstClearRune: number;
+	readonly campaignRuneCap: number;
+	readonly policy: ProtocolPhasePolicy;
 }): CampaignRewardCopy {
+	const local = input.policy.localSettlement;
+	const capDetail = local
+		? `Local resettable cap: ${input.campaignRuneCap} RUNE per account from campaign first-clears in this replay epoch.`
+		: `Season cap: ${input.campaignRuneCap} RUNE per account from campaign first-clears.`;
+
 	if (input.completed) {
 		return {
-			label: 'Replay: no new RUNE',
-			detail: 'First-clear rewards are one-time. Replays can improve best turns or difficulty, but they do not mint more RUNE.',
+			label: local ? 'Replay: no new local RUNE' : 'Replay: no new RUNE',
+			detail: local
+				? 'First-clear rewards are one-time in this local replay. Replays can improve best turns or difficulty, but they do not add more resettable RUNE.'
+				: 'First-clear rewards are one-time. Replays can improve best turns or difficulty, but they do not mint more RUNE.',
+			capDetail,
 			tone: 'no_reward',
 		};
 	}
 
 	if (input.firstClearRune > 0) {
 		return {
-			label: `First clear: +${input.firstClearRune} RUNE`,
-			detail: 'Paid only when the campaign result lands as this account\'s first verified clear for the mission.',
+			label: local ? `First clear: +${input.firstClearRune} local RUNE` : `First clear: +${input.firstClearRune} RUNE`,
+			detail: local
+				? 'Committed only after this account\'s first clear is atomically recorded in local IndexedDB/replay. The balance is resettable and never externally published.'
+				: 'Paid only when the campaign result lands as this account\'s first verified clear for the mission.',
+			capDetail,
 			tone: 'reward',
 		};
 	}
 
 	return {
 		label: 'First clear: no RUNE',
-		detail: 'This mission can be recorded for progression, but no RUNE reward is configured for its first clear.',
+		detail: local
+			? 'This mission can be recorded for local progression, but no resettable RUNE reward is configured for its first clear.'
+			: 'This mission can be recorded for progression, but no RUNE reward is configured for its first clear.',
+		capDetail,
 		tone: 'no_reward',
 	};
 }
@@ -131,6 +150,12 @@ export function getCampaignResultRewardCopy(
 					'Campaign result submitted. Replay applies the first-clear credit within the season cap.',
 					feedback.matchXpShown,
 				),
+				tone: 'reward',
+			};
+		case 'first_clear_local':
+			return {
+				label: `First clear: +${feedback.previewRune} RUNE (local)`,
+				detail: formatCampaignRewardDetail('Committed to local gameplay replay; no external publication.', feedback.matchXpShown),
 				tone: 'reward',
 			};
 		case 'first_clear_no_rune':

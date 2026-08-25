@@ -26,6 +26,7 @@ import {
 	playShowdownDamageVFX,
 	playStreakAnnouncementVFX,
 } from '../../animations/PokerDramaVFX';
+import { playThorHammerVFX } from '../../../animations/ThorHammerVFX';
 import { CombatAction, CombatPhase, HAND_RANK_NAMES, PokerHandRank } from '../../../types/PokerCombatTypes';
 import { registerVisualEffect, type EffectHandle, type VisualEffectUnregister } from '../registry';
 import { registerCombatImpactVisualEffect } from './combatImpactHandler';
@@ -59,6 +60,7 @@ let showdownContext: {
 	opponentRank: PokerHandRank;
 	winner: ArenaVfxOwner | 'draw';
 } | null = null;
+const lastThorHammerPlayedAt: Partial<Record<ArenaVfxOwner, number>> = {};
 
 export function resetPokerBettingPressure(): void {
 	bettingPressureLevel = 0;
@@ -149,6 +151,10 @@ function handleHandRankAnnounced(event: HandRankAnnouncedEvent): EffectHandle | 
 		showdownContext = { playerRank: event.rank, opponentRank: event.rank, winner: event.winner };
 		updateShowdownStreaks(event.winner);
 		return schedulePokerMotion(POKER_MOTION_SPECS['hand-rank'], [400], () => {
+			if (event.rank === PokerHandRank.THORS_HAMMER) {
+				playThorHammerIfNeeded(event.side, event.id, event.timestamp);
+				return;
+			}
 			playHandRankAnnouncement(rankName, event.rank, event.winner === 'player', true);
 		}, `hand-rank-${event.side}`);
 	} else {
@@ -156,6 +162,10 @@ function handleHandRankAnnounced(event: HandRankAnnouncedEvent): EffectHandle | 
 			showdownContext.opponentRank = event.rank;
 		}
 		return schedulePokerMotion(POKER_MOTION_SPECS['hand-rank'], [900], () => {
+			if (event.rank === PokerHandRank.THORS_HAMMER) {
+				playThorHammerIfNeeded(event.side, event.id, event.timestamp);
+				return;
+			}
 			playHandRankAnnouncement(rankName, event.rank, event.winner === 'opponent', false);
 		}, `hand-rank-${event.side}`);
 	}
@@ -192,7 +202,18 @@ function handlePhaseEntered(event: PhaseEnteredEvent): EffectHandle | null {
 	return schedulePokerMotion(POKER_MOTION_SPECS['phase-reveal'], [0], () => playPhaseDramaVFX(event.phase), 'phase');
 }
 
+function playThorHammerIfNeeded(side: ArenaVfxOwner, seed: string, timestamp: number): void {
+	const previous = lastThorHammerPlayedAt[side];
+	if (previous !== undefined && timestamp - previous < 2800) return;
+	lastThorHammerPlayedAt[side] = timestamp;
+	void playThorHammerVFX({ side, seed });
+}
+
 function handleHandImproved(event: HandImprovedEvent): EffectHandle | null {
+	if (event.rank === PokerHandRank.THORS_HAMMER) {
+		playThorHammerIfNeeded(event.side, event.id, event.timestamp);
+		return COMPLETED_HANDLE;
+	}
 	return schedulePokerMotion(POKER_MOTION_SPECS['betting-action'], [0], () => playHandImprovementVFX(event.tier), 'hand-improved');
 }
 
@@ -202,6 +223,8 @@ export function registerPokerDramaVisualEffects(): VisualEffectUnregister {
 	playerStreak = 0;
 	opponentStreak = 0;
 	showdownContext = null;
+	delete lastThorHammerPlayedAt.player;
+	delete lastThorHammerPlayedAt.opponent;
 
 	const unregisterFns = [
 		registerVisualEffect('bettingAction', handleBettingAction),

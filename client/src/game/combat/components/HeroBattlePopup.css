@@ -1,5 +1,5 @@
 .hbp-overlay {
-	position: fixed;
+	position: absolute;
 	pointer-events: none;
 	z-index: 700;
 	box-sizing: border-box;

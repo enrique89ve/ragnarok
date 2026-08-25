@@ -1,6 +1,11 @@
-# Testnet Readiness Fast Track - 2026-08-20
+# Testnet Readiness Fast Track - 2026-08-23
 
 ## Proposito
+
+**Canonical phase note:** this plan now targets F1 `local-gameplay-v1`. Daily,
+campaign and P2P local RUNE are real idempotent IndexedDB ledger projections;
+local ELO, SeasonScore, CardXP and level-ups are also persisted. No wallet
+Claim, Hive `custom_json`, outbox or canonical settlement is an F1 gate.
 
 Esta es la fuente activa para cerrar lo que falta entre el estado actual y una
 Alfa Testnet jugable por personas reales, con el menor camino posible hacia
@@ -16,15 +21,21 @@ con la misma spine chess↔poker→`game_over`, daily quest claimable, poker
 legible, y una sola fuente de verdad por dominio. No es un cemetery de
 archivos sueltos ni las 49 misiones.
 
-Actualizacion 2026-08-20: se reconcilio el tablero de gates con el codigo y
-los smokes locales. Practica, funnel CTA, daily claim local, match-end unico
-y docs de Standard Match ya no bloquean. Siguen abiertos: first-clear de
-norse-1, `getCardById` unico, pass visual de arena, runtime del host, Hive
-Keychain, P2P dos browsers, y el re-run de ticket security.
+Actualizacion 2026-08-23: el runtime del host, headers/cache, build Alfa,
+seguridad P2P, lookup canonico, persistencia local y los gates de capacidades
+ya tienen evidencia. `dev/local` permite Single sin login para QA por browser o
+LLM; la Alfa compartida conserva identidad. Siguen abiertos la victoria humana
+de norse-1, el smoke P2P con dos cuentas/Keychain reales, desplegar este arbol
+y el sign-off del operador.
 
 ## Verdad actual
 
-- Fase actual: **Alfa Testnet con mecanicas full NFT**.
+Phase 1 gameplay validation is `local-gameplay-v1`: single, campaign, daily
+quests and P2P use local replay/IndexedDB settlement. RUNE, ELO, SeasonScore,
+CardXP and level-ups are local authority, never Hive output. Marketplace,
+packs and NFTLox writes are disabled and must be verified through their gates.
+
+- Fase actual: **Phase 1 Gameplay Validation con mecanicas locales completas**.
 - Runtime esperado: `RAGNAROK_RUNTIME_MODE=alfa-testnet`.
 - Stage de red: `VITE_NETWORK_STAGE=testnet`.
 - Protocolo: `VITE_RAGNAROK_PROTOCOL_ID=rk_game_testnet`.
@@ -72,12 +83,19 @@ chess_attack       v
             daily quest Claim en home
 ```
 
+F1 terminal settlement is local and complete: campaign/daily/P2P RUNE is
+idempotent IndexedDB ledger state; ELO, SeasonScore, CardXP and level-ups are
+local projections. The two-browser smoke must verify those projections and
+zero Hive/custom_json/outbox/wallet output. It must not claim browser smoke is
+complete until it is run operationally.
+
 La decision normativa es
 [`ADR 0007`](./adr/0007-p2p-gameplay-only-testnet.md): esta fase prueba partidas
 P2P completas y fluidas. El relay arbitra solamente checkpoints deterministas
 de cambio de fase. No hay firma ni broadcast de `match_result`, settlement P2P
-de RUNE/ELO/Season Score/CardXP, ni prompts de Keychain causados por la partida.
-El resultado terminal es evidencia local.
+canonico de RUNE/ELO/Season Score/CardXP, ni prompts de Keychain causados por
+la partida. El resultado terminal y esas proyecciones economicas son evidencia
+local en IndexedDB/replay.
 
 ## Definicion de listo
 
@@ -122,8 +140,8 @@ Alfa esta lista para mas manos internas cuando todo esto sea verdad:
 5. El P2P de dos browsers cubre el mismo script mas checkpoints
    `chess ↔ poker_combat`, checkpoint terminal, reconnect corto, reload local
    snapshot + rejoin, resultado local y export JSON sin operacion Hive.
-6. Daily quest: progreso de partida + Claim explicito en home; duplicate
-   claim es no-op. Campana first-clear persiste; replay no paga RUNE extra.
+6. Daily quest: progreso de partida + commit local idempotente en home; duplicate
+   claim es no-op. Campana first-clear persiste RUNE local una vez; no wallet en F1.
 7. Dualidades P0 de migracion estan congeladas: un owner de fin de partida,
    un lookup de carta, docs que no anuncian el modo muerto "Standard Match".
 8. `pnpm run check`, `pnpm run lint:css`, el runner de seguridad P2P y el build
@@ -133,15 +151,13 @@ Alfa esta lista para mas manos internas cuando todo esto sea verdad:
 
 Closed Beta no se abre hasta que, ademas de lo anterior:
 
-1. Exista prueba de coleccion/schema NFTLoX testnet para Ragnarok.
-2. Se rote a `closed-beta-*`.
-3. `qaFullCatalogEnabled=false`.
-4. `closedBetaCutover.inviteBlocked=false` solo despues de estas evidencias:
-   `RAGNAROK_NFTLOX_COLLECTION_PROOF`,
+1. Se rote a `closed-beta-*`.
+2. `qaFullCatalogEnabled=false`.
+3. `closedBetaCutover.inviteBlocked=false` solo despues de estas evidencias:
    `RAGNAROK_HIVE_KEYCHAIN_SMOKE`,
    `RAGNAROK_P2P_TWO_BROWSER_SMOKE`,
    `RAGNAROK_CLOSED_BETA_OPERATOR_SIGNOFF`.
-5. P2P ranked RUNE, ELO oficial, Season Score y CardXP siguen apagados. El
+4. P2P ranked RUNE, ELO oficial, Season Score y CardXP siguen apagados. El
    winner-arbiter y `match_result` pertenecen a una fase futura y no bloquean
    la validacion de jugabilidad actual.
 
@@ -176,21 +192,27 @@ como host-auth.
 6. P1: muertos evidentes, CSS dedupe, Closed Beta cutover
 ```
 
-Chequeo 2026-08-20 (codigo + smokes de agent-browser; no sustituye Keychain
-humano ni health del deploy real).
+Chequeo 2026-08-23 (codigo + pruebas focalizadas + smokes previos de
+agent-browser; no sustituye Keychain humano, dispositivo fisico ni health del
+deploy real).
 
 | Orden | Gate | Estado actual | Cierre minimo |
 |---|---|---|---|
 | 0 | WIP del arbol | Queda chrome poker | Diff actual: `HoleCardsOverlay.tsx`, `hero-card.css`, `CardFrame.css`. Spine/resume/labels ya en `main`. No empilar trabajo nuevo fuera de arena. |
-| 1 | Spine practica / campana / P2P | Practica local cerrada | Practica: chess → poker writeback → Leave Match → `game_over` (2026-08-19). Campana: norse-1 entra, abandon ya no muestra victoria. Falta **ganar** norse-1 (first-clear) y el smoke P2P de dos browsers. |
-| 2 | Poker board + funnel | Funnel cerrado; arena en curso | Labels Bet/Call/Raise/Fold/All in + HP. Home: CTA starter/campana; PvP copy gameplay-only. Warband: Launch Battle / Find Opponent. Game-over: Play Again / Continue the Saga / Return Home. Falta el pass visual 1366/1920/ultrawide/mobile landscape. |
-| 3 | Runtime Alfa desplegable | Abierto P0 operador | Scripts `build:alfa-testnet` / `start:alfa-testnet` y Dokploy docs existen. Falta probar health/admin/p2p status, headers y cache en el host real. |
-| 4 | Hive session | Abierto P0 humano | Login real con Keychain antes de matchmaking; cero prompts causados por la partida. Claim de daily quest es el unico prompt post-partida. |
-| 5 | Campana 1 mision + daily quest | Daily local cerrado | Claim diario local: `claimed` / `already_claimed` sin RUNE. norse-1 entra. Falta first-clear ganado y Claim Hive testnet. |
-| 6 | Dualidades P0 | Casi cerrado | Fin de partida unico (`matchEndController` cableado). Docs: Standard Match historico. OPEN-8 cerrado. **Sigue abierto:** dos `getCardById` (`allCards.ts` y `cardManagement/cardRegistry.ts`). Showdown 9s queda como red de seguridad aceptada. |
-| 7 | P2P smoke dos browsers | Abierto P0 humano | Codigo de snapshot local + rejoin existe (`P2P_MATCH_RESUME.md`). Falta evidencia de dos perfiles: spine + checkpoints + reconnect + reload + export, cero Keychain de partida. |
-| 8 | Seguridad P2P enfocada | Necesita re-run | `bash scripts/p2p-ticket-security-check.sh` en el arbol que se va a desplegar. |
-| 9 | Closed Beta cutover | Bloqueado | NFTLoX proof, epoch `closed-beta-*`, env evidence y operator sign-off. No es gate de Alfa Player-Ready. |
+| 1 | Spine practica / campana / P2P | Integracion automatizada cerrada; smoke humano abierto | Practica: chess → poker writeback → Leave Match → `game_over` (2026-08-19). Campana: el test de lifecycle ejecuta derrota, first-clear, segundo clear y reapertura de IndexedDB con settlement local. P2P: el tracer multiperfil cubre handshake, chess, checkpoint, Poker, reload serializado y `game_over`. Faltan ganar norse-1 en browser y el smoke P2P de dos browsers reales. |
+| 2 | Poker board + funnel | Funnel y telefono landscape cerrados; pass amplio abierto | El contrato SSR prueba labels visibles dinamicos Bet/Raise y Check/Call, Fold, Frontline, All in, HP, aria/title y razones disabled; la geometria `117x99` queda fijada por test. Browser 844x390 confirma starter, warband, deckbuilder y combate lado a lado; portrait muestra el gate de rotacion. Atlas 844x390 muestra mapa+dossier y 390x844 sigue responsive, sin relajar CSP. Falta el pass visual humano 1366/1920/ultrawide/dispositivo fisico. |
+| 3 | Runtime Alfa desplegable | Host inspeccionado; arbol actual no desplegado | `build:alfa-testnet` pasa. En `testnetdev.ragnaroknft.quest`, health/admin/p2p status, sync, headers y cache pasaron; challenge signing figura `source=env`, `required=true`, `ready=true`. El host todavia sirve copy/API anteriores (por ejemplo daily claim) y no prueba este workspace hasta el siguiente deploy. |
+| 4 | Hive session | Abierto P0 humano | Login real opcional con Keychain; cero prompts causados por la partida o claims F1. |
+| 5 | Campana 1 mision + daily quest | Persistencia local automatizada cerrada | Claim diario local: commit IDB `claimed` / `already_claimed` con RUNE local una vez. Campana: first-clear concede RUNE/CardXP/level local una sola vez, el replay persiste tras cerrar/reabrir IndexedDB y una derrota no completa la mision. Falta evidencia jugada en browser de una victoria norse-1. |
+| 6 | Dualidades P0 | Cerrado | Fin de partida unico (`matchEndController` cableado). Lookup de cartas unico en `data/cardRegistry`; `allCards.ts` y `cardManagement/cardRegistry.ts` son adaptadores sin dataset propio. Docs: Standard Match historico. OPEN-8 cerrado. Showdown 9s queda como red de seguridad aceptada. |
+| 7 | P2P smoke dos browsers | Automatizacion cerrada; P0 humano abierto | El tracer usa dos perfiles aislados y prueba spine + checkpoints + reload serializado + settlement local externamente silencioso. Falta evidencia de dos browsers/Keychain reales, relay desplegado, desconexion/reconexion de transporte y export. |
+| 8 | Seguridad P2P enfocada | Verde | `bash scripts/p2p-ticket-security-check.sh`: 26/26 suites y 163/163 tests (2026-08-23). El tracer multiperfil y la suite global tambien pasan; esto no sustituye el smoke humano de dos browsers. |
+| 9 | Closed Beta cutover | Bloqueado | F2 epoch `closed-beta-*`, env evidence y operator sign-off. NFTLox proof es F3 futuro, no gate F2. |
+
+Validacion del arbol local al cierre de este corte: Vitest 238/238 suites y
+1743/1743 tests; TypeScript y build Alfa verdes; stylelint verde, cero
+duplicados CSS cross-file y ningun nuevo duplicado interno. ESLint no tiene
+errores y conserva 3132 warnings historicos.
 
 ## Fuentes de verdad
 
@@ -200,7 +222,7 @@ mismo cambio.
 | Dominio | Canon | No es canon |
 |---|---|---|
 | Schemas (rarity, set, starter) | `shared/schemas/` | `metadata.json`, strings sueltos |
-| Definiciones de carta | `client/src/game/data/cardRegistry/` | `allCards.ts` (compat), `cardManagement/cardRegistry.ts` (map paralelo) |
+| Definiciones de carta | `client/src/game/data/cardRegistry/` | `allCards.ts` y `cardManagement/cardRegistry.ts` (adaptadores compat sin dataset propio) |
 | Reglas de juego | chess en `shared/protocol-core/chess` + poker combat + `docs/RULEBOOK.md` | `GAME_FLOW.md` (historico) |
 | Campana progreso | `campaign_result` en protocol-core + `campaignProgress` | solo `campaignStore.completedMissions` |
 | Daily quest RUNE | `applyDailyQuestClaim` en protocol-core | `questStore` (card-quests in-match) |
@@ -225,10 +247,11 @@ P0, dos verdades que causan bugs o mentiras:
 2. Showdown que no llama `onCombatEnd`: **aceptado.** `ShowdownCelebration`
    garantiza `onComplete` en ≤8s. El timer de 9s en
    `useRagnarokCombatController` es red de seguridad, no el camino feliz.
-3. Lookup de cartas: **sigue abierto.** Canon de definiciones =
-   `client/src/game/data/cardRegistry/`. Hay dos helpers `getCardById`:
-   `allCards.ts` (compat Map) y `cardManagement/cardRegistry.ts` (Map paralelo
-   usado por effect handlers). Un helper. No fusionar archivos en Alfa.
+3. Lookup de cartas: **cerrado 2026-08-23.** Canon de definiciones y lecturas =
+   `client/src/game/data/cardRegistry/`. `allCards.ts` y
+   `cardManagement/cardRegistry.ts` preservan imports legacy, pero delegan al
+   mismo `getCardById` y nunca mantienen un dataset paralelo. La prueba de
+   paridad incluye IDs reales, tokens, miss y un effect handler legacy.
 4. Docs: **cerrado.** Standard Match / `GameBoard` no es un modo Alfa.
    RULEBOOK y GAME_FLOW lo marcan historico.
 5. `P2P_SECURITY_HARDENING.md` es historico; OPEN-8 esta cerrado.
@@ -312,6 +335,14 @@ siguiente; game-over dice el resultado y el siguiente paso.
 
 4. **Geometria**
    - Mantener `GameViewport` como unico escalador.
+   - En telefono, bloquear la interaccion de partida en portrait y pedir giro;
+     no crear una segunda geometria vertical para combate.
+   - Aplicar el mismo gate a single, campana y P2P. Warband/seleccion de heroes
+     y deckbuilder tambien son landscape-first porque son parte del funnel de
+     batalla.
+   - Lobby, Atlas, mapa de campana y metajuego pueden seguir siendo responsive
+     en portrait; en landscape corto deben aprovechar el ancho sin apilar
+     paneles por debajo del viewport.
    - Mover ajustes anonimos a tokens en `client/src/game/combat/layout/board.css`.
    - No meter `vw`/`vh` nuevos dentro de gameplay zones.
    - Validar 1366x768, 1920x1080, ultrawide y mobile landscape.
@@ -375,6 +406,36 @@ subprotocol, logs, memoria privada y adapter de poker sin `globalThis`.
 
 No marcar como pasado sin dos perfiles reales con Hive Keychain.
 
+La preparación técnica del handshake no sustituye este smoke: el snapshot de
+deck+claims es único (`deckHash`/`claimsHash`) y, en shared-network,
+`initGameFromHandshake` queda bloqueado hasta que la identidad Hive coincida,
+el binding de claims sea válido y las verificaciones de IndexedDB y servidor
+devuelvan `approved`. Un mismatch o fallo de verificación es fail-closed y
+desconecta. En Poker, `decisionId`, dedup, transcript y cierre de ronda solo
+se comprometen después de que el motor devuelva `applied`.
+
+Evidencia automatizada focalizada (no evidencia de dos navegadores):
+
+```bash
+pnpm exec vitest run \
+  client/src/game/p2p/p2pMultiProfileF1.integration.test.ts \
+  client/src/game/p2p/deckHandshakeAuthority.test.ts \
+  client/src/game/p2p/p2pMatchResume.test.ts \
+  client/src/game/p2p/phaseCheckpointClient.test.ts \
+  client/src/game/match/modes/p2p/wireSync/pokerP2PActionCommit.test.ts \
+  client/src/game/match/modes/p2p/wireSync/pokerP2PCombatAdapter.test.ts \
+  client/src/game/subscribers/BlockchainSubscriber.localP2P.test.ts \
+  client/src/game/subscribers/localP2PSettlement.test.ts
+```
+
+El tracer multiperfil compone dos sesiones aisladas: binding deck+claims
+aprobado, chess aplicado/rechazado, checkpoint a Poker, accion Poker
+rechazada/reintentada/deduplicada, reload serializado de transcript/checkpoint,
+`game_over` y settlement F1 local con RUNE/ELO/SeasonScore/CardXP. La ruta de
+settlement externo no se invoca. Ese reload serializado no prueba el relay:
+el smoke humano de dos browsers, desconexion/reconnect real, transporte
+desplegado e identidad Keychain sigue pendiente.
+
 Flujo minimo:
 
 1. Browser A y Browser B tienen identidades Hive testnet distintas.
@@ -412,8 +473,8 @@ Flujo minimo:
 - No abrir Public Testnet.
 - No activar P2P ranked RUNE, ELO oficial o Season Score.
 - No firmar/broadcast `match_anchor` o `match_result` ni pedir Keychain durante,
-  al reconectar o al terminar una partida P2P. Daily quest Claim es el unico
-  prompt de wallet post-partida.
+  al reconectar, al terminar una partida P2P o al reclamar en F1. Los claims F1
+  son commits locales; no hay prompt de wallet post-partida.
 - No convertir NFTLoX en requisito de Alfa.
 - No usar Vercel/static para una prueba con `/api/*` y `/ws/p2p`.
 - No resolver visuales creando un segundo tablero paralelo.

@@ -244,9 +244,9 @@ export default function MapPage() {
 	};
 
 	return (
-		<main className="h-screen w-screen overflow-hidden bg-obsidian-950 text-ink-0">
-			<header className="relative z-40 border-b border-obsidian-700/80 bg-obsidian-950/90 backdrop-blur-md">
-				<div className="mx-auto flex h-16 max-w-[1800px] items-center justify-between gap-4 px-4 md:px-6">
+		<main className="atlas-page-shell h-screen w-screen overflow-hidden bg-obsidian-950 text-ink-0">
+			<header className="atlas-page-header relative z-40 border-b border-obsidian-700/80 bg-obsidian-950/90 backdrop-blur-md">
+				<div className="atlas-page-header-inner mx-auto flex h-16 max-w-[1800px] items-center justify-between gap-4 px-4 md:px-6">
 					<div className="flex min-w-0 items-center gap-3">
 						<Link
 							to={data.homePath}
@@ -271,9 +271,9 @@ export default function MapPage() {
 				</div>
 			</header>
 
-			<section className="relative z-10 mx-auto grid h-[calc(100dvh-4rem)] max-w-[1800px] grid-rows-[minmax(0,1fr)_minmax(20rem,42dvh)] gap-3 p-3 md:p-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_340px]">
+			<section className="atlas-page-workspace relative z-10 mx-auto grid h-[calc(100dvh-4rem)] max-w-[1800px] grid-rows-[minmax(0,1fr)_minmax(20rem,42dvh)] gap-3 p-3 md:p-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_340px]">
 				<div
-					className={`relative h-full overflow-hidden rounded-xl border border-gold-300/22 bg-obsidian-950 shadow-[0_28px_100px_-55px_rgba(0,0,0,0.95)] ${
+					className={`atlas-map-stage relative h-full min-w-0 overflow-hidden rounded-xl border border-gold-300/22 bg-obsidian-950 shadow-[0_28px_100px_-55px_rgba(0,0,0,0.95)] ${
 						isDragging ? 'cursor-grabbing' : 'cursor-grab'
 					}`}
 					onPointerDown={handleMapPointerDown}

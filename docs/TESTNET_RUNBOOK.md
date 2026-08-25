@@ -2,12 +2,21 @@
 
 ## Purpose
 
+For F1, campaign, daily quests and P2P progression are local replay/IndexedDB
+state, not preview-only UI. Marketplace, packs and NFTLox writes are disabled;
+verify their `capability_disabled` gates instead of attempting mutations.
+
 Run Ragnarok in a mainnet-like beta environment with a separate Hive namespace, collection id, accounts, and service endpoints. Testnet validates the full architecture but remains resettable.
 
 For the current Alfa Testnet readiness order and the shortest path to Closed
 Testnet Beta, use
 [`TESTNET_READINESS_FAST_TRACK.md`](./TESTNET_READINESS_FAST_TRACK.md). This
 runbook remains the command and smoke reference.
+For a legacy server JSON state, use the dry-run-first
+[`PHASE_MIGRATION_RUNBOOK.md`](./PHASE_MIGRATION_RUNBOOK.md) procedure and
+`pnpm run prepare:chain-state-migration`; then point
+`RAGNAROK_CHAIN_STATE_FILE` at the new destination after verification. The
+archive remains explicit recovery evidence; never reuse an incompatible volume.
 
 Current P2P testnet follows
 [`ADR 0007`](./adr/0007-p2p-gameplay-only-testnet.md): Keychain may be used for
@@ -18,6 +27,49 @@ WebSocket relay and the terminal result is local evidence only.
 For the one-week QA Testnet Season 0 operating script, use
 [`TESTNET_WEEK_ONE_SPEC.md`](./TESTNET_WEEK_ONE_SPEC.md). That spec is the
 day-by-day historical QA checklist.
+
+## Launch variables
+
+`VITE_NETWORK_STAGE` is the only network stage (`local | testnet | mainnet`).
+The npm script is not authority. The reset epoch selects the runtime phase
+and the IndexedDB/JSON namespace.
+
+Two local lanes: `pnpm run dev` is the guest workshop (LLM/browser Single, no
+Keychain). To feel the launched Alfa on localhost, run
+`pnpm run dev:alfa-testnet` with Hive Keychain. `pnpm run dev:testnet` loads
+`.env.testnet` (generic/`qa-s0` epochs) and is not the Dokploy fingerprint.
+
+| Launch | Stage | Epoch prefix | Protocol id | State file | Verifier |
+|---|---|---|---|---|---|
+| `pnpm run dev` / `dev:local` | `local` | optional / unused | local default | derived local JSON | not required |
+| `pnpm run dev:testnet` | `testnet` | `testnet-s01-*` (generic) or `qa-s0-*` | `rk_game_testnet` | `data/chain-state.testnet.json` | `verify:runtime-env -- --mode testnet` |
+| `pnpm run dev:alfa-testnet` / `start:alfa-testnet` | `testnet` | `alfa-testnet-*` | `rk_game_testnet` | `data/chain-state.alfa-testnet.json` | `verify:alfa-runtime-env` |
+| Dokploy image | `testnet` | baked `alfa-testnet-full-nft-2026-05-22` | `rk_game_testnet` | `/app/data/chain-state.alfa-testnet.json` | paste `.env.alfa-testnet.example` in the Environment tab; verifier runs in `CMD` before boot |
+| Closed Beta | `testnet` | `closed-beta-*` | `rk_game_testnet` | dedicated closed-beta JSON | `verify:runtime-env -- --mode testnet-safe --scope runtime` |
+| Mainnet | `mainnet` | `mainnet-*` | `ragnarok-cards` | dedicated mainnet JSON | `verify:runtime-env -- --mode mainnet` |
+
+Alfa required public pair (browser `VITE_*` = server `RAGNAROK_*`):
+
+```env
+VITE_NETWORK_STAGE=testnet
+VITE_RAGNAROK_PROTOCOL_ID=rk_game_testnet
+VITE_RAGNAROK_COLLECTION_ID=ragnarok-testnet
+VITE_RAGNAROK_RESET_EPOCH=alfa-testnet-full-nft-2026-05-22
+VITE_SEASON_START=2026-06-14T23:28:54Z
+VITE_RAGNAROK_INDEX_START_BLOCK=109016418
+RAGNAROK_PROTOCOL_ID=rk_game_testnet
+RAGNAROK_RESET_EPOCH=alfa-testnet-full-nft-2026-05-22
+RAGNAROK_SEASON_START=2026-06-14T23:28:54Z
+RAGNAROK_INDEX_START_BLOCK=109016418
+RAGNAROK_CHAIN_STATE_FILE=data/chain-state.alfa-testnet.json
+RAGNAROK_NFT_OWNERSHIP_SOURCE=json
+```
+
+Keep that epoch on every redeploy. A new `alfa-testnet-*` value is a phase
+wipe: testers get empty IndexedDB and the JSON volume must be migrated, not
+reused. `P2P_CHALLENGE_SIGNING_SECRET` must stay the same 32+ character value
+or match tickets die across restarts. See
+[`ENV_SECURITY.md`](./ENV_SECURITY.md) § Restart isolation.
 
 ## First Setup
 
@@ -38,8 +90,8 @@ VITE_RAGNAROK_ADMIN_ACCOUNT=ragnarok-test
 VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT=ragnarok-test-operator
 ```
 
-NFTLoX is not required for Alfa or QA Season 0. Keep
-`VITE_NFTLOX_PROTOCOL_ID` unset until the Closed Beta collection proof exists.
+NFTLoX writes are disabled in F1 and F2. Keep
+`VITE_NFTLOX_PROTOCOL_ID` unset until the F3 NFTLox activation/proof exists.
 
 For QA Testnet Season 0, rotate the reset epoch to a `qa-s0-*` value before
 testers start, for example:
@@ -51,9 +103,8 @@ VITE_RAGNAROK_RESET_EPOCH=qa-s0-2026-05-21
 The default `testnet-s01-*` example is not enough for the QA full-catalog
 rehearsal because it intentionally keeps `qaFullCatalogEnabled=false`.
 
-`VITE_NETWORK_STAGE=testnet` derives Hive data mode and blockchain packaging.
-Do not set `VITE_DATA_LAYER_MODE` or `VITE_BLOCKCHAIN_PACKAGING` for normal
-testnet runs.
+`VITE_NETWORK_STAGE=testnet` derives Hive data mode and packaging. Do not set
+`VITE_DATA_LAYER_MODE` or `VITE_BLOCKCHAIN_PACKAGING` in launch env files.
 
 `VITE_RAGNAROK_RESET_EPOCH` is the browser/server projection boundary for a
 resettable phase. Change it when opening QA Testnet Season 0, Closed Testnet
@@ -83,14 +134,15 @@ The indexer reads irreversible Hive operations, filters Ragnarok
 Use a `qa-s0-*` or `QA Season 0 / ...` reset epoch only for the QA full-catalog
 rehearsal. Closed Testnet Beta must rotate to a different epoch such as
 `closed-beta-*`, which disables the `qa_full_catalog` deck entitlement and
-returns verification to starter, NFT custody, and replay-derived acquisition.
+returns verification to starter and replay-derived acquisition; NFTLox custody
+and writes remain reserved for F3.
 Alfa Testnet must use an `alfa-testnet-*` reset epoch. It is a temporary
 production-hosted testnet alias for finding Dokploy, SSL, Cloudflare, WebSocket,
-and JSON-state failures with full NFT mechanics. It still keeps
+and JSON-state failures with local full gameplay mechanics. It still keeps
 `VITE_NETWORK_STAGE=testnet`, uses `rk_game_testnet`, disables QA full-catalog
 access, keeps RUNE/P2P active, and differs from later Beta Testnet only in the
-NFT ownership source: JSON-backed provenance projection now, NFTLox custody
-after the collection proof exists.
+ownership evidence source: JSON-backed provenance projection; NFTLox custody
+and writes remain reserved for F3.
 QA reward preview caches must include at least stage, protocol id, reset epoch,
 account, and match id in their key; on stage/epoch/account mismatch they must be
 ignored or purged before UI render.
@@ -221,7 +273,67 @@ Production rate limits are 24 requests/minute per IP for chain reads that may
 sync unknown accounts, 60 requests/minute per IP for RUNE state/ledger/balances,
 and 120 requests/minute per IP for the global `/api` limiter.
 
-## Smoke Test — Testnet Configuration (Gate 5)
+## F1 Smoke Test — Gameplay Validation
+
+Use this checklist for `local-gameplay-v1` (QA/alfa/generic testnet labels).
+
+For structural QA, run `pnpm run dev:local`: a clean browser may reveal its
+starter and enter Single without Hive login, network claim or Keychain. This
+guest affordance is local-only so browser agents and LLMs can inspect the full
+play spine. On a shared Alfa host, establish Hive identity first; F1 may then
+issue the starter receipt from that identity without requesting a second
+wallet signature. Never use the local guest path as evidence that shared P2P
+is authenticated.
+
+1. Verify runtime evidence reports F1, `local-replay`, `local-simulation` and
+   `wallet=login-only`.
+2. Complete single, one campaign mission, daily quest progress and a two-browser
+   P2P match through `game_over`.
+3. Verify local replay/IndexedDB contains idempotent local RUNE, ELO,
+   SeasonScore, CardXP, level-up and anchor/result evidence.
+4. Retry a daily/campaign/P2P settlement and verify no duplicate ledger entry.
+5. Verify zero Hive `custom_json`, outbox, IPFS, Keychain wallet invocation,
+   canonical `match_anchor`/`match_result`, marketplace mutation, pack mutation
+   and NFTLox write.
+6. Visit marketplace, trading and packs routes and verify disabled
+   `capability_disabled`/Phase 2 surfaces. Mutation endpoints must return HTTP
+   `409` with `code: "capability_disabled"`; verify zero Keychain/Hive calls.
+   Do not buy, exchange, open or claim packs in F1.
+
+Deployed/browser smoke is not claimed complete by source tests; record it as
+operational evidence separately.
+
+### Automated P2P protocol boundary checks
+
+These checks validate the local contract only; they do not close the two-browser
+smoke. The deck handshake tests cover the immutable deck+claims snapshot,
+identity binding, fail-closed verification gate, and the rule that shared-network
+init waits for approval. The Poker tests cover the post-engine `applied` seam;
+rejected actions must not commit `decisionId`, transcript, or betting-round
+effects. The multiprofile tracer composes two isolated in-memory sessions through
+approved deck binding, chess apply/reject, the chess-to-Poker checkpoint, Poker
+reject/retry/dedup, serialized resume reload, terminal `game_over`, and F1 local
+settlement. It verifies that the external settlement callback is never reached
+and that local RUNE, ELO, SeasonScore and CardXP projections are produced.
+
+```bash
+pnpm exec vitest run \
+  client/src/game/p2p/p2pMultiProfileF1.integration.test.ts \
+  client/src/game/p2p/deckHandshakeAuthority.test.ts \
+  client/src/game/p2p/p2pMatchResume.test.ts \
+  client/src/game/p2p/phaseCheckpointClient.test.ts \
+  client/src/game/match/modes/p2p/wireSync/pokerP2PActionCommit.test.ts \
+  client/src/game/match/modes/p2p/wireSync/pokerP2PCombatAdapter.test.ts \
+  client/src/game/match/modes/p2p/wireSync/pokerP2PCombatAdapter.securityBoundary.test.ts \
+  client/src/game/subscribers/BlockchainSubscriber.localP2P.test.ts \
+  client/src/game/subscribers/localP2PSettlement.test.ts
+```
+
+The serialized resume assertion is deterministic local reload evidence, not a
+real relay reconnect. Human two-browser identity, relay disconnect/reconnect,
+deployed transport and Keychain session evidence remain operationally pending.
+
+## Smoke Test — Testnet Configuration (Future F2/F3)
 
 1. Open the app at the dev server URL.
 2. Confirm the testnet badge is visible.
@@ -238,9 +350,13 @@ and 120 requests/minute per IP for the global `/api` limiter.
 
 Passing this smoke test closes the testnet configuration gate and opens the next roadmap block: gameplay/P2P validation under the testnet namespace.
 
-## Quick Manual Checklist — Ceremony Feedback
+## Future F3 only — Quick Manual Checklist — Pack/NFT Ceremony Feedback
 
-Run once per QA reset epoch. For every ceremony, use the visible Evidence
+This section is not an F1 or F2 checklist. Marketplace, packs and NFTLox writes
+are disabled in both earlier profiles; run it only after the F3 capability gate.
+
+Run only under an F3-enabled runtime (the old QA reset-epoch wording is
+historical). For every ceremony, use the visible Evidence
 button and confirm the JSON includes `runtime.resetEpoch`,
 `runtime.protocolId`, `runtime.qaFullCatalogEnabled`, the active account, and
 recent ceremony/session events.
@@ -264,9 +380,12 @@ recent ceremony/session events.
    sealed RUNE pack from `/#/packs`. Confirm spend, rejection/failure, indexing,
    confirmed, and reveal states are distinguishable from DUAT and HBD packs.
 
-## Smoke Test — RUNE Rewards and Pack Flow
+## Future F3 only — Smoke Test — RUNE Exchange and Pack Flow
 
-Run once per QA reset epoch after the configuration gate passes. This smoke uses
+This pack/market ceremony is F3-only. F2 may validate campaign/daily Hive replay,
+but must reject `rune_exchange`, pack and marketplace mutations.
+
+Run only under an F3-enabled runtime after the configuration gate passes. This smoke uses
 only replay-derived RUNE and the public `/api/chain/*` read model; do not edit a
 wallet balance, seed a parallel API, or use `/api/testnet/rune/*`.
 
@@ -299,18 +418,16 @@ wallet balance, seed a parallel API, or use `/api/testnet/rune/*`.
     exchange, and RUNE pack opening. The JSON should include the account,
     `custom_json` id, source keys, reset epoch, and relevant ledger entries.
 
-## Smoke Test — Campaign QA Season 0
+## Future F2 — Smoke Test — Campaign Hive Replay
 
-Run once per QA reset epoch with `qa_full_catalog` enabled. This smoke validates
-campaign mechanics coverage only; it does not validate NFT custody, marketplace
-ownership, CardXP, or ranked economy proof.
+Run once per `closed-beta-*` reset epoch with `qa_full_catalog` disabled. This
+smoke validates campaign replay coverage only; it does not activate NFTLox,
+marketplace, packs, or official ranking.
 
 1. Confirm `GET /api/health` reports `runtime.stage: "testnet"`,
-   `runtime.protocolId: "rk_game_testnet"`, and the active QA reset epoch.
-2. In `/#/warband?mode=single`, build at least one 30-card hero loadout for
-   campaign testing using non-starter QA Access cards. The deck may verify through
-   `qa_full_catalog`, but verified cards must remain non-transferable and
-   `earnsCardXp: false`.
+   `runtime.protocolId: "rk_game_testnet"`, and the active Closed Beta reset epoch.
+2. In `/#/warband?mode=single`, build a standard replay-backed hero loadout for
+   campaign testing. Do not enable or rely on `qa_full_catalog`.
 3. Start a campaign mission from `/#/campaign`. Record the local run id from
    the campaign evidence export when available.
 4. Win one configured reward-paying first-clear mission. Confirm
@@ -328,17 +445,20 @@ ownership, CardXP, or ranked economy proof.
    JSON must include `runtime.resetEpoch`, `campaignId`, `missionId`,
    `localRunId` when available, difficulty, result/turn count when available,
    and reward evidence (`status`, preview RUNE, transaction id or error).
-9. Confirm the campaign evidence and collection UI do not describe QA Access
-   as NFT ownership, DUAT provenance, marketplace value, or CardXP eligibility.
+9. Confirm the campaign evidence and collection UI do not describe replay
+   evidence as NFTLox ownership, marketplace value, or official ranking.
 
-## Smoke Test — P2P QA Season 0
+## Future F3 — Smoke Test — P2P Ranked/Official Replay
 
-Run once per QA reset epoch with two browser profiles and two Hive testnet
+`p2pProgression` is available in F2, but official ranking is F3-only; this
+section's ranked/official evidence must not be run in F2.
+
+Run once per F3/mainnet reset epoch with two browser profiles and two Hive
 identities. This smoke validates the networked peer path only; do not use
 campaign/local AI behavior as proof for P2P.
 
 1. Confirm both profiles report `runtime.stage: "testnet"`,
-   `runtime.protocolId: "rk_game_testnet"`, and the same QA reset epoch.
+   `runtime.protocolId: "ragnarok-cards"`, and the same F3 reset epoch.
 2. Connect Hive Keychain in both profiles before opening multiplayer. The P2P
    screen should block matchmaking/manual peer links until a Hive session is
    present in shared-network runtime.
@@ -386,7 +506,7 @@ campaign/local AI behavior as proof for P2P.
     preview does not appear in result history, wallet balance, collection, or
     matchmaking/ranking surfaces.
 
-## Smoke Test — Closed Beta Cutover Gate
+## Future F2 — Closed Beta Runtime Cutover (F3 economy excluded)
 
 Run before inviting the first Closed Testnet Beta cohort. This gate is not a
 replacement for owner/operator sign-off; it only proves that the active runtime
@@ -400,8 +520,15 @@ VITE_NETWORK_STAGE=testnet \
 VITE_RAGNAROK_PROTOCOL_ID=rk_game_testnet \
 VITE_RAGNAROK_COLLECTION_ID=ragnarok-testnet \
 VITE_RAGNAROK_RESET_EPOCH=closed-beta-2026-06 \
-VITE_NFTLOX_PROTOCOL_ID=nftlox_testnet \
-RAGNAROK_NFTLOX_COLLECTION_PROOF=verified \
+VITE_SEASON_START=2026-06-14T23:28:54Z \
+VITE_RAGNAROK_INDEX_START_BLOCK=109016418 \
+RAGNAROK_PROTOCOL_ID=rk_game_testnet \
+RAGNAROK_RESET_EPOCH=closed-beta-2026-06 \
+RAGNAROK_SEASON_START=2026-06-14T23:28:54Z \
+RAGNAROK_INDEX_START_BLOCK=109016418 \
+RAGNAROK_NFT_OWNERSHIP_SOURCE=json \
+RAGNAROK_CHAIN_STATE_FILE=data/chain-state.closed-beta.json \
+P2P_CHALLENGE_SIGNING_SECRET=operator_owned_replace_with_real_secret_32chars \
 RAGNAROK_HIVE_KEYCHAIN_SMOKE=passed \
 RAGNAROK_P2P_TWO_BROWSER_SMOKE=passed \
 RAGNAROK_CLOSED_BETA_OPERATOR_SIGNOFF=approved \
@@ -413,8 +540,19 @@ ENABLE_INDEX_CHECKPOINT_PUBLISHER=false \
 Then verify the runtime gate:
 
 ```bash
-node -e "fetch('http://127.0.0.1:5011/api/health').then(r=>r.json()).then(j=>console.log(JSON.stringify({phase:j.runtime.runtimePhase,qa:j.runtime.qaFullCatalogEnabled,blocked:j.runtime.closedBetaCutover.inviteBlocked,blockers:j.runtime.closedBetaCutover.blockerIds,signoff:j.runtime.closedBetaCutover.operatorSignoffRequired},null,2)))"
+node -e "fetch('http://127.0.0.1:5011/api/health').then(r=>r.json()).then(j=>console.log(JSON.stringify({phase:j.runtime.runtimePhase,phaseId:j.runtime.phaseId,protocolId:j.runtime.protocolId,resetEpoch:j.runtime.resetEpoch,seasonStart:j.runtime.seasonStart,indexStartBlock:j.runtime.indexStartBlock,fingerprint:j.runtime.runtimeFingerprint,qa:j.runtime.qaFullCatalogEnabled,blocked:j.runtime.closedBetaCutover.inviteBlocked,blockers:j.runtime.closedBetaCutover.blockerIds,signoff:j.runtime.closedBetaCutover.operatorSignoffRequired},null,2)))"
 ```
+
+With the same server environment loaded, run the verifier before inviting
+testers. It checks the full server fingerprint/chain-state/P2P boundary and
+client/server epoch, season, and index agreement:
+
+```bash
+pnpm run verify:runtime-env -- --mode testnet-safe --scope runtime
+```
+
+Replace the `P2P_CHALLENGE_SIGNING_SECRET` placeholder with an operator-owned
+secret before starting the runtime; never commit or share that value.
 
 Expected automated result:
 
@@ -425,15 +563,17 @@ Expected automated result:
 - `signoff` is `false`.
 
 If any blocker appears, do not invite testers. Common blockers are a QA reset
-epoch, missing collection id, missing NFTLoX protocol id, a non-testnet /
-economic profile, missing NFTLoX collection proof, missing Hive/Keychain smoke,
-missing two-browser P2P smoke, or missing operator sign-off.
+epoch, missing collection id, a non-testnet profile, missing Hive/Keychain
+session smoke, missing two-browser P2P smoke, or missing operator sign-off.
+Marketplace, packs, NFTLox writes and official ranking remain disabled in this
+F2 cutover; their ceremonies belong to a separate F3-only runbook.
 
 Operator UI check:
 
 1. Open `/#/admin` as the configured admin account.
 2. Confirm the header/status panel shows the active phase, reset epoch, QA
-   catalog disabled, NFTLoX protocol id, and Closed Beta cutover checks.
+   catalog disabled, NFTLox optional/disabled in F2, and Closed Beta cutover
+   checks.
 3. Confirm the admin panel still requires the normal admin session and
    multisig/operator configuration.
 
@@ -447,9 +587,9 @@ Ownership smoke for the same epoch:
 5. Confirm DUAT and RUNE pack cards are playable only after replay/custody
    evidence exists for that account.
 
-Final invite approval remains HITL: record the NFTLoX collection/schema proof,
-starter/DUAT/RUNE pack evidence, tester cohort, and invite timing before
-opening access.
+Final invite approval remains HITL: record the Hive/Keychain session smoke,
+two-browser P2P smoke, operator sign-off, tester cohort, and invite timing
+before opening access. NFTLox collection/schema proof belongs to F3.
 
 ## Local/Mainnet Profile Commands
 
@@ -477,15 +617,19 @@ Validates that a single-player practice match runs end-to-end on the local stack
 
 **Prerequisites**
 
-- Dev server running: `pnpm run dev` (local config). Testnet/mainnet flags are not required for Gate 2.
+- Dev server running: `pnpm run dev:local` (local config). Testnet/mainnet flags are not required for Gate 2.
 - Browser at `http://localhost:5000/`.
+- Start from a clean browser profile with no Hive login or Keychain extension.
+  The starter reveal and Single flow must remain usable in this local mode.
 - A complete warband. Two ways to obtain one:
   - **Real path** (preferred for Gate 6 tester readiness): build all four piece decks via the deck builder UI on `/#/warband?mode=single`.
   - **Programmatic seed** (fast for regression smoke): the `useWarbandStore` is exposed on `globalThis.__ragnarokWarbandStore` for test affordance. Call `getState().setWarband(army, deckCardIds)` from the DevTools console with the army payload below.
 
 **Procedure**
 
-1. Open `/#/warband?mode=single`. Confirm the page renders without "Maximum update depth exceeded".
+1. Open `/#/game/single` from a clean profile. Reveal the starter when asked
+   and confirm the app routes to `/#/warband?mode=single` without a Hive login,
+   fetch to `/api/starter/claim`, or Keychain call.
 2. Either complete the warband via UI or seed it via console (see Prerequisites).
 3. Visit `/#/game`. Confirm the URL replaces to `/#/game/single` (Navigate redirect, no back-history pollution).
 4. Confirm the coordinator mounts: chess board visible with 5 player pieces (king + queen + rook + bishop + knight), 5 player pawns, mirrored opponent pieces (10 total per side).
@@ -496,7 +640,9 @@ Validates that a single-player practice match runs end-to-end on the local stack
 9. Confirm transition into combat: `gameStatus === 'combat'` and `pokerIsActive === true`. The cards UI mounts (Spellcraft window, mulligan prompt). No console errors.
 10. Play through combat phases (mulligan -> spellcraft -> betting rounds) until one side's HP reaches 0 or chess resumes and chess reaches checkmate, draw, or decisive-material game-over.
 11. Confirm the game-over screen renders with the correct winner attribution. `getWinnerFromGameStatus` resolves to `'player'` or `'opponent'` matching the visible UI.
-12. Confirm console is clean of errors throughout the entire session. Warnings from `cardDataExporter` (effect registry deuda, see `effect-registry-deuda.md`) are expected and not failures.
+12. Confirm console is clean of errors throughout the entire session. The
+    exporter may report one bounded summary for unsupported legacy catalog
+    effects; per-card warning floods are a QA failure.
 
 **Last verified**
 

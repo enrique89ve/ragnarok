@@ -5,14 +5,15 @@ Norse Mythos Card Game — Hive-anchored card battler.
 ## Commands
 
 ```bash
-pnpm run dev       # Vite + Express dev server → http://localhost:5000
-pnpm run dev:testnet # Same server with .env.testnet / rk_game_testnet
+pnpm run dev            # Local workshop: guest Single, no Keychain (not the launch)
+pnpm run dev:alfa-testnet # Launch replica: same Alfa fingerprint as Dokploy + Hive login
+pnpm run dev:testnet    # Generic/QA testnet from .env.testnet (not Alfa)
 pnpm run build:alfa-testnet # Production Alfa Testnet bundle; stage stays testnet
 pnpm run start:alfa-testnet # Built server with alfa-testnet reset epoch / JSON state
-pnpm run build:mainnet # Production browser bundle with .env.mainnet
-pnpm run check     # TypeScript type check
-pnpm run lint      # ESLint (use --fix to autofix)
-pnpm run lint:css  # Stylelint (runs in pre-commit)
+pnpm run build:mainnet  # Production browser bundle with .env.mainnet
+pnpm run check          # TypeScript type check
+pnpm run lint           # ESLint (use --fix to autofix)
+pnpm run lint:css       # Stylelint (runs in pre-commit)
 ```
 
 Package manager is **pnpm** (see `pnpm-workspace.yaml`). Install with `pnpm install --frozen-lockfile`; never commit a `package-lock.json`.
@@ -26,6 +27,7 @@ Package manager is **pnpm** (see `pnpm-workspace.yaml`). Install with `pnpm inst
 - **Hive indexer contract** → `docs/HIVE_INDEXER_CONTRACT.md`
 - **PvP wire protocol** → `docs/PVP_WIRE_PROTOCOL.md` (transport, lifecycle, envelopes, authority model, transcript)
 - **Ranked P2P settlement** → `docs/adr/0008-winner-posted-match-result.md` (winner posts, replay validates, loser does not countersign). Alfa remains gameplay-only per ADR 0007.
+- **Versioned phase authority** → `docs/TESTNET_PHASES.md`, `docs/PROTOCOL_CAPABILITY_MATRIX.md`, `docs/PHASE_MIGRATION_RUNBOOK.md`, and ADR 0009.
 - **P2P reload / local snapshot** → `docs/P2P_MATCH_RESUME.md`
 - **Current Alfa → Closed Beta readiness** → `docs/TESTNET_READINESS_FAST_TRACK.md`
 - **Card chrome by stage** → `docs/CARD_SURFACE_RENDER.md`

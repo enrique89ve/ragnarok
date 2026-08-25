@@ -2,6 +2,13 @@ import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Application, Graphics, Container } from 'pixi.js';
 import gsap from 'gsap';
+import { debug } from '../config/debugConfig';
+import {
+	ARENA_CANVAS_SIZE,
+	ARENA_VFX_LAYERS,
+	getArenaLocalPoint,
+	getArenaVfxLayer,
+} from '../combat/arenaVfxTargets';
 
 export interface ParticleColor {
 	primary: string;
@@ -32,6 +39,7 @@ let burstContainer: Container | null = null;
 let ambientContainer: Container | null = null;
 let filterContainer: Container | null = null;
 let emitterContainer: Container | null = null;
+let thorContainer: Container | null = null;
 let ambientTimers: ReturnType<typeof setTimeout>[] = [];
 let currentRealm: string | undefined;
 
@@ -41,11 +49,17 @@ export function getPixiApp(): Application | null { return pixiApp; }
 export function getBurstContainer(): Container | null { return burstContainer; }
 export function getFilterContainer(): Container | null { return filterContainer; }
 export function getEmitterContainer(): Container | null { return emitterContainer; }
+export function getThorContainer(): Container | null { return thorContainer; }
 
 function clearAmbientTimers() {
 	currentRealm = undefined;
 	ambientTimers.forEach(timer => clearTimeout(timer));
 	ambientTimers = [];
+}
+
+function toArenaPoint(x: number, y: number): { x: number; y: number } | null {
+	const layer = getArenaVfxLayer(ARENA_VFX_LAYERS.vfx);
+	return layer ? getArenaLocalPoint({ x, y }, layer) : null;
 }
 
 function killContainerTweens(container: Container | null) {
@@ -67,6 +81,7 @@ function resetPixiGlobals(app: Application) {
 	ambientContainer = null;
 	filterContainer = null;
 	emitterContainer = null;
+	thorContainer = null;
 }
 
 interface RealmParticleConfig {
@@ -96,8 +111,8 @@ const REALM_CONFIGS: Record<string, RealmParticleConfig> = {
 function spawnAmbientParticle(config: RealmParticleConfig) {
 	if (!pixiApp || !ambientContainer) return;
 
-	const w = window.innerWidth;
-	const h = window.innerHeight;
+	const w = ARENA_CANVAS_SIZE.width;
+	const h = ARENA_CANVAS_SIZE.height;
 	const x = Math.random() * w;
 	const y = config.driftY < 0 ? h + 20 : (config.driftY > 0.3 ? -20 : Math.random() * h);
 	const size = config.sizeRange[0] + Math.random() * (config.sizeRange[1] - config.sizeRange[0]);
@@ -184,8 +199,11 @@ export function spawnSlashTrail(
 	palette: ParticleColor
 ) {
 	if (!pixiApp || !trailContainer) return;
-	const dx = tx - sx;
-	const dy = ty - sy;
+	const start = toArenaPoint(sx, sy);
+	const end = toArenaPoint(tx, ty);
+	if (!start || !end) return;
+	const dx = end.x - start.x;
+	const dy = end.y - start.y;
 	const len = Math.sqrt(dx * dx + dy * dy);
 	const nx = len > 0 ? -dy / len : 0;
 	const ny = len > 0 ? dx / len : 0;
@@ -193,8 +211,8 @@ export function spawnSlashTrail(
 	for (let i = 0; i < count; i++) {
 		const t = i / count;
 		const spread = (Math.random() - 0.5) * 30;
-		const x = sx + dx * t + nx * spread;
-		const y = sy + dy * t + ny * spread;
+		const x = start.x + dx * t + nx * spread;
+		const y = start.y + dy * t + ny * spread;
 		const r = 2 + Math.random() * 3;
 
 		const g = new Graphics();
@@ -235,18 +253,20 @@ export function spawnParticleBurst(
 	palette: ParticleColor
 ) {
 	if (!pixiApp || !burstContainer) return;
+	const center = toArenaPoint(cx, cy);
+	if (!center) return;
 
 	for (let i = 0; i < count; i++) {
 		const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4;
 		const dist = 30 + Math.random() * 90;
 		const r = 2 + Math.random() * 6;
-		const endX = cx + Math.cos(angle) * dist;
-		const endY = cy + Math.sin(angle) * dist;
+		const endX = center.x + Math.cos(angle) * dist;
+		const endY = center.y + Math.sin(angle) * dist;
 
 		const g = new Graphics();
 		g.circle(0, 0, r);
 		g.fill(pickColor(palette));
-		g.position.set(cx, cy);
+		g.position.set(center.x, center.y);
 		g.alpha = 1;
 		burstContainer.addChild(g);
 
@@ -269,11 +289,13 @@ export function spawnImpactRing(
 	palette: ParticleColor
 ) {
 	if (!pixiApp || !burstContainer) return;
+	const center = toArenaPoint(cx, cy);
+	if (!center) return;
 
 	const ring = new Graphics();
 	ring.circle(0, 0, 20);
 	ring.stroke({ width: 3, color: hexToNum(palette.primary) });
-	ring.position.set(cx, cy);
+	ring.position.set(center.x, center.y);
 	ring.alpha = 0.9;
 	ring.scale.set(0.2);
 	burstContainer.addChild(ring);
@@ -301,6 +323,8 @@ export function spawnEmbers(
 	palette: ParticleColor
 ) {
 	if (!pixiApp || !burstContainer) return;
+	const center = toArenaPoint(cx, cy);
+	if (!center) return;
 
 	for (let i = 0; i < count; i++) {
 		const angle = Math.random() * Math.PI * 2;
@@ -310,13 +334,13 @@ export function spawnEmbers(
 		const g = new Graphics();
 		g.circle(0, 0, r);
 		g.fill(hexToNum(palette.secondary));
-		g.position.set(cx + (Math.random() - 0.5) * 20, cy + (Math.random() - 0.5) * 20);
+		g.position.set(center.x + (Math.random() - 0.5) * 20, center.y + (Math.random() - 0.5) * 20);
 		g.alpha = 0.8;
 		burstContainer.addChild(g);
 
 		gsap.to(g, {
-			x: cx + Math.cos(angle) * dist,
-			y: cy + Math.sin(angle) * dist - 20,
+			x: center.x + Math.cos(angle) * dist,
+			y: center.y + Math.sin(angle) * dist - 20,
 			alpha: 0,
 			duration: 0.8 + Math.random() * 0.6,
 			delay: 0.3 + Math.random() * 0.3,
@@ -331,9 +355,14 @@ export function spawnEmbers(
 
 export const PixiParticleCanvas: React.FC<{ realm?: string }> = ({ realm }) => {
 	const containerRef = useRef<HTMLDivElement>(null);
+	const [portalTarget, setPortalTarget] = React.useState<HTMLElement | null>(null);
 
 	useEffect(() => {
-		if (!containerRef.current) return;
+		setPortalTarget(getArenaVfxLayer(ARENA_VFX_LAYERS.vfx));
+	}, []);
+
+	useEffect(() => {
+		if (!containerRef.current || !portalTarget) return;
 
 		const app = new Application();
 		let mounted = true;
@@ -349,6 +378,7 @@ export const PixiParticleCanvas: React.FC<{ realm?: string }> = ({ realm }) => {
 				trailContainer,
 				filterContainer,
 				emitterContainer,
+				thorContainer,
 				burstContainer,
 			].forEach(killContainerTweens);
 			resetPixiGlobals(app);
@@ -366,7 +396,8 @@ export const PixiParticleCanvas: React.FC<{ realm?: string }> = ({ realm }) => {
 
 		app.init({
 			backgroundAlpha: 0,
-			resizeTo: window,
+			width: ARENA_CANVAS_SIZE.width,
+			height: ARENA_CANVAS_SIZE.height,
 			antialias: true,
 			resolution: Math.min(window.devicePixelRatio || 1, PARTICLE_CANVAS_MAX_DPR),
 			autoDensity: true,
@@ -385,14 +416,16 @@ export const PixiParticleCanvas: React.FC<{ realm?: string }> = ({ realm }) => {
 			ambientContainer = new Container();
 			filterContainer = new Container();
 			emitterContainer = new Container();
+			thorContainer = new Container();
 			app.stage.addChild(ambientContainer);
 			app.stage.addChild(trailContainer);
 			app.stage.addChild(filterContainer);
 			app.stage.addChild(emitterContainer);
+			app.stage.addChild(thorContainer);
 			app.stage.addChild(burstContainer);
 		}).catch((error: unknown) => {
 			if (mounted) {
-				console.warn('[PixiParticleCanvas] Particle renderer disabled:', error);
+				debug.warn('[PixiParticleCanvas] Particle renderer disabled:', error);
 			}
 			destroyApp();
 		});
@@ -401,7 +434,7 @@ export const PixiParticleCanvas: React.FC<{ realm?: string }> = ({ realm }) => {
 			mounted = false;
 			destroyApp();
 		};
-	}, []);
+	}, [portalTarget]);
 
 	useEffect(() => {
 		if (realm) {
@@ -411,22 +444,24 @@ export const PixiParticleCanvas: React.FC<{ realm?: string }> = ({ realm }) => {
 		}
 	}, [realm]);
 
+	if (!portalTarget) return null;
+
 	const overlay = (
 		<div
 			ref={containerRef}
 			style={{
-				position: 'fixed',
+				position: 'absolute',
 				top: 0,
 				left: 0,
-				width: '100vw',
-				height: '100vh',
+				width: '100%',
+				height: '100%',
 				pointerEvents: 'none',
-				zIndex: 8500,
+				zIndex: 2,
 			}}
 		/>
 	);
 
-	return createPortal(overlay, document.body);
+	return createPortal(overlay, portalTarget);
 };
 
 export default PixiParticleCanvas;

@@ -2,7 +2,7 @@ import { GameState, CardInstance, Player, HeroClass, CardData } from '../types';
 import type { HiveCardAsset } from '../../data/schemas/HiveTypes';
 import { debug, isAISimulationMode } from '../config/debugConfig';
 import { createRuntimeStorageKey } from '../config/networkConfig';
-import { createStartingDeck, createClassDeck, drawCards, findCardInstance, createCardInstance } from './cards/cardUtils';
+import { createClassDeck, drawCards, findCardInstance, createCardInstance } from './cards/cardUtils';
 import { isMinion, getAttack, getHealth } from './cards/typeGuards';
 import { getDefaultHeroPower, resetHeroPower, executeHeroPower } from './heroPowerUtils';
 import { requiresBattlecryTarget, executeBattlecry } from './battlecryUtils';
@@ -32,7 +32,8 @@ import { dealDamage, dealDamageToAllEnemyMinions, dealDamageToAllMinions, dealDa
 import { MAX_BATTLEFIELD_SIZE } from '../constants/gameConstants';
 import { removeKeyword, hasKeyword, getKeywords } from './cards/keywordUtils';
 import { canMagnetize, applyMagnetization, isValidMagneticTarget } from './mechanics/magneticUtils';
-import allCards, { getCardById } from '../data/allCards';
+import { getCardById } from '../data/cardRegistry';
+import { STARTER_ENTITLEMENT, isStarterHeroClass } from '@shared/schemas/starterEntitlement';
 import { trackQuestProgress, activateQuest } from './quests/questProgress';
 import { isQuestCard, extractQuestData } from './quests/questUtils';
 import {
@@ -239,6 +240,29 @@ export interface InitializeGameSeededOpts {
 }
 
 /**
+ * Resolve the authoritative player fallback without affecting explicit decks.
+ * Default hero classes use the universal starter entitlement; legacy classes
+ * retain the catalog fallback until they receive a canonical starter deck.
+ */
+export function createFallbackPlayerDeck(
+  heroClass: HeroClass,
+  rng: () => number,
+): CardData[] {
+  const normalizedClass = heroClass.toLowerCase();
+  if (!isStarterHeroClass(normalizedClass)) {
+    return createClassDeck(heroClass, 30, rng);
+  }
+
+  return STARTER_ENTITLEMENT.heroDecks[normalizedClass].map(cardId => {
+    const card = getCardById(cardId);
+    if (!card) {
+      throw new Error(`Starter entitlement card ${cardId} is missing from the canonical registry`);
+    }
+    return card;
+  });
+}
+
+/**
  * Construct a fully populated `GameState` from an explicit RNG and id
  * generators. Pure with respect to its arguments — no `Math.random`, no
  * `globalThis` reads, no `localStorage` reads beyond the deck lookup
@@ -275,13 +299,13 @@ export function initializeGameSeeded(opts: InitializeGameSeededOpts): GameState 
       });
       playerClass = opts.selectedHeroClass;
     } else {
-      playerDeck = createStartingDeck(30, opts.rng);
       playerClass = opts.selectedHeroClass;
-      debug.warn(`Selected deck not found. Using random deck.`);
+      playerDeck = createFallbackPlayerDeck(playerClass, opts.rng);
+      debug.warn(`Selected deck not found. Using the canonical player fallback deck.`);
     }
   } else {
-    playerClass = opts.playerHeroClass ?? 'mage';
-    playerDeck = createClassDeck(playerClass, 30, opts.rng);
+    playerClass = opts.playerHeroClass ?? opts.selectedHeroClass ?? 'mage';
+    playerDeck = createFallbackPlayerDeck(playerClass, opts.rng);
   }
 
   if (opts.hiveCollection?.length && !opts.playerDeckCards) {

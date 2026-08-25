@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Application, Container, Graphics, type Ticker } from 'pixi.js';
+import { Application, Container, Graphics, type Ticker } from './atlasPixiRuntime';
 import {
 	sampleCirclePoint,
 	type AtlasEffectPreset,

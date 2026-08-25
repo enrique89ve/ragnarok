@@ -12,7 +12,7 @@ import { MAX_CARD_LEVEL } from './types';
 
 export type EconomicXPKey = Rarity;
 
-export type XpAuthority = 'starter-entitlement' | 'nft-custody' | 'qa_full_catalog';
+export type XpAuthority = 'starter-entitlement' | 'nft-custody' | 'qa_full_catalog' | 'local-testnet';
 
 export type MatchXpResult = 'victory' | 'defeat' | 'draw';
 
@@ -82,7 +82,7 @@ export const ECONOMIC_XP_CONFIG: Record<EconomicXPKey, EconomicXPConfig> = {
 };
 
 export function isInstanceXpEligible(authority: XpAuthority): boolean {
-	return authority === 'nft-custody';
+	return authority === 'nft-custody' || authority === 'local-testnet';
 }
 
 export function getEconomicXPConfig(rarity: string): EconomicXPConfig {

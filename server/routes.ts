@@ -7,6 +7,7 @@ import {
   buildRagnarokRuntimeEvidence,
 } from "../shared/runtimeConfig";
 import { buildServerStateEvidence } from "./services/runtimeStateEvidence";
+import { requireProtocolCapability } from './middleware/protocolCapabilityGate';
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
@@ -16,6 +17,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Packs and inventory are chain-derived projections. The old SQL opener stays
   // unmounted so DATABASE_URL cannot accidentally become an authority path.
   const packRoutes = (await import("./routes/packRoutes")).default;
+  app.use('/api/packs/open', requireProtocolCapability('packs'));
   app.use('/api/packs', packRoutes);
   app.get('/api/inventory/:userId/stats', (_req: Request, res: Response) => {
     res.status(410).json({
@@ -96,6 +98,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // NFT Explorer public API (NFTLox-compatible structure)
   const explorerRoutes = (await import("./routes/explorerRoutes")).default;
+  app.use('/api/explorer/marketplace', requireProtocolCapability('marketplace'));
   app.use('/api/explorer', explorerRoutes);
 
   // Start the server-side chain indexer (Worker Thread version)

@@ -38,6 +38,7 @@ function getSpellEffectType(effectType: string): SpellEffectType {
     'draw': 'draw',
     'quest': 'quest',
     'transform': 'transform',
+    'damage_submerged': 'void',
     'freeze': 'debuff',
     'silence': 'debuff',
   };
@@ -183,6 +184,9 @@ function executeSpellUnbound(
     case 'draw':
       resultState = executeDrawSpell(state, effect);
       break;
+    case 'draw_per_damaged':
+      resultState = executeDrawPerDamagedFriendlyCharacterSpell(state);
+      break;
     case 'summon':
       resultState = executeSummonSpell(state, effect);
       break;
@@ -192,6 +196,9 @@ function executeSpellUnbound(
       break;
     case 'freeze':
       resultState = executeFreezeSpell(state, effect, targetId, targetType);
+      break;
+    case 'damage_and_freeze':
+      resultState = executeDamageAndFreezeSpell(state, effect, targetId, targetType);
       break;
     case 'freeze_and_damage':
       // Freeze all targets first, then deal damage to frozen ones
@@ -276,6 +283,15 @@ function executeSpellUnbound(
     case 'buff_weapon':
       resultState = executeBuffWeaponSpell(state, effect);
       break;
+    case 'heal_all_friendly':
+      resultState = executeHealAllFriendlyCharactersSpell(state, effect);
+      break;
+    case 'damage_all_and_draw':
+      resultState = executeDamageAllEnemiesAndDrawSpell(state, effect);
+      break;
+    case 'heal_and_draw':
+      resultState = executeHealAndDrawSpell(state, effect, targetId, targetType);
+      break;
     case 'equip_weapon':
       resultState = executeEquipWeaponSpell(state, effect);
       break;
@@ -306,7 +322,7 @@ function executeSpellUnbound(
       resultState = executeDamageBasedOnArmorSpell(state, effect, targetId, targetType);
       // Calculate actual damage based on current player's armor for popup
       const currentPlayerState = state.currentTurn === 'player' ? state.players.player : state.players.opponent;
-      const armorDamage = currentPlayerState.armor || 0;
+      const armorDamage = currentPlayerState.heroArmor ?? currentPlayerState.armor ?? 0;
       if (armorDamage > 0) {
         queueSpellDamagePopup(spellCard.card.name, armorDamage, 'Armor Damage');
       }
@@ -1059,8 +1075,27 @@ function executeSpellUnbound(
       resultState = executeDiscoverSpell(resultState, discoverEffect, spellCard.instanceId);
     }
   }
-  
-  return resultState;
+
+  const priorSpellCasts = resultState.gameLog.filter(event =>
+    event.type === 'spell_cast'
+    && event.player === playerType
+    && event.turn === resultState.turnNumber,
+  ).length;
+  return {
+    ...resultState,
+    gameLog: [
+      ...resultState.gameLog,
+      {
+        id: `spell-cast:${spellCard.instanceId}:${resultState.turnNumber}:${priorSpellCasts}`,
+        type: 'spell_cast',
+        player: playerType,
+        text: `${spellCard.card.name} cast`,
+        timestamp: resultState.turnNumber,
+        turn: resultState.turnNumber,
+        cardId: String(spellCard.card.id),
+      },
+    ],
+  };
 }
 
 /**
@@ -1166,6 +1201,86 @@ function executeDamageSpell(
   }
   
   return newState;
+}
+
+function executeDamageAndFreezeSpell(
+  state: GameState,
+  effect: SpellEffect,
+  targetId?: string,
+  targetType?: 'minion' | 'hero',
+): GameState {
+  const damagedState = executeDamageSpell(state, effect, targetId, targetType);
+  return executeFreezeSpell(
+    damagedState,
+    { type: 'freeze', requiresTarget: true, targetType: effect.targetType },
+    targetId,
+    targetType,
+  );
+}
+
+function executeDrawPerDamagedFriendlyCharacterSpell(state: GameState): GameState {
+  const player = state.players[state.currentTurn];
+  const damagedMinions = player.battlefield.filter(card =>
+    isMinion(card.card) && (card.currentHealth ?? getHealth(card.card)) < getHealth(card.card),
+  ).length;
+  const damagedHero = (player.heroHealth ?? player.health) < player.maxHealth ? 1 : 0;
+  return drawMultipleCards(state, state.currentTurn, damagedMinions + damagedHero);
+}
+
+function executeHealAllFriendlyCharactersSpell(
+  state: GameState,
+  effect: SpellEffect,
+): GameState {
+  const healAmount = effect.value ?? 0;
+  if (healAmount <= 0) return state;
+
+  const owner = state.currentTurn;
+  const player = state.players[owner];
+  const heroHealth = Math.min(player.maxHealth, (player.heroHealth ?? player.health) + healAmount);
+  const nextPlayer = {
+    ...player,
+    health: heroHealth,
+    heroHealth,
+    battlefield: player.battlefield.map(card => ({
+      ...card,
+      currentHealth: isMinion(card.card)
+        ? Math.min(getHealth(card.card), (card.currentHealth ?? getHealth(card.card)) + healAmount)
+        : card.currentHealth,
+    })),
+  };
+
+  return checkPetEvolutionTrigger({
+    ...state,
+    players: { ...state.players, [owner]: nextPlayer },
+  }, 'on_heal');
+}
+
+function executeDamageAllEnemiesAndDrawSpell(
+  state: GameState,
+  effect: SpellEffect,
+): GameState {
+  const damagedState = executeAoEDamageSpell(state, {
+    ...effect,
+    type: 'aoe_damage',
+    targetType: 'all_enemy_minions',
+  });
+  return executeDrawSpell(damagedState, {
+    type: 'draw',
+    value: effect.drawValue ?? 1,
+  });
+}
+
+function executeHealAndDrawSpell(
+  state: GameState,
+  effect: SpellEffect,
+  targetId?: string,
+  targetType?: 'minion' | 'hero',
+): GameState {
+  const healedState = executeHealSpell(state, effect, targetId, targetType);
+  return executeDrawSpell(healedState, {
+    type: 'draw',
+    value: effect.drawValue ?? 1,
+  });
 }
 
 /**
@@ -3705,7 +3820,7 @@ function executeDamageBasedOnArmorSpell(
   const currentPlayer = state.currentTurn || 'player';
   const playerState = currentPlayer === 'player' ? newState.players.player : newState.players.opponent;
   
-  const armor = playerState.armor || 0;
+  const armor = playerState.heroArmor ?? playerState.armor ?? 0;
   const damageAmount = armor;
   
   if (damageAmount <= 0) {

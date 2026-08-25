@@ -37,7 +37,9 @@ import {
 	projectRuneSeason,
 	projectRuneSeasonAccount,
 } from '../../shared/protocol-core/runeSeasonView';
-import { getRagnarokRuntimePhase } from '../../shared/runtimeConfig';
+import { buildRagnarokRuntimeEvidence, getRagnarokRuntimePhase } from '../../shared/runtimeConfig';
+import { createProtocolRuntimeFingerprint, type ProtocolRuntimeFingerprint } from '../../shared/protocolPhase';
+import { assertProtocolRuntimeFingerprint } from '../../shared/protocolPhaseMigration';
 import { getRagnarokServerRuntimeConfig } from './runtimeConfig';
 
 const DEFAULT_ELO_RATING = 1000;
@@ -187,7 +189,8 @@ export interface EitrSeasonStats {
 	forgeRefundCreditTotal: number;
 }
 
-interface SerializedState {
+export interface SerializedState {
+	runtimeFingerprint: ProtocolRuntimeFingerprint;
 	players: [string, PlayerRecord][];
 	cards: [string, CardRecord][];
 	matches: MatchRecord[];
@@ -228,6 +231,7 @@ interface SerializedState {
 const NonNegativeInt = z.number().int().nonnegative().finite();
 const IntNumber = z.number().finite();
 const SafeString = z.string();
+const RuntimeFingerprintSchema = z.object({ stage: z.enum(['local', 'testnet', 'mainnet']), phaseId: z.enum(['local-gameplay-v1', 'hive-testnet-v1', 'mainnet-v1']), protocolId: z.string().min(1), resetEpoch: z.string().min(1), seasonStart: z.string().min(1), indexStartBlock: z.number().int().positive(), representation: z.string().min(1) }).superRefine((value, ctx) => { const expected = createProtocolRuntimeFingerprint(value); if (expected.representation !== value.representation) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'runtime fingerprint representation mismatch', path: ['representation'] }); });
 const Timestamp = z.number().finite().nonnegative();
 const Pair = <T>(value: z.ZodType<T>) => z.tuple([SafeString, value]);
 const AcquisitionProvenanceSchema = z.custom<AcquisitionProvenance>(
@@ -446,6 +450,7 @@ const MarketOfferSchema = z.object({
 }).passthrough();
 
 const ChainStateContractSchema = z.object({
+	runtimeFingerprint: RuntimeFingerprintSchema,
 	players: z.array(Pair(PlayerRecordSchema)).catch([]).default([]),
 	cards: z.array(Pair(CardRecordSchema)).catch([]).default([]),
 	matches: z.array(MatchRecordSchema).catch([]).default([]),
@@ -487,6 +492,11 @@ function parseChainStatePayload(raw: string, initialBlockCursor: number): ChainS
 		console.warn('[chainState] Invalid JSON in state file, using defaults:', err);
 		return normalizeChainStatePayload(undefined, initialBlockCursor, true);
 	}
+	if (payload && typeof payload === 'object' && !('runtimeFingerprint' in payload)) {
+		const error = new Error('persisted chain state missing runtime fingerprint') as Error & { code: string };
+		error.code = 'fingerprint_mismatch';
+		throw error;
+	}
 
 	return normalizeChainStatePayload(payload, initialBlockCursor, false);
 }
@@ -498,12 +508,10 @@ function normalizeChainStatePayload(
 ): ChainStateContract {
 	const result = ChainStateContractSchema.safeParse(payload);
 	if (!result.success) {
-		if (fromJson) {
-			console.warn('[chainState] Invalid persisted state contract, using defaults:', result.error.flatten().formErrors);
-		} else {
-			console.warn('[chainState] Invalid import state contract, using defaults:', result.error.flatten().formErrors);
-		}
-		return emptyChainState(initialBlockCursor);
+		if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return emptyChainState(initialBlockCursor);
+		const error = new Error('invalid persisted runtime fingerprint') as Error & { code: string };
+		error.code = 'fingerprint_mismatch';
+		throw error;
 	}
 	const data = result.data;
 	return {
@@ -513,8 +521,12 @@ function normalizeChainStatePayload(
 	};
 }
 
-function emptyChainState(initialBlockCursor: number): ChainStateContract {
+function emptyChainState(
+	initialBlockCursor: number,
+	runtimeFingerprint = getCurrentServerProtocolRuntimeFingerprint(),
+): ChainStateContract {
 	return {
+		runtimeFingerprint,
 		players: [],
 		cards: [],
 		matches: [],
@@ -545,6 +557,23 @@ function emptyChainState(initialBlockCursor: number): ChainStateContract {
 		irreversibleBlock: 0,
 		syncTargetBlock: initialBlockCursor,
 	};
+}
+
+export function createEmptyChainStateSnapshot(
+	runtimeFingerprint: ProtocolRuntimeFingerprint,
+	initialBlockCursor = runtimeFingerprint.indexStartBlock,
+): SerializedState {
+	return emptyChainState(initialBlockCursor, runtimeFingerprint) as SerializedState;
+}
+
+export function validateChainStateSnapshot(payload: unknown): SerializedState {
+	const result = ChainStateContractSchema.safeParse(payload);
+	if (!result.success) {
+		const error = new Error('invalid chain state snapshot') as Error & { code: string };
+		error.code = 'chain_state_contract_invalid';
+		throw error;
+	}
+	return result.data;
 }
 
 // ---------------------------------------------------------------------------
@@ -686,7 +715,12 @@ function getCurrentBlocksBehind(): number {
 	return Math.max(0, _syncTargetBlock - lastIrreversibleBlockProcessed);
 }
 
+export function getCurrentServerProtocolRuntimeFingerprint(): ProtocolRuntimeFingerprint {
+	return buildRagnarokRuntimeEvidence(getRagnarokServerRuntimeConfig()).runtimeFingerprint;
+}
+
 export function loadState(): void {
+	const currentFingerprint = getCurrentServerProtocolRuntimeFingerprint();
 	try {
 		const initialBlockCursor = getConfiguredInitialBlockCursor();
 		const stateFile = getStateFilePath();
@@ -698,6 +732,7 @@ export function loadState(): void {
 		}
 		const raw = fs.readFileSync(stateFile, 'utf8');
 		const data = parseChainStatePayload(raw, initialBlockCursor);
+		assertProtocolRuntimeFingerprint(currentFingerprint, data.runtimeFingerprint);
 
 		players.clear();
 		for (const [k, v] of data.players ?? []) players.set(k, v);
@@ -779,6 +814,7 @@ export function loadState(): void {
 
 		console.log(`[chainState] Loaded: file=${getStateFileDisplayPath(stateFile)}, ${players.size} players, ${cards.size} cards, ${matches.length} matches, blockCursor=${lastIrreversibleBlockProcessed}, target=${_syncTargetBlock}, blocksBehind=${getCurrentBlocksBehind()}, inSync=${_inSync}`);
 	} catch (err) {
+		if (err instanceof Error && (err as { code?: string }).code === 'fingerprint_mismatch') throw err;
 		console.warn('[chainState] Failed to load state:', err);
 	}
 }
@@ -800,6 +836,7 @@ export function saveState(): void {
 
 export function exportState(): SerializedState {
 	return {
+		runtimeFingerprint: getCurrentServerProtocolRuntimeFingerprint(),
 		players: [...players.entries()],
 		cards: [...cards.entries()],
 		matches,
@@ -835,6 +872,7 @@ export function exportState(): SerializedState {
 
 export function importState(data: SerializedState): void {
 	const normalized = normalizeChainStatePayload(data, lastIrreversibleBlockProcessed, false);
+	assertProtocolRuntimeFingerprint(getCurrentServerProtocolRuntimeFingerprint(), normalized.runtimeFingerprint);
 
 	players.clear();
 	for (const [k, v] of normalized.players ?? []) players.set(k, v);

@@ -7,6 +7,7 @@ import { getCardById } from '../data/allCards';
 import './mulligan.css';
 import './card/pokerFaceDown.css';
 import { GameIcon } from '../utils/ui/GameIcon';
+import { getMulliganEvolutionGuidance } from './mulligan/mulliganEvolutionGuidance';
 
 const ANIMATE_SELECTED = { scale: 0.93, y: 6 };
 const ANIMATE_DEFAULT = { scale: 1, y: 0 };
@@ -81,6 +82,13 @@ export const MulliganCard: React.FC<MulliganCardProps> = React.memo(({ card, isS
     transition: SPRING_TRANSITION,
   };
 
+  const evolutionGuidance = getMulliganEvolutionGuidance(simpleCardData);
+  const interactionLabel = [
+    `Inspect ${simpleCardData.name}.`,
+    evolutionGuidance?.ariaDescription,
+    `Click to ${isSelected ? 'keep' : 'replace'} this card.`,
+  ].filter(Boolean).join(' ');
+
   const overlay = isSelected ? (
     disableMotion ? (
       <div className="mulligan-card-selected-overlay">
@@ -124,6 +132,21 @@ export const MulliganCard: React.FC<MulliganCardProps> = React.memo(({ card, isS
           semanticMode="presentation"
         />
 
+        {evolutionGuidance && !isSelected && (
+          <div
+            className="mulligan-card-evolution-lock"
+            data-evolution-stage={evolutionGuidance.stage}
+            aria-hidden="true"
+          >
+            <GameIcon name="lock" size={18} />
+            <strong>{evolutionGuidance.label}</strong>
+            <span>{evolutionGuidance.prerequisite}</span>
+            <span className="mulligan-card-evolution-recommendation">
+              {evolutionGuidance.recommendation}
+            </span>
+          </div>
+        )}
+
         {overlay}
       </div>
     </div>
@@ -135,7 +158,7 @@ export const MulliganCard: React.FC<MulliganCardProps> = React.memo(({ card, isS
       role="button"
       tabIndex={0}
       aria-pressed={isSelected}
-      aria-label={`Inspect ${simpleCardData.name}. Click to ${isSelected ? 'keep' : 'replace'} this card.`}
+      aria-label={interactionLabel}
       onClick={onClick}
       onMouseEnter={(event) => onHoverChange?.(card, event.currentTarget)}
       onMouseLeave={() => onHoverChange?.(null)}
@@ -156,7 +179,7 @@ export const MulliganCard: React.FC<MulliganCardProps> = React.memo(({ card, isS
       role="button"
       tabIndex={0}
       aria-pressed={isSelected}
-      aria-label={`Inspect ${simpleCardData.name}. Click to ${isSelected ? 'keep' : 'replace'} this card.`}
+      aria-label={interactionLabel}
       onClick={onClick}
       onMouseEnter={(event) => onHoverChange?.(card, event.currentTarget)}
       onMouseLeave={() => onHoverChange?.(null)}

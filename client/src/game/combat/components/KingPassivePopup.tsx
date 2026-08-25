@@ -5,6 +5,8 @@ import { useKingPassiveEventStore, KingPassiveEvent } from '../../stores/kingPas
 import { proceduralAudio } from '../../audio/proceduralAudio';
 import { assetPath } from '../../utils/assetPath';
 import { getKingArtPath, DEFAULT_PORTRAIT } from '../../utils/art/artMapping';
+import { gameEffectCoordinator } from '@/game/effects/core/gameEffectCoordinator';
+import { ARENA_VFX_LAYERS, getArenaVfxLayer } from '../arenaVfxTargets';
 import './KingPassivePopup.css';
 
 const POPUP_DURATION = 2200;
@@ -23,12 +25,23 @@ const KingPopupBubble: React.FC<{
 	const [imgError, setImgError] = useState(false);
 
 	useEffect(() => {
-		try { proceduralAudio.play('card_draw'); } catch {}
+		try {
+			proceduralAudio.play('card_draw');
+		} catch {
+			// Audio is optional; the visual feedback remains authoritative.
+		}
 	}, []);
 
 	useEffect(() => {
-		const timer = setTimeout(() => onComplete(event.id), POPUP_DURATION);
-		return () => clearTimeout(timer);
+		const handle = gameEffectCoordinator.schedule({
+			owner: 'poker-renderer',
+			lane: 'king-passive-popup',
+			key: event.id,
+			priority: 'normal',
+			delayMs: POPUP_DURATION,
+			run: () => onComplete(event.id),
+		});
+		return () => handle.cancel();
 	}, [event.id, onComplete]);
 
 	const portraitSrc = getKingPortraitPath(event.kingId);
@@ -80,6 +93,8 @@ export const KingPassivePopup: React.FC = () => {
 	}, [removeEvent]);
 
 	const visibleEvents = events.slice(0, MAX_SIMULTANEOUS);
+	const portalTarget = getArenaVfxLayer(ARENA_VFX_LAYERS.vfx);
+	if (!portalTarget) return null;
 
 	return createPortal(
 		<AnimatePresence>
@@ -96,7 +111,7 @@ export const KingPassivePopup: React.FC = () => {
 				</div>
 			))}
 		</AnimatePresence>,
-		document.body
+		portalTarget
 	);
 };
 

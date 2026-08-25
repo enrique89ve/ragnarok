@@ -34,7 +34,7 @@ TEST_FILES=(
 )
 
 if [[ -f pnpm-lock.yaml ]]; then
-  exec pnpm test -- "${TEST_FILES[@]}"
+  exec pnpm exec vitest run "${TEST_FILES[@]}"
 fi
 
 if [[ -f bun.lockb ]]; then

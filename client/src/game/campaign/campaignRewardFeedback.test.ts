@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { PROTOCOL_PHASE_POLICIES } from '@shared/protocolPhase';
 
 import {
 	buildCampaignRewardEvidenceContext,
@@ -35,16 +36,36 @@ describe('campaignRewardFeedback', () => {
 		const copy = getCampaignBriefingRewardCopy({
 			completed: false,
 			firstClearRune: 2,
+			campaignRuneCap: 20,
+			policy: PROTOCOL_PHASE_POLICIES['local-gameplay-v1'],
+		});
+
+		expect(copy.label).toBe('First clear: +2 local RUNE');
+		expect(copy.detail).toContain('local IndexedDB/replay');
+		expect(copy.detail).toContain('resettable');
+		expect(copy.capDetail).toContain('Local resettable cap: 20 RUNE');
+	});
+
+	it('keeps Hive wording for F2 campaign briefing', () => {
+		const copy = getCampaignBriefingRewardCopy({
+			completed: false,
+			firstClearRune: 2,
+			campaignRuneCap: 20,
+			policy: PROTOCOL_PHASE_POLICIES['hive-testnet-v1'],
 		});
 
 		expect(copy.label).toBe('First clear: +2 RUNE');
 		expect(copy.detail).toContain('first verified clear');
+		expect(copy.detail).not.toContain('local IndexedDB');
+		expect(copy.capDetail).toBe('Season cap: 20 RUNE per account from campaign first-clears.');
 	});
 
 	it('labels completed mission briefing as replay with no new RUNE', () => {
 		const copy = getCampaignBriefingRewardCopy({
 			completed: true,
 			firstClearRune: 2,
+			campaignRuneCap: 20,
+			policy: PROTOCOL_PHASE_POLICIES['hive-testnet-v1'],
 		});
 
 		expect(copy.label).toBe('Replay: no new RUNE');

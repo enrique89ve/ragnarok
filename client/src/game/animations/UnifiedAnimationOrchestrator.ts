@@ -317,7 +317,7 @@ export function scheduleAnnouncementEffect(
   });
 }
 
-export type SpellEffectType = 'damage' | 'heal' | 'buff' | 'debuff' | 'summon' | 'aoe' | 'draw' | 'quest' | 'transform' | 'default';
+export type SpellEffectType = 'damage' | 'heal' | 'buff' | 'debuff' | 'summon' | 'aoe' | 'draw' | 'quest' | 'transform' | 'void' | 'default';
 
 export function scheduleSpellEffect(
   spellName: string,

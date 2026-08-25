@@ -71,6 +71,14 @@ function optionalEqual(name, expected) {
   }
 }
 
+function requireMatching(firstName, secondName) {
+  const first = value(firstName);
+  const second = value(secondName);
+  if (first && second && first !== second) {
+    errors.push(`${firstName} must match ${secondName}; got ${first} vs ${second}.`);
+  }
+}
+
 function requirePrefix(name, prefix) {
   const resolved = requireValue(name);
   if (resolved && !resolved.startsWith(prefix)) {
@@ -104,10 +112,47 @@ if (!['local', 'testnet', 'mainnet'].includes(stage)) {
   errors.push(`VITE_NETWORK_STAGE must be local, testnet, or mainnet; got ${stage}.`);
 }
 
+const clientResetEpoch = value('VITE_RAGNAROK_RESET_EPOCH');
+const serverResetEpoch = value('RAGNAROK_RESET_EPOCH');
+const effectiveResetEpoch = serverResetEpoch ?? clientResetEpoch;
+const isClosedBeta = [clientResetEpoch, serverResetEpoch]
+  .filter((epoch) => typeof epoch === 'string' && epoch.length > 0)
+  .some((epoch) => epoch.toLowerCase().startsWith('closed-beta-'));
+
 if (stage === 'testnet' || stage === 'mainnet') {
   requireValue('VITE_RAGNAROK_RESET_EPOCH');
   requireIsoDate('VITE_SEASON_START');
   requirePositiveInteger('VITE_RAGNAROK_INDEX_START_BLOCK');
+}
+
+if (isClosedBeta) {
+  const protocolId = value('RAGNAROK_PROTOCOL_ID') ?? value('VITE_RAGNAROK_PROTOCOL_ID');
+  if (protocolId !== 'rk_game_testnet') {
+    errors.push(`Closed Beta requires protocol id rk_game_testnet; got ${protocolId ?? 'missing'}.`);
+  }
+  requireEqual('VITE_NETWORK_STAGE', 'testnet');
+  requireValue('VITE_RAGNAROK_COLLECTION_ID');
+  requireEqual('RAGNAROK_HIVE_KEYCHAIN_SMOKE', 'passed');
+  requireEqual('RAGNAROK_P2P_TWO_BROWSER_SMOKE', 'passed');
+  requireEqual('RAGNAROK_CLOSED_BETA_OPERATOR_SIGNOFF', 'approved');
+  requireMatching('RAGNAROK_RESET_EPOCH', 'VITE_RAGNAROK_RESET_EPOCH');
+  requireMatching('RAGNAROK_PROTOCOL_ID', 'VITE_RAGNAROK_PROTOCOL_ID');
+  requireMatching('RAGNAROK_SEASON_START', 'VITE_SEASON_START');
+  requireMatching('RAGNAROK_INDEX_START_BLOCK', 'VITE_RAGNAROK_INDEX_START_BLOCK');
+  if (scope === 'runtime') {
+    requirePrefix('RAGNAROK_RESET_EPOCH', 'closed-beta-');
+    requireEqual('RAGNAROK_PROTOCOL_ID', 'rk_game_testnet');
+    requireEqual('RAGNAROK_SEASON_START', value('VITE_SEASON_START') ?? '');
+    requireValue('RAGNAROK_CHAIN_STATE_FILE');
+    requireEqual('RAGNAROK_NFT_OWNERSHIP_SOURCE', 'json');
+    requireEqual('RAGNAROK_INDEX_START_BLOCK', value('VITE_RAGNAROK_INDEX_START_BLOCK') ?? '');
+    const p2pSecret = requireValue('P2P_CHALLENGE_SIGNING_SECRET');
+    if (p2pSecret && p2pSecret.length < P2P_SECRET_MIN_LENGTH) {
+      errors.push(`P2P_CHALLENGE_SIGNING_SECRET must be at least ${P2P_SECRET_MIN_LENGTH} characters.`);
+    }
+  }
+  // NFTLox variables remain optional legacy inputs. F2 policy keeps NFTLox
+  // writes disabled; collection proof is an F3 gate, not a Closed Beta gate.
 }
 
 if (stage === 'mainnet') {
@@ -125,6 +170,11 @@ if (mode === 'alfa-testnet') {
 
   if (scope === 'runtime') {
     requirePrefix('RAGNAROK_RESET_EPOCH', 'alfa-testnet-');
+    requireValue('RAGNAROK_PROTOCOL_ID');
+    requireMatching('RAGNAROK_RESET_EPOCH', 'VITE_RAGNAROK_RESET_EPOCH');
+    requireMatching('RAGNAROK_PROTOCOL_ID', 'VITE_RAGNAROK_PROTOCOL_ID');
+    requireMatching('RAGNAROK_SEASON_START', 'VITE_SEASON_START');
+    requireMatching('RAGNAROK_INDEX_START_BLOCK', 'VITE_RAGNAROK_INDEX_START_BLOCK');
     requireEqual('RAGNAROK_SEASON_START', value('VITE_SEASON_START') ?? '2026-06-14T23:28:54Z');
     requireValue('RAGNAROK_CHAIN_STATE_FILE');
     requireEqual('RAGNAROK_NFT_OWNERSHIP_SOURCE', 'json');

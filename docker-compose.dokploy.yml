@@ -1,8 +1,10 @@
 # Alfa Testnet Compose for Dokploy.
 #
-# The public profile (stage, protocol, accounts, reset epoch, indexer path)
-# is baked in the Dockerfile. Dokploy's Environment tab is interpolated here
-# for secrets only. Leftover public VITE_* keys in that tab are ignored.
+# Dokploy Environment tab → .env next to this file → ${VAR} interpolation.
+# Paste `.env.alfa-testnet.example` in the UI, fill the P2P secret, leave
+# the fingerprint values as-is. ${VAR:-default} treats a blank UI field as
+# the baked launch profile so an empty key cannot wipe the epoch.
+# Do not add VITE_DATA_LAYER_MODE, VITE_BLOCKCHAIN_PACKAGING, or NFTLox.
 #
 # Required in Dokploy:
 #   P2P_CHALLENGE_SIGNING_SECRET
@@ -22,13 +24,32 @@ services:
     environment:
       NODE_ENV: production
       PORT: "5000"
-      RAGNAROK_RUNTIME_MODE: alfa-testnet
+      RAGNAROK_RUNTIME_MODE: ${RAGNAROK_RUNTIME_MODE:-alfa-testnet}
       P2P_CHALLENGE_SIGNING_SECRET: ${P2P_CHALLENGE_SIGNING_SECRET:?Set P2P_CHALLENGE_SIGNING_SECRET in Dokploy}
       RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY: ${RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY:-}
       RAGNAROK_INDEX_POSTING_KEY: ${RAGNAROK_INDEX_POSTING_KEY:-}
       WITNESS_HIVE_ACCOUNT: ${WITNESS_HIVE_ACCOUNT:-}
       WITNESS_HIVE_POSTING_KEY: ${WITNESS_HIVE_POSTING_KEY:-}
       P2P_RELAY_ALLOWED_ORIGINS: ${P2P_RELAY_ALLOWED_ORIGINS:-}
+      VITE_NETWORK_STAGE: ${VITE_NETWORK_STAGE:-testnet}
+      VITE_RAGNAROK_PROTOCOL_ID: ${VITE_RAGNAROK_PROTOCOL_ID:-rk_game_testnet}
+      VITE_RAGNAROK_COLLECTION_ID: ${VITE_RAGNAROK_COLLECTION_ID:-ragnarok-testnet}
+      VITE_RAGNAROK_RESET_EPOCH: ${VITE_RAGNAROK_RESET_EPOCH:-alfa-testnet-full-nft-2026-05-22}
+      VITE_SEASON_START: ${VITE_SEASON_START:-2026-06-14T23:28:54Z}
+      VITE_RAGNAROK_INDEX_START_BLOCK: ${VITE_RAGNAROK_INDEX_START_BLOCK:-109016418}
+      VITE_RAGNAROK_ADMIN_ACCOUNT: ${VITE_RAGNAROK_ADMIN_ACCOUNT:-ragnaroktestnet}
+      VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT: ${VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT:-ragp2p}
+      VITE_RAGNAROK_GENESIS_ACCOUNT: ${VITE_RAGNAROK_GENESIS_ACCOUNT:-ragnaroktestnet}
+      VITE_RAGNAROK_TREASURY_ACCOUNT: ${VITE_RAGNAROK_TREASURY_ACCOUNT:-ragp2p}
+      VITE_RAGNAROK_INDEX_ACCOUNT: ${VITE_RAGNAROK_INDEX_ACCOUNT:-ragp2p}
+      RAGNAROK_PROTOCOL_ID: ${RAGNAROK_PROTOCOL_ID:-${VITE_RAGNAROK_PROTOCOL_ID:-rk_game_testnet}}
+      RAGNAROK_RESET_EPOCH: ${RAGNAROK_RESET_EPOCH:-${VITE_RAGNAROK_RESET_EPOCH:-alfa-testnet-full-nft-2026-05-22}}
+      RAGNAROK_SEASON_START: ${RAGNAROK_SEASON_START:-${VITE_SEASON_START:-2026-06-14T23:28:54Z}}
+      RAGNAROK_INDEX_START_BLOCK: ${RAGNAROK_INDEX_START_BLOCK:-${VITE_RAGNAROK_INDEX_START_BLOCK:-109016418}}
+      RAGNAROK_ADMIN_OPERATOR_ACCOUNT: ${RAGNAROK_ADMIN_OPERATOR_ACCOUNT:-${VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT:-ragp2p}}
+      RAGNAROK_CHAIN_STATE_FILE: ${RAGNAROK_CHAIN_STATE_FILE:-data/chain-state.alfa-testnet.json}
+      RAGNAROK_NFT_OWNERSHIP_SOURCE: ${RAGNAROK_NFT_OWNERSHIP_SOURCE:-json}
+      ENABLE_CHAIN_INDEXER: ${ENABLE_CHAIN_INDEXER:-true}
     expose:
       - "5000"
     networks:

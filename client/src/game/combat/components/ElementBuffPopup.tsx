@@ -88,7 +88,8 @@ export const ElementBuffPopup: React.FC<ElementBuffPopupProps> = ({
               gap: '12px',
               background: 'linear-gradient(135deg, var(--obsidian-900), var(--obsidian-950))',
               border: `2px solid ${color}`,
-              borderRadius: '8px',
+              borderRadius: 0,
+              clipPath: 'polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px)',
               padding: '8px 16px',
               boxShadow: `0 0 20px color-mix(in srgb, ${color} 25%, transparent), inset 0 0 10px color-mix(in srgb, ${color} 15%, transparent)`
             }}

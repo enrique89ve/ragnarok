@@ -1,6 +1,7 @@
 import type { GameOverSubPhase } from '../flow/round/types';
 import { deriveCampaignMatch } from '../match/derived';
 import type { MatchContext } from '../match/types';
+import type { GameState } from '../types';
 import { getInitialGameOverSubPhase } from './gameCoordinatorRules';
 
 export const GAME_END_DELAY_MS = 1500;
@@ -13,6 +14,7 @@ export interface MatchEndRequest {
 	readonly iWon: boolean;
 	readonly isDraw: boolean;
 	readonly turnCount: number;
+	readonly finalGameState?: GameState;
 	readonly fromPhase: MatchEndFromPhase;
 	readonly commitMode: MatchEndCommitMode;
 	readonly delayMs: number;

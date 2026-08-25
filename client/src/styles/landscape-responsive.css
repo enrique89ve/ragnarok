@@ -81,7 +81,10 @@
 		z-index: 9999;
 		display: grid;
 		place-items: center;
-		padding: 1.25rem;
+		padding-top: max(1.25rem, env(safe-area-inset-top));
+		padding-right: max(1.25rem, env(safe-area-inset-right));
+		padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+		padding-left: max(1.25rem, env(safe-area-inset-left));
 		color: var(--color-ink-0, #f8f4e8);
 		background:
 			radial-gradient(ellipse 78% 42% at 50% 18%, rgba(217, 168, 68, 0.18), transparent 72%),
@@ -91,6 +94,8 @@
 
 	.game-orientation-card {
 		width: min(100%, 22rem);
+		max-width: 100%;
+		box-sizing: border-box;
 		border: 1px solid rgba(217, 168, 68, 0.36);
 		border-radius: 0.75rem;
 		background: rgba(15, 17, 23, 0.92);
@@ -137,6 +142,7 @@
 		letter-spacing: 0.08em;
 		line-height: 1;
 		text-transform: uppercase;
+		text-wrap: balance;
 	}
 
 	.game-orientation-copy {
@@ -418,7 +424,50 @@
 }
 
 /* =============================================
-   6. CAMPAIGN CONSTELLATION MAP — readability cap
+   6. LANDSCAPE-FIRST ATLAS — map + dossier side by side
+   The default phone/tablet layout stacks the launch dossier below the map.
+   On a short landscape viewport that would consume more than the available
+   height, so Atlas switches to the same wide-screen mental model as combat.
+   Portrait remains supported for browsing; this is an optimization, not a
+   route lock.
+   ============================================= */
+
+@media (orientation: landscape) and (max-height: 500px) and (max-width: 1024px) {
+	.atlas-page-shell {
+		height: 100dvh;
+	}
+
+	.atlas-page-header-inner {
+		height: 3.25rem;
+		padding-right: max(0.75rem, calc(env(safe-area-inset-right) + 0.5rem));
+		padding-left: max(0.75rem, calc(env(safe-area-inset-left) + 0.5rem));
+	}
+
+	.atlas-page-workspace {
+		height: calc(100dvh - 3.25rem);
+		grid-template-columns: minmax(0, 1fr) clamp(15rem, 34vw, 18rem);
+		grid-template-rows: minmax(0, 1fr);
+		gap: 0.5rem;
+		padding-top: 0.5rem;
+		padding-right: max(0.5rem, calc(env(safe-area-inset-right) + 0.25rem));
+		padding-bottom: max(0.5rem, calc(env(safe-area-inset-bottom) + 0.25rem));
+		padding-left: max(0.5rem, calc(env(safe-area-inset-left) + 0.25rem));
+	}
+
+	.atlas-map-stage,
+	.atlas-launch-panel {
+		min-width: 0;
+		min-height: 0;
+	}
+
+	.atlas-launch-panel-scroll {
+		gap: 0.5rem;
+		padding: 0.5rem;
+	}
+}
+
+/* =============================================
+   7. CAMPAIGN CONSTELLATION MAP — readability cap
    Constellation map is unreadable below 360px height. Scale it down
    so dots/labels remain tappable rather than micro-stretched.
    ============================================= */
@@ -431,7 +480,7 @@
 }
 
 /* =============================================
-   7. SAFETY: never compress the combat boards
+   8. SAFETY: never compress the combat boards
    Belt-and-suspenders — explicitly preserve the virtual canvas and
    game grid even if any rule above accidentally bleeds in.
    ============================================= */
@@ -446,7 +495,7 @@
 }
 
 /* =============================================
-   8. REDUCED MOTION — keep it accessible
+   9. REDUCED MOTION — keep it accessible
    ============================================= */
 
 @media (prefers-reduced-motion: reduce) and (orientation: landscape) {

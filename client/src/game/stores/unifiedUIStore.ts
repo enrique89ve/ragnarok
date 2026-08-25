@@ -8,6 +8,7 @@
 import { create } from 'zustand';
 import type { IconName } from '../utils/ui/iconMap';
 import { overlayHoldMs } from '../combat/feedback/combatFeedback';
+import { debug } from '../config/debugConfig';
 
 export type AnimationType = 
   | 'attack'
@@ -74,45 +75,66 @@ export interface ActionAnnouncement {
   duration?: number;
 }
 
-export function getAnnouncementConfig(type: AnnouncementType): { iconName: IconName; color: string } {
-  const configs: Record<AnnouncementType, { iconName: IconName; color: string }> = {
-    battlecry: { iconName: 'swords', color: '#FFD700' },
-    deathrattle: { iconName: 'skull', color: '#9B59B6' },
-    spell: { iconName: 'sparkles', color: '#3498DB' },
-    attack: { iconName: 'swords', color: '#E74C3C' },
-    damage: { iconName: 'swords', color: '#E74C3C' },
-    heal: { iconName: 'heart', color: '#2ECC71' },
-    buff: { iconName: 'hand', color: '#F39C12' },
-    summon: { iconName: 'puzzle', color: '#1ABC9C' },
-    draw: { iconName: 'book', color: '#3498DB' },
-    discover: { iconName: 'search', color: '#9B59B6' },
-    secret: { iconName: 'question', color: '#E91E63' },
-    mythic: { iconName: 'crown', color: '#FF8C00' },
-    combo: { iconName: 'target', color: '#F1C40F' },
-    taunt: { iconName: 'shield', color: '#7F8C8D' },
-    divine_shield: { iconName: 'sparkles', color: '#F1C40F' },
-    freeze: { iconName: 'snowflake', color: '#00BCD4' },
-    silence: { iconName: 'mute', color: '#95A5A6' },
-    transform: { iconName: 'refresh', color: '#9B59B6' },
-    destroy: { iconName: 'skull', color: '#2C3E50' },
-    phase_change: { iconName: 'zap', color: '#E67E22' },
-    turn_start: { iconName: 'day', color: '#3498DB' },
-    turn_end: { iconName: 'night', color: '#34495E' },
-    victory: { iconName: 'crown', color: '#FFD700' },
-    defeat: { iconName: 'skull', color: '#7F8C8D' },
-    poker_check: { iconName: 'shield', color: '#4CAF50' },
-    poker_bet: { iconName: 'swords', color: '#FF9800' },
-    poker_call: { iconName: 'swords', color: '#2196F3' },
-    poker_fold: { iconName: 'shield', color: '#9E9E9E' },
-    blocked: { iconName: 'ban', color: '#E74C3C' },
-    effect_failed: { iconName: 'x', color: '#95A5A6' },
-    condition_not_met: { iconName: 'warning', color: '#F39C12' },
-    warning: { iconName: 'warning', color: '#FF9800' },
-    info: { iconName: 'info', color: '#2196F3' },
-    status_effect: { iconName: 'crystal', color: '#A855F7' }
-  };
+const ANNOUNCEMENT_TEXT_LIMITS = {
+	title: 64,
+	subtitle: 120,
+} as const;
 
-  return configs[type] || { iconName: 'sparkles', color: '#FFFFFF' };
+function clampAnnouncementText(value: string, limit: number): string {
+	const normalized = value.trim().replace(/\s+/g, ' ');
+	return normalized.length <= limit
+		? normalized
+		: `${normalized.slice(0, Math.max(0, limit - 1)).trimEnd()}…`;
+}
+
+export function getAnnouncementConfig(type: AnnouncementType): { iconName: IconName; color: string } {
+  return getAnnouncementConfigMap()[type] || { iconName: 'sparkles', color: '#FFFFFF' };
+}
+
+export function isKnownAnnouncementType(value: unknown): value is AnnouncementType {
+	return typeof value === 'string' && Object.prototype.hasOwnProperty.call(
+		getAnnouncementConfigMap(),
+		value,
+	);
+}
+
+function getAnnouncementConfigMap(): Record<string, { iconName: IconName; color: string }> {
+	return {
+		battlecry: { iconName: 'swords', color: '#FFD700' },
+		deathrattle: { iconName: 'skull', color: '#9B59B6' },
+		spell: { iconName: 'sparkles', color: '#3498DB' },
+		attack: { iconName: 'swords', color: '#E74C3C' },
+		damage: { iconName: 'swords', color: '#E74C3C' },
+		heal: { iconName: 'heart', color: '#2ECC71' },
+		buff: { iconName: 'hand', color: '#F39C12' },
+		summon: { iconName: 'puzzle', color: '#1ABC9C' },
+		draw: { iconName: 'book', color: '#3498DB' },
+		discover: { iconName: 'search', color: '#9B59B6' },
+		secret: { iconName: 'question', color: '#E91E63' },
+		mythic: { iconName: 'crown', color: '#FF8C00' },
+		combo: { iconName: 'target', color: '#F1C40F' },
+		taunt: { iconName: 'shield', color: '#7F8C8D' },
+		divine_shield: { iconName: 'sparkles', color: '#F1C40F' },
+		freeze: { iconName: 'snowflake', color: '#00BCD4' },
+		silence: { iconName: 'mute', color: '#95A5A6' },
+		transform: { iconName: 'refresh', color: '#9B59B6' },
+		destroy: { iconName: 'skull', color: '#2C3E50' },
+		phase_change: { iconName: 'zap', color: '#E67E22' },
+		turn_start: { iconName: 'day', color: '#3498DB' },
+		turn_end: { iconName: 'night', color: '#34495E' },
+		victory: { iconName: 'crown', color: '#FFD700' },
+		defeat: { iconName: 'skull', color: '#7F8C8D' },
+		poker_check: { iconName: 'shield', color: '#4CAF50' },
+		poker_bet: { iconName: 'swords', color: '#FF9800' },
+		poker_call: { iconName: 'swords', color: '#2196F3' },
+		poker_fold: { iconName: 'shield', color: '#9E9E9E' },
+		blocked: { iconName: 'ban', color: '#E74C3C' },
+		effect_failed: { iconName: 'x', color: '#95A5A6' },
+		condition_not_met: { iconName: 'warning', color: '#F39C12' },
+		warning: { iconName: 'warning', color: '#FF9800' },
+		info: { iconName: 'info', color: '#2196F3' },
+		status_effect: { iconName: 'crystal', color: '#A855F7' },
+	};
 }
 
 export const ANNOUNCEMENT_DURATIONS: Record<string, number> = {
@@ -319,10 +341,18 @@ export const useUnifiedUIStore = create<UnifiedUIStore>((set, get) => ({
   },
 
   addAnnouncement: (announcement) => {
+    if (!isKnownAnnouncementType(announcement.type)) {
+      debug.warn('[UnifiedUIStore] Ignoring unregistered announcement type:', announcement.type);
+      return;
+    }
     const id = `announcement-${++announcementIdCounter}-${Date.now()}`;
     const newAnnouncement: ActionAnnouncement = {
       ...announcement,
       id,
+      title: clampAnnouncementText(announcement.title, ANNOUNCEMENT_TEXT_LIMITS.title),
+      subtitle: announcement.subtitle
+        ? clampAnnouncementText(announcement.subtitle, ANNOUNCEMENT_TEXT_LIMITS.subtitle)
+        : undefined,
       duration: announcement.duration ?? overlayHoldMs(
         [announcement.title, announcement.subtitle].filter(Boolean).join(' '),
       ),

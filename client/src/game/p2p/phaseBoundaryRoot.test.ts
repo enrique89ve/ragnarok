@@ -53,6 +53,7 @@ function participant(id: string, card: PokerCard, health: number): PlayerCombatS
 function attackerView(): PokerCombatState {
 	return {
 		combatId: 'combat-1',
+		handNumber: 0,
 		phase: CombatPhase.PRE_FLOP,
 		player: participant('attacker-id', ACE_SPADES, 90),
 		opponent: participant('defender-id', KING_HEARTS, 80),

@@ -13,6 +13,8 @@ import { getNFTBridge } from '../nft';
 import type { Difficulty } from './campaignTypes';
 import type { MatchEndContext } from '../match/onWinDispatch';
 import type { MatchContext } from '../match/types';
+import { commitProgressAccountId } from '../auth/progressAccount';
+import { getRagnarokNetworkConfig } from '../config/networkConfig';
 
 interface CampaignRunStartInput {
 	readonly missionId: string;
@@ -34,22 +36,22 @@ interface CampaignResultArtifacts {
 	readonly finalStateHash: string;
 }
 
-const LOCAL_ACCOUNT = 'local';
-
 function createLocalRunId(): string {
 	return globalThis.crypto?.randomUUID?.()
 		?? `campaign-run-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-function getRunAccount(account?: string | null): string {
-	return account && account.length > 0 ? account : LOCAL_ACCOUNT;
+function getRunAccount(account?: string | null): string | null {
+	return commitProgressAccountId(account, getRagnarokNetworkConfig().stage);
 }
 
-export function createCampaignRunDraft(input: CampaignRunStartInput): CampaignRunRecord {
+export function createCampaignRunDraft(input: CampaignRunStartInput): CampaignRunRecord | null {
+	const account = getRunAccount(input.account);
+	if (!account) return null;
 	const localStartedAt = Date.now();
 	return {
 		localRunId: createLocalRunId(),
-		account: getRunAccount(input.account),
+		account,
 		campaignId: CAMPAIGN_ID,
 		missionId: input.missionId,
 		difficulty: input.difficulty,
@@ -62,8 +64,9 @@ export function createCampaignRunDraft(input: CampaignRunStartInput): CampaignRu
 	};
 }
 
-export async function recordCampaignRunStart(input: CampaignRunStartInput): Promise<CampaignRunRecord> {
+export async function recordCampaignRunStart(input: CampaignRunStartInput): Promise<CampaignRunRecord | null> {
 	const run = createCampaignRunDraft(input);
+	if (!run) return null;
 	await putCampaignRun(run);
 	return run;
 }
@@ -127,11 +130,13 @@ async function getRunForMatch(ctx: MatchContext): Promise<CampaignRunRecord> {
 	const existing = localRunId ? await getCampaignRun(localRunId) : undefined;
 	if (existing) return existing;
 
-	return recordCampaignRunStart({
+	const started = await recordCampaignRunStart({
 		account: getNFTBridge().getUsername(),
 		missionId: ctx.opponent.script.mission.id,
 		difficulty: ctx.opponent.script.difficulty,
 	});
+	if (!started) throw new Error('campaign run requires a Hive account on shared testnet');
+	return started;
 }
 
 export async function publishCampaignVictoryResult(
@@ -143,6 +148,7 @@ export async function publishCampaignVictoryResult(
 	const bridge = getNFTBridge();
 	const run = await getRunForMatch(ctx);
 	const account = getRunAccount(bridge.getUsername() ?? run.account);
+	if (!account) return { success: false, error: 'Hive account required to publish a campaign result.' };
 	const artifacts = await buildCampaignResultArtifacts({
 		run,
 		account,

@@ -52,6 +52,8 @@ const envSnapshot = {
 	NODE_ENV: process.env.NODE_ENV,
 	VITE_NETWORK_STAGE: process.env.VITE_NETWORK_STAGE,
 	P2P_CHALLENGE_SIGNING_SECRET: process.env.P2P_CHALLENGE_SIGNING_SECRET,
+	VITE_RAGNAROK_RESET_EPOCH: process.env.VITE_RAGNAROK_RESET_EPOCH,
+	RAGNAROK_RESET_EPOCH: process.env.RAGNAROK_RESET_EPOCH,
 };
 
 function restoreEnv(): void {
@@ -307,6 +309,8 @@ describe('matchmaking and relay integration', () => {
 	beforeEach(() => {
 		process.env.NODE_ENV = 'test';
 		process.env.VITE_NETWORK_STAGE = 'testnet';
+		process.env.VITE_RAGNAROK_RESET_EPOCH = 'alfa-testnet-matchmaking';
+		process.env.RAGNAROK_RESET_EPOCH = 'alfa-testnet-matchmaking';
 		process.env.P2P_CHALLENGE_SIGNING_SECRET = 'integration-secret-32-characters-minimum';
 		clearStarterCeremonyClaimsForTests();
 	});
@@ -347,16 +351,7 @@ describe('matchmaking and relay integration', () => {
 			const firstQueueBody = queueBody(peerOneId, 'alice');
 			const firstQueue = await postJson(baseUrl, '/api/matchmaking/queue', firstQueueBody);
 			expect(firstQueue.status).toBe(200);
-			expect(vi.mocked(verifyHiveAuth)).toHaveBeenCalledWith(
-				'alice',
-				buildP2PQueueAuthMessage({
-					username: 'alice',
-					peerId: peerOneId,
-					starterClaimed: true,
-					timestamp: Number(firstQueueBody.timestamp),
-				}),
-				'alice-mock-signature',
-			);
+			expect(vi.mocked(verifyHiveAuth)).not.toHaveBeenCalled();
 			expect(isRecord(firstQueue.body)).toBe(true);
 			const firstQueueRecord = isRecord(firstQueue.body) ? firstQueue.body : {};
 			expect(firstQueueRecord.status).toBe('queued');
@@ -442,6 +437,66 @@ describe('matchmaking and relay integration', () => {
 					socket.close();
 				}
 			}
+			await closeServer(server);
+		}
+	});
+
+	it('requires Hive verification for F2 shared-network queue bodies', async () => {
+		process.env.VITE_RAGNAROK_RESET_EPOCH = 'closed-beta-queue-auth';
+		process.env.RAGNAROK_RESET_EPOCH = 'closed-beta-queue-auth';
+		const { default: matchmakingRouter, clearP2PMatchmakingStateForTests } = await import('./matchmakingRoutes');
+		clearP2PMatchmakingStateForTests();
+		vi.mocked(verifyHiveAuth).mockClear();
+		const app = express();
+		app.use(express.json());
+		app.use('/api/matchmaking', matchmakingRouter);
+		const server = createServer(app);
+
+		try {
+			const port = await listenOnEphemeralPort(server);
+			const baseUrl = `http://127.0.0.1:${port}`;
+			await setStarterCeremonyClaim('alice', 1_800_000_000_000);
+			const body = queueBody('f2-signed-peer', 'alice');
+			const response = await postJson(baseUrl, '/api/matchmaking/queue', body);
+			expect(response.status).toBe(200);
+			expect(vi.mocked(verifyHiveAuth)).toHaveBeenCalledWith(
+				'alice',
+				buildP2PQueueAuthMessage({
+					username: 'alice',
+					peerId: 'f2-signed-peer',
+					starterClaimed: true,
+					timestamp: Number(body.timestamp),
+				}),
+				'alice-mock-signature',
+			);
+		} finally {
+			await closeServer(server);
+		}
+	});
+
+	it('accepts an unsigned F1 shared-network queue body without Hive verification', async () => {
+		const { default: matchmakingRouter, clearP2PMatchmakingStateForTests } = await import('./matchmakingRoutes');
+		clearP2PMatchmakingStateForTests();
+		vi.mocked(verifyHiveAuth).mockClear();
+		const app = express();
+		app.use(express.json());
+		app.use('/api/matchmaking', matchmakingRouter);
+		const server = createServer(app);
+
+		try {
+			const port = await listenOnEphemeralPort(server);
+			const baseUrl = `http://127.0.0.1:${port}`;
+			await setStarterCeremonyClaim('alice', 1_800_000_000_000);
+			const response = await postJson(baseUrl, '/api/matchmaking/queue', {
+				peerId: 'f1-unsigned-peer',
+				username: 'alice',
+				starterClaimed: true,
+			});
+			expect(response.status).toBe(200);
+			expect(isRecord(response.body)).toBe(true);
+			expect(isRecord(response.body) ? response.body.status : null).toBe('queued');
+			expect(vi.mocked(verifyHiveAuth)).not.toHaveBeenCalled();
+		} finally {
 			await closeServer(server);
 		}
 	});

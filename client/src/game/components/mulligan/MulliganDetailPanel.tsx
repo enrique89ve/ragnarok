@@ -10,6 +10,12 @@ import {
 	getPetStageChromeFaq,
 	getRarityChromeFaq,
 } from '../card/cardChromeFaq';
+import {
+	ARENA_CANVAS_SIZE,
+	ARENA_VFX_LAYERS,
+	getArenaLocalPoint,
+	getArenaVfxLayer,
+} from '../../combat/arenaVfxTargets';
 
 const PET_STAGE_FAQ: Record<string, number> = {
 	basic: 1,
@@ -30,8 +36,8 @@ const readMulliganChromeLines = (card: SimpleCardData): readonly string[] => {
 /*
   MulliganDetailPanel — contextual keyword tooltip.
 
-  The row owns the cards' geometry. This panel is fixed and positioned from the
-  hovered card's real DOMRect, so inspection can never push, resize, or reorder
+  The row owns the cards' geometry. This panel is positioned from the hovered
+  card's real DOMRect after conversion into the arena canvas, so inspection can never push, resize, or reorder
   the cards. It intentionally omits name and mana because they are already
   visible on the card itself.
 */
@@ -48,7 +54,7 @@ const TOOLTIP_GAP = 12;
 const TOOLTIP_EDGE = 16;
 
 const TOOLTIP_CLASS =
-  'fixed z-[5] pointer-events-none overflow-y-auto rounded-md ' +
+  'mulligan-detail-panel absolute z-[5] pointer-events-none overflow-y-auto ' +
   'border border-amber-400/25 bg-[linear-gradient(180deg,rgba(7,12,24,0.98),rgba(3,7,15,0.98))] ' +
   'px-3.5 py-3 text-[#fbf4dc] ' +
   'shadow-[0_12px_32px_rgba(0,0,0,0.62),inset_0_1px_0_rgba(251,191,36,0.08)]';
@@ -56,15 +62,22 @@ const TOOLTIP_CLASS =
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), Math.max(min, max));
 
-const resolveTooltipPosition = (rect: DOMRect) => {
-  const viewportWidth = typeof window === 'undefined' ? 1280 : window.innerWidth;
-  const viewportHeight = typeof window === 'undefined' ? 720 : window.innerHeight;
+const resolveTooltipPosition = (rect: DOMRect, layer: HTMLElement) => {
+  const layerRect = layer.getBoundingClientRect();
+  const scaleX = ARENA_CANVAS_SIZE.width / layerRect.width;
+  const scaleY = ARENA_CANVAS_SIZE.height / layerRect.height;
+  const localRect = getArenaLocalPoint({ x: rect.left, y: rect.top }, layer);
+  if (!localRect) return null;
+  const anchorWidth = rect.width * scaleX;
+  const anchorHeight = rect.height * scaleY;
+  const viewportWidth = ARENA_CANVAS_SIZE.width;
+  const viewportHeight = ARENA_CANVAS_SIZE.height;
   const width = Math.min(TOOLTIP_WIDTH, Math.max(0, viewportWidth - TOOLTIP_EDGE * 2));
-  const spaceLeft = rect.left;
-  const spaceRight = viewportWidth - rect.right;
+  const spaceLeft = localRect.x;
+  const spaceRight = viewportWidth - (localRect.x + anchorWidth);
   const preferRight = spaceRight >= spaceLeft;
-  const rightCandidate = rect.right + TOOLTIP_GAP;
-  const leftCandidate = rect.left - width - TOOLTIP_GAP;
+  const rightCandidate = localRect.x + anchorWidth + TOOLTIP_GAP;
+  const leftCandidate = localRect.x - width - TOOLTIP_GAP;
   const rightFits = rightCandidate + width <= viewportWidth - TOOLTIP_EDGE;
   const leftFits = leftCandidate >= TOOLTIP_EDGE;
   const side = preferRight
@@ -73,7 +86,7 @@ const resolveTooltipPosition = (rect: DOMRect) => {
   const rawLeft = side === 'right' ? rightCandidate : leftCandidate;
   const left = clamp(rawLeft, TOOLTIP_EDGE, viewportWidth - width - TOOLTIP_EDGE);
   const top = clamp(
-    rect.top + rect.height / 2 - TOOLTIP_ESTIMATED_HEIGHT / 2,
+    localRect.y + anchorHeight / 2 - TOOLTIP_ESTIMATED_HEIGHT / 2,
     TOOLTIP_EDGE,
     viewportHeight - TOOLTIP_ESTIMATED_HEIGHT - TOOLTIP_EDGE,
   );
@@ -87,6 +100,8 @@ export const MulliganDetailPanel: React.FC<MulliganDetailPanelProps> = ({
   disableMotion,
 }) => {
   if (!hoveredCard?.card || !anchorRect) return null;
+  const arenaLayer = getArenaVfxLayer(ARENA_VFX_LAYERS.modal);
+  if (!arenaLayer) return null;
 
   const card = toMulliganSimpleCardData(hoveredCard.card);
   const keywordEntries = adaptCardKeywordsForPresentation({
@@ -99,12 +114,13 @@ export const MulliganDetailPanel: React.FC<MulliganDetailPanelProps> = ({
   const hasInspectionText = keywordEntries.length > 0 || chromeLines.length > 0 || Boolean(card.description);
   if (!hasInspectionText) return null;
 
-  const position = resolveTooltipPosition(anchorRect);
+  const position = resolveTooltipPosition(anchorRect, arenaLayer);
+  if (!position) return null;
   const tooltipStyle: React.CSSProperties = {
     left: position.left,
     top: position.top,
     width: position.width,
-    maxHeight: 'calc(100vh - 32px)',
+    maxHeight: `${ARENA_CANVAS_SIZE.height - TOOLTIP_EDGE * 2}px`,
   };
 
   const tooltipContent = (

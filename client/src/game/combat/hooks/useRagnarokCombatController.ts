@@ -46,6 +46,7 @@ import { debug } from '../../config/debugConfig';
 import type { HeroBattlePopupData, BattlePopupAction, BattlePopupTarget } from '../components/HeroBattlePopup';
 import { validatePokerActionIntent } from '../rules/pokerActionRules';
 import { getPokerTurnProcessMode } from '../decision/pokerTurnPolicy';
+import { deriveSpellcraftDecision, submitSpellcraftReadyIntent } from '../decision/spellcraftDecision';
 import { getPokerActionPresentation } from '../decision/pokerActionPresentation';
 import { emitBettingAction } from '../vfx/events';
 import { emitHeroPowerUsed } from '../../actions/gameActions';
@@ -130,6 +131,7 @@ export interface UseRagnarokCombatControllerReturn {
   handleCombatEnd: () => void;
   handleHeroDeathComplete: () => void;
   handleUnifiedEndTurn: () => void;
+  handleSpellcraftReady: () => void;
   
   turnPhase: string;
   orchestratorTurn: number;
@@ -206,7 +208,11 @@ export function useRagnarokCombatController(
     addHeroBattlePopup
   });
 
-  usePokerPhases({ combatState, isActive: isActive && !isP2PActionLocked });
+  usePokerPhases({
+    combatState,
+    isActive: isActive && !isP2PActionLocked,
+    processMode: pokerTurnProcessMode,
+  });
 
   useCombatTimer({
     combatState,
@@ -1119,6 +1125,42 @@ export function useRagnarokCombatController(
     
   }, [combatState, performAction, endTurn, isP2PActionLocked]);
 
+  const handleSpellcraftReady = useCallback(() => {
+    const adapter = getPokerCombatAdapterState();
+    const freshState = adapter.combatState;
+    const decision = deriveSpellcraftDecision({
+      phase: freshState?.phase,
+      isActive,
+      isMulliganActive: Boolean(useGameStore.getState().gameState?.mulligan?.active),
+      processMode: pokerTurnProcessMode,
+      isTransportConnected: p2pTransportConnected,
+      isPlayerReady: Boolean(freshState?.player.isReady),
+      isOpponentReady: Boolean(freshState?.opponent.isReady),
+	  peerReadyIntentAvailable: isP2PCombat
+		&& p2pTransportConnected
+		&& typeof p2pActions.sendSpellcraftReady === 'function',
+    });
+    if (!freshState || !decision.canSubmitReady) {
+      return;
+    }
+
+	const submission = submitSpellcraftReadyIntent({
+		processMode: pokerTurnProcessMode,
+		combatId: freshState.combatId,
+		handNumber: freshState.handNumber,
+		playerId: freshState.player.playerId,
+		sendPeerReady: p2pActions.sendSpellcraftReady,
+		applyLocalReady: adapter.setPlayerReady,
+		maybeClose: adapter.maybeCloseBettingRound,
+	});
+	if (submission === 'peer_rejected' || submission === 'unavailable') {
+		fireAnnouncement('warning', 'Ready sync pending', {
+			subtitle: 'Spellcraft remains open. Reconnect and try Ready again.',
+			duration: 1800,
+		});
+	}
+  }, [isActive, isP2PCombat, p2pActions, p2pTransportConnected, pokerTurnProcessMode]);
+
   return {
     combatState,
     isActive,
@@ -1166,6 +1208,7 @@ export function useRagnarokCombatController(
     handleCombatEnd,
     handleHeroDeathComplete,
     handleUnifiedEndTurn,
+    handleSpellcraftReady,
     
     turnPhase,
     orchestratorTurn,

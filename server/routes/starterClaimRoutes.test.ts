@@ -1,5 +1,5 @@
 import express from 'express';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildStarterClaimAuthMessage } from '../../shared/starterClaimAuth';
 import { verifyHiveAuth } from '../services/hiveAuth';
 import {
@@ -41,14 +41,52 @@ async function postStarterClaim(body: Record<string, unknown>): Promise<Response
 	}
 }
 
+function setProtocolPhase(phase: 'local-gameplay-v1' | 'hive-testnet-v1'): void {
+	const resetEpoch = phase === 'local-gameplay-v1'
+		? 'alfa-testnet-starter-claim'
+		: 'closed-beta-starter-claim';
+	vi.stubEnv('VITE_NETWORK_STAGE', 'testnet');
+	vi.stubEnv('VITE_RAGNAROK_PROTOCOL_ID', 'rk_game_testnet');
+	vi.stubEnv('VITE_RAGNAROK_RESET_EPOCH', resetEpoch);
+	vi.stubEnv('RAGNAROK_PROTOCOL_ID', 'rk_game_testnet');
+	vi.stubEnv('RAGNAROK_RESET_EPOCH', resetEpoch);
+}
+
 describe('starterClaimRoutes', () => {
 	beforeEach(() => {
-		process.env.NODE_ENV = 'test';
+		vi.stubEnv('NODE_ENV', 'test');
 		clearStarterCeremonyClaimsForTests();
 		vi.clearAllMocks();
 	});
 
-	it('records a starter ceremony claim after Hive body auth succeeds', async () => {
+	afterEach(() => {
+		vi.unstubAllEnvs();
+	});
+
+	it('accepts and normalizes an unsigned F1 starter claim without Hive verification', async () => {
+		setProtocolPhase('local-gameplay-v1');
+		const response = await postStarterClaim({ username: ' Alice ' });
+
+		expect(response.status).toBe(200);
+		await expect(response.json()).resolves.toMatchObject({
+			success: true,
+			account: 'alice',
+		});
+		await expect(hasStarterCeremonyClaim('alice')).resolves.toBe(true);
+		expect(vi.mocked(verifyHiveAuth)).not.toHaveBeenCalled();
+	});
+
+	it('rejects an empty F1 starter claim username', async () => {
+		setProtocolPhase('local-gameplay-v1');
+		const response = await postStarterClaim({ username: '   ' });
+
+		expect(response.status).toBe(400);
+		await expect(hasStarterCeremonyClaim('alice')).resolves.toBe(false);
+		expect(vi.mocked(verifyHiveAuth)).not.toHaveBeenCalled();
+	});
+
+	it('records an F2 starter ceremony claim after Hive body auth succeeds', async () => {
+		setProtocolPhase('hive-testnet-v1');
 		const timestamp = Date.now();
 		const response = await postStarterClaim({
 			username: 'Alice',
@@ -69,7 +107,8 @@ describe('starterClaimRoutes', () => {
 		);
 	});
 
-	it('rejects unsigned starter claim attempts', async () => {
+	it('rejects unsigned F2 starter claim attempts', async () => {
+		setProtocolPhase('hive-testnet-v1');
 		const response = await postStarterClaim({
 			username: 'alice',
 			timestamp: 1_800_000_000_000,

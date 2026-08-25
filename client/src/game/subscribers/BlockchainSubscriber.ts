@@ -23,8 +23,14 @@ import { computePoW } from '@/data/blockchain/proofOfWork';
 import { sha256Hash, canonicalStringify } from '@/data/blockchain/hashUtils';
 import { useSeasonStore } from '../stores/seasonStore';
 import { getCardsByOwner, getTokenBalance, getEloRating } from '@/data/blockchain/replayDB';
+import { getLatestLocalCardProgressionByOwner } from '@/data/blockchain/replayDB';
+import { indexedDbLocalSettlementStore } from '@/data/blockchain/localSettlementStore';
+import { settleLocalP2PGameOver } from './localP2PSettlement';
+import { buildRagnarokRuntimeEvidence } from '@shared/runtimeConfig';
+import { getCurrentHiveUsername } from '@/data/HiveSessionIdentity';
 import { HIVE_USERNAME_RE } from '../../../../shared/protocol-core/types';
 import { isStarterEntitlementCardId } from '@shared/schemas/starterEntitlement';
+import { handleLocalP2PGameEnded, routeP2PGameEnded } from './localP2PGameEndedBoundary';
 
 type UnsubscribeFn = () => void;
 type RuntimeCardSource =
@@ -176,11 +182,57 @@ function buildCardRarities(
 // Main handler
 // ---------------------------------------------------------------------------
 
-async function handleGameEnded(_event: GameEndedEvent): Promise<void> {
-	if (!isBlockchainPackagingEnabled()) return;
-
+/**
+ * Terminal local-peer boundary. Keeping this adapter separate makes the
+ * no-external-output contract executable without importing Hive packaging in a
+ * local settlement test.
+ */
+export async function handleGameEnded(event: GameEndedEvent): Promise<void> {
 	const gameState = useGameStore.getState().gameState;
 	if (!gameState || gameState.gamePhase !== 'game_over') return;
+	const runtimeConfig = getRagnarokNetworkConfig();
+	const runtimeEvidence = buildRagnarokRuntimeEvidence(runtimeConfig);
+	const activeMatch = useMatchStore.getState().activeMatch;
+	const route = await routeP2PGameEnded({
+		gameState,
+		activeMatch,
+		runtimeEvidence,
+		runLocalSettlement: async () => {
+			if (!activeMatch) return { status: 'skipped', reason: 'not_peer' };
+			return handleLocalP2PGameEnded(gameState, activeMatch, {
+				runtimeConfig,
+				runtimeEvidence,
+				getLocalAccount: getCurrentHiveUsername,
+				getEloRating,
+				getTokenBalance,
+				getLatestCardProgressionByOwner: getLatestLocalCardProgressionByOwner,
+				getTranscriptRoot: async () => {
+					const transcript = getActiveTranscript();
+					return transcript && transcript.getMoveCount() > 0 ? transcript.buildMerkleTree() : undefined;
+				},
+				clearTranscript,
+				settlementStore: indexedDbLocalSettlementStore,
+				now: Date.now,
+			});
+		},
+		runExternalSettlement: () => runExternalGameEnded(event),
+	});
+	if (route.route !== 'external') {
+		if (route.route === 'local') debug.combat('[BlockchainSubscriber] Local P2P settlement:', route.result.status);
+		return;
+	}
+}
+
+async function runExternalGameEnded(_event: GameEndedEvent): Promise<void> {
+	const gameState = useGameStore.getState().gameState;
+	if (!gameState || gameState.gamePhase !== 'game_over') return;
+
+	// This function is the external settlement callback only. The router invokes
+	// it for F2/F3; F1 peer matches return through local IndexedDB before this
+	// function can reach any Hive packaging dependency.
+	const runtimeConfig = getRagnarokNetworkConfig();
+
+	if (!isBlockchainPackagingEnabled()) return;
 
 	// Dedup: both the store watcher and event bus can fire for the same game end
 	const matchKey = `${gameState.winner ?? 'unknown'}_${gameState.turnNumber}`;

@@ -34,6 +34,16 @@
     #000;
 }
 
+/* The fixed game shell is the only route surface that owns the physical
+   viewport. Remove document scrolling only while that shell is mounted. */
+html:has(.game-viewport-wrapper),
+body:has(.game-viewport-wrapper) {
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: hidden;
+  scrollbar-gutter: auto;
+}
+
 /*
   RESPONSIVE SCALING
   ------------------

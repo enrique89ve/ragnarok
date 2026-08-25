@@ -11,7 +11,7 @@
  * All card data flows through this registry with validation.
  */
 
-import { CardData } from '../../types';
+import type { CardData } from '../../types';
 import { validateCardRegistry } from './validation';
 
 // Import organized card sets
@@ -66,6 +66,28 @@ const rawRegistry: CardData[] = [
 
 // Validate and deduplicate
 export const cardRegistry = validateCardRegistry(rawRegistry);
+
+// Derived lookup owned by the canonical registry. Compatibility modules must
+// delegate here rather than constructing their own maps or card datasets.
+const cardsById = new Map<CardData['id'], CardData>(
+  cardRegistry.map(card => [card.id, card]),
+);
+
+export function getCardById(id: CardData['id']): CardData | undefined {
+  return cardsById.get(id);
+}
+
+export function getCardByName(name: string): CardData | undefined {
+  return cardRegistry.find(card => card.name === name);
+}
+
+export function getAllCards(): CardData[] {
+  return cardRegistry;
+}
+
+export function getCardsByPredicate(predicate: (card: CardData) => boolean): CardData[] {
+  return cardRegistry.filter(predicate);
+}
 
 // Convenience exports for specific sets
 export { coreNeutralCards } from './sets/core/neutrals';

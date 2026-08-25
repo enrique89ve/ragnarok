@@ -127,11 +127,6 @@
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hero-element-accent) 28%, transparent);
 }
 
-.hero-card-details-trigger:focus-visible {
-  outline: 3px solid var(--ink-0);
-  outline-offset: 3px;
-}
-
 .hero-card-details-trigger:active {
   transform: scale(0.995);
 }

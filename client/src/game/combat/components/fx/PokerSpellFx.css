@@ -1,0 +1,130 @@
+.poker-spell-fx {
+	position: absolute;
+	left: 50%;
+	top: 35%;
+	z-index: 30;
+	width: 360px;
+	pointer-events: none;
+	transform: translate(-50%, -50%);
+	filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.48));
+}
+
+.poker-spell-fx__plate {
+	position: relative;
+	display: grid;
+	justify-items: center;
+	gap: 8px;
+	min-height: 128px;
+	padding: 18px 24px 20px;
+	box-sizing: border-box;
+	background:
+		linear-gradient(145deg, color-mix(in srgb, var(--spell-accent, var(--info-400)) 15%, var(--obsidian-900)), var(--obsidian-950) 58%),
+		var(--obsidian-950);
+	border: 1px solid color-mix(in srgb, var(--spell-accent, var(--gold-300)) 78%, var(--ink-0) 22%);
+	clip-path: polygon(
+		10px 0,
+		calc(100% - 10px) 0,
+		100% 10px,
+		100% calc(100% - 10px),
+		calc(100% - 10px) 100%,
+		10px 100%,
+		0 calc(100% - 10px),
+		0 10px
+	);
+	box-shadow:
+		inset 0 1px 0 color-mix(in srgb, var(--ink-0) 14%, transparent),
+		inset 0 -12px 18px rgba(0, 0, 0, 0.34),
+		0 0 26px color-mix(in srgb, var(--spell-accent, var(--gold-300)) 28%, transparent);
+}
+
+.poker-spell-fx__plate::before {
+	content: '';
+	position: absolute;
+	left: 14px;
+	right: 14px;
+	height: 1px;
+	background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--spell-accent, var(--gold-300)) 72%, transparent), transparent);
+	opacity: 0.8;
+	top: 6px;
+}
+
+.poker-spell-fx__plate::after {
+	content: '';
+	position: absolute;
+	left: 14px;
+	right: 14px;
+	height: 1px;
+	background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--spell-accent, var(--gold-300)) 72%, transparent), transparent);
+	opacity: 0.8;
+	bottom: 6px;
+}
+
+.poker-spell-fx__sigil {
+	display: grid;
+	place-items: center;
+	width: 42px;
+	height: 42px;
+	color: var(--ink-0);
+	background: color-mix(in srgb, var(--spell-accent, var(--gold-300)) 14%, var(--obsidian-950));
+	border: 1px solid color-mix(in srgb, var(--spell-accent, var(--gold-300)) 72%, transparent);
+	clip-path: polygon(50% 0, 88% 12%, 100% 50%, 88% 88%, 50% 100%, 12% 88%, 0 50%, 12% 12%);
+	filter: drop-shadow(0 0 8px color-mix(in srgb, var(--spell-accent, var(--gold-300)) 62%, transparent));
+}
+
+.poker-spell-fx__rune-line {
+	width: 42%;
+	height: 1px;
+	background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--spell-accent, var(--gold-300)) 80%, transparent), transparent);
+	box-shadow: 0 0 12px color-mix(in srgb, var(--spell-accent, var(--gold-300)) 60%, transparent);
+}
+
+.poker-spell-fx__copy {
+	position: relative;
+	max-width: 100%;
+	margin: 0;
+	text-align: center;
+}
+
+.poker-spell-fx__eyebrow {
+	font-family: var(--type-mono, 'IBM Plex Mono', monospace);
+	font-size: 0.5rem;
+	font-weight: 700;
+	letter-spacing: 0.2em;
+	line-height: 1;
+	text-transform: uppercase;
+	color: color-mix(in srgb, var(--spell-accent, var(--gold-300)) 76%, var(--ink-0));
+}
+
+.poker-spell-fx__title {
+	font-family: var(--type-display, 'Cinzel', Georgia, serif);
+	font-size: clamp(0.92rem, 2vw, 1.12rem);
+	font-weight: 800;
+	line-height: 1.2;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--ink-0);
+	text-shadow: 0 0 10px color-mix(in srgb, var(--spell-accent, var(--gold-300)) 58%, transparent);
+	overflow-wrap: anywhere;
+}
+
+.poker-spell-fx[data-spell-type='damage'] {
+	--spell-accent: var(--danger-400);
+}
+
+.poker-spell-fx[data-spell-type='heal'] {
+	--spell-accent: var(--success-400);
+}
+
+.poker-spell-fx[data-spell-type='buff'] {
+	--spell-accent: var(--gold-300);
+}
+
+.poker-spell-fx[data-spell-type='void'] {
+	--spell-accent: var(--rarity-epic-color, var(--info-400));
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.poker-spell-fx__plate {
+		box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink-0) 14%, transparent);
+	}
+}

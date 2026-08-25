@@ -468,6 +468,35 @@ describe('parseWireMessage — poker action and clock variants', () => {
 	});
 });
 
+describe('parseWireMessage — Spellcraft Ready', () => {
+	const validReady = {
+		type: 'spellcraft_ready_v1' as const,
+		protocolVersion: 1 as const,
+		matchId: 'match-a',
+		combatId: 'combat-a',
+		handNumber: 2,
+		windowKey: 'match-a:combat-a:2',
+		actorSide: 'second-mover' as const,
+		actorPlayerId: 'remote-piece',
+		seq: 0,
+		decisionId: 'match-a:combat-a:2:second-mover:ready',
+	};
+
+	it('accepts the strict canonical versioned envelope', () => {
+		expect(parseWireMessage(validReady)).toEqual(validReady);
+	});
+
+	it.each([
+		{ windowKey: 'match-a:combat-a:3' },
+		{ decisionId: 'forged' },
+		{ handNumber: -1 },
+		{ actorSide: 'player' },
+		{ protocolVersion: 2 },
+	])('rejects malformed or unbound readiness fields %#', (override) => {
+		expect(parseWireMessage({ ...validReady, ...override })).toBeNull();
+	});
+});
+
 describe('parseWireMessage — trivial variants', () => {
 	it('accepts ping/pong/opponentDisconnected with no payload', () => {
 		expect(parseWireMessage({ type: 'ping' })).not.toBeNull();

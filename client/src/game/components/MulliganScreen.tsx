@@ -7,8 +7,10 @@ import { MulliganCard } from './MulliganCard';
 import { EmberField } from './transitions/EmberField';
 import { MulliganDetailPanel } from './mulligan/MulliganDetailPanel';
 import { MulliganActionBar } from './mulligan/MulliganActionBar';
+import { collectMountedMulliganCardTargets } from './mulligan/mulliganEntranceTargets';
 import { useGameStore } from '../stores/gameStore';
 import { useSettingsStore } from '../stores/settingsStore';
+import { ARENA_VFX_LAYERS, getArenaVfxLayer } from '../combat/arenaVfxTargets';
 import './mulligan.css';
 
 interface MulliganScreenProps {
@@ -17,13 +19,8 @@ interface MulliganScreenProps {
   onMulliganAction: (newState: any) => void;
 }
 
-// z-[100000] sits above the cluster of portal-rendered tooltips that all
-// share `z-index: var(--z-topmost)` (10000) — UnifiedCardTooltip, hero
-// secret tooltips, attack animations — plus the keyword-badge-tooltip
-// outlier at 15000. Without this, ties resolve by DOM order and any
-// tooltip portaled after the mulligan paints on top of the veil.
 const OVERLAY_CLASS =
-  'fixed inset-0 z-[100000] flex flex-col items-center justify-center ' +
+  'absolute inset-0 z-10 pointer-events-auto flex flex-col items-center justify-center ' +
   // Three-layer atmospheric veil: vignette focal pull + amber halo + obsidian wash.
   'bg-[radial-gradient(ellipse_45%_60%_at_center,transparent_0%,rgba(0,0,0,0.45)_75%,rgba(0,0,0,0.78)_100%),' +
   'radial-gradient(ellipse_65%_85%_at_center,rgba(251,191,36,0.12)_0%,transparent_55%),' +
@@ -113,9 +110,10 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
   useLayoutEffect(() => {
     if (!mulligan?.active || disableMotion) return;
 
-    const cards = validPlayerHand
-      .map(card => mulliganCardRefs.current[card.instanceId])
-      .filter((card): card is HTMLDivElement => card !== null);
+    const cards = collectMountedMulliganCardTargets(
+      validPlayerHand.map(card => card.instanceId),
+      mulliganCardRefs.current,
+    );
     if (cards.length === 0) return;
 
     const centerIndex = (cards.length - 1) / 2;
@@ -420,9 +418,9 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
     </>
   );
 
-  // Portaled to document.body so the fixed overlay isn't trapped by the arena
-  // canvas's transform: scale() ancestor (which would otherwise anchor `fixed`
-  // to that scaled box, leaving the wrapper/volcano edges bare).
+  const portalTarget = getArenaVfxLayer(ARENA_VFX_LAYERS.modal);
+  if (!portalTarget) return null;
+
   const overlay = (
     disableMotion ? (
       <div
@@ -464,5 +462,5 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
     )
   );
 
-  return createPortal(overlay, document.body);
+  return createPortal(overlay, portalTarget);
 };

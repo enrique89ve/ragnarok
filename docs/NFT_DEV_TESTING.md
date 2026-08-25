@@ -203,7 +203,10 @@ ownership from local/dev runtime access:
 | `testnet` | Real Hive L1 in the testnet namespace | IndexedDB from chain | Genesis NFT ownership enforced per card; fixed starter entitlement allowed off-chain; resettable and non-economic |
 | `mainnet` | Real Hive L1 in the mainnet namespace | IndexedDB from chain | Genesis NFT ownership enforced per card; fixed starter entitlement allowed off-chain; permanent and economic |
 
-`VITE_DATA_LAYER_MODE=test` remains available only for mock-server harnesses.
+`VITE_DATA_LAYER_MODE=test` and `VITE_BLOCKCHAIN_PACKAGING` remain available
+only for mock-server harnesses. Do not set them in `.env.example`, Alfa, or
+Dokploy. Launch profiles derive data layer and packaging from
+`VITE_NETWORK_STAGE`.
 
 ## Security Notes
 

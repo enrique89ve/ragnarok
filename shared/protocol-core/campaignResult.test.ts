@@ -31,7 +31,11 @@ import type { EitrLedgerEntry } from './eitrEconomy';
 
 const CAMPAIGN_ID = 'war-of-pantheons';
 const RULESET_HASH = 'ruleset-hash-v1';
-const TESTNET_SEASON_ID = deriveRuneSeasonId(RAGNAROK_RUNTIME_CONFIGS.testnet);
+const TESTNET_RUNTIME = {
+	...RAGNAROK_RUNTIME_CONFIGS.testnet,
+	resetEpoch: 'closed-beta-period6-test',
+};
+const TESTNET_SEASON_ID = deriveRuneSeasonId(TESTNET_RUNTIME);
 
 function createStateAdapter(): StateAdapter & {
 	readonly campaignProgress: Map<string, CampaignProgressRecord>;
@@ -173,7 +177,7 @@ function createStateAdapter(): StateAdapter & {
 
 function createDeps(state: StateAdapter, campaignId = CAMPAIGN_ID): ProtocolCoreDeps {
 	return {
-		runtime: RAGNAROK_RUNTIME_CONFIGS.testnet,
+		runtime: TESTNET_RUNTIME,
 		state,
 		cards: {
 			getCardById: () => null,
@@ -549,5 +553,20 @@ describe('campaign_result protocol op', () => {
 			sourceType: 'p2p_ranked',
 			account: 'alice',
 		})).toBe(100);
+	});
+
+	it('rejects external campaign publication in F1 before the handler mutates state', async () => {
+		const state = createStateAdapter();
+		const result = await applyCampaignResult({
+			...createDeps(state),
+			runtime: RAGNAROK_RUNTIME_CONFIGS.testnet,
+		}, { missionId: 'norse-1', nonce: 1 });
+
+		expect(result).toEqual({
+			status: 'rejected',
+			reason: 'capability_disabled: campaignPublish (local-gameplay-v1)',
+		});
+		expect(state.campaignSubmissions.size).toBe(0);
+		expect(state.runeLedger.size).toBe(0);
 	});
 });

@@ -27,12 +27,21 @@ indexer, `/api/health`, admin diagnostics, and the `/ws/p2p` relay.
 
 The Compose file follows Dokploy's Docker Compose variable model:
 
-- Dokploy's Environment tab writes values to `.env` next to the Compose file.
-- Compose interpolates only the listed secrets into the container.
-- Leftover public `VITE_*` keys in that tab do not enter the container and
-  cannot override the baked image profile.
-- The Alfa public profile is baked in the `Dockerfile` (Vite build args and
-  runner `ENV`). Compose does not pass `VITE_*` as build args.
+- The Environment tab is the supported load path: Dokploy writes it to `.env`
+  next to the Compose file and interpolates `${VAR}` into the container.
+- Paste `.env.alfa-testnet.example` into that tab, set
+  `P2P_CHALLENGE_SIGNING_SECRET`, leave the fingerprint block as-is.
+- Compose uses `${VAR:-baked-default}`. A blank field in the UI does **not**
+  wipe the image epoch; it falls back to `alfa-testnet-full-nft-2026-05-22`.
+- Only keys listed in `docker-compose.dokploy.yml` `environment:` enter the
+  container. Extra UI keys (`VITE_DATA_LAYER_MODE`, packaging, NFTLox) are
+  ignored — delete them from the tab if you pasted an old file.
+- The Alfa public profile is also baked in the `Dockerfile`. Compose does not
+  pass `VITE_*` as **build** args. The Environment tab does **not** rebuild
+  the browser bundle: paste the same fingerprint the image was built with.
+  Changing the epoch only in the UI leaves testers on the old JS namespace.
+  To change epoch, rebuild the image, then keep the tab in sync (or leave
+  fingerprint fields blank so `${VAR:-}` keeps the baked default).
 - A missing `P2P_CHALLENGE_SIGNING_SECRET` fails the deploy before start.
 
 Do not put Hive private keys or `P2P_CHALLENGE_SIGNING_SECRET` in Docker build
@@ -44,17 +53,15 @@ put `NODE_VERSION` or `NODE_ALPINE_VERSION` in Dokploy.
 
 ## Environment Variables
 
-For this Alfa Testnet phase, the Environment tab should hold **secrets only**.
-Copy `.env.alfa-testnet.example`. Empty leftover public keys override the
-image with a blank and will fail `verifyRuntimeEnv` at boot — delete them.
+Load env from the Dokploy Environment tab (paste `.env.alfa-testnet.example`).
 
-Required:
+Required secret:
 
 ```dotenv
 P2P_CHALLENGE_SIGNING_SECRET=<64-hex-chars>
 ```
 
-Optional runtime secrets (unprefixed; never add `VITE_`):
+Optional secrets (uncomment in the tab; never add `VITE_`):
 
 ```dotenv
 RAGNAROK_ADMIN_OPERATOR_ACTIVE_KEY=<active-private-key>
@@ -64,37 +71,26 @@ WITNESS_HIVE_ACCOUNT=
 WITNESS_HIVE_POSTING_KEY=
 ```
 
+The same paste file already includes the launch fingerprint (`VITE_*` =
+`RAGNAROK_*`). Keep those values. Changing `VITE_RAGNAROK_RESET_EPOCH` /
+`RAGNAROK_RESET_EPOCH` in the UI is a wipe. If you omit a fingerprint key or
+leave it blank, Compose keeps the baked default; the boot verifier still
+requires the pair to match.
+
 `P2P_RELAY_ALLOWED_ORIGINS` is only needed when the browser origin differs
 from the API/relay host. Same-host deploys can omit it. Keep
 `P2P_RELAY_TRUST_FORWARDED_HOST` unset unless Dokploy is behind a trusted
 proxy that overwrites `X-Forwarded-Host`.
 
-Baked in the image (do not paste into Dokploy):
+Baked in the image (do not paste into Dokploy). The Dockerfile uses one ARG
+block for both the Vite bundle and the Node process, so `VITE_*` and
+`RAGNAROK_*` cannot drift on a rebuild:
 
 ```text
-RAGNAROK_RUNTIME_MODE=alfa-testnet
-VITE_NETWORK_STAGE=testnet
-VITE_RAGNAROK_PROTOCOL_ID=rk_game_testnet
-VITE_RAGNAROK_COLLECTION_ID=ragnarok-testnet
-VITE_RAGNAROK_RESET_EPOCH=alfa-testnet-full-nft-2026-05-22
-VITE_RAGNAROK_ADMIN_ACCOUNT=ragnaroktestnet
-VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT=ragp2p
-VITE_RAGNAROK_GENESIS_ACCOUNT=ragnaroktestnet
-VITE_RAGNAROK_TREASURY_ACCOUNT=ragp2p
-VITE_RAGNAROK_INDEX_ACCOUNT=ragp2p
-VITE_SEASON_START=2026-06-14T23:28:54Z
-VITE_RAGNAROK_INDEX_START_BLOCK=109016418
-VITE_NFT_ART_BASE_URL=https://dhenz14.github.io/norse-mythos-card-game
-VITE_EXTERNAL_URL_BASE=https://testnetdev.ragnaroknft.quest
-ENABLE_CHAIN_INDEXER=true
-RAGNAROK_CHAIN_STATE_FILE=data/chain-state.alfa-testnet.json
-RAGNAROK_NFT_OWNERSHIP_SOURCE=json
-RAGNAROK_SEASON_START=2026-06-14T23:28:54Z
-RAGNAROK_INDEX_START_BLOCK=109016418
-RAGNAROK_RANGE_SCAN=true
-RAGNAROK_HAF_ENDPOINTS=https://api.hive.blog
-ENABLE_INDEX_CHECKPOINT_PUBLISHER=false
-RAGNAROK_INDEX_CHECKPOINT_DRY_RUN=true
+fingerprint: testnet / rk_game_testnet / alfa-testnet-full-nft-2026-05-22
+seasonStart: 2026-06-14T23:28:54Z
+indexStartBlock: 109016418
+state: data/chain-state.alfa-testnet.json (json ownership, indexer on)
 ```
 
 Keep `VITE_NETWORK_STAGE=testnet` if you ever override the image. Do not set
@@ -102,6 +98,13 @@ Keep `VITE_NETWORK_STAGE=testnet` if you ever override the image. Do not set
 derived from the `alfa-testnet-*` reset epoch. Later NFT-full beta profiles
 should rotate to a `closed-beta-*` reset epoch. Do not use `qa-s0-*` or
 `qa-season-0-*` here; those epochs enable QA full-catalog entitlement.
+
+Do not change `VITE_RAGNAROK_RESET_EPOCH` or `RAGNAROK_RESET_EPOCH` on a
+routine Dokploy redeploy. The baked pair must stay equal
+(`alfa-testnet-full-nft-2026-05-22`). A new epoch is a wipe: testers lose
+IndexedDB progress and the named volume's JSON must be migrated, not reused.
+The container verifier now rejects a client/server epoch or protocol mismatch
+before Node boots.
 
 NFTLoX is not an Alfa requirement. Leave `VITE_NFTLOX_PROTOCOL_ID` unset
 during Alfa. Closed Beta must set `VITE_NFTLOX_PROTOCOL_ID=nftlox_testnet`
@@ -113,12 +116,9 @@ Generate the P2P challenge secret with:
 node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 ```
 
-`P2P_CHALLENGE_SIGNING_SECRET` must be stable in Dokploy. If it is missing or
-shorter than 32 characters, the server falls back to a process-local secret,
-which is acceptable for local/dev but wrong for shared Alfa/P2P because
-redeploys or future replicas can invalidate challenge envelopes. In production
-Alfa the server now fails closed instead of signing challenges with a
-process-local fallback.
+`P2P_CHALLENGE_SIGNING_SECRET` must stay the same 32+ character value in
+Dokploy. Production Alfa fails closed if it is missing or too short. Do not
+rotate it on a routine redeploy: tickets and challenge envelopes would die.
 
 The chain indexer operation filter, fast-sync mode, and replay validation
 surface are documented in [`HIVE_INDEXER_CONTRACT.md`](./HIVE_INDEXER_CONTRACT.md).

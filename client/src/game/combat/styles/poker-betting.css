@@ -180,6 +180,60 @@
   align-items: center;
 }
 
+/* Spellcraft is mutually exclusive with the normal betting surface, but both
+   occupy the canonical bettingControls zone owned by poker/styles/canvas.css. */
+.spellcraft-ready-panel {
+  pointer-events: auto;
+}
+
+.spellcraft-ready-layout {
+  display: grid;
+  grid-template-columns: 117px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 18px;
+  box-sizing: border-box;
+  border: 1px solid rgba(245, 197, 66, 0.22);
+  background: linear-gradient(90deg, rgba(5, 7, 13, 0.92), rgba(15, 23, 42, 0.8));
+  clip-path: polygon(
+    8px 0,
+    100% 0,
+    100% calc(100% - 8px),
+    calc(100% - 8px) 100%,
+    0 100%,
+    0 8px
+  );
+}
+
+.spellcraft-ready-copy {
+  min-width: 0;
+  color: #e5e7eb;
+}
+
+.spellcraft-ready-copy strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #f5c542;
+  font-family: var(--type-display), "Cinzel", serif;
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.spellcraft-ready-copy p {
+  max-width: 36ch;
+  margin: 0;
+  font-family: var(--type-body), system-ui, sans-serif;
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.35;
+  color: #e5e7eb;
+}
+
 /* ─── Base poker button — large Nordic icon + optional HP tab ─── */
 .poker-btn {
   --poker-button-accent: #a8c9e8;
@@ -217,6 +271,17 @@
   box-sizing: border-box;
 }
 
+/* Compact landscape expands only the interactive box. The fixed 117x99
+   .btn-icon-frame remains unscaled, and four 124px targets plus the existing
+   gaps still fit inside the canonical 608x176 bettingControls zone. */
+.game-viewport-wrapper[data-compact-landscape="true"] .poker-btn {
+  flex-basis: 124px;
+  inline-size: 124px;
+  min-inline-size: 124px;
+  max-inline-size: 124px;
+  block-size: 124px;
+}
+
 .poker-btn::before {
   content: "";
   position: absolute;
@@ -250,8 +315,8 @@
   z-index: 0;
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--poker-button-accent) 38%, #111827) 0%,
-    color-mix(in srgb, var(--poker-button-accent) 16%, #05070d) 100%
+    color-mix(in srgb, var(--poker-button-accent) 14%, #111827) 0%,
+    color-mix(in srgb, var(--poker-button-accent) 6%, #05070d) 100%
   );
   clip-path: polygon(
     5px 0,
@@ -263,25 +328,25 @@
     0 calc(100% - 5px),
     0 5px
   );
-  opacity: 0.45;
+  opacity: 0.92;
   pointer-events: none;
 }
 
 .poker-btn .btn-hp {
   position: absolute;
   left: 50%;
-  bottom: 3px;
+  bottom: 1px;
   z-index: 4;
   display: grid;
   place-items: center;
   min-inline-size: 81px;
-  block-size: 31px;
+  block-size: 25px;
   padding: 0 9px 1px;
   box-sizing: border-box;
   border: 0;
   background: none;
   font-family: var(--type-mono), "JetBrains Mono", ui-monospace, monospace;
-  font-size: 1.32rem;
+  font-size: 1.25rem;
   line-height: 1;
   font-weight: 900;
   letter-spacing: 0;
@@ -293,6 +358,29 @@
   text-shadow:
     0 1px 2px rgba(0, 0, 0, 0.96),
     0 0 3px rgba(0, 0, 0, 0.96);
+}
+
+.poker-btn .btn-action-label {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  z-index: 4;
+  inline-size: 82px;
+  min-block-size: 14px;
+  transform: translateX(-50%);
+  color: #fff;
+  font-family: var(--type-display), "Cinzel", serif;
+  font-size: 0.66rem;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: 0.035em;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 1;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.98),
+    0 0 3px rgba(0, 0, 0, 0.92);
 }
 
 .poker-btn .btn-icon-frame {
@@ -347,25 +435,25 @@
   );
   background: linear-gradient(
     145deg,
-    color-mix(in srgb, var(--poker-button-accent) 78%, transparent) 0%,
-    color-mix(in srgb, var(--poker-button-accent) 62%, transparent) 54%,
-    color-mix(in srgb, var(--poker-button-accent) 42%, transparent) 100%
+    color-mix(in srgb, var(--poker-button-accent) 20%, #1f2937) 0%,
+    color-mix(in srgb, var(--poker-button-accent) 10%, #0b1018) 54%,
+    color-mix(in srgb, var(--poker-button-accent) 6%, #05070d) 100%
   );
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.28),
     inset 0 -7px 11px rgba(0, 0, 0, 0.26);
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.58));
-  opacity: 0.88;
+  opacity: 0.96;
   pointer-events: none;
 }
 
 .poker-btn .btn-icon {
   position: absolute;
   left: 50%;
-  top: 40px;
+  top: 37px;
   z-index: 3;
-  inline-size: 46px;
-  block-size: 46px;
+  inline-size: 40px;
+  block-size: 40px;
   display: block;
   transform: translate(-50%, -50%);
   filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.88))
@@ -445,6 +533,10 @@
 }
 
 .poker-btn:disabled .btn-hp {
+  opacity: 1;
+}
+
+.poker-btn:disabled .btn-action-label {
   opacity: 1;
 }
 

@@ -1,5 +1,8 @@
 # ADR 0008 — Winner-posted match result
 
+> Future F2/F3 Hive replay/canonical design. It does not apply to F1
+> `local-gameplay-v1`, whose settlement remains local replay only.
+
 **This ADR is the single source of truth for ranked P2P settlement.** Other
 docs must point here. If they disagree, this file wins.
 

@@ -91,6 +91,7 @@ export function canonicalizePokerCombatState(state: PokerCombatState | null): un
 
 	return {
 		combatId: state.combatId,
+		handNumber: state.handNumber,
 		phase: state.phase,
 		participants,
 		communityCards: {

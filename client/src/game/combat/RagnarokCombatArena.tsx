@@ -62,6 +62,7 @@ import { readViewerCombatHeroHp } from './combatHeroHp';
 import { useAudio } from '../../lib/stores/useAudio';
 import { BossPhaseFlash } from './components/BossPhaseFlash';
 import { BettingPanel } from './components/BettingPanel';
+import { SpellcraftReadyControl } from './components/SpellcraftReadyControl';
 import { PokerSpellTray } from './components/PokerSpellTray';
 import { useUnifiedCombatStore } from '../stores/unifiedCombatStore';
 import { PokerP2PTurnStatus } from './components/PokerP2PTurnStatus';
@@ -80,6 +81,9 @@ import { resolveHeroPortrait } from '../utils/art/artMapping';
 import { getHeroFeud } from '../pvp/pvpData';
 import type { CardInstance } from '../types';
 import { derivePokerDecisionView } from './decision/pokerDecisionView';
+import { deriveSpellcraftDecision } from './decision/spellcraftDecision';
+import { useP2PActions } from '../context/useP2PActions';
+import { getPokerTurnProcessMode } from './decision/pokerTurnPolicy';
 import { BattlefieldCardInspector } from './components/BattlefieldCardInspector';
 import type { CardInspectorSource } from './cardInspector/cardInspectorModel';
 import { resolveBattlefieldCardClickIntent, type BattlefieldCardSide } from './cardInspector/battlefieldCardIntent';
@@ -226,6 +230,7 @@ interface UnifiedCombatArenaProps {
   handCurrentMana?: number;
   handIsPlayerTurn?: boolean;
   onCardPlay?: (card: CardInstance, position?: CombatZonePosition) => void;
+  onSpellcraftReady: () => void;
   registerCardPosition?: (card: CardInstance, position: Position) => void;
   battlefieldRef?: React.RefObject<HTMLDivElement | null>;
   // Boss dialogue (campaign mode only) — owned by parent RagnarokCombatArena
@@ -243,7 +248,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
   onHeroPowerClick, onWeaponUpgradeClick, isWeaponUpgraded = false,
   heroPowerTargeting, executeHeroPowerEffect,
   handCards = [], handCurrentMana = 0, handIsPlayerTurn = false,
-  onCardPlay, registerCardPosition, battlefieldRef: externalBattlefieldRef,
+  onCardPlay, onSpellcraftReady, registerCardPosition, battlefieldRef: externalBattlefieldRef,
   bossQuipText = null, bossQuipKey = 0, bossPortrait,
 }) => {
   const noopRegisterCardPosition = useCallback(() => {}, []);
@@ -258,9 +263,22 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
   const selectedHandCard = useGameStore(s => s.selectedCard);
   const activeMatch = useMatchStore(s => s.activeMatch);
   const connectionState = usePeerStore(s => s.connectionState);
+	const p2pActions = useP2PActions();
 
   const cardGameIsPlayerTurn = gameState?.currentTurn === 'player';
   const isP2PCombat = activeMatch?.opponent.kind === 'peer';
+  const spellcraftDecision = deriveSpellcraftDecision({
+    phase: combatState?.phase,
+    isActive: Boolean(combatState),
+    isMulliganActive: Boolean(gameState?.mulligan?.active),
+    processMode: getPokerTurnProcessMode(isP2PCombat),
+    isTransportConnected: connectionState === 'connected',
+    isPlayerReady: Boolean(combatState?.player.isReady),
+    isOpponentReady: Boolean(combatState?.opponent.isReady),
+	peerReadyIntentAvailable: isP2PCombat
+		&& connectionState === 'connected'
+		&& typeof p2pActions.sendSpellcraftReady === 'function',
+  });
   const pendingPokerSpells = useUnifiedCombatStore(state => state.pendingPokerSpells);
   const hasQueuedPokerSpells = (pendingPokerSpells?.length ?? 0) > 0;
 
@@ -477,6 +495,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
   });
 
   const isCardInteractionDisabled = gameState?.gamePhase === 'game_over';
+  const isHandInteractionDisabled = isCardInteractionDisabled || !spellcraftDecision.canPlayCards;
   const openCardInspector = useCallback((card: CardInstance, source: CardInspectorSource) => {
     setInspectedCard({ card, source });
   }, []);
@@ -666,6 +685,8 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
         handCards={handCards}
         handCurrentMana={handCurrentMana}
         handIsPlayerTurn={handIsPlayerTurn}
+        handIsPlayWindowOpen={spellcraftDecision.canPlayCards}
+        handIsInteractionDisabled={isHandInteractionDisabled}
         heroHealth={readViewerCombatHeroHp(combatState, 'player')?.current ?? 0}
         evolveReadyIds={evolveReadyIds}
         playerBattlefield={playerBattlefield}
@@ -720,6 +741,11 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
         />
       )}
 
+      <SpellcraftReadyControl
+        view={spellcraftDecision}
+        onReady={onSpellcraftReady}
+      />
+
       {hasQueuedPokerSpells && (
         <>
           <div className="poker-spell-tray-mount poker-spell-tray-mount--opponent">
@@ -740,6 +766,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
       {/* Damage Animations — gated by showDamageNumbers setting */}
       {useSettingsStore.getState().showDamageNumbers && damageAnimations.map(anim => (
         <DamageIndicator
+          id={anim.id}
           key={anim.id}
           damage={anim.damage}
           x={anim.x}
@@ -894,6 +921,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
     handleCombatEnd,
     handleHeroDeathComplete,
     handleUnifiedEndTurn,
+    handleSpellcraftReady,
     heroBattlePopups,
     removeHeroBattlePopup,
   } = useRagnarokCombatController({ onCombatEnd });
@@ -1422,6 +1450,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
             handCurrentMana={playerMana}
             handIsPlayerTurn={isPlayerTurn}
             onCardPlay={sharedHandleCardPlay}
+            onSpellcraftReady={handleSpellcraftReady}
             registerCardPosition={sharedRegisterCardPosition}
             battlefieldRef={sharedBattlefieldRef}
             bossQuipText={quipText}

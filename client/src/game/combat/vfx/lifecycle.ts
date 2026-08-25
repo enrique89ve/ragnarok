@@ -7,6 +7,7 @@ import { CombatPhase } from '../../types/PokerCombatTypes';
 import { killAllPokerVFX, startPokerOrphanSweep, stopPokerOrphanSweep } from '../animations/PokerDramaVFX';
 import { cancelAllActiveVisualEffects } from './registry';
 import { gameEffectCoordinator } from '@/game/effects/core/gameEffectCoordinator';
+import { gameEffectMediator } from '@/game/effects/core/gameEffectMediator';
 import { startGameEffectBrowserRuntime } from '@/game/effects/core/gameEffectBrowserRuntime';
 
 const POKER_VFX_ORCHESTRATOR_CATEGORIES: readonly AnimationCategory[] = [
@@ -37,6 +38,7 @@ export function cancelAllVisualEffects(): void {
 	gameEffectCoordinator.cancelOwner('feedback');
 	gameEffectCoordinator.cancelOwner('visual-impact');
 	gameEffectCoordinator.cancelOwner('poker-renderer');
+	gameEffectMediator.cancelAll();
 	cancelPokerOrchestratedEffects();
 	if (!hasDom()) return;
 	killAllPokerVFX();

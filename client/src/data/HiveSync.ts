@@ -29,6 +29,7 @@ import {
   getCurrentHiveUsername,
 } from "./HiveSessionIdentity";
 import { RAGNAROK_LEGACY_PREFIX } from "@shared/indexer-types";
+import { checkProtocolActionCapability, checkRuntimeCapability } from "@shared/protocol-core/phaseGate";
 import {
   sanitizePayload,
   validatePayloadSize,
@@ -43,11 +44,11 @@ import {
 } from "@shared/protocol-core";
 import { buildMatchResultSignatureMessage } from "@shared/protocol-core/matchResultCommitment";
 import {
-  NFTLOX_PROTOCOL_ID,
   NFTLOX_PROTOCOL_VERSION,
   NFTLOX_COLLECTION_SYMBOL,
   RAGNAROK_TREASURY_ACCOUNT,
 } from "./blockchain/hiveConfig";
+import { getRagnarokNetworkConfig } from "../game/config/networkConfig";
 
 export interface HiveBroadcastResult {
   success: boolean;
@@ -204,15 +205,23 @@ export class HiveSync {
     payload: Record<string, unknown>,
     useActiveKey: boolean = false,
   ): Promise<HiveBroadcastResult> {
-    const contextResult = this.getKeychainContext();
-    if (!contextResult.success) return contextResult.result;
-    const { keychain, username } = contextResult.context;
-
+    const runtime = getRagnarokNetworkConfig();
     const cleanPayload = sanitizePayload(payload);
     const actionResult = resolveBroadcastAction(type, cleanPayload);
     if (!actionResult.success) {
       return { success: false, error: actionResult.error };
     }
+    const broadcastCapability = checkRuntimeCapability(runtime, 'hiveBroadcast');
+    if (broadcastCapability.status === 'rejected') {
+      return { success: false, error: `${broadcastCapability.code}: ${broadcastCapability.capability} (${broadcastCapability.phaseId})` };
+    }
+    const capability = checkProtocolActionCapability(runtime, actionResult.action);
+    if (capability.status === 'rejected') {
+      return { success: false, error: `${capability.code}: ${capability.capability} (${capability.phaseId})` };
+    }
+    const contextResult = this.getKeychainContext();
+    if (!contextResult.success) return contextResult.result;
+    const { keychain, username } = contextResult.context;
     const { action } = actionResult;
 
     if (ACTIVE_AUTH_OPS.has(action) && !useActiveKey) {
@@ -272,6 +281,17 @@ export class HiveSync {
     keyType,
     operations,
   }: HiveOperationBroadcastRequest): Promise<HiveBroadcastResult> {
+    const runtime = getRagnarokNetworkConfig();
+    const broadcastCapability = checkRuntimeCapability(runtime, 'hiveBroadcast');
+    if (broadcastCapability.status === 'rejected') {
+      return { success: false, error: `${broadcastCapability.code}: ${broadcastCapability.capability} (${broadcastCapability.phaseId})` };
+    }
+    if (isCanonicalAction(action)) {
+      const capability = checkProtocolActionCapability(runtime, action);
+      if (capability.status === 'rejected') {
+        return { success: false, error: `${capability.code}: ${capability.capability} (${capability.phaseId})` };
+      }
+    }
     const contextResult = this.getKeychainContext();
     if (!contextResult.success) return contextResult.result;
     const { keychain, username } = contextResult.context;
@@ -399,6 +419,15 @@ export class HiveSync {
     quantity: number,
     totalPriceThousandths: number,
   ): Promise<HiveBroadcastResult> {
+    const runtime = getRagnarokNetworkConfig();
+    const broadcastCapability = checkRuntimeCapability(runtime, 'hiveBroadcast');
+    if (broadcastCapability.status === 'rejected') {
+      return { success: false, error: `${broadcastCapability.code}: ${broadcastCapability.capability} (${broadcastCapability.phaseId})` };
+    }
+    const packCapability = checkRuntimeCapability(runtime, 'packs');
+    if (packCapability.status === 'rejected') {
+      return { success: false, error: `${packCapability.code}: ${packCapability.capability} (${packCapability.phaseId})` };
+    }
     const username = this.getUsername();
     if (!username) return { success: false, error: "No username set" };
 
@@ -614,16 +643,21 @@ export class HiveSync {
     data: Record<string, unknown>,
     useActiveKey: boolean = false,
   ): Promise<HiveBroadcastResult> {
+    const runtime = getRagnarokNetworkConfig();
+    const capability = checkRuntimeCapability(runtime, 'nftLoxWrites');
+    if (capability.status === 'rejected') {
+      return { success: false, error: `${capability.code}: ${capability.capability} (${capability.phaseId})` };
+    }
     const username = this.getUsername();
     if (!username) return { success: false, error: "No username set" };
     if (!this.isKeychainAvailable())
       return { success: false, error: "Hive Keychain not available" };
-    if (!NFTLOX_PROTOCOL_ID.trim()) {
+    if (!runtime.nftLoxProtocolId.trim()) {
       return { success: false, error: "NFTLox protocol is not configured for this runtime" };
     }
 
     const payload = {
-      protocol: NFTLOX_PROTOCOL_ID,
+      protocol: runtime.nftLoxProtocolId,
       version: NFTLOX_PROTOCOL_VERSION,
       action,
       data: sanitizePayload(data),
@@ -645,7 +679,7 @@ export class HiveSync {
     const keychainPromise = new Promise<HiveBroadcastResult>((resolve) => {
       keychain.requestCustomJson(
         username,
-        NFTLOX_PROTOCOL_ID,
+        runtime.nftLoxProtocolId,
         useActiveKey ? "Active" : "Posting",
         jsonStr,
         `NFTLox: ${action.replace(/_/g, " ")}`,

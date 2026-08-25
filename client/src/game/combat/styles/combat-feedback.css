@@ -18,7 +18,8 @@
 	min-width: 0;
 	max-width: 220px;
 	padding: 8px 14px;
-	border-radius: 4px;
+	border-radius: 0;
+	clip-path: polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px);
 	background: color-mix(in srgb, var(--obsidian-950, #0b1628) 88%, transparent);
 	border: 1px solid color-mix(in srgb, var(--gold-300, #e0c070) 55%, transparent);
 	box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
@@ -27,8 +28,7 @@
 	animation: combat-feedback-enter 200ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
 }
 
-.combat-feedback-chip-title,
-.combat-feedback-chip-subtitle {
+.combat-feedback-chip-copy {
 	margin: 0;
 	white-space: nowrap;
 	overflow: hidden;

@@ -5,7 +5,9 @@ import { Button } from '../../../components/ui-norse';
 import { buildCampaignRewardEvidenceContext, getCampaignBriefingRewardCopy, useCampaignStore } from '../../campaign';
 import type { CampaignChapter, CampaignMission, Difficulty } from '../../campaign/campaignTypes';
 import { getCampaignFirstClearRuneReward, TESTNET_RUNE_ECONOMY } from '@shared/protocol-core/runeEconomy';
+import { buildRagnarokRuntimeEvidence } from '@shared/runtimeConfig';
 import { CAMPAIGN_ID } from '@shared/campaign/constants';
+import { getRagnarokNetworkConfig } from '../../config/networkConfig';
 import CeremonyEvidenceButton from '../CeremonyEvidenceButton';
 import { useNFTUsername } from '../../nft/hooks';
 import {
@@ -191,6 +193,8 @@ export function MissionBriefing({
 	const rewardCopy = getCampaignBriefingRewardCopy({
 		completed: Boolean(completed),
 		firstClearRune,
+		campaignRuneCap: TESTNET_RUNE_ECONOMY.maxCampaignRunePerAccount,
+		policy: buildRagnarokRuntimeEvidence(getRagnarokNetworkConfig()).phasePolicy,
 	});
 
 	return (
@@ -410,7 +414,7 @@ export function MissionBriefing({
 								<span className={PILL_CLASS}>{rewardCopy.label}</span>
 							</div>
 							<p className="mt-2 max-w-[58ch] text-xs leading-relaxed opacity-70">{rewardCopy.detail}</p>
-							<p className="mt-1 text-xs opacity-70">Season cap: {TESTNET_RUNE_ECONOMY.maxCampaignRunePerAccount} RUNE per account from campaign first-clears.</p>
+							<p className="mt-1 text-xs opacity-70">{rewardCopy.capDetail}</p>
 						</div>
 					</div>
 

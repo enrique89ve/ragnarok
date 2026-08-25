@@ -34,8 +34,17 @@ export const HandStrengthIndicator: React.FC<HandStrengthIndicatorProps> = ({
 	if (handRank <= PokerHandRank.HIGH_CARD || !handName) return null;
 
 	return (
-		<div className={`hand-strength-indicator tier-${tier} ${improved ? 'improved' : ''}`}>
-			<span className="hand-strength-name">{handName}</span>
+		<div
+			className={`hand-strength-indicator tier-${tier} ${improved ? 'improved' : ''}`}
+			data-hand-rank={handRank}
+			aria-label={`Current hand: ${handName}`}
+		>
+			<span className="hand-strength-sigil" aria-hidden="true">TH</span>
+			<span className="hand-strength-copy">
+				<span className="hand-strength-kicker">HAND RUNE</span>
+				<span className="hand-strength-name">{handName}</span>
+			</span>
+			<span className="hand-strength-rank" aria-hidden="true">{String(handRank).padStart(2, '0')}</span>
 		</div>
 	);
 };

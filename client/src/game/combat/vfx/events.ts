@@ -86,6 +86,8 @@ export interface StreakAnnouncedEvent extends VisualEventBase {
 export interface HandImprovedEvent extends VisualEventBase {
 	type: 'handImproved';
 	tier: 'low' | 'mid' | 'high' | 'godly';
+	rank: PokerHandRank;
+	side: ArenaVfxOwner;
 }
 
 export interface SpellCastEvent extends VisualEventBase {

@@ -240,6 +240,9 @@ const mockCards: CardDataProvider = {
 
 const TESTNET_TRACE_RUNTIME = {
 	...RAGNAROK_RUNTIME_CONFIGS.testnet,
+	// Replay conformance exercises Hive handlers; local gameplay capability
+	// rejection is covered by phaseGate tests and dedicated local fixtures.
+	resetEpoch: 'closed-beta',
 	adminAccount: 'ragnarok',
 	genesisAccount: 'ragnarok',
 	treasuryAccount: 'ragnarok-treasury',
@@ -530,6 +533,15 @@ describe('Protocol Core: Replay Traces', () => {
 	beforeEach(async () => {
 		state = new MemoryState();
 		deps = makeDeps(state);
+	});
+
+	it('keeps finality ignore ahead of capability rejection', async () => {
+		const result = await applyOp(
+			makeOp('market_list', {}, { blockNum: defaultCtx.lastIrreversibleBlock + 1 }),
+			defaultCtx,
+			deps,
+		);
+		expect(result).toEqual({ status: 'ignored' });
 	});
 
 	// --- Genesis & Seal ---

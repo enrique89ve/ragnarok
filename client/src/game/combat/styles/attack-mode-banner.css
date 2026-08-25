@@ -21,7 +21,17 @@
     rgba(60, 35, 5, 0.92) 100%
   );
   border: 1.5px solid var(--gold-300);
-  border-radius: var(--radius-norse);
+  border-radius: 0;
+  clip-path: polygon(
+    8px 0,
+    calc(100% - 8px) 0,
+    100% 8px,
+    100% calc(100% - 8px),
+    calc(100% - 8px) 100%,
+    8px 100%,
+    0 calc(100% - 8px),
+    0 8px
+  );
   box-shadow:
     0 0 18px var(--gold-glow),
     0 4px 12px rgba(0, 0, 0, 0.55);

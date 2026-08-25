@@ -105,9 +105,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .battlefield-hero-square,
+  .battlefield-hero-square {
+    transition: none;
+  }
+
   .battlefield-hero-square .hero-card-frame {
     transition: none;
+    animation: none;
   }
 
   .battlefield-hero-square.targetable .hero-card-frame {

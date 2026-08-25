@@ -32,6 +32,7 @@ import {
 } from '@shared/p2p-wire/phaseCheckpoint';
 import { DeckCardClaimsSchema } from '@shared/protocol-core/deckVerification';
 import { CHALLENGE_SIGNATURE_ALGORITHM } from '@shared/p2pAvailability';
+import { SpellcraftReadyAckMessageSchema, SpellcraftReadyMessageSchema } from '@shared/p2p-wire/spellcraft';
 
 import type { P2PMessage } from './messages';
 import {
@@ -371,6 +372,8 @@ const SCHEMA_BY_TYPE = {
 	hash_mismatch: HashMismatchSchema,
 	poker_action: PokerActionSchema,
 	poker_turn_started: PokerTurnStartedSchema,
+	spellcraft_ready_v1: SpellcraftReadyMessageSchema,
+	spellcraft_ready_ack_v1: SpellcraftReadyAckMessageSchema,
 	heartbeat: HeartbeatSchema,
 	session_authorize: SessionAuthorizeSchema,
 	session_renewal: SessionRenewalSchema,

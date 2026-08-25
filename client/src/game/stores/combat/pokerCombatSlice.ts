@@ -429,7 +429,7 @@ export const createPokerCombatSlice: StateCreator<
     }
 
     // All starting phases (MULLIGAN, SPELL_PET, FIRST_STRIKE) begin with isReady: false
-    // SPELL_PET has a timing window managed by usePokerPhases, not immediate advancement
+    // SPELL_PET remains open until each participant submits an explicit Ready intent.
     const playerCombatState: PlayerCombatState = {
       playerId,
       playerName,
@@ -471,6 +471,7 @@ export const createPokerCombatSlice: StateCreator<
     
     const combatState: PokerCombatState = applyLocalPokerTurnClock({
       combatId: deterministic?.combatId ?? `combat_${get()._nextLogTick()}`,
+      handNumber: 0,
       phase: startingPhase,
       player: playerCombatState,
       opponent: opponentCombatState,
@@ -558,8 +559,7 @@ export const createPokerCombatSlice: StateCreator<
     debug.combat(`[PokerCombatSlice] First strike damage ${damage} applied to ${target}, transitioning to phase: ${nextPhase}`);
     
     // Enter next phase with isReady: false
-    // If going to SPELL_PET, it's a timed phase for card playing
-    // usePokerPhases will handle the timing window and auto-advance
+    // SPELL_PET is an explicit card-playing decision window.
     const playerState = target === 'player' ? updatedTargetState : state.pokerCombatState.player;
     const opponentState = target === 'opponent' ? updatedTargetState : state.pokerCombatState.opponent;
     
@@ -625,8 +625,7 @@ export const createPokerCombatSlice: StateCreator<
     validateActivePlayer(PokerCombatPhase.SPELL_PET, newActivePlayerId, 'completeMulligan');
     
     // Enter SPELL_PET phase with isReady: false
-    // SPELL_PET is a timed phase where players can play cards/spells
-    // usePokerPhases will auto-advance to FAITH after the timing window
+    // Both participants may play cards before submitting their explicit Ready intent.
     set({
       pokerCombatState: applyLocalPokerTurnClock({
         ...state.pokerCombatState,
@@ -925,13 +924,12 @@ export const createPokerCombatSlice: StateCreator<
     const combatState = state.pokerCombatState;
     
     // Prevent advancement from SPELL_PET to FAITH if a player is currently acting
-    // UNLESS both players are ready (timer expired or both clicked Ready)
-    // This allows the 2.5s timer to advance the phase even if no actions were taken
+    // unless both participants committed their explicit Ready intents.
     if (combatState.phase === PokerCombatPhase.SPELL_PET && 
         combatState.activePlayerId !== null && 
         combatState.actionsThisRound === 0 &&
         !(combatState.player.isReady && combatState.opponent.isReady)) {
-      debug.combat('[advancePokerPhase] Blocking auto-advance: waiting for first action or Ready click');
+      debug.combat('[advancePokerPhase] Blocking phase advance: waiting for both Ready intents');
       return;
     }
 
@@ -967,7 +965,7 @@ export const createPokerCombatSlice: StateCreator<
     }
     
     // Ready state logic by phase type:
-    // - SPELL_PET: Reset to false, phase has timing window for card playing
+    // - SPELL_PET: Reset to false for the explicit card-playing decision window
     // - FAITH/FORESIGHT/DESTINY: Reset to false, players need to bet
     // - RESOLUTION: Set to true immediately, no actions needed
     const isResolutionPhase = newPhase === PokerCombatPhase.RESOLUTION;
@@ -1738,6 +1736,7 @@ export const createPokerCombatSlice: StateCreator<
       isTransitioningHand: false,
       pokerCombatState: applyLocalPokerTurnClock({
         ...state.pokerCombatState,
+        handNumber: state.pokerCombatState.handNumber + 1,
         phase: PokerCombatPhase.SPELL_PET,
         spellPetPhaseStartTime: Date.now(),
         pot: 0,

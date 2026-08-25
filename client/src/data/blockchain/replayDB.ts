@@ -29,10 +29,11 @@
  *   forge_commits    keyed by trxId             — forge commit-reveal records (ADR 0001 §3)
  *
  * All writes are idempotent — safe to re-apply the same op.
- * DB version 15 — upgrade handler creates any missing stores.
+ * DB version 19 — upgrade handler creates any missing stores.
  */
 
 import type { HiveCardAsset, HiveMatchResult, HiveTokenBalance } from '../schemas/HiveTypes';
+import type { MigrationDecision } from '@shared/protocolPhaseMigration';
 import { DEFAULT_TOKEN_BALANCE } from '../schemas/HiveTypes';
 import { DEFAULT_ELO_RATING } from './hiveConfig';
 import type {
@@ -47,10 +48,15 @@ import type {
 	EitrLedgerTotalQuery,
 	ForgeCommitRecord,
 } from '../../../../shared/protocol-core/types';
+import type {
+	LocalSettlementCommitResult,
+	LocalSettlementRecord,
+} from '../../../../shared/protocol-core/localSettlement';
+import type { LocalCampaignSettlementEnvelope } from '../../../../shared/protocol-core/localCampaignSettlement';
 import { createRuntimeDatabaseName } from '../../game/config/networkConfig';
 
 const DB_NAME = createRuntimeDatabaseName('chain-v1');
-const DB_VERSION = 15;
+const DB_VERSION = 19;
 
 let _db: IDBDatabase | null = null;
 
@@ -75,8 +81,9 @@ function openDB(): Promise<IDBDatabase> {
 	return new Promise((resolve, reject) => {
 		const req = indexedDB.open(DB_NAME, DB_VERSION);
 
-		req.onupgradeneeded = (e) => {
+			req.onupgradeneeded = (e) => {
 			const db = (e.target as IDBOpenDBRequest).result;
+			if (!db.objectStoreNames.contains('phase_migrations')) db.createObjectStore('phase_migrations', { keyPath: 'migrationId' });
 
 			if (!db.objectStoreNames.contains('cards')) {
 				const cards = db.createObjectStore('cards', { keyPath: 'uid' });
@@ -91,6 +98,31 @@ function openDB(): Promise<IDBDatabase> {
 					multiEntry: true,
 				});
 			}
+
+			// v16: local gameplay settlement is separate from canonical Hive replay.
+			const upgradeTransaction = (e.target as IDBOpenDBRequest).transaction;
+			const settlements = db.objectStoreNames.contains('local_settlements')
+				? upgradeTransaction!.objectStore('local_settlements')
+				: db.createObjectStore('local_settlements', { keyPath: 'eventId' });
+			if (!settlements.indexNames.contains('by_match_id')) settlements.createIndex('by_match_id', 'matchId', { unique: false });
+			if (!settlements.indexNames.contains('by_reset_epoch')) settlements.createIndex('by_reset_epoch', 'resetEpoch', { unique: false });
+			if (!settlements.indexNames.contains('by_account')) settlements.createIndex('by_account', 'participants', { unique: false, multiEntry: true });
+			const localCards = db.objectStoreNames.contains('local_card_progression')
+				? upgradeTransaction!.objectStore('local_card_progression')
+				: db.createObjectStore('local_card_progression', { keyPath: 'updateId' });
+			if (!localCards.indexNames.contains('by_uid')) localCards.createIndex('by_uid', 'uid', { unique: false });
+			if (!localCards.indexNames.contains('by_event_id')) localCards.createIndex('by_event_id', 'eventId', { unique: false });
+			if (!localCards.indexNames.contains('by_owner_account')) localCards.createIndex('by_owner_account', 'ownerAccount', { unique: false });
+			const localLevelUps = db.objectStoreNames.contains('local_level_ups')
+				? upgradeTransaction!.objectStore('local_level_ups')
+				: db.createObjectStore('local_level_ups', { keyPath: 'levelUpId' });
+			if (!localLevelUps.indexNames.contains('by_event_id')) localLevelUps.createIndex('by_event_id', 'eventId', { unique: false });
+			const localCampaigns = db.objectStoreNames.contains('local_campaign_settlements')
+				? upgradeTransaction!.objectStore('local_campaign_settlements')
+				: db.createObjectStore('local_campaign_settlements', { keyPath: 'eventId' });
+			if (!localCampaigns.indexNames.contains('by_account_mission')) localCampaigns.createIndex('by_account_mission', 'account', { unique: false });
+			if (!localCampaigns.indexNames.contains('by_account')) localCampaigns.createIndex('by_account', 'account', { unique: false });
+			if (!db.objectStoreNames.contains('local_campaign_first_clears')) db.createObjectStore('local_campaign_first_clears', { keyPath: 'key' });
 
 			if (!db.objectStoreNames.contains('sync_cursors')) {
 				db.createObjectStore('sync_cursors', { keyPath: 'account' });
@@ -286,6 +318,22 @@ function idbGetAll<T>(store: string): Promise<T[]> {
 	);
 }
 
+/** Test-only namespace cleanup; closes this module's handle before deletion. */
+export function closeReplayDatabaseForTests(): void {
+	_db?.close();
+	_db = null;
+}
+
+export function resetReplayDatabaseForTests(): Promise<void> {
+	closeReplayDatabaseForTests();
+	return new Promise((resolve, reject) => {
+		const request = indexedDB.deleteDatabase(DB_NAME);
+		request.onsuccess = () => resolve();
+		request.onerror = () => reject(request.error);
+		request.onblocked = () => reject(new Error(`replay database cleanup blocked: ${DB_NAME}`));
+	});
+}
+
 // ---------------------------------------------------------------------------
 // Cards API
 // ---------------------------------------------------------------------------
@@ -319,6 +367,181 @@ export async function getMatchesByAccount(username: string): Promise<HiveMatchRe
 	return stored
 		.sort((a, b) => b.timestamp - a.timestamp)
 		.map(({ participants: _p, ...match }) => match as HiveMatchResult);
+}
+
+// ---------------------------------------------------------------------------
+// Local gameplay settlement API
+// ---------------------------------------------------------------------------
+
+export async function commitLocalSettlement(record: LocalSettlementRecord): Promise<LocalSettlementCommitResult> {
+	const db = await openDB();
+	return new Promise((resolve, reject) => {
+		let alreadyApplied = false;
+		let conflict: { existingResultHash: string; existingRuntimeFingerprint: string } | null = null;
+		const tx = db.transaction([
+			'local_settlements', 'rune_ledger', 'elo_ratings', 'local_card_progression', 'local_level_ups',
+		], 'readwrite');
+		const settlements = tx.objectStore('local_settlements');
+		const getRequest = settlements.get(record.eventId);
+		getRequest.onsuccess = () => {
+			const existing = getRequest.result as LocalSettlementRecord | undefined;
+			if (existing) {
+				if (
+					existing.result.resultHash !== record.result.resultHash
+					|| existing.runtimeFingerprint !== record.runtimeFingerprint
+				) {
+					conflict = {
+						existingResultHash: existing.result.resultHash,
+						existingRuntimeFingerprint: existing.runtimeFingerprint,
+					};
+					tx.abort();
+					return;
+				}
+				alreadyApplied = true;
+				return;
+			}
+			settlements.put(record);
+			const runeLedger = tx.objectStore('rune_ledger');
+			for (const entry of record.runeEntries) runeLedger.put(entry);
+			const eloRatings = tx.objectStore('elo_ratings');
+			for (const projection of record.elo) {
+				eloRatings.put({
+					account: projection.account,
+					elo: projection.eloAfter,
+					wins: projection.winsAfter,
+					losses: projection.lossesAfter,
+					lastMatchBlock: 0,
+					seasonScore: projection.seasonScoreAfter,
+				});
+			}
+			const cardProgression = tx.objectStore('local_card_progression');
+			for (const projection of record.cardXp) {
+				cardProgression.put({
+					uid: projection.uid,
+					ownerAccount: projection.ownerAccount,
+					cardId: projection.cardId,
+					xp: projection.xpAfter,
+					level: projection.levelAfter,
+					eventId: record.eventId,
+					updateId: projection.updateId,
+					timestamp: record.timestamp,
+					sequence: `${record.timestamp}:${record.eventId}`,
+				});
+			}
+			const levelUps = tx.objectStore('local_level_ups');
+			for (const projection of record.levelUps) {
+				levelUps.put({ ...projection, eventId: record.eventId });
+			}
+		};
+		getRequest.onerror = () => reject(getRequest.error);
+		tx.oncomplete = () => resolve(alreadyApplied ? 'already_applied' : 'applied');
+		tx.onerror = () => {
+			if (!conflict) reject(tx.error);
+		};
+		tx.onabort = () => {
+			if (conflict) {
+				resolve({
+					status: 'conflict',
+					existingResultHash: conflict.existingResultHash,
+					existingRuntimeFingerprint: conflict.existingRuntimeFingerprint,
+				});
+				return;
+			}
+			reject(tx.error ?? new Error('local settlement transaction aborted'));
+		};
+	});
+}
+
+export const getLocalSettlementsByAccount = (account: string): Promise<LocalSettlementRecord[]> =>
+	idbGetByIndex<LocalSettlementRecord>('local_settlements', 'by_account', account);
+
+export type LocalCardProgressionRecord = {
+	readonly updateId: string;
+	readonly uid: string;
+	readonly ownerAccount: string;
+	readonly cardId: number;
+	readonly xp: number;
+	readonly level: number;
+	readonly eventId: string;
+	readonly timestamp: number;
+	readonly sequence: string;
+};
+
+export const getLocalCardProgressionByOwner = (ownerAccount: string): Promise<LocalCardProgressionRecord[]> =>
+	idbGetByIndex<LocalCardProgressionRecord>('local_card_progression', 'by_owner_account', ownerAccount);
+
+export type LocalCampaignSettlementRecord = LocalCampaignSettlementEnvelope;
+
+export type LocalCampaignCommitResult = { readonly status: 'applied' | 'already_applied' | 'conflict'; readonly record: LocalCampaignSettlementRecord };
+
+export const getLocalCampaignSettlementsByAccount = (account: string): Promise<LocalCampaignSettlementRecord[]> =>
+	idbGetByIndex<LocalCampaignSettlementRecord>('local_campaign_settlements', 'by_account', account);
+
+export type LocalLevelUpRecord = {
+	readonly levelUpId: string;
+	readonly uid: string;
+	readonly ownerAccount: string;
+	readonly cardId: number;
+	readonly newLevel: number;
+	readonly eventId: string;
+};
+
+export const getLocalLevelUpsByEvent = (eventId: string): Promise<LocalLevelUpRecord[]> =>
+	idbGetByIndex<LocalLevelUpRecord>('local_level_ups', 'by_event_id', eventId);
+
+export async function commitLocalCampaignSettlement(record: LocalCampaignSettlementRecord): Promise<LocalCampaignCommitResult> {
+	const db = await openDB();
+	return new Promise((resolve, reject) => {
+		const tx = db.transaction(['local_campaign_settlements', 'local_campaign_first_clears', 'rune_ledger', 'local_card_progression', 'local_level_ups'], 'readwrite');
+		const campaigns = tx.objectStore('local_campaign_settlements');
+		const firstClear = tx.objectStore('local_campaign_first_clears');
+		const firstClearRequest = firstClear.get(`${record.account}:${record.missionId}`);
+		const existing = campaigns.get(record.eventId);
+		let alreadyApplied = false;
+		let conflict = false;
+		let effectiveRecord = record;
+		existing.onsuccess = () => {
+			if (existing.result) {
+				if (existing.result.resultHash !== record.resultHash || existing.result.runtimeFingerprint !== record.runtimeFingerprint) { conflict = true; tx.abort(); return; }
+				alreadyApplied = true;
+				effectiveRecord = existing.result;
+				return;
+			}
+			const priorFirstClear = firstClearRequest.result !== undefined;
+			const appliedRecord = priorFirstClear && record.firstClear ? { ...record, firstClear: false, runeAmount: 0, runeEntry: undefined } : record;
+				effectiveRecord = appliedRecord;
+				campaigns.put(appliedRecord);
+				if (record.firstClear && !priorFirstClear) firstClear.put({ key: `${record.account}:${record.missionId}`, eventId: record.eventId });
+				if (appliedRecord.runeEntry) tx.objectStore('rune_ledger').put(appliedRecord.runeEntry);
+				for (const projection of appliedRecord.cardXp) {
+					tx.objectStore('local_card_progression').put({ updateId: projection.updateId, uid: projection.uid, ownerAccount: projection.ownerAccount, cardId: projection.cardId, xp: projection.xpAfter, level: projection.levelAfter, eventId: appliedRecord.eventId, timestamp: appliedRecord.timestamp, sequence: `${appliedRecord.timestamp}:${appliedRecord.eventId}` });
+					if (projection.levelUpId) tx.objectStore('local_level_ups').put({ levelUpId: projection.levelUpId, uid: projection.uid, ownerAccount: projection.ownerAccount, cardId: projection.cardId, newLevel: projection.levelAfter, eventId: appliedRecord.eventId });
+				}
+		};
+		existing.onerror = () => reject(existing.error);
+		tx.oncomplete = () => resolve({ status: alreadyApplied ? 'already_applied' : 'applied', record: effectiveRecord });
+		tx.onerror = () => reject(tx.error ?? new Error('local campaign transaction error'));
+		tx.onabort = () => conflict ? resolve({ status: 'conflict', record }) : reject(tx.error ?? new Error('local campaign transaction aborted'));
+	});
+}
+
+export async function hasLocalCampaignFirstClear(account: string, missionId: string): Promise<boolean> {
+	const records = await idbGetByIndex<LocalCampaignSettlementRecord>('local_campaign_settlements', 'by_account', account);
+	return records.some(record => record.missionId === missionId && record.firstClear);
+}
+
+/** Returns one deterministic current snapshot per owner-bound card UID. */
+export async function getLatestLocalCardProgressionByOwner(ownerAccount: string): Promise<LocalCardProgressionRecord[]> {
+	const records = await getLocalCardProgressionByOwner(ownerAccount);
+	const latest = new Map<string, LocalCardProgressionRecord>();
+	for (const record of records) {
+		const previous = latest.get(record.uid);
+		if (!previous || record.timestamp > previous.timestamp ||
+			(record.timestamp === previous.timestamp && record.sequence > previous.sequence)) {
+			latest.set(record.uid, record);
+		}
+	}
+	return [...latest.values()].sort((a, b) => a.uid.localeCompare(b.uid));
 }
 
 // ---------------------------------------------------------------------------
@@ -356,6 +579,42 @@ export const getRuneLedgerEntry = (entryId: string): Promise<RuneLedgerEntry | u
 
 export const putRuneLedgerEntry = (entry: RuneLedgerEntry): Promise<void> =>
 	idbPut('rune_ledger', entry);
+
+export type LocalDailyLedgerCommitResult = { readonly appliedIds: readonly string[]; readonly alreadyAppliedIds: readonly string[]; readonly conflictingIds: readonly string[] };
+
+function sameRuneLedgerEntry(a: RuneLedgerEntry, b: RuneLedgerEntry): boolean {
+	return a.entryId === b.entryId && a.seasonId === b.seasonId && a.account === b.account && a.direction === b.direction
+		&& a.sourceType === b.sourceType && a.sourceKey === b.sourceKey && a.amount === b.amount
+		&& a.balanceBefore === b.balanceBefore && a.balanceAfter === b.balanceAfter;
+}
+
+export async function commitLocalDailyQuestLedger(entries: readonly RuneLedgerEntry[]): Promise<LocalDailyLedgerCommitResult> {
+	const db = await openDB();
+	return new Promise((resolve, reject) => {
+		const tx = db.transaction(['rune_ledger'], 'readwrite');
+		const store = tx.objectStore('rune_ledger');
+		const existingIds: string[] = [];
+		const missing: RuneLedgerEntry[] = [];
+		const conflictingIds: string[] = [];
+		let checked = 0;
+		for (const entry of entries) {
+			const request = store.get(entry.entryId);
+			request.onsuccess = () => {
+				if (request.result) {
+					if (sameRuneLedgerEntry(request.result as RuneLedgerEntry, entry)) existingIds.push(entry.entryId);
+					else conflictingIds.push(entry.entryId);
+				} else missing.push(entry);
+				checked++;
+				if (checked === entries.length && missing.length > 0) {
+					if (conflictingIds.length === 0) for (const candidate of missing) store.put(candidate);
+				}
+			};
+			request.onerror = () => reject(request.error);
+		}
+		tx.oncomplete = () => resolve({ appliedIds: conflictingIds.length === 0 ? missing.map(entry => entry.entryId) : [], alreadyAppliedIds: existingIds, conflictingIds });
+		tx.onerror = () => reject(tx.error);
+	});
+}
 
 export async function getRuneLedgerEntries(query: RuneLedgerEntryQuery): Promise<RuneLedgerEntry[]> {
 	const candidates = query.account
@@ -936,5 +1195,21 @@ export async function getOffersByNftUid(nftUid: string): Promise<StoredOffer[]> 
 	return new Promise((resolve) => {
 		req.onsuccess = () => resolve(req.result || []);
 		req.onerror = () => resolve([]);
+	});
+}
+
+export type PhaseMigrationRecord = { readonly migrationId: string; readonly projectionHash: string; readonly status: 'ready' | 'applied'; readonly localEconomyPromoted: false; readonly report: Extract<MigrationDecision, { status: 'ready' }> };
+export type PhaseMigrationCommit = 'applied' | 'already_applied' | 'conflict';
+export async function recordPhaseMigrationDryRun(report: MigrationDecision): Promise<PhaseMigrationCommit> {
+	if (report.status !== 'ready') throw new Error(`cannot persist migration ${report.status}`);
+	const db = await openDB();
+	return new Promise((resolve, reject) => {
+		const tx = db.transaction('phase_migrations', 'readwrite'); const store = tx.objectStore('phase_migrations');
+		const get = store.get(report.migrationId);
+		get.onsuccess = () => {
+			if (get.result) { if (get.result.projectionHash !== report.projectionHash) { resolve('conflict'); tx.abort(); } else resolve('already_applied'); return; }
+			store.put({ migrationId: report.migrationId, projectionHash: report.projectionHash, status: 'ready', localEconomyPromoted: false, report });
+		};
+		tx.oncomplete = () => resolve('applied'); tx.onerror = () => reject(tx.error);
 	});
 }

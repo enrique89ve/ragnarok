@@ -1,17 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle2, Clock, Info, RotateCcw, Wallet } from 'lucide-react';
+import { CheckCircle2, Clock, Database, Info, RotateCcw, Wallet } from 'lucide-react';
 import { useDailyQuestStore, type DailyQuest, type DailyQuestClaimFeedback } from '../../stores/dailyQuestStore';
 import { formatCountdown, useDailyResetCountdown } from '../../hooks/useDailyResetCountdown';
 import { invokeClientWalletAction } from '../../../data/wallet/clientWalletInvocation';
 import DailyQuestInfoDialog from './DailyQuestInfoDialog';
 import CeremonyEvidenceButton from '../CeremonyEvidenceButton';
 import { useNFTUsername } from '../../nft/hooks';
+import { buildRagnarokRuntimeEvidence } from '@shared/runtimeConfig';
+import { getRagnarokNetworkConfig } from '../../config/networkConfig';
+import { getDailyQuestClaimPresentation } from './dailyQuestClaimPresentation';
 
 /**
  * QuestRow — compact horizontal quest entry.
  *
  * State machine has three visible states. Completion is detected mid-match,
- * but the chain broadcast is deferred (so Keychain doesn't pop during combat).
+ * but settlement is deferred until the player explicitly commits or claims.
  *
  *   in_progress -> awaiting_claim -> claimed
  *
@@ -23,15 +26,16 @@ import { useNFTUsername } from '../../nft/hooks';
  *
  * Left edge has a 2px state strip:
  *   gold     -> in progress
- *   amber    -> completed, broadcast pending (Keychain not yet confirmed)
- *   emerald  -> chain has acknowledged the claim
+ *   amber    -> completed, local commit or Hive replay pending
+ *   emerald  -> the active authority has acknowledged the claim
  */
-function QuestRow({ quest, onReroll, onClaim, canReroll, claiming }: {
+function QuestRow({ quest, onReroll, onClaim, canReroll, claiming, claimPresentation }: {
 	quest: DailyQuest;
 	onReroll: () => void;
 	onClaim: () => void;
 	canReroll: boolean;
 	claiming: boolean;
+	claimPresentation: ReturnType<typeof getDailyQuestClaimPresentation>;
 }) {
 	const pct = Math.min((quest.progress / quest.goal) * 100, 100);
 	const isClaimed = quest.claimed;
@@ -104,10 +108,12 @@ function QuestRow({ quest, onReroll, onClaim, canReroll, claiming }: {
 							onClick={onClaim}
 							disabled={claiming}
 							className="inline-flex min-h-11 items-center gap-1.5 px-2 font-mono text-[10px] tracking-[0.18em] uppercase text-amber-300 transition-colors hover:text-gold-200 disabled:cursor-not-allowed disabled:opacity-50"
-							title="Claim completed daily quests. Hive testnet credits RUNE; local mode records the claim only."
+							title={claimPresentation.buttonTitle}
 						>
-							<Wallet size={11} strokeWidth={2} />
-							{claiming ? 'Wait' : 'Claim'}
+							{claimPresentation.icon === 'local'
+								? <Database size={11} strokeWidth={2} />
+								: <Wallet size={11} strokeWidth={2} />}
+							{claiming ? 'Wait' : claimPresentation.buttonLabel}
 						</button>
 					)}
 					{isClaimed && (
@@ -132,10 +138,17 @@ export default function DailyQuestPanel() {
 	const flushPendingClaims = useDailyQuestStore(s => s.flushPendingClaims);
 	const account = useNFTUsername();
 	const [infoOpen, setInfoOpen] = useState(false);
+	const claimPresentation = getDailyQuestClaimPresentation(
+		buildRagnarokRuntimeEvidence(getRagnarokNetworkConfig()).phasePolicy,
+	);
 
 	useEffect(() => { void refreshIfNeeded(); }, [refreshIfNeeded]);
 
 	const claimPending = () => {
+		if (claimPresentation.mode === 'local') {
+			void flushPendingClaims(null);
+			return;
+		}
 		void invokeClientWalletAction(
 			{
 				kind: 'daily_quest_claim',
@@ -156,6 +169,7 @@ export default function DailyQuestPanel() {
 					account={account}
 					quests={quests}
 					claimFeedback={claimFeedback}
+					claimPresentation={claimPresentation}
 				/>
 				{quests.map(quest => (
 					<QuestRow
@@ -165,10 +179,11 @@ export default function DailyQuestPanel() {
 						onClaim={claimPending}
 						canReroll={rerollsUsed < 1}
 						claiming={claiming}
+						claimPresentation={claimPresentation}
 					/>
 				))}
 			</div>
-			{infoOpen && <DailyQuestInfoDialog onClose={() => setInfoOpen(false)} />}
+			{infoOpen && <DailyQuestInfoDialog onClose={() => setInfoOpen(false)} claimPresentation={claimPresentation} />}
 		</>
 	);
 }
@@ -177,10 +192,12 @@ function DailyQuestClaimSummary({
 	account,
 	quests,
 	claimFeedback,
+	claimPresentation,
 }: {
 	account: string | null;
 	quests: DailyQuest[];
 	claimFeedback: DailyQuestClaimFeedback | null;
+	claimPresentation: ReturnType<typeof getDailyQuestClaimPresentation>;
 }) {
 	const completed = quests.filter(quest => quest.completed);
 	const claimable = completed.filter(quest => !quest.claimed);
@@ -193,6 +210,7 @@ function DailyQuestClaimSummary({
 		claimedCount: claimed.length,
 		totalEarnedRune,
 		claimFeedback,
+		claimPresentation,
 	});
 
 	return (
@@ -233,29 +251,32 @@ function getDailyQuestStatusCopy(input: {
 	claimedCount: number;
 	totalEarnedRune: number;
 	claimFeedback: DailyQuestClaimFeedback | null;
+	claimPresentation: ReturnType<typeof getDailyQuestClaimPresentation>;
 }): { title: string; detail: string } {
 	if (input.claimFeedback?.status === 'unavailable') {
 		return {
 			title: 'Claim unavailable in this runtime',
-			detail: input.claimFeedback.errors[0] ?? 'Daily quest RUNE claims require Hive testnet mode.',
+			detail: input.claimFeedback.errors[0] ?? 'Daily quest claims are unavailable in this runtime.',
 		};
 	}
 	if (input.claimFeedback?.status === 'claimed' && input.claimFeedback.runeEarned === 0) {
 		return {
 			title: 'Daily quests recorded locally',
-			detail: 'No RUNE until a Hive testnet Claim. Duplicate claim is a no-op.',
+			detail: input.claimPresentation.recordedDetail,
 		};
 	}
 	if (input.claimFeedback?.status === 'rejected' || input.claimFeedback?.status === 'partial') {
 		return {
 			title: input.claimFeedback.status === 'partial' ? 'Some daily rewards need attention' : 'Daily claim rejected',
-			detail: input.claimFeedback.errors[0] ?? 'Download evidence and retry after checking Keychain/replay state.',
+			detail: input.claimFeedback.errors[0] ?? (input.claimPresentation.mode === 'local'
+			? 'Download local replay evidence and retry the IndexedDB commit.'
+			: 'Download evidence and retry after checking Keychain/replay state.'),
 		};
 	}
 	if (input.claimableCount > 0) {
 		return {
 			title: `${input.totalEarnedRune} RUNE earned today`,
-			detail: `${input.claimableCount} completed slot${input.claimableCount === 1 ? '' : 's'} ready for a Posting-key claim. ${input.claimedCount} already claimed.`,
+			detail: input.claimPresentation.claimableDetail(input.claimableCount, input.claimedCount),
 		};
 	}
 	if (input.claimedCount > 0) {
@@ -266,7 +287,7 @@ function getDailyQuestStatusCopy(input: {
 	}
 	return {
 		title: 'No daily RUNE ready yet',
-		detail: 'Complete a listed quest, then claim from the row to broadcast the reward.',
+		detail: input.claimPresentation.emptyDetail,
 	};
 }
 

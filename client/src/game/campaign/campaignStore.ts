@@ -63,11 +63,13 @@ export const useCampaignStore = create<CampaignState & CampaignActions>()(
 			startMission: (missionId, difficulty) => {
 				const account = getNFTBridge().getUsername();
 				const run = createCampaignRunDraft({ account, missionId, difficulty });
-				saveCampaignRunDraft(run)
-					.catch(err => debug.warn('[campaignStore] Failed to record campaign run:', err));
+				if (run) {
+					saveCampaignRunDraft(run)
+						.catch(err => debug.warn('[campaignStore] Failed to record campaign run:', err));
+				}
 				set({
 					currentMission: missionId,
-					currentRunId: run.localRunId,
+					currentRunId: run?.localRunId ?? null,
 					currentDifficulty: difficulty,
 					bossRulesApplied: false,
 					lastRewardFeedback: null,

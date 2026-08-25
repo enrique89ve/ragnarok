@@ -1,7 +1,7 @@
 /**
  * P2P match lifecycle handlers.
  *
- * Closed-beta status: deferred. The chain handler
+ * Hive settlement status: deferred. The chain handler
  * (`applyRankedMatchSettlement`) is fully wired, but no `match_result`
  * broadcast fires here because no winner-arbiter exists yet — accepting
  * client-declared winners would let either peer claim 2 RUNE per match.
@@ -12,12 +12,13 @@
  *     transcript-verified settlement.
  *   - Update local ELO snapshot + season streak.
  *
- * Battle-end Match XP and RUNE are projected together via
- * `projectBattleEndRewards`. P2P RUNE persist stays deferred.
+ * Gameplay-only phases use the local settlement service and IndexedDB as the
+ * sole authority. Hive settlement remains deferred until the arbiter exists.
  */
 
 import { debug } from '../../../config/debugConfig';
 import { getRagnarokNetworkConfig } from '../../../config/networkConfig';
+import { buildRagnarokRuntimeEvidence } from '@shared/runtimeConfig';
 import { recordSessionEvent } from '../../../../data/blockchain/transcriptBuilder';
 import type { MatchEndContext } from '../../onWinDispatch';
 import type { MatchContext } from '../../types';
@@ -28,6 +29,12 @@ import {
 import { projectBattleEndRewards } from '../../battleEndRewards';
 import { createP2PQaLocalRewardPreview } from './qaLocalRewardPreview';
 
+export type P2PMatchEndRoute = 'local' | 'hive';
+
+export function resolveP2PMatchEndRoute(runtime: ReturnType<typeof getRagnarokNetworkConfig>): P2PMatchEndRoute {
+	return buildRagnarokRuntimeEvidence(runtime).phasePolicy.localSettlement ? 'local' : 'hive';
+}
+
 const RANKED_SETTLEMENT_MODULE = createP2PRankedSettlementModule(
 	createDefaultP2PRankedSettlementAdapters({
 		runtime: getRagnarokNetworkConfig(),
@@ -36,16 +43,27 @@ const RANKED_SETTLEMENT_MODULE = createP2PRankedSettlementModule(
 
 export function onP2PMatchEnd(ctx: MatchContext, end: MatchEndContext): void {
 	if (ctx.opponent.kind !== 'peer') return;
+	const runtime = getRagnarokNetworkConfig();
+	if (resolveP2PMatchEndRoute(runtime) === 'local') {
+		recordSessionEvent('p2p_match_end_local_settlement_pending', {
+			matchId: ctx.matchId,
+			iWon: end.iWon,
+			turnCount: end.turnCount,
+			authority: 'indexeddb-local-settlement',
+		});
+		debug.chess(`[P2P] Match ended (matchId=${ctx.matchId.slice(0, 8)}); local settlement handled by IndexedDB.`);
+		return;
+	}
 	const result = end.iWon ? 'victory' : 'defeat';
 	const battleEndRewards = projectBattleEndRewards({
 		reward: ctx.reward,
 		result,
-		runtimeStage: getRagnarokNetworkConfig().stage,
+		runtimeStage: runtime.stage,
 	});
 	const qaLocalRewardPreview = createP2PQaLocalRewardPreview({
 		match: ctx,
 		result,
-		runtime: getRagnarokNetworkConfig(),
+		runtime: runtime,
 	});
 	const rankedDecision = RANKED_SETTLEMENT_MODULE.evaluateMatchEnd(ctx, end);
 	// P2P RUNE/ELO deferred — wait for winner-arbiter (see file header).

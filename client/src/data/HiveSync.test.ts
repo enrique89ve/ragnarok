@@ -48,18 +48,21 @@ describe('HiveSync broadcastCustomJson', () => {
 			memo: 'claim "DUAT" & test',
 		});
 
-		expect(result.success).toBe(true);
-		expect(requestCustomJson).toHaveBeenCalledOnce();
+		// Local gameplay validation blocks all external broadcasts, including DUAT.
+		expect(result.success).toBe(false);
+		expect(result.error).toContain('capability_disabled');
+		expect(requestCustomJson).not.toHaveBeenCalled();
+	});
 
-		const [, customJsonId, keyType, json] = requestCustomJson.mock.calls[0];
-		expect(customJsonId).toBe(RAGNAROK_APP_ID);
-		expect(keyType).toBe('Posting');
-		expect(json).not.toContain('&quot;');
-		expect(JSON.parse(json)).toMatchObject({
-			action: 'duat_airdrop_claim',
-			app: RAGNAROK_APP_ID,
-			p: RAGNAROK_APP_ID,
-			memo: 'claim "DUAT" & test',
+	it('rejects market and NFTLox writes before username or Keychain access in local phase', async () => {
+		clearActiveHiveSession();
+		const sync = new HiveSync();
+		await expect(sync.broadcastCustomJson(RAGNAROK_APP_ID, { action: 'market_list', nft_uid: 'nft-1' })).resolves.toMatchObject({
+			success: false, error: expect.stringContaining('capability_disabled'),
 		});
+		await expect(sync.broadcastNFTLoxJson('mint', { nftId: 'nft-1' })).resolves.toMatchObject({
+			success: false, error: expect.stringContaining('capability_disabled'),
+		});
+		expect(requestCustomJson).not.toHaveBeenCalled();
 	});
 });

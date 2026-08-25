@@ -33,6 +33,7 @@ export function useP2PActions(): P2PActions {
 		},
 		sendPokerAction: () => undefined,
 		sendPokerTurnStarted: () => undefined,
+		sendSpellcraftReady: null,
 		requestPhaseCheckpoint: async () => ({ status: 'unavailable', reason: 'not_connected' }),
 		downloadSessionLog: () => undefined,
 		gameState: gsGameState,

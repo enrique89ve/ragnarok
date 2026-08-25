@@ -1,5 +1,5 @@
 /* Damage/heal number popup + target shake/flash effects.
-   Position set inline as position:fixed so viewport coords work. */
+   The React renderer supplies bounded 1920x1080 coordinates. */
 
 .damage-indicator {
   display: flex;

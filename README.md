@@ -35,18 +35,20 @@
 
 ## Current Stage
 
-Current operational stage: **Alfa Testnet**.
+Current operational stage: **Phase 1 Gameplay Validation** (`local-gameplay-v1`).
+
+See the [phase explanation](docs/TESTNET_PHASES.md), [capability matrix](docs/PROTOCOL_CAPABILITY_MATRIX.md), and [migration runbook](docs/PHASE_MIGRATION_RUNBOOK.md).
 
 This is not Closed Testnet Beta, Public Testnet, Genesis, or Mainnet. Alfa is a
 production-hosted testnet profile used to prove Dokploy, SSL/Cloudflare,
-WebSocket/P2P, runtime JSON state, admin diagnostics, and full-NFT gameplay
-mechanics before inviting a wider tester cohort.
+WebSocket/P2P, runtime JSON state, admin diagnostics, and full local gameplay
+before inviting a wider tester cohort.
 
-Current P2P scope is gameplay-only: two browsers run chess and poker while the
+Current P2P scope is gameplay-only externally: two browsers run chess and poker while the
 WebSocket relay compares deterministic roots only at phase boundaries. Matches
 do not sign or broadcast Hive `match_anchor`/`match_result`, do not trigger
-Keychain after matchmaking, and do not settle P2P RUNE, ELO, Season Score or
-CardXP. See
+Keychain after matchmaking. F1 persists complete local settlement/progression
+in IndexedDB/replay and never promotes it to Hive. See
 [`ADR 0007`](docs/adr/0007-p2p-gameplay-only-testnet.md).
 
 Hard rule: `VITE_NETWORK_STAGE` has only three valid values:
@@ -57,11 +59,10 @@ new network stages.
 | Order | Stage / phase | Runtime truth | What it proves | Not allowed | Exit gate |
 |---|---|---|---|---|---|
 | 0 | Local development | `VITE_NETWORK_STAGE=local`, `runtimePhase=local` | Private iteration, mocks, fast gameplay checks. | Tester claims, real Hive value, public readiness claims. | Focused checks for the touched area. |
-| 1 | QA Testnet Season 0 | `stage=testnet`, `runtimePhase=qa-season-0`, reset epoch `qa-s0-*` | Resettable full-catalog rehearsal, evidence exports, RUNE/pack/campaign/P2P smoke paths. | NFT ownership claims, CardXP, ELO, Season Score, mainnet value. | Week-one evidence matrix complete, including P2P pass or captured blocker. |
-| 2 | Alfa Testnet (current) | `stage=testnet`, `runtimePhase=alfa-testnet`, reset epoch `alfa-testnet-*`, JSON state | Hosted runtime plus the playable loop: single, one Norse campaign mission, and two-browser P2P all finish chess↔poker→`game_over`; poker HUD readable; daily quest claimable. | Closed Beta invites, mainnet acceptance, permanent value, NFTLoX custody claims, ranked P2P RUNE. | **Alfa Player-Ready** in [`docs/TESTNET_READINESS_FAST_TRACK.md`](docs/TESTNET_READINESS_FAST_TRACK.md): runtime health + spine in three modes + poker readability + daily claim. |
-| 3 | Closed Testnet Beta | `stage=testnet`, `runtimePhase=closed-beta`, reset epoch `closed-beta-*`, `qaFullCatalogEnabled=false` | Limited testers with Hive/Keychain, resettable testnet ownership, starter/DUAT/RUNE pack gates, campaign/daily RUNE. | P2P ranked RUNE, official ELO/Season Score, public season, permanent value. | `closedBetaCutover.inviteBlocked=false`, NFTLoX collection proof, two-browser P2P smoke, operator sign-off. |
-| 4 | Genesis / mainnet rehearsal | `stage=mainnet` in a controlled rehearsal | Multisig ceremony, irreversible replay, pack minting, seal lifecycle, production indexer behavior. | Treating rehearsal balances as final user value. | Tabletop rehearsal, hash bundle, post-seal replay validation. |
-| 5 | Mainnet | `VITE_NETWORK_STAGE=mainnet`, `runtimePhase=mainnet`, `economic=true` | Permanent ownership and economy. | Resettable shortcuts, QA catalog, testnet protocol ids. | Only after Genesis gates are closed. |
+| 1 | QA Season 0 / Alfa / generic testnet | `stage=testnet`, `runtimePhase=qa-season-0|alfa-testnet|generic-testnet`, `phaseId=local-gameplay-v1` | Single, campaign, daily quests, P2P and complete local replay progression. | Hive wallet invocation, packs, marketplace, NFTLox writes and official ranking. | Local settlement evidence plus zero external output; deployed smoke remains pending. |
+| 2 | Closed Testnet Beta | `stage=testnet`, `runtimePhase=closed-beta`, `phaseId=hive-testnet-v1` | Hive replay and explicit wallet flows where enabled. | Marketplace, packs, NFTLox writes and official ranking remain disabled by policy. | F2 operator/runtime sign-off; no F3 claims. |
+| 3 | Genesis / mainnet rehearsal | `stage=mainnet` in a controlled rehearsal | Multisig ceremony, irreversible replay, pack minting, seal lifecycle, production indexer behavior. | Treating rehearsal balances as final user value. | Tabletop rehearsal, hash bundle, post-seal replay validation. |
+| 4 | Mainnet | `VITE_NETWORK_STAGE=mainnet`, `runtimePhase=mainnet`, `phaseId=mainnet-v1` | Permanent canonical ownership and economy after Genesis gates. | Resettable shortcuts, QA catalog, testnet protocol ids. | Production approval and post-seal validation. |
 
 The active readiness plan lives in
 [`docs/TESTNET_READINESS_FAST_TRACK.md`](docs/TESTNET_READINESS_FAST_TRACK.md).
@@ -113,10 +114,13 @@ Five mythological pantheons clash for supremacy. Norse frost giants wage war aga
 - **Card evolution** — 3 tiers: Mortal (60-70%) → Ascended (80-90%) → Divine (100%)
 - **Daily quest system** — 19 quest templates, 3 active per day
 - **Pack opening** — commit-reveal with delayed irreversible Hive block entropy (anti-grind, anti-selective-reveal)
-- **RUNE rewards** — testnet S01 caps are declared in protocol; campaign and daily quest RUNE are active in closed-beta scope, while P2P ranked RUNE remains disabled until ADR 0008 (winner-posted `match_result` + replay) is activated
+- **RUNE rewards** — F1 campaign, daily and P2P RUNE are local replay projections; Hive/canonical RUNE is F2/F3 policy-gated.
 - **Eitr crafting** — dissolve cards to see Eitr value (display only in v1 — forging and Eitr trading disabled until replay-derived)
 
-### Blockchain (Hive Layer 1 — Protocol v1.2)
+### Blockchain (Hive Layer 1 — Protocol v1.2, F3-enabled surfaces)
+
+These protocol, marketplace and pack implementations are present behind phase
+gates; they are not active F1 tester surfaces. F1 uses local replay/IndexedDB.
 - **Reader-defined L1 asset protocol** — canonical state derived from irreversible Hive block replay, not a smart contract
 - **29 canonical operations** — v1.0 base (14 ops) + v1.1 pack NFTs & DNA lineage (6 ops) + v1.2 marketplace & DUAT (9 ops)
 - **Shared replay core** — one isomorphic protocol engine used by both browser and server (no duplicate validation)
@@ -485,37 +489,54 @@ Playable entry routes:
 - `/#/campaign` — campaign chapter and mission flow; staged missions launch `/#/game/campaign`.
 - `/#/multiplayer` remains a direct lobby/compatibility entry for challenges and old tester links. It consumes a ready Warband and redirects to `/#/warband?mode=multiplayer` when loadout state is missing.
 
-Runtime profile is explicit:
+Runtime profile is explicit. Local work uses two lanes: `dev` is the guest
+workshop; `dev:alfa-testnet` is how the launched Alfa feels (Hive login, no
+guest ledger). `dev:testnet` is generic/QA from `.env.testnet`, not the launch.
 
 ```bash
-pnpm run dev             # local private development
-pnpm run dev:testnet     # shared resettable beta profile from .env.testnet
+pnpm run dev              # local workshop: Single without Keychain
+pnpm run dev:alfa-testnet # launch replica (Keychain + alfa-testnet-* epoch)
+pnpm run dev:testnet      # generic/QA testnet from .env.testnet (not Alfa)
 pnpm run build:alfa-testnet # production Alfa Testnet bundle, stage=testnet
 pnpm run start:alfa-testnet # built server with Alfa Testnet JSON state
-pnpm run build:mainnet   # production browser bundle from .env.mainnet
-pnpm run start:mainnet   # built server with .env.mainnet
+pnpm run build:mainnet    # production browser bundle from .env.mainnet
+pnpm run start:mainnet    # built server with .env.mainnet
 ```
 
-Copy `.env.testnet.example` to `.env.testnet` for generic testnet, QA Season 0,
-or Closed Testnet Beta work; set the reset epoch deliberately for the phase you
-are testing. Dokploy Alfa uses `docker-compose.dokploy.yml`; the image bakes
-the public profile, so `.env.alfa-testnet.example` is secrets-only. Copy
-`.env.mainnet.example` to `.env.mainnet` for mainnet release rehearsals.
-`VITE_NETWORK_STAGE` is the source of truth; `VITE_DATA_LAYER_MODE` and
-`VITE_BLOCKCHAIN_PACKAGING` are debug overrides, not normal profile switches.
-Alfa Testnet still uses `VITE_NETWORK_STAGE=testnet`; `alfa-testnet` is only the
-reset epoch/release alias and should persist state to JSON.
-For resettable shared phases, set `VITE_RAGNAROK_RESET_EPOCH` deliberately
-before testers start. A new epoch isolates IndexedDB, localStorage stores,
-service-worker caches, RUNE/DUAT projections, action logs, and decks from any
-previous QA or beta wipe.
+Copy `.env.testnet.example` to `.env.testnet` for generic/QA testnet (not Alfa).
+Copy `.env.mainnet.example` to `.env.mainnet` for mainnet rehearsals.
+`VITE_NETWORK_STAGE` is `local | testnet | mainnet`. Alfa is
+`stage=testnet` plus reset epoch `alfa-testnet-*`. Do not set
+`VITE_DATA_LAYER_MODE` or `VITE_BLOCKCHAIN_PACKAGING` in launch env files.
+
+Rotating `VITE_RAGNAROK_RESET_EPOCH` is a wipe (new IndexedDB/JSON namespace),
+not a restart. Keep the `VITE_*` / `RAGNAROK_*` fingerprint pair equal.
+
+### Dokploy Environment tab
+
+Alfa on Dokploy uses `docker-compose.dokploy.yml`. Load env **from the
+Dokploy Environment UI** (it writes `.env` next to Compose):
+
+1. Paste [`.env.alfa-testnet.example`](.env.alfa-testnet.example) into the tab.
+2. Set `P2P_CHALLENGE_SIGNING_SECRET` (32+ chars; keep it stable across redeploys).
+3. Leave the fingerprint block unchanged (`testnet` /
+   `rk_game_testnet` / `alfa-testnet-full-nft-2026-05-22`).
+4. Do not add `VITE_DATA_LAYER_MODE`, `VITE_BLOCKCHAIN_PACKAGING`, or NFTLox.
+
+Blank fingerprint fields fall back to those baked defaults
+(`${VAR:-}` in Compose). The tab does **not** rebuild the browser bundle: the
+image already baked the epoch. Changing the epoch only in the UI desyncs JS
+from Node. To wipe, rebuild the image and keep the tab in sync.
+
+Full operator notes: [`docs/DOKPLOY_DEPLOYMENT.md`](docs/DOKPLOY_DEPLOYMENT.md).
 
 ### Commands
 
 | Command | Description |
 |---------|-------------|
-| `pnpm run dev` | Local development server (Vite + Express) |
-| `pnpm run dev:testnet` | Testnet development server using `.env.testnet` |
+| `pnpm run dev` | Local workshop (guest Single, no Keychain). Not the Alfa launch. |
+| `pnpm run dev:alfa-testnet` | Local replica of the launched Alfa. Requires Hive Keychain. |
+| `pnpm run dev:testnet` | Generic/QA testnet from `.env.testnet`. Not the Alfa fingerprint. |
 | `pnpm run dev:mainnet` | Mainnet-profile local smoke using `.env.mainnet` |
 | `pnpm run build` | Production build |
 | `pnpm run build:alfa-testnet` | Alfa Testnet production build with `stage=testnet` and an `alfa-testnet-*` reset epoch |
@@ -645,7 +666,7 @@ server/
 
 Status 2026-08-20. Code-complete is not the same as human/operator evidence.
 
-**Alfa Player-Ready — already in the tree**
+**F1 Gameplay Validation — code path in the tree; operational browser smoke pending**
 
 - [x] One coordinator owns single / campaign / P2P (`RagnarokGameCoordinator`).
 - [x] Match-end owner is `matchEndController` (chess terminal, hero HP=0, Leave Match).
@@ -654,16 +675,16 @@ Status 2026-08-20. Code-complete is not the same as human/operator evidence.
 - [x] Poker actions labeled (Bet/Call/Raise/Fold/All in + HP).
 - [x] Home funnel: primary CTA is starter or campaign; PvP copy is gameplay-only.
 - [x] Warband and game-over expose a primary CTA (Launch Battle / Play Again / Continue the Saga).
-- [x] Daily quest local Claim: `claimed` / `already_claimed`, no RUNE until Hive.
+- [x] Daily quest local settlement: atomic IDB RUNE ledger, `claimed` only after commit, no Hive claim.
 - [x] P2P local snapshot + rejoin code (`docs/P2P_MATCH_RESUME.md`).
-- [x] ADR 0007 gameplay-only: no `match_anchor` / `match_result` / ranked P2P RUNE during Alfa.
+- [x] F1 local settlement: local anchors/results, RUNE, ELO, SeasonScore, CardXP and level-ups; zero Hive output.
 
 **Alfa Player-Ready — still open**
 
 - [ ] Prove the deployed Alfa runtime through `/api/health`, `/api/admin/config`, and `/api/admin/p2p/status`: `stage=testnet`, `runtimePhase=alfa-testnet`, `resetEpoch=alfa-testnet-*`, `qaFullCatalogEnabled=false`, JSON state evidence.
 - [ ] Complete Hive/Keychain smoke with an internal testnet account (login before matchmaking; zero match-driven prompts).
 - [ ] Win norse-1 first-clear (not abandon) and confirm replay does not pay extra RUNE.
-- [ ] Daily quest Claim against Hive testnet (local path already works).
+- [ ] Future F2 explicit Hive claim/replay activation (not an F1 gate).
 - [ ] Poker arena visual pass at 1366x768, 1920x1080, ultrawide, and mobile landscape.
 - [ ] One `getCardById` helper (stop the `allCards` vs `cardManagement/cardRegistry` split). Do not merge the files this phase.
 - [ ] Complete the gameplay-only two-browser P2P smoke: quiet chess move,
@@ -672,13 +693,13 @@ Status 2026-08-20. Code-complete is not the same as human/operator evidence.
   result operation, and export JSON.
 - [ ] Re-run `bash scripts/p2p-ticket-security-check.sh` on the tree that will deploy.
 
-**Closed Testnet Beta — blocked until Alfa Player-Ready**
+**F2 Closed Testnet — future Hive replay profile; not an F1 gate**
 
-- [ ] Create and prove the Ragnarok NFTLoX testnet collection/schema before Closed Beta invites.
-- [ ] Rotate to a `closed-beta-*` reset epoch and prove `closedBetaCutover.inviteBlocked=false` only after NFTLoX proof, Hive/Keychain smoke, two-browser P2P smoke, and operator sign-off env evidence are set.
+- [ ] Future: activate a `closed-beta-*` F2 epoch and complete explicit replay/operator sign-off.
 
 Keep P2P `match_anchor`/`match_result`, ranked RUNE, official ELO, Season
-Score and CardXP dark. Winner arbitration and Hive settlement are a later
+Score and CardXP dark externally/officially; F1 keeps local projections active.
+Winner arbitration and Hive settlement are a later
 release track ([ADR 0008](docs/adr/0008-winner-posted-match-result.md)), not a
 blocker for the gameplay-only smoke.
 

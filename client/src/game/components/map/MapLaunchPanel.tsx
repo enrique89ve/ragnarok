@@ -37,8 +37,8 @@ export default function MapLaunchPanel({
 	const totalLinks = Math.round(realms.reduce((total, realm) => total + realm.connections.length, 0) / 2);
 
 	return (
-		<aside className="min-h-0 overflow-hidden rounded-xl border border-gold-300/25 bg-obsidian-950/88 text-ink-0 shadow-[0_28px_90px_-55px_rgba(0,0,0,0.95)] backdrop-blur-md">
-			<div className="grid h-full content-start gap-3 overflow-y-auto p-3 [scrollbar-width:thin]">
+		<aside className="atlas-launch-panel min-h-0 overflow-hidden rounded-xl border border-gold-300/25 bg-obsidian-950/88 text-ink-0 shadow-[0_28px_90px_-55px_rgba(0,0,0,0.95)] backdrop-blur-md">
+			<div className="atlas-launch-panel-scroll grid h-full content-start gap-3 overflow-y-auto p-3 [scrollbar-width:thin]">
 				<section className="rounded-lg border border-obsidian-700/80 bg-obsidian-900/68 p-3">
 					<div className="flex items-start justify-between gap-3">
 						<div>

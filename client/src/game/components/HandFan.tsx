@@ -16,7 +16,7 @@ import { useElementalBuff } from '../combat/hooks/useElementalBuff';
 import { CardDrawAnimation } from './CardDrawAnimation';
 import { CardPlayAnimation } from './CardPlayAnimation';
 import { MAX_BATTLEFIELD_SIZE } from '../constants/gameConstants';
-import { canPlayHandCard } from './handFanPlayability';
+import { canPlayHandCard, getHandCardAriaLabel } from './handFanPlayability';
 import './HandFan.css';
 
 interface HandFanProps {
@@ -24,6 +24,7 @@ interface HandFanProps {
   currentMana: number;
   heroHealth: number;
   isPlayerTurn: boolean;
+  isPlayWindowOpen: boolean;
   onCardPlay?: (card: CardInstance, position?: Position) => void;
   isInteractionDisabled?: boolean;
   registerCardPosition?: (card: CardInstance, position: Position) => void;
@@ -45,6 +46,7 @@ export const HandFan = React.memo<HandFanProps>(({
   currentMana,
   heroHealth,
   isPlayerTurn,
+  isPlayWindowOpen,
   onCardPlay,
   isInteractionDisabled = false,
   registerCardPosition,
@@ -245,6 +247,7 @@ export const HandFan = React.memo<HandFanProps>(({
         const canPlay = canPlayHandCard({
           isPlayerTurn,
           isInteractionDisabled,
+          isPlayWindowOpen,
           boardFull,
           meetsPetEvolution,
           isBloodMode,
@@ -263,7 +266,12 @@ export const HandFan = React.memo<HandFanProps>(({
             style={getCardStyle(index)}
             tabIndex={0}
             role="button"
-            aria-label={`${card.card.name}, ${manaCost} mana. Enter for details. Space to play.`}
+            aria-label={getHandCardAriaLabel({
+              cardName: card.card.name,
+              manaCost,
+              canPlay,
+              isPlayWindowOpen,
+            })}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
@@ -275,7 +283,7 @@ export const HandFan = React.memo<HandFanProps>(({
                 e.preventDefault();
                 if (canPlay) {
                   handleCardPlay(card);
-                } else if (isPlayerTurn && !isInteractionDisabled) {
+                } else if (isPlayWindowOpen && isPlayerTurn && !isInteractionDisabled) {
                   triggerCardShake(card.instanceId);
                   playSound('error');
                   if (isBloodMode && bloodCost) {

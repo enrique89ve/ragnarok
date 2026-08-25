@@ -1,4 +1,4 @@
-import { Router, type Request, type Response } from 'express';
+import { Router, type NextFunction, type Request, type Response } from 'express';
 import {
 	requireHiveBodyAuth,
 	type HiveAuthenticatedRequest,
@@ -7,8 +7,10 @@ import {
 	hasStarterCeremonyClaim,
 	setStarterCeremonyClaim,
 } from '../services/starterClaimRegistry';
-import { normalizeHiveUsername } from '../../shared/p2pAvailability';
-import { buildStarterClaimAuthMessage } from '../../shared/starterClaimAuth';
+import { isValidAvailabilityHiveUsername, normalizeHiveUsername } from '../../shared/p2pAvailability';
+import { buildRagnarokRuntimeEvidence } from '../../shared/runtimeConfig';
+import { buildStarterClaimAuthMessage, resolveStarterClaimAuthMode } from '../../shared/starterClaimAuth';
+import { getRagnarokServerRuntimeConfig } from '../services/runtimeConfig';
 
 const router = Router();
 
@@ -19,7 +21,33 @@ const starterClaimAuth = requireHiveBodyAuth({
 	usernameErrorStatus: 401,
 });
 
-router.post('/claim', starterClaimAuth, async (req: HiveAuthenticatedRequest, res: Response) => {
+function authorizeStarterClaim(req: Request, res: Response, next: NextFunction): void {
+	const policy = buildRagnarokRuntimeEvidence(getRagnarokServerRuntimeConfig()).phasePolicy;
+	if (resolveStarterClaimAuthMode(policy) === 'hive-body-auth') {
+		starterClaimAuth(req, res, next);
+		return;
+	}
+
+	const rawUsername: unknown = req.body?.username;
+	if (typeof rawUsername !== 'string') {
+		res.status(400).json({ success: false, error: 'username required' });
+		return;
+	}
+	const username = normalizeHiveUsername(rawUsername);
+	if (!username) {
+		res.status(400).json({ success: false, error: 'username required' });
+		return;
+	}
+	if (!isValidAvailabilityHiveUsername(username)) {
+		res.status(400).json({ success: false, error: 'Invalid Hive username format' });
+		return;
+	}
+	const authenticatedRequest = req as HiveAuthenticatedRequest;
+	authenticatedRequest.hiveUsername = username;
+	next();
+}
+
+router.post('/claim', authorizeStarterClaim, async (req: HiveAuthenticatedRequest, res: Response) => {
 	const authenticatedUsername = req.hiveUsername;
 	if (!authenticatedUsername) {
 		res.status(401).json({ success: false, error: 'Hive authentication required' });

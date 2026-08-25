@@ -11,6 +11,28 @@ import { parseEffect } from '../data/effects/effectSchema';
 import { debug } from '../config/debugConfig';
 
 type EffectSlot = 'battlecry' | 'deathrattle' | 'spellEffect';
+type MalformedEffectIssue = {
+	readonly cardId: number;
+	readonly slot: EffectSlot;
+	readonly effectType: string;
+	readonly reason: string;
+};
+
+const MAX_MALFORMED_TYPE_GROUPS = 5;
+const MAX_MALFORMED_SAMPLES = 3;
+const MAX_DIAGNOSTIC_TEXT_LENGTH = 80;
+
+const STARTER_LIVE_ONLY_EFFECTS: Readonly<Record<number, Partial<Record<EffectSlot, string>>>> = {
+	102: { battlecry: 'conditional_buff_self' },
+	107: { spellEffect: 'damage_and_freeze' },
+	118: { spellEffect: 'damage_based_on_armor' },
+	119: { spellEffect: 'draw_per_damaged' },
+	129: { spellEffect: 'heal_all_friendly' },
+	138: { spellEffect: 'buff_weapon' },
+	139: { spellEffect: 'damage_all_and_draw' },
+	142: { battlecry: 'discover' },
+	143: { spellEffect: 'heal_and_draw' },
+};
 
 const CARD_TYPE_MAP: Record<string, number> = {
 	minion: 0, spell: 1, weapon: 2, hero: 3,
@@ -26,10 +48,55 @@ const HERO_CLASS_MAP: Record<string, number> = {
 	Necromancer: 10, Berserker: 11, DeathKnight: 12,
 };
 
+function diagnosticText(value: string): string {
+	return value.length <= MAX_DIAGNOSTIC_TEXT_LENGTH
+		? value
+		: `${value.slice(0, MAX_DIAGNOSTIC_TEXT_LENGTH - 1)}…`;
+}
+
+function createMalformedEffectReporter(): {
+	report(issue: MalformedEffectIssue): void;
+	emit(): void;
+} {
+	let total = 0;
+	let otherTypeCount = 0;
+	const typeCounts = new Map<string, number>();
+	const samples: MalformedEffectIssue[] = [];
+
+	return {
+		report(issue) {
+			total += 1;
+			const knownCount = typeCounts.get(issue.effectType);
+			if (knownCount !== undefined) {
+				typeCounts.set(issue.effectType, knownCount + 1);
+			} else if (typeCounts.size < MAX_MALFORMED_TYPE_GROUPS) {
+				typeCounts.set(issue.effectType, 1);
+			} else {
+				otherTypeCount += 1;
+			}
+			if (samples.length < MAX_MALFORMED_SAMPLES) samples.push(issue);
+		},
+		emit() {
+			if (total === 0) return;
+			const typeSummary = [
+				...Array.from(typeCounts, ([effectType, count]) => `${diagnosticText(effectType)}:${count}`),
+				...(otherTypeCount > 0 ? [`other:${otherTypeCount}`] : []),
+			].join(',');
+			const sampleSummary = samples.map(issue =>
+				`card=${issue.cardId} slot=${issue.slot} type=${diagnosticText(issue.effectType)} reason=${diagnosticText(issue.reason)}`,
+			).join(' | ');
+			debug.warn(
+				`[cardDataExporter] Skipped ${total} malformed legacy effect${total === 1 ? '' : 's'} during WASM export; cards were committed without those effects. types=${typeSummary}; samples=${sampleSummary}`,
+			);
+		},
+	};
+}
+
 function mapEffectToPattern(
 	effect: BattlecryEffect | DeathrattleEffect | SpellEffect | undefined,
 	cardId: number,
 	slot: EffectSlot,
+	reportMalformed: (issue: MalformedEffectIssue) => void,
 ): {
 	pattern: string; value: number; value2: number;
 	targetType: string; condition: string; cardId: number; count: number;
@@ -44,7 +111,20 @@ function mapEffectToPattern(
 	// (skip the effect) — the warn raises visibility without a hard break.
 	const parsed = parseEffect(effect);
 	if (!parsed.ok) {
-		debug.warn(`[cardDataExporter] Skipping malformed effect (card=${cardId} slot=${slot}): ${parsed.reason}`);
+		// The generic WASM effect interpreter is an export boundary, not the live
+		// cards dispatcher. These exact starter composites have deterministic live
+		// utility coverage and stay out of EffectSchema until AssemblyScript gains
+		// equivalent semantics.
+		if (STARTER_LIVE_ONLY_EFFECTS[cardId]?.[slot] === effect.type) {
+			debug.verbose(`[cardDataExporter] Starter live-only effect omitted from WASM export (card=${cardId} slot=${slot})`);
+			return null;
+		}
+		reportMalformed({
+			cardId,
+			slot,
+			effectType: effect.type,
+			reason: parsed.reason,
+		});
 		return null;
 	}
 
@@ -74,6 +154,7 @@ export interface WasmCardLoader {
 
 export function exportCardDataToWasm(cards: CardData[], loader: WasmCardLoader): number {
 	loader.clearCardData();
+	const malformedEffects = createMalformedEffectReporter();
 
 	for (const card of cards) {
 		const id = typeof card.id === 'number' ? card.id : parseInt(String(card.id), 10);
@@ -108,22 +189,23 @@ export function exportCardDataToWasm(cards: CardData[], loader: WasmCardLoader):
 		}
 
 		if ('battlecry' in card) {
-			const bc = mapEffectToPattern(card.battlecry as BattlecryEffect, id, 'battlecry');
+			const bc = mapEffectToPattern(card.battlecry as BattlecryEffect, id, 'battlecry', malformedEffects.report);
 			if (bc) loader.setCardBattlecry(bc.pattern, bc.value, bc.value2, bc.targetType, bc.condition, bc.cardId, bc.count);
 		}
 
 		if ('deathrattle' in card) {
-			const dr = mapEffectToPattern(card.deathrattle as DeathrattleEffect, id, 'deathrattle');
+			const dr = mapEffectToPattern(card.deathrattle as DeathrattleEffect, id, 'deathrattle', malformedEffects.report);
 			if (dr) loader.setCardDeathrattle(dr.pattern, dr.value, dr.value2, dr.targetType, dr.condition, dr.cardId, dr.count);
 		}
 
 		if ('spellEffect' in card) {
-			const se = mapEffectToPattern(card.spellEffect as SpellEffect, id, 'spellEffect');
+			const se = mapEffectToPattern(card.spellEffect as SpellEffect, id, 'spellEffect', malformedEffects.report);
 			if (se) loader.setCardSpellEffect(se.pattern, se.value, se.value2, se.targetType, se.condition, se.cardId, se.count);
 		}
 
 		loader.commitCard();
 	}
+	malformedEffects.emit();
 
 	return loader.getCardCount();
 }

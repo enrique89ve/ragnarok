@@ -2,6 +2,14 @@
 
 This context defines the release language for taking Ragnarok from internal development into a closed, resettable community test.
 
+## Current canonical phase correction
+
+F1 is `local-gameplay-v1`: local replay/IndexedDB is authority for complete
+local RUNE, ELO, SeasonScore, CardXP and level-ups. There is no F1 wallet Claim,
+Hive replay dependency, Hive output, outbox or NFTLox write. Any later section
+using “preview”, “display-only”, “QA reward feedback” or Hive Claim describes a
+historical/future F2/F3 design and does not override the current phase matrix.
+
 ## Language
 
 **Testnet**:
@@ -11,20 +19,25 @@ _Avoid_: Production, mainnet, permanent economy
 **Gameplay-only P2P Testnet**:
 The current P2P slice: both browsers run chess and poker, and the WebSocket
 relay compares opaque deterministic roots only at phase changes. The match
-shows a local terminal result but does not sign or broadcast `match_anchor` or
-`match_result`, open Keychain after matchmaking, or mutate P2P RUNE, ELO,
-Season Score, CardXP, NFTLox progress, or ownership.
+shows a local terminal result but does not sign or broadcast Hive
+`match_anchor` or `match_result`, or open Keychain after matchmaking. F1 local
+replay persists RUNE, ELO, Season Score, CardXP, level-ups and local
+anchor/result evidence in IndexedDB; these resettable projections never become
+Hive, NFTLox or official ownership/ranking state.
 _Avoid_: Ranked settlement, official winner, on-chain result, server gameplay judge
 
 **QA Testnet Season 0**:
-A resettable Testnet rehearsal that uses a separate Hive protocol id, fresh index start, and real replay-derived RUNE while deliberately granting testers full-catalog gameplay access for mechanics coverage. Its card access is a QA entitlement, not ownership, and it must not validate NFT custody, scarcity, marketplace value, or official ranking.
+A resettable F1 gameplay-validation profile (`local-gameplay-v1`) with local
+replay/IndexedDB RUNE, ELO, SeasonScore, CardXP and level-up projections. Its
+card access is a QA entitlement, not ownership; Hive replay/canonical economy
+is a later F2/F3 profile.
 _Avoid_: Local sandbox, mainnet season, NFT ownership test, public beta
 
 **Testnet Reset Epoch**:
 The explicit identity of a resettable test phase. It binds the Hive protocol id, index start boundary, season start, collection id, and browser/server projection namespace into one reset contract so old local projections cannot bleed into a new QA or beta phase.
 _Avoid_: Hardcoded cache buckets, manual browser cleanup, reusing local projections across reset phases
 
-**QA Local Reward Feedback**:
+**QA Local Reward Feedback (historical name)**:
 The reset-epoch-scoped UX calculation shown after QA full-catalog P2P results so testers can validate victory rewards before winner-arbiter settlement. It may calculate and display projected winner RUNE from the current testnet season constants and local/profile XP from the P2P reward channel. If retained after display, it may live only in browser/profile QA state. It must not create a RUNE ledger entry, update `/api/chain/*`, update CardXP/`level_up`/NFTLox `mutableData`, affect Season Score, or become marketplace/ownership evidence.
 _Avoid_: Local wallet credit, NFT XP, NFTLox data mutation, ranked settlement, mainnet reward history
 
@@ -33,8 +46,8 @@ The static, adapter-ready math for Match XP and instance CardXP. Rates and proje
 CardXP belongs to the genesis NFT `uid`, not to the player account and not to `cardId`. A `card_transfer` or marketplace sale changes `owner` only; `xp` and `level` stay on the instance. Burn destroys the uid and that XP with it. A new forge/pack mint starts at `xp: 0`. Derived level is capped at `MAX_CARD_LEVEL` (3); the XP counter may keep growing past the last threshold. The 1→2 step is 5 ranked wins; the 2→3 step is four times that, so Divine is the long grind.
 _Avoid_: Magic XP numbers in UI, client-only gain formulas, paying CardXP to starter or QA authorities, resetting XP on sale, treating CardXP as account-bound like RUNE
 
-**Testnet Local Reward Feedback**:
-The Alfa/closed-beta game-over display of the battle-end projection so the winner can see Match XP and projected RUNE without Hive. CardXP stays `0` until instance uids persist through `match_result`. It must not write Hive, `/api/chain/*`, `level_up`, NFTLox `mutableData`, or Season Score, and must not be treated as ranked settlement.
+**Testnet Local Reward Feedback (historical name)**:
+The old Alfa/closed-beta display term. F1 now commits local replay settlement and CardXP/level-ups; it still must not write Hive, `/api/chain/*`, NFTLox `mutableData`, or official Season Score.
 _Avoid_: Crediting RUNE on Alfa, writing CardXP, calling the modal an official wallet credit
 
 **Closed Testnet Beta**:
@@ -50,7 +63,7 @@ The complete tester-facing loop of local play, P2P play, turns, combat, victory,
 _Avoid_: Full catalog audit, every card validated, final balance
 
 **Alfa Player-Ready**:
-The current finish line for shipping Ragnarok to more internal hands. It is true only when **single**, one Norse campaign mission, and two-browser P2P all complete the **Playable Match Spine**, the poker board and tester funnel are readable without external explanation, daily quests can be claimed after a match, Hive Keychain is used only for pre-match login or an explicit daily-quest Claim, and the deployed Alfa runtime proves health/admin/P2P readiness. It is not Closed Testnet Beta, Public Testnet Beta, or mainnet.
+The current finish line for shipping Ragnarok to more internal hands. It is true only when **single**, one Norse campaign mission, and two-browser P2P complete the **Playable Match Spine**, local daily/campaign/P2P settlement is persisted, and the deployed runtime proves health/admin/P2P readiness. F1 permits login before matchmaking only; no Claim wallet invocation occurs.
 _Avoid_: Finished game, ranked launch, settlement complete, every OPEN in the wire spec closed, all 49 campaign missions, deleting every unused file
 
 **Playable Match Spine**:
@@ -91,22 +104,22 @@ _Avoid_: Using the receipt as poker or `game_over` authority, recovering from mi
 - **Gameplay-only P2P Testnet** is the active P2P validation slice and follows
   [`ADR 0007`](docs/adr/0007-p2p-gameplay-only-testnet.md); ranked settlement is
   a later slice.
-- **QA Testnet Season 0** may run before **Closed Testnet Beta** to stress gameplay with full-catalog access while still using resettable Hive replay and RUNE.
+- **QA Testnet Season 0** and Alfa use F1 local replay/IndexedDB; F2 Hive replay is a later profile.
 - Every resettable QA or beta phase must declare a **Testnet Reset Epoch** before testers start.
 - A **Public Testnet Beta** follows a successful **Closed Testnet Beta**.
 - **Testnet** state is reset before mainnet and does not create permanent ownership or rewards.
 - **QA Testnet Season 0** does not prove NFT custody or player ownership because its card access is intentionally broader than **NFT Custody**.
 - Client-local replay, tester progress, and operational projections must be isolated by **Testnet Reset Epoch** rather than cleaned manually between phases.
-- **QA Local Reward Feedback** may run only inside the QA full-catalog reset epoch. It is UX rehearsal for reward math, not **RUNE Ledger Protocol**, **NFTLox Progress Mirror**, or official ranking.
-- **Testnet Local Reward Feedback** may run on resettable non-economic testnet P2P (Alfa or Closed Testnet Beta) so the winner sees Match XP and projected RUNE in the game-over modal. It is display-only and not a ledger credit.
+- **QA Local Reward Feedback** is historical terminology; F1 local settlement is actual local ledger/progression, never canonical Hive/NFTLox state.
+- **Testnet Local Reward Feedback** is a historical UI term. F1 now commits local replay RUNE/progression; it remains non-canonical and never a Hive ledger credit.
 - **XP Economy Protocol** is the only place Match XP and CardXP rates are defined. Preview adapters calculate; Hive adapters persist later.
-- Campaign and P2P battle-end fire Match XP and RUNE together via `projectBattleEndRewards`. The channels stay independent; **single** pays neither.
+- Campaign, daily and P2P battle-end commit local Match XP/RUNE projections via replay; the channels stay independent; **single** pays neither.
 - Any QA local reward cache must be keyed by stage, protocol id, reset epoch, account, and match id, and must be ignored or purged on stage/epoch/account change so QA feedback cannot leak into Closed Testnet Beta, NFTLox custody, or mainnet.
 - The **Playable Beta Flow** must be stable before **Closed Testnet Beta** opens.
 - **Alfa Player-Ready** is the shortest definition of "the game is finished enough to play." Ranked settlement, NFTLoX custody proof, and Closed Testnet Beta come after that spine is proven.
 - The **Playable Match Spine** is required in **single**, one campaign mission, and P2P. The **Chess-Poker P2P Spine** is that same loop plus **Phase Checkpoint** agreement.
 - **Match Mode Frontier** keeps those three flows behind `MatchContext`. Chess and poker rules stay mode-agnostic; single, campaign, and P2P only change opponent, reward, and flow.
-- Daily quest Claim is a tester ceremony after the match. In-match card quests are a separate mechanic and are not an Alfa gate.
+- Daily quest local commit is part of F1 validation after the match; no wallet Claim is required. In-match card quests are a separate mechanic.
 - **Instant Kill Capture** never enters poker. Kings do not capture; capturing the king wins immediately. **Poker Combat Capture** is hero vs hero only (knight, bishop, rook, queen) and always enters poker through `pendingCombat` and a **Phase Checkpoint** on `chess → poker_combat`.
 - Poker resolution writes HP/stamina back onto the same chess pieces, then a **Phase Checkpoint** on `poker_combat → chess` must commit before chess inputs resume.
 - `game_over` is legal from chess or poker only after the terminal **Phase Checkpoint**. The displayed winner is local test evidence, not **Anti-Cheat Protocol** settlement.
@@ -234,7 +247,7 @@ _Avoid_: `/api/testnet/rune/*`, duplicate RUNE read sources, client-authored RUN
 > **Domain expert:** "No — it means the **Playable Beta Flow** works end-to-end. Exhaustive card validation is work for beta feedback and targeted fixes."
 
 > **Dev:** "How do we finish Ragnarok as soon as possible?"
-> **Domain expert:** "Finish now means **Alfa Player-Ready**. Prove the **Playable Match Spine** in **single**, one Norse campaign mission, and two-browser P2P, make the poker board readable, keep Keychain off the match path except daily-quest Claim, freeze dual sources of truth, and ship the Alfa runtime. Do not block that on `match_result`, ranked RUNE/ELO, NFTLoX custody, all 49 missions, or closing every OPEN in the wire spec."
+> **Domain expert:** "Finish now means **Alfa Player-Ready**. Prove the **Playable Match Spine** in **single**, one Norse campaign mission, and two-browser P2P, make the poker board readable, keep Keychain off the match path and all F1 gameplay claims, persist local settlement in replay/IndexedDB, freeze dual sources of truth, and ship the Alfa runtime. Do not block that on Hive `match_result`, ranked RUNE/ELO, NFTLoX custody, all 49 missions, or closing every OPEN in the wire spec."
 
 > **Dev:** "Does the server decide who won the chess-to-poker fight?"
 > **Domain expert:** "No. Both browsers apply the same chess and poker intents. The relay only compares **Phase Checkpoint** roots. On mismatch it freezes; it never picks a winner."

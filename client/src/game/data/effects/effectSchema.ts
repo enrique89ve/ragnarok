@@ -12,6 +12,11 @@
  * fields, so a malformed card fails at registry boot — not in the middle of
  * a ranked match.
  *
+ * This schema does not enumerate the TypeScript gameplay dispatchers in
+ * `battlecryUtils`, `deathrattleUtils`, and `spellUtils`. Live-only starter
+ * composites are exercised there and stay outside this WASM export schema
+ * until the AssemblyScript interpreter has equivalent behavior.
+ *
  * Boundary: this is the TS-side shape (what cards declare in
  * `cardRegistry/sets/...`). The exporter `client/src/game/engine/cardDataExporter.ts`
  * translates this shape into the AS `EffectDef` (`assembly/types/GameState.ts`)

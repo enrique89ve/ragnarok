@@ -1,14 +1,13 @@
 import {
 	scheduleAttackEffect,
 	scheduleDamageEffect,
+	useAnimationOrchestrator,
 } from '../../../animations/UnifiedAnimationOrchestrator';
-import { gameEffectCoordinator } from '@/game/effects/core/gameEffectCoordinator';
+import { gameEffectMediator } from '@/game/effects/core/gameEffectMediator';
 import { registerVisualEffect, type EffectHandle, type VisualEffectUnregister } from '../registry';
 import type { CombatImpactEvent } from '../events';
 import type { AttackVisualProfile } from '@/game/effects/core/effectIntentTypes';
 import { resolveArenaEffectPoint } from '@/game/effects/presentation';
-
-const NO_OP_HANDLE: EffectHandle = { cancel() {} };
 
 type Point = { readonly x: number; readonly y: number };
 
@@ -49,21 +48,45 @@ function handleCombatImpact(event: CombatImpactEvent): EffectHandle | null {
 	const sourcePosition = event.intent ? resolveArenaEffectPoint(event.intent.source) : null;
 	if (sourcePosition && event.intent?.motion.type !== 'instant') {
 		const variedPath = applyAttackVisualProfile(sourcePosition, position, event.intent?.visual);
-		scheduleAttackEffect(variedPath.source, variedPath.target, event.damage, category);
-		return NO_OP_HANDLE;
-	}
-	if (event.kind === 'counter') {
-		return gameEffectCoordinator.schedule({
+		return gameEffectMediator.dispatch({
+			id: `combat-impact:${event.id}`,
 			owner: 'visual-impact',
 			lane: 'impact',
-			key: event.id,
-			priority: 'normal',
-			delayMs: 100,
-			run: () => scheduleDamageEffect(position, event.damage, category),
+			priority: event.kind === 'counter' ? 'high' : 'normal',
+			nodes: [
+				{
+					id: 'attack-travel',
+					run: () => {
+						const effectId = scheduleAttackEffect(variedPath.source, variedPath.target, event.damage, category);
+						return { cancel: () => useAnimationOrchestrator.getState().cancelEffect(effectId) };
+					},
+				},
+				{
+					id: 'damage-impact',
+					after: ['attack-travel'],
+					delayMs: 600,
+					run: () => {
+						const effectId = scheduleDamageEffect(position, event.damage, category);
+						return { cancel: () => useAnimationOrchestrator.getState().cancelEffect(effectId) };
+					},
+				},
+			],
 		});
 	}
-	scheduleDamageEffect(position, event.damage, category);
-	return NO_OP_HANDLE;
+	return gameEffectMediator.dispatch({
+		id: `combat-impact:${event.id}`,
+		owner: 'visual-impact',
+		lane: 'impact',
+		priority: event.kind === 'counter' ? 'high' : 'normal',
+		nodes: [{
+			id: 'damage-impact',
+			delayMs: event.kind === 'counter' ? 100 : 0,
+			run: () => {
+				const effectId = scheduleDamageEffect(position, event.damage, category);
+				return { cancel: () => useAnimationOrchestrator.getState().cancelEffect(effectId) };
+			},
+		}],
+	});
 }
 
 export function registerCombatImpactVisualEffect(): VisualEffectUnregister {

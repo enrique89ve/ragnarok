@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { toast } from 'sonner';
-import { TESTNET_RUNE_ECONOMY, MAINNET_RUNE_ECONOMY, getRuneEconomy } from '@shared/protocol-core/runeEconomy';
+import { TESTNET_RUNE_ECONOMY, MAINNET_RUNE_ECONOMY, getRuneEconomy, createDailyQuestRuneSourceKey, createRuneLedgerEntryId } from '@shared/protocol-core/runeEconomy';
 import { getRuntimeExecutionMode } from '../config/featureFlags';
 import { accountScopedStorage, registerAccountScopedStore } from '../../lib/storage/accountScopedStorage';
 import { pickRandomQuests, type DailyQuestType, type QuestTemplate } from '../data/dailyQuestPool';
@@ -14,6 +14,13 @@ import {
 	type ClientWalletInvocation,
 } from '../../data/wallet/clientWalletInvocation';
 import { recordCeremonyFeedbackEvent } from '../protocol/ceremonyFeedback';
+import { getRagnarokNetworkConfig } from '../config/networkConfig';
+import { getActiveRuneSeasonId } from '@shared/protocol-core/runeSeasonView';
+import { getRuneLedgerEntry, getTokenBalance, commitLocalDailyQuestLedger } from '../../data/blockchain/replayDB';
+import { createLocalDailyQuestLedgerEntry } from '@shared/protocol-core/localDailyQuestSettlement';
+import { buildRagnarokRuntimeEvidence } from '@shared/runtimeConfig';
+import { getCurrentHiveUsername } from '../../data/HiveSessionIdentity';
+import { isSharedProgressStage, resolveProgressAccountId } from '../auth/progressAccount';
 
 export interface DailyQuest {
 	id: string;
@@ -31,11 +38,12 @@ export interface DailyQuest {
 }
 
 export interface DailyQuestClaimFeedback {
-	status: 'claimed' | 'already_claimed' | 'partial' | 'rejected' | 'unavailable';
+	status: 'claimed' | 'already_claimed' | 'partial' | 'rejected' | 'unavailable' | 'awaiting_replay';
 	claimedCount: number;
 	alreadyClaimedCount: number;
 	runeEarned: number;
 	errors: string[];
+	awaitingReplayCount?: number;
 	updatedAt: number;
 }
 
@@ -54,13 +62,38 @@ interface DailyQuestActions {
 	refreshIfNeeded: () => Promise<void>;
 	updateProgress: (type: DailyQuestType, increment: number) => void;
 	rerollQuest: (questId: string) => void;
-	flushPendingClaims: (invocation: ClientWalletInvocation) => Promise<void>;
+	flushPendingClaims: (invocation: ClientWalletInvocation | null) => Promise<void>;
 }
 
 const getActiveEconomy = () => getRuneEconomy(getRuntimeExecutionMode());
 
 const DAILY_QUEST_RUNE_REWARD = () => getActiveEconomy().dailyQuestRunePerSlot;
 const DAILY_QUEST_SLOTS_PER_DAY = () => getActiveEconomy().dailyQuestSlotsPerDay;
+
+function rejectSharedDailyQuestWithoutAccount(): void {
+	const feedback = buildClaimFeedback({
+		status: 'rejected',
+		claimedCount: 0,
+		alreadyClaimedCount: 0,
+		runeEarned: 0,
+		errors: ['Hive account required to record daily quests on shared testnet.'],
+	});
+	useDailyQuestStore.setState({ lastClaimFeedback: feedback });
+	recordCeremonyFeedbackEvent('daily_quest_claim', 'missing_account', {
+		status: feedback.status,
+		errors: feedback.errors,
+	});
+}
+
+export function resolveDailyQuestAccount(input?: {
+	readonly username?: string | null;
+	readonly sharedNetwork?: boolean;
+}): string | null {
+	return resolveProgressAccountId({
+		username: input?.username ?? getCurrentHiveUsername() ?? getNFTBridge().getUsername(),
+		sharedNetwork: input?.sharedNetwork ?? isSharedProgressStage(getRagnarokNetworkConfig().stage),
+	});
+}
 
 function todayUtcString(): string {
 	return new Date().toISOString().slice(0, 10);
@@ -98,44 +131,56 @@ function templateToQuest(template: QuestTemplate, slot: number, ymdUtc: string, 
 	} as DailyQuest;
 }
 
-async function broadcastDailyQuestClaim(quest: DailyQuest): Promise<boolean> {
+async function broadcastDailyQuestClaim(quest: DailyQuest): Promise<{ readonly success: boolean; readonly trxId?: string }> {
 	const bridge = getNFTBridge();
-	if (!bridge.isHiveMode()) return false;
+	if (!bridge.isHiveMode()) return { success: false };
 	try {
 		const result = await bridge.claimDailyQuest(quest.slot, quest.type);
 		if (!result.success) {
 			debug.warn('[DailyQuest] Claim broadcast rejected:', result.error);
-			return false;
+			return { success: false };
 		}
 		if (result.trxId) bridge.emitTransactionConfirmed(result.trxId);
-		return true;
+		return { success: true, trxId: result.trxId };
 	} catch (err) {
 		debug.warn('[DailyQuest] Claim broadcast error:', err);
-		return false;
+		return { success: false };
 	}
 }
 
-export function settleLocalDailyQuestClaims(pending: ReadonlyArray<DailyQuest>): {
-	readonly claimedIds: ReadonlyArray<string>;
-	readonly history: Record<string, string>;
-	readonly feedback: DailyQuestClaimFeedback;
-} {
-	const claimedAt = `local:${Date.now()}`;
+export function awaitingReplayHistory(trxId: string): string { return `awaiting-replay:${trxId}`; }
+
+export async function settleLocalDailyQuestClaimsToLedger(
+	pending: ReadonlyArray<DailyQuest>, account: string, now = Date.now,
+): Promise<{ readonly claimedIds: ReadonlyArray<string>; readonly history: Record<string, string>; readonly runeEarned: number; readonly alreadyClaimedCount: number }> {
+	const seasonId = getActiveRuneSeasonId(getRagnarokNetworkConfig());
+	let runeEarned = 0;
+	let alreadyClaimedCount = 0;
+	const claimedIds: string[] = [];
 	const history: Record<string, string> = {};
+	const entries = [];
+	let balanceBefore = (await getTokenBalance(account, seasonId)).RUNE;
 	for (const quest of pending) {
-		history[`${quest.ymdUtc}:${quest.slot}`] = claimedAt;
+		const sourceKey = createDailyQuestRuneSourceKey(account, quest.ymdUtc, quest.slot, seasonId);
+		const entryId = createRuneLedgerEntryId({ seasonId, direction: 'credit', sourceType: 'daily_quest_claim', sourceKey });
+		const existing = await getRuneLedgerEntry(entryId);
+		if (existing) {
+			entries.push(existing);
+		} else {
+			const entry = createLocalDailyQuestLedgerEntry({ account, ymdUtc: quest.ymdUtc, slot: quest.slot, seasonId, stage: getRagnarokNetworkConfig().stage, balanceBefore, timestamp: now() });
+			entries.push(entry);
+			balanceBefore = entry.balanceAfter;
+		}
+		claimedIds.push(quest.id);
+		history[`${quest.ymdUtc}:${quest.slot}`] = entryId;
 	}
-	return {
-		claimedIds: pending.map((quest) => quest.id),
-		history,
-		feedback: buildClaimFeedback({
-			status: 'claimed',
-			claimedCount: pending.length,
-			alreadyClaimedCount: 0,
-			runeEarned: 0,
-			errors: [],
-		}),
-	};
+	const committed = await commitLocalDailyQuestLedger(entries);
+	if (committed.conflictingIds.length > 0) {
+		throw new Error(`local_daily_settlement_conflict:${committed.conflictingIds.join(',')}`);
+	}
+	runeEarned = entries.filter(entry => committed.appliedIds.includes(entry.entryId)).reduce((sum, entry) => sum + entry.amount, 0);
+	alreadyClaimedCount = committed.alreadyAppliedIds.length;
+	return { claimedIds, history, runeEarned, alreadyClaimedCount };
 }
 
 function emitClaimToast(quest: DailyQuest, slotOrdinal: number): void {
@@ -170,9 +215,7 @@ function markQuestsClaimedFromSlots(
 }
 
 async function syncClaimedSlotsFromLocalLedger(ymdUtc: string): Promise<void> {
-	const bridge = getNFTBridge();
-	if (!bridge.isHiveMode()) return;
-	const account = bridge.getUsername();
+	const account = resolveDailyQuestAccount();
 	if (!account) return;
 
 	try {
@@ -225,7 +268,8 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 					return;
 				}
 
-				const account = getNFTBridge().getUsername() ?? 'guest';
+				const account = resolveDailyQuestAccount();
+				if (!account) return;
 				const economy = getActiveEconomy();
 				const templates = pickRandomQuests(
 					economy.dailyQuestSlotsPerDay,
@@ -260,7 +304,6 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 			},
 
 			flushPendingClaims: async (invocation) => {
-				assertClientWalletInvocation(invocation, 'daily_quest_claim', 'Posting');
 				if (get().flushing) return;
 				const pending = get().quests.filter(q => q.completed && !q.claimed);
 				if (pending.length === 0) {
@@ -287,28 +330,45 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 					}
 					return;
 				}
-				const bridge = getNFTBridge();
-				if (!bridge.isHiveMode()) {
-					const settled = settleLocalDailyQuestClaims(pending);
+				const localPhase = buildRagnarokRuntimeEvidence(getRagnarokNetworkConfig()).phasePolicy.localSettlement;
+				if (localPhase) {
+					const account = resolveDailyQuestAccount();
+					if (!account) {
+						rejectSharedDailyQuestWithoutAccount();
+						return;
+					}
+					const ledger = await settleLocalDailyQuestClaimsToLedger(pending, account);
+					const settled = {
+						...ledger,
+						feedback: buildClaimFeedback({
+							status: ledger.alreadyClaimedCount === pending.length ? 'already_claimed' : 'claimed',
+							claimedCount: ledger.claimedIds.length - ledger.alreadyClaimedCount,
+							alreadyClaimedCount: ledger.alreadyClaimedCount,
+							runeEarned: ledger.runeEarned,
+							errors: [],
+						}),
+					};
 					const claimed = new Set(settled.claimedIds);
 					set((state) => ({
 						quests: state.quests.map((quest) => (
 							claimed.has(quest.id) ? { ...quest, claimed: true } : quest
 						)),
-						totalCompleted: state.totalCompleted + settled.claimedIds.length,
+						totalCompleted: state.totalCompleted + settled.feedback.claimedCount,
 						claimHistory: { ...state.claimHistory, ...settled.history },
 						lastClaimFeedback: settled.feedback,
 					}));
 					recordCeremonyFeedbackEvent('daily_quest_claim', 'local_recorded', {
 						status: settled.feedback.status,
 						claimedCount: settled.feedback.claimedCount,
-						runeEarned: 0,
+						runeEarned: settled.feedback.runeEarned,
 					});
 					toast.info('Daily quests recorded locally.', {
-						description: 'Hive testnet Claim is required to credit RUNE. Duplicate claim is a no-op.',
+						description: `${settled.feedback.runeEarned} RUNE committed locally. Duplicate claim is a no-op.`,
 					});
 					return;
 				}
+
+				assertClientWalletInvocation(invocation, 'daily_quest_claim', 'Posting');
 
 				set({ flushing: true });
 				let claimedCount = 0;
@@ -321,9 +381,9 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 						if (get().claimHistory[claimKey]) {
 							debug.warn(`[DailyQuest] Claim already in history for ${claimKey}, skipping redundant broadcast.`);
 							alreadyClaimedCount++;
-							set(state => ({
-								quests: state.quests.map(q => q.id === quest.id ? { ...q, claimed: true } : q)
-							}));
+							if (!get().claimHistory[claimKey].startsWith('awaiting-replay:')) {
+								set(state => ({ quests: state.quests.map(q => q.id === quest.id ? { ...q, claimed: true } : q) }));
+							}
 							recordCeremonyFeedbackEvent('daily_quest_claim', 'already_recorded', {
 								ymdUtc: quest.ymdUtc,
 								slot: quest.slot,
@@ -343,7 +403,7 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 						}
 
 						const ok = await broadcastDailyQuestClaim(quest);
-						if (!ok) {
+						if (!ok.success) {
 							errors.push(`Slot ${quest.slot + 1}: broadcast rejected.`);
 							recordCeremonyFeedbackEvent('daily_quest_claim', 'broadcast_rejected', {
 								ymdUtc: quest.ymdUtc,
@@ -354,17 +414,7 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 							continue;
 						}
 
-						set(state => {
-							const quests = state.quests.map(q => q.id === quest.id ? { ...q, claimed: true } : q);
-							const claimedToday = quests.filter(q => q.claimed && q.ymdUtc === quest.ymdUtc).length;
-							emitClaimToast(quest, claimedToday);
-							return {
-								quests,
-								totalCompleted: state.totalCompleted + 1,
-								claimHistory: { ...state.claimHistory, [claimKey]: 'in-flight' },
-							};
-						});
-						claimedCount++;
+						set(state => ({ claimHistory: { ...state.claimHistory, [claimKey]: awaitingReplayHistory(ok.trxId ?? 'pending') } }));
 						recordCeremonyFeedbackEvent('daily_quest_claim', 'broadcasted', {
 							ymdUtc: quest.ymdUtc,
 							slot: quest.slot,
@@ -376,9 +426,9 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 					const runeEarned = pending
 						.filter(quest => get().quests.some(current => current.id === quest.id && current.claimed))
 						.reduce((total, quest) => total + quest.reward.rune, 0);
-					const status: DailyQuestClaimFeedback['status'] = errors.length > 0
+						const status: DailyQuestClaimFeedback['status'] = errors.length > 0
 						? claimedCount > 0 || alreadyClaimedCount > 0 ? 'partial' : 'rejected'
-						: claimedCount > 0 ? 'claimed' : 'already_claimed';
+						: claimedCount > 0 ? 'claimed' : pending.some(quest => get().claimHistory[`${quest.ymdUtc}:${quest.slot}`]?.startsWith('awaiting-replay:')) ? 'awaiting_replay' : 'already_claimed';
 					const feedback = buildClaimFeedback({
 						status,
 						claimedCount,
@@ -406,7 +456,8 @@ export const useDailyQuestStore = create<DailyQuestState & DailyQuestActions>()(
 
 				const target = current.quests[targetIndex];
 				const existingTitles = current.quests.map(q => q.title);
-				const account = getNFTBridge().getUsername() ?? 'guest';
+				const account = resolveDailyQuestAccount();
+				if (!account) return;
 				const newTemplates = pickRandomQuests(
 					1,
 					existingTitles,

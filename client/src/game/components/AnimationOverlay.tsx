@@ -19,8 +19,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAnimationOrchestrator, AnimationEffect, AnimationCategory } from '../animations/UnifiedAnimationOrchestrator';
 import type { Rarity } from '@shared/schemas/rarity';
 import { GameIcon } from '../utils/ui/GameIcon';
-import type { IconName } from '../utils/ui/iconMap';
 import { getRarityUi, normalizeRarityKey } from '../utils/rarityUtils';
+import { PokerSpellFx } from '../combat/components/fx/PokerSpellFx';
+import {
+  ARENA_VFX_LAYERS,
+  getArenaLocalPoint,
+  getArenaVfxLayer,
+} from '../combat/arenaVfxTargets';
 
 interface ParticleConfig {
   angle: number;
@@ -74,7 +79,7 @@ const SummonEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo((
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       style={{
-        position: 'fixed',
+        position: 'absolute',
         left: position.x,
         top: position.y,
         transform: 'translate(-50%, -50%)',
@@ -173,7 +178,7 @@ const DamageEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo((
       exit={{ opacity: 0, y: -50 }}
       transition={{ duration: 0.8 }}
       style={{
-        position: 'fixed',
+        position: 'absolute',
         left: position.x,
         top: position.y,
         transform: 'translate(-50%, -50%)',
@@ -210,7 +215,7 @@ const HealEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo(({ 
       exit={{ opacity: 0, y: -50 }}
       transition={{ duration: 0.8 }}
       style={{
-        position: 'fixed',
+        position: 'absolute',
         left: position.x,
         top: position.y,
         transform: 'translate(-50%, -50%)',
@@ -248,7 +253,7 @@ const AttackEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo((
       animate={{ x: dx, y: dy, opacity: [1, 1, 0] }}
       transition={{ duration: 0.4, ease: 'easeInOut', times: [0, 0.8, 1] }}
       style={{
-        position: 'fixed',
+        position: 'absolute',
         left: sourcePosition.x,
         top: sourcePosition.y,
         transform: 'translate(-50%, -50%)',
@@ -277,130 +282,7 @@ const AttackEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo((
 AttackEffectRenderer.displayName = 'AttackEffectRenderer';
 
 const SpellEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo(({ effect }) => {
-  const { data } = effect;
-  const spellName = data.spellName || 'Spell';
-  const description = data.description || '';
-  const spellType = data.spellType || 'damage';
-
-  const spellColors: Record<string, { bg: string; border: string; glow: string; iconName: IconName }> = {
-    damage: { bg: 'rgba(255, 68, 68, 0.95)', border: '#ff6b6b', glow: 'rgba(255, 0, 0, 0.6)', iconName: 'flame' },
-    heal: { bg: 'rgba(68, 255, 68, 0.95)', border: '#6bff6b', glow: 'rgba(0, 255, 0, 0.6)', iconName: 'heart' },
-    buff: { bg: 'rgba(255, 215, 0, 0.95)', border: '#ffd700', glow: 'rgba(255, 215, 0, 0.6)', iconName: 'arrowDown' },
-    debuff: { bg: 'rgba(128, 0, 128, 0.95)', border: '#9932cc', glow: 'rgba(128, 0, 128, 0.6)', iconName: 'arrowDown' },
-    summon: { bg: 'rgba(0, 191, 255, 0.95)', border: '#00bfff', glow: 'rgba(0, 191, 255, 0.6)', iconName: 'sparkles' },
-    aoe: { bg: 'rgba(255, 140, 0, 0.95)', border: '#ff8c00', glow: 'rgba(255, 140, 0, 0.6)', iconName: 'flame' },
-    draw: { bg: 'rgba(100, 149, 237, 0.95)', border: '#6495ed', glow: 'rgba(100, 149, 237, 0.6)', iconName: 'book' },
-    quest: { bg: 'rgba(218, 165, 32, 0.95)', border: '#daa520', glow: 'rgba(218, 165, 32, 0.6)', iconName: 'crown' },
-    transform: { bg: 'rgba(147, 112, 219, 0.95)', border: '#9370db', glow: 'rgba(147, 112, 219, 0.6)', iconName: 'refresh' },
-    default: { bg: 'rgba(70, 130, 180, 0.95)', border: '#4682b4', glow: 'rgba(70, 130, 180, 0.6)', iconName: 'sparkles' },
-  };
-
-  const colors = spellColors[spellType] || spellColors.default;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.5, y: 50 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.8, y: -30 }}
-      transition={{
-        duration: 0.4,
-        ease: [0.25, 0.1, 0.25, 1],
-        scale: { type: 'spring', stiffness: 300, damping: 20 }
-      }}
-      style={{
-        position: 'fixed',
-        left: '50%',
-        top: '35%',
-        transform: 'translate(-50%, -50%)',
-        pointerEvents: 'none',
-        zIndex: 10001,
-      }}
-    >
-      <motion.div
-        initial={{ boxShadow: `0 0 30px ${colors.glow}` }}
-        animate={{
-          boxShadow: [
-            `0 0 30px ${colors.glow}`,
-            `0 0 60px ${colors.glow}`,
-            `0 0 30px ${colors.glow}`
-          ]
-        }}
-        transition={{ duration: 1.5, repeat: Infinity }}
-        style={{
-          background: `linear-gradient(135deg, ${colors.bg}, rgba(20, 20, 40, 0.95))`,
-          border: `3px solid ${colors.border}`,
-          borderRadius: '16px',
-          padding: '20px 40px',
-          minWidth: '300px',
-          maxWidth: '450px',
-          textAlign: 'center',
-        }}
-      >
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: [0, 1.2, 1] }}
-          transition={{ duration: 0.5, times: [0, 0.6, 1] }}
-          style={{
-            fontSize: '48px',
-            marginBottom: '8px',
-          }}
-        >
-          {<GameIcon name={colors.iconName} size={40} />}
-        </motion.div>
-
-        <motion.h2
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          style={{
-            color: '#ffffff',
-            fontSize: '28px',
-            fontWeight: 'bold',
-            margin: '0 0 8px 0',
-            textShadow: `2px 2px 4px rgba(0,0,0,0.8), 0 0 20px ${colors.glow}`,
-            fontFamily: 'system-ui, -apple-system, sans-serif',
-          }}
-        >
-          {spellName}
-        </motion.h2>
-
-        {description && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.25 }}
-            style={{
-              color: '#e0e0e0',
-              fontSize: '16px',
-              margin: 0,
-              textShadow: '1px 1px 2px rgba(0,0,0,0.6)',
-              lineHeight: 1.4,
-            }}
-          >
-            {description}
-          </motion.p>
-        )}
-      </motion.div>
-
-      <motion.div
-        initial={{ scale: 0, opacity: 0.8 }}
-        animate={{ scale: 3, opacity: 0 }}
-        transition={{ duration: 0.8, ease: 'easeOut' }}
-        style={{
-          position: 'absolute',
-          left: '50%',
-          top: '50%',
-          width: 100,
-          height: 100,
-          marginLeft: -50,
-          marginTop: -50,
-          borderRadius: '50%',
-          border: `3px solid ${colors.border}`,
-          pointerEvents: 'none',
-        }}
-      />
-    </motion.div>
-  );
+	return <PokerSpellFx effect={effect} />;
 });
 
 SpellEffectRenderer.displayName = 'SpellEffectRenderer';
@@ -431,7 +313,7 @@ const ShuffleEffectRenderer: React.FC<{ effect: AnimationEffect }> = React.memo(
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       style={{
-        position: 'fixed',
+        position: 'absolute',
         inset: 0,
         pointerEvents: 'none',
         zIndex: 9998,
@@ -568,8 +450,19 @@ const EffectRenderer: React.FC<{ effect: AnimationEffect }> = ({ effect }) => {
 
 const RENDERED_CATEGORIES: AnimationCategory[] = ['summon', 'damage', 'heal', 'attack', 'spell', 'shuffle'];
 
+function isPoint(value: unknown): value is { x: number; y: number } {
+  if (!value || typeof value !== 'object') return false;
+  const point = value as { x?: unknown; y?: unknown };
+  return typeof point.x === 'number' && typeof point.y === 'number';
+}
+
 export const AnimationOverlay: React.FC = () => {
   const [activeEffects, setActiveEffects] = useState<AnimationEffect[]>([]);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setPortalTarget(getArenaVfxLayer(ARENA_VFX_LAYERS.vfx));
+  }, []);
 
   useEffect(() => {
     const getFilteredEffects = (state: { activeEffects: Map<string, AnimationEffect> }): AnimationEffect[] => {
@@ -598,10 +491,30 @@ export const AnimationOverlay: React.FC = () => {
     return unsubscribe;
   }, []);
 
+  if (!portalTarget) return null;
+
+  const toArenaPoint = (point: { x: number; y: number }) =>
+    getArenaLocalPoint(point, portalTarget) ?? point;
+  const scopedEffects = activeEffects.map(effect => ({
+    ...effect,
+    position: effect.position ? toArenaPoint(effect.position) : undefined,
+    sourcePosition: effect.sourcePosition ? toArenaPoint(effect.sourcePosition) : undefined,
+    targetPosition: effect.targetPosition ? toArenaPoint(effect.targetPosition) : undefined,
+    data: {
+      ...effect.data,
+      sourcePosition: isPoint(effect.data.sourcePosition)
+        ? toArenaPoint(effect.data.sourcePosition)
+        : effect.data.sourcePosition,
+      targetPosition: isPoint(effect.data.targetPosition)
+        ? toArenaPoint(effect.data.targetPosition)
+        : effect.data.targetPosition,
+    },
+  }));
+
   const overlayContent = (
     <div
       style={{
-        position: 'fixed',
+        position: 'absolute',
         inset: 0,
         pointerEvents: 'none',
         zIndex: 9990,
@@ -609,14 +522,14 @@ export const AnimationOverlay: React.FC = () => {
       }}
     >
       <AnimatePresence mode="sync">
-        {activeEffects.map(effect => (
+        {scopedEffects.map(effect => (
           <EffectRenderer key={effect.id} effect={effect} />
         ))}
       </AnimatePresence>
     </div>
   );
 
-  return ReactDOM.createPortal(overlayContent, document.body);
+  return ReactDOM.createPortal(overlayContent, portalTarget);
 };
 
 export default AnimationOverlay;

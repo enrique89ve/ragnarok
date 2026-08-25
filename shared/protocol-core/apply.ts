@@ -18,7 +18,7 @@ import type {
 } from './types';
 import {
 	TRANSFER_COOLDOWN_BLOCKS, MAX_CARD_LEVEL,
-	ELO_K_FACTOR, ELO_FLOOR, RUNE_WIN_RANKED, RUNE_LOSS_RANKED,
+	RUNE_WIN_RANKED, RUNE_LOSS_RANKED,
 	HIVE_USERNAME_RE, ATOMIC_TRANSFER_AMOUNT, PACK_SIZES,
 	MAX_REPLICAS_PER_CARD, MAX_GENERATION, REPLICA_COOLDOWN_BLOCKS,
 	PACK_ENTROPY_DELAY_BLOCKS, PACK_REVEAL_DEADLINE_BLOCKS,
@@ -65,6 +65,7 @@ import {
 } from './adminMultisig';
 import { fnv1a } from './broadcast-utils';
 import { calculateInstanceXpGain, getEconomicLevelForXP, parseWinnerInstanceUids } from './xpEconomy';
+import { projectEloMatch } from './eloEconomy';
 import {
 	PACK_ID_RANGES, lcgNext, deriveLegacyPackSeed, pickLegacyPackCardIds,
 } from './packDraw';
@@ -72,6 +73,8 @@ import {
 	createDuatCardAcquisition,
 	createDuatPackAcquisition,
 } from './acquisitionProvenance';
+import { checkProtocolActionCapability } from './phaseGate';
+import { getRagnarokRuntimePhase, getProtocolPhaseId } from '../runtimeConfig';
 
 // ============================================================
 // Dependencies injected at init, not imported
@@ -224,6 +227,13 @@ export async function applyOp(
 	// Finality gate: reject ops from blocks beyond LIB
 	if (op.blockNum > ctx.lastIrreversibleBlock) {
 		return IGNORE_RESULT; // not yet irreversible
+	}
+	const phaseId = getProtocolPhaseId(getRagnarokRuntimePhase(deps.runtime));
+	if (phaseId === 'local-gameplay-v1') {
+		const capability = checkProtocolActionCapability(deps.runtime, op.action);
+		if (capability.status === 'rejected') {
+			return reject(`${capability.code}: ${capability.capability} (${capability.phaseId})`);
+		}
 	}
 
 	const slashResult = await validateSlashedAction(op, deps);
@@ -1015,12 +1025,9 @@ async function applyRankedMatchSettlement(
 
 	const winnerElo = await deps.state.getElo(details.winner);
 	const loserElo = await deps.state.getElo(loserAccount);
-	const expected = 1 / (1 + Math.pow(10, (loserElo.elo - winnerElo.elo) / 400));
-	const newWinnerElo = Math.round(winnerElo.elo + ELO_K_FACTOR * (1 - expected));
-	const newLoserElo = Math.max(
-		Math.round(loserElo.elo + ELO_K_FACTOR * (0 - (1 - expected))),
-		ELO_FLOOR,
-	);
+	const eloProjection = projectEloMatch({ winnerElo: winnerElo.elo, loserElo: loserElo.elo });
+	const newWinnerElo = eloProjection.winner.after;
+	const newLoserElo = eloProjection.loser.after;
 
 	await deps.state.putElo({ ...winnerElo, elo: newWinnerElo, wins: winnerElo.wins + 1 });
 	await deps.state.putElo({ ...loserElo, elo: newLoserElo, losses: loserElo.losses + 1 });

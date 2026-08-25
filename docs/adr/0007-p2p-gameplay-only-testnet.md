@@ -20,6 +20,11 @@ for browsers that cannot establish a direct path.
 
 ## Decision
 
+This decision describes external transport only. Under F1, local replay still
+commits complete local progression; “gameplay-only” must not be read as
+“preview-only”; it means gameplay-only externally, with complete local replay
+settlement in F1.
+
 The current Alfa/closed testnet P2P track is **gameplay-only**:
 
 - Both peers run the deterministic chess and poker mechanics.
@@ -29,10 +34,10 @@ The current Alfa/closed testnet P2P track is **gameplay-only**:
 - The match flow must not open Hive Keychain during a match, on reload/reconnect,
   or after `game_over`. A login/session action explicitly initiated before
   matchmaking may still use Keychain.
-- P2P does not settle RUNE, ELO, Season Score, CardXP, `level_up`, NFTLoX mutable
-  data or ownership.
-- The terminal result is displayed and exported as local test evidence only.
-  It is not canonical economic evidence.
+- F1 does not settle RUNE, ELO, Season Score, CardXP or `level_up` on Hive.
+  Local replay/IndexedDB does persist those complete projections plus local
+  anchor/result evidence; none is NFTLoX ownership or official ranking.
+- The terminal result is a versioned local settlement envelope, not a Hive op.
 
 The winner-posted `match_result` path, session keys, winner arbiter and Hive
 broadcast remain future ranked work under

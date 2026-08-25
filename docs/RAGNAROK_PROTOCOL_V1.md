@@ -968,7 +968,7 @@ The `starter` pack key in `packCatalog.ts` is intentionally **not** a chain-broa
 | `acquisition` | `['free_starter_claim']` (no `direct_purchase`, no `rune_exchange`) |
 | Source of card IDs | [`shared/schemas/starterEntitlement.ts`](../shared/schemas/starterEntitlement.ts) — `STARTER_ENTITLEMENT_CARD_IDS_BY_CLASS` (10 Mage + 10 Warrior + 10 Priest + 10 Rogue + 5 Neutral) |
 | Materialization | `materializeStarterEntitlement()` in `client/src/game/data/starterSet.ts` — writes 45 starter-category cards directly into the local collection. No Hive broadcast for the cards themselves. |
-| `claimStarterEntitlement` | Client ceremony state plus shared-network server receipt. No Hive broadcast; cards are entitled regardless. In `testnet`/`mainnet`, `/api/starter/claim` records a signed operational receipt so public P2P can reject accounts that skipped the ceremony. |
+| `claimStarterEntitlement` | Client ceremony state plus shared-network server receipt. No Hive broadcast; cards are entitled regardless. In F1 (`local-gameplay-v1`), after login/identity, `/api/starter/claim` records the normalized account without a second wallet invocation. F2/F3 require the existing signed body authentication. The receipt lets public P2P reject accounts that skipped the ceremony. |
 
 Protocol-level rejection rules:
 

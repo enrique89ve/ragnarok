@@ -71,6 +71,11 @@ export * from './acquisitionProvenance';
 export * from './playerCollection';
 export * from './deckVerification';
 export * from './xpEconomy';
+export * from './localSettlement';
+export * from './eloEconomy';
+export * from './phaseGate';
+export * from './localCampaignSettlement';
+export * from './localDailyQuestSettlement';
 
 // v1.2: Broadcast utilities (NFTLox-inspired patterns)
 export {

@@ -38,6 +38,7 @@ function PokerActionButton({
 	readonly reason: string | null;
 }): React.ReactElement {
 	const hasValue = hp != null && hp > 0;
+	const visibleLabel = pokerLabel ?? label;
 	const actionName = pokerLabel ? `${label} (${pokerLabel})` : label;
 	const aria = hasValue ? `${actionName} ${hp} HP` : actionName;
 	return (
@@ -52,6 +53,7 @@ function PokerActionButton({
 		>
 			<ButtonIconFrame>
 				{icon}
+				<span className="btn-action-label">{visibleLabel}</span>
 				{hasValue ? <span className="btn-hp">{hp}</span> : null}
 			</ButtonIconFrame>
 		</button>
@@ -93,6 +95,10 @@ export interface BettingPanelProps {
 	readonly showFrontlineButton: boolean;
 }
 
+function shouldDisableHpBetting(isDisabled: boolean, sliderMax: number): boolean {
+	return isDisabled || sliderMax <= 0;
+}
+
 export const BettingPanel: React.FC<BettingPanelProps> = ({
 	permissions,
 	betAmount,
@@ -102,12 +108,8 @@ export const BettingPanel: React.FC<BettingPanelProps> = ({
 	showFrontlineButton,
 }) => {
 	if (!permissions) {
-	return null;
-}
-
-function shouldDisableHpBetting(isDisabled: boolean, sliderMax: number): boolean {
-	return isDisabled || sliderMax <= 0;
-}
+		return null;
+	}
 
 	const {
 		hasBetToCall,

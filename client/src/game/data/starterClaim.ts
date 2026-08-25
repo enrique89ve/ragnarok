@@ -5,7 +5,9 @@ import { isSharedNetworkEnvironment } from '../config/featureFlags';
 import { resolveProtectedFlowAccess } from '../auth/protectedFlowAccess';
 import { getAuthenticatedHiveUsername } from '../../data/HiveSessionIdentity';
 import { signHiveMessage } from '../../data/HiveAuth';
-import { buildStarterClaimAuthMessage } from '@shared/starterClaimAuth';
+import { buildRagnarokRuntimeEvidence } from '@shared/runtimeConfig';
+import { buildStarterClaimAuthMessage, resolveStarterClaimAuthMode } from '@shared/starterClaimAuth';
+import { getRagnarokNetworkConfig } from '../config/networkConfig';
 
 export type StarterClaimResult =
 	| { success: true; cards: CardData[] }
@@ -18,6 +20,10 @@ type ClaimStarterEntitlementParams = {
 type StarterClaimReceiptResult =
 	| { success: true }
 	| { success: false; error: string };
+
+type StarterClaimRequestBody =
+	| { readonly username: string }
+	| { readonly username: string; readonly timestamp: number; readonly signature: string };
 
 function normalizeAccountId(accountId: string | null | undefined): string | null {
 	const normalized = accountId?.trim().toLowerCase();
@@ -44,24 +50,32 @@ export async function ensureSharedNetworkStarterClaimReceipt(accountId: string):
 		return { success: true };
 	}
 
-	const timestamp = Date.now();
-	const message = buildStarterClaimAuthMessage({ username: normalizedAccountId, timestamp });
-	const signature = await signHiveMessage(message, {
+	const policy = buildRagnarokRuntimeEvidence(getRagnarokNetworkConfig()).phasePolicy;
+	const authMode = resolveStarterClaimAuthMode(policy);
+	let body: StarterClaimRequestBody = {
 		username: normalizedAccountId,
-		title: 'Ragnarok: starter claim',
-	});
-	if (!signature.success || !signature.signature) {
-		return { success: false, error: 'Hive Keychain signature required to register starter claim for shared-network P2P.' };
+	};
+	if (authMode === 'hive-body-auth') {
+		const timestamp = Date.now();
+		const message = buildStarterClaimAuthMessage({ username: normalizedAccountId, timestamp });
+		const signature = await signHiveMessage(message, {
+			username: normalizedAccountId,
+			title: 'Ragnarok: starter claim',
+		});
+		if (!signature.success || !signature.signature) {
+			return { success: false, error: 'Hive Keychain signature required to register starter claim for shared-network P2P.' };
+		}
+		body = {
+			username: normalizedAccountId,
+			timestamp,
+			signature: signature.signature,
+		};
 	}
 
 	const response = await fetch('/api/starter/claim', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({
-			username: normalizedAccountId,
-			timestamp,
-			signature: signature.signature,
-		}),
+		body: JSON.stringify(body),
 	});
 	if (!response.ok) {
 		return { success: false, error: `Starter claim registry rejected the ceremony (HTTP ${response.status}).` };

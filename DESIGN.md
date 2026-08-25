@@ -6,8 +6,11 @@
   Texas Hold'em poker combat where HP is the betting currency.
 - **Who it is for:** Players who understand collectible card games, strategy
   board tactics, wallet-gated testnet play, and mythic fantasy presentation.
-- **Current product phase:** Alfa Testnet, full NFT mechanics, resettable
-  testnet value.
+- **Current product phase:** Phase 1 Gameplay Validation, full local mechanics,
+  resettable replay value.
+- **Phase boundary:** F1 gameplay validation uses local replay; marketplace,
+  packs and NFTLox write surfaces are visibly disabled until their enabled
+  phase. Disabled surfaces must not look actionable.
 - **Primary design problem now:** make poker combat readable enough that a new
   tester understands turn, phase, cards, risk, action and result without help.
 

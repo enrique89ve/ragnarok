@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { canPlayHandCard } from './handFanPlayability';
+import { canPlayHandCard, getHandCardAriaLabel } from './handFanPlayability';
 
 const playableInput = {
   isPlayerTurn: true,
   isInteractionDisabled: false,
+  isPlayWindowOpen: true,
   boardFull: false,
   meetsPetEvolution: true,
   isBloodMode: false,
@@ -32,5 +33,30 @@ describe('canPlayHandCard', () => {
 
   it('allows normal mana payment when the card is affordable by mana', () => {
     expect(canPlayHandCard(playableInput)).toBe(true);
+  });
+
+  it('never announces a card as playable outside Spellcraft', () => {
+    expect(canPlayHandCard({ ...playableInput, isPlayWindowOpen: false })).toBe(false);
+    expect(getHandCardAriaLabel({
+      cardName: 'Shadowmaw',
+      manaCost: 1,
+      canPlay: false,
+      isPlayWindowOpen: false,
+    })).toBe('Shadowmaw, 1 mana. Enter for details. Play during Spellcraft.');
+  });
+
+  it('announces the Space action only when the card is actually playable', () => {
+    expect(getHandCardAriaLabel({
+      cardName: 'Shadowmaw',
+      manaCost: 1,
+      canPlay: true,
+      isPlayWindowOpen: true,
+    })).toContain('Space to play.');
+    expect(getHandCardAriaLabel({
+      cardName: 'Shadowmaw',
+      manaCost: 1,
+      canPlay: false,
+      isPlayWindowOpen: true,
+    })).not.toContain('Space to play.');
   });
 });

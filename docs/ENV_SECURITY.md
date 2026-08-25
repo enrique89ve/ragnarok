@@ -12,6 +12,9 @@ Allowed public values:
 - `VITE_NETWORK_STAGE`
 - `VITE_RAGNAROK_PROTOCOL_ID`
 - `VITE_RAGNAROK_COLLECTION_ID`
+- `VITE_RAGNAROK_RESET_EPOCH`
+- `VITE_SEASON_START`
+- `VITE_RAGNAROK_INDEX_START_BLOCK`
 - `VITE_RAGNAROK_ADMIN_ACCOUNT`
 - `VITE_RAGNAROK_ADMIN_OPERATOR_ACCOUNT`
 - `VITE_RAGNAROK_GENESIS_ACCOUNT`
@@ -28,14 +31,18 @@ Allowed public values:
 unless the NFTLoX collection flow is being tested intentionally; Closed Beta
 requires it only after collection proof exists.
 
-`VITE_DATA_LAYER_MODE` and `VITE_BLOCKCHAIN_PACKAGING` are advanced test/debug
-overrides. Normal `local`, `testnet`, and `mainnet` runs derive those values
+`VITE_DATA_LAYER_MODE` and `VITE_BLOCKCHAIN_PACKAGING` are mock/debug
+overrides. Do not put them in launch env files. They live in
+[`NFT_DEV_TESTING.md`](./NFT_DEV_TESTING.md). Normal runs derive those values
 from `VITE_NETWORK_STAGE`.
 
 Profile examples:
 
-- `.env.example` defaults to `VITE_NETWORK_STAGE=local`.
-- `.env.testnet.example` is the resettable shared beta profile.
+- `.env.example` is local workshop only (`VITE_NETWORK_STAGE=local`).
+- `.env.alfa-testnet.example` is the Dokploy Environment-tab paste file
+  (P2P secret + filled fingerprint). Compose `${VAR:-}` keeps baked defaults
+  if a fingerprint field is blank.
+- `.env.testnet.example` is generic/QA testnet, not the Alfa launch replica.
 - `.env.mainnet.example` is the permanent economic profile for release
   rehearsals and mainnet builds.
 
@@ -115,6 +122,31 @@ it selects the JSON projection the API serves. Prefer one file per runtime phase
 (`data/chain-state.alfa-testnet.json`, `data/chain-state.mainnet.json`, etc.).
 When omitted, the server now derives a runtime-specific default instead of using
 one shared `data/chain-state.json` for every profile.
+
+## Restart isolation
+
+Routine process restarts must not look like a phase wipe. Keep the launch
+fingerprint stable: `VITE_NETWORK_STAGE`, `VITE_RAGNAROK_PROTOCOL_ID`,
+`VITE_RAGNAROK_RESET_EPOCH`, `VITE_SEASON_START`,
+`VITE_RAGNAROK_INDEX_START_BLOCK` and their `RAGNAROK_*` server mirrors.
+
+| Preventive seam | What it blocks |
+|---|---|
+| `pnpm run verify:runtime-env` / `verify:alfa-runtime-env` | Boot with a missing or mismatched fingerprint |
+| Docker `CMD` runs the Alfa verifier before `dist/index.js` | Image start without the baked epoch/protocol/P2P secret |
+| `RAGNAROK_RESET_EPOCH` must match `VITE_RAGNAROK_RESET_EPOCH` on Alfa and Closed Beta | Browser IndexedDB namespace vs server JSON namespace split |
+| Chain-state `runtimeFingerprint` | Loading a JSON volume from another epoch; `fingerprint_mismatch` throws before Maps mutate |
+| IndexedDB / localStorage keys include stage + epoch + protocol | Old tester progress bleeding into a new epoch |
+| Stable `P2P_CHALLENGE_SIGNING_SECRET` | Redeploy invalidating match tickets and challenge envelopes |
+
+Do **not** rotate `VITE_RAGNAROK_RESET_EPOCH` on a normal redeploy. A new epoch
+is an intentional wipe: browsers get an empty namespace and the server JSON
+must be migrated with [`PHASE_MIGRATION_RUNBOOK.md`](./PHASE_MIGRATION_RUNBOOK.md),
+never reused in place.
+
+Anonymous progress sentinels `guest` and legacy `local` are `dev/local` only.
+Shared Alfa/testnet never writes RUNE, ELO, SeasonScore or CardXP under those
+ids, so a restart without Hive identity cannot mint anonymous ledger rows.
 
 `RAGNAROK_RANGE_SCAN` and `RAGNAROK_HAF_ENDPOINTS` are not secret. Range scan is
 enabled by default and uses HafAH for fast catch-up over large block gaps. Keep

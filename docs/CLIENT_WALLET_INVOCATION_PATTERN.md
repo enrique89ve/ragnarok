@@ -6,6 +6,10 @@ For the current gameplay-only P2P testnet, ADR 0007 is stricter: after
 matchmaking starts, the match flow must create **zero** wallet invocations,
 including reconnect/reload and `game_over`.
 
+In F1 this boundary also covers local campaign and daily-quest settlement:
+local replay commits first and no Keychain/broadcast is involved. Login is an
+identity action; it is not permission to invoke a wallet during gameplay.
+
 Hive Keychain prompts are browser-client actions. Server adapters, replay
 indexers, polling loops, mounted panels, match-end effects, and background
 queues MUST NOT open Keychain directly.
@@ -36,7 +40,8 @@ The current TypeScript seam is:
 
 ## Current Hardening
 
-- Daily quests now stay `Pending` until the player clicks Claim.
+- F1 daily quests commit locally after the gameplay action; no wallet Claim is
+  needed. Future F2 explicit claims remain behind this invocation seam.
 - DUAT airdrop pack claims now require an explicit Claim Packs wallet action.
 - DUAT pack opening no longer burns the next pack from a mount effect. Each pack
   burn is invoked by an explicit Open pack action.
@@ -60,7 +65,7 @@ The current TypeScript seam is:
 - Future ranked/on-chain matchmaking `queue_join` / `queue_leave`, Collection
   custody/crafting actions, Marketplace actions, Admin, and Treasury still use
   direct button handlers and should be migrated through the same invocation
-  wrapper for consistency. Closed-beta full NFT Quick Match uses unsigned server
-  matchmaking so battle search does not request a Posting signature.
+  wrapper for consistency. F1 Quick Match is unsigned server matchmaking
+  (`walletInvocation=false`); F2/F3 queue bodies use Hive body auth.
 - Campaign result publishing should be reviewed against the same rule before
   public beta.

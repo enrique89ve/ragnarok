@@ -2,6 +2,7 @@ import { Router, Request, Response, type NextFunction } from 'express';
 import {
 	requireHiveBodyAuth,
 	requireHiveBodyAuthIfUsernamePresent,
+	type HiveAuthenticatedRequest,
 } from '../middleware/hiveAuth';
 import { getPlayer, registerAccount } from '../services/chainState';
 import { buildServerSignedChallenge } from '../services/p2pChallengeSigner';
@@ -16,11 +17,15 @@ import { hasStarterCeremonyClaim } from '../services/starterClaimRegistry';
 import {
 	CHALLENGE_STALE_THRESHOLD_MS,
 	isSafePeerId,
+	isValidAvailabilityHiveUsername,
 	normalizeHiveUsername,
 	type P2PMatchTicket,
 	type ServerSignedChallenge,
 } from '../../shared/p2pAvailability';
 import { buildP2PQueueAuthMessage } from '../../shared/p2pMatchmakingAuth';
+import { resolveWalletInvocationAuthMode } from '../../shared/protocolPhase';
+import { buildRagnarokRuntimeEvidence } from '../../shared/runtimeConfig';
+import { getRagnarokServerRuntimeConfig } from '../services/runtimeConfig';
 import { log } from '../static';
 
 const router = Router();
@@ -266,9 +271,34 @@ function isSharedServerNetworkEnvironment(): boolean {
 	return process.env.VITE_NETWORK_STAGE === 'testnet' || process.env.VITE_NETWORK_STAGE === 'mainnet';
 }
 
+function attachUnsignedQueueUsername(req: Request, res: Response, next: NextFunction): void {
+	const rawUsername: unknown = req.body?.username;
+	if (typeof rawUsername !== 'string') {
+		res.status(401).json({ success: false, error: 'Hive username required for shared-network matchmaking' });
+		return;
+	}
+	const username = normalizeHiveUsername(rawUsername);
+	if (!username || !isValidAvailabilityHiveUsername(username)) {
+		res.status(400).json({ success: false, error: 'Invalid Hive username format' });
+		return;
+	}
+	const authenticatedRequest = req as HiveAuthenticatedRequest;
+	authenticatedRequest.hiveUsername = username;
+	next();
+}
+
 function requireQueueAuthForRuntime(req: Request, res: Response, next: NextFunction): void {
+	const policy = buildRagnarokRuntimeEvidence(getRagnarokServerRuntimeConfig()).phasePolicy;
+	if (resolveWalletInvocationAuthMode(policy) === 'hive-body-auth') {
+		if (isSharedServerNetworkEnvironment()) {
+			void sharedNetworkQueueAuth(req, res, next);
+			return;
+		}
+		void queueAuth(req, res, next);
+		return;
+	}
 	if (isSharedServerNetworkEnvironment()) {
-		void sharedNetworkQueueAuth(req, res, next);
+		attachUnsignedQueueUsername(req, res, next);
 		return;
 	}
 	void queueAuth(req, res, next);

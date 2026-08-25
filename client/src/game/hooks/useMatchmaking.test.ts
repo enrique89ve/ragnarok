@@ -143,6 +143,25 @@ describe('useMatchmaking quick-match access helpers', () => {
 		});
 	});
 
+	it('builds an unsigned F1 shared-network queue body without Keychain', async () => {
+		const result = await buildQuickMatchQueueBody({
+			peerId: 'peer-one',
+			accountId: 'alice',
+			sharedNetwork: true,
+			starterClaimed: true,
+			walletAuthMode: 'unsigned-local',
+		});
+
+		expect(result.ok).toBe(true);
+		if (!result.ok) return;
+		expect(result.body).toEqual({
+			peerId: 'peer-one',
+			username: 'alice',
+			starterClaimed: true,
+		});
+		expect(matchmakingMocks.signHiveMessage).not.toHaveBeenCalled();
+	});
+
 	it('builds a queue body whose Hive signature is bound to peerId and starter claim state', async () => {
 		matchmakingMocks.signHiveMessage.mockResolvedValueOnce({
 			success: true,
@@ -154,7 +173,7 @@ describe('useMatchmaking quick-match access helpers', () => {
 			accountId: 'alice',
 			sharedNetwork: true,
 			starterClaimed: true,
-			hiveMode: true,
+			walletAuthMode: 'hive-body-auth',
 		});
 
 		expect(result.ok).toBe(true);
@@ -190,7 +209,7 @@ describe('useMatchmaking quick-match access helpers', () => {
 			accountId: 'alice',
 			sharedNetwork: true,
 			starterClaimed: true,
-			hiveMode: true,
+			walletAuthMode: 'hive-body-auth',
 		})).resolves.toEqual({
 			ok: false,
 			message: 'Hive Keychain signature required before entering matchmaking.',

@@ -7,16 +7,42 @@ export type RagnarokRuntimeExecutionMode = typeof RAGNAROK_RUNTIME_EXECUTION_MOD
 export const RAGNAROK_RUNTIME_PHASES = ['local', 'qa-season-0', 'alfa-testnet', 'closed-beta', 'generic-testnet', 'mainnet'] as const;
 export type RagnarokRuntimePhase = typeof RAGNAROK_RUNTIME_PHASES[number];
 
+import {
+	createProtocolRuntimeFingerprint,
+	getProtocolPhaseId,
+	resolveProtocolPhasePolicy,
+	type ProtocolPhaseId,
+	type ProtocolPhasePolicy,
+	type ProtocolRuntimeFingerprint,
+} from './protocolPhase';
+
+export {
+	PROTOCOL_PHASE_IDS,
+	PROTOCOL_PHASE_POLICIES,
+	checkProtocolCapability,
+	createProtocolRuntimeFingerprint,
+	getProtocolPhaseId,
+	resolveProtocolPhasePolicy,
+	type EconomyScope,
+	type ProtocolCapability,
+	type ProtocolCapabilityDecision,
+	type ProtocolCapabilityRejection,
+	type ProtocolPhaseId,
+	type ProtocolPhasePolicy,
+	type ProtocolRuntimeFingerprint,
+	type SettlementScope,
+	type WalletPolicy,
+} from './protocolPhase';
+
 export const RAGNAROK_CLOSED_BETA_CUTOVER_CHECK_IDS = [
 	'testnet_profile',
 	'closed_beta_reset_epoch',
+	'runtime_fingerprint_configured',
 	'qa_full_catalog_disabled',
 	'isolated_storage_namespace',
 	'collection_id_configured',
-	'nftlox_protocol_configured',
 	'resettable_non_economic',
 	'ownership_authority_scope',
-	'nftlox_collection_proof',
 	'hive_keychain_smoke',
 	'two_browser_p2p_smoke',
 	'operator_signoff',
@@ -78,6 +104,9 @@ export type RagnarokRuntimeEvidence = {
 	readonly resettable: boolean;
 	readonly economic: boolean;
 	readonly runtimePhase: RagnarokRuntimePhase;
+	readonly phaseId: ProtocolPhaseId;
+	readonly phasePolicy: ProtocolPhasePolicy;
+	readonly runtimeFingerprint: ProtocolRuntimeFingerprint;
 	readonly seasonStart: string;
 	readonly indexStartBlock: number;
 	readonly storageNamespace: string;
@@ -361,6 +390,8 @@ export function createRagnarokDatabaseName(config: RagnarokRuntimeConfig, name: 
 }
 
 export function buildRagnarokRuntimeEvidence(config: RagnarokRuntimeConfig): RagnarokRuntimeEvidence {
+	const runtimePhase = getRagnarokRuntimePhase(config);
+	const phaseId = getProtocolPhaseId(runtimePhase);
 	return {
 		stage: config.stage,
 		executionMode: config.executionMode,
@@ -370,7 +401,17 @@ export function buildRagnarokRuntimeEvidence(config: RagnarokRuntimeConfig): Rag
 		resetEpoch: config.resetEpoch,
 		resettable: config.resettable,
 		economic: config.economic,
-		runtimePhase: getRagnarokRuntimePhase(config),
+		runtimePhase,
+		phaseId,
+		phasePolicy: resolveProtocolPhasePolicy(runtimePhase),
+		runtimeFingerprint: createProtocolRuntimeFingerprint({
+			stage: config.stage,
+			phaseId,
+			protocolId: config.protocolId,
+			resetEpoch: config.resetEpoch,
+			seasonStart: config.seasonStart,
+			indexStartBlock: config.indexStartBlock,
+		}),
 		seasonStart: config.seasonStart,
 		indexStartBlock: config.indexStartBlock,
 		storageNamespace: getRagnarokStorageNamespace(config),
@@ -408,6 +449,15 @@ export function buildClosedBetaCutoverGate(config: RagnarokRuntimeConfig): Ragna
 			`resetEpoch=${config.resetEpoch}`,
 		),
 		createClosedBetaCutoverCheck(
+			'runtime_fingerprint_configured',
+			testnetProfile
+				&& config.protocolId === 'rk_game_testnet'
+				&& Number.isFinite(Date.parse(config.seasonStart))
+				&& Number.isInteger(config.indexStartBlock)
+				&& config.indexStartBlock > 0,
+			`protocolId=${config.protocolId}, seasonStart=${config.seasonStart}, indexStartBlock=${config.indexStartBlock}`,
+		),
+		createClosedBetaCutoverCheck(
 			'qa_full_catalog_disabled',
 			testnetProfile && !qaFullCatalogEnabled,
 			`qaFullCatalogEnabled=${String(qaFullCatalogEnabled)}`,
@@ -423,11 +473,6 @@ export function buildClosedBetaCutoverGate(config: RagnarokRuntimeConfig): Ragna
 			`collectionId=${config.collectionId || 'missing'}`,
 		),
 		createClosedBetaCutoverCheck(
-			'nftlox_protocol_configured',
-			config.nftLoxProtocolId.trim().length > 0,
-			`nftLoxProtocolId=${config.nftLoxProtocolId || 'missing'}`,
-		),
-		createClosedBetaCutoverCheck(
 			'resettable_non_economic',
 			testnetProfile && config.resettable && !config.economic,
 			`resettable=${String(config.resettable)}, economic=${String(config.economic)}`,
@@ -436,11 +481,6 @@ export function buildClosedBetaCutoverGate(config: RagnarokRuntimeConfig): Ragna
 			'ownership_authority_scope',
 			testnetProfile && runtimePhase === 'closed-beta' && !qaFullCatalogEnabled,
 			'starter entitlement remains universal; genesis cards require nft-custody or replay-derived pack acquisition',
-		),
-		createClosedBetaCutoverCheck(
-			'nftlox_collection_proof',
-			testnetProfile && runtimePhase === 'closed-beta' && config.closedBetaNftLoxCollectionProof,
-			`RAGNAROK_NFTLOX_COLLECTION_PROOF=${String(config.closedBetaNftLoxCollectionProof)}`,
 		),
 		createClosedBetaCutoverCheck(
 			'hive_keychain_smoke',
