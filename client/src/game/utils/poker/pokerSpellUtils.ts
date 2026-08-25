@@ -102,11 +102,11 @@ export const canCastPokerSpell = (
   
   const effect = spell.pokerSpellEffect;
   
-  if (effect.timing === 'pre_deal' && currentPhase !== 'SPELL_PET') {
+  if (effect.timing === 'pre_deal' && currentPhase !== 'PRE_FLOP' && currentPhase !== 'pre_flop') {
     return { canCast: false, reason: 'Can only cast before dealing' };
   }
   
-  if (effect.timing === 'on_river' && currentPhase !== 'DESTINY') {
+  if (effect.timing === 'on_river' && currentPhase !== 'DESTINY' && currentPhase !== 'destiny') {
     return { canCast: false, reason: 'Can only cast on the River' };
   }
   

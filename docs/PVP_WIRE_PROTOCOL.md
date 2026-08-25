@@ -583,9 +583,26 @@ Implementation:
   the action so the transcript cannot carry two interpretations.
 - `poker_turn_started` is advisory clock sync only. A peer may not extend a
   decision window: receivers accept the message only when `durationMs`
-  equals their local `maxTurnTime * 1000` for the same combat/phase/actor.
-  Senders include `remainingMs`, so receivers derive their local deadline
-  from receipt time instead of trusting the sender's wall clock.
+  equals the shared `UNIVERSAL_POKER_TURN_CLOCK_POLICY.durationMs` (60,000
+  ms), for the same combat/phase/actor, and the actor is the receiver's remote
+  poker slot. Senders include `remainingMs`, so receivers derive their local
+  deadline from receipt time instead of trusting the sender's wall clock.
+- The receiving store records the remote actor as the `turnClockOwnerId` for
+  that `turnId`; duplicate announcements from that owner are ignored. A new
+  owner is accepted only when the turn identity changes, so reconnect or
+  replay cannot re-arm an existing deadline.
+- Playing a legal card is an auxiliary action. It is repeatable while the
+  active poker decision remains open and does not emit `poker_turn_started`,
+  advance `activePlayerId`, or change the absolute deadline. The next valid
+  `poker_action` is the turn terminator.
+- Extending card timing does not grant resources: `PRE_FLOP`, `FAITH`,
+  `FORESIGHT` and `DESTINY` share each player's mana pool for the current
+  Poker hand. Phase changes and active-player changes do not refill or
+  increase mana; draw and progression remain scoped to the Poker hand as
+  before. Clock/card timing code must not invoke a turn-start resource refresh.
+- The battlefield remains a hard five-slot limit (`MAX_BATTLEFIELD_SIZE = 5`).
+  A minion command is rejected when `battlefield.length >= 5`, regardless of
+  remaining mana or time; card timing never creates a sixth slot.
 - P2P poker freezes local input, timers, and AI fallback while the transport
   is in reconnect/grace states. Local-only poker mutations must not happen
   during reconnect.

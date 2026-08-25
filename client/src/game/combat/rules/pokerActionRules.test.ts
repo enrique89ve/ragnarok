@@ -92,8 +92,8 @@ function createCombatState(overrides: Partial<PokerCombatState> = {}): PokerComb
 }
 
 describe('poker action intent rules', () => {
-  it('rejects stale setup-phase betting actions before they reach the P2P store', () => {
-    const state = createCombatState({ phase: CombatPhase.SPELL_PET });
+	it('rejects stale mulligan-phase betting actions before they reach the P2P store', () => {
+		const state = createCombatState({ phase: CombatPhase.MULLIGAN, activePlayerId: null });
 
     const result = validatePokerActionIntent({
       combatState: state,
@@ -270,9 +270,10 @@ describe('poker combat store exploit shields', () => {
     useUnifiedCombatStore.setState({
       pokerCombatState: createCombatState({
         maxTurnTime: 60,
-        turnId: 'combat-test:faith:player-piece:0',
+        turnId: 'combat-test:faith:opponent-piece:0',
         turnStartedAtMs: 0,
         turnDeadlineAtMs: 60_000,
+        activePlayerId: 'opponent-piece',
       }),
       pokerIsActive: true,
     });
@@ -281,7 +282,7 @@ describe('poker combat store exploit shields', () => {
       combatId: 'combat-test',
       turnId: 'combat-test:faith:player-piece:0',
       phase: CombatPhase.FAITH,
-      activePlayerId: 'player-piece',
+      activePlayerId: 'opponent-piece',
       actionsThisRound: 0,
       durationMs: 600_000,
       receivedAtMs: 1_000,
@@ -290,6 +291,39 @@ describe('poker combat store exploit shields', () => {
     const state = useUnifiedCombatStore.getState().pokerCombatState;
     expect(state?.turnStartedAtMs).toBe(0);
     expect(state?.turnDeadlineAtMs).toBe(60_000);
+  });
+
+  it('accepts one remote clock owner and ignores duplicate re-arm attempts', () => {
+    useUnifiedCombatStore.setState({
+      pokerCombatState: createCombatState({
+        turnId: 'combat-test:faith:opponent-piece:0',
+        turnStartedAtMs: 0,
+        turnDeadlineAtMs: 60_000,
+        activePlayerId: 'opponent-piece',
+      }),
+      pokerIsActive: true,
+    });
+
+    const sync = (remainingMs: number, receivedAtMs: number) => useUnifiedCombatStore.getState().syncPokerTurnClock({
+      combatId: 'combat-test',
+      turnId: 'combat-test:faith:opponent-piece:0',
+      phase: CombatPhase.FAITH,
+      activePlayerId: 'opponent-piece',
+      actionsThisRound: 0,
+      durationMs: 60_000,
+      remainingMs,
+      receivedAtMs,
+    });
+
+    sync(25_000, 1_000);
+    expect(useUnifiedCombatStore.getState().pokerCombatState).toMatchObject({
+      turnClockOwnerId: 'opponent-piece',
+      turnStartedAtMs: -34_000,
+      turnDeadlineAtMs: 26_000,
+    });
+
+    sync(60_000, 2_000);
+    expect(useUnifiedCombatStore.getState().pokerCombatState?.turnDeadlineAtMs).toBe(26_000);
   });
 
   it('derives the same pre-flop turn identity from mirrored P2P combat slots', () => {
@@ -311,9 +345,6 @@ describe('poker combat store exploit shields', () => {
         playerRole: 'attacker',
       },
     );
-    store.markBothPlayersReady();
-    store.advancePokerPhase();
-
     const attackerView = useUnifiedCombatStore.getState().pokerCombatState;
     expect(attackerView).toMatchObject({
       phase: CombatPhase.PRE_FLOP,
@@ -342,9 +373,6 @@ describe('poker combat store exploit shields', () => {
         playerRole: 'defender',
       },
     );
-    defenderStore.markBothPlayersReady();
-    defenderStore.advancePokerPhase();
-
     const defenderView = useUnifiedCombatStore.getState().pokerCombatState;
     expect(defenderView).toMatchObject({
       phase: CombatPhase.PRE_FLOP,

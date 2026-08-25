@@ -4,7 +4,7 @@ import { getPokerCombatAdapterState } from '../../hooks/usePokerCombatAdapter';
 import { useGameStore } from '../../stores/gameStore';
 import { debug } from '../../config/debugConfig';
 import type { PokerTurnProcessMode } from '../decision/pokerTurnPolicy';
-import { shouldPrepareLocalAiSpellcraftOpponent } from '../decision/spellcraftDecision';
+import { shouldPrepareLocalAiCards } from '../decision/pokerAiCardSetup';
 
 interface UsePokerPhasesOptions {
   combatState: PokerCombatState | null;
@@ -22,14 +22,12 @@ export function usePokerPhases(options: UsePokerPhasesOptions): void {
   useEffect(() => {
     if (!combatState || !isActive) return;
     if (combatState.phase === CombatPhase.MULLIGAN) return;
-    if (combatState.phase !== CombatPhase.SPELL_PET) return;
     if (cardGameMulliganActive) {
-      debug.combat('[SPELL_PET Phase] Blocked: card game mulligan still active');
+      debug.combat('[Poker auxiliary phase] Blocked: card game mulligan still active');
       return;
     }
-
-    const setupKey = `${combatState.combatId}:${combatState.handNumber}`;
-    if (!shouldPrepareLocalAiSpellcraftOpponent({
+	const setupKey = `${combatState.combatId}:${combatState.handNumber}:${combatState.phase}:${combatState.actionsThisRound}`;
+    if (!shouldPrepareLocalAiCards({
       phase: combatState.phase,
       isActive,
       isMulliganActive: Boolean(cardGameMulliganActive),
@@ -44,18 +42,9 @@ export function usePokerPhases(options: UsePokerPhasesOptions): void {
 
     const adapter = getPokerCombatAdapterState();
     const freshState = adapter.combatState;
-    if (
-      !freshState
-      || freshState.combatId !== combatState.combatId
-      || freshState.phase !== CombatPhase.SPELL_PET
-    ) {
+    if (!freshState || freshState.combatId !== combatState.combatId) {
       return;
     }
-
-    if (!freshState.opponent.isReady) {
-      adapter.setPlayerReady(freshState.opponent.playerId);
-    }
-    adapter.maybeCloseBettingRound();
   }, [combatState?.combatId, combatState?.handNumber, combatState?.phase, isActive, cardGameMulliganActive, processMode]);
 
   useEffect(() => {

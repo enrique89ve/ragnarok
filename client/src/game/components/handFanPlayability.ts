@@ -34,7 +34,7 @@ export function getHandCardAriaLabel(input: {
     return `${details} Space to play.`;
   }
   if (!input.isPlayWindowOpen) {
-    return `${details} Play during Spellcraft.`;
+    return `${details} Play during your poker decision.`;
   }
   return `${details} Not currently playable.`;
 }

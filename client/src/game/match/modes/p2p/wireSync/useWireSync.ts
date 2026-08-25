@@ -54,6 +54,7 @@ import type { P2PMessage } from '../../../../p2p/messages';
 import { parseWireMessage } from '../../../../p2p/messageSchemas';
 import { CombatAction, CombatPhase } from '../../../../types/PokerCombatTypes';
 import { encodePokerAction, isPokerActionCompactConsistent, type CompactPokerActionName } from '../../../../../../../shared/p2p-wire/combat';
+import { UNIVERSAL_POKER_TURN_CLOCK_POLICY } from '../../../../../../../shared/p2p-wire/pokerTurnClock';
 import { generateSessionKey, type SessionKey } from '../../../../protocol/sessionKey';
 import { CHALLENGE_STALE_THRESHOLD_MS, type ServerSignedChallenge } from '@shared/p2pAvailability';
 import {
@@ -98,26 +99,6 @@ import {
 import type { Hash256 } from '@shared/p2p-wire/integrity';
 import { isRetryablePhaseCheckpointDispute, type PhaseCheckpointPhase } from '@shared/p2p-wire/phaseCheckpoint';
 import { settleRemoteCommand } from './remoteCommandSettlement';
-import {
-	createSpellcraftReadyAckMessage,
-	createSpellcraftReadyMessage,
-	oppositeSpellcraftActorSide,
-	type SpellcraftReadyMessage,
-} from '@shared/p2p-wire/spellcraft';
-import {
-	createSpellcraftReadyLedger,
-	resetSpellcraftReadyLedger,
-	settleRemoteSpellcraftReady,
-} from './spellcraftReadyBoundary';
-import {
-	applySpellcraftReadyAck,
-	claimSpellcraftClose,
-	commitSpellcraftTranscriptPair,
-	createSpellcraftReadySession,
-	resetSpellcraftReadySession,
-	shouldReemitSpellcraftReady,
-	stageAppliedSpellcraftReady,
-} from './spellcraftReadySession';
 
 export type { GameCommandEnvelope, WireGameCommand } from '../../../../hooks/p2pEnvelope';
 export type { P2PMessage } from '../../../../p2p/messages';
@@ -352,99 +333,6 @@ export function useWireSync() {
 	const chessReceiptCommandOrderRef = useRef<string[]>([]);
 	const seenPokerDecisionIdsRef = useRef<Set<string>>(new Set());
 	const seenPokerDecisionIdsOrderRef = useRef<string[]>([]);
-	const spellcraftReadyLedgerRef = useRef(createSpellcraftReadyLedger());
-	const spellcraftReadySessionRef = useRef(createSpellcraftReadySession());
-	const spellcraftReadyMatchIdRef = useRef<string | null>(null);
-
-	useEffect(() => {
-		const nextMatchId = activeMatchForAuthority?.matchId ?? null;
-		if (spellcraftReadyMatchIdRef.current === nextMatchId) return;
-		spellcraftReadyMatchIdRef.current = nextMatchId;
-		resetSpellcraftReadyLedger(spellcraftReadyLedgerRef.current);
-		resetSpellcraftReadySession(spellcraftReadySessionRef.current);
-	}, [activeMatchForAuthority?.matchId]);
-
-	const createCurrentSpellcraftReady = useCallback((actor: 'local' | 'remote'): SpellcraftReadyMessage | null => {
-		const activeMatch = useMatchStore.getState().activeMatch;
-		const matchId = matchIdRef.current;
-		const pokerAdapter = getP2PPokerCombatAdapter();
-		const pokerState = pokerAdapter.getPokerState();
-		if (!activeMatch || activeMatch.opponent.kind !== 'peer' || !matchId || !pokerState) return null;
-		const actorSide = actor === 'local'
-			? activeMatch.opponent.myRole
-			: oppositeSpellcraftActorSide(activeMatch.opponent.myRole);
-		const actorPlayerId = actor === 'local'
-			? pokerState.player.playerId
-			: pokerState.opponent.playerId;
-		return createSpellcraftReadyMessage({
-			matchId,
-			combatId: pokerState.combatId,
-			handNumber: pokerState.handNumber,
-			actorSide,
-			actorPlayerId,
-			seq: pokerState.handNumber,
-		});
-	}, []);
-
-	const commitSpellcraftTranscript = useCallback((
-		pair: readonly [SpellcraftReadyMessage, SpellcraftReadyMessage],
-	): void => {
-		const activeMatch = useMatchStore.getState().activeMatch;
-		if (!activeMatch || activeMatch.opponent.kind !== 'peer') return;
-		const localSide = activeMatch.opponent.myRole;
-		const existingDecisionIds = new Set(
-			(getActiveTranscript()?.getRawMoves() ?? [])
-				.filter(move => move.action === 'spellcraft_ready_v1')
-				.map(move => move.payload.decisionId)
-				.filter((decisionId): decisionId is string => typeof decisionId === 'string'),
-		);
-		const result = commitSpellcraftTranscriptPair({
-			session: spellcraftReadySessionRef.current,
-			pair,
-			alreadyRecordedDecisionIds: existingDecisionIds,
-			record: (message) => {
-				const isLocal = message.actorSide === localSide;
-				recordMove('spellcraft_ready_v1', {
-					combatId: message.combatId,
-					handNumber: message.handNumber,
-					windowKey: message.windowKey,
-					actorSide: message.actorSide,
-					actorPlayerId: message.actorPlayerId,
-					seq: message.seq,
-					decisionId: message.decisionId,
-				}, isLocal
-					? localPlayerId({
-						hiveUsername: getNFTBridge().getUsername(),
-						myPeerId: usePeerStore.getState().myPeerId,
-					})
-					: remotePlayerId({
-						opponentUsername: opponentUsernameRef.current,
-						remotePeerId: usePeerStore.getState().remotePeerId,
-					}));
-			},
-		});
-		if (result === 'incomplete_existing_transcript') {
-			debug.warn('[wireSync] Spellcraft transcript pair incomplete — close remains fail-closed', {
-				windowKey: pair[0].windowKey,
-			});
-		}
-	}, []);
-
-	const stageSpellcraftReady = useCallback((message: SpellcraftReadyMessage): void => {
-		const pair = stageAppliedSpellcraftReady(spellcraftReadySessionRef.current, message);
-		if (pair) commitSpellcraftTranscript(pair);
-	}, [commitSpellcraftTranscript]);
-
-	const closeAcknowledgedSpellcraftWindow = useCallback((localReady: SpellcraftReadyMessage): void => {
-		const pokerAdapter = getP2PPokerCombatAdapter();
-		if (claimSpellcraftClose({
-			session: spellcraftReadySessionRef.current,
-			localReady,
-			pokerState: pokerAdapter.getPokerState(),
-		})) {
-			pokerAdapter.maybeCloseBettingRound();
-		}
-	}, []);
 
 	// Last envelope send timestamp — used by `sendCommandEnvelope` to enforce a
 	// short cooldown that avoids the prevStateHash race when the user clicks
@@ -502,15 +390,12 @@ export function useWireSync() {
 			seenCommandIdsOrderRef.current.length = 0;
 				lastIncomingChessSeqRef.current = -1;
 				seenChessCommandIdsRef.current.clear();
-				seenChessCommandIdsOrderRef.current.length = 0;
-				chessReceiptByCommandIdRef.current.clear();
-				chessReceiptCommandOrderRef.current.length = 0;
-				seenPokerDecisionIdsRef.current.clear();
-				seenPokerDecisionIdsOrderRef.current.length = 0;
-				resetSpellcraftReadyLedger(spellcraftReadyLedgerRef.current);
-				resetSpellcraftReadySession(spellcraftReadySessionRef.current);
-				spellcraftReadyMatchIdRef.current = null;
-				resetChessWireSender();
+					seenChessCommandIdsOrderRef.current.length = 0;
+					chessReceiptByCommandIdRef.current.clear();
+					chessReceiptCommandOrderRef.current.length = 0;
+					seenPokerDecisionIdsRef.current.clear();
+					seenPokerDecisionIdsOrderRef.current.length = 0;
+					resetChessWireSender();
 				phaseCheckpointClient.reset();
 			lastEnvelopeSentAtRef.current = 0;
 			sessionKeyRef.current = null;
@@ -1887,68 +1772,6 @@ export function useWireSync() {
 					break;
 					}
 
-				case 'spellcraft_ready_v1': {
-					const activeMatch = useMatchStore.getState().activeMatch;
-					if (!activeMatch || activeMatch.opponent.kind !== 'peer') {
-						debug.warn('[wireSync] spellcraft_ready_v1 dropped — no peer authority');
-						break;
-					}
-					const pokerAdapter = getP2PPokerCombatAdapter();
-					const result = settleRemoteSpellcraftReady({
-						message: data,
-						connectionState: usePeerStore.getState().connectionState,
-						expectedMatchId: matchIdRef.current,
-						expectedRemoteSide: oppositeSpellcraftActorSide(activeMatch.opponent.myRole),
-						pokerState: pokerAdapter.getPokerState(),
-						ledger: spellcraftReadyLedgerRef.current,
-						maxLedgerEntries: SEEN_COMMAND_IDS_MAX,
-					}, {
-						applyRemoteReady: () => pokerAdapter.applyRemoteSpellcraftReady({
-							combatId: data.combatId,
-							handNumber: data.handNumber,
-							actorPlayerId: data.actorPlayerId,
-						}),
-						onApplied: () => stageSpellcraftReady(data),
-					});
-					if (result.status === 'applied' || result.status === 'duplicate') {
-						// ACK is emitted before any close attempt, including duplicate
-						// replay after reload/phase advance.
-						send(createSpellcraftReadyAckMessage({
-							ready: data,
-							acknowledgerSide: activeMatch.opponent.myRole,
-						}));
-						const localReady = createCurrentSpellcraftReady('local');
-						if (localReady) {
-							const currentState = pokerAdapter.getPokerState();
-							if (currentState?.player.isReady) stageSpellcraftReady(localReady);
-							closeAcknowledgedSpellcraftWindow(localReady);
-						}
-					}
-					if (result.status === 'rejected') {
-						debug.warn('[wireSync] spellcraft_ready_v1 rejected', { reason: result.reason });
-					}
-					break;
-				}
-
-				case 'spellcraft_ready_ack_v1': {
-					const activeMatch = useMatchStore.getState().activeMatch;
-					const localReady = createCurrentSpellcraftReady('local');
-					if (!activeMatch || activeMatch.opponent.kind !== 'peer' || !localReady) break;
-					const result = applySpellcraftReadyAck({
-						session: spellcraftReadySessionRef.current,
-						ack: data,
-						localReady,
-						localSide: activeMatch.opponent.myRole,
-						connectionState: usePeerStore.getState().connectionState,
-						pokerState: getP2PPokerCombatAdapter().getPokerState(),
-					});
-					if (result.status === 'applied') closeAcknowledgedSpellcraftWindow(localReady);
-					if (result.status === 'rejected') {
-						debug.warn('[wireSync] spellcraft_ready_ack_v1 rejected', { reason: result.reason });
-					}
-					break;
-				}
-
 					case 'poker_turn_started': {
 						const pokerAdapter = getP2PPokerCombatAdapter();
 						const pokerState = pokerAdapter.getPokerState();
@@ -1956,8 +1779,9 @@ export function useWireSync() {
 						if (pokerState.combatId !== data.combatId) break;
 					if (pokerState.phase !== data.phase) break;
 					if (pokerState.activePlayerId !== data.activePlayerId) break;
+					if (data.activePlayerId !== pokerState.opponent.playerId) break;
 					if (pokerState.actionsThisRound !== data.actionsThisRound) break;
-					const expectedDurationMs = Math.max(1, pokerState.maxTurnTime ?? 60) * 1_000;
+					const expectedDurationMs = UNIVERSAL_POKER_TURN_CLOCK_POLICY.durationMs;
 					if (data.durationMs !== expectedDurationMs) {
 						debug.warn('[wireSync] poker_turn_started dropped — duration mismatch', {
 							received: data.durationMs,
@@ -2535,7 +2359,7 @@ export function useWireSync() {
 				pendingSyncRef.current = null;
 			}
 		};
-	}, [connection, connectionState, isHostFrame, isWsHost, sendsCardsInit, adoptsRemoteCardsInit, sendsCardsRecoverySnapshot, send, playCard, attackWithCard, endTurn, performHeroPower, applyOpponentCommandToStore, isCurrentConnectedMatch, createCurrentSpellcraftReady, stageSpellcraftReady, closeAcknowledgedSpellcraftWindow]);
+	}, [connection, connectionState, isHostFrame, isWsHost, sendsCardsInit, adoptsRemoteCardsInit, sendsCardsRecoverySnapshot, send, playCard, attackWithCard, endTurn, performHeroPower, applyOpponentCommandToStore, isCurrentConnectedMatch]);
 
 	const syncGameState = useCallback(() => {
 		if (connectionState !== 'connected' || !sendsCardsRecoverySnapshot) return;
@@ -2860,72 +2684,6 @@ export function useWireSync() {
 		});
 	}, [connectionState, send]);
 
-	const sendSpellcraftReady = useCallback((input: {
-		readonly combatId: string;
-		readonly handNumber: number;
-		readonly actorPlayerId: string;
-	}) => {
-		if (connectionState !== 'connected') {
-			return { status: 'rejected' as const, reason: 'not_connected' as const };
-		}
-		const activeMatch = useMatchStore.getState().activeMatch;
-		const matchId = matchIdRef.current;
-		if (!activeMatch || activeMatch.opponent.kind !== 'peer' || !matchId || activeMatch.matchId !== matchId) {
-			return { status: 'rejected' as const, reason: 'match_unavailable' as const };
-		}
-		const pokerAdapter = getP2PPokerCombatAdapter();
-		const pokerState = pokerAdapter.getPokerState();
-		if (
-			!pokerState
-			|| pokerState.phase !== CombatPhase.SPELL_PET
-			|| pokerState.combatId !== input.combatId
-			|| pokerState.handNumber !== input.handNumber
-			|| pokerState.player.playerId !== input.actorPlayerId
-			|| pokerState.player.isReady
-		) {
-			return { status: 'rejected' as const, reason: 'state_mismatch' as const };
-		}
-
-		const message = createSpellcraftReadyMessage({
-			matchId,
-			combatId: input.combatId,
-			handNumber: input.handNumber,
-			actorSide: activeMatch.opponent.myRole,
-			actorPlayerId: input.actorPlayerId,
-			seq: input.handNumber,
-		});
-		const applied = pokerAdapter.applyLocalSpellcraftReady(input);
-		if (applied.status !== 'applied') {
-			return { status: 'rejected' as const, reason: applied.reason };
-		}
-		stageSpellcraftReady(message);
-		send(message);
-		return { status: 'sent' as const, message };
-	}, [connectionState, send, stageSpellcraftReady]);
-
-	// Reconstruct from canonical engine state after hook reload/reconnect. A
-	// missing ACK causes the same deterministic Ready/decisionId to be resent;
-	// the receiver's applied-only boundary treats it idempotently.
-	useEffect(() => {
-		if (connectionState !== 'connected') return;
-		const pokerState = getP2PPokerCombatAdapter().getPokerState();
-		const localReady = createCurrentSpellcraftReady('local');
-		if (!pokerState || !localReady) return;
-		if (pokerState.player.isReady) stageSpellcraftReady(localReady);
-		if (pokerState.opponent.isReady) {
-			const remoteReady = createCurrentSpellcraftReady('remote');
-			if (remoteReady) stageSpellcraftReady(remoteReady);
-		}
-		if (shouldReemitSpellcraftReady({
-			session: spellcraftReadySessionRef.current,
-			localReady,
-			pokerState,
-			connectionState,
-		})) {
-			send(localReady);
-		}
-	}, [connectionState, send, createCurrentSpellcraftReady, stageSpellcraftReady]);
-
 	/**
 	 * Propose a match result to the opponent for dual-signature verification.
 	 * Returns the signatures object if the opponent counter-signs within 30s,
@@ -3014,7 +2772,6 @@ export function useWireSync() {
 		performHeroPower: wrappedUseHeroPower,
 		sendPokerAction,
 		sendPokerTurnStarted,
-		sendSpellcraftReady,
 		sendDeckVerification,
 		proposeResult,
 		downloadSessionLog,

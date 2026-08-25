@@ -51,7 +51,7 @@ export const createPokerSpellSlice: StateCreator<
 
   canCastPokerSpell: (spell: PokerSpellCard, casterMana: number): { canCast: boolean; reason?: string } => {
     const state = get();
-    const currentPhase = state.isSpellPetPhase ? 'SPELL_PET' : 'UNKNOWN';
+    const currentPhase = state.pokerCombatState?.phase ?? 'UNKNOWN';
     return utilCanCastPokerSpell(spell, casterMana, currentPhase);
   },
 

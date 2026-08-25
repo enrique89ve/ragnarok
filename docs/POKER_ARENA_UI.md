@@ -303,9 +303,6 @@ FIRST_STRIKE (15 dmg instant, no betting)
 MULLIGAN     (replace hole cards — modal overlay, blocks board)
        │
        ▼
-SPELL_PET    (cast pre-deal spells; no community cards yet)
-       │
-       ▼
 PRE_FLOP     (First Blood — opening wager round)         ──┐
        │                                                    │
        ▼                                                    │

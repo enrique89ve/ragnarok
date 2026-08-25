@@ -301,7 +301,7 @@ siguiente; game-over dice el resultado y el siguiente paso.
 ### Resultado que debe ver el jugador
 
 - Quien actua ahora.
-- En que fase esta la mano: Mulligan, Spellcraft, First Blood, Faith,
+- En que fase esta la mano: Mulligan, First Blood, Faith,
   Foresight, Destiny, Showdown.
 - Cuales son sus cartas, cuales son cartas comunitarias y cuales son del rival.
 - Cuantos HP estan en riesgo, cuanto debe pagar, si puede check/call/raise/fold.

@@ -426,7 +426,7 @@ function P2PTesterRules() {
 	return (
 		<ul className="cgo-p2p-rules" aria-label="Testnet combat rules">
 			<li>Pawn or King captures, and any capture of a pawn, resolve instantly. Kings cannot be taken.</li>
-			<li>Other hero collisions go to poker. There is no mulligan; the hand starts at Spellcraft.</li>
+			<li>Other hero collisions go to poker. There is no mulligan; the hand starts at First Blood.</li>
 			<li>A poker draw leaves both pieces alive and the attacker does not take the square.</li>
 		</ul>
 	);

@@ -56,9 +56,11 @@ import { cryptoRng, seededRngFromString } from '../../utils/seededRng';
 import { playWagerActivate } from '../../combat/animations/PokerDramaVFX';
 import {
   createPokerTurnClock,
-  createReceivedPokerTurnClock,
-  getPokerTurnRemainingSeconds,
-  type PokerTurnIdentityInput,
+	createReceivedPokerTurnClock,
+	getPokerTurnRemainingSeconds,
+	isTimedPokerDecisionPhase,
+	UNIVERSAL_POKER_TURN_CLOCK_POLICY,
+	type PokerTurnIdentityInput,
 } from '@shared/p2p-wire/pokerTurnClock';
 import { validatePokerActionIntent } from '../../combat/rules/pokerActionRules';
 import { emitCommunityCardRevealed, emitPhaseEntered } from '../../combat/vfx/events';
@@ -79,8 +81,8 @@ interface WagerEffect {
 	ranks?: number;
 }
 
-function getTurnDurationMs(state: Pick<PokerCombatState, 'maxTurnTime'>): number {
-  return Math.max(1, state.maxTurnTime) * 1_000;
+function getTurnDurationMs(_state: Pick<PokerCombatState, 'maxTurnTime'>): number {
+	return UNIVERSAL_POKER_TURN_CLOCK_POLICY.durationMs;
 }
 
 function getTurnIdentity(state: PokerCombatState): PokerTurnIdentityInput {
@@ -93,25 +95,37 @@ function getTurnIdentity(state: PokerCombatState): PokerTurnIdentityInput {
 }
 
 function applyLocalPokerTurnClock(state: PokerCombatState, nowMs = Date.now()): PokerCombatState {
-  const clock = createPokerTurnClock({
+	const clock = createPokerTurnClock({
     ...getTurnIdentity(state),
     nowMs,
     durationMs: getTurnDurationMs(state),
   });
-  if (!clock) {
+	if (!clock) {
     return {
       ...state,
       turnId: null,
       turnStartedAtMs: null,
       turnDeadlineAtMs: null,
+      turnClockOwnerId: null,
       turnTimer: state.maxTurnTime,
     };
-  }
-  return {
+	}
+	if (
+		state.turnId === clock.turnId
+		&& state.turnStartedAtMs !== null
+		&& state.turnDeadlineAtMs !== null
+	) {
+		return {
+			...state,
+			turnTimer: getPokerTurnRemainingSeconds({ nowMs, deadlineAtMs: state.turnDeadlineAtMs }),
+		};
+	}
+	return {
     ...state,
     turnId: clock.turnId,
     turnStartedAtMs: clock.startedAtMs,
     turnDeadlineAtMs: clock.deadlineAtMs,
+    turnClockOwnerId: null,
     turnTimer: getPokerTurnRemainingSeconds({ nowMs, deadlineAtMs: clock.deadlineAtMs }),
   };
 }
@@ -383,7 +397,7 @@ export const createPokerCombatSlice: StateCreator<
     const minBet = DEFAULT_BLIND_CONFIG.bigBlind;
     
     const FIRST_STRIKE_DAMAGE = 15;
-    let startingPhase = skipMulligan ? PokerCombatPhase.SPELL_PET : PokerCombatPhase.MULLIGAN;
+	let startingPhase = skipMulligan ? PokerCombatPhase.PRE_FLOP : PokerCombatPhase.MULLIGAN;
     if (firstStrikeTarget) {
       startingPhase = PokerCombatPhase.FIRST_STRIKE;
     }
@@ -425,11 +439,10 @@ export const createPokerCombatSlice: StateCreator<
       isAllInShowdown = true;
       // Flip cards immediately
       skipMulligan = true;
-      startingPhase = PokerCombatPhase.SPELL_PET;
+	      startingPhase = PokerCombatPhase.PRE_FLOP;
     }
 
-    // All starting phases (MULLIGAN, SPELL_PET, FIRST_STRIKE) begin with isReady: false
-    // SPELL_PET remains open until each participant submits an explicit Ready intent.
+	    // All starting phases (MULLIGAN, PRE_FLOP, FIRST_STRIKE) begin with isReady: false.
     const playerCombatState: PlayerCombatState = {
       playerId,
       playerName,
@@ -499,8 +512,7 @@ export const createPokerCombatSlice: StateCreator<
         target: firstStrikeTarget,
         completed: false
       } : undefined,
-      // Set SPELL_PET timing if starting in that phase (skipMulligan + no firstStrike)
-      spellPetPhaseStartTime: startingPhase === PokerCombatPhase.SPELL_PET ? Date.now() : undefined,
+	      spellPetPhaseStartTime: undefined,
       deterministicDeckSeed: deterministic?.deckSeed,
       deterministicPlayerRole: deterministic?.playerRole
     });
@@ -555,11 +567,10 @@ export const createPokerCombatSlice: StateCreator<
       preBlindHealth: floorHealth
     };
     
-    const nextPhase = state.mulliganComplete ? PokerCombatPhase.SPELL_PET : PokerCombatPhase.MULLIGAN;
+	    const nextPhase = state.mulliganComplete ? PokerCombatPhase.PRE_FLOP : PokerCombatPhase.MULLIGAN;
     debug.combat(`[PokerCombatSlice] First strike damage ${damage} applied to ${target}, transitioning to phase: ${nextPhase}`);
     
-    // Enter next phase with isReady: false
-    // SPELL_PET is an explicit card-playing decision window.
+	    // Enter next phase with isReady: false.
     const playerState = target === 'player' ? updatedTargetState : state.pokerCombatState.player;
     const opponentState = target === 'opponent' ? updatedTargetState : state.pokerCombatState.opponent;
     
@@ -576,7 +587,7 @@ export const createPokerCombatSlice: StateCreator<
       pokerCombatState: {
         ...state.pokerCombatState,
         phase: nextPhase,
-        spellPetPhaseStartTime: nextPhase === PokerCombatPhase.SPELL_PET ? Date.now() : undefined,
+	        spellPetPhaseStartTime: undefined,
         activePlayerId: newActivePlayerId,
         actionsThisRound: 0,
         player: {
@@ -602,7 +613,7 @@ export const createPokerCombatSlice: StateCreator<
       message: `First strike! ${target === 'player' ? 'Player' : 'Opponent'} takes ${damage} damage`
     });
 
-    // Post-commit: shake on the MULLIGAN/SPELL_PET transition.
+	    // Post-commit: shake on the MULLIGAN/first poker turn transition.
     emitPhaseEntered({ phase: nextPhase });
   },
 
@@ -621,16 +632,15 @@ export const createPokerCombatSlice: StateCreator<
       playerId: state.pokerCombatState.player.playerId,
       opponentId: state.pokerCombatState.opponent.playerId
     };
-    const newActivePlayerId = getActivePlayerForPhase(PokerCombatPhase.SPELL_PET, ctx);
-    validateActivePlayer(PokerCombatPhase.SPELL_PET, newActivePlayerId, 'completeMulligan');
+	    const newActivePlayerId = getActivePlayerForPhase(PokerCombatPhase.PRE_FLOP, ctx);
+	    validateActivePlayer(PokerCombatPhase.PRE_FLOP, newActivePlayerId, 'completeMulligan');
     
-    // Enter SPELL_PET phase with isReady: false
-    // Both participants may play cards before submitting their explicit Ready intent.
+	    // Enter the first poker turn with isReady: false.
     set({
       pokerCombatState: applyLocalPokerTurnClock({
         ...state.pokerCombatState,
-        phase: PokerCombatPhase.SPELL_PET,
-        spellPetPhaseStartTime: Date.now(),
+	        phase: PokerCombatPhase.PRE_FLOP,
+        spellPetPhaseStartTime: undefined,
         activePlayerId: newActivePlayerId,
         actionsThisRound: 0,
         player: {
@@ -648,8 +658,8 @@ export const createPokerCombatSlice: StateCreator<
       mulliganComplete: true
     });
 
-    // Post-commit: shake on the SPELL_PET transition.
-    emitPhaseEntered({ phase: PokerCombatPhase.SPELL_PET });
+	    // Post-commit: shake on the first poker turn transition.
+	    emitPhaseEntered({ phase: PokerCombatPhase.PRE_FLOP });
   },
 
   performPokerAction: (playerId: string, action: CombatAction, hpCommitment?: number) => {
@@ -786,7 +796,7 @@ export const createPokerCombatSlice: StateCreator<
         const folderIsPlayer = playerId === newState.player.playerId;
         const folderSide: 'player' | 'opponent' = folderIsPlayer ? 'player' : 'opponent';
         
-        // Force blind posting if folding before FAITH phase (e.g. during SPELL_PET)
+        // Force blind posting if folding before FAITH phase (e.g. during PRE_FLOP)
         // This ensures the folder always loses at least their blind HP
         if (!newState.blindsPosted) {
           const sbBlind = newState.blindConfig?.smallBlind || BLINDS.SB;
@@ -923,27 +933,14 @@ export const createPokerCombatSlice: StateCreator<
     
     const combatState = state.pokerCombatState;
     
-    // Prevent advancement from SPELL_PET to FAITH if a player is currently acting
-    // unless both participants committed their explicit Ready intents.
-    if (combatState.phase === PokerCombatPhase.SPELL_PET && 
-        combatState.activePlayerId !== null && 
-        combatState.actionsThisRound === 0 &&
-        !(combatState.player.isReady && combatState.opponent.isReady)) {
-      debug.combat('[advancePokerPhase] Blocking phase advance: waiting for both Ready intents');
-      return;
-    }
-
-    let newPhase = combatState.phase;
+	    let newPhase = combatState.phase;
     let newCommunityCards = { ...combatState.communityCards };
     let deck = [...state.pokerDeck];
     
-    switch (combatState.phase) {
-      case PokerCombatPhase.MULLIGAN:
-        newPhase = PokerCombatPhase.SPELL_PET;
-        break;
-      case PokerCombatPhase.SPELL_PET:
-        newPhase = PokerCombatPhase.PRE_FLOP;
-        break;
+	    switch (combatState.phase) {
+	      case PokerCombatPhase.MULLIGAN:
+	        newPhase = PokerCombatPhase.PRE_FLOP;
+	        break;
       case PokerCombatPhase.PRE_FLOP:
         newPhase = PokerCombatPhase.FAITH;
         const faithCards = [deck.pop()!, deck.pop()!, deck.pop()!];
@@ -964,10 +961,9 @@ export const createPokerCombatSlice: StateCreator<
         break;
     }
     
-    // Ready state logic by phase type:
-    // - SPELL_PET: Reset to false for the explicit card-playing decision window
-    // - FAITH/FORESIGHT/DESTINY: Reset to false, players need to bet
-    // - RESOLUTION: Set to true immediately, no actions needed
+	    // Ready state logic by phase type:
+	    // - Poker decision phases: Reset to false, the active player needs to act
+	    // - RESOLUTION: Set to true immediately, no actions needed
     const isResolutionPhase = newPhase === PokerCombatPhase.RESOLUTION;
     
 	let phasedCombat: PokerCombatState = {
@@ -985,7 +981,7 @@ export const createPokerCombatSlice: StateCreator<
     };
     
     // Wager: betting_round_damage — deal damage to enemy hero at start of each betting round
-    if (newPhase !== PokerCombatPhase.RESOLUTION && newPhase !== PokerCombatPhase.SPELL_PET && newPhase !== PokerCombatPhase.MULLIGAN) {
+	    if (newPhase !== PokerCombatPhase.RESOLUTION && newPhase !== PokerCombatPhase.MULLIGAN) {
       try {
         const gs = (globalThis as Record<string, any>).__ragnarokGameStore?.getState()?.gameState;
         if (gs) {
@@ -1532,10 +1528,13 @@ export const createPokerCombatSlice: StateCreator<
     const combatState = state.pokerCombatState;
     if (!combatState) return;
     if (combatState.combatId !== input.combatId) return;
-    if (combatState.phase !== input.phase) return;
-    if (combatState.activePlayerId !== input.activePlayerId) return;
-    if (combatState.actionsThisRound !== input.actionsThisRound) return;
-    if (input.durationMs !== getTurnDurationMs(combatState)) return;
+	    if (combatState.phase !== input.phase) return;
+	    if (combatState.activePlayerId !== input.activePlayerId) return;
+	    if (input.activePlayerId !== combatState.opponent.playerId) return;
+	    if (combatState.actionsThisRound !== input.actionsThisRound) return;
+	    if (!isTimedPokerDecisionPhase(input.phase)) return;
+	    if (input.durationMs !== UNIVERSAL_POKER_TURN_CLOCK_POLICY.durationMs) return;
+	    if (combatState.turnClockOwnerId === input.activePlayerId) return;
 
     const clock = createReceivedPokerTurnClock(input);
     if (!clock || clock.turnId !== input.turnId) return;
@@ -1546,6 +1545,7 @@ export const createPokerCombatSlice: StateCreator<
         turnId: clock.turnId,
         turnStartedAtMs: clock.startedAtMs,
         turnDeadlineAtMs: clock.deadlineAtMs,
+        turnClockOwnerId: input.activePlayerId,
         turnTimer: getPokerTurnRemainingSeconds({
           nowMs: input.receivedAtMs,
           deadlineAtMs: clock.deadlineAtMs,
@@ -1728,8 +1728,8 @@ export const createPokerCombatSlice: StateCreator<
       playerId: state.pokerCombatState.player.playerId,
       opponentId: state.pokerCombatState.opponent.playerId
     };
-    const newActivePlayerId = getActivePlayerForPhase(PokerCombatPhase.SPELL_PET, ctx);
-    validateActivePlayer(PokerCombatPhase.SPELL_PET, newActivePlayerId, 'startNextHand');
+	    const newActivePlayerId = getActivePlayerForPhase(PokerCombatPhase.PRE_FLOP, ctx);
+	    validateActivePlayer(PokerCombatPhase.PRE_FLOP, newActivePlayerId, 'startNextHand');
     
     set({
       pokerDeck: newDeck,
@@ -1737,8 +1737,8 @@ export const createPokerCombatSlice: StateCreator<
       pokerCombatState: applyLocalPokerTurnClock({
         ...state.pokerCombatState,
         handNumber: state.pokerCombatState.handNumber + 1,
-        phase: PokerCombatPhase.SPELL_PET,
-        spellPetPhaseStartTime: Date.now(),
+	        phase: PokerCombatPhase.PRE_FLOP,
+	        spellPetPhaseStartTime: undefined,
         pot: 0,
         currentBet: 0,
         turnTimer: state.pokerCombatState.maxTurnTime,
@@ -1785,8 +1785,8 @@ export const createPokerCombatSlice: StateCreator<
       })
     });
 
-    // Post-commit: shake on the new-hand SPELL_PET transition.
-    emitPhaseEntered({ phase: PokerCombatPhase.SPELL_PET });
+	    // Post-commit: shake on the new-hand first poker turn transition.
+	    emitPhaseEntered({ phase: PokerCombatPhase.PRE_FLOP });
   },
 
   startNextHandDelayed: (resolution: CombatResolution) => {
@@ -1841,11 +1841,6 @@ export const createPokerCombatSlice: StateCreator<
     }
     
     if (!combatState.player.isReady || !combatState.opponent.isReady) {
-      return;
-    }
-    
-    if (combatState.phase === PokerCombatPhase.SPELL_PET) {
-      get().advancePokerPhase();
       return;
     }
     

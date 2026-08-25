@@ -133,18 +133,18 @@ describe('getPokerDecisionView', () => {
 		expect(view.turnLabel).toBe('No clock');
 	});
 
-	it('runs the Spellcraft window clock from the same deadline contract as betting', () => {
+	it('runs the merged Spell/Pet window from the same deadline contract as betting', () => {
 		const view = getPokerDecisionView({
 			combatState: makeDecisionState({
-				phase: CombatPhase.SPELL_PET,
-				turnId: 'combat-test:spell_pet:local-piece:0',
+				phase: CombatPhase.PRE_FLOP,
+				turnId: 'combat-test:pre_flop:local-piece:0',
 				turnDeadlineAtMs: 61_000,
 			}),
 			connectionState: 'connected',
 			nowMs: 1_001,
 		});
 
-		expect(view.phaseLabel).toBe('Spellcraft');
+		expect(view.phaseLabel).toBe('First Blood');
 		expect(view.remainingSeconds).toBe(60);
 		expect(view.clockLabel).toBe('60s');
 		expect(view.status).toBe('local_decision');
@@ -152,10 +152,10 @@ describe('getPokerDecisionView', () => {
 });
 
 describe('derivePokerDecisionView clock parking', () => {
-	it('parks the hourglass only when Spellcraft has no deadline yet', () => {
+	it('parks the hourglass only when the merged poker window has no deadline yet', () => {
 		const parked = derivePokerDecisionView({
 			combatState: makeDecisionState({
-				phase: CombatPhase.SPELL_PET,
+				phase: CombatPhase.PRE_FLOP,
 				turnId: null,
 				turnDeadlineAtMs: null,
 				turnTimer: 60,
@@ -164,8 +164,8 @@ describe('derivePokerDecisionView clock parking', () => {
 		});
 		const live = derivePokerDecisionView({
 			combatState: makeDecisionState({
-				phase: CombatPhase.SPELL_PET,
-				turnId: 'combat-test:spell_pet:local-piece:0',
+				phase: CombatPhase.PRE_FLOP,
+				turnId: 'combat-test:pre_flop:local-piece:0',
 				turnDeadlineAtMs: 61_000,
 			}),
 			nowMs: 1_001,

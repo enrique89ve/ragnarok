@@ -9,7 +9,6 @@ import { getPokerTurnRemainingSeconds } from '../../../../../shared/p2p-wire/pok
 import { derivePokerDecisionView } from '../decision/pokerDecisionView';
 import { getPokerActionDefinition } from '../decision/pokerActionCatalog';
 import { derivePokerTurnPolicy, type PokerOpponentKind } from '../decision/pokerTurnPolicy';
-import { shouldTickSpellcraftClock } from '../decision/spellcraftDecision';
 
 interface UseCombatTimerOptions {
   combatState: PokerCombatState | null;
@@ -32,20 +31,36 @@ interface UseCombatTimerOptions {
     durationMs: number;
     remainingMs?: number;
   }) => void;
+  confirmMulligan?: () => void;
   addHeroBattlePopup?: (params: { action: BattlePopupAction; target: BattlePopupTarget; text: string; subtitle?: string }) => void;
-  onSpellcraftTimeout?: () => void;
 }
 
 export function useCombatTimer(options: UseCombatTimerOptions): void {
-  const { combatState, isActive, updateTimer, isP2PCombat = false, opponentKind = null, sendPokerAction, sendPokerTurnStarted, addHeroBattlePopup, onSpellcraftTimeout } = options;
+  const { combatState, isActive, updateTimer, isP2PCombat = false, opponentKind = null, sendPokerAction, sendPokerTurnStarted, confirmMulligan, addHeroBattlePopup } = options;
   const announcedTurnIdRef = useRef<string | null>(null);
   const expiredTurnIdRef = useRef<string | null>(null);
+  const mulliganDeadlineRef = useRef<{ readonly key: string; readonly deadlineAtMs: number } | null>(null);
 
   const cardGameMulliganActive = useGameStore(state => state.gameState?.mulligan?.active);
 
   useEffect(() => {
     if (!combatState || !isActive) return;
-    if (combatState.phase === CombatPhase.MULLIGAN) return;
+    if (combatState.phase === CombatPhase.MULLIGAN) {
+      if (!cardGameMulliganActive) return;
+      const mulliganKey = `${combatState.combatId}:${combatState.handNumber}`;
+      const existingDeadline = mulliganDeadlineRef.current?.key === mulliganKey
+        ? mulliganDeadlineRef.current
+        : { key: mulliganKey, deadlineAtMs: Date.now() + 60_000 };
+      mulliganDeadlineRef.current = existingDeadline;
+      const timer = setInterval(() => {
+        const mulligan = useGameStore.getState().gameState?.mulligan;
+        if (!mulligan?.active || mulligan.playerReady) return;
+        if (Date.now() < existingDeadline.deadlineAtMs) return;
+        confirmMulligan?.();
+      }, 250);
+      return () => clearInterval(timer);
+    }
+    mulliganDeadlineRef.current = null;
     if (cardGameMulliganActive) return;
 
     if (combatState.isAllInShowdown) {
@@ -57,7 +72,6 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
       activePlayerId: combatState.activePlayerId,
       localPlayerId: combatState.player.playerId,
       remotePlayerId: combatState.opponent.playerId,
-      localPlayerIsReady: combatState.player.isReady,
       isP2PCombat,
       opponentKind,
     });
@@ -79,24 +93,16 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
             combatId: combatState.combatId,
             turnId: combatState.turnId,
             phase: combatState.phase,
-            activePlayerId: combatState.activePlayerId,
-            actionsThisRound: combatState.actionsThisRound,
-            durationMs: combatState.maxTurnTime * 1_000,
+					activePlayerId: combatState.activePlayerId,
+					actionsThisRound: combatState.actionsThisRound,
+					durationMs: turnPolicy.turnClockPolicy.durationMs,
             remainingMs,
           });
         }
       }
     }
 
-    const spellcraftClock = shouldTickSpellcraftClock({
-      phase: combatState.phase,
-      isPlayerReady: Boolean(combatState.player.isReady),
-    });
-    if (!spellcraftClock && turnPolicy.shouldSkipTimerAfterLocalReady) {
-      debug.combat('[Timer] SKIP: Player already ready (isReady=true)');
-      return;
-    }
-    if (!spellcraftClock && !turnPolicy.shouldTickTimer) return;
+    if (!turnPolicy.shouldTickTimer) return;
 
     const timer = setInterval(() => {
       const mulliganStillActive = useGameStore.getState().gameState?.mulligan?.active;
@@ -110,28 +116,15 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
         return;
       }
 
-      const freshSpellcraftClock = shouldTickSpellcraftClock({
-        phase: freshState.phase,
-        isPlayerReady: Boolean(freshState.player.isReady),
-      });
-      if (freshState.phase === CombatPhase.SPELL_PET && !freshSpellcraftClock) {
-        return;
-      }
-
       const freshTurnPolicy = derivePokerTurnPolicy({
         activePlayerId: freshState.activePlayerId,
         localPlayerId: freshState.player.playerId,
         remotePlayerId: freshState.opponent.playerId,
-        localPlayerIsReady: freshState.player.isReady,
         isP2PCombat,
         opponentKind,
       });
 
-      if (!freshSpellcraftClock && freshTurnPolicy.shouldSkipTimerAfterLocalReady) {
-        debug.combat('[Timer] SKIP in interval: playerReady=', freshState.player.isReady, 'activePlayerId=', freshState.activePlayerId);
-        return;
-      }
-      if (!freshSpellcraftClock && !freshTurnPolicy.shouldTickTimer) return;
+      if (!freshTurnPolicy.shouldTickTimer) return;
 
       const newTime = freshState.turnDeadlineAtMs !== null
         ? getPokerTurnRemainingSeconds({ nowMs: Date.now(), deadlineAtMs: freshState.turnDeadlineAtMs })
@@ -144,18 +137,10 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
         updateTimer(newTime);
       } else {
         updateTimer(0);
-        if (freshState.phase === CombatPhase.SPELL_PET) {
-          if (freshState.turnId && expiredTurnIdRef.current === freshState.turnId) return;
-          if (freshState.turnId) expiredTurnIdRef.current = freshState.turnId;
-          onSpellcraftTimeout?.();
-          return;
-        }
         if (!freshTurnPolicy.shouldAutoActOnTimeout) return;
         if (isP2PCombat && freshState.turnId && expiredTurnIdRef.current === freshState.turnId) {
           return;
         }
-        if (freshState.turnId) expiredTurnIdRef.current = freshState.turnId;
-
         const permissions = getActionPermissions(freshState, true);
 
         let autoAction = CombatAction.DEFEND;
@@ -176,6 +161,12 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
           });
         }
 
+        const previousState = freshState;
+        getPokerCombatAdapterState().performAction(freshState.player.playerId, autoAction);
+        const appliedState = getPokerCombatAdapterState().combatState;
+        if (!appliedState || appliedState === previousState) return;
+
+        if (freshState.turnId) expiredTurnIdRef.current = freshState.turnId;
         if (isP2PCombat) {
           sendPokerAction?.({
             playerId: freshState.player.playerId,
@@ -183,7 +174,6 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
             turnId: freshState.turnId,
           });
         }
-        getPokerCombatAdapterState().performAction(freshState.player.playerId, autoAction);
         getPokerCombatAdapterState().maybeCloseBettingRound();
       }
     }, 1000);
@@ -208,8 +198,8 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
     opponentKind,
     sendPokerAction,
     sendPokerTurnStarted,
+    confirmMulligan,
     cardGameMulliganActive,
     addHeroBattlePopup,
-    onSpellcraftTimeout,
-  ]);
+	]);
 }

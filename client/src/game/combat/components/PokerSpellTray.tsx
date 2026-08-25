@@ -5,8 +5,8 @@
  * instances with `cardFamily="poker-spell"` so the indigo accent +
  * cast-glow keyframe (defined in CardFrame.css) apply. The opponent
  * tray mirrors the same queue today (the poker-spell state is shared
- * at the slice level — the SPELL_PET phase is a public preview before
- * resolution). When opponent-only spell tracking lands, split the
+ * at the slice level — the queue is part of the active poker decision
+ * window. When opponent-only spell tracking lands, split the
  * selector.
  *
  * Empty: render nothing. The tray is a queue, not a permanent label.

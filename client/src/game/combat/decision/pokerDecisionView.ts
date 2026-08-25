@@ -100,7 +100,6 @@ export interface PokerDecisionView {
 
 const PHASE_LABELS: Partial<Record<CombatPhase, string>> = {
 	[CombatPhase.MULLIGAN]: 'Mulligan',
-	[CombatPhase.SPELL_PET]: 'Spellcraft',
 	[CombatPhase.PRE_FLOP]: 'First Blood',
 	[CombatPhase.FAITH]: 'Faith',
 	[CombatPhase.FORESIGHT]: 'Foresight',

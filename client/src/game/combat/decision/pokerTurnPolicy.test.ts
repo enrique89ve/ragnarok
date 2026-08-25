@@ -5,7 +5,6 @@ const BASE_INPUT = {
 	activePlayerId: 'local-piece',
 	localPlayerId: 'local-piece',
 	remotePlayerId: 'remote-piece',
-	localPlayerIsReady: false,
 	isP2PCombat: false,
 };
 
@@ -24,7 +23,7 @@ describe('derivePokerTurnPolicy', () => {
 			shouldAutoActOnTimeout: true,
 			shouldBroadcastTurnStart: true,
 			shouldScheduleAiDecision: false,
-			shouldSkipTimerAfterLocalReady: false,
+			turnClockPolicy: { durationMs: 60_000 },
 		});
 	});
 
@@ -32,7 +31,6 @@ describe('derivePokerTurnPolicy', () => {
 		const policy = derivePokerTurnPolicy({
 			...BASE_INPUT,
 			activePlayerId: 'remote-piece',
-			localPlayerIsReady: true,
 			isP2PCombat: true,
 		});
 
@@ -43,7 +41,7 @@ describe('derivePokerTurnPolicy', () => {
 			shouldAutoActOnTimeout: false,
 			shouldBroadcastTurnStart: false,
 			shouldScheduleAiDecision: false,
-			shouldSkipTimerAfterLocalReady: false,
+			turnClockPolicy: { durationMs: 60_000 },
 		});
 	});
 
@@ -51,7 +49,6 @@ describe('derivePokerTurnPolicy', () => {
 		const policy = derivePokerTurnPolicy({
 			...BASE_INPUT,
 			activePlayerId: 'remote-piece',
-			localPlayerIsReady: true,
 			opponentKind: 'ai',
 		});
 
@@ -63,7 +60,7 @@ describe('derivePokerTurnPolicy', () => {
 			shouldAutoActOnTimeout: false,
 			shouldBroadcastTurnStart: false,
 			shouldScheduleAiDecision: true,
-			shouldSkipTimerAfterLocalReady: true,
+			turnClockPolicy: { durationMs: 60_000 },
 		});
 	});
 

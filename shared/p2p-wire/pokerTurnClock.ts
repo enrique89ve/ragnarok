@@ -10,7 +10,37 @@
 export const DEFAULT_POKER_TURN_DURATION_MS = 60_000;
 export const POKER_TURN_TIMER_TICK_MS = 1_000;
 
-const TIMED_POKER_PHASES = new Set(['spell_pet', 'pre_flop', 'faith', 'foresight', 'destiny']);
+export type TurnClockPolicy = Readonly<{
+	durationMs: typeof DEFAULT_POKER_TURN_DURATION_MS;
+	auxiliaryActions: 'repeatable';
+	auxiliaryActionsResetClock: false;
+	auxiliaryActionsAdvanceTurn: false;
+	pokerActionEndsTurn: true;
+	manaPoolScope: 'poker_hand';
+	drawScope: 'poker_hand';
+	progressionScope: 'poker_hand';
+	phaseChangesRefillMana: false;
+	playerChangesRefillMana: false;
+	mulliganExit: 'explicit_confirmation_or_timeout';
+	timeoutResolution: 'check_or_fold';
+}>;
+
+export const UNIVERSAL_POKER_TURN_CLOCK_POLICY: TurnClockPolicy = {
+	durationMs: DEFAULT_POKER_TURN_DURATION_MS,
+	auxiliaryActions: 'repeatable',
+	auxiliaryActionsResetClock: false,
+	auxiliaryActionsAdvanceTurn: false,
+	pokerActionEndsTurn: true,
+	manaPoolScope: 'poker_hand',
+	drawScope: 'poker_hand',
+	progressionScope: 'poker_hand',
+	phaseChangesRefillMana: false,
+	playerChangesRefillMana: false,
+	mulliganExit: 'explicit_confirmation_or_timeout',
+	timeoutResolution: 'check_or_fold',
+};
+
+const TIMED_POKER_PHASES = new Set(['pre_flop', 'faith', 'foresight', 'destiny']);
 
 export type PokerTurnClock = Readonly<{
 	turnId: string;
@@ -28,6 +58,21 @@ export type PokerTurnIdentityInput = Readonly<{
 
 export function isTimedPokerDecisionPhase(phase: string): boolean {
 	return TIMED_POKER_PHASES.has(phase);
+}
+
+export function isUniversalPokerTurnClock(policy: TurnClockPolicy): boolean {
+	return policy.durationMs === DEFAULT_POKER_TURN_DURATION_MS
+		&& policy.auxiliaryActions === 'repeatable'
+		&& policy.auxiliaryActionsResetClock === false
+		&& policy.auxiliaryActionsAdvanceTurn === false
+		&& policy.pokerActionEndsTurn === true
+		&& policy.manaPoolScope === 'poker_hand'
+		&& policy.drawScope === 'poker_hand'
+		&& policy.progressionScope === 'poker_hand'
+		&& policy.phaseChangesRefillMana === false
+		&& policy.playerChangesRefillMana === false
+		&& policy.mulliganExit === 'explicit_confirmation_or_timeout'
+		&& policy.timeoutResolution === 'check_or_fold';
 }
 
 export function buildPokerTurnId(input: PokerTurnIdentityInput): string {

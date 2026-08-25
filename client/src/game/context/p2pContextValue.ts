@@ -36,11 +36,6 @@ export interface P2PActions {
 		durationMs: number;
 		remainingMs?: number;
 	}) => void;
-	sendSpellcraftReady: ((input: {
-		readonly combatId: string;
-		readonly handNumber: number;
-		readonly actorPlayerId: string;
-	}) => { readonly status: 'sent' } | { readonly status: 'rejected'; readonly reason: string }) | null;
 	requestPhaseCheckpoint: (input: {
 		readonly fromPhase: PhaseCheckpointPhase;
 		readonly toPhase: PhaseCheckpointPhase;

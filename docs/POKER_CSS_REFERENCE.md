@@ -505,7 +505,7 @@ See [POKER_ARENA_DOM_TREE.md](./POKER_ARENA_DOM_TREE.md) §"Suspects for layout 
 
 1. **WagerInfoPanel height changes** — fixed width but height can vary by phase content. Constrain or convert to fixed height.
 2. **`<BossQuipBubble>` AnimatePresence** — may force re-flow of `.opponent-hero-container` parent.
-3. **CombatPhaseDirector content height** — phase changes (Spellcraft → First Blood → Faith …) alter text length.
+3. **CombatPhaseDirector content height** — phase changes (First Blood → Faith …) alter text length.
 
 ---
 

@@ -79,15 +79,14 @@ describe('getPokerP2PTurnStatusView', () => {
 		expect(view.displayTurn).toBe('opponent');
 		expect(view.windowLabel).toBe('Enemy Acting');
 		expect(derivePokerTurnPolicy({
-			localPlayerIsReady: combatState.player.isReady,
 			activePlayerId: combatState.activePlayerId,
 			localPlayerId: combatState.player.playerId,
 			remotePlayerId: combatState.opponent.playerId,
 			isP2PCombat: true,
-		}).shouldSkipTimerAfterLocalReady).toBe(false);
+		}).turnClockPolicy.durationMs).toBe(60_000);
 	});
 
-	it('skips the local timer only when the ready local side owns no remote decision window', () => {
+	it('keeps the universal clock policy after an auxiliary local card action', () => {
 		const localReady = makeState({
 			activePlayerId: 'player-1',
 			player: { playerId: 'player-1', isReady: true },
@@ -95,26 +94,34 @@ describe('getPokerP2PTurnStatusView', () => {
 		});
 
 		expect(derivePokerTurnPolicy({
-			localPlayerIsReady: localReady.player.isReady,
 			activePlayerId: localReady.activePlayerId,
 			localPlayerId: localReady.player.playerId,
 			remotePlayerId: localReady.opponent.playerId,
 			isP2PCombat: true,
-		}).shouldSkipTimerAfterLocalReady).toBe(true);
+		}).turnClockPolicy.auxiliaryActionsResetClock).toBe(false);
 		expect(derivePokerTurnPolicy({
-			localPlayerIsReady: localReady.player.isReady,
 			activePlayerId: localReady.activePlayerId,
 			localPlayerId: localReady.player.playerId,
 			remotePlayerId: localReady.opponent.playerId,
 			isP2PCombat: false,
-		}).shouldSkipTimerAfterLocalReady).toBe(true);
+		}).turnClockPolicy.auxiliaryActionsAdvanceTurn).toBe(false);
 		expect(derivePokerTurnPolicy({
-			localPlayerIsReady: false,
 			activePlayerId: 'player-1',
 			localPlayerId: 'player-1',
 			remotePlayerId: 'opponent-1',
 			isP2PCombat: true,
-		}).shouldSkipTimerAfterLocalReady).toBe(false);
+		}).turnClockPolicy.pokerActionEndsTurn).toBe(true);
+		const resourcePolicy = derivePokerTurnPolicy({
+			activePlayerId: 'player-1',
+			localPlayerId: 'player-1',
+			remotePlayerId: 'opponent-1',
+			isP2PCombat: true,
+		}).turnClockPolicy;
+		expect(resourcePolicy.manaPoolScope).toBe('poker_hand');
+		expect(resourcePolicy.drawScope).toBe('poker_hand');
+		expect(resourcePolicy.progressionScope).toBe('poker_hand');
+		expect(resourcePolicy.phaseChangesRefillMana).toBe(false);
+		expect(resourcePolicy.playerChangesRefillMana).toBe(false);
 	});
 
 	it('derives countdown from the deadline when a decision window has one', () => {

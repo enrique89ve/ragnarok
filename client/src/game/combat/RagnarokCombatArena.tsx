@@ -62,7 +62,6 @@ import { readViewerCombatHeroHp } from './combatHeroHp';
 import { useAudio } from '../../lib/stores/useAudio';
 import { BossPhaseFlash } from './components/BossPhaseFlash';
 import { BettingPanel } from './components/BettingPanel';
-import { SpellcraftReadyControl } from './components/SpellcraftReadyControl';
 import { PokerSpellTray } from './components/PokerSpellTray';
 import { useUnifiedCombatStore } from '../stores/unifiedCombatStore';
 import { PokerP2PTurnStatus } from './components/PokerP2PTurnStatus';
@@ -81,9 +80,6 @@ import { resolveHeroPortrait } from '../utils/art/artMapping';
 import { getHeroFeud } from '../pvp/pvpData';
 import type { CardInstance } from '../types';
 import { derivePokerDecisionView } from './decision/pokerDecisionView';
-import { deriveSpellcraftDecision } from './decision/spellcraftDecision';
-import { useP2PActions } from '../context/useP2PActions';
-import { getPokerTurnProcessMode } from './decision/pokerTurnPolicy';
 import { BattlefieldCardInspector } from './components/BattlefieldCardInspector';
 import type { CardInspectorSource } from './cardInspector/cardInspectorModel';
 import { resolveBattlefieldCardClickIntent, type BattlefieldCardSide } from './cardInspector/battlefieldCardIntent';
@@ -104,7 +100,6 @@ const CloseIcon = () => (
 
 const PHASE_LABELS: Partial<Record<CombatPhase, string>> = {
 	[CombatPhase.MULLIGAN]: 'Mulligan',
-	[CombatPhase.SPELL_PET]: 'Spellcraft',
 	[CombatPhase.PRE_FLOP]: 'First Blood',
 	[CombatPhase.FAITH]: 'Faith',
 	[CombatPhase.FORESIGHT]: 'Foresight',
@@ -230,8 +225,7 @@ interface UnifiedCombatArenaProps {
   handCurrentMana?: number;
   handIsPlayerTurn?: boolean;
   onCardPlay?: (card: CardInstance, position?: CombatZonePosition) => void;
-  onSpellcraftReady: () => void;
-  registerCardPosition?: (card: CardInstance, position: Position) => void;
+	  registerCardPosition?: (card: CardInstance, position: Position) => void;
   battlefieldRef?: React.RefObject<HTMLDivElement | null>;
   // Boss dialogue (campaign mode only) — owned by parent RagnarokCombatArena
   bossQuipText?: string | null;
@@ -248,7 +242,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
   onHeroPowerClick, onWeaponUpgradeClick, isWeaponUpgraded = false,
   heroPowerTargeting, executeHeroPowerEffect,
   handCards = [], handCurrentMana = 0, handIsPlayerTurn = false,
-  onCardPlay, onSpellcraftReady, registerCardPosition, battlefieldRef: externalBattlefieldRef,
+	  onCardPlay, registerCardPosition, battlefieldRef: externalBattlefieldRef,
   bossQuipText = null, bossQuipKey = 0, bossPortrait,
 }) => {
   const noopRegisterCardPosition = useCallback(() => {}, []);
@@ -261,24 +255,11 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
   const autoAttackAll = useGameStore(s => s.autoAttackAll);
   const selectAttacker = useGameStore(s => s.selectAttacker);
   const selectedHandCard = useGameStore(s => s.selectedCard);
-  const activeMatch = useMatchStore(s => s.activeMatch);
-  const connectionState = usePeerStore(s => s.connectionState);
-	const p2pActions = useP2PActions();
+	const activeMatch = useMatchStore(s => s.activeMatch);
+	const connectionState = usePeerStore(s => s.connectionState);
 
-  const cardGameIsPlayerTurn = gameState?.currentTurn === 'player';
-  const isP2PCombat = activeMatch?.opponent.kind === 'peer';
-  const spellcraftDecision = deriveSpellcraftDecision({
-    phase: combatState?.phase,
-    isActive: Boolean(combatState),
-    isMulliganActive: Boolean(gameState?.mulligan?.active),
-    processMode: getPokerTurnProcessMode(isP2PCombat),
-    isTransportConnected: connectionState === 'connected',
-    isPlayerReady: Boolean(combatState?.player.isReady),
-    isOpponentReady: Boolean(combatState?.opponent.isReady),
-	peerReadyIntentAvailable: isP2PCombat
-		&& connectionState === 'connected'
-		&& typeof p2pActions.sendSpellcraftReady === 'function',
-  });
+	const cardGameIsPlayerTurn = gameState?.currentTurn === 'player';
+	const isP2PCombat = activeMatch?.opponent.kind === 'peer';
   const pendingPokerSpells = useUnifiedCombatStore(state => state.pendingPokerSpells);
   const hasQueuedPokerSpells = (pendingPokerSpells?.length ?? 0) > 0;
 
@@ -292,7 +273,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
   useEffect(() => {
     if (!combatState?.phase) return;
     const phase = combatState.phase;
-    if (phase === CombatPhase.SPELL_PET || phase === CombatPhase.MULLIGAN || phase === CombatPhase.PRE_FLOP) {
+		if (phase === CombatPhase.MULLIGAN || phase === CombatPhase.PRE_FLOP) {
       setCommunityCardsRevealed(false);
     } else if (phase === CombatPhase.FAITH || phase === CombatPhase.FORESIGHT || phase === CombatPhase.DESTINY || phase === CombatPhase.RESOLUTION) {
       setCommunityCardsRevealed(true);
@@ -495,7 +476,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
   });
 
   const isCardInteractionDisabled = gameState?.gamePhase === 'game_over';
-  const isHandInteractionDisabled = isCardInteractionDisabled || !spellcraftDecision.canPlayCards;
+	const isHandInteractionDisabled = isCardInteractionDisabled || !pokerDecisionView.localCanAct;
   const openCardInspector = useCallback((card: CardInstance, source: CardInspectorSource) => {
     setInspectedCard({ card, source });
   }, []);
@@ -544,7 +525,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
     ? !isMulligan && isBettingRound && !combatState.isAllInShowdown
     : false;
   const showBettingInteraction = showBettingControls && Boolean(basePermissions?.isMyTurnToAct);
-  const phaseAllowsFaith = Boolean(combatPhase) && !isMulligan && combatPhase !== CombatPhase.SPELL_PET && combatPhase !== CombatPhase.PRE_FLOP;
+	const phaseAllowsFaith = Boolean(combatPhase) && !isMulligan && combatPhase !== CombatPhase.PRE_FLOP;
   const showFaith = phaseAllowsFaith && communityCardsRevealed;
   const showForesight = communityCardsRevealed && !isMulligan && (combatPhase === CombatPhase.FORESIGHT || combatPhase === CombatPhase.DESTINY || combatPhase === CombatPhase.RESOLUTION);
   const showDestiny = communityCardsRevealed && !isMulligan && (combatPhase === CombatPhase.DESTINY || combatPhase === CombatPhase.RESOLUTION);
@@ -685,7 +666,7 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
         handCards={handCards}
         handCurrentMana={handCurrentMana}
         handIsPlayerTurn={handIsPlayerTurn}
-        handIsPlayWindowOpen={spellcraftDecision.canPlayCards}
+	        handIsPlayWindowOpen={pokerDecisionView.localCanAct}
         handIsInteractionDisabled={isHandInteractionDisabled}
         heroHealth={readViewerCombatHeroHp(combatState, 'player')?.current ?? 0}
         evolveReadyIds={evolveReadyIds}
@@ -740,11 +721,6 @@ const UnifiedCombatArena: React.FC<UnifiedCombatArenaProps> = ({
           showFrontlineButton={isPlayerTurn && playerBattlefield.length > 0}
         />
       )}
-
-      <SpellcraftReadyControl
-        view={spellcraftDecision}
-        onReady={onSpellcraftReady}
-      />
 
       {hasQueuedPokerSpells && (
         <>
@@ -919,9 +895,8 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
     handleWeaponUpgrade,
     handleAction,
     handleCombatEnd,
-    handleHeroDeathComplete,
-    handleUnifiedEndTurn,
-    handleSpellcraftReady,
+	    handleHeroDeathComplete,
+	    handleUnifiedEndTurn,
     heroBattlePopups,
     removeHeroBattlePopup,
   } = useRagnarokCombatController({ onCombatEnd });
@@ -1449,8 +1424,7 @@ export const RagnarokCombatArena: React.FC<RagnarokCombatArenaProps> = ({ onComb
             handCards={playerHand}
             handCurrentMana={playerMana}
             handIsPlayerTurn={isPlayerTurn}
-            onCardPlay={sharedHandleCardPlay}
-            onSpellcraftReady={handleSpellcraftReady}
+	            onCardPlay={sharedHandleCardPlay}
             registerCardPosition={sharedRegisterCardPosition}
             battlefieldRef={sharedBattlefieldRef}
             bossQuipText={quipText}

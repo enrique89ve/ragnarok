@@ -35,14 +35,14 @@ describe('canPlayHandCard', () => {
     expect(canPlayHandCard(playableInput)).toBe(true);
   });
 
-  it('never announces a card as playable outside Spellcraft', () => {
+	it('never announces a card as playable outside the poker decision window', () => {
     expect(canPlayHandCard({ ...playableInput, isPlayWindowOpen: false })).toBe(false);
     expect(getHandCardAriaLabel({
       cardName: 'Shadowmaw',
       manaCost: 1,
       canPlay: false,
       isPlayWindowOpen: false,
-    })).toBe('Shadowmaw, 1 mana. Enter for details. Play during Spellcraft.');
+	})).toBe('Shadowmaw, 1 mana. Enter for details. Play during your poker decision.');
   });
 
   it('announces the Space action only when the card is actually playable', () => {

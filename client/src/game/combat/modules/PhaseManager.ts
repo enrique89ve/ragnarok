@@ -25,7 +25,6 @@ export interface PhaseTransition {
 const PHASE_ORDER: CombatPhase[] = [
         CombatPhase.FIRST_STRIKE,
         CombatPhase.MULLIGAN,
-        CombatPhase.SPELL_PET,
         CombatPhase.PRE_FLOP,
         CombatPhase.FAITH,
         CombatPhase.FORESIGHT,

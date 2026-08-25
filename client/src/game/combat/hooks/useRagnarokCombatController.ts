@@ -46,7 +46,6 @@ import { debug } from '../../config/debugConfig';
 import type { HeroBattlePopupData, BattlePopupAction, BattlePopupTarget } from '../components/HeroBattlePopup';
 import { validatePokerActionIntent } from '../rules/pokerActionRules';
 import { getPokerTurnProcessMode } from '../decision/pokerTurnPolicy';
-import { deriveSpellcraftDecision, submitSpellcraftReadyIntent } from '../decision/spellcraftDecision';
 import { getPokerActionPresentation } from '../decision/pokerActionPresentation';
 import { emitBettingAction } from '../vfx/events';
 import { emitHeroPowerUsed } from '../../actions/gameActions';
@@ -129,9 +128,8 @@ export interface UseRagnarokCombatControllerReturn {
   handleWeaponUpgrade: () => void;
   handleAction: (action: CombatAction, hp?: number) => void;
   handleCombatEnd: () => void;
-  handleHeroDeathComplete: () => void;
-  handleUnifiedEndTurn: () => void;
-  handleSpellcraftReady: () => void;
+	handleHeroDeathComplete: () => void;
+	handleUnifiedEndTurn: () => void;
   
   turnPhase: string;
   orchestratorTurn: number;
@@ -192,7 +190,6 @@ export function useRagnarokCombatController(
   }, []);
 
   const aiResponseInProgressRef = useRef(false);
-  const spellcraftTimeoutRef = useRef<() => void>(() => undefined);
   const p2pActions = useP2PActions();
   const activeMatch = useMatchStore(state => state.activeMatch);
   const connectionState = usePeerStore(state => state.connectionState);
@@ -223,8 +220,8 @@ export function useRagnarokCombatController(
     opponentKind,
     sendPokerAction: p2pActions.sendPokerAction,
     sendPokerTurnStarted: p2pActions.sendPokerTurnStarted,
+    confirmMulligan: () => p2pActions.dispatchGameCommand({ type: GAME_COMMAND_TYPES.confirmMulligan }),
     addHeroBattlePopup,
-    onSpellcraftTimeout: () => spellcraftTimeoutRef.current(),
   });
   
   useCombatEvents({
@@ -1127,43 +1124,6 @@ export function useRagnarokCombatController(
     
   }, [combatState, performAction, endTurn, isP2PActionLocked]);
 
-  const handleSpellcraftReady = useCallback(() => {
-    const adapter = getPokerCombatAdapterState();
-    const freshState = adapter.combatState;
-    const decision = deriveSpellcraftDecision({
-      phase: freshState?.phase,
-      isActive,
-      isMulliganActive: Boolean(useGameStore.getState().gameState?.mulligan?.active),
-      processMode: pokerTurnProcessMode,
-      isTransportConnected: p2pTransportConnected,
-      isPlayerReady: Boolean(freshState?.player.isReady),
-      isOpponentReady: Boolean(freshState?.opponent.isReady),
-	  peerReadyIntentAvailable: isP2PCombat
-		&& p2pTransportConnected
-		&& typeof p2pActions.sendSpellcraftReady === 'function',
-    });
-    if (!freshState || !decision.canSubmitReady) {
-      return;
-    }
-
-	const submission = submitSpellcraftReadyIntent({
-		processMode: pokerTurnProcessMode,
-		combatId: freshState.combatId,
-		handNumber: freshState.handNumber,
-		playerId: freshState.player.playerId,
-		sendPeerReady: p2pActions.sendSpellcraftReady,
-		applyLocalReady: adapter.setPlayerReady,
-		maybeClose: adapter.maybeCloseBettingRound,
-	});
-	if (submission === 'peer_rejected' || submission === 'unavailable') {
-		fireAnnouncement('warning', 'Ready sync pending', {
-			subtitle: 'Spellcraft remains open. Reconnect and try Ready again.',
-			duration: 1800,
-		});
-	}
-  }, [isActive, isP2PCombat, p2pActions, p2pTransportConnected, pokerTurnProcessMode]);
-  spellcraftTimeoutRef.current = handleSpellcraftReady;
-
   return {
     combatState,
     isActive,
@@ -1209,9 +1169,8 @@ export function useRagnarokCombatController(
     handleWeaponUpgrade,
     handleAction,
     handleCombatEnd,
-    handleHeroDeathComplete,
-    handleUnifiedEndTurn,
-    handleSpellcraftReady,
+	    handleHeroDeathComplete,
+	    handleUnifiedEndTurn,
     
     turnPhase,
     orchestratorTurn,

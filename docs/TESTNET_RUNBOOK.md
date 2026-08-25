@@ -637,8 +637,8 @@ Validates that a single-player practice match runs end-to-end on the local stack
 6. Move a player pawn forward. Confirm a MovePlate dot appears on click; click the dot to commit.
 7. Wait ~1.5s. Confirm the AI plays exactly one piece in response (no "doble movimiento"). `boardState.currentTurn` flips back to `'player'`. `boardState.moveCount` advances by 2.
 8. Repeat moves until phase advances to combat or chess concludes. Track AI turns -- target ≥10 across the session.
-9. Confirm transition into combat: `gameStatus === 'combat'` and `pokerIsActive === true`. The cards UI mounts (Spellcraft window, mulligan prompt). No console errors.
-10. Play through combat phases (mulligan -> spellcraft -> betting rounds) until one side's HP reaches 0 or chess resumes and chess reaches checkmate, draw, or decisive-material game-over.
+9. Confirm transition into combat: `gameStatus === 'combat'` and `pokerIsActive === true`. The cards UI mounts (mulligan prompt and universal 60s poker decision window). No console errors.
+10. Play through combat phases (mulligan -> First Blood -> betting rounds) until one side's HP reaches 0 or chess resumes and chess reaches checkmate, draw, or decisive-material game-over.
 11. Confirm the game-over screen renders with the correct winner attribution. `getWinnerFromGameStatus` resolves to `'player'` or `'opponent'` matching the visible UI.
 12. Confirm console is clean of errors throughout the entire session. The
     exporter may report one bounded summary for unsupported legacy catalog

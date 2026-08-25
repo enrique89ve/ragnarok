@@ -1,3 +1,8 @@
+import {
+	UNIVERSAL_POKER_TURN_CLOCK_POLICY,
+	type TurnClockPolicy,
+} from '../../../../../shared/p2p-wire/pokerTurnClock';
+
 export type PokerTurnProcessMode = 'p2p' | 'local_ai';
 export type PokerTurnProfileMode = 'p2p' | 'campaign' | 'vs_ai';
 export type PokerTurnActor = 'local_human' | 'remote_peer' | 'remote_ai' | 'none';
@@ -11,7 +16,7 @@ export type PokerTurnPolicy = {
 	readonly shouldAutoActOnTimeout: boolean;
 	readonly shouldBroadcastTurnStart: boolean;
 	readonly shouldScheduleAiDecision: boolean;
-	readonly shouldSkipTimerAfterLocalReady: boolean;
+	readonly turnClockPolicy: TurnClockPolicy;
 };
 
 export function getPokerTurnProcessMode(isP2PCombat: boolean): PokerTurnProcessMode {
@@ -45,7 +50,6 @@ export function derivePokerTurnPolicy(input: {
 	readonly activePlayerId: string | null | undefined;
 	readonly localPlayerId: string;
 	readonly remotePlayerId: string;
-	readonly localPlayerIsReady: boolean | undefined;
 	readonly opponentKind?: PokerOpponentKind | null;
 	readonly isP2PCombat?: boolean;
 	readonly isCampaign?: boolean;
@@ -69,7 +73,7 @@ export function derivePokerTurnPolicy(input: {
 		shouldAutoActOnTimeout: actor === 'local_human',
 		shouldBroadcastTurnStart: processMode === 'p2p' && actor === 'local_human',
 		shouldScheduleAiDecision: actor === 'remote_ai',
-		shouldSkipTimerAfterLocalReady: Boolean(input.localPlayerIsReady) && actor !== 'remote_peer',
+		turnClockPolicy: UNIVERSAL_POKER_TURN_CLOCK_POLICY,
 	};
 }
 

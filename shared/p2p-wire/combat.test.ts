@@ -17,6 +17,8 @@ import {
 	createReceivedPokerTurnClock,
 	getPokerTurnRemainingSeconds,
 	isTimedPokerDecisionPhase,
+	isUniversalPokerTurnClock,
+	UNIVERSAL_POKER_TURN_CLOCK_POLICY,
 } from './pokerTurnClock';
 
 describe('compact combat wire codec', () => {
@@ -108,16 +110,17 @@ describe('poker turn clock contract', () => {
 
 	it('creates deadlines only for timed decision phases', () => {
 		expect(isTimedPokerDecisionPhase('faith')).toBe(true);
-		expect(isTimedPokerDecisionPhase('spell_pet')).toBe(true);
+		expect(isTimedPokerDecisionPhase('pre_flop')).toBe(true);
+		expect(isTimedPokerDecisionPhase('spell_pet')).toBe(false);
 		expect(createPokerTurnClock({
 			combatId: 'combat-a',
-			phase: 'spell_pet',
+			phase: 'pre_flop',
 			activePlayerId: 'piece-1',
 			actionsThisRound: 0,
 			nowMs: 1_000,
 			durationMs: 60_000,
 		})).toEqual({
-			turnId: 'combat-a:spell_pet:piece-1:0',
+			turnId: 'combat-a:pre_flop:piece-1:0',
 			startedAtMs: 1_000,
 			deadlineAtMs: 61_000,
 			durationMs: 60_000,
@@ -129,6 +132,18 @@ describe('poker turn clock contract', () => {
 			actionsThisRound: 0,
 			nowMs: 1_000,
 		})).toBeNull();
+	});
+
+	it('publishes one universal policy for all timed poker decisions', () => {
+		expect(UNIVERSAL_POKER_TURN_CLOCK_POLICY).toMatchObject({
+			durationMs: 60_000,
+			manaPoolScope: 'poker_hand',
+			drawScope: 'poker_hand',
+			progressionScope: 'poker_hand',
+			phaseChangesRefillMana: false,
+			playerChangesRefillMana: false,
+		});
+		expect(isUniversalPokerTurnClock(UNIVERSAL_POKER_TURN_CLOCK_POLICY)).toBe(true);
 	});
 
 	it('derives remaining seconds from deadline, not mutable browser countdown', () => {

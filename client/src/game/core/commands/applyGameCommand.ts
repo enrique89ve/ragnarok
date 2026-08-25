@@ -367,6 +367,8 @@ function getPlayCardRejection(
 	const player = state.players.player;
 
 	if (cardInstance.card.type === 'minion') {
+		// Hard five-slot invariant: timing and available mana never create a
+		// sixth battlefield slot. Keep this guard at the command boundary.
 		if (player.battlefield.length >= MAX_BATTLEFIELD_SIZE) {
 			return 'battlefield full';
 		}

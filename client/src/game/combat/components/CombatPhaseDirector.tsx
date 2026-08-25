@@ -18,7 +18,6 @@ interface CombatPhaseDirectorProps {
 }
 
 const PHASE_RAIL: Array<{ phase: CombatPhase; label: string }> = [
-	{ phase: CombatPhase.SPELL_PET, label: 'Spellcraft' },
 	{ phase: CombatPhase.PRE_FLOP, label: 'First Blood' },
 	{ phase: CombatPhase.FAITH, label: 'Faith' },
 	{ phase: CombatPhase.FORESIGHT, label: 'Foresight' },

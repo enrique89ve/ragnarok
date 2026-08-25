@@ -119,7 +119,7 @@ All zones always mount. Their position is defined by `grid-template-areas` plus 
 
 ### Remaining medium suspicion:
 
-3. **`.combat-phase-director-*`** (CombatPhaseDirector inside WagerInfoPanel) — CSS now exists in `RagnarokCombatArena.css`. Still verify fixed height/overflow behavior because content changes between phases (Spellcraft → First Blood → Faith …); the parent panel has fixed width but may still change height.
+3. **`.combat-phase-director-*`** (CombatPhaseDirector inside WagerInfoPanel) — CSS now exists in `RagnarokCombatArena.css`. Still verify fixed height/overflow behavior because content changes between phases (First Blood → Faith …); the parent panel has fixed width but may still change height.
 
 4. **`<BossQuipBubble>`** — absolute (verified). OK on its own, but it uses AnimatePresence + motion.div which may force a re-flow of its absolute parent (`.opponent-hero-container`) during enter/exit transitions.
 

@@ -117,7 +117,7 @@ export interface EvaluatedHand {
 export enum CombatPhase {
   FIRST_STRIKE = 'first_strike', // First strike animation - attacker deals 15 damage
   MULLIGAN = 'mulligan',      // Mulligan phase - replace cards in hand (MUST be first)
-  SPELL_PET = 'spell_pet',    // Cast spells and use pets
+  SPELL_PET = 'spell_pet',    // Legacy persisted value; runtime uses the poker decision window
   PRE_FLOP = 'pre_flop',      // Pre-flop betting round (blinds posted, no community cards)
   FAITH = 'faith',            // First 3 cards (flop)
   FORESIGHT = 'foresight',    // 4th card (turn)
@@ -348,6 +348,9 @@ export interface PokerCombatState {
   turnId: string | null;    // Stable id for the active decision window
   turnStartedAtMs: number | null; // Local timestamp when the active decision window started
   turnDeadlineAtMs: number | null;// Local timestamp when the active decision window expires
+  // Set only after the remote owner announces this window. A duplicate
+  // announcement must not re-arm an already synchronized deadline.
+  turnClockOwnerId?: string | null;
   actionHistory: CombatActionDetails[];
   winner?: 'player' | 'opponent' | 'draw' | null;
   minBet: number;           // Minimum bet/raise amount (5 HP = big blind in Ragnarok)
@@ -375,8 +378,9 @@ export interface PokerCombatState {
     completed: boolean;
   };
   
-  // SPELL_PET phase timing - used to give players time to play cards
-  spellPetPhaseStartTime?: number; // Timestamp when SPELL_PET phase started
+  // Legacy field retained for persisted/replay compatibility. Spell/Pet is no
+  // longer a separate timed phase; cards live inside the poker decision turn.
+  spellPetPhaseStartTime?: number;
 
   // P2P deterministic replay metadata. When set, future reshuffles keep
   // physical attacker/defender card assignment stable across viewer slots.

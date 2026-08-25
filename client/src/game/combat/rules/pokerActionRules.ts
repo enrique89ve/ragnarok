@@ -111,7 +111,7 @@ export function getPokerActionPermissions(
   const turn = getPokerTurnFlags(combatState, actor, isResolution);
 
   return {
-    isPreForesight: combatState.phase === CombatPhase.SPELL_PET || combatState.phase === CombatPhase.PRE_FLOP,
+		isPreForesight: combatState.phase === CombatPhase.PRE_FLOP,
     ...stake,
     ...actions,
     ...turn,
