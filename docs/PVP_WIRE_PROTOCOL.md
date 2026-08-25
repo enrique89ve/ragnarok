@@ -14,6 +14,7 @@ pipeline, or the matchmaking surface. Ranked settlement canon:
 
 **Companion specs**:
 - `adr/0008-winner-posted-match-result.md` — ranked settlement (winner posts, replay validates)
+- `adr/0011-server-notarized-poker-turn-clock.md` — P2P Time Notary for the 60s poker window
 - `RAGNAROK_PROTOCOL_V1.md` — on-chain custom_json surface; ranked result follows ADR 0008;
   it is not submitted by the current testnet match flow.
 - `P2P_SECURITY_HARDENING.md` — five security invariants enforced over this
@@ -59,26 +60,33 @@ never emits Hive `match_anchor`/`match_result` or canonical economy.
 ## §1 Architecture Overview
 
 A PvP match runs primarily between two browser clients ("peers"). The server
-owns four bounded responsibilities:
+owns five bounded responsibilities:
 
 1. **Matchmaking**: an in-memory, ELO-aware queue that issues per-peer
    `queueToken` bearer secrets and per-peer `P2PMatchTicket` relay
    credentials (`server/routes/matchmakingRoutes.ts`).
 2. **Relay**: a WebSocket fan-out that forwards opaque JSON frames between
    the two peers in a room (`server/routes/p2pRelay.ts`). The relay does
-   NOT inspect game logic; it only validates frame envelope shape and
-   enforces a whitelist of `type` values.
+   NOT inspect game logic; it only validates frame envelope shape,
+   enforces a whitelist of `type` values, and applies the two notaries
+   below.
 3. **Phase notarization**: at `chess ↔ poker_combat` and `* → game_over`, the
    relay compares two opaque deterministic roots. It never receives or runs
    gameplay state. See [ADR 0005](adr/0005-server-notarized-phase-checkpoints.md).
-4. **Future arbitration** (post-match, off-wire): outside those fixed
-   checkpoints the server is *not* part of real-time validation. Dual-signed
-   `match_result`, Hive broadcast and slash processing remain deferred ranked
-   settlement work and are not executed in the current testnet.
+4. **Time notarization**: at each timed poker decision (`pre_flop`, `faith`,
+   `foresight`, `destiny`) both peers propose the same `turnId`. The relay
+   stamps `serverStartedAtMs` on the first valid proposal and commits
+   `deadline = start + 60_000` when the second matches. It then gates
+   `poker_action` by receive time vs that deadline. It never runs poker.
+   See [ADR 0011](adr/0011-server-notarized-poker-turn-clock.md).
+5. **Future arbitration** (post-match, off-wire): outside those fixed
+   checkpoints the server is *not* part of real-time gameplay validation.
+   Dual-signed `match_result`, Hive broadcast and slash processing remain
+   deferred ranked settlement work and are not executed in the current testnet.
 
 The relay does not have a database of game state and cannot adjudicate moves.
-It holds only constant-sized phase agreement metadata and is **not a source of
-truth about gameplay**.
+It holds only constant-sized phase agreement and poker-turn deadline metadata
+and is **not a source of truth about gameplay**.
 
 **Client bridge dependency rule**: P2P wire handlers must not reach gameplay
 stores through `globalThis`. Poker P2P behavior goes through the explicit
@@ -368,7 +376,9 @@ The relay whitelist (`server/routes/p2pRelay.ts:47-69`) MUST stay in sync.
 | `transition_receipt_v1` | receiver → command sender | both (symmetric) | Post-commit chess receipt binding the command intent to the receiver's pre/post chess+cards integrity roots. A rejection or root mismatch quarantines further local chess actions. |
 | `phase_checkpoint_propose_v1` | peer → relay | both | Fixed-size proposal for a deterministic phase boundary; consumed by the relay and never fanned out. |
 | `phase_checkpoint_commit_v1` / `phase_checkpoint_dispute_v1` | relay → peers inside `__sys.event=phase_checkpoint` | relay only | Commit if roots match. Mismatch retries; freeze only after 3 strikes. The relay never picks a winner. |
-| `poker_action` | both | both (symmetric) | Phase 3 poker: deterministic local apply + relay to peer; includes optional compact tuple for transcript/DataChannel migration |
+| `poker_turn_started` | peer → relay | both | Timed-poker turn identity proposal; consumed by the relay and never fanned out. Client `durationMs` / `remainingMs` / `sentAtMs` are ignored. |
+| `poker_turn_notary_commit_v1` / `poker_turn_notary_dispute_v1` | relay → peers inside `__sys.event=poker_turn_notary` | relay only | Commit if both peers proposed the same `turnId`. The first proposal stamps the start; the deadline is always 60s. Mismatch retries; freeze after 3 strikes. The relay never picks a winner. |
+| `poker_action` | both | both (symmetric) | Phase 3 poker: deterministic local apply + relay to peer; required `origin` and `turnId`. The relay time-gates by server receive time vs the notarized deadline, then fans out. Compact tuple remains optional. |
 | `poker_hash_check` | host → client | host | Turn-scoped Poker integrity probe; compared only when phase, turn id and action count match locally |
 | `hash_check` | host → client | host | Periodic state-hash sanity check |
 | `hash_mismatch` | client → host | client | Reports a divergent state hash |
@@ -590,21 +600,25 @@ Implementation:
 - If `poker_action.compact` is present, it must agree with the legacy
   `action` / `hpCommitment` fields. Peers reject mismatches before applying
   the action so the transcript cannot carry two interpretations.
-- `poker_turn_started` is advisory clock sync only. A peer may not extend a
-  decision window: receivers accept the message only when `durationMs`
-  equals the shared `UNIVERSAL_POKER_TURN_CLOCK_POLICY.durationMs` (60,000
-  ms), for the same combat/phase/actor, and the actor is the receiver's remote
-  poker slot. Senders include `remainingMs`, so receivers derive their local
-  deadline from receipt time instead of trusting the sender's wall clock.
-- `origin: 'timeout'` is accepted only at or after the local deadline and only
-  when the action equals the shared derivation: no pending wager → `DEFEND`,
-  pending wager → `BRACE`. Timeout `DEFEND` preserves stamina; it never grants
-  the manual-check `+1 STA` reward. Missing origin is rejected at the wire
-  schema.
-- The receiving store records the remote actor as the `turnClockOwnerId` for
-  that `turnId`; duplicate announcements from that owner are ignored. A new
-  owner is accepted only when the turn identity changes, so reconnect or
-  replay cannot re-arm an existing deadline.
+- `poker_turn_started` is a dual proposal to the Time Notary, not peer-advisory
+  clock sync. Both peers send it when they discover a timed `turnId`. The
+  relay consumes the frame (it is never fanned out), ignores client
+  `durationMs` / `remainingMs` / `sentAtMs`, stamps `serverStartedAtMs` on the
+  first valid proposal, and commits `deadline = start + 60_000` when the
+  second identity matches. Reconnect replays that same commit; it does not
+  grant another 60s. See ADR 0011.
+- The browser still renders a countdown from `PokerTurnClock` via
+  `createNotarizedPokerTurnClock`. That projection may lag the server by one
+  RTT. Acceptance authority is the relay receive timestamp, not `Date.now()`
+  on either client.
+- `origin: 'timeout'` is accepted by the relay only at or after the notarized
+  deadline, and by the local engine only when the action equals the shared
+  derivation: no pending wager → `DEFEND`, pending wager → `BRACE`. Timeout
+  `DEFEND` preserves stamina; it never grants the manual-check `+1 STA`
+  reward. Missing origin or `turnId` is rejected at the wire schema.
+- After a notary commit the store records `turnClockOwnerId = server-notary`
+  for that `turnId`. Later commits for the same identity cannot re-arm the
+  deadline. A new logical turn creates a new `turnId` and a new notary record.
 - Playing a legal card is an auxiliary action. It is repeatable while the
   active poker decision remains open and does not emit `poker_turn_started`,
   advance `activePlayerId`, or change the absolute deadline. The next valid

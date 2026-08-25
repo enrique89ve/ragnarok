@@ -5,6 +5,7 @@ import type {
 	PhaseCheckpointProposal,
 	PhaseCheckpointServerMessage,
 } from '../../../../shared/p2p-wire/phaseCheckpoint';
+import type { PokerTurnNotaryServerMessage } from '../../../../shared/p2p-wire/pokerTimeNotary';
 import type { DeckCardClaim } from '../../../../shared/protocol-core/deckVerification';
 import type { ServerSignedChallenge } from '@shared/p2pAvailability';
 import type { PackagedMatchResult } from '../../data/blockchain/types';
@@ -60,12 +61,13 @@ export type WireMessage =
 	| { type: 'hash_check'; stateHash: string; chessStateHash: string; chessMoveCount: number; turnNumber: number }
 	| { type: 'poker_hash_check'; pokerStateHash: string; phase: 'pre_flop' | 'faith' | 'foresight' | 'destiny'; turnId: string; actionsThisRound: number }
 	| { type: 'hash_mismatch'; turnNumber: number; myHash: string }
-	| { type: 'poker_action'; playerId: string; action: string; origin: PokerActionOrigin; hpCommitment?: number; compact?: CompactPokerAction; turnId?: string; decisionId: string; sentAtMs?: number }
+	| { type: 'poker_action'; playerId: string; action: string; origin: PokerActionOrigin; hpCommitment?: number; compact?: CompactPokerAction; turnId: string; decisionId: string; sentAtMs?: number }
 	| { type: 'poker_turn_started'; combatId: string; turnId: string; phase: string; activePlayerId: string; actionsThisRound: number; durationMs: number; remainingMs?: number; sentAtMs: number }
 	| ChessCommandEnvelope
 	| TransitionReceiptMessage
 	| PhaseCheckpointProposal
 	| PhaseCheckpointServerMessage
+	| PokerTurnNotaryServerMessage
 	// ── Phase 0 protocol-v2 envelopes (ADR 0004 §Decision.6) ─────────────
 	// Schema/wire only at this stage — handlers land in issues 02 / 06 / 03.
 	// Inner `action: unknown` on `action_envelope` is intentional: the per-

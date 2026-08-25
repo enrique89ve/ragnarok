@@ -55,6 +55,7 @@ Saves are queued. IndexedDB `get` + `put` run in one transaction (compare-and-sw
 - `POST /api/matchmaking/leave` removes only the caller from the match book. The opponent stays `matched`.
 - `opponentDisconnected` is not a legal relay type. Departure is transport close only (`__sys.close`).
 - Phase checkpoints: identical roots commit. A mismatch notifies and retries. The room freezes only after 3 mismatches. Equivocation keeps the first vote and does not freeze. The relay never picks a winner.
+- Poker Time Notary: reconnect re-proposes the current `turnId`. The relay returns the original `serverStartedAtMs` / `serverDeadlineAtMs`. It does not grant a fresh 60s. Empty-room notary state is retained for the same 120s tombstone as phase checkpoints.
 
 ## What is still open
 

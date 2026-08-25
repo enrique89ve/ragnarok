@@ -177,6 +177,15 @@ export interface PokerCombatSliceActions {
     remainingMs?: number;
     receivedAtMs: number;
   }) => void;
+  applyNotarizedPokerTurnClock: (input: {
+    turnId: string;
+    combatId: string;
+    phase: string;
+    activePlayerId: string;
+    actionsThisRound: number;
+    serverStartedAtMs: number;
+    serverDeadlineAtMs: number;
+  }) => void;
   setPlayerReady: (playerId: string) => void;
   healPlayerHero: (amount: number) => void;
   healOpponentHero: (amount: number) => void;

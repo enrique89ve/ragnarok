@@ -71,6 +71,15 @@ export interface PokerCombatAdapter {
     remainingMs?: number;
     receivedAtMs: number;
   }) => void;
+  applyNotarizedTurnClock: (input: {
+    turnId: string;
+    combatId: string;
+    phase: string;
+    activePlayerId: string;
+    actionsThisRound: number;
+    serverStartedAtMs: number;
+    serverDeadlineAtMs: number;
+  }) => void;
   startNextHand: (resolution?: CombatResolution) => void;
   startNextHandDelayed: (resolution: CombatResolution) => void;
   setTransitioning: (value: boolean) => void;
@@ -107,6 +116,7 @@ export function usePokerCombatAdapter(): PokerCombatAdapter {
   const setPlayerReadyFn = useUnifiedCombatStore(s => s.setPlayerReady);
   const updatePokerTimer = useUnifiedCombatStore(s => s.updatePokerTimer);
   const syncPokerTurnClockFn = useUnifiedCombatStore(s => s.syncPokerTurnClock);
+  const applyNotarizedPokerTurnClockFn = useUnifiedCombatStore(s => s.applyNotarizedPokerTurnClock);
   const startNextHandDelayedFn = useUnifiedCombatStore(s => s.startNextHandDelayed);
   const startNextHandFn = useUnifiedCombatStore(s => s.startNextHand);
   const maybeCloseBettingRoundFn = useUnifiedCombatStore(s => s.maybeCloseBettingRound);
@@ -230,6 +240,10 @@ export function usePokerCombatAdapter(): PokerCombatAdapter {
 
       syncTurnClock: (input) => {
         syncPokerTurnClockFn(input);
+      },
+
+      applyNotarizedTurnClock: (input) => {
+        applyNotarizedPokerTurnClockFn(input);
       },
 
       startNextHandDelayed: (resolution: CombatResolution) => {
@@ -389,6 +403,10 @@ export function getPokerCombatAdapterState(): PokerCombatAdapter {
 
     syncTurnClock: (input) => {
       getStore().syncPokerTurnClock(input);
+    },
+
+    applyNotarizedTurnClock: (input) => {
+      getStore().applyNotarizedPokerTurnClock(input);
     },
 
     startNextHand: (resolution?: CombatResolution) => {

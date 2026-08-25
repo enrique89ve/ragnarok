@@ -27,6 +27,7 @@ import {
 	type P2PMatchTicket,
 } from '@shared/p2pAvailability';
 import { tryParsePhaseCheckpointServerMessage } from '@shared/p2p-wire/phaseCheckpoint';
+import { tryParsePokerTurnNotaryServerMessage } from '@shared/p2p-wire/pokerTimeNotary';
 
 type TransportEvent = 'data' | 'open' | 'close' | 'error';
 type TransportCloseReason = 'local' | 'opponent';
@@ -193,6 +194,15 @@ export class LocalWebSocketTransport {
 				const message = tryParsePhaseCheckpointServerMessage(msg.message);
 				if (!message) {
 					debug.warn('[WSTransport] malformed server phase checkpoint');
+					return;
+				}
+				this.emit('data', message);
+				return;
+			}
+			case 'poker_turn_notary': {
+				const message = tryParsePokerTurnNotaryServerMessage(msg.message);
+				if (!message) {
+					debug.warn('[WSTransport] malformed server poker turn notary');
 					return;
 				}
 				this.emit('data', message);

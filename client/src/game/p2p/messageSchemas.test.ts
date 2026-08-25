@@ -445,6 +445,42 @@ describe('parseWireMessage — poker action and clock variants', () => {
 		expect(parseWireMessage(withoutOrigin)).toBeNull();
 	});
 
+	it('rejects poker_action without a turnId', () => {
+		const { turnId: _, ...withoutTurnId } = validPokerAction;
+		expect(parseWireMessage(withoutTurnId)).toBeNull();
+	});
+
+	it('accepts a server-only poker turn notary commit and rejects client extras', () => {
+		expect(parseWireMessage({
+			type: 'poker_turn_notary_commit_v1',
+			protocolVersion: 1,
+			roomId: 'room-1',
+			matchId: 'room-1',
+			combatId: 'combat-a',
+			turnId: 'combat-a:faith:remote-piece:0',
+			phase: 'faith',
+			activePlayerId: 'remote-piece',
+			actionsThisRound: 0,
+			durationMs: 60_000,
+			serverStartedAtMs: 1_000,
+			serverDeadlineAtMs: 61_000,
+		})).not.toBeNull();
+		expect(parseWireMessage({
+			type: 'poker_turn_notary_commit_v1',
+			protocolVersion: 1,
+			roomId: 'room-1',
+			matchId: 'room-1',
+			combatId: 'combat-a',
+			turnId: 'combat-a:faith:remote-piece:0',
+			phase: 'faith',
+			activePlayerId: 'remote-piece',
+			actionsThisRound: 0,
+			durationMs: 120_000,
+			serverStartedAtMs: 1_000,
+			serverDeadlineAtMs: 121_000,
+		})).toBeNull();
+	});
+
 	it('rejects poker_action without decisionId', () => {
 		const { decisionId: _, ...withoutDecisionId } = validPokerAction;
 		expect(parseWireMessage(withoutDecisionId)).toBeNull();

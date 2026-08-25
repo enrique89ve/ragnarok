@@ -58,10 +58,12 @@ import { applyStaminaShield, getExtraFoldPenalty } from '../../utils/poker/poker
 import { cryptoRng, seededRngFromString } from '../../utils/seededRng';
 import { playWagerActivate } from '../../combat/animations/PokerDramaVFX';
 import {
+  createNotarizedPokerTurnClock,
   createPokerTurnClock,
 	createReceivedPokerTurnClock,
 	getPokerTurnRemainingSeconds,
 	isTimedPokerDecisionPhase,
+	POKER_TURN_CLOCK_NOTARY_OWNER_ID,
 	UNIVERSAL_POKER_TURN_CLOCK_POLICY,
 	type PokerTurnIdentityInput,
 } from '@shared/p2p-wire/pokerTurnClock';
@@ -1591,6 +1593,40 @@ export const createPokerCombatSlice: StateCreator<
         turnClockOwnerId: input.activePlayerId,
         turnTimer: getPokerTurnRemainingSeconds({
           nowMs: input.receivedAtMs,
+          deadlineAtMs: clock.deadlineAtMs,
+        }),
+      },
+    });
+  },
+
+  applyNotarizedPokerTurnClock: (input) => {
+    const state = get();
+    const combatState = state.pokerCombatState;
+    if (!combatState) return;
+    if (combatState.combatId !== input.combatId) return;
+    if (combatState.phase !== input.phase) return;
+    if (combatState.activePlayerId !== input.activePlayerId) return;
+    if (combatState.actionsThisRound !== input.actionsThisRound) return;
+    if (!isTimedPokerDecisionPhase(input.phase)) return;
+
+    const clock = createNotarizedPokerTurnClock(input);
+    if (!clock || clock.turnId !== input.turnId) return;
+    if (
+      combatState.turnClockOwnerId === POKER_TURN_CLOCK_NOTARY_OWNER_ID
+      && combatState.turnId === clock.turnId
+    ) {
+      return;
+    }
+
+    set({
+      pokerCombatState: {
+        ...combatState,
+        turnId: clock.turnId,
+        turnStartedAtMs: clock.startedAtMs,
+        turnDeadlineAtMs: clock.deadlineAtMs,
+        turnClockOwnerId: POKER_TURN_CLOCK_NOTARY_OWNER_ID,
+        turnTimer: getPokerTurnRemainingSeconds({
+          nowMs: Date.now(),
           deadlineAtMs: clock.deadlineAtMs,
         }),
       },

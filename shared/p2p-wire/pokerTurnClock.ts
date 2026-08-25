@@ -98,6 +98,25 @@ export function createPokerTurnClock(input: PokerTurnIdentityInput & {
 	};
 }
 
+export const POKER_TURN_CLOCK_NOTARY_OWNER_ID = 'server-notary';
+
+export function createNotarizedPokerTurnClock(input: PokerTurnIdentityInput & {
+	readonly serverStartedAtMs: number;
+	readonly serverDeadlineAtMs: number;
+}): PokerTurnClock | null {
+	if (!input.activePlayerId || !isTimedPokerDecisionPhase(input.phase)) return null;
+	const durationMs = DEFAULT_POKER_TURN_DURATION_MS;
+	const startedAtMs = normalizeTimestampMs(input.serverStartedAtMs);
+	const deadlineAtMs = normalizeTimestampMs(input.serverDeadlineAtMs);
+	if (deadlineAtMs !== startedAtMs + durationMs) return null;
+	return {
+		turnId: buildPokerTurnId(input),
+		startedAtMs,
+		deadlineAtMs,
+		durationMs,
+	};
+}
+
 export function createReceivedPokerTurnClock(input: PokerTurnIdentityInput & {
 	readonly receivedAtMs: number;
 	readonly sentAtMs?: number;

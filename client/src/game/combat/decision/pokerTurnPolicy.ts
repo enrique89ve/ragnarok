@@ -73,7 +73,7 @@ export function derivePokerTurnPolicy(input: {
 		shouldTickTimer,
 		shouldResolveTimeout: actor === 'local_human' || actor === 'remote_peer',
 		shouldAutoActOnTimeout: actor === 'local_human',
-		shouldBroadcastTurnStart: processMode === 'p2p' && actor === 'local_human',
+		shouldBroadcastTurnStart: processMode === 'p2p' && shouldTickTimer,
 		shouldScheduleAiDecision: actor === 'remote_ai',
 		turnClockPolicy: UNIVERSAL_POKER_TURN_CLOCK_POLICY,
 	};

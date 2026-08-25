@@ -26,6 +26,11 @@ import {
 	type PhaseCheckpointServerMessage,
 } from '../../shared/p2p-wire/phaseCheckpoint';
 import {
+	tryParsePokerActionTimeGate,
+	tryParsePokerTurnClockProposal,
+	type PokerTurnNotaryServerMessage,
+} from '../../shared/p2p-wire/pokerTimeNotary';
+import {
 	P2P_MATCH_TICKET_WS_PROTOCOL,
 	isSafePeerId,
 	isSafeRoomOrMatchId,
@@ -41,6 +46,7 @@ import {
 } from '../services/p2pTelemetry';
 import { verifyP2PMatchTicketForRoom } from '../services/p2pMatchTicketSigner';
 import { createP2PPhaseCheckpointCoordinator } from '../services/p2pPhaseCheckpointCoordinator';
+import { createP2PPokerTimeNotary } from '../services/p2pPokerTimeNotary';
 import {
 	isP2PRelayOriginAllowed,
 } from '../services/p2pRelayOrigin';
@@ -59,6 +65,7 @@ type RoomMember = {
 const rooms = new Map<string, RoomMember[]>();
 const relayAliveSockets = new WeakSet<WebSocket>();
 const phaseCheckpointCoordinator = createP2PPhaseCheckpointCoordinator();
+const pokerTimeNotary = createP2PPokerTimeNotary();
 const emptyCheckpointRoomExpiry = new Map<string, number>();
 
 const ROOM_MAX_PEERS = 2;
@@ -252,6 +259,13 @@ function sendPhaseCheckpoint(
 	sendSys(ws, { event: 'phase_checkpoint', message });
 }
 
+function sendPokerTurnNotary(
+	ws: WebSocket,
+	message: PokerTurnNotaryServerMessage,
+): void {
+	sendSys(ws, { event: 'poker_turn_notary', message });
+}
+
 function notifyRoomFull(room: readonly RoomMember[]): void {
 	if (room.length !== ROOM_MAX_PEERS) return;
 	const [first, second] = room;
@@ -440,6 +454,57 @@ export function attachP2PRelay(server: HttpServer): void {
 				return;
 			}
 
+			if (validation.type === 'poker_turn_started') {
+				if (!consumeCheckpointToken()) {
+					recordP2PRelayDrop('poker_turn_notary_rate_limited');
+					return;
+				}
+				let parsedTurn: unknown;
+				try { parsedTurn = JSON.parse(text); }
+				catch { return; }
+				const proposal = tryParsePokerTurnClockProposal(parsedTurn);
+				if (!proposal) {
+					recordP2PRelayDrop('malformed_poker_turn_notary');
+					return;
+				}
+				const result = pokerTimeNotary.submit({
+					roomId,
+					peerId,
+					proposal,
+					nowMs: Date.now(),
+				});
+				if (result.status === 'pending') return;
+				if (result.recipients === 'sender') {
+					sendPokerTurnNotary(ws, result.message);
+					return;
+				}
+				for (const member of currentRoom) {
+					sendPokerTurnNotary(member.ws, result.message);
+				}
+				recordP2PRelayMessage();
+				return;
+			}
+
+			if (validation.type === 'poker_action') {
+				let parsedAction: unknown;
+				try { parsedAction = JSON.parse(text); }
+				catch { return; }
+				const gateInput = tryParsePokerActionTimeGate(parsedAction);
+				if (!gateInput) {
+					recordP2PRelayDrop('malformed_poker_action_time_gate');
+					return;
+				}
+				const gate = pokerTimeNotary.gatePokerAction({
+					roomId,
+					action: gateInput,
+					receivedAtMs: Date.now(),
+				});
+				if (gate.status === 'drop') {
+					recordP2PRelayDrop(gate.reason);
+					return;
+				}
+			}
+
 			const other = currentRoom.find(m => m.peerId !== peerId);
 			if (!other || other.ws.readyState !== WebSocket.OPEN) return;
 
@@ -502,6 +567,7 @@ export function attachP2PRelay(server: HttpServer): void {
 			if (expiresAt > now || rooms.has(roomId)) continue;
 			emptyCheckpointRoomExpiry.delete(roomId);
 			phaseCheckpointCoordinator.dropRoom(roomId);
+			pokerTimeNotary.dropRoom(roomId);
 		}
 	}, CHECKPOINT_SWEEP_INTERVAL_MS);
 	checkpointSweepTimer.unref?.();

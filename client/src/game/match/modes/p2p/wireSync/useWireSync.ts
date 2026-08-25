@@ -99,6 +99,7 @@ import {
 } from '../../../../p2p/phaseCheckpointClient';
 import type { Hash256 } from '@shared/p2p-wire/integrity';
 import { isRetryablePhaseCheckpointDispute, type PhaseCheckpointPhase } from '@shared/p2p-wire/phaseCheckpoint';
+import { isRetryablePokerTurnNotaryDispute } from '@shared/p2p-wire/pokerTimeNotary';
 import { settleRemoteCommand } from './remoteCommandSettlement';
 
 export type { GameCommandEnvelope, WireGameCommand } from '../../../../hooks/p2pEnvelope';
@@ -738,6 +739,51 @@ export function useWireSync() {
 							duration: 6000,
 						});
 					}
+					break;
+				}
+
+				case 'poker_turn_notary_commit_v1': {
+					const pokerAdapter = getP2PPokerCombatAdapter();
+					pokerAdapter.applyNotarizedPokerTurnClock({
+						turnId: data.turnId,
+						combatId: data.combatId,
+						phase: data.phase,
+						activePlayerId: data.activePlayerId,
+						actionsThisRound: data.actionsThisRound,
+						serverStartedAtMs: data.serverStartedAtMs,
+						serverDeadlineAtMs: data.serverDeadlineAtMs,
+					});
+					break;
+				}
+
+				case 'poker_turn_notary_dispute_v1': {
+					debug.warn('[wireSync] poker turn notary dispute', { reason: data.reason, turnId: data.turnId });
+					if (isRetryablePokerTurnNotaryDispute(data.reason)) {
+						const pokerState = getP2PPokerCombatAdapter().getPokerState();
+						if (pokerState?.turnId && pokerState.activePlayerId && isTimedPokerDecisionPhase(pokerState.phase)) {
+							send({
+								type: 'poker_turn_started',
+								combatId: pokerState.combatId,
+								turnId: pokerState.turnId,
+								phase: pokerState.phase,
+								activePlayerId: pokerState.activePlayerId,
+								actionsThisRound: pokerState.actionsThisRound,
+								durationMs: UNIVERSAL_POKER_TURN_CLOCK_POLICY.durationMs,
+								sentAtMs: Date.now(),
+							});
+						}
+						GameEventBus.emitNotification({
+							level: 'warning',
+							message: 'Poker clocks disagreed. The relay did not pick a winner — retrying the same turn.',
+							duration: 6000,
+						});
+						break;
+					}
+					GameEventBus.emitNotification({
+						level: 'warning',
+						message: 'Poker turn clock frozen. Time-sensitive actions will not relay until recovery.',
+						duration: 8000,
+					});
 					break;
 				}
 
@@ -1904,47 +1950,9 @@ export function useWireSync() {
 					}
 
 					case 'poker_turn_started': {
-						const pokerAdapter = getP2PPokerCombatAdapter();
-						const pokerState = pokerAdapter.getPokerState();
-						if (!pokerState) break;
-						if (pokerState.combatId !== data.combatId) break;
-					if (pokerState.phase !== data.phase) break;
-					if (pokerState.activePlayerId !== data.activePlayerId) break;
-					if (data.activePlayerId !== pokerState.opponent.playerId) break;
-					if (pokerState.actionsThisRound !== data.actionsThisRound) break;
-					const expectedDurationMs = UNIVERSAL_POKER_TURN_CLOCK_POLICY.durationMs;
-					if (data.durationMs !== expectedDurationMs) {
-						debug.warn('[wireSync] poker_turn_started dropped — duration mismatch', {
-							received: data.durationMs,
-							expected: expectedDurationMs,
-						});
+						debug.warn('[wireSync] Dropped peer-sent poker_turn_started — relay consumes clock proposals');
 						break;
 					}
-						pokerAdapter.syncRemotePokerTurnClock({
-							turnId: data.turnId,
-							combatId: data.combatId,
-						phase: data.phase,
-						activePlayerId: data.activePlayerId,
-						actionsThisRound: data.actionsThisRound,
-						durationMs: data.durationMs,
-						sentAtMs: data.sentAtMs,
-						remainingMs: data.remainingMs,
-						receivedAtMs: Date.now(),
-					});
-					recordMove('poker_turn_started', {
-						combatId: data.combatId,
-						phase: data.phase,
-						activePlayerId: data.activePlayerId,
-						turnId: data.turnId,
-						actionsThisRound: data.actionsThisRound,
-						durationMs: data.durationMs,
-						remainingMs: data.remainingMs,
-					}, remotePlayerId({
-						opponentUsername: opponentUsernameRef.current,
-						remotePeerId: usePeerStore.getState().remotePeerId,
-					}));
-					break;
-				}
 
 				case 'gameState':
 					if (!isHostFrame) {
@@ -2837,6 +2845,7 @@ export function useWireSync() {
 		turnId?: string | null;
 	}) => {
 		if (connectionState !== 'connected') return;
+		if (!input.turnId) return;
 		const sentAtMs = Date.now();
 		send({
 			type: 'poker_action',
@@ -2844,8 +2853,8 @@ export function useWireSync() {
 			action: input.action,
 			origin: input.origin,
 			hpCommitment: input.hpCommitment,
-			turnId: input.turnId ?? undefined,
-			decisionId: `${input.turnId ?? 'unclocked'}:${input.playerId}:${sentAtMs}`,
+			turnId: input.turnId,
+			decisionId: `${input.turnId}:${input.playerId}:${sentAtMs}`,
 			sentAtMs,
 			compact: encodePokerAction({
 				action: input.action as CompactPokerActionName,

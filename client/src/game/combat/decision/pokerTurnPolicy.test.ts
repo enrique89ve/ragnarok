@@ -41,7 +41,7 @@ describe('derivePokerTurnPolicy', () => {
 			shouldTickTimer: true,
 			shouldResolveTimeout: true,
 			shouldAutoActOnTimeout: false,
-			shouldBroadcastTurnStart: false,
+			shouldBroadcastTurnStart: true,
 			shouldScheduleAiDecision: false,
 			turnClockPolicy: { durationMs: 60_000 },
 		});

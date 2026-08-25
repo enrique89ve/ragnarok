@@ -61,18 +61,18 @@ Avoid:
   authority; blood red is danger; rune cyan is magic/connection; green is
   success; amber is warning.
 
-| Role | Hex | Use |
-|---|---|---|
-| Obsidian 950 | `#05070d` | page and combat depth |
-| Iron 850 | `#111827` | panels and inactive surfaces |
-| Iron 650 | `#334155` | borders and disabled UI |
-| Gold 300 | `#f5c542` | primary game authority and current phase |
-| Gold 500 | `#b7791f` | frames, separators, active focus |
-| Blood 500 | `#dc2626` | damage, fold/loss, critical HP |
-| Rune Cyan | `#38bdf8` | P2P, magic, session/connection |
-| Saga Green | `#22c55e` | success, valid action, health gain |
-| Amber 400 | `#f59e0b` | warning, reconnect/grace |
-| Ink 100 | `#e5e7eb` | primary text |
+| Role         | Hex       | Use                                      |
+| ------------ | --------- | ---------------------------------------- |
+| Obsidian 950 | `#05070d` | page and combat depth                    |
+| Iron 850     | `#111827` | panels and inactive surfaces             |
+| Iron 650     | `#334155` | borders and disabled UI                  |
+| Gold 300     | `#f5c542` | primary game authority and current phase |
+| Gold 500     | `#b7791f` | frames, separators, active focus         |
+| Blood 500    | `#dc2626` | damage, fold/loss, critical HP           |
+| Rune Cyan    | `#38bdf8` | P2P, magic, session/connection           |
+| Saga Green   | `#22c55e` | success, valid action, health gain       |
+| Amber 400    | `#f59e0b` | warning, reconnect/grace                 |
+| Ink 100      | `#e5e7eb` | primary text                             |
 
 Dark mode is the base mode. Do not simply brighten everything for contrast;
 increase separation through borders, shadows, panel opacity and fewer competing
@@ -129,16 +129,7 @@ reinforce state, but text/value state must remain stable and readable.
 - **Approach:** intentional-functional.
 - **Durations:** micro 80-120ms, short 150-250ms, medium 300-450ms, cinematic
   700-1200ms only for phase/result beats.
-- **Rule:** gameplay state must update from canonical state first; animation
-  subscribes to that state. Animation failure must not lose or delay gameplay
-  truth.
-- **Poker pacing:** slower readable phase/result motion beats subtle fast motion.
-
-## Accessibility And QA
-
-- Icon buttons require `aria-label`, `title`, focus state and adjacent context
-  when the action is game-critical.
-- Text must fit fixed controls at desktop, ultrawide and mobile landscape.
+- **Rule:** gameplay state must update from canonicok
 - Critical colors need shape or label backup, especially success/error/turn
   states.
 - Verify poker visually at 1366x768, 1920x1080, ultrawide, and mobile landscape.
@@ -155,8 +146,8 @@ reinforce state, but text/value state must remain stable and readable.
 
 ## Decisions Log
 
-| Date | Decision | Rationale |
-|---|---|---|
-| 2026-06-14 | Created design source of truth | The repo had poker technical docs but no active design system. |
-| 2026-06-14 | Poker board clarity is P0 | Testnet cannot succeed if players cannot read turn, risk, action and result. |
+| Date       | Decision                                | Rationale                                                                      |
+| ---------- | --------------------------------------- | ------------------------------------------------------------------------------ |
+| 2026-06-14 | Created design source of truth          | The repo had poker technical docs but no active design system.                 |
+| 2026-06-14 | Poker board clarity is P0               | Testnet cannot succeed if players cannot read turn, risk, action and result.   |
 | 2026-06-14 | Alfa stays dark mythic, not casino/SaaS | The game needs a serious war-table identity that supports rules comprehension. |

@@ -24,6 +24,17 @@ export type P2PPokerCombatAdapter = {
 	}) => P2PPokerActionResult;
 	readonly maybeCloseBettingRound: () => void;
 	readonly syncRemotePokerTurnClock: (input: P2PPokerTurnClockInput) => void;
+	readonly applyNotarizedPokerTurnClock: (input: P2PNotarizedPokerTurnClockInput) => void;
+};
+
+export type P2PNotarizedPokerTurnClockInput = {
+	readonly turnId: string;
+	readonly combatId: string;
+	readonly phase: string;
+	readonly activePlayerId: string;
+	readonly actionsThisRound: number;
+	readonly serverStartedAtMs: number;
+	readonly serverDeadlineAtMs: number;
 };
 
 export type P2PPokerActionResult =
@@ -52,6 +63,9 @@ export function getP2PPokerCombatAdapter(): P2PPokerCombatAdapter {
 		},
 		syncRemotePokerTurnClock: (input) => {
 			getPokerCombatAdapterState().syncTurnClock(input);
+		},
+		applyNotarizedPokerTurnClock: (input) => {
+			getPokerCombatAdapterState().applyNotarizedTurnClock(input);
 		},
 	};
 }

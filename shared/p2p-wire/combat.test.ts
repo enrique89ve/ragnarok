@@ -13,6 +13,7 @@ import {
 } from './combat';
 import {
 	buildPokerTurnId,
+	createNotarizedPokerTurnClock,
 	createPokerTurnClock,
 	createReceivedPokerTurnClock,
 	getPokerTurnRemainingSeconds,
@@ -202,6 +203,30 @@ describe('poker turn clock contract', () => {
 			deadlineAtMs: 32_000,
 			durationMs: 30_000,
 		});
+	});
+
+	it('builds a notarized clock only when the server deadline is start plus 60s', () => {
+		expect(createNotarizedPokerTurnClock({
+			combatId: 'combat-a',
+			phase: 'faith',
+			activePlayerId: 'piece-1',
+			actionsThisRound: 0,
+			serverStartedAtMs: 1_000,
+			serverDeadlineAtMs: 61_000,
+		})).toEqual({
+			turnId: 'combat-a:faith:piece-1:0',
+			startedAtMs: 1_000,
+			deadlineAtMs: 61_000,
+			durationMs: 60_000,
+		});
+		expect(createNotarizedPokerTurnClock({
+			combatId: 'combat-a',
+			phase: 'faith',
+			activePlayerId: 'piece-1',
+			actionsThisRound: 0,
+			serverStartedAtMs: 1_000,
+			serverDeadlineAtMs: 121_000,
+		})).toBeNull();
 	});
 
 	it('uses relative remaining time over sender wall-clock time when provided', () => {

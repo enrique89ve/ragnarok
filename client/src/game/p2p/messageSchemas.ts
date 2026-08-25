@@ -30,6 +30,11 @@ import {
 	PhaseCheckpointDisputeSchema,
 	PhaseCheckpointProposalSchema,
 } from '@shared/p2p-wire/phaseCheckpoint';
+import {
+	PokerTurnClockProposalSchema,
+	PokerTurnNotaryCommitSchema,
+	PokerTurnNotaryDisputeSchema,
+} from '@shared/p2p-wire/pokerTimeNotary';
 import { DeckCardClaimsSchema } from '@shared/protocol-core/deckVerification';
 import { CHALLENGE_SIGNATURE_ALGORITHM } from '@shared/p2pAvailability';
 
@@ -45,7 +50,6 @@ const NonEmptyString = (max: number) => z.string().min(1).max(max);
 const HashString = z.string().min(1).max(256);
 const NonNegativeInt = z.number().int().nonnegative();
 const PokerHpCommitment = z.number().int().min(0).max(500);
-const PokerTurnDurationMs = z.number().int().min(1).max(300_000);
 
 // `OpaqueObject` covers payloads we deliberately do not model (full game
 // state, packaged match results, army selections). Requiring an object
@@ -288,7 +292,7 @@ const PokerActionSchema = z.object({
 	origin: z.enum(['player', 'timeout']),
 	hpCommitment: PokerHpCommitment.optional(),
 	compact: CompactPokerActionSchema.optional(),
-	turnId: NonEmptyString(256).optional(),
+	turnId: NonEmptyString(256),
 	decisionId: NonEmptyString(256),
 	sentAtMs: NonNegativeInt.optional(),
 }).strict().superRefine((message, ctx) => {
@@ -305,17 +309,7 @@ const PokerActionSchema = z.object({
 	});
 });
 
-const PokerTurnStartedSchema = z.object({
-	type: z.literal('poker_turn_started'),
-	combatId: NonEmptyString(128),
-	turnId: NonEmptyString(256),
-	phase: z.enum(['pre_flop', 'faith', 'foresight', 'destiny']),
-	activePlayerId: NonEmptyString(128),
-	actionsThisRound: NonNegativeInt,
-	durationMs: PokerTurnDurationMs,
-	remainingMs: PokerTurnDurationMs.optional(),
-	sentAtMs: NonNegativeInt,
-}).strict();
+const PokerTurnStartedSchema = PokerTurnClockProposalSchema;
 
 // ── Heartbeat (peerStore-level keepalive) ──────────────────────────────────
 
@@ -420,6 +414,8 @@ const SCHEMA_BY_TYPE = {
 	hash_mismatch: HashMismatchSchema,
 	poker_action: PokerActionSchema,
 	poker_turn_started: PokerTurnStartedSchema,
+	poker_turn_notary_commit_v1: PokerTurnNotaryCommitSchema,
+	poker_turn_notary_dispute_v1: PokerTurnNotaryDisputeSchema,
 	heartbeat: HeartbeatSchema,
 	session_authorize: SessionAuthorizeSchema,
 	session_renewal: SessionRenewalSchema,

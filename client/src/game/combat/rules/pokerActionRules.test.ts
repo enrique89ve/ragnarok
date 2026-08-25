@@ -465,6 +465,46 @@ describe('poker combat store exploit shields', () => {
       turnId: attackerView?.turnId,
     });
   });
+
+  it('overwrites the local projection with a server-notarized deadline and ignores later re-arms', () => {
+    useUnifiedCombatStore.setState({
+      pokerCombatState: createCombatState({
+        turnId: 'combat-test:faith:player-piece:0',
+        turnStartedAtMs: 5_000,
+        turnDeadlineAtMs: 65_000,
+        activePlayerId: 'player-piece',
+        turnClockOwnerId: null,
+      }),
+      pokerIsActive: true,
+    });
+
+    useUnifiedCombatStore.getState().applyNotarizedPokerTurnClock({
+      combatId: 'combat-test',
+      turnId: 'combat-test:faith:player-piece:0',
+      phase: CombatPhase.FAITH,
+      activePlayerId: 'player-piece',
+      actionsThisRound: 0,
+      serverStartedAtMs: 1_000,
+      serverDeadlineAtMs: 61_000,
+    });
+
+    expect(useUnifiedCombatStore.getState().pokerCombatState).toMatchObject({
+      turnStartedAtMs: 1_000,
+      turnDeadlineAtMs: 61_000,
+      turnClockOwnerId: 'server-notary',
+    });
+
+    useUnifiedCombatStore.getState().applyNotarizedPokerTurnClock({
+      combatId: 'combat-test',
+      turnId: 'combat-test:faith:player-piece:0',
+      phase: CombatPhase.FAITH,
+      activePlayerId: 'player-piece',
+      actionsThisRound: 0,
+      serverStartedAtMs: 20_000,
+      serverDeadlineAtMs: 80_000,
+    });
+    expect(useUnifiedCombatStore.getState().pokerCombatState?.turnDeadlineAtMs).toBe(61_000);
+  });
 });
 
 describe('deterministic poker showdown helpers', () => {
