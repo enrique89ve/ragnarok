@@ -70,6 +70,7 @@ export const PokerTurnNotaryCommitSchema = z.object({
 	durationMs: z.literal(DEFAULT_POKER_TURN_DURATION_MS),
 	serverStartedAtMs: NonNegativeInt,
 	serverDeadlineAtMs: NonNegativeInt,
+	remainingMsAtCommit: z.number().int().min(0).max(DEFAULT_POKER_TURN_DURATION_MS),
 }).strict();
 
 export type PokerTurnNotaryCommit = z.infer<typeof PokerTurnNotaryCommitSchema>;
@@ -143,11 +144,21 @@ export function pokerTurnClockIdentityFromProposal(
 	return buildPokerTurnId(identity) === identity.turnId ? identity : null;
 }
 
+export function remainingMsAtServerNow(input: {
+	readonly serverDeadlineAtMs: number;
+	readonly nowMs: number;
+}): number {
+	const remainingMs = Math.floor(input.serverDeadlineAtMs) - Math.floor(input.nowMs);
+	if (!Number.isFinite(remainingMs) || remainingMs <= 0) return 0;
+	return Math.min(DEFAULT_POKER_TURN_DURATION_MS, remainingMs);
+}
+
 export function buildPokerTurnNotaryCommit(input: {
 	readonly roomId: string;
 	readonly identity: PokerTurnClockIdentity;
 	readonly serverStartedAtMs: number;
 	readonly serverDeadlineAtMs: number;
+	readonly nowMs: number;
 }): PokerTurnNotaryCommit {
 	return PokerTurnNotaryCommitSchema.parse({
 		type: 'poker_turn_notary_commit_v1',
@@ -162,6 +173,10 @@ export function buildPokerTurnNotaryCommit(input: {
 		durationMs: DEFAULT_POKER_TURN_DURATION_MS,
 		serverStartedAtMs: input.serverStartedAtMs,
 		serverDeadlineAtMs: input.serverDeadlineAtMs,
+		remainingMsAtCommit: remainingMsAtServerNow({
+			serverDeadlineAtMs: input.serverDeadlineAtMs,
+			nowMs: input.nowMs,
+		}),
 	});
 }
 

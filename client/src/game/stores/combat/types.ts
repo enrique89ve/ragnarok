@@ -183,8 +183,8 @@ export interface PokerCombatSliceActions {
     phase: string;
     activePlayerId: string;
     actionsThisRound: number;
-    serverStartedAtMs: number;
-    serverDeadlineAtMs: number;
+    remainingMsAtCommit: number;
+    receivedAtMs: number;
   }) => void;
   setPlayerReady: (playerId: string) => void;
   healPlayerHero: (amount: number) => void;

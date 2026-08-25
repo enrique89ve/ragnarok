@@ -77,8 +77,8 @@ export interface PokerCombatAdapter {
     phase: string;
     activePlayerId: string;
     actionsThisRound: number;
-    serverStartedAtMs: number;
-    serverDeadlineAtMs: number;
+    remainingMsAtCommit: number;
+    receivedAtMs: number;
   }) => void;
   startNextHand: (resolution?: CombatResolution) => void;
   startNextHandDelayed: (resolution: CombatResolution) => void;

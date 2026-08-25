@@ -205,28 +205,41 @@ describe('poker turn clock contract', () => {
 		});
 	});
 
-	it('builds a notarized clock only when the server deadline is start plus 60s', () => {
-		expect(createNotarizedPokerTurnClock({
+	it('projects a notarized remaining window onto the local receive clock', () => {
+		const skewedAhead = 5 * 60_000;
+		const ahead = createNotarizedPokerTurnClock({
 			combatId: 'combat-a',
 			phase: 'faith',
 			activePlayerId: 'piece-1',
 			actionsThisRound: 0,
-			serverStartedAtMs: 1_000,
-			serverDeadlineAtMs: 61_000,
-		})).toEqual({
+			remainingMsAtCommit: 50_000,
+			receivedAtMs: skewedAhead,
+		});
+		expect(ahead).toEqual({
 			turnId: 'combat-a:faith:piece-1:0',
-			startedAtMs: 1_000,
-			deadlineAtMs: 61_000,
+			startedAtMs: skewedAhead - 10_000,
+			deadlineAtMs: skewedAhead + 50_000,
 			durationMs: 60_000,
 		});
-		expect(createNotarizedPokerTurnClock({
+		expect(getPokerTurnRemainingSeconds({
+			nowMs: skewedAhead,
+			deadlineAtMs: ahead!.deadlineAtMs,
+		})).toBe(50);
+
+		const skewedBehind = 1_000;
+		const behind = createNotarizedPokerTurnClock({
 			combatId: 'combat-a',
 			phase: 'faith',
 			activePlayerId: 'piece-1',
 			actionsThisRound: 0,
-			serverStartedAtMs: 1_000,
-			serverDeadlineAtMs: 121_000,
-		})).toBeNull();
+			remainingMsAtCommit: 50_000,
+			receivedAtMs: skewedBehind,
+		});
+		expect(behind?.deadlineAtMs).toBe(skewedBehind + 50_000);
+		expect(getPokerTurnRemainingSeconds({
+			nowMs: skewedBehind,
+			deadlineAtMs: behind!.deadlineAtMs,
+		})).toBe(50);
 	});
 
 	it('uses relative remaining time over sender wall-clock time when provided', () => {

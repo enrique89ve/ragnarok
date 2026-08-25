@@ -129,7 +129,16 @@ reinforce state, but text/value state must remain stable and readable.
 - **Approach:** intentional-functional.
 - **Durations:** micro 80-120ms, short 150-250ms, medium 300-450ms, cinematic
   700-1200ms only for phase/result beats.
-- **Rule:** gameplay state must update from canonicok
+- **Rule:** gameplay state must update from canonical state first; animation
+  subscribes to that state. Animation failure must not lose or delay gameplay
+  truth.
+- **Poker pacing:** slower readable phase/result motion beats subtle fast motion.
+
+## Accessibility And QA
+
+- Icon buttons require `aria-label`, `title`, focus state and adjacent context
+  when the action is game-critical.
+- Text must fit fixed controls at desktop, ultrawide and mobile landscape.
 - Critical colors need shape or label backup, especially success/error/turn
   states.
 - Verify poker visually at 1366x768, 1920x1080, ultrawide, and mobile landscape.

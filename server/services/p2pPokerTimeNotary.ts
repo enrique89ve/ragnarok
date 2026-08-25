@@ -52,6 +52,7 @@ export type PokerTimeNotarySubmitResult =
 
 export type PokerTimeNotaryGateReason =
 	| 'missing_notary'
+	| 'notary_pending'
 	| 'stale_turn'
 	| 'late_player_action'
 	| 'premature_timeout'
@@ -105,22 +106,18 @@ function startPendingTurn(
 	};
 }
 
-function commitMessage(roomId: string, turn: NotarizedTurn): PokerTurnNotaryServerMessage {
+function commitMessage(
+	roomId: string,
+	turn: NotarizedTurn,
+	nowMs: number,
+): PokerTurnNotaryServerMessage {
 	return buildPokerTurnNotaryCommit({
 		roomId,
 		identity: turn.identity,
 		serverStartedAtMs: turn.startedAtServerMs,
 		serverDeadlineAtMs: turn.deadlineAtServerMs,
+		nowMs,
 	});
-}
-
-function lookupTurn(
-	state: OpenRoomNotaryState,
-	turnId: string,
-): NotarizedTurn | null {
-	if (state.current?.identity.turnId === turnId) return state.current;
-	if (state.previous?.identity.turnId === turnId) return state.previous;
-	return null;
 }
 
 function openRoom(
@@ -161,6 +158,7 @@ export function createP2PPokerTimeNotary(): PokerTimeNotaryCoordinator {
 		room: OpenRoomNotaryState,
 		peerId: string,
 		identity: PokerTurnClockIdentity,
+		nowMs: number,
 	): PokerTimeNotarySubmitResult {
 		const current = room.current;
 		if (!current) return { status: 'pending' };
@@ -169,7 +167,7 @@ export function createP2PPokerTimeNotary(): PokerTimeNotaryCoordinator {
 		if (previousVote) {
 			if (samePokerTurnClockIdentity(previousVote, identity)) {
 				return current.status === 'committed'
-					? { status: 'message', recipients: 'sender', message: commitMessage(roomId, current) }
+					? { status: 'message', recipients: 'sender', message: commitMessage(roomId, current, nowMs) }
 					: { status: 'pending' };
 			}
 			return {
@@ -199,7 +197,7 @@ export function createP2PPokerTimeNotary(): PokerTimeNotaryCoordinator {
 		return {
 			status: 'message',
 			recipients: 'room',
-			message: commitMessage(roomId, committed),
+			message: commitMessage(roomId, committed, nowMs),
 		};
 	}
 
@@ -237,7 +235,7 @@ export function createP2PPokerTimeNotary(): PokerTimeNotaryCoordinator {
 			return {
 				status: 'message',
 				recipients: 'sender',
-				message: commitMessage(input.roomId, room.previous),
+				message: commitMessage(input.roomId, room.previous, nowMs),
 			};
 		}
 
@@ -262,7 +260,7 @@ export function createP2PPokerTimeNotary(): PokerTimeNotaryCoordinator {
 		}
 
 		if (samePokerTurnClockIdentity(room.current.identity, identity)) {
-			return applyVote(input.roomId, room, input.peerId, identity);
+			return applyVote(input.roomId, room, input.peerId, identity, nowMs);
 		}
 
 		if (room.current.status === 'pending') {
@@ -289,12 +287,11 @@ export function createP2PPokerTimeNotary(): PokerTimeNotaryCoordinator {
 		if (!state) return { status: 'drop', reason: 'missing_notary' };
 		if (state.status === 'disputed') return { status: 'drop', reason: 'room_disputed' };
 
-		const turn = lookupTurn(state, input.action.turnId);
-		if (!turn) {
-			return {
-				status: 'drop',
-				reason: state.current ? 'stale_turn' : 'missing_notary',
-			};
+		const turn = state.current;
+		if (!turn) return { status: 'drop', reason: 'missing_notary' };
+		if (turn.status !== 'committed') return { status: 'drop', reason: 'notary_pending' };
+		if (input.action.turnId !== turn.identity.turnId) {
+			return { status: 'drop', reason: 'stale_turn' };
 		}
 
 		if (input.action.origin === 'player') {

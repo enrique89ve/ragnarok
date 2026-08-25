@@ -464,6 +464,7 @@ describe('parseWireMessage — poker action and clock variants', () => {
 			durationMs: 60_000,
 			serverStartedAtMs: 1_000,
 			serverDeadlineAtMs: 61_000,
+			remainingMsAtCommit: 54_000,
 		})).not.toBeNull();
 		expect(parseWireMessage({
 			type: 'poker_turn_notary_commit_v1',
@@ -478,6 +479,7 @@ describe('parseWireMessage — poker action and clock variants', () => {
 			durationMs: 120_000,
 			serverStartedAtMs: 1_000,
 			serverDeadlineAtMs: 121_000,
+			remainingMsAtCommit: 120_000,
 		})).toBeNull();
 	});
 

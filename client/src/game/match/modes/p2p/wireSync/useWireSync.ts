@@ -750,8 +750,8 @@ export function useWireSync() {
 						phase: data.phase,
 						activePlayerId: data.activePlayerId,
 						actionsThisRound: data.actionsThisRound,
-						serverStartedAtMs: data.serverStartedAtMs,
-						serverDeadlineAtMs: data.serverDeadlineAtMs,
+						remainingMsAtCommit: data.remainingMsAtCommit,
+						receivedAtMs: Date.now(),
 					});
 					break;
 				}

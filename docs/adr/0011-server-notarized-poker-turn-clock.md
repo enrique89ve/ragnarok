@@ -49,11 +49,20 @@ Memory is O(1) per room: previous committed turn + current pending-or-committed
 turn (at most two votes). Empty rooms keep that tombstone for the same 120s
 reconnect window as phase checkpoints.
 
-`poker_action` is time-gated without GameState:
+`poker_action` is time-gated without GameState. The gate looks only at
+`current` and requires a dual commit:
 
+- missing notary / disputed room is fail-closed (drop)
+- `current.status !== 'committed'` → drop `notary_pending`
+- `action.turnId !== current.turnId` → drop `stale_turn` (`previous` is only
+  for reconnect replay of the commit, never for new actions)
 - `origin=player` requires `receivedAtServerMs < deadline`
 - `origin=timeout` requires `receivedAtServerMs >= deadline`
-- missing notary / unknown `turnId` / disputed room is fail-closed (drop)
+
+The commit also carries `remainingMsAtCommit`, computed from the server
+deadline minus server now at emit time. Clients project that remainder onto
+local `Date.now()` for UI/timeout firing. Acceptance authority stays the
+relay receive timestamp versus `serverDeadlineAtMs`.
 
 The server never chooses Check vs Fold. Each peer still runs
 `derivePokerTimeoutIntent`. Auxiliaries do not create a new notary turn.
@@ -61,8 +70,8 @@ The server never chooses Check vs Fold. Each peer still runs
 On mismatch the relay does not pick a winner. Equivocation keeps the first
 vote. The room freezes only after three peer mismatches, matching ADR 0005.
 
-Local UI may project a countdown from `Date.now()` against the notarized
-deadline. That projection is not acceptance authority.
+Local UI projects remaining time as `Date.now() + remainingMsAtCommit`.
+That projection is not acceptance authority and does not compare wall clocks.
 
 ## Rejected bolt-on
 

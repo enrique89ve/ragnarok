@@ -33,8 +33,8 @@ export type P2PNotarizedPokerTurnClockInput = {
 	readonly phase: string;
 	readonly activePlayerId: string;
 	readonly actionsThisRound: number;
-	readonly serverStartedAtMs: number;
-	readonly serverDeadlineAtMs: number;
+	readonly remainingMsAtCommit: number;
+	readonly receivedAtMs: number;
 };
 
 export type P2PPokerActionResult =

@@ -484,13 +484,13 @@ describe('poker combat store exploit shields', () => {
       phase: CombatPhase.FAITH,
       activePlayerId: 'player-piece',
       actionsThisRound: 0,
-      serverStartedAtMs: 1_000,
-      serverDeadlineAtMs: 61_000,
+      remainingMsAtCommit: 50_000,
+      receivedAtMs: 1_000_000,
     });
 
     expect(useUnifiedCombatStore.getState().pokerCombatState).toMatchObject({
-      turnStartedAtMs: 1_000,
-      turnDeadlineAtMs: 61_000,
+      turnStartedAtMs: 990_000,
+      turnDeadlineAtMs: 1_050_000,
       turnClockOwnerId: 'server-notary',
     });
 
@@ -500,10 +500,10 @@ describe('poker combat store exploit shields', () => {
       phase: CombatPhase.FAITH,
       activePlayerId: 'player-piece',
       actionsThisRound: 0,
-      serverStartedAtMs: 20_000,
-      serverDeadlineAtMs: 80_000,
+      remainingMsAtCommit: 60_000,
+      receivedAtMs: 2_000_000,
     });
-    expect(useUnifiedCombatStore.getState().pokerCombatState?.turnDeadlineAtMs).toBe(61_000);
+    expect(useUnifiedCombatStore.getState().pokerCombatState?.turnDeadlineAtMs).toBe(1_050_000);
   });
 });
 

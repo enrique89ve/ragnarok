@@ -1626,7 +1626,7 @@ export const createPokerCombatSlice: StateCreator<
         turnDeadlineAtMs: clock.deadlineAtMs,
         turnClockOwnerId: POKER_TURN_CLOCK_NOTARY_OWNER_ID,
         turnTimer: getPokerTurnRemainingSeconds({
-          nowMs: Date.now(),
+          nowMs: input.receivedAtMs,
           deadlineAtMs: clock.deadlineAtMs,
         }),
       },

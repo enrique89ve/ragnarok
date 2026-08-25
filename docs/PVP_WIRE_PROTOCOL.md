@@ -607,10 +607,12 @@ Implementation:
   first valid proposal, and commits `deadline = start + 60_000` when the
   second identity matches. Reconnect replays that same commit; it does not
   grant another 60s. See ADR 0011.
-- The browser still renders a countdown from `PokerTurnClock` via
-  `createNotarizedPokerTurnClock`. That projection may lag the server by one
-  RTT. Acceptance authority is the relay receive timestamp, not `Date.now()`
-  on either client.
+- The browser renders a countdown from `PokerTurnClock` via
+  `createNotarizedPokerTurnClock`, which projects `remainingMsAtCommit` onto
+  local `Date.now()`. That may lag the server by one RTT. Acceptance
+  authority is the relay receive timestamp versus `serverDeadlineAtMs`, not
+  either wall clock. A `poker_action` is forwarded only after the turn is
+  `committed`; a pending notary or a previous `turnId` is dropped.
 - `origin: 'timeout'` is accepted by the relay only at or after the notarized
   deadline, and by the local engine only when the action equals the shared
   derivation: no pending wager → `DEFEND`, pending wager → `BRACE`. Timeout
