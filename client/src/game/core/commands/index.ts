@@ -16,6 +16,13 @@ export {
 } from './gameCommandTypes';
 export { applyGameCommand, applyOpponentCommand, type ApplyGameCommandDeps } from './applyGameCommand';
 export {
+	canPlayCardInPokerWindow,
+	isPokerCardTimingAllowed,
+	type PokerCardTimingContext,
+	type PokerCardTimingRejectReason,
+	type PokerCardTimingResult,
+} from './pokerCardTiming';
+export {
 	appliedGameCommand,
 	ignoredGameCommand,
 	rejectedGameCommand,

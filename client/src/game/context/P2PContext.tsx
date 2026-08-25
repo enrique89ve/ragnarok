@@ -11,6 +11,9 @@ export const P2PProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 	const gsAttackWithCard = useGameStore(s => s.attackWithCard);
 	const gsEndTurn = useGameStore(s => s.endTurn);
 	const gsPerformHeroPower = useGameStore(s => s.performHeroPower);
+	const gsToggleMulliganCard = useGameStore(s => s.toggleMulliganCard);
+	const gsConfirmMulligan = useGameStore(s => s.confirmMulligan);
+	const gsSkipMulligan = useGameStore(s => s.skipMulligan);
 	const gameState = useGameStore(s => s.gameState);
 
 	// Single ref object — mutated in place so the context value never changes identity
@@ -37,6 +40,9 @@ export const P2PProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 	const activePerformHeroPower = p2pSync.isConnected
 		? (targetId?: string, _targetType?: HeroPowerTargetType) => p2pSync.performHeroPower(targetId)
 		: gsPerformHeroPower;
+	const activeToggleMulliganCard = p2pSync.isConnected ? p2pSync.toggleMulliganCard : gsToggleMulliganCard;
+	const activeConfirmMulligan = p2pSync.isConnected ? p2pSync.confirmMulligan : gsConfirmMulligan;
+	const activeSkipMulligan = p2pSync.isConnected ? p2pSync.skipMulligan : gsSkipMulligan;
 
 	// Mutate ref fields — zero allocations, zero new object identity
 	ref.current.playCard = activePlayCard;
@@ -49,9 +55,9 @@ export const P2PProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 			attackWithCard: activeAttackWithCard,
 			endTurn: activeEndTurn,
 			performHeroPower: activePerformHeroPower,
-			toggleMulliganCard: useGameStore.getState().toggleMulliganCard,
-			confirmMulligan: useGameStore.getState().confirmMulligan,
-			skipMulligan: useGameStore.getState().skipMulligan,
+			toggleMulliganCard: activeToggleMulliganCard,
+			confirmMulligan: activeConfirmMulligan,
+			skipMulligan: activeSkipMulligan,
 			selectDiscoveryOption: useGameStore.getState().selectDiscoveryOption,
 		});
 	};

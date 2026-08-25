@@ -8,7 +8,7 @@ import {
 } from '../../types/PokerCombatTypes';
 import { useUnifiedCombatStore } from '../../stores/unifiedCombatStore';
 import { getShowdownCoinFlipRoll } from '../../stores/combat/pokerCombatSlice';
-import { getPokerActionPermissions, validatePokerActionIntent } from './pokerActionRules';
+import { derivePokerTimeoutIntent, getPokerActionPermissions, validatePokerActionIntent } from './pokerActionRules';
 
 function createPet(id: string, currentHealth = 100, currentStamina = 10): PetData {
   return {
@@ -70,8 +70,8 @@ function createCombatState(overrides: Partial<PokerCombatState> = {}): PokerComb
     turnTimer: 60,
     maxTurnTime: 60,
     turnId: 'combat-test:faith:player-piece:0',
-    turnStartedAtMs: 0,
-    turnDeadlineAtMs: 60_000,
+    turnStartedAtMs: Date.now(),
+    turnDeadlineAtMs: Date.now() + 60_000,
     actionHistory: [],
     minBet: 10,
     openerIsPlayer: true,
@@ -92,7 +92,7 @@ function createCombatState(overrides: Partial<PokerCombatState> = {}): PokerComb
 }
 
 describe('poker action intent rules', () => {
-	it('rejects stale mulligan-phase betting actions before they reach the P2P store', () => {
+  it('rejects stale mulligan-phase betting actions before they reach the P2P store', () => {
 		const state = createCombatState({ phase: CombatPhase.MULLIGAN, activePlayerId: null });
 
     const result = validatePokerActionIntent({
@@ -103,6 +103,43 @@ describe('poker action intent rules', () => {
     });
 
     expect(result).toMatchObject({ ok: false, reason: 'phase_not_actionable' });
+  });
+
+  it('accepts an action strictly before the deadline and rejects it at the deadline', () => {
+    const state = createCombatState();
+
+    expect(validatePokerActionIntent({
+      combatState: state,
+      playerId: 'player-piece',
+      action: CombatAction.DEFEND,
+      nowMs: state.turnDeadlineAtMs! - 1,
+    })).toMatchObject({ ok: true });
+
+    expect(validatePokerActionIntent({
+      combatState: state,
+      playerId: 'player-piece',
+      action: CombatAction.DEFEND,
+      nowMs: state.turnDeadlineAtMs!,
+    })).toMatchObject({ ok: false, reason: 'turn_expired' });
+  });
+
+  it('derives deterministic timeout actions for either active peer', () => {
+    expect(derivePokerTimeoutIntent(createCombatState())).toEqual({
+      actorId: 'player-piece',
+      action: CombatAction.DEFEND,
+    });
+
+    expect(derivePokerTimeoutIntent(createCombatState({
+      activePlayerId: 'opponent-piece',
+      currentBet: 20,
+      opponent: {
+        ...createCombatState().opponent,
+        hpCommitted: 5,
+      },
+    }))).toEqual({
+      actorId: 'opponent-piece',
+      action: CombatAction.BRACE,
+    });
   });
 
   it('rejects checks when a peer must answer an existing wager', () => {

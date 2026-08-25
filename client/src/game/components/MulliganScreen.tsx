@@ -8,7 +8,8 @@ import { EmberField } from './transitions/EmberField';
 import { MulliganDetailPanel } from './mulligan/MulliganDetailPanel';
 import { MulliganActionBar } from './mulligan/MulliganActionBar';
 import { collectMountedMulliganCardTargets } from './mulligan/mulliganEntranceTargets';
-import { useGameStore } from '../stores/gameStore';
+import { GAME_COMMAND_TYPES } from '../core/commands';
+import { useP2PActions } from '../context/useP2PActions';
 import { useSettingsStore } from '../stores/settingsStore';
 import { ARENA_VFX_LAYERS, getArenaVfxLayer } from '../combat/arenaVfxTargets';
 import './mulligan.css';
@@ -48,9 +49,19 @@ export const MulliganScreen: React.FC<MulliganScreenProps> = ({
   mulligan,
   playerHand,
 }) => {
-  const toggleMulliganCard = useGameStore(state => state.toggleMulliganCard);
-  const confirmMulliganChoice = useGameStore(state => state.confirmMulligan);
-  const skipMulliganChoice = useGameStore(state => state.skipMulligan);
+  const p2pActions = useP2PActions();
+  const toggleMulliganCard = useCallback(
+    (cardId: string) => p2pActions.dispatchGameCommand({ type: GAME_COMMAND_TYPES.toggleMulliganCard, cardId }),
+    [p2pActions],
+  );
+  const confirmMulliganChoice = useCallback(
+    () => p2pActions.dispatchGameCommand({ type: GAME_COMMAND_TYPES.confirmMulligan }),
+    [p2pActions],
+  );
+  const skipMulliganChoice = useCallback(
+    () => p2pActions.dispatchGameCommand({ type: GAME_COMMAND_TYPES.skipMulligan }),
+    [p2pActions],
+  );
   const animationsEnabled = useSettingsStore(state => state.animationsEnabled);
   const enhancedVFX = useSettingsStore(state => state.enhancedVFX);
   const reduceMotionSetting = useSettingsStore(state => state.reduceMotion);

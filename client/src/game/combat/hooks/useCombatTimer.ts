@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { CombatPhase, CombatAction, PokerCombatState } from '../../types/PokerCombatTypes';
-import { getPokerCombatAdapterState, getActionPermissions } from '../../hooks/usePokerCombatAdapter';
+import { getPokerCombatAdapterState } from '../../hooks/usePokerCombatAdapter';
 import { useGameStore } from '../../stores/gameStore';
 import { debug } from '../../config/debugConfig';
 import { proceduralAudio } from '../../audio/proceduralAudio';
@@ -9,6 +9,7 @@ import { getPokerTurnRemainingSeconds } from '../../../../../shared/p2p-wire/pok
 import { derivePokerDecisionView } from '../decision/pokerDecisionView';
 import { getPokerActionDefinition } from '../decision/pokerActionCatalog';
 import { derivePokerTurnPolicy, type PokerOpponentKind } from '../decision/pokerTurnPolicy';
+import { derivePokerTimeoutIntent } from '../rules/pokerActionRules';
 
 interface UseCombatTimerOptions {
   combatState: PokerCombatState | null;
@@ -137,39 +138,40 @@ export function useCombatTimer(options: UseCombatTimerOptions): void {
         updateTimer(newTime);
       } else {
         updateTimer(0);
-        if (!freshTurnPolicy.shouldAutoActOnTimeout) return;
-        if (isP2PCombat && freshState.turnId && expiredTurnIdRef.current === freshState.turnId) {
+        if (!freshTurnPolicy.shouldResolveTimeout || !freshState.turnId || freshState.turnDeadlineAtMs === null) return;
+        if (expiredTurnIdRef.current === freshState.turnId) {
           return;
         }
-        const permissions = getActionPermissions(freshState, true);
-
-        let autoAction = CombatAction.DEFEND;
-        if (permissions?.hasBetToCall) {
-          autoAction = CombatAction.BRACE;
+        const timeoutIntent = derivePokerTimeoutIntent(freshState);
+        if (!timeoutIntent) return;
+        const isLocalActor = timeoutIntent.actorId === freshState.player.playerId;
+        const actorId = timeoutIntent.actorId;
+        const autoAction = timeoutIntent.action;
+        if (autoAction === CombatAction.BRACE) {
           addHeroBattlePopup?.({
             action: CombatAction.BRACE,
-            target: 'player',
+            target: isLocalActor ? 'player' : 'opponent',
             text: getPokerActionDefinition(CombatAction.BRACE).label,
             subtitle: 'Time expired',
           });
         } else {
           addHeroBattlePopup?.({
             action: CombatAction.DEFEND,
-            target: 'player',
+            target: isLocalActor ? 'player' : 'opponent',
             text: getPokerActionDefinition(CombatAction.DEFEND).label,
             subtitle: 'Time expired',
           });
         }
 
         const previousState = freshState;
-        getPokerCombatAdapterState().performAction(freshState.player.playerId, autoAction);
+        getPokerCombatAdapterState().performAction(actorId, autoAction, undefined, true);
         const appliedState = getPokerCombatAdapterState().combatState;
         if (!appliedState || appliedState === previousState) return;
 
-        if (freshState.turnId) expiredTurnIdRef.current = freshState.turnId;
-        if (isP2PCombat) {
+        expiredTurnIdRef.current = freshState.turnId;
+        if (isP2PCombat && isLocalActor) {
           sendPokerAction?.({
-            playerId: freshState.player.playerId,
+            playerId: actorId,
             action: autoAction,
             turnId: freshState.turnId,
           });

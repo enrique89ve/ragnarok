@@ -584,10 +584,10 @@ export const createPokerCombatSlice: StateCreator<
     validateActivePlayer(nextPhase, newActivePlayerId, 'completeFirstStrike');
     
     set({
-      pokerCombatState: {
+      pokerCombatState: applyLocalPokerTurnClock({
         ...state.pokerCombatState,
         phase: nextPhase,
-	        spellPetPhaseStartTime: undefined,
+        spellPetPhaseStartTime: undefined,
         activePlayerId: newActivePlayerId,
         actionsThisRound: 0,
         player: {
@@ -602,7 +602,7 @@ export const createPokerCombatSlice: StateCreator<
           ...state.pokerCombatState.firstStrike,
           completed: true
         }
-      }
+      })
     });
     
     const firstStrikeTick = get()._nextLogTick();
@@ -662,7 +662,7 @@ export const createPokerCombatSlice: StateCreator<
 	    emitPhaseEntered({ phase: PokerCombatPhase.PRE_FLOP });
   },
 
-  performPokerAction: (playerId: string, action: CombatAction, hpCommitment?: number) => {
+  performPokerAction: (playerId: string, action: CombatAction, hpCommitment?: number, allowExpiredTurn = false) => {
     const state = get();
     if (!state.pokerCombatState) return;
 
@@ -671,6 +671,8 @@ export const createPokerCombatSlice: StateCreator<
       playerId,
       action,
       hpCommitment,
+		  nowMs: Date.now(),
+		  allowExpiredTurn,
     });
     if (!validation.ok) {
       debug.combat('[performPokerAction] REJECTED:', {

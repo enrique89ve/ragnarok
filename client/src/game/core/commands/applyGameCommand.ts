@@ -18,10 +18,13 @@ import {
 	type ApplyGameCommandResult,
 	type GameCommandEffect,
 } from './gameCommandResult';
+import { canPlayCardInPokerWindow, type PokerCardTimingContext } from './pokerCardTiming';
 
 export type ApplyGameCommandDeps = {
 	readonly isAiSimulationMode?: () => boolean;
 	readonly rng?: () => number;
+	readonly pokerCombat?: PokerCardTimingContext | null;
+	readonly nowMs?: number;
 };
 
 /**
@@ -32,6 +35,7 @@ export type ApplyGameCommandDeps = {
  * Idempotent: swap(swap(state)) === state structurally.
  */
 function swapPlayerOpponent(state: GameState): GameState {
+	const mulligan = state.mulligan;
 	return {
 		...state,
 		players: {
@@ -42,6 +46,15 @@ function swapPlayerOpponent(state: GameState): GameState {
 			state.currentTurn === 'player' ? 'opponent'
 			: state.currentTurn === 'opponent' ? 'player'
 			: state.currentTurn,
+		mulligan: mulligan
+			? {
+				...mulligan,
+				playerSelections: mulligan.opponentSelections ?? {},
+				opponentSelections: mulligan.playerSelections ?? {},
+				playerReady: mulligan.opponentReady,
+				opponentReady: mulligan.playerReady,
+			}
+			: mulligan,
 	};
 }
 
@@ -109,7 +122,17 @@ export function applyOpponentCommand(
 	deps: ApplyGameCommandDeps = {},
 ): ApplyGameCommandResult {
 	const swapped = swapPlayerOpponent(state);
-	const result = applyGameCommand(swapped, command, deps);
+	const swappedDeps = deps.pokerCombat
+		? {
+			...deps,
+			pokerCombat: {
+				...deps.pokerCombat,
+				playerId: deps.pokerCombat.opponentId,
+				opponentId: deps.pokerCombat.playerId,
+			},
+		}
+		: deps;
+	const result = applyGameCommand(swapped, command, swappedDeps);
 	const restoredState = swapPlayerOpponent(result.state);
 	const flippedEffects = flipEffectsToOpponentPerspective(result.effects);
 
@@ -178,6 +201,17 @@ function applyPlayCardCommand(
 	}
 
 	const cardInstance = cardResult.card;
+	if (deps.pokerCombat) {
+		const pokerTiming = canPlayCardInPokerWindow({
+			combatState: deps.pokerCombat,
+			card: cardInstance,
+			actor: deps.pokerCombat.playerId,
+			nowMs: deps.nowMs,
+		});
+		if (!pokerTiming.ok) {
+			return rejectedGameCommand(state, pokerTiming.reason);
+		}
+	}
 	const playCardRejection = getPlayCardRejection(state, cardInstance, command, cardResult.index);
 	if (playCardRejection) {
 		return rejectedGameCommand(state, playCardRejection);

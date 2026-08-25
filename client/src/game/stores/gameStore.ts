@@ -30,7 +30,7 @@ import { CombatEventBus } from '../services/CombatEventBus';
 import { getAttack } from '../utils/cards/typeGuards';
 import { useMatchStore } from '../match/store';
 import { computeStateHash } from '../engine/engineBridge';
-import { GAME_COMMAND_TYPES, applyGameCommand, applyOpponentCommand, type ApplyGameCommandResult, type GameCommand } from '../core/commands';
+import { GAME_COMMAND_TYPES, applyGameCommand, applyOpponentCommand, type ApplyGameCommandResult, type GameCommand, type PokerCardTimingContext } from '../core/commands';
 import { applyGameCommandToStore } from './gameCommandStoreAdapter';
 import { buildHandshakeGameState, type CardsDeckAnnounce } from '../p2p/cardsDeckHandshake';
 
@@ -176,6 +176,20 @@ function isPeerOpponentMatch(): boolean {
 	return useMatchStore.getState().activeMatch?.opponent.kind === 'peer';
 }
 
+function getPokerCardTimingContext(): PokerCardTimingContext | null {
+	const combatState = getPokerCombatAdapterState().combatState;
+	if (!combatState) return null;
+	return {
+		combatId: combatState.combatId,
+		phase: combatState.phase,
+		playerId: combatState.player.playerId,
+		opponentId: combatState.opponent.playerId,
+		activePlayerId: combatState.activePlayerId,
+		turnId: combatState.turnId,
+		turnDeadlineAtMs: combatState.turnDeadlineAtMs,
+	};
+}
+
 // Guard: prevents a second attack from being initiated while one is already animating
 let isAttackProcessing = false;
 let attackWatchdogTimer: ReturnType<typeof setTimeout> | null = null;
@@ -318,6 +332,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
     const result = applyGameCommand(gameState, command, {
       isAiSimulationMode: isAISimulationMode,
       rng: commandRng(),
+      pokerCombat: getPokerCardTimingContext(),
     });
 
     applyGameCommandToStore({
@@ -333,6 +348,7 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
     const result = applyOpponentCommand(gameState, command, {
       isAiSimulationMode: isAISimulationMode,
       rng: commandRng(),
+      pokerCombat: getPokerCardTimingContext(),
     });
 
     applyGameCommandToStore({
@@ -697,14 +713,22 @@ export const useGameStore = create<GameStore>()(subscribeWithSelector((set, get)
   // Confirm mulligan selections and replace selected cards
   confirmMulligan: () => {
     const { gameState } = get();
-    const newState = useMulliganStore.getState().confirmMulligan(gameState);
+    const mulliganStore = useMulliganStore.getState();
+    const localState = mulliganStore.confirmMulligan(gameState);
+    const newState = localState && !isPeerOpponentMatch()
+      ? mulliganStore.confirmAiMulligan(localState)
+      : localState;
     if (newState) set({ gameState: newState });
   },
 
   // Skip mulligan and keep all cards
   skipMulligan: () => {
     const { gameState } = get();
-    const newState = useMulliganStore.getState().skipMulligan(gameState);
+    const mulliganStore = useMulliganStore.getState();
+    const localState = mulliganStore.skipMulligan(gameState);
+    const newState = localState && !isPeerOpponentMatch()
+      ? mulliganStore.confirmAiMulligan(localState)
+      : localState;
     if (newState) set({ gameState: newState });
   },
 

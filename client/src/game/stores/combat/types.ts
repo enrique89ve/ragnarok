@@ -159,7 +159,7 @@ export interface PokerCombatSliceActions {
   ) => void;
   completeFirstStrike: () => void;
   completeMulligan: () => void;
-  performPokerAction: (playerId: string, action: CombatAction, hpCommitment?: number) => void;
+  performPokerAction: (playerId: string, action: CombatAction, hpCommitment?: number, allowExpiredTurn?: boolean) => void;
   advancePokerPhase: () => void;
   resolvePokerCombat: () => CombatResolution | null;
   endPokerCombat: () => void;

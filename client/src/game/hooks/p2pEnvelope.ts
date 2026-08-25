@@ -1,6 +1,21 @@
-import type { AttackCommand, EndTurnCommand, PlayCardCommand, UseHeroPowerCommand } from '../core/commands';
+import type {
+	AttackCommand,
+	ConfirmMulliganCommand,
+	EndTurnCommand,
+	PlayCardCommand,
+	SkipMulliganCommand,
+	ToggleMulliganCardCommand,
+	UseHeroPowerCommand,
+} from '../core/commands';
 
-export type WireGameCommand = PlayCardCommand | AttackCommand | EndTurnCommand | UseHeroPowerCommand;
+export type WireGameCommand =
+	| PlayCardCommand
+	| AttackCommand
+	| EndTurnCommand
+	| UseHeroPowerCommand
+	| ToggleMulliganCardCommand
+	| ConfirmMulliganCommand
+	| SkipMulliganCommand;
 
 export interface GameCommandEnvelope {
 	type: 'game_command';

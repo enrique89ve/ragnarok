@@ -33,6 +33,8 @@ export function flipGameState(state: GameState): GameState {
 	const flippedMulligan = state.mulligan
 		? {
 			...state.mulligan,
+			playerSelections: state.mulligan.opponentSelections ?? {},
+			opponentSelections: state.mulligan.playerSelections ?? {},
 			playerReady: (state.mulligan as { opponentReady?: boolean }).opponentReady ?? false,
 			opponentReady: (state.mulligan as { playerReady?: boolean }).playerReady ?? false,
 		}

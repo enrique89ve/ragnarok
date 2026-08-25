@@ -935,6 +935,7 @@ export interface Player {
 export interface MulliganState {
   active: boolean;
   playerSelections: Record<string, boolean>;
+  opponentSelections: Record<string, boolean>;
   playerReady: boolean;
   opponentReady: boolean;
 }

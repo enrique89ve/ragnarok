@@ -10,6 +10,7 @@
 import { PokerSpellCard, PokerSpellEffectType, PokerSpellTiming } from '../../types/CardTypes';
 import { PokerCard } from '../../types/PokerCombatTypes';
 import { cryptoRng } from '../seededRng';
+import { isPokerCardTimingAllowed } from '../../core/commands/pokerCardTiming';
 
 // ==================== TYPES ====================
 
@@ -102,12 +103,11 @@ export const canCastPokerSpell = (
   
   const effect = spell.pokerSpellEffect;
   
-  if (effect.timing === 'pre_deal' && currentPhase !== 'PRE_FLOP' && currentPhase !== 'pre_flop') {
-    return { canCast: false, reason: 'Can only cast before dealing' };
-  }
-  
-  if (effect.timing === 'on_river' && currentPhase !== 'DESTINY' && currentPhase !== 'destiny') {
-    return { canCast: false, reason: 'Can only cast on the River' };
+  if (!isPokerCardTimingAllowed(effect.timing, currentPhase)) {
+    return {
+      canCast: false,
+      reason: effect.timing === 'pre_deal' ? 'Can only cast before dealing' : 'Can only cast on the River',
+    };
   }
   
   return { canCast: true };

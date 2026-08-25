@@ -13,6 +13,7 @@ export type PokerTurnPolicy = {
 	readonly profileMode: PokerTurnProfileMode;
 	readonly actor: PokerTurnActor;
 	readonly shouldTickTimer: boolean;
+	readonly shouldResolveTimeout: boolean;
 	readonly shouldAutoActOnTimeout: boolean;
 	readonly shouldBroadcastTurnStart: boolean;
 	readonly shouldScheduleAiDecision: boolean;
@@ -70,6 +71,7 @@ export function derivePokerTurnPolicy(input: {
 		profileMode,
 		actor,
 		shouldTickTimer,
+		shouldResolveTimeout: actor === 'local_human' || actor === 'remote_peer',
 		shouldAutoActOnTimeout: actor === 'local_human',
 		shouldBroadcastTurnStart: processMode === 'p2p' && actor === 'local_human',
 		shouldScheduleAiDecision: actor === 'remote_ai',

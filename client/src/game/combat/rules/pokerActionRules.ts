@@ -4,6 +4,7 @@ import {
   type PlayerCombatState,
   type PokerCombatState,
 } from '../../types/PokerCombatTypes';
+import { isTimedPokerDecisionPhase } from '../../../../../shared/p2p-wire/pokerTurnClock';
 
 export interface ActionPermissions {
   isPreForesight: boolean;
@@ -40,7 +41,8 @@ export type PokerActionRejectReason =
   | 'raise_exceeds_capacity'
   | 'call_not_allowed'
   | 'check_not_allowed'
-  | 'fold_not_allowed';
+  | 'fold_not_allowed'
+  | 'turn_expired';
 
 export type PokerActionValidationResult =
   | {
@@ -118,13 +120,32 @@ export function getPokerActionPermissions(
   };
 }
 
+export function derivePokerTimeoutIntent(combatState: PokerCombatState | null): {
+  readonly actorId: string;
+  readonly action: CombatAction;
+} | null {
+  if (!combatState || !isTimedPokerDecisionPhase(combatState.phase)) return null;
+  if (!combatState.activePlayerId || combatState.turnId === null || combatState.turnDeadlineAtMs === null) return null;
+
+  const isPlayer = combatState.activePlayerId === combatState.player.playerId;
+  const permissions = getPokerActionPermissions(combatState, isPlayer);
+  if (!permissions) return null;
+
+  return {
+    actorId: combatState.activePlayerId,
+    action: permissions.hasBetToCall ? CombatAction.BRACE : CombatAction.DEFEND,
+  };
+}
+
 export function validatePokerActionIntent(input: {
   combatState: PokerCombatState | null;
   playerId: string;
   action: CombatAction;
   hpCommitment?: number;
+  nowMs?: number;
+  allowExpiredTurn?: boolean;
 }): PokerActionValidationResult {
-  const { combatState, playerId, action, hpCommitment } = input;
+  const { combatState, playerId, action, hpCommitment, nowMs, allowExpiredTurn = false } = input;
   if (!combatState) return reject('missing_combat_state', null);
 
   const actorSide = getActorSide(combatState, playerId);
@@ -136,6 +157,10 @@ export function validatePokerActionIntent(input: {
   if (combatState.phase === CombatPhase.RESOLUTION || combatState.foldWinner) return reject('combat_resolved', permissions);
   if (combatState.isAllInShowdown) return reject('all_in_showdown', permissions);
   if (combatState.activePlayerId !== playerId) return reject('not_active_player', permissions);
+	if (!allowExpiredTurn && combatState.turnDeadlineAtMs !== null
+		&& (nowMs ?? Date.now()) >= combatState.turnDeadlineAtMs) {
+		return reject('turn_expired', permissions);
+	}
 
   const actor = actorSide === 'player' ? combatState.player : combatState.opponent;
   if (actor.isReady) return reject('actor_already_ready', permissions);

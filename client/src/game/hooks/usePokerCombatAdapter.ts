@@ -51,7 +51,7 @@ export interface PokerCombatAdapter {
     deterministic?: PokerCombatDeterministicOptions
   ) => void;
   initializeCombatFromPayload: (payload: PokerCombatAdapterInit) => void;
-  performAction: (playerId: string, action: CombatAction, hpCommitment?: number) => void;
+  performAction: (playerId: string, action: CombatAction, hpCommitment?: number, allowExpiredTurn?: boolean) => void;
   advancePhase: () => void;
   maybeCloseBettingRound: () => void;
   resolveCombat: () => CombatResolution | null;
@@ -198,8 +198,8 @@ export function usePokerCombatAdapter(): PokerCombatAdapter {
       },
       initializeCombatFromPayload,
 
-      performAction: (playerId, action, hpCommitment) => {
-        performPokerAction(playerId, action, hpCommitment);
+      performAction: (playerId, action, hpCommitment, allowExpiredTurn) => {
+        performPokerAction(playerId, action, hpCommitment, allowExpiredTurn);
       },
 
       advancePhase: () => {
@@ -357,8 +357,8 @@ export function getPokerCombatAdapterState(): PokerCombatAdapter {
       getStore().completeMulligan();
     },
 
-    performAction: (playerId, action, hpCommitment) => {
-      getStore().performPokerAction(playerId, action, hpCommitment);
+    performAction: (playerId, action, hpCommitment, allowExpiredTurn) => {
+      getStore().performPokerAction(playerId, action, hpCommitment, allowExpiredTurn);
     },
 
     advancePhase: () => {

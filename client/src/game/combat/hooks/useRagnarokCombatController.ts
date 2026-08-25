@@ -214,7 +214,10 @@ export function useRagnarokCombatController(
 
   useCombatTimer({
     combatState,
-    isActive: isActive && !isP2PActionLocked,
+    // The absolute Poker deadline belongs to the combat state, not the
+    // transport. Disconnects lock input/phase advancement, but never pause or
+    // restart the decision clock.
+    isActive,
     updateTimer,
     isP2PCombat,
     opponentKind,

@@ -209,6 +209,7 @@ export function initializeGame(): GameState {
     mulligan: {
       active: false,
       playerSelections: {},
+      opponentSelections: {},
       playerReady: false,
       opponentReady: false,
     },
@@ -379,6 +380,7 @@ export function initializeGameSeeded(opts: InitializeGameSeededOpts): GameState 
     mulligan: {
       active: true,
       playerSelections: {},
+      opponentSelections: {},
       playerReady: false,
       opponentReady: false,
     },

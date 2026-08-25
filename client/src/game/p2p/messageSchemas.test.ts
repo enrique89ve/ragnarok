@@ -86,6 +86,12 @@ describe('parseWireMessage — game_command envelope (cards integrity)', () => {
 		expect(parseWireMessage({ ...validEnvelope, command: { type: 'use_hero_power' } })).not.toBeNull();
 	});
 
+	it('accepts the three actor-scoped mulligan commands', () => {
+		expect(parseWireMessage({ ...validEnvelope, command: { type: 'toggle_mulligan_card', cardId: 'card-1' } })).not.toBeNull();
+		expect(parseWireMessage({ ...validEnvelope, command: { type: 'confirm_mulligan' } })).not.toBeNull();
+		expect(parseWireMessage({ ...validEnvelope, command: { type: 'skip_mulligan' } })).not.toBeNull();
+	});
+
 	it('rejects envelopes missing commandId — replay-protection field', () => {
 		const { commandId: _, ...withoutCommandId } = validEnvelope;
 		expect(parseWireMessage(withoutCommandId)).toBeNull();

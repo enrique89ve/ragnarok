@@ -84,11 +84,27 @@ const UseHeroPowerSchema = z.object({
 	targetType: z.enum(['card', 'hero']).optional(),
 }).strict();
 
+const ToggleMulliganCardSchema = z.object({
+	type: z.literal('toggle_mulligan_card'),
+	cardId: NonEmptyString(64),
+}).strict();
+
+const ConfirmMulliganSchema = z.object({
+	type: z.literal('confirm_mulligan'),
+}).strict();
+
+const SkipMulliganSchema = z.object({
+	type: z.literal('skip_mulligan'),
+}).strict();
+
 const WireGameCommandSchema = z.discriminatedUnion('type', [
 	PlayCardSchema,
 	AttackSchema,
 	EndTurnSchema,
 	UseHeroPowerSchema,
+	ToggleMulliganCardSchema,
+	ConfirmMulliganSchema,
+	SkipMulliganSchema,
 ]);
 
 const GameCommandEnvelopeSchema = z.object({

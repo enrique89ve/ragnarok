@@ -249,6 +249,9 @@ export function useWireSync() {
 	const attackWithCard = useGameStore(state => state.attackWithCard);
 	const endTurn = useGameStore(state => state.endTurn);
 	const performHeroPower = useGameStore(state => state.performHeroPower);
+	const toggleMulliganCard = useGameStore(state => state.toggleMulliganCard);
+	const confirmMulligan = useGameStore(state => state.confirmMulligan);
+	const skipMulligan = useGameStore(state => state.skipMulligan);
 	const applyOpponentCommandToStore = useGameStore(state => state.applyOpponentCommand);
 	const lastSyncRef = useRef<number>(0);
 	const messageQueueRef = useRef<P2PMessage[]>([]);
@@ -1221,15 +1224,21 @@ export function useWireSync() {
 						}
 						actionTimestampsRef.current.push(nowEnvelope);
 
-						const gs = useGameStore.getState().gameState;
-						if (gs.currentTurn !== 'opponent' || gs.gamePhase === 'game_over') {
-							reject('not_opponent_turn_or_game_over');
-							break;
-						}
-
 						const wireCommand = data.command;
 						if (!wireCommand || typeof wireCommand !== 'object') {
 							reject('malformed_command');
+							break;
+						}
+
+						const gs = useGameStore.getState().gameState;
+						const isMulliganCommand = wireCommand.type === GAME_COMMAND_TYPES.toggleMulliganCard
+							|| wireCommand.type === GAME_COMMAND_TYPES.confirmMulligan
+							|| wireCommand.type === GAME_COMMAND_TYPES.skipMulligan;
+						const isActiveMulligan = gs.gamePhase === 'mulligan' && gs.mulligan?.active === true;
+						if (gs.gamePhase === 'game_over'
+							|| (!isMulliganCommand && gs.currentTurn !== 'opponent')
+							|| (isMulliganCommand && !isActiveMulligan)) {
+							reject('not_opponent_turn_or_game_over');
 							break;
 						}
 
@@ -1351,6 +1360,39 @@ export function useWireSync() {
 										markCommandApplied();
 										debouncedSyncRef.current?.();
 									},
+									onUnapplied: (reason) => reject(reason),
+								});
+								break;
+							case GAME_COMMAND_TYPES.toggleMulliganCard:
+								if (typeof wireCommand.cardId !== 'string' || wireCommand.cardId.length > 64) {
+									reject('invalid_mulligan_payload');
+									break;
+								}
+								if (!gs.players.opponent.hand.some(card => card.instanceId === wireCommand.cardId)) {
+									reject('mulligan_card_id_not_in_opponent_hand');
+									break;
+								}
+								settleRemoteCommand(applyOpponentCommandToStore(wireCommand), {
+									onApplied: () => {
+										recordMove('toggleMulliganCard', { cardId: wireCommand.cardId, commandId: data.commandId, seq: data.seq }, remoteTranscriptId);
+									markCommandApplied();
+									debouncedSyncRef.current?.();
+								},
+									onUnapplied: (reason) => reject(reason),
+								});
+								break;
+							case GAME_COMMAND_TYPES.confirmMulligan:
+							case GAME_COMMAND_TYPES.skipMulligan:
+								settleRemoteCommand(applyOpponentCommandToStore(wireCommand), {
+									onApplied: () => {
+										recordMove(
+										wireCommand.type === GAME_COMMAND_TYPES.confirmMulligan ? 'confirmMulligan' : 'skipMulligan',
+										{ commandId: data.commandId, seq: data.seq },
+										remoteTranscriptId,
+									);
+									markCommandApplied();
+									debouncedSyncRef.current?.();
+								},
 									onUnapplied: (reason) => reject(reason),
 								});
 								break;
@@ -2359,7 +2401,7 @@ export function useWireSync() {
 				pendingSyncRef.current = null;
 			}
 		};
-	}, [connection, connectionState, isHostFrame, isWsHost, sendsCardsInit, adoptsRemoteCardsInit, sendsCardsRecoverySnapshot, send, playCard, attackWithCard, endTurn, performHeroPower, applyOpponentCommandToStore, isCurrentConnectedMatch]);
+	}, [connection, connectionState, isHostFrame, isWsHost, sendsCardsInit, adoptsRemoteCardsInit, sendsCardsRecoverySnapshot, send, playCard, attackWithCard, endTurn, performHeroPower, toggleMulliganCard, confirmMulligan, skipMulligan, applyOpponentCommandToStore, isCurrentConnectedMatch]);
 
 	const syncGameState = useCallback(() => {
 		if (connectionState !== 'connected' || !sendsCardsRecoverySnapshot) return;
@@ -2557,6 +2599,27 @@ export function useWireSync() {
 			targetType: 'card',
 		}, () => performHeroPower(targetId, 'card'));
 	}, [performHeroPower, runCardsLocalAction, appendAndSendActionEnvelope]);
+
+	const wrappedToggleMulliganCard = useCallback((cardId: string) => {
+		runCardsLocalAction(
+			{ type: GAME_COMMAND_TYPES.toggleMulliganCard, cardId },
+			() => toggleMulliganCard(cardId),
+		);
+	}, [toggleMulliganCard, runCardsLocalAction]);
+
+	const wrappedConfirmMulligan = useCallback(() => {
+		runCardsLocalAction(
+			{ type: GAME_COMMAND_TYPES.confirmMulligan },
+			confirmMulligan,
+		);
+	}, [confirmMulligan, runCardsLocalAction]);
+
+	const wrappedSkipMulligan = useCallback(() => {
+		runCardsLocalAction(
+			{ type: GAME_COMMAND_TYPES.skipMulligan },
+			skipMulligan,
+		);
+	}, [skipMulligan, runCardsLocalAction]);
 
 	const downloadSessionLog = useCallback((): void => {
 		try {
@@ -2770,6 +2833,9 @@ export function useWireSync() {
 		attackWithCard: wrappedAttack,
 		endTurn: wrappedEndTurn,
 		performHeroPower: wrappedUseHeroPower,
+		toggleMulliganCard: wrappedToggleMulliganCard,
+		confirmMulligan: wrappedConfirmMulligan,
+		skipMulligan: wrappedSkipMulligan,
 		sendPokerAction,
 		sendPokerTurnStarted,
 		sendDeckVerification,
